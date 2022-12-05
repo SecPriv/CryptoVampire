@@ -1,0 +1,35 @@
+content = _{SOI ~ (declare_fun | step)+ ~ EOI}
+
+WHITESPACE = _{ " " | "\t" | NEWLINE }
+
+ident = @{ASCII_ALPHA ~ ( ASCII_ALPHANUMERIC | "_" | "-")* }
+
+
+declare_type = {"type" ~ ident ~ ";"?}
+declare_fun = {"let" ~ ident ~ parameters ~ "->" ~ ident ~ ";"?}
+
+quantifier = {(exists | forall) ~ parameters ~ "{" ~ cnf ~ "}"}
+	forall = {"&"}
+    exists = {"|"}
+
+fun = {ident ~ ("(" ~ term* ~ ")")?}
+infix_term = {term ~ op ~ term}
+	op = {eq | neq}
+    eq = {"=="}
+    neq = {"!="}
+ifthenelse = {"if"~"{"~ cnf ~ "{" ~ term ~ "}" ~ "else" ~ "{" ~ term ~ "}"}
+term = {ifthenelse | fun }
+
+cnf = {disjonction ~ ("&&" ~ disjonction)*}
+disjonction = {bool ~ ("||" ~ bool)*}
+	bool = {infix_term | term | quantifier | neg}
+    neg = { "!" ~ (term | quantifier | ("(" ~ (term | quantifier | infix_term) ~ ")" ))}
+    
+step = {"step" ~ ident ~ parameters ~
+         "{" ~ cnf ~ "}" ~ 
+         "{" ~ term ~ "}" ~ ";"?}
+parameters = {("(" ~ (ident ~ ",") * ~ ident? ~ ")")?}
+
+COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+
+underscore = {"_"}
