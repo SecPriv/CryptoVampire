@@ -1,0 +1,56 @@
+content = _{SOI ~ (declaration | step)+ ~ EOI}
+
+WHITESPACE = _{ " " | "\t" | NEWLINE }
+COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+
+ident = @{  ASCII_ALPHA ~ ( ASCII_ALPHANUMERIC | "_" | "-")* }
+underscore = {"_"}
+
+
+type_name = @{ident}
+function = @{ident}
+variable = @{underscore? ~ ident}
+step_name = {ident}
+
+declaration = { declare_type | declare_function }
+    declare_type = {"type" ~ type_name ~ ";"?}
+    declare_function = {"fun" ~ function ~ declare_function_args ~ 
+                          ":" ~ type_name ~ ";"?}
+       declare_function_args = {("(" ~ (type_name ~ ",")* ~ type_name? ~ ")")?}
+
+typed_arguments = {("(" ~ (variable_binding ~ ",")* ~ variable_binding? ~ ")")?}
+    variable_binding = {variable ~ ":" ~ type_name }
+
+term = {if_then_else | application | find_such_that }
+application = {(function | variable) ~ ("(" ~ (term ~ ",")* ~ term? ~ ")")?}
+if_then_else = {"if"~ inner_cond_if ~ bracketed_term ~ "else" ~ bracketed_term}
+    inner_cond_if = _{ cnf | "(" ~ cnf ~ ")"}
+find_such_that = {"try find" ~ 
+                    typed_arguments ~ "{" ~ cnf ~ "}" ~
+                    "such that" ~ bracketed_term ~
+                    "else" ~ bracketed_term}
+bracketed_term = _{"{" ~ term ~ "}"}
+
+quantifier = {quantifier_op ~ typed_arguments ~ "{" ~ cnf ~ "}"}
+    quantifier_op = _{exists | forall }
+	forall = {"&"}
+    exists = {"|"}
+
+infix_term = { inner_infix_term | ("(" ~ inner_infix_term ~ ")")}
+    inner_infix_term = _{term ~ op ~ term}
+	op = _{ eq }
+    eq = {"=="}
+
+
+cnf = {inner_cnf ~ ("&&" ~ inner_cnf)*}
+    inner_cnf = _{disjonction | ("(" ~ disjonction ~ ")")}
+
+disjonction = {bool ~ ("||" ~ bool)*}
+    inner_disjonction = _{ bool | ( "(" ~ bool ~ ")")}
+	bool = {inner_bool | neg}
+    neg = { "!" ~ (inner_bool | ("(" ~ inner_bool ~ ")" ))}
+    inner_bool = _{infix_term | term | quantifier }
+    
+step = {"step" ~ step_name ~ typed_arguments ~
+         "{" ~ cnf ~ "}" ~ 
+         "{" ~ term ~ "}" ~ ";"?}
