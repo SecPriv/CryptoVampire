@@ -10,6 +10,8 @@ pub mod types {
 }
 
 pub mod functions {
+    use crate::formula::formula::Formula;
+
     use super::super::function::Function;
     use super::{macros::new_fun, types::*};
     use paste::paste;
@@ -20,8 +22,24 @@ pub mod functions {
     new_fun!(AND, "and"; BOOL, BOOL ; BOOL);
     new_fun!(OR, "or"; BOOL, BOOL ; BOOL);
     new_fun!(NOT, "not"; BOOL ; BOOL);
-    new_fun!(TRUE_F, "true"; ; BOOL);
-    new_fun!(FALSE_F, "false"; ; BOOL);
+    new_fun!(TRUE, "true"; ; BOOL);
+    new_fun!(FALSE, "false"; ; BOOL);
+
+    pub fn f_true() -> Formula {
+        Formula::Fun(TRUE.clone(), vec![])
+    }
+
+    pub fn f_false() -> Formula {
+        Formula::Fun(FALSE.clone(), vec![])
+    }
+
+    pub fn f_and(a: Formula, b: Formula) -> Formula {
+        Formula::Fun(AND.clone(), vec![a, b])
+    }
+
+    pub fn f_or(a: Formula, b: Formula) -> Formula {
+        Formula::Fun(OR.clone(), vec![a, b])
+    }
 }
 
 mod macros {

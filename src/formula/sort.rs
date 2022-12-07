@@ -1,5 +1,5 @@
 use core::fmt::Debug;
-use std::sync::Arc;
+use std::{fmt::Display, sync::Arc};
 
 #[derive(Hash)]
 pub struct Sort(Arc<InnerSort>);
@@ -44,6 +44,12 @@ impl Clone for Sort {
 impl<'a> From<&'a str> for Sort {
     fn from(str: &'a str) -> Self {
         Self::new(str)
+    }
+}
+
+impl Display for Sort {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.name)
     }
 }
 

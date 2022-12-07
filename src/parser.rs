@@ -4,7 +4,9 @@ use std::collections::{HashMap, HashSet};
 use crate::{
     formula::{
         builtins::{functions::*, types::*},
-        Formula, Function, MFormula, RcFunction, RcType, MCNF,
+        formula::{var, Formula, CNF},
+        function::Function,
+        sort::Sort,
     },
     protocol::Protocol,
 };
@@ -19,11 +21,6 @@ use pest_derive::Parser;
 use self::macros::*;
 
 mod macros {
-    use pest::{
-        error::{Error, ErrorVariant},
-        iterators::Pair,
-        RuleType,
-    };
 
     macro_rules! match_or_err {
         ($rule:path, $pair:expr; $content:block) => {{
@@ -86,8 +83,8 @@ type E = Error<Rule>;
 
 #[derive(Debug, Default)]
 struct Context<'a> {
-    types: HashMap<&'a str, RcType>,
-    funs: HashMap<&'a str, RcFunction>,
+    types: HashMap<&'a str, Sort>,
+    funs: HashMap<&'a str, Function>,
     steps: HashSet<&'a str>,
 }
 
@@ -113,8 +110,8 @@ pub fn parse_protocol(str: &str) -> Result<Protocol, E> {
             (OR_NAME, OR.clone()),
             (NOT_NAME, NOT.clone()),
             (NONCE_MSG_NAME, NONCE_MSG.clone()),
-            (TRUE_F_NAME, TRUE_F.clone()),
-            (FALSE_F_NAME, FALSE_F.clone()),
+            (TRUE_NAME, TRUE.clone()),
+            (FALSE_NAME, FALSE.clone()),
         ]
         .into_iter(),
     );
@@ -136,7 +133,7 @@ pub fn parse_protocol(str: &str) -> Result<Protocol, E> {
     todo!()
 }
 
-fn parse_type(ctx: &Context, p: Pair<Rule>) -> Result<RcType, E> {
+fn parse_type(ctx: &Context, p: Pair<Rule>) -> Result<Sort, E> {
     match_or_err!(Rule::type_name, p; {
         match ctx.types.get(p.as_str()) {
             Some(f) => Ok(f.clone()),
@@ -145,7 +142,7 @@ fn parse_type(ctx: &Context, p: Pair<Rule>) -> Result<RcType, E> {
     })
 }
 
-fn parse_function_name(ctx: &Context, p: Pair<Rule>) -> Result<RcFunction, E> {
+fn parse_function_name(ctx: &Context, p: Pair<Rule>) -> Result<Function, E> {
     match_or_err!(Rule::function, p; {
         match ctx.funs.get(p.as_str()) {
             Some(f) => Ok(f.clone()),
@@ -157,8 +154,8 @@ fn parse_function_name(ctx: &Context, p: Pair<Rule>) -> Result<RcFunction, E> {
 fn parse_variable<'a>(
     ctx: &Context<'a>,
     p: Pair<'a, Rule>,
-    memory: &HashMap<&'a str, MFormula>,
-) -> Result<MFormula, E> {
+    memory: &HashMap<&'a str, Formula>,
+) -> Result<Formula, E> {
     match_or_err!(Rule::variable, p; {
         match memory.get(p.as_str()) {
             Some(var) => Ok(var.clone()),
@@ -170,8 +167,8 @@ fn parse_variable<'a>(
 fn parse_variable_binding<'a>(
     ctx: &Context<'a>,
     p: Pair<'a, Rule>,
-    memory: &mut HashMap<&'a str, MFormula>,
-) -> Result<MFormula, E> {
+    memory: &mut HashMap<&'a str, Formula>,
+) -> Result<Formula, E> {
     match_or_err!(Rule::variable_binding, p ; {
         let mut inner_rule = p.into_inner();
 
@@ -189,7 +186,7 @@ fn parse_variable_binding<'a>(
         let var_type = inner_rule.next().unwrap(); // can't fail
         let var_type = parse_type(ctx, var_type)?;
 
-        let var_f = Formula::Var(memory.len(), var_type);
+        let var_f = var!(memory.len(), var_type);
         memory.insert(var, var_f.clone());
         Ok(var_f)
     })
@@ -205,7 +202,7 @@ fn parse_step_name<'a>(ctx: &Context<'a>, p: Pair<'a, Rule>) -> Result<&'a str, 
     })
 }
 
-fn parse_declare_function_args<'a>(ctx: &Context<'a>, p: Pair<'a, Rule>) -> Result<Vec<RcType>, E> {
+fn parse_declare_function_args<'a>(ctx: &Context<'a>, p: Pair<'a, Rule>) -> Result<Vec<Sort>, E> {
     match_or_err!(Rule::type_name, p; {
         let mut inner_rule = p.into_inner();
         inner_rule.map(|p2| parse_type(ctx, p2)).collect()
@@ -235,7 +232,7 @@ fn parse_declare_function<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Resul
 
         match ctx.funs.get(name) {
             None => {
-                let f = Function::new_rc(name, input_sorts, output_sort);
+                let f = Function::new(name, input_sorts, output_sort);
                 ctx.funs.insert(name, f);
                 Ok(())
             },
@@ -247,8 +244,8 @@ fn parse_declare_function<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Resul
 fn parse_application<'a>(
     ctx: &Context<'a>,
     p: Pair<'a, Rule>,
-    memory: &HashMap<&'a str, MFormula>,
-) -> Result<MFormula, E> {
+    memory: &HashMap<&'a str, Formula>,
+) -> Result<Formula, E> {
     match_or_err!(Rule::application, p; {
         let span = p.as_span();
 
@@ -278,9 +275,9 @@ fn parse_application<'a>(
                 };
                 let mut i = 1;
 
-                let args: Result<Vec<_>,_> = fun.0.input_sorts.iter().map(|s|{
+                let args: Result<Vec<_>,_> = fun.get_input_sorts().iter().map(|s|{
                     match inner_rule.next() {
-                        None => perr!(span; "not enough arguments, expected {} got {}", fun.0.arity(), i),
+                        None => perr!(span; "not enough arguments, expected {} got {}", fun.arity(), i),
                         Some(arg) => {
                             i += 1;
                             parse_term_as_type(ctx, arg, memory, s)
@@ -290,10 +287,10 @@ fn parse_application<'a>(
                 let args = args?;
 
                 if inner_rule.next().is_some() {
-                    perr!(span; "too many arguments, expected {} got {}", fun.0.arity(), i)
+                    perr!(span; "too many arguments, expected {} got {}", fun.arity(), i)
                 } else {
                     let formula = Formula::Fun(fun.clone(), args);
-                    if formula.get_type() == NONCE.clone() {
+                    if formula.get_sort() == &NONCE.clone() {
                         Ok(Formula::Fun(NONCE_MSG.clone(), vec![formula]))
                     } else {
                         Ok(formula)
@@ -307,23 +304,23 @@ fn parse_application<'a>(
 fn parse_term_as_type<'a>(
     ctx: &Context<'a>,
     p: Pair<'a, Rule>,
-    memory: &HashMap<&'a str, MFormula>,
-    mtype: &RcType,
-) -> Result<MFormula, E> {
+    memory: &HashMap<&'a str, Formula>,
+    mtype: &Sort,
+) -> Result<Formula, E> {
     let span = p.as_span();
     let r = parse_term(ctx, p, memory)?;
-    if &r.get_type() == mtype {
+    if r.get_sort() == mtype {
         Ok(r)
     } else {
-        perr!(span; "wrong type, expected {} got {}", mtype, r.get_type())
+        perr!(span; "wrong type, expected {} got {}", mtype, r.get_sort())
     }
 }
 
 fn parse_if_then_else<'a>(
     ctx: &Context<'a>,
     p: Pair<'a, Rule>,
-    memory: &HashMap<&'a str, MFormula>,
-) -> Result<MFormula, E> {
+    memory: &HashMap<&'a str, Formula>,
+) -> Result<Formula, E> {
     match_or_err!(Rule::if_then_else, p; {
         let mut inner_rule = p.into_inner();
 
@@ -340,8 +337,8 @@ fn parse_if_then_else<'a>(
 fn parse_term<'a>(
     ctx: &Context<'a>,
     p: Pair<'a, Rule>,
-    memory: &HashMap<&'a str, MFormula>,
-) -> Result<MFormula, E> {
+    memory: &HashMap<&'a str, Formula>,
+) -> Result<Formula, E> {
     match_or_err!(Rule::term, p; {
         let mut inner_rule = p.into_inner();
         let np = inner_rule.next().unwrap();
@@ -355,7 +352,7 @@ fn parse_term<'a>(
 fn parse_cnf<'a>(
     ctx: &Context<'a>,
     p: Pair<'a, Rule>,
-    memory: &HashMap<&'a str, MFormula>,
-) -> Result<MCNF, E> {
+    memory: &HashMap<&'a str, Formula>,
+) -> Result<CNF, E> {
     todo!()
 }

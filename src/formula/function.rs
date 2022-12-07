@@ -53,4 +53,16 @@ impl Function {
             output_sort,
         }))
     }
+
+    pub fn arity(&self) -> usize {
+        self.0.input_sorts.len()
+    }
+
+    pub fn get_input_sorts(&self) -> &[Sort] {
+        self.0.as_ref().input_sorts.as_slice()
+    }
+
+    pub fn get_output_sort(&self) -> &Sort {
+        &self.0.output_sort
+    }
 }

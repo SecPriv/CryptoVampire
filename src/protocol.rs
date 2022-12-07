@@ -1,4 +1,7 @@
-use crate::formula::{MFormula, RcType, MCNF};
+use crate::formula::{
+    formula::{Formula, CNF},
+    sort::Sort,
+};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub struct Protocol {
@@ -13,13 +16,13 @@ impl Protocol {
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Step {
-    parameters: Vec<RcType>,
-    condition: MCNF,
-    message: MFormula,
+    parameters: Vec<Sort>,
+    condition: CNF,
+    message: Formula,
 }
 
 impl Step {
-    pub fn new(parameters: Vec<RcType>, condition: MCNF, message: MFormula) -> Self {
+    pub fn new(parameters: Vec<Sort>, condition: CNF, message: Formula) -> Self {
         Self {
             parameters,
             condition,
