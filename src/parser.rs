@@ -2,7 +2,10 @@ extern crate pest;
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    formula::{Formula, Function, MFormula, RcFunction, RcType, AS_MSG, BOOL, MCNF, MSG, NONCE},
+    formula::{
+        builtins::{functions::*, types::*},
+        Formula, Function, MFormula, RcFunction, RcType, MCNF,
+    },
     protocol::Protocol,
 };
 
@@ -88,21 +91,32 @@ struct Context<'a> {
     steps: HashSet<&'a str>,
 }
 
-const IF_THEN_ELSE_NAME: &'static str = "m$item";
+const FORBIDDEN_NAMES: &'static [&'static str] = &[
+    "subterm", "ite", "=", "<", ">", "assert", "if", "then", "else",
+];
 
 pub fn parse_protocol(str: &str) -> Result<Protocol, E> {
     let mut ctx = Context::default();
 
-    ctx.types.insert("bool", BOOL.clone());
-    ctx.types.insert("msg", MSG.clone());
-    ctx.funs.insert("as_msg", AS_MSG.clone());
-    ctx.funs.insert(
-        IF_THEN_ELSE_NAME,
-        Function::new_rc(
-            IF_THEN_ELSE_NAME,
-            vec![BOOL.clone(), MSG.clone(), MSG.clone()],
-            MSG.clone(),
-        ),
+    ctx.types.extend(
+        [
+            (BOOL_NAME, BOOL.clone()),
+            (MSG_NAME, MSG.clone()),
+            (NONCE_NAME, NONCE.clone()),
+        ]
+        .into_iter(),
+    );
+    ctx.funs.extend(
+        [
+            (IF_THEN_ELSE_NAME, IF_THEN_ELSE.clone()),
+            (AND_NAME, AND.clone()),
+            (OR_NAME, OR.clone()),
+            (NOT_NAME, NOT.clone()),
+            (NONCE_MSG_NAME, NONCE_MSG.clone()),
+            (TRUE_F_NAME, TRUE_F.clone()),
+            (FALSE_F_NAME, FALSE_F.clone()),
+        ]
+        .into_iter(),
     );
 
     let c = MainParser::parse(Rule::content, str)?.next().unwrap();
@@ -280,7 +294,7 @@ fn parse_application<'a>(
                 } else {
                     let formula = Formula::Fun(fun.clone(), args);
                     if formula.get_type() == NONCE.clone() {
-                        Ok(Formula::Fun(AS_MSG.clone(), vec![formula]))
+                        Ok(Formula::Fun(NONCE_MSG.clone(), vec![formula]))
                     } else {
                         Ok(formula)
                     }
