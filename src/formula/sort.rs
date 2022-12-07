@@ -59,4 +59,8 @@ impl Sort {
             name: str.to_owned(),
         }))
     }
+
+    pub fn name(&self) -> &str {
+        &&self.0.name
+    }
 }

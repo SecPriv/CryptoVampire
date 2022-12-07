@@ -44,7 +44,7 @@ macro_rules! var {
             sort: $sort,
         })
     };
-    ($id:expr, $sort:expr) => {
+    ($id:expr; $sort:expr) => {
         crate::formula::formula::Formula::Var(crate::formula::formula::Variable {
             id: $id,
             sort: $sort,
@@ -56,7 +56,7 @@ macro_rules! fun {
     ($f:pat, $args:pat) => {
         crate::formula::formula::Formula::Fun($f, $args)
     };
-    ($f:expr, $($args:expr),*) => {
+    ($f:expr; $($args:expr),*) => {
         crate::formula::formula::Formula::Fun($f.clone(), vec![$($args,)*])
     };
 }
@@ -65,7 +65,7 @@ macro_rules! quant {
     ($f:pat, $args:pat) => {
         crate::formula::formula::Formula::Quantifier($f, $args)
     };
-    ($f:expr, $($args:expr),*) => {
+    ($f:expr; $($args:expr),*) => {
         crate::formula::formula::Formula::Quantifier($f.clone(), vec![$($args,)*])
     };
 }
@@ -78,5 +78,17 @@ impl Formula {
             fun!(f, _) => f.get_output_sort(),
             quant!(q, _) => q.get_output_sort(),
         }
+    }
+}
+
+impl Variable {
+    pub fn new(id: usize, sort: Sort) -> Self {
+        Self { id, sort }
+    }
+}
+
+impl CNF {
+    pub fn new(f: Vec<Vec<Formula>>) -> Self {
+        CNF(f)
     }
 }

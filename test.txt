@@ -1,0 +1,10 @@
+type index
+
+fun tuple(msg, msg):msg
+fun sel1of2(msg):msg;
+fun sel2of2(msg):msg
+
+step m_step(i:index) {
+    forall (j:index) {sel1of2(input(m_step(i))) == sel2of2(input(m_step(i)))}
+    && sel1of2(input(m_step(i))) != fail || true
+} { fail }

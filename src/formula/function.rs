@@ -11,6 +11,7 @@ struct InnerFunction {
     name: String,
     input_sorts: Vec<Sort>,
     output_sort: Sort,
+    from_step: bool,
 }
 
 impl Debug for Function {
@@ -51,6 +52,16 @@ impl Function {
             name: name.to_owned(),
             input_sorts,
             output_sort,
+            from_step: false,
+        }))
+    }
+
+    pub fn new_from_step(name: &str, input_sorts: Vec<Sort>, output_sort: Sort) -> Self {
+        Function(Arc::new(InnerFunction {
+            name: name.to_owned(),
+            input_sorts,
+            output_sort,
+            from_step: true,
         }))
     }
 
@@ -64,5 +75,9 @@ impl Function {
 
     pub fn get_output_sort(&self) -> &Sort {
         &self.0.output_sort
+    }
+
+    pub fn name(&self) -> &str {
+        &self.0.name
     }
 }

@@ -7,10 +7,11 @@ pub mod types {
     new_type!(BOOL, "bool");
     new_type!(MSG, "msg");
     new_type!(NONCE, "nonce");
+    new_type!(STEP, "step");
 }
 
 pub mod functions {
-    use crate::formula::formula::Formula;
+    use crate::formula::formula::{fun, Formula};
 
     use super::super::function::Function;
     use super::{macros::new_fun, types::*};
@@ -24,21 +25,28 @@ pub mod functions {
     new_fun!(NOT, "not"; BOOL ; BOOL);
     new_fun!(TRUE, "true"; ; BOOL);
     new_fun!(FALSE, "false"; ; BOOL);
+    new_fun!(EQUALITY, "=="; MSG, MSG; BOOL);
+    new_fun!(INPUT, "input"; STEP; MSG);
+    new_fun!(FAIL, "fail" ; ; MSG);
 
     pub fn f_true() -> Formula {
-        Formula::Fun(TRUE.clone(), vec![])
+        fun!(TRUE; )
     }
 
     pub fn f_false() -> Formula {
-        Formula::Fun(FALSE.clone(), vec![])
+        fun!(FALSE; )
     }
 
     pub fn f_and(a: Formula, b: Formula) -> Formula {
-        Formula::Fun(AND.clone(), vec![a, b])
+        fun!(AND; a, b)
     }
 
     pub fn f_or(a: Formula, b: Formula) -> Formula {
-        Formula::Fun(OR.clone(), vec![a, b])
+        fun!(OR; a, b)
+    }
+
+    pub fn not(a: Formula) -> Formula {
+        fun!(NOT; a)
     }
 }
 
