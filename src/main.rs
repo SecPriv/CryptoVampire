@@ -2,28 +2,20 @@
 // #![feature(box_patterns)]
 
 use std::{
-    fs::{read_to_string, File},
-    path::Path,
+    fs::{read_to_string}, path::Path, env,
 };
 
 use automator::parser::parse_protocol;
 
-#[macro_use]
 extern crate pest_derive;
 
-#[macro_use]
 extern crate paste;
 
 fn main() {
-    println!("Hello, world!");
+    let args: Vec<String> = env::args().collect();
+    let path = Path::new(&args[1]);
 
-    // let t = "let ceci_Est_un_tests -> bool;
-
-    // step reader() {true && &(i) {false(i) || true}}{empty}";
-
-    // parse_protocol(t);
-
-    let p = match parse_protocol(&read_to_string("test.txt").expect("file not found")) {
+    let p = match parse_protocol(&read_to_string(path).expect("file not found")) {
         Ok(p) => p,
         Err(e) => {
             panic!("{}", e)

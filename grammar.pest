@@ -1,4 +1,4 @@
-content = {SOI ~ (declaration | step)+ ~ EOI}
+content = {SOI ~ (declaration | step | assertion | order)+ ~ query ~ EOI}
 
 WHITESPACE = _{ " " | "\t" | NEWLINE }
 COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
@@ -23,13 +23,14 @@ declaration = { declare_type | declare_function }
 typed_arguments = {("(" ~ (variable_binding ~ ",")* ~ variable_binding? ~ ")")?}
     variable_binding = {variable ~ ":" ~ type_name }
 
-term = {if_then_else | application | find_such_that }
+term = {if_then_else | find_such_that | application }
 application = {(function | variable) ~ ("(" ~ (term ~ ",")* ~ term? ~ ")")?}
 if_then_else = {"if"~ inner_cond_if ~ bracketed_term ~ "else" ~ bracketed_term}
     inner_cond_if = _{ cnf | "(" ~ cnf ~ ")"}
-find_such_that = {"try" ~ WHITESPACE+ ~ "find" ~ 
-                    typed_arguments ~ "{" ~ cnf ~ "}" ~
-                    "such" ~ WHITESPACE ~"that" ~ bracketed_term ~
+find_such_that = {"try" ~ "find" ~ 
+                    typed_arguments ~
+                    "such" ~ "that"  ~ "{" ~ cnf ~ "}" ~
+                    "then" ~ bracketed_term ~
                     "else" ~ bracketed_term}
 bracketed_term = _{"{" ~ term ~ "}"}
 
@@ -52,3 +53,11 @@ disjunction = {inner_disjunction ~ ("||" ~ inner_disjunction)*}
 step = {"step" ~ step_name ~ typed_arguments ~
          "{" ~ cnf ~ "}" ~ 
          "{" ~ term ~ "}" ~ ";"?}
+
+assertion = {"assert" ~ cnf ~ ";"?}
+query = {"query" ~ cnf ~ ";"?}
+
+order = {"order" ~ quantifier_op ~ typed_arguments ~ 
+    (inner_order | "{" ~ inner_order ~ "}") ~ ";"?}
+    inner_order = _{application ~ ordering_operation ~ application}
+    ordering_operation = _{"<" | "<>" | ">" }

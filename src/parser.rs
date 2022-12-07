@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use crate::{
     formula::{
         builtins::{functions::*, types::*},
-        formula::{fun, quant, var, Formula, Variable, CNF},
-        function::{self, Function},
+        formula::{fun, quant, Formula, Variable, CNF},
+        function::{Function},
         quantifier::Quantifier,
         sort::Sort,
     },
@@ -92,9 +92,9 @@ impl<'a> Context<'a> {
     fn to_protocol(self) -> Protocol {
         let Context { types, funs, steps } = self;
         Protocol::new(
-            steps.into_iter().map(|(k, v)| v),
-            funs.into_iter().map(|(k, v)| v),
-            types.into_iter().map(|(k, v)| v),
+            steps.into_iter().map(|(_k, v)| v),
+            funs.into_iter().map(|(_k, v)| v),
+            types.into_iter().map(|(_k, v)| v),
         )
     }
 }
@@ -136,11 +136,20 @@ pub fn parse_protocol(str: &str) -> Result<Protocol, E> {
 
     for p in c.into_inner() {
         match p.as_rule() {
-            Rule::declaration => parse_declaration(&mut ctx, p)?,
-            Rule::step => {
-                parse_step(&mut ctx, p)?;
-            }
             Rule::EOI => (),
+            Rule::declaration => parse_declaration(&mut ctx, p)?,
+            Rule::step => {parse_step(&mut ctx, p)?;}
+            Rule::assertion => {
+                let mut memory = HashMap::new();
+                parse_cnf(&ctx, 
+                    p.into_inner().next().unwrap(), &mut memory)?;
+            }
+            Rule::query => {
+                let mut memory = HashMap::new();
+                parse_cnf(&ctx, 
+                    p.into_inner().next().unwrap(), &mut memory)?;
+            }
+            Rule::order => {()}
             r => unreachable!("{:?}", r),
         }
     }
@@ -152,30 +161,7 @@ fn parse_type(ctx: &Context, p: Pair<Rule>) -> Result<Sort, E> {
         match ctx.types.get(p.as_str()) {
             Some(f) => Ok(f.clone()),
             _ => {
-                panic!("{:?}", ctx.types);
                 uerr!(p, "type")}
-        }
-    })
-}
-
-fn parse_function_name(ctx: &Context, p: Pair<Rule>) -> Result<Function, E> {
-    match_or_err!(Rule::function, p; {
-        match ctx.funs.get(p.as_str()) {
-            Some(f) => Ok(f.clone()),
-            _ => uerr!(p, "function")
-        }
-    })
-}
-
-fn parse_variable<'a>(
-    ctx: &Context<'a>,
-    p: Pair<'a, Rule>,
-    memory: &HashMap<&'a str, Formula>,
-) -> Result<Formula, E> {
-    match_or_err!(Rule::variable, p; {
-        match memory.get(p.as_str()) {
-            Some(var) => Ok(var.clone()),
-            _ => uerr!(p, "variable")
         }
     })
 }
@@ -210,7 +196,7 @@ fn parse_variable_binding<'a>(
 
 fn parse_declare_function_args<'a>(ctx: &Context<'a>, p: Pair<'a, Rule>) -> Result<Vec<Sort>, E> {
     match_or_err!(Rule::declare_function_args, p; {
-        let mut inner_rule = p.into_inner();
+        let inner_rule = p.into_inner();
         inner_rule.map(|p2| parse_type(ctx, p2)).collect()
     })
 }
@@ -352,6 +338,7 @@ fn parse_term<'a>(
         match np.as_rule() {
             Rule::application => parse_application(ctx, np, memory),
             Rule::if_then_else => parse_if_then_else(ctx, np, memory),
+            Rule::find_such_that => parse_find_such_that(ctx, np, memory),
             _ => unreachable!()
         }
     })
@@ -502,7 +489,7 @@ fn parse_step<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Result<Step, E> {
         }
 
 
-        let (to_be_freed, sorts): (Vec<_>, Vec<_>) =
+        let (_to_be_freed, sorts): (Vec<_>, Vec<_>) =
             parse_typed_arguments(ctx, inner.next().unwrap(), &mut memory)?.into_iter().map(|(s,v)| (s,v.sort)).unzip();
 
         let f = Function::new_from_step(
