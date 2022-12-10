@@ -1,4 +1,4 @@
 mod formula;
 pub mod parser;
-pub mod protocol;
+mod problem;
 pub mod utils;

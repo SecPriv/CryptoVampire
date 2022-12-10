@@ -1,9 +1,7 @@
 // #![feature(box_syntax)]
 // #![feature(box_patterns)]
 
-use std::{
-    fs::{read_to_string}, path::Path, env,
-};
+use std::{env, fs::read_to_string, path::Path};
 
 use automator::parser::parse_protocol;
 

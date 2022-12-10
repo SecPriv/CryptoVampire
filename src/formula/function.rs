@@ -1,7 +1,19 @@
 use std::sync::Arc;
 
+use bitflags::bitflags;
+
 use super::sort::Sort;
 use core::fmt::Debug;
+
+const BASE_SKOLEM_NAME: &'static str = "m$sk_";
+bitflags! {
+    #[derive(Default)]
+    struct Flags: u32 {
+        const FROM_STEP =       0b00001;
+        const SKOLEM =          0b00010;
+        const FIND_SUCH_THAT =  0b00100;
+    }
+}
 
 #[derive(Hash)]
 pub struct Function(Arc<InnerFunction>);
@@ -11,7 +23,7 @@ struct InnerFunction {
     name: String,
     input_sorts: Vec<Sort>,
     output_sort: Sort,
-    from_step: bool,
+    flags: Flags,
 }
 
 impl Debug for Function {
@@ -52,7 +64,7 @@ impl Function {
             name: name.to_owned(),
             input_sorts,
             output_sort,
-            from_step: false,
+            flags: Flags::empty(),
         }))
     }
 
@@ -61,7 +73,16 @@ impl Function {
             name: name.to_owned(),
             input_sorts,
             output_sort,
-            from_step: true,
+            flags: Flags::FROM_STEP,
+        }))
+    }
+
+    pub fn new_skolem(nbr: usize, input_sorts: Vec<Sort>, output_sort: Sort) -> Self {
+        Function(Arc::new(InnerFunction {
+            name: format!("{}{}", BASE_SKOLEM_NAME, nbr),
+            input_sorts,
+            output_sort,
+            flags: Flags::SKOLEM,
         }))
     }
 
@@ -79,5 +100,9 @@ impl Function {
 
     pub fn name(&self) -> &str {
         &self.0.name
+    }
+
+    pub fn is_skolem(&self) -> bool {
+        self.0.flags.contains(Flags::SKOLEM)
     }
 }

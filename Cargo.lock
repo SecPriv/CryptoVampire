@@ -12,6 +12,8 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 name = "automator"
 version = "0.1.0"
 dependencies = [
+ "bitflags",
+ "ord-utils",
  "paste",
  "pest",
  "pest_derive",
@@ -120,6 +122,11 @@ name = "once_cell"
 version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "86f0b0d4bf799edbc74508c1e8bf170ff5f41238e5f8225603ca7caaae2b7860"
+
+[[package]]
+name = "ord-utils"
+version = "0.1.0"
+source = "git+https://github.com/puyral/ord-utils#d4b6da69ec4cf33a2e4b0b14cb737a702dd56fa6"
 
 [[package]]
 name = "parking_lot"

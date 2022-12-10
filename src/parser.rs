@@ -5,11 +5,11 @@ use crate::{
     formula::{
         builtins::{functions::*, types::*},
         formula::{fun, quant, Formula, Variable, CNF},
-        function::{Function},
+        function::Function,
         quantifier::Quantifier,
         sort::Sort,
     },
-    protocol::{Protocol, Step},
+    problem::protocol::{Protocol, Step},
 };
 
 use pest::{
@@ -138,18 +138,18 @@ pub fn parse_protocol(str: &str) -> Result<Protocol, E> {
         match p.as_rule() {
             Rule::EOI => (),
             Rule::declaration => parse_declaration(&mut ctx, p)?,
-            Rule::step => {parse_step(&mut ctx, p)?;}
+            Rule::step => {
+                parse_step(&mut ctx, p)?;
+            }
             Rule::assertion => {
                 let mut memory = HashMap::new();
-                parse_cnf(&ctx, 
-                    p.into_inner().next().unwrap(), &mut memory)?;
+                parse_cnf(&ctx, p.into_inner().next().unwrap(), &mut memory)?;
             }
             Rule::query => {
                 let mut memory = HashMap::new();
-                parse_cnf(&ctx, 
-                    p.into_inner().next().unwrap(), &mut memory)?;
+                parse_cnf(&ctx, p.into_inner().next().unwrap(), &mut memory)?;
             }
-            Rule::order => {()}
+            Rule::order => (),
             r => unreachable!("{:?}", r),
         }
     }
