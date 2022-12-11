@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{slice::Iter, sync::Arc};
 
 #[derive(Debug, Eq, Hash, Default)]
 pub struct RcEq<S>(pub Arc<S>);
@@ -35,5 +35,33 @@ impl<S> Clone for RcEq<S> {
 impl<S> RcEq<S> {
     pub fn new(s: S) -> Self {
         RcEq(Arc::new(s))
+    }
+}
+
+pub struct IntersectionVecIterator<'a, T> {
+    a: &'a [T],
+    b: Iter<'a, T>,
+}
+
+impl<'a, T> IntersectionVecIterator<'a, T> {
+    pub fn new(a: &'a [T], b: &'a [T]) -> Self {
+        let (a, b) = ord_utils::sort_by(|&a, &b| a.len() <= b.len(), a, b);
+        IntersectionVecIterator { a, b: b.iter() }
+    }
+}
+
+impl<'a, T> Iterator for IntersectionVecIterator<'a, T>
+where
+    T: Eq,
+{
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let n = self.b.next()?;
+        if self.a.contains(n) {
+            Some(n)
+        } else {
+            self.next()
+        }
     }
 }

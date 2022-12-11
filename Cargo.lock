@@ -126,7 +126,7 @@ checksum = "86f0b0d4bf799edbc74508c1e8bf170ff5f41238e5f8225603ca7caaae2b7860"
 [[package]]
 name = "ord-utils"
 version = "0.1.0"
-source = "git+https://github.com/puyral/ord-utils#d4b6da69ec4cf33a2e4b0b14cb737a702dd56fa6"
+source = "git+https://github.com/puyral/ord-utils#7b99295931fb79b868e9a5134a408754def4aead"
 
 [[package]]
 name = "parking_lot"
@@ -314,9 +314,9 @@ dependencies = [
 
 [[package]]
 name = "typenum"
-version = "1.15.0"
+version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dcf81ac59edc17cc8697ff311e8f5ef2d99fcbd9817b34cec66f90b6c3dfd987"
+checksum = "497961ef93d974e23eb6f433eb5fe1b7930b659f06d12dec6fc44a8f554c0bba"
 
 [[package]]
 name = "ucd-trie"
