@@ -19,4 +19,12 @@ impl Quantifier {
             Quantifier::FindSuchThat { variable: _ } => &MSG,
         }
     }
+
+    pub fn get_variables(&self) -> &[Variable] {
+        match self {
+            Quantifier::Exists { variable } => variable.as_slice(),
+            Quantifier::Forall { variable } => variable.as_slice(),
+            Quantifier::FindSuchThat { variable } => variable.as_slice(),
+        }
+    }
 }

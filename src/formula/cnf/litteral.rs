@@ -5,7 +5,7 @@ use crate::formula::{
     function::Function,
 };
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum Litteral {
     Var(Variable),
     Fun(Function, Vec<Litteral>),

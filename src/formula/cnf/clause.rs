@@ -1,4 +1,4 @@
-use std::{collections::HashSet};
+use std::{collections::HashSet, ops::Add};
 
 use crate::formula::formula::Variable;
 
@@ -74,5 +74,25 @@ impl Clause {
 
     pub fn variables_unique_big(&self) -> HashSet<Variable> {
         self.variables_iter().map(|v| v.clone()).collect()
+    }
+}
+
+impl Add for &Clause {
+    type Output = Clause;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Clause::new(
+            self.litterals()
+                .iter()
+                .chain(rhs.litterals().iter())
+                .map(|f| f.clone())
+                .collect(),
+        )
+    }
+}
+
+impl FromIterator<Litteral> for Clause {
+    fn from_iter<T: IntoIterator<Item = Litteral>>(iter: T) -> Self {
+        Self::new(iter.into_iter().collect())
     }
 }
