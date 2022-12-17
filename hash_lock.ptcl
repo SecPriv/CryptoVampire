@@ -24,8 +24,8 @@ step reader2(i:session)
     {
         try find (j:index)
             such that {
-                hash(tuple(nr(i),sel1of2(input(reader2(i)))), key(j)) 
-                    == sel2of2(input(reader2(i)))
+                ( hash(tuple(nr(i),sel1of2(input(reader2(i)))), key(j)) 
+                    == sel2of2(input(reader2(i))) )
             } then { ok } else { ko }
     }
 
@@ -41,8 +41,8 @@ step tag(i:session, j:index)
 
 assert
     forall (m1:msg, m2:msg) {
-        m1 == sel1of2(tuple(m1,m2)) &&
-        m1 == sel1of2(tuple(m1,m2))
+        ((m1 == sel1of2(tuple(m1,m2))) &&
+        (m1 == sel1of2(tuple(m1,m2))))
     }
 
 order forall (bijour:session) 

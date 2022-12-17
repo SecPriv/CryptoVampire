@@ -1,4 +1,4 @@
-content = {SOI ~ (declaration | step | assertion | order)+ ~ query ~ EOI}
+content = {SOI ~ ( declaration | step | assertion | order | query | temporary )*  ~ EOI}
 
 WHITESPACE = _{ " " | "\t" | NEWLINE }
 COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
@@ -11,8 +11,35 @@ type_name = @{ident}
 function = @{ident}
 variable = @{underscore? ~ ident}
 step_name = @{ident}
-operation = @{ inner_symbols ~ ("&" | "|" | inner_symbols)*}
-    inner_symbols = _{"="| "/"| "."| "<"| ">"| "^"| "%" | "#"| "*" | "!"}
+operation = _{ eq | neq | or | and }
+    eq = { "==" }
+    neq = { "!=" | "<>" }
+    or = { "||" }
+    and = { "&&" }
+
+typed_arguments = {("(" ~ (variable_binding ~ ",")* ~ variable_binding? ~ ")")?}
+    variable_binding = {variable ~ ":" ~ type_name }
+
+commun_base = { if_then_else | find_such_that | quantifier | application } 
+term = { /* "(" ~ inner_term ~ ")" | */ inner_term }
+    inner_term = { commun_base | infix_term}
+bracketed_term = _{"{" ~ term ~ "}"}
+
+infix_term = {"(" ~ term ~ (operation ~ term)+ ~ ")" }
+    // inner_infix_term = { commun_base ~ infix_term }
+
+application = {(function | variable) ~ ("(" ~ (term ~ ",")* ~ term? ~ ")")?}
+if_then_else = {"if"~ term ~ bracketed_term ~ "else" ~ bracketed_term}
+find_such_that = {"try" ~ "find" ~ 
+                    typed_arguments ~
+                    "such" ~ "that"  ~ bracketed_term ~
+                    "then" ~ bracketed_term ~
+                    "else" ~ bracketed_term}
+
+quantifier = {quantifier_op ~ typed_arguments ~ bracketed_term }
+    quantifier_op = _{exists | forall }
+	forall = {"forall"}
+    exists = {"exists"}
 
 declaration = { declare_type | declare_function }
     declare_type = {"type" ~ type_name ~ ";"?}
@@ -20,42 +47,15 @@ declaration = { declare_type | declare_function }
                           ":" ~ type_name ~ ";"?}
        declare_function_args = {("(" ~ (type_name ~ ",")* ~ type_name? ~ ")")?}
 
-typed_arguments = {("(" ~ (variable_binding ~ ",")* ~ variable_binding? ~ ")")?}
-    variable_binding = {variable ~ ":" ~ type_name }
-
-term = {if_then_else | find_such_that | application }
-application = {(function | variable) ~ ("(" ~ (term ~ ",")* ~ term? ~ ")")?}
-if_then_else = {"if"~ inner_cond_if ~ bracketed_term ~ "else" ~ bracketed_term}
-    inner_cond_if = _{ cnf | "(" ~ cnf ~ ")"}
-find_such_that = {"try" ~ "find" ~ 
-                    typed_arguments ~
-                    "such" ~ "that"  ~ "{" ~ cnf ~ "}" ~
-                    "then" ~ bracketed_term ~
-                    "else" ~ bracketed_term}
-bracketed_term = _{"{" ~ term ~ "}"}
-
-quantifier = {quantifier_op ~ typed_arguments ~ "{" ~ cnf ~ "}"}
-    quantifier_op = _{exists | forall }
-	forall = {"forall"}
-    exists = {"exists"}
-
-infix_term = { inner_infix_term | ("(" ~ inner_infix_term ~ ")")}
-    inner_infix_term = _{term ~ operation ~ term}
-
-
-cnf = {inner_cnf ~ ("&&" ~ inner_cnf)*}
-    inner_cnf = _{disjunction | ("(" ~ disjunction ~ ")")}
-
-disjunction = {inner_disjunction ~ ("||" ~ inner_disjunction)*}
-    inner_disjunction = _{ bool | ( "(" ~ bool ~ ")")}
-	bool = {infix_term | quantifier | term }
-    
 step = {"step" ~ step_name ~ typed_arguments ~
-         "{" ~ cnf ~ "}" ~ 
-         "{" ~ term ~ "}" ~ ";"?}
+         bracketed_term ~ 
+         bracketed_term ~ ";"?}
 
-assertion = {"assert" ~ cnf ~ ";"?}
-query = {"query" ~ cnf ~ ";"?}
+assertion = {"assert" ~ term ~ ";"?}
+
+query = {"query" ~ term ~ ";"?}
+
+temporary = {"temporary" ~ term ~ ";"?}
 
 order = {"order" ~ quantifier_op ~ typed_arguments ~ 
     (inner_order | "{" ~ inner_order ~ "}") ~ ";"?}

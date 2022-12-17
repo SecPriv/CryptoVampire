@@ -10,21 +10,15 @@ use crate::formula::{
 #[derive(Debug)]
 pub struct Protocol {
     steps: HashMap<String, Step>,
-    functions: HashMap<String, Function>,
-    sorts: Vec<Sort>,
 }
 
 impl Protocol {
-    pub fn new<I, J, K>(steps: I, functions: J, sorts: K) -> Self
+    pub fn new<I>(steps: I,) -> Self
     where
         I: Iterator<Item = Step>,
-        J: Iterator<Item = Function>,
-        K: Iterator<Item = Sort>,
     {
         Self {
             steps: steps.map(|s| (s.name().to_owned(), s)).collect(),
-            functions: functions.map(|f| (f.name().to_owned(), f)).collect(),
-            sorts: sorts.collect(),
         }
     }
 }
@@ -36,12 +30,12 @@ pub struct Step(Arc<InnerStep>);
 struct InnerStep {
     name: String,
     parameters: Vec<Sort>,
-    condition: CNF,
+    condition: Formula,
     message: Formula,
 }
 
 impl Step {
-    pub fn new(name: &str, parameters: Vec<Sort>, condition: CNF, message: Formula) -> Self {
+    pub fn new(name: &str, parameters: Vec<Sort>, condition: Formula, message: Formula) -> Self {
         Self(Arc::new(InnerStep {
             name: name.to_owned(),
             parameters,

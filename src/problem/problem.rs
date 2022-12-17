@@ -12,4 +12,5 @@ pub struct Problem {
     assertions: Vec<Formula>,
     query: Vec<Formula>,
     order: Vec<Formula>,
+    temporary: Vec<Formula>
 }
