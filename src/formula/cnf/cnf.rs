@@ -5,7 +5,7 @@ use crate::formula::{env::Environement, sort::Sort};
 
 use super::{
     super::{
-        formula::{Formula as F, Variable},
+        formula::{RichFormula as F, Variable},
         function::Function,
     },
     clause::Clause,

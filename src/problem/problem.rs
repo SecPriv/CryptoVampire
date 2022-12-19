@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::formula::{formula::Formula, function::Function, sort::Sort};
+use crate::formula::{formula::RichFormula, function::Function, sort::Sort};
 
 use super::protocol::Step;
 
@@ -9,8 +9,8 @@ pub struct Problem {
     steps: HashMap<String, Step>,
     functions: HashMap<String, Function>,
     sorts: Vec<Sort>,
-    assertions: Vec<Formula>,
-    query: Vec<Formula>,
-    order: Vec<Formula>,
-    temporary: Vec<Formula>
+    assertions: Vec<RichFormula>,
+    query: Vec<RichFormula>,
+    order: Vec<RichFormula>,
+    temporary: Vec<RichFormula>
 }

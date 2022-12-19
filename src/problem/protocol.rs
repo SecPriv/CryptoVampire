@@ -2,7 +2,7 @@ use core::fmt::Debug;
 use std::{collections::HashMap, sync::Arc};
 
 use crate::formula::{
-    formula::{Formula, CNF},
+    formula::{RichFormula, CNF},
     function::Function,
     sort::Sort,
 };
@@ -30,12 +30,12 @@ pub struct Step(Arc<InnerStep>);
 struct InnerStep {
     name: String,
     parameters: Vec<Sort>,
-    condition: Formula,
-    message: Formula,
+    condition: RichFormula,
+    message: RichFormula,
 }
 
 impl Step {
-    pub fn new(name: &str, parameters: Vec<Sort>, condition: Formula, message: Formula) -> Self {
+    pub fn new(name: &str, parameters: Vec<Sort>, condition: RichFormula, message: RichFormula) -> Self {
         Self(Arc::new(InnerStep {
             name: name.to_owned(),
             parameters,

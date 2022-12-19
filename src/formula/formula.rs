@@ -1,10 +1,20 @@
+use std::fmt;
+
 use super::{function::Function, quantifier::Quantifier, sort::Sort};
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub enum RichFormula {
+    Var(Variable),
+    Fun(Function, Vec<RichFormula>),
+    Quantifier(Quantifier, Vec<RichFormula>),
+}
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum Formula {
     Var(Variable),
     Fun(Function, Vec<Formula>),
-    Quantifier(Quantifier, Vec<Formula>),
+    Forall(Vec<Variable>, Box<Formula>),
+    Exists(Vec<Variable>, Box<Formula>),
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -13,24 +23,30 @@ pub struct Variable {
     pub sort: Sort,
 }
 
+impl fmt::Display for Variable {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "X{}", self.id)
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct CNF(Vec<Vec<Formula>>);
+pub struct CNF(Vec<Vec<RichFormula>>);
 
 use super::builtins::functions::{f_and, f_false, f_or, f_true, AND, FALSE, NOT, OR, TRUE};
-impl From<CNF> for Formula {
+impl From<CNF> for RichFormula {
     fn from(cnf: CNF) -> Self {
         from_conjunction(cnf.0.into_iter().map(|c| from_disjunction(c.into_iter())))
     }
 }
 
-fn from_disjunction(mut dis: impl Iterator<Item = Formula>) -> Formula {
+fn from_disjunction(mut dis: impl Iterator<Item = RichFormula>) -> RichFormula {
     match dis.next() {
         None => f_true(),
         Some(f) => dis.fold(f, f_or),
     }
 }
 
-fn from_conjunction(mut dis: impl Iterator<Item = Formula>) -> Formula {
+fn from_conjunction(mut dis: impl Iterator<Item = RichFormula>) -> RichFormula {
     match dis.next() {
         None => f_false(),
         Some(f) => dis.fold(f, f_and),
@@ -39,13 +55,13 @@ fn from_conjunction(mut dis: impl Iterator<Item = Formula>) -> Formula {
 
 macro_rules! var {
     ($id:pat, $sort:pat) => {
-        crate::formula::formula::Formula::Var(crate::formula::formula::Variable {
+        crate::formula::formula::RichFormula::Var(crate::formula::formula::Variable {
             id: $id,
             sort: $sort,
         })
     };
     ($id:expr; $sort:expr) => {
-        crate::formula::formula::Formula::Var(crate::formula::formula::Variable {
+        crate::formula::formula::RichFormula::Var(crate::formula::formula::Variable {
             id: $id,
             sort: $sort,
         })
@@ -54,24 +70,24 @@ macro_rules! var {
 
 macro_rules! fun {
     ($f:pat, $args:pat) => {
-        crate::formula::formula::Formula::Fun($f, $args)
+        crate::formula::formula::RichFormula::Fun($f, $args)
     };
     ($f:expr; $($args:expr),*) => {
-        crate::formula::formula::Formula::Fun($f.clone(), vec![$($args,)*])
+        crate::formula::formula::RichFormula::Fun($f.clone(), vec![$($args,)*])
     };
 }
 
 macro_rules! quant {
     ($f:pat, $args:pat) => {
-        crate::formula::formula::Formula::Quantifier($f, $args)
+        crate::formula::formula::RichFormula::Quantifier($f, $args)
     };
     ($f:expr; $($args:expr),*) => {
-        crate::formula::formula::Formula::Quantifier($f.clone(), vec![$($args,)*])
+        crate::formula::formula::RichFormula::Quantifier($f.clone(), vec![$($args,)*])
     };
 }
 pub(crate) use {fun, quant, var};
 
-impl Formula {
+impl RichFormula {
     pub fn get_sort(&self) -> &Sort {
         match self {
             var!(_, s) => s,
@@ -84,11 +100,11 @@ impl Formula {
         let mut r = Vec::new();
         let mut bounded = Vec::new();
 
-        fn aux<'a>(bounded: &mut Vec<&'a Variable>, r: &mut Vec<&'a Variable>, t: &'a Formula) {
+        fn aux<'a>(bounded: &mut Vec<&'a Variable>, r: &mut Vec<&'a Variable>, t: &'a RichFormula) {
             match t {
-                Formula::Fun(_, args) => args.iter().for_each(|f| aux(bounded, r, f)),
-                Formula::Var(v) if !bounded.contains(&v) => r.push(v),
-                Formula::Quantifier(q, args) => {
+                RichFormula::Fun(_, args) => args.iter().for_each(|f| aux(bounded, r, f)),
+                RichFormula::Var(v) if !bounded.contains(&v) => r.push(v),
+                RichFormula::Quantifier(q, args) => {
                     let vars = q.get_variables();
                     let n = vars.len();
                     bounded.extend(vars.into_iter());
@@ -102,9 +118,9 @@ impl Formula {
         r
     }
 
-    pub fn simplify(self) -> Formula {
+    pub fn simplify(self) -> RichFormula {
         match self {
-            Formula::Fun(f, args) => {
+            RichFormula::Fun(f, args) => {
                 let truef = fun!(TRUE;);
                 let falsef = fun!(FALSE;);
 
@@ -117,7 +133,7 @@ impl Formula {
                     } else if args[1] == truef {
                         args.into_iter().nth(0).unwrap()
                     } else {
-                        Formula::Fun(f, args)
+                        RichFormula::Fun(f, args)
                     }
                 } else if f.eq(&OR) {
                     let args: Vec<_> = args.into_iter().map(Self::simplify).collect();
@@ -128,25 +144,25 @@ impl Formula {
                     } else if args[1] == falsef {
                         args.into_iter().nth(0).unwrap()
                     } else {
-                        Formula::Fun(f, args)
+                        RichFormula::Fun(f, args)
                     }
                 } else if f.eq(&NOT) {
                     match args.into_iter().nth(0).unwrap() {
-                        Formula::Fun(f, args) => {
+                        RichFormula::Fun(f, args) => {
                             if f.eq(&AND) {
-                                Formula::Fun(OR.clone(), args).simplify()
+                                RichFormula::Fun(OR.clone(), args).simplify()
                             } else if f.eq(&OR) {
-                                Formula::Fun(AND.clone(), args).simplify()
+                                RichFormula::Fun(AND.clone(), args).simplify()
                             } else {
-                                Formula::Fun(f, args).simplify()
+                                RichFormula::Fun(f, args).simplify()
                             }
                         }
-                        Formula::Quantifier(_, _) => todo!(),
+                        RichFormula::Quantifier(_, _) => todo!(),
                         f => f,
                     }
                 } else {
                     let args: Vec<_> = args.into_iter().map(Self::simplify).collect();
-                    Formula::Fun(f, args)
+                    RichFormula::Fun(f, args)
                 }
             }
             _ => self,
@@ -161,7 +177,7 @@ impl Variable {
 }
 
 impl CNF {
-    pub fn new(f: Vec<Vec<Formula>>) -> Self {
+    pub fn new(f: Vec<Vec<RichFormula>>) -> Self {
         CNF(f)
     }
 }

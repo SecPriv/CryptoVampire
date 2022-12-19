@@ -1,7 +1,8 @@
-content = {SOI ~ ( declaration | step | assertion | order | query | temporary )*  ~ EOI}
+content = {SOI ~ (( declaration | step | assertion | order | query | lemma ) ~ EOL)*  ~ EOI}
 
 WHITESPACE = _{ " " | "\t" | NEWLINE }
 COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+EOL = _{ ";" | NEWLINE }
 
 ident = @{  ASCII_ALPHA ~ ( ASCII_ALPHANUMERIC | "_" | "-")* }
 underscore = {"_"}
@@ -42,22 +43,22 @@ quantifier = {quantifier_op ~ typed_arguments ~ bracketed_term }
     exists = {"exists"}
 
 declaration = { declare_type | declare_function }
-    declare_type = {"type" ~ type_name ~ ";"?}
+    declare_type = {"type" ~ type_name }
     declare_function = {"fun" ~ function ~ declare_function_args ~ 
-                          ":" ~ type_name ~ ";"?}
+                          ":" ~ type_name }
        declare_function_args = {("(" ~ (type_name ~ ",")* ~ type_name? ~ ")")?}
 
 step = {"step" ~ step_name ~ typed_arguments ~
          bracketed_term ~ 
-         bracketed_term ~ ";"?}
+         bracketed_term }
 
-assertion = {"assert" ~ term ~ ";"?}
+assertion = {"assert" ~ term }
 
-query = {"query" ~ term ~ ";"?}
+query = {"query" ~ term }
 
-temporary = {"temporary" ~ term ~ ";"?}
+lemma = {"lemma" ~ term }
 
 order = {"order" ~ quantifier_op ~ typed_arguments ~ 
-    (inner_order | "{" ~ inner_order ~ "}") ~ ";"?}
+    (inner_order | "{" ~ inner_order ~ "}") }
     inner_order = _{application ~ ordering_operation ~ application}
     ordering_operation = _{"<" | "<>" | ">" }

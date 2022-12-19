@@ -11,7 +11,7 @@ pub mod types {
 }
 
 pub mod functions {
-    use crate::formula::formula::{fun, Formula};
+    use crate::formula::formula::{fun, RichFormula};
 
     use super::super::function::Function;
     use super::{macros::new_fun, types::*};
@@ -28,24 +28,27 @@ pub mod functions {
     new_fun!(EQUALITY, "=="; MSG, MSG; BOOL);
     new_fun!(INPUT, "input"; STEP; MSG);
     new_fun!(FAIL, "fail" ; ; MSG);
+    new_fun!(LT, "lt"; STEP, STEP; BOOL);
+    new_fun!(HAPPENS, "happens"; STEP; BOOL);
+    new_fun!(IMPLIES, "=>"; BOOL, BOOL; BOOL);
 
-    pub fn f_true() -> Formula {
+    pub fn f_true() -> RichFormula {
         fun!(TRUE; )
     }
 
-    pub fn f_false() -> Formula {
+    pub fn f_false() -> RichFormula {
         fun!(FALSE; )
     }
 
-    pub fn f_and(a: Formula, b: Formula) -> Formula {
+    pub fn f_and(a: RichFormula, b: RichFormula) -> RichFormula {
         fun!(AND; a, b)
     }
 
-    pub fn f_or(a: Formula, b: Formula) -> Formula {
+    pub fn f_or(a: RichFormula, b: RichFormula) -> RichFormula {
         fun!(OR; a, b)
     }
 
-    pub fn not(a: Formula) -> Formula {
+    pub fn not(a: RichFormula) -> RichFormula {
         fun!(NOT; a)
     }
 }

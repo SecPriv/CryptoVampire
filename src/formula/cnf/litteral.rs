@@ -1,7 +1,7 @@
 use std::{collections::VecDeque, error::Error, fmt};
 
 use crate::formula::{
-    formula::{Formula as F, Variable},
+    formula::{RichFormula as F, Variable},
     function::Function,
 };
 

@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use crate::{
     formula::{
         builtins::{functions::*, types::*},
-        formula::{fun, quant, Formula, Variable, CNF},
+        formula::{fun, quant, RichFormula, Variable, CNF},
         function::Function,
         quantifier::Quantifier,
         sort::Sort,
@@ -87,10 +87,22 @@ struct Context<'a> {
     types: HashMap<&'a str, Sort>,
     funs: HashMap<&'a str, Function>,
     steps: HashMap<&'a str, Step>,
+    assertions: Vec<RichFormula>,
+    query: Option<RichFormula>,
+    lemma: Vec<RichFormula>,
+    order: Vec<RichFormula>,
 }
 impl<'a> Context<'a> {
     fn to_protocol(self) -> Protocol {
-        let Context { types, funs, steps } = self;
+        let Context { 
+            types, 
+            funs, 
+            steps,
+            assertions,
+            query,
+            lemma,
+            order
+        } = self;
         Protocol::new(steps.into_iter().map(|(_k, v)| v))
     }
 }
@@ -123,11 +135,14 @@ pub fn parse_protocol(str: &str) -> Result<Protocol, E> {
             (EQUALITY_NAME, EQUALITY.clone()),
             (INPUT_NAME, INPUT.clone()),
             (FAIL_NAME, FAIL.clone()),
+            (LT_NAME, LT.clone()),
+            (HAPPENS_NAME, HAPPENS.clone())
         ]
         .into_iter(),
     );
 
-    let c = MainParser::parse(Rule::content, str)?.next().unwrap();
+    let c = MainParser::parse(Rule::content, str)?
+            .next().unwrap();
     // println!("{:?}", c);
 
     for p in c.into_inner() {
@@ -139,13 +154,26 @@ pub fn parse_protocol(str: &str) -> Result<Protocol, E> {
             }
             Rule::assertion => {
                 let mut memory = HashMap::new();
-                parse_term_as(&ctx, p.into_inner().next().unwrap(), &mut memory, Some(&BOOL))?;
+                let assert = parse_term_as(
+                    &ctx, p.into_inner().next().unwrap(), 
+                    &mut memory, Some(&BOOL))?;
+                ctx.assertions.push(assert)
             }
             Rule::query => {
-                let mut memory = HashMap::new();
-                parse_term_as(&ctx, p.into_inner().next().unwrap(), &mut memory, Some(&BOOL))?;
+                if ctx.query.is_some() {
+                    perr!(p, "can't define two queries, use lemmas to prove intermediary results".to_owned())?;
+                } else {
+                    let mut memory = HashMap::new();
+                    let query = parse_term_as(
+                        &ctx, p.into_inner().next().unwrap(), 
+                        &mut memory, Some(&BOOL))?;
+                    ctx.query = Some(query);
+                }
             }
-            Rule::order => (),
+            Rule::order => {
+                let f = parse_order(&mut ctx, p)?;
+                ctx.order.push(f)
+            }
             r => unreachable!("{:?}", r),
         }
     }
@@ -234,7 +262,7 @@ fn parse_application<'a>(
     ctx: &Context<'a>,
     p: Pair<'a, Rule>,
     memory: &mut HashMap<&'a str, Variable>,
-) -> Result<Formula, E> {
+) -> Result<RichFormula, E> {
     match_or_err!(Rule::application, p; {
         let span = p.as_span();
 
@@ -244,7 +272,7 @@ fn parse_application<'a>(
         match memory.get(name.as_str()) {
             Some(var) => {
                 if inner_rule.next().is_none() {
-                    Ok(Formula::Var(var.clone()))
+                    Ok(RichFormula::Var(var.clone()))
                 } else {
                     perr!(span; "a varibale is not a function",)
                 }
@@ -278,9 +306,9 @@ fn parse_application<'a>(
                 if inner_rule.next().is_some() {
                     perr!(span; "too many arguments, expected {} got {}", fun.arity(), i)
                 } else {
-                    let formula = Formula::Fun(fun.clone(), args);
+                    let formula = RichFormula::Fun(fun.clone(), args);
                     if formula.get_sort() == &NONCE.clone() {
-                        Ok(Formula::Fun(NONCE_MSG.clone(), vec![formula]))
+                        Ok(RichFormula::Fun(NONCE_MSG.clone(), vec![formula]))
                     } else {
                         Ok(formula)
                     }
@@ -295,7 +323,7 @@ fn parse_term_as<'a>(
     p: Pair<'a, Rule>,
     memory: &mut HashMap<&'a str, Variable>,
     mtype: Option<&Sort>,
-) -> Result<Formula, E> {
+) -> Result<RichFormula, E> {
     match_or_err!(Rule::term, p; {
         let inner = p.into_inner().next().unwrap();
         parse_inner_term_as(ctx, inner, memory, mtype)
@@ -306,7 +334,7 @@ fn parse_commun_base<'a>(
     ctx: &Context<'a>,
     p: Pair<'a, Rule>,
     memory: &mut HashMap<&'a str, Variable>,
-) -> Result<Formula, E> {
+) -> Result<RichFormula, E> {
     match_or_err!(Rule::commun_base, p ; {
         let np = p.into_inner().next().unwrap();
         match np.as_rule() {
@@ -324,7 +352,7 @@ fn parse_inner_term_as<'a>(
     p: Pair<'a, Rule>,
     memory: &mut HashMap<&'a str, Variable>,
     mtype: Option<&Sort>,
-) -> Result<Formula, E> {
+) -> Result<RichFormula, E> {
     match_or_err!(Rule::inner_term, p; {
         let span = p.as_span();
         let mut inner_rule = p.into_inner();
@@ -345,7 +373,7 @@ fn parse_if_then_else<'a>(
     ctx: &Context<'a>,
     p: Pair<'a, Rule>,
     memory: &mut HashMap<&'a str, Variable>,
-) -> Result<Formula, E> {
+) -> Result<RichFormula, E> {
     match_or_err!(Rule::if_then_else, p; {
         let mut inner_rule = p.into_inner();
 
@@ -364,7 +392,7 @@ fn parse_infix_term_as<'a>(
     p: Pair<'a, Rule>,
     memory: &mut HashMap<&'a str, Variable>,
     mtype: Option<&Sort>,
-) -> Result<Formula, E> {
+) -> Result<RichFormula, E> {
     match_or_err!(Rule::infix_term, p; {
         let mut inner = p.into_inner();
         let lhs = inner.next().unwrap();
@@ -458,7 +486,7 @@ fn parse_quantifier<'a>(
     ctx: &Context<'a>,
     p: Pair<'a, Rule>,
     memory: &mut HashMap<&'a str, Variable>,
-) -> Result<Formula, E> {
+) -> Result<RichFormula, E> {
     match_or_err!(Rule::quantifier, p; {
         let mut inner = p.into_inner();
 
@@ -469,8 +497,8 @@ fn parse_quantifier<'a>(
         let (strs, vars) :(Vec<_>, Vec<_>) = to_be_freed.into_iter().unzip();
 
         let r = quant!( {match op.as_rule(){
-            Rule::forall =>  Quantifier::Forall { variable: vars },
-            Rule::exists =>  Quantifier::Exists { variable: vars },
+            Rule::forall =>  Quantifier::Forall { variables: vars },
+            Rule::exists =>  Quantifier::Exists { variables: vars },
             _ => unreachable!()
         }}; content );
 
@@ -486,7 +514,7 @@ fn parse_find_such_that<'a>(
     ctx: &Context<'a>,
     p: Pair<'a, Rule>,
     memory: &mut HashMap<&'a str, Variable>,
-) -> Result<Formula, E> {
+) -> Result<RichFormula, E> {
     match_or_err!(Rule::find_such_that, p;{
         let mut inner = p.into_inner();
         let (to_be_freed, vars): (Vec<_>, Vec<_>) =
@@ -495,7 +523,7 @@ fn parse_find_such_that<'a>(
         let ml = parse_term_as(ctx, inner.next().unwrap(), memory, Some(&MSG))?;
         let mr = parse_term_as(ctx, inner.next().unwrap(), memory, Some(&MSG))?;
 
-        let r = quant!(Quantifier::FindSuchThat { variable: vars }; cond, ml, mr);
+        let r = quant!(Quantifier::FindSuchThat { variables: vars }; cond, ml, mr);
         to_be_freed.iter().for_each(|s| {memory.remove(s).unwrap();});
         Ok(r)
     })
@@ -543,5 +571,37 @@ fn parse_step<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Result<Step, E> {
         ctx.steps.insert(name, r.clone());
         Ok(r)
 
+    })
+}
+
+fn parse_order<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Result<RichFormula, E> {
+    match_or_err!(Rule::order, p; {
+        let mut inner = p.into_inner();
+        let quantifier_op = inner.next().unwrap();
+        let args = inner.next().unwrap();
+        let stp1 = inner.next().unwrap();
+        let op = inner.next().unwrap();
+        let stp2 = inner.next().unwrap();
+        let _ = inner; // drop inner
+
+        let mut memory = HashMap::new();
+        let variables = parse_typed_arguments(ctx, args, &mut memory)?
+            .into_iter().map(|(_, v)| v).collect();
+
+        let stp1 = parse_term_as(ctx, stp1, &mut memory, Some(&STEP))?;
+        let stp2 = parse_term_as(ctx, stp2, &mut memory, Some(&STEP))?;
+
+        let formula = match op.as_str() {
+            "<" => fun!(LT; stp1, stp2),
+            ">" => fun!(LT; stp2, stp1),
+            "<>" => not(f_and(fun!(HAPPENS; stp1), fun!(HAPPENS; stp2))),
+            _ => unreachable!()
+        };
+
+        Ok(quant!({match quantifier_op.as_rule() {
+            Rule::forall => Quantifier::Forall { variables },
+            Rule::exists => Quantifier::Exists { variables },
+            _ => unreachable!()
+        }}; formula))
     })
 }
