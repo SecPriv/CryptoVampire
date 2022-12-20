@@ -1,10 +1,7 @@
 use std::fmt::{self};
 
 use crate::formula::{
-    builtins::functions::IMPLIES,
-    formula::{fun, Variable},
-    function::Function,
-    sort::Sort,
+    builtins::functions::IMPLIES, formula::Variable, function::Function, sort::Sort,
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]

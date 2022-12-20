@@ -1,10 +1,11 @@
 extern crate pest;
+use crate::formula::{function::Flags, macros::fun};
 use std::collections::HashMap;
 
 use crate::{
     formula::{
         builtins::{functions::*, types::*},
-        formula::{fun, quant, RichFormula, Variable, CNF},
+        formula::{RichFormula, Variable},
         function::Function,
         quantifier::Quantifier,
         sort::Sort,
@@ -94,14 +95,14 @@ struct Context<'a> {
 }
 impl<'a> Context<'a> {
     fn to_protocol(self) -> Protocol {
-        let Context { 
-            types, 
-            funs, 
+        let Context {
+            types,
+            funs,
             steps,
             assertions,
             query,
             lemma,
-            order
+            order,
         } = self;
         Protocol::new(steps.into_iter().map(|(_k, v)| v))
     }
@@ -136,16 +137,16 @@ pub fn parse_protocol(str: &str) -> Result<Protocol, E> {
             (INPUT_NAME, INPUT.clone()),
             (FAIL_NAME, FAIL.clone()),
             (LT_NAME, LT.clone()),
-            (HAPPENS_NAME, HAPPENS.clone())
+            (HAPPENS_NAME, HAPPENS.clone()),
         ]
         .into_iter(),
     );
 
-    let c = MainParser::parse(Rule::content, str)?
-            .next().unwrap();
+    let c = MainParser::parse(Rule::content, str)?.next().unwrap();
     // println!("{:?}", c);
 
     for p in c.into_inner() {
+        let span = p.as_span();
         match p.as_rule() {
             Rule::EOI => (),
             Rule::declaration => parse_declaration(&mut ctx, p)?,
@@ -155,19 +156,48 @@ pub fn parse_protocol(str: &str) -> Result<Protocol, E> {
             Rule::assertion => {
                 let mut memory = HashMap::new();
                 let assert = parse_term_as(
-                    &ctx, p.into_inner().next().unwrap(), 
-                    &mut memory, Some(&BOOL))?;
-                ctx.assertions.push(assert)
+                    &ctx,
+                    p.into_inner().next().unwrap(),
+                    &mut memory,
+                    Some(&BOOL),
+                )?;
+
+                if assert.iter().all(|f| match f {
+                    RichFormula::Quantifier(Quantifier::FindSuchThat { variables: _ }, _) => false,
+                    _ => true,
+                }) {
+                    ctx.assertions.push(assert)
+                } else {
+                    perr!(
+                        span ;
+                        "\"try find such that\" are not allowed in assertions",
+                    )?;
+                }
             }
             Rule::query => {
                 if ctx.query.is_some() {
-                    perr!(p, "can't define two queries, use lemmas to prove intermediary results".to_owned())?;
+                    perr!(
+                        span;
+                        "can't define two queries, use lemmas to prove intermediary results",
+                    )?;
                 } else {
                     let mut memory = HashMap::new();
                     let query = parse_term_as(
-                        &ctx, p.into_inner().next().unwrap(), 
-                        &mut memory, Some(&BOOL))?;
-                    ctx.query = Some(query);
+                        &ctx,
+                        p.into_inner().next().unwrap(),
+                        &mut memory,
+                        Some(&BOOL),
+                    )?;
+                    if query.iter().all(|f| match f {
+                        RichFormula::Quantifier(Quantifier::FindSuchThat { variables: _ }, _) => {
+                            false
+                        }
+                        _ => true,
+                    }) {
+                        ctx.query = Some(query);
+                    } else {
+                        perr!(span; "\"try find such that\" are not allowed in query",)?;
+                    }
                 }
             }
             Rule::order => {
@@ -184,8 +214,7 @@ fn parse_type(ctx: &Context, p: Pair<Rule>) -> Result<Sort, E> {
     match_or_err!(Rule::type_name, p; {
         match ctx.types.get(p.as_str()) {
             Some(f) => Ok(f.clone()),
-            _ => {
-                uerr!(p, "type")}
+            _ => uerr!(p, "type"),
         }
     })
 }
@@ -249,7 +278,18 @@ fn parse_declare_function<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Resul
 
         match ctx.funs.get(name) {
             None => {
-                let f = Function::new(name, input_sorts, output_sort);
+                let flags = Flags::USER_DEFINED | 
+                    if input_sorts
+                        .iter()
+                        .chain(std::iter::once(&output_sort))
+                        .find(|s| (s.name() == MSG_NAME) || (s.name() == CONDITION_NAME))
+                        .is_some() 
+                    {
+                        Flags::TERM_ALGEBRA
+                    } else {
+                        Flags::empty()
+                    };
+                let f = Function::new_with_flag(name, input_sorts, output_sort, flags);
                 ctx.funs.insert(name, f);
                 Ok(())
             },
@@ -401,9 +441,9 @@ fn parse_infix_term_as<'a>(
         let mut lhs_span = lhs.as_span();
 
         let mut lhs_formula = match op.as_ref().unwrap().as_rule() {
-            Rule::eq | Rule::neq => parse_term_as(ctx, lhs, 
+            Rule::eq | Rule::neq => parse_term_as(ctx, lhs,
                 memory, Some(&MSG))?,
-            Rule::or | Rule::and => parse_term_as(ctx, lhs, 
+            Rule::or | Rule::and => parse_term_as(ctx, lhs,
                 memory, Some(&BOOL))?,
             _ => unreachable!()
         };
@@ -413,46 +453,46 @@ fn parse_infix_term_as<'a>(
 
             lhs_formula = match mop.as_rule() {
                 Rule::eq => {
-                    let rhs_formula = parse_term_as(ctx, rhs, 
+                    let rhs_formula = parse_term_as(ctx, rhs,
                         memory, Some(&MSG))?;
                     if lhs_formula.get_sort() == &MSG.clone() {
                         Ok(fun!(EQUALITY; lhs_formula, rhs_formula))
                     } else {
                         perr!(
-                            lhs_span; "wrong type, expected {} got {}", 
+                            lhs_span; "wrong type, expected {} got {}",
                             &MSG.clone(), lhs_formula.get_sort())
                     }
                 }
                 Rule::neq => {
-                    let rhs_formula = parse_term_as(ctx, rhs, 
+                    let rhs_formula = parse_term_as(ctx, rhs,
                         memory, Some(&MSG))?;
                     if lhs_formula.get_sort() == &MSG.clone() {
                         Ok(not(fun!(EQUALITY; lhs_formula, rhs_formula)))
                     } else {
                         perr!(
-                            lhs_span; "wrong type, expected {} got {}", 
+                            lhs_span; "wrong type, expected {} got {}",
                             &MSG.clone(), lhs_formula.get_sort())
                     }
                 }
                 Rule::or => {
-                    let rhs_formula = parse_term_as(ctx, rhs, 
+                    let rhs_formula = parse_term_as(ctx, rhs,
                         memory, Some(&BOOL))?;
                     if lhs_formula.get_sort() == &BOOL.clone() {
                         Ok(f_or(lhs_formula, rhs_formula))
                     } else {
                         perr!(
-                            lhs_span; "wrong type, expected {} got {}", 
+                            lhs_span; "wrong type, expected {} got {}",
                             &BOOL.clone(), lhs_formula.get_sort())
                     }
                 }
                 Rule::and => {
-                    let rhs_formula = parse_term_as(ctx, rhs, 
+                    let rhs_formula = parse_term_as(ctx, rhs,
                         memory, Some(&BOOL))?;
                     if lhs_formula.get_sort() == &BOOL.clone() {
                         Ok(f_and(lhs_formula, rhs_formula))
                     } else {
                         perr!(
-                            lhs_span; "wrong type, expected {} got {}", 
+                            lhs_span; "wrong type, expected {} got {}",
                             &BOOL.clone(), lhs_formula.get_sort())
                     }
                 }
@@ -464,7 +504,7 @@ fn parse_infix_term_as<'a>(
         if mtype.is_none() || Some(lhs_formula.get_sort()) == mtype {
             Ok(lhs_formula)
         } else {
-            perr!(lhs_span; "wrong type, expected {} got {}", 
+            perr!(lhs_span; "wrong type, expected {} got {}",
                 mtype.unwrap(), lhs_formula.get_sort())
         }
 
@@ -496,11 +536,11 @@ fn parse_quantifier<'a>(
 
         let (strs, vars) :(Vec<_>, Vec<_>) = to_be_freed.into_iter().unzip();
 
-        let r = quant!( {match op.as_rule(){
+        let r = RichFormula::Quantifier( {match op.as_rule(){
             Rule::forall =>  Quantifier::Forall { variables: vars },
             Rule::exists =>  Quantifier::Exists { variables: vars },
             _ => unreachable!()
-        }}; content );
+        }}, vec![content] );
 
         for s in strs{
             memory.remove(s).unwrap();
@@ -523,7 +563,7 @@ fn parse_find_such_that<'a>(
         let ml = parse_term_as(ctx, inner.next().unwrap(), memory, Some(&MSG))?;
         let mr = parse_term_as(ctx, inner.next().unwrap(), memory, Some(&MSG))?;
 
-        let r = quant!(Quantifier::FindSuchThat { variables: vars }; cond, ml, mr);
+        let r = RichFormula::Quantifier(Quantifier::FindSuchThat { variables: vars },vec![cond, ml, mr]);
         to_be_freed.iter().for_each(|s| {memory.remove(s).unwrap();});
         Ok(r)
     })
@@ -557,10 +597,11 @@ fn parse_step<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Result<Step, E> {
         let (_to_be_freed, sorts): (Vec<_>, Vec<_>) =
             parse_typed_arguments(ctx, inner.next().unwrap(), &mut memory)?.into_iter().map(|(s,v)| (s,v.sort)).unzip();
 
-        let f = Function::new_from_step(
+        let mut f = Function::new(
             name,
             sorts.clone(),
             STEP.clone());
+        f.set_from_step();
         ctx.funs.insert(name, f);
 
         let cond = parse_term_as(ctx, inner.next().unwrap(), &mut memory, Some(&BOOL))?;
@@ -598,10 +639,10 @@ fn parse_order<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Result<RichFormu
             _ => unreachable!()
         };
 
-        Ok(quant!({match quantifier_op.as_rule() {
+        Ok(RichFormula::Quantifier({match quantifier_op.as_rule() {
             Rule::forall => Quantifier::Forall { variables },
             Rule::exists => Quantifier::Exists { variables },
             _ => unreachable!()
-        }}; formula))
+        }}, vec![formula]))
     })
 }

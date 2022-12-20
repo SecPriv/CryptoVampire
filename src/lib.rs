@@ -1,5 +1,5 @@
 mod formula;
-mod smt;
 pub mod parser;
 mod problem;
+mod smt;
 pub mod utils;

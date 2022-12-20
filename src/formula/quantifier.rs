@@ -22,9 +22,15 @@ impl Quantifier {
 
     pub fn get_variables(&self) -> &[Variable] {
         match self {
-            Quantifier::Exists { variables: variable } => variable.as_slice(),
-            Quantifier::Forall { variables: variable } => variable.as_slice(),
-            Quantifier::FindSuchThat { variables: variable } => variable.as_slice(),
+            Quantifier::Exists {
+                variables: variable,
+            } => variable.as_slice(),
+            Quantifier::Forall {
+                variables: variable,
+            } => variable.as_slice(),
+            Quantifier::FindSuchThat {
+                variables: variable,
+            } => variable.as_slice(),
         }
     }
 }

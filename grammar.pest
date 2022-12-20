@@ -1,4 +1,4 @@
-content = {SOI ~ (( declaration | step | assertion | order | query | lemma ) ~ EOL)*  ~ EOI}
+content = {SOI ~ (( declaration | step | assertion | order | query | lemma | assertion_crypto ) ~ EOL)*  ~ EOI}
 
 WHITESPACE = _{ " " | "\t" | NEWLINE }
 COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
@@ -53,6 +53,8 @@ step = {"step" ~ step_name ~ typed_arguments ~
          bracketed_term }
 
 assertion = {"assert" ~ term }
+
+assertion_crypto = {"assert-crypto" ~ ident ~ function+ }
 
 query = {"query" ~ term }
 

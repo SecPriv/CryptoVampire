@@ -19,9 +19,7 @@ pub struct QuantizedCNF {
 }
 
 impl QuantizedCNF {
-    pub fn from_formula(env: Environement, f:F) -> Self {
-        
-
+    pub fn from_formula(env: Environement, f: F) -> Self {
         todo!()
     }
 
