@@ -1,5 +1,8 @@
 extern crate pest;
-use crate::formula::{function::Flags, macros::fun};
+use crate::{
+    formula::{function::Flags, macros::fun},
+    problem::{crypto_assumptions::CryptoAssumption, problem::{ProblemBuilder, Problem}},
+};
 use std::collections::HashMap;
 
 use crate::{
@@ -90,21 +93,32 @@ struct Context<'a> {
     steps: HashMap<&'a str, Step>,
     assertions: Vec<RichFormula>,
     query: Option<RichFormula>,
-    lemma: Vec<RichFormula>,
+    lemmas: Vec<RichFormula>,
+    crypto_assumptions: Vec<CryptoAssumption>,
     order: Vec<RichFormula>,
 }
 impl<'a> Context<'a> {
-    fn to_protocol(self) -> Protocol {
+    fn to_pb_builder(self) -> ProblemBuilder {
         let Context {
             types,
             funs,
             steps,
             assertions,
             query,
-            lemma,
+            lemmas,
+            crypto_assumptions,
             order,
         } = self;
-        Protocol::new(steps.into_iter().map(|(_k, v)| v))
+        ProblemBuilder {
+            steps: steps.into_iter().map(|(_, t)| t).collect(),
+            functions: funs.into_iter().map(|(_, t)| t).collect(),
+            sorts: types.into_iter().map(|(_, t)| t).collect(),
+            assertions,
+            query: query.unwrap(),
+            order,
+            lemmas,
+            crypto_assumptions,
+        }
     }
 }
 
@@ -112,7 +126,7 @@ const FORBIDDEN_NAMES: &'static [&'static str] = &[
     "subterm", "ite", "=", "<", ">", "assert", "if", "then", "else",
 ];
 
-pub fn parse_protocol(str: &str) -> Result<Protocol, E> {
+pub fn parse_protocol(str: &str) -> Result<Problem, E> {
     let mut ctx = Context::default();
 
     ctx.types.extend(
@@ -204,10 +218,64 @@ pub fn parse_protocol(str: &str) -> Result<Protocol, E> {
                 let f = parse_order(&mut ctx, p)?;
                 ctx.order.push(f)
             }
+            Rule::lemma => {
+                let mut memory = HashMap::new();
+                let lemma = parse_term_as(
+                    &ctx,
+                    p.into_inner().next().unwrap(),
+                    &mut memory,
+                    Some(&BOOL),
+                )?;
+
+                if lemma.iter().all(|f| match f {
+                    RichFormula::Quantifier(Quantifier::FindSuchThat { variables: _ }, _) => false,
+                    _ => true,
+                }) {
+                    ctx.lemmas.push(lemma)
+                } else {
+                    perr!(
+                        span ;
+                        "\"try find such that\" are not allowed in lemmas",
+                    )?;
+                }
+            }
+            Rule::assertion_crypto => {
+                let mut inner = p.into_inner();
+                let ident = inner.next().unwrap();
+                match ident.as_str() {
+                    "euf-cma-hash" => {
+                        let hash_f_rule = inner.next().unwrap();
+
+                        let hash_f = match ctx.funs.get(hash_f_rule.as_str()) {
+                            Some(h) => h,
+                            _ => {
+                                perr!(hash_f_rule.as_span(); "{} is not defined", hash_f_rule.as_str())?
+                            }
+                        };
+                        let mmsg = MSG.clone();
+                        if hash_f
+                            .get_input_sorts()
+                            .iter()
+                            .chain(std::iter::once(hash_f.get_output_sort()))
+                            .all(|s| s == &mmsg)
+                        {
+                            ctx.crypto_assumptions
+                                .push(CryptoAssumption::EufCmaHash(hash_f.clone()))
+                        } else {
+                            perr!(
+                                hash_f_rule.as_span(); 
+                                "{} should have type {} -> {} -> {} as it should be a keyed hash", 
+                                hash_f_rule.as_str(), MSG.name(), MSG.name(), MSG.name())?
+                        }
+                    }
+                    s => perr!(ident.as_span(); "{} is not a valid crypto assumption", s)?,
+                };
+            }
             r => unreachable!("{:?}", r),
         }
     }
-    Ok(ctx.to_protocol())
+    let pbbuild = ctx.to_pb_builder();
+    Ok(Problem::new(pbbuild))
 }
 
 fn parse_type(ctx: &Context, p: Pair<Rule>) -> Result<Sort, E> {
@@ -278,12 +346,12 @@ fn parse_declare_function<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Resul
 
         match ctx.funs.get(name) {
             None => {
-                let flags = Flags::USER_DEFINED | 
+                let flags = Flags::USER_DEFINED |
                     if input_sorts
                         .iter()
                         .chain(std::iter::once(&output_sort))
                         .find(|s| (s.name() == MSG_NAME) || (s.name() == CONDITION_NAME))
-                        .is_some() 
+                        .is_some()
                     {
                         Flags::TERM_ALGEBRA
                     } else {

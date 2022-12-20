@@ -1,4 +1,8 @@
-content = {SOI ~ (( declaration | step | assertion | order | query | lemma | assertion_crypto ) ~ EOL)*  ~ EOI}
+content = {SOI ~ (
+        ( declaration | step | assertion 
+            | order | query | lemma 
+            | assertion_crypto 
+        ) ~ EOL)*  ~ EOI}
 
 WHITESPACE = _{ " " | "\t" | NEWLINE }
 COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }

@@ -31,18 +31,18 @@ pub struct Problem {
     order: Vec<RichFormula>,
     lemmas: Vec<RichFormula>,
     crypto_assumptions: Vec<CryptoAssumption>,
-    quantifiers: Vec<QuantifierP>
+    quantifiers: Vec<QuantifierP>,
 }
 
 pub struct ProblemBuilder {
-    steps: Vec<Step>,
-    functions: Vec<Function>,
-    sorts: Vec<Sort>,
-    assertions: Vec<RichFormula>,
-    query: RichFormula,
-    order: Vec<RichFormula>,
-    temporary: Vec<RichFormula>,
-    crypto_assumptions: Vec<CryptoAssumption>,
+    pub steps: Vec<Step>,
+    pub functions: Vec<Function>,
+    pub sorts: Vec<Sort>,
+    pub assertions: Vec<RichFormula>,
+    pub query: RichFormula,
+    pub order: Vec<RichFormula>,
+    pub lemmas: Vec<RichFormula>,
+    pub crypto_assumptions: Vec<CryptoAssumption>,
 }
 
 #[derive(Debug)]
@@ -89,7 +89,7 @@ impl Problem {
             assertions,
             query,
             order,
-            temporary,
+            lemmas: temporary,
             crypto_assumptions,
         } = pbl;
 
