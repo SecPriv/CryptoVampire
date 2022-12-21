@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, env::var};
 
 use itertools::{Either, Itertools};
 
@@ -334,7 +334,7 @@ fn turn_formula_into_evaluate(
 
                 // non-term algebra, leave as is
                 _ => {
-                    assert!(
+                    debug_assert!(
                         !(fun.contain_sort(&MSG) || fun.contain_sort(&CONDITION)),
                         "{:?}",
                         fun
@@ -369,7 +369,7 @@ pub fn get_evaluate_fun_name(f: &Function) -> Option<String> {
 /// skip the [`Flags::SPECIAL_EVALUATE`] functions
 fn generate_evaluate_fun(f: &Function) -> Option<Function> {
     if f.is_term_algebra() && !f.is_special_evaluate() && !f.is_from_step() {
-        assert!(
+        debug_assert!(
             (f.contain_sort(&CONDITION) || f.contain_sort(&MSG)),
             "{:?}",
             f
@@ -529,10 +529,16 @@ fn make_quantifier(
     content: QuantifierPContent,
     name: &str,
 ) -> RichFormula {
-    assert!(free_vars
-        .iter()
-        .cartesian_product(variables.iter())
-        .all(|(a, b)| a != b));
+    debug_assert!(
+        free_vars
+            .iter()
+            .cartesian_product(variables.iter())
+            .all(|(a, b)| a != b),
+        "\n\tfv: {:?}\n\tbv: {:?}\n\tq: {:?}",
+        &free_vars,
+        &variables,
+        &content
+    );
 
     let function = Function::new_with_flag(
         &format!("m${}_{}", name, quantifiers.len()),

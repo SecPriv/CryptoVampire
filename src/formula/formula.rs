@@ -50,28 +50,53 @@ impl RichFormula {
     }
 
     pub fn get_free_vars(&self) -> Vec<&Variable> {
-        let mut r = Vec::new();
-        let mut bounded = Vec::new();
+        let mut free_vars = Vec::new();
+        let mut bound_vars = Vec::new();
+        // let mut bounded = Vec::new();
 
-        fn aux<'a>(bounded: &mut Vec<&'a Variable>, r: &mut Vec<&'a Variable>, t: &'a RichFormula) {
-            match t {
-                RichFormula::Fun(_, args) => args.iter().for_each(|f| aux(bounded, r, f)),
-                RichFormula::Var(v) if !bounded.contains(&v) => {
-                    dbg!(&v);
-                    r.push(v)},
-                RichFormula::Quantifier(q, args) => {
-                    let vars = q.get_variables();
-                    let n = vars.len();
-                    assert!(!vars.iter().any(|v| bounded.contains(&v)));
-                    bounded.extend(vars.into_iter());
-                    args.iter().for_each(|f| aux(bounded, r, f));
-                    bounded.truncate(bounded.len() - n);
+        // fn aux<'a>(bounded: &mut Vec<&'a Variable>, r: &mut Vec<&'a Variable>, t: &'a RichFormula) {
+        //     match t {
+        //         RichFormula::Fun(_, args) => args.iter().for_each(|f| aux(bounded, r, f)),
+        //         RichFormula::Var(v) if !bounded.contains(&v) => {
+        //             dbg!(&v);
+        //             dbg!(&bounded);
+        //             r.push(v)},
+        //         RichFormula::Quantifier(q, args) => {
+        //             let vars = q.get_variables();
+        //             let n = vars.len();
+        //             debug_assert!(!vars.iter().any(|v| bounded.contains(&v)));
+        //             bounded.extend(vars.into_iter());
+        //             args.iter().for_each(|f| aux(bounded, r, f));
+        //             bounded.truncate(bounded.len() - n);
+        //         }
+        //         _ => {}
+        //     }
+        // }
+        // aux(&mut bounded, &mut r, self);
+        // r
+
+        for f in self.iter() {
+            match f {
+                RichFormula::Var(v) if !(free_vars.contains(&v) || bound_vars.contains(&v)) => {
+                    free_vars.push(v)
+                }
+                RichFormula::Quantifier(q, _) => {
+                    for v in q.get_variables() {
+                        debug_assert!(
+                            !free_vars.contains(&v),
+                            "\n\tfv:{:?}\n\t{:?}",
+                            &free_vars,
+                            &v
+                        );
+                        if !bound_vars.contains(&v) {
+                            bound_vars.push(v)
+                        }
+                    }
                 }
                 _ => {}
             }
         }
-        aux(&mut bounded, &mut r, self);
-        r
+        free_vars
     }
 
     pub fn get_used_variables(&'_ self) -> HashSet<&'_ Variable> {

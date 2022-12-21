@@ -299,7 +299,7 @@ fn evaluate_rewrite(
         }
     };
 
-    assert!(!ctx.pbl.functions.contains_key(rewriteb.name()));
+    debug_assert!(!ctx.pbl.functions.contains_key(rewriteb.name()));
     declarations.push(Smt::DeclareFun(rewriteb.clone()));
 
     for &f in ctx.ta_funs.iter().filter(|&&f| !f.is_special_evaluate()) {
@@ -444,8 +444,6 @@ fn evaluate_rewrite(
                     left,
                     right,
                 } => {
-                    dbg!(&q.free_variables);
-                    dbg!(&q.bound_variables);
                     let sorts = q.function.get_input_sorts();
                     let name = q.function.name();
                     let skolems = q
@@ -474,35 +472,46 @@ fn evaluate_rewrite(
                             })
                     };
 
-                    let sk_condition = skolemnise(condition);
-                    let left = skolemnise(left);
-                    let right = skolemnise(right);
+                    let sk_condition: SmtFormula = skolemnise(condition).into();
+                    let left: SmtFormula = skolemnise(left).into();
+                    let right: SmtFormula = skolemnise(right).into();
+                    let condition: SmtFormula = condition.into();
 
-                    vec![sforall!(
-                        q.bound_variables
-                            .iter()
-                            .chain(q.free_variables.iter())
-                            .cloned()
-                            .collect(),
-                        simplies!(SmtFormula::from(condition), SmtFormula::from(sk_condition))
-                    )]
+                    vec![
+                        sforall!(
+                            q.bound_variables
+                                .iter()
+                                .chain(q.free_variables.iter())
+                                .cloned()
+                                .collect(),
+                            simplies!(
+                                sfun!(evaluate_cond; condition),
+                                sfun!(evaluate_cond; sk_condition)
+                            )
+                        ),
+                        sforall!(
+                            q.free_variables
+                                .iter()
+                                .map(|v| Variable::clone(v))
+                                .collect(),
+                            seq!(
+                                sfun!(evaluate_msg; sfun!(
+                                        q.function, 
+                                        q.free_variables.iter().map(SmtFormula::from).collect())),
+                                site!(
+                                    sfun!(evaluate_cond; sk_condition),
+                                    sfun!(evaluate_msg; left),
+                                    sfun!(evaluate_msg; right)
+                                )
+                            )
+                        ),
+                    ]
                     .into_iter()
-
-                    // vec![sforall!(
-                    //     q.free_variables.iter().cloned().collect_vec(),
-                    //     simplies!(
-                    //         sfun!(evaluate_cond;
-                    //             sfun!(q.function, q.free_variables.iter().map_into().collect_vec())),
-                    //         sforall!(
-                    //             q.bound_variables.iter().cloned().collect_vec(),
-                    //             content.into()
-                    //         )
-                    //     )
-                    // )].into_iter()
-                    // todo!()
                 }
             };
             assertions.extend(asserts.map(|a| Smt::Assert(a)));
         }
     }
 }
+
+

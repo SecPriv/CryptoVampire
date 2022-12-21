@@ -104,7 +104,7 @@ impl QuantizedCNF {
 
     fn extend_skolem(&mut self, iter: impl Iterator<Item = Function>) {
         for f in iter {
-            assert!(f.is_skolem());
+            debug_assert!(f.is_skolem());
             if !self.skolems.contains(&f) {
                 self.skolems.push(f)
             }

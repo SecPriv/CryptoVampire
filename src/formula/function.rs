@@ -215,7 +215,7 @@ impl Function {
     }
 
     pub fn generate_new_destructor(&self) -> Vec<Function> {
-        assert!(
+        debug_assert!(
             self.is_term_algebra(),
             "'{}' isn't in the term algebra, a destructor wouldn't make sense",
             self.name()
