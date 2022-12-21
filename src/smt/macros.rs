@@ -92,4 +92,4 @@ macro_rules! sexists {
     };
 }
 
-pub(crate) use {sand, seq, sexists, sforall, sfun, simplies, site, sneq, snot, sor, svar};
+pub(crate) use {sand, seq, sexists, sforall, sfun, simplies, site, snot, sor, svar};

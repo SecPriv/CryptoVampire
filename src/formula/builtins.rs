@@ -86,7 +86,6 @@ pub mod steps {
 }
 
 mod macros {
-    use static_init::dynamic;
 
     macro_rules! new_type {
         ($name:ident, $content:literal) => {

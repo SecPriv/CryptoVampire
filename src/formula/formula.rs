@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fmt;
 
 use super::{function::Function, quantifier::Quantifier, sort::Sort};
@@ -39,7 +39,6 @@ impl PartialEq for Variable {
 
 impl Eq for Variable {}
 
-use super::builtins::functions::{f_and, f_false, f_or, f_true, AND, FALSE, NOT, OR, TRUE};
 impl RichFormula {
     pub fn get_sort(&self) -> &Sort {
         match self {

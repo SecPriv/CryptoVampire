@@ -1,11 +1,7 @@
 use core::fmt::Debug;
 use std::{collections::HashMap, sync::Arc};
 
-use crate::formula::{
-    formula::RichFormula,
-    function::{self, Function},
-    sort::Sort,
-};
+use crate::formula::{formula::RichFormula, function::Function, sort::Sort};
 
 #[derive(Debug)]
 pub struct Protocol {

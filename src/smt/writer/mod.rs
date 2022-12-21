@@ -1,38 +1,16 @@
-
-use std::collections::HashMap;
 mod declare;
+mod evaluate;
 mod nonce;
 mod order;
-mod evaluate;
 
 use itertools::{Either, Itertools};
 
 use crate::{
-    formula::{
-        builtins::{
-            functions::{
-                EVAL_COND_NAME, EVAL_MSG_NAME, HAPPENS, HAPPENS_NAME, IF_THEN_ELSE,
-                IF_THEN_ELSE_NAME, LT_NAME,
-            },
-            steps::INIT,
-            types::{BITSTRING, BOOL, CONDITION, MSG, NONCE, STEP},
-        },
-        env::Environement,
-        formula::{sorts_to_variables, RichFormula, Variable},
-        function::{FFlags, Function},
-        sort::Sort,
-    },
-    problem::problem::{
-        Problem, QuantifierPContent, CAND_NAME, CEQ_NAME, CFALSE_NAME, CNOT_NAME, COR_NAME,
-        CTRUE_NAME,
-    },
-    smt::smt::RewriteKind,
+    formula::{env::Environement, function::Function, sort::Sort},
+    problem::problem::Problem,
 };
 
-use super::{
-    macros::*,
-    smt::{Smt, SmtCons, SmtFormula},
-};
+use super::smt::Smt;
 
 pub(crate) struct Ctx<'a> {
     pub(crate) ta_funs: Vec<&'a Function>,
@@ -42,17 +20,17 @@ pub(crate) struct Ctx<'a> {
     pub(crate) pbl: &'a Problem,
 }
 
-pub fn problem_to_smt(env: &Environement, mut pbl: Problem) -> Vec<Smt> {
+pub fn problem_to_smt(env: &Environement, pbl: Problem) -> Vec<Smt> {
     let Problem {
-        steps,
+        steps: _,
         functions,
         sorts,
-        assertions,
-        query,
-        order,
-        lemmas,
-        crypto_assumptions,
-        quantifiers,
+        assertions: _,
+        query: _,
+        order: _,
+        lemmas: _,
+        crypto_assumptions: _,
+        quantifiers: _,
     } = &pbl;
 
     let mut declarations = Vec::new();
@@ -73,7 +51,7 @@ pub fn problem_to_smt(env: &Environement, mut pbl: Problem) -> Vec<Smt> {
         }
     });
 
-    let mut ctx = Ctx {
+    let ctx = Ctx {
         ta_funs,
         free_funs,
         ta_sorts,
@@ -96,6 +74,3 @@ pub fn problem_to_smt(env: &Environement, mut pbl: Problem) -> Vec<Smt> {
     declarations.extend(assertions.into_iter());
     declarations
 }
-
-
-

@@ -1,12 +1,9 @@
-use std::{
-    clone,
-    fmt::{self},
-};
+use std::fmt::{self};
 
 use itertools::Itertools;
 
 use crate::formula::{
-    builtins::functions::{AND, AND_NAME, B_IF_THEN_ELSE_NAME, IMPLIES, NOT, NOT_NAME, OR_NAME},
+    builtins::functions::{AND_NAME, B_IF_THEN_ELSE_NAME, IMPLIES, NOT, OR_NAME},
     formula::{RichFormula, Variable},
     function::Function,
     quantifier::Quantifier,

@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, error::Error, fmt};
+use std::{error::Error, fmt};
 
 use crate::formula::{
     formula::{RichFormula as F, Variable},

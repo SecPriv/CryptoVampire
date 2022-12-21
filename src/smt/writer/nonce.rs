@@ -4,7 +4,7 @@ use crate::{
     formula::{builtins::types::NONCE, env::Environement, formula::Variable},
     smt::{
         macros::*,
-        smt::{Smt, SmtCons, SmtFormula},
+        smt::{Smt, SmtFormula},
     },
 };
 

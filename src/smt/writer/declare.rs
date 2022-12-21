@@ -1,10 +1,11 @@
 use itertools::Itertools;
 
-use crate::{formula::env::Environement, smt::smt::{Smt, SmtCons}};
+use crate::{
+    formula::env::Environement,
+    smt::smt::{Smt, SmtCons},
+};
 
 use super::Ctx;
-
-
 
 pub(crate) fn declare(
     _env: &Environement,

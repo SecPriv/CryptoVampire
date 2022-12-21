@@ -1,7 +1,4 @@
-use core::fmt;
-use std::{collections::HashMap, error::Error};
-
-use crate::formula::{env::Environement, sort::Sort};
+use crate::formula::env::Environement;
 
 use super::{
     super::{
@@ -19,11 +16,11 @@ pub struct QuantizedCNF {
 }
 
 impl QuantizedCNF {
-    pub fn from_formula(env: Environement, f: F) -> Self {
+    pub fn from_formula(_env: Environement, _f: F) -> Self {
         todo!()
     }
 
-    fn and(ctx: &mut Environement, mut a: Self, b: Self) -> Self {
+    fn and(_ctx: &mut Environement, mut a: Self, b: Self) -> Self {
         let QuantizedCNF {
             variables,
             skolems,
@@ -35,7 +32,7 @@ impl QuantizedCNF {
         a
     }
 
-    fn or(ctx: &mut Environement, mut a: Self, b: Self) -> Self {
+    fn or(_ctx: &mut Environement, mut a: Self, b: Self) -> Self {
         let QuantizedCNF {
             variables,
             skolems,
@@ -56,7 +53,7 @@ impl QuantizedCNF {
         }
     }
 
-    fn not(ctx: &mut Environement, a: Self) -> Self {
+    fn not(_ctx: &mut Environement, a: Self) -> Self {
         let QuantizedCNF {
             variables,
             skolems,

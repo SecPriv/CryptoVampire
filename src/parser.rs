@@ -16,7 +16,7 @@ use crate::{
         quantifier::Quantifier,
         sort::Sort,
     },
-    problem::protocol::{Protocol, Step},
+    problem::protocol::Step,
 };
 
 use pest::{

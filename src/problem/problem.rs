@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env::var};
+use std::collections::HashMap;
 
 use itertools::{Either, Itertools};
 
@@ -6,9 +6,8 @@ use crate::{
     formula::{
         builtins::{
             functions::{
-                self, AND, AND_NAME, B_EQUALITY, B_IF_THEN_ELSE, EQUALITY_NAME, EVAL_COND,
-                EVAL_COND_NAME, EVAL_MSG, EVAL_MSG_NAME, FALSE, FALSE_NAME, IF_THEN_ELSE_NAME, NOT,
-                NOT_NAME, OR, OR_NAME, TRUE, TRUE_NAME,
+                AND, AND_NAME, B_EQUALITY, B_IF_THEN_ELSE, EQUALITY_NAME, EVAL_COND, EVAL_MSG,
+                FALSE, FALSE_NAME, IF_THEN_ELSE_NAME, NOT, NOT_NAME, OR, OR_NAME, TRUE, TRUE_NAME,
             },
             steps::INIT,
             types::{BITSTRING, BOOL, CONDITION, CONDITION_NAME, MSG, MSG_NAME},
@@ -16,10 +15,10 @@ use crate::{
         formula::{RichFormula, Variable},
         function::{FFlags, Function},
         macros::fun,
-        quantifier::{self, Quantifier},
+        quantifier::Quantifier,
         sort::Sort,
     },
-    utils::{clone_iter, replace_if_eq},
+    utils::replace_if_eq,
 };
 
 use super::{crypto_assumptions::CryptoAssumption, protocol::Step};
@@ -262,7 +261,7 @@ fn process_query(functions: &HashMap<String, Function>, f: RichFormula) -> RichF
     turn_formula_into_evaluate(functions, f)
 }
 
-fn process_oder(functions: &HashMap<String, Function>, f: RichFormula) -> RichFormula {
+fn process_oder(_functions: &HashMap<String, Function>, f: RichFormula) -> RichFormula {
     f
 }
 
