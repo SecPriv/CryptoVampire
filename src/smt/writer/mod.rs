@@ -77,6 +77,12 @@ pub fn problem_to_smt(env: &Environement, pbl: Problem) -> Vec<Smt> {
         c.generate_smt(env, &mut assertions, &mut declarations, &ctx);
     }
 
+    // order
+    assertions.extend(ctx.pbl.order.iter().map(|f| Smt::Assert(f.into())));
+
+    // query
+    assertions.push(Smt::AssertNot((&ctx.pbl.query).into()));
+
     declarations.extend(assertions.into_iter());
     declarations
 }
