@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use itertools::{Either, Itertools};
+
 use crate::{
     formula::{
         builtins::{
@@ -8,10 +10,10 @@ use crate::{
                 EVAL_MSG, FALSE, FALSE_NAME, IF_THEN_ELSE_NAME, NOT, NOT_NAME, OR, OR_NAME, TRUE,
                 TRUE_NAME,
             },
-            types::{BITSTRING, BOOL, CONDITION, CONDITION_NAME, MSG, MSG_NAME},
+            types::{BITSTRING, BOOL, CONDITION, CONDITION_NAME, MSG, MSG_NAME}, steps::INIT,
         },
         formula::{RichFormula, Variable},
-        function::{Flags, Function},
+        function::{FFlags, Function},
         macros::fun,
         quantifier::{self, Quantifier},
         sort::Sort,
@@ -23,15 +25,15 @@ use super::{crypto_assumptions::CryptoAssumption, protocol::Step};
 
 #[derive(Debug)]
 pub struct Problem {
-    steps: HashMap<String, Step>,
-    functions: HashMap<String, Function>,
-    sorts: Vec<Sort>,
-    assertions: Vec<RichFormula>,
-    query: RichFormula,
-    order: Vec<RichFormula>,
-    lemmas: Vec<RichFormula>,
-    crypto_assumptions: Vec<CryptoAssumption>,
-    quantifiers: Vec<QuantifierP>,
+    pub steps: HashMap<String, Step>,
+    pub functions: HashMap<String, Function>,
+    pub sorts: Vec<Sort>,
+    pub assertions: Vec<RichFormula>,
+    pub query: RichFormula,
+    pub order: Vec<RichFormula>,
+    pub lemmas: Vec<RichFormula>,
+    pub crypto_assumptions: Vec<CryptoAssumption>,
+    pub quantifiers: Vec<QuantifierP>,
 }
 
 pub struct ProblemBuilder {
@@ -94,22 +96,23 @@ impl Problem {
         } = pbl;
 
         // ensure all term algebra functions use the right sorts
-        let term_algebra_functions: Vec<Function> = functions
-            .iter()
-            .filter(|f| f.is_term_algebra())
-            .map(|f| {
-                let name = f.name();
-                let in_s = f
-                    .get_input_sorts()
-                    .iter()
-                    .map(|s| replace_if_eq(s.clone(), BOOL.clone(), CONDITION.clone()))
-                    .collect();
-                let out_s =
-                    replace_if_eq(f.get_output_sort().clone(), BOOL.clone(), CONDITION.clone());
-                let flags = f.get_flags();
-                Function::new_with_flag(name, in_s, out_s, flags)
-            })
-            .collect();
+        let (term_algebra_functions, other_functions): (Vec<Function>, Vec<Function>) =
+            functions.into_iter().partition_map(|f| {
+                if f.is_term_algebra() {
+                    let name = f.name();
+                    let in_s = f
+                        .get_input_sorts()
+                        .iter()
+                        .map(|s| replace_if_eq(s.clone(), BOOL.clone(), CONDITION.clone()))
+                        .collect();
+                    let out_s =
+                        replace_if_eq(f.get_output_sort().clone(), BOOL.clone(), CONDITION.clone());
+                    let flags = f.get_flags();
+                    Either::Left(Function::new_with_flag(name, in_s, out_s, flags))
+                } else {
+                    Either::Right(f)
+                }
+            });
 
         // get the evaluate version of thos function (skipping the special cases)
         let evaluated_functions: Vec<Function> = term_algebra_functions
@@ -118,7 +121,7 @@ impl Problem {
             .collect();
 
         // some special functions
-        let flag = Flags::SPECIAL_EVALUATE | Flags::TERM_ALGEBRA;
+        let flag = FFlags::SPECIAL_EVALUATE | FFlags::TERM_ALGEBRA;
         let function_db = FunctionDB {
             cand: Function::new_with_flag(
                 CAND_NAME,
@@ -153,6 +156,7 @@ impl Problem {
             .into_iter()
             .chain(evaluated_functions.into_iter())
             .chain(function_db.as_vec().iter().map(|f| Function::clone(f)))
+            .chain(other_functions.into_iter())
             .map(|f| (f.name().to_owned(), f))
             .collect();
 
@@ -211,6 +215,7 @@ impl Problem {
         Problem {
             steps: steps
                 .into_iter()
+                .chain(std::iter::once(INIT.clone()))
                 .map(|s| (s.name().to_owned(), s))
                 .collect(),
             functions,
@@ -294,6 +299,7 @@ fn turn_formula_into_evaluate(
                 CTRUE_NAME => RichFormula::Fun(TRUE.clone(), eargs),
                 CFALSE_NAME => RichFormula::Fun(FALSE.clone(), eargs),
                 IF_THEN_ELSE_NAME => RichFormula::Fun(B_IF_THEN_ELSE.clone(), eargs),
+                EQUALITY_NAME => RichFormula::Fun(B_EQUALITY.clone(), eargs),
 
                 // wierder
                 _ if fun.get_output_sort() == &MSG.clone() => {
@@ -305,7 +311,7 @@ fn turn_formula_into_evaluate(
 
                 // non-term algebra, leave as is
                 _ => {
-                    assert!(!(fun.contain_sort(&MSG) || fun.contain_sort(&CONDITION)));
+                    assert!(!(fun.contain_sort(&MSG) || fun.contain_sort(&CONDITION)), "{:?}", fun);
                     RichFormula::Fun(fun, eargs)
                 }
             }
@@ -315,8 +321,8 @@ fn turn_formula_into_evaluate(
                 .into_iter()
                 .map(|f| turn_formula_into_evaluate(functions, f))
                 .collect();
-                RichFormula::Quantifier(map_quant(q), eargs)
-        },
+            RichFormula::Quantifier(map_quant(q), eargs)
+        }
     }
 }
 
@@ -359,7 +365,7 @@ fn get_evaluate_fun(f: &Function) -> Option<Function> {
             &name,
             n_in_s,
             n_out_s,
-            Flags::EVALUATE_TA,
+            FFlags::EVALUATE_TA,
         ))
     } else {
         None
@@ -493,7 +499,7 @@ fn make_quantifier(
         &format!("m${}_{}", name, quantifiers.len()),
         free_vars.iter().map(|f| f.sort.clone()).collect(),
         sort,
-        Flags::TERM_ALGEBRA | Flags::SPECIAL_EVALUATE,
+        FFlags::TERM_ALGEBRA | FFlags::SPECIAL_EVALUATE,
     );
     functions.insert(function.name().to_owned(), function.clone());
     quantifiers.push(QuantifierP {

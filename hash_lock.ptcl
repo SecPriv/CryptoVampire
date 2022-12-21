@@ -1,19 +1,19 @@
 type index;
-fun tuple(msg, msg):msg
+fun tuple(Message, Message):Message
 
 type session
 
 
-fun sel1of2(msg):msg;
-fun sel2of2(msg):msg
-fun hash(msg, msg):msg
-fun ok:msg
-fun ko:msg
+fun sel1of2(Message):Message;
+fun sel2of2(Message):Message
+fun hash(Message, Message):Message
+fun ok:Message
+fun ko:Message
 
-/* the nonces */
-fun nt(session, index): nonce
-fun nr(session): nonce
-fun key(index):nonce
+/* the Nonces */
+fun nt(session, index): Nonce
+fun nr(session): Nonce
+fun key(index):Nonce
 
 step reader1(i:session) 
     {true}
@@ -40,7 +40,7 @@ step tag(i:session, j:index)
     )}
 
 assert
-    forall (m1:msg, m2:msg) {
+    forall (m1:Message, m2:Message) {
         ((m1 == sel1of2(tuple(m1,m2))) &&
         (m1 == sel1of2(tuple(m1,m2))))
     }

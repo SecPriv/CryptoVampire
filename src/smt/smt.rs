@@ -1,10 +1,16 @@
-use std::fmt::{self};
+use std::{fmt::{self}, clone};
 
 use crate::formula::{
-    builtins::functions::IMPLIES, formula::Variable, function::Function, sort::Sort,
+    builtins::functions::{IMPLIES, AND_NAME, AND, OR_NAME, NOT_NAME, NOT, B_IF_THEN_ELSE_NAME},
+    formula::{RichFormula, Variable},
+    function::Function,
+    quantifier::Quantifier,
+    sort::Sort,
 };
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+use super::macros::sfun;
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum SmtFormula {
     Var(Variable),
     Fun(Function, Vec<SmtFormula>),
@@ -19,7 +25,15 @@ pub enum SmtFormula {
     Ite(Box<SmtFormula>, Box<SmtFormula>, Box<SmtFormula>),
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub fn implies(a:SmtFormula, b:SmtFormula) -> SmtFormula {
+    sfun!(IMPLIES; a, b)
+}
+
+pub fn not(a:SmtFormula) -> SmtFormula {
+    sfun!(NOT; a)
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum Smt {
     Assert(SmtFormula),
     AssertTh(SmtFormula),
@@ -38,17 +52,17 @@ pub enum Smt {
 
     DeclareDatatypes {
         sorts: Vec<Sort>,
-        cons: Vec<SmtCons>,
+        cons: Vec<Vec<SmtCons>>,
     },
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct SmtCons {
-    fun: Function,
-    dest: Vec<Function>,
+    pub fun: Function,
+    pub dest: Vec<Function>,
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum RewriteKind {
     Bool,
     Other(Function),
@@ -137,13 +151,17 @@ impl fmt::Display for Smt {
                 write!(f, ") (")?;
 
                 // cons
-                for (j, c) in cons.iter().enumerate() {
-                    assert_eq!(&sorts[j], c.fun.get_output_sort());
+                for (j, vc) in cons.iter().enumerate() {
+                    write!(f, "(")?;
+                    for c in vc {
+                        assert_eq!(&sorts[j], c.fun.get_output_sort());
 
-                    write!(f, "({}", c.fun.name())?;
+                        write!(f, "({}", c.fun.name())?;
 
-                    for (i, s) in c.fun.get_input_sorts().iter().enumerate() {
-                        write!(f, "({} {})", c.dest.get(i).unwrap().name(), s)?;
+                        for (i, s) in c.fun.get_input_sorts().iter().enumerate() {
+                            write!(f, "({} {})", c.dest.get(i).unwrap().name(), s)?;
+                        }
+                        write!(f, ")")?;
                     }
                     write!(f, ")")?;
                 }
@@ -163,4 +181,30 @@ fn fun_list_fmt<I: Iterator<Item = impl fmt::Display>>(
         write!(f, "{} ", e)?;
     }
     write!(f, ")")
+}
+
+impl From<RichFormula> for SmtFormula {
+    fn from(f: RichFormula) -> Self {
+        match f {
+            RichFormula::Var(v) => SmtFormula::Var(v),
+
+            RichFormula::Fun(f, args) => {
+                let iter = args.into_iter().map(Into::into);
+                match f.name() {
+                    AND_NAME => todo!(),
+                    OR_NAME => todo!(),
+                    NOT_NAME => todo!(),
+                    B_IF_THEN_ELSE_NAME => todo!(),
+                    _ => SmtFormula::Fun(f, iter.collect())
+                }
+            }
+            RichFormula::Quantifier(Quantifier::Exists { variables }, args) => {
+                SmtFormula::Exists(variables, Box::new(args.into_iter().next().unwrap().into()))
+            }
+            RichFormula::Quantifier(Quantifier::Forall { variables }, args) => {
+                SmtFormula::Forall(variables, Box::new(args.into_iter().next().unwrap().into()))
+            }
+            RichFormula::Quantifier(_, _) => panic!("unsuported quantifier: {:?}", f)
+        }
+    }
 }

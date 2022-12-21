@@ -1,5 +1,14 @@
+use bitflags::bitflags;
 use core::fmt::Debug;
 use std::{fmt::Display, sync::Arc};
+
+bitflags! {
+    #[derive(Default )]
+    pub struct SFlags: u32 {
+        const TERM_ALGEBRA =        1<<0;
+        const BUILTIN_VAMPIRE =     1<<1;
+    }
+}
 
 #[derive(Hash)]
 pub struct Sort(Arc<InnerSort>);
@@ -7,6 +16,7 @@ pub struct Sort(Arc<InnerSort>);
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 struct InnerSort {
     name: String,
+    flags: SFlags,
 }
 
 impl Debug for Sort {
@@ -57,10 +67,25 @@ impl Sort {
     pub fn new(str: &str) -> Self {
         Sort(Arc::new(InnerSort {
             name: str.to_owned(),
+            flags: SFlags::empty(),
+        }))
+    }
+    pub fn new_with_flag(str: &str, flags: SFlags) -> Self {
+        Sort(Arc::new(InnerSort {
+            name: str.to_owned(),
+            flags,
         }))
     }
 
     pub fn name(&self) -> &str {
         &&self.0.name
+    }
+
+    pub fn is_term_algebra(&self) -> bool {
+        self.0.flags.contains(SFlags::TERM_ALGEBRA)
+    }
+
+    pub fn is_built_in(&self) -> bool{
+        self.0.flags.contains(SFlags::BUILTIN_VAMPIRE)
     }
 }

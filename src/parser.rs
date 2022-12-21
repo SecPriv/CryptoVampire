@@ -1,6 +1,6 @@
 extern crate pest;
 use crate::{
-    formula::{function::Flags, macros::fun},
+    formula::{function::FFlags, macros::fun},
     problem::{crypto_assumptions::CryptoAssumption, problem::{ProblemBuilder, Problem}},
 };
 use std::collections::HashMap;
@@ -152,6 +152,7 @@ pub fn parse_protocol(str: &str) -> Result<Problem, E> {
             (FAIL_NAME, FAIL.clone()),
             (LT_NAME, LT.clone()),
             (HAPPENS_NAME, HAPPENS.clone()),
+            (EMPTY_NAME, EMPTY.clone()),
         ]
         .into_iter(),
     );
@@ -346,16 +347,16 @@ fn parse_declare_function<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Resul
 
         match ctx.funs.get(name) {
             None => {
-                let flags = Flags::USER_DEFINED |
+                let flags = FFlags::USER_DEFINED |
                     if input_sorts
                         .iter()
                         .chain(std::iter::once(&output_sort))
                         .find(|s| (s.name() == MSG_NAME) || (s.name() == CONDITION_NAME))
                         .is_some()
                     {
-                        Flags::TERM_ALGEBRA
+                        FFlags::TERM_ALGEBRA
                     } else {
-                        Flags::empty()
+                        FFlags::empty()
                     };
                 let f = Function::new_with_flag(name, input_sorts, output_sort, flags);
                 ctx.funs.insert(name, f);

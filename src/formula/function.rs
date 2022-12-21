@@ -9,9 +9,9 @@ use core::fmt::Debug;
 const BASE_SKOLEM_NAME: &'static str = "m$sk_";
 bitflags! {
     #[derive(Default )]
-    pub struct Flags: u32 {
+    pub struct FFlags: u32 {
         /// is a step
-        const FROM_STEP =           1<<0;
+        const FROM_STEP =           1<<0 | FFlags::TERM_ALGEBRA.bits;
         /// is a skolem
         const SKOLEM =              1<<1;
         /// is a find such that
@@ -23,9 +23,13 @@ bitflags! {
         const TERM_ALGEBRA =        1<<4;
         /// is the evaluate equivalent of a [`Flags::TERM_ALGEBRA`]
         const EVALUATE_TA =         1<<5;
-        /// automations will skip this function when generating the 
+        /// automations will skip this function when generating the
         /// translation for ta to evaluate
         const SPECIAL_EVALUATE =    1<<6;
+
+        const DESTRUCTOR =          1<<7 | FFlags::TERM_ALGEBRA.bits | FFlags::SPECIAL_EVALUATE.bits;
+
+        const BUILTIN =             1<<8;
 
     }
 }
@@ -110,14 +114,14 @@ impl Function {
             name: name.to_owned(),
             input_sorts,
             output_sort,
-            flags: AtomicCell::new(Flags::empty().bits()),
+            flags: AtomicCell::new(FFlags::empty().bits()),
         }))
     }
     pub fn new_with_flag(
         name: &str,
         input_sorts: Vec<Sort>,
         output_sort: Sort,
-        flag: Flags,
+        flag: FFlags,
     ) -> Self {
         Function(Arc::new(InnerFunction {
             name: name.to_owned(),
@@ -128,15 +132,15 @@ impl Function {
     }
 
     pub fn set_user_defined(&self) {
-        self.add_flag(Flags::USER_DEFINED)
+        self.add_flag(FFlags::USER_DEFINED)
     }
 
     pub fn set_from_step(&self) {
-        self.add_flag(Flags::FROM_STEP)
+        self.add_flag(FFlags::FROM_STEP)
     }
 
     pub fn set_skolem(&self) {
-        self.add_flag(Flags::SKOLEM)
+        self.add_flag(FFlags::SKOLEM)
     }
 
     pub fn arity(&self) -> usize {
@@ -155,46 +159,78 @@ impl Function {
         &self.0.name
     }
 
-    fn add_flag(&self, flag: Flags) {
+    fn add_flag(&self, flag: FFlags) {
         self.0.flags.fetch_or(flag.bits);
     }
 
-    fn remove_flag(&self, flag: Flags) {
+    fn remove_flag(&self, flag: FFlags) {
         self.0.flags.fetch_and((!flag).bits());
     }
 
-    fn contain_flag(&self, flag: Flags) -> bool {
+    fn contain_flag(&self, flag: FFlags) -> bool {
         unsafe {
             // all operations are done through Flag
-            Flags::from_bits_unchecked(self.0.flags.load())
+            FFlags::from_bits_unchecked(self.0.flags.load())
         }
         .contains(flag)
     }
 
     pub fn is_skolem(&self) -> bool {
-        self.contain_flag(Flags::SKOLEM)
+        self.contain_flag(FFlags::SKOLEM)
     }
 
     pub fn is_user_defined(&self) -> bool {
-        self.contain_flag(Flags::USER_DEFINED)
+        self.contain_flag(FFlags::USER_DEFINED)
     }
 
     pub fn is_term_algebra(&self) -> bool {
-        self.contain_flag(Flags::TERM_ALGEBRA)
+        self.contain_flag(FFlags::TERM_ALGEBRA)
     }
 
     pub fn is_special_evaluate(&self) -> bool {
-        self.contain_flag(Flags::SPECIAL_EVALUATE)
+        self.contain_flag(FFlags::SPECIAL_EVALUATE)
     }
 
     pub fn contain_sort(&self, s: &Sort) -> bool {
-        self.get_input_sorts().contains(s) || self.get_output_sort() == s
+        self.sort_iter().any(|fs| fs == s)
     }
 
-    pub fn get_flags(&self) -> Flags {
+    pub fn get_flags(&self) -> FFlags {
         unsafe {
             // all operations are done through Flag
-            Flags::from_bits_unchecked(self.0.flags.load())
+            FFlags::from_bits_unchecked(self.0.flags.load())
         }
+    }
+
+    pub fn sort_iter(&self) -> impl Iterator<Item = &Sort> {
+        self.get_input_sorts()
+            .iter()
+            .chain(std::iter::once(self.get_output_sort()))
+    }
+
+    pub fn generate_new_destructor(&self) -> Vec<Function> {
+        assert!(
+            self.is_term_algebra(),
+            "'{}' isn't in the term algebra, a destructor wouldn't make sense",
+            self.name()
+        );
+
+        self.get_input_sorts()
+            .iter()
+            .enumerate()
+            .map(|(i, s)| {
+                let name = format!("d${}_{}", self.name(), i);
+                Function::new_with_flag(
+                    &name,
+                    vec![self.get_output_sort().clone()],
+                    s.clone(),
+                    FFlags::DESTRUCTOR,
+                )
+            })
+            .collect()
+    }
+
+    pub fn is_built_in(&self) -> bool {
+        self.contain_flag(FFlags::BUILTIN)
     }
 }
