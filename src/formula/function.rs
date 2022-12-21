@@ -13,7 +13,7 @@ bitflags! {
     #[derive(Default )]
     pub struct FFlags: u32 {
         /// is a step
-        const FROM_STEP =           1<<0 | FFlags::TERM_ALGEBRA.bits;
+        const FROM_STEP =           1<<0 | FFlags::TERM_ALGEBRA.bits | FFlags::SPECIAL_EVALUATE.bits;
         /// is a skolem
         const SKOLEM =              1<<1;
         /// is a find such that

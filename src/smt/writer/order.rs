@@ -56,4 +56,5 @@ pub(crate) fn ordering(
             snot!(sfun!(happens; s2))
         )
     })));
+    assertions.push(Smt::AssertTh(sfun!(happens; init)))
 }

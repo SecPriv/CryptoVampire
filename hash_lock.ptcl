@@ -48,7 +48,14 @@ assert
 order forall (bijour:session) 
     reader1(bijour) < reader2(bijour)
 
-query false
+query forall (i:session, j:index) {
+    or(not(
+        (( hash(tuple(nr(i),sel1of2(input(reader2(i)))), key(j)) 
+                    == sel2of2(input(reader2(i))) )
+                    && happens(reader2(i)))
+    ),
+    lt(tag(i, j), reader2(i)))
+}
 
 assert-crypto euf-cma-hash hash;
 assert-crypto nonce;

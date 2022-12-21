@@ -309,7 +309,9 @@ fn turn_formula_into_evaluate(
                 // dumb base term algebra
                 _ if fun.is_term_algebra() && !fun.is_special_evaluate() => RichFormula::Fun(
                     // functions.get(&get_evaluate_fun_name(&fun).unwrap()).unwrap().clone(),
-                    fun.get_evaluate_function(functions).unwrap().clone(),
+                    fun.get_evaluate_function(functions)
+                        .unwrap_or_else(|| panic!("{:?}", &fun))
+                        .clone(),
                     eargs,
                 ),
 
