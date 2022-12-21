@@ -42,7 +42,7 @@ step tag(i:session, j:index)
 assert
     forall (m1:Message, m2:Message) {
         ((m1 == sel1of2(tuple(m1,m2))) &&
-        (m1 == sel1of2(tuple(m1,m2))))
+        (m2 == sel2of2(tuple(m1,m2))))
     }
 
 order forall (bijour:session) 

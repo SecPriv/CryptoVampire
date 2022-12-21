@@ -1,266 +1,27 @@
-use std::collections::HashMap;
-
-use itertools::{Either, Itertools};
+use itertools::Itertools;
 
 use crate::{
     formula::{
         builtins::{
-            functions::{
-                EVAL_COND_NAME, EVAL_MSG_NAME, HAPPENS, HAPPENS_NAME, IF_THEN_ELSE,
-                IF_THEN_ELSE_NAME, LT_NAME,
-            },
-            steps::INIT,
-            types::{BITSTRING, BOOL, CONDITION, MSG, NONCE, STEP},
+            functions::{EVAL_COND_NAME, EVAL_MSG_NAME, IF_THEN_ELSE_NAME},
+            types::{BITSTRING, BOOL, CONDITION, MSG},
         },
         env::Environement,
         formula::{sorts_to_variables, RichFormula, Variable},
         function::{FFlags, Function},
-        sort::Sort,
     },
     problem::problem::{
-        Problem, QuantifierPContent, CAND_NAME, CEQ_NAME, CFALSE_NAME, CNOT_NAME, COR_NAME,
-        CTRUE_NAME,
+        QuantifierPContent, CAND_NAME, CEQ_NAME, CFALSE_NAME, CNOT_NAME, COR_NAME, CTRUE_NAME,
     },
-    smt::smt::RewriteKind,
+    smt::{
+        macros::*,
+        smt::{RewriteKind, Smt, SmtFormula},
+    },
 };
 
-use super::{
-    macros::*,
-    smt::{Smt, SmtCons, SmtFormula},
-};
+use super::Ctx;
 
-struct Ctx<'a> {
-    ta_funs: Vec<&'a Function>,
-    free_funs: Vec<&'a Function>,
-    ta_sorts: Vec<&'a Sort>,
-    free_sorts: Vec<&'a Sort>,
-    pbl: &'a Problem,
-}
-
-pub fn problem_to_smt(env: &Environement, mut pbl: Problem) -> Vec<Smt> {
-    let Problem {
-        steps,
-        functions,
-        sorts,
-        assertions,
-        query,
-        order,
-        lemmas,
-        crypto_assumptions,
-        quantifiers,
-    } = &pbl;
-
-    let mut declarations = Vec::new();
-    let mut assertions = Vec::new();
-
-    let (ta_funs, free_funs): (Vec<_>, Vec<_>) = functions.into_iter().partition_map(|(_, f)| {
-        if f.is_term_algebra() {
-            Either::Left(f)
-        } else {
-            Either::Right(f)
-        }
-    });
-    let (ta_sorts, free_sorts): (Vec<_>, Vec<_>) = sorts.into_iter().partition_map(|s| {
-        if s.is_term_algebra() {
-            Either::Left(s)
-        } else {
-            Either::Right(s)
-        }
-    });
-
-    let mut ctx = Ctx {
-        ta_funs,
-        free_funs,
-        ta_sorts,
-        free_sorts,
-        pbl: &pbl,
-    };
-
-    // declare sorts and funs
-    declare(env, &mut assertions, &mut declarations, &ctx);
-
-    // nonce pseudo ta
-    nonce_pseudo_ta(env, &mut assertions, &mut declarations, &ctx);
-
-    // ordering
-    ordering(env, &mut assertions, &mut declarations, &ctx);
-
-    // evaluate
-    evaluate(env, &mut assertions, &mut declarations, &ctx);
-
-    declarations.extend(assertions.into_iter());
-    declarations
-}
-
-fn declare(
-    _env: &Environement,
-    _assertions: &mut Vec<Smt>,
-    declarations: &mut Vec<Smt>,
-    ctx: &Ctx<'_>,
-) {
-    let free_sorts = &ctx.free_sorts;
-    let ta_sorts = &ctx.ta_sorts;
-    let free_funs = &ctx.free_funs;
-    let ta_funs = &ctx.ta_funs;
-
-    // free sorts
-    declarations.extend(
-        free_sorts
-            .into_iter()
-            .filter_map(|&s| (!s.is_built_in()).then_some(Smt::DeclareSort(s.clone()))),
-    );
-
-    // ta
-    let cons = ta_sorts
-        .iter()
-        .map(|&s| {
-            ta_funs
-                .iter()
-                .filter(|&&f| f.get_output_sort() == s)
-                .map(|&f| SmtCons {
-                    fun: f.clone(),
-                    dest: f.generate_new_destructor(),
-                })
-                .collect_vec()
-        })
-        .collect_vec();
-    declarations.push(Smt::DeclareDatatypes {
-        sorts: ta_sorts.iter().map(|&s| s.clone()).collect(),
-        cons,
-    });
-
-    // free funs
-    declarations.extend(
-        free_funs
-            .iter()
-            .filter_map(|&f| (!f.is_built_in()).then_some(Smt::DeclareFun(f.clone()))),
-    );
-}
-
-fn nonce_pseudo_ta(
-    _env: &Environement,
-    assertions: &mut Vec<Smt>,
-    _declarations: &mut Vec<Smt>,
-    ctx: &Ctx<'_>,
-) {
-    let free_funs = &ctx.free_funs;
-    let nonce = NONCE.clone();
-    let nonces = free_funs
-        .iter()
-        .filter(|&&f| f.get_output_sort() == &nonce)
-        .map(|&f| f)
-        .collect_vec();
-
-    assertions.push({
-        let mut i = 0;
-        let (vars, nonces): (Vec<_>, Vec<_>) = nonces
-            .iter()
-            .map(|&f| {
-                let vars = f
-                    .get_input_sorts()
-                    .iter()
-                    .map(|s| {
-                        i += 1;
-                        Variable {
-                            id: i,
-                            sort: s.clone(),
-                        }
-                    })
-                    .collect_vec();
-                (
-                    vars.clone(),
-                    SmtFormula::Fun(
-                        f.clone(),
-                        vars.into_iter().map(|v| SmtFormula::Var(v)).collect_vec(),
-                    ),
-                )
-            })
-            .unzip();
-
-        let vars = vars.into_iter().flat_map(|v| v.into_iter()).collect_vec();
-
-        Smt::Assert(sforall!(vars, SmtFormula::Neq(nonces)))
-    });
-
-    for n in nonces {
-        let vars1 = n
-            .get_input_sorts()
-            .iter()
-            .enumerate()
-            .map(|(id, s)| Variable {
-                id,
-                sort: s.clone(),
-            })
-            .collect_vec();
-        let vars2 = vars1
-            .iter()
-            .map(|v| Variable {
-                id: vars1.len() + v.id,
-                sort: v.sort.clone(),
-            })
-            .collect_vec();
-
-        assertions.push(Smt::Assert(sforall!(
-            vars1
-                .iter()
-                .chain(vars2.iter())
-                .map(|v| v.clone())
-                .collect_vec(),
-            simplies!(
-                seq!(
-                    sfun!(n, vars1.iter().map_into().collect()),
-                    sfun!(n, vars2.iter().map_into().collect())
-                ),
-                SmtFormula::Or(
-                    vars1
-                        .into_iter()
-                        .zip(vars2.into_iter())
-                        .map(|(v1, v2)| { seq!(svar!(v1), svar!(v2)) })
-                        .collect_vec()
-                )
-            )
-        )))
-    }
-}
-
-fn ordering(
-    _env: &Environement,
-    assertions: &mut Vec<Smt>,
-    _declarations: &mut Vec<Smt>,
-    ctx: &Ctx<'_>,
-) {
-    let functions = &ctx.pbl.functions;
-    let init = sfun!(functions.get(INIT.name()).unwrap().clone());
-    let lt = functions.get(LT_NAME).unwrap().clone();
-    let happens = functions.get(HAPPENS_NAME).unwrap().clone();
-
-    assertions.push(Smt::AssertTh(sforall!(s!0:STEP; {
-        sor!(
-            sfun!(lt; init, s),
-            seq!(init, s)
-        )
-    })));
-    assertions.push(Smt::AssertTh(sforall!(s1!1:STEP, s2!2:STEP, s3!3:STEP ;{
-            simplies!(
-                sand!(
-                    sfun!(lt; s1, s2),
-                    sfun!(lt; s2, s3)
-                ),
-                sfun!(lt; s1, s3)
-            )
-    })));
-    assertions.push(Smt::AssertTh(sforall!(s1!1:STEP, s2!2:STEP; {
-        simplies!(
-            sand!(
-                sfun!(happens; s2),
-                sfun!(lt; s1, s2)
-            ),
-            sfun!(happens; s1)
-        )
-    })));
-}
-
-fn evaluate(
+pub(crate) fn evaluate(
     env: &Environement,
     assertions: &mut Vec<Smt>,
     declarations: &mut Vec<Smt>,
@@ -271,6 +32,7 @@ fn evaluate(
     } else {
         todo!()
     }
+    user_evaluate(env, assertions, declarations, ctx)
 }
 fn evaluate_rewrite(
     _env: &Environement,
@@ -411,14 +173,13 @@ fn evaluate_rewrite(
 
     {
         for q in &ctx.pbl.quantifiers {
-            let vars = q.free_variables.iter().chain(q.bound_variables.iter());
+            // let vars = q.free_variables.iter().chain(q.bound_variables.iter());
             let asserts = match &q.content {
                 QuantifierPContent::Exists { content } => vec![sforall!(
                     q.free_variables.iter().cloned().collect_vec(),
                     simplies!(
                         sfun!(evaluate_cond; sfun!(
-                            q.function, 
-                            q.free_variables.iter().map_into().collect_vec())),
+                            q.function, q.free_variables.iter().map_into().collect_vec())),
                         sexists!(
                             q.bound_variables.iter().cloned().collect_vec(),
                             sfun!(evaluate_cond; SmtFormula::from(content))
@@ -430,8 +191,7 @@ fn evaluate_rewrite(
                     q.free_variables.iter().cloned().collect_vec(),
                     simplies!(
                         sfun!(evaluate_cond; sfun!(
-                            q.function, 
-                            q.free_variables.iter().map_into().collect_vec())),
+                            q.function, q.free_variables.iter().map_into().collect_vec())),
                         sforall!(
                             q.bound_variables.iter().cloned().collect_vec(),
                             sfun!(evaluate_cond; SmtFormula::from(content))
@@ -464,12 +224,18 @@ fn evaluate_rewrite(
                     }
 
                     let skolemnise = |formula: &RichFormula| {
-                        skolems
-                            .iter()
-                            .zip(q.bound_variables.iter())
-                            .fold(formula.clone(), |f, (sk, v)| {
-                                f.apply(v, &RichFormula::Fun(sk.clone(), vec![]))
-                            })
+                        skolems.iter().zip(q.bound_variables.iter()).fold(
+                            formula.clone(),
+                            |f, (sk, v)| {
+                                f.apply(
+                                    v,
+                                    &RichFormula::Fun(
+                                        sk.clone(),
+                                        q.free_variables.iter().map_into().collect(),
+                                    ),
+                                )
+                            },
+                        )
                     };
 
                     let sk_condition: SmtFormula = skolemnise(condition).into();
@@ -496,8 +262,7 @@ fn evaluate_rewrite(
                                 .collect(),
                             seq!(
                                 sfun!(evaluate_msg; sfun!(
-                                        q.function, 
-                                        q.free_variables.iter().map(SmtFormula::from).collect())),
+                                        q.function, q.free_variables.iter().map(SmtFormula::from).collect())),
                                 site!(
                                     sfun!(evaluate_cond; sk_condition),
                                     sfun!(evaluate_msg; left),
@@ -514,4 +279,13 @@ fn evaluate_rewrite(
     }
 }
 
-
+fn user_evaluate(
+    _env: &Environement,
+    assertions: &mut Vec<Smt>,
+    _declarations: &mut Vec<Smt>,
+    ctx: &Ctx<'_>,
+) {
+    for f in &ctx.pbl.assertions {
+        assertions.push(Smt::Assert(f.into()))
+    }
+}

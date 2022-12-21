@@ -161,3 +161,14 @@ pub fn sorts_to_variables<'a>(from: usize, s: impl Iterator<Item = &'a Sort>) ->
         .map(|(i, s)| Variable::new(i + from, s.clone()))
         .collect()
 }
+
+impl From<Variable> for RichFormula {
+    fn from(v: Variable) -> Self {
+        RichFormula::Var(v)
+    }
+}
+impl From<&Variable> for RichFormula {
+    fn from(v: &Variable) -> Self {
+        v.clone().into()
+    }
+}

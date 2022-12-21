@@ -198,12 +198,15 @@ impl From<&RichFormula> for SmtFormula {
             RichFormula::Var(v) => v.into(),
 
             RichFormula::Fun(f, args) => {
-                let iter = args.into_iter().map(Into::into);
+                let mut iter = args.into_iter().map(Into::into);
                 match f.name() {
-                    AND_NAME => todo!(),
-                    OR_NAME => todo!(),
-                    NOT_NAME => todo!(),
-                    B_IF_THEN_ELSE_NAME => todo!(),
+                    AND_NAME => SmtFormula::And(iter.collect()),
+                    OR_NAME => SmtFormula::Or(iter.collect()),
+                    // NOT_NAME => SmtFormula::Not(iter.next().unwrap()),
+                    B_IF_THEN_ELSE_NAME => {
+                        let (c, l, r) = iter.next_tuple().unwrap();
+                        SmtFormula::Ite(Box::new(c), Box::new(l), Box::new(r))
+                    }
                     _ => SmtFormula::Fun(f.clone(), iter.collect()),
                 }
             }
