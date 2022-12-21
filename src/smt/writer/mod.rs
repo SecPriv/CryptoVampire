@@ -2,6 +2,7 @@ mod declare;
 mod evaluate;
 mod nonce;
 mod order;
+pub(crate) mod subterm;
 
 use itertools::{Either, Itertools};
 
@@ -70,6 +71,11 @@ pub fn problem_to_smt(env: &Environement, pbl: Problem) -> Vec<Smt> {
 
     // evaluate
     evaluate::evaluate(env, &mut assertions, &mut declarations, &ctx);
+
+    // crypto
+    for c in &ctx.pbl.crypto_assumptions {
+        c.generate_smt(env, &mut assertions, &mut declarations, &ctx);
+    }
 
     declarations.extend(assertions.into_iter());
     declarations

@@ -49,3 +49,5 @@ order forall (bijour:session)
     reader1(bijour) < reader2(bijour)
 
 query false
+
+assert-crypto euf-cma-hash hash;

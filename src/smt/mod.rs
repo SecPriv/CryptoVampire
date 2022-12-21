@@ -1,3 +1,3 @@
 pub mod macros;
-mod smt;
+pub(crate) mod smt;
 pub mod writer;

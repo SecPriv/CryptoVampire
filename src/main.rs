@@ -25,6 +25,6 @@ fn main() {
     let smt = problem_to_smt(&Environement::default(), p);
 
     for s in smt {
-        println!("{}", s);
+        println!("{}\n", s);
     }
 }

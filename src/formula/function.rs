@@ -33,18 +33,24 @@ bitflags! {
 
         const BUILTIN =             1<<8;
 
+        const SUBTERM_FUN =         1<<9;
+
+        const SPLITING =            1<<10;
+
+        const SPECIAL_SUBTERM =     1<<11;
+
     }
 }
 
-#[derive(Hash)]
+#[derive(Hash, PartialEq, Eq)]
 pub struct Function(Arc<InnerFunction>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 struct InnerFunction {
     name: String,
     input_sorts: Vec<Sort>,
     output_sort: Sort,
-    flags: AtomicCell<u32>,
+    flags: FFlags,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -52,7 +58,7 @@ struct InnerFunctionFrozen<'a> {
     name: &'a String,
     input_sorts: &'a Vec<Sort>,
     output_sort: &'a Sort,
-    flags: u32,
+    flags: FFlags,
 }
 
 impl<'a> From<&'a InnerFunction> for InnerFunctionFrozen<'a> {
@@ -61,7 +67,7 @@ impl<'a> From<&'a InnerFunction> for InnerFunctionFrozen<'a> {
             name: &f.name,
             input_sorts: &f.input_sorts,
             output_sort: &f.output_sort,
-            flags: f.flags.load(),
+            flags: f.flags, /* .load() */
         }
     }
 }
@@ -90,13 +96,13 @@ impl Clone for Function {
     }
 }
 
-impl PartialEq for Function {
-    fn eq(&self, other: &Self) -> bool {
-        Arc::ptr_eq(&self.0, &other.0)
-    }
-}
+// impl PartialEq for Function {
+//     fn eq(&self, other: &Self) -> bool {
+//         Arc::ptr_eq(&self.0, &other.0)
+//     }
+// }
 
-impl Eq for Function {}
+// impl Eq for Function {}
 
 impl Ord for Function {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
@@ -116,20 +122,22 @@ impl Function {
             name: name.to_owned(),
             input_sorts,
             output_sort,
-            flags: AtomicCell::new(FFlags::empty().bits()),
+            // flags: AtomicCell::new(FFlags::empty().bits()),
+            flags: FFlags::empty(),
         }))
     }
     pub fn new_with_flag(
         name: &str,
         input_sorts: Vec<Sort>,
         output_sort: Sort,
-        flag: FFlags,
+        flags: FFlags,
     ) -> Self {
         Function(Arc::new(InnerFunction {
             name: name.to_owned(),
             input_sorts,
             output_sort,
-            flags: AtomicCell::new(flag.bits()),
+            // flags: AtomicCell::new(flag.bits()),
+            flags,
         }))
     }
 
@@ -161,20 +169,20 @@ impl Function {
         &self.0.name
     }
 
-    fn add_flag(&self, flag: FFlags) {
-        self.0.flags.fetch_or(flag.bits);
-    }
+    // fn add_flag(&self, flag: FFlags) {
+    //     self.0.flags |=flag.bits;
+    // }
 
-    fn remove_flag(&self, flag: FFlags) {
-        self.0.flags.fetch_and((!flag).bits());
-    }
+    // fn remove_flag(&self, flag: FFlags) {
+    //     self.0.flags.fetch_and((!flag).bits());
+    // }
 
     fn contain_flag(&self, flag: FFlags) -> bool {
-        unsafe {
-            // all operations are done through Flag
-            FFlags::from_bits_unchecked(self.0.flags.load())
-        }
-        .contains(flag)
+        // unsafe {
+        //     // all operations are done through Flag
+        //     FFlags::from_bits_unchecked(self.0.flags.load())
+        // }
+        self.get_flags().contains(flag)
     }
 
     pub fn is_skolem(&self) -> bool {
@@ -193,6 +201,10 @@ impl Function {
         self.contain_flag(FFlags::SPECIAL_EVALUATE)
     }
 
+    pub fn is_special_subterm(&self) -> bool {
+        self.contain_flag(FFlags::SPECIAL_SUBTERM)
+    }
+
     pub fn is_from_step(&self) -> bool {
         self.contain_flag(FFlags::FROM_STEP)
     }
@@ -202,10 +214,11 @@ impl Function {
     }
 
     pub fn get_flags(&self) -> FFlags {
-        unsafe {
-            // all operations are done through Flag
-            FFlags::from_bits_unchecked(self.0.flags.load())
-        }
+        // unsafe {
+        //     // all operations are done through Flag
+        //     FFlags::from_bits_unchecked(self.0.flags.load())
+        // }
+        self.0.flags
     }
 
     pub fn sort_iter(&self) -> impl Iterator<Item = &Sort> {

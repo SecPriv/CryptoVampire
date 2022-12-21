@@ -34,7 +34,7 @@ pub mod functions {
     new_fun!(FALSE, "false"; ; BOOL; FFlags::BUILTIN);
     new_fun!(EQUALITY, "=="; MSG, MSG; BOOL; FFlags::BUILTIN);
     new_fun!(B_EQUALITY, "="; BITSTRING, BITSTRING; BOOL; FFlags::EVALUATE_TA | FFlags::BUILTIN);
-    new_fun!(INPUT, "input"; STEP; MSG; FFlags::TERM_ALGEBRA | FFlags::SPECIAL_EVALUATE);
+    new_fun!(INPUT, "input"; STEP; MSG; FFlags::TERM_ALGEBRA | FFlags::SPECIAL_EVALUATE | FFlags::SPECIAL_SUBTERM);
     new_fun!(FAIL, "fail" ; ; MSG; FFlags::TERM_ALGEBRA);
     new_fun!(EMPTY, "empty" ; ; MSG; FFlags::TERM_ALGEBRA);
     new_fun!(LT, "lt"; STEP, STEP; BOOL);
@@ -43,6 +43,8 @@ pub mod functions {
 
     new_fun!(EVAL_MSG, "m$eval"; MSG; BITSTRING);
     new_fun!(EVAL_COND, "c$eval"; CONDITION; BOOL);
+
+    new_fun!(SUBTERM, "subterm"; BOOL, BOOL, BOOL; BOOL ; FFlags::BUILTIN);
 
     pub fn f_true() -> RichFormula {
         fun!(TRUE; )

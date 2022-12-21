@@ -22,6 +22,7 @@ impl Protocol {
 #[derive(Hash)]
 pub struct Step(Arc<InnerStep>);
 
+// variables from 1 to parameters.len()
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 struct InnerStep {
     name: String,

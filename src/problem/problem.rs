@@ -174,6 +174,7 @@ impl Problem {
         // the steps and collect the ta quantifiers
         let steps: Vec<Step> = steps
             .into_iter()
+            .chain(std::iter::once(INIT.clone()))
             .map(|s| {
                 let msg = process_step_content(
                     &function_db,
@@ -197,7 +198,6 @@ impl Problem {
                     s.function().clone(),
                 )
             })
-            .chain(std::iter::once(INIT.clone()))
             .collect();
 
         // make sure the steps are in the function set
@@ -543,7 +543,7 @@ fn make_quantifier(
         &format!("m${}_{}", name, quantifiers.len()),
         free_vars.iter().map(|f| f.sort.clone()).collect(),
         sort,
-        FFlags::TERM_ALGEBRA | FFlags::SPECIAL_EVALUATE,
+        FFlags::TERM_ALGEBRA | FFlags::SPECIAL_EVALUATE | FFlags::SPECIAL_SUBTERM,
     );
     functions.insert(function.name().to_owned(), function.clone());
     quantifiers.push(QuantifierP {
