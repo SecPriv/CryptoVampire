@@ -236,3 +236,26 @@ impl From<Variable> for SmtFormula {
         SmtFormula::Var(v)
     }
 }
+
+impl Smt {
+    pub fn rewrite_to_assert(self) -> Self {
+        match self {
+            Self::DeclareRewrite {
+                rewrite_fun: RewriteKind::Bool,
+                vars,
+                lhs,
+                rhs,
+            } => Smt::Assert(SmtFormula::Forall(vars, Box::new(implies(*lhs, *rhs)))),
+            Self::DeclareRewrite {
+                rewrite_fun: RewriteKind::Other(_),
+                vars,
+                lhs,
+                rhs,
+            } => Smt::Assert(SmtFormula::Forall(
+                vars,
+                Box::new(SmtFormula::Eq(vec![*lhs, *rhs])),
+            )),
+            _ => self,
+        }
+    }
+}

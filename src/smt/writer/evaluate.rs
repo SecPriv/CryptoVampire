@@ -30,7 +30,9 @@ pub(crate) fn evaluate(
     if env.use_rewrite {
         evaluate_rewrite(env, assertions, declarations, ctx)
     } else {
-        todo!()
+        let mut masserts = Vec::new();
+        evaluate_rewrite(env, &mut masserts, declarations, ctx);
+        assertions.extend(masserts.into_iter().map(Smt::rewrite_to_assert))
     }
     user_evaluate(env, assertions, declarations, ctx)
 }
