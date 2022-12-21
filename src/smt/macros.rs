@@ -5,6 +5,9 @@ macro_rules! sfun {
     ($fun:expr) => {
         sfun!($fun;)
     };
+    ($fun:expr , $args:expr ) => {
+        crate::smt::smt::SmtFormula::Fun($fun.clone(), $args)
+    };
 }
 
 macro_rules! sand {
@@ -53,6 +56,12 @@ macro_rules! snot {
     };
 }
 
+macro_rules! svar {
+    ($v:expr) => {
+        crate::smt::smt::SmtFormula::Var($v)
+    };
+}
+
 macro_rules! sforall {
     ($($name:ident ! $i:literal : $sort:expr),*; $content:block) => {{
         let f = |$($name:crate::smt::smt::SmtFormula),*| $content;
@@ -83,4 +92,4 @@ macro_rules! sexists {
     };
 }
 
-pub(crate) use {sand, seq, sexists, sforall, sfun, simplies, site, sneq, snot, sor};
+pub(crate) use {sand, seq, sexists, sforall, sfun, simplies, site, sneq, snot, sor, svar};

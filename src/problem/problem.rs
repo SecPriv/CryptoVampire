@@ -7,10 +7,11 @@ use crate::{
         builtins::{
             functions::{
                 self, AND, AND_NAME, B_EQUALITY, B_IF_THEN_ELSE, EQUALITY_NAME, EVAL_COND,
-                EVAL_MSG, FALSE, FALSE_NAME, IF_THEN_ELSE_NAME, NOT, NOT_NAME, OR, OR_NAME, TRUE,
-                TRUE_NAME,
+                EVAL_COND_NAME, EVAL_MSG, EVAL_MSG_NAME, FALSE, FALSE_NAME, IF_THEN_ELSE_NAME, NOT,
+                NOT_NAME, OR, OR_NAME, TRUE, TRUE_NAME,
             },
-            types::{BITSTRING, BOOL, CONDITION, CONDITION_NAME, MSG, MSG_NAME}, steps::INIT,
+            steps::INIT,
+            types::{BITSTRING, BOOL, CONDITION, CONDITION_NAME, MSG, MSG_NAME},
         },
         formula::{RichFormula, Variable},
         function::{FFlags, Function},
@@ -75,25 +76,33 @@ pub enum QuantifierPContent {
     },
 }
 
-const CAND_NAME: &'static str = "c$and";
-const COR_NAME: &'static str = "c$or";
-const CNOT_NAME: &'static str = "c$not";
-const CEQ_NAME: &'static str = "c$eq";
-const CTRUE_NAME: &'static str = "c$true";
-const CFALSE_NAME: &'static str = "c$false";
+pub const CAND_NAME: &'static str = "c$and";
+pub const COR_NAME: &'static str = "c$or";
+pub const CNOT_NAME: &'static str = "c$not";
+pub const CEQ_NAME: &'static str = "c$eq";
+pub const CTRUE_NAME: &'static str = "c$true";
+pub const CFALSE_NAME: &'static str = "c$false";
 
 impl Problem {
     pub fn new(pbl: ProblemBuilder) -> Self {
         let ProblemBuilder {
             steps,
-            functions,
-            sorts,
+            mut functions,
+            mut sorts,
             assertions,
             query,
             order,
             lemmas: temporary,
             crypto_assumptions,
         } = pbl;
+
+        // add the sorts that are missing
+        sorts.push(CONDITION.clone());
+        sorts.push(BITSTRING.clone());
+
+        // add the functions that are missing
+        functions.push(EVAL_COND.clone());
+        functions.push(EVAL_MSG.clone());
 
         // ensure all term algebra functions use the right sorts
         let (term_algebra_functions, other_functions): (Vec<Function>, Vec<Function>) =
@@ -114,10 +123,10 @@ impl Problem {
                 }
             });
 
-        // get the evaluate version of thos function (skipping the special cases)
+        // get the evaluate version of those function (skipping the special cases)
         let evaluated_functions: Vec<Function> = term_algebra_functions
             .iter()
-            .filter_map(get_evaluate_fun)
+            .filter_map(generate_evaluate_fun)
             .collect();
 
         // some special functions
@@ -181,9 +190,23 @@ impl Problem {
                 );
                 let name = s.name();
 
-                Step::new(name, s.parameters().clone(), cond, msg)
+                Step::new(
+                    name,
+                    s.parameters().clone(),
+                    cond,
+                    msg,
+                    s.function().clone(),
+                )
             })
+            .chain(std::iter::once(INIT.clone()))
             .collect();
+
+        // make sure the steps are in the function set
+        for step in &steps {
+            functions
+                .entry(step.name().to_owned())
+                .or_insert(step.into()); // skip if already there
+        }
 
         // add the quantifier to the set of functions
         functions.extend(
@@ -215,7 +238,6 @@ impl Problem {
         Problem {
             steps: steps
                 .into_iter()
-                .chain(std::iter::once(INIT.clone()))
                 .map(|s| (s.name().to_owned(), s))
                 .collect(),
             functions,
@@ -287,7 +309,8 @@ fn turn_formula_into_evaluate(
             match fun.name() {
                 // dumb base term algebra
                 _ if fun.is_term_algebra() && !fun.is_special_evaluate() => RichFormula::Fun(
-                    functions.get(&get_evaluate_fun_name(&fun)).unwrap().clone(),
+                    // functions.get(&get_evaluate_fun_name(&fun).unwrap()).unwrap().clone(),
+                    fun.get_evaluate_function(functions).unwrap().clone(),
                     eargs,
                 ),
 
@@ -311,7 +334,11 @@ fn turn_formula_into_evaluate(
 
                 // non-term algebra, leave as is
                 _ => {
-                    assert!(!(fun.contain_sort(&MSG) || fun.contain_sort(&CONDITION)), "{:?}", fun);
+                    assert!(
+                        !(fun.contain_sort(&MSG) || fun.contain_sort(&CONDITION)),
+                        "{:?}",
+                        fun
+                    );
                     RichFormula::Fun(fun, eargs)
                 }
             }
@@ -330,17 +357,24 @@ fn turn_formula_into_evaluate(
 ///
 /// shouldn't be called if `f` isn't in the ta or has a special
 /// evaluate, the result would be unsound
-fn get_evaluate_fun_name(f: &Function) -> String {
-    assert!(!f.is_special_evaluate() && f.is_term_algebra());
-    format!("b_{}", f.name())
+pub fn get_evaluate_fun_name(f: &Function) -> Option<String> {
+    if !f.is_special_evaluate() && f.is_term_algebra() {
+        Some(format!("b_{}", f.name()))
+    } else {
+        None
+    }
 }
 
 /// get the evaluate version of a term algebra function
 /// skip the [`Flags::SPECIAL_EVALUATE`] functions
-fn get_evaluate_fun(f: &Function) -> Option<Function> {
-    if f.is_term_algebra() && !f.is_special_evaluate() {
-        assert!((f.contain_sort(&CONDITION) || f.contain_sort(&MSG)));
-        let name = get_evaluate_fun_name(f);
+fn generate_evaluate_fun(f: &Function) -> Option<Function> {
+    if f.is_term_algebra() && !f.is_special_evaluate() && !f.is_from_step() {
+        assert!(
+            (f.contain_sort(&CONDITION) || f.contain_sort(&MSG)),
+            "{:?}",
+            f
+        );
+        let name = get_evaluate_fun_name(f).unwrap();
         let n_in_s = {
             f.get_input_sorts()
                 .iter()
@@ -495,6 +529,11 @@ fn make_quantifier(
     content: QuantifierPContent,
     name: &str,
 ) -> RichFormula {
+    assert!(free_vars
+        .iter()
+        .cartesian_product(variables.iter())
+        .all(|(a, b)| a != b));
+
     let function = Function::new_with_flag(
         &format!("m${}_{}", name, quantifiers.len()),
         free_vars.iter().map(|f| f.sort.clone()).collect(),
@@ -504,7 +543,7 @@ fn make_quantifier(
     functions.insert(function.name().to_owned(), function.clone());
     quantifiers.push(QuantifierP {
         bound_variables: variables.clone(),
-        free_variables: free_vars.iter().map(|v| Variable::clone(v)).collect(),
+        free_variables: free_vars.iter().cloned().collect(),
         function: function.clone(),
         content,
     });

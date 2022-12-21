@@ -1,7 +1,11 @@
 use core::fmt::Debug;
 use std::{collections::HashMap, sync::Arc};
 
-use crate::formula::{formula::RichFormula, function::Function, sort::Sort};
+use crate::formula::{
+    formula::RichFormula,
+    function::{self, Function},
+    sort::Sort,
+};
 
 #[derive(Debug)]
 pub struct Protocol {
@@ -28,6 +32,7 @@ struct InnerStep {
     parameters: Vec<Sort>,
     condition: RichFormula,
     message: RichFormula,
+    function: Function,
 }
 
 impl Step {
@@ -36,12 +41,14 @@ impl Step {
         parameters: Vec<Sort>,
         condition: RichFormula,
         message: RichFormula,
+        function: Function,
     ) -> Self {
         Self(Arc::new(InnerStep {
             name: name.to_owned(),
             parameters,
             condition,
             message,
+            function,
         }))
     }
 
@@ -59,6 +66,10 @@ impl Step {
 
     pub fn message(&self) -> &RichFormula {
         &self.0.message
+    }
+
+    pub fn function(&self) -> &Function {
+        &self.0.function
     }
 }
 

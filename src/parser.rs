@@ -1,7 +1,10 @@
 extern crate pest;
 use crate::{
     formula::{function::FFlags, macros::fun},
-    problem::{crypto_assumptions::CryptoAssumption, problem::{ProblemBuilder, Problem}},
+    problem::{
+        crypto_assumptions::CryptoAssumption,
+        problem::{Problem, ProblemBuilder},
+    },
 };
 use std::collections::HashMap;
 
@@ -666,17 +669,13 @@ fn parse_step<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Result<Step, E> {
         let (_to_be_freed, sorts): (Vec<_>, Vec<_>) =
             parse_typed_arguments(ctx, inner.next().unwrap(), &mut memory)?.into_iter().map(|(s,v)| (s,v.sort)).unzip();
 
-        let mut f = Function::new(
-            name,
-            sorts.clone(),
-            STEP.clone());
-        f.set_from_step();
-        ctx.funs.insert(name, f);
+        let f = Function::new_step(name, &sorts);
+        ctx.funs.insert(name, f.clone());
 
         let cond = parse_term_as(ctx, inner.next().unwrap(), &mut memory, Some(&BOOL))?;
         let msg = parse_term_as(ctx, inner.next().unwrap(), &mut memory, Some(&MSG))?;
 
-        let r = Step::new(name, sorts, cond, msg);
+        let r = Step::new(name, sorts, cond, msg, f);
         // to_be_freed.iter().for_each(|s| {memory.remove(s).unwrap();});
         ctx.steps.insert(name, r.clone());
         Ok(r)

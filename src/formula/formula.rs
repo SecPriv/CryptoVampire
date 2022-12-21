@@ -10,7 +10,7 @@ pub enum RichFormula {
     Quantifier(Quantifier, Vec<RichFormula>),
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(Debug, PartialOrd, Ord, Hash, Clone)]
 pub struct Variable {
     pub id: usize,
     pub sort: Sort,
@@ -21,6 +21,23 @@ impl fmt::Display for Variable {
         write!(f, "X{}", self.id)
     }
 }
+
+impl PartialEq for Variable {
+    fn eq(&self, other: &Self) -> bool {
+        if cfg!(debug_assertions) {
+            if self.id == other.id {
+                assert_eq!(self.sort, other.sort);
+                true
+            } else {
+                false
+            }
+        } else {
+            self.id == other.id
+        }
+    }
+}
+
+impl Eq for Variable {}
 
 use super::builtins::functions::{f_and, f_false, f_or, f_true, AND, FALSE, NOT, OR, TRUE};
 impl RichFormula {
@@ -39,10 +56,13 @@ impl RichFormula {
         fn aux<'a>(bounded: &mut Vec<&'a Variable>, r: &mut Vec<&'a Variable>, t: &'a RichFormula) {
             match t {
                 RichFormula::Fun(_, args) => args.iter().for_each(|f| aux(bounded, r, f)),
-                RichFormula::Var(v) if !bounded.contains(&v) => r.push(v),
+                RichFormula::Var(v) if !bounded.contains(&v) => {
+                    dbg!(&v);
+                    r.push(v)},
                 RichFormula::Quantifier(q, args) => {
                     let vars = q.get_variables();
                     let n = vars.len();
+                    assert!(!vars.iter().any(|v| bounded.contains(&v)));
                     bounded.extend(vars.into_iter());
                     args.iter().for_each(|f| aux(bounded, r, f));
                     bounded.truncate(bounded.len() - n);
@@ -109,4 +129,10 @@ impl Variable {
     pub fn new(id: usize, sort: Sort) -> Self {
         Self { id, sort }
     }
+}
+
+pub fn sorts_to_variables<'a>(from: usize, s: impl Iterator<Item = &'a Sort>) -> Vec<Variable> {
+    s.enumerate()
+        .map(|(i, s)| Variable::new(i + from, s.clone()))
+        .collect()
 }

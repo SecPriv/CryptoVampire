@@ -27,7 +27,8 @@ impl Debug for Sort {
 
 impl PartialEq for Sort {
     fn eq(&self, other: &Self) -> bool {
-        Arc::ptr_eq(&self.0, &other.0)
+        // Arc::ptr_eq(&self.0, &other.0)
+        self.0.name == other.0.name
     }
 }
 
@@ -85,7 +86,7 @@ impl Sort {
         self.0.flags.contains(SFlags::TERM_ALGEBRA)
     }
 
-    pub fn is_built_in(&self) -> bool{
+    pub fn is_built_in(&self) -> bool {
         self.0.flags.contains(SFlags::BUILTIN_VAMPIRE)
     }
 }

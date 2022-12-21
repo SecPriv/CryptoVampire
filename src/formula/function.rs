@@ -1,9 +1,11 @@
-use std::{hash::Hash, sync::Arc};
+use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use bitflags::bitflags;
 use crossbeam_utils::atomic::AtomicCell;
 
-use super::sort::Sort;
+use crate::problem::{problem::get_evaluate_fun_name, protocol::Step};
+
+use super::{builtins::types::STEP, sort::Sort};
 use core::fmt::Debug;
 
 const BASE_SKOLEM_NAME: &'static str = "m$sk_";
@@ -131,17 +133,17 @@ impl Function {
         }))
     }
 
-    pub fn set_user_defined(&self) {
-        self.add_flag(FFlags::USER_DEFINED)
-    }
+    // pub fn set_user_defined(&self) {
+    //     self.add_flag(FFlags::USER_DEFINED)
+    // }
 
-    pub fn set_from_step(&self) {
-        self.add_flag(FFlags::FROM_STEP)
-    }
+    // pub fn set_from_step(&self) {
+    //     self.add_flag(FFlags::FROM_STEP)
+    // }
 
-    pub fn set_skolem(&self) {
-        self.add_flag(FFlags::SKOLEM)
-    }
+    // pub fn set_skolem(&self) {
+    //     self.add_flag(FFlags::SKOLEM)
+    // }
 
     pub fn arity(&self) -> usize {
         self.0.input_sorts.len()
@@ -191,6 +193,10 @@ impl Function {
         self.contain_flag(FFlags::SPECIAL_EVALUATE)
     }
 
+    pub fn is_from_step(&self) -> bool {
+        self.contain_flag(FFlags::FROM_STEP)
+    }
+
     pub fn contain_sort(&self, s: &Sort) -> bool {
         self.sort_iter().any(|fs| fs == s)
     }
@@ -232,5 +238,33 @@ impl Function {
 
     pub fn is_built_in(&self) -> bool {
         self.contain_flag(FFlags::BUILTIN)
+    }
+
+    pub fn new_step(name: &str, sorts: &Vec<Sort>) -> Self {
+        Self::new_with_flag(
+            name,
+            sorts.clone(),
+            STEP.clone(),
+            FFlags::FROM_STEP | FFlags::TERM_ALGEBRA,
+        )
+    }
+
+    // panics if unsound
+    pub fn get_evaluate_name(&self) -> Option<String> {
+        get_evaluate_fun_name(self)
+    }
+
+    pub fn get_evaluate_function<'a>(
+        &self,
+        functions: &'a HashMap<String, Function>,
+    ) -> Option<&'a Function> {
+        let name = self.get_evaluate_name()?;
+        functions.get(&name)
+    }
+}
+
+impl From<&Step> for Function {
+    fn from(s: &Step) -> Self {
+        s.function().clone()
     }
 }

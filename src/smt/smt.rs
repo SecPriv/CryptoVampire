@@ -1,7 +1,12 @@
-use std::{fmt::{self}, clone};
+use std::{
+    clone,
+    fmt::{self},
+};
+
+use itertools::Itertools;
 
 use crate::formula::{
-    builtins::functions::{IMPLIES, AND_NAME, AND, OR_NAME, NOT_NAME, NOT, B_IF_THEN_ELSE_NAME},
+    builtins::functions::{AND, AND_NAME, B_IF_THEN_ELSE_NAME, IMPLIES, NOT, NOT_NAME, OR_NAME},
     formula::{RichFormula, Variable},
     function::Function,
     quantifier::Quantifier,
@@ -25,11 +30,11 @@ pub enum SmtFormula {
     Ite(Box<SmtFormula>, Box<SmtFormula>, Box<SmtFormula>),
 }
 
-pub fn implies(a:SmtFormula, b:SmtFormula) -> SmtFormula {
+pub fn implies(a: SmtFormula, b: SmtFormula) -> SmtFormula {
     sfun!(IMPLIES; a, b)
 }
 
-pub fn not(a:SmtFormula) -> SmtFormula {
+pub fn not(a: SmtFormula) -> SmtFormula {
     sfun!(NOT; a)
 }
 
@@ -73,11 +78,15 @@ impl fmt::Display for SmtFormula {
         match self {
             SmtFormula::Var(v) => v.fmt(f),
             SmtFormula::Fun(fun, args) => {
-                write!(f, "({} ", fun.name())?;
-                for arg in args {
-                    write!(f, "{} ", arg)?;
+                if args.len() > 0 {
+                    write!(f, "({} ", fun.name())?;
+                    for arg in args {
+                        write!(f, "{} ", arg)?;
+                    }
+                    write!(f, ")")
+                } else {
+                    write!(f, "{} ", fun.name())
                 }
-                write!(f, ")")
             }
             SmtFormula::Forall(vars, formula) => {
                 write!(f, "(forall (")?;
@@ -131,7 +140,7 @@ impl fmt::Display for Smt {
                 lhs,
                 rhs,
             } => {
-                write!(f, "declare-rewrite (forall ")?;
+                write!(f, "(declare-rewrite (forall (")?;
                 for v in vars {
                     write!(f, "({} {}) ", v, v.sort)?;
                 }
@@ -139,33 +148,33 @@ impl fmt::Display for Smt {
                     RewriteKind::Bool => "=>",
                     RewriteKind::Other(f) => f.name(),
                 };
-                write!(f, ") ({} {} {}))", op, lhs, rhs)
+                write!(f, ") ({} {} {})))", op, lhs, rhs)
             }
             Smt::DeclareDatatypes { sorts, cons } => {
-                write!(f, "(declare-datatypes ")?;
+                write!(f, "(declare-datatypes\n")?;
                 // name of types
-                write!(f, "(")?;
+                write!(f, "\t(")?;
                 for s in sorts {
                     write!(f, "({} 0) ", s)?;
                 }
-                write!(f, ") (")?;
+                write!(f, ")\n\t(\n")?;
 
                 // cons
                 for (j, vc) in cons.iter().enumerate() {
-                    write!(f, "(")?;
+                    write!(f, "\t\t(\n")?;
                     for c in vc {
                         assert_eq!(&sorts[j], c.fun.get_output_sort());
 
-                        write!(f, "({}", c.fun.name())?;
+                        write!(f, "\t\t\t({} ", c.fun.name())?;
 
                         for (i, s) in c.fun.get_input_sorts().iter().enumerate() {
-                            write!(f, "({} {})", c.dest.get(i).unwrap().name(), s)?;
+                            write!(f, "({} {}) ", c.dest.get(i).unwrap().name(), s)?;
                         }
-                        write!(f, ")")?;
+                        write!(f, ")\n")?;
                     }
-                    write!(f, ")")?;
+                    write!(f, "\t\t)\n")?;
                 }
-                write!(f, "))")
+                write!(f, "\t)\n)")
             }
         }
     }
@@ -183,10 +192,10 @@ fn fun_list_fmt<I: Iterator<Item = impl fmt::Display>>(
     write!(f, ")")
 }
 
-impl From<RichFormula> for SmtFormula {
-    fn from(f: RichFormula) -> Self {
+impl From<&RichFormula> for SmtFormula {
+    fn from(f: &RichFormula) -> Self {
         match f {
-            RichFormula::Var(v) => SmtFormula::Var(v),
+            RichFormula::Var(v) => v.into(),
 
             RichFormula::Fun(f, args) => {
                 let iter = args.into_iter().map(Into::into);
@@ -195,16 +204,35 @@ impl From<RichFormula> for SmtFormula {
                     OR_NAME => todo!(),
                     NOT_NAME => todo!(),
                     B_IF_THEN_ELSE_NAME => todo!(),
-                    _ => SmtFormula::Fun(f, iter.collect())
+                    _ => SmtFormula::Fun(f.clone(), iter.collect()),
                 }
             }
-            RichFormula::Quantifier(Quantifier::Exists { variables }, args) => {
-                SmtFormula::Exists(variables, Box::new(args.into_iter().next().unwrap().into()))
-            }
-            RichFormula::Quantifier(Quantifier::Forall { variables }, args) => {
-                SmtFormula::Forall(variables, Box::new(args.into_iter().next().unwrap().into()))
-            }
-            RichFormula::Quantifier(_, _) => panic!("unsuported quantifier: {:?}", f)
+            RichFormula::Quantifier(Quantifier::Exists { variables }, args) => SmtFormula::Exists(
+                variables.clone(),
+                Box::new(args.into_iter().next().unwrap().into()),
+            ),
+            RichFormula::Quantifier(Quantifier::Forall { variables }, args) => SmtFormula::Forall(
+                variables.clone(),
+                Box::new(args.into_iter().next().unwrap().into()),
+            ),
+            RichFormula::Quantifier(_, _) => panic!("unsuported quantifier: {:?}", f),
         }
+    }
+}
+
+impl From<RichFormula> for SmtFormula {
+    fn from(f: RichFormula) -> Self {
+        SmtFormula::from(&f)
+    }
+}
+
+impl From<&Variable> for SmtFormula {
+    fn from(v: &Variable) -> Self {
+        v.clone().into()
+    }
+}
+impl From<Variable> for SmtFormula {
+    fn from(v: Variable) -> Self {
+        SmtFormula::Var(v)
     }
 }
