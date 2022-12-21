@@ -51,3 +51,4 @@ order forall (bijour:session)
 query false
 
 assert-crypto euf-cma-hash hash;
+assert-crypto nonce;

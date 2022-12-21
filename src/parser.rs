@@ -272,6 +272,7 @@ pub fn parse_protocol(str: &str) -> Result<Problem, E> {
                                 hash_f_rule.as_str(), MSG.name(), MSG.name(), MSG.name())?
                         }
                     }
+                    "nonce" => ctx.crypto_assumptions.push(CryptoAssumption::Nonce),
                     s => perr!(ident.as_span(); "{} is not a valid crypto assumption", s)?,
                 };
             }

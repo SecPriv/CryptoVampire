@@ -24,7 +24,7 @@ pub enum Subterm {
     Base(Sort, Function, Function),
 }
 
-enum OneSubterm<'a> {
+pub(crate) enum OneSubterm<'a> {
     Main(&'a Subterm),
     Secondary(&'a Subterm),
 }
@@ -71,6 +71,10 @@ impl Subterm {
             Subterm::VampireSpecial(s, _, _) => s,
             Subterm::Base(s, _, _) => s,
         }
+    }
+
+    pub(crate) fn iter<'a>(&'a self) -> impl Iterator<Item = OneSubterm<'a>> {
+        [self.as_main(), self.as_secondary()].into_iter()
     }
 }
 

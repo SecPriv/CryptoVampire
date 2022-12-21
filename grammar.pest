@@ -58,7 +58,7 @@ step = {"step" ~ step_name ~ typed_arguments ~
 
 assertion = {"assert" ~ term }
 
-assertion_crypto = {"assert-crypto" ~ ident ~ function+ }
+assertion_crypto = {"assert-crypto" ~ ident ~ function* }
 
 query = {"query" ~ term }
 

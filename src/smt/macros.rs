@@ -92,4 +92,21 @@ macro_rules! sexists {
     };
 }
 
-pub(crate) use {sand, seq, sexists, sforall, sfun, simplies, site, snot, sor, svar};
+macro_rules! srewrite {
+    ($kind:expr; $($name:ident ! $i:literal : $sort:expr),*; $lhs:block -> $rhs:block) => {{
+        let lhs = |$($name:crate::smt::smt::SmtFormula),*| $lhs;
+        let rhs = |$($name:crate::smt::smt::SmtFormula),*| $rhs;
+        crate::smt::smt::Smt::DeclareRewrite {
+            rewrite_fun: $kind,
+            vars: vec![$(crate::formula::formula::Variable {id: $i, sort: $sort.clone()}),*],
+            lhs: std::boxed::Box::new(
+                lhs($(crate::smt::smt::SmtFormula::Var(crate::formula::formula::Variable {id: $i, sort: $sort.clone()})),*)
+            ),
+            rhs: std::boxed::Box::new(
+                rhs($(crate::smt::smt::SmtFormula::Var(crate::formula::formula::Variable {id: $i, sort: $sort.clone()})),*)
+            ),
+        }
+    }};
+}
+
+pub(crate) use {sand, seq, sexists, sforall, sfun, simplies, site, snot, sor, svar, srewrite};
