@@ -7,7 +7,7 @@ pub struct Environement {
 impl Default for Environement {
     fn default() -> Self {
         Self {
-            use_rewrite: false,
+            use_rewrite: true,
             use_special_subterm: true,
             crypto_rewrite: true
         }

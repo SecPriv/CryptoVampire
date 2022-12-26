@@ -257,22 +257,34 @@ fn process_assertion(functions: &HashMap<String, Function>, f: RichFormula) -> R
 }
 
 // assertions must be turned into evaluate form
-fn process_query(functions: &HashMap<String, Function>, f: RichFormula) -> RichFormula {
-    turn_formula_into_evaluate(functions, f)
+fn process_query(
+    function_db: &FunctionDB,
+    functions: &mut HashMap<String, Function>,
+    quantifiers: &mut Vec<QuantifierP>,
+    formula: &RichFormula,
+) -> RichFormula {
+    // turn_formula_into_evaluate(functions, f)
+
+    match f {
+        RichFormula::Var(v) => RichFormula::Var(to_evaluate::map_var(v)),
+        RichFormula::Fun(fun, args) if fun.is_term_algebra() && !f.is_from_step() {
+            let nf = 
+        }
+    }
 }
 
 fn process_oder(_functions: &HashMap<String, Function>, f: RichFormula) -> RichFormula {
     f
 }
 
-// from ta to evaluate
-//
-// panic if there is a plain tfst
-fn turn_formula_into_evaluate(
-    functions: &HashMap<String, Function>,
-    f: RichFormula,
-) -> RichFormula {
-    fn map_var(v: Variable) -> Variable {
+mod to_evaluate {
+    use crate::formula::{
+        builtins::types::{BITSTRING, BOOL},
+        formula::Variable,
+        quantifier::Quantifier,
+    };
+
+    pub fn map_var(v: Variable) -> Variable {
         match v.sort.name() {
             MSG_NAME => Variable {
                 sort: BITSTRING.clone(),
@@ -286,7 +298,7 @@ fn turn_formula_into_evaluate(
         }
     }
 
-    fn map_quant(q: Quantifier) -> Quantifier {
+    pub fn map_quant(q: Quantifier) -> Quantifier {
         match q {
             Quantifier::Exists { variables } => Quantifier::Exists {
                 variables: variables.into_iter().map(map_var).collect(),
@@ -297,9 +309,17 @@ fn turn_formula_into_evaluate(
             _ => unreachable!(),
         }
     }
+}
 
+// from ta to evaluate
+//
+// panic if there is a plain tfst
+fn turn_formula_into_evaluate(
+    functions: &HashMap<String, Function>,
+    f: RichFormula,
+) -> RichFormula {
     match f {
-        RichFormula::Var(v) => RichFormula::Var(map_var(v)),
+        RichFormula::Var(v) => RichFormula::Var(to_evaluate::map_var(v)),
         RichFormula::Fun(fun, args) => {
             let eargs = args
                 .into_iter()
@@ -349,7 +369,7 @@ fn turn_formula_into_evaluate(
                 .into_iter()
                 .map(|f| turn_formula_into_evaluate(functions, f))
                 .collect();
-            RichFormula::Quantifier(map_quant(q), eargs)
+            RichFormula::Quantifier(to_evaluate::map_quant(q), eargs)
         }
     }
 }
@@ -481,21 +501,29 @@ fn process_step_content<'a>(
             )
         }
         RichFormula::Fun(f, args) => {
-            let nf = match f.name() {
-                AND_NAME => function_db.cand.clone(),
-                OR_NAME => function_db.cor.clone(),
-                NOT_NAME => function_db.cnot.clone(),
-                EQUALITY_NAME => function_db.ceq.clone(),
-                TRUE_NAME => function_db.ctrue.clone(),
-                FALSE_NAME => function_db.cfalse.clone(),
-                name => functions.get(name).unwrap().clone(),
-            };
+            let nf = get_ta_fun(function_db, functions, f).clone();
             let nargs = args
                 .into_iter()
                 .map(|f| process_step_content(function_db, functions, quantifiers, f))
                 .collect();
             RichFormula::Fun(nf, nargs)
         }
+    }
+}
+
+fn get_ta_fun<'a>(
+    function_db: &'a FunctionDB,
+    functions: &'a HashMap<String, Function>,
+    f: &Function,
+) -> &'a Function {
+    match f.name() {
+        AND_NAME => &function_db.cand,
+        OR_NAME => &function_db.cor,
+        NOT_NAME => &function_db.cnot,
+        EQUALITY_NAME => &function_db.ceq,
+        TRUE_NAME => &function_db.ctrue,
+        FALSE_NAME => &function_db.cfalse,
+        name => functions.get(name).unwrap(),
     }
 }
 
