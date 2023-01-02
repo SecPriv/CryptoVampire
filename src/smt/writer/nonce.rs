@@ -11,16 +11,16 @@ use crate::{
 use super::Ctx;
 
 pub(crate) fn nonce_pseudo_ta(
-    _env: &Environement,
+    env: &Environement,
     assertions: &mut Vec<Smt>,
     _declarations: &mut Vec<Smt>,
     ctx: &Ctx<'_>,
 ) {
     let free_funs = &ctx.free_funs;
-    let nonce = NONCE.clone();
+    let nonce = NONCE(env);
     let nonces = free_funs
         .iter()
-        .filter(|&&f| f.get_output_sort() == &nonce)
+        .filter(|&&f| &f.get_output_sort() == nonce)
         .map(|&f| f)
         .collect_vec();
 
@@ -79,7 +79,7 @@ pub(crate) fn nonce_pseudo_ta(
                 .chain(vars2.iter())
                 .map(|v| v.clone())
                 .collect_vec(),
-            simplies!(
+            simplies!(env;
                 seq!(
                     sfun!(n, vars1.iter().map_into().collect()),
                     sfun!(n, vars2.iter().map_into().collect())

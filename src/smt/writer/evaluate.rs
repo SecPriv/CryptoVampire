@@ -3,7 +3,7 @@ use itertools::Itertools;
 use crate::{
     formula::{
         builtins::{
-            functions::{EVAL_COND_NAME, EVAL_MSG_NAME, IF_THEN_ELSE_NAME},
+            functions::{EVAL_COND, EVAL_COND_NAME, EVAL_MSG, EVAL_MSG_NAME, IF_THEN_ELSE_NAME},
             types::{BITSTRING, BOOL, CONDITION, MSG},
         },
         env::Environement,
@@ -27,48 +27,51 @@ pub(crate) fn evaluate(
     declarations: &mut Vec<Smt>,
     ctx: &Ctx<'_>,
 ) {
-    if env.use_rewrite {
+    if env.use_rewrite() {
         evaluate_rewrite(env, assertions, declarations, ctx)
     } else {
         let mut masserts = Vec::new();
         evaluate_rewrite(env, &mut masserts, declarations, ctx);
-        assertions.extend(masserts.into_iter().map(Smt::rewrite_to_assert))
+        assertions.extend(masserts.into_iter().map(|a| a.rewrite_to_assert(env)))
     }
     user_evaluate(env, assertions, declarations, ctx)
 }
 fn evaluate_rewrite(
-    _env: &Environement,
+    env: &Environement,
     assertions: &mut Vec<Smt>,
     declarations: &mut Vec<Smt>,
     ctx: &Ctx<'_>,
 ) {
-    let msg = MSG.clone();
-    let cond = CONDITION.clone();
+    let msg = MSG(env);
+    let cond = CONDITION(env);
+    let bitstring = BITSTRING(env);
+    let bool = BOOL(env);
+
     let rewriteb = Function::new(
         "r$rewriteb",
-        vec![BITSTRING.clone(), BITSTRING.clone()],
-        BOOL.clone(),
+        vec![bitstring.clone(), bitstring.clone()],
+        bool.clone(),
     );
-    let functions = &ctx.pbl.functions;
-    let evaluate_msg = functions.get(EVAL_MSG_NAME).unwrap();
-    let evaluate_cond = functions.get(EVAL_COND_NAME).unwrap();
+    // let functions = &ctx.pbl.functions;
+    let evaluate_msg = EVAL_MSG(env);
+    let evaluate_cond = EVAL_COND(env);
 
     let to_eval = |v: &Variable| {
-        if &v.sort == &cond {
+        if &v.sort == cond {
             sfun!(evaluate_cond; svar!(v.clone()))
-        } else if &v.sort == &msg {
+        } else if &v.sort == msg {
             sfun!(evaluate_msg; svar!(v.clone()))
         } else {
             svar!(v.clone())
         }
     };
 
-    debug_assert!(!ctx.pbl.functions.contains_key(rewriteb.name()));
+    debug_assert!(!env.contains_f(&rewriteb));
     declarations.push(Smt::DeclareFun(rewriteb.clone()));
 
     for &f in ctx.ta_funs.iter().filter(|&&f| !f.is_special_evaluate()) {
-        if f.get_output_sort() == &msg {
-            let vars = sorts_to_variables(0, f.get_input_sorts().into_iter());
+        if &f.get_output_sort() == msg {
+            let vars = sorts_to_variables(0, f.input_sorts_iter());
             assertions.push(Smt::DeclareRewrite {
                 rewrite_fun: RewriteKind::Other(rewriteb.clone()),
                 vars: vars.clone(),
@@ -76,12 +79,12 @@ fn evaluate_rewrite(
                     sfun!(evaluate_msg; sfun!(f, vars.iter().map(|s| svar!(s.clone())).collect())),
                 ),
                 rhs: Box::new(sfun!(
-                    f.get_evaluate_function(functions).unwrap(),
+                    f.get_evaluate_function().unwrap(),
                     vars.iter().map(to_eval).collect()
                 )),
             })
-        } else if f.get_output_sort() == &cond {
-            let vars = sorts_to_variables(0, f.get_input_sorts().into_iter());
+        } else if &f.get_output_sort() == cond {
+            let vars = sorts_to_variables(0, f.input_sorts_iter());
             assertions.push(Smt::DeclareRewrite {
                 rewrite_fun: RewriteKind::Bool,
                 vars: vars.clone(),
@@ -89,7 +92,7 @@ fn evaluate_rewrite(
                     sfun!(evaluate_cond; sfun!(f, vars.iter().map(|s| svar!(s.clone())).collect())),
                 ),
                 rhs: Box::new(sfun!(
-                    f.get_evaluate_function(functions).unwrap(),
+                    f.get_evaluate_function().unwrap(),
                     vars.iter().map(to_eval).collect()
                 )),
             })
@@ -98,13 +101,13 @@ fn evaluate_rewrite(
         }
     }
 
-    let v1 = Variable::new(1, CONDITION.clone());
-    let v2 = Variable::new(2, CONDITION.clone());
+    let v1 = Variable::new(1, cond.clone());
+    let v2 = Variable::new(2, cond.clone());
     let vars = vec![v1.clone(), v2.clone()];
 
     // and
     {
-        let cand = functions.get(CAND_NAME).unwrap();
+        let cand = env.get_f(CAND_NAME).unwrap();
         assertions.push(Smt::DeclareRewrite {
             rewrite_fun: RewriteKind::Bool,
             vars: vars.clone(),
@@ -114,7 +117,7 @@ fn evaluate_rewrite(
     }
     // or
     {
-        let cor = functions.get(COR_NAME).unwrap();
+        let cor = env.get_f(COR_NAME).unwrap();
         assertions.push(Smt::DeclareRewrite {
             rewrite_fun: RewriteKind::Bool,
             vars: vars.clone(),
@@ -125,21 +128,21 @@ fn evaluate_rewrite(
 
     // not
     {
-        let cnot = functions.get(CNOT_NAME).unwrap();
+        let cnot = env.get_f(CNOT_NAME).unwrap();
         assertions.push(Smt::DeclareRewrite {
             rewrite_fun: RewriteKind::Bool,
             vars: vec![v1.clone()],
             lhs: Box::new(sfun!(evaluate_cond; sfun!(cnot; svar!(v1.clone())))),
-            rhs: Box::new(snot!(to_eval(&v1))),
+            rhs: Box::new(snot!(env; to_eval(&v1))),
         })
     }
 
     // eq
     {
-        let v1 = Variable::new(1, MSG.clone());
-        let v2 = Variable::new(2, MSG.clone());
+        let v1 = Variable::new(1, msg.clone());
+        let v2 = Variable::new(2, msg.clone());
         let vars = vec![v1, v2];
-        let ceq = functions.get(CEQ_NAME).unwrap();
+        let ceq = env.get_f(CEQ_NAME).unwrap();
         assertions.push(Smt::DeclareRewrite {
             rewrite_fun: RewriteKind::Bool,
             vars: vars.clone(),
@@ -151,25 +154,25 @@ fn evaluate_rewrite(
     // true
     {
         assertions.push(Smt::Assert(
-            sfun!(evaluate_cond; sfun!(functions.get(CTRUE_NAME).unwrap())),
+            sfun!(evaluate_cond; sfun!(env.get_f(CTRUE_NAME).unwrap())),
         ))
     }
 
     // false
     {
-        assertions.push(Smt::Assert(snot!(
-            sfun!(evaluate_cond; sfun!(functions.get(CFALSE_NAME).unwrap()))
+        assertions.push(Smt::Assert(snot!(env;
+            sfun!(evaluate_cond; sfun!(env.get_f(CFALSE_NAME).unwrap()))
         )))
     }
 
     // ite
     {
-        let vars = sorts_to_variables(0, [&cond, &msg, &msg].into_iter());
+        let vars = sorts_to_variables(0, [cond, msg, msg].into_iter());
         let (c, l, r) = (&vars[0], &vars[1], &vars[2]);
-        let fite = functions.get(IF_THEN_ELSE_NAME).unwrap();
+        let fite = env.get_f(IF_THEN_ELSE_NAME).unwrap();
         assertions.push(Smt::Assert(sforall!(vars.clone(), seq!(
             sfun!(evaluate_msg; sfun!(fite; svar!(c.clone()), svar!(l.clone()), svar!(r.clone()))),
-            site!(to_eval(c), to_eval(l), to_eval(r))
+            site!( to_eval(c), to_eval(l), to_eval(r))
         ))))
     }
 
@@ -179,7 +182,7 @@ fn evaluate_rewrite(
             let asserts = match &q.content {
                 QuantifierPContent::Exists { content } => vec![sforall!(
                     q.free_variables.iter().cloned().collect_vec(),
-                    simplies!(
+                    simplies!(env;
                         sfun!(evaluate_cond; sfun!(
                             q.function, q.free_variables.iter().map_into().collect_vec())),
                         sexists!(
@@ -191,7 +194,7 @@ fn evaluate_rewrite(
                 .into_iter(),
                 QuantifierPContent::Forall { content } => vec![sforall!(
                     q.free_variables.iter().cloned().collect_vec(),
-                    simplies!(
+                    simplies!(env;
                         sfun!(evaluate_cond; sfun!(
                             q.function, q.free_variables.iter().map_into().collect_vec())),
                         sforall!(
@@ -214,7 +217,7 @@ fn evaluate_rewrite(
                         .map(|Variable { id, sort }| {
                             Function::new_with_flag(
                                 &format!("sk${}_{}", name, id),
-                                sorts.into(),
+                                sorts.clone(),
                                 sort.clone(),
                                 FFlags::SKOLEM,
                             )
@@ -252,7 +255,7 @@ fn evaluate_rewrite(
                                 .chain(q.free_variables.iter())
                                 .cloned()
                                 .collect(),
-                            simplies!(
+                            simplies!(env;
                                 sfun!(evaluate_cond; condition),
                                 sfun!(evaluate_cond; sk_condition)
                             )

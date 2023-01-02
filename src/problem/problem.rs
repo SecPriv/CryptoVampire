@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Deref};
 
 use itertools::{Either, Itertools};
 
@@ -6,12 +6,14 @@ use crate::{
     formula::{
         builtins::{
             functions::{
-                AND, AND_NAME, B_EQUALITY, B_IF_THEN_ELSE, EQUALITY_NAME, EVAL_COND, EVAL_MSG,
-                FALSE, FALSE_NAME, IF_THEN_ELSE_NAME, NOT, NOT_NAME, OR, OR_NAME, TRUE, TRUE_NAME,
+                AND, AND_NAME, B_EQUALITY, B_EQUALITY_NAME, B_IF_THEN_ELSE, B_IF_THEN_ELSE_NAME,
+                EQUALITY_NAME, EVAL_COND, EVAL_MSG, FALSE, FALSE_NAME, IF_THEN_ELSE,
+                IF_THEN_ELSE_NAME, NOT, NOT_NAME, OR, OR_NAME, TRUE, TRUE_NAME,
             },
-            steps::INIT,
+            steps::{INIT, INIT_NAME},
             types::{BITSTRING, BOOL, CONDITION, CONDITION_NAME, MSG, MSG_NAME},
         },
+        env::Environement,
         formula::{RichFormula, Variable},
         function::{FFlags, Function},
         macros::fun,
@@ -26,8 +28,7 @@ use super::{crypto_assumptions::CryptoAssumption, protocol::Step};
 #[derive(Debug)]
 pub struct Problem {
     pub steps: HashMap<String, Step>,
-    pub functions: HashMap<String, Function>,
-    pub sorts: Vec<Sort>,
+    pub env: Environement,
     pub assertions: Vec<RichFormula>,
     pub query: RichFormula,
     pub order: Vec<RichFormula>,
@@ -38,8 +39,7 @@ pub struct Problem {
 
 pub struct ProblemBuilder {
     pub steps: Vec<Step>,
-    pub functions: Vec<Function>,
-    pub sorts: Vec<Sort>,
+    pub env: Environement,
     pub assertions: Vec<RichFormula>,
     pub query: RichFormula,
     pub order: Vec<RichFormula>,
@@ -86,8 +86,7 @@ impl Problem {
     pub fn new(pbl: ProblemBuilder) -> Self {
         let ProblemBuilder {
             steps,
-            mut functions,
-            mut sorts,
+            mut env,
             assertions,
             query,
             order,
@@ -95,78 +94,71 @@ impl Problem {
             crypto_assumptions,
         } = pbl;
 
-        // add the sorts that are missing
-        sorts.push(CONDITION.clone());
-        sorts.push(BITSTRING.clone());
+        let cond = CONDITION(&env).clone();
+        let msg = MSG(&env).clone();
+        let bool = BOOL(&env).clone();
+        let bitstring = BITSTRING(&env).clone();
 
-        // add the functions that are missing
-        functions.push(EVAL_COND.clone());
-        functions.push(EVAL_MSG.clone());
+        // add and build easy to easy to acces functions & steps
+        let function_db = {
+            let flag = FFlags::SPECIAL_EVALUATE | FFlags::TERM_ALGEBRA;
 
-        // ensure all term algebra functions use the right sorts
-        let (term_algebra_functions, other_functions): (Vec<Function>, Vec<Function>) =
-            functions.into_iter().partition_map(|f| {
-                if f.is_term_algebra() {
-                    let name = f.name();
-                    let in_s = f
-                        .get_input_sorts()
-                        .iter()
-                        .map(|s| replace_if_eq(s.clone(), BOOL.clone(), CONDITION.clone()))
-                        .collect();
-                    let out_s =
-                        replace_if_eq(f.get_output_sort().clone(), BOOL.clone(), CONDITION.clone());
-                    let flags = f.get_flags();
-                    Either::Left(Function::new_with_flag(name, in_s, out_s, flags))
-                } else {
-                    Either::Right(f)
-                }
-            });
+            let cand = env.create_and_add_function(CAND_NAME, &[&cond, &cond], &cond, flag);
+            let cor = env.create_and_add_function(COR_NAME, &[&cond, &cond], &cond, flag);
+            let cnot = env.create_and_add_function(CNOT_NAME, &[&cond], &cond, flag);
+            let ceq = env.create_and_add_function(CEQ_NAME, &[&msg, &msg], &cond, flag);
+            let ctrue = env.create_and_add_function(CTRUE_NAME, &[], &cond, flag);
+            let cfalse = env.create_and_add_function(CFALSE_NAME, &[], &cond, flag);
+            let item = IF_THEN_ELSE(&env).clone();
 
-        // get the evaluate version of those function (skipping the special cases)
-        let evaluated_functions: Vec<Function> = term_algebra_functions
-            .iter()
-            .filter_map(generate_evaluate_fun)
-            .collect();
+            cand.set_evaluate_functions(AND(&env));
+            cor.set_evaluate_functions(OR(&env));
+            cnot.set_evaluate_functions(NOT(&env));
+            ceq.set_evaluate_functions(B_EQUALITY(&env));
+            item.set_evaluate_functions(B_IF_THEN_ELSE(&env));
 
-        // some special functions
-        let flag = FFlags::SPECIAL_EVALUATE | FFlags::TERM_ALGEBRA;
-        let function_db = FunctionDB {
-            cand: Function::new_with_flag(
-                CAND_NAME,
-                vec![CONDITION.clone(), CONDITION.clone()],
-                CONDITION.clone(),
-                flag,
-            ),
-            cor: Function::new_with_flag(
-                COR_NAME,
-                vec![CONDITION.clone(), CONDITION.clone()],
-                CONDITION.clone(),
-                flag,
-            ),
-            cnot: Function::new_with_flag(
-                CNOT_NAME,
-                vec![CONDITION.clone()],
-                CONDITION.clone(),
-                flag,
-            ),
-            ceq: Function::new_with_flag(
-                CEQ_NAME,
-                vec![MSG.clone(), MSG.clone()],
-                CONDITION.clone(),
-                flag,
-            ),
-            ctrue: Function::new_with_flag(CTRUE_NAME, vec![], CONDITION.clone(), flag),
-            cfalse: Function::new_with_flag(CFALSE_NAME, vec![], CONDITION.clone(), flag),
+            QuickAccess {
+                cand,
+                cor,
+                cnot,
+                ceq,
+                ctrue,
+                cfalse,
+                init: INIT(&env),
+                cond: cond.clone(),
+                msg: msg.clone(),
+                bool: bool.clone(),
+                bitstring: bitstring.clone(),
+                item,
+            }
         };
 
-        // add everything to the the hashtable
-        let mut functions = term_algebra_functions
-            .into_iter()
-            .chain(evaluated_functions.into_iter())
-            .chain(function_db.as_vec().iter().map(|f| Function::clone(f)))
-            .chain(other_functions.into_iter())
-            .map(|f| (f.name().to_owned(), f))
-            .collect();
+        // ensure all term algebra functions use the right sorts
+        // get the evaluate version of those function (skipping the special cases)
+        let evaluated_functions = env
+            .get_functions_iter_mut()
+            .filter_map(|f| {
+                if !f.is_term_algebra() {
+                    None
+                } else {
+                    {
+                        let in_s = f
+                            .get_input_sorts()
+                            .iter()
+                            .map(|s| replace_if_eq(s, &bool, &cond))
+                            .cloned()
+                            .collect();
+                        f.set_input_sorts(in_s)
+                    }
+                    {
+                        let out_s =
+                            replace_if_eq(&f.get_output_sort(), &bool, &cond).clone();
+                        f.set_output_sort(out_s)
+                    }
+                    generate_evaluate_fun(&function_db, f)
+                }
+            })
+            .collect_vec();
 
         // to keep track of the ta quantifiers
         let mut quantifiers = Vec::new();
@@ -174,18 +166,19 @@ impl Problem {
         // the steps and collect the ta quantifiers
         let steps: Vec<Step> = steps
             .into_iter()
-            .chain(std::iter::once(INIT.clone()))
             .map(|s| {
                 let msg = process_step_content(
                     &function_db,
-                    &mut functions,
+                    &mut env,
                     &mut quantifiers,
+                    &msg,
                     s.message(),
                 );
                 let cond = process_step_content(
                     &function_db,
-                    &mut functions,
+                    &mut env,
                     &mut quantifiers,
+                    &cond,
                     s.condition(),
                 );
                 let name = s.name();
@@ -198,49 +191,42 @@ impl Problem {
                     s.function().clone(),
                 )
             })
+            .chain(std::iter::once(function_db.init.clone()))
             .collect();
 
         // make sure the steps are in the function set
         for step in &steps {
-            functions
+            env.get_functions_mut()
                 .entry(step.name().to_owned())
                 .or_insert(step.into()); // skip if already there
         }
 
         // add the quantifier to the set of functions
-        functions.extend(
-            quantifiers
-                .iter()
-                .map(|q| (q.function.name().to_owned(), q.function.clone())),
-        );
+        env.extend_f(quantifiers.iter().map(|q| &q.function).cloned());
 
         // no longer mutable
-        let functions = functions;
+        // let env = env;
         let quantifiers = quantifiers;
 
         // NB: no more ta quantifiers from now on
 
         let user_assertions: Vec<RichFormula> = assertions
             .into_iter()
-            .map(|f| process_assertion(&functions, f))
+            .map(|f| process_assertion(&function_db, &env, f))
             .collect();
-        let query: RichFormula = process_query(&functions, query);
+        let query: RichFormula = process_query(&function_db, &env, query);
         let lemmas: Vec<RichFormula> = temporary
             .into_iter()
-            .map(|f| process_query(&functions, f))
+            .map(|f| process_query(&function_db, &env, f))
             .collect();
-        let order: Vec<RichFormula> = order
-            .into_iter()
-            .map(|f| process_oder(&functions, f))
-            .collect();
+        let order: Vec<RichFormula> = order.into_iter().map(|f| process_oder(&env, f)).collect();
 
         Problem {
             steps: steps
                 .into_iter()
                 .map(|s| (s.name().to_owned(), s))
                 .collect(),
-            functions,
-            sorts,
+            env,
             assertions: user_assertions,
             query,
             order,
@@ -249,31 +235,35 @@ impl Problem {
             crypto_assumptions,
         }
     }
+
+    pub fn get_init_step(&self) -> &Step {
+        self.steps.get(INIT_NAME).unwrap()
+    }
+
+    pub fn get_init_step_function(&self) -> &Function {
+        self.env.get_f(INIT_NAME).unwrap()
+    }
 }
 
 // assertions must be turned into evaluate form
-fn process_assertion(functions: &HashMap<String, Function>, f: RichFormula) -> RichFormula {
-    turn_formula_into_evaluate(functions, f)
+fn process_assertion(
+    functions_db: &QuickAccess,
+    env: &Environement,
+    f: RichFormula,
+) -> RichFormula {
+    turn_formula_into_evaluate(functions_db, env, f)
 }
 
 // assertions must be turned into evaluate form
 fn process_query(
-    function_db: &FunctionDB,
-    functions: &mut HashMap<String, Function>,
-    quantifiers: &mut Vec<QuantifierP>,
-    formula: &RichFormula,
+    function_db: &QuickAccess,
+    env: &Environement,
+    formula: RichFormula,
 ) -> RichFormula {
-    // turn_formula_into_evaluate(functions, f)
-
-    match f {
-        RichFormula::Var(v) => RichFormula::Var(to_evaluate::map_var(v)),
-        RichFormula::Fun(fun, args) if fun.is_term_algebra() && !f.is_from_step() {
-            let nf = 
-        }
-    }
+    process_query_content(function_db, env, formula)
 }
 
-fn process_oder(_functions: &HashMap<String, Function>, f: RichFormula) -> RichFormula {
+fn process_oder(_env: &Environement, f: RichFormula) -> RichFormula {
     f
 }
 
@@ -284,27 +274,29 @@ mod to_evaluate {
         quantifier::Quantifier,
     };
 
-    pub fn map_var(v: Variable) -> Variable {
+    use super::QuickAccess;
+
+   pub(crate) fn map_var(function_db: &QuickAccess, v: Variable) -> Variable {
         match v.sort.name() {
             MSG_NAME => Variable {
-                sort: BITSTRING.clone(),
+                sort: function_db.bitstring.clone(),
                 ..v
             },
             CONDITION_NAME => Variable {
-                sort: BOOL.clone(),
+                sort: function_db.bool.clone(),
                 ..v
             },
             _ => v,
         }
     }
 
-    pub fn map_quant(q: Quantifier) -> Quantifier {
+    pub(crate) fn map_quant(fdb: &QuickAccess, q: Quantifier) -> Quantifier {
         match q {
             Quantifier::Exists { variables } => Quantifier::Exists {
-                variables: variables.into_iter().map(map_var).collect(),
+                variables: variables.into_iter().map(|v| map_var(fdb, v)).collect(),
             },
             Quantifier::Forall { variables } => Quantifier::Forall {
-                variables: variables.into_iter().map(map_var).collect(),
+                variables: variables.into_iter().map(|v| map_var(fdb, v)).collect(),
             },
             _ => unreachable!(),
         }
@@ -315,51 +307,71 @@ mod to_evaluate {
 //
 // panic if there is a plain tfst
 fn turn_formula_into_evaluate(
-    functions: &HashMap<String, Function>,
+    function_db: &QuickAccess,
+    env: &Environement,
     f: RichFormula,
 ) -> RichFormula {
     match f {
-        RichFormula::Var(v) => RichFormula::Var(to_evaluate::map_var(v)),
+        RichFormula::Var(v) => RichFormula::Var(to_evaluate::map_var(function_db, v)),
         RichFormula::Fun(fun, args) => {
-            let eargs = args
-                .into_iter()
-                .map(|f| turn_formula_into_evaluate(functions, f))
-                .collect();
             match fun.name() {
                 // dumb base term algebra
-                _ if fun.is_term_algebra() && !fun.is_special_evaluate() => RichFormula::Fun(
-                    // functions.get(&get_evaluate_fun_name(&fun).unwrap()).unwrap().clone(),
-                    fun.get_evaluate_function(functions)
-                        .unwrap_or_else(|| panic!("{:?}", &fun))
-                        .clone(),
-                    eargs,
-                ),
+                _ if fun.is_term_algebra() && !fun.is_special_evaluate() => {
+                    let eargs = args
+                        .into_iter()
+                        .map(|f| turn_formula_into_evaluate(function_db, env, f))
+                        .collect();
+
+                    RichFormula::Fun(
+                        // functions.get(&get_evaluate_fun_name(&fun).unwrap()).unwrap().clone(),
+                        fun.get_evaluate_function()
+                            .unwrap_or_else(|| panic!("{:?}", &fun))
+                            .clone(),
+                        eargs,
+                    )
+                }
 
                 // special ones
-                CAND_NAME => RichFormula::Fun(AND.clone(), eargs),
-                COR_NAME => RichFormula::Fun(OR.clone(), eargs),
-                CNOT_NAME => RichFormula::Fun(NOT.clone(), eargs),
-                CEQ_NAME => RichFormula::Fun(B_EQUALITY.clone(), eargs),
-                CTRUE_NAME => RichFormula::Fun(TRUE.clone(), eargs),
-                CFALSE_NAME => RichFormula::Fun(FALSE.clone(), eargs),
-                IF_THEN_ELSE_NAME => RichFormula::Fun(B_IF_THEN_ELSE.clone(), eargs),
-                EQUALITY_NAME => RichFormula::Fun(B_EQUALITY.clone(), eargs),
+                // CAND_NAME => RichFormula::Fun(AND(env).clone(), eargs),
+                // COR_NAME => RichFormula::Fun(OR(env).clone(), eargs),
+                // CNOT_NAME => RichFormula::Fun(NOT(env).clone(), eargs),
+                // CEQ_NAME => RichFormula::Fun(B_EQUALITY(env).clone(), eargs),
+                // CTRUE_NAME => RichFormula::Fun(TRUE(env).clone(), eargs),
+                // CFALSE_NAME => RichFormula::Fun(FALSE(env).clone(), eargs),
+                // IF_THEN_ELSE_NAME => RichFormula::Fun(B_IF_THEN_ELSE(env).clone(), eargs),
+                // EQUALITY_NAME => RichFormula::Fun(B_EQUALITY(env).clone(), eargs),
+                CAND_NAME | COR_NAME | CNOT_NAME | CEQ_NAME | CTRUE_NAME | CFALSE_NAME
+                | IF_THEN_ELSE_NAME | EQUALITY_NAME => {
+                    let eargs = args
+                        .into_iter()
+                        .map(|f| turn_formula_into_evaluate(function_db, env, f))
+                        .collect();
+
+                    RichFormula::Fun(get_ta_fun(function_db, &fun).clone(), eargs)
+                }
 
                 // wierder
-                _ if fun.get_output_sort() == &MSG.clone() => {
-                    fun!(EVAL_MSG; RichFormula::Fun(fun, eargs))
-                }
-                _ if fun.get_output_sort() == &CONDITION.clone() => {
-                    fun!(EVAL_COND; RichFormula::Fun(fun, eargs))
+                // _ if fun.get_output_sort() == MSG(env) => {
+                //     fun!(EVAL_MSG(env); RichFormula::Fun(fun, eargs))
+                // }
+                // _ if fun.get_output_sort() == CONDITION(env) => {
+                //     fun!(EVAL_COND(env); RichFormula::Fun(fun, eargs))
+                // }
+                _ if fun.get_output_sort().is_evaluatable() => {
+                    call_evaluate(env, RichFormula::Fun(fun, args))
                 }
 
                 // non-term algebra, leave as is
                 _ => {
                     debug_assert!(
-                        !(fun.contain_sort(&MSG) || fun.contain_sort(&CONDITION)),
+                        !(fun.contain_sort(MSG(env)) || fun.contain_sort(CONDITION(env))),
                         "{:?}",
                         fun
                     );
+                    let eargs = args
+                        .into_iter()
+                        .map(|f| turn_formula_into_evaluate(function_db, env, f))
+                        .collect();
                     RichFormula::Fun(fun, eargs)
                 }
             }
@@ -367,10 +379,19 @@ fn turn_formula_into_evaluate(
         RichFormula::Quantifier(q, args) => {
             let eargs = args
                 .into_iter()
-                .map(|f| turn_formula_into_evaluate(functions, f))
+                .map(|f| turn_formula_into_evaluate(function_db, env, f))
                 .collect();
-            RichFormula::Quantifier(to_evaluate::map_quant(q), eargs)
+            RichFormula::Quantifier(to_evaluate::map_quant(function_db, q), eargs)
         }
+    }
+}
+
+pub fn call_evaluate(env: &Environement, f: RichFormula) -> RichFormula {
+    debug_assert!(f.get_sort(env).is_evaluatable());
+    match &f.get_sort(env) {
+        s if s == MSG(env) => fun!(EVAL_MSG(env); f),
+        s if s == CONDITION(env) => fun!(EVAL_COND(env); f),
+        s => unreachable!("{} is not evaluatable or not implemented", s.name()),
     }
 }
 
@@ -388,10 +409,10 @@ pub fn get_evaluate_fun_name(f: &Function) -> Option<String> {
 
 /// get the evaluate version of a term algebra function
 /// skip the [`Flags::SPECIAL_EVALUATE`] functions
-fn generate_evaluate_fun(f: &Function) -> Option<Function> {
+fn generate_evaluate_fun(db: &QuickAccess, f: &Function) -> Option<Function> {
     if f.is_term_algebra() && !f.is_special_evaluate() && !f.is_from_step() {
         debug_assert!(
-            (f.contain_sort(&CONDITION) || f.contain_sort(&MSG)),
+            (f.contain_sort(&db.cond) || f.contain_sort(&db.msg)),
             "{:?}",
             f
         );
@@ -400,40 +421,38 @@ fn generate_evaluate_fun(f: &Function) -> Option<Function> {
             f.get_input_sorts()
                 .iter()
                 .map(|f| {
-                    replace_if_eq(
-                        replace_if_eq(f.clone(), CONDITION.clone(), BOOL.clone()),
-                        MSG.clone(),
-                        BITSTRING.clone(),
-                    )
+                    replace_if_eq(replace_if_eq(f, &db.cond, &db.bool), &db.msg, &db.bitstring)
+                        .clone()
                 })
                 .collect()
         };
         let n_out_s = {
             replace_if_eq(
-                replace_if_eq(f.get_output_sort().clone(), CONDITION.clone(), BOOL.clone()),
-                MSG.clone(),
-                BITSTRING.clone(),
+                replace_if_eq(&f.get_output_sort(), &db.cond, &db.bool),
+                &db.msg,
+                &db.bitstring,
             )
+            .clone()
         };
 
-        Some(Function::new_with_flag(
-            &name,
-            n_in_s,
-            n_out_s,
-            FFlags::EVALUATE_TA,
-        ))
+        let new_f = Function::new_with_flag(&name, n_in_s, n_out_s, FFlags::EVALUATE_TA);
+        f.set_evaluate_functions(&new_f);
+        Some(new_f)
     } else {
         None
     }
 }
 
 /// turn whatever format `formula` has into a term algebra one
-fn process_step_content<'a>(
-    function_db: &FunctionDB,
-    functions: &mut HashMap<String, Function>,
+fn process_step_content<S>(
+    function_db: &QuickAccess,
+    env: &mut Environement,
     quantifiers: &mut Vec<QuantifierP>,
+    expected_sort: S,
     formula: &RichFormula,
-) -> RichFormula {
+) -> RichFormula where S:Deref<Target = Sort> {
+    let function = &mut env.get_functions_mut();
+
     let free_vars: Vec<Variable> = {
         formula
             .get_free_vars()
@@ -441,19 +460,20 @@ fn process_step_content<'a>(
             .map(|v| Variable::clone(v))
             .collect()
     };
-    let sort = formula.get_sort().clone();
+    let sort = formula.get_sort(env).clone();
 
     match formula {
         RichFormula::Var(_) => formula.clone(),
         RichFormula::Quantifier(Quantifier::Forall { variables }, args) => {
             let content = process_step_content(
                 function_db,
-                functions,
+                env,
                 quantifiers,
+                &function_db.cond,
                 args.into_iter().next().unwrap(),
             );
             make_quantifier(
-                functions,
+                env,
                 quantifiers,
                 free_vars,
                 sort,
@@ -465,12 +485,13 @@ fn process_step_content<'a>(
         RichFormula::Quantifier(Quantifier::Exists { variables }, args) => {
             let content = process_step_content(
                 function_db,
-                functions,
+                env,
                 quantifiers,
+                &function_db.cond,
                 args.into_iter().next().unwrap(),
             );
             make_quantifier(
-                functions,
+                env,
                 quantifiers,
                 free_vars,
                 sort,
@@ -482,12 +503,13 @@ fn process_step_content<'a>(
         RichFormula::Quantifier(Quantifier::FindSuchThat { variables }, args) => {
             let mut arg_iter = args
                 .into_iter()
-                .map(|f| process_step_content(function_db, functions, quantifiers, f));
+                .zip([&function_db.cond, &function_db.msg, &function_db.msg].into_iter())
+                .map(|(f, s)| process_step_content(function_db, env, quantifiers, s, f));
             let condition = arg_iter.next().unwrap();
             let left = arg_iter.next().unwrap();
             let right = arg_iter.next().unwrap();
             make_quantifier(
-                functions,
+                env,
                 quantifiers,
                 free_vars,
                 sort,
@@ -501,42 +523,82 @@ fn process_step_content<'a>(
             )
         }
         RichFormula::Fun(f, args) => {
-            let nf = get_ta_fun(function_db, functions, f).clone();
+            let nf = get_ta_fun(function_db, f).clone();
             let nargs = args
                 .into_iter()
-                .map(|f| process_step_content(function_db, functions, quantifiers, f))
+                .zip(f.input_sorts_iter())
+                .map(|(f, s)| process_step_content(function_db, env, quantifiers, s, f))
                 .collect();
             RichFormula::Fun(nf, nargs)
         }
     }
 }
 
-fn get_ta_fun<'a>(
-    function_db: &'a FunctionDB,
-    functions: &'a HashMap<String, Function>,
-    f: &Function,
-) -> &'a Function {
+/// turn whatever format `formula` has into a term algebra one
+fn process_query_content(
+    function_db: &QuickAccess,
+    env: &Environement,
+    formula: RichFormula,
+) -> RichFormula {
+    match formula {
+        RichFormula::Var(_) => formula.clone(),
+        RichFormula::Quantifier(Quantifier::FindSuchThat { variables }, _) => {
+            panic!("no fst!")
+        }
+        RichFormula::Quantifier(q, args) => {
+            let args = args
+                .into_iter()
+                .map(|f| process_query_content(function_db, env, f))
+                .collect();
+            RichFormula::Quantifier(q.clone(), args)
+        }
+        RichFormula::Fun(f, args) => {
+            if f.is_special_evaluate() {
+                let args = args
+                    .into_iter()
+                    .map(|f| process_query_content(function_db, env, f))
+                    .collect();
+                RichFormula::Fun(f.get_evaluate_function().unwrap(), args)
+            } else if f.get_output_sort().is_evaluatable() {
+                call_evaluate(env, RichFormula::Fun(f, args))
+            } else {
+                unreachable!()
+            }
+        }
+    }
+}
+
+fn get_ta_fun<'a>(function_db: &'a QuickAccess, f: &'a Function) -> &'a Function {
     match f.name() {
         AND_NAME => &function_db.cand,
         OR_NAME => &function_db.cor,
         NOT_NAME => &function_db.cnot,
         EQUALITY_NAME => &function_db.ceq,
+        B_EQUALITY_NAME => &function_db.ceq,
         TRUE_NAME => &function_db.ctrue,
         FALSE_NAME => &function_db.cfalse,
-        name => functions.get(name).unwrap(),
+        B_IF_THEN_ELSE_NAME => &function_db.item,
+        name if !f.is_special_evaluate() => f,
+        _ => unreachable!("special evaluate should be treated specially"),
     }
 }
 
-struct FunctionDB {
+pub (crate) struct QuickAccess {
     cand: Function,
     cor: Function,
     cnot: Function,
     ceq: Function,
     ctrue: Function,
     cfalse: Function,
+    item: Function,
+    init: Step,
+    bool: Sort,
+    msg: Sort,
+    cond: Sort,
+    bitstring: Sort,
 }
 
-impl FunctionDB {
+impl QuickAccess {
     fn as_vec(&self) -> Vec<&Function> {
         vec![
             &self.cand,
@@ -550,7 +612,7 @@ impl FunctionDB {
 }
 
 fn make_quantifier(
-    functions: &mut HashMap<String, Function>,
+    env: &mut Environement,
     quantifiers: &mut Vec<QuantifierP>,
     free_vars: Vec<Variable>,
     sort: Sort,
@@ -575,7 +637,7 @@ fn make_quantifier(
         sort,
         FFlags::TERM_ALGEBRA | FFlags::SPECIAL_EVALUATE | FFlags::SPECIAL_SUBTERM,
     );
-    functions.insert(function.name().to_owned(), function.clone());
+    env.add_f(function.clone());
     quantifiers.push(QuantifierP {
         bound_variables: variables.clone(),
         free_variables: free_vars.iter().cloned().collect(),

@@ -1,7 +1,7 @@
 use super::{
     builtins::types::{BOOL, MSG},
     formula::Variable,
-    sort::Sort,
+    sort::Sort, env::Environement,
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -12,11 +12,11 @@ pub enum Quantifier {
 }
 
 impl Quantifier {
-    pub fn get_output_sort(&self) -> &Sort {
+    pub fn get_output_sort<'a>(&self, env: &'a Environement) -> &'a Sort {
         match self {
-            Quantifier::Exists { variables: _ } => &BOOL,
-            Quantifier::Forall { variables: _ } => &BOOL,
-            Quantifier::FindSuchThat { variables: _ } => &MSG,
+            Quantifier::Exists { variables: _ } => BOOL(env),
+            Quantifier::Forall { variables: _ } => BOOL(env),
+            Quantifier::FindSuchThat { variables: _ } => MSG(env),
         }
     }
 

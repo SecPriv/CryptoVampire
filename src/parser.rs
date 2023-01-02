@@ -1,6 +1,6 @@
 extern crate pest;
 use crate::{
-    formula::{function::FFlags, macros::fun},
+    formula::{env::Environement, function::FFlags, macros::fun},
     problem::{
         crypto_assumptions::CryptoAssumption,
         problem::{Problem, ProblemBuilder},
@@ -91,8 +91,7 @@ type E = Error<Rule>;
 
 #[derive(Debug, Default)]
 struct Context<'a> {
-    types: HashMap<&'a str, Sort>,
-    funs: HashMap<&'a str, Function>,
+    env: Environement,
     steps: HashMap<&'a str, Step>,
     assertions: Vec<RichFormula>,
     query: Option<RichFormula>,
@@ -100,11 +99,11 @@ struct Context<'a> {
     crypto_assumptions: Vec<CryptoAssumption>,
     order: Vec<RichFormula>,
 }
+
 impl<'a> Context<'a> {
     fn to_pb_builder(self) -> ProblemBuilder {
         let Context {
-            types,
-            funs,
+            env,
             steps,
             assertions,
             query,
@@ -114,8 +113,7 @@ impl<'a> Context<'a> {
         } = self;
         ProblemBuilder {
             steps: steps.into_iter().map(|(_, t)| t).collect(),
-            functions: funs.into_iter().map(|(_, t)| t).collect(),
-            sorts: types.into_iter().map(|(_, t)| t).collect(),
+            env,
             assertions,
             query: query.unwrap(),
             order,
@@ -129,36 +127,8 @@ const FORBIDDEN_NAMES: &'static [&'static str] = &[
     "subterm", "ite", "=", "<", ">", "assert", "if", "then", "else",
 ];
 
-pub fn parse_protocol(str: &str) -> Result<Problem, E> {
-    let mut ctx = Context::default();
-
-    ctx.types.extend(
-        [
-            (BOOL_NAME, BOOL.clone()),
-            (MSG_NAME, MSG.clone()),
-            (NONCE_NAME, NONCE.clone()),
-            (STEP_NAME, STEP.clone()),
-        ]
-        .into_iter(),
-    );
-    ctx.funs.extend(
-        [
-            (IF_THEN_ELSE_NAME, IF_THEN_ELSE.clone()),
-            (AND_NAME, AND.clone()),
-            (OR_NAME, OR.clone()),
-            (NOT_NAME, NOT.clone()),
-            (NONCE_MSG_NAME, NONCE_MSG.clone()),
-            (TRUE_NAME, TRUE.clone()),
-            (FALSE_NAME, FALSE.clone()),
-            (EQUALITY_NAME, EQUALITY.clone()),
-            (INPUT_NAME, INPUT.clone()),
-            (FAIL_NAME, FAIL.clone()),
-            (LT_NAME, LT.clone()),
-            (HAPPENS_NAME, HAPPENS.clone()),
-            (EMPTY_NAME, EMPTY.clone()),
-        ]
-        .into_iter(),
-    );
+pub fn parse_protocol(env: Environement, str: &str) -> Result<Problem, E> {
+    let mut ctx = Context { env, ..Default::default()};
 
     let c = MainParser::parse(Rule::content, str)?.next().unwrap();
     // println!("{:?}", c);
@@ -177,7 +147,7 @@ pub fn parse_protocol(str: &str) -> Result<Problem, E> {
                     &ctx,
                     p.into_inner().next().unwrap(),
                     &mut memory,
-                    Some(&BOOL),
+                    Some(BOOL(&ctx.env)),
                 )?;
 
                 if assert.iter().all(|f| match f {
@@ -204,7 +174,7 @@ pub fn parse_protocol(str: &str) -> Result<Problem, E> {
                         &ctx,
                         p.into_inner().next().unwrap(),
                         &mut memory,
-                        Some(&BOOL),
+                        Some(BOOL(&ctx.env)),
                     )?;
                     if query.iter().all(|f| match f {
                         RichFormula::Quantifier(Quantifier::FindSuchThat { variables: _ }, _) => {
@@ -228,7 +198,7 @@ pub fn parse_protocol(str: &str) -> Result<Problem, E> {
                     &ctx,
                     p.into_inner().next().unwrap(),
                     &mut memory,
-                    Some(&BOOL),
+                    Some(BOOL(&ctx.env)),
                 )?;
 
                 if lemma.iter().all(|f| match f {
@@ -250,18 +220,18 @@ pub fn parse_protocol(str: &str) -> Result<Problem, E> {
                     "euf-cma-hash" => {
                         let hash_f_rule = inner.next().unwrap();
 
-                        let hash_f = match ctx.funs.get(hash_f_rule.as_str()) {
+                        let hash_f = match ctx.env.get_f(hash_f_rule.as_str()) {
                             Some(h) => h,
                             _ => {
                                 perr!(hash_f_rule.as_span(); "{} is not defined", hash_f_rule.as_str())?
                             }
                         };
-                        let mmsg = MSG.clone();
+                        let mmsg = MSG(&ctx.env);
                         if hash_f
                             .get_input_sorts()
                             .iter()
-                            .chain(std::iter::once(hash_f.get_output_sort()))
-                            .all(|s| s == &mmsg)
+                            .chain(std::iter::once(&hash_f.get_output_sort()))
+                            .all(|s| s == mmsg)
                         {
                             ctx.crypto_assumptions
                                 .push(CryptoAssumption::EufCmaHash(hash_f.clone()))
@@ -269,7 +239,7 @@ pub fn parse_protocol(str: &str) -> Result<Problem, E> {
                             perr!(
                                 hash_f_rule.as_span(); 
                                 "{} should have type {} -> {} -> {} as it should be a keyed hash", 
-                                hash_f_rule.as_str(), MSG.name(), MSG.name(), MSG.name())?
+                                hash_f_rule.as_str(), MSG(&ctx.env).name(), MSG(&ctx.env).name(), MSG(&ctx.env).name())?
                         }
                     }
                     "nonce" => ctx.crypto_assumptions.push(CryptoAssumption::Nonce),
@@ -285,7 +255,7 @@ pub fn parse_protocol(str: &str) -> Result<Problem, E> {
 
 fn parse_type(ctx: &Context, p: Pair<Rule>) -> Result<Sort, E> {
     match_or_err!(Rule::type_name, p; {
-        match ctx.types.get(p.as_str()) {
+        match ctx.env.get_s(p.as_str()) {
             Some(f) => Ok(f.clone()),
             _ => uerr!(p, "type"),
         }
@@ -303,7 +273,7 @@ fn parse_variable_binding<'a>(
         let var = inner_rule.next().unwrap(); // can't fail
         let var = {
             match_or_err!(Rule::variable, var; {
-                if ctx.funs.contains_key(var.as_str()) {
+                if ctx.env.contain_key_f(var.as_str()) {
                     perr!(var, "the name '{}' is used for both a variable and a function", var.as_str())
                 } else {
                     Ok(var.as_str())
@@ -331,11 +301,15 @@ fn parse_declare_type<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Result<()
     match_or_err!(Rule::declare_type, p; {
         let inner = p.into_inner().next().unwrap();
         let t = inner.as_str();
-        if ctx.types.contains_key(t){
-            rerr!(inner, "type")
-        } else {
-            ctx.types.insert(t, t.into());
-            Ok(())
+        // if ctx.env.get_sorts().contains_key(t){
+        //     rerr!(inner, "type")
+        // } else {
+        //     ctx.env.add_s(t.into());
+        //     Ok(())
+        // }
+        match ctx.env.add_s(t.into()) {
+            true => Ok(()),
+            _ => rerr!(inner, "type")
         }
     })
 }
@@ -349,8 +323,8 @@ fn parse_declare_function<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Resul
         let input_sorts = parse_declare_function_args(ctx, inner_rule.next().unwrap())?;
         let output_sort = parse_type(ctx, inner_rule.next().unwrap())?;
 
-        match ctx.funs.get(name) {
-            None => {
+        // match ctx.env.get_f(name) {
+        //     None => {
                 let flags = FFlags::USER_DEFINED |
                     if input_sorts
                         .iter()
@@ -363,11 +337,13 @@ fn parse_declare_function<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Resul
                         FFlags::empty()
                     };
                 let f = Function::new_with_flag(name, input_sorts, output_sort, flags);
-                ctx.funs.insert(name, f);
-                Ok(())
-            },
-            _ => perr!(name_rule, "redeclaring function: {}", name)
-        }
+                match ctx.env.add_f(f) {
+                    true => Ok(()),
+                    _ => perr!(name_rule, "redeclaring function: {}", name)
+                }
+            // },
+            // _ => perr!(name_rule, "redeclaring function: {}", name)
+        // }
     })
 }
 
@@ -391,7 +367,7 @@ fn parse_application<'a>(
                 }
             }
             _ => {
-                let fun = match ctx.funs.get(name.as_str()) {
+                let fun = match ctx.env.get_f(name.as_str()) {
                     None => {
                         if inner_rule.next().is_none() {
                             return uerr!(name, "constant or variable")
@@ -420,8 +396,8 @@ fn parse_application<'a>(
                     perr!(span; "too many arguments, expected {} got {}", fun.arity(), i)
                 } else {
                     let formula = RichFormula::Fun(fun.clone(), args);
-                    if formula.get_sort() == &NONCE.clone() {
-                        Ok(RichFormula::Fun(NONCE_MSG.clone(), vec![formula]))
+                    if &formula.get_sort(&ctx.env) == NONCE(&ctx.env) {
+                        Ok(RichFormula::Fun(NONCE_MSG(&ctx.env).clone(), vec![formula]))
                     } else {
                         Ok(formula)
                     }
@@ -474,10 +450,10 @@ fn parse_inner_term_as<'a>(
             Rule::infix_term => parse_infix_term_as(ctx, np, memory, None),
             _ => parse_commun_base(ctx, np, memory),
         }?;
-        if mtype.is_none() || Some(r.get_sort()) == mtype {
+        if mtype.is_none() || Some(&r.get_sort(&ctx.env)) == mtype {
             Ok(r)
         } else {
-            perr!(span; "wrong type, expected {} got {}", mtype.unwrap(), r.get_sort())
+            perr!(span; "wrong type, expected {} got {}", mtype.unwrap(), r.get_sort(&ctx.env))
         }
     })
 }
@@ -490,13 +466,13 @@ fn parse_if_then_else<'a>(
     match_or_err!(Rule::if_then_else, p; {
         let mut inner_rule = p.into_inner();
 
-        let condition = parse_term_as(ctx, inner_rule.next().unwrap(), memory, Some(&BOOL))?;
-        let left = parse_term_as(ctx, inner_rule.next().unwrap(), memory, Some(&MSG))?;
-        let right = parse_term_as(ctx, inner_rule.next().unwrap(), memory, Some(&MSG))?;
+        let condition = parse_term_as(ctx, inner_rule.next().unwrap(), memory, Some(BOOL(&ctx.env)))?;
+        let left = parse_term_as(ctx, inner_rule.next().unwrap(), memory, Some(MSG(&ctx.env)))?;
+        let right = parse_term_as(ctx, inner_rule.next().unwrap(), memory, Some(MSG(&ctx.env)))?;
 
         let condition = condition.into();
 
-        Ok(fun!(ctx.funs.get(IF_THEN_ELSE_NAME).unwrap(); condition, left, right))
+        Ok(fun!(IF_THEN_ELSE(&ctx.env); condition, left, right))
     })
 }
 
@@ -515,9 +491,9 @@ fn parse_infix_term_as<'a>(
 
         let mut lhs_formula = match op.as_ref().unwrap().as_rule() {
             Rule::eq | Rule::neq => parse_term_as(ctx, lhs,
-                memory, Some(&MSG))?,
+                memory, Some(MSG(&ctx.env)))?,
             Rule::or | Rule::and => parse_term_as(ctx, lhs,
-                memory, Some(&BOOL))?,
+                memory, Some(BOOL(&ctx.env)))?,
             _ => unreachable!()
         };
         while let Some(mop) = op {
@@ -527,46 +503,46 @@ fn parse_infix_term_as<'a>(
             lhs_formula = match mop.as_rule() {
                 Rule::eq => {
                     let rhs_formula = parse_term_as(ctx, rhs,
-                        memory, Some(&MSG))?;
-                    if lhs_formula.get_sort() == &MSG.clone() {
-                        Ok(fun!(EQUALITY; lhs_formula, rhs_formula))
+                        memory, Some(MSG(&ctx.env)))?;
+                    if &lhs_formula.get_sort(&ctx.env) == MSG(&ctx.env) {
+                        Ok(fun!(EQUALITY(&ctx.env); lhs_formula, rhs_formula))
                     } else {
                         perr!(
                             lhs_span; "wrong type, expected {} got {}",
-                            &MSG.clone(), lhs_formula.get_sort())
+                            MSG(&ctx.env), lhs_formula.get_sort(&ctx.env))
                     }
                 }
                 Rule::neq => {
                     let rhs_formula = parse_term_as(ctx, rhs,
-                        memory, Some(&MSG))?;
-                    if lhs_formula.get_sort() == &MSG.clone() {
-                        Ok(not(fun!(EQUALITY; lhs_formula, rhs_formula)))
+                        memory, Some(MSG(&ctx.env)))?;
+                    if &lhs_formula.get_sort(&ctx.env) == MSG(&ctx.env) {
+                        Ok(not(&ctx.env, fun!(EQUALITY(&ctx.env); lhs_formula, rhs_formula)))
                     } else {
                         perr!(
                             lhs_span; "wrong type, expected {} got {}",
-                            &MSG.clone(), lhs_formula.get_sort())
+                            MSG(&ctx.env), lhs_formula.get_sort(&ctx.env))
                     }
                 }
                 Rule::or => {
                     let rhs_formula = parse_term_as(ctx, rhs,
-                        memory, Some(&BOOL))?;
-                    if lhs_formula.get_sort() == &BOOL.clone() {
-                        Ok(f_or(lhs_formula, rhs_formula))
+                        memory, Some(BOOL(&ctx.env)))?;
+                    if &lhs_formula.get_sort(&ctx.env) == BOOL(&ctx.env) {
+                        Ok(f_or(&ctx.env, lhs_formula, rhs_formula))
                     } else {
                         perr!(
                             lhs_span; "wrong type, expected {} got {}",
-                            &BOOL.clone(), lhs_formula.get_sort())
+                            BOOL(&ctx.env), lhs_formula.get_sort(&ctx.env))
                     }
                 }
                 Rule::and => {
                     let rhs_formula = parse_term_as(ctx, rhs,
-                        memory, Some(&BOOL))?;
-                    if lhs_formula.get_sort() == &BOOL.clone() {
-                        Ok(f_and(lhs_formula, rhs_formula))
+                        memory, Some(BOOL(&ctx.env)))?;
+                    if &lhs_formula.get_sort(&ctx.env) == BOOL(&ctx.env) {
+                        Ok(f_and(&ctx.env, lhs_formula, rhs_formula))
                     } else {
                         perr!(
                             lhs_span; "wrong type, expected {} got {}",
-                            &BOOL.clone(), lhs_formula.get_sort())
+                            BOOL(&ctx.env), lhs_formula.get_sort(&ctx.env))
                     }
                 }
                 _ => unreachable!()
@@ -574,11 +550,11 @@ fn parse_infix_term_as<'a>(
             lhs_span = lhs_span.start_pos().span(&end);
             op = inner.next();
         }
-        if mtype.is_none() || Some(lhs_formula.get_sort()) == mtype {
+        if mtype.is_none() || Some(&lhs_formula.get_sort(&ctx.env)) == mtype {
             Ok(lhs_formula)
         } else {
             perr!(lhs_span; "wrong type, expected {} got {}",
-                mtype.unwrap(), lhs_formula.get_sort())
+                mtype.unwrap(), lhs_formula.get_sort(&ctx.env))
         }
 
     })
@@ -605,7 +581,7 @@ fn parse_quantifier<'a>(
 
         let op = inner.next().unwrap();
         let to_be_freed =  parse_typed_arguments(ctx, inner.next().unwrap(), memory)?;
-        let content = parse_term_as(ctx, inner.next().unwrap(), memory, Some(&BOOL))?;
+        let content = parse_term_as(ctx, inner.next().unwrap(), memory, Some(BOOL(&ctx.env)))?;
 
         let (strs, vars) :(Vec<_>, Vec<_>) = to_be_freed.into_iter().unzip();
 
@@ -632,9 +608,9 @@ fn parse_find_such_that<'a>(
         let mut inner = p.into_inner();
         let (to_be_freed, vars): (Vec<_>, Vec<_>) =
             parse_typed_arguments(ctx, inner.next().unwrap(), memory)?.into_iter().unzip();
-        let cond = parse_term_as(ctx, inner.next().unwrap(), memory, Some(&BOOL))?;
-        let ml = parse_term_as(ctx, inner.next().unwrap(), memory, Some(&MSG))?;
-        let mr = parse_term_as(ctx, inner.next().unwrap(), memory, Some(&MSG))?;
+        let cond = parse_term_as(ctx, inner.next().unwrap(), memory, Some(BOOL(&ctx.env)))?;
+        let ml = parse_term_as(ctx, inner.next().unwrap(), memory, Some(MSG(&ctx.env)))?;
+        let mr = parse_term_as(ctx, inner.next().unwrap(), memory, Some(MSG(&ctx.env)))?;
 
         let r = RichFormula::Quantifier(Quantifier::FindSuchThat { variables: vars },vec![cond, ml, mr]);
         to_be_freed.iter().for_each(|s| {memory.remove(s).unwrap();});
@@ -659,10 +635,10 @@ fn parse_step<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Result<Step, E> {
         let mut inner = p.into_inner();
 
         let mut memory = HashMap::new();
-        memory.insert("in", Variable::new(0, MSG.clone()));
+        memory.insert("in", Variable::new(0, MSG(&ctx.env).clone()));
 
         let name = inner.next().unwrap().as_str();
-        if ctx.steps.contains_key(name) || ctx.funs.contains_key(name) || FORBIDDEN_NAMES.contains(&name) {
+        if ctx.steps.contains_key(name) || ctx.env.contain_key_f(name) || FORBIDDEN_NAMES.contains(&name) {
             return perr!(span ; "the name {} is already taken", name);
         }
 
@@ -670,11 +646,11 @@ fn parse_step<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Result<Step, E> {
         let (_to_be_freed, sorts): (Vec<_>, Vec<_>) =
             parse_typed_arguments(ctx, inner.next().unwrap(), &mut memory)?.into_iter().map(|(s,v)| (s,v.sort)).unzip();
 
-        let f = Function::new_step(name, &sorts);
-        ctx.funs.insert(name, f.clone());
+        let f = Function::new_step(&ctx.env, name, &sorts);
+        ctx.env.add_f(f.clone());
 
-        let cond = parse_term_as(ctx, inner.next().unwrap(), &mut memory, Some(&BOOL))?;
-        let msg = parse_term_as(ctx, inner.next().unwrap(), &mut memory, Some(&MSG))?;
+        let cond = parse_term_as(ctx, inner.next().unwrap(), &mut memory, Some(BOOL(&ctx.env)))?;
+        let msg = parse_term_as(ctx, inner.next().unwrap(), &mut memory, Some(MSG(&ctx.env)))?;
 
         let r = Step::new(name, sorts, cond, msg, f);
         // to_be_freed.iter().for_each(|s| {memory.remove(s).unwrap();});
@@ -698,13 +674,13 @@ fn parse_order<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Result<RichFormu
         let variables = parse_typed_arguments(ctx, args, &mut memory)?
             .into_iter().map(|(_, v)| v).collect();
 
-        let stp1 = parse_term_as(ctx, stp1, &mut memory, Some(&STEP))?;
-        let stp2 = parse_term_as(ctx, stp2, &mut memory, Some(&STEP))?;
+        let stp1 = parse_term_as(ctx, stp1, &mut memory, Some(STEP(&ctx.env)))?;
+        let stp2 = parse_term_as(ctx, stp2, &mut memory, Some(STEP(&ctx.env)))?;
 
         let formula = match op.as_str() {
-            "<" => fun!(LT; stp1, stp2),
-            ">" => fun!(LT; stp2, stp1),
-            "<>" => not(f_and(fun!(HAPPENS; stp1), fun!(HAPPENS; stp2))),
+            "<" => fun!(LT(&ctx.env); stp1, stp2),
+            ">" => fun!(LT(&ctx.env); stp2, stp1),
+            "<>" => not(&ctx.env, f_and(&ctx.env, fun!(HAPPENS(&ctx.env); stp1), fun!(HAPPENS(&ctx.env); stp2))),
             _ => unreachable!()
         };
 

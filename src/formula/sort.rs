@@ -1,17 +1,18 @@
 use bitflags::bitflags;
 use core::fmt::Debug;
-use std::{fmt::Display, sync::Arc};
+use std::{fmt::Display, sync::Arc, rc::Rc};
 
 bitflags! {
     #[derive(Default )]
     pub struct SFlags: u32 {
         const TERM_ALGEBRA =        1<<0;
         const BUILTIN_VAMPIRE =     1<<1;
+        const EVALUATABLE =         1<<2;
     }
 }
 
 #[derive(Hash)]
-pub struct Sort(Arc<InnerSort>);
+pub struct Sort(Rc<InnerSort>);
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 struct InnerSort {
@@ -36,7 +37,7 @@ impl Eq for Sort {}
 
 impl Ord for Sort {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        Ord::cmp(&Arc::as_ptr(&self.0), &Arc::as_ptr(&other.0))
+        Ord::cmp(&Rc::as_ptr(&self.0), &Rc::as_ptr(&other.0))
     }
 }
 
@@ -48,7 +49,7 @@ impl PartialOrd for Sort {
 
 impl Clone for Sort {
     fn clone(&self) -> Self {
-        Self(Arc::clone(&self.0))
+        Self(Rc::clone(&self.0))
     }
 }
 
@@ -66,13 +67,13 @@ impl Display for Sort {
 
 impl Sort {
     pub fn new(str: &str) -> Self {
-        Sort(Arc::new(InnerSort {
+        Sort(Rc::new(InnerSort {
             name: str.to_owned(),
             flags: SFlags::empty(),
         }))
     }
     pub fn new_with_flag(str: &str, flags: SFlags) -> Self {
-        Sort(Arc::new(InnerSort {
+        Sort(Rc::new(InnerSort {
             name: str.to_owned(),
             flags,
         }))
@@ -88,5 +89,13 @@ impl Sort {
 
     pub fn is_built_in(&self) -> bool {
         self.0.flags.contains(SFlags::BUILTIN_VAMPIRE)
+    }
+
+    pub fn is_evaluatable(&self) -> bool {
+        self.0.flags.contains(SFlags::EVALUATABLE)
+    }
+
+    pub fn as_ptr_usize(&self) -> usize {
+        Rc::as_ptr(&self.0) as usize
     }
 }

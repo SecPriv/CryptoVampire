@@ -1,11 +1,21 @@
-use std::{collections::HashMap, hash::Hash, sync::Arc};
+use std::{
+    borrow::Borrow,
+    cell::{Ref, RefCell},
+    collections::HashMap,
+    hash::Hash,
+    rc::{Rc, Weak},
+};
 
 use bitflags::bitflags;
 use crossbeam_utils::atomic::AtomicCell;
 
-use crate::problem::{problem::get_evaluate_fun_name, protocol::Step};
+use crate::problem::protocol::Step;
 
-use super::{builtins::types::STEP, sort::Sort};
+use super::{
+    builtins::types::STEP,
+    env::Environement,
+    sort::{SFlags, Sort},
+};
 use core::fmt::Debug;
 
 const BASE_SKOLEM_NAME: &'static str = "m$sk_";
@@ -42,89 +52,151 @@ bitflags! {
     }
 }
 
-#[derive(Hash, PartialEq, Eq)]
-pub struct Function(Arc<InnerFunction>);
+// user accessible part
 
-#[derive(Debug, PartialEq, Eq)]
+/// A function is just a pointer to some content in memory.
+/// Pieces of it are mutable through a RefCell, other are not.
+///
+/// Most notable, equality is made on pointers to avoid the possibly
+/// convoluted content
+///
+/// Thus one can copy Function around for more or less free and still
+/// carry a lot of information arround within them
+#[derive(Hash)]
+pub struct Function {
+    inner: Rc<InnerFunction>,
+}
+
+// fast imutable content
+#[derive(Debug)]
 struct InnerFunction {
     name: String,
+    inner: RefCell<InnerInnerFunction>,
+}
+
+// slowe mutable content
+#[derive(Debug)]
+struct InnerInnerFunction {
     input_sorts: Vec<Sort>,
     output_sort: Sort,
     flags: FFlags,
+
+    // more specific
+    /// pointer to the evaluate function when it exists.
+    ///
+    /// I'm using a weak to avoid loops
+    evaluate_fun: Option<Weak<InnerFunction>>,
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-struct InnerFunctionFrozen<'a> {
-    name: &'a String,
-    input_sorts: &'a Vec<Sort>,
-    output_sort: &'a Sort,
-    flags: FFlags,
-}
-
-impl<'a> From<&'a InnerFunction> for InnerFunctionFrozen<'a> {
-    fn from(f: &'a InnerFunction) -> Self {
-        InnerFunctionFrozen {
-            name: &f.name,
-            input_sorts: &f.input_sorts,
-            output_sort: &f.output_sort,
-            flags: f.flags, /* .load() */
-        }
+impl Ord for InnerInnerFunction {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        todo!()
     }
 }
 
-impl InnerFunction {
-    fn freeze<'a>(&'a self) -> InnerFunctionFrozen<'a> {
-        self.into()
+impl PartialOrd for InnerInnerFunction {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(Ord::cmp(self, other))
+    }
+}
+
+impl Eq for InnerInnerFunction {}
+impl PartialEq for InnerInnerFunction {
+    fn eq(&self, other: &Self) -> bool {
+        self.input_sorts == other.input_sorts
+            && self.output_sort == other.output_sort
+            && self.flags == other.flags
+            && match (
+                self.evaluate_fun.as_ref().map(|f| f.upgrade()),
+                other.evaluate_fun.as_ref().map(|f| f.upgrade()),
+            ) {
+                (Some(Some(a)), Some(Some(b))) => Rc::ptr_eq(&a, &b),
+                _ => false,
+            }
+    }
+}
+
+impl Hash for InnerInnerFunction {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.input_sorts.hash(state);
+        self.output_sort.hash(state);
+        self.flags.hash(state);
+        self.evaluate_fun
+            .as_ref()
+            .map(|f| f.upgrade().hash(state))
+            .hash(state);
+    }
+}
+
+impl InnerInnerFunction {
+    fn as_tuple(&self) -> (&Vec<Sort>, &Sort, &FFlags) {
+        (&self.input_sorts, &self.output_sort, &self.flags)
     }
 }
 
 impl Hash for InnerFunction {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.freeze().hash(state);
+        self.name.hash(state);
     }
 }
 
 impl Debug for Function {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
+        self.inner.fmt(f)
     }
 }
 
 impl Clone for Function {
     fn clone(&self) -> Self {
-        Self(Arc::clone(&self.0))
+        Self {
+            inner: Rc::clone(&self.inner),
+        }
     }
 }
 
-// impl PartialEq for Function {
-//     fn eq(&self, other: &Self) -> bool {
-//         Arc::ptr_eq(&self.0, &other.0)
-//     }
-// }
+impl PartialEq for Function {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.inner, &other.inner)
+    }
+}
 
-// impl Eq for Function {}
+impl Eq for Function {}
 
 impl Ord for Function {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        Ord::cmp(&Arc::as_ptr(&self.0), &Arc::as_ptr(&other.0))
+        Ord::cmp(&Rc::as_ptr(&self.inner), &Rc::as_ptr(&other.inner)).then(
+            Ord::cmp(self.name(), other.name())
+                .then_with(|| self.inner.inner.borrow().cmp(&other.inner.inner.borrow())),
+        )
     }
 }
 
 impl PartialOrd for Function {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.0.freeze().cmp(&other.0.freeze()))
+        Some(self.cmp(&other))
     }
 }
 
 impl Function {
     pub fn new(name: &str, input_sorts: Vec<Sort>, output_sort: Sort) -> Self {
-        Function(Arc::new(InnerFunction {
-            name: name.to_owned(),
+        Self::hidden_new(name.to_owned(), input_sorts, output_sort, FFlags::empty())
+    }
+
+    fn hidden_new(name: String, input_sorts: Vec<Sort>, output_sort: Sort, flags: FFlags) -> Self {
+        let innerinner = InnerInnerFunction {
             input_sorts,
             output_sort,
-            // flags: AtomicCell::new(FFlags::empty().bits()),
-            flags: FFlags::empty(),
-        }))
+            flags,
+            evaluate_fun: None,
+        };
+        let inner = InnerFunction {
+            name: name,
+            inner: RefCell::new(innerinner),
+        };
+
+        Function {
+            inner: Rc::new(inner),
+        }
     }
     pub fn new_with_flag(
         name: &str,
@@ -132,56 +204,44 @@ impl Function {
         output_sort: Sort,
         flags: FFlags,
     ) -> Self {
-        Function(Arc::new(InnerFunction {
-            name: name.to_owned(),
-            input_sorts,
-            output_sort,
-            // flags: AtomicCell::new(flag.bits()),
-            flags,
-        }))
+        Self::hidden_new(name.to_owned(), input_sorts, output_sort, flags)
     }
-
-    // pub fn set_user_defined(&self) {
-    //     self.add_flag(FFlags::USER_DEFINED)
-    // }
-
-    // pub fn set_from_step(&self) {
-    //     self.add_flag(FFlags::FROM_STEP)
-    // }
-
-    // pub fn set_skolem(&self) {
-    //     self.add_flag(FFlags::SKOLEM)
-    // }
 
     pub fn arity(&self) -> usize {
-        self.0.input_sorts.len()
+        self.inner.inner.borrow().input_sorts.len()
     }
 
-    pub fn get_input_sorts(&self) -> &[Sort] {
-        self.0.as_ref().input_sorts.as_slice()
+    pub fn get_input_sorts(&self) -> Ref<'_, Vec<Sort>> {
+        Ref::map(self.inner.inner.borrow(), |i| &i.input_sorts)
     }
 
-    pub fn get_output_sort(&self) -> &Sort {
-        &self.0.output_sort
+    pub fn set_input_sorts(&self, v: Vec<Sort>) {
+        self.inner.inner.borrow_mut().input_sorts = v
+    }
+
+    pub fn get_output_sort(&self) -> Sort {
+        self.inner.inner.borrow().output_sort.clone()
+    }
+
+    pub fn set_output_sort(&self, v: Sort) {
+        self.inner.inner.borrow_mut().output_sort = v
     }
 
     pub fn name(&self) -> &str {
-        &self.0.name
+        &self.inner.name
     }
 
-    // fn add_flag(&self, flag: FFlags) {
-    //     self.0.flags |=flag.bits;
-    // }
+    fn add_flag(&self, flag: FFlags) {
+        // self.0.flags |=flag.bits;
+        self.inner.inner.borrow_mut().flags |= flag
+    }
 
-    // fn remove_flag(&self, flag: FFlags) {
-    //     self.0.flags.fetch_and((!flag).bits());
-    // }
+    fn remove_flag(&self, flag: FFlags) {
+        // self.0.flags.fetch_and((!flag).bits());
+        self.inner.inner.borrow_mut().flags.remove(flag)
+    }
 
     fn contain_flag(&self, flag: FFlags) -> bool {
-        // unsafe {
-        //     // all operations are done through Flag
-        //     FFlags::from_bits_unchecked(self.0.flags.load())
-        // }
         self.get_flags().contains(flag)
     }
 
@@ -210,21 +270,33 @@ impl Function {
     }
 
     pub fn contain_sort(&self, s: &Sort) -> bool {
-        self.sort_iter().any(|fs| fs == s)
+        self.sort_iter().any(|fs| fs.eq(s))
     }
 
     pub fn get_flags(&self) -> FFlags {
-        // unsafe {
-        //     // all operations are done through Flag
-        //     FFlags::from_bits_unchecked(self.0.flags.load())
-        // }
-        self.0.flags
+        self.inner.inner.borrow().flags
     }
 
-    pub fn sort_iter(&self) -> impl Iterator<Item = &Sort> {
-        self.get_input_sorts()
-            .iter()
-            .chain(std::iter::once(self.get_output_sort()))
+    pub fn sort_iter(&'_ self) -> impl Iterator<Item = Ref<'_, Sort>> {
+        std::iter::successors(
+            Some((
+                0,
+                Ref::map(self.inner.inner.borrow(), |inn| &inn.output_sort),
+            )),
+            |(i, _)| {
+                let inner = self.inner.inner.borrow();
+                if *i < inner.input_sorts.len() {
+                    Some((i + 1, Ref::map(inner, |inn| &inn.input_sorts[*i])))
+                } else {
+                    None
+                }
+            },
+        )
+        .map(|(_, s)| s)
+    }
+
+    pub fn input_sorts_iter(&'_ self) -> impl Iterator<Item = Ref<'_, Sort>> {
+        self.sort_iter().skip(1)
     }
 
     pub fn generate_new_destructor(&self) -> Vec<Function> {
@@ -253,26 +325,40 @@ impl Function {
         self.contain_flag(FFlags::BUILTIN)
     }
 
-    pub fn new_step(name: &str, sorts: &Vec<Sort>) -> Self {
-        Self::new_with_flag(
-            name,
-            sorts.clone(),
-            STEP.clone(),
-            FFlags::FROM_STEP | FFlags::TERM_ALGEBRA,
-        )
+    pub fn new_step(env: &Environement, name: &str, sorts: &Vec<Sort>) -> Self {
+        Self::new_with_flag(name, sorts.clone(), STEP(env).clone(), Self::step_flags())
     }
 
-    // panics if unsound
+    pub fn step_flags() -> FFlags {
+        FFlags::FROM_STEP | FFlags::TERM_ALGEBRA
+    }
+
     pub fn get_evaluate_name(&self) -> Option<String> {
-        get_evaluate_fun_name(self)
+        self.get_evaluate_function().map(|f| f.name().to_owned())
     }
 
-    pub fn get_evaluate_function<'a>(
-        &self,
-        functions: &'a HashMap<String, Function>,
-    ) -> Option<&'a Function> {
-        let name = self.get_evaluate_name()?;
-        functions.get(&name)
+    pub fn get_evaluate_function(&self) -> Option<Function> {
+        self.inner
+            .inner
+            .borrow()
+            .evaluate_fun
+            .as_ref()
+            .map(|f| f.upgrade().map(|inner| Function { inner }))
+            .flatten()
+    }
+
+    pub fn set_evaluate_functions(&self, f: &Function) {
+        self.inner.inner.borrow_mut().evaluate_fun = Some(Rc::downgrade(&self.inner))
+    }
+
+    pub fn hard_eq(&self, other: &Self) -> bool {
+        (self == other)
+            || ((self.name() == other.name())
+                && (self.inner.inner.borrow().as_tuple() == other.inner.inner.borrow().as_tuple()))
+    }
+
+    pub fn as_ptr_usize(&self) -> usize {
+        Rc::as_ptr(&self.inner) as usize
     }
 }
 

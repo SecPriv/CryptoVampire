@@ -45,14 +45,14 @@ macro_rules! site {
 }
 
 macro_rules! simplies {
-    ($arg1:expr, $arg2:expr) => {
-        crate::smt::smt::implies($arg1, $arg2)
+    ($env:expr; $arg1:expr, $arg2:expr) => {
+        crate::smt::smt::implies($env, $arg1, $arg2)
     };
 }
 
 macro_rules! snot {
-    ($arg1:expr) => {
-        crate::smt::smt::not($arg1)
+    ($env:expr; $arg1:expr) => {
+        crate::smt::smt::not($env, $arg1)
     };
 }
 

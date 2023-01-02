@@ -1,7 +1,7 @@
 use crate::{
     formula::{
         builtins::{
-            functions::{EVAL_MSG_NAME, NONCE_MSG_NAME},
+            functions::{EVAL_MSG_NAME, NONCE_MSG_NAME, EVAL_MSG, NONCE_MSG},
             types::{MSG, NONCE},
         },
         env::Environement,
@@ -43,8 +43,10 @@ fn generate_smt_nonce(
     declarations: &mut Vec<Smt>,
     ctx: &Ctx<'_>,
 ) {
-    let eval_msg = ctx.pbl.functions.get(EVAL_MSG_NAME).unwrap();
-    let nonce = ctx.pbl.functions.get(NONCE_MSG_NAME).unwrap();
+    let eval_msg = EVAL_MSG(env);
+    let nonce = NONCE_MSG(env);
+    let nonce_sort = NONCE(env);
+    let msg = MSG(env);
 
     let subt_main = generate_subterm(
         env,
@@ -52,12 +54,12 @@ fn generate_smt_nonce(
         declarations,
         ctx,
         "sbt$nonce_main",
-        &NONCE,
+        NONCE(env),
         vec![],
     );
 
-    assertions.push(Smt::Assert(sforall!(n!0:NONCE, m!1:MSG;{
-        simplies!(
+    assertions.push(Smt::Assert(sforall!(n!0:nonce_sort, m!1:msg;{
+        simplies!(env;
             seq!(sfun!(eval_msg; sfun!(nonce; n.clone())), sfun!(eval_msg; m.clone())),
             subt_main.main(n.clone(), m.clone())
         )
@@ -71,8 +73,11 @@ fn generate_smt_euf_sma_hash(
     ctx: &Ctx<'_>,
     hash: &Function,
 ) {
-    let eval_msg = ctx.pbl.functions.get(EVAL_MSG_NAME).unwrap();
-    let nonce = ctx.pbl.functions.get(NONCE_MSG_NAME).unwrap();
+    let eval_msg = EVAL_MSG(env);
+    let nonce = NONCE_MSG(env);
+    let msg = MSG(env);
+    let nonce_sort = NONCE(env);
+
 
     let subt_main = generate_subterm(
         env,
@@ -80,7 +85,7 @@ fn generate_smt_euf_sma_hash(
         declarations,
         ctx,
         "sbt$euf_hash_main",
-        &MSG,
+        msg,
         vec![],
     );
     let subt_sec = generate_subterm(
@@ -89,13 +94,13 @@ fn generate_smt_euf_sma_hash(
         declarations,
         ctx,
         "sbt$euf_hash_sec",
-        &NONCE,
+        nonce_sort,
         vec![hash],
     );
 
     for s in subt_sec.iter() {
-        assertions.push(Smt::Assert(sforall!(k!0:NONCE, m!1:MSG, k2!2:MSG; {
-            simplies!(
+        assertions.push(Smt::Assert(sforall!(k!0:nonce_sort, m!1:msg, k2!2:msg; {
+            simplies!(env;
                 s.f(k.clone(), sfun!(hash; m.clone(), k2.clone())),
                 site!(
                     seq!(k2.clone(), sfun!(nonce; k.clone())),
@@ -109,15 +114,15 @@ fn generate_smt_euf_sma_hash(
         })))
     }
 
-    if env.crypto_rewrite {
+    if env.crypto_rewrite() {
         let sk = Function::new_with_flag(
             "sk$u$euf_cma_hash",
-            vec![MSG.clone(), MSG.clone(), NONCE.clone()],
-            MSG.clone(),
+            vec![msg.clone(), msg.clone(), nonce_sort.clone()],
+            msg.clone(),
             FFlags::SKOLEM,
         );
         let asser = srewrite!(
-                RewriteKind::Bool; s!1:MSG, k!2:NONCE, m!3:MSG;
+                RewriteKind::Bool; s!1:msg, k!2:nonce_sort, m!3:msg;
                 {
                     seq!(
                         sfun!(eval_msg; s.clone()),

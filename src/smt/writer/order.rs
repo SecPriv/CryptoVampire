@@ -13,24 +13,25 @@ use crate::{
 use super::Ctx;
 
 pub(crate) fn ordering(
-    _env: &Environement,
+    env: &Environement,
     assertions: &mut Vec<Smt>,
     _declarations: &mut Vec<Smt>,
     ctx: &Ctx<'_>,
 ) {
-    let functions = &ctx.pbl.functions;
-    let init = sfun!(functions.get(INIT.name()).unwrap().clone());
-    let lt = functions.get(LT_NAME).unwrap().clone();
-    let happens = functions.get(HAPPENS_NAME).unwrap().clone();
+    // let functions = &ctx.pbl.functions;
+    let init = sfun!(ctx.pbl.get_init_step_function().clone());
+    let lt = env.get_f(LT_NAME).unwrap().clone();
+    let happens = env.get_f(HAPPENS_NAME).unwrap().clone();
+    let step = STEP(env);
 
-    assertions.push(Smt::AssertTh(sforall!(s!0:STEP; {
+    assertions.push(Smt::AssertTh(sforall!(s!0:step; {
         sor!(
             sfun!(lt; init, s),
             seq!(init, s)
         )
     })));
-    assertions.push(Smt::AssertTh(sforall!(s1!1:STEP, s2!2:STEP, s3!3:STEP ;{
-        simplies!(
+    assertions.push(Smt::AssertTh(sforall!(s1!1:step, s2!2:step, s3!3:step ;{
+        simplies!(env;
             sand!(
                 sfun!(lt; s1, s2),
                 sfun!(lt; s2, s3)
@@ -38,8 +39,8 @@ pub(crate) fn ordering(
             sfun!(lt; s1, s3)
         )
     })));
-    assertions.push(Smt::AssertTh(sforall!(s1!1:STEP, s2!2:STEP; {
-        simplies!(
+    assertions.push(Smt::AssertTh(sforall!(s1!1:step, s2!2:step; {
+        simplies!(env;
             sand!(
                 sfun!(happens; s2),
                 sfun!(lt; s1, s2)
@@ -47,13 +48,13 @@ pub(crate) fn ordering(
             sfun!(happens; s1)
         )
     })));
-    assertions.push(Smt::AssertTh(sforall!(s1!1:STEP, s2!2:STEP; {
+    assertions.push(Smt::AssertTh(sforall!(s1!1:step, s2!2:step; {
         sor!(
             sfun!(lt; s1, s2),
             sfun!(lt; s2, s1),
             seq!(s1, s2),
-            snot!(sfun!(happens; s1)),
-            snot!(sfun!(happens; s2))
+            snot!(env; sfun!(happens; s1)),
+            snot!(env; sfun!(happens; s2))
         )
     })));
     assertions.push(Smt::AssertTh(sfun!(happens; init)))

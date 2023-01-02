@@ -7,7 +7,7 @@ use crate::formula::{
     formula::{RichFormula, Variable},
     function::Function,
     quantifier::Quantifier,
-    sort::Sort,
+    sort::Sort, env::Environement,
 };
 
 use super::macros::sfun;
@@ -27,12 +27,12 @@ pub enum SmtFormula {
     Ite(Box<SmtFormula>, Box<SmtFormula>, Box<SmtFormula>),
 }
 
-pub fn implies(a: SmtFormula, b: SmtFormula) -> SmtFormula {
-    sfun!(IMPLIES; a, b)
+pub fn implies(env:&Environement, a: SmtFormula, b: SmtFormula) -> SmtFormula {
+    sfun!(IMPLIES(env); a, b)
 }
 
-pub fn not(a: SmtFormula) -> SmtFormula {
-    sfun!(NOT; a)
+pub fn not(env:&Environement, a: SmtFormula) -> SmtFormula {
+    sfun!(NOT(env); a)
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -118,7 +118,7 @@ impl fmt::Display for Smt {
             Smt::AssertNot(e) => write!(f, "(assert-not {})", e),
             Smt::DeclareFun(fun) => {
                 write!(f, "(declare-fun {} (", fun.name())?;
-                for s in fun.get_input_sorts() {
+                for s in fun.input_sorts_iter() {
                     write!(f, "{} ", s)?;
                 }
                 write!(f, ") {})", fun.get_output_sort())
@@ -160,7 +160,7 @@ impl fmt::Display for Smt {
                 for (j, vc) in cons.iter().enumerate() {
                     write!(f, "\t\t(\n")?;
                     for c in vc {
-                        assert_eq!(&sorts[j], c.fun.get_output_sort());
+                        assert_eq!(sorts[j], c.fun.get_output_sort());
 
                         write!(f, "\t\t\t({} ", c.fun.name())?;
 
@@ -238,14 +238,14 @@ impl From<Variable> for SmtFormula {
 }
 
 impl Smt {
-    pub fn rewrite_to_assert(self) -> Self {
+    pub fn rewrite_to_assert(self, env:&Environement) -> Self {
         match self {
             Self::DeclareRewrite {
                 rewrite_fun: RewriteKind::Bool,
                 vars,
                 lhs,
                 rhs,
-            } => Smt::Assert(SmtFormula::Forall(vars, Box::new(implies(*lhs, *rhs)))),
+            } => Smt::Assert(SmtFormula::Forall(vars, Box::new(implies(env, *lhs, *rhs)))),
             Self::DeclareRewrite {
                 rewrite_fun: RewriteKind::Other(_),
                 vars,

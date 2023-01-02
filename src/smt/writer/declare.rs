@@ -31,7 +31,7 @@ pub(crate) fn declare(
         .map(|&s| {
             ta_funs
                 .iter()
-                .filter(|&&f| f.get_output_sort() == s)
+                .filter(|&&f| &f.get_output_sort() == s)
                 .map(|&f| SmtCons {
                     fun: f.clone(),
                     dest: f.generate_new_destructor(),

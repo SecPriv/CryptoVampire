@@ -1,7 +1,8 @@
-use std::collections::HashSet;
+use std::ops::Deref;
+use std::{collections::HashSet, borrow::Borrow};
 use std::fmt;
 
-use super::{function::Function, quantifier::Quantifier, sort::Sort};
+use super::{function::Function, quantifier::Quantifier, sort::Sort, env::Environement};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum RichFormula {
@@ -40,11 +41,11 @@ impl PartialEq for Variable {
 impl Eq for Variable {}
 
 impl RichFormula {
-    pub fn get_sort(&self) -> &Sort {
+    pub fn get_sort<'a>(& self, env: & Environement) ->  Sort {
         match self {
-            RichFormula::Var(v) => &v.sort,
+            RichFormula::Var(v) => v.sort.clone(),
             RichFormula::Fun(f, _) => f.get_output_sort(),
-            RichFormula::Quantifier(q, _) => q.get_output_sort(),
+            RichFormula::Quantifier(q, _) => q.get_output_sort(env).clone(),
         }
     }
 
@@ -155,7 +156,7 @@ impl Variable {
     }
 }
 
-pub fn sorts_to_variables<'a>(from: usize, s: impl Iterator<Item = &'a Sort>) -> Vec<Variable> {
+pub fn sorts_to_variables<I:Deref<Target = Sort>> (from: usize, s: impl Iterator<Item = I>) -> Vec<Variable> {
     s.enumerate()
         .map(|(i, s)| Variable::new(i + from, s.clone()))
         .collect()
