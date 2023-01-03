@@ -14,7 +14,8 @@ use crate::{
     },
 };
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+// should be quick to copy
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum CryptoAssumption {
     EufCmaHash(Function),
     Nonce,
@@ -23,97 +24,91 @@ pub enum CryptoAssumption {
 impl CryptoAssumption {
     pub(crate) fn generate_smt(
         &self,
-        env: &Environement,
         assertions: &mut Vec<Smt>,
         declarations: &mut Vec<Smt>,
-        ctx: &Ctx<'_>,
+        ctx: &mut Ctx,
     ) {
         match self {
             CryptoAssumption::EufCmaHash(f) => {
-                generate_smt_euf_sma_hash(env, assertions, declarations, ctx, f)
+                generate_smt_euf_sma_hash( assertions, declarations, ctx, f)
             }
-            CryptoAssumption::Nonce => generate_smt_nonce(env, assertions, declarations, ctx),
+            CryptoAssumption::Nonce => generate_smt_nonce(assertions, declarations, ctx),
         }
     }
 }
 
 fn generate_smt_nonce(
-    env: &Environement,
     assertions: &mut Vec<Smt>,
     declarations: &mut Vec<Smt>,
-    ctx: &Ctx<'_>,
+    ctx: &mut Ctx,
 ) {
-    let eval_msg = EVAL_MSG(env);
-    let nonce = NONCE_MSG(env);
-    let nonce_sort = NONCE(env);
-    let msg = MSG(env);
+    let eval_msg = EVAL_MSG(ctx.env()).clone();
+    let nonce = NONCE_MSG(ctx.env()).clone();
+    let nonce_sort = NONCE(ctx.env()).clone();
+    let msg = MSG(ctx.env()).clone();
 
     let subt_main = generate_subterm(
-        env,
         assertions,
         declarations,
         ctx,
         "sbt$nonce_main",
-        NONCE(env),
+        &nonce_sort,
         vec![],
     );
 
     assertions.push(Smt::Assert(sforall!(n!0:nonce_sort, m!1:msg;{
-        simplies!(env;
+        simplies!(ctx.env();
             seq!(sfun!(eval_msg; sfun!(nonce; n.clone())), sfun!(eval_msg; m.clone())),
-            subt_main.main(n.clone(), m.clone())
+            subt_main.main(n.clone(), m.clone(), &msg)
         )
     })))
 }
 
 fn generate_smt_euf_sma_hash(
-    env: &Environement,
     assertions: &mut Vec<Smt>,
     declarations: &mut Vec<Smt>,
-    ctx: &Ctx<'_>,
+    ctx: &mut Ctx,
     hash: &Function,
 ) {
-    let eval_msg = EVAL_MSG(env);
-    let nonce = NONCE_MSG(env);
-    let msg = MSG(env);
-    let nonce_sort = NONCE(env);
+    let eval_msg = EVAL_MSG(ctx.env()).clone();
+    let nonce = NONCE_MSG(ctx.env()).clone();
+    let msg = MSG(ctx.env()).clone();
+    let nonce_sort = NONCE(ctx.env()).clone();
 
     let subt_main = generate_subterm(
-        env,
         assertions,
         declarations,
         ctx,
         "sbt$euf_hash_main",
-        msg,
+        &msg,
         vec![],
     );
     let subt_sec = generate_subterm(
-        env,
         assertions,
         declarations,
         ctx,
         "sbt$euf_hash_sec",
-        nonce_sort,
+        &nonce_sort,
         vec![hash],
     );
 
     for s in subt_sec.iter() {
         assertions.push(Smt::Assert(sforall!(k!0:nonce_sort, m!1:msg, k2!2:msg; {
-            simplies!(env;
-                s.f(k.clone(), sfun!(hash; m.clone(), k2.clone())),
+            simplies!(ctx.env();
+                s.f(k.clone(), sfun!(hash; m.clone(), k2.clone()), &msg),
                 site!(
                     seq!(k2.clone(), sfun!(nonce; k.clone())),
-                    s.f(k.clone(), m.clone()),
+                    s.f(k.clone(), m.clone(), &msg),
                     sor!(
-                        s.f(k.clone(), m.clone()),
-                        s.f(k.clone(), k2.clone())
+                        s.f(k.clone(), m.clone(), &msg),
+                        s.f(k.clone(), k2.clone(), &nonce_sort)
                     )
                 )
             )
         })))
     }
 
-    if env.crypto_rewrite() {
+    if ctx.env().crypto_rewrite() {
         let sk = Function::new_with_flag(
             "sk$u$euf_cma_hash",
             vec![msg.clone(), msg.clone(), nonce_sort.clone()],
@@ -132,10 +127,10 @@ fn generate_smt_euf_sma_hash(
                     let h = sfun!(hash; u.clone(), sfun!(nonce; k.clone()));
                     sand!(
                         sor!(
-                            subt_main.main(h.clone(), s.clone()),
-                            subt_main.main(h.clone(), m.clone()),
-                            subt_sec.main(k.clone(), m.clone()),
-                            subt_sec.main(k.clone(), s.clone())
+                            subt_main.main(h.clone(), s.clone(), &msg),
+                            subt_main.main(h.clone(), m.clone(), &msg),
+                            subt_sec.main(k.clone(), m.clone(), &msg),
+                            subt_sec.main(k.clone(), s.clone(), &msg)
                         ),
                         seq!(sfun!(eval_msg; h.clone()), sfun!(eval_msg; s.clone()))
                     )

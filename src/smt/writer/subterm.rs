@@ -4,7 +4,7 @@ use crate::{
     formula::{
         builtins::{
             functions::{INPUT, LT_NAME, SUBTERM},
-            types::{BOOL, STEP},
+            types::{BOOL, CONDITION, MSG, STEP},
         },
         env::Environement,
         formula::sorts_to_variables,
@@ -19,81 +19,120 @@ use crate::{
 
 use super::Ctx;
 
-pub enum Subterm<'b> {
-    VampireSpecial(Sort, &'b Function, Function, Function),
-    Base(Sort, Function, Function),
+pub enum Subterm {
+    VampireSpecial {
+        sort: Sort,
+        vampire_subterm_fun: Function,
+        main: Function,
+        secondary: Function,
+    },
+    Base {
+        sort: Sort,
+        sorts_order: Vec<Sort>,
+        main: Vec<Function>,
+        secondary: Vec<Function>,
+        name: String,
+    },
 }
 
-pub(crate) enum OneSubterm<'a, 'b> {
-    Main(&'a Subterm<'b>),
-    Secondary(&'a Subterm<'b>),
+pub(crate) enum OneSubterm<'a> {
+    Main(&'a Subterm),
+    Secondary(&'a Subterm),
 }
 
-impl<'b> Subterm<'b> {
-    pub fn main(&self, a: SmtFormula, b: SmtFormula) -> SmtFormula {
+impl Subterm {
+    pub fn main(&self, a: SmtFormula, b: SmtFormula, sort: &Sort) -> SmtFormula {
         match self {
-            Subterm::VampireSpecial(_, sbt, f, _) => sfun!(*sbt; sfun!(f), a, b),
-            Subterm::Base(_, f, _) => sfun!(f; a, b),
+            Subterm::VampireSpecial {
+                vampire_subterm_fun: sbt,
+                main: f,
+                ..
+            } => sfun!(sbt; sfun!(f), a, b),
+            Subterm::Base {
+                sorts_order,
+                main: f,
+                ..
+            } => Self::call_base(sorts_order, f, a, b, sort),
         }
     }
-    pub fn secondary(&self, a: SmtFormula, b: SmtFormula) -> SmtFormula {
+    pub fn secondary(&self, a: SmtFormula, b: SmtFormula, sort: &Sort) -> SmtFormula {
         match self {
-            Subterm::VampireSpecial(_, sbt, _, f) => sfun!(*sbt; sfun!(f), a, b),
-            Subterm::Base(_, _, f) => sfun!(f; a, b),
+            Subterm::VampireSpecial {
+                vampire_subterm_fun: sbt,
+                secondary: f,
+                ..
+            } => sfun!(sbt; sfun!(f), a, b),
+            Subterm::Base {
+                sorts_order,
+                secondary: f,
+                ..
+            } => Self::call_base(sorts_order, f, a, b, sort),
         }
     }
 
-    fn as_tuple(&self) -> (&Function, &Function) {
+    fn call_base(
+        sorts: &Vec<Sort>,
+        f: &Vec<Function>,
+        a: SmtFormula,
+        b: SmtFormula,
+        sort: &Sort,
+    ) -> SmtFormula {
+        let i = sorts.iter().position(|s| s == sort).unwrap();
+        sfun!(f[i]; a, b)
+    }
+
+    pub fn name_main(&self) -> String {
+        // self.as_tuple().0.name()
         match self {
-            Subterm::VampireSpecial(_, _, a, b) => (a, b),
-            Subterm::Base(_, a, b) => (a, b),
+            Subterm::VampireSpecial { main: f, .. } => f.name(),
+            Subterm::Base { name, .. } => name,
+        }
+        .to_owned()
+    }
+
+    pub fn name_secondary(&self) -> String {
+        match self {
+            Subterm::VampireSpecial { main: f, .. } => f.name().to_owned(),
+            Subterm::Base { name, .. } => name.to_owned() + "_bis",
         }
     }
 
-    pub fn name_main(&self) -> &str {
-        self.as_tuple().0.name()
-    }
-
-    pub fn name_secondary(&self) -> &str {
-        self.as_tuple().1.name()
-    }
-
-    fn as_main<'a>(&'a self) -> OneSubterm<'a, 'b> {
+    fn as_main<'a>(&'a self) -> OneSubterm<'a> {
         OneSubterm::Main(self)
     }
 
-    fn as_secondary<'a>(&'a self) -> OneSubterm<'a, 'b> {
+    fn as_secondary<'a>(&'a self) -> OneSubterm<'a> {
         OneSubterm::Secondary(self)
     }
 
     pub fn sort(&self) -> &Sort {
         match self {
-            Subterm::VampireSpecial(s, _, _, _) => s,
-            Subterm::Base(s, _, _) => s,
+            Subterm::VampireSpecial { sort, .. } => sort,
+            Subterm::Base { sort: s, .. } => s,
         }
     }
 
-    pub(crate) fn iter<'a>(&'a self) -> impl Iterator<Item = OneSubterm<'a, 'b>> {
+    pub(crate) fn iter<'a>(&'a self) -> impl Iterator<Item = OneSubterm<'a>> {
         [self.as_main(), self.as_secondary()].into_iter()
     }
 }
 
-impl<'a, 'b> OneSubterm<'a, 'b> {
-    pub fn f(&self, a: SmtFormula, b: SmtFormula) -> SmtFormula {
+impl<'a> OneSubterm<'a> {
+    pub fn f(&self, a: SmtFormula, b: SmtFormula, sort: &Sort) -> SmtFormula {
         match self {
-            OneSubterm::Main(s) => s.main(a, b),
-            OneSubterm::Secondary(s) => s.secondary(a, b),
+            OneSubterm::Main(s) => s.main(a, b, sort),
+            OneSubterm::Secondary(s) => s.secondary(a, b, sort),
         }
     }
 
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> String {
         match self {
             OneSubterm::Main(s) => s.name_main(),
             OneSubterm::Secondary(s) => s.name_secondary(),
         }
     }
 
-    fn inner(&self) -> &'a Subterm<'b> {
+    fn inner(&self) -> &'a Subterm {
         match self {
             OneSubterm::Main(s) => s,
             OneSubterm::Secondary(s) => s,
@@ -105,25 +144,24 @@ impl<'a, 'b> OneSubterm<'a, 'b> {
     }
 }
 
-pub(crate) fn generate_subterm<'a>(
-    env: &'a Environement,
+pub(crate) fn generate_subterm(
     assertions: &mut Vec<Smt>,
     declarations: &mut Vec<Smt>,
-    ctx: &Ctx<'a>,
+    ctx: &mut Ctx,
     name: &str,
     sort: &Sort,
     functions: Vec<&Function>,
-) -> Subterm<'a> {
-    debug_assert!(env.verify_f());
+) -> Subterm {
+    debug_assert!( ctx.pbl.env.verify_f());
     debug_assert!(
-        functions.iter().all(|f| env.contains_f(f)),
+        functions.iter().all(|f| ctx.pbl.env.contains_f(f)),
         "\n\tfuns: {:?}\n\tf2: {:?}",
         &functions,
-        env.get_functions_iter().collect_vec()
+        ctx.pbl.env.get_functions_iter().collect_vec()
     );
 
-    let subt = if env.use_special_subterm() {
-        generate_special_subterm(env, assertions, declarations, ctx, name, sort, functions)
+    let subt = if ctx.pbl.env.use_special_subterm() {
+        generate_special_subterm( assertions, declarations, ctx, name, sort, functions)
     } else {
         todo!()
     };
@@ -132,23 +170,22 @@ pub(crate) fn generate_subterm<'a>(
     // spliting(assertions, declarations, ctx, subt.as_secondary());
 
     for s in subt.iter() {
-        spliting(env, assertions, declarations, ctx, s);
+        spliting(assertions, declarations, ctx, s);
     }
 
     subt
 }
-fn generate_special_subterm<'a>(
-    env: &'a Environement,
+fn generate_special_subterm(
     assertions: &mut Vec<Smt>,
     declarations: &mut Vec<Smt>,
-    _ctx: &Ctx<'a>,
+    ctx: &mut Ctx,
     name: &str,
     sort: &Sort,
     functions: Vec<&Function>,
-) -> Subterm<'a> {
-    let bool = BOOL(env);
+) -> Subterm {
+    let bool = BOOL(ctx.env());
 
-    let input = INPUT(env);
+    let input = INPUT(ctx.env()).clone();
     let f_main = Function::new_with_flag(name, vec![], bool.clone(), FFlags::SUBTERM_FUN);
     let f_secondary = Function::new_with_flag(
         &format!("{}_bis", name),
@@ -156,14 +193,18 @@ fn generate_special_subterm<'a>(
         bool.clone(),
         FFlags::SUBTERM_FUN,
     );
-    let subt = Subterm::VampireSpecial(
-        sort.clone(),
-        SUBTERM(env),
-        f_main.clone(),
-        f_secondary.clone(),
-    );
 
-    let funs_main = env
+    assert!(ctx.env_mut().add_f(f_main.clone()));
+    assert!(ctx.env_mut().add_f(f_secondary.clone()));
+
+    let subt = Subterm::VampireSpecial {
+        sort: sort.clone(),
+        vampire_subterm_fun: SUBTERM(ctx.env()).clone(),
+        main: f_main.clone(),
+        secondary: f_secondary.clone(),
+    };
+
+    let funs_main = ctx.env()
         .get_functions_iter()
         .filter(|&f| f.is_term_algebra() && !f.is_special_subterm() && !functions.contains(&f))
         .cloned()
@@ -180,34 +221,89 @@ fn generate_special_subterm<'a>(
         funs_secondary.clone(),
     ));
 
-    for s in env
+    for s in ctx.env()
         .get_sort_iter()
         .filter(|&s| (s != sort) && !s.is_term_algebra())
     {
         assertions.push(Smt::Assert(
-            sforall!(m!1:sort, m2!2:s; {snot!(env; subt.main(m, m2))}),
+            sforall!(m!1:sort, m2!2:s; {snot!(ctx.env(); subt.main(m, m2, s))}),
         ));
         assertions.push(Smt::Assert(
-            sforall!(m!1:sort, m2!2:s; {snot!(env; subt.secondary(m, m2))}),
+            sforall!(m!1:sort, m2!2:s; {snot!(ctx.env(); subt.secondary(m, m2, s))}),
         ));
     }
-    assertions.push(Smt::Assert(sforall!(m!1:sort; {subt.main(m.clone(), m)})));
     assertions.push(Smt::Assert(
-        sforall!(m!1:sort; {subt.secondary(m.clone(), m)}),
+        sforall!(m!1:sort; {subt.main(m.clone(), m, sort)}),
+    ));
+    assertions.push(Smt::Assert(
+        sforall!(m!1:sort; {subt.secondary(m.clone(), m, sort)}),
     ));
 
     subt
 }
 
-fn spliting(
-    env: &Environement,
+fn generate_base_subterm(
     assertions: &mut Vec<Smt>,
     declarations: &mut Vec<Smt>,
-    ctx: &Ctx<'_>,
+    ctx: &mut Ctx,
+    name: &str,
+    sort: &Sort,
+    functions: Vec<&Function>,
+) -> Subterm {
+    let bool = BOOL(ctx.env()).clone();
+    let input = INPUT(ctx.env()).clone();
+
+    let sorts = ctx.env()
+        .get_sort_iter()
+        .cloned()
+        .filter(Sort::is_term_algebra)
+        .collect_vec();
+    let (main, secondary): (Vec<_>, Vec<_>) = sorts
+        .iter()
+        .map(|s| {
+            let main = Function::new_with_flag(
+                &format!("s$subterm_{}_{}", name, s.name()),
+                vec![sort.clone(), s.clone()],
+                bool.clone(),
+                FFlags::empty(),
+            );
+            let secondary = Function::new_with_flag(
+                &format!("s$subterm_{}_{}_bis", name, s.name()),
+                vec![sort.clone(), s.clone()],
+                bool.clone(),
+                FFlags::empty(),
+            );
+
+            assert!(ctx.env_mut().add_f(main.clone()));
+            assert!(ctx.env_mut().add_f(secondary.clone()));
+
+            (main, secondary)
+        })
+        .unzip();
+
+    let subterm = Subterm::Base {
+        sort: sort.clone(),
+        sorts_order: sorts,
+        main: main,
+        secondary: secondary,
+        name: name.to_owned(),
+    };
+
+
+    subterm
+}
+
+fn spliting(
+    assertions: &mut Vec<Smt>,
+    declarations: &mut Vec<Smt>,
+    ctx: &mut Ctx,
     subt: OneSubterm,
 ) {
-    let input = INPUT(env);
-    let lt = env.get_f(LT_NAME).unwrap();
+    let input = INPUT(ctx.env());
+    let lt = ctx.env().get_f(LT_NAME).unwrap();
+    let msg = MSG(ctx.env());
+    let cond = CONDITION(ctx.env());
+
     // biggest than any step variable
     let max_var = ctx
         .pbl
@@ -218,7 +314,7 @@ fn spliting(
         .unwrap_or(0)
         + 1;
     // make ununsed variables
-    let sorts = vec![subt.sort().clone(), STEP(env).clone()];
+    let sorts = vec![subt.sort().clone(), STEP(ctx.env()).clone()];
     let vars = sorts_to_variables(max_var, sorts.iter());
 
     declarations.reserve(ctx.pbl.steps.len());
@@ -232,7 +328,7 @@ fn spliting(
         let sp = Function::new_with_flag(
             &format!("sp${}${}", subt.name(), s.name()),
             sorts.clone(),
-            BOOL(env).clone(),
+            BOOL(ctx.env()).clone(),
             FFlags::SPLITING,
         );
         let sp_const = sfun!(sp, vars.iter().map_into().collect());
@@ -245,7 +341,7 @@ fn spliting(
 
         assertions.push(Smt::Assert(sforall!(
             vars.clone(),
-            simplies!(env;
+            simplies!(ctx.env();
                 sp_const.clone(),
                 sexists!(
                     step_vars.clone(),
@@ -255,8 +351,8 @@ fn spliting(
                             step_vars.iter().map_into().collect()),
                         tp.clone()),
                         sor!(
-                            subt.f(m.clone(), s.message().into()),
-                            subt.f(m.clone(), s.condition().into())
+                            subt.f(m.clone(), s.message().into(), msg),
+                            subt.f(m.clone(), s.condition().into(), cond)
                         )
                     )
                 )
@@ -266,8 +362,8 @@ fn spliting(
 
     assertions.push(Smt::Assert(sforall!(
         vars.clone(),
-        simplies!(env;
-            subt.f(m.clone(), sfun!(input; tp.clone())),
+        simplies!(ctx.env();
+            subt.f(m.clone(), sfun!(input; tp.clone()), msg),
             SmtFormula::Or(premises)
         )
     )))

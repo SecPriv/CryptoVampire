@@ -15,7 +15,7 @@ pub(crate) fn ordering(
     env: &Environement,
     assertions: &mut Vec<Smt>,
     _declarations: &mut Vec<Smt>,
-    ctx: &Ctx<'_>,
+    ctx: &Ctx,
 ) {
     // let functions = &ctx.pbl.functions;
     let init = sfun!(ctx.pbl.get_init_step_function().clone());

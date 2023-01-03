@@ -147,6 +147,23 @@ impl Environement {
         }
     }
 
+    pub fn get_or_create<'a>(
+        &'a mut self,
+        name: &str,
+        inputs: &[&Sort],
+        output: &Sort,
+        flags: FFlags,
+    ) -> &'a Function {
+        self.functions
+            .entry(name.to_owned())
+            .or_insert(Function::new_with_flag(
+                name,
+                inputs.iter().map(|&s| s.clone()).collect(),
+                output.clone(),
+                flags,
+            ))
+    }
+
     pub fn verify_f(&self) -> bool {
         self.functions.iter().all(|(name, f)| name == f.name())
     }

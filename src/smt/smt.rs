@@ -86,6 +86,11 @@ impl fmt::Display for SmtFormula {
                     write!(f, "{} ", fun.name())
                 }
             }
+            SmtFormula::Forall(vars, formula) | SmtFormula::Exists(vars, formula)
+                if vars.is_empty() =>
+            {
+                formula.fmt(f)
+            }
             SmtFormula::Forall(vars, formula) => {
                 write!(f, "(forall (")?;
                 for v in vars {

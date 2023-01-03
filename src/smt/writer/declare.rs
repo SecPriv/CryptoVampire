@@ -11,7 +11,7 @@ pub(crate) fn declare(
     _env: &Environement,
     _assertions: &mut Vec<Smt>,
     declarations: &mut Vec<Smt>,
-    ctx: &Ctx<'_>,
+    ctx: &Ctx,
 ) {
     let free_sorts = &ctx.free_sorts;
     let ta_sorts = &ctx.ta_sorts;
@@ -22,17 +22,17 @@ pub(crate) fn declare(
     declarations.extend(
         free_sorts
             .into_iter()
-            .filter_map(|&s| (!s.is_built_in()).then_some(Smt::DeclareSort(s.clone()))),
+            .filter_map(|s| (!s.is_built_in()).then_some(Smt::DeclareSort(s.clone()))),
     );
 
     // ta
     let cons = ta_sorts
         .iter()
-        .map(|&s| {
+        .map(|s| {
             ta_funs
                 .iter()
-                .filter(|&&f| &f.get_output_sort() == s)
-                .map(|&f| SmtCons {
+                .filter(|&f| &f.get_output_sort() == s)
+                .map(|f| SmtCons {
                     fun: f.clone(),
                     dest: f.generate_new_destructor(),
                 })
@@ -40,7 +40,7 @@ pub(crate) fn declare(
         })
         .collect_vec();
     declarations.push(Smt::DeclareDatatypes {
-        sorts: ta_sorts.iter().map(|&s| s.clone()).collect(),
+        sorts: ta_sorts.iter().map(|s| s.clone()).collect(),
         cons,
     });
 
@@ -48,6 +48,6 @@ pub(crate) fn declare(
     declarations.extend(
         free_funs
             .iter()
-            .filter_map(|&f| (!f.is_built_in()).then_some(Smt::DeclareFun(f.clone()))),
+            .filter_map(|f| (!f.is_built_in()).then_some(Smt::DeclareFun(f.clone()))),
     );
 }

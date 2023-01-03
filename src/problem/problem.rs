@@ -612,12 +612,12 @@ fn get_ta_fun<'a>(function_db: &'a QuickAccess, f: &'a Function) -> &'a Function
         OR_NAME => &function_db.cor,
         NOT_NAME => &function_db.cnot,
         EQUALITY_NAME => &function_db.ceq,
-        B_EQUALITY_NAME => &function_db.ceq,
         TRUE_NAME => &function_db.ctrue,
+        B_EQUALITY_NAME => &function_db.ceq,
         FALSE_NAME => &function_db.cfalse,
         B_IF_THEN_ELSE_NAME => &function_db.item,
         _ => f,
-        _ => unreachable!("special evaluate should be treated specially ({:?})", f),
+        // _ => unreachable!("special evaluate should be treated specially ({:?})", f),
     }
 }
 

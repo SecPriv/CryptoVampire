@@ -25,7 +25,7 @@ pub(crate) fn evaluate(
     env: &Environement,
     assertions: &mut Vec<Smt>,
     declarations: &mut Vec<Smt>,
-    ctx: &Ctx<'_>,
+    ctx: &Ctx,
 ) {
     if env.use_rewrite() {
         evaluate_rewrite(env, assertions, declarations, ctx)
@@ -40,7 +40,7 @@ fn evaluate_rewrite(
     env: &Environement,
     assertions: &mut Vec<Smt>,
     declarations: &mut Vec<Smt>,
-    ctx: &Ctx<'_>,
+    ctx: &Ctx,
 ) {
     let msg = MSG(env);
     let cond = CONDITION(env);
@@ -69,7 +69,7 @@ fn evaluate_rewrite(
     debug_assert!(!env.contains_f(&rewriteb));
     declarations.push(Smt::DeclareFun(rewriteb.clone()));
 
-    for &f in ctx.ta_funs.iter().filter(|&&f| !f.is_special_evaluate()) {
+    for f in ctx.ta_funs.iter().filter(|&f| !f.is_special_evaluate()) {
         if &f.get_output_sort() == msg {
             let vars = sorts_to_variables(0, f.input_sorts_iter());
             assertions.push(Smt::DeclareRewrite {
@@ -288,7 +288,7 @@ fn user_evaluate(
     _env: &Environement,
     assertions: &mut Vec<Smt>,
     _declarations: &mut Vec<Smt>,
-    ctx: &Ctx<'_>,
+    ctx: &Ctx,
 ) {
     for f in &ctx.pbl.assertions {
         assertions.push(Smt::Assert(f.into()))

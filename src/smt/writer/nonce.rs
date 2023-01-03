@@ -14,14 +14,14 @@ pub(crate) fn nonce_pseudo_ta(
     env: &Environement,
     assertions: &mut Vec<Smt>,
     _declarations: &mut Vec<Smt>,
-    ctx: &Ctx<'_>,
+    ctx: &Ctx,
 ) {
     let free_funs = &ctx.free_funs;
     let nonce = NONCE(env);
     let nonces = free_funs
         .iter()
-        .filter(|&&f| &f.get_output_sort() == nonce)
-        .map(|&f| f)
+        .filter(|&f| &f.get_output_sort() == nonce)
+        .map(|f| f)
         .collect_vec();
 
     assertions.push({
