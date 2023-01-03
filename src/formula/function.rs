@@ -1,21 +1,15 @@
 use std::{
     borrow::Borrow,
     cell::{Ref, RefCell},
-    collections::HashMap,
     hash::Hash,
     rc::{Rc, Weak},
 };
 
 use bitflags::bitflags;
-use crossbeam_utils::atomic::AtomicCell;
 
 use crate::problem::protocol::Step;
 
-use super::{
-    builtins::types::STEP,
-    env::Environement,
-    sort::{SFlags, Sort},
-};
+use super::{builtins::types::STEP, env::Environement, sort::Sort};
 use core::fmt::Debug;
 
 const BASE_SKOLEM_NAME: &'static str = "m$sk_";
@@ -89,7 +83,7 @@ struct InnerInnerFunction {
 }
 
 impl Ord for InnerInnerFunction {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, _other: &Self) -> std::cmp::Ordering {
         todo!()
     }
 }

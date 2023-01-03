@@ -2,7 +2,6 @@ use crate::{
     formula::{
         builtins::{
             functions::{HAPPENS_NAME, LT_NAME},
-            steps::INIT,
             types::STEP,
         },
         env::Environement,

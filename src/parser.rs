@@ -128,7 +128,10 @@ const FORBIDDEN_NAMES: &'static [&'static str] = &[
 ];
 
 pub fn parse_protocol(env: Environement, str: &str) -> Result<Problem, E> {
-    let mut ctx = Context { env, ..Default::default()};
+    let mut ctx = Context {
+        env,
+        ..Default::default()
+    };
 
     let c = MainParser::parse(Rule::content, str)?.next().unwrap();
     // println!("{:?}", c);
@@ -236,8 +239,7 @@ pub fn parse_protocol(env: Environement, str: &str) -> Result<Problem, E> {
                             ctx.crypto_assumptions
                                 .push(CryptoAssumption::EufCmaHash(hash_f.clone()))
                         } else {
-                            perr!(
-                                hash_f_rule.as_span(); 
+                            perr!( hash_f_rule.as_span(); 
                                 "{} should have type {} -> {} -> {} as it should be a keyed hash", 
                                 hash_f_rule.as_str(), MSG(&ctx.env).name(), MSG(&ctx.env).name(), MSG(&ctx.env).name())?
                         }

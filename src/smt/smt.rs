@@ -4,10 +4,11 @@ use itertools::Itertools;
 
 use crate::formula::{
     builtins::functions::{AND_NAME, B_IF_THEN_ELSE_NAME, IMPLIES, NOT, OR_NAME},
+    env::Environement,
     formula::{RichFormula, Variable},
     function::Function,
     quantifier::Quantifier,
-    sort::Sort, env::Environement,
+    sort::Sort,
 };
 
 use super::macros::sfun;
@@ -27,11 +28,11 @@ pub enum SmtFormula {
     Ite(Box<SmtFormula>, Box<SmtFormula>, Box<SmtFormula>),
 }
 
-pub fn implies(env:&Environement, a: SmtFormula, b: SmtFormula) -> SmtFormula {
+pub fn implies(env: &Environement, a: SmtFormula, b: SmtFormula) -> SmtFormula {
     sfun!(IMPLIES(env); a, b)
 }
 
-pub fn not(env:&Environement, a: SmtFormula) -> SmtFormula {
+pub fn not(env: &Environement, a: SmtFormula) -> SmtFormula {
     sfun!(NOT(env); a)
 }
 
@@ -238,7 +239,7 @@ impl From<Variable> for SmtFormula {
 }
 
 impl Smt {
-    pub fn rewrite_to_assert(self, env:&Environement) -> Self {
+    pub fn rewrite_to_assert(self, env: &Environement) -> Self {
         match self {
             Self::DeclareRewrite {
                 rewrite_fun: RewriteKind::Bool,

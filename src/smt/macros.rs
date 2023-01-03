@@ -109,4 +109,4 @@ macro_rules! srewrite {
     }};
 }
 
-pub(crate) use {sand, seq, sexists, sforall, sfun, simplies, site, snot, sor, svar, srewrite};
+pub(crate) use {sand, seq, sexists, sforall, sfun, simplies, site, snot, sor, srewrite, svar};

@@ -7,7 +7,7 @@ pub(crate) mod subterm;
 use itertools::{Either, Itertools};
 
 use crate::{
-    formula::{env::Environement, function::Function, sort::Sort},
+    formula::{function::Function, sort::Sort},
     problem::problem::Problem,
 };
 

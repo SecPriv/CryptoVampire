@@ -1,11 +1,9 @@
 pub mod types {
     use crate::formula::env::Environement;
-    use crate::formula::sort::SFlags;
 
     use super::super::sort::Sort;
     use super::macros::new_type;
     use paste::paste;
-    use static_init::dynamic;
 
     new_type!(BOOL, "Bool");
     new_type!(MSG, "Message");
@@ -18,13 +16,12 @@ pub mod types {
 pub mod functions {
     use crate::formula::env::Environement;
     use crate::formula::formula::RichFormula;
-    use crate::formula::function::FFlags;
+
     use crate::formula::macros::fun;
 
     use super::super::function::Function;
-    use super::{macros::new_fun, types::*};
+    use super::macros::new_fun;
     use paste::paste;
-    use static_init::dynamic;
 
     new_fun!(NONCE_MSG, "m$nonce_as_msg");
     new_fun!(IF_THEN_ELSE, "m$ite");
@@ -60,7 +57,7 @@ pub mod functions {
         fun!(AND(env); a, b)
     }
 
-    pub fn f_or(env: &Environement,a: RichFormula, b: RichFormula) -> RichFormula {
+    pub fn f_or(env: &Environement, a: RichFormula, b: RichFormula) -> RichFormula {
         fun!(OR(env); a, b)
     }
 
@@ -71,17 +68,12 @@ pub mod functions {
 
 pub mod steps {
     use crate::{
-        formula::{env::Environement, formula::RichFormula, function::Function},
+        formula::{env::Environement, formula::RichFormula},
         problem::protocol::Step,
     };
-    use paste::paste;
 
-    use super::{
-        functions::{EMPTY, TRUE},
-        macros::init_fun,
-        types::STEP,
-    };
-    
+    use super::functions::{EMPTY, TRUE};
+
     #[allow(non_snake_case)]
     pub fn INIT(env: &Environement) -> Step {
         let f = env.get_f(INIT_NAME).unwrap().clone();
@@ -100,7 +92,6 @@ pub mod init {
     use crate::formula::env::Environement;
     use crate::formula::function::FFlags;
     use crate::formula::sort::SFlags;
-    use crate::problem::protocol::Step;
 
     use super::super::function::Function;
     use super::super::sort::Sort;
@@ -163,7 +154,7 @@ mod macros {
         ($name:ident, $name2:literal) => {
             paste! {
                 pub const [<$name _NAME>]:&'static str = $name2;
-                
+
                 #[allow(non_snake_case)]
                 pub fn $name(env: &Environement) -> &Function {
                     env.get_f([<$name _NAME>]).unwrap()

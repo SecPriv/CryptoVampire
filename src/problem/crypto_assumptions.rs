@@ -1,7 +1,7 @@
 use crate::{
     formula::{
         builtins::{
-            functions::{EVAL_MSG_NAME, NONCE_MSG_NAME, EVAL_MSG, NONCE_MSG},
+            functions::{EVAL_MSG, NONCE_MSG},
             types::{MSG, NONCE},
         },
         env::Environement,
@@ -77,7 +77,6 @@ fn generate_smt_euf_sma_hash(
     let nonce = NONCE_MSG(env);
     let msg = MSG(env);
     let nonce_sort = NONCE(env);
-
 
     let subt_main = generate_subterm(
         env,

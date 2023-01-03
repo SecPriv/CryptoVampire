@@ -1,7 +1,8 @@
 use super::{
     builtins::types::{BOOL, MSG},
+    env::Environement,
     formula::Variable,
-    sort::Sort, env::Environement,
+    sort::Sort,
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

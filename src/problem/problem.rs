@@ -1,17 +1,17 @@
 use std::{collections::HashMap, ops::Deref};
 
-use itertools::{Either, Itertools};
+use itertools::Itertools;
 
 use crate::{
     formula::{
         builtins::{
             functions::{
                 AND, AND_NAME, B_EQUALITY, B_EQUALITY_NAME, B_IF_THEN_ELSE, B_IF_THEN_ELSE_NAME,
-                EQUALITY, EQUALITY_NAME, EVAL_COND, EVAL_MSG, FALSE, FALSE_NAME, IF_THEN_ELSE,
-                IF_THEN_ELSE_NAME, NOT, NOT_NAME, OR, OR_NAME, TRUE, TRUE_NAME,
+                EQUALITY, EQUALITY_NAME, EVAL_COND, EVAL_MSG, FALSE_NAME, IF_THEN_ELSE,
+                IF_THEN_ELSE_NAME, NOT, NOT_NAME, OR, OR_NAME, TRUE_NAME,
             },
             steps::{INIT, INIT_NAME},
-            types::{BITSTRING, BOOL, CONDITION, CONDITION_NAME, MSG, MSG_NAME},
+            types::{BITSTRING, BOOL, CONDITION, MSG},
         },
         env::Environement,
         formula::{RichFormula, Variable},
@@ -279,7 +279,7 @@ fn process_oder(_env: &Environement, f: RichFormula) -> RichFormula {
 
 mod to_evaluate {
     use crate::formula::{
-        builtins::types::{BITSTRING, BOOL, CONDITION_NAME, MSG_NAME},
+        builtins::types::{CONDITION_NAME, MSG_NAME},
         formula::Variable,
         quantifier::Quantifier,
     };
@@ -357,7 +357,8 @@ fn turn_formula_into_evaluate(
                         .collect();
 
                     RichFormula::Fun(
-                        fun.get_evaluate_function().unwrap_or_else(|| panic!("{:?}", &fun)),
+                        fun.get_evaluate_function()
+                            .unwrap_or_else(|| panic!("{:?}", &fun)),
                         eargs,
                     )
                 }
@@ -464,13 +465,13 @@ fn process_step_content<S>(
     function_db: &QuickAccess,
     env: &mut Environement,
     quantifiers: &mut Vec<QuantifierP>,
-    expected_sort: S,
+    _expected_sort: S,
     formula: &RichFormula,
 ) -> RichFormula
 where
     S: Deref<Target = Sort>,
 {
-    let function = &mut env.get_functions_mut();
+    let _function = &mut env.get_functions_mut();
 
     let free_vars: Vec<Variable> = {
         formula
@@ -561,7 +562,7 @@ fn process_query_content(
 ) -> RichFormula {
     match formula {
         RichFormula::Var(_) => formula.clone(),
-        RichFormula::Quantifier(Quantifier::FindSuchThat { variables }, _) => {
+        RichFormula::Quantifier(Quantifier::FindSuchThat { variables: _ }, _) => {
             panic!("no fst!")
         }
         RichFormula::Quantifier(q, args) => {

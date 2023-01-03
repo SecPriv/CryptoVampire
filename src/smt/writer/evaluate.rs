@@ -3,7 +3,7 @@ use itertools::Itertools;
 use crate::{
     formula::{
         builtins::{
-            functions::{EVAL_COND, EVAL_COND_NAME, EVAL_MSG, EVAL_MSG_NAME, IF_THEN_ELSE_NAME},
+            functions::{EVAL_COND, EVAL_MSG, IF_THEN_ELSE_NAME},
             types::{BITSTRING, BOOL, CONDITION, MSG},
         },
         env::Environement,
