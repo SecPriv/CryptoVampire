@@ -129,7 +129,7 @@ impl Problem {
                 ceq,
                 ctrue,
                 cfalse,
-                init: INIT(&env),
+                // init: INIT(&env),
                 cond: cond.clone(),
                 msg: msg.clone(),
                 bool: bool.clone(),
@@ -171,10 +171,12 @@ impl Problem {
 
         // to keep track of the ta quantifiers
         let mut quantifiers = Vec::new();
+        let init = INIT(&env).clone();
 
         // the steps and collect the ta quantifiers
         let steps: Vec<Step> = steps
             .into_iter()
+            .chain(std::iter::once(init))
             .map(|s| {
                 let msg = process_step_content(
                     &function_db,
@@ -200,7 +202,6 @@ impl Problem {
                     s.function().clone(),
                 )
             })
-            .chain(std::iter::once(function_db.init.clone()))
             .collect();
 
         // make sure the steps are in the function set
@@ -629,7 +630,7 @@ pub(crate) struct QuickAccess {
     ctrue: Function,
     cfalse: Function,
     item: Function,
-    init: Step,
+    // init: Step,
     bool: Sort,
     msg: Sort,
     cond: Sort,

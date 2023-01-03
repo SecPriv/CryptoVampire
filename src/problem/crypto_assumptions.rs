@@ -8,7 +8,7 @@ use crate::{
         function::{FFlags, Function},
     },
     smt::{
-        macros::{sand, seq, sforall, sfun, simplies, site, sor, srewrite},
+        macros::{sand, seq, sexists, sforall, sfun, simplies, site, sor, srewrite},
         smt::{RewriteKind, Smt},
         writer::{subterm::generate_subterm, Ctx},
     },
@@ -30,18 +30,14 @@ impl CryptoAssumption {
     ) {
         match self {
             CryptoAssumption::EufCmaHash(f) => {
-                generate_smt_euf_sma_hash( assertions, declarations, ctx, f)
+                generate_smt_euf_sma_hash(assertions, declarations, ctx, f)
             }
             CryptoAssumption::Nonce => generate_smt_nonce(assertions, declarations, ctx),
         }
     }
 }
 
-fn generate_smt_nonce(
-    assertions: &mut Vec<Smt>,
-    declarations: &mut Vec<Smt>,
-    ctx: &mut Ctx,
-) {
+fn generate_smt_nonce(assertions: &mut Vec<Smt>, declarations: &mut Vec<Smt>, ctx: &mut Ctx) {
     let eval_msg = EVAL_MSG(ctx.env()).clone();
     let nonce = NONCE_MSG(ctx.env()).clone();
     let nonce_sort = NONCE(ctx.env()).clone();
@@ -101,7 +97,7 @@ fn generate_smt_euf_sma_hash(
                     s.f(k.clone(), m.clone(), &msg),
                     sor!(
                         s.f(k.clone(), m.clone(), &msg),
-                        s.f(k.clone(), k2.clone(), &nonce_sort)
+                        s.f(k.clone(), k2.clone(), &msg)
                     )
                 )
             )
@@ -140,6 +136,26 @@ fn generate_smt_euf_sma_hash(
         declarations.push(Smt::DeclareFun(sk));
         assertions.push(asser);
     } else {
-        todo!()
+        let asser = sforall!(s!1:msg, k!2:nonce_sort, m!3:msg;{
+                simplies!(ctx.env();
+                    seq!(
+                        sfun!(eval_msg; s.clone()),
+                        sfun!(eval_msg; sfun!(hash; m.clone(), sfun!(nonce; k.clone())))
+                    )
+                ,
+                    sexists!(u!4:msg; {
+                    let h = sfun!(hash; u.clone(), sfun!(nonce; k.clone()));
+                    sand!(
+                        sor!(
+                            subt_main.main(h.clone(), s.clone(), &msg),
+                            subt_main.main(h.clone(), m.clone(), &msg),
+                            subt_sec.main(k.clone(), m.clone(), &msg),
+                            subt_sec.main(k.clone(), s.clone(), &msg)
+                        ),
+                        seq!(sfun!(eval_msg; h.clone()), sfun!(eval_msg; s.clone()))
+                    )})
+                )}
+        );
+        assertions.push(Smt::Assert(asser));
     }
 }

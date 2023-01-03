@@ -57,6 +57,8 @@ pub enum Smt {
         sorts: Vec<Sort>,
         cons: Vec<Vec<SmtCons>>,
     },
+
+    CheckSat
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -105,7 +107,9 @@ impl fmt::Display for SmtFormula {
                 }
                 write!(f, ") {})", formula)
             }
+            SmtFormula::And(args) if args.is_empty() => write!(f, "true"), 
             SmtFormula::And(args) => fun_list_fmt(f, "and", args.iter()),
+            SmtFormula::Or(args) if args.is_empty() => write!(f, "false"),
             SmtFormula::Or(args) => fun_list_fmt(f, "or", args.iter()),
             SmtFormula::Eq(args) => fun_list_fmt(f, "=", args.iter()),
             SmtFormula::Neq(args) => fun_list_fmt(f, "distinct", args.iter()),
@@ -179,6 +183,8 @@ impl fmt::Display for Smt {
                 }
                 write!(f, "\t)\n)")
             }
+
+            Smt::CheckSat => write!(f, "(check-sat)")
         }
     }
 }

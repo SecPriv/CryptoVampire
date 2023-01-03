@@ -102,5 +102,6 @@ pub fn problem_to_smt(mut pbl: Problem) -> Vec<Smt> {
     assertions.push(Smt::AssertNot((&ctx.pbl.query).into()));
 
     declarations.extend(assertions.into_iter());
+    declarations.push(Smt::CheckSat);
     declarations
 }

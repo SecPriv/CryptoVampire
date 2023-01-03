@@ -79,7 +79,7 @@ macro_rules! sforall {
 
 macro_rules! sexists {
     ($($name:ident ! $i:literal : $sort:expr),*; $content:block) => {{
-        let f = |$($name),*| $content;
+        let f = |$($name:crate::smt::smt::SmtFormula),*| $content;
         crate::smt::smt::SmtFormula::Exists(
             vec![$(crate::formula::formula::Variable {id: $i, sort: $sort.clone()}),*],
             std::boxed::Box::new(

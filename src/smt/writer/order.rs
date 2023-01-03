@@ -23,13 +23,15 @@ pub(crate) fn ordering(
     let happens = env.get_f(HAPPENS_NAME).unwrap().clone();
     let step = STEP(env);
 
-    assertions.push(Smt::AssertTh(sforall!(s!0:step; {
+    let mut assert_tmp = Vec::new();
+
+    assert_tmp.push(sforall!(s!0:step; {
         sor!(
             sfun!(lt; init, s),
             seq!(init, s)
         )
-    })));
-    assertions.push(Smt::AssertTh(sforall!(s1!1:step, s2!2:step, s3!3:step ;{
+    }));
+    assert_tmp.push(sforall!(s1!1:step, s2!2:step, s3!3:step ;{
         simplies!(env;
             sand!(
                 sfun!(lt; s1, s2),
@@ -37,8 +39,8 @@ pub(crate) fn ordering(
             ),
             sfun!(lt; s1, s3)
         )
-    })));
-    assertions.push(Smt::AssertTh(sforall!(s1!1:step, s2!2:step; {
+    }));
+    assert_tmp.push(sforall!(s1!1:step, s2!2:step; {
         simplies!(env;
             sand!(
                 sfun!(happens; s2),
@@ -46,8 +48,8 @@ pub(crate) fn ordering(
             ),
             sfun!(happens; s1)
         )
-    })));
-    assertions.push(Smt::AssertTh(sforall!(s1!1:step, s2!2:step; {
+    }));
+    assert_tmp.push(sforall!(s1!1:step, s2!2:step; {
         sor!(
             sfun!(lt; s1, s2),
             sfun!(lt; s2, s1),
@@ -55,6 +57,12 @@ pub(crate) fn ordering(
             snot!(env; sfun!(happens; s1)),
             snot!(env; sfun!(happens; s2))
         )
-    })));
-    assertions.push(Smt::AssertTh(sfun!(happens; init)))
+    }));
+    assert_tmp.push(sfun!(happens; init));
+
+    if ctx.env().use_assert_theory() {
+        assertions.extend(assert_tmp.into_iter().map(Smt::AssertTh))
+    } else {
+        assertions.extend(assert_tmp.into_iter().map(Smt::Assert))
+    };
 }

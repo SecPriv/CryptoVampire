@@ -7,12 +7,12 @@ use crate::{
             types::{BOOL, CONDITION, MSG, STEP},
         },
         env::Environement,
-        formula::sorts_to_variables,
+        formula::{sorts_to_variables, Variable},
         function::{FFlags, Function},
         sort::Sort,
     },
     smt::{
-        macros::{sand, sexists, sforall, sfun, simplies, snot, sor},
+        macros::{sand, seq, sexists, sforall, sfun, simplies, snot, sor, svar},
         smt::{Smt, SmtFormula},
     },
 };
@@ -77,7 +77,10 @@ impl Subterm {
         b: SmtFormula,
         sort: &Sort,
     ) -> SmtFormula {
-        let i = sorts.iter().position(|s| s == sort).unwrap();
+        let i = sorts
+            .iter()
+            .position(|s| s == sort)
+            .unwrap_or_else(|| panic!("{:?}", sort));
         sfun!(f[i]; a, b)
     }
 
@@ -152,7 +155,7 @@ pub(crate) fn generate_subterm(
     sort: &Sort,
     functions: Vec<&Function>,
 ) -> Subterm {
-    debug_assert!( ctx.pbl.env.verify_f());
+    debug_assert!(ctx.pbl.env.verify_f());
     debug_assert!(
         functions.iter().all(|f| ctx.pbl.env.contains_f(f)),
         "\n\tfuns: {:?}\n\tf2: {:?}",
@@ -161,9 +164,9 @@ pub(crate) fn generate_subterm(
     );
 
     let subt = if ctx.pbl.env.use_special_subterm() {
-        generate_special_subterm( assertions, declarations, ctx, name, sort, functions)
+        generate_special_subterm(assertions, declarations, ctx, name, sort, functions)
     } else {
-        todo!()
+        generate_base_subterm(assertions, declarations, ctx, name, sort, functions)
     };
 
     // spliting(assertions, declarations, ctx, subt.as_main());
@@ -204,7 +207,8 @@ fn generate_special_subterm(
         secondary: f_secondary.clone(),
     };
 
-    let funs_main = ctx.env()
+    let funs_main = ctx
+        .env()
         .get_functions_iter()
         .filter(|&f| f.is_term_algebra() && !f.is_special_subterm() && !functions.contains(&f))
         .cloned()
@@ -221,7 +225,8 @@ fn generate_special_subterm(
         funs_secondary.clone(),
     ));
 
-    for s in ctx.env()
+    for s in ctx
+        .env()
         .get_sort_iter()
         .filter(|&s| (s != sort) && !s.is_term_algebra())
     {
@@ -253,10 +258,11 @@ fn generate_base_subterm(
     let bool = BOOL(ctx.env()).clone();
     let input = INPUT(ctx.env()).clone();
 
-    let sorts = ctx.env()
+    let sorts = ctx
+        .env()
         .get_sort_iter()
         .cloned()
-        .filter(Sort::is_term_algebra)
+        // .filter(Sort::is_term_algebra)
         .collect_vec();
     let (main, secondary): (Vec<_>, Vec<_>) = sorts
         .iter()
@@ -289,6 +295,123 @@ fn generate_base_subterm(
         name: name.to_owned(),
     };
 
+    // declare all functions
+    if let Subterm::Base {
+        main, secondary, ..
+    } = &subterm
+    {
+        declarations.extend(
+            main.iter()
+                .chain(secondary.iter())
+                .cloned()
+                .map(|f| Smt::DeclareFun(f)),
+        )
+    } else {
+        unreachable!()
+    }
+
+    // functions on which the subterm commutes "blindly"
+    let funs_main = ctx
+        .env()
+        .get_functions_iter()
+        .filter(|&f| f.is_term_algebra() && !f.is_special_subterm() && !functions.contains(&f))
+        .cloned()
+        .collect_vec();
+
+    // prepare space for all the assertions
+    assertions.reserve(2 * funs_main.len() + 1);
+
+    // add the assertions
+    {
+        let iter = funs_main.iter().flat_map(|f| {
+            // the variables for the forall
+            // the lhs var is first
+            let vars = std::iter::once(sort.clone())
+                .chain(
+                    f.input_sorts_iter()
+                        // .filter(|s| s.is_term_algebra())
+                        .map(|s| s.clone()),
+                )
+                .enumerate()
+                .map(|(id, s)| Variable::new(id, s))
+                .collect_vec();
+            // the lhs var
+            let x = vars.first().unwrap();
+
+            // f(vars)
+            // stored here to avoid repeating code
+            let applied_f = sfun!(
+                f,
+                vars.iter().skip(1).map(|v| svar!(v.clone())).collect_vec()
+            );
+
+            // the content of the disjonction
+            let mut or_formulas = Vec::with_capacity(vars.len());
+
+            // no equality if it's useless
+            if sort == &f.get_output_sort() {
+                or_formulas.push(seq!(svar!(x.clone()), applied_f.clone()))
+            }
+
+            subterm
+                .iter()
+                // zip it with copies of 'or_formulas'
+                .zip([or_formulas.clone(), or_formulas].into_iter())
+                .map(|(s, mut or_formulas)| {
+                    or_formulas.extend(
+                        vars.iter()
+                            .skip(1)
+                            .map(|v| s.f(svar!(x.clone()), svar!(v.clone()), &v.sort)),
+                    );
+
+                    simplies!(ctx.env();
+                        s.f(svar!(x.clone()), applied_f.clone(), &f.get_output_sort()),
+                        SmtFormula::Or(or_formulas)
+                    )
+                })
+                .map(|f| Smt::Assert(SmtFormula::Forall(vars.clone(), Box::new(f))))
+                .collect_vec() // because it needs to take ownedship of vars
+                .into_iter()
+        });
+        assertions.extend(iter);
+
+        {
+            let msg = MSG(ctx.env());
+            let step = STEP(ctx.env());
+
+            let f = if sort == msg {
+                sforall!(x!1:sort, s!2:step; {
+                    simplies!(ctx.env();
+                        subterm.secondary(x.clone(), sfun!(input; s.clone()), msg),
+                        seq!(x.clone(), sfun!(input; s))
+                )
+                })
+            } else {
+                sforall!(x!1:sort, s!2:step; {
+                    snot!(ctx.env();
+                        subterm.secondary(x.clone(), sfun!(input; s.clone()), msg)
+                )
+                })
+            };
+            assertions.push(Smt::Assert(f));
+        }
+    }
+
+    if let Subterm::Base { sorts_order, .. } = &subterm {
+        assertions.extend(
+            sorts_order
+                .iter()
+                .filter(|&s| !s.is_term_algebra() && (s != sort))
+                .flat_map(|s| {
+                    subterm
+                        .iter()
+                        .map(|subt| sforall!(x!1:sort, n!2:s; {snot!(ctx.env(); subt.f(x, n, s))}))
+                })
+                .map(|f| Smt::Assert(f)),
+        )
+    } else {
+        unreachable!()
+    }
 
     subterm
 }

@@ -18,6 +18,7 @@ pub struct InnerEnvironement {
     use_rewrite: bool,
     crypto_rewrite: bool,
     use_special_subterm: bool,
+    assert_theory: bool,
 }
 
 impl Default for Environement {
@@ -26,9 +27,10 @@ impl Default for Environement {
             functions: HashMap::new(),
             sorts: HashMap::new(),
             inner: Box::new(InnerEnvironement {
-                use_rewrite: true,
-                crypto_rewrite: true,
-                use_special_subterm: true,
+                use_rewrite: false,
+                crypto_rewrite: false,
+                use_special_subterm: false,
+                assert_theory: false,
             }),
         };
         init_env(&mut env);
@@ -79,6 +81,10 @@ impl Environement {
 
     pub fn use_rewrite(&self) -> bool {
         self.inner.use_rewrite
+    }
+
+    pub fn use_assert_theory(&self) -> bool {
+        self.inner.assert_theory
     }
 
     // pub fn get_functions(&self) -> &HashMap<String, Function> {
