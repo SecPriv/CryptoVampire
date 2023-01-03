@@ -147,11 +147,6 @@ impl Environement {
         }
     }
 
-    pub fn extend_f(&mut self, funs: impl Iterator<Item = Function>) {
-        self.functions
-            .extend(funs.map(|f| (f.name().to_owned(), f)))
-    }
-
     pub fn verify_f(&self) -> bool {
         self.functions.iter().all(|(name, f)| name == f.name())
     }

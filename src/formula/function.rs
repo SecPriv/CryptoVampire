@@ -348,7 +348,7 @@ impl Function {
     }
 
     pub fn set_evaluate_functions(&self, f: &Function) {
-        self.inner.inner.borrow_mut().evaluate_fun = Some(Rc::downgrade(&self.inner))
+        self.inner.inner.borrow_mut().evaluate_fun = Some(Rc::downgrade(&f.inner))
     }
 
     pub fn hard_eq(&self, other: &Self) -> bool {

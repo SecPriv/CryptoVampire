@@ -7,7 +7,7 @@ use crate::{
         builtins::{
             functions::{
                 AND, AND_NAME, B_EQUALITY, B_EQUALITY_NAME, B_IF_THEN_ELSE, B_IF_THEN_ELSE_NAME,
-                EQUALITY_NAME, EVAL_COND, EVAL_MSG, FALSE, FALSE_NAME, IF_THEN_ELSE,
+                EQUALITY, EQUALITY_NAME, EVAL_COND, EVAL_MSG, FALSE, FALSE_NAME, IF_THEN_ELSE,
                 IF_THEN_ELSE_NAME, NOT, NOT_NAME, OR, OR_NAME, TRUE, TRUE_NAME,
             },
             steps::{INIT, INIT_NAME},
@@ -117,6 +117,11 @@ impl Problem {
             ceq.set_evaluate_functions(B_EQUALITY(&env));
             item.set_evaluate_functions(B_IF_THEN_ELSE(&env));
 
+            {
+                let eq = EQUALITY(&env);
+                eq.set_evaluate_functions(eq)
+            }
+
             QuickAccess {
                 cand,
                 cor,
@@ -151,14 +156,18 @@ impl Problem {
                         f.set_input_sorts(in_s)
                     }
                     {
-                        let out_s =
-                            replace_if_eq(&f.get_output_sort(), &bool, &cond).clone();
+                        let out_s = replace_if_eq(&f.get_output_sort(), &bool, &cond).clone();
                         f.set_output_sort(out_s)
                     }
-                    generate_evaluate_fun(&function_db, f)
+                    generate_evaluate_fun(&function_db, f).map(|nf| (f, nf))
                 }
             })
+            .map(|(nf, f)| {
+                nf.set_evaluate_functions(&f);
+                f
+            })
             .collect_vec();
+        env.extend_functions(evaluated_functions.into_iter());
 
         // to keep track of the ta quantifiers
         let mut quantifiers = Vec::new();
@@ -202,7 +211,7 @@ impl Problem {
         }
 
         // add the quantifier to the set of functions
-        env.extend_f(quantifiers.iter().map(|q| &q.function).cloned());
+        env.extend_functions(quantifiers.iter().map(|q| &q.function).cloned());
 
         // no longer mutable
         // let env = env;
@@ -212,6 +221,7 @@ impl Problem {
 
         let user_assertions: Vec<RichFormula> = assertions
             .into_iter()
+            // .map(|f| process_assertion(&function_db, &env, f))
             .map(|f| process_assertion(&function_db, &env, f))
             .collect();
         let query: RichFormula = process_query(&function_db, &env, query);
@@ -269,14 +279,14 @@ fn process_oder(_env: &Environement, f: RichFormula) -> RichFormula {
 
 mod to_evaluate {
     use crate::formula::{
-        builtins::types::{BITSTRING, BOOL},
+        builtins::types::{BITSTRING, BOOL, CONDITION_NAME, MSG_NAME},
         formula::Variable,
         quantifier::Quantifier,
     };
 
     use super::QuickAccess;
 
-   pub(crate) fn map_var(function_db: &QuickAccess, v: Variable) -> Variable {
+    pub(crate) fn map_var(function_db: &QuickAccess, v: Variable) -> Variable {
         match v.sort.name() {
             MSG_NAME => Variable {
                 sort: function_db.bitstring.clone(),
@@ -325,8 +335,7 @@ fn turn_formula_into_evaluate(
                     RichFormula::Fun(
                         // functions.get(&get_evaluate_fun_name(&fun).unwrap()).unwrap().clone(),
                         fun.get_evaluate_function()
-                            .unwrap_or_else(|| panic!("{:?}", &fun))
-                            .clone(),
+                            .unwrap_or_else(|| panic!("{:?}", &fun)),
                         eargs,
                     )
                 }
@@ -347,7 +356,10 @@ fn turn_formula_into_evaluate(
                         .map(|f| turn_formula_into_evaluate(function_db, env, f))
                         .collect();
 
-                    RichFormula::Fun(get_ta_fun(function_db, &fun).clone(), eargs)
+                    RichFormula::Fun(
+                        fun.get_evaluate_function().unwrap_or_else(|| panic!("{:?}", &fun)),
+                        eargs,
+                    )
                 }
 
                 // wierder
@@ -387,7 +399,11 @@ fn turn_formula_into_evaluate(
 }
 
 pub fn call_evaluate(env: &Environement, f: RichFormula) -> RichFormula {
-    debug_assert!(f.get_sort(env).is_evaluatable());
+    debug_assert!(
+        f.get_sort(env).is_evaluatable(),
+        "sort: {}",
+        f.get_sort(env)
+    );
     match &f.get_sort(env) {
         s if s == MSG(env) => fun!(EVAL_MSG(env); f),
         s if s == CONDITION(env) => fun!(EVAL_COND(env); f),
@@ -450,7 +466,10 @@ fn process_step_content<S>(
     quantifiers: &mut Vec<QuantifierP>,
     expected_sort: S,
     formula: &RichFormula,
-) -> RichFormula where S:Deref<Target = Sort> {
+) -> RichFormula
+where
+    S: Deref<Target = Sort>,
+{
     let function = &mut env.get_functions_mut();
 
     let free_vars: Vec<Variable> = {
@@ -553,16 +572,33 @@ fn process_query_content(
             RichFormula::Quantifier(q.clone(), args)
         }
         RichFormula::Fun(f, args) => {
-            if f.is_special_evaluate() {
+            // if f.is_built_in() {
+            //     let args = args
+            //         .into_iter()
+            //         .map(|f| process_query_content(function_db, env, f))
+            //         .collect();
+            //     RichFormula::Fun(f, args)
+            // } else if f.is_special_evaluate() {
+            //     let args = args
+            //         .into_iter()
+            //         .map(|f| process_query_content(function_db, env, f))
+            //         .collect();
+            //     RichFormula::Fun(f.get_evaluate_function().unwrap(), args)
+            // } else if f.get_output_sort().is_evaluatable() {
+            //     call_evaluate(env, RichFormula::Fun(f, args))
+            // } else {
+            //     unreachable!("{:?}", f)
+            // }
+            // dbg!(f.name(), f.is_term_algebra());
+
+            if f.is_term_algebra() && f.get_output_sort().is_evaluatable() {
+                call_evaluate(env, RichFormula::Fun(f, args))
+            } else {
                 let args = args
                     .into_iter()
                     .map(|f| process_query_content(function_db, env, f))
                     .collect();
-                RichFormula::Fun(f.get_evaluate_function().unwrap(), args)
-            } else if f.get_output_sort().is_evaluatable() {
-                call_evaluate(env, RichFormula::Fun(f, args))
-            } else {
-                unreachable!()
+                RichFormula::Fun(f, args)
             }
         }
     }
@@ -570,6 +606,7 @@ fn process_query_content(
 
 fn get_ta_fun<'a>(function_db: &'a QuickAccess, f: &'a Function) -> &'a Function {
     match f.name() {
+        // _ if f.is_term_algebra() => f,
         AND_NAME => &function_db.cand,
         OR_NAME => &function_db.cor,
         NOT_NAME => &function_db.cnot,
@@ -578,12 +615,12 @@ fn get_ta_fun<'a>(function_db: &'a QuickAccess, f: &'a Function) -> &'a Function
         TRUE_NAME => &function_db.ctrue,
         FALSE_NAME => &function_db.cfalse,
         B_IF_THEN_ELSE_NAME => &function_db.item,
-        name if !f.is_special_evaluate() => f,
-        _ => unreachable!("special evaluate should be treated specially"),
+        _ => f,
+        _ => unreachable!("special evaluate should be treated specially ({:?})", f),
     }
 }
 
-pub (crate) struct QuickAccess {
+pub(crate) struct QuickAccess {
     cand: Function,
     cor: Function,
     cnot: Function,

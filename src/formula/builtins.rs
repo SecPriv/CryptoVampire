@@ -34,7 +34,7 @@ pub mod functions {
     new_fun!(NOT, "not");
     new_fun!(TRUE, "true");
     new_fun!(FALSE, "false");
-    new_fun!(EQUALITY, "==");
+    new_fun!(EQUALITY, "=");
     new_fun!(B_EQUALITY, "=");
     new_fun!(INPUT, "input");
     new_fun!(FAIL, "fail");
@@ -81,6 +81,8 @@ pub mod steps {
         macros::init_fun,
         types::STEP,
     };
+    
+    #[allow(non_snake_case)]
     pub fn INIT(env: &Environement) -> Step {
         let f = env.get_f(INIT_NAME).unwrap().clone();
         Step::new(
@@ -120,7 +122,7 @@ pub mod init {
 
         init_fun!(env; NONCE_MSG; NONCE ; MSG; FFlags::TERM_ALGEBRA);
         init_fun!(env; IF_THEN_ELSE; BOOL, MSG, MSG ; MSG; FFlags::TERM_ALGEBRA | FFlags::SPECIAL_EVALUATE);
-        init_fun!(env; B_IF_THEN_ELSE; BOOL, BITSTRING, BITSTRING ; BITSTRING; FFlags::EVALUATE_TA);
+        init_fun!(env; B_IF_THEN_ELSE; BOOL, BITSTRING, BITSTRING ; BITSTRING; FFlags::EVALUATE_TA | FFlags::BUILTIN);
         init_fun!(env; AND; BOOL, BOOL ; BOOL; FFlags::BUILTIN);
         init_fun!(env; OR; BOOL, BOOL ; BOOL; FFlags::BUILTIN);
         init_fun!(env; NOT; BOOL ; BOOL; FFlags::BUILTIN);
@@ -149,6 +151,7 @@ mod macros {
             paste! {
                 pub const [<$name _NAME>]:&'static str = $content;
 
+                #[allow(non_snake_case)]
                 pub fn $name(env: &Environement) -> &Sort {
                     env.get_s([<$name _NAME>]).unwrap()
                 }
@@ -160,7 +163,8 @@ mod macros {
         ($name:ident, $name2:literal) => {
             paste! {
                 pub const [<$name _NAME>]:&'static str = $name2;
-
+                
+                #[allow(non_snake_case)]
                 pub fn $name(env: &Environement) -> &Function {
                     env.get_f([<$name _NAME>]).unwrap()
                 }
