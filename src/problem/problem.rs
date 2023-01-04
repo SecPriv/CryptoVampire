@@ -47,7 +47,7 @@ pub struct ProblemBuilder {
     pub crypto_assumptions: Vec<CryptoAssumption>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct QuantifierP {
     /// variables bounded by this quantifier
     pub bound_variables: Vec<Variable>,
@@ -60,7 +60,7 @@ pub struct QuantifierP {
     pub content: QuantifierPContent,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum QuantifierPContent {
     Exists {
         content: RichFormula,

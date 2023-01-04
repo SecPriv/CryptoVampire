@@ -7,7 +7,7 @@ pub(crate) mod subterm;
 use itertools::{Either, Itertools};
 
 use crate::{
-    formula::{env::Environement, function::Function, sort::Sort},
+    formula::{env::Environement, function::Function, sort::Sort, formula::RichFormula},
     problem::problem::Problem,
 };
 
@@ -17,7 +17,7 @@ pub(crate) struct Ctx {
     pub(crate) ta_funs: Vec<Function>,
     pub(crate) free_funs: Vec<Function>,
     pub(crate) ta_sorts: Vec<Sort>,
-    pub(crate) free_sorts: Vec< Sort>,
+    pub(crate) free_sorts: Vec<Sort>,
     pub(crate) pbl: Problem,
 }
 
@@ -51,14 +51,14 @@ pub fn problem_to_smt(mut pbl: Problem) -> Vec<Smt> {
             quantifiers: _,
         } = &pbl;
 
-         (ta_funs, free_funs) = env.get_functions_iter().cloned().partition_map(|f| {
+        (ta_funs, free_funs) = env.get_functions_iter().cloned().partition_map(|f| {
             if f.is_term_algebra() {
                 Either::Left(f)
             } else {
                 Either::Right(f)
             }
         });
-         (ta_sorts, free_sorts) = env.get_sort_iter().cloned().partition_map(|s| {
+        (ta_sorts, free_sorts) = env.get_sort_iter().cloned().partition_map(|s| {
             if s.is_term_algebra() {
                 Either::Left(s)
             } else {
@@ -104,4 +104,47 @@ pub fn problem_to_smt(mut pbl: Problem) -> Vec<Smt> {
     declarations.extend(assertions.into_iter());
     declarations.push(Smt::CheckSat);
     declarations
+}
+
+pub fn problem_smts_with_lemma(pbl: Problem) -> impl Iterator<Item = Vec<Smt>> {
+    let Problem {
+        steps,
+        env,
+        assertions,
+        query,
+        order,
+        mut lemmas,
+        crypto_assumptions,
+        quantifiers,
+    } = pbl;
+
+    // the last lemma is the query
+    lemmas.push(query);
+
+    let mut verified_lemmas :Vec<RichFormula> = Vec::new();
+
+    lemmas.into_iter().map(move |lemma| {
+        // this hurts a little ^^'
+        let pbl = Problem {
+            steps: steps.clone(),
+            env: env.clone(),
+            assertions: assertions.clone(),
+            query: lemma.clone(),
+            order: order.clone(),
+            lemmas: vec![],
+            crypto_assumptions: crypto_assumptions.clone(),
+            quantifiers: quantifiers.clone(),
+        };
+
+        let mut smt = problem_to_smt(pbl);
+        smt.extend(
+            verified_lemmas
+                .iter()
+                .map(|old_lemma| Smt::Assert(old_lemma.clone().into())),
+        );
+
+        verified_lemmas.push(lemma);
+
+        smt
+    })
 }

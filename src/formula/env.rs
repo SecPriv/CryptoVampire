@@ -6,14 +6,14 @@ use super::{
     sort::Sort,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Environement {
     functions: HashMap<String, Function>,
     sorts: HashMap<String, Sort>,
     inner: Box<InnerEnvironement>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InnerEnvironement {
     use_rewrite: bool,
     crypto_rewrite: bool,
