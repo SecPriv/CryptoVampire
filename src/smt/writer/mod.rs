@@ -7,7 +7,7 @@ pub(crate) mod subterm;
 use itertools::{Either, Itertools};
 
 use crate::{
-    formula::{env::Environement, function::Function, sort::Sort, formula::RichFormula},
+    formula::{env::Environement, formula::RichFormula, function::Function, sort::Sort},
     problem::problem::Problem,
 };
 
@@ -121,7 +121,7 @@ pub fn problem_smts_with_lemma(pbl: Problem) -> impl Iterator<Item = Vec<Smt>> {
     // the last lemma is the query
     lemmas.push(query);
 
-    let mut verified_lemmas :Vec<RichFormula> = Vec::new();
+    let mut verified_lemmas: Vec<RichFormula> = Vec::new();
 
     lemmas.into_iter().map(move |lemma| {
         // this hurts a little ^^'

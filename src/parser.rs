@@ -89,7 +89,7 @@ struct MainParser;
 
 type E = Error<Rule>;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct Context<'a> {
     env: Environement,
     steps: HashMap<&'a str, Step>,
@@ -123,15 +123,26 @@ impl<'a> Context<'a> {
     }
 }
 
+impl<'a> From<Environement> for Context<'a> {
+    fn from(env: Environement) -> Self {
+        Context {
+            env,
+            steps: Default::default(),
+            assertions: Default::default(),
+            query: Default::default(),
+            lemmas: Default::default(),
+            crypto_assumptions: Default::default(),
+            order: Default::default(),
+        }
+    }
+}
+
 const FORBIDDEN_NAMES: &'static [&'static str] = &[
     "subterm", "ite", "=", "<", ">", "assert", "if", "then", "else",
 ];
 
 pub fn parse_protocol(env: Environement, str: &str) -> Result<Problem, E> {
-    let mut ctx = Context {
-        env,
-        ..Default::default()
-    };
+    let mut ctx = env.into();
 
     let c = MainParser::parse(Rule::content, str)?.next().unwrap();
     // println!("{:?}", c);

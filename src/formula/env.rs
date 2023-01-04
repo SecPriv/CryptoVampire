@@ -1,7 +1,8 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
 use super::{
     builtins::init::init_env,
+    cli::Args,
     function::{FFlags, Function},
     sort::Sort,
 };
@@ -10,35 +11,45 @@ use super::{
 pub struct Environement {
     functions: HashMap<String, Function>,
     sorts: HashMap<String, Sort>,
-    inner: Box<InnerEnvironement>,
+    args: Rc<Args>,
 }
 
-#[derive(Debug, Clone)]
-pub struct InnerEnvironement {
-    use_rewrite: bool,
-    crypto_rewrite: bool,
-    use_special_subterm: bool,
-    assert_theory: bool,
-}
+// #[derive(Debug, Clone)]
+// pub struct InnerEnvironement {
+//     use_rewrite: bool,
+//     crypto_rewrite: bool,
+//     use_special_subterm: bool,
+//     assert_theory: bool,
+// }
 
-impl Default for Environement {
-    fn default() -> Self {
-        let mut env = Self {
+// impl Default for Environement {
+//     fn default() -> Self {
+//         let mut env = Self {
+//             functions: HashMap::new(),
+//             sorts: HashMap::new(),
+//             inner: Box::new(InnerEnvironement {
+//                 use_rewrite: false,
+//                 crypto_rewrite: false,
+//                 use_special_subterm: false,
+//                 assert_theory: false,
+//             }),
+//         };
+//         init_env(&mut env);
+//         env
+//     }
+// }
+
+impl Environement {
+    pub fn empty(args: Rc<Args>) -> Self {
+        let mut env = Environement {
             functions: HashMap::new(),
             sorts: HashMap::new(),
-            inner: Box::new(InnerEnvironement {
-                use_rewrite: false,
-                crypto_rewrite: false,
-                use_special_subterm: false,
-                assert_theory: false,
-            }),
+            args,
         };
         init_env(&mut env);
         env
     }
-}
 
-impl Environement {
     pub fn get_f<'a>(&'a self, s: &str) -> Option<&'a Function> {
         self.functions.get(s)
     }
@@ -72,19 +83,19 @@ impl Environement {
     }
 
     pub fn use_special_subterm(&self) -> bool {
-        self.inner.use_special_subterm
+        self.args.vampire_subterm
     }
 
     pub fn crypto_rewrite(&self) -> bool {
-        self.inner.crypto_rewrite
+        self.args.crypto_rewrite
     }
 
     pub fn use_rewrite(&self) -> bool {
-        self.inner.use_rewrite
+        self.args.eval_rewrite
     }
 
     pub fn use_assert_theory(&self) -> bool {
-        self.inner.assert_theory
+        self.args.assert_theory
     }
 
     // pub fn get_functions(&self) -> &HashMap<String, Function> {

@@ -14,3 +14,4 @@ ord-utils = {git = "https://github.com/puyral/ord-utils"}
 bitflags = "1.3.2"
 crossbeam-utils = "0.8.14" # because I made poor choices
 itertools = "0.10.5"
+clap = { version = "4.0.32", features = ["derive"] }
