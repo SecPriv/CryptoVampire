@@ -70,6 +70,7 @@ fn main() {
 fn write_to_file(path: &PathBuf, smt: Vec<Smt>) {
     let mut f = File::options()
         .write(true)
+        .truncate(true)
         .create(true)
         .open(path)
         .expect(&format!(
