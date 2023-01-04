@@ -94,7 +94,7 @@ impl Subterm {
 
     pub fn name_secondary(&self) -> String {
         match self {
-            Subterm::VampireSpecial { main: f, .. } => f.name().to_owned(),
+            Subterm::VampireSpecial { secondary: f, .. } => f.name().to_owned(),
             Subterm::Base { name, .. } => name.to_owned() + "_bis",
         }
     }
