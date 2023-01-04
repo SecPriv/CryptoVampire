@@ -6,7 +6,6 @@ use crate::{
             functions::{INPUT, LT_NAME, SUBTERM},
             types::{BOOL, CONDITION, MSG, STEP},
         },
-        env::Environement,
         formula::{sorts_to_variables, Variable},
         function::{FFlags, Function},
         sort::Sort,

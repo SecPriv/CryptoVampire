@@ -30,7 +30,7 @@ impl Ctx {
     }
 }
 
-pub fn problem_to_smt(mut pbl: Problem) -> Vec<Smt> {
+pub fn problem_to_smt(pbl: Problem) -> Vec<Smt> {
     let mut declarations = Vec::new();
     let mut assertions = Vec::new();
 

@@ -4,7 +4,6 @@ use crate::{
             functions::{EVAL_MSG, NONCE_MSG},
             types::{MSG, NONCE},
         },
-        env::Environement,
         function::{FFlags, Function},
     },
     smt::{

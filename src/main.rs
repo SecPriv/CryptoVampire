@@ -2,7 +2,6 @@
 // #![feature(box_patterns)]
 
 use std::{
-    env,
     fs::{self, read_to_string, File},
     io::{self, Read, Write},
     path::{Path, PathBuf},
@@ -17,7 +16,7 @@ use automator::{
         writer::{problem_smts_with_lemma, problem_to_smt},
     },
 };
-use clap::{builder::Str, Parser};
+use clap::{Parser};
 
 extern crate pest_derive;
 
