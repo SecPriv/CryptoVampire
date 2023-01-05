@@ -11,6 +11,7 @@ use super::{
 pub struct Environement {
     functions: HashMap<String, Function>,
     sorts: HashMap<String, Sort>,
+    skolems: usize,
     args: Rc<Args>,
 }
 
@@ -44,6 +45,7 @@ impl Environement {
         let mut env = Environement {
             functions: HashMap::new(),
             sorts: HashMap::new(),
+            skolems: 0,
             args,
         };
         init_env(&mut env);
@@ -67,6 +69,15 @@ impl Environement {
             .or_insert(f)
             .as_ptr_usize()
             == ptr
+    }
+
+    pub fn add_skolem<'a>(&mut self, fv_sorts:impl Iterator<Item = &'a Sort>, sort: &Sort) -> Function {
+        let name = format!("sk${}", self.skolems);
+        self.skolems += 1;
+
+        let function = Function::new_with_flag(&name, fv_sorts.cloned().collect(), sort.clone(), FFlags::SKOLEM);
+        assert!(self.add_f(function.clone()));
+        function
     }
 
     pub fn get_s<'a>(&'a self, s: &str) -> Option<&'a Sort> {
@@ -96,6 +107,10 @@ impl Environement {
 
     pub fn use_assert_theory(&self) -> bool {
         self.args.assert_theory
+    }
+
+    pub fn skolemnise(&self) -> bool {
+        self.args.skolemnise
     }
 
     // pub fn get_functions(&self) -> &HashMap<String, Function> {

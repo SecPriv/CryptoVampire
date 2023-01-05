@@ -78,6 +78,6 @@ fn write_to_file(path: &PathBuf, smt: Vec<Smt>) {
         ));
 
     for s in smt.into_iter() {
-        write!(f, "{}\n", s).expect("couldn't write");
+        write!(f, "{}\n\n", s).expect("couldn't write");
     }
 }

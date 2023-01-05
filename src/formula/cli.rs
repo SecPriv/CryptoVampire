@@ -31,4 +31,8 @@ pub struct Args {
     /// use vampire's 'assert-theory'
     #[arg(long)]
     pub assert_theory: bool,
+
+    /// skolemnise before passing to sat solver
+    #[arg(long, short)]
+    pub skolemnise: bool
 }

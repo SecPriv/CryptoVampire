@@ -2,13 +2,19 @@ use std::fmt::{self};
 
 use itertools::Itertools;
 
-use crate::formula::{
-    builtins::functions::{AND_NAME, B_IF_THEN_ELSE_NAME, IMPLIES, NOT, OR_NAME},
-    env::Environement,
-    formula::{RichFormula, Variable},
-    function::Function,
-    quantifier::Quantifier,
-    sort::Sort,
+use crate::{
+    formula::{
+        builtins::{
+            functions::{AND_NAME, B_IF_THEN_ELSE_NAME, IMPLIES, NOT, OR_NAME},
+            types::BOOL,
+        },
+        env::Environement,
+        formula::{RichFormula, Variable},
+        function::Function,
+        quantifier::Quantifier,
+        sort::Sort,
+    },
+    smt::macros::svar,
 };
 
 use super::macros::sfun;
@@ -269,5 +275,159 @@ impl Smt {
             )),
             _ => self,
         }
+    }
+}
+
+impl SmtFormula {
+    /// Gets rid of as many exists (or hidden exists) quantifiers as possible.
+    /// Some may remain if they are too tricky to soundly remove
+    pub fn skolemnise(
+        self,
+        env: &mut Environement,
+        negative: bool,
+        free_vars: &[Variable],
+    ) -> (Self, Vec<Function>) {
+        let mut skolems = Vec::new();
+        let mut fv = free_vars.into();
+
+        struct SC {
+            not: Function,
+            bool: Sort,
+            implies: Function,
+        }
+        let db = SC {
+            not: NOT(env).clone(),
+            bool: BOOL(env).clone(),
+            implies: IMPLIES(env).clone(),
+        };
+
+        fn aux(
+            f: SmtFormula,
+            env: &mut Environement,
+            negative: bool,
+            skolems: &mut Vec<Function>,
+            db: &SC,
+            fv: &mut Vec<Variable>,
+        ) -> SmtFormula {
+            match (negative, f) {
+                (negative, SmtFormula::Fun(fun, args)) if fun == db.not => SmtFormula::Fun(
+                    fun,
+                    vec![aux(
+                        args.into_iter().next().unwrap(),
+                        env,
+                        !negative,
+                        skolems,
+                        db,
+                        fv,
+                    )],
+                ),
+                (negative, SmtFormula::Fun(fun, args)) if fun == db.implies => {
+                    let mut iter = args.into_iter();
+                    let premise = iter.next().unwrap();
+                    let conclusion = iter.next().unwrap();
+                    SmtFormula::Fun(
+                        fun,
+                        vec![
+                            aux(premise, env, !negative, skolems, db, fv),
+                            aux(conclusion, env, negative, skolems, db, fv),
+                        ],
+                    )
+                }
+
+                (_, SmtFormula::Fun(fun, args)) if !fun.get_input_sorts().contains(&db.bool) => {
+                    SmtFormula::Fun(
+                        fun,
+                        args.into_iter()
+                            .map(|arg| aux(arg, env, negative, skolems, db, fv))
+                            .collect(),
+                    )
+                }
+                (true, SmtFormula::Forall(vars, arg)) | (false, SmtFormula::Exists(vars, arg)) => {
+                    let nvars = vars
+                        .iter()
+                        .map(|v| env.add_skolem(fv.iter().map(|v2| &v2.sort), &v.sort))
+                        .collect_vec();
+                    skolems.extend(nvars.iter().cloned());
+                    let fs = nvars
+                        .into_iter()
+                        .map(|fun| sfun!(fun, fv.iter().map(|v| svar!(v.clone())).collect()))
+                        .collect_vec();
+                    let vars = vars.into_iter().map(|v| v.id).collect_vec();
+                    arg.partial_substitution(&vars, &fs)
+                }
+                (_, SmtFormula::Forall(vars, arg)) => {
+                    fv.extend(vars.iter().cloned());
+                    let arg = Box::new(aux(*arg, env, negative, skolems, db, fv));
+                    // gets rid of the free variable of this quantifier
+                    fv.truncate(fv.len() - vars.len());
+                    SmtFormula::Forall(vars, arg)
+                }
+                (_, SmtFormula::Exists(vars, arg)) => {
+                    fv.extend(vars.iter().cloned());
+                    let arg = Box::new(aux(*arg, env, negative, skolems, db, fv));
+                    // gets rid of the free variable of this quantifier
+                    fv.truncate(fv.len() - vars.len());
+                    SmtFormula::Exists(vars, arg)
+                }
+                (_, SmtFormula::And(args)) => SmtFormula::And(
+                    args.into_iter()
+                        .map(|f| aux(f, env, negative, skolems, db, fv))
+                        .collect(),
+                ),
+                (_, SmtFormula::Or(args)) => SmtFormula::Or(
+                    args.into_iter()
+                        .map(|f| aux(f, env, negative, skolems, db, fv))
+                        .collect(),
+                ),
+                (_, f) => f,
+            }
+        }
+
+        let result = aux(self, env, negative, &mut skolems, &db, &mut fv);
+        (result, skolems)
+    }
+
+    pub fn map<F>(self, f: &F) -> Self
+    where
+        F: Fn(Self) -> Self,
+    {
+        match self {
+            SmtFormula::Var(_) => f(self),
+            SmtFormula::Fun(fun, args) => f(SmtFormula::Fun(
+                fun,
+                args.into_iter().map(|arg| arg.map(f)).collect(),
+            )),
+            SmtFormula::Forall(vars, arg) => f(Self::Forall(vars, Box::new(f(*arg)))),
+            SmtFormula::Exists(vars, arg) => f(Self::Exists(vars, Box::new(f(*arg)))),
+            SmtFormula::And(arg) => f(Self::And(arg.into_iter().map(|x| x.map(f)).collect())),
+            SmtFormula::Or(arg) => f(Self::Or(arg.into_iter().map(|x| x.map(f)).collect())),
+            SmtFormula::Eq(arg) => f(Self::Eq(arg.into_iter().map(|x| x.map(f)).collect())),
+            SmtFormula::Neq(arg) => f(Self::Neq(arg.into_iter().map(|x| x.map(f)).collect())),
+            SmtFormula::Ite(c, l, r) => {
+                let c = Box::new(f(*c));
+                let r = Box::new(f(*r));
+                let l = Box::new(f(*l));
+                f(Self::Ite(c, r, l))
+            }
+        }
+    }
+
+    pub fn partial_substitution(self, vars: &[usize], fs: &[SmtFormula]) -> Self {
+        debug_assert_eq!(vars.len(), fs.len());
+
+        let idx = |v| vars.iter().position(|&var| var == v);
+
+        self.map(&{
+            |f| match f {
+                Self::Var(v) => {
+                    if let Some(i) = idx(v.id) {
+                        fs[i].clone()
+                    } else {
+                        Self::Var(v)
+                    }
+                }
+                _ => f,
+            }
+        })
     }
 }

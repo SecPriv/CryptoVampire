@@ -101,9 +101,31 @@ pub fn problem_to_smt(pbl: Problem) -> Vec<Smt> {
     // query
     assertions.push(Smt::AssertNot((&ctx.pbl.query).into()));
 
+    if ctx.env().skolemnise() {
+        skolemnise(&mut ctx, &mut assertions, &mut declarations);
+    }
+
     declarations.extend(assertions.into_iter());
     declarations.push(Smt::CheckSat);
     declarations
+}
+
+fn skolemnise(ctx: &mut Ctx, assertions: &mut Vec<Smt>, declarations: &mut Vec<Smt>) {
+    for s in assertions.iter_mut() {
+        match s {
+            Smt::Assert(f) | Smt::AssertTh(f) => take_mut::take(f, |f| {
+                let (f, sk) = f.skolemnise(ctx.env_mut(), false, &[]);
+                declarations.extend(sk.into_iter().map(|fun| Smt::DeclareFun(fun)));
+                f
+            }),
+            Smt::AssertNot(f) => take_mut::take(f, |f| {
+                let (f, sk) = f.skolemnise(ctx.env_mut(), true, &[]);
+                declarations.extend(sk.into_iter().map(|fun| Smt::DeclareFun(fun)));
+                f
+            }),
+            _ => continue,
+        }
+    }
 }
 
 pub fn problem_smts_with_lemma(pbl: Problem) -> impl Iterator<Item = Vec<Smt>> {
