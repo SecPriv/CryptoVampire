@@ -118,20 +118,20 @@ impl RichFormula {
         data
     }
 
-    pub fn apply(self, var: &Variable, f: &Self) -> Self {
-        match self {
-            RichFormula::Var(v) if &v == var => f.clone(),
-            RichFormula::Fun(fun, args) => RichFormula::Fun(
-                fun,
-                args.into_iter().map(|old_f| old_f.apply(var, f)).collect(),
-            ),
-            RichFormula::Quantifier(q, args) => RichFormula::Quantifier(
-                q,
-                args.into_iter().map(|old_f| old_f.apply(var, f)).collect(),
-            ),
-            _ => self,
-        }
-    }
+    // pub fn apply(self, var: &Variable, f: &Self) -> Self {
+    //     match self {
+    //         RichFormula::Var(v) if &v == var => f.clone(),
+    //         RichFormula::Fun(fun, args) => RichFormula::Fun(
+    //             fun,
+    //             args.into_iter().map(|old_f| old_f.apply(var, f)).collect(),
+    //         ),
+    //         RichFormula::Quantifier(q, args) => RichFormula::Quantifier(
+    //             q,
+    //             args.into_iter().map(|old_f| old_f.apply(var, f)).collect(),
+    //         ),
+    //         _ => self,
+    //     }
+    // }
 
     pub fn iter(&self) -> impl Iterator<Item = &RichFormula> {
         let mut pile = vec![self];
@@ -146,6 +146,50 @@ impl RichFormula {
             } else {
                 None
             }
+        })
+    }
+
+    pub fn map<F>(self, f: &F) -> Self
+    where
+        F: Fn(Self) -> Self,
+    {
+        match self {
+            RichFormula::Var(_) => f(self),
+            RichFormula::Fun(fun, args) => {
+                f(Self::Fun(fun, args.into_iter().map(|x| x.map(f)).collect()))
+            }
+            RichFormula::Quantifier(q, args) => f(Self::Quantifier(
+                q,
+                args.into_iter().map(|x| x.map(f)).collect(),
+            )),
+        }
+    }
+
+    pub fn apply<F>(self, f: F) -> Self
+    where
+        F: Fn(&Variable) -> Self,
+    {
+        self.map(&{
+            |form| match form {
+                Self::Var(v) => f(&v),
+                _ => form,
+            }
+        })
+    }
+
+    pub fn apply_some<F>(self, f: F) -> Self
+    where
+        F: Fn(&Variable) -> Option<Self>,
+    {
+        self.apply(|v| f(v).unwrap_or(Self::Var(v.clone())))
+    }
+
+    pub fn apply_substitution(self, vars: &[usize], fs: &[Self]) -> Self {
+        debug_assert_eq!(vars.len(), fs.len());
+        self.apply_some(|v| {
+            vars.iter()
+                .position(|v2| v2 == &v.id)
+                .map(|i| fs[i].clone())
         })
     }
 }

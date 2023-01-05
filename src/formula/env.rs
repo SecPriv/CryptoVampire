@@ -71,11 +71,20 @@ impl Environement {
             == ptr
     }
 
-    pub fn add_skolem<'a>(&mut self, fv_sorts:impl Iterator<Item = &'a Sort>, sort: &Sort) -> Function {
+    pub fn add_skolem<'a>(
+        &mut self,
+        fv_sorts: impl Iterator<Item = &'a Sort>,
+        sort: &Sort,
+    ) -> Function {
         let name = format!("sk${}", self.skolems);
         self.skolems += 1;
 
-        let function = Function::new_with_flag(&name, fv_sorts.cloned().collect(), sort.clone(), FFlags::SKOLEM);
+        let function = Function::new_with_flag(
+            &name,
+            fv_sorts.cloned().collect(),
+            sort.clone(),
+            FFlags::SKOLEM,
+        );
         assert!(self.add_f(function.clone()));
         function
     }

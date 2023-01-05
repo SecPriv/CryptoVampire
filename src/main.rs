@@ -16,7 +16,7 @@ use automator::{
         writer::{problem_smts_with_lemma, problem_to_smt},
     },
 };
-use clap::{Parser};
+use clap::Parser;
 
 extern crate pest_derive;
 

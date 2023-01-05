@@ -34,5 +34,5 @@ pub struct Args {
 
     /// skolemnise before passing to sat solver
     #[arg(long, short)]
-    pub skolemnise: bool
+    pub skolemnise: bool,
 }

@@ -6,7 +6,7 @@ use crate::{
         problem::{Problem, ProblemBuilder},
     },
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, borrow::Borrow};
 
 use crate::{
     formula::{
@@ -19,6 +19,7 @@ use crate::{
     problem::protocol::Step,
 };
 
+use itertools::Either;
 use pest::{
     error::{Error, ErrorVariant},
     iterators::Pair,
@@ -98,6 +99,14 @@ struct Context<'a> {
     lemmas: Vec<RichFormula>,
     crypto_assumptions: Vec<CryptoAssumption>,
     order: Vec<RichFormula>,
+    macros: HashMap<&'a str, Macro>
+}
+
+#[derive(Debug)]
+struct Macro {
+    ids: Vec<usize>,
+    sorts: Vec<Sort>,
+    content: RichFormula
 }
 
 impl<'a> Context<'a> {
@@ -110,6 +119,7 @@ impl<'a> Context<'a> {
             lemmas,
             crypto_assumptions,
             order,
+            macros: _
         } = self;
         ProblemBuilder {
             steps: steps.into_iter().map(|(_, t)| t).collect(),
@@ -120,6 +130,14 @@ impl<'a> Context<'a> {
             lemmas,
             crypto_assumptions,
         }
+    }
+
+    fn available_fun_name(&self, name:&str) -> bool {
+       !( FORBIDDEN_NAMES.contains(&name) || self.env.get_f(name).is_some() || self.macros.contains_key(name) )
+    }
+
+    fn available_sort_name(&self, name:&str) -> bool {
+       !( FORBIDDEN_NAMES.contains(&name) || self.env.get_s(name).is_some() )
     }
 }
 
@@ -133,12 +151,14 @@ impl<'a> From<Environement> for Context<'a> {
             lemmas: Default::default(),
             crypto_assumptions: Default::default(),
             order: Default::default(),
+            macros: Default::default()
         }
     }
 }
-
+const MSG_MACRO: &'static str = "msg";
+const COND_MACRO: &'static str = "cond";
 const FORBIDDEN_NAMES: &'static [&'static str] = &[
-    "subterm", "ite", "=", "<", ">", "assert", "if", "then", "else",
+    "subterm", "ite", "=", "<", ">", "assert", "if", "then", "else", MSG_MACRO, COND_MACRO,
 ];
 
 pub fn parse_protocol(env: Environement, str: &str) -> Result<Problem, E> {
@@ -259,11 +279,38 @@ pub fn parse_protocol(env: Environement, str: &str) -> Result<Problem, E> {
                     s => perr!(ident.as_span(); "{} is not a valid crypto assumption", s)?,
                 };
             }
+            Rule::mlet => {
+                let (name, m) = parse_let(&mut ctx, p)?;
+                ctx.macros.insert(name, m);
+            }
             r => unreachable!("{:?}", r),
         }
     }
     let pbbuild = ctx.to_pb_builder();
     Ok(Problem::new(pbbuild))
+}
+
+fn parse_let<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(&'a str, Macro), E>  {
+    let mut inner = p.into_inner();
+    let name = inner.next().unwrap();
+    let args = inner.next().unwrap();
+    let content = inner.next().unwrap();
+
+    let name = 
+        if !ctx.available_fun_name(name.as_str()){
+            perr!(name.as_span(); "{} is already taken", name.as_str())
+        } else {
+            Ok(name.as_str())
+        }?;
+    let mut memory = Default::default();
+    let (ids, sorts) = 
+        parse_typed_arguments(ctx, args, &mut memory)?
+        .into_iter()
+        .map(|(_, Variable { id, sort })| (id, sort))
+        .unzip();
+    let content = parse_term_as(ctx, content, &mut memory, None)?;
+
+    Ok((name, Macro {ids, sorts, content}))
 }
 
 fn parse_type(ctx: &Context, p: Pair<Rule>) -> Result<Sort, E> {
@@ -286,8 +333,8 @@ fn parse_variable_binding<'a>(
         let var = inner_rule.next().unwrap(); // can't fail
         let var = {
             match_or_err!(Rule::variable, var; {
-                if ctx.env.contain_key_f(var.as_str()) {
-                    perr!(var, "the name '{}' is used for both a variable and a function", var.as_str())
+                if !ctx.available_fun_name(var.as_str()) {
+                    perr!(var, "the name '{}' is used for both a variable and a function or is forbidden", var.as_str())
                 } else {
                     Ok(var.as_str())
                 }
@@ -320,9 +367,16 @@ fn parse_declare_type<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Result<()
         //     ctx.env.add_s(t.into());
         //     Ok(())
         // }
-        match ctx.env.add_s(t.into()) {
-            true => Ok(()),
-            _ => rerr!(inner, "type")
+        // match ctx.env.add_s(t.into()) {
+        //     true => Ok(()),
+        //     _ => rerr!(inner, "type")
+        // }
+
+        if ctx.available_sort_name(t) {
+            ctx.env.add_s(t.into());
+            Ok(())
+        } else {
+            rerr!(inner, "type")
         }
     })
 }
@@ -350,9 +404,15 @@ fn parse_declare_function<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Resul
                         FFlags::empty()
                     };
                 let f = Function::new_with_flag(name, input_sorts, output_sort, flags);
-                match ctx.env.add_f(f) {
-                    true => Ok(()),
-                    _ => perr!(name_rule, "redeclaring function: {}", name)
+                // match ctx.env.add_f(f) {
+                //     true => Ok(()),
+                //     _ => perr!(name_rule, "redeclaring function: {}", name)
+                // }
+                if ctx.available_fun_name(f.name()) {
+                    ctx.env.add_f(f);
+                    Ok(())
+                } else {
+                    perr!(name_rule, "redeclaring function: {} (or forbidden)", name)
                 }
             // },
             // _ => perr!(name_rule, "redeclaring function: {}", name)
@@ -379,24 +439,62 @@ fn parse_application<'a>(
                     perr!(span; "a varibale is not a function",)
                 }
             }
+            _ if name.as_str() == MSG_MACRO || name.as_str() == COND_MACRO => {
+                let stp  = inner_rule.next().ok_or(
+                    Error::new_from_span(
+                        ErrorVariant::CustomError {
+                            message: format!("should be an application"),
+                        },
+                        name.as_span())
+                    )?;
+                let stp_span = stp.as_span();
+                let stp = parse_term_as(ctx, stp, memory, Some(&STEP(&ctx.env).clone()))?;
+                let (stp_f, args) = match &stp {
+                    RichFormula::Fun(f, args) => Ok((f, args)),
+                    _ => perr!(stp_span; "expected application" ,)
+                }?;
+
+                let stp_p = ctx.steps.get(stp_f.name()).ok_or(
+                    Error::new_from_span(
+                        ErrorVariant::CustomError {
+                            message: format!("unknown step {}", stp_f.name()),
+                        },
+                        stp_span)
+                    )?;
+
+                if name.as_str() == MSG_MACRO {
+                    Ok(stp_p.apply_message(args))
+                } else { // name.as_str() == COND_MACRO
+                    Ok(stp_p.apply_condition(args))
+
+                }
+            }
             _ => {
-                let fun = match ctx.env.get_f(name.as_str()) {
+                let (fun, sorts) = match ctx.env.get_f(name.as_str()) {
                     None => {
-                        if inner_rule.next().is_none() {
-                            return uerr!(name, "constant or variable")
+                        if let Some(m) = ctx.macros.get(name.as_str()) {
+                            (Either::Right(m), m.sorts.clone())
                         } else {
-                            return uerr!(name, "function")
+                            let nxt = inner_rule.next();
+                            if nxt.is_none() {
+                                return uerr!(name, "constant or variable")
+                            } else {
+                                return uerr!(name, "function")
+                            }
                         }
                     }
                     Some(fun) => {
-                        fun
+                        (Either::Left(fun), fun.get_input_sorts().clone())
                     }
                 };
-                let mut i = 1;
+                let mut i = 0;
 
-                let args: Result<Vec<_>,_> = fun.get_input_sorts().iter().map(|s|{
+                let args: Result<Vec<_>,_> = sorts.iter().map(|s|{
                     match inner_rule.next() {
-                        None => perr!(span; "not enough arguments, expected {} got {}", fun.arity(), i),
+                        None => {
+                            dbg!(&fun); 
+                            perr!(span; "not enough arguments, expected {} got {}", sorts.len(), i)
+                        },
                         Some(arg) => {
                             i += 1;
                             parse_term_as(ctx, arg, memory, Some(s))
@@ -406,15 +504,19 @@ fn parse_application<'a>(
                 let args = args?;
 
                 if inner_rule.next().is_some() {
-                    perr!(span; "too many arguments, expected {} got {}", fun.arity(), i)
+                    return perr!(span; "too many arguments, expected {} got {}", sorts.len(), i)
+                } 
+
+                let formula = match fun{
+                    Either::Left(fun) => RichFormula::Fun(fun.clone(), args),
+                    Either::Right(m) => m.content.clone().apply_substitution(&m.ids, args.as_slice()),
+                };
+                if &formula.get_sort(&ctx.env) == NONCE(&ctx.env) {
+                    Ok(RichFormula::Fun(NONCE_MSG(&ctx.env).clone(), vec![formula]))
                 } else {
-                    let formula = RichFormula::Fun(fun.clone(), args);
-                    if &formula.get_sort(&ctx.env) == NONCE(&ctx.env) {
-                        Ok(RichFormula::Fun(NONCE_MSG(&ctx.env).clone(), vec![formula]))
-                    } else {
-                        Ok(formula)
-                    }
+                    Ok(formula)
                 }
+                
             }
         }
     })

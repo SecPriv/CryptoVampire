@@ -1,3 +1,4 @@
+
 use itertools::Itertools;
 
 use crate::{
@@ -227,20 +228,20 @@ fn evaluate_rewrite(
                     for sk in &skolems {
                         declarations.push(Smt::DeclareFun(sk.clone()));
                     }
-
+                    let bounded_vars_id = q.bound_variables.iter().map(|v| v.id).collect_vec();
+                    let sk_args = skolems
+                        .iter()
+                        .map(|sk| {
+                            RichFormula::Fun(
+                                sk.clone(),
+                                q.free_variables.iter().map_into().collect(),
+                            )
+                        })
+                        .collect_vec();
                     let skolemnise = |formula: &RichFormula| {
-                        skolems.iter().zip(q.bound_variables.iter()).fold(
-                            formula.clone(),
-                            |f, (sk, v)| {
-                                f.apply(
-                                    v,
-                                    &RichFormula::Fun(
-                                        sk.clone(),
-                                        q.free_variables.iter().map_into().collect(),
-                                    ),
-                                )
-                            },
-                        )
+                        formula
+                            .clone()
+                            .apply_substitution(&bounded_vars_id, sk_args.as_slice())
                     };
 
                     let sk_condition: SmtFormula = skolemnise(condition).into();

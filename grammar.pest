@@ -2,6 +2,7 @@ content = {SOI ~ (
         ( declaration | step | assertion 
             | order | query | lemma 
             | assertion_crypto 
+            | mlet
         ) ~ EOL?)*  ~ EOI}
 
 WHITESPACE = _{ " " | "\t" | NEWLINE }
@@ -67,4 +68,6 @@ lemma = {"lemma" ~ term }
 order = {"order" ~ quantifier_op ~ typed_arguments ~ 
     (inner_order | "{" ~ inner_order ~ "}") }
     inner_order = _{term ~ ordering_operation ~ term}
-    ordering_operation = {"<" | "<>" | ">" }
+    ordering_operation = { "<>" | "<" | ">" }
+
+mlet = {"let" ~ function ~ typed_arguments ~ "=" ~ term }

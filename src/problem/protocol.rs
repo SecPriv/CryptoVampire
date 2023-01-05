@@ -1,6 +1,8 @@
 use core::fmt::Debug;
 use std::{collections::HashMap, sync::Arc};
 
+use itertools::Itertools;
+
 use crate::formula::{formula::RichFormula, function::Function, sort::Sort};
 
 #[derive(Debug)]
@@ -67,6 +69,20 @@ impl Step {
 
     pub fn function(&self) -> &Function {
         &self.0.function
+    }
+
+    pub fn apply_condition(&self, args: &[RichFormula]) -> RichFormula {
+        let vars: Vec<_> = (1..=self.arity()).into_iter().collect_vec();
+        self.condition().clone().apply_substitution(&vars, args)
+    }
+
+    pub fn apply_message(&self, args: &[RichFormula]) -> RichFormula {
+        let vars: Vec<_> = (1..=self.arity()).into_iter().collect_vec();
+        self.message().clone().apply_substitution(&vars, args)
+    }
+
+    pub fn arity(&self) -> usize {
+        self.parameters().len()
     }
 }
 
