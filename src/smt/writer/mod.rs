@@ -52,6 +52,7 @@ pub fn problem_to_smt(pbl: Problem) -> Vec<Smt> {
         } = &pbl;
 
         (ta_funs, free_funs) = env.get_functions_iter().cloned().partition_map(|f| {
+            // dbg!(&f);
             if f.is_term_algebra() {
                 Either::Left(f)
             } else {

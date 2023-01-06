@@ -1,9 +1,0 @@
-type index;
-
-fun key(index):msg;
-
-step m_step(i:index) {
-    forall(j:index) { [true == true] } 
-} { fail }
-
-query true

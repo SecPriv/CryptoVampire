@@ -4,7 +4,7 @@ use crate::{
     problem::{
         crypto_assumptions::CryptoAssumption,
         problem::{Problem, ProblemBuilder},
-    },
+    }, smt::macros::sfun,
 };
 use std::{collections::HashMap, borrow::Borrow};
 
@@ -607,9 +607,8 @@ fn parse_infix_term_as<'a>(
         let mut lhs_formula = match op.as_ref().unwrap().as_rule() {
             Rule::eq | Rule::neq => parse_term_as(ctx, lhs,
                 memory, Some(MSG(&ctx.env)))?,
-            Rule::or | Rule::and => parse_term_as(ctx, lhs,
+            _ => parse_term_as(ctx, lhs,
                 memory, Some(BOOL(&ctx.env)))?,
-            _ => unreachable!()
         };
         while let Some(mop) = op {
             let rhs = inner.next().unwrap();
@@ -654,6 +653,31 @@ fn parse_infix_term_as<'a>(
                         memory, Some(BOOL(&ctx.env)))?;
                     if &lhs_formula.get_sort(&ctx.env) == BOOL(&ctx.env) {
                         Ok(f_and(&ctx.env, lhs_formula, rhs_formula))
+                    } else {
+                        perr!(
+                            lhs_span; "wrong type, expected {} got {}",
+                            BOOL(&ctx.env), lhs_formula.get_sort(&ctx.env))
+                    }
+                }
+                Rule::implies => {
+                    let rhs_formula = parse_term_as(ctx, rhs,
+                        memory, Some(BOOL(&ctx.env)))?;
+                    if &lhs_formula.get_sort(&ctx.env) == BOOL(&ctx.env) {
+                        Ok(implies(&ctx.env, lhs_formula, rhs_formula))
+                    } else {
+                        perr!(
+                            lhs_span; "wrong type, expected {} got {}",
+                            BOOL(&ctx.env), lhs_formula.get_sort(&ctx.env))
+                    }
+                }
+                Rule::iff => {
+                    let rhs_formula = parse_term_as(ctx, rhs,
+                        memory, Some(BOOL(&ctx.env)))?;
+                    if &lhs_formula.get_sort(&ctx.env) == BOOL(&ctx.env) {
+                        Ok(f_and(&ctx.env, 
+                            implies(&ctx.env, lhs_formula.clone(), rhs_formula.clone()),
+                            implies(&ctx.env, rhs_formula, lhs_formula),
+                        ))
                     } else {
                         perr!(
                             lhs_span; "wrong type, expected {} got {}",
@@ -785,17 +809,24 @@ fn parse_order<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Result<RichFormu
         let stp2 = inner.next().unwrap();
         let _ = inner; // drop inner
 
+        let step = STEP(&ctx.env);
+        let happens = HAPPENS(&ctx.env);
+
         let mut memory = HashMap::new();
         let variables = parse_typed_arguments(ctx, args, &mut memory)?
             .into_iter().map(|(_, v)| v).collect();
 
-        let stp1 = parse_term_as(ctx, stp1, &mut memory, Some(STEP(&ctx.env)))?;
-        let stp2 = parse_term_as(ctx, stp2, &mut memory, Some(STEP(&ctx.env)))?;
+        let stp1 = parse_term_as(ctx, stp1, &mut memory, Some(step))?;
+        let stp2 = parse_term_as(ctx, stp2, &mut memory, Some(step))?;
 
         let formula = match op.as_str() {
             "<" => fun!(LT(&ctx.env); stp1, stp2),
             ">" => fun!(LT(&ctx.env); stp2, stp1),
-            "<>" => not(&ctx.env, f_and(&ctx.env, fun!(HAPPENS(&ctx.env); stp1), fun!(HAPPENS(&ctx.env); stp2))),
+            "<>" => implies(
+                &ctx.env, 
+                f_and(&ctx.env, fun!(happens; stp1.clone()), fun!(happens; stp2.clone())), 
+                fun!(EQUALITY(&ctx.env); stp1, stp2)
+            ),
             _ => unreachable!()
         };
 

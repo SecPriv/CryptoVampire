@@ -481,7 +481,7 @@ where
             .map(|v| Variable::clone(v))
             .collect()
     };
-    let sort = formula.get_sort(env).clone();
+    // let sort = formula.get_sort(env).clone();
 
     match formula {
         RichFormula::Var(_) => formula.clone(),
@@ -497,7 +497,7 @@ where
                 env,
                 quantifiers,
                 free_vars,
-                sort,
+                CONDITION(env).clone(),
                 variables,
                 QuantifierPContent::Forall { content },
                 "forall",
@@ -515,7 +515,7 @@ where
                 env,
                 quantifiers,
                 free_vars,
-                sort,
+                CONDITION(env).clone(),
                 variables,
                 QuantifierPContent::Exists { content },
                 "exists",
@@ -533,7 +533,7 @@ where
                 env,
                 quantifiers,
                 free_vars,
-                sort,
+                MSG(env).clone(),
                 variables,
                 QuantifierPContent::FindSuchThat {
                     condition,

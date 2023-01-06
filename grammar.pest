@@ -17,11 +17,13 @@ type_name = @{ident}
 function = @{ident}
 variable = @{underscore? ~ ident}
 step_name = @{ident}
-operation = _{ eq | neq | or | and }
+operation = _{ eq | neq | or | and | implies | iff }
     eq = { "==" }
     neq = { "!=" | "<>" }
     or = { "||" }
     and = { "&&" }
+    implies = {"=>"}
+    iff = {"<=>"}
 
 typed_arguments = {("(" ~ (variable_binding ~ ",")* ~ variable_binding? ~ ")")?}
     variable_binding = {variable ~ ":" ~ type_name }
