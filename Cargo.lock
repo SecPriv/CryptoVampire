@@ -15,6 +15,7 @@ dependencies = [
  "bitflags",
  "clap",
  "crossbeam-utils",
+ "if_chain",
  "itertools",
  "ord-utils",
  "paste",
@@ -183,6 +184,12 @@ checksum = "ee512640fe35acbfb4bb779db6f0d80704c2cacfa2e39b601ef3e3f47d1ae4c7"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "if_chain"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb56e1aa765b4b4f3aadfab769793b7087bb03a4ea4920644a6d238e2df5b9ed"
 
 [[package]]
 name = "instant"

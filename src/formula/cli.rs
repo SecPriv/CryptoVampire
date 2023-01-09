@@ -35,4 +35,8 @@ pub struct Args {
     /// skolemnise before passing to sat solver
     #[arg(long, short)]
     pub skolemnise: bool,
+
+    /// preprocess subterm of input
+    #[arg(long, short)]
+    pub input_subterm_preprocessed: bool,
 }

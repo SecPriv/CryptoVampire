@@ -122,6 +122,10 @@ impl Environement {
         self.args.skolemnise
     }
 
+    pub fn preprocessed_input(&self) -> bool {
+        self.args.input_subterm_preprocessed
+    }
+
     // pub fn get_functions(&self) -> &HashMap<String, Function> {
     //     &self.functions
     // }

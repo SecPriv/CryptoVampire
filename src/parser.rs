@@ -20,7 +20,7 @@ use crate::{
     problem::protocol::Step,
 };
 
-use itertools::Either;
+use itertools::{Either, Itertools};
 use pest::{
     error::{Error, ErrorVariant},
     iterators::Pair,
@@ -251,7 +251,7 @@ pub fn parse_protocol(env: Environement, str: &str) -> Result<Problem, E> {
                 }
             }
             Rule::assertion_crypto => {
-                parse_crypto(&mut ctx, p);
+                parse_crypto(&mut ctx, p)?;
             }
             Rule::mlet => {
                 let (name, m) = parse_let(&mut ctx, p)?;
@@ -320,7 +320,7 @@ fn parse_crypto<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(), E> {
             }).zip(sort_vec.into_iter()).map(|((span, f), s)| {
                 match f {
                     Ok(f) => {
-                        let ss: Vec<_> = f.input_sorts_iter().collect();
+                        let ss: Vec<_> = f.sort_iter().collect();
                         if s.len() == ss.len() && ss.iter().zip(s.iter()).all(|(ss, s)| ss.eq(s)) {
                             Ok(f)
 
@@ -351,12 +351,13 @@ fn parse_crypto<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(), E> {
             }).zip(sort_vec.into_iter()).map(|((span, f), s)| {
                 match f {
                     Ok(f) => {
-                        let ss: Vec<_> = f.input_sorts_iter().collect();
+                        let ss: Vec<_> = f.sort_iter().collect();
                         if s.len() == ss.len() && ss.iter().zip(s.iter()).all(|(ss, s)| ss.eq(s)) {
                             Ok(f)
-
                         } else {
-                            Err(span_err(span, format!("doessn't have the right signature")))
+                            let signature_exp = s.iter().map(|s| s.name()).join(" -> ");
+                            let signature_got = ss.iter().map(|s| s.name()).join(" -> ");
+                            Err(span_err(span, format!("doessn't have the right signature\n\tgot: {}\n\texpected: {}", signature_got, signature_exp)))
                         }
                     },
                     Err(e) => Err(e)

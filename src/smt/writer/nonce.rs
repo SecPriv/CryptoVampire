@@ -84,7 +84,7 @@ pub(crate) fn nonce_pseudo_ta(
                     sfun!(n, vars1.iter().map_into().collect()),
                     sfun!(n, vars2.iter().map_into().collect())
                 ),
-                SmtFormula::Or(
+                SmtFormula::And(
                     vars1
                         .into_iter()
                         .zip(vars2.into_iter())

@@ -1,16 +1,18 @@
+use if_chain::if_chain;
+
 use crate::{
     formula::{
         builtins::{
             functions::{EVAL_MSG, NONCE_MSG},
             types::{MSG, NONCE, BOOL},
         },
-        function::{FFlags, Function},
+        function::{FFlags, Function}, formula::RichFormula, env::Environement, sort::Sort,
     },
     smt::{
         macros::{sand, seq, sexists, sforall, sfun, simplies, site, snot, sor, srewrite, sneq},
-        smt::{RewriteKind, Smt},
-        writer::{subterm::generate_subterm, Ctx},
-    },
+        smt::{RewriteKind, Smt, SmtFormula},
+        writer::{subterm::{generate_subterm, default_f, Subterm}, Ctx},
+    }, problem::protocol::Step,
 };
 
 // should be quick to copy
@@ -56,6 +58,9 @@ impl CryptoAssumption {
     }
 }
 
+fn aux(m:&SmtFormula, f:&RichFormula) -> SmtFormula{
+    seq!(m.clone(), SmtFormula::from(f))
+}
 fn generate_smt_int_ctxt_senc(
     assertions: &mut Vec<Smt>,
     declarations: &mut Vec<Smt>,
@@ -69,6 +74,13 @@ fn generate_smt_int_ctxt_senc(
     let msg = MSG(ctx.env()).clone();
     let nonce_sort = NONCE(ctx.env()).clone();
 
+    struct Db<'a> {
+        nonce_sort: &'a Sort,
+        nonce: &'a Function,
+        enc: &'a Function,
+        dec:&'a Function,
+    }
+
     let subt_main = generate_subterm(
         assertions,
         declarations,
@@ -76,6 +88,7 @@ fn generate_smt_int_ctxt_senc(
         "sbt$euf_ctxt_main",
         &msg,
         vec![],
+        default_f(&msg)
     );
     let subt_sec = generate_subterm(
         assertions,
@@ -84,6 +97,47 @@ fn generate_smt_int_ctxt_senc(
         "sbt$euf_ctxt_sec",
         &nonce_sort,
         vec![enc, dec],
+        |_, m, s, env| {
+            let mut todo = vec![s.message(), s.condition()];
+            let mut ors = Vec::new();
+
+            while let Some(f) = todo.pop() {
+                match f {
+                    RichFormula::Var(_) if f.get_sort(env) == nonce_sort => ors.push(aux(m, f)),
+                    RichFormula::Fun(fun, args) if fun == enc => {
+                        todo.push(&args[0]);
+                        todo.push(&args[1]);
+                        if_chain!(
+                            if let RichFormula::Fun(fun2, _) = &args[2];
+                            if fun2 == &nonce;
+                            then {}
+                            else {
+                                todo.push(&args[2])
+                            }
+                        )
+                    }
+                    RichFormula::Fun(fun, args) if fun == dec => {
+                        todo.push(&args[0]);
+                        if_chain!(
+                            if let RichFormula::Fun(fun2, _) = &args[1];
+                            if fun2 == &nonce;
+                            then {}
+                            else {
+                                todo.push(&args[1])
+                            }
+                        )
+                    }
+                    RichFormula::Fun(_, args) => {
+                        todo.extend(args.iter());
+                        if f.get_sort(env) == nonce_sort {
+                            ors.push(aux(m,f))
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            SmtFormula::Or(ors)
+        }
     );
     let subt_rd = generate_subterm(
         assertions,
@@ -92,6 +146,36 @@ fn generate_smt_int_ctxt_senc(
         "sbt$euf_ctxt_rd",
         &nonce_sort,
         vec![enc],
+        |_, m, s, env| {
+            let mut todo = vec![s.message(), s.condition()];
+            let mut ors = Vec::new();
+
+            while let Some(f) = todo.pop() {
+                match f {
+                    RichFormula::Var(_) if f.get_sort(env) == nonce_sort => ors.push(aux(m, f)),
+                    RichFormula::Fun(fun, args) if fun == enc => {
+                        todo.push(&args[0]);
+                        todo.push(&args[2]);
+                        if_chain!(
+                            if let RichFormula::Fun(fun2, _) = &args[1];
+                            if fun2 == &nonce;
+                            then {}
+                            else {
+                                todo.push(&args[1])
+                            }
+                        )
+                    }
+                    RichFormula::Fun(_, args) => {
+                        todo.extend(args.iter());
+                        if f.get_sort(env) == nonce_sort {
+                            ors.push(aux(m,f))
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            SmtFormula::Or(ors)
+        }
     );
 
     for s in subt_sec.iter() {
@@ -256,6 +340,7 @@ fn generate_smt_nonce(assertions: &mut Vec<Smt>, declarations: &mut Vec<Smt>, ct
         "sbt$nonce_main",
         &nonce_sort,
         vec![],
+        default_f(&nonce_sort)
     );
 
     assertions.push(Smt::Assert(sforall!(n!0:nonce_sort, m!1:msg;{
@@ -284,6 +369,7 @@ fn generate_smt_euf_cma_hash(
         "sbt$euf_hash_main",
         &msg,
         vec![],
+        default_f(&msg)
     );
     let subt_sec = generate_subterm(
         assertions,
@@ -292,6 +378,37 @@ fn generate_smt_euf_cma_hash(
         "sbt$euf_hash_sec",
         &nonce_sort,
         vec![hash],
+        |_, m, s, env| {
+            let aux = |f| {
+                seq!(m.clone(), SmtFormula::from(f))
+            };
+
+            let mut todo = vec![s.message(), s.condition()];
+            let mut ors = Vec::new();
+            while let Some(f) = todo.pop() {
+                match f {
+                    RichFormula::Var(_) if f.get_sort(env) == nonce_sort => ors.push(aux(f)),
+                    RichFormula::Fun(fun, args) if fun == hash => {
+                        todo.push(&args[0]);
+                        if let RichFormula::Fun(fun, _) = &args[1] {
+                            if fun != &nonce {
+                                todo.push(&args[1])
+                            }
+                        } else {
+                            todo.push(&args[1])
+                        }
+                    }
+                    RichFormula::Fun(_, args) => {
+                        todo.extend(args.iter());
+                        if f.get_sort(env) == nonce_sort {
+                            ors.push(aux(f))
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            SmtFormula::Or(ors)
+        }
     );
 
     for s in subt_sec.iter() {
@@ -334,7 +451,7 @@ fn generate_smt_euf_cma_hash(
                             subt_sec.main(k.clone(), m.clone(), &msg),
                             subt_sec.main(k.clone(), s.clone(), &msg)
                         ),
-                        seq!(sfun!(eval_msg; h.clone()), sfun!(eval_msg; s.clone()))
+                        seq!(sfun!(eval_msg; m.clone()), sfun!(eval_msg; u.clone()))
                     )
                 }
         );
@@ -358,7 +475,7 @@ fn generate_smt_euf_cma_hash(
                             subt_sec.main(k.clone(), m.clone(), &msg),
                             subt_sec.main(k.clone(), s.clone(), &msg)
                         ),
-                        seq!(sfun!(eval_msg; h.clone()), sfun!(eval_msg; s.clone()))
+                        seq!(sfun!(eval_msg; m.clone()), sfun!(eval_msg; u.clone()))
                     )})
                 )}
         );
@@ -387,6 +504,7 @@ fn generate_smt_euf_cma_sign(
         "sbt$euf_sign_main",
         &msg,
         vec![],
+        default_f(&msg)
     );
     let subt_sec = generate_subterm(
         assertions,
@@ -395,6 +513,37 @@ fn generate_smt_euf_cma_sign(
         "sbt$euf_sign_sec",
         &nonce_sort,
         vec![sign, pk],
+        |_, m, s, env| {
+
+            let mut todo = vec![s.message(), s.condition()];
+            let mut ors = Vec::new();
+            while let Some(f) = todo.pop() {
+                match f {
+                    RichFormula::Var(_) if f.get_sort(env) == nonce_sort => ors.push(aux(m, f)),
+                    RichFormula::Fun(fun, args) if fun == sign => {
+                        todo.push(&args[0]);
+                        if_chain!(
+                            if let RichFormula::Fun(fun1, args1) = &args[1];
+                            if fun1 == pk;
+                            if let RichFormula::Fun(fun2, _) = &args1[0];
+                            if fun2 == &nonce;
+                            then {}
+                            else {
+                                todo.push(&args[1])
+                            }
+                        )
+                    }
+                    RichFormula::Fun(_, args) => {
+                        todo.extend(args.iter());
+                        if f.get_sort(env) == nonce_sort {
+                            ors.push(aux(m, f))
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            SmtFormula::Or(ors)
+        }
     );
 
     for s in subt_sec.iter() {
@@ -466,7 +615,7 @@ fn generate_smt_euf_cma_sign(
                             subt_sec.main(k.clone(), m.clone(), &msg),
                             subt_sec.main(k.clone(), s.clone(), &msg)
                         ),
-                        seq!(sfun!(eval_msg; sig.clone()), sfun!(eval_msg; s.clone()))
+                        seq!(sfun!(eval_msg; m.clone()), sfun!(eval_msg; u.clone()))
                     )
                 }
         );

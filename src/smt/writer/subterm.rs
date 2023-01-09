@@ -8,8 +8,9 @@ use crate::{
         },
         formula::{sorts_to_variables, Variable},
         function::{FFlags, Function},
-        sort::Sort,
+        sort::Sort, env::Environement,
     },
+    problem::protocol::Step,
     smt::{
         macros::{sand, seq, sexists, sforall, sfun, simplies, snot, sor, svar},
         smt::{Smt, SmtFormula},
@@ -146,14 +147,18 @@ impl<'a> OneSubterm<'a> {
     }
 }
 
-pub(crate) fn generate_subterm(
+pub(crate) fn generate_subterm<'a, F>(
     assertions: &mut Vec<Smt>,
     declarations: &mut Vec<Smt>,
-    ctx: &mut Ctx,
+    ctx: &'a mut Ctx,
     name: &str,
-    sort: &Sort,
+    sort: &'a Sort,
     functions: Vec<&Function>,
-) -> Subterm {
+    preprocess: F,
+) -> Subterm
+where
+    F: Fn(&Subterm, &SmtFormula, &Step, &'a Environement) -> SmtFormula,
+{
     debug_assert!(ctx.pbl.env.verify_f());
     debug_assert!(
         functions.iter().all(|f| ctx.pbl.env.contains_f(f)),
@@ -168,15 +173,88 @@ pub(crate) fn generate_subterm(
         generate_base_subterm(assertions, declarations, ctx, name, sort, functions)
     };
 
-    // spliting(assertions, declarations, ctx, subt.as_main());
-    // spliting(assertions, declarations, ctx, subt.as_secondary());
+    if ctx.env().preprocessed_input() {
+        user_splitting(assertions, declarations, ctx, &subt, preprocess)
+    } else {
+        spliting(assertions, declarations, ctx, &subt /* .as_main() */);
+        // spliting(assertions, declarations, ctx, subt.as_secondary());
 
-    for s in subt.iter() {
-        spliting(assertions, declarations, ctx, s);
+        // for s in subt.iter() {
+        //     spliting(assertions, declarations, ctx, s);
+        // }
     }
-
     subt
 }
+
+fn user_splitting<'a, F>(
+    assertions: &mut Vec<Smt>,
+    _: &mut Vec<Smt>,
+    ctx: &'a mut Ctx,
+    subt: &Subterm,
+    preprocess: F,
+) where
+    F: Fn(&Subterm, &SmtFormula, &Step, &'a Environement) -> SmtFormula,
+{
+    let input = INPUT(ctx.env());
+    let lt = ctx.env().get_f(LT_NAME).unwrap();
+    let msg = MSG(ctx.env());
+    // let cond = CONDITION(ctx.env());
+
+    // biggest than any step variable
+    let max_var = ctx
+        .pbl
+        .steps
+        .values()
+        .map(|s| s.parameters().len())
+        .max()
+        .unwrap_or(0)
+        + 1;
+    // make ununsed variables
+    let sorts = vec![subt.sort().clone(), STEP(ctx.env()).clone()];
+    let vars = sorts_to_variables(max_var, sorts.iter());
+    let tp = svar!(vars[1].clone());
+    let m = svar!(vars[0].clone());
+
+    let mut ors: Vec<_> = ctx
+        .pbl
+        .steps
+        .values()
+        .map(|s| {
+            let s_vars = sorts_to_variables(1, s.parameters().iter());
+
+            let step_f = sfun!(
+                s.function(),
+                s_vars.iter().cloned().map(|v| svar!(v)).collect()
+            );
+            let order = sfun!(lt; step_f, tp.clone());
+            let content = preprocess(subt, &m, s, ctx.env());
+            SmtFormula::Exists(s_vars, Box::new(SmtFormula::And(vec![order, content])))
+        })
+        .collect();
+    
+    let input_f = sfun!(input; tp.clone());
+    if subt.sort() == msg {
+        ors.push(seq!(m.clone(), input_f.clone()))
+    }
+    assertions.push(Smt::Assert(SmtFormula::Forall(
+        vars,
+        Box::new(simplies!(ctx.env();
+            subt.main(m.clone(), input_f, &msg),
+            SmtFormula::Or(ors)
+        )),
+    )));
+}
+
+pub fn default_f<'a>(sort: &'a Sort) -> impl Fn(&Subterm, &SmtFormula, &Step, &'a Environement) -> SmtFormula {
+    move |_, m, s, env|  {
+        SmtFormula::Or(s.message().iter().chain(s.condition().iter()).filter_map(|f|{
+            if &f.get_sort(env) == sort {
+                Some(seq!(m.clone(), SmtFormula::from(f)))
+            } else { None }
+        }).collect())
+    }
+}
+
 fn generate_special_subterm(
     assertions: &mut Vec<Smt>,
     declarations: &mut Vec<Smt>,
@@ -196,6 +274,8 @@ fn generate_special_subterm(
         FFlags::SUBTERM_FUN,
     );
 
+    let step_sort = &STEP(ctx.env()).clone();
+
     assert!(ctx.env_mut().add_f(f_main.clone()));
     assert!(ctx.env_mut().add_f(f_secondary.clone()));
 
@@ -209,7 +289,12 @@ fn generate_special_subterm(
     let funs_main = ctx
         .env()
         .get_functions_iter()
-        .filter(|&f| f.is_term_algebra() && !f.is_special_subterm() && !functions.contains(&f))
+        .filter(|&f| {
+            f.is_term_algebra()
+                && !f.is_special_subterm()
+                && !functions.contains(&f)
+                && !f.is_from_step()
+        })
         .cloned()
         .collect_vec();
     let funs_secondary = funs_main
@@ -227,7 +312,7 @@ fn generate_special_subterm(
     for s in ctx
         .env()
         .get_sort_iter()
-        .filter(|&s| (s != sort) && !s.is_term_algebra())
+        .filter(|&s| (s != sort) && !s.is_term_algebra() && (s != step_sort))
     {
         assertions.push(Smt::Assert(
             sforall!(m!1:sort, m2!2:s; {snot!(ctx.env(); subt.main(m, m2, s))}),
@@ -236,12 +321,23 @@ fn generate_special_subterm(
             sforall!(m!1:sort, m2!2:s; {snot!(ctx.env(); subt.secondary(m, m2, s))}),
         ));
     }
-    assertions.push(Smt::Assert(
-        sforall!(m!1:sort; {subt.main(m.clone(), m, sort)}),
-    ));
-    assertions.push(Smt::Assert(
-        sforall!(m!1:sort; {subt.secondary(m.clone(), m, sort)}),
-    ));
+    if sort.is_term_algebra() {
+        assertions.push(Smt::Assert(
+            sforall!(m!1:sort; {subt.main(m.clone(), m, sort)}),
+        ));
+        assertions.push(Smt::Assert(
+            sforall!(m!1:sort; {subt.secondary(m.clone(), m, sort)}),
+        ));
+    } else {
+        for s in subt.iter() {
+            assertions.push(Smt::Assert(sforall!(m!1:sort, m2!2:sort; {
+                simplies!(ctx.env();
+                    s.f(m.clone(), m2.clone(), sort),
+                    seq!(m, m2)
+                )
+            })))
+        }
+    }
 
     subt
 }
@@ -256,6 +352,7 @@ fn generate_base_subterm(
 ) -> Subterm {
     let bool = BOOL(ctx.env()).clone();
     let input = INPUT(ctx.env()).clone();
+    let step_sort = &STEP(ctx.env()).clone();
 
     let sorts = ctx
         .env()
@@ -313,7 +410,12 @@ fn generate_base_subterm(
     let funs_main = ctx
         .env()
         .get_functions_iter()
-        .filter(|&f| f.is_term_algebra() && !f.is_special_subterm() && !functions.contains(&f))
+        .filter(|&f| {
+            f.is_term_algebra()
+                && !f.is_special_subterm()
+                && !functions.contains(&f)
+                && !f.is_from_step()
+        })
         .cloned()
         .collect_vec();
 
@@ -400,7 +502,7 @@ fn generate_base_subterm(
         assertions.extend(
             sorts_order
                 .iter()
-                .filter(|&s| !s.is_term_algebra() && (s != sort))
+                .filter(|&s| !s.is_term_algebra() && (s != sort) && (s != step_sort))
                 .flat_map(|s| {
                     subterm
                         .iter()
@@ -412,15 +514,25 @@ fn generate_base_subterm(
         unreachable!()
     }
 
+    if sort.is_term_algebra() {
+        for s in subterm.iter() {
+            assertions.push(Smt::Assert(sforall!(m!1:sort; {s.f(m.clone(), m, sort)})))
+        }
+    } else {
+        for s in subterm.iter() {
+            assertions.push(Smt::Assert(sforall!(m!1:sort, m2!2:sort; {
+                simplies!(ctx.env();
+                    s.f(m.clone(), m2.clone(), sort),
+                    seq!(m, m2)
+                )
+            })))
+        }
+    }
+
     subterm
 }
 
-fn spliting(
-    assertions: &mut Vec<Smt>,
-    declarations: &mut Vec<Smt>,
-    ctx: &mut Ctx,
-    subt: OneSubterm,
-) {
+fn spliting(assertions: &mut Vec<Smt>, declarations: &mut Vec<Smt>, ctx: &mut Ctx, subt: &Subterm) {
     let input = INPUT(ctx.env());
     let lt = ctx.env().get_f(LT_NAME).unwrap();
     let msg = MSG(ctx.env());
@@ -448,7 +560,7 @@ fn spliting(
 
     for s in ctx.pbl.steps.values() {
         let sp = Function::new_with_flag(
-            &format!("sp${}${}", subt.name(), s.name()),
+            &format!("sp${}${}", subt.as_main().name(), s.name()),
             sorts.clone(),
             BOOL(ctx.env()).clone(),
             FFlags::SPLITING,
@@ -473,8 +585,8 @@ fn spliting(
                             step_vars.iter().map_into().collect()),
                         tp.clone()),
                         sor!(
-                            subt.f(m.clone(), s.message().into(), msg),
-                            subt.f(m.clone(), s.condition().into(), cond)
+                            subt.secondary(m.clone(), s.message().into(), msg),
+                            subt.secondary(m.clone(), s.condition().into(), cond)
                         )
                     )
                 )
@@ -485,7 +597,7 @@ fn spliting(
     assertions.push(Smt::Assert(sforall!(
         vars.clone(),
         simplies!(ctx.env();
-            subt.f(m.clone(), sfun!(input; tp.clone()), msg),
+            subt.main(m.clone(), sfun!(input; tp.clone()), msg),
             SmtFormula::Or(premises)
         )
     )))
