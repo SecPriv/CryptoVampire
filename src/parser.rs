@@ -4,9 +4,10 @@ use crate::{
     problem::{
         crypto_assumptions::CryptoAssumption,
         problem::{Problem, ProblemBuilder},
-    }, smt::macros::sfun,
+    },
+    smt::macros::sfun,
 };
-use std::{collections::HashMap, borrow::Borrow};
+use std::{borrow::Borrow, collections::HashMap, cell::Ref};
 
 use crate::{
     formula::{
@@ -23,7 +24,7 @@ use itertools::Either;
 use pest::{
     error::{Error, ErrorVariant},
     iterators::Pair,
-    Parser,
+    Parser, Span,
 };
 use pest_derive::Parser;
 
@@ -99,14 +100,14 @@ struct Context<'a> {
     lemmas: Vec<RichFormula>,
     crypto_assumptions: Vec<CryptoAssumption>,
     order: Vec<RichFormula>,
-    macros: HashMap<&'a str, Macro>
+    macros: HashMap<&'a str, Macro>,
 }
 
 #[derive(Debug)]
 struct Macro {
     ids: Vec<usize>,
     sorts: Vec<Sort>,
-    content: RichFormula
+    content: RichFormula,
 }
 
 impl<'a> Context<'a> {
@@ -119,7 +120,7 @@ impl<'a> Context<'a> {
             lemmas,
             crypto_assumptions,
             order,
-            macros: _
+            macros: _,
         } = self;
         ProblemBuilder {
             steps: steps.into_iter().map(|(_, t)| t).collect(),
@@ -132,12 +133,14 @@ impl<'a> Context<'a> {
         }
     }
 
-    fn available_fun_name(&self, name:&str) -> bool {
-       !( FORBIDDEN_NAMES.contains(&name) || self.env.get_f(name).is_some() || self.macros.contains_key(name) )
+    fn available_fun_name(&self, name: &str) -> bool {
+        !(FORBIDDEN_NAMES.contains(&name)
+            || self.env.get_f(name).is_some()
+            || self.macros.contains_key(name))
     }
 
-    fn available_sort_name(&self, name:&str) -> bool {
-       !( FORBIDDEN_NAMES.contains(&name) || self.env.get_s(name).is_some() )
+    fn available_sort_name(&self, name: &str) -> bool {
+        !(FORBIDDEN_NAMES.contains(&name) || self.env.get_s(name).is_some())
     }
 }
 
@@ -151,7 +154,7 @@ impl<'a> From<Environement> for Context<'a> {
             lemmas: Default::default(),
             crypto_assumptions: Default::default(),
             order: Default::default(),
-            macros: Default::default()
+            macros: Default::default(),
         }
     }
 }
@@ -248,36 +251,7 @@ pub fn parse_protocol(env: Environement, str: &str) -> Result<Problem, E> {
                 }
             }
             Rule::assertion_crypto => {
-                let mut inner = p.into_inner();
-                let ident = inner.next().unwrap();
-                match ident.as_str() {
-                    "euf-cma-hash" => {
-                        let hash_f_rule = inner.next().unwrap();
-
-                        let hash_f = match ctx.env.get_f(hash_f_rule.as_str()) {
-                            Some(h) => h,
-                            _ => {
-                                perr!(hash_f_rule.as_span(); "{} is not defined", hash_f_rule.as_str())?
-                            }
-                        };
-                        let mmsg = MSG(&ctx.env);
-                        if hash_f
-                            .get_input_sorts()
-                            .iter()
-                            .chain(std::iter::once(&hash_f.get_output_sort()))
-                            .all(|s| s == mmsg)
-                        {
-                            ctx.crypto_assumptions
-                                .push(CryptoAssumption::EufCmaHash(hash_f.clone()))
-                        } else {
-                            perr!( hash_f_rule.as_span(); 
-                                "{} should have type {} -> {} -> {} as it should be a keyed hash", 
-                                hash_f_rule.as_str(), MSG(&ctx.env).name(), MSG(&ctx.env).name(), MSG(&ctx.env).name())?
-                        }
-                    }
-                    "nonce" => ctx.crypto_assumptions.push(CryptoAssumption::Nonce),
-                    s => perr!(ident.as_span(); "{} is not a valid crypto assumption", s)?,
-                };
+                parse_crypto(&mut ctx, p);
             }
             Rule::mlet => {
                 let (name, m) = parse_let(&mut ctx, p)?;
@@ -290,27 +264,140 @@ pub fn parse_protocol(env: Environement, str: &str) -> Result<Problem, E> {
     Ok(Problem::new(pbbuild))
 }
 
-fn parse_let<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(&'a str, Macro), E>  {
+fn span_err(s: Span, str:String) -> E {
+    Error::new_from_span(
+                ErrorVariant::CustomError {
+                    message: str,
+                },
+                s,
+            )
+}
+
+fn parse_crypto<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(), E> {
+    let p_span = p.as_span();
+    let mut inner = p.into_inner();
+    let ident = inner.next().unwrap();
+    match ident.as_str() {
+        "euf-cma-hash" => {
+            let hash_f_rule = inner.next().unwrap();
+
+            let hash_f = match ctx.env.get_f(hash_f_rule.as_str()) {
+                Some(h) => h,
+                _ => perr!(hash_f_rule.as_span(); "{} is not defined", hash_f_rule.as_str())?,
+            };
+            let mmsg = MSG(&ctx.env);
+            if hash_f
+                .get_input_sorts()
+                .iter()
+                .chain(std::iter::once(&hash_f.get_output_sort()))
+                .all(|s| s == mmsg)
+            {
+                ctx.crypto_assumptions
+                    .push(CryptoAssumption::EufCmaHash(hash_f.clone()));
+                Ok(())
+            } else {
+                perr!( hash_f_rule.as_span(); 
+                                "{} should have type {} -> {} -> {} as it should be a keyed hash", 
+                                hash_f_rule.as_str(), MSG(&ctx.env).name(), MSG(&ctx.env).name(), MSG(&ctx.env).name())
+            }
+        }
+        "nonce" => {
+            ctx.crypto_assumptions.push(CryptoAssumption::Nonce);
+            Ok(())
+        }
+        "euf-cma-sign" => {
+            let msg = MSG(&ctx.env);
+
+            let sign = inner.next().ok_or(span_err(p_span, format!("expect a function for 'sign'")))?;
+            let verify = inner.next().ok_or(span_err(p_span, format!("expect a function for 'verify'")))?;
+            let pk = inner.next().ok_or(span_err(p_span, format!("expect a function for 'pk'")))?;
+            let fail = inner.next().ok_or(span_err(p_span, format!("expect a function for 'fail'")))?;
+
+            let sort_vec:[&[&Sort]; 4] = [&[msg, msg, msg], &[msg, msg, msg], &[msg, msg], &[msg]];
+            let tmp: Result<Vec<_>, _> = [&sign, &verify, &pk, &fail].into_iter().map(|r| {
+                let s = r.as_span();
+                (s, ctx.env.get_f(r.as_str()).ok_or(span_err(s, format!("no function {}", r.as_str()))))
+            }).zip(sort_vec.into_iter()).map(|((span, f), s)| {
+                match f {
+                    Ok(f) => {
+                        let ss: Vec<_> = f.input_sorts_iter().collect();
+                        if s.len() == ss.len() && ss.iter().zip(s.iter()).all(|(ss, s)| ss.eq(s)) {
+                            Ok(f)
+
+                        } else {
+                            Err(span_err(span, format!("doessn't have the right signature")))
+                        }
+                    },
+                    Err(e) => Err(e)
+                }
+            }).collect();
+            let tmp = tmp?;
+
+            ctx.crypto_assumptions.push(CryptoAssumption::EufCmaSign { sign: tmp[0].clone(), verify: tmp[1].clone(), pk: tmp[2].clone(), fail: tmp[3].clone() });
+            Ok(())
+
+        },
+        "int-ctxt" => {
+            let msg = MSG(&ctx.env);
+
+            let enc = inner.next().ok_or(span_err(p_span, format!("expect a function for 'enc'")))?;
+            let dec = inner.next().ok_or(span_err(p_span, format!("expect a function for 'dec'")))?;
+            let fail = inner.next().ok_or(span_err(p_span, format!("expect a function for 'fail'")))?;
+
+            let sort_vec:[&[&Sort]; 3] = [&[msg, msg, msg, msg], &[msg, msg, msg], &[msg]];
+            let tmp: Result<Vec<_>, _> = [&enc, &dec, &fail].into_iter().map(|r| {
+                let s = r.as_span();
+                (s, ctx.env.get_f(r.as_str()).ok_or(span_err(s, format!("no function {}", r.as_str()))))
+            }).zip(sort_vec.into_iter()).map(|((span, f), s)| {
+                match f {
+                    Ok(f) => {
+                        let ss: Vec<_> = f.input_sorts_iter().collect();
+                        if s.len() == ss.len() && ss.iter().zip(s.iter()).all(|(ss, s)| ss.eq(s)) {
+                            Ok(f)
+
+                        } else {
+                            Err(span_err(span, format!("doessn't have the right signature")))
+                        }
+                    },
+                    Err(e) => Err(e)
+                }
+            }).collect();
+            let tmp = tmp?;
+
+            ctx.crypto_assumptions.push(CryptoAssumption::IntCtxtSenc { enc: tmp[0].clone(), dec: tmp[1].clone(), fail: tmp[2].clone() });
+            Ok(())
+
+        },
+        s => perr!(ident.as_span(); "{} is not a valid crypto assumption", s),
+    }
+}
+
+fn parse_let<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(&'a str, Macro), E> {
     let mut inner = p.into_inner();
     let name = inner.next().unwrap();
     let args = inner.next().unwrap();
     let content = inner.next().unwrap();
 
-    let name = 
-        if !ctx.available_fun_name(name.as_str()){
-            perr!(name.as_span(); "{} is already taken", name.as_str())
-        } else {
-            Ok(name.as_str())
-        }?;
+    let name = if !ctx.available_fun_name(name.as_str()) {
+        perr!(name.as_span(); "{} is already taken", name.as_str())
+    } else {
+        Ok(name.as_str())
+    }?;
     let mut memory = Default::default();
-    let (ids, sorts) = 
-        parse_typed_arguments(ctx, args, &mut memory)?
+    let (ids, sorts) = parse_typed_arguments(ctx, args, &mut memory)?
         .into_iter()
         .map(|(_, Variable { id, sort })| (id, sort))
         .unzip();
     let content = parse_term_as(ctx, content, &mut memory, None)?;
 
-    Ok((name, Macro {ids, sorts, content}))
+    Ok((
+        name,
+        Macro {
+            ids,
+            sorts,
+            content,
+        },
+    ))
 }
 
 fn parse_type(ctx: &Context, p: Pair<Rule>) -> Result<Sort, E> {
@@ -492,7 +579,7 @@ fn parse_application<'a>(
                 let args: Result<Vec<_>,_> = sorts.iter().map(|s|{
                     match inner_rule.next() {
                         None => {
-                            dbg!(&fun); 
+                            dbg!(&fun);
                             perr!(span; "not enough arguments, expected {} got {}", sorts.len(), i)
                         },
                         Some(arg) => {
@@ -505,7 +592,7 @@ fn parse_application<'a>(
 
                 if inner_rule.next().is_some() {
                     return perr!(span; "too many arguments, expected {} got {}", sorts.len(), i)
-                } 
+                }
 
                 let formula = match fun{
                     Either::Left(fun) => RichFormula::Fun(fun.clone(), args),
@@ -516,7 +603,7 @@ fn parse_application<'a>(
                 } else {
                     Ok(formula)
                 }
-                
+
             }
         }
     })
@@ -674,7 +761,7 @@ fn parse_infix_term_as<'a>(
                     let rhs_formula = parse_term_as(ctx, rhs,
                         memory, Some(BOOL(&ctx.env)))?;
                     if &lhs_formula.get_sort(&ctx.env) == BOOL(&ctx.env) {
-                        Ok(f_and(&ctx.env, 
+                        Ok(f_and(&ctx.env,
                             implies(&ctx.env, lhs_formula.clone(), rhs_formula.clone()),
                             implies(&ctx.env, rhs_formula, lhs_formula),
                         ))
@@ -823,8 +910,8 @@ fn parse_order<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Result<RichFormu
             "<" => fun!(LT(&ctx.env); stp1, stp2),
             ">" => fun!(LT(&ctx.env); stp2, stp1),
             "<>" => implies(
-                &ctx.env, 
-                f_and(&ctx.env, fun!(happens; stp1.clone()), fun!(happens; stp2.clone())), 
+                &ctx.env,
+                f_and(&ctx.env, fun!(happens; stp1.clone()), fun!(happens; stp2.clone())),
                 fun!(EQUALITY(&ctx.env); stp1, stp2)
             ),
             _ => unreachable!()

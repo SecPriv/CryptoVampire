@@ -353,7 +353,8 @@ impl SmtFormula {
                         .map(|fun| sfun!(fun, fv.iter().map(|v| svar!(v.clone())).collect()))
                         .collect_vec();
                     let vars = vars.into_iter().map(|v| v.id).collect_vec();
-                    arg.partial_substitution(&vars, &fs)
+                    let arg = arg.partial_substitution(&vars, &fs);
+                    aux(arg, env, negative, skolems, db, fv)
                 }
                 (_, SmtFormula::Forall(vars, arg)) => {
                     fv.extend(vars.iter().cloned());
