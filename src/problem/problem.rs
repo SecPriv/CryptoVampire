@@ -158,23 +158,16 @@ impl Problem {
         let evaluated_functions = env
             .get_functions_iter_mut()
             .filter_map(|f| {
-                if !f.is_term_algebra() {
-                    None
-                } else {
-                    {
-                        let in_s = f
-                            .get_input_sorts()
-                            .iter()
-                            .map(|s| replace_if_eq(s, &bool, &cond))
-                            .cloned()
-                            .collect();
-                        f.set_input_sorts(in_s)
-                    }
-                    {
-                        let out_s = replace_if_eq(&f.get_output_sort(), &bool, &cond).clone();
-                        f.set_output_sort(out_s)
-                    }
+                if f.is_term_algebra() {
+                    // dbg!((f.name(), bool.name(), cond.name()));
+                    f.set_sort_fun(|s| {
+                        // dbg!(s.name());
+                        replace_if_eq(&s, &bool, &cond).clone()
+                    });
+
                     generate_evaluate_fun(&function_db, f).map(|nf| (f, nf))
+                } else {
+                    None
                 }
             })
             .map(|(nf, f)| {

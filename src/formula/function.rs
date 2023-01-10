@@ -215,6 +215,17 @@ impl Function {
         self.inner.inner.borrow_mut().input_sorts = v
     }
 
+    pub fn set_sort_fun<F>(&self, f: F)
+    where
+        F: Fn(Sort) -> Sort,
+    {
+        let mut inner = self.inner.inner.borrow_mut();
+        take_mut::take(&mut inner.output_sort, |s| f(s));
+        for s in inner.input_sorts.iter_mut() {
+            take_mut::take(s, |s| f(s))
+        }
+    }
+
     pub fn get_output_sort(&self) -> Sort {
         self.inner.inner.borrow().output_sort.clone()
     }

@@ -3,8 +3,8 @@ use if_chain::if_chain;
 use crate::{
     formula::{
         builtins::{
-            functions::{EVAL_MSG, NONCE_MSG},
-            types::{BOOL, MSG, NONCE},
+            functions::{EVAL_MSG, NONCE_MSG, EVAL_COND},
+            types::{BOOL, MSG, NONCE, CONDITION},
         },
         env::Environement,
         formula::RichFormula,
@@ -26,11 +26,15 @@ use crate::{
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum CryptoAssumption {
     EufCmaMac {
+        /// mac(Message, Key) -> Signature
         mac: Function,
+        /// verify(Signature, Message, Key) -> bool
         verify: Function,
     },
     EufCmaSign {
+        /// sign(Message, Key) -> Signature
         sign: Function,
+        /// verify(Signature, Message, vKey) -> bool
         verify: Function,
         pk: Function,
     },
@@ -352,8 +356,10 @@ fn generate_smt_euf_cma_hash(
     verify: &Function,
 ) {
     let eval_msg = EVAL_MSG(ctx.env()).clone();
+    let eval_cond = EVAL_COND(ctx.env()).clone();
     let nonce = NONCE_MSG(ctx.env()).clone();
     let msg = MSG(ctx.env()).clone();
+    let cond = CONDITION(ctx.env()).clone();
     let nonce_sort = NONCE(ctx.env()).clone();
 
     let subt_main = generate_subterm(
@@ -378,7 +384,7 @@ fn generate_smt_euf_cma_hash(
                 let mut todo = Vec::with_capacity(2);
                 todo.push(&args[0]);
                 if_chain!(
-                    if let RichFormula::Fun(fun2, _) = &args[2];
+                    if let RichFormula::Fun(fun2, _) = &args[1];
                     if fun2 == &nonce;
                     then {}
                     else {
@@ -427,7 +433,7 @@ fn generate_smt_euf_cma_hash(
         assertions.push(Smt::Assert(
             sforall!(k!0:nonce_sort, sigma!3:msg, m!1:msg, k2!2:msg; {
                 simplies!(ctx.env();
-                    s.f(k.clone(), sfun!(verify; m.clone(), sigma.clone(), k2.clone()), &msg),
+                    s.f(k.clone(), sfun!(verify; m.clone(), sigma.clone(), k2.clone()), &cond),
                     site!(
                         seq!(k2.clone(), sfun!(nonce; k.clone())),
                         sor!(
@@ -445,7 +451,7 @@ fn generate_smt_euf_cma_hash(
         ))
     }
     assertions.push(Smt::Assert(sforall!(sk!0:nonce_sort, m!1:msg; {
-                sfun!(eval_msg; sfun!(verify; sfun!(mac; m.clone(), sfun!(nonce; sk.clone())),  sfun!(nonce; sk.clone())))
+                sfun!(eval_cond; sfun!(verify; sfun!(mac; m.clone(), sfun!(nonce; sk.clone())), m.clone(),  sfun!(nonce; sk.clone())))
         })));
 
     if ctx.env().crypto_rewrite() {
@@ -462,7 +468,7 @@ fn generate_smt_euf_cma_hash(
                     //     sfun!(eval_msg; s.clone()),
                     //     sfun!(eval_msg; sfun!(hash; m.clone(), sfun!(nonce; k.clone())))
                     // )
-                    sfun!(eval_msg; sfun!(verify; m.clone(), s.clone(), sfun!(nonce; k.clone())))
+                    sfun!(eval_cond; sfun!(verify; s.clone(), m.clone(), sfun!(nonce; k.clone())))
                 } -> {
                     let u = sfun!(sk; s.clone(), m.clone(), k.clone());
                     let h = sfun!(mac; u.clone(), sfun!(nonce; k.clone()));
@@ -487,7 +493,7 @@ fn generate_smt_euf_cma_hash(
                     //     sfun!(eval_msg; s.clone()),
                     //     sfun!(eval_msg; sfun!(hash; m.clone(), sfun!(nonce; k.clone())))
                     // )
-                    sfun!(eval_msg; sfun!(verify; m.clone(), s.clone(), sfun!(nonce; k.clone())))
+                    sfun!(eval_cond; sfun!(verify; s.clone(), m.clone(), sfun!(nonce; k.clone())))
                 ,
                     sexists!(u!4:msg; {
                     let h = sfun!(mac; u.clone(), sfun!(nonce; k.clone()));
@@ -514,6 +520,7 @@ fn generate_smt_euf_cma_sign(
     verify: &Function,
     vk: &Function,
 ) {
+    let eval_cond = EVAL_COND(ctx.env()).clone();
     let eval_msg = EVAL_MSG(ctx.env()).clone();
     let nonce = NONCE_MSG(ctx.env()).clone();
     let msg = MSG(ctx.env()).clone();
@@ -603,7 +610,7 @@ fn generate_smt_euf_cma_sign(
         })));
     }
     assertions.push(Smt::Assert(sforall!(sk!0:nonce_sort, m!1:msg; {
-                sfun!(eval_msg; sfun!(verify; sfun!(sign; m.clone(), sfun!(nonce; sk.clone())), sfun!(vk; sfun!(nonce; sk.clone()))))
+                sfun!(eval_cond; sfun!(verify; sfun!(sign; m.clone(), sfun!(nonce; sk.clone())), m.clone(), sfun!(vk; sfun!(nonce; sk.clone()))))
         })));
 
     if ctx.env().crypto_rewrite() {
@@ -616,7 +623,7 @@ fn generate_smt_euf_cma_sign(
         let asser = srewrite!(
                 RewriteKind::Bool; s!1:msg, sk!2:nonce_sort, m!3:msg;
                 {
-                    sfun!(eval_msg; sfun!(verify; s.clone(), sfun!(vk; sfun!(nonce; sk.clone()))))
+                    sfun!(eval_cond; sfun!(verify; s.clone(), sfun!(vk; sfun!(nonce; sk.clone()))))
                 } -> {
                     let u = sfun!(skolem; s.clone(), m.clone(), sk.clone());
                     let sig = sfun!(sign; u.clone(), sfun!(nonce; sk.clone()));
@@ -647,7 +654,7 @@ fn generate_smt_euf_cma_sign(
                     //         sfun!(eval_msg; s.clone())
                     //     ))
                     // )
-                    sfun!(eval_msg; sfun!(verify; s.clone(), sfun!(vk; sfun!(nonce; sk.clone()))))
+                    sfun!(eval_cond; sfun!(verify; s.clone(), sfun!(vk; sfun!(nonce; sk.clone()))))
                 ,
                     sexists!(u!4:msg; {
                     let sig = sfun!(sign; u.clone(), sfun!(nonce; sk.clone()));

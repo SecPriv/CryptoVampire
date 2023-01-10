@@ -314,7 +314,7 @@ fn parse_crypto<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(), E> {
         }
         "euf-cma" => {
             let msg = MSG(&ctx.env);
-            let cond = CONDITION(&ctx.env);
+            let bool = BOOL(&ctx.env);
 
             let sign = inner
                 .next()
@@ -324,7 +324,7 @@ fn parse_crypto<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(), E> {
                 .ok_or(span_err(p_span, format!("expect a function for 'verify'")))?;
             let pk = inner.next();
 
-            let sort_vec: [&[&Sort]; 3] = [&[msg, msg, msg], &[msg, msg, msg, cond], &[msg, msg]];
+            let sort_vec: [&[&Sort]; 3] = [&[msg, msg, msg], &[bool, msg, msg, msg, ], &[msg, msg]];
             let tmp: Result<Vec<_>, _> = [&sign, &verify]
                 .into_iter()
                 .chain(pk.as_ref())
@@ -344,13 +344,19 @@ fn parse_crypto<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(), E> {
                         if s.len() == ss.len() && ss.iter().zip(s.iter()).all(|(ss, s)| ss.eq(s)) {
                             Ok(f)
                         } else {
-                            let got = ss.iter().map(|s| s.name()).join(" -> ");
-                            let expected = s.iter().map(|s| s.name()).join(" -> ");
+                            let mut got = ss.iter();
+                            let got_final = got.next().into_iter();
+                            let got = got.chain(got_final).map(|s| s.name()).join(" -> ");
+
+                            let mut expected = s.iter();
+                            let expected_final = expected.next().into_iter();
+                            let expected = expected.chain(expected_final).map(|s| s.name()).join(" -> ");
+
                             Err(span_err(
                                 span,
                                 format!(
-                                    "{} doesn't have the right signature.\n\texpected: {}\n\tgot: {}",
-                                    f.name(), expected, got
+                                    "{} doesn't have the right signature.\n\texpected: {}\n\tgot: {}\n\t function: {:?}",
+                                    f.name(), expected, got, f
                                 ),
                             ))
                         }
@@ -359,6 +365,12 @@ fn parse_crypto<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(), E> {
                 })
                 .collect();
             let tmp = tmp?;
+
+            for f in tmp.iter() {
+                if !f.is_user_defined() {
+                    return Err(span_err(p_span, format!("{} is not user defined!", f.name())));
+                }
+            }
 
             if pk.is_some() {
                 debug_assert_eq!(tmp.len(), 3);
@@ -543,11 +555,12 @@ fn parse_declare_function<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Resul
         // match ctx.env.get_f(name) {
         //     None => {
                 let flags = FFlags::USER_DEFINED |
-                    if input_sorts
-                        .iter()
-                        .chain(std::iter::once(&output_sort))
-                        .find(|s| (s.name() == MSG_NAME) || (s.name() == CONDITION_NAME))
-                        .is_some()
+                    // if input_sorts
+                    //     .iter()
+                    //     .chain(std::iter::once(&output_sort))
+                    //     .find(|s| (s.name() == MSG_NAME) || (s.name() == CONDITION_NAME))
+                    //     .is_some()
+                    if output_sort.is_term_algebra() || &output_sort == BOOL(&ctx.env)
                     {
                         FFlags::TERM_ALGEBRA
                     } else {
