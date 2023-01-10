@@ -594,7 +594,7 @@ fn parse_application<'a>(
         let mut inner_rule = p.into_inner();
 
         let name = inner_rule.next().unwrap(); // can't fail
-        match memory.get(name.as_str()) {
+        let formula = match memory.get(name.as_str()) {
             Some(var) => {
                 if inner_rule.next().is_none() {
                     Ok(RichFormula::Var(var.clone()))
@@ -674,13 +674,16 @@ fn parse_application<'a>(
                     Either::Left(fun) => RichFormula::Fun(fun.clone(), args),
                     Either::Right(m) => m.content.clone().apply_substitution(&m.ids, args.as_slice()),
                 };
-                if &formula.get_sort(&ctx.env) == NONCE(&ctx.env) {
-                    Ok(RichFormula::Fun(NONCE_MSG(&ctx.env).clone(), vec![formula]))
-                } else {
-                    Ok(formula)
-                }
+                Ok(formula)
 
             }
+        }?;
+        
+        // sugar for nonces
+        if &formula.get_sort(&ctx.env) == NONCE(&ctx.env) {
+            Ok(RichFormula::Fun(NONCE_MSG(&ctx.env).clone(), vec![formula]))
+        } else {
+            Ok(formula)
         }
     })
 }

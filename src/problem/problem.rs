@@ -238,7 +238,7 @@ impl Problem {
         let user_assertions: Vec<RichFormula> = assertions
             .into_iter()
             // .map(|f| process_assertion(&function_db, &env, f))
-            .map(|f| process_assertion(&function_db, &env, f))
+            .map(|f| process_query(&function_db, &env, f))
             .collect();
         let query: RichFormula = process_query(&function_db, &env, query);
         let lemmas: Vec<RichFormula> = temporary
@@ -577,7 +577,15 @@ fn process_query_content(
     formula: RichFormula,
 ) -> RichFormula {
     match formula {
-        RichFormula::Var(_) => formula.clone(),
+        RichFormula::Var(v) => {
+            let condition = v.sort.is_evaluatable();
+            let f = RichFormula::Var(v);
+            if condition {
+                call_evaluate(env, f)
+            } else {
+                f
+            }
+        }
         RichFormula::Quantifier(Quantifier::FindSuchThat { variables: _ }, _) => {
             panic!("no fst!")
         }
