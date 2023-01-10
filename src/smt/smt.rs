@@ -63,6 +63,7 @@ pub enum Smt {
         sorts: Vec<Sort>,
         cons: Vec<Vec<SmtCons>>,
     },
+    Comment(String),
 
     CheckSat,
 }
@@ -191,6 +192,7 @@ impl fmt::Display for Smt {
             }
 
             Smt::CheckSat => write!(f, "(check-sat)"),
+            Smt::Comment(s) => write!(f, "\n; {}\n", s),
         }
     }
 }

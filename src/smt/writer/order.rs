@@ -6,7 +6,10 @@ use crate::{
         },
         env::Environement,
     },
-    smt::{macros::*, smt::Smt},
+    smt::{
+        macros::*,
+        smt::{Smt, SmtFormula},
+    },
 };
 
 use super::Ctx;
@@ -24,6 +27,8 @@ pub(crate) fn ordering(
     let step = STEP(env);
 
     let mut assert_tmp = Vec::new();
+
+    assertions.push(Smt::Comment(format!("ordering")));
 
     assert_tmp.push(sforall!(s!0:step; {
         sor!(
@@ -65,4 +70,11 @@ pub(crate) fn ordering(
     } else {
         assertions.extend(assert_tmp.into_iter().map(Smt::Assert))
     };
+
+    assertions.extend(
+        ctx.pbl
+            .order
+            .iter()
+            .map(|f| Smt::Assert(SmtFormula::from(f))),
+    )
 }

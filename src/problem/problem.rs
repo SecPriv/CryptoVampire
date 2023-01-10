@@ -75,6 +75,21 @@ pub enum QuantifierPContent {
     },
 }
 
+impl QuantifierP {
+    pub fn iter_content<'a>(&'a self) -> impl Iterator<Item = &'a RichFormula> {
+        match &self.content {
+            QuantifierPContent::Exists { content } | QuantifierPContent::Forall { content } => {
+                vec![content].into_iter()
+            }
+            QuantifierPContent::FindSuchThat {
+                condition,
+                left,
+                right,
+            } => vec![condition, left, right].into_iter(),
+        }
+    }
+}
+
 pub const CAND_NAME: &'static str = "c$and";
 pub const COR_NAME: &'static str = "c$or";
 pub const CNOT_NAME: &'static str = "c$not";
@@ -178,29 +193,36 @@ impl Problem {
             .into_iter()
             .chain(std::iter::once(init))
             .map(|s| {
-                let msg = process_step_content(
-                    &function_db,
-                    &mut env,
-                    &mut quantifiers,
-                    &msg,
-                    s.message(),
-                );
-                let cond = process_step_content(
-                    &function_db,
-                    &mut env,
-                    &mut quantifiers,
-                    &cond,
-                    s.condition(),
-                );
+                // let msg = process_step_content(
+                //     &function_db,
+                //     &mut env,
+                //     &mut quantifiers,
+                //     &msg,
+                //     s.message(),
+                // );
+                // let cond = process_step_content(
+                //     &function_db,
+                //     &mut env,
+                //     &mut quantifiers,
+                //     &cond,
+                //     s.condition(),
+                // );
                 let name = s.name();
 
-                Step::new(
-                    name,
-                    s.parameters().clone(),
-                    cond,
-                    msg,
-                    s.function().clone(),
-                )
+                // Step::new(
+                //     name,
+                //     s.parameters().clone(),
+                //     cond,
+                //     msg,
+                //     s.function().clone(),
+                // )
+                s.map(|i, f| {
+                    let sort = match i {
+                        super::protocol::MessageOrCondition::Message => &msg,
+                        super::protocol::MessageOrCondition::Condition => &cond,
+                    };
+                    process_step_content(&function_db, &mut env, &mut quantifiers, sort, f)
+                })
             })
             .collect();
 
@@ -674,7 +696,10 @@ fn make_quantifier(
         &format!("m${}_{}", name, quantifiers.len()),
         free_vars.iter().map(|f| f.sort.clone()).collect(),
         sort,
-        FFlags::TERM_ALGEBRA | FFlags::SPECIAL_EVALUATE | FFlags::SPECIAL_SUBTERM,
+        FFlags::TERM_ALGEBRA
+            | FFlags::SPECIAL_EVALUATE
+            | FFlags::SPECIAL_SUBTERM
+            | FFlags::FROM_QUANTIFIER,
     );
     env.add_f(function.clone());
     quantifiers.push(QuantifierP {

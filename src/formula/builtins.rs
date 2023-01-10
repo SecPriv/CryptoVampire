@@ -65,7 +65,7 @@ pub mod functions {
         fun!(NOT(env); a)
     }
 
-    pub fn implies(env: &Environement, a: RichFormula, b:RichFormula) -> RichFormula {
+    pub fn implies(env: &Environement, a: RichFormula, b: RichFormula) -> RichFormula {
         fun!(IMPLIES(env); a, b)
     }
 }

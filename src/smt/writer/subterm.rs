@@ -6,11 +6,12 @@ use crate::{
             functions::{INPUT, LT_NAME, SUBTERM},
             types::{BOOL, CONDITION, MSG, STEP},
         },
-        formula::{sorts_to_variables, Variable},
+        env::Environement,
+        formula::{sorts_to_variables, RichFormula, Variable},
         function::{FFlags, Function},
-        sort::Sort, env::Environement,
+        sort::Sort,
     },
-    problem::protocol::Step,
+    problem::{problem::Problem, protocol::Step},
     smt::{
         macros::{sand, seq, sexists, sforall, sfun, simplies, snot, sor, svar},
         smt::{Smt, SmtFormula},
@@ -147,6 +148,8 @@ impl<'a> OneSubterm<'a> {
     }
 }
 
+// type MyF<'a, 'b> = Fn(&Subterm, &SmtFormula, &Step, &'a Problem, &'b RichFormula) -> (SmtFormula, Vec<&'b RichFormula>);
+
 pub(crate) fn generate_subterm<'a, F>(
     assertions: &mut Vec<Smt>,
     declarations: &mut Vec<Smt>,
@@ -157,7 +160,14 @@ pub(crate) fn generate_subterm<'a, F>(
     preprocess: F,
 ) -> Subterm
 where
-    F: Fn(&Subterm, &SmtFormula, &Step, &'a Environement) -> SmtFormula,
+    // F: Fn(&Subterm, &SmtFormula, &Step, &'a Problem) -> SmtFormula,
+    F: Fn(
+        &Subterm,
+        &SmtFormula,
+        &Step,
+        &'a Problem,
+        &'a RichFormula,
+    ) -> (Option<SmtFormula>, Vec<&'a RichFormula>),
 {
     debug_assert!(ctx.pbl.env.verify_f());
     debug_assert!(
@@ -193,7 +203,13 @@ fn user_splitting<'a, F>(
     subt: &Subterm,
     preprocess: F,
 ) where
-    F: Fn(&Subterm, &SmtFormula, &Step, &'a Environement) -> SmtFormula,
+    F: Fn(
+        &Subterm,
+        &SmtFormula,
+        &Step,
+        &'a Problem,
+        &'a RichFormula,
+    ) -> (Option<SmtFormula>, Vec<&'a RichFormula>),
 {
     let input = INPUT(ctx.env());
     let lt = ctx.env().get_f(LT_NAME).unwrap();
@@ -205,33 +221,71 @@ fn user_splitting<'a, F>(
         .pbl
         .steps
         .values()
-        .map(|s| s.parameters().len())
+        .map(|s| s.vairable_range().end)
         .max()
-        .unwrap_or(0)
-        + 1;
+        .unwrap_or(0);
     // make ununsed variables
     let sorts = vec![subt.sort().clone(), STEP(ctx.env()).clone()];
     let vars = sorts_to_variables(max_var, sorts.iter());
     let tp = svar!(vars[1].clone());
     let m = svar!(vars[0].clone());
 
+    // for reuse
+    let mut todo = Vec::new();
+
     let mut ors: Vec<_> = ctx
         .pbl
         .steps
         .values()
         .map(|s| {
-            let s_vars = sorts_to_variables(1, s.parameters().iter());
+            let s_vars = s.occuring_variables().clone();
 
             let step_f = sfun!(
                 s.function(),
-                s_vars.iter().cloned().map(|v| svar!(v)).collect()
+                s.free_variables()
+                    .iter()
+                    .cloned()
+                    .map(|v| svar!(v))
+                    .collect()
             );
             let order = sfun!(lt; step_f, tp.clone());
-            let content = preprocess(subt, &m, s, ctx.env());
-            SmtFormula::Exists(s_vars, Box::new(SmtFormula::And(vec![order, content])))
+            // let content = preprocess(subt, &m, s, &ctx.pbl);
+
+            let content = {
+                let mut ors = Vec::new();
+                todo.clear();
+
+                todo.push(s.message());
+                todo.push(s.condition());
+
+                while let Some(f) = todo.pop() {
+                    match f {
+                        RichFormula::Fun(f, _) if f.is_from_quantifer() => {
+                            let q = ctx
+                                .pbl
+                                .quantifiers
+                                .iter()
+                                .find(|q| &q.function == f)
+                                .unwrap();
+                            todo.extend(q.iter_content())
+                        }
+                        _ => {}
+                    }
+                    let (litteral, next) = preprocess(subt, &m, s, &ctx.pbl, f);
+                    todo.extend(next.into_iter());
+                    if let Some(lit) = litteral {
+                        ors.push(lit)
+                    }
+                }
+                ors
+            };
+            SmtFormula::Exists(
+                s_vars,
+                Box::new(SmtFormula::And(vec![order, SmtFormula::Or(content)])),
+            )
         })
         .collect();
-    
+
     let input_f = sfun!(input; tp.clone());
     if subt.sort() == msg {
         ors.push(seq!(m.clone(), input_f.clone()))
@@ -245,13 +299,25 @@ fn user_splitting<'a, F>(
     )));
 }
 
-pub fn default_f<'a>(sort: &'a Sort) -> impl Fn(&Subterm, &SmtFormula, &Step, &'a Environement) -> SmtFormula {
-    move |_, m, s, env|  {
-        SmtFormula::Or(s.message().iter().chain(s.condition().iter()).filter_map(|f|{
-            if &f.get_sort(env) == sort {
-                Some(seq!(m.clone(), SmtFormula::from(f)))
-            } else { None }
-        }).collect())
+pub fn default_f<'a, 'b>() -> impl Fn(
+    &Subterm,
+    &SmtFormula,
+    &Step,
+    &'a Problem,
+    &'b RichFormula,
+) -> (Option<SmtFormula>, Vec<&'b RichFormula>) {
+    move |subt, m, _, _, f| {
+        let sort = subt.sort();
+        match f {
+            RichFormula::Fun(fun, args) => (
+                (&fun.get_output_sort() == sort).then(|| seq!(m.clone(), SmtFormula::from(f))),
+                args.iter().collect(),
+            ),
+            RichFormula::Var(v) if &v.sort == sort => {
+                (Some(seq!(m.clone(), svar!(v.clone()))), vec![])
+            }
+            _ => (None, vec![]),
+        }
     }
 }
 
@@ -543,10 +609,10 @@ fn spliting(assertions: &mut Vec<Smt>, declarations: &mut Vec<Smt>, ctx: &mut Ct
         .pbl
         .steps
         .values()
-        .map(|s| s.parameters().len())
+        .map(|s| s.vairable_range().end)
         .max()
-        .unwrap_or(0)
-        + 1;
+        .unwrap_or(0);
+
     // make ununsed variables
     let sorts = vec![subt.sort().clone(), STEP(ctx.env()).clone()];
     let vars = sorts_to_variables(max_var, sorts.iter());
@@ -571,7 +637,7 @@ fn spliting(assertions: &mut Vec<Smt>, declarations: &mut Vec<Smt>, ctx: &mut Ct
         premises.push(sp_const.clone());
 
         // variables 0 was `in`
-        let step_vars = sorts_to_variables(1, s.parameters().iter());
+        let step_vars = sorts_to_variables(1, s.parameters());
 
         assertions.push(Smt::Assert(sforall!(
             vars.clone(),

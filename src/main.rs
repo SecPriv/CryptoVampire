@@ -37,7 +37,12 @@ fn main() {
     let pbl = match parse_protocol(env, &str) {
         Ok(p) => p,
         Err(e) => {
-            panic!("{}", e)
+            let file = if let Some(f) = &args.file {
+                f.to_str().unwrap_or("[non-unicode file name]")
+            } else {
+                "stdin"
+            };
+            panic!("error while parsing {}:\n{}", file, e)
         }
     };
 
@@ -62,8 +67,6 @@ fn main() {
     // for s in smt {
     //     println!("{}\n", s);
     // }
-
-    println!("end")
 }
 
 fn write_to_file(path: &PathBuf, smt: Vec<Smt>) {

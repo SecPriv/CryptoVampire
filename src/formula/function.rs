@@ -21,7 +21,8 @@ bitflags! {
         /// is a skolem
         const SKOLEM =              1<<1;
         /// is a find such that
-        const FIND_SUCH_THAT =      1<<2;
+        // const FIND_SUCH_THAT =      1<<2;
+        const FROM_QUANTIFIER =     1<<2;
         /// introduced by the user
         const USER_DEFINED =        1<<3;
         /// will be defined as part as the term algebra in smt
@@ -42,6 +43,7 @@ bitflags! {
         const SPLITING =            1<<10;
 
         const SPECIAL_SUBTERM =     1<<11;
+
 
     }
 }
@@ -261,6 +263,10 @@ impl Function {
 
     pub fn is_from_step(&self) -> bool {
         self.contain_flag(FFlags::FROM_STEP)
+    }
+
+    pub fn is_from_quantifer(&self) -> bool {
+        self.contain_flag(FFlags::FROM_QUANTIFIER)
     }
 
     pub fn contain_sort(&self, s: &Sort) -> bool {

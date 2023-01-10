@@ -2,6 +2,8 @@ use std::collections::HashSet;
 use std::fmt;
 use std::ops::Deref;
 
+use crate::problem::problem::Problem;
+
 use super::{env::Environement, function::Function, quantifier::Quantifier, sort::Sort};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -139,6 +141,29 @@ impl RichFormula {
             if let Some(f) = pile.pop() {
                 match f {
                     RichFormula::Var(_) => {}
+                    RichFormula::Fun(_, args) => pile.extend(args.iter()),
+                    RichFormula::Quantifier(_, args) => pile.extend(args.iter()),
+                }
+                Some(f)
+            } else {
+                None
+            }
+        })
+    }
+
+    pub fn iter_with_quantifier<'a>(
+        &'a self,
+        pbl: &'a Problem,
+    ) -> impl Iterator<Item = &'a RichFormula> {
+        let mut pile = vec![self];
+        std::iter::from_fn(move || {
+            if let Some(f) = pile.pop() {
+                match f {
+                    RichFormula::Var(_) => {}
+                    RichFormula::Fun(fun, _) if fun.is_from_quantifer() => {
+                        let q = pbl.quantifiers.iter().find(|q| &q.function == fun).unwrap();
+                        pile.extend(q.iter_content())
+                    }
                     RichFormula::Fun(_, args) => pile.extend(args.iter()),
                     RichFormula::Quantifier(_, args) => pile.extend(args.iter()),
                 }
