@@ -36,6 +36,12 @@ pub(crate) fn ordering(
             seq!(init, s)
         )
     }));
+    assert_tmp.push(sforall!(s!1:step; {
+        simplies!(ctx.env();
+            sfun!(lt; s.clone(), s.clone()),
+            seq!(init, s)
+        )
+    }));
     assert_tmp.push(sforall!(s1!1:step, s2!2:step, s3!3:step ;{
         simplies!(env;
             sand!(

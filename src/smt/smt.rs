@@ -1,4 +1,4 @@
-use std::fmt::{self};
+use std::fmt::{self, write};
 
 use itertools::Itertools;
 
@@ -118,6 +118,7 @@ impl fmt::Display for SmtFormula {
             SmtFormula::And(args) => fun_list_fmt(f, "and", args.iter()),
             SmtFormula::Or(args) if args.is_empty() => write!(f, "false"),
             SmtFormula::Or(args) => fun_list_fmt(f, "or", args.iter()),
+            SmtFormula::Eq(args) | SmtFormula::Neq(args) if args.len() <= 1 => write!(f, "true"),
             SmtFormula::Eq(args) => fun_list_fmt(f, "=", args.iter()),
             SmtFormula::Neq(args) => fun_list_fmt(f, "distinct", args.iter()),
             SmtFormula::Ite(c, r, l) => {
