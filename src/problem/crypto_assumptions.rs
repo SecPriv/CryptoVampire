@@ -3,8 +3,8 @@ use if_chain::if_chain;
 use crate::{
     formula::{
         builtins::{
-            functions::{EVAL_MSG, NONCE_MSG, EVAL_COND},
-            types::{BOOL, MSG, NONCE, CONDITION},
+            functions::{EVAL_COND, EVAL_MSG, NONCE_MSG},
+            types::{BOOL, CONDITION, MSG, NONCE},
         },
         env::Environement,
         formula::RichFormula,
@@ -296,7 +296,7 @@ fn generate_smt_int_ctxt_senc(
             } -> {
                 let m = sfun!(sk_m; c.clone(), k.clone());
                 let r = sfun!(sk_r; c.clone(), k.clone());
-                let nc = sfun!(enc; m.clone(), r.clone(), sfun!(nonce; k.clone()));
+                let nc = sfun!(enc; m.clone(), sfun!(nonce; r.clone()), sfun!(nonce; k.clone()));
                 sor!(
                     subt_sec.main(k.clone(), c.clone(), &msg),
                     subt_main.main(nc, c.clone(), &msg),
@@ -312,7 +312,7 @@ fn generate_smt_int_ctxt_senc(
                     sfun!(eval_msg; sfun!(dec; c.clone(), sfun!(nonce; k.clone())))
                 ),
                 sexists!(m!4:msg, r!5:nonce_sort; {
-                    let nc = sfun!(enc; m.clone(), r.clone(), sfun!(nonce; k.clone()));
+                    let nc = sfun!(enc; m.clone(),  sfun!(nonce; r.clone()), sfun!(nonce; k.clone()));
                     sor!(
                         subt_sec.main(k.clone(), c.clone(), &msg),
                         subt_main.main(nc, c.clone(), &msg),

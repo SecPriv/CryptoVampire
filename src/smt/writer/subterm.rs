@@ -660,6 +660,10 @@ fn spliting(assertions: &mut Vec<Smt>, declarations: &mut Vec<Smt>, ctx: &mut Ct
         )))
     }
 
+    if subt.sort() == msg {
+        premises.push(seq!(m.clone(), sfun!(input; tp.clone())));
+    }
+
     assertions.push(Smt::Assert(sforall!(
         vars.clone(),
         simplies!(ctx.env();
