@@ -1,10 +1,12 @@
+use std::convert::identity;
+
 use if_chain::if_chain;
 use itertools::{Either, Itertools};
 
 use crate::{
     formula::{
         builtins::{
-            functions::{EVAL_COND, EVAL_MSG, NONCE_MSG},
+            functions::{EVAL_COND, EVAL_MSG, INPUT, LT, NONCE_MSG},
             types::{BOOL, CONDITION, MSG, NONCE},
         },
         env::Environement,
@@ -15,7 +17,9 @@ use crate::{
     },
     problem::protocol::Step,
     smt::{
-        macros::{sand, seq, sexists, sforall, sfun, simplies, site, sneq, snot, sor, srewrite},
+        macros::{
+            sand, seq, sexists, sforall, sfun, simplies, site, sneq, snot, sor, srewrite, svar,
+        },
         smt::{RewriteKind, Smt, SmtFormula},
         writer::{
             subterm::{default_f, generate_subterm, Subterm},
@@ -275,47 +279,47 @@ fn generate_smt_int_ctxt_senc(
     //     })
     // ));
 
-    let sp = Function::new_with_flag(
-        "sp$int_ctxt",
-        vec![nonce_sort.clone(), msg.clone()],
-        BOOL(ctx.env()).clone(),
-        FFlags::empty(),
-    );
-    declarations.push(Smt::DeclareFun(sp.clone()));
+    // let sp = Function::new_with_flag(
+    //     "sp$int_ctxt",
+    //     vec![nonce_sort.clone(), msg.clone()],
+    //     BOOL(ctx.env()).clone(),
+    //     FFlags::empty(),
+    // );
+    // declarations.push(Smt::DeclareFun(sp.clone()));
 
-    // let's ignore this for now
-    if false {
-        assertions.push(Smt::Assert(sforall!(c!0:msg, k!1:nonce_sort; {
-            simplies!(ctx.env();
-                // sand!(
-                //     sfun!(sp; k.clone(), c.clone()),
-                //     subt_main.main(sfun!(enc; m.clone(), r.clone(), sfun!(nonce; k.clone())), c.clone(), &msg)
-                // ),
-                sfun!(sp; k.clone(), c.clone()),
-                sexists!( r!2:msg, m!3:msg;{
-                    sand!(
-                        subt_main.main(sfun!(enc; m.clone(), r.clone(), sfun!(nonce; k.clone())), c.clone(), &msg),
-                        sor!(
-                            sforall!(n!4:nonce_sort; {sneq!(r.clone(), sfun!(nonce; n))}),
-                            sexists!(m2!4:msg, k2!5:msg; {
-                                sand!(
-                                    subt_main.main(sfun!(enc; m2.clone(), r.clone(), k2.clone()), c.clone(), &msg),
-                                    sneq!(m2, m.clone()),
-                                    sneq!(k2,  sfun!(nonce; k.clone()))
-                                )
-                            }),
-                            sexists!(n!4:nonce_sort; {sand!(
-                                seq!(r.clone(), sfun!(nonce; n.clone())),
-                                subt_rd.main(n.clone(), c.clone(), &msg)
-                            )})
-                        )
-                    )
-                })
-            )
-        })));
-    }
+    // // let's ignore this for now
+    // if false {
+    //     assertions.push(Smt::Assert(sforall!(c!0:msg, k!1:nonce_sort; {
+    //         simplies!(ctx.env();
+    //             // sand!(
+    //             //     sfun!(sp; k.clone(), c.clone()),
+    //             //     subt_main.main(sfun!(enc; m.clone(), r.clone(), sfun!(nonce; k.clone())), c.clone(), &msg)
+    //             // ),
+    //             sfun!(sp; k.clone(), c.clone()),
+    //             sexists!( r!2:msg, m!3:msg;{
+    //                 sand!(
+    //                     subt_main.main(sfun!(enc; m.clone(), r.clone(), sfun!(nonce; k.clone())), c.clone(), &msg),
+    //                     sor!(
+    //                         sforall!(n!4:nonce_sort; {sneq!(r.clone(), sfun!(nonce; n))}),
+    //                         sexists!(m2!4:msg, k2!5:msg; {
+    //                             sand!(
+    //                                 subt_main.main(sfun!(enc; m2.clone(), r.clone(), k2.clone()), c.clone(), &msg),
+    //                                 sneq!(m2, m.clone()),
+    //                                 sneq!(k2,  sfun!(nonce; k.clone()))
+    //                             )
+    //                         }),
+    //                         sexists!(n!4:nonce_sort; {sand!(
+    //                             seq!(r.clone(), sfun!(nonce; n.clone())),
+    //                             subt_rd.main(n.clone(), c.clone(), &msg)
+    //                         )})
+    //                     )
+    //                 )
+    //             })
+    //         )
+    //     })));
+    // }
 
-    {
+    let ok = {
         // sp
 
         // all the randomness nonces + some context
@@ -351,7 +355,7 @@ fn generate_smt_int_ctxt_senc(
             .collect();
 
         // if Ok, all the randomness nonces. Thoses should not appear outside of a enc
-        // Err if a randomness encrypts two different messages or is used with two different keys
+        // Err if a randomness encrypts two differents messages or is used with two different keys
         let randomness =
             randomness.and_then(|rands| {
                 if rands.iter().cartesian_product(rands.iter()).all(
@@ -359,8 +363,16 @@ fn generate_smt_int_ctxt_senc(
                         if let Some(mgu) = Unifier::mgu(n1, n2) {
                             mgu.does_unify(sk1, sk2) && mgu.does_unify(m1, m2)
                         } else {
-                            println!("err at {} -> {}", SmtFormula::from(*m1), SmtFormula::from(*m2));
-                            println!("or at {} -> {}", SmtFormula::from(*sk1), SmtFormula::from(*sk2));
+                            println!(
+                                "err at {} -> {}",
+                                SmtFormula::from(*m1),
+                                SmtFormula::from(*m2)
+                            );
+                            println!(
+                                "or at {} -> {}",
+                                SmtFormula::from(*sk1),
+                                SmtFormula::from(*sk2)
+                            );
                             false
                         }
                     },
@@ -373,6 +385,7 @@ fn generate_smt_int_ctxt_senc(
                         })
                         .collect_vec())
                 } else {
+                    dbg!("there");
                     Err(())
                 }
             });
@@ -387,7 +400,7 @@ fn generate_smt_int_ctxt_senc(
                         RichFormula::Fun(fun, _) if randomness.contains(&fun) => {
                             println!("err at {}", fun.name());
                             (Some(()), vec![])
-                        },
+                        }
                         RichFormula::Fun(fun, _) if fun == enc => (None, vec![]),
                         RichFormula::Fun(_, args) => (None, args.iter().collect()),
                         _ => (None, vec![]),
@@ -402,69 +415,72 @@ fn generate_smt_int_ctxt_senc(
             println!("WARN: int-ctxt is useless")
         }
 
-        assertions.push(Smt::Assert(sforall!(c!0:msg, k!1:nonce_sort;{
-            if !ok {
-                sfun!(sp; c, k)
-            } else {
-                snot!(ctx.env(); sfun!(sp; c, k))
-            }
-        })))
-    }
+        // assertions.push(Smt::Assert(sforall!(c!0:msg, k!1:nonce_sort;{
+        //     if !ok {
+        //         sfun!(sp; k, c)
+        //     } else {
+        //         snot!(ctx.env(); sfun!(sp; k, c))
+        //     }
+        // })))
+        ok
+    };
 
-    if ctx.env().crypto_rewrite() {
-        let sk_m = Function::new_with_flag(
-            "sk$u$int_ctx_m",
-            vec![msg.clone(), nonce_sort.clone()],
-            msg.clone(),
-            FFlags::SKOLEM,
-        );
-        let sk_r = Function::new_with_flag(
-            "sk$u$int_ctx_r",
-            vec![msg.clone(), nonce_sort.clone()],
-            nonce_sort.clone(),
-            FFlags::SKOLEM,
-        );
+    if ok {
+        if ctx.env().crypto_rewrite() {
+            let sk_m = Function::new_with_flag(
+                "sk$u$int_ctx_m",
+                vec![msg.clone(), nonce_sort.clone()],
+                msg.clone(),
+                FFlags::SKOLEM,
+            );
+            let sk_r = Function::new_with_flag(
+                "sk$u$int_ctx_r",
+                vec![msg.clone(), nonce_sort.clone()],
+                nonce_sort.clone(),
+                FFlags::SKOLEM,
+            );
 
-        declarations.push(Smt::DeclareFun(sk_m.clone()));
-        declarations.push(Smt::DeclareFun(sk_r.clone()));
+            declarations.push(Smt::DeclareFun(sk_m.clone()));
+            declarations.push(Smt::DeclareFun(sk_r.clone()));
 
-        assertions.push(srewrite!(
+            assertions.push(srewrite!(
             RewriteKind::Bool; c!2:msg, k!3:nonce_sort;
             {
                 // sneq!(
                 //     sfun!(eval_msg; sfun!(fail; )),
                 //     sfun!(eval_msg; sfun!(dec; c.clone(), sfun!(nonce; k.clone())))
                 // )
-                sfun!(eval_cond; sfun!(verify; c.clone(), k.clone()))
+                sfun!(eval_cond; sfun!(verify; c.clone(), sfun!(nonce; k.clone())))
             } -> {
                 let m = sfun!(sk_m; c.clone(), k.clone());
                 let r = sfun!(sk_r; c.clone(), k.clone());
                 let nc = sfun!(enc; m.clone(), sfun!(nonce; r.clone()), sfun!(nonce; k.clone()));
                 sor!(
                     subt_sk.main(k.clone(), c.clone(), &msg),
-                    subt_main.main(nc, c.clone(), &msg),
-                    sfun!(sp; k.clone(), c.clone())
+                    subt_main.main(nc, c.clone(), &msg) //,
+                    // sfun!(sp; k.clone(), c.clone())
                 )
             }
         ));
-    } else {
-        assertions.push(Smt::Assert(sforall!(c!2:msg, k!3:nonce_sort;{
-            simplies!(ctx.env();
-                // sneq!(
-                //     sfun!(eval_msg; sfun!(fail; )),
-                //     sfun!(eval_msg; sfun!(dec; c.clone(), sfun!(nonce; k.clone())))
-                // ),
-                sfun!(eval_cond; sfun!(verify; c.clone(), k.clone())),
-                sexists!(m!4:msg, r!5:nonce_sort; {
-                    let nc = sfun!(enc; m.clone(),  sfun!(nonce; r.clone()), sfun!(nonce; k.clone()));
-                    sor!(
-                        subt_sk.main(k.clone(), c.clone(), &msg),
-                        subt_main.main(nc, c.clone(), &msg),
-                        sfun!(sp; k.clone(), c.clone())
-                    )
-                })
-            )
-        })));
+        } else {
+            assertions.push(Smt::Assert(sforall!(c!2:msg, k!3:nonce_sort;{
+                simplies!(ctx.env();
+                    // sneq!(
+                    //     sfun!(eval_msg; sfun!(fail; )),
+                    //     sfun!(eval_msg; sfun!(dec; c.clone(), sfun!(nonce; k.clone())))
+                    // ),
+                    sfun!(eval_cond; sfun!(verify; c.clone(), sfun!(nonce; k.clone()))),
+                    sexists!(m!4:msg, r!5:nonce_sort; {
+                        let nc = sfun!(enc; m.clone(),  sfun!(nonce; r.clone()), sfun!(nonce; k.clone()));
+                        sor!(
+                            subt_sk.main(k.clone(), c.clone(), &msg),
+                            subt_main.main(nc, c.clone(), &msg) // ,
+                            // sfun!(sp; k.clone(), c.clone())
+                        )
+                    })
+                )
+            })));
+        }
     }
 }
 
@@ -505,154 +521,355 @@ fn generate_smt_euf_cma_hash(
     let msg = MSG(ctx.env()).clone();
     let cond = CONDITION(ctx.env()).clone();
     let nonce_sort = NONCE(ctx.env()).clone();
+    let input_f = INPUT(ctx.env()).clone();
+    let lt = LT(ctx.env()).clone();
 
-    let subt_main = generate_subterm(
-        assertions,
-        declarations,
-        ctx,
-        "sbt$euf_hash_main",
-        &msg,
-        vec![],
-        default_f(),
-    );
-    let subt_sec = generate_subterm(
-        assertions,
-        declarations,
-        ctx,
-        "sbt$euf_hash_sec",
-        &nonce_sort,
-        vec![mac, verify],
-        |_, m, _, _, f| match f {
-            RichFormula::Var(v) if v.sort == nonce_sort => (Some(aux(m, f)), vec![]),
-            RichFormula::Fun(fun, args) if fun == mac => {
-                let mut todo = Vec::with_capacity(2);
-                todo.push(&args[0]);
-                if_chain!(
-                    if let RichFormula::Fun(fun2, _) = &args[1];
-                    if fun2 == &nonce;
-                    then {}
-                    else {
-                        todo.push(&args[1])
+    if ctx.env().preprocessing_plus() {
+        let candidates = ctx
+            .pbl
+            .iter_content()
+            .map(|(_, f)| f)
+            .flat_map(|f| {
+                f.custom_iter_w_quantifier(&ctx.pbl, |f, _| match f {
+                    RichFormula::Fun(fun, args) if fun == verify => {
+                        println!("here {}", SmtFormula::from(f));
+                        if_chain!(
+                            if let RichFormula::Fun(f1, k) = &args[2];
+                            if f1 == &nonce;
+                            then {
+                                println!("h");
+                                (Some((&args[0], &args[1], &k[0])), vec![&args[0], &args[1]])
+                            } else {
+                                (None, args.iter().collect())
+                            }
+                        )
                     }
-                );
-                (None, todo)
-            }
-            RichFormula::Fun(fun, args) if fun == verify => {
-                let mut todo = Vec::with_capacity(3);
-                todo.push(&args[0]);
-                todo.push(&args[1]);
-                if_chain!(
-                    if let RichFormula::Fun(fun2, _) = &args[2];
-                    if fun2 == &nonce;
-                    then {}
-                    else {
-                        todo.push(&args[2])
-                    }
-                );
-                (None, todo)
-            }
-            RichFormula::Fun(fun, args) => (
-                (fun.get_output_sort() == nonce_sort).then(|| aux(m, f)),
-                args.iter().collect(),
-            ),
-            _ => (None, vec![]),
-        },
-    );
+                    RichFormula::Fun(_, args) => (None, args.iter().collect()),
+                    _ => (None, vec![]),
+                })
+            })
+            .collect_vec();
 
-    for s in subt_sec.iter() {
-        assertions.push(Smt::Assert(sforall!(k!0:nonce_sort, m!1:msg, k2!2:msg; {
-            simplies!(ctx.env();
-                s.f(k.clone(), sfun!(mac; m.clone(), k2.clone()), &msg),
-                site!(
-                    seq!(k2.clone(), sfun!(nonce; k.clone())),
-                    s.f(k.clone(), m.clone(), &msg),
-                    sor!(
-                        s.f(k.clone(), m.clone(), &msg),
-                        s.f(k.clone(), k2.clone(), &msg)
-                    )
-                )
-            )
-        })));
+        for (i, (sigma, m, k)) in candidates.into_iter().enumerate() {
+            println!(
+                "sigma = {}, m = {}, k = {}",
+                SmtFormula::from(sigma),
+                SmtFormula::from(m),
+                SmtFormula::from(k)
+            );
 
-        assertions.push(Smt::Assert(
-            sforall!(k!0:nonce_sort, sigma!3:msg, m!1:msg, k2!2:msg; {
+            let kfun = if let RichFormula::Fun(f, _) = k {
+                f
+            } else {
+                unreachable!()
+            };
+            if ctx
+                .pbl
+                .iter_content()
+                .map(|(_, f)| f)
+                .flat_map(|f| {
+                    f.custom_iter_w_quantifier(&ctx.pbl, |f, _| match f {
+                        RichFormula::Fun(fun, _) if fun == kfun => (Some(()), vec![]),
+                        RichFormula::Fun(fun, args) if fun == verify || fun == mac => {
+                            (None, args.iter().rev().skip(1).collect())
+                        }
+                        RichFormula::Fun(_, args) => (None, args.iter().collect()),
+                        _ => (None, vec![]),
+                    })
+                })
+                .next()
+                .is_none()
+            {
+                // free vars of k
+                // let fv = k.get_free_vars().into_iter().cloned().collect_vec();
+                let fv = k
+                    .get_free_vars()
+                    .into_iter()
+                    .chain(m.get_free_vars().into_iter())
+                    .chain(sigma.get_free_vars().into_iter())
+                    .unique()
+                    .cloned()
+                    .collect_vec();
+
+                let max_var = fv
+                    .iter()
+                    .map(|v| v.id)
+                    // .chain(m.get_free_vars().iter().map(|v| v.id))
+                    .max()
+                    .unwrap_or(0);
+
+                let u = Variable {
+                    id: max_var + 1,
+                    sort: msg.clone(),
+                };
+                let su = svar!(u.clone());
+                let sk = SmtFormula::from(k);
+                let sm = SmtFormula::from(m);
+                let ssigma = SmtFormula::from(sigma);
+
+                let max_var = max_var + 1;
+
+                let (mut candidates, inputs): (Vec<_>, Vec<_>) = [m, sigma]
+                    .into_iter()
+                    .flat_map(|f| {
+                        f.custom_iter_w_quantifier(&ctx.pbl, |f, _| match f {
+                            RichFormula::Fun(fun, args) if fun == mac => (
+                                Some(Either::Left((None, &args[0], &args[1]))),
+                                args.iter().collect(),
+                            ),
+                            RichFormula::Fun(fun, args) if fun == &input_f => {
+                                (Some(Either::Right(&args[0])), vec![])
+                            }
+                            RichFormula::Fun(_, args) => (None, args.iter().collect()),
+                            _ => (None, vec![]),
+                        })
+                    })
+                    .partition_map(identity);
+                let inputs = inputs;
+
+                if !inputs.is_empty() {
+                    candidates.extend(ctx.pbl.iter_content().flat_map(|(s, f)| {
+                        f.custom_iter_w_quantifier(&ctx.pbl, move |f, _| match f {
+                            RichFormula::Fun(fun, args) if fun == mac => {
+                                (Some((Some(s), &args[0], &args[1])), args.iter().collect())
+                            }
+                            RichFormula::Fun(_, args) => (None, args.iter().collect()),
+                            _ => (None, vec![]),
+                        })
+                    }))
+                }
+
+                // let candidates_input = .collect_vec();
+                let inputs = inputs
+                    .into_iter()
+                    .map(|f| SmtFormula::from(f))
+                    .collect_vec();
+
+                let ors = candidates
+                    .into_iter()
+                    .map(|(s, m2, k2)| {
+                        let m2 = m2.translate_vars(max_var);
+                        let k2 = k2.translate_vars(max_var);
+
+                        let sm2 = SmtFormula::from(&m2);
+                        let sk2 = SmtFormula::from(&k2);
+
+                        match s {
+                            None => {
+                                let nvars = m2
+                                    .get_free_vars()
+                                    .into_iter()
+                                    .chain(k2.get_free_vars().into_iter())
+                                    .unique()
+                                    .cloned()
+                                    .collect_vec();
+                                // let ss = sfun!(s.function().clone(), svars.map(|v| svar!(v)).collect());
+
+                                SmtFormula::Exists(
+                                    nvars,
+                                    Box::new(sand!(
+                                        // seq!(su.clone(), m2),
+                                        seq!(sfun!(nonce; sk.clone()), sk2),
+                                        seq!(sfun!(eval_msg; sm2), sfun!(eval_msg; sm.clone()))
+                                    )),
+                                )
+                            }
+                            Some(s) => {
+                                let nvars = s
+                                    .occuring_variables()
+                                    .iter()
+                                    .map(|v| Variable {
+                                        id: v.id + max_var,
+                                        ..v.clone()
+                                    })
+                                    .collect_vec();
+                                let svars = s
+                                    .free_variables()
+                                    .iter()
+                                    .map(|v| Variable {
+                                        id: v.id + max_var,
+                                        ..v.clone()
+                                    })
+                                    .map(|v| svar!(v))
+                                    .collect_vec();
+
+                                let ss = sfun!(s.function().clone(), svars);
+
+                                let s_ors = inputs
+                                    .iter()
+                                    .map(|is| sfun!(lt; ss.clone(), is.clone()))
+                                    .collect();
+
+                                SmtFormula::Exists(
+                                    nvars,
+                                    Box::new(sand!(
+                                        SmtFormula::Or(s_ors),
+                                        seq!(sfun!(nonce; sk.clone()), sk2),
+                                        seq!(sfun!(eval_msg; sm2), sfun!(eval_msg; sm.clone()))
+                                    )),
+                                )
+                            }
+                        }
+                    })
+                    .collect();
+
+                assertions.push(Smt::Assert(SmtFormula::Forall(
+                    fv,
+                    Box::new(simplies!(ctx.env();
+                        sfun!(eval_cond; sfun!(verify;ssigma, sm.clone(), sfun!(nonce; sk.clone()))),
+                        SmtFormula::Exists(vec![u], Box::new(SmtFormula::Or(ors))))),
+                )))
+            }
+        }
+    } else {
+        let subt_main = generate_subterm(
+            assertions,
+            declarations,
+            ctx,
+            "sbt$euf_hash_main",
+            &msg,
+            vec![],
+            default_f(),
+        );
+        let subt_sec = generate_subterm(
+            assertions,
+            declarations,
+            ctx,
+            "sbt$euf_hash_sec",
+            &nonce_sort,
+            vec![mac, verify],
+            |_, m, _, _, f| match f {
+                RichFormula::Var(v) if v.sort == nonce_sort => (Some(aux(m, f)), vec![]),
+                RichFormula::Fun(fun, args) if fun == mac => {
+                    let mut todo = Vec::with_capacity(2);
+                    todo.push(&args[0]);
+                    if_chain!(
+                        if let RichFormula::Fun(fun2, _) = &args[1];
+                        if fun2 == &nonce;
+                        then {}
+                        else {
+                            todo.push(&args[1])
+                        }
+                    );
+                    (None, todo)
+                }
+                RichFormula::Fun(fun, args) if fun == verify => {
+                    let mut todo = Vec::with_capacity(3);
+                    todo.push(&args[0]);
+                    todo.push(&args[1]);
+                    if_chain!(
+                        if let RichFormula::Fun(fun2, _) = &args[2];
+                        if fun2 == &nonce;
+                        then {}
+                        else {
+                            todo.push(&args[2])
+                        }
+                    );
+                    (None, todo)
+                }
+                RichFormula::Fun(fun, args) => (
+                    (fun.get_output_sort() == nonce_sort).then(|| aux(m, f)),
+                    args.iter().collect(),
+                ),
+                _ => (None, vec![]),
+            },
+        );
+
+        for s in subt_sec.iter() {
+            assertions.push(Smt::Assert(sforall!(k!0:nonce_sort, m!1:msg, k2!2:msg; {
                 simplies!(ctx.env();
-                    s.f(k.clone(), sfun!(verify; m.clone(), sigma.clone(), k2.clone()), &cond),
+                    s.f(k.clone(), sfun!(mac; m.clone(), k2.clone()), &msg),
                     site!(
                         seq!(k2.clone(), sfun!(nonce; k.clone())),
+                        s.f(k.clone(), m.clone(), &msg),
                         sor!(
                             s.f(k.clone(), m.clone(), &msg),
-                            s.f(k.clone(), sigma.clone(), &msg)
-                        ),
-                        sor!(
-                            s.f(k.clone(), m.clone(), &msg),
-                            s.f(k.clone(), k2.clone(), &msg),
-                            s.f(k.clone(), sigma.clone(), &msg)
+                            s.f(k.clone(), k2.clone(), &msg)
                         )
                     )
                 )
-            }),
-        ))
-    }
-    assertions.push(Smt::Assert(sforall!(sk!0:nonce_sort, m!1:msg; {
+            })));
+
+            assertions.push(Smt::Assert(
+                sforall!(k!0:nonce_sort, sigma!3:msg, m!1:msg, k2!2:msg; {
+                    simplies!(ctx.env();
+                        s.f(k.clone(), sfun!(verify; m.clone(), sigma.clone(), k2.clone()), &cond),
+                        site!(
+                            seq!(k2.clone(), sfun!(nonce; k.clone())),
+                            sor!(
+                                s.f(k.clone(), m.clone(), &msg),
+                                s.f(k.clone(), sigma.clone(), &msg)
+                            ),
+                            sor!(
+                                s.f(k.clone(), m.clone(), &msg),
+                                s.f(k.clone(), k2.clone(), &msg),
+                                s.f(k.clone(), sigma.clone(), &msg)
+                            )
+                        )
+                    )
+                }),
+            ))
+        }
+        assertions.push(Smt::Assert(sforall!(sk!0:nonce_sort, m!1:msg; {
                 sfun!(eval_cond; sfun!(verify; sfun!(mac; m.clone(), sfun!(nonce; sk.clone())), m.clone(),  sfun!(nonce; sk.clone())))
         })));
 
-    if ctx.env().crypto_rewrite() {
-        let sk = Function::new_with_flag(
-            "sk$u$euf_cma",
-            vec![msg.clone(), msg.clone(), nonce_sort.clone()],
-            msg.clone(),
-            FFlags::SKOLEM,
-        );
-        let asser = srewrite!(
-                RewriteKind::Bool; s!1:msg, k!2:nonce_sort, m!3:msg;
-                {
-                    // seq!(
-                    //     sfun!(eval_msg; s.clone()),
-                    //     sfun!(eval_msg; sfun!(hash; m.clone(), sfun!(nonce; k.clone())))
-                    // )
-                    sfun!(eval_cond; sfun!(verify; s.clone(), m.clone(), sfun!(nonce; k.clone())))
-                } -> {
-                    let u = sfun!(sk; s.clone(), m.clone(), k.clone());
-                    let h = sfun!(mac; u.clone(), sfun!(nonce; k.clone()));
-                    sand!(
-                        sor!(
-                            subt_main.main(h.clone(), s.clone(), &msg),
-                            subt_main.main(h.clone(), m.clone(), &msg),
-                            subt_sec.main(k.clone(), m.clone(), &msg),
-                            subt_sec.main(k.clone(), s.clone(), &msg)
-                        ),
-                        seq!(sfun!(eval_msg; m.clone()), sfun!(eval_msg; u.clone()))
-                    )
-                }
-        );
+        if ctx.env().crypto_rewrite() {
+            let sk = Function::new_with_flag(
+                "sk$u$euf_cma",
+                vec![msg.clone(), msg.clone(), nonce_sort.clone()],
+                msg.clone(),
+                FFlags::SKOLEM,
+            );
+            let asser = srewrite!(
+                    RewriteKind::Bool; s!1:msg, k!2:nonce_sort, m!3:msg;
+                    {
+                        // seq!(
+                        //     sfun!(eval_msg; s.clone()),
+                        //     sfun!(eval_msg; sfun!(hash; m.clone(), sfun!(nonce; k.clone())))
+                        // )
+                        sfun!(eval_cond; sfun!(verify; s.clone(), m.clone(), sfun!(nonce; k.clone())))
+                    } -> {
+                        let u = sfun!(sk; s.clone(), m.clone(), k.clone());
+                        let h = sfun!(mac; u.clone(), sfun!(nonce; k.clone()));
+                        sand!(
+                            sor!(
+                                subt_main.main(h.clone(), s.clone(), &msg),
+                                subt_main.main(h.clone(), m.clone(), &msg),
+                                subt_sec.main(k.clone(), m.clone(), &msg),
+                                subt_sec.main(k.clone(), s.clone(), &msg)
+                            ),
+                            seq!(sfun!(eval_msg; m.clone()), sfun!(eval_msg; u.clone()))
+                        )
+                    }
+            );
 
-        declarations.push(Smt::DeclareFun(sk));
-        assertions.push(asser);
-    } else {
-        let asser = sforall!(s!1:msg, k!2:nonce_sort, m!3:msg;{
-                simplies!(ctx.env();
-                    // seq!(
-                    //     sfun!(eval_msg; s.clone()),
-                    //     sfun!(eval_msg; sfun!(hash; m.clone(), sfun!(nonce; k.clone())))
-                    // )
-                    sfun!(eval_cond; sfun!(verify; s.clone(), m.clone(), sfun!(nonce; k.clone())))
-                ,
-                    sexists!(u!4:msg; {
-                    let h = sfun!(mac; u.clone(), sfun!(nonce; k.clone()));
-                    sand!(
-                        sor!(
-                            subt_main.main(h.clone(), s.clone(), &msg),
-                            subt_main.main(h.clone(), m.clone(), &msg),
-                            subt_sec.main(k.clone(), m.clone(), &msg),
-                            subt_sec.main(k.clone(), s.clone(), &msg)
-                        ),
-                        seq!(sfun!(eval_msg; m.clone()), sfun!(eval_msg; u.clone()))
-                    )})
-                )}
-        );
-        assertions.push(Smt::Assert(asser));
+            declarations.push(Smt::DeclareFun(sk));
+            assertions.push(asser);
+        } else {
+            let asser = sforall!(s!1:msg, k!2:nonce_sort, m!3:msg;{
+                    simplies!(ctx.env();
+                        // seq!(
+                        //     sfun!(eval_msg; s.clone()),
+                        //     sfun!(eval_msg; sfun!(hash; m.clone(), sfun!(nonce; k.clone())))
+                        // )
+                        sfun!(eval_cond; sfun!(verify; s.clone(), m.clone(), sfun!(nonce; k.clone())))
+                    ,
+                        sexists!(u!4:msg; {
+                        let h = sfun!(mac; u.clone(), sfun!(nonce; k.clone()));
+                        sand!(
+                            sor!(
+                                subt_main.main(h.clone(), s.clone(), &msg),
+                                subt_main.main(h.clone(), m.clone(), &msg),
+                                subt_sec.main(k.clone(), m.clone(), &msg),
+                                subt_sec.main(k.clone(), s.clone(), &msg)
+                            ),
+                            seq!(sfun!(eval_msg; m.clone()), sfun!(eval_msg; u.clone()))
+                        )})
+                    )}
+            );
+            assertions.push(Smt::Assert(asser));
+        }
     }
 }
 

@@ -4,7 +4,13 @@ use std::ops::Deref;
 
 use crate::problem::problem::Problem;
 
-use super::{env::Environement, function::Function, quantifier::Quantifier, sort::Sort};
+use super::{
+    env::Environement,
+    function::Function,
+    quantifier::Quantifier,
+    sort::Sort,
+    unifier::{Substitution, Translate},
+};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum RichFormula {
@@ -201,6 +207,18 @@ impl RichFormula {
                 match self.pile.pop() {
                     None => None,
                     Some(formula) => {
+                        match formula {
+                            RichFormula::Fun(fun, _) if fun.is_from_quantifer() => {
+                                let q = self
+                                    .pbl
+                                    .quantifiers
+                                    .iter()
+                                    .find(|q| &q.function == fun)
+                                    .unwrap();
+                                self.pile.extend(q.iter_content())
+                            }
+                            _ => {}
+                        }
                         let (res, nexts) = (self.f)(formula, self.pbl);
                         self.pile.extend(nexts.into_iter());
                         if let Some(_) = res {
@@ -214,7 +232,8 @@ impl RichFormula {
         }
 
         Iter {
-            f, pbl,
+            f,
+            pbl,
             pile: vec![self],
         }
     }
@@ -261,6 +280,14 @@ impl RichFormula {
                 .position(|v2| v2 == &v.id)
                 .map(|i| fs[i].clone())
         })
+    }
+
+    pub fn apply_permutation2(&self, per: &impl Substitution) -> Self {
+        per.apply(self)
+    }
+
+    pub fn translate_vars(&self, i: usize) -> Self {
+        self.apply_permutation2(&Translate::new(i))
     }
 }
 

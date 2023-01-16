@@ -125,6 +125,10 @@ impl Environement {
     pub fn preprocessed_input(&self) -> bool {
         self.args.input_subterm_preprocessed
     }
+    
+    pub fn preprocessing_plus(&self) -> bool {
+        self.args.preprocessing
+    }
 
     // pub fn get_functions(&self) -> &HashMap<String, Function> {
     //     &self.functions
@@ -227,5 +231,13 @@ impl Environement {
 
     pub fn contain_key_f(&self, name: &str) -> bool {
         self.functions.contains_key(name)
+    }
+
+    pub fn len_fun(&self) -> usize {
+        self.functions.len()
+    }
+
+    pub fn len_sort(&self) -> usize {
+        self.sorts.len()
     }
 }
