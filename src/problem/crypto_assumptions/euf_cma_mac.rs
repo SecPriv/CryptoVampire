@@ -1,4 +1,3 @@
-
 use std::convert::identity;
 
 use if_chain::if_chain;
@@ -45,11 +44,16 @@ pub(crate) fn generate(
     let input_f = INPUT(ctx.env()).clone();
     let lt = LT(ctx.env()).clone();
 
+    assertions.push(Smt::Assert(sforall!(sk!0:nonce_sort, m!1:msg; {
+                sfun!(eval_cond; sfun!(verify; sfun!(mac; m.clone(), sfun!(nonce; sk.clone())), m.clone(),  sfun!(nonce; sk.clone())))
+        })));
+
     if ctx.env().preprocessing_plus() {
         let candidates = ctx
             .pbl
             .iter_content()
             .map(|(_, f)| f)
+            .chain(std::iter::once(&ctx.pbl.query))
             .flat_map(|f| {
                 f.custom_iter_w_quantifier(&ctx.pbl, |f, _| match f {
                     RichFormula::Fun(fun, args) if fun == verify => {
@@ -71,6 +75,8 @@ pub(crate) fn generate(
             })
             .collect_vec();
 
+        dbg!(candidates.len());
+
         for (i, (sigma, m, k)) in candidates.into_iter().enumerate() {
             println!(
                 "sigma = {}, m = {}, k = {}",
@@ -88,6 +94,7 @@ pub(crate) fn generate(
                 .pbl
                 .iter_content()
                 .map(|(_, f)| f)
+                .chain([sigma, m].into_iter())
                 .flat_map(|f| {
                     f.custom_iter_w_quantifier(&ctx.pbl, |f, _| match f {
                         RichFormula::Fun(fun, _) if fun == kfun => (Some(()), vec![]),
@@ -146,7 +153,6 @@ pub(crate) fn generate(
                         })
                     })
                     .partition_map(identity);
-                let inputs = inputs;
 
                 if !inputs.is_empty() {
                     candidates.extend(ctx.pbl.iter_content().flat_map(|(s, f)| {
@@ -331,9 +337,6 @@ pub(crate) fn generate(
                 }),
             ))
         }
-        assertions.push(Smt::Assert(sforall!(sk!0:nonce_sort, m!1:msg; {
-                sfun!(eval_cond; sfun!(verify; sfun!(mac; m.clone(), sfun!(nonce; sk.clone())), m.clone(),  sfun!(nonce; sk.clone())))
-        })));
 
         if ctx.env().crypto_rewrite() {
             let sk = Function::new_with_flag(
