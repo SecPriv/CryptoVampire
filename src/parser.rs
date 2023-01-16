@@ -269,6 +269,8 @@ fn span_err(s: Span, str: String) -> E {
 }
 
 fn parse_crypto<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(), E> {
+    let msg = MSG(&ctx.env);
+    let bool = BOOL(&ctx.env);
     let p_span = p.as_span();
     let mut inner = p.into_inner();
 
@@ -313,8 +315,6 @@ fn parse_crypto<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(), E> {
             finished(inner)
         }
         "euf-cma" => {
-            let msg = MSG(&ctx.env);
-            let bool = BOOL(&ctx.env);
 
             let sign = inner
                 .next()
@@ -389,7 +389,6 @@ fn parse_crypto<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(), E> {
             finished(inner)
         }
         "int-ctxt" => {
-            let msg = MSG(&ctx.env);
 
             let enc = inner
                 .next()
@@ -397,12 +396,15 @@ fn parse_crypto<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(), E> {
             let dec = inner
                 .next()
                 .ok_or(span_err(p_span, format!("expect a function for 'dec'")))?;
+            let verify = inner
+                .next()
+                .ok_or(span_err(p_span, format!("expect a function for 'fail'")))?;
             let fail = inner
                 .next()
                 .ok_or(span_err(p_span, format!("expect a function for 'fail'")))?;
 
-            let sort_vec: [&[&Sort]; 3] = [&[msg, msg, msg, msg], &[msg, msg, msg], &[msg]];
-            let tmp: Result<Vec<_>, _> = [&enc, &dec, &fail]
+            let sort_vec: [&[&Sort]; 4] = [&[msg, msg, msg, msg], &[msg, msg, msg], &[bool, msg, msg], &[msg]];
+            let tmp: Result<Vec<_>, _> = [&enc, &dec, &verify, &fail]
                 .into_iter()
                 .map(|r| {
                     let s = r.as_span();
@@ -439,7 +441,8 @@ fn parse_crypto<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(), E> {
             ctx.crypto_assumptions.push(CryptoAssumption::IntCtxtSenc {
                 enc: tmp[0].clone(),
                 dec: tmp[1].clone(),
-                fail: tmp[2].clone(),
+                fail: tmp[3].clone(),
+                verify: tmp[2].clone()
             });
             finished(inner)
         }
@@ -771,6 +774,7 @@ fn parse_infix_term_as<'a>(
         let mut lhs_span = lhs.as_span();
 
         let mut lhs_formula = match op.as_ref().unwrap().as_rule() {
+            Rule::hard_eq => todo!(),
             Rule::eq | Rule::neq => parse_term_as(ctx, lhs,
                 memory, Some(MSG(&ctx.env)))?,
             _ => parse_term_as(ctx, lhs,
@@ -781,6 +785,7 @@ fn parse_infix_term_as<'a>(
             let end = rhs.as_span().end_pos();
 
             lhs_formula = match mop.as_rule() {
+                Rule::hard_eq => todo!(),
                 Rule::eq => {
                     let rhs_formula = parse_term_as(ctx, rhs,
                         memory, Some(MSG(&ctx.env)))?;

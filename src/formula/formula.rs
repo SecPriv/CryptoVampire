@@ -174,6 +174,51 @@ impl RichFormula {
         })
     }
 
+    pub fn custom_iter_w_quantifier<'a, F, T>(
+        &'a self,
+        pbl: &'a Problem,
+        f: F,
+    ) -> impl Iterator<Item = T> + 'a
+    where
+        F: FnMut(&'a RichFormula, &'a Problem) -> (Option<T>, Vec<&'a RichFormula>) + 'a,
+        T: 'a,
+    {
+        struct Iter<'a, F, T>
+        where
+            F: FnMut(&'a RichFormula, &'a Problem) -> (Option<T>, Vec<&'a RichFormula>),
+        {
+            pile: Vec<&'a RichFormula>,
+            pbl: &'a Problem,
+            f: F,
+        }
+        impl<'a, F, T> Iterator for Iter<'a, F, T>
+        where
+            F: FnMut(&'a RichFormula, &'a Problem) -> (Option<T>, Vec<&'a RichFormula>),
+        {
+            type Item = T;
+
+            fn next(&mut self) -> Option<T> {
+                match self.pile.pop() {
+                    None => None,
+                    Some(formula) => {
+                        let (res, nexts) = (self.f)(formula, self.pbl);
+                        self.pile.extend(nexts.into_iter());
+                        if let Some(_) = res {
+                            res
+                        } else {
+                            self.next()
+                        }
+                    }
+                }
+            }
+        }
+
+        Iter {
+            f, pbl,
+            pile: vec![self],
+        }
+    }
+
     pub fn map<F>(self, f: &F) -> Self
     where
         F: Fn(Self) -> Self,

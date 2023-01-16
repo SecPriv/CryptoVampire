@@ -39,4 +39,8 @@ pub struct Args {
     /// preprocess subterm of input
     #[arg(long, short)]
     pub input_subterm_preprocessed: bool,
+
+    /// do as much preprocessing as possible
+    #[arg(long, short)]
+    pub preprocessing: bool
 }

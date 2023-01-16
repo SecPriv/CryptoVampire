@@ -269,6 +269,10 @@ impl Problem {
     pub fn get_init_step_function(&self) -> &Function {
         self.env.get_f(INIT_NAME).unwrap()
     }
+
+    pub fn iter_content<'a>(&'a self) -> impl Iterator<Item = (&'a Step, &'a RichFormula)> {
+        self.steps.values().flat_map(|s| [(s, s.message()), (s, s.condition())].into_iter())
+    }
 }
 
 // assertions must be turned into evaluate form
