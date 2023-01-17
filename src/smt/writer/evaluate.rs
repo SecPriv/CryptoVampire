@@ -47,13 +47,13 @@ pub(crate) fn evaluate(
 fn legacy_evaluate(
     env: &Environement,
     assertions: &mut Vec<Smt>,
-    declarations: &mut Vec<Smt>,
+    _declarations: &mut Vec<Smt>,
     ctx: &Ctx,
 ) {
     let msg = MSG(env);
     let cond = CONDITION(env);
-    let bitstring = BITSTRING(env);
-    let bool = BOOL(env);
+    // let bitstring = BITSTRING(env);
+    // let bool = BOOL(env);
     // let functions = &ctx.pbl.functions;
     let evaluate_msg = EVAL_MSG(env);
     let evaluate_cond = EVAL_COND(env);
@@ -118,7 +118,7 @@ fn legacy_evaluate(
                             )
                         } else {
                             let v = Variable {
-                                id: 2 * 1,
+                                id: 2 * i,
                                 sort: s.clone(),
                             };
                             IsEval::NoEval(v)

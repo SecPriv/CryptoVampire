@@ -73,6 +73,7 @@ pub(crate) fn generate(
                     _ => (None, vec![]),
                 })
             })
+            .unique()
             .collect_vec();
 
         dbg!(candidates.len());
