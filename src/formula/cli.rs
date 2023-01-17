@@ -46,8 +46,8 @@ pub struct Args {
 
     /// add (|x1| == |x1'|)/\.../\(|xn| == |xn'|) => |f(x1,...,xn)| == |f(x1',...,xn')| axioms
     #[arg(long)]
-    pub legacy_evaluate:bool,
+    pub legacy_evaluate: bool,
 
     #[arg(long)]
-    pub no_bitstring_fun:bool
+    pub no_bitstring_fun: bool,
 }

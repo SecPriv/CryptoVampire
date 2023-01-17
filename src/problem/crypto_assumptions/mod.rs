@@ -1,14 +1,12 @@
-
-mod int_ctxt;
 mod euf_cma_mac;
 mod euf_cma_sign;
+mod int_ctxt;
 mod nonce;
 
 use std::convert::identity;
 
 use if_chain::if_chain;
 use itertools::{Either, Itertools};
-
 
 use crate::{
     formula::{
@@ -88,6 +86,3 @@ impl CryptoAssumption {
 fn aux(m: &SmtFormula, f: &RichFormula) -> SmtFormula {
     seq!(m.clone(), SmtFormula::from(f))
 }
-
-
-

@@ -217,9 +217,7 @@ impl RichFormula {
                                     .unwrap();
                                 self.pile.extend(q.iter_content())
                             }
-                            RichFormula::Quantifier(_, args) => {
-                                self.pile.extend(args.iter())
-                            }
+                            RichFormula::Quantifier(_, args) => self.pile.extend(args.iter()),
                             _ => {}
                         }
                         let (res, nexts) = (self.f)(formula, self.pbl);

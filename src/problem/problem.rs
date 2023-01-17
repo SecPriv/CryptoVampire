@@ -271,7 +271,9 @@ impl Problem {
     }
 
     pub fn iter_content<'a>(&'a self) -> impl Iterator<Item = (&'a Step, &'a RichFormula)> {
-        self.steps.values().flat_map(|s| [(s, s.message()), (s, s.condition())].into_iter())
+        self.steps
+            .values()
+            .flat_map(|s| [(s, s.message()), (s, s.condition())].into_iter())
     }
 }
 

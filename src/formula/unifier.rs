@@ -251,7 +251,7 @@ impl<A: Substitution, B: Substitution> Substitution for Chain<A, B> {
 pub struct Translate(usize);
 
 impl Translate {
-    pub fn new(i:usize) -> Self {
+    pub fn new(i: usize) -> Self {
         Translate(i)
     }
 }

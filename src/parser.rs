@@ -315,7 +315,6 @@ fn parse_crypto<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(), E> {
             finished(inner)
         }
         "euf-cma" => {
-
             let sign = inner
                 .next()
                 .ok_or(span_err(p_span, format!("expect a function for 'sign'")))?;
@@ -324,7 +323,7 @@ fn parse_crypto<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(), E> {
                 .ok_or(span_err(p_span, format!("expect a function for 'verify'")))?;
             let pk = inner.next();
 
-            let sort_vec: [&[&Sort]; 3] = [&[msg, msg, msg], &[bool, msg, msg, msg, ], &[msg, msg]];
+            let sort_vec: [&[&Sort]; 3] = [&[msg, msg, msg], &[bool, msg, msg, msg], &[msg, msg]];
             let tmp: Result<Vec<_>, _> = [&sign, &verify]
                 .into_iter()
                 .chain(pk.as_ref())
@@ -368,7 +367,10 @@ fn parse_crypto<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(), E> {
 
             for f in tmp.iter() {
                 if !f.is_user_defined() {
-                    return Err(span_err(p_span, format!("{} is not user defined!", f.name())));
+                    return Err(span_err(
+                        p_span,
+                        format!("{} is not user defined!", f.name()),
+                    ));
                 }
             }
 
@@ -389,7 +391,6 @@ fn parse_crypto<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(), E> {
             finished(inner)
         }
         "int-ctxt" => {
-
             let enc = inner
                 .next()
                 .ok_or(span_err(p_span, format!("expect a function for 'enc'")))?;
@@ -403,7 +404,12 @@ fn parse_crypto<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(), E> {
                 .next()
                 .ok_or(span_err(p_span, format!("expect a function for 'fail'")))?;
 
-            let sort_vec: [&[&Sort]; 4] = [&[msg, msg, msg, msg], &[msg, msg, msg], &[bool, msg, msg], &[msg]];
+            let sort_vec: [&[&Sort]; 4] = [
+                &[msg, msg, msg, msg],
+                &[msg, msg, msg],
+                &[bool, msg, msg],
+                &[msg],
+            ];
             let tmp: Result<Vec<_>, _> = [&enc, &dec, &verify, &fail]
                 .into_iter()
                 .map(|r| {
@@ -442,7 +448,7 @@ fn parse_crypto<'a>(ctx: &mut Context, p: Pair<'a, Rule>) -> Result<(), E> {
                 enc: tmp[0].clone(),
                 dec: tmp[1].clone(),
                 fail: tmp[3].clone(),
-                verify: tmp[2].clone()
+                verify: tmp[2].clone(),
             });
             finished(inner)
         }
@@ -681,7 +687,7 @@ fn parse_application<'a>(
 
             }
         }?;
-        
+
         // sugar for nonces
         if &formula.get_sort(&ctx.env) == NONCE(&ctx.env) {
             Ok(RichFormula::Fun(NONCE_MSG(&ctx.env).clone(), vec![formula]))

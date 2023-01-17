@@ -125,7 +125,7 @@ impl Environement {
     pub fn preprocessed_input(&self) -> bool {
         self.args.input_subterm_preprocessed
     }
-    
+
     pub fn preprocessing_plus(&self) -> bool {
         self.args.preprocessing
     }

@@ -29,7 +29,6 @@ use crate::{
     },
 };
 
-
 pub(crate) fn generate(
     assertions: &mut Vec<Smt>,
     declarations: &mut Vec<Smt>,
