@@ -1,4 +1,4 @@
-use std::fmt::{self, write};
+use std::fmt::{self};
 
 use itertools::Itertools;
 
@@ -66,6 +66,9 @@ pub enum Smt {
     Comment(String),
 
     CheckSat,
+    GetProof,
+    SetOption(String, String),
+    SetLogic(String)
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -194,6 +197,9 @@ impl fmt::Display for Smt {
 
             Smt::CheckSat => write!(f, "(check-sat)"),
             Smt::Comment(s) => write!(f, "\n; {}\n", s),
+            Smt::GetProof => write!(f,"(get-proof)"),
+            Smt::SetOption(option, arg) => write!(f, "(set-option :{} {})", option, arg),
+            Smt::SetLogic(logic) => write!(f, "(set-logic {})", logic),
         }
     }
 }

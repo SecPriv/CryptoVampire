@@ -17,18 +17,26 @@ pub struct Args {
     pub lemmas: bool,
 
     /// use rewrite in evaluate
+    /// 
+    /// NB: not in the smt standard
     #[arg(long)]
     pub eval_rewrite: bool,
 
     /// use rewrite in crypto axioms
+    /// 
+    /// NB: not in the smt standard
     #[arg(long)]
     pub crypto_rewrite: bool,
 
     /// use vampire's special subterm
+    /// 
+    /// NB: not in the smt standard
     #[arg(long)]
     pub vampire_subterm: bool,
 
     /// use vampire's 'assert-theory'
+    /// 
+    /// NB: not in the smt standard
     #[arg(long)]
     pub assert_theory: bool,
 
@@ -48,6 +56,11 @@ pub struct Args {
     #[arg(long)]
     pub legacy_evaluate: bool,
 
+    /// remove the bitstring functions, evaluation must then be handeled by somthing else
     #[arg(long)]
     pub no_bitstring_fun: bool,
+
+    /// use `(assert (not ...))` instead of `(assert-not ...)` for the query
+    #[arg(long)]
+    pub cvc5: bool,
 }

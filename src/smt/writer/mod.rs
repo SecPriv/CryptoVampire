@@ -11,7 +11,7 @@ use crate::{
     problem::problem::Problem,
 };
 
-use super::smt::Smt;
+use super::{smt::Smt, macros::snot};
 
 pub(crate) struct Ctx {
     pub(crate) ta_funs: Vec<Function>,
@@ -31,7 +31,10 @@ impl Ctx {
 }
 
 pub fn problem_to_smt(pbl: Problem) -> Vec<Smt> {
-    let mut declarations = Vec::new();
+    let mut declarations = vec![
+        Smt::SetOption("produce-proofs".to_owned(), "true".to_owned()),
+        Smt::SetLogic("ALL".to_owned())
+        ];
     let mut assertions = Vec::new();
 
     let ta_funs;
@@ -100,7 +103,14 @@ pub fn problem_to_smt(pbl: Problem) -> Vec<Smt> {
     assertions.extend(ctx.pbl.order.iter().map(|f| Smt::Assert(f.into())));
 
     // query
-    assertions.push(Smt::AssertNot((&ctx.pbl.query).into()));
+    assertions.push({
+        let query = (&ctx.pbl.query).into();
+        if ctx.env().cvc5() {
+            Smt::Assert(snot!(ctx.env(); query))
+        } else {
+            Smt::AssertNot(query)
+        }
+    });
 
     if ctx.env().skolemnise() {
         skolemnise(&mut ctx, &mut assertions, &mut declarations);
@@ -108,6 +118,7 @@ pub fn problem_to_smt(pbl: Problem) -> Vec<Smt> {
 
     declarations.extend(assertions.into_iter());
     declarations.push(Smt::CheckSat);
+    declarations.push(Smt::GetProof);
     declarations
 }
 

@@ -138,6 +138,10 @@ impl Environement {
         self.args.no_bitstring_fun
     }
 
+    pub fn cvc5(&self) -> bool {
+        self.args.cvc5
+    }
+
     // pub fn get_functions(&self) -> &HashMap<String, Function> {
     //     &self.functions
     // }
