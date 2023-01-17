@@ -130,6 +130,14 @@ impl Environement {
         self.args.preprocessing
     }
 
+    pub fn legacy_evaluate(&self) -> bool {
+        self.args.legacy_evaluate
+    }
+
+    pub fn no_bitstring_fun(&self) -> bool {
+        self.args.no_bitstring_fun
+    }
+
     // pub fn get_functions(&self) -> &HashMap<String, Function> {
     //     &self.functions
     // }

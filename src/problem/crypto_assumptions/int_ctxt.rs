@@ -47,24 +47,30 @@ pub(crate) fn generate(
     let input_f = INPUT(ctx.env()).clone();
     let lt = LT(ctx.env()).clone();
 
-    assertions.push(Smt::Assert(
-        sforall!(m!0:msg, r!1:nonce_sort, sk!2:nonce_sort; {
-            let r = sfun!(nonce; r);
-            let sk = sfun!(nonce; sk);
+    assertions.push(Smt::Assert(sforall!(m!0:msg, r!1:msg, sk!2:msg; {
+        // let r = sfun!(nonce; r);
+        // let sk = sfun!(nonce; sk);
             seq!(
                 sfun!(eval_msg; sfun!(dec; sfun!(enc; m.clone(), r, sk.clone()), sk)),
-                sfun!(eval_msg; m)
+                sfun!(eval_msg; m.clone())
             )
-        }),
-    ));
+    })));
 
-    assertions.push(Smt::Assert(
-        sforall!(m!0:msg, r!1:nonce_sort, sk!2:nonce_sort; {
-            let r = sfun!(nonce; r);
-            let sk = sfun!(nonce; sk);
-            sfun!(eval_cond; sfun!(verify; sfun!(enc; m.clone(), r, sk.clone()), sk.clone()))
-        }),
-    ));
+    assertions.push(Smt::Assert(sforall!(m!0:msg, r!1:msg, sk!2:msg; {
+        // let r = sfun!(nonce; r);
+        // let sk = sfun!(nonce; sk);
+        sor!(
+            sfun!(eval_cond; sfun!(verify; sfun!(enc; m.clone(), r, sk.clone()), sk.clone())),
+            seq!(sfun!(eval_msg; m.clone()), sfun!(eval_msg; sfun!(fail)))
+        )
+    })));
+
+    assertions.push(Smt::Assert(sforall!(m!0:msg, sk!1:msg; {
+        seq!(
+            sneq!(sfun!(eval_msg; sfun!(dec; m, sk)), sfun!(eval_msg; sfun!(fail))),
+            sfun!(eval_cond; sfun!(verify; m, sk))
+        )
+    })));
 
     if !senc_rand(ctx, enc, dec, verify, fail) {
         return;

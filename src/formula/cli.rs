@@ -42,5 +42,12 @@ pub struct Args {
 
     /// do as much preprocessing as possible
     #[arg(long, short)]
-    pub preprocessing: bool
+    pub preprocessing: bool,
+
+    /// add (|x1| == |x1'|)/\.../\(|xn| == |xn'|) => |f(x1,...,xn)| == |f(x1',...,xn')| axioms
+    #[arg(long)]
+    pub legacy_evaluate:bool,
+
+    #[arg(long)]
+    pub no_bitstring_fun:bool
 }

@@ -27,14 +27,142 @@ pub(crate) fn evaluate(
     declarations: &mut Vec<Smt>,
     ctx: &Ctx,
 ) {
-    if env.use_rewrite() {
-        evaluate_rewrite(env, assertions, declarations, ctx)
-    } else {
-        let mut masserts = Vec::new();
-        evaluate_rewrite(env, &mut masserts, declarations, ctx);
-        assertions.extend(masserts.into_iter().map(|a| a.rewrite_to_assert(env)))
+    if !env.no_bitstring_fun() {
+        if env.use_rewrite() {
+            evaluate_rewrite(env, assertions, declarations, ctx)
+        } else {
+            let mut masserts = Vec::new();
+            evaluate_rewrite(env, &mut masserts, declarations, ctx);
+            assertions.extend(masserts.into_iter().map(|a| a.rewrite_to_assert(env)))
+        }
     }
+
+    if env.legacy_evaluate() {
+        legacy_evaluate(env, assertions, declarations, ctx)
+    }
+
     user_evaluate(env, assertions, declarations, ctx)
+}
+
+fn legacy_evaluate(
+    env: &Environement,
+    assertions: &mut Vec<Smt>,
+    declarations: &mut Vec<Smt>,
+    ctx: &Ctx,
+) {
+    let msg = MSG(env);
+    let cond = CONDITION(env);
+    let bitstring = BITSTRING(env);
+    let bool = BOOL(env);
+    // let functions = &ctx.pbl.functions;
+    let evaluate_msg = EVAL_MSG(env);
+    let evaluate_cond = EVAL_COND(env);
+
+    let to_eval = |v: &Variable| {
+        if &v.sort == cond {
+            sfun!(evaluate_cond; svar!(v.clone()))
+        } else if &v.sort == msg {
+            sfun!(evaluate_msg; svar!(v.clone()))
+        } else {
+            svar!(v.clone())
+        }
+    };
+
+    #[derive(Clone)]
+    enum IsEval {
+        Eval(Variable, Variable),
+        NoEval(Variable),
+    }
+
+    fn filter_eval(e: &IsEval) -> Option<(&Variable, &Variable)> {
+        match e {
+            IsEval::Eval(v1, v2) => Some((v1, v2)),
+            _ => None,
+        }
+    }
+
+    fn to_tuple(e: IsEval) -> (Variable, Variable) {
+        match e {
+            IsEval::Eval(v1, v2) => (v1, v2),
+            IsEval::NoEval(v) => (v.clone(), v),
+        }
+    }
+
+    fn iter(e: IsEval) -> impl Iterator<Item = Variable> {
+        match e {
+            IsEval::Eval(v1, v2) => vec![v1, v2].into_iter(),
+            IsEval::NoEval(v) => vec![v].into_iter(),
+        }
+    }
+
+    assertions.extend(
+        ctx.ta_funs
+            .iter()
+            .filter(|f| f.get_output_sort().is_evaluatable())
+            .map(|f| {
+                let vars_couple = f
+                    .get_input_sorts()
+                    .iter()
+                    .enumerate()
+                    .map(|(i, s)| {
+                        if s.is_evaluatable() {
+                            IsEval::Eval(
+                                Variable {
+                                    id: i * 2,
+                                    sort: s.clone(),
+                                },
+                                Variable {
+                                    id: i * 2 + 1,
+                                    sort: s.clone(),
+                                },
+                            )
+                        } else {
+                            let v = Variable {
+                                id: 2 * 1,
+                                sort: s.clone(),
+                            };
+                            IsEval::NoEval(v)
+                        }
+                    })
+                    .collect_vec();
+
+                let ands = vars_couple
+                    .iter()
+                    .filter_map(filter_eval)
+                    .map(|(v1, v2)| seq!(to_eval(v1), to_eval(v2)))
+                    .collect_vec();
+
+                let (lvars, rvars): (Vec<_>, Vec<_>) = vars_couple
+                    .iter()
+                    .cloned()
+                    .map(to_tuple)
+                    .map(|(v1, v2)| (svar!(v1), svar!(v2)))
+                    .unzip();
+
+                SmtFormula::Forall(
+                    vars_couple.into_iter().flat_map(iter).collect(),
+                    Box::new({
+                        let os = f.get_output_sort();
+                        let eval = if &os == msg {
+                            evaluate_msg
+                        } else if &os == cond {
+                            evaluate_cond
+                        } else {
+                            unreachable!()
+                        };
+
+                        simplies!(env;
+                            SmtFormula::And(ands),
+                            seq!(
+                                sfun!(eval; sfun!(f, lvars)),
+                                sfun!(eval; sfun!(f, rvars))
+                            )
+                        )
+                    }),
+                )
+            })
+            .map(|f| Smt::Assert(f)),
+    )
 }
 fn evaluate_rewrite(
     env: &Environement,
