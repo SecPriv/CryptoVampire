@@ -27,7 +27,10 @@ fn main() {
     let env = Environement::empty(Rc::clone(&args));
 
     let str = if let Some(file) = &args.file {
-        read_to_string(file).expect("file not found")
+        read_to_string(file).expect(&format!(
+            "file \"{}\" not found",
+            file.to_str().unwrap_or("[non-unicode file name]")
+        ))
     } else {
         let mut buf = String::new();
         Read::read_to_string(&mut io::stdin(), &mut buf).expect("unable to read stdin");

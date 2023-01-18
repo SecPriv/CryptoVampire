@@ -8,11 +8,23 @@ pub struct Args {
     #[arg(value_name = "FILE")]
     pub file: Option<PathBuf>,
 
-    /// output location (dir or file)
-    #[arg(short, long, value_name = "FILE")]
+    /// output location
+    /// 
+    /// This should be a file unless `lemmas` is set
+    #[arg(short, long, value_name = "FILE|DIR")]
     pub output_location: PathBuf,
 
-    /// will ouptu to a directory
+    /// uses the lemmas
+    /// 
+    /// It will generate multiples files
+    ///     lemma_0: output_location/0.smt
+    ///     ...
+    ///     lemma_n: output_location/n.smt
+    ///     query: output_location/n+1.smt
+    /// 
+    /// The order of the lemma is determined based on their order in the file.
+    /// The files are generated such that lemma_0 to n are assertion in lemma_n+1's
+    /// file. Same for the query
     #[arg(short, long, default_value_t = false)]
     pub lemmas: bool,
 

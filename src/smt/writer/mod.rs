@@ -144,20 +144,21 @@ pub fn problem_smts_with_lemma(pbl: Problem) -> impl Iterator<Item = Vec<Smt>> {
     let Problem {
         steps,
         env,
-        assertions,
+        mut assertions,
         query,
         order,
-        mut lemmas,
+        lemmas,
         crypto_assumptions,
         quantifiers,
     } = pbl;
 
     // the last lemma is the query
-    lemmas.push(query);
+    // lemmas.push(query);
 
-    let mut verified_lemmas: Vec<RichFormula> = Vec::new();
+    // let mut verified_lemmas: Vec<RichFormula> = Vec::new();
 
-    lemmas.into_iter().map(move |lemma| {
+    lemmas.into_iter().chain(std::iter::once(query)).map(move |lemma| {
+
         // this hurts a little ^^'
         let pbl = Problem {
             steps: steps.clone(),
@@ -170,14 +171,16 @@ pub fn problem_smts_with_lemma(pbl: Problem) -> impl Iterator<Item = Vec<Smt>> {
             quantifiers: quantifiers.clone(),
         };
 
-        let mut smt = problem_to_smt(pbl);
-        smt.extend(
-            verified_lemmas
-                .iter()
-                .map(|old_lemma| Smt::Assert(old_lemma.clone().into())),
-        );
+        let smt = problem_to_smt(pbl);
+        // let end = smt.iter().skip_while(|&s| s != &Smt::CheckSat).cloned().collect_vec();
+        // smt.extend(
+        //     verified_lemmas
+        //         .iter()
+        //         .map(|old_lemma| Smt::Assert(old_lemma.clone().into())),
+        // );
 
-        verified_lemmas.push(lemma);
+        // verified_lemmas.push(lemma);
+        assertions.push(lemma);
 
         smt
     })
