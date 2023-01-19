@@ -29,6 +29,10 @@ use crate::{
     },
 };
 pub(crate) fn generate(assertions: &mut Vec<Smt>, declarations: &mut Vec<Smt>, ctx: &mut Ctx) {
+    // if ctx.env().no_subterm() {
+    //     return;
+    // }
+
     let eval_msg = EVAL_MSG(ctx.env()).clone();
     let nonce = NONCE_MSG(ctx.env()).clone();
     let nonce_sort = NONCE(ctx.env()).clone();

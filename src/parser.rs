@@ -664,7 +664,7 @@ fn parse_application<'a>(
                 let args: Result<Vec<_>,_> = sorts.iter().map(|s|{
                     match inner_rule.next() {
                         None => {
-                            dbg!(&fun);
+                            // dbg!(&fun);
                             perr!(span; "not enough arguments, expected {} got {}", sorts.len(), i)
                         },
                         Some(arg) => {

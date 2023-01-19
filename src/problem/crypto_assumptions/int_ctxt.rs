@@ -279,7 +279,7 @@ pub(crate) fn generate(
                         SmtFormula::Exists(vec![], Box::new(SmtFormula::Or(ors))))),
             )))
         }
-    } else {
+    } else if !ctx.env().no_ta() {
         let subt_main = generate_subterm(
             assertions,
             declarations,

@@ -75,4 +75,10 @@ pub struct Args {
     /// use `(assert (not ...))` instead of `(assert-not ...)` for the query
     #[arg(long)]
     pub cvc5: bool,
+
+    /// deactivate subterm and optimises evaluates
+    /// 
+    /// NB: the program will crash it subterms are required somewhere
+    #[arg(long)]
+    pub no_term_algebra: bool
 }

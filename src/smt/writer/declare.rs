@@ -22,6 +22,7 @@ pub(crate) fn declare(
     declarations.extend(
         free_sorts
             .into_iter()
+            .unique()
             .filter_map(|s| (!s.is_built_in()).then_some(Smt::DeclareSort(s.clone()))),
     );
 

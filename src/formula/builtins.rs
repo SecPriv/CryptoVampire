@@ -93,6 +93,8 @@ pub mod steps {
 }
 
 pub mod init {
+    use std::collections::HashMap;
+
     use crate::formula::env::Environement;
     use crate::formula::function::FFlags;
     use crate::formula::sort::SFlags;
@@ -107,13 +109,26 @@ pub mod init {
     };
 
     use paste::paste;
-    pub fn init_env(env: &mut Environement) {
+    pub fn init_env(
+        env: &mut Environement,
+        h: impl Fn(&mut Environement) -> &mut HashMap<String, Sort>,
+    ) {
         init_sort!(env; BOOL; SFlags::BUILTIN_VAMPIRE);
-        init_sort!(env; MSG; SFlags::TERM_ALGEBRA | SFlags::EVALUATABLE);
         init_sort!(env; NONCE);
         init_sort!(env; STEP; SFlags::TERM_ALGEBRA);
         init_sort!(env; BITSTRING);
-        init_sort!(env; CONDITION; SFlags::TERM_ALGEBRA | SFlags::EVALUATABLE);
+        if env.no_ta() {
+            let bitstring = BITSTRING(env).clone();
+            let bool = BOOL(env).clone();
+
+            let h = h(env);
+
+            h.insert(MSG_NAME.to_owned(), bitstring);
+            h.insert(CONDITION_NAME.to_owned(), bool);
+        } else {
+            init_sort!(env; MSG; SFlags::TERM_ALGEBRA | SFlags::EVALUATABLE);
+            init_sort!(env; CONDITION; SFlags::TERM_ALGEBRA | SFlags::EVALUATABLE);
+        }
 
         init_fun!(env; NONCE_MSG; NONCE ; MSG; FFlags::TERM_ALGEBRA);
         init_fun!(env; IF_THEN_ELSE; BOOL, MSG, MSG ; MSG; FFlags::TERM_ALGEBRA | FFlags::SPECIAL_EVALUATE);

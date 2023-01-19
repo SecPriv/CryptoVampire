@@ -37,6 +37,10 @@ pub(crate) fn generate(
     verify: &Function,
     vk: &Function,
 ) {
+    if ctx.env().no_ta() {
+        return
+    }
+
     let eval_cond = EVAL_COND(ctx.env()).clone();
     let eval_msg = EVAL_MSG(ctx.env()).clone();
     let nonce = NONCE_MSG(ctx.env()).clone();

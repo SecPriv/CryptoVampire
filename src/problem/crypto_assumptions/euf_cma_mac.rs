@@ -49,6 +49,7 @@ pub(crate) fn generate(
         })));
 
     if ctx.env().preprocessing_plus() {
+        // find candidates for preprocessing
         let candidates = ctx
             .pbl
             .iter_content()
@@ -57,12 +58,10 @@ pub(crate) fn generate(
             .flat_map(|f| {
                 f.custom_iter_w_quantifier(&ctx.pbl, |f, _| match f {
                     RichFormula::Fun(fun, args) if fun == verify => {
-                        println!("here {}", SmtFormula::from(f));
                         if_chain!(
                             if let RichFormula::Fun(f1, k) = &args[2];
                             if f1 == &nonce;
                             then {
-                                println!("h");
                                 (Some((&args[0], &args[1], &k[0])), vec![&args[0], &args[1]])
                             } else {
                                 (None, args.iter().collect())
@@ -76,39 +75,43 @@ pub(crate) fn generate(
             .unique()
             .collect_vec();
 
-        dbg!(candidates.len());
+        for (sigma, m, k) in candidates.into_iter() {
+            // println!(
+            //     "sigma = {}, m = {}, k = {}",
+            //     SmtFormula::from(sigma),
+            //     SmtFormula::from(m),
+            //     SmtFormula::from(k)
+            // );
 
-        for (i, (sigma, m, k)) in candidates.into_iter().enumerate() {
-            println!(
-                "sigma = {}, m = {}, k = {}",
-                SmtFormula::from(sigma),
-                SmtFormula::from(m),
-                SmtFormula::from(k)
-            );
+            // side condtion on k
+            let k_sc = {
+                let kfun = if let RichFormula::Fun(f, _) = k {
+                    f
+                } else {
+                    unreachable!()
+                };
 
-            let kfun = if let RichFormula::Fun(f, _) = k {
-                f
-            } else {
-                unreachable!()
-            };
-            if ctx
-                .pbl
-                .iter_content()
-                .map(|(_, f)| f)
-                .chain([sigma, m].into_iter())
-                .flat_map(|f| {
-                    f.custom_iter_w_quantifier(&ctx.pbl, |f, _| match f {
-                        RichFormula::Fun(fun, _) if fun == kfun => (Some(()), vec![]),
-                        RichFormula::Fun(fun, args) if fun == verify || fun == mac => {
-                            (None, args.iter().rev().skip(1).collect())
-                        }
-                        RichFormula::Fun(_, args) => (None, args.iter().collect()),
-                        _ => (None, vec![]),
+                let tmp = ctx
+                    .pbl
+                    .iter_content()
+                    .map(|(_, f)| f)
+                    .chain([sigma, m].into_iter())
+                    .flat_map(|f| {
+                        f.custom_iter_w_quantifier(&ctx.pbl, |f, _| match f {
+                            RichFormula::Fun(fun, _) if fun == kfun => (Some(()), vec![]),
+                            RichFormula::Fun(fun, args) if fun == verify || fun == mac => {
+                                (None, args.iter().rev().skip(1).collect())
+                            }
+                            RichFormula::Fun(_, args) => (None, args.iter().collect()),
+                            _ => (None, vec![]),
+                        })
                     })
-                })
-                .next()
-                .is_none()
-            {
+                    .next()
+                    .is_none();
+                tmp
+            };
+
+            if k_sc {
                 // free vars of k
                 // let fv = k.get_free_vars().into_iter().cloned().collect_vec();
                 let fv = k
@@ -127,18 +130,21 @@ pub(crate) fn generate(
                     .max()
                     .unwrap_or(0);
 
-                let u = Variable {
-                    id: max_var + 1,
-                    sort: msg.clone(),
-                };
-                let su = svar!(u.clone());
+                // let u = Variable {
+                //     id: max_var + 1,
+                //     sort: msg.clone(),
+                // };
+                // let su = svar!(u.clone());
                 let sk = SmtFormula::from(k);
                 let sm = SmtFormula::from(m);
                 let ssigma = SmtFormula::from(sigma);
 
                 let max_var = max_var + 1;
 
-                let (mut candidates, inputs): (Vec<_>, Vec<_>) = [m, sigma]
+                let (
+                    mut candidates, // the hashes find in m and sigma (might be filtered out later)
+                    inputs,         // the input(s) encountered
+                ): (Vec<_>, Vec<_>) = [m, sigma]
                     .into_iter()
                     .flat_map(|f| {
                         f.custom_iter_w_quantifier(&ctx.pbl, |f, _| match f {
@@ -156,6 +162,7 @@ pub(crate) fn generate(
                     .partition_map(identity);
 
                 if !inputs.is_empty() {
+                    // if there were no inputs in m and sigma, no need to explore the whole protocol !
                     candidates.extend(ctx.pbl.iter_content().flat_map(|(s, f)| {
                         f.custom_iter_w_quantifier(&ctx.pbl, move |f, _| match f {
                             RichFormula::Fun(fun, args) if fun == mac => {
@@ -167,9 +174,9 @@ pub(crate) fn generate(
                     }))
                 }
 
-                // let candidates_input = .collect_vec();
                 let inputs = inputs
                     .into_iter()
+                    .unique()
                     .map(|f| SmtFormula::from(f))
                     .collect_vec();
 
@@ -245,11 +252,12 @@ pub(crate) fn generate(
                     fv,
                     Box::new(simplies!(ctx.env();
                         sfun!(eval_cond; sfun!(verify;ssigma, sm.clone(), sfun!(nonce; sk.clone()))),
-                        SmtFormula::Exists(vec![u], Box::new(SmtFormula::Or(ors))))),
+                        // SmtFormula::Exists(vec![u], Box::new(SmtFormula::Or(ors))))),
+                        SmtFormula::Or(ors))),
                 )))
             }
         }
-    } else {
+    } else if !ctx.env().no_ta() {
         let subt_main = generate_subterm(
             assertions,
             declarations,

@@ -169,6 +169,8 @@ where
         &'a RichFormula,
     ) -> (Option<SmtFormula>, Vec<&'a RichFormula>),
 {
+    // assert!(ctx.env().no_subterm(), "trying to define a subterm even though they are deactivated");
+
     debug_assert!(ctx.pbl.env.verify_f());
     debug_assert!(
         functions.iter().all(|f| ctx.pbl.env.contains_f(f)),
@@ -274,7 +276,9 @@ fn user_splitting<'a, F>(
                     let (litteral, next) = preprocess(subt, &m, s, &ctx.pbl, f);
                     todo.extend(next.into_iter());
                     if let Some(lit) = litteral {
-                        ors.push(lit)
+                        if !ors.contains(&lit) {
+                            ors.push(lit)
+                        }
                     }
                 }
                 ors
@@ -375,11 +379,17 @@ fn generate_special_subterm(
         funs_secondary.clone(),
     ));
 
-    for s in ctx
-        .env()
-        .get_sort_iter()
-        .filter(|&s| (s != sort) && !s.is_term_algebra() && (s != step_sort))
-    {
+    let known_ta = [MSG(ctx.env()).clone(), CONDITION(ctx.env()).clone()];
+
+    for s in ctx.env().get_sort_iter().filter(|&s| {
+        (s != sort)
+            && !if ctx.env().no_ta() {
+                known_ta.contains(s)
+            } else {
+                s.is_term_algebra()
+            }
+            && (s != step_sort)
+    }) {
         assertions.push(Smt::Assert(
             sforall!(m!1:sort, m2!2:s; {snot!(ctx.env(); subt.main(m, m2, s))}),
         ));
@@ -471,6 +481,7 @@ fn generate_base_subterm(
     } else {
         unreachable!()
     }
+
 
     // functions on which the subterm commutes "blindly"
     let funs_main = ctx

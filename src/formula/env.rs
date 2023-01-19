@@ -48,7 +48,7 @@ impl Environement {
             skolems: 0,
             args,
         };
-        init_env(&mut env);
+        init_env(&mut env, Self::get_sorts_mut);
         env
     }
 
@@ -102,6 +102,10 @@ impl Environement {
             == ptr
     }
 
+    fn get_sorts_mut(&mut self) -> &mut HashMap<String, Sort> {
+        &mut self.sorts
+    }
+
     pub fn use_special_subterm(&self) -> bool {
         self.args.vampire_subterm
     }
@@ -140,6 +144,10 @@ impl Environement {
 
     pub fn cvc5(&self) -> bool {
         self.args.cvc5
+    }
+
+    pub fn no_ta(&self) -> bool {
+        self.args.no_term_algebra
     }
 
     // pub fn get_functions(&self) -> &HashMap<String, Function> {
