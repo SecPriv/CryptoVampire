@@ -453,7 +453,9 @@ fn generate_base_subterm(
             );
 
             assert!(ctx.env_mut().add_f(main.clone()));
-            assert!(ctx.env_mut().add_f(secondary.clone()));
+            if !ctx.env().preprocessed_input() {
+                assert!(ctx.env_mut().add_f(secondary.clone()));
+            }
 
             (main, secondary)
         })
@@ -481,7 +483,6 @@ fn generate_base_subterm(
     } else {
         unreachable!()
     }
-
 
     // functions on which the subterm commutes "blindly"
     let funs_main = ctx
@@ -576,10 +577,18 @@ fn generate_base_subterm(
     }
 
     if let Subterm::Base { sorts_order, .. } = &subterm {
+        let known_ta = [MSG(ctx.env()).clone(), CONDITION(ctx.env()).clone()];
         assertions.extend(
             sorts_order
                 .iter()
-                .filter(|&s| !s.is_term_algebra() && (s != sort) && (s != step_sort))
+                .filter(|&s| {
+                    !if ctx.env().no_ta() {
+                        known_ta.contains(s)
+                    } else {
+                        s.is_term_algebra()
+                    } && (s != sort)
+                        && (s != step_sort)
+                })
                 .flat_map(|s| {
                     subterm
                         .iter()

@@ -1,5 +1,7 @@
 use std::{collections::HashMap, rc::Rc};
 
+use itertools::Itertools;
+
 use super::{
     builtins::init::init_env,
     cli::Args,
@@ -63,6 +65,7 @@ impl Environement {
     ///
     /// Note that the functions isn't inserted if it was already in
     pub fn add_f(&mut self, f: Function) -> bool {
+        // dbg!(f.name());
         let ptr = f.as_ptr_usize();
         self.functions
             .entry(f.name().to_owned())
@@ -180,7 +183,7 @@ impl Environement {
     // }
 
     pub fn get_sort_iter(&self) -> impl Iterator<Item = &Sort> {
-        self.sorts.values()
+        self.sorts.values().unique()
     }
 
     pub fn get_sort_iter_mut(&mut self) -> impl Iterator<Item = &mut Sort> {
