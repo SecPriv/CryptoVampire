@@ -85,12 +85,10 @@ pub(crate) fn generate(
             .flat_map(|f| {
                 f.custom_iter_w_quantifier(&ctx.pbl, |f, _| match f {
                     RichFormula::Fun(fun, args) if fun == verify => {
-                        println!("here {}", SmtFormula::from(f));
                         if_chain!(
                             if let RichFormula::Fun(f1, k) = &args[1];
                             if f1 == &nonce;
                             then {
-                                println!("h");
                                 (Some((&args[0], &k[0])), vec![&args[0]])
                             } else {
                                 (None, args.iter().collect())
@@ -103,10 +101,8 @@ pub(crate) fn generate(
             })
             .unique()
             .collect_vec();
-        dbg!(candidates.len());
 
         for (c, k) in candidates {
-            println!("m = {}, k = {}", SmtFormula::from(c), SmtFormula::from(k));
 
             let kfun = if let RichFormula::Fun(f, _) = k {
                 f
@@ -122,7 +118,6 @@ pub(crate) fn generate(
                 .flat_map(|f| {
                     f.custom_iter_w_quantifier(&ctx.pbl, |f, _| match f {
                         RichFormula::Fun(fun, _) if fun == kfun => {
-                            println!("{}", SmtFormula::from(f));
                             (Some(()), vec![])
                         }
                         RichFormula::Fun(fun, args)
