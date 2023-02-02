@@ -1,6 +1,6 @@
 pub mod builtins;
 pub mod cli;
-pub mod cnf;
+// pub mod cnf;
 pub mod env;
 pub mod formula;
 pub mod function;
