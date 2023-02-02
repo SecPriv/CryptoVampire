@@ -1,3 +1,3 @@
 pub mod crypto_assumptions;
 pub mod problem;
-pub mod protocol;
+pub mod step;

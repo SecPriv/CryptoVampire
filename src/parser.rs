@@ -16,7 +16,7 @@ use crate::{
         quantifier::Quantifier,
         sort::Sort,
     },
-    problem::protocol::Step,
+    problem::step::Step,
 };
 
 use itertools::{Either, Itertools};

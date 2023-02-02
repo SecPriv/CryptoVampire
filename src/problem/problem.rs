@@ -23,7 +23,7 @@ use crate::{
     utils::replace_if_eq,
 };
 
-use super::{crypto_assumptions::CryptoAssumption, protocol::Step};
+use super::{crypto_assumptions::CryptoAssumption, step::Step};
 
 #[derive(Debug)]
 pub struct Problem {
@@ -211,8 +211,8 @@ impl Problem {
                 // )
                 s.map(|i, f| {
                     let sort = match i {
-                        super::protocol::MessageOrCondition::Message => &msg,
-                        super::protocol::MessageOrCondition::Condition => &cond,
+                        super::step::MessageOrCondition::Message => &msg,
+                        super::step::MessageOrCondition::Condition => &cond,
                     };
                     process_step_content(&function_db, &mut env, &mut quantifiers, sort, f)
                 })

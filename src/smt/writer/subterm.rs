@@ -10,7 +10,7 @@ use crate::{
         function::{FFlags, Function},
         sort::Sort,
     },
-    problem::{problem::Problem, protocol::Step},
+    problem::{problem::Problem, step::Step},
     smt::{
         macros::{sand, seq, sexists, sforall, sfun, simplies, snot, sor, svar},
         smt::{Smt, SmtFormula},

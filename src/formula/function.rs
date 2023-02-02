@@ -6,7 +6,7 @@ use std::{
 
 use bitflags::bitflags;
 
-use crate::problem::protocol::Step;
+use crate::problem::step::Step;
 
 use super::{builtins::types::STEP, env::Environement, sort::Sort};
 use core::fmt::Debug;

@@ -73,7 +73,7 @@ pub mod functions {
 pub mod steps {
     use crate::{
         formula::{env::Environement, formula::RichFormula},
-        problem::protocol::Step,
+        problem::step::Step,
     };
 
     use super::functions::{EMPTY, TRUE};
