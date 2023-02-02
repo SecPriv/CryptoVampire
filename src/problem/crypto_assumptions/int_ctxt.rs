@@ -8,22 +8,17 @@ use crate::{
     formula::{
         builtins::{
             functions::{EVAL_COND, EVAL_MSG, INPUT, LT, NONCE_MSG},
-            types::{BOOL, CONDITION, MSG, NONCE},
+            types::{CONDITION, MSG, NONCE},
         },
-        env::Environement,
         formula::{RichFormula, Variable},
         function::{FFlags, Function},
-        sort::Sort,
         unifier::Unifier,
     },
-    problem::protocol::Step,
     smt::{
-        macros::{
-            sand, seq, sexists, sforall, sfun, simplies, site, sneq, snot, sor, srewrite, svar,
-        },
+        macros::{sand, seq, sexists, sforall, sfun, simplies, site, sneq, sor, srewrite, svar},
         smt::{RewriteKind, Smt, SmtFormula},
         writer::{
-            subterm::{default_f, generate_subterm, Subterm},
+            subterm::{default_f, generate_subterm},
             Ctx,
         },
     },
@@ -103,7 +98,6 @@ pub(crate) fn generate(
             .collect_vec();
 
         for (c, k) in candidates {
-
             let kfun = if let RichFormula::Fun(f, _) = k {
                 f
             } else {
@@ -117,9 +111,7 @@ pub(crate) fn generate(
                 .chain(std::iter::once(c))
                 .flat_map(|f| {
                     f.custom_iter_w_quantifier(&ctx.pbl, |f, _| match f {
-                        RichFormula::Fun(fun, _) if fun == kfun => {
-                            (Some(()), vec![])
-                        }
+                        RichFormula::Fun(fun, _) if fun == kfun => (Some(()), vec![]),
                         RichFormula::Fun(fun, args)
                             if fun == verify || fun == enc || fun == dec =>
                         {
@@ -540,15 +532,15 @@ pub(crate) fn generate(
 fn senc_rand(
     ctx: &mut Ctx,
     enc: &Function,
-    dec: &Function,
-    verify: &Function,
-    fail: &Function,
+    _dec: &Function,
+    _verify: &Function,
+    _fail: &Function,
 ) -> bool {
-    let eval_msg = EVAL_MSG(ctx.env()).clone();
-    let eval_cond = EVAL_COND(ctx.env()).clone();
+    // let eval_msg = EVAL_MSG(ctx.env()).clone();
+    // let eval_cond = EVAL_COND(ctx.env()).clone();
     let nonce = NONCE_MSG(ctx.env()).clone();
     let msg = MSG(ctx.env()).clone();
-    let cond = CONDITION(ctx.env()).clone();
+    // let cond = CONDITION(ctx.env()).clone();
     let nonce_sort = NONCE(ctx.env()).clone();
 
     // sp

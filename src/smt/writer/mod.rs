@@ -4,29 +4,29 @@ mod nonce;
 mod order;
 pub(crate) mod subterm;
 
-use std::borrow::BorrowMut;
-
 use itertools::{Either, Itertools};
 
 use crate::{
     formula::{
         builtins::{
             functions::{EVAL_COND, EVAL_MSG, NONCE_MSG},
-            types::{BITSTRING, BOOL, CONDITION, MSG, NONCE},
+            types::NONCE,
         },
         env::Environement,
-        formula::RichFormula,
         function::Function,
         sort::Sort,
     },
     problem::problem::Problem,
     smt::{
-        macros::{sand, seq, sforall, sfun},
+        macros::{seq, sforall, sfun},
         smt::SmtFormula,
     },
 };
 
-use super::{macros::{snot, simplies}, smt::Smt};
+use super::{
+    macros::{simplies, snot},
+    smt::Smt,
+};
 
 pub(crate) struct Ctx {
     pub(crate) ta_funs: Vec<Function>,

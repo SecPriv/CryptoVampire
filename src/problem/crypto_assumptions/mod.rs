@@ -3,33 +3,12 @@ mod euf_cma_sign;
 mod int_ctxt;
 mod nonce;
 
-use std::convert::identity;
-
-use if_chain::if_chain;
-use itertools::{Either, Itertools};
-
 use crate::{
-    formula::{
-        builtins::{
-            functions::{EVAL_COND, EVAL_MSG, INPUT, LT, NONCE_MSG},
-            types::{BOOL, CONDITION, MSG, NONCE},
-        },
-        env::Environement,
-        formula::{RichFormula, Variable},
-        function::{FFlags, Function},
-        sort::Sort,
-        unifier::Unifier,
-    },
-    problem::protocol::Step,
+    formula::{formula::RichFormula, function::Function},
     smt::{
-        macros::{
-            sand, seq, sexists, sforall, sfun, simplies, site, sneq, snot, sor, srewrite, svar,
-        },
-        smt::{RewriteKind, Smt, SmtFormula},
-        writer::{
-            subterm::{default_f, generate_subterm, Subterm},
-            Ctx,
-        },
+        macros::seq,
+        smt::{Smt, SmtFormula},
+        writer::Ctx,
     },
 };
 

@@ -8,22 +8,16 @@ use crate::{
     formula::{
         builtins::{
             functions::{EVAL_COND, EVAL_MSG, INPUT, LT, NONCE_MSG},
-            types::{BOOL, CONDITION, MSG, NONCE},
+            types::{CONDITION, MSG, NONCE},
         },
-        env::Environement,
         formula::{RichFormula, Variable},
         function::{FFlags, Function},
-        sort::Sort,
-        unifier::Unifier,
     },
-    problem::protocol::Step,
     smt::{
-        macros::{
-            sand, seq, sexists, sforall, sfun, simplies, site, sneq, snot, sor, srewrite, svar,
-        },
+        macros::{sand, seq, sexists, sforall, sfun, simplies, site, sor, srewrite, svar},
         smt::{RewriteKind, Smt, SmtFormula},
         writer::{
-            subterm::{default_f, generate_subterm, Subterm},
+            subterm::{default_f, generate_subterm},
             Ctx,
         },
     },

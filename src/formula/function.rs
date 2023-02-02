@@ -1,5 +1,4 @@
 use std::{
-    borrow::Borrow,
     cell::{Ref, RefCell},
     hash::Hash,
     rc::{Rc, Weak},
@@ -12,7 +11,7 @@ use crate::problem::protocol::Step;
 use super::{builtins::types::STEP, env::Environement, sort::Sort};
 use core::fmt::Debug;
 
-const BASE_SKOLEM_NAME: &'static str = "m$sk_";
+// const BASE_SKOLEM_NAME: &'static str = "m$sk_";
 bitflags! {
     #[derive(Default )]
     pub struct FFlags: u32 {
@@ -238,11 +237,13 @@ impl Function {
         &self.inner.name
     }
 
+    #[allow(dead_code)]
     fn add_flag(&self, flag: FFlags) {
         // self.0.flags |=flag.bits;
         self.inner.inner.borrow_mut().flags |= flag
     }
 
+    #[allow(dead_code)]
     fn remove_flag(&self, flag: FFlags) {
         // self.0.flags.fetch_and((!flag).bits());
         self.inner.inner.borrow_mut().flags.remove(flag)

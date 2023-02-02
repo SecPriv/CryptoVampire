@@ -234,7 +234,7 @@ impl<'a> Substitution for ISubstitution<&'a RichFormula> {
     fn get(&self, var: &Variable) -> RichFormula {
         self.0
             .iter()
-            .find(|(nid, f)| nid == &var.id)
+            .find(|(nid, _)| nid == &var.id)
             .map(|(_, f)| RichFormula::clone(f))
             .unwrap_or(RichFormula::Var(var.clone()))
     }

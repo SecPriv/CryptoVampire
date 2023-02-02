@@ -68,7 +68,7 @@ pub enum Smt {
     CheckSat,
     GetProof,
     SetOption(String, String),
-    SetLogic(String)
+    SetLogic(String),
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -197,7 +197,7 @@ impl fmt::Display for Smt {
 
             Smt::CheckSat => write!(f, "(check-sat)"),
             Smt::Comment(s) => write!(f, "\n; {}\n", s),
-            Smt::GetProof => write!(f,"(get-proof)"),
+            Smt::GetProof => write!(f, "(get-proof)"),
             Smt::SetOption(option, arg) => write!(f, "(set-option :{} {})", option, arg),
             Smt::SetLogic(logic) => write!(f, "(set-logic {})", logic),
         }

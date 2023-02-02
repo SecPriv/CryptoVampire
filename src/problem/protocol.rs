@@ -1,6 +1,6 @@
 use core::fmt::Debug;
 use std::{
-    collections::{HashMap, HashSet},
+    // collections::{HashMap, HashSet},
     ops::Range,
     sync::Arc,
 };
@@ -13,21 +13,21 @@ use crate::formula::{
     sort::Sort,
 };
 
-#[derive(Debug)]
-pub struct Protocol {
-    steps: HashMap<String, Step>,
-}
+// #[derive(Debug)]
+// pub struct Protocol {
+//     steps: HashMap<String, Step>,
+// }
 
-impl Protocol {
-    pub fn new<I>(steps: I) -> Self
-    where
-        I: Iterator<Item = Step>,
-    {
-        Self {
-            steps: steps.map(|s| (s.name().to_owned(), s)).collect(),
-        }
-    }
-}
+// impl Protocol {
+//     pub fn new<I>(steps: I) -> Self
+//     where
+//         I: Iterator<Item = Step>,
+//     {
+//         Self {
+//             steps: steps.map(|s| (s.name().to_owned(), s)).collect(),
+//         }
+//     }
+// }
 
 #[derive(Hash)]
 pub struct Step(Arc<InnerStep>);

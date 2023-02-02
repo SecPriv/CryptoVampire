@@ -94,7 +94,10 @@ macro_rules! sexists {
 
 macro_rules! srewrite {
     ($kind:expr; $($name:ident ! $i:literal : $sort:expr),*; $lhs:block -> $rhs:block) => {{
+        #[allow(unused_variables)]
         let lhs = |$($name:crate::smt::smt::SmtFormula),*| $lhs;
+
+        #[allow(unused_variables)]
         let rhs = |$($name:crate::smt::smt::SmtFormula),*| $rhs;
         crate::smt::smt::Smt::DeclareRewrite {
             rewrite_fun: $kind,

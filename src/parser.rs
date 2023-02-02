@@ -5,9 +5,8 @@ use crate::{
         crypto_assumptions::CryptoAssumption,
         problem::{Problem, ProblemBuilder},
     },
-    smt::macros::sfun,
 };
-use std::{borrow::Borrow, cell::Ref, collections::HashMap};
+use std::collections::HashMap;
 
 use crate::{
     formula::{

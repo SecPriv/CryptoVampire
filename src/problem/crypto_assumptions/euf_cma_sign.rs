@@ -1,29 +1,20 @@
-use std::convert::identity;
-
 use if_chain::if_chain;
-use itertools::{Either, Itertools};
 
 use crate::problem::crypto_assumptions::aux;
 use crate::{
     formula::{
         builtins::{
-            functions::{EVAL_COND, EVAL_MSG, INPUT, LT, NONCE_MSG},
-            types::{BOOL, CONDITION, MSG, NONCE},
+            functions::{EVAL_COND, EVAL_MSG, NONCE_MSG},
+            types::{MSG, NONCE},
         },
-        env::Environement,
-        formula::{RichFormula, Variable},
+        formula::RichFormula,
         function::{FFlags, Function},
-        sort::Sort,
-        unifier::Unifier,
     },
-    problem::protocol::Step,
     smt::{
-        macros::{
-            sand, seq, sexists, sforall, sfun, simplies, site, sneq, snot, sor, srewrite, svar,
-        },
-        smt::{RewriteKind, Smt, SmtFormula},
+        macros::{sand, seq, sexists, sforall, sfun, simplies, site, sor, srewrite},
+        smt::{RewriteKind, Smt},
         writer::{
-            subterm::{default_f, generate_subterm, Subterm},
+            subterm::{default_f, generate_subterm},
             Ctx,
         },
     },
@@ -38,7 +29,7 @@ pub(crate) fn generate(
     vk: &Function,
 ) {
     if ctx.env().no_ta() {
-        return
+        return;
     }
 
     let eval_cond = EVAL_COND(ctx.env()).clone();

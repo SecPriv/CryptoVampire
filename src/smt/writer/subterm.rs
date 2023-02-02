@@ -6,7 +6,6 @@ use crate::{
             functions::{INPUT, LT_NAME, SUBTERM},
             types::{BOOL, CONDITION, MSG, STEP},
         },
-        env::Environement,
         formula::{sorts_to_variables, RichFormula, Variable},
         function::{FFlags, Function},
         sort::Sort,
@@ -134,17 +133,6 @@ impl<'a> OneSubterm<'a> {
             OneSubterm::Main(s) => s.name_main(),
             OneSubterm::Secondary(s) => s.name_secondary(),
         }
-    }
-
-    fn inner(&self) -> &'a Subterm {
-        match self {
-            OneSubterm::Main(s) => s,
-            OneSubterm::Secondary(s) => s,
-        }
-    }
-
-    pub fn sort(&self) -> &'a Sort {
-        self.inner().sort()
     }
 }
 

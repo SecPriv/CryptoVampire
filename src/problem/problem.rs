@@ -200,7 +200,7 @@ impl Problem {
                 //     &cond,
                 //     s.condition(),
                 // );
-                let name = s.name();
+                // let name = s.name();
 
                 // Step::new(
                 //     name,
@@ -238,12 +238,12 @@ impl Problem {
         let user_assertions: Vec<RichFormula> = assertions
             .into_iter()
             // .map(|f| process_assertion(&function_db, &env, f))
-            .map(|f| process_query(&function_db, &env, f))
+            .map(|f| process_user_formula(&function_db, &env, f))
             .collect();
-        let query: RichFormula = process_query(&function_db, &env, query);
+        let query: RichFormula = process_user_formula(&function_db, &env, query);
         let lemmas: Vec<RichFormula> = temporary
             .into_iter()
-            .map(|f| process_query(&function_db, &env, f))
+            .map(|f| process_user_formula(&function_db, &env, f))
             .collect();
         let order: Vec<RichFormula> = order.into_iter().map(|f| process_oder(&env, f)).collect();
 
@@ -278,21 +278,12 @@ impl Problem {
 }
 
 // assertions must be turned into evaluate form
-fn process_assertion(
-    functions_db: &QuickAccess,
-    env: &Environement,
-    f: RichFormula,
-) -> RichFormula {
-    turn_formula_into_evaluate(functions_db, env, f)
-}
-
-// assertions must be turned into evaluate form
-fn process_query(
+fn process_user_formula(
     function_db: &QuickAccess,
     env: &Environement,
     formula: RichFormula,
 ) -> RichFormula {
-    process_query_content(function_db, env, formula)
+    process_user_formula_content(function_db, env, formula)
 }
 
 fn process_oder(_env: &Environement, f: RichFormula) -> RichFormula {
@@ -338,6 +329,7 @@ mod to_evaluate {
 // from ta to evaluate
 //
 // panic if there is a plain tfst
+#[allow(dead_code)]
 fn turn_formula_into_evaluate(
     function_db: &QuickAccess,
     env: &Environement,
@@ -577,7 +569,7 @@ where
 }
 
 /// turn whatever format `formula` has into a term algebra one
-fn process_query_content(
+fn process_user_formula_content(
     function_db: &QuickAccess,
     env: &Environement,
     formula: RichFormula,
@@ -598,7 +590,7 @@ fn process_query_content(
         RichFormula::Quantifier(q, args) => {
             let args = args
                 .into_iter()
-                .map(|f| process_query_content(function_db, env, f))
+                .map(|f| process_user_formula_content(function_db, env, f))
                 .collect();
             RichFormula::Quantifier(q.clone(), args)
         }
@@ -627,7 +619,7 @@ fn process_query_content(
             } else {
                 let args = args
                     .into_iter()
-                    .map(|f| process_query_content(function_db, env, f))
+                    .map(|f| process_user_formula_content(function_db, env, f))
                     .collect();
                 RichFormula::Fun(f, args)
             }
@@ -635,6 +627,7 @@ fn process_query_content(
     }
 }
 
+#[allow(unreachable_patterns)]
 fn get_ta_fun<'a>(function_db: &'a QuickAccess, f: &'a Function) -> &'a Function {
     match f.name() {
         // _ if f.is_term_algebra() => f,
@@ -666,18 +659,18 @@ pub(crate) struct QuickAccess {
     bitstring: Sort,
 }
 
-impl QuickAccess {
-    fn as_vec(&self) -> Vec<&Function> {
-        vec![
-            &self.cand,
-            &self.cor,
-            &self.cnot,
-            &self.ceq,
-            &self.ctrue,
-            &self.cfalse,
-        ]
-    }
-}
+// impl QuickAccess {
+//     fn as_vec(&self) -> Vec<&Function> {
+//         vec![
+//             &self.cand,
+//             &self.cor,
+//             &self.cnot,
+//             &self.ceq,
+//             &self.ctrue,
+//             &self.cfalse,
+//         ]
+//     }
+// }
 
 fn make_quantifier(
     env: &mut Environement,

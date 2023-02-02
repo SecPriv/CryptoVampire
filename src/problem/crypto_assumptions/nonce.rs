@@ -1,33 +1,18 @@
-use std::convert::identity;
-
-use if_chain::if_chain;
-use itertools::{Either, Itertools};
-
-use crate::problem::crypto_assumptions::aux;
 use crate::{
-    formula::{
-        builtins::{
-            functions::{EVAL_COND, EVAL_MSG, INPUT, LT, NONCE_MSG},
-            types::{BOOL, CONDITION, MSG, NONCE},
-        },
-        env::Environement,
-        formula::{RichFormula, Variable},
-        function::{FFlags, Function},
-        sort::Sort,
-        unifier::Unifier,
+    formula::builtins::{
+        functions::{EVAL_MSG, NONCE_MSG},
+        types::{MSG, NONCE},
     },
-    problem::protocol::Step,
     smt::{
-        macros::{
-            sand, seq, sexists, sforall, sfun, simplies, site, sneq, snot, sor, srewrite, svar,
-        },
-        smt::{RewriteKind, Smt, SmtFormula},
+        macros::{seq, sforall, sfun, simplies},
+        smt::Smt,
         writer::{
-            subterm::{default_f, generate_subterm, Subterm},
+            subterm::{default_f, generate_subterm},
             Ctx,
         },
     },
 };
+
 pub(crate) fn generate(assertions: &mut Vec<Smt>, declarations: &mut Vec<Smt>, ctx: &mut Ctx) {
     // if ctx.env().no_subterm() {
     //     return;
