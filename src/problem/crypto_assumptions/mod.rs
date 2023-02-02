@@ -11,7 +11,7 @@ use itertools::{Either, Itertools};
 use crate::{
     formula::{
         builtins::{
-            functions::{EVAL_COND, EVAL_MSG, INPUT, LT, NONCE_MSG},
+            functions::{ INPUT, LT, NONCE_MSG},
             types::{BOOL, CONDITION, MSG, NONCE},
         },
         env::Environement,

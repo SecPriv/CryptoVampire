@@ -11,7 +11,7 @@ use itertools::{Either, Itertools};
 use crate::{
     formula::{
         builtins::{
-            functions::{EVAL_COND, EVAL_MSG, NONCE_MSG},
+            functions::{ NONCE_MSG, EVAL_MSG_NAME, EVAL_COND_NAME},
             types::{BITSTRING, BOOL, CONDITION, MSG, NONCE},
         },
         env::Environement,
@@ -180,14 +180,14 @@ fn remove_evals(ctx: &Ctx, assertions: &mut Vec<Smt>) {
     let eval = {
         let env = ctx.env();
         Db {
-            m: EVAL_MSG(env).clone(),
-            c: EVAL_COND(env).clone(),
+            m: env.get_f(EVAL_MSG_NAME).unwrap().clone(),
+            c: env.get_f(EVAL_COND_NAME).unwrap().clone(),
         }
     };
 
     fn aux(f: &mut SmtFormula, eval: &Db) {
         match f {
-            SmtFormula::Fun(fun, args) if fun == &eval.m || fun == &eval.c => {
+            SmtFormula::Fun(fun, args) if fun == &eval.m /* || fun == &eval.c */ => {
                 *f = args[0].clone();
                 aux(f, eval)
             }

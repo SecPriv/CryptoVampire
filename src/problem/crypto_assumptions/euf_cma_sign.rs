@@ -4,10 +4,11 @@ use if_chain::if_chain;
 use itertools::{Either, Itertools};
 
 use crate::problem::crypto_assumptions::aux;
+use crate::smt::{get_eval_msg, get_eval_cond};
 use crate::{
     formula::{
         builtins::{
-            functions::{EVAL_COND, EVAL_MSG, INPUT, LT, NONCE_MSG},
+            functions::{ INPUT, LT, NONCE_MSG},
             types::{BOOL, CONDITION, MSG, NONCE},
         },
         env::Environement,
@@ -41,8 +42,8 @@ pub(crate) fn generate(
         return
     }
 
-    let eval_cond = EVAL_COND(ctx.env()).clone();
-    let eval_msg = EVAL_MSG(ctx.env()).clone();
+    let eval_msg = get_eval_msg(ctx.env());
+    let eval_cond = get_eval_cond(ctx.env());
     let nonce = NONCE_MSG(ctx.env()).clone();
     let msg = MSG(ctx.env()).clone();
     let nonce_sort = NONCE(ctx.env()).clone();
@@ -131,7 +132,7 @@ pub(crate) fn generate(
         })));
     }
     assertions.push(Smt::Assert(sforall!(sk!0:nonce_sort, m!1:msg; {
-                sfun!(eval_cond; sfun!(verify; sfun!(sign; m.clone(), sfun!(nonce; sk.clone())), m.clone(), sfun!(vk; sfun!(nonce; sk.clone()))))
+                eval_cond( sfun!(verify; sfun!(sign; m.clone(), sfun!(nonce; sk.clone())), m.clone(), sfun!(vk; sfun!(nonce; sk.clone()))))
         })));
 
     if ctx.env().crypto_rewrite() {
@@ -144,7 +145,7 @@ pub(crate) fn generate(
         let asser = srewrite!(
                 RewriteKind::Bool; s!1:msg, sk!2:nonce_sort, m!3:msg;
                 {
-                    sfun!(eval_cond; sfun!(verify; s.clone(), sfun!(vk; sfun!(nonce; sk.clone()))))
+                    eval_cond( sfun!(verify; s.clone(), sfun!(vk; sfun!(nonce; sk.clone()))))
                 } -> {
                     let u = sfun!(skolem; s.clone(), m.clone(), sk.clone());
                     let sig = sfun!(sign; u.clone(), sfun!(nonce; sk.clone()));
@@ -155,7 +156,7 @@ pub(crate) fn generate(
                             subt_sec.main(sk.clone(), m.clone(), &msg),
                             subt_sec.main(sk.clone(), s.clone(), &msg)
                         ),
-                        seq!(sfun!(eval_msg; m.clone()), sfun!(eval_msg; u.clone()))
+                        seq!(eval_msg( m.clone()), eval_msg( u.clone()))
                     )
                 }
         );
@@ -175,7 +176,7 @@ pub(crate) fn generate(
                     //         sfun!(eval_msg; s.clone())
                     //     ))
                     // )
-                    sfun!(eval_cond; sfun!(verify; s.clone(), sfun!(vk; sfun!(nonce; sk.clone()))))
+                    eval_cond( sfun!(verify; s.clone(), sfun!(vk; sfun!(nonce; sk.clone()))))
                 ,
                     sexists!(u!4:msg; {
                     let sig = sfun!(sign; u.clone(), sfun!(nonce; sk.clone()));
@@ -186,7 +187,7 @@ pub(crate) fn generate(
                             subt_sec.main(sk.clone(), m.clone(), &msg),
                             subt_sec.main(sk.clone(), s.clone(), &msg)
                         ),
-                        seq!(sfun!(eval_msg; sig.clone()), sfun!(eval_msg; s.clone()))
+                        seq!(eval_msg( sig.clone()), eval_msg( s.clone()))
                     )})
                 )}
         );

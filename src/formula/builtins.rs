@@ -40,8 +40,10 @@ pub mod functions {
     new_fun!(HAPPENS, "happens");
     new_fun!(IMPLIES, "=>");
 
-    new_fun!(EVAL_MSG, "m$eval");
-    new_fun!(EVAL_COND, "c$eval");
+    // new_fun!(EVAL_MSG, "m$eval");
+    // new_fun!(EVAL_COND, "c$eval");
+    pub const EVAL_COND_NAME: &'static str = "c$eval";
+    pub const EVAL_MSG_NAME: &'static str = "m$eval";
 
     new_fun!(SUBTERM, "subterm");
 
@@ -124,11 +126,10 @@ pub mod init {
             let h = h(env);
 
             h.insert(MSG_NAME.to_owned(), bitstring);
-            h.insert(CONDITION_NAME.to_owned(), bool);
         } else {
             init_sort!(env; MSG; SFlags::TERM_ALGEBRA | SFlags::EVALUATABLE);
-            init_sort!(env; CONDITION; SFlags::TERM_ALGEBRA | SFlags::EVALUATABLE);
         }
+        init_sort!(env; CONDITION; SFlags::TERM_ALGEBRA | SFlags::EVALUATABLE);
 
         init_fun!(env; NONCE_MSG; NONCE ; MSG; FFlags::TERM_ALGEBRA);
         init_fun!(env; IF_THEN_ELSE; BOOL, MSG, MSG ; MSG; FFlags::TERM_ALGEBRA | FFlags::SPECIAL_EVALUATE);

@@ -4,10 +4,11 @@ use if_chain::if_chain;
 use itertools::{Either, Itertools};
 
 use crate::problem::crypto_assumptions::aux;
+use crate::smt::{get_eval_msg, get_eval_cond};
 use crate::{
     formula::{
         builtins::{
-            functions::{EVAL_COND, EVAL_MSG, INPUT, LT, NONCE_MSG},
+            functions::{ INPUT, LT, NONCE_MSG},
             types::{BOOL, CONDITION, MSG, NONCE},
         },
         env::Environement,
@@ -35,8 +36,8 @@ pub(crate) fn generate(
     mac: &Function,
     verify: &Function,
 ) {
-    let eval_msg = EVAL_MSG(ctx.env()).clone();
-    let eval_cond = EVAL_COND(ctx.env()).clone();
+    let eval_msg = get_eval_msg(ctx.env());
+    let eval_cond = get_eval_cond(ctx.env());
     let nonce = NONCE_MSG(ctx.env()).clone();
     let msg = MSG(ctx.env()).clone();
     let cond = CONDITION(ctx.env()).clone();
@@ -45,7 +46,7 @@ pub(crate) fn generate(
     let lt = LT(ctx.env()).clone();
 
     assertions.push(Smt::Assert(sforall!(sk!0:nonce_sort, m!1:msg; {
-                sfun!(eval_cond; sfun!(verify; sfun!(mac; m.clone(), sfun!(nonce; sk.clone())), m.clone(),  sfun!(nonce; sk.clone())))
+                eval_cond( sfun!(verify; sfun!(mac; m.clone(), sfun!(nonce; sk.clone())), m.clone(),  sfun!(nonce; sk.clone())))
         })));
 
     if ctx.env().preprocessing_plus() {
@@ -55,12 +56,14 @@ pub(crate) fn generate(
             .iter_content()
             .map(|(_, f)| f)
             .chain(std::iter::once(&ctx.pbl.query))
+            .chain(ctx.pbl.assertions.iter())
             .flat_map(|f| {
                 f.custom_iter_w_quantifier(&ctx.pbl, |f, _| match f {
                     RichFormula::Fun(fun, args) if fun == verify => {
                         if_chain!(
                             if let RichFormula::Fun(f1, k) = &args[2];
                             if f1 == &nonce;
+                            if let RichFormula::Fun(_, _) = &k[0];
                             then {
                                 (Some((&args[0], &args[1], &k[0])), vec![&args[0], &args[1]])
                             } else {
@@ -72,10 +75,10 @@ pub(crate) fn generate(
                     _ => (None, vec![]),
                 })
             })
-            .unique()
-            .collect_vec();
+            .unique();
+            // .collect_vec();
 
-        for (sigma, m, k) in candidates.into_iter() {
+        for (sigma, m, k) in candidates/* .into_iter() */ {
             // println!(
             //     "sigma = {}, m = {}, k = {}",
             //     SmtFormula::from(sigma),
@@ -88,7 +91,8 @@ pub(crate) fn generate(
                 let kfun = if let RichFormula::Fun(f, _) = k {
                     f
                 } else {
-                    unreachable!()
+                    unreachable!("{}", k)
+                    // continue;
                 };
 
                 let tmp = ctx
@@ -205,7 +209,7 @@ pub(crate) fn generate(
                                     Box::new(sand!(
                                         // seq!(su.clone(), m2),
                                         seq!(sfun!(nonce; sk.clone()), sk2),
-                                        seq!(sfun!(eval_msg; sm2), sfun!(eval_msg; sm.clone()))
+                                        seq!(eval_msg( sm2), eval_msg( sm.clone()))
                                     )),
                                 )
                             }
@@ -240,7 +244,7 @@ pub(crate) fn generate(
                                     Box::new(sand!(
                                         SmtFormula::Or(s_ors),
                                         seq!(sfun!(nonce; sk.clone()), sk2),
-                                        seq!(sfun!(eval_msg; sm2), sfun!(eval_msg; sm.clone()))
+                                        seq!(eval_msg( sm2), eval_msg( sm.clone()))
                                     )),
                                 )
                             }
@@ -251,7 +255,7 @@ pub(crate) fn generate(
                 assertions.push(Smt::Assert(SmtFormula::Forall(
                     fv,
                     Box::new(simplies!(ctx.env();
-                        sfun!(eval_cond; sfun!(verify;ssigma, sm.clone(), sfun!(nonce; sk.clone()))),
+                        eval_cond( sfun!(verify;ssigma, sm.clone(), sfun!(nonce; sk.clone()))),
                         // SmtFormula::Exists(vec![u], Box::new(SmtFormula::Or(ors))))),
                         SmtFormula::Or(ors))),
                 )))
@@ -361,7 +365,7 @@ pub(crate) fn generate(
                         //     sfun!(eval_msg; s.clone()),
                         //     sfun!(eval_msg; sfun!(hash; m.clone(), sfun!(nonce; k.clone())))
                         // )
-                        sfun!(eval_cond; sfun!(verify; s.clone(), m.clone(), sfun!(nonce; k.clone())))
+                        eval_cond( sfun!(verify; s.clone(), m.clone(), sfun!(nonce; k.clone())))
                     } -> {
                         let u = sfun!(sk; s.clone(), m.clone(), k.clone());
                         let h = sfun!(mac; u.clone(), sfun!(nonce; k.clone()));
@@ -372,7 +376,7 @@ pub(crate) fn generate(
                                 subt_sec.main(k.clone(), m.clone(), &msg),
                                 subt_sec.main(k.clone(), s.clone(), &msg)
                             ),
-                            seq!(sfun!(eval_msg; m.clone()), sfun!(eval_msg; u.clone()))
+                            seq!(eval_msg( m.clone()), eval_msg( u.clone()))
                         )
                     }
             );
@@ -386,7 +390,7 @@ pub(crate) fn generate(
                         //     sfun!(eval_msg; s.clone()),
                         //     sfun!(eval_msg; sfun!(hash; m.clone(), sfun!(nonce; k.clone())))
                         // )
-                        sfun!(eval_cond; sfun!(verify; s.clone(), m.clone(), sfun!(nonce; k.clone())))
+                        eval_cond( sfun!(verify; s.clone(), m.clone(), sfun!(nonce; k.clone())))
                     ,
                         sexists!(u!4:msg; {
                         let h = sfun!(mac; u.clone(), sfun!(nonce; k.clone()));
@@ -397,7 +401,7 @@ pub(crate) fn generate(
                                 subt_sec.main(k.clone(), m.clone(), &msg),
                                 subt_sec.main(k.clone(), s.clone(), &msg)
                             ),
-                            seq!(sfun!(eval_msg; m.clone()), sfun!(eval_msg; u.clone()))
+                            seq!(eval_msg( m.clone()), eval_msg( u.clone()))
                         )})
                     )}
             );

@@ -7,14 +7,14 @@ use crate::{
         builtins::{
             functions::{
                 AND, AND_NAME, B_EQUALITY, B_EQUALITY_NAME, B_IF_THEN_ELSE, B_IF_THEN_ELSE_NAME,
-                EQUALITY, EQUALITY_NAME, EVAL_COND, EVAL_MSG, FALSE_NAME, IF_THEN_ELSE,
+                EQUALITY, EQUALITY_NAME,  FALSE_NAME, IF_THEN_ELSE,
                 IF_THEN_ELSE_NAME, NOT, NOT_NAME, OR, OR_NAME, TRUE_NAME,
             },
             steps::{INIT, INIT_NAME},
             types::{BITSTRING, BOOL, CONDITION, MSG},
         },
         env::Environement,
-        formula::{RichFormula, Variable},
+        formula::{RichFormula, Variable, get_eval_msg, get_eval_cond},
         function::{FFlags, Function},
         macros::fun,
         quantifier::Quantifier,
@@ -113,6 +113,8 @@ impl Problem {
         let msg = MSG(&env).clone();
         let bool = BOOL(&env).clone();
         let bitstring = BITSTRING(&env).clone();
+        let f_not = NOT(&env).clone();
+        let f_or = OR(&env).clone();
 
         // add and build easy to easy to acces functions & steps
         let function_db = {
@@ -127,7 +129,7 @@ impl Problem {
             let item = IF_THEN_ELSE(&env).clone();
 
             cand.set_evaluate_functions(AND(&env));
-            cor.set_evaluate_functions(OR(&env));
+            // cor.set_evaluate_functions(OR(&env));
             cnot.set_evaluate_functions(NOT(&env));
             ceq.set_evaluate_functions(B_EQUALITY(&env));
             item.set_evaluate_functions(B_IF_THEN_ELSE(&env));
@@ -150,6 +152,9 @@ impl Problem {
                 bool: bool.clone(),
                 bitstring: bitstring.clone(),
                 item,
+
+                not: f_not,
+                or: f_or,
             }
         };
 
@@ -226,26 +231,26 @@ impl Problem {
                 .or_insert(step.into()); // skip if already there
         }
 
+        // NB: no more ta quantifiers from now on
+
+        let user_assertions: Vec<RichFormula> = assertions
+            .into_iter()
+            // .map(|f| process_assertion(&function_db, &env, f))
+            .map(|f| process_query(&function_db, &mut env, &mut quantifiers, f))
+            .collect();
+        let query: RichFormula = process_query(&function_db, &mut env, &mut quantifiers, query);
+        let lemmas: Vec<RichFormula> = temporary
+            .into_iter()
+            .map(|f| process_query(&function_db, &mut env, &mut quantifiers, f))
+            .collect();
+        let order: Vec<RichFormula> = order.into_iter().map(|f| process_oder(&env, f)).collect();
+
         // add the quantifier to the set of functions
         env.extend_functions(quantifiers.iter().map(|q| &q.function).cloned());
 
         // no longer mutable
         // let env = env;
         let quantifiers = quantifiers;
-
-        // NB: no more ta quantifiers from now on
-
-        let user_assertions: Vec<RichFormula> = assertions
-            .into_iter()
-            // .map(|f| process_assertion(&function_db, &env, f))
-            .map(|f| process_query(&function_db, &env, f))
-            .collect();
-        let query: RichFormula = process_query(&function_db, &env, query);
-        let lemmas: Vec<RichFormula> = temporary
-            .into_iter()
-            .map(|f| process_query(&function_db, &env, f))
-            .collect();
-        let order: Vec<RichFormula> = order.into_iter().map(|f| process_oder(&env, f)).collect();
 
         Problem {
             steps: steps
@@ -289,10 +294,11 @@ fn process_assertion(
 // assertions must be turned into evaluate form
 fn process_query(
     function_db: &QuickAccess,
-    env: &Environement,
+    env: &mut Environement,
+    quantifiers: &mut Vec<QuantifierP>,
     formula: RichFormula,
 ) -> RichFormula {
-    process_query_content(function_db, env, formula)
+    process_query_content(function_db, env, quantifiers, formula)
 }
 
 fn process_oder(_env: &Environement, f: RichFormula) -> RichFormula {
@@ -428,8 +434,8 @@ pub fn call_evaluate(env: &Environement, f: RichFormula) -> RichFormula {
         f.get_sort(env)
     );
     match &f.get_sort(env) {
-        s if s == MSG(env) => fun!(EVAL_MSG(env); f),
-        s if s == CONDITION(env) => fun!(EVAL_COND(env); f),
+        s if s == MSG(env) => (get_eval_msg(env))(f),
+        s if s == CONDITION(env) => (get_eval_cond(env))(f),
         s => unreachable!("{} is not evaluatable or not implemented", s.name()),
     }
 }
@@ -579,7 +585,8 @@ where
 /// turn whatever format `formula` has into a term algebra one
 fn process_query_content(
     function_db: &QuickAccess,
-    env: &Environement,
+    env: &mut Environement,
+    quantifiers: &mut Vec<QuantifierP>,
     formula: RichFormula,
 ) -> RichFormula {
     match formula {
@@ -595,12 +602,20 @@ fn process_query_content(
         RichFormula::Quantifier(Quantifier::FindSuchThat { variables: _ }, _) => {
             panic!("no fst!")
         }
+        // todo fix
         RichFormula::Quantifier(q, args) => {
             let args = args
                 .into_iter()
-                .map(|f| process_query_content(function_db, env, f))
+                .map(|f| process_query_content(function_db, env, quantifiers, f))
                 .collect();
             RichFormula::Quantifier(q.clone(), args)
+        }
+        // otherwise unsound
+        RichFormula::Fun(f, args) if f == function_db.or || f == function_db.not => {
+            let formula = RichFormula::Fun(f, args);
+            let nf =
+                process_step_content(function_db, env, quantifiers, &function_db.cond, &formula);
+            call_evaluate(env, nf)
         }
         RichFormula::Fun(f, args) => {
             // if f.is_built_in() {
@@ -627,7 +642,7 @@ fn process_query_content(
             } else {
                 let args = args
                     .into_iter()
-                    .map(|f| process_query_content(function_db, env, f))
+                    .map(|f| process_query_content(function_db, env, quantifiers, f))
                     .collect();
                 RichFormula::Fun(f, args)
             }
@@ -664,6 +679,9 @@ pub(crate) struct QuickAccess {
     msg: Sort,
     cond: Sort,
     bitstring: Sort,
+
+    or: Function,
+    not: Function,
 }
 
 impl QuickAccess {

@@ -4,10 +4,11 @@ use if_chain::if_chain;
 use itertools::{Either, Itertools};
 
 use crate::problem::crypto_assumptions::aux;
+use crate::smt::get_eval_msg;
 use crate::{
     formula::{
         builtins::{
-            functions::{EVAL_COND, EVAL_MSG, INPUT, LT, NONCE_MSG},
+            functions::{ INPUT, LT, NONCE_MSG},
             types::{BOOL, CONDITION, MSG, NONCE},
         },
         env::Environement,
@@ -33,7 +34,7 @@ pub(crate) fn generate(assertions: &mut Vec<Smt>, declarations: &mut Vec<Smt>, c
     //     return;
     // }
 
-    let eval_msg = EVAL_MSG(ctx.env()).clone();
+    let eval_msg = get_eval_msg(ctx.env());
     let nonce = NONCE_MSG(ctx.env()).clone();
     let nonce_sort = NONCE(ctx.env()).clone();
     let msg = MSG(ctx.env()).clone();
@@ -50,7 +51,7 @@ pub(crate) fn generate(assertions: &mut Vec<Smt>, declarations: &mut Vec<Smt>, c
 
     assertions.push(Smt::Assert(sforall!(n!0:nonce_sort, m!1:msg;{
         simplies!(ctx.env();
-            seq!(sfun!(eval_msg; sfun!(nonce; n.clone())), sfun!(eval_msg; m.clone())),
+            seq!(eval_msg( sfun!(nonce; n.clone())), eval_msg( m.clone())),
             subt_main.main(n.clone(), m.clone(), &msg)
         )
     })))
