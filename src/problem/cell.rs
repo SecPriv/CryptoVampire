@@ -1,0 +1,75 @@
+use std::rc::Rc;
+
+use crate::formula::{
+    builtins::types::{MSG_NAME, STEP_NAME},
+    function::{self, Function},
+    sort::Sort,
+};
+use core::fmt::Debug;
+
+#[derive(Hash)]
+pub struct MemoryCell(Rc<InnerMemoryCell>);
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct InnerMemoryCell {
+    name: String,
+    args: Vec<Sort>,
+    function: Function,
+}
+
+// impl
+
+impl MemoryCell {
+    pub fn new(name: &str, function: Function) -> Self {
+        debug_assert!(function.get_output_sort().name() == MSG_NAME);
+
+        let args = { // this is way more complicated than it should be...
+            let tmp = function.get_input_sorts();
+            let mut in_s = tmp.iter();
+            let last = in_s.next_back();
+
+            debug_assert!(last.map(Sort::name) == Some(STEP_NAME));
+            in_s.cloned().collect()
+        }; // all of this to stop the borow of function
+
+        MemoryCell(Rc::new(InnerMemoryCell {
+            name: name.to_owned(),
+            args,
+            function,
+        }))
+    }
+}
+
+// base impl
+
+impl Debug for MemoryCell {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl Clone for MemoryCell {
+    fn clone(&self) -> Self {
+        Self(Rc::clone(&self.0))
+    }
+}
+
+impl PartialEq for MemoryCell {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.0, &other.0)
+    }
+}
+
+impl Eq for MemoryCell {}
+
+impl Ord for MemoryCell {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        Ord::cmp(&Rc::as_ptr(&self.0), &Rc::as_ptr(&other.0))
+    }
+}
+
+impl PartialOrd for MemoryCell {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.0.cmp(&other.0))
+    }
+}

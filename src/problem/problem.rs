@@ -20,7 +20,7 @@ use crate::{
         quantifier::Quantifier,
         sort::Sort,
     },
-    utils::replace_if_eq,
+    utils::utils::replace_if_eq,
 };
 
 use super::{crypto_assumptions::CryptoAssumption, step::Step};
