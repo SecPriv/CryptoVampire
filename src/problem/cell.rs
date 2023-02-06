@@ -3,7 +3,7 @@ use std::{rc::Rc, cell::RefCell, collections::HashMap};
 use crate::formula::{
     builtins::types::{MSG_NAME, STEP_NAME},
     function::{self, Function},
-    sort::Sort, formula::RichFormula,
+    sort::Sort, formula::{RichFormula, Variable},
 };
 use core::fmt::Debug;
 
@@ -13,17 +13,28 @@ use super::step::Step;
 pub struct MemoryCell(Rc<InnerMemoryCell>);
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct PreMemoryCell(Box<InnerMemoryCell>);
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct InnerMemoryCell {
     name: String,
     args: Vec<Sort>,
     function: Function,
-    // assignements: Vec<(Step, RichFormula)>
+    assignements: Vec<Assignement>
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Assignement {
+    pub step: Step,
+    // pub vars: Vec<Variable>, // those are the step's free variables
+    pub args: Vec<RichFormula>,
+    pub content: RichFormula
 }
 
 // impl
 
-impl MemoryCell {
-    pub fn new(name: &str, function: Function) -> Self {
+impl PreMemoryCell {
+    pub fn new(name: String, function: Function) -> Self {
         assert!(function.get_output_sort().name() == MSG_NAME);
 
         let args = { // this is way more complicated than it should be...
@@ -35,11 +46,17 @@ impl MemoryCell {
             in_s.cloned().collect()
         }; // all of this to stop the borow of function
 
-        MemoryCell(Rc::new(InnerMemoryCell {
+        let inner = InnerMemoryCell {
             name: name.to_owned(),
             args,
             function,
-        }))
+            assignements: vec![]
+        };
+        PreMemoryCell(Box::new(inner))
+    }
+
+    pub fn add_asignement(&mut self, a: Assignement) {
+        self.0.assignements.push(a)
     }
 
     pub fn name(&self) -> &str {
@@ -52,6 +69,30 @@ impl MemoryCell {
 
     pub fn function(&self) -> &Function {
         &self.0.function
+    }
+}
+
+impl MemoryCell {
+    pub fn name(&self) -> &str {
+        &self.0.name
+    }
+
+    pub fn args(&self) -> &Vec<Sort> {
+        &self.0.args
+    }
+
+    pub fn function(&self) -> &Function {
+        &self.0.function
+    }
+
+    pub fn assignements(&self) -> &Vec<Assignement> {
+        &self.0.assignements
+    }
+}
+
+impl From<PreMemoryCell> for MemoryCell {
+    fn from(m: PreMemoryCell) -> Self {
+        Self(Rc::new(*m.0))
     }
 }
 

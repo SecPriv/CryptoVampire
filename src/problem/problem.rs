@@ -23,7 +23,7 @@ use crate::{
     utils::utils::replace_if_eq,
 };
 
-use super::{crypto_assumptions::CryptoAssumption, step::Step, cell::MemoryCell};
+use super::{crypto_assumptions::CryptoAssumption, step::Step, cell::{MemoryCell, PreMemoryCell}};
 
 #[derive(Debug)]
 pub struct Problem {
@@ -40,7 +40,7 @@ pub struct Problem {
 
 pub struct ProblemBuilder {
     pub steps: Vec<Step>,
-    pub memory_cells: Vec<MemoryCell>,
+    pub memory_cells: Vec<PreMemoryCell>,
     pub env: Environement,
     pub assertions: Vec<RichFormula>,
     pub query: RichFormula,
@@ -257,7 +257,7 @@ impl Problem {
                 .collect(),
             memory_cells: memory_cells
                 .into_iter()
-                .map(|s| (s.name().to_owned(), s))
+                .map(|s| (s.name().to_owned(), s.into()))
                 .collect(),
             env,
             assertions: user_assertions,

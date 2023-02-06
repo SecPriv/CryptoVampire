@@ -43,6 +43,7 @@ bitflags! {
 
         const SPECIAL_SUBTERM =     1<<11;
 
+        const CELL =                1<<12 | FFlags::SPECIAL_EVALUATE.bits | FFlags::SPECIAL_SUBTERM.bits | FFlags::TERM_ALGEBRA.bits;
 
     }
 }

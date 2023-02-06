@@ -2,8 +2,9 @@ extern crate pest;
 use crate::{
     formula::{env::Environement, function::FFlags, macros::fun},
     problem::{
+        cell::{Assignement, MemoryCell, PreMemoryCell},
         crypto_assumptions::CryptoAssumption,
-        problem::{Problem, ProblemBuilder}, cell::MemoryCell,
+        problem::{Problem, ProblemBuilder},
     },
 };
 use std::collections::HashMap;
@@ -94,7 +95,7 @@ type E = Error<Rule>;
 struct Context<'a> {
     env: Environement,
     steps: HashMap<&'a str, Step>,
-    cells: HashMap<&'a str, MemoryCell>,
+    cells: HashMap<&'a str, PreMemoryCell>,
     assertions: Vec<RichFormula>,
     query: Option<RichFormula>,
     lemmas: Vec<RichFormula>,
@@ -555,6 +556,48 @@ fn parse_declare_type<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Result<()
     })
 }
 
+fn parse_declare_cell<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Result<(), E> {
+    match_or_err!(Rule::declare_cell, p; {
+        let mut inner_rule = p.into_inner();
+
+        let name_rule = inner_rule.next().unwrap();
+        let name = name_rule.as_str(); // never fails
+        let mut input_sorts = {
+            let n = inner_rule.next().unwrap();
+            let span = n.as_span();
+            let args = parse_declare_function_args(ctx, n)?;
+            if args.iter().any(Sort::is_term_algebra) {
+                Err(span_err(span, format!("only indices types are expected in argument for soundness reasons")))
+            } else {
+                Ok(args)
+            }
+        }?;
+        input_sorts.push(STEP(&ctx.env).clone());
+
+        let output_sort = {
+            let n = inner_rule.next().unwrap();
+            let span = n.as_span();
+            let s = parse_type(ctx, n)?;
+            if &s != MSG(&ctx.env) {
+                Err(span_err(span, format!("only Message is currently supported")))
+            } else {
+                Ok(s)
+            }
+        }?;
+
+
+        let flags = FFlags::CELL;
+        let f = Function::new_with_flag(name, input_sorts, output_sort, flags);
+        if ctx.available_fun_name(f.name()) && !ctx.cells.contains_key(f.name()) {
+            ctx.env.add_f(f.clone());
+            ctx.cells.insert(name, PreMemoryCell::new(f.name().to_owned(), f));
+            Ok(())
+        } else {
+            perr!(name_rule, "redeclaring cell: {} (or forbidden)", name)
+        }
+    })
+}
+
 fn parse_declare_function<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Result<(), E> {
     match_or_err!(Rule::declare_function, p; {
         let mut inner_rule = p.into_inner();
@@ -943,6 +986,7 @@ fn parse_declaration<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Result<(),
         match d.as_rule() {
             Rule::declare_type => parse_declare_type(ctx, d),
             Rule::declare_function => parse_declare_function(ctx, d),
+            Rule::declare_cell => parse_declare_cell(ctx, d),
             _ => unreachable!()
         }
     })
@@ -970,12 +1014,71 @@ fn parse_step<'a>(ctx: &mut Context<'a>, p: Pair<'a, Rule>) -> Result<Step, E> {
 
         let cond = parse_term_as(ctx, inner.next().unwrap(), &mut memory, Some(BOOL(&ctx.env)))?;
         let msg = parse_term_as(ctx, inner.next().unwrap(), &mut memory, Some(MSG(&ctx.env)))?;
-
         let r = Step::new(name, vars, cond, msg, f);
+
+        if let Some(assignements) = inner.next(){
+            parse_assignements(ctx, assignements, &mut memory, &r)?;
+        }
+
         // to_be_freed.iter().for_each(|s| {memory.remove(s).unwrap();});
         ctx.steps.insert(name, r.clone());
         Ok(r)
+    })
+}
 
+fn parse_assignements<'a>(
+    ctx: &mut Context<'a>,
+    p: Pair<'a, Rule>,
+    memory: &mut HashMap<&'a str, Variable>,
+    step: &Step,
+) -> Result<(), E> {
+    match_or_err!(Rule::assignements, p;{
+        let r:Result<Vec<_>, _> = p.into_inner().map(|p| parse_assignement(ctx, p, memory, step)).collect();
+        r.map(|_| ())
+    })
+}
+
+fn parse_assignement<'a>(
+    ctx: &mut Context<'a>,
+    p: Pair<'a, Rule>,
+    memory: &mut HashMap<&'a str, Variable>,
+    step: &Step,
+) -> Result<(), E> {
+    match_or_err!(Rule::assignement, p;{
+        let msg = MSG(&ctx.env).clone();
+        let mut inner = p.into_inner();
+
+        let application = inner.next().unwrap();
+        let content = inner.next().unwrap();
+
+        let content =
+            parse_term_as(ctx, content, memory, Some(&msg))?;
+
+        let application_span = application.as_span();
+        let mut application_inner = application.into_inner();
+        let name = application_inner.next().unwrap();
+        let args = application_inner.collect_vec();
+
+        let pre_memrory_cell = ctx.cells
+            .get(name.as_str())
+            .ok_or(span_err(name.as_span(), format!("unknown memory cell \"{}\"", name.as_str())))?;
+
+        let args_sort = pre_memrory_cell.args();
+        if args_sort.len() == args.len() {
+            let args :Result<_, _> = args_sort
+                .iter()
+                .zip(args.into_iter())
+                .map(|(s, arg)| parse_term_as(ctx, arg, memory, Some(s)))
+                .collect();
+            let args = args?;
+            let pre_memrory_cell = ctx.cells
+                .get_mut(name.as_str())
+                .ok_or(span_err(name.as_span(), format!("unknown memory cell \"{}\"", name.as_str())))?;
+            pre_memrory_cell.add_asignement(Assignement { step: step.clone(), args: args, content: content });
+            Ok(())
+        } else {
+            Err(span_err(application_span, format!("not enough arguments, expected {} got {}", args_sort.len(), args.len())))
+        }
     })
 }
 
