@@ -3,7 +3,7 @@ use crate::{
     formula::{env::Environement, function::FFlags, macros::fun},
     problem::{
         crypto_assumptions::CryptoAssumption,
-        problem::{Problem, ProblemBuilder},
+        problem::{Problem, ProblemBuilder}, cell::MemoryCell,
     },
 };
 use std::collections::HashMap;
@@ -94,6 +94,7 @@ type E = Error<Rule>;
 struct Context<'a> {
     env: Environement,
     steps: HashMap<&'a str, Step>,
+    cells: HashMap<&'a str, MemoryCell>,
     assertions: Vec<RichFormula>,
     query: Option<RichFormula>,
     lemmas: Vec<RichFormula>,
@@ -114,6 +115,7 @@ impl<'a> Context<'a> {
         let Context {
             env,
             steps,
+            cells,
             assertions,
             query,
             lemmas,
@@ -123,6 +125,7 @@ impl<'a> Context<'a> {
         } = self;
         ProblemBuilder {
             steps: steps.into_iter().map(|(_, t)| t).collect(),
+            memory_cells: cells.into_iter().map(|(_, t)| t).collect(),
             env,
             assertions,
             query: query.unwrap(),
@@ -148,6 +151,7 @@ impl<'a> From<Environement> for Context<'a> {
         Context {
             env,
             steps: Default::default(),
+            cells: Default::default(),
             assertions: Default::default(),
             query: Default::default(),
             lemmas: Default::default(),

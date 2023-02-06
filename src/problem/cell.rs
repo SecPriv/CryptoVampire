@@ -1,11 +1,13 @@
-use std::rc::Rc;
+use std::{rc::Rc, cell::RefCell, collections::HashMap};
 
 use crate::formula::{
     builtins::types::{MSG_NAME, STEP_NAME},
     function::{self, Function},
-    sort::Sort,
+    sort::Sort, formula::RichFormula,
 };
 use core::fmt::Debug;
+
+use super::step::Step;
 
 #[derive(Hash)]
 pub struct MemoryCell(Rc<InnerMemoryCell>);
@@ -15,20 +17,21 @@ struct InnerMemoryCell {
     name: String,
     args: Vec<Sort>,
     function: Function,
+    // assignements: Vec<(Step, RichFormula)>
 }
 
 // impl
 
 impl MemoryCell {
     pub fn new(name: &str, function: Function) -> Self {
-        debug_assert!(function.get_output_sort().name() == MSG_NAME);
+        assert!(function.get_output_sort().name() == MSG_NAME);
 
         let args = { // this is way more complicated than it should be...
             let tmp = function.get_input_sorts();
             let mut in_s = tmp.iter();
             let last = in_s.next_back();
 
-            debug_assert!(last.map(Sort::name) == Some(STEP_NAME));
+            assert!(last.map(Sort::name) == Some(STEP_NAME));
             in_s.cloned().collect()
         }; // all of this to stop the borow of function
 
@@ -37,6 +40,18 @@ impl MemoryCell {
             args,
             function,
         }))
+    }
+
+    pub fn name(&self) -> &str {
+        &self.0.name
+    }
+
+    pub fn args(&self) -> &Vec<Sort> {
+        &self.0.args
+    }
+
+    pub fn function(&self) -> &Function {
+        &self.0.function
     }
 }
 

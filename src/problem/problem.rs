@@ -23,11 +23,12 @@ use crate::{
     utils::utils::replace_if_eq,
 };
 
-use super::{crypto_assumptions::CryptoAssumption, step::Step};
+use super::{crypto_assumptions::CryptoAssumption, step::Step, cell::MemoryCell};
 
 #[derive(Debug)]
 pub struct Problem {
     pub steps: HashMap<String, Step>,
+    pub memory_cells: HashMap<String, MemoryCell>,
     pub env: Environement,
     pub assertions: Vec<RichFormula>,
     pub query: RichFormula,
@@ -39,6 +40,7 @@ pub struct Problem {
 
 pub struct ProblemBuilder {
     pub steps: Vec<Step>,
+    pub memory_cells: Vec<MemoryCell>,
     pub env: Environement,
     pub assertions: Vec<RichFormula>,
     pub query: RichFormula,
@@ -101,6 +103,7 @@ impl Problem {
     pub fn new(pbl: ProblemBuilder) -> Self {
         let ProblemBuilder {
             steps,
+            memory_cells,
             mut env,
             assertions,
             query,
@@ -249,6 +252,10 @@ impl Problem {
 
         Problem {
             steps: steps
+                .into_iter()
+                .map(|s| (s.name().to_owned(), s))
+                .collect(),
+            memory_cells: memory_cells
                 .into_iter()
                 .map(|s| (s.name().to_owned(), s))
                 .collect(),

@@ -50,15 +50,20 @@ quantifier = {quantifier_op ~ typed_arguments ~ bracketed_term }
 	forall = {"forall"}
     exists = {"exists"}
 
-declaration = { declare_type | declare_function }
+declaration = { declare_type | declare_function | declare_cell}
     declare_type = {"type" ~ type_name }
     declare_function = {"fun" ~ function ~ declare_function_args ~ 
                           ":" ~ type_name }
        declare_function_args = {("(" ~ (type_name ~ ",")* ~ type_name? ~ ")")?}
+    declare_cell = {"cell" ~ function ~ declare_function_args ~
+                          ":" ~ type_name}
 
 step = {"step" ~ step_name ~ typed_arguments ~
          bracketed_term ~ 
-         bracketed_term }
+         bracketed_term ~
+         assignements?}
+    assignement = {application ~ "<-" ~ term}
+    assignements= {"{" ~ (assignement ~ ",")* ~ assignement? ~ "}"}
 
 assertion = {"assert" ~ term }
 

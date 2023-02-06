@@ -60,6 +60,7 @@ pub fn problem_to_smt(pbl: Problem) -> Vec<Smt> {
     {
         let Problem {
             steps: _,
+            memory_cells: _,
             env,
             assertions: _,
             query: _,
@@ -213,6 +214,7 @@ fn remove_evals(ctx: &Ctx, assertions: &mut Vec<Smt>) {
 pub fn problem_smts_with_lemma(pbl: Problem) -> impl Iterator<Item = Vec<Smt>> {
     let Problem {
         steps,
+        memory_cells,
         env,
         mut assertions,
         query,
@@ -234,6 +236,7 @@ pub fn problem_smts_with_lemma(pbl: Problem) -> impl Iterator<Item = Vec<Smt>> {
             // this hurts a little ^^'
             let pbl = Problem {
                 steps: steps.clone(),
+                memory_cells: memory_cells.clone(),
                 env: env.clone(),
                 assertions: assertions.clone(),
                 query: lemma.clone(),
