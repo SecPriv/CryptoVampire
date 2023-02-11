@@ -26,20 +26,6 @@ use if_chain::if_chain;
 
 use super::Ctx;
 
-// pub enum Subterm {
-//     VampireSpecial {
-//         sort: Sort,
-//         vampire_subterm_fun: Function,
-//         main: Function
-//     },
-//     Base {
-//         sort: Sort,
-//         sorts_order: Vec<Sort>,
-//         main: Vec<Function>,
-//         name: String,
-//     },
-// }
-
 bitflags! {
     #[derive(Default )]
     pub struct SubtermFlags: u8 {
@@ -48,11 +34,11 @@ bitflags! {
 
     }
 }
-pub struct Subterm<F> {
+pub struct Subterm<B> {
     sort: Sort,
     name: String,
     flags: SubtermFlags,
-    builder: F,
+    builder: B,
     inner: InnerSubterm,
 }
 
@@ -102,26 +88,8 @@ impl<F> Subterm<F> {
     }
 }
 
-// impl<'a> OneSubterm<'a> {
-//     pub fn f(&self, a: SmtFormula, b: SmtFormula, sort: &Sort) -> SmtFormula {
-//         match self {
-//             OneSubterm::Main(s) => s.f(a, b, sort),
-//             OneSubterm::Secondary(s) => s.secondary(a, b, sort),
-//         }
-//     }
-
-//     pub fn name(&self) -> String {
-//         match self {
-//             OneSubterm::Main(s) => s.name(),
-//             OneSubterm::Secondary(s) => s.name_secondary(),
-//         }
-//     }
-// }
-
-// type MyF<'a, 'b> = Fn(&Subterm, &SmtFormula, &Step, &'a Problem, &'b RichFormula) -> (SmtFormula, Vec<&'b RichFormula>);
-
 /// generate all the axioms for a subterm function
-pub(crate) fn generate_subterm<'a, F>(
+pub(crate) fn generate_subterm<'a, B>(
     assertions: &mut Vec<Smt>,
     declarations: &mut Vec<Smt>,
     ctx: &'a mut Ctx,
@@ -129,17 +97,11 @@ pub(crate) fn generate_subterm<'a, F>(
     sort: &'a Sort,
     functions: Vec<&Function>,
     flags: SubtermFlags,
-    preprocess: F,
-) -> Subterm<F>
+    builder: B,
+) -> Subterm<B>
 where
     // F: Fn(&Subterm, &SmtFormula, &Step, &'a Problem) -> SmtFormula,
-    F: Fn(
-        &Subterm<F>,
-        &SmtFormula,
-        &Step,
-        &'a Problem,
-        &'a RichFormula,
-    ) -> (Option<SmtFormula>, Vec<&'a RichFormula>),
+    B: Builder<'a>,
 {
     // assert!(ctx.env().no_subterm(), "trying to define a subterm even though they are deactivated");
 
@@ -160,7 +122,7 @@ where
             sort,
             functions,
             flags,
-            preprocess,
+            builder,
         )
     } else {
         generate_base_subterm(
@@ -171,7 +133,7 @@ where
             sort,
             functions,
             flags,
-            preprocess,
+            builder,
         )
     };
 
@@ -190,21 +152,15 @@ where
     subt
 }
 
-fn user_splitting<'a, F>(
+fn user_splitting<'a, B>(
     assertions: &mut Vec<Smt>,
     _: &mut Vec<Smt>,
     ctx: &'a mut Ctx,
-    subt: &Subterm<F>,
+    subt: &Subterm<B>,
 ) where
-    F: Fn(
-        &Subterm<F>,
-        &SmtFormula,
-        &Step,
-        &'a Problem,
-        &'a RichFormula,
-    ) -> (Option<SmtFormula>, Vec<&'a RichFormula>),
+    B: Builder<'a>,
 {
-    let preprocess = subt.get_builder();
+    // let preprocess = subt.get_builder();
     let input = INPUT(ctx.env());
     let lt = ctx.env().get_f(LT_NAME).unwrap();
 
@@ -234,7 +190,7 @@ fn user_splitting<'a, F>(
         if subt.sort() == msg {
             ors.push(seq!(m.clone(), input_f.clone()))
         }
-        user_spliting_inputs(ctx, &tp, &m, todo, &mut ors, preprocess, subt, max_var, lt);
+        user_spliting_inputs(ctx, &tp, &m, todo, &mut ors, subt, max_var, lt);
         assertions.push(Smt::Assert(SmtFormula::Forall(
             vars.clone(),
             Box::new(simplies!(ctx.env();
@@ -309,25 +265,19 @@ fn user_splitting<'a, F>(
     )
 }
 
-fn user_spliting_inputs<'a, F>(
+fn user_spliting_inputs<'a, B>(
     ctx: &'a Ctx,
     tp: &SmtFormula,
     m: &SmtFormula,
     todo: RefCell<Vec<&'a RichFormula>>,
     ors: &mut Vec<SmtFormula>,
-    preprocess: &F,
-    subt: &Subterm<F>,
+    // preprocess: &F,
+    subt: &Subterm<B>,
     max_var: usize,
     lt: &Function, // input: &Function,
                    // msg: &Sort,
 ) where
-    F: Fn(
-        &Subterm<F>,
-        &SmtFormula,
-        &Step,
-        &'a Problem,
-        &'a RichFormula,
-    ) -> (Option<SmtFormula>, Vec<&'a RichFormula>),
+    B: Builder<'a>,
 {
     let flt = |s1: &SmtFormula, s2: &SmtFormula| sfun!(lt; s1.clone(), s2.clone());
     let flt_eq = |s1: &SmtFormula, s2: &SmtFormula| sor!(seq!(s1.clone(), s2.clone()), flt(s1, s2));
@@ -363,7 +313,7 @@ fn user_spliting_inputs<'a, F>(
                         calls_to_cells.push((s, fun, args))
                     }
                 };
-                preprocess(subt, m, s, p, f)
+                subt.get_builder().preprocess(subt, m, s, p, f)
             })
             .collect_vec()
         }; // todo's RefMut dies here
@@ -433,7 +383,7 @@ fn user_spliting_inputs<'a, F>(
                 todo.clear();
                 todo.push(content);
                 new_formula_iter_vec(todo, &ctx.pbl, IteratorFlags::QUANTIFIER, |f, p| {
-                    preprocess(subt, m, s, p, f)
+                    subt.get_builder().preprocess(subt, m, s, p, f)
                 })
                 .collect_vec()
             }; // todo's RefMut dies here
@@ -463,26 +413,6 @@ fn user_spliting_inputs<'a, F>(
             ors.push(r)
         }
     }
-}
-
-pub fn default_f<'a, 'b, F>(
-    subt: &Subterm<F>,
-    m: &SmtFormula,
-    _: &Step,
-    _: &'a Problem,
-    f: &'b RichFormula,
-) -> (Option<SmtFormula>, Vec<&'b RichFormula>) {
-    // move |subt, m, _, _, f| {
-    let sort = subt.sort();
-    match f {
-        RichFormula::Fun(fun, args) => (
-            (&fun.get_output_sort() == sort).then(|| seq!(m.clone(), SmtFormula::from(f))),
-            args.iter().collect(),
-        ),
-        RichFormula::Var(v) if &v.sort == sort => (Some(seq!(m.clone(), svar!(v.clone()))), vec![]),
-        _ => (None, vec![]),
-    }
-    // }
 }
 
 fn generate_comute_fun_vec<F>(
@@ -825,5 +755,70 @@ where
         )));
 
         fun
+    }
+}
+
+pub trait Builder<'a> {
+    fn preprocess(
+        self,
+        subt: &Subterm<Self>,
+        m: &SmtFormula,
+        s: &Step,
+        pbl: &'a Problem,
+        f: &'a RichFormula,
+    ) -> (Option<SmtFormula>, Vec<&'a RichFormula>)
+    where
+        Self: Sized;
+}
+
+impl<'a, F> Builder<'a> for F
+where
+    F: Fn(
+        &Subterm<F>,
+        &SmtFormula,
+        &Step,
+        &'a Problem,
+        &'a RichFormula,
+    ) -> (Option<SmtFormula>, Vec<&'a RichFormula>),
+{
+    fn preprocess(
+        self,
+        subt: &Subterm<Self>,
+        m: &SmtFormula,
+        s: &Step,
+        pbl: &'a Problem,
+        f: &'a RichFormula,
+    ) -> (Option<SmtFormula>, Vec<&'a RichFormula>)
+    where
+        Self: Sized,
+    {
+        (self)(subt, m, s, pbl, f)
+    }
+}
+
+pub struct DefaultBuilder();
+impl<'a> Builder<'a> for DefaultBuilder {
+    fn preprocess(
+        self,
+        subt: &Subterm<Self>,
+        m: &SmtFormula,
+        s: &Step,
+        pbl: &'a Problem,
+        f: &'a RichFormula,
+    ) -> (Option<SmtFormula>, Vec<&'a RichFormula>)
+    where
+        Self: Sized,
+    {
+        let sort = subt.sort();
+        match f {
+            RichFormula::Fun(fun, args) => (
+                (&fun.get_output_sort() == sort).then(|| seq!(m.clone(), SmtFormula::from(f))),
+                args.iter().collect(),
+            ),
+            RichFormula::Var(v) if &v.sort == sort => {
+                (Some(seq!(m.clone(), svar!(v.clone()))), vec![])
+            }
+            _ => (None, vec![]),
+        }
     }
 }

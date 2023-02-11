@@ -1,7 +1,7 @@
 // mod euf_cma_mac;
 // mod euf_cma_sign;
 // mod int_ctxt;
-// mod nonce;
+mod nonce;
 
 use crate::{
     formula::{formula::RichFormula, function::Function},
@@ -44,22 +44,22 @@ impl CryptoAssumption {
         declarations: &mut Vec<Smt>,
         ctx: &mut Ctx,
     ) {
-        // match self {
-        //     CryptoAssumption::EufCmaMac { mac, verify } => {
-        //         euf_cma_mac::generate(assertions, declarations, ctx, mac, verify)
-        //     }
-        //     CryptoAssumption::Nonce => nonce::generate(assertions, declarations, ctx),
-        //     CryptoAssumption::EufCmaSign { sign, verify, pk } => {
-        //         euf_cma_sign::generate(assertions, declarations, ctx, sign, verify, pk)
-        //     }
-        //     CryptoAssumption::IntCtxtSenc {
-        //         enc,
-        //         dec,
-        //         verify,
-        //         fail,
-        //     } => int_ctxt::generate(assertions, declarations, ctx, enc, dec, verify, fail),
-        // }
-        todo!()
+        match self {
+            // CryptoAssumption::EufCmaMac { mac, verify } => {
+            //     euf_cma_mac::generate(assertions, declarations, ctx, mac, verify)
+            // }
+            CryptoAssumption::Nonce => nonce::generate(assertions, declarations, ctx),
+            // CryptoAssumption::EufCmaSign { sign, verify, pk } => {
+            //     euf_cma_sign::generate(assertions, declarations, ctx, sign, verify, pk)
+            // }
+            // CryptoAssumption::IntCtxtSenc {
+            //     enc,
+            //     dec,
+            //     verify,
+            //     fail,
+            // } => int_ctxt::generate(assertions, declarations, ctx, enc, dec, verify, fail),
+            _ => todo!()
+        }
     }
 }
 

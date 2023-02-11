@@ -1,3 +1,5 @@
+use std::default;
+
 use crate::{
     formula::builtins::{
         functions::{EVAL_MSG, NONCE_MSG},
@@ -7,7 +9,7 @@ use crate::{
         macros::{seq, sforall, sfun, simplies},
         smt::Smt,
         writer::{
-            subterm::{default_f, generate_subterm},
+            subterm::{generate_subterm, DefaultBuilder, SubtermFlags},
             Ctx,
         },
     },
@@ -30,7 +32,8 @@ pub(crate) fn generate(assertions: &mut Vec<Smt>, declarations: &mut Vec<Smt>, c
         "sbt$nonce_main",
         &nonce_sort,
         vec![],
-        default_f(),
+        Default::default(),
+        DefaultBuilder(),
     );
 
     assertions.push(Smt::Assert(sforall!(n!0:nonce_sort, m!1:msg;{
