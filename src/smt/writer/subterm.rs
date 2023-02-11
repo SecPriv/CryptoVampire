@@ -332,7 +332,7 @@ fn user_spliting_inputs<'a, F>(
     let flt = |s1: &SmtFormula, s2: &SmtFormula| sfun!(lt; s1.clone(), s2.clone());
     let flt_eq = |s1: &SmtFormula, s2: &SmtFormula| sor!(seq!(s1.clone(), s2.clone()), flt(s1, s2));
 
-    let mut encountered_cells = Vec::new();
+    let mut calls_to_cells = Vec::new();
     ors.reserve(ctx.pbl.steps.len());
     for s in ctx.pbl.steps.values() {
         let s_vars = s.occuring_variables().clone();
@@ -345,13 +345,11 @@ fn user_spliting_inputs<'a, F>(
                 .map(|v| svar!(v))
                 .collect()
         );
-        // let order = sfun!(lt; step_f, tp.clone());
+        // step < tp
         let order = flt(&step_f, tp);
-        // let content = preprocess(subt, &m, s, &ctx.pbl);
 
         let content = {
             let mut todo = todo.borrow_mut();
-            // let mut ors = Vec::new();
             todo.clear();
 
             todo.push(s.message());
@@ -362,20 +360,21 @@ fn user_spliting_inputs<'a, F>(
                     if let RichFormula::Fun(fun, args) = f;
                     if fun.is_cell();
                     then {
-                        encountered_cells.push((s, fun, args))
+                        calls_to_cells.push((s, fun, args))
                     }
                 };
                 preprocess(subt, m, s, p, f)
             })
             .collect_vec()
-        };
+        }; // todo's RefMut dies here
         let r = SmtFormula::Exists(
             s_vars,
             Box::new(SmtFormula::And(vec![order, SmtFormula::Or(content)])),
         );
         ors.push(r);
     }
-    let encountered_cells_cells = encountered_cells
+
+    let cells = calls_to_cells
         .iter()
         .map(|(_, fun, _)| {
             ctx.pbl
@@ -386,16 +385,8 @@ fn user_spliting_inputs<'a, F>(
         })
         .collect_vec();
 
-    ors.reserve(
-        encountered_cells_cells
-            .iter()
-            .map(|c| c.assignements().len())
-            .sum(),
-    );
-    for (cell, (s, fun, c_args)) in encountered_cells_cells
-        .into_iter()
-        .zip(encountered_cells.into_iter())
-    {
+    ors.reserve(cells.iter().map(|c| c.assignements().len()).sum());
+    for (cell, (s, fun, c_args)) in cells.into_iter().zip(calls_to_cells.into_iter()) {
         // c_args with its variables names moved away
         let c_args = c_args
             .iter()
@@ -445,7 +436,7 @@ fn user_spliting_inputs<'a, F>(
                     preprocess(subt, m, s, p, f)
                 })
                 .collect_vec()
-            };
+            }; // todo's RefMut dies here
 
             // step <= s
             let order_step = {
@@ -456,10 +447,6 @@ fn user_spliting_inputs<'a, F>(
                     .map(SmtFormula::from)
                     .collect();
                 let step_smt = sfun!(step.function(), vars);
-                // sor!(
-                //     sfun!(lt; step.clone(), s_smt.clone()),
-                //     seq!(s_smt.clone(), step.clone())
-                // )
                 flt_eq(&step_smt, &s_smt)
             };
             // the content itself
@@ -476,108 +463,6 @@ fn user_spliting_inputs<'a, F>(
             ors.push(r)
         }
     }
-
-    /*     ors.extend(
-        encountered_cells
-            .into_iter()
-            .flat_map(|(s, fun, c_args)| {
-                let cell = ctx
-                    .pbl
-                    .memory_cells
-                    .values()
-                    .find(|c| c.function() == fun)
-                    .unwrap();
-                // c_args with its variables names moved away
-                let c_args = c_args
-                    .iter()
-                    .map(|f| f.translate_vars(max_var))
-                    .collect_vec();
-                // variables of the arguments of s
-                let vars_s = s
-                    .free_variables()
-                    .iter()
-                    .cloned()
-                    .map(|v| Variable {
-                        id: v.id + max_var,
-                        ..v
-                    })
-                    .collect_vec();
-                // s as an SmtFormula
-                let s_smt = {
-                    let smt_vars_s = vars_s.iter().cloned().map(|v| svar!(v)).collect();
-                    sfun!(s.function(), smt_vars_s)
-                };
-                // s < tp
-                // let order_s = sfun!(lt; s_smt.clone(), tp.clone());
-                let order_s = flt(&s_smt, tp);
-                cell.assignements()
-                    .iter()
-                    .map(|a| (cell, &c_args, &vars_s, s, &s_smt, &order_s, a))
-            })
-            .map(
-                |(
-                    cell,
-                    c_args,
-                    vars_s,
-                    s,
-                    s_smt,
-                    order_s,
-                    Assignement {
-                        step,
-                        args,
-                        content,
-                    },
-                )| {
-                    // should never fail, but we never know
-                    assert_eq!(args.len() + 1, c_args.len());
-
-                    // how the arguments map to one another
-                    let args_eq = SmtFormula::And(
-                        args.iter()
-                            .zip(c_args.iter())
-                            .map(|(a, b)| (SmtFormula::from(a), SmtFormula::from(b)))
-                            .map(|(a, b)| seq!(a, b))
-                            .collect(),
-                    );
-
-                    let inner_ors = {
-                        todo.clear();
-                        todo.push(content);
-                        new_formula_iter_vec(todo, &ctx.pbl, IteratorFlags::QUANTIFIER, |f, p| {
-                            preprocess(subt, m, s, p, f)
-                        })
-                        .collect_vec()
-                    };
-
-                    // step <= s
-                    let order_step = {
-                        let vars = step
-                            .free_variables()
-                            .iter()
-                            .cloned()
-                            .map(SmtFormula::from)
-                            .collect();
-                        let step_smt = sfun!(step.function(), vars);
-                        // sor!(
-                        //     sfun!(lt; step.clone(), s_smt.clone()),
-                        //     seq!(s_smt.clone(), step.clone())
-                        // )
-                        flt_eq(&step_smt, &s_smt)
-                    };
-                    // the content itself
-                    let content = sand!(order_s, order_step, args_eq, SmtFormula::Or(inner_ors));
-
-                    SmtFormula::Exists(
-                        vars_s
-                            .iter()
-                            .cloned()
-                            .chain(s.occuring_variables().iter().cloned())
-                            .collect(),
-                        Box::new(content),
-                    )
-                },
-            ),
-    ); */
 }
 
 pub fn default_f<'a, 'b, F>(
@@ -665,19 +550,12 @@ fn generate_special_subterm<F>(
         assertions.push(Smt::Assert(
             sforall!(m!1:sort, m2!2:s; {snot!(ctx.env(); subt.f(m, m2, s))}),
         ));
-        // assertions.push(Smt::Assert(
-        //     sforall!(m!1:sort, m2!2:s; {snot!(ctx.env(); subt.secondary(m, m2, s))}),
-        // ));
     }
     if sort.is_term_algebra() {
         assertions.push(Smt::Assert(
             sforall!(m!1:sort; {subt.f(m.clone(), m, sort)}),
         ));
-        // assertions.push(Smt::Assert(
-        //     sforall!(m!1:sort; {subt.secondary(m.clone(), m, sort)}),
-        // ));
     } else {
-        /* for s in subt.iter() */
         {
             let s = &subt;
             assertions.push(Smt::Assert(sforall!(m!1:sort, m2!2:sort; {
@@ -721,17 +599,7 @@ fn generate_base_subterm<F>(
                 bool.clone(),
                 FFlags::empty(),
             );
-            // let secondary = Function::new_with_flag(
-            //     &format!("s$subterm_{}_{}_bis", name, s.name()),
-            //     vec![sort.clone(), s.clone()],
-            //     bool.clone(),
-            //     FFlags::empty(),
-            // );
-
             assert!(ctx.env_mut().add_f(main.clone()));
-            // if !ctx.env().preprocessed_input() {
-            //     assert!(ctx.env_mut().add_f(secondary.clone()));
-            // }
 
             main
         })
@@ -739,22 +607,9 @@ fn generate_base_subterm<F>(
 
     // declare all functions
     {
-        declarations.extend(
-            subt_functions
-                .iter()
-                // .chain(secondary.iter())
-                .cloned()
-                .map(|f| Smt::DeclareFun(f)),
-        )
+        declarations.extend(subt_functions.iter().cloned().map(|f| Smt::DeclareFun(f)))
     }
 
-    // let subterm = Subterm::Base {
-    //     sort: sort.clone(),
-    //     sorts_order: sorts,
-    //     main: main,
-    //     // secondary: secondary,
-    //     name: name.to_owned(),
-    // };
     let subterm = Subterm {
         sort: sort.clone(),
         name: name.to_owned(),
@@ -826,27 +681,6 @@ fn generate_base_subterm<F>(
             }
         });
         assertions.extend(iter);
-
-        // {
-        //     let msg = MSG(ctx.env());
-        //     let step = STEP(ctx.env());
-
-        //     let f = if sort == msg {
-        //         sforall!(x!1:sort, s!2:step; {
-        //             simplies!(ctx.env();
-        //                 subterm.secondary(x.clone(), sfun!(input; s.clone()), msg),
-        //                 seq!(x.clone(), sfun!(input; s))
-        //         )
-        //         })
-        //     } else {
-        //         sforall!(x!1:sort, s!2:step; {
-        //             snot!(ctx.env();
-        //                 subterm.secondary(x.clone(), sfun!(input; s.clone()), msg)
-        //         )
-        //         })
-        //     };
-        //     assertions.push(Smt::Assert(f));
-        // }
     }
 
     if let InnerSubterm::Base { sorts_order, .. } = &subterm.inner {
@@ -993,121 +827,3 @@ where
         fun
     }
 }
-
-/* fn spliting(assertions: &mut Vec<Smt>, declarations: &mut Vec<Smt>, ctx: &mut Ctx, subt: &Subterm) {
-    let input = INPUT(ctx.env());
-    let lt = ctx.env().get_f(LT_NAME).unwrap();
-    let msg = MSG(ctx.env());
-    let cond = CONDITION(ctx.env());
-
-    // bigger than any step variable
-    let mut max_var = ctx
-        .pbl
-        .steps
-        .values()
-        .map(|s| s.vairable_range().end)
-        .max()
-        .unwrap_or(0);
-
-    // make ununsed variables
-    let sorts = vec![subt.sort().clone(), STEP(ctx.env()).clone()];
-    let vars = sorts_to_variables(max_var, sorts.iter());
-    let m = SmtFormula::from(&vars[0]);
-    let tp = SmtFormula::from(&vars[1]);
-    max_var += vars.len();
-
-    let n_cells = ctx.pbl.memory_cells.len();
-    let n_steps = ctx.pbl.memory_cells.len();
-
-    declarations.reserve(n_steps * (1 + n_cells));
-    assertions.reserve((n_steps + 1) * (1 + n_cells));
-
-    for cell in ctx.pbl.memory_cells.values() {
-        /*
-        m subt ci(i1,...,in,T) => m = ci(...) \/ sp_ci_s(m,T, i1, ...,in)
-        sp_ci_sj(m,T,i1,...,in) => exists j1,...,jk:
-            s(j1,...,jk) <= T
-                /\ i1 = f1(j1,...,jk) /\ ... /\ in = fn(j1,...,jk)
-                /\ m subt cnt(ci(...))
-        */
-
-        let i_vec = sorts_to_variables(max_var, cell.args().iter());
-        let cell_call = sfun!(
-            cell.function().clone(),
-            i_vec
-                .iter()
-                .map(SmtFormula::from)
-                .chain([tp.clone()].into_iter())
-                .collect()
-        );
-
-        let mut conclusions = cell
-            .assignements()
-            .iter()
-            .map(
-                |Assignement {
-                     step,
-                     args,
-                     content,
-                 }| {
-                    let sp = Function::new_with_flag(
-                        name: &format!("sp${}${}${}", cell.name(), subt.as_main().name(), step.name())
-                    )
-                 },
-            )
-            .collect();
-    }
-
-    {
-        // input
-        let mut conclusions = Vec::with_capacity(n_steps);
-
-        for s in ctx.pbl.steps.values() {
-            let sp = Function::new_with_flag(
-                &format!("sp${}${}", subt.as_main().name(), s.name()),
-                sorts.clone(),
-                BOOL(ctx.env()).clone(),
-                FFlags::SPLITING,
-            );
-            let sp_const = sfun!(sp, vars.iter().map_into().collect());
-
-            declarations.push(Smt::DeclareFun(sp.clone()));
-            conclusions.push(sp_const.clone());
-
-            // variables 0 was `in`
-            let step_vars = sorts_to_variables(1, s.parameters());
-
-            assertions.push(Smt::Assert(sforall!(
-                vars.clone(),
-                simplies!(ctx.env();
-                    sp_const.clone(),
-                    sexists!(
-                        step_vars.clone(),
-                        sand!(
-                            sfun!(lt; sfun!(
-                                s.function(),
-                                step_vars.iter().map_into().collect()),
-                            tp.clone()),
-                            sor!(
-                                subt.secondary(m.clone(), s.message().into(), msg),
-                                subt.secondary(m.clone(), s.condition().into(), cond)
-                            )
-                        )
-                    )
-                )
-            )))
-        }
-
-        if subt.sort() == msg {
-            conclusions.push(seq!(m.clone(), sfun!(input; tp.clone())));
-        }
-
-        assertions.push(Smt::Assert(sforall!(
-            vars.clone(),
-            simplies!(ctx.env();
-                subt.main(m.clone(), sfun!(input; tp.clone()), msg),
-                SmtFormula::Or(conclusions)
-            )
-        )))
-    }
-} */

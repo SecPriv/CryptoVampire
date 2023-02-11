@@ -63,28 +63,6 @@ impl RichFormula {
     pub fn get_free_vars(&self) -> Vec<&Variable> {
         let mut free_vars = Vec::new();
         let mut bound_vars = Vec::new();
-        // let mut bounded = Vec::new();
-
-        // fn aux<'a>(bounded: &mut Vec<&'a Variable>, r: &mut Vec<&'a Variable>, t: &'a RichFormula) {
-        //     match t {
-        //         RichFormula::Fun(_, args) => args.iter().for_each(|f| aux(bounded, r, f)),
-        //         RichFormula::Var(v) if !bounded.contains(&v) => {
-        //             dbg!(&v);
-        //             dbg!(&bounded);
-        //             r.push(v)},
-        //         RichFormula::Quantifier(q, args) => {
-        //             let vars = q.get_variables();
-        //             let n = vars.len();
-        //             debug_assert!(!vars.iter().any(|v| bounded.contains(&v)));
-        //             bounded.extend(vars.into_iter());
-        //             args.iter().for_each(|f| aux(bounded, r, f));
-        //             bounded.truncate(bounded.len() - n);
-        //         }
-        //         _ => {}
-        //     }
-        // }
-        // aux(&mut bounded, &mut r, self);
-        // r
 
         for f in self.iter() {
             match f {
@@ -167,21 +145,6 @@ impl RichFormula {
         })
     }
 
-    // pub fn apply(self, var: &Variable, f: &Self) -> Self {
-    //     match self {
-    //         RichFormula::Var(v) if &v == var => f.clone(),
-    //         RichFormula::Fun(fun, args) => RichFormula::Fun(
-    //             fun,
-    //             args.into_iter().map(|old_f| old_f.apply(var, f)).collect(),
-    //         ),
-    //         RichFormula::Quantifier(q, args) => RichFormula::Quantifier(
-    //             q,
-    //             args.into_iter().map(|old_f| old_f.apply(var, f)).collect(),
-    //         ),
-    //         _ => self,
-    //     }
-    // }
-
     pub fn iter(&self) -> impl Iterator<Item = &RichFormula> {
         let mut pile = vec![self];
         std::iter::from_fn(move || {
@@ -196,31 +159,12 @@ impl RichFormula {
                 None
             }
         })
-        // FormulaIterator::new(vec![self], pbl, IteratorFlags::default(), Self::default_f)
     }
 
     pub fn iter_with_quantifier<'a>(
         &'a self,
         pbl: &'a Problem,
     ) -> impl Iterator<Item = &'a RichFormula> {
-        // let mut pile = vec![self];
-        // std::iter::from_fn(move || {
-        //     if let Some(f) = pile.pop() {
-        //         match f {
-        //             RichFormula::Var(_) => {}
-        //             RichFormula::Fun(fun, _) if fun.is_from_quantifer() => {
-        //                 let q = pbl.quantifiers.iter().find(|q| &q.function == fun).unwrap();
-        //                 pile.extend(q.iter_content())
-        //             }
-        //             RichFormula::Fun(_, args) => pile.extend(args.iter()),
-        //             RichFormula::Quantifier(_, args) => pile.extend(args.iter()),
-        //         }
-        //         Some(f)
-        //     } else {
-        //         None
-        //     }
-        // })
-
         FormulaIterator::new(
             StackBox::new(vec![self]),
             pbl,
