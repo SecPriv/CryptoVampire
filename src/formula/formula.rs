@@ -2,10 +2,13 @@ use std::collections::HashSet;
 use std::fmt;
 use std::ops::Deref;
 
-use crate::problem::problem::Problem;
+use itertools::Itertools;
+
+use crate::{problem::problem::Problem, smt::writer::subterm::default_f, utils::utils::StackBox};
 
 use super::{
     env::Environement,
+    formula_iterator::{FormulaIterator, IteratorFlags},
     function::Function,
     quantifier::Quantifier,
     sort::Sort,
@@ -107,6 +110,7 @@ impl RichFormula {
         free_vars
     }
 
+    /// doesn't go though all quantifiers
     pub fn get_used_variables(&'_ self) -> HashSet<&'_ Variable> {
         fn aux<'a>(data: &mut HashSet<&'a Variable>, f: &'a RichFormula) {
             match f {
@@ -124,6 +128,43 @@ impl RichFormula {
         let mut data = HashSet::new();
         aux(&mut data, self);
         data
+    }
+
+    pub fn used_variables_iter<'a>(
+        &'a self,
+        pbl: &'a Problem,
+    ) -> impl Iterator<Item = &'a Variable> + 'a {
+        FormulaIterator::new(
+            StackBox::new(vec![self]),
+            pbl,
+            IteratorFlags::QUANTIFIER,
+            |f, _| {
+                let (o, r) = match f {
+                    RichFormula::Var(v) => (Some(v), None),
+                    RichFormula::Fun(_, args) => (None, Some(args.iter())),
+                    _ => (None, None),
+                };
+                (o, r.into_iter().flatten())
+            },
+        )
+    }
+
+    pub fn used_variables_iter_with_pile<'a, 'b>(
+        &'a self,
+        pbl: &'a Problem,
+        pile: &'b mut Vec<&'a RichFormula>,
+    ) -> impl Iterator<Item = &'a Variable> + 'b {
+        pile.clear();
+        pile.push(self);
+
+        FormulaIterator::new(pile, pbl, IteratorFlags::QUANTIFIER, |f, _| {
+            let (o, r) = match f {
+                RichFormula::Var(v) => (Some(v), None),
+                RichFormula::Fun(_, args) => (None, Some(args.iter())),
+                _ => (None, None),
+            };
+            (o, r.into_iter().flatten())
+        })
     }
 
     // pub fn apply(self, var: &Variable, f: &Self) -> Self {
@@ -155,88 +196,75 @@ impl RichFormula {
                 None
             }
         })
+        // FormulaIterator::new(vec![self], pbl, IteratorFlags::default(), Self::default_f)
     }
 
     pub fn iter_with_quantifier<'a>(
         &'a self,
         pbl: &'a Problem,
     ) -> impl Iterator<Item = &'a RichFormula> {
-        let mut pile = vec![self];
-        std::iter::from_fn(move || {
-            if let Some(f) = pile.pop() {
-                match f {
-                    RichFormula::Var(_) => {}
-                    RichFormula::Fun(fun, _) if fun.is_from_quantifer() => {
-                        let q = pbl.quantifiers.iter().find(|q| &q.function == fun).unwrap();
-                        pile.extend(q.iter_content())
-                    }
-                    RichFormula::Fun(_, args) => pile.extend(args.iter()),
-                    RichFormula::Quantifier(_, args) => pile.extend(args.iter()),
-                }
-                Some(f)
-            } else {
-                None
+        // let mut pile = vec![self];
+        // std::iter::from_fn(move || {
+        //     if let Some(f) = pile.pop() {
+        //         match f {
+        //             RichFormula::Var(_) => {}
+        //             RichFormula::Fun(fun, _) if fun.is_from_quantifer() => {
+        //                 let q = pbl.quantifiers.iter().find(|q| &q.function == fun).unwrap();
+        //                 pile.extend(q.iter_content())
+        //             }
+        //             RichFormula::Fun(_, args) => pile.extend(args.iter()),
+        //             RichFormula::Quantifier(_, args) => pile.extend(args.iter()),
+        //         }
+        //         Some(f)
+        //     } else {
+        //         None
+        //     }
+        // })
+
+        FormulaIterator::new(
+            StackBox::new(vec![self]),
+            pbl,
+            IteratorFlags::QUANTIFIER,
+            Self::default_f,
+        )
+    }
+
+    fn default_f<'a>(
+        f: &'a RichFormula,
+        _: &'a Problem,
+    ) -> (
+        Option<&'a RichFormula>,
+        impl Iterator<Item = &'a RichFormula>,
+    ) {
+        (
+            Some(f),
+            match f {
+                RichFormula::Fun(_, args) => Some(args.iter()),
+                _ => None,
             }
-        })
+            .into_iter()
+            .flatten(),
+        )
     }
 
     pub fn custom_iter_w_quantifier<'a, F, T>(
         &'a self,
         pbl: &'a Problem,
-        f: F,
+        mut f: F,
     ) -> impl Iterator<Item = T> + 'a
     where
         F: FnMut(&'a RichFormula, &'a Problem) -> (Option<T>, Vec<&'a RichFormula>) + 'a,
         T: 'a,
     {
-        struct Iter<'a, F, T>
-        where
-            F: FnMut(&'a RichFormula, &'a Problem) -> (Option<T>, Vec<&'a RichFormula>),
-        {
-            pile: Vec<&'a RichFormula>,
-            pbl: &'a Problem,
-            f: F,
-        }
-        impl<'a, F, T> Iterator for Iter<'a, F, T>
-        where
-            F: FnMut(&'a RichFormula, &'a Problem) -> (Option<T>, Vec<&'a RichFormula>),
-        {
-            type Item = T;
-
-            fn next(&mut self) -> Option<T> {
-                match self.pile.pop() {
-                    None => None,
-                    Some(formula) => {
-                        match formula {
-                            RichFormula::Fun(fun, _) if fun.is_from_quantifer() => {
-                                let q = self
-                                    .pbl
-                                    .quantifiers
-                                    .iter()
-                                    .find(|q| &q.function == fun)
-                                    .unwrap();
-                                self.pile.extend(q.iter_content())
-                            }
-                            RichFormula::Quantifier(_, args) => self.pile.extend(args.iter()),
-                            _ => {}
-                        }
-                        let (res, nexts) = (self.f)(formula, self.pbl);
-                        self.pile.extend(nexts.into_iter());
-                        if let Some(_) = res {
-                            res
-                        } else {
-                            self.next()
-                        }
-                    }
-                }
-            }
-        }
-
-        Iter {
-            f,
+        FormulaIterator::new(
+            StackBox::new(vec![self]),
             pbl,
-            pile: vec![self],
-        }
+            IteratorFlags::QUANTIFIER,
+            move |a, b| {
+                let (o, v) = f(a, b);
+                (o, v.into_iter())
+            },
+        )
     }
 
     pub fn map<F>(self, f: &F) -> Self

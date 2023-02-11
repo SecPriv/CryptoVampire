@@ -23,7 +23,11 @@ use crate::{
     utils::utils::replace_if_eq,
 };
 
-use super::{crypto_assumptions::CryptoAssumption, step::Step, cell::{MemoryCell, PreMemoryCell}};
+use super::{
+    cell::{Assignement, MemoryCell, PreMemoryCell},
+    crypto_assumptions::CryptoAssumption,
+    step::Step,
+};
 
 #[derive(Debug)]
 pub struct Problem {
@@ -281,6 +285,30 @@ impl Problem {
         self.steps
             .values()
             .flat_map(|s| [(s, s.message()), (s, s.condition())].into_iter())
+    }
+
+    pub fn max_var(&self) -> usize {
+        let mut pile = Vec::new();
+
+        let mut max = 0;
+        for c in self.memory_cells.values() {
+            for Assignement { content, .. } in c.assignements() {
+                for Variable { id, .. } in content.used_variables_iter_with_pile(self, &mut pile) {
+                    if *id > max {
+                        max = *id;
+                    }
+                }
+            }
+        }
+        for s in self.steps.values() {
+            for Variable { id, .. } in s.occuring_variables() {
+                if *id > max {
+                    max = *id
+                }
+            }
+        }
+
+        max
     }
 }
 

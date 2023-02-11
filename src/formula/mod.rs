@@ -8,4 +8,5 @@ pub mod macros;
 pub mod quantifier;
 pub mod sort;
 pub mod unifier;
+pub(crate) mod formula_iterator;
 // pub mod formula_builder;

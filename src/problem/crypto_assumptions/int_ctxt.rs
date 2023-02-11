@@ -501,8 +501,8 @@ pub(crate) fn generate(
                 let r = sfun!(sk_r; c.clone(), k.clone());
                 let nc = sfun!(enc; m.clone(), sfun!(nonce; r.clone()), sfun!(nonce; k.clone()));
                 sor!(
-                    subt_sk.main(k.clone(), c.clone(), &msg),
-                    subt_main.main(nc, c.clone(), &msg) //,
+                    subt_sk.f(k.clone(), c.clone(), &msg),
+                    subt_main.f(nc, c.clone(), &msg) //,
                     // sfun!(sp; k.clone(), c.clone())
                 )
             }
@@ -518,8 +518,8 @@ pub(crate) fn generate(
                     sexists!(m!4:msg, r!5:nonce_sort; {
                         let nc = sfun!(enc; m.clone(),  sfun!(nonce; r.clone()), sfun!(nonce; k.clone()));
                         sor!(
-                            subt_sk.main(k.clone(), c.clone(), &msg),
-                            subt_main.main(nc, c.clone(), &msg) // ,
+                            subt_sk.f(k.clone(), c.clone(), &msg),
+                            subt_main.f(nc, c.clone(), &msg) // ,
                             // sfun!(sp; k.clone(), c.clone())
                         )
                     })

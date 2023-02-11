@@ -141,10 +141,10 @@ pub(crate) fn generate(
                     let sig = sfun!(sign; u.clone(), sfun!(nonce; sk.clone()));
                     sand!(
                         sor!(
-                            subt_main.main(sig.clone(), s.clone(), &msg),
-                            subt_main.main(sig.clone(), m.clone(), &msg),
-                            subt_sec.main(sk.clone(), m.clone(), &msg),
-                            subt_sec.main(sk.clone(), s.clone(), &msg)
+                            subt_main.f(sig.clone(), s.clone(), &msg),
+                            subt_main.f(sig.clone(), m.clone(), &msg),
+                            subt_sec.f(sk.clone(), m.clone(), &msg),
+                            subt_sec.f(sk.clone(), s.clone(), &msg)
                         ),
                         seq!(sfun!(eval_msg; m.clone()), sfun!(eval_msg; u.clone()))
                     )
@@ -172,10 +172,10 @@ pub(crate) fn generate(
                     let sig = sfun!(sign; u.clone(), sfun!(nonce; sk.clone()));
                     sand!(
                         sor!(
-                            subt_main.main(sig.clone(), s.clone(), &msg),
-                            subt_main.main(sig.clone(), m.clone(), &msg),
-                            subt_sec.main(sk.clone(), m.clone(), &msg),
-                            subt_sec.main(sk.clone(), s.clone(), &msg)
+                            subt_main.f(sig.clone(), s.clone(), &msg),
+                            subt_main.f(sig.clone(), m.clone(), &msg),
+                            subt_sec.f(sk.clone(), m.clone(), &msg),
+                            subt_sec.f(sk.clone(), s.clone(), &msg)
                         ),
                         seq!(sfun!(eval_msg; sig.clone()), sfun!(eval_msg; s.clone()))
                     )})

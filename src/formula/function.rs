@@ -282,6 +282,10 @@ impl Function {
         self.contain_flag(FFlags::FROM_QUANTIFIER)
     }
 
+    pub fn is_cell(&self) -> bool {
+        self.contain_flag(FFlags::CELL)
+    }
+
     pub fn contain_sort(&self, s: &Sort) -> bool {
         self.sort_iter().any(|fs| fs.eq(s))
     }

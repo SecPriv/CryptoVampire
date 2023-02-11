@@ -18,7 +18,11 @@ pub struct PreMemoryCell(Box<InnerMemoryCell>);
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct InnerMemoryCell {
     name: String,
+    /// the arguments of the cell
     args: Vec<Sort>,
+    /// the function used to refer to it
+    /// 
+    /// NB: this function takes one more argument of sort step
     function: Function,
     assignements: Vec<Assignement>
 }
@@ -27,6 +31,9 @@ struct InnerMemoryCell {
 pub struct Assignement {
     pub step: Step,
     // pub vars: Vec<Variable>, // those are the step's free variables
+    /// all the relevant arguments, this means it doesn't have the last `step` argument
+    /// 
+    /// `args.len() == InnerMemoryCell::args.len()`
     pub args: Vec<RichFormula>,
     pub content: RichFormula
 }
@@ -56,6 +63,7 @@ impl PreMemoryCell {
     }
 
     pub fn add_asignement(&mut self, a: Assignement) {
+        assert_eq!(a.args.len(), self.0.args.len(), "wrong nnumber of arguments");
         self.0.assignements.push(a)
     }
 

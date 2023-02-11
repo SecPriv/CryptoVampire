@@ -36,7 +36,7 @@ pub(crate) fn generate(assertions: &mut Vec<Smt>, declarations: &mut Vec<Smt>, c
     assertions.push(Smt::Assert(sforall!(n!0:nonce_sort, m!1:msg;{
         simplies!(ctx.env();
             seq!(sfun!(eval_msg; sfun!(nonce; n.clone())), sfun!(eval_msg; m.clone())),
-            subt_main.main(n.clone(), m.clone(), &msg)
+            subt_main.f(n.clone(), m.clone(), &msg)
         )
     })))
 }

@@ -56,9 +56,10 @@ pub struct Args {
     #[arg(long, short)]
     pub skolemnise: bool,
 
+    // this is now activated by default
     /// preprocess subterm of input
-    #[arg(long, short)]
-    pub input_subterm_preprocessed: bool,
+    // #[arg(long, short)]
+    // pub input_subterm_preprocessed: bool,
 
     /// do as much preprocessing as possible
     #[arg(long, short)]
