@@ -1,6 +1,6 @@
 use bitflags::bitflags;
 use core::fmt::Debug;
-use std::{fmt::Display, rc::Rc, cmp::Ordering};
+use std::{fmt::Display, rc::Rc, cmp::Ordering, hash::Hash};
 
 bitflags! {
     #[derive(Default )]
@@ -11,14 +11,17 @@ bitflags! {
     }
 }
 
-#[derive(Hash)]
-pub enum Sort {
-    BuiltIn(&'static InnerSort),
-    Dynamic(Rc<InnerSort>),
+pub struct Sort(ISort);
+
+enum ISort  {
+    BuiltIn(&'static IISort),
+    Dynamic(Rc<IISort>),
 }
 
+
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct InnerSort {
+struct IISort {
     name: String,
     flags: SFlags,
 }
@@ -62,9 +65,9 @@ impl PartialOrd for Sort {
 impl Clone for Sort {
     fn clone(&self) -> Self {
         // Self(Rc::clone(&self.0))
-        match self {
-            Sort::BuiltIn(s) => Sort::BuiltIn(s),
-            Sort::Dynamic(s) => Sort::Dynamic(Rc::clone(s)),
+        match &self.0 {
+            ISort::BuiltIn(s) => Sort(ISort::BuiltIn(s)),
+            ISort::Dynamic(s) => Sort(ISort::Dynamic(Rc::clone(s))),
         }
     }
 }
@@ -81,18 +84,21 @@ impl Display for Sort {
     }
 }
 
+impl Hash for Sort {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.as_ptr_usize().hash(state);
+    }
+}
+
 impl Sort {
     pub fn new(str: &str) -> Self {
-        Sort::Dynamic(Rc::new(InnerSort {
-            name: str.to_owned(),
-            flags: SFlags::empty(),
-        }))
+        Self::new_with_flag(str, Default::default())
     }
     pub fn new_with_flag(str: &str, flags: SFlags) -> Self {
-        Sort::Dynamic(Rc::new(InnerSort {
+        Sort(ISort::Dynamic(Rc::new(IISort {
             name: str.to_owned(),
             flags,
-        }))
+        })))
     }
 
     pub fn name(&self) -> &str {
@@ -112,15 +118,15 @@ impl Sort {
     }
 
     pub fn as_ptr_usize(&self) -> usize {
-        self.as_ref() as *const InnerSort as usize
+        self.as_ref() as *const IISort as usize
     }
 }
 
-impl AsRef<InnerSort> for Sort {
-    fn as_ref(&self) -> &InnerSort {
-        match self {
-            Sort::BuiltIn(s) => s,
-            Sort::Dynamic(s) => s.as_ref(),
+impl AsRef<IISort> for Sort {
+    fn as_ref(&self) -> &IISort {
+        match self.0 {
+            ISort::BuiltIn(s) => s,
+            ISort::Dynamic(s) => s.as_ref(),
         }
     }
 }
