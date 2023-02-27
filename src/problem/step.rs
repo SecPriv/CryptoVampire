@@ -9,6 +9,7 @@ use itertools::Itertools;
 
 use crate::formula::{
     formula::{RichFormula, Variable},
+    formula_user::FormulaUser,
     function::Function,
     sort::Sort,
 };
@@ -145,6 +146,20 @@ impl Step {
 
     pub fn arity(&self) -> usize {
         self.0.free_variables.len()
+    }
+
+    /// return `self` as a formula of type `U` using the variables of [free_variables]
+    pub fn as_formula<T, U>(&self, ctx: &T) -> U
+    where
+        T: FormulaUser<U>,
+    {
+        ctx.funf(
+            self.function().clone(),
+            self.free_variables()
+                .into_iter()
+                .cloned()
+                .map(|v| ctx.varf(v)),
+        )
     }
 }
 

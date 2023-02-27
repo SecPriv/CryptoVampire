@@ -14,7 +14,7 @@ use crate::{
         },
         env::Environement,
         function::Function,
-        sort::Sort,
+        sort::Sort, formula_user::HasSortcut,
     },
     problem::problem::Problem,
     smt::{
@@ -42,6 +42,12 @@ impl Ctx {
     }
     pub(crate) fn env_mut(&mut self) -> &mut Environement {
         &mut self.pbl.env
+    }
+}
+
+impl HasSortcut for Ctx {
+    fn get_function_shortcut(&self) -> &crate::formula::formula_user::FunctionSortcuter {
+        self.env().get_function_shortcut()
     }
 }
 

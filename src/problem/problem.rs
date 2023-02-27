@@ -18,7 +18,7 @@ use crate::{
         function::{FFlags, Function},
         macros::fun,
         quantifier::Quantifier,
-        sort::Sort,
+        sort::Sort, formula_user::{HasSortcut, FunctionSortcuter},
     },
     utils::utils::replace_if_eq,
 };
@@ -750,4 +750,10 @@ fn make_quantifier(
             .map(|v| RichFormula::Var(Variable::clone(v)))
             .collect(),
     )
+}
+
+impl HasSortcut for Problem {
+    fn get_function_shortcut(&self) -> &FunctionSortcuter {
+        self.env.get_function_shortcut()
+    }
 }

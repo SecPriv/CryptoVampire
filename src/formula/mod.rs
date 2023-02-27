@@ -10,3 +10,4 @@ pub mod sort;
 pub mod unifier;
 pub(crate) mod formula_iterator;
 // pub mod formula_builder;
+pub mod formula_user;

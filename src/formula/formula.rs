@@ -4,7 +4,7 @@ use std::ops::Deref;
 
 use itertools::Itertools;
 
-use crate::{problem::problem::Problem, smt::writer::subterm::default_f, utils::utils::StackBox};
+use crate::{problem::problem::Problem,  utils::utils::StackBox, smt::smt::SmtFormula};
 
 use super::{
     env::Environement,
@@ -261,6 +261,10 @@ impl RichFormula {
 
     pub fn translate_vars(&self, i: usize) -> Self {
         self.apply_permutation2(&Translate::new(i))
+    }
+
+    pub fn smt(&self) -> SmtFormula {
+        self.into()
     }
 }
 

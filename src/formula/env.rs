@@ -3,10 +3,10 @@ use std::{collections::HashMap, rc::Rc};
 use itertools::Itertools;
 
 use super::{
-    builtins::init::init_env,
+    builtins::{init::init_env, functions::{EQUALITY, AND, OR, IMPLIES, TRUE, FALSE, NOT}},
     cli::Args,
     function::{FFlags, Function},
-    sort::Sort,
+    sort::Sort, formula_user::{FunctionSortcuter, HasSortcut},
 };
 
 #[derive(Debug, Clone)]
@@ -15,6 +15,7 @@ pub struct Environement {
     sorts: HashMap<String, Sort>,
     skolems: usize,
     args: Rc<Args>,
+    functions_shortcuter: Option<FunctionSortcuter>
 }
 
 // #[derive(Debug, Clone)]
@@ -49,8 +50,18 @@ impl Environement {
             sorts: HashMap::new(),
             skolems: 0,
             args,
+            functions_shortcuter: None
         };
         init_env(&mut env, Self::get_sorts_mut);
+        env.functions_shortcuter = Some(FunctionSortcuter {
+            eq: EQUALITY(&env).clone(),
+            and: AND(&env).clone(),
+            or: OR(&env).clone(),
+            implies: IMPLIES(&env).clone(),
+            true_f: TRUE(&env).clone(),
+            false_f: FALSE(&env).clone(),
+            not: NOT(&env).clone(),
+        });
         env
     }
 
@@ -262,5 +273,11 @@ impl Environement {
 
     pub fn len_sort(&self) -> usize {
         self.sorts.len()
+    }
+}
+
+impl HasSortcut for Environement {
+    fn get_function_shortcut(&self) -> &FunctionSortcuter {
+        self.functions_shortcuter.as_ref().unwrap()
     }
 }

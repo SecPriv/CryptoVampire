@@ -4,6 +4,7 @@ use if_chain::if_chain;
 use itertools::{Either, Itertools};
 
 use crate::problem::crypto_assumptions::aux;
+use crate::smt::writer::subterm::{DefaultBuilder, SubtermFlags};
 use crate::{
     formula::{
         builtins::{
@@ -259,7 +260,8 @@ pub(crate) fn generate(
             "sbt$euf_hash_main",
             &msg,
             vec![],
-            default_f(),
+            Default::default(),
+            DefaultBuilder(),
         );
         let subt_sec = generate_subterm(
             assertions,
@@ -268,6 +270,7 @@ pub(crate) fn generate(
             "sbt$euf_hash_sec",
             &nonce_sort,
             vec![mac, verify],
+            SubtermFlags::ALWAYS_PROCESSWIDE,
             |_, m, _, _, f| match f {
                 RichFormula::Var(v) if v.sort == nonce_sort => (Some(aux(m, f)), vec![]),
                 RichFormula::Fun(fun, args) if fun == mac => {
