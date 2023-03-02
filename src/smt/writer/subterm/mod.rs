@@ -150,7 +150,7 @@ impl<B> Subterm<B> {
                         let f = Function::new_with_flag(
                             &format!("s$subterm_{}_{}", name, s.name()),
                             vec![sort.clone(), s.clone()],
-                            bool,
+                            bool.clone(),
                             FFlags::empty(),
                         );
                         assert!(ctx.env_mut().add_f(f.clone()));
@@ -228,7 +228,7 @@ where
     pub fn analyse(
         &self,
         m: &RichFormula,
-        s: &Step,
+        s: Option<&Step>,
         pbl: &'a Problem,
         f: &'a RichFormula,
     ) -> (Option<RichFormula>, Vec<&'a RichFormula>) {

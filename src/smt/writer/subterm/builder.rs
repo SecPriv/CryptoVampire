@@ -11,10 +11,10 @@ use super::Subterm;
 
 pub trait Builder<'a> {
     fn analyse(
-        self,
+        &self,
         subt: &Subterm<Self>,
         m: &RichFormula,
-        s: &Step,
+        s: Option<&Step>,
         pbl: &'a Problem,
         f: &'a RichFormula,
     ) -> (Option<RichFormula>, Vec<&'a RichFormula>)
@@ -27,16 +27,16 @@ where
     F: Fn(
         &Subterm<F>,
         &RichFormula,
-        &Step,
+        Option<&Step>,
         &'a Problem,
         &'a RichFormula,
     ) -> (Option<RichFormula>, Vec<&'a RichFormula>),
 {
     fn analyse(
-        self,
+        &self,
         subt: &Subterm<Self>,
         m: &RichFormula,
-        s: &Step,
+        s: Option<&Step>,
         pbl: &'a Problem,
         f: &'a RichFormula,
     ) -> (Option<RichFormula>, Vec<&'a RichFormula>)
@@ -50,10 +50,10 @@ where
 pub struct DefaultBuilder();
 impl<'a> Builder<'a> for DefaultBuilder {
     fn analyse(
-        self,
+        &self,
         subt: &Subterm<Self>,
         m: &RichFormula,
-        s: &Step,
+        _s: Option<&Step>,
         pbl: &'a Problem,
         f: &'a RichFormula,
     ) -> (Option<RichFormula>, Vec<&'a RichFormula>)

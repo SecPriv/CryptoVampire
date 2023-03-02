@@ -17,17 +17,16 @@ where
     iter.map(|e| e.clone())
 }
 
-
 pub struct StackBox<T>(T);
 
 impl<T> StackBox<T> {
-    pub fn new(t:T) -> Self {
+    pub fn new(t: T) -> Self {
         StackBox(t)
     }
 }
 
 impl<T> Deref for StackBox<T> {
-    type Target=T;
+    type Target = T;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -38,4 +37,9 @@ impl<T> DerefMut for StackBox<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
+}
+
+pub(crate) fn reset_vec<'a, 'b, T>(v: &'a mut Vec<*const T>) -> &'a mut Vec<&'b T> {
+    v.clear();
+    unsafe { std::mem::transmute(v) }
 }

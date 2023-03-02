@@ -18,6 +18,38 @@ pub struct FunctionSortcuter {
     false_f: Function,
     not: Function,
 }
+pub struct FunctionSortcuterBuilder {
+    pub eq: Function,
+    pub and: Function,
+    pub or: Function,
+    pub implies: Function,
+    pub true_f: Function,
+    pub false_f: Function,
+    pub not: Function,
+}
+
+impl From<FunctionSortcuterBuilder> for FunctionSortcuter {
+    fn from(f: FunctionSortcuterBuilder) -> Self {
+        let FunctionSortcuterBuilder {
+            eq,
+            and,
+            or,
+            implies,
+            true_f,
+            false_f,
+            not,
+        } = f;
+        FunctionSortcuter {
+            eq,
+            and,
+            or,
+            implies,
+            true_f,
+            false_f,
+            not,
+        }
+    }
+}
 
 pub trait FormulaUser<A> {
     fn truef(&self) -> A;
@@ -255,7 +287,7 @@ macro_rules! impl_formula_user {
             }
 
             fn mandf(&self, args: impl IntoIterator<Item = $a>) -> $a {
-                self.get_function_shortcut().mand(args)
+                self.get_function_shortcut().mandf(args)
             }
 
             fn morf(&self, args: impl IntoIterator<Item = $a>) -> $a {

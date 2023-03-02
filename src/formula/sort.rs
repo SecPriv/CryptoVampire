@@ -125,8 +125,8 @@ impl Sort {
 impl AsRef<IISort> for Sort {
     fn as_ref(&self) -> &IISort {
         match self.0 {
-            ISort::BuiltIn(s) => s,
-            ISort::Dynamic(s) => s.as_ref(),
+            ISort::BuiltIn(ref s) => s,
+            ISort::Dynamic(ref s) => s.as_ref(),
         }
     }
 }

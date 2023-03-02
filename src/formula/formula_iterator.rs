@@ -41,7 +41,7 @@ where
     }
 }
 
-pub(crate) fn new_formula_iter_vec<'a, 'b, F, V, T>(
+pub(crate) fn new_formula_iter_vec<'a,  F, V, T>(
     pile: V,
     pbl: &'a Problem,
     flags: IteratorFlags,

@@ -6,7 +6,7 @@ use super::{
     builtins::{init::init_env, functions::{EQUALITY, AND, OR, IMPLIES, TRUE, FALSE, NOT}},
     cli::Args,
     function::{FFlags, Function},
-    sort::Sort, formula_user::{FunctionSortcuter, HasSortcut},
+    sort::Sort, formula_user::{FunctionSortcuter, HasSortcut, FunctionSortcuterBuilder},
 };
 
 #[derive(Debug, Clone)]
@@ -53,7 +53,7 @@ impl Environement {
             functions_shortcuter: None
         };
         init_env(&mut env, Self::get_sorts_mut);
-        env.functions_shortcuter = Some(FunctionSortcuter {
+        env.functions_shortcuter = Some(FunctionSortcuterBuilder {
             eq: EQUALITY(&env).clone(),
             and: AND(&env).clone(),
             or: OR(&env).clone(),
@@ -61,7 +61,7 @@ impl Environement {
             true_f: TRUE(&env).clone(),
             false_f: FALSE(&env).clone(),
             not: NOT(&env).clone(),
-        });
+        }.into());
         env
     }
 

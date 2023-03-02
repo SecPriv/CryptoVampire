@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashSet};
+use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 use crate::{
     formula::{
@@ -19,7 +19,7 @@ use crate::{
         smt::{Smt, SmtFormula},
         writer::Ctx,
     },
-    utils::utils::StackBox,
+    utils::utils::{StackBox, reset_vec},
 };
 
 use super::{builder::Builder, Subterm};
@@ -51,39 +51,43 @@ fn preprocess<'a, B>(
     // make ununsed variables
     let sorts = vec![subt.sort().clone(), STEP(ctx.env()).clone()];
     let vars = sorts_to_variables(max_var, sorts.iter());
-    let tp = svar!(vars[1].clone()); // a timepoint var
-    let m = svar!(vars[0].clone()); // the message (or whatever other sort)
+    // let tp = svar!(vars[1].clone()); // a timepoint var
+    // let m = svar!(vars[0].clone()); // the message (or whatever other sort)
+    let m = &vars[0];
+    let tp = &vars[1];
 
     let max_var = max_var + vars.len(); // update max_var
 
-    // for reuse
-    let todo = RefCell::new(Vec::new());
+    let lt = Mlt { fun: lt.clone() };
 
-    {
-        // input
-        let mut ors = Vec::new();
-        let input_f = sfun!(input; tp.clone());
-        if subt.sort() == msg {
-            ors.push(seq!(m.clone(), input_f.clone()))
-        }
-        inputs(ctx, &tp, &m, todo, &mut ors, subt, max_var, lt);
-        assertions.push(Smt::Assert(SmtFormula::Forall(
-            vars.clone(),
-            Box::new(simplies!(ctx.env();
-                subt.f(m.clone(), input_f, &msg),
-                SmtFormula::Or(ors)
-            )),
-        )));
-    }
+    inputs(assertions, ctx, subt, tp, m, max_var, msg, &lt, input);
+    memory_cells(assertions, ctx, max_var, subt, msg, &lt, tp, m);
 
-    // memory cells
-    memory_cells(assertions, ctx, max_var, subt, msg, lt, tp, m, vars);
+    // {
+    //     // input
+    //     let mut ors = Vec::new();
+    //     let input_f = sfun!(input; tp.clone());
+    //     if subt.sort() == msg {
+    //         ors.push(seq!(m.clone(), input_f.clone()))
+    //     }
+    //     inputs(ctx, &tp, &m, todo, &mut ors, subt, max_var, lt);
+    //     assertions.push(Smt::Assert(SmtFormula::Forall(
+    //         vars.clone(),
+    //         Box::new(simplies!(ctx.env();
+    //             subt.f(m.clone(), input_f, &msg),
+    //             SmtFormula::Or(ors)
+    //         )),
+    //     )));
+    // }
+
+    // // memory cells
+    // memory_cells(assertions, ctx, max_var, subt, msg, lt, tp, m);
 }
 
 /// preprocess memory cells
 fn memory_cells<'a, B>(
     assertions: &mut Vec<Smt>,
-    ctx: &mut Ctx,
+    ctx: &Ctx,
     max_var: usize,
     subt: &Subterm<B>,
     msg: &Sort,
@@ -158,8 +162,8 @@ fn memory_cells<'a, B>(
 
                 let vars = [m, tp]
                     .into_iter()
+                    .chain(cell_vars.iter())
                     .cloned()
-                    .chain(cell_vars.into_iter())
                     .collect();
                 // SmtFormula::Forall(
                 //     vars,
@@ -171,10 +175,10 @@ fn memory_cells<'a, B>(
                 ctx.forallf(
                     vars,
                     ctx.impliesf(
-                        subt.f(ctx, m.clone_to_formula(ctx), smt_c, msg),
+                        subt.f(ctx, m.clone_to_formula(ctx), smt_c.clone(), msg),
                         if subt.sort() == msg {
                             ctx.morf(
-                                [ctx.eqf(m.clone_to_formula(ctx), smt_c.clone())]
+                                [ctx.eqf(m.clone_to_formula(ctx), smt_c)]
                                     .into_iter()
                                     .chain(ors),
                             )
@@ -191,15 +195,15 @@ fn memory_cells<'a, B>(
 
 /// Mutates `assertions` and/or `declaration` to add any relevant axioms
 /// to encode `t \sqsubseteq \mathsf{input}(T)`
-fn inputs2<'a, B>(
-    declarations: &mut Vec<Smt>,
+fn inputs<'a, B>(
+    // declarations: &mut Vec<Smt>,
     assertions: &mut Vec<Smt>,
-    ctx: &mut Ctx,
+    ctx: &'a Ctx,
     subt: &Subterm<B>,
     tp: &Variable,
     m: &Variable,
     // vars: &Vec<Variable>,
-    max_var: usize,
+    _max_var: usize,
     msg: &Sort,
     lt: &Mlt,
     input: &Function,
@@ -212,33 +216,37 @@ fn inputs2<'a, B>(
 
     let pile = RefCell::new(Vec::new());
     let mut ors: Vec<RichFormula> = Vec::new();
+    let premise;
 
     {
+        let m: RichFormula = m.clone_to_formula(ctx);
+        let tp: RichFormula = tp.clone_to_formula(ctx);
+        let input = ctx.funf(input.clone(), [tp]);
         // m = input
         if subt.sort() == msg {
-            ors.push(ctx.eqf(
-                m.clone_to_formula(ctx),
-                ctx.funf(input.clone(), [tp.clone_to_formula(ctx)]),
-            ))
+            ors.push(ctx.eqf(m.clone(), input.clone()))
         }
-    }
+
+        premise = subt.f(ctx, m, input, msg)
+    };
 
     // let cell_evidences = Vec::new(); // cell don't recurse, so we can skip this for now
     {
-        let m = m.clone_to_formula(ctx);
         for s in ctx.pbl.steps.values() {
             let step_vars = s.occuring_variables().clone();
             let step_formula = s.as_formula(ctx);
 
             let inner_ors = {
-                let pile = pile.borrow_mut();
+                let m = m.clone_to_formula(ctx);
+                let mut pile = pile.borrow_mut();
+                // let pile = reset_vec(pile.as_mut());
                 pile.clear();
                 pile.extend([s.message(), s.condition()]);
                 let iter = new_formula_iter_vec(
                     pile,
                     &ctx.pbl,
                     IteratorFlags::QUANTIFIER,
-                    move |f, pbl| {
+                     |f, pbl| {
                         // if_chain! {
                         //     if let RichFormula::Fun(fun, args) = f;
                         //     if fun.is_cell();
@@ -246,10 +254,10 @@ fn inputs2<'a, B>(
                         //         cell_evidences.push((s, fun, args))
                         //     }
                         // }; cells don't recurse
-                        subt.analyse(&m, s, pbl, f)
+                        subt.analyse(&m, Some(s), pbl, f)
                     },
                 );
-                iter
+                iter.collect_vec()
             };
 
             ors.push(ctx.existsf(
@@ -261,7 +269,10 @@ fn inputs2<'a, B>(
             ))
         }
     }
-    assertions.push(Smt::Assert(SmtFormula::from(ctx.morf(ors))))
+    assertions.push(Smt::Assert(SmtFormula::from(ctx.forallf(
+        vec![m.clone(), tp.clone()],
+        ctx.impliesf(premise, ctx.morf(ors)),
+    ))))
 }
 /* pub fn inputs<'a, B>(
     ctx: &'a Ctx,
@@ -421,7 +432,7 @@ pub fn not_subterm_protocol<'a, B>(
     subt: &Subterm<B>,
     assertions: &mut Vec<Smt>,
     declarations: &mut Vec<Smt>,
-    ctx: &mut Ctx,
+    ctx: &'a mut Ctx,
 ) -> Function
 where
     B: Builder<'a>,
@@ -429,14 +440,14 @@ where
     struct Aux<'a> {
         pbl: &'a Problem,
         var_set: HashSet<usize>,
-        pile: Vec<&'a RichFormula>,
+        pile: Vec<*const RichFormula>,
     }
     impl<'a> Aux<'a> {
-        fn run(&mut self, f: &'a RichFormula) -> Vec<Variable> {
+        fn run(&mut self, f: Rc<RichFormula>) -> Vec<Variable> {
             self.var_set.clear();
-            self.pile.clear();
+            let pile = reset_vec(&mut self.pile);
 
-            f.used_variables_iter_with_pile(&self.pbl, &mut self.pile)
+            f.used_variables_iter_with_pile(&self.pbl, pile)
                 .into_iter()
                 .filter(|v| self.var_set.insert(v.id))
                 .cloned()
@@ -454,11 +465,11 @@ where
     declarations.push(Smt::DeclareFun(fun.clone()));
 
     let max_var = ctx.pbl.max_var();
-    let m_var = Variable {
+    let m = Variable {
         id: max_var,
         sort: subt.sort().clone(),
     };
-    let m = svar!(m_var.clone());
+    // let m = m_var.clone_to_formula(ctx);
 
     let pile = {
         let from_steps = ctx
@@ -475,23 +486,27 @@ where
         from_steps.chain(from_cells).collect_vec()
     };
 
-    let mut iter = FormulaIterator::new(
-        StackBox::new(pile),
-        &ctx.pbl,
-        IteratorFlags::QUANTIFIER,
-        |f, _| {
-            // (
-            //     Some(f),
-            //     match f {
-            //         RichFormula::Fun(_, args) => Some(args.iter()),
-            //         _ => None,
-            //     }
-            //     .into_iter()
-            //     .flatten(),
-            // )
-            subt.builder().analyse(subt, m, s, pbl, f)
-        },
-    );
+    let iter = {
+        let m = m.clone_to_formula(ctx);
+        new_formula_iter_vec(
+            StackBox::new(pile),
+            &ctx.pbl,
+            IteratorFlags::QUANTIFIER,
+            move |f, pbl| {
+                // (
+                //     Some(f),
+                //     match f {
+                //         RichFormula::Fun(_, args) => Some(args.iter()),
+                //         _ => None,
+                //     }
+                //     .into_iter()
+                //     .flatten(),
+                // )
+                // subt.builder().analyse(subt, m, s, pbl, f)
+                subt.analyse(&m, None, pbl, f)
+            },
+        )
+    };
 
     let mut f_set = HashSet::new();
     let mut get_vars = {
@@ -503,16 +518,20 @@ where
     };
 
     let ands = iter
-        .filter(|&f| &f.get_sort(ctx.env()) == subt.sort() && f_set.insert(f))
+        .map(|f| Rc::new(f))
+        .filter(|f| &f.get_sort(ctx.env()) == subt.sort() && f_set.insert(Rc::clone(f)))
         .map(|f| {
-            let vars = get_vars.run(f);
-            SmtFormula::Forall(vars, Box::new(sneq!(m.clone(), SmtFormula::from(f))))
-        })
-        .collect_vec();
+            let vars = get_vars.run(Rc::clone(&f));
+            // SmtFormula::Forall(vars, Box::new(sneq!(m.clone(), SmtFormula::from(f))))
+            ctx.forallf(vars, ctx.neqf(m.clone_to_formula(ctx), (*f).clone()))
+        });
 
-    assertions.push(Smt::Assert(SmtFormula::Forall(
-        vec![m_var],
-        Box::new(simplies!(ctx.env(); sfun!(fun; m), SmtFormula::And(ands))),
+    // assertions.push(Smt::Assert(SmtFormula::Forall(
+    //     vec![m_var],
+    //     Box::new(simplies!(ctx.env(); sfun!(fun; m), SmtFormula::And(ands))),
+    // )));
+    assertions.push(Smt::Assert(SmtFormula::from(
+        ctx.forallf(vec![m.clone()], ctx.mandf(ands)),
     )));
 
     fun

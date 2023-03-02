@@ -28,12 +28,12 @@ use super::{
     smt::Smt,
 };
 
-pub(crate) struct Ctx {
-    pub(crate) ta_funs: Vec<Function>,
-    pub(crate) free_funs: Vec<Function>,
-    pub(crate) ta_sorts: Vec<Sort>,
-    pub(crate) free_sorts: Vec<Sort>,
-    pub(crate) pbl: Problem,
+pub struct Ctx {
+    pub ta_funs: Vec<Function>,
+    pub free_funs: Vec<Function>,
+    pub ta_sorts: Vec<Sort>,
+    pub free_sorts: Vec<Sort>,
+    pub pbl: Problem,
 }
 
 impl Ctx {
