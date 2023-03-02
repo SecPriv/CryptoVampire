@@ -19,7 +19,7 @@ use crate::{
         smt::{Smt, SmtFormula},
         writer::Ctx,
     },
-    utils::utils::{StackBox, reset_vec},
+    utils::utils::{reset_vec, StackBox},
 };
 
 use super::{builder::Builder, Subterm};
@@ -242,11 +242,8 @@ fn inputs<'a, B>(
                 // let pile = reset_vec(pile.as_mut());
                 pile.clear();
                 pile.extend([s.message(), s.condition()]);
-                let iter = new_formula_iter_vec(
-                    pile,
-                    &ctx.pbl,
-                    IteratorFlags::QUANTIFIER,
-                     |f, pbl| {
+                let iter =
+                    new_formula_iter_vec(pile, &ctx.pbl, IteratorFlags::QUANTIFIER, |f, pbl| {
                         // if_chain! {
                         //     if let RichFormula::Fun(fun, args) = f;
                         //     if fun.is_cell();
@@ -255,8 +252,7 @@ fn inputs<'a, B>(
                         //     }
                         // }; cells don't recurse
                         subt.analyse(&m, Some(s), pbl, f)
-                    },
-                );
+                    });
                 iter.collect_vec()
             };
 
@@ -486,45 +482,45 @@ where
         from_steps.chain(from_cells).collect_vec()
     };
 
-    let iter = {
-        let m = m.clone_to_formula(ctx);
-        new_formula_iter_vec(
-            StackBox::new(pile),
-            &ctx.pbl,
-            IteratorFlags::QUANTIFIER,
-            move |f, pbl| {
-                // (
-                //     Some(f),
-                //     match f {
-                //         RichFormula::Fun(_, args) => Some(args.iter()),
-                //         _ => None,
-                //     }
-                //     .into_iter()
-                //     .flatten(),
-                // )
-                // subt.builder().analyse(subt, m, s, pbl, f)
-                subt.analyse(&m, None, pbl, f)
-            },
-        )
-    };
+    let iter = new_formula_iter_vec(
+        StackBox::new(pile),
+        &ctx.pbl,
+        IteratorFlags::QUANTIFIER,
+        |f, pbl| {
+            // (
+            //     Some(f),
+            //     match f {
+            //         RichFormula::Fun(_, args) => Some(args.iter()),
+            //         _ => None,
+            //     }
+            //     .into_iter()
+            //     .flatten(),
+            // )
+            // subt.builder().analyse(subt, m, s, pbl, f)
+            let (f, next) = subt.analyse(&m.clone_to_formula(ctx), None, pbl, f);
+            (f.map(|f| ctx.negf(f)), next)
+        },
+    );
 
     let mut f_set = HashSet::new();
-    let mut get_vars = {
-        Aux {
-            pbl: &ctx.pbl,
-            var_set: HashSet::new(),
-            pile: Vec::new(),
-        }
-    };
+    // let mut get_vars = {
+    //     Aux {
+    //         pbl: &ctx.pbl,
+    //         var_set: HashSet::new(),
+    //         pile: Vec::new(),
+    //     }
+    // };
 
     let ands = iter
         .map(|f| Rc::new(f))
         .filter(|f| &f.get_sort(ctx.env()) == subt.sort() && f_set.insert(Rc::clone(f)))
-        .map(|f| {
-            let vars = get_vars.run(Rc::clone(&f));
-            // SmtFormula::Forall(vars, Box::new(sneq!(m.clone(), SmtFormula::from(f))))
-            ctx.forallf(vars, ctx.neqf(m.clone_to_formula(ctx), (*f).clone()))
-        });
+        .map(|f| (*f).clone())
+        // .map(|f| {
+        //     let vars = get_vars.run(Rc::clone(&f));
+        //     // SmtFormula::Forall(vars, Box::new(sneq!(m.clone(), SmtFormula::from(f))))
+        //     // ctx.forallf(vars, ctx.neqf(m.clone_to_formula(ctx), (*f).clone()))
+        // })
+        ;
 
     // assertions.push(Smt::Assert(SmtFormula::Forall(
     //     vec![m_var],
