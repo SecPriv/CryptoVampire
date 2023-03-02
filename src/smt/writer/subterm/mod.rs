@@ -202,7 +202,7 @@ where
         ctx: &mut Ctx,
         name: String,
         sort: Sort,
-        ignored_functions: impl Iterator<Item = Function>,
+        ignored_functions: impl IntoIterator<Item = Function>,
         flags: SubtermFlags,
         builder: B,
     ) -> Self {
@@ -212,7 +212,7 @@ where
             sort,
             name,
             flags,
-            ignored_functions,
+            ignored_functions.into_iter(),
             builder,
         );
         declare_and_base::declare_and_base(assertions, declarations, ctx, &subt);

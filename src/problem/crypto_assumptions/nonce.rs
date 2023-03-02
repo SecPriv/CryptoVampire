@@ -9,7 +9,7 @@ use crate::{
         macros::{seq, sforall, sfun, simplies},
         smt::Smt,
         writer::{
-            subterm::{generate_subterm, DefaultBuilder, SubtermFlags},
+            subterm::{builder::DefaultBuilder, Subterm},
             Ctx,
         },
     },
@@ -25,13 +25,13 @@ pub(crate) fn generate(assertions: &mut Vec<Smt>, declarations: &mut Vec<Smt>, c
     let nonce_sort = NONCE(ctx.env()).clone();
     let msg = MSG(ctx.env()).clone();
 
-    let subt_main = generate_subterm(
+    let subt_main = Subterm::new_and_init(
         assertions,
         declarations,
         ctx,
-        "sbt$nonce_main",
-        &nonce_sort,
-        vec![],
+        "sbt$nonce_main".to_owned(),
+        nonce_sort.clone(),
+        [],
         Default::default(),
         DefaultBuilder(),
     );
@@ -39,7 +39,7 @@ pub(crate) fn generate(assertions: &mut Vec<Smt>, declarations: &mut Vec<Smt>, c
     assertions.push(Smt::Assert(sforall!(n!0:nonce_sort, m!1:msg;{
         simplies!(ctx.env();
             seq!(sfun!(eval_msg; sfun!(nonce; n.clone())), sfun!(eval_msg; m.clone())),
-            subt_main.f(n.clone(), m.clone(), &msg)
+            subt_main.f(ctx, n.clone(), m.clone(), &msg)
         )
     })))
 }
