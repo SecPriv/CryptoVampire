@@ -13,6 +13,7 @@ use crate::{
         env::Environement,
         formula::{RichFormula, Variable},
         formula_iterator::{FormulaIterator, IteratorFlags},
+        formula_user::FormulaUser,
         function::{FFlags, Function},
         sort::Sort,
     },
@@ -85,13 +86,16 @@ impl From<&Environement> for SubtermKind {
 }
 
 impl<B> Subterm<B> {
-    pub fn f(&self, a: SmtFormula, b: SmtFormula, sort: &Sort) -> SmtFormula {
+    pub fn f<T, U>(&self, ctx: &T, a: U, b: U, sort: &Sort) -> U
+    where
+        T: FormulaUser<U>,
+    {
         match &self.inner {
             InnerSubterm::Vampire {
                 high_order_fun: sbt,
                 function: f,
                 ..
-            } => sfun!(sbt; sfun!(f), a, b),
+            } => ctx.funf(sbt.clone(), [ctx.funf(f.clone(), []), a, b]),
             InnerSubterm::SmtCompliant {
                 sorts_order,
                 functions: f,
@@ -101,7 +105,8 @@ impl<B> Subterm<B> {
                     .iter()
                     .position(|s| s == sort)
                     .unwrap_or_else(|| panic!("{:?}", sort));
-                sfun!(f[i]; a, b)
+                // sfun!(f[i]; a, b)
+                ctx.funf(f[i].clone(), [a, b])
             }
         }
     }
@@ -214,13 +219,19 @@ where
 
         subt
     }
-    pub fn builder_function(
+
+    /// Analyses a message `f` for subterm (`m<<f`)
+    ///  - `m` the message to match against `f`
+    ///  - `s` the step in which `m` is
+    ///  - `pbl` the [Problem]
+    ///  - `f`
+    pub fn analyse(
         &self,
         m: &RichFormula,
         s: &Step,
         pbl: &'a Problem,
         f: &'a RichFormula,
     ) -> (Option<RichFormula>, Vec<&'a RichFormula>) {
-        self.builder().preprocess(self, m, s, pbl, f)
+        self.builder().analyse(self, m, s, pbl, f)
     }
 }

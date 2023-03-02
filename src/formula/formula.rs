@@ -12,7 +12,7 @@ use super::{
     function::Function,
     quantifier::Quantifier,
     sort::Sort,
-    unifier::{Substitution, Translate},
+    unifier::{Substitution, Translate}, formula_user::FormulaUser,
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -271,6 +271,14 @@ impl RichFormula {
 impl Variable {
     pub fn new(id: usize, sort: Sort) -> Self {
         Self { id, sort }
+    }
+
+    pub fn as_formula<T, U>(self, ctx: &T) -> U where T: FormulaUser<U> {
+        ctx.varf(self)
+    }
+
+    pub fn clone_to_formula<T, U>(&self, ctx: &T) -> U where T:FormulaUser<U> {
+        self.clone().as_formula(ctx)
     }
 }
 

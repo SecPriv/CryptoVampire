@@ -10,7 +10,7 @@ use crate::{
 use super::Subterm;
 
 pub trait Builder<'a> {
-    fn preprocess(
+    fn analyse(
         self,
         subt: &Subterm<Self>,
         m: &RichFormula,
@@ -32,7 +32,7 @@ where
         &'a RichFormula,
     ) -> (Option<RichFormula>, Vec<&'a RichFormula>),
 {
-    fn preprocess(
+    fn analyse(
         self,
         subt: &Subterm<Self>,
         m: &RichFormula,
@@ -49,7 +49,7 @@ where
 
 pub struct DefaultBuilder();
 impl<'a> Builder<'a> for DefaultBuilder {
-    fn preprocess(
+    fn analyse(
         self,
         subt: &Subterm<Self>,
         m: &RichFormula,

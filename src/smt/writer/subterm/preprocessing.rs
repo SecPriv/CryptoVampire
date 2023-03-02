@@ -8,7 +8,7 @@ use crate::{
         },
         formula::{sorts_to_variables, RichFormula, Variable},
         formula_iterator::{new_formula_iter_vec, FormulaIterator, IteratorFlags},
-        formula_user::FormulaUser,
+        formula_user::{FormulaUser, HasSortcut},
         function::{FFlags, Function},
         macros::fun,
         sort::Sort,
@@ -26,6 +26,7 @@ use super::{builder::Builder, Subterm};
 use if_chain::if_chain;
 use itertools::Itertools;
 
+/// preprocess input and memory cells
 fn preprocess<'a, B>(
     assertions: &mut Vec<Smt>,
     _: &mut Vec<Smt>,
@@ -79,82 +80,111 @@ fn preprocess<'a, B>(
     memory_cells(assertions, ctx, max_var, subt, msg, lt, tp, m, vars);
 }
 
+/// preprocess memory cells
 fn memory_cells<'a, B>(
     assertions: &mut Vec<Smt>,
     ctx: &mut Ctx,
     max_var: usize,
     subt: &Subterm<B>,
     msg: &Sort,
-    lt: &Function,
-    tp: SmtFormula,
-    m: SmtFormula,
-    vars: Vec<Variable>,
+    lt: &Mlt,
+    tp: &Variable,
+    m: &Variable,
+    // vars: Vec<Variable>,
 ) where
     B: Builder<'a>,
 {
-    let flt = |s1: &SmtFormula, s2: &SmtFormula| sfun!(lt; s1.clone(), s2.clone());
-    let flt_eq = |s1: &SmtFormula, s2: &SmtFormula| sor!(seq!(s1.clone(), s2.clone()), flt(s1, s2));
+    // let flt = |s1: &RichFormula, s2: &RichFormula| ctx.funf(lt.clone(), [s1.clone(), s2.clone()]);
+    // let flt_eq =
+    //     |s1: &RichFormula, s2: &RichFormula| ctx.orf(ctx.eqf(s1.clone(), s2.clone()), flt(s1, s2));
     assertions.extend(
         ctx.pbl
             .memory_cells
             .values()
             .map(|c| {
-                let c_vars = sorts_to_variables(max_var, c.args().iter());
-                let max_var = max_var + c_vars.len();
+                let cell_vars = sorts_to_variables(max_var, c.args().iter());
+                let max_var = max_var + cell_vars.len();
 
-                let smt_c = sfun!(
-                    c.function(),
-                    c_vars
+                let smt_c: RichFormula = ctx.funf(
+                    c.function().clone(),
+                    cell_vars
                         .iter()
-                        .map(SmtFormula::from)
-                        .chain([tp.clone()].into_iter())
-                        .collect()
+                        .chain([tp].into_iter())
+                        .cloned()
+                        .map(|v| ctx.varf(v))
+                        .collect_vec(),
                 );
 
-                let mut ors = if subt.sort() == msg {
-                    vec![seq!(m.clone(), smt_c.clone())]
-                } else {
-                    vec![]
-                };
+                // let mut ors = if subt.sort() == msg {
+                //     // vec![seq!(m.clone(), smt_c.clone())]
+                //     vec![ctx.eqf(m.clone(), smt_c.clone())]
+                // } else {
+                //     vec![]
+                // };
 
-                ors.extend(c.assignements().iter().map(
+                let ors = c.assignements().iter().map(
                     |Assignement {
                          step,
                          args,
                          content,
                      }| {
-                        let eq_args = SmtFormula::And(
-                            c_vars
+                        let eq_args = ctx.mandf(
+                            cell_vars
                                 .iter()
-                                .map(SmtFormula::from)
-                                .zip(args.iter().map(SmtFormula::from))
-                                .map(|(a, b)| seq!(a, b))
-                                .collect(),
+                                // .map(SmtFormula::from)
+                                .zip(args.iter() /* .map(SmtFormula::from) */)
+                                .map(|(a, b)| ctx.eqf(a.clone_to_formula(ctx), b.clone())),
                         );
 
                         // step <= tp
                         let order = {
-                            let vars = step.free_variables().iter().map(SmtFormula::from).collect();
-                            let step = sfun!(step.function(), vars);
-                            flt_eq(&step, &tp)
+                            let vars = step
+                                .free_variables()
+                                .iter()
+                                .map(|v| v.clone_to_formula(ctx));
+                            let step = ctx.funf(step.function().clone(), vars);
+                            // flt_eq(&step, &tp)
+                            lt.leq(ctx, step, tp.clone_to_formula(ctx))
                         };
 
-                        let rec_call = subt.f(m.clone(), content.into(), msg);
+                        // will terminate because no loops
+                        let rec_call = subt.f(ctx, m.clone_to_formula(ctx), content.clone(), msg);
 
                         let vars = step.occuring_variables().clone();
-                        SmtFormula::Exists(vars, Box::new(sand!(order, eq_args, eq_args, rec_call)))
+                        // SmtFormula::Exists(vars, Box::new(sand!(order, eq_args, eq_args, rec_call)))
+                        ctx.existsf(vars, ctx.mandf([order, eq_args, rec_call]))
                     },
-                ));
+                );
 
-                let vars = vars.iter().cloned().chain(c_vars.into_iter()).collect();
-                SmtFormula::Forall(
+                let vars = [m, tp]
+                    .into_iter()
+                    .cloned()
+                    .chain(cell_vars.into_iter())
+                    .collect();
+                // SmtFormula::Forall(
+                //     vars,
+                //     Box::new(simplies!(ctx.env();
+                //         subt.f(m.clone(), smt_c, msg),
+                //         SmtFormula::Or(ors)
+                //     )),
+                // )
+                ctx.forallf(
                     vars,
-                    Box::new(simplies!(ctx.env();
-                        subt.f(m.clone(), smt_c, msg),
-                        SmtFormula::Or(ors)
-                    )),
+                    ctx.impliesf(
+                        subt.f(ctx, m.clone_to_formula(ctx), smt_c, msg),
+                        if subt.sort() == msg {
+                            ctx.morf(
+                                [ctx.eqf(m.clone_to_formula(ctx), smt_c.clone())]
+                                    .into_iter()
+                                    .chain(ors),
+                            )
+                        } else {
+                            ctx.morf(ors)
+                        },
+                    ),
                 )
             })
+            .map(SmtFormula::from)
             .map(Smt::Assert),
     )
 }
@@ -166,32 +196,36 @@ fn inputs2<'a, B>(
     assertions: &mut Vec<Smt>,
     ctx: &mut Ctx,
     subt: &Subterm<B>,
-    tp: &RichFormula,
-    m: &RichFormula,
-    vars: &Vec<Variable>,
+    tp: &Variable,
+    m: &Variable,
+    // vars: &Vec<Variable>,
     max_var: usize,
     msg: &Sort,
-    lt: &Function,
+    lt: &Mlt,
     input: &Function,
 ) where
     B: Builder<'a>,
 {
-    let flt = |s1: &RichFormula, s2: &RichFormula| ctx.funf(lt, [s1.clone(), s2.clone()]);
-    let flt_eq =
-        |s1: &RichFormula, s2: &RichFormula| ctx.orf(ctx.eqf(s1.clone(), s2.clone()), flt(s1, s2));
+    // let flt = |s1: &RichFormula, s2: &RichFormula| ctx.funf(lt.clone(), [s1.clone(), s2.clone()]);
+    // let flt_eq =
+    //     |s1: &RichFormula, s2: &RichFormula| ctx.orf(ctx.eqf(s1.clone(), s2.clone()), flt(s1, s2));
 
     let pile = RefCell::new(Vec::new());
-    let mut ors = Vec::new();
+    let mut ors: Vec<RichFormula> = Vec::new();
 
     {
         // m = input
         if subt.sort() == msg {
-            ors.push(ctx.eqf(m.clone(), ctx.funf(input.clone(), [tp.clone()])))
+            ors.push(ctx.eqf(
+                m.clone_to_formula(ctx),
+                ctx.funf(input.clone(), [tp.clone_to_formula(ctx)]),
+            ))
         }
     }
 
-    let cell_evidences = Vec::new();
+    // let cell_evidences = Vec::new(); // cell don't recurse, so we can skip this for now
     {
+        let m = m.clone_to_formula(ctx);
         for s in ctx.pbl.steps.values() {
             let step_vars = s.occuring_variables().clone();
             let step_formula = s.as_formula(ctx);
@@ -205,14 +239,14 @@ fn inputs2<'a, B>(
                     &ctx.pbl,
                     IteratorFlags::QUANTIFIER,
                     move |f, pbl| {
-                        if_chain! {
-                            if let RichFormula::Fun(fun, args) = f;
-                            if fun.is_cell();
-                            then {
-                                cell_evidences.push((s, fun, args))
-                            }
-                        };
-                        subt.builder_function(m, s, pbl, f)
+                        // if_chain! {
+                        //     if let RichFormula::Fun(fun, args) = f;
+                        //     if fun.is_cell();
+                        //     then {
+                        //         cell_evidences.push((s, fun, args))
+                        //     }
+                        // }; cells don't recurse
+                        subt.analyse(&m, s, pbl, f)
                     },
                 );
                 iter
@@ -220,12 +254,16 @@ fn inputs2<'a, B>(
 
             ors.push(ctx.existsf(
                 step_vars,
-                ctx.andf(flt(&step_formula, tp), ctx.morf(inner_ors)),
+                ctx.andf(
+                    lt.lt(ctx, step_formula, tp.clone_to_formula(ctx)),
+                    ctx.morf(inner_ors),
+                ),
             ))
         }
     }
+    assertions.push(Smt::Assert(SmtFormula::from(ctx.morf(ors))))
 }
-pub fn inputs<'a, B>(
+/* pub fn inputs<'a, B>(
     ctx: &'a Ctx,
     tp: &RichFormula,
     m: &RichFormula,
@@ -374,7 +412,7 @@ pub fn inputs<'a, B>(
             ors.push(r)
         }
     }
-}
+} */
 
 /// I'm using the negative to avoid too many existential quantifiers
 ///
@@ -451,7 +489,7 @@ where
             //     .into_iter()
             //     .flatten(),
             // )
-            subt.builder().preprocess(subt, m, s, pbl, f)
+            subt.builder().analyse(subt, m, s, pbl, f)
         },
     );
 
@@ -478,4 +516,25 @@ where
     )));
 
     fun
+}
+
+struct Mlt {
+    fun: Function,
+}
+
+impl Mlt {
+    fn lt<T, U>(&self, ctx: &T, a: U, b: U) -> U
+    where
+        T: FormulaUser<U>,
+    {
+        ctx.funf(self.fun.clone(), [a, b])
+    }
+
+    fn leq<T, U>(&self, ctx: &T, a: U, b: U) -> U
+    where
+        T: FormulaUser<U>,
+        U: Clone,
+    {
+        ctx.orf(ctx.eqf(a.clone(), b.clone()), self.lt(ctx, a, b))
+    }
 }

@@ -39,7 +39,7 @@ pub struct Problem {
     pub order: Vec<RichFormula>,
     pub lemmas: Vec<RichFormula>,
     pub crypto_assumptions: Vec<CryptoAssumption>,
-    pub quantifiers: Vec<QuantifierP>,
+    pub quantifiers: Vec<QuantifierP>
 }
 
 pub struct ProblemBuilder {

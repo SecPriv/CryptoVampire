@@ -60,19 +60,19 @@ bitflags! {
 /// carry a lot of information arround within them
 #[derive(Hash)]
 pub struct Function {
-    inner: Rc<InnerFunction>,
+    inner: Rc<IIFunction>,
 }
 
 // fast imutable content
 #[derive(Debug)]
-struct InnerFunction {
+struct IIFunction {
     name: String,
-    inner: RefCell<InnerInnerFunction>,
+    inner: RefCell<IIIFunction>,
 }
 
 // slowe mutable content
 #[derive(Debug)]
-struct InnerInnerFunction {
+struct IIIFunction {
     input_sorts: Vec<Sort>,
     output_sort: Sort,
     flags: FFlags,
@@ -81,23 +81,23 @@ struct InnerInnerFunction {
     /// pointer to the evaluate function when it exists.
     ///
     /// I'm using a weak to avoid loops
-    evaluate_fun: Option<Weak<InnerFunction>>,
+    evaluate_fun: Option<Weak<IIFunction>>,
 }
 
-impl Ord for InnerInnerFunction {
+impl Ord for IIIFunction {
     fn cmp(&self, _other: &Self) -> std::cmp::Ordering {
         todo!()
     }
 }
 
-impl PartialOrd for InnerInnerFunction {
+impl PartialOrd for IIIFunction {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(Ord::cmp(self, other))
     }
 }
 
-impl Eq for InnerInnerFunction {}
-impl PartialEq for InnerInnerFunction {
+impl Eq for IIIFunction {}
+impl PartialEq for IIIFunction {
     fn eq(&self, other: &Self) -> bool {
         self.input_sorts == other.input_sorts
             && self.output_sort == other.output_sort
@@ -112,7 +112,7 @@ impl PartialEq for InnerInnerFunction {
     }
 }
 
-impl Hash for InnerInnerFunction {
+impl Hash for IIIFunction {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.input_sorts.hash(state);
         self.output_sort.hash(state);
@@ -124,13 +124,13 @@ impl Hash for InnerInnerFunction {
     }
 }
 
-impl InnerInnerFunction {
+impl IIIFunction {
     fn as_tuple(&self) -> (&Vec<Sort>, &Sort, &FFlags) {
         (&self.input_sorts, &self.output_sort, &self.flags)
     }
 }
 
-impl Hash for InnerFunction {
+impl Hash for IIFunction {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.name.hash(state);
     }
@@ -179,13 +179,13 @@ impl Function {
     }
 
     fn hidden_new(name: String, input_sorts: Vec<Sort>, output_sort: Sort, flags: FFlags) -> Self {
-        let innerinner = InnerInnerFunction {
+        let innerinner = IIIFunction {
             input_sorts,
             output_sort,
             flags,
             evaluate_fun: None,
         };
-        let inner = InnerFunction {
+        let inner = IIFunction {
             name: name,
             inner: RefCell::new(innerinner),
         };
