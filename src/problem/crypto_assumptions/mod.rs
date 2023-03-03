@@ -1,10 +1,10 @@
-// mod euf_cma_mac;
+mod euf_cma_mac;
 // mod euf_cma_sign;
 // mod int_ctxt;
 mod nonce;
 
 use crate::{
-    formula::{formula::RichFormula, function::Function},
+    formula::{formula::RichFormula, function::Function, formula_user::FormulaUser},
     smt::{
         macros::seq,
         smt::{Smt, SmtFormula},
@@ -45,9 +45,9 @@ impl CryptoAssumption {
         ctx: &mut Ctx,
     ) {
         match self {
-            // CryptoAssumption::EufCmaMac { mac, verify } => {
-            //     euf_cma_mac::generate(assertions, declarations, ctx, mac, verify)
-            // }
+            CryptoAssumption::EufCmaMac { mac, verify } => {
+                euf_cma_mac::generate(assertions, declarations, ctx, mac, verify)
+            }
             CryptoAssumption::Nonce => nonce::generate(assertions, declarations, ctx),
             // CryptoAssumption::EufCmaSign { sign, verify, pk } => {
             //     euf_cma_sign::generate(assertions, declarations, ctx, sign, verify, pk)
@@ -63,6 +63,7 @@ impl CryptoAssumption {
     }
 }
 
-fn aux(m: &SmtFormula, f: &RichFormula) -> SmtFormula {
-    seq!(m.clone(), SmtFormula::from(f))
+fn aux<T, U>(ctx:&T, a:U, b:U) -> U where T:FormulaUser<U> {
+    // seq!(m.clone(), SmtFormula::from(f))
+    ctx.eqf(a, b)
 }

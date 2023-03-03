@@ -8,7 +8,7 @@ use bitflags::bitflags;
 
 use crate::problem::step::Step;
 
-use super::{builtins::types::STEP, env::Environement, sort::Sort};
+use super::{builtins::types::STEP, env::Environement, formula_user::FormulaUser, sort::Sort};
 use core::fmt::Debug;
 
 // const BASE_SKOLEM_NAME: &'static str = "m$sk_";
@@ -376,6 +376,20 @@ impl Function {
 
     pub fn as_ptr_usize(&self) -> usize {
         Rc::as_ptr(&self.inner) as usize
+    }
+
+    pub fn f<T, U>(self, ctx: &T, args: impl IntoIterator<Item = U>) -> U
+    where
+        T: FormulaUser<U>,
+    {
+        ctx.funf(self, args)
+    }
+
+    pub fn cf<T, U>(&self, ctx: &T, args: impl IntoIterator<Item = U>) -> U
+    where
+        T: FormulaUser<U>,
+    {
+        self.clone().f(ctx, args)
     }
 }
 

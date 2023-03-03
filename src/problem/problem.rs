@@ -18,7 +18,7 @@ use crate::{
         function::{FFlags, Function},
         macros::fun,
         quantifier::Quantifier,
-        sort::Sort, formula_user::{HasSortcut, FunctionSortcuter},
+        sort::Sort, formula_user::{HasShortcut, FunctionShortcuter},
     },
     utils::utils::replace_if_eq,
 };
@@ -752,8 +752,8 @@ fn make_quantifier(
     )
 }
 
-impl HasSortcut for Problem {
-    fn get_function_shortcut(&self) -> &FunctionSortcuter {
+impl HasShortcut for Problem {
+    fn get_function_shortcut(&self) -> &FunctionShortcuter {
         self.env.get_function_shortcut()
     }
 }

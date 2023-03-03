@@ -6,7 +6,7 @@ use super::{
     builtins::{init::init_env, functions::{EQUALITY, AND, OR, IMPLIES, TRUE, FALSE, NOT}},
     cli::Args,
     function::{FFlags, Function},
-    sort::Sort, formula_user::{FunctionSortcuter, HasSortcut, FunctionSortcuterBuilder},
+    sort::Sort, formula_user::{FunctionShortcuter, HasShortcut, FunctionShortcuterBuilder},
 };
 
 #[derive(Debug, Clone)]
@@ -15,7 +15,7 @@ pub struct Environement {
     sorts: HashMap<String, Sort>,
     skolems: usize,
     args: Rc<Args>,
-    functions_shortcuter: Option<FunctionSortcuter>
+    functions_shortcuter: Option<FunctionShortcuter>
 }
 
 // #[derive(Debug, Clone)]
@@ -53,7 +53,7 @@ impl Environement {
             functions_shortcuter: None
         };
         init_env(&mut env, Self::get_sorts_mut);
-        env.functions_shortcuter = Some(FunctionSortcuterBuilder {
+        env.functions_shortcuter = Some(FunctionShortcuterBuilder {
             eq: EQUALITY(&env).clone(),
             and: AND(&env).clone(),
             or: OR(&env).clone(),
@@ -276,8 +276,8 @@ impl Environement {
     }
 }
 
-impl HasSortcut for Environement {
-    fn get_function_shortcut(&self) -> &FunctionSortcuter {
+impl HasShortcut for Environement {
+    fn get_function_shortcut(&self) -> &FunctionShortcuter {
         self.functions_shortcuter.as_ref().unwrap()
     }
 }

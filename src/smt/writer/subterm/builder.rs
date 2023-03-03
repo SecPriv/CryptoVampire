@@ -9,8 +9,8 @@ use crate::{
 
 use super::Subterm;
 
-pub trait Builder<'a> {
-    fn analyse(
+pub trait Builder {
+    fn analyse<'a>(
         &self,
         subt: &Subterm<Self>,
         m: &RichFormula,
@@ -22,34 +22,71 @@ pub trait Builder<'a> {
         Self: Sized;
 }
 
-impl<'a, F> Builder<'a> for F
-where
-    F: Fn(
-        &Subterm<F>,
-        &RichFormula,
-        Option<&Step>,
-        &'a Problem,
-        &'a RichFormula,
-    ) -> (Option<RichFormula>, Vec<&'a RichFormula>),
-{
-    fn analyse(
-        &self,
-        subt: &Subterm<Self>,
-        m: &RichFormula,
-        s: Option<&Step>,
-        pbl: &'a Problem,
-        f: &'a RichFormula,
-    ) -> (Option<RichFormula>, Vec<&'a RichFormula>)
-    where
-        Self: Sized,
-    {
-        (self)(subt, m, s, pbl, f)
-    }
-}
+// impl<'a, F> Builder<'a> for F
+// where
+//     F: Fn(
+//         &Subterm<F>,
+//         &RichFormula,
+//         Option<&Step>,
+//         &'a Problem,
+//         &'a RichFormula,
+//     ) -> (Option<RichFormula>, Vec<&'a RichFormula>),
+// {
+//     fn analyse(
+//         &self,
+//         subt: &Subterm<Self>,
+//         m: &RichFormula,
+//         s: Option<&Step>,
+//         pbl: &'a Problem,
+//         f: &'a RichFormula,
+//     ) -> (Option<RichFormula>, Vec<&'a RichFormula>)
+//     where
+//         Self: Sized,
+//     {
+//         (self)(subt, m, s, pbl, f)
+//     }
+// }
+
+// pub struct FBuilder<F>(F);
+// impl<'a, F> Builder<'a> for FBuilder<F>
+// where
+//     F: Fn(
+//         &RichFormula,
+//         &'a Problem,
+//         &'a RichFormula,
+//     ) -> (Option<RichFormula>, Vec<&'a RichFormula>),
+// {
+//     fn analyse(
+//         &self,
+//         subt: &Subterm<Self>,
+//         m: &RichFormula,
+//         s: Option<&Step>,
+//         pbl: &'a Problem,
+//         f: &'a RichFormula,
+//     ) -> (Option<RichFormula>, Vec<&'a RichFormula>)
+//     where
+//         Self: Sized,
+//     {
+//         (self.0)(m, pbl, f)
+//     }
+// }
+
+// impl<'a, F> FBuilder<F>
+// where
+//     F: Fn(
+//         &RichFormula,
+//         &'a Problem,
+//         &'a RichFormula,
+//     ) -> (Option<RichFormula>, Vec<&'a RichFormula>),
+// {
+//     pub fn new(f: F) -> Self {
+//         FBuilder(f)
+//     }
+// }
 
 pub struct DefaultBuilder();
-impl<'a> Builder<'a> for DefaultBuilder {
-    fn analyse(
+impl Builder for DefaultBuilder {
+    fn analyse<'a>(
         &self,
         subt: &Subterm<Self>,
         m: &RichFormula,

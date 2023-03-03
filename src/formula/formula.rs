@@ -4,15 +4,16 @@ use std::ops::Deref;
 
 use itertools::Itertools;
 
-use crate::{problem::problem::Problem,  utils::utils::StackBox, smt::smt::SmtFormula};
+use crate::{problem::problem::Problem, smt::smt::SmtFormula, utils::utils::StackBox};
 
 use super::{
     env::Environement,
     formula_iterator::{FormulaIterator, IteratorFlags},
+    formula_user::FormulaUser,
     function::Function,
     quantifier::Quantifier,
     sort::Sort,
-    unifier::{Substitution, Translate}, formula_user::FormulaUser,
+    unifier::{Substitution, Translate},
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -273,12 +274,26 @@ impl Variable {
         Self { id, sort }
     }
 
-    pub fn as_formula<T, U>(self, ctx: &T) -> U where T: FormulaUser<U> {
+    pub fn as_formula<T, U>(self, ctx: &T) -> U
+    where
+        T: FormulaUser<U>,
+    {
         ctx.varf(self)
     }
 
-    pub fn clone_to_formula<T, U>(&self, ctx: &T) -> U where T:FormulaUser<U> {
+    pub fn clone_to_formula<T, U>(&self, ctx: &T) -> U
+    where
+        T: FormulaUser<U>,
+    {
         self.clone().as_formula(ctx)
+    }
+
+    pub fn sort(&self) -> &Sort {
+        &self.sort
+    }
+
+    pub fn id(&self) -> usize {
+        self.id
     }
 }
 
@@ -299,5 +314,37 @@ impl From<Variable> for RichFormula {
 impl From<&Variable> for RichFormula {
     fn from(v: &Variable) -> Self {
         v.clone().into()
+    }
+}
+
+impl From<(usize, Sort)> for Variable {
+    fn from(arg: (usize, Sort)) -> Self {
+        let (id, sort) = arg;
+        Variable { id, sort }
+    }
+}
+impl From<(Sort, usize)> for Variable {
+    fn from(arg: (Sort, usize)) -> Self {
+        let (sort, id) = arg;
+        Variable { id, sort }
+    }
+}
+
+impl<'a> From<(usize, &'a Sort)> for Variable {
+    fn from(arg: (usize, &'a Sort)) -> Self {
+        let (id, sort) = arg;
+        Variable {
+            id,
+            sort: sort.clone(),
+        }
+    }
+}
+impl<'a> From<(&'a Sort, usize)> for Variable {
+    fn from(arg: (&'a Sort, usize)) -> Self {
+        let (sort, id) = arg;
+        Variable {
+            id,
+            sort: sort.clone(),
+        }
     }
 }

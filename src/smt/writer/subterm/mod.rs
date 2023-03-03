@@ -1,6 +1,6 @@
 pub mod builder;
 mod declare_and_base;
-mod preprocessing;
+pub(crate) mod preprocessing;
 
 use std::collections::HashSet;
 
@@ -190,11 +190,17 @@ impl<B> Subterm<B> {
                 && !f.is_from_step()
         })
     }
+
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a Self> {
+        [self].into_iter()
+    }
+
+
 }
 
-impl<'a, B> Subterm<B>
+impl< B> Subterm<B>
 where
-    B: Builder<'a>,
+    B: Builder,
 {
     pub fn new_and_init(
         assertions: &mut Vec<Smt>,
@@ -225,7 +231,7 @@ where
     ///  - `s` the step in which `m` is
     ///  - `pbl` the [Problem]
     ///  - `f`
-    pub fn analyse(
+    pub fn analyse<'a>(
         &self,
         m: &RichFormula,
         s: Option<&Step>,

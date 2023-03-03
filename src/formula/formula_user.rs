@@ -9,7 +9,7 @@ use super::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct FunctionSortcuter {
+pub struct FunctionShortcuter {
     eq: Function,
     and: Function,
     or: Function,
@@ -18,7 +18,7 @@ pub struct FunctionSortcuter {
     false_f: Function,
     not: Function,
 }
-pub struct FunctionSortcuterBuilder {
+pub struct FunctionShortcuterBuilder {
     pub eq: Function,
     pub and: Function,
     pub or: Function,
@@ -28,9 +28,9 @@ pub struct FunctionSortcuterBuilder {
     pub not: Function,
 }
 
-impl From<FunctionSortcuterBuilder> for FunctionSortcuter {
-    fn from(f: FunctionSortcuterBuilder) -> Self {
-        let FunctionSortcuterBuilder {
+impl From<FunctionShortcuterBuilder> for FunctionShortcuter {
+    fn from(f: FunctionShortcuterBuilder) -> Self {
+        let FunctionShortcuterBuilder {
             eq,
             and,
             or,
@@ -39,7 +39,7 @@ impl From<FunctionSortcuterBuilder> for FunctionSortcuter {
             false_f,
             not,
         } = f;
-        FunctionSortcuter {
+        FunctionShortcuter {
             eq,
             and,
             or,
@@ -73,13 +73,33 @@ pub trait FormulaUser<A> {
     fn mandf(&self, args: impl IntoIterator<Item = A>) -> A;
     /// multiple or
     fn morf(&self, args: impl IntoIterator<Item = A>) -> A;
+
+    fn forallff<V,F, const N: usize>(&self, vars: [V; N], f: F) -> A
+    where
+        V: Into<Variable>,
+        F: Fn([A; N]) -> A,
+    {
+        let vars = vars.map(Into::into);
+        let vars_2 = vars.clone().map(|v| self.varf(v));
+        self.forallf(vars.into(), f(vars_2))
+    }
+
+    fn existsff<V, F, const N: usize>(&self, vars: [V; N], f: F) -> A
+    where
+        V: Into<Variable>,
+        F: Fn([A; N]) -> A,
+    {
+        let vars = vars.map(Into::into);
+        let vars_2 = vars.clone().map(|v| self.varf(v));
+        self.existsf(vars.into(), f(vars_2))
+    }
 }
 
-pub(crate) trait HasSortcut {
-    fn get_function_shortcut(&self) -> &FunctionSortcuter;
+pub(crate) trait HasShortcut {
+    fn get_function_shortcut(&self) -> &FunctionShortcuter;
 }
 
-impl FormulaUser<RichFormula> for FunctionSortcuter {
+impl FormulaUser<RichFormula> for FunctionShortcuter {
     fn truef(&self) -> RichFormula {
         RichFormula::Fun(self.true_f.clone(), vec![])
     }
@@ -161,7 +181,7 @@ impl FormulaUser<RichFormula> for FunctionSortcuter {
     }
 }
 
-impl FormulaUser<SmtFormula> for FunctionSortcuter {
+impl FormulaUser<SmtFormula> for FunctionShortcuter {
     fn truef(&self) -> SmtFormula {
         SmtFormula::Fun(self.true_f.clone(), vec![])
     }
@@ -229,7 +249,7 @@ impl FormulaUser<SmtFormula> for FunctionSortcuter {
 
 macro_rules! impl_formula_user {
     ($a:ty) => {
-        impl<T: HasSortcut> FormulaUser<$a> for T {
+        impl<T: HasShortcut> FormulaUser<$a> for T {
             fn truef(&self) -> $a {
                 self.get_function_shortcut().truef()
             }
@@ -299,3 +319,23 @@ macro_rules! impl_formula_user {
 
 impl_formula_user!(RichFormula);
 impl_formula_user!(SmtFormula);
+
+// macro_rules! existsf {
+//     ($ctx:expr; $($name:ident ! $i:literal : $sort:expr),*; $content:block) => {{
+//         let f = |$($name),*| $content;
+//         ctx.existsf(
+//             vec![$(crate::formula::formula::Variable {id: $i, sort: $sort.clone()}),*],
+
+//                 f($(ctx.varf(crate::formula::formula::Variable {id: $i, sort: $sort.clone()})),*)
+
+//         )
+//     }};
+// }
+
+// macro_rules! forallf {
+//     ($ctx:expr; $($name:ident ! $i:literal : $sort:expr),*; $content:block) => {{
+//         $ctx.forallff( [$(crate::formula::formula::Variable {id: $i, sort: $sort.clone()}),*], |[$($name),*]| $content)
+//     }};
+// }
+
+// pub(crate) use {existsf, forallf};

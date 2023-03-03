@@ -8,7 +8,7 @@ use crate::{
         },
         formula::{sorts_to_variables, RichFormula, Variable},
         formula_iterator::{new_formula_iter_vec, FormulaIterator, IteratorFlags},
-        formula_user::{FormulaUser, HasSortcut},
+        formula_user::{FormulaUser, HasShortcut},
         function::{FFlags, Function},
         macros::fun,
         sort::Sort,
@@ -27,13 +27,13 @@ use if_chain::if_chain;
 use itertools::Itertools;
 
 /// preprocess input and memory cells
-fn preprocess<'a, B>(
+fn preprocess<B>(
     assertions: &mut Vec<Smt>,
     _: &mut Vec<Smt>,
-    ctx: &'a mut Ctx,
+    ctx: &mut Ctx,
     subt: &Subterm<B>,
 ) where
-    B: Builder<'a>,
+    B: Builder,
 {
     // let preprocess = subt.get_builder();
     let input = INPUT(ctx.env());
@@ -85,7 +85,7 @@ fn preprocess<'a, B>(
 }
 
 /// preprocess memory cells
-fn memory_cells<'a, B>(
+fn memory_cells<B>(
     assertions: &mut Vec<Smt>,
     ctx: &Ctx,
     max_var: usize,
@@ -96,7 +96,7 @@ fn memory_cells<'a, B>(
     m: &Variable,
     // vars: Vec<Variable>,
 ) where
-    B: Builder<'a>,
+    B: Builder,
 {
     // let flt = |s1: &RichFormula, s2: &RichFormula| ctx.funf(lt.clone(), [s1.clone(), s2.clone()]);
     // let flt_eq =
@@ -195,10 +195,10 @@ fn memory_cells<'a, B>(
 
 /// Mutates `assertions` and/or `declaration` to add any relevant axioms
 /// to encode `t \sqsubseteq \mathsf{input}(T)`
-fn inputs<'a, B>(
+fn inputs<B>(
     // declarations: &mut Vec<Smt>,
     assertions: &mut Vec<Smt>,
-    ctx: &'a Ctx,
+    ctx: &Ctx,
     subt: &Subterm<B>,
     tp: &Variable,
     m: &Variable,
@@ -208,7 +208,7 @@ fn inputs<'a, B>(
     lt: &Mlt,
     input: &Function,
 ) where
-    B: Builder<'a>,
+    B: Builder,
 {
     // let flt = |s1: &RichFormula, s2: &RichFormula| ctx.funf(lt.clone(), [s1.clone(), s2.clone()]);
     // let flt_eq =
@@ -428,10 +428,10 @@ pub fn not_subterm_protocol<'a, B>(
     subt: &Subterm<B>,
     assertions: &mut Vec<Smt>,
     declarations: &mut Vec<Smt>,
-    ctx: &'a mut Ctx,
+    ctx: &mut Ctx,
 ) -> Function
 where
-    B: Builder<'a>,
+    B: Builder,
 {
     struct Aux<'a> {
         pbl: &'a Problem,
