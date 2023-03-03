@@ -27,7 +27,9 @@ pub fn declare_and_base<'a, B>(
         super::SubtermKind::Vampire => {
             declare_and_base_vampire(assertions, declarations, ctx, subt)
         }
-        super::SubtermKind::SmtCompliant => todo!(),
+        super::SubtermKind::SmtCompliant => {
+            declare_and_base_smtlib(assertions, declarations, ctx, subt)
+        }
     }
 }
 
