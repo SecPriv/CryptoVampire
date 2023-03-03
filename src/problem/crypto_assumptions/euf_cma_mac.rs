@@ -7,7 +7,7 @@ use crate::formula::builtins::functions::IF_THEN_ELSE;
 use crate::formula::formula_user::FormulaUser;
 use crate::formula::sort::Sort;
 use crate::formula::utils::Evaluator;
-use crate::problem::crypto_assumptions::aux;
+
 use crate::smt::writer::subterm::builder::{Builder, DefaultBuilder};
 use crate::smt::writer::subterm::preprocessing::not_subterm_protocol;
 use crate::smt::writer::subterm::{Subterm, SubtermFlags};

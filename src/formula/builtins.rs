@@ -121,7 +121,7 @@ pub mod init {
         init_sort!(env; BITSTRING);
         if env.no_ta() {
             let bitstring = BITSTRING(env).clone();
-            let bool = BOOL(env).clone();
+            let _bool = BOOL(env).clone();
 
             let h = h(env);
 

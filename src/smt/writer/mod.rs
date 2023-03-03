@@ -9,8 +9,8 @@ use itertools::{Either, Itertools};
 use crate::{
     formula::{
         builtins::{
-            functions::{ NONCE_MSG, EVAL_MSG_NAME, EVAL_COND_NAME},
-            types::{BITSTRING, BOOL, CONDITION, MSG, NONCE},
+            functions::{EVAL_COND_NAME, EVAL_MSG_NAME, NONCE_MSG},
+            types::NONCE,
         },
         env::Environement,
         formula_user::HasShortcut,

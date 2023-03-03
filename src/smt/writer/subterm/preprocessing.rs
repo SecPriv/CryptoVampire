@@ -17,7 +17,8 @@ use crate::{
         macros::*,
         smt::{Smt, SmtFormula},
         writer::Ctx,
-    }, utils::utils::{StackBox, reset_vec},
+    },
+    utils::utils::{reset_vec, StackBox},
 };
 
 use super::{builder::Builder, Subterm};

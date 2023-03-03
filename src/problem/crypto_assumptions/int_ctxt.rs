@@ -13,14 +13,14 @@ use crate::smt::writer::subterm::{Subterm, SubtermFlags};
 use crate::{
     formula::{
         builtins::{
-            functions::{ INPUT, LT, NONCE_MSG},
-            types::{BOOL, CONDITION, MSG, NONCE},
+            functions::{INPUT, LT, NONCE_MSG},
+            types::{CONDITION, MSG, NONCE},
         },
         formula::{RichFormula, Variable},
         function::{FFlags, Function},
     },
     smt::{
-        macros::{sand, seq, sexists, sforall, sfun, simplies, site, sneq, sor, srewrite, svar},
+        macros::{sand, seq, sexists, sforall, sfun, simplies, site, sor, srewrite, svar},
         smt::{RewriteKind, Smt, SmtFormula},
         writer::Ctx,
     },
@@ -72,7 +72,6 @@ pub(crate) fn generate(
             evaluate.cond(ctx,sfun!(cnot; sfun!(ceq;  sfun!(dec; m, sk), evaluate.msg(ctx, sfun!(fail)))))
         )
     })));
-
 
     if !senc_rand(ctx, enc, dec, verify, fail) {
         return;

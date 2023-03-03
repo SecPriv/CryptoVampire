@@ -1,6 +1,6 @@
-use std::{collections::HashSet, fmt::Display};
 use std::fmt;
 use std::ops::Deref;
+use std::{collections::HashSet, fmt::Display};
 
 use itertools::Itertools;
 
@@ -13,7 +13,7 @@ use super::{
     function::Function,
     quantifier::Quantifier,
     sort::Sort,
-    unifier::{Substitution, Translate}, builtins::functions::{EVAL_MSG_NAME, EVAL_COND_NAME},
+    unifier::{Substitution, Translate},
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

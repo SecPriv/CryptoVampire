@@ -1,7 +1,3 @@
-use crate::formula::{env::Environement, builtins::functions::{EVAL_COND_NAME, EVAL_MSG_NAME}};
-
-use self::smt::SmtFormula;
-
 pub mod macros;
 pub mod smt;
 pub mod writer;

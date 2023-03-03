@@ -219,7 +219,7 @@ fn evaluate_rewrite(
         msg,
         cond,
         &to_eval,
-        &evaluate
+        &evaluate,
     );
 
     if env.no_bitstring_fun() {
@@ -264,7 +264,7 @@ fn evaluate_rewrite(
         for q in &ctx.pbl.quantifiers {
             // let vars = q.free_variables.iter().chain(q.bound_variables.iter());
             let asserts = match &q.content {
-                QuantifierPContent::Exists { content } => vec![
+                QuantifierPContent::Exists { content: _ } => vec![
                 //     sforall!(
                 //     q.free_variables.iter().cloned().collect_vec(),
                 //     simplies!(env;
@@ -375,12 +375,12 @@ fn evaluate_rewrite(
     }
 }
 
-fn evaluate_rewrite_conditions<F/* , F2, F3 */>(
+fn evaluate_rewrite_conditions<F /* , F2, F3 */>(
     env: &Environement,
     assertions: &mut Vec<Smt>,
-    declarations: &mut Vec<Smt>,
+    _declarations: &mut Vec<Smt>,
     ctx: &Ctx,
-    rewriteb: &Function,
+    _rewriteb: &Function,
     msg: &Sort,
     cond: &Sort,
     to_eval: &F,

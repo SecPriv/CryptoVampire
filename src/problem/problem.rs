@@ -17,7 +17,6 @@ use crate::{
         formula::{RichFormula, Variable},
         formula_user::{FunctionShortcuter, HasShortcut},
         function::{FFlags, Function},
-        macros::fun,
         quantifier::Quantifier,
         sort::Sort,
         utils::Evaluator,
