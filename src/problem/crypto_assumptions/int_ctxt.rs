@@ -3,7 +3,10 @@ use std::convert::identity;
 use if_chain::if_chain;
 use itertools::{Either, Itertools};
 
+use crate::formula::sort::Sort;
 use crate::problem::crypto_assumptions::aux;
+use crate::smt::writer::subterm::builder::{Builder, DefaultBuilder};
+use crate::smt::writer::subterm::{Subterm, SubtermFlags};
 use crate::{
     formula::{
         builtins::{
@@ -17,10 +20,7 @@ use crate::{
     smt::{
         macros::{sand, seq, sexists, sforall, sfun, simplies, site, sneq, sor, srewrite, svar},
         smt::{RewriteKind, Smt, SmtFormula},
-        writer::{
-            subterm::{default_f, generate_subterm},
-            Ctx,
-        },
+        writer::Ctx,
     },
 };
 
@@ -267,86 +267,152 @@ pub(crate) fn generate(
             )))
         }
     } else if !ctx.env().no_ta() {
-        let subt_main = generate_subterm(
+        let data = MBuilderData {
+            nonce_sort: nonce_sort.clone(),
+            nonce: nonce.clone(),
+            enc: enc.clone(),
+            dec: dec.clone(),
+            verify: verify.clone(),
+        };
+
+        let subt_main = Subterm::new_and_init(
             assertions,
             declarations,
             ctx,
-            "sbt$euf_ctxt_main",
-            &msg,
+            "sbt$euf_ctxt_main".to_owned(),
+            msg.clone(),
             vec![],
-            default_f(),
+            Default::default(),
+            DefaultBuilder(),
         );
-        let subt_sk = generate_subterm(
+        let subt_sk = Subterm::new_and_init(
             assertions,
             declarations,
             ctx,
-            "sbt$euf_ctxt_sk",
-            &nonce_sort,
-            vec![enc, dec, verify],
-            |_, m, _, _, f| match f {
-                RichFormula::Var(v) if v.sort == nonce_sort => (Some(aux(m, f)), vec![]),
-                RichFormula::Fun(fun, args) if fun == enc => {
-                    let mut todo = Vec::with_capacity(3);
-                    todo.push(&args[0]);
-                    todo.push(&args[1]);
-                    if_chain!(
-                        if let RichFormula::Fun(fun2, _) = &args[2];
-                        if fun2 == &nonce;
-                        then {}
-                        else {
-                            todo.push(&args[2])
+            "sbt$euf_ctxt_sk".to_owned(),
+            nonce_sort.clone(),
+            [enc, dec, verify].into_iter().cloned(),
+            SubtermFlags::ALWAYS_PROCESSWIDE,
+            {
+                struct MBuilder(MBuilderData);
+                impl Builder for MBuilder {
+                    fn analyse<'a>(
+                        &self,
+                        _: &Subterm<Self>,
+                        m: &RichFormula,
+                        _: Option<&crate::problem::step::Step>,
+                        pbl: &'a crate::problem::problem::Problem,
+                        f: &'a RichFormula,
+                    ) -> (Option<RichFormula>, Vec<&'a RichFormula>)
+                    where
+                        Self: Sized,
+                    {
+                        let MBuilderData {
+                            nonce_sort,
+                            nonce,
+                            enc,
+                            dec,
+                            verify,
+                        } = &self.0;
+                        match f {
+                            RichFormula::Var(v) if &v.sort == nonce_sort => {
+                                (Some(aux(pbl, m.clone(), f.clone())), vec![])
+                            }
+                            RichFormula::Fun(fun, args) if fun == enc => {
+                                let mut todo = Vec::with_capacity(3);
+                                todo.push(&args[0]);
+                                todo.push(&args[1]);
+                                if_chain!(
+                                    if let RichFormula::Fun(fun2, _) = &args[2];
+                                    if fun2 == nonce;
+                                    then {}
+                                    else {
+                                        todo.push(&args[2])
+                                    }
+                                );
+                                (None, todo)
+                            }
+                            RichFormula::Fun(fun, args) if fun == dec || fun == verify => {
+                                let mut todo = Vec::with_capacity(2);
+                                todo.push(&args[0]);
+                                if_chain!(
+                                    if let RichFormula::Fun(fun2, _) = &args[1];
+                                    if fun2 == nonce;
+                                    then {}
+                                    else {
+                                        todo.push(&args[1])
+                                    }
+                                );
+                                (None, todo)
+                            }
+                            RichFormula::Fun(fun, args) => (
+                                (&fun.get_output_sort() == nonce_sort)
+                                    .then(|| aux(pbl, m.clone(), f.clone())),
+                                args.iter().collect(),
+                            ),
+                            _ => (None, vec![]),
                         }
-                    );
-                    (None, todo)
+                    }
                 }
-                RichFormula::Fun(fun, args) if fun == dec || fun == verify => {
-                    let mut todo = Vec::with_capacity(2);
-                    todo.push(&args[0]);
-                    if_chain!(
-                        if let RichFormula::Fun(fun2, _) = &args[1];
-                        if fun2 == &nonce;
-                        then {}
-                        else {
-                            todo.push(&args[1])
-                        }
-                    );
-                    (None, todo)
-                }
-                RichFormula::Fun(fun, args) => (
-                    (fun.get_output_sort() == nonce_sort).then(|| aux(m, f)),
-                    args.iter().collect(),
-                ),
-                _ => (None, vec![]),
+                MBuilder(data.clone())
             },
         );
-        let subt_rd = generate_subterm(
+        let subt_rd = Subterm::new_and_init(
             assertions,
             declarations,
             ctx,
-            "sbt$euf_ctxt_r",
-            &nonce_sort,
-            vec![enc],
-            |_, m, _, _, f| match f {
-                RichFormula::Var(v) if v.sort == nonce_sort => (Some(aux(m, f)), vec![]),
-                RichFormula::Fun(fun, args) if fun == enc => {
-                    let mut todo = Vec::with_capacity(3);
-                    todo.push(&args[0]);
-                    todo.push(&args[2]);
-                    if_chain!(
-                        if let RichFormula::Fun(fun2, _) = &args[1];
-                        if fun2 == &nonce;
-                        then {}
-                        else {
-                            todo.push(&args[1])
+            "sbt$euf_ctxt_r".into(),
+            nonce_sort.clone(),
+            [enc.clone()],
+            SubtermFlags::ALWAYS_PROCESSWIDE,
+            {
+                struct MBuilder(MBuilderData);
+                impl Builder for MBuilder {
+                    fn analyse<'a>(
+                        &self,
+                        _: &Subterm<Self>,
+                        m: &RichFormula,
+                        _: Option<&crate::problem::step::Step>,
+                        pbl: &'a crate::problem::problem::Problem,
+                        f: &'a RichFormula,
+                    ) -> (Option<RichFormula>, Vec<&'a RichFormula>)
+                    where
+                        Self: Sized,
+                    {
+                        let MBuilderData {
+                            nonce_sort,
+                            nonce,
+                            enc,
+                            ..
+                        } = &self.0;
+                        match f {
+                            RichFormula::Var(v) if &v.sort == nonce_sort => {
+                                (Some(aux(pbl, m.clone(), f.clone())), vec![])
+                            }
+                            RichFormula::Fun(fun, args) if fun == enc => {
+                                let mut todo = Vec::with_capacity(3);
+                                todo.push(&args[0]);
+                                todo.push(&args[2]);
+                                if_chain!(
+                                    if let RichFormula::Fun(fun2, _) = &args[1];
+                                    if fun2 == nonce;
+                                    then {}
+                                    else {
+                                        todo.push(&args[1])
+                                    }
+                                );
+                                (None, todo)
+                            }
+                            RichFormula::Fun(fun, args) => (
+                                (&fun.get_output_sort() == nonce_sort)
+                                    .then(|| aux(pbl, m.clone(), f.clone())),
+                                args.iter().collect(),
+                            ),
+                            _ => (None, vec![]),
                         }
-                    );
-                    (None, todo)
+                    }
                 }
-                RichFormula::Fun(fun, args) => (
-                    (fun.get_output_sort() == nonce_sort).then(|| aux(m, f)),
-                    args.iter().collect(),
-                ),
-                _ => (None, vec![]),
+                MBuilder(data)
             },
         );
 
@@ -354,17 +420,17 @@ pub(crate) fn generate(
             assertions.push(Smt::Assert(
                 sforall!(sk!0:nonce_sort, k!1:msg, m!2:msg, r!3:msg;{
                     simplies!(ctx.env();
-                        s.f(sk.clone(), sfun!(enc; m.clone(), r.clone(), k.clone()), &msg),
+                        s.f(ctx, sk.clone(), sfun!(enc; m.clone(), r.clone(), k.clone()), &msg),
                         site!(
                             seq!(k.clone(), sfun!(nonce; sk.clone())),
                             sor!(
-                                s.f(sk.clone(), m.clone(), &msg),
-                                s.f(sk.clone(), r.clone(), &msg)
+                                s.f(ctx, sk.clone(), m.clone(), &msg),
+                                s.f(ctx, sk.clone(), r.clone(), &msg)
                             ),
                             sor!(
-                                s.f(sk.clone(), m.clone(), &msg),
-                                s.f(sk.clone(), r.clone(), &msg),
-                                s.f(sk.clone(), k.clone(), &msg)
+                                s.f(ctx, sk.clone(), m.clone(), &msg),
+                                s.f(ctx, sk.clone(), r.clone(), &msg),
+                                s.f(ctx, sk.clone(), k.clone(), &msg)
                             )
                         )
                     )
@@ -372,26 +438,26 @@ pub(crate) fn generate(
             ));
             assertions.push(Smt::Assert(sforall!(sk!0:nonce_sort, m!1:msg, k!2:msg; {
                 simplies!(ctx.env();
-                    s.f(sk.clone(), sfun!(dec; m.clone(), k.clone()), &msg),
+                    s.f(ctx, sk.clone(), sfun!(dec; m.clone(), k.clone()), &msg),
                     site!(
                         seq!(k.clone(), sfun!(nonce; sk.clone())),
-                        s.f(sk.clone(), m.clone(), &msg),
+                        s.f(ctx, sk.clone(), m.clone(), &msg),
                         sor!(
-                            s.f(sk.clone(), m.clone(), &msg),
-                            s.f(sk.clone(), k.clone(), &msg)
+                            s.f(ctx, sk.clone(), m.clone(), &msg),
+                            s.f(ctx, sk.clone(), k.clone(), &msg)
                         )
                     )
                 )
             })));
             assertions.push(Smt::Assert(sforall!(sk!0:nonce_sort, m!1:msg, k!2:msg; {
                 simplies!(ctx.env();
-                    s.f(sk.clone(), sfun!(verify; m.clone(), k.clone()), &cond),
+                    s.f(ctx, sk.clone(), sfun!(verify; m.clone(), k.clone()), &cond),
                     site!(
                         seq!(k.clone(), sfun!(nonce; sk.clone())),
-                        s.f(sk.clone(), m.clone(), &msg),
+                        s.f(ctx, sk.clone(), m.clone(), &msg),
                         sor!(
-                            s.f(sk.clone(), m.clone(), &msg),
-                            s.f(sk.clone(), k.clone(), &msg)
+                            s.f(ctx, sk.clone(), m.clone(), &msg),
+                            s.f(ctx, sk.clone(), k.clone(), &msg)
                         )
                     )
                 )
@@ -402,17 +468,17 @@ pub(crate) fn generate(
             assertions.push(Smt::Assert(
                 sforall!(nr!0:nonce_sort, k!1:msg, m!2:msg, r!3:msg;{
                     simplies!(ctx.env();
-                        s.f(nr.clone(), sfun!(enc; m.clone(), r.clone(), k.clone()), &msg),
+                        s.f(ctx, nr.clone(), sfun!(enc; m.clone(), r.clone(), k.clone()), &msg),
                         site!(
                             seq!(r.clone(), sfun!(nonce; nr.clone())),
                             sor!(
-                                s.f(nr.clone(), m.clone(), &msg),
-                                s.f(nr.clone(), k.clone(), &msg)
+                                s.f(ctx, nr.clone(), m.clone(), &msg),
+                                s.f(ctx, nr.clone(), k.clone(), &msg)
                             ),
                             sor!(
-                                s.f(nr.clone(), m.clone(), &msg),
-                                s.f(nr.clone(), r.clone(), &msg),
-                                s.f(nr.clone(), k.clone(), &msg)
+                                s.f(ctx, nr.clone(), m.clone(), &msg),
+                                s.f(ctx, nr.clone(), r.clone(), &msg),
+                                s.f(ctx, nr.clone(), k.clone(), &msg)
                             )
                         )
                     )
@@ -501,8 +567,8 @@ pub(crate) fn generate(
                 let r = sfun!(sk_r; c.clone(), k.clone());
                 let nc = sfun!(enc; m.clone(), sfun!(nonce; r.clone()), sfun!(nonce; k.clone()));
                 sor!(
-                    subt_sk.f(k.clone(), c.clone(), &msg),
-                    subt_main.f(nc, c.clone(), &msg) //,
+                    subt_sk.f(ctx, k.clone(), c.clone(), &msg),
+                    subt_main.f(ctx, nc, c.clone(), &msg) //,
                     // sfun!(sp; k.clone(), c.clone())
                 )
             }
@@ -518,8 +584,8 @@ pub(crate) fn generate(
                     sexists!(m!4:msg, r!5:nonce_sort; {
                         let nc = sfun!(enc; m.clone(),  sfun!(nonce; r.clone()), sfun!(nonce; k.clone()));
                         sor!(
-                            subt_sk.f(k.clone(), c.clone(), &msg),
-                            subt_main.f(nc, c.clone(), &msg) // ,
+                            subt_sk.f(ctx, k.clone(), c.clone(), &msg),
+                            subt_main.f(ctx, nc, c.clone(), &msg) // ,
                             // sfun!(sp; k.clone(), c.clone())
                         )
                     })
@@ -646,4 +712,13 @@ fn senc_rand(
     //     }
     // })))
     ok
+}
+
+#[derive(Clone)]
+struct MBuilderData {
+    nonce_sort: Sort,
+    nonce: Function,
+    enc: Function,
+    dec: Function,
+    verify: Function,
 }

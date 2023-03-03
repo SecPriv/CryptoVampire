@@ -1,6 +1,6 @@
 mod euf_cma_mac;
 // mod euf_cma_sign;
-// mod int_ctxt;
+mod int_ctxt;
 mod nonce;
 
 use crate::{
@@ -52,12 +52,12 @@ impl CryptoAssumption {
             // CryptoAssumption::EufCmaSign { sign, verify, pk } => {
             //     euf_cma_sign::generate(assertions, declarations, ctx, sign, verify, pk)
             // }
-            // CryptoAssumption::IntCtxtSenc {
-            //     enc,
-            //     dec,
-            //     verify,
-            //     fail,
-            // } => int_ctxt::generate(assertions, declarations, ctx, enc, dec, verify, fail),
+            CryptoAssumption::IntCtxtSenc {
+                enc,
+                dec,
+                verify,
+                fail,
+            } => int_ctxt::generate(assertions, declarations, ctx, enc, dec, verify, fail),
             _ => todo!()
         }
     }
