@@ -27,10 +27,8 @@ fn main() {
     let env = Environement::empty(Rc::clone(&args));
 
     let str = if let Some(file) = &args.file {
-        read_to_string(file).expect(&format!(
-            "file \"{}\" not found",
-            file.to_str().unwrap_or("[non-unicode file name]")
-        ))
+        read_to_string(file).unwrap_or_else(|_| panic!("file \"{}\" not found",
+            file.to_str().unwrap_or("[non-unicode file name]")))
     } else {
         let mut buf = String::new();
         Read::read_to_string(&mut io::stdin(), &mut buf).expect("unable to read stdin");
@@ -78,10 +76,8 @@ fn write_to_file(path: &PathBuf, smt: Vec<Smt>) {
         .truncate(true)
         .create(true)
         .open(path)
-        .expect(&format!(
-            "error while open the file {}",
-            path.as_os_str().to_str().unwrap_or("invalid")
-        ));
+        .unwrap_or_else(|_| panic!("error while open the file {}",
+            path.as_os_str().to_str().unwrap_or("invalid")));
 
     for s in smt.into_iter() {
         write!(f, "{}\n\n", s).expect("couldn't write");
