@@ -1,10 +1,6 @@
 use crate::{
     formula::{formula::RichFormula, formula_user::FormulaUser},
     problem::{problem::Problem, step::Step},
-    smt::{
-        macros::{seq, svar},
-        smt::SmtFormula,
-    },
 };
 
 use super::Subterm;

@@ -4,12 +4,8 @@ mod int_ctxt;
 mod nonce;
 
 use crate::{
-    formula::{formula::RichFormula, function::Function, formula_user::FormulaUser},
-    smt::{
-        macros::seq,
-        smt::{Smt, SmtFormula},
-        writer::Ctx,
-    },
+    formula::{formula_user::FormulaUser, function::Function},
+    smt::{smt::Smt, writer::Ctx},
 };
 
 // should be quick to copy
@@ -58,12 +54,15 @@ impl CryptoAssumption {
                 verify,
                 fail,
             } => int_ctxt::generate(assertions, declarations, ctx, enc, dec, verify, fail),
-            _ => todo!()
+            _ => todo!(),
         }
     }
 }
 
-fn aux<T, U>(ctx:&T, a:U, b:U) -> U where T:FormulaUser<U> {
+fn aux<T, U>(ctx: &T, a: U, b: U) -> U
+where
+    T: FormulaUser<U>,
+{
     // seq!(m.clone(), SmtFormula::from(f))
     ctx.eqf(a, b)
 }

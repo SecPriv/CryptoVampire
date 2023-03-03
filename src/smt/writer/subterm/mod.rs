@@ -2,8 +2,6 @@ pub mod builder;
 mod declare_and_base;
 pub(crate) mod preprocessing;
 
-use std::collections::HashSet;
-
 use bitflags::bitflags;
 use itertools::Itertools;
 
@@ -11,18 +9,13 @@ use crate::{
     formula::{
         builtins::{functions::SUBTERM, types::BOOL},
         env::Environement,
-        formula::{RichFormula, Variable},
-        formula_iterator::{FormulaIterator, IteratorFlags},
+        formula::RichFormula,
         formula_user::FormulaUser,
         function::{FFlags, Function},
         sort::Sort,
     },
     problem::{problem::Problem, step::Step},
-    smt::{
-        macros::{sfun, simplies, sneq},
-        smt::{Smt, SmtFormula},
-    },
-    utils::utils::StackBox,
+    smt::smt::Smt,
 };
 
 use self::builder::Builder;
@@ -194,11 +187,9 @@ impl<B> Subterm<B> {
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a Self> {
         [self].into_iter()
     }
-
-
 }
 
-impl< B> Subterm<B>
+impl<B> Subterm<B>
 where
     B: Builder,
 {

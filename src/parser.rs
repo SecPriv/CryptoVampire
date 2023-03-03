@@ -2,7 +2,7 @@ extern crate pest;
 use crate::{
     formula::{env::Environement, function::FFlags, macros::fun},
     problem::{
-        cell::{Assignement, MemoryCell, PreMemoryCell},
+        cell::{Assignement, PreMemoryCell},
         crypto_assumptions::CryptoAssumption,
         problem::{Problem, ProblemBuilder},
     },

@@ -15,10 +15,11 @@ use crate::{
         },
         env::Environement,
         formula::{RichFormula, Variable},
+        formula_user::{FunctionShortcuter, HasShortcut},
         function::{FFlags, Function},
         macros::fun,
         quantifier::Quantifier,
-        sort::Sort, formula_user::{HasShortcut, FunctionShortcuter},
+        sort::Sort,
     },
     utils::utils::replace_if_eq,
 };
@@ -39,7 +40,7 @@ pub struct Problem {
     pub order: Vec<RichFormula>,
     pub lemmas: Vec<RichFormula>,
     pub crypto_assumptions: Vec<CryptoAssumption>,
-    pub quantifiers: Vec<QuantifierP>
+    pub quantifiers: Vec<QuantifierP>,
 }
 
 pub struct ProblemBuilder {

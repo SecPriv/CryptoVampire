@@ -1,4 +1,4 @@
-use std::ops::{DerefMut, Deref};
+use std::ops::{Deref, DerefMut};
 
 use crate::problem::problem::Problem;
 
@@ -17,7 +17,7 @@ pub(crate) struct FormulaIterator<'a, F, T, V, I>
 where
     F: FnMut(&'a RichFormula, &'a Problem) -> (Option<T>, I),
     I: Iterator<Item = &'a RichFormula>,
-    V: DerefMut<Target=Vec<&'a RichFormula>> + Deref<Target=Vec<&'a RichFormula>>,
+    V: DerefMut<Target = Vec<&'a RichFormula>> + Deref<Target = Vec<&'a RichFormula>>,
 {
     pile: V,
     pbl: &'a Problem,
@@ -29,7 +29,7 @@ impl<'a, F, T, V, I> FormulaIterator<'a, F, T, V, I>
 where
     F: FnMut(&'a RichFormula, &'a Problem) -> (Option<T>, I),
     I: Iterator<Item = &'a RichFormula>,
-    V: DerefMut<Target=Vec<&'a RichFormula>> + Deref<Target=Vec<&'a RichFormula>>,
+    V: DerefMut<Target = Vec<&'a RichFormula>> + Deref<Target = Vec<&'a RichFormula>>,
 {
     pub(crate) fn new(pile: V, pbl: &'a Problem, flags: IteratorFlags, f: F) -> Self {
         Self {
@@ -41,7 +41,7 @@ where
     }
 }
 
-pub(crate) fn new_formula_iter_vec<'a,  F, V, T>(
+pub(crate) fn new_formula_iter_vec<'a, F, V, T>(
     pile: V,
     pbl: &'a Problem,
     flags: IteratorFlags,
@@ -55,7 +55,7 @@ pub(crate) fn new_formula_iter_vec<'a,  F, V, T>(
 >
 where
     F: FnMut(&'a RichFormula, &'a Problem) -> (Option<T>, Vec<&'a RichFormula>),
-    V: DerefMut<Target=Vec<&'a RichFormula>> + Deref<Target=Vec<&'a RichFormula>>,
+    V: DerefMut<Target = Vec<&'a RichFormula>> + Deref<Target = Vec<&'a RichFormula>>,
 {
     FormulaIterator {
         pile,
@@ -72,7 +72,7 @@ impl<'a, F, T, V, I> Iterator for FormulaIterator<'a, F, T, V, I>
 where
     F: FnMut(&'a RichFormula, &'a Problem) -> (Option<T>, I),
     I: Iterator<Item = &'a RichFormula>,
-    V: DerefMut<Target=Vec<&'a RichFormula>> + Deref<Target=Vec<&'a RichFormula>>,
+    V: DerefMut<Target = Vec<&'a RichFormula>> + Deref<Target = Vec<&'a RichFormula>>,
 {
     type Item = T;
 

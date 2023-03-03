@@ -7,10 +7,9 @@ use crate::{
             types::{BOOL, MSG, STEP},
         },
         formula::{sorts_to_variables, RichFormula, Variable},
-        formula_iterator::{new_formula_iter_vec, FormulaIterator, IteratorFlags},
-        formula_user::{FormulaUser, HasShortcut},
+        formula_iterator::{new_formula_iter_vec, IteratorFlags},
+        formula_user::FormulaUser,
         function::{FFlags, Function},
-        macros::fun,
         sort::Sort,
     },
     problem::{cell::Assignement, problem::Problem},
@@ -23,16 +22,12 @@ use crate::{
 };
 
 use super::{builder::Builder, Subterm};
-use if_chain::if_chain;
+
 use itertools::Itertools;
 
 /// preprocess input and memory cells
-fn preprocess<B>(
-    assertions: &mut Vec<Smt>,
-    _: &mut Vec<Smt>,
-    ctx: &mut Ctx,
-    subt: &Subterm<B>,
-) where
+fn preprocess<B>(assertions: &mut Vec<Smt>, _: &mut Vec<Smt>, ctx: &mut Ctx, subt: &Subterm<B>)
+where
     B: Builder,
 {
     // let preprocess = subt.get_builder();
@@ -40,7 +35,8 @@ fn preprocess<B>(
     let lt = ctx.env().get_f(LT_NAME).unwrap();
 
     let flt = |s1: &SmtFormula, s2: &SmtFormula| sfun!(lt; s1.clone(), s2.clone());
-    let flt_eq = |s1: &SmtFormula, s2: &SmtFormula| sor!(seq!(s1.clone(), s2.clone()), flt(s1, s2));
+    let _flt_eq =
+        |s1: &SmtFormula, s2: &SmtFormula| sor!(seq!(s1.clone(), s2.clone()), flt(s1, s2));
 
     let msg = MSG(ctx.env());
     // let cond = CONDITION(ctx.env());
@@ -107,7 +103,7 @@ fn memory_cells<B>(
             .values()
             .map(|c| {
                 let cell_vars = sorts_to_variables(max_var, c.args().iter());
-                let max_var = max_var + cell_vars.len();
+                let _max_var = max_var + cell_vars.len();
 
                 let smt_c: RichFormula = ctx.funf(
                     c.function().clone(),

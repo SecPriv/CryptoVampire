@@ -6,7 +6,7 @@ use itertools::{Either, Itertools};
 use crate::formula::builtins::functions::IF_THEN_ELSE;
 use crate::formula::formula_user::FormulaUser;
 use crate::formula::sort::Sort;
-use crate::problem::crypto_assumptions::aux;
+
 use crate::smt::writer::subterm::builder::{Builder, DefaultBuilder};
 use crate::smt::writer::subterm::preprocessing::not_subterm_protocol;
 use crate::smt::writer::subterm::{Subterm, SubtermFlags};
@@ -20,7 +20,7 @@ use crate::{
         function::{FFlags, Function},
     },
     smt::{
-        macros::{sand, seq, sexists, sforall, sfun, simplies, site, sor, srewrite, svar},
+        macros::{sand, seq, sexists, sforall, sfun, simplies, sor, srewrite, svar},
         smt::{RewriteKind, Smt, SmtFormula},
         writer::Ctx,
     },

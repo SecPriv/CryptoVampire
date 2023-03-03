@@ -6,9 +6,7 @@ use crate::{
             functions::INPUT,
             types::{BOOL, CONDITION, MSG, STEP},
         },
-        env::Environement,
         formula::Variable,
-        function::Function,
     },
     smt::{
         macros::{seq, sforall, sfun, simplies, snot, svar},
@@ -17,7 +15,7 @@ use crate::{
     },
 };
 
-use super::{builder::Builder, InnerSubterm, Subterm, SubtermFlags};
+use super::{InnerSubterm, Subterm};
 
 pub fn declare_and_base<'a, B>(
     assertions: &mut Vec<Smt>,
@@ -39,8 +37,8 @@ pub fn declare_and_base_vampire<'a, B>(
     ctx: &mut Ctx,
     subt: &Subterm<B>,
 ) {
-    let bool = BOOL(ctx.env());
-    let input = INPUT(ctx.env()).clone();
+    let _bool = BOOL(ctx.env());
+    let _input = INPUT(ctx.env()).clone();
     let step_sort = STEP(ctx.env()).clone();
 
     if let Subterm {
@@ -48,12 +46,7 @@ pub fn declare_and_base_vampire<'a, B>(
         // name,
         // flags,
         // ignored_functions,
-        inner:
-            InnerSubterm::Vampire {
-                high_order_fun,
-                function,
-                ..
-            },
+        inner: InnerSubterm::Vampire { function, .. },
         ..
     } = subt
     {

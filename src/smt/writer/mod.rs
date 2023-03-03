@@ -13,8 +13,9 @@ use crate::{
             types::NONCE,
         },
         env::Environement,
+        formula_user::HasShortcut,
         function::Function,
-        sort::Sort, formula_user::HasShortcut,
+        sort::Sort,
     },
     problem::problem::Problem,
     smt::{

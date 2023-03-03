@@ -1,5 +1,3 @@
-use std::default;
-
 use crate::{
     formula::builtins::{
         functions::{EVAL_MSG, NONCE_MSG},

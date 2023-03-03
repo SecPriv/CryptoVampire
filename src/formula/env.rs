@@ -3,10 +3,14 @@ use std::{collections::HashMap, rc::Rc};
 use itertools::Itertools;
 
 use super::{
-    builtins::{init::init_env, functions::{EQUALITY, AND, OR, IMPLIES, TRUE, FALSE, NOT}},
+    builtins::{
+        functions::{AND, EQUALITY, FALSE, IMPLIES, NOT, OR, TRUE},
+        init::init_env,
+    },
     cli::Args,
+    formula_user::{FunctionShortcuter, FunctionShortcuterBuilder, HasShortcut},
     function::{FFlags, Function},
-    sort::Sort, formula_user::{FunctionShortcuter, HasShortcut, FunctionShortcuterBuilder},
+    sort::Sort,
 };
 
 #[derive(Debug, Clone)]
@@ -15,7 +19,7 @@ pub struct Environement {
     sorts: HashMap<String, Sort>,
     skolems: usize,
     args: Rc<Args>,
-    functions_shortcuter: Option<FunctionShortcuter>
+    functions_shortcuter: Option<FunctionShortcuter>,
 }
 
 // #[derive(Debug, Clone)]
@@ -50,18 +54,21 @@ impl Environement {
             sorts: HashMap::new(),
             skolems: 0,
             args,
-            functions_shortcuter: None
+            functions_shortcuter: None,
         };
         init_env(&mut env, Self::get_sorts_mut);
-        env.functions_shortcuter = Some(FunctionShortcuterBuilder {
-            eq: EQUALITY(&env).clone(),
-            and: AND(&env).clone(),
-            or: OR(&env).clone(),
-            implies: IMPLIES(&env).clone(),
-            true_f: TRUE(&env).clone(),
-            false_f: FALSE(&env).clone(),
-            not: NOT(&env).clone(),
-        }.into());
+        env.functions_shortcuter = Some(
+            FunctionShortcuterBuilder {
+                eq: EQUALITY(&env).clone(),
+                and: AND(&env).clone(),
+                or: OR(&env).clone(),
+                implies: IMPLIES(&env).clone(),
+                true_f: TRUE(&env).clone(),
+                false_f: FALSE(&env).clone(),
+                not: NOT(&env).clone(),
+            }
+            .into(),
+        );
         env
     }
 

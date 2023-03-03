@@ -74,7 +74,7 @@ pub trait FormulaUser<A> {
     /// multiple or
     fn morf(&self, args: impl IntoIterator<Item = A>) -> A;
 
-    fn forallff<V,F, const N: usize>(&self, vars: [V; N], f: F) -> A
+    fn forallff<V, F, const N: usize>(&self, vars: [V; N], f: F) -> A
     where
         V: Into<Variable>,
         F: Fn([A; N]) -> A,

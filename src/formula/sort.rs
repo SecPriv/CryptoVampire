@@ -1,6 +1,6 @@
 use bitflags::bitflags;
 use core::fmt::Debug;
-use std::{fmt::Display, rc::Rc, cmp::Ordering, hash::Hash};
+use std::{cmp::Ordering, fmt::Display, hash::Hash, rc::Rc};
 
 bitflags! {
     #[derive(Default )]
@@ -13,12 +13,10 @@ bitflags! {
 
 pub struct Sort(ISort);
 
-enum ISort  {
+enum ISort {
     BuiltIn(&'static IISort),
     Dynamic(Rc<IISort>),
 }
-
-
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 struct IISort {
@@ -46,10 +44,7 @@ impl Ord for Sort {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // Ord::cmp(&Rc::as_ptr(&self.0), &Rc::as_ptr(&other.0))
         if self != other {
-            Ord::cmp(
-                &self.as_ptr_usize(),
-                &self.as_ptr_usize(),
-            )
+            Ord::cmp(&self.as_ptr_usize(), &self.as_ptr_usize())
         } else {
             Ordering::Equal
         }
