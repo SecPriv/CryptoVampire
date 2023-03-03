@@ -3,6 +3,7 @@ use std::convert::identity;
 use if_chain::if_chain;
 use itertools::{Either, Itertools};
 
+use crate::formula::formula_user::FormulaUser;
 use crate::formula::sort::Sort;
 use crate::formula::unifier::Unifier;
 use crate::formula::utils::Evaluator;
@@ -68,8 +69,8 @@ pub(crate) fn generate(
         let cnot = ctx.env().get_f(CNOT_NAME).unwrap();
         seq!(
             evaluate.cond(ctx, sfun!(verify; m, sk)),
-            // sneq!(evaluate.msg(ctx, sfun!(dec; m, sk)), evaluate.msg(ctx, sfun!(fail)))
-            evaluate.cond(ctx,sfun!(cnot; sfun!(ceq;  sfun!(dec; m, sk), evaluate.msg(ctx, sfun!(fail)))))
+            ctx.neqf(evaluate.msg(ctx, sfun!(dec; m, sk)), evaluate.msg(ctx, sfun!(fail)))
+            // evaluate.cond(ctx,sfun!(cnot; sfun!(ceq;  sfun!(dec; m, sk), evaluate.msg(ctx, sfun!(fail)))))
         )
     })));
 

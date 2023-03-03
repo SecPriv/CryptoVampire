@@ -137,7 +137,7 @@ impl Problem {
             let item = IF_THEN_ELSE(&env).clone();
 
             cand.set_evaluate_functions(AND(&env));
-            // cor.set_evaluate_functions(OR(&env));
+            cor.set_evaluate_functions(OR(&env));
             cnot.set_evaluate_functions(NOT(&env));
             ceq.set_evaluate_functions(B_EQUALITY(&env));
             item.set_evaluate_functions(B_IF_THEN_ELSE(&env));

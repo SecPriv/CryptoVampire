@@ -115,21 +115,28 @@ pub mod init {
         env: &mut Environement,
         h: impl Fn(&mut Environement) -> &mut HashMap<String, Sort>,
     ) {
-        init_sort!(env; BOOL; SFlags::BUILTIN_VAMPIRE);
+        let extra_evaluatable = if env.no_ta() {
+            SFlags::EVALUATABLE
+        } else {
+            Default::default()
+        };
+
+        init_sort!(env; BOOL; SFlags::BUILTIN_VAMPIRE | extra_evaluatable);
         init_sort!(env; NONCE);
         init_sort!(env; STEP; SFlags::TERM_ALGEBRA);
-        init_sort!(env; BITSTRING);
+        init_sort!(env; BITSTRING; extra_evaluatable);
         if env.no_ta() {
             let bitstring = BITSTRING(env).clone();
-            let _bool = BOOL(env).clone();
+            let bool = BOOL(env).clone();
 
             let h = h(env);
 
             h.insert(MSG_NAME.to_owned(), bitstring);
+            h.insert(CONDITION_NAME.to_owned(), bool);
         } else {
             init_sort!(env; MSG; SFlags::TERM_ALGEBRA | SFlags::EVALUATABLE);
+            init_sort!(env; CONDITION; SFlags::TERM_ALGEBRA | SFlags::EVALUATABLE);
         }
-        init_sort!(env; CONDITION; SFlags::TERM_ALGEBRA | SFlags::EVALUATABLE);
 
         init_fun!(env; NONCE_MSG; NONCE ; MSG; FFlags::TERM_ALGEBRA);
         init_fun!(env; IF_THEN_ELSE; BOOL, MSG, MSG ; MSG; FFlags::TERM_ALGEBRA | FFlags::SPECIAL_EVALUATE);

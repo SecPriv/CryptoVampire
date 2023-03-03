@@ -29,16 +29,18 @@ pub(crate) fn evaluate(
     declarations: &mut Vec<Smt>,
     ctx: &Ctx,
 ) {
-    if env.use_rewrite() {
-        evaluate_rewrite(env, assertions, declarations, ctx)
-    } else {
-        let mut masserts = Vec::new();
-        evaluate_rewrite(env, &mut masserts, declarations, ctx);
-        assertions.extend(masserts.into_iter().map(|a| a.rewrite_to_assert(env)))
-    }
+    if env.no_bitstring_fun() {
+        if env.use_rewrite() {
+            evaluate_rewrite(env, assertions, declarations, ctx)
+        } else {
+            let mut masserts = Vec::new();
+            evaluate_rewrite(env, &mut masserts, declarations, ctx);
+            assertions.extend(masserts.into_iter().map(|a| a.rewrite_to_assert(env)))
+        }
 
-    if env.legacy_evaluate() {
-        legacy_evaluate(env, assertions, declarations, ctx)
+        if env.legacy_evaluate() {
+            legacy_evaluate(env, assertions, declarations, ctx)
+        }
     }
 
     user_evaluate(env, assertions, declarations, ctx)
@@ -407,18 +409,18 @@ fn evaluate_rewrite_conditions<F /* , F2, F3 */>(
     // or
     {
         let cor = env.get_f(COR_NAME).unwrap();
-        // assertions.push(Smt::DeclareRewrite {
-        //     rewrite_fun: RewriteKind::Bool,
-        //     vars: vars.clone(),
-        //     lhs: Box::new(evaluate.cond(ctx,  sfun!(cor, vars.iter().map_into().collect()))),
-        //     rhs: Box::new(SmtFormula::Or(vars.iter().map(to_eval).collect())),
-        // })
-        assertions.push(Smt::Assert(sforall!(a!1:cond, b!2:cond; {
-            simplies!(env;
-                sor!(evaluate.cond(ctx, a.clone()) , evaluate.cond(ctx, a.clone())),
-                evaluate.cond(ctx, sfun!(cor; a, b))
-            )
-        })))
+        assertions.push(Smt::DeclareRewrite {
+            rewrite_fun: RewriteKind::Bool,
+            vars: vars.clone(),
+            lhs: Box::new(evaluate.cond(ctx, sfun!(cor, vars.iter().map_into().collect()))),
+            rhs: Box::new(SmtFormula::Or(vars.iter().map(to_eval).collect())),
+        })
+        // assertions.push(Smt::Assert(sforall!(a!1:cond, b!2:cond; {
+        //     simplies!(env;
+        //         sor!(evaluate.cond(ctx, a.clone()) , evaluate.cond(ctx, a.clone())),
+        //         evaluate.cond(ctx, sfun!(cor; a, b))
+        //     )
+        // })))
     }
 
     // not

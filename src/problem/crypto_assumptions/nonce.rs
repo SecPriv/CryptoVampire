@@ -46,7 +46,7 @@ pub(crate) fn generate(assertions: &mut Vec<Smt>, declarations: &mut Vec<Smt>, c
     // })))
 
     assertions.push(Smt::Assert(ctx.forallff(
-        [(1, &nonce_sort), (1, &msg)],
+        [(0, &nonce_sort), (1, &msg)],
         |[n, m]: [SmtFormula; 2]| {
             ctx.impliesf(
                 ctx.eqf(

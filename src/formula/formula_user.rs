@@ -80,6 +80,7 @@ pub trait FormulaUser<A> {
         F: Fn([A; N]) -> A,
     {
         let vars = vars.map(Into::into);
+        debug_assert!(vars.iter().map(|v| v.id).duplicates().next().is_none());
         let vars_2 = vars.clone().map(|v| self.varf(v));
         self.forallf(vars.into(), f(vars_2))
     }
