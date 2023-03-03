@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, fmt::Display};
 use std::fmt;
 use std::ops::Deref;
 
@@ -13,7 +13,7 @@ use super::{
     function::Function,
     quantifier::Quantifier,
     sort::Sort,
-    unifier::{Substitution, Translate},
+    unifier::{Substitution, Translate}, builtins::functions::{EVAL_MSG_NAME, EVAL_COND_NAME},
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -348,3 +348,34 @@ impl<'a> From<(&'a Sort, usize)> for Variable {
         }
     }
 }
+
+impl Display for RichFormula {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        SmtFormula::from(self).fmt(f)
+    }
+}
+
+// pub fn get_eval_msg(env:&Environement) -> impl Fn(RichFormula) -> RichFormula {
+//     let eval = env.get_f(EVAL_MSG_NAME).unwrap().clone();
+//     let no_ta = env.no_ta();
+//     move |f| {
+//         if !no_ta {
+//             RichFormula::Fun(eval.clone(), vec![f])
+//         } else {
+//             f
+//         }
+//     }
+// }
+
+// pub fn get_eval_cond(env:&Environement) -> impl Fn(RichFormula) -> RichFormula {
+//     let eval = env.get_f(EVAL_COND_NAME).unwrap().clone();
+//     // let ctrue = env.get_f(CTRUE_NAME).unwrap().clone();
+//     let no_ta = env.no_ta();
+//     move |f| {
+//         if !no_ta {
+//             RichFormula::Fun(eval.clone(), vec![f])
+//         } else {
+//             RichFormula::Fun(eval.clone(), vec![f])
+//         }
+//     }
+// }

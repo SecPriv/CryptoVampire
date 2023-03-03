@@ -6,14 +6,15 @@ use itertools::{Either, Itertools};
 use crate::formula::builtins::functions::IF_THEN_ELSE;
 use crate::formula::formula_user::FormulaUser;
 use crate::formula::sort::Sort;
-
+use crate::formula::utils::Evaluator;
+use crate::problem::crypto_assumptions::aux;
 use crate::smt::writer::subterm::builder::{Builder, DefaultBuilder};
 use crate::smt::writer::subterm::preprocessing::not_subterm_protocol;
 use crate::smt::writer::subterm::{Subterm, SubtermFlags};
 use crate::{
     formula::{
         builtins::{
-            functions::{EVAL_COND, EVAL_MSG, INPUT, LT, NONCE_MSG},
+            functions::{INPUT, LT, NONCE_MSG},
             types::{CONDITION, MSG, NONCE},
         },
         formula::{RichFormula, Variable},
@@ -32,8 +33,9 @@ pub(crate) fn generate(
     mac: &Function,
     verify: &Function,
 ) {
-    let eval_msg = EVAL_MSG(ctx.env()).clone();
-    let eval_cond = EVAL_COND(ctx.env()).clone();
+    // let eval_msg = get_evaluate.msg(ctx,ctx.env());
+    // let eval_cond = get_evaluate.cond(ctx,ctx.env());
+    let evaluate = Evaluator::new(ctx.env()).unwrap();
     let nonce = NONCE_MSG(ctx.env()).clone();
     let msg = MSG(ctx.env()).clone();
     let cond = CONDITION(ctx.env()).clone();
@@ -50,7 +52,7 @@ pub(crate) fn generate(
             // ctx.funf(eval_cond.clone(), [ctx.funf(verify.clone(), [ctx.funf(mac.clone(), [m.clone(), ctx.funf(nonce.clone(), sk.clone())]), m.clone(), ctx.fun])])
             let nsk: SmtFormula = nonce.cf(ctx, [sk]);
             let mac = mac.cf(ctx, [m.clone(), nsk.clone()]);
-            eval_cond.cf(ctx, [verify.cf(ctx, [mac, m, nsk])])
+            evaluate.cond(ctx, verify.cf(ctx, [mac, m, nsk]))
         },
     )));
 
@@ -61,12 +63,14 @@ pub(crate) fn generate(
             .iter_content()
             .map(|(_, f)| f)
             .chain(std::iter::once(&ctx.pbl.query))
+            .chain(ctx.pbl.assertions.iter())
             .flat_map(|f| {
                 f.custom_iter_w_quantifier(&ctx.pbl, |f, _| match f {
                     RichFormula::Fun(fun, args) if fun == verify => {
                         if_chain!(
                             if let RichFormula::Fun(f1, k) = &args[2];
                             if f1 == &nonce;
+                            if let RichFormula::Fun(_, _) = &k[0];
                             then {
                                 (Some((&args[0], &args[1], &k[0])), vec![&args[0], &args[1]])
                             } else {
@@ -78,10 +82,12 @@ pub(crate) fn generate(
                     _ => (None, vec![]),
                 })
             })
-            .unique()
-            .collect_vec();
+            .unique();
+        // .collect_vec();
 
-        for (sigma, m, k) in candidates.into_iter() {
+        for (sigma, m, k) in candidates
+        /* .into_iter() */
+        {
             // println!(
             //     "sigma = {}, m = {}, k = {}",
             //     SmtFormula::from(sigma),
@@ -94,7 +100,8 @@ pub(crate) fn generate(
                 let kfun = if let RichFormula::Fun(f, _) = k {
                     f
                 } else {
-                    unreachable!()
+                    unreachable!("{}", k)
+                    // continue;
                 };
 
                 let tmp = ctx
@@ -212,7 +219,7 @@ pub(crate) fn generate(
                                     Box::new(sand!(
                                         // seq!(su.clone(), m2),
                                         seq!(sfun!(nonce; sk.clone()), sk2),
-                                        seq!(sfun!(eval_msg; sm2), sfun!(eval_msg; sm.clone()))
+                                        seq!(evaluate.msg(ctx, sm2), evaluate.msg(ctx, sm.clone()))
                                     )),
                                 )
                             }
@@ -247,7 +254,7 @@ pub(crate) fn generate(
                                     Box::new(sand!(
                                         SmtFormula::Or(s_ors),
                                         seq!(sfun!(nonce; sk.clone()), sk2),
-                                        seq!(sfun!(eval_msg; sm2), sfun!(eval_msg; sm.clone()))
+                                        seq!(evaluate.msg(ctx, sm2), evaluate.msg(ctx, sm.clone()))
                                     )),
                                 )
                             }
@@ -258,7 +265,7 @@ pub(crate) fn generate(
                 assertions.push(Smt::Assert(SmtFormula::Forall(
                     fv,
                     Box::new(simplies!(ctx.env();
-                        sfun!(eval_cond; sfun!(verify;ssigma, sm.clone(), sfun!(nonce; sk.clone()))),
+                        evaluate.cond(ctx, sfun!(verify;ssigma, sm.clone(), sfun!(nonce; sk.clone()))),
                         // SmtFormula::Exists(vec![u], Box::new(SmtFormula::Or(ors))))),
                         SmtFormula::Or(ors))),
                 )))
@@ -463,7 +470,7 @@ pub(crate) fn generate(
                         //     sfun!(eval_msg; s.clone()),
                         //     sfun!(eval_msg; sfun!(hash; m.clone(), sfun!(nonce; k.clone())))
                         // )
-                        sfun!(eval_cond; sfun!(verify; s.clone(), m.clone(), sfun!(nonce; k.clone())))
+                        evaluate.cond(ctx, sfun!(verify; s.clone(), m.clone(), sfun!(nonce; k.clone())))
                     } -> {
                         let u = sfun!(sk; s.clone(), m.clone(), k.clone());
                         let h = sfun!(mac; u.clone(), sfun!(nonce; k.clone()));
@@ -475,7 +482,7 @@ pub(crate) fn generate(
                                 subt_sec.f(ctx, k.clone(), s.clone(), &msg),
                                 ctx.negf(ctx.funf(not_protocol_wide_subterm, [k.clone()]))
                             ),
-                            seq!(sfun!(eval_msg; m.clone()), sfun!(eval_msg; u.clone()))
+                            seq!(evaluate.msg(ctx, m.clone()), evaluate.msg(ctx, u.clone()))
                         )
                     }
             );
@@ -490,7 +497,8 @@ pub(crate) fn generate(
                         //     sfun!(eval_msg; sfun!(hash; m.clone(), sfun!(nonce; k.clone())))
                         // )
                         sand!(
-                            sfun!(eval_cond; sfun!(verify; s.clone(), m.clone(), sfun!(nonce; k.clone()))),
+                            // sfun!(eval_cond; sfun!(verify; s.clone(), m.clone(), sfun!(nonce; k.clone()))),
+                            evaluate.cond(ctx, verify.cf(ctx, [s.clone(), m.clone(), nonce.cf(ctx, [k.clone()])])),
                             not_protocol_wide_subterm.cf(ctx, [k.clone()])
                         )
                     ,
@@ -503,7 +511,7 @@ pub(crate) fn generate(
                                 subt_sec.f(ctx, k.clone(), m.clone(), &msg),
                                 subt_sec.f(ctx, k.clone(), s.clone(), &msg)
                             ),
-                            seq!(sfun!(eval_msg; m.clone()), sfun!(eval_msg; u.clone()))
+                            seq!(evaluate.msg(ctx, m.clone()), evaluate.msg(ctx, u.clone()))
                         )})
                     )}
             );

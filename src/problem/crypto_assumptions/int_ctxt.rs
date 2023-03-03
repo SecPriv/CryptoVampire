@@ -4,18 +4,20 @@ use if_chain::if_chain;
 use itertools::{Either, Itertools};
 
 use crate::formula::sort::Sort;
+use crate::formula::unifier::Unifier;
+use crate::formula::utils::Evaluator;
 use crate::problem::crypto_assumptions::aux;
+use crate::problem::problem::{CEQ_NAME, CNOT_NAME};
 use crate::smt::writer::subterm::builder::{Builder, DefaultBuilder};
 use crate::smt::writer::subterm::{Subterm, SubtermFlags};
 use crate::{
     formula::{
         builtins::{
-            functions::{EVAL_COND, EVAL_MSG, INPUT, LT, NONCE_MSG},
-            types::{CONDITION, MSG, NONCE},
+            functions::{ INPUT, LT, NONCE_MSG},
+            types::{BOOL, CONDITION, MSG, NONCE},
         },
         formula::{RichFormula, Variable},
         function::{FFlags, Function},
-        unifier::Unifier,
     },
     smt::{
         macros::{sand, seq, sexists, sforall, sfun, simplies, site, sneq, sor, srewrite, svar},
@@ -33,8 +35,9 @@ pub(crate) fn generate(
     verify: &Function,
     fail: &Function,
 ) {
-    let eval_msg = EVAL_MSG(ctx.env()).clone();
-    let eval_cond = EVAL_COND(ctx.env()).clone();
+    // let eval_msg = get_evaluate.msg(ctx,ctx.env());
+    // let eval_cond = get_evaluate.cond(ctx,ctx.env());
+    let evaluate = Evaluator::new(ctx.env()).unwrap();
     let nonce = NONCE_MSG(ctx.env()).clone();
     let msg = MSG(ctx.env()).clone();
     let cond = CONDITION(ctx.env()).clone();
@@ -46,8 +49,8 @@ pub(crate) fn generate(
         // let r = sfun!(nonce; r);
         // let sk = sfun!(nonce; sk);
             seq!(
-                sfun!(eval_msg; sfun!(dec; sfun!(enc; m.clone(), r, sk.clone()), sk)),
-                sfun!(eval_msg; m.clone())
+                evaluate.msg(ctx, sfun!(dec; sfun!(enc; m.clone(), r, sk.clone()), sk)),
+                evaluate.msg(ctx, m.clone())
             )
     })));
 
@@ -55,17 +58,21 @@ pub(crate) fn generate(
         // let r = sfun!(nonce; r);
         // let sk = sfun!(nonce; sk);
         sor!(
-            sfun!(eval_cond; sfun!(verify; sfun!(enc; m.clone(), r, sk.clone()), sk.clone())),
-            seq!(sfun!(eval_msg; m.clone()), sfun!(eval_msg; sfun!(fail)))
+            evaluate.cond(ctx, sfun!(verify; sfun!(enc; m.clone(), r, sk.clone()), sk.clone())),
+            seq!(evaluate.msg(ctx, m.clone()), evaluate.msg(ctx, sfun!(fail)))
         )
     })));
 
     assertions.push(Smt::Assert(sforall!(m!0:msg, sk!1:msg; {
+        let ceq = ctx.env().get_f(CEQ_NAME).unwrap();
+        let cnot = ctx.env().get_f(CNOT_NAME).unwrap();
         seq!(
-            sneq!(sfun!(eval_msg; sfun!(dec; m, sk)), sfun!(eval_msg; sfun!(fail))),
-            sfun!(eval_cond; sfun!(verify; m, sk))
+            evaluate.cond(ctx, sfun!(verify; m, sk)),
+            // sneq!(evaluate.msg(ctx, sfun!(dec; m, sk)), evaluate.msg(ctx, sfun!(fail)))
+            evaluate.cond(ctx,sfun!(cnot; sfun!(ceq;  sfun!(dec; m, sk), evaluate.msg(ctx, sfun!(fail)))))
         )
     })));
+
 
     if !senc_rand(ctx, enc, dec, verify, fail) {
         return;
@@ -77,12 +84,14 @@ pub(crate) fn generate(
             .iter_content()
             .map(|(_, f)| f)
             .chain(std::iter::once(&ctx.pbl.query))
+            .chain(ctx.pbl.assertions.iter())
             .flat_map(|f| {
                 f.custom_iter_w_quantifier(&ctx.pbl, |f, _| match f {
                     RichFormula::Fun(fun, args) if fun == verify => {
                         if_chain!(
                             if let RichFormula::Fun(f1, k) = &args[1];
                             if f1 == &nonce;
+                            if let RichFormula::Fun(_, _) = &k[0];
                             then {
                                 (Some((&args[0], &k[0])), vec![&args[0]])
                             } else {
@@ -211,8 +220,8 @@ pub(crate) fn generate(
                                     // seq!(su.clone(), m2),
                                     seq!(sfun!(nonce; sk.clone()), sk2),
                                     seq!(
-                                        sfun!(eval_msg; sc),
-                                        sfun!(eval_msg; sfun!(enc; sm2, sr2, sk2))
+                                        evaluate.msg(ctx, sc.clone()),
+                                        evaluate.msg(ctx, sfun!(enc; sm2, sr2, sk2))
                                     )
                                 )),
                             )
@@ -249,8 +258,8 @@ pub(crate) fn generate(
                                     SmtFormula::Or(s_ors),
                                     seq!(sfun!(nonce; sk.clone()), sk2),
                                     seq!(
-                                        sfun!(eval_msg; sc),
-                                        sfun!(eval_msg; sfun!(enc; sm2, sr2, sk2))
+                                        evaluate.msg(ctx, sc.clone()),
+                                        evaluate.msg(ctx, sfun!(enc; sm2, sr2, sk2))
                                     )
                                 )),
                             )
@@ -262,7 +271,7 @@ pub(crate) fn generate(
             assertions.push(Smt::Assert(SmtFormula::Forall(
                 fv,
                 Box::new(simplies!(ctx.env();
-                        sfun!(eval_cond; sfun!(verify; sc.clone(), sfun!(nonce; sk.clone()))),
+                        evaluate.cond(ctx, sfun!(verify; sc.clone(), sfun!(nonce; sk.clone()))),
                         SmtFormula::Exists(vec![], Box::new(SmtFormula::Or(ors))))),
             )))
         }
@@ -561,7 +570,7 @@ pub(crate) fn generate(
                 //     sfun!(eval_msg; sfun!(fail; )),
                 //     sfun!(eval_msg; sfun!(dec; c.clone(), sfun!(nonce; k.clone())))
                 // )
-                sfun!(eval_cond; sfun!(verify; c.clone(), sfun!(nonce; k.clone())))
+                evaluate.cond(ctx, sfun!(verify; c.clone(), sfun!(nonce; k.clone())))
             } -> {
                 let m = sfun!(sk_m; c.clone(), k.clone());
                 let r = sfun!(sk_r; c.clone(), k.clone());
@@ -580,7 +589,7 @@ pub(crate) fn generate(
                     //     sfun!(eval_msg; sfun!(fail; )),
                     //     sfun!(eval_msg; sfun!(dec; c.clone(), sfun!(nonce; k.clone())))
                     // ),
-                    sfun!(eval_cond; sfun!(verify; c.clone(), sfun!(nonce; k.clone()))),
+                    evaluate.cond(ctx, sfun!(verify; c.clone(), sfun!(nonce; k.clone()))),
                     sexists!(m!4:msg, r!5:nonce_sort; {
                         let nc = sfun!(enc; m.clone(),  sfun!(nonce; r.clone()), sfun!(nonce; k.clone()));
                         sor!(
@@ -602,8 +611,8 @@ fn senc_rand(
     _verify: &Function,
     _fail: &Function,
 ) -> bool {
-    // let eval_msg = EVAL_MSG(ctx.env()).clone();
-    // let eval_cond = EVAL_COND(ctx.env()).clone();
+    // let eval_msg = evaluate.msg(ctx,ctx.env()).clone();
+    // let eval_cond = evaluate.cond(ctx,ctx.env()).clone();
     let nonce = NONCE_MSG(ctx.env()).clone();
     let msg = MSG(ctx.env()).clone();
     // let cond = CONDITION(ctx.env()).clone();
@@ -674,7 +683,7 @@ fn senc_rand(
                 })
                 .collect_vec())
         } else {
-            dbg!("there");
+            // dbg!("there");
             Err(())
         }
     });
