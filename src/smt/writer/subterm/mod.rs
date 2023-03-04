@@ -2,12 +2,17 @@ pub mod builder;
 mod declare_and_base;
 pub(crate) mod preprocessing;
 
+use std::ops::{Deref, DerefMut};
+
 use bitflags::bitflags;
 use itertools::Itertools;
 
 use crate::{
     formula::{
-        builtins::{functions::SUBTERM, types::BOOL},
+        builtins::{
+            functions::{SUBTERM, TRUE},
+            types::BOOL,
+        },
         env::Environement,
         formula::RichFormula,
         formula_user::FormulaUser,
@@ -231,4 +236,28 @@ where
     ) -> (Option<RichFormula>, Vec<&'a RichFormula>) {
         self.builder().analyse(self, m, s, pbl, f)
     }
+
+    // pub fn is_subterm_of<'a, V>(
+    //     &self,
+    //     pbl: &'a Problem,
+    //     t1: &'a RichFormula,
+    //     t2: &'a RichFormula,
+    // ) -> RichFormula {
+    //     struct ST<'a, 'b> {
+    //         cond: &'a RichFormula,
+    //         term: &'b RichFormula,
+    //     }
+    //     let mtrue: RichFormula = TRUE(&pbl.env).cf(pbl, []);
+    //     let mut pile = vec![ST {
+    //         cond: &mtrue,
+    //         term: t1,
+    //     }];
+
+    //     while let Some(st) = pile.pop() {
+    //         let ST { cond, term } = st;
+    //         match term {}
+    //     }
+
+    //     todo!()
+    // }
 }
