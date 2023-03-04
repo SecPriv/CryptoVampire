@@ -315,7 +315,7 @@ impl Problem {
             }
         }
 
-        max
+        max + 1
     }
 }
 

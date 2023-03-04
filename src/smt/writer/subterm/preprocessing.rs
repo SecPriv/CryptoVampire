@@ -26,7 +26,7 @@ use super::{builder::Builder, Subterm};
 use itertools::Itertools;
 
 /// preprocess input and memory cells
-fn preprocess<B>(assertions: &mut Vec<Smt>, _: &mut Vec<Smt>, ctx: &mut Ctx, subt: &Subterm<B>)
+pub(crate) fn preprocess<B>(assertions: &mut Vec<Smt>, _: &mut Vec<Smt>, ctx: &mut Ctx, subt: &Subterm<B>)
 where
     B: Builder,
 {

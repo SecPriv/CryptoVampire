@@ -15,14 +15,16 @@ use crate::{
     },
 };
 
-use super::{InnerSubterm, Subterm};
+use super::{builder::Builder, preprocessing, InnerSubterm, Subterm};
 
 pub fn declare_and_base<'a, B>(
     assertions: &mut Vec<Smt>,
     declarations: &mut Vec<Smt>,
     ctx: &mut Ctx,
     subt: &Subterm<B>,
-) {
+) where
+    B: Builder,
+{
     match subt.kind() {
         super::SubtermKind::Vampire => {
             declare_and_base_vampire(assertions, declarations, ctx, subt)
@@ -31,6 +33,8 @@ pub fn declare_and_base<'a, B>(
             declare_and_base_smtlib(assertions, declarations, ctx, subt)
         }
     }
+
+    preprocessing::preprocess(assertions, declarations, ctx, subt);
 }
 
 pub fn declare_and_base_vampire<'a, B>(
