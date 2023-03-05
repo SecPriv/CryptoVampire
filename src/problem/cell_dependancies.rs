@@ -1,12 +1,14 @@
+use crate::formula::formula::RichFormula;
 
+use super::{cell::MemoryCell, step::Step};
 
-    pub struct CellDependancy<'a> {
-        // self_cell: &'a MemoryCell,
-        pub step_at: &'a Step,
-        pub self_args: &'a Vec<RichFormula>,
-        pub cell: &'a MemoryCell,
-        pub call_args: &'a [RichFormula],
-    }
+pub struct CellDependancy<'a> {
+    // self_cell: &'a MemoryCell,
+    pub step_at: &'a Step,
+    pub self_args: &'a Vec<RichFormula>,
+    pub cell: &'a MemoryCell,
+    pub call_args: &'a [RichFormula],
+}
 mod calculate {
     use crate::{
         formula::{
@@ -111,7 +113,7 @@ pub mod graph {
         utils::utils::StackBox,
     };
 
-    use super::{calculate, empty, from_vec};
+    use super::{calculate, empty, from_vec, CellDependancy};
     use anyhow::Result;
     use thiserror::Error;
 
@@ -144,7 +146,7 @@ pub mod graph {
                     for d in calculate::find_dependencies_cell(pbl, cell) {
                         match d {
                             calculate::Dependancy::Input(_) => has_input[i] = true,
-                            calculate::Dependancy::Cell(calculate::CellDependancy {
+                            calculate::Dependancy::Cell(CellDependancy {
                                 step_at,
                                 self_args,
                                 cell,
@@ -211,9 +213,7 @@ pub mod graph {
                 .position(|c| c == &cell)
                 .ok_or(DependancyError::MemoryCellNotFound)?;
 
-            let mut args = vec![vec![];self.len()];
-
-            
+            // let mut args = vec![vec![]; self.len()];
 
             todo!()
         }
