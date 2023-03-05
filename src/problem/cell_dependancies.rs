@@ -1,3 +1,12 @@
+
+
+    pub struct CellDependancy<'a> {
+        // self_cell: &'a MemoryCell,
+        pub step_at: &'a Step,
+        pub self_args: &'a Vec<RichFormula>,
+        pub cell: &'a MemoryCell,
+        pub call_args: &'a [RichFormula],
+    }
 mod calculate {
     use crate::{
         formula::{
@@ -13,15 +22,7 @@ mod calculate {
         utils::utils::StackBox,
     };
 
-    use super::{empty, from_vec};
-
-    pub struct CellDependancy<'a> {
-        // self_cell: &'a MemoryCell,
-        pub step_at: &'a Step,
-        pub self_args: &'a Vec<RichFormula>,
-        pub cell: &'a MemoryCell,
-        pub call_args: &'a [RichFormula],
-    }
+    use super::{empty, from_vec, CellDependancy};
 
     pub struct InputDependancy<'a> {
         // self_cell: &'a MemoryCell,
@@ -111,8 +112,10 @@ pub mod graph {
     };
 
     use super::{calculate, empty, from_vec};
+    use anyhow::Result;
+    use thiserror::Error;
 
-    struct CellDependancy<'a> {
+    struct CellDependancyIndices<'a> {
         // found in which step?
         step_at: Step,
         // with which arguments?
@@ -125,7 +128,7 @@ pub mod graph {
     pub struct DependancyGraph<'a> {
         cells: Vec<&'a MemoryCell>,
         has_input: Vec<bool>,
-        dependancies: Vec<Vec<CellDependancy<'a>>>,
+        dependancies: Vec<Vec<CellDependancyIndices<'a>>>,
         protocol_dependancies: Vec<usize>,
     }
 
@@ -148,7 +151,7 @@ pub mod graph {
                                 call_args,
                             }) => {
                                 let cell = cells.iter().position(|c| c == &cell).unwrap();
-                                dep.push(CellDependancy {
+                                dep.push(CellDependancyIndices {
                                     step_at: step_at.clone(),
                                     self_args,
                                     cell,
@@ -191,6 +194,32 @@ pub mod graph {
                 dependancies,
                 protocol_dependancies,
             }
+        }
+    }
+
+    #[derive(Debug, Error)]
+    pub enum DependancyError {
+        #[error("Cell not found")]
+        MemoryCellNotFound,
+    }
+
+    impl<'a> DependancyGraph<'a> {
+        pub fn find_dependencies(&self, cell: &MemoryCell) -> Result<()> {
+            let cell = self
+                .cells
+                .iter()
+                .position(|c| c == &cell)
+                .ok_or(DependancyError::MemoryCellNotFound)?;
+
+            let mut args = vec![vec![];self.len()];
+
+            
+
+            todo!()
+        }
+
+        pub fn len(&self) -> usize {
+            self.cells.len()
         }
     }
 }
