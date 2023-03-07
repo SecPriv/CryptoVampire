@@ -26,6 +26,7 @@ pub mod functions {
     new_fun!(NONCE_MSG, "m$nonce_as_msg");
     new_fun!(IF_THEN_ELSE, "m$ite");
     new_fun!(B_IF_THEN_ELSE, "ite");
+    new_fun!(BOOL_IF_THEN_ELSE, "ite");
     new_fun!(AND, "and");
     new_fun!(OR, "or");
     new_fun!(NOT, "not");
@@ -141,6 +142,7 @@ pub mod init {
         init_fun!(env; NONCE_MSG; NONCE ; MSG; FFlags::TERM_ALGEBRA);
         init_fun!(env; IF_THEN_ELSE; BOOL, MSG, MSG ; MSG; FFlags::TERM_ALGEBRA | FFlags::SPECIAL_EVALUATE);
         init_fun!(env; B_IF_THEN_ELSE; BOOL, BITSTRING, BITSTRING ; BITSTRING; FFlags::EVALUATE_TA | FFlags::BUILTIN);
+        init_fun!(env; BOOL_IF_THEN_ELSE; BOOL, BOOL, BOOL ; BOOL; FFlags::BUILTIN);
         init_fun!(env; AND; BOOL, BOOL ; BOOL; FFlags::BUILTIN);
         init_fun!(env; OR; BOOL, BOOL ; BOOL; FFlags::BUILTIN);
         init_fun!(env; NOT; BOOL ; BOOL; FFlags::BUILTIN);

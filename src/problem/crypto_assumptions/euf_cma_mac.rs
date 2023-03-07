@@ -3,7 +3,7 @@ use std::convert::identity;
 use if_chain::if_chain;
 use itertools::{Either, Itertools};
 
-use crate::formula::builtins::functions::IF_THEN_ELSE;
+use crate::formula::builtins::functions::{IF_THEN_ELSE, BOOL_IF_THEN_ELSE};
 use crate::formula::formula_user::FormulaUser;
 use crate::formula::sort::Sort;
 use crate::formula::utils::Evaluator;
@@ -406,7 +406,7 @@ pub(crate) fn generate(
                     |[k, m, k2]: [SmtFormula; 3]| {
                         ctx.impliesf(
                             subt_sec.f(ctx, k.clone(), mac.cf(ctx, [m.clone(), k2.clone()]), &msg),
-                            IF_THEN_ELSE(ctx.env()).cf(
+                            BOOL_IF_THEN_ELSE(ctx.env()).cf(
                                 ctx,
                                 [
                                     ctx.eqf(k2.clone(), nonce.cf(ctx, [k.clone()])),
@@ -430,7 +430,7 @@ pub(crate) fn generate(
                                 verify.cf(ctx, [m.clone(), sigma.clone(), k2.clone()]),
                                 &cond,
                             ),
-                            IF_THEN_ELSE(ctx.env()).cf(
+                            BOOL_IF_THEN_ELSE(ctx.env()).cf(
                                 ctx,
                                 [
                                     ctx.eqf(k2.clone(), nonce.cf(ctx, [k.clone()])),
