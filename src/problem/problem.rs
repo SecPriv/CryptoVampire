@@ -648,18 +648,22 @@ fn process_user_formula_content(
             call_evaluate(env, nf)
         }
         RichFormula::Fun(f, args) => {
-            // if f.is_built_in() {
+            // if f.is_built_in() || !f.get_output_sort().is_evaluatable() {
             //     let args = args
             //         .into_iter()
-            //         .map(|f| process_query_content(function_db, env, f))
+            //         .map(|f| process_user_formula_content(function_db, env, quantifiers, f))
             //         .collect();
             //     RichFormula::Fun(f, args)
             // } else if f.is_special_evaluate() {
             //     let args = args
             //         .into_iter()
-            //         .map(|f| process_query_content(function_db, env, f))
+            //         .map(|f| process_user_formula_content(function_db, env, quantifiers, f))
             //         .collect();
-            //     RichFormula::Fun(f.get_evaluate_function().unwrap(), args)
+            //     RichFormula::Fun(
+            //         f.get_evaluate_function()
+            //             .unwrap_or_else(|| panic!("{:?}", f)),
+            //         args,
+            //     )
             // } else if f.get_output_sort().is_evaluatable() {
             //     call_evaluate(env, RichFormula::Fun(f, args))
             // } else {

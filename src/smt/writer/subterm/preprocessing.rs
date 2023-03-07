@@ -26,8 +26,12 @@ use super::{builder::Builder, Subterm};
 use itertools::Itertools;
 
 /// preprocess input and memory cells
-pub(crate) fn preprocess<B>(assertions: &mut Vec<Smt>, _: &mut Vec<Smt>, ctx: &mut Ctx, subt: &Subterm<B>)
-where
+pub(crate) fn preprocess<B>(
+    assertions: &mut Vec<Smt>,
+    _: &mut Vec<Smt>,
+    ctx: &mut Ctx,
+    subt: &Subterm<B>,
+) where
     B: Builder,
 {
     // let preprocess = subt.get_builder();
@@ -372,9 +376,10 @@ where
     //     vec![m_var],
     //     Box::new(simplies!(ctx.env(); sfun!(fun; m), SmtFormula::And(ands))),
     // )));
-    assertions.push(Smt::Assert(SmtFormula::from(
-        ctx.forallf(vec![m.clone()], ctx.mandf(ands)),
-    )));
+    assertions.push(Smt::Assert(SmtFormula::from(ctx.forallf(
+        vec![m.clone()],
+        ctx.impliesf(ctx.mandf(ands), fun.cf(ctx, [m.as_formula(ctx)])),
+    ))));
 
     fun
 }
