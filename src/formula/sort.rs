@@ -44,7 +44,8 @@ impl Ord for Sort {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // Ord::cmp(&Rc::as_ptr(&self.0), &Rc::as_ptr(&other.0))
         if self != other {
-            Ord::cmp(&self.as_ptr_usize(), &self.as_ptr_usize())
+            Ord::cmp(self.name(), other.name())
+                .then(Ord::cmp(&self.as_ptr_usize(), &self.as_ptr_usize()))
         } else {
             Ordering::Equal
         }

@@ -288,7 +288,7 @@ macro_rules! impl_formula_user {
             }
 
             fn existsf(&self, vars: Vec<Variable>, f: $a) -> $a {
-                self.get_function_shortcut().forallf(vars, f)
+                self.get_function_shortcut().existsf(vars, f)
             }
 
             fn varf(&self, var: Variable) -> $a {

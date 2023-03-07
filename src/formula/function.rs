@@ -1,5 +1,6 @@
 use std::{
     cell::{Ref, RefCell},
+    cmp::Ordering,
     hash::Hash,
     rc::{Rc, Weak},
 };
@@ -85,8 +86,11 @@ struct IIIFunction {
 }
 
 impl Ord for IIIFunction {
-    fn cmp(&self, _other: &Self) -> std::cmp::Ordering {
-        todo!()
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        Ord::cmp(
+            &(&self.input_sorts, &self.output_sort, &self.flags),
+            &(&other.input_sorts, &other.output_sort, &other.flags),
+        )
     }
 }
 
@@ -160,10 +164,20 @@ impl Eq for Function {}
 
 impl Ord for Function {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        Ord::cmp(&Rc::as_ptr(&self.inner), &Rc::as_ptr(&other.inner)).then(
+        // Ord::cmp(&Rc::as_ptr(&self.inner), &Rc::as_ptr(&other.inner)).then(
+        //     Ord::cmp(self.name(), other.name())
+        //         .then_with(|| self.inner.inner.borrow().cmp(&other.inner.inner.borrow())),
+        // )
+        if self == other {
+            Ordering::Equal
+        } else {
             Ord::cmp(self.name(), other.name())
-                .then_with(|| self.inner.inner.borrow().cmp(&other.inner.inner.borrow())),
-        )
+                .then(Ord::cmp(
+                    &(Rc::as_ptr(&self.inner) as usize),
+                    &(Rc::as_ptr(&other.inner) as usize),
+                ))
+                .then_with(|| self.inner.inner.borrow().cmp(&other.inner.inner.borrow()))
+        }
     }
 }
 

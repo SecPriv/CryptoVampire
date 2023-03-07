@@ -3,6 +3,7 @@ use std::convert::identity;
 use if_chain::if_chain;
 use itertools::{Either, Itertools};
 
+use crate::formula::builtins::types::BOOL;
 use crate::formula::formula_user::FormulaUser;
 use crate::formula::sort::Sort;
 use crate::formula::unifier::Unifier;
@@ -506,84 +507,86 @@ pub(crate) fn generate(
         //     })
         // ));
 
-        // let sp = Function::new_with_flag(
-        //     "sp$int_ctxt",
-        //     vec![nonce_sort.clone(), msg.clone()],
-        //     BOOL(ctx.env()).clone(),
-        //     FFlags::empty(),
-        // );
-        // declarations.push(Smt::DeclareFun(sp.clone()));
+        let sp = Function::new_with_flag(
+            "sp$int_ctxt",
+            vec![nonce_sort.clone(), msg.clone()],
+            BOOL(ctx.env()).clone(),
+            FFlags::empty(),
+        );
+        declarations.push(Smt::DeclareFun(sp.clone()));
 
-        // // let's ignore this for now
+        // let's ignore this for now
         // if false {
-        //     assertions.push(Smt::Assert(sforall!(c!0:msg, k!1:nonce_sort; {
-        //         simplies!(ctx.env();
-        //             // sand!(
-        //             //     sfun!(sp; k.clone(), c.clone()),
-        //             //     subt_main.main(sfun!(enc; m.clone(), r.clone(), sfun!(nonce; k.clone())), c.clone(), &msg)
-        //             // ),
-        //             sfun!(sp; k.clone(), c.clone()),
-        //             sexists!( r!2:msg, m!3:msg;{
-        //                 sand!(
-        //                     subt_main.main(sfun!(enc; m.clone(), r.clone(), sfun!(nonce; k.clone())), c.clone(), &msg),
-        //                     sor!(
-        //                         sforall!(n!4:nonce_sort; {sneq!(r.clone(), sfun!(nonce; n))}),
-        //                         sexists!(m2!4:msg, k2!5:msg; {
-        //                             sand!(
-        //                                 subt_main.main(sfun!(enc; m2.clone(), r.clone(), k2.clone()), c.clone(), &msg),
-        //                                 sneq!(m2, m.clone()),
-        //                                 sneq!(k2,  sfun!(nonce; k.clone()))
-        //                             )
-        //                         }),
-        //                         sexists!(n!4:nonce_sort; {sand!(
-        //                             seq!(r.clone(), sfun!(nonce; n.clone())),
-        //                             subt_rd.main(n.clone(), c.clone(), &msg)
-        //                         )})
-        //                     )
-        //                 )
-        //             })
-        //         )
-        //     })));
+        assertions.push(Smt::Assert(sforall!(c!0:msg, k!1:nonce_sort; {
+                simplies!(ctx.env();
+                    // sand!(
+                    //     sfun!(sp; k.clone(), c.clone()),
+                    //     subt_main.main(sfun!(enc; m.clone(), r.clone(), sfun!(nonce; k.clone())), c.clone(), &msg)
+                    // ),
+                    sfun!(sp; k.clone(), c.clone()),
+                    sexists!( r!2:msg, m!3:msg;{
+                        sand!(
+                            subt_main.f(ctx, sfun!(enc; m.clone(), r.clone(), sfun!(nonce; k.clone())), c.clone(), &msg),
+                            sor!(
+                                sforall!(n!4:nonce_sort; {ctx.neqf(r.clone(), sfun!(nonce; n))}),
+                                sexists!(m2!4:msg, k2!5:msg; {
+                                    sand!(
+                                        subt_main.f(ctx, sfun!(enc; m2.clone(), r.clone(), k2.clone()), c.clone(), &msg),
+                                        ctx.neqf(m2, m.clone()),
+                                        ctx.neqf(k2,  sfun!(nonce; k.clone()))
+                                    )
+                                }),
+                                sexists!(n!4:nonce_sort; {sand!(
+                                    seq!(r.clone(), sfun!(nonce; n.clone())),
+                                    subt_rd.f(ctx, n.clone(), c.clone(), &msg)
+                                )})
+                            )
+                        )
+                    })
+                )
+            })));
         // }
 
-        if ctx.env().crypto_rewrite() {
-            let sk_m = Function::new_with_flag(
-                "sk$u$int_ctx_m",
-                vec![msg.clone(), nonce_sort.clone()],
-                msg.clone(),
-                FFlags::SKOLEM,
-            );
-            let sk_r = Function::new_with_flag(
-                "sk$u$int_ctx_r",
-                vec![msg.clone(), nonce_sort.clone()],
-                nonce_sort.clone(),
-                FFlags::SKOLEM,
-            );
+        // if ctx.env().crypto_rewrite() {
+        //     let sk_m = Function::new_with_flag(
+        //         "sk$u$int_ctx_m",
+        //         vec![msg.clone(), nonce_sort.clone()],
+        //         msg.clone(),
+        //         FFlags::SKOLEM,
+        //     );
+        //     let sk_r = Function::new_with_flag(
+        //         "sk$u$int_ctx_r",
+        //         vec![msg.clone(), nonce_sort.clone()],
+        //         nonce_sort.clone(),
+        //         FFlags::SKOLEM,
+        //     );
 
-            declarations.push(Smt::DeclareFun(sk_m.clone()));
-            declarations.push(Smt::DeclareFun(sk_r.clone()));
+        //     declarations.push(Smt::DeclareFun(sk_m.clone()));
+        //     declarations.push(Smt::DeclareFun(sk_r.clone()));
 
-            assertions.push(srewrite!(
-            RewriteKind::Bool; c!2:msg, k!3:nonce_sort;
-            {
-                // sneq!(
-                //     sfun!(eval_msg; sfun!(fail; )),
-                //     sfun!(eval_msg; sfun!(dec; c.clone(), sfun!(nonce; k.clone())))
-                // )
-                evaluate.cond(ctx, sfun!(verify; c.clone(), sfun!(nonce; k.clone())))
-            } -> {
-                let m = sfun!(sk_m; c.clone(), k.clone());
-                let r = sfun!(sk_r; c.clone(), k.clone());
-                let nc = sfun!(enc; m.clone(), sfun!(nonce; r.clone()), sfun!(nonce; k.clone()));
-                sor!(
-                    subt_sk.f(ctx, k.clone(), c.clone(), &msg),
-                    subt_main.f(ctx, nc, c.clone(), &msg) //,
-                    // sfun!(sp; k.clone(), c.clone())
-                )
-            }
-        ));
-        } else {
-            assertions.push(Smt::Assert(sforall!(c!2:msg, k!3:nonce_sort;{
+        //     assertions.push(srewrite!(
+        //     RewriteKind::Bool; c!2:msg, k!3:nonce_sort;
+        //     {
+        //         // sneq!(
+        //         //     sfun!(eval_msg; sfun!(fail; )),
+        //         //     sfun!(eval_msg; sfun!(dec; c.clone(), sfun!(nonce; k.clone())))
+        //         // )
+        //         evaluate.cond(ctx, sfun!(verify; c.clone(), sfun!(nonce; k.clone())))
+        //     } -> {
+        //         let m = sfun!(sk_m; c.clone(), k.clone());
+        //         let r = sfun!(sk_r; c.clone(), k.clone());
+        //         let nc = sfun!(enc; m.clone(), sfun!(nonce; r.clone()), sfun!(nonce; k.clone()));
+        //         sor!(
+        //             subt_sk.f(ctx, k.clone(), c.clone(), &msg),
+        //             subt_main.f(ctx, nc, c.clone(), &msg) ,
+        //             // sfun!(sp; k.clone(), c.clone())
+
+        //             ctx.existsff([(4, )], f)
+        //         )
+        //     }
+        // ));
+        // } else {
+        assertions.push(Smt::Assert(sforall!(c!2:msg, k!3:nonce_sort;{
                 simplies!(ctx.env();
                     // sneq!(
                     //     sfun!(eval_msg; sfun!(fail; )),
@@ -592,15 +595,18 @@ pub(crate) fn generate(
                     evaluate.cond(ctx, sfun!(verify; c.clone(), sfun!(nonce; k.clone()))),
                     sexists!(m!4:msg, r!5:nonce_sort; {
                         let nc = sfun!(enc; m.clone(),  sfun!(nonce; r.clone()), sfun!(nonce; k.clone()));
-                        sor!(
-                            subt_sk.f(ctx, k.clone(), c.clone(), &msg),
-                            subt_main.f(ctx, nc, c.clone(), &msg) // ,
-                            // sfun!(sp; k.clone(), c.clone())
+                        sand!(
+                            sor!(
+                                subt_sk.f(ctx, k.clone(), c.clone(), &msg),
+                                subt_main.f(ctx, nc.clone(), c.clone(), &msg)  ,
+                                sp.cf(ctx, [k.clone(), c.clone()])
+                            ),
+                            seq!(evaluate.msg(ctx, c), evaluate.msg(ctx, nc))
                         )
                     })
                 )
             })));
-        }
+        // }
     }
 }
 
