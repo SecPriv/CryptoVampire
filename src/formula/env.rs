@@ -160,7 +160,7 @@ impl Environement {
     }
 
     pub fn no_bitstring_fun(&self) -> bool {
-        self.args.no_bitstring_fun
+        self.args.no_bitstring_fun || self.no_ta()
     }
 
     pub fn cvc5(&self) -> bool {

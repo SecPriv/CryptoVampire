@@ -29,7 +29,7 @@ pub(crate) fn evaluate(
     declarations: &mut Vec<Smt>,
     ctx: &Ctx,
 ) {
-    if !env.no_bitstring_fun() {
+    // if !env.no_bitstring_fun() {
         if env.use_rewrite() {
             evaluate_rewrite(env, assertions, declarations, ctx)
         } else {
@@ -41,7 +41,7 @@ pub(crate) fn evaluate(
         if env.legacy_evaluate() {
             legacy_evaluate(env, assertions, declarations, ctx)
         }
-    }
+    // }
 
     user_evaluate(env, assertions, declarations, ctx)
 }
