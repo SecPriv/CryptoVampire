@@ -641,46 +641,58 @@ fn process_user_formula_content(
             RichFormula::Quantifier(q.clone(), args)
         }
         // otherwise unsound
-        RichFormula::Fun(f, args) if f == function_db.or || f == function_db.not => {
-            let formula = RichFormula::Fun(f, args);
-            let nf =
-                process_step_content(function_db, env, quantifiers, &function_db.cond, &formula);
-            call_evaluate(env, nf)
+        // RichFormula::Fun(f, args) if f == function_db.or || f == function_db.not => {
+        //     let formula = RichFormula::Fun(f, args);
+        //     let nf =
+        //         process_step_content(function_db, env, quantifiers, &function_db.cond, &formula);
+        //     call_evaluate(env, nf)
+        // }
+        // RichFormula::Fun(f, args) => {
+        //     // if f.is_built_in() || !f.get_output_sort().is_evaluatable() {
+        //     //     let args = args
+        //     //         .into_iter()
+        //     //         .map(|f| process_user_formula_content(function_db, env, quantifiers, f))
+        //     //         .collect();
+        //     //     RichFormula::Fun(f, args)
+        //     // } else if f.is_special_evaluate() {
+        //     //     let args = args
+        //     //         .into_iter()
+        //     //         .map(|f| process_user_formula_content(function_db, env, quantifiers, f))
+        //     //         .collect();
+        //     //     RichFormula::Fun(
+        //     //         f.get_evaluate_function()
+        //     //             .unwrap_or_else(|| panic!("{:?}", f)),
+        //     //         args,
+        //     //     )
+        //     // } else if f.get_output_sort().is_evaluatable() {
+        //     //     call_evaluate(env, RichFormula::Fun(f, args))
+        //     // } else {
+        //     //     unreachable!("{:?}", f)
+        //     // }
+        //     // dbg!(f.name(), f.is_term_algebra());
+
+        //     if f.is_term_algebra() && f.get_output_sort().is_evaluatable() {
+        //         call_evaluate(env, RichFormula::Fun(f, args))
+        //     } else {
+        //         let args = args
+        //             .into_iter()
+        //             .map(|f| process_user_formula_content(function_db, env, quantifiers, f))
+        //             .collect();
+        //         RichFormula::Fun(f, args)
+        //     }
+        // }
+        RichFormula::Fun(ref f, _)
+            if f.is_term_algebra() && f.get_output_sort().is_evaluatable() =>
+        {
+            call_evaluate(env, formula)
         }
         RichFormula::Fun(f, args) => {
-            // if f.is_built_in() || !f.get_output_sort().is_evaluatable() {
-            //     let args = args
-            //         .into_iter()
-            //         .map(|f| process_user_formula_content(function_db, env, quantifiers, f))
-            //         .collect();
-            //     RichFormula::Fun(f, args)
-            // } else if f.is_special_evaluate() {
-            //     let args = args
-            //         .into_iter()
-            //         .map(|f| process_user_formula_content(function_db, env, quantifiers, f))
-            //         .collect();
-            //     RichFormula::Fun(
-            //         f.get_evaluate_function()
-            //             .unwrap_or_else(|| panic!("{:?}", f)),
-            //         args,
-            //     )
-            // } else if f.get_output_sort().is_evaluatable() {
-            //     call_evaluate(env, RichFormula::Fun(f, args))
-            // } else {
-            //     unreachable!("{:?}", f)
-            // }
-            // dbg!(f.name(), f.is_term_algebra());
-
-            if f.is_term_algebra() && f.get_output_sort().is_evaluatable() {
-                call_evaluate(env, RichFormula::Fun(f, args))
-            } else {
-                let args = args
-                    .into_iter()
-                    .map(|f| process_user_formula_content(function_db, env, quantifiers, f))
-                    .collect();
-                RichFormula::Fun(f, args)
-            }
-        }
+            let args = args
+                .into_iter()
+                .map(|f| process_user_formula_content(function_db, env, quantifiers, f))
+                .collect();
+            RichFormula::Fun(f, args)
+        } // RichFormula::Fun(_, _) => call_evaluate(env, formula),
     }
 }
 
