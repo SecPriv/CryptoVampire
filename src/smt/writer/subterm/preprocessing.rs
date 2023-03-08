@@ -12,7 +12,7 @@ use crate::{
         function::{FFlags, Function},
         sort::Sort,
     },
-    problem::{cell::Assignement, problem::Problem},
+    problem::{cell::Assignement, cell_dependancies::graph::DependancyGraph, problem::Problem},
     smt::{
         macros::*,
         smt::{Smt, SmtFormula},
@@ -60,8 +60,31 @@ pub(crate) fn preprocess<B>(
 
     let lt = Mlt { fun: lt.clone() };
 
-    inputs(assertions, ctx, subt, tp, m, max_var, msg, &lt, input);
-    memory_cells(assertions, ctx, max_var, subt, msg, &lt, tp, m);
+    let dependency_graph = DependancyGraph::from(&ctx.pbl);
+
+    inputs(
+        assertions,
+        ctx,
+        subt,
+        tp,
+        m,
+        max_var,
+        msg,
+        &lt,
+        input,
+        &dependency_graph,
+    );
+    memory_cells(
+        assertions,
+        ctx,
+        max_var,
+        subt,
+        msg,
+        &lt,
+        tp,
+        m,
+        &dependency_graph,
+    );
 
     // {
     //     // input
@@ -85,16 +108,16 @@ pub(crate) fn preprocess<B>(
 }
 
 /// preprocess memory cells
-fn memory_cells<B>(
+fn memory_cells<'a, B>(
     assertions: &mut Vec<Smt>,
-    ctx: &Ctx,
+    ctx: &'a Ctx,
     max_var: usize,
     subt: &Subterm<B>,
     msg: &Sort,
     lt: &Mlt,
     tp: &Variable,
     m: &Variable,
-    // vars: Vec<Variable>,
+    dependency_graph: &DependancyGraph<'a>, // vars: Vec<Variable>,
 ) where
     B: Builder,
 {
@@ -118,6 +141,10 @@ fn memory_cells<B>(
                         .map(|v| ctx.varf(v))
                         .collect_vec(),
                 );
+
+                // let dependant_cells = dependency_graph.find_dependencies(Some(c)).unwrap().into_iter().map(|d| {
+
+                // })V
 
                 // let mut ors = if subt.sort() == msg {
                 //     // vec![seq!(m.clone(), smt_c.clone())]
@@ -195,10 +222,10 @@ fn memory_cells<B>(
 
 /// Mutates `assertions` and/or `declaration` to add any relevant axioms
 /// to encode `t \sqsubseteq \mathsf{input}(T)`
-fn inputs<B>(
+fn inputs<'a, B>(
     // declarations: &mut Vec<Smt>,
     assertions: &mut Vec<Smt>,
-    ctx: &Ctx,
+    ctx: &'a Ctx,
     subt: &Subterm<B>,
     tp: &Variable,
     m: &Variable,
@@ -207,6 +234,7 @@ fn inputs<B>(
     msg: &Sort,
     lt: &Mlt,
     input: &Function,
+    dependency_graph: &DependancyGraph<'a>,
 ) where
     B: Builder,
 {

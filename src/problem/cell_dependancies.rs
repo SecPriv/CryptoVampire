@@ -9,6 +9,12 @@ pub struct Dependancy<'a> {
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct DependancyFromStep<'a> {
+    pub steps_origin: Vec<Step>,
+    pub cell: Option<&'a MemoryCell>,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum OutGoingCall<'a> {
     Input(InputCall<'a>),
     Cell(CellCall<'a>),
@@ -47,7 +53,7 @@ pub mod graph {
 
     use super::{
         calculate::{self, find_dependencies_cell, CellDependancy, InputDependancy},
-        some_iter, CellCall, Dependancy, InputCall, OutGoingCall, StepCall,
+        some_iter, CellCall, Dependancy, DependancyFromStep, InputCall, OutGoingCall, StepCall,
     };
     use anyhow::{Ok, Result};
     use thiserror::Error;
@@ -220,13 +226,19 @@ pub mod graph {
     impl<'a> DependancyGraph<'a> {
         /// use None for input
         pub fn find_dependencies(&self, cell: Option<&MemoryCell>) -> Result<Vec<Dependancy<'a>>> {
-            let cell = cell.map(|cell| {
-                self.cells
-                    .iter()
-                    .position(|c| &c.cell == &cell)
-                    .ok_or(DependancyError::MemoryCellNotFound)
-            }).transpose()?;
+            let cell = cell
+                .map(|cell| {
+                    self.cells
+                        .iter()
+                        .position(|c| &c.cell == &cell)
+                        .ok_or(DependancyError::MemoryCellNotFound)
+                })
+                .transpose()?;
 
+            Ok(self.inner_find_dependencies(cell))
+        }
+
+        fn inner_find_dependencies(&self, cell: Option<usize>) -> Vec<Dependancy<'a>> {
             let mut not_visited_edge = vec![true; self.edges.len()];
             let mut not_visited_node = vec![true; self.cells.len()];
             let mut todo = vec![cell];
@@ -264,6 +276,75 @@ pub mod graph {
                         _ => None,
                     }
                 }))
+            }
+            result
+        }
+
+        pub fn find_dependencies_keep_steps(
+            &self,
+            cell: &MemoryCell,
+        ) -> Result<Vec<DependancyFromStep<'a>>> {
+            let cell = self
+                .cells
+                .iter()
+                .position(|c| &c.cell == &cell)
+                .ok_or(DependancyError::MemoryCellNotFound)?;
+
+            let per_step_dep = self.cells[cell]
+                .edges
+                .iter()
+                .map(|i| {
+                    let (i, d, s) = if let Edges {
+                        from:
+                            FromNode::CellCall(InnerCellCall {
+                                cell: c,
+                                step: StepCall::Step(s),
+                                ..
+                            }),
+                        to,
+                    } = &self.edges[*i]
+                    {
+                        assert_eq!(*c, cell);
+                        match to {
+                            ToNode::Input(_) => (None, self.inner_find_dependencies(None), s),
+                            ToNode::CellCall(InnerCellCall { cell, .. }) => {
+                                (Some(*cell), self.inner_find_dependencies(Some(*cell)), s)
+                            }
+                        }
+                    } else {
+                        unreachable!()
+                    };
+
+                    let d = d
+                        .into_iter()
+                        .map(|Dependancy { depends_on, .. }| match depends_on {
+                            OutGoingCall::Input(_) => None,
+                            OutGoingCall::Cell(CellCall { cell, .. }) => Some(cell),
+                        })
+                        .chain([i.map(|i| self.cells[i].cell)].into_iter())
+                        .unique()
+                        .collect_vec();
+                    (d, s.clone())
+                })
+                .flat_map(|(d, s)| d.into_iter().map(move |om| (s.clone(), om)));
+
+            let mut result = vec![];
+
+            for (s, om) in per_step_dep.into_iter() {
+                let dfs = result
+                    .iter()
+                    .position(|dfs: &DependancyFromStep| dfs.cell == om)
+                    .unwrap_or_else(|| {
+                        let i = result.len();
+                        result.push(DependancyFromStep {
+                            steps_origin: vec![],
+                            cell: om,
+                        });
+                        i
+                    });
+                if !result[dfs].steps_origin.contains(&s) {
+                    result[dfs].steps_origin.push(s)
+                }
             }
 
             Ok(result)
@@ -406,12 +487,12 @@ mod calculate {
             )
     }
 
-    fn find_all_dependancies<'a>(pbl: &'a Problem) -> Vec<Dependancy<'a>> {
-        pbl.memory_cells
-            .values()
-            .flat_map(|c| find_dependencies_cell(pbl, c))
-            .collect()
-    }
+    // fn find_all_dependancies<'a>(pbl: &'a Problem) -> Vec<Dependancy<'a>> {
+    //     pbl.memory_cells
+    //         .values()
+    //         .flat_map(|c| find_dependencies_cell(pbl, c))
+    //         .collect()
+    // }
 }
 fn some_iter<T, I: IntoIterator<Item = T>>(iter: Option<I>) -> impl Iterator<Item = T> {
     enum PossiblyEmptyIterator<T, I: IntoIterator<Item = T>> {
