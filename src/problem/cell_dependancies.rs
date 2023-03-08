@@ -163,36 +163,6 @@ pub mod graph {
                 cells[c].edges.push(i)
             }
 
-            // let mut has_input = vec![false; cells.len()];
-
-            // let dependancies = cells
-            //     .iter()
-            //     .enumerate()
-            //     .map(|(i, cell)| {
-            //         let mut dep = Vec::new();
-            //         for d in calculate::find_dependencies_cell(pbl, cell) {
-            //             match d {
-            //                 calculate::Dependancy::Input(_) => has_input[i] = true,
-            //                 calculate::Dependancy::Cell(CellDependancy {
-            //                     step_at,
-            //                     self_args,
-            //                     cell,
-            //                     call_args,
-            //                 }) => {
-            //                     let cell = cells.iter().position(|c| c == &cell).unwrap();
-            //                     dep.push(CellDependancyIndices {
-            //                         step_at: step_at.clone(),
-            //                         self_args,
-            //                         cell,
-            //                         call_args,
-            //                     })
-            //                 }
-            //             }
-            //         }
-            //         dep
-            //     })
-            //     .collect();
-
             let mut pile = Vec::with_capacity(2);
             let start_input = edges.len();
             for s in pbl.steps.values() {
@@ -230,36 +200,6 @@ pub mod graph {
                 });
                 edges.extend(iter);
             }
-
-            // let protocol_dependancies = {
-            //     let pile = pbl
-            //         .steps
-            //         .values()
-            //         .flat_map(|s| [s.message(), s.condition()].into_iter())
-            //         .collect_vec();
-
-            //     FormulaIterator::new(
-            //         StackBox::new(pile),
-            //         pbl,
-            //         IteratorFlags::QUANTIFIER,
-            //         |f, _| match f {
-            //             RichFormula::Fun(fun, _) if fun.is_cell() => {
-            //                 (Some(fun), some_iter(None))
-            //             }
-            //             RichFormula::Fun(_, args) => (None, some_iter(Some(args))),
-            //             _ => (None, some_iter(None)),
-            //         },
-            //     ).unique()
-            // }
-            // .map(|fun| cells.iter().position(|c| c.name() == fun.name()).unwrap()) // I don't like using names
-            // .collect();
-
-            // DependancyGraph {
-            //     cells,
-            //     has_input,
-            //     dependancies,
-            //     protocol_dependancies,
-            // }
 
             DependancyGraph {
                 cells,
