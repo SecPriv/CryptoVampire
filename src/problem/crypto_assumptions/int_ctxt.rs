@@ -80,6 +80,9 @@ pub(crate) fn generate(
     }
 
     if ctx.env().preprocessing_plus() {
+        if !ctx.pbl.memory_cells.is_empty() {
+            panic!("preprocessing and memory cell is not supported at the moment")
+        }
         let candidates = ctx
             .pbl
             .iter_content()
