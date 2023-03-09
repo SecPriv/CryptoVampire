@@ -43,3 +43,25 @@ pub(crate) fn reset_vec<'a, 'b, T>(v: &'a mut Vec<*const T>) -> &'a mut Vec<&'b 
     v.clear();
     unsafe { std::mem::transmute(v) }
 }
+
+pub(crate) fn transpose<A: Eq + Clone, B: Eq>(vec: Vec<(A, Vec<B>)>) -> Vec<(B, Vec<A>)> {
+    let mut result = vec![];
+
+    for (a, v) in vec {
+        for b in v {
+            let i = result
+                .iter()
+                .position(|(b2, _)| b2 == &b)
+                .unwrap_or_else(|| {
+                    let i = result.len();
+                    result.push((b, vec![]));
+                    i
+                });
+            let bvec = &mut result[i].1;
+            if !bvec.contains(&a) {
+                bvec.push(a.clone())
+            }
+        }
+    }
+    result
+}

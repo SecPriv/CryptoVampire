@@ -1,5 +1,5 @@
 use std::fmt;
-use std::ops::Deref;
+use std::ops::{Add, Deref};
 use std::{collections::HashSet, fmt::Display};
 
 use itertools::Itertools;
@@ -294,6 +294,17 @@ impl Variable {
 
     pub fn id(&self) -> usize {
         self.id
+    }
+}
+
+impl Add<usize> for Variable {
+    type Output = Variable;
+
+    fn add(self, rhs: usize) -> Self::Output {
+        Variable {
+            id: self.id + rhs,
+            ..self
+        }
     }
 }
 

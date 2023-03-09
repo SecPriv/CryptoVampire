@@ -41,6 +41,8 @@ pub enum StepCall<'a> {
 
 pub mod graph {
 
+    use std::{convert::identity, num::NonZeroUsize};
+
     use itertools::Itertools;
 
     use crate::{
@@ -349,6 +351,54 @@ pub mod graph {
 
             Ok(result)
         }
+
+        pub fn find_dependencies_from_step(&self, step: &Step) -> Vec<&'a MemoryCell> {
+            let mut not_visited = vec![true; self.cells.len()];
+            let mut not_visited_input = true;
+
+            let mut todo = self.edges[self.input.edges_starts..]
+                .iter()
+                .filter_map(|e| match e {
+                    Edges {
+                        from: FromNode::Input { step: s },
+                        ..
+                    } if s == step => Some(e.to()),
+                    _ => None,
+                })
+                .unique()
+                .collect_vec();
+
+            std::iter::from_fn(move || match todo.pop() {
+                Some(Some(i)) => {
+                    not_visited[i] = false;
+                    let gn = &self.cells[i];
+                    todo.extend(gn.edges.iter().map(|e| self.edges[*e].to()).filter(
+                        |to| match to {
+                            Some(i) => not_visited[*i],
+                            None => not_visited_input,
+                        },
+                    ));
+
+                    Some(Some(gn.cell))
+                }
+                Some(None) => {
+                    not_visited_input = false;
+                    todo.extend(
+                        self.edges[self.input.edges_starts..]
+                            .iter()
+                            .map(|e| e.to())
+                            .filter(|to| match to {
+                                Some(i) => not_visited[*i],
+                                None => not_visited_input,
+                            }),
+                    );
+                    Some(None)
+                }
+                _ => None,
+            })
+            .filter_map(identity)
+            .collect_vec()
+        }
     }
 
     impl<'a> InnerCellCall<'a> {
@@ -384,6 +434,20 @@ pub mod graph {
                     from: fcall.as_cell_call(graph),
                     depends_on: OutGoingCall::Cell(tcall.as_cell_call(graph)),
                 }),
+            }
+        }
+
+        fn from(&self) -> Option<usize> {
+            match &self.from {
+                FromNode::Input { .. } => None,
+                FromNode::CellCall(InnerCellCall { cell, .. }) => Some(*cell),
+            }
+        }
+
+        fn to(&self) -> Option<usize> {
+            match &self.to {
+                ToNode::Input(_) => None,
+                ToNode::CellCall(InnerCellCall { cell, .. }) => Some(*cell),
             }
         }
     }

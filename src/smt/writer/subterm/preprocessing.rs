@@ -12,13 +12,18 @@ use crate::{
         function::{FFlags, Function},
         sort::Sort,
     },
-    problem::{cell::Assignement, cell_dependancies::graph::DependancyGraph, problem::Problem},
+    problem::{
+        cell::Assignement,
+        cell_dependancies::{graph::DependancyGraph, CellCall, DependancyFromStep, OutGoingCall},
+        problem::Problem,
+        step::Step,
+    },
     smt::{
         macros::*,
         smt::{Smt, SmtFormula},
         writer::Ctx,
     },
-    utils::utils::{reset_vec, StackBox},
+    utils::utils::{reset_vec, transpose, StackBox},
 };
 
 use super::{builder::Builder, Subterm};
@@ -77,12 +82,12 @@ pub(crate) fn preprocess<B>(
     memory_cells(
         assertions,
         ctx,
-        max_var,
         subt,
         msg,
         &lt,
         tp,
         m,
+        max_var,
         &dependency_graph,
     );
 
@@ -111,113 +116,218 @@ pub(crate) fn preprocess<B>(
 fn memory_cells<'a, B>(
     assertions: &mut Vec<Smt>,
     ctx: &'a Ctx,
-    max_var: usize,
     subt: &Subterm<B>,
     msg: &Sort,
     lt: &Mlt,
     tp: &Variable,
     m: &Variable,
+    max_var: usize,
     dependency_graph: &DependancyGraph<'a>, // vars: Vec<Variable>,
 ) where
     B: Builder,
 {
-    // let flt = |s1: &RichFormula, s2: &RichFormula| ctx.funf(lt.clone(), [s1.clone(), s2.clone()]);
-    // let flt_eq =
-    //     |s1: &RichFormula, s2: &RichFormula| ctx.orf(ctx.eqf(s1.clone(), s2.clone()), flt(s1, s2));
+    let tp_f: RichFormula = tp.clone().as_formula(ctx);
+    let m_f: RichFormula = m.clone().as_formula(ctx);
+    let pile = RefCell::new(Vec::new());
     assertions.extend(
         ctx.pbl
             .memory_cells
             .values()
-            .map(|c| {
-                let cell_vars = sorts_to_variables(max_var, c.args().iter());
-                let _max_var = max_var + cell_vars.len();
-
-                let smt_c: RichFormula = ctx.funf(
-                    c.function().clone(),
-                    cell_vars
-                        .iter()
-                        .chain([tp].into_iter())
-                        .cloned()
-                        .map(|v| ctx.varf(v))
-                        .collect_vec(),
-                );
-
-                // let dependant_cells = dependency_graph.find_dependencies(Some(c)).unwrap().into_iter().map(|d| {
-
-                // })V
-
-                // let mut ors = if subt.sort() == msg {
-                //     // vec![seq!(m.clone(), smt_c.clone())]
-                //     vec![ctx.eqf(m.clone(), smt_c.clone())]
-                // } else {
-                //     vec![]
-                // };
-
-                let ors = c.assignements().iter().map(
-                    |Assignement {
-                         step,
-                         args,
-                         content,
-                     }| {
-                        let eq_args = ctx.mandf(
-                            cell_vars
-                                .iter()
-                                // .map(SmtFormula::from)
-                                .zip(args.iter() /* .map(SmtFormula::from) */)
-                                .map(|(a, b)| ctx.eqf(a.clone_to_formula(ctx), b.clone())),
-                        );
-
-                        // step <= tp
-                        let order = {
-                            let vars = step
-                                .free_variables()
-                                .iter()
-                                .map(|v| v.clone_to_formula(ctx));
-                            let step = ctx.funf(step.function().clone(), vars);
-                            // flt_eq(&step, &tp)
-                            lt.leq(ctx, step, tp.clone_to_formula(ctx))
-                        };
-
-                        // will terminate because no loops
-                        let rec_call = subt.f(ctx, m.clone_to_formula(ctx), content.clone(), msg);
-
-                        let vars = step.occuring_variables().clone();
-                        // SmtFormula::Exists(vars, Box::new(sand!(order, eq_args, eq_args, rec_call)))
-                        ctx.existsf(vars, ctx.mandf([order, eq_args, rec_call]))
-                    },
-                );
-
-                let vars = [m, tp]
+            .map(|cell| {
+                let dep = dependency_graph
+                    .find_dependencies_keep_steps(cell)
+                    .unwrap()
                     .into_iter()
-                    .chain(cell_vars.iter())
+                    .filter(|d| d.cell != Some(cell))
+                    .collect_vec();
+
+                let cell_args = cell
+                    .args()
+                    .iter()
+                    .enumerate()
+                    .map(|(i, s)| Variable {
+                        id: max_var + i,
+                        sort: s.clone(),
+                    })
+                    .collect_vec();
+                let cell_args_f = cell_args
+                    .iter()
+                    .chain([tp].into_iter())
                     .cloned()
-                    .collect();
-                // SmtFormula::Forall(
-                //     vars,
-                //     Box::new(simplies!(ctx.env();
-                //         subt.f(m.clone(), smt_c, msg),
-                //         SmtFormula::Or(ors)
-                //     )),
-                // )
+                    .map(|v| v.as_formula(ctx))
+                    .collect_vec();
+                let max_var = max_var + cell_args.len();
+
+                let mut ors = vec![];
+
+                for Assignement { step, content, .. } in cell.assignements() {
+                    let step_fv = step.free_variables();
+                    let step_f = step
+                        .function()
+                        .cf(ctx, step_fv.iter().cloned().map(|v| v.as_formula(ctx)));
+
+                    let inner_ors = generate_inner_ors(m, ctx, &pile, [content], step, subt);
+                    ors.push(ctx.existsf(
+                        step.occuring_variables().clone(),
+                        ctx.andf(lt.leq(ctx, step_f, tp_f.clone()), ctx.morf(inner_ors)),
+                    ));
+                }
+
+                for DependancyFromStep {
+                    steps_origin,
+                    cell: cell2,
+                } in dep
+                {
+                    if let Some(cell) = cell2 {
+                        for Assignement { step, content, .. } in cell.assignements() {
+                            let step_fv = step.free_variables();
+                            let step_f: RichFormula = step
+                                .function()
+                                .cf(ctx, step_fv.iter().cloned().map(|v| v.as_formula(ctx)));
+
+                            let inner_ors =
+                                generate_inner_ors(m, ctx, &pile, [content], step, subt);
+
+                            let guards = steps_origin
+                                .iter()
+                                .map(|s| {
+                                    let s_fv = s
+                                        .free_variables()
+                                        .iter()
+                                        .cloned()
+                                        .map(|v| v + max_var)
+                                        .collect_vec();
+                                    let s_f = s
+                                        .function()
+                                        .cf(ctx, s_fv.iter().cloned().map(|v| v.as_formula(ctx)));
+
+                                    ctx.existsf(
+                                        s_fv,
+                                        ctx.andf(
+                                            lt.leq(ctx, s_f, step_f.clone()),
+                                            lt.leq(ctx, step_f.clone(), tp_f.clone()),
+                                        ),
+                                    )
+                                })
+                                .collect_vec();
+
+                            ors.push(ctx.existsf(
+                                step.occuring_variables().clone(),
+                                ctx.andf(ctx.morf(guards), ctx.morf(inner_ors)),
+                            ));
+                        }
+                    }
+                }
+
                 ctx.forallf(
-                    vars,
+                    vec![tp.clone(), m.clone()],
                     ctx.impliesf(
-                        subt.f(ctx, m.clone_to_formula(ctx), smt_c.clone(), msg),
-                        if subt.sort() == msg {
-                            ctx.morf(
-                                [ctx.eqf(m.clone_to_formula(ctx), smt_c)]
-                                    .into_iter()
-                                    .chain(ors),
-                            )
-                        } else {
-                            ctx.morf(ors)
-                        },
+                        subt.f(ctx, m_f.clone(), cell.function().cf(ctx, cell_args_f), msg),
+                        ctx.morf(ors),
                     ),
                 )
             })
             .map(SmtFormula::from)
             .map(Smt::Assert),
-    )
+    );
+
+    // let flt = |s1: &RichFormula, s2: &RichFormula| ctx.funf(lt.clone(), [s1.clone(), s2.clone()]);
+    // let flt_eq =
+    //     |s1: &RichFormula, s2: &RichFormula| ctx.orf(ctx.eqf(s1.clone(), s2.clone()), flt(s1, s2));
+    // assertions.extend(
+    //     ctx.pbl
+    //         .memory_cells
+    //         .values()
+    //         .map(|c| {
+    //             let cell_vars = sorts_to_variables(max_var, c.args().iter());
+    //             let _max_var = max_var + cell_vars.len();
+
+    //             let smt_c: RichFormula = ctx.funf(
+    //                 c.function().clone(),
+    //                 cell_vars
+    //                     .iter()
+    //                     .chain([tp].into_iter())
+    //                     .cloned()
+    //                     .map(|v| ctx.varf(v))
+    //                     .collect_vec(),
+    //             );
+
+    //             // let dependant_cells = dependency_graph.find_dependencies(Some(c)).unwrap().into_iter().map(|d| {
+
+    //             // })V
+
+    //             // let mut ors = if subt.sort() == msg {
+    //             //     // vec![seq!(m.clone(), smt_c.clone())]
+    //             //     vec![ctx.eqf(m.clone(), smt_c.clone())]
+    //             // } else {
+    //             //     vec![]
+    //             // };
+
+    //             let ors = c.assignements().iter().map(
+    //                 |Assignement {
+    //                      step,
+    //                      args,
+    //                      content,
+    //                  }| {
+    //                     let eq_args = ctx.mandf(
+    //                         cell_vars
+    //                             .iter()
+    //                             // .map(SmtFormula::from)
+    //                             .zip(args.iter() /* .map(SmtFormula::from) */)
+    //                             .map(|(a, b)| ctx.eqf(a.clone_to_formula(ctx), b.clone())),
+    //                     );
+
+    //                     // step <= tp
+    //                     let order = {
+    //                         let vars = step
+    //                             .free_variables()
+    //                             .iter()
+    //                             .map(|v| v.clone_to_formula(ctx));
+    //                         let step = ctx.funf(step.function().clone(), vars);
+    //                         // flt_eq(&step, &tp)
+    //                         lt.leq(ctx, step, tp.clone_to_formula(ctx))
+    //                     };
+
+    //                     // will terminate because no loops
+    //                     let rec_call = subt.f(ctx, m.clone_to_formula(ctx), content.clone(), msg);
+
+    //                     let vars = step.occuring_variables().clone();
+    //                     // SmtFormula::Exists(vars, Box::new(sand!(order, eq_args, eq_args, rec_call)))
+    //                     ctx.existsf(vars, ctx.mandf([order, eq_args, rec_call]))
+    //                 },
+    //             );
+
+    //             let vars = [m, tp]
+    //                 .into_iter()
+    //                 .chain(cell_vars.iter())
+    //                 .cloned()
+    //                 .collect();
+    //             // SmtFormula::Forall(
+    //             //     vars,
+    //             //     Box::new(simplies!(ctx.env();
+    //             //         subt.f(m.clone(), smt_c, msg),
+    //             //         SmtFormula::Or(ors)
+    //             //     )),
+    //             // )
+    //             ctx.forallf(
+    //                 vars,
+    //                 ctx.impliesf(
+    //                     subt.f(ctx, m.clone_to_formula(ctx), smt_c.clone(), msg),
+    //                     if subt.sort() == msg {
+    //                         ctx.morf(
+    //                             [ctx.eqf(m.clone_to_formula(ctx), smt_c)]
+    //                                 .into_iter()
+    //                                 .chain(ors),
+    //                         )
+    //                     } else {
+    //                         ctx.morf(ors)
+    //                     },
+    //                 ),
+    //             )
+    //         })
+    //         .map(SmtFormula::from)
+    //         .map(Smt::Assert),
+    // )
 }
 
 /// Mutates `assertions` and/or `declaration` to add any relevant axioms
@@ -230,7 +340,7 @@ fn inputs<'a, B>(
     tp: &Variable,
     m: &Variable,
     // vars: &Vec<Variable>,
-    _max_var: usize,
+    max_var: usize,
     msg: &Sort,
     lt: &Mlt,
     input: &Function,
@@ -238,9 +348,28 @@ fn inputs<'a, B>(
 ) where
     B: Builder,
 {
+    // let dependencies = dependency_graph
+    //     .find_dependencies(None)
+    //     .unwrap()
+    //     .into_iter()
+    //     .filter_map(|d| match &d.depends_on {
+    //         OutGoingCall::Input(_) => None,
+    //         OutGoingCall::Cell(CellCall { cell, .. }) => Some(*cell),
+    //     })
+    //     .unique()
+    //     .collect_vec();
+
     // let flt = |s1: &RichFormula, s2: &RichFormula| ctx.funf(lt.clone(), [s1.clone(), s2.clone()]);
     // let flt_eq =
     //     |s1: &RichFormula, s2: &RichFormula| ctx.orf(ctx.eqf(s1.clone(), s2.clone()), flt(s1, s2));
+
+    let cell_prendencies = transpose(
+        ctx.pbl
+            .steps
+            .values()
+            .map(|step| (step, dependency_graph.find_dependencies_from_step(step)))
+            .collect_vec(),
+    );
 
     let pile = RefCell::new(Vec::new());
     let mut ors: Vec<RichFormula> = Vec::new();
@@ -261,31 +390,14 @@ fn inputs<'a, B>(
     // let cell_evidences = Vec::new(); // cell don't recurse, so we can skip this for now
     {
         for s in ctx.pbl.steps.values() {
-            let step_vars = s.occuring_variables().clone();
+            let step_vars = s.occuring_variables();
             let step_formula = s.as_formula(ctx);
 
-            let inner_ors = {
-                let m = m.clone_to_formula(ctx);
-                let mut pile = pile.borrow_mut();
-                // let pile = reset_vec(pile.as_mut());
-                pile.clear();
-                pile.extend([s.message(), s.condition()]);
-                let iter =
-                    new_formula_iter_vec(pile, &ctx.pbl, IteratorFlags::QUANTIFIER, |f, pbl| {
-                        // if_chain! {
-                        //     if let RichFormula::Fun(fun, args) = f;
-                        //     if fun.is_cell();
-                        //     then {
-                        //         cell_evidences.push((s, fun, args))
-                        //     }
-                        // }; cells don't recurse
-                        subt.analyse(&m, Some(s), pbl, f)
-                    });
-                iter.collect_vec()
-            };
+            let inner_ors =
+                generate_inner_ors(m, ctx, &pile, [s.condition(), s.message()], s, subt);
 
             ors.push(ctx.existsf(
-                step_vars,
+                s.occuring_variables().clone(),
                 ctx.andf(
                     lt.lt(ctx, step_formula, tp.clone_to_formula(ctx)),
                     ctx.morf(inner_ors),
@@ -293,10 +405,76 @@ fn inputs<'a, B>(
             ))
         }
     }
+
+    {
+        let tp_f: RichFormula = tp.clone_to_formula(ctx);
+        // let m_f: RichFormula = m.clone_to_formula(ctx);
+        for (cell, steps) in cell_prendencies {
+            for Assignement { step, content, .. } in cell.assignements() {
+                let inner_ors = generate_inner_ors(m, ctx, &pile, [content], step, subt);
+                let step_free_vars = step.free_variables();
+                let step_as_formula: RichFormula = step
+                    .function()
+                    .cf(ctx, step_free_vars.iter().cloned().map(|var| ctx.varf(var)));
+
+                let guard = steps.iter().map(|s| {
+                    let tmp_step_fv = s
+                        .free_variables()
+                        .iter()
+                        .map(|v| Variable {
+                            id: v.id + max_var,
+                            ..v.clone()
+                        })
+                        .collect_vec();
+                    let tmp_step_fv_as_formula = tmp_step_fv
+                        .iter()
+                        .map(|v| ctx.varf(v.clone()))
+                        .collect_vec();
+
+                    ctx.existsf(
+                        tmp_step_fv,
+                        ctx.andf(
+                            lt.lt(ctx, step_as_formula.clone(), tp_f.clone()),
+                            lt.leq(
+                                ctx,
+                                s.function().cf(ctx, tmp_step_fv_as_formula),
+                                step_as_formula.clone(),
+                            ),
+                        ),
+                    )
+                });
+
+                ors.push(ctx.existsf(
+                    // step_free_vars.clone(),
+                    step.occuring_variables().clone(),
+                    ctx.andf(ctx.morf(guard), ctx.morf(inner_ors)),
+                ));
+            }
+        }
+    }
+
     assertions.push(Smt::Assert(SmtFormula::from(ctx.forallf(
         vec![m.clone(), tp.clone()],
         ctx.impliesf(premise, ctx.morf(ors)),
     ))))
+}
+
+fn generate_inner_ors<'a, B: Builder>(
+    m: &Variable,
+    ctx: &'a Ctx,
+    pile: &RefCell<Vec<&'a RichFormula>>,
+    to_fill: impl IntoIterator<Item = &'a RichFormula>,
+    step: &'a Step,
+    subt: &Subterm<B>,
+) -> Vec<RichFormula> {
+    let m = m.clone_to_formula(ctx);
+    let mut pile = pile.borrow_mut();
+    pile.clear();
+    pile.extend(to_fill.into_iter());
+    let iter = new_formula_iter_vec(pile, &ctx.pbl, IteratorFlags::QUANTIFIER, |f, pbl| {
+        subt.analyse(&m, Some(step), pbl, f)
+    });
+    iter.collect_vec()
 }
 
 /// I'm using the negative to avoid too many existential quantifiers
