@@ -590,23 +590,27 @@ where
     fun
 }
 
-struct Mlt {
+pub struct Mlt {
     fun: Function,
 }
 
 impl Mlt {
-    fn lt<T, U>(&self, ctx: &T, a: U, b: U) -> U
+    pub fn lt<T, U>(&self, ctx: &T, a: U, b: U) -> U
     where
         T: FormulaUser<U>,
     {
         ctx.funf(self.fun.clone(), [a, b])
     }
 
-    fn leq<T, U>(&self, ctx: &T, a: U, b: U) -> U
+    pub fn leq<T, U>(&self, ctx: &T, a: U, b: U) -> U
     where
         T: FormulaUser<U>,
         U: Clone,
     {
         ctx.orf(ctx.eqf(a.clone(), b.clone()), self.lt(ctx, a, b))
+    }
+
+    pub fn new(fun: Function) -> Self {
+        Mlt { fun }
     }
 }

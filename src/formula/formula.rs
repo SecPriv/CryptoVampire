@@ -192,14 +192,15 @@ impl RichFormula {
         )
     }
 
-    pub fn custom_iter_w_quantifier<'a, F, T>(
+    pub fn custom_iter_w_quantifier<'a, 'b, F, T>(
         &'a self,
         pbl: &'a Problem,
         mut f: F,
-    ) -> impl Iterator<Item = T> + 'a
+    ) -> impl Iterator<Item = T> + 'b
     where
-        F: FnMut(&'a RichFormula, &'a Problem) -> (Option<T>, Vec<&'a RichFormula>) + 'a,
-        T: 'a,
+        F: FnMut(&'b RichFormula, &'b Problem) -> (Option<T>, Vec<&'b RichFormula>) + 'b,
+        T: 'b,
+        'a: 'b
     {
         FormulaIterator::new(
             StackBox::new(vec![self]),

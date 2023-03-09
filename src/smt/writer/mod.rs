@@ -17,7 +17,7 @@ use crate::{
         function::Function,
         sort::Sort,
     },
-    problem::problem::Problem,
+    problem::{cell_dependancies::graph::DependancyGraph, problem::Problem},
     smt::{
         macros::{seq, sforall, sfun},
         smt::SmtFormula,
@@ -99,7 +99,7 @@ pub fn problem_to_smt(pbl: Problem) -> Vec<Smt> {
         free_funs,
         ta_sorts,
         free_sorts,
-        pbl: pbl,
+        pbl,
     };
 
     // declare sorts and funs

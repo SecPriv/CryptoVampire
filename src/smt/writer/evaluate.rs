@@ -30,17 +30,17 @@ pub(crate) fn evaluate(
     ctx: &Ctx,
 ) {
     // if !env.no_bitstring_fun() {
-        if env.use_rewrite() {
-            evaluate_rewrite(env, assertions, declarations, ctx)
-        } else {
-            let mut masserts = Vec::new();
-            evaluate_rewrite(env, &mut masserts, declarations, ctx);
-            assertions.extend(masserts.into_iter().map(|a| a.rewrite_to_assert(env)))
-        }
+    if env.use_rewrite() {
+        evaluate_rewrite(env, assertions, declarations, ctx)
+    } else {
+        let mut masserts = Vec::new();
+        evaluate_rewrite(env, &mut masserts, declarations, ctx);
+        assertions.extend(masserts.into_iter().map(|a| a.rewrite_to_assert(env)))
+    }
 
-        if env.legacy_evaluate() {
-            legacy_evaluate(env, assertions, declarations, ctx)
-        }
+    if env.legacy_evaluate() {
+        legacy_evaluate(env, assertions, declarations, ctx)
+    }
     // }
 
     user_evaluate(env, assertions, declarations, ctx)

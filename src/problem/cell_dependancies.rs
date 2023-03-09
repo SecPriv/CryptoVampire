@@ -3,45 +3,45 @@ use crate::formula::formula::RichFormula;
 use super::{cell::MemoryCell, step::Step};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Dependancy<'a> {
-    pub from: CellCall<'a>,
-    pub depends_on: OutGoingCall<'a>,
+pub struct Dependancy<'pbl> {
+    pub from: CellCall<'pbl>,
+    pub depends_on: OutGoingCall<'pbl>,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct DependancyFromStep<'a> {
-    pub steps_origin: Vec<Step>,
-    pub cell: Option<&'a MemoryCell>,
+pub struct DependancyFromStep<'pbl> {
+    pub steps_origin: Vec<&'pbl Step>,
+    pub cell: Option<&'pbl MemoryCell>,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum OutGoingCall<'a> {
-    Input(InputCall<'a>),
-    Cell(CellCall<'a>),
+pub enum OutGoingCall<'pbl> {
+    Input(InputCall<'pbl>),
+    Cell(CellCall<'pbl>),
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct CellCall<'a> {
-    pub cell: &'a MemoryCell,
-    pub step: StepCall<'a>,
-    pub args: &'a [RichFormula],
+pub struct CellCall<'pbl> {
+    pub cell: &'pbl MemoryCell,
+    pub step: StepCall<'pbl>,
+    pub args: &'pbl [RichFormula],
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct InputCall<'a> {
-    pub step: StepCall<'a>,
-    // pub args: &'a [RichFormula],
+pub struct InputCall<'pbl> {
+    pub step: StepCall<'pbl>,
+    // pub args: &'pbl [RichFormula],
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum StepCall<'a> {
-    Step(Step),
-    General(&'a RichFormula),
+pub enum StepCall<'pbl> {
+    Step(&'pbl Step),
+    General(&'pbl RichFormula),
 }
 
 pub mod graph {
 
-    use std::{convert::identity, num::NonZeroUsize};
+    use std::convert::identity;
 
     use itertools::Itertools;
 
@@ -61,10 +61,10 @@ pub mod graph {
     use thiserror::Error;
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default)]
-    pub struct DependancyGraph<'a> {
-        cells: Vec<GlobNode<'a>>,
-        // calls: Vec<InnerCellCall<'a>>,
-        edges: Vec<Edges<'a>>,
+    pub struct DependancyGraph<'pbl> {
+        cells: Vec<GlobNode<'pbl>>,
+        // calls: Vec<InnerCellCall<'pbl>>,
+        edges: Vec<Edges<'pbl>>,
         input: InputNode,
     }
 
@@ -74,38 +74,38 @@ pub mod graph {
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-    struct GlobNode<'a> {
-        pub cell: &'a MemoryCell,
+    struct GlobNode<'pbl> {
+        pub cell: &'pbl MemoryCell,
         pub edges: Vec<usize>,
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-    struct InnerCellCall<'a> {
+    struct InnerCellCall<'pbl> {
         pub cell: usize,
-        pub step: StepCall<'a>,
-        pub args: &'a [RichFormula],
+        pub step: StepCall<'pbl>,
+        pub args: &'pbl [RichFormula],
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-    struct Edges<'a> {
-        pub from: FromNode<'a>,
-        pub to: ToNode<'a>,
+    struct Edges<'pbl> {
+        pub from: FromNode<'pbl>,
+        pub to: ToNode<'pbl>,
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-    enum FromNode<'a> {
-        Input { step: Step },
-        CellCall(InnerCellCall<'a>),
+    enum FromNode<'pbl> {
+        Input { step: &'pbl Step },
+        CellCall(InnerCellCall<'pbl>),
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-    enum ToNode<'a> {
-        Input(InputCall<'a>),
-        CellCall(InnerCellCall<'a>),
+    enum ToNode<'pbl> {
+        Input(InputCall<'pbl>),
+        CellCall(InnerCellCall<'pbl>),
     }
 
-    impl<'a> From<&'a Problem> for DependancyGraph<'a> {
-        fn from(pbl: &'a Problem) -> Self {
+    impl<'pbl> From<&'pbl Problem> for DependancyGraph<'pbl> {
+        fn from(pbl: &'pbl Problem) -> Self {
             let mut cells = pbl
                 .memory_cells
                 .values()
@@ -130,7 +130,7 @@ pub mod graph {
                     }) => {
                         let df = InnerCellCall {
                             cell: c,
-                            step: StepCall::Step(step_at.clone()),
+                            step: StepCall::Step(step_at),
                             args: &self_args[..],
                         };
                         let dt = InnerCellCall {
@@ -151,7 +151,7 @@ pub mod graph {
                     }) => {
                         let df = InnerCellCall {
                             cell: c,
-                            step: StepCall::Step(step_at.clone()),
+                            step: StepCall::Step(step_at),
                             args: &self_args[..],
                         };
                         let dt = InputCall {
@@ -198,7 +198,7 @@ pub mod graph {
                         .unwrap();
 
                     Edges {
-                        from: FromNode::Input { step: s.clone() },
+                        from: FromNode::Input { step: s },
                         to: ToNode::CellCall(InnerCellCall {
                             cell,
                             step: StepCall::General(args.last().unwrap()),
@@ -225,9 +225,12 @@ pub mod graph {
         MemoryCellNotFound,
     }
 
-    impl<'a> DependancyGraph<'a> {
+    impl<'pbl> DependancyGraph<'pbl> {
         /// use None for input
-        pub fn find_dependencies(&self, cell: Option<&MemoryCell>) -> Result<Vec<Dependancy<'a>>> {
+        pub fn find_dependencies(
+            &self,
+            cell: Option<&'pbl MemoryCell>,
+        ) -> Result<Vec<Dependancy<'pbl>>> {
             let cell = cell
                 .map(|cell| {
                     self.cells
@@ -240,7 +243,7 @@ pub mod graph {
             Ok(self.inner_find_dependencies(cell))
         }
 
-        fn inner_find_dependencies(&self, cell: Option<usize>) -> Vec<Dependancy<'a>> {
+        fn inner_find_dependencies(&self, cell: Option<usize>) -> Vec<Dependancy<'pbl>> {
             let mut not_visited_edge = vec![true; self.edges.len()];
             let mut not_visited_node = vec![true; self.cells.len()];
             let mut todo = vec![cell];
@@ -285,7 +288,7 @@ pub mod graph {
         pub fn find_dependencies_keep_steps(
             &self,
             cell: &MemoryCell,
-        ) -> Result<Vec<DependancyFromStep<'a>>> {
+        ) -> Result<Vec<DependancyFromStep<'pbl>>> {
             let cell = self
                 .cells
                 .iter()
@@ -326,9 +329,9 @@ pub mod graph {
                         .chain([i.map(|i| self.cells[i].cell)].into_iter())
                         .unique()
                         .collect_vec();
-                    (d, s.clone())
+                    (d, s)
                 })
-                .flat_map(|(d, s)| d.into_iter().map(move |om| (s.clone(), om)));
+                .flat_map(|(d, s)| d.into_iter().map(move |om| (s, om)));
 
             let mut result = vec![];
 
@@ -352,7 +355,7 @@ pub mod graph {
             Ok(result)
         }
 
-        pub fn find_dependencies_from_step(&self, step: &Step) -> Vec<&'a MemoryCell> {
+        pub fn find_dependencies_from_step(&self, step: &Step) -> Vec<&'pbl MemoryCell> {
             let mut not_visited = vec![true; self.cells.len()];
             let mut not_visited_input = true;
 
@@ -362,7 +365,7 @@ pub mod graph {
                     Edges {
                         from: FromNode::Input { step: s },
                         ..
-                    } if s == step => Some(e.to()),
+                    } if *s == step => Some(e.to()),
                     _ => None,
                 })
                 .unique()
@@ -401,8 +404,8 @@ pub mod graph {
         }
     }
 
-    impl<'a> InnerCellCall<'a> {
-        fn as_cell_call(&self, graph: &DependancyGraph<'a>) -> CellCall<'a> {
+    impl<'pbl> InnerCellCall<'pbl> {
+        fn as_cell_call(&self, graph: &DependancyGraph<'pbl>) -> CellCall<'pbl> {
             let InnerCellCall { cell, step, args } = self;
             CellCall {
                 cell: graph.cells.get(*cell).unwrap().cell,
@@ -412,8 +415,8 @@ pub mod graph {
         }
     }
 
-    impl<'a> Edges<'a> {
-        fn as_dependancy(&self, graph: &DependancyGraph<'a>) -> Option<Dependancy<'a>> {
+    impl<'pbl> Edges<'pbl> {
+        fn as_dependancy(&self, graph: &DependancyGraph<'pbl>) -> Option<Dependancy<'pbl>> {
             match self {
                 Edges {
                     from: FromNode::Input { .. },
@@ -468,33 +471,33 @@ mod calculate {
         utils::utils::StackBox,
     };
 
-    pub struct CellDependancy<'a> {
-        // self_cell: &'a MemoryCell,
-        pub step_at: &'a Step,
-        pub self_args: &'a Vec<RichFormula>,
-        pub cell: &'a MemoryCell,
-        pub call_args: &'a [RichFormula],
-        pub step_call: &'a RichFormula,
+    pub struct CellDependancy<'pbl> {
+        // self_cell: &'pbl MemoryCell,
+        pub step_at: &'pbl Step,
+        pub self_args: &'pbl Vec<RichFormula>,
+        pub cell: &'pbl MemoryCell,
+        pub call_args: &'pbl [RichFormula],
+        pub step_call: &'pbl RichFormula,
     }
 
     use super::some_iter;
 
-    pub struct InputDependancy<'a> {
-        // self_cell: &'a MemoryCell,
-        pub step_at: &'a Step,
-        pub self_args: &'a [RichFormula],
-        pub step_call: &'a RichFormula,
+    pub struct InputDependancy<'pbl> {
+        // self_cell: &'pbl MemoryCell,
+        pub step_at: &'pbl Step,
+        pub self_args: &'pbl [RichFormula],
+        pub step_call: &'pbl RichFormula,
     }
 
-    pub enum Dependancy<'a> {
-        Cell(CellDependancy<'a>),
-        Input(InputDependancy<'a>),
+    pub enum Dependancy<'pbl> {
+        Cell(CellDependancy<'pbl>),
+        Input(InputDependancy<'pbl>),
     }
 
-    pub fn find_dependencies_cell<'a>(
-        pbl: &'a Problem,
-        cell: &'a MemoryCell,
-    ) -> impl Iterator<Item = Dependancy<'a>> {
+    pub fn find_dependencies_cell<'pbl>(
+        pbl: &'pbl Problem,
+        cell: &'pbl MemoryCell,
+    ) -> impl Iterator<Item = Dependancy<'pbl>> {
         let input = INPUT(&pbl.env);
         cell.assignements()
             .iter()
@@ -551,7 +554,7 @@ mod calculate {
             )
     }
 
-    // fn find_all_dependancies<'a>(pbl: &'a Problem) -> Vec<Dependancy<'a>> {
+    // fn find_all_dependancies<'pbl>(pbl: &'pbl Problem) -> Vec<Dependancy<'pbl>> {
     //     pbl.memory_cells
     //         .values()
     //         .flat_map(|c| find_dependencies_cell(pbl, c))

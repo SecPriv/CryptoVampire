@@ -26,6 +26,7 @@ use crate::{
 
 use super::{
     cell::{Assignement, MemoryCell, PreMemoryCell},
+    cell_dependancies::graph::DependancyGraph,
     crypto_assumptions::CryptoAssumption,
     step::Step,
 };
@@ -289,9 +290,16 @@ impl Problem {
     }
 
     pub fn iter_content<'a>(&'a self) -> impl Iterator<Item = (&'a Step, &'a RichFormula)> {
-        self.steps
+        let steps_content = self
+            .steps
             .values()
-            .flat_map(|s| [(s, s.message()), (s, s.condition())].into_iter())
+            .flat_map(|s| [(s, s.message()), (s, s.condition())].into_iter());
+        let cells_content = self.memory_cells.values().flat_map(|c| {
+            c.assignements()
+                .iter()
+                .map(|Assignement { step, content, .. }| (step, content))
+        });
+        steps_content.chain(cells_content)
     }
 
     pub fn max_var(&self) -> usize {
