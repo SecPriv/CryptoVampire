@@ -6,7 +6,9 @@ content = {SOI ~ (
         ) ~ EOL?)*  ~ EOI}
 
 WHITESPACE = _{ " " | "\t" | NEWLINE }
-COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+COMMENT = _{ c_like_comments | ml_like_comments }
+c_like_comments = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+ml_like_comments = _{ "(*" ~ (!"*)" ~ ANY)* ~ "*)" }
 EOL = _{";"}
 
 ident = @{  ASCII_ALPHA ~ ( ASCII_ALPHANUMERIC | "_" | "-" | "'" )* }
@@ -47,8 +49,8 @@ find_such_that = {"try" ~ "find" ~
 
 quantifier = {quantifier_op ~ typed_arguments ~ bracketed_term }
     quantifier_op = _{exists | forall }
-	forall = {"forall"}
-    exists = {"exists"}
+	forall = {"forall" | "∀" }
+    exists = {"exists" | "∃" }
 
 declaration = { declare_type | declare_function | declare_cell}
     declare_type = {"type" ~ type_name }
