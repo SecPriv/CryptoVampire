@@ -49,6 +49,13 @@ bitflags! {
     }
 }
 
+
+pub enum IFunction {
+    Bool(),
+    
+}
+
+
 // user accessible part
 
 /// A function is just a pointer to some content in memory.
