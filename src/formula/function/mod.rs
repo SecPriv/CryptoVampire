@@ -1,5 +1,7 @@
 pub mod base_function;
-mod function_like;
+pub mod function_like;
+pub mod booleans;
+pub mod equality;
 use std::{
     cell::{Ref, RefCell},
     cmp::Ordering,
@@ -51,21 +53,15 @@ bitflags! {
     }
 }
 
-pub enum Booleans {
-    And, Or, Not, Implies
-}
-
-pub enum Equities {
-    Eq, Neq
-}
 
 
 
-pub enum IFunction {
+pub enum InnerFunction {
     Bool(),
 
 }
 
+// pub struct InnerFunction 
 
 // user accessible part
 

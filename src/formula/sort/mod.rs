@@ -1,6 +1,13 @@
+pub mod builtins;
+pub mod sorted;
 use bitflags::bitflags;
 use core::fmt::Debug;
-use std::{cmp::Ordering, fmt::Display, hash::Hash, rc::Rc};
+use std::{
+    cmp::Ordering,
+    fmt::Display,
+    hash::{Hash, Hasher},
+    rc::{Rc, Weak},
+};
 
 bitflags! {
     #[derive(Default )]
@@ -11,8 +18,18 @@ bitflags! {
     }
 }
 
+// pub type AsSort = AsRef<InnerSort>;
+
 #[derive(Debug, Clone, Copy)]
-pub struct Sort<'a>(&'a ISort);
+pub struct Sort<'a>(&'a InnerSort);
+
+#[derive(Debug, Clone)]
+pub struct RcSort(Rc<InnerSort>);
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct InnerSort {
+    inner: HiddenSort,
+}
 
 // enum ISort {
 //     BuiltIn(&'static IISort),
@@ -20,9 +37,10 @@ pub struct Sort<'a>(&'a ISort);
 // }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct ISort {
+struct HiddenSort {
     name: String,
     flags: SFlags,
+    itself: Weak<InnerSort>,
 }
 
 impl<'a> PartialEq for Sort<'a> {
@@ -63,15 +81,27 @@ impl<'a> PartialOrd for Sort<'a> {
 //     }
 // }
 
-impl<'a> From<&'a str> for Sort {
-    fn from(str: &'a str) -> Self {
-        Self::new(str)
+impl<'a> From<&'a str> for RcSort {
+    fn from(value: &'a str) -> Self {
+        Self::new(value.to_owned(), Default::default())
     }
 }
+
+// impl<'a> From<&'a str> for Sort {
+//     fn from(str: &'a str) -> Self {
+//         Self::new(str)
+//     }
+// }
 
 impl<'a> Display for Sort<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_ref().name)
+    }
+}
+
+impl Display for RcSort {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.as_sort().fmt(f)
     }
 }
 
@@ -82,15 +112,15 @@ impl<'a> Hash for Sort<'a> {
 }
 
 impl<'a> Sort<'a> {
-    pub fn new(str: &str) -> Self {
-        Self::new_with_flag(str, Default::default())
-    }
-    pub fn new_with_flag(str: &str, flags: SFlags) -> Self {
-        Sort(ISort::Dynamic(Rc::new(ISort {
-            name: str.to_owned(),
-            flags,
-        })))
-    }
+    // pub fn new(str: &str) -> Self {
+    //     Self::new_with_flag(str, Default::default())
+    // }
+    // pub fn new_with_flag(str: &str, flags: SFlags) -> Self {
+    //     Sort(ISort::Dynamic(Rc::new(ISort {
+    //         name: str.to_owned(),
+    //         flags,
+    //     })))
+    // }
 
     pub fn name(&self) -> &str {
         &self.as_ref().name
@@ -109,16 +139,74 @@ impl<'a> Sort<'a> {
     }
 
     pub fn as_ptr_usize(&self) -> usize {
-        self.as_ref() as *const ISort as usize
+        self.as_ref() as *const HiddenSort as usize
+    }
+
+    pub fn as_rc(&self) -> RcSort {
+        self.0.itself.upgrade().unwrap() // cannot fail so long as self id a valid reference
     }
 }
 
-impl<'a> AsRef<ISort> for Sort<'a> {
-    fn as_ref(&self) -> &ISort {
+impl<'a> AsRef<HiddenSort> for Sort<'a> {
+    fn as_ref(&self) -> &HiddenSort {
         // match self.0 {
         //     ISort::BuiltIn(ref s) => s,
         //     ISort::Dynamic(ref s) => s.as_ref(),
         // }
+        self.0
+    }
+}
+
+impl RcSort {
+    // pub fn as_sort<'a>(&'a self) -> Sort<'a> {
+    //     Sort(self.0.as_ref())
+    // }
+
+    pub fn new(name: String, flags: SFlags) -> Self {
+        RcSort(Rc::new_cyclic(|itself| InnerSort {
+            inner: HiddenSort {
+                name,
+                flags,
+                itself: Weak::clone(itself),
+            },
+        }))
+    }
+
+    pub fn as_sort<'a>(&'a self) -> Sort<'a> {
+        Sort(self.0.as_ref())
+    }
+}
+
+impl Eq for RcSort {}
+impl Ord for RcSort {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.as_sort().cmp(&other.as_sort())
+    }
+}
+impl PartialEq for RcSort {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_sort() == other.as_sort()
+    }
+}
+impl PartialOrd for RcSort {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.as_sort().partial_cmp(&other.as_sort())
+    }
+}
+impl Hash for RcSort {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.as_sort().hash(state);
+    }
+}
+
+impl AsRef<HiddenSort> for InnerSort {
+    fn as_ref(&self) -> &HiddenSort {
+        &self.inner
+    }
+}
+
+impl<'a> AsRef<InnerSort> for Sort<'a> {
+    fn as_ref(&self) -> &InnerSort {
         self.0
     }
 }

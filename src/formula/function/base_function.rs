@@ -1,38 +1,41 @@
-use core::slice::SlicePattern;
 
-use crate::formula::sort::Sort;
 
-use super::function_like::{HasInputSorts, Named, HasOutputSort};
+use crate::formula::sort::{RcSort, Sort};
+
+use super::function_like::{HasInputSorts, HasOutputSort, Named};
 
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct BaseFunction<'a> {
+pub struct BaseFunction {
     pub name: String,
-    pub args: Box<[Sort<'a>]>,
-    pub output: Sort<'a>,
+    pub args: Box<[RcSort]>,
+    pub output: RcSort,
     pub info: Information,
 }
 
-impl<'a> HasInputSorts<'a> for BaseFunction<'a> {
-    fn input_sorts(&self) -> &[Sort<'a>] {
-        self.input_sorts().as_slice()
+impl HasInputSorts for BaseFunction {
+    type Ref = RcSort;
+
+    fn input_sorts<'sort>(&'sort self) -> &'sort [Self::Ref] {
+        self.args.as_slice()
     }
 }
 
-impl<'a> HasOutputSort<'a> for BaseFunction<'a> {
-    fn output_sort(&self) -> Sort<'a> {
-        self.output
+impl HasOutputSort for BaseFunction {
+    type Ref = RcSort;
+
+    fn output_sort<'sort>(&'sort self) -> &'sort Self::Ref {
+        &self.output
     }
 }
 
-impl<'a> Named for BaseFunction<'a> {
+impl Named for BaseFunction {
     fn name(&self) -> &str {
         &self.name
     }
 }
 
-
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Information {
     // pub is_term_algebra: bool,
-    pub user_generated: bool
+    pub user_generated: bool,
 }
