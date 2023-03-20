@@ -2,7 +2,7 @@ use super::{sort::Sort};
 use thiserror::Error;
 
 pub trait Sorted {
-    fn sort(&self, args: &[impl Sorted]) -> Result<Sort, SortedError>;
+    fn sort<'a>(&self, args: &[Sort<'a>]) -> Result<Sort<'a>, SortedError>;
 }
 
 

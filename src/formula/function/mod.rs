@@ -1,3 +1,5 @@
+pub mod base_function;
+mod function_like;
 use std::{
     cell::{Ref, RefCell},
     cmp::Ordering,
@@ -49,10 +51,19 @@ bitflags! {
     }
 }
 
+pub enum Booleans {
+    And, Or, Not, Implies
+}
+
+pub enum Equities {
+    Eq, Neq
+}
+
+
 
 pub enum IFunction {
     Bool(),
-    
+
 }
 
 
