@@ -1,6 +1,8 @@
 pub mod builtins;
+// pub mod collection;
 pub mod sorted;
 use bitflags::bitflags;
+use bumpalo::{collections, Bump};
 use core::fmt::Debug;
 use std::{
     cmp::Ordering,
@@ -21,14 +23,31 @@ bitflags! {
 // pub type AsSort = AsRef<InnerSort>;
 
 #[derive(Debug, Clone, Copy)]
-pub struct Sort<'a>(&'a InnerSort);
+pub struct Sort<'bump> {
+    inner: &'bump InnerSort<'bump>,
+}
 
-#[derive(Debug, Clone)]
-pub struct RcSort(Rc<InnerSort>);
+// #[derive(Debug, Clone)]
+// pub struct RcSort(Rc<InnerSort>);
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct InnerSort {
-    inner: HiddenSort,
+pub struct InnerSort<'bump> {
+    inner: HiddenSort<'bump>,
+}
+
+impl<'bump> InnerSort<'bump> {
+    fn new(bump: &'bump Bump, name: &str, flags: SFlags) -> &'bump mut Self {
+        bump.alloc(InnerSort {
+            inner: HiddenSort {
+                name: collections::String::from_str_in(name, bump),
+                flags,
+            },
+        })
+    }
+
+    pub fn as_sort<'sort>(&'sort self) -> Sort<'sort> {
+        Sort { inner: self }
+    }
 }
 
 // enum ISort {
@@ -37,10 +56,9 @@ pub struct InnerSort {
 // }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct HiddenSort {
-    name: String,
+struct HiddenSort<'bump> {
+    name: collections::String<'bump>,
     flags: SFlags,
-    itself: Weak<InnerSort>,
 }
 
 impl<'a> PartialEq for Sort<'a> {
@@ -81,11 +99,11 @@ impl<'a> PartialOrd for Sort<'a> {
 //     }
 // }
 
-impl<'a> From<&'a str> for RcSort {
-    fn from(value: &'a str) -> Self {
-        Self::new(value.to_owned(), Default::default())
-    }
-}
+// impl<'a> From<&'a str> for RcSort {
+//     fn from(value: &'a str) -> Self {
+//         Self::new(value.to_owned(), Default::default())
+//     }
+// }
 
 // impl<'a> From<&'a str> for Sort {
 //     fn from(str: &'a str) -> Self {
@@ -99,11 +117,11 @@ impl<'a> Display for Sort<'a> {
     }
 }
 
-impl Display for RcSort {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.as_sort().fmt(f)
-    }
-}
+// impl Display for RcSort {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         self.as_sort().fmt(f)
+//     }
+// }
 
 impl<'a> Hash for Sort<'a> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -142,12 +160,12 @@ impl<'a> Sort<'a> {
         self.as_ref() as *const HiddenSort as usize
     }
 
-    pub fn as_rc(&self) -> RcSort {
-        self.0.itself.upgrade().unwrap() // cannot fail so long as self id a valid reference
-    }
+    // pub fn as_rc(&self) -> RcSort {
+    //     self.0.itself.upgrade().unwrap() // cannot fail so long as self id a valid reference
+    // }
 }
 
-impl<'a> AsRef<HiddenSort> for Sort<'a> {
+impl<'a> AsRef<HiddenSort<'a>> for Sort<'a> {
     fn as_ref(&self) -> &HiddenSort {
         // match self.0 {
         //     ISort::BuiltIn(ref s) => s,
@@ -157,56 +175,56 @@ impl<'a> AsRef<HiddenSort> for Sort<'a> {
     }
 }
 
-impl RcSort {
-    // pub fn as_sort<'a>(&'a self) -> Sort<'a> {
-    //     Sort(self.0.as_ref())
-    // }
+// impl RcSort {
+//     // pub fn as_sort<'a>(&'a self) -> Sort<'a> {
+//     //     Sort(self.0.as_ref())
+//     // }
 
-    pub fn new(name: String, flags: SFlags) -> Self {
-        RcSort(Rc::new_cyclic(|itself| InnerSort {
-            inner: HiddenSort {
-                name,
-                flags,
-                itself: Weak::clone(itself),
-            },
-        }))
-    }
+//     pub fn new(name: String, flags: SFlags) -> Self {
+//         RcSort(Rc::new_cyclic(|itself| InnerSort {
+//             inner: HiddenSort {
+//                 name,
+//                 flags,
+//                 itself: Weak::clone(itself),
+//             },
+//         }))
+//     }
 
-    pub fn as_sort<'a>(&'a self) -> Sort<'a> {
-        Sort(self.0.as_ref())
-    }
-}
+//     pub fn as_sort<'a>(&'a self) -> Sort<'a> {
+//         Sort(self.0.as_ref())
+//     }
+// }
 
-impl Eq for RcSort {}
-impl Ord for RcSort {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.as_sort().cmp(&other.as_sort())
-    }
-}
-impl PartialEq for RcSort {
-    fn eq(&self, other: &Self) -> bool {
-        self.as_sort() == other.as_sort()
-    }
-}
-impl PartialOrd for RcSort {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.as_sort().partial_cmp(&other.as_sort())
-    }
-}
-impl Hash for RcSort {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.as_sort().hash(state);
-    }
-}
+// impl Eq for RcSort {}
+// impl Ord for RcSort {
+//     fn cmp(&self, other: &Self) -> Ordering {
+//         self.as_sort().cmp(&other.as_sort())
+//     }
+// }
+// impl PartialEq for RcSort {
+//     fn eq(&self, other: &Self) -> bool {
+//         self.as_sort() == other.as_sort()
+//     }
+// }
+// impl PartialOrd for RcSort {
+//     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+//         self.as_sort().partial_cmp(&other.as_sort())
+//     }
+// }
+// impl Hash for RcSort {
+//     fn hash<H: Hasher>(&self, state: &mut H) {
+//         self.as_sort().hash(state);
+//     }
+// }
 
-impl AsRef<HiddenSort> for InnerSort {
-    fn as_ref(&self) -> &HiddenSort {
+impl<'bump> AsRef<HiddenSort<'bump>> for InnerSort<'bump> {
+    fn as_ref(&self) -> &HiddenSort<'bump> {
         &self.inner
     }
 }
 
-impl<'a> AsRef<InnerSort> for Sort<'a> {
-    fn as_ref(&self) -> &InnerSort {
-        self.0
-    }
-}
+// impl<'a> AsRef<InnerSort<'a>> for Sort<'a> {
+//     fn as_ref(&self) -> &InnerSort {
+//         self.inner
+//     }
+// }

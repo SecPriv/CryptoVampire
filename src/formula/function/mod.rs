@@ -1,7 +1,14 @@
-pub mod base_function;
+// pub mod base_function;
 pub mod function_like;
 pub mod booleans;
-pub mod equality;
+pub mod subterm;
+pub mod step;
+pub mod nonce;
+pub mod term_algebra;
+pub mod if_then_else;
+pub mod evaluate;
+
+// pub mod equality;
 use std::{
     cell::{Ref, RefCell},
     cmp::Ordering,
@@ -12,6 +19,8 @@ use std::{
 use bitflags::bitflags;
 
 use crate::problem::step::Step;
+
+use self::{booleans::Booleans, nonce::Nonce, step::StepFunction, subterm::Subterm, term_algebra::TermAlgebra, if_then_else::IfThenElse, evaluate::Evaluate};
 
 use super::{builtins::types::STEP, env::Environement, formula_user::FormulaUser, sort::Sort};
 use core::fmt::Debug;
@@ -56,9 +65,15 @@ bitflags! {
 
 
 
-pub enum InnerFunction {
-    Bool(),
-
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub enum InnerFunction<'bump> {
+    Bool(Booleans),
+    Nonce(Nonce<'bump>),
+    Step(StepFunction<'bump>),
+    Subterm(Subterm<'bump>),
+    TermAlgebra(TermAlgebra<'bump>),
+    IfThenElse(IfThenElse),
+    Evaluate(Evaluate)
 }
 
 // pub struct InnerFunction 
@@ -73,12 +88,13 @@ pub enum InnerFunction {
 ///
 /// Thus one can copy Function around for more or less free and still
 /// carry a lot of information arround within them
-#[derive(Hash)]
-pub struct Function {
-    inner: Rc<IIFunction>,
+#[derive(Hash, Clone, Copy)]
+pub struct Function<'bump> {
+    // inner: Rc<IIFunction>,
+    inner: &'bump InnerFunction<'bump>
 }
 
-// fast imutable content
+/* // fast imutable content
 #[derive(Debug)]
 struct IIFunction {
     name: String,
@@ -152,31 +168,31 @@ impl Hash for IIFunction {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.name.hash(state);
     }
-}
+} */
 
-impl Debug for Function {
+impl<'b> Debug for Function<'b> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.inner.fmt(f)
     }
 }
 
-impl Clone for Function {
+/* impl Clone for Function {
     fn clone(&self) -> Self {
         Self {
             inner: Rc::clone(&self.inner),
         }
     }
-}
+} */
 
-impl PartialEq for Function {
+impl<'bump> PartialEq for Function<'bump> {
     fn eq(&self, other: &Self) -> bool {
         Rc::ptr_eq(&self.inner, &other.inner)
     }
 }
 
-impl Eq for Function {}
+impl<'bump> Eq for Function<'bump> {}
 
-impl Ord for Function {
+impl<'bump> Ord for Function<'bump> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // Ord::cmp(&Rc::as_ptr(&self.inner), &Rc::as_ptr(&other.inner)).then(
         //     Ord::cmp(self.name(), other.name())
@@ -195,13 +211,13 @@ impl Ord for Function {
     }
 }
 
-impl PartialOrd for Function {
+impl<'bump> PartialOrd for Function<'bump> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(&other))
     }
 }
 
-impl Function {
+impl<'bump> Function<'bump> {
     pub fn new(name: &str, input_sorts: Vec<Sort>, output_sort: Sort) -> Self {
         Self::hidden_new(name.to_owned(), input_sorts, output_sort, FFlags::empty())
     }
@@ -419,10 +435,14 @@ impl Function {
     {
         self.clone().f(ctx, args)
     }
-}
 
-impl From<&Step> for Function {
-    fn from(s: &Step) -> Self {
-        s.function().clone()
+    pub fn inner(&self) -> &InnerFunction {
+        self.inner
     }
 }
+
+// impl From<&Step> for Function {
+//     fn from(s: &Step) -> Self {
+//         s.function().clone()
+//     }
+// }

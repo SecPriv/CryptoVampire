@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use thiserror::Error;
 
 use super::Sort;
@@ -9,10 +11,10 @@ pub trait Sorted<'a> {
 
 #[derive(Debug, Error)]
 pub enum SortedError {
-    #[error("wrong number of arguments (expected {expected:?}, got {got:?})")]
-    WrongNumberOfArguments {
-        expected: Option<usize>,
-        got: Option<usize>,
+    #[error("wrong number of arguments (expected {expected}, got {got})")]
+    WrongArguments {
+        expected: Option<Box<dyn Display>>,
+        got: Option<Box<dyn Display>>,
     },
     #[error("the sort cannot be deduced")]
     Impossible,

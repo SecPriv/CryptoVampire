@@ -12,4 +12,5 @@ pub mod unifier;
 // pub mod formula_builder;
 pub mod formula_user;
 pub mod utils;
-pub mod sorted;
+// pub mod sorted;
+pub(crate) mod static_allocator;

@@ -17,25 +17,25 @@ use super::{
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum RichFormula {
-    Var(Variable),
-    Fun(Function, Vec<RichFormula>),
-    Quantifier(Quantifier, Vec<RichFormula>),
+pub enum RichFormula<'bump> {
+    Var(Variable<'bump>),
+    Fun(Function<'bump>, Vec<RichFormula<'bump>>),
+    Quantifier(Quantifier, Vec<RichFormula<'bump>>),
 }
 
 #[derive(Debug, PartialOrd, Ord, Hash, Clone)]
-pub struct Variable {
+pub struct Variable<'bump> {
     pub id: usize,
-    pub sort: Sort,
+    pub sort: Sort<'bump>,
 }
 
-impl fmt::Display for Variable {
+impl<'bump> fmt::Display for Variable<'bump> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "X{}", self.id)
     }
 }
 
-impl PartialEq for Variable {
+impl<'bump> PartialEq for Variable<'bump> {
     fn eq(&self, other: &Self) -> bool {
         if cfg!(debug_assertions) {
             if self.id == other.id {
@@ -50,10 +50,10 @@ impl PartialEq for Variable {
     }
 }
 
-impl Eq for Variable {}
+impl<'bump> Eq for Variable<'bump> {}
 
-impl RichFormula {
-    pub fn get_sort<'a>(&self, env: &Environement) -> Sort {
+impl<'bump> RichFormula<'bump> {
+    pub fn get_sort<'a>(&self, env: &Environement) -> Sort<'bump> {
         match self {
             RichFormula::Var(v) => v.sort.clone(),
             RichFormula::Fun(f, _) => f.get_output_sort(),
@@ -61,7 +61,7 @@ impl RichFormula {
         }
     }
 
-    pub fn get_free_vars(&self) -> Vec<&Variable> {
+    pub fn get_free_vars(&self) -> Vec<&Variable<'bump>> {
         let mut free_vars = Vec::new();
         let mut bound_vars = Vec::new();
 
@@ -90,8 +90,8 @@ impl RichFormula {
     }
 
     /// doesn't go though all quantifiers
-    pub fn get_used_variables(&'_ self) -> HashSet<&'_ Variable> {
-        fn aux<'a>(data: &mut HashSet<&'a Variable>, f: &'a RichFormula) {
+    pub fn get_used_variables(&'_ self) -> HashSet<&'_ Variable<'bump>> {
+        fn aux<'a>(data: &mut HashSet<&'a Variable<'bump>>, f: &'a RichFormula<'bump>) {
             match f {
                 RichFormula::Var(v) => {
                     data.insert(v);
@@ -112,7 +112,7 @@ impl RichFormula {
     pub fn used_variables_iter<'a>(
         &'a self,
         pbl: &'a Problem,
-    ) -> impl Iterator<Item = &'a Variable> + 'a {
+    ) -> impl Iterator<Item = &'a Variable<'bump>> + 'a {
         FormulaIterator::new(
             StackBox::new(vec![self]),
             pbl,
@@ -270,8 +270,8 @@ impl RichFormula {
     }
 }
 
-impl Variable {
-    pub fn new(id: usize, sort: Sort) -> Self {
+impl<'bump> Variable<'bump> {
+    pub fn new(id: usize, sort: Sort<'bump>) -> Self {
         Self { id, sort }
     }
 
@@ -289,7 +289,7 @@ impl Variable {
         self.clone().as_formula(ctx)
     }
 
-    pub fn sort(&self) -> &Sort {
+    pub fn sort(&self) -> &Sort<'bump> {
         &self.sort
     }
 
@@ -298,8 +298,8 @@ impl Variable {
     }
 }
 
-impl Add<usize> for Variable {
-    type Output = Variable;
+impl<'bump> Add<usize> for Variable<'bump> {
+    type Output = Variable<'bump>;
 
     fn add(self, rhs: usize) -> Self::Output {
         Variable {
@@ -309,7 +309,7 @@ impl Add<usize> for Variable {
     }
 }
 
-pub fn sorts_to_variables<I: Deref<Target = Sort>>(
+pub fn sorts_to_variables<I: Deref<Target = Sort<'bump>>>(
     from: usize,
     s: impl Iterator<Item = I>,
 ) -> Vec<Variable> {
@@ -318,31 +318,31 @@ pub fn sorts_to_variables<I: Deref<Target = Sort>>(
         .collect()
 }
 
-impl From<Variable> for RichFormula {
+impl<'bump> From<Variable<'bump>> for RichFormula<'bump> {
     fn from(v: Variable) -> Self {
         RichFormula::Var(v)
     }
 }
-impl From<&Variable> for RichFormula {
+impl<'bump> From<&Variable<'bump>> for RichFormula<'bump> {
     fn from(v: &Variable) -> Self {
         v.clone().into()
     }
 }
 
-impl From<(usize, Sort)> for Variable {
+impl<'bump> From<(usize, Sort<'bump>)> for Variable<'bump> {
     fn from(arg: (usize, Sort)) -> Self {
         let (id, sort) = arg;
         Variable { id, sort }
     }
 }
-impl From<(Sort, usize)> for Variable {
+impl<'bump> From<(Sort<'bump>, usize)> for Variable<'bump> {
     fn from(arg: (Sort, usize)) -> Self {
         let (sort, id) = arg;
         Variable { id, sort }
     }
 }
 
-impl<'a> From<(usize, &'a Sort)> for Variable {
+impl<'bump, 'a:'bump> From<(usize, &'a Sort<'bump>)> for Variable<'bump> {
     fn from(arg: (usize, &'a Sort)) -> Self {
         let (id, sort) = arg;
         Variable {
@@ -351,7 +351,7 @@ impl<'a> From<(usize, &'a Sort)> for Variable {
         }
     }
 }
-impl<'a> From<(&'a Sort, usize)> for Variable {
+impl<'bump, 'a:'bump> From<(&'a Sort<'bump>, usize)> for Variable<'bump> {
     fn from(arg: (&'a Sort, usize)) -> Self {
         let (sort, id) = arg;
         Variable {
@@ -361,7 +361,7 @@ impl<'a> From<(&'a Sort, usize)> for Variable {
     }
 }
 
-impl Display for RichFormula {
+impl<'bump> Display for RichFormula<'bump> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         SmtFormula::from(self).fmt(f)
     }
