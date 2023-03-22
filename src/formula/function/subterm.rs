@@ -4,3 +4,8 @@ use std::marker::PhantomData;
 pub struct Subterm<'bump> {
     tmp: PhantomData<&'bump ()>,
 }
+
+
+fn enlarge<'a, 'b>(q: Subterm<'a>) -> Subterm<'b> where 'a:'b {
+    q
+}

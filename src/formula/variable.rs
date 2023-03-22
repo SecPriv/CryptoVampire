@@ -69,11 +69,11 @@ impl<'bump> Add<usize> for Variable<'bump> {
     }
 }
 
-pub fn sorts_to_variables<'bump, I>(from: usize, s: impl Iterator<Item = I>) -> Vec<Variable<'bump>>
+pub fn sorts_to_variables<'bump, I>(from: usize, s: impl IntoIterator<Item = I>) -> Vec<Variable<'bump>>
 where
     I: Deref<Target = Sort<'bump>>,
 {
-    s.enumerate()
+    s.into_iter().enumerate()
         .map(|(i, s)| Variable::new(i + from, s.clone()))
         .collect()
 }
@@ -108,4 +108,9 @@ impl<'bump, 'a: 'bump> From<(&'a Sort<'bump>, usize)> for Variable<'bump> {
             sort: sort.clone(),
         }
     }
+}
+
+
+fn enlarge<'a, 'b>(q: Variable<'a>) -> Variable<'b> where 'a:'b {
+    q
 }

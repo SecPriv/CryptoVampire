@@ -16,3 +16,8 @@ pub enum TermAlgebra<'bump> {
     Input,
     IfThenElse,
 }
+
+
+fn enlarge<'a, 'b>(q: TermAlgebra<'a>) -> TermAlgebra<'b> where 'a:'b {
+    q
+}

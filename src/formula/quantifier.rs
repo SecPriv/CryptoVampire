@@ -30,3 +30,7 @@ impl<'bump> Quantifier<'bump> {
         }
     }
 }
+
+fn enlarge<'a, 'b>(q: Quantifier<'a>) -> Quantifier<'b> where 'a:'b {
+    q
+}

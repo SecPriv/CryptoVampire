@@ -3,7 +3,7 @@ use super::{formula::RichFormula, variable::Variable};
 #[derive(Debug, Clone)]
 pub struct Unifier<'a, 'bump>
 where
-    'a: 'bump,
+    'bump: 'a,
 {
     left: ISubstitution<&'a RichFormula<'bump>>,
     right: ISubstitution<&'a RichFormula<'bump>>,
@@ -40,8 +40,20 @@ impl<'bump, 'a> ISubstitution<&'a RichFormula<'bump>> {
 
 impl<'a, 'bump> Unifier<'a, 'bump>
 where
-    'a: 'bump,
+    'bump: 'a,
 {
+    /// the mgu of `x <-> f` where `x` is a formula
+    pub fn one_variable_unifier(
+        left_variable: &Variable<'bump>,
+        right_formula: &'a RichFormula<'bump>,
+    ) -> Self {
+        let Variable { id, .. } = left_variable;
+        Unifier {
+            left: ISubstitution(vec![(*id, right_formula)]),
+            right: ISubstitution(vec![]),
+        }
+    }
+
     pub fn does_unify(&self, left: &RichFormula<'bump>, right: &RichFormula<'bump>) -> bool {
         match (left, right) {
             (RichFormula::Fun(fun_l, args_l), RichFormula::Fun(fun_r, args_r))
@@ -156,16 +168,14 @@ where
         }
     }
 
-    pub fn left<'b>(&'b self) -> &'b (impl Substitution + 'a)
-    where
-        'b: 'a,
-    {
+    pub fn left(&self) -> &(impl Substitution<'bump> + 'a)
+where {
         &self.left
     }
 
-    pub fn right<'b>(&'b self) -> &'b (impl Substitution + 'a)
-    where
-        'b: 'a,
+    pub fn right(&self) -> &(impl Substitution<'bump> + 'a)
+where
+        // 'bump: 'b
     {
         &self.right
     }
@@ -173,7 +183,7 @@ where
 
 impl<'a, 'bump> OneWayUnifier<'a, 'bump>
 where
-    'a: 'bump,
+    'bump: 'a,
 {
     pub fn new(from: &'a RichFormula<'bump>, to: &'a RichFormula<'bump>) -> Option<Self> {
         fn aux<'a, 'bump>(
@@ -247,7 +257,7 @@ pub trait Substitution<'bump> {
 
 impl<'a, 'bump> Substitution<'bump> for ISubstitution<&'a RichFormula<'bump>>
 where
-    'a: 'bump,
+    'bump: 'a,
 {
     fn get(&self, var: &Variable<'bump>) -> RichFormula<'bump> {
         self.0

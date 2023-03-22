@@ -1,5 +1,6 @@
 // pub mod base_function;
 pub mod booleans;
+pub mod builtin;
 pub mod evaluate;
 pub mod function_like;
 pub mod if_then_else;
@@ -95,8 +96,11 @@ pub struct Function<'bump> {
     // inner: Rc<IIFunction>,
     // pub inner: &'bump InnerFunction<'bump>,
     inner: NonNull<InnerFunction<'bump>>,
-    container: PhantomData<Container<'bump>>,
+    container: PhantomData<&'bump ()>,
 }
+
+unsafe impl<'bump> Sync for Function<'bump> {}
+unsafe impl<'bump> Send for Function<'bump> {}
 
 impl<'bump> Sorted<'bump> for Function<'bump> {
     fn sort(&self, _args: &[Sort<'bump>]) -> Result<Sort<'bump>, SortedError> {
@@ -259,6 +263,9 @@ impl<'bump> Function<'bump> {
     // }
 
     pub fn fast_outsort(&self) -> Option<Sort<'bump>> {
+        todo!()
+    }
+    pub fn forced_input_sort(&self) -> &[Sort<'bump>] {
         todo!()
     }
 
@@ -446,7 +453,13 @@ impl<'bump> Function<'bump> {
     //     ctx.funf(self, args)
     // }
 
-    pub fn f(&self, args: impl IntoIterator<Item = RichFormula<'bump>>) -> RichFormula<'bump> {
+    pub fn f<'bbump>(
+        &self,
+        args: impl IntoIterator<Item = RichFormula<'bbump>>,
+    ) -> RichFormula<'bbump>
+    where
+        'bump: 'bbump,
+    {
         RichFormula::Fun(*self, args.into_iter().collect())
     }
 
@@ -473,3 +486,16 @@ impl<'bump> AsRef<InnerFunction<'bump>> for Function<'bump> {
 //         s.function().clone()
 //     }
 // }
+
+pub fn new_static_function(inner: InnerFunction<'static>) -> Function<'static> {
+    let inner = NonNull::new(Box::into_raw(Box::new(inner))).unwrap();
+    Function {
+        inner,
+        container: Default::default(),
+    }
+}
+
+
+fn enlarge<'a, 'b>(q: Function<'a>) -> Function<'b> where 'a:'b {
+    q
+}

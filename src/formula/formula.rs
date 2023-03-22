@@ -1,10 +1,11 @@
 use std::collections::HashSet;
-use std::ops::{Deref, DerefMut};
+use std::ops::{BitAnd, BitOr, Deref, DerefMut, Not, Shr};
 
 use itertools::Itertools;
 
 use crate::utils::utils::StackBox;
 
+use super::function::builtin::{AND, IMPLIES, NOT, OR, EQUALITY};
 use super::sort::builtins::BOOL;
 use super::sort::sorted::{Sorted, SortedError};
 use super::variable::Variable;
@@ -302,6 +303,14 @@ impl<'bump> RichFormula<'bump> {
     // pub fn smt(&self) -> SmtFormula {
     //     self.into()
     // }
+
+    pub fn ands(args: impl IntoIterator<Item = RichFormula<'bump>>) -> RichFormula<'bump> {
+        AND.f(args)
+    }
+
+    pub fn ors(args: impl IntoIterator<Item = RichFormula<'bump>>) -> RichFormula<'bump> {
+        OR.f(args)
+    }
 }
 
 impl<'bump> From<Variable<'bump>> for RichFormula<'bump> {
@@ -345,3 +354,60 @@ impl<'bump> From<&Variable<'bump>> for RichFormula<'bump> {
 //         }
 //     }
 // }
+
+impl<'bump> BitAnd for RichFormula<'bump> {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        AND.f([self, rhs])
+    }
+}
+
+impl<'bump> BitOr for RichFormula<'bump> {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        OR.f([self, rhs])
+    }
+}
+
+impl<'bump> Not for RichFormula<'bump> {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        NOT.f([self])
+    }
+}
+
+impl<'bump> Shr for RichFormula<'bump> {
+    type Output = Self;
+
+    fn shr(self, rhs: Self) -> Self::Output {
+        IMPLIES.f([self, rhs])
+    }
+}
+
+fn enlarge<'a, 'b>(q: RichFormula<'a>) -> RichFormula<'b>
+where
+    'a: 'b,
+{
+    q
+}
+
+pub fn forall<'bump>(
+    vars: impl IntoIterator<Item = Variable<'bump>>,
+    arg: RichFormula<'bump>,
+) -> RichFormula<'bump> {
+    RichFormula::Quantifier(Quantifier::Forall { variables: vars.into_iter().collect() }, vec![arg])
+}
+
+pub fn exists<'bump>(
+    vars: impl IntoIterator<Item = Variable<'bump>>,
+    arg: RichFormula<'bump>,
+) -> RichFormula<'bump> {
+    RichFormula::Quantifier(Quantifier::Exists { variables: vars.into_iter().collect() }, vec![arg])
+}
+
+pub fn meq<'bump>(lhs:RichFormula<'bump>, rhs:RichFormula<'bump>) -> RichFormula<'bump> {
+    EQUALITY.f([lhs, rhs])
+}
