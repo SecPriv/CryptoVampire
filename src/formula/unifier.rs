@@ -1,7 +1,10 @@
 use super::{formula::RichFormula, variable::Variable};
 
 #[derive(Debug, Clone)]
-pub struct Unifier<'a, 'bump> where 'a:'bump {
+pub struct Unifier<'a, 'bump>
+where
+    'a: 'bump,
+{
     left: ISubstitution<&'a RichFormula<'bump>>,
     right: ISubstitution<&'a RichFormula<'bump>>,
 }
@@ -153,11 +156,17 @@ where
         }
     }
 
-    pub fn left<'b>(&'b self) -> &'b (impl Substitution + 'a) where  'b : 'a {
+    pub fn left<'b>(&'b self) -> &'b (impl Substitution + 'a)
+    where
+        'b: 'a,
+    {
         &self.left
     }
 
-    pub fn right<'b>(&'b self) -> &'b (impl Substitution + 'a) where 'b:'a {
+    pub fn right<'b>(&'b self) -> &'b (impl Substitution + 'a)
+    where
+        'b: 'a,
+    {
         &self.right
     }
 }
@@ -205,7 +214,7 @@ where
 }
 
 pub trait Substitution<'bump> {
-    fn get(&self, var: &Variable<'bump>) -> RichFormula<'bump> ;
+    fn get(&self, var: &Variable<'bump>) -> RichFormula<'bump>;
 
     fn apply(&self, f: &RichFormula<'bump>) -> RichFormula<'bump> {
         match f {
@@ -236,7 +245,10 @@ pub trait Substitution<'bump> {
     }
 }
 
-impl<'a, 'bump> Substitution<'bump> for ISubstitution<&'a RichFormula<'bump>> where 'a:'bump {
+impl<'a, 'bump> Substitution<'bump> for ISubstitution<&'a RichFormula<'bump>>
+where
+    'a: 'bump,
+{
     fn get(&self, var: &Variable<'bump>) -> RichFormula<'bump> {
         self.0
             .iter()

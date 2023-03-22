@@ -1,9 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::formula::container::Container;
-
-
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Cell<'bump> {
-    cell: PhantomData<&'bump ()>
+    cell: PhantomData<&'bump ()>,
 }

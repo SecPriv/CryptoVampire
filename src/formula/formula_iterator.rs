@@ -4,7 +4,7 @@ use std::ops::{Deref, DerefMut};
 
 use super::{
     formula::RichFormula,
-    function::{term_algebra::TermAlgebra, Function, InnerFunction},
+    function::{term_algebra::TermAlgebra, InnerFunction},
 };
 use bitflags::bitflags;
 

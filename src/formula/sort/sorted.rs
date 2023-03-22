@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 
 use thiserror::Error;
 
@@ -11,10 +11,7 @@ pub trait Sorted<'a> {
 #[derive(Debug, Error)]
 pub enum SortedError {
     #[error("wrong number of arguments (expected {expected:?}, got {got:?})")]
-    WrongArguments {
-        expected: String,
-        got: String,
-    },
+    WrongArguments { expected: String, got: String },
     #[error("the sort cannot be deduced")]
     Impossible,
 }

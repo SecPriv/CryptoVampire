@@ -2,5 +2,5 @@ pub mod formula;
 // pub mod parser;
 // mod problem;
 // pub mod smt;
-pub mod utils;
 pub mod environement;
+pub mod utils;

@@ -1,13 +1,12 @@
-use std::fmt;
-use std::ops::{Add, Deref, DerefMut};
-use std::{collections::HashSet, fmt::Display};
+use std::collections::HashSet;
+use std::ops::{Deref, DerefMut};
 
 use itertools::Itertools;
 
 use crate::utils::utils::StackBox;
 
 use super::sort::builtins::BOOL;
-use super::sort::sorted::{self, Sorted, SortedError};
+use super::sort::sorted::{Sorted, SortedError};
 use super::variable::Variable;
 use super::{
     formula_iterator::{FormulaIterator, IteratorFlags},
@@ -32,7 +31,7 @@ impl<'bump> RichFormula<'bump> {
                 let args: Result<Vec<_>, _> = args.iter().map(|arg| arg.get_sort()).collect();
                 fun.sort(args?.as_slice())
             }
-            RichFormula::Quantifier(q, _) => Ok(BOOL.as_sort()),
+            RichFormula::Quantifier(_q, _) => Ok(BOOL.as_sort()),
         }
     }
 
@@ -120,7 +119,7 @@ impl<'bump> RichFormula<'bump> {
 
     pub fn used_variables_iter_with_pile<'a, V>(
         &'a self,
-        mut pile: V,
+        pile: V,
     ) -> impl Iterator<Item = &'a Variable<'bump>>
     where
         V: DerefMut<Target = Vec<&'a RichFormula<'bump>>>
@@ -157,7 +156,10 @@ impl<'bump> RichFormula<'bump> {
         })
     }
 
-    pub fn iter_with_pile<'a, V>(&'a self, mut pile: V) -> impl Iterator<Item = &'a RichFormula<'bump>> 
+    pub fn iter_with_pile<'a, V>(
+        &'a self,
+        mut pile: V,
+    ) -> impl Iterator<Item = &'a RichFormula<'bump>>
     where
         V: DerefMut<Target = Vec<&'a Self>> + Deref<Target = Vec<&'a Self>>,
     {
@@ -273,11 +275,11 @@ impl<'bump> RichFormula<'bump> {
         })
     }
 
-    pub fn apply_some< F>(self, f: F) -> Self
+    pub fn apply_some<F>(self, f: F) -> Self
     where
-        F: Fn(&Variable<'bump>) -> Option<Self> ,
+        F: Fn(&Variable<'bump>) -> Option<Self>,
     {
-        self.apply(|v:&Variable| f(v).unwrap_or(Self::Var(v.clone())))
+        self.apply(|v: &Variable| f(v).unwrap_or(Self::Var(v.clone())))
     }
 
     pub fn apply_substitution(self, vars: &[usize], fs: &[Self]) -> Self {

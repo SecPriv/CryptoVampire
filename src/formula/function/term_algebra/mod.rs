@@ -1,9 +1,11 @@
-use self::{connective::Connective, quantifier::Quantifier, base_function::BaseFunction, cell::Cell};
+use self::{
+    base_function::BaseFunction, cell::Cell, connective::Connective, quantifier::Quantifier,
+};
 
 pub mod base_function;
+pub mod cell;
 pub mod connective;
 pub mod quantifier;
-pub mod cell;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum TermAlgebra<'bump> {
@@ -12,5 +14,5 @@ pub enum TermAlgebra<'bump> {
     Function(BaseFunction<'bump>),
     Cell(Cell<'bump>),
     Input,
-    IfThenElse
+    IfThenElse,
 }

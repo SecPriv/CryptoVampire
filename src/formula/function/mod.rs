@@ -9,14 +9,7 @@ pub mod subterm;
 pub mod term_algebra;
 
 // pub mod equality;
-use std::{
-    cell::{Ref, RefCell},
-    cmp::Ordering,
-    hash::Hash,
-    marker::PhantomData,
-    ptr::NonNull,
-    rc::{Rc, Weak},
-};
+use std::{cmp::Ordering, hash::Hash, marker::PhantomData, ptr::NonNull};
 
 use bitflags::bitflags;
 
@@ -30,7 +23,10 @@ use self::{
 use super::{
     container::Container,
     formula::RichFormula,
-    sort::{sorted::{Sorted, SortedError}, Sort},
+    sort::{
+        sorted::{Sorted, SortedError},
+        Sort,
+    },
 };
 use core::fmt::Debug;
 
@@ -103,7 +99,7 @@ pub struct Function<'bump> {
 }
 
 impl<'bump> Sorted<'bump> for Function<'bump> {
-    fn sort(&self, args: &[Sort<'bump>]) -> Result<Sort<'bump>, SortedError> {
+    fn sort(&self, _args: &[Sort<'bump>]) -> Result<Sort<'bump>, SortedError> {
         todo!()
     }
 }

@@ -1,14 +1,6 @@
-use std::{
-    alloc::{alloc, Layout},
-    cell::{Cell, RefCell},
-    ops::DerefMut,
-    ptr::NonNull,
-};
+use std::{cell::RefCell, ops::DerefMut, ptr::NonNull};
 
-use super::{
-    function::InnerFunction,
-    sort::{InnerSort, Sort},
-};
+use super::{function::InnerFunction, sort::InnerSort};
 
 // #[derive(Debug)]
 pub struct Container<'bump> {

@@ -1,8 +1,8 @@
 // pub mod builtins;
 pub mod formula;
-pub mod variable;
 pub(crate) mod formula_iterator;
 pub mod function;
+pub mod variable;
 // pub mod macros;
 pub mod quantifier;
 pub mod sort;

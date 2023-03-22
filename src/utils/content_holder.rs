@@ -1,4 +1,4 @@
-use std::cell::{Ref, RefCell};
+use std::cell::RefCell;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Holder<T, U: 'static> {

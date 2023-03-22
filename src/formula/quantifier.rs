@@ -1,10 +1,7 @@
 // use core::slice::SlicePattern;
 
 use super::{
-    sort::{
-        builtins::{BOOL, MESSAGE},
-        Sort,
-    },
+    sort::{builtins::BOOL, Sort},
     variable::Variable,
 };
 

@@ -1,5 +1,3 @@
-use crate::formula::sort::Sort;
-
 pub trait HasArity {
     fn arity(&self) -> usize;
 }

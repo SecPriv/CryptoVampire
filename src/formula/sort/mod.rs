@@ -9,7 +9,6 @@ use std::{
     hash::{Hash, Hasher},
     marker::PhantomData,
     ptr::NonNull,
-    rc::{Rc, Weak},
 };
 
 use super::container::{CanBeAllocated, Container, ScopeAllocator};
