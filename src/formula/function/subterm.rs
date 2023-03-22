@@ -1,8 +1,9 @@
 use std::marker::PhantomData;
 
-use bumpalo::Bump;
+use crate::formula::container::Container;
+
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Subterm<'bump> {
-    tmp: PhantomData<&'bump Bump>
+    tmp: PhantomData<&'bump ()>
 }

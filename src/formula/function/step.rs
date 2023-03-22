@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
-use bumpalo::Bump;
+use crate::formula::container::Container;
+
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum StepFunction<'bump> {
@@ -10,7 +11,7 @@ pub enum StepFunction<'bump> {
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct InnerStepFuction<'bump> {
-    tmp: PhantomData<&'bump Bump>
+    tmp: PhantomData<&'bump ()>
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]

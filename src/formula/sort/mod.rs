@@ -2,17 +2,20 @@ pub mod builtins;
 // pub mod collection;
 pub mod sorted;
 use bitflags::bitflags;
-use bumpalo::{collections, Bump};
 use core::fmt::Debug;
 use std::{
     cmp::Ordering,
     fmt::Display,
     hash::{Hash, Hasher},
+    marker::PhantomData,
+    ptr::NonNull,
     rc::{Rc, Weak},
 };
 
+use super::container::{CanBeAllocated, Container, ScopeAllocator};
+
 bitflags! {
-    #[derive(Default )]
+    #[derive(Default, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy )]
     pub struct SFlags: u32 {
         const TERM_ALGEBRA =        1<<0;
         const BUILTIN_VAMPIRE =     1<<1;
@@ -22,32 +25,39 @@ bitflags! {
 
 // pub type AsSort = AsRef<InnerSort>;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Sort<'bump> {
-    inner: &'bump InnerSort<'bump>,
+    inner: NonNull<InnerSort>,
+    container: PhantomData<&'bump ()>,
 }
+
+unsafe impl<'bump> Sync for Sort<'bump> {}
+unsafe impl<'bump> Send for Sort<'bump> {}
 
 // #[derive(Debug, Clone)]
 // pub struct RcSort(Rc<InnerSort>);
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct InnerSort<'bump> {
-    inner: HiddenSort<'bump>,
+pub struct InnerSort {
+    inner: HiddenSort,
 }
 
-impl<'bump> InnerSort<'bump> {
-    fn new(bump: &'bump Bump, name: &str, flags: SFlags) -> &'bump mut Self {
-        bump.alloc(InnerSort {
-            inner: HiddenSort {
-                name: collections::String::from_str_in(name, bump),
-                flags,
-            },
-        })
+impl InnerSort {
+    fn new(name: String, flags: SFlags) -> Self {
+        // bump.alloc(InnerSort {
+        //     inner: HiddenSort {
+        //         name,
+        //         flags,
+        //     },
+        // })
+        InnerSort {
+            inner: HiddenSort { name, flags },
+        }
     }
 
-    pub fn as_sort<'sort>(&'sort self) -> Sort<'sort> {
-        Sort { inner: self }
-    }
+    // pub fn as_sort<'sort>(&'sort self) -> Sort<'sort> {
+    //     Sort { inner: self }
+    // }
 }
 
 // enum ISort {
@@ -56,20 +66,20 @@ impl<'bump> InnerSort<'bump> {
 // }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct HiddenSort<'bump> {
-    name: collections::String<'bump>,
+struct HiddenSort {
+    name: String,
     flags: SFlags,
 }
 
-impl<'a> PartialEq for Sort<'a> {
-    fn eq(&self, other: &Self) -> bool {
-        // Arc::ptr_eq(&self.0, &other.0)
-        // self.0.name == other.0.name
-        std::ptr::eq(self.as_ref(), other.as_ref())
-    }
-}
+// impl<'a> PartialEq for Sort<'a> {
+//     fn eq(&self, other: &Self) -> bool {
+//         // Arc::ptr_eq(&self.0, &other.0)
+//         // self.0.name == other.0.name
+//         std::ptr::eq(&self.inner, &other.inner)
+//     }
+// }
 
-impl<'a> Eq for Sort<'a> {}
+// impl<'a> Eq for Sort<'a> {}
 
 impl<'a> Ord for Sort<'a> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
@@ -113,7 +123,7 @@ impl<'a> PartialOrd for Sort<'a> {
 
 impl<'a> Display for Sort<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_ref().name)
+        write!(f, "{}", self.inner().name)
     }
 }
 
@@ -140,32 +150,44 @@ impl<'a> Sort<'a> {
     //     })))
     // }
 
+    pub fn new(allocator: &'a Container<'a>, inner: InnerSort) -> Self {
+        Self::allocate(allocator, inner)
+    }
+
     pub fn name(&self) -> &str {
-        &self.as_ref().name
+        &self.inner().name
     }
 
     pub fn is_term_algebra(&self) -> bool {
-        self.as_ref().flags.contains(SFlags::TERM_ALGEBRA)
+        self.inner().flags.contains(SFlags::TERM_ALGEBRA)
     }
 
     pub fn is_built_in(&self) -> bool {
-        self.as_ref().flags.contains(SFlags::BUILTIN_VAMPIRE)
+        self.inner().flags.contains(SFlags::BUILTIN_VAMPIRE)
     }
 
     pub fn is_evaluatable(&self) -> bool {
-        self.as_ref().flags.contains(SFlags::EVALUATABLE)
+        self.inner().flags.contains(SFlags::EVALUATABLE)
     }
 
     pub fn as_ptr_usize(&self) -> usize {
-        self.as_ref() as *const HiddenSort as usize
+        self.inner() as *const HiddenSort as usize
     }
 
     // pub fn as_rc(&self) -> RcSort {
     //     self.0.itself.upgrade().unwrap() // cannot fail so long as self id a valid reference
     // }
+
+    fn inner(&self) -> &HiddenSort {
+        self.as_ref().as_ref()
+    }
+
+    pub fn as_sort(&self) -> Sort<'a> {
+        *self
+    }
 }
 
-impl<'a> AsRef<HiddenSort<'a>> for Sort<'a> {
+/* impl<'a> AsRef<HiddenSort> for Sort<'a> {
     fn as_ref(&self) -> &HiddenSort {
         // match self.0 {
         //     ISort::BuiltIn(ref s) => s,
@@ -173,7 +195,7 @@ impl<'a> AsRef<HiddenSort<'a>> for Sort<'a> {
         // }
         self.0
     }
-}
+} */
 
 // impl RcSort {
 //     // pub fn as_sort<'a>(&'a self) -> Sort<'a> {
@@ -217,14 +239,45 @@ impl<'a> AsRef<HiddenSort<'a>> for Sort<'a> {
 //     }
 // }
 
-impl<'bump> AsRef<HiddenSort<'bump>> for InnerSort<'bump> {
-    fn as_ref(&self) -> &HiddenSort<'bump> {
+impl AsRef<HiddenSort> for InnerSort {
+    fn as_ref(&self) -> &HiddenSort {
         &self.inner
     }
 }
 
-// impl<'a> AsRef<InnerSort<'a>> for Sort<'a> {
-//     fn as_ref(&self) -> &InnerSort {
-//         self.inner
-//     }
-// }
+impl<'bump> AsRef<InnerSort> for Sort<'bump> {
+    fn as_ref(&self) -> &InnerSort {
+        unsafe { self.inner.as_ref() } // for self to exists, container must exists
+    }
+}
+
+impl<'bump> CanBeAllocated<'bump> for Sort<'bump> {
+    type Inner = InnerSort;
+
+    fn allocate<A>(allocator: &'bump A, inner: Self::Inner) -> Self
+    where
+        A: ScopeAllocator<Self::Inner> + 'bump,
+    {
+        let inner = unsafe {
+            let ptr = allocator.alloc();
+            std::ptr::write(ptr.as_ptr(), inner);
+            ptr
+        };
+        Sort {
+            inner,
+            container: PhantomData::default(),
+        }
+    }
+}
+
+pub fn new_static_sort(name: &str, flags: SFlags) -> Sort<'static> {
+    let inner = NonNull::new(Box::into_raw(Box::new(InnerSort::new(
+        name.to_owned(),
+        flags,
+    ))))
+    .unwrap();
+    Sort {
+        inner,
+        container: Default::default(),
+    }
+}

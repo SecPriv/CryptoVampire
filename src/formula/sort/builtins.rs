@@ -1,23 +1,24 @@
+
+
+
 use static_init::dynamic;
 
-use crate::formula::static_allocator::STATIC_ALLOCATOR;
-
-use super::{InnerSort, Sort};
+use super::{InnerSort, Sort, new_static_sort};
 
 #[dynamic]
 pub static BOOL: StatSort =
-    InnerSort::new(STATIC_ALLOCATOR.as_ref(), "bool", Default::default()).as_sort();
+    new_static_sort(/* STATIC_ALLOCATOR.as_ref(), */ "bool", Default::default());
 #[dynamic]
-pub static CONDITION: StatSort =
-    InnerSort::new(STATIC_ALLOCATOR.as_ref(), "Condition", Default::default()).as_sort();
+pub static CONDITION: StatSort=
+    new_static_sort(/* STATIC_ALLOCATOR.as_ref(), */ "Condition", Default::default());
 #[dynamic]
 pub static STEP: StatSort =
-    InnerSort::new(STATIC_ALLOCATOR.as_ref(), "Time", Default::default()).as_sort();
+    new_static_sort(/* STATIC_ALLOCATOR.as_ref(), */ "Time", Default::default());
 #[dynamic]
 pub static MESSAGE: StatSort =
-    InnerSort::new(STATIC_ALLOCATOR.as_ref(), "Message", Default::default()).as_sort();
+    new_static_sort(/* STATIC_ALLOCATOR.as_ref(), */ "Message", Default::default());
 #[dynamic]
 pub static NONCE: StatSort =
-    InnerSort::new(STATIC_ALLOCATOR.as_ref(), "Nonce", Default::default()).as_sort();
+    new_static_sort(/* STATIC_ALLOCATOR.as_ref(), */ "Nonce", Default::default());
 
 pub type StatSort = Sort<'static>;

@@ -1,18 +1,17 @@
+use crate::environement::env::Environement;
+
 use super::{
-    builtins::functions::{EVAL_COND_NAME, EVAL_MSG_NAME},
-    env::Environement,
-    formula_user::FormulaUser,
     function::Function,
 };
 
 #[derive(Clone)]
-pub struct Evaluator {
-    msg: Function,
-    cond: Function,
+pub struct Evaluator<'bump> {
+    msg: Function<'bump>,
+    cond: Function<'bump>,
     ta: bool,
 }
 
-impl Evaluator {
+impl<'bump> Evaluator<'bump> {
     pub fn msg<T, U>(&self, ctx: &T, arg: U) -> U
     where
         T: FormulaUser<U>,

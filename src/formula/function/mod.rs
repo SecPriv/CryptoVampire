@@ -1,36 +1,45 @@
 // pub mod base_function;
-pub mod function_like;
 pub mod booleans;
-pub mod subterm;
-pub mod step;
-pub mod nonce;
-pub mod term_algebra;
-pub mod if_then_else;
 pub mod evaluate;
+pub mod function_like;
+pub mod if_then_else;
+pub mod nonce;
+pub mod step;
+pub mod subterm;
+pub mod term_algebra;
 
 // pub mod equality;
 use std::{
     cell::{Ref, RefCell},
     cmp::Ordering,
     hash::Hash,
+    marker::PhantomData,
+    ptr::NonNull,
     rc::{Rc, Weak},
 };
 
 use bitflags::bitflags;
 
-use crate::problem::step::Step;
+// use crate::problem::step::Step;
 
-use self::{booleans::Booleans, nonce::Nonce, step::StepFunction, subterm::Subterm, term_algebra::TermAlgebra, if_then_else::IfThenElse, evaluate::Evaluate};
+use self::{
+    booleans::Booleans, evaluate::Evaluate, if_then_else::IfThenElse, nonce::Nonce,
+    step::StepFunction, subterm::Subterm, term_algebra::TermAlgebra,
+};
 
-use super::{builtins::types::STEP, env::Environement, formula_user::FormulaUser, sort::Sort};
+use super::{
+    container::Container,
+    formula::RichFormula,
+    sort::{sorted::{Sorted, SortedError}, Sort},
+};
 use core::fmt::Debug;
 
 // const BASE_SKOLEM_NAME: &'static str = "m$sk_";
 bitflags! {
-    #[derive(Default )]
+    #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug )]
     pub struct FFlags: u32 {
         /// is a step
-        const FROM_STEP =           1<<0 | FFlags::TERM_ALGEBRA.bits | FFlags::SPECIAL_EVALUATE.bits;
+        const FROM_STEP =           1<<0 | FFlags::TERM_ALGEBRA.bits() | FFlags::SPECIAL_EVALUATE.bits();
         /// is a skolem
         const SKOLEM =              1<<1;
         /// is a find such that
@@ -47,7 +56,7 @@ bitflags! {
         /// translation for ta to evaluate
         const SPECIAL_EVALUATE =    1<<6;
 
-        const DESTRUCTOR =          1<<7 | FFlags::TERM_ALGEBRA.bits | FFlags::SPECIAL_EVALUATE.bits;
+        const DESTRUCTOR =          1<<7 | FFlags::TERM_ALGEBRA.bits() | FFlags::SPECIAL_EVALUATE.bits();
 
         const BUILTIN =             1<<8;
 
@@ -57,13 +66,10 @@ bitflags! {
 
         const SPECIAL_SUBTERM =     1<<11;
 
-        const CELL =                1<<12 | FFlags::SPECIAL_EVALUATE.bits | FFlags::SPECIAL_SUBTERM.bits | FFlags::TERM_ALGEBRA.bits;
+        const CELL =                1<<12 | FFlags::SPECIAL_EVALUATE.bits() | FFlags::SPECIAL_SUBTERM.bits() | FFlags::TERM_ALGEBRA.bits();
 
     }
 }
-
-
-
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum InnerFunction<'bump> {
@@ -73,10 +79,10 @@ pub enum InnerFunction<'bump> {
     Subterm(Subterm<'bump>),
     TermAlgebra(TermAlgebra<'bump>),
     IfThenElse(IfThenElse),
-    Evaluate(Evaluate)
+    Evaluate(Evaluate),
 }
 
-// pub struct InnerFunction 
+// pub struct InnerFunction
 
 // user accessible part
 
@@ -88,10 +94,18 @@ pub enum InnerFunction<'bump> {
 ///
 /// Thus one can copy Function around for more or less free and still
 /// carry a lot of information arround within them
-#[derive(Hash, Clone, Copy)]
+#[derive(Hash, Clone, Copy, PartialEq, Eq)]
 pub struct Function<'bump> {
     // inner: Rc<IIFunction>,
-    inner: &'bump InnerFunction<'bump>
+    // pub inner: &'bump InnerFunction<'bump>,
+    inner: NonNull<InnerFunction<'bump>>,
+    container: PhantomData<Container<'bump>>,
+}
+
+impl<'bump> Sorted<'bump> for Function<'bump> {
+    fn sort(&self, args: &[Sort<'bump>]) -> Result<Sort<'bump>, SortedError> {
+        todo!()
+    }
 }
 
 /* // fast imutable content
@@ -184,13 +198,13 @@ impl<'b> Debug for Function<'b> {
     }
 } */
 
-impl<'bump> PartialEq for Function<'bump> {
-    fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.inner, &other.inner)
-    }
-}
+// impl<'bump> PartialEq for Function<'bump> {
+//     fn eq(&self, other: &Self) -> bool {
+//         Rc::ptr_eq(&self.inner, &other.inner)
+//     }
+// }
 
-impl<'bump> Eq for Function<'bump> {}
+// impl<'bump> Eq for Function<'bump> {}
 
 impl<'bump> Ord for Function<'bump> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
@@ -201,12 +215,13 @@ impl<'bump> Ord for Function<'bump> {
         if self == other {
             Ordering::Equal
         } else {
-            Ord::cmp(self.name(), other.name())
-                .then(Ord::cmp(
-                    &(Rc::as_ptr(&self.inner) as usize),
-                    &(Rc::as_ptr(&other.inner) as usize),
-                ))
-                .then_with(|| self.inner.inner.borrow().cmp(&other.inner.inner.borrow()))
+            // Ord::cmp(self.name(), other.name())
+            // .then(Ord::cmp(
+            //     &(Rc::as_ptr(&self.inner) as usize),
+            //     &(Rc::as_ptr(&other.inner) as usize),
+            // ))
+            // .then_with(|| self.inner.inner.borrow().cmp(&other.inner.inner.borrow()))
+            Ord::cmp(self.as_ref(), other.as_ref())
         }
     }
 }
@@ -218,36 +233,40 @@ impl<'bump> PartialOrd for Function<'bump> {
 }
 
 impl<'bump> Function<'bump> {
-    pub fn new(name: &str, input_sorts: Vec<Sort>, output_sort: Sort) -> Self {
-        Self::hidden_new(name.to_owned(), input_sorts, output_sort, FFlags::empty())
+    // pub fn new(name: &str, input_sorts: Vec<Sort>, output_sort: Sort) -> Self {
+    //     Self::hidden_new(name.to_owned(), input_sorts, output_sort, FFlags::empty())
+    // }
+
+    // fn hidden_new(name: String, input_sorts: Vec<Sort>, output_sort: Sort, flags: FFlags) -> Self {
+    //     let innerinner = IIIFunction {
+    //         input_sorts,
+    //         output_sort,
+    //         flags,
+    //         evaluate_fun: None,
+    //     };
+    //     let inner = IIFunction {
+    //         name: name,
+    //         inner: RefCell::new(innerinner),
+    //     };
+
+    //     Function {
+    //         inner: Rc::new(inner),
+    //     }
+    // }
+    // pub fn new_with_flag(
+    //     name: &str,
+    //     input_sorts: Vec<Sort>,
+    //     output_sort: Sort,
+    //     flags: FFlags,
+    // ) -> Self {
+    //     Self::hidden_new(name.to_owned(), input_sorts, output_sort, flags)
+    // }
+
+    pub fn fast_outsort(&self) -> Option<Sort<'bump>> {
+        todo!()
     }
 
-    fn hidden_new(name: String, input_sorts: Vec<Sort>, output_sort: Sort, flags: FFlags) -> Self {
-        let innerinner = IIIFunction {
-            input_sorts,
-            output_sort,
-            flags,
-            evaluate_fun: None,
-        };
-        let inner = IIFunction {
-            name: name,
-            inner: RefCell::new(innerinner),
-        };
-
-        Function {
-            inner: Rc::new(inner),
-        }
-    }
-    pub fn new_with_flag(
-        name: &str,
-        input_sorts: Vec<Sort>,
-        output_sort: Sort,
-        flags: FFlags,
-    ) -> Self {
-        Self::hidden_new(name.to_owned(), input_sorts, output_sort, flags)
-    }
-
-    pub fn arity(&self) -> usize {
+    /*     pub fn arity(&self) -> usize {
         self.inner.inner.borrow().input_sorts.len()
     }
 
@@ -276,61 +295,62 @@ impl<'bump> Function<'bump> {
 
     pub fn set_output_sort(&self, v: Sort) {
         self.inner.inner.borrow_mut().output_sort = v
-    }
+    } */
 
     pub fn name(&self) -> &str {
-        &self.inner.name
+        // &self.inner.name
+        todo!()
     }
 
-    #[allow(dead_code)]
-    fn add_flag(&self, flag: FFlags) {
-        // self.0.flags |=flag.bits;
-        self.inner.inner.borrow_mut().flags |= flag
-    }
+    // #[allow(dead_code)]
+    // fn add_flag(&self, flag: FFlags) {
+    //     // self.0.flags |=flag.bits;
+    //     self.inner.inner.borrow_mut().flags |= flag
+    // }
 
-    #[allow(dead_code)]
-    fn remove_flag(&self, flag: FFlags) {
-        // self.0.flags.fetch_and((!flag).bits());
-        self.inner.inner.borrow_mut().flags.remove(flag)
-    }
+    // #[allow(dead_code)]
+    // fn remove_flag(&self, flag: FFlags) {
+    //     // self.0.flags.fetch_and((!flag).bits());
+    //     self.inner.inner.borrow_mut().flags.remove(flag)
+    // }
 
-    fn contain_flag(&self, flag: FFlags) -> bool {
-        self.get_flags().contains(flag)
-    }
+    // fn contain_flag(&self, flag: FFlags) -> bool {
+    //     self.get_flags().contains(flag)
+    // }
 
-    pub fn is_skolem(&self) -> bool {
-        self.contain_flag(FFlags::SKOLEM)
-    }
+    // pub fn is_skolem(&self) -> bool {
+    //     self.contain_flag(FFlags::SKOLEM)
+    // }
 
-    pub fn is_user_defined(&self) -> bool {
-        self.contain_flag(FFlags::USER_DEFINED)
-    }
+    // pub fn is_user_defined(&self) -> bool {
+    //     self.contain_flag(FFlags::USER_DEFINED)
+    // }
 
-    pub fn is_term_algebra(&self) -> bool {
-        self.contain_flag(FFlags::TERM_ALGEBRA)
-    }
+    // pub fn is_term_algebra(&self) -> bool {
+    //     self.contain_flag(FFlags::TERM_ALGEBRA)
+    // }
 
-    pub fn is_special_evaluate(&self) -> bool {
-        self.contain_flag(FFlags::SPECIAL_EVALUATE)
-    }
+    // pub fn is_special_evaluate(&self) -> bool {
+    //     self.contain_flag(FFlags::SPECIAL_EVALUATE)
+    // }
 
-    pub fn is_special_subterm(&self) -> bool {
-        self.contain_flag(FFlags::SPECIAL_SUBTERM)
-    }
+    // pub fn is_special_subterm(&self) -> bool {
+    //     self.contain_flag(FFlags::SPECIAL_SUBTERM)
+    // }
 
-    pub fn is_from_step(&self) -> bool {
-        self.contain_flag(FFlags::FROM_STEP)
-    }
+    // pub fn is_from_step(&self) -> bool {
+    //     self.contain_flag(FFlags::FROM_STEP)
+    // }
 
-    pub fn is_from_quantifer(&self) -> bool {
-        self.contain_flag(FFlags::FROM_QUANTIFIER)
-    }
+    // pub fn is_from_quantifer(&self) -> bool {
+    //     self.contain_flag(FFlags::FROM_QUANTIFIER)
+    // }
 
-    pub fn is_cell(&self) -> bool {
-        self.contain_flag(FFlags::CELL)
-    }
+    // pub fn is_cell(&self) -> bool {
+    //     self.contain_flag(FFlags::CELL)
+    // }
 
-    pub fn contain_sort(&self, s: &Sort) -> bool {
+    /*     pub fn contain_sort(&self, s: &Sort) -> bool {
         self.sort_iter().any(|fs| fs.eq(s))
     }
 
@@ -410,34 +430,45 @@ impl<'bump> Function<'bump> {
 
     pub fn set_evaluate_functions(&self, f: &Function) {
         self.inner.inner.borrow_mut().evaluate_fun = Some(Rc::downgrade(&f.inner))
+    } */
+
+    // pub fn hard_eq(&self, other: &Self) -> bool {
+    //     (self == other)
+    //         || ((self.name() == other.name())
+    //             && (self.inner.inner.borrow().as_tuple() == other.inner.inner.borrow().as_tuple()))
+    // }
+
+    // pub fn as_ptr_usize(&self) -> usize {
+    //     // Rc::as_ptr(self.inner) as usize
+    //     self.inner.as_ptr() as usize
+    // }
+
+    // pub fn f<T, U>(self, ctx: &T, args: impl IntoIterator<Item = U>) -> U
+    // where
+    //     T: FormulaUser<U>,
+    // {
+    //     ctx.funf(self, args)
+    // }
+
+    pub fn f(&self, args: impl IntoIterator<Item = RichFormula<'bump>>) -> RichFormula<'bump> {
+        RichFormula::Fun(*self, args.into_iter().collect())
     }
 
-    pub fn hard_eq(&self, other: &Self) -> bool {
-        (self == other)
-            || ((self.name() == other.name())
-                && (self.inner.inner.borrow().as_tuple() == other.inner.inner.borrow().as_tuple()))
-    }
+    // pub fn cf<T, U>(&self, ctx: &T, args: impl IntoIterator<Item = U>) -> U
+    // where
+    //     T: FormulaUser<U>,
+    // {
+    //     self.clone().f(ctx, args)
+    // }
 
-    pub fn as_ptr_usize(&self) -> usize {
-        Rc::as_ptr(&self.inner) as usize
+    pub fn inner(&self) -> &InnerFunction<'bump> {
+        self.as_ref()
     }
+}
 
-    pub fn f<T, U>(self, ctx: &T, args: impl IntoIterator<Item = U>) -> U
-    where
-        T: FormulaUser<U>,
-    {
-        ctx.funf(self, args)
-    }
-
-    pub fn cf<T, U>(&self, ctx: &T, args: impl IntoIterator<Item = U>) -> U
-    where
-        T: FormulaUser<U>,
-    {
-        self.clone().f(ctx, args)
-    }
-
-    pub fn inner(&self) -> &InnerFunction {
-        self.inner
+impl<'bump> AsRef<InnerFunction<'bump>> for Function<'bump> {
+    fn as_ref(&self) -> &InnerFunction<'bump> {
+        unsafe { self.inner.as_ref() } // container is alive
     }
 }
 

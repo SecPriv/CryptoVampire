@@ -3,14 +3,7 @@ use std::{collections::HashMap, rc::Rc};
 use itertools::Itertools;
 
 use super::{
-    builtins::{
-        functions::{AND, EQUALITY, FALSE, IMPLIES, NOT, OR, TRUE},
-        init::init_env,
-    },
     cli::Args,
-    formula_user::{FunctionShortcuter, FunctionShortcuterBuilder, HasShortcut},
-    function::{FFlags, Function},
-    sort::Sort,
 };
 
 #[derive(Debug, Clone)]

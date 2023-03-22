@@ -1,37 +1,35 @@
+// use core::slice::SlicePattern;
+
 use super::{
-    builtins::types::{BOOL, MSG},
-    env::Environement,
-    formula::Variable,
-    sort::Sort,
+    sort::{
+        builtins::{BOOL, MESSAGE},
+        Sort,
+    },
+    variable::Variable,
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum Quantifier {
-    Exists { variables: Vec<Variable> },
-    Forall { variables: Vec<Variable> },
-    FindSuchThat { variables: Vec<Variable> },
+pub enum Quantifier<'bump> {
+    Exists { variables: Vec<Variable<'bump>> },
+    Forall { variables: Vec<Variable<'bump>> },
+    // FindSuchThat { variables: Vec<Variable<'bump>> },
 }
 
-impl Quantifier {
-    pub fn get_output_sort<'a>(&self, env: &'a Environement) -> &'a Sort {
-        match self {
-            Quantifier::Exists { variables: _ } => BOOL(env),
-            Quantifier::Forall { variables: _ } => BOOL(env),
-            Quantifier::FindSuchThat { variables: _ } => MSG(env),
-        }
+impl<'bump> Quantifier<'bump> {
+    pub fn get_output_sort(&self) -> Sort<'bump> {
+        // match self {
+        //     Quantifier::Exists { variables: _ } => BOOL.as_ref(),
+        //     Quantifier::Forall { variables: _ } => BOOL.as_ref(),
+        //     // Quantifier::FindSuchThat { variables: _ } => MESSAGE.as_ref(),
+        // }
+        BOOL.as_sort()
     }
 
-    pub fn get_variables(&self) -> &[Variable] {
+    pub fn get_variables(&self) -> &[Variable<'bump>] {
         match self {
-            Quantifier::Exists {
-                variables: variable,
-            } => variable.as_slice(),
-            Quantifier::Forall {
-                variables: variable,
-            } => variable.as_slice(),
-            Quantifier::FindSuchThat {
-                variables: variable,
-            } => variable.as_slice(),
+            Quantifier::Exists { variables }
+            | Quantifier::Forall { variables }
+            /* | Quantifier::FindSuchThat { variables } */ => variables.as_slice(),
         }
     }
 }

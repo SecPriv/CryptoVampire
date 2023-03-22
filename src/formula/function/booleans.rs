@@ -33,28 +33,30 @@ impl Connective {
 
 #[dynamic]
 static BOOL_2: [Sort<'static>; 2] = [BOOL.as_sort(), BOOL.as_sort()];
+#[dynamic]
 static BOOL_1: [Sort<'static>; 1] = [BOOL.as_sort()];
 
 impl<'a> Sorted<'a> for Connective {
     fn sort(&self, args: &[Sort<'a>]) -> Result<Sort<'a>, SortedError> {
-        if args.iter().any(|s| s != BOOL.as_sort()) {
+        if args.iter().any(|s| s != &BOOL.as_sort()) {
             Err(SortedError::WrongArguments {
-                expected: Some(Box::new(format!("only {}", BOOL.as_sort()))),
-                got: Some(Box::new(args)),
+                expected: format!("only {:?}", BOOL.as_sort()),
+                got: format!("{:?}", args),
             })
-        }
-        match self {
-            Connective::Not => Err(SortedError::WrongArguments {
-                expected: Some(Box::new(format!("1 arguments of type {}", BOOL.as_sort()))),
-                got: Some(Box::new(args)),
-            }),
-            Connective::Implies | Connective::Iff if args.len() != 2 => {
-                Err(SortedError::WrongArguments {
-                    expected: Some(Box::new(format!("2 arguments of type {}", BOOL.as_sort()))),
-                    got: Some(Box::new(args)),
-                })
+        } else {
+            match self {
+                Connective::Not => Err(SortedError::WrongArguments {
+                    expected: format!("1 arguments of type {:?}", BOOL.as_sort()),
+                    got: format!("{:?}", args),
+                }),
+                Connective::Implies | Connective::Iff if args.len() != 2 => {
+                    Err(SortedError::WrongArguments {
+                        expected: format!("2 arguments of type {:?}", BOOL.as_sort()),
+                        got: format!("{:?}", args),
+                    })
+                }
+                _ => Ok(BOOL.as_sort()),
             }
-            _ => Ok(BOOL.as_sort()),
         }
     }
 }
@@ -76,8 +78,8 @@ impl<'a> Sorted<'a> for Equality {
     fn sort(&self, args: &[Sort<'a>]) -> Result<Sort<'a>, SortedError> {
         if args.len() != 2 || args.get(0) != args.get(1) {
             Err(SortedError::WrongArguments {
-                expected: Some(Box::new(format!("2 arguments the same type"))),
-                got: Some(Box::new(args)),
+                expected: format!("2 arguments the same type"),
+                got: format!("{:?}", args),
             })
         } else {
             Ok(BOOL.as_sort())
@@ -94,7 +96,8 @@ pub enum Booleans {
 impl Booleans {
     pub const fn name(&self) -> &'static str {
         match self {
-            Booleans::Connective(e) | Booleans::Equality(e) => e.name(),
+            Booleans::Connective(e) => e.name(),
+            Booleans::Equality(e) => e.name(),
         }
     }
 
@@ -106,7 +109,8 @@ impl Booleans {
 impl<'a> Sorted<'a> for Booleans {
     fn sort(&self, args: &[Sort<'a>]) -> Result<Sort<'a>, SortedError> {
         match self {
-            Booleans::Connective(e) | Booleans::Equality(e) => e.sort(args),
+            Booleans::Connective(e) => e.sort(args),
+            Booleans::Equality(e) => e.sort(args),
         }
     }
 }
