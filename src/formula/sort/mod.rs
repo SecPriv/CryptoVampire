@@ -11,7 +11,7 @@ use std::{
     ptr::NonNull,
 };
 
-use super::container::{CanBeAllocated, Container, ScopeAllocator};
+use crate::container::{CanBeAllocated, Container, ScopeAllocator};
 
 bitflags! {
     #[derive(Default, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy )]

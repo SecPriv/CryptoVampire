@@ -22,7 +22,6 @@ use self::{
 };
 
 use super::{
-    container::Container,
     formula::RichFormula,
     sort::{
         sorted::{Sorted, SortedError},

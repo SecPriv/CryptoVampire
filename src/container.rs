@@ -1,6 +1,7 @@
 use std::{cell::RefCell, ops::DerefMut, ptr::NonNull};
 
-use super::{function::InnerFunction, sort::InnerSort};
+use crate::formula::{sort::InnerSort, function::InnerFunction};
+
 
 // #[derive(Debug)]
 pub struct Container<'bump> {
