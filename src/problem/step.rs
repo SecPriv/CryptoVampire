@@ -1,18 +1,16 @@
 use core::fmt::Debug;
 use std::{
+    cmp::Ordering,
+    marker::PhantomData,
     // collections::{HashMap, HashSet},
     ops::Range,
+    ptr::NonNull,
     sync::Arc,
 };
 
 use itertools::Itertools;
 
-use crate::formula::{
-    formula::{RichFormula, Variable},
-    formula_user::FormulaUser,
-    function::Function,
-    sort::Sort,
-};
+use crate::formula::{formula::RichFormula, function::Function, sort::Sort, variable::Variable};
 
 // #[derive(Debug)]
 // pub struct Protocol {
@@ -30,20 +28,23 @@ use crate::formula::{
 //     }
 // }
 
-#[derive(Hash)]
-pub struct Step(Arc<InnerStep>);
+#[derive(Hash, PartialEq, Eq, Clone, Copy)]
+pub struct Step<'bump> {
+    inner: NonNull<InnerStep<'bump>>,
+    container: PhantomData<&'bump ()>,
+}
 
 // variables from 1 to parameters.len()
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct InnerStep {
+pub(crate) struct InnerStep<'bump> {
     name: String,
     /// ie. the parameters of the step
-    free_variables: Vec<Variable>,
+    free_variables: Vec<Variable<'bump>>,
     /// variables that are bound within the step (by a quantifier for instance)
-    used_variables: Vec<Variable>,
-    condition: RichFormula,
-    message: RichFormula,
-    function: Function,
+    used_variables: Vec<Variable<'bump>>,
+    condition: RichFormula<'bump>,
+    message: RichFormula<'bump>,
+    function: Function<'bump>,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -52,58 +53,61 @@ pub enum MessageOrCondition {
     Condition,
 }
 
-impl Step {
-    pub fn new(
-        name: &str,
-        variables: Vec<Variable>,
-        condition: RichFormula,
-        message: RichFormula,
-        function: Function,
-    ) -> Self {
-        let mut used_variables = message.get_used_variables();
-        used_variables.extend(condition.get_used_variables().into_iter());
-        debug_assert!(variables.iter().all(|v| used_variables.contains(v)));
+impl<'bump> Step<'bump> {
+    // pub fn new(
+    //     name: &str,
+    //     variables: Vec<Variable>,
+    //     condition: RichFormula,
+    //     message: RichFormula,
+    //     function: Function,
+    // ) -> Self {
+    //     let mut used_variables = message.get_used_variables();
+    //     used_variables.extend(condition.get_used_variables().into_iter());
+    //     debug_assert!(variables.iter().all(|v| used_variables.contains(v)));
 
-        let used_variables = used_variables.into_iter().cloned().collect();
+    //     let used_variables = used_variables.into_iter().cloned().collect();
 
-        Self(Arc::new(InnerStep {
-            name: name.to_owned(),
-            free_variables: variables,
-            used_variables,
-            condition,
-            message,
-            function,
-        }))
-    }
+    //     Self(Arc::new(InnerStep {
+    //         name: name.to_owned(),
+    //         free_variables: variables,
+    //         used_variables,
+    //         condition,
+    //         message,
+    //         function,
+    //     }))
+    // }
 
-    pub fn map<F>(&self, mut f: F) -> Self
-    where
-        F: FnMut(MessageOrCondition, &RichFormula) -> RichFormula,
-    {
-        Self(Arc::new(InnerStep {
-            name: self.0.name.clone(),
-            free_variables: self.0.free_variables.clone(),
-            used_variables: self.0.used_variables.clone(),
-            condition: f(MessageOrCondition::Condition, &self.0.condition),
-            message: f(MessageOrCondition::Message, &self.0.message),
-            function: self.0.function.clone(),
-        }))
-    }
+    // pub fn map<F>(&self, mut f: F) -> Self
+    // where
+    //     F: FnMut(MessageOrCondition, &RichFormula) -> RichFormula,
+    // {
+    //     Self(Arc::new(InnerStep {
+    //         name: self.0.name.clone(),
+    //         free_variables: self.0.free_variables.clone(),
+    //         used_variables: self.0.used_variables.clone(),
+    //         condition: f(MessageOrCondition::Condition, &self.0.condition),
+    //         message: f(MessageOrCondition::Message, &self.0.message),
+    //         function: self.0.function.clone(),
+    //     }))
+    // }
 
     pub fn name(&self) -> &str {
-        &self.0.name
+        &self.as_ref().name
     }
 
-    pub fn parameters<'a>(&'a self) -> impl Iterator<Item = &'a Sort> {
+    pub fn parameters<'a>(&'a self) -> impl Iterator<Item = &'a Sort<'bump>>
+    where
+        'bump: 'a,
+    {
         self.free_variables().iter().map(|v| &v.sort)
     }
 
-    pub fn free_variables(&self) -> &Vec<Variable> {
-        &self.0.free_variables
+    pub fn free_variables(&self) -> &Vec<Variable<'bump>> {
+        &self.as_ref().free_variables
     }
 
-    pub fn occuring_variables(&self) -> &Vec<Variable> {
-        &self.0.used_variables
+    pub fn occuring_variables(&self) -> &Vec<Variable<'bump>> {
+        &self.as_ref().used_variables
     }
 
     pub fn vairable_range(&self) -> Range<usize> {
@@ -122,75 +126,85 @@ impl Step {
         min..(max + 1)
     }
 
-    pub fn condition(&self) -> &RichFormula {
-        &self.0.condition
+    pub fn condition(&self) -> &RichFormula<'bump> {
+        &self.as_ref().condition
     }
 
-    pub fn message(&self) -> &RichFormula {
-        &self.0.message
+    pub fn message(&self) -> &RichFormula<'bump> {
+        &self.as_ref().message
     }
 
     pub fn function(&self) -> &Function {
-        &self.0.function
+        &self.as_ref().function
     }
 
-    pub fn apply_condition(&self, args: &[RichFormula]) -> RichFormula {
+    pub fn apply_condition(&self, args: &[RichFormula<'bump>]) -> RichFormula<'bump> {
         let vars: Vec<_> = (1..=self.arity()).into_iter().collect_vec();
         self.condition().clone().apply_substitution(&vars, args)
     }
 
-    pub fn apply_message(&self, args: &[RichFormula]) -> RichFormula {
+    pub fn apply_message(&self, args: &[RichFormula<'bump>]) -> RichFormula<'bump> {
         let vars: Vec<_> = (1..=self.arity()).into_iter().collect_vec();
         self.message().clone().apply_substitution(&vars, args)
     }
 
     pub fn arity(&self) -> usize {
-        self.0.free_variables.len()
+        self.as_ref().free_variables.len()
     }
 
-    /// return `self` as a formula of type `U` using the variables of [free_variables]
-    pub fn as_formula<T, U>(&self, ctx: &T) -> U
-    where
-        T: FormulaUser<U>,
-    {
-        ctx.funf(
-            self.function().clone(),
-            self.free_variables()
-                .into_iter()
-                .cloned()
-                .map(|v| ctx.varf(v)),
-        )
+    // return `self` as a formula of type `U` using the variables of [free_variables]
+    // pub fn as_formula<T, U>(&self, ctx: &T) -> U
+    // where
+    //     T: FormulaUser<U>,
+    // {
+    //     ctx.funf(
+    //         self.function().clone(),
+    //         self.free_variables()
+    //             .into_iter()
+    //             .cloned()
+    //             .map(|v| ctx.varf(v)),
+    //     )
+    // }
+}
+
+impl<'bump> AsRef<InnerStep<'bump>> for Step<'bump> {
+    fn as_ref(&self) -> &InnerStep<'bump> {
+        unsafe { self.inner.as_ref() } // inner is alive while 'bump is
     }
 }
 
-impl Debug for Step {
+impl<'bump> Debug for Step<'bump> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
+        self.as_ref().fmt(f)
     }
 }
 
-impl Clone for Step {
-    fn clone(&self) -> Self {
-        Self(Arc::clone(&self.0))
-    }
-}
+// impl Clone for Step {
+//     fn clone(&self) -> Self {
+//         Self(Arc::clone(&self.0))
+//     }
+// }
 
-impl PartialEq for Step {
-    fn eq(&self, other: &Self) -> bool {
-        Arc::ptr_eq(&self.0, &other.0)
-    }
-}
+// impl PartialEq for Step {
+//     fn eq(&self, other: &Self) -> bool {
+//         Arc::ptr_eq(&self.0, &other.0)
+//     }
+// }
 
-impl Eq for Step {}
+// impl Eq for Step {}
 
-impl Ord for Step {
+impl<'bump> Ord for Step<'bump> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        Ord::cmp(&Arc::as_ptr(&self.0), &Arc::as_ptr(&other.0))
+        if self == other {
+            Ordering::Equal
+        } else {
+            Ord::cmp(self.as_ref(), other.as_ref())
+        }
     }
 }
 
-impl PartialOrd for Step {
+impl<'bump> PartialOrd for Step<'bump> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.0.cmp(&other.0))
+        Some(Ord::cmp(&self, &other))
     }
 }

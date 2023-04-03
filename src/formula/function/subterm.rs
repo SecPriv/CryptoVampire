@@ -1,8 +1,10 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, rc::Rc, fmt::Debug};
+
+use crate::problem::subterm::{Subterm as PblSubterm, traits::SubtermAux, AsSubterm};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Subterm<'bump> {
-    tmp: PhantomData<&'bump ()>,
+pub enum Subterm<'bump> {
+    Nope(PhantomData<&'bump ()>)
 }
 
 

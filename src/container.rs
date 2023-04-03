@@ -1,12 +1,18 @@
 use std::{cell::RefCell, ops::DerefMut, ptr::NonNull};
 
-use crate::formula::{sort::InnerSort, function::InnerFunction};
+use crate::{
+    formula::{function::InnerFunction, sort::InnerSort},
+    problem::{cell::InnerMemoryCell, step::InnerStep},
+};
 
+type InnerContainer<T> = RefCell<Vec<NonNull<T>>>;
 
 // #[derive(Debug)]
 pub struct Container<'bump> {
-    sorts: RefCell<Vec<NonNull<InnerSort>>>,
-    functions: RefCell<Vec<NonNull<InnerFunction<'bump>>>>,
+    sorts: InnerContainer<InnerSort>,
+    functions: InnerContainer<InnerFunction<'bump>>,
+    steps: InnerContainer<InnerStep<'bump>>,
+    cells: InnerContainer<InnerMemoryCell<'bump>>,
 }
 
 pub trait ScopeAllocator<T> {
@@ -27,26 +33,51 @@ unsafe fn aux_alloc<T>(mut vec: impl DerefMut<Target = Vec<NonNull<T>>>) -> NonN
     ptr
 }
 
-impl<'bump> ScopeAllocator<InnerSort> for Container<'bump> {
-    unsafe fn alloc(&self) -> NonNull<InnerSort> {
-        aux_alloc(self.sorts.borrow_mut())
-    }
+// impl<'bump> ScopeAllocator<InnerSort> for Container<'bump> {
+//     unsafe fn alloc(&self) -> NonNull<InnerSort> {
+//         aux_alloc(self.sorts.borrow_mut())
+//     }
+// }
+
+// impl<'bump> ScopeAllocator<InnerFunction<'bump>> for Container<'bump> {
+//     unsafe fn alloc(&self) -> NonNull<InnerFunction<'bump>> {
+//         aux_alloc(self.functions.borrow_mut())
+//     }
+// }
+
+macro_rules! make_scope_allocator {
+    ($fun:ident, $t:ty) => {
+        impl<'bump> ScopeAllocator<$t> for Container<'bump> {
+            unsafe fn alloc(&self) -> NonNull<$t> {
+                aux_alloc(self.$fun.borrow_mut())
+            }
+        }
+    };
 }
 
-impl<'bump> ScopeAllocator<InnerFunction<'bump>> for Container<'bump> {
-    unsafe fn alloc(&self) -> NonNull<InnerFunction<'bump>> {
-        aux_alloc(self.functions.borrow_mut())
-    }
+make_scope_allocator!(functions, InnerFunction<'bump>);
+make_scope_allocator!(sorts, InnerSort);
+make_scope_allocator!(steps, InnerStep<'bump>);
+make_scope_allocator!(cells, InnerMemoryCell<'bump>);
+
+macro_rules! my_drop {
+    ($($fun:ident),*) => {
+        $(
+            for e in $fun.get_mut() {
+                drop(unsafe { e.as_mut()})
+            }
+        )*
+    };
 }
 
 impl<'bump> Drop for Container<'bump> {
     fn drop(&mut self) {
-        let Container { sorts, functions } = self;
-        for s in sorts.get_mut() {
-            drop(unsafe { s.as_mut() })
-        }
-        for fun in functions.get_mut() {
-            drop(unsafe { fun.as_mut() })
-        }
+        let Container {
+            sorts,
+            functions,
+            steps,
+            cells,
+        } = self;
+        my_drop!(sorts, functions, cells, steps);
     }
 }

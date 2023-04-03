@@ -62,4 +62,46 @@ where
     pub fn f(&self, x: RichFormula<'bump>, m: RichFormula<'bump>) -> RichFormula<'bump> {
         self.function.f([x, m])
     }
+
+    pub fn function(&self) -> Function<'bump> {
+        self.function
+    }
+
+    pub fn ignored_functions(&self) -> &[Function<'bump>] {
+        self.ignored_functions.as_ref()
+    }
+
+    pub fn sort(&self) -> Sort<'bump> {
+        self.sort
+    }
+}
+
+pub trait AsSubterm<'bump>/* : Ord */ /* + std::fmt::Debug */ {
+    fn generate_function_assertions(&self, funs: &[Function<'bump>]) -> Vec<RichFormula<'bump>>;
+    fn f(&self, x: RichFormula<'bump>, m: RichFormula<'bump>) -> RichFormula<'bump>;
+    fn function(&self) -> Function<'bump>;
+    fn ignored_functions(&self) -> &[Function<'bump>];
+    fn sort(&self) -> Sort<'bump>;
+}
+
+impl<'bump, Aux> AsSubterm<'bump> for Subterm<'bump, Aux>
+where
+    Aux: SubtermAux<'bump>,
+{
+    fn generate_function_assertions(&self, funs: &[Function<'bump>]) -> Vec<RichFormula<'bump>> {
+        Subterm::generate_function_assertions(self, funs.iter().cloned())
+    }
+
+    fn f(&self, x: RichFormula<'bump>, m: RichFormula<'bump>) -> RichFormula<'bump> {
+        Subterm::f(self, x, m)
+    }
+    fn function(&self) -> Function<'bump> {
+        Self::function(&self)
+    }
+    fn ignored_functions(&self) -> &[Function<'bump>] {
+        Self::ignored_functions(&self)
+    }
+    fn sort(&self) -> Sort<'bump> {
+        Self::sort(&self)
+    }
 }

@@ -60,6 +60,7 @@ pub trait SubtermAux<'bump> {
         }
     }
 
+    /// `eval_and_next` but optimized for variable only
     fn var_eval_and_next<'a>(
         &self,
         x: &'a RichFormula<'bump>,
