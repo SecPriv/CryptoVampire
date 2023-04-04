@@ -2,11 +2,12 @@ use std::ops::{Deref, DerefMut};
 
 // use crate::problem::problem::Problem;
 
-use super::{
+use bitflags::bitflags;
+
+use crate::formula::{
     formula::RichFormula,
     function::{term_algebra::TermAlgebra, InnerFunction},
 };
-use bitflags::bitflags;
 
 bitflags! {
     #[derive(Default )]

@@ -1,13 +1,16 @@
-mod lock;
+// mod lock;
 
 use std::{
     cell::UnsafeCell,
+    cmp::Ordering,
     marker::PhantomData,
     num::NonZeroUsize,
     ptr::NonNull,
     rc::Rc,
     sync::atomic::{self, AtomicUsize},
 };
+
+use qcell::{QCell, QCellOwner};
 
 use crate::{
     container::{CanBeAllocated, Container},
@@ -20,7 +23,6 @@ use crate::{
 };
 use core::fmt::Debug;
 
-use self::lock::{IsLock, Lock, LockError};
 
 use super::step::Step;
 
@@ -28,6 +30,24 @@ use super::step::Step;
 pub struct MemoryCell<'bump> {
     inner: NonNull<InnerMemoryCell<'bump>>,
     container: PhantomData<&'bump ()>,
+}
+
+impl<'bump> Ord for MemoryCell<'bump> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        if self == other {
+            Ordering::Equal
+        } else {
+            self.as_ref()
+                .cmp(other.as_ref())
+                .then(self.inner.cmp(&other.inner))
+        }
+    }
+}
+
+impl<'bump> PartialOrd for MemoryCell<'bump> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(&other))
+    }
 }
 
 // #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -43,48 +63,39 @@ pub struct InnerMemoryCell<'bump> {
     /// NB: this function takes one more argument of sort step
     function: Function<'bump>,
     /// is accessible iff lock is `Immutable` or using the right lock
-    assignements: UnsafeCell<Vec<Assignement<'bump>>>,
-    lock: IsLock,
+    pub assignements: Vec<Assignement<'bump>>,
+}
+
+pub type Lock = QCellOwner;
+
+impl<'bump> Eq for InnerMemoryCell<'bump> {}
+impl<'bump> PartialEq for InnerMemoryCell<'bump> {
+    fn eq(&self, other: &Self) -> bool {
+        self.function == other.function && self.name == other.name && self.args == other.args
+    }
+}
+impl<'bump> PartialOrd for InnerMemoryCell<'bump> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl<'bump> Ord for InnerMemoryCell<'bump> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.name
+            .cmp(&other.name)
+            .then(self.function.cmp(&other.function))
+            .then(self.args.cmp(&other.args))
+    }
+}
+impl<'bump> std::hash::Hash for InnerMemoryCell<'bump> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        self.args.hash(state);
+        self.function.hash(state);
+    }
 }
 
 impl<'bump> InnerMemoryCell<'bump> {
-    pub(crate) fn assignements(&self) -> Result<&Vec<Assignement<'bump>>, LockError> {
-        match &self.lock.is_free() {
-            true => unsafe { self.assignements.get().as_ref() }.ok_or(LockError::NullPointer), // note: will never return None
-            _ => Err(LockError::WrongLock),
-        }
-    }
-
-    pub(crate) fn get_assignement(
-        &self,
-        lock: &Lock,
-    ) -> Result<&Vec<Assignement<'bump>>, LockError> {
-        if lock.is_correspinding_lock(&self.lock) {
-            unsafe { self.assignements.get().as_ref() }.ok_or(LockError::NullPointer)
-        } else {
-            Err(LockError::WrongLock)
-        }
-    }
-
-    pub(crate) fn get_assignement_mut(
-        &self,
-        lock: &mut Lock,
-    ) -> Result<&mut Vec<Assignement<'bump>>, LockError> {
-        if lock.is_correspinding_lock(&self.lock) {
-            unsafe { self.assignements.get().as_mut() }.ok_or(LockError::NullPointer)
-        } else {
-            Err(LockError::WrongLock)
-        }
-    }
-
-    pub(crate) fn freeze(&self, lock: Lock) -> Result<(), LockError> {
-        if lock.is_correspinding_lock(&self.lock) {
-            self.lock.freeze();
-            Ok(())
-        } else {
-            Err(LockError::WrongLock)
-        }
-    }
 }
 
 unsafe impl<'bump> Sync for InnerMemoryCell<'bump> {}
@@ -114,34 +125,12 @@ impl<'bump> MemoryCell<'bump> {
         &self.as_ref().function
     }
 
-    pub fn assignements(&self) -> Result<&Vec<Assignement>, LockError> {
-        match &self.as_ref().lock.is_free() {
-            true => {
-                unsafe { self.as_ref().assignements.get().as_ref() }.ok_or(LockError::NullPointer)
-            } // note: will never return None
-            _ => Err(LockError::WrongLock),
-        }
+    pub fn assignements(&self) -> &Vec<Assignement<'bump>> {
+        &self.as_ref().assignements
     }
 
-    pub fn add_assignement(
-        &self,
-        lock: &mut Lock,
-        assignement: Assignement<'bump>,
-    ) -> Result<(), LockError> {
-        self.as_ref().get_assignement_mut(lock)?.push(assignement);
-        Ok(())
-    }
 
-    pub fn new(container: &Container<'bump>, name: String, args: Vec<Sort<'bump>>) -> Self {
-        let inner = InnerMemoryCell {
-            name,
-            args,
-            function: todo!(),
-            assignements: UnsafeCell::default(),
-            lock: IsLock::new(),
-        };
-        Self::allocate(container, inner)
-    }
+
 }
 
 impl<'bump> AsRef<InnerMemoryCell<'bump>> for MemoryCell<'bump> {

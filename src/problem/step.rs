@@ -10,7 +10,12 @@ use std::{
 
 use itertools::Itertools;
 
-use crate::formula::{formula::RichFormula, function::Function, sort::Sort, variable::Variable};
+use crate::formula::{
+    formula::{meq, RichFormula},
+    function::{builtin::LESS_THAN_STEP, Function},
+    sort::Sort,
+    variable::Variable,
+};
 
 // #[derive(Debug)]
 // pub struct Protocol {
@@ -134,7 +139,7 @@ impl<'bump> Step<'bump> {
         &self.as_ref().message
     }
 
-    pub fn function(&self) -> &Function {
+    pub fn function(&self) -> &Function<'bump> {
         &self.as_ref().function
     }
 
@@ -150,6 +155,16 @@ impl<'bump> Step<'bump> {
 
     pub fn arity(&self) -> usize {
         self.as_ref().free_variables.len()
+    }
+
+    /// strict happen before relation
+    pub fn strict_before(a: RichFormula<'bump>, b: RichFormula<'bump>) -> RichFormula<'bump> {
+        LESS_THAN_STEP.f([a, b])
+    }
+
+    /// happen before or equal
+    pub fn before(a: RichFormula<'bump>, b: RichFormula<'bump>) -> RichFormula<'bump> {
+        Self::strict_before(a.clone(), b.clone()) | meq(a, b)
     }
 
     // return `self` as a formula of type `U` using the variables of [free_variables]

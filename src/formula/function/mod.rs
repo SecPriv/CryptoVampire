@@ -8,6 +8,7 @@ pub mod nonce;
 pub mod step;
 pub mod subterm;
 pub mod term_algebra;
+pub mod predicate;
 
 // pub mod equality;
 use std::{cmp::Ordering, hash::Hash, marker::PhantomData, ptr::NonNull};
@@ -18,7 +19,7 @@ use bitflags::bitflags;
 
 use self::{
     booleans::Booleans, evaluate::Evaluate, if_then_else::IfThenElse, nonce::Nonce,
-    step::StepFunction, subterm::Subterm, term_algebra::TermAlgebra,
+    step::StepFunction, subterm::Subterm, term_algebra::TermAlgebra, predicate::Predicate,
 };
 
 use super::{
@@ -76,6 +77,7 @@ pub enum InnerFunction<'bump> {
     TermAlgebra(TermAlgebra<'bump>),
     IfThenElse(IfThenElse),
     Evaluate(Evaluate),
+    Predicate(Predicate<'bump>)
 }
 
 // pub struct InnerFunction

@@ -3,40 +3,40 @@ use crate::formula::formula::RichFormula;
 use super::{cell::MemoryCell, step::Step};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Dependancy<'pbl> {
-    pub from: CellCall<'pbl>,
-    pub depends_on: OutGoingCall<'pbl>,
+pub struct Dependancy<'pbl, 'bump> {
+    pub from: CellCall<'pbl, 'bump>,
+    pub depends_on: OutGoingCall<'pbl, 'bump>,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct DependancyFromStep<'pbl> {
-    pub steps_origin: Vec<&'pbl Step>,
-    pub cell: Option<&'pbl MemoryCell>,
+pub struct DependancyFromStep<'pbl, 'bump> {
+    pub steps_origin: Vec<&'pbl Step<'bump>>,
+    pub cell: Option<&'pbl MemoryCell<'bump>>,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum OutGoingCall<'pbl> {
-    Input(InputCall<'pbl>),
-    Cell(CellCall<'pbl>),
+pub enum OutGoingCall<'pbl, 'bump> {
+    Input(InputCall<'pbl, 'bump>),
+    Cell(CellCall<'pbl, 'bump>),
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct CellCall<'pbl> {
-    pub cell: &'pbl MemoryCell,
-    pub step: StepCall<'pbl>,
-    pub args: &'pbl [RichFormula],
+pub struct CellCall<'pbl, 'bump> {
+    pub cell: &'pbl MemoryCell<'bump>,
+    pub step: StepCall<'pbl, 'bump>,
+    pub args: &'pbl [RichFormula<'bump>],
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct InputCall<'pbl> {
-    pub step: StepCall<'pbl>,
+pub struct InputCall<'pbl, 'bump> {
+    pub step: StepCall<'pbl, 'bump>,
     // pub args: &'pbl [RichFormula],
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum StepCall<'pbl> {
-    Step(&'pbl Step),
-    General(&'pbl RichFormula),
+pub enum StepCall<'pbl, 'bump> {
+    Step(&'pbl Step<'bump>),
+    General(&'pbl RichFormula<'bump>),
 }
 
 pub mod graph {
@@ -46,25 +46,21 @@ pub mod graph {
     use itertools::Itertools;
 
     use crate::{
-        formula::{
-            formula::RichFormula,
-            formula_iterator::{FormulaIterator, IteratorFlags},
-        },
-        problem::{cell::MemoryCell, problem::Problem, step::Step},
+        formula::formula::RichFormula,
+        problem::{cell::MemoryCell, step::Step},
     };
 
     use super::{
-        calculate::{self, find_dependencies_cell, CellDependancy, InputDependancy},
         some_iter, CellCall, Dependancy, DependancyFromStep, InputCall, OutGoingCall, StepCall,
     };
     use anyhow::{Ok, Result};
     use thiserror::Error;
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default)]
-    pub struct DependancyGraph<'pbl> {
-        cells: Vec<GlobNode<'pbl>>,
+    pub struct DependancyGraph<'pbl, 'bump> {
+        cells: Vec<GlobNode<'pbl, 'bump>>,
         // calls: Vec<InnerCellCall<'pbl>>,
-        edges: Vec<Edges<'pbl>>,
+        edges: Vec<Edges<'pbl, 'bump>>,
         input: InputNode,
     }
 
@@ -74,37 +70,37 @@ pub mod graph {
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-    struct GlobNode<'pbl> {
-        pub cell: &'pbl MemoryCell,
+    struct GlobNode<'pbl, 'bump> {
+        pub cell: &'pbl MemoryCell<'bump>,
         pub edges: Vec<usize>,
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-    struct InnerCellCall<'pbl> {
+    struct InnerCellCall<'pbl, 'bump> {
         pub cell: usize,
-        pub step: StepCall<'pbl>,
-        pub args: &'pbl [RichFormula],
+        pub step: StepCall<'pbl, 'bump>,
+        pub args: &'pbl [RichFormula<'bump>],
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-    struct Edges<'pbl> {
-        pub from: FromNode<'pbl>,
-        pub to: ToNode<'pbl>,
+    struct Edges<'pbl, 'bump> {
+        pub from: FromNode<'pbl, 'bump>,
+        pub to: ToNode<'pbl, 'bump>,
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-    enum FromNode<'pbl> {
-        Input { step: &'pbl Step },
-        CellCall(InnerCellCall<'pbl>),
+    enum FromNode<'pbl, 'bump> {
+        Input { step: &'pbl Step<'bump> },
+        CellCall(InnerCellCall<'pbl, 'bump>),
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-    enum ToNode<'pbl> {
-        Input(InputCall<'pbl>),
-        CellCall(InnerCellCall<'pbl>),
+    enum ToNode<'pbl, 'bump> {
+        Input(InputCall<'pbl, 'bump>),
+        CellCall(InnerCellCall<'pbl, 'bump>),
     }
 
-    impl<'pbl> From<&'pbl Problem> for DependancyGraph<'pbl> {
+    /*     // impl<'pbl> From<&'pbl Problem> for DependancyGraph<'pbl> {
         fn from(pbl: &'pbl Problem) -> Self {
             let mut cells = pbl
                 .memory_cells
@@ -217,7 +213,7 @@ pub mod graph {
                 },
             }
         }
-    }
+    } */
 
     #[derive(Debug, Error)]
     pub enum DependancyError {
@@ -225,12 +221,66 @@ pub mod graph {
         MemoryCellNotFound,
     }
 
-    impl<'pbl> DependancyGraph<'pbl> {
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+    pub struct Ancestors<'pbl, 'bump> {
+        pub input: bool,
+        pub cells: Vec<&'pbl MemoryCell<'bump>>,
+    }
+
+    impl<'pbl, 'bump> DependancyGraph<'pbl, 'bump> {
+        pub fn ancestors(&self, cell: Option<&MemoryCell<'bump>>) -> Result<Ancestors<'pbl, 'bump>> {
+            let input_index = self.cells.len();
+
+            let cell = cell
+                .map(|cell| {
+                    self.cells
+                        .iter()
+                        .position(|c| c.cell == cell)
+                        .ok_or(DependancyError::MemoryCellNotFound)
+                })
+                .transpose()?
+                .unwrap_or(input_index);
+
+            let mut visited = vec![false; input_index + 1];
+            visited[cell] = true;
+            let mut todo = vec![cell];
+            let input_edges = (self.input.edges_starts..self.edges.len()).collect_vec();
+
+            while let Some(next) = todo.pop() {
+                visited[next] = true;
+
+                todo.extend(
+                    self.cells
+                        .get(next)
+                        .map(|c| c.edges.as_slice())
+                        .unwrap_or(input_edges.as_slice()) // if out of bound, it's an input
+                        .iter()
+                        .map(|ei| &self.edges[*ei])
+                        .map(|edge| match edge.to {
+                            ToNode::Input(_) => input_index,
+                            ToNode::CellCall(InnerCellCall { cell, .. }) => cell,
+                        })
+                        .filter(|i| visited[*i]),
+                )
+            }
+
+            let input = visited.pop().unwrap();
+            Ok(Ancestors {
+                input,
+                cells: visited
+                    .into_iter()
+                    .enumerate()
+                    .filter(|(_, b)| *b)
+                    .map(|(i, _)| self.cells[i].cell)
+                    .collect(),
+            })
+        }
+
         /// use None for input
         pub fn find_dependencies(
             &self,
-            cell: Option<&'pbl MemoryCell>,
-        ) -> Result<Vec<Dependancy<'pbl>>> {
+            cell: Option<&'pbl MemoryCell<'bump>>,
+        ) -> Result<Vec<Dependancy<'pbl, 'bump>>> {
             let cell = cell
                 .map(|cell| {
                     self.cells
@@ -243,7 +293,7 @@ pub mod graph {
             Ok(self.inner_find_dependencies(cell))
         }
 
-        fn inner_find_dependencies(&self, cell: Option<usize>) -> Vec<Dependancy<'pbl>> {
+        fn inner_find_dependencies(&self, cell: Option<usize>) -> Vec<Dependancy<'pbl, 'bump>> {
             let mut not_visited_edge = vec![true; self.edges.len()];
             let mut not_visited_node = vec![true; self.cells.len()];
             let mut todo = vec![cell];
@@ -287,8 +337,8 @@ pub mod graph {
 
         pub fn find_dependencies_keep_steps(
             &self,
-            cell: &MemoryCell,
-        ) -> Result<Vec<DependancyFromStep<'pbl>>> {
+            cell: &MemoryCell<'bump>,
+        ) -> Result<Vec<DependancyFromStep<'pbl, 'bump>>> {
             let cell = self
                 .cells
                 .iter()
@@ -355,7 +405,10 @@ pub mod graph {
             Ok(result)
         }
 
-        pub fn find_dependencies_from_step(&self, step: &Step) -> Vec<&'pbl MemoryCell> {
+        pub fn find_dependencies_from_step(
+            &self,
+            step: &Step<'bump>,
+        ) -> Vec<&'pbl MemoryCell<'bump>> {
             let mut not_visited = vec![true; self.cells.len()];
             let mut not_visited_input = true;
 
@@ -404,8 +457,8 @@ pub mod graph {
         }
     }
 
-    impl<'pbl> InnerCellCall<'pbl> {
-        fn as_cell_call(&self, graph: &DependancyGraph<'pbl>) -> CellCall<'pbl> {
+    impl<'pbl, 'bump> InnerCellCall<'pbl, 'bump> {
+        fn as_cell_call(&self, graph: &DependancyGraph<'pbl, 'bump>) -> CellCall<'pbl, 'bump> {
             let InnerCellCall { cell, step, args } = self;
             CellCall {
                 cell: graph.cells.get(*cell).unwrap().cell,
@@ -415,8 +468,11 @@ pub mod graph {
         }
     }
 
-    impl<'pbl> Edges<'pbl> {
-        fn as_dependancy(&self, graph: &DependancyGraph<'pbl>) -> Option<Dependancy<'pbl>> {
+    impl<'pbl, 'bump> Edges<'pbl, 'bump> {
+        fn as_dependancy(
+            &self,
+            graph: &DependancyGraph<'pbl, 'bump>,
+        ) -> Option<Dependancy<'pbl, 'bump>> {
             match self {
                 Edges {
                     from: FromNode::Input { .. },
@@ -458,101 +514,96 @@ pub mod graph {
 
 mod calculate {
     use crate::{
-        formula::{
-            builtins::functions::INPUT,
-            formula::RichFormula,
-            formula_iterator::{FormulaIterator, IteratorFlags},
-        },
+        formula::formula::RichFormula,
         problem::{
             cell::{Assignement, MemoryCell},
-            problem::Problem,
             step::Step,
         },
         utils::utils::StackBox,
     };
 
-    pub struct CellDependancy<'pbl> {
+    pub struct CellDependancy<'pbl, 'bump> {
         // self_cell: &'pbl MemoryCell,
-        pub step_at: &'pbl Step,
-        pub self_args: &'pbl Vec<RichFormula>,
-        pub cell: &'pbl MemoryCell,
-        pub call_args: &'pbl [RichFormula],
-        pub step_call: &'pbl RichFormula,
+        pub step_at: &'pbl Step<'bump>,
+        pub self_args: &'pbl Vec<RichFormula<'bump>>,
+        pub cell: &'pbl MemoryCell<'bump>,
+        pub call_args: &'pbl [RichFormula<'bump>],
+        pub step_call: &'pbl RichFormula<'bump>,
     }
 
     use super::some_iter;
 
-    pub struct InputDependancy<'pbl> {
+    pub struct InputDependancy<'pbl, 'bump> {
         // self_cell: &'pbl MemoryCell,
-        pub step_at: &'pbl Step,
-        pub self_args: &'pbl [RichFormula],
-        pub step_call: &'pbl RichFormula,
+        pub step_at: &'pbl Step<'bump>,
+        pub self_args: &'pbl [RichFormula<'bump>],
+        pub step_call: &'pbl RichFormula<'bump>,
     }
 
-    pub enum Dependancy<'pbl> {
-        Cell(CellDependancy<'pbl>),
-        Input(InputDependancy<'pbl>),
+    pub enum Dependancy<'pbl, 'bump> {
+        Cell(CellDependancy<'pbl, 'bump>),
+        Input(InputDependancy<'pbl, 'bump>),
     }
 
-    pub fn find_dependencies_cell<'pbl>(
-        pbl: &'pbl Problem,
-        cell: &'pbl MemoryCell,
-    ) -> impl Iterator<Item = Dependancy<'pbl>> {
-        let input = INPUT(&pbl.env);
-        cell.assignements()
-            .iter()
-            .zip(std::iter::repeat(input))
-            .flat_map(
-                move |(
-                    Assignement {
-                        step,
-                        args,
-                        content,
-                    },
-                    input,
-                )| {
-                    let pile = vec![content];
+    // pub fn find_dependencies_cell<'pbl, 'bump>(
+    //     pbl: &'pbl Problem,
+    //     cell: &'pbl MemoryCell,
+    // ) -> impl Iterator<Item = Dependancy<'pbl>> {
+    //     let input = INPUT(&pbl.env);
+    //     cell.assignements()
+    //         .iter()
+    //         .zip(std::iter::repeat(input))
+    //         .flat_map(
+    //             move |(
+    //                 Assignement {
+    //                     step,
+    //                     args,
+    //                     content,
+    //                 },
+    //                 input,
+    //             )| {
+    //                 let pile = vec![content];
 
-                    FormulaIterator::new(
-                        StackBox::new(pile),
-                        pbl,
-                        IteratorFlags::QUANTIFIER,
-                        move |f, pbl| match f {
-                            RichFormula::Fun(fun, iargs) if fun == input => {
-                                assert_eq!(iargs.len(), 1);
-                                (
-                                    Some(Dependancy::Input(InputDependancy {
-                                        // self_cell: cell,
-                                        step_at: step,
-                                        self_args: args,
-                                        step_call: iargs.first().unwrap(),
-                                    })),
-                                    some_iter(None),
-                                )
-                            }
-                            RichFormula::Fun(fun, fargs) if fun.is_cell() => {
-                                assert!(fargs.last().is_some());
-                                let other_cell = pbl.memory_cells.get(fun.name()).unwrap();
-                                let call_args = &fargs[..(fargs.len() - 1)];
-                                (
-                                    Some(Dependancy::Cell(CellDependancy {
-                                        // self_cell: cell,
-                                        step_at: step,
-                                        self_args: args,
-                                        cell: other_cell,
-                                        call_args,
-                                        step_call: fargs.last().unwrap(),
-                                    })),
-                                    some_iter(None),
-                                )
-                            }
-                            RichFormula::Fun(_, args) => (None, some_iter(Some(args))),
-                            _ => (None, some_iter(None)),
-                        },
-                    )
-                },
-            )
-    }
+    //                 FormulaIterator::new(
+    //                     StackBox::new(pile),
+    //                     pbl,
+    //                     IteratorFlags::QUANTIFIER,
+    //                     move |f, pbl| match f {
+    //                         RichFormula::Fun(fun, iargs) if fun == input => {
+    //                             assert_eq!(iargs.len(), 1);
+    //                             (
+    //                                 Some(Dependancy::Input(InputDependancy {
+    //                                     // self_cell: cell,
+    //                                     step_at: step,
+    //                                     self_args: args,
+    //                                     step_call: iargs.first().unwrap(),
+    //                                 })),
+    //                                 some_iter(None),
+    //                             )
+    //                         }
+    //                         RichFormula::Fun(fun, fargs) if fun.is_cell() => {
+    //                             assert!(fargs.last().is_some());
+    //                             let other_cell = pbl.memory_cells.get(fun.name()).unwrap();
+    //                             let call_args = &fargs[..(fargs.len() - 1)];
+    //                             (
+    //                                 Some(Dependancy::Cell(CellDependancy {
+    //                                     // self_cell: cell,
+    //                                     step_at: step,
+    //                                     self_args: args,
+    //                                     cell: other_cell,
+    //                                     call_args,
+    //                                     step_call: fargs.last().unwrap(),
+    //                                 })),
+    //                                 some_iter(None),
+    //                             )
+    //                         }
+    //                         RichFormula::Fun(_, args) => (None, some_iter(Some(args))),
+    //                         _ => (None, some_iter(None)),
+    //                     },
+    //                 )
+    //             },
+    //         )
+    // }
 
     // fn find_all_dependancies<'pbl>(pbl: &'pbl Problem) -> Vec<Dependancy<'pbl>> {
     //     pbl.memory_cells

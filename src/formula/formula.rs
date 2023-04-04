@@ -8,9 +8,9 @@ use crate::utils::utils::StackBox;
 use super::function::builtin::{AND, IMPLIES, NOT, OR, EQUALITY};
 use super::sort::builtins::BOOL;
 use super::sort::sorted::{Sorted, SortedError};
+use super::utils::formula_iterator::{FormulaIterator, IteratorFlags};
 use super::variable::Variable;
 use super::{
-    formula_iterator::{FormulaIterator, IteratorFlags},
     function::Function,
     quantifier::Quantifier,
     sort::Sort,
