@@ -80,6 +80,6 @@ pub struct Args {
     /// deactivate subterm and optimises evaluates
     ///
     /// NB: the program will crash it subterms are required somewhere
-    #[arg(long)]
+    #[arg(long, short)]
     pub no_term_algebra: bool,
 }
