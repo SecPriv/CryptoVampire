@@ -18,13 +18,20 @@ pub struct Problem<'bump> {
 }
 
 impl<'bump> Problem<'bump> {
+    pub fn list_top_level_terms<'a>(&'a self) -> impl Iterator<Item = &'a RichFormula<'bump>>
+    where
+        'bump: 'a,
+    {
+        self.assertions
+            .iter()
+            .chain(std::iter::once(self.query.as_ref()))
+            .chain(self.protocol.list_top_level_terms_shot_lifetime())
+    }
+
     pub fn max_var(&self) -> usize {
         let pile = RefCell::new(Vec::new());
 
-        self.protocol
-            .list_top_level_terms()
-            .chain(self.assertions.iter())
-            .chain(std::iter::once(self.query.as_ref()))
+        self.list_top_level_terms()
             .flat_map(|f| f.used_variables_iter_with_pile(pile.borrow_mut()))
             .map(|Variable { id, .. }| *id)
             .max()

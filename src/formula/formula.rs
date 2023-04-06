@@ -117,7 +117,7 @@ impl<'bump> RichFormula<'bump> {
         pile.push(((), self));
         FormulaIterator {
             pile,
-            passed_along: (),
+            passed_along: None,
             flags: IteratorFlags::QUANTIFIER,
             f: |_, f| {
                 let next = match f {
@@ -197,12 +197,16 @@ impl<'bump> RichFormula<'bump> {
         OR.f(args)
     }
 
-    pub fn expand<'a>(&'a self, ptcl: &Protocol<'bump>) -> Vec<ExpantionContent<'a, 'bump>> {
+    pub fn expand<'a>(
+        &'a self,
+        ptcl: &Protocol<'bump>,
+        with_args: bool,
+    ) -> Vec<ExpantionContent<'a, 'bump>> {
         ExpantionContent {
             state: ExpantionState::None,
             content: &self,
         }
-        .expand(ptcl.steps.iter().cloned(), &ptcl.graph)
+        .expand(ptcl.steps.iter().cloned(), &ptcl.graph, with_args)
     }
 }
 

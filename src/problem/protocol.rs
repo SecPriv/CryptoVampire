@@ -17,7 +17,27 @@ pub struct Protocol<'bump> {
 }
 
 impl<'bump> Protocol<'bump> {
-    pub fn list_top_level_terms(&'_ self) -> impl Iterator<Item = &'bump RichFormula<'bump>> + '_ {
+    pub fn list_top_level_terms<'a>(
+        &'a self,
+    ) -> impl Iterator<Item = &'bump RichFormula<'bump>> + 'a
+    where
+        'bump: 'a,
+    {
+        self.steps
+            .iter()
+            .flat_map(|s| [s.condition(), s.message()].into_iter())
+            .chain(self.memory_cells.iter().flat_map(|c| {
+                c.assignements()
+                    .iter()
+                    .map(|Assignement { content, .. }| content)
+            }))
+    }
+    pub fn list_top_level_terms_shot_lifetime<'a>(
+        &'a self,
+    ) -> impl Iterator<Item = &'a RichFormula<'bump>> + 'a
+    where
+        'bump: 'a,
+    {
         self.steps
             .iter()
             .flat_map(|s| [s.condition(), s.message()].into_iter())

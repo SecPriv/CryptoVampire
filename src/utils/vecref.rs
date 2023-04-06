@@ -77,7 +77,7 @@ impl<'a, T> Iterator for IterVecRef<'a, T> {
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             IterVecRef::Vec(iter) => iter.next(),
-            IterVecRef::Ref(Iter) => Iter.next().map(|e| *e),
+            IterVecRef::Ref(iter) => iter.next().map(|e| *e),
         }
     }
 }

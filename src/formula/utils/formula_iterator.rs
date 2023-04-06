@@ -28,9 +28,12 @@ where
     P: Clone,
     'bump: 'a,
 {
+    /// used for the algo, everything there will be iterated on
     pub pile: V,
-    pub passed_along: P,
+    /// some extra info to move around. If `None` it will use the last one available
+    pub passed_along: Option<P>,
     pub flags: IteratorFlags,
+    /// how does this iterator behave ?
     pub f: F,
 }
 
@@ -55,17 +58,18 @@ where
                             if self.flags.contains(IteratorFlags::QUANTIFIER) =>
                         {
                             let iter = q.get_content();
-                            let iter = repeat_n_zip(p, iter.iter()).map(|(p, f)| (p, *f));
+                            let iter = repeat_n_zip(p.clone(), iter.iter()).map(|(p, f)| (p, *f));
                             self.pile.extend(iter)
                         }
                         _ => {}
                     },
                     RichFormula::Quantifier(_, args) => {
-                        self.pile.extend(repeat_n_zip(p, args.iter()))
+                        self.pile.extend(repeat_n_zip(p.clone(), args.iter()))
                     }
                     _ => {}
                 };
-                let (ret, add) = (self.f)(self.passed_along.clone(), formula);
+                let (ret, add) =
+                    (self.f)(self.passed_along.as_ref().unwrap_or(&p).clone(), formula);
                 self.pile.extend(add.into_iter());
                 if let Some(_) = ret {
                     ret

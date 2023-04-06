@@ -228,14 +228,14 @@ pub mod graph {
     }
 
     impl<'bump> DependancyGraph<'bump> {
-        pub fn ancestors(&self, cell: Option<&MemoryCell<'bump>>) -> Result<Ancestors<'bump>> {
+        pub fn ancestors(&self, cell: Option<MemoryCell<'bump>>) -> Result<Ancestors<'bump>> {
             let input_index = self.cells.len();
 
             let cell = cell
                 .map(|cell| {
                     self.cells
                         .iter()
-                        .position(|c| &c.cell == cell)
+                        .position(|c| c.cell == cell)
                         .ok_or(DependancyError::MemoryCellNotFound)
                 })
                 .transpose()?

@@ -2,10 +2,13 @@ use itertools::Itertools;
 
 use crate::{
     formula::{
-        formula::{forall, meq, RichFormula},
+        formula::{exists, forall, meq, RichFormula},
         function::Function,
         sort::Sort,
-        utils::formula_iterator::{FormulaIterator, IteratorFlags},
+        utils::{
+            formula_expander::{ExpantionContent, ExpantionState},
+            formula_iterator::{FormulaIterator, IteratorFlags},
+        },
         variable::{sorts_to_variables, Variable},
     },
     utils::utils::{repeat_n_zip, StackBox},
@@ -65,7 +68,10 @@ where
             .collect()
     }
 
-    pub fn generate_function_assertions_pbl(&self, pbl: Problem<'bump>) -> Vec<RichFormula<'bump>> {
+    pub fn generate_function_assertions_from_pbl(
+        &self,
+        pbl: Problem<'bump>,
+    ) -> Vec<RichFormula<'bump>> {
         self.generate_function_assertions(
             pbl.functions
                 .iter()
@@ -77,7 +83,7 @@ where
     pub fn preprocess_whole_ptcl(
         &self,
         ptcl: &Protocol<'bump>,
-        formula: RichFormula<'bump>,
+        formula: &RichFormula<'bump>,
     ) -> RichFormula<'bump> {
         let pile = repeat_n_zip((), ptcl.list_top_level_terms()).collect_vec();
 
@@ -86,7 +92,7 @@ where
 
         let iter = FormulaIterator {
             pile: StackBox::new(pile),
-            passed_along: (),
+            passed_along: None,
             flags: IteratorFlags::QUANTIFIER,
             f: |_, f| {
                 let SubtermResult { unifier, nexts } = self.aux.eval_and_next(&formula, f);
@@ -97,6 +103,62 @@ where
             },
         };
 
+        RichFormula::ors(iter)
+    }
+
+    /// preprocess a subterm search going through inputs and cells
+    ///
+    /// **!!! Please ensure the variables are well placed to avoid colisions !!!**
+    ///
+    /// This function *will not* take care of it (nor check)
+    pub fn preprocess_term(
+        &self,
+        ptcl: &Protocol<'bump>,
+        x: &RichFormula<'bump>,
+        m: &RichFormula<'bump>,
+        keep_guard: bool,
+    ) -> RichFormula<'bump> {
+        let steps = &ptcl.steps;
+        let pile = vec![(ExpantionState::None, m)];
+
+        let iter = FormulaIterator {
+            pile: StackBox::new(pile),
+            passed_along: None,
+            flags: IteratorFlags::default(),
+            f: |state: ExpantionState<'bump>, f| {
+                let inner_iter = ExpantionContent {
+                    state: state.clone(),
+                    content: f,
+                }
+                .expand(steps.iter().cloned(), &ptcl.graph, false)
+                .into_iter()
+                .map(|ec| ec.as_tuple());
+                let SubtermResult { unifier, nexts } = self.aux.eval_and_next(x, f);
+                (
+                    unifier.map(|u| {
+                        let mut guard = u.as_equalities().unwrap();
+                        if keep_guard {
+                            match state.bound_variables() {
+                                Some(vars) => {
+                                    let var_iter = vars.iter().cloned();
+                                    match state.condition() {
+                                        Some(cond) => {
+                                            guard.push(cond.clone());
+                                            exists(var_iter, RichFormula::ands(guard))
+                                        }
+                                        None => exists(var_iter, RichFormula::ands(guard)),
+                                    }
+                                }
+                                None => RichFormula::ands(guard),
+                            }
+                        } else {
+                            RichFormula::ands(guard)
+                        }
+                    }),
+                    inner_iter.chain(repeat_n_zip(state.clone(), nexts)),
+                )
+            },
+        };
         RichFormula::ors(iter)
     }
 
