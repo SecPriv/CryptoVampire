@@ -1,5 +1,14 @@
-use crate::{problem::{subterm::{Subterm, traits::DefaultAuxSubterm}, problem::Problem}, formula::file_descriptior::{axioms::Axiom, declare::Declaration}, environement::environement::Environement};
-
+use crate::{
+    environement::environement::Environement,
+    formula::{
+        file_descriptior::{axioms::Axiom, declare::Declaration},
+        sort::builtins::NONCE,
+    },
+    problem::{
+        problem::Problem,
+        subterm::{traits::DefaultAuxSubterm, Subterm},
+    },
+};
 
 pub type SubtermNonce<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
 
@@ -11,13 +20,18 @@ impl Nonce {
         assertions: &mut Vec<Axiom<'bump>>,
         declarations: &mut Vec<Declaration<'bump>>,
         env: &Environement<'bump>,
-        pbl: &Problem<'bump>
+        pbl: &Problem<'bump>,
     ) {
-
+        let subterm = Subterm::new(
+            env.container,
+            env.container.find_free_function_name("subterm_nonce"),
+            env.into(),
+            DefaultAuxSubterm::new(NONCE.clone()),
+            [],
+            |rc| crate::formula::function::subterm::Subsubterm::Nonce(rc),
+        );
     }
 }
-
-
 
 // pub(crate) fn generate(assertions: &mut Vec<Smt>, declarations: &mut Vec<Smt>, ctx: &mut Ctx) {
 //     // if ctx.env().no_subterm() {

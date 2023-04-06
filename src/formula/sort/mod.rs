@@ -264,7 +264,7 @@ impl<'bump> CanBeAllocated<'bump> for Sort<'bump> {
 
     fn allocate<A>(allocator: &'bump A, inner: Self::Inner) -> Self
     where
-        A: ScopeAllocator<Self::Inner> + 'bump,
+        A: ScopeAllocator<'bump, Self::Inner> + 'bump,
     {
         let inner = unsafe {
             let ptr = allocator.alloc();

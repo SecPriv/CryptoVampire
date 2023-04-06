@@ -150,7 +150,7 @@ impl<'bump> CanBeAllocated<'bump> for MemoryCell<'bump> {
 
     fn allocate<A>(allocator: &'bump A, inner: Self::Inner) -> Self
     where
-        A: crate::container::ScopeAllocator<Self::Inner> + 'bump,
+        A: crate::container::ScopeAllocator<'bump, Self::Inner> + 'bump,
     {
         let inner = unsafe {
             let ptr = allocator.alloc();

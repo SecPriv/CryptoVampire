@@ -39,7 +39,7 @@ where
     Aux: SubtermAux<'bump>,
 {
     pub fn new<F>(
-        container: &'bump impl ScopeAllocator<InnerFunction<'bump>>,
+        container: &'bump impl ScopeAllocator<'bump, InnerFunction<'bump>>,
         name: String,
         kind: function::subterm::SubtermKind,
         aux: Aux,

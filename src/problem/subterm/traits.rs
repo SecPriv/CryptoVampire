@@ -101,6 +101,12 @@ pub struct DefaultAuxSubterm<'bump>{
     pub sort: Sort<'bump>
 }
 
+impl<'bump> DefaultAuxSubterm<'bump> {
+    pub fn new(sort: Sort<'bump>) -> Self {
+        DefaultAuxSubterm { sort }
+    }
+}
+
 static EMPTY_SLICE: [RichFormula<'static>; 0] = [];
 
 impl<'bump> SubtermAux<'bump> for DefaultAuxSubterm<'bump> {

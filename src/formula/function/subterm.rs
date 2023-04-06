@@ -35,8 +35,8 @@ where
     q
 }
 
-impl<'bump> From<Environement<'bump>> for SubtermKind {
-    fn from(env: Environement<'bump>) -> Self {
+impl<'a, 'bump> From<&'a Environement<'bump>> for SubtermKind {
+    fn from(env: &'a Environement<'bump>) -> Self {
         if env.use_vampire_subterm() {
             Self::Vampire
         } else {

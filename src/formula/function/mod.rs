@@ -240,7 +240,7 @@ impl<'bump> PartialOrd for Function<'bump> {
 
 impl<'bump> Function<'bump> {
     pub unsafe fn new_cyclic<F, T>(
-        container: &'bump impl ScopeAllocator<InnerFunction<'bump>>,
+        container: &'bump impl ScopeAllocator<'bump, InnerFunction<'bump>>,
         f: F,
     ) -> (Self, T)
     where
@@ -513,6 +513,10 @@ impl<'bump> Function<'bump> {
             | InnerFunction::TermAlgebra(TermAlgebra::Input) => true,
             _ => false,
         }
+    }
+
+    pub(crate) fn from_ptr_inner(inner: NonNull<InnerFunction<'bump>>) -> Self {
+        Function { inner, container: Default::default() }
     }
 }
 
