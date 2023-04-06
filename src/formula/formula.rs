@@ -3,11 +3,13 @@ use std::ops::{BitAnd, BitOr, Deref, DerefMut, Not, Shr};
 
 use itertools::Itertools;
 
-use crate::utils::utils::StackBox;
+use crate::problem::protocol::Protocol;
+use crate::utils::utils::{repeat_n_zip, StackBox};
 
-use super::function::builtin::{AND, IMPLIES, NOT, OR, EQUALITY};
+use super::function::builtin::{AND, EQUALITY, IMPLIES, NOT, OR};
 use super::sort::builtins::BOOL;
 use super::sort::sorted::{Sorted, SortedError};
+use super::utils::formula_expander::{self, ExpantionContent, ExpantionState};
 use super::utils::formula_iterator::{FormulaIterator, IteratorFlags};
 use super::variable::Variable;
 use super::{
@@ -87,34 +89,6 @@ impl<'bump> RichFormula<'bump> {
     pub fn used_variables_iter<'a: 'bump>(
         &'a self,
     ) -> impl Iterator<Item = &'a Variable<'bump>> + 'a {
-        /*FormulaIterator::new(
-            StackBox::new(vec![self]),
-            pbl,
-            IteratorFlags::QUANTIFIER,
-            |f, _| {
-                let (o, r) = match f {
-                    RichFormula::Var(v) => (Some(v), None),
-                    RichFormula::Fun(_, args) => (None, Some(args.iter())),
-                    _ => (None, None),
-                };
-                (o, r.into_iter().flatten())
-            },
-        )*/
-
-        // FormulaIterator {
-        //     pile: StackBox::new(vec![self]),
-        //     passed_along: (),
-        //     flags: IteratorFlags::QUANTIFIER,
-        //     f: |_, f| {
-        //         let (o, r) = match f {
-        //             RichFormula::Var(v) => (Some(v), None),
-        //             RichFormula::Fun(_, args) => (None, Some(args.iter())),
-        //             _ => (None, None),
-        //         };
-        //         (o, r.into_iter().flatten())
-        //     },
-        // }
-
         self.used_variables_iter_with_pile(StackBox::new(Vec::with_capacity(1)))
     }
 
@@ -123,34 +97,9 @@ impl<'bump> RichFormula<'bump> {
         pile: V,
     ) -> impl Iterator<Item = &'a Variable<'bump>>
     where
-        V: DerefMut<Target = Vec<&'a RichFormula<'bump>>>
-            + Deref<Target = Vec<&'a RichFormula<'bump>>>,
+        V: DerefMut<Target = Vec<((), &'a RichFormula<'bump>)>>
+            + Deref<Target = Vec<((), &'a RichFormula<'bump>)>>,
     {
-        /*         pile.clear();
-        pile.push(self);
-
-        // FormulaIterator::new(pile, pbl, IteratorFlags::QUANTIFIER, |f, _| {
-        //     let (o, r) = match f {
-        //         RichFormula::Var(v) => (Some(v), None),
-        //         RichFormula::Fun(_, args) => (None, Some(args.iter())),
-        //         _ => (None, None),
-        //     };
-        //     (o, r.into_iter().flatten())
-        // })
-        FormulaIterator {
-            pile,
-            passed_along: (),
-            flags: IteratorFlags::QUANTIFIER,
-            f: |_, f| {
-                let (o, r) = match f {
-                    RichFormula::Var(v) => (Some(v), None),
-                    RichFormula::Fun(_, args) => (None, Some(args.iter())),
-                    _ => (None, None),
-                };
-                (o, r.into_iter().flatten())
-            },
-        } */
-
         self.iter_with_pile(pile).filter_map(|f| match f {
             RichFormula::Var(v) => Some(v),
             _ => None,
@@ -162,10 +111,10 @@ impl<'bump> RichFormula<'bump> {
         mut pile: V,
     ) -> impl Iterator<Item = &'a RichFormula<'bump>>
     where
-        V: DerefMut<Target = Vec<&'a Self>> + Deref<Target = Vec<&'a Self>>,
+        V: DerefMut<Target = Vec<((), &'a Self)>> + Deref<Target = Vec<((), &'a Self)>>,
     {
         pile.clear();
-        pile.push(self);
+        pile.push(((), self));
         FormulaIterator {
             pile,
             passed_along: (),
@@ -175,78 +124,14 @@ impl<'bump> RichFormula<'bump> {
                     RichFormula::Fun(_, args) => Some(args.iter()),
                     _ => None,
                 };
-                (Some(f), next.into_iter().flatten())
+                (Some(f), repeat_n_zip((), next.into_iter().flatten()))
             },
         }
     }
 
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a RichFormula<'bump>> {
-        // let mut pile = vec![self];
-        // std::iter::from_fn(move || {
-        //     if let Some(f) = pile.pop() {
-        //         match f {
-        //             RichFormula::Var(_) => {}
-        //             RichFormula::Fun(_, args) => pile.extend(args.iter()),
-        //             RichFormula::Quantifier(_, args) => pile.extend(args.iter()),
-        //         }
-        //         Some(f)
-        //     } else {
-        //         None
-        //     }
-        // })
-        self.iter_with_pile(StackBox::new(vec![self]))
+        self.iter_with_pile(StackBox::new(vec![]))
     }
-
-    // pub fn iter_with_quantifier<'a>(
-    //     &'a self,
-    //     pbl: &'a Problem,
-    // ) -> impl Iterator<Item = &'a RichFormula> {
-    //     FormulaIterator::new(
-    //         StackBox::new(vec![self]),
-    //         pbl,
-    //         IteratorFlags::QUANTIFIER,
-    //         Self::default_f,
-    //     )
-    // }
-
-    // fn default_f<'a>(
-    //     f: &'a RichFormula,
-    //     _: &'a Problem,
-    // ) -> (
-    //     Option<&'a RichFormula>,
-    //     impl Iterator<Item = &'a RichFormula>,
-    // ) {
-    //     (
-    //         Some(f),
-    //         match f {
-    //             RichFormula::Fun(_, args) => Some(args.iter()),
-    //             _ => None,
-    //         }
-    //         .into_iter()
-    //         .flatten(),
-    //     )
-    // }
-
-    // pub fn custom_iter_w_quantifier<'a, 'b, F, T>(
-    //     &'a self,
-    //     pbl: &'a Problem,
-    //     mut f: F,
-    // ) -> impl Iterator<Item = T> + 'b
-    // where
-    //     F: FnMut(&'b RichFormula, &'b Problem) -> (Option<T>, Vec<&'b RichFormula>) + 'b,
-    //     T: 'b,
-    //     'a: 'b,
-    // {
-    //     FormulaIterator::new(
-    //         StackBox::new(vec![self]),
-    //         pbl,
-    //         IteratorFlags::QUANTIFIER,
-    //         move |a, b| {
-    //             let (o, v) = f(a, b);
-    //             (o, v.into_iter())
-    //         },
-    //     )
-    // }
 
     pub fn map<F>(self, f: &F) -> Self
     where
@@ -310,6 +195,14 @@ impl<'bump> RichFormula<'bump> {
 
     pub fn ors(args: impl IntoIterator<Item = RichFormula<'bump>>) -> RichFormula<'bump> {
         OR.f(args)
+    }
+
+    pub fn expand<'a>(&'a self, ptcl: &Protocol<'bump>) -> Vec<ExpantionContent<'a, 'bump>> {
+        ExpantionContent {
+            state: ExpantionState::None,
+            content: &self,
+        }
+        .expand(ptcl.steps.iter().cloned(), &ptcl.graph)
     }
 }
 
@@ -398,16 +291,26 @@ pub fn forall<'bump>(
     vars: impl IntoIterator<Item = Variable<'bump>>,
     arg: RichFormula<'bump>,
 ) -> RichFormula<'bump> {
-    RichFormula::Quantifier(Quantifier::Forall { variables: vars.into_iter().collect() }, vec![arg])
+    RichFormula::Quantifier(
+        Quantifier::Forall {
+            variables: vars.into_iter().collect(),
+        },
+        vec![arg],
+    )
 }
 
 pub fn exists<'bump>(
     vars: impl IntoIterator<Item = Variable<'bump>>,
     arg: RichFormula<'bump>,
 ) -> RichFormula<'bump> {
-    RichFormula::Quantifier(Quantifier::Exists { variables: vars.into_iter().collect() }, vec![arg])
+    RichFormula::Quantifier(
+        Quantifier::Exists {
+            variables: vars.into_iter().collect(),
+        },
+        vec![arg],
+    )
 }
 
-pub fn meq<'bump>(lhs:RichFormula<'bump>, rhs:RichFormula<'bump>) -> RichFormula<'bump> {
+pub fn meq<'bump>(lhs: RichFormula<'bump>, rhs: RichFormula<'bump>) -> RichFormula<'bump> {
     EQUALITY.f([lhs, rhs])
 }

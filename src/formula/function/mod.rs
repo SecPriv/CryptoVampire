@@ -5,10 +5,10 @@ pub mod evaluate;
 pub mod function_like;
 pub mod if_then_else;
 pub mod nonce;
+pub mod predicate;
 pub mod step;
 pub mod subterm;
 pub mod term_algebra;
-pub mod predicate;
 
 // pub mod equality;
 use std::{cmp::Ordering, hash::Hash, marker::PhantomData, ptr::NonNull};
@@ -17,9 +17,11 @@ use bitflags::bitflags;
 
 // use crate::problem::step::Step;
 
+use crate::utils::precise_as_ref::PreciseAsRef;
+
 use self::{
     booleans::Booleans, evaluate::Evaluate, if_then_else::IfThenElse, nonce::Nonce,
-    step::StepFunction, subterm::Subterm, term_algebra::TermAlgebra, predicate::Predicate,
+    predicate::Predicate, step::StepFunction, subterm::Subterm, term_algebra::TermAlgebra,
 };
 
 use super::{
@@ -77,7 +79,7 @@ pub enum InnerFunction<'bump> {
     TermAlgebra(TermAlgebra<'bump>),
     IfThenElse(IfThenElse),
     Evaluate(Evaluate),
-    Predicate(Predicate<'bump>)
+    Predicate(Predicate<'bump>),
 }
 
 // pub struct InnerFunction
@@ -474,11 +476,34 @@ impl<'bump> Function<'bump> {
     pub fn inner(&self) -> &InnerFunction<'bump> {
         self.as_ref()
     }
+
+    pub fn is_term_algebra(&self) -> bool {
+        match self.as_ref() {
+            InnerFunction::TermAlgebra(_) => true,
+            _ => false,
+        }
+    }
+
+    /// does this function hide something (ie. quantifier, memory cell, input,...)
+    pub fn need_extraction(&self) -> bool {
+        match self.as_ref() {
+            InnerFunction::TermAlgebra(TermAlgebra::Cell(_))
+            | InnerFunction::TermAlgebra(TermAlgebra::Quantifier(_))
+            | InnerFunction::TermAlgebra(TermAlgebra::Input) => true,
+            _ => false,
+        }
+    }
+}
+
+impl<'bump> PreciseAsRef<'bump, InnerFunction<'bump>> for Function<'bump> {
+    fn precise_as_ref(&self) -> &'bump InnerFunction<'bump> {
+        unsafe { self.inner.as_ref() } // container is alive
+    }
 }
 
 impl<'bump> AsRef<InnerFunction<'bump>> for Function<'bump> {
     fn as_ref(&self) -> &InnerFunction<'bump> {
-        unsafe { self.inner.as_ref() } // container is alive
+        self.precise_as_ref()
     }
 }
 
@@ -496,7 +521,9 @@ pub fn new_static_function(inner: InnerFunction<'static>) -> Function<'static> {
     }
 }
 
-
-fn enlarge<'a, 'b>(q: Function<'a>) -> Function<'b> where 'a:'b {
+fn enlarge<'a, 'b>(q: Function<'a>) -> Function<'b>
+where
+    'a: 'b,
+{
     q
 }

@@ -3,40 +3,40 @@ use crate::formula::formula::RichFormula;
 use super::{cell::MemoryCell, step::Step};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Dependancy<'pbl, 'bump> {
-    pub from: CellCall<'pbl, 'bump>,
-    pub depends_on: OutGoingCall<'pbl, 'bump>,
+pub struct Dependancy<'bump> {
+    pub from: CellCall<'bump>,
+    pub depends_on: OutGoingCall<'bump>,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct DependancyFromStep<'pbl, 'bump> {
-    pub steps_origin: Vec<&'pbl Step<'bump>>,
-    pub cell: Option<&'pbl MemoryCell<'bump>>,
+pub struct DependancyFromStep<'bump> {
+    pub steps_origin: Vec<Step<'bump>>,
+    pub cell: Option<MemoryCell<'bump>>,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum OutGoingCall<'pbl, 'bump> {
-    Input(InputCall<'pbl, 'bump>),
-    Cell(CellCall<'pbl, 'bump>),
+pub enum OutGoingCall<'bump> {
+    Input(InputCall<'bump>),
+    Cell(CellCall<'bump>),
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct CellCall<'pbl, 'bump> {
-    pub cell: &'pbl MemoryCell<'bump>,
-    pub step: StepCall<'pbl, 'bump>,
-    pub args: &'pbl [RichFormula<'bump>],
+pub struct CellCall<'bump> {
+    pub cell: MemoryCell<'bump>,
+    pub step: StepCall<'bump>,
+    pub args: &'bump [RichFormula<'bump>],
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct InputCall<'pbl, 'bump> {
-    pub step: StepCall<'pbl, 'bump>,
+pub struct InputCall<'bump> {
+    pub step: StepCall<'bump>,
     // pub args: &'pbl [RichFormula],
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum StepCall<'pbl, 'bump> {
-    Step(&'pbl Step<'bump>),
-    General(&'pbl RichFormula<'bump>),
+pub enum StepCall<'bump> {
+    Step(Step<'bump>),
+    General(&'bump RichFormula<'bump>),
 }
 
 pub mod graph {
@@ -57,10 +57,10 @@ pub mod graph {
     use thiserror::Error;
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default)]
-    pub struct DependancyGraph<'pbl, 'bump> {
-        cells: Vec<GlobNode<'pbl, 'bump>>,
+    pub struct DependancyGraph<'bump> {
+        cells: Vec<GlobNode<'bump>>,
         // calls: Vec<InnerCellCall<'pbl>>,
-        edges: Vec<Edges<'pbl, 'bump>>,
+        edges: Vec<Edges<'bump>>,
         input: InputNode,
     }
 
@@ -70,34 +70,34 @@ pub mod graph {
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-    struct GlobNode<'pbl, 'bump> {
-        pub cell: &'pbl MemoryCell<'bump>,
+    struct GlobNode<'bump> {
+        pub cell: MemoryCell<'bump>,
         pub edges: Vec<usize>,
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-    struct InnerCellCall<'pbl, 'bump> {
+    struct InnerCellCall<'bump> {
         pub cell: usize,
-        pub step: StepCall<'pbl, 'bump>,
-        pub args: &'pbl [RichFormula<'bump>],
+        pub step: StepCall<'bump>,
+        pub args: &'bump [RichFormula<'bump>],
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-    struct Edges<'pbl, 'bump> {
-        pub from: FromNode<'pbl, 'bump>,
-        pub to: ToNode<'pbl, 'bump>,
+    struct Edges<'bump> {
+        pub from: FromNode<'bump>,
+        pub to: ToNode<'bump>,
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-    enum FromNode<'pbl, 'bump> {
-        Input { step: &'pbl Step<'bump> },
-        CellCall(InnerCellCall<'pbl, 'bump>),
+    enum FromNode<'bump> {
+        Input { step:Step<'bump> },
+        CellCall(InnerCellCall<'bump>),
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-    enum ToNode<'pbl, 'bump> {
-        Input(InputCall<'pbl, 'bump>),
-        CellCall(InnerCellCall<'pbl, 'bump>),
+    enum ToNode<'bump> {
+        Input(InputCall<'bump>),
+        CellCall(InnerCellCall<'bump>),
     }
 
     /*     // impl<'pbl> From<&'pbl Problem> for DependancyGraph<'pbl> {
@@ -222,20 +222,20 @@ pub mod graph {
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-    pub struct Ancestors<'pbl, 'bump> {
+    pub struct Ancestors<'bump> {
         pub input: bool,
-        pub cells: Vec<&'pbl MemoryCell<'bump>>,
+        pub cells: Vec<MemoryCell<'bump>>,
     }
 
-    impl<'pbl, 'bump> DependancyGraph<'pbl, 'bump> {
-        pub fn ancestors(&self, cell: Option<&MemoryCell<'bump>>) -> Result<Ancestors<'pbl, 'bump>> {
+    impl<'bump> DependancyGraph<'bump> {
+        pub fn ancestors(&self, cell: Option<&MemoryCell<'bump>>) -> Result<Ancestors<'bump>> {
             let input_index = self.cells.len();
 
             let cell = cell
                 .map(|cell| {
                     self.cells
                         .iter()
-                        .position(|c| c.cell == cell)
+                        .position(|c| &c.cell == cell)
                         .ok_or(DependancyError::MemoryCellNotFound)
                 })
                 .transpose()?
@@ -279,8 +279,8 @@ pub mod graph {
         /// use None for input
         pub fn find_dependencies(
             &self,
-            cell: Option<&'pbl MemoryCell<'bump>>,
-        ) -> Result<Vec<Dependancy<'pbl, 'bump>>> {
+            cell: Option<MemoryCell<'bump>>,
+        ) -> Result<Vec<Dependancy<'bump>>> {
             let cell = cell
                 .map(|cell| {
                     self.cells
@@ -293,7 +293,7 @@ pub mod graph {
             Ok(self.inner_find_dependencies(cell))
         }
 
-        fn inner_find_dependencies(&self, cell: Option<usize>) -> Vec<Dependancy<'pbl, 'bump>> {
+        fn inner_find_dependencies(&self, cell: Option<usize>) -> Vec<Dependancy<'bump>> {
             let mut not_visited_edge = vec![true; self.edges.len()];
             let mut not_visited_node = vec![true; self.cells.len()];
             let mut todo = vec![cell];
@@ -337,8 +337,8 @@ pub mod graph {
 
         pub fn find_dependencies_keep_steps(
             &self,
-            cell: &MemoryCell<'bump>,
-        ) -> Result<Vec<DependancyFromStep<'pbl, 'bump>>> {
+            cell: MemoryCell<'bump>,
+        ) -> Result<Vec<DependancyFromStep<'bump>>> {
             let cell = self
                 .cells
                 .iter()
@@ -397,8 +397,8 @@ pub mod graph {
                         });
                         i
                     });
-                if !result[dfs].steps_origin.contains(&s) {
-                    result[dfs].steps_origin.push(s)
+                if !result[dfs].steps_origin.contains(s) {
+                    result[dfs].steps_origin.push(*s)
                 }
             }
 
@@ -407,8 +407,8 @@ pub mod graph {
 
         pub fn find_dependencies_from_step(
             &self,
-            step: &Step<'bump>,
-        ) -> Vec<&'pbl MemoryCell<'bump>> {
+            step: Step<'bump>,
+        ) -> Vec<MemoryCell<'bump>> {
             let mut not_visited = vec![true; self.cells.len()];
             let mut not_visited_input = true;
 
@@ -457,8 +457,8 @@ pub mod graph {
         }
     }
 
-    impl<'pbl, 'bump> InnerCellCall<'pbl, 'bump> {
-        fn as_cell_call(&self, graph: &DependancyGraph<'pbl, 'bump>) -> CellCall<'pbl, 'bump> {
+    impl<'bump> InnerCellCall<'bump> {
+        fn as_cell_call(&self, graph: &DependancyGraph<'bump>) -> CellCall<'bump> {
             let InnerCellCall { cell, step, args } = self;
             CellCall {
                 cell: graph.cells.get(*cell).unwrap().cell,
@@ -468,11 +468,11 @@ pub mod graph {
         }
     }
 
-    impl<'pbl, 'bump> Edges<'pbl, 'bump> {
+    impl<'bump> Edges<'bump> {
         fn as_dependancy(
             &self,
-            graph: &DependancyGraph<'pbl, 'bump>,
-        ) -> Option<Dependancy<'pbl, 'bump>> {
+            graph: &DependancyGraph<'bump>,
+        ) -> Option<Dependancy<'bump>> {
             match self {
                 Edges {
                     from: FromNode::Input { .. },
@@ -522,27 +522,27 @@ mod calculate {
         utils::utils::StackBox,
     };
 
-    pub struct CellDependancy<'pbl, 'bump> {
+    pub struct CellDependancy<'bump> {
         // self_cell: &'pbl MemoryCell,
-        pub step_at: &'pbl Step<'bump>,
-        pub self_args: &'pbl Vec<RichFormula<'bump>>,
-        pub cell: &'pbl MemoryCell<'bump>,
-        pub call_args: &'pbl [RichFormula<'bump>],
-        pub step_call: &'pbl RichFormula<'bump>,
+        pub step_at: Step<'bump>,
+        pub self_args: &'bump Vec<RichFormula<'bump>>,
+        pub cell: MemoryCell<'bump>,
+        pub call_args: &'bump [RichFormula<'bump>],
+        pub step_call: &'bump RichFormula<'bump>,
     }
 
     use super::some_iter;
 
-    pub struct InputDependancy<'pbl, 'bump> {
+    pub struct InputDependancy<'bump> {
         // self_cell: &'pbl MemoryCell,
-        pub step_at: &'pbl Step<'bump>,
-        pub self_args: &'pbl [RichFormula<'bump>],
-        pub step_call: &'pbl RichFormula<'bump>,
+        pub step_at: Step<'bump>,
+        pub self_args: &'bump [RichFormula<'bump>],
+        pub step_call: &'bump RichFormula<'bump>,
     }
 
-    pub enum Dependancy<'pbl, 'bump> {
-        Cell(CellDependancy<'pbl, 'bump>),
-        Input(InputDependancy<'pbl, 'bump>),
+    pub enum Dependancy<'bump> {
+        Cell(CellDependancy<'bump>),
+        Input(InputDependancy<'bump>),
     }
 
     // pub fn find_dependencies_cell<'pbl, 'bump>(

@@ -1,4 +1,4 @@
-use std::{cell::RefCell, ops::DerefMut, ptr::NonNull};
+use std::{cell::RefCell, fmt::Debug, ops::DerefMut, ptr::NonNull};
 
 use crate::{
     formula::{function::InnerFunction, sort::InnerSort},
@@ -14,6 +14,7 @@ pub struct Container<'bump> {
     steps: InnerContainer<InnerStep<'bump>>,
     cells: InnerContainer<InnerMemoryCell<'bump>>,
 }
+
 
 pub trait ScopeAllocator<T> {
     unsafe fn alloc(&self) -> NonNull<T>;
@@ -79,5 +80,16 @@ impl<'bump> Drop for Container<'bump> {
             cells,
         } = self;
         my_drop!(sorts, functions, cells, steps);
+    }
+}
+
+impl<'bump> Debug for Container<'bump> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Container")
+            .field("sorts", &self.sorts.borrow())
+            .field("functions", &self.functions.borrow())
+            .field("steps", &self.steps.borrow())
+            .field("cells", &self.cells.borrow())
+            .finish()
     }
 }

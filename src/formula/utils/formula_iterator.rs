@@ -4,24 +4,27 @@ use std::ops::{Deref, DerefMut};
 
 use bitflags::bitflags;
 
-use crate::formula::{
-    formula::RichFormula,
-    function::{term_algebra::TermAlgebra, InnerFunction},
+use crate::{
+    formula::{
+        formula::RichFormula,
+        function::{term_algebra::TermAlgebra, InnerFunction},
+    },
+    utils::utils::repeat_n_zip,
 };
 
 bitflags! {
     #[derive(Default )]
     pub struct IteratorFlags: u8 {
         const QUANTIFIER    = 1<<0;
-        const CELLS         = 1<<1;
     }
 }
 
 pub struct FormulaIterator<'bump, 'a, V, P, F, I, T>
 where
     F: FnMut(P, &'a RichFormula<'bump>) -> (Option<T>, I),
-    I: IntoIterator<Item = &'a RichFormula<'bump>>,
-    V: DerefMut<Target = Vec<&'a RichFormula<'bump>>> + Deref<Target = Vec<&'a RichFormula<'bump>>>,
+    I: IntoIterator<Item = (P, &'a RichFormula<'bump>)>,
+    V: DerefMut<Target = Vec<(P, &'a RichFormula<'bump>)>>
+        + Deref<Target = Vec<(P, &'a RichFormula<'bump>)>>,
     P: Clone,
     'bump: 'a,
 {
@@ -34,8 +37,9 @@ where
 impl<'bump, 'a, V, P, F, I, T> Iterator for FormulaIterator<'bump, 'a, V, P, F, I, T>
 where
     F: FnMut(P, &'a RichFormula<'bump>) -> (Option<T>, I),
-    I: IntoIterator<Item = &'a RichFormula<'bump>>,
-    V: DerefMut<Target = Vec<&'a RichFormula<'bump>>> + Deref<Target = Vec<&'a RichFormula<'bump>>>,
+    I: IntoIterator<Item = (P, &'a RichFormula<'bump>)>,
+    V: DerefMut<Target = Vec<(P, &'a RichFormula<'bump>)>>
+        + Deref<Target = Vec<(P, &'a RichFormula<'bump>)>>,
     P: Clone,
     'bump: 'a,
 {
@@ -44,17 +48,21 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         match self.pile.pop() {
             None => None,
-            Some(formula) => {
+            Some((p, formula)) => {
                 match formula {
                     RichFormula::Fun(fun, _) => match fun.as_ref() {
                         InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q))
                             if self.flags.contains(IteratorFlags::QUANTIFIER) =>
                         {
-                            self.pile.extend(q.get_content().iter())
+                            let iter = q.get_content();
+                            let iter = repeat_n_zip(p, iter.iter()).map(|(p, f)| (p, *f));
+                            self.pile.extend(iter)
                         }
                         _ => {}
                     },
-                    RichFormula::Quantifier(_, args) => self.pile.extend(args.iter()),
+                    RichFormula::Quantifier(_, args) => {
+                        self.pile.extend(repeat_n_zip(p, args.iter()))
+                    }
                     _ => {}
                 };
                 let (ret, add) = (self.f)(self.passed_along.clone(), formula);

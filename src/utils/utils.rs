@@ -65,3 +65,12 @@ pub(crate) fn transpose<A: Eq + Clone, B: Eq>(vec: Vec<(A, Vec<B>)>) -> Vec<(B, 
     }
     result
 }
+
+pub fn repeat_n_zip<P, I, T>(p: P, iter: I) -> impl Iterator<Item = (P, T)>
+where
+    P: Clone,
+    I: IntoIterator<Item = T>,
+{
+    // std::iter::repeat(p).zip(iter.into_iter())
+    iter.into_iter().map(move |t| (p.clone(), t))
+}

@@ -10,11 +10,14 @@ use std::{
 
 use itertools::Itertools;
 
-use crate::formula::{
-    formula::{meq, RichFormula},
-    function::{builtin::LESS_THAN_STEP, Function},
-    sort::Sort,
-    variable::Variable,
+use crate::{
+    formula::{
+        formula::{meq, RichFormula},
+        function::{builtin::LESS_THAN_STEP, Function},
+        sort::Sort,
+        variable::Variable,
+    },
+    utils::precise_as_ref::PreciseAsRef,
 };
 
 // #[derive(Debug)]
@@ -96,23 +99,21 @@ impl<'bump> Step<'bump> {
     //     }))
     // }
 
-    pub fn name(&self) -> &str {
-        &self.as_ref().name
+    pub fn name(&self) -> &'bump str {
+        &self.precise_as_ref().name
     }
 
-    pub fn parameters<'a>(&'a self) -> impl Iterator<Item = &'a Sort<'bump>>
-    where
-        'bump: 'a,
+    pub fn parameters(&self) -> impl Iterator<Item = &'bump Sort<'bump>>
     {
         self.free_variables().iter().map(|v| &v.sort)
     }
 
-    pub fn free_variables(&self) -> &Vec<Variable<'bump>> {
-        &self.as_ref().free_variables
+    pub fn free_variables(&self) -> &'bump Vec<Variable<'bump>> {
+        &self.precise_as_ref().free_variables
     }
 
-    pub fn occuring_variables(&self) -> &Vec<Variable<'bump>> {
-        &self.as_ref().used_variables
+    pub fn occuring_variables(&self) -> &'bump Vec<Variable<'bump>> {
+        &self.precise_as_ref().used_variables
     }
 
     pub fn vairable_range(&self) -> Range<usize> {
@@ -131,16 +132,16 @@ impl<'bump> Step<'bump> {
         min..(max + 1)
     }
 
-    pub fn condition(&self) -> &RichFormula<'bump> {
-        &self.as_ref().condition
+    pub fn condition(&self) -> &'bump RichFormula<'bump> {
+        &self.precise_as_ref().condition
     }
 
-    pub fn message(&self) -> &RichFormula<'bump> {
-        &self.as_ref().message
+    pub fn message(&self) -> &'bump RichFormula<'bump> {
+        &self.precise_as_ref().message
     }
 
-    pub fn function(&self) -> &Function<'bump> {
-        &self.as_ref().function
+    pub fn function(&self) -> Function<'bump> {
+        self.as_ref().function
     }
 
     pub fn apply_condition(&self, args: &[RichFormula<'bump>]) -> RichFormula<'bump> {
@@ -182,9 +183,15 @@ impl<'bump> Step<'bump> {
     // }
 }
 
+impl<'bump> PreciseAsRef<'bump, InnerStep<'bump>> for Step<'bump> {
+    fn precise_as_ref(&self) -> &'bump InnerStep<'bump> {
+        unsafe { self.inner.as_ref() } // inner is alive while 'bump is
+    }
+}
+
 impl<'bump> AsRef<InnerStep<'bump>> for Step<'bump> {
     fn as_ref(&self) -> &InnerStep<'bump> {
-        unsafe { self.inner.as_ref() } // inner is alive while 'bump is
+        self.precise_as_ref()
     }
 }
 

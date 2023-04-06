@@ -1,4 +1,12 @@
-use super::{formula::RichFormula, variable::Variable};
+
+use itertools::Itertools;
+use thiserror::Error;
+
+use super::{
+    formula::{meq, RichFormula},
+    sort::sorted::SortedError,
+    variable::Variable,
+};
 
 #[derive(Debug, Clone)]
 pub struct Unifier<'a, 'bump>
@@ -38,10 +46,52 @@ impl<'bump, 'a> ISubstitution<&'a RichFormula<'bump>> {
     }
 }
 
+#[derive(Debug, Error)]
+pub enum UnifierAsEqualityErr {
+    #[error("found tow variables with the same id on both sides: {id:?}")]
+    NonDisjointVariables { id: usize },
+    #[error("sort is not defined in some of the formulas: {0:?}")]
+    SortError(SortedError),
+}
+
 impl<'a, 'bump> Unifier<'a, 'bump>
 where
     'bump: 'a,
 {
+    /// Make a formula to check unifiability
+    ///
+    /// It returns an error if it can't deduce the sort of one of the variables or if a variables is used on the left *and* the right
+    pub fn as_equalities(&'_ self) -> Result<Vec<RichFormula<'bump>>, UnifierAsEqualityErr> {
+        let left = &self.left.0;
+        let right = &self.right.0;
+
+        {
+            // ensure there is no colisions of variables
+            let (small, big) = ord_utils::sort_by(|a, b| a.len() < b.len(), left, right);
+
+            let id_small = small.iter().map(|(id, _)| *id).collect_vec();
+            if let Some(id) = big
+                .iter()
+                .map(|(id, _)| *id)
+                .filter(|id| id_small.contains(&id))
+                .next()
+            {
+                return Err(UnifierAsEqualityErr::NonDisjointVariables { id });
+            }
+        }
+
+        // make the equalities
+        let f = |(id, formula): &(usize, &'a RichFormula<'bump>)| match formula.get_sort() {
+            Ok(sort) => Ok(meq(
+                Variable::new(*id, sort).into_formula(),
+                (*formula).clone(),
+            )),
+            Err(err) => Err(UnifierAsEqualityErr::SortError(err)),
+        };
+
+        left.iter().map(f).chain(right.iter().map(f)).collect()
+    }
+
     /// the mgu of `x <-> f` where `x` is a formula
     pub fn one_variable_unifier(
         left_variable: &Variable<'bump>,

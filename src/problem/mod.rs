@@ -4,3 +4,5 @@ pub mod cell_dependancies;
 // pub mod problem;
 pub mod step;
 pub mod subterm;
+pub mod problem;
+pub mod protocol;

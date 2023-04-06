@@ -11,7 +11,10 @@ use std::{
     ptr::NonNull,
 };
 
-use crate::container::{CanBeAllocated, Container, ScopeAllocator};
+use crate::{
+    container::{CanBeAllocated, Container, ScopeAllocator},
+    utils::precise_as_ref::PreciseAsRef,
+};
 
 bitflags! {
     #[derive(Default, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy )]
@@ -153,7 +156,7 @@ impl<'a> Sort<'a> {
         Self::allocate(allocator, inner)
     }
 
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &'a str {
         &self.inner().name
     }
 
@@ -177,8 +180,8 @@ impl<'a> Sort<'a> {
     //     self.0.itself.upgrade().unwrap() // cannot fail so long as self id a valid reference
     // }
 
-    fn inner(&self) -> &HiddenSort {
-        self.as_ref().as_ref()
+    fn inner(&self) -> &'a HiddenSort {
+        self.precise_as_ref().as_ref()
     }
 
     pub fn as_sort(&self) -> Sort<'a> {
@@ -244,9 +247,15 @@ impl AsRef<HiddenSort> for InnerSort {
     }
 }
 
+impl<'bump> PreciseAsRef<'bump, InnerSort> for Sort<'bump> {
+    fn precise_as_ref(&self) -> &'bump InnerSort {
+        unsafe { self.inner.as_ref() } // for self to exists, container must exists
+    }
+}
+
 impl<'bump> AsRef<InnerSort> for Sort<'bump> {
     fn as_ref(&self) -> &InnerSort {
-        unsafe { self.inner.as_ref() } // for self to exists, container must exists
+        self.precise_as_ref()
     }
 }
 
@@ -265,6 +274,15 @@ impl<'bump> CanBeAllocated<'bump> for Sort<'bump> {
         Sort {
             inner,
             container: PhantomData::default(),
+        }
+    }
+}
+
+impl<'bump> From<&'bump InnerSort> for Sort<'bump> {
+    fn from(value: &'bump InnerSort) -> Self {
+        Sort {
+            inner: NonNull::from(value),
+            container: Default::default(),
         }
     }
 }

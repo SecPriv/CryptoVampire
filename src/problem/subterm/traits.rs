@@ -18,7 +18,7 @@ where
     I: IntoIterator<Item = &'a RichFormula<'bump>>,
     'bump: 'a,
 {
-    pub unifier: bool,
+    pub unified: bool,
     pub nexts: I,
 }
 
@@ -34,7 +34,10 @@ pub trait SubtermAux<'bump> {
     where
         'bump: 'a,
     {
-        let VarSubtermResult { unifier, nexts } = self.var_eval_and_next(x, m);
+        let VarSubtermResult {
+            unified: unifier,
+            nexts,
+        } = self.var_eval_and_next(x, m);
         if unifier {
             match x {
                 RichFormula::Var(v) => SubtermResult {
@@ -71,7 +74,7 @@ pub trait SubtermAux<'bump> {
     {
         let SubtermResult { unifier, nexts } = self.eval_and_next(x, m);
         VarSubtermResult {
-            unifier: unifier.is_some(),
+            unified: unifier.is_some(),
             nexts,
         }
     }
@@ -134,7 +137,7 @@ impl<'bump> SubtermAux<'bump> for DefaultAuxSubterm {
         let m_sort = m.get_sort();
 
         VarSubtermResult {
-            unifier: x_sort.is_err() || m_sort.is_err() || x_sort.unwrap() == m_sort.unwrap(),
+            unified: x_sort.is_err() || m_sort.is_err() || x_sort.unwrap() == m_sort.unwrap(),
             nexts,
         }
     }
@@ -173,5 +176,21 @@ mod possibly_empty {
                 }),
             }
         }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            match self {
+                PE::Empty => (0, Some(0)),
+                PE::NotEmpty { vec, i } => vec[*i..].iter().size_hint(),
+            }
+        }
+    }
+
+    impl<'a, 'bump> ExactSizeIterator for PE<'a, 'bump> {
+        fn len(&self) -> usize {
+            let (lower, upper) = self.size_hint();
+            assert_eq!(upper, Some(lower));
+            lower
+        }
+
     }
 }

@@ -26,8 +26,8 @@ pub enum ExpantionState<'bump> {
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct ExpantionContent<'a, 'bump> {
-    state: ExpantionState<'bump>,
-    content: &'a RichFormula<'bump>,
+    pub state: ExpantionState<'bump>,
+    pub content: &'a RichFormula<'bump>,
 }
 
 impl<'a, 'bump> ExpantionContent<'a, 'bump>
@@ -36,8 +36,8 @@ where
 {
     pub fn expand(
         &self,
-        steps: impl IntoIterator<Item = &'a Step<'bump>>,
-        graph: &DependancyGraph<'a, 'bump>,
+        steps: impl IntoIterator<Item = Step<'bump>>,
+        graph: &DependancyGraph<'bump>,
     ) -> Vec<ExpantionContent<'a, 'bump>> {
         fn process_arg<'a, 'b, 'bump>(
             expc: &'b ExpantionContent<'a, 'bump>,
@@ -53,8 +53,8 @@ where
         }
 
         fn process_deeper<'a, 'bump>(
-            steps: impl IntoIterator<Item = &'a Step<'bump>>,
-            graph: &DependancyGraph<'a, 'bump>,
+            steps: impl IntoIterator<Item = Step<'bump>>,
+            graph: &DependancyGraph<'bump>,
             deeper: Option<&MemoryCell<'bump>>,
             args: &'a Vec<RichFormula<'bump>>,
         ) -> impl Iterator<Item = ExpantionContent<'a, 'bump>>
@@ -103,10 +103,10 @@ where
                     if input {
                         None
                     } else {
-                        Some(steps.into_iter().flat_map(|step| {
+                        Some(steps.into_iter().flat_map(move |step| {
                             [step.message(), step.condition()]
                                 .into_iter()
-                                .map(|content| {
+                                .map(move |content| {
                                     let vars = step.free_variables();
                                     let step_f =
                                         step.function().f(vars.iter().map(|v| v.into_formula()));
@@ -159,6 +159,15 @@ where
                     | InnerFunction::Evaluate(_) => iter.collect(),
                 }
             }
+        }
+    }
+}
+
+impl<'a, 'bump> From<&'a RichFormula<'bump>> for ExpantionContent<'a, 'bump> {
+    fn from(value: &'a RichFormula<'bump>) -> Self {
+        ExpantionContent {
+            state: ExpantionState::None,
+            content: value,
         }
     }
 }

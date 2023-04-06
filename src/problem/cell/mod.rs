@@ -10,8 +10,6 @@ use std::{
     sync::atomic::{self, AtomicUsize},
 };
 
-use qcell::{QCell, QCellOwner};
-
 use crate::{
     container::{CanBeAllocated, Container},
     formula::{
@@ -20,9 +18,9 @@ use crate::{
         function::Function,
         sort::Sort,
     },
+    utils::precise_as_ref::PreciseAsRef,
 };
 use core::fmt::Debug;
-
 
 use super::step::Step;
 
@@ -66,8 +64,6 @@ pub struct InnerMemoryCell<'bump> {
     pub assignements: Vec<Assignement<'bump>>,
 }
 
-pub type Lock = QCellOwner;
-
 impl<'bump> Eq for InnerMemoryCell<'bump> {}
 impl<'bump> PartialEq for InnerMemoryCell<'bump> {
     fn eq(&self, other: &Self) -> bool {
@@ -95,8 +91,7 @@ impl<'bump> std::hash::Hash for InnerMemoryCell<'bump> {
     }
 }
 
-impl<'bump> InnerMemoryCell<'bump> {
-}
+impl<'bump> InnerMemoryCell<'bump> {}
 
 unsafe impl<'bump> Sync for InnerMemoryCell<'bump> {}
 unsafe impl<'bump> Send for InnerMemoryCell<'bump> {}
@@ -113,29 +108,32 @@ pub struct Assignement<'bump> {
 }
 
 impl<'bump> MemoryCell<'bump> {
-    pub fn name(&self) -> &str {
-        &self.as_ref().name
+    pub fn name(&self) -> &'bump str {
+        &self.precise_as_ref().name
     }
 
-    pub fn args(&self) -> &Vec<Sort> {
-        &self.as_ref().args
+    pub fn args(&self) -> &'bump Vec<Sort> {
+        &self.precise_as_ref().args
     }
 
-    pub fn function(&self) -> &Function {
-        &self.as_ref().function
+    pub fn function(&self) -> Function {
+        self.as_ref().function
     }
 
-    pub fn assignements(&self) -> &Vec<Assignement<'bump>> {
-        &self.as_ref().assignements
+    pub fn assignements(&self) -> &'bump Vec<Assignement<'bump>> {
+        &self.precise_as_ref().assignements
     }
+}
 
-
-
+impl<'bump> PreciseAsRef<'bump, InnerMemoryCell<'bump>> for MemoryCell<'bump> {
+    fn precise_as_ref(&self) -> &'bump InnerMemoryCell<'bump> {
+        unsafe { self.inner.as_ref() } // same as always
+    }
 }
 
 impl<'bump> AsRef<InnerMemoryCell<'bump>> for MemoryCell<'bump> {
     fn as_ref(&self) -> &InnerMemoryCell<'bump> {
-        unsafe { self.inner.as_ref() } // same as always
+        self.precise_as_ref()
     }
 }
 

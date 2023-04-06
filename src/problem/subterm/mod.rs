@@ -1,13 +1,19 @@
 use itertools::Itertools;
 
-use crate::formula::{
-    formula::{forall, meq, RichFormula},
-    function::Function,
-    sort::Sort,
-    variable::{sorts_to_variables, Variable},
+use crate::{
+    formula::{
+        formula::{forall, meq, RichFormula},
+        function::Function,
+        sort::Sort,
+        utils::formula_iterator::{FormulaIterator, IteratorFlags},
+        variable::{sorts_to_variables, Variable},
+    },
+    utils::utils::{repeat_n_zip, StackBox},
 };
 
-use self::traits::SubtermAux;
+use self::traits::{SubtermAux, SubtermResult};
+
+use super::{problem::Problem, protocol::Protocol};
 
 pub mod traits;
 
@@ -59,6 +65,41 @@ where
             .collect()
     }
 
+    pub fn generate_function_assertions_pbl(&self, pbl: Problem<'bump>) -> Vec<RichFormula<'bump>> {
+        self.generate_function_assertions(
+            pbl.functions
+                .iter()
+                .filter(|f| f.is_term_algebra())
+                .cloned(),
+        )
+    }
+
+    pub fn preprocess_whole_ptcl(
+        &self,
+        ptcl: &Protocol<'bump>,
+        formula: RichFormula<'bump>,
+    ) -> RichFormula<'bump> {
+        let pile = repeat_n_zip((), ptcl.list_top_level_terms()).collect_vec();
+
+        let max_var = ptcl.max_var();
+        let formula = formula.translate_vars(max_var);
+
+        let iter = FormulaIterator {
+            pile: StackBox::new(pile),
+            passed_along: (),
+            flags: IteratorFlags::QUANTIFIER,
+            f: |_, f| {
+                let SubtermResult { unifier, nexts } = self.aux.eval_and_next(&formula, f);
+                (
+                    unifier.map(|u| RichFormula::ands(u.as_equalities().unwrap())),
+                    repeat_n_zip((), nexts),
+                )
+            },
+        };
+
+        RichFormula::ors(iter)
+    }
+
     pub fn f(&self, x: RichFormula<'bump>, m: RichFormula<'bump>) -> RichFormula<'bump> {
         self.function.f([x, m])
     }
@@ -76,7 +117,7 @@ where
     }
 }
 
-pub trait AsSubterm<'bump>/* : Ord */ /* + std::fmt::Debug */ {
+pub trait AsSubterm<'bump> /* : Ord */ /* + std::fmt::Debug */ {
     fn generate_function_assertions(&self, funs: &[Function<'bump>]) -> Vec<RichFormula<'bump>>;
     fn f(&self, x: RichFormula<'bump>, m: RichFormula<'bump>) -> RichFormula<'bump>;
     fn function(&self) -> Function<'bump>;
