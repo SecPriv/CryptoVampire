@@ -1,4 +1,4 @@
-use crate::formula::{formula::RichFormula, unifier::Unifier};
+use crate::formula::{formula::RichFormula, unifier::Unifier, sort::Sort};
 
 use self::possibly_empty::PE;
 
@@ -92,13 +92,18 @@ pub trait SubtermAux<'bump> {
     {
         self.eval_and_next(x, m).nexts
     }
+
+    fn sort(&self) -> Sort<'bump>;
 }
 
-pub struct DefaultAuxSubterm();
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct DefaultAuxSubterm<'bump>{
+    pub sort: Sort<'bump>
+}
 
 static EMPTY_SLICE: [RichFormula<'static>; 0] = [];
 
-impl<'bump> SubtermAux<'bump> for DefaultAuxSubterm {
+impl<'bump> SubtermAux<'bump> for DefaultAuxSubterm<'bump> {
     type IntoIter<'a> = PE<'a, 'bump>
     where
         'bump: 'a;
@@ -140,6 +145,10 @@ impl<'bump> SubtermAux<'bump> for DefaultAuxSubterm {
             unified: x_sort.is_err() || m_sort.is_err() || x_sort.unwrap() == m_sort.unwrap(),
             nexts,
         }
+    }
+
+    fn sort(&self) -> Sort<'bump> {
+        self.sort
     }
 }
 

@@ -1,9 +1,12 @@
+use std::rc::Rc;
+
 use itertools::Itertools;
 
 use crate::{
+    container::ScopeAllocator,
     formula::{
         formula::{exists, forall, meq, RichFormula},
-        function::Function,
+        function::{self, Function, InnerFunction},
         sort::Sort,
         utils::{
             formula_expander::{ExpantionContent, ExpantionState},
@@ -20,6 +23,7 @@ use super::{problem::Problem, protocol::Protocol};
 
 pub mod traits;
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Subterm<'bump, Aux>
 where
     Aux: SubtermAux<'bump>,
@@ -27,13 +31,44 @@ where
     function: Function<'bump>,
     aux: Aux,
     ignored_functions: Vec<Function<'bump>>,
-    sort: Sort<'bump>,
+    // sort: Sort<'bump>,
 }
 
 impl<'bump, Aux> Subterm<'bump, Aux>
 where
     Aux: SubtermAux<'bump>,
 {
+    pub fn new<F>(
+        container: &'bump impl ScopeAllocator<InnerFunction<'bump>>,
+        name: String,
+        kind: function::subterm::SubtermKind,
+        aux: Aux,
+        ignored_functions: impl IntoIterator<Item = Function<'bump>>,
+        to_enum: F,
+    ) -> Rc<Self>
+    where
+        F: FnOnce(Rc<Self>) -> function::subterm::Subsubterm<'bump>,
+    {
+        let ignored_functions = ignored_functions.into_iter().collect();
+        let (_, self_rc) = unsafe {
+            Function::new_cyclic(container, |function| {
+                let subterm = Subterm {
+                    function,
+                    aux,
+                    ignored_functions,
+                };
+                let self_rc = Rc::new(subterm);
+                let inner = function::subterm::Subterm {
+                    subterm: to_enum(Rc::clone(&self_rc)),
+                    kind,
+                    name,
+                };
+                (inner.into_inner_function(), self_rc)
+            })
+        };
+        self_rc
+    }
+
     pub fn generate_function_assertions(
         &self,
         funs: impl Iterator<Item = Function<'bump>>,
@@ -42,7 +77,7 @@ where
             .map(|fun| {
                 let f_sorts = fun.forced_input_sort();
 
-                let x = Variable::new(0, self.sort);
+                let x = Variable::new(0, self.sort());
                 let mut vars = sorts_to_variables(1, f_sorts);
 
                 let vars_f = vars.iter().map(|v| v.into_formula()).collect_vec();
@@ -57,7 +92,7 @@ where
 
                     {
                         let o_sort = applied_fun.get_sort();
-                        if o_sort.is_err() || o_sort.unwrap() == self.sort {
+                        if o_sort.is_err() || o_sort.unwrap() == self.sort() {
                             ors = ors | meq(x_f.clone(), applied_fun.clone())
                         }
                     }
@@ -175,7 +210,7 @@ where
     }
 
     pub fn sort(&self) -> Sort<'bump> {
-        self.sort
+        self.aux.sort()
     }
 }
 

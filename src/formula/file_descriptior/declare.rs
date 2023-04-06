@@ -1,7 +1,7 @@
 use crate::formula::{function::Function, sort::Sort};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Delcare<'bump> {
+pub enum Declaration<'bump> {
     Sort(Sort<'bump>),
     FreeFunction(Function<'bump>),
     DataTypes(Vec<DataType<'bump>>),

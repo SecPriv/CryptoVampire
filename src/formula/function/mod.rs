@@ -17,7 +17,10 @@ use bitflags::bitflags;
 
 // use crate::problem::step::Step;
 
-use crate::utils::precise_as_ref::PreciseAsRef;
+use crate::{
+    container::{self, Container, ScopeAllocator},
+    utils::precise_as_ref::PreciseAsRef,
+};
 
 use self::{
     booleans::Booleans, evaluate::Evaluate, if_then_else::IfThenElse, nonce::Nonce,
@@ -236,6 +239,24 @@ impl<'bump> PartialOrd for Function<'bump> {
 }
 
 impl<'bump> Function<'bump> {
+    pub unsafe fn new_cyclic<F, T>(
+        container: &'bump impl ScopeAllocator<InnerFunction<'bump>>,
+        f: F,
+    ) -> (Self, T)
+    where
+        F: FnOnce(Function<'bump>) -> (InnerFunction<'bump>, T),
+        T: Sized,
+    {
+        let ptr = container.alloc();
+        let fun = Function {
+            inner: ptr,
+            container: Default::default(),
+        };
+        let (inner, t) = f(fun);
+        std::ptr::write(fun.inner.as_ptr(), inner);
+        (fun, t)
+    }
+
     // pub fn new(name: &str, input_sorts: Vec<Sort>, output_sort: Sort) -> Self {
     //     Self::hidden_new(name.to_owned(), input_sorts, output_sort, FFlags::empty())
     // }

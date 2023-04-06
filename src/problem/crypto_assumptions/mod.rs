@@ -1,118 +1,121 @@
-mod euf_cma_mac;
+// mod euf_cma_mac;
 // mod euf_cma_sign;
-mod int_ctxt;
+// mod int_ctxt;
 mod nonce;
+
+pub use nonce::SubtermNonce as SubtermNonce;
 
 use std::rc::Rc;
 
-use crate::{
-    formula::{
-        formula::{RichFormula, Variable},
-        formula_user::FormulaUser,
-        function::Function,
-    },
-    smt::{smt::Smt, writer::Ctx},
+use crate::formula::{
+    file_descriptior::{axioms::Axiom, declare::Declaration},
+    formula::RichFormula,
+    function::Function,
+    variable::Variable,
 };
 
-use super::{cell::{Assignement, MemoryCell}, step::Step};
+use super::{
+    cell::{Assignement, MemoryCell},
+    step::Step,
+};
 
 // should be quick to copy
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum CryptoAssumption {
+pub enum CryptoAssumption<'bump> {
     EufCmaMac {
         /// mac(Message, Key) -> Signature
-        mac: Function,
+        mac: Function<'bump>,
         /// verify(Signature, Message, Key) -> bool
-        verify: Function,
+        verify: Function<'bump>,
     },
     EufCmaSign {
         /// sign(Message, Key) -> Signature
-        sign: Function,
+        sign: Function<'bump>,
         /// verify(Signature, Message, vKey) -> bool
-        verify: Function,
-        pk: Function,
+        verify: Function<'bump>,
+        pk: Function<'bump>,
     },
     IntCtxtSenc {
-        enc: Function,
-        dec: Function,
-        fail: Function,
-        verify: Function,
+        enc: Function<'bump>,
+        dec: Function<'bump>,
+        fail: Function<'bump>,
+        verify: Function<'bump>,
     },
     Nonce,
 }
 
-impl CryptoAssumption {
-    pub(crate) fn generate_smt(
+impl<'bump> CryptoAssumption<'bump> {
+    pub(crate) fn generate_file(
         &self,
-        assertions: &mut Vec<Smt>,
-        declarations: &mut Vec<Smt>,
-        ctx: &mut Ctx,
+        assertions: &mut Vec<Axiom<'bump>>,
+        declarations: &mut Vec<Declaration<'bump>>,
+        // ctx: &mut Ctx,
     ) {
         match self {
-            CryptoAssumption::EufCmaMac { mac, verify } => {
-                euf_cma_mac::generate(assertions, declarations, ctx, mac, verify)
-            }
-            CryptoAssumption::Nonce => nonce::generate(assertions, declarations, ctx),
+            // CryptoAssumption::EufCmaMac { mac, verify } => {
+            //     euf_cma_mac::generate(assertions, declarations, ctx, mac, verify)
+            // }
+            // CryptoAssumption::Nonce => nonce::generate(assertions, declarations, ctx),
             // CryptoAssumption::EufCmaSign { sign, verify, pk } => {
             //     euf_cma_sign::generate(assertions, declarations, ctx, sign, verify, pk)
             // }
-            CryptoAssumption::IntCtxtSenc {
-                enc,
-                dec,
-                verify,
-                fail,
-            } => int_ctxt::generate(assertions, declarations, ctx, enc, dec, verify, fail),
+            // CryptoAssumption::IntCtxtSenc {
+            //     enc,
+            //     dec,
+            //     verify,
+            //     fail,
+            // } => int_ctxt::generate(assertions, declarations, ctx, enc, dec, verify, fail),
             _ => todo!(),
         }
     }
 }
 
-fn aux<T, U>(ctx: &T, a: U, b: U) -> U
-where
-    T: FormulaUser<U>,
-{
-    // seq!(m.clone(), SmtFormula::from(f))
-    ctx.eqf(a, b)
-}
+// fn aux<T, U>(ctx: &T, a: U, b: U) -> U
+// where
+//     T: FormulaUser<U>,
+// {
+//     // seq!(m.clone(), SmtFormula::from(f))
+//     ctx.eqf(a, b)
+// }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-enum Provenance<'pbl, T> {
+enum Provenance<'bump, T> {
     Plain {
         candidate: T,
     },
     InputPlain {
-        step: &'pbl Step,
+        step: Step<'bump>,
         candidate: T,
     },
     /// Found `candidate` in `assgnm` while looking into `step`
     InputCell {
-        steps: Rc<[&'pbl Step]>,
-        assgnm: &'pbl Assignement,
-        cell: &'pbl MemoryCell,
+        steps: Rc<[Step<'bump>]>,
+        assgnm: &'bump Assignement<'bump>,
+        cell: MemoryCell<'bump>,
         // call_arg: &'pbl [&'pbl RichFormula],
         // call_t_arg: &'pbl RichFormula,
         candidate: T,
     },
     CellPlain {
         // call_arg: &'pbl [&'pbl RichFormula],
-        call_t_arg: &'pbl RichFormula,
-        assgnm: &'pbl Assignement,
-        cell: &'pbl MemoryCell,
+        call_t_arg: &'bump RichFormula<'bump>,
+        assgnm: &'bump Assignement<'bump>,
+        cell: MemoryCell<'bump>,
         candidate: T,
     },
     /// Found `candidate` in `assgnm` while looking into `step`
     CellDeep {
         // call_arg: &'pbl [&'pbl RichFormula],
-        steps: Rc<[&'pbl Step]>,
-        call_t_arg: &'pbl RichFormula,
-        assgnm: &'pbl Assignement,
-        cell: &'pbl MemoryCell,
+        steps: Rc<[Step<'bump>]>,
+        call_t_arg: &'bump RichFormula<'bump>,
+        assgnm: &'bump Assignement<'bump>,
+        cell: MemoryCell<'bump>,
         candidate: T,
     },
     CellInput {
-        steps: Rc<[&'pbl Step]>,
-        step: &'pbl Step,
-        call_t_arg: &'pbl RichFormula,
+        steps: Rc<[Step<'bump>]>,
+        step: Step<'bump>,
+        call_t_arg: &'bump RichFormula<'bump>,
         // call_arg: &'pbl [&'pbl RichFormula],
         // call_t_arg: &'pbl RichFormula,
         candidate: T,
@@ -120,11 +123,11 @@ enum Provenance<'pbl, T> {
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-struct DijBranch {
+struct DijBranch<'bump> {
     /// extra variables required to express `content`
-    vars: Vec<Variable>,
-    guard: Box<RichFormula>,
-    content: Box<RichFormula>,
+    vars: Vec<Variable<'bump>>,
+    guard: Box<RichFormula<'bump>>,
+    content: Box<RichFormula<'bump>>,
 }
 
 impl<'pbl, T> Provenance<'pbl, T> {
