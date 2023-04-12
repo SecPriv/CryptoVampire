@@ -1,4 +1,4 @@
-
+use if_chain::if_chain;
 use itertools::Itertools;
 use thiserror::Error;
 
@@ -13,7 +13,9 @@ pub struct Unifier<'a, 'bump>
 where
     'bump: 'a,
 {
+    /// variables on the left mapped to terms on the right
     left: ISubstitution<&'a RichFormula<'bump>>,
+    /// variables on the right mapped to terms on the left
     right: ISubstitution<&'a RichFormula<'bump>>,
 }
 
@@ -228,6 +230,19 @@ where
         // 'bump: 'b
     {
         &self.right
+    }
+
+    pub fn is_unifying_to_variable(&self) -> Option<(usize, &RichFormula<'bump>)> {
+        if_chain! {
+            if self.left.0.is_empty();
+            if self.right.0.len() == 1;
+            if let Some((id, t)) = self.right.0.first();
+            then {
+                Some((*id, t))
+            } else {
+                None
+            }
+        }
     }
 }
 

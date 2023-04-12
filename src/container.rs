@@ -14,7 +14,7 @@ type InnerContainer<T> = RefCell<Vec<NonNull<T>>>;
 
 // #[derive(Debug)]
 pub struct Container<'bump> {
-    sorts: InnerContainer<InnerSort>,
+    sorts: InnerContainer<InnerSort<'bump>>,
     functions: InnerContainer<InnerFunction<'bump>>,
     steps: InnerContainer<InnerStep<'bump>>,
     cells: InnerContainer<InnerMemoryCell<'bump>>,
@@ -49,7 +49,7 @@ macro_rules! make_scope_allocator {
 }
 
 make_scope_allocator!(functions, InnerFunction<'bump>);
-make_scope_allocator!(sorts, InnerSort);
+make_scope_allocator!(sorts, InnerSort<'bump>);
 make_scope_allocator!(steps, InnerStep<'bump>);
 make_scope_allocator!(cells, InnerMemoryCell<'bump>);
 

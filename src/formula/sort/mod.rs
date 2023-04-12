@@ -29,7 +29,7 @@ bitflags! {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Sort<'bump> {
-    inner: NonNull<InnerSort>,
+    inner: NonNull<InnerSort<'bump>>,
     container: PhantomData<&'bump ()>,
 }
 
@@ -40,11 +40,11 @@ unsafe impl<'bump> Send for Sort<'bump> {}
 // pub struct RcSort(Rc<InnerSort>);
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct InnerSort {
-    inner: HiddenSort,
+pub struct InnerSort<'bump> {
+    inner: HiddenSort<'bump>,
 }
 
-impl InnerSort {
+impl<'bump> InnerSort<'bump> {
     fn new(name: String, flags: SFlags) -> Self {
         // bump.alloc(InnerSort {
         //     inner: HiddenSort {
@@ -53,7 +53,11 @@ impl InnerSort {
         //     },
         // })
         InnerSort {
-            inner: HiddenSort { name, flags },
+            inner: HiddenSort {
+                name,
+                flags,
+                evaluated: None,
+            },
         }
     }
 
@@ -68,9 +72,16 @@ impl InnerSort {
 // }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct HiddenSort {
+struct HiddenSort<'bump> {
     name: String,
     flags: SFlags,
+    evaluated: Option<EvaluateSort<'bump>>,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+enum EvaluateSort<'bump> {
+    EvalSort(Sort<'bump>),
+    TASort(Sort<'bump>),
 }
 
 // impl<'a> PartialEq for Sort<'a> {
@@ -152,12 +163,12 @@ impl<'a> Sort<'a> {
     //     })))
     // }
 
-    pub fn new(allocator: &'a Container<'a>, inner: InnerSort) -> Self {
+    pub fn new(allocator: &'a Container<'a>, inner: InnerSort<'a>) -> Self {
         Self::allocate(allocator, inner)
     }
 
     pub fn name(&self) -> &'a str {
-        &self.inner().name
+        &self.precise_as_ref().inner.name
     }
 
     pub fn is_term_algebra(&self) -> bool {
@@ -241,26 +252,26 @@ impl<'a> Sort<'a> {
 //     }
 // }
 
-impl AsRef<HiddenSort> for InnerSort {
-    fn as_ref(&self) -> &HiddenSort {
+impl<'bump> AsRef<HiddenSort<'bump>> for InnerSort<'bump> {
+    fn as_ref(&self) -> &HiddenSort<'bump> {
         &self.inner
     }
 }
 
-impl<'bump> PreciseAsRef<'bump, InnerSort> for Sort<'bump> {
-    fn precise_as_ref(&self) -> &'bump InnerSort {
+impl<'bump> PreciseAsRef<'bump, InnerSort<'bump>> for Sort<'bump> {
+    fn precise_as_ref(&self) -> &'bump InnerSort<'bump> {
         unsafe { self.inner.as_ref() } // for self to exists, container must exists
     }
 }
 
-impl<'bump> AsRef<InnerSort> for Sort<'bump> {
-    fn as_ref(&self) -> &InnerSort {
+impl<'bump> AsRef<InnerSort<'bump>> for Sort<'bump> {
+    fn as_ref(&self) -> &InnerSort<'bump> {
         self.precise_as_ref()
     }
 }
 
 impl<'bump> CanBeAllocated<'bump> for Sort<'bump> {
-    type Inner = InnerSort;
+    type Inner = InnerSort<'bump>;
 
     fn allocate<A>(allocator: &'bump A, inner: Self::Inner) -> Self
     where
@@ -278,8 +289,8 @@ impl<'bump> CanBeAllocated<'bump> for Sort<'bump> {
     }
 }
 
-impl<'bump> From<&'bump InnerSort> for Sort<'bump> {
-    fn from(value: &'bump InnerSort) -> Self {
+impl<'bump> From<&'bump InnerSort<'bump>> for Sort<'bump> {
+    fn from(value: &'bump InnerSort<'bump>) -> Self {
         Sort {
             inner: NonNull::from(value),
             container: Default::default(),

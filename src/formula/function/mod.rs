@@ -81,7 +81,7 @@ pub enum InnerFunction<'bump> {
     Subterm(Subterm<'bump>),
     TermAlgebra(TermAlgebra<'bump>),
     IfThenElse(IfThenElse),
-    Evaluate(Evaluate),
+    Evaluate(Evaluate<'bump>),
     Predicate(Predicate<'bump>),
 }
 
@@ -505,6 +505,13 @@ impl<'bump> Function<'bump> {
         }
     }
 
+    pub fn is_default_subterm(&self) -> bool {
+        match self.as_ref() {
+            InnerFunction::TermAlgebra(f) => f.is_default_subterm(),
+            _ => false,
+        }
+    }
+
     /// does this function hide something (ie. quantifier, memory cell, input,...)
     pub fn need_extraction(&self) -> bool {
         match self.as_ref() {
@@ -516,7 +523,10 @@ impl<'bump> Function<'bump> {
     }
 
     pub(crate) fn from_ptr_inner(inner: NonNull<InnerFunction<'bump>>) -> Self {
-        Function { inner, container: Default::default() }
+        Function {
+            inner,
+            container: Default::default(),
+        }
     }
 }
 

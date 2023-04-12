@@ -7,7 +7,6 @@ use super::InnerFunction;
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Subterm<'bump> {
     pub subterm: Subsubterm<'bump>,
-    pub kind: SubtermKind,
     pub name: String,
 }
 
@@ -17,36 +16,14 @@ impl<'bump> Subterm<'bump> {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-pub enum SubtermKind {
-    Regular,
-    Vampire,
-}
-
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum Subsubterm<'bump> {
     Nonce(Rc<SubtermNonce<'bump>>),
 }
 
-fn enlarge<'a, 'b>(q: Subterm<'a>) -> Subterm<'b>
+fn _enlarge<'a, 'b>(q: Subterm<'a>) -> Subterm<'b>
 where
     'a: 'b,
 {
     q
-}
-
-impl<'a, 'bump> From<&'a Environement<'bump>> for SubtermKind {
-    fn from(env: &'a Environement<'bump>) -> Self {
-        if env.use_vampire_subterm() {
-            Self::Vampire
-        } else {
-            Self::default()
-        }
-    }
-}
-
-impl Default for SubtermKind {
-    fn default() -> Self {
-        Self::Regular
-    }
 }

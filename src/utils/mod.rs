@@ -4,3 +4,4 @@ pub(crate) mod graph;
 pub mod utils;
 pub mod vecref;
 pub mod precise_as_ref;
+pub mod fast_partial_cmp;

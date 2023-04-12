@@ -315,6 +315,29 @@ pub fn exists<'bump>(
     )
 }
 
+
 pub fn meq<'bump>(lhs: RichFormula<'bump>, rhs: RichFormula<'bump>) -> RichFormula<'bump> {
     EQUALITY.f([lhs, rhs])
+}
+
+pub mod macros {
+    #[macro_export]
+    macro_rules! mforall {
+        ($($var:ident!$n:literal:$sort:expr),*; $content:block) => {{
+            $(
+                let $var = $crate::formula::variable::Variable { id: $n, sort: $sort};
+            )*
+            $crate::formula::formula::forall([$($var),*], {
+                $(
+                    let $var = $var.into_formula();
+                )*
+                $content
+            })
+        }};
+        ($vars:expr, $content:block) => {
+            $crate::formula::formula::forall($vars, $content)
+        }
+    }
+
+    pub use mforall;
 }

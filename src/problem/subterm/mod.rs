@@ -1,10 +1,14 @@
-use std::rc::Rc;
+use std::{
+    hash::Hash,
+    rc::{Rc, Weak},
+};
 
 use itertools::Itertools;
 
 use crate::{
     container::ScopeAllocator,
     formula::{
+        file_descriptior::declare::{self, Declaration},
         formula::{exists, forall, meq, RichFormula},
         function::{self, Function, InnerFunction},
         sort::Sort,
@@ -14,16 +18,21 @@ use crate::{
         },
         variable::{sorts_to_variables, Variable},
     },
+    mforall, partial_order,
     utils::utils::{repeat_n_zip, StackBox},
 };
 
-use self::traits::{SubtermAux, SubtermResult};
+use self::{
+    kind::SubtermKind,
+    traits::{SubtermAux, SubtermResult},
+};
 
 use super::{problem::Problem, protocol::Protocol};
 
+pub mod kind;
 pub mod traits;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone)]
 pub struct Subterm<'bump, Aux>
 where
     Aux: SubtermAux<'bump>,
@@ -31,7 +40,46 @@ where
     function: Function<'bump>,
     aux: Aux,
     ignored_functions: Vec<Function<'bump>>,
-    // sort: Sort<'bump>,
+    pub kind: SubtermKind,
+    weak: Weak<Self>, // sort: Sort<'bump>,
+}
+
+impl<'bump, Aux> Eq for Subterm<'bump, Aux> where Aux: SubtermAux<'bump> + Eq {}
+impl<'bump, Aux> Ord for Subterm<'bump, Aux>
+where
+    Aux: SubtermAux<'bump> + Ord,
+{
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        Self::partial_cmp(&self, &other).unwrap()
+    }
+}
+impl<'bump, Aux> PartialOrd for Subterm<'bump, Aux>
+where
+    Aux: SubtermAux<'bump> + PartialOrd,
+{
+    partial_order!(function, aux, kind, ignored_functions);
+}
+impl<'bump, Aux> PartialEq for Subterm<'bump, Aux>
+where
+    Aux: SubtermAux<'bump> + PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.function == other.function
+            && self.kind == other.kind
+            && self.aux == other.aux
+            && self.ignored_functions == other.ignored_functions
+    }
+}
+impl<'bump, Aux> Hash for Subterm<'bump, Aux>
+where
+    Aux: SubtermAux<'bump> + Hash,
+{
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.function.hash(state);
+        self.aux.hash(state);
+        self.ignored_functions.hash(state);
+        self.kind.hash(state);
+    }
 }
 
 impl<'bump, Aux> Subterm<'bump, Aux>
@@ -41,7 +89,7 @@ where
     pub fn new<F>(
         container: &'bump impl ScopeAllocator<'bump, InnerFunction<'bump>>,
         name: String,
-        kind: function::subterm::SubtermKind,
+        kind: SubtermKind,
         aux: Aux,
         ignored_functions: impl IntoIterator<Item = Function<'bump>>,
         to_enum: F,
@@ -52,15 +100,17 @@ where
         let ignored_functions = ignored_functions.into_iter().collect();
         let (_, self_rc) = unsafe {
             Function::new_cyclic(container, |function| {
-                let subterm = Subterm {
+                // let subterm = ;
+                let self_rc = Rc::new_cyclic(|weak| Subterm {
                     function,
                     aux,
                     ignored_functions,
-                };
-                let self_rc = Rc::new(subterm);
+                    kind,
+                    weak: Weak::clone(weak),
+                });
+                //  Rc::new(subterm);
                 let inner = function::subterm::Subterm {
                     subterm: to_enum(Rc::clone(&self_rc)),
-                    kind,
                     name,
                 };
                 (inner.into_inner_function(), self_rc)
@@ -103,16 +153,62 @@ where
             .collect()
     }
 
+    pub fn default_subterm_functions<'a>(
+        &'a self,
+        pbl: &'a Problem<'bump>,
+    ) -> impl Iterator<Item = Function<'bump>> + 'a {
+        pbl.functions
+            .iter()
+            .filter(|f| f.is_default_subterm())
+            .cloned()
+    }
+
     pub fn generate_function_assertions_from_pbl(
         &self,
-        pbl: Problem<'bump>,
+        pbl: &Problem<'bump>,
     ) -> Vec<RichFormula<'bump>> {
-        self.generate_function_assertions(
-            pbl.functions
-                .iter()
-                .filter(|f| f.is_term_algebra())
-                .cloned(),
-        )
+        self.generate_function_assertions(self.default_subterm_functions(pbl))
+    }
+
+    pub fn preprocess_special_assertion<'a>(
+        &'a self,
+        funs: impl Iterator<Item = Function<'bump>> + 'a,
+        ptcl: &'a Protocol<'bump>,
+        keep_guard: bool,
+    ) -> impl Iterator<Item = RichFormula<'bump>> + 'a {
+        let x = Variable::new(0, self.sort());
+        let x_f = x.into_formula();
+        funs.map(move |fun| {
+            assert!(!fun.is_default_subterm());
+
+            let f_sorts = fun.forced_input_sort();
+            let vars = sorts_to_variables(1, f_sorts);
+            let vars_f = vars.iter().map(|v| v.into_formula()).collect_vec();
+            let f_f = fun.f(vars_f);
+
+            let f = self.preprocess_term(ptcl, &x_f, &f_f, keep_guard);
+            forall(
+                vars.into_iter().chain(std::iter::once(x)),
+                self.f(x_f.clone(), f_f) >> f,
+            )
+        })
+    }
+
+    pub fn preprocess_special_assertion_from_pbl<'a>(
+        &'a self,
+        pbl: &'a Problem<'bump>,
+        keep_guard: bool,
+    ) -> impl Iterator<Item = RichFormula<'bump>> + 'a {
+        let funs = pbl
+            .functions
+            .iter()
+            .filter(|f| {
+                f.is_term_algebra()
+                    && !f.is_default_subterm()
+                    && !self.ignored_functions.contains(f)
+            })
+            .cloned();
+        self.preprocess_special_assertion(funs, &pbl.protocol, keep_guard)
     }
 
     pub fn preprocess_whole_ptcl(
@@ -132,7 +228,13 @@ where
             f: |_, f| {
                 let SubtermResult { unifier, nexts } = self.aux.eval_and_next(&formula, f);
                 (
-                    unifier.map(|u| RichFormula::ands(u.as_equalities().unwrap())),
+                    unifier.map(|u| {
+                        u.is_unifying_to_variable()
+                            .and_then(|(_, v)| {
+                                (v == &formula).then(|| self.f(formula.clone(), f.clone()))
+                            })
+                            .unwrap_or_else(|| RichFormula::ands(u.as_equalities().unwrap()))
+                    }),
                     repeat_n_zip((), nexts),
                 )
             },
@@ -171,7 +273,10 @@ where
                 let SubtermResult { unifier, nexts } = self.aux.eval_and_next(x, f);
                 (
                     unifier.map(|u| {
-                        let mut guard = u.as_equalities().unwrap();
+                        let mut guard = u
+                            .is_unifying_to_variable()
+                            .and_then(|(_, v)| (v == x).then(|| vec![self.f(x.clone(), f.clone())]))
+                            .unwrap_or_else(|| u.as_equalities().unwrap());
                         if keep_guard {
                             match state.bound_variables() {
                                 Some(vars) => {
@@ -211,6 +316,31 @@ where
 
     pub fn sort(&self) -> Sort<'bump> {
         self.aux.sort()
+    }
+
+    pub fn reflexivity(&self) -> RichFormula<'bump> {
+        mforall!(x!0:self.sort(); {
+            self.f(x.clone(), x.clone())
+        })
+    }
+
+    pub fn not_of_sort<'a>(
+        &'a self,
+        sorts: impl IntoIterator<Item = Sort<'bump>> + 'a,
+    ) -> impl Iterator<Item = RichFormula<'bump>> + 'a {
+        sorts
+            .into_iter()
+            .map(|s| mforall!(x!0:self.sort(), m!1:s; {!self.f(x, m)}))
+    }
+
+    pub fn declare(&self, pbl: &Problem<'bump>) -> Declaration<'bump> {
+        match self.kind {
+            SubtermKind::Regular => Declaration::FreeFunction(self.function),
+            SubtermKind::Vampire => Declaration::Subterm(declare::Subterm {
+                name: self.function.name().to_owned(),
+                functions: self.default_subterm_functions(pbl).collect(),
+            }),
+        }
     }
 }
 

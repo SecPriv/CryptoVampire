@@ -6,7 +6,7 @@ use crate::{
     },
     problem::{
         problem::Problem,
-        subterm::{traits::DefaultAuxSubterm, Subterm},
+        subterm::{kind::SubtermKind, traits::DefaultAuxSubterm, Subterm},
     },
 };
 
@@ -22,13 +22,36 @@ impl Nonce {
         env: &Environement<'bump>,
         pbl: &Problem<'bump>,
     ) {
+        let nonce_sort = NONCE.clone();
+        let kind = env.into();
         let subterm = Subterm::new(
             env.container,
             env.container.find_free_function_name("subterm_nonce"),
-            env.into(),
-            DefaultAuxSubterm::new(NONCE.clone()),
+            kind,
+            DefaultAuxSubterm::new(nonce_sort),
             [],
             |rc| crate::formula::function::subterm::Subsubterm::Nonce(rc),
+        );
+
+        declarations.push(subterm.declare(pbl));
+
+        if let SubtermKind::Vampire = kind {
+        } else {
+            assertions.extend(
+                subterm
+                    .generate_function_assertions_from_pbl(pbl)
+                    .into_iter()
+                    .chain(
+                        subterm
+                            .not_of_sort(pbl.sorts.iter().filter(|&&s| s != nonce_sort).cloned()),
+                    )
+                    .map(|f| Axiom::base(f)),
+            );
+        }
+        assertions.extend(
+            subterm
+                .preprocess_special_assertion_from_pbl(pbl, true)
+                .map(|f| Axiom::base(f)),
         );
     }
 }

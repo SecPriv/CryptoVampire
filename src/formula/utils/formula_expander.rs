@@ -35,9 +35,7 @@ pub struct InnerExpantionState<'bump> {
 impl<'bump> ExpantionState<'bump> {
     pub fn add_variables(&self, vars: impl IntoIterator<Item = Variable<'bump>>) -> Self {
         match self {
-            ExpantionState::None => {
-                ExpantionState::BoundingVariables(vars.into_iter().collect())
-            }
+            ExpantionState::None => ExpantionState::BoundingVariables(vars.into_iter().collect()),
             ExpantionState::BoundingVariables(old_vars) => ExpantionState::BoundingVariables(
                 vars.into_iter().chain(old_vars.iter().cloned()).collect(),
             ),
@@ -230,8 +228,10 @@ where
 
                 match fun.as_ref() {
                     InnerFunction::TermAlgebra(ta) => match ta {
+                        // writting everything down to get notified by the type checker in case of changes
                         TermAlgebra::Condition(_)
                         | TermAlgebra::Function(_)
+                        | TermAlgebra::Name(_)
                         | TermAlgebra::IfThenElse => iter.collect(),
                         TermAlgebra::Quantifier(q) => iter
                             .chain(q.get_content().into_vec().iter().map(|f| ExpantionContent {
