@@ -13,10 +13,10 @@ use crate::{
         function::{self, Function, InnerFunction},
         sort::Sort,
         utils::{
-            formula_expander::{ExpantionContent, ExpantionState},
+            formula_expander::{ExpantionContent, ExpantionState, InnerExpantionState},
             formula_iterator::{FormulaIterator, IteratorFlags},
         },
-        variable::{sorts_to_variables, Variable},
+        variable::{sorts_to_variables, Variable}, unifier::Unifier,
     },
     mforall, partial_order,
     utils::utils::{repeat_n_zip, StackBox},
@@ -248,7 +248,7 @@ where
     /// **!!! Please ensure the variables are well placed to avoid colisions !!!**
     ///
     /// This function *will not* take care of it (nor check)
-    pub fn preprocess_term(
+    pub fn preprocess_term_to_formula(
         &self,
         ptcl: &Protocol<'bump>,
         x: &RichFormula<'bump>,
@@ -302,6 +302,13 @@ where
         RichFormula::ors(iter)
     }
 
+    pub fn preprocess_term<'a>(
+        &'a self,
+        ptrcl: Option<&'a Protocol<'bump>>,
+        x: &'a RichFormula<'bump>,
+        m:&'a RichFormula<'bump>,
+    ) -> impl
+
     pub fn f(&self, x: RichFormula<'bump>, m: RichFormula<'bump>) -> RichFormula<'bump> {
         self.function.f([x, m])
     }
@@ -342,6 +349,12 @@ where
             }),
         }
     }
+}
+
+pub type GuardAndBound<'a> = InnerExpantionState<'a>;
+pub struct SubtermSearchElement<'a, 'bump> {
+    pub inner_state: Rc<GuardAndBound<'bump>>,
+    pub unifier: Unifier<'a, 'bump>
 }
 
 pub trait AsSubterm<'bump> /* : Ord */ /* + std::fmt::Debug */ {

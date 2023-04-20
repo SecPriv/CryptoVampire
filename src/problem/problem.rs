@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     container::Container,
@@ -12,8 +12,8 @@ pub struct Problem<'bump> {
     container: &'bump Container<'bump>,
     pub functions: Vec<Function<'bump>>, // to keep track of 'static functions
     pub sorts: Vec<Sort<'bump>>,     // same
-    pub evaluator: Evaluator<'bump>,
-    pub name_caster: NameCaster<'bump>,
+    pub evaluator: Rc<Evaluator<'bump>>,
+    pub name_caster: Rc<NameCaster<'bump>>,
     pub protocol: Protocol<'bump>,
     pub assertions: Vec<RichFormula<'bump>>,
     pub query: Box<RichFormula<'bump>>,

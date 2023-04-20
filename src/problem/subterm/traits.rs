@@ -1,12 +1,16 @@
-use crate::formula::{formula::RichFormula, unifier::Unifier, sort::Sort};
+use crate::{
+    formula::{formula::RichFormula, sort::Sort, unifier::Unifier, variable::Variable},
+    utils::{possibly_empty::PE, vecref::VecRef},
+};
 
-use self::possibly_empty::PE;
+// use self::possibly_empty::PE;
 
 #[derive(Debug, Clone)]
-pub struct SubtermResult<'a, 'bump, I>
+pub struct SubtermResult<'a, 'b, 'bump, I>
 where
-    I: IntoIterator<Item = &'a RichFormula<'bump>>,
-    'bump: 'a,
+    I: IntoIterator<Item = &'b RichFormula<'bump>>,
+    'bump: 'b,
+    'b: 'a,
 {
     pub unifier: Option<Unifier<'a, 'bump>>,
     pub nexts: I,
@@ -26,18 +30,19 @@ pub trait SubtermAux<'bump> {
     type IntoIter<'a>: IntoIterator<Item = &'a RichFormula<'bump>> + 'a
     where
         'bump: 'a;
-    fn eval_and_next<'a>(
+    fn eval_and_next<'a, 'b>(
         &self,
         x: &'a RichFormula<'bump>,
-        m: &'a RichFormula<'bump>,
-    ) -> SubtermResult<'a, 'bump, Self::IntoIter<'a>>
+        m: &'b RichFormula<'bump>,
+    ) -> SubtermResult<'a, 'b, 'bump, Self::IntoIter<'b>>
     where
-        'bump: 'a,
+        'bump: 'b,
+        'b: 'a,
     {
         let VarSubtermResult {
             unified: unifier,
             nexts,
-        } = self.var_eval_and_next(x, m);
+        } = self.var_eval_and_next(m);
         if unifier {
             match x {
                 RichFormula::Var(v) => SubtermResult {
@@ -66,13 +71,17 @@ pub trait SubtermAux<'bump> {
     /// `eval_and_next` but optimized for variable only
     fn var_eval_and_next<'a>(
         &self,
-        x: &'a RichFormula<'bump>,
         m: &'a RichFormula<'bump>,
     ) -> VarSubtermResult<'a, 'bump, Self::IntoIter<'a>>
     where
         'bump: 'a,
     {
-        let SubtermResult { unifier, nexts } = self.eval_and_next(x, m);
+        let x = Variable {
+            id: 0,
+            sort: self.sort(),
+        }
+        .into_formula();
+        let SubtermResult { unifier, nexts } = self.eval_and_next(&x, m);
         VarSubtermResult {
             unified: unifier.is_some(),
             nexts,
@@ -97,8 +106,8 @@ pub trait SubtermAux<'bump> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct DefaultAuxSubterm<'bump>{
-    pub sort: Sort<'bump>
+pub struct DefaultAuxSubterm<'bump> {
+    pub sort: Sort<'bump>,
 }
 
 impl<'bump> DefaultAuxSubterm<'bump> {
@@ -110,7 +119,7 @@ impl<'bump> DefaultAuxSubterm<'bump> {
 static EMPTY_SLICE: [RichFormula<'static>; 0] = [];
 
 impl<'bump> SubtermAux<'bump> for DefaultAuxSubterm<'bump> {
-    type IntoIter<'a> = PE<'a, 'bump>
+    type IntoIter<'a> = VecRef<'a, RichFormula<'bump>>
     where
         'bump: 'a;
 
@@ -133,22 +142,21 @@ impl<'bump> SubtermAux<'bump> for DefaultAuxSubterm<'bump> {
 
     fn var_eval_and_next<'a>(
         &self,
-        x: &'a RichFormula<'bump>,
         m: &'a RichFormula<'bump>,
     ) -> VarSubtermResult<'a, 'bump, Self::IntoIter<'a>>
     where
         'bump: 'a,
     {
         let nexts = match m {
-            RichFormula::Fun(_, args) => PE::new(args.as_slice()), //args.as_slice(),
-            _ => PE::empty(),
+            RichFormula::Fun(_, args) => VecRef::Ref(args),
+            _ => VecRef::Empty,
         };
 
-        let x_sort = x.get_sort();
+        let x_sort = self.sort();
         let m_sort = m.get_sort();
 
         VarSubtermResult {
-            unified: x_sort.is_err() || m_sort.is_err() || x_sort.unwrap() == m_sort.unwrap(),
+            unified: m_sort.is_err() || x_sort == m_sort.unwrap(),
             nexts,
         }
     }
@@ -158,54 +166,5 @@ impl<'bump> SubtermAux<'bump> for DefaultAuxSubterm<'bump> {
     }
 }
 
-mod possibly_empty {
-    use crate::formula::formula::RichFormula;
-
-    pub enum PE<'a, 'bump> {
-        Empty,
-        NotEmpty {
-            vec: &'a [RichFormula<'bump>],
-            i: usize,
-        },
-    }
-
-    impl<'a, 'bump> PE<'a, 'bump> {
-        pub fn new(vec: &'a [RichFormula<'bump>]) -> Self {
-            Self::NotEmpty { vec, i: 0 }
-        }
-
-        pub fn empty() -> Self {
-            Self::Empty
-        }
-    }
-
-    impl<'a, 'bump> Iterator for PE<'a, 'bump> {
-        type Item = &'a RichFormula<'bump>;
-
-        fn next(&mut self) -> Option<Self::Item> {
-            match self {
-                PE::Empty => None,
-                PE::NotEmpty { vec, i } => vec.get(*i).map(|x| {
-                    *i += 1;
-                    x
-                }),
-            }
-        }
-
-        fn size_hint(&self) -> (usize, Option<usize>) {
-            match self {
-                PE::Empty => (0, Some(0)),
-                PE::NotEmpty { vec, i } => vec[*i..].iter().size_hint(),
-            }
-        }
-    }
-
-    impl<'a, 'bump> ExactSizeIterator for PE<'a, 'bump> {
-        fn len(&self) -> usize {
-            let (lower, upper) = self.size_hint();
-            assert_eq!(upper, Some(lower));
-            lower
-        }
-
-    }
-}
+// mod possibly_empty {
+// }

@@ -2,8 +2,10 @@ use crate::{
     environement::environement::Environement,
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
-        sort::builtins::NONCE,
+        formula::meq,
+        sort::builtins::{MESSAGE, NONCE},
     },
+    mforall,
     problem::{
         problem::Problem,
         subterm::{kind::SubtermKind, traits::DefaultAuxSubterm, Subterm},
@@ -17,12 +19,17 @@ pub struct Nonce;
 
 impl Nonce {
     pub fn generate<'bump>(
+        &self,
         assertions: &mut Vec<Axiom<'bump>>,
         declarations: &mut Vec<Declaration<'bump>>,
         env: &Environement<'bump>,
         pbl: &Problem<'bump>,
     ) {
         let nonce_sort = NONCE.clone();
+        let message_sort = MESSAGE.clone();
+        let ev = &pbl.evaluator;
+        let nc = &pbl.name_caster;
+
         let kind = env.into();
         let subterm = Subterm::new(
             env.container,
@@ -53,6 +60,19 @@ impl Nonce {
                 .preprocess_special_assertion_from_pbl(pbl, true)
                 .map(|f| Axiom::base(f)),
         );
+
+        assertions.extend(
+            [mforall!(n!0:nonce_sort, m!1:message_sort; {
+                meq(ev.eval(nc.cast(message_sort, n.clone())),
+                    ev.eval(m.clone())) >> subterm.f(n, m)
+            }),
+            mforall!(n1!0:nonce_sort, n2!1:nonce_sort; {
+                meq(ev.eval(nc.cast(message_sort, n1.clone())), ev.eval(nc.cast(message_sort, n2.clone())))
+                    >> meq(n1, n2)
+            })]
+            .into_iter()
+            .map(|f| Axiom::base(f)),
+        )
     }
 }
 

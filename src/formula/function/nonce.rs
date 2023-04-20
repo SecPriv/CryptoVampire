@@ -6,6 +6,9 @@ pub struct Nonce<'bump> {
     name: Box<str>,
 }
 
-fn enlarge<'a, 'b>(q: Nonce<'a>) -> Nonce<'b> where 'a:'b {
+fn _enlarge<'a, 'b>(q: Nonce<'a>) -> Nonce<'b>
+where
+    'a: 'b,
+{
     q
 }
