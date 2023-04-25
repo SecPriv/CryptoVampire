@@ -10,13 +10,19 @@ pub enum Axiom<'bump> {
 
 impl<'bump> Axiom<'bump> {
     pub fn base(f: RichFormula<'bump>) -> Self {
-        Self::Base { formula: Box::new(f) }
+        Self::Base {
+            formula: Box::new(f),
+        }
     }
     pub fn theory(f: RichFormula<'bump>) -> Self {
-        Self::Theory { formula: Box::new(f) }
+        Self::Theory {
+            formula: Box::new(f),
+        }
     }
     pub fn query(f: RichFormula<'bump>) -> Self {
-        Self::Query { formula: Box::new(f) }
+        Self::Query {
+            formula: Box::new(f),
+        }
     }
 }
 

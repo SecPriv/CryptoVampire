@@ -1,2 +1,2 @@
-pub mod declare;
 pub mod axioms;
+pub mod declare;

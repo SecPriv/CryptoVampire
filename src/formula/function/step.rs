@@ -17,7 +17,9 @@ pub enum StepPredicates {
     Happens,
 }
 
-
-fn enlarge<'a, 'b>(q: StepFunction<'a>) -> StepFunction<'b> where 'a:'b {
+fn enlarge<'a, 'b>(q: StepFunction<'a>) -> StepFunction<'b>
+where
+    'a: 'b,
+{
     q
 }

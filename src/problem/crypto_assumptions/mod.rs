@@ -3,10 +3,10 @@ mod euf_cma_mac;
 // mod int_ctxt;
 mod nonce;
 
-pub use nonce::SubtermNonce as SubtermNonce;
+pub use nonce::SubtermNonce;
 
-pub use euf_cma_mac::SubtermEufCmaMacMain as SubtermEufCmaMacMain;
-pub use euf_cma_mac::SubtermEufCmaMacKey as SubtermEufCmaMacKey;
+pub use euf_cma_mac::SubtermEufCmaMacKey;
+pub use euf_cma_mac::SubtermEufCmaMacMain;
 
 use std::rc::Rc;
 

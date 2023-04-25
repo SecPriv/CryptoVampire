@@ -8,13 +8,20 @@ use crate::{
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::RichFormula,
-        function::{subterm::Subsubterm, term_algebra::name::NameCaster, Function},
+        function::{
+            subterm::{self, Subsubterm},
+            term_algebra::name::NameCaster,
+            Function,
+        },
         sort::builtins::{MESSAGE, NONCE},
+        utils::formula_expander::DeeperKinds,
         variable::Variable,
     },
+    mexists, mforall,
     problem::{
         problem::Problem,
         subterm::{
+            kind::SubtermKind,
             traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
             Subterm,
         },
@@ -69,6 +76,60 @@ impl<'bump> EufCmaMac<'bump> {
             [],
             |rc| Subsubterm::EufCmaMacKey(rc),
         );
+
+        if env.preprocess_instances() {
+            assertions.extend(
+                self.preprocess(pbl, subterm_main.as_ref(), subterm_key.as_ref())
+                    .map(Axiom::base),
+            )
+        }
+
+        if env.define_subterm() {
+            {
+                let subterm = subterm_key.as_ref();
+                declarations.push(subterm.declare(pbl));
+
+                if let SubtermKind::Vampire = kind {
+                } else {
+                    assertions.extend(
+                        subterm
+                            .generate_function_assertions_from_pbl(pbl)
+                            .into_iter()
+                            .chain(subterm.not_of_sort(
+                                pbl.sorts.iter().filter(|&&s| s != nonce_sort).cloned(),
+                            ))
+                            .map(|f| Axiom::base(f)),
+                    );
+                }
+                assertions.extend(
+                    subterm
+                        .preprocess_special_assertion_from_pbl(pbl, true)
+                        .map(|f| Axiom::base(f)),
+                );
+            }
+            {
+                let subterm = subterm_main.as_ref();
+                declarations.push(subterm.declare(pbl));
+
+                if let SubtermKind::Vampire = kind {
+                } else {
+                    assertions.extend(
+                        subterm
+                            .generate_function_assertions_from_pbl(pbl)
+                            .into_iter()
+                            .chain(subterm.not_of_sort(
+                                pbl.sorts.iter().filter(|&&s| s != nonce_sort).cloned(),
+                            ))
+                            .map(|f| Axiom::base(f)),
+                    );
+                }
+                assertions.extend(
+                    subterm
+                        .preprocess_special_assertion_from_pbl(pbl, true)
+                        .map(|f| Axiom::base(f)),
+                );
+            }
+        }
     }
 
     pub fn preprocess<'a>(
@@ -78,9 +139,11 @@ impl<'bump> EufCmaMac<'bump> {
         subterm_key: &'a Subterm<'bump, impl SubtermAux<'bump>>,
     ) -> impl Iterator<Item = RichFormula<'bump>> + 'a {
         let max_var = pbl.max_var();
-        let pile = RefCell::new(Vec::new());
+        // let pile1 = RefCell::new(Vec::new());
+        let pile2 = RefCell::new(Vec::new());
         let candidates = pbl
             .list_top_level_terms()
+            .flat_map(move |f| f.iter()) // sad...
             .filter_map(|formula| match formula {
                 RichFormula::Fun(fun, args) => {
                     if_chain! {
@@ -94,10 +157,10 @@ impl<'bump> EufCmaMac<'bump> {
                 }
                 _ => None,
             }).unique()
-            .map(|EufCandidate { message, signature, key }| {
+            .filter_map(move |EufCandidate { message, signature, key }| {
                 let array = [message, signature, key];
                 let max_var = array.iter()
-                    .flat_map(|f| f.used_variables_iter_with_pile(pile.borrow_mut()))
+                    .flat_map(|f| f.used_variables_iter_with_pile(pile2.borrow_mut()))
                     .map(|Variable { id, ..} | *id)
                     .max().unwrap_or(max_var) + 1;
                 let free_vars = array.iter()
@@ -105,10 +168,25 @@ impl<'bump> EufCmaMac<'bump> {
                     .cloned().unique();
                 let u_var = Variable {id: max_var, sort: MESSAGE.clone()};
                 let u_f = u_var.into_formula();
-                
+
+                let k_sc = subterm_key.preprocess_terms(&pbl.protocol, key,
+                    pbl.protocol.list_top_level_terms_short_lifetime()
+                        .chain([message, signature].into_iter())
+                    , false, DeeperKinds::NO_MACROS).next().is_none();
+                if k_sc {
+            let disjunction = subterm_main.preprocess_terms(&pbl.protocol, &u_f, [message, signature], true, DeeperKinds::all());
+
+                Some(mforall!(free_vars, {
+                    self.verify.f([message.clone(), signature.clone(), pbl.name_caster.cast(MESSAGE.clone(), key.clone())])
+                    >> mexists!([u_var], {
+                            RichFormula::ors(disjunction)
+                        })
+                }))
+                } else {None}
             });
 
-        [].into_iter()
+        // [].into_iter()
+        candidates
     }
 }
 

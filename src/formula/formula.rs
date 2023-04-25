@@ -10,7 +10,7 @@ use crate::utils::utils::{repeat_n_zip, StackBox};
 use super::function::builtin::{AND, EQUALITY, IMPLIES, NOT, OR};
 use super::sort::builtins::BOOL;
 use super::sort::sorted::{Sorted, SortedError};
-use super::utils::formula_expander::{self, ExpantionContent, ExpantionState};
+use super::utils::formula_expander::{self, DeeperKinds, ExpantionContent, ExpantionState};
 use super::utils::formula_iterator::{FormulaIterator, IteratorFlags};
 use super::variable::Variable;
 use super::{
@@ -202,12 +202,18 @@ impl<'bump> RichFormula<'bump> {
         &'a self,
         ptcl: &Protocol<'bump>,
         with_args: bool,
+        deeper_kind: DeeperKinds,
     ) -> Vec<ExpantionContent<'a, 'bump>> {
         ExpantionContent {
             state: ExpantionState::None,
             content: &self,
         }
-        .expand(ptcl.steps.iter().cloned(), &ptcl.graph, with_args)
+        .expand(
+            ptcl.steps.iter().cloned(),
+            &ptcl.graph,
+            with_args,
+            deeper_kind,
+        )
     }
 }
 
@@ -341,5 +347,23 @@ pub mod macros {
         }
     }
 
-    pub use mforall;
+    #[macro_export]
+    macro_rules! mexists {
+        ($($var:ident!$n:literal:$sort:expr),*; $content:block) => {{
+            $(
+                let $var = $crate::formula::variable::Variable { id: $n, sort: $sort};
+            )*
+            $crate::formula::formula::exists([$($var),*], {
+                $(
+                    let $var = $var.into_formula();
+                )*
+                $content
+            })
+        }};
+        ($vars:expr, $content:block) => {
+            $crate::formula::formula::exists($vars, $content)
+        }
+    }
+
+    pub use {mexists, mforall};
 }

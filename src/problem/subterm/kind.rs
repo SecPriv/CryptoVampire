@@ -1,7 +1,5 @@
 use crate::environement::environement::Environement;
 
-
-
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub enum SubtermKind {
     Regular,

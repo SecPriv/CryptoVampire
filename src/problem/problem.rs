@@ -2,7 +2,12 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     container::Container,
-    formula::{formula::RichFormula, function::{Function, evaluate::Evaluator, term_algebra::name::NameCaster}, variable::Variable, sort::Sort},
+    formula::{
+        formula::RichFormula,
+        function::{evaluate::Evaluator, term_algebra::name::NameCaster, Function},
+        sort::Sort,
+        variable::Variable,
+    },
 };
 
 use super::protocol::Protocol;
@@ -11,7 +16,7 @@ use super::protocol::Protocol;
 pub struct Problem<'bump> {
     container: &'bump Container<'bump>,
     pub functions: Vec<Function<'bump>>, // to keep track of 'static functions
-    pub sorts: Vec<Sort<'bump>>,     // same
+    pub sorts: Vec<Sort<'bump>>,         // same
     pub evaluator: Rc<Evaluator<'bump>>,
     pub name_caster: Rc<NameCaster<'bump>>,
     pub protocol: Protocol<'bump>,
@@ -27,7 +32,7 @@ impl<'bump> Problem<'bump> {
         self.assertions
             .iter()
             .chain(std::iter::once(self.query.as_ref()))
-            .chain(self.protocol.list_top_level_terms_shot_lifetime())
+            .chain(self.protocol.list_top_level_terms_short_lifetime())
     }
 
     pub fn max_var(&self) -> usize {

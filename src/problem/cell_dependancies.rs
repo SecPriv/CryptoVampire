@@ -90,7 +90,7 @@ pub mod graph {
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
     enum FromNode<'bump> {
-        Input { step:Step<'bump> },
+        Input { step: Step<'bump> },
         CellCall(InnerCellCall<'bump>),
     }
 
@@ -405,10 +405,7 @@ pub mod graph {
             Ok(result)
         }
 
-        pub fn find_dependencies_from_step(
-            &self,
-            step: Step<'bump>,
-        ) -> Vec<MemoryCell<'bump>> {
+        pub fn find_dependencies_from_step(&self, step: Step<'bump>) -> Vec<MemoryCell<'bump>> {
             let mut not_visited = vec![true; self.cells.len()];
             let mut not_visited_input = true;
 
@@ -469,10 +466,7 @@ pub mod graph {
     }
 
     impl<'bump> Edges<'bump> {
-        fn as_dependancy(
-            &self,
-            graph: &DependancyGraph<'bump>,
-        ) -> Option<Dependancy<'bump>> {
+        fn as_dependancy(&self, graph: &DependancyGraph<'bump>) -> Option<Dependancy<'bump>> {
             match self {
                 Edges {
                     from: FromNode::Input { .. },

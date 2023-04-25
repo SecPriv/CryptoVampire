@@ -103,8 +103,7 @@ impl<'bump> Step<'bump> {
         &self.precise_as_ref().name
     }
 
-    pub fn parameters(&self) -> impl Iterator<Item = &'bump Sort<'bump>>
-    {
+    pub fn parameters(&self) -> impl Iterator<Item = &'bump Sort<'bump>> {
         self.free_variables().iter().map(|v| &v.sort)
     }
 

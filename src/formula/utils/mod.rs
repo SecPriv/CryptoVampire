@@ -1,13 +1,9 @@
+pub mod formula_expander;
 pub mod formula_iterator;
 pub mod formula_trait;
-pub mod formula_expander;
 // pub mod formula_user;
 
-
-
-use super::{
-    function::Function,
-};
+use super::function::Function;
 
 // #[derive(Clone)]
 // pub struct Evaluator<'bump> {

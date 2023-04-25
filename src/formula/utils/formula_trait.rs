@@ -1,3 +1,1 @@
-pub trait AsFormula {
-
-}
+pub trait AsFormula {}

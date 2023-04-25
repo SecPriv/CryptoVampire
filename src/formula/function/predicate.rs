@@ -4,5 +4,5 @@ use crate::formula::sort::Sort;
 pub struct Predicate<'bump> {
     pub name: Box<str>,
     pub args: Box<[Sort<'bump>]>,
-    pub out: Sort<'bump>
+    pub out: Sort<'bump>,
 }

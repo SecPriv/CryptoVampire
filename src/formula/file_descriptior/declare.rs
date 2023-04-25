@@ -1,12 +1,14 @@
-
-use crate::formula::{function::{Function, subterm}, sort::Sort};
+use crate::formula::{
+    function::{subterm, Function},
+    sort::Sort,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Declaration<'bump> {
     Sort(Sort<'bump>),
     FreeFunction(Function<'bump>),
     DataTypes(Vec<DataType<'bump>>),
-    Subterm(Subterm<'bump>)
+    Subterm(Subterm<'bump>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -24,5 +26,5 @@ pub struct ConstructorDestructor<'bump> {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Subterm<'bump> {
     pub name: String,
-    pub functions: Vec<Function<'bump>>
+    pub functions: Vec<Function<'bump>>,
 }

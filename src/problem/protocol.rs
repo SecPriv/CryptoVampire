@@ -32,7 +32,7 @@ impl<'bump> Protocol<'bump> {
                     .map(|Assignement { content, .. }| content)
             }))
     }
-    pub fn list_top_level_terms_shot_lifetime<'a>(
+    pub fn list_top_level_terms_short_lifetime<'a>(
         &'a self,
     ) -> impl Iterator<Item = &'a RichFormula<'bump>> + 'a
     where

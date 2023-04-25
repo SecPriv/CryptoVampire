@@ -115,6 +115,7 @@ where
         steps: impl IntoIterator<Item = Step<'bump>>,
         graph: &DependancyGraph<'bump>,
         with_args: bool,
+        deeper_kinds: DeeperKinds,
     ) -> Vec<ExpantionContent<'a, 'bump>> {
         fn process_arg<'a, 'b, 'bump>(
             expc: &'b ExpantionContent<'a, 'bump>,
@@ -228,29 +229,43 @@ where
 
                 match fun.as_ref() {
                     InnerFunction::TermAlgebra(ta) => match ta {
-                        // writting everything down to get notified by the type checker in case of changes
-                        TermAlgebra::Condition(_)
-                        | TermAlgebra::Function(_)
-                        | TermAlgebra::Name(_)
-                        | TermAlgebra::IfThenElse => iter.collect(),
-                        TermAlgebra::Quantifier(q) => iter
-                            .chain(q.get_content().into_vec().iter().map(|f| ExpantionContent {
-                                state: self.state.add_variables(q.bound_variables.iter().cloned()),
-                                content: *f,
+                        TermAlgebra::Quantifier(q)
+                            if deeper_kinds.contains(DeeperKinds::QUANTIFIER) =>
+                        {
+                            iter.chain(q.get_content().into_vec().iter().map(|f| {
+                                ExpantionContent {
+                                    state: self
+                                        .state
+                                        .add_variables(q.bound_variables.iter().cloned()),
+                                    content: *f,
+                                }
                             }))
-                            .collect(),
-                        TermAlgebra::Input => iter
+                            .collect()
+                        }
+                        TermAlgebra::Input if deeper_kinds.contains(DeeperKinds::INPUT) => iter
                             .chain(process_deeper(steps, graph, None, &self.state, args))
                             .collect(),
-                        TermAlgebra::Cell(c) => iter
-                            .chain(process_deeper(
+                        TermAlgebra::Cell(c)
+                            if deeper_kinds.contains(DeeperKinds::MEMORY_CELLS) =>
+                        {
+                            iter.chain(process_deeper(
                                 steps,
                                 graph,
                                 Some(c.memory_cell()),
                                 &self.state,
                                 args,
                             ))
-                            .collect(),
+                            .collect()
+                        }
+
+                        // writting everything down to get notified by the type checker in case of changes
+                        TermAlgebra::Condition(_)
+                        | TermAlgebra::Function(_)
+                        | TermAlgebra::Name(_)
+                        | TermAlgebra::IfThenElse
+                        | TermAlgebra::Quantifier(_)
+                        | TermAlgebra::Input
+                        | TermAlgebra::Cell(_) => iter.collect(),
                     },
                     InnerFunction::Bool(_)
                     | InnerFunction::Nonce(_)
@@ -276,5 +291,15 @@ impl<'a, 'bump> From<&'a RichFormula<'bump>> for ExpantionContent<'a, 'bump> {
             state: ExpantionState::None,
             content: value,
         }
+    }
+}
+use bitflags::bitflags;
+bitflags! {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+    pub struct DeeperKinds: u8 {
+        const QUANTIFIER = 1 << 0;
+        const INPUT = 1 << 1;
+        const MEMORY_CELLS = 1 << 2;
+        const NO_MACROS = Self::QUANTIFIER.bits();
     }
 }

@@ -59,6 +59,7 @@ impl<'bump> Environement<'bump> {
         self.options
             .subterm_flags
             .contains(SubtermFlags::PREPROCESS_INSTANCES)
+            || !self.define_subterm()
     }
 
     pub fn preprocess_inputs(&self) -> bool {
