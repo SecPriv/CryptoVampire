@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::env::var;
 use std::ops::{BitAnd, BitOr, Deref, DerefMut, Not, Shr};
 
 use itertools::Itertools;
@@ -284,7 +285,7 @@ impl<'bump> Shr for RichFormula<'bump> {
     }
 }
 
-fn enlarge<'a, 'b>(q: RichFormula<'a>) -> RichFormula<'b>
+fn _enlarge<'a, 'b>(q: RichFormula<'a>) -> RichFormula<'b>
 where
     'a: 'b,
 {
@@ -295,26 +296,27 @@ pub fn forall<'bump>(
     vars: impl IntoIterator<Item = Variable<'bump>>,
     arg: RichFormula<'bump>,
 ) -> RichFormula<'bump> {
-    RichFormula::Quantifier(
-        Quantifier::Forall {
-            variables: vars.into_iter().collect(),
-        },
-        vec![arg],
-    )
+    let mut vars = vars.into_iter().peekable();
+    if let Some(_) = vars.peek() {
+        let variables = vars.collect_vec();
+        RichFormula::Quantifier(Quantifier::Forall { variables }, vec![arg])
+    } else {
+        arg
+    }
 }
 
 pub fn exists<'bump>(
     vars: impl IntoIterator<Item = Variable<'bump>>,
     arg: RichFormula<'bump>,
 ) -> RichFormula<'bump> {
-    RichFormula::Quantifier(
-        Quantifier::Exists {
-            variables: vars.into_iter().collect(),
-        },
-        vec![arg],
-    )
+    let mut vars = vars.into_iter().peekable();
+    if let Some(_) = vars.peek() {
+        let variables = vars.collect_vec();
+        RichFormula::Quantifier(Quantifier::Exists { variables }, vec![arg])
+    } else {
+        arg
+    }
 }
-
 
 pub fn meq<'bump>(lhs: RichFormula<'bump>, rhs: RichFormula<'bump>) -> RichFormula<'bump> {
     EQUALITY.f([lhs, rhs])

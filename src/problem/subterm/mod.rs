@@ -1,5 +1,7 @@
 use std::{
+    cell::RefCell,
     hash::Hash,
+    ops::{Deref, DerefMut},
     rc::{Rc, Weak},
 };
 
@@ -12,11 +14,12 @@ use crate::{
         formula::{exists, forall, meq, RichFormula},
         function::{self, Function, InnerFunction},
         sort::Sort,
+        unifier::Unifier,
         utils::{
             formula_expander::{ExpantionContent, ExpantionState, InnerExpantionState},
             formula_iterator::{FormulaIterator, IteratorFlags},
         },
-        variable::{sorts_to_variables, Variable}, unifier::Unifier,
+        variable::{sorts_to_variables, Variable},
     },
     mforall, partial_order,
     utils::utils::{repeat_n_zip, StackBox},
@@ -119,40 +122,44 @@ where
         self_rc
     }
 
-    pub fn generate_function_assertions(
+    /// Generate default function assertions from a list of function
+    ///
+    /// This should not be used with "special functions" (it will crash anyway)
+    fn generate_functions_assertions(
         &self,
         funs: impl Iterator<Item = Function<'bump>>,
     ) -> Vec<RichFormula<'bump>> {
-        funs.filter(|fun| self.ignored_functions.contains(fun))
-            .map(|fun| {
-                let f_sorts = fun.forced_input_sort();
+        funs.map(|fun| {
+            assert!(fun.is_default_subterm());
 
-                let x = Variable::new(0, self.sort());
-                let mut vars = sorts_to_variables(1, f_sorts);
+            let f_sorts = fun.forced_input_sort();
 
-                let vars_f = vars.iter().map(|v| v.into_formula()).collect_vec();
-                let x_f = x.into_formula();
+            let x = Variable::new(0, self.sort());
+            let mut vars = sorts_to_variables(1, f_sorts);
 
-                vars.push(x);
-                forall(vars, {
-                    let applied_fun = fun.f(vars_f.clone());
+            let vars_f = vars.iter().map(|v| v.into_formula()).collect_vec();
+            let x_f = x.into_formula();
 
-                    let mut ors =
-                        RichFormula::ors(vars_f.into_iter().map(|f| self.f(x_f.clone(), f)));
+            vars.push(x);
+            forall(vars, {
+                let applied_fun = fun.f(vars_f.clone());
 
-                    {
-                        let o_sort = applied_fun.get_sort();
-                        if o_sort.is_err() || o_sort.unwrap() == self.sort() {
-                            ors = ors | meq(x_f.clone(), applied_fun.clone())
-                        }
+                let mut ors = RichFormula::ors(vars_f.into_iter().map(|f| self.f(x_f.clone(), f)));
+
+                {
+                    let o_sort = applied_fun.get_sort();
+                    if o_sort.is_err() || o_sort.unwrap() == self.sort() {
+                        ors = ors | meq(x_f.clone(), applied_fun.clone())
                     }
+                }
 
-                    self.f(x_f, applied_fun) >> ors
-                })
+                self.f(x_f, applied_fun) >> ors
             })
-            .collect()
+        })
+        .collect()
     }
 
+    /// List of functions declared to use default subterm
     pub fn default_subterm_functions<'a>(
         &'a self,
         pbl: &'a Problem<'bump>,
@@ -160,6 +167,7 @@ where
         pbl.functions
             .iter()
             .filter(|f| f.is_default_subterm())
+            .filter(|fun| !self.ignored_functions.contains(fun))
             .cloned()
     }
 
@@ -167,26 +175,29 @@ where
         &self,
         pbl: &Problem<'bump>,
     ) -> Vec<RichFormula<'bump>> {
-        self.generate_function_assertions(self.default_subterm_functions(pbl))
+        self.generate_functions_assertions(self.default_subterm_functions(pbl))
     }
 
-    pub fn preprocess_special_assertion<'a>(
+    pub fn generate_special_functions_assertions<'a>(
         &'a self,
         funs: impl Iterator<Item = Function<'bump>> + 'a,
         ptcl: &'a Protocol<'bump>,
         keep_guard: bool,
     ) -> impl Iterator<Item = RichFormula<'bump>> + 'a {
-        let x = Variable::new(0, self.sort());
+        let max_var = ptcl.max_var() + 1;
+        let x = Variable::new(max_var, self.sort());
+        let max_var = max_var + 1;
         let x_f = x.into_formula();
         funs.map(move |fun| {
             assert!(!fun.is_default_subterm());
 
             let f_sorts = fun.forced_input_sort();
-            let vars = sorts_to_variables(1, f_sorts);
+            let vars = sorts_to_variables(max_var, f_sorts);
             let vars_f = vars.iter().map(|v| v.into_formula()).collect_vec();
             let f_f = fun.f(vars_f);
 
-            let f = self.preprocess_term(ptcl, &x_f, &f_f, keep_guard);
+            // no variable collision
+            let f = self.preprocess_term_to_formula(ptcl, &x_f, &f_f, keep_guard);
             forall(
                 vars.into_iter().chain(std::iter::once(x)),
                 self.f(x_f.clone(), f_f) >> f,
@@ -204,11 +215,10 @@ where
             .iter()
             .filter(|f| {
                 f.is_term_algebra()
-                    && !f.is_default_subterm()
-                    && !self.ignored_functions.contains(f)
+                    && (!f.is_default_subterm() || self.ignored_functions.contains(f))
             })
             .cloned();
-        self.preprocess_special_assertion(funs, &pbl.protocol, keep_guard)
+        self.generate_special_functions_assertions(funs, &pbl.protocol, keep_guard)
     }
 
     pub fn preprocess_whole_ptcl(
@@ -248,14 +258,15 @@ where
     /// **!!! Please ensure the variables are well placed to avoid colisions !!!**
     ///
     /// This function *will not* take care of it (nor check)
-    pub fn preprocess_term_to_formula(
-        &self,
-        ptcl: &Protocol<'bump>,
-        x: &RichFormula<'bump>,
-        m: &RichFormula<'bump>,
+    pub fn preprocess_term_to_formula<'a>(
+        &'a self,
+        ptcl: &'a Protocol<'bump>,
+        x: &'a RichFormula<'bump>,
+        m: &'a RichFormula<'bump>,
         keep_guard: bool,
     ) -> RichFormula<'bump> {
         let steps = &ptcl.steps;
+
         let pile = vec![(ExpantionState::None, m)];
 
         let iter = FormulaIterator {
@@ -278,22 +289,15 @@ where
                             .and_then(|(_, v)| (v == x).then(|| vec![self.f(x.clone(), f.clone())]))
                             .unwrap_or_else(|| u.as_equalities().unwrap());
                         if keep_guard {
-                            match state.bound_variables() {
-                                Some(vars) => {
-                                    let var_iter = vars.iter().cloned();
-                                    match state.condition() {
-                                        Some(cond) => {
-                                            guard.push(cond.clone());
-                                            exists(var_iter, RichFormula::ands(guard))
-                                        }
-                                        None => exists(var_iter, RichFormula::ands(guard)),
-                                    }
-                                }
-                                None => RichFormula::ands(guard),
-                            }
-                        } else {
-                            RichFormula::ands(guard)
+                            guard.extend(state.condition().into_iter().cloned())
                         }
+                        exists(
+                            state
+                                .bound_variables()
+                                .into_iter()
+                                .flat_map(|vars| vars.iter().cloned()),
+                            RichFormula::ands(guard),
+                        )
                     }),
                     inner_iter.chain(repeat_n_zip(state.clone(), nexts)),
                 )
@@ -301,13 +305,6 @@ where
         };
         RichFormula::ors(iter)
     }
-
-    pub fn preprocess_term<'a>(
-        &'a self,
-        ptrcl: Option<&'a Protocol<'bump>>,
-        x: &'a RichFormula<'bump>,
-        m:&'a RichFormula<'bump>,
-    ) -> impl
 
     pub fn f(&self, x: RichFormula<'bump>, m: RichFormula<'bump>) -> RichFormula<'bump> {
         self.function.f([x, m])
@@ -354,7 +351,7 @@ where
 pub type GuardAndBound<'a> = InnerExpantionState<'a>;
 pub struct SubtermSearchElement<'a, 'bump> {
     pub inner_state: Rc<GuardAndBound<'bump>>,
-    pub unifier: Unifier<'a, 'bump>
+    pub unifier: Unifier<'a, 'bump>,
 }
 
 pub trait AsSubterm<'bump> /* : Ord */ /* + std::fmt::Debug */ {
@@ -370,7 +367,7 @@ where
     Aux: SubtermAux<'bump>,
 {
     fn generate_function_assertions(&self, funs: &[Function<'bump>]) -> Vec<RichFormula<'bump>> {
-        Subterm::generate_function_assertions(self, funs.iter().cloned())
+        Subterm::generate_functions_assertions(self, funs.iter().cloned())
     }
 
     fn f(&self, x: RichFormula<'bump>, m: RichFormula<'bump>) -> RichFormula<'bump> {
