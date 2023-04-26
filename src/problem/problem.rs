@@ -10,7 +10,7 @@ use crate::{
         },
         formula::RichFormula,
         function::{
-            builtin::LESS_THAN_STEP, evaluate::Evaluator, term_algebra::name::NameCaster, Function,
+            evaluate::Evaluator, term_algebra::name::NameCaster, Function,
         },
         sort::Sort,
         variable::Variable,

@@ -1,7 +1,7 @@
 use crate::{
     container::{NameFinder, ScopeAllocator},
     formula::{
-        function::{subterm, Function, InnerFunction},
+        function::{Function, InnerFunction},
         sort::Sort,
     },
 };

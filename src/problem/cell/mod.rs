@@ -1,17 +1,13 @@
 // mod lock;
 
 use std::{
-    cell::UnsafeCell,
     cmp::Ordering,
     marker::PhantomData,
-    num::NonZeroUsize,
     ptr::NonNull,
-    rc::Rc,
-    sync::atomic::{self, AtomicUsize},
 };
 
 use crate::{
-    container::{CanBeAllocated, Container},
+    container::{CanBeAllocated},
     formula::{
         // builtins::types::{MSG_NAME, STEP_NAME},
         formula::RichFormula,

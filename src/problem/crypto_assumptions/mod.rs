@@ -62,10 +62,10 @@ impl<'bump> Generator<'bump> for CryptoAssumption<'bump> {
             CryptoAssumption::EufCmaMac(euf) => euf.generate(assertions, declarations, env, pbl),
             CryptoAssumption::EufCmaSign(euf) => euf.generate(assertions, declarations, env, pbl),
             CryptoAssumption::IntCtxtSenc {
-                enc,
-                dec,
-                fail,
-                verify,
+                enc: _,
+                dec: _,
+                fail: _,
+                verify: _,
             } => todo!(),
             CryptoAssumption::Nonce(nonce) => nonce.generate(assertions, declarations, env, pbl),
         }

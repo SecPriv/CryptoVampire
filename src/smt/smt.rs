@@ -1,6 +1,5 @@
 use std::{
     fmt::{self, Display},
-    rc::Rc,
 };
 
 use crate::{

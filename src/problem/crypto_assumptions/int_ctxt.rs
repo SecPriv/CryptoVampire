@@ -7,9 +7,9 @@ use crate::{
     environement::environement::Environement,
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
-        formula::{forall, meq, RichFormula},
+        formula::{meq, RichFormula},
         function::{
-            subterm::{self, Subsubterm},
+            subterm::{Subsubterm},
             term_algebra::name::NameCaster,
             Function,
         },
@@ -220,7 +220,7 @@ impl<'bump> IntCtxt<'bump> {
                 let u_f = u_var.into_formula();
                 let r_var = Variable::new(max_var + 1, NONCE.clone());
                 let r_f = pbl.name_caster.cast(MESSAGE.clone(), r_var.into_formula());
-                let max_var = max_var + 2;
+                let _max_var = max_var + 2;
 
                 let k_sc = side_condition
                     && subterm_key
@@ -454,7 +454,7 @@ impl<'bump> SubtermAux<'bump> for RandAux<'bump> {
             RichFormula::Fun(fun, args) => 'function: {
                 if_chain! {
                     if fun == &self.int_ctxt.enc;
-                    if let RichFormula::Fun(nf, args2) = &args[1];
+                    if let RichFormula::Fun(nf, _args2) = &args[1];
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
                         break 'function VecRef::Vec(vec![&args[0], &args[2]]) // can't be the subterm of another nonce

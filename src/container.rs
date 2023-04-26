@@ -1,6 +1,6 @@
 use std::{cell::RefCell, fmt::Debug, ops::DerefMut, ptr::NonNull};
 
-use itertools::Itertools;
+
 
 use crate::{
     formula::{

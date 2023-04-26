@@ -9,7 +9,7 @@ use crate::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::{forall, meq, RichFormula},
         function::{
-            subterm::{self, Subsubterm},
+            subterm::{Subsubterm},
             term_algebra::name::NameCaster,
             Function,
         },
@@ -202,7 +202,7 @@ fn define_subterms<'bump>(
     subterm_key: &Rc<Subterm<'bump, impl SubtermAux<'bump>>>,
     subterm_main: &Rc<Subterm<'bump, impl SubtermAux<'bump>>>,
 ) {
-    let nonce_sort = NONCE.clone();
+    let _nonce_sort = NONCE.clone();
     let kind = env.into();
     {
         let subterm = subterm_key.as_ref();
@@ -287,7 +287,7 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
             RichFormula::Fun(fun, args) => 'function: {
                 if_chain! {
                     if fun == &self.euf_cma.sign;
-                    if let RichFormula::Fun(nf, args2) = &args[1];
+                    if let RichFormula::Fun(nf, _args2) = &args[1];
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
                         // break 'function VecRef::Vec(vec![&args[0], &args2[0]])
@@ -296,7 +296,7 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
                 }
                 if_chain! {
                     if fun == &self.euf_cma.pk;
-                    if let RichFormula::Fun(nf, args2) = &args[0];
+                    if let RichFormula::Fun(nf, _args2) = &args[0];
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
                         // break 'function VecRef::Vec(vec![&args[0], &args[1], &args2[0]])

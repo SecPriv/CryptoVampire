@@ -1,6 +1,6 @@
 use crate::{
     formula::{formula::RichFormula, sort::Sort, unifier::Unifier, variable::Variable},
-    utils::{possibly_empty::PE, vecref::VecRef},
+    utils::{vecref::VecRef},
 };
 
 // use self::possibly_empty::PE;

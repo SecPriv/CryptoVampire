@@ -51,7 +51,7 @@ pub mod graph {
     };
 
     use super::{
-        some_iter, CellCall, Dependancy, DependancyFromStep, InputCall, OutGoingCall, StepCall,
+        CellCall, Dependancy, DependancyFromStep, InputCall, OutGoingCall, StepCall,
     };
     use anyhow::{Ok, Result};
     use thiserror::Error;
@@ -510,10 +510,9 @@ mod calculate {
     use crate::{
         formula::formula::RichFormula,
         problem::{
-            cell::{Assignement, MemoryCell},
+            cell::{MemoryCell},
             step::Step,
         },
-        utils::utils::StackBox,
     };
 
     pub struct CellDependancy<'bump> {
@@ -525,7 +524,7 @@ mod calculate {
         pub step_call: &'bump RichFormula<'bump>,
     }
 
-    use super::some_iter;
+    
 
     pub struct InputDependancy<'bump> {
         // self_cell: &'pbl MemoryCell,

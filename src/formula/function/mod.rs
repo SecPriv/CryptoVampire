@@ -20,7 +20,7 @@ use bitflags::bitflags;
 // use crate::problem::step::Step;
 
 use crate::{
-    container::{self, Container, NameFinder, ScopeAllocator},
+    container::{NameFinder, ScopeAllocator},
     utils::precise_as_ref::PreciseAsRef,
 };
 

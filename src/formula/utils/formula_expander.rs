@@ -1,10 +1,10 @@
-use std::{iter::repeat, path::Iter, rc::Rc};
+use std::{rc::Rc};
 
 use itertools::Itertools;
 
 use crate::{
     formula::{
-        formula::{exists, RichFormula},
+        formula::{RichFormula},
         function::{term_algebra::TermAlgebra, InnerFunction},
         variable::Variable,
     },
@@ -12,7 +12,6 @@ use crate::{
         cell::{Assignement, MemoryCell},
         cell_dependancies::{
             graph::{Ancestors, DependancyGraph},
-            Dependancy,
         },
         step::Step,
     },
@@ -159,7 +158,7 @@ where
                 .map(
                     move |Assignement {
                               step,
-                              args,
+                              args: _,
                               content,
                           }| {
                         let vars = step.free_variables();

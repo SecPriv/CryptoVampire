@@ -1,13 +1,12 @@
 use static_init::dynamic;
 
-use crate::formula::sort::builtins::{BOOL, STEP};
+use crate::formula::sort::builtins::{STEP};
 
 use super::{
     booleans::{self, Booleans},
     if_then_else::IfThenElse,
     new_static_function,
     predicate::Predicate,
-    term_algebra::TermAlgebra,
     Function, InnerFunction,
 };
 

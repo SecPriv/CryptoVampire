@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::env::var;
+
 use std::ops::{BitAnd, BitOr, Deref, DerefMut, Not, Shr};
 
 use itertools::Itertools;
@@ -10,7 +10,7 @@ use crate::utils::utils::{repeat_n_zip, StackBox};
 use super::function::builtin::{AND, EQUALITY, IMPLIES, NOT, OR};
 use super::sort::builtins::BOOL;
 use super::sort::sorted::{Sorted, SortedError};
-use super::utils::formula_expander::{self, DeeperKinds, ExpantionContent, ExpantionState};
+use super::utils::formula_expander::{DeeperKinds, ExpantionContent, ExpantionState};
 use super::utils::formula_iterator::{FormulaIterator, IteratorFlags};
 use super::variable::Variable;
 use super::{

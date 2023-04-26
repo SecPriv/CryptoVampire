@@ -126,7 +126,7 @@ pub fn generate<'bump>(
                     let vars2 = vars1.iter().map(|&v| v + vars1.len()).collect_vec();
 
                     let premise =
-                        RichFormula::ands(vars1.iter().zip(vars2.iter()).map(|(v1, v2)| {
+                        RichFormula::ands(vars1.iter().zip(vars2.iter()).map(|(v1, _v2)| {
                             meq(
                                 pbl.evaluator.eval(v1.into_formula()),
                                 pbl.evaluator.eval(v1.into_formula()),
@@ -198,7 +198,7 @@ fn generate_connectives<'bump>(
 pub fn generate_quantifier<'bump>(
     assertions: &mut Vec<Axiom<'bump>>,
     declarations: &mut Vec<Declaration<'bump>>,
-    env: &Environement<'bump>,
+    _env: &Environement<'bump>,
     pbl: &Problem<'bump>,
     function: &Function<'bump>,
     q: &Quantifier<'bump>,
