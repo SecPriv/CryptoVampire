@@ -45,5 +45,5 @@ pub static LESS_THAN_STEP: Function<'static> =
     new_static_function(InnerFunction::Predicate(Predicate {
         name: "lt".into(),
         args: Box::new([STEP.clone(), STEP.clone()]),
-        out: BOOL.clone(),
+        // out: BOOL.clone(),
     }));

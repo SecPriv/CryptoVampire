@@ -303,3 +303,9 @@ bitflags! {
         const NO_MACROS = Self::QUANTIFIER.bits();
     }
 }
+
+impl Default for DeeperKinds {
+    fn default() -> Self {
+        Self::all()
+    }
+}

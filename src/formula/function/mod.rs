@@ -18,7 +18,7 @@ use bitflags::bitflags;
 // use crate::problem::step::Step;
 
 use crate::{
-    container::{self, Container, ScopeAllocator},
+    container::{self, Container, NameFinder, ScopeAllocator},
     utils::precise_as_ref::PreciseAsRef,
 };
 
@@ -255,6 +255,28 @@ impl<'bump> Function<'bump> {
         let (inner, t) = f(fun);
         std::ptr::write(fun.inner.as_ptr(), inner);
         (fun, t)
+    }
+
+    pub fn new_spliting(
+        container: &'bump (impl ScopeAllocator<'bump, InnerFunction<'bump>>
+                    + NameFinder<Function<'bump>>),
+        sorts: impl IntoIterator<Item = Sort<'bump>>,
+    ) -> Self {
+        let name = container.find_free_name("split");
+        let inner = InnerFunction::Predicate(Predicate {
+            name: name.into(),
+            args: sorts.into_iter().collect(),
+        });
+
+        let inner = unsafe {
+            let ptr = container.alloc();
+            std::ptr::write(ptr.as_ptr(), inner);
+            ptr
+        };
+        Function {
+            inner,
+            container: Default::default(),
+        }
     }
 
     // pub fn new(name: &str, input_sorts: Vec<Sort>, output_sort: Sort) -> Self {

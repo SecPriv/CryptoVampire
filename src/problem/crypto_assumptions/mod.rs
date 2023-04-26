@@ -10,6 +10,7 @@ pub use euf_cma_mac::SubtermEufCmaMacMain;
 
 use std::rc::Rc;
 
+use crate::environement::environement::Environement;
 use crate::formula::{
     file_descriptior::{axioms::Axiom, declare::Declaration},
     formula::RichFormula,
@@ -17,6 +18,10 @@ use crate::formula::{
     variable::Variable,
 };
 
+use self::euf_cma_mac::EufCmaMac;
+use self::nonce::Nonce;
+
+use super::problem::Problem;
 use super::{
     cell::{Assignement, MemoryCell},
     step::Step,
@@ -25,12 +30,7 @@ use super::{
 // should be quick to copy
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum CryptoAssumption<'bump> {
-    EufCmaMac {
-        /// mac(Message, Key) -> Signature
-        mac: Function<'bump>,
-        /// verify(Signature, Message, Key) -> bool
-        verify: Function<'bump>,
-    },
+    EufCmaMac(EufCmaMac<'bump>),
     EufCmaSign {
         /// sign(Message, Key) -> Signature
         sign: Function<'bump>,
@@ -44,7 +44,7 @@ pub enum CryptoAssumption<'bump> {
         fail: Function<'bump>,
         verify: Function<'bump>,
     },
-    Nonce,
+    Nonce(Nonce),
 }
 
 impl<'bump> CryptoAssumption<'bump> {
@@ -52,23 +52,19 @@ impl<'bump> CryptoAssumption<'bump> {
         &self,
         assertions: &mut Vec<Axiom<'bump>>,
         declarations: &mut Vec<Declaration<'bump>>,
-        // ctx: &mut Ctx,
+        env: &Environement<'bump>,
+        pbl: &Problem<'bump>,
     ) {
         match self {
-            // CryptoAssumption::EufCmaMac { mac, verify } => {
-            //     euf_cma_mac::generate(assertions, declarations, ctx, mac, verify)
-            // }
-            // CryptoAssumption::Nonce => nonce::generate(assertions, declarations, ctx),
-            // CryptoAssumption::EufCmaSign { sign, verify, pk } => {
-            //     euf_cma_sign::generate(assertions, declarations, ctx, sign, verify, pk)
-            // }
-            // CryptoAssumption::IntCtxtSenc {
-            //     enc,
-            //     dec,
-            //     verify,
-            //     fail,
-            // } => int_ctxt::generate(assertions, declarations, ctx, enc, dec, verify, fail),
-            _ => todo!(),
+            CryptoAssumption::EufCmaMac(euf) => euf.generate(assertions, declarations, env, pbl),
+            CryptoAssumption::EufCmaSign { sign, verify, pk } => todo!(),
+            CryptoAssumption::IntCtxtSenc {
+                enc,
+                dec,
+                fail,
+                verify,
+            } => todo!(),
+            CryptoAssumption::Nonce(nonce) => nonce.generate(assertions, declarations, env, pbl),
         }
     }
 }

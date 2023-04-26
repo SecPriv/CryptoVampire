@@ -37,6 +37,7 @@ impl Nonce {
             kind,
             DefaultAuxSubterm::new(nonce_sort),
             [],
+            Default::default(),
             |rc| crate::formula::function::subterm::Subsubterm::Nonce(rc),
         );
 

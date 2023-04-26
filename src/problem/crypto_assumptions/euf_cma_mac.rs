@@ -7,7 +7,7 @@ use crate::{
     environement::environement::Environement,
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
-        formula::RichFormula,
+        formula::{forall, meq, RichFormula},
         function::{
             subterm::{self, Subsubterm},
             term_algebra::name::NameCaster,
@@ -61,6 +61,7 @@ impl<'bump> EufCmaMac<'bump> {
             kind,
             DefaultAuxSubterm::new(message_sort),
             [],
+            DeeperKinds::default(),
             |rc| Subsubterm::EufCmaMacMain(rc),
         );
 
@@ -74,6 +75,7 @@ impl<'bump> EufCmaMac<'bump> {
                 name_caster: Rc::clone(&pbl.name_caster),
             },
             [],
+            DeeperKinds::NO_MACROS,
             |rc| Subsubterm::EufCmaMacKey(rc),
         );
 
@@ -85,50 +87,48 @@ impl<'bump> EufCmaMac<'bump> {
         }
 
         if env.define_subterm() {
-            {
-                let subterm = subterm_key.as_ref();
-                declarations.push(subterm.declare(pbl));
+            define_subterms(
+                env,
+                pbl,
+                assertions,
+                declarations,
+                &subterm_key,
+                &subterm_main,
+            );
+        }
 
-                if let SubtermKind::Vampire = kind {
-                } else {
-                    assertions.extend(
-                        subterm
-                            .generate_function_assertions_from_pbl(pbl)
-                            .into_iter()
-                            .chain(subterm.not_of_sort(
-                                pbl.sorts.iter().filter(|&&s| s != nonce_sort).cloned(),
-                            ))
-                            .map(|f| Axiom::base(f)),
-                    );
-                }
-                assertions.extend(
-                    subterm
-                        .preprocess_special_assertion_from_pbl(pbl, true)
-                        .map(|f| Axiom::base(f)),
-                );
-            }
-            {
-                let subterm = subterm_main.as_ref();
-                declarations.push(subterm.declare(pbl));
+        if env.with_general_crypto_axiom() && env.define_subterm() {
+            let max_var = pbl.max_var() + 1;
+            let split = Function::new_spliting(env.container_full_life_time(), [message_sort]);
+            declarations.push(Declaration::FreeFunction(split));
 
-                if let SubtermKind::Vampire = kind {
-                } else {
-                    assertions.extend(
-                        subterm
-                            .generate_function_assertions_from_pbl(pbl)
-                            .into_iter()
-                            .chain(subterm.not_of_sort(
-                                pbl.sorts.iter().filter(|&&s| s != nonce_sort).cloned(),
-                            ))
-                            .map(|f| Axiom::base(f)),
-                    );
-                }
-                assertions.extend(
-                    subterm
-                        .preprocess_special_assertion_from_pbl(pbl, true)
-                        .map(|f| Axiom::base(f)),
-                );
-            }
+            assertions.push(Axiom::base({
+                let k = Variable {
+                    id: max_var,
+                    sort: nonce_sort,
+                };
+                let k_f = k.into_formula();
+                let ors = RichFormula::ors(subterm_key.preprocess_whole_ptcl(&pbl.protocol, &k_f));
+
+                forall([k], split.f([k_f]) >> ors)
+            }));
+
+            assertions.push(Axiom::base(
+                mforall!(m!1:message_sort, sigma!2:message_sort, k!3:nonce_sort; {
+                    let k_f = nc.cast(message_sort, k.clone());
+                    ev.eval(self.verify.f([m.clone(), sigma.clone(), k_f.clone()])) >>
+                    mexists!(u!4:message_sort; {
+                        meq(ev.eval(u.clone()), ev.eval(m.clone())) &
+                        (
+                            subterm_main.f( self.mac.f([u.clone(), k_f.clone()]), m.clone()) |
+                            subterm_main.f( self.mac.f([u.clone(), k_f.clone()]), sigma.clone()) |
+                            subterm_key.f( k.clone(), m.clone()) |
+                            subterm_key.f( k.clone(), sigma.clone()) |
+                            split.f([k])
+                        )
+                    })
+                }),
+            ))
         }
     }
 
@@ -187,6 +187,64 @@ impl<'bump> EufCmaMac<'bump> {
 
         // [].into_iter()
         candidates
+    }
+}
+
+fn define_subterms<'bump>(
+    env: &Environement<'bump>,
+    pbl: &Problem<'bump>,
+    assertions: &mut Vec<Axiom<'bump>>,
+    declarations: &mut Vec<Declaration<'bump>>,
+    subterm_key: &Rc<Subterm<'bump, impl SubtermAux<'bump>>>,
+    subterm_main: &Rc<Subterm<'bump, impl SubtermAux<'bump>>>,
+) {
+    let nonce_sort = NONCE.clone();
+    let kind = env.into();
+    {
+        let subterm = subterm_key.as_ref();
+        declarations.push(subterm.declare(pbl));
+
+        if let SubtermKind::Vampire = kind {
+        } else {
+            assertions.extend(
+                subterm
+                    .generate_function_assertions_from_pbl(pbl)
+                    .into_iter()
+                    .chain(
+                        subterm
+                            .not_of_sort(pbl.sorts.iter().filter(|&&s| s != nonce_sort).cloned()),
+                    )
+                    .map(|f| Axiom::base(f)),
+            );
+        }
+        assertions.extend(
+            subterm
+                .preprocess_special_assertion_from_pbl(pbl, false)
+                .map(|f| Axiom::base(f)),
+        );
+    }
+    {
+        let subterm = subterm_main.as_ref();
+        declarations.push(subterm.declare(pbl));
+
+        if let SubtermKind::Vampire = kind {
+        } else {
+            assertions.extend(
+                subterm
+                    .generate_function_assertions_from_pbl(pbl)
+                    .into_iter()
+                    .chain(
+                        subterm
+                            .not_of_sort(pbl.sorts.iter().filter(|&&s| s != nonce_sort).cloned()),
+                    )
+                    .map(|f| Axiom::base(f)),
+            );
+        }
+        assertions.extend(
+            subterm
+                .preprocess_special_assertion_from_pbl(pbl, true)
+                .map(|f| Axiom::base(f)),
+        );
     }
 }
 

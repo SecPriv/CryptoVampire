@@ -47,6 +47,7 @@ where
     ignored_functions: Vec<Function<'bump>>,
     pub kind: SubtermKind,
     weak: Weak<Self>, // sort: Sort<'bump>,
+    deeper_kind: DeeperKinds
 }
 
 impl<'bump, Aux> Eq for Subterm<'bump, Aux> where Aux: SubtermAux<'bump> + Eq {}
@@ -97,6 +98,7 @@ where
         kind: SubtermKind,
         aux: Aux,
         ignored_functions: impl IntoIterator<Item = Function<'bump>>,
+        deeper_kind: DeeperKinds,
         to_enum: F,
     ) -> Rc<Self>
     where
@@ -112,6 +114,7 @@ where
                     ignored_functions,
                     kind,
                     weak: Weak::clone(weak),
+                    deeper_kind
                 });
                 //  Rc::new(subterm);
                 let inner = function::subterm::Subterm {
@@ -162,7 +165,7 @@ where
     }
 
     /// List of functions declared to use default subterm
-    pub fn default_subterm_functions<'a>(
+    pub fn list_default_subterm_functions<'a>(
         &'a self,
         pbl: &'a Problem<'bump>,
     ) -> impl Iterator<Item = Function<'bump>> + 'a {
@@ -177,7 +180,7 @@ where
         &self,
         pbl: &Problem<'bump>,
     ) -> Vec<RichFormula<'bump>> {
-        self.generate_functions_assertions(self.default_subterm_functions(pbl))
+        self.generate_functions_assertions(self.list_default_subterm_functions(pbl))
     }
 
     pub fn generate_special_functions_assertions<'a>(
@@ -250,7 +253,7 @@ where
         m: &'a RichFormula<'bump>,
         keep_guard: bool,
     ) -> RichFormula<'bump> {
-        RichFormula::ors(self.preprocess_term(ptcl, x, m, keep_guard, DeeperKinds::all()))
+        RichFormula::ors(self.preprocess_term(ptcl, x, m, keep_guard, self.deeper_kind))
     }
 
     /// preprocess a subterm search going through inputs and cells. Returns a list to ored.
@@ -359,7 +362,7 @@ where
             SubtermKind::Regular => Declaration::FreeFunction(self.function),
             SubtermKind::Vampire => Declaration::Subterm(declare::Subterm {
                 name: self.function.name().to_owned(),
-                functions: self.default_subterm_functions(pbl).collect(),
+                functions: self.list_default_subterm_functions(pbl).collect(),
             }),
         }
     }

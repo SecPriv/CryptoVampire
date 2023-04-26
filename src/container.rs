@@ -103,3 +103,13 @@ impl<'bump> Container<'bump> {
             .unwrap_or(name.to_owned())
     }
 }
+
+pub trait NameFinder<T> {
+    fn find_free_name(&self, name: &str) -> String;
+}
+
+impl<'bump> NameFinder<Function<'bump>> for Container<'bump> {
+    fn find_free_name(&self, name: &str) -> String {
+        self.find_free_function_name(name)
+    }
+}

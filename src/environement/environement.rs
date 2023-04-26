@@ -109,4 +109,12 @@ impl<'bump> Environement<'bump> {
     pub fn not_as_term_algebra(&self) -> bool {
         self.options.flags.contains(Flags::NOT_AS_TERM_ALGEBRA)
     }
+
+    pub fn with_general_crypto_axiom(&self) -> bool {
+        !self.not_as_term_algebra()
+    }
+
+    pub fn container_full_life_time(&self) -> &'bump Container<'bump> {
+        self.container
+    }
 }
