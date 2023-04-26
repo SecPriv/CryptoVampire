@@ -114,21 +114,6 @@ impl<'bump> IntCtxt<'bump> {
         }
 
         if env.with_general_crypto_axiom() && env.define_subterm() {
-            // let max_var = pbl.max_var() + 1;
-            // let split = Function::new_spliting(env.container_full_life_time(), [message_sort]);
-            // declarations.push(Declaration::FreeFunction(split));
-
-            // assertions.push(Axiom::base({
-            //     let k = Variable {
-            //         id: max_var,
-            //         sort: nonce_sort,
-            //     };
-            //     let k_f = k.into_formula();
-            //     let ors = RichFormula::ors(subterm_key.preprocess_whole_ptcl(&pbl.protocol, &k_f));
-
-            //     forall([k], split.f([k_f]) >> ors)
-            // }));
-
             assertions.push(Axiom::base(
                 mforall!(c!1:message_sort, k!3:nonce_sort; {
                     let k_f = nc.cast(message_sort, k.clone());
@@ -146,8 +131,9 @@ impl<'bump> IntCtxt<'bump> {
                                 & (
                                     (mforall!(n!9:nonce_sort; {!meq(r2.clone(), nc.cast(message_sort, n))})) |
                                     ( meq(r2, r_f.clone()) &
-                                    (!meq(m2, m.clone()))
-                                | (!meq(k2, k_f.clone()))))
+                                        ((!meq(m2, m.clone())) | (!meq(k2, k_f.clone())))
+                                    )
+                                )
                             }))
                         )
                     })
@@ -281,16 +267,16 @@ impl<'bump> IntCtxt<'bump> {
                             });
 
                     Some(mforall!(free_vars, {
-                        (pbl.evaluator
+                        pbl.evaluator
                             .eval(self.verify.f([cipher.clone(), k_f.clone()]))
-                            & RichFormula::ands(other_sc))
-                            >> mexists!([u_var, r_var], {
-                                RichFormula::ors(disjunction)
-                                    & meq(
-                                        pbl.evaluator.eval(cipher.clone()),
-                                        pbl.evaluator.eval(n_c_f),
-                                    )
-                            })
+                            & mforall!([r_var], { RichFormula::ands(other_sc) })
+                                >> mexists!([u_var, r_var], {
+                                    RichFormula::ors(disjunction)
+                                        & meq(
+                                            pbl.evaluator.eval(cipher.clone()),
+                                            pbl.evaluator.eval(n_c_f),
+                                        )
+                                })
                     }))
                 } else {
                     None
@@ -302,43 +288,6 @@ impl<'bump> IntCtxt<'bump> {
         candidates
     }
 }
-
-/* fn define_subterms<'bump>(
-    env: &Environement<'bump>,
-    pbl: &Problem<'bump>,
-    assertions: &mut Vec<Axiom<'bump>>,
-    declarations: &mut Vec<Declaration<'bump>>,
-    subterm_key: &Rc<Subterm<'bump, impl SubtermAux<'bump>>>,
-    subterm_main: &Rc<Subterm<'bump, impl SubtermAux<'bump>>>,
-) {
-    let nonce_sort = NONCE.clone();
-    let kind = env.into();
-    {
-        let subterm = subterm_key.as_ref();
-        declarations.push(subterm.declare(pbl));
-
-        if let SubtermKind::Vampire = kind {
-        } else {
-            assertions.extend(
-                subterm
-                    .generate_function_assertions_from_pbl(pbl)
-                    .into_iter()
-                    .chain(
-                        subterm.not_of_sort(
-                            pbl.sorts.iter().filter(|&&s| s != subterm.sort()).cloned(),
-                        ),
-                    )
-                    .map(|f| Axiom::base(f)),
-            );
-        }
-        assertions.extend(
-            subterm
-                .preprocess_special_assertion_from_pbl(pbl, false)
-                .map(|f| Axiom::base(f)),
-        );
-    }
-    // define_subterm(subterm_main, declarations, pbl, kind, assertions, true);
-} */
 
 fn define_subterm<'bump>(
     env: &Environement<'bump>,
@@ -409,7 +358,7 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
             RichFormula::Fun(fun, args) => 'function: {
                 if_chain! {
                     if fun == &self.int_ctxt.dec;
-                    if let RichFormula::Fun(nf, args2) = &args[1];
+                    if let RichFormula::Fun(nf, _) = &args[1];
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
                         break 'function VecRef::Vec(vec![&args[0]]) // can't be the subterm of another nonce
@@ -417,7 +366,7 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
                 }
                 if_chain! {
                     if fun == &self.int_ctxt.verify;
-                    if let RichFormula::Fun(nf, args2) = &args[1];
+                    if let RichFormula::Fun(nf, _) = &args[1];
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
                         break 'function VecRef::Vec(vec![&args[0]]) // can't be the subterm of another nonce
@@ -425,7 +374,7 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
                 }
                 if_chain! {
                     if fun == &self.int_ctxt.enc;
-                    if let RichFormula::Fun(nf, args2) = &args[2];
+                    if let RichFormula::Fun(nf, _) = &args[2];
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
                         break 'function VecRef::Vec(vec![&args[0], &args[1]]) // can't be the subterm of another nonce

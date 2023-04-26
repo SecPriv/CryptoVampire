@@ -1,67 +1,72 @@
-use std::fmt::{self};
-
-use itertools::Itertools;
-
-use crate::{
-    formula::{
-        builtins::{
-            functions::{AND_NAME, B_IF_THEN_ELSE_NAME, IMPLIES, NOT, OR_NAME},
-            types::BOOL,
-        },
-        env::Environement,
-        formula::{RichFormula, Variable},
-        function::Function,
-        quantifier::Quantifier,
-        sort::Sort,
-    },
-    smt::macros::svar,
+use std::{
+    fmt::{self, Display},
+    rc::Rc,
 };
 
-use super::macros::sfun;
+use crate::{
+    environement::environement::Environement,
+    formula::{
+        file_descriptior::axioms::{Axiom, Rewrite, RewriteKind},
+        formula::RichFormula,
+        function::{
+            booleans::{Booleans, Connective},
+            subterm::Subterm,
+            Function, InnerFunction,
+        },
+        quantifier::Quantifier,
+        sort::Sort,
+        variable::Variable,
+    },
+    problem::subterm::kind::SubtermKind,
+};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum SmtFormula {
-    Var(Variable),
-    Fun(Function, Vec<SmtFormula>),
-    Forall(Vec<Variable>, Box<SmtFormula>),
-    Exists(Vec<Variable>, Box<SmtFormula>),
+pub enum SmtFormula<'bump> {
+    Var(Variable<'bump>),
+    Fun(Function<'bump>, Vec<SmtFormula<'bump>>),
+    Forall(Vec<Variable<'bump>>, Box<SmtFormula<'bump>>),
+    Exists(Vec<Variable<'bump>>, Box<SmtFormula<'bump>>),
 
-    And(Vec<SmtFormula>),
-    Or(Vec<SmtFormula>),
-    Eq(Vec<SmtFormula>),
-    Neq(Vec<SmtFormula>),
+    And(Vec<SmtFormula<'bump>>),
+    Or(Vec<SmtFormula<'bump>>),
+    Eq(Vec<SmtFormula<'bump>>),
+    Neq(Vec<SmtFormula<'bump>>),
+    Not(Box<SmtFormula<'bump>>),
+    Implies(Box<SmtFormula<'bump>>, Box<SmtFormula<'bump>>),
 
-    Ite(Box<SmtFormula>, Box<SmtFormula>, Box<SmtFormula>),
-}
+    Subterm(
+        Function<'bump>,
+        Box<SmtFormula<'bump>>,
+        Box<SmtFormula<'bump>>,
+    ),
 
-pub fn implies(env: &Environement, a: SmtFormula, b: SmtFormula) -> SmtFormula {
-    sfun!(IMPLIES(env); a, b)
-}
-
-pub fn not(env: &Environement, a: SmtFormula) -> SmtFormula {
-    sfun!(NOT(env); a)
+    Ite(
+        Box<SmtFormula<'bump>>,
+        Box<SmtFormula<'bump>>,
+        Box<SmtFormula<'bump>>,
+    ),
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum Smt {
-    Assert(SmtFormula),
-    AssertTh(SmtFormula),
-    AssertNot(SmtFormula),
-    DeclareFun(Function),
-    DeclareSort(Sort),
+pub enum Smt<'bump> {
+    Assert(SmtFormula<'bump>),
+    AssertTh(SmtFormula<'bump>),
+    AssertNot(SmtFormula<'bump>),
+    DeclareFun(Function<'bump>),
+    DeclareSort(Sort<'bump>),
 
-    DeclareSubtermRelation(Function, Vec<Function>),
+    DeclareSubtermRelation(Function<'bump>, Vec<Function<'bump>>),
 
     DeclareRewrite {
-        rewrite_fun: RewriteKind,
-        vars: Vec<Variable>,
-        lhs: Box<SmtFormula>,
-        rhs: Box<SmtFormula>,
+        rewrite_fun: RewriteKind<'bump>,
+        vars: Vec<Variable<'bump>>,
+        lhs: Box<SmtFormula<'bump>>,
+        rhs: Box<SmtFormula<'bump>>,
     },
 
     DeclareDatatypes {
-        sorts: Vec<Sort>,
-        cons: Vec<Vec<SmtCons>>,
+        sorts: Vec<Sort<'bump>>,
+        cons: Vec<Vec<SmtCons<'bump>>>,
     },
     Comment(String),
 
@@ -72,18 +77,12 @@ pub enum Smt {
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct SmtCons {
-    pub fun: Function,
-    pub dest: Vec<Function>,
+pub struct SmtCons<'bump> {
+    pub fun: Function<'bump>,
+    pub dest: Vec<Function<'bump>>,
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum RewriteKind {
-    Bool,
-    Other(Function),
-}
-
-impl fmt::Display for SmtFormula {
+impl<'bump> fmt::Display for SmtFormula<'bump> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             SmtFormula::Var(v) => v.fmt(f),
@@ -127,11 +126,14 @@ impl fmt::Display for SmtFormula {
             SmtFormula::Ite(c, r, l) => {
                 write!(f, "(ite {} {} {})", c, r, l)
             }
+            SmtFormula::Implies(a, b) => write!(f, "(=> {} {})", a, b),
+            SmtFormula::Subterm(fun, a, b) => write!(f, "(subterm {} {} {})", fun.name(), a, b),
+            SmtFormula::Not(a) => write!(f, "(not {})", a),
         }
     }
 }
 
-impl fmt::Display for Smt {
+impl<'bump> fmt::Display for Smt<'bump> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Smt::Assert(e) => write!(f, "(assert {})", e),
@@ -139,10 +141,10 @@ impl fmt::Display for Smt {
             Smt::AssertNot(e) => write!(f, "(assert-not {})", e),
             Smt::DeclareFun(fun) => {
                 write!(f, "(declare-fun {} (", fun.name())?;
-                for s in fun.input_sorts_iter() {
-                    write!(f, "{} ", s)?;
+                for s in fun.forced_input_sort() {
+                    write!(f, "{} ", s.name())?;
                 }
-                write!(f, ") {})", fun.get_output_sort())
+                write!(f, ") {})", fun.fast_outsort().unwrap())
             }
             Smt::DeclareSort(sort) => write!(f, "(declare-sort {} 0)", sort),
             Smt::DeclareSubtermRelation(fun, funs) => {
@@ -181,11 +183,11 @@ impl fmt::Display for Smt {
                 for (j, vc) in cons.iter().enumerate() {
                     write!(f, "\t\t(\n")?;
                     for c in vc {
-                        assert_eq!(sorts[j], c.fun.get_output_sort());
+                        assert_eq!(sorts[j], c.fun.fast_outsort().unwrap());
 
                         write!(f, "\t\t\t({} ", c.fun.name())?;
 
-                        for (i, s) in c.fun.get_input_sorts().iter().enumerate() {
+                        for (i, s) in c.fun.forced_input_sort().iter().enumerate() {
                             write!(f, "({} {}) ", c.dest.get(i).unwrap().name(), s)?;
                         }
                         write!(f, ")\n")?;
@@ -216,228 +218,118 @@ fn fun_list_fmt<I: Iterator<Item = impl fmt::Display>>(
     write!(f, ")")
 }
 
-impl From<&RichFormula> for SmtFormula {
-    fn from(f: &RichFormula) -> Self {
-        match f {
-            RichFormula::Var(v) => v.into(),
-
+impl<'bump> SmtFormula<'bump> {
+    pub fn from_richformula(env: &Environement<'bump>, formula: RichFormula<'bump>) -> Self {
+        match formula {
+            RichFormula::Var(v) => SmtFormula::Var(v),
+            RichFormula::Quantifier(q, arg) => match q {
+                Quantifier::Exists { variables } => {
+                    SmtFormula::Exists(variables, Box::new(Self::from_richformula(env, *arg)))
+                }
+                Quantifier::Forall { variables } => {
+                    SmtFormula::Forall(variables, Box::new(Self::from_richformula(env, *arg)))
+                }
+            },
             RichFormula::Fun(f, args) => {
-                let mut iter = args.into_iter().map(Into::into);
-                match f.name() {
-                    AND_NAME => SmtFormula::And(iter.collect()),
-                    OR_NAME => SmtFormula::Or(iter.collect()),
-                    // NOT_NAME => SmtFormula::Not(iter.next().unwrap()),
-                    B_IF_THEN_ELSE_NAME => {
-                        let (c, l, r) = iter.next_tuple().unwrap();
+                let mut args = args
+                    .into_iter()
+                    .map(|f| Self::from_richformula(env, f))
+                    .collect();
+
+                match f.as_ref() {
+                    InnerFunction::Nonce(_)
+                    | InnerFunction::Step(_)
+                    | InnerFunction::TermAlgebra(_)
+                    | InnerFunction::Predicate(_)
+                    | InnerFunction::Unused(_)
+                    | InnerFunction::Skolem(_)
+                    | InnerFunction::Evaluate(_) => SmtFormula::Fun(f, args),
+                    InnerFunction::Subterm(Subterm { subterm, .. }) => {
+                        let kind = subterm.kind();
+
+                        match kind {
+                            SubtermKind::Regular => SmtFormula::Fun(f, args),
+                            SubtermKind::Vampire => {
+                                let b = args.pop().unwrap();
+                                let a = args.pop().unwrap();
+                                SmtFormula::Subterm(f, Box::new(a), Box::new(b))
+                            }
+                        }
+                    }
+                    InnerFunction::IfThenElse(_) => {
+                        let r = args.pop().unwrap();
+                        let l = args.pop().unwrap();
+                        let c = args.pop().unwrap();
                         SmtFormula::Ite(Box::new(c), Box::new(l), Box::new(r))
                     }
-                    _ => SmtFormula::Fun(f.clone(), iter.collect()),
+                    InnerFunction::Bool(c) => match c {
+                        Booleans::Equality(_) => SmtFormula::Eq(args),
+                        Booleans::Connective(c) => match c {
+                            Connective::And => SmtFormula::And(args),
+                            Connective::Or => SmtFormula::Or(args),
+                            Connective::Not => SmtFormula::Not(Box::new(args.pop().unwrap())),
+                            Connective::Implies => {
+                                let b = args.pop().unwrap();
+                                let a = args.pop().unwrap();
+                                SmtFormula::Implies(Box::new(a), Box::new(b))
+                            }
+                            Connective::Iff => SmtFormula::Eq(args),
+                        },
+                    },
                 }
             }
-            RichFormula::Quantifier(Quantifier::Exists { variables }, args) => SmtFormula::Exists(
-                variables.clone(),
-                Box::new(args.into_iter().next().unwrap().into()),
-            ),
-            RichFormula::Quantifier(Quantifier::Forall { variables }, args) => SmtFormula::Forall(
-                variables.clone(),
-                Box::new(args.into_iter().next().unwrap().into()),
-            ),
-            RichFormula::Quantifier(_, _) => panic!("unsuported quantifier: {:?}", f),
         }
     }
 }
 
-impl From<RichFormula> for SmtFormula {
-    fn from(f: RichFormula) -> Self {
-        SmtFormula::from(&f)
-    }
-}
-
-impl From<&Variable> for SmtFormula {
-    fn from(v: &Variable) -> Self {
-        v.clone().into()
-    }
-}
-impl From<Variable> for SmtFormula {
-    fn from(v: Variable) -> Self {
-        SmtFormula::Var(v)
-    }
-}
-
-impl Smt {
-    pub fn rewrite_to_assert(self, env: &Environement) -> Self {
-        match self {
-            Self::DeclareRewrite {
-                rewrite_fun: RewriteKind::Bool,
-                vars,
-                lhs,
-                rhs,
-            } => Smt::Assert(SmtFormula::Forall(vars, Box::new(implies(env, *lhs, *rhs)))),
-            Self::DeclareRewrite {
-                rewrite_fun: RewriteKind::Other(_),
-                vars,
-                lhs,
-                rhs,
-            } => Smt::Assert(SmtFormula::Forall(
-                vars,
-                Box::new(SmtFormula::Eq(vec![*lhs, *rhs])),
-            )),
-            _ => self,
-        }
-    }
-}
-
-impl SmtFormula {
-    /// Gets rid of as many exists (or hidden exists) quantifiers as possible.
-    /// Some may remain if they are too tricky to soundly remove
-    pub fn skolemnise(
-        self,
-        env: &mut Environement,
-        negative: bool,
-        free_vars: &[Variable],
-    ) -> (Self, Vec<Function>) {
-        let mut skolems = Vec::new();
-        let mut fv = free_vars.into();
-
-        struct SC {
-            not: Function,
-            bool: Sort,
-            implies: Function,
-        }
-        let db = SC {
-            not: NOT(env).clone(),
-            bool: BOOL(env).clone(),
-            implies: IMPLIES(env).clone(),
-        };
-
-        fn aux(
-            f: SmtFormula,
-            env: &mut Environement,
-            negative: bool,
-            skolems: &mut Vec<Function>,
-            db: &SC,
-            fv: &mut Vec<Variable>,
-        ) -> SmtFormula {
-            match (negative, f) {
-                (negative, SmtFormula::Fun(fun, args)) if fun == db.not => SmtFormula::Fun(
-                    fun,
-                    vec![aux(
-                        args.into_iter().next().unwrap(),
-                        env,
-                        !negative,
-                        skolems,
-                        db,
-                        fv,
-                    )],
-                ),
-                (negative, SmtFormula::Fun(fun, args)) if fun == db.implies => {
-                    let mut iter = args.into_iter();
-                    let premise = iter.next().unwrap();
-                    let conclusion = iter.next().unwrap();
-                    SmtFormula::Fun(
-                        fun,
-                        vec![
-                            aux(premise, env, !negative, skolems, db, fv),
-                            aux(conclusion, env, negative, skolems, db, fv),
-                        ],
-                    )
+impl<'bump> Smt<'bump> {
+    pub fn from_axiom(env: &Environement<'bump>, ax: Axiom<'bump>) -> Self {
+        match ax {
+            Axiom::Comment(str) => Smt::Comment(str.into()),
+            Axiom::Base { formula } => Smt::Assert(SmtFormula::from_richformula(env, *formula)),
+            Axiom::Theory { formula } => {
+                let f = SmtFormula::from_richformula(env, *formula);
+                if env.use_assert_theory() {
+                    Smt::AssertTh(f)
+                } else {
+                    Smt::Assert(f)
                 }
-
-                (_, SmtFormula::Fun(fun, args)) if !fun.get_input_sorts().contains(&db.bool) => {
-                    SmtFormula::Fun(
-                        fun,
-                        args.into_iter()
-                            .map(|arg| aux(arg, env, negative, skolems, db, fv))
-                            .collect(),
-                    )
-                }
-                (true, SmtFormula::Forall(vars, arg)) | (false, SmtFormula::Exists(vars, arg)) => {
-                    let nvars = vars
-                        .iter()
-                        .map(|v| env.add_skolem(fv.iter().map(|v2| &v2.sort), &v.sort))
-                        .collect_vec();
-                    skolems.extend(nvars.iter().cloned());
-                    let fs = nvars
-                        .into_iter()
-                        .map(|fun| sfun!(fun, fv.iter().map(|v| svar!(v.clone())).collect()))
-                        .collect_vec();
-                    let vars = vars.into_iter().map(|v| v.id).collect_vec();
-                    let arg = arg.partial_substitution(&vars, &fs);
-                    aux(arg, env, negative, skolems, db, fv)
-                }
-                (_, SmtFormula::Forall(vars, arg)) => {
-                    fv.extend(vars.iter().cloned());
-                    let arg = Box::new(aux(*arg, env, negative, skolems, db, fv));
-                    // gets rid of the free variable of this quantifier
-                    fv.truncate(fv.len() - vars.len());
-                    SmtFormula::Forall(vars, arg)
-                }
-                (_, SmtFormula::Exists(vars, arg)) => {
-                    fv.extend(vars.iter().cloned());
-                    let arg = Box::new(aux(*arg, env, negative, skolems, db, fv));
-                    // gets rid of the free variable of this quantifier
-                    fv.truncate(fv.len() - vars.len());
-                    SmtFormula::Exists(vars, arg)
-                }
-                (_, SmtFormula::And(args)) => SmtFormula::And(
-                    args.into_iter()
-                        .map(|f| aux(f, env, negative, skolems, db, fv))
-                        .collect(),
-                ),
-                (_, SmtFormula::Or(args)) => SmtFormula::Or(
-                    args.into_iter()
-                        .map(|f| aux(f, env, negative, skolems, db, fv))
-                        .collect(),
-                ),
-                (_, f) => f,
             }
-        }
-
-        let result = aux(self, env, negative, &mut skolems, &db, &mut fv);
-        (result, skolems)
-    }
-
-    pub fn map<F>(self, f: &F) -> Self
-    where
-        F: Fn(Self) -> Self,
-    {
-        match self {
-            SmtFormula::Var(_) => f(self),
-            SmtFormula::Fun(fun, args) => f(SmtFormula::Fun(
-                fun,
-                args.into_iter().map(|arg| arg.map(f)).collect(),
-            )),
-            SmtFormula::Forall(vars, arg) => f(Self::Forall(vars, Box::new(f(arg.map(f))))),
-            SmtFormula::Exists(vars, arg) => f(Self::Exists(vars, Box::new(f(arg.map(f))))),
-            SmtFormula::And(arg) => f(Self::And(arg.into_iter().map(|x| x.map(f)).collect())),
-            SmtFormula::Or(arg) => f(Self::Or(arg.into_iter().map(|x| x.map(f)).collect())),
-            SmtFormula::Eq(arg) => f(Self::Eq(arg.into_iter().map(|x| x.map(f)).collect())),
-            SmtFormula::Neq(arg) => f(Self::Neq(arg.into_iter().map(|x| x.map(f)).collect())),
-            SmtFormula::Ite(c, l, r) => {
-                let c = Box::new(f(*c));
-                let r = Box::new(f(*r));
-                let l = Box::new(f(*l));
-                f(Self::Ite(c, r, l))
+            Axiom::Query { formula } => {
+                let f = SmtFormula::from_richformula(env, *formula);
+                if env.use_assert_not() {
+                    Smt::AssertNot(f)
+                } else {
+                    Smt::Assert(SmtFormula::Not(Box::new(f)))
+                }
             }
-        }
-    }
-
-    pub fn partial_substitution(self, vars: &[usize], fs: &[SmtFormula]) -> Self {
-        debug_assert_eq!(vars.len(), fs.len());
-
-        let idx = |v| vars.iter().position(|&var| var == v);
-
-        self.map(&{
-            |f| match f {
-                Self::Var(v) => {
-                    if let Some(i) = idx(v.id) {
-                        fs[i].clone()
-                    } else {
-                        Self::Var(v)
+            Axiom::Rewrite { rewrite } => {
+                let Rewrite {
+                    kind,
+                    vars,
+                    pre,
+                    post,
+                } = *rewrite;
+                let pre = SmtFormula::from_richformula(env, pre);
+                let post = SmtFormula::from_richformula(env, post);
+                if env.no_rewrite() {
+                    Smt::Assert(SmtFormula::Forall(
+                        vars,
+                        Box::new(if kind == RewriteKind::Bool {
+                            SmtFormula::Implies(Box::new(pre), Box::new(post))
+                        } else {
+                            SmtFormula::Eq(vec![pre, post])
+                        }),
+                    ))
+                } else {
+                    Smt::DeclareRewrite {
+                        rewrite_fun: kind,
+                        vars,
+                        lhs: Box::new(pre),
+                        rhs: Box::new(post),
                     }
                 }
-                _ => f,
             }
-        })
+        }
     }
 }

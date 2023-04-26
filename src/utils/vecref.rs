@@ -5,6 +5,7 @@ pub enum VecRef<'a, T> {
     Vec(Vec<&'a T>),
     Ref(&'a [T]),
     RefRef(&'a [&'a T]),
+    Single(&'a T),
     Empty,
 }
 
@@ -24,6 +25,7 @@ impl<'a, T> VecRef<'a, T> {
             VecRef::Vec(v) => v.len(),
             VecRef::Ref(v) => v.len(),
             VecRef::RefRef(v) => v.len(),
+            VecRef::Single(_) => 0,
             VecRef::Empty => 0,
         }
     }
@@ -33,6 +35,7 @@ impl<'a, T> VecRef<'a, T> {
             VecRef::Vec(v) => v.get(i).map(|e| *e),
             VecRef::Ref(v) => v.get(i),
             VecRef::RefRef(v) => v.get(i).map(|e| *e),
+            VecRef::Single(e) => (i == 0).then(|| *e),
             VecRef::Empty => None,
         }
     }
@@ -42,6 +45,10 @@ impl<'a, T> VecRef<'a, T> {
             VecRef::Vec(v) => v.get_unchecked(i),
             VecRef::Ref(v) => v.get_unchecked(i),
             VecRef::RefRef(v) => v.get_unchecked(i),
+            VecRef::Single(e) => {
+                assert_eq!(0, i);
+                *e
+            }
             VecRef::Empty => panic!(),
         }
     }
@@ -59,6 +66,10 @@ impl<'a, T> Index<usize> for VecRef<'a, T> {
             VecRef::Vec(v) => &v[i],
             VecRef::Ref(v) => &v[i],
             VecRef::RefRef(v) => v[i],
+            VecRef::Single(e) => {
+                assert_eq!(i, 0);
+                *e
+            }
             VecRef::Empty => panic!(),
         }
     }
@@ -74,6 +85,7 @@ impl<'a, T> IntoIterator for &'a VecRef<'a, T> {
             VecRef::Vec(v) => IterVecRef::Ref(v.iter()),
             VecRef::Ref(v) => IterVecRef::Vec(v.iter()),
             VecRef::RefRef(v) => IterVecRef::Ref(v.iter()),
+            VecRef::Single(e) => IterVecRef::Single(*e),
             VecRef::Empty => IterVecRef::Empty,
         }
     }
@@ -89,6 +101,7 @@ impl<'a, T> IntoIterator for VecRef<'a, T> {
             VecRef::Vec(v) => IterVecRef::OwnedVec(v.into_iter()),
             VecRef::Ref(v) => IterVecRef::Vec(v.iter()),
             VecRef::RefRef(v) => IterVecRef::Ref(v.iter()),
+            VecRef::Single(e) => IterVecRef::Single(e),
             VecRef::Empty => IterVecRef::Empty,
         }
     }
@@ -99,6 +112,7 @@ pub enum IterVecRef<'a, T> {
     OwnedVec(IntoIter<&'a T>),
     Vec(Iter<'a, T>),
     Ref(Iter<'a, &'a T>),
+    Single(&'a T),
     Empty,
 }
 
@@ -110,6 +124,11 @@ impl<'a, T> Iterator for IterVecRef<'a, T> {
             IterVecRef::OwnedVec(iter) => iter.next(),
             IterVecRef::Vec(iter) => iter.next(),
             IterVecRef::Ref(iter) => iter.next().map(|e| *e),
+            IterVecRef::Single(e) => {
+                let r = Some(*e);
+                *self = IterVecRef::Empty;
+                r
+            }
             IterVecRef::Empty => None,
         }
     }
@@ -119,6 +138,7 @@ impl<'a, T> Iterator for IterVecRef<'a, T> {
             IterVecRef::OwnedVec(iter) => iter.size_hint(),
             IterVecRef::Vec(iter) => iter.size_hint(),
             IterVecRef::Ref(iter) => iter.size_hint(),
+            IterVecRef::Single(_) => (1, Some(1)),
             IterVecRef::Empty => (0, Some(0)),
         }
     }
@@ -134,6 +154,7 @@ impl<'a, T> DoubleEndedIterator for IterVecRef<'a, T> {
             IterVecRef::OwnedVec(iter) => iter.next_back(),
             IterVecRef::Vec(iter) => iter.next_back(),
             IterVecRef::Ref(iter) => iter.next_back().map(|e| *e),
+            IterVecRef::Single(_) => self.next(),
             IterVecRef::Empty => None,
         }
     }

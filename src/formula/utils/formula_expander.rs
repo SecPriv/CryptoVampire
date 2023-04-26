@@ -117,14 +117,14 @@ where
         with_args: bool,
         deeper_kinds: DeeperKinds,
     ) -> Vec<ExpantionContent<'a, 'bump>> {
-        fn process_arg<'a, 'b, 'bump>(
+        fn process_arg<'a, 'b, 'c, 'bump>(
             expc: &'b ExpantionContent<'a, 'bump>,
-            args: &'a Vec<RichFormula<'bump>>,
+            args: VecRef<'a, RichFormula<'bump>>,
         ) -> impl Iterator<Item = ExpantionContent<'a, 'bump>> + 'b
         where
             'bump: 'a,
         {
-            args.iter().map(move |arg| ExpantionContent {
+            args.into_iter().map(move |arg| ExpantionContent {
                 state: expc.state.clone(),
                 content: arg,
             })
@@ -217,10 +217,12 @@ where
 
         match self.content {
             RichFormula::Var(_) => vec![],
-            RichFormula::Quantifier(_, args) => process_arg(self, args).collect(),
+            RichFormula::Quantifier(_, args) => {
+                process_arg(self, VecRef::Single(args.as_ref())).collect()
+            }
             RichFormula::Fun(fun, args) => {
                 let iter = (if with_args {
-                    Some(process_arg(self, args))
+                    Some(process_arg(self, VecRef::Ref(args.as_ref())))
                 } else {
                     None
                 })

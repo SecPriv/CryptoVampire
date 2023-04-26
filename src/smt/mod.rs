@@ -1,6 +1,6 @@
-pub mod macros;
+// pub mod macros;
 pub mod smt;
-pub mod writer;
+// pub mod writer;
 
 // pub fn get_eval_msg(env:&Environement) -> impl Clone + Fn(SmtFormula) -> SmtFormula {
 //     let eval = env.get_f(EVAL_MSG_NAME).unwrap().clone();

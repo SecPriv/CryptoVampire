@@ -2,9 +2,9 @@ use crate::formula::sort::Sort;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Skolem<'bump> {
-    name: Box<str>,
-    in_sort: Box<[Sort<'bump>]>,
-    out_sort: Sort<'bump>,
+    pub name: Box<str>,
+    pub in_sort: Box<[Sort<'bump>]>,
+    pub out_sort: Sort<'bump>,
 }
 
 impl<'bump> Skolem<'bump> {

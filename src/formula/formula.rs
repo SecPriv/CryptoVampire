@@ -24,7 +24,7 @@ use super::{
 pub enum RichFormula<'bump> {
     Var(Variable<'bump>),
     Fun(Function<'bump>, Vec<RichFormula<'bump>>),
-    Quantifier(Quantifier<'bump>, Vec<RichFormula<'bump>>),
+    Quantifier(Quantifier<'bump>, Box<RichFormula<'bump>>),
 }
 
 impl<'bump> RichFormula<'bump> {
@@ -183,7 +183,8 @@ impl<'bump> RichFormula<'bump> {
             }
             RichFormula::Quantifier(q, args) => f(Self::Quantifier(
                 q,
-                args.into_iter().map(|x| x.map(f)).collect(),
+                // args.into_iter().map(|x| x.map(f)).collect(),
+                Box::new(args.map(f))
             )),
         }
     }
@@ -343,7 +344,7 @@ pub fn forall<'bump>(
     let mut vars = vars.into_iter().peekable();
     if let Some(_) = vars.peek() {
         let variables = vars.collect_vec();
-        RichFormula::Quantifier(Quantifier::Forall { variables }, vec![arg])
+        RichFormula::Quantifier(Quantifier::Forall { variables }, Box::new(arg))
     } else {
         arg
     }
@@ -356,7 +357,7 @@ pub fn exists<'bump>(
     let mut vars = vars.into_iter().peekable();
     if let Some(_) = vars.peek() {
         let variables = vars.collect_vec();
-        RichFormula::Quantifier(Quantifier::Exists { variables }, vec![arg])
+        RichFormula::Quantifier(Quantifier::Exists { variables }, Box::new(arg))
     } else {
         arg
     }

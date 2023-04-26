@@ -298,8 +298,8 @@ pub trait Substitution<'bump> {
                 fun.clone(),
                 args.iter().map(|arg| self.apply(arg)).collect(),
             ),
-            RichFormula::Quantifier(q, args) => {
-                RichFormula::Quantifier(q.clone(), args.iter().map(|arg| self.apply(arg)).collect())
+            RichFormula::Quantifier(q, arg) => {
+                RichFormula::Quantifier(q.clone(), Box::new(self.apply(arg.as_ref())))
             }
         }
     }
