@@ -1,742 +1,548 @@
-use std::convert::identity;
+use std::{cell::RefCell, hash::Hash, rc::Rc};
 
 use if_chain::if_chain;
-use itertools::{Either, Itertools};
+use itertools::Itertools;
 
-use crate::formula::builtins::types::BOOL;
-use crate::formula::formula_user::FormulaUser;
-use crate::formula::sort::Sort;
-use crate::formula::unifier::Unifier;
-use crate::formula::utils::Evaluator;
-use crate::problem::crypto_assumptions::aux;
-use crate::problem::problem::{CEQ_NAME, CNOT_NAME};
-use crate::smt::writer::subterm::builder::{Builder, DefaultBuilder};
-use crate::smt::writer::subterm::{Subterm, SubtermFlags};
 use crate::{
+    environement::environement::Environement,
     formula::{
-        builtins::{
-            functions::{INPUT, LT, NONCE_MSG},
-            types::{CONDITION, MSG, NONCE},
+        file_descriptior::{axioms::Axiom, declare::Declaration},
+        formula::{forall, meq, RichFormula},
+        function::{
+            subterm::{self, Subsubterm},
+            term_algebra::name::NameCaster,
+            Function,
         },
-        formula::{RichFormula, Variable},
-        function::{FFlags, Function},
+        sort::{
+            builtins::{MESSAGE, NONCE},
+            Sort,
+        },
+        utils::formula_expander::DeeperKinds,
+        variable::Variable,
     },
-    smt::{
-        macros::{sand, seq, sexists, sforall, sfun, simplies, site, sor, srewrite, svar},
-        smt::{RewriteKind, Smt, SmtFormula},
-        writer::Ctx,
+    mexists, mforall,
+    problem::{
+        generator::Generator,
+        problem::Problem,
+        subterm::{
+            kind::SubtermKind,
+            traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
+            Subterm,
+        },
     },
+    utils::vecref::VecRef,
 };
 
-pub(crate) fn generate(
-    assertions: &mut Vec<Smt>,
-    declarations: &mut Vec<Smt>,
-    ctx: &mut Ctx,
-    enc: &Function,
-    dec: &Function,
-    verify: &Function,
-    fail: &Function,
-) {
-    // let eval_msg = get_evaluate.msg(ctx,ctx.env());
-    // let eval_cond = get_evaluate.cond(ctx,ctx.env());
-    let evaluate = Evaluator::new(ctx.env()).unwrap();
-    let nonce = NONCE_MSG(ctx.env()).clone();
-    let msg = MSG(ctx.env()).clone();
-    let cond = CONDITION(ctx.env()).clone();
-    let nonce_sort = NONCE(ctx.env()).clone();
-    let input_f = INPUT(ctx.env()).clone();
-    let lt = LT(ctx.env()).clone();
+pub type SubtermIntCtxtMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
+pub type SubtermIntCtxtKey<'bump> = Subterm<'bump, KeyAux<'bump>>;
+pub type SubtermIntCtxtRand<'bump> = Subterm<'bump, RandAux<'bump>>;
 
-    assertions.push(Smt::Assert(sforall!(m!0:msg, r!1:msg, sk!2:msg; {
-        // let r = sfun!(nonce; r);
-        // let sk = sfun!(nonce; sk);
-            seq!(
-                evaluate.msg(ctx, sfun!(dec; sfun!(enc; m.clone(), r, sk.clone()), sk)),
-                evaluate.msg(ctx, m.clone())
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct IntCtxt<'bump> {
+    /// mac(Message, rand,) -> cipher
+    enc: Function<'bump>,
+    /// dec(cipher, Key) -> mess
+    dec: Function<'bump>,
+    /// verify(cipher, key) -> bool
+    verify: Function<'bump>,
+}
+
+impl<'bump> IntCtxt<'bump> {
+    pub fn generate(
+        &self,
+        assertions: &mut Vec<Axiom<'bump>>,
+        declarations: &mut Vec<Declaration<'bump>>,
+        env: &Environement<'bump>,
+        pbl: &Problem<'bump>,
+    ) {
+        let nonce_sort = NONCE.clone();
+        let message_sort = MESSAGE.clone();
+        let ev = &pbl.evaluator;
+        let nc = &pbl.name_caster;
+        let kind = env.into();
+
+        let subterm_main = Subterm::new(
+            env.container,
+            env.container
+                .find_free_function_name("subterm_int_ctxt_main"),
+            kind,
+            DefaultAuxSubterm::new(message_sort),
+            [],
+            DeeperKinds::default(),
+            |rc| Subsubterm::IntCtxtMain(rc),
+        );
+
+        let subterm_key = Subterm::new(
+            env.container,
+            env.container
+                .find_free_function_name("subterm_int_ctxt_key"),
+            kind,
+            KeyAux {
+                int_ctxt: *self,
+                name_caster: Rc::clone(&pbl.name_caster),
+            },
+            [self.enc, self.dec, self.verify],
+            DeeperKinds::all(),
+            |rc| Subsubterm::IntCtxtKey(rc),
+        );
+
+        let subterm_rand = Subterm::new(
+            env.container,
+            env.container
+                .find_free_function_name("subterm_int_ctxt_rand"),
+            kind,
+            RandAux {
+                int_ctxt: *self,
+                name_caster: Rc::clone(&pbl.name_caster),
+            },
+            [self.enc],
+            DeeperKinds::all(),
+            |rc| Subsubterm::IntCtxtRand(rc),
+        );
+
+        if env.preprocess_instances() {
+            assertions.extend(
+                self.preprocess(pbl, subterm_main.as_ref(), subterm_key.as_ref())
+                    .map(Axiom::base),
             )
-    })));
+        }
 
-    assertions.push(Smt::Assert(sforall!(m!0:msg, r!1:msg, sk!2:msg; {
-        // let r = sfun!(nonce; r);
-        // let sk = sfun!(nonce; sk);
-        sor!(
-            evaluate.cond(ctx, sfun!(verify; sfun!(enc; m.clone(), r, sk.clone()), sk.clone())),
-            seq!(evaluate.msg(ctx, m.clone()), evaluate.msg(ctx, sfun!(fail)))
-        )
-    })));
+        if env.define_subterm() {
+            define_subterm(env, pbl, assertions, declarations, &subterm_main, true);
+            define_subterm(env, pbl, assertions, declarations, &subterm_key, false);
+            define_subterm(env, pbl, assertions, declarations, &subterm_key, false);
+        }
 
-    assertions.push(Smt::Assert(sforall!(m!0:msg, sk!1:msg; {
-        let ceq = ctx.env().get_f(CEQ_NAME).unwrap();
-        let cnot = ctx.env().get_f(CNOT_NAME).unwrap();
-        seq!(
-            evaluate.cond(ctx, sfun!(verify; m, sk)),
-            ctx.neqf(evaluate.msg(ctx, sfun!(dec; m, sk)), evaluate.msg(ctx, sfun!(fail)))
-            // evaluate.cond(ctx,sfun!(cnot; sfun!(ceq;  sfun!(dec; m, sk), evaluate.msg(ctx, sfun!(fail)))))
-        )
-    })));
+        if env.with_general_crypto_axiom() && env.define_subterm() {
+            // let max_var = pbl.max_var() + 1;
+            // let split = Function::new_spliting(env.container_full_life_time(), [message_sort]);
+            // declarations.push(Declaration::FreeFunction(split));
 
-    if !senc_rand(ctx, enc, dec, verify, fail) {
-        return;
+            // assertions.push(Axiom::base({
+            //     let k = Variable {
+            //         id: max_var,
+            //         sort: nonce_sort,
+            //     };
+            //     let k_f = k.into_formula();
+            //     let ors = RichFormula::ors(subterm_key.preprocess_whole_ptcl(&pbl.protocol, &k_f));
+
+            //     forall([k], split.f([k_f]) >> ors)
+            // }));
+
+            assertions.push(Axiom::base(
+                mforall!(c!1:message_sort, k!3:nonce_sort; {
+                    let k_f = nc.cast(message_sort, k.clone());
+                    ev.eval(self.verify.f([c.clone(), k_f.clone()])) >>
+                    mexists!(m!4:message_sort, r!5:nonce_sort; {
+                        let r_f = nc.cast(message_sort, r.clone());
+                        let c2 = self.enc.f([m.clone(), r_f.clone(), k_f.clone()]);
+                        meq(ev.eval(c.clone()), ev.eval(c2.clone())) &
+                        (
+                            subterm_main.f( c2.clone(), c.clone()) |
+                            subterm_key.f( k.clone(), c.clone()) |
+                            subterm_rand.f(r.clone(), c.clone()) |
+                            (mexists!(m2!6:message_sort, k2!7:message_sort, r2!8:message_sort; {
+                                subterm_main.f(self.enc.f([m2.clone(), r2.clone(), k.clone()]), c.clone())
+                                & (
+                                    (mforall!(n!9:nonce_sort; {!meq(r2.clone(), nc.cast(message_sort, n))})) |
+                                    ( meq(r2, r_f.clone()) &
+                                    (!meq(m2, m.clone()))
+                                | (!meq(k2, k_f.clone()))))
+                            }))
+                        )
+                    })
+                }),
+            ))
+        }
     }
 
-    if ctx.env().preprocessing_plus() {
-        if !ctx.pbl.memory_cells.is_empty() {
-            panic!("preprocessing and memory cell is not supported at the moment")
-        }
-        let candidates = ctx
-            .pbl
-            .iter_content()
-            .map(|(_, f)| f)
-            .chain(std::iter::once(&ctx.pbl.query))
-            .chain(ctx.pbl.assertions.iter())
-            .flat_map(|f| {
-                f.custom_iter_w_quantifier(&ctx.pbl, |f, _| match f {
-                    RichFormula::Fun(fun, args) if fun == verify => {
-                        if_chain!(
-                            if let RichFormula::Fun(f1, k) = &args[1];
-                            if f1 == &nonce;
-                            if let RichFormula::Fun(_, _) = &k[0];
-                            then {
-                                (Some((&args[0], &k[0])), vec![&args[0]])
-                            } else {
-                                (None, args.iter().collect())
-                            }
-                        )
+    pub fn preprocess<'a>(
+        &'a self,
+        pbl: &'a Problem<'bump>,
+        subterm_main: &'a Subterm<'bump, impl SubtermAux<'bump>>,
+        subterm_key: &'a Subterm<'bump, impl SubtermAux<'bump>>,
+    ) -> impl Iterator<Item = RichFormula<'bump>> + 'a {
+        let mut side_condition = true;
+        let max_var = pbl.max_var();
+        // let pile1 = RefCell::new(Vec::new());
+        let pile2 = RefCell::new(Vec::new());
+        let candidates_verif = pbl
+            .list_top_level_terms()
+            .flat_map(move |f| f.iter()) // sad...
+            .filter_map(|formula| match formula {
+                RichFormula::Fun(fun, args) => {
+                    if_chain! {
+                        if fun == &self.verify;
+                        if let RichFormula::Fun(nf, args2) = &args[1];
+                        if nf == pbl.name_caster.cast_function(&MESSAGE.clone()).unwrap();
+                        then {
+                            Some(IntCtxtVerifCandidates {cipher: &args[0],  key: &args2[0]})
+                        } else {None}
                     }
-                    RichFormula::Fun(_, args) => (None, args.iter().collect()),
-                    _ => (None, vec![]),
-                })
+                }
+                _ => None,
             })
             .unique()
             .collect_vec();
 
-        for (c, k) in candidates {
-            let kfun = if let RichFormula::Fun(f, _) = k {
-                f
-            } else {
-                unreachable!()
-            };
-
-            let side_condition_key = ctx
-                .pbl
-                .iter_content()
-                .map(|(_, f)| f)
-                .chain(std::iter::once(c))
-                .flat_map(|f| {
-                    f.custom_iter_w_quantifier(&ctx.pbl, |f, _| match f {
-                        RichFormula::Fun(fun, _) if fun == kfun => (Some(()), vec![]),
-                        RichFormula::Fun(fun, args)
-                            if fun == verify || fun == enc || fun == dec =>
-                        {
-                            (None, args.iter().rev().skip(1).collect())
+        let candidates_enc = pbl
+            .list_top_level_terms()
+            .flat_map(move |f| f.iter()) // sad...
+            .filter_map(|formula| match formula {
+                RichFormula::Fun(fun, args) => {
+                    if fun == &self.enc {
+                        if_chain! {
+                            if let RichFormula::Fun(nf, args2) = &args[1];
+                            if nf == pbl.name_caster.cast_function(&MESSAGE.clone()).unwrap();
+                            then {
+                                Some(IntCtxtEncCandidates {
+                                        message: &args[0],
+                                        key: &args[2],
+                                        rand: &args2[0],
+                                    })
+                            } else {
+                                side_condition = false;
+                                None
+                            }
                         }
-                        RichFormula::Fun(_, args) => (None, args.iter().collect()),
-                        _ => (None, vec![]),
-                    })
-                })
-                .next()
-                .is_none();
-
-            if !side_condition_key {
-                dbg!(side_condition_key);
-                continue;
-            }
-            // free variables
-            let fv = k
-                .get_free_vars()
-                .into_iter()
-                .chain(c.get_free_vars().into_iter())
-                .unique()
-                .cloned()
-                .collect_vec();
-
-            let max_var = fv
-                .iter()
-                .map(|v| v.id)
-                // .chain(m.get_free_vars().iter().map(|v| v.id))
-                .max()
-                .unwrap_or(0);
-
-            let sk = SmtFormula::from(k);
-            let sc = SmtFormula::from(c);
-
-            let (mut candidates, inputs): (Vec<_>, Vec<_>) = [c]
-                .into_iter()
-                .flat_map(|f| {
-                    f.custom_iter_w_quantifier(&ctx.pbl, |f, _| match f {
-                        RichFormula::Fun(fun, args) if fun == enc => (
-                            Some(Either::Left((None, &args[0], &args[1], &args[2]))),
-                            args.iter().collect(),
-                        ),
-                        RichFormula::Fun(fun, args) if fun == &input_f => {
-                            (Some(Either::Right(&args[0])), vec![])
-                        }
-                        RichFormula::Fun(_, args) => (None, args.iter().collect()),
-                        _ => (None, vec![]),
-                    })
-                })
-                .partition_map(identity);
-
-            if !inputs.is_empty() {
-                candidates.extend(ctx.pbl.iter_content().flat_map(|(s, f)| {
-                    f.custom_iter_w_quantifier(&ctx.pbl, move |f, _| match f {
-                        RichFormula::Fun(fun, args) if fun == enc => (
-                            Some((Some(s), &args[0], &args[1], &args[2])),
-                            args.iter().collect(),
-                        ),
-                        RichFormula::Fun(_, args) => (None, args.iter().collect()),
-                        _ => (None, vec![]),
-                    })
-                }))
-            }
-
-            let inputs = inputs
-                .into_iter()
-                .unique()
-                .map(|f| SmtFormula::from(f))
-                .collect_vec();
-
-            let ors = candidates
-                .into_iter()
-                .map(|(s, m2, r2, k2)| {
-                    let m2 = m2.translate_vars(max_var);
-                    let k2 = k2.translate_vars(max_var);
-                    let r2 = r2.translate_vars(max_var);
-
-                    let sm2 = SmtFormula::from(&m2);
-                    let sk2 = SmtFormula::from(&k2);
-                    let sr2 = SmtFormula::from(&r2);
-
-                    match s {
-                        None => {
-                            let nvars = m2
-                                .get_free_vars()
-                                .into_iter()
-                                .chain(k2.get_free_vars().into_iter())
-                                .unique()
-                                .cloned()
-                                .collect_vec();
-                            // let ss = sfun!(s.function().clone(), svars.map(|v| svar!(v)).collect());
-
-                            SmtFormula::Exists(
-                                nvars,
-                                Box::new(sand!(
-                                    // seq!(su.clone(), m2),
-                                    seq!(sfun!(nonce; sk.clone()), sk2),
-                                    seq!(
-                                        evaluate.msg(ctx, sc.clone()),
-                                        evaluate.msg(ctx, sfun!(enc; sm2, sr2, sk2))
-                                    )
-                                )),
-                            )
-                        }
-                        Some(s) => {
-                            let nvars = s
-                                .occuring_variables()
-                                .iter()
-                                .map(|v| Variable {
-                                    id: v.id + max_var,
-                                    ..v.clone()
-                                })
-                                .collect_vec();
-                            let svars = s
-                                .free_variables()
-                                .iter()
-                                .map(|v| Variable {
-                                    id: v.id + max_var,
-                                    ..v.clone()
-                                })
-                                .map(|v| svar!(v))
-                                .collect_vec();
-
-                            let ss = sfun!(s.function().clone(), svars);
-
-                            let s_ors = inputs
-                                .iter()
-                                .map(|is| sfun!(lt; ss.clone(), is.clone()))
-                                .collect();
-
-                            SmtFormula::Exists(
-                                nvars,
-                                Box::new(sand!(
-                                    SmtFormula::Or(s_ors),
-                                    seq!(sfun!(nonce; sk.clone()), sk2),
-                                    seq!(
-                                        evaluate.msg(ctx, sc.clone()),
-                                        evaluate.msg(ctx, sfun!(enc; sm2, sr2, sk2))
-                                    )
-                                )),
-                            )
-                        }
+                    } else {
+                        None
                     }
-                })
-                .collect();
+                    // } else {None}
+                }
+                _ => None,
+            })
+            .unique()
+            .collect_vec();
 
-            assertions.push(Smt::Assert(SmtFormula::Forall(
-                fv,
-                Box::new(simplies!(ctx.env();
-                        evaluate.cond(ctx, sfun!(verify; sc.clone(), sfun!(nonce; sk.clone()))),
-                        SmtFormula::Exists(vec![], Box::new(SmtFormula::Or(ors))))),
-            )))
+        let candidates = candidates_verif.into_iter().filter_map(
+            move |IntCtxtVerifCandidates { cipher, key }| {
+                let array = [cipher, key];
+                let max_var = array
+                    .iter()
+                    .flat_map(|f| f.used_variables_iter_with_pile(pile2.borrow_mut()))
+                    .map(|Variable { id, .. }| *id)
+                    .max()
+                    .unwrap_or(max_var)
+                    + 1;
+                let free_vars = array
+                    .iter()
+                    .flat_map(|f| f.get_free_vars().into_iter())
+                    .cloned()
+                    .unique();
+                let u_var = Variable::new(max_var, MESSAGE.clone());
+                let u_f = u_var.into_formula();
+                let r_var = Variable::new(max_var + 1, NONCE.clone());
+                let r_f = pbl.name_caster.cast(MESSAGE.clone(), r_var.into_formula());
+                let max_var = max_var + 2;
+
+                let k_sc = side_condition
+                    && subterm_key
+                        .preprocess_terms(
+                            &pbl.protocol,
+                            key,
+                            pbl.protocol
+                                .list_top_level_terms_short_lifetime()
+                                .chain([cipher].into_iter()),
+                            false,
+                            DeeperKinds::NO_MACROS,
+                        )
+                        .next()
+                        .is_none();
+                if k_sc {
+                    let k_f = pbl.name_caster.cast(MESSAGE.clone(), key.clone());
+                    let n_c_f = self.enc.f([u_f.clone(), r_f.clone(), k_f.clone()]);
+
+                    let disjunction = subterm_main.preprocess_terms(
+                        &pbl.protocol,
+                        &n_c_f,
+                        [cipher],
+                        true,
+                        DeeperKinds::all(),
+                    );
+
+                    let other_sc =
+                        candidates_enc
+                            .iter()
+                            .map(|IntCtxtEncCandidates { rand, message, key }| {
+                                let vars = rand
+                                    .get_free_vars()
+                                    .iter()
+                                    .chain(message.get_free_vars().iter())
+                                    .chain(key.get_free_vars().iter())
+                                    .map(|v: &&Variable<'bump>| **v)
+                                    .unique()
+                                    .collect_vec();
+                                mforall!(vars, {
+                                    meq(r_var.into_formula(), RichFormula::clone(rand))
+                                        >> (meq(RichFormula::clone(message), u_f.clone())
+                                            & meq(RichFormula::clone(key), k_f.clone()))
+                                })
+                            });
+
+                    Some(mforall!(free_vars, {
+                        (pbl.evaluator
+                            .eval(self.verify.f([cipher.clone(), k_f.clone()]))
+                            & RichFormula::ands(other_sc))
+                            >> mexists!([u_var, r_var], {
+                                RichFormula::ors(disjunction)
+                                    & meq(
+                                        pbl.evaluator.eval(cipher.clone()),
+                                        pbl.evaluator.eval(n_c_f),
+                                    )
+                            })
+                    }))
+                } else {
+                    None
+                }
+            },
+        );
+
+        // [].into_iter()
+        candidates
+    }
+}
+
+/* fn define_subterms<'bump>(
+    env: &Environement<'bump>,
+    pbl: &Problem<'bump>,
+    assertions: &mut Vec<Axiom<'bump>>,
+    declarations: &mut Vec<Declaration<'bump>>,
+    subterm_key: &Rc<Subterm<'bump, impl SubtermAux<'bump>>>,
+    subterm_main: &Rc<Subterm<'bump, impl SubtermAux<'bump>>>,
+) {
+    let nonce_sort = NONCE.clone();
+    let kind = env.into();
+    {
+        let subterm = subterm_key.as_ref();
+        declarations.push(subterm.declare(pbl));
+
+        if let SubtermKind::Vampire = kind {
+        } else {
+            assertions.extend(
+                subterm
+                    .generate_function_assertions_from_pbl(pbl)
+                    .into_iter()
+                    .chain(
+                        subterm.not_of_sort(
+                            pbl.sorts.iter().filter(|&&s| s != subterm.sort()).cloned(),
+                        ),
+                    )
+                    .map(|f| Axiom::base(f)),
+            );
         }
-    } else if !ctx.env().no_ta() {
-        let data = MBuilderData {
-            nonce_sort: nonce_sort.clone(),
-            nonce: nonce.clone(),
-            enc: enc.clone(),
-            dec: dec.clone(),
-            verify: verify.clone(),
+        assertions.extend(
+            subterm
+                .preprocess_special_assertion_from_pbl(pbl, false)
+                .map(|f| Axiom::base(f)),
+        );
+    }
+    // define_subterm(subterm_main, declarations, pbl, kind, assertions, true);
+} */
+
+fn define_subterm<'bump>(
+    env: &Environement<'bump>,
+    pbl: &Problem<'bump>,
+    assertions: &mut Vec<Axiom<'bump>>,
+    declarations: &mut Vec<Declaration<'bump>>,
+    subterm: &Rc<Subterm<'bump, impl SubtermAux<'bump>>>,
+    keep_guard: bool,
+) {
+    let kind = env.into();
+    declarations.push(subterm.declare(pbl));
+    if let SubtermKind::Vampire = kind {
+    } else {
+        assertions.extend(
+            subterm
+                .generate_function_assertions_from_pbl(pbl)
+                .into_iter()
+                .chain(
+                    subterm
+                        .not_of_sort(pbl.sorts.iter().filter(|&&s| s != subterm.sort()).cloned()),
+                )
+                .map(|f| Axiom::base(f)),
+        );
+    }
+    assertions.extend(
+        subterm
+            .preprocess_special_assertion_from_pbl(pbl, keep_guard)
+            .map(|f| Axiom::base(f)),
+    );
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+struct IntCtxtVerifCandidates<'a, 'bump> {
+    cipher: &'a RichFormula<'bump>,
+    key: &'a RichFormula<'bump>,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+struct IntCtxtEncCandidates<'a, 'bump> {
+    rand: &'a RichFormula<'bump>,
+    message: &'a RichFormula<'bump>,
+    key: &'a RichFormula<'bump>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KeyAux<'bump> {
+    int_ctxt: IntCtxt<'bump>,
+    name_caster: Rc<NameCaster<'bump>>,
+}
+
+impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
+    type IntoIter<'a> = VecRef<'a, RichFormula<'bump>>
+    where
+        'bump: 'a;
+
+    fn sort(&self) -> Sort<'bump> {
+        NONCE.clone()
+    }
+
+    fn var_eval_and_next<'a>(
+        &self,
+        m: &'a RichFormula<'bump>,
+    ) -> VarSubtermResult<'a, 'bump, Self::IntoIter<'a>>
+    where
+        'bump: 'a,
+    {
+        let nexts = match m {
+            RichFormula::Fun(fun, args) => 'function: {
+                if_chain! {
+                    if fun == &self.int_ctxt.dec;
+                    if let RichFormula::Fun(nf, args2) = &args[1];
+                    if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
+                    then {
+                        break 'function VecRef::Vec(vec![&args[0]]) // can't be the subterm of another nonce
+                    }
+                }
+                if_chain! {
+                    if fun == &self.int_ctxt.verify;
+                    if let RichFormula::Fun(nf, args2) = &args[1];
+                    if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
+                    then {
+                        break 'function VecRef::Vec(vec![&args[0]]) // can't be the subterm of another nonce
+                    }
+                }
+                if_chain! {
+                    if fun == &self.int_ctxt.enc;
+                    if let RichFormula::Fun(nf, args2) = &args[2];
+                    if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
+                    then {
+                        break 'function VecRef::Vec(vec![&args[0], &args[1]]) // can't be the subterm of another nonce
+                    }
+                }
+                VecRef::Ref(args)
+            }
+            _ => VecRef::Empty,
         };
 
-        let subt_main = Subterm::new_and_init(
-            assertions,
-            declarations,
-            ctx,
-            "sbt$euf_ctxt_main".to_owned(),
-            msg.clone(),
-            vec![],
-            Default::default(),
-            DefaultBuilder(),
-        );
-        let subt_sk = Subterm::new_and_init(
-            assertions,
-            declarations,
-            ctx,
-            "sbt$euf_ctxt_sk".to_owned(),
-            nonce_sort.clone(),
-            [enc, dec, verify].into_iter().cloned(),
-            SubtermFlags::ALWAYS_PROCESSWIDE,
-            {
-                struct MBuilder(MBuilderData);
-                impl Builder for MBuilder {
-                    fn analyse<'a>(
-                        &self,
-                        _: &Subterm<Self>,
-                        m: &RichFormula,
-                        _: Option<&crate::problem::step::Step>,
-                        pbl: &'a crate::problem::problem::Problem,
-                        f: &'a RichFormula,
-                    ) -> (Option<RichFormula>, Vec<&'a RichFormula>)
-                    where
-                        Self: Sized,
-                    {
-                        let MBuilderData {
-                            nonce_sort,
-                            nonce,
-                            enc,
-                            dec,
-                            verify,
-                        } = &self.0;
-                        match f {
-                            RichFormula::Var(v) if &v.sort == nonce_sort => {
-                                (Some(aux(pbl, m.clone(), f.clone())), vec![])
-                            }
-                            RichFormula::Fun(fun, args) if fun == enc => {
-                                let mut todo = Vec::with_capacity(3);
-                                todo.push(&args[0]);
-                                todo.push(&args[1]);
-                                if_chain!(
-                                    if let RichFormula::Fun(fun2, _) = &args[2];
-                                    if fun2 == nonce;
-                                    then {}
-                                    else {
-                                        todo.push(&args[2])
-                                    }
-                                );
-                                (None, todo)
-                            }
-                            RichFormula::Fun(fun, args) if fun == dec || fun == verify => {
-                                let mut todo = Vec::with_capacity(2);
-                                todo.push(&args[0]);
-                                if_chain!(
-                                    if let RichFormula::Fun(fun2, _) = &args[1];
-                                    if fun2 == nonce;
-                                    then {}
-                                    else {
-                                        todo.push(&args[1])
-                                    }
-                                );
-                                (None, todo)
-                            }
-                            RichFormula::Fun(fun, args) => (
-                                (&fun.get_output_sort() == nonce_sort)
-                                    .then(|| aux(pbl, m.clone(), f.clone())),
-                                args.iter().collect(),
-                            ),
-                            _ => (None, vec![]),
-                        }
-                    }
-                }
-                MBuilder(data.clone())
-            },
-        );
-        let subt_rd = Subterm::new_and_init(
-            assertions,
-            declarations,
-            ctx,
-            "sbt$euf_ctxt_r".into(),
-            nonce_sort.clone(),
-            [enc.clone()],
-            SubtermFlags::ALWAYS_PROCESSWIDE,
-            {
-                struct MBuilder(MBuilderData);
-                impl Builder for MBuilder {
-                    fn analyse<'a>(
-                        &self,
-                        _: &Subterm<Self>,
-                        m: &RichFormula,
-                        _: Option<&crate::problem::step::Step>,
-                        pbl: &'a crate::problem::problem::Problem,
-                        f: &'a RichFormula,
-                    ) -> (Option<RichFormula>, Vec<&'a RichFormula>)
-                    where
-                        Self: Sized,
-                    {
-                        let MBuilderData {
-                            nonce_sort,
-                            nonce,
-                            enc,
-                            ..
-                        } = &self.0;
-                        match f {
-                            RichFormula::Var(v) if &v.sort == nonce_sort => {
-                                (Some(aux(pbl, m.clone(), f.clone())), vec![])
-                            }
-                            RichFormula::Fun(fun, args) if fun == enc => {
-                                let mut todo = Vec::with_capacity(3);
-                                todo.push(&args[0]);
-                                todo.push(&args[2]);
-                                if_chain!(
-                                    if let RichFormula::Fun(fun2, _) = &args[1];
-                                    if fun2 == nonce;
-                                    then {}
-                                    else {
-                                        todo.push(&args[1])
-                                    }
-                                );
-                                (None, todo)
-                            }
-                            RichFormula::Fun(fun, args) => (
-                                (&fun.get_output_sort() == nonce_sort)
-                                    .then(|| aux(pbl, m.clone(), f.clone())),
-                                args.iter().collect(),
-                            ),
-                            _ => (None, vec![]),
-                        }
-                    }
-                }
-                MBuilder(data)
-            },
-        );
+        let m_sort = m.get_sort();
 
-        for s in subt_sk.iter() {
-            assertions.push(Smt::Assert(
-                sforall!(sk!0:nonce_sort, k!1:msg, m!2:msg, r!3:msg;{
-                    simplies!(ctx.env();
-                        s.f(ctx, sk.clone(), sfun!(enc; m.clone(), r.clone(), k.clone()), &msg),
-                        site!(
-                            seq!(k.clone(), sfun!(nonce; sk.clone())),
-                            sor!(
-                                s.f(ctx, sk.clone(), m.clone(), &msg),
-                                s.f(ctx, sk.clone(), r.clone(), &msg)
-                            ),
-                            sor!(
-                                s.f(ctx, sk.clone(), m.clone(), &msg),
-                                s.f(ctx, sk.clone(), r.clone(), &msg),
-                                s.f(ctx, sk.clone(), k.clone(), &msg)
-                            )
-                        )
-                    )
-                }),
-            ));
-            assertions.push(Smt::Assert(sforall!(sk!0:nonce_sort, m!1:msg, k!2:msg; {
-                simplies!(ctx.env();
-                    s.f(ctx, sk.clone(), sfun!(dec; m.clone(), k.clone()), &msg),
-                    site!(
-                        seq!(k.clone(), sfun!(nonce; sk.clone())),
-                        s.f(ctx, sk.clone(), m.clone(), &msg),
-                        sor!(
-                            s.f(ctx, sk.clone(), m.clone(), &msg),
-                            s.f(ctx, sk.clone(), k.clone(), &msg)
-                        )
-                    )
-                )
-            })));
-            assertions.push(Smt::Assert(sforall!(sk!0:nonce_sort, m!1:msg, k!2:msg; {
-                simplies!(ctx.env();
-                    s.f(ctx, sk.clone(), sfun!(verify; m.clone(), k.clone()), &cond),
-                    site!(
-                        seq!(k.clone(), sfun!(nonce; sk.clone())),
-                        s.f(ctx, sk.clone(), m.clone(), &msg),
-                        sor!(
-                            s.f(ctx, sk.clone(), m.clone(), &msg),
-                            s.f(ctx, sk.clone(), k.clone(), &msg)
-                        )
-                    )
-                )
-            })))
+        VarSubtermResult {
+            unified: m_sort.is_err() || self.sort() == m_sort.unwrap(),
+            nexts,
         }
-
-        for s in subt_rd.iter() {
-            assertions.push(Smt::Assert(
-                sforall!(nr!0:nonce_sort, k!1:msg, m!2:msg, r!3:msg;{
-                    simplies!(ctx.env();
-                        s.f(ctx, nr.clone(), sfun!(enc; m.clone(), r.clone(), k.clone()), &msg),
-                        site!(
-                            seq!(r.clone(), sfun!(nonce; nr.clone())),
-                            sor!(
-                                s.f(ctx, nr.clone(), m.clone(), &msg),
-                                s.f(ctx, nr.clone(), k.clone(), &msg)
-                            ),
-                            sor!(
-                                s.f(ctx, nr.clone(), m.clone(), &msg),
-                                s.f(ctx, nr.clone(), r.clone(), &msg),
-                                s.f(ctx, nr.clone(), k.clone(), &msg)
-                            )
-                        )
-                    )
-                }),
-            ));
-        }
-
-        // assertions.push(Smt::Assert(
-        //     sforall!(m!0:msg, r!1:nonce_sort, sk!2:nonce_sort; {
-        //         let r = sfun!(nonce; r);
-        //         let sk = sfun!(nonce; sk);
-        //         seq!(
-        //             snot!(ctx.env(); sfun!(eval_cond; sfun!(verify; m.clone(), sk.clone()))),
-        //             seq!(sfun!(eval_msg; sfun!(fail;)), sfun!(eval_msg; sfun!(dec; m.clone(), sk.clone())))
-        //         )
-        //     })
-        // ));
-
-        let sp = Function::new_with_flag(
-            "sp$int_ctxt",
-            vec![nonce_sort.clone(), msg.clone()],
-            BOOL(ctx.env()).clone(),
-            FFlags::empty(),
-        );
-        declarations.push(Smt::DeclareFun(sp.clone()));
-
-        // let's ignore this for now
-        // if false {
-        assertions.push(Smt::Assert(sforall!(c!0:msg, k!1:nonce_sort; {
-                simplies!(ctx.env();
-                    // sand!(
-                    //     sfun!(sp; k.clone(), c.clone()),
-                    //     subt_main.main(sfun!(enc; m.clone(), r.clone(), sfun!(nonce; k.clone())), c.clone(), &msg)
-                    // ),
-                    sfun!(sp; k.clone(), c.clone()),
-                    sexists!( r!2:msg, m!3:msg;{
-                        sand!(
-                            subt_main.f(ctx, sfun!(enc; m.clone(), r.clone(), sfun!(nonce; k.clone())), c.clone(), &msg),
-                            sor!(
-                                sforall!(n!4:nonce_sort; {ctx.neqf(r.clone(), sfun!(nonce; n))}),
-                                sexists!(m2!4:msg, k2!5:msg; {
-                                    sand!(
-                                        subt_main.f(ctx, sfun!(enc; m2.clone(), r.clone(), k2.clone()), c.clone(), &msg),
-                                        ctx.neqf(m2, m.clone()),
-                                        ctx.neqf(k2,  sfun!(nonce; k.clone()))
-                                    )
-                                }),
-                                sexists!(n!4:nonce_sort; {sand!(
-                                    seq!(r.clone(), sfun!(nonce; n.clone())),
-                                    subt_rd.f(ctx, n.clone(), c.clone(), &msg)
-                                )})
-                            )
-                        )
-                    })
-                )
-            })));
-        // }
-
-        // if ctx.env().crypto_rewrite() {
-        //     let sk_m = Function::new_with_flag(
-        //         "sk$u$int_ctx_m",
-        //         vec![msg.clone(), nonce_sort.clone()],
-        //         msg.clone(),
-        //         FFlags::SKOLEM,
-        //     );
-        //     let sk_r = Function::new_with_flag(
-        //         "sk$u$int_ctx_r",
-        //         vec![msg.clone(), nonce_sort.clone()],
-        //         nonce_sort.clone(),
-        //         FFlags::SKOLEM,
-        //     );
-
-        //     declarations.push(Smt::DeclareFun(sk_m.clone()));
-        //     declarations.push(Smt::DeclareFun(sk_r.clone()));
-
-        //     assertions.push(srewrite!(
-        //     RewriteKind::Bool; c!2:msg, k!3:nonce_sort;
-        //     {
-        //         // sneq!(
-        //         //     sfun!(eval_msg; sfun!(fail; )),
-        //         //     sfun!(eval_msg; sfun!(dec; c.clone(), sfun!(nonce; k.clone())))
-        //         // )
-        //         evaluate.cond(ctx, sfun!(verify; c.clone(), sfun!(nonce; k.clone())))
-        //     } -> {
-        //         let m = sfun!(sk_m; c.clone(), k.clone());
-        //         let r = sfun!(sk_r; c.clone(), k.clone());
-        //         let nc = sfun!(enc; m.clone(), sfun!(nonce; r.clone()), sfun!(nonce; k.clone()));
-        //         sor!(
-        //             subt_sk.f(ctx, k.clone(), c.clone(), &msg),
-        //             subt_main.f(ctx, nc, c.clone(), &msg) ,
-        //             // sfun!(sp; k.clone(), c.clone())
-
-        //             ctx.existsff([(4, )], f)
-        //         )
-        //     }
-        // ));
-        // } else {
-        assertions.push(Smt::Assert(sforall!(c!2:msg, k!3:nonce_sort;{
-                simplies!(ctx.env();
-                    // sneq!(
-                    //     sfun!(eval_msg; sfun!(fail; )),
-                    //     sfun!(eval_msg; sfun!(dec; c.clone(), sfun!(nonce; k.clone())))
-                    // ),
-                    evaluate.cond(ctx, sfun!(verify; c.clone(), sfun!(nonce; k.clone()))),
-                    sexists!(m!4:msg, r!5:nonce_sort; {
-                        let nc = sfun!(enc; m.clone(),  sfun!(nonce; r.clone()), sfun!(nonce; k.clone()));
-                        sand!(
-                            sor!(
-                                subt_sk.f(ctx, k.clone(), c.clone(), &msg),
-                                subt_main.f(ctx, nc.clone(), c.clone(), &msg)  ,
-                                sp.cf(ctx, [k.clone(), c.clone()])
-                            ),
-                            seq!(evaluate.msg(ctx, c), evaluate.msg(ctx, nc))
-                        )
-                    })
-                )
-            })));
-        // }
     }
 }
 
-fn senc_rand(
-    ctx: &mut Ctx,
-    enc: &Function,
-    _dec: &Function,
-    _verify: &Function,
-    _fail: &Function,
-) -> bool {
-    // let eval_msg = evaluate.msg(ctx,ctx.env()).clone();
-    // let eval_cond = evaluate.cond(ctx,ctx.env()).clone();
-    let nonce = NONCE_MSG(ctx.env()).clone();
-    let msg = MSG(ctx.env()).clone();
-    // let cond = CONDITION(ctx.env()).clone();
-    let nonce_sort = NONCE(ctx.env()).clone();
-
-    // sp
-
-    // all the randomness nonces + some context
-    // Err if something else than a nonce is used as randomness or key in enc
-    let randomness: Result<Vec<_>, ()> = ctx
-        .pbl
-        .iter_content()
-        .map(|(_, f)| f)
-        .flat_map(|f| {
-            f.custom_iter_w_quantifier(&ctx.pbl, |f, _| match f {
-                RichFormula::Var(v) if v.sort == msg || v.sort == nonce_sort => panic!("nope"),
-                RichFormula::Var(_) => (None, vec![]),
-                RichFormula::Fun(fun, args) if fun == enc => (Some(f), vec![&args[0]]),
-                RichFormula::Fun(_, args) => (None, args.iter().collect()),
-                _ => (None, vec![]),
-            })
+impl<'bump> PartialOrd for KeyAux<'bump> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(Ord::cmp(&self, &other))
+    }
+}
+impl<'bump> Ord for KeyAux<'bump> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        Ord::cmp(&self.int_ctxt, &other.int_ctxt).then_with(|| {
+            Ord::cmp(
+                &Rc::as_ptr(&self.name_caster),
+                &Rc::as_ptr(&other.name_caster),
+            )
         })
-        .map(|f| match f {
-            RichFormula::Fun(_, args) => {
-                if_chain!(
-                    if let RichFormula::Fun(f2, r) = &args[1];
-                    if let RichFormula::Fun(f1, sk) = &args[2];
-                    if f1 == &nonce && f2 == &nonce;
-                    then{ Ok((&args[0], &sk[0], &r[0])) }
-                    else {
-                        println!("err at {}", SmtFormula::from(f));
-                        Err(())
+    }
+}
+impl<'bump> Hash for KeyAux<'bump> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.int_ctxt.hash(state);
+        Rc::as_ptr(&self.name_caster).hash(state);
+    }
+}
+
+impl<'bump> Generator<'bump> for IntCtxt<'bump> {
+    fn generate(
+        &self,
+        assertions: &mut Vec<Axiom<'bump>>,
+        declarations: &mut Vec<Declaration<'bump>>,
+        env: &Environement<'bump>,
+        pbl: &Problem<'bump>,
+    ) {
+        self.generate(assertions, declarations, env, pbl)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RandAux<'bump> {
+    int_ctxt: IntCtxt<'bump>,
+    name_caster: Rc<NameCaster<'bump>>,
+}
+
+impl<'bump> SubtermAux<'bump> for RandAux<'bump> {
+    type IntoIter<'a> = VecRef<'a, RichFormula<'bump>>
+    where
+        'bump: 'a;
+
+    fn sort(&self) -> Sort<'bump> {
+        NONCE.clone()
+    }
+
+    fn var_eval_and_next<'a>(
+        &self,
+        m: &'a RichFormula<'bump>,
+    ) -> VarSubtermResult<'a, 'bump, Self::IntoIter<'a>>
+    where
+        'bump: 'a,
+    {
+        let nexts = match m {
+            RichFormula::Fun(fun, args) => 'function: {
+                if_chain! {
+                    if fun == &self.int_ctxt.enc;
+                    if let RichFormula::Fun(nf, args2) = &args[1];
+                    if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
+                    then {
+                        break 'function VecRef::Vec(vec![&args[0], &args[2]]) // can't be the subterm of another nonce
                     }
-                )
+                }
+                VecRef::Ref(args)
             }
-            _ => unreachable!(),
-        })
-        .collect();
+            _ => VecRef::Empty,
+        };
 
-    // if Ok, all the randomness nonces. Thoses should not appear outside of a enc
-    // Err if a randomness encrypts two differents messages or is used with two different keys
-    let randomness = randomness.and_then(|rands| {
-        if rands
-            .iter()
-            .cartesian_product(rands.iter())
-            .all(|((m1, sk1, r1), (m2, sk2, r2))| {
-                // println!(
-                //     "unifier_check:\n m {} -> {}\n sk {} -> {}\n r {} -> {}",
-                //     SmtFormula::from(*m1),
-                //     SmtFormula::from(*m2),
-                //     SmtFormula::from(*sk1),
-                //     SmtFormula::from(*sk2),
-                //     SmtFormula::from(*r1),
-                //     SmtFormula::from(*r2),
-                // );
-                if let Some(mgu) = Unifier::mgu(r1, r2) {
-                    mgu.does_unify(sk1, sk2) && mgu.does_unify(m1, m2)
-                } else {
-                    true
-                }
-            })
-        {
-            Ok(rands
-                .into_iter()
-                .map(|(_, _, n)| match n {
-                    RichFormula::Fun(fun, _) => fun,
-                    _ => unreachable!(),
-                })
-                .collect_vec())
-        } else {
-            // dbg!("there");
-            Err(())
+        let m_sort = m.get_sort();
+
+        VarSubtermResult {
+            unified: m_sort.is_err() || self.sort() == m_sort.unwrap(),
+            nexts,
         }
-    });
-
-    let ok = match randomness {
-        Ok(randomness) => ctx
-            .pbl
-            .iter_content()
-            .map(|(_, f)| f)
-            .flat_map(|f| {
-                f.custom_iter_w_quantifier(&ctx.pbl, |f, _| match f {
-                    RichFormula::Fun(fun, _) if randomness.contains(&fun) => {
-                        println!("err at {}", fun.name());
-                        (Some(()), vec![])
-                    }
-                    RichFormula::Fun(fun, _) if fun == enc => (None, vec![]),
-                    RichFormula::Fun(_, args) => (None, args.iter().collect()),
-                    _ => (None, vec![]),
-                })
-            })
-            .next()
-            .is_none(),
-        Err(_) => false,
-    };
-
-    if !ok {
-        println!("WARN: int-ctxt is useless")
     }
-
-    // assertions.push(Smt::Assert(sforall!(c!0:msg, k!1:nonce_sort;{
-    //     if !ok {
-    //         sfun!(sp; k, c)
-    //     } else {
-    //         snot!(ctx.env(); sfun!(sp; k, c))
-    //     }
-    // })))
-    ok
 }
 
-#[derive(Clone)]
-struct MBuilderData {
-    nonce_sort: Sort,
-    nonce: Function,
-    enc: Function,
-    dec: Function,
-    verify: Function,
+impl<'bump> PartialOrd for RandAux<'bump> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(Ord::cmp(&self, &other))
+    }
+}
+impl<'bump> Ord for RandAux<'bump> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        Ord::cmp(&self.int_ctxt, &other.int_ctxt).then_with(|| {
+            Ord::cmp(
+                &Rc::as_ptr(&self.name_caster),
+                &Rc::as_ptr(&other.name_caster),
+            )
+        })
+    }
+}
+impl<'bump> Hash for RandAux<'bump> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.int_ctxt.hash(state);
+        Rc::as_ptr(&self.name_caster).hash(state);
+    }
 }
