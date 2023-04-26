@@ -6,3 +6,4 @@ pub mod problem;
 pub mod protocol;
 pub mod step;
 pub mod subterm;
+pub mod generator;

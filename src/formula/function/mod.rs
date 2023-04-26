@@ -9,6 +9,7 @@ pub mod predicate;
 pub mod step;
 pub mod subterm;
 pub mod term_algebra;
+pub mod unused;
 
 // pub mod equality;
 use std::{cmp::Ordering, hash::Hash, marker::PhantomData, ptr::NonNull};
@@ -24,7 +25,7 @@ use crate::{
 
 use self::{
     booleans::Booleans, evaluate::Evaluate, if_then_else::IfThenElse, nonce::Nonce,
-    predicate::Predicate, step::StepFunction, subterm::Subterm, term_algebra::TermAlgebra,
+    predicate::Predicate, step::StepFunction, subterm::Subterm, term_algebra::TermAlgebra, unused::Unused,
 };
 
 use super::{
@@ -83,6 +84,7 @@ pub enum InnerFunction<'bump> {
     IfThenElse(IfThenElse),
     Evaluate(Evaluate<'bump>),
     Predicate(Predicate<'bump>),
+    Unused(Unused<'bump>)
 }
 
 // pub struct InnerFunction
@@ -506,6 +508,8 @@ impl<'bump> Function<'bump> {
     where
         'bump: 'bbump,
     {
+        assert!(!matches!(self.inner(), InnerFunction::Unused(_)));
+
         RichFormula::Fun(*self, args.into_iter().collect())
     }
 

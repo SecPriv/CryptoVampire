@@ -273,6 +273,7 @@ where
                     | InnerFunction::Subterm(_)
                     | InnerFunction::IfThenElse(_)
                     | InnerFunction::Predicate(_)
+                    | InnerFunction::Unused(_)
                     | InnerFunction::Evaluate(_) => iter.collect(),
                 }
             }

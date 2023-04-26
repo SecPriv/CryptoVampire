@@ -1,5 +1,5 @@
 mod euf_cma_mac;
-// mod euf_cma_sign;
+mod euf_cma_sign;
 // mod int_ctxt;
 mod nonce;
 
@@ -7,6 +7,9 @@ pub use nonce::SubtermNonce;
 
 pub use euf_cma_mac::SubtermEufCmaMacKey;
 pub use euf_cma_mac::SubtermEufCmaMacMain;
+
+pub use euf_cma_sign::SubtermEufCmaSignKey;
+pub use euf_cma_sign::SubtermEufCmaSignMain;
 
 use std::rc::Rc;
 
@@ -19,8 +22,10 @@ use crate::formula::{
 };
 
 use self::euf_cma_mac::EufCmaMac;
+use self::euf_cma_sign::EufCmaSign;
 use self::nonce::Nonce;
 
+use super::generator::Generator;
 use super::problem::Problem;
 use super::{
     cell::{Assignement, MemoryCell},
@@ -31,13 +36,7 @@ use super::{
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum CryptoAssumption<'bump> {
     EufCmaMac(EufCmaMac<'bump>),
-    EufCmaSign {
-        /// sign(Message, Key) -> Signature
-        sign: Function<'bump>,
-        /// verify(Signature, Message, vKey) -> bool
-        verify: Function<'bump>,
-        pk: Function<'bump>,
-    },
+    EufCmaSign(EufCmaSign<'bump>),
     IntCtxtSenc {
         enc: Function<'bump>,
         dec: Function<'bump>,
@@ -47,8 +46,8 @@ pub enum CryptoAssumption<'bump> {
     Nonce(Nonce),
 }
 
-impl<'bump> CryptoAssumption<'bump> {
-    pub(crate) fn generate_file(
+impl<'bump> Generator<'bump> for CryptoAssumption<'bump> {
+    fn generate(
         &self,
         assertions: &mut Vec<Axiom<'bump>>,
         declarations: &mut Vec<Declaration<'bump>>,
@@ -57,7 +56,7 @@ impl<'bump> CryptoAssumption<'bump> {
     ) {
         match self {
             CryptoAssumption::EufCmaMac(euf) => euf.generate(assertions, declarations, env, pbl),
-            CryptoAssumption::EufCmaSign { sign, verify, pk } => todo!(),
+            CryptoAssumption::EufCmaSign(euf) => euf.generate(assertions, declarations, env, pbl),
             CryptoAssumption::IntCtxtSenc {
                 enc,
                 dec,

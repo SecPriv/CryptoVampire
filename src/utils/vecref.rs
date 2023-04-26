@@ -1,4 +1,4 @@
-use std::{ops::Index, slice::Iter, vec::IntoIter};
+use std::{iter::FusedIterator, ops::Index, slice::Iter, vec::IntoIter};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum VecRef<'a, T> {
@@ -110,6 +110,30 @@ impl<'a, T> Iterator for IterVecRef<'a, T> {
             IterVecRef::OwnedVec(iter) => iter.next(),
             IterVecRef::Vec(iter) => iter.next(),
             IterVecRef::Ref(iter) => iter.next().map(|e| *e),
+            IterVecRef::Empty => None,
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match self {
+            IterVecRef::OwnedVec(iter) => iter.size_hint(),
+            IterVecRef::Vec(iter) => iter.size_hint(),
+            IterVecRef::Ref(iter) => iter.size_hint(),
+            IterVecRef::Empty => (0, Some(0)),
+        }
+    }
+}
+
+impl<'a, T> FusedIterator for IterVecRef<'a, T> {}
+
+impl<'a, T> ExactSizeIterator for IterVecRef<'a, T> {}
+
+impl<'a, T> DoubleEndedIterator for IterVecRef<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        match self {
+            IterVecRef::OwnedVec(iter) => iter.next_back(),
+            IterVecRef::Vec(iter) => iter.next_back(),
+            IterVecRef::Ref(iter) => iter.next_back().map(|e| *e),
             IterVecRef::Empty => None,
         }
     }

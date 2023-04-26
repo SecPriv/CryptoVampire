@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::{
     environement::environement::Environement,
-    problem::crypto_assumptions::{SubtermEufCmaMacKey, SubtermEufCmaMacMain, SubtermNonce},
+    problem::crypto_assumptions::{SubtermEufCmaMacKey, SubtermEufCmaMacMain, SubtermNonce, SubtermEufCmaSignMain, SubtermEufCmaSignKey},
 };
 
 use super::InnerFunction;
@@ -24,6 +24,8 @@ pub enum Subsubterm<'bump> {
     Nonce(Rc<SubtermNonce<'bump>>),
     EufCmaMacMain(Rc<SubtermEufCmaMacMain<'bump>>),
     EufCmaMacKey(Rc<SubtermEufCmaMacKey<'bump>>),
+    EufCmaSignMain(Rc<SubtermEufCmaSignMain<'bump>>),
+    EufCmaSignKey(Rc<SubtermEufCmaSignKey<'bump>>),
 }
 
 fn _enlarge<'a, 'b>(q: Subterm<'a>) -> Subterm<'b>

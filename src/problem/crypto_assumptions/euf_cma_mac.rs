@@ -24,7 +24,7 @@ use crate::{
             kind::SubtermKind,
             traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
             Subterm,
-        },
+        }, generator::Generator,
     },
     utils::vecref::VecRef,
 };
@@ -67,14 +67,13 @@ impl<'bump> EufCmaMac<'bump> {
 
         let subterm_key = Subterm::new(
             env.container,
-            env.container
-                .find_free_function_name("subterm_euf_cma_main"),
+            env.container.find_free_function_name("subterm_euf_cma_key"),
             kind,
             KeyAux {
                 euf_cma: *self,
                 name_caster: Rc::clone(&pbl.name_caster),
             },
-            [],
+            [self.mac, self.verify],
             DeeperKinds::NO_MACROS,
             |rc| Subsubterm::EufCmaMacKey(rc),
         );
@@ -177,7 +176,7 @@ impl<'bump> EufCmaMac<'bump> {
             let disjunction = subterm_main.preprocess_terms(&pbl.protocol, &u_f, [message, signature], true, DeeperKinds::all());
 
                 Some(mforall!(free_vars, {
-                    self.verify.f([message.clone(), signature.clone(), pbl.name_caster.cast(MESSAGE.clone(), key.clone())])
+                    pbl.evaluator.eval(self.verify.f([message.clone(), signature.clone(), pbl.name_caster.cast(MESSAGE.clone(), key.clone())]))
                     >> mexists!([u_var], {
                             RichFormula::ors(disjunction)
                         })
@@ -211,8 +210,9 @@ fn define_subterms<'bump>(
                     .generate_function_assertions_from_pbl(pbl)
                     .into_iter()
                     .chain(
-                        subterm
-                            .not_of_sort(pbl.sorts.iter().filter(|&&s| s != nonce_sort).cloned()),
+                        subterm.not_of_sort(
+                            pbl.sorts.iter().filter(|&&s| s != subterm.sort()).cloned(),
+                        ),
                     )
                     .map(|f| Axiom::base(f)),
             );
@@ -234,8 +234,9 @@ fn define_subterms<'bump>(
                     .generate_function_assertions_from_pbl(pbl)
                     .into_iter()
                     .chain(
-                        subterm
-                            .not_of_sort(pbl.sorts.iter().filter(|&&s| s != nonce_sort).cloned()),
+                        subterm.not_of_sort(
+                            pbl.sorts.iter().filter(|&&s| s != subterm.sort()).cloned(),
+                        ),
                     )
                     .map(|f| Axiom::base(f)),
             );
@@ -284,7 +285,8 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
                     if let RichFormula::Fun(nf, args2) = &args[1];
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
-                        break 'function VecRef::Vec(vec![&args[0], &args2[0]])
+                        // break 'function VecRef::Vec(vec![&args[0], &args2[0]])
+                        break 'function VecRef::Vec(vec![&args[0]])
                     }
                 }
                 if_chain! {
@@ -292,7 +294,8 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
                     if let RichFormula::Fun(nf, args2) = &args[2];
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
-                        break 'function VecRef::Vec(vec![&args[0], &args[1], &args2[0]])
+                        // break 'function VecRef::Vec(vec![&args[0], &args[1], &args2[0]])
+                        break 'function VecRef::Vec(vec![&args[0], &args[1]])
                     }
                 }
                 VecRef::Ref(args)
@@ -328,5 +331,18 @@ impl<'bump> Hash for KeyAux<'bump> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.euf_cma.hash(state);
         Rc::as_ptr(&self.name_caster).hash(state);
+    }
+}
+
+
+impl<'bump> Generator<'bump> for EufCmaMac<'bump> {
+    fn generate(
+        &self,
+        assertions: &mut Vec<Axiom<'bump>>,
+        declarations: &mut Vec<Declaration<'bump>>,
+        env: &Environement<'bump>,
+        pbl: &Problem<'bump>,
+    ) {
+        self.generate(assertions, declarations, env, pbl)
     }
 }

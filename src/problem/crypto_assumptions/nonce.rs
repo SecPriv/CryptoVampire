@@ -8,7 +8,7 @@ use crate::{
     mforall,
     problem::{
         problem::Problem,
-        subterm::{kind::SubtermKind, traits::DefaultAuxSubterm, Subterm},
+        subterm::{kind::SubtermKind, traits::DefaultAuxSubterm, Subterm}, generator::Generator,
     },
 };
 
@@ -119,3 +119,16 @@ impl Nonce {
 //         },
 //     )))
 // }
+
+
+impl<'bump> Generator<'bump> for Nonce {
+    fn generate(
+        &self,
+        assertions: &mut Vec<Axiom<'bump>>,
+        declarations: &mut Vec<Declaration<'bump>>,
+        env: &Environement<'bump>,
+        pbl: &Problem<'bump>,
+    ) {
+        self.generate(assertions, declarations, env, pbl)
+    }
+}
