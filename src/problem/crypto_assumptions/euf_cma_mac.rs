@@ -19,12 +19,13 @@ use crate::{
     },
     mexists, mforall,
     problem::{
+        generator::Generator,
         problem::Problem,
         subterm::{
             kind::SubtermKind,
             traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
             Subterm,
-        }, generator::Generator,
+        },
     },
     utils::vecref::VecRef,
 };
@@ -333,7 +334,6 @@ impl<'bump> Hash for KeyAux<'bump> {
         Rc::as_ptr(&self.name_caster).hash(state);
     }
 }
-
 
 impl<'bump> Generator<'bump> for EufCmaMac<'bump> {
     fn generate(

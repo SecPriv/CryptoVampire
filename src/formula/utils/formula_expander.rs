@@ -274,6 +274,7 @@ where
                     | InnerFunction::IfThenElse(_)
                     | InnerFunction::Predicate(_)
                     | InnerFunction::Unused(_)
+                    | InnerFunction::Skolem(_)
                     | InnerFunction::Evaluate(_) => iter.collect(),
                 }
             }

@@ -57,4 +57,8 @@ impl<'bump> Protocol<'bump> {
             .max()
             .unwrap_or(0)
     }
+
+    pub fn init_step(&self) -> Step<'bump> {
+        *self.steps.first().unwrap()
+    }
 }

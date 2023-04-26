@@ -6,6 +6,7 @@ pub mod function_like;
 pub mod if_then_else;
 pub mod nonce;
 pub mod predicate;
+pub mod skolem;
 pub mod step;
 pub mod subterm;
 pub mod term_algebra;
@@ -25,7 +26,8 @@ use crate::{
 
 use self::{
     booleans::Booleans, evaluate::Evaluate, if_then_else::IfThenElse, nonce::Nonce,
-    predicate::Predicate, step::StepFunction, subterm::Subterm, term_algebra::TermAlgebra, unused::Unused,
+    predicate::Predicate, skolem::Skolem, step::StepFunction, subterm::Subterm,
+    term_algebra::TermAlgebra, unused::Unused,
 };
 
 use super::{
@@ -84,7 +86,8 @@ pub enum InnerFunction<'bump> {
     IfThenElse(IfThenElse),
     Evaluate(Evaluate<'bump>),
     Predicate(Predicate<'bump>),
-    Unused(Unused<'bump>)
+    Unused(Unused<'bump>),
+    Skolem(Skolem<'bump>),
 }
 
 // pub struct InnerFunction
@@ -264,7 +267,24 @@ impl<'bump> Function<'bump> {
                     + NameFinder<Function<'bump>>),
         sorts: impl IntoIterator<Item = Sort<'bump>>,
     ) -> Self {
-        let name = container.find_free_name("split");
+        Self::new_predicate(container, sorts, "split")
+    }
+
+    pub fn new_rewrite_function(
+        container: &'bump (impl ScopeAllocator<'bump, InnerFunction<'bump>>
+                    + NameFinder<Function<'bump>>),
+        sort: Sort<'bump>,
+    ) -> Self {
+        Self::new_predicate(container, [sort, sort], &format!("rewrite_{}", sort.name()))
+    }
+
+    fn new_predicate(
+        container: &'bump (impl ScopeAllocator<'bump, InnerFunction<'bump>>
+                    + NameFinder<Function<'bump>>),
+        sorts: impl IntoIterator<Item = Sort<'bump>>,
+        name: &str,
+    ) -> Self {
+        let name = container.find_free_name(name);
         let inner = InnerFunction::Predicate(Predicate {
             name: name.into(),
             args: sorts.into_iter().collect(),
@@ -278,6 +298,65 @@ impl<'bump> Function<'bump> {
         Function {
             inner,
             container: Default::default(),
+        }
+    }
+
+    pub fn new_unused_destructors(
+        container: &'bump (impl ScopeAllocator<'bump, InnerFunction<'bump>>
+                    + NameFinder<Function<'bump>>),
+        constructor: Self,
+    ) -> Vec<Self> {
+        assert!(constructor.is_term_algebra());
+
+        let o_sort = constructor.fast_outsort().unwrap();
+        constructor
+            .forced_input_sort()
+            .iter()
+            .enumerate()
+            .map(|(i, &s)| {
+                let name = container.find_free_name(&format!("dest_{}_{}", constructor.name(), i));
+                let inner = InnerFunction::Unused(Unused {
+                    name,
+                    in_sorts: Box::new([o_sort]),
+                    out_sort: s,
+                });
+
+                let inner = unsafe {
+                    let ptr = container.alloc();
+                    std::ptr::write(ptr.as_ptr(), inner);
+                    ptr
+                };
+                Function {
+                    inner,
+                    container: Default::default(),
+                }
+            })
+            .collect()
+    }
+
+    pub fn new_skolem(
+        container: &'bump (impl ScopeAllocator<'bump, InnerFunction<'bump>>
+                    + NameFinder<Function<'bump>>),
+        free_sorts: impl IntoIterator<Item = Sort<'bump>>,
+        out: Sort<'bump>,
+    ) -> Self {
+        {
+            let name = container.find_free_name("sk_");
+            let inner = InnerFunction::Skolem(Skolem {
+                name: name.into(),
+                in_sort: free_sorts.into_iter().collect(),
+                out_sort: out,
+            });
+
+            let inner = unsafe {
+                let ptr = container.alloc();
+                std::ptr::write(ptr.as_ptr(), inner);
+                ptr
+            };
+            Function {
+                inner,
+                container: Default::default(),
+            }
         }
     }
 

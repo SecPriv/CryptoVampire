@@ -4,6 +4,7 @@ use crate::formula::sort::builtins::{BOOL, STEP};
 
 use super::{
     booleans::{self, Booleans},
+    if_then_else::IfThenElse,
     new_static_function,
     predicate::Predicate,
     term_algebra::TermAlgebra,
@@ -41,9 +42,20 @@ pub static EQUALITY: Function<'static> = new_static_function(InnerFunction::Bool
 ));
 
 #[dynamic]
+pub static IF_THEN_ELSE: Function<'static> =
+    new_static_function(InnerFunction::IfThenElse(IfThenElse));
+
+#[dynamic]
 pub static LESS_THAN_STEP: Function<'static> =
     new_static_function(InnerFunction::Predicate(Predicate {
         name: "lt".into(),
         args: Box::new([STEP.clone(), STEP.clone()]),
         // out: BOOL.clone(),
     }));
+
+#[dynamic]
+pub static HAPPENS: Function<'static> = new_static_function(InnerFunction::Predicate(Predicate {
+    name: "happens".into(),
+    args: Box::new([STEP.clone()]),
+    // out: BOOL.clone(),
+}));

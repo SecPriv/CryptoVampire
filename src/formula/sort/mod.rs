@@ -45,7 +45,7 @@ pub struct InnerSort<'bump> {
 }
 
 impl<'bump> InnerSort<'bump> {
-    fn new(name: String, flags: SFlags) -> Self {
+    fn new(name: String, flags: SFlags, evaluated: Option<Sort<'bump>>) -> Self {
         // bump.alloc(InnerSort {
         //     inner: HiddenSort {
         //         name,
@@ -56,7 +56,7 @@ impl<'bump> InnerSort<'bump> {
             inner: HiddenSort {
                 name,
                 flags,
-                evaluated: None,
+                evaluated,
             },
         }
     }
@@ -75,14 +75,14 @@ impl<'bump> InnerSort<'bump> {
 struct HiddenSort<'bump> {
     name: String,
     flags: SFlags,
-    evaluated: Option<EvaluateSort<'bump>>,
+    evaluated: Option<Sort<'bump>>,
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-enum EvaluateSort<'bump> {
-    EvalSort(Sort<'bump>),
-    TASort(Sort<'bump>),
-}
+// #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+// enum EvaluateSort<'bump> {
+//     EvalSort(Sort<'bump>),
+//     TASort(Sort<'bump>),
+// }
 
 // impl<'a> PartialEq for Sort<'a> {
 //     fn eq(&self, other: &Self) -> bool {
@@ -180,7 +180,13 @@ impl<'a> Sort<'a> {
     }
 
     pub fn is_evaluatable(&self) -> bool {
-        self.inner().flags.contains(SFlags::EVALUATABLE)
+        let r = self.inner().flags.contains(SFlags::EVALUATABLE);
+        assert_eq!(r, self.evaluated_sort().is_some());
+        r
+    }
+
+    pub fn evaluated_sort(&self) -> Option<Sort<'a>> {
+        self.as_ref().as_ref().evaluated
     }
 
     pub fn as_ptr_usize(&self) -> usize {
@@ -298,10 +304,10 @@ impl<'bump> From<&'bump InnerSort<'bump>> for Sort<'bump> {
     }
 }
 
-pub fn new_static_sort(name: &str, flags: SFlags) -> Sort<'static> {
+pub fn new_static_sort(name: &str, flags: SFlags, evaluated: Option<Sort<'static>>) -> Sort<'static> {
     let inner = NonNull::new(Box::into_raw(Box::new(InnerSort::new(
         name.to_owned(),
-        flags,
+        flags, evaluated
     ))))
     .unwrap();
     Sort {

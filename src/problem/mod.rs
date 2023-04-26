@@ -7,3 +7,4 @@ pub mod protocol;
 pub mod step;
 pub mod subterm;
 pub mod generator;
+pub(crate) mod general_assertions;

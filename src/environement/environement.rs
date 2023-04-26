@@ -99,11 +99,19 @@ impl<'bump> Environement<'bump> {
     }
 
     pub fn use_legacy_evaluate(&self) -> bool {
-        self.options.flags.contains(Flags::LEGACY_EVALUATE)
+        self.options.flags.contains(Flags::LEGACY_EVALUATE) && !self.no_evaluate()
     }
 
     pub fn no_bitstring(&self) -> bool {
         self.options.flags.contains(Flags::NO_BITSTRING)
+    }
+
+    pub fn use_bitstring(&self) -> bool {
+        !self.no_bitstring() && !self.no_evaluate()
+    }
+
+    pub fn no_evaluate(&self) -> bool {
+        self.not_as_term_algebra()
     }
 
     pub fn not_as_term_algebra(&self) -> bool {

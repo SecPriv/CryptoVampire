@@ -2,6 +2,7 @@ use crate::formula::{formula::RichFormula, function::Function, variable::Variabl
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Axiom<'bump> {
+    Comment(Box<str>),
     Base { formula: Box<RichFormula<'bump>> },
     Theory { formula: Box<RichFormula<'bump>> },
     Query { formula: Box<RichFormula<'bump>> },
@@ -28,15 +29,14 @@ impl<'bump> Axiom<'bump> {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Rewrite<'bump> {
-    pub kind: RewriteKind,
-    pub function: Function<'bump>,
+    pub kind: RewriteKind<'bump>,
     pub vars: Vec<Variable<'bump>>,
     pub pre: RichFormula<'bump>,
     pub post: RichFormula<'bump>,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum RewriteKind {
+pub enum RewriteKind<'bump> {
     Bool,
-    Other,
+    Other(Function<'bump>),
 }

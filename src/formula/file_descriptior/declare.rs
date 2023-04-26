@@ -1,11 +1,15 @@
-use crate::formula::{
-    function::{subterm, Function},
+use crate::{formula::{
+    function::{subterm, Function, InnerFunction},
     sort::Sort,
-};
+}, container::{ScopeAllocator, NameFinder}};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Declaration<'bump> {
     Sort(Sort<'bump>),
+    SortAlias{
+        from: Sort<'bump>,
+        to: Sort<'bump>
+    },
     FreeFunction(Function<'bump>),
     DataTypes(Vec<DataType<'bump>>),
     Subterm(Subterm<'bump>),
@@ -21,6 +25,19 @@ pub struct DataType<'bump> {
 pub struct ConstructorDestructor<'bump> {
     pub constructor: Function<'bump>,
     pub destructor: Vec<Function<'bump>>,
+}
+
+impl<'bump> ConstructorDestructor<'bump> {
+    pub fn new_unused(
+        container: &'bump (impl ScopeAllocator<'bump, InnerFunction<'bump>>
+                    + NameFinder<Function<'bump>>),
+        f: Function<'bump>,
+    ) -> Self {
+        Self {
+            constructor: f,
+            destructor: Function::new_unused_destructors(container, f),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

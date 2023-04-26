@@ -134,6 +134,44 @@ impl<'bump> RichFormula<'bump> {
         self.iter_with_pile(StackBox::new(vec![]))
     }
 
+    pub fn iter_used_varibales_with_pile<'a, V, D>(
+        mut pile: V,
+        fs: impl IntoIterator<Item = &'a RichFormula<'bump>>,
+    ) -> impl Iterator<Item = Variable<'bump>> + 'a
+    where
+        V: DerefMut<Target = Vec<(D, &'a Self)>> + Deref<Target = Vec<(D, &'a Self)>> + 'a,
+        D: Default + Clone + 'a,
+        'bump: 'a,
+    {
+        pile.clear();
+        pile.extend(fs.into_iter().map(|f| (Default::default(), f)));
+        FormulaIterator {
+            pile,
+            passed_along: None,
+            flags: IteratorFlags::QUANTIFIER,
+            f: |_, f| {
+                let (current, next) = match f {
+                    RichFormula::Var(v) => (Some(*v), None),
+                    RichFormula::Fun(_, args) => (None, Some(args.iter())),
+                    _ => (None, None),
+                };
+                (
+                    current,
+                    next.into_iter().flatten().map(|f| (Default::default(), f)),
+                )
+            },
+        }
+    }
+
+    pub fn iter_used_varibales<'a>(
+        fs: impl IntoIterator<Item = &'a RichFormula<'bump>>,
+    ) -> impl Iterator<Item = Variable<'bump>> + 'a
+    where
+        'bump: 'a,
+    {
+        Self::iter_used_varibales_with_pile(StackBox::new(Vec::<((), _)>::new()), fs)
+    }
+
     pub fn map<F>(self, f: &F) -> Self
     where
         F: Fn(Self) -> Self,

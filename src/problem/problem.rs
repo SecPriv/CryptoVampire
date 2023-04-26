@@ -1,24 +1,35 @@
-use std::{cell::RefCell, rc::Rc};
-
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
     container::Container,
+    environement::environement::Environement,
     formula::{
+        file_descriptior::{
+            axioms::Axiom,
+            declare::{ConstructorDestructor, DataType, Declaration},
+        },
         formula::RichFormula,
-        function::{evaluate::Evaluator, term_algebra::name::NameCaster, Function},
+        function::{
+            builtin::LESS_THAN_STEP, evaluate::Evaluator, term_algebra::name::NameCaster, Function,
+        },
         sort::Sort,
-        variable::Variable, file_descriptior::{axioms::Axiom, declare::Declaration},
-    }, environement::environement::Environement,
+        variable::Variable,
+    },
 };
 
-use super::{protocol::Protocol, crypto_assumptions::CryptoAssumption, generator::Generator};
+use super::{
+    crypto_assumptions::CryptoAssumption,
+    general_assertions::{self, order},
+    generator::Generator,
+    protocol::Protocol,
+};
 
 #[derive(Debug, Clone)]
 pub struct Problem<'bump> {
     container: &'bump Container<'bump>,
     /// functions to declare (not already declared somewhere else)
     pub functions: Vec<Function<'bump>>, // to keep track of 'static functions
-    pub sorts: Vec<Sort<'bump>>,         // same
+    pub sorts: Vec<Sort<'bump>>, // same
     pub evaluator: Rc<Evaluator<'bump>>,
     pub name_caster: Rc<NameCaster<'bump>>,
     pub protocol: Protocol<'bump>,
@@ -47,6 +58,10 @@ impl<'bump> Problem<'bump> {
             .max()
             .unwrap_or(0)
     }
+
+    pub fn container(&self) -> &'bump Container<'bump> {
+        self.container
+    }
 }
 
 impl<'bump> Generator<'bump> for Problem<'bump> {
@@ -59,9 +74,46 @@ impl<'bump> Generator<'bump> for Problem<'bump> {
     ) {
         declarations.extend(self.sorts.iter().map(|s| Declaration::Sort(*s)));
 
-        declarations.reserve(self.functions.len());
-        for &fun in &self.functions {
-            
+        {
+            declarations.reserve(self.functions.len());
+            // let mut datatypes = Vec::new();
+            let mut datatypes = HashMap::new();
+            for &fun in &self.functions {
+                if fun.is_term_algebra() && !env.not_as_term_algebra() {
+                    let constr: &mut Vec<_> =
+                        datatypes.entry(fun.fast_outsort().unwrap()).or_default();
+                    constr.push(ConstructorDestructor::new_unused(self.container, fun))
+                } else {
+                    declarations.push(Declaration::FreeFunction(fun))
+                }
+            }
+
+            declarations.push(Declaration::DataTypes(
+                datatypes
+                    .into_iter()
+                    .map(|(sort, constructor_destructors)| DataType {
+                        sort,
+                        constructor_destructors,
+                    })
+                    .collect(),
+            ));
         }
+
+        order::generate(assertions, declarations, env, self);
+
+        general_assertions::evaluate::generate(assertions, declarations, env, self);
+
+        assertions.push(Axiom::Comment("crypto".into()));
+        for crypto in &self.crypto_assertions {
+            crypto.generate(assertions, declarations, env, self)
+        }
+
+        assertions.push(Axiom::Comment("user asserts".into()));
+        assertions.extend(self.assertions.iter().cloned().map(Axiom::base));
+
+        assertions.push(Axiom::Comment("query".into()));
+        assertions.push(Axiom::Query {
+            formula: self.query.clone(),
+        })
     }
 }

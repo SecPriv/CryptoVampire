@@ -1,2 +1,2 @@
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-pub struct IfThenElse();
+pub struct IfThenElse;

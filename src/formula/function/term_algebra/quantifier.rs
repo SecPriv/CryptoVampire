@@ -52,4 +52,8 @@ impl<'bump> Quantifier<'bump> {
             } => std::boxed::Box::new([condition.as_ref(), success.as_ref(), faillure.as_ref()]),
         }
     }
+
+    pub fn inner(&self) -> &InnerQuantifier<'bump> {
+        &self.inner
+    }
 }
