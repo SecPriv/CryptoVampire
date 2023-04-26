@@ -5,5 +5,5 @@ use crate::formula::sort::Sort;
 pub struct Unused<'bump> {
     pub name: String,
     pub in_sorts: Box<[Sort<'bump>]>,
-    pub out_sort: Sort<'bump>
+    pub out_sort: Sort<'bump>,
 }

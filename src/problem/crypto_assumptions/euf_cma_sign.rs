@@ -19,12 +19,13 @@ use crate::{
     },
     mexists, mforall,
     problem::{
+        generator::Generator,
         problem::Problem,
         subterm::{
             kind::SubtermKind,
             traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
             Subterm,
-        }, generator::Generator,
+        },
     },
     utils::vecref::VecRef,
 };

@@ -4,7 +4,7 @@ use crate::formula::sort::Sort;
 pub struct Skolem<'bump> {
     name: Box<str>,
     in_sort: Box<[Sort<'bump>]>,
-    out_sort: Sort<'bump>
+    out_sort: Sort<'bump>,
 }
 
 impl<'bump> Skolem<'bump> {

@@ -47,7 +47,7 @@ where
     ignored_functions: Vec<Function<'bump>>,
     pub kind: SubtermKind,
     weak: Weak<Self>, // sort: Sort<'bump>,
-    deeper_kind: DeeperKinds
+    deeper_kind: DeeperKinds,
 }
 
 impl<'bump, Aux> Eq for Subterm<'bump, Aux> where Aux: SubtermAux<'bump> + Eq {}
@@ -114,7 +114,7 @@ where
                     ignored_functions,
                     kind,
                     weak: Weak::clone(weak),
-                    deeper_kind
+                    deeper_kind,
                 });
                 //  Rc::new(subterm);
                 let inner = function::subterm::Subterm {

@@ -4,7 +4,7 @@ use crate::{
     environement::environement::Environement,
     problem::crypto_assumptions::{
         SubtermEufCmaMacKey, SubtermEufCmaMacMain, SubtermEufCmaSignKey, SubtermEufCmaSignMain,
-        SubtermIntCtxtKey, SubtermIntCtxtMain, SubtermNonce, SubtermIntCtxtRand,
+        SubtermIntCtxtKey, SubtermIntCtxtMain, SubtermIntCtxtRand, SubtermNonce,
     },
 };
 

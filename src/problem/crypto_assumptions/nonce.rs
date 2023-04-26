@@ -7,8 +7,9 @@ use crate::{
     },
     mforall,
     problem::{
+        generator::Generator,
         problem::Problem,
-        subterm::{kind::SubtermKind, traits::DefaultAuxSubterm, Subterm}, generator::Generator,
+        subterm::{kind::SubtermKind, traits::DefaultAuxSubterm, Subterm},
     },
 };
 
@@ -119,7 +120,6 @@ impl Nonce {
 //         },
 //     )))
 // }
-
 
 impl<'bump> Generator<'bump> for Nonce {
     fn generate(

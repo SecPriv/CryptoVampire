@@ -304,10 +304,15 @@ impl<'bump> From<&'bump InnerSort<'bump>> for Sort<'bump> {
     }
 }
 
-pub fn new_static_sort(name: &str, flags: SFlags, evaluated: Option<Sort<'static>>) -> Sort<'static> {
+pub fn new_static_sort(
+    name: &str,
+    flags: SFlags,
+    evaluated: Option<Sort<'static>>,
+) -> Sort<'static> {
     let inner = NonNull::new(Box::into_raw(Box::new(InnerSort::new(
         name.to_owned(),
-        flags, evaluated
+        flags,
+        evaluated,
     ))))
     .unwrap();
     Sort {

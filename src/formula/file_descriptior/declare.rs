@@ -1,15 +1,15 @@
-use crate::{formula::{
-    function::{subterm, Function, InnerFunction},
-    sort::Sort,
-}, container::{ScopeAllocator, NameFinder}};
+use crate::{
+    container::{NameFinder, ScopeAllocator},
+    formula::{
+        function::{subterm, Function, InnerFunction},
+        sort::Sort,
+    },
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Declaration<'bump> {
     Sort(Sort<'bump>),
-    SortAlias{
-        from: Sort<'bump>,
-        to: Sort<'bump>
-    },
+    SortAlias { from: Sort<'bump>, to: Sort<'bump> },
     FreeFunction(Function<'bump>),
     DataTypes(Vec<DataType<'bump>>),
     Subterm(Subterm<'bump>),
