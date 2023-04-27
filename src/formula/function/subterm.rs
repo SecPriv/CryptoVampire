@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::{
     problem::{
@@ -28,7 +28,7 @@ macro_rules! generate {
     ($($name:ident:$t:ty),*) => {
         #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
         pub enum Subsubterm<'bump> {
-            $($name(Rc<$t>)),*
+            $($name(Arc<$t>)),*
         }
     };
 }

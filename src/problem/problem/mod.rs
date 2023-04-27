@@ -1,6 +1,6 @@
 pub mod builder;
 
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc, sync::Arc};
 
 use crate::{
     container::Container,
@@ -32,8 +32,8 @@ pub struct Problem<'bump> {
     /// functions to declare (not already declared somewhere else)
     pub functions: Vec<Function<'bump>>, // to keep track of 'static functions
     pub sorts: Vec<Sort<'bump>>, // same
-    pub evaluator: Rc<Evaluator<'bump>>,
-    pub name_caster: Rc<NameCaster<'bump>>,
+    pub evaluator: Arc<Evaluator<'bump>>,
+    pub name_caster: Arc<NameCaster<'bump>>,
     pub protocol: Protocol<'bump>,
     pub assertions: Vec<RichFormula<'bump>>,
     pub crypto_assertions: Vec<CryptoAssumption<'bump>>,

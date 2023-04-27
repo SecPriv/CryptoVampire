@@ -1,4 +1,4 @@
-use std::{cell::RefCell, hash::Hash, rc::Rc};
+use std::{cell::RefCell, hash::Hash, rc::Rc, sync::Arc};
 
 use if_chain::if_chain;
 use itertools::Itertools;
@@ -74,7 +74,7 @@ impl<'bump> EufCmaSign<'bump> {
             kind,
             KeyAux {
                 euf_cma: *self,
-                name_caster: Rc::clone(&pbl.name_caster),
+                name_caster: Arc::clone(&pbl.name_caster),
             },
             [self.sign, self.pk],
             DeeperKinds::NO_MACROS,
@@ -199,8 +199,8 @@ fn define_subterms<'bump>(
     pbl: &Problem<'bump>,
     assertions: &mut Vec<Axiom<'bump>>,
     declarations: &mut Vec<Declaration<'bump>>,
-    subterm_key: &Rc<Subterm<'bump, impl SubtermAux<'bump>>>,
-    subterm_main: &Rc<Subterm<'bump, impl SubtermAux<'bump>>>,
+    subterm_key: &Arc<Subterm<'bump, impl SubtermAux<'bump>>>,
+    subterm_main: &Arc<Subterm<'bump, impl SubtermAux<'bump>>>,
 ) {
     let _nonce_sort = NONCE.clone();
     let kind = env.into();
@@ -264,7 +264,7 @@ struct EufCandidate<'a, 'bump> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyAux<'bump> {
     euf_cma: EufCmaSign<'bump>,
-    name_caster: Rc<NameCaster<'bump>>,
+    name_caster: Arc<NameCaster<'bump>>,
 }
 
 impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
@@ -326,8 +326,8 @@ impl<'bump> Ord for KeyAux<'bump> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         Ord::cmp(&self.euf_cma, &other.euf_cma).then_with(|| {
             Ord::cmp(
-                &Rc::as_ptr(&self.name_caster),
-                &Rc::as_ptr(&other.name_caster),
+                &Arc::as_ptr(&self.name_caster),
+                &Arc::as_ptr(&other.name_caster),
             )
         })
     }
@@ -335,7 +335,7 @@ impl<'bump> Ord for KeyAux<'bump> {
 impl<'bump> Hash for KeyAux<'bump> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.euf_cma.hash(state);
-        Rc::as_ptr(&self.name_caster).hash(state);
+        Arc::as_ptr(&self.name_caster).hash(state);
     }
 }
 

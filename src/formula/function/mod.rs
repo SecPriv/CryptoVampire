@@ -661,6 +661,6 @@ pub fn new_static_function(inner: InnerFunction<'static>) -> Function<'static> {
     }
 }
 
-// asssert_trait!(sync_and_send; InnerFunction; Sync, Send);
+asssert_trait!(sync_and_send; InnerFunction; Sync, Send);
 assert_variance!(Function);
 assert_variance!(InnerFunction);

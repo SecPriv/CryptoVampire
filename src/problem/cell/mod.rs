@@ -14,7 +14,7 @@ use crate::{
         function::Function,
         sort::Sort,
     },
-    utils::precise_as_ref::PreciseAsRef,
+    utils::precise_as_ref::PreciseAsRef, asssert_trait, assert_variance,
 };
 use core::fmt::Debug;
 
@@ -25,6 +25,11 @@ pub struct MemoryCell<'bump> {
     inner: NonNull<InnerMemoryCell<'bump>>,
     container: PhantomData<&'bump ()>,
 }
+
+asssert_trait!(sync_send_cell; InnerMemoryCell; Sync, Send);
+assert_variance!(MemoryCell);
+unsafe impl<'bump> Sync for MemoryCell<'bump>{}
+unsafe impl<'bump> Send for MemoryCell<'bump>{}
 
 impl<'bump> Ord for MemoryCell<'bump> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {

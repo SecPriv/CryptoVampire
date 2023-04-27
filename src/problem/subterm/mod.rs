@@ -1,6 +1,5 @@
 use std::{
-    hash::Hash,
-    rc::{Rc, Weak},
+    hash::Hash, sync::{Arc, Weak}, rc::Rc,
 };
 
 use itertools::Itertools;
@@ -98,15 +97,15 @@ where
         ignored_functions: impl IntoIterator<Item = Function<'bump>>,
         deeper_kind: DeeperKinds,
         to_enum: F,
-    ) -> Rc<Self>
+    ) -> Arc<Self>
     where
-        F: FnOnce(Rc<Self>) -> function::subterm::Subsubterm<'bump>,
+        F: FnOnce(Arc<Self>) -> function::subterm::Subsubterm<'bump>,
     {
         let ignored_functions = ignored_functions.into_iter().collect();
         let (_, self_rc) = unsafe {
             Function::new_cyclic(container, |function| {
                 // let subterm = ;
-                let self_rc = Rc::new_cyclic(|weak| Subterm {
+                let self_rc = Arc::new_cyclic(|weak| Subterm {
                     function,
                     aux,
                     ignored_functions,
@@ -116,7 +115,7 @@ where
                 });
                 //  Rc::new(subterm);
                 let inner = function::subterm::Subterm {
-                    subterm: to_enum(Rc::clone(&self_rc)),
+                    subterm: to_enum(Arc::clone(&self_rc)),
                     name,
                 };
                 (inner.into_inner_function(), self_rc)

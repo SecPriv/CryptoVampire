@@ -1,4 +1,4 @@
-use std::{cell::RefCell, hash::Hash, rc::Rc};
+use std::{cell::RefCell, hash::Hash, sync::Arc};
 
 use if_chain::if_chain;
 use itertools::Itertools;
@@ -79,7 +79,7 @@ impl<'bump> IntCtxt<'bump> {
             kind,
             KeyAux {
                 int_ctxt: *self,
-                name_caster: Rc::clone(&pbl.name_caster),
+                name_caster: Arc::clone(&pbl.name_caster),
             },
             [self.enc, self.dec, self.verify],
             DeeperKinds::all(),
@@ -93,7 +93,7 @@ impl<'bump> IntCtxt<'bump> {
             kind,
             RandAux {
                 int_ctxt: *self,
-                name_caster: Rc::clone(&pbl.name_caster),
+                name_caster: Arc::clone(&pbl.name_caster),
             },
             [self.enc],
             DeeperKinds::all(),
@@ -294,7 +294,7 @@ fn define_subterm<'bump>(
     pbl: &Problem<'bump>,
     assertions: &mut Vec<Axiom<'bump>>,
     declarations: &mut Vec<Declaration<'bump>>,
-    subterm: &Rc<Subterm<'bump, impl SubtermAux<'bump>>>,
+    subterm: &Arc<Subterm<'bump, impl SubtermAux<'bump>>>,
     keep_guard: bool,
 ) {
     let kind = env.into();
@@ -335,7 +335,7 @@ struct IntCtxtEncCandidates<'a, 'bump> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyAux<'bump> {
     int_ctxt: IntCtxt<'bump>,
-    name_caster: Rc<NameCaster<'bump>>,
+    name_caster: Arc<NameCaster<'bump>>,
 }
 
 impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
@@ -403,8 +403,8 @@ impl<'bump> Ord for KeyAux<'bump> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         Ord::cmp(&self.int_ctxt, &other.int_ctxt).then_with(|| {
             Ord::cmp(
-                &Rc::as_ptr(&self.name_caster),
-                &Rc::as_ptr(&other.name_caster),
+                &Arc::as_ptr(&self.name_caster),
+                &Arc::as_ptr(&other.name_caster),
             )
         })
     }
@@ -412,7 +412,7 @@ impl<'bump> Ord for KeyAux<'bump> {
 impl<'bump> Hash for KeyAux<'bump> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.int_ctxt.hash(state);
-        Rc::as_ptr(&self.name_caster).hash(state);
+        Arc::as_ptr(&self.name_caster).hash(state);
     }
 }
 
@@ -431,7 +431,7 @@ impl<'bump> Generator<'bump> for IntCtxt<'bump> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RandAux<'bump> {
     int_ctxt: IntCtxt<'bump>,
-    name_caster: Rc<NameCaster<'bump>>,
+    name_caster: Arc<NameCaster<'bump>>,
 }
 
 impl<'bump> SubtermAux<'bump> for RandAux<'bump> {
@@ -483,8 +483,8 @@ impl<'bump> Ord for RandAux<'bump> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         Ord::cmp(&self.int_ctxt, &other.int_ctxt).then_with(|| {
             Ord::cmp(
-                &Rc::as_ptr(&self.name_caster),
-                &Rc::as_ptr(&other.name_caster),
+                &Arc::as_ptr(&self.name_caster),
+                &Arc::as_ptr(&other.name_caster),
             )
         })
     }
@@ -492,6 +492,6 @@ impl<'bump> Ord for RandAux<'bump> {
 impl<'bump> Hash for RandAux<'bump> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.int_ctxt.hash(state);
-        Rc::as_ptr(&self.name_caster).hash(state);
+        Arc::as_ptr(&self.name_caster).hash(state);
     }
 }
