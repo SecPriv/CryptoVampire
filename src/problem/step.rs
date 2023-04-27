@@ -10,12 +10,19 @@ use std::{
 use itertools::Itertools;
 
 use crate::{
+    assert_variance, asssert_trait,
+    container::ScopeAllocator,
     formula::{
         formula::{meq, RichFormula},
-        function::{builtin::LESS_THAN_STEP, Function},
+        function::{
+            builtin::LESS_THAN_STEP,
+            step::{InnerStepFuction, StepFunction},
+            Function, InnerFunction,
+        },
         sort::Sort,
         variable::Variable,
     },
+    implderef, implvec,
     utils::precise_as_ref::PreciseAsRef,
 };
 
@@ -54,6 +61,11 @@ pub(crate) struct InnerStep<'bump> {
     function: Function<'bump>,
 }
 
+asssert_trait!(sync_send_step; InnerStep; Sync, Send);
+assert_variance!(Step);
+unsafe impl<'bump> Sync for Step<'bump> {}
+unsafe impl<'bump> Send for Step<'bump> {}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum MessageOrCondition {
     Message,
@@ -61,42 +73,102 @@ pub enum MessageOrCondition {
 }
 
 impl<'bump> Step<'bump> {
-    // pub fn new(
-    //     name: &str,
-    //     variables: Vec<Variable>,
-    //     condition: RichFormula,
-    //     message: RichFormula,
-    //     function: Function,
-    // ) -> Self {
-    //     let mut used_variables = message.get_used_variables();
-    //     used_variables.extend(condition.get_used_variables().into_iter());
-    //     debug_assert!(variables.iter().all(|v| used_variables.contains(v)));
+    pub(crate) fn new(
+        container: &'bump (impl ScopeAllocator<'bump, InnerStep<'bump>>
+                    + ScopeAllocator<'bump, InnerFunction<'bump>>),
+        name: implderef!(str),
+        args: implvec!(Variable<'bump>),
+        message: RichFormula<'bump>,
+        condition: RichFormula<'bump>,
+    ) -> Self {
+        let free_variables = args.into_iter().collect_vec();
+        assert!(message
+            .get_free_vars()
+            .iter()
+            .all(|v| free_variables.contains(v)));
+        assert!(condition
+            .get_free_vars()
+            .iter()
+            .all(|v| free_variables.contains(v)));
 
-    //     let used_variables = used_variables.into_iter().cloned().collect();
+        let used_variables = RichFormula::iter_used_varibales([&message, &condition])
+            .unique()
+            .collect_vec();
 
-    //     Self(Arc::new(InnerStep {
-    //         name: name.to_owned(),
-    //         free_variables: variables,
-    //         used_variables,
-    //         condition,
-    //         message,
-    //         function,
-    //     }))
-    // }
+        let (_, step) = unsafe {
+            Function::new_cyclic(container, |function| {
+                let inner_step = InnerStep {
+                    name: name.to_string(),
+                    free_variables,
+                    used_variables,
+                    condition,
+                    message,
+                    function,
+                };
+                let inner_step_ref = container.alloc();
+                std::ptr::write(inner_step_ref.as_ptr(), inner_step);
+                let step = Step {
+                    inner: inner_step_ref,
+                    container: Default::default(),
+                };
+                (
+                    InnerFunction::Step(StepFunction::Step(InnerStepFuction::new(step))),
+                    step,
+                )
+                // all has been allocated
+            })
+        };
 
-    // pub fn map<F>(&self, mut f: F) -> Self
-    // where
-    //     F: FnMut(MessageOrCondition, &RichFormula) -> RichFormula,
-    // {
-    //     Self(Arc::new(InnerStep {
-    //         name: self.0.name.clone(),
-    //         free_variables: self.0.free_variables.clone(),
-    //         used_variables: self.0.used_variables.clone(),
-    //         condition: f(MessageOrCondition::Condition, &self.0.condition),
-    //         message: f(MessageOrCondition::Message, &self.0.message),
-    //         function: self.0.function.clone(),
-    //     }))
-    // }
+        step
+    }
+
+    /// new step overwriting `old_function`.
+    ///
+    /// **Not thread safe**
+    pub(crate) unsafe fn new_with_function(
+        container: &'bump impl ScopeAllocator<'bump, InnerStep<'bump>>,
+        old_function: Function<'bump>,
+        name: implderef!(str),
+        args: implvec!(Variable<'bump>),
+        message: RichFormula<'bump>,
+        condition: RichFormula<'bump>,
+    ) -> Self {
+        let free_variables = args.into_iter().collect_vec();
+        assert!(message
+            .get_free_vars()
+            .iter()
+            .all(|v| free_variables.contains(v)));
+        assert!(condition
+            .get_free_vars()
+            .iter()
+            .all(|v| free_variables.contains(v)));
+
+        let used_variables = RichFormula::iter_used_varibales([&message, &condition])
+            .unique()
+            .collect_vec();
+        let name = name.to_string();
+        let inner = {
+            let inner_step = InnerStep {
+                name: name.to_string(),
+                free_variables,
+                used_variables,
+                condition,
+                message,
+                function: old_function,
+            };
+            let inner_step_ref = container.alloc();
+            std::ptr::write(inner_step_ref.as_ptr(), inner_step);
+            inner_step_ref
+        };
+        let step = Step {
+            inner,
+            container: Default::default(),
+        };
+        old_function.overwrite(InnerFunction::Step(StepFunction::Step(
+            InnerStepFuction::new(step),
+        )));
+        step
+    }
 
     pub fn name(&self) -> &'bump str {
         &self.precise_as_ref().name

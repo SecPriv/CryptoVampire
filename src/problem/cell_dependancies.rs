@@ -100,8 +100,23 @@ pub mod graph {
         CellCall(InnerCellCall<'bump>),
     }
 
-    /*     // impl<'pbl> From<&'pbl Problem> for DependancyGraph<'pbl> {
-        fn from(pbl: &'pbl Problem) -> Self {
+    //  impl<'pbl> From<&'pbl Problem> for DependancyGraph<'pbl> {
+    // } 
+
+    #[derive(Debug, Error)]
+    pub enum DependancyError {
+        #[error("Cell not found")]
+        MemoryCellNotFound,
+    }
+
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+    pub struct Ancestors<'bump> {
+        pub input: bool,
+        pub cells: Vec<MemoryCell<'bump>>,
+    }
+
+    impl<'bump> DependancyGraph<'bump> {
+/*         fn new(pbl: &'pbl Problem) -> Self {
             let mut cells = pbl
                 .memory_cells
                 .values()
@@ -212,22 +227,7 @@ pub mod graph {
                     edges_starts: start_input,
                 },
             }
-        }
-    } */
-
-    #[derive(Debug, Error)]
-    pub enum DependancyError {
-        #[error("Cell not found")]
-        MemoryCellNotFound,
-    }
-
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-    pub struct Ancestors<'bump> {
-        pub input: bool,
-        pub cells: Vec<MemoryCell<'bump>>,
-    }
-
-    impl<'bump> DependancyGraph<'bump> {
+        } */
         pub fn ancestors(&self, cell: Option<MemoryCell<'bump>>) -> Result<Ancestors<'bump>> {
             let input_index = self.cells.len();
 

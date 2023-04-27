@@ -8,6 +8,8 @@ pub struct Cell<'bump> {
 }
 
 impl<'bump> Cell<'bump> {
+    pub fn new(memory_cell: MemoryCell<'bump>) -> Self { Self { memory_cell } }
+
     pub fn memory_cell(&self) -> MemoryCell<'bump> {
         self.memory_cell
     }

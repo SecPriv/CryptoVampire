@@ -84,3 +84,11 @@ macro_rules! implderef {
         impl core::ops::Deref<Target = $t> 
     };
 }
+
+#[macro_export]
+macro_rules! implvec {
+    ($t:ty) => {
+        impl std::iter::IntoIterator<Item = $t>
+    };
+
+}

@@ -1,20 +1,21 @@
 // mod lock;
 
-use std::{
-    cmp::Ordering,
-    marker::PhantomData,
-    ptr::NonNull,
-};
+use std::{cmp::Ordering, marker::PhantomData, ptr::NonNull};
 
 use crate::{
-    container::{CanBeAllocated},
+    assert_variance, asssert_trait,
+    container::{CanBeAllocated, ScopeAllocator},
     formula::{
         // builtins::types::{MSG_NAME, STEP_NAME},
         formula::RichFormula,
-        function::Function,
+        function::{
+            term_algebra::{cell::Cell, TermAlgebra},
+            Function, InnerFunction,
+        },
         sort::Sort,
     },
-    utils::precise_as_ref::PreciseAsRef, asssert_trait, assert_variance,
+    implderef, implvec,
+    utils::precise_as_ref::PreciseAsRef,
 };
 use core::fmt::Debug;
 
@@ -28,8 +29,8 @@ pub struct MemoryCell<'bump> {
 
 asssert_trait!(sync_send_cell; InnerMemoryCell; Sync, Send);
 assert_variance!(MemoryCell);
-unsafe impl<'bump> Sync for MemoryCell<'bump>{}
-unsafe impl<'bump> Send for MemoryCell<'bump>{}
+unsafe impl<'bump> Sync for MemoryCell<'bump> {}
+unsafe impl<'bump> Send for MemoryCell<'bump> {}
 
 impl<'bump> Ord for MemoryCell<'bump> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
@@ -94,9 +95,6 @@ impl<'bump> std::hash::Hash for InnerMemoryCell<'bump> {
 
 impl<'bump> InnerMemoryCell<'bump> {}
 
-unsafe impl<'bump> Sync for InnerMemoryCell<'bump> {}
-unsafe impl<'bump> Send for InnerMemoryCell<'bump> {}
-
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Assignement<'bump> {
     pub step: Step<'bump>,
@@ -109,6 +107,69 @@ pub struct Assignement<'bump> {
 }
 
 impl<'bump> MemoryCell<'bump> {
+    pub fn new(
+        container: &'bump (impl ScopeAllocator<'bump, InnerMemoryCell<'bump>>
+                    + ScopeAllocator<'bump, InnerFunction<'bump>>),
+        name: implderef!(str),
+        args: implvec!(Sort<'bump>),
+        assignements: implvec!(Assignement<'bump>),
+    ) -> Self {
+        let name = name.to_string();
+        let args = args.into_iter().collect();
+        let assignements = assignements.into_iter().collect();
+
+        let (_, cell) = unsafe {
+            Function::new_cyclic(container, |function| {
+                let inner_content = InnerMemoryCell {
+                    name,
+                    args,
+                    function,
+                    assignements,
+                };
+                let inner = container.alloc();
+                std::ptr::write(inner.as_ptr(), inner_content);
+                let memory_cell = MemoryCell {
+                    inner,
+                    container: Default::default(),
+                };
+                (
+                    InnerFunction::TermAlgebra(TermAlgebra::Cell(Cell::new(memory_cell))),
+                    memory_cell,
+                )
+            })
+        };
+        cell
+    }
+
+    pub unsafe fn new_with_function(
+        container: &'bump impl ScopeAllocator<'bump, InnerMemoryCell<'bump>>,
+        old_function: Function<'bump>,
+        name: implderef!(str),
+        args: implvec!(Sort<'bump>),
+        assignements: implvec!(Assignement<'bump>),
+    ) -> Self {
+        let name = name.to_string();
+        let args = args.into_iter().collect();
+        let assignements = assignements.into_iter().collect();
+        let cell = {
+            let inner_content = InnerMemoryCell {
+                name,
+                args,
+                function: old_function,
+                assignements,
+            };
+            let inner = container.alloc();
+            std::ptr::write(inner.as_ptr(), inner_content);
+            MemoryCell {
+                inner,
+                container: Default::default(),
+            }
+        };
+        old_function.overwrite(InnerFunction::TermAlgebra(TermAlgebra::Cell(Cell::new(
+            cell,
+        ))));
+        cell
+    }
     pub fn name(&self) -> &'bump str {
         &self.precise_as_ref().name
     }

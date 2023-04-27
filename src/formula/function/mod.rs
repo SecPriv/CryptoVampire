@@ -20,14 +20,16 @@ use bitflags::bitflags;
 // use crate::problem::step::Step;
 
 use crate::{
+    assert_variance, asssert_trait,
     container::{NameFinder, ScopeAllocator},
-    utils::{precise_as_ref::PreciseAsRef, string_ref::StrRef}, asssert_trait, assert_variance,
+    implderef, implvec,
+    utils::{precise_as_ref::PreciseAsRef, string_ref::StrRef},
 };
 
 use self::{
     booleans::Booleans, evaluate::Evaluate, if_then_else::IfThenElse, nonce::Nonce,
     predicate::Predicate, skolem::Skolem, step::StepFunction, subterm::Subterm,
-    term_algebra::TermAlgebra, unused::Unused,
+    term_algebra::TermAlgebra, unused::Tmp,
 };
 
 use super::{
@@ -86,7 +88,7 @@ pub enum InnerFunction<'bump> {
     IfThenElse(IfThenElse),
     Evaluate(Evaluate<'bump>),
     Predicate(Predicate<'bump>),
-    Unused(Unused<'bump>),
+    Tmp(Tmp<'bump>),
     Skolem(Skolem<'bump>),
 }
 
@@ -262,6 +264,14 @@ impl<'bump> Function<'bump> {
         (fun, t)
     }
 
+    /// Replace the underlying function
+    ///
+    /// *Not thread safe*
+    pub unsafe fn overwrite(&self, other: InnerFunction<'bump>) {
+        std::ptr::drop_in_place(self.inner.as_ptr());
+        std::ptr::write(self.inner.as_ptr(), other);
+    }
+
     pub fn new_spliting(
         container: &'bump (impl ScopeAllocator<'bump, InnerFunction<'bump>>
                     + NameFinder<Function<'bump>>),
@@ -315,23 +325,32 @@ impl<'bump> Function<'bump> {
             .enumerate()
             .map(|(i, &s)| {
                 let name = container.find_free_name(&format!("dest_{}_{}", constructor.name(), i));
-                let inner = InnerFunction::Unused(Unused {
-                    name,
-                    in_sorts: Box::new([o_sort]),
-                    out_sort: s,
-                });
-
-                let inner = unsafe {
-                    let ptr = container.alloc();
-                    std::ptr::write(ptr.as_ptr(), inner);
-                    ptr
-                };
-                Function {
-                    inner,
-                    container: Default::default(),
-                }
+                Self::new_tmp(container, name, [o_sort], s)
             })
             .collect()
+    }
+
+    pub fn new_tmp(
+        container: &'bump impl ScopeAllocator<'bump, InnerFunction<'bump>>,
+        name: implderef!(str),
+        input_sorts: implvec!(Sort<'bump>),
+        output_sort: Sort<'bump>,
+    ) -> Self {
+        let inner = InnerFunction::Tmp(Tmp {
+            name: name.to_string(),
+            in_sorts: input_sorts.into_iter().collect(),
+            out_sort: output_sort,
+        });
+
+        let inner = unsafe {
+            let ptr = container.alloc();
+            std::ptr::write(ptr.as_ptr(), inner);
+            ptr
+        };
+        Function {
+            inner,
+            container: Default::default(),
+        }
     }
 
     pub fn new_skolem(
@@ -587,7 +606,7 @@ impl<'bump> Function<'bump> {
     where
         'bump: 'bbump,
     {
-        assert!(!matches!(self.inner(), InnerFunction::Unused(_)));
+        assert!(!matches!(self.inner(), InnerFunction::Tmp(_)));
 
         RichFormula::Fun(*self, args.into_iter().collect())
     }

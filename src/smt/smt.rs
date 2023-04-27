@@ -240,7 +240,7 @@ impl<'bump> SmtFormula<'bump> {
                     | InnerFunction::Step(_)
                     | InnerFunction::TermAlgebra(_)
                     | InnerFunction::Predicate(_)
-                    | InnerFunction::Unused(_)
+                    | InnerFunction::Tmp(_)
                     | InnerFunction::Skolem(_)
                     | InnerFunction::Evaluate(_) => SmtFormula::Fun(f, args),
                     InnerFunction::Subterm(Subterm { subterm, .. }) => {
