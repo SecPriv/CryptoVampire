@@ -108,11 +108,11 @@ impl<'bump> MemoryCell<'bump> {
         &self.precise_as_ref().name
     }
 
-    pub fn args(&self) -> &'bump Vec<Sort> {
+    pub fn args(&self) -> &'bump Vec<Sort<'bump>> {
         &self.precise_as_ref().args
     }
 
-    pub fn function(&self) -> Function {
+    pub fn function(&self) -> Function<'bump> {
         self.as_ref().function
     }
 

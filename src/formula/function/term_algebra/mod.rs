@@ -1,3 +1,5 @@
+use crate::assert_variance;
+
 use self::{
     base_function::BaseFunction, cell::Cell, connective::Connective, name::Name,
     quantifier::Quantifier,
@@ -32,9 +34,4 @@ impl<'bump> TermAlgebra<'bump> {
     }
 }
 
-fn _enlarge<'a, 'b>(q: TermAlgebra<'a>) -> TermAlgebra<'b>
-where
-    'a: 'b,
-{
-    q
-}
+assert_variance!(TermAlgebra);

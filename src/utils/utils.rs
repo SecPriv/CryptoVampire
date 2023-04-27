@@ -74,3 +74,13 @@ where
     // std::iter::repeat(p).zip(iter.into_iter())
     iter.into_iter().map(move |t| (p.clone(), t))
 }
+
+#[macro_export]
+macro_rules! implderef {
+    ($b:lifetime, $t:ty) => {
+        impl core::ops::Deref<Target = $t> + $b
+    };
+    ($t:ty) => {
+        impl core::ops::Deref<Target = $t> 
+    };
+}

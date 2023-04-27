@@ -21,7 +21,7 @@ use bitflags::bitflags;
 
 use crate::{
     container::{NameFinder, ScopeAllocator},
-    utils::{precise_as_ref::PreciseAsRef, string_ref::StrRef},
+    utils::{precise_as_ref::PreciseAsRef, string_ref::StrRef}, asssert_trait, assert_variance,
 };
 
 use self::{
@@ -661,9 +661,6 @@ pub fn new_static_function(inner: InnerFunction<'static>) -> Function<'static> {
     }
 }
 
-fn enlarge<'a, 'b>(q: Function<'a>) -> Function<'b>
-where
-    'a: 'b,
-{
-    q
-}
+// asssert_trait!(sync_and_send; InnerFunction; Sync, Send);
+assert_variance!(Function);
+assert_variance!(InnerFunction);

@@ -6,3 +6,4 @@ pub mod precise_as_ref;
 pub mod utils;
 pub mod vecref;
 pub mod string_ref;
+pub mod test_utils;
