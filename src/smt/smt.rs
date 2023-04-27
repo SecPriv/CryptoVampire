@@ -164,7 +164,7 @@ impl<'bump> fmt::Display for Smt<'bump> {
                     write!(f, "({} {}) ", v, v.sort)?;
                 }
                 let op = match rewrite_fun {
-                    RewriteKind::Bool => "=>",
+                    RewriteKind::Bool => "=>".into(),
                     RewriteKind::Other(f) => f.name(),
                 };
                 write!(f, ") ({} {} {})))", op, lhs, rhs)

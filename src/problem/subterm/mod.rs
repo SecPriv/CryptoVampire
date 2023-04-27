@@ -359,7 +359,7 @@ where
         match self.kind {
             SubtermKind::Regular => Declaration::FreeFunction(self.function),
             SubtermKind::Vampire => Declaration::Subterm(declare::Subterm {
-                name: self.function.name().to_owned(),
+                name: self.function.name().to_string(),
                 functions: self.list_default_subterm_functions(pbl).collect(),
             }),
         }

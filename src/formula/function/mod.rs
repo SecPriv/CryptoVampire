@@ -21,7 +21,7 @@ use bitflags::bitflags;
 
 use crate::{
     container::{NameFinder, ScopeAllocator},
-    utils::precise_as_ref::PreciseAsRef,
+    utils::{precise_as_ref::PreciseAsRef, string_ref::StrRef},
 };
 
 use self::{
@@ -427,7 +427,7 @@ impl<'bump> Function<'bump> {
         self.inner.inner.borrow_mut().output_sort = v
     } */
 
-    pub fn name(&self) -> &str {
+    pub fn name(&'_ self) -> StrRef<'_> {
         // &self.inner.name
         todo!()
     }
