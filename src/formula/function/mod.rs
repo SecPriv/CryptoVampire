@@ -23,13 +23,21 @@ use crate::{
     assert_variance, asssert_trait,
     container::{NameFinder, ScopeAllocator},
     implderef, implvec,
+    problem::cell::MemoryCell,
     utils::{precise_as_ref::PreciseAsRef, string_ref::StrRef},
 };
 
 use self::{
-    booleans::Booleans, evaluate::Evaluate, if_then_else::IfThenElse, nonce::Nonce,
-    predicate::Predicate, skolem::Skolem, step::StepFunction, subterm::Subterm,
-    term_algebra::TermAlgebra, unused::Tmp,
+    booleans::Booleans,
+    evaluate::Evaluate,
+    if_then_else::IfThenElse,
+    nonce::Nonce,
+    predicate::Predicate,
+    skolem::Skolem,
+    step::StepFunction,
+    subterm::Subterm,
+    term_algebra::{cell::Cell, TermAlgebra},
+    unused::Tmp,
 };
 
 use super::{
@@ -598,6 +606,13 @@ impl<'bump> Function<'bump> {
     // {
     //     ctx.funf(self, args)
     // }
+
+    pub fn get_cell(&self) -> Option<MemoryCell<'bump>> {
+        match self.as_ref() {
+            InnerFunction::TermAlgebra(TermAlgebra::Cell(c)) => Some(c.memory_cell()),
+            _ => None,
+        }
+    }
 
     pub fn f<'bbump>(
         &self,

@@ -81,7 +81,7 @@ macro_rules! implderef {
         impl core::ops::Deref<Target = $t> + $b
     };
     ($t:ty) => {
-        impl core::ops::Deref<Target = $t> 
+        impl core::ops::Deref<Target = $t>
     };
 }
 
@@ -91,4 +91,19 @@ macro_rules! implvec {
         impl std::iter::IntoIterator<Item = $t>
     };
 
+}
+
+#[macro_export]
+macro_rules! destvec {
+    ([$(arg:ident),*] = $vec:expr) => {
+        let mut iter = $args.into_iter();
+        $(
+            let $arg = if let Some(tmp) = iter.next() {
+                tmp
+            } else {
+                panic!("not enough elements")
+            };
+        )*
+        assert!(iter.next().is_none(), "too many elements");
+    };
 }

@@ -343,8 +343,8 @@ pub fn forall<'bump>(
 ) -> RichFormula<'bump> {
     let mut vars = vars.into_iter().peekable();
     if let Some(_) = vars.peek() {
-        let variables = vars.collect_vec();
-        RichFormula::Quantifier(Quantifier::Forall { variables }, Box::new(arg))
+        // let variables = vars.collect_vec();
+        RichFormula::Quantifier(Quantifier::forall(vars), Box::new(arg))
     } else {
         arg
     }
@@ -356,8 +356,8 @@ pub fn exists<'bump>(
 ) -> RichFormula<'bump> {
     let mut vars = vars.into_iter().peekable();
     if let Some(_) = vars.peek() {
-        let variables = vars.collect_vec();
-        RichFormula::Quantifier(Quantifier::Exists { variables }, Box::new(arg))
+        // let variables = vars.collect_vec();
+        RichFormula::Quantifier(Quantifier::exists(vars), Box::new(arg))
     } else {
         arg
     }

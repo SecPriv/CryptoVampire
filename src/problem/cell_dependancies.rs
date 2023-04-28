@@ -41,18 +41,25 @@ pub enum StepCall<'bump> {
 
 pub mod graph {
 
-    use std::convert::identity;
+    use std::{cell::RefCell, convert::identity};
 
     use itertools::Itertools;
 
     use crate::{
-        formula::formula::RichFormula,
-        problem::{cell::MemoryCell, step::Step},
+        formula::{
+            formula::RichFormula,
+            function::{term_algebra::TermAlgebra, InnerFunction},
+            utils::formula_iterator::{FormulaIterator, IteratorFlags},
+        },
+        implvec,
+        problem::{
+            cell::{Assignement, MemoryCell},
+            step::Step,
+        },
+        utils::{utils::repeat_n_zip, vecref::VecRef},
     };
 
-    use super::{
-        CellCall, Dependancy, DependancyFromStep, InputCall, OutGoingCall, StepCall,
-    };
+    use super::{CellCall, Dependancy, DependancyFromStep, InputCall, OutGoingCall, StepCall};
     use anyhow::{Ok, Result};
     use thiserror::Error;
 
@@ -101,7 +108,7 @@ pub mod graph {
     }
 
     //  impl<'pbl> From<&'pbl Problem> for DependancyGraph<'pbl> {
-    // } 
+    // }
 
     #[derive(Debug, Error)]
     pub enum DependancyError {
@@ -116,7 +123,45 @@ pub mod graph {
     }
 
     impl<'bump> DependancyGraph<'bump> {
-/*         fn new(pbl: &'pbl Problem) -> Self {
+        pub fn new(steps: implvec!(Step<'bump>), cells: implvec!(MemoryCell<'bump>)) -> Self {
+            let steps = steps.into_iter().collect_vec();
+            let mut cells = cells
+                .into_iter()
+                .map(|cell| GlobNode {
+                    cell,
+                    edges: vec![],
+                })
+                .collect_vec();
+            // let just_cells = cells
+            //     .iter()
+            //     .map(|GlobNode { cell, .. }| *cell)
+            //     .collect_vec();
+            let mut edges = Vec::new();
+            let mut input_edges = Vec::new();
+
+            let pile = RefCell::new(vec![]);
+            process_steps(&steps, &pile, &cells, &mut input_edges, &mut edges);
+            process_cell(&steps, &pile, &cells, &mut input_edges, &mut edges);
+
+            let input = InputNode {
+                edges_starts: edges.len(),
+            };
+
+            for (i, Edges { from, .. }) in edges.iter().enumerate() {
+                match from {
+                    FromNode::CellCall(InnerCellCall { cell, .. }) => cells[*cell].edges.push(i),
+                    _ => {}
+                }
+            }
+            edges.extend(input_edges);
+            DependancyGraph {
+                cells,
+                edges,
+                input,
+            }
+        }
+
+        /*         fn new(pbl: &'pbl Problem) -> Self {
             let mut cells = pbl
                 .memory_cells
                 .values()
@@ -454,6 +499,126 @@ pub mod graph {
         }
     }
 
+    fn process_steps<'bump>(
+        steps: &Vec<Step<'bump>>,
+        pile: &RefCell<Vec<((), &'bump RichFormula<'bump>)>>,
+        cells: &Vec<GlobNode<'bump>>,
+        input_edges: &mut Vec<Edges<'bump>>,
+        edges: &mut Vec<Edges<'bump>>,
+    ) {
+        for step in steps {
+            let from = FromNode::Input { step: *step };
+            let step_call = StepCall::Step(*step);
+            let mut pile = pile.borrow_mut();
+            pile.clear();
+            pile.extend([((), step.message()), ((), step.condition())]);
+
+            let iter = FormulaIterator {
+                pile,
+                passed_along: Some(()),
+                flags: IteratorFlags::QUANTIFIER,
+                f: |_, f: &'bump RichFormula<'bump>| match f {
+                    RichFormula::Fun(fun, args) => match fun.as_ref() {
+                        InnerFunction::TermAlgebra(TermAlgebra::Cell(c)) => {
+                            let c = c.memory_cell();
+                            let cell = cells.iter().position(|g| g.cell == c).unwrap();
+                            let to_node = ToNode::CellCall(InnerCellCall {
+                                cell,
+                                step: StepCall::General(args.last().unwrap()),
+                                args: &args[..args.len() - 1],
+                            });
+                            (Some(to_node), repeat_n_zip((), VecRef::Empty))
+                        }
+                        InnerFunction::Step(s) => {
+                            let to_node = ToNode::Input(InputCall {
+                                step: StepCall::General(f),
+                            });
+                            (Some(to_node), repeat_n_zip((), VecRef::Empty))
+                        }
+                        _ => (None, repeat_n_zip((), VecRef::Ref(args.as_slice()))),
+                    },
+                    _ => (None, repeat_n_zip((), VecRef::Empty)),
+                },
+            };
+
+            iter.for_each(|to_node| match &to_node {
+                ToNode::Input(_) => input_edges.push(Edges {
+                    from: from.clone(),
+                    to: to_node,
+                }),
+                ToNode::CellCall(_) => edges.push(Edges {
+                    from: from.clone(),
+                    to: to_node,
+                }),
+            })
+        }
+    }
+
+    fn process_cell<'bump>(
+        _steps: &Vec<Step<'bump>>,
+        pile: &RefCell<Vec<((), &'bump RichFormula<'bump>)>>,
+        cells: &Vec<GlobNode<'bump>>,
+        input_edges: &mut Vec<Edges<'bump>>,
+        edges: &mut Vec<Edges<'bump>>,
+    ) {
+        for (cell_idx, GlobNode { cell, .. }) in cells.iter().enumerate() {
+            for Assignement {
+                step,
+                args,
+                content,
+            } in cell.assignements()
+            {
+                let from = FromNode::CellCall(InnerCellCall {
+                    cell: cell_idx,
+                    step: StepCall::Step(*step),
+                    args: args.as_slice(),
+                });
+                let mut pile = pile.borrow_mut();
+                pile.clear();
+                pile.extend([((), content)]);
+
+                let iter = FormulaIterator {
+                    pile,
+                    passed_along: Some(()),
+                    flags: IteratorFlags::QUANTIFIER,
+                    f: |_, f: &'bump RichFormula<'bump>| match f {
+                        RichFormula::Fun(fun, args) => match fun.as_ref() {
+                            InnerFunction::TermAlgebra(TermAlgebra::Cell(c)) => {
+                                let c = c.memory_cell();
+                                let cell = cells.iter().position(|g| g.cell == c).unwrap();
+                                let to_node = ToNode::CellCall(InnerCellCall {
+                                    cell,
+                                    step: StepCall::General(args.last().unwrap()),
+                                    args: &args[..args.len() - 1],
+                                });
+                                (Some(to_node), repeat_n_zip((), VecRef::Empty))
+                            }
+                            InnerFunction::Step(s) => {
+                                let to_node = ToNode::Input(InputCall {
+                                    step: StepCall::General(f),
+                                });
+                                (Some(to_node), repeat_n_zip((), VecRef::Empty))
+                            }
+                            _ => (None, repeat_n_zip((), VecRef::Ref(args.as_slice()))),
+                        },
+                        _ => (None, repeat_n_zip((), VecRef::Empty)),
+                    },
+                };
+
+                iter.for_each(|to_node| match &to_node {
+                    ToNode::Input(_) => input_edges.push(Edges {
+                        from: from.clone(),
+                        to: to_node,
+                    }),
+                    ToNode::CellCall(_) => edges.push(Edges {
+                        from: from.clone(),
+                        to: to_node,
+                    }),
+                })
+            }
+        }
+    }
+
     impl<'bump> InnerCellCall<'bump> {
         fn as_cell_call(&self, graph: &DependancyGraph<'bump>) -> CellCall<'bump> {
             let InnerCellCall { cell, step, args } = self;
@@ -509,10 +674,7 @@ pub mod graph {
 mod calculate {
     use crate::{
         formula::formula::RichFormula,
-        problem::{
-            cell::{MemoryCell},
-            step::Step,
-        },
+        problem::{cell::MemoryCell, step::Step},
     };
 
     pub struct CellDependancy<'bump> {
@@ -523,8 +685,6 @@ mod calculate {
         pub call_args: &'bump [RichFormula<'bump>],
         pub step_call: &'bump RichFormula<'bump>,
     }
-
-    
 
     pub struct InputDependancy<'bump> {
         // self_cell: &'pbl MemoryCell,

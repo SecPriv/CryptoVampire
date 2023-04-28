@@ -1,6 +1,4 @@
-use std::{
-    fmt::{self, Display},
-};
+use std::fmt::{self, Display};
 
 use crate::{
     environement::environement::Environement,
@@ -217,15 +215,32 @@ fn fun_list_fmt<I: Iterator<Item = impl fmt::Display>>(
     write!(f, ")")
 }
 
+macro_rules! unpack_args {
+    ([$($arg:ident),*] = $args:expr; $do:block) => {{
+        let mut iter = $args.into_iter();
+        $(
+            let $arg = if let Some(tmp) = iter.next() {
+                tmp
+            } else {
+                panic!("not enough arguments")
+            };
+        )*
+        assert!(iter.next().is_none(), "too many arguments");
+        $do
+    }};
+}
+
 impl<'bump> SmtFormula<'bump> {
     pub fn from_richformula(env: &Environement<'bump>, formula: RichFormula<'bump>) -> Self {
         match formula {
             RichFormula::Var(v) => SmtFormula::Var(v),
             RichFormula::Quantifier(q, arg) => match q {
-                Quantifier::Exists { variables } => {
+                Quantifier::Exists { variables, status } => {
+                    assert!(status.is_bool());
                     SmtFormula::Exists(variables, Box::new(Self::from_richformula(env, *arg)))
                 }
-                Quantifier::Forall { variables } => {
+                Quantifier::Forall { variables, status } => {
+                    assert!(status.is_bool());
                     SmtFormula::Forall(variables, Box::new(Self::from_richformula(env, *arg)))
                 }
             },
@@ -249,17 +264,16 @@ impl<'bump> SmtFormula<'bump> {
                         match kind {
                             SubtermKind::Regular => SmtFormula::Fun(f, args),
                             SubtermKind::Vampire => {
-                                let b = args.pop().unwrap();
-                                let a = args.pop().unwrap();
-                                SmtFormula::Subterm(f, Box::new(a), Box::new(b))
+                                unpack_args!([a, b] =  args; {
+                                    SmtFormula::Subterm(f, Box::new(a), Box::new(b))
+                                })
                             }
                         }
                     }
                     InnerFunction::IfThenElse(_) => {
-                        let r = args.pop().unwrap();
-                        let l = args.pop().unwrap();
-                        let c = args.pop().unwrap();
-                        SmtFormula::Ite(Box::new(c), Box::new(l), Box::new(r))
+                        unpack_args!([c, l, r] = args; {
+                            SmtFormula::Ite(Box::new(c), Box::new(l), Box::new(r))
+                        })
                     }
                     InnerFunction::Bool(c) => match c {
                         Booleans::Equality(_) => SmtFormula::Eq(args),
@@ -268,9 +282,9 @@ impl<'bump> SmtFormula<'bump> {
                             Connective::Or => SmtFormula::Or(args),
                             Connective::Not => SmtFormula::Not(Box::new(args.pop().unwrap())),
                             Connective::Implies => {
-                                let b = args.pop().unwrap();
-                                let a = args.pop().unwrap();
-                                SmtFormula::Implies(Box::new(a), Box::new(b))
+                                unpack_args!([a, b] = args; {
+                                    SmtFormula::Implies(Box::new(a), Box::new(b))
+                                })
                             }
                             Connective::Iff => SmtFormula::Eq(args),
                         },

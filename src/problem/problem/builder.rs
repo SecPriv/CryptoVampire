@@ -21,6 +21,7 @@ use crate::{
     implvec, mforall,
     problem::{
         cell::{Assignement, MemoryCell},
+        cell_dependancies::graph::DependancyGraph,
         crypto_assumptions::CryptoAssumption,
         protocol::Protocol,
         step::Step,
@@ -114,9 +115,10 @@ impl<'bump> Into<Problem<'bump>> for PblFromParser<'bump> {
         let steps = generate_steps(container, steps, &mut assignements);
         let memory_cells = generate_cells(container, cells, assignements);
         let ordering = generate_order(order);
+        let graph = DependancyGraph::new(steps.iter().cloned(), memory_cells.iter().cloned());
 
         let protocol = Protocol {
-            graph: todo!(),
+            graph,
             steps,
             memory_cells,
             ordering,
@@ -141,6 +143,18 @@ impl<'bump> Into<Problem<'bump>> for PblFromParser<'bump> {
             query: todo!(),
         }
     }
+}
+
+fn compress_quantifier<'bump>(
+    container: &'bump Container<'bump>,
+    f: RichFormula<'bump>,
+) -> RichFormula<'bump> {
+    f.map(&|f| match f {
+        RichFormula::Quantifier(q, args) if q.status().is_condition() => {
+            todo!()
+        }
+        _ => f,
+    })
 }
 
 fn generate_order<'bump>(order: implvec!(TmpOrdering<'bump>)) -> Vec<RichFormula<'bump>> {
@@ -223,7 +237,7 @@ fn generate_cells<'bump>(
 
 macro_rules! default_functions {
     ($($fun:expr),*) => {
-        fn default_functions() -> impl Iterator<Item = Function<'static>> {
+        fn default_functions<'bump>() -> impl Iterator<Item = Function<'bump>> {
             [$($fun.clone()),*].into_iter()
         }
     };
@@ -232,7 +246,7 @@ default_functions!(LESS_THAN_STEP, HAPPENS);
 
 macro_rules! default_sorts {
     ($($fun:expr),*) => {
-        fn default_sorts() -> impl Iterator<Item = Sort<'static>> {
+        fn default_sorts<'bump>() -> impl Iterator<Item = Sort<'bump>> {
             [$($fun.clone()),*].into_iter()
         }
     };
