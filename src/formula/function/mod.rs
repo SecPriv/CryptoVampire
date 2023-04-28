@@ -36,12 +36,17 @@ use self::{
     skolem::Skolem,
     step::StepFunction,
     subterm::Subterm,
-    term_algebra::{cell::Cell, TermAlgebra},
+    term_algebra::{
+        cell::Cell,
+        quantifier::{get_next_quantifer_id, InnerQuantifier, Quantifier},
+        TermAlgebra,
+    },
     unused::Tmp,
 };
 
 use super::{
-    formula::RichFormula,
+    formula::{self, RichFormula},
+    quantifier,
     sort::{
         sorted::{Sorted, SortedError},
         Sort,
@@ -117,6 +122,10 @@ pub struct Function<'bump> {
     inner: NonNull<InnerFunction<'bump>>,
     container: PhantomData<&'bump ()>,
 }
+
+asssert_trait!(sync_and_send; InnerFunction; Sync, Send);
+assert_variance!(Function);
+assert_variance!(InnerFunction);
 
 unsafe impl<'bump> Sync for Function<'bump> {}
 unsafe impl<'bump> Send for Function<'bump> {}
@@ -283,13 +292,55 @@ impl<'bump> Function<'bump> {
         }
     }
 
+    pub fn new_quantifier_from_quantifier(
+        container: &'bump (impl ScopeAllocator<'bump, InnerFunction<'bump>>
+                    + NameFinder<Function<'bump>>),
+        q: quantifier::Quantifier<'bump>,
+        arg: Box<RichFormula<'bump>>,
+    ) -> Self {
+        let id = get_next_quantifer_id();
+        // let name = container.find_free_name(&format!("c_{}_{}", q.name(), id));
+
+        let free_variables = arg
+            .get_free_vars()
+            .into_iter()
+            .filter(|v| q.get_variables().contains(v))
+            .cloned()
+            .collect();
+
+        let inner = match &q {
+            quantifier::Quantifier::Exists { .. } => InnerQuantifier::Exists { content: arg },
+            quantifier::Quantifier::Forall { .. } => InnerQuantifier::Forall { content: arg },
+        };
+
+        let bound_variables = match q {
+            quantifier::Quantifier::Exists { variables, .. }
+            | quantifier::Quantifier::Forall { variables, .. } => variables.into(),
+        };
+
+        let inner = InnerFunction::TermAlgebra(TermAlgebra::Quantifier(Quantifier {
+            bound_variables,
+            free_variables,
+            id,
+            inner,
+        }));
+        let inner = unsafe {
+            let ptr = container.alloc();
+            std::ptr::write(ptr.as_ptr(), inner);
+            ptr
+        };
+        Function {
+            inner,
+            container: Default::default(),
+        }
+    }
+
     pub fn fast_outsort(&self) -> Option<Sort<'bump>> {
         todo!()
     }
     pub fn forced_input_sort(&self) -> &[Sort<'bump>] {
         todo!()
     }
-
 
     pub fn name(&'_ self) -> StrRef<'_> {
         // &self.inner.name
@@ -376,7 +427,3 @@ pub fn new_static_function(inner: InnerFunction<'static>) -> Function<'static> {
         container: Default::default(),
     }
 }
-
-asssert_trait!(sync_and_send; InnerFunction; Sync, Send);
-assert_variance!(Function);
-assert_variance!(InnerFunction);

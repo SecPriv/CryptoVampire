@@ -9,8 +9,8 @@ use crate::{
         function::{
             builtin::{HAPPENS, LESS_THAN_STEP},
             evaluate::Evaluator,
-            term_algebra::name::NameCaster,
-            Function,
+            term_algebra::{name::NameCaster, TermAlgebra},
+            Function, InnerFunction,
         },
         sort::{
             builtins::{MESSAGE, NONCE, STEP},
@@ -147,11 +147,18 @@ impl<'bump> Into<Problem<'bump>> for PblFromParser<'bump> {
 
 fn compress_quantifier<'bump>(
     container: &'bump Container<'bump>,
+    functions: &mut Vec<Function<'bump>>,
     f: RichFormula<'bump>,
 ) -> RichFormula<'bump> {
-    f.map(&|f| match f {
-        RichFormula::Quantifier(q, args) if q.status().is_condition() => {
-            todo!()
+    f.map(&mut |f| match f {
+        RichFormula::Quantifier(q, arg) if q.status().is_condition() => {
+            let fun = Function::new_quantifier_from_quantifier(container, q, arg);
+            let free = match fun.as_ref() {
+                InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q)) => &q.free_variables,
+                _ => unreachable!()
+            };
+            functions.push(fun);
+            RichFormula::Fun(fun, free.iter().map(|v| v.into_formula()).collect())
         }
         _ => f,
     })

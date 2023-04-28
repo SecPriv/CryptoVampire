@@ -172,28 +172,32 @@ impl<'bump> RichFormula<'bump> {
         Self::iter_used_varibales_with_pile(StackBox::new(Vec::<((), _)>::new()), fs)
     }
 
-    pub fn map<F>(self, f: &F) -> Self
+    pub fn map<F>(self, f: &mut F) -> Self
     where
-        F: Fn(Self) -> Self,
+        F: FnMut(Self) -> Self,
     {
         match self {
             RichFormula::Var(_) => f(self),
             RichFormula::Fun(fun, args) => {
-                f(Self::Fun(fun, args.into_iter().map(|x| x.map(f)).collect()))
+                let tmp = Self::Fun(fun, args.into_iter().map(|x| x.map(f)).collect());
+                f(tmp)
             }
-            RichFormula::Quantifier(q, args) => f(Self::Quantifier(
-                q,
-                // args.into_iter().map(|x| x.map(f)).collect(),
-                Box::new(args.map(f))
-            )),
+            RichFormula::Quantifier(q, args) => {
+                let tmp = Self::Quantifier(
+                    q,
+                    // args.into_iter().map(|x| x.map(f)).collect(),
+                    Box::new(args.map(f)),
+                );
+                f(tmp)
+            }
         }
     }
 
-    pub fn apply<F>(self, f: F) -> Self
+    pub fn apply<F>(self, mut f: F) -> Self
     where
-        F: Fn(&Variable<'bump>) -> Self,
+        F: FnMut(&Variable<'bump>) -> Self,
     {
-        self.map(&{
+        self.map(&mut {
             |form| match form {
                 Self::Var(v) => f(&v),
                 _ => form,

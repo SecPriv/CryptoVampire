@@ -99,6 +99,13 @@ impl<'bump> Quantifier<'bump> {
             status: Status::Bool,
         }
     }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            Quantifier::Exists { ..} => "exist",
+            Quantifier::Forall { .. } => "forall",
+        }
+    }
 }
 
 fn enlarge<'a, 'b>(q: Quantifier<'a>) -> Quantifier<'b>

@@ -23,8 +23,8 @@ pub enum InnerQuantifier<'bump> {
 pub struct Quantifier<'bump> {
     pub bound_variables: Box<[Variable<'bump>]>,
     pub free_variables: Box<[Variable<'bump>]>,
-    id: usize,
-    inner: InnerQuantifier<'bump>,
+    pub id: usize,
+    pub inner: InnerQuantifier<'bump>,
 }
 
 pub fn get_next_quantifer_id() -> usize {
