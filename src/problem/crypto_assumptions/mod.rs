@@ -80,49 +80,49 @@ impl<'bump> Generator<'bump> for CryptoAssumption<'bump> {
 //     ctx.eqf(a, b)
 // }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-enum Provenance<'bump, T> {
-    Plain {
-        candidate: T,
-    },
-    InputPlain {
-        step: Step<'bump>,
-        candidate: T,
-    },
-    /// Found `candidate` in `assgnm` while looking into `step`
-    InputCell {
-        steps: Rc<[Step<'bump>]>,
-        assgnm: &'bump Assignement<'bump>,
-        cell: MemoryCell<'bump>,
-        // call_arg: &'pbl [&'pbl RichFormula],
-        // call_t_arg: &'pbl RichFormula,
-        candidate: T,
-    },
-    CellPlain {
-        // call_arg: &'pbl [&'pbl RichFormula],
-        call_t_arg: &'bump RichFormula<'bump>,
-        assgnm: &'bump Assignement<'bump>,
-        cell: MemoryCell<'bump>,
-        candidate: T,
-    },
-    /// Found `candidate` in `assgnm` while looking into `step`
-    CellDeep {
-        // call_arg: &'pbl [&'pbl RichFormula],
-        steps: Rc<[Step<'bump>]>,
-        call_t_arg: &'bump RichFormula<'bump>,
-        assgnm: &'bump Assignement<'bump>,
-        cell: MemoryCell<'bump>,
-        candidate: T,
-    },
-    CellInput {
-        steps: Rc<[Step<'bump>]>,
-        step: Step<'bump>,
-        call_t_arg: &'bump RichFormula<'bump>,
-        // call_arg: &'pbl [&'pbl RichFormula],
-        // call_t_arg: &'pbl RichFormula,
-        candidate: T,
-    },
-}
+// #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+// enum Provenance<'bump, T> {
+//     Plain {
+//         candidate: T,
+//     },
+//     InputPlain {
+//         step: Step<'bump>,
+//         candidate: T,
+//     },
+//     /// Found `candidate` in `assgnm` while looking into `step`
+//     InputCell {
+//         steps: Rc<[Step<'bump>]>,
+//         assgnm: &'bump Assignement<'bump>,
+//         cell: MemoryCell<'bump>,
+//         // call_arg: &'pbl [&'pbl RichFormula],
+//         // call_t_arg: &'pbl RichFormula,
+//         candidate: T,
+//     },
+//     CellPlain {
+//         // call_arg: &'pbl [&'pbl RichFormula],
+//         call_t_arg: &'bump RichFormula<'bump>,
+//         assgnm: &'bump Assignement<'bump>,
+//         cell: MemoryCell<'bump>,
+//         candidate: T,
+//     },
+//     /// Found `candidate` in `assgnm` while looking into `step`
+//     CellDeep {
+//         // call_arg: &'pbl [&'pbl RichFormula],
+//         steps: Rc<[Step<'bump>]>,
+//         call_t_arg: &'bump RichFormula<'bump>,
+//         assgnm: &'bump Assignement<'bump>,
+//         cell: MemoryCell<'bump>,
+//         candidate: T,
+//     },
+//     CellInput {
+//         steps: Rc<[Step<'bump>]>,
+//         step: Step<'bump>,
+//         call_t_arg: &'bump RichFormula<'bump>,
+//         // call_arg: &'pbl [&'pbl RichFormula],
+//         // call_t_arg: &'pbl RichFormula,
+//         candidate: T,
+//     },
+// }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 struct DijBranch<'bump> {
@@ -132,15 +132,15 @@ struct DijBranch<'bump> {
     content: Box<RichFormula<'bump>>,
 }
 
-impl<'pbl, T> Provenance<'pbl, T> {
-    pub fn candidate(&self) -> &T {
-        match self {
-            Provenance::Plain { candidate }
-            | Provenance::CellInput { candidate, .. }
-            | Provenance::InputPlain { candidate, .. }
-            | Provenance::InputCell { candidate, .. }
-            | Provenance::CellPlain { candidate, .. }
-            | Provenance::CellDeep { candidate, .. } => candidate,
-        }
-    }
-}
+// impl<'pbl, T> Provenance<'pbl, T> {
+//     pub fn candidate(&self) -> &T {
+//         match self {
+//             Provenance::Plain { candidate }
+//             | Provenance::CellInput { candidate, .. }
+//             | Provenance::InputPlain { candidate, .. }
+//             | Provenance::InputCell { candidate, .. }
+//             | Provenance::CellPlain { candidate, .. }
+//             | Provenance::CellDeep { candidate, .. } => candidate,
+//         }
+//     }
+// }
