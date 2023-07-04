@@ -24,6 +24,8 @@ pub enum SmtFormula<'bump> {
     Forall(Vec<Variable<'bump>>, Box<SmtFormula<'bump>>),
     Exists(Vec<Variable<'bump>>, Box<SmtFormula<'bump>>),
 
+    True,
+    False,
     And(Vec<SmtFormula<'bump>>),
     Or(Vec<SmtFormula<'bump>>),
     Eq(Vec<SmtFormula<'bump>>),
@@ -113,11 +115,15 @@ impl<'bump> fmt::Display for SmtFormula<'bump> {
                 }
                 write!(f, ") {})", formula)
             }
-            SmtFormula::And(args) if args.is_empty() => write!(f, "true"),
+            SmtFormula::True => write!(f, "true"),
+            SmtFormula::False => write!(f, "false"),
+            SmtFormula::And(args) if args.is_empty() => SmtFormula::True.fmt(f),
             SmtFormula::And(args) => fun_list_fmt(f, "and", args.iter()),
-            SmtFormula::Or(args) if args.is_empty() => write!(f, "false"),
+            SmtFormula::Or(args) if args.is_empty() => SmtFormula::False.fmt(f),
             SmtFormula::Or(args) => fun_list_fmt(f, "or", args.iter()),
-            SmtFormula::Eq(args) | SmtFormula::Neq(args) if args.len() <= 1 => write!(f, "true"),
+            SmtFormula::Eq(args) | SmtFormula::Neq(args) if args.len() <= 1 => {
+                SmtFormula::True.fmt(f)
+            }
             SmtFormula::Eq(args) => fun_list_fmt(f, "=", args.iter()),
             SmtFormula::Neq(args) => fun_list_fmt(f, "distinct", args.iter()),
             SmtFormula::Ite(c, r, l) => {
@@ -278,6 +284,8 @@ impl<'bump> SmtFormula<'bump> {
                     InnerFunction::Bool(c) => match c {
                         Booleans::Equality(_) => SmtFormula::Eq(args),
                         Booleans::Connective(c) => match c {
+                            Connective::True => SmtFormula::True,
+                            Connective::False => SmtFormula::False,
                             Connective::And => SmtFormula::And(args),
                             Connective::Or => SmtFormula::Or(args),
                             Connective::Not => SmtFormula::Not(Box::new(args.pop().unwrap())),

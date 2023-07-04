@@ -13,6 +13,8 @@ pub enum Connective {
     Not,
     Implies,
     Iff,
+    True,
+    False,
 }
 
 impl Connective {
@@ -23,6 +25,8 @@ impl Connective {
             Connective::Not => "not",
             Connective::Implies => "=>",
             Connective::Iff => "=",
+            Connective::True => "true",
+            Connective::False => "false",
         }
     }
 
@@ -38,24 +42,29 @@ static BOOL_1: [Sort<'static>; 1] = [BOOL.as_sort()];
 
 impl<'a> Sorted<'a> for Connective {
     fn sort(&self, args: &[Sort<'a>]) -> Result<Sort<'a>, SortedError> {
-        if args.iter().any(|s| s != &BOOL.as_sort()) {
-            Err(SortedError::WrongArguments {
-                expected: format!("only {:?}", BOOL.as_sort()),
-                got: format!("{:?}", args),
-            })
-        } else {
-            match self {
-                Connective::Not => Err(SortedError::WrongArguments {
-                    expected: format!("1 arguments of type {:?}", BOOL.as_sort()),
-                    got: format!("{:?}", args),
-                }),
-                Connective::Implies | Connective::Iff if args.len() != 2 => {
+        match &self {
+            Connective::True | Connective::False => Ok(BOOL.as_sort()),
+            _ => {
+                if args.iter().any(|s| s != &BOOL.as_sort()) {
                     Err(SortedError::WrongArguments {
-                        expected: format!("2 arguments of type {:?}", BOOL.as_sort()),
+                        expected: format!("only {:?}", BOOL.as_sort()),
                         got: format!("{:?}", args),
                     })
+                } else {
+                    match self {
+                        Connective::Not => Err(SortedError::WrongArguments {
+                            expected: format!("1 arguments of type {:?}", BOOL.as_sort()),
+                            got: format!("{:?}", args),
+                        }),
+                        Connective::Implies | Connective::Iff if args.len() != 2 => {
+                            Err(SortedError::WrongArguments {
+                                expected: format!("2 arguments of type {:?}", BOOL.as_sort()),
+                                got: format!("{:?}", args),
+                            })
+                        }
+                        _ => Ok(BOOL.as_sort()),
+                    }
                 }
-                _ => Ok(BOOL.as_sort()),
             }
         }
     }

@@ -1,4 +1,4 @@
-use std::{rc::Rc, sync::Arc};
+use std::{iter::FusedIterator, rc::Rc, slice::Iter, sync::Arc, vec::IntoIter};
 
 use itertools::Itertools;
 
@@ -7,7 +7,7 @@ use crate::{
     formula::{
         formula::RichFormula,
         function::{
-            builtin::{HAPPENS, LESS_THAN_STEP},
+            builtin::{HAPPENS, LESS_THAN_STEP, TRUE},
             evaluate::Evaluator,
             term_algebra::{name::NameCaster, TermAlgebra},
             Function, InnerFunction,
@@ -90,20 +90,98 @@ pub enum OrderingKind {
     Diff,
 }
 
-impl<'bump> Into<Problem<'bump>> for PblFromParser<'bump> {
-    fn into(self) -> Problem<'bump> {
+#[derive(Debug, Clone)]
+/// See `Problem`
+struct PrePbl<'bump> {
+    container: &'bump Container<'bump>,
+    functions: Vec<Function<'bump>>,
+    sorts: Vec<Sort<'bump>>,
+    evaluator: Arc<Evaluator<'bump>>,
+    name_caster: Arc<NameCaster<'bump>>,
+    protocol: Protocol<'bump>,
+    crypto_assertions: Vec<CryptoAssumption<'bump>>,
+}
+
+#[derive(Debug)]
+pub struct PblIterator<'bump> {
+    prepbl: PrePbl<'bump>,
+
+    lemmas: IntoIter<RichFormula<'bump>>,
+    assertions: Vec<RichFormula<'bump>>,
+    query: Box<RichFormula<'bump>>,
+}
+
+impl<'bump> PrePbl<'bump> {
+    fn to_pbl(
+        self,
+        assertions: Vec<RichFormula<'bump>>,
+        query: Box<RichFormula<'bump>>,
+    ) -> Problem<'bump> {
+        let PrePbl {
+            container,
+            functions,
+            sorts,
+            evaluator,
+            name_caster,
+            protocol,
+            crypto_assertions,
+        } = self;
+
+        Problem {
+            container,
+            functions,
+            sorts,
+            evaluator,
+            name_caster,
+            protocol,
+            assertions,
+            crypto_assertions,
+            query,
+        }
+    }
+}
+
+impl<'bump> Iterator for PblIterator<'bump> {
+    type Item = Problem<'bump>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let nxt = self.lemmas.next()?;
+        let old_query = std::mem::replace(&mut *self.query, nxt);
+        self.assertions.push(old_query);
+        Some(
+            self.prepbl
+                .clone()
+                .to_pbl(self.assertions.clone(), self.query.clone()),
+        )
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.lemmas.size_hint()
+    }
+}
+
+impl<'bump> FusedIterator for PblIterator<'bump> {}
+impl<'bump> ExactSizeIterator for PblIterator<'bump> {}
+
+impl<'bump> IntoIterator for PblFromParser<'bump> {
+    type Item = Problem<'bump>;
+
+    type IntoIter = PblIterator<'bump>;
+
+    fn into_iter(self) -> Self::IntoIter {
         let PblFromParser {
             llc,
             functions,
             sorts,
             assertions,
-            lemmas,
+            mut lemmas,
             query,
             steps,
             cells,
             crypto_assertions,
             order,
         } = self;
+
         let LongLivedContent {
             container,
             evaluator,
@@ -131,17 +209,34 @@ impl<'bump> Into<Problem<'bump>> for PblFromParser<'bump> {
             .collect();
         let sorts = sorts.into_iter().chain(default_sorts()).unique().collect();
 
-        Problem {
-            container,
-            functions,
-            sorts,
-            evaluator,
-            name_caster,
-            protocol,
-            crypto_assertions,
-            assertions: todo!(),
-            query: todo!(),
+        lemmas.push(*query);
+        let lemmas = lemmas.into_iter();
+        PblIterator {
+            prepbl: PrePbl {
+                container,
+                functions,
+                sorts,
+                evaluator,
+                name_caster,
+                protocol,
+                crypto_assertions,
+            },
+            lemmas,
+            assertions,
+            query: Box::new(TRUE.clone()),
         }
+    }
+}
+
+impl<'bump> Into<Problem<'bump>> for PblFromParser<'bump> {
+    fn into(self) -> Problem<'bump> {
+        if !self.lemmas.is_empty() {
+            eprint!(
+                "Using `into` despite having {} lemmas. They will be ignored",
+                self.lemmas.len()
+            )
+        }
+        self.into_iter().next().unwrap()
     }
 }
 
@@ -155,7 +250,7 @@ fn compress_quantifier<'bump>(
             let fun = Function::new_quantifier_from_quantifier(container, q, arg);
             let free = match fun.as_ref() {
                 InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q)) => &q.free_variables,
-                _ => unreachable!()
+                _ => unreachable!(),
             };
             functions.push(fun);
             RichFormula::Fun(fun, free.iter().map(|v| v.into_formula()).collect())

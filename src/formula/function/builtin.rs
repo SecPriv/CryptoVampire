@@ -1,6 +1,6 @@
 use static_init::dynamic;
 
-use crate::formula::sort::builtins::{STEP};
+use crate::formula::{sort::builtins::{STEP}, formula::RichFormula};
 
 use super::{
     booleans::{self, Booleans},
@@ -9,6 +9,22 @@ use super::{
     predicate::Predicate,
     Function, InnerFunction,
 };
+
+#[dynamic]
+pub static TRUE_F: Function<'static> = new_static_function(InnerFunction::Bool(Booleans::Connective(
+    booleans::Connective::True,
+)));
+
+#[dynamic]
+pub static FALSE_F: Function<'static> = new_static_function(InnerFunction::Bool(Booleans::Connective(
+    booleans::Connective::False,
+)));
+
+#[dynamic]
+pub static TRUE: RichFormula<'static> = RichFormula::Fun(TRUE_F.clone(), vec![]);
+
+#[dynamic]
+pub static FALSE: RichFormula<'static> = RichFormula::Fun(TRUE_F.clone(), vec![]);
 
 #[dynamic]
 pub static AND: Function<'static> = new_static_function(InnerFunction::Bool(Booleans::Connective(
