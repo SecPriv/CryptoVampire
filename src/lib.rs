@@ -1,5 +1,5 @@
 pub mod formula;
-// pub mod parser;
+pub mod parser;
 mod problem;
 pub mod smt;
 pub(crate) mod container;
