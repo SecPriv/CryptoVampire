@@ -18,6 +18,8 @@
 // };
 // use clap::Parser;
 
+use automator::parser;
+
 extern crate pest_derive;
 
 extern crate paste;
@@ -92,4 +94,6 @@ extern crate paste;
 //     }
 // }
 
-fn main() {}
+fn main() {
+   parser::parse_string("").unwrap()
+}
