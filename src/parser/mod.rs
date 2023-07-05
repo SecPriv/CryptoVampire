@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use pest::error::Error;
 use pest_derive::Parser;
 
-use crate::formula::{function::Function, sort::Sort};
+use crate::{formula::{function::Function, sort::Sort, formula::RichFormula}, container::Container};
 
 #[derive(Parser, Debug)]
 #[grammar = "grammar.pest"]
@@ -45,18 +45,11 @@ struct PVar<'str, 'bump> {
     sort: PSortRef<'str, 'bump>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 struct ParisingEnv<'str, 'bump> {
-    variables: HashMap<&'str str, PVar<'str, 'bump>>,
-    functions: HashMap<&'str str, PFun<'str, 'bump>>,
-    sorts: HashMap<&'str str, PSort<'str>>,
+    container: &'bump Container<'bump>,
+    variables: HashMap<&'str str, RichFormula<'bump>>
 }
 
 impl<'str, 'bump> ParisingEnv<'str, 'bump> {
-
-    pub fn is_name_available(&self, name: &'str str) -> bool {
-        !(self.variables.contains_key(name))
-            && !(self.functions.contains_key(name))
-            && !(self.functions.contains_key(name))
-    }
 }

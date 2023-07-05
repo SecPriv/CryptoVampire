@@ -12,7 +12,7 @@ use std::{
 };
 
 use crate::{
-    container::{CanBeAllocated, Container, ScopeAllocator},
+    container::{CanBeAllocated, Container, ScopeAllocator, FromNN},
     utils::precise_as_ref::PreciseAsRef,
 };
 
@@ -301,6 +301,14 @@ impl<'bump> From<&'bump InnerSort<'bump>> for Sort<'bump> {
             inner: NonNull::from(value),
             container: Default::default(),
         }
+    }
+}
+
+impl<'bump> FromNN<'bump> for Sort<'bump> {
+    type Inner = InnerSort<'bump>;
+
+    unsafe fn from_nn(inner: NonNull<Self::Inner>) -> Self {
+        Self { inner, container: Default::default() }
     }
 }
 

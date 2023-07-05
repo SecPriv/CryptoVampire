@@ -1,13 +1,25 @@
-use std::{cell::RefCell, fmt::Debug, ops::DerefMut, ptr::NonNull};
-
-
+use itertools::chain;
+use paste::paste;
+use std::{
+    cell::{Ref, RefCell},
+    collections::HashSet,
+    fmt::Debug,
+    iter::{Cloned, Map},
+    ops::DerefMut,
+    ptr::NonNull,
+    slice::Iter,
+};
 
 use crate::{
     formula::{
         function::{Function, InnerFunction},
-        sort::InnerSort,
+        sort::{InnerSort, Sort},
     },
-    problem::{cell::InnerMemoryCell, step::InnerStep},
+    problem::{
+        cell::{InnerMemoryCell, MemoryCell},
+        step::{InnerStep, Step},
+    },
+    utils::string_ref::StrRef,
 };
 
 type InnerContainer<T> = RefCell<Vec<NonNull<T>>>;
@@ -86,6 +98,26 @@ impl<'bump> Debug for Container<'bump> {
     }
 }
 
+macro_rules! make_into_iters {
+    ($name:ident, $out:ty, $bump:lifetime) => {
+        paste! {
+            pub(crate) fn [< $name _into_iter >] (
+                & $bump self,
+            ) -> VecRefWrapperMap<
+                $bump,
+                NonNull<<$out as FromNN<$bump>>::Inner >,
+                $out,
+                fn(&NonNull<<$out as FromNN<$bump>>::Inner>) -> $out,
+            > {
+                VecRefWrapperMap {
+                    r: self.$name.borrow(),
+                    f: |nn| unsafe { <$out as FromNN<$bump>>::from_nn(*nn) },
+                }
+            }
+        }
+    };
+}
+
 impl<'bump> Container<'bump> {
     /// find a name starting by `name` that isn't assigned to any function yet
     pub fn find_free_function_name(&self, name: &str) -> String {
@@ -102,6 +134,38 @@ impl<'bump> Container<'bump> {
             .map(|m| format!("{}{}", name, m + 1))
             .unwrap_or(name.to_owned())
     }
+
+    pub fn is_name_available(&'bump self, name: &str) -> bool {
+        self.functions_into_iter()
+            .into_iter()
+            .all(|f| f.name().as_ref() != name)
+            && self.sorts_into_iter().into_iter().all(|s| s.name() != name)
+            && self.steps_into_iter().into_iter().all(|s| s.name() != name)
+            && self.cells_into_iter().into_iter().all(|c| c.name() != name)
+    }
+
+    pub fn name_hash_set<'a>(&'bump self) -> HashSet<StrRef<'a>>
+    where
+        'bump: 'a,
+    {
+        let f_iter = self.functions_into_iter();
+        let sort_iter = self.sorts_into_iter();
+        let step_iter = self.steps_into_iter();
+        let cell_iter = self.cells_into_iter();
+
+        chain!(
+            f_iter.into_iter().map(|f| f.name().into()),
+            sort_iter.into_iter().map(|s| s.name().into()),
+            step_iter.into_iter().map(|s| s.name().into()),
+            cell_iter.into_iter().map(|c| c.name().into()),
+        )
+        .collect()
+    }
+
+    make_into_iters!(functions, Function<'bump>, 'bump);
+    make_into_iters!(sorts, Sort<'bump>, 'bump);
+    make_into_iters!(steps, Step<'bump>, 'bump);
+    make_into_iters!(cells, MemoryCell<'bump>, 'bump);
 }
 
 pub trait NameFinder<T> {
@@ -111,5 +175,33 @@ pub trait NameFinder<T> {
 impl<'bump> NameFinder<Function<'bump>> for Container<'bump> {
     fn find_free_name(&self, name: &str) -> String {
         self.find_free_function_name(name)
+    }
+}
+
+pub(crate) trait FromNN<'bump>: Sized {
+    type Inner;
+    /// inner lives 'bump
+    unsafe fn from_nn(inner: NonNull<Self::Inner>) -> Self;
+}
+
+/// from https://stackoverflow.com/a/33542412/10875409
+#[derive(Debug)]
+pub struct VecRefWrapperMap<'a, T: 'a, U, F>
+where
+    F: Fn(&'a T) -> U + Clone,
+{
+    r: Ref<'a, Vec<T>>,
+    f: F,
+}
+
+impl<'a, 'b: 'a, T: 'a, U, F> IntoIterator for &'b VecRefWrapperMap<'a, T, U, F>
+where
+    F: Fn(&'a T) -> U + Clone,
+{
+    type IntoIter = Map<Iter<'a, T>, F>;
+    type Item = U;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.r.iter().map(self.f.clone())
     }
 }

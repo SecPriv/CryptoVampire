@@ -1,9 +1,23 @@
 use std::{ops::Deref, fmt::Display};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+/// A boxed string that can also be a `&str`
 pub enum StrRef<'a> {
     Ref(&'a str),
     Owned(Box<str>),
+}
+
+impl<'a> StrRef<'a> {
+    pub fn into_owned(self) -> Box<str> {
+        match self {
+            StrRef::Ref(s) => Box::from(s),
+            StrRef::Owned(s) => s,
+        }
+    }
+
+    pub fn into_string(self) -> String {
+        self.into_owned().into_string()
+    }
 }
 
 impl<'a> From<&'a str> for StrRef<'a> {

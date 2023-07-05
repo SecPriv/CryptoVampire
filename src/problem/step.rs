@@ -11,7 +11,7 @@ use itertools::Itertools;
 
 use crate::{
     assert_variance, asssert_trait,
-    container::ScopeAllocator,
+    container::{FromNN, ScopeAllocator},
     formula::{
         formula::{meq, RichFormula},
         function::{
@@ -298,5 +298,16 @@ impl<'bump> Ord for Step<'bump> {
 impl<'bump> PartialOrd for Step<'bump> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(Ord::cmp(&self, &other))
+    }
+}
+
+impl<'bump> FromNN<'bump> for Step<'bump> {
+    type Inner = InnerStep<'bump>;
+
+    unsafe fn from_nn(inner: NonNull<Self::Inner>) -> Self {
+        Self {
+            inner,
+            container: Default::default(),
+        }
     }
 }
