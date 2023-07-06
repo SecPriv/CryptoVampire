@@ -31,8 +31,8 @@ operation = _{ eq | neq | or | and | implies | iff }
 typed_arguments = {("(" ~ (variable_binding ~ ",")* ~ variable_binding? ~ ")")?}
     variable_binding = {variable ~ ":" ~ type_name }
 
-commun_base = { if_then_else | find_such_that | quantifier | application } 
-term = { /* "(" ~ inner_term ~ ")" | */ inner_term }
+commun_base = { let_in | if_then_else | find_such_that | quantifier | application } 
+term = { /* "(" ~ inner_term ~ ")" | */  inner_term }
     inner_term = { commun_base | infix_term}
 bracketed_term = _{"{" ~ term ~ "}"}
 
@@ -46,6 +46,7 @@ find_such_that = {"try" ~ "find" ~
                     "such" ~ "that"  ~ bracketed_term ~
                     "then" ~ bracketed_term ~
                     "else" ~ bracketed_term}
+let_in = {"let" ~ variable ~ "=" ~ term ~ "in" ~ term}
 
 quantifier = {quantifier_op ~ typed_arguments ~ bracketed_term }
     quantifier_op = _{exists | forall }
