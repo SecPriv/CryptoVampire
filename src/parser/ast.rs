@@ -1,14 +1,11 @@
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::Display,
-};
+use std::fmt::Display;
 
 use derivative::Derivative;
 use itertools::Itertools;
 use pest::{error::Error, iterators::Pair, Parser, Span};
 use pest_derive::Parser;
 
-use crate::{destvec, formula::variable};
+use crate::destvec;
 
 #[derive(Parser, Debug)]
 #[grammar = "grammar.pest"]
@@ -36,6 +33,18 @@ macro_rules! merr {
     };
 }
 
+macro_rules! unreachable_rules {
+    ($span:expr, $urule:expr; $($rule:ident),* ) => {
+        return err(Error::new_from_span(
+            pest::error::ErrorVariant::ParsingError {
+                positives: vec![$(Rule::$rule),+],
+                negatives: vec![$urule],
+            },
+            $span,
+        ))
+    };
+}
+
 macro_rules! debug_rule {
     ($p:ident, $($rule:ident)|+) => {
         if cfg!(debug_assertions) && match $p.as_rule() {
@@ -43,13 +52,7 @@ macro_rules! debug_rule {
                 _ => true
             }
         {
-            return err(Error::new_from_span(
-                pest::error::ErrorVariant::ParsingError {
-                    positives: vec![$(Rule::$rule),+],
-                    negatives: vec![$p.as_rule()],
-                },
-                $p.as_span(),
-            ));
+            unreachable_rules!($p.as_span(),  $p.as_rule(); $($rule),*);
         }
     };
 }
@@ -81,13 +84,7 @@ macro_rules! boiler_plate {
                 $(
                     $(Rule::$pat)|+ => $content,
                 )*
-                r => err(Error::new_from_span(
-                pest::error::ErrorVariant::ParsingError {
-                    positives: vec![$($(Rule::$pat),+),*],
-                    negatives: vec![r],
-                },
-                span,
-            ))
+                r => unreachable_rules!(span, r; $($($pat),+),*)
             }
         });
     };
@@ -300,10 +297,10 @@ boiler_plate!(InnerTerm<'s>, 's, inner_term; |p| {
                     dest_rule!(span in [inner] = cmn_rule.into_inner());
                     Ok(InnerTerm::Appliction(Box::new(inner)))
                 },
-                _ => unreachable!()
+                r => unreachable_rules!(span, r; let_in, if_then_else, find_such_that, quantifier, application)
             }
         },
-        _ => unreachable!()
+        r => unreachable_rules!(span, r; infix_term, commun_base)
     }
 });
 
