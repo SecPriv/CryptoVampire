@@ -4,7 +4,7 @@ use std::{
 };
 
 use derivative::Derivative;
-use paste::paste;
+use itertools::Itertools;
 use pest::{error::Error, iterators::Pair, Parser, Span};
 use pest_derive::Parser;
 
@@ -16,8 +16,17 @@ struct MainParser;
 
 type E = Error<Rule>;
 
+#[inline(always)]
+fn err<E:std::error::Error, T>(err: E) -> Result<T, E> {
+    if cfg!(debug_assertions) {
+        Err(err).unwrap()
+    } else {
+        Err(err)
+    }
+}
+
 macro_rules! merr {
-    ($span:ident; $msg:literal $(,$args:expr)*) => {
+    ($span:expr; $msg:literal $(,$args:expr)*) => {
         Error::new_from_span(
             pest::error::ErrorVariant::CustomError {
                 message: format!($msg $(,$args)*),
@@ -28,11 +37,15 @@ macro_rules! merr {
 }
 
 macro_rules! debug_rule {
-    ($p:ident, $rule:ident) => {
-        if cfg!(debug_assertions) && !matches!($p.as_rule(), Rule::$rule) {
-            return Err(Error::new_from_span(
+    ($p:ident, $($rule:ident)|+) => {
+        if cfg!(debug_assertions) && match $p.as_rule() {
+                $(Rule::$rule)|+ => false,
+                _ => true
+            }
+         {
+            return err(Error::new_from_span(
                 pest::error::ErrorVariant::ParsingError {
-                    positives: vec![Rule::$rule],
+                    positives: vec![$(Rule::$rule),+],
                     negatives: vec![$p.as_rule()],
                 },
                 $p.as_span(),
@@ -42,31 +55,47 @@ macro_rules! debug_rule {
 }
 
 macro_rules! boiler_plate {
-    ($t:ty, $lt:lifetime, $rule:ident; |$p:ident| $content:block) => {
+    ($t:ty, $lt:lifetime, $($rule:ident)|+; |$p:ident| $content:block) => {
         impl<$lt> TryFrom<Pair<$lt, Rule>> for $t {
             type Error = E;
 
             fn try_from($p: Pair<$lt, Rule>) -> Result<$t, Self::Error> {
-                debug_rule!($p, $rule);
+                debug_rule!($p, $($rule)|+);
 
                 $content
             }
         }
     };
-    
-    ($t:ty, $rule:ident; { $($pat:ident => $res:ident),* }) => {
-        boiler_plate!($t, 'a, $rule; |p| {
-            match p.as_rule() {
-                $(
-                    Rule::$pat => Ok(Self::$res),
-                )*
-                r => Err(Error::new_from_span(
 
-                ))
+    ($t:ty, $rule:ident; |$p:ident| { $($pat:ident => $content:block)* }) => {
+        boiler_plate!($t, 'a, $rule; |p| {
+            let span = p.as_span();
+            let mut p_iter = p.into_inner();
+            let $p = p_iter.next().unwrap();
+
+            if let Some(p) = p_iter.next() {
+                return err(merr!(p.as_span(); "too much"))
             }
-        })
+
+            match $p.as_rule() {
+                $(
+                    Rule::$pat => $content,
+                )*
+                r => err(Error::new_from_span(
+                pest::error::ErrorVariant::ParsingError {
+                    positives: vec![$(Rule::$pat),*],
+                    negatives: vec![r],
+                },
+                span,
+            ))
+            }
+        });
+    };
+
+    ($t:ty, $rule:ident; { $($pat:ident => $res:ident),* }) => {
+        boiler_plate!($t, $rule; |p| {$($pat => { Ok(Self::$res) })*});
     }
-    
+
 }
 
 macro_rules! as_array {
@@ -77,9 +106,31 @@ macro_rules! as_array {
     };
 }
 
+mod macro_helper {
+    use pest::iterators::{Pairs, Pair};
+
+    use super::Rule;
+
+    pub trait AsInner<'a> {
+        fn m_into_inner(self) -> Pairs<'a, Rule>;
+    }
+
+    impl<'a> AsInner<'a> for Pairs<'a, Rule>{
+        fn m_into_inner(self) -> Pairs<'a, Rule> {
+            self
+        }
+    }
+
+    impl<'a> AsInner<'a> for Pair<'a, Rule> {
+        fn m_into_inner(self) -> Pairs<'a, Rule> {
+            self.into_inner()
+        }
+    }
+}
+
 macro_rules! dest_rule {
     ($span:ident in [$($arg:ident),*] = $vec:expr) => {
-        as_array!($span in [$($arg),*] = $vec);
+        as_array!($span in [$($arg),*] = macro_helper::AsInner::m_into_inner($vec));
         $(
             let $arg = $arg.try_into()?;
         )*
@@ -116,31 +167,6 @@ enum AST<'a> {
 boiler_plate!(AST<'a>, 'a, content; |p| {
     todo!()
 });
-
-#[derive(Derivative)]
-#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct Let<'a> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    span: Span<'a>,
-    name: Function<'a>,
-    args: TypedArgument<'a>,
-    term: Term<'a>,
-}
-
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-enum Assert<'a> {
-    Assertion(Assertion<'a>),
-    Query(Assertion<'a>),
-    Lemma(Assertion<'a>),
-}
-
-#[derive(Derivative)]
-#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct Assertion<'a> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    span: Span<'a>,
-    content: Term<'a>,
-}
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -208,6 +234,11 @@ boiler_plate!(TypedArgument<'a>, 'a, typed_arguments; |p| {
     Ok(TypedArgument { span, bindings: bindings? })
 });
 
+
+// -----------------------------------------------------------------------------
+// ---------------------------------- terms ------------------------------------
+// -----------------------------------------------------------------------------
+
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 struct Term<'a> {
@@ -215,7 +246,7 @@ struct Term<'a> {
     span: Span<'a>,
     inner: InnerTerm<'a>,
 }
-boiler_plate!(VariableBinding<'s>, 's, term; |p| {
+boiler_plate!(Term<'s>, 's, term; |p| {
     let span = p.as_span();
     dest_rule!(span in [inner] = p.into_inner());
     Ok(Term{span, inner})
@@ -230,35 +261,35 @@ enum InnerTerm<'a> {
     Appliction(Box<Application<'a>>),
     Infix(Box<Infix<'a>>),
 }
-boiler_plate!(VariableBinding<'s>, 's, inner_term; |p| {
+boiler_plate!(InnerTerm<'s>, 's, inner_term; |p| {
     let span = p.as_span();
     as_array!(span in [nxt] = p.into_inner());
     match nxt.as_rule() {
         Rule::infix_term => {
-            dest_rule!(span in [inner] = nxt);
+            dest_rule!(span in [inner] = nxt.into_inner());
             Ok(InnerTerm::Infix(Box::new(inner)))
         }
         Rule::commun_base => {
             as_array!(span in [cmn_rule] = nxt.into_inner());
             match cmn_rule.as_rule(){
                 Rule::let_in => {
-                    dest_rule!(span in [inner] = nxt);
+                    dest_rule!(span in [inner] = cmn_rule.into_inner());
                     Ok(InnerTerm::LetIn(Box::new(inner)))
                 },
                 Rule::if_then_else => {
-                    dest_rule!(span in [inner] = nxt);
+                    dest_rule!(span in [inner] = cmn_rule.into_inner());
                     Ok(InnerTerm::If(Box::new(inner)))
                 },
                 Rule::find_such_that => {
-                    dest_rule!(span in [inner] = nxt);
+                    dest_rule!(span in [inner] = cmn_rule.into_inner());
                     Ok(InnerTerm::Fndst(Box::new(inner)))
                 },
                 Rule::quantifier => {
-                    dest_rule!(span in [inner] = nxt);
+                    dest_rule!(span in [inner] = cmn_rule.into_inner());
                     Ok(InnerTerm::Quant(Box::new(inner)))
                 },
                 Rule::application => {
-                    dest_rule!(span in [inner] = nxt);
+                    dest_rule!(span in [inner] = cmn_rule.into_inner());
                     Ok(InnerTerm::Appliction(Box::new(inner)))
                 },
                 _ => unreachable!()
@@ -296,7 +327,7 @@ boiler_plate!(Infix<'a>, 'a, infix_term; |p| {
     Ok(Infix { span, operation, terms })
 });
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 enum Operation {
     HardEq,
     Eq,
@@ -322,38 +353,15 @@ impl Display for Operation {
     }
 }
 
-impl<'str> TryFrom<Pair<'str, Rule>> for Operation {
-    type Error = E;
-
-    fn try_from(value: Pair<'str, Rule>) -> Result<Self, Self::Error> {
-        let span = value.as_span();
-        match value.as_rule() {
-            Rule::hard_eq => Ok(Self::HardEq),
-            Rule::eq => Ok(Self::Eq),
-            Rule::neq => Ok(Self::Neq),
-            Rule::or => Ok(Self::Or),
-            Rule::and => Ok(Self::And),
-            Rule::implies => Ok(Self::Implies),
-            Rule::iff => Ok(Self::Iff),
-            r => Err(Error::new_from_span(
-                pest::error::ErrorVariant::ParsingError {
-                    positives: vec![
-                        Rule::hard_eq,
-                        Rule::eq,
-                        Rule::neq,
-                        Rule::neq,
-                        Rule::or,
-                        Rule::and,
-                        Rule::implies,
-                        Rule::iff,
-                    ],
-                    negatives: vec![r],
-                },
-                span,
-            )),
-        }
-    }
-}
+boiler_plate!(Operation, operation; {
+    hard_eq => HardEq,
+    eq => Eq,
+    neq => Neq,
+    or => Or,
+    and => And,
+    implies => Implies,
+    iff => Iff
+});
 
 #[derive(Derivative)]
 #[derivative(
@@ -367,10 +375,12 @@ impl<'str> TryFrom<Pair<'str, Rule>> for Operation {
 )]
 enum Application<'a> {
     ConstVar {
+        #[derivative(PartialOrd = "ignore", Ord = "ignore")]
         span: Span<'a>,
         content: &'a str,
     },
     Application {
+        #[derivative(PartialOrd = "ignore", Ord = "ignore")]
         span: Span<'a>,
         function: Function<'a>,
         args: Vec<Term<'a>>,
@@ -429,7 +439,7 @@ struct Quantifier<'a> {
     vars: TypedArgument<'a>,
     content: Term<'a>,
 }
-boiler_plate!(Quantifier<'a>, 'a, find_such_that; |p| {
+boiler_plate!(Quantifier<'a>, 'a, quantifier; |p| {
     let span = p.as_span();
     dest_rule!(span in [kind, vars, content] = p.into_inner());
     Ok(Self { kind, vars, span, content})
@@ -438,18 +448,12 @@ boiler_plate!(Quantifier<'a>, 'a, find_such_that; |p| {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 enum QuantifierKind {
     Forall,
-    Exits,
+    Exists,
 }
-impl<'a> TryFrom<Pair<'a, Rule>> for QuantifierKind {
-    type Error = E;
-
-    fn try_from(value: Pair<'a, Rule>) -> Result<Self, Self::Error> {
-        match value.as_rule() {
-            Rule::exists => Ok(Self::Exits),
-            Rule::forall => Ok(Self::Forall)
-        }
-    }
-}
+boiler_plate!(QuantifierKind, quantifier_op; {
+    forall => Forall,
+    exists => Exists
+});
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -460,6 +464,11 @@ struct LetIn<'a> {
     t1: Term<'a>,
     t2: Term<'a>,
 }
+boiler_plate!(LetIn<'a>, 'a, let_in; |p| {
+    let span = p.as_span();
+    dest_rule!(span in [var, t1, t2] = p.into_inner());
+    Ok(Self { span, var, t1, t2})
+});
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 enum Declaration<'a> {
@@ -515,10 +524,66 @@ struct Assignements<'a> {
     span: Span<'a>,
     assignements: Vec<Assignement<'a>>,
 }
+boiler_plate!(Assignements<'a>, 'a, assignements; |p| {
+    let span = p.as_span();
+    let assignements = p.into_inner().map(TryInto::try_into).try_collect()?;
+    Ok(Self { span, assignements })
+});
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 struct Assignement<'a> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
+    span: Span<'a>,
     cell: Application<'a>,
     term: Term<'a>,
 }
+boiler_plate!(Assignement<'a>, 'a, assignement; |p| {
+    let span = p.as_span();
+    dest_rule!(span in [cell, term] = p);
+    Ok(Self { span, cell, term })
+});
+
+
+#[derive(Derivative)]
+#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+struct Let<'a> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
+    span: Span<'a>,
+    name: Function<'a>,
+    args: TypedArgument<'a>,
+    term: Term<'a>,
+}
+boiler_plate!(Let<'a>, 'a, mlet ; |p| {
+    let span = p.as_span();
+    dest_rule!(span in [name, args, term] = p);
+    Ok(Self {span, name, args, term})
+});
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+enum Assert<'a> {
+    Assertion(Assertion<'a>),
+    Query(Assertion<'a>),
+    Lemma(Assertion<'a>),
+}
+boiler_plate!(Assert<'a>, 'a, assertion | query | lemma ; |p| {
+    Ok(match p.as_rule() {
+        Rule::assertion => Assert::Assertion(p.try_into()?),
+        Rule::query => Assert::Query(p.try_into()?),
+        Rule::lemma => Assert::Lemma(p.try_into()?),
+        _ => unreachable!()
+    })
+});
+
+#[derive(Derivative)]
+#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+struct Assertion<'a> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
+    span: Span<'a>,
+    content: Term<'a>,
+}
+boiler_plate!(Assertion<'a>, 'a, assertion | query | lemma ; |p| {
+    let span = p.as_span();
+    dest_rule!(span in [content] = p);
+    Ok(Self {span, content})
+});
