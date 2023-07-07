@@ -1,9 +1,9 @@
-content = {SOI ~ (
-        ( declaration | step | assertion 
+file = {SOI ~ ( content
+         ~ EOL?)*  ~ EOI}
+content = { declaration | step | assertion 
             | order | query | lemma 
             | assertion_crypto 
-            | mlet
-        ) ~ EOL?)*  ~ EOI}
+            | mlet }
 
 WHITESPACE = _{ " " | "\t" | NEWLINE }
 COMMENT = _{ c_like_comments | ml_like_comments }
@@ -79,6 +79,9 @@ lemma = {"lemma" ~ term }
 order = {"order" ~ quantifier_op ~ typed_arguments ~ 
     (inner_order | "{" ~ inner_order ~ "}") }
     inner_order = _{term ~ ordering_operation ~ term}
-    ordering_operation = { "<>" | "<" | ">" }
+    ordering_operation = { order_incompatible | order_lt | order_gt }
+        order_incompatible = {"<>"}
+        order_lt = { "<" }
+        order_gt = { ">" }
 
 mlet = {"let" ~ function ~ typed_arguments ~ "=" ~ term }

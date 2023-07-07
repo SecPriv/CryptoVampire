@@ -14,10 +14,10 @@ use crate::{destvec, formula::variable};
 #[grammar = "grammar.pest"]
 struct MainParser;
 
-type E = Error<Rule>;
+pub type E = Error<Rule>;
 
 #[inline(always)]
-fn err<E:std::error::Error, T>(err: E) -> Result<T, E> {
+fn err<E: std::error::Error, T>(err: E) -> Result<T, E> {
     if cfg!(debug_assertions) {
         Err(err).unwrap()
     } else {
@@ -42,7 +42,7 @@ macro_rules! debug_rule {
                 $(Rule::$rule)|+ => false,
                 _ => true
             }
-         {
+        {
             return err(Error::new_from_span(
                 pest::error::ErrorVariant::ParsingError {
                     positives: vec![$(Rule::$rule),+],
@@ -67,8 +67,8 @@ macro_rules! boiler_plate {
         }
     };
 
-    ($t:ty, $rule:ident; |$p:ident| { $($pat:ident => $content:block)* }) => {
-        boiler_plate!($t, 'a, $rule; |p| {
+    (l $t:ty, $lt:lifetime, $($rule:ident)|+; |$p:ident| { $($($pat:ident)|+ => $content:block)* }) => {
+        boiler_plate!($t, 'a, $($rule)|+; |p| {
             let span = p.as_span();
             let mut p_iter = p.into_inner();
             let $p = p_iter.next().unwrap();
@@ -79,11 +79,11 @@ macro_rules! boiler_plate {
 
             match $p.as_rule() {
                 $(
-                    Rule::$pat => $content,
+                    $(Rule::$pat)|+ => $content,
                 )*
                 r => err(Error::new_from_span(
                 pest::error::ErrorVariant::ParsingError {
-                    positives: vec![$(Rule::$pat),*],
+                    positives: vec![$($(Rule::$pat),+),*],
                     negatives: vec![r],
                 },
                 span,
@@ -93,7 +93,7 @@ macro_rules! boiler_plate {
     };
 
     ($t:ty, $rule:ident; { $($pat:ident => $res:ident),* }) => {
-        boiler_plate!($t, $rule; |p| {$($pat => { Ok(Self::$res) })*});
+        boiler_plate!(l $t, 'a, $rule; |p| {$($pat => { Ok(Self::$res) })*});
     }
 
 }
@@ -107,7 +107,7 @@ macro_rules! as_array {
 }
 
 mod macro_helper {
-    use pest::iterators::{Pairs, Pair};
+    use pest::iterators::{Pair, Pairs};
 
     use super::Rule;
 
@@ -115,7 +115,7 @@ mod macro_helper {
         fn m_into_inner(self) -> Pairs<'a, Rule>;
     }
 
-    impl<'a> AsInner<'a> for Pairs<'a, Rule>{
+    impl<'a> AsInner<'a> for Pairs<'a, Rule> {
         fn m_into_inner(self) -> Pairs<'a, Rule> {
             self
         }
@@ -137,43 +137,52 @@ macro_rules! dest_rule {
     };
 }
 
-#[derive(Derivative)]
-#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct Sub<'s, T> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    span: Span<'s>,
-    content: T,
+pub struct ASTList<'a>(Vec<AST<'a>>);
+
+impl<'a> TryFrom<&'a str> for ASTList<'a> {
+    type Error = E;
+
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+        Ok(ASTList(
+            MainParser::parse(Rule::file, value)?
+                .map(TryInto::try_into)
+                .try_collect()?,
+        ))
+    }
 }
 
 #[derive(Derivative)]
-#[derivative(
-    Debug,
-    PartialEq,
-    Eq,
-    PartialOrd = "feature_allow_slow_enum",
-    Ord = "feature_allow_slow_enum",
-    Hash,
-    Clone
-)]
-enum AST<'a> {
+#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct Sub<'s, T> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
+    pub span: Span<'s>,
+    pub content: T,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+pub enum AST<'a> {
     Declaration(Box<Declaration<'a>>),
     Step(Box<Step<'a>>),
-    Order,
-    AssertCrypto,
+    Order(Box<Order<'a>>),
+    AssertCrypto(Box<AssertCrypto<'a>>),
     Assert(Box<Assert<'a>>),
     Let(Box<Let<'a>>),
 }
-
-boiler_plate!(AST<'a>, 'a, content; |p| {
-    todo!()
+boiler_plate!(l AST<'a>, 'a, content; |p| {
+    declaration => { Ok(AST::Declaration(Box::new(p.try_into()?))) }
+    step => { Ok(AST::Step(Box::new(p.try_into()?))) }
+    order => { Ok(AST::Order(Box::new(p.try_into()?))) }
+    assertion_crypto => { Ok(AST::AssertCrypto(Box::new(p.try_into()?))) }
+    assertion | query | lemma => { Ok(AST::Assert(Box::new(p.try_into()?))) }
+    mlet => { Ok(AST::Let(Box::new(p.try_into()?))) }
 });
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct Ident<'s> {
+pub struct Ident<'s> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    span: Span<'s>,
-    content: &'s str,
+    pub span: Span<'s>,
+    pub content: &'s str,
 }
 boiler_plate!(Ident<'s>, 's, ident; |p| {
     Ok(Ident { span: p.as_span(), content: p.as_str()})
@@ -181,39 +190,39 @@ boiler_plate!(Ident<'s>, 's, ident; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct TypeName<'a>(Sub<'a, Ident<'a>>);
+pub struct TypeName<'a>(Sub<'a, Ident<'a>>);
 boiler_plate!(TypeName<'a>, 'a, type_name; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct Function<'a>(Sub<'a, Ident<'a>>);
+pub struct Function<'a>(Sub<'a, Ident<'a>>);
 boiler_plate!(Function<'a>, 'a, function; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct Variable<'a>(Sub<'a, &'a str>);
+pub struct Variable<'a>(Sub<'a, &'a str>);
 boiler_plate!(Variable<'a>, 'a, variable; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.as_str() }))
 });
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct StepName<'a>(Sub<'a, Ident<'a>>);
+pub struct StepName<'a>(Sub<'a, Ident<'a>>);
 boiler_plate!(StepName<'a>, 'a, step_name; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct VariableBinding<'a> {
+pub struct VariableBinding<'a> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    span: Span<'a>,
-    variable: Variable<'a>,
-    type_name: TypeName<'a>,
+    pub span: Span<'a>,
+    pub variable: Variable<'a>,
+    pub type_name: TypeName<'a>,
 }
 boiler_plate!(VariableBinding<'s>, 's, variable_binding; |p| {
     let span = p.as_span();
@@ -223,10 +232,10 @@ boiler_plate!(VariableBinding<'s>, 's, variable_binding; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct TypedArgument<'a> {
+pub struct TypedArgument<'a> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    span: Span<'a>,
-    bindings: Vec<VariableBinding<'a>>,
+    pub span: Span<'a>,
+    pub bindings: Vec<VariableBinding<'a>>,
 }
 boiler_plate!(TypedArgument<'a>, 'a, typed_arguments; |p| {
     let span = p.as_span();
@@ -234,17 +243,16 @@ boiler_plate!(TypedArgument<'a>, 'a, typed_arguments; |p| {
     Ok(TypedArgument { span, bindings: bindings? })
 });
 
-
 // -----------------------------------------------------------------------------
 // ---------------------------------- terms ------------------------------------
 // -----------------------------------------------------------------------------
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct Term<'a> {
+pub struct Term<'a> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    span: Span<'a>,
-    inner: InnerTerm<'a>,
+    pub span: Span<'a>,
+    pub inner: InnerTerm<'a>,
 }
 boiler_plate!(Term<'s>, 's, term; |p| {
     let span = p.as_span();
@@ -253,7 +261,7 @@ boiler_plate!(Term<'s>, 's, term; |p| {
 });
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-enum InnerTerm<'a> {
+pub enum InnerTerm<'a> {
     LetIn(Box<LetIn<'a>>),
     If(Box<IfThenElse<'a>>),
     Fndst(Box<FindSuchThat<'a>>),
@@ -301,11 +309,11 @@ boiler_plate!(InnerTerm<'s>, 's, inner_term; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct Infix<'a> {
+pub struct Infix<'a> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    span: Span<'a>,
-    operation: Operation,
-    terms: Vec<Term<'a>>,
+    pub span: Span<'a>,
+    pub operation: Operation,
+    pub terms: Vec<Term<'a>>,
 }
 boiler_plate!(Infix<'a>, 'a, infix_term; |p| {
     let span = p.as_span();
@@ -328,7 +336,7 @@ boiler_plate!(Infix<'a>, 'a, infix_term; |p| {
 });
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
-enum Operation {
+pub enum Operation {
     HardEq,
     Eq,
     Neq,
@@ -373,7 +381,7 @@ boiler_plate!(Operation, operation; {
     Hash,
     Clone
 )]
-enum Application<'a> {
+pub enum Application<'a> {
     ConstVar {
         #[derivative(PartialOrd = "ignore", Ord = "ignore")]
         span: Span<'a>,
@@ -401,12 +409,12 @@ boiler_plate!(Application<'a>, 'a, application; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct IfThenElse<'a> {
+pub struct IfThenElse<'a> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    span: Span<'a>,
-    condition: Term<'a>,
-    left: Term<'a>,
-    right: Term<'a>,
+    pub span: Span<'a>,
+    pub condition: Term<'a>,
+    pub left: Term<'a>,
+    pub right: Term<'a>,
 }
 boiler_plate!(IfThenElse<'a>, 'a, if_then_else; |p| {
     let span = p.as_span();
@@ -416,13 +424,13 @@ boiler_plate!(IfThenElse<'a>, 'a, if_then_else; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct FindSuchThat<'a> {
+pub struct FindSuchThat<'a> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    span: Span<'a>,
-    vars: TypedArgument<'a>,
-    condition: Term<'a>,
-    left: Term<'a>,
-    right: Term<'a>,
+    pub span: Span<'a>,
+    pub vars: TypedArgument<'a>,
+    pub condition: Term<'a>,
+    pub left: Term<'a>,
+    pub right: Term<'a>,
 }
 boiler_plate!(FindSuchThat<'a>, 'a, find_such_that; |p| {
     let span = p.as_span();
@@ -432,12 +440,12 @@ boiler_plate!(FindSuchThat<'a>, 'a, find_such_that; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct Quantifier<'a> {
-    kind: QuantifierKind,
+pub struct Quantifier<'a> {
+    pub kind: QuantifierKind,
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    span: Span<'a>,
-    vars: TypedArgument<'a>,
-    content: Term<'a>,
+    pub span: Span<'a>,
+    pub vars: TypedArgument<'a>,
+    pub content: Term<'a>,
 }
 boiler_plate!(Quantifier<'a>, 'a, quantifier; |p| {
     let span = p.as_span();
@@ -446,7 +454,7 @@ boiler_plate!(Quantifier<'a>, 'a, quantifier; |p| {
 });
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-enum QuantifierKind {
+pub enum QuantifierKind {
     Forall,
     Exists,
 }
@@ -457,12 +465,12 @@ boiler_plate!(QuantifierKind, quantifier_op; {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct LetIn<'a> {
+pub struct LetIn<'a> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    span: Span<'a>,
-    var: Variable<'a>,
-    t1: Term<'a>,
-    t2: Term<'a>,
+    pub span: Span<'a>,
+    pub var: Variable<'a>,
+    pub t1: Term<'a>,
+    pub t2: Term<'a>,
 }
 boiler_plate!(LetIn<'a>, 'a, let_in; |p| {
     let span = p.as_span();
@@ -471,58 +479,113 @@ boiler_plate!(LetIn<'a>, 'a, let_in; |p| {
 });
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-enum Declaration<'a> {
+pub enum Declaration<'a> {
     Type(DeclareType<'a>),
     Function(DeclareFunction<'a>),
     Cell(DeclareCell<'a>),
 }
+boiler_plate!(l Declaration<'a>, 'a, declaration; |p| {
+    declare_type => { Ok(Declaration::Type(p.try_into()?)) }
+    declare_function => { Ok(Declaration::Function(p.try_into()?)) }
+    declare_cell => { Ok(Declaration::Cell(p.try_into()?)) }
+});
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct DeclareType<'a> {
+pub struct DeclareType<'a> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    span: Span<'a>,
-    name: TypeName<'a>,
+    pub span: Span<'a>,
+    pub name: TypeName<'a>,
 }
+boiler_plate!(DeclareType<'a>, 'a, declare_type; |p| {
+    let span = p.as_span();
+    dest_rule!(span in [name] = p);
+    Ok(Self { span, name })
+});
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct DeclareFunction<'a> {
+pub struct DeclareFunction<'a> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    span: Span<'a>,
-    name: Function<'a>,
-    args: Vec<TypeName<'a>>,
-    sort: TypeName<'a>,
+    pub span: Span<'a>,
+    pub name: Function<'a>,
+    pub args: DeclareFunctionArgs<'a>,
+    pub sort: TypeName<'a>,
 }
+boiler_plate!(DeclareFunction<'a>, 'a, declare_function; |p| {
+    let span = p.as_span();
+    dest_rule!(span in [name, args, sort] = p);
+    Ok(Self { span, name, args, sort })
+});
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct DeclareCell<'a> {
+pub struct DeclareFunctionArgs<'a> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    span: Span<'a>,
-    name: Function<'a>,
-    args: Vec<TypeName<'a>>,
-    sort: TypeName<'a>,
+    pub span: Span<'a>,
+    pub args: Vec<TypeName<'a>>,
 }
+boiler_plate!(DeclareFunctionArgs<'a>, 'a, declare_function_args; |p| {
+    let span = p.as_span();
+    let args = p.into_inner().map(TryInto::try_into).try_collect()?;
+    Ok(Self { span, args })
+});
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct Step<'a> {
+pub struct DeclareCell<'a> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    span: Span<'a>,
-    name: StepName<'a>,
-    args: Vec<TypedArgument<'a>>,
-    condition: Term<'a>,
-    message: Term<'a>,
-    assignements: Option<Assignements<'a>>,
+    pub span: Span<'a>,
+    pub name: Function<'a>,
+    pub args: DeclareFunctionArgs<'a>,
+    pub sort: TypeName<'a>,
 }
+boiler_plate!(DeclareCell<'a>, 'a, declare_cell; |p| {
+    let span = p.as_span();
+    dest_rule!(span in [name, args, sort] = p);
+    Ok(Self { span, name, args, sort })
+});
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct Assignements<'a> {
+pub struct Step<'a> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    span: Span<'a>,
-    assignements: Vec<Assignement<'a>>,
+    pub span: Span<'a>,
+    pub name: StepName<'a>,
+    pub args: TypedArgument<'a>,
+    pub condition: Term<'a>,
+    pub message: Term<'a>,
+    pub assignements: Option<Assignements<'a>>,
+}
+boiler_plate!(Step<'a>, 'a, step; |p| {
+    let span = p.as_span();
+    // dest_rule!(span in [name, args, condition, message, assignements] = p);
+    let mut p = p.into_inner();
+    let name = p.next().unwrap().try_into()?;
+    let args = p.next().unwrap().try_into()?;
+    let condition = p.next().unwrap().try_into()?;
+    let message = p.next().unwrap().try_into()?;
+    let assignements = p.next().map(TryInto::try_into).transpose()?;
+
+    if let Some(np) = p.next() {
+        let mut l = 0;
+        for _ in p {
+            l+=1;
+        }
+        return err(merr!(np.as_span();
+            "too many arguments (expected at most 5, got {})",
+            (6 + l)))
+    }
+
+    Ok(Self { span, name, args, condition, message, assignements})
+});
+
+#[derive(Derivative)]
+#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct Assignements<'a> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
+    pub span: Span<'a>,
+    pub assignements: Vec<Assignement<'a>>,
 }
 boiler_plate!(Assignements<'a>, 'a, assignements; |p| {
     let span = p.as_span();
@@ -532,11 +595,11 @@ boiler_plate!(Assignements<'a>, 'a, assignements; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct Assignement<'a> {
+pub struct Assignement<'a> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    span: Span<'a>,
-    cell: Application<'a>,
-    term: Term<'a>,
+    pub span: Span<'a>,
+    pub cell: Application<'a>,
+    pub term: Term<'a>,
 }
 boiler_plate!(Assignement<'a>, 'a, assignement; |p| {
     let span = p.as_span();
@@ -544,15 +607,14 @@ boiler_plate!(Assignement<'a>, 'a, assignement; |p| {
     Ok(Self { span, cell, term })
 });
 
-
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct Let<'a> {
+pub struct Let<'a> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    span: Span<'a>,
-    name: Function<'a>,
-    args: TypedArgument<'a>,
-    term: Term<'a>,
+    pub span: Span<'a>,
+    pub name: Function<'a>,
+    pub args: TypedArgument<'a>,
+    pub term: Term<'a>,
 }
 boiler_plate!(Let<'a>, 'a, mlet ; |p| {
     let span = p.as_span();
@@ -561,29 +623,72 @@ boiler_plate!(Let<'a>, 'a, mlet ; |p| {
 });
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-enum Assert<'a> {
+pub enum Assert<'a> {
     Assertion(Assertion<'a>),
     Query(Assertion<'a>),
     Lemma(Assertion<'a>),
 }
-boiler_plate!(Assert<'a>, 'a, assertion | query | lemma ; |p| {
-    Ok(match p.as_rule() {
-        Rule::assertion => Assert::Assertion(p.try_into()?),
-        Rule::query => Assert::Query(p.try_into()?),
-        Rule::lemma => Assert::Lemma(p.try_into()?),
-        _ => unreachable!()
-    })
+boiler_plate!(l Assert<'a>, 'a, assertion | query | lemma ; |p| {
+    assertion => { Ok(Assert::Assertion(p.try_into()?)) }
+    query => { Ok(Assert::Query(p.try_into()?)) }
+    lemma => { Ok(Assert::Lemma(p.try_into()?)) }
 });
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct Assertion<'a> {
+pub struct Assertion<'a> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    span: Span<'a>,
-    content: Term<'a>,
+    pub span: Span<'a>,
+    pub content: Term<'a>,
 }
 boiler_plate!(Assertion<'a>, 'a, assertion | query | lemma ; |p| {
     let span = p.as_span();
     dest_rule!(span in [content] = p);
     Ok(Self {span, content})
+});
+
+#[derive(Derivative)]
+#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct AssertCrypto<'a> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
+    pub span: Span<'a>,
+    pub name: Ident<'a>,
+    pub functions: Vec<Function<'a>>,
+}
+boiler_plate!(AssertCrypto<'a>, 'a, assertion_crypto ; |p| {
+    let span = p.as_span();
+    let mut p = p.into_inner();
+    let name = p.next().unwrap().try_into()?;
+    let functions = p.map(TryInto::try_into).try_collect()?;
+
+    Ok(Self {span, name, functions})
+});
+
+#[derive(Derivative)]
+#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct Order<'a> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
+    pub span: Span<'a>,
+    pub quantifier: QuantifierKind,
+    pub args: TypedArgument<'a>,
+    pub t1: Term<'a>,
+    pub t2: Term<'a>,
+    pub kind: OrderOperation,
+}
+boiler_plate!(Order<'a>, 'a, order ; |p| {
+    let span = p.as_span();
+    dest_rule!(span in [quantifier, args, t1, kind, t2] = p);
+    Ok(Self {span, quantifier, args, t1, t2, kind})
+});
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
+pub enum OrderOperation {
+    Incompatible,
+    Lt,
+    Gt,
+}
+boiler_plate!(OrderOperation, operation; {
+    order_incompatible => Incompatible,
+    order_lt => Lt,
+    order_gt => Gt
 });
