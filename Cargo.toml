@@ -1,6 +1,6 @@
 [package]
 name = "automator"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -19,7 +19,8 @@ take_mut = "0.2.2"
 if_chain = "1.0.2"
 thiserror = "1.0.38"
 anyhow = "1.0.68"
-ouroboros = "0.17.0"
+# ouroboros = "0.17.0"
+derivative = {version = "2.2.0"}
 # qcell = "0.5.3"
 # match_deref = "0.1.1"
 # bumpalo = { version = "3.12.0", features = ["boxed", "collections"] }

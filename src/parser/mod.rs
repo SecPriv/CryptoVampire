@@ -1,3 +1,5 @@
+mod ast;
+
 use std::collections::{HashMap, HashSet};
 
 use paste::paste;

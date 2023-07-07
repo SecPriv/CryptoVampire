@@ -95,15 +95,29 @@ macro_rules! implvec {
 
 #[macro_export]
 macro_rules! destvec {
-    ([$(arg:ident),*] = $vec:expr) => {
-        let mut iter = $args.into_iter();
+    ([$($arg:ident),*] = $vec:expr) => {
+        destvec!{ [$($arg),*] = $vec; |err| {
+            panic!("{}", err);
+        }}
+    };
+
+    ([$($arg:ident),*] = $vec:expr; |$err:ident| $err_handling:block) => {
+        let mut iter = $vec.into_iter();
         $(
             let $arg = if let Some(tmp) = iter.next() {
                 tmp
             } else {
-                panic!("not enough elements")
+                {
+                    let $err = "not enough elements";
+                    $err_handling
+                }
             };
         )*
-        assert!(iter.next().is_none(), "too many elements");
-    };
+        if !iter.next().is_none() {
+            {
+                let $err = "too many elements";
+                $err_handling
+            }
+        }
+    }
 }

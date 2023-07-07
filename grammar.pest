@@ -19,7 +19,7 @@ type_name = @{ident}
 function = @{ident}
 variable = @{underscore? ~ ident}
 step_name = @{ident}
-operation = _{ eq | neq | or | and | implies | iff }
+operation = { eq | neq | or | and | implies | iff }
     hard_eq = { "===" }
     eq = { "==" }
     neq = { "!=" | "<>" }
@@ -49,7 +49,7 @@ find_such_that = {"try" ~ "find" ~
 let_in = {"let" ~ variable ~ "=" ~ term ~ "in" ~ term}
 
 quantifier = {quantifier_op ~ typed_arguments ~ bracketed_term }
-    quantifier_op = _{exists | forall }
+    quantifier_op = {exists | forall }
 	forall = {"forall" | "∀" }
     exists = {"exists" | "∃" }
 
