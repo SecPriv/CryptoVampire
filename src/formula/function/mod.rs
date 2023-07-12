@@ -21,7 +21,7 @@ use bitflags::bitflags;
 
 use crate::{
     assert_variance, asssert_trait,
-    container::{NameFinder, ScopeAllocator, FromNN},
+    container::{FromNN, NameFinder, ScopeAllocator},
     implderef, implvec,
     problem::cell::MemoryCell,
     utils::{precise_as_ref::PreciseAsRef, string_ref::StrRef},
@@ -342,7 +342,7 @@ impl<'bump> Function<'bump> {
         todo!()
     }
 
-    pub fn name(& self) -> StrRef<'bump> {
+    pub fn name(&self) -> StrRef<'bump> {
         // &self.inner.name
         todo!()
     }
@@ -432,6 +432,9 @@ impl<'bump> FromNN<'bump> for Function<'bump> {
     type Inner = InnerFunction<'bump>;
 
     unsafe fn from_nn(inner: NonNull<Self::Inner>) -> Self {
-        Function { inner, container: Default::default() }
+        Function {
+            inner,
+            container: Default::default(),
+        }
     }
 }

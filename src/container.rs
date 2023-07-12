@@ -69,7 +69,7 @@ macro_rules! my_drop {
     ($($fun:ident),*) => {
         $(
             for e in $fun.get_mut() {
-                drop(unsafe { e.as_mut()})
+                unsafe { std::ptr::drop_in_place(e.as_ptr()) }
             }
         )*
     };

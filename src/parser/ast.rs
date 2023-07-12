@@ -1,37 +1,12 @@
-use std::fmt::Display;
+use std::{fmt::Display, slice::Iter};
 
 use derivative::Derivative;
 use itertools::Itertools;
 use pest::{error::Error, iterators::Pair, Parser, Span};
-use pest_derive::Parser;
 
 use crate::destvec;
 
-#[derive(Parser, Debug)]
-#[grammar = "grammar.pest"]
-struct MainParser;
-
-pub type E = Error<Rule>;
-
-#[inline(always)]
-fn err<E: std::error::Error, T>(err: E) -> Result<T, E> {
-    if cfg!(debug_assertions) {
-        Err(err).unwrap()
-    } else {
-        Err(err)
-    }
-}
-
-macro_rules! merr {
-    ($span:expr; $msg:literal $(,$args:expr)*) => {
-        Error::new_from_span(
-            pest::error::ErrorVariant::CustomError {
-                message: format!($msg $(,$args)*),
-            },
-            $span,
-        )
-    };
-}
+use super::*;
 
 macro_rules! unreachable_rules {
     ($span:expr, $urule:expr; $($rule:ident),* ) => {
@@ -134,7 +109,8 @@ macro_rules! dest_rule {
     };
 }
 
-pub struct ASTList<'a>(Vec<AST<'a>>);
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct ASTList<'a>(pub Vec<AST<'a>>);
 
 impl<'a> TryFrom<&'a str> for ASTList<'a> {
     type Error = E;
@@ -145,6 +121,16 @@ impl<'a> TryFrom<&'a str> for ASTList<'a> {
                 .map(TryInto::try_into)
                 .try_collect()?,
         ))
+    }
+}
+
+impl<'str, 'b> IntoIterator for &'b ASTList<'str> {
+    type Item = &'b AST<'str>;
+
+    type IntoIter = Iter<'b, AST<'str>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
     }
 }
 
@@ -187,28 +173,28 @@ boiler_plate!(Ident<'s>, 's, ident; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct TypeName<'a>(Sub<'a, Ident<'a>>);
+pub struct TypeName<'a>(pub Sub<'a, Ident<'a>>);
 boiler_plate!(TypeName<'a>, 'a, type_name; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Function<'a>(Sub<'a, Ident<'a>>);
+pub struct Function<'a>(pub Sub<'a, Ident<'a>>);
 boiler_plate!(Function<'a>, 'a, function; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Variable<'a>(Sub<'a, &'a str>);
+pub struct Variable<'a>(pub Sub<'a, &'a str>);
 boiler_plate!(Variable<'a>, 'a, variable; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.as_str() }))
 });
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct StepName<'a>(Sub<'a, Ident<'a>>);
+pub struct StepName<'a>(pub Sub<'a, Ident<'a>>);
 boiler_plate!(StepName<'a>, 'a, step_name; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
@@ -500,6 +486,16 @@ boiler_plate!(DeclareType<'a>, 'a, declare_type; |p| {
     Ok(Self { span, name })
 });
 
+impl<'a> DeclareType<'a> {
+    pub fn name(&self) -> &'a str {
+        self.name.0.content.content
+    }
+
+    pub fn get_name_span(&self) -> &Span<'a> {
+        &self.name.0.span
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct DeclareFunction<'a> {
@@ -689,3 +685,109 @@ boiler_plate!(OrderOperation, operation; {
     order_lt => Lt,
     order_gt => Gt
 });
+
+pub mod extra {
+    use enum_dispatch::enum_dispatch;
+    use pest::Span;
+
+    use crate::formula::sort::builtins::STEP;
+
+    use super::{DeclareCell, DeclareFunction, Function, Step, StepName, TypeName};
+
+    #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+    pub struct SnN<'a, 'b> {
+        span: &'b Span<'a>,
+        name: &'a str,
+    }
+
+    impl<'a, 'b> From<&'b TypeName<'a>> for SnN<'a, 'b> {
+        fn from(value: &'b TypeName<'a>) -> Self {
+            SnN {
+                span: &value.0.span,
+                name: value.0.content.content,
+            }
+        }
+    }
+
+    impl<'a, 'b> From<&'b Function<'a>> for SnN<'a, 'b> {
+        fn from(value: &'b Function<'a>) -> Self {
+            SnN {
+                span: &value.0.span,
+                name: value.0.content.content,
+            }
+        }
+    }
+
+    impl<'a, 'b> From<&'b StepName<'a>> for SnN<'a, 'b> {
+        fn from(value: &'b StepName<'a>) -> Self {
+            SnN {
+                span: &value.0.span,
+                name: value.0.content.content,
+            }
+        }
+    }
+
+    #[enum_dispatch]
+    pub trait AsFunction<'a> {
+        fn name(&'_ self) -> SnN<'a, '_>;
+        fn args(&'_ self) -> Vec<SnN<'a, '_>>;
+        fn out(&'_ self) -> SnN<'a, '_>;
+    }
+
+    impl<'a> AsFunction<'a> for DeclareFunction<'a> {
+        fn name(&'_ self) -> SnN<'a, '_> {
+            From::from(&self.name)
+        }
+
+        fn args(&'_ self) -> Vec<SnN<'a, '_>> {
+            self.args.args.iter().map(|tn| tn.into()).collect()
+        }
+
+        fn out(&'_ self) -> SnN<'a, '_> {
+            From::from(&self.sort)
+        }
+    }
+
+    impl<'a> AsFunction<'a> for DeclareCell<'a> {
+        fn name(&'_ self) -> SnN<'a, '_> {
+            From::from(&self.name)
+        }
+
+        fn args(&'_ self) -> Vec<SnN<'a, '_>> {
+            self.args
+                .args
+                .iter()
+                .map(|tn| tn.into())
+                .chain([SnN {
+                    span: &self.span,
+                    name: STEP.name(),
+                }])
+                .collect()
+        }
+
+        fn out(&'_ self) -> SnN<'a, '_> {
+            From::from(&self.sort)
+        }
+    }
+
+    impl<'a> AsFunction<'a> for Step<'a> {
+        fn name(&'_ self) -> SnN<'a, '_> {
+            From::from(&self.name)
+        }
+
+        fn args(&'_ self) -> Vec<SnN<'a, '_>> {
+            self.args
+                .bindings
+                .iter()
+                .map(|b| From::from(&b.type_name))
+                .collect()
+        }
+
+        fn out(&'_ self) -> SnN<'a, '_> {
+            SnN {
+                span: &self.span,
+                name: STEP.name(),
+            }
+        }
+    }
+}

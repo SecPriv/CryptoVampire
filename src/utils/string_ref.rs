@@ -1,4 +1,4 @@
-use std::{ops::Deref, fmt::Display};
+use std::{fmt::Display, ops::Deref};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 /// A boxed string that can also be a `&str`

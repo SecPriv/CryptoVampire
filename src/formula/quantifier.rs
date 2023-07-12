@@ -102,7 +102,7 @@ impl<'bump> Quantifier<'bump> {
 
     pub fn name(&self) -> &'static str {
         match self {
-            Quantifier::Exists { ..} => "exist",
+            Quantifier::Exists { .. } => "exist",
             Quantifier::Forall { .. } => "forall",
         }
     }

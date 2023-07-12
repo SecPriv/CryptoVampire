@@ -21,6 +21,7 @@ thiserror = "1.0.38"
 anyhow = "1.0.68"
 # ouroboros = "0.17.0"
 derivative = {version = "2.2.0"}
+enum_dispatch = "0.3.12"
 # qcell = "0.5.3"
 # match_deref = "0.1.1"
 # bumpalo = { version = "3.12.0", features = ["boxed", "collections"] }

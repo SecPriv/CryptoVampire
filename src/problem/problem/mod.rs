@@ -11,9 +11,7 @@ use crate::{
             declare::{ConstructorDestructor, DataType, Declaration},
         },
         formula::RichFormula,
-        function::{
-            evaluate::Evaluator, term_algebra::name::NameCaster, Function,
-        },
+        function::{evaluate::Evaluator, term_algebra::name::NameCaster, Function},
         sort::Sort,
         variable::Variable,
     },

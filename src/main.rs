@@ -95,5 +95,5 @@ extern crate paste;
 // }
 
 fn main() {
-   parser::parse_string("").unwrap()
+    parser::parse_string("").unwrap()
 }

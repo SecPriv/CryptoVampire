@@ -12,7 +12,7 @@ use std::{
 };
 
 use crate::{
-    container::{CanBeAllocated, Container, ScopeAllocator, FromNN},
+    container::{CanBeAllocated, Container, FromNN, ScopeAllocator},
     utils::precise_as_ref::PreciseAsRef,
 };
 
@@ -204,6 +204,11 @@ impl<'a> Sort<'a> {
     pub fn as_sort(&self) -> Sort<'a> {
         *self
     }
+
+    // ~~~~~~~~~~~~~~~ builders ~~~~~~~~~~~~~~~~~
+    pub fn new_regular(allocator: &'a Container<'a>, name: String) -> Self {
+        Self::new(allocator, InnerSort::new(name, SFlags::empty(), None))
+    }
 }
 
 /* impl<'a> AsRef<HiddenSort> for Sort<'a> {
@@ -308,7 +313,10 @@ impl<'bump> FromNN<'bump> for Sort<'bump> {
     type Inner = InnerSort<'bump>;
 
     unsafe fn from_nn(inner: NonNull<Self::Inner>) -> Self {
-        Self { inner, container: Default::default() }
+        Self {
+            inner,
+            container: Default::default(),
+        }
     }
 }
 

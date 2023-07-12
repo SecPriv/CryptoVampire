@@ -1,5 +1,7 @@
 use std::{
-    hash::Hash, sync::{Arc, Weak}, rc::Rc,
+    hash::Hash,
+    rc::Rc,
+    sync::{Arc, Weak},
 };
 
 use itertools::Itertools;
@@ -371,7 +373,7 @@ pub struct SubtermSearchElement<'a, 'bump> {
     pub unifier: Unifier<'a, 'bump>,
 }
 
-pub trait AsSubterm<'bump> /* : Ord */ /* + std::fmt::Debug */ {
+pub trait AsSubterm<'bump> {
     fn generate_function_assertions(&self, funs: &[Function<'bump>]) -> Vec<RichFormula<'bump>>;
     fn f(&self, x: RichFormula<'bump>, m: RichFormula<'bump>) -> RichFormula<'bump>;
     fn function(&self) -> Function<'bump>;

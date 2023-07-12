@@ -14,7 +14,9 @@ pub struct InnerStepFuction<'bump> {
 }
 
 impl<'bump> InnerStepFuction<'bump> {
-    pub fn new(step: Step<'bump>) -> Self { Self { step } }
+    pub fn new(step: Step<'bump>) -> Self {
+        Self { step }
+    }
 
     pub fn step(&self) -> Step {
         self.step

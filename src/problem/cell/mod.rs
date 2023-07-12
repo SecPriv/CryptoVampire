@@ -4,7 +4,7 @@ use std::{cmp::Ordering, marker::PhantomData, ptr::NonNull};
 
 use crate::{
     assert_variance, asssert_trait,
-    container::{CanBeAllocated, ScopeAllocator, FromNN},
+    container::{CanBeAllocated, FromNN, ScopeAllocator},
     formula::{
         // builtins::types::{MSG_NAME, STEP_NAME},
         formula::RichFormula,
@@ -226,11 +226,13 @@ impl<'bump> CanBeAllocated<'bump> for MemoryCell<'bump> {
     }
 }
 
-
 impl<'bump> FromNN<'bump> for MemoryCell<'bump> {
     type Inner = InnerMemoryCell<'bump>;
 
     unsafe fn from_nn(inner: NonNull<Self::Inner>) -> Self {
-        Self { inner, container: Default::default() }
+        Self {
+            inner,
+            container: Default::default(),
+        }
     }
 }

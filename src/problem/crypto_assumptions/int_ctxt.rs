@@ -8,11 +8,7 @@ use crate::{
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::{meq, RichFormula},
-        function::{
-            subterm::{Subsubterm},
-            term_algebra::name::NameCaster,
-            Function,
-        },
+        function::{subterm::Subsubterm, term_algebra::name::NameCaster, Function},
         sort::{
             builtins::{MESSAGE, NONCE},
             Sort,

@@ -1,18 +1,16 @@
-use std::{rc::Rc};
+use std::rc::Rc;
 
 use itertools::Itertools;
 
 use crate::{
     formula::{
-        formula::{RichFormula},
+        formula::RichFormula,
         function::{term_algebra::TermAlgebra, InnerFunction},
         variable::Variable,
     },
     problem::{
         cell::{Assignement, MemoryCell},
-        cell_dependancies::{
-            graph::{Ancestors, DependancyGraph},
-        },
+        cell_dependancies::graph::{Ancestors, DependancyGraph},
         step::Step,
     },
     utils::vecref::VecRef,

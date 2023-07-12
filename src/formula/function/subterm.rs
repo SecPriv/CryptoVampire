@@ -1,13 +1,11 @@
 use std::sync::Arc;
 
-use crate::{
-    problem::{
-        crypto_assumptions::{
-            SubtermEufCmaMacKey, SubtermEufCmaMacMain, SubtermEufCmaSignKey, SubtermEufCmaSignMain,
-            SubtermIntCtxtKey, SubtermIntCtxtMain, SubtermIntCtxtRand, SubtermNonce,
-        },
-        subterm::kind::SubtermKind,
+use crate::problem::{
+    crypto_assumptions::{
+        SubtermEufCmaMacKey, SubtermEufCmaMacMain, SubtermEufCmaSignKey, SubtermEufCmaSignMain,
+        SubtermIntCtxtKey, SubtermIntCtxtMain, SubtermIntCtxtRand, SubtermNonce,
     },
+    subterm::kind::SubtermKind,
 };
 
 use super::InnerFunction;

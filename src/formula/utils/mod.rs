@@ -3,8 +3,6 @@ pub mod formula_iterator;
 pub mod formula_trait;
 // pub mod formula_user;
 
-
-
 // #[derive(Clone)]
 // pub struct Evaluator<'bump> {
 //     msg: Function<'bump>,
