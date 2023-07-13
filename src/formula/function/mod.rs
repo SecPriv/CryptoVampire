@@ -4,6 +4,7 @@ pub mod builtin;
 pub mod evaluate;
 pub mod function_like;
 pub mod if_then_else;
+pub mod invalid_function;
 pub mod nonce;
 pub mod predicate;
 pub mod skolem;
@@ -13,7 +14,7 @@ pub mod term_algebra;
 pub mod unused;
 
 // pub mod equality;
-use std::{cmp::Ordering, hash::Hash, marker::PhantomData, ptr::NonNull};
+use std::{cmp::Ordering, hash::Hash, marker::PhantomData, ptr::NonNull, ops::Deref};
 
 use bitflags::bitflags;
 
@@ -22,21 +23,28 @@ use bitflags::bitflags;
 use crate::{
     assert_variance, asssert_trait,
     container::{FromNN, NameFinder, ScopeAllocator},
+    formula::function::term_algebra::base_function::{BaseFunction, InnerBaseFunction},
     implderef, implvec,
     problem::cell::MemoryCell,
-    utils::{precise_as_ref::PreciseAsRef, string_ref::StrRef},
+    utils::{
+        precise_as_ref::PreciseAsRef,
+        string_ref::StrRef,
+        utils::{MaybeInvalid, Reference},
+    },
 };
 
 use self::{
     booleans::Booleans,
     evaluate::Evaluate,
     if_then_else::IfThenElse,
+    invalid_function::InvalidFunction,
     nonce::Nonce,
     predicate::Predicate,
     skolem::Skolem,
     step::StepFunction,
     subterm::Subterm,
     term_algebra::{
+        base_function::BaseFunctionTuple,
         cell::Cell,
         quantifier::{get_next_quantifer_id, InnerQuantifier, Quantifier},
         TermAlgebra,
@@ -103,6 +111,7 @@ pub enum InnerFunction<'bump> {
     Predicate(Predicate<'bump>),
     Tmp(Tmp<'bump>),
     Skolem(Skolem<'bump>),
+    Invalid(InvalidFunction<'bump>),
 }
 
 // pub struct InnerFunction
@@ -158,7 +167,31 @@ impl<'bump> PartialOrd for Function<'bump> {
     }
 }
 
+impl<'bump> Reference for Function<'bump> {
+    type Inner = InnerFunction<'bump>;
+
+    unsafe fn overwrite(&self, other: Self::Inner) {
+        std::ptr::drop_in_place(self.inner.as_ptr());
+        std::ptr::write(self.inner.as_ptr(), other);
+    }
+}
+
 impl<'bump> Function<'bump> {
+    pub fn new_from_inner(
+        container: &'bump impl ScopeAllocator<'bump, InnerFunction<'bump>>,
+        inner: InnerFunction<'bump>,
+    ) -> Self {
+        unsafe {
+            let ptr = container.alloc();
+            std::ptr::write(ptr.as_ptr(), inner);
+            Function {
+                inner: ptr,
+                container: Default::default(),
+            }
+        }
+    }
+
+    /// *safety*: do not call `f`, it is not initialised yet
     pub unsafe fn new_cyclic<F, T>(
         container: &'bump impl ScopeAllocator<'bump, InnerFunction<'bump>>,
         f: F,
@@ -175,14 +208,6 @@ impl<'bump> Function<'bump> {
         let (inner, t) = f(fun);
         std::ptr::write(fun.inner.as_ptr(), inner);
         (fun, t)
-    }
-
-    /// Replace the underlying function
-    ///
-    /// *Not thread safe*
-    pub unsafe fn overwrite(&self, other: InnerFunction<'bump>) {
-        std::ptr::drop_in_place(self.inner.as_ptr());
-        std::ptr::write(self.inner.as_ptr(), other);
     }
 
     pub fn new_spliting(
@@ -335,6 +360,57 @@ impl<'bump> Function<'bump> {
         }
     }
 
+    pub fn new_uninit(
+        container: &'bump impl ScopeAllocator<'bump, InnerFunction<'bump>>,
+        name: Option<implderef!(str)>,
+        input_sorts: Option<implvec!(Sort<'bump>)>,
+        output_sort: Option<Sort<'bump>>,
+    ) -> Self {
+        Self::new_from_inner(
+            container,
+            InnerFunction::Invalid(InvalidFunction {
+                name: name.map(|n| n.to_owned().into()),
+                args: input_sorts.map(|i| i.into_iter().collect()),
+                sort: output_sort,
+            }),
+        )
+    }
+
+    pub fn new_user_term_algebra(
+        container: &'bump impl ScopeAllocator<'bump, InnerFunction<'bump>>,
+        name: implderef!(str),
+        input_sorts: implvec!(Sort<'bump>),
+        output_sort: Sort<'bump>,
+    ) -> BaseFunctionTuple<'bump> {
+        assert!(output_sort.is_term_algebra());
+        let (eval, main) = unsafe {
+            Self::new_cyclic(container, |eval_fun| {
+                let main_fun = Self::new_from_inner(
+                    container,
+                    InnerFunction::TermAlgebra(TermAlgebra::Function(BaseFunction::Base(
+                        InnerBaseFunction {
+                            name: name.to_string().into(),
+                            args: input_sorts.into_iter().collect(),
+                            out: output_sort,
+                            eval_fun,
+                        },
+                    ))),
+                );
+                let ref_to_main_inner = match main_fun.precise_as_ref() {
+                    InnerFunction::TermAlgebra(TermAlgebra::Function(bfun)) => bfun,
+                    _ => unreachable!(),
+                };
+
+                let eval_inner = InnerFunction::TermAlgebra(TermAlgebra::Function(
+                    BaseFunction::Eval(ref_to_main_inner),
+                ));
+
+                (eval_inner, main_fun)
+            })
+        };
+        BaseFunctionTuple { main, eval }
+    }
+
     pub fn fast_outsort(&self) -> Option<Sort<'bump>> {
         todo!()
     }
@@ -436,5 +512,18 @@ impl<'bump> FromNN<'bump> for Function<'bump> {
             inner,
             container: Default::default(),
         }
+    }
+}
+
+impl<'bump> MaybeInvalid for InnerFunction<'bump> {
+    fn valid(&self) -> bool {
+        todo!()
+    }
+}
+
+impl<'bump> MaybeInvalid for Function<'bump> {
+    fn valid(&self) -> bool {
+        let Function { inner, .. } = self;
+        (!inner.as_ptr().is_null()) && self.as_ref().valid()
     }
 }

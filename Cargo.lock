@@ -3,6 +3,12 @@
 version = 3
 
 [[package]]
+name = "aliasable"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "250f629c0161ad8107cf89319e990051fae62832fd343083bea452d93e2205fd"
+
+[[package]]
 name = "anyhow"
 version = "1.0.71"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -18,6 +24,7 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 name = "automator"
 version = "0.2.0"
 dependencies = [
+ "aliasable",
  "anyhow",
  "bitflags 2.0.2",
  "clap",
@@ -29,6 +36,7 @@ dependencies = [
  "paste",
  "pest",
  "pest_derive",
+ "qcell",
  "static_init",
  "take_mut",
  "thiserror",
@@ -411,6 +419,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7b368fba921b0dce7e60f5e04ec15e565b3303972b42bcfde1d0713b881959eb"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "qcell"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76babcf954d92eee717a7c9bfc4921d91dfbf2124d9bfb6ed1b0b3d0c47361e3"
+dependencies = [
+ "once_cell",
 ]
 
 [[package]]

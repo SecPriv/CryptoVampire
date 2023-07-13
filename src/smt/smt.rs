@@ -297,6 +297,7 @@ impl<'bump> SmtFormula<'bump> {
                             Connective::Iff => SmtFormula::Eq(args),
                         },
                     },
+                    InnerFunction::Invalid(_) => unreachable!("the function is invalid")
                 }
             }
         }

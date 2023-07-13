@@ -1,27 +1,69 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Deref};
+
+use pest::Span;
+
+use self::guard::{GuardedFunction, GuardedMemoryCell, GuardedStep};
 
 use super::{
-    ast::{ASTList, Declaration, DeclareType, AST},
+    ast::{
+        extra::{self, AsFunction, SnN},
+        ASTList, Declaration, DeclareType, Ident, AST,
+    },
     *,
 };
 use crate::{
     container::Container,
-    formula::{sort::{InnerSort, Sort}, function::Function},
-    implvec,
+    formula::{
+        function::{Function, InnerFunction},
+        sort::{InnerSort, Sort},
+    },
+    implderef, implvec,
+    parser::parser::guard::Guard,
+    problem::{cell::InnerMemoryCell, step::InnerStep},
+    utils::{
+        string_ref::StrRef,
+        utils::{MaybeInvalid, Reference},
+    },
 };
 
-#[derive(Debug)]
-pub struct Environement<'bump, 'str> {
-    container: &'bump Container<'bump>,
-    ast: ASTList<'str>,
+mod guard {
+    use std::ops::Deref;
 
-    sort_hash: HashMap<&'bump str, Sort<'bump>>,
-    function_hash: HashMap<&'bump str, Function<'str>>
+    use crate::{
+        formula::function::Function,
+        problem::{cell::MemoryCell, step::Step},
+    };
+
+    #[derive(Hash, Clone, Copy, PartialEq, Eq, Debug)]
+    pub struct Guard<T>(T);
+
+    impl<T> Deref for Guard<T> {
+        type Target = T;
+
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    pub type GuardedFunction<'bump> = Guard<Function<'bump>>;
+    pub type GuardedStep<'bump> = Guard<Step<'bump>>;
+    pub type GuardedMemoryCell<'bump> = Guard<MemoryCell<'bump>>;
 }
 
-pub fn declare_sorts<'a, 'bump>(env: &mut Environement<'bump, 'a>) -> Result<(), E> {
-    env.ast
-        .into_iter()
+#[derive(Debug)]
+pub struct Environement<'bump> {
+    container: &'bump Container<'bump>,
+
+    sort_hash: HashMap<&'bump str, Sort<'bump>>,
+    function_hash: HashMap<String, Function<'bump>>,
+
+    functions_initialize: HashMap<GuardedFunction<'bump>, Option<InnerFunction<'bump>>>,
+    steps_initialize: HashMap<GuardedStep<'bump>, Option<InnerStep<'bump>>>,
+    cells_initialize: HashMap<GuardedMemoryCell<'bump>, Option<InnerMemoryCell<'bump>>>,
+}
+
+pub fn declare_sorts<'a, 'bump>(env: &mut Environement<'bump>, ast: &ASTList<'a>) -> Result<(), E> {
+    ast.into_iter()
         .filter_map(|ast| match ast {
             AST::Declaration(d) => match d.as_ref() {
                 Declaration::Type(dt) => Some(dt),
@@ -35,16 +77,151 @@ pub fn declare_sorts<'a, 'bump>(env: &mut Environement<'bump, 'a>) -> Result<(),
                 err(merr!(*s.get_name_span(); "the sort name {} is already in use", name))
             } else {
                 let sort = Sort::new_regular(env.container, name.to_owned());
-                env.sort_hash.insert(sort.name(), sort)
-                .ok_or_else(|| merr!(*s.get_name_span(); 
-                        "!UNREACHABLE!(line {} in {}) The sort name {} somehow reintroduced itself in the hash", line!(), file!(), name))
-                .map(|_|())
+                env.sort_hash
+                    .insert(sort.name(), sort)
+                    .ok_or_else(|| {
+                        merr!(*s.get_name_span();
+                        "!UNREACHABLE!(line {} in {}) \
+The sort name {} somehow reintroduced itself in the hash",
+                        line!(), file!(), name)
+                    })
+                    .map(|_| ())
             }
         })
 }
 
-pub fn declare_functions<'a, 'bump>(env: &mut Environement<'bump, 'a>) -> Result<(), E> {
+pub fn declare_functions<'a, 'bump>(
+    env: &mut Environement<'bump>,
+    ast: &ASTList<'a>,
+) -> Result<(), E> {
+    ast.into_iter()
+        .filter_map(|ast| match ast {
+            AST::Declaration(b) => match b.as_ref() {
+                Declaration::Function(f) => Some(f),
+                _ => None,
+            },
+            _ => None,
+        })
+        .try_for_each(|fun| {
+            let Ident {
+                span,
+                content: name,
+            } = fun.name();
+            if env.function_hash.contains_key(name) {
+                err(merr!(span; "the function name {} is already in use", name))
+            } else {
+                let input_sorts: Result<Vec<_>, _> = fun
+                    .args()
+                    .map(|idn| get_sort(env, idn.span, idn.content))
+                    .collect();
+                let output_sort = {
+                    let idn = fun.out();
+                    get_sort(env, idn.span, idn.content)
+                }?;
+                let fun =
+                    Function::new_user_term_algebra(env.container, name, input_sorts?, output_sort)
+                        .main;
+                env.function_hash
+                    .insert(fun.name().to_string(), fun)
+                    .ok_or_else(|| {
+                        merr!(span;
+                        "!UNREACHABLE!(line {} in {}) \
+The function name {} somehow reintroduced itself in the hash",
+                        line!(), file!(), name)
+                    })
+                    .map(|_| ())
+            }
+        })
+}
 
+pub fn declare_steps_and_cells<'a, 'bump>(
+    env: &mut Environement<'bump>,
+    ast: &ASTList<'a>,
+) -> Result<(), E> {
+    ast.into_iter()
+        .filter_map(|ast| match ast {
+            AST::Declaration(b) => match Box::as_ref(b) {
+                Declaration::Cell(f) => Some(extra::MAsFunction::Cell(f)),
+                _ => None,
+            },
+            AST::Step(b) => Some(extra::MAsFunction::Step(Box::as_ref(b))),
+            _ => None,
+        })
+        .try_for_each(|fun| {
+            let SnN {span, name} = fun.name();
+            if env.function_hash.contains_key(name) {
+                err(merr!(*span; "the step/cell/function name {} is already in use", name))
+            } else {
+                let input_sorts: Result<Vec<_>, _> = fun
+                    .args().into_iter()
+                    .map(|idn| get_sort(env, *idn.span, idn.name))
+                    .collect();
+                let output_sort = {
+                    let idn = fun.out();
+                    get_sort(env, *idn.span, idn.name)
+                }?;
+                let fun =
+                    Function::new_uninit(env.container, Some(name), Some(input_sorts?), Some(output_sort));
+                env.function_hash
+                    .insert(fun.name().to_string(), fun)
+                    .ok_or_else(|| {
+                        merr!(*span;
+                        "!UNREACHABLE!(line {} in {}) \
+The step/cell/function name {} somehow reintroduced itself in the hash",
+                        line!(), file!(), name)
+                    })
+                    .map(|_| ())
+            }
+        })
+}
 
-    todo!()
+fn get_sort<'a, 'bump>(
+    env: &Environement<'bump>,
+    span: Span<'a>,
+    str: implderef!(str),
+) -> Result<Sort<'bump>, E> {
+    env.sort_hash
+        .get(Deref::deref(&str))
+        .ok_or_else(|| merr!(span; "undefined sort {}", Deref::deref(&str)))
+        .map(|s| *s)
+}
+
+fn get_function<'a, 'bump>(
+    env: &Environement<'bump>,
+    span: Span<'a>,
+    str: implderef!(str),
+) -> Result<Function<'bump>, E> {
+    env.function_hash
+        .get(Deref::deref(&str))
+        .ok_or_else(|| merr!(span; "undefined function {}", Deref::deref(&str)))
+        .map(|s| *s)
+}
+
+impl<'bump> MaybeInvalid for Environement<'bump> {
+    fn valid(&self) -> bool {
+        todo!()
+    }
+}
+
+impl<'bump> Environement<'bump> {
+    pub fn finalize(&mut self) {
+        assert!(self.valid());
+
+        fn finalize_hash_map<T>(h: &mut HashMap<Guard<T>, Option<T::Inner>>)
+        where
+            T: Reference,
+        {
+            for (g, fun) in std::mem::take(h) {
+                if let Some(fun) = fun {
+                    unsafe { g.overwrite(fun) }
+                } else {
+                    unreachable!()
+                }
+            }
+        }
+
+        finalize_hash_map(&mut self.functions_initialize);
+        finalize_hash_map(&mut self.steps_initialize);
+        finalize_hash_map(&mut self.cells_initialize);
+    }
 }

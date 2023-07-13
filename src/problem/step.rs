@@ -23,7 +23,7 @@ use crate::{
         variable::Variable,
     },
     implderef, implvec,
-    utils::precise_as_ref::PreciseAsRef,
+    utils::{precise_as_ref::PreciseAsRef, utils::Reference},
 };
 
 // #[derive(Debug)]
@@ -50,7 +50,7 @@ pub struct Step<'bump> {
 
 // variables from 1 to parameters.len()
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub(crate) struct InnerStep<'bump> {
+pub struct InnerStep<'bump> {
     name: String,
     /// ie. the parameters of the step
     free_variables: Vec<Variable<'bump>>,
@@ -309,5 +309,15 @@ impl<'bump> FromNN<'bump> for Step<'bump> {
             inner,
             container: Default::default(),
         }
+    }
+}
+
+
+impl<'bump> Reference for Step<'bump> {
+    type Inner = InnerStep<'bump>;
+
+    unsafe fn overwrite(&self, other: Self::Inner) {
+        std::ptr::drop_in_place(self.inner.as_ptr());
+        std::ptr::write(self.inner.as_ptr(), other);
     }
 }

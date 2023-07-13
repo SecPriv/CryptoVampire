@@ -1,10 +1,32 @@
-use std::{fmt::Display, ops::Deref};
+use std::{fmt::Display, hash::Hash, ops::Deref};
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(Debug, Clone)]
 /// A boxed string that can also be a `&str`
 pub enum StrRef<'a> {
     Ref(&'a str),
     Owned(Box<str>),
+}
+
+impl<'a> PartialEq for StrRef<'a> {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_ref() == other.as_ref()
+    }
+}
+impl<'a> Eq for StrRef<'a> {}
+impl<'a> PartialOrd for StrRef<'a> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        PartialOrd::partial_cmp(self.as_ref(), other.as_ref())
+    }
+}
+impl<'a> Ord for StrRef<'a> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        Ord::cmp(self.as_ref(), other.as_ref())
+    }
+}
+impl<'a> Hash for StrRef<'a> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.as_ref().hash(state)
+    }
 }
 
 impl<'a> StrRef<'a> {

@@ -15,7 +15,7 @@ use crate::{
         sort::Sort,
     },
     implderef, implvec,
-    utils::precise_as_ref::PreciseAsRef,
+    utils::{precise_as_ref::PreciseAsRef, utils::Reference},
 };
 use core::fmt::Debug;
 
@@ -234,5 +234,14 @@ impl<'bump> FromNN<'bump> for MemoryCell<'bump> {
             inner,
             container: Default::default(),
         }
+    }
+}
+
+impl<'bump> Reference for MemoryCell<'bump> {
+    type Inner = InnerMemoryCell<'bump>;
+
+    unsafe fn overwrite(&self, other: Self::Inner) {
+        std::ptr::drop_in_place(self.inner.as_ptr());
+        std::ptr::write(self.inner.as_ptr(), other);
     }
 }

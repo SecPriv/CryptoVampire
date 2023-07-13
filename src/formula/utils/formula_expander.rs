@@ -275,6 +275,7 @@ where
                     | InnerFunction::Tmp(_)
                     | InnerFunction::Skolem(_)
                     | InnerFunction::Evaluate(_) => iter.collect(),
+                    InnerFunction::Invalid(_) => iter.collect(), // we continue anyway
                 }
             }
         }

@@ -161,7 +161,7 @@ boiler_plate!(l AST<'a>, 'a, content; |p| {
 });
 
 #[derive(Derivative)]
-#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct Ident<'s> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Span<'s>,
@@ -511,6 +511,20 @@ boiler_plate!(DeclareFunction<'a>, 'a, declare_function; |p| {
     Ok(Self { span, name, args, sort })
 });
 
+impl<'a> DeclareFunction<'a> {
+    pub fn name(&self) -> Ident<'a> {
+        self.name.0.content
+    }
+
+    pub fn args(&'_ self) -> impl Iterator<Item = Ident<'a>> + '_ {
+        self.args.args.iter().map(|tn| tn.0.content)
+    }
+
+    pub fn out(&self) -> Ident<'a> {
+        self.sort.0.content
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct DeclareFunctionArgs<'a> {
@@ -694,10 +708,40 @@ pub mod extra {
 
     use super::{DeclareCell, DeclareFunction, Function, Step, StepName, TypeName};
 
+    #[derive(Debug, PartialEq, Eq, Clone, Hash)]
+    pub enum MAsFunction<'a, 'b> {
+        // Function(DeclareFunction<'a>),
+        Step(&'b Step<'a>),
+        Cell(&'b DeclareCell<'a>),
+    }
+
+    impl<'a, 'b, 'c> AsFunction<'a, 'b> for &'c MAsFunction<'a, 'b> {
+        fn name(self) -> SnN<'a, 'b> {
+            match self {
+                MAsFunction::Step(s) => s.name(),
+                MAsFunction::Cell(c) => c.name(),
+            }
+        }
+
+        fn args(self) -> Vec<SnN<'a, 'b>> {
+            match self {
+                MAsFunction::Step(s) => s.args(),
+                MAsFunction::Cell(c) => c.args(),
+            }
+        }
+
+        fn out(self) -> SnN<'a, 'b> {
+            match self {
+                MAsFunction::Step(s) => s.out(),
+                MAsFunction::Cell(c) => c.out(),
+            }
+        }
+    }
+
     #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
     pub struct SnN<'a, 'b> {
-        span: &'b Span<'a>,
-        name: &'a str,
+        pub span: &'b Span<'a>,
+        pub name: &'a str,
     }
 
     impl<'a, 'b> From<&'b TypeName<'a>> for SnN<'a, 'b> {
@@ -728,32 +772,32 @@ pub mod extra {
     }
 
     #[enum_dispatch]
-    pub trait AsFunction<'a> {
-        fn name(&'_ self) -> SnN<'a, '_>;
-        fn args(&'_ self) -> Vec<SnN<'a, '_>>;
-        fn out(&'_ self) -> SnN<'a, '_>;
+    pub trait AsFunction<'a, 'b> {
+        fn name(self) -> SnN<'a, 'b>;
+        fn args(self) -> Vec<SnN<'a, 'b>>;
+        fn out(self) -> SnN<'a, 'b>;
     }
 
-    impl<'a> AsFunction<'a> for DeclareFunction<'a> {
-        fn name(&'_ self) -> SnN<'a, '_> {
+    impl<'a, 'b> AsFunction<'a, 'b> for &'b DeclareFunction<'a> {
+        fn name(self) -> SnN<'a, 'b> {
             From::from(&self.name)
         }
 
-        fn args(&'_ self) -> Vec<SnN<'a, '_>> {
+        fn args(self) -> Vec<SnN<'a, 'b>> {
             self.args.args.iter().map(|tn| tn.into()).collect()
         }
 
-        fn out(&'_ self) -> SnN<'a, '_> {
+        fn out(self) -> SnN<'a, 'b> {
             From::from(&self.sort)
         }
     }
 
-    impl<'a> AsFunction<'a> for DeclareCell<'a> {
-        fn name(&'_ self) -> SnN<'a, '_> {
+    impl<'a, 'b> AsFunction<'a, 'b> for &'b DeclareCell<'a> {
+        fn name(self) -> SnN<'a, 'b> {
             From::from(&self.name)
         }
 
-        fn args(&'_ self) -> Vec<SnN<'a, '_>> {
+        fn args(self) -> Vec<SnN<'a, 'b>> {
             self.args
                 .args
                 .iter()
@@ -765,17 +809,17 @@ pub mod extra {
                 .collect()
         }
 
-        fn out(&'_ self) -> SnN<'a, '_> {
+        fn out(self) -> SnN<'a, 'b> {
             From::from(&self.sort)
         }
     }
 
-    impl<'a> AsFunction<'a> for Step<'a> {
-        fn name(&'_ self) -> SnN<'a, '_> {
+    impl<'a, 'b> AsFunction<'a, 'b> for &'b Step<'a> {
+        fn name(self) -> SnN<'a, 'b> {
             From::from(&self.name)
         }
 
-        fn args(&'_ self) -> Vec<SnN<'a, '_>> {
+        fn args(self) -> Vec<SnN<'a, 'b>> {
             self.args
                 .bindings
                 .iter()
@@ -783,7 +827,7 @@ pub mod extra {
                 .collect()
         }
 
-        fn out(&'_ self) -> SnN<'a, '_> {
+        fn out(self) -> SnN<'a, 'b> {
             SnN {
                 span: &self.span,
                 name: STEP.name(),

@@ -1,6 +1,6 @@
 use std::{
     cell::Ref,
-    ops::{Deref, DerefMut},
+    ops::{Deref, DerefMut}, ptr::NonNull,
 };
 
 #[inline(always)]
@@ -123,4 +123,17 @@ macro_rules! destvec {
             }
         }
     }
+}
+
+pub trait MaybeInvalid {
+    fn valid(&self) -> bool;
+}
+
+pub trait Reference {
+    type Inner;
+
+    /// Replace the underlying function
+    ///
+    /// *Not thread safe*
+    unsafe fn overwrite(&self, other: Self::Inner);
 }

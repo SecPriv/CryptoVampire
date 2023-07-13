@@ -2,10 +2,10 @@ use crate::formula::{function::Function, sort::Sort};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct InnerBaseFunction<'bump> {
-    name: Box<str>,
-    args: Box<[Sort<'bump>]>,
-    out: Sort<'bump>,
-    eval_fun: Function<'bump>,
+    pub name: Box<str>,
+    pub args: Box<[Sort<'bump>]>,
+    pub out: Sort<'bump>,
+    pub eval_fun: Function<'bump>,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -26,4 +26,10 @@ impl<'bump> InnerBaseFunction<'bump> {
     pub fn args(&self) -> &[Sort<'bump>] {
         self.args.as_ref()
     }
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+pub struct BaseFunctionTuple<'bump> {
+    pub main: Function<'bump>,
+    pub eval: Function<'bump>,
 }
