@@ -1,5 +1,14 @@
+//! Slice-like object for references
+//!
+//! See [VecRef]
 use std::{iter::FusedIterator, ops::Index, slice::Iter, vec::IntoIter};
 
+/// Slice-like object for references
+///
+/// To iterate over `&'s T`.
+///
+/// Most notably it accepts `Vec<&'a T>`, `&'a [T]`, `&'a [&'a T]`
+/// single `&'a T` and the empty iterator.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum VecRef<'a, T> {
     Vec(Vec<&'a T>),
@@ -8,16 +17,6 @@ pub enum VecRef<'a, T> {
     Single(&'a T),
     Empty,
 }
-
-// macro_rules! mmap {
-//     ($arr:expr, $v:ident, $b:block) => {
-//         match $arr {
-//             VecRef::Vec($v) => $b,
-//             VecRef::Ref($v) => $b,
-//             VecRef::RefRef($v) => $b,
-//         }
-//     };
-// }
 
 impl<'a, T> VecRef<'a, T> {
     pub fn len(&self) -> usize {
@@ -53,7 +52,7 @@ impl<'a, T> VecRef<'a, T> {
         }
     }
 
-    pub fn iter(&'a self) -> impl Iterator<Item = &'a T> {
+    pub fn iter(&'_ self) -> impl Iterator<Item = &'a T> + '_ {
         self.into_iter()
     }
 }
@@ -75,10 +74,10 @@ impl<'a, T> Index<usize> for VecRef<'a, T> {
     }
 }
 
-impl<'a, T> IntoIterator for &'a VecRef<'a, T> {
+impl<'a, 'b, T> IntoIterator for &'b VecRef<'a, T> {
     type Item = &'a T;
 
-    type IntoIter = IterVecRef<'a, T>;
+    type IntoIter = IterVecRef<'a, 'b, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         match self {
@@ -94,7 +93,7 @@ impl<'a, T> IntoIterator for &'a VecRef<'a, T> {
 impl<'a, T> IntoIterator for VecRef<'a, T> {
     type Item = &'a T;
 
-    type IntoIter = IterVecRef<'a, T>;
+    type IntoIter = IterVecRef<'a, 'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         match self {
@@ -108,15 +107,15 @@ impl<'a, T> IntoIterator for VecRef<'a, T> {
 }
 
 #[derive(Debug, Clone)]
-pub enum IterVecRef<'a, T> {
+pub enum IterVecRef<'a, 'b, T> {
     OwnedVec(IntoIter<&'a T>),
     Vec(Iter<'a, T>),
-    Ref(Iter<'a, &'a T>),
+    Ref(Iter<'b, &'a T>),
     Single(&'a T),
     Empty,
 }
 
-impl<'a, T> Iterator for IterVecRef<'a, T> {
+impl<'a, 'b, T> Iterator for IterVecRef<'a, 'b, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -144,11 +143,11 @@ impl<'a, T> Iterator for IterVecRef<'a, T> {
     }
 }
 
-impl<'a, T> FusedIterator for IterVecRef<'a, T> {}
+impl<'a, 'b, T> FusedIterator for IterVecRef<'a, 'b, T> {}
 
-impl<'a, T> ExactSizeIterator for IterVecRef<'a, T> {}
+impl<'a, 'b, T> ExactSizeIterator for IterVecRef<'a, 'b, T> {}
 
-impl<'a, T> DoubleEndedIterator for IterVecRef<'a, T> {
+impl<'a, 'b, T> DoubleEndedIterator for IterVecRef<'a, 'b, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
         match self {
             IterVecRef::OwnedVec(iter) => iter.next_back(),

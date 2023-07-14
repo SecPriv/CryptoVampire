@@ -45,6 +45,12 @@ mod guard {
         }
     }
 
+    impl<T> From<T> for Guard<T> {
+        fn from(value: T) -> Self {
+            Guard(value)
+        }
+    }
+
     pub type GuardedFunction<'bump> = Guard<Function<'bump>>;
     pub type GuardedStep<'bump> = Guard<Step<'bump>>;
     pub type GuardedMemoryCell<'bump> = Guard<MemoryCell<'bump>>;
@@ -52,16 +58,35 @@ mod guard {
 
 #[derive(Debug)]
 pub struct Environement<'bump> {
+    /// the main memory
     container: &'bump Container<'bump>,
 
+    /// some hash map to quickly turn [String] likes into [Sort] or [Function] during parsing.
+    ///
+    /// This is basically the non-variable bounded names
+    ///
+    /// This one is for [Sort]
     sort_hash: HashMap<&'bump str, Sort<'bump>>,
+    /// That one for [Function]s
     function_hash: HashMap<String, Function<'bump>>,
 
+    /// List of things to initialize
+    /// 
+    /// Those are recurive structure or immutable structure which cannot be built at once.
+    /// Instead we define them incrementally and once the parsing is done, we call [Self::finalize()]
+    /// 
+    /// We use [Guard<T>] to ensure only the trait we know won't call the underlying `T` in
+    /// that are not initialized yet.
+    /// 
+    /// This one is for [Function]
     functions_initialize: HashMap<GuardedFunction<'bump>, Option<InnerFunction<'bump>>>,
+    /// For [Step][crate::problem::step::Step]
     steps_initialize: HashMap<GuardedStep<'bump>, Option<InnerStep<'bump>>>,
+    /// For [MemoryCell][crate::problem::cell::MemoryCell]
     cells_initialize: HashMap<GuardedMemoryCell<'bump>, Option<InnerMemoryCell<'bump>>>,
 }
 
+/// Declare the sort
 pub fn declare_sorts<'a, 'bump>(env: &mut Environement<'bump>, ast: &ASTList<'a>) -> Result<(), E> {
     ast.into_iter()
         .filter_map(|ast| match ast {
@@ -90,6 +115,7 @@ The sort name {} somehow reintroduced itself in the hash",
         })
 }
 
+/// declare the user function (e.g., tuple & co)
 pub fn declare_functions<'a, 'bump>(
     env: &mut Environement<'bump>,
     ast: &ASTList<'a>,
@@ -134,6 +160,10 @@ The function name {} somehow reintroduced itself in the hash",
         })
 }
 
+/// Declare memory cells and steps.
+///
+/// The functions are also added to the list of things to initialize as the
+/// they are kept empty. For instance a step might depend on itself.
 pub fn declare_steps_and_cells<'a, 'bump>(
     env: &mut Environement<'bump>,
     ast: &ASTList<'a>,
@@ -147,21 +177,38 @@ pub fn declare_steps_and_cells<'a, 'bump>(
             AST::Step(b) => Some(extra::MAsFunction::Step(Box::as_ref(b))),
             _ => None,
         })
+        // extract only the terms that matter
+        // that is the declarations of cells and steps
+        // and turn them into a MAsFunction to generically take care of them
         .try_for_each(|fun| {
-            let SnN {span, name} = fun.name();
+            let SnN { span, name } = fun.name();
             if env.function_hash.contains_key(name) {
                 err(merr!(*span; "the step/cell/function name {} is already in use", name))
             } else {
+                // the input sorts (will gracefully error out later if a sort is undefined)
                 let input_sorts: Result<Vec<_>, _> = fun
-                    .args().into_iter()
+                    .args()
+                    .into_iter()
                     .map(|idn| get_sort(env, *idn.span, idn.name))
                     .collect();
+                // the output sort
                 let output_sort = {
                     let idn = fun.out();
                     get_sort(env, *idn.span, idn.name)
                 }?;
-                let fun =
-                    Function::new_uninit(env.container, Some(name), Some(input_sorts?), Some(output_sort));
+                // built an uninitialized function
+                let fun = Function::new_uninit(
+                    env.container,
+                    Some(name),
+                    Some(input_sorts?),
+                    Some(output_sort),
+                );
+
+                // add the function to the list of things to initialize
+                let not_already_in = env.functions_initialize.insert(fun.into(), None).is_none();
+                assert!(not_already_in);
+
+                // add the function the map of function for faster parsing
                 env.function_hash
                     .insert(fun.name().to_string(), fun)
                     .ok_or_else(|| {
@@ -175,6 +222,7 @@ The step/cell/function name {} somehow reintroduced itself in the hash",
         })
 }
 
+/// Find the [Sort] in already declared in [Environement::sort_hash]
 fn get_sort<'a, 'bump>(
     env: &Environement<'bump>,
     span: Span<'a>,
@@ -186,6 +234,7 @@ fn get_sort<'a, 'bump>(
         .map(|s| *s)
 }
 
+/// Find the [Function] in already declared in [Environement::sort_function]
 fn get_function<'a, 'bump>(
     env: &Environement<'bump>,
     span: Span<'a>,

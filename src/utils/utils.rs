@@ -1,6 +1,7 @@
 use std::{
     cell::Ref,
-    ops::{Deref, DerefMut}, ptr::NonNull,
+    ops::{Deref, DerefMut},
+    ptr::NonNull,
 };
 
 #[inline(always)]
@@ -96,6 +97,35 @@ macro_rules! implvec {
 
 }
 
+/// A macro to do pattern matching on any [IntoIterator]
+///
+/// # Example
+///
+/// Base usage
+/// ```
+/// # use automator::destvec;
+/// let vec = vec![1,3,4];
+///
+/// destvec!([a, b, c] = vec);
+///
+/// assert_eq!(a, 1);
+/// assert_eq!(b, 3);
+/// assert_eq!(c, 4);
+/// ```
+///
+/// It is also possible to control what happens on failure with the second pattern
+///
+///
+/// ```
+/// # use automator::destvec;
+/// let vec = vec![1,3,4,5];
+///
+/// destvec!([a, b, c] = vec; |err| { println!("{}",err); 0 });
+///
+/// assert_eq!(a, 1);
+/// assert_eq!(b, 3);
+/// assert_eq!(c, 4);
+/// ```
 #[macro_export]
 macro_rules! destvec {
     ([$($arg:ident),*] = $vec:expr) => {
@@ -119,12 +149,24 @@ macro_rules! destvec {
         if !iter.next().is_none() {
             {
                 let $err = "too many elements";
-                $err_handling
+                $err_handling ;
             }
         }
     }
 }
 
+/// For things that might be invalid
+///
+/// # Reason
+/// Many object cannot be soundly built in one go. Most notably some
+/// [Function][crate::formula::function::Function] self recursive, and
+/// [MemoryCell][crate::problem::cell::MemoryCell] needs to have its
+/// [Assignement][crate::problem::cell::Assignement] built incrementally.
+///
+/// This trait is here to check if those object are properly initiallized
+/// and propagate this notion to object that might sort them.
+///
+/// Maybe one day this could be replaced by [MaybeUninit][std::mem::MaybeUninit].
 pub trait MaybeInvalid {
     fn valid(&self) -> bool;
 }
