@@ -74,3 +74,8 @@ pub static HAPPENS: Function<'static> = new_static_function(InnerFunction::Predi
     args: Box::new([STEP.clone()]),
     // out: BOOL.clone(),
 }));
+
+#[dynamic]
+pub static IF_THEN_ELSE_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(
+    super::term_algebra::TermAlgebra::IfThenElse,
+));

@@ -149,7 +149,7 @@ pub enum AST<'a> {
     Order(Box<Order<'a>>),
     AssertCrypto(Box<AssertCrypto<'a>>),
     Assert(Box<Assert<'a>>),
-    Let(Box<Let<'a>>),
+    Let(Box<Macro<'a>>),
 }
 boiler_plate!(l AST<'a>, 'a, content; |p| {
     declaration => { Ok(AST::Declaration(Box::new(p.try_into()?))) }
@@ -171,29 +171,37 @@ boiler_plate!(Ident<'s>, 's, ident; |p| {
     Ok(Ident { span: p.as_span(), content: p.as_str()})
 });
 
-#[derive(Derivative)]
-#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct TypeName<'a>(pub Sub<'a, Ident<'a>>);
 boiler_plate!(TypeName<'a>, 'a, type_name; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
-#[derive(Derivative)]
-#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Function<'a>(pub Sub<'a, Ident<'a>>);
 boiler_plate!(Function<'a>, 'a, function; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
-#[derive(Derivative)]
-#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct MacroName<'a>(pub Sub<'a, Ident<'a>>);
+boiler_plate!(MacroName<'a>, 'a, function; |p| {
+    Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
+});
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Variable<'a>(pub Sub<'a, &'a str>);
 boiler_plate!(Variable<'a>, 'a, variable; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.as_str() }))
 });
 
-#[derive(Derivative)]
-#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+impl<'a> Variable<'a> {
+    pub fn name(&self) -> &'a str {
+        self.0.content
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct StepName<'a>(pub Sub<'a, Ident<'a>>);
 boiler_plate!(StepName<'a>, 'a, step_name; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
@@ -251,6 +259,7 @@ pub enum InnerTerm<'a> {
     Quant(Box<Quantifier<'a>>),
     Appliction(Box<Application<'a>>),
     Infix(Box<Infix<'a>>),
+    Macro(Box<AppMacro<'a>>),
 }
 boiler_plate!(InnerTerm<'s>, 's, inner_term; |p| {
     let span = p.as_span();
@@ -283,12 +292,52 @@ boiler_plate!(InnerTerm<'s>, 's, inner_term; |p| {
                     dest_rule!(span in [inner] = cmn_rule.into_inner());
                     Ok(InnerTerm::Appliction(Box::new(inner)))
                 },
+                Rule::macro_application => {
+                    dest_rule!(span in [inner] = cmn_rule.into_inner());
+                    Ok(InnerTerm::Macro(Box::new(inner)))
+                }
                 r => unreachable_rules!(span, r; let_in, if_then_else, find_such_that, quantifier, application)
             }
         },
         r => unreachable_rules!(span, r; infix_term, commun_base)
     }
 });
+
+#[derive(Derivative)]
+#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct AppMacro<'a> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
+    pub span: Span<'a>,
+    pub inner: InnerAppMacro<'a>,
+}
+boiler_plate!(AppMacro<'a>, 'a, macro_application; |p| {
+    let span = p.as_span();
+    let mut p = p.into_inner();
+    let inner = {
+        let name: MacroName = p.next().unwrap().try_into()?;
+
+        match name.0.content.content {
+            "msg" => InnerAppMacro::Msg,
+            "cond" => InnerAppMacro::Cond,
+            _ => {
+                let args : Result<Vec<_>, _> = p.map(TryInto::try_into).collect();
+                InnerAppMacro::Other { name, args: args? }
+            }
+        }
+    };
+
+    Ok(Self{span, inner})
+});
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub enum InnerAppMacro<'a> {
+    Msg,
+    Cond,
+    Other {
+        name: MacroName<'a>,
+        args: Vec<Term<'a>>,
+    },
+}
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -616,14 +665,14 @@ boiler_plate!(Assignement<'a>, 'a, assignement; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Let<'a> {
+pub struct Macro<'a> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Span<'a>,
-    pub name: Function<'a>,
+    pub name: MacroName<'a>,
     pub args: TypedArgument<'a>,
     pub term: Term<'a>,
 }
-boiler_plate!(Let<'a>, 'a, mlet ; |p| {
+boiler_plate!(Macro<'a>, 'a, mlet ; |p| {
     let span = p.as_span();
     dest_rule!(span in [name, args, term] = p);
     Ok(Self {span, name, args, term})
@@ -700,13 +749,25 @@ boiler_plate!(OrderOperation, operation; {
     order_gt => Gt
 });
 
+impl<'a, 'b> IntoIterator for &'b TypedArgument<'a> {
+    type Item = &'b VariableBinding<'a>;
+
+    type IntoIter = Iter<'b, VariableBinding<'a>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.bindings.iter()
+    }
+}
+
 pub mod extra {
     use enum_dispatch::enum_dispatch;
     use pest::Span;
 
     use crate::formula::sort::builtins::STEP;
 
-    use super::{DeclareCell, DeclareFunction, Function, Step, StepName, TypeName};
+    use super::{
+        DeclareCell, DeclareFunction, Function, Macro, MacroName, Step, StepName, TypeName,
+    };
 
     #[derive(Debug, PartialEq, Eq, Clone, Hash)]
     pub enum MAsFunction<'a, 'b> {
@@ -764,6 +825,15 @@ pub mod extra {
 
     impl<'a, 'b> From<&'b StepName<'a>> for SnN<'a, 'b> {
         fn from(value: &'b StepName<'a>) -> Self {
+            SnN {
+                span: &value.0.span,
+                name: value.0.content.content,
+            }
+        }
+    }
+
+    impl<'a, 'b> From<&'b MacroName<'a>> for SnN<'a, 'b> {
+        fn from(value: &'b MacroName<'a>) -> Self {
             SnN {
                 span: &value.0.span,
                 name: value.0.content.content,
@@ -832,6 +902,24 @@ pub mod extra {
                 span: &self.span,
                 name: STEP.name(),
             }
+        }
+    }
+
+    impl<'a, 'b> AsFunction<'a, 'b> for &'b Macro<'a> {
+        fn name(self) -> SnN<'a, 'b> {
+            From::from(&self.name)
+        }
+
+        fn args(self) -> Vec<SnN<'a, 'b>> {
+            self.args
+                .bindings
+                .iter()
+                .map(|b| From::from(&b.type_name))
+                .collect()
+        }
+
+        fn out(self) -> SnN<'a, 'b> {
+            panic!()
         }
     }
 }

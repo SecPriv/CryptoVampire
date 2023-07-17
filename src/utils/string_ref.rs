@@ -69,6 +69,21 @@ impl<'a> AsRef<str> for StrRef<'a> {
     }
 }
 
+impl<'a> Into<Box<str>> for StrRef<'a> {
+    fn into(self) -> Box<str> {
+        match self {
+            StrRef::Ref(s) => Box::from(s),
+            StrRef::Owned(s) => s,
+        }
+    }
+}
+
+impl<'a> Into<String> for StrRef<'a> {
+    fn into(self) -> String {
+        Box::from(self).into_string()
+    }
+}
+
 impl<'a> Deref for StrRef<'a> {
     type Target = str;
 

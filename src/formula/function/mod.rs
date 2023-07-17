@@ -14,9 +14,10 @@ pub mod term_algebra;
 pub mod unused;
 
 // pub mod equality;
-use std::{cmp::Ordering, hash::Hash, marker::PhantomData, ptr::NonNull, ops::Deref};
+use std::{cmp::Ordering, hash::Hash, marker::PhantomData, ops::Deref, ptr::NonNull};
 
 use bitflags::bitflags;
+use itertools::Itertools;
 
 // use crate::problem::step::Step;
 
@@ -59,6 +60,7 @@ use super::{
         sorted::{Sorted, SortedError},
         Sort,
     },
+    variable::Variable,
 };
 use core::fmt::Debug;
 
@@ -358,6 +360,55 @@ impl<'bump> Function<'bump> {
             inner,
             container: Default::default(),
         }
+    }
+
+    /// returns the function and the array of free variables
+    pub fn new_find_such_that(
+        container: &'bump (impl ScopeAllocator<'bump, InnerFunction<'bump>>
+                    + NameFinder<Function<'bump>>),
+        vars: implvec!(Variable<'bump>),
+        condition: RichFormula<'bump>,
+        success: RichFormula<'bump>,
+        failure: RichFormula<'bump>,
+    ) -> (Self, Vec<Variable<'bump>>) {
+        let id = get_next_quantifer_id();
+
+        let vars: Box<[_]> = vars.into_iter().collect();
+
+        let free_variables = [&condition, &success, &failure]
+            .into_iter()
+            .flat_map(|f| f.get_free_vars().into_iter().cloned())
+            .filter(|v| !vars.contains(v))
+            .unique()
+            .collect_vec();
+
+        if cfg!(debug_assertions) {
+            for (v1, v2) in itertools::Itertools::cartesian_product(
+                free_variables.iter(),
+                free_variables.iter(),
+            ) {
+                assert!(
+                    (v1.id != v2.id) || (v1.sort == v2.sort),
+                    "\n\tv1: {:?}\n\tv2: {:?}",
+                    v1,
+                    v2
+                )
+            }
+        }
+
+        let inner = InnerFunction::TermAlgebra(TermAlgebra::Quantifier(
+            term_algebra::quantifier::Quantifier {
+                id,
+                bound_variables: vars,
+                free_variables: free_variables.iter().cloned().collect(),
+                inner: term_algebra::quantifier::InnerQuantifier::FindSuchThat {
+                    condition: Box::new(condition),
+                    success: Box::new(success),
+                    faillure: Box::new(failure),
+                },
+            },
+        ));
+        (Self::new_from_inner(container, inner), free_variables)
     }
 
     pub fn new_uninit(
