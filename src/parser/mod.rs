@@ -2,7 +2,7 @@ mod ast;
 mod parser;
 // mod builders;
 
-use pest::error::Error;
+use pest::{error::Error, Span};
 use pest_derive::Parser;
 
 #[derive(Parser, Debug)]
@@ -34,3 +34,18 @@ macro_rules! merr {
 }
 
 pub(crate) use merr;
+
+use crate::formula::sort::sort_proxy::InferenceError;
+
+trait IntoRuleResult<T, Err> {
+    fn into_rr<'a>(self, span: Span<'a>) -> Result<T, E>;
+}
+
+impl<'bump, T> IntoRuleResult<T, InferenceError<'bump>> for Result<T, InferenceError<'bump>> {
+    fn into_rr<'a>(self, span: Span<'a>) -> Result<T, E> {
+        match self {
+            Ok(x) => Ok(x),
+            Err(e) => err(merr!(span; "{}", e)),
+        }
+    }
+}

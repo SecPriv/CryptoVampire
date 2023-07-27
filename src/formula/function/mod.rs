@@ -7,6 +7,7 @@ pub mod if_then_else;
 pub mod invalid_function;
 pub mod nonce;
 pub mod predicate;
+pub mod signature;
 pub mod skolem;
 pub mod step;
 pub mod subterm;
@@ -22,15 +23,19 @@ use itertools::Itertools;
 // use crate::problem::step::Step;
 
 use crate::{
-    assert_variance, asssert_trait,
+    variants, assert_variance, asssert_trait,
     container::{FromNN, NameFinder, ScopeAllocator},
-    formula::function::term_algebra::base_function::{BaseFunction, InnerBaseFunction},
+    formula::function::{
+        signature::{FastSignature, FixedSignature},
+        term_algebra::base_function::{BaseFunction, InnerBaseFunction},
+    },
     implderef, implvec,
     problem::cell::MemoryCell,
     utils::{
         precise_as_ref::PreciseAsRef,
         string_ref::StrRef,
         utils::{MaybeInvalid, Reference},
+        vecref::VecRef,
     },
 };
 
@@ -41,6 +46,7 @@ use self::{
     invalid_function::InvalidFunction,
     nonce::Nonce,
     predicate::Predicate,
+    signature::Signature,
     skolem::Skolem,
     step::StepFunction,
     subterm::Subterm,
@@ -57,6 +63,7 @@ use super::{
     formula::{self, RichFormula},
     quantifier,
     sort::{
+        sort_proxy::SortProxy,
         sorted::{Sorted, SortedError},
         Sort,
     },
@@ -114,6 +121,22 @@ pub enum InnerFunction<'bump> {
     Tmp(Tmp<'bump>),
     Skolem(Skolem<'bump>),
     Invalid(InvalidFunction<'bump>),
+}
+
+impl<'bump> InnerFunction<'bump> {
+    variants!(InnerFunction;
+        Bool:Booleans,
+        Nonce:Nonce<'bump>,
+        Step:StepFunction<'bump>,
+        Subterm:Subterm<'bump>,
+        TermAlgebra:TermAlgebra<'bump>,
+        IfThenElse:IfThenElse,
+        Evaluate:Evaluate<'bump>,
+        Predicate:Predicate<'bump>,
+        Tmp:Tmp<'bump>,
+        Skolem:Skolem<'bump>,
+        Invalid:InvalidFunction<'bump>,
+    );
 }
 
 // pub struct InnerFunction
@@ -260,7 +283,8 @@ impl<'bump> Function<'bump> {
 
         let o_sort = constructor.fast_outsort().unwrap();
         constructor
-            .forced_input_sort()
+            .fast_insort()
+            .expect("term algebra should have fast in sorts")
             .iter()
             .enumerate()
             .map(|(i, &s)| {
@@ -463,9 +487,21 @@ impl<'bump> Function<'bump> {
     }
 
     pub fn fast_outsort(&self) -> Option<Sort<'bump>> {
-        todo!()
+        self.signature().fast().map(|s| s.out)
     }
-    pub fn forced_input_sort(&self) -> &[Sort<'bump>] {
+    pub fn fast_insort(&'_ self) -> Option<Vec<Sort<'bump>>> {
+        self.signature().fast().map(|s| s.args)
+    }
+
+    pub fn signature(&self) -> impl Signature<'bump> {
+        todo!();
+        FixedSignature {
+            out: todo!(),
+            args: todo!(),
+        }
+    }
+
+    pub fn valid_args(&self, args: implvec!(SortProxy<'bump>)) -> bool {
         todo!()
     }
 

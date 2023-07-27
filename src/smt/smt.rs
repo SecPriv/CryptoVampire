@@ -144,7 +144,7 @@ impl<'bump> fmt::Display for Smt<'bump> {
             Smt::AssertNot(e) => write!(f, "(assert-not {})", e),
             Smt::DeclareFun(fun) => {
                 write!(f, "(declare-fun {} (", fun.name())?;
-                for s in fun.forced_input_sort() {
+                for s in fun.fast_insort().expect("todo") {
                     write!(f, "{} ", s.name())?;
                 }
                 write!(f, ") {})", fun.fast_outsort().unwrap())
@@ -190,7 +190,7 @@ impl<'bump> fmt::Display for Smt<'bump> {
 
                         write!(f, "\t\t\t({} ", c.fun.name())?;
 
-                        for (i, s) in c.fun.forced_input_sort().iter().enumerate() {
+                        for (i, s) in c.fun.fast_insort().expect("todo").iter().enumerate() {
                             write!(f, "({} {}) ", c.dest.get(i).unwrap().name(), s)?;
                         }
                         write!(f, ")\n")?;

@@ -346,27 +346,33 @@ impl<'bump> Environement<'bump> {
 mod parsable_trait {
     use std::{borrow::BorrowMut, cell::RefCell, collections::HashSet, rc::Rc};
 
+    use if_chain::if_chain;
     use itertools::Itertools;
     use pest::Span;
 
     use crate::{
         formula::{
+            self,
             formula::RichFormula,
             function::{
+                self,
                 builtin::{IF_THEN_ELSE, IF_THEN_ELSE_TA},
-                Function,
+                signature::{CheckError, Signature},
+                term_algebra::TermAlgebra,
+                Function, InnerFunction,
             },
             sort::{
                 builtins::{BOOL, CONDITION, MESSAGE},
+                sort_proxy::SortProxy,
                 Sort,
             },
             variable::Variable,
         },
         parser::{
-            ast::{self, extra::SnN},
+            ast::{self, extra::SnN, VariableBinding},
             err, merr,
-            parser::get_sort,
-            E,
+            parser::{get_function, get_sort},
+            IntoRuleResult, E,
         },
     };
 
@@ -382,36 +388,6 @@ mod parsable_trait {
     impl Default for State {
         fn default() -> Self {
             Self::High
-        }
-    }
-
-    /// A way to emulate sort variables for type inference
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Default)]
-    pub struct SortProxy<'bump>(Rc<RefCell<Option<Sort<'bump>>>>);
-
-    impl<'bump> SortProxy<'bump> {
-        fn match_sort<'a>(&self, s: Sort<'bump>, span: Span<'a>) -> Result<(), E> {
-            match self.0.borrow().clone() {
-                Some(s2) if s2 == s => Ok(()),
-                None => {
-                    // if not defined yet, assign a sort
-                    *RefCell::borrow_mut(&self.0.as_ref()) = Some(s);
-                    Ok(())
-                }
-                Some(s2) => err(merr!(span; "wrong sort: {} instead of {}", s2.name(), s.name())),
-            }
-        }
-    }
-
-    impl<'bump> From<Sort<'bump>> for SortProxy<'bump> {
-        fn from(value: Sort<'bump>) -> Self {
-            Self(Rc::new(RefCell::new(Some(value))))
-        }
-    }
-
-    impl<'bump> Into<Option<Sort<'bump>>> for SortProxy<'bump> {
-        fn into(self) -> Option<Sort<'bump>> {
-            self.0.borrow().clone()
         }
     }
 
@@ -506,7 +482,7 @@ mod parsable_trait {
 
             // check sort
             if let Some(e) = expected_sort.and_then(|s| s.into()) {
-                SortProxy::match_sort(&eb, e, self.span)?
+                SortProxy::expects(&eb, e).into_rr(self.span)?
             }
 
             let ast::IfThenElse {
@@ -540,7 +516,7 @@ mod parsable_trait {
         ) -> Result<Self::R, E> {
             expected_sort
                 .into_iter()
-                .try_for_each(|s| s.match_sort(MESSAGE.as_sort(), self.span))?;
+                .try_for_each(|s| s.expects(MESSAGE.as_sort()).into_rr(self.span))?;
 
             let ast::FindSuchThat {
                 vars,
@@ -568,6 +544,14 @@ mod parsable_trait {
                         type_name,
                         ..
                     } = v;
+
+                    // ensures the name is free
+                    if env.function_hash.contains_key(variable.name()) {
+                        return err(
+                            merr!(variable.0.span; "the name {} is already taken", variable.name()),
+                        );
+                    }
+
                     let SnN { span, name } = type_name.into();
 
                     let var = Variable {
@@ -576,6 +560,7 @@ mod parsable_trait {
                     };
 
                     // sneakly expand `bvars`
+                    // we need this here to keep the name
                     let content = (variable.name(), var.into());
                     bvars.push(content);
 
@@ -593,7 +578,7 @@ mod parsable_trait {
             bvars.truncate(bn);
 
             let (f /* the function */, fvars /* the free vars */) =
-                Function::new_find_such_that(env.container, vars.clone(), condition, left, right);
+                Function::new_find_such_that(env.container, vars, condition, left, right);
 
             Ok(match state {
                 State::Low => f.f(fvars.into_iter().map(RichFormula::from)),
@@ -601,9 +586,205 @@ mod parsable_trait {
             })
         }
     }
-    // impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Quantifier<'a> {}
-    // impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Application<'a> {}
+    impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Quantifier<'a> {
+        type R = RichFormula<'bump>;
+
+        fn parse(
+            &self,
+            env: &Environement<'bump>,
+            bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
+            state: State,
+            expected_sort: Option<SortProxy<'bump>>,
+        ) -> Result<Self::R, E> {
+            let ast::Quantifier {
+                kind,
+                span,
+                vars,
+                content,
+                ..
+            } = self;
+
+            let es = match state {
+                State::Convert | State::High => BOOL.as_sort().into(),
+                State::Low => CONDITION.as_sort().into(),
+            };
+            expected_sort
+                .into_iter()
+                .try_for_each(|s| s.expects(es).into_rr(*span))?;
+
+            let bn = bvars.len();
+
+            bvars.reserve(vars.into_iter().len());
+            let vars: Result<Vec<_>, _> = vars
+                .into_iter()
+                .enumerate()
+                .map(|(i, v)| {
+                    let id = i + bn;
+                    let VariableBinding {
+                        variable,
+                        type_name,
+                        ..
+                    } = v;
+
+                    let vname = variable.name();
+                    // ensures the name is free
+                    if env.function_hash.contains_key(vname) {
+                        return err(merr!(variable.0.span; "the name {} is already taken", vname));
+                    }
+
+                    let SnN { span, name } = type_name.into();
+
+                    let var = Variable {
+                        id,
+                        sort: get_sort(env, *span, name)?,
+                    };
+
+                    // sneakly expand `bvars`
+                    // we need this here to keep the name
+                    let content = (variable.name(), var.into());
+                    bvars.push(content);
+
+                    Ok(var)
+                })
+                .collect();
+            let vars = vars?;
+
+            // parse body
+            let content = content.parse(env, bvars, state, Some(es.into()))?;
+
+            // remove bounded variables from pile
+            bvars.truncate(bn);
+
+            let q = {
+                let status = match state {
+                    State::Convert | State::High => formula::quantifier::Status::Bool,
+                    State::Low => formula::quantifier::Status::Condition,
+                };
+                match kind {
+                    ast::QuantifierKind::Forall => formula::quantifier::Quantifier::Forall {
+                        variables: vars,
+                        status,
+                    },
+                    ast::QuantifierKind::Exists => formula::quantifier::Quantifier::Exists {
+                        variables: vars,
+                        status,
+                    },
+                }
+            };
+
+            Ok(match state {
+                State::Convert | State::High => RichFormula::Quantifier(q, Box::new(content)),
+                State::Low => {
+                    let fq = Function::new_quantifier_from_quantifier(
+                        env.container,
+                        q,
+                        Box::new(content),
+                    );
+
+                    let args = match fq.as_ref() {
+                        function::InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q)) => {
+                            q.free_variables.iter()
+                        }
+                        _ => unreachable!(),
+                    }
+                    .map(RichFormula::from);
+
+                    fq.f(args)
+                }
+            })
+        }
+    }
+    impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Application<'a> {
+        type R = RichFormula<'bump>;
+
+        fn parse(
+            &self,
+            env: &Environement<'bump>,
+            bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
+            state: State,
+            expected_sort: Option<SortProxy<'bump>>,
+        ) -> Result<Self::R, E> {
+            match self {
+                ast::Application::ConstVar { span, content } => {
+                    // check if it is a variable
+                    bvars.iter().find(|(s, _)| s == content).map(|(_, v)| {
+                        let VarProxy { id, sort } = v;
+                        let sort = expected_sort.clone()
+                            .map(|es| sort.unify(&es).into_rr(*span))
+                            .unwrap_or_else(|| {
+                                Into::<Option<Sort>>::into(sort)
+                                    .ok_or_else(|| merr!(*span; "can't infer sort"))
+                            })?;
+
+                        Ok(Variable { id: *id, sort }.into())
+                    })
+                    // otherwise look for a function
+                    .unwrap_or_else(|| get_function(env, *span, *content).and_then(|f| {
+
+                        // TODO: check arity
+
+                        let f2 = match f.inner() {
+                            InnerFunction::TermAlgebra(taf) => match state {
+                                State::Convert | State::High => taf
+                            }
+                        }
+
+                        match expected_sort.map(|s| (s.clone(), s.into())) {
+                            None => Ok(f.f([])),
+                            Some((s, None)) => {
+                                if let Some(s2) = f.fast_outsort() {
+                                    s.set(s2)
+                                }
+                                Ok(f.f([]))
+                            },
+                            Some((_, Some(s))) => if_chain!{
+                                if let Some(s2) = f.fast_outsort();
+                                if s2 != s;
+                                then {
+                                    err(merr!(*span; "wrong sort: got {}, expected {}", s2.name(), s.name()))
+                                } else {
+                                    Ok(f.f([]))
+                                }
+                            }
+                        }
+                    }))
+                }
+                ast::Application::Application {
+                    span,
+                    function,
+                    args,
+                } => {
+                    get_function(env, *span, function.0.content.content).and_then(|f| {
+                        // TODO: arity
+                        let signature = f.signature();
+
+                        let n_args: Result<Vec<_>, _> = signature
+                            .args()
+                            .into_iter()
+                            .zip(args.iter())
+                            .map(|(es, t)| t.parse(env, bvars, state, Some(es)))
+                            .collect();
+                        let n_args = n_args?;
+                        let _ = match signature.check_rich_formulas(&n_args) {
+                            Ok(_) => Ok(()),
+                            Err(CheckError::SortError { position, error }) => match position {
+                                Some(i) => err(merr!(args[i].span; "{}", error)),
+                                None => err(merr!(*span; "{}", error)),
+                            },
+                            Err(e) => err(merr!(*span; "{}", e)),
+                        }?;
+
+                        let _ = expected_sort.map(|es| es.unify(&signature.out())).transpose().into_rr(*span)?;
+
+                        Ok(())
+                    })?;
+                    todo!()
+                }
+            }
+        }
+    }
     // impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::AppMacro<'a> {}
+    // impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {}
     impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Term<'a> {
         type R = RichFormula<'bump>;
 

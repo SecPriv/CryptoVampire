@@ -52,7 +52,7 @@ impl<'a, T> VecRef<'a, T> {
         }
     }
 
-    pub fn iter(&'_ self) -> impl Iterator<Item = &'a T> + '_ {
+    pub fn iter(&'_ self) -> IterVecRef<'a, '_, T> {
         self.into_iter()
     }
 }
@@ -156,5 +156,11 @@ impl<'a, 'b, T> DoubleEndedIterator for IterVecRef<'a, 'b, T> {
             IterVecRef::Single(_) => self.next(),
             IterVecRef::Empty => None,
         }
+    }
+}
+
+impl<'a, I> FromIterator<&'a I> for VecRef<'a, I> {
+    fn from_iter<T: IntoIterator<Item = &'a I>>(iter: T) -> Self {
+        Self::Vec(Vec::from_iter(iter))
     }
 }

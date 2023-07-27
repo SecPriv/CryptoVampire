@@ -136,10 +136,10 @@ where
         funs.map(|fun| {
             assert!(fun.is_default_subterm());
 
-            let f_sorts = fun.forced_input_sort();
+            let f_sorts = fun.fast_insort().expect("todo");
 
             let x = Variable::new(0, self.sort());
-            let mut vars = sorts_to_variables(1, f_sorts);
+            let mut vars = sorts_to_variables(1, f_sorts.iter());
 
             let vars_f = vars.iter().map(|v| v.into_formula()).collect_vec();
             let x_f = x.into_formula();
@@ -195,8 +195,8 @@ where
         funs.map(move |fun| {
             assert!(!fun.is_default_subterm());
 
-            let f_sorts = fun.forced_input_sort();
-            let vars = sorts_to_variables(max_var, f_sorts);
+            let f_sorts = fun.fast_insort().expect("todo");
+            let vars = sorts_to_variables(max_var, f_sorts.iter());
             let vars_f = vars.iter().map(|v| v.into_formula()).collect_vec();
             let f_f = fun.f(vars_f);
 

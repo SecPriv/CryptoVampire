@@ -155,6 +155,33 @@ macro_rules! destvec {
     }
 }
 
+#[macro_export]
+macro_rules! variants {
+    ($base:ty; $variant:ident : $t:ty) => {
+        paste::paste! {
+            pub fn [<as_ $variant:snake>](&self) -> ::core::option::Option<&$t> {
+                match self {
+                    $base::$variant(x) => ::core::option::Option::Some(x),
+                    _ => ::core::option::Option::None
+                }
+            }
+        }
+        paste::paste! {
+            pub fn [<is_ $variant:snake>](&self) -> bool {
+                self.[<as_ $variant:snake>]().is_some()
+            }
+        }
+    };
+    ($base:ty; $($variant:ident: $t:ty),*) => {
+        $(
+            variants!($base; $variant : $t);
+        )*
+    };
+    ($base:ty; $($variant:ident: $t:ty,)*) => {
+        variants!($base; $($variant: $t),*);
+    };
+}
+
 /// For things that might be invalid
 ///
 /// # Reason

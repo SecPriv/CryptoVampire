@@ -1,6 +1,7 @@
 pub mod builtins;
 // pub mod collection;
 pub mod sorted;
+pub mod sort_proxy;
 use bitflags::bitflags;
 use core::fmt::Debug;
 use std::{

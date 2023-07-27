@@ -12,6 +12,7 @@ use crate::utils::utils::{repeat_n_zip, StackBox};
 use crate::utils::vecref::VecRef;
 
 use super::function::builtin::{AND, EQUALITY, IMPLIES, NOT, OR};
+use super::function::signature::Signature;
 use super::sort::builtins::BOOL;
 use super::sort::sorted::{Sorted, SortedError};
 use super::utils::formula_expander::{DeeperKinds, ExpantionContent, ExpantionState};
@@ -40,6 +41,14 @@ impl<'bump> RichFormula<'bump> {
                 fun.sort(args?.as_slice())
             }
             RichFormula::Quantifier(_q, _) => Ok(BOOL.as_sort()),
+        }
+    }
+
+    pub fn sort(&self) -> Option<Sort<'bump>> {
+        match self {
+            RichFormula::Var(v) => Some(v.sort),
+            RichFormula::Fun(fun, _) => fun.signature().out().into(),
+            RichFormula::Quantifier(_, _) => Some(BOOL.as_sort())
         }
     }
     pub fn get_free_vars(&'_ self) -> Vec<&'_ Variable<'bump>> {
