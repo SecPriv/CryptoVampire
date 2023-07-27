@@ -23,7 +23,7 @@ use itertools::Itertools;
 // use crate::problem::step::Step;
 
 use crate::{
-    variants, assert_variance, asssert_trait,
+    assert_variance, asssert_trait,
     container::{FromNN, NameFinder, ScopeAllocator},
     formula::function::{
         signature::{FastSignature, FixedSignature},
@@ -37,6 +37,7 @@ use crate::{
         utils::{MaybeInvalid, Reference},
         vecref::VecRef,
     },
+    variants, variants_ref,
 };
 
 use self::{
@@ -510,12 +511,12 @@ impl<'bump> Function<'bump> {
         todo!()
     }
 
-    pub fn get_cell(&self) -> Option<MemoryCell<'bump>> {
-        match self.as_ref() {
-            InnerFunction::TermAlgebra(TermAlgebra::Cell(c)) => Some(c.memory_cell()),
-            _ => None,
-        }
-    }
+    // pub fn get_cell(&self) -> Option<MemoryCell<'bump>> {
+    //     match self.as_ref() {
+    //         InnerFunction::TermAlgebra(TermAlgebra::Cell(c)) => Some(c.memory_cell()),
+    //         _ => None,
+    //     }
+    // }
 
     pub fn f<'bbump>(
         &self,
@@ -531,13 +532,6 @@ impl<'bump> Function<'bump> {
 
     pub fn inner(&self) -> &InnerFunction<'bump> {
         self.as_ref()
-    }
-
-    pub fn is_term_algebra(&self) -> bool {
-        match self.as_ref() {
-            InnerFunction::TermAlgebra(_) => true,
-            _ => false,
-        }
     }
 
     pub fn is_default_subterm(&self) -> bool {
@@ -563,6 +557,20 @@ impl<'bump> Function<'bump> {
             container: Default::default(),
         }
     }
+
+    variants_ref!(InnerFunction, 'bump;
+        Bool:Booleans,
+        Nonce:Nonce<'bump>,
+        Step:StepFunction<'bump>,
+        Subterm:Subterm<'bump>,
+        TermAlgebra:TermAlgebra<'bump>,
+        IfThenElse:IfThenElse,
+        Evaluate:Evaluate<'bump>,
+        Predicate:Predicate<'bump>,
+        Tmp:Tmp<'bump>,
+        Skolem:Skolem<'bump>,
+        Invalid:InvalidFunction<'bump>,
+    );
 }
 
 impl<'bump> PreciseAsRef<'bump, InnerFunction<'bump>> for Function<'bump> {

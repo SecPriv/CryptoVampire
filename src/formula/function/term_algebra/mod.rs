@@ -1,9 +1,11 @@
-use crate::assert_variance;
+use crate::{assert_variance, variants};
 
 use self::{
     base_function::BaseFunction, cell::Cell, connective::Connective, name::Name,
     quantifier::Quantifier,
 };
+
+use super::Function;
 
 pub mod base_function;
 pub mod cell;
@@ -32,6 +34,33 @@ impl<'bump> TermAlgebra<'bump> {
             TermAlgebra::Quantifier(_) | TermAlgebra::Cell(_) | TermAlgebra::Input => false,
         }
     }
+
+    variants!(TermAlgebra;
+        Condition:Connective,
+        Quantifier:Quantifier<'bump>,
+        Function:BaseFunction<'bump>,
+        Cell:Cell<'bump>,
+        Name:Name<'bump>);
 }
 
 assert_variance!(TermAlgebra);
+
+pub trait Evaluatable<'bump> {
+    fn get_evaluated(&self) -> Function<'bump>;
+}
+
+pub trait MaybeEvaluatable<'bump> {
+    fn get_evaluated(&self) -> Option<Function<'bump>>;
+}
+
+impl<'bump, I> MaybeEvaluatable<'bump> for I where I:Evaluatable<'bump> {
+    fn get_evaluated(&self) -> Option<Function<'bump>> {
+        Some(self.get_evaluated())
+    }
+}
+
+impl<'bump, I> MaybeEvaluatable<'bump> for Option<I> where I: MaybeEvaluatable<'bump> {
+    fn get_evaluated(&self) -> Option<Function<'bump>> {
+        self.as_ref().and_then(MaybeEvaluatable::get_evaluated)
+    }
+}

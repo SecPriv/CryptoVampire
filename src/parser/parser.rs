@@ -723,11 +723,11 @@ mod parsable_trait {
 
                         // TODO: check arity
 
-                        let f2 = match f.inner() {
-                            InnerFunction::TermAlgebra(taf) => match state {
-                                State::Convert | State::High => taf
-                            }
-                        }
+                        // let f2 = match f.inner() {
+                        //     InnerFunction::TermAlgebra(taf) => match state {
+                        //         State::Convert | State::High => taf
+                        //     }
+                        // }
 
                         match expected_sort.map(|s| (s.clone(), s.into())) {
                             None => Ok(f.f([])),

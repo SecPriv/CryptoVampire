@@ -182,6 +182,66 @@ macro_rules! variants {
     };
 }
 
+#[macro_export]
+macro_rules! variants_ref {
+    ($base:ty; $variant:ident : $t:ty) => {
+        paste::paste! {
+            pub fn [<as_ $variant:snake>](&self) -> ::core::option::Option<&$t> {
+                match self.as_ref() {
+                    $base::$variant(x) => ::core::option::Option::Some(x),
+                    _ => ::core::option::Option::None
+                }
+            }
+        }
+        paste::paste! {
+            pub fn [<is_ $variant:snake>](&self) -> bool {
+                self.[<as_ $variant:snake>]().is_some()
+            }
+        }
+    };
+    ($base:ty; $($variant:ident: $t:ty),*) => {
+        $(
+            variants_ref!($base; $variant : $t);
+        )*
+    };
+    ($base:ty; $($variant:ident: $t:ty,)*) => {
+        variants_ref!($base; $($variant: $t),*);
+    };
+
+    ($base:ty, $lt:lifetime; $variant:ident : $t:ty) => {
+        paste::paste! {
+            pub fn [<precise_as_ $variant:snake>](&self) -> ::core::option::Option<&$lt $t> {
+                match self.precise_as_ref() {
+                    $base::$variant(x) => ::core::option::Option::Some(x),
+                    _ => ::core::option::Option::None
+                }
+            }
+        }
+
+        paste::paste! {
+            pub fn [<as_ $variant:snake>](&self) -> ::core::option::Option<&$t> {
+                match self.precise_as_ref() {
+                    $base::$variant(x) => ::core::option::Option::Some(x),
+                    _ => ::core::option::Option::None
+                }
+            }
+        }
+        paste::paste! {
+            pub fn [<is_ $variant:snake>](&self) -> bool {
+                self.[<as_ $variant:snake>]().is_some()
+            }
+        }
+    };
+    ($base:ty, $lt:lifetime; $($variant:ident: $t:ty),*) => {
+        $(
+            variants_ref!($base, $lt; $variant : $t);
+        )*
+    };
+    ($base:ty, $lt:lifetime; $($variant:ident: $t:ty,)*) => {
+        variants_ref!($base, $lt; $($variant: $t),*);
+    };
+}
+
 /// For things that might be invalid
 ///
 /// # Reason
