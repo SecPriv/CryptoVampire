@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::formula::{formula::RichFormula, sort::Sort};
 
-use super::Function;
+use super::{signature::FixedRefSignature, traits::FixedSignature, Function};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Evaluate<'bump> {
@@ -19,5 +19,14 @@ pub struct Evaluator<'bump> {
 impl<'bump> Evaluator<'bump> {
     pub fn eval(&self, f: RichFormula<'bump>) -> RichFormula<'bump> {
         self.functions.get(&f.get_sort().unwrap()).unwrap().f([f])
+    }
+}
+
+impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for Evaluate<'bump> {
+    fn as_fixed_signature(&'a self) -> FixedRefSignature<'a, 'bump> {
+        FixedRefSignature {
+            out: self.input_sort,
+            args: [self.ouput_sort].into(),
+        }
     }
 }

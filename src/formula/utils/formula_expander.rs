@@ -267,7 +267,7 @@ where
                         | TermAlgebra::Cell(_) => iter.collect(),
                     },
                     InnerFunction::Bool(_)
-                    | InnerFunction::Nonce(_)
+                    // | InnerFunction::Nonce(_)
                     | InnerFunction::Step(_)
                     | InnerFunction::Subterm(_)
                     | InnerFunction::IfThenElse(_)

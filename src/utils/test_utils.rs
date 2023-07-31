@@ -9,6 +9,7 @@ pub mod tests {
     }
 }
 
+/// makes sure traits are implemented
 #[macro_export]
 macro_rules! asssert_trait {
     ($name:ident; $to_test:ty; $($trait:ty),*) => {
@@ -24,6 +25,7 @@ macro_rules! asssert_trait {
     };
 }
 
+/// make sure a type has the right variance
 #[macro_export]
 macro_rules! assert_variance {
     ($name:ident) => {

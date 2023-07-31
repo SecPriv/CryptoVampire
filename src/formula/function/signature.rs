@@ -30,14 +30,26 @@ pub enum CheckError<'bump> {
     },
 }
 
+/// A very general trait of what should be a signature of a function
 pub trait Signature<'bump>: Sized {
+    /// [Iterator] over the argument's [SortProxy]. See [Self::args()]
     type I<'a>: IntoIterator<Item = SortProxy<'bump>> + 'a
     where
         Self: 'a;
 
+    /// output sort
     fn out(&self) -> SortProxy<'bump>;
+    ///  [Iterator] over the argument's [SortProxy].
+    ///
+    /// This iterator may or may not be finite. The use of [SortProxy]
+    /// takes polymorphism into account
     fn args(&'_ self) -> Self::I<'_>;
 
+    /// Force a signature out when it is possible. Return [None] when
+    /// this doesn't make sense
+    /// 
+    /// *NB*: The blanket implementation assumes [Self::args()] is finite!
+    /// Make sure to overwrite when this cannot be enforced
     fn fast(self) -> Option<FixedSignature<'bump>> {
         let out = self.out().as_option()?;
         let args: Option<Vec<Sort<'bump>>> = self.args().into_iter().map_into().collect();
@@ -46,10 +58,12 @@ pub trait Signature<'bump>: Sized {
         Some(FixedSignature { out, args })
     }
 
+    /// Check if a [PartialImplSignature] can unify with [Self]
     fn check<J>(&self, sign: PartialImplSignature<'bump, J>) -> Result<bool, CheckError<'bump>>
     where
         J: IntoIterator<Item = Option<Sort<'bump>>>;
 
+    /// Cheks is a list of argument can typecheck with this function
     fn check_rich_formulas<'a>(
         &self,
         args: implvec!(&'a RichFormula<'bump>),
@@ -65,6 +79,7 @@ pub trait Signature<'bump>: Sized {
     }
 }
 
+/// when [Signature::fast()] always returns [Some]
 pub trait FastSignature<'bump>: Signature<'bump> {
     fn faster(self) -> FixedSignature<'bump> {
         let fast = self.fast();
@@ -73,6 +88,7 @@ pub trait FastSignature<'bump>: Signature<'bump> {
     }
 }
 
+/// Owned fixed signature
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FixedSignature<'bump> {
     pub out: Sort<'bump>,
@@ -139,6 +155,7 @@ impl<'bump> Signature<'bump> for FixedSignature<'bump> {
 
 impl<'bump> FastSignature<'bump> for FixedSignature<'bump> {}
 
+/// a half finished signature
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct PartialImplSignature<'bump, I>
 where
@@ -148,6 +165,8 @@ where
     pub args: I,
 }
 
+/// A [Signature] that may of may not own its argument sort via the
+/// use of [VecRefClone]
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct FixedRefSignature<'a, 'bump>
 where

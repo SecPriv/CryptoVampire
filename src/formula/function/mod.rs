@@ -2,10 +2,10 @@
 pub mod booleans;
 pub mod builtin;
 pub mod evaluate;
-pub mod function_like;
+// pub mod function_like;
 pub mod if_then_else;
 pub mod invalid_function;
-pub mod nonce;
+// pub mod nonce;
 pub mod predicate;
 pub mod signature;
 pub mod skolem;
@@ -46,7 +46,7 @@ use self::{
     evaluate::Evaluate,
     if_then_else::IfThenElse,
     invalid_function::InvalidFunction,
-    nonce::Nonce,
+    // nonce::Nonce,
     predicate::Predicate,
     signature::Signature,
     skolem::Skolem,
@@ -113,7 +113,7 @@ bitflags! {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum InnerFunction<'bump> {
     Bool(Booleans),
-    Nonce(Nonce<'bump>),
+    // Nonce(Nonce<'bump>),
     Step(StepFunction<'bump>),
     Subterm(Subterm<'bump>),
     TermAlgebra(TermAlgebra<'bump>),
@@ -128,7 +128,7 @@ pub enum InnerFunction<'bump> {
 impl<'bump> InnerFunction<'bump> {
     variants!(InnerFunction;
         Bool:Booleans,
-        Nonce:Nonce<'bump>,
+        // Nonce:Nonce<'bump>,
         Step:StepFunction<'bump>,
         Subterm:Subterm<'bump>,
         TermAlgebra:TermAlgebra<'bump>,
@@ -304,8 +304,8 @@ impl<'bump> Function<'bump> {
     ) -> Self {
         let inner = InnerFunction::Tmp(Tmp {
             name: name.to_string(),
-            in_sorts: input_sorts.into_iter().collect(),
-            out_sort: output_sort,
+            args: input_sorts.into_iter().collect(),
+            sort: output_sort,
         });
 
         let inner = unsafe {
@@ -329,8 +329,8 @@ impl<'bump> Function<'bump> {
             let name = container.find_free_name("sk_");
             let inner = InnerFunction::Skolem(Skolem {
                 name: name.into(),
-                in_sort: free_sorts.into_iter().collect(),
-                out_sort: out,
+                args: free_sorts.into_iter().collect(),
+                sort: out,
             });
 
             let inner = unsafe {
@@ -561,7 +561,7 @@ impl<'bump> Function<'bump> {
 
     variants_ref!(InnerFunction, 'bump;
         Bool:Booleans,
-        Nonce:Nonce<'bump>,
+        // Nonce:Nonce<'bump>,
         Step:StepFunction<'bump>,
         Subterm:Subterm<'bump>,
         TermAlgebra:TermAlgebra<'bump>,
@@ -576,7 +576,7 @@ impl<'bump> Function<'bump> {
 
 variants_ref_try_into!(InnerFunction : InnerFunction<'bump> => {
     Bool:Booleans|
-    Nonce:Nonce<'bump>|
+    // Nonce:Nonce<'bump>|
     Step:StepFunction<'bump>|
     Subterm:Subterm<'bump>|
     TermAlgebra:TermAlgebra<'bump>|

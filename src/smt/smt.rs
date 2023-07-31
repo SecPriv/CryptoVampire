@@ -257,9 +257,9 @@ impl<'bump> SmtFormula<'bump> {
                     .collect();
 
                 match f.as_ref() {
-                    InnerFunction::Nonce(_)
+                    InnerFunction::TermAlgebra(_)
+                    // | InnerFunction::Nonce(_)
                     | InnerFunction::Step(_)
-                    | InnerFunction::TermAlgebra(_)
                     | InnerFunction::Predicate(_)
                     | InnerFunction::Tmp(_)
                     | InnerFunction::Skolem(_)

@@ -191,6 +191,11 @@ impl<'a, T> From<Vec<&'a T>> for VecRef<'a, T> {
     }
 }
 
+/// a [VecRef] with one more case when it needs to own the content
+///
+/// `T` must then be [Clone] because the owned [Iterator] cannot return
+/// meaningful references, hence it clones the elements. Thus cloning
+/// should be very cheap (intuitively `T` should be [Copy])
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum VecRefClone<'a, T>
 where
@@ -225,26 +230,26 @@ impl<'a, T: Clone> Index<usize> for VecRefClone<'a, T> {
     }
 }
 
-impl<'b, 'a:'b, T:Clone> IntoIterator for &'b VecRefClone<'a, T> {
+impl<'b, 'a: 'b, T: Clone> IntoIterator for &'b VecRefClone<'a, T> {
     type Item = &'b T;
 
     type IntoIter = IterVecRefClone<'a, 'b, T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        match self{
+        match self {
             VecRefClone::VecRef(x) => IterVecRefClone::VecRef(x.into_iter()),
             VecRefClone::Vec(x) => IterVecRefClone::Vec(x.into_iter()),
         }
     }
 }
 
-impl<'a, T:Clone> IntoIterator for VecRefClone<'a, T> {
+impl<'a, T: Clone> IntoIterator for VecRefClone<'a, T> {
     type Item = T;
 
     type IntoIter = IntoIterVecRefClone<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        match self{
+        match self {
             VecRefClone::VecRef(x) => IntoIterVecRefClone::VecRef(x.into_iter()),
             VecRefClone::Vec(x) => IntoIterVecRefClone::Vec(x.into_iter()),
         }
@@ -356,6 +361,15 @@ where
     }
 }
 
+impl<'a, T, const N: usize> From<[T; N]> for VecRefClone<'a, T>
+where
+    T: Clone,
+{
+    fn from(value: [T; N]) -> Self {
+        Self::Vec(value.into())
+    }
+}
+
 impl<'a, T> From<&'a [&'a T]> for VecRefClone<'a, T>
 where
     T: Clone,
@@ -380,5 +394,14 @@ where
 {
     fn from(value: Vec<T>) -> Self {
         Self::Vec(value)
+    }
+}
+
+impl<'a, T> From<Box<[T]>> for VecRefClone<'a, T>
+where
+    T: Clone,
+{
+    fn from(value: Box<[T]>) -> Self {
+        Self::Vec(value.into_vec())
     }
 }

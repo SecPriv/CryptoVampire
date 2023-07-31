@@ -1,10 +1,15 @@
 use static_init::dynamic;
 
-use crate::formula::sort::{
-    builtins::{StatSort, BOOL},
-    sorted::{Sorted, SortedError},
-    Sort,
+use crate::{
+    formula::sort::{
+        builtins::{StatSort, BOOL},
+        sorted::{Sorted, SortedError},
+        Sort,
+    },
+    static_signature, CustomDerive
 };
+
+use super::traits::{Evaluatable, MaybeEvaluatable, MaybeFixedSignature};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum Connective {
@@ -96,10 +101,16 @@ impl<'a> Sorted<'a> for Equality {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
-pub enum Booleans {
-    Connective(Connective),
-    Equality(Equality),
+use macro_attr::*;
+
+macro_attr! {
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
+        CustomDerive!(maybe_evaluate, no_bump, 'bump),
+        CustomDerive!(maybe_fixed_signature, no_bump, 'bump))]
+    pub enum Booleans {
+        Connective(Connective),
+        Equality(Equality),
+    }
 }
 
 impl Booleans {
@@ -121,5 +132,42 @@ impl<'a> Sorted<'a> for Booleans {
             Booleans::Connective(e) => e.sort(args),
             Booleans::Equality(e) => e.sort(args),
         }
+    }
+}
+
+static_signature!(IMPLIES_SIGNATURE: (BOOL, BOOL) -> BOOL);
+static_signature!(IFF_SIGNATURE: (BOOL, BOOL) -> BOOL);
+static_signature!(NOT_SIGNATURE: (BOOL) -> BOOL);
+static_signature!(TRUE_SIGNATURE: () -> BOOL);
+static_signature!(FALSE_SIGNATURE: () -> BOOL);
+
+impl<'a, 'bump: 'a> MaybeFixedSignature<'a, 'bump> for Connective {
+    fn maybe_fixed_signature(&'a self) -> Option<super::signature::FixedRefSignature<'a, 'bump>> {
+        match self {
+            Connective::Not => Some(NOT_SIGNATURE.clone()),
+            Connective::Implies => Some(IMPLIES_SIGNATURE.clone()),
+            Connective::Iff => Some(IFF_SIGNATURE.clone()),
+            Connective::True => Some(TRUE_SIGNATURE.clone()),
+            Connective::False => Some(FALSE_SIGNATURE.clone()),
+            _ => None,
+        }
+    }
+}
+
+impl<'bump> MaybeEvaluatable<'bump> for Connective {
+    fn maybe_get_evaluated(&self) -> Option<super::Function<'bump>> {
+        None
+    }
+}
+
+impl<'a, 'bump: 'a> MaybeFixedSignature<'a, 'bump> for Equality {
+    fn maybe_fixed_signature(&'a self) -> Option<super::signature::FixedRefSignature<'a, 'bump>> {
+        None
+    }
+}
+
+impl<'bump> MaybeEvaluatable<'bump> for Equality {
+    fn maybe_get_evaluated(&self) -> Option<super::Function<'bump>> {
+        None
     }
 }

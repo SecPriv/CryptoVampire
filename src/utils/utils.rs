@@ -155,6 +155,34 @@ macro_rules! destvec {
     }
 }
 
+/// Let's one use or pattern even when the bound variables don't share
+/// a type by rewriting the block of code to each branch.
+///
+///
+/// ```rust
+/// use automator::match_as_trait;
+///
+/// #[derive(Debug)]
+/// struct A;
+///
+/// #[derive(Debug)]
+/// struct B;
+///
+/// enum AB {A(A), B(B)}
+///
+/// fn printAB(ab:AB) {
+///     match_as_trait!(ab => {AB::A(x) | AB::B(x) => {println!("{x:?}")}})
+/// }
+///
+/// // is the same as
+/// fn printABbis(ab:AB) {
+///     match ab {
+///         AB::A(x) => println!("{x:?}"),
+///         AB::B(x) => println!("{x:?}"),
+///     }
+/// }
+///
+/// ```
 #[macro_export]
 macro_rules! match_as_trait {
     ($e:expr => {$($($pat:pat_param)|+ => $b:block),*}) => {
@@ -177,6 +205,7 @@ macro_rules! match_as_trait {
     }
 }
 
+/// sortcut for [std::fmt::format]
 #[macro_export]
 macro_rules! f {
     ($lit:literal $(, $arg:expr)*) => {format!($lit $(,$arg)*)};

@@ -1,5 +1,7 @@
 use crate::{formula::sort::Sort, utils::string_ref::StrRef};
 
+use super::{signature::FixedRefSignature, traits::MaybeFixedSignature};
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct InvalidFunction<'bump> {
     pub name: Option<StrRef<'bump>>,
@@ -18,5 +20,14 @@ impl<'bump> InvalidFunction<'bump> {
 
     pub fn sort(&self) -> Option<Sort<'bump>> {
         self.sort
+    }
+}
+
+impl<'a, 'bump: 'a> MaybeFixedSignature<'a, 'bump> for InvalidFunction<'bump> {
+    fn maybe_fixed_signature(&'a self) -> Option<FixedRefSignature<'a, 'bump>> {
+        let out = self.sort()?;
+        let args = self.args()?.into();
+
+        Some(FixedRefSignature { out, args })
     }
 }

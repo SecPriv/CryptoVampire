@@ -8,6 +8,8 @@ use super::{signature::FixedRefSignature, Function};
 // =========================================================
 // =================== FixedSignature ======================
 // =========================================================
+/// Some function that has a fixed signature. It means it signature is
+/// neither polymorphic nor variadic
 pub trait FixedSignature<'a, 'bump>
 where
     'bump: 'a,
@@ -16,7 +18,7 @@ where
     fn as_fixed_signature(&'a self) -> FixedRefSignature<'a, 'bump>;
 }
 
-#[enum_dispatch]
+/// To easily filter arounf functions that are [FixedSignature]
 pub trait MaybeFixedSignature<'a, 'bump>
 where
     'bump: 'a,
@@ -52,6 +54,10 @@ where
 // =========================================================
 // ===================== Evaluatable =======================
 // =========================================================
+/// Function that have an "evaluated" version of themselves
+///
+/// These are exclusively [TermAlgebra](super::term_algebra::TermAlgebra)
+/// functions.
 pub trait Evaluatable<'bump> {
     fn get_evaluated(&self) -> Function<'bump>;
 }
@@ -78,9 +84,14 @@ where
     }
 }
 
-use paste::paste;
+// use paste::paste;
 
-
+/// You don't want to know...
+///
+/// This horrendous things lets me (along with [macro_attr::macro_attr]) make my
+/// own custom derive macros for all the trait that are here. I had to do this
+/// because [`enum_dispach`](https://crates.io/crates/enum_dispatch) refuses to work
+/// accross modules / with lifetimes
 #[macro_export]
 macro_rules! CustomDerive {
     (($($kind:tt),+) $(pub)? enum $name:ident {$($variant:ident$($vt:ty)?),* $(,)?}) => {
@@ -153,7 +164,7 @@ macro_rules! CustomDerive {
                 $($lt_where1:$lt_where2),*
                 $($t_where1:$t_where2),*
         {
-            fn get_evaluated(&self) -> Function<'bump> {
+            fn get_evaluated(&self) -> $crate::formula::function::Function<'bump> {
 
                 match self {
                         $(
@@ -182,7 +193,7 @@ macro_rules! CustomDerive {
                 $($lt_where1:$lt_where2),*
                 $($t_where1:$t_where2),*
         {
-            fn maybe_get_evaluated(&self) -> Option<Function<'bump>>{
+            fn maybe_get_evaluated(&self) -> Option<$crate::formula::function::Function<'bump>>{
                 match self {
                         $(
                             Self::$variant(x) =>  x.maybe_get_evaluated()

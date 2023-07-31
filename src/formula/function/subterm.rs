@@ -8,7 +8,10 @@ use crate::problem::{
     subterm::kind::SubtermKind,
 };
 
-use super::InnerFunction;
+use super::{
+    traits::{MaybeEvaluatable, MaybeFixedSignature},
+    InnerFunction,
+};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Subterm<'bump> {
@@ -80,4 +83,16 @@ where
     'a: 'b,
 {
     q
+}
+
+impl<'a, 'bump: 'a> MaybeFixedSignature<'a, 'bump> for Subterm<'bump> {
+    fn maybe_fixed_signature(&'a self) -> Option<super::signature::FixedRefSignature<'a, 'bump>> {
+        None
+    }
+}
+
+impl<'bump> MaybeEvaluatable<'bump> for Subterm<'bump> {
+    fn maybe_get_evaluated(&self) -> Option<super::Function<'bump>> {
+        None
+    }
 }
