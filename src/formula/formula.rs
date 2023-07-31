@@ -48,7 +48,7 @@ impl<'bump> RichFormula<'bump> {
         match self {
             RichFormula::Var(v) => Some(v.sort),
             RichFormula::Fun(fun, _) => fun.signature().out().into(),
-            RichFormula::Quantifier(_, _) => Some(BOOL.as_sort())
+            RichFormula::Quantifier(_, _) => Some(BOOL.as_sort()),
         }
     }
     pub fn get_free_vars(&'_ self) -> Vec<&'_ Variable<'bump>> {
@@ -264,7 +264,10 @@ impl<'bump> RichFormula<'bump> {
         self.apply(|v: &Variable| f(v).unwrap_or(Self::Var(v.clone())))
     }
 
-    pub fn apply_substitution<'a>(self, vars: implvec!(usize), fs: implvec!(&'a Self)) -> Self where 'bump:'a {
+    pub fn apply_substitution<'a>(self, vars: implvec!(usize), fs: implvec!(&'a Self)) -> Self
+    where
+        'bump: 'a,
+    {
         let vars = vars.into_iter().collect_vec();
         let fs = fs.into_iter().collect_vec();
         debug_assert_eq!(vars.len(), fs.len());

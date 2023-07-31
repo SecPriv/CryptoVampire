@@ -1,7 +1,9 @@
+use crate::formula::sort::{builtins::BOOL, Sort};
 
-use crate::formula::sort::{Sort, builtins::BOOL};
-
-use super::{traits::{FixedSignature, MaybeEvaluatable}, signature::FixedRefSignature};
+use super::{
+    signature::FixedRefSignature,
+    traits::{FixedSignature, MaybeEvaluatable},
+};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Predicate<'bump> {
@@ -20,9 +22,12 @@ impl<'bump> Predicate<'bump> {
     }
 }
 
-impl<'a, 'bump:'a> FixedSignature<'a, 'bump> for Predicate<'bump> {
-    fn as_fixed_signature(&'a self) ->FixedRefSignature<'a, 'bump> {
-        FixedRefSignature { out: BOOL.as_sort(), args: self.args.as_ref().into() }
+impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for Predicate<'bump> {
+    fn as_fixed_signature(&'a self) -> FixedRefSignature<'a, 'bump> {
+        FixedRefSignature {
+            out: BOOL.as_sort(),
+            args: self.args.as_ref().into(),
+        }
     }
 }
 

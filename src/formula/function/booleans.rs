@@ -6,7 +6,7 @@ use crate::{
         sorted::{Sorted, SortedError},
         Sort,
     },
-    static_signature, CustomDerive
+    static_signature, CustomDerive,
 };
 
 use super::traits::{Evaluatable, MaybeEvaluatable, MaybeFixedSignature};

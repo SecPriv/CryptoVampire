@@ -1,6 +1,9 @@
 use crate::{formula::sort::Sort, utils::string_ref::StrRef};
 
-use super::{signature::FixedRefSignature, traits::{MaybeFixedSignature, MaybeEvaluatable}};
+use super::{
+    signature::FixedRefSignature,
+    traits::{MaybeEvaluatable, MaybeFixedSignature},
+};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct InvalidFunction<'bump> {

@@ -39,7 +39,7 @@ fn merr<'a>(s: Span<'a>, msg: String) -> E {
 
 // pub(crate) use merr;
 
-use crate::{formula::sort::sort_proxy::InferenceError, f};
+use crate::{f, formula::sort::sort_proxy::InferenceError};
 
 trait IntoRuleResult<T, Err> {
     fn into_rr<'a>(self, span: Span<'a>) -> Result<T, E>;

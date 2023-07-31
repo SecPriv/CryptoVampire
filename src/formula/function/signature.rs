@@ -47,7 +47,7 @@ pub trait Signature<'bump>: Sized {
 
     /// Force a signature out when it is possible. Return [None] when
     /// this doesn't make sense
-    /// 
+    ///
     /// *NB*: The blanket implementation assumes [Self::args()] is finite!
     /// Make sure to overwrite when this cannot be enforced
     fn fast(self) -> Option<FixedSignature<'bump>> {

@@ -449,22 +449,21 @@ pub enum Application<'a> {
 
 impl<'a> Application<'a> {
     pub fn name(&self) -> &'a str {
-        match self{
-            Application::ConstVar { content,.. } => *content,
-            Application::Application {  function, .. } => function.0.content.content,
+        match self {
+            Application::ConstVar { content, .. } => *content,
+            Application::Application { function, .. } => function.0.content.content,
         }
     }
     pub fn name_span(&self) -> Span<'a> {
-        match self{
-            Application::ConstVar { span,.. } => *span,
-            Application::Application {  function, .. } => function.0.span,
+        match self {
+            Application::ConstVar { span, .. } => *span,
+            Application::Application { function, .. } => function.0.span,
         }
     }
 
     pub fn span(&self) -> Span<'a> {
         match self {
-            Application::ConstVar { span, .. }
-             | Application::Application { span, .. } => *span
+            Application::ConstVar { span, .. } | Application::Application { span, .. } => *span,
         }
     }
 }

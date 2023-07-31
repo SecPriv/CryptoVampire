@@ -1,10 +1,14 @@
 use std::marker::PhantomData;
 
 use crate::{
-    assert_variance, formula::sort::builtins::STEP, problem::step::Step, static_signature, CustomDerive,
+    assert_variance, formula::sort::builtins::STEP, problem::step::Step, static_signature,
+    CustomDerive,
 };
 
-use super::{signature::FixedRefSignature, traits::{FixedSignature, MaybeEvaluatable}};
+use super::{
+    signature::FixedRefSignature,
+    traits::{FixedSignature, MaybeEvaluatable},
+};
 
 use macro_attr::*;
 macro_attr! {
@@ -71,7 +75,6 @@ impl<'bump> MaybeEvaluatable<'bump> for Pred {
         None
     }
 }
-
 
 impl<'bump> MaybeEvaluatable<'bump> for InnerStepFuction<'bump> {
     fn maybe_get_evaluated(&self) -> Option<super::Function<'bump>> {

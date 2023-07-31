@@ -312,7 +312,6 @@ impl<'bump> FromNN<'bump> for Step<'bump> {
     }
 }
 
-
 impl<'bump> Reference for Step<'bump> {
     type Inner = InnerStep<'bump>;
 

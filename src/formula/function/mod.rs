@@ -16,7 +16,7 @@ pub mod traits;
 pub mod unused;
 
 // pub mod equality;
-use std::{cmp::Ordering, hash::Hash, marker::PhantomData, ops::Deref, ptr::NonNull};
+use std::{cmp::Ordering, hash::Hash, marker::PhantomData, ptr::NonNull};
 
 use bitflags::bitflags;
 use itertools::Itertools;

@@ -394,7 +394,9 @@ mod parsable_trait {
                 self,
                 builtin::{IF_THEN_ELSE, IF_THEN_ELSE_TA, INPUT},
                 signature::{CheckError, Signature},
-                Function, InnerFunction, term_algebra::TermAlgebra, traits::MaybeEvaluatable,
+                term_algebra::TermAlgebra,
+                traits::MaybeEvaluatable,
+                Function, InnerFunction,
             },
             sort::{
                 builtins::{BOOL, CONDITION, MESSAGE, STEP},
