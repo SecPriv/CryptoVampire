@@ -24,7 +24,7 @@ use itertools::Itertools;
 // use crate::problem::step::Step;
 
 use crate::{
-    assert_variance, asssert_trait,
+    assert_variance, asssert_trait, CustomDerive,
     container::{FromNN, NameFinder, ScopeAllocator},
     formula::function::{
         signature::{FastSignature, FixedSignature},
@@ -110,19 +110,25 @@ bitflags! {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum InnerFunction<'bump> {
-    Bool(Booleans),
-    // Nonce(Nonce<'bump>),
-    Step(StepFunction<'bump>),
-    Subterm(Subterm<'bump>),
-    TermAlgebra(TermAlgebra<'bump>),
-    IfThenElse(IfThenElse),
-    Evaluate(Evaluate<'bump>),
-    Predicate(Predicate<'bump>),
-    Tmp(Tmp<'bump>),
-    Skolem(Skolem<'bump>),
-    Invalid(InvalidFunction<'bump>),
+use macro_attr::*;
+macro_attr! {
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+        CustomDerive!(maybe_evaluate, 'bump),
+        CustomDerive!(maybe_fixed_signature, 'bump),
+    )]
+    pub enum InnerFunction<'bump> {
+        Bool(Booleans),
+        // Nonce(Nonce<'bump>),
+        Step(StepFunction<'bump>),
+        Subterm(Subterm<'bump>),
+        TermAlgebra(TermAlgebra<'bump>),
+        IfThenElse(IfThenElse),
+        Evaluate(Evaluate<'bump>),
+        Predicate(Predicate<'bump>),
+        Tmp(Tmp<'bump>),
+        Skolem(Skolem<'bump>),
+        Invalid(InvalidFunction<'bump>),
+    }
 }
 
 impl<'bump> InnerFunction<'bump> {

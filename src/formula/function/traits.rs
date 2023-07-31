@@ -203,6 +203,36 @@ macro_rules! CustomDerive {
         }
     };
 
+    (@inner(fixed_signature, $bump:lifetime) $name:ident
+            {lifetimes $($lt:lifetime),* $(,)?}
+            {type_vars $($tv:ident),* $(,)?}
+            {variants $($variant:ident$($vt:ty)?),* $(,)?}
+            {where
+                lifetimes {$($lt_where1:lifetime : $lt_were:lifetime),*}
+                traits {$($t_where1:ty : $t_where2:ty),*}
+            }
+            $({extra bump $bump2:lifetime})?
+        ) => {
+        impl<'ref_a, $($bump2, )? $($lt),* $($tv),* >
+            $crate::formula::function::traits::FixedSignature<'ref_a, $bump>
+            for $name<$($lt),* $($tv),*>
+            where
+                $($lt:$bump, $lt:'ref_a),*
+                $($lt_where1:$lt_where2),*
+                $($t_where1:$t_where2),*
+                $($bump2: 'ref_a)?
+        {
+            fn as_fixed_signature(&'ref_a self) ->
+                $crate::formula::function::signature::FixedRefSignature<'ref_a, 'bump>{
+                match self {
+                        $(
+                            Self::$variant(x) =>  x.as_fixed_signature()
+                        ),*
+                }
+            }
+        }
+    };
+
     (@inner(maybe_fixed_signature, $bump:lifetime) $name:ident
             {lifetimes $($lt:lifetime),* $(,)?}
             {type_vars $($tv:ident),* $(,)?}

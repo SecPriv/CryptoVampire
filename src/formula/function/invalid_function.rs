@@ -1,6 +1,6 @@
 use crate::{formula::sort::Sort, utils::string_ref::StrRef};
 
-use super::{signature::FixedRefSignature, traits::MaybeFixedSignature};
+use super::{signature::FixedRefSignature, traits::{MaybeFixedSignature, MaybeEvaluatable}};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct InvalidFunction<'bump> {
@@ -29,5 +29,11 @@ impl<'a, 'bump: 'a> MaybeFixedSignature<'a, 'bump> for InvalidFunction<'bump> {
         let args = self.args()?.into();
 
         Some(FixedRefSignature { out, args })
+    }
+}
+
+impl<'bump> MaybeEvaluatable<'bump> for InvalidFunction<'bump> {
+    fn maybe_get_evaluated(&self) -> Option<super::Function<'bump>> {
+        None
     }
 }

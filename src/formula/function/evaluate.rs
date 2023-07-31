@@ -2,7 +2,11 @@ use std::collections::HashMap;
 
 use crate::formula::{formula::RichFormula, sort::Sort};
 
-use super::{signature::FixedRefSignature, traits::FixedSignature, Function};
+use super::{
+    signature::FixedRefSignature,
+    traits::{FixedSignature, MaybeEvaluatable},
+    Function,
+};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Evaluate<'bump> {
@@ -28,5 +32,11 @@ impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for Evaluate<'bump> {
             out: self.input_sort,
             args: [self.ouput_sort].into(),
         }
+    }
+}
+
+impl<'bump> MaybeEvaluatable<'bump> for Evaluate<'bump> {
+    fn maybe_get_evaluated(&self) -> Option<Function<'bump>> {
+        None
     }
 }
