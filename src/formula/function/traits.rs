@@ -94,7 +94,7 @@ where
 /// accross modules / with lifetimes
 #[macro_export]
 macro_rules! CustomDerive {
-    (($($kind:tt),+) $(pub)? enum $name:ident {$($variant:ident$($vt:ty)?),* $(,)?}) => {
+    (($($kind:tt),+) $(pub)? enum $name:ident { $($(#[$($attrs:tt)*])*$variant:ident$($vt:ty)?),* $(,)?}) => {
         CustomDerive!(
             @inner($($kind),*) $name
                 {lifetimes}
@@ -105,7 +105,7 @@ macro_rules! CustomDerive {
     };
 
     (($($kind:tt),+) $(pub)? enum $name:ident<$($lt:lifetime),* $(,$tv:ident)*>
-        {$($variant:ident$(($vt:ty))?),* $(,)?}) => {
+        {$($(#[$($attrs:tt)*])* $variant:ident$(($vt:ty))?),* $(,)?}) => {
         CustomDerive!(
             @inner($($kind),*) $name
             {lifetimes $($lt),*}
@@ -119,7 +119,7 @@ macro_rules! CustomDerive {
         where
             $($lt_where1:lifetime : $lt_were:lifetime),*
             $($t_where1:ty : $t_where2:ty),*
-        {$($variant:ident$($vt:ty)?),* $(,)?}) => {
+        {$($(#[$($attrs:tt)*])* $variant:ident$($vt:ty)?),* $(,)?}) => {
         CustomDerive!(
             @inner($($kind),+) $name
             {lifetimes $($lt),*}

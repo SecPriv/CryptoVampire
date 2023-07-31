@@ -24,7 +24,7 @@ use itertools::Itertools;
 // use crate::problem::step::Step;
 
 use crate::{
-    assert_variance, asssert_trait, CustomDerive,
+    assert_variance, asssert_trait,
     container::{FromNN, NameFinder, ScopeAllocator},
     formula::function::{
         signature::{FastSignature, FixedSignature},
@@ -38,7 +38,7 @@ use crate::{
         utils::{MaybeInvalid, Reference},
         vecref::VecRef,
     },
-    variants, variants_ref, variants_ref_try_into,
+    variants, variants_ref, variants_ref_try_into, CustomDerive,
 };
 
 use self::{
@@ -117,16 +117,30 @@ macro_attr! {
         CustomDerive!(maybe_fixed_signature, 'bump),
     )]
     pub enum InnerFunction<'bump> {
+        #[doc="Boolean connective like `and`, `or`, `=`, etc... \
+            Basically the builtin functions that have type \
+            [BOOL](automator::formula::sort::builtins::BOOL)."]
         Bool(Booleans),
         // Nonce(Nonce<'bump>),
+        #[doc="The [Step](automator::problem::step)s"]
         Step(StepFunction<'bump>),
+        #[doc="A subterm function. By it a `vampire` special one, \
+            or a pure FOL one"]
         Subterm(Subterm<'bump>),
+        #[doc="Term algebra functions and their evaluated form
+
+This means all the user-defined function and all the other BC functions"]
         TermAlgebra(TermAlgebra<'bump>),
+        #[doc="The `ite` from smt"]
         IfThenElse(IfThenElse),
+        #[doc="To cast from term algebra to the evaluated space"]
         Evaluate(Evaluate<'bump>),
+        #[doc="Other predicates"]
         Predicate(Predicate<'bump>),
+        #[doc="When you need to define a function but not use it"]
         Tmp(Tmp<'bump>),
         Skolem(Skolem<'bump>),
+        #[doc="A function to be overwritten soon"]
         Invalid(InvalidFunction<'bump>),
     }
 }
