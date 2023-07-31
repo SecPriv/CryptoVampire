@@ -151,8 +151,8 @@ pub fn generate<'bump>(
             InnerFunction::TermAlgebra(ta) => {
                 match ta {
                     TermAlgebra::Function(_) => continue, // already done
-                    TermAlgebra::Cell(_) | TermAlgebra::Input | TermAlgebra::Name(_) => continue, // nothing specific to be done here
-                    TermAlgebra::IfThenElse => {
+                    TermAlgebra::Cell(_) | TermAlgebra::Input(_) | TermAlgebra::Name(_) => continue, // nothing specific to be done here
+                    TermAlgebra::IfThenElse(_) => {
                         assertions.push(Axiom::base(mforall!(c!0:cond, l!1:msg, r!2:msg; {
                             pbl.evaluator.eval(function.f([c.clone(), l.clone(), r.clone()]))
                                 >> IF_THEN_ELSE.f([c, l, r].into_iter().map(|v| pbl.evaluator.eval(v)))
@@ -249,13 +249,13 @@ pub fn generate_quantifier<'bump>(
 
             let applied_condition = condition
                 .clone()
-                .apply_substitution(subst_source.as_ref(), subst_target.as_ref());
+                .apply_substitution(subst_source.clone(), &subst_target);
             let applied_l = success
                 .clone()
-                .apply_substitution(subst_source.as_ref(), subst_target.as_ref());
+                .apply_substitution(subst_source.clone(), &subst_target);
             let applied_r = faillure
                 .clone()
-                .apply_substitution(subst_source.as_ref(), subst_target.as_ref());
+                .apply_substitution(subst_source.clone(), &subst_target);
 
             assertions.extend(
                 [

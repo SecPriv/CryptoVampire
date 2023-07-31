@@ -1,6 +1,14 @@
 use std::sync::atomic::{self, AtomicUsize};
 
-use crate::formula::{formula::RichFormula, variable::Variable};
+use crate::formula::{
+    formula::RichFormula,
+    function::{
+        signature::FixedRefSignature,
+        traits::{FixedSignature, MaybeEvaluatable},
+    },
+    sort::builtins::{CONDITION, MESSAGE},
+    variable::Variable,
+};
 
 static N_QUANTIFIERS: AtomicUsize = AtomicUsize::new(0);
 
@@ -55,5 +63,27 @@ impl<'bump> Quantifier<'bump> {
 
     pub fn inner(&self) -> &InnerQuantifier<'bump> {
         &self.inner
+    }
+}
+
+impl<'bump> MaybeEvaluatable<'bump> for Quantifier<'bump> {
+    fn maybe_get_evaluated(&self) -> Option<crate::formula::function::Function<'bump>> {
+        None
+    }
+}
+
+impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for Quantifier<'bump> {
+    fn as_fixed_signature(
+        &'a self,
+    ) -> crate::formula::function::signature::FixedRefSignature<'a, 'bump> {
+        let out = match self.inner {
+            InnerQuantifier::FindSuchThat { .. } => MESSAGE.clone(),
+            InnerQuantifier::Exists { .. } | InnerQuantifier::Forall { .. } => CONDITION.clone(),
+        };
+
+        FixedRefSignature {
+            out,
+            args: self.bound_variables.iter().map(|v| v.sort).collect(),
+        }
     }
 }

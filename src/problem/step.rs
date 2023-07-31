@@ -216,12 +216,12 @@ impl<'bump> Step<'bump> {
 
     pub fn apply_condition(&self, args: &[RichFormula<'bump>]) -> RichFormula<'bump> {
         let vars: Vec<_> = (1..=self.arity()).into_iter().collect_vec();
-        self.condition().clone().apply_substitution(&vars, args)
+        self.condition().clone().apply_substitution(vars, args)
     }
 
     pub fn apply_message(&self, args: &[RichFormula<'bump>]) -> RichFormula<'bump> {
         let vars: Vec<_> = (1..=self.arity()).into_iter().collect_vec();
-        self.message().clone().apply_substitution(&vars, args)
+        self.message().clone().apply_substitution(vars, args)
     }
 
     pub fn arity(&self) -> usize {

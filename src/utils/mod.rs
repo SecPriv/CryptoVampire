@@ -7,3 +7,4 @@ pub mod string_ref;
 pub mod test_utils;
 pub mod utils;
 pub mod vecref;
+pub mod enum_utils;

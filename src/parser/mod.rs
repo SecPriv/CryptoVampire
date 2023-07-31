@@ -22,20 +22,24 @@ fn err<E: std::error::Error, T>(err: E) -> Result<T, E> {
     }
 }
 
-macro_rules! merr {
-    ($span:expr; $msg:literal $(,$args:expr)*) => {
-        pest::error::Error::new_from_span(
-            pest::error::ErrorVariant::CustomError {
-                message: format!($msg $(,$args)*),
-            },
-            $span,
-        )
-    };
+fn merr<'a>(s: Span<'a>, msg: String) -> E {
+    pest::error::Error::new_from_span(pest::error::ErrorVariant::CustomError { message: msg }, s)
 }
 
-pub(crate) use merr;
+// macro_rules! merr {
+//     ($span:expr; $msg:literal $(,$args:expr)*) => {
+//         pest::error::Error::new_from_span(
+//             pest::error::ErrorVariant::CustomError {
+//                 message: format!($msg $(,$args)*),
+//             },
+//             $span,
+//         )
+//     };
+// }
 
-use crate::formula::sort::sort_proxy::InferenceError;
+// pub(crate) use merr;
+
+use crate::{formula::sort::sort_proxy::InferenceError, f};
 
 trait IntoRuleResult<T, Err> {
     fn into_rr<'a>(self, span: Span<'a>) -> Result<T, E>;
@@ -45,7 +49,7 @@ impl<'bump, T> IntoRuleResult<T, InferenceError<'bump>> for Result<T, InferenceE
     fn into_rr<'a>(self, span: Span<'a>) -> Result<T, E> {
         match self {
             Ok(x) => Ok(x),
-            Err(e) => err(merr!(span; "{}", e)),
+            Err(e) => err(merr(span, f!("{}", e))),
         }
     }
 }

@@ -1,27 +1,39 @@
-use crate::{assert_variance, variants};
-
-use self::{
-    base_function::BaseFunction, cell::Cell, connective::Connective, name::Name,
-    quantifier::Quantifier,
+use crate::{
+    assert_variance, formula::function::builtin::IF_THEN_ELSE, match_as_trait, variants,
+    CustomDerive,
 };
 
-use super::Function;
+use self::{
+    base_function::BaseFunction, cell::Cell, connective::Connective, if_then_else::IfThenElse,
+    input::Input, name::Name, quantifier::Quantifier,
+};
+
+use super::{traits::MaybeEvaluatable, Function};
 
 pub mod base_function;
 pub mod cell;
 pub mod connective;
+pub mod if_then_else;
+pub mod input;
 pub mod name;
 pub mod quantifier;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum TermAlgebra<'bump> {
-    Condition(Connective),
-    Quantifier(Quantifier<'bump>),
-    Function(BaseFunction<'bump>),
-    Cell(Cell<'bump>),
-    Name(Name<'bump>),
-    Input,
-    IfThenElse,
+use macro_attr::*;
+
+macro_attr! {
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
+        CustomDerive!(maybe_evaluate, 'bump),
+        CustomDerive!(maybe_fixed_signature, 'bump),
+    )]
+    pub enum TermAlgebra<'bump> {
+        Condition(Connective),
+        Quantifier(Quantifier<'bump>),
+        Function(BaseFunction<'bump>),
+        Cell(Cell<'bump>),
+        Name(Name<'bump>),
+        Input(Input),
+        IfThenElse(IfThenElse),
+    }
 }
 
 impl<'bump> TermAlgebra<'bump> {
@@ -29,9 +41,9 @@ impl<'bump> TermAlgebra<'bump> {
         match self {
             TermAlgebra::Condition(_)
             | TermAlgebra::Function(_)
-            | TermAlgebra::IfThenElse
+            | TermAlgebra::IfThenElse(_)
             | TermAlgebra::Name(_) => true,
-            TermAlgebra::Quantifier(_) | TermAlgebra::Cell(_) | TermAlgebra::Input => false,
+            TermAlgebra::Quantifier(_) | TermAlgebra::Cell(_) | TermAlgebra::Input(_) => false,
         }
     }
 
@@ -44,23 +56,3 @@ impl<'bump> TermAlgebra<'bump> {
 }
 
 assert_variance!(TermAlgebra);
-
-pub trait Evaluatable<'bump> {
-    fn get_evaluated(&self) -> Function<'bump>;
-}
-
-pub trait MaybeEvaluatable<'bump> {
-    fn get_evaluated(&self) -> Option<Function<'bump>>;
-}
-
-impl<'bump, I> MaybeEvaluatable<'bump> for I where I:Evaluatable<'bump> {
-    fn get_evaluated(&self) -> Option<Function<'bump>> {
-        Some(self.get_evaluated())
-    }
-}
-
-impl<'bump, I> MaybeEvaluatable<'bump> for Option<I> where I: MaybeEvaluatable<'bump> {
-    fn get_evaluated(&self) -> Option<Function<'bump>> {
-        self.as_ref().and_then(MaybeEvaluatable::get_evaluated)
-    }
-}

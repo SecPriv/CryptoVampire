@@ -12,6 +12,7 @@ pub mod skolem;
 pub mod step;
 pub mod subterm;
 pub mod term_algebra;
+pub mod traits;
 pub mod unused;
 
 // pub mod equality;
@@ -37,7 +38,7 @@ use crate::{
         utils::{MaybeInvalid, Reference},
         vecref::VecRef,
     },
-    variants, variants_ref,
+    variants, variants_ref, variants_ref_try_into,
 };
 
 use self::{
@@ -546,7 +547,7 @@ impl<'bump> Function<'bump> {
         match self.as_ref() {
             InnerFunction::TermAlgebra(TermAlgebra::Cell(_))
             | InnerFunction::TermAlgebra(TermAlgebra::Quantifier(_))
-            | InnerFunction::TermAlgebra(TermAlgebra::Input) => true,
+            | InnerFunction::TermAlgebra(TermAlgebra::Input(_)) => true,
             _ => false,
         }
     }
@@ -572,6 +573,21 @@ impl<'bump> Function<'bump> {
         Invalid:InvalidFunction<'bump>,
     );
 }
+
+variants_ref_try_into!(InnerFunction : InnerFunction<'bump> => {
+    Bool:Booleans|
+    Nonce:Nonce<'bump>|
+    Step:StepFunction<'bump>|
+    Subterm:Subterm<'bump>|
+    TermAlgebra:TermAlgebra<'bump>|
+    IfThenElse:IfThenElse|
+    Evaluate:Evaluate<'bump>|
+    Predicate:Predicate<'bump>|
+    Tmp:Tmp<'bump>|
+    Skolem:Skolem<'bump>|
+    Invalid:InvalidFunction<'bump>};
+    'bump
+);
 
 impl<'bump> PreciseAsRef<'bump, InnerFunction<'bump>> for Function<'bump> {
     fn precise_as_ref(&self) -> &'bump InnerFunction<'bump> {

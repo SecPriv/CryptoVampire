@@ -4,6 +4,7 @@ use std::{
 };
 
 use itertools::{Either, Itertools, MapInto};
+// use paste::paste;
 use thiserror::Error;
 
 use crate::{
@@ -15,7 +16,7 @@ use crate::{
         },
     },
     implvec,
-    utils::vecref::{IterVecRef, VecRef},
+    utils::vecref::{IterVecRef, IterVecRefClone, VecRef, VecRefClone},
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Error)]
@@ -51,8 +52,11 @@ pub trait Signature<'bump>: Sized {
 
     fn check_rich_formulas<'a>(
         &self,
-        args: implvec!(&'a RichFormula< 'bump>),
-    )-> Result<(), CheckError<'bump>> where 'bump:'a  {
+        args: implvec!(&'a RichFormula<'bump>),
+    ) -> Result<(), CheckError<'bump>>
+    where
+        'bump: 'a,
+    {
         self.check(PartialImplSignature {
             out: None,
             args: args.into_iter().map(|f| f.sort()),
@@ -150,13 +154,13 @@ where
     'bump: 'a,
 {
     pub out: Sort<'bump>,
-    pub args: VecRef<'a, Sort<'bump>>,
+    pub args: VecRefClone<'a, Sort<'bump>>,
 }
 
 impl<'a, 'bump: 'a> Signature<'bump> for FixedRefSignature<'a, 'bump> {
-    type I<'b> = MapInto< IterVecRef<'a, 'b, Sort<'bump>>, SortProxy<'bump>>
+    type I<'b> = MapInto< IterVecRefClone<'a, 'b, Sort<'bump>>, SortProxy<'bump>>
     where
-        Self: 'b;
+        Self: 'b, 'a:'b;
 
     fn out(&self) -> SortProxy<'bump> {
         self.out.into()
@@ -175,3 +179,28 @@ impl<'a, 'bump: 'a> Signature<'bump> for FixedRefSignature<'a, 'bump> {
 }
 
 impl<'a, 'bump: 'a> FastSignature<'bump> for FixedRefSignature<'a, 'bump> {}
+
+paste::paste!();
+
+#[macro_export]
+macro_rules! static_signature {
+
+    ($name:ident: ($($arg:expr),*) -> $out:expr) => {
+    paste::paste!{
+        #[static_init::dynamic]
+        static  [<$name _ARGS>] : [$crate::formula::sort::Sort<'static>; $crate::static_signature!(@inner ($($arg,)*))]
+            = [$($arg.as_sort()),*];
+    }
+
+    #[static_init::dynamic]
+    static $name: $crate::formula::function::signature::FixedRefSignature<'static, 'static> =
+        $crate::formula::function::signature::FixedRefSignature {
+            out: $out.as_sort(),
+            args:  std::convert::From::from( paste::paste!{ [<$name _ARGS>] }.as_ref())
+        };
+    };
+
+    (@inner ()) => { 0 };
+    (@inner ($t:tt, $($other:tt,)*)) => { 1 + $crate::static_signature!(@inner ($($other,)*))};
+
+}

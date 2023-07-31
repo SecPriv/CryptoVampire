@@ -83,6 +83,7 @@ dependencies = [
  "enum_dispatch",
  "if_chain",
  "itertools",
+ "macro-attr",
  "ord-utils",
  "paste",
  "pest",
@@ -382,6 +383,12 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
 ]
+
+[[package]]
+name = "macro-attr"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "00e51c6f0e2bf862b01b3d784fc32b02feb248a69062c51fb0b6d14cd526cc2a"
 
 [[package]]
 name = "matchers"

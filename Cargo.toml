@@ -24,6 +24,7 @@ derivative = {version = "2.2.0"}
 # aliasable = "0.1.3"
 qcell = "0.5.3"
 enum_dispatch = "0.3.11"
+macro-attr = "0.2.0"
 # qcell = "0.5.3"
 # match_deref = "0.1.1"
 # bumpalo = { version = "3.12.0", features = ["boxed", "collections"] }

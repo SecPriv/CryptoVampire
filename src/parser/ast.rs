@@ -4,7 +4,7 @@ use derivative::Derivative;
 use itertools::Itertools;
 use pest::{error::Error, iterators::Pair, Parser, Span};
 
-use crate::destvec;
+use crate::{destvec, f};
 
 use super::*;
 
@@ -52,7 +52,7 @@ macro_rules! boiler_plate {
             let $p = p_iter.next().unwrap();
 
             if let Some(p) = p_iter.next() {
-                return err(merr!(p.as_span(); "too much"))
+                return err(merr(p.as_span(), f!("too much")))
             }
 
             match $p.as_rule() {
@@ -73,7 +73,7 @@ macro_rules! boiler_plate {
 macro_rules! as_array {
     ($span:ident in [$($arg:ident),*] = $vec:expr) => {
         destvec!{ [$($arg),*] = $vec; |err| {
-            return Err(merr!($span; "{}", err))
+            return Err(merr($span, f!("{}", err)))
         }}
     };
 }
@@ -177,6 +177,16 @@ boiler_plate!(TypeName<'a>, 'a, type_name; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
+impl<'a> TypeName<'a> {
+    pub fn name(&self) -> &'a str {
+        self.0.content.content
+    }
+
+    pub fn name_span(&self) -> Span<'a> {
+        self.0.span
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Function<'a>(pub Sub<'a, Ident<'a>>);
 boiler_plate!(Function<'a>, 'a, function; |p| {
@@ -188,6 +198,16 @@ pub struct MacroName<'a>(pub Sub<'a, Ident<'a>>);
 boiler_plate!(MacroName<'a>, 'a, function; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
+
+impl<'a> MacroName<'a> {
+    pub fn name(&self) -> &'a str {
+        self.0.content.content
+    }
+
+    pub fn span(&self) -> Span<'a> {
+        self.0.span
+    }
+}
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Variable<'a>(pub Sub<'a, &'a str>);
@@ -257,7 +277,7 @@ pub enum InnerTerm<'a> {
     If(Box<IfThenElse<'a>>),
     Fndst(Box<FindSuchThat<'a>>),
     Quant(Box<Quantifier<'a>>),
-    Appliction(Box<Application<'a>>),
+    Application(Box<Application<'a>>),
     Infix(Box<Infix<'a>>),
     Macro(Box<AppMacro<'a>>),
 }
@@ -290,7 +310,7 @@ boiler_plate!(InnerTerm<'s>, 's, inner_term; |p| {
                 },
                 Rule::application => {
                     dest_rule!(span in [inner] = cmn_rule.into_inner());
-                    Ok(InnerTerm::Appliction(Box::new(inner)))
+                    Ok(InnerTerm::Application(Box::new(inner)))
                 },
                 Rule::macro_application => {
                     dest_rule!(span in [inner] = cmn_rule.into_inner());
@@ -317,8 +337,8 @@ boiler_plate!(AppMacro<'a>, 'a, macro_application; |p| {
         let name: MacroName = p.next().unwrap().try_into()?;
 
         match name.0.content.content {
-            "msg" => InnerAppMacro::Msg,
-            "cond" => InnerAppMacro::Cond,
+            "msg" => InnerAppMacro::Msg(p.next().unwrap().try_into()?),
+            "cond" => InnerAppMacro::Cond(p.next().unwrap().try_into()?),
             _ => {
                 let args : Result<Vec<_>, _> = p.map(TryInto::try_into).collect();
                 InnerAppMacro::Other { name, args: args? }
@@ -331,8 +351,8 @@ boiler_plate!(AppMacro<'a>, 'a, macro_application; |p| {
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum InnerAppMacro<'a> {
-    Msg,
-    Cond,
+    Msg(Application<'a>),
+    Cond(Application<'a>),
     Other {
         name: MacroName<'a>,
         args: Vec<Term<'a>>,
@@ -360,7 +380,7 @@ boiler_plate!(Infix<'a>, 'a, infix_term; |p| {
     while let Some(n_op) = p.next() {
         let n_op_span = n_op.as_span();
         if n_op.try_into() != Ok(operation) {
-            return Err(merr!(n_op_span; "should be {}", operation))
+            return Err(merr(n_op_span, f!("should be {}", operation)))
         }
         terms.push(p.next().unwrap().try_into()?)
     }
@@ -425,6 +445,28 @@ pub enum Application<'a> {
         function: Function<'a>,
         args: Vec<Term<'a>>,
     },
+}
+
+impl<'a> Application<'a> {
+    pub fn name(&self) -> &'a str {
+        match self{
+            Application::ConstVar { content,.. } => *content,
+            Application::Application {  function, .. } => function.0.content.content,
+        }
+    }
+    pub fn name_span(&self) -> Span<'a> {
+        match self{
+            Application::ConstVar { span,.. } => *span,
+            Application::Application {  function, .. } => function.0.span,
+        }
+    }
+
+    pub fn span(&self) -> Span<'a> {
+        match self {
+            Application::ConstVar { span, .. }
+             | Application::Application { span, .. } => *span
+        }
+    }
 }
 boiler_plate!(Application<'a>, 'a, application; |p| {
     let span = p.as_span();
@@ -624,13 +666,9 @@ boiler_plate!(Step<'a>, 'a, step; |p| {
     let assignements = p.next().map(TryInto::try_into).transpose()?;
 
     if let Some(np) = p.next() {
-        let mut l = 0;
-        for _ in p {
-            l+=1;
-        }
-        return err(merr!(np.as_span();
-            "too many arguments (expected at most 5, got {})",
-            (6 + l)))
+        return err(merr(np.as_span(),
+            f!("too many arguments (expected at most 5, got {})",
+            (6 + p.len()))))
     }
 
     Ok(Self { span, name, args, condition, message, assignements})

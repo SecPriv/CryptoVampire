@@ -264,7 +264,9 @@ impl<'bump> RichFormula<'bump> {
         self.apply(|v: &Variable| f(v).unwrap_or(Self::Var(v.clone())))
     }
 
-    pub fn apply_substitution(self, vars: &[usize], fs: &[Self]) -> Self {
+    pub fn apply_substitution<'a>(self, vars: implvec!(usize), fs: implvec!(&'a Self)) -> Self where 'bump:'a {
+        let vars = vars.into_iter().collect_vec();
+        let fs = fs.into_iter().collect_vec();
         debug_assert_eq!(vars.len(), fs.len());
         self.apply_some(|v| {
             vars.iter()

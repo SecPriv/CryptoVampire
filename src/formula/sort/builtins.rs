@@ -39,4 +39,11 @@ pub static NONCE: StatSort = new_static_sort(
     None,
 );
 
+#[dynamic]
+pub static NAME: StatSort = new_static_sort(
+    /* STATIC_ALLOCATOR.as_ref(), */ "Name",
+    Default::default(),
+    None,
+);
+
 pub type StatSort = Sort<'static>;

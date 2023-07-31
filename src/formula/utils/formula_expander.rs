@@ -241,7 +241,7 @@ where
                             }))
                             .collect()
                         }
-                        TermAlgebra::Input if deeper_kinds.contains(DeeperKinds::INPUT) => iter
+                        TermAlgebra::Input(_) if deeper_kinds.contains(DeeperKinds::INPUT) => iter
                             .chain(process_deeper(steps, graph, None, &self.state, args))
                             .collect(),
                         TermAlgebra::Cell(c)
@@ -261,9 +261,9 @@ where
                         TermAlgebra::Condition(_)
                         | TermAlgebra::Function(_)
                         | TermAlgebra::Name(_)
-                        | TermAlgebra::IfThenElse
+                        | TermAlgebra::IfThenElse(_)
                         | TermAlgebra::Quantifier(_)
-                        | TermAlgebra::Input
+                        | TermAlgebra::Input(_)
                         | TermAlgebra::Cell(_) => iter.collect(),
                     },
                     InnerFunction::Bool(_)

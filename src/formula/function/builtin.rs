@@ -77,5 +77,10 @@ pub static HAPPENS: Function<'static> = new_static_function(InnerFunction::Predi
 
 #[dynamic]
 pub static IF_THEN_ELSE_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(
-    super::term_algebra::TermAlgebra::IfThenElse,
+    super::term_algebra::TermAlgebra::IfThenElse(Default::default()),
+));
+
+#[dynamic]
+pub static INPUT: Function<'static> = new_static_function(InnerFunction::TermAlgebra(
+    super::term_algebra::TermAlgebra::Input(Default::default()),
 ));

@@ -2,12 +2,15 @@ use std::{collections::HashMap, ops::Deref};
 
 use pest::Span;
 
-use self::guard::{GuardedFunction, GuardedMemoryCell, GuardedStep};
+use self::{
+    guard::{GuardedFunction, GuardedMemoryCell, GuardedStep},
+    parsable_trait::VarProxy,
+};
 
 use super::{
     ast::{
         extra::{self, AsFunction, SnN},
-        ASTList, Declaration, DeclareType, Ident, AST,
+        ASTList, Declaration, DeclareType, Ident, Term, AST,
     },
     *,
 };
@@ -59,14 +62,14 @@ mod guard {
 }
 
 #[derive(Hash, Clone, PartialEq, Eq, Debug, PartialOrd, Ord)]
-struct Macro<'bump> {
-    name: String,
-    args: Vec<Variable<'bump>>,
-    content: RichFormula<'bump>,
+struct Macro<'bump, 'a> {
+    // name: &'a str,
+    args: Vec<(&'a str, Variable<'bump>)>,
+    content: ast::Term<'a>,
 }
 
 #[derive(Debug)]
-pub struct Environement<'bump> {
+pub struct Environement<'bump, 'str> {
     /// the main memory
     container: &'bump Container<'bump>,
 
@@ -79,7 +82,10 @@ pub struct Environement<'bump> {
     /// That one for [Function]s
     function_hash: HashMap<String, Function<'bump>>,
     /// For [Macro]s
-    macro_hash: HashMap<String, Macro<'bump>>,
+    macro_hash: HashMap<&'str str, Macro<'bump, 'str>>,
+
+    /// # Macro look up table
+    step_lut_to_parse: HashMap<&'str str, ast::Step<'str>>,
 
     /// List of things to initialize
     ///
@@ -98,7 +104,10 @@ pub struct Environement<'bump> {
 }
 
 /// Declare the sort
-pub fn declare_sorts<'a, 'bump>(env: &mut Environement<'bump>, ast: &ASTList<'a>) -> Result<(), E> {
+pub fn declare_sorts<'a, 'bump>(
+    env: &mut Environement<'bump, 'a>,
+    ast: &ASTList<'a>,
+) -> Result<(), E> {
     ast.into_iter()
         .filter_map(|ast| match ast {
             AST::Declaration(d) => match d.as_ref() {
@@ -110,16 +119,25 @@ pub fn declare_sorts<'a, 'bump>(env: &mut Environement<'bump>, ast: &ASTList<'a>
         .try_for_each(|s| {
             let name = s.name();
             if env.sort_hash.contains_key(name) {
-                err(merr!(*s.get_name_span(); "the sort name {} is already in use", name))
+                err(merr(
+                    *s.get_name_span(),
+                    f!("the sort name {} is already in use", name),
+                ))
             } else {
                 let sort = Sort::new_regular(env.container, name.to_owned());
                 env.sort_hash
                     .insert(sort.name(), sort)
                     .ok_or_else(|| {
-                        merr!(*s.get_name_span();
-                        "!UNREACHABLE!(line {} in {}) \
+                        merr(
+                            *s.get_name_span(),
+                            f!(
+                                "!UNREACHABLE!(line {} in {}) \
 The sort name {} somehow reintroduced itself in the hash",
-                        line!(), file!(), name)
+                                line!(),
+                                file!(),
+                                name
+                            ),
+                        )
                     })
                     .map(|_| ())
             }
@@ -128,7 +146,7 @@ The sort name {} somehow reintroduced itself in the hash",
 
 /// declare the user function (e.g., tuple & co)
 pub fn declare_functions<'a, 'bump>(
-    env: &mut Environement<'bump>,
+    env: &mut Environement<'bump, 'a>,
     ast: &ASTList<'a>,
 ) -> Result<(), E> {
     ast.into_iter()
@@ -145,7 +163,10 @@ pub fn declare_functions<'a, 'bump>(
                 content: name,
             } = fun.name();
             if env.function_hash.contains_key(name) {
-                err(merr!(span; "the function name {} is already in use", name))
+                err(merr(
+                    span,
+                    f!("the function name {} is already in use", name),
+                ))
             } else {
                 let input_sorts: Result<Vec<_>, _> = fun
                     .args()
@@ -161,10 +182,16 @@ pub fn declare_functions<'a, 'bump>(
                 env.function_hash
                     .insert(fun.name().to_string(), fun)
                     .ok_or_else(|| {
-                        merr!(span;
-                        "!UNREACHABLE!(line {} in {}) \
+                        merr(
+                            span,
+                            f!(
+                                "!UNREACHABLE!(line {} in {}) \
 The function name {} somehow reintroduced itself in the hash",
-                        line!(), file!(), name)
+                                line!(),
+                                file!(),
+                                name
+                            ),
+                        )
                     })
                     .map(|_| ())
             }
@@ -176,7 +203,7 @@ The function name {} somehow reintroduced itself in the hash",
 /// The functions are also added to the list of things to initialize as the
 /// they are kept empty. For instance a step might depend on itself.
 pub fn declare_steps_and_cells<'a, 'bump>(
-    env: &mut Environement<'bump>,
+    env: &mut Environement<'bump, 'a>,
     ast: &ASTList<'a>,
 ) -> Result<(), E> {
     ast.into_iter()
@@ -194,7 +221,10 @@ pub fn declare_steps_and_cells<'a, 'bump>(
         .try_for_each(|fun| {
             let SnN { span, name } = fun.name();
             if env.function_hash.contains_key(name) {
-                err(merr!(*span; "the step/cell/function name {} is already in use", name))
+                err(merr(
+                    *span,
+                    f!("the step/cell/function name {} is already in use", name),
+                ))
             } else {
                 // the input sorts (will gracefully error out later if a sort is undefined)
                 let input_sorts: Result<Vec<_>, _> = fun
@@ -221,23 +251,27 @@ pub fn declare_steps_and_cells<'a, 'bump>(
                 // NB: no UB because "uninitialized" is another state.
                 // (might "gracefully" crash later though)
                 if let Some(_) = err_check {
-                    err(merr!(*span; "already in the list of things to initialize"))?;
+                    err(merr(
+                        *span,
+                        f!("already in the list of things to initialize"),
+                    ))?;
                 }
 
                 // add the function the map of function for faster parsing
                 env.function_hash
                     .insert(fun.name().to_string(), fun)
                     .ok_or_else(|| {
-                        merr!(*span;
-                        "!UNREACHABLE!(line {} in {}; {})",
-                        line!(), file!(), name)
+                        merr(
+                            *span,
+                            f!("!UNREACHABLE!(line {} in {}; {})", line!(), file!(), name),
+                        )
                     })
                     .map(|_| ())
             }
         })
 }
 
-fn declare_let<'bump, 'a>(env: &mut Environement<'bump>, ast: &ASTList<'a>) -> Result<(), E> {
+fn declare_let<'bump, 'a>(env: &mut Environement<'bump, 'a>, ast: &ASTList<'a>) -> Result<(), E> {
     ast.into_iter()
         .filter_map(|ast| match ast {
             AST::Let(b) => Some(b.as_ref()),
@@ -248,7 +282,7 @@ fn declare_let<'bump, 'a>(env: &mut Environement<'bump>, ast: &ASTList<'a>) -> R
             let SnN { span, name } = name.into();
             // TODO: no hard-coded values
             if env.macro_hash.contains_key(name) || ["msg", "cond"].contains(&name) {
-                err(merr!(*span; "the macro {}! is already in use", name))
+                err(merr(*span, f!("the macro {}! is already in use", name)))
             } else {
                 // the input sorts (will gracefully error out later if a sort is undefined)
                 let input_sorts: Result<Vec<_>, _> = mlet
@@ -264,35 +298,35 @@ fn declare_let<'bump, 'a>(env: &mut Environement<'bump>, ast: &ASTList<'a>) -> R
 
 /// Find the [Sort] in already declared in [Environement::sort_hash]
 fn get_sort<'a, 'bump>(
-    env: &Environement<'bump>,
+    env: &Environement<'bump, 'a>,
     span: Span<'a>,
     str: implderef!(str),
 ) -> Result<Sort<'bump>, E> {
     env.sort_hash
         .get(Deref::deref(&str))
-        .ok_or_else(|| merr!(span; "undefined sort {}", Deref::deref(&str)))
+        .ok_or_else(|| merr(span, f!("undefined sort {}", Deref::deref(&str))))
         .map(|s| *s)
 }
 
 /// Find the [Function] in already declared in [Environement::sort_function]
 fn get_function<'a, 'bump>(
-    env: &Environement<'bump>,
+    env: &Environement<'bump, 'a>,
     span: Span<'a>,
     str: implderef!(str),
 ) -> Result<Function<'bump>, E> {
     env.function_hash
         .get(Deref::deref(&str))
-        .ok_or_else(|| merr!(span; "undefined function {}", Deref::deref(&str)))
+        .ok_or_else(|| merr(span, f!("undefined function {}", Deref::deref(&str))))
         .map(|s| *s)
 }
 
-impl<'bump> MaybeInvalid for Environement<'bump> {
+impl<'bump, 'a> MaybeInvalid for Environement<'bump, 'a> {
     fn valid(&self) -> bool {
         todo!()
     }
 }
 
-impl<'bump> Environement<'bump> {
+impl<'bump, 'a> Environement<'bump, 'a> {
     pub fn new(
         container: &'bump Container<'bump>,
         sort_hash: implvec!(Sort<'bump>),
@@ -309,6 +343,7 @@ impl<'bump> Environement<'bump> {
             sort_hash,
             function_hash,
             /// those start empty
+            step_lut_to_parse: Default::default(),
             macro_hash: Default::default(),
             functions_initialize: Default::default(),
             steps_initialize: Default::default(),
@@ -351,25 +386,26 @@ mod parsable_trait {
     use pest::Span;
 
     use crate::{
+        f,
         formula::{
             self,
             formula::RichFormula,
             function::{
                 self,
-                builtin::{IF_THEN_ELSE, IF_THEN_ELSE_TA},
+                builtin::{IF_THEN_ELSE, IF_THEN_ELSE_TA, INPUT},
                 signature::{CheckError, Signature},
-                term_algebra::TermAlgebra,
-                Function, InnerFunction,
+                Function, InnerFunction, term_algebra::TermAlgebra, traits::MaybeEvaluatable,
             },
             sort::{
-                builtins::{BOOL, CONDITION, MESSAGE},
+                builtins::{BOOL, CONDITION, MESSAGE, STEP},
                 sort_proxy::SortProxy,
                 Sort,
             },
             variable::Variable,
         },
+        match_as_trait,
         parser::{
-            ast::{self, extra::SnN, VariableBinding},
+            ast::{self, extra::SnN, Macro, VariableBinding},
             err, merr,
             parser::{get_function, get_sort},
             IntoRuleResult, E,
@@ -413,7 +449,7 @@ mod parsable_trait {
         type R;
         fn parse(
             &self,
-            env: &Environement<'bump>,
+            env: &Environement<'bump, 'str>,
             bvars: &mut Vec<(&'str str, VarProxy<'bump>)>,
             state: State,
             expected_sort: Option<SortProxy<'bump>>,
@@ -425,7 +461,7 @@ mod parsable_trait {
 
         fn parse(
             &self,
-            env: &Environement<'bump>,
+            env: &Environement<'bump, 'a>,
             bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
             state: State,
             expected_sort: Option<SortProxy<'bump>>,
@@ -455,7 +491,7 @@ mod parsable_trait {
             };
 
             // replace `v` by its content: `t1`
-            Ok(t2.apply_substitution(&[vn], &[t1]))
+            Ok(t2.apply_substitution([vn], [&t1]))
         }
     }
     impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::IfThenElse<'a> {
@@ -463,7 +499,7 @@ mod parsable_trait {
 
         fn parse(
             &self,
-            env: &Environement<'bump>,
+            env: &Environement<'bump, 'a>,
             bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
             state: State,
             expected_sort: Option<SortProxy<'bump>>,
@@ -509,7 +545,7 @@ mod parsable_trait {
 
         fn parse(
             &self,
-            env: &Environement<'bump>,
+            env: &Environement<'bump, 'a>,
             bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
             state: State,
             expected_sort: Option<SortProxy<'bump>>,
@@ -547,9 +583,10 @@ mod parsable_trait {
 
                     // ensures the name is free
                     if env.function_hash.contains_key(variable.name()) {
-                        return err(
-                            merr!(variable.0.span; "the name {} is already taken", variable.name()),
-                        );
+                        return err(merr(
+                            variable.0.span,
+                            f!("the name {} is already taken", variable.name()),
+                        ));
                     }
 
                     let SnN { span, name } = type_name.into();
@@ -591,7 +628,7 @@ mod parsable_trait {
 
         fn parse(
             &self,
-            env: &Environement<'bump>,
+            env: &Environement<'bump, 'a>,
             bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
             state: State,
             expected_sort: Option<SortProxy<'bump>>,
@@ -629,7 +666,10 @@ mod parsable_trait {
                     let vname = variable.name();
                     // ensures the name is free
                     if env.function_hash.contains_key(vname) {
-                        return err(merr!(variable.0.span; "the name {} is already taken", vname));
+                        return err(merr(
+                            variable.0.span,
+                            f!("the name {} is already taken", vname),
+                        ));
                     }
 
                     let SnN { span, name } = type_name.into();
@@ -699,7 +739,7 @@ mod parsable_trait {
 
         fn parse(
             &self,
-            env: &Environement<'bump>,
+            env: &Environement<'bump, 'a>,
             bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
             state: State,
             expected_sort: Option<SortProxy<'bump>>,
@@ -713,7 +753,7 @@ mod parsable_trait {
                             .map(|es| sort.unify(&es).into_rr(*span))
                             .unwrap_or_else(|| {
                                 Into::<Option<Sort>>::into(sort)
-                                    .ok_or_else(|| merr!(*span; "can't infer sort"))
+                                    .ok_or_else(|| merr(*span, f!("can't infer sort")))
                             })?;
 
                         Ok(Variable { id: *id, sort }.into())
@@ -723,27 +763,27 @@ mod parsable_trait {
 
                         // TODO: check arity
 
-                        // let f2 = match f.inner() {
-                        //     InnerFunction::TermAlgebra(taf) => match state {
-                        //         State::Convert | State::High => taf
-                        //     }
-                        // }
+                        // get the evaluated version if needed
+                        let f_eval = match state {
+                            State::Convert | State::High => f.as_term_algebra().maybe_get_evaluated().unwrap_or(f),
+                            State::Low => f
+                        };
 
                         match expected_sort.map(|s| (s.clone(), s.into())) {
-                            None => Ok(f.f([])),
+                            None => Ok(f_eval.f([])),
                             Some((s, None)) => {
                                 if let Some(s2) = f.fast_outsort() {
                                     s.set(s2)
                                 }
-                                Ok(f.f([]))
+                                Ok(f_eval.f([]))
                             },
                             Some((_, Some(s))) => if_chain!{
                                 if let Some(s2) = f.fast_outsort();
                                 if s2 != s;
                                 then {
-                                    err(merr!(*span; "wrong sort: got {}, expected {}", s2.name(), s.name()))
+                                    err(merr(*span, f!("wrong sort: got {}, expected {}", s2.name(), s.name())))
                                 } else {
-                                    Ok(f.f([]))
+                                    Ok(f_eval.f([]))
                                 }
                             }
                         }
@@ -758,6 +798,15 @@ mod parsable_trait {
                         // TODO: arity
                         let signature = f.signature();
 
+                        // get the evaluated version if needed
+                        let f_eval = match state {
+                            State::Convert | State::High => {
+                                f.as_term_algebra().maybe_get_evaluated().unwrap_or(f)
+                            }
+                            State::Low => f,
+                        };
+
+                        // parse further
                         let n_args: Result<Vec<_>, _> = signature
                             .args()
                             .into_iter()
@@ -765,37 +814,177 @@ mod parsable_trait {
                             .map(|(es, t)| t.parse(env, bvars, state, Some(es)))
                             .collect();
                         let n_args = n_args?;
+                        // check arity & co
                         let _ = match signature.check_rich_formulas(&n_args) {
                             Ok(_) => Ok(()),
                             Err(CheckError::SortError { position, error }) => match position {
-                                Some(i) => err(merr!(args[i].span; "{}", error)),
-                                None => err(merr!(*span; "{}", error)),
+                                Some(i) => err(merr(args[i].span, f!("{}", error))),
+                                None => err(merr(*span, f!("{}", error))),
                             },
-                            Err(e) => err(merr!(*span; "{}", e)),
+                            Err(e) => err(merr(*span, f!("{}", e))),
                         }?;
 
-                        let _ = expected_sort.map(|es| es.unify(&signature.out())).transpose().into_rr(*span)?;
+                        // check output sort
+                        let _ = expected_sort
+                            .map(|es| es.unify(&signature.out()))
+                            .transpose()
+                            .into_rr(*span)?;
 
-                        Ok(())
-                    })?;
-                    todo!()
+                        Ok(f_eval.f(n_args))
+                    })
                 }
             }
         }
     }
-    // impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::AppMacro<'a> {}
-    // impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {}
+    impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::AppMacro<'a> {
+        type R = RichFormula<'bump>;
+
+        fn parse(
+            &self,
+            env: &Environement<'bump, 'a>,
+            bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
+            state: State,
+            expected_sort: Option<SortProxy<'bump>>,
+        ) -> Result<Self::R, E> {
+            let Self {
+                span: main_span,
+                inner,
+            } = self;
+
+            match inner {
+                ast::InnerAppMacro::Msg(app) | ast::InnerAppMacro::Cond(app) => {
+                    let step_as_term = app.parse(env, bvars, state, Some(STEP.as_sort().into()))?;
+
+                    let args = if let RichFormula::Fun(_, args) = &step_as_term {
+                        Ok(args)
+                    } else {
+                        err(
+                            merr(app.span(), f!("this can only be a plain reference to a step (not just a term of sort {}))", STEP.name()))
+                        )
+                    }?;
+
+                    let step = env.step_lut_to_parse.get(app.name()).ok_or_else(|| {
+                        merr(
+                            app.name_span(),
+                            f!("{} is not a known step name", app.name()),
+                        )
+                    })?;
+
+                    let nbvars: Result<Vec<_>, _> = step
+                        .args
+                        .into_iter()
+                        .enumerate()
+                        .map(|(i, v)| {
+                            let name = v.variable.name();
+                            let sort = env.sort_hash.get(v.type_name.name()).ok_or_else(|| {
+                                merr(
+                                    v.type_name.name_span(),
+                                    f!("{} is not a known type", v.type_name.name()),
+                                )
+                            })?;
+                            Ok((
+                                name,
+                                VarProxy {
+                                    id: i + 1,
+                                    sort: sort.into(),
+                                },
+                            ))
+                        })
+                        .chain([Ok((
+                            "in",
+                            VarProxy {
+                                id: 0,
+                                sort: MESSAGE.as_sort().into(),
+                            },
+                        ))])
+                        .collect();
+                    let mut nbvars = nbvars?;
+                    let n = bvars.len();
+
+                    let (to_parse, n_es) = match inner {
+                        ast::InnerAppMacro::Msg(_) => (&step.message, MESSAGE.as_sort()),
+                        ast::InnerAppMacro::Cond(_) => (&step.condition, CONDITION.as_sort()),
+                        _ => unreachable!(),
+                    };
+                    if let Some(es) = expected_sort {
+                        let n_es_2 = SortProxy::from(n_es).unify(&es).into_rr(*main_span)?;
+                        assert_eq!(n_es, n_es_2);
+                    };
+
+                    let term = to_parse.parse(env, &mut nbvars, state, Some(n_es.into()))?;
+
+                    let input = INPUT.f([step_as_term.clone()]);
+                    Ok(term.apply_substitution(0..=n, [&input].into_iter().chain(args)))
+                }
+                ast::InnerAppMacro::Other { name, args } => {
+                    let mmacro = env.macro_hash.get(name.name()).ok_or_else(|| {
+                        merr(name.span(), f!("{} is not a known macro", name.name()))
+                    })?;
+
+                    let args: Vec<_> = if mmacro.args.len() == args.len() {
+                        mmacro
+                            .args
+                            .iter()
+                            .zip(args)
+                            .map(|((_, v), arg)| {
+                                arg.parse(env, bvars, state, Some(v.sort().into()))
+                            })
+                            .collect()
+                    } else {
+                        err(merr(
+                            *main_span,
+                            f!(
+                                "not enough arguments: expected {}, got {}",
+                                mmacro.args.len(),
+                                args.len()
+                            ),
+                        ))
+                    }?;
+
+                    let term = {
+                        let mut bvars = mmacro
+                            .args
+                            .iter()
+                            .map(|(s, v)| (*s, (*v).into()))
+                            .collect_vec();
+                        mmacro.content.parse(env, &mut bvars, state, expected_sort)
+                    }?;
+
+                    Ok(term.apply_substitution(mmacro.args.iter().map(|(_, v)| v.id), &args))
+                }
+            }
+        }
+    }
+    impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
+        type R = RichFormula<'bump>;
+
+        fn parse(
+            &self,
+            env: &Environement<'bump, 'a>,
+            bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
+            state: State,
+            expected_sort: Option<SortProxy<'bump>>,
+        ) -> Result<Self::R, E> {
+            // let n_es = match state {
+            //     State::Convert | State::High => BOOL.as_sort().into(),
+            //     State::Low => todo!(),
+            // };
+
+            todo!()
+        }
+    }
     impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Term<'a> {
         type R = RichFormula<'bump>;
 
         fn parse(
             &self,
-            env: &Environement<'bump>,
+            env: &Environement<'bump, 'a>,
             bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
             state: State,
             expected_sort: Option<SortProxy<'bump>>,
         ) -> Result<Self::R, E> {
-            todo!()
+            match_as_trait!(ast::InnerTerm, |x| in &self.inner => LetIn | If | Fndst | Quant | Application | Infix | Macro
+                    {x.parse(env, bvars, state, expected_sort)})
         }
     }
 }

@@ -156,90 +156,31 @@ macro_rules! destvec {
 }
 
 #[macro_export]
-macro_rules! variants {
-    ($base:ty; $variant:ident : $t:ty) => {
-        paste::paste! {
-            pub fn [<as_ $variant:snake>](&self) -> ::core::option::Option<&$t> {
-                match self {
-                    $base::$variant(x) => ::core::option::Option::Some(x),
-                    _ => ::core::option::Option::None
-                }
-            }
-        }
-        paste::paste! {
-            pub fn [<is_ $variant:snake>](&self) -> bool {
-                self.[<as_ $variant:snake>]().is_some()
-            }
+macro_rules! match_as_trait {
+    ($e:expr => {$($($pat:pat_param)|+ => $b:block),*}) => {
+        match $e {
+            $(
+                $(
+                    $pat => $b
+                ),+
+            )*
         }
     };
-    ($base:ty; $($variant:ident: $t:ty),*) => {
-        $(
-            variants!($base; $variant : $t);
-        )*
-    };
-    ($base:ty; $($variant:ident: $t:ty,)*) => {
-        variants!($base; $($variant: $t),*);
-    };
+    ($t:path, |$x:ident| in $e:expr => $($variant:ident)|* $b:block) => {
+        paste::paste! {
+            match $e {
+                $(
+                    $t::$variant($x) => $b,
+                )*
+            }
+        }
+    }
 }
 
 #[macro_export]
-macro_rules! variants_ref {
-    ($base:ty; $variant:ident : $t:ty) => {
-        paste::paste! {
-            pub fn [<as_ $variant:snake>](&self) -> ::core::option::Option<&$t> {
-                match self.as_ref() {
-                    $base::$variant(x) => ::core::option::Option::Some(x),
-                    _ => ::core::option::Option::None
-                }
-            }
-        }
-        paste::paste! {
-            pub fn [<is_ $variant:snake>](&self) -> bool {
-                self.[<as_ $variant:snake>]().is_some()
-            }
-        }
-    };
-    ($base:ty; $($variant:ident: $t:ty),*) => {
-        $(
-            variants_ref!($base; $variant : $t);
-        )*
-    };
-    ($base:ty; $($variant:ident: $t:ty,)*) => {
-        variants_ref!($base; $($variant: $t),*);
-    };
-
-    ($base:ty, $lt:lifetime; $variant:ident : $t:ty) => {
-        paste::paste! {
-            pub fn [<precise_as_ $variant:snake>](&self) -> ::core::option::Option<&$lt $t> {
-                match self.precise_as_ref() {
-                    $base::$variant(x) => ::core::option::Option::Some(x),
-                    _ => ::core::option::Option::None
-                }
-            }
-        }
-
-        paste::paste! {
-            pub fn [<as_ $variant:snake>](&self) -> ::core::option::Option<&$t> {
-                match self.precise_as_ref() {
-                    $base::$variant(x) => ::core::option::Option::Some(x),
-                    _ => ::core::option::Option::None
-                }
-            }
-        }
-        paste::paste! {
-            pub fn [<is_ $variant:snake>](&self) -> bool {
-                self.[<as_ $variant:snake>]().is_some()
-            }
-        }
-    };
-    ($base:ty, $lt:lifetime; $($variant:ident: $t:ty),*) => {
-        $(
-            variants_ref!($base, $lt; $variant : $t);
-        )*
-    };
-    ($base:ty, $lt:lifetime; $($variant:ident: $t:ty,)*) => {
-        variants_ref!($base, $lt; $($variant: $t),*);
-    };
+macro_rules! f {
+    ($lit:literal $(, $arg:expr)*) => {format!($lit $(,$arg)*)};
+    ($lit:literal $(, $arg:expr)*,) => {format!($lit $(,$arg)*)};
 }
 
 /// For things that might be invalid

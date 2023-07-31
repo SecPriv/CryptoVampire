@@ -1,4 +1,14 @@
-use crate::problem::cell::MemoryCell;
+use crate::{
+    formula::{
+        function::{
+            signature::FixedRefSignature,
+            traits::{FixedSignature, MaybeEvaluatable},
+            Function,
+        },
+        sort::builtins::MESSAGE,
+    },
+    problem::cell::MemoryCell,
+};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Cell<'bump> {
@@ -12,5 +22,20 @@ impl<'bump> Cell<'bump> {
 
     pub fn memory_cell(&self) -> MemoryCell<'bump> {
         self.memory_cell
+    }
+}
+
+impl<'bump> MaybeEvaluatable<'bump> for Cell<'bump> {
+    fn maybe_get_evaluated(&self) -> Option<Function<'bump>> {
+        None
+    }
+}
+
+impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for Cell<'bump> {
+    fn as_fixed_signature(&'a self) -> FixedRefSignature<'a, 'bump> {
+        FixedRefSignature {
+            out: MESSAGE.as_sort(),
+            args: self.memory_cell().args().as_slice().into(),
+        }
     }
 }

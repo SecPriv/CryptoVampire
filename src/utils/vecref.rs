@@ -3,6 +3,8 @@
 //! See [VecRef]
 use std::{iter::FusedIterator, ops::Index, slice::Iter, vec::IntoIter};
 
+use crate::match_as_trait;
+
 /// Slice-like object for references
 ///
 /// To iterate over `&'s T`.
@@ -162,5 +164,221 @@ impl<'a, 'b, T> DoubleEndedIterator for IterVecRef<'a, 'b, T> {
 impl<'a, I> FromIterator<&'a I> for VecRef<'a, I> {
     fn from_iter<T: IntoIterator<Item = &'a I>>(iter: T) -> Self {
         Self::Vec(Vec::from_iter(iter))
+    }
+}
+
+impl<'a, T> From<&'a [T]> for VecRef<'a, T> {
+    fn from(value: &'a [T]) -> Self {
+        Self::Ref(value)
+    }
+}
+
+impl<'a, T, const N: usize> From<&'a [T; N]> for VecRef<'a, T> {
+    fn from(value: &'a [T; N]) -> Self {
+        Self::Ref(value.as_slice())
+    }
+}
+
+impl<'a, T> From<&'a [&'a T]> for VecRef<'a, T> {
+    fn from(value: &'a [&'a T]) -> Self {
+        Self::RefRef(value)
+    }
+}
+
+impl<'a, T> From<Vec<&'a T>> for VecRef<'a, T> {
+    fn from(value: Vec<&'a T>) -> Self {
+        Self::Vec(value)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub enum VecRefClone<'a, T>
+where
+    T: Clone,
+{
+    VecRef(VecRef<'a, T>),
+    Vec(Vec<T>),
+}
+
+impl<'a, T: Clone> VecRefClone<'a, T> {
+    pub fn len(&self) -> usize {
+        match_as_trait!(self => {Self::VecRef(x) | Self::Vec(x) => {x.len()}})
+    }
+
+    pub fn get(&self, i: usize) -> Option<&T> {
+        match self {
+            Self::VecRef(x) => x.get(i),
+            Self::Vec(x) => x.get(i),
+        }
+    }
+
+    pub fn iter(&'_ self) -> IterVecRefClone<'a, '_, T> {
+        IntoIterator::into_iter(self)
+    }
+}
+
+impl<'a, T: Clone> Index<usize> for VecRefClone<'a, T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        self.get(index).unwrap()
+    }
+}
+
+impl<'b, 'a:'b, T:Clone> IntoIterator for &'b VecRefClone<'a, T> {
+    type Item = &'b T;
+
+    type IntoIter = IterVecRefClone<'a, 'b, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self{
+            VecRefClone::VecRef(x) => IterVecRefClone::VecRef(x.into_iter()),
+            VecRefClone::Vec(x) => IterVecRefClone::Vec(x.into_iter()),
+        }
+    }
+}
+
+impl<'a, T:Clone> IntoIterator for VecRefClone<'a, T> {
+    type Item = T;
+
+    type IntoIter = IntoIterVecRefClone<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self{
+            VecRefClone::VecRef(x) => IntoIterVecRefClone::VecRef(x.into_iter()),
+            VecRefClone::Vec(x) => IntoIterVecRefClone::Vec(x.into_iter()),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum IntoIterVecRefClone<'a, T>
+where
+    T: Clone,
+{
+    VecRef(IterVecRef<'a, 'a, T>),
+    Vec(IntoIter<T>),
+}
+
+#[derive(Debug, Clone)]
+pub enum IterVecRefClone<'a, 'b, T>
+where
+    T: Clone,
+{
+    VecRef(IterVecRef<'a, 'b, T>),
+    Vec(Iter<'b, T>),
+}
+
+impl<'a, T> Iterator for IntoIterVecRefClone<'a, T>
+where
+    T: Clone,
+{
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match_as_trait!(self => {Self::VecRef(x) | Self::Vec(x) => {x.next().map(|e| e.clone())}})
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match_as_trait!(self => {Self::VecRef(x) | Self::Vec(x) => {x.size_hint()}})
+    }
+}
+
+impl<'a, T: Clone> FusedIterator for IntoIterVecRefClone<'a, T> {}
+
+impl<'a, T: Clone> ExactSizeIterator for IntoIterVecRefClone<'a, T> {}
+
+impl<'a, T: Clone> DoubleEndedIterator for IntoIterVecRefClone<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        match_as_trait!(self => {Self::VecRef(x) | Self::Vec(x) => {x.next_back().map(|e| e.clone())}})
+    }
+}
+
+impl<'a, 'b, T> Iterator for IterVecRefClone<'a, 'b, T>
+where
+    T: Clone,
+    'a: 'b,
+{
+    type Item = &'b T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match_as_trait!(self => {Self::VecRef(x) | Self::Vec(x) => {x.next()}})
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match_as_trait!(self => {Self::VecRef(x) | Self::Vec(x) => {x.size_hint()}})
+    }
+}
+
+impl<'b, 'a: 'b, T: Clone> FusedIterator for IterVecRefClone<'a, 'b, T> {}
+
+impl<'b, 'a: 'b, T: Clone> ExactSizeIterator for IterVecRefClone<'a, 'b, T> {}
+
+impl<'b, 'a: 'b, T: Clone> DoubleEndedIterator for IterVecRefClone<'a, 'b, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        match_as_trait!(self => {Self::VecRef(x) | Self::Vec(x) => {x.next_back()}})
+    }
+}
+
+impl<'a, I> FromIterator<&'a I> for VecRefClone<'a, I>
+where
+    I: Clone,
+{
+    fn from_iter<T: IntoIterator<Item = &'a I>>(iter: T) -> Self {
+        Self::VecRef(VecRef::from_iter(iter))
+    }
+}
+
+impl<'a, I> FromIterator<I> for VecRefClone<'a, I>
+where
+    I: Clone,
+{
+    fn from_iter<T: IntoIterator<Item = I>>(iter: T) -> Self {
+        Self::Vec(FromIterator::from_iter(iter))
+    }
+}
+
+impl<'a, T> From<&'a [T]> for VecRefClone<'a, T>
+where
+    T: Clone,
+{
+    fn from(value: &'a [T]) -> Self {
+        Self::VecRef(value.into())
+    }
+}
+
+impl<'a, T, const N: usize> From<&'a [T; N]> for VecRefClone<'a, T>
+where
+    T: Clone,
+{
+    fn from(value: &'a [T; N]) -> Self {
+        Self::VecRef(value.into())
+    }
+}
+
+impl<'a, T> From<&'a [&'a T]> for VecRefClone<'a, T>
+where
+    T: Clone,
+{
+    fn from(value: &'a [&'a T]) -> Self {
+        Self::VecRef(value.into())
+    }
+}
+
+impl<'a, T> From<Vec<&'a T>> for VecRefClone<'a, T>
+where
+    T: Clone,
+{
+    fn from(value: Vec<&'a T>) -> Self {
+        Self::VecRef(value.into())
+    }
+}
+
+impl<'a, T> From<Vec<T>> for VecRefClone<'a, T>
+where
+    T: Clone,
+{
+    fn from(value: Vec<T>) -> Self {
+        Self::Vec(value)
     }
 }
