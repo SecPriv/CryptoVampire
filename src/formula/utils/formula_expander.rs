@@ -5,7 +5,7 @@ use itertools::Itertools;
 use crate::{
     formula::{
         formula::RichFormula,
-        function::{term_algebra::TermAlgebra, InnerFunction},
+        function::{inner::term_algebra::TermAlgebra, InnerFunction},
         variable::Variable,
     },
     problem::{
@@ -267,7 +267,7 @@ where
                         | TermAlgebra::Cell(_) => iter.collect(),
                     },
                     InnerFunction::Bool(_)
-                    // | InnerFunction::Nonce(_)
+                    // | Innerfunction::inner::Nonce(_)
                     | InnerFunction::Step(_)
                     | InnerFunction::Subterm(_)
                     | InnerFunction::IfThenElse(_)

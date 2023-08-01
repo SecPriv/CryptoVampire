@@ -1,19 +1,7 @@
-// pub mod base_function;
-pub mod booleans;
 pub mod builtin;
-pub mod evaluate;
-// pub mod function_like;
-pub mod if_then_else;
-pub mod invalid_function;
-// pub mod nonce;
-pub mod predicate;
+pub mod inner;
 pub mod signature;
-pub mod skolem;
-pub mod step;
-pub mod subterm;
-pub mod term_algebra;
 pub mod traits;
-pub mod unused;
 
 // pub mod equality;
 use std::{cmp::Ordering, hash::Hash, marker::PhantomData, ptr::NonNull};
@@ -27,8 +15,8 @@ use crate::{
     assert_variance, asssert_trait,
     container::{FromNN, NameFinder, ScopeAllocator},
     formula::function::{
+        inner::term_algebra::base_function::{BaseFunction, InnerBaseFunction},
         signature::{AsFixedSignature, FixedRefSignature},
-        term_algebra::base_function::{BaseFunction, InnerBaseFunction},
     },
     implderef, implvec,
     utils::{
@@ -39,14 +27,13 @@ use crate::{
     variants, variants_ref, variants_ref_try_into, CustomDerive,
 };
 
-use self::{
+use self::inner::{
     booleans::Booleans,
     evaluate::Evaluate,
     if_then_else::IfThenElse,
     invalid_function::InvalidFunction,
     // nonce::Nonce,
     predicate::Predicate,
-    signature::Signature,
     skolem::Skolem,
     step::StepFunction,
     subterm::Subterm,
@@ -57,6 +44,7 @@ use self::{
     },
     unused::Tmp,
 };
+use self::signature::Signature;
 
 use super::{
     formula::RichFormula,
@@ -440,11 +428,11 @@ impl<'bump> Function<'bump> {
         }
 
         let inner = InnerFunction::TermAlgebra(TermAlgebra::Quantifier(
-            term_algebra::quantifier::Quantifier {
+            inner::term_algebra::quantifier::Quantifier {
                 id,
                 bound_variables: vars,
                 free_variables: free_variables.iter().cloned().collect(),
-                inner: term_algebra::quantifier::InnerQuantifier::FindSuchThat {
+                inner: inner::term_algebra::quantifier::InnerQuantifier::FindSuchThat {
                     condition: Box::new(condition),
                     success: Box::new(success),
                     faillure: Box::new(failure),

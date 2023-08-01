@@ -6,8 +6,10 @@ use crate::{
         file_descriptior::axioms::{Axiom, Rewrite, RewriteKind},
         formula::RichFormula,
         function::{
-            booleans::{Booleans, Connective},
-            subterm::Subterm,
+            inner::{
+                booleans::{Booleans, Connective},
+                subterm::Subterm,
+            },
             Function, InnerFunction,
         },
         quantifier::Quantifier,

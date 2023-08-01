@@ -101,7 +101,7 @@ where
         to_enum: F,
     ) -> Arc<Self>
     where
-        F: FnOnce(Arc<Self>) -> function::subterm::Subsubterm<'bump>,
+        F: FnOnce(Arc<Self>) -> function::inner::subterm::Subsubterm<'bump>,
     {
         let ignored_functions = ignored_functions.into_iter().collect();
         let (_, self_rc) = unsafe {
@@ -116,7 +116,7 @@ where
                     deeper_kind,
                 });
                 //  Rc::new(subterm);
-                let inner = function::subterm::Subterm {
+                let inner = function::inner::subterm::Subterm {
                     subterm: to_enum(Arc::clone(&self_rc)),
                     name,
                 };

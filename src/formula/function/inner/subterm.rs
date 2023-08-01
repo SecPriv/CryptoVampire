@@ -8,7 +8,7 @@ use crate::problem::{
     subterm::kind::SubtermKind,
 };
 
-use super::{
+use super::super::{
     traits::{MaybeEvaluatable, MaybeFixedSignature},
     InnerFunction,
 };
@@ -38,7 +38,7 @@ macro_rules! generate {
 macro_rules! do_for_all_subterms {
     ($($name:ident),*;  $val:expr; $v:ident -> $block:block) => {
         match $val {
-            $($crate::formula::function::subterm::Subsubterm::$name($v) => {$block}),*
+            $($crate::formula::function::inner::subterm::Subsubterm::$name($v) => {$block}),*
         }
     };
 }
@@ -86,13 +86,15 @@ where
 }
 
 impl<'a, 'bump: 'a> MaybeFixedSignature<'a, 'bump> for Subterm<'bump> {
-    fn maybe_fixed_signature(&'a self) -> Option<super::signature::FixedRefSignature<'a, 'bump>> {
+    fn maybe_fixed_signature(
+        &'a self,
+    ) -> Option<super::super::signature::FixedRefSignature<'a, 'bump>> {
         None
     }
 }
 
 impl<'bump> MaybeEvaluatable<'bump> for Subterm<'bump> {
-    fn maybe_get_evaluated(&self) -> Option<super::Function<'bump>> {
+    fn maybe_get_evaluated(&self) -> Option<super::super::Function<'bump>> {
         None
     }
 }

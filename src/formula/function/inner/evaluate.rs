@@ -1,11 +1,13 @@
 use std::collections::HashMap;
 
-use crate::formula::{formula::RichFormula, sort::Sort};
-
-use super::{
-    signature::FixedRefSignature,
-    traits::{FixedSignature, MaybeEvaluatable},
-    Function,
+use crate::formula::{
+    formula::RichFormula,
+    function::{
+        signature::FixedRefSignature,
+        traits::{FixedSignature, MaybeEvaluatable},
+        Function,
+    },
+    sort::Sort,
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

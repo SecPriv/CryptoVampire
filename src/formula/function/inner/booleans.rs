@@ -7,7 +7,7 @@ use crate::{
     static_signature, CustomDerive,
 };
 
-use super::traits::{MaybeEvaluatable, MaybeFixedSignature};
+use super::super::traits::{MaybeEvaluatable, MaybeFixedSignature};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum Connective {
@@ -140,7 +140,9 @@ static_signature!(TRUE_SIGNATURE: () -> BOOL);
 static_signature!(FALSE_SIGNATURE: () -> BOOL);
 
 impl<'a, 'bump: 'a> MaybeFixedSignature<'a, 'bump> for Connective {
-    fn maybe_fixed_signature(&'a self) -> Option<super::signature::FixedRefSignature<'a, 'bump>> {
+    fn maybe_fixed_signature(
+        &'a self,
+    ) -> Option<super::super::signature::FixedRefSignature<'a, 'bump>> {
         match self {
             Connective::Not => Some(NOT_SIGNATURE.as_ref()),
             Connective::Implies => Some(IMPLIES_SIGNATURE.as_ref()),
@@ -153,19 +155,21 @@ impl<'a, 'bump: 'a> MaybeFixedSignature<'a, 'bump> for Connective {
 }
 
 impl<'bump> MaybeEvaluatable<'bump> for Connective {
-    fn maybe_get_evaluated(&self) -> Option<super::Function<'bump>> {
+    fn maybe_get_evaluated(&self) -> Option<super::super::Function<'bump>> {
         None
     }
 }
 
 impl<'a, 'bump: 'a> MaybeFixedSignature<'a, 'bump> for Equality {
-    fn maybe_fixed_signature(&'a self) -> Option<super::signature::FixedRefSignature<'a, 'bump>> {
+    fn maybe_fixed_signature(
+        &'a self,
+    ) -> Option<super::super::signature::FixedRefSignature<'a, 'bump>> {
         None
     }
 }
 
 impl<'bump> MaybeEvaluatable<'bump> for Equality {
-    fn maybe_get_evaluated(&self) -> Option<super::Function<'bump>> {
+    fn maybe_get_evaluated(&self) -> Option<super::super::Function<'bump>> {
         None
     }
 }

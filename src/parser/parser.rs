@@ -384,8 +384,8 @@ mod parsable_trait {
             function::{
                 self,
                 builtin::{IF_THEN_ELSE, IF_THEN_ELSE_TA, INPUT},
+                inner::term_algebra::TermAlgebra,
                 signature::Signature,
-                term_algebra::TermAlgebra,
                 traits::MaybeEvaluatable,
                 Function,
             },

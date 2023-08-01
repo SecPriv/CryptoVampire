@@ -7,7 +7,7 @@ use bitflags::bitflags;
 use crate::{
     formula::{
         formula::RichFormula,
-        function::{term_algebra::TermAlgebra, InnerFunction},
+        function::{inner::term_algebra::TermAlgebra, InnerFunction},
     },
     utils::utils::repeat_n_zip,
 };

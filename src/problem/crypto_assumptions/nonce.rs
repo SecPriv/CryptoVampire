@@ -3,6 +3,7 @@ use crate::{
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::meq,
+        function::inner::subterm::Subsubterm,
         sort::builtins::{MESSAGE, NONCE},
     },
     mforall,
@@ -39,7 +40,7 @@ impl Nonce {
             DefaultAuxSubterm::new(nonce_sort),
             [],
             Default::default(),
-            |rc| crate::formula::function::subterm::Subsubterm::Nonce(rc),
+            |rc| Subsubterm::Nonce(rc),
         );
 
         declarations.push(subterm.declare(pbl));

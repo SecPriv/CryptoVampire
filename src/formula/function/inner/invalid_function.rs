@@ -1,6 +1,6 @@
 use crate::{formula::sort::Sort, utils::string_ref::StrRef};
 
-use super::{
+use super::super::{
     signature::FixedRefSignature,
     traits::{MaybeEvaluatable, MaybeFixedSignature},
 };
@@ -36,7 +36,7 @@ impl<'a, 'bump: 'a> MaybeFixedSignature<'a, 'bump> for InvalidFunction<'bump> {
 }
 
 impl<'bump> MaybeEvaluatable<'bump> for InvalidFunction<'bump> {
-    fn maybe_get_evaluated(&self) -> Option<super::Function<'bump>> {
+    fn maybe_get_evaluated(&self) -> Option<super::super::Function<'bump>> {
         None
     }
 }

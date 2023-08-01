@@ -2,12 +2,12 @@ use static_init::dynamic;
 
 use crate::formula::{formula::RichFormula, sort::builtins::STEP};
 
-use super::{
+use super::{new_static_function, Function, InnerFunction};
+
+use super::inner::{
     booleans::{self, Booleans},
     if_then_else::IfThenElse,
-    new_static_function,
     predicate::Predicate,
-    Function, InnerFunction,
 };
 
 #[dynamic]
@@ -77,10 +77,10 @@ pub static HAPPENS: Function<'static> = new_static_function(InnerFunction::Predi
 
 #[dynamic]
 pub static IF_THEN_ELSE_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(
-    super::term_algebra::TermAlgebra::IfThenElse(Default::default()),
+    super::inner::term_algebra::TermAlgebra::IfThenElse(Default::default()),
 ));
 
 #[dynamic]
 pub static INPUT: Function<'static> = new_static_function(InnerFunction::TermAlgebra(
-    super::term_algebra::TermAlgebra::Input(Default::default()),
+    super::inner::term_algebra::TermAlgebra::Input(Default::default()),
 ));

@@ -12,7 +12,7 @@ use crate::{
         formula::{meq, RichFormula},
         function::{
             builtin::IF_THEN_ELSE,
-            term_algebra::{
+            inner::term_algebra::{
                 base_function::BaseFunction,
                 connective::{BaseConnective, Connective},
                 quantifier::{InnerQuantifier, Quantifier},

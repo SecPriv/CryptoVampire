@@ -48,7 +48,7 @@ pub mod graph {
     use crate::{
         formula::{
             formula::RichFormula,
-            function::{term_algebra::TermAlgebra, InnerFunction},
+            function::{inner::term_algebra::TermAlgebra, InnerFunction},
             utils::formula_iterator::{FormulaIterator, IteratorFlags},
         },
         implvec,

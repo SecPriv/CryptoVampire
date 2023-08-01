@@ -1,6 +1,6 @@
 use crate::formula::sort::{builtins::BOOL, Sort};
 
-use super::{
+use super::super::{
     signature::FixedRefSignature,
     traits::{FixedSignature, MaybeEvaluatable},
 };
@@ -32,7 +32,7 @@ impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for Predicate<'bump> {
 }
 
 impl<'bump> MaybeEvaluatable<'bump> for Predicate<'bump> {
-    fn maybe_get_evaluated(&self) -> Option<super::Function<'bump>> {
+    fn maybe_get_evaluated(&self) -> Option<super::super::Function<'bump>> {
         None
     }
 }

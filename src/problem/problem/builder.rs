@@ -8,8 +8,8 @@ use crate::{
         formula::RichFormula,
         function::{
             builtin::{HAPPENS, LESS_THAN_STEP, TRUE},
-            evaluate::Evaluator,
-            term_algebra::{name::NameCaster, TermAlgebra},
+            inner::evaluate::Evaluator,
+            inner::term_algebra::{name::NameCaster, TermAlgebra},
             Function, InnerFunction,
         },
         sort::{

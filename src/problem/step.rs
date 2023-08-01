@@ -16,7 +16,7 @@ use crate::{
         formula::{meq, RichFormula},
         function::{
             builtin::LESS_THAN_STEP,
-            step::{InnerStepFuction, StepFunction},
+            inner::step::{InnerStepFuction, StepFunction},
             Function, InnerFunction,
         },
         sort::Sort,

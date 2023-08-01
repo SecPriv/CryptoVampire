@@ -6,10 +6,9 @@ use crate::{
     assert_variance, asssert_trait,
     container::{CanBeAllocated, FromNN, ScopeAllocator},
     formula::{
-        // builtins::types::{MSG_NAME, STEP_NAME},
         formula::RichFormula,
         function::{
-            term_algebra::{cell::Cell, TermAlgebra},
+            inner::term_algebra::{cell::Cell, TermAlgebra},
             Function, InnerFunction,
         },
         sort::Sort,

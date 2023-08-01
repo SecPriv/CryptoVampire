@@ -8,7 +8,8 @@ use crate::{
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::{forall, meq, RichFormula},
-        function::{subterm::Subsubterm, term_algebra::name::NameCaster, Function},
+        function::inner::{subterm::Subsubterm, term_algebra::name::NameCaster},
+        function::Function,
         sort::builtins::{MESSAGE, NONCE},
         utils::formula_expander::DeeperKinds,
         variable::Variable,
