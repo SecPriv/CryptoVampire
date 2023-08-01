@@ -357,7 +357,7 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
                     if let RichFormula::Fun(nf, _) = &args[1];
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
-                        break 'function VecRef::Vec(vec![&args[0]]) // can't be the subterm of another nonce
+                        break 'function [&args[0]].into() // can't be the subterm of another nonce
                     }
                 }
                 if_chain! {
@@ -365,7 +365,7 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
                     if let RichFormula::Fun(nf, _) = &args[1];
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
-                        break 'function VecRef::Vec(vec![&args[0]]) // can't be the subterm of another nonce
+                        break 'function [&args[0]].into() // can't be the subterm of another nonce
                     }
                 }
                 if_chain! {
@@ -373,7 +373,7 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
                     if let RichFormula::Fun(nf, _) = &args[2];
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
-                        break 'function VecRef::Vec(vec![&args[0], &args[1]]) // can't be the subterm of another nonce
+                        break 'function [&args[0], &args[1]].into() // can't be the subterm of another nonce
                     }
                 }
                 VecRef::Ref(args)
@@ -453,7 +453,7 @@ impl<'bump> SubtermAux<'bump> for RandAux<'bump> {
                     if let RichFormula::Fun(nf, _args2) = &args[1];
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
-                        break 'function VecRef::Vec(vec![&args[0], &args[2]]) // can't be the subterm of another nonce
+                        break 'function [&args[0], &args[2]].into() // can't be the subterm of another nonce
                     }
                 }
                 VecRef::Ref(args)

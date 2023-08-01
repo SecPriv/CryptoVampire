@@ -177,7 +177,7 @@ where
 }
 
 impl<'a, 'bump: 'a> Signature<'bump> for FixedRefSignature<'a, 'bump> {
-    type I<'b> = MapInto< IterVecRefClone<'a, 'b, Sort<'bump>>, SortProxy<'bump>>
+    type I<'b> = MapInto< IterVecRef<'b, 'b, Sort<'bump>>, SortProxy<'bump>>
     where
         Self: 'b, 'a:'b;
 

@@ -287,7 +287,7 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
                         // break 'function VecRef::Vec(vec![&args[0], &args2[0]])
-                        break 'function VecRef::Vec(vec![&args[0]]) // can't be the subterm of another nonce
+                        break 'function [&args[0]].into() // can't be the subterm of another nonce
                     }
                 }
                 if_chain! {

@@ -1,9 +1,11 @@
 //! Slice-like object for references
 //!
 //! See [VecRef]
-use std::{iter::FusedIterator, ops::Index, slice::Iter, vec::IntoIter};
+use std::{iter::FusedIterator, ops::Index, slice::Iter, sync::Arc, vec::IntoIter};
 
 use crate::match_as_trait;
+
+use super::arc_into_iter::ArcIntoIter;
 
 /// Slice-like object for references
 ///
@@ -11,9 +13,11 @@ use crate::match_as_trait;
 ///
 /// Most notably it accepts `Vec<&'a T>`, `&'a [T]`, `&'a [&'a T]`
 /// single `&'a T` and the empty iterator.
+///
+/// Note that it is cheap to clone (ie. almost free)
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum VecRef<'a, T> {
-    Vec(Vec<&'a T>),
+    Vec(Arc<[&'a T]>),
     Ref(&'a [T]),
     RefRef(&'a [&'a T]),
     Single(&'a T),
@@ -99,7 +103,7 @@ impl<'a, T> IntoIterator for VecRef<'a, T> {
 
     fn into_iter(self) -> Self::IntoIter {
         match self {
-            VecRef::Vec(v) => IterVecRef::OwnedVec(v.into_iter()),
+            VecRef::Vec(v) => IterVecRef::OwnedVec(v.into()),
             VecRef::Ref(v) => IterVecRef::Vec(v.iter()),
             VecRef::RefRef(v) => IterVecRef::Ref(v.iter()),
             VecRef::Single(e) => IterVecRef::Single(e),
@@ -110,7 +114,7 @@ impl<'a, T> IntoIterator for VecRef<'a, T> {
 
 #[derive(Debug, Clone)]
 pub enum IterVecRef<'a, 'b, T> {
-    OwnedVec(IntoIter<&'a T>),
+    OwnedVec(ArcIntoIter<&'a T>),
     Vec(Iter<'a, T>),
     Ref(Iter<'b, &'a T>),
     Single(&'a T),
@@ -163,13 +167,19 @@ impl<'a, 'b, T> DoubleEndedIterator for IterVecRef<'a, 'b, T> {
 
 impl<'a, I> FromIterator<&'a I> for VecRef<'a, I> {
     fn from_iter<T: IntoIterator<Item = &'a I>>(iter: T) -> Self {
-        Self::Vec(Vec::from_iter(iter))
+        Self::Vec(FromIterator::from_iter(iter))
     }
 }
 
 impl<'a, T> From<&'a [T]> for VecRef<'a, T> {
     fn from(value: &'a [T]) -> Self {
         Self::Ref(value)
+    }
+}
+
+impl<'a, T> From<&'a Arc<[T]>> for VecRef<'a, T> {
+    fn from(value: &'a Arc<[T]>) -> Self {
+        Self::Ref(value.as_ref())
     }
 }
 
@@ -187,7 +197,13 @@ impl<'a, T> From<&'a [&'a T]> for VecRef<'a, T> {
 
 impl<'a, T> From<Vec<&'a T>> for VecRef<'a, T> {
     fn from(value: Vec<&'a T>) -> Self {
-        Self::Vec(value)
+        Self::Vec(value.into_boxed_slice().into())
+    }
+}
+
+impl<'a, T, const N: usize> From<[&'a T; N]> for VecRef<'a, T> {
+    fn from(value: [&'a T; N]) -> Self {
+        Self::Vec(Arc::new(value))
     }
 }
 
@@ -196,13 +212,15 @@ impl<'a, T> From<Vec<&'a T>> for VecRef<'a, T> {
 /// `T` must then be [Clone] because the owned [Iterator] cannot return
 /// meaningful references, hence it clones the elements. Thus cloning
 /// should be very cheap (intuitively `T` should be [Copy])
+///
+/// Note that [VecRefClone] is itself very cheap to clone
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum VecRefClone<'a, T>
 where
     T: Clone,
 {
     VecRef(VecRef<'a, T>),
-    Vec(Vec<T>),
+    Vec(Arc<[T]>),
 }
 
 impl<'a, T: Clone> VecRefClone<'a, T> {
@@ -217,7 +235,7 @@ impl<'a, T: Clone> VecRefClone<'a, T> {
         }
     }
 
-    pub fn iter(&'_ self) -> IterVecRefClone<'a, '_, T> {
+    pub fn iter(&'a self) -> IterVecRef<'a, 'a, T> {
         IntoIterator::into_iter(self)
     }
 }
@@ -233,12 +251,12 @@ impl<'a, T: Clone> Index<usize> for VecRefClone<'a, T> {
 impl<'b, 'a: 'b, T: Clone> IntoIterator for &'b VecRefClone<'a, T> {
     type Item = &'b T;
 
-    type IntoIter = IterVecRefClone<'a, 'b, T>;
+    type IntoIter = IterVecRef<'b, 'b, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         match self {
-            VecRefClone::VecRef(x) => IterVecRefClone::VecRef(x.into_iter()),
-            VecRefClone::Vec(x) => IterVecRefClone::Vec(x.into_iter()),
+            VecRefClone::VecRef(x) => x.into_iter(),
+            VecRefClone::Vec(x) => VecRef::from(x).into_iter(),
         }
     }
 }
@@ -251,7 +269,7 @@ impl<'a, T: Clone> IntoIterator for VecRefClone<'a, T> {
     fn into_iter(self) -> Self::IntoIter {
         match self {
             VecRefClone::VecRef(x) => IntoIterVecRefClone::VecRef(x.into_iter()),
-            VecRefClone::Vec(x) => IntoIterVecRefClone::Vec(x.into_iter()),
+            VecRefClone::Vec(x) => IntoIterVecRefClone::Vec(x.into()),
         }
     }
 }
@@ -262,7 +280,7 @@ where
     T: Clone,
 {
     VecRef(IterVecRef<'a, 'a, T>),
-    Vec(IntoIter<T>),
+    Vec(ArcIntoIter<T>),
 }
 
 #[derive(Debug, Clone)]
@@ -366,7 +384,7 @@ where
     T: Clone,
 {
     fn from(value: [T; N]) -> Self {
-        Self::Vec(value.into())
+        Self::Vec(Arc::new(value))
     }
 }
 
@@ -393,7 +411,7 @@ where
     T: Clone,
 {
     fn from(value: Vec<T>) -> Self {
-        Self::Vec(value)
+        Self::Vec(value.into_boxed_slice().into())
     }
 }
 
@@ -402,6 +420,7 @@ where
     T: Clone,
 {
     fn from(value: Box<[T]>) -> Self {
-        Self::Vec(value.into_vec())
+        Self::Vec(value.into())
     }
 }
+

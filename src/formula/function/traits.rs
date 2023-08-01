@@ -18,7 +18,7 @@ where
     fn as_fixed_signature(&'a self) -> FixedRefSignature<'a, 'bump>;
 }
 
-/// To easily filter arounf functions that are [FixedSignature]
+/// To easily filter around functions that are [FixedSignature]
 pub trait MaybeFixedSignature<'a, 'bump>
 where
     'bump: 'a,

@@ -283,7 +283,7 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
                         // break 'function VecRef::Vec(vec![&args[0], &args2[0]])
-                        break 'function VecRef::Vec(vec![&args[0]])
+                        break 'function [&args[0]].into()
                     }
                 }
                 if_chain! {
@@ -292,7 +292,7 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
                         // break 'function VecRef::Vec(vec![&args[0], &args[1], &args2[0]])
-                        break 'function VecRef::Vec(vec![&args[0], &args[1]])
+                        break 'function [&args[0], &args[1]].into()
                     }
                 }
                 VecRef::Ref(args)
