@@ -5,8 +5,6 @@ use self::{
     input::Input, name::Name, quantifier::Quantifier,
 };
 
-use super::traits::MaybeEvaluatable;
-
 pub mod base_function;
 pub mod cell;
 pub mod connective;
