@@ -1,6 +1,6 @@
 //! A way to emulate sort variables for type inference
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, fmt::Display, rc::Rc};
 use thiserror::Error;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Error)]
@@ -120,5 +120,16 @@ impl<'bump> Into<Option<Sort<'bump>>> for SortProxy<'bump> {
 impl<'bump, 'a> Into<Option<Sort<'bump>>> for &'a SortProxy<'bump> {
     fn into(self) -> Option<Sort<'bump>> {
         self.0.borrow().clone()
+    }
+}
+
+impl<'bump> Display for SortProxy<'bump> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.0.borrow().as_ref() {
+            None => {
+                write!(f, "_{:x}", self.0.as_ptr() as usize)
+            }
+            Some(s) => write!(f, "{}", s),
+        }
     }
 }

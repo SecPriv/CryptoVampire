@@ -52,7 +52,7 @@ static_signature!(PRED_SIGNATURE: (STEP) -> STEP);
 
 impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for Pred {
     fn as_fixed_signature(&'a self) -> FixedRefSignature<'a, 'bump> {
-        PRED_SIGNATURE.clone()
+        PRED_SIGNATURE.as_ref()
     }
 }
 

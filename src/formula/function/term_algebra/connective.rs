@@ -71,11 +71,11 @@ where
 {
     fn as_fixed_signature(&'a self) -> FixedRefSignature<'a, 'bump> {
         match self {
-            BaseConnective::And => AND_SIGNATURE.clone(),
-            BaseConnective::Or => OR_SIGNATURE.clone(),
-            BaseConnective::Not => NOT_SIGNATURE.clone(),
-            BaseConnective::Implies => IMPLIES_SIGNATURE.clone(),
-            BaseConnective::Iff => IFF_SIGNATURE.clone(),
+            BaseConnective::And => AND_SIGNATURE.as_ref(),
+            BaseConnective::Or => OR_SIGNATURE.as_ref(),
+            BaseConnective::Not => NOT_SIGNATURE.as_ref(),
+            BaseConnective::Implies => IMPLIES_SIGNATURE.as_ref(),
+            BaseConnective::Iff => IFF_SIGNATURE.as_ref(),
         }
     }
 }

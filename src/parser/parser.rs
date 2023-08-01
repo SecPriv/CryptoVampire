@@ -817,14 +817,14 @@ mod parsable_trait {
                             .collect();
                         let n_args = n_args?;
                         // check arity & co
-                        let _ = match signature.check_rich_formulas(&n_args) {
-                            Ok(_) => Ok(()),
-                            Err(CheckError::SortError { position, error }) => match position {
-                                Some(i) => err(merr(args[i].span, f!("{}", error))),
-                                None => err(merr(*span, f!("{}", error))),
-                            },
-                            Err(e) => err(merr(*span, f!("{}", e))),
-                        }?;
+                        // let _ = match signature.check_rich_formulas(&n_args) {
+                        //     Ok(_) => Ok(()),
+                        //     Err(CheckError::SortError { position, error }) => match position {
+                        //         Some(i) => err(merr(args[i].span, f!("{}", error))),
+                        //         None => err(merr(*span, f!("{}", error))),
+                        //     },
+                        //     Err(e) => err(merr(*span, f!("{}", e))),
+                        // }?;
 
                         // check output sort
                         let _ = expected_sort

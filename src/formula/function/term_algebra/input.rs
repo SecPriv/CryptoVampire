@@ -21,6 +21,6 @@ impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for Input {
     fn as_fixed_signature(
         &'a self,
     ) -> crate::formula::function::signature::FixedRefSignature<'a, 'bump> {
-        INPUT_SIGNATURE.clone()
+        INPUT_SIGNATURE.as_ref()
     }
 }

@@ -9,3 +9,4 @@ pub mod test_utils;
 pub mod utils;
 pub mod vecref;
 pub mod arc_into_iter;
+pub mod infinity;

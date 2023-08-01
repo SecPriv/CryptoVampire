@@ -27,7 +27,7 @@ use crate::{
     assert_variance, asssert_trait,
     container::{FromNN, NameFinder, ScopeAllocator},
     formula::function::{
-        signature::{FastSignature, FixedSignature},
+        signature::{FixedRefSignature, AsFixedSignature},
         term_algebra::base_function::{BaseFunction, InnerBaseFunction},
     },
     implderef, implvec,
@@ -509,15 +509,18 @@ impl<'bump> Function<'bump> {
     }
 
     pub fn fast_outsort(&self) -> Option<Sort<'bump>> {
-        self.signature().fast().map(|s| s.out)
+        self.signature().fast().map(|s| s.fixed_out())
     }
-    pub fn fast_insort(&'_ self) -> Option<Vec<Sort<'bump>>> {
-        self.signature().fast().map(|s| s.args)
+    pub fn fast_insort(&self) -> Option<Vec<Sort<'bump>>> {
+        self.signature().fast().map(|s| {
+            let tmp = &s;
+            tmp.fixed_args().into_iter().collect_vec()}
+        )
     }
 
-    pub fn signature(&self) -> impl Signature<'bump> {
+    pub fn signature<'a>(&'a self) -> impl Signature< 'bump> {
         todo!();
-        FixedSignature {
+        FixedRefSignature {
             out: todo!(),
             args: todo!(),
         }

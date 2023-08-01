@@ -40,10 +40,10 @@ impl Connective {
     }
 }
 
-#[dynamic]
-static BOOL_2: [Sort<'static>; 2] = [BOOL.as_sort(), BOOL.as_sort()];
-#[dynamic]
-static BOOL_1: [Sort<'static>; 1] = [BOOL.as_sort()];
+// #[dynamic]
+// static BOOL_2: [Sort<'static>; 2] = [BOOL.as_sort(), BOOL.as_sort()];
+// #[dynamic]
+// static BOOL_1: [Sort<'static>; 1] = [BOOL.as_sort()];
 
 impl<'a> Sorted<'a> for Connective {
     fn sort(&self, args: &[Sort<'a>]) -> Result<Sort<'a>, SortedError> {
@@ -144,11 +144,11 @@ static_signature!(FALSE_SIGNATURE: () -> BOOL);
 impl<'a, 'bump: 'a> MaybeFixedSignature<'a, 'bump> for Connective {
     fn maybe_fixed_signature(&'a self) -> Option<super::signature::FixedRefSignature<'a, 'bump>> {
         match self {
-            Connective::Not => Some(NOT_SIGNATURE.clone()),
-            Connective::Implies => Some(IMPLIES_SIGNATURE.clone()),
-            Connective::Iff => Some(IFF_SIGNATURE.clone()),
-            Connective::True => Some(TRUE_SIGNATURE.clone()),
-            Connective::False => Some(FALSE_SIGNATURE.clone()),
+            Connective::Not => Some(NOT_SIGNATURE.as_ref()),
+            Connective::Implies => Some(IMPLIES_SIGNATURE.as_ref()),
+            Connective::Iff => Some(IFF_SIGNATURE.as_ref()),
+            Connective::True => Some(TRUE_SIGNATURE.as_ref()),
+            Connective::False => Some(FALSE_SIGNATURE.as_ref()),
             _ => None,
         }
     }

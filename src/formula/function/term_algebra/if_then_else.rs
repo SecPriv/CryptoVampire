@@ -22,6 +22,6 @@ impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for IfThenElse {
     fn as_fixed_signature(
         &'a self,
     ) -> crate::formula::function::signature::FixedRefSignature<'a, 'bump> {
-        ITE_SIGNATURE.clone()
+        ITE_SIGNATURE.as_ref()
     }
 }

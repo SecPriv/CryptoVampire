@@ -424,3 +424,15 @@ where
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use crate::utils::vecref::{VecRef, VecRefClone};
+
+    #[test]
+    fn they_are_small() {
+        assert_eq!(
+            std::mem::size_of::<VecRef<'static, usize>>(),
+            std::mem::size_of::<VecRefClone<'static, usize>>()
+        )
+    }
+}
