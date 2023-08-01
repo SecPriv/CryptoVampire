@@ -4,12 +4,9 @@ use std::ops::{BitAnd, BitOr, Deref, DerefMut, Not, Shr};
 
 use itertools::Itertools;
 
-use crate::formula::function::term_algebra::TermAlgebra;
-use crate::formula::function::InnerFunction;
 use crate::implvec;
 use crate::problem::protocol::Protocol;
 use crate::utils::utils::{repeat_n_zip, StackBox};
-use crate::utils::vecref::VecRef;
 
 use super::function::builtin::{AND, EQUALITY, IMPLIES, NOT, OR};
 use super::function::signature::Signature;

@@ -1,7 +1,7 @@
 //! Slice-like object for references
 //!
 //! See [VecRef]
-use std::{iter::FusedIterator, ops::Index, slice::Iter, sync::Arc, vec::IntoIter};
+use std::{iter::FusedIterator, ops::Index, slice::Iter, sync::Arc};
 
 use crate::match_as_trait;
 

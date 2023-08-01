@@ -4,13 +4,7 @@ pub mod sort_proxy;
 pub mod sorted;
 use bitflags::bitflags;
 use core::fmt::Debug;
-use std::{
-    cmp::Ordering,
-    fmt::Display,
-    hash::{Hash, Hasher},
-    marker::PhantomData,
-    ptr::NonNull,
-};
+use std::{cmp::Ordering, fmt::Display, hash::Hash, marker::PhantomData, ptr::NonNull};
 
 use crate::{
     container::{CanBeAllocated, Container, FromNN, ScopeAllocator},

@@ -2,33 +2,26 @@ use std::{collections::HashMap, ops::Deref};
 
 use pest::Span;
 
-use self::{
-    guard::{GuardedFunction, GuardedMemoryCell, GuardedStep},
-    parsable_trait::VarProxy,
-};
+use self::guard::{GuardedFunction, GuardedMemoryCell, GuardedStep};
 
 use super::{
     ast::{
         extra::{self, AsFunction, SnN},
-        ASTList, Declaration, DeclareType, Ident, Term, AST,
+        ASTList, Declaration, Ident, AST,
     },
     *,
 };
 use crate::{
     container::Container,
     formula::{
-        formula::RichFormula,
         function::{self, Function, InnerFunction},
-        sort::{InnerSort, Sort},
+        sort::Sort,
         variable::Variable,
     },
     implderef, implvec,
     parser::parser::guard::Guard,
     problem::{cell::InnerMemoryCell, step::InnerStep},
-    utils::{
-        string_ref::StrRef,
-        utils::{MaybeInvalid, Reference},
-    },
+    utils::utils::{MaybeInvalid, Reference},
 };
 
 mod guard {
@@ -278,14 +271,14 @@ fn declare_let<'bump, 'a>(env: &mut Environement<'bump, 'a>, ast: &ASTList<'a>) 
             _ => None,
         })
         .try_for_each(|mlet| {
-            let super::ast::Macro { name, term, .. } = mlet;
+            let super::ast::Macro { name, .. } = mlet;
             let SnN { span, name } = name.into();
             // TODO: no hard-coded values
             if env.macro_hash.contains_key(name) || ["msg", "cond"].contains(&name) {
                 err(merr(*span, f!("the macro {}! is already in use", name)))
             } else {
                 // the input sorts (will gracefully error out later if a sort is undefined)
-                let input_sorts: Result<Vec<_>, _> = mlet
+                let _input_sorts: Result<Vec<_>, _> = mlet
                     .args()
                     .into_iter()
                     .map(|idn| get_sort(env, *idn.span, idn.name))
@@ -379,11 +372,9 @@ impl<'bump, 'a> Environement<'bump, 'a> {
 }
 
 mod parsable_trait {
-    use std::{borrow::BorrowMut, cell::RefCell, collections::HashSet, rc::Rc};
 
     use if_chain::if_chain;
     use itertools::Itertools;
-    use pest::Span;
 
     use crate::{
         f,
@@ -393,10 +384,10 @@ mod parsable_trait {
             function::{
                 self,
                 builtin::{IF_THEN_ELSE, IF_THEN_ELSE_TA, INPUT},
-                signature::{CheckError, Signature},
+                signature::Signature,
                 term_algebra::TermAlgebra,
                 traits::MaybeEvaluatable,
-                Function, InnerFunction,
+                Function,
             },
             sort::{
                 builtins::{BOOL, CONDITION, MESSAGE, STEP},
@@ -407,7 +398,7 @@ mod parsable_trait {
         },
         match_as_trait,
         parser::{
-            ast::{self, extra::SnN, Macro, VariableBinding},
+            ast::{self, extra::SnN, VariableBinding},
             err, merr,
             parser::{get_function, get_sort},
             IntoRuleResult, E,
@@ -962,10 +953,10 @@ mod parsable_trait {
 
         fn parse(
             &self,
-            env: &Environement<'bump, 'a>,
-            bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
-            state: State,
-            expected_sort: Option<SortProxy<'bump>>,
+            _env: &Environement<'bump, 'a>,
+            _bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
+            _state: State,
+            _expected_sort: Option<SortProxy<'bump>>,
         ) -> Result<Self::R, E> {
             // let n_es = match state {
             //     State::Convert | State::High => BOOL.as_sort().into(),

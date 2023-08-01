@@ -6,16 +6,10 @@ use bitflags::bitflags;
 
 use crate::{
     formula::{
-        self,
         formula::RichFormula,
-        function::{
-            self,
-            term_algebra::{quantifier::Quantifier, TermAlgebra},
-            Function, InnerFunction,
-        },
-        variable::Variable,
+        function::{term_algebra::TermAlgebra, InnerFunction},
     },
-    utils::{utils::repeat_n_zip, vecref::VecRef},
+    utils::utils::repeat_n_zip,
 };
 
 bitflags! {

@@ -7,8 +7,7 @@ use crate::{
         },
         sort::Sort,
     },
-    utils::vecref::{VecRef, VecRefClone},
-    CustomDerive,
+    utils::vecref::VecRefClone,
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

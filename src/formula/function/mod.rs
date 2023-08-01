@@ -27,16 +27,14 @@ use crate::{
     assert_variance, asssert_trait,
     container::{FromNN, NameFinder, ScopeAllocator},
     formula::function::{
-        signature::{FixedRefSignature, AsFixedSignature},
+        signature::{AsFixedSignature, FixedRefSignature},
         term_algebra::base_function::{BaseFunction, InnerBaseFunction},
     },
     implderef, implvec,
-    problem::cell::MemoryCell,
     utils::{
         precise_as_ref::PreciseAsRef,
         string_ref::StrRef,
         utils::{MaybeInvalid, Reference},
-        vecref::VecRef,
     },
     variants, variants_ref, variants_ref_try_into, CustomDerive,
 };
@@ -54,7 +52,6 @@ use self::{
     subterm::Subterm,
     term_algebra::{
         base_function::BaseFunctionTuple,
-        cell::Cell,
         quantifier::{get_next_quantifer_id, InnerQuantifier, Quantifier},
         TermAlgebra,
     },
@@ -62,7 +59,7 @@ use self::{
 };
 
 use super::{
-    formula::{self, RichFormula},
+    formula::RichFormula,
     quantifier,
     sort::{
         sort_proxy::SortProxy,
@@ -514,11 +511,11 @@ impl<'bump> Function<'bump> {
     pub fn fast_insort(&self) -> Option<Vec<Sort<'bump>>> {
         self.signature().fast().map(|s| {
             let tmp = &s;
-            tmp.fixed_args().into_iter().collect_vec()}
-        )
+            tmp.fixed_args().into_iter().collect_vec()
+        })
     }
 
-    pub fn signature<'a>(&'a self) -> impl Signature< 'bump> {
+    pub fn signature<'a>(&'a self) -> impl Signature<'bump> {
         todo!();
         FixedRefSignature {
             out: todo!(),
@@ -526,7 +523,7 @@ impl<'bump> Function<'bump> {
         }
     }
 
-    pub fn valid_args(&self, args: implvec!(SortProxy<'bump>)) -> bool {
+    pub fn valid_args(&self, _args: implvec!(SortProxy<'bump>)) -> bool {
         todo!()
     }
 

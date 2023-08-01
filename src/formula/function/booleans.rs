@@ -1,5 +1,3 @@
-use static_init::dynamic;
-
 use crate::{
     formula::sort::{
         builtins::{StatSort, BOOL},
@@ -9,7 +7,7 @@ use crate::{
     static_signature, CustomDerive,
 };
 
-use super::traits::{Evaluatable, MaybeEvaluatable, MaybeFixedSignature};
+use super::traits::{MaybeEvaluatable, MaybeFixedSignature};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum Connective {

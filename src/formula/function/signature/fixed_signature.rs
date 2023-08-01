@@ -100,7 +100,6 @@ impl<'bump, const N: usize> Display for StaticSignature<'bump, N> {
     }
 }
 
-
 /// To quickly define static signatures
 #[macro_export]
 macro_rules! static_signature {

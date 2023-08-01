@@ -508,7 +508,7 @@ pub mod graph {
     ) {
         for step in steps {
             let from = FromNode::Input { step: *step };
-            let step_call = StepCall::Step(*step);
+            let _step_call = StepCall::Step(*step);
             let mut pile = pile.borrow_mut();
             pile.clear();
             pile.extend([((), step.message()), ((), step.condition())]);
@@ -529,7 +529,7 @@ pub mod graph {
                             });
                             (Some(to_node), repeat_n_zip((), VecRef::Empty))
                         }
-                        InnerFunction::Step(s) => {
+                        InnerFunction::Step(_s) => {
                             let to_node = ToNode::Input(InputCall {
                                 step: StepCall::General(f),
                             });
@@ -593,7 +593,7 @@ pub mod graph {
                                 });
                                 (Some(to_node), repeat_n_zip((), VecRef::Empty))
                             }
-                            InnerFunction::Step(s) => {
+                            InnerFunction::Step(_s) => {
                                 let to_node = ToNode::Input(InputCall {
                                     step: StepCall::General(f),
                                 });

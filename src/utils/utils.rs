@@ -1,8 +1,4 @@
-use std::{
-    cell::Ref,
-    ops::{Deref, DerefMut},
-    ptr::NonNull,
-};
+use std::ops::{Deref, DerefMut};
 
 #[inline(always)]
 pub fn replace_if_eq<T: Eq>(a: T, b: T, c: T) -> T {

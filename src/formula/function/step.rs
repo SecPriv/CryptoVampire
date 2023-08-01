@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use crate::{
     assert_variance, formula::sort::builtins::STEP, problem::step::Step, static_signature,
     CustomDerive,

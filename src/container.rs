@@ -4,7 +4,7 @@ use std::{
     cell::{Ref, RefCell},
     collections::HashSet,
     fmt::Debug,
-    iter::{Cloned, Map},
+    iter::Map,
     ops::DerefMut,
     ptr::NonNull,
     slice::Iter,

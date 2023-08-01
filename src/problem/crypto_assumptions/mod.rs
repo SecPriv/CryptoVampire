@@ -15,8 +15,6 @@ pub use int_ctxt::SubtermIntCtxtKey;
 pub use int_ctxt::SubtermIntCtxtMain;
 pub use int_ctxt::SubtermIntCtxtRand;
 
-use std::rc::Rc;
-
 use crate::environement::environement::Environement;
 use crate::formula::{
     file_descriptior::{axioms::Axiom, declare::Declaration},
@@ -31,10 +29,6 @@ use self::nonce::Nonce;
 
 use super::generator::Generator;
 use super::problem::Problem;
-use super::{
-    cell::{Assignement, MemoryCell},
-    step::Step,
-};
 
 // should be quick to copy
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

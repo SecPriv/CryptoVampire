@@ -8,7 +8,7 @@ use crate::{
         },
         sort::builtins::CONDITION,
     },
-    match_as_trait, static_signature, CustomDerive,
+    static_signature, CustomDerive,
 };
 
 use macro_attr::*;

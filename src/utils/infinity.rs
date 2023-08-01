@@ -1,4 +1,4 @@
-use std::{cmp::Ordering,  fmt::Display};
+use std::fmt::Display;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub enum Infinity<Idx> {
@@ -7,12 +7,12 @@ pub enum Infinity<Idx> {
     HighInfinty,
 }
 
-impl<Idx:Display> Display for Infinity<Idx> {
+impl<Idx: Display> Display for Infinity<Idx> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::LowInfinity => write!(f, "-∞"),
             Self::HighInfinty => write!(f, "+∞"),
-            Self::Num(x) => write!(f, "{x}")
+            Self::Num(x) => write!(f, "{x}"),
         }
     }
 }
@@ -40,7 +40,6 @@ impl<Idx> From<Idx> for Infinity<Idx> {
 #[cfg(test)]
 mod tests {
     use crate::utils::infinity::Infinity;
-
 
     #[test]
     fn lower_infinity_is_smaller() {

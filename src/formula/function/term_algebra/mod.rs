@@ -1,14 +1,11 @@
-use crate::{
-    assert_variance, formula::function::builtin::IF_THEN_ELSE, match_as_trait, variants,
-    CustomDerive,
-};
+use crate::{assert_variance, variants, CustomDerive};
 
 use self::{
     base_function::BaseFunction, cell::Cell, connective::Connective, if_then_else::IfThenElse,
     input::Input, name::Name, quantifier::Quantifier,
 };
 
-use super::{traits::MaybeEvaluatable, Function};
+use super::traits::MaybeEvaluatable;
 
 pub mod base_function;
 pub mod cell;
