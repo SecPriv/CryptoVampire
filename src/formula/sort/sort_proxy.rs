@@ -26,25 +26,23 @@ pub enum UpdateError {
 use crate::environement::traits::KnowsRealm;
 
 use super::Sort;
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[derive(Debug, Clone)]
 pub enum SortProxy<'bump> {
     Var(Rc<RefCell<Option<Sort<'bump>>>>),
     Static(Sort<'bump>),
 }
 
-impl<'bump> Default for SortProxy<'bump> {
-    fn default() -> Self {
-        Self::Var(Default::default())
-    }
-}
-
 impl<'bump> SortProxy<'bump> {
     /// Check or set that `self` is `s`.
     ///
-    /// The error is set up so that is expects `self` to be `s`
-    pub fn expects<'a>(&self, s: Sort<'bump>) -> Result<(), InferenceError<'bump>> {
+    /// The error is set up so that it expects `self` to be `s`
+    pub fn expects<'a>(
+        &self,
+        s: Sort<'bump>,
+        realm: &impl KnowsRealm,
+    ) -> Result<(), InferenceError<'bump>> {
         match self.as_option() {
-            Some(s2) if s2 == s => Ok(()),
+            Some(s2) if Sort::eq_realm(&s2, &s, realm) => Ok(()),
             None => {
                 // if not defined yet, assign a sort
                 self.set(s).unwrap(); // cannot fail
@@ -62,8 +60,12 @@ impl<'bump> SortProxy<'bump> {
     /// Check or set that `s` is `self`.
     ///
     /// The error is set up so that is expects `s` to be `self`
-    pub fn matches<'a>(&self, s: Sort<'bump>) -> Result<(), InferenceError<'bump>> {
-        match self.expects(s) {
+    pub fn matches<'a>(
+        &self,
+        s: Sort<'bump>,
+        realm: &impl KnowsRealm,
+    ) -> Result<(), InferenceError<'bump>> {
+        match self.expects(s, realm) {
             Err(InferenceError::SortMismatch {
                 proxy,
                 expected,
@@ -77,17 +79,24 @@ impl<'bump> SortProxy<'bump> {
         }
     }
 
-    pub fn matches_sort(s1: Sort<'bump>, s2: Sort<'bump>) -> Result<(), InferenceError<'bump>> {
-        Self::from(s1).matches(s2)
+    pub fn matches_sort(
+        s1: Sort<'bump>,
+        s2: Sort<'bump>,
+        realm: &impl KnowsRealm,
+    ) -> Result<(), InferenceError<'bump>> {
+        Self::matches(&s1.into(), s2, realm)
     }
 
-    pub fn unify<'a>(&self, other: &Self, env: &impl KnowsRealm) -> Result<Sort<'bump>, InferenceError<'bump>> {
+    pub fn unify<'a>(
+        &self,
+        other: &Self,
+        realm: &impl KnowsRealm,
+    ) -> Result<Sort<'bump>, InferenceError<'bump>> {
         match (self.into(), other.into()) {
             (Some(s), Some(s2)) => {
-                if s == s2 {
+                if Sort::eq_realm(&s, &s2, realm) {
                     Ok(s)
                 } else {
-                    // err(merr!(span; "wrong sort: got {} expected {}", s.name(), s2.name()))
                     Err(InferenceError::SortMismatch {
                         proxy: self.clone(),
                         expected: s2,
@@ -103,7 +112,6 @@ impl<'bump> SortProxy<'bump> {
                 other.set(s).unwrap(); // cannot fail
                 Ok(s)
             }
-            // _ => err(merr!(span; "can't infer sort")),
             _ => Err(InferenceError::CantInfer {
                 proxy: self.clone(),
             }),
@@ -129,6 +137,10 @@ impl<'bump> SortProxy<'bump> {
 
     pub fn as_option(&self) -> Option<Sort<'bump>> {
         self.into()
+    }
+
+    pub fn as_owned(&self) -> Option<Self> {
+        self.as_option().map(Into::into)
     }
 }
 
@@ -170,5 +182,31 @@ impl<'bump> Display for SortProxy<'bump> {
             },
             SortProxy::Static(s) => write!(f, "${}", s),
         }
+    }
+}
+
+impl<'bump> Default for SortProxy<'bump> {
+    fn default() -> Self {
+        Self::Var(Default::default())
+    }
+}
+
+impl<'bump> PartialEq for SortProxy<'bump> {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_option() == other.as_option()
+    }
+}
+
+impl<'bump> Eq for SortProxy<'bump> {}
+
+impl<'bump> PartialOrd for SortProxy<'bump> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(Ord::cmp(self, other))
+    }
+}
+
+impl<'bump> Ord for SortProxy<'bump> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        Ord::cmp(&self.as_option(), &other.as_option())
     }
 }

@@ -35,19 +35,6 @@ use super::{
     Environement,
 };
 
-// #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
-// pub enum State {
-//     High,
-//     Low,
-//     Convert,
-// }
-
-// impl Default for State {
-//     fn default() -> Self {
-//         Self::High
-//     }
-// }
-
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct VarProxy<'bump> {
     id: usize,
@@ -139,7 +126,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::IfThenElse<'a> {
 
         // check sort
         if let Some(e) = expected_sort.and_then(|s| s.into()) {
-            SortProxy::expects(&eb, e).into_rr(self.span)?
+            SortProxy::expects(&eb, e, &state).into_rr(self.span)?
         }
 
         let ast::IfThenElse {
@@ -173,7 +160,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
     ) -> Result<Self::R, E> {
         expected_sort
             .into_iter()
-            .try_for_each(|s| s.expects(MESSAGE.as_sort()).into_rr(self.span))?;
+            .try_for_each(|s| s.expects(MESSAGE.as_sort(), &state).into_rr(self.span))?;
 
         let ast::FindSuchThat {
             vars,
@@ -282,7 +269,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Quantifier<'a> {
         };
         expected_sort
             .into_iter()
-            .try_for_each(|s| s.expects(es).into_rr(*span))?;
+            .try_for_each(|s| s.expects(es, &state).into_rr(*span))?;
 
         let bn = bvars.len();
 
