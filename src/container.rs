@@ -11,6 +11,7 @@ use std::{
 };
 
 use crate::{
+    assert_variance,
     formula::{
         function::{Function, InnerFunction},
         sort::{InnerSort, Sort},
@@ -166,6 +167,39 @@ impl<'bump> Container<'bump> {
     make_into_iters!(sorts, Sort<'bump>, 'bump);
     make_into_iters!(steps, Step<'bump>, 'bump);
     make_into_iters!(cells, MemoryCell<'bump>, 'bump);
+
+    unsafe fn new_unbounded<'a>() -> Container<'a> {
+        Container {
+            sorts: Default::default(),
+            functions: Default::default(),
+            steps: Default::default(),
+            cells: Default::default(),
+        }
+    }
+
+    pub fn new_leaked() -> &'static mut Self {
+        let container = unsafe { Self::new_unbounded() };
+        Box::leak(Box::new(container))
+    }
+
+    /// uses [std::mem::transmute]...
+    pub fn shorten_life<'short>(&'_ self) -> &'_ Container<'short>
+    where
+        'bump: 'short,
+    {
+        // this if the content lives at least 'bump, then it leaves at least 'short
+        unsafe { std::mem::transmute(self) }
+    }
+}
+
+pub fn scope<F, U>(f: F) -> U
+where
+    F: for<'bump> FnOnce(&'bump Container<'bump>) -> U,
+{
+    let container: Container<'static> = unsafe { Container::new_unbounded() };
+    let result = f(&container.shorten_life());
+    drop(container);
+    result
 }
 
 pub trait NameFinder<T> {
@@ -205,3 +239,5 @@ where
         self.r.iter().map(self.f.clone())
     }
 }
+
+// assert_variance!(Container);
