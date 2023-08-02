@@ -9,6 +9,7 @@ use std::{fmt::Display, ops::RangeInclusive};
 use itertools::{Either, Itertools, MapInto};
 
 use crate::{
+    environement::traits::KnowsRealm,
     formula::sort::{sort_proxy::SortProxy, Sort},
     utils::infinity::Infinity,
 };
@@ -45,9 +46,13 @@ pub trait Signature<'bump>: Sized {
     /// Unifies `self` with `other`.
     ///
     /// The errors will be thrown out assuming `self` is the grounder truth
-    fn unify<S: Signature<'bump>>(&self, other: &S) -> Result<(), CheckError<'bump>> {
+    fn unify<S, R>(&self, other: &S, env: &R) -> Result<(), CheckError<'bump>>
+    where
+        S: Signature<'bump>,
+        R: KnowsRealm,
+    {
         self.out()
-            .unify(&other.out())
+            .unify(&other.out(), env)
             .map_err(|error| CheckError::SortError {
                 position: None,
                 error,
@@ -60,7 +65,7 @@ pub trait Signature<'bump>: Sized {
             .enumerate()
             .try_fold(None, |_, (i, e)| match e {
                 itertools::EitherOrBoth::Both(l, r) => l
-                    .unify(&r)
+                    .unify(&r, env)
                     .map_err(|e| CheckError::from_inference(e, Some(i)))
                     .map(|_| None),
                 itertools::EitherOrBoth::Left(_) => Err(CheckError::WrongNumberOfArguments {

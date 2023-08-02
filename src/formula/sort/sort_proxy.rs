@@ -23,6 +23,8 @@ pub enum UpdateError {
     AlreadySet,
 }
 
+use crate::environement::traits::KnowsRealm;
+
 use super::Sort;
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum SortProxy<'bump> {
@@ -79,7 +81,7 @@ impl<'bump> SortProxy<'bump> {
         Self::from(s1).matches(s2)
     }
 
-    pub fn unify<'a>(&self, other: &Self) -> Result<Sort<'bump>, InferenceError<'bump>> {
+    pub fn unify<'a>(&self, other: &Self, env: &impl KnowsRealm) -> Result<Sort<'bump>, InferenceError<'bump>> {
         match (self.into(), other.into()) {
             (Some(s), Some(s2)) => {
                 if s == s2 {

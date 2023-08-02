@@ -8,6 +8,7 @@ use std::{cmp::Ordering, fmt::Display, hash::Hash, marker::PhantomData, ptr::Non
 
 use crate::{
     container::{CanBeAllocated, Container, FromNN, ScopeAllocator},
+    environement::traits::{KnowsRealm, Realm},
     utils::precise_as_ref::PreciseAsRef,
 };
 
@@ -84,14 +85,7 @@ impl<'a> Hash for Sort<'a> {
 }
 
 impl<'a> Sort<'a> {
-    pub fn new(allocator: &'a Container<'a>, inner: InnerSort<'a>) -> Self {
-        Self::allocate(allocator, inner)
-    }
-
-    pub fn name(&self) -> &'a str {
-        &self.precise_as_ref().inner.name
-    }
-
+    // ~~~~~~~~~~~~~~~~~~ is ~~~~~~~~~~~~~~~~~~~~
     pub fn is_term_algebra(&self) -> bool {
         self.inner().flags.contains(SFlags::TERM_ALGEBRA)
     }
@@ -106,10 +100,16 @@ impl<'a> Sort<'a> {
         r
     }
 
-    pub fn evaluated_sort(&self) -> Option<Sort<'a>> {
-        self.as_ref().as_ref().evaluated
+    // ~~~~~~~~~~~~~~~ builders ~~~~~~~~~~~~~~~~~
+    pub fn new(allocator: &'a Container<'a>, inner: InnerSort<'a>) -> Self {
+        Self::allocate(allocator, inner)
     }
 
+    pub fn new_regular(allocator: &'a Container<'a>, name: String) -> Self {
+        Self::new(allocator, InnerSort::new(name, SFlags::empty(), None))
+    }
+
+    // ~~~~~~~~~~~~~~~~~ cast ~~~~~~~~~~~~~~~~~~~
     pub fn as_ptr_usize(&self) -> usize {
         self.inner() as *const HiddenSort as usize
     }
@@ -122,9 +122,31 @@ impl<'a> Sort<'a> {
         *self
     }
 
-    // ~~~~~~~~~~~~~~~ builders ~~~~~~~~~~~~~~~~~
-    pub fn new_regular(allocator: &'a Container<'a>, name: String) -> Self {
-        Self::new(allocator, InnerSort::new(name, SFlags::empty(), None))
+    // ~~~~~~~~~~~~~~~~ other ~~~~~~~~~~~~~~~~~~~
+    pub fn name(&self) -> &'a str {
+        &self.precise_as_ref().inner.name
+    }
+
+    pub fn evaluated_sort(&self) -> Option<Sort<'a>> {
+        self.as_ref().as_ref().evaluated
+    }
+
+    /// Equality modulo a [Realm]
+    ///
+    /// ```rust
+    /// assert!(BOOL.eq_realm(CONDITION.as_ref(), Realm::Evaluated))
+    /// ```
+    pub fn eq_realm<R>(&self, other: &Self, realm: &R) -> bool
+    where
+        R: KnowsRealm,
+    {
+        (self == other)
+            || match realm.get_realm() {
+                Realm::Symbolic => false,
+                Realm::Evaluated => {
+                    self.is_evaluatable() && (self.evaluated_sort() == other.evaluated_sort())
+                }
+            }
     }
 }
 

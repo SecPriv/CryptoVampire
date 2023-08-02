@@ -1,3 +1,3 @@
 mod realm;
 
-pub use  realm::{KnowsReaml, Realm};
+pub use  realm::{KnowsRealm, Realm, RealmMerger};
