@@ -17,3 +17,10 @@ pub enum CheckError<'bump> {
         error: InferenceError<'bump>,
     },
 }
+
+impl<'bump> CheckError<'bump> {
+    pub fn from_inference(error: InferenceError<'bump>, position: Option<usize>) -> Self {
+        Self::SortError { position, error }
+    }
+}
+

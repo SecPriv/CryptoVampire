@@ -766,7 +766,7 @@ mod parsable_trait {
                             None => Ok(f_eval.f([])),
                             Some((s, None)) => {
                                 if let Some(s2) = f.fast_outsort() {
-                                    s.set(s2)
+                                    s.set(s2).unwrap(); // cannot fail
                                 }
                                 Ok(f_eval.f([]))
                             },

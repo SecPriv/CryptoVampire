@@ -6,7 +6,7 @@ pub use fixed_signature::{FixedRefSignature, StaticSignature};
 
 use std::{fmt::Display, ops::RangeInclusive};
 
-use itertools::{Itertools, MapInto};
+use itertools::{Either, Itertools, MapInto};
 
 use crate::{
     formula::sort::{sort_proxy::SortProxy, Sort},
@@ -35,9 +35,6 @@ pub trait Signature<'bump>: Sized {
 
     /// Force a signature out when it is possible. Return [None] when
     /// this doesn't make sense
-    ///
-    /// *NB*: The blanket implementation assumes [Self::args()] is finite!
-    /// Make sure to overwrite when this cannot be enforced
     fn fast(self) -> Option<Self::FxSign>;
 
     /// The number of arguments
@@ -45,17 +42,41 @@ pub trait Signature<'bump>: Sized {
     /// This should be compatible with [Self::Args::size_hint()]
     fn args_size(&self) -> RangeInclusive<Infinity<usize>>;
 
+    /// Unifies `self` with `other`.
+    ///
+    /// The errors will be thrown out assuming `self` is the grounder truth
     fn unify<S: Signature<'bump>>(&self, other: &S) -> Result<(), CheckError<'bump>> {
-        match self.out().unify(&other.out()) {
-            Err(ie) => Err(CheckError::SortError {
+        self.out()
+            .unify(&other.out())
+            .map_err(|error| CheckError::SortError {
                 position: None,
-                error: ie,
-            }),
-            Ok(_) => Ok(()),
-        }?;
+                error,
+            })?;
 
-        // Itertools::zip_longest(self.args().into_iter(), other.args()).try_for_each(|e| match e {})
-        Ok(())
+        let args_unify = self
+            .args()
+            .into_iter()
+            .zip_longest(other.args().into_iter())
+            .enumerate()
+            .try_fold(None, |_, (i, e)| match e {
+                itertools::EitherOrBoth::Both(l, r) => l
+                    .unify(&r)
+                    .map_err(|e| CheckError::from_inference(e, Some(i)))
+                    .map(|_| None),
+                itertools::EitherOrBoth::Left(_) => Err(CheckError::WrongNumberOfArguments {
+                    got: i.into(),
+                    expected: self.args_size(),
+                }),
+                itertools::EitherOrBoth::Right(_) => Ok(Some(i)),
+            })?;
+
+        match args_unify {
+            Some(i) => Err(CheckError::WrongNumberOfArguments {
+                got: i.into(),
+                expected: self.args_size(),
+            }),
+            None => Ok(()),
+        }
     }
 
     /// To not force implement [Display]
@@ -152,29 +173,3 @@ impl<'a, 'bump: 'a, T: Signature<'bump>> From<&'a T> for DisplaySignature<'a, T>
         DisplaySignature(value)
     }
 }
-
-// paste::paste!();
-
-// To quickly define static signatures
-// #[macro_export]
-// macro_rules! static_signature {
-
-//     ($name:ident: ($($arg:expr),*) -> $out:expr) => {
-//     paste::paste!{
-//         #[static_init::dynamic]
-//         static  [<$name _ARGS>] : [$crate::formula::sort::Sort<'static>; $crate::static_signature!(@inner ($($arg,)*))]
-//             = [$($arg.as_sort()),*];
-//     }
-
-//     #[static_init::dynamic]
-//     static $name: $crate::formula::function::signature::FixedRefSignature<'static, 'static> =
-//         $crate::formula::function::signature::FixedRefSignature {
-//             out: $out.as_sort(),
-//             args:  std::convert::From::from( paste::paste!{ [<$name _ARGS>] }.as_ref())
-//         };
-//     };
-
-//     (@inner ()) => { 0 };
-//     (@inner ($t:tt, $($other:tt,)*)) => { 1 + $crate::static_signature!(@inner ($($other,)*))};
-
-// }

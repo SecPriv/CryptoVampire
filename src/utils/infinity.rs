@@ -18,6 +18,7 @@ impl<Idx: Display> Display for Infinity<Idx> {
 }
 
 impl<Idx> From<Idx> for Infinity<Idx> {
+    #[inline]
     fn from(value: Idx) -> Self {
         Self::Num(value)
     }
