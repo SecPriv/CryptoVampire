@@ -1,64 +1,16 @@
-use itertools::chain;
-use paste::paste;
-use std::{
-    cell::{Ref, RefCell},
-    collections::HashSet,
-    fmt::Debug,
-    iter::Map,
-    ops::DerefMut,
-    ptr::NonNull,
-    slice::Iter,
-};
+use std::{cell::RefCell, ptr::NonNull};
 
-use crate::{
-    assert_variance,
-    formula::{
-        function::{Function, InnerFunction},
-        sort::{InnerSort, Sort},
-    },
-    problem::{
-        cell::{InnerMemoryCell, MemoryCell},
-        step::{InnerStep, Step},
-    },
-    utils::string_ref::StrRef,
-};
+use crate::{formula::{sort::InnerSort, function::InnerFunction}, problem::{step::InnerStep, cell::InnerMemoryCell}};
+
+
 
 type InnerContainer<T> = RefCell<Vec<NonNull<T>>>;
 
-// #[derive(Debug)]
-pub struct Container<'bump> {
+pub struct ScopedContainer<'bump> {
     sorts: InnerContainer<InnerSort<'bump>>,
     functions: InnerContainer<InnerFunction<'bump>>,
     steps: InnerContainer<InnerStep<'bump>>,
     cells: InnerContainer<InnerMemoryCell<'bump>>,
-}
-
-pub trait ScopeAllocator<'bump, T> {
-    unsafe fn alloc(&'bump self) -> NonNull<T>;
-}
-
-pub trait CanBeAllocated<'bump> {
-    type Inner;
-    fn allocate<A>(allocator: &'bump A, inner: Self::Inner) -> Self
-    where
-        A: ScopeAllocator<'bump, Self::Inner> + 'bump;
-}
-
-unsafe fn aux_alloc<T>(mut vec: impl DerefMut<Target = Vec<NonNull<T>>>) -> NonNull<T> {
-    // let ptr = NonNull::new_unchecked(alloc(Layout::new::<T>()) as *mut T);
-    let ptr = NonNull::dangling();
-    vec.push(ptr);
-    ptr
-}
-
-macro_rules! make_scope_allocator {
-    ($fun:ident, $t:ty) => {
-        impl<'bump> ScopeAllocator<'bump, $t> for Container<'bump> {
-            unsafe fn alloc(&'bump self) -> NonNull<$t> {
-                aux_alloc(self.$fun.borrow_mut())
-            }
-        }
-    };
 }
 
 make_scope_allocator!(functions, InnerFunction<'bump>);
@@ -76,9 +28,9 @@ macro_rules! my_drop {
     };
 }
 
-impl<'bump> Drop for Container<'bump> {
+impl<'bump> Drop for ScopedContainer<'bump> {
     fn drop(&mut self) {
-        let Container {
+        let ScopedContainer {
             sorts,
             functions,
             steps,
@@ -88,13 +40,13 @@ impl<'bump> Drop for Container<'bump> {
     }
 }
 
-impl<'bump> Debug for Container<'bump> {
+impl<'bump> Debug for ScopedContainer<'bump> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Container")
-            .field("sorts", &self.sorts.borrow())
-            .field("functions", &self.functions.borrow())
-            .field("steps", &self.steps.borrow())
-            .field("cells", &self.cells.borrow())
+            .field("sorts", &self.sorts.try_borrow())
+            .field("functions", &self.functions.try_borrow())
+            .field("steps", &self.steps.try_borrow())
+            .field("cells", &self.cells.try_borrow())
             .finish()
     }
 }
@@ -119,7 +71,7 @@ macro_rules! make_into_iters {
     };
 }
 
-impl<'bump> Container<'bump> {
+impl<'bump> ScopedContainer<'bump> {
     /// find a name starting by `name` that isn't assigned to any function yet
     pub fn find_free_function_name(&self, name: &str) -> String {
         self.functions
@@ -168,8 +120,16 @@ impl<'bump> Container<'bump> {
     make_into_iters!(steps, Step<'bump>, 'bump);
     make_into_iters!(cells, MemoryCell<'bump>, 'bump);
 
-    unsafe fn new_unbounded<'a>() -> Container<'a> {
-        Container {
+    /// Creates a new [Container]
+    ///
+    /// ## Safety
+    /// the lifetime is arbitrary, and therefore usafe.
+    ///
+    /// Any `'a` shorter that the lifetime of the container is fine.
+    /// Since achieving this requires some "convicing" of borrow checker,
+    /// favor using [scoped()] or [Self::new_leaked()].
+    pub unsafe fn new_unbounded<'a>() -> ScopedContainer<'a> {
+        ScopedContainer {
             sorts: Default::default(),
             functions: Default::default(),
             steps: Default::default(),
@@ -182,62 +142,23 @@ impl<'bump> Container<'bump> {
         Box::leak(Box::new(container))
     }
 
-    /// uses [std::mem::transmute]...
-    pub fn shorten_life<'short>(&'_ self) -> &'_ Container<'short>
+    /// Give a scope in which one can use a [Container]
+    pub fn scoped<F, U>(f: F) -> U
     where
-        'bump: 'short,
+        F: for<'a> FnOnce(&'a mut ScopedContainer<'a>) -> U,
     {
-        // this if the content lives at least 'bump, then it leaves at least 'short
-        unsafe { std::mem::transmute(self) }
+        fn shorten_life<'a, 'short, 'long>(x: &'a mut ScopedContainer<'long>) -> &'a mut ScopedContainer<'short>
+        where
+            'long: 'short,
+        {
+            // this if the content lives at least 'bump, then it leaves at least 'short
+            unsafe { std::mem::transmute(x) }
+        }
+        unsafe {
+            let mut container = ScopedContainer::new_unbounded();
+            let result = f(shorten_life(&mut container));
+            drop(container); // result can't refer to anything in container, it can be safely dropped
+            result
+        }
     }
 }
-
-pub fn scope<F, U>(f: F) -> U
-where
-    F: for<'bump> FnOnce(&'bump Container<'bump>) -> U,
-{
-    let container: Container<'static> = unsafe { Container::new_unbounded() };
-    let result = f(&container.shorten_life());
-    drop(container);
-    result
-}
-
-pub trait NameFinder<T> {
-    fn find_free_name(&self, name: &str) -> String;
-}
-
-impl<'bump> NameFinder<Function<'bump>> for Container<'bump> {
-    fn find_free_name(&self, name: &str) -> String {
-        self.find_free_function_name(name)
-    }
-}
-
-pub(crate) trait FromNN<'bump>: Sized {
-    type Inner;
-    /// inner lives 'bump
-    unsafe fn from_nn(inner: NonNull<Self::Inner>) -> Self;
-}
-
-/// from https://stackoverflow.com/a/33542412/10875409
-#[derive(Debug)]
-pub struct VecRefWrapperMap<'a, T: 'a, U, F>
-where
-    F: Fn(&'a T) -> U + Clone,
-{
-    r: Ref<'a, Vec<T>>,
-    f: F,
-}
-
-impl<'a, 'b: 'a, T: 'a, U, F> IntoIterator for &'b VecRefWrapperMap<'a, T, U, F>
-where
-    F: Fn(&'a T) -> U + Clone,
-{
-    type IntoIter = Map<Iter<'a, T>, F>;
-    type Item = U;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.r.iter().map(self.f.clone())
-    }
-}
-
-// assert_variance!(Container);

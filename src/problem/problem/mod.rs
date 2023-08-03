@@ -3,7 +3,7 @@ pub mod builder;
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
 use crate::{
-    container::Container,
+    container::ScopedContainer,
     environement::environement::Environement,
     formula::{
         file_descriptior::{
@@ -27,7 +27,7 @@ use super::{
 
 #[derive(Debug, Clone)]
 pub struct Problem<'bump> {
-    container: &'bump Container<'bump>,
+    container: &'bump ScopedContainer<'bump>,
     /// functions to declare (not already declared somewhere else)
     pub functions: Vec<Function<'bump>>, // to keep track of 'static functions
     pub sorts: Vec<Sort<'bump>>, // same
@@ -60,7 +60,7 @@ impl<'bump> Problem<'bump> {
             .unwrap_or(0)
     }
 
-    pub fn container(&self) -> &'bump Container<'bump> {
+    pub fn container(&self) -> &'bump ScopedContainer<'bump> {
         self.container
     }
 }

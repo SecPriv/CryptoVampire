@@ -14,7 +14,7 @@ use crate::{
         sort::Sort,
     },
     implderef, implvec,
-    utils::{precise_as_ref::PreciseAsRef, utils::Reference},
+    utils::{precise_as_ref::PreciseAsRef, utils::{LateInitializable, MaybeInvalid}},
 };
 use core::fmt::Debug;
 
@@ -52,8 +52,10 @@ impl<'bump> PartialOrd for MemoryCell<'bump> {
 // #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 // pub struct PreMemoryCell<'bump>(Box<InnerMemoryCell<'bump>>);
 
+pub type InnerMemoryCell<'bump> = Option<IInnerMemoryCell<'bumnp>>;
+
 #[derive(Debug)]
-pub struct InnerMemoryCell<'bump> {
+pub struct IInnerMemoryCell<'bump> {
     name: String,
     /// the arguments of the cell
     args: Vec<Sort<'bump>>,
@@ -65,18 +67,18 @@ pub struct InnerMemoryCell<'bump> {
     pub assignements: Vec<Assignement<'bump>>,
 }
 
-impl<'bump> Eq for InnerMemoryCell<'bump> {}
-impl<'bump> PartialEq for InnerMemoryCell<'bump> {
+impl<'bump> Eq for IInnerMemoryCell<'bump> {}
+impl<'bump> PartialEq for IInnerMemoryCell<'bump> {
     fn eq(&self, other: &Self) -> bool {
         self.function == other.function && self.name == other.name && self.args == other.args
     }
 }
-impl<'bump> PartialOrd for InnerMemoryCell<'bump> {
+impl<'bump> PartialOrd for IInnerMemoryCell<'bump> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
-impl<'bump> Ord for InnerMemoryCell<'bump> {
+impl<'bump> Ord for IInnerMemoryCell<'bump> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.name
             .cmp(&other.name)
@@ -84,7 +86,7 @@ impl<'bump> Ord for InnerMemoryCell<'bump> {
             .then(self.args.cmp(&other.args))
     }
 }
-impl<'bump> std::hash::Hash for InnerMemoryCell<'bump> {
+impl<'bump> std::hash::Hash for IInnerMemoryCell<'bump> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.name.hash(state);
         self.args.hash(state);
@@ -92,7 +94,7 @@ impl<'bump> std::hash::Hash for InnerMemoryCell<'bump> {
     }
 }
 
-impl<'bump> InnerMemoryCell<'bump> {}
+impl<'bump> IInnerMemoryCell<'bump> {}
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Assignement<'bump> {
@@ -119,7 +121,7 @@ impl<'bump> MemoryCell<'bump> {
 
         let (_, cell) = unsafe {
             Function::new_cyclic(container, |function| {
-                let inner_content = InnerMemoryCell {
+                let inner_content = IInnerMemoryCell {
                     name,
                     args,
                     function,
@@ -151,7 +153,7 @@ impl<'bump> MemoryCell<'bump> {
         let args = args.into_iter().collect();
         let assignements = assignements.into_iter().collect();
         let cell = {
-            let inner_content = InnerMemoryCell {
+            let inner_content = IInnerMemoryCell {
                 name,
                 args,
                 function: old_function,
@@ -164,7 +166,7 @@ impl<'bump> MemoryCell<'bump> {
                 container: Default::default(),
             }
         };
-        old_function.overwrite(InnerFunction::TermAlgebra(TermAlgebra::Cell(Cell::new(
+        old_function.initiallize(InnerFunction::TermAlgebra(TermAlgebra::Cell(Cell::new(
             cell,
         ))));
         cell
@@ -186,14 +188,14 @@ impl<'bump> MemoryCell<'bump> {
     }
 }
 
-impl<'bump> PreciseAsRef<'bump, InnerMemoryCell<'bump>> for MemoryCell<'bump> {
-    fn precise_as_ref(&self) -> &'bump InnerMemoryCell<'bump> {
+impl<'bump> PreciseAsRef<'bump, IInnerMemoryCell<'bump>> for MemoryCell<'bump> {
+    fn precise_as_ref(&self) -> &'bump IInnerMemoryCell<'bump> {
         unsafe { self.inner.as_ref() } // same as always
     }
 }
 
-impl<'bump> AsRef<InnerMemoryCell<'bump>> for MemoryCell<'bump> {
-    fn as_ref(&self) -> &InnerMemoryCell<'bump> {
+impl<'bump> AsRef<IInnerMemoryCell<'bump>> for MemoryCell<'bump> {
+    fn as_ref(&self) -> &IInnerMemoryCell<'bump> {
         self.precise_as_ref()
     }
 }
@@ -207,7 +209,7 @@ impl<'bump> Debug for MemoryCell<'bump> {
 }
 
 impl<'bump> CanBeAllocated<'bump> for MemoryCell<'bump> {
-    type Inner = InnerMemoryCell<'bump>;
+    type Inner = IInnerMemoryCell<'bump>;
 
     fn allocate<A>(allocator: &'bump A, inner: Self::Inner) -> Self
     where
@@ -236,11 +238,15 @@ impl<'bump> FromNN<'bump> for MemoryCell<'bump> {
     }
 }
 
-impl<'bump> Reference for MemoryCell<'bump> {
-    type Inner = InnerMemoryCell<'bump>;
+impl<'bump> LateInitializable for MemoryCell<'bump> {
+    type Inner = IInnerMemoryCell<'bump>;
 
-    unsafe fn overwrite(&self, other: Self::Inner) {
+    unsafe fn initiallize(&self, other: Self::Inner) {
         std::ptr::drop_in_place(self.inner.as_ptr());
         std::ptr::write(self.inner.as_ptr(), other);
     }
+}
+
+impl<'bump> MaybeInvalid for MemoryCell<'bump> {
+
 }

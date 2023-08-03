@@ -3,7 +3,7 @@ use std::{iter::FusedIterator, sync::Arc, vec::IntoIter};
 use itertools::Itertools;
 
 use crate::{
-    container::Container,
+    container::ScopedContainer,
     formula::{
         formula::RichFormula,
         function::{
@@ -71,7 +71,7 @@ pub struct TmpAssignements<'bump> {
 
 #[derive(Debug)]
 pub struct LongLivedContent<'bump> {
-    pub container: &'bump Container<'bump>,
+    pub container: &'bump ScopedContainer<'bump>,
     pub evaluator: Arc<Evaluator<'bump>>,
     pub name_caster: Arc<NameCaster<'bump>>,
 }
@@ -93,7 +93,7 @@ pub enum OrderingKind {
 #[derive(Debug, Clone)]
 /// See `Problem`
 struct PrePbl<'bump> {
-    container: &'bump Container<'bump>,
+    container: &'bump ScopedContainer<'bump>,
     functions: Vec<Function<'bump>>,
     sorts: Vec<Sort<'bump>>,
     evaluator: Arc<Evaluator<'bump>>,
@@ -241,7 +241,7 @@ impl<'bump> Into<Problem<'bump>> for PblFromParser<'bump> {
 }
 
 fn compress_quantifier<'bump>(
-    container: &'bump Container<'bump>,
+    container: &'bump ScopedContainer<'bump>,
     functions: &mut Vec<Function<'bump>>,
     f: RichFormula<'bump>,
 ) -> RichFormula<'bump> {
@@ -274,7 +274,7 @@ fn generate_order<'bump>(order: implvec!(TmpOrdering<'bump>)) -> Vec<RichFormula
 }
 
 fn generate_steps<'bump>(
-    container: &'bump Container<'bump>,
+    container: &'bump ScopedContainer<'bump>,
     steps: implvec!(TmpStep<'bump>),
     assignements: &mut Vec<Vec<Assignement<'bump>>>,
 ) -> Vec<Step<'bump>> {
@@ -313,7 +313,7 @@ fn generate_steps<'bump>(
 }
 
 fn generate_cells<'bump>(
-    container: &'bump Container<'bump>,
+    container: &'bump ScopedContainer<'bump>,
     cells: implvec!(TmpCell<'bump>),
     assignements: Vec<Vec<Assignement<'bump>>>,
 ) -> Vec<MemoryCell<'bump>> {

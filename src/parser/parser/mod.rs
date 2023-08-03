@@ -12,7 +12,7 @@ use super::{
     *,
 };
 use crate::{
-    container::Container,
+    container::ScopedContainer,
     formula::{
         function::{self, Function, InnerFunction},
         sort::Sort,
@@ -21,7 +21,7 @@ use crate::{
     implderef, implvec,
     parser::parser::guard::Guard,
     problem::{cell::InnerMemoryCell, step::InnerStep},
-    utils::utils::{MaybeInvalid, Reference},
+    utils::utils::{MaybeInvalid, LateInitializable},
 };
 
 pub mod guard;
@@ -166,9 +166,9 @@ pub fn declare_steps_and_cells<'a, 'bump>(
                 // built an uninitialized function
                 let fun = Function::new_uninit(
                     env.container,
-                    Some(name),
-                    Some(input_sorts?),
-                    Some(output_sort),
+                    // Some(name),
+                    // Some(input_sorts?),
+                    // Some(output_sort),
                 );
 
                 // add the function to the list of things to initialize

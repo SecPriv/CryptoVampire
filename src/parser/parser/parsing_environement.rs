@@ -3,7 +3,7 @@ use std::ops::Deref;
 use hashbrown::HashMap;
 use pest::Span;
 
-use crate::{utils::utils::{MaybeInvalid, Reference}, problem::{cell::InnerMemoryCell, step::InnerStep}, formula::{function::{InnerFunction, Function}, sort::Sort, variable::Variable}, parser::{ast, parser::guard::Guard, merr, E}, container::Container, implvec, implderef, f, environement::traits::KnowsRealm};
+use crate::{utils::utils::{MaybeInvalid, LateInitializable}, problem::{cell::InnerMemoryCell, step::InnerStep}, formula::{function::{InnerFunction, Function}, sort::Sort, variable::Variable}, parser::{ast, parser::guard::Guard, merr, E}, container::ScopedContainer, implvec, implderef, f, environement::traits::KnowsRealm};
 
 use super::guard::{GuardedMemoryCell, GuardedFunction, GuardedStep};
 
@@ -18,7 +18,7 @@ pub struct Macro<'bump, 'a> {
 #[derive(Debug)]
 pub struct Environement<'bump, 'str> {
     /// the main memory
-    pub container: &'bump Container<'bump>,
+    pub container: &'bump ScopedContainer<'bump>,
 
     /// some hash map to quickly turn [String] likes into [Sort] or [Function] during parsing.
     ///
@@ -28,9 +28,9 @@ pub struct Environement<'bump, 'str> {
     pub sort_hash: HashMap<&'bump str, Sort<'bump>>,
     /// That one for [Function]s
     pub function_hash: HashMap<String, Function<'bump>>,
+
     /// For [Macro]s
     pub macro_hash: HashMap<&'str str, Macro<'bump, 'str>>,
-
     /// # Macro look up table
     pub step_lut_to_parse: HashMap<&'str str, ast::Step<'str>>,
 
@@ -51,14 +51,14 @@ pub struct Environement<'bump, 'str> {
 }
 
 impl<'bump, 'a> MaybeInvalid for Environement<'bump, 'a> {
-    fn valid(&self) -> bool {
+    fn is_valid(&self) -> bool {
         todo!()
     }
 }
 
 impl<'bump, 'a> Environement<'bump, 'a> {
     pub fn new(
-        container: &'bump Container<'bump>,
+        container: &'bump ScopedContainer<'bump>,
         sort_hash: implvec!(Sort<'bump>),
         function_hash: implvec!(Function<'bump>),
     ) -> Self {
@@ -84,12 +84,12 @@ impl<'bump, 'a> Environement<'bump, 'a> {
     pub fn finalize(&mut self) {
         fn finalize_hash_map<T>(h: &mut HashMap<Guard<T>, Option<T::Inner>>)
         where
-            T: Reference,
+            T: LateInitializable,
         {
             std::mem::take(h)
                 .into_iter()
                 // This returns shortcuts to `None` if `fun` is `None`
-                .try_for_each(|(g, fun)| fun.map(|fun| unsafe { g.overwrite(fun) }))
+                .try_for_each(|(g, fun)| fun.map(|fun| unsafe { g.initiallize(fun) }))
                 .expect("unreachable") // should never crash
         }
 
@@ -104,7 +104,7 @@ impl<'bump, 'a> Environement<'bump, 'a> {
         finalize_hash_map(steps_initialize);
         finalize_hash_map(cells_initialize);
 
-        assert!(self.valid(), "something went wrong while initializing");
+        assert!(self.is_valid(), "something went wrong while initializing");
     }
 }
 

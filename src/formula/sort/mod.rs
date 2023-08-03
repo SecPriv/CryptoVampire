@@ -7,7 +7,7 @@ use core::fmt::Debug;
 use std::{cmp::Ordering, fmt::Display, hash::Hash, marker::PhantomData, ptr::NonNull};
 
 use crate::{
-    container::{CanBeAllocated, Container, FromNN, ScopeAllocator},
+    container::{CanBeAllocated, ScopedContainer, FromNN, ScopeAllocator},
     environement::traits::{KnowsRealm, Realm},
     utils::precise_as_ref::PreciseAsRef,
 };
@@ -101,11 +101,11 @@ impl<'a> Sort<'a> {
     }
 
     // ~~~~~~~~~~~~~~~ builders ~~~~~~~~~~~~~~~~~
-    pub fn new(allocator: &'a Container<'a>, inner: InnerSort<'a>) -> Self {
+    pub fn new(allocator: &'a ScopedContainer<'a>, inner: InnerSort<'a>) -> Self {
         Self::allocate(allocator, inner)
     }
 
-    pub fn new_regular(allocator: &'a Container<'a>, name: String) -> Self {
+    pub fn new_regular(allocator: &'a ScopedContainer<'a>, name: String) -> Self {
         Self::new(allocator, InnerSort::new(name, SFlags::empty(), None))
     }
 

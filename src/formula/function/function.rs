@@ -23,7 +23,7 @@ use crate::{
         variable::Variable,
     },
     implderef, implvec,
-    utils::{precise_as_ref::PreciseAsRef, string_ref::StrRef, utils::Reference},
+    utils::{precise_as_ref::PreciseAsRef, string_ref::StrRef, utils::LateInitializable},
     variants_ref,
 };
 
@@ -100,10 +100,10 @@ impl<'bump> PartialOrd for Function<'bump> {
     }
 }
 
-impl<'bump> Reference for Function<'bump> {
+impl<'bump> LateInitializable for Function<'bump> {
     type Inner = InnerFunction<'bump>;
 
-    unsafe fn overwrite(&self, other: Self::Inner) {
+    unsafe fn initiallize(&self, other: Self::Inner) {
         std::ptr::drop_in_place(self.inner.as_ptr());
         std::ptr::write(self.inner.as_ptr(), other);
     }
@@ -351,16 +351,16 @@ impl<'bump> Function<'bump> {
 
     pub fn new_uninit(
         container: &'bump impl ScopeAllocator<'bump, InnerFunction<'bump>>,
-        name: Option<implderef!(str)>,
-        input_sorts: Option<implvec!(Sort<'bump>)>,
-        output_sort: Option<Sort<'bump>>,
+        // name: Option<implderef!(str)>,
+        // input_sorts: Option<implvec!(Sort<'bump>)>,
+        // output_sort: Option<Sort<'bump>>,
     ) -> Self {
         Self::new_from_inner(
             container,
             InnerFunction::Invalid(InvalidFunction {
-                name: name.map(|n| n.to_owned().into()),
-                args: input_sorts.map(|i| i.into_iter().collect()),
-                sort: output_sort,
+                // name: name.map(|n| n.to_owned().into()),
+                // args: input_sorts.map(|i| i.into_iter().collect()),
+                // sort: output_sort,
             }),
         )
     }
@@ -485,7 +485,7 @@ impl<'bump> Function<'bump> {
         Predicate:Predicate<'bump>,
         Tmp:Tmp<'bump>,
         Skolem:Skolem<'bump>,
-        Invalid:InvalidFunction<'bump>,
+        Invalid:InvalidFunction,
     );
 
 
@@ -514,8 +514,8 @@ impl<'bump> FromNN<'bump> for Function<'bump> {
 }
 
 impl<'bump> MaybeInvalid for Function<'bump> {
-    fn valid(&self) -> bool {
+    fn is_valid(&self) -> bool {
         let Function { inner, .. } = self;
-        (!inner.as_ptr().is_null()) && self.as_ref().valid()
+        (!inner.as_ptr().is_null()) && self.as_ref().is_valid()
     }
 }

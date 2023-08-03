@@ -25,13 +25,13 @@ macro_rules! asssert_trait {
     };
 }
 
-/// make sure a type has the right variance
+/// make sure a type is covariant. [read more](https://doc.rust-lang.org/reference/subtyping.html)
 #[macro_export]
 macro_rules! assert_variance {
     ($name:ident) => {
         ::paste::paste! {
             #[cfg(test)]
-            fn [<_enlarge_$name:snake>]<'a, 'b>(q: $name<'a>) -> $name<'b> where 'a:'b { q }
+            fn [<_enlarge_$name:snake>]<'long, 'short>(q: $name<'long>) -> $name<'short> where 'long:'short { q }
         }
     };
 }

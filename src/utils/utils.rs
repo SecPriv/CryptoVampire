@@ -1,4 +1,6 @@
-use std::ops::{Deref, DerefMut};
+use std::{ops::{Deref, DerefMut}, default};
+
+use thiserror::Error;
 
 #[inline(always)]
 pub fn replace_if_eq<T: Eq>(a: T, b: T, c: T) -> T {
@@ -221,14 +223,54 @@ macro_rules! f {
 ///
 /// Maybe one day this could be replaced by [MaybeUninit][std::mem::MaybeUninit].
 pub trait MaybeInvalid {
-    fn valid(&self) -> bool;
+    fn is_valid(&self) -> bool;
+
+    #[must_use]
+    fn assert_valid(&self) -> Result<(), AccessToInvalidData> {
+        if self.is_valid() {
+            if cfg!(debug_assertions) {
+                unreachable!("{}", AccessToInvalidData::Error)
+            } else {
+                Err(AccessToInvalidData::Error)
+            }
+        }
+    }
 }
 
-pub trait Reference {
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash, Error, Default)]
+pub enum AccessToInvalidData {
+    #[error("Access to invalid data")]
+    #[default]
+    Error,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash, Error, Default)]
+pub enum AlreadyInitialized {
+    #[error("Overwritting already initialized data")]
+    #[default]
+    Error,
+}
+
+pub trait LateInitializable: MaybeInvalid {
     type Inner;
 
     /// Replace the underlying function
     ///
     /// *Not thread safe*
-    unsafe fn overwrite(&self, other: Self::Inner);
+    unsafe fn inner_overwrite(&self, other: Self::Inner);
+
+    /// **DO NOT OVERWRITE THIS FUNCTION**
+    #[must_use]
+    unsafe fn initiallize(&self, other: Self::Inner) -> Result<&Self, AlreadyInitialized> {
+        if !self.is_valid() {
+            self.inner_overwrite(other);
+            Ok(self)
+        } else {
+            if cfg!(debug_assertions) {
+                unreachable!("{}", AlreadyInitialized::default())
+            } else {
+                Err(Default::default())
+            }
+        }
+    }
 }

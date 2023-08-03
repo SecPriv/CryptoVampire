@@ -1,10 +1,10 @@
-use crate::container::Container;
+use crate::container::ScopedContainer;
 
 use bitflags::bitflags;
 
 #[derive(Debug, Clone)]
 pub struct Environement<'bump> {
-    pub container: &'bump Container<'bump>,
+    pub container: &'bump ScopedContainer<'bump>,
     options: Options,
 }
 
@@ -122,7 +122,7 @@ impl<'bump> Environement<'bump> {
         !self.not_as_term_algebra()
     }
 
-    pub fn container_full_life_time(&self) -> &'bump Container<'bump> {
+    pub fn container_full_life_time(&self) -> &'bump ScopedContainer<'bump> {
         self.container
     }
 }

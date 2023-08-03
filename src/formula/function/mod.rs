@@ -27,7 +27,7 @@ use crate::{
     utils::{
         precise_as_ref::PreciseAsRef,
         string_ref::StrRef,
-        utils::{MaybeInvalid, Reference},
+        utils::{MaybeInvalid, LateInitializable},
     },
     variants, variants_ref, variants_ref_try_into, CustomDerive,
 };
@@ -131,7 +131,7 @@ This means all the user-defined function and all the other BC functions"]
         Tmp(Tmp<'bump>),
         Skolem(Skolem<'bump>),
         #[doc="A function to be overwritten soon"]
-        Invalid(InvalidFunction<'bump>),
+        Invalid(InvalidFunction),
     }
 }
 
@@ -147,7 +147,7 @@ impl<'bump> InnerFunction<'bump> {
         Predicate:Predicate<'bump>,
         Tmp:Tmp<'bump>,
         Skolem:Skolem<'bump>,
-        Invalid:InvalidFunction<'bump>,
+        Invalid:InvalidFunction,
     );
 }
 
@@ -162,7 +162,7 @@ variants_ref_try_into!(InnerFunction : InnerFunction<'bump> => {
     Predicate:Predicate<'bump>|
     Tmp:Tmp<'bump>|
     Skolem:Skolem<'bump>|
-    Invalid:InvalidFunction<'bump>};
+    Invalid:InvalidFunction};
     'bump
 );
 
@@ -179,7 +179,7 @@ impl<'bump> AsRef<InnerFunction<'bump>> for Function<'bump> {
 // }
 
 impl<'bump> MaybeInvalid for InnerFunction<'bump> {
-    fn valid(&self) -> bool {
+    fn is_valid(&self) -> bool {
         todo!()
     }
 }
