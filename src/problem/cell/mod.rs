@@ -6,7 +6,7 @@ use crate::{
     assert_variance, asssert_trait,
     container::{
         allocator::ContainerTools,
-        reference::{ Reference},
+        reference::{ Reference}, contained::Containable,
     },
     formula::{
         formula::RichFormula,
@@ -25,34 +25,37 @@ use core::fmt::Debug;
 
 use super::step::Step;
 
-#[derive(Hash, PartialEq, Eq, Clone, Copy)]
-pub struct MemoryCell<'bump> {
-    inner: NonNull<Option<InnerMemoryCell<'bump>>>,
-    container: PhantomData<&'bump ()>,
-}
+pub type MemoryCell<'bump> = Reference<'bump, InnerMemoryCell<'bump>>;
+
+// #[derive(Hash, PartialEq, Eq, Clone, Copy)]
+// pub struct MemoryCell<'bump> {
+//     inner: NonNull<Option<InnerMemoryCell<'bump>>>,
+//     container: PhantomData<&'bump ()>,
+// }
+impl<'bump> Containable<'bump> for InnerMemoryCell<'bump>{}
 
 asssert_trait!(sync_send_cell; InnerMemoryCell; Sync, Send);
 assert_variance!(MemoryCell);
 unsafe impl<'bump> Sync for MemoryCell<'bump> {}
 unsafe impl<'bump> Send for MemoryCell<'bump> {}
 
-impl<'bump> Ord for MemoryCell<'bump> {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        if self == other {
-            Ordering::Equal
-        } else {
-            self.as_inner()
-                .cmp(other.as_inner())
-                .then(self.inner.cmp(&other.inner))
-        }
-    }
-}
+// impl<'bump> Ord for MemoryCell<'bump> {
+//     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+//         if self == other {
+//             Ordering::Equal
+//         } else {
+//             self.as_inner()
+//                 .cmp(other.as_inner())
+//                 .then(self.inner.cmp(&other.inner))
+//         }
+//     }
+// }
 
-impl<'bump> PartialOrd for MemoryCell<'bump> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(&other))
-    }
-}
+// impl<'bump> PartialOrd for MemoryCell<'bump> {
+//     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+//         Some(self.cmp(&other))
+//     }
+// }
 
 // #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 // pub struct PreMemoryCell<'bump>(Box<InnerMemoryCell<'bump>>);
@@ -156,7 +159,7 @@ impl<'bump> MemoryCell<'bump> {
         assignements: implvec!(Assignement<'bump>),
     ) -> Self
     where
-        C: ContainerTools<'bump, Self>,
+        C: ContainerTools<'bump, InnerMemoryCell<'bump>>,
     {
         // let name = name.to_string();
         // let args = args.into_iter().collect();
@@ -200,24 +203,24 @@ impl<'bump> MemoryCell<'bump> {
 
 // base impl
 
-impl<'bump> Debug for MemoryCell<'bump> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.as_inner().fmt(f)
-    }
-}
+// impl<'bump> Debug for MemoryCell<'bump> {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         self.as_inner().fmt(f)
+//     }
+// }
 
-impl<'bump> Reference<'bump> for MemoryCell<'bump> {
-    type Inner<'a> = InnerMemoryCell<'a> where 'a:'bump;
+// impl<'bump> Reference<'bump> for MemoryCell<'bump> {
+//     type Inner<'a> = InnerMemoryCell<'a> where 'a:'bump;
 
-    fn from_ref(ptr: &'bump Option<InnerMemoryCell<'bump>>) -> Self {
-        Self {
-            inner: NonNull::from(ptr),
-            container: Default::default(),
-        }
-    }
+//     fn from_ref(ptr: &'bump Option<InnerMemoryCell<'bump>>) -> Self {
+//         Self {
+//             inner: NonNull::from(ptr),
+//             container: Default::default(),
+//         }
+//     }
 
-    fn to_ref(&self) -> &'bump Option<Self::Inner<'bump>> {
-        unsafe { self.inner.as_ref() }
-    }
-}
+//     fn to_ref(&self) -> &'bump Option<Self::Inner<'bump>> {
+//         unsafe { self.inner.as_ref() }
+//     }
+// }
 

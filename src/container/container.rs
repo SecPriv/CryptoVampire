@@ -12,8 +12,8 @@ use crate::{
     utils::string_ref::StrRef,
 };
 
-use super::utils::VecRefWrapperMap;
 use super::{allocator::Container, reference::Reference};
+use super::{contained::Contained, utils::VecRefWrapperMap};
 use hashbrown::HashSet;
 use itertools::chain;
 use paste::paste;
@@ -37,11 +37,8 @@ pub struct ScopedContainer<'bump> {
 
 macro_rules! make_scope_allocator {
     ($fun:ident, $t:ident, $inner:ident) => {
-        impl<'bump> Container<'bump, $t<'bump>> for ScopedContainer<'bump> {
-            fn allocate_pointee(
-                &'bump self,
-                content: Option<$inner<'bump>>,
-            ) -> &'bump Option<$inner<'bump>> {
+        impl<'bump> Container<'bump, $inner<'bump>> for ScopedContainer<'bump> {
+            fn allocate_pointee(&'bump self, content: Option<$inner<'bump>>) -> &'bump Option<$inner> {
                 let uninit_ref = &*Box::leak(Box::new(content));
                 self.$fun.borrow_mut().push(uninit_ref);
                 uninit_ref
@@ -207,14 +204,11 @@ impl<'bump> ScopedContainer<'bump> {
 
 pub struct StaticContainer;
 
-impl<R> Container<'static, R> for StaticContainer
+impl<I> Container<'static, I> for StaticContainer
 where
-    R: Reference<'static>,
+    I: Contained<'static> + 'static,
 {
-    fn allocate_pointee(
-        &'static self,
-        content: Option<<R as Reference<'static>>::Inner<'static>>,
-    ) -> &'static Option<<R as Reference<'static>>::Inner<'static>> {
+    fn allocate_pointee(&'static self, content: Option<I>) -> &'static Option<I> {
         Box::leak(Box::new(content))
     }
 }

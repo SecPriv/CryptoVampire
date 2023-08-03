@@ -1,4 +1,7 @@
-use std::{convert::Infallible, error::Error, ptr::NonNull};
+use std::{
+    cmp::Ordering, convert::Infallible, error::Error, fmt::Debug, hash::Hash, marker::PhantomData,
+    ptr::NonNull,
+};
 
 use itertools::Itertools;
 
@@ -7,92 +10,104 @@ use crate::utils::{
     utils::{AccessToInvalidData, AlreadyInitialized, MaybeInvalid},
 };
 
-use super::allocator::{Container, ContainerTools};
+use super::{
+    allocator::{Container, ContainerTools},
+    contained::{Contained, Containable},
+};
 
-// pub type RefPointee<'bump, R> = Option<<R as Reference<'bump>>::Inner<'bump>>;
-// pub type RefInner<'bump, R> = <R as Reference<'bump>>::Inner<'bump>;
+// pub type RefPointee<'bump, R> = Option<<R as Reference<'bump>>::Inner>;
+// pub type RefInner<'bump, R> = <R as Reference<'bump>>::Inner;
 
-///
-/// # Safety
-/// No access to invalid data as defined by [MaybeInvalid]
-pub trait Reference<'bump> : Sized + 'bump {
-    // type Inner<'a> where 'a:'bump, Self:'a;
-    type Inner<'a> where 'a:'bump, Self:'a;
+#[derive(PartialEq, Eq)]
+pub struct Reference<'bump, T>  {
+    inner: NonNull<Option<T>>,
+    lt: PhantomData<&'bump ()>,
+}
 
-    fn from_ref(ptr: &'bump Option<Self::Inner<'bump>>) -> Self;
-    fn to_ref(&self) -> &'bump Option<Self::Inner<'bump>>;
-
-    fn new_uninit<C>(container: &'bump C) -> Self
-    where
-        C: Container<'bump, Self>,
-    {
-        Self::from_ref(container.allocate_uninit())
+impl<'bump, T> Reference<'bump, T> {
+    pub fn as_option_ref(&self) -> &'bump Option<T> {
+        unsafe { self.inner.as_ref() }
     }
 
-    fn new_from<C>(container: &'bump C, content: Self::Inner<'bump>) -> Self
-    where
-        C: Container<'bump, Self>,
-    {
-        Self::from_ref(container.allocate_inner(content))
+    pub fn as_inner(&self) -> &T {
+        self.as_ref()
     }
 
-    // fn try_alloc_array_cyclic_with_residual<C, F, T, E1, E2, const N: usize>(
-    //     container: &'bump C,
-    //     f: F,
-    // ) -> Result<(T, [Self; N]), E2>
-    // where
-    //     C: Container<'bump, Self>,
-    //     F: for<'a> FnOnce(&'a [Self; N]) -> Result<(T, [Self::Inner; N]), E1>,
-    //     E1: Error,
-    //     E2: Error + From<E1> + From<AlreadyInitialized>,
-    // {
-    //     container.try_alloc_array_cyclic_with_residual(f)
-    // }
-
-
-    fn maybe_precise_as_ref(&self) -> Result<&'bump Self::Inner<'bump>, AccessToInvalidData> {
-        self.to_ref().as_ref().ok_or(AccessToInvalidData::Error)
+    pub fn maybe_precise_as_ref(&self) -> Option<&'bump T> {
+        self.as_option_ref().as_ref()
     }
 
-    /// initialize via inner mutability
-    unsafe fn initialize_with(&self, content: Self::Inner<'bump>) -> Result<&Self, AlreadyInitialized> {
-        if !self.is_valid() {
-            let ptr = self.to_ref() as *const _ as *mut Option<Self::Inner<'bump>>;
-            core::ptr::drop_in_place(ptr);
-            core::ptr::write(ptr, Some(content));
-            Ok(self)
-        } else {
-            Err(AlreadyInitialized::Error)
-        }
-    }
-
-    fn as_inner(&self) -> &Self::Inner<'bump> {
-        self.precise_as_ref()
+    pub fn from_ref(ptr: &'bump Option<T>) -> Self {
+        Self::from(ptr)
     }
 }
 
-impl<'bump, R> PreciseAsRef<'bump, R::Inner<'bump>> for R
-where
-    R: Reference<'bump>,
-{
-    fn precise_as_ref(&self) -> &'bump R::Inner<'bump> {
+impl<'bump, T> PreciseAsRef<'bump, T> for Reference<'bump, T> {
+    fn precise_as_ref(&self) -> &'bump T {
         self.maybe_precise_as_ref().unwrap()
     }
 }
 
-impl<'bump, T> MaybeInvalid for T
-where
-    T: Reference<'bump>,
-{
-    fn is_valid(&self) -> bool {
-        self.maybe_precise_as_ref().is_ok()
+impl<'bump, T> AsRef<T> for Reference<'bump, T> {
+    fn as_ref(&self) -> &T {
+        self.precise_as_ref()
     }
 }
-// impl<'bump, R> From<&'bump RefPointee<'bump, R>> for R
-// where
-//     R: Reference<'bump>,
-// {
-//     fn from(value: &'bump R::Inner) -> Self {
-//         Self::from_ref(value)
-//     }
-// }
+
+impl<'bump, T: Ord> Ord for Reference<'bump, T> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        if self == other {
+            Ordering::Equal
+        } else {
+            Ord::cmp(self.as_inner(), other.as_inner())
+        }
+    }
+}
+
+impl<'bump, T:PartialOrd> PartialOrd for Reference<'bump, T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        if self == other {
+            Some(Ordering::Equal)
+        } else {
+            PartialOrd::partial_cmp(self.as_inner(), other.as_inner())
+        }
+    }
+}
+
+impl<'b, T: Debug> Debug for Reference<'b, T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.inner.fmt(f)
+    }
+}
+
+impl<'bump, T> MaybeInvalid for Reference<'bump, T> {
+    fn is_valid(&self) -> bool {
+        self.maybe_precise_as_ref().is_some()
+    }
+}
+
+impl<'bump, T> From<&'bump Option<T>> for Reference<'bump, T> {
+    fn from(value: &'bump Option<T>) -> Self {
+        Self {
+            inner: NonNull::from(value),
+            lt: Default::default(),
+        }
+    }
+}
+
+impl<'bump, T> Clone for Reference<'bump, T> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner,
+            lt: Default::default(),
+        }
+    }
+}
+
+impl<'bump, T> Copy for Reference<'bump, T> {}
+
+impl<'bump, T: Hash> Hash for Reference<'bump, T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.as_option_ref().hash(state);
+    }
+}

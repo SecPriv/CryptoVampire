@@ -29,7 +29,7 @@ pub struct ConstructorDestructor<'bump> {
 
 impl<'bump> ConstructorDestructor<'bump> {
     pub fn new_unused(
-        container: &'bump (impl Container<'bump, Function<'bump>>
+        container: &'bump (impl Container<'bump, InnerFunction<'bump>>
                     + NameFinder<Function<'bump>>),
         f: Function<'bump>,
     ) -> Self {

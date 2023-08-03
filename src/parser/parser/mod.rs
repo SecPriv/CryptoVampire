@@ -12,7 +12,7 @@ use super::{
     *,
 };
 use crate::{
-    container::{ScopedContainer, allocator::ContainerTools},
+    container::{ScopedContainer, allocator::{ContainerTools, Container}},
     formula::{
         function::{self, Function, InnerFunction},
         sort::Sort,
@@ -170,7 +170,7 @@ pub fn declare_steps_and_cells<'a, 'bump>(
                 //     // Some(input_sorts?),
                 //     // Some(output_sort),
                 // );
-                let fun: Function<'bump> = env.container.alloc_uninit();
+                let fun: Function<'bump> = env.container.allocate_uninit().into();
 
                 // add the function to the list of things to initialize
                 let err_check = env.functions_initialize.insert(fun.into(), None);

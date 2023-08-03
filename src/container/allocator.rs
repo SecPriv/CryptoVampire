@@ -4,50 +4,55 @@ use itertools::Itertools;
 
 use crate::utils::utils::AlreadyInitialized;
 
-use super::reference::Reference;
+use super::{
+    contained::{Containable, Contained},
+    reference::Reference,
+};
 
-pub trait Container<'bump, R>
+pub trait Container<'bump, I>
 where
-    R:  Reference<'bump>,
+    I: Contained<'bump>,
 {
-    fn allocate_pointee(
-        &'bump self,
-        content: Option<<R as Reference<'bump>>::Inner<'bump>>,
-    ) -> &'bump Option<<R as Reference<'bump>>::Inner<'bump>>;
-    fn allocate_uninit(&'bump self) -> &'bump Option<<R as Reference<'bump>>::Inner<'bump>> {
+    fn allocate_pointee(&'bump self, content: Option<I>) -> &'bump Option<I>;
+    fn allocate_uninit(&'bump self) -> &'bump Option<I> {
         self.allocate_pointee(Default::default())
     }
-    fn allocate_inner(
-        &'bump self,
-        inner: <R as Reference<'bump>>::Inner<'bump>,
-    ) -> &'bump Option<<R as Reference<'bump>>::Inner<'bump>> {
+    fn allocate_inner(&'bump self, inner: I) -> &'bump Option<I> {
         self.allocate_pointee(Some(inner))
     }
 }
 
-pub trait ContainerTools<'bump, R> {
-    type Inner<'a>
+pub trait ContainerTools<'bump, I> {
+    type R<'a>
     where
-        'a: 'bump;
+        'bump: 'a;
 
-    fn alloc_uninit(&'bump self) -> R;
-    fn alloc_inner(&'bump self, inner: Self::Inner<'bump>) -> R;
-    unsafe fn initialize(
-        reference: &R,
-        inner: Self::Inner<'bump>,
-    ) -> Result<(), AlreadyInitialized>;
-
-    fn alloc_cyclic<F>(&'bump self, f: F) -> Result<R, AlreadyInitialized>
+    fn alloc_uninit<'a>(&'bump self) -> Self::R<'a>
     where
-        F: for<'a> FnOnce(&'a R) -> Self::Inner<'bump>,
+        'bump: 'a;
+    fn alloc_inner<'a>(&'bump self, inner: I) -> Self::R<'a>
+    where
+        'bump: 'a;
+    unsafe fn initialize(reference: &Self::R<'bump>, inner: I) -> Result<(), AlreadyInitialized>;
+    // where
+    //     'bump: 'a;
+
+    fn alloc_cyclic< F>(&'bump self, f: F) -> Result<Self::R<'bump>, AlreadyInitialized>
+    where
+        F: for<'b> FnOnce(&'b Self::R<'bump>) -> I,
+        // 'bump: 'a,
     {
         self.try_alloc_cyclic_with_residual(|u| Ok::<_, Infallible>((f(u), ())))
             .map(|(r, _)| r)
     }
 
-    fn alloc_cyclic_with_residual<F, T>(&'bump self, f: F) -> Result<(R, T), AlreadyInitialized>
+    fn alloc_cyclic_with_residual< F, T>(
+        &'bump self,
+        f: F,
+    ) -> Result<(Self::R<'bump>, T), AlreadyInitialized>
     where
-        F: for<'a> FnOnce(&'a R) -> (Self::Inner<'bump>, T),
+        F: for<'b> FnOnce(&'b Self::R<'bump>) -> (I, T),
+        // 'bump: 'a,
     {
         self.try_alloc_cyclic_with_residual(|u| {
             let (res, inner) = f(u);
@@ -55,9 +60,12 @@ pub trait ContainerTools<'bump, R> {
         })
     }
 
-    fn try_alloc_cyclic_with_residual<F, T, E1, E2>(&'bump self, f: F) -> Result<(R, T), E2>
+    fn try_alloc_cyclic_with_residual< F, T, E1, E2>(
+        &'bump self,
+        f: F,
+    ) -> Result<(Self::R<'bump>, T), E2>
     where
-        F: for<'a> FnOnce(&'a R) -> Result<(Self::Inner<'bump>, T), E1>,
+        F: for<'b> FnOnce(&'b Self::R<'bump>) -> Result<(I, T), E1>,
         E1: Error,
         E2: Error + From<E1> + From<AlreadyInitialized>,
     {
@@ -68,78 +76,136 @@ pub trait ContainerTools<'bump, R> {
     }
 }
 
-impl<'bump, C, R> ContainerTools<'bump, R> for C
+impl<'bump, C, I> ContainerTools<'bump, I> for C
 where
-    C: Container<'bump, R>,
-    R:  Reference<'bump>,
+    C: Container<'bump, I>,
+    I: Contained<'bump> + Containable<'bump>,
 {
-    type Inner<'a> = <R as Reference<'bump>>::Inner<'a> where 'a:'bump;
+    type R<'a> = I::Pointer<'a> where 'bump:'a;
 
-    fn alloc_uninit(&'bump self) -> R {
-        R::new_uninit(self)
+    fn alloc_uninit<'a>(&'bump self) -> Self::R<'a>
+    where
+        'bump: 'a,
+    {
+        I::new_ptr_uninit(self)
     }
 
-    unsafe fn initialize(
-        reference: &R,
-        inner: Self::Inner<'bump>,
-    ) -> Result<(), AlreadyInitialized> {
-        R::initialize_with(reference, inner).map(|_| ())
+    fn alloc_inner<'a>(&'bump self, inner: I) -> Self::R<'a>
+    where
+        'bump: 'a,
+    {
+        I::new_ptr_from_inner(self, inner)
     }
 
-    fn alloc_inner(&'bump self, inner: Self::Inner<'bump>) -> R {
-        R::new_from(self, inner)
+    unsafe fn initialize(reference: &Self::R<'bump>, inner: I) -> Result<(), AlreadyInitialized>
+    // where
+    //     'bump: 'a,
+    {
+        I::initialize_with(reference, inner).map(|_| ())
     }
+    // type R<'a> = I::Pointer<'a> where 'bump:'a;
+
+    // fn alloc_uninit<'a>(&'bump self) -> Self::R<'a> where 'bump:'a {
+    //     R::new_uninit(self)
+    // }
+
+    // unsafe fn initialize(reference: &R, inner: Self::Inner) -> Result<(), AlreadyInitialized> {
+    //     R::initialize_with(reference, inner).map(|_| ())
+    // }
+
+    // fn alloc_inner(&'bump self, inner: Self::Inner) -> R {
+    //     R::new_from(self, inner)
+    // }
 }
 
 impl<'bump, C, A, B> ContainerTools<'bump, (A, B)> for C
 where
     C: ContainerTools<'bump, A> + ContainerTools<'bump, B>,
 {
-    type Inner<'a> = (
-        <C as ContainerTools<'bump, A>>::Inner<'a>,
-        <C as ContainerTools<'bump, B>>::Inner<'a>,
-    ) where 'a:'bump;
+    type R<'a> = (<C as ContainerTools<'bump, A>>::R<'a>
+        , <C as ContainerTools<'bump, B>>::R<'a>) where 'bump:'a;
 
-    fn alloc_uninit(&'bump self) -> (A, B) {
-        (self.alloc_uninit(), self.alloc_uninit())
+    fn alloc_uninit<'a>(&'bump self) -> Self::R<'a>
+    where
+        'bump: 'a,
+    {
+        (
+            <C as ContainerTools<'bump, A>>::alloc_uninit(&self),
+            <C as ContainerTools<'bump, B>>::alloc_uninit(&self),
+        )
+    }
+
+    fn alloc_inner<'a>(&'bump self, inner: (A, B)) -> Self::R<'a>
+    where
+        'bump: 'a,
+    {
+        let (a, b) = inner;
+        (
+            <C as ContainerTools<'bump, A>>::alloc_inner(&self, a),
+            <C as ContainerTools<'bump, B>>::alloc_inner(&self, b),
+        )
     }
 
     unsafe fn initialize(
-        reference: &(A, B),
-        inner: Self::Inner<'bump>,
-    ) -> Result<(), AlreadyInitialized> {
-        let (a, b) = reference;
-        let (ia, ib) = inner;
-        Self::initialize(a, ia).and_then(|_| Self::initialize(b, ib))
-    }
-
-    fn alloc_inner(&'bump self, inner: Self::Inner<'bump>) -> (A, B) {
+        reference: &Self::R<'bump>,
+        inner: (A, B),
+    ) -> Result<(), AlreadyInitialized>
+    // where
+    //     'bump: 'a,
+    {
         let (a, b) = inner;
-        (self.alloc_inner(a), self.alloc_inner(b))
+        let (ra, rb) = reference;
+        C::initialize(ra, a)?;
+        C::initialize(rb, b);
+        Ok(())
     }
 }
 
-impl<'bump, C, R, const N: usize> ContainerTools<'bump, [R; N]> for C
+impl<'bump, C, I, const N: usize> ContainerTools<'bump, [I; N]> for C
 where
-    C: ContainerTools<'bump, R>,
+    C: ContainerTools<'bump, I>,
 {
-    type Inner<'a> = [<C as ContainerTools<'bump, R>>::Inner<'a>; N] where 'a:'bump;
+    type R<'a> = [<C as ContainerTools<'bump, I>>::R<'a>; N] where 'bump:'a;
 
-    fn alloc_uninit(&'bump self) -> [R; N] {
+    fn alloc_uninit<'a>(&'bump self) -> Self::R<'a>
+    where
+        'bump: 'a,
+    {
         std::array::from_fn(|_| self.alloc_uninit())
     }
 
+    fn alloc_inner<'a>(&'bump self, inner: [I; N]) -> Self::R<'a>
+    where
+        'bump: 'a,
+    {
+        inner.map(|inner| self.alloc_inner(inner))
+    }
+
     unsafe fn initialize(
-        reference: &[R; N],
-        inner: Self::Inner<'bump>,
-    ) -> Result<(), AlreadyInitialized> {
+        reference: &Self::R<'bump>,
+        inner: [I; N],
+    ) -> Result<(), AlreadyInitialized>
+    // where
+    //     'bump: 'a,
+    {
         inner
             .into_iter()
             .zip_eq(reference.iter())
             .try_for_each(|(inner, reference)| unsafe { C::initialize(reference, inner) })
     }
 
-    fn alloc_inner(&'bump self, inner: Self::Inner<'bump>) -> [R; N] {
-        inner.map(|inner| self.alloc_inner(inner))
-    }
+    // fn alloc_uninit<'a>(&'a self) -> [I; N] {
+    //     std::array::from_fn(|_| self.alloc_uninit())
+    // }
+
+    // unsafe fn initialize(reference: &[I; N], inner: [I; N]) -> Result<(), AlreadyInitialized> {
+    //     inner
+    //         .into_iter()
+    //         .zip_eq(reference.iter())
+    //         .try_for_each(|(inner, reference)| unsafe { C::initialize(reference, inner) })
+    // }
+
+    // fn alloc_inner(&'bump self, inner: [I; N]) -> [I; N] {
+    //     inner.map(|inner| self.alloc_inner(inner))
+    // }
 }

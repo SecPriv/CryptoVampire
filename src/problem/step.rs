@@ -13,7 +13,7 @@ use crate::{
     assert_variance, asssert_trait,
     container::{
         allocator::{Container, ContainerTools},
-        reference::{ Reference},
+        reference::{ Reference}, contained::Containable,
     },
     formula::{
         formula::{meq, RichFormula},
@@ -48,11 +48,13 @@ use crate::{
 //     }
 // }
 
-#[derive(Hash, PartialEq, Eq, Clone, Copy)]
-pub struct Step<'bump> {
-    inner: NonNull<Option<InnerStep<'bump>>>,
-    container: PhantomData<&'bump ()>,
-}
+pub type Step<'bump> = Reference<'bump, InnerStep<'bump>>;
+impl<'bump> Containable<'bump> for InnerStep<'bump>{}
+// #[derive(Hash, PartialEq, Eq, Clone, Copy)]
+// pub struct Step<'bump> {
+//     inner: NonNull<Option<InnerStep<'bump>>>,
+//     container: PhantomData<&'bump ()>,
+// }
 
 // variables from 1 to parameters.len()
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -138,7 +140,7 @@ impl<'bump> Step<'bump> {
     ///
     /// **Not thread safe**
     pub(crate) unsafe fn new_with_function(
-        container: &'bump impl Container<'bump, Step<'bump>>,
+        container: &'bump impl ContainerTools<'bump, InnerStep<'bump>>,
         old_function: Function<'bump>,
         name: implderef!(str),
         args: implvec!(Variable<'bump>),
@@ -276,15 +278,15 @@ impl<'bump> Step<'bump> {
     //     )
     // }
 
-    pub fn maybe_precise_as_ref(&self) -> Result<&'bump InnerStep<'bump>, AccessToInvalidData> {
-        unsafe { self.inner.as_ref() }
-            .as_ref()
-            .ok_or(AccessToInvalidData::Error)
-    }
+    // pub fn maybe_precise_as_ref(&self) -> Result<&'bump InnerStep<'bump>, AccessToInvalidData> {
+    //     unsafe { self.inner.as_ref() }
+    //         .as_ref()
+    //         .ok_or(AccessToInvalidData::Error)
+    // }
 
-    pub fn as_inner(&self) -> &InnerStep<'bump> {
-        self.precise_as_ref()
-    }
+    // pub fn as_inner(&self) -> &InnerStep<'bump> {
+    //     self.precise_as_ref()
+    // }
 }
 
 // impl<'bump> PreciseAsRef<'bump, IInnerStep<'bump>> for Step<'bump> {
@@ -300,11 +302,11 @@ impl<'bump> Step<'bump> {
 //     }
 // }
 
-impl<'bump> Debug for Step<'bump> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.as_inner().fmt(f)
-    }
-}
+// impl<'bump> Debug for Step<'bump> {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         self.as_inner().fmt(f)
+//     }
+// }
 
 // impl Clone for Step {
 //     fn clone(&self) -> Self {
@@ -320,23 +322,23 @@ impl<'bump> Debug for Step<'bump> {
 
 // impl Eq for Step {}
 
-impl<'bump> Ord for Step<'bump> {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.assert_valid().unwrap();
-        if self == other {
-            Ordering::Equal
-        } else {
-            Ord::cmp(self.as_inner(), other.as_inner())
-        }
-    }
-}
+// impl<'bump> Ord for Step<'bump> {
+//     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+//         self.assert_valid().unwrap();
+//         if self == other {
+//             Ordering::Equal
+//         } else {
+//             Ord::cmp(self.as_inner(), other.as_inner())
+//         }
+//     }
+// }
 
-impl<'bump> PartialOrd for Step<'bump> {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.assert_valid().unwrap();
-        Some(Ord::cmp(&self, &other))
-    }
-}
+// impl<'bump> PartialOrd for Step<'bump> {
+//     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+//         self.assert_valid().unwrap();
+//         Some(Ord::cmp(&self, &other))
+//     }
+// }
 
 // impl<'bump> FromNN<'bump> for Step<'bump> {
 //     type Inner = InnerStep<'bump>;
@@ -364,20 +366,20 @@ impl<'bump> PartialOrd for Step<'bump> {
 //     }
 // }
 
-impl<'bump> Reference<'bump> for Step<'bump> {
-    type Inner<'a> = InnerStep<'a> where 'a:'bump;
+// impl<'bump> Reference<'bump> for Step<'bump> {
+//     type Inner<'a> = InnerStep<'a> where 'a:'bump;
 
-    fn from_ref(ptr: &'bump Option<InnerStep<'bump>>) -> Self {
-        Self {
-            inner: NonNull::from(ptr),
-            container: Default::default(),
-        }
-    }
+//     fn from_ref(ptr: &'bump Option<InnerStep<'bump>>) -> Self {
+//         Self {
+//             inner: NonNull::from(ptr),
+//             container: Default::default(),
+//         }
+//     }
 
-    fn to_ref(&self) -> &'bump Option<Self::Inner<'bump>> {
-        unsafe { self.inner.as_ref() }
-    }
-}
+//     fn to_ref(&self) -> &'bump Option<Self::Inner<'bump>> {
+//         unsafe { self.inner.as_ref() }
+//     }
+// }
 
 // impl<'bump> AsRef<RefPointee<'bump, Step<'bump>>> for Step<'bump> {
 //     fn as_ref(&self) -> &RefPointee<'bump, Step<'bump>> {

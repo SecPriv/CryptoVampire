@@ -15,6 +15,7 @@ pub use container::{ScopedContainer, StaticContainer};
 pub mod allocator;
 pub mod reference;
 pub mod utils;
+pub mod contained;
 
 use crate::{
     assert_variance,

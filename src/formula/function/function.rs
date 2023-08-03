@@ -4,7 +4,8 @@ use std::{cmp::Ordering, marker::PhantomData, ptr::NonNull};
 use itertools::Itertools;
 
 use crate::container::allocator::{Container, ContainerTools};
-use crate::container::reference::{ Reference};
+use crate::container::contained::Containable;
+use crate::container::reference::Reference;
 use crate::container::utils::NameFinder;
 use crate::container::StaticContainer;
 use crate::force_lifetime;
@@ -62,11 +63,14 @@ use super::{
 ///
 /// Thus one can copy Function around for more or less free and still
 /// carry a lot of information arround within them
-#[derive(Hash, Clone, Copy, PartialEq, Eq)]
-pub struct Function<'bump> {
-    inner: NonNull<Option<InnerFunction<'bump>>>,
-    container: PhantomData<&'bump ()>,
-}
+pub type Function<'bump> = Reference<'bump, InnerFunction<'bump>>;
+// #[derive(Hash, Clone, Copy, PartialEq, Eq)]
+// pub struct Function<'bump> {
+//     inner: NonNull<Option<InnerFunction<'bump>>>,
+//     container: PhantomData<&'bump ()>,
+// }
+
+impl<'bump> Containable<'bump> for InnerFunction<'bump>{}
 
 asssert_trait!(sync_and_send; InnerFunction; Sync, Send);
 // assert_variance!(Function);
@@ -81,20 +85,23 @@ unsafe impl<'bump> Send for Function<'bump> {}
 //     }
 // }
 
-impl<'bump> Reference<'bump> for Function<'bump> {
-    type Inner<'a> = InnerFunction<'a> where 'a:'bump;
 
-    fn from_ref(ptr: &'bump Option<InnerFunction<'bump>>) -> Self {
-        Self {
-            inner: NonNull::from(ptr),
-            container: Default::default(),
-        }
-    }
+// pub type MFunction<'bump> = Reference<'bump, InnerFunction<'bump>>;
 
-    fn to_ref(&self) -> &'bump Option<Self::Inner<'bump>> {
-        unsafe { self.inner.as_ref() }
-    }
-}
+// impl<'bump> Reference<'bump> for Function<'bump> {
+//     type Inner<'a> = InnerFunction<'a> where 'a:'bump;
+
+//     fn from_ref(ptr: &'bump Option<InnerFunction<'bump>>) -> Self {
+//         Self {
+//             inner: NonNull::from(ptr),
+//             container: Default::default(),
+//         }
+//     }
+
+//     fn to_ref(&self) -> &'bump Option<Self::Inner<'bump>> {
+//         unsafe { self.inner.as_ref() }
+//     }
+// }
 
 impl<'bump> Sorted<'bump> for Function<'bump> {
     fn sort(&self, _args: &[Sort<'bump>]) -> Result<Sort<'bump>, SortedError> {
@@ -102,27 +109,27 @@ impl<'bump> Sorted<'bump> for Function<'bump> {
     }
 }
 
-impl<'b> Debug for Function<'b> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.inner.fmt(f)
-    }
-}
+// impl<'b> Debug for Function<'b> {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         self.inner.fmt(f)
+//     }
+// }
 
-impl<'bump> Ord for Function<'bump> {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        if self == other {
-            Ordering::Equal
-        } else {
-            Ord::cmp(self.as_inner(), other.as_inner())
-        }
-    }
-}
+// impl<'bump> Ord for Function<'bump> {
+//     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+//         if self == other {
+//             Ordering::Equal
+//         } else {
+//             Ord::cmp(self.as_inner(), other.as_inner())
+//         }
+//     }
+// }
 
-impl<'bump> PartialOrd for Function<'bump> {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(&other))
-    }
-}
+// impl<'bump> PartialOrd for Function<'bump> {
+//     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+//         Some(self.cmp(&other))
+//     }
+// }
 
 // impl<'bump> LateInitializable for Function<'bump> {
 //     type Inner = InnerFunction<'bump>;
@@ -139,9 +146,18 @@ impl<'bump> PartialOrd for Function<'bump> {
 //     }
 // }
 
+macro_rules! container {
+    () => {
+        &'bump impl ContainerTools<'bump, InnerFunction<'bump>, R<'bump> = Self>
+    };
+    (nf) => {
+        &'bump (impl ContainerTools<'bump, InnerFunction<'bump>, R<'bump> = Self> + NameFinder<Function<'bump>>)
+    }
+}
+
 impl<'bump> Function<'bump> {
     pub fn new_from_inner(
-        container: &'bump impl Container<'bump, Self>,
+        container: container!(),
         inner: InnerFunction<'bump>,
     ) -> Self {
         // unsafe {
@@ -152,11 +168,12 @@ impl<'bump> Function<'bump> {
         //         container: Default::default(),
         //     }
         // }
-        Self::new_from(container, inner)
+        // Self::new_from(container, inner)
+        container.alloc_inner(inner)
     }
 
     /// *safety*: do not call `f`, it is not initialised yet
-    pub unsafe fn new_cyclic<F, T>(container: &'bump impl Container<'bump, Self>, f: F) -> (Self, T)
+    pub unsafe fn new_cyclic<F, T>(container: container!(), f: F) -> (Self, T)
     where
         F: for<'a> FnOnce(&'a Function<'bump>) -> (InnerFunction<'bump>, T),
         T: Sized,
@@ -174,21 +191,21 @@ impl<'bump> Function<'bump> {
     }
 
     pub fn new_spliting(
-        container: &'bump (impl Container<'bump, Self> + NameFinder<Function<'bump>>),
+        container: container!(nf),
         sorts: impl IntoIterator<Item = Sort<'bump>>,
     ) -> Self {
         Self::new_predicate(container, sorts, "split")
     }
 
     pub fn new_rewrite_function(
-        container: &'bump (impl Container<'bump, Self> + NameFinder<Function<'bump>>),
+        container: container!(nf),
         sort: Sort<'bump>,
     ) -> Self {
         Self::new_predicate(container, [sort, sort], &format!("rewrite_{}", sort.name()))
     }
 
     fn new_predicate(
-        container: &'bump (impl Container<'bump, Self> + NameFinder<Self>),
+        container: container!(nf),
         sorts: impl IntoIterator<Item = Sort<'bump>>,
         name: &str,
     ) -> Self {
@@ -198,7 +215,8 @@ impl<'bump> Function<'bump> {
             args: sorts.into_iter().collect(),
         });
 
-        Self::new_from(container, inner)
+        // Self::new_from(container, inner)
+        container.alloc_inner(inner)
 
         // let inner = unsafe {
         //     let ptr = container.alloc();
@@ -212,7 +230,7 @@ impl<'bump> Function<'bump> {
     }
 
     pub fn new_unused_destructors(
-        container: &'bump (impl Container<'bump, Self> + NameFinder<Self>),
+        container: container!(nf),
         constructor: Self,
     ) -> Vec<Self> {
         assert!(constructor.is_term_algebra());
@@ -231,7 +249,7 @@ impl<'bump> Function<'bump> {
     }
 
     pub fn new_tmp(
-        container: &'bump impl Container<'bump, Self>,
+        container: container!(),
         name: implderef!(str),
         input_sorts: implvec!(Sort<'bump>),
         output_sort: Sort<'bump>,
@@ -247,7 +265,7 @@ impl<'bump> Function<'bump> {
     }
 
     pub fn new_skolem(
-        container: &'bump (impl Container<'bump, Self> + NameFinder<Self>),
+        container: container!(nf),
         free_sorts: impl IntoIterator<Item = Sort<'bump>>,
         out: Sort<'bump>,
     ) -> Self {
@@ -274,7 +292,7 @@ impl<'bump> Function<'bump> {
     }
 
     pub fn new_quantifier_from_quantifier(
-        container: &'bump (impl Container<'bump, Self> + NameFinder<Self>),
+        container: container!(nf),
         q: quantifier::Quantifier<'bump>,
         arg: Box<RichFormula<'bump>>,
     ) -> Self {
@@ -313,12 +331,13 @@ impl<'bump> Function<'bump> {
         //     inner,
         //     container: Default::default(),
         // }
-        Self::new_from(container, inner)
+        // Self::new_from(container, iner)
+        container.alloc_inner(inner)
     }
 
     /// returns the function and the array of free variables
     pub fn new_find_such_that(
-        container: &'bump (impl Container<'bump, Self> + NameFinder<Function<'bump>>),
+        container: container!(nf),
         vars: implvec!(Variable<'bump>),
         condition: RichFormula<'bump>,
         success: RichFormula<'bump>,
@@ -361,7 +380,8 @@ impl<'bump> Function<'bump> {
                 },
             },
         ));
-        (Self::new_from(container, inner), free_variables)
+        // (Self::new_from(container, inner), free_variables)
+        (container.alloc_inner(inner), free_variables)
     }
 
     // pub fn new_uninit(
@@ -381,7 +401,7 @@ impl<'bump> Function<'bump> {
     // }
 
     pub fn new_user_term_algebra(
-        container: &'bump impl Container<'bump, Self>,
+        container: container!(),
         name: implderef!(str),
         input_sorts: implvec!(Sort<'bump>),
         output_sort: Sort<'bump>,
@@ -431,7 +451,8 @@ impl<'bump> Function<'bump> {
         //     .unwrap();
 
         let (eval, main) = container.alloc_cyclic_with_residual(|eval_fun| {
-                let main_fun: Function<'bump> = container.alloc_inner(InnerFunction::TermAlgebra(TermAlgebra::Function(
+                let main_fun: Function<'bump> = 
+                    container.alloc_inner(InnerFunction::TermAlgebra(TermAlgebra::Function(
                     BaseFunction::Base(InnerBaseFunction {
                         name: name.to_string().into(),
                         args: input_sorts.into_iter().collect(),
@@ -511,12 +532,12 @@ impl<'bump> Function<'bump> {
         }
     }
 
-    pub(crate) fn from_ptr_inner(inner: NonNull<Option<InnerFunction<'bump>>>) -> Self {
-        Function {
-            inner,
-            container: Default::default(),
-        }
-    }
+    // pub(crate) fn from_ptr_inner(inner: NonNull<Option<InnerFunction<'bump>>>) -> Self {
+    //     Function {
+    //         inner,
+    //         container: Default::default(),
+    //     }
+    // }
 
     variants_ref!(InnerFunction, 'bump;
         Bool:Booleans,
@@ -540,7 +561,8 @@ impl<'bump> Function<'bump> {
 }
 
 pub fn new_static_function(inner: InnerFunction<'static>) -> Function<'static> {
-    Function::new_from(&StaticContainer, inner)
+    // Function::new_from(&StaticContainer, inner)
+    StaticContainer.alloc_inner(inner)
 }
 
 // impl<'bump> FromNN<'bump> for Function<'bump> {

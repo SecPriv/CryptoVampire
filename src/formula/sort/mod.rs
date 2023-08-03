@@ -9,8 +9,7 @@ use std::{cmp::Ordering, fmt::Display, hash::Hash, marker::PhantomData, ptr::Non
 use crate::{
     assert_variance,
     container::{
-        reference::{ Reference},
-        ScopedContainer, StaticContainer,
+        ScopedContainer, StaticContainer, reference::Reference, contained::Containable, allocator::ContainerTools,
     },
     environement::traits::{KnowsRealm, Realm},
     utils::precise_as_ref::PreciseAsRef, force_lifetime,
@@ -25,11 +24,15 @@ bitflags! {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Sort<'bump> {
-    inner: NonNull<Option<InnerSort<'bump>>>,
-    container: PhantomData<&'bump ()>,
-}
+// #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+// pub struct Sort<'bump> {
+//     inner: NonNull<Option<InnerSort<'bump>>>,
+//     container: PhantomData<&'bump ()>,
+// }
+
+pub type Sort<'bump> = Reference<'bump, InnerSort<'bump>>;
+
+impl<'bump> Containable<'bump> for InnerSort<'bump>{}
 
 unsafe impl<'bump> Sync for Sort<'bump> {}
 unsafe impl<'bump> Send for Sort<'bump> {}
@@ -58,23 +61,23 @@ struct HiddenSort<'bump> {
     evaluated: Option<Sort<'bump>>,
 }
 
-impl<'a> Ord for Sort<'a> {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // Ord::cmp(&Rc::as_ptr(&self.0), &Rc::as_ptr(&other.0))
-        if self != other {
-            Ord::cmp(self.name(), other.name())
-                .then(Ord::cmp(&self.as_ptr_usize(), &self.as_ptr_usize()))
-        } else {
-            Ordering::Equal
-        }
-    }
-}
+// impl<'a> Ord for Sort<'a> {
+//     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+//         // Ord::cmp(&Rc::as_ptr(&self.0), &Rc::as_ptr(&other.0))
+//         if self != other {
+//             Ord::cmp(self.name(), other.name())
+//                 .then(Ord::cmp(&self.as_ptr_usize(), &self.as_ptr_usize()))
+//         } else {
+//             Ordering::Equal
+//         }
+//     }
+// }
 
-impl<'a> PartialOrd for Sort<'a> {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(&other))
-    }
-}
+// impl<'a> PartialOrd for Sort<'a> {
+//     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+//         Some(self.cmp(&other))
+//     }
+// }
 
 impl<'a> Display for Sort<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -82,11 +85,11 @@ impl<'a> Display for Sort<'a> {
     }
 }
 
-impl<'a> Hash for Sort<'a> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.as_ptr_usize().hash(state);
-    }
-}
+// impl<'a> Hash for Sort<'a> {
+//     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+//         self.as_ptr_usize().hash(state);
+//     }
+// }
 
 impl<'a> Sort<'a> {
     // ~~~~~~~~~~~~~~~~~~ is ~~~~~~~~~~~~~~~~~~~~
@@ -106,7 +109,8 @@ impl<'a> Sort<'a> {
 
     // ~~~~~~~~~~~~~~~ builders ~~~~~~~~~~~~~~~~~
     pub fn new(allocator: &'a ScopedContainer<'a>, inner: InnerSort<'a>) -> Self {
-        Self::new_from(allocator, inner)
+        allocator.alloc_inner(inner)
+        // Self::new_from(allocator, inner)
     }
 
     pub fn new_regular(allocator: &'a ScopedContainer<'a>, name: String) -> Self {
@@ -162,20 +166,20 @@ impl<'bump> AsRef<HiddenSort<'bump>> for InnerSort<'bump> {
     }
 }
 
-impl<'bump> Reference<'bump> for Sort<'bump> {
-    type Inner<'a> = InnerSort<'a> where 'a:'bump;
+// impl<'bump> Reference<'bump> for Sort<'bump> {
+//     type Inner<'a> = InnerSort<'a> where 'a:'bump;
 
-    fn from_ref(ptr: &'bump Option<InnerSort<'bump>>) -> Self {
-        Self {
-            inner: NonNull::from(ptr),
-            container: Default::default(),
-        }
-    }
+//     fn from_ref(ptr: &'bump Option<InnerSort<'bump>>) -> Self {
+//         Self {
+//             inner: NonNull::from(ptr),
+//             container: Default::default(),
+//         }
+//     }
 
-    fn to_ref(&self) -> &'bump Option<Self::Inner<'bump>> {
-        unsafe { self.inner.as_ref() }
-    }
-}
+//     fn to_ref(&self) -> &'bump Option<Self::Inner<'bump>> {
+//         unsafe { self.inner.as_ref() }
+//     }
+// }
 
 
 // impl<'bump> PreciseAsRef<'bump, InnerSort<'bump>> for Sort<'bump> {
@@ -240,5 +244,6 @@ pub fn new_static_sort(
     //     inner,
     //     container: Default::default(),
     // }
-    Sort::new_from(&StaticContainer, inner)
+    // Sort::new_from(&StaticContainer, inner)
+    StaticContainer.alloc_inner(inner)
 }

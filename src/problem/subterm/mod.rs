@@ -7,7 +7,7 @@ use std::{
 use itertools::Itertools;
 
 use crate::{
-    container::allocator::Container,
+    container::allocator::{Container, ContainerTools},
     formula::{
         file_descriptior::declare::{self, Declaration},
         formula::{exists, forall, meq, RichFormula},
@@ -92,7 +92,7 @@ where
     Aux: SubtermAux<'bump>,
 {
     pub fn new<F>(
-        container: &'bump impl Container<'bump, Function<'bump>>,
+        container: &'bump impl ContainerTools<'bump, InnerFunction<'bump>, R<'bump> = Function<'bump>>,
         name: String,
         kind: SubtermKind,
         aux: Aux,
