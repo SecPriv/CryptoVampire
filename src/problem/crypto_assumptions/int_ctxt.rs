@@ -157,7 +157,7 @@ impl<'bump> IntCtxt<'bump> {
                     if_chain! {
                         if fun == &self.verify;
                         if let RichFormula::Fun(nf, args2) = &args[1];
-                        if nf == pbl.name_caster.cast_function(&MESSAGE.clone()).unwrap();
+                        if nf == pbl.name_caster.cast_function(&MESSAGE.as_sort()).unwrap();
                         then {
                             Some(IntCtxtVerifCandidates {cipher: &args[0],  key: &args2[0]})
                         } else {None}
@@ -176,7 +176,7 @@ impl<'bump> IntCtxt<'bump> {
                     if fun == &self.enc {
                         if_chain! {
                             if let RichFormula::Fun(nf, args2) = &args[1];
-                            if nf == pbl.name_caster.cast_function(&MESSAGE.clone()).unwrap();
+                            if nf == pbl.name_caster.cast_function(&MESSAGE.as_sort()).unwrap();
                             then {
                                 Some(IntCtxtEncCandidates {
                                         message: &args[0],
@@ -213,10 +213,10 @@ impl<'bump> IntCtxt<'bump> {
                     .flat_map(|f| f.get_free_vars().into_iter())
                     .cloned()
                     .unique();
-                let u_var = Variable::new(max_var, MESSAGE.clone());
+                let u_var = Variable::new(max_var, MESSAGE.as_sort());
                 let u_f = u_var.into_formula();
-                let r_var = Variable::new(max_var + 1, NONCE.clone());
-                let r_f = pbl.name_caster.cast(MESSAGE.clone(), r_var.into_formula());
+                let r_var = Variable::new(max_var + 1, NONCE.as_sort());
+                let r_f = pbl.name_caster.cast(MESSAGE.as_sort(), r_var.into_formula());
                 let _max_var = max_var + 2;
 
                 let k_sc = side_condition
@@ -233,7 +233,7 @@ impl<'bump> IntCtxt<'bump> {
                         .next()
                         .is_none();
                 if k_sc {
-                    let k_f = pbl.name_caster.cast(MESSAGE.clone(), key.clone());
+                    let k_f = pbl.name_caster.cast(MESSAGE.as_sort(), key.clone());
                     let n_c_f = self.enc.f([u_f.clone(), r_f.clone(), k_f.clone()]);
 
                     let disjunction = subterm_main.preprocess_terms(

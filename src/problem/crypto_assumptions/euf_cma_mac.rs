@@ -10,7 +10,9 @@ use crate::{
         formula::{forall, meq, RichFormula},
         function::inner::{subterm::Subsubterm, term_algebra::name::NameCaster},
         function::Function,
-        sort::builtins::{MESSAGE, NONCE},
+        sort::{
+            builtins::{MESSAGE, NONCE},
+        },
         utils::formula_expander::DeeperKinds,
         variable::Variable,
     },
@@ -146,7 +148,7 @@ impl<'bump> EufCmaMac<'bump> {
                     if_chain! {
                         if fun == &self.verify;
                         if let RichFormula::Fun(nf, args2) = &args[2];
-                        if nf == pbl.name_caster.cast_function(&MESSAGE.clone()).unwrap();
+                        if nf == pbl.name_caster.cast_function(&MESSAGE.as_sort()).unwrap();
                         then {
                             Some(EufCandidate {message: &args[0], signature: &args[1], key: &args2[0]})
                         } else {None}
@@ -163,7 +165,7 @@ impl<'bump> EufCmaMac<'bump> {
                 let free_vars = array.iter()
                     .flat_map(|f| f.get_free_vars().into_iter())
                     .cloned().unique();
-                let u_var = Variable {id: max_var, sort: MESSAGE.clone()};
+                let u_var = Variable {id: max_var, sort: MESSAGE.as_sort()};
                 let u_f = u_var.into_formula();
 
                 let k_sc = subterm_key.preprocess_terms(&pbl.protocol, key,
@@ -174,7 +176,7 @@ impl<'bump> EufCmaMac<'bump> {
             let disjunction = subterm_main.preprocess_terms(&pbl.protocol, &u_f, [message, signature], true, DeeperKinds::all());
 
                 Some(mforall!(free_vars, {
-                    pbl.evaluator.eval(self.verify.f([message.clone(), signature.clone(), pbl.name_caster.cast(MESSAGE.clone(), key.clone())]))
+                    pbl.evaluator.eval(self.verify.f([message.clone(), signature.clone(), pbl.name_caster.cast( MESSAGE.as_sort(), key.clone())]))
                     >> mexists!([u_var], {
                             RichFormula::ors(disjunction)
                         })

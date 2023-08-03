@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 // // #![feature(box_syntax)]
 // // #![feature(box_patterns)]
 

@@ -18,7 +18,6 @@ use itertools::Itertools;
 
 use crate::{
     assert_variance, asssert_trait,
-    container::{FromNN, NameFinder, ScopeAllocator},
     formula::function::{
         inner::term_algebra::base_function::{BaseFunction, InnerBaseFunction},
         signature::{AsFixedSignature, FixedRefSignature},
@@ -27,7 +26,6 @@ use crate::{
     utils::{
         precise_as_ref::PreciseAsRef,
         string_ref::StrRef,
-        utils::{MaybeInvalid, LateInitializable},
     },
     variants, variants_ref, variants_ref_try_into, CustomDerive,
 };
@@ -130,8 +128,8 @@ This means all the user-defined function and all the other BC functions"]
         #[doc="When you need to define a function but not use it"]
         Tmp(Tmp<'bump>),
         Skolem(Skolem<'bump>),
-        #[doc="A function to be overwritten soon"]
-        Invalid(InvalidFunction),
+        // #[doc="A function to be overwritten soon"]
+        // Invalid(InvalidFunction),
     }
 }
 
@@ -147,7 +145,7 @@ impl<'bump> InnerFunction<'bump> {
         Predicate:Predicate<'bump>,
         Tmp:Tmp<'bump>,
         Skolem:Skolem<'bump>,
-        Invalid:InvalidFunction,
+        // Invalid:InvalidFunction,
     );
 }
 
@@ -161,16 +159,17 @@ variants_ref_try_into!(InnerFunction : InnerFunction<'bump> => {
     Evaluate:Evaluate<'bump>|
     Predicate:Predicate<'bump>|
     Tmp:Tmp<'bump>|
-    Skolem:Skolem<'bump>|
-    Invalid:InvalidFunction};
+    Skolem:Skolem<'bump>
+    // Invalid:InvalidFunction
+};
     'bump
 );
 
-impl<'bump> AsRef<InnerFunction<'bump>> for Function<'bump> {
-    fn as_ref(&self) -> &InnerFunction<'bump> {
-        self.precise_as_ref()
-    }
-}
+// impl<'bump> AsRef<InnerFunction<'bump>> for Function<'bump> {
+//     fn as_ref(&self) -> &InnerFunction<'bump> {
+//         self.precise_as_ref()
+//     }
+// }
 
 // impl From<&Step> for Function {
 //     fn from(s: &Step) -> Self {
@@ -178,8 +177,8 @@ impl<'bump> AsRef<InnerFunction<'bump>> for Function<'bump> {
 //     }
 // }
 
-impl<'bump> MaybeInvalid for InnerFunction<'bump> {
-    fn is_valid(&self) -> bool {
-        todo!()
-    }
-}
+// impl<'bump> MaybeInvalid for InnerFunction<'bump> {
+//     fn is_valid(&self) -> bool {
+//         todo!()
+//     }
+// }

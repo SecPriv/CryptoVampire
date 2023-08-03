@@ -9,7 +9,7 @@ use crate::{
         formula::RichFormula,
         function::{inner::term_algebra::TermAlgebra, InnerFunction},
     },
-    utils::utils::repeat_n_zip,
+    utils::utils::repeat_n_zip, container::reference::Reference,
 };
 
 bitflags! {
@@ -53,7 +53,7 @@ where
             None => None,
             Some((p, formula)) => {
                 match formula {
-                    RichFormula::Fun(fun, _) => match fun.as_ref() {
+                    RichFormula::Fun(fun, _) => match fun.as_inner() {
                         InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q))
                             if self.flags.contains(IteratorFlags::QUANTIFIER) =>
                         {

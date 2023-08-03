@@ -7,9 +7,13 @@ use core::fmt::Debug;
 use std::{cmp::Ordering, fmt::Display, hash::Hash, marker::PhantomData, ptr::NonNull};
 
 use crate::{
-    container::{CanBeAllocated, ScopedContainer, FromNN, ScopeAllocator},
+    assert_variance,
+    container::{
+        reference::{ Reference},
+        ScopedContainer, StaticContainer,
+    },
     environement::traits::{KnowsRealm, Realm},
-    utils::precise_as_ref::PreciseAsRef,
+    utils::precise_as_ref::PreciseAsRef, force_lifetime,
 };
 
 bitflags! {
@@ -23,7 +27,7 @@ bitflags! {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Sort<'bump> {
-    inner: NonNull<InnerSort<'bump>>,
+    inner: NonNull<Option<InnerSort<'bump>>>,
     container: PhantomData<&'bump ()>,
 }
 
@@ -102,7 +106,7 @@ impl<'a> Sort<'a> {
 
     // ~~~~~~~~~~~~~~~ builders ~~~~~~~~~~~~~~~~~
     pub fn new(allocator: &'a ScopedContainer<'a>, inner: InnerSort<'a>) -> Self {
-        Self::allocate(allocator, inner)
+        Self::new_from(allocator, inner)
     }
 
     pub fn new_regular(allocator: &'a ScopedContainer<'a>, name: String) -> Self {
@@ -118,7 +122,7 @@ impl<'a> Sort<'a> {
         self.precise_as_ref().as_ref()
     }
 
-    pub fn as_sort(&self) -> Sort<'a> {
+    pub fn as_sort<'b>(&self) -> Sort<'b> where 'a:'b {
         *self
     }
 
@@ -128,7 +132,7 @@ impl<'a> Sort<'a> {
     }
 
     pub fn evaluated_sort(&self) -> Option<Sort<'a>> {
-        self.as_ref().as_ref().evaluated
+        self.as_inner().as_ref().evaluated
     }
 
     /// Equality modulo a [Realm]
@@ -148,6 +152,8 @@ impl<'a> Sort<'a> {
                 }
             }
     }
+
+    force_lifetime!(Sort, 'a);
 }
 
 impl<'bump> AsRef<HiddenSort<'bump>> for InnerSort<'bump> {
@@ -156,70 +162,83 @@ impl<'bump> AsRef<HiddenSort<'bump>> for InnerSort<'bump> {
     }
 }
 
-impl<'bump> PreciseAsRef<'bump, InnerSort<'bump>> for Sort<'bump> {
-    fn precise_as_ref(&self) -> &'bump InnerSort<'bump> {
-        unsafe { self.inner.as_ref() } // for self to exists, container must exists
-    }
-}
+impl<'bump> Reference<'bump> for Sort<'bump> {
+    type Inner<'a> = InnerSort<'a> where 'a:'bump;
 
-impl<'bump> AsRef<InnerSort<'bump>> for Sort<'bump> {
-    fn as_ref(&self) -> &InnerSort<'bump> {
-        self.precise_as_ref()
-    }
-}
-
-impl<'bump> CanBeAllocated<'bump> for Sort<'bump> {
-    type Inner = InnerSort<'bump>;
-
-    fn allocate<A>(allocator: &'bump A, inner: Self::Inner) -> Self
-    where
-        A: ScopeAllocator<'bump, Self::Inner> + 'bump,
-    {
-        let inner = unsafe {
-            let ptr = allocator.alloc();
-            std::ptr::write(ptr.as_ptr(), inner);
-            ptr
-        };
-        Sort {
-            inner,
-            container: PhantomData::default(),
-        }
-    }
-}
-
-impl<'bump> From<&'bump InnerSort<'bump>> for Sort<'bump> {
-    fn from(value: &'bump InnerSort<'bump>) -> Self {
-        Sort {
-            inner: NonNull::from(value),
-            container: Default::default(),
-        }
-    }
-}
-
-impl<'bump> FromNN<'bump> for Sort<'bump> {
-    type Inner = InnerSort<'bump>;
-
-    unsafe fn from_nn(inner: NonNull<Self::Inner>) -> Self {
+    fn from_ref(ptr: &'bump Option<InnerSort<'bump>>) -> Self {
         Self {
-            inner,
+            inner: NonNull::from(ptr),
             container: Default::default(),
         }
     }
+
+    fn to_ref(&self) -> &'bump Option<Self::Inner<'bump>> {
+        unsafe { self.inner.as_ref() }
+    }
 }
+
+
+// impl<'bump> PreciseAsRef<'bump, InnerSort<'bump>> for Sort<'bump> {
+//     fn precise_as_ref(&self) -> &'bump InnerSort<'bump> {
+//         unsafe { self.inner.as_ref() } // for self to exists, container must exists
+//     }
+// }
+
+// impl<'bump> AsRef<InnerSort<'bump>> for Sort<'bump> {
+//     fn as_ref(&self) -> &InnerSort<'bump> {
+//         self.precise_as_ref()
+//     }
+// }
+
+// impl<'bump> CanBeAllocated<'bump> for Sort<'bump> {
+//     type Inner = InnerSort<'bump>;
+
+//     fn allocate<A>(allocator: &'bump A, inner: Self::Inner) -> Self
+//     where
+//         A: ScopeAllocator<'bump, Self::Inner> + 'bump,
+//     {
+//         let inner = unsafe {
+//             let ptr = allocator.alloc();
+//             std::ptr::write(ptr.as_ptr(), inner);
+//             ptr
+//         };
+//         Sort {
+//             inner,
+//             container: PhantomData::default(),
+//         }
+//     }
+// }
+
+// impl<'bump> From<&'bump InnerSort<'bump>> for Sort<'bump> {
+//     fn from(value: &'bump InnerSort<'bump>) -> Self {
+//         Sort {
+//             inner: NonNull::from(value),
+//             container: Default::default(),
+//         }
+//     }
+// }
+
+// impl<'bump> FromNN<'bump> for Sort<'bump> {
+//     type Inner = InnerSort<'bump>;
+
+//     unsafe fn from_nn(inner: NonNull<Self::Inner>) -> Self {
+//         Self {
+//             inner,
+//             container: Default::default(),
+//         }
+//     }
+// }
 
 pub fn new_static_sort(
     name: &str,
     flags: SFlags,
     evaluated: Option<Sort<'static>>,
 ) -> Sort<'static> {
-    let inner = NonNull::new(Box::into_raw(Box::new(InnerSort::new(
-        name.to_owned(),
-        flags,
-        evaluated,
-    ))))
-    .unwrap();
-    Sort {
-        inner,
-        container: Default::default(),
-    }
+    let inner = InnerSort::new(name.to_owned(), flags, evaluated);
+    // .unwrap();
+    // Sort {
+    //     inner,
+    //     container: Default::default(),
+    // }
+    Sort::new_from(&StaticContainer, inner)
 }

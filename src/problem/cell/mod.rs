@@ -4,7 +4,10 @@ use std::{cmp::Ordering, marker::PhantomData, ptr::NonNull};
 
 use crate::{
     assert_variance, asssert_trait,
-    container::{CanBeAllocated, FromNN, ScopeAllocator},
+    container::{
+        allocator::ContainerTools,
+        reference::{ Reference},
+    },
     formula::{
         formula::RichFormula,
         function::{
@@ -14,7 +17,9 @@ use crate::{
         sort::Sort,
     },
     implderef, implvec,
-    utils::{precise_as_ref::PreciseAsRef, utils::{LateInitializable, MaybeInvalid}},
+    utils::{
+        precise_as_ref::PreciseAsRef,
+    },
 };
 use core::fmt::Debug;
 
@@ -22,7 +27,7 @@ use super::step::Step;
 
 #[derive(Hash, PartialEq, Eq, Clone, Copy)]
 pub struct MemoryCell<'bump> {
-    inner: NonNull<InnerMemoryCell<'bump>>,
+    inner: NonNull<Option<InnerMemoryCell<'bump>>>,
     container: PhantomData<&'bump ()>,
 }
 
@@ -36,8 +41,8 @@ impl<'bump> Ord for MemoryCell<'bump> {
         if self == other {
             Ordering::Equal
         } else {
-            self.as_ref()
-                .cmp(other.as_ref())
+            self.as_inner()
+                .cmp(other.as_inner())
                 .then(self.inner.cmp(&other.inner))
         }
     }
@@ -52,10 +57,8 @@ impl<'bump> PartialOrd for MemoryCell<'bump> {
 // #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 // pub struct PreMemoryCell<'bump>(Box<InnerMemoryCell<'bump>>);
 
-pub type InnerMemoryCell<'bump> = Option<IInnerMemoryCell<'bumnp>>;
-
 #[derive(Debug)]
-pub struct IInnerMemoryCell<'bump> {
+pub struct InnerMemoryCell<'bump> {
     name: String,
     /// the arguments of the cell
     args: Vec<Sort<'bump>>,
@@ -67,18 +70,18 @@ pub struct IInnerMemoryCell<'bump> {
     pub assignements: Vec<Assignement<'bump>>,
 }
 
-impl<'bump> Eq for IInnerMemoryCell<'bump> {}
-impl<'bump> PartialEq for IInnerMemoryCell<'bump> {
+impl<'bump> Eq for InnerMemoryCell<'bump> {}
+impl<'bump> PartialEq for InnerMemoryCell<'bump> {
     fn eq(&self, other: &Self) -> bool {
         self.function == other.function && self.name == other.name && self.args == other.args
     }
 }
-impl<'bump> PartialOrd for IInnerMemoryCell<'bump> {
+impl<'bump> PartialOrd for InnerMemoryCell<'bump> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
-impl<'bump> Ord for IInnerMemoryCell<'bump> {
+impl<'bump> Ord for InnerMemoryCell<'bump> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.name
             .cmp(&other.name)
@@ -86,7 +89,7 @@ impl<'bump> Ord for IInnerMemoryCell<'bump> {
             .then(self.args.cmp(&other.args))
     }
 }
-impl<'bump> std::hash::Hash for IInnerMemoryCell<'bump> {
+impl<'bump> std::hash::Hash for InnerMemoryCell<'bump> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.name.hash(state);
         self.args.hash(state);
@@ -94,7 +97,7 @@ impl<'bump> std::hash::Hash for IInnerMemoryCell<'bump> {
     }
 }
 
-impl<'bump> IInnerMemoryCell<'bump> {}
+impl<'bump> InnerMemoryCell<'bump> {}
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Assignement<'bump> {
@@ -108,68 +111,75 @@ pub struct Assignement<'bump> {
 }
 
 impl<'bump> MemoryCell<'bump> {
-    pub fn new(
-        container: &'bump (impl ScopeAllocator<'bump, InnerMemoryCell<'bump>>
-                    + ScopeAllocator<'bump, InnerFunction<'bump>>),
+    pub fn new<C>(
+        container: &'bump C,
         name: implderef!(str),
         args: implvec!(Sort<'bump>),
         assignements: implvec!(Assignement<'bump>),
-    ) -> Self {
-        let name = name.to_string();
-        let args = args.into_iter().collect();
-        let assignements = assignements.into_iter().collect();
+    ) -> Self
+    where
+        C: ContainerTools<'bump, (Self, Function<'bump>)>,
+    {
+        // let name = name.to_string();
+        // let args = args.into_iter().collect();
+        // let assignements = assignements.into_iter().collect();
 
-        let (_, cell) = unsafe {
-            Function::new_cyclic(container, |function| {
-                let inner_content = IInnerMemoryCell {
-                    name,
-                    args,
-                    function,
-                    assignements,
-                };
-                let inner = container.alloc();
-                std::ptr::write(inner.as_ptr(), inner_content);
-                let memory_cell = MemoryCell {
-                    inner,
-                    container: Default::default(),
-                };
-                (
-                    InnerFunction::TermAlgebra(TermAlgebra::Cell(Cell::new(memory_cell))),
-                    memory_cell,
-                )
-            })
-        };
-        cell
+        // let (_, cell) = unsafe {
+        //     Function::new_cyclic(container, |function| {
+        //         let inner_content = InnerMemoryCell {
+        //             name,
+        //             args,
+        //             function,
+        //             assignements,
+        //         };
+        //         let inner = container.alloc();
+        //         std::ptr::write(inner.as_ptr(), inner_content);
+        //         let memory_cell = MemoryCell {
+        //             inner,
+        //             container: Default::default(),
+        //         };
+        //         (
+        //             InnerFunction::TermAlgebra(TermAlgebra::Cell(Cell::new(memory_cell))),
+        //             memory_cell,
+        //         )
+        //     })
+        // };
+        // cell
+        todo!()
     }
 
-    pub unsafe fn new_with_function(
-        container: &'bump impl ScopeAllocator<'bump, InnerMemoryCell<'bump>>,
+    pub unsafe fn new_with_function<C>(
+        container: &'bump C,
         old_function: Function<'bump>,
         name: implderef!(str),
         args: implvec!(Sort<'bump>),
         assignements: implvec!(Assignement<'bump>),
-    ) -> Self {
-        let name = name.to_string();
-        let args = args.into_iter().collect();
-        let assignements = assignements.into_iter().collect();
-        let cell = {
-            let inner_content = IInnerMemoryCell {
-                name,
-                args,
-                function: old_function,
-                assignements,
-            };
-            let inner = container.alloc();
-            std::ptr::write(inner.as_ptr(), inner_content);
-            MemoryCell {
-                inner,
-                container: Default::default(),
-            }
-        };
-        old_function.initiallize(InnerFunction::TermAlgebra(TermAlgebra::Cell(Cell::new(
-            cell,
-        ))));
-        cell
+    ) -> Self
+    where
+        C: ContainerTools<'bump, Self>,
+    {
+        // let name = name.to_string();
+        // let args = args.into_iter().collect();
+        // let assignements = assignements.into_iter().collect();
+        // let cell = {
+        //     let inner_content = InnerMemoryCell {
+        //         name,
+        //         args,
+        //         function: old_function,
+        //         assignements,
+        //     };
+        //     let inner = container.alloc();
+        //     std::ptr::write(inner.as_ptr(), inner_content);
+        //     MemoryCell {
+        //         inner,
+        //         container: Default::default(),
+        //     }
+        // };
+        // old_function.initiallize(InnerFunction::TermAlgebra(TermAlgebra::Cell(Cell::new(
+        //     cell,
+        // ))));
+        // cell
+        todo!()
     }
     pub fn name(&self) -> &'bump str {
         &self.precise_as_ref().name
@@ -180,7 +190,7 @@ impl<'bump> MemoryCell<'bump> {
     }
 
     pub fn function(&self) -> Function<'bump> {
-        self.as_ref().function
+        self.as_inner().function
     }
 
     pub fn assignements(&self) -> &'bump Vec<Assignement<'bump>> {
@@ -188,65 +198,26 @@ impl<'bump> MemoryCell<'bump> {
     }
 }
 
-impl<'bump> PreciseAsRef<'bump, IInnerMemoryCell<'bump>> for MemoryCell<'bump> {
-    fn precise_as_ref(&self) -> &'bump IInnerMemoryCell<'bump> {
-        unsafe { self.inner.as_ref() } // same as always
-    }
-}
-
-impl<'bump> AsRef<IInnerMemoryCell<'bump>> for MemoryCell<'bump> {
-    fn as_ref(&self) -> &IInnerMemoryCell<'bump> {
-        self.precise_as_ref()
-    }
-}
-
 // base impl
 
 impl<'bump> Debug for MemoryCell<'bump> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.as_ref().fmt(f)
+        self.as_inner().fmt(f)
     }
 }
 
-impl<'bump> CanBeAllocated<'bump> for MemoryCell<'bump> {
-    type Inner = IInnerMemoryCell<'bump>;
+impl<'bump> Reference<'bump> for MemoryCell<'bump> {
+    type Inner<'a> = InnerMemoryCell<'a> where 'a:'bump;
 
-    fn allocate<A>(allocator: &'bump A, inner: Self::Inner) -> Self
-    where
-        A: crate::container::ScopeAllocator<'bump, Self::Inner> + 'bump,
-    {
-        let inner = unsafe {
-            let ptr = allocator.alloc();
-            ptr.as_ptr().write(inner);
-            ptr
-        };
-        MemoryCell {
-            inner,
-            container: Default::default(),
-        }
-    }
-}
-
-impl<'bump> FromNN<'bump> for MemoryCell<'bump> {
-    type Inner = InnerMemoryCell<'bump>;
-
-    unsafe fn from_nn(inner: NonNull<Self::Inner>) -> Self {
+    fn from_ref(ptr: &'bump Option<InnerMemoryCell<'bump>>) -> Self {
         Self {
-            inner,
+            inner: NonNull::from(ptr),
             container: Default::default(),
         }
     }
-}
 
-impl<'bump> LateInitializable for MemoryCell<'bump> {
-    type Inner = IInnerMemoryCell<'bump>;
-
-    unsafe fn initiallize(&self, other: Self::Inner) {
-        std::ptr::drop_in_place(self.inner.as_ptr());
-        std::ptr::write(self.inner.as_ptr(), other);
+    fn to_ref(&self) -> &'bump Option<Self::Inner<'bump>> {
+        unsafe { self.inner.as_ref() }
     }
 }
 
-impl<'bump> MaybeInvalid for MemoryCell<'bump> {
-
-}

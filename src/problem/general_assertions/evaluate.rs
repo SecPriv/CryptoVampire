@@ -27,7 +27,7 @@ use crate::{
         variable::{sorts_to_variables, Variable},
     },
     mexists, mforall,
-    problem::problem::Problem,
+    problem::problem::Problem, container::reference::Reference,
 };
 
 pub fn generate<'bump>(
@@ -49,7 +49,7 @@ pub fn generate<'bump>(
     let relevant_functions = pbl
         .functions
         .iter()
-        .filter_map(|f| match f.as_ref() {
+        .filter_map(|f| match f.as_inner() {
             InnerFunction::TermAlgebra(TermAlgebra::Function(BaseFunction::Base(b))) => {
                 assert_eq!(f.fast_outsort().map(|s| s.is_evaluatable()), Some(true));
                 Some((f, b))
@@ -147,7 +147,7 @@ pub fn generate<'bump>(
     }
 
     for function in &pbl.functions {
-        match function.as_ref() {
+        match function.as_inner() {
             InnerFunction::TermAlgebra(ta) => {
                 match ta {
                     TermAlgebra::Function(_) => continue, // already done

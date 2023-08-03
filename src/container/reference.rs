@@ -1,4 +1,4 @@
-use std::ptr::NonNull;
+use std::{convert::Infallible, error::Error, ptr::NonNull};
 
 use itertools::Itertools;
 
@@ -7,67 +7,57 @@ use crate::utils::{
     utils::{AccessToInvalidData, AlreadyInitialized, MaybeInvalid},
 };
 
-use super::allocator::Container;
+use super::allocator::{Container, ContainerTools};
 
-pub type RefPointee<'bump, R> = Option<<R as Reference<'bump>>::Inner>;
+// pub type RefPointee<'bump, R> = Option<<R as Reference<'bump>>::Inner<'bump>>;
+// pub type RefInner<'bump, R> = <R as Reference<'bump>>::Inner<'bump>;
 
 ///
 /// # Safety
-/// No access to invalid data
-pub trait Reference<'bump>: AsRef<RefPointee<'bump, Self>> {
-    type Inner;
+/// No access to invalid data as defined by [MaybeInvalid]
+pub trait Reference<'bump> : Sized + 'bump {
+    // type Inner<'a> where 'a:'bump, Self:'a;
+    type Inner<'a> where 'a:'bump, Self:'a;
 
-    fn from_ref(ptr: &'bump RefPointee<'bump, Self>) -> Self;
+    fn from_ref(ptr: &'bump Option<Self::Inner<'bump>>) -> Self;
+    fn to_ref(&self) -> &'bump Option<Self::Inner<'bump>>;
 
-    fn new_uninit<C>(container: &C) -> Self
+    fn new_uninit<C>(container: &'bump C) -> Self
     where
         C: Container<'bump, Self>,
     {
-        container.allocate_uninit()
+        Self::from_ref(container.allocate_uninit())
     }
 
-    fn new_from<C>(container: &C, content: Self::Inner) -> Self
+    fn new_from<C>(container: &'bump C, content: Self::Inner<'bump>) -> Self
     where
         C: Container<'bump, Self>,
     {
-        container.allocate(content)
+        Self::from_ref(container.allocate_inner(content))
     }
 
-    fn new_with_array<C, F, const N: usize>(
-        container: &C,
-        f: F,
-    ) -> Result<[Self; N], AlreadyInitialized>
-    where
-        C: Container<'bump, Self>,
-        F: for<'a> FnOnce(&'a [Self; N]) -> [Self::Inner; N],
-    {
-        // let uninit = Self::new_uninit(container);
-        let uninits = std::array::from_fn(|_| Self::new_uninit(container));
-        let values = f(&uninits);
-        // uninit.initialize_with(value).map(|_| uninit)
-        values
-            .into_iter()
-            .zip_eq(uninits.iter())
-            .try_for_each(|(content, uninit)| uninit.initialize_with(content))?;
-        uninits
-    }
+    // fn try_alloc_array_cyclic_with_residual<C, F, T, E1, E2, const N: usize>(
+    //     container: &'bump C,
+    //     f: F,
+    // ) -> Result<(T, [Self; N]), E2>
+    // where
+    //     C: Container<'bump, Self>,
+    //     F: for<'a> FnOnce(&'a [Self; N]) -> Result<(T, [Self::Inner; N]), E1>,
+    //     E1: Error,
+    //     E2: Error + From<E1> + From<AlreadyInitialized>,
+    // {
+    //     container.try_alloc_array_cyclic_with_residual(f)
+    // }
 
-    fn new_with<C, F>(container: &C, f: F) -> Result<Self, AlreadyInitialized>
-    where
-        C: Container<'bump>,
-        F: for<'a> FnOnce(&'a Self) -> Self::Inner,
-    {
-        Self::new_with_array(container, |[u]| [f(u)])
-    }
 
-    fn maybe_precise_as_ref(&self) -> Result<&'bump Self::Inner, AccessToInvalidData> {
-        self.as_ref().as_ref().ok_or(AccessToInvalidData::Error)
+    fn maybe_precise_as_ref(&self) -> Result<&'bump Self::Inner<'bump>, AccessToInvalidData> {
+        self.to_ref().as_ref().ok_or(AccessToInvalidData::Error)
     }
 
     /// initialize via inner mutability
-    unsafe fn initialize_with(&self, content: Self::Inner) -> Result<&Self, AlreadyInitialized> {
+    unsafe fn initialize_with(&self, content: Self::Inner<'bump>) -> Result<&Self, AlreadyInitialized> {
         if !self.is_valid() {
-            let ptr = self.as_ref() as *const _ as *mut RefPointee<'bump, Self>;
+            let ptr = self.to_ref() as *const _ as *mut Option<Self::Inner<'bump>>;
             core::ptr::drop_in_place(ptr);
             core::ptr::write(ptr, Some(content));
             Ok(self)
@@ -75,13 +65,17 @@ pub trait Reference<'bump>: AsRef<RefPointee<'bump, Self>> {
             Err(AlreadyInitialized::Error)
         }
     }
+
+    fn as_inner(&self) -> &Self::Inner<'bump> {
+        self.precise_as_ref()
+    }
 }
 
-impl<'bump, R> PreciseAsRef<'bump, R::Inner> for R
+impl<'bump, R> PreciseAsRef<'bump, R::Inner<'bump>> for R
 where
     R: Reference<'bump>,
 {
-    fn precise_as_ref(&self) -> &'bump R::Inner {
+    fn precise_as_ref(&self) -> &'bump R::Inner<'bump> {
         self.maybe_precise_as_ref().unwrap()
     }
 }
@@ -94,3 +88,11 @@ where
         self.maybe_precise_as_ref().is_ok()
     }
 }
+// impl<'bump, R> From<&'bump RefPointee<'bump, R>> for R
+// where
+//     R: Reference<'bump>,
+// {
+//     fn from(value: &'bump R::Inner) -> Self {
+//         Self::from_ref(value)
+//     }
+// }

@@ -11,7 +11,10 @@ use itertools::Itertools;
 
 use crate::{
     assert_variance, asssert_trait,
-    container::{FromNN, ScopeAllocator},
+    container::{
+        allocator::{Container, ContainerTools},
+        reference::{ Reference},
+    },
     formula::{
         formula::{meq, RichFormula},
         function::{
@@ -25,7 +28,7 @@ use crate::{
     implderef, implvec,
     utils::{
         precise_as_ref::PreciseAsRef,
-        utils::{AccessToInvalidData, AlreadyInitialized, LateInitializable, MaybeInvalid},
+        utils::{AccessToInvalidData, AlreadyInitialized,  MaybeInvalid},
     },
 };
 
@@ -47,13 +50,13 @@ use crate::{
 
 #[derive(Hash, PartialEq, Eq, Clone, Copy)]
 pub struct Step<'bump> {
-    inner: NonNull<InnerStep<'bump>>,
+    inner: NonNull<Option<InnerStep<'bump>>>,
     container: PhantomData<&'bump ()>,
 }
 
 // variables from 1 to parameters.len()
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct IInnerStep<'bump> {
+pub struct InnerStep<'bump> {
     name: String,
     /// ie. the parameters of the step
     free_variables: Vec<Variable<'bump>>,
@@ -64,7 +67,6 @@ pub struct IInnerStep<'bump> {
     function: Function<'bump>,
 }
 
-pub type InnerStep<'bump> = Option<IInnerStep<'bump>>;
 
 asssert_trait!(sync_send_step; InnerStep; Sync, Send);
 assert_variance!(Step);
@@ -78,14 +80,16 @@ pub enum MessageOrCondition {
 }
 
 impl<'bump> Step<'bump> {
-    pub(crate) fn new(
-        container: &'bump (impl ScopeAllocator<'bump, InnerStep<'bump>>
-                    + ScopeAllocator<'bump, InnerFunction<'bump>>),
+    pub(crate) fn new<C>(
+        container: &'bump C,
         name: implderef!(str),
         args: implvec!(Variable<'bump>),
         message: RichFormula<'bump>,
         condition: RichFormula<'bump>,
-    ) -> Self {
+    ) -> Self
+    where
+        C: ContainerTools<'bump, (Self, Function<'bump>)>,
+    {
         let free_variables = args.into_iter().collect_vec();
         assert!(message
             .get_free_vars()
@@ -100,38 +104,41 @@ impl<'bump> Step<'bump> {
             .unique()
             .collect_vec();
 
-        let (_, step) = unsafe {
-            Function::new_cyclic(container, |function| {
-                let inner_step = InnerStep::Valid {
-                    name: name.to_string(),
-                    free_variables,
-                    used_variables,
-                    condition,
-                    message,
-                    function,
-                };
-                let inner_step_ref = container.alloc();
-                std::ptr::write(inner_step_ref.as_ptr(), inner_step);
-                let step = Step {
-                    inner: inner_step_ref,
-                    container: Default::default(),
-                };
-                (
-                    InnerFunction::Step(StepFunction::Step(InnerStepFuction::new(step))),
-                    step,
-                )
-                // all has been allocated
-            })
-        };
+        // let (_, step) = unsafe {
+        //     Function::new_cyclic(container, |function| {
+        //         let inner_step = InnerStep::Valid {
+        //             name: name.to_string(),
+        //             free_variables,
+        //             used_variables,
+        //             condition,
+        //             message,
+        //             function,
+        //         };
+        //         let inner_step_ref = container.alloc();
+        //         std::ptr::write(inner_step_ref.as_ptr(), inner_step);
+        //         let step = Step {
+        //             inner: inner_step_ref,
+        //             container: Default::default(),
+        //         };
+        //         (
+        //             InnerFunction::Step(StepFunction::Step(InnerStepFuction::new(step))),
+        //             step,
+        //         )
+        //         // all has been allocated
+        //     })
+        // };
 
-        step
+        // let
+
+        // step
+        todo!()
     }
 
     /// new step overwriting `old_function`.
     ///
     /// **Not thread safe**
     pub(crate) unsafe fn new_with_function(
-        container: &'bump impl ScopeAllocator<'bump, InnerStep<'bump>>,
+        container: &'bump impl Container<'bump, Step<'bump>>,
         old_function: Function<'bump>,
         name: implderef!(str),
         args: implvec!(Variable<'bump>),
@@ -148,31 +155,32 @@ impl<'bump> Step<'bump> {
             .iter()
             .all(|v| free_variables.contains(v)));
 
-        let used_variables = RichFormula::iter_used_varibales([&message, &condition])
-            .unique()
-            .collect_vec();
-        let name = name.to_string();
-        let inner = {
-            let inner_step = InnerStep::Valid {
-                name: name.to_string(),
-                free_variables,
-                used_variables,
-                condition,
-                message,
-                function: old_function,
-            };
-            let inner_step_ref = container.alloc();
-            std::ptr::write(inner_step_ref.as_ptr(), inner_step);
-            inner_step_ref
-        };
-        let step = Step {
-            inner,
-            container: Default::default(),
-        };
-        old_function.initiallize(InnerFunction::Step(StepFunction::Step(
-            InnerStepFuction::new(step),
-        )))?;
-        Ok(step)
+        // let used_variables = RichFormula::iter_used_varibales([&message, &condition])
+        //     .unique()
+        //     .collect_vec();
+        // let name = name.to_string();
+        // let inner = {
+        //     let inner_step = InnerStep {
+        //         name: name.to_string(),
+        //         free_variables,
+        //         used_variables,
+        //         condition,
+        //         message,
+        //         function: old_function,
+        //     };
+        //     let inner_step_ref = container.alloc();
+        //     std::ptr::write(inner_step_ref.as_ptr(), inner_step);
+        //     inner_step_ref
+        // };
+        // let step = Step {
+        //     inner,
+        //     container: Default::default(),
+        // };
+        // old_function.initiallize(InnerFunction::Step(StepFunction::Step(
+        //     InnerStepFuction::new(step),
+        // )))?;
+        // Ok(step)
+        todo!()
     }
 
     pub fn name(&self) -> &'bump str {
@@ -224,7 +232,7 @@ impl<'bump> Step<'bump> {
 
     pub fn function(&self) -> Function<'bump> {
         self.assert_valid().unwrap();
-        self.as_ref().function
+        self.as_inner().function
     }
 
     pub fn apply_condition(&self, args: &[RichFormula<'bump>]) -> RichFormula<'bump> {
@@ -241,7 +249,7 @@ impl<'bump> Step<'bump> {
 
     pub fn arity(&self) -> usize {
         self.assert_valid().unwrap();
-        self.as_ref().free_variables.len()
+        self.as_inner().free_variables.len()
     }
 
     /// strict happen before relation
@@ -268,29 +276,33 @@ impl<'bump> Step<'bump> {
     //     )
     // }
 
-    pub fn maybe_precise_as_ref(&self) -> Result<&'bump IInnerStep<'bump>, AccessToInvalidData> {
+    pub fn maybe_precise_as_ref(&self) -> Result<&'bump InnerStep<'bump>, AccessToInvalidData> {
         unsafe { self.inner.as_ref() }
             .as_ref()
             .ok_or(AccessToInvalidData::Error)
     }
-}
 
-impl<'bump> PreciseAsRef<'bump, IInnerStep<'bump>> for Step<'bump> {
-    fn precise_as_ref(&self) -> &'bump IInnerStep<'bump> {
-        self.maybe_precise_as_ref().unwrap()
-    }
-}
-
-impl<'bump> AsRef<IInnerStep<'bump>> for Step<'bump> {
-    fn as_ref(&self) -> &IInnerStep<'bump> {
-        // the validity check is made before
+    pub fn as_inner(&self) -> &InnerStep<'bump> {
         self.precise_as_ref()
     }
 }
 
+// impl<'bump> PreciseAsRef<'bump, IInnerStep<'bump>> for Step<'bump> {
+//     fn precise_as_ref(&self) -> &'bump IInnerStep<'bump> {
+//         self.maybe_precise_as_ref().unwrap()
+//     }
+// }
+
+// impl<'bump> AsRef<IInnerStep<'bump>> for Step<'bump> {
+//     fn as_ref(&self) -> &IInnerStep<'bump> {
+//         // the validity check is made before
+//         self.precise_as_ref()
+//     }
+// }
+
 impl<'bump> Debug for Step<'bump> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.as_ref().fmt(f)
+        self.as_inner().fmt(f)
     }
 }
 
@@ -314,7 +326,7 @@ impl<'bump> Ord for Step<'bump> {
         if self == other {
             Ordering::Equal
         } else {
-            Ord::cmp(self.as_ref(), other.as_ref())
+            Ord::cmp(self.as_inner(), other.as_inner())
         }
     }
 }
@@ -326,28 +338,49 @@ impl<'bump> PartialOrd for Step<'bump> {
     }
 }
 
-impl<'bump> FromNN<'bump> for Step<'bump> {
-    type Inner = InnerStep<'bump>;
+// impl<'bump> FromNN<'bump> for Step<'bump> {
+//     type Inner = InnerStep<'bump>;
 
-    unsafe fn from_nn(inner: NonNull<Self::Inner>) -> Self {
+//     unsafe fn from_nn(inner: NonNull<Self::Inner>) -> Self {
+//         Self {
+//             inner,
+//             container: Default::default(),
+//         }
+//     }
+// }
+
+// impl<'bump> LateInitializable for Step<'bump> {
+//     type Inner = IInnerStep<'bump>;
+
+//     unsafe fn inner_overwrite(&self, other: Self::Inner) {
+//         std::ptr::drop_in_place(self.inner.as_ptr());
+//         std::ptr::write(self.inner.as_ptr(), Some(other));
+//     }
+// }
+
+// impl<'bump> MaybeInvalid for Step<'bump> {
+//     fn is_valid(&self) -> bool {
+//         self.maybe_precise_as_ref().is_ok()
+//     }
+// }
+
+impl<'bump> Reference<'bump> for Step<'bump> {
+    type Inner<'a> = InnerStep<'a> where 'a:'bump;
+
+    fn from_ref(ptr: &'bump Option<InnerStep<'bump>>) -> Self {
         Self {
-            inner,
+            inner: NonNull::from(ptr),
             container: Default::default(),
         }
     }
-}
 
-impl<'bump> LateInitializable for Step<'bump> {
-    type Inner = IInnerStep<'bump>;
-
-    unsafe fn inner_overwrite(&self, other: Self::Inner) {
-        std::ptr::drop_in_place(self.inner.as_ptr());
-        std::ptr::write(self.inner.as_ptr(), Some(other));
+    fn to_ref(&self) -> &'bump Option<Self::Inner<'bump>> {
+        unsafe { self.inner.as_ref() }
     }
 }
 
-impl<'bump> MaybeInvalid for Step<'bump> {
-    fn is_valid(&self) -> bool {
-        self.maybe_precise_as_ref().is_ok()
-    }
-}
+// impl<'bump> AsRef<RefPointee<'bump, Step<'bump>>> for Step<'bump> {
+//     fn as_ref(&self) -> &RefPointee<'bump, Step<'bump>> {
+//         unsafe { self.inner.as_ref() }
+//     }
+// }

@@ -16,7 +16,7 @@ use crate::{
         sort::Sort,
         variable::Variable,
     },
-    problem::subterm::kind::SubtermKind,
+    problem::subterm::kind::SubtermKind, container::reference::Reference,
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -258,7 +258,7 @@ impl<'bump> SmtFormula<'bump> {
                     .map(|f| Self::from_richformula(env, f))
                     .collect();
 
-                match f.as_ref() {
+                match f.as_inner() {
                     InnerFunction::TermAlgebra(_)
                     // | InnerFunction::Nonce(_)
                     | InnerFunction::Step(_)
@@ -299,7 +299,7 @@ impl<'bump> SmtFormula<'bump> {
                             Connective::Iff => SmtFormula::Eq(args),
                         },
                     },
-                    InnerFunction::Invalid(_) => unreachable!("the function is invalid")
+                    // InnerFunction::Invalid(_) => unreachable!("the function is invalid")
                 }
             }
         }

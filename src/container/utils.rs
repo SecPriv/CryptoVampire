@@ -1,3 +1,9 @@
+use std::{cell::Ref, slice::Iter, iter::Map};
+
+use crate::formula::function::Function;
+
+use super::ScopedContainer;
+
 
 
 /// from https://stackoverflow.com/a/33542412/10875409
@@ -26,14 +32,14 @@ pub trait NameFinder<T> {
     fn find_free_name(&self, name: &str) -> String;
 }
 
-impl<'bump> NameFinder<Function<'bump>> for Container<'bump> {
+impl<'bump> NameFinder<Function<'bump>> for ScopedContainer<'bump> {
     fn find_free_name(&self, name: &str) -> String {
         self.find_free_function_name(name)
     }
 }
 
-pub(crate) trait FromNN<'bump>: Sized {
-    type Inner;
-    /// inner lives 'bump
-    unsafe fn from_nn(inner: NonNull<Self::Inner>) -> Self;
-}
+// pub(crate) trait FromNN<'bump>: Sized {
+//     type Inner;
+//     /// inner lives 'bump
+//     unsafe fn from_nn(inner: NonNull<Self::Inner>) -> Self;
+// }

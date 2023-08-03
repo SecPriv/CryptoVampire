@@ -56,7 +56,7 @@ pub mod graph {
             cell::{Assignement, MemoryCell},
             step::Step,
         },
-        utils::{utils::repeat_n_zip, vecref::VecRef},
+        utils::{utils::repeat_n_zip, vecref::VecRef}, container::reference::Reference,
     };
 
     use super::{CellCall, Dependancy, DependancyFromStep, InputCall, OutGoingCall, StepCall};
@@ -518,7 +518,7 @@ pub mod graph {
                 passed_along: Some(()),
                 flags: IteratorFlags::QUANTIFIER,
                 f: |_, f: &'bump RichFormula<'bump>| match f {
-                    RichFormula::Fun(fun, args) => match fun.as_ref() {
+                    RichFormula::Fun(fun, args) => match fun.as_inner() {
                         InnerFunction::TermAlgebra(TermAlgebra::Cell(c)) => {
                             let c = c.memory_cell();
                             let cell = cells.iter().position(|g| g.cell == c).unwrap();
@@ -582,7 +582,7 @@ pub mod graph {
                     passed_along: Some(()),
                     flags: IteratorFlags::QUANTIFIER,
                     f: |_, f: &'bump RichFormula<'bump>| match f {
-                        RichFormula::Fun(fun, args) => match fun.as_ref() {
+                        RichFormula::Fun(fun, args) => match fun.as_inner() {
                             InnerFunction::TermAlgebra(TermAlgebra::Cell(c)) => {
                                 let c = c.memory_cell();
                                 let cell = cells.iter().position(|g| g.cell == c).unwrap();

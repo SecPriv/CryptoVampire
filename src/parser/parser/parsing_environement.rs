@@ -3,10 +3,22 @@ use std::ops::Deref;
 use hashbrown::HashMap;
 use pest::Span;
 
-use crate::{utils::utils::{MaybeInvalid, LateInitializable}, problem::{cell::InnerMemoryCell, step::InnerStep}, formula::{function::{InnerFunction, Function}, sort::Sort, variable::Variable}, parser::{ast, parser::guard::Guard, merr, E}, container::ScopedContainer, implvec, implderef, f, environement::traits::KnowsRealm};
+use crate::{
+    container::{allocator::ContainerTools, ScopedContainer},
+    environement::traits::KnowsRealm,
+    f,
+    formula::{
+        function::{Function, InnerFunction},
+        sort::Sort,
+        variable::Variable,
+    },
+    implderef, implvec,
+    parser::{ast, merr, parser::guard::Guard, E},
+    problem::{cell::InnerMemoryCell, step::InnerStep},
+    utils::utils::MaybeInvalid,
+};
 
-use super::guard::{GuardedMemoryCell, GuardedFunction, GuardedStep};
-
+use super::guard::{GuardedFunction, GuardedMemoryCell, GuardedStep};
 
 #[derive(Hash, Clone, PartialEq, Eq, Debug, PartialOrd, Ord)]
 pub struct Macro<'bump, 'a> {
@@ -82,15 +94,20 @@ impl<'bump, 'a> Environement<'bump, 'a> {
     }
 
     pub fn finalize(&mut self) {
-        fn finalize_hash_map<T>(h: &mut HashMap<Guard<T>, Option<T::Inner>>)
-        where
-            T: LateInitializable,
+        fn finalize_hash_map<'bump, C, T>(
+            container: &C,
+            h: &mut HashMap<Guard<T>, Option<C::Inner<'bump>>>,
+        ) where
+            C: ContainerTools<'bump, T>,
         {
             std::mem::take(h)
                 .into_iter()
                 // This returns shortcuts to `None` if `fun` is `None`
-                .try_for_each(|(g, fun)| fun.map(|fun| unsafe { g.initiallize(fun) }))
-                .expect("unreachable") // should never crash
+                .try_for_each(|(g, fun)| {
+                    fun.map(|fun| unsafe { C::initialize(&g, fun) })
+                        .expect("unreachable: all inner should be ready")
+                })
+                .expect("unreachable: nothing was initialized before") // should never crash
         }
 
         let Environement {
@@ -100,9 +117,9 @@ impl<'bump, 'a> Environement<'bump, 'a> {
             ..
         } = self;
 
-        finalize_hash_map(functions_initialize);
-        finalize_hash_map(steps_initialize);
-        finalize_hash_map(cells_initialize);
+        finalize_hash_map(self.container, functions_initialize);
+        finalize_hash_map(self.container, steps_initialize);
+        finalize_hash_map(self.container, cells_initialize);
 
         assert!(self.is_valid(), "something went wrong while initializing");
     }
@@ -136,4 +153,4 @@ impl<'a, 'bump> KnowsRealm for Environement<'bump, 'a> {
     fn get_realm(&self) -> crate::environement::traits::Realm {
         todo!()
     }
-} 
+}

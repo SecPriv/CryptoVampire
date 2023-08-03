@@ -1,28 +1,65 @@
 use std::{cell::RefCell, ptr::NonNull};
 
-use crate::{formula::{sort::InnerSort, function::InnerFunction}, problem::{step::InnerStep, cell::InnerMemoryCell}};
+use crate::{
+    formula::{
+        function::{Function, InnerFunction},
+        sort::{InnerSort, Sort},
+    },
+    problem::{
+        cell::{InnerMemoryCell, MemoryCell},
+        step::{InnerStep, Step},
+    },
+    utils::string_ref::StrRef,
+};
 
+use super::utils::VecRefWrapperMap;
+use super::{allocator::Container, reference::Reference};
+use hashbrown::HashSet;
+use itertools::chain;
+use paste::paste;
+use std::fmt::Debug;
 
-
-type InnerContainer<T> = RefCell<Vec<NonNull<T>>>;
+// type InnerContainer<'bump, T> = RefCell<Vec<&'bump RefPointee<'bump, T>>>;
 
 pub struct ScopedContainer<'bump> {
-    sorts: InnerContainer<InnerSort<'bump>>,
-    functions: InnerContainer<InnerFunction<'bump>>,
-    steps: InnerContainer<InnerStep<'bump>>,
-    cells: InnerContainer<InnerMemoryCell<'bump>>,
+    sorts: RefCell<Vec<&'bump Option<InnerSort<'bump>>>>,
+    functions: RefCell<Vec<&'bump Option<InnerFunction<'bump>>>>,
+    steps: RefCell<Vec<&'bump Option<InnerStep<'bump>>>>,
+    cells: RefCell<Vec<&'bump Option<InnerMemoryCell<'bump>>>>,
 }
 
-make_scope_allocator!(functions, InnerFunction<'bump>);
-make_scope_allocator!(sorts, InnerSort<'bump>);
-make_scope_allocator!(steps, InnerStep<'bump>);
-make_scope_allocator!(cells, InnerMemoryCell<'bump>);
+// unsafe fn aux_alloc<T>(mut vec: impl DerefMut<Target = Vec<NonNull<T>>>) -> NonNull<T> {
+//     // let ptr = NonNull::new_unchecked(alloc(Layout::new::<T>()) as *mut T);
+//     let ptr = NonNull::dangling();
+//     vec.push(ptr);
+//     ptr
+// }
+
+macro_rules! make_scope_allocator {
+    ($fun:ident, $t:ident, $inner:ident) => {
+        impl<'bump> Container<'bump, $t<'bump>> for ScopedContainer<'bump> {
+            fn allocate_pointee(
+                &'bump self,
+                content: Option<$inner<'bump>>,
+            ) -> &'bump Option<$inner<'bump>> {
+                let uninit_ref = &*Box::leak(Box::new(content));
+                self.$fun.borrow_mut().push(uninit_ref);
+                uninit_ref
+            }
+        }
+    };
+}
+
+make_scope_allocator!(functions, Function, InnerFunction);
+make_scope_allocator!(sorts, Sort, InnerSort);
+make_scope_allocator!(steps, Step, InnerStep);
+make_scope_allocator!(cells, MemoryCell, InnerMemoryCell);
 
 macro_rules! my_drop {
     ($($fun:ident),*) => {
         $(
             for e in $fun.get_mut() {
-                unsafe { std::ptr::drop_in_place(e.as_ptr()) }
+                unsafe { std::ptr::drop_in_place(e as *mut _) }
             }
         )*
     };
@@ -52,20 +89,21 @@ impl<'bump> Debug for ScopedContainer<'bump> {
 }
 
 macro_rules! make_into_iters {
-    ($name:ident, $out:ty, $bump:lifetime) => {
+    ($name:ident, $out:ident, $inner:ident, $bump:lifetime) => {
         paste! {
-            pub(crate) fn [< $name _into_iter >] (
-                & $bump self,
+            pub(crate) fn [< $name _into_iter >]<'a> (
+                &'a self,
             ) -> VecRefWrapperMap<
-                $bump,
-                NonNull<<$out as FromNN<$bump>>::Inner >,
-                $out,
-                fn(&NonNull<<$out as FromNN<$bump>>::Inner>) -> $out,
+                'a,
+                &$bump Option<$inner<$bump>>,
+                $out<'bump>,
+                fn(&&Option<$inner<$bump>>) -> $out<$bump>,
             > {
-                VecRefWrapperMap {
-                    r: self.$name.borrow(),
-                    f: |nn| unsafe { <$out as FromNN<$bump>>::from_nn(*nn) },
-                }
+                // VecRefWrapperMap {
+                //     r: self.$name.borrow(),
+                //     f: |i| $out::<$bump>::from_ref(*i),
+                // }
+                todo!()
             }
         }
     };
@@ -74,10 +112,12 @@ macro_rules! make_into_iters {
 impl<'bump> ScopedContainer<'bump> {
     /// find a name starting by `name` that isn't assigned to any function yet
     pub fn find_free_function_name(&self, name: &str) -> String {
-        self.functions
-            .borrow()
-            .iter()
-            .map(|nn| Function::from_ptr_inner(*nn))
+        // self.functions
+        //     .borrow()
+        //     .iter()
+        //     .map(|nn| Function::from_ptr_inner(*nn))
+        self.functions_into_iter()
+            .into_iter()
             .filter_map(|f| {
                 f.name()
                     .strip_prefix(name)
@@ -115,10 +155,10 @@ impl<'bump> ScopedContainer<'bump> {
         .collect()
     }
 
-    make_into_iters!(functions, Function<'bump>, 'bump);
-    make_into_iters!(sorts, Sort<'bump>, 'bump);
-    make_into_iters!(steps, Step<'bump>, 'bump);
-    make_into_iters!(cells, MemoryCell<'bump>, 'bump);
+    make_into_iters!(functions, Function, InnerFunction, 'bump);
+    make_into_iters!(sorts, Sort, InnerSort, 'bump);
+    make_into_iters!(steps, Step, InnerStep, 'bump);
+    make_into_iters!(cells, MemoryCell, InnerMemoryCell, 'bump);
 
     /// Creates a new [Container]
     ///
@@ -147,7 +187,9 @@ impl<'bump> ScopedContainer<'bump> {
     where
         F: for<'a> FnOnce(&'a mut ScopedContainer<'a>) -> U,
     {
-        fn shorten_life<'a, 'short, 'long>(x: &'a mut ScopedContainer<'long>) -> &'a mut ScopedContainer<'short>
+        fn shorten_life<'a, 'short, 'long>(
+            x: &'a mut ScopedContainer<'long>,
+        ) -> &'a mut ScopedContainer<'short>
         where
             'long: 'short,
         {
@@ -160,5 +202,19 @@ impl<'bump> ScopedContainer<'bump> {
             drop(container); // result can't refer to anything in container, it can be safely dropped
             result
         }
+    }
+}
+
+pub struct StaticContainer;
+
+impl<R> Container<'static, R> for StaticContainer
+where
+    R: Reference<'static>,
+{
+    fn allocate_pointee(
+        &'static self,
+        content: Option<<R as Reference<'static>>::Inner<'static>>,
+    ) -> &'static Option<<R as Reference<'static>>::Inner<'static>> {
+        Box::leak(Box::new(content))
     }
 }

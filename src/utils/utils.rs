@@ -1,4 +1,4 @@
-use std::{ops::{Deref, DerefMut}, default};
+use std::{ops::{Deref, DerefMut}, default, convert::Infallible};
 
 use thiserror::Error;
 
@@ -227,13 +227,13 @@ pub trait MaybeInvalid {
 
     #[must_use]
     fn assert_valid(&self) -> Result<(), AccessToInvalidData> {
-        if self.is_valid() {
+        if !self.is_valid() {
             if cfg!(debug_assertions) {
                 unreachable!("{}", AccessToInvalidData::Error)
             } else {
                 Err(AccessToInvalidData::Error)
             }
-        }
+        } else { Ok(())}
     }
 }
 
@@ -251,26 +251,32 @@ pub enum AlreadyInitialized {
     Error,
 }
 
-pub trait LateInitializable: MaybeInvalid {
-    type Inner;
-
-    /// Replace the underlying function
-    ///
-    /// *Not thread safe*
-    unsafe fn inner_overwrite(&self, other: Self::Inner);
-
-    /// **DO NOT OVERWRITE THIS FUNCTION**
-    #[must_use]
-    unsafe fn initiallize(&self, other: Self::Inner) -> Result<&Self, AlreadyInitialized> {
-        if !self.is_valid() {
-            self.inner_overwrite(other);
-            Ok(self)
-        } else {
-            if cfg!(debug_assertions) {
-                unreachable!("{}", AlreadyInitialized::default())
-            } else {
-                Err(Default::default())
-            }
-        }
+impl From<Infallible> for AlreadyInitialized {
+    fn from(value: Infallible) -> Self {
+        unreachable!()
     }
 }
+
+// pub trait LateInitializable: MaybeInvalid {
+//     type Inner;
+
+//     /// Replace the underlying function
+//     ///
+//     /// *Not thread safe*
+//     unsafe fn inner_overwrite(&self, other: Self::Inner);
+
+//     /// **DO NOT OVERWRITE THIS FUNCTION**
+//     #[must_use]
+//     unsafe fn initiallize(&self, other: Self::Inner) -> Result<&Self, AlreadyInitialized> {
+//         if !self.is_valid() {
+//             self.inner_overwrite(other);
+//             Ok(self)
+//         } else {
+//             if cfg!(debug_assertions) {
+//                 unreachable!("{}", AlreadyInitialized::default())
+//             } else {
+//                 Err(Default::default())
+//             }
+//         }
+//     }
+// }

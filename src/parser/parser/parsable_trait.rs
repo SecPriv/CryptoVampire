@@ -26,7 +26,7 @@ use crate::{
     parser::{
         ast::{self, extra::SnN, VariableBinding},
         err, merr, IntoRuleResult, E,
-    },
+    }, container::reference::Reference,
 };
 
 use super::{
@@ -340,7 +340,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Quantifier<'a> {
                 let fq =
                     Function::new_quantifier_from_quantifier(env.container, q, Box::new(content));
 
-                let args = match fq.as_ref() {
+                let args = match fq.as_inner() {
                     function::InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q)) => {
                         q.free_variables.iter()
                     }

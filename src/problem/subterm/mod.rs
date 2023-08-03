@@ -7,7 +7,7 @@ use std::{
 use itertools::Itertools;
 
 use crate::{
-    container::ScopeAllocator,
+    container::allocator::Container,
     formula::{
         file_descriptior::declare::{self, Declaration},
         formula::{exists, forall, meq, RichFormula},
@@ -92,7 +92,7 @@ where
     Aux: SubtermAux<'bump>,
 {
     pub fn new<F>(
-        container: &'bump impl ScopeAllocator<'bump, InnerFunction<'bump>>,
+        container: &'bump impl Container<'bump, Function<'bump>>,
         name: String,
         kind: SubtermKind,
         aux: Aux,
@@ -108,7 +108,7 @@ where
             Function::new_cyclic(container, |function| {
                 // let subterm = ;
                 let self_rc = Arc::new_cyclic(|weak| Subterm {
-                    function,
+                    function: *function,
                     aux,
                     ignored_functions,
                     kind,

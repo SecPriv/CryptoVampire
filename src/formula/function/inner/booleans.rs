@@ -1,6 +1,6 @@
 use crate::{
     formula::sort::{
-        builtins::{StatSort, BOOL},
+        builtins::{BOOL},
         sorted::{Sorted, SortedError},
         Sort,
     },
@@ -33,7 +33,7 @@ impl Connective {
         }
     }
 
-    pub fn output_sort(&self) -> StatSort {
+    pub fn output_sort<'a>(&self) -> Sort<'a> {
         BOOL.as_sort()
     }
 }
@@ -81,7 +81,7 @@ impl Equality {
         "="
     }
 
-    pub fn output_sort(&self) -> StatSort {
+    pub fn output_sort<'a>(&self) -> Sort<'a> {
         BOOL.as_sort()
     }
 }
@@ -119,7 +119,7 @@ impl Booleans {
         }
     }
 
-    pub fn output_sort(&self) -> StatSort {
+    pub fn output_sort<'a>(&self) -> Sort<'a> {
         BOOL.as_sort()
     }
 }

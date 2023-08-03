@@ -3,7 +3,7 @@ use std::{iter::FusedIterator, sync::Arc, vec::IntoIter};
 use itertools::Itertools;
 
 use crate::{
-    container::ScopedContainer,
+    container::{ScopedContainer, reference::Reference},
     formula::{
         formula::RichFormula,
         function::{
@@ -248,7 +248,7 @@ fn compress_quantifier<'bump>(
     f.map(&mut |f| match f {
         RichFormula::Quantifier(q, arg) if q.status().is_condition() => {
             let fun = Function::new_quantifier_from_quantifier(container, q, arg);
-            let free = match fun.as_ref() {
+            let free = match fun.as_inner() {
                 InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q)) => &q.free_variables,
                 _ => unreachable!(),
             };
@@ -291,7 +291,7 @@ fn generate_steps<'bump>(
              }| {
                 let step = unsafe {
                     Step::new_with_function(container, function, name, args, *message, *condition)
-                };
+                }.unwrap();
 
                 for TmpAssignements {
                     cell_idx,
@@ -340,7 +340,7 @@ fn generate_cells<'bump>(
 macro_rules! default_functions {
     ($($fun:expr),*) => {
         fn default_functions<'bump>() -> impl Iterator<Item = Function<'bump>> {
-            [$($fun.clone()),*].into_iter()
+            [$(*$fun.shorten_lifetime()),*].into_iter()
         }
     };
 }
@@ -349,7 +349,7 @@ default_functions!(LESS_THAN_STEP, HAPPENS);
 macro_rules! default_sorts {
     ($($fun:expr),*) => {
         fn default_sorts<'bump>() -> impl Iterator<Item = Sort<'bump>> {
-            [$($fun.clone()),*].into_iter()
+            [$(*$fun.shorten_lifetime()),*].into_iter()
         }
     };
 }

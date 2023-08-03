@@ -13,7 +13,7 @@ use crate::{
         cell_dependancies::graph::{Ancestors, DependancyGraph},
         step::Step,
     },
-    utils::vecref::VecRef,
+    utils::vecref::VecRef, container::reference::Reference,
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -226,7 +226,7 @@ where
                 .into_iter()
                 .flatten();
 
-                match fun.as_ref() {
+                match fun.as_inner() {
                     InnerFunction::TermAlgebra(ta) => match ta {
                         TermAlgebra::Quantifier(q)
                             if deeper_kinds.contains(DeeperKinds::QUANTIFIER) =>
@@ -275,7 +275,7 @@ where
                     | InnerFunction::Tmp(_)
                     | InnerFunction::Skolem(_)
                     | InnerFunction::Evaluate(_) => iter.collect(),
-                    InnerFunction::Invalid(_) => iter.collect(), // we continue anyway
+                    // InnerFunction::Invalid(_) => iter.collect(), // we continue anyway
                 }
             }
         }

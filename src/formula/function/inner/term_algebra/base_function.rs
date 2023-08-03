@@ -1,13 +1,14 @@
 use crate::{
+    container::reference::Reference,
     formula::{
         function::{
             signature::FixedRefSignature,
-            traits::{Evaluatable, FixedSignature, MaybeEvaluatable},
+            traits::{Evaluatable, FixedSignature, MaybeEvaluatable, MaybeFixedSignature},
             Function,
         },
         sort::Sort,
     },
-    utils::vecref::VecRefClone,
+    utils::{precise_as_ref::PreciseAsRef, vecref::VecRefClone}, assert_variance,
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -23,6 +24,8 @@ pub enum BaseFunction<'bump> {
     Eval(&'bump BaseFunction<'bump>),
     Base(InnerBaseFunction<'bump>),
 }
+
+assert_variance!(BaseFunction);
 
 impl<'bump> InnerBaseFunction<'bump> {
     pub fn eval_fun(&self) -> Function<'bump> {
@@ -78,7 +81,8 @@ where
         match self {
             BaseFunction::Base(x) => x.as_fixed_signature(),
             BaseFunction::Eval(e) => {
-                let FixedRefSignature { out, args } = e.as_fixed_signature();
+                let FixedRefSignature { out, args } =
+                    e.as_fixed_signature();
                 let out = out.evaluated_sort().unwrap();
                 let args: Option<VecRefClone<_>> =
                     args.into_iter().map(|s| s.evaluated_sort()).collect();
