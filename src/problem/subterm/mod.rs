@@ -12,8 +12,8 @@ use crate::{
         file_descriptior::declare::{self, Declaration},
         formula::{exists, forall, meq, RichFormula},
         function::{self, Function, InnerFunction},
-        sort::Sort,
         manipulation::Unifier,
+        sort::Sort,
         utils::{
             formula_expander::{
                 DeeperKinds, ExpantionContent, ExpantionState, InnerExpantionState,
@@ -306,7 +306,9 @@ where
                     unifier.map(|u| {
                         let mut guard = u
                             .is_unifying_to_variable()
-                            .and_then(|(_, v)| (v == x).then(|| vec![self.f(x.clone(), f.clone())]))
+                            .and_then(|ovs| {
+                                (ovs.fc() == x).then(|| vec![self.f(x.clone(), f.clone())])
+                            })
                             .unwrap_or_else(|| u.as_equalities().unwrap());
                         if keep_guard {
                             guard.extend(state.condition().into_iter().cloned())

@@ -1,12 +1,16 @@
+use if_chain::if_chain;
 use itertools::Itertools;
 use thiserror::Error;
-use if_chain::if_chain;
 
-use super::{super::{
-    formula::{meq, RichFormula},
-    sort::sorted::SortedError,
-    variable::Variable,
-}, Substitution, OwnedVarSubst};
+use super::{
+    super::{
+        formula::{meq, RichFormula},
+        sort::sorted::SortedError,
+        variable::Variable,
+    },
+    substitution::variable_substitution::{OneVarSubst, OneVarSubstF, OwnedVarSubstF},
+    OwnedVarSubst, Substitution,
+};
 
 #[derive(Debug, Clone)]
 pub struct Unifier<'a, 'bump>
@@ -47,10 +51,10 @@ where
             // ensure there is no colisions of variables
             let (small, big) = ord_utils::sort_by(|a, b| a.len() < b.len(), left, right);
 
-            let id_small = small.iter().map(|(id, _)| *id).collect_vec();
+            let id_small = small.iter().map(OneVarSubst::id).collect_vec();
             if let Some(id) = big
                 .iter()
-                .map(|(id, _)| *id)
+                .map(OneVarSubst::id)
                 .filter(|id| id_small.contains(&id))
                 .next()
             {
@@ -59,10 +63,10 @@ where
         }
 
         // make the equalities
-        let f = |(id, formula): &(usize, &'a RichFormula<'bump>)| match formula.get_sort() {
+        let f = |ovs: &OneVarSubstF<'a, 'bump>| match ovs.f().get_sort() {
             Ok(sort) => Ok(meq(
-                Variable::new(*id, sort).into_formula(),
-                (*formula).clone(),
+                Variable::new(ovs.id(), sort).into_formula(),
+                ovs.fc().clone(),
             )),
             Err(err) => Err(UnifierAsEqualityErr::SortError(err)),
         };
@@ -77,8 +81,8 @@ where
     ) -> Self {
         let Variable { id, .. } = left_variable;
         Unifier {
-            left: OwnedVarSubst { field1: vec![(*id, right_formula)] },
-            right: OwnedVarSubst { field1: vec![] } ,
+            left: [(*id, right_formula)].into(),
+            right: OwnedVarSubst::default(),
         }
     }
 
@@ -208,13 +212,13 @@ where
         &self.right
     }
 
-    pub fn is_unifying_to_variable(&self) -> Option<(usize, &RichFormula<'bump>)> {
+    pub fn is_unifying_to_variable(&self) -> Option<OneVarSubstF<'_, 'bump>> {
         if_chain! {
             if self.left.field1.is_empty();
             if self.right.field1.len() == 1;
-            if let Some((id, t)) = self.right.field1.first();
+            // if let Some(ovs) = self.right.field1.first();
             then {
-                Some((*id, t))
+                self.right.field1.first().cloned()
             } else {
                 None
             }
@@ -260,6 +264,6 @@ where
     }
 
     pub fn vars<'b: 'bump>(&'b self) -> impl Iterator<Item = usize> + 'b {
-        self.subst.field1.iter().map(|(i, _)| *i)
+        self.subst.field1.iter().map(OneVarSubst::id)
     }
 }
