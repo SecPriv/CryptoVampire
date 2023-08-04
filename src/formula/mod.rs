@@ -7,7 +7,7 @@ pub mod variable;
 // pub mod macros;
 pub mod quantifier;
 pub mod sort;
-pub mod unifier;
+pub mod manipulation;
 // pub mod formula_builder;
 // pub mod formula_user;
 // pub mod utils;

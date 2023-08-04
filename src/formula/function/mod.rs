@@ -151,6 +151,5 @@ variants_ref_try_into!(InnerFunction : InnerFunction<'bump> => {
 
 // impl<'bump> MaybeInvalid for InnerFunction<'bump> {
 //     fn is_valid(&self) -> bool {
-//         todo!()
 //     }
 // }

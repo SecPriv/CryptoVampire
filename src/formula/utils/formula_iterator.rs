@@ -54,11 +54,10 @@ where
             Some((p, formula)) => {
                 match formula {
                     RichFormula::Fun(fun, _) => match fun.as_inner() {
-                        InnerFunction::TermAlgebra(TermAlgebra::Quantifier(_q))
+                        InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q))
                             if self.flags.contains(IteratorFlags::QUANTIFIER) =>
                         {
-                            todo!();
-                            let iter = _q.get_content();
+                            let iter = q.get_content();
                             let iter = repeat_n_zip(p.clone(), iter.iter()).map(|(p, f)| (p, *f));
                             self.pile.extend(iter)
                         }

@@ -7,6 +7,7 @@ use crate::container::utils::NameFinder;
 use crate::container::StaticContainer;
 use crate::force_lifetime;
 
+use crate::utils::traits::RefNamed;
 use crate::{
     assert_variance, asssert_trait,
     formula::{
@@ -484,7 +485,7 @@ impl<'bump> Function<'bump> {
 
     pub fn name(&self) -> StrRef<'bump> {
         // &self.inner.name
-        todo!()
+        self.name_ref()
     }
 
     // pub fn get_cell(&self) -> Option<MemoryCell<'bump>> {

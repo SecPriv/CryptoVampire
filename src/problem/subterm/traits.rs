@@ -1,5 +1,5 @@
 use crate::{
-    formula::{formula::RichFormula, sort::Sort, unifier::Unifier, variable::Variable},
+    formula::{formula::RichFormula, sort::Sort, manipulation::Unifier, variable::Variable},
     utils::vecref::VecRef,
 };
 

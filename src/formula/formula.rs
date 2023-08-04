@@ -19,7 +19,7 @@ use super::{
     function::Function,
     quantifier::Quantifier,
     sort::Sort,
-    unifier::{Substitution, Translate},
+    manipulation::{Substitution, Translate},
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

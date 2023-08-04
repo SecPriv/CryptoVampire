@@ -13,7 +13,7 @@ use crate::{
         formula::{exists, forall, meq, RichFormula},
         function::{self, Function, InnerFunction},
         sort::Sort,
-        unifier::Unifier,
+        manipulation::Unifier,
         utils::{
             formula_expander::{
                 DeeperKinds, ExpantionContent, ExpantionState, InnerExpantionState,

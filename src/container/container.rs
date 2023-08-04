@@ -100,7 +100,6 @@ impl<'bump> Debug for ScopedContainer<'bump> {
 //                     r: self.$name.borrow(),
 //                     f: |i| $out::<$bump>::from_ref(*i),
 //                 }
-//                 // todo!()
 //             }
 //         }
 //     };

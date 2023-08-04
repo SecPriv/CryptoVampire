@@ -1,12 +1,12 @@
-use if_chain::if_chain;
 use itertools::Itertools;
 use thiserror::Error;
+use if_chain::if_chain;
 
-use super::{
+use super::{super::{
     formula::{meq, RichFormula},
     sort::sorted::SortedError,
     variable::Variable,
-};
+}, Substitution, OwnedVarSubst};
 
 #[derive(Debug, Clone)]
 pub struct Unifier<'a, 'bump>
@@ -14,38 +14,14 @@ where
     'bump: 'a,
 {
     /// variables on the left mapped to terms on the right
-    left: ISubstitution<&'a RichFormula<'bump>>,
+    left: OwnedVarSubst<&'a RichFormula<'bump>>,
     /// variables on the right mapped to terms on the left
-    right: ISubstitution<&'a RichFormula<'bump>>,
+    right: OwnedVarSubst<&'a RichFormula<'bump>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct OneWayUnifier<'a, 'bump> {
-    subst: ISubstitution<&'a RichFormula<'bump>>,
-}
-
-#[derive(Debug, Clone)]
-struct ISubstitution<T>(Vec<(usize, T)>);
-
-impl<'bump, T> ISubstitution<T> {
-    fn get(&self, id: usize) -> Option<&T> {
-        self.0.iter().find(|(i, _)| i == &id).map(|(_, f)| f)
-    }
-
-    fn new() -> Self {
-        Self(Vec::new())
-    }
-}
-
-impl<'bump, 'a> ISubstitution<&'a RichFormula<'bump>> {
-    fn add(&mut self, id: usize, r: &'a RichFormula<'bump>) {
-        debug_assert!(self.0.iter().all(|(i, _)| i != &id));
-        debug_assert!(match r {
-            RichFormula::Var(v) => v.id != id,
-            _ => true,
-        });
-        self.0.push((id, r))
-    }
+    subst: OwnedVarSubst<&'a RichFormula<'bump>>,
 }
 
 #[derive(Debug, Error)]
@@ -64,8 +40,8 @@ where
     ///
     /// It returns an error if it can't deduce the sort of one of the variables or if a variables is used on the left *and* the right
     pub fn as_equalities(&'_ self) -> Result<Vec<RichFormula<'bump>>, UnifierAsEqualityErr> {
-        let left = &self.left.0;
-        let right = &self.right.0;
+        let left = &self.left.field1;
+        let right = &self.right.field1;
 
         {
             // ensure there is no colisions of variables
@@ -101,8 +77,8 @@ where
     ) -> Self {
         let Variable { id, .. } = left_variable;
         Unifier {
-            left: ISubstitution(vec![(*id, right_formula)]),
-            right: ISubstitution(vec![]),
+            left: OwnedVarSubst { field1: vec![(*id, right_formula)] },
+            right: OwnedVarSubst { field1: vec![] } ,
         }
     }
 
@@ -150,8 +126,8 @@ where
         fn aux<'a, 'bump>(
             left: &'a RichFormula<'bump>,
             right: &'a RichFormula<'bump>,
-            left_p: &mut ISubstitution<&'a RichFormula<'bump>>,
-            right_p: &mut ISubstitution<&'a RichFormula<'bump>>,
+            left_p: &mut OwnedVarSubst<&'a RichFormula<'bump>>,
+            right_p: &mut OwnedVarSubst<&'a RichFormula<'bump>>,
         ) -> bool {
             match (left, right) {
                 (RichFormula::Var(vl), RichFormula::Var(vr)) if vl == vr => true,
@@ -207,8 +183,8 @@ where
             }
         }
 
-        let mut left_p = ISubstitution::new();
-        let mut right_p = ISubstitution::new();
+        let mut left_p = OwnedVarSubst::new();
+        let mut right_p = OwnedVarSubst::new();
 
         if aux(left, right, &mut left_p, &mut right_p) {
             Some(Unifier {
@@ -234,9 +210,9 @@ where
 
     pub fn is_unifying_to_variable(&self) -> Option<(usize, &RichFormula<'bump>)> {
         if_chain! {
-            if self.left.0.is_empty();
-            if self.right.0.len() == 1;
-            if let Some((id, t)) = self.right.0.first();
+            if self.left.field1.is_empty();
+            if self.right.field1.len() == 1;
+            if let Some((id, t)) = self.right.field1.first();
             then {
                 Some((*id, t))
             } else {
@@ -254,7 +230,7 @@ where
         fn aux<'a, 'bump>(
             from: &'a RichFormula<'bump>,
             to: &'a RichFormula<'bump>,
-            p: &mut ISubstitution<&'a RichFormula<'bump>>,
+            p: &mut OwnedVarSubst<&'a RichFormula<'bump>>,
         ) -> bool {
             match (from, to) {
                 (RichFormula::Var(v), _) => {
@@ -274,7 +250,7 @@ where
             }
         }
 
-        let mut p = ISubstitution::new();
+        let mut p = OwnedVarSubst::new();
 
         if aux(from, to, &mut p) {
             Some(OneWayUnifier { subst: p })
@@ -284,76 +260,6 @@ where
     }
 
     pub fn vars<'b: 'bump>(&'b self) -> impl Iterator<Item = usize> + 'b {
-        self.subst.0.iter().map(|(i, _)| *i)
-    }
-}
-
-pub trait Substitution<'bump> {
-    fn get(&self, var: &Variable<'bump>) -> RichFormula<'bump>;
-
-    fn apply(&self, f: &RichFormula<'bump>) -> RichFormula<'bump> {
-        match f {
-            RichFormula::Var(v) => self.get(v),
-            RichFormula::Fun(fun, args) => RichFormula::Fun(
-                fun.clone(),
-                args.iter().map(|arg| self.apply(arg)).collect(),
-            ),
-            RichFormula::Quantifier(q, arg) => {
-                RichFormula::Quantifier(q.clone(), Box::new(self.apply(arg.as_ref())))
-            }
-        }
-    }
-
-    fn chain<O>(self: Self, other: O) -> Chain<Self, O>
-    where
-        Self: Sized,
-        O: Substitution<'bump> + Sized,
-    {
-        Chain(self, other)
-    }
-
-    fn translate(self, i: usize) -> Chain<Self, Translate>
-    where
-        Self: Sized,
-    {
-        self.chain(Translate(i))
-    }
-}
-
-impl<'a, 'bump> Substitution<'bump> for ISubstitution<&'a RichFormula<'bump>>
-where
-    'bump: 'a,
-{
-    fn get(&self, var: &Variable<'bump>) -> RichFormula<'bump> {
-        self.0
-            .iter()
-            .find(|(nid, _)| nid == &var.id)
-            .map(|(_, f)| RichFormula::clone(f))
-            .unwrap_or(RichFormula::Var(var.clone()))
-    }
-}
-
-pub struct Chain<A, B>(A, B);
-
-impl<'bump, A: Substitution<'bump>, B: Substitution<'bump>> Substitution<'bump> for Chain<A, B> {
-    fn get(&self, var: &Variable<'bump>) -> RichFormula<'bump> {
-        self.0.get(var).apply_permutation2(&self.1)
-    }
-}
-
-pub struct Translate(usize);
-
-impl Translate {
-    pub fn new(i: usize) -> Self {
-        Translate(i)
-    }
-}
-
-impl<'bump> Substitution<'bump> for Translate {
-    fn get(&self, var: &Variable<'bump>) -> RichFormula<'bump> {
-        RichFormula::Var(Variable {
-            id: var.id + self.0,
-            ..var.clone()
-        })
+        self.subst.field1.iter().map(|(i, _)| *i)
     }
 }
