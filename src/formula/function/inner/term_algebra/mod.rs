@@ -1,4 +1,4 @@
-use crate::{assert_variance, variants, CustomDerive, utils::traits::RefNamed, formula::function::InnerFunction};
+use crate::{assert_variance, variants, CustomDerive};
 
 use self::{
     base_function::BaseFunction, cell::Cell, connective::Connective, if_then_else::IfThenElse,

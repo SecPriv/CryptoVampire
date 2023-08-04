@@ -1,27 +1,25 @@
 use std::{
     cell::RefCell,
-    ptr::NonNull,
-    sync::atomic::{self, AtomicU16, AtomicUsize},
+    sync::atomic::{self, AtomicU16},
 };
 
 use crate::{
-    container::contained::Containable,
     formula::{
-        function::{Function, InnerFunction},
-        sort::{InnerSort, Sort},
+        function::{InnerFunction},
+        sort::{InnerSort},
     },
     problem::{
-        cell::{InnerMemoryCell, MemoryCell},
-        step::{InnerStep, Step},
+        cell::{InnerMemoryCell},
+        step::{InnerStep},
     },
     utils::{string_ref::StrRef, traits::RefNamed},
 };
 
-use super::{allocator::Container, reference::Reference};
-use super::{contained::Contained, utils::VecRefWrapperMap};
+use super::{allocator::Container};
+use super::{contained::Contained};
 use hashbrown::HashSet;
-use itertools::{chain, Itertools};
-use paste::paste;
+use itertools::{Itertools};
+
 use std::fmt::Debug;
 
 // type InnerContainer<'bump, T> = RefCell<Vec<&'bump RefPointee<'bump, T>>>;

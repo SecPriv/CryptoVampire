@@ -16,7 +16,7 @@ use crate::{
         sort::Sort,
         variable::Variable,
     },
-    problem::subterm::kind::SubtermKind, container::reference::Reference,
+    problem::subterm::kind::SubtermKind,
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

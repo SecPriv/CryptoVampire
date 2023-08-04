@@ -1,6 +1,6 @@
 //! A way to emulate sort variables for type inference
 
-use std::{cell::RefCell, default, fmt::Display, rc::Rc};
+use std::{cell::RefCell, fmt::Display, rc::Rc};
 use thiserror::Error;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Error)]

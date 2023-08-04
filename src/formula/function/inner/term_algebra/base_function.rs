@@ -1,14 +1,13 @@
 use crate::{
-    container::reference::Reference,
     formula::{
         function::{
             signature::FixedRefSignature,
-            traits::{Evaluatable, FixedSignature, MaybeEvaluatable, MaybeFixedSignature},
+            traits::{Evaluatable, FixedSignature, MaybeEvaluatable},
             Function,
         },
         sort::Sort,
     },
-    utils::{precise_as_ref::PreciseAsRef, vecref::VecRefClone}, assert_variance,
+    utils::{vecref::VecRefClone}, assert_variance,
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

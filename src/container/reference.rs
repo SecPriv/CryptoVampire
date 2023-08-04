@@ -1,20 +1,19 @@
 use std::{
-    cmp::Ordering, convert::Infallible, error::Error, fmt::Debug, hash::Hash, marker::PhantomData,
+    cmp::Ordering, fmt::Debug, hash::Hash, marker::PhantomData,
     ptr::NonNull,
 };
 
-use itertools::Itertools;
+
 
 use crate::utils::{
     precise_as_ref::PreciseAsRef,
     string_ref::StrRef,
     traits::RefNamed,
-    utils::{AccessToInvalidData, AlreadyInitialized, MaybeInvalid},
+    utils::{MaybeInvalid},
 };
 
 use super::{
-    allocator::{Container, ContainerTools},
-    contained::{Containable, Contained},
+    contained::{Contained},
 };
 
 // pub type RefPointee<'bump, R> = Option<<R as Reference<'bump>>::Inner>;

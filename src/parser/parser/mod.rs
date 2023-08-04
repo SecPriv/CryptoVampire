@@ -1,8 +1,8 @@
-use std::{collections::HashMap, ops::Deref};
 
-use pest::Span;
 
-use self::{guard::{GuardedFunction, GuardedMemoryCell, GuardedStep}, parsing_environement::{Environement, get_sort}};
+
+
+use self::{parsing_environement::{Environement, get_sort}};
 
 use super::{
     ast::{
@@ -12,16 +12,11 @@ use super::{
     *,
 };
 use crate::{
-    container::{ScopedContainer, allocator::{ContainerTools, Container}},
+    container::{allocator::{Container}},
     formula::{
-        function::{self, Function, InnerFunction},
+        function::{Function},
         sort::Sort,
-        variable::Variable,
     },
-    implderef, implvec,
-    parser::parser::guard::Guard,
-    problem::{cell::InnerMemoryCell, step::InnerStep},
-    utils::utils::{MaybeInvalid},
 };
 
 pub mod guard;
@@ -153,13 +148,13 @@ pub fn declare_steps_and_cells<'a, 'bump>(
                 ))
             } else {
                 // the input sorts (will gracefully error out later if a sort is undefined)
-                let input_sorts: Result<Vec<_>, _> = fun
+                let _input_sorts: Result<Vec<_>, _> = fun
                     .args()
                     .into_iter()
                     .map(|idn| get_sort(env, *idn.span, idn.name))
                     .collect();
                 // the output sort
-                let output_sort = {
+                let _output_sort = {
                     let idn = fun.out();
                     get_sort(env, *idn.span, idn.name)
                 }?;

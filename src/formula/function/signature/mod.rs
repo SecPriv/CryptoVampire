@@ -6,7 +6,7 @@ pub use fixed_signature::{FixedRefSignature, StaticSignature};
 
 use std::{fmt::Display, ops::RangeInclusive};
 
-use itertools::{Either, Itertools, MapInto};
+use itertools::{Itertools, MapInto};
 
 use crate::{
     environement::traits::KnowsRealm,

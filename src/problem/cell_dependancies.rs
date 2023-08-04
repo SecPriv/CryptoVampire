@@ -56,7 +56,7 @@ pub mod graph {
             cell::{Assignement, MemoryCell},
             step::Step,
         },
-        utils::{utils::repeat_n_zip, vecref::VecRef}, container::reference::Reference,
+        utils::{utils::repeat_n_zip, vecref::VecRef},
     };
 
     use super::{CellCall, Dependancy, DependancyFromStep, InputCall, OutGoingCall, StepCall};

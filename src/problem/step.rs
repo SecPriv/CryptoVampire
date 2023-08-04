@@ -1,10 +1,6 @@
 use core::fmt::Debug;
 use std::{
-    cmp::Ordering,
-    marker::PhantomData,
-    // collections::{HashMap, HashSet},
     ops::Range,
-    ptr::NonNull,
 };
 
 use itertools::Itertools;
@@ -12,15 +8,14 @@ use itertools::Itertools;
 use crate::{
     assert_variance, asssert_trait,
     container::{
-        allocator::{Container, ContainerTools},
+        allocator::{ContainerTools},
         reference::{ Reference}, contained::Containable,
     },
     formula::{
         formula::{meq, RichFormula},
         function::{
             builtin::LESS_THAN_STEP,
-            inner::step::{InnerStepFuction, StepFunction},
-            Function, InnerFunction,
+            Function,
         },
         sort::Sort,
         variable::Variable,
@@ -28,7 +23,7 @@ use crate::{
     implderef, implvec,
     utils::{
         precise_as_ref::PreciseAsRef,
-        utils::{AccessToInvalidData, AlreadyInitialized,  MaybeInvalid}, traits::RefNamed, string_ref::StrRef,
+        utils::{AlreadyInitialized,  MaybeInvalid}, traits::RefNamed, string_ref::StrRef,
     },
 };
 
@@ -83,8 +78,8 @@ pub enum MessageOrCondition {
 
 impl<'bump> Step<'bump> {
     pub(crate) fn new<C>(
-        container: &'bump C,
-        name: implderef!(str),
+        _container: &'bump C,
+        _name: implderef!(str),
         args: implvec!(Variable<'bump>),
         message: RichFormula<'bump>,
         condition: RichFormula<'bump>,
@@ -102,7 +97,7 @@ impl<'bump> Step<'bump> {
             .iter()
             .all(|v| free_variables.contains(v)));
 
-        let used_variables = RichFormula::iter_used_varibales([&message, &condition])
+        let _used_variables = RichFormula::iter_used_varibales([&message, &condition])
             .unique()
             .collect_vec();
 
@@ -140,9 +135,9 @@ impl<'bump> Step<'bump> {
     ///
     /// **Not thread safe**
     pub(crate) unsafe fn new_with_function(
-        container: &'bump impl ContainerTools<'bump, InnerStep<'bump>>,
-        old_function: Function<'bump>,
-        name: implderef!(str),
+        _container: &'bump impl ContainerTools<'bump, InnerStep<'bump>>,
+        _old_function: Function<'bump>,
+        _name: implderef!(str),
         args: implvec!(Variable<'bump>),
         message: RichFormula<'bump>,
         condition: RichFormula<'bump>,

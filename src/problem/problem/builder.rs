@@ -3,7 +3,7 @@ use std::{iter::FusedIterator, sync::Arc, vec::IntoIter};
 use itertools::Itertools;
 
 use crate::{
-    container::{ScopedContainer, reference::Reference},
+    container::{ScopedContainer},
     formula::{
         formula::RichFormula,
         function::{

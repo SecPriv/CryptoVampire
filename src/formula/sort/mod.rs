@@ -4,10 +4,9 @@ pub mod sort_proxy;
 pub mod sorted;
 use bitflags::bitflags;
 use core::fmt::Debug;
-use std::{cmp::Ordering, fmt::Display, hash::Hash, marker::PhantomData, ptr::NonNull};
+use std::{fmt::Display, hash::Hash};
 
 use crate::{
-    assert_variance,
     container::{
         ScopedContainer, StaticContainer, reference::Reference, contained::Containable, allocator::ContainerTools,
     },

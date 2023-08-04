@@ -6,7 +6,6 @@ use crate::utils::utils::AlreadyInitialized;
 
 use super::{
     contained::{Containable, Contained},
-    reference::Reference,
 };
 
 pub trait Container<'bump, I>

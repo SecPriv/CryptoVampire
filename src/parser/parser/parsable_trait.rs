@@ -1,4 +1,4 @@
-use if_chain::if_chain;
+
 use itertools::Itertools;
 
 use crate::{
@@ -11,13 +11,13 @@ use crate::{
             self,
             builtin::{IF_THEN_ELSE, IF_THEN_ELSE_TA, INPUT},
             inner::term_algebra::TermAlgebra,
-            signature::{CheckError, Signature},
+            signature::{Signature},
             traits::MaybeEvaluatable,
             Function,
         },
         sort::{
             builtins::{BOOL, CONDITION, MESSAGE, STEP},
-            sort_proxy::{InferenceError, SortProxy},
+            sort_proxy::{SortProxy},
             Sort,
         },
         variable::Variable,
@@ -26,7 +26,7 @@ use crate::{
     parser::{
         ast::{self, extra::SnN, VariableBinding},
         err, merr, IntoRuleResult, E,
-    }, container::reference::Reference,
+    },
 };
 
 use super::{

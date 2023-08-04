@@ -1,6 +1,6 @@
 // mod lock;
 
-use std::{cmp::Ordering, marker::PhantomData, ptr::NonNull};
+
 
 use crate::{
     assert_variance, asssert_trait,
@@ -11,8 +11,7 @@ use crate::{
     formula::{
         formula::RichFormula,
         function::{
-            inner::term_algebra::{cell::Cell, TermAlgebra},
-            Function, InnerFunction,
+            Function,
         },
         sort::Sort,
     },
@@ -115,10 +114,10 @@ pub struct Assignement<'bump> {
 
 impl<'bump> MemoryCell<'bump> {
     pub fn new<C>(
-        container: &'bump C,
-        name: implderef!(str),
-        args: implvec!(Sort<'bump>),
-        assignements: implvec!(Assignement<'bump>),
+        _container: &'bump C,
+        _name: implderef!(str),
+        _args: implvec!(Sort<'bump>),
+        _assignements: implvec!(Assignement<'bump>),
     ) -> Self
     where
         C: ContainerTools<'bump, (Self, Function<'bump>)>,
@@ -152,11 +151,11 @@ impl<'bump> MemoryCell<'bump> {
     }
 
     pub unsafe fn new_with_function<C>(
-        container: &'bump C,
-        old_function: Function<'bump>,
-        name: implderef!(str),
-        args: implvec!(Sort<'bump>),
-        assignements: implvec!(Assignement<'bump>),
+        _container: &'bump C,
+        _old_function: Function<'bump>,
+        _name: implderef!(str),
+        _args: implvec!(Sort<'bump>),
+        _assignements: implvec!(Assignement<'bump>),
     ) -> Self
     where
         C: ContainerTools<'bump, InnerMemoryCell<'bump>>,

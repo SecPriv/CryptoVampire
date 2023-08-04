@@ -13,7 +13,7 @@ use crate::{
         cell_dependancies::graph::{Ancestors, DependancyGraph},
         step::Step,
     },
-    utils::vecref::VecRef, container::reference::Reference,
+    utils::vecref::VecRef,
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

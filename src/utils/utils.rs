@@ -1,4 +1,4 @@
-use std::{ops::{Deref, DerefMut}, default, convert::Infallible};
+use std::{ops::{Deref, DerefMut}, convert::Infallible};
 
 use thiserror::Error;
 
@@ -252,7 +252,7 @@ pub enum AlreadyInitialized {
 }
 
 impl From<Infallible> for AlreadyInitialized {
-    fn from(value: Infallible) -> Self {
+    fn from(_value: Infallible) -> Self {
         unreachable!()
     }
 }

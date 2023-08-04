@@ -1,16 +1,16 @@
-use std::fmt::Debug;
-use std::{cmp::Ordering, marker::PhantomData, ptr::NonNull};
+
+
 
 use itertools::Itertools;
 
-use crate::container::allocator::{Container, ContainerTools};
+use crate::container::allocator::{ContainerTools};
 use crate::container::contained::Containable;
 use crate::container::reference::Reference;
 use crate::container::utils::NameFinder;
 use crate::container::StaticContainer;
 use crate::force_lifetime;
-use crate::utils::traits::RefNamed;
-use crate::utils::utils::MaybeInvalid;
+
+
 use crate::{
     assert_variance, asssert_trait,
     formula::{
@@ -40,7 +40,6 @@ use super::{
         booleans::Booleans,
         evaluate::Evaluate,
         if_then_else::IfThenElse,
-        invalid_function::InvalidFunction,
         predicate::Predicate,
         skolem::Skolem,
         step::StepFunction,

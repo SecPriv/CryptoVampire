@@ -27,7 +27,7 @@ use crate::{
         variable::{sorts_to_variables, Variable},
     },
     mexists, mforall,
-    problem::problem::Problem, container::reference::Reference,
+    problem::problem::Problem,
 };
 
 pub fn generate<'bump>(

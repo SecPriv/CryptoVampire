@@ -9,7 +9,7 @@ mod function;
 pub use function::{new_static_function, Function};
 
 // pub mod equality;
-use std::{cmp::Ordering, hash::Hash, marker::PhantomData, ptr::NonNull};
+use std::{hash::Hash};
 
 use bitflags::bitflags;
 use itertools::Itertools;
@@ -17,48 +17,26 @@ use itertools::Itertools;
 // use crate::problem::step::Step;
 
 use crate::{
-    assert_variance, asssert_trait,
-    formula::function::{
-        inner::term_algebra::base_function::{BaseFunction, InnerBaseFunction},
-        signature::{AsFixedSignature, FixedRefSignature},
-    },
-    implderef, implvec,
-    utils::{
-        precise_as_ref::PreciseAsRef,
-        string_ref::StrRef,
-    },
-    variants, variants_ref, variants_ref_try_into, CustomDerive,
+    variants, variants_ref_try_into, CustomDerive,
 };
 
 use self::inner::{
     booleans::Booleans,
     evaluate::Evaluate,
     if_then_else::IfThenElse,
-    invalid_function::InvalidFunction,
     // nonce::Nonce,
     predicate::Predicate,
     skolem::Skolem,
     step::StepFunction,
     subterm::Subterm,
     term_algebra::{
-        base_function::BaseFunctionTuple,
-        quantifier::{get_next_quantifer_id, InnerQuantifier, Quantifier},
         TermAlgebra,
     },
     unused::Tmp,
 };
-use self::signature::Signature;
 
-use super::{
-    formula::RichFormula,
-    quantifier,
-    sort::{
-        sort_proxy::SortProxy,
-        sorted::{Sorted, SortedError},
-        Sort,
-    },
-    variable::Variable,
-};
+
+
 use core::fmt::Debug;
 
 // const BASE_SKOLEM_NAME: &'static str = "m$sk_";

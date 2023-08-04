@@ -95,7 +95,7 @@ impl<'bump, 'a> Environement<'bump, 'a> {
 
     pub fn finalize(&mut self) {
         fn finalize_hash_map<'bump, C, T>(
-            container: &C,
+            _container: &C,
             h: &mut HashMap<Guard<C::R<'bump>>, Option<T>>,
         ) where
             C: ContainerTools<'bump, T>,
