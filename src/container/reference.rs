@@ -1,20 +1,10 @@
-use std::{
-    cmp::Ordering, fmt::Debug, hash::Hash, marker::PhantomData,
-    ptr::NonNull,
-};
-
-
+use std::{cmp::Ordering, fmt::Debug, hash::Hash, marker::PhantomData, ptr::NonNull};
 
 use crate::utils::{
-    precise_as_ref::PreciseAsRef,
-    string_ref::StrRef,
-    traits::RefNamed,
-    utils::{MaybeInvalid},
+    precise_as_ref::PreciseAsRef, string_ref::StrRef, traits::RefNamed, utils::MaybeInvalid,
 };
 
-use super::{
-    contained::{Contained},
-};
+use super::contained::Contained;
 
 // pub type RefPointee<'bump, R> = Option<<R as Reference<'bump>>::Inner>;
 // pub type RefInner<'bump, R> = <R as Reference<'bump>>::Inner;

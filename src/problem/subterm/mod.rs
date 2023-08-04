@@ -7,7 +7,7 @@ use std::{
 use itertools::Itertools;
 
 use crate::{
-    container::allocator::{ContainerTools},
+    container::allocator::ContainerTools,
     formula::{
         file_descriptior::declare::{self, Declaration},
         formula::{exists, forall, meq, RichFormula},

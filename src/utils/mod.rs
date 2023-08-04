@@ -8,6 +8,6 @@ pub mod infinity;
 pub mod precise_as_ref;
 pub mod string_ref;
 pub mod test_utils;
+pub mod traits;
 pub mod utils;
 pub mod vecref;
-pub mod traits;

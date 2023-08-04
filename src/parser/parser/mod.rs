@@ -1,8 +1,4 @@
-
-
-
-
-use self::{parsing_environement::{Environement, get_sort}};
+use self::parsing_environement::{get_sort, Environement};
 
 use super::{
     ast::{
@@ -12,11 +8,8 @@ use super::{
     *,
 };
 use crate::{
-    container::{allocator::{Container}},
-    formula::{
-        function::{Function},
-        sort::Sort,
-    },
+    container::allocator::Container,
+    formula::{function::Function, sort::Sort},
 };
 
 pub mod guard;

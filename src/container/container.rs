@@ -4,21 +4,15 @@ use std::{
 };
 
 use crate::{
-    formula::{
-        function::{InnerFunction},
-        sort::{InnerSort},
-    },
-    problem::{
-        cell::{InnerMemoryCell},
-        step::{InnerStep},
-    },
+    formula::{function::InnerFunction, sort::InnerSort},
+    problem::{cell::InnerMemoryCell, step::InnerStep},
     utils::{string_ref::StrRef, traits::RefNamed},
 };
 
-use super::{allocator::Container};
-use super::{contained::Contained};
+use super::allocator::Container;
+use super::contained::Contained;
 use hashbrown::HashSet;
-use itertools::{Itertools};
+use itertools::Itertools;
 
 use std::fmt::Debug;
 

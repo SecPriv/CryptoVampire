@@ -3,7 +3,7 @@ use std::{iter::FusedIterator, sync::Arc, vec::IntoIter};
 use itertools::Itertools;
 
 use crate::{
-    container::{ScopedContainer},
+    container::ScopedContainer,
     formula::{
         formula::RichFormula,
         function::{
@@ -291,7 +291,8 @@ fn generate_steps<'bump>(
              }| {
                 let step = unsafe {
                     Step::new_with_function(container, function, name, args, *message, *condition)
-                }.unwrap();
+                }
+                .unwrap();
 
                 for TmpAssignements {
                     cell_idx,

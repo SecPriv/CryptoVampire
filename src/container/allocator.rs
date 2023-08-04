@@ -4,9 +4,7 @@ use itertools::Itertools;
 
 use crate::utils::utils::AlreadyInitialized;
 
-use super::{
-    contained::{Containable, Contained},
-};
+use super::contained::{Containable, Contained};
 
 pub trait Container<'bump, I>
 where
@@ -36,7 +34,7 @@ pub trait ContainerTools<'bump, I> {
     // where
     //     'bump: 'a;
 
-    fn alloc_cyclic< F>(&'bump self, f: F) -> Result<Self::R<'bump>, AlreadyInitialized>
+    fn alloc_cyclic<F>(&'bump self, f: F) -> Result<Self::R<'bump>, AlreadyInitialized>
     where
         F: for<'b> FnOnce(&'b Self::R<'bump>) -> I,
         // 'bump: 'a,
@@ -45,7 +43,7 @@ pub trait ContainerTools<'bump, I> {
             .map(|(r, _)| r)
     }
 
-    fn alloc_cyclic_with_residual< F, T>(
+    fn alloc_cyclic_with_residual<F, T>(
         &'bump self,
         f: F,
     ) -> Result<(Self::R<'bump>, T), AlreadyInitialized>
@@ -59,7 +57,7 @@ pub trait ContainerTools<'bump, I> {
         })
     }
 
-    fn try_alloc_cyclic_with_residual< F, T, E1, E2>(
+    fn try_alloc_cyclic_with_residual<F, T, E1, E2>(
         &'bump self,
         f: F,
     ) -> Result<(Self::R<'bump>, T), E2>
@@ -97,7 +95,7 @@ where
     }
 
     unsafe fn initialize(reference: &Self::R<'bump>, inner: I) -> Result<(), AlreadyInitialized>
-    // where
+// where
     //     'bump: 'a,
     {
         I::initialize_with(reference, inner).map(|_| ())
@@ -149,7 +147,7 @@ where
         reference: &Self::R<'bump>,
         inner: (A, B),
     ) -> Result<(), AlreadyInitialized>
-    // where
+// where
     //     'bump: 'a,
     {
         let (a, b) = inner;
@@ -184,7 +182,7 @@ where
         reference: &Self::R<'bump>,
         inner: [I; N],
     ) -> Result<(), AlreadyInitialized>
-    // where
+// where
     //     'bump: 'a,
     {
         inner

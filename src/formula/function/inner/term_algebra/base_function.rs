@@ -1,4 +1,5 @@
 use crate::{
+    assert_variance,
     formula::{
         function::{
             signature::FixedRefSignature,
@@ -7,7 +8,7 @@ use crate::{
         },
         sort::Sort,
     },
-    utils::{vecref::VecRefClone}, assert_variance,
+    utils::vecref::VecRefClone,
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -80,8 +81,7 @@ where
         match self {
             BaseFunction::Base(x) => x.as_fixed_signature(),
             BaseFunction::Eval(e) => {
-                let FixedRefSignature { out, args } =
-                    e.as_fixed_signature();
+                let FixedRefSignature { out, args } = e.as_fixed_signature();
                 let out = out.evaluated_sort().unwrap();
                 let args: Option<VecRefClone<_>> =
                     args.into_iter().map(|s| s.evaluated_sort()).collect();

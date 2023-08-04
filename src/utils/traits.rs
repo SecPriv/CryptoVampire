@@ -1,5 +1,3 @@
-
-
 use super::string_ref::StrRef;
 
 pub trait Named {

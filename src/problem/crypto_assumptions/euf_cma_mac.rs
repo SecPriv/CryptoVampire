@@ -10,9 +10,7 @@ use crate::{
         formula::{forall, meq, RichFormula},
         function::inner::{subterm::Subsubterm, term_algebra::name::NameCaster},
         function::Function,
-        sort::{
-            builtins::{MESSAGE, NONCE},
-        },
+        sort::builtins::{MESSAGE, NONCE},
         utils::formula_expander::DeeperKinds,
         variable::Variable,
     },

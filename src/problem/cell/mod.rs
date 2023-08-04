@@ -1,24 +1,11 @@
 // mod lock;
 
-
-
 use crate::{
     assert_variance, asssert_trait,
-    container::{
-        allocator::ContainerTools,
-        reference::{ Reference}, contained::Containable,
-    },
-    formula::{
-        formula::RichFormula,
-        function::{
-            Function,
-        },
-        sort::Sort,
-    },
+    container::{allocator::ContainerTools, contained::Containable, reference::Reference},
+    formula::{formula::RichFormula, function::Function, sort::Sort},
     implderef, implvec,
-    utils::{
-        precise_as_ref::PreciseAsRef, traits::RefNamed, string_ref::StrRef,
-    },
+    utils::{precise_as_ref::PreciseAsRef, string_ref::StrRef, traits::RefNamed},
 };
 use core::fmt::Debug;
 
@@ -31,7 +18,7 @@ pub type MemoryCell<'bump> = Reference<'bump, InnerMemoryCell<'bump>>;
 //     inner: NonNull<Option<InnerMemoryCell<'bump>>>,
 //     container: PhantomData<&'bump ()>,
 // }
-impl<'bump> Containable<'bump> for InnerMemoryCell<'bump>{}
+impl<'bump> Containable<'bump> for InnerMemoryCell<'bump> {}
 
 asssert_trait!(sync_send_cell; InnerMemoryCell; Sync, Send);
 assert_variance!(MemoryCell);
@@ -228,4 +215,3 @@ impl<'a, 'bump: 'a> RefNamed<'a> for &'a InnerMemoryCell<'bump> {
 //         unsafe { self.inner.as_ref() }
 //     }
 // }
-

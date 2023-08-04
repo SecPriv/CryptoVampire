@@ -23,4 +23,3 @@ impl<'bump> CheckError<'bump> {
         Self::SortError { position, error }
     }
 }
-

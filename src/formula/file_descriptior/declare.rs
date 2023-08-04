@@ -1,5 +1,5 @@
 use crate::{
-    container::{  utils::NameFinder, allocator::Container},
+    container::{allocator::Container, utils::NameFinder},
     formula::{
         function::{Function, InnerFunction},
         sort::Sort,
@@ -29,8 +29,7 @@ pub struct ConstructorDestructor<'bump> {
 
 impl<'bump> ConstructorDestructor<'bump> {
     pub fn new_unused(
-        container: &'bump (impl Container<'bump, InnerFunction<'bump>>
-                    + NameFinder<Function<'bump>>),
+        container: &'bump (impl Container<'bump, InnerFunction<'bump>> + NameFinder<Function<'bump>>),
         f: Function<'bump>,
     ) -> Self {
         Self {

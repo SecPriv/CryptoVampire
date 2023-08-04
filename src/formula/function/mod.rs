@@ -9,16 +9,14 @@ mod function;
 pub use function::{new_static_function, Function};
 
 // pub mod equality;
-use std::{hash::Hash};
+use std::hash::Hash;
 
 use bitflags::bitflags;
 use itertools::Itertools;
 
 // use crate::problem::step::Step;
 
-use crate::{
-    variants, variants_ref_try_into, CustomDerive,
-};
+use crate::{variants, variants_ref_try_into, CustomDerive};
 
 use self::inner::{
     booleans::Booleans,
@@ -29,13 +27,9 @@ use self::inner::{
     skolem::Skolem,
     step::StepFunction,
     subterm::Subterm,
-    term_algebra::{
-        TermAlgebra,
-    },
+    term_algebra::TermAlgebra,
     unused::Tmp,
 };
-
-
 
 use core::fmt::Debug;
 

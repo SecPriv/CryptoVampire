@@ -1,4 +1,3 @@
-
 use itertools::Itertools;
 
 use crate::{
@@ -11,13 +10,13 @@ use crate::{
             self,
             builtin::{IF_THEN_ELSE, IF_THEN_ELSE_TA, INPUT},
             inner::term_algebra::TermAlgebra,
-            signature::{Signature},
+            signature::Signature,
             traits::MaybeEvaluatable,
             Function,
         },
         sort::{
             builtins::{BOOL, CONDITION, MESSAGE, STEP},
-            sort_proxy::{SortProxy},
+            sort_proxy::SortProxy,
             Sort,
         },
         variable::Variable,

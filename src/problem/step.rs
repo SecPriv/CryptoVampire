@@ -1,29 +1,23 @@
 use core::fmt::Debug;
-use std::{
-    ops::Range,
-};
+use std::ops::Range;
 
 use itertools::Itertools;
 
 use crate::{
     assert_variance, asssert_trait,
-    container::{
-        allocator::{ContainerTools},
-        reference::{ Reference}, contained::Containable,
-    },
+    container::{allocator::ContainerTools, contained::Containable, reference::Reference},
     formula::{
         formula::{meq, RichFormula},
-        function::{
-            builtin::LESS_THAN_STEP,
-            Function,
-        },
+        function::{builtin::LESS_THAN_STEP, Function},
         sort::Sort,
         variable::Variable,
     },
     implderef, implvec,
     utils::{
         precise_as_ref::PreciseAsRef,
-        utils::{AlreadyInitialized,  MaybeInvalid}, traits::RefNamed, string_ref::StrRef,
+        string_ref::StrRef,
+        traits::RefNamed,
+        utils::{AlreadyInitialized, MaybeInvalid},
     },
 };
 
@@ -44,7 +38,7 @@ use crate::{
 // }
 
 pub type Step<'bump> = Reference<'bump, InnerStep<'bump>>;
-impl<'bump> Containable<'bump> for InnerStep<'bump>{}
+impl<'bump> Containable<'bump> for InnerStep<'bump> {}
 // #[derive(Hash, PartialEq, Eq, Clone, Copy)]
 // pub struct Step<'bump> {
 //     inner: NonNull<Option<InnerStep<'bump>>>,
@@ -63,7 +57,6 @@ pub struct InnerStep<'bump> {
     message: RichFormula<'bump>,
     function: Function<'bump>,
 }
-
 
 asssert_trait!(sync_send_step; InnerStep; Sync, Send);
 assert_variance!(Step);
@@ -283,7 +276,6 @@ impl<'bump> Step<'bump> {
     //     self.precise_as_ref()
     // }
 }
-
 
 impl<'a, 'bump: 'a> RefNamed<'a> for &'a InnerStep<'bump> {
     fn name_ref(&self) -> StrRef<'a> {

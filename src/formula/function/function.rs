@@ -1,15 +1,11 @@
-
-
-
 use itertools::Itertools;
 
-use crate::container::allocator::{ContainerTools};
+use crate::container::allocator::ContainerTools;
 use crate::container::contained::Containable;
 use crate::container::reference::Reference;
 use crate::container::utils::NameFinder;
 use crate::container::StaticContainer;
 use crate::force_lifetime;
-
 
 use crate::{
     assert_variance, asssert_trait,
@@ -70,7 +66,7 @@ pub type Function<'bump> = Reference<'bump, InnerFunction<'bump>>;
 //     container: PhantomData<&'bump ()>,
 // }
 
-impl<'bump> Containable<'bump> for InnerFunction<'bump>{}
+impl<'bump> Containable<'bump> for InnerFunction<'bump> {}
 
 asssert_trait!(sync_and_send; InnerFunction; Sync, Send);
 // assert_variance!(Function);
@@ -84,7 +80,6 @@ unsafe impl<'bump> Send for Function<'bump> {}
 //         unsafe { self.inner.as_ref() }
 //     }
 // }
-
 
 // pub type MFunction<'bump> = Reference<'bump, InnerFunction<'bump>>;
 
@@ -156,10 +151,7 @@ macro_rules! container {
 }
 
 impl<'bump> Function<'bump> {
-    pub fn new_from_inner(
-        container: container!(),
-        inner: InnerFunction<'bump>,
-    ) -> Self {
+    pub fn new_from_inner(container: container!(), inner: InnerFunction<'bump>) -> Self {
         // unsafe {
         //     let ptr = container.alloc();
         //     std::ptr::write(ptr.as_ptr(), inner);
@@ -197,10 +189,7 @@ impl<'bump> Function<'bump> {
         Self::new_predicate(container, sorts, "split")
     }
 
-    pub fn new_rewrite_function(
-        container: container!(nf),
-        sort: Sort<'bump>,
-    ) -> Self {
+    pub fn new_rewrite_function(container: container!(nf), sort: Sort<'bump>) -> Self {
         Self::new_predicate(container, [sort, sort], &format!("rewrite_{}", sort.name()))
     }
 
@@ -229,10 +218,7 @@ impl<'bump> Function<'bump> {
         // }
     }
 
-    pub fn new_unused_destructors(
-        container: container!(nf),
-        constructor: Self,
-    ) -> Vec<Self> {
+    pub fn new_unused_destructors(container: container!(nf), constructor: Self) -> Vec<Self> {
         assert!(constructor.is_term_algebra());
 
         let o_sort = constructor.fast_outsort().unwrap();
@@ -450,22 +436,27 @@ impl<'bump> Function<'bump> {
         //     })
         //     .unwrap();
 
-        let (eval, main) = container.alloc_cyclic_with_residual(|eval_fun| {
-                let main_fun: Function<'bump> = 
-                    container.alloc_inner(InnerFunction::TermAlgebra(TermAlgebra::Function(
-                    BaseFunction::Base(InnerBaseFunction {
+        let (eval, main) = container
+            .alloc_cyclic_with_residual(|eval_fun| {
+                let main_fun: Function<'bump> = container.alloc_inner(InnerFunction::TermAlgebra(
+                    TermAlgebra::Function(BaseFunction::Base(InnerBaseFunction {
                         name: name.to_string().into(),
                         args: input_sorts.into_iter().collect(),
                         out: output_sort,
                         eval_fun: *eval_fun,
-                    }),
-                )));
-        let InnerFunction::TermAlgebra(TermAlgebra::Function(base_main_fun)) = 
+                    })),
+                ));
+                let InnerFunction::TermAlgebra(TermAlgebra::Function(base_main_fun)) =
             main_fun.precise_as_ref() else {unreachable!()};
 
-        (InnerFunction::TermAlgebra(TermAlgebra::Function(BaseFunction::Eval(&base_main_fun))), main_fun)
-
-            }).unwrap();
+                (
+                    InnerFunction::TermAlgebra(TermAlgebra::Function(BaseFunction::Eval(
+                        &base_main_fun,
+                    ))),
+                    main_fun,
+                )
+            })
+            .unwrap();
         BaseFunctionTuple { main, eval }
     }
 

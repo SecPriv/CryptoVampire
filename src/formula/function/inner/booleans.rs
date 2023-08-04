@@ -1,6 +1,6 @@
 use crate::{
     formula::sort::{
-        builtins::{BOOL},
+        builtins::BOOL,
         sorted::{Sorted, SortedError},
         Sort,
     },

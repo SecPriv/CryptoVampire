@@ -1,4 +1,4 @@
-use std::{fmt::Display, hash::Hash, ops::Deref, borrow::Borrow};
+use std::{borrow::Borrow, fmt::Display, hash::Hash, ops::Deref};
 
 #[derive(Debug, Clone)]
 /// A boxed string that can also be a `&str`

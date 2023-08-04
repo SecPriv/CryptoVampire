@@ -1,15 +1,9 @@
-
-
-
-
 mod container;
 pub use container::{ScopedContainer, StaticContainer};
 pub mod allocator;
+pub mod contained;
 pub mod reference;
 pub mod utils;
-pub mod contained;
-
-
 
 // pub trait ScopeAllocator<'bump, T> {
 //     unsafe fn alloc(&'bump self) -> NonNull<T>;

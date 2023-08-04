@@ -1,4 +1,7 @@
-use std::{ops::{Deref, DerefMut}, convert::Infallible};
+use std::{
+    convert::Infallible,
+    ops::{Deref, DerefMut},
+};
 
 use thiserror::Error;
 
@@ -233,7 +236,9 @@ pub trait MaybeInvalid {
             } else {
                 Err(AccessToInvalidData::Error)
             }
-        } else { Ok(())}
+        } else {
+            Ok(())
+        }
     }
 }
 

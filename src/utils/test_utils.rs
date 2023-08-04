@@ -40,6 +40,11 @@ macro_rules! assert_variance {
 macro_rules! force_lifetime {
     ($t:ident, $long:lifetime) => {
         #[allow(dead_code)]
-        pub fn shorten_lifetime<'short>(&self) -> &$t<'short>  where $long:'short { self }
+        pub fn shorten_lifetime<'short>(&self) -> &$t<'short>
+        where
+            $long: 'short,
+        {
+            self
+        }
     };
 }

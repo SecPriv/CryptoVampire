@@ -5,14 +5,16 @@ use super::{allocator::Container, reference::Reference};
 pub trait Containable<'bump> {}
 
 pub trait Contained<'bump>: 'bump + Sized {
-    type Pointer<'a> :Sized
+    type Pointer<'a>: Sized
     where
         'bump: 'a;
 
     fn ptr_from_ref<'a>(ptr: &'bump Option<Self>) -> Self::Pointer<'a>
     where
         'bump: 'a;
-    fn ptr_to_ref<'a>(ptr: &Self::Pointer<'bump>) -> &'a Option<Self> where 'bump:'a;
+    fn ptr_to_ref<'a>(ptr: &Self::Pointer<'bump>) -> &'a Option<Self>
+    where
+        'bump: 'a;
 
     fn new_ptr_uninit<'a, C>(container: &'bump C) -> Self::Pointer<'a>
     where
@@ -30,8 +32,9 @@ pub trait Contained<'bump>: 'bump + Sized {
         Self::ptr_from_ref(container.allocate_inner(content))
     }
 
-    fn maybe_precise_as_ref(ptr: &Self::Pointer<'bump>) -> Result<&'bump Self, AccessToInvalidData>
-    {
+    fn maybe_precise_as_ref(
+        ptr: &Self::Pointer<'bump>,
+    ) -> Result<&'bump Self, AccessToInvalidData> {
         // self.to_ref().as_ref().ok_or(AccessToInvalidData::Error)
         Self::ptr_to_ref(ptr)
             .as_ref()
@@ -39,11 +42,10 @@ pub trait Contained<'bump>: 'bump + Sized {
     }
 
     /// initialize via inner mutability
-    unsafe fn initialize_with< 'b>(
+    unsafe fn initialize_with<'b>(
         ptr: &'b Self::Pointer<'bump>,
         content: Self,
-    ) -> Result<&'b Self::Pointer<'bump>, AlreadyInitialized>
-    {
+    ) -> Result<&'b Self::Pointer<'bump>, AlreadyInitialized> {
         if Self::is_ptr_valid(ptr) {
             let nn_ptr = Self::ptr_to_ref(ptr) as *const _ as *mut Option<Self>;
             core::ptr::drop_in_place(nn_ptr);
@@ -65,14 +67,17 @@ where
 {
     type Pointer<'a> = Reference<'a, Self> where 'bump: 'a;
 
-    fn ptr_from_ref<'a>(ptr: &'bump Option<Self>) -> Self::Pointer<'a> //Self::Pointer<'a>
+    fn ptr_from_ref<'a>(ptr: &'bump Option<Self>) -> Self::Pointer<'a>
+    //Self::Pointer<'a>
     where
         'bump: 'a,
     {
         ptr.into()
     }
 
-    fn ptr_to_ref<'a>(ptr: &Self::Pointer<'bump>) -> &'a Option<Self> where 'bump:'a
+    fn ptr_to_ref<'a>(ptr: &Self::Pointer<'bump>) -> &'a Option<Self>
+    where
+        'bump: 'a,
     {
         ptr.as_option_ref()
     }

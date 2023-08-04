@@ -8,10 +8,12 @@ use std::{fmt::Display, hash::Hash};
 
 use crate::{
     container::{
-        ScopedContainer, StaticContainer, reference::Reference, contained::Containable, allocator::ContainerTools,
+        allocator::ContainerTools, contained::Containable, reference::Reference, ScopedContainer,
+        StaticContainer,
     },
     environement::traits::{KnowsRealm, Realm},
-    utils::{precise_as_ref::PreciseAsRef, traits::RefNamed, string_ref::StrRef}, force_lifetime,
+    force_lifetime,
+    utils::{precise_as_ref::PreciseAsRef, string_ref::StrRef, traits::RefNamed},
 };
 
 bitflags! {
@@ -31,7 +33,7 @@ bitflags! {
 
 pub type Sort<'bump> = Reference<'bump, InnerSort<'bump>>;
 
-impl<'bump> Containable<'bump> for InnerSort<'bump>{}
+impl<'bump> Containable<'bump> for InnerSort<'bump> {}
 
 unsafe impl<'bump> Sync for Sort<'bump> {}
 unsafe impl<'bump> Send for Sort<'bump> {}
@@ -125,7 +127,10 @@ impl<'a> Sort<'a> {
         self.precise_as_ref().as_ref()
     }
 
-    pub fn as_sort<'b>(&self) -> Sort<'b> where 'a:'b {
+    pub fn as_sort<'b>(&self) -> Sort<'b>
+    where
+        'a: 'b,
+    {
         *self
     }
 
@@ -179,7 +184,6 @@ impl<'bump> AsRef<HiddenSort<'bump>> for InnerSort<'bump> {
 //         unsafe { self.inner.as_ref() }
 //     }
 // }
-
 
 // impl<'bump> PreciseAsRef<'bump, InnerSort<'bump>> for Sort<'bump> {
 //     fn precise_as_ref(&self) -> &'bump InnerSort<'bump> {

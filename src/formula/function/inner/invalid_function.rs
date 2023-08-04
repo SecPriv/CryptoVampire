@@ -1,5 +1,3 @@
-
-
 use super::super::{
     signature::FixedRefSignature,
     traits::{MaybeEvaluatable, MaybeFixedSignature},

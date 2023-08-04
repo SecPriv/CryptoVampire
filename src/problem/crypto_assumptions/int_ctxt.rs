@@ -216,7 +216,9 @@ impl<'bump> IntCtxt<'bump> {
                 let u_var = Variable::new(max_var, MESSAGE.as_sort());
                 let u_f = u_var.into_formula();
                 let r_var = Variable::new(max_var + 1, NONCE.as_sort());
-                let r_f = pbl.name_caster.cast(MESSAGE.as_sort(), r_var.into_formula());
+                let r_f = pbl
+                    .name_caster
+                    .cast(MESSAGE.as_sort(), r_var.into_formula());
                 let _max_var = max_var + 2;
 
                 let k_sc = side_condition
