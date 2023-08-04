@@ -9,6 +9,7 @@ use crate::container::reference::Reference;
 use crate::container::utils::NameFinder;
 use crate::container::StaticContainer;
 use crate::force_lifetime;
+use crate::utils::traits::RefNamed;
 use crate::utils::utils::MaybeInvalid;
 use crate::{
     assert_variance, asssert_trait,

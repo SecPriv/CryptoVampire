@@ -1,4 +1,4 @@
-use std::{fmt::Display, hash::Hash, ops::Deref};
+use std::{fmt::Display, hash::Hash, ops::Deref, borrow::Borrow};
 
 #[derive(Debug, Clone)]
 /// A boxed string that can also be a `&str`
@@ -88,6 +88,12 @@ impl<'a> Deref for StrRef<'a> {
     type Target = str;
 
     fn deref(&self) -> &Self::Target {
+        self.as_ref()
+    }
+}
+
+impl<'a> Borrow<str> for StrRef<'a> {
+    fn borrow(&self) -> &str {
         self.as_ref()
     }
 }

@@ -41,10 +41,10 @@ impl<T> DerefMut for StackBox<T> {
     }
 }
 
-pub(crate) fn reset_vec<'a, 'b, T>(v: &'a mut Vec<*const T>) -> &'a mut Vec<&'b T> {
-    v.clear();
-    unsafe { std::mem::transmute(v) }
-}
+// pub(crate) fn reset_vec<'a, 'b, T>(v: &'a mut Vec<*const T>) -> &'a mut Vec<&'b T> {
+//     v.clear();
+//     unsafe { std::mem::transmute(v) }
+// }
 
 pub(crate) fn transpose<A: Eq + Clone, B: Eq>(vec: Vec<(A, Vec<B>)>) -> Vec<(B, Vec<A>)> {
     let mut result = vec![];

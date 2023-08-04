@@ -12,7 +12,7 @@ use crate::{
         ScopedContainer, StaticContainer, reference::Reference, contained::Containable, allocator::ContainerTools,
     },
     environement::traits::{KnowsRealm, Realm},
-    utils::precise_as_ref::PreciseAsRef, force_lifetime,
+    utils::{precise_as_ref::PreciseAsRef, traits::RefNamed, string_ref::StrRef}, force_lifetime,
 };
 
 bitflags! {
@@ -246,4 +246,10 @@ pub fn new_static_sort(
     // }
     // Sort::new_from(&StaticContainer, inner)
     StaticContainer.alloc_inner(inner)
+}
+
+impl<'a, 'bump: 'a> RefNamed<'a> for &'a InnerSort<'bump> {
+    fn name_ref(&self) -> StrRef<'a> {
+        self.inner.name.as_str().into()
+    }
 }

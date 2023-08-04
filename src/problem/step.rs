@@ -28,7 +28,7 @@ use crate::{
     implderef, implvec,
     utils::{
         precise_as_ref::PreciseAsRef,
-        utils::{AccessToInvalidData, AlreadyInitialized,  MaybeInvalid},
+        utils::{AccessToInvalidData, AlreadyInitialized,  MaybeInvalid}, traits::RefNamed, string_ref::StrRef,
     },
 };
 
@@ -287,6 +287,13 @@ impl<'bump> Step<'bump> {
     // pub fn as_inner(&self) -> &InnerStep<'bump> {
     //     self.precise_as_ref()
     // }
+}
+
+
+impl<'a, 'bump: 'a> RefNamed<'a> for &'a InnerStep<'bump> {
+    fn name_ref(&self) -> StrRef<'a> {
+        self.name.as_str().into()
+    }
 }
 
 // impl<'bump> PreciseAsRef<'bump, IInnerStep<'bump>> for Step<'bump> {

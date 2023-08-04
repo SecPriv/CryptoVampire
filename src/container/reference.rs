@@ -7,19 +7,21 @@ use itertools::Itertools;
 
 use crate::utils::{
     precise_as_ref::PreciseAsRef,
+    string_ref::StrRef,
+    traits::RefNamed,
     utils::{AccessToInvalidData, AlreadyInitialized, MaybeInvalid},
 };
 
 use super::{
     allocator::{Container, ContainerTools},
-    contained::{Contained, Containable},
+    contained::{Containable, Contained},
 };
 
 // pub type RefPointee<'bump, R> = Option<<R as Reference<'bump>>::Inner>;
 // pub type RefInner<'bump, R> = <R as Reference<'bump>>::Inner;
 
 #[derive(PartialEq, Eq)]
-pub struct Reference<'bump, T>  {
+pub struct Reference<'bump, T> {
     inner: NonNull<Option<T>>,
     lt: PhantomData<&'bump ()>,
 }
@@ -64,7 +66,7 @@ impl<'bump, T: Ord> Ord for Reference<'bump, T> {
     }
 }
 
-impl<'bump, T:PartialOrd> PartialOrd for Reference<'bump, T> {
+impl<'bump, T: PartialOrd> PartialOrd for Reference<'bump, T> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         if self == other {
             Some(Ordering::Equal)
@@ -109,5 +111,14 @@ impl<'bump, T> Copy for Reference<'bump, T> {}
 impl<'bump, T: Hash> Hash for Reference<'bump, T> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.as_option_ref().hash(state);
+    }
+}
+
+impl<'a, 'bump: 'a, T> RefNamed<'a> for Reference<'bump, T>
+where
+    &'bump T: RefNamed<'bump> + 'bump,
+{
+    fn name_ref(&self) -> StrRef<'a> {
+        self.precise_as_ref().name_ref()
     }
 }

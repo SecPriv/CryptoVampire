@@ -18,7 +18,7 @@ use crate::{
     },
     implderef, implvec,
     utils::{
-        precise_as_ref::PreciseAsRef,
+        precise_as_ref::PreciseAsRef, traits::RefNamed, string_ref::StrRef,
     },
 };
 use core::fmt::Debug;
@@ -198,6 +198,12 @@ impl<'bump> MemoryCell<'bump> {
 
     pub fn assignements(&self) -> &'bump Vec<Assignement<'bump>> {
         &self.precise_as_ref().assignements
+    }
+}
+
+impl<'a, 'bump: 'a> RefNamed<'a> for &'a InnerMemoryCell<'bump> {
+    fn name_ref(&self) -> StrRef<'a> {
+        self.name.as_str().into()
     }
 }
 
