@@ -186,7 +186,7 @@ macro_rules! destvec {
 /// ```
 #[macro_export]
 macro_rules! match_as_trait {
-    ($e:expr => {$($($pat:pat_param)|+ => $b:block),*}) => {
+    ($e:expr => {$($($pat:pat_param)|+ => $b:block),*$(,)?} ) => {
         match $e {
             $(
                 $(

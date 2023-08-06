@@ -8,8 +8,10 @@ use super::{
         sort::sorted::SortedError,
         variable::Variable,
     },
-    substitution::variable_substitution::{OneVarSubst, OneVarSubstF, OwnedVarSubstF},
-    OwnedVarSubst, Substitution,
+    substitution::variable_substitution::{
+        OneVarSubst, OneVarSubstF, OwnedVarSubst, OwnedVarSubstF,
+    },
+    Substitution,
 };
 
 #[derive(Debug, Clone)]
@@ -44,8 +46,8 @@ where
     ///
     /// It returns an error if it can't deduce the sort of one of the variables or if a variables is used on the left *and* the right
     pub fn as_equalities(&'_ self) -> Result<Vec<RichFormula<'bump>>, UnifierAsEqualityErr> {
-        let left = &self.left.field1;
-        let right = &self.right.field1;
+        let left = &self.left.subst;
+        let right = &self.right.subst;
 
         {
             // ensure there is no colisions of variables
@@ -214,11 +216,11 @@ where
 
     pub fn is_unifying_to_variable(&self) -> Option<OneVarSubstF<'_, 'bump>> {
         if_chain! {
-            if self.left.field1.is_empty();
-            if self.right.field1.len() == 1;
+            if self.left.subst.is_empty();
+            if self.right.subst.len() == 1;
             // if let Some(ovs) = self.right.field1.first();
             then {
-                self.right.field1.first().cloned()
+                self.right.subst.first().cloned()
             } else {
                 None
             }
@@ -264,6 +266,6 @@ where
     }
 
     pub fn vars<'b: 'bump>(&'b self) -> impl Iterator<Item = usize> + 'b {
-        self.subst.field1.iter().map(OneVarSubst::id)
+        self.subst.subst.iter().map(OneVarSubst::id)
     }
 }

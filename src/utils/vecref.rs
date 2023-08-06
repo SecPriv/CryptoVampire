@@ -24,6 +24,12 @@ pub enum VecRef<'a, T> {
     Empty,
 }
 
+impl<'a, T> Default for VecRef<'a, T> {
+    fn default() -> Self {
+        Self::Empty
+    }
+}
+
 impl<'a, T> VecRef<'a, T> {
     pub fn len(&self) -> usize {
         match self {
@@ -147,6 +153,19 @@ impl<'a, 'b, T> Iterator for IterVecRef<'a, 'b, T> {
             IterVecRef::Empty => (0, Some(0)),
         }
     }
+
+    fn collect<B: FromIterator<Self::Item>>(self) -> B
+    where
+        Self: Sized,
+    {
+        match self {
+            Self::OwnedVec(v) => B::from_iter(v),
+            Self::Vec(v) => B::from_iter(v),
+            Self::Ref(v) => B::from_iter(v.cloned()),
+            Self::Single(v) => Some(v).into_iter().collect(),
+            Self::Empty => None.into_iter().collect(),
+        }
+    }
 }
 
 impl<'a, 'b, T> FusedIterator for IterVecRef<'a, 'b, T> {}
@@ -240,6 +259,12 @@ impl<'a, T: Clone> VecRefClone<'a, T> {
     }
 }
 
+impl<'a, T: Clone> Default for VecRefClone<'a, T> {
+    fn default() -> Self {
+        Self::VecRef(Default::default())
+    }
+}
+
 impl<'a, T: Clone> Index<usize> for VecRefClone<'a, T> {
     type Output = T;
 
@@ -304,6 +329,16 @@ where
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         match_as_trait!(self => {Self::VecRef(x) | Self::Vec(x) => {x.size_hint()}})
+    }
+
+    fn collect<B: FromIterator<Self::Item>>(self) -> B
+    where
+        Self: Sized,
+    {
+        match self {
+            Self::VecRef(x) => B::from_iter(x.cloned()),
+            Self::Vec(x) => B::from_iter(x),
+        }
     }
 }
 
