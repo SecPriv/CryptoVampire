@@ -3,11 +3,12 @@
 use crate::{
     assert_variance, asssert_trait,
     container::{allocator::ContainerTools, contained::Containable, reference::Reference},
-    formula::{formula::RichFormula, function::Function, sort::Sort},
+    formula::{formula::{RichFormula, ARichFormula}, function::Function, sort::Sort},
     implderef, implvec,
     utils::{precise_as_ref::PreciseAsRef, string_ref::StrRef, traits::RefNamed},
 };
 use core::fmt::Debug;
+use std::sync::Arc;
 
 use super::step::Step;
 
@@ -95,8 +96,8 @@ pub struct Assignement<'bump> {
     /// all the relevant arguments, this means it doesn't have the last `step` argument
     ///
     /// `args.len() == InnerMemoryCell::args.len()`
-    pub args: Vec<RichFormula<'bump>>,
-    pub content: RichFormula<'bump>,
+    pub args: Arc<[ARichFormula<'bump>]>,
+    pub content: ARichFormula<'bump>,
 }
 
 impl<'bump> MemoryCell<'bump> {

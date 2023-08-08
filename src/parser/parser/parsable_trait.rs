@@ -5,7 +5,7 @@ use crate::{
     f,
     formula::{
         self,
-        formula::RichFormula,
+        formula::{ARichFormula, RichFormula},
         function::{
             self,
             builtin::{IF_THEN_ELSE, IF_THEN_ELSE_TA, INPUT},
@@ -64,7 +64,7 @@ where
 }
 
 impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::LetIn<'a> {
-    type R = RichFormula<'bump>;
+    type R = ARichFormula<'bump>;
 
     fn parse(
         &self,
@@ -98,11 +98,11 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::LetIn<'a> {
         };
 
         // replace `v` by its content: `t1`
-        Ok(t2.apply_substitution([vn], [&t1]))
+        Ok(t2.owned_into_inner().apply_substitution([vn], [&t1]).into())
     }
 }
 impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::IfThenElse<'a> {
-    type R = RichFormula<'bump>;
+    type R = ARichFormula<'bump>;
 
     fn parse(
         &self,
@@ -143,12 +143,12 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::IfThenElse<'a> {
             Realm::Evaluated => IF_THEN_ELSE.clone(),
             Realm::Symbolic => IF_THEN_ELSE_TA.clone(),
         }
-        .f([condition, left, right]))
+        .f_a([condition, left, right]))
     }
 }
 
 impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
-    type R = RichFormula<'bump>;
+    type R = ARichFormula<'bump>;
 
     fn parse(
         &self,
@@ -239,13 +239,13 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
             Function::new_find_such_that(env.container, vars, condition, left, right);
 
         Ok(match state.get_realm() {
-            Realm::Symbolic => f.f(fvars.into_iter().map(RichFormula::from)),
+            Realm::Symbolic => f.f_a(fvars.iter()),
             _ => todo!(),
         })
     }
 }
 impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Quantifier<'a> {
-    type R = RichFormula<'bump>;
+    type R = ARichFormula<'bump>;
 
     fn parse(
         &self,
@@ -308,7 +308,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Quantifier<'a> {
                 Ok(var)
             })
             .collect();
-        let vars = vars?;
+        let vars = vars?.into();
 
         // parse body
         let content = content.parse(env, bvars, state, Some(es.into()))?;
@@ -334,10 +334,9 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Quantifier<'a> {
         };
 
         Ok(match state.get_realm() {
-            Realm::Evaluated => RichFormula::Quantifier(q, Box::new(content)),
+            Realm::Evaluated => RichFormula::Quantifier(q, content).into(),
             Realm::Symbolic => {
-                let fq =
-                    Function::new_quantifier_from_quantifier(env.container, q, Box::new(content));
+                let fq = Function::new_quantifier_from_quantifier(env.container, q, content);
 
                 let args = match fq.as_inner() {
                     function::InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q)) => {
@@ -345,15 +344,15 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Quantifier<'a> {
                     }
                     _ => unreachable!(),
                 }
-                .map(RichFormula::from);
+                .map(ARichFormula::from);
 
-                fq.f(args)
+                fq.f_a(args)
             }
         })
     }
 }
 impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Application<'a> {
-    type R = RichFormula<'bump>;
+    type R = ARichFormula<'bump>;
 
     fn parse(
         &self,
@@ -406,7 +405,7 @@ fn parse_application<'b, 'a, 'bump: 'a>(
     expected_sort: Option<SortProxy<'bump>>,
     function: Function<'bump>,
     args: implvec!(&'b ast::Term<'a>),
-) -> Result<RichFormula<'bump>, E> {
+) -> Result<ARichFormula<'bump>, E> {
     // get the evaluated version if needed
     let f = match state.get_realm() {
         Realm::Evaluated => function
@@ -447,11 +446,11 @@ fn parse_application<'b, 'a, 'bump: 'a>(
         ));
     }
 
-    Ok(f.f(n_args))
+    Ok(f.f_a(n_args))
 }
 
 impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::AppMacro<'a> {
-    type R = RichFormula<'bump>;
+    type R = ARichFormula<'bump>;
 
     fn parse(
         &self,
@@ -469,7 +468,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::AppMacro<'a> {
             ast::InnerAppMacro::Msg(app) | ast::InnerAppMacro::Cond(app) => {
                 let step_as_term = app.parse(env, bvars, state, Some(STEP.as_sort().into()))?;
 
-                let args = if let RichFormula::Fun(_, args) = &step_as_term {
+                let args = if let RichFormula::Fun(_, args) = step_as_term.as_ref() {
                     Ok(args)
                 } else {
                     err(
@@ -529,8 +528,11 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::AppMacro<'a> {
 
                 let term = to_parse.parse(env, &mut nbvars, state, Some(n_es.into()))?;
 
-                let input = INPUT.f([step_as_term.clone()]);
-                Ok(term.apply_substitution(0..=n, [&input].into_iter().chain(args)))
+                let input = INPUT.f_a([step_as_term.clone()]);
+                Ok(term
+                    .owned_into_inner()
+                    .apply_substitution(0..=n, [input].iter().chain(args.iter()))
+                    .into())
             }
             ast::InnerAppMacro::Other { name, args } => {
                 let mmacro = env
@@ -565,13 +567,16 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::AppMacro<'a> {
                     mmacro.content.parse(env, &mut bvars, state, expected_sort)
                 }?;
 
-                Ok(term.apply_substitution(mmacro.args.iter().map(|(_, v)| v.id), &args))
+                Ok(term
+                    .owned_into_inner()
+                    .apply_substitution(mmacro.args.iter().map(|(_, v)| v.id), &args)
+                    .into())
             }
         }
     }
 }
 impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
-    type R = RichFormula<'bump>;
+    type R = ARichFormula<'bump>;
 
     fn parse(
         &self,
@@ -589,7 +594,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
     }
 }
 impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Term<'a> {
-    type R = RichFormula<'bump>;
+    type R = ARichFormula<'bump>;
 
     fn parse(
         &self,

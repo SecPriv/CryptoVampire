@@ -7,7 +7,7 @@ use crate::{
     environement::environement::Environement,
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
-        formula::{meq, RichFormula},
+        formula::{self, meq, ARichFormula, RichFormula},
         function::inner::{subterm::Subsubterm, term_algebra::name::NameCaster},
         function::Function,
         sort::{
@@ -27,7 +27,7 @@ use crate::{
             Subterm,
         },
     },
-    utils::vecref::VecRef,
+    utils::{arc_into_iter::ArcIntoIter, vecref::VecRef},
 };
 
 pub type SubtermIntCtxtMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
@@ -114,17 +114,17 @@ impl<'bump> IntCtxt<'bump> {
             assertions.push(Axiom::base(
                 mforall!(c!1:message_sort, k!3:nonce_sort; {
                     let k_f = nc.cast(message_sort, k.clone());
-                    ev.eval(self.verify.f([c.clone(), k_f.clone()])) >>
+                    ev.eval(self.verify.f([c.into(), k_f.clone()])) >>
                     mexists!(m!4:message_sort, r!5:nonce_sort; {
                         let r_f = nc.cast(message_sort, r.clone());
-                        let c2 = self.enc.f([m.clone(), r_f.clone(), k_f.clone()]);
-                        meq(ev.eval(c.clone()), ev.eval(c2.clone())) &
+                        let c2 = self.enc.f_a([m.into(), r_f.clone(), k_f.clone()]);
+                        meq(ev.eval(c), ev.eval(c2.clone())) &
                         (
-                            subterm_main.f( c2.clone(), c.clone()) |
-                            subterm_key.f( k.clone(), c.clone()) |
-                            subterm_rand.f(r.clone(), c.clone()) |
+                            subterm_main.f_a( c2.clone(), c.into()) |
+                            subterm_key.f_a( k, c) |
+                            subterm_rand.f_a(r, c) |
                             (mexists!(m2!6:message_sort, k2!7:message_sort, r2!8:message_sort; {
-                                subterm_main.f(self.enc.f([m2.clone(), r2.clone(), k.clone()]), c.clone())
+                                subterm_main.f_a(self.enc.f_a([m2.clone(), r2.clone(), k.into()]), c.into())
                                 & (
                                     (mforall!(n!9:nonce_sort; {!meq(r2.clone(), nc.cast(message_sort, n))})) |
                                     ( meq(r2, r_f.clone()) &
@@ -144,22 +144,22 @@ impl<'bump> IntCtxt<'bump> {
         pbl: &'a Problem<'bump>,
         subterm_main: &'a Subterm<'bump, impl SubtermAux<'bump>>,
         subterm_key: &'a Subterm<'bump, impl SubtermAux<'bump>>,
-    ) -> impl Iterator<Item = RichFormula<'bump>> + 'a {
+    ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
         let mut side_condition = true;
         let max_var = pbl.max_var();
         // let pile1 = RefCell::new(Vec::new());
         let pile2 = RefCell::new(Vec::new());
         let candidates_verif = pbl
             .list_top_level_terms()
-            .flat_map(move |f| f.iter()) // sad...
-            .filter_map(|formula| match formula {
+            .flat_map(move |f:&ARichFormula<'bump>| f.iter()) // sad...
+            .filter_map(|formula| match formula.as_ref() {
                 RichFormula::Fun(fun, args) => {
                     if_chain! {
                         if fun == &self.verify;
-                        if let RichFormula::Fun(nf, args2) = &args[1];
+                        if let RichFormula::Fun(nf, args2) = args[1].as_ref();
                         if nf == pbl.name_caster.cast_function(&MESSAGE.as_sort()).unwrap();
                         then {
-                            Some(IntCtxtVerifCandidates {cipher: &args[0],  key: &args2[0]})
+                            Some(IntCtxtVerifCandidates {cipher: args[0].shallow_copy(),  key: args2[0].shallow_copy()})
                         } else {None}
                     }
                 }
@@ -171,17 +171,17 @@ impl<'bump> IntCtxt<'bump> {
         let candidates_enc = pbl
             .list_top_level_terms()
             .flat_map(move |f| f.iter()) // sad...
-            .filter_map(|formula| match formula {
+            .filter_map(|formula| match formula.as_ref() {
                 RichFormula::Fun(fun, args) => {
                     if fun == &self.enc {
                         if_chain! {
-                            if let RichFormula::Fun(nf, args2) = &args[1];
+                            if let RichFormula::Fun(nf, args2) = args[1].as_ref();
                             if nf == pbl.name_caster.cast_function(&MESSAGE.as_sort()).unwrap();
                             then {
                                 Some(IntCtxtEncCandidates {
-                                        message: &args[0],
-                                        key: &args[2],
-                                        rand: &args2[0],
+                                        message: args[0].shallow_copy(),
+                                        key: args[2].shallow_copy(),
+                                        rand: args2[0].shallow_copy(),
                                     })
                             } else {
                                 side_condition = false;
@@ -200,21 +200,21 @@ impl<'bump> IntCtxt<'bump> {
 
         let candidates = candidates_verif.into_iter().filter_map(
             move |IntCtxtVerifCandidates { cipher, key }| {
-                let array = [cipher, key];
+                let array = [&cipher, &key];
                 let max_var = array
                     .iter()
                     .flat_map(|f| f.used_variables_iter_with_pile(pile2.borrow_mut()))
-                    .map(|Variable { id, .. }| *id)
+                    .map(|Variable { id, .. }| id)
                     .max()
                     .unwrap_or(max_var)
                     + 1;
                 let free_vars = array
                     .iter()
                     .flat_map(|f| f.get_free_vars().into_iter())
-                    .cloned()
+                    // .cloned()
                     .unique();
                 let u_var = Variable::new(max_var, MESSAGE.as_sort());
-                let u_f = u_var.into_formula();
+                let u_f = u_var.into_aformula();
                 let r_var = Variable::new(max_var + 1, NONCE.as_sort());
                 let r_f = pbl
                     .name_caster
@@ -225,10 +225,11 @@ impl<'bump> IntCtxt<'bump> {
                     && subterm_key
                         .preprocess_terms(
                             &pbl.protocol,
-                            key,
+                            &key,
                             pbl.protocol
                                 .list_top_level_terms_short_lifetime()
-                                .chain([cipher].into_iter()),
+                                .chain([&cipher])
+                                .cloned(),
                             false,
                             DeeperKinds::NO_MACROS,
                         )
@@ -236,12 +237,12 @@ impl<'bump> IntCtxt<'bump> {
                         .is_none();
                 if k_sc {
                     let k_f = pbl.name_caster.cast(MESSAGE.as_sort(), key.clone());
-                    let n_c_f = self.enc.f([u_f.clone(), r_f.clone(), k_f.clone()]);
+                    let n_c_f = self.enc.f_a([u_f.clone(), r_f.clone(), k_f.clone()]);
 
                     let disjunction = subterm_main.preprocess_terms(
                         &pbl.protocol,
                         &n_c_f,
-                        [cipher],
+                        [cipher.shallow_copy()],
                         true,
                         DeeperKinds::all(),
                     );
@@ -255,22 +256,23 @@ impl<'bump> IntCtxt<'bump> {
                                     .iter()
                                     .chain(message.get_free_vars().iter())
                                     .chain(key.get_free_vars().iter())
-                                    .map(|v: &&Variable<'bump>| **v)
+                                    // .map(|v: &&Variable<'bump>| **v)
                                     .unique()
+                                    .cloned()
                                     .collect_vec();
                                 mforall!(vars, {
-                                    meq(r_var.into_formula(), RichFormula::clone(rand))
-                                        >> (meq(RichFormula::clone(message), u_f.clone())
-                                            & meq(RichFormula::clone(key), k_f.clone()))
+                                    meq(r_var, rand.shallow_copy())
+                                        >> (meq(message.shallow_copy(), u_f.clone())
+                                            & meq(key.shallow_copy(), k_f.clone()))
                                 })
                             });
 
                     Some(mforall!(free_vars, {
                         pbl.evaluator
                             .eval(self.verify.f([cipher.clone(), k_f.clone()]))
-                            & mforall!([r_var], { RichFormula::ands(other_sc) })
+                            & mforall!([r_var], { formula::ands(other_sc) })
                                 >> mexists!([u_var, r_var], {
-                                    RichFormula::ors(disjunction)
+                                    formula::ors(disjunction)
                                         & meq(
                                             pbl.evaluator.eval(cipher.clone()),
                                             pbl.evaluator.eval(n_c_f),
@@ -319,16 +321,16 @@ fn define_subterm<'bump>(
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct IntCtxtVerifCandidates<'a, 'bump> {
-    cipher: &'a RichFormula<'bump>,
-    key: &'a RichFormula<'bump>,
+struct IntCtxtVerifCandidates<'bump> {
+    cipher: ARichFormula<'bump>,
+    key: ARichFormula<'bump>,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct IntCtxtEncCandidates<'a, 'bump> {
-    rand: &'a RichFormula<'bump>,
-    message: &'a RichFormula<'bump>,
-    key: &'a RichFormula<'bump>,
+struct IntCtxtEncCandidates<'bump> {
+    rand: ARichFormula<'bump>,
+    message: ARichFormula<'bump>,
+    key: ARichFormula<'bump>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -338,50 +340,45 @@ pub struct KeyAux<'bump> {
 }
 
 impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
-    type IntoIter<'a> = VecRef<'a, RichFormula<'bump>>
-    where
-        'bump: 'a;
+    type IntoIter = ArcIntoIter<ARichFormula<'bump>>;
 
     fn sort(&self) -> Sort<'bump> {
         NONCE.clone()
     }
 
-    fn var_eval_and_next<'a>(
+    fn var_eval_and_next(
         &self,
-        m: &'a RichFormula<'bump>,
-    ) -> VarSubtermResult<'a, 'bump, Self::IntoIter<'a>>
-    where
-        'bump: 'a,
-    {
-        let nexts = match m {
+        m: &ARichFormula<'bump>,
+    ) -> VarSubtermResult<'bump, Self::IntoIter> {
+        let nexts = match m.as_ref() {
             RichFormula::Fun(fun, args) => 'function: {
                 if_chain! {
                     if fun == &self.int_ctxt.dec;
-                    if let RichFormula::Fun(nf, _) = &args[1];
+                    if let RichFormula::Fun(nf, _) = args[1].as_ref();
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
-                        break 'function [&args[0]].into() // can't be the subterm of another nonce
+                        break 'function [args[0].shallow_copy()].into() // can't be the subterm of another nonce
                     }
                 }
                 if_chain! {
                     if fun == &self.int_ctxt.verify;
-                    if let RichFormula::Fun(nf, _) = &args[1];
+                    if let RichFormula::Fun(nf, _) = args[1].as_ref();
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
-                        break 'function [&args[0]].into() // can't be the subterm of another nonce
+                        break 'function [args[0].shallow_copy()].into() // can't be the subterm of another nonce
                     }
                 }
                 if_chain! {
                     if fun == &self.int_ctxt.enc;
-                    if let RichFormula::Fun(nf, _) = &args[2];
+                    if let RichFormula::Fun(nf, _) = args[2].as_ref();
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
-                        break 'function [&args[0], &args[1]].into() // can't be the subterm of another nonce
+                        break 'function [&args[0], &args[1]].map(|x| x.shallow_copy()).into() // can't be the subterm of another nonce
                     }
                 }
-                VecRef::Ref(args)
+                args.into()
             }
-            _ => VecRef::Empty,
+            _ => [].into(),
         };
 
         let m_sort = m.get_sort();
@@ -434,34 +431,29 @@ pub struct RandAux<'bump> {
 }
 
 impl<'bump> SubtermAux<'bump> for RandAux<'bump> {
-    type IntoIter<'a> = VecRef<'a, RichFormula<'bump>>
-    where
-        'bump: 'a;
+    type IntoIter = ArcIntoIter<ARichFormula<'bump>>;
 
     fn sort(&self) -> Sort<'bump> {
         NONCE.clone()
     }
 
-    fn var_eval_and_next<'a>(
+    fn var_eval_and_next(
         &self,
-        m: &'a RichFormula<'bump>,
-    ) -> VarSubtermResult<'a, 'bump, Self::IntoIter<'a>>
-    where
-        'bump: 'a,
-    {
-        let nexts = match m {
+        m: &ARichFormula<'bump>,
+    ) -> VarSubtermResult<'bump, Self::IntoIter> {
+        let nexts = match m.as_ref() {
             RichFormula::Fun(fun, args) => 'function: {
                 if_chain! {
                     if fun == &self.int_ctxt.enc;
-                    if let RichFormula::Fun(nf, _args2) = &args[1];
+                    if let RichFormula::Fun(nf, _args2) = args[1].as_ref();
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
-                        break 'function [&args[0], &args[2]].into() // can't be the subterm of another nonce
+                        break 'function [&args[0], &args[2]].map(|x| x.shallow_copy()).into() // can't be the subterm of another nonce
                     }
                 }
-                VecRef::Ref(args)
+                args.into()
             }
-            _ => VecRef::Empty,
+            _ => [].into(),
         };
 
         let m_sort = m.get_sort();

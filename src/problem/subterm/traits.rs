@@ -1,52 +1,54 @@
+use std::sync::Arc;
+
 use crate::{
-    formula::{formula::RichFormula, sort::Sort, manipulation::Unifier, variable::Variable},
-    utils::vecref::VecRef,
+    formula::{
+        formula::{ARichFormula, RichFormula},
+        manipulation::Unifier,
+        sort::Sort,
+        variable::Variable,
+    },
+    utils::{
+        arc_into_iter::{ArcIntoIter, ClonableArc},
+        vecref::VecRef,
+    },
 };
 
 // use self::possibly_empty::PE;
 
 #[derive(Debug, Clone)]
-pub struct SubtermResult<'a, 'b, 'bump, I>
+pub struct SubtermResult<'bump, I>
 where
-    I: IntoIterator<Item = &'b RichFormula<'bump>>,
-    'bump: 'b,
-    'b: 'a,
+    I: IntoIterator<Item = ARichFormula<'bump>>,
 {
-    pub unifier: Option<Unifier<'a, 'bump>>,
+    pub unifier: Option<Unifier<'bump>>,
     pub nexts: I,
 }
 
 #[derive(Debug, Clone)]
-pub struct VarSubtermResult<'a, 'bump, I>
+pub struct VarSubtermResult<'bump, I>
 where
-    I: IntoIterator<Item = &'a RichFormula<'bump>>,
-    'bump: 'a,
+    I: IntoIterator<Item = ARichFormula<'bump>>,
 {
     pub unified: bool,
     pub nexts: I,
 }
 
 pub trait SubtermAux<'bump> {
-    type IntoIter<'a>: IntoIterator<Item = &'a RichFormula<'bump>> + 'a
-    where
-        'bump: 'a;
-    fn eval_and_next<'a, 'b>(
+    type IntoIter: IntoIterator<Item = ARichFormula<'bump>>;
+
+    fn eval_and_next(
         &self,
-        x: &'a RichFormula<'bump>,
-        m: &'b RichFormula<'bump>,
-    ) -> SubtermResult<'a, 'b, 'bump, Self::IntoIter<'b>>
-    where
-        'bump: 'b,
-        'b: 'a,
-    {
+        x: &ARichFormula<'bump>,
+        m: &ARichFormula<'bump>,
+    ) -> SubtermResult<'bump, Self::IntoIter> {
         let VarSubtermResult {
             unified: unifier,
             nexts,
         } = self.var_eval_and_next(m);
         if unifier {
-            match x {
+            match x.as_ref() {
                 RichFormula::Var(v) => SubtermResult {
-                    unifier: Some(Unifier::one_variable_unifier(v, m)),
+                    unifier: Some(Unifier::one_variable_unifier(v, m.shallow_copy())),
                     nexts,
                 },
                 _ => {
@@ -69,18 +71,15 @@ pub trait SubtermAux<'bump> {
     }
 
     /// `eval_and_next` but optimized for variable only
-    fn var_eval_and_next<'a>(
+    fn var_eval_and_next(
         &self,
-        m: &'a RichFormula<'bump>,
-    ) -> VarSubtermResult<'a, 'bump, Self::IntoIter<'a>>
-    where
-        'bump: 'a,
-    {
+        m: &ARichFormula<'bump>,
+    ) -> VarSubtermResult<'bump, Self::IntoIter> {
         let x = Variable {
             id: 0,
             sort: self.sort(),
         }
-        .into_formula();
+        .into_aformula();
         let SubtermResult { unifier, nexts } = self.eval_and_next(&x, m);
         VarSubtermResult {
             unified: unifier.is_some(),
@@ -88,17 +87,11 @@ pub trait SubtermAux<'bump> {
         }
     }
 
-    fn eval<'a>(&self, x: &'a RichFormula<'bump>, m: &'a RichFormula<'bump>) -> bool
-    where
-        'bump: 'a,
-    {
+    fn eval(&self, x: &ARichFormula<'bump>, m: &ARichFormula<'bump>) -> bool {
         self.eval_and_next(x, m).unifier.is_some()
     }
 
-    fn nexts<'a>(&self, x: &'a RichFormula<'bump>, m: &'a RichFormula<'bump>) -> Self::IntoIter<'a>
-    where
-        'bump: 'a,
-    {
+    fn nexts(&self, x: &ARichFormula<'bump>, m: &ARichFormula<'bump>) -> Self::IntoIter {
         self.eval_and_next(x, m).nexts
     }
 
@@ -119,14 +112,12 @@ impl<'bump> DefaultAuxSubterm<'bump> {
 static EMPTY_SLICE: [RichFormula<'static>; 0] = [];
 
 impl<'bump> SubtermAux<'bump> for DefaultAuxSubterm<'bump> {
-    type IntoIter<'a> = VecRef<'a, RichFormula<'bump>>
-    where
-        'bump: 'a;
+    type IntoIter = ArcIntoIter<ARichFormula<'bump>>;
 
     // fn eval_and_next<'a>(
     //     &self,
-    //     x: &'a RichFormula<'bump>,
-    //     m: &'a RichFormula<'bump>,
+    //     x: ARichFormula<'bump>,
+    //     m: ARichFormula<'bump>,
     // ) -> SubtermResult<'a, 'bump, Self::IntoIter<'a>>
     // where
     //     'bump: 'a,
@@ -140,16 +131,13 @@ impl<'bump> SubtermAux<'bump> for DefaultAuxSubterm<'bump> {
     //     SubtermResult { unifier, nexts }
     // }
 
-    fn var_eval_and_next<'a>(
+    fn var_eval_and_next(
         &self,
-        m: &'a RichFormula<'bump>,
-    ) -> VarSubtermResult<'a, 'bump, Self::IntoIter<'a>>
-    where
-        'bump: 'a,
-    {
-        let nexts = match m {
-            RichFormula::Fun(_, args) => VecRef::Ref(args),
-            _ => VecRef::Empty,
+        m: &ARichFormula<'bump>,
+    ) -> VarSubtermResult<'bump, Self::IntoIter> {
+        let nexts = match m.as_ref() {
+            RichFormula::Fun(_, args) => args.into(),
+            _ => [].into(),
         };
 
         let x_sort = self.sort();

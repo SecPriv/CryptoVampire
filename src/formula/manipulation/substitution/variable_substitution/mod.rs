@@ -1,13 +1,8 @@
-use itertools::Itertools;
-
-use crate::formula::{formula::RichFormula, variable::Variable};
-
-use super::substitution::Substitution;
-
-pub use one_var::{OneVarSubst, OneVarSubstF};
 mod one_var;
-
-pub use owned_var::{OwnedVarSubst, OwnedVarSubstF};
+pub use one_var::{OneVarSubst, OneVarSubstF};
 
 mod owned_var;
+pub use owned_var::{OwnedVarSubst, OwnedVarSubstF};
+
 mod ref_substitution;
+pub use ref_substitution::{FrozenOVSubst, FrozenOVSubstF,  FrozenSubst, FrozenSubstF};

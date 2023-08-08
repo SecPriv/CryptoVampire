@@ -67,7 +67,7 @@ impl Nonce {
         assertions.extend(
             [mforall!(n!0:nonce_sort, m!1:message_sort; {
                 meq(ev.eval(nc.cast(message_sort, n.clone())),
-                    ev.eval(m.clone())) >> subterm.f(n, m)
+                    ev.eval(m.clone())) >> subterm.f_a(n, m)
             }),
             mforall!(n1!0:nonce_sort, n2!1:nonce_sort; {
                 meq(ev.eval(nc.cast(message_sort, n1.clone())), ev.eval(nc.cast(message_sort, n2.clone())))

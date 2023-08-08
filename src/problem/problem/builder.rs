@@ -5,7 +5,7 @@ use itertools::Itertools;
 use crate::{
     container::ScopedContainer,
     formula::{
-        formula::RichFormula,
+        formula::{ARichFormula, RichFormula},
         function::{
             builtin::{HAPPENS, LESS_THAN_STEP, TRUE},
             inner::evaluate::Evaluator,
@@ -35,10 +35,10 @@ pub struct PblFromParser<'bump> {
     pub llc: LongLivedContent<'bump>,
     pub functions: Vec<Function<'bump>>,
     pub sorts: Vec<Sort<'bump>>,
-    pub assertions: Vec<RichFormula<'bump>>,
-    pub lemmas: Vec<RichFormula<'bump>>,
+    pub assertions: Vec<ARichFormula<'bump>>,
+    pub lemmas: Vec<ARichFormula<'bump>>,
     pub order: Vec<TmpOrdering<'bump>>,
-    pub query: Box<RichFormula<'bump>>,
+    pub query: ARichFormula<'bump>,
 
     pub steps: Vec<TmpStep<'bump>>,
     pub cells: Vec<TmpCell<'bump>>,
@@ -50,8 +50,8 @@ pub struct TmpStep<'bump> {
     pub name: String,
     pub args: Vec<Variable<'bump>>,
     pub assignements: Vec<TmpAssignements<'bump>>,
-    pub message: Box<RichFormula<'bump>>,
-    pub condition: Box<RichFormula<'bump>>,
+    pub message: ARichFormula<'bump>,
+    pub condition: ARichFormula<'bump>,
     pub function: Function<'bump>,
 }
 
@@ -65,8 +65,8 @@ pub struct TmpCell<'bump> {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct TmpAssignements<'bump> {
     pub cell_idx: usize,
-    pub args: Vec<RichFormula<'bump>>,
-    pub content: Box<RichFormula<'bump>>,
+    pub args: Vec<ARichFormula<'bump>>,
+    pub content: ARichFormula<'bump>,
 }
 
 #[derive(Debug)]
@@ -79,8 +79,8 @@ pub struct LongLivedContent<'bump> {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct TmpOrdering<'bump> {
     pub vars: Vec<Variable<'bump>>,
-    pub a: Box<RichFormula<'bump>>,
-    pub b: Box<RichFormula<'bump>>,
+    pub a: ARichFormula<'bump>,
+    pub b: ARichFormula<'bump>,
     pub kind: OrderingKind,
 }
 
@@ -106,16 +106,16 @@ struct PrePbl<'bump> {
 pub struct PblIterator<'bump> {
     prepbl: PrePbl<'bump>,
 
-    lemmas: IntoIter<RichFormula<'bump>>,
-    assertions: Vec<RichFormula<'bump>>,
-    query: Box<RichFormula<'bump>>,
+    lemmas: IntoIter<ARichFormula<'bump>>,
+    assertions: Vec<ARichFormula<'bump>>,
+    query: ARichFormula<'bump>,
 }
 
 impl<'bump> PrePbl<'bump> {
     fn to_pbl(
         self,
-        assertions: Vec<RichFormula<'bump>>,
-        query: Box<RichFormula<'bump>>,
+        assertions: Vec<ARichFormula<'bump>>,
+        query: ARichFormula<'bump>,
     ) -> Problem<'bump> {
         let PrePbl {
             container,
@@ -146,7 +146,7 @@ impl<'bump> Iterator for PblIterator<'bump> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let nxt = self.lemmas.next()?;
-        let old_query = std::mem::replace(&mut *self.query, nxt);
+        let old_query = std::mem::replace(&mut self.query, nxt);
         self.assertions.push(old_query);
         Some(
             self.prepbl
@@ -209,7 +209,7 @@ impl<'bump> IntoIterator for PblFromParser<'bump> {
             .collect();
         let sorts = sorts.into_iter().chain(default_sorts()).unique().collect();
 
-        lemmas.push(*query);
+        lemmas.push(query);
         let lemmas = lemmas.into_iter();
         PblIterator {
             prepbl: PrePbl {
@@ -223,7 +223,7 @@ impl<'bump> IntoIterator for PblFromParser<'bump> {
             },
             lemmas,
             assertions,
-            query: Box::new(TRUE.clone()),
+            query: TRUE.clone_as_arc(),
         }
     }
 }
@@ -240,33 +240,33 @@ impl<'bump> Into<Problem<'bump>> for PblFromParser<'bump> {
     }
 }
 
-fn compress_quantifier<'bump>(
-    container: &'bump ScopedContainer<'bump>,
-    functions: &mut Vec<Function<'bump>>,
-    f: RichFormula<'bump>,
-) -> RichFormula<'bump> {
-    f.map(&mut |f| match f {
-        RichFormula::Quantifier(q, arg) if q.status().is_condition() => {
-            let fun = Function::new_quantifier_from_quantifier(container, q, arg);
-            let free = match fun.as_inner() {
-                InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q)) => &q.free_variables,
-                _ => unreachable!(),
-            };
-            functions.push(fun);
-            RichFormula::Fun(fun, free.iter().map(|v| v.into_formula()).collect())
-        }
-        _ => f,
-    })
-}
+// fn compress_quantifier<'bump>(
+//     container: &'bump ScopedContainer<'bump>,
+//     functions: &mut Vec<Function<'bump>>,
+//     f: ARichFormula<'bump>,
+// ) -> ARichFormula<'bump> {
+//     f.map(&mut |f| match f.as_ref() {
+//         RichFormula::Quantifier(q, arg) if q.status().is_condition() => {
+//             let fun = Function::new_quantifier_from_quantifier(container, q, arg);
+//             let free = match fun.as_inner() {
+//                 InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q)) => &q.free_variables,
+//                 _ => unreachable!(),
+//             };
+//             functions.push(fun);
+//             fun.f_a(free.iter().map(|v| v.into_formula()).collect())
+//         }
+//         _ => f,
+//     })
+// }
 
-fn generate_order<'bump>(order: implvec!(TmpOrdering<'bump>)) -> Vec<RichFormula<'bump>> {
+fn generate_order<'bump>(order: implvec!(TmpOrdering<'bump>)) -> Vec<ARichFormula<'bump>> {
     order
         .into_iter()
         .map(|TmpOrdering { vars, a, b, kind }| {
             mforall!(vars, {
                 match kind {
-                    OrderingKind::Lt => LESS_THAN_STEP.f([*a, *b]),
-                    OrderingKind::Diff => (!HAPPENS.f([*a])) | (!HAPPENS.f([*b])),
+                    OrderingKind::Lt => LESS_THAN_STEP.f_a([&a, &b]),
+                    OrderingKind::Diff => (!HAPPENS.f_a([a])) | (!HAPPENS.f_a([b])),
                 }
             })
         })
@@ -290,7 +290,7 @@ fn generate_steps<'bump>(
                  function,
              }| {
                 let step = unsafe {
-                    Step::new_with_function(container, function, name, args, *message, *condition)
+                    Step::new_with_function(container, function, name, args, message, condition)
                 }
                 .unwrap();
 
@@ -302,8 +302,8 @@ fn generate_steps<'bump>(
                 {
                     assignements[cell_idx].push(Assignement {
                         step,
-                        args,
-                        content: *content,
+                        args: args.into(),
+                        content,
                     });
                 }
 

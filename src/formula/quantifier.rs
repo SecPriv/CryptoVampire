@@ -1,5 +1,7 @@
 // use core::slice::SlicePattern;
 
+use std::sync::Arc;
+
 use crate::implvec;
 
 use super::{
@@ -13,11 +15,11 @@ use super::{
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum Quantifier<'bump> {
     Exists {
-        variables: Vec<Variable<'bump>>,
+        variables: Arc<[Variable<'bump>]>,
         status: Status,
     },
     Forall {
-        variables: Vec<Variable<'bump>>,
+        variables: Arc<[Variable<'bump>]>,
         status: Status,
     },
     // FindSuchThat { variables: Vec<Variable<'bump>> },
@@ -72,11 +74,11 @@ impl<'bump> Quantifier<'bump> {
         self.status().into()
     }
 
-    pub fn get_variables(&self) -> &[Variable<'bump>] {
+    pub fn get_variables(&self) -> &Arc<[Variable<'bump>]> {
         match self {
             Quantifier::Exists { variables, .. }
             | Quantifier::Forall { variables ,..}
-            /* | Quantifier::FindSuchThat { variables } */ => variables.as_slice(),
+            /* | Quantifier::FindSuchThat { variables } */ => variables,
         }
     }
 

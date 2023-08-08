@@ -10,7 +10,7 @@ use crate::{
             axioms::Axiom,
             declare::{ConstructorDestructor, DataType, Declaration},
         },
-        formula::RichFormula,
+        formula::{RichFormula, ARichFormula},
         function::inner::{evaluate::Evaluator, term_algebra::name::NameCaster},
         function::Function,
         sort::Sort,
@@ -34,19 +34,19 @@ pub struct Problem<'bump> {
     pub evaluator: Arc<Evaluator<'bump>>,
     pub name_caster: Arc<NameCaster<'bump>>,
     pub protocol: Protocol<'bump>,
-    pub assertions: Vec<RichFormula<'bump>>,
+    pub assertions: Vec<ARichFormula<'bump>>,
     pub crypto_assertions: Vec<CryptoAssumption<'bump>>,
-    pub query: Box<RichFormula<'bump>>,
+    pub query: ARichFormula<'bump>,
 }
 
 impl<'bump> Problem<'bump> {
-    pub fn list_top_level_terms<'a>(&'a self) -> impl Iterator<Item = &'a RichFormula<'bump>>
+    pub fn list_top_level_terms<'a>(&'a self) -> impl Iterator<Item = &'a ARichFormula<'bump>>
     where
         'bump: 'a,
     {
         self.assertions
             .iter()
-            .chain(std::iter::once(self.query.as_ref()))
+            .chain(std::iter::once(&self.query))
             .chain(self.protocol.list_top_level_terms_short_lifetime())
     }
 
@@ -55,7 +55,7 @@ impl<'bump> Problem<'bump> {
 
         self.list_top_level_terms()
             .flat_map(|f| f.used_variables_iter_with_pile(pile.borrow_mut()))
-            .map(|Variable { id, .. }| *id)
+            .map(|Variable { id, .. }| id)
             .max()
             .unwrap_or(0)
     }

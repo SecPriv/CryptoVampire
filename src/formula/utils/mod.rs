@@ -1,7 +1,7 @@
 pub mod formula_expander;
 pub mod formula_iterator;
 pub mod formula_trait;
-mod map;
+// mod map;
 // pub mod formula_user;
 
 // #[derive(Clone)]

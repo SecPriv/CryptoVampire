@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::formula::{
-    formula::RichFormula,
+    formula::{RichFormula, ARichFormula},
     function::{
         signature::FixedRefSignature,
         traits::{FixedSignature, MaybeEvaluatable},
@@ -41,8 +41,8 @@ impl<'bump> NameCaster<'bump> {
         self.content.get(&sort)
     }
 
-    pub fn cast(&self, sort: Sort<'bump>, f: RichFormula<'bump>) -> RichFormula<'bump> {
-        self.cast_function(&sort).unwrap().f([f])
+    pub fn cast(&self, sort: Sort<'bump>, f: impl Into<ARichFormula<'bump>>) -> ARichFormula<'bump> {
+        self.cast_function(&sort).unwrap().f_a([f])
     }
 }
 

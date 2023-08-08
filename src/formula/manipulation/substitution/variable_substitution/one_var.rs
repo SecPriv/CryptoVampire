@@ -1,4 +1,4 @@
-use crate::formula::{formula::RichFormula, manipulation::Substitution, variable::Variable};
+use crate::formula::{formula::{RichFormula, ARichFormula}, manipulation::Substitution, variable::Variable};
 
 use super::OwnedVarSubst;
 
@@ -8,7 +8,7 @@ pub struct OneVarSubst<T> {
     pub f: T,
 }
 
-pub type OneVarSubstF<'a, 'bump> = OneVarSubst<&'a RichFormula<'bump>>;
+pub type OneVarSubstF<'bump> = OneVarSubst<ARichFormula<'bump>>;
 
 impl<T> OneVarSubst<T> {
     pub fn id(&self) -> usize {
@@ -36,9 +36,9 @@ impl<T> OneVarSubst<T> {
     }
 }
 
-impl<T: Copy> OneVarSubst<T> {
+impl<T: Clone> OneVarSubst<T> {
     pub fn fc(&self) -> T {
-        *self.f()
+        self.f().clone()
     }
 }
 
@@ -48,12 +48,12 @@ impl<T> From<(usize, T)> for OneVarSubst<T> {
     }
 }
 
-impl<'a, 'bump:'a> Substitution<'bump> for OneVarSubstF<'a, 'bump> {
-    fn get(&self, var: &Variable<'bump>) -> RichFormula<'bump> {
+impl<'a, 'bump:'a> Substitution<'bump> for OneVarSubstF<'bump> {
+    fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump> {
         if var.id == self.id {
             self.f.clone()
         } else {
-            RichFormula::from(*var)
+            RichFormula::from(*var).into()
         }
     }
 }

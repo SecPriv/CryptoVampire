@@ -1,10 +1,10 @@
-use std::rc::Rc;
+use std::{rc::Rc, sync::Arc};
 
 use itertools::Itertools;
 
 use crate::{
     formula::{
-        formula::RichFormula,
+        formula::{ARichFormula, RichFormula},
         function::{inner::term_algebra::TermAlgebra, InnerFunction},
         variable::Variable,
     },
@@ -13,20 +13,20 @@ use crate::{
         cell_dependancies::graph::{Ancestors, DependancyGraph},
         step::Step,
     },
-    utils::vecref::VecRef,
+    utils::{arc_into_iter::ArcIntoIter, vecref::VecRef},
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum ExpantionState<'bump> {
     None,
-    BoundingVariables(Rc<[Variable<'bump>]>),
-    Deeper(Rc<InnerExpantionState<'bump>>),
+    BoundingVariables(Arc<[Variable<'bump>]>),
+    Deeper(InnerExpantionState<'bump>),
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct InnerExpantionState<'bump> {
-    pub bound_variables: Vec<Variable<'bump>>,
-    pub content: RichFormula<'bump>,
+    pub bound_variables: Arc<[Variable<'bump>]>,
+    pub content: ARichFormula<'bump>,
 }
 
 impl<'bump> ExpantionState<'bump> {
@@ -40,15 +40,15 @@ impl<'bump> ExpantionState<'bump> {
                 let InnerExpantionState {
                     bound_variables,
                     content,
-                } = inner.as_ref();
-                ExpantionState::Deeper(Rc::new(InnerExpantionState {
+                } = inner;
+                ExpantionState::Deeper(InnerExpantionState {
                     bound_variables: bound_variables
                         .iter()
                         .cloned()
                         .chain(vars.into_iter())
                         .collect(),
-                    content: content.clone(),
-                }))
+                    content: content.shallow_copy(),
+                })
             }
         }
     }
@@ -57,13 +57,13 @@ impl<'bump> ExpantionState<'bump> {
         match self {
             ExpantionState::None => None,
             ExpantionState::BoundingVariables(vars) => Some(vars.as_ref()),
-            ExpantionState::Deeper(inner) => Some(inner.as_ref().bound_variables.as_slice()),
+            ExpantionState::Deeper(inner) => Some(inner.bound_variables.as_ref()),
         }
     }
 
-    pub fn condition(&self) -> Option<&RichFormula<'bump>> {
+    pub fn condition(&self) -> Option<&ARichFormula<'bump>> {
         match self {
-            ExpantionState::Deeper(inner) => Some(&inner.as_ref().content),
+            ExpantionState::Deeper(inner) => Some(&inner.content),
             _ => None,
         }
     }
@@ -71,7 +71,7 @@ impl<'bump> ExpantionState<'bump> {
     pub fn add_condition(
         &self,
         vars: impl IntoIterator<Item = Variable<'bump>>,
-        condition: RichFormula<'bump>,
+        condition: ARichFormula<'bump>,
     ) -> Self {
         let old_vars = self.bound_variables();
         let old_condition = self.condition();
@@ -85,23 +85,20 @@ impl<'bump> ExpantionState<'bump> {
             None => condition,
         };
 
-        ExpantionState::Deeper(Rc::new(InnerExpantionState {
+        ExpantionState::Deeper(InnerExpantionState {
             bound_variables: new_vars,
-            content: new_condition,
-        }))
+            content: new_condition.shallow_copy(),
+        })
     }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct ExpantionContent<'a, 'bump> {
+pub struct ExpantionContent<'bump> {
     pub state: ExpantionState<'bump>,
-    pub content: &'a RichFormula<'bump>,
+    pub content: ARichFormula<'bump>,
 }
 
-impl<'a, 'bump> ExpantionContent<'a, 'bump>
-where
-    'bump: 'a,
-{
+impl<'bump> ExpantionContent<'bump> {
     /// expand a formula
     ///
     ///  - `steps`: a list of steps (where `input` will look)
@@ -113,30 +110,31 @@ where
         graph: &DependancyGraph<'bump>,
         with_args: bool,
         deeper_kinds: DeeperKinds,
-    ) -> Vec<ExpantionContent<'a, 'bump>> {
+    ) -> Vec<ExpantionContent<'bump>> {
         fn process_arg<'a, 'b, 'c, 'bump>(
-            expc: &'b ExpantionContent<'a, 'bump>,
-            args: VecRef<'a, RichFormula<'bump>>,
-        ) -> impl Iterator<Item = ExpantionContent<'a, 'bump>> + 'b
+            expc: &'b ExpantionContent<'bump>,
+            args: Arc<[ARichFormula<'bump>]>,
+        ) -> impl Iterator<Item = ExpantionContent<'bump>> + 'b
         where
             'bump: 'a,
         {
-            args.into_iter().map(move |arg| ExpantionContent {
-                state: expc.state.clone(),
-                content: arg,
-            })
+            ArcIntoIter::from(args)
+                .into_iter()
+                .map(move |arg| ExpantionContent {
+                    state: expc.state.clone(),
+                    content: arg.shallow_copy(),
+                })
         }
 
-        fn process_deeper<'a, 'b, 'bump>(
+        fn process_deeper<'b, 'bump>(
             steps: impl IntoIterator<Item = Step<'bump>> + 'b,
             graph: &DependancyGraph<'bump>,
             deeper: Option<MemoryCell<'bump>>,
             state: &'b ExpantionState<'bump>,
-            args: &'a Vec<RichFormula<'bump>>,
-        ) -> impl Iterator<Item = ExpantionContent<'a, 'bump>> + 'b
+            args: &'b [ARichFormula<'bump>],
+        ) -> impl Iterator<Item = ExpantionContent<'bump>> + 'b
         where
-            'bump: 'a,
-            'a: 'b,
+            'bump: 'b,
         {
             let Ancestors { input, cells } = graph.ancestors(deeper.clone()).unwrap();
 
@@ -153,58 +151,61 @@ where
             cells
                 .into_iter()
                 .flat_map(|c| c.assignements().iter())
-                .map(
-                    move |Assignement {
-                              step,
-                              args: _,
-                              content,
-                          }| {
-                        let vars = step.free_variables();
-                        let step_f = step.function().f(vars.iter().map(|v| v.into_formula()));
-                        // let condition = InnerExpantionState {
-                        //     bound_variables: vars.clone(),
-                        //     content: if is_input {
-                        //         Step::strict_before(step_origin.clone(), step_f)
-                        //     } else {
-                        //         Step::before(step_origin.clone(), step_f)
-                        //     },
-                        // };
+                .map(move |Assignement { step, content, .. }| {
+                    let vars = step.free_variables();
+                    let step_f = step.function().f_a(vars.iter().map(|v| v.into_formula()));
+                    // let condition = InnerExpantionState {
+                    //     bound_variables: vars.clone(),
+                    //     content: if is_input {
+                    //         Step::strict_before(step_origin.clone(), step_f)
+                    //     } else {
+                    //         Step::before(step_origin.clone(), step_f)
+                    //     },
+                    // };
 
-                        let state = state.add_condition(
-                            vars.clone(),
-                            if is_input {
-                                Step::strict_before(step_origin.clone(), step_f)
-                            } else {
-                                Step::before(step_origin.clone(), step_f)
-                            },
-                        );
+                    let state = state.add_condition(
+                        vars.iter().cloned(),
+                        if is_input {
+                            Step::strict_before(step_origin.shallow_copy(), step_f)
+                        } else {
+                            Step::before(step_origin.shallow_copy(), step_f)
+                        },
+                    );
 
-                        ExpantionContent { state, content }
-                    },
-                )
+                    ExpantionContent {
+                        state,
+                        content: content.shallow_copy(),
+                    }
+                })
                 .chain(
                     if input {
                         None
                     } else {
                         Some(steps.into_iter().flat_map(move |step| {
-                            [step.message(), step.condition()]
-                                .into_iter()
-                                .map(move |content| {
+                            [step.message_arc(), step.condition_arc()].into_iter().map(
+                                move |content| {
                                     let vars = step.free_variables();
                                     let step_f =
-                                        step.function().f(vars.iter().map(|v| v.into_formula()));
+                                        step.function().f_a(vars.iter().map(|v| v.into_formula()));
                                     // let condition = InnerExpantionState {
                                     //     bound_variables: vars.clone(),
                                     //     content: Step::strict_before(step_origin.clone(), step_f),
                                     // };
 
                                     let state = state.add_condition(
-                                        vars.clone(),
-                                        Step::strict_before(step_origin.clone(), step_f),
+                                        vars.iter().cloned(),
+                                        Step::strict_before(
+                                            step_origin.clone(),
+                                            step_f.shallow_copy(),
+                                        ),
                                     );
 
-                                    ExpantionContent { state, content }
-                                })
+                                    ExpantionContent {
+                                        state,
+                                        content: content.shallow_copy(),
+                                    }
+                                },
+                            )
                         }))
                     }
                     .into_iter()
@@ -212,14 +213,14 @@ where
                 )
         }
 
-        match self.content {
+        match self.content.as_ref() {
             RichFormula::Var(_) => vec![],
             RichFormula::Quantifier(_, args) => {
-                process_arg(self, VecRef::Single(args.as_ref())).collect()
+                process_arg(self, Arc::new([args.shallow_copy()])).collect()
             }
             RichFormula::Fun(fun, args) => {
                 let iter = (if with_args {
-                    Some(process_arg(self, VecRef::Ref(args.as_ref())))
+                    Some(process_arg(self, Arc::clone(args)))
                 } else {
                     None
                 })
@@ -231,18 +232,18 @@ where
                         TermAlgebra::Quantifier(q)
                             if deeper_kinds.contains(DeeperKinds::QUANTIFIER) =>
                         {
-                            iter.chain(q.get_content().into_vec().iter().map(|f| {
+                            iter.chain(q.get_content().into_vec().iter().cloned().map(|f| {
                                 ExpantionContent {
                                     state: self
                                         .state
                                         .add_variables(q.bound_variables.iter().cloned()),
-                                    content: *f,
+                                    content: f,
                                 }
                             }))
                             .collect()
                         }
                         TermAlgebra::Input(_) if deeper_kinds.contains(DeeperKinds::INPUT) => iter
-                            .chain(process_deeper(steps, graph, None, &self.state, args))
+                            .chain(process_deeper(steps, graph, None, &self.state, args.as_ref()))
                             .collect(),
                         TermAlgebra::Cell(c)
                             if deeper_kinds.contains(DeeperKinds::MEMORY_CELLS) =>
@@ -252,7 +253,7 @@ where
                                 graph,
                                 Some(c.memory_cell()),
                                 &self.state,
-                                args,
+                                args.as_ref(),
                             ))
                             .collect()
                         }
@@ -281,14 +282,23 @@ where
         }
     }
 
-    pub fn as_tuple(self) -> (ExpantionState<'bump>, &'a RichFormula<'bump>) {
+    pub fn as_tuple(self) -> (ExpantionState<'bump>, ARichFormula<'bump>) {
         let ExpantionContent { state, content } = self;
         (state, content)
     }
 }
 
-impl<'a, 'bump> From<&'a RichFormula<'bump>> for ExpantionContent<'a, 'bump> {
-    fn from(value: &'a RichFormula<'bump>) -> Self {
+impl<'a, 'bump> From<&'a ARichFormula<'bump>> for ExpantionContent<'bump> {
+    fn from(value: &'a ARichFormula<'bump>) -> Self {
+        ExpantionContent {
+            state: ExpantionState::None,
+            content: value.shallow_copy(),
+        }
+    }
+}
+
+impl<'a, 'bump> From<ARichFormula<'bump>> for ExpantionContent<'bump> {
+    fn from(value: ARichFormula<'bump>) -> Self {
         ExpantionContent {
             state: ExpantionState::None,
             content: value,

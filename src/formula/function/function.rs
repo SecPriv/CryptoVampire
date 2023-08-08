@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use itertools::Itertools;
 
 use crate::container::allocator::ContainerTools;
@@ -7,7 +9,9 @@ use crate::container::utils::NameFinder;
 use crate::container::StaticContainer;
 use crate::force_lifetime;
 
+use crate::formula::formula::ARichFormula;
 use crate::utils::traits::RefNamed;
+use crate::utils::utils::MaybeInvalid;
 use crate::{
     assert_variance, asssert_trait,
     formula::{
@@ -281,7 +285,7 @@ impl<'bump> Function<'bump> {
     pub fn new_quantifier_from_quantifier(
         container: container!(nf),
         q: quantifier::Quantifier<'bump>,
-        arg: Box<RichFormula<'bump>>,
+        arg: ARichFormula<'bump>,
     ) -> Self {
         let id = get_next_quantifer_id();
         // let name = container.find_free_name(&format!("c_{}_{}", q.name(), id));
@@ -290,7 +294,6 @@ impl<'bump> Function<'bump> {
             .get_free_vars()
             .into_iter()
             .filter(|v| q.get_variables().contains(v))
-            .cloned()
             .collect();
 
         let inner = match &q {
@@ -326,20 +329,20 @@ impl<'bump> Function<'bump> {
     pub fn new_find_such_that(
         container: container!(nf),
         vars: implvec!(Variable<'bump>),
-        condition: RichFormula<'bump>,
-        success: RichFormula<'bump>,
-        failure: RichFormula<'bump>,
-    ) -> (Self, Vec<Variable<'bump>>) {
+        condition: ARichFormula<'bump>,
+        success: ARichFormula<'bump>,
+        faillure: ARichFormula<'bump>,
+    ) -> (Self, Arc<[Variable<'bump>]>) {
         let id = get_next_quantifer_id();
 
-        let vars: Box<[_]> = vars.into_iter().collect();
+        let vars: Arc<[_]> = vars.into_iter().collect();
 
-        let free_variables = [&condition, &success, &failure]
+        let free_variables :Arc<[_]> = [&condition, &success, &faillure]
             .into_iter()
-            .flat_map(|f| f.get_free_vars().into_iter().cloned())
+            .flat_map(|f| f.get_free_vars().into_iter())
             .filter(|v| !vars.contains(v))
             .unique()
-            .collect_vec();
+            .collect();
 
         if cfg!(debug_assertions) {
             for (v1, v2) in itertools::Itertools::cartesian_product(
@@ -359,11 +362,11 @@ impl<'bump> Function<'bump> {
             inner::term_algebra::quantifier::Quantifier {
                 id,
                 bound_variables: vars,
-                free_variables: free_variables.iter().cloned().collect(),
+                free_variables: free_variables.clone(),
                 inner: inner::term_algebra::quantifier::InnerQuantifier::FindSuchThat {
-                    condition: Box::new(condition),
-                    success: Box::new(success),
-                    faillure: Box::new(failure),
+                    condition,
+                    success,
+                    faillure,
                 },
             },
         ));
@@ -495,16 +498,39 @@ impl<'bump> Function<'bump> {
     //     }
     // }
 
-    pub fn f<'bbump>(
+    pub fn f<'bbump, I>(
+        &self,
+        args: impl IntoIterator<Item = I>,
+    ) -> RichFormula<'bbump>
+    where
+        'bump: 'bbump,
+        I: Into<ARichFormula<'bbump>>
+    {
+        assert!(self.is_valid());
+        assert!(!matches!(self.as_inner(), InnerFunction::Tmp(_)));
+
+        RichFormula::Fun(*self, args.into_iter().map_into().collect())
+    }
+
+    pub fn f_a<'bbump, I>(
+        &self,
+        args: impl IntoIterator<Item = I>,
+    ) -> ARichFormula<'bbump>
+    where
+        'bump: 'bbump,
+        I: Into<ARichFormula<'bbump>>
+    {
+        self.f(args).into_arc()
+    }
+
+    pub fn f_rf<'bbump>(
         &self,
         args: impl IntoIterator<Item = RichFormula<'bbump>>,
     ) -> RichFormula<'bbump>
     where
         'bump: 'bbump,
     {
-        assert!(!matches!(self.as_inner(), InnerFunction::Tmp(_)));
-
-        RichFormula::Fun(*self, args.into_iter().collect())
+        self.f(args)
     }
 
     pub fn is_default_subterm(&self) -> bool {

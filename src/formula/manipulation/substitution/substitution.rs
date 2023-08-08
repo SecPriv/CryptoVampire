@@ -1,18 +1,18 @@
-use crate::formula::{variable::Variable, formula::RichFormula};
+use crate::formula::{variable::Variable, formula::{RichFormula, ARichFormula}};
 
 
 pub trait Substitution<'bump> {
-    fn get(&self, var: &Variable<'bump>) -> RichFormula<'bump>;
+    fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump>;
 
-    fn apply(&self, f: &RichFormula<'bump>) -> RichFormula<'bump> {
+    fn apply(&self, f: &RichFormula<'bump>) -> ARichFormula<'bump> {
         match f {
             RichFormula::Var(v) => self.get(v),
             RichFormula::Fun(fun, args) => RichFormula::Fun(
                 fun.clone(),
-                args.iter().map(|arg| self.apply(arg)).collect(),
-            ),
+                args.iter().map(|arg| self.apply(arg.as_ref())).collect(),
+            ).into_arc(),
             RichFormula::Quantifier(q, arg) => {
-                RichFormula::Quantifier(q.clone(), Box::new(self.apply(arg.as_ref())))
+                RichFormula::Quantifier(q.clone(), self.apply(arg.as_ref())).into_arc()
             }
         }
     }
@@ -37,8 +37,8 @@ pub trait Substitution<'bump> {
 pub struct Chain<A, B>(A, B);
 
 impl<'bump, A: Substitution<'bump>, B: Substitution<'bump>> Substitution<'bump> for Chain<A, B> {
-    fn get(&self, var: &Variable<'bump>) -> RichFormula<'bump> {
-        self.0.get(var).apply_permutation2(&self.1)
+    fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump> {
+        self.0.get(var).apply_substitution2(&self.1)
     }
 }
 
@@ -51,10 +51,10 @@ impl Translate {
 }
 
 impl<'bump> Substitution<'bump> for Translate {
-    fn get(&self, var: &Variable<'bump>) -> RichFormula<'bump> {
+    fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump> {
         RichFormula::Var(Variable {
             id: var.id + self.0,
             ..var.clone()
-        })
+        }).into_arc()
     }
 }

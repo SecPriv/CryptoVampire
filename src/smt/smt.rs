@@ -1,10 +1,10 @@
-use std::fmt::{self, Display};
+use std::{fmt::{self, Display}, sync::Arc};
 
 use crate::{
     environement::environement::Environement,
     formula::{
         file_descriptior::axioms::{Axiom, Rewrite, RewriteKind},
-        formula::RichFormula,
+        formula::{RichFormula, ARichFormula},
         function::{
             inner::{
                 booleans::{Booleans, Connective},
@@ -23,8 +23,8 @@ use crate::{
 pub enum SmtFormula<'bump> {
     Var(Variable<'bump>),
     Fun(Function<'bump>, Vec<SmtFormula<'bump>>),
-    Forall(Vec<Variable<'bump>>, Box<SmtFormula<'bump>>),
-    Exists(Vec<Variable<'bump>>, Box<SmtFormula<'bump>>),
+    Forall(Arc<[Variable<'bump>]>, Box<SmtFormula<'bump>>),
+    Exists(Arc<[Variable<'bump>]>, Box<SmtFormula<'bump>>),
 
     True,
     False,
@@ -60,13 +60,13 @@ pub enum Smt<'bump> {
 
     DeclareRewrite {
         rewrite_fun: RewriteKind<'bump>,
-        vars: Vec<Variable<'bump>>,
+        vars: Arc<[Variable<'bump>]>,
         lhs: Box<SmtFormula<'bump>>,
         rhs: Box<SmtFormula<'bump>>,
     },
 
     DeclareDatatypes {
-        sorts: Vec<Sort<'bump>>,
+        sorts: Arc<[Sort<'bump>]>,
         cons: Vec<Vec<SmtCons<'bump>>>,
     },
     Comment(String),
@@ -105,14 +105,14 @@ impl<'bump> fmt::Display for SmtFormula<'bump> {
             }
             SmtFormula::Forall(vars, formula) => {
                 write!(f, "(forall (")?;
-                for v in vars {
+                for v in vars.into_iter() {
                     write!(f, "({} {}) ", v, v.sort)?;
                 }
                 write!(f, ") {})", formula)
             }
             SmtFormula::Exists(vars, formula) => {
                 write!(f, "(exists (")?;
-                for v in vars {
+                for v in vars.into_iter() {
                     write!(f, "({} {}) ", v, v.sort)?;
                 }
                 write!(f, ") {})", formula)
@@ -166,7 +166,7 @@ impl<'bump> fmt::Display for Smt<'bump> {
                 rhs,
             } => {
                 write!(f, "(declare-rewrite (forall (")?;
-                for v in vars {
+                for v in vars.into_iter() {
                     write!(f, "({} {}) ", v, v.sort)?;
                 }
                 let op = match rewrite_fun {
@@ -179,7 +179,7 @@ impl<'bump> fmt::Display for Smt<'bump> {
                 write!(f, "(declare-datatypes\n")?;
                 // name of types
                 write!(f, "\t(")?;
-                for s in sorts {
+                for s in sorts.into_iter() {
                     write!(f, "({} 0) ", s)?;
                 }
                 write!(f, ")\n\t(\n")?;
@@ -239,23 +239,23 @@ macro_rules! unpack_args {
 }
 
 impl<'bump> SmtFormula<'bump> {
-    pub fn from_richformula(env: &Environement<'bump>, formula: RichFormula<'bump>) -> Self {
+    pub fn from_arichformula(env: &Environement<'bump>, formula: &RichFormula<'bump>) -> Self {
         match formula {
-            RichFormula::Var(v) => SmtFormula::Var(v),
+            RichFormula::Var(v) => SmtFormula::Var(*v),
             RichFormula::Quantifier(q, arg) => match q {
                 Quantifier::Exists { variables, status } => {
                     assert!(status.is_bool());
-                    SmtFormula::Exists(variables, Box::new(Self::from_richformula(env, *arg)))
+                    SmtFormula::Exists(variables.clone(), Box::new(Self::from_arichformula(env, arg.as_ref())))
                 }
                 Quantifier::Forall { variables, status } => {
                     assert!(status.is_bool());
-                    SmtFormula::Forall(variables, Box::new(Self::from_richformula(env, *arg)))
+                    SmtFormula::Forall(variables.clone(), Box::new(Self::from_arichformula(env, arg.as_ref())))
                 }
             },
             RichFormula::Fun(f, args) => {
                 let mut args = args
                     .into_iter()
-                    .map(|f| Self::from_richformula(env, f))
+                    .map(|f| Self::from_arichformula(env, f.as_ref()))
                     .collect();
 
                 match f.as_inner() {
@@ -265,15 +265,15 @@ impl<'bump> SmtFormula<'bump> {
                     | InnerFunction::Predicate(_)
                     | InnerFunction::Tmp(_)
                     | InnerFunction::Skolem(_)
-                    | InnerFunction::Evaluate(_) => SmtFormula::Fun(f, args),
+                    | InnerFunction::Evaluate(_) => SmtFormula::Fun(*f, args),
                     InnerFunction::Subterm(Subterm { subterm, .. }) => {
                         let kind = subterm.kind();
 
                         match kind {
-                            SubtermKind::Regular => SmtFormula::Fun(f, args),
+                            SubtermKind::Regular => SmtFormula::Fun(*f, args),
                             SubtermKind::Vampire => {
                                 unpack_args!([a, b] =  args; {
-                                    SmtFormula::Subterm(f, Box::new(a), Box::new(b))
+                                    SmtFormula::Subterm(*f, Box::new(a), Box::new(b))
                                 })
                             }
                         }
@@ -310,9 +310,9 @@ impl<'bump> Smt<'bump> {
     pub fn from_axiom(env: &Environement<'bump>, ax: Axiom<'bump>) -> Self {
         match ax {
             Axiom::Comment(str) => Smt::Comment(str.into()),
-            Axiom::Base { formula } => Smt::Assert(SmtFormula::from_richformula(env, *formula)),
+            Axiom::Base { formula } => Smt::Assert(SmtFormula::from_arichformula(env, formula.as_ref())),
             Axiom::Theory { formula } => {
-                let f = SmtFormula::from_richformula(env, *formula);
+                let f = SmtFormula::from_arichformula(env, formula.as_ref());
                 if env.use_assert_theory() {
                     Smt::AssertTh(f)
                 } else {
@@ -320,7 +320,7 @@ impl<'bump> Smt<'bump> {
                 }
             }
             Axiom::Query { formula } => {
-                let f = SmtFormula::from_richformula(env, *formula);
+                let f = SmtFormula::from_arichformula(env, formula.as_ref());
                 if env.use_assert_not() {
                     Smt::AssertNot(f)
                 } else {
@@ -334,8 +334,8 @@ impl<'bump> Smt<'bump> {
                     pre,
                     post,
                 } = *rewrite;
-                let pre = SmtFormula::from_richformula(env, pre);
-                let post = SmtFormula::from_richformula(env, post);
+                let pre = SmtFormula::from_arichformula(env, pre.as_ref());
+                let post = SmtFormula::from_arichformula(env, post.as_ref());
                 if env.no_rewrite() {
                     Smt::Assert(SmtFormula::Forall(
                         vars,

@@ -3,7 +3,7 @@ use std::{
     ops::{Add, Deref},
 };
 
-use super::{formula::RichFormula, sort::Sort};
+use super::{formula::{RichFormula, ARichFormula}, sort::Sort};
 
 #[derive(Debug, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct Variable<'bump> {
@@ -42,6 +42,10 @@ impl<'bump> Variable<'bump> {
         RichFormula::Var(*self)
     }
 
+    pub fn into_aformula(&self) -> ARichFormula<'bump> {
+        RichFormula::Var(*self).into()
+    }
+
     // pub fn clone_to_formula<T, U>(&self, ctx: &T) -> U
     // where
     //     T: FormulaUser<U>,
@@ -69,12 +73,13 @@ impl<'bump> Add<usize> for Variable<'bump> {
     }
 }
 
-pub fn sorts_to_variables<'bump, I>(
+pub fn sorts_to_variables<'bump, I, I2>(
     from: usize,
     s: impl IntoIterator<Item = I>,
-) -> Vec<Variable<'bump>>
+) -> I2//Vec<Variable<'bump>>
 where
     I: Deref<Target = Sort<'bump>>,
+    I2: FromIterator<Variable<'bump>>
 {
     s.into_iter()
         .enumerate()

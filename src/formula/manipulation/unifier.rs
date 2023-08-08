@@ -2,6 +2,8 @@ use if_chain::if_chain;
 use itertools::Itertools;
 use thiserror::Error;
 
+use crate::formula::formula::ARichFormula;
+
 use super::{
     super::{
         formula::{meq, RichFormula},
@@ -15,19 +17,16 @@ use super::{
 };
 
 #[derive(Debug, Clone)]
-pub struct Unifier<'a, 'bump>
-where
-    'bump: 'a,
-{
+pub struct Unifier<'bump> {
     /// variables on the left mapped to terms on the right
-    left: OwnedVarSubst<&'a RichFormula<'bump>>,
+    left: OwnedVarSubst<ARichFormula<'bump>>,
     /// variables on the right mapped to terms on the left
-    right: OwnedVarSubst<&'a RichFormula<'bump>>,
+    right: OwnedVarSubst<ARichFormula<'bump>>,
 }
 
 #[derive(Debug, Clone)]
-pub struct OneWayUnifier<'a, 'bump> {
-    subst: OwnedVarSubst<&'a RichFormula<'bump>>,
+pub struct OneWayUnifier<'bump> {
+    subst: OwnedVarSubst<ARichFormula<'bump>>,
 }
 
 #[derive(Debug, Error)]
@@ -38,14 +37,11 @@ pub enum UnifierAsEqualityErr {
     SortError(SortedError),
 }
 
-impl<'a, 'bump> Unifier<'a, 'bump>
-where
-    'bump: 'a,
-{
+impl<'bump> Unifier<'bump> {
     /// Make a formula to check unifiability
     ///
     /// It returns an error if it can't deduce the sort of one of the variables or if a variables is used on the left *and* the right
-    pub fn as_equalities(&'_ self) -> Result<Vec<RichFormula<'bump>>, UnifierAsEqualityErr> {
+    pub fn as_equalities(&'_ self) -> Result<Vec<ARichFormula<'bump>>, UnifierAsEqualityErr> {
         let left = &self.left.subst;
         let right = &self.right.subst;
 
@@ -65,7 +61,7 @@ where
         }
 
         // make the equalities
-        let f = |ovs: &OneVarSubstF<'a, 'bump>| match ovs.f().get_sort() {
+        let f = |ovs: &OneVarSubstF<'bump>| match ovs.f().get_sort() {
             Ok(sort) => Ok(meq(
                 Variable::new(ovs.id(), sort).into_formula(),
                 ovs.fc().clone(),
@@ -79,7 +75,7 @@ where
     /// the mgu of `x <-> f` where `x` is a formula
     pub fn one_variable_unifier(
         left_variable: &Variable<'bump>,
-        right_formula: &'a RichFormula<'bump>,
+        right_formula: ARichFormula<'bump>,
     ) -> Self {
         let Variable { id, .. } = left_variable;
         Unifier {
@@ -99,11 +95,11 @@ where
                     .all(|(l, r)| self.does_unify(l, r))
             }
             (RichFormula::Var(v), _) => {
-                if let Some(&left) = self.left.get(v.id) {
-                    self.does_unify(left, right)
+                if let Some(left) = self.left.get(v.id) {
+                    self.does_unify(left.as_ref(), right)
                 } else if let RichFormula::Var(v2) = right {
-                    if let Some(&right) = self.right.get(v2.id) {
-                        self.does_unify(left, right)
+                    if let Some(right) = self.right.get(v2.id) {
+                        self.does_unify(left, right.as_ref())
                     } else {
                         v == v2
                     }
@@ -112,11 +108,11 @@ where
                 }
             }
             (_, RichFormula::Var(v)) => {
-                if let Some(&right) = self.right.get(v.id) {
-                    self.does_unify(left, right)
+                if let Some(right) = self.right.get(v.id) {
+                    self.does_unify(left, right.as_ref())
                 } else if let RichFormula::Var(v2) = right {
-                    if let Some(&left) = self.left.get(v2.id) {
-                        self.does_unify(left, right)
+                    if let Some(left) = self.left.get(v2.id) {
+                        self.does_unify(left.as_ref(), right)
                     } else {
                         v == v2
                     }
@@ -128,52 +124,52 @@ where
         }
     }
 
-    pub fn mgu(left: &'a RichFormula<'bump>, right: &'a RichFormula<'bump>) -> Option<Self> {
-        fn aux<'a, 'bump>(
-            left: &'a RichFormula<'bump>,
-            right: &'a RichFormula<'bump>,
-            left_p: &mut OwnedVarSubst<&'a RichFormula<'bump>>,
-            right_p: &mut OwnedVarSubst<&'a RichFormula<'bump>>,
+    pub fn mgu(left: &ARichFormula<'bump>, right: &ARichFormula<'bump>) -> Option<Self> {
+        fn aux<'bump>(
+            left: &ARichFormula<'bump>,
+            right: &ARichFormula<'bump>,
+            left_p: &mut OwnedVarSubstF<'bump>,
+            right_p: &mut OwnedVarSubstF<'bump>,
         ) -> bool {
-            match (left, right) {
+            match (left.as_ref(), right.as_ref()) {
                 (RichFormula::Var(vl), RichFormula::Var(vr)) if vl == vr => true,
-                (RichFormula::Var(v), _) => match left_p.get(v.id) {
-                    Some(nl @ RichFormula::Var(v2)) => match right {
-                        RichFormula::Var(v3) => {
+                (RichFormula::Var(v), _) => match left_p.get(v.id).cloned() {
+                    Some(nl) if nl.is_var() => match (nl.as_ref(), right.as_ref()) {
+                        (RichFormula::Var(v2), RichFormula::Var(v3)) => {
                             v2 == v3 || {
-                                if let Some(&r) = right_p.get(v3.id) {
-                                    nl == &r
+                                if let Some(r) = right_p.get_as_rf(v3.id) {
+                                    nl.as_ref() == r
                                 } else {
-                                    right_p.add(v3.id, nl);
+                                    right_p.add(v3.id, nl.shallow_copy());
                                     true
                                 }
                             }
                         }
                         _ => false,
                     },
-                    Some(nl) => aux(nl, right, left_p, right_p),
+                    Some(nl) => aux(&nl, right, left_p, right_p),
                     None => {
-                        left_p.add(v.id, right);
+                        left_p.add(v.id, right.shallow_copy());
                         true
                     }
                 },
-                (_, RichFormula::Var(v)) => match right_p.get(v.id) {
-                    Some(nr @ RichFormula::Var(v2)) => match left {
-                        RichFormula::Var(v3) => {
+                (_, RichFormula::Var(v)) => match right_p.get(v.id).cloned() {
+                    Some(nr) if nr.is_var() => match (nr.as_ref(), left.as_ref()) {
+                        (RichFormula::Var(v2), RichFormula::Var(v3)) => {
                             v2 == v3 || {
-                                if let Some(&r) = left_p.get(v3.id) {
-                                    nr == &r
+                                if let Some(r) = left_p.get(v3.id) {
+                                    &nr == r
                                 } else {
-                                    left_p.add(v3.id, nr);
+                                    left_p.add(v3.id, nr.shallow_copy());
                                     true
                                 }
                             }
                         }
                         _ => false,
                     },
-                    Some(nl) => aux(nl, right, left_p, right_p),
+                    Some(nl) => aux(&nl, right, left_p, right_p),
                     None => {
-                        right_p.add(v.id, left);
+                        right_p.add(v.id, left.shallow_copy());
                         true
                     }
                 },
@@ -202,19 +198,19 @@ where
         }
     }
 
-    pub fn left(&self) -> &(impl Substitution<'bump> + 'a)
+    pub fn left(&self) -> &(impl Substitution<'bump>)
 where {
         &self.left
     }
 
-    pub fn right(&self) -> &(impl Substitution<'bump> + 'a)
+    pub fn right(&self) -> &(impl Substitution<'bump>)
 where
         // 'bump: 'b
     {
         &self.right
     }
 
-    pub fn is_unifying_to_variable(&self) -> Option<OneVarSubstF<'_, 'bump>> {
+    pub fn is_unifying_to_variable(&self) -> Option<OneVarSubstF<'bump>> {
         if_chain! {
             if self.left.subst.is_empty();
             if self.right.subst.len() == 1;
@@ -228,22 +224,19 @@ where
     }
 }
 
-impl<'a, 'bump> OneWayUnifier<'a, 'bump>
-where
-    'bump: 'a,
-{
-    pub fn new(from: &'a RichFormula<'bump>, to: &'a RichFormula<'bump>) -> Option<Self> {
+impl<'bump> OneWayUnifier<'bump> {
+    pub fn new(from: &ARichFormula<'bump>, to: &ARichFormula<'bump>) -> Option<Self> {
         fn aux<'a, 'bump>(
-            from: &'a RichFormula<'bump>,
-            to: &'a RichFormula<'bump>,
-            p: &mut OwnedVarSubst<&'a RichFormula<'bump>>,
+            from: &ARichFormula<'bump>,
+            to: &ARichFormula<'bump>,
+            p: &mut OwnedVarSubst<ARichFormula<'bump>>,
         ) -> bool {
-            match (from, to) {
+            match (from.as_ref(), to.as_ref()) {
                 (RichFormula::Var(v), _) => {
-                    if let Some(&nf) = p.get(v.id) {
+                    if let Some(nf) = p.get(v.id) {
                         nf == to
                     } else {
-                        p.add(v.id, to);
+                        p.add(v.id, to.shallow_copy());
                         true
                     }
                 }

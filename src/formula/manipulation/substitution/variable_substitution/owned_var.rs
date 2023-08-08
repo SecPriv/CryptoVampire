@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use crate::formula::variable::Variable;
+use crate::formula::{variable::Variable, formula::ARichFormula};
 
 use super::super::substitution::Substitution;
 
@@ -13,7 +13,7 @@ pub struct OwnedVarSubst<T> {
     pub subst: Vec<OneVarSubst<T>>,
 }
 
-pub type OwnedVarSubstF<'a, 'bump> = OwnedVarSubst<&'a RichFormula<'bump>>;
+pub type OwnedVarSubstF<'bump> = OwnedVarSubst<ARichFormula<'bump>>;
 
 impl<'bump, T> OwnedVarSubst<T> {
     pub fn get(&self, id: usize) -> Option<&T> {
@@ -28,14 +28,18 @@ impl<'bump, T> OwnedVarSubst<T> {
     }
 }
 
-impl<'bump, 'a> OwnedVarSubstF<'a, 'bump> {
-    pub fn add(&mut self, id: usize, r: &'a RichFormula<'bump>) {
+impl<'bump> OwnedVarSubstF<'bump> {
+    pub fn add(&mut self, id: usize, r: ARichFormula<'bump>) {
         debug_assert!(self.subst.iter().all(|ovs| ovs.is_id(id)));
-        debug_assert!(match r {
+        debug_assert!(match r.as_ref() {
             RichFormula::Var(v) => v.id != id,
             _ => true,
         });
         self.subst.push((id, r).into())
+    }
+
+    pub fn get_as_rf(&self, id:usize) -> Option<&RichFormula<'bump>> {
+        self.get(id).map(ARichFormula::as_ref)
     }
 }
 
@@ -68,17 +72,18 @@ impl<T> Default for OwnedVarSubst<T> {
     }
 }
 
-impl<'a, 'bump> Substitution<'bump> for OwnedVarSubst<&'a RichFormula<'bump>>
+impl<'a, 'bump> Substitution<'bump> for OwnedVarSubst<ARichFormula<'bump>>
 where
     'bump: 'a,
 {
-    fn get(&self, var: &Variable<'bump>) -> RichFormula<'bump> {
+    fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump> {
         self.subst
             .iter()
             .find(|ovs| ovs.is_id(var.id))
             // .map(|ovs| RichFormula::clone(*ovs.f()))
             .map(OneVarSubst::fc)
-            .cloned()
-            .unwrap_or(RichFormula::Var(var.clone()))
+            // .cloned()
+            .unwrap_or_else(|| RichFormula::Var(var.clone()).into())
+
     }
 }

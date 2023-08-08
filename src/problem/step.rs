@@ -1,5 +1,5 @@
 use core::fmt::Debug;
-use std::ops::Range;
+use std::{ops::Range, sync::Arc};
 
 use itertools::Itertools;
 
@@ -7,7 +7,7 @@ use crate::{
     assert_variance, asssert_trait,
     container::{allocator::ContainerTools, contained::Containable, reference::Reference},
     formula::{
-        formula::{meq, RichFormula},
+        formula::{meq, ARichFormula, RichFormula},
         function::{builtin::LESS_THAN_STEP, Function},
         sort::Sort,
         variable::Variable,
@@ -50,11 +50,11 @@ impl<'bump> Containable<'bump> for InnerStep<'bump> {}
 pub struct InnerStep<'bump> {
     name: String,
     /// ie. the parameters of the step
-    free_variables: Vec<Variable<'bump>>,
+    free_variables: Arc<[Variable<'bump>]>,
     /// variables that are bound within the step (by a quantifier for instance)
-    used_variables: Vec<Variable<'bump>>,
-    condition: RichFormula<'bump>,
-    message: RichFormula<'bump>,
+    used_variables: Arc<[Variable<'bump>]>,
+    condition: ARichFormula<'bump>,
+    message: ARichFormula<'bump>,
     function: Function<'bump>,
 }
 
@@ -74,8 +74,8 @@ impl<'bump> Step<'bump> {
         _container: &'bump C,
         _name: implderef!(str),
         args: implvec!(Variable<'bump>),
-        message: RichFormula<'bump>,
-        condition: RichFormula<'bump>,
+        message: ARichFormula<'bump>,
+        condition: ARichFormula<'bump>,
     ) -> Self
     where
         C: ContainerTools<'bump, (Self, Function<'bump>)>,
@@ -90,7 +90,7 @@ impl<'bump> Step<'bump> {
             .iter()
             .all(|v| free_variables.contains(v)));
 
-        let _used_variables = RichFormula::iter_used_varibales([&message, &condition])
+        let _used_variables = ARichFormula::iter_used_varibales([message, condition])
             .unique()
             .collect_vec();
 
@@ -132,8 +132,8 @@ impl<'bump> Step<'bump> {
         _old_function: Function<'bump>,
         _name: implderef!(str),
         args: implvec!(Variable<'bump>),
-        message: RichFormula<'bump>,
-        condition: RichFormula<'bump>,
+        message: ARichFormula<'bump>,
+        condition: ARichFormula<'bump>,
     ) -> Result<Self, AlreadyInitialized> {
         let free_variables = args.into_iter().collect_vec();
         assert!(message
@@ -179,18 +179,16 @@ impl<'bump> Step<'bump> {
     }
 
     pub fn parameters(&self) -> impl Iterator<Item = &'bump Sort<'bump>> {
-        self.assert_valid().unwrap();
+        // self.assert_valid().unwrap();
         self.free_variables().iter().map(|v| &v.sort)
     }
 
-    pub fn free_variables(&self) -> &'bump Vec<Variable<'bump>> {
-        self.assert_valid().unwrap();
-        &self.precise_as_ref().free_variables
+    pub fn free_variables(&self) -> &'bump [Variable<'bump>] {
+        self.precise_as_ref().free_variables.as_ref()
     }
 
-    pub fn occuring_variables(&self) -> &'bump Vec<Variable<'bump>> {
-        self.assert_valid().unwrap();
-        &self.precise_as_ref().used_variables
+    pub fn occuring_variables(&self) -> &'bump [Variable<'bump>] {
+        self.precise_as_ref().used_variables.as_ref()
     }
 
     pub fn vairable_range(&self) -> Range<usize> {
@@ -211,12 +209,18 @@ impl<'bump> Step<'bump> {
     }
 
     pub fn condition(&self) -> &'bump RichFormula<'bump> {
-        self.assert_valid().unwrap();
         &self.precise_as_ref().condition
     }
 
     pub fn message(&self) -> &'bump RichFormula<'bump> {
-        self.assert_valid().unwrap();
+        &self.precise_as_ref().message
+    }
+
+    pub fn condition_arc(&self) -> &'bump ARichFormula<'bump> {
+        &self.precise_as_ref().condition
+    }
+
+    pub fn message_arc(&self) -> &'bump ARichFormula<'bump> {
         &self.precise_as_ref().message
     }
 
@@ -225,13 +229,13 @@ impl<'bump> Step<'bump> {
         self.as_inner().function
     }
 
-    pub fn apply_condition(&self, args: &[RichFormula<'bump>]) -> RichFormula<'bump> {
+    pub fn apply_condition(&self, args: &[ARichFormula<'bump>]) -> ARichFormula<'bump> {
         self.assert_valid().unwrap();
         let vars: Vec<_> = (1..=self.arity()).into_iter().collect_vec();
         self.condition().clone().apply_substitution(vars, args)
     }
 
-    pub fn apply_message(&self, args: &[RichFormula<'bump>]) -> RichFormula<'bump> {
+    pub fn apply_message(&self, args: &[ARichFormula<'bump>]) -> ARichFormula<'bump> {
         self.assert_valid().unwrap();
         let vars: Vec<_> = (1..=self.arity()).into_iter().collect_vec();
         self.message().clone().apply_substitution(vars, args)
@@ -243,12 +247,12 @@ impl<'bump> Step<'bump> {
     }
 
     /// strict happen before relation
-    pub fn strict_before(a: RichFormula<'bump>, b: RichFormula<'bump>) -> RichFormula<'bump> {
-        LESS_THAN_STEP.f([a, b])
+    pub fn strict_before(a: ARichFormula<'bump>, b: ARichFormula<'bump>) -> ARichFormula<'bump> {
+        LESS_THAN_STEP.f_a([a, b])
     }
 
     /// happen before or equal
-    pub fn before(a: RichFormula<'bump>, b: RichFormula<'bump>) -> RichFormula<'bump> {
+    pub fn before(a: ARichFormula<'bump>, b: ARichFormula<'bump>) -> ARichFormula<'bump> {
         Self::strict_before(a.clone(), b.clone()) | meq(a, b)
     }
 

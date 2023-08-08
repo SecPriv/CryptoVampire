@@ -226,6 +226,12 @@ impl<'a, T, const N: usize> From<[&'a T; N]> for VecRef<'a, T> {
     }
 }
 
+impl<'a, T> From<&'a Box<[T]>> for VecRef<'a, T> {
+    fn from(value: &'a Box<[T]>) -> Self {
+        Self::Ref(value)
+    }
+}
+
 /// a [VecRef] with one more case when it needs to own the content
 ///
 /// `T` must then be [Clone] because the owned [Iterator] cannot return
@@ -456,6 +462,26 @@ where
 {
     fn from(value: Box<[T]>) -> Self {
         Self::Vec(value.into())
+    }
+}
+impl<'a, T> From<&'a Box<[T]>> for VecRefClone<'a, T>
+where
+    T: Clone,
+{
+    fn from(value: &'a Box<[T]>) -> Self {
+        Self::VecRef(value.into())
+    }
+}
+
+impl<'a, T: Clone> From<Arc<[T]>> for VecRefClone<'a, T> {
+    fn from(value: Arc<[T]>) -> Self {
+        Self::Vec(value)
+    }
+}
+
+impl<'a, 'b, T: Clone> From<&'b Arc<[T]>> for VecRefClone<'a, T> {
+    fn from(value: &'b Arc<[T]>) -> Self {
+        Self::Vec(Arc::clone(value))
     }
 }
 

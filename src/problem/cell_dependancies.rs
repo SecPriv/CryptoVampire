@@ -1,4 +1,6 @@
-use crate::formula::formula::RichFormula;
+use std::sync::Arc;
+
+use crate::formula::formula::{ARichFormula, RichFormula};
 
 use super::{cell::MemoryCell, step::Step};
 
@@ -24,7 +26,7 @@ pub enum OutGoingCall<'bump> {
 pub struct CellCall<'bump> {
     pub cell: MemoryCell<'bump>,
     pub step: StepCall<'bump>,
-    pub args: &'bump [RichFormula<'bump>],
+    pub args: Arc<[ARichFormula<'bump>]>,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -36,18 +38,18 @@ pub struct InputCall<'bump> {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum StepCall<'bump> {
     Step(Step<'bump>),
-    General(&'bump RichFormula<'bump>),
+    General(ARichFormula<'bump>),
 }
 
 pub mod graph {
 
-    use std::{cell::RefCell, convert::identity};
+    use std::{cell::RefCell, convert::identity, sync::Arc};
 
     use itertools::Itertools;
 
     use crate::{
         formula::{
-            formula::RichFormula,
+            formula::{ARichFormula, RichFormula},
             function::{inner::term_algebra::TermAlgebra, InnerFunction},
             utils::formula_iterator::{FormulaIterator, IteratorFlags},
         },
@@ -56,7 +58,7 @@ pub mod graph {
             cell::{Assignement, MemoryCell},
             step::Step,
         },
-        utils::{utils::repeat_n_zip, vecref::VecRef},
+        utils::{arc_into_iter::ArcIntoIter, utils::repeat_n_zip},
     };
 
     use super::{CellCall, Dependancy, DependancyFromStep, InputCall, OutGoingCall, StepCall};
@@ -86,7 +88,7 @@ pub mod graph {
     struct InnerCellCall<'bump> {
         pub cell: usize,
         pub step: StepCall<'bump>,
-        pub args: &'bump [RichFormula<'bump>],
+        pub args: Arc<[ARichFormula<'bump>]>,
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -501,7 +503,7 @@ pub mod graph {
 
     fn process_steps<'bump>(
         steps: &Vec<Step<'bump>>,
-        pile: &RefCell<Vec<((), &'bump RichFormula<'bump>)>>,
+        pile: &RefCell<Vec<((), ARichFormula<'bump>)>>,
         cells: &Vec<GlobNode<'bump>>,
         input_edges: &mut Vec<Edges<'bump>>,
         edges: &mut Vec<Edges<'bump>>,
@@ -511,33 +513,33 @@ pub mod graph {
             let _step_call = StepCall::Step(*step);
             let mut pile = pile.borrow_mut();
             pile.clear();
-            pile.extend([((), step.message()), ((), step.condition())]);
+            pile.extend([step.message_arc(), step.condition_arc()].map(|x| ((), x.shallow_copy())));
 
             let iter = FormulaIterator {
                 pile,
                 passed_along: Some(()),
                 flags: IteratorFlags::QUANTIFIER,
-                f: |_, f: &'bump RichFormula<'bump>| match f {
+                f: |_, f: ARichFormula<'bump>| match f.as_ref() {
                     RichFormula::Fun(fun, args) => match fun.as_inner() {
                         InnerFunction::TermAlgebra(TermAlgebra::Cell(c)) => {
                             let c = c.memory_cell();
                             let cell = cells.iter().position(|g| g.cell == c).unwrap();
                             let to_node = ToNode::CellCall(InnerCellCall {
                                 cell,
-                                step: StepCall::General(args.last().unwrap()),
-                                args: &args[..args.len() - 1],
+                                step: StepCall::General(args.last().unwrap().shallow_copy()),
+                                args: args[..args.len() - 1].iter().cloned().collect(),
                             });
-                            (Some(to_node), repeat_n_zip((), VecRef::Empty))
+                            (Some(to_node), repeat_n_zip((), [].into()))
                         }
                         InnerFunction::Step(_s) => {
                             let to_node = ToNode::Input(InputCall {
                                 step: StepCall::General(f),
                             });
-                            (Some(to_node), repeat_n_zip((), VecRef::Empty))
+                            (Some(to_node), repeat_n_zip((), [].into()))
                         }
-                        _ => (None, repeat_n_zip((), VecRef::Ref(args.as_slice()))),
+                        _ => (None, repeat_n_zip((), ArcIntoIter::from(args))),
                     },
-                    _ => (None, repeat_n_zip((), VecRef::Empty)),
+                    _ => (None, repeat_n_zip((), [].into())),
                 },
             };
 
@@ -556,7 +558,7 @@ pub mod graph {
 
     fn process_cell<'bump>(
         _steps: &Vec<Step<'bump>>,
-        pile: &RefCell<Vec<((), &'bump RichFormula<'bump>)>>,
+        pile: &RefCell<Vec<((), ARichFormula<'bump>)>>,
         cells: &Vec<GlobNode<'bump>>,
         input_edges: &mut Vec<Edges<'bump>>,
         edges: &mut Vec<Edges<'bump>>,
@@ -571,37 +573,37 @@ pub mod graph {
                 let from = FromNode::CellCall(InnerCellCall {
                     cell: cell_idx,
                     step: StepCall::Step(*step),
-                    args: args.as_slice(),
+                    args: args.clone(),
                 });
                 let mut pile = pile.borrow_mut();
                 pile.clear();
-                pile.extend([((), content)]);
+                pile.extend([((), content.shallow_copy())]);
 
                 let iter = FormulaIterator {
                     pile,
                     passed_along: Some(()),
                     flags: IteratorFlags::QUANTIFIER,
-                    f: |_, f: &'bump RichFormula<'bump>| match f {
+                    f: |_, f: ARichFormula<'bump>| match f.as_ref() {
                         RichFormula::Fun(fun, args) => match fun.as_inner() {
                             InnerFunction::TermAlgebra(TermAlgebra::Cell(c)) => {
                                 let c = c.memory_cell();
                                 let cell = cells.iter().position(|g| g.cell == c).unwrap();
                                 let to_node = ToNode::CellCall(InnerCellCall {
                                     cell,
-                                    step: StepCall::General(args.last().unwrap()),
-                                    args: &args[..args.len() - 1],
+                                    step: StepCall::General(args.last().unwrap().shallow_copy()),
+                                    args: args[..args.len() - 1].iter().cloned().collect(),
                                 });
-                                (Some(to_node), repeat_n_zip((), VecRef::Empty))
+                                (Some(to_node), repeat_n_zip((), [].into()))
                             }
                             InnerFunction::Step(_s) => {
                                 let to_node = ToNode::Input(InputCall {
                                     step: StepCall::General(f),
                                 });
-                                (Some(to_node), repeat_n_zip((), VecRef::Empty))
+                                (Some(to_node), repeat_n_zip((), [].into()))
                             }
-                            _ => (None, repeat_n_zip((), VecRef::Ref(args.as_slice()))),
+                            _ => (None, repeat_n_zip((), ArcIntoIter::from(args))),
                         },
-                        _ => (None, repeat_n_zip((), VecRef::Empty)),
+                        _ => (None, repeat_n_zip((), [].into())),
                     },
                 };
 
@@ -625,7 +627,7 @@ pub mod graph {
             CellCall {
                 cell: graph.cells.get(*cell).unwrap().cell,
                 step: step.clone(),
-                args,
+                args: args.clone(),
             }
         }
     }

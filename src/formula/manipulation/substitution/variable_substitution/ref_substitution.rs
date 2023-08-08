@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use crate::{
-    formula::{formula::RichFormula, manipulation::Substitution, variable::Variable},
+    formula::{formula::{RichFormula, ARichFormula}, manipulation::Substitution, variable::Variable},
     utils::vecref::VecRefClone,
 };
 
@@ -31,7 +31,11 @@ pub struct FrozenSubst<'a, T: Clone> {
 }
 
 impl<'a, T: Clone> FrozenSubst<'a, T> {
-    pub fn new<VRCusize, VCRT>(var: VRCusize, formulas: VCRT) -> Self
+    pub fn new(vars: VecRefClone<'a, usize>, formulas: VecRefClone<'a, T>) -> Self {
+        Self { vars, formulas }
+    }
+
+    pub fn new_from<VRCusize, VCRT>(var: VRCusize, formulas: VCRT) -> Self
     where
         VRCusize: Into<VecRefClone<'a, usize>>,
         VCRT: Into<VecRefClone<'a, T>>,
@@ -80,7 +84,7 @@ impl<'a, T: Clone> From<FrozenOVSubst<'a, T>> for FrozenSubst<'a, T> {
             .into_iter()
             .map(|OneVarSubst { id, f }| (id, f))
             .unzip();
-        Self::new(vars, formulas)
+        Self::new_from(vars, formulas)
     }
 }
 
@@ -97,23 +101,25 @@ impl<'a, T: Clone> From<FrozenSubst<'a, T>> for FrozenOVSubst<'a, T> {
     }
 }
 
-impl<'a, 'bump: 'a> Substitution<'bump> for FrozenOVSubst<'a, RichFormula<'bump>> {
-    fn get(&self, var: &Variable<'bump>) -> RichFormula<'bump> {
+pub type FrozenOVSubstF<'a, 'bump> = FrozenOVSubst<'a, ARichFormula<'bump>>;
+impl<'a, 'bump: 'a> Substitution<'bump> for FrozenOVSubstF<'a, 'bump> {
+    fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump> {
         self.content()
             .into_iter()
             .find(|ovs| ovs.id() == var.id)
-            .map(|ovs| ovs.as_ref().get(var))
-            .unwrap_or(RichFormula::Var(*var))
+            .map(|ovs| ovs.get(var))
+            .unwrap_or(RichFormula::Var(*var).into())
     }
 }
 
-impl<'a, 'bump: 'a> Substitution<'bump> for FrozenSubst<'a, RichFormula<'bump>> {
-    fn get(&self, var: &Variable<'bump>) -> RichFormula<'bump> {
+pub type FrozenSubstF<'a, 'bump> = FrozenSubst<'a, ARichFormula<'bump>>;
+impl<'a, 'bump: 'a> Substitution<'bump> for FrozenSubstF<'a, 'bump> {
+    fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump> {
         let FrozenSubst { vars, formulas, .. } = self;
         vars.iter()
             .zip_eq(formulas.iter())
             .find(|(&id, _)| id == var.id)
             .map(|(_, f)| f.clone())
-            .unwrap_or(RichFormula::Var(*var))
+            .unwrap_or(RichFormula::Var(*var).into())
     }
 }

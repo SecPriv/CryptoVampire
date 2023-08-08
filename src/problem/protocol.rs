@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 
-use crate::formula::{formula::RichFormula, variable::Variable};
+use crate::formula::{formula::{RichFormula, ARichFormula}, variable::Variable};
 
 use super::{
     cell::{Assignement, MemoryCell},
@@ -13,19 +13,19 @@ pub struct Protocol<'bump> {
     pub graph: DependancyGraph<'bump>,
     pub steps: Vec<Step<'bump>>,
     pub memory_cells: Vec<MemoryCell<'bump>>,
-    pub ordering: Vec<RichFormula<'bump>>,
+    pub ordering: Vec<ARichFormula<'bump>>,
 }
 
 impl<'bump> Protocol<'bump> {
     pub fn list_top_level_terms<'a>(
         &'a self,
-    ) -> impl Iterator<Item = &'bump RichFormula<'bump>> + 'a
+    ) -> impl Iterator<Item = &'bump ARichFormula<'bump>> + 'a
     where
         'bump: 'a,
     {
         self.steps
             .iter()
-            .flat_map(|s| [s.condition(), s.message()].into_iter())
+            .flat_map(|s| [s.condition_arc(), s.message_arc()].into_iter())
             .chain(self.memory_cells.iter().flat_map(|c| {
                 c.assignements()
                     .iter()
@@ -34,13 +34,13 @@ impl<'bump> Protocol<'bump> {
     }
     pub fn list_top_level_terms_short_lifetime<'a>(
         &'a self,
-    ) -> impl Iterator<Item = &'a RichFormula<'bump>> + 'a
+    ) -> impl Iterator<Item = &'a ARichFormula<'bump>> + 'a
     where
         'bump: 'a,
     {
         self.steps
             .iter()
-            .flat_map(|s| [s.condition(), s.message()].into_iter())
+            .flat_map(|s| [s.condition_arc(), s.message_arc()].into_iter())
             .chain(self.memory_cells.iter().flat_map(|c| {
                 c.assignements()
                     .iter()
@@ -53,7 +53,7 @@ impl<'bump> Protocol<'bump> {
 
         self.list_top_level_terms()
             .flat_map(|f| f.used_variables_iter_with_pile(pile.borrow_mut()))
-            .map(|Variable { id, .. }| *id)
+            .map(|Variable { id, .. }| id)
             .max()
             .unwrap_or(0)
     }

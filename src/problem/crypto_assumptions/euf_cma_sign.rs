@@ -7,10 +7,13 @@ use crate::{
     environement::environement::Environement,
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
-        formula::{forall, meq, RichFormula},
+        formula::{self, forall, meq, ARichFormula, RichFormula},
         function::inner::{subterm::Subsubterm, term_algebra::name::NameCaster},
         function::Function,
-        sort::builtins::{MESSAGE, NONCE},
+        sort::{
+            builtins::{MESSAGE, NONCE},
+            Sort,
+        },
         utils::formula_expander::DeeperKinds,
         variable::Variable,
     },
@@ -24,7 +27,7 @@ use crate::{
             Subterm,
         },
     },
-    utils::vecref::VecRef,
+    utils::{arc_into_iter::ArcIntoIter, vecref::VecRef},
 };
 
 pub type SubtermEufCmaSignMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
@@ -106,24 +109,24 @@ impl<'bump> EufCmaSign<'bump> {
                     id: max_var,
                     sort: nonce_sort,
                 };
-                let k_f = k.into_formula();
-                let ors = RichFormula::ors(subterm_key.preprocess_whole_ptcl(&pbl.protocol, &k_f));
+                let k_f = k.into_aformula();
+                let ors = formula::ors(subterm_key.preprocess_whole_ptcl(&pbl.protocol, &k_f));
 
-                forall([k], split.f([k_f]) >> ors)
+                forall([k], split.f_a([k_f]) >> ors)
             }));
 
             assertions.push(Axiom::base(
                 mforall!(m!1:message_sort, sigma!2:message_sort, k!3:nonce_sort; {
-                    let k_f = nc.cast(message_sort, k.clone());
-                    ev.eval(self.verify.f([m.clone(), sigma.clone(), self.pk.f([ k_f.clone()])])) >>
+                    let k_f = nc.cast(message_sort, k);
+                    ev.eval(self.verify.f([m.into(), sigma.into(), self.pk.f_a([ k_f.clone()])])) >>
                     mexists!(u!4:message_sort; {
-                        meq(ev.eval(u.clone()), ev.eval(m.clone())) &
+                        meq(ev.eval(u.clone()), ev.eval(m)) &
                         (
-                            subterm_main.f( self.sign.f([u.clone(), k_f.clone()]), m.clone()) |
-                            subterm_main.f( self.sign.f([u.clone(), k_f.clone()]), sigma.clone()) |
-                            subterm_key.f( k.clone(), m.clone()) |
-                            subterm_key.f( k.clone(), sigma.clone()) |
-                            split.f([k])
+                            subterm_main.f_a( self.sign.f_a([u.into(), k_f.clone()]), m.into()) |
+                            subterm_main.f_a( self.sign.f_a([u.into(), k_f.clone()]), sigma.into()) |
+                            subterm_key.f_a( k.clone(), m.clone()) |
+                            subterm_key.f_a( k.clone(), sigma.clone()) |
+                            split.f_a([k])
                         )
                     })
                 }),
@@ -136,51 +139,52 @@ impl<'bump> EufCmaSign<'bump> {
         pbl: &'a Problem<'bump>,
         subterm_main: &'a Subterm<'bump, impl SubtermAux<'bump>>,
         subterm_key: &'a Subterm<'bump, impl SubtermAux<'bump>>,
-    ) -> impl Iterator<Item = RichFormula<'bump>> + 'a {
+    ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
         let max_var = pbl.max_var();
         // let pile1 = RefCell::new(Vec::new());
         let pile2 = RefCell::new(Vec::new());
         let candidates = pbl
             .list_top_level_terms()
             .flat_map(move |f| f.iter()) // sad...
-            .filter_map(|formula| match formula {
+            .filter_map(|formula| match formula.as_ref() {
                 RichFormula::Fun(fun, args) => {
                     if_chain! {
                         if fun == &self.verify;
-                        if let RichFormula::Fun(mpk, args2) = &args[2];
+                        if let RichFormula::Fun(mpk, args2) = args[2].as_ref();
                         if mpk == &self.pk;
-                        if let RichFormula::Fun(nf, args3) = &args2[0];
+                        if let RichFormula::Fun(nf, args3) = args2[0].as_ref();
                         if nf == pbl.name_caster.cast_function(&MESSAGE.as_sort()).unwrap();
                         then {
-                            Some(EufCandidate {message: &args[0], signature: &args[1], key: &args3[0]})
+                            Some(EufCandidate {message: args[0].shallow_copy(), signature: args[1].shallow_copy(), key: args3[0].shallow_copy()})
                         } else {None}
                     }
                 }
                 _ => None,
             }).unique()
             .filter_map(move |EufCandidate { message, signature, key }| {
-                let array = [message, signature, key];
+                let array = [&message, &signature, &key];
                 let max_var = array.iter()
                     .flat_map(|f| f.used_variables_iter_with_pile(pile2.borrow_mut()))
-                    .map(|Variable { id, ..} | *id)
+                    .map(|Variable { id, ..} | id)
                     .max().unwrap_or(max_var) + 1;
                 let free_vars = array.iter()
                     .flat_map(|f| f.get_free_vars().into_iter())
-                    .cloned().unique();
+                    // .cloned()
+                    .unique();
                 let u_var = Variable {id: max_var, sort: MESSAGE.as_sort()};
-                let u_f = u_var.into_formula();
+                let u_f = u_var.into_aformula();
 
-                let k_sc = subterm_key.preprocess_terms(&pbl.protocol, key,
+                let k_sc = subterm_key.preprocess_terms(&pbl.protocol, &key,
                     pbl.protocol.list_top_level_terms_short_lifetime()
-                        .chain([message, signature].into_iter())
+                        .chain([&message, &signature]).cloned()
                     , false, DeeperKinds::NO_MACROS).next().is_none();
                 if k_sc {
-            let disjunction = subterm_main.preprocess_terms(&pbl.protocol, &u_f, [message, signature], true, DeeperKinds::all());
+            let disjunction = subterm_main.preprocess_terms(&pbl.protocol, &u_f, [&message, &signature].map(|x| x.shallow_copy()), true, DeeperKinds::all());
 
                 Some(mforall!(free_vars, {
-                    pbl.evaluator.eval(self.verify.f([message.clone(), signature.clone(), self.pk.f([ pbl.name_caster.cast(MESSAGE.as_sort(), key.clone())])]))
+                    pbl.evaluator.eval(self.verify.f([message.clone(), signature.clone(), self.pk.f_a([ pbl.name_caster.cast(MESSAGE.as_sort(), key.clone())])]))
                     >> mexists!([u_var], {
-                            RichFormula::ors(disjunction)
+                            formula::ors(disjunction)
                         })
                 }))
                 } else {None}
@@ -252,10 +256,10 @@ fn define_subterms<'bump>(
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct EufCandidate<'a, 'bump> {
-    message: &'a RichFormula<'bump>,
-    signature: &'a RichFormula<'bump>,
-    key: &'a RichFormula<'bump>,
+struct EufCandidate<'bump> {
+    message: ARichFormula<'bump>,
+    signature: ARichFormula<'bump>,
+    key: ARichFormula<'bump>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -265,44 +269,36 @@ pub struct KeyAux<'bump> {
 }
 
 impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
-    type IntoIter<'a> = VecRef<'a, RichFormula<'bump>>
-    where
-        'bump: 'a;
+    type IntoIter = ArcIntoIter<ARichFormula<'bump>>;
 
-    fn sort(&self) -> crate::formula::sort::Sort<'bump> {
+    fn sort(&self) -> Sort<'bump> {
         NONCE.clone()
     }
 
-    fn var_eval_and_next<'a>(
-        &self,
-        m: &'a RichFormula<'bump>,
-    ) -> VarSubtermResult<'a, 'bump, Self::IntoIter<'a>>
-    where
-        'bump: 'a,
-    {
-        let nexts = match m {
+    fn var_eval_and_next(&self, m: &ARichFormula<'bump>) -> VarSubtermResult<'bump, Self::IntoIter> {
+        let nexts = match m.as_ref() {
             RichFormula::Fun(fun, args) => 'function: {
                 if_chain! {
                     if fun == &self.euf_cma.sign;
-                    if let RichFormula::Fun(nf, _args2) = &args[1];
+                    if let RichFormula::Fun(nf, _args2) = args[1].as_ref();
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
                         // break 'function VecRef::Vec(vec![&args[0], &args2[0]])
-                        break 'function [&args[0]].into() // can't be the subterm of another nonce
+                        break 'function [args[0].shallow_copy()].into() // can't be the subterm of another nonce
                     }
                 }
                 if_chain! {
                     if fun == &self.euf_cma.pk;
-                    if let RichFormula::Fun(nf, _args2) = &args[0];
+                    if let RichFormula::Fun(nf, _args2) = args[0].as_ref();
                     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
                     then {
                         // break 'function VecRef::Vec(vec![&args[0], &args[1], &args2[0]])
-                        break 'function VecRef::Empty // can't be the subterm of another nonce
+                        break 'function [].into() // can't be the subterm of another nonce
                     }
                 }
-                VecRef::Ref(args)
+                ArcIntoIter::from(args)
             }
-            _ => VecRef::Empty,
+            _ => [].into(),
         };
 
         let m_sort = m.get_sort();

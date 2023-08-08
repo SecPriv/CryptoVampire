@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use static_init::dynamic;
 
 use crate::formula::{formula::RichFormula, sort::builtins::STEP};
@@ -21,10 +23,10 @@ pub static FALSE_F: Function<'static> = new_static_function(InnerFunction::Bool(
 ));
 
 #[dynamic]
-pub static TRUE: RichFormula<'static> = RichFormula::Fun(TRUE_F.clone(), vec![]);
+pub static TRUE: RichFormula<'static> = RichFormula::Fun(TRUE_F.clone(), Arc::new([]));
 
 #[dynamic]
-pub static FALSE: RichFormula<'static> = RichFormula::Fun(TRUE_F.clone(), vec![]);
+pub static FALSE: RichFormula<'static> = RichFormula::Fun(TRUE_F.clone(), Arc::new([]));
 
 #[dynamic]
 pub static AND: Function<'static> = new_static_function(InnerFunction::Bool(Booleans::Connective(

@@ -1,28 +1,54 @@
 use std::{iter::FusedIterator, sync::Arc};
 
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone)]
-pub struct ArcIntoIter<T> {
-    data: Arc<[T]>,
-    index: usize,
-    end: usize,
+pub enum ArcIntoIter<T> {
+    Empty,
+    Iter {
+        data: Arc<[T]>,
+        index: usize,
+        end: usize,
+    },
 }
 
 impl<T: Clone> Iterator for ArcIntoIter<T> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index != self.end {
-            let e = self.data.get(self.index).unwrap();
-            self.index += 1;
-            Some(e.clone())
-        } else {
-            None
+        match self {
+            ArcIntoIter::Empty => None,
+            ArcIntoIter::Iter { data, index, end } => {
+                if index != end {
+                    let e = data.get(*index).unwrap();
+                    *index += 1;
+                    Some(e.clone())
+                } else {
+                    *self = Self::Empty;
+                    self.next()
+                }
+            }
         }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let len = self.end - self.index;
-        (len, Some(len))
+        match self {
+            ArcIntoIter::Empty => (0, Some(0)),
+            ArcIntoIter::Iter { data, index, end } => {
+                let len = *end - *index;
+                (len, Some(len))
+            }
+        }
+    }
+
+    fn collect<B: FromIterator<Self::Item>>(self) -> B
+    where
+        Self: Sized,
+    {
+        match self {
+            ArcIntoIter::Empty => B::from_iter(std::iter::empty()),
+            ArcIntoIter::Iter { data, index, end } => {
+                B::from_iter(data.as_ref()[index..end].iter().cloned())
+            }
+        }
     }
 }
 
@@ -32,19 +58,25 @@ impl<T: Clone> ExactSizeIterator for ArcIntoIter<T> {}
 
 impl<T: Clone> DoubleEndedIterator for ArcIntoIter<T> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        if self.index != self.end {
-            self.end -= 1;
-            let e = self.data.get(self.end).unwrap();
-            Some(e.clone())
-        } else {
-            None
+        match self {
+            ArcIntoIter::Empty => None,
+            ArcIntoIter::Iter { data, index, end } => {
+                if index != end {
+                    *end -= 1;
+                    let e = data.get(*end).unwrap();
+                    Some(e.clone())
+                } else {
+                    *self = Self::Empty;
+                    self.next()
+                }
+            }
         }
     }
 }
 
 impl<T> From<Arc<[T]>> for ArcIntoIter<T> {
     fn from(value: Arc<[T]>) -> Self {
-        ArcIntoIter {
+        ArcIntoIter::Iter {
             end: value.len(),
             data: value,
             index: 0,
@@ -54,10 +86,63 @@ impl<T> From<Arc<[T]>> for ArcIntoIter<T> {
 
 impl<'a, T> From<&'a Arc<[T]>> for ArcIntoIter<T> {
     fn from(value: &'a Arc<[T]>) -> Self {
-        ArcIntoIter {
-            end: value.len(),
-            data: Arc::clone(value),
-            index: 0,
+        if value.len() == 0 {
+            Self::Empty
+        } else {
+            ArcIntoIter::Iter {
+                end: value.len(),
+                data: Arc::clone(value),
+                index: 0,
+            }
         }
+    }
+}
+
+impl<T, const N: usize> From<[T; N]> for ArcIntoIter<T> {
+    fn from(value: [T; N]) -> Self {
+        if N == 0 {
+            Self::Empty
+        } else {
+            Self::Iter {
+                data: Arc::new(value),
+                index: 0,
+                end: N,
+            }
+        }
+    }
+}
+
+impl<T> Default for ArcIntoIter<T> {
+    fn default() -> Self {
+        [].into()
+    }
+}
+
+pub trait ClonableArc<T> : Sized
+where
+    T: Clone,
+{
+    fn clonnable_arc(self) -> Arc<[T]>;
+    fn into_iter(self) -> ArcIntoIter<T> {
+        ArcIntoIter::from(self.clonnable_arc())
+    }
+}
+
+// impl<I, T> IntoIterator for I
+// where
+//     I: ClonableArc<T>,
+//     T: Clone,
+// {
+//     type Item = T;
+
+//     type IntoIter = ArcIntoIter<T>;
+
+//     fn into_iter(self) -> Self::IntoIter {
+//         ArcIntoIter::from(self.clonnable_arc())
+//     }
+// }
+impl<T: Clone> ClonableArc<T> for Arc<[T]> {
+    fn clonnable_arc(self) -> Arc<[T]> {
+        self
     }
 }
