@@ -1,10 +1,13 @@
-use std::{fmt::{self, Display}, sync::Arc};
+use std::{
+    fmt::{self, Display},
+    sync::Arc,
+};
 
 use crate::{
     environement::environement::Environement,
     formula::{
         file_descriptior::axioms::{Axiom, Rewrite, RewriteKind},
-        formula::{RichFormula, ARichFormula},
+        formula::RichFormula,
         function::{
             inner::{
                 booleans::{Booleans, Connective},
@@ -245,11 +248,17 @@ impl<'bump> SmtFormula<'bump> {
             RichFormula::Quantifier(q, arg) => match q {
                 Quantifier::Exists { variables, status } => {
                     assert!(status.is_bool());
-                    SmtFormula::Exists(variables.clone(), Box::new(Self::from_arichformula(env, arg.as_ref())))
+                    SmtFormula::Exists(
+                        variables.clone(),
+                        Box::new(Self::from_arichformula(env, arg.as_ref())),
+                    )
                 }
                 Quantifier::Forall { variables, status } => {
                     assert!(status.is_bool());
-                    SmtFormula::Forall(variables.clone(), Box::new(Self::from_arichformula(env, arg.as_ref())))
+                    SmtFormula::Forall(
+                        variables.clone(),
+                        Box::new(Self::from_arichformula(env, arg.as_ref())),
+                    )
                 }
             },
             RichFormula::Fun(f, args) => {
@@ -310,7 +319,9 @@ impl<'bump> Smt<'bump> {
     pub fn from_axiom(env: &Environement<'bump>, ax: Axiom<'bump>) -> Self {
         match ax {
             Axiom::Comment(str) => Smt::Comment(str.into()),
-            Axiom::Base { formula } => Smt::Assert(SmtFormula::from_arichformula(env, formula.as_ref())),
+            Axiom::Base { formula } => {
+                Smt::Assert(SmtFormula::from_arichformula(env, formula.as_ref()))
+            }
             Axiom::Theory { formula } => {
                 let f = SmtFormula::from_arichformula(env, formula.as_ref());
                 if env.use_assert_theory() {

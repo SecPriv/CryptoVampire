@@ -5,12 +5,12 @@ use itertools::Itertools;
 use crate::{
     container::ScopedContainer,
     formula::{
-        formula::{ARichFormula, RichFormula},
+        formula::ARichFormula,
         function::{
             builtin::{HAPPENS, LESS_THAN_STEP, TRUE},
             inner::evaluate::Evaluator,
-            inner::term_algebra::{name::NameCaster, TermAlgebra},
-            Function, InnerFunction,
+            inner::term_algebra::name::NameCaster,
+            Function,
         },
         sort::{
             builtins::{MESSAGE, NONCE, STEP},

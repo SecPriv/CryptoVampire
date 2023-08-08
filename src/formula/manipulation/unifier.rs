@@ -198,12 +198,12 @@ impl<'bump> Unifier<'bump> {
         }
     }
 
-    pub fn left(&self) -> &(impl Substitution<'bump>)
+    pub fn left(&self) -> &impl Substitution<'bump>
 where {
         &self.left
     }
 
-    pub fn right(&self) -> &(impl Substitution<'bump>)
+    pub fn right(&self) -> &impl Substitution<'bump>
 where
         // 'bump: 'b
     {

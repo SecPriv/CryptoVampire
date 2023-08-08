@@ -10,7 +10,7 @@ use crate::{
             axioms::Axiom,
             declare::{ConstructorDestructor, DataType, Declaration},
         },
-        formula::{RichFormula, ARichFormula},
+        formula::ARichFormula,
         function::inner::{evaluate::Evaluator, term_algebra::name::NameCaster},
         function::Function,
         sort::Sort,

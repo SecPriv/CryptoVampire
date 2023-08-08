@@ -1,4 +1,8 @@
-use crate::formula::{formula::{RichFormula, ARichFormula}, manipulation::Substitution, variable::Variable};
+use crate::formula::{
+    formula::{ARichFormula, RichFormula},
+    manipulation::Substitution,
+    variable::Variable,
+};
 
 use super::OwnedVarSubst;
 
@@ -48,7 +52,7 @@ impl<T> From<(usize, T)> for OneVarSubst<T> {
     }
 }
 
-impl<'a, 'bump:'a> Substitution<'bump> for OneVarSubstF<'bump> {
+impl<'a, 'bump: 'a> Substitution<'bump> for OneVarSubstF<'bump> {
     fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump> {
         if var.id == self.id {
             self.f.clone()

@@ -1,5 +1,7 @@
-use crate::formula::{variable::Variable, formula::{RichFormula, ARichFormula}};
-
+use crate::formula::{
+    formula::{ARichFormula, RichFormula},
+    variable::Variable,
+};
 
 pub trait Substitution<'bump> {
     fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump>;
@@ -10,7 +12,8 @@ pub trait Substitution<'bump> {
             RichFormula::Fun(fun, args) => RichFormula::Fun(
                 fun.clone(),
                 args.iter().map(|arg| self.apply(arg.as_ref())).collect(),
-            ).into_arc(),
+            )
+            .into_arc(),
             RichFormula::Quantifier(q, arg) => {
                 RichFormula::Quantifier(q.clone(), self.apply(arg.as_ref())).into_arc()
             }
@@ -33,7 +36,6 @@ pub trait Substitution<'bump> {
     }
 }
 
-
 pub struct Chain<A, B>(A, B);
 
 impl<'bump, A: Substitution<'bump>, B: Substitution<'bump>> Substitution<'bump> for Chain<A, B> {
@@ -55,6 +57,7 @@ impl<'bump> Substitution<'bump> for Translate {
         RichFormula::Var(Variable {
             id: var.id + self.0,
             ..var.clone()
-        }).into_arc()
+        })
+        .into_arc()
     }
 }

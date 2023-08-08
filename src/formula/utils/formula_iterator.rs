@@ -1,4 +1,4 @@
-use std::{ops::{Deref, DerefMut}, sync::Arc};
+use std::ops::{Deref, DerefMut};
 
 // use crate::problem::problem::Problem;
 
@@ -6,7 +6,7 @@ use bitflags::bitflags;
 
 use crate::{
     formula::{
-        formula::{RichFormula, ARichFormula},
+        formula::{ARichFormula, RichFormula},
         function::{inner::term_algebra::TermAlgebra, InnerFunction},
     },
     utils::utils::repeat_n_zip,
@@ -51,12 +51,12 @@ where
             None => None,
             Some((p, formula)) => {
                 match formula.as_ref() {
-                    RichFormula::Fun(fun, args) => match fun.as_inner() {
+                    RichFormula::Fun(fun, _args) => match fun.as_inner() {
                         InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q))
                             if self.flags.contains(IteratorFlags::QUANTIFIER) =>
                         {
                             let iter = q.get_content();
-                            let iter = repeat_n_zip(p.clone(), iter.iter().cloned());//.map(|(p, f)| (p, f));
+                            let iter = repeat_n_zip(p.clone(), iter.iter().cloned()); //.map(|(p, f)| (p, f));
                             self.pile.extend(iter)
                         }
                         _ => {}

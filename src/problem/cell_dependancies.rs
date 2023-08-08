@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::formula::formula::{ARichFormula, RichFormula};
+use crate::formula::formula::ARichFormula;
 
 use super::{cell::MemoryCell, step::Step};
 

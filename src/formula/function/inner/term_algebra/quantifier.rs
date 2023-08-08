@@ -4,7 +4,7 @@ use std::sync::{
 };
 
 use crate::formula::{
-    formula::{RichFormula, ARichFormula},
+    formula::ARichFormula,
     function::{
         signature::FixedRefSignature,
         traits::{FixedSignature, MaybeEvaluatable},

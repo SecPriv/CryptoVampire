@@ -1,5 +1,5 @@
 use std::{
-    ops::{BitAnd, BitOr, Deref, DerefMut, Not, Shr},
+    ops::{BitAnd, BitOr, Not, Shr},
     sync::Arc,
 };
 
@@ -21,15 +21,11 @@ use crate::{
             sorted::{Sorted, SortedError},
             Sort,
         },
-        utils::{
-            formula_expander::{DeeperKinds, ExpantionContent, ExpantionState},
-            formula_iterator::{FormulaIterator, IteratorFlags},
-        },
+        utils::formula_expander::{DeeperKinds, ExpantionContent, ExpantionState},
         variable::Variable,
     },
     implvec,
     problem::protocol::Protocol,
-    utils::utils::{repeat_n_zip, StackBox},
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

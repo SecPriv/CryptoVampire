@@ -10,7 +10,7 @@ use crate::{
     container::allocator::ContainerTools,
     formula::{
         file_descriptior::declare::{self, Declaration},
-        formula::{self, exists, forall, meq, ARichFormula, RichFormula},
+        formula::{self, exists, forall, meq, ARichFormula},
         function::{self, Function, InnerFunction},
         manipulation::Unifier,
         sort::Sort,

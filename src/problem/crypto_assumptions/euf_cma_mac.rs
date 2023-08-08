@@ -24,7 +24,7 @@ use crate::{
             Subterm,
         },
     },
-    utils::{arc_into_iter::ArcIntoIter, vecref::VecRef},
+    utils::arc_into_iter::ArcIntoIter,
 };
 
 pub type SubtermEufCmaMacMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;

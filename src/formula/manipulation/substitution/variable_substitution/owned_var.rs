@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use crate::formula::{variable::Variable, formula::ARichFormula};
+use crate::formula::{formula::ARichFormula, variable::Variable};
 
 use super::super::substitution::Substitution;
 
@@ -38,7 +38,7 @@ impl<'bump> OwnedVarSubstF<'bump> {
         self.subst.push((id, r).into())
     }
 
-    pub fn get_as_rf(&self, id:usize) -> Option<&RichFormula<'bump>> {
+    pub fn get_as_rf(&self, id: usize) -> Option<&RichFormula<'bump>> {
         self.get(id).map(ARichFormula::as_ref)
     }
 }
@@ -84,6 +84,5 @@ where
             .map(OneVarSubst::fc)
             // .cloned()
             .unwrap_or_else(|| RichFormula::Var(var.clone()).into())
-
     }
 }

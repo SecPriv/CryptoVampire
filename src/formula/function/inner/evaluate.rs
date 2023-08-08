@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::formula::{
-    formula::{RichFormula, ARichFormula},
+    formula::ARichFormula,
     function::{
         signature::FixedRefSignature,
         traits::{FixedSignature, MaybeEvaluatable},
@@ -24,7 +24,7 @@ pub struct Evaluator<'bump> {
 
 impl<'bump> Evaluator<'bump> {
     pub fn eval(&self, f: impl Into<ARichFormula<'bump>>) -> ARichFormula<'bump> {
-        let f  = f.into();
+        let f = f.into();
         self.functions.get(&f.get_sort().unwrap()).unwrap().f_a([f])
     }
 }

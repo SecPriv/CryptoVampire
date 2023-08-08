@@ -4,7 +4,8 @@ use crate::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::meq,
         function::builtin::{HAPPENS, LESS_THAN_STEP},
-        sort::builtins::STEP, variable::Variable,
+        sort::builtins::STEP,
+        variable::Variable,
     },
     mforall,
     problem::problem::Problem,
@@ -21,7 +22,11 @@ pub fn generate<'bump>(
     let lt = LESS_THAN_STEP.clone();
     let happens = HAPPENS.clone();
     let step = STEP.clone();
-    let init = pbl.protocol.init_step().function().f_a::<Variable<'bump>>([]);
+    let init = pbl
+        .protocol
+        .init_step()
+        .function()
+        .f_a::<Variable<'bump>>([]);
 
     assertions.extend(
         [

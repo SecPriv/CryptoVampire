@@ -9,7 +9,7 @@ use crate::{
             axioms::{Axiom, Rewrite, RewriteKind},
             declare::Declaration,
         },
-        formula::{self, meq, RichFormula},
+        formula::{self, meq},
         function::{
             builtin::IF_THEN_ELSE,
             inner::term_algebra::{

@@ -1,7 +1,11 @@
 use itertools::Itertools;
 
 use crate::{
-    formula::{formula::{RichFormula, ARichFormula}, manipulation::Substitution, variable::Variable},
+    formula::{
+        formula::{ARichFormula, RichFormula},
+        manipulation::Substitution,
+        variable::Variable,
+    },
     utils::vecref::VecRefClone,
 };
 

@@ -4,9 +4,6 @@ pub use arc::*;
 mod formula;
 pub use formula::*;
 
-
-
-
 pub mod macros {
     #[macro_export]
     macro_rules! mforall {

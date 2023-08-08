@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 
-use crate::formula::{formula::{RichFormula, ARichFormula}, variable::Variable};
+use crate::formula::{formula::ARichFormula, variable::Variable};
 
 use super::{
     cell::{Assignement, MemoryCell},

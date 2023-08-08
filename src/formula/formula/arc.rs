@@ -12,7 +12,6 @@ use crate::{
     utils::{
         arc_into_iter::ArcIntoIter,
         utils::{repeat_n_zip, StackBox},
-        vecref::VecRefClone,
     },
 };
 
@@ -41,13 +40,13 @@ impl<'bump> From<Variable<'bump>> for ARichFormula<'bump> {
     }
 }
 
-impl<'a, 'bump:'a> From<&'a Variable<'bump>> for ARichFormula<'bump> {
+impl<'a, 'bump: 'a> From<&'a Variable<'bump>> for ARichFormula<'bump> {
     fn from(value: &'a Variable<'bump>) -> Self {
         Self(Arc::new(RichFormula::Var(*value)))
     }
 }
 
-impl<'a, 'bump:'a> From<&'a ARichFormula<'bump>> for ARichFormula<'bump> {
+impl<'a, 'bump: 'a> From<&'a ARichFormula<'bump>> for ARichFormula<'bump> {
     fn from(value: &'a ARichFormula<'bump>) -> Self {
         value.shallow_copy()
     }
@@ -179,7 +178,6 @@ impl<'bump> ARichFormula<'bump> {
     {
         Self::iter_used_varibales_with_pile(StackBox::new(Vec::<((), _)>::new()), fs)
     }
-
 }
 
 impl<'bump> BitAnd for ARichFormula<'bump> {

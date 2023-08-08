@@ -1,4 +1,4 @@
-use std::{rc::Rc, sync::Arc};
+use std::sync::Arc;
 
 use itertools::Itertools;
 
@@ -13,7 +13,7 @@ use crate::{
         cell_dependancies::graph::{Ancestors, DependancyGraph},
         step::Step,
     },
-    utils::{arc_into_iter::ArcIntoIter, vecref::VecRef},
+    utils::arc_into_iter::ArcIntoIter,
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

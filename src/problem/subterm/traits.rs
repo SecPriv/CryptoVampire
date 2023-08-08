@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{
     formula::{
         formula::{ARichFormula, RichFormula},
@@ -7,10 +5,7 @@ use crate::{
         sort::Sort,
         variable::Variable,
     },
-    utils::{
-        arc_into_iter::{ArcIntoIter, ClonableArc},
-        vecref::VecRef,
-    },
+    utils::arc_into_iter::ArcIntoIter,
 };
 
 // use self::possibly_empty::PE;

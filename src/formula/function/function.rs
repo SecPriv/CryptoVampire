@@ -337,7 +337,7 @@ impl<'bump> Function<'bump> {
 
         let vars: Arc<[_]> = vars.into_iter().collect();
 
-        let free_variables :Arc<[_]> = [&condition, &success, &faillure]
+        let free_variables: Arc<[_]> = [&condition, &success, &faillure]
             .into_iter()
             .flat_map(|f| f.get_free_vars().into_iter())
             .filter(|v| !vars.contains(v))
@@ -498,13 +498,10 @@ impl<'bump> Function<'bump> {
     //     }
     // }
 
-    pub fn f<'bbump, I>(
-        &self,
-        args: impl IntoIterator<Item = I>,
-    ) -> RichFormula<'bbump>
+    pub fn f<'bbump, I>(&self, args: impl IntoIterator<Item = I>) -> RichFormula<'bbump>
     where
         'bump: 'bbump,
-        I: Into<ARichFormula<'bbump>>
+        I: Into<ARichFormula<'bbump>>,
     {
         assert!(self.is_valid());
         assert!(!matches!(self.as_inner(), InnerFunction::Tmp(_)));
@@ -512,13 +509,10 @@ impl<'bump> Function<'bump> {
         RichFormula::Fun(*self, args.into_iter().map_into().collect())
     }
 
-    pub fn f_a<'bbump, I>(
-        &self,
-        args: impl IntoIterator<Item = I>,
-    ) -> ARichFormula<'bbump>
+    pub fn f_a<'bbump, I>(&self, args: impl IntoIterator<Item = I>) -> ARichFormula<'bbump>
     where
         'bump: 'bbump,
-        I: Into<ARichFormula<'bbump>>
+        I: Into<ARichFormula<'bbump>>,
     {
         self.f(args).into_arc()
     }

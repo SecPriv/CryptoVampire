@@ -5,4 +5,4 @@ mod owned_var;
 pub use owned_var::{OwnedVarSubst, OwnedVarSubstF};
 
 mod ref_substitution;
-pub use ref_substitution::{FrozenOVSubst, FrozenOVSubstF,  FrozenSubst, FrozenSubstF};
+pub use ref_substitution::{FrozenOVSubst, FrozenOVSubstF, FrozenSubst, FrozenSubstF};

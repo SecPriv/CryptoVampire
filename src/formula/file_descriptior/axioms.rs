@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::formula::{formula::{RichFormula, ARichFormula}, function::Function, variable::Variable};
+use crate::formula::{formula::ARichFormula, function::Function, variable::Variable};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Axiom<'bump> {
@@ -13,19 +13,13 @@ pub enum Axiom<'bump> {
 
 impl<'bump> Axiom<'bump> {
     pub fn base(f: ARichFormula<'bump>) -> Self {
-        Self::Base {
-            formula: f,
-        }
+        Self::Base { formula: f }
     }
     pub fn theory(f: ARichFormula<'bump>) -> Self {
-        Self::Theory {
-            formula: f,
-        }
+        Self::Theory { formula: f }
     }
     pub fn query(f: ARichFormula<'bump>) -> Self {
-        Self::Query {
-            formula: f,
-        }
+        Self::Query { formula: f }
     }
 }
 

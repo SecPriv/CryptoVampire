@@ -3,7 +3,10 @@ use std::{
     ops::{Add, Deref},
 };
 
-use super::{formula::{RichFormula, ARichFormula}, sort::Sort};
+use super::{
+    formula::{ARichFormula, RichFormula},
+    sort::Sort,
+};
 
 #[derive(Debug, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct Variable<'bump> {
@@ -73,13 +76,11 @@ impl<'bump> Add<usize> for Variable<'bump> {
     }
 }
 
-pub fn sorts_to_variables<'bump, I, I2>(
-    from: usize,
-    s: impl IntoIterator<Item = I>,
-) -> I2//Vec<Variable<'bump>>
+pub fn sorts_to_variables<'bump, I, I2>(from: usize, s: impl IntoIterator<Item = I>) -> I2
+//Vec<Variable<'bump>>
 where
     I: Deref<Target = Sort<'bump>>,
-    I2: FromIterator<Variable<'bump>>
+    I2: FromIterator<Variable<'bump>>,
 {
     s.into_iter()
         .enumerate()

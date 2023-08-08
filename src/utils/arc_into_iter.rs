@@ -32,7 +32,11 @@ impl<T: Clone> Iterator for ArcIntoIter<T> {
     fn size_hint(&self) -> (usize, Option<usize>) {
         match self {
             ArcIntoIter::Empty => (0, Some(0)),
-            ArcIntoIter::Iter { data, index, end } => {
+            ArcIntoIter::Iter {
+                data: _,
+                index,
+                end,
+            } => {
                 let len = *end - *index;
                 (len, Some(len))
             }
@@ -118,7 +122,7 @@ impl<T> Default for ArcIntoIter<T> {
     }
 }
 
-pub trait ClonableArc<T> : Sized
+pub trait ClonableArc<T>: Sized
 where
     T: Clone,
 {

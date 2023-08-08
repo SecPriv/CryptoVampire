@@ -27,7 +27,7 @@ use crate::{
             Subterm,
         },
     },
-    utils::{arc_into_iter::ArcIntoIter, vecref::VecRef},
+    utils::arc_into_iter::ArcIntoIter,
 };
 
 pub type SubtermEufCmaSignMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
@@ -275,7 +275,10 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
         NONCE.clone()
     }
 
-    fn var_eval_and_next(&self, m: &ARichFormula<'bump>) -> VarSubtermResult<'bump, Self::IntoIter> {
+    fn var_eval_and_next(
+        &self,
+        m: &ARichFormula<'bump>,
+    ) -> VarSubtermResult<'bump, Self::IntoIter> {
         let nexts = match m.as_ref() {
             RichFormula::Fun(fun, args) => 'function: {
                 if_chain! {
