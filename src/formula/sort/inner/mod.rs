@@ -1,7 +1,7 @@
 mod base;
-mod user;
 mod other;
+mod user;
 
 pub use base::TermBase;
-pub use  user::{UserEvaluatable, Index};
 pub use other::Other;
+pub use user::{Index, UserEvaluatable};

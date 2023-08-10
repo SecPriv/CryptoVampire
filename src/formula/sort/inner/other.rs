@@ -27,7 +27,8 @@ impl Other {
         match self {
             Self::Name => "Name",
             Self::Step => "Step",
-        }.into()
+        }
+        .into()
     }
 
     pub fn list() -> [Self; 2] {

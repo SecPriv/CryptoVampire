@@ -1,7 +1,7 @@
 mod error;
 mod fixed_signature;
-mod partial_signature;
 mod lazy_signature;
+mod partial_signature;
 
 pub use lazy_signature::Lazy;
 

@@ -1,4 +1,7 @@
-use crate::formula::function::{traits::{MaybeEvaluatable, MaybeFixedSignature}, signature::Signature};
+use crate::formula::function::{
+    signature::Signature,
+    traits::{MaybeEvaluatable, MaybeFixedSignature},
+};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct IfThenElse;

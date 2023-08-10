@@ -5,10 +5,7 @@ use std::sync::Arc;
 use crate::implvec;
 
 use super::{
-    sort::{
-        builtins::{BOOL, CONDITION},
-        Sort,
-    },
+    sort::{builtins::BOOL, Sort},
     variable::Variable,
 };
 

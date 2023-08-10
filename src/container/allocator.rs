@@ -153,7 +153,7 @@ where
         let (a, b) = inner;
         let (ra, rb) = reference;
         C::initialize(ra, a)?;
-        C::initialize(rb, b);
+        C::initialize(rb, b)?;
         Ok(())
     }
 }

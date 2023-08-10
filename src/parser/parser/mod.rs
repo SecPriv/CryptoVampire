@@ -216,7 +216,9 @@ fn declare_let<'bump, 'a>(env: &mut Environement<'bump, 'a>, ast: &ASTList<'a>) 
             let super::ast::Macro { name, .. } = mlet;
             let SnN { span, name } = name.into();
             // TODO: no hard-coded values
-            if env.macro_hash.contains_key(name.as_ref()) || ["msg", "cond"].contains(&name.as_ref()) {
+            if env.macro_hash.contains_key(name.as_ref())
+                || ["msg", "cond"].contains(&name.as_ref())
+            {
                 err(merr(*span, f!("the macro {}! is already in use", name)))
             } else {
                 // the input sorts (will gracefully error out later if a sort is undefined)

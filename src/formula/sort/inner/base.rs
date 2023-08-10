@@ -1,4 +1,11 @@
-use crate::{utils::string_ref::StrRef, formula::sort::{builtins::{BOOL, BITSTRING}, Sort}, environement::traits::{KnowsRealm, Realm}};
+use crate::{
+    environement::traits::{KnowsRealm, Realm},
+    formula::sort::{
+        builtins::{BITSTRING, BOOL},
+        Sort,
+    },
+    utils::string_ref::StrRef,
+};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub enum TermBase {
@@ -13,7 +20,7 @@ impl TermBase {
         match self {
             Self::Condition => Some(BOOL.as_sort()),
             Self::Message => Some(BITSTRING.as_sort()),
-            _ => None
+            _ => None,
         }
     }
 
@@ -21,14 +28,14 @@ impl TermBase {
         self.evaluated_sort().is_none()
     }
 
-
     pub fn name(&self) -> StrRef<'static> {
         match self {
             TermBase::Bool => "Bool",
             TermBase::Condition => "Condition",
             TermBase::Message => "Message",
             TermBase::Bitstring => "Bitstring",
-        }.into()
+        }
+        .into()
     }
 
     /// Returns `true` if the base is [`Bool`].
@@ -68,7 +75,7 @@ impl TermBase {
     }
 }
 
-impl KnowsRealm for  TermBase {
+impl KnowsRealm for TermBase {
     fn get_realm(&self) -> Realm {
         if self.is_evaluated() {
             Realm::Evaluated

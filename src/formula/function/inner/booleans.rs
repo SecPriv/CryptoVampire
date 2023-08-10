@@ -1,6 +1,6 @@
 use crate::{
     formula::{
-        function::signature::{Signature, Lazy},
+        function::signature::{Lazy, Signature},
         sort::{
             builtins::BOOL,
             sorted::{Sorted, SortedError},
@@ -142,7 +142,7 @@ impl Booleans {
         BOOL.as_sort()
     }
 
-    pub fn signature<'a, 'bump:'a>(&'a self) -> impl Signature<'bump> + 'a {
+    pub fn signature<'a, 'bump: 'a>(&'a self) -> impl Signature<'bump> + 'a {
         match self {
             Booleans::Connective(x) => Lazy::A(x.signature()),
             Booleans::Equality(_) => Lazy::B(Equality::signature()),
@@ -205,7 +205,7 @@ mod signatures {
 
     use crate::{
         formula::{
-            function::signature::{FixedRefSignature, Impossible, Signature},
+            function::signature::{Impossible, Signature},
             sort::{builtins::BOOL, sort_proxy::SortProxy},
         },
         static_signature,

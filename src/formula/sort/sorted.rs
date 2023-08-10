@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use thiserror::Error;
 
-use crate::{environement::traits::KnowsRealm, formula::function::signature::CheckError};
+use crate::formula::function::signature::CheckError;
 
 use super::Sort;
 

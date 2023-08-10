@@ -8,7 +8,7 @@ use crate::formula::{
     function::{
         inner::{
             evaluate::Evaluator,
-            term_algebra::quantifier::{self, InnerQuantifier, Quantifier},
+            term_algebra::quantifier::{InnerQuantifier, Quantifier},
         },
         traits::MaybeEvaluatable,
     },
@@ -82,7 +82,7 @@ fn preprocess_after_eval<'bump>(
                 Some(Quantifier {
                     bound_variables,
                     free_variables,
-                    id,
+                    id: _,
                     inner,
                 }) => match inner {
                     InnerQuantifier::FindSuchThat { .. } => None,

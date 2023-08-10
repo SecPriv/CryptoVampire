@@ -6,7 +6,7 @@ use crate::formula::sort::builtins::{BITSTRING, MESSAGE};
 use crate::formula::{formula::RichFormula, sort::builtins::STEP};
 
 use super::inner::evaluate::Evaluate;
-use super::inner::term_algebra::base_function::BaseFunction;
+
 use super::inner::term_algebra::name::NameCaster;
 use super::inner::term_algebra::{self, TermAlgebra};
 use super::{new_static_function, Function, InnerFunction};
@@ -39,11 +39,11 @@ pub static AND: Function<'static> = new_static_function(InnerFunction::Bool(Bool
 )));
 
 #[dynamic]
-pub static AND_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(TermAlgebra::Condition(
-    term_algebra::connective::Connective::BaseConnective(
-        term_algebra::connective::BaseConnective::And
-    )
-)));
+pub static AND_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(
+    TermAlgebra::Condition(term_algebra::connective::Connective::BaseConnective(
+        term_algebra::connective::BaseConnective::And,
+    )),
+));
 
 #[dynamic]
 pub static OR: Function<'static> = new_static_function(InnerFunction::Bool(Booleans::Connective(
@@ -51,11 +51,11 @@ pub static OR: Function<'static> = new_static_function(InnerFunction::Bool(Boole
 )));
 
 #[dynamic]
-pub static OR_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(TermAlgebra::Condition(
-    term_algebra::connective::Connective::BaseConnective(
-        term_algebra::connective::BaseConnective::Or
-    )
-)));
+pub static OR_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(
+    TermAlgebra::Condition(term_algebra::connective::Connective::BaseConnective(
+        term_algebra::connective::BaseConnective::Or,
+    )),
+));
 
 #[dynamic]
 pub static NOT: Function<'static> = new_static_function(InnerFunction::Bool(Booleans::Connective(
@@ -63,11 +63,11 @@ pub static NOT: Function<'static> = new_static_function(InnerFunction::Bool(Bool
 )));
 
 #[dynamic]
-pub static NOT_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(TermAlgebra::Condition(
-    term_algebra::connective::Connective::BaseConnective(
-        term_algebra::connective::BaseConnective::Not
-    )
-)));
+pub static NOT_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(
+    TermAlgebra::Condition(term_algebra::connective::Connective::BaseConnective(
+        term_algebra::connective::BaseConnective::Not,
+    )),
+));
 
 #[dynamic]
 pub static IMPLIES: Function<'static> = new_static_function(InnerFunction::Bool(
@@ -75,11 +75,11 @@ pub static IMPLIES: Function<'static> = new_static_function(InnerFunction::Bool(
 ));
 
 #[dynamic]
-pub static IMPLIES_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(TermAlgebra::Condition(
-    term_algebra::connective::Connective::BaseConnective(
-        term_algebra::connective::BaseConnective::Implies
-    )
-)));
+pub static IMPLIES_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(
+    TermAlgebra::Condition(term_algebra::connective::Connective::BaseConnective(
+        term_algebra::connective::BaseConnective::Implies,
+    )),
+));
 
 #[dynamic]
 pub static IFF: Function<'static> = new_static_function(InnerFunction::Bool(Booleans::Connective(
@@ -87,11 +87,11 @@ pub static IFF: Function<'static> = new_static_function(InnerFunction::Bool(Bool
 )));
 
 #[dynamic]
-pub static IFF_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(TermAlgebra::Condition(
-    term_algebra::connective::Connective::BaseConnective(
-        term_algebra::connective::BaseConnective::Iff
-    )
-)));
+pub static IFF_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(
+    TermAlgebra::Condition(term_algebra::connective::Connective::BaseConnective(
+        term_algebra::connective::BaseConnective::Iff,
+    )),
+));
 
 #[dynamic]
 pub static EQUALITY: Function<'static> = new_static_function(InnerFunction::Bool(

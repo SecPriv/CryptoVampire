@@ -14,7 +14,6 @@ use crate::{
             },
             inner::term_algebra::TermAlgebra,
             signature::Signature,
-            traits::MaybeEvaluatable,
             Function,
         },
         sort::{

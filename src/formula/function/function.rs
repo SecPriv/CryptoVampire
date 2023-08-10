@@ -7,7 +7,7 @@ use crate::container::contained::Containable;
 use crate::container::reference::Reference;
 use crate::container::utils::NameFinder;
 use crate::container::StaticContainer;
-use crate::environement::traits::{KnowsRealm, Realm};
+use crate::environement::traits::Realm;
 use crate::force_lifetime;
 
 use crate::formula::formula::ARichFormula;
@@ -18,10 +18,7 @@ use crate::{
     assert_variance, asssert_trait,
     formula::{
         formula::RichFormula,
-        function::{
-            inner::term_algebra::base_function::{BaseFunction, InnerBaseFunction},
-            signature::FixedRefSignature,
-        },
+        function::inner::term_algebra::base_function::{BaseFunction, InnerBaseFunction},
         quantifier,
         sort::{
             sort_proxy::SortProxy,
@@ -486,7 +483,7 @@ impl<'bump> Function<'bump> {
             InnerFunction::Bool(x) => B(A(x.signature())),
             InnerFunction::Step(x) => B(B(A(x.as_fixed_signature()))),
             InnerFunction::Subterm(x) => B(B(B(A(x.signature())))),
-            InnerFunction::IfThenElse(x) => B(B(B(B(A(IfThenElse::signature()))))),
+            InnerFunction::IfThenElse(_x) => B(B(B(B(A(IfThenElse::signature()))))),
             InnerFunction::Evaluate(x) => B(B(B(B(B(A(x.as_fixed_signature())))))),
             InnerFunction::Predicate(x) => B(B(B(B(B(B(A(x.as_fixed_signature()))))))),
             InnerFunction::Tmp(x) => B(B(B(B(B(B(B(A(x.as_fixed_signature())))))))),

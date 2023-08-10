@@ -21,7 +21,7 @@ use crate::{
     implderef, implvec,
     parser::{ast, merr, parser::guard::Guard, E},
     problem::{cell::InnerMemoryCell, step::InnerStep},
-    utils::{string_ref::StrRef, utils::MaybeInvalid},
+    utils::utils::MaybeInvalid,
 };
 
 use super::guard::{GuardedFunction, GuardedMemoryCell, GuardedStep};
