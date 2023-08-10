@@ -9,7 +9,16 @@ use super::{
 };
 use crate::{
     container::allocator::Container,
-    formula::{function::Function, sort::Sort},
+    formula::{
+        function::{
+            inner::term_algebra::{name::Name, TermAlgebra},
+            Function, InnerFunction,
+        },
+        sort::{
+            builtins::{MESSAGE, NAME},
+            Sort,
+        },
+    },
 };
 
 pub mod guard;
@@ -90,24 +99,35 @@ pub fn declare_functions<'a, 'bump>(
                     let idn = fun.out();
                     get_sort(env, idn.span, idn.content)
                 }?;
-                let fun =
+                let fun = if output_sort == NAME.as_sort() {
+                    Function::new_from_inner(
+                        env.container,
+                        InnerFunction::TermAlgebra(TermAlgebra::Name(Name::new(
+                            name.to_string(),
+                            MESSAGE.as_sort(),
+                            input_sorts?,
+                        ))),
+                    )
+
+                    // add to env. name_caster_collection
+                } else {
                     Function::new_user_term_algebra(env.container, name, input_sorts?, output_sort)
-                        .main;
-                env.function_hash
-                    .insert(fun.name().to_string(), fun)
-                    .ok_or_else(|| {
-                        merr(
-                            span,
-                            f!(
-                                "!UNREACHABLE!(line {} in {}) \
+                        .main
+                };
+                if let Some(_) = env.function_hash.insert(fun.name().to_string(), fun) {
+                    err(merr(
+                        span,
+                        f!(
+                            "!UNREACHABLE!(line {} in {}) \
 The function name {} somehow reintroduced itself in the hash",
-                                line!(),
-                                file!(),
-                                name
-                            ),
-                        )
-                    })
-                    .map(|_| ())
+                            line!(),
+                            file!(),
+                            name
+                        ),
+                    ))
+                } else {
+                    Ok(())
+                }
             }
         })
 }

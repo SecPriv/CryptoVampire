@@ -2,7 +2,7 @@ use crate::{assert_variance, variants, CustomDerive};
 
 use self::{
     base_function::BaseFunction, cell::Cell, connective::Connective, if_then_else::IfThenElse,
-    input::Input, name::Name, quantifier::Quantifier,
+    input::Input, name::{Name, NameCaster}, quantifier::Quantifier,
 };
 
 pub mod base_function;
@@ -26,6 +26,7 @@ macro_attr! {
         Function(BaseFunction<'bump>),
         Cell(Cell<'bump>),
         Name(Name<'bump>),
+        NameCaster(NameCaster<'bump>),
         Input(Input),
         IfThenElse(IfThenElse),
     }
@@ -37,6 +38,7 @@ impl<'bump> TermAlgebra<'bump> {
             TermAlgebra::Condition(_)
             | TermAlgebra::Function(_)
             | TermAlgebra::IfThenElse(_)
+            | TermAlgebra::NameCaster(_)
             | TermAlgebra::Name(_) => true,
             TermAlgebra::Quantifier(_) | TermAlgebra::Cell(_) | TermAlgebra::Input(_) => false,
         }
@@ -47,6 +49,7 @@ impl<'bump> TermAlgebra<'bump> {
         Quantifier:Quantifier<'bump>,
         Function:BaseFunction<'bump>,
         Cell:Cell<'bump>,
+        NameCaster:NameCaster<'bump>,
         Name:Name<'bump>);
 }
 

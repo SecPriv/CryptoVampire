@@ -8,7 +8,7 @@ use crate::{
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::{self, meq, ARichFormula, RichFormula},
-        function::inner::{subterm::Subsubterm, term_algebra::name::NameCaster},
+        function::inner::{subterm::Subsubterm, term_algebra::name::NameCasterCollection},
         function::Function,
         sort::{
             builtins::{MESSAGE, NONCE},
@@ -336,7 +336,7 @@ struct IntCtxtEncCandidates<'bump> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyAux<'bump> {
     int_ctxt: IntCtxt<'bump>,
-    name_caster: Arc<NameCaster<'bump>>,
+    name_caster: Arc<NameCasterCollection<'bump>>,
 }
 
 impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
@@ -427,7 +427,7 @@ impl<'bump> Generator<'bump> for IntCtxt<'bump> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RandAux<'bump> {
     int_ctxt: IntCtxt<'bump>,
-    name_caster: Arc<NameCaster<'bump>>,
+    name_caster: Arc<NameCasterCollection<'bump>>,
 }
 
 impl<'bump> SubtermAux<'bump> for RandAux<'bump> {

@@ -1,4 +1,4 @@
-pub mod builder;
+// pub mod builder;
 
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
@@ -11,7 +11,7 @@ use crate::{
             declare::{ConstructorDestructor, DataType, Declaration},
         },
         formula::ARichFormula,
-        function::inner::{evaluate::Evaluator, term_algebra::name::NameCaster},
+        function::inner::{evaluate::Evaluator, term_algebra::name::NameCasterCollection},
         function::Function,
         sort::Sort,
         variable::Variable,
@@ -32,7 +32,7 @@ pub struct Problem<'bump> {
     pub functions: Vec<Function<'bump>>, // to keep track of 'static functions
     pub sorts: Vec<Sort<'bump>>, // same
     pub evaluator: Arc<Evaluator<'bump>>,
-    pub name_caster: Arc<NameCaster<'bump>>,
+    pub name_caster: Arc<NameCasterCollection<'bump>>,
     pub protocol: Protocol<'bump>,
     pub assertions: Vec<ARichFormula<'bump>>,
     pub crypto_assertions: Vec<CryptoAssumption<'bump>>,

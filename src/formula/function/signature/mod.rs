@@ -9,7 +9,7 @@ use std::{fmt::Display, ops::RangeInclusive};
 use itertools::{Itertools, MapInto};
 
 use crate::{
-    environement::traits::KnowsRealm,
+    environement::traits::{KnowsRealm, Realm},
     formula::sort::{sort_proxy::SortProxy, Sort},
     utils::infinity::Infinity,
 };
@@ -87,6 +87,11 @@ pub trait Signature<'bump>: Sized {
     /// To not force implement [Display]
     fn as_display(&'_ self) -> DisplaySignature<'_, Self> {
         DisplaySignature(self)
+    }
+
+    /// The [Realm] in which this function should be used. [None] if it doesn't matter or can't be decided
+    fn realm(&self) -> Option<Realm> {
+        self.out().as_option().and_then(|s| s.realm())
     }
 }
 

@@ -8,7 +8,13 @@ use crate::{
     environement::traits::KnowsRealm,
     f,
     formula::{
-        function::{Function, InnerFunction},
+        function::{
+            inner::{
+                evaluate::Evaluator,
+                term_algebra::name::{NameCasterCollection, DEFAULT_NAME_CASTER},
+            },
+            Function, InnerFunction,
+        },
         sort::Sort,
         variable::Variable,
     },
@@ -41,6 +47,9 @@ pub struct Environement<'bump, 'str> {
     /// That one for [Function]s
     pub function_hash: HashMap<String, Function<'bump>>,
 
+    pub name_caster_collection: NameCasterCollection<'bump>,
+    pub evaluator: Evaluator<'bump>,
+
     /// For [Macro]s
     pub macro_hash: HashMap<&'str str, Macro<'bump, 'str>>,
     /// # Macro look up table
@@ -64,7 +73,28 @@ pub struct Environement<'bump, 'str> {
 
 impl<'bump, 'a> MaybeInvalid for Environement<'bump, 'a> {
     fn is_valid(&self) -> bool {
-        todo!()
+        let Environement {
+            name_caster_collection: _,
+            container: _,
+            sort_hash: _,
+            function_hash: _,
+            macro_hash: _,
+            evaluator: _,
+            step_lut_to_parse: _,
+            functions_initialize,
+            steps_initialize,
+            cells_initialize,
+        } = self;
+
+        functions_initialize
+            .iter()
+            .all(|(k, v)| k.is_valid() && v.is_some())
+            && steps_initialize
+                .iter()
+                .all(|(k, v)| k.is_valid() && v.is_some())
+            && cells_initialize
+                .iter()
+                .all(|(k, v)| k.is_valid() && v.is_some())
     }
 }
 
@@ -81,9 +111,11 @@ impl<'bump, 'a> Environement<'bump, 'a> {
             .collect();
 
         Self {
+            name_caster_collection: DEFAULT_NAME_CASTER.clone(),
             container,
             sort_hash,
             function_hash,
+            evaluator: Default::default(),
             /// those start empty
             step_lut_to_parse: Default::default(),
             macro_hash: Default::default(),

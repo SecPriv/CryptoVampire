@@ -87,6 +87,9 @@ impl<'bump> SortProxy<'bump> {
         Self::matches(&s1.into(), s2, realm)
     }
 
+    /// unifies two [`SortProxies`](SortProxy) and set them
+    ///
+    /// The error is returned as if `self` is expected to be `other`
     pub fn unify<'a>(
         &self,
         other: &Self,

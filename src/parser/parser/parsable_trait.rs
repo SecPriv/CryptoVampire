@@ -8,7 +8,10 @@ use crate::{
         formula::{ARichFormula, RichFormula},
         function::{
             self,
-            builtin::{IF_THEN_ELSE, IF_THEN_ELSE_TA, INPUT},
+            builtin::{
+                AND, AND_TA, EQUALITY, EQUALITY_TA, IFF, IF_THEN_ELSE, IF_THEN_ELSE_TA, IMPLIES,
+                IMPLIES_TA, INPUT, NOT, NOT_TA, OR, OR_TA,
+            },
             inner::term_algebra::TermAlgebra,
             signature::Signature,
             traits::MaybeEvaluatable,
@@ -23,7 +26,7 @@ use crate::{
     },
     implvec, match_as_trait,
     parser::{
-        ast::{self, extra::SnN, VariableBinding},
+        ast::{self, extra::SnN, Term, VariableBinding},
         err, merr, IntoRuleResult, E,
     },
 };
@@ -112,20 +115,14 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::IfThenElse<'a> {
         expected_sort: Option<SortProxy<'bump>>,
     ) -> Result<Self::R, E> {
         // generate the expected sorts
-        let (ec, eb) = match state.get_realm() {
+        let (es_condition, es_branches): (SortProxy, SortProxy) = match state.get_realm() {
             Realm::Evaluated => (BOOL.as_sort().into(), Default::default()),
             Realm::Symbolic => (CONDITION.as_sort().into(), MESSAGE.as_sort().into()),
         };
 
-        let expected_sort = if let Realm::Symbolic = state.get_realm() {
-            Some(MESSAGE.as_sort().into())
-        } else {
-            expected_sort
-        };
-
         // check sort
-        if let Some(e) = expected_sort.and_then(|s| s.into()) {
-            SortProxy::expects(&eb, e, &state).into_rr(self.span)?
+        if let Some(es) = &expected_sort {
+            es_branches.unify(es, &state).into_rr(self.span)?;
         }
 
         let ast::IfThenElse {
@@ -135,9 +132,10 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::IfThenElse<'a> {
             ..
         } = self;
 
-        let condition = condition.parse(env, bvars, state, Some(ec))?;
-        let left = left.parse(env, bvars, state, Some(eb.clone()))?;
-        let right = right.parse(env, bvars, state, Some(eb))?;
+        // parse the argumeents
+        let condition = condition.parse(env, bvars, state, Some(es_condition))?;
+        let left = left.parse(env, bvars, state, Some(es_branches.clone()))?;
+        let right = right.parse(env, bvars, state, Some(es_branches))?;
 
         Ok(match state.get_realm() {
             Realm::Evaluated => IF_THEN_ELSE.clone(),
@@ -238,9 +236,10 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
         let (f /* the function */, fvars /* the free vars */) =
             Function::new_find_such_that(env.container, vars, condition, left, right);
 
+        let ret = f.f_a(fvars.iter());
         Ok(match state.get_realm() {
-            Realm::Symbolic => f.f_a(fvars.iter()),
-            _ => todo!(),
+            Realm::Symbolic => ret,
+            _ => env.evaluator.eval(ret),
         })
     }
 }
@@ -381,7 +380,13 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Application<'a> {
                     })
                     // otherwise look for a function
                     .unwrap_or_else(|| {
-                        get_function(env, *span, *content).and_then(|f| {
+                        match get_function(env, *span, *content) {
+                            Ok(f) => Ok(f),
+                            Err(e) => match *content {
+                                _ => Err(e),
+                            },
+                        }
+                        .and_then(|f| {
                             parse_application(env, span, state, bvars, expected_sort, f, [])
                         })
                     })
@@ -390,8 +395,20 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Application<'a> {
                 span,
                 function,
                 args,
-            } => get_function(env, *span, function.0.content.content)
-                .and_then(|f| parse_application(env, span, state, bvars, expected_sort, f, args)),
+            } => {
+                let content = function.0.content.content;
+                match get_function(env, *span, content) {
+                    Ok(f) => Ok(f),
+                    Err(e) => match content {
+                        "not" => Ok(match state.get_realm() {
+                            Realm::Symbolic => NOT_TA.clone(),
+                            Realm::Evaluated => NOT.clone(),
+                        }),
+                        _ => Err(e),
+                    },
+                }
+                .and_then(|f| parse_application(env, span, state, bvars, expected_sort, f, args))
+            }
         }
     }
 }
@@ -407,15 +424,16 @@ fn parse_application<'b, 'a, 'bump: 'a>(
     args: implvec!(&'b ast::Term<'a>),
 ) -> Result<ARichFormula<'bump>, E> {
     // get the evaluated version if needed
-    let f = match state.get_realm() {
-        Realm::Evaluated => function
-            .as_term_algebra()
-            .maybe_get_evaluated()
-            .unwrap_or(function),
-        Realm::Symbolic => function,
-    };
+    // let fun = match state.get_realm() {
+    //     Realm::Evaluated => function
+    //         .as_term_algebra()
+    //         .maybe_get_evaluated()
+    //         .unwrap_or(function),
+    //     Realm::Symbolic => function,
+    // };
 
     let signature = function.signature();
+    let mut formula_realm = signature.realm();
 
     // check output sort
     let _ = expected_sort
@@ -424,12 +442,19 @@ fn parse_application<'b, 'a, 'bump: 'a>(
         .into_rr(*span)?;
 
     // parse further
-    let n_args: Result<Vec<_>, _> = signature
-        .args()
-        .into_iter()
-        .zip(args.into_iter())
-        .map(|(es, t)| t.parse(env, bvars, state, Some(es)))
-        .collect();
+    let n_args: Result<Vec<_>, _> = {
+        // propagate the right state if it changed
+        let state = match &formula_realm {
+            Some(r) => state.to_realm(r),
+            None => state,
+        };
+        signature
+            .args()
+            .into_iter()
+            .zip(args.into_iter())
+            .map(|(es, t)| t.parse(env, bvars, state, Some(es)))
+            .collect()
+    };
     let n_args = n_args?;
 
     // check arity
@@ -446,7 +471,20 @@ fn parse_application<'b, 'a, 'bump: 'a>(
         ));
     }
 
-    Ok(f.f_a(n_args))
+    // if it's a name, cast it
+    let formula = if let Some(name) = function.as_term_algebra().and_then(|f| f.as_name()) {
+        formula_realm = Some(Realm::Symbolic); // names are symbolic
+        env.name_caster_collection
+            .cast(name.target(), function.f_a(n_args))
+    } else {
+        function.f_a(n_args)
+    };
+    // if we are in evaluated land, evaluate
+    let formula = match (state.get_realm(), formula_realm) {
+        (Realm::Evaluated, Some(Realm::Symbolic)) => env.evaluator.try_eval(formula).unwrap(),
+        _ => formula,
+    };
+    Ok(formula)
 }
 
 impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::AppMacro<'a> {
@@ -580,19 +618,163 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
 
     fn parse(
         &self,
-        _env: &Environement<'bump, 'a>,
-        _bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
-        _state: State<'_, 'a, 'bump>,
-        _expected_sort: Option<SortProxy<'bump>>,
+        env: &Environement<'bump, 'a>,
+        bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
+        state: State<'_, 'a, 'bump>,
+        expected_sort: Option<SortProxy<'bump>>,
     ) -> Result<Self::R, E> {
-        // let n_es = match state {
-        //     State::Convert | State::High => BOOL.as_sort().into(),
-        //     State::Low => todo!(),
-        // };
+        match self.operation {
+            ast::Operation::HardEq => match self.terms.len() {
+                2 => parse_application(
+                    env,
+                    &self.span,
+                    state,
+                    bvars,
+                    expected_sort,
+                    EQUALITY_TA.clone(),
+                    &self.terms,
+                ),
+                _ => Self {
+                    operation: ast::Operation::And,
+                    span: self.span,
+                    terms: as_pair_of_term(
+                        self.span,
+                        self.operation,
+                        self.terms.iter().tuple_windows(),
+                    ),
+                }
+                .parse(env, bvars, state, expected_sort),
+            },
+            ast::Operation::Eq => match state.get_realm() {
+                Realm::Evaluated => parse_application(
+                    env,
+                    &self.span,
+                    state,
+                    bvars,
+                    expected_sort,
+                    EQUALITY.clone(),
+                    &self.terms,
+                ),
+                Realm::Symbolic => Self {
+                    operation: ast::Operation::HardEq,
+                    ..self.clone()
+                }
+                .parse(env, bvars, state, expected_sort),
+            },
+            ast::Operation::Neq => {
+                // let not_fun = match state.get_realm() {
+                //     Realm::Symbolic => NOT_TA.clone(),
+                //     Realm::Evaluated => NOT.clone(),
+                // };
+                ast::Application::Application {
+                    span: self.span,
+                    function: ast::Function(ast::Sub {
+                        span: self.span,
+                        content: ast::Ident {
+                            span: self.span,
+                            content: "not",
+                        },
+                    }),
+                    args: vec![ast::Term {
+                        span: self.span,
+                        inner: ast::InnerTerm::Infix(Box::new(Self {
+                            operation: ast::Operation::Eq,
+                            ..self.clone()
+                        })),
+                    }],
+                }
+                .parse(env, bvars, state, expected_sort)
+            }
+            ast::Operation::Iff => match state.get_realm() {
+                Realm::Evaluated => parse_application(
+                    env,
+                    &self.span,
+                    state,
+                    bvars,
+                    expected_sort,
+                    IFF.clone(),
+                    &self.terms,
+                ),
+                Realm::Symbolic => Self {
+                    operation: ast::Operation::And,
+                    span: self.span,
+                    terms: as_pair_of_term(
+                        self.span,
+                        self.operation,
+                        self.terms.iter().tuple_windows(),
+                    ),
+                }
+                .parse(env, bvars, state, expected_sort),
+            },
+            ast::Operation::Implies => {
+                let function = match state.get_realm() {
+                    Realm::Symbolic => IMPLIES_TA.clone(),
+                    Realm::Evaluated => IMPLIES.clone(),
+                };
+                parse_application(
+                    env,
+                    &self.span,
+                    state,
+                    bvars,
+                    expected_sort,
+                    function,
+                    &self.terms,
+                )
+            }
+            ast::Operation::Or | ast::Operation::And => {
+                let realm = state.get_realm();
+                let function = match (realm, self.operation) {
+                    (Realm::Symbolic, ast::Operation::And) => AND_TA.clone(),
+                    (Realm::Symbolic, ast::Operation::Or) => OR_TA.clone(),
+                    (Realm::Evaluated, ast::Operation::And) => AND.clone(),
+                    (Realm::Evaluated, ast::Operation::Or) => OR.clone(),
+                    _ => unreachable!(),
+                };
 
-        todo!()
+                match realm {
+                    Realm::Evaluated => parse_application(
+                        env,
+                        &self.span,
+                        state,
+                        bvars,
+                        expected_sort,
+                        function,
+                        &self.terms,
+                    ),
+                    Realm::Symbolic => {
+                        let mut iter = self.terms.iter();
+                        let first =
+                            iter.next()
+                                .unwrap()
+                                .parse(env, bvars, state, expected_sort.clone())?; // can't fail
+                        iter.try_fold(first, |acc, t| {
+                            Ok(function
+                                .f_a([acc, t.parse(env, bvars, state, expected_sort.clone())?]))
+                        })
+                    }
+                }
+            }
+        }
     }
 }
+
+fn as_pair_of_term<'a, 'b: 'a>(
+    span: pest::Span<'b>,
+    op: ast::Operation,
+    iter: impl IntoIterator<Item = (&'a Term<'b>, &'a Term<'b>)>,
+) -> Vec<Term<'b>> {
+    iter.into_iter()
+        .map(|(a, b)| ast::Term {
+            span,
+            inner: ast::InnerTerm::Infix(Box::new(ast::Infix {
+                operation: op,
+                span,
+                terms: vec![a.clone(), b.clone()],
+            })),
+        })
+        .collect()
+}
+
 impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Term<'a> {
     type R = ARichFormula<'bump>;
 

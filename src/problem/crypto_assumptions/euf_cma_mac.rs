@@ -8,7 +8,7 @@ use crate::{
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::{self, forall, meq, ARichFormula, RichFormula},
-        function::inner::{subterm::Subsubterm, term_algebra::name::NameCaster},
+        function::inner::{subterm::Subsubterm, term_algebra::name::NameCasterCollection},
         function::Function,
         sort::builtins::{MESSAGE, NONCE},
         utils::formula_expander::DeeperKinds,
@@ -258,7 +258,7 @@ struct EufCandidate<'bump> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyAux<'bump> {
     euf_cma: EufCmaMac<'bump>,
-    name_caster: Arc<NameCaster<'bump>>,
+    name_caster: Arc<NameCasterCollection<'bump>>,
 }
 
 impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {

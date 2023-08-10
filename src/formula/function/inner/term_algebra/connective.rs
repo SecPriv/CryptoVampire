@@ -32,7 +32,7 @@ pub enum BaseConnective {
     Iff,
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Default)]
 pub struct Equality();
 
 impl BaseConnective {

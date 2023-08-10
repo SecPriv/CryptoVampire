@@ -39,4 +39,10 @@ impl<'a, 'str, 'bump> State<'a, 'str, 'bump> {
     pub fn to_symbolic(&self) -> Self {
         self.to_high()
     }
+    pub fn to_realm(&self, realm: &impl KnowsRealm) -> Self {
+        Self(RealmMerger {
+            inner: realm.get_realm(),
+            ..self.0
+        })
+    }
 }

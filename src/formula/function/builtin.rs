@@ -2,8 +2,13 @@ use std::sync::Arc;
 
 use static_init::dynamic;
 
+use crate::formula::sort::builtins::{BITSTRING, MESSAGE};
 use crate::formula::{formula::RichFormula, sort::builtins::STEP};
 
+use super::inner::evaluate::Evaluate;
+use super::inner::term_algebra::base_function::BaseFunction;
+use super::inner::term_algebra::name::NameCaster;
+use super::inner::term_algebra::{self, TermAlgebra};
 use super::{new_static_function, Function, InnerFunction};
 
 use super::inner::{
@@ -34,8 +39,22 @@ pub static AND: Function<'static> = new_static_function(InnerFunction::Bool(Bool
 )));
 
 #[dynamic]
+pub static AND_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(TermAlgebra::Condition(
+    term_algebra::connective::Connective::BaseConnective(
+        term_algebra::connective::BaseConnective::And
+    )
+)));
+
+#[dynamic]
 pub static OR: Function<'static> = new_static_function(InnerFunction::Bool(Booleans::Connective(
     booleans::Connective::Or,
+)));
+
+#[dynamic]
+pub static OR_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(TermAlgebra::Condition(
+    term_algebra::connective::Connective::BaseConnective(
+        term_algebra::connective::BaseConnective::Or
+    )
 )));
 
 #[dynamic]
@@ -44,9 +63,23 @@ pub static NOT: Function<'static> = new_static_function(InnerFunction::Bool(Bool
 )));
 
 #[dynamic]
+pub static NOT_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(TermAlgebra::Condition(
+    term_algebra::connective::Connective::BaseConnective(
+        term_algebra::connective::BaseConnective::Not
+    )
+)));
+
+#[dynamic]
 pub static IMPLIES: Function<'static> = new_static_function(InnerFunction::Bool(
     Booleans::Connective(booleans::Connective::Implies),
 ));
+
+#[dynamic]
+pub static IMPLIES_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(TermAlgebra::Condition(
+    term_algebra::connective::Connective::BaseConnective(
+        term_algebra::connective::BaseConnective::Implies
+    )
+)));
 
 #[dynamic]
 pub static IFF: Function<'static> = new_static_function(InnerFunction::Bool(Booleans::Connective(
@@ -54,9 +87,22 @@ pub static IFF: Function<'static> = new_static_function(InnerFunction::Bool(Bool
 )));
 
 #[dynamic]
+pub static IFF_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(TermAlgebra::Condition(
+    term_algebra::connective::Connective::BaseConnective(
+        term_algebra::connective::BaseConnective::Iff
+    )
+)));
+
+#[dynamic]
 pub static EQUALITY: Function<'static> = new_static_function(InnerFunction::Bool(
     Booleans::Equality(booleans::Equality()),
 ));
+
+#[dynamic]
+pub static EQUALITY_TA: Function<'static> =
+    new_static_function(InnerFunction::TermAlgebra(TermAlgebra::Condition(
+        term_algebra::connective::Connective::Equality(Default::default()),
+    )));
 
 #[dynamic]
 pub static IF_THEN_ELSE: Function<'static> =
@@ -85,4 +131,14 @@ pub static IF_THEN_ELSE_TA: Function<'static> = new_static_function(InnerFunctio
 #[dynamic]
 pub static INPUT: Function<'static> = new_static_function(InnerFunction::TermAlgebra(
     super::inner::term_algebra::TermAlgebra::Input(Default::default()),
+));
+
+#[dynamic]
+pub static NAME_TO_MESSAGE: Function<'static> = new_static_function(InnerFunction::TermAlgebra(
+    TermAlgebra::NameCaster(NameCaster::new(MESSAGE.as_sort())),
+));
+
+#[dynamic]
+pub static MESSAGE_TO_BITSTRING: Function<'static> = new_static_function(InnerFunction::Evaluate(
+    Evaluate::new("evaluate".into(), MESSAGE.as_sort(), BITSTRING.as_sort()),
 ));

@@ -148,7 +148,7 @@ pub fn generate<'bump>(
             InnerFunction::TermAlgebra(ta) => {
                 match ta {
                     TermAlgebra::Function(_) => continue, // already done
-                    TermAlgebra::Cell(_) | TermAlgebra::Input(_) | TermAlgebra::Name(_) => continue, // nothing specific to be done here
+                    TermAlgebra::Cell(_) | TermAlgebra::Input(_) | TermAlgebra::Name(_) | TermAlgebra::NameCaster(_) => continue, // nothing specific to be done here
                     TermAlgebra::IfThenElse(_) => {
                         assertions.push(Axiom::base(mforall!(c!0:cond, l!1:msg, r!2:msg; {
                             pbl.evaluator.eval(function.f_a([c, l, r]))

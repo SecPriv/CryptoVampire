@@ -15,12 +15,12 @@ use super::{
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum Quantifier<'bump> {
     Exists {
-        variables: Arc<[Variable<'bump>]>,
         status: Status,
+        variables: Arc<[Variable<'bump>]>,
     },
     Forall {
-        variables: Arc<[Variable<'bump>]>,
         status: Status,
+        variables: Arc<[Variable<'bump>]>,
     },
     // FindSuchThat { variables: Vec<Variable<'bump>> },
 }

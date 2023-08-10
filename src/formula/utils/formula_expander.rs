@@ -262,6 +262,7 @@ impl<'bump> ExpantionContent<'bump> {
                         TermAlgebra::Condition(_)
                         | TermAlgebra::Function(_)
                         | TermAlgebra::Name(_)
+                        | TermAlgebra::NameCaster(_)
                         | TermAlgebra::IfThenElse(_)
                         | TermAlgebra::Quantifier(_)
                         | TermAlgebra::Input(_)

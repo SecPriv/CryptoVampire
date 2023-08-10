@@ -8,7 +8,11 @@ use crate::{
     container::{allocator::ContainerTools, contained::Containable, reference::Reference},
     formula::{
         formula::{meq, ARichFormula, RichFormula},
-        function::{builtin::LESS_THAN_STEP, Function},
+        function::{
+            builtin::LESS_THAN_STEP,
+            inner::step::{InnerStepFuction, StepFunction},
+            Function, InnerFunction,
+        },
         sort::Sort,
         variable::Variable,
     },
@@ -71,16 +75,17 @@ pub enum MessageOrCondition {
 
 impl<'bump> Step<'bump> {
     pub(crate) fn new<C>(
-        _container: &'bump C,
-        _name: implderef!(str),
+        container: &'bump C,
+        name: implderef!(str),
         args: implvec!(Variable<'bump>),
         message: ARichFormula<'bump>,
         condition: ARichFormula<'bump>,
     ) -> Self
     where
-        C: ContainerTools<'bump, (Self, Function<'bump>)>,
+        C: ContainerTools<'bump, InnerStep<'bump>, R<'bump> = Self>
+            + ContainerTools<'bump, InnerFunction<'bump>, R<'bump> = Function<'bump>>,
     {
-        let free_variables = args.into_iter().collect_vec();
+        let free_variables: Arc<[_]> = args.into_iter().collect();
         assert!(message
             .get_free_vars()
             .iter()
@@ -90,45 +95,35 @@ impl<'bump> Step<'bump> {
             .iter()
             .all(|v| free_variables.contains(v)));
 
-        let _used_variables = ARichFormula::iter_used_varibales([message, condition])
-            .unique()
-            .collect_vec();
+        let used_variables =
+            ARichFormula::iter_used_varibales([message.clone(), condition.clone()])
+                .unique()
+                .collect();
 
-        // let (_, step) = unsafe {
-        //     Function::new_cyclic(container, |function| {
-        //         let inner_step = InnerStep::Valid {
-        //             name: name.to_string(),
-        //             free_variables,
-        //             used_variables,
-        //             condition,
-        //             message,
-        //             function,
-        //         };
-        //         let inner_step_ref = container.alloc();
-        //         std::ptr::write(inner_step_ref.as_ptr(), inner_step);
-        //         let step = Step {
-        //             inner: inner_step_ref,
-        //             container: Default::default(),
-        //         };
-        //         (
-        //             InnerFunction::Step(StepFunction::Step(InnerStepFuction::new(step))),
-        //             step,
-        //         )
-        //         // all has been allocated
-        //     })
-        // };
+        let (step, _) = container
+            .alloc_cyclic(|(step, function)| {
+                let inner_step = InnerStep {
+                    name: name.to_string(),
+                    free_variables,
+                    used_variables,
+                    condition,
+                    message,
+                    function: *function,
+                };
+                let inner_function =
+                    InnerFunction::Step(StepFunction::Step(InnerStepFuction::new(*step)));
+                (inner_step, inner_function)
+            })
+            .expect("`step` and `function` should not have been initialized");
 
-        // let
-
-        // step
-        todo!()
+        step
     }
 
     /// new step overwriting `old_function`.
     ///
     /// **Not thread safe**
     pub(crate) unsafe fn new_with_function(
-        _container: &'bump impl ContainerTools<'bump, InnerStep<'bump>>,
+        _container: &'bump impl ContainerTools<'bump, InnerStep<'bump>, R<'bump> = Self>,
         _old_function: Function<'bump>,
         _name: implderef!(str),
         args: implvec!(Variable<'bump>),
