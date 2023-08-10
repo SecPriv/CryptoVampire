@@ -161,7 +161,7 @@ impl<'a> Sort<'a> {
             }
     }
 
-    /// The [Realm] in which this function should be used. [None] if it doesn't matter or can't be decided
+    /// The [Realm] in which this sort should be used. [None] if it doesn't matter or can't be decided
     pub fn realm(&self) -> Option<Realm> {
         todo!()
     }

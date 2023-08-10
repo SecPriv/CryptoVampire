@@ -7,6 +7,7 @@ use crate::container::contained::Containable;
 use crate::container::reference::Reference;
 use crate::container::utils::NameFinder;
 use crate::container::StaticContainer;
+use crate::environement::traits::{KnowsRealm, Realm};
 use crate::force_lifetime;
 
 use crate::formula::formula::ARichFormula;
@@ -34,7 +35,7 @@ use crate::{
 };
 
 use super::dispacher::Dispacher;
-use super::signature::AsFixedSignature;
+use super::signature::{AsFixedSignature, OnlyArgsSignature, OnlyArgsSignatureProxy};
 use super::{
     inner::{
         self,
@@ -104,8 +105,11 @@ unsafe impl<'bump> Send for Function<'bump> {}
 // }
 
 impl<'bump> Sorted<'bump> for Function<'bump> {
-    fn sort(&self, _args: &[Sort<'bump>]) -> Result<Sort<'bump>, SortedError> {
-        todo!()
+    fn sort(&self, args: &[Sort<'bump>]) -> Result<Sort<'bump>, SortedError> {
+        let s = self.signature();
+        let partial_s = OnlyArgsSignature::new(args);
+        s.unify(&partial_s, &Realm::default())?;
+        s.out().as_option().ok_or(SortedError::Impossible)
     }
 }
 
@@ -482,8 +486,14 @@ impl<'bump> Function<'bump> {
         }
     }
 
-    pub fn valid_args(&self, _args: implvec!(SortProxy<'bump>)) -> bool {
-        todo!()
+    pub fn valid_args(&self, args: implvec!(SortProxy<'bump>)) -> bool {
+        let args = args.into_iter().collect_vec();
+        self.signature()
+            .unify(
+                &OnlyArgsSignatureProxy::new(args.as_slice()),
+                &Realm::default(),
+            )
+            .is_ok()
     }
 
     pub fn name(&self) -> StrRef<'bump> {

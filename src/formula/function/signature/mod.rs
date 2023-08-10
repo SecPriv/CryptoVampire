@@ -1,8 +1,10 @@
 mod error;
 mod fixed_signature;
+mod partial_signature;
 
 pub use error::CheckError;
 pub use fixed_signature::{FixedRefSignature, StaticSignature};
+pub use partial_signature::{OnlyArgsSignature, OnlyArgsSignatureProxy};
 
 use std::{fmt::Display, ops::RangeInclusive};
 
