@@ -2,7 +2,6 @@ pub mod builtins;
 // pub mod collection;
 pub mod sort_proxy;
 pub mod sorted;
-use bitflags::bitflags;
 use core::fmt::Debug;
 use std::{fmt::Display, hash::Hash};
 
@@ -10,8 +9,7 @@ pub mod inner;
 
 use crate::{
     container::{
-        allocator::ContainerTools, contained::Containable, reference::Reference, ScopedContainer,
-        StaticContainer,
+        allocator::ContainerTools, contained::Containable, reference::Reference, StaticContainer,
     },
     environement::traits::{KnowsRealm, Realm},
     force_lifetime,
@@ -121,35 +119,11 @@ impl<'bump> InnerSort<'bump> {
     }
 }
 
-// impl<'a> Ord for Sort<'a> {
-//     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-//         // Ord::cmp(&Rc::as_ptr(&self.0), &Rc::as_ptr(&other.0))
-//         if self != other {
-//             Ord::cmp(self.name(), other.name())
-//                 .then(Ord::cmp(&self.as_ptr_usize(), &self.as_ptr_usize()))
-//         } else {
-//             Ordering::Equal
-//         }
-//     }
-// }
-
-// impl<'a> PartialOrd for Sort<'a> {
-//     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-//         Some(self.cmp(&other))
-//     }
-// }
-
 impl<'a> Display for Sort<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.inner().name())
     }
 }
-
-// impl<'a> Hash for Sort<'a> {
-//     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-//         self.as_ptr_usize().hash(state);
-//     }
-// }
 
 impl<'a> Sort<'a> {
     // ~~~~~~~~~~~~~~~~~~ is ~~~~~~~~~~~~~~~~~~~~
@@ -242,90 +216,7 @@ impl<'a> Sort<'a> {
     force_lifetime!(Sort, 'a);
 }
 
-// impl<'bump> AsRef<HiddenSort<'bump>> for InnerSort<'bump> {
-//     fn as_ref(&self) -> &HiddenSort<'bump> {
-//         &self.inner
-//     }
-// }
-
-// impl<'bump> Reference<'bump> for Sort<'bump> {
-//     type Inner<'a> = InnerSort<'a> where 'a:'bump;
-
-//     fn from_ref(ptr: &'bump Option<InnerSort<'bump>>) -> Self {
-//         Self {
-//             inner: NonNull::from(ptr),
-//             container: Default::default(),
-//         }
-//     }
-
-//     fn to_ref(&self) -> &'bump Option<Self::Inner<'bump>> {
-//         unsafe { self.inner.as_ref() }
-//     }
-// }
-
-// impl<'bump> PreciseAsRef<'bump, InnerSort<'bump>> for Sort<'bump> {
-//     fn precise_as_ref(&self) -> &'bump InnerSort<'bump> {
-//         unsafe { self.inner.as_ref() } // for self to exists, container must exists
-//     }
-// }
-
-// impl<'bump> AsRef<InnerSort<'bump>> for Sort<'bump> {
-//     fn as_ref(&self) -> &InnerSort<'bump> {
-//         self.precise_as_ref()
-//     }
-// }
-
-// impl<'bump> CanBeAllocated<'bump> for Sort<'bump> {
-//     type Inner = InnerSort<'bump>;
-
-//     fn allocate<A>(allocator: &'bump A, inner: Self::Inner) -> Self
-//     where
-//         A: ScopeAllocator<'bump, Self::Inner> + 'bump,
-//     {
-//         let inner = unsafe {
-//             let ptr = allocator.alloc();
-//             std::ptr::write(ptr.as_ptr(), inner);
-//             ptr
-//         };
-//         Sort {
-//             inner,
-//             container: PhantomData::default(),
-//         }
-//     }
-// }
-
-// impl<'bump> From<&'bump InnerSort<'bump>> for Sort<'bump> {
-//     fn from(value: &'bump InnerSort<'bump>) -> Self {
-//         Sort {
-//             inner: NonNull::from(value),
-//             container: Default::default(),
-//         }
-//     }
-// }
-
-// impl<'bump> FromNN<'bump> for Sort<'bump> {
-//     type Inner = InnerSort<'bump>;
-
-//     unsafe fn from_nn(inner: NonNull<Self::Inner>) -> Self {
-//         Self {
-//             inner,
-//             container: Default::default(),
-//         }
-//     }
-// }
-
-pub fn new_static_sort(
-    // name: &str,
-    // flags: SFlags,
-    // evaluated: Option<Sort<'static>>,
-    inner: InnerSort<'static>,
-) -> Sort<'static> {
-    // .unwrap();
-    // Sort {
-    //     inner,
-    //     container: Default::default(),
-    // }
-    // Sort::new_from(&StaticContainer, inner)
+pub fn new_static_sort(inner: InnerSort<'static>) -> Sort<'static> {
     StaticContainer.alloc_inner(inner)
 }
 
