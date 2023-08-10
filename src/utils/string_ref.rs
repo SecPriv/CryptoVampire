@@ -1,10 +1,10 @@
-use std::{borrow::Borrow, fmt::Display, hash::Hash, ops::Deref};
+use std::{borrow::Borrow, fmt::Display, hash::Hash, ops::Deref, sync::Arc};
 
 #[derive(Debug, Clone)]
 /// A boxed string that can also be a `&str`
 pub enum StrRef<'a> {
     Ref(&'a str),
-    Owned(Box<str>),
+    Owned(Arc<str>),
 }
 
 impl<'a> PartialEq for StrRef<'a> {
@@ -30,15 +30,12 @@ impl<'a> Hash for StrRef<'a> {
 }
 
 impl<'a> StrRef<'a> {
-    pub fn into_owned(self) -> Box<str> {
-        match self {
-            StrRef::Ref(s) => Box::from(s),
-            StrRef::Owned(s) => s,
-        }
+    pub fn into_owned(self) -> Arc<str> {
+        self.into()
     }
 
     pub fn into_string(self) -> String {
-        self.into_owned().into_string()
+        self.into_owned().as_ref().into()
     }
 }
 
@@ -50,13 +47,13 @@ impl<'a> From<&'a str> for StrRef<'a> {
 
 impl<'a> From<String> for StrRef<'a> {
     fn from(value: String) -> Self {
-        Self::Owned(value.into_boxed_str())
+        Self::Owned(value.into_boxed_str().into())
     }
 }
 
 impl<'a> From<Box<str>> for StrRef<'a> {
     fn from(value: Box<str>) -> Self {
-        Self::Owned(value)
+        Self::Owned(value.into())
     }
 }
 
@@ -69,10 +66,10 @@ impl<'a> AsRef<str> for StrRef<'a> {
     }
 }
 
-impl<'a> Into<Box<str>> for StrRef<'a> {
-    fn into(self) -> Box<str> {
+impl<'a> Into<Arc<str>> for StrRef<'a> {
+    fn into(self) -> Arc<str> {
         match self {
-            StrRef::Ref(s) => Box::from(s),
+            StrRef::Ref(s) => Arc::from(s),
             StrRef::Owned(s) => s,
         }
     }
@@ -101,5 +98,11 @@ impl<'a> Borrow<str> for StrRef<'a> {
 impl<'a> Display for StrRef<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.as_ref().fmt(f)
+    }
+}
+
+impl<'a> hashbrown::Equivalent<String> for StrRef<'a> {
+    fn equivalent(&self, key: &String) -> bool {
+        self.as_ref() == key.as_str()
     }
 }

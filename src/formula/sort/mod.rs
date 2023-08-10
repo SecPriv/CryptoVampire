@@ -226,6 +226,7 @@ impl<'a, 'bump: 'a> RefNamed<'a> for &'a InnerSort<'bump> {
             InnerSort::Base(b) => b.name(),
             InnerSort::UserEvaluatable(ue) => ue.name(),
             InnerSort::Index(idx) => idx.name(),
+            InnerSort::Other(o) => o.name()
         }
     }
 }

@@ -21,7 +21,7 @@ use crate::{
     implderef, implvec,
     parser::{ast, merr, parser::guard::Guard, E},
     problem::{cell::InnerMemoryCell, step::InnerStep},
-    utils::utils::MaybeInvalid,
+    utils::{string_ref::StrRef, utils::MaybeInvalid},
 };
 
 use super::guard::{GuardedFunction, GuardedMemoryCell, GuardedStep};
@@ -43,7 +43,7 @@ pub struct Environement<'bump, 'str> {
     /// This is basically the non-variable bounded names
     ///
     /// This one is for [Sort]
-    pub sort_hash: HashMap<&'bump str, Sort<'bump>>,
+    pub sort_hash: HashMap<String, Sort<'bump>>,
     /// That one for [Function]s
     pub function_hash: HashMap<String, Function<'bump>>,
 
@@ -104,7 +104,10 @@ impl<'bump, 'a> Environement<'bump, 'a> {
         sort_hash: implvec!(Sort<'bump>),
         function_hash: implvec!(Function<'bump>),
     ) -> Self {
-        let sort_hash = sort_hash.into_iter().map(|s| (s.name(), s)).collect();
+        let sort_hash = sort_hash
+            .into_iter()
+            .map(|s| (s.name().into_string(), s))
+            .collect();
         let function_hash = function_hash
             .into_iter()
             .map(|f| (f.name().into(), f))

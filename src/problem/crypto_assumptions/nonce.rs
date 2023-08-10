@@ -4,7 +4,7 @@ use crate::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::meq,
         function::inner::subterm::Subsubterm,
-        sort::builtins::{MESSAGE, NONCE},
+        sort::builtins::{MESSAGE, NAME},
     },
     mforall,
     problem::{
@@ -27,7 +27,7 @@ impl Nonce {
         env: &Environement<'bump>,
         pbl: &Problem<'bump>,
     ) {
-        let nonce_sort = NONCE.clone();
+        let nonce_sort = NAME.clone();
         let message_sort = MESSAGE.clone();
         let ev = &pbl.evaluator;
         let nc = &pbl.name_caster;

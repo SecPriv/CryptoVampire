@@ -47,9 +47,9 @@ pub fn declare_sorts<'a, 'bump>(
                     f!("the sort name {} is already in use", name),
                 ))
             } else {
-                let sort = Sort::new_regular(env.container, name.to_owned());
+                let (sort, _) = Sort::new_user(env.container, name.to_owned().into_boxed_str());
                 env.sort_hash
-                    .insert(sort.name(), sort)
+                    .insert(sort.name().into_string(), sort)
                     .ok_or_else(|| {
                         merr(
                             *s.get_name_span(),
@@ -154,10 +154,10 @@ pub fn declare_steps_and_cells<'a, 'bump>(
         // and turn them into a MAsFunction to generically take care of them
         .try_for_each(|fun| {
             let SnN { span, name } = fun.name();
-            if env.function_hash.contains_key(name) {
+            if env.function_hash.contains_key(&name) {
                 err(merr(
                     *span,
-                    f!("the step/cell/function name {} is already in use", name),
+                    f!("the step/cell/function name {} is already in use", &name),
                 ))
             } else {
                 // the input sorts (will gracefully error out later if a sort is undefined)
@@ -216,7 +216,7 @@ fn declare_let<'bump, 'a>(env: &mut Environement<'bump, 'a>, ast: &ASTList<'a>) 
             let super::ast::Macro { name, .. } = mlet;
             let SnN { span, name } = name.into();
             // TODO: no hard-coded values
-            if env.macro_hash.contains_key(name) || ["msg", "cond"].contains(&name) {
+            if env.macro_hash.contains_key(name.as_ref()) || ["msg", "cond"].contains(&name.as_ref()) {
                 err(merr(*span, f!("the macro {}! is already in use", name)))
             } else {
                 // the input sorts (will gracefully error out later if a sort is undefined)

@@ -11,7 +11,7 @@ use crate::{
         function::inner::{subterm::Subsubterm, term_algebra::name::NameCasterCollection},
         function::Function,
         sort::{
-            builtins::{MESSAGE, NONCE},
+            builtins::{MESSAGE, NAME},
             Sort,
         },
         utils::formula_expander::DeeperKinds,
@@ -51,7 +51,7 @@ impl<'bump> EufCmaSign<'bump> {
         env: &Environement<'bump>,
         pbl: &Problem<'bump>,
     ) {
-        let nonce_sort = NONCE.clone();
+        let nonce_sort = NAME.clone();
         let message_sort = MESSAGE.clone();
         let ev = &pbl.evaluator;
         let nc = &pbl.name_caster;
@@ -203,7 +203,7 @@ fn define_subterms<'bump>(
     subterm_key: &Arc<Subterm<'bump, impl SubtermAux<'bump>>>,
     subterm_main: &Arc<Subterm<'bump, impl SubtermAux<'bump>>>,
 ) {
-    let _nonce_sort = NONCE.clone();
+    let _nonce_sort = NAME.clone();
     let kind = env.into();
     {
         let subterm = subterm_key.as_ref();
@@ -272,7 +272,7 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
     type IntoIter = ArcIntoIter<ARichFormula<'bump>>;
 
     fn sort(&self) -> Sort<'bump> {
-        NONCE.clone()
+        NAME.clone()
     }
 
     fn var_eval_and_next(

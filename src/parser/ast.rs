@@ -800,7 +800,7 @@ pub mod extra {
     use enum_dispatch::enum_dispatch;
     use pest::Span;
 
-    use crate::formula::sort::builtins::STEP;
+    use crate::{formula::sort::builtins::STEP, utils::string_ref::StrRef};
 
     use super::{
         DeclareCell, DeclareFunction, Function, Macro, MacroName, Step, StepName, TypeName,
@@ -836,17 +836,17 @@ pub mod extra {
         }
     }
 
-    #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+    #[derive(Debug, PartialEq, Eq, Clone, Hash)]
     pub struct SnN<'a, 'b> {
         pub span: &'b Span<'a>,
-        pub name: &'a str,
+        pub name: StrRef<'a>,
     }
 
     impl<'a, 'b> From<&'b TypeName<'a>> for SnN<'a, 'b> {
         fn from(value: &'b TypeName<'a>) -> Self {
             SnN {
                 span: &value.0.span,
-                name: value.0.content.content,
+                name: value.0.content.content.into(),
             }
         }
     }
@@ -855,7 +855,7 @@ pub mod extra {
         fn from(value: &'b Function<'a>) -> Self {
             SnN {
                 span: &value.0.span,
-                name: value.0.content.content,
+                name: value.0.content.content.into(),
             }
         }
     }
@@ -864,7 +864,7 @@ pub mod extra {
         fn from(value: &'b StepName<'a>) -> Self {
             SnN {
                 span: &value.0.span,
-                name: value.0.content.content,
+                name: value.0.content.content.into(),
             }
         }
     }
@@ -873,7 +873,7 @@ pub mod extra {
         fn from(value: &'b MacroName<'a>) -> Self {
             SnN {
                 span: &value.0.span,
-                name: value.0.content.content,
+                name: value.0.content.content.into(),
             }
         }
     }

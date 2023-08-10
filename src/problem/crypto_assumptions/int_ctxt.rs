@@ -11,7 +11,7 @@ use crate::{
         function::inner::{subterm::Subsubterm, term_algebra::name::NameCasterCollection},
         function::Function,
         sort::{
-            builtins::{MESSAGE, NONCE},
+            builtins::{MESSAGE, NAME},
             Sort,
         },
         utils::formula_expander::DeeperKinds,
@@ -52,7 +52,7 @@ impl<'bump> IntCtxt<'bump> {
         env: &Environement<'bump>,
         pbl: &Problem<'bump>,
     ) {
-        let nonce_sort = NONCE.clone();
+        let nonce_sort = NAME.clone();
         let message_sort = MESSAGE.clone();
         let ev = &pbl.evaluator;
         let nc = &pbl.name_caster;
@@ -215,7 +215,7 @@ impl<'bump> IntCtxt<'bump> {
                     .unique();
                 let u_var = Variable::new(max_var, MESSAGE.as_sort());
                 let u_f = u_var.into_aformula();
-                let r_var = Variable::new(max_var + 1, NONCE.as_sort());
+                let r_var = Variable::new(max_var + 1, NAME.as_sort());
                 let r_f = pbl
                     .name_caster
                     .cast(MESSAGE.as_sort(), r_var.into_formula());
@@ -343,7 +343,7 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
     type IntoIter = ArcIntoIter<ARichFormula<'bump>>;
 
     fn sort(&self) -> Sort<'bump> {
-        NONCE.clone()
+        NAME.clone()
     }
 
     fn var_eval_and_next(
@@ -434,7 +434,7 @@ impl<'bump> SubtermAux<'bump> for RandAux<'bump> {
     type IntoIter = ArcIntoIter<ARichFormula<'bump>>;
 
     fn sort(&self) -> Sort<'bump> {
-        NONCE.clone()
+        NAME.clone()
     }
 
     fn var_eval_and_next(
