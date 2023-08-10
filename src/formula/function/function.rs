@@ -587,6 +587,7 @@ pub fn new_static_function(inner: InnerFunction<'static>) -> Function<'static> {
     StaticContainer.alloc_inner(inner)
 }
 
+
 // impl<'bump> FromNN<'bump> for Function<'bump> {
 //     type Inner = InnerFunction<'bump>;
 

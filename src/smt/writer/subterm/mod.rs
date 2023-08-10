@@ -236,28 +236,4 @@ where
     ) -> (Option<RichFormula>, Vec<&'a RichFormula>) {
         self.builder().analyse(self, m, s, pbl, f)
     }
-
-    // pub fn is_subterm_of<'a, V>(
-    //     &self,
-    //     pbl: &'a Problem,
-    //     t1: &'a RichFormula,
-    //     t2: &'a RichFormula,
-    // ) -> RichFormula {
-    //     struct ST<'a, 'b> {
-    //         cond: &'a RichFormula,
-    //         term: &'b RichFormula,
-    //     }
-    //     let mtrue: RichFormula = TRUE(&pbl.env).cf(pbl, []);
-    //     let mut pile = vec![ST {
-    //         cond: &mtrue,
-    //         term: t1,
-    //     }];
-
-    //     while let Some(st) = pile.pop() {
-    //         let ST { cond, term } = st;
-    //         match term {}
-    //     }
-
-    //     todo!()
-    // }
 }

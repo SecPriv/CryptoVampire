@@ -195,7 +195,9 @@ where
         funs.map(move |fun| {
             assert!(!fun.is_default_subterm());
 
-            let f_sorts = fun.fast_insort().unwrap_or_else(|| todo!());
+            let f_sorts = fun
+                .fast_insort()
+                .expect(&format!("failed here: {}", line!()));
             let vars: Vec<_> = sorts_to_variables(max_var, f_sorts.iter());
             let vars_f = vars.iter().map(|v| v.into_aformula()).collect_vec();
             let f_f = fun.f_a(vars_f);
