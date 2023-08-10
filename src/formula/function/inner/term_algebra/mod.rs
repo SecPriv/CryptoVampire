@@ -1,8 +1,20 @@
-use crate::{assert_variance, variants, CustomDerive};
+use crate::{
+    assert_variance,
+    formula::function::{
+        signature::{Lazy, Signature},
+        traits::FixedSignature,
+    },
+    match_as_trait, variants, CustomDerive,
+};
 
 use self::{
-    base_function::BaseFunction, cell::Cell, connective::Connective, if_then_else::IfThenElse,
-    input::Input, name::{Name, NameCaster}, quantifier::Quantifier,
+    base_function::BaseFunction,
+    cell::Cell,
+    connective::Connective,
+    if_then_else::IfThenElse,
+    input::Input,
+    name::{Name, NameCaster},
+    quantifier::Quantifier,
 };
 
 pub mod base_function;
@@ -42,6 +54,19 @@ impl<'bump> TermAlgebra<'bump> {
             | TermAlgebra::Name(_) => true,
             TermAlgebra::Quantifier(_) | TermAlgebra::Cell(_) | TermAlgebra::Input(_) => false,
         }
+    }
+
+    pub fn signature(&self) -> impl Signature<'bump> + '_ {
+        match_as_trait!(self => {
+            Self::Condition(x) => {Lazy::A(x.signature())},
+            Self::Function(x)
+                | Self::IfThenElse(x)
+                | Self::NameCaster(x)
+                | Self::Name(x)
+                | Self::Quantifier(x)
+                | Self::Cell(x)
+                | Self::Input(x) => {Lazy::B(x.as_fixed_signature())}
+        })
     }
 
     variants!(TermAlgebra;

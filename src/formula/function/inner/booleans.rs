@@ -1,10 +1,13 @@
 use crate::{
-    formula::sort::{
-        builtins::BOOL,
-        sorted::{Sorted, SortedError},
-        Sort,
+    formula::{
+        function::signature::{Signature, Lazy},
+        sort::{
+            builtins::BOOL,
+            sorted::{Sorted, SortedError},
+            Sort,
+        },
     },
-    static_signature, CustomDerive, environement::traits::KnowsRealm,
+    static_signature, CustomDerive,
 };
 
 use super::super::traits::{MaybeEvaluatable, MaybeFixedSignature};
@@ -35,6 +38,18 @@ impl Connective {
 
     pub fn output_sort<'a>(&self) -> Sort<'a> {
         BOOL.as_sort()
+    }
+
+    pub fn signature<'a, 'bump: 'a>(&'a self) -> impl Signature<'bump> + 'a {
+        match self {
+            Connective::And => Lazy::A(signatures::InfiniteBoolSignature),
+            Connective::Or => Lazy::A(signatures::InfiniteBoolSignature),
+            Connective::Not => Lazy::B(NOT_SIGNATURE.as_ref()),
+            Connective::Implies => Lazy::B(IMPLIES_SIGNATURE.as_ref()),
+            Connective::Iff => Lazy::B(IFF_SIGNATURE.as_ref()),
+            Connective::True => Lazy::B(TRUE_SIGNATURE.as_ref()),
+            Connective::False => Lazy::B(FALSE_SIGNATURE.as_ref()),
+        }
     }
 }
 
@@ -84,6 +99,10 @@ impl Equality {
     pub fn output_sort<'a>(&self) -> Sort<'a> {
         BOOL.as_sort()
     }
+
+    pub fn signature<'a>() -> impl Signature<'a> {
+        signatures::EqualitySignature::default()
+    }
 }
 
 impl<'a> Sorted<'a> for Equality {
@@ -121,6 +140,13 @@ impl Booleans {
 
     pub fn output_sort<'a>(&self) -> Sort<'a> {
         BOOL.as_sort()
+    }
+
+    pub fn signature<'a, 'bump:'a>(&'a self) -> impl Signature<'bump> + 'a {
+        match self {
+            Booleans::Connective(x) => Lazy::A(x.signature()),
+            Booleans::Equality(_) => Lazy::B(Equality::signature()),
+        }
     }
 }
 
@@ -171,5 +197,85 @@ impl<'a, 'bump: 'a> MaybeFixedSignature<'a, 'bump> for Equality {
 impl<'bump> MaybeEvaluatable<'bump> for Equality {
     fn maybe_get_evaluated(&self) -> Option<super::super::Function<'bump>> {
         None
+    }
+}
+
+mod signatures {
+    use std::iter::Repeat;
+
+    use crate::{
+        formula::{
+            function::signature::{FixedRefSignature, Impossible, Signature},
+            sort::{builtins::BOOL, sort_proxy::SortProxy},
+        },
+        static_signature,
+        utils::infinity::Infinity,
+    };
+
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Default)]
+    pub struct EqualitySignature<'bump> {
+        left: SortProxy<'bump>,
+        right: SortProxy<'bump>,
+    }
+
+    impl<'bump> Signature<'bump> for EqualitySignature<'bump> {
+        type Args<'a> = [SortProxy<'bump>; 2]
+    where
+        Self: 'a,
+        'bump: 'a;
+
+        type FxSign = Impossible;
+
+        fn out(&self) -> SortProxy<'bump> {
+            BOOL.as_sort().into()
+        }
+
+        fn args<'a>(&'a self) -> Self::Args<'a>
+        where
+            'bump: 'a,
+        {
+            [&self.left, &self.right].map(Clone::clone)
+        }
+
+        fn fast(self) -> Option<Self::FxSign> {
+            None
+        }
+
+        fn args_size(&self) -> std::ops::RangeInclusive<crate::utils::infinity::Infinity<usize>> {
+            2.into()..=2.into()
+        }
+    }
+
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Default, Copy)]
+    pub struct InfiniteBoolSignature;
+
+    static_signature!(BINARY_SIGNATURE: (BOOL, BOOL) -> BOOL);
+    impl<'bump> Signature<'bump> for InfiniteBoolSignature {
+        type Args<'a> = Repeat<SortProxy<'bump>>
+        where
+            Self: 'a,
+            'bump: 'a;
+
+        type FxSign = Impossible; // FixedRefSignature<'static, 'static>;
+
+        fn out(&self) -> SortProxy<'bump> {
+            BOOL.as_sort().into()
+        }
+
+        fn args<'a>(&'a self) -> Self::Args<'a>
+        where
+            'bump: 'a,
+        {
+            std::iter::repeat(BOOL.as_sort().into())
+        }
+
+        fn fast(self) -> Option<Self::FxSign> {
+            // Some(BINARY_SIGNATURE.as_ref())
+            None
+        }
+
+        fn args_size(&self) -> std::ops::RangeInclusive<Infinity<usize>> {
+            0.into()..=Infinity::HighInfinty
+        }
     }
 }

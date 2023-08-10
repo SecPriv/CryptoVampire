@@ -2,11 +2,11 @@ use crate::{
     formula::{
         function::{
             builtin::{AND, EQUALITY, IFF, IMPLIES, NOT, OR},
-            signature::FixedRefSignature,
+            signature::{FixedRefSignature, Impossible, Lazy, Signature},
             traits::{Evaluatable, FixedSignature, MaybeFixedSignature},
             Function,
         },
-        sort::builtins::CONDITION,
+        sort::{builtins::CONDITION, sort_proxy::SortProxy},
     },
     static_signature, CustomDerive,
 };
@@ -34,6 +34,21 @@ pub enum BaseConnective {
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Default)]
 pub struct Equality();
+
+impl Connective {
+    pub fn signature<'a, 'bump: 'a>(&'a self) -> impl Signature<'bump> + 'a {
+        match self {
+            Connective::BaseConnective(b) => Lazy::A(b.as_fixed_signature()),
+            Connective::Equality(_) => Lazy::B(Equality::signature()),
+        }
+    }
+}
+
+impl Equality {
+    pub fn signature<'bump>() -> EqualitySignature<'bump> {
+        Default::default()
+    }
+}
 
 impl BaseConnective {
     pub fn evaluated(&self) -> Function<'static> {
@@ -95,3 +110,37 @@ where
 //         })
 //     }
 // }
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Default)]
+pub struct EqualitySignature<'bump> {
+    left: SortProxy<'bump>,
+    right: SortProxy<'bump>,
+}
+
+impl<'bump> Signature<'bump> for EqualitySignature<'bump> {
+    type Args<'a> = [SortProxy<'bump>; 2]
+    where
+        Self: 'a,
+        'bump: 'a;
+
+    type FxSign = Impossible;
+
+    fn out(&self) -> SortProxy<'bump> {
+        CONDITION.as_sort().into()
+    }
+
+    fn args<'a>(&'a self) -> Self::Args<'a>
+    where
+        'bump: 'a,
+    {
+        [&self.left, &self.right].map(Clone::clone)
+    }
+
+    fn fast(self) -> Option<Self::FxSign> {
+        None
+    }
+
+    fn args_size(&self) -> std::ops::RangeInclusive<crate::utils::infinity::Infinity<usize>> {
+        2.into()..=2.into()
+    }
+}

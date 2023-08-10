@@ -1,11 +1,14 @@
 use std::sync::Arc;
 
-use crate::problem::{
-    crypto_assumptions::{
-        SubtermEufCmaMacKey, SubtermEufCmaMacMain, SubtermEufCmaSignKey, SubtermEufCmaSignMain,
-        SubtermIntCtxtKey, SubtermIntCtxtMain, SubtermIntCtxtRand, SubtermNonce,
+use crate::{
+    formula::{function::signature::Signature, sort::Sort},
+    problem::{
+        crypto_assumptions::{
+            SubtermEufCmaMacKey, SubtermEufCmaMacMain, SubtermEufCmaSignKey, SubtermEufCmaSignMain,
+            SubtermIntCtxtKey, SubtermIntCtxtMain, SubtermIntCtxtRand, SubtermNonce,
+        },
+        subterm::kind::SubtermKind,
     },
-    subterm::kind::SubtermKind,
 };
 
 use super::super::{
@@ -23,6 +26,10 @@ impl<'bump> Subterm<'bump> {
     pub fn into_inner_function(self) -> InnerFunction<'bump> {
         InnerFunction::Subterm(self)
     }
+
+    pub fn signature(&self) -> impl Signature<'bump> {
+        signature::SubtermSignature::new(self.subterm.sort())
+    }
 }
 
 macro_rules! generate {
@@ -30,6 +37,14 @@ macro_rules! generate {
         #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
         pub enum Subsubterm<'bump> {
             $($name(Arc<$t>)),*
+        }
+
+        impl<'bump> Subsubterm<'bump> {
+            pub fn sort(&self) -> Sort<'bump> {
+                match self {
+                    $(Self::$name(x) => x.sort()),*
+                }
+            }
         }
     };
 }
@@ -96,5 +111,55 @@ impl<'a, 'bump: 'a> MaybeFixedSignature<'a, 'bump> for Subterm<'bump> {
 impl<'bump> MaybeEvaluatable<'bump> for Subterm<'bump> {
     fn maybe_get_evaluated(&self) -> Option<super::super::Function<'bump>> {
         None
+    }
+}
+
+mod signature {
+    use crate::formula::{
+        function::signature::{Impossible, Signature},
+        sort::{builtins::BOOL, sort_proxy::SortProxy, Sort},
+    };
+
+    #[derive(Debug)]
+    pub struct SubtermSignature<'bump> {
+        own: Sort<'bump>,
+        other: SortProxy<'bump>,
+    }
+
+    impl<'bump> SubtermSignature<'bump> {
+        pub fn new(own: Sort<'bump>) -> Self {
+            Self {
+                own,
+                other: Default::default(),
+            }
+        }
+    }
+
+    impl<'bump> Signature<'bump> for SubtermSignature<'bump> {
+        type Args<'a> = [SortProxy<'bump> ; 2]
+        where
+            Self: 'a,
+            'bump: 'a;
+
+        type FxSign = Impossible;
+
+        fn out(&self) -> SortProxy<'bump> {
+            BOOL.as_sort().into()
+        }
+
+        fn args<'a>(&'a self) -> Self::Args<'a>
+        where
+            'bump: 'a,
+        {
+            [self.own.into(), self.other.clone()]
+        }
+
+        fn fast(self) -> Option<Self::FxSign> {
+            None
+        }
+
+        fn args_size(&self) -> std::ops::RangeInclusive<crate::utils::infinity::Infinity<usize>> {
+            2.into()..=2.into()
+        }
     }
 }

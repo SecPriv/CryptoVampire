@@ -11,6 +11,7 @@ use crate::environement::traits::{KnowsRealm, Realm};
 use crate::force_lifetime;
 
 use crate::formula::formula::ARichFormula;
+use crate::formula::function::signature::Lazy::{A, B};
 use crate::utils::traits::RefNamed;
 use crate::utils::utils::MaybeInvalid;
 use crate::{
@@ -36,6 +37,7 @@ use crate::{
 
 use super::dispacher::Dispacher;
 use super::signature::{AsFixedSignature, OnlyArgsSignature, OnlyArgsSignatureProxy};
+use super::traits::FixedSignature;
 use super::{
     inner::{
         self,
@@ -478,11 +480,17 @@ impl<'bump> Function<'bump> {
         })
     }
 
-    pub fn signature<'a>(&'a self) -> impl Signature<'bump> {
-        todo!();
-        FixedRefSignature {
-            out: todo!(),
-            args: todo!(),
+    pub fn signature<'a>(&'a self) -> impl Signature<'bump> + 'bump {
+        match self.precise_as_ref() {
+            InnerFunction::TermAlgebra(x) => A(x.signature()),
+            InnerFunction::Bool(x) => B(A(x.signature())),
+            InnerFunction::Step(x) => B(B(A(x.as_fixed_signature()))),
+            InnerFunction::Subterm(x) => B(B(B(A(x.signature())))),
+            InnerFunction::IfThenElse(x) => B(B(B(B(A(IfThenElse::signature()))))),
+            InnerFunction::Evaluate(x) => B(B(B(B(B(A(x.as_fixed_signature())))))),
+            InnerFunction::Predicate(x) => B(B(B(B(B(B(A(x.as_fixed_signature()))))))),
+            InnerFunction::Tmp(x) => B(B(B(B(B(B(B(A(x.as_fixed_signature())))))))),
+            InnerFunction::Skolem(x) => B(B(B(B(B(B(B(B(x.as_fixed_signature())))))))),
         }
     }
 
@@ -586,7 +594,6 @@ pub fn new_static_function(inner: InnerFunction<'static>) -> Function<'static> {
     // Function::new_from(&StaticContainer, inner)
     StaticContainer.alloc_inner(inner)
 }
-
 
 // impl<'bump> FromNN<'bump> for Function<'bump> {
 //     type Inner = InnerFunction<'bump>;
