@@ -1,49 +1,33 @@
 use static_init::dynamic;
 
-use super::{new_static_sort, Sort};
+use super::{
+    inner::{Other, TermBase},
+    new_static_sort, InnerSort, Sort,
+};
 
 #[dynamic]
-pub static BOOL: Sort<'static> = new_static_sort(
-    /* STATIC_ALLOCATOR.as_ref(), */ "bool",
-    Default::default(),
-    None,
-);
+pub static BOOL: Sort<'static> = new_static_sort(InnerSort::Base(TermBase::Bool));
 #[dynamic]
-pub static CONDITION: Sort<'static> = new_static_sort(
-    /* STATIC_ALLOCATOR.as_ref(), */ "Condition",
-    Default::default(),
-    Some(BOOL.clone()),
-);
+pub static CONDITION: Sort<'static> = new_static_sort(InnerSort::Base(TermBase::Condition));
 #[dynamic]
-pub static STEP: Sort<'static> = new_static_sort(
-    /* STATIC_ALLOCATOR.as_ref(), */ "Time",
-    Default::default(),
-    None,
-);
+pub static STEP: Sort<'static> = new_static_sort(InnerSort::Other(Other::Step));
 #[dynamic]
-pub static BITSTRING: Sort<'static> = new_static_sort(
-    /* STATIC_ALLOCATOR.as_ref(), */ "Bitstring",
-    Default::default(),
-    None,
-);
+pub static BITSTRING: Sort<'static> = new_static_sort(InnerSort::Base(TermBase::Bitstring));
 #[dynamic]
-pub static MESSAGE: Sort<'static> = new_static_sort(
-    /* STATIC_ALLOCATOR.as_ref(), */ "Message",
-    Default::default(),
-    Some(BITSTRING.clone()),
-);
+pub static MESSAGE: Sort<'static> = new_static_sort(InnerSort::Base(TermBase::Message));
 #[dynamic]
-pub static NONCE: Sort<'static> = new_static_sort(
-    /* STATIC_ALLOCATOR.as_ref(), */ "Nonce",
-    Default::default(),
-    None,
-);
+pub static NAME: Sort<'static> = new_static_sort(InnerSort::Other(Other::Name));
 
 #[dynamic]
-pub static NAME: Sort<'static> = new_static_sort(
-    /* STATIC_ALLOCATOR.as_ref(), */ "Name",
-    Default::default(),
-    None,
-);
+pub static BUILT_IN_SORTS: [Sort<'static>; 6] = [
+    BOOL.clone(),
+    CONDITION.clone(),
+    MESSAGE.clone(),
+    BITSTRING.clone(),
+    STEP.clone(),
+    NAME.clone(),
+];
 
-// pub type StatSort = Sort<'static>;
+// alias
+#[dynamic]
+pub static TIME: Sort<'static> = STEP.clone();
