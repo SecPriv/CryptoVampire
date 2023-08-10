@@ -1,6 +1,9 @@
 mod error;
 mod fixed_signature;
 mod partial_signature;
+mod lazy_signature;
+
+pub use lazy_signature::Lazy;
 
 pub use error::CheckError;
 pub use fixed_signature::{FixedRefSignature, StaticSignature};
