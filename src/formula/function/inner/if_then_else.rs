@@ -10,6 +10,10 @@ impl IfThenElse {
     pub fn signature<'bump>() -> impl Signature<'bump> {
         signature::ITESignature::default()
     }
+
+    pub fn name() -> &'static str {
+        "ite"
+    }
 }
 
 impl<'a, 'bump: 'a> MaybeFixedSignature<'a, 'bump> for IfThenElse {

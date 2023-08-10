@@ -9,6 +9,12 @@ use crate::{
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Default)]
 pub struct IfThenElse;
 
+impl IfThenElse {
+    pub fn name(&self) -> &'static str {
+        "ta$ite"
+    }
+}
+
 impl<'bump> MaybeEvaluatable<'bump> for IfThenElse {
     fn maybe_get_evaluated(&self) -> Option<crate::formula::function::Function<'bump>> {
         None

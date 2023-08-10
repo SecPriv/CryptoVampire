@@ -3,7 +3,7 @@ use std::sync::{
     Arc,
 };
 
-use crate::formula::{
+use crate::{formula::{
     formula::ARichFormula,
     function::{
         signature::FixedRefSignature,
@@ -11,7 +11,7 @@ use crate::formula::{
     },
     sort::builtins::{CONDITION, MESSAGE},
     variable::Variable,
-};
+}, utils::string_ref::StrRef};
 
 static N_QUANTIFIERS: AtomicUsize = AtomicUsize::new(0);
 
@@ -54,6 +54,14 @@ impl<'bump> InnerQuantifier<'bump> {
     pub fn is_forall(&self) -> bool {
         matches!(self, Self::Forall { .. })
     }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            InnerQuantifier::Forall { .. } => "ta$forall",
+            InnerQuantifier::Exists { .. } => "ta$exists",
+            InnerQuantifier::FindSuchThat { .. } => "ta$find_such_that",
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -92,6 +100,10 @@ impl<'bump> Quantifier<'bump> {
 
     pub fn inner(&self) -> &InnerQuantifier<'bump> {
         &self.inner
+    }
+
+    pub fn name<'a>(&self) -> StrRef<'a> {
+        format!("{}${}", self.inner.name(), self.id).into()
     }
 }
 

@@ -23,6 +23,10 @@ impl<'bump> Cell<'bump> {
     pub fn memory_cell(&self) -> MemoryCell<'bump> {
         self.memory_cell
     }
+
+    pub fn name(&self) -> &str {
+        self.memory_cell.name()
+    }
 }
 
 impl<'bump> MaybeEvaluatable<'bump> for Cell<'bump> {

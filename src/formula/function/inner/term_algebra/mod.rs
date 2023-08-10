@@ -4,7 +4,9 @@ use crate::{
         signature::{Lazy, Signature},
         traits::FixedSignature,
     },
-    match_as_trait, variants, CustomDerive,
+    match_as_trait,
+    utils::string_ref::StrRef,
+    variants, CustomDerive,
 };
 
 use self::{
@@ -30,7 +32,7 @@ use macro_attr::*;
 macro_attr! {
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
         CustomDerive!(maybe_evaluate, 'bump),
-        CustomDerive!(maybe_fixed_signature, 'bump),
+        CustomDerive!(fixed_signature, 'bump),
     )]
     pub enum TermAlgebra<'bump> {
         Condition(Connective),
@@ -56,18 +58,33 @@ impl<'bump> TermAlgebra<'bump> {
         }
     }
 
-    pub fn signature(&self) -> impl Signature<'bump> + '_ {
+    pub fn name(&self) -> StrRef<'_> {
         match_as_trait!(self => {
-            Self::Condition(x) => {Lazy::A(x.signature())},
-            Self::Function(x)
-                | Self::IfThenElse(x)
-                | Self::NameCaster(x)
-                | Self::Name(x)
-                | Self::Quantifier(x)
-                | Self::Cell(x)
-                | Self::Input(x) => {Lazy::B(x.as_fixed_signature())}
+            TermAlgebra::Quantifier(x)
+                | TermAlgebra::NameCaster(x)
+                | TermAlgebra::Function(x)
+                    => {x.name()},
+            TermAlgebra::Condition(x)
+                | TermAlgebra::Cell(x)
+                | TermAlgebra::Name(x)
+                | TermAlgebra::Input(x)
+                | TermAlgebra::IfThenElse(x)
+                    => {x.name().into()}
         })
     }
+
+    // pub fn signature(&self) -> impl Signature<'bump> + '_ {
+    //     match_as_trait!(self => {
+    //         Self::Condition(x) => {Lazy::A(x.signature())},
+    //         Self::Function(x)
+    //             | Self::IfThenElse(x)
+    //             | Self::NameCaster(x)
+    //             | Self::Name(x)
+    //             | Self::Quantifier(x)
+    //             | Self::Cell(x)
+    //             | Self::Input(x) => {Lazy::B(x.as_fixed_signature())}
+    //     })
+    // }
 
     variants!(TermAlgebra;
         Condition:Connective,

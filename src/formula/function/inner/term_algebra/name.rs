@@ -18,7 +18,7 @@ use crate::{
         },
     },
     implvec,
-    utils::vecref::{VecRef, VecRefClone},
+    utils::{vecref::{VecRef, VecRefClone}, string_ref::StrRef},
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -62,6 +62,10 @@ impl<'bump> NameCaster<'bump> {
 
     pub fn target(&self) -> Sort<'bump> {
         self.target
+    }
+
+    pub fn name(&self) -> StrRef<'_> {
+        format!("cast${}$name", self.target.name()).into()
     }
 }
 

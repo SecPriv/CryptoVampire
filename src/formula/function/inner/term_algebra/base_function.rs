@@ -8,7 +8,7 @@ use crate::{
         },
         sort::Sort,
     },
-    utils::vecref::VecRefClone,
+    utils::{string_ref::StrRef, vecref::VecRefClone},
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -25,6 +25,15 @@ pub enum BaseFunction<'bump> {
     Base(InnerBaseFunction<'bump>),
 }
 
+impl<'bump> BaseFunction<'bump> {
+    pub fn name(&self) -> StrRef<'_> {
+        match self {
+            BaseFunction::Eval(ev) => format!("eval${}", ev.name()).into(),
+            BaseFunction::Base(base) => base.name().into(),
+        }
+    }
+}
+
 assert_variance!(BaseFunction);
 
 impl<'bump> InnerBaseFunction<'bump> {
@@ -38,6 +47,10 @@ impl<'bump> InnerBaseFunction<'bump> {
 
     pub fn args(&self) -> &[Sort<'bump>] {
         self.args.as_ref()
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 }
 

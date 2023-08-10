@@ -2,11 +2,14 @@ use crate::{
     formula::{
         function::{
             builtin::{AND, EQUALITY, IFF, IMPLIES, NOT, OR},
-            signature::{FixedRefSignature, Impossible, Lazy, Signature},
+            signature::{AsFixedSignature, FixedRefSignature, Impossible, Lazy, Signature},
             traits::{Evaluatable, FixedSignature, MaybeFixedSignature},
             Function,
         },
-        sort::{builtins::CONDITION, sort_proxy::SortProxy},
+        sort::{
+            builtins::{CONDITION, MESSAGE},
+            sort_proxy::SortProxy,
+        },
     },
     static_signature, CustomDerive,
 };
@@ -16,7 +19,7 @@ use macro_attr::*;
 macro_attr! {
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,
         CustomDerive!(evaluate, no_bump, 'bump),
-        CustomDerive!(maybe_fixed_signature, no_bump, 'bump))]
+        CustomDerive!(fixed_signature, no_bump, 'bump))]
     pub enum Connective {
         BaseConnective(BaseConnective),
         Equality(Equality),
@@ -36,17 +39,19 @@ pub enum BaseConnective {
 pub struct Equality();
 
 impl Connective {
-    pub fn signature<'a, 'bump: 'a>(&'a self) -> impl Signature<'bump> + 'a {
+    pub fn name(&self) -> &'static str {
         match self {
-            Connective::BaseConnective(b) => Lazy::A(b.as_fixed_signature()),
-            Connective::Equality(_) => Lazy::B(Equality::signature()),
+            Connective::BaseConnective(x) => x.name(),
+            Connective::Equality(_) => "ta$=",
         }
     }
 }
 
-impl Equality {
-    pub fn signature<'bump>() -> EqualitySignature<'bump> {
-        Default::default()
+
+static_signature!(EQ_SIGNATURE: (MESSAGE, MESSAGE) -> CONDITION);
+impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for Equality {
+    fn as_fixed_signature(&'a self) -> FixedRefSignature<'a, 'bump> {
+        EQ_SIGNATURE.as_ref()
     }
 }
 
@@ -58,6 +63,16 @@ impl BaseConnective {
             BaseConnective::Not => NOT.clone(),
             BaseConnective::Implies => IMPLIES.clone(),
             BaseConnective::Iff => IFF.clone(),
+        }
+    }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            BaseConnective::And => "ta$and",
+            BaseConnective::Or => "ta$or",
+            BaseConnective::Not => "ta$not",
+            BaseConnective::Implies => "ta$implies",
+            BaseConnective::Iff => "ta$iff",
         }
     }
 }
@@ -95,14 +110,14 @@ where
     }
 }
 
-impl<'a, 'bump> MaybeFixedSignature<'a, 'bump> for Equality
-where
-    'bump: 'a,
-{
-    fn maybe_fixed_signature(&'a self) -> Option<FixedRefSignature<'a, 'bump>> {
-        None
-    }
-}
+// impl<'a, 'bump> MaybeFixedSignature<'a, 'bump> for Equality
+// where
+//     'bump: 'a,
+// {
+//     fn maybe_fixed_signature(&'a self) -> Option<FixedRefSignature<'a, 'bump>> {
+//         None
+//     }
+// }
 // impl<'bump> Evaluatable<'bump> for Connective {
 //     fn get_evaluated(&self) -> Function<'bump> {
 //         match_as_trait!(self => {

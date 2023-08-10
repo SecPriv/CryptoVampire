@@ -1,6 +1,6 @@
 use crate::{
     assert_variance, formula::sort::builtins::STEP, problem::step::Step, static_signature,
-    CustomDerive,
+    CustomDerive, utils::string_ref::StrRef,
 };
 
 use super::super::{
@@ -35,6 +35,15 @@ impl<'bump> InnerStepFuction<'bump> {
 
     pub fn step(&self) -> Step<'bump> {
         self.step
+    }
+}
+
+impl<'bump> StepFunction<'bump> {
+    pub fn name(&self) -> &str {
+        match self {
+            StepFunction::Pred(_) => "pred".into(),
+            StepFunction::Step(s) => s.step.name(),
+        }
     }
 }
 

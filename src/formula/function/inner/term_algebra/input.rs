@@ -9,6 +9,10 @@ use crate::{
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Default)]
 pub struct Input;
 
+impl Input {
+    pub fn name(&self) -> &'static str {"input"}
+}
+
 impl<'bump> MaybeEvaluatable<'bump> for Input {
     fn maybe_get_evaluated(&self) -> Option<crate::formula::function::Function<'bump>> {
         None

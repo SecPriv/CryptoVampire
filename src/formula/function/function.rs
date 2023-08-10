@@ -479,7 +479,7 @@ impl<'bump> Function<'bump> {
 
     pub fn signature<'a>(&'a self) -> impl Signature<'bump> + 'bump {
         match self.precise_as_ref() {
-            InnerFunction::TermAlgebra(x) => A(x.signature()),
+            InnerFunction::TermAlgebra(x) => A(x.as_fixed_signature()),
             InnerFunction::Bool(x) => B(A(x.signature())),
             InnerFunction::Step(x) => B(B(A(x.as_fixed_signature()))),
             InnerFunction::Subterm(x) => B(B(B(A(x.signature())))),

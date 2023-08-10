@@ -26,6 +26,10 @@ impl<'bump> Evaluate<'bump> {
             ouput_sort,
         }
     }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
