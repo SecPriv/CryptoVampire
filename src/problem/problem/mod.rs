@@ -20,7 +20,7 @@ use crate::{
 
 use super::{
     crypto_assumptions::CryptoAssumption,
-    general_assertions::{self, order},
+    general_assertions::{self, assertion_preprocessor::propagate_evaluate, order},
     generator::Generator,
     protocol::Protocol,
 };
@@ -110,11 +110,17 @@ impl<'bump> Generator<'bump> for Problem<'bump> {
         }
 
         assertions.push(Axiom::Comment("user asserts".into()));
-        assertions.extend(self.assertions.iter().cloned().map(Axiom::base));
+        assertions.extend(
+            self.assertions
+                .iter()
+                .cloned()
+                .map(|a| propagate_evaluate(a.as_ref(), &self.evaluator))
+                .map(Axiom::base),
+        );
 
         assertions.push(Axiom::Comment("query".into()));
         assertions.push(Axiom::Query {
-            formula: self.query.clone(),
+            formula: propagate_evaluate(self.query.as_ref(), &self.evaluator),
         })
     }
 }

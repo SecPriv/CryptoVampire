@@ -15,54 +15,54 @@ use super::{
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum Quantifier<'bump> {
     Exists {
-        status: Status,
+        // status: Status,
         variables: Arc<[Variable<'bump>]>,
     },
     Forall {
-        status: Status,
+        // status: Status,
         variables: Arc<[Variable<'bump>]>,
     },
     // FindSuchThat { variables: Vec<Variable<'bump>> },
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-pub enum Status {
-    Condition,
-    Bool,
-}
+// #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+// pub enum Status {
+//     Condition,
+//     Bool,
+// }
 
-impl Default for Status {
-    fn default() -> Self {
-        Self::Bool
-    }
-}
+// impl Default for Status {
+//     fn default() -> Self {
+//         Self::Bool
+//     }
+// }
 
-impl Status {
-    /// Returns `true` if the status is [`Condition`].
-    ///
-    /// [`Condition`]: Status::Condition
-    #[must_use]
-    pub fn is_condition(&self) -> bool {
-        matches!(self, Self::Condition)
-    }
+// impl Status {
+//     /// Returns `true` if the status is [`Condition`].
+//     ///
+//     /// [`Condition`]: Status::Condition
+//     #[must_use]
+//     pub fn is_condition(&self) -> bool {
+//         matches!(self, Self::Condition)
+//     }
 
-    /// Returns `true` if the status is [`Bool`].
-    ///
-    /// [`Bool`]: Status::Bool
-    #[must_use]
-    pub fn is_bool(&self) -> bool {
-        matches!(self, Self::Bool)
-    }
-}
+//     /// Returns `true` if the status is [`Bool`].
+//     ///
+//     /// [`Bool`]: Status::Bool
+//     #[must_use]
+//     pub fn is_bool(&self) -> bool {
+//         matches!(self, Self::Bool)
+//     }
+// }
 
-impl Into<Sort<'static>> for Status {
-    fn into(self) -> Sort<'static> {
-        match self {
-            Status::Condition => CONDITION.clone(),
-            Status::Bool => BOOL.clone(),
-        }
-    }
-}
+// impl Into<Sort<'static>> for Status {
+//     fn into(self) -> Sort<'static> {
+//         match self {
+//             Status::Condition => CONDITION.clone(),
+//             Status::Bool => BOOL.clone(),
+//         }
+//     }
+// }
 
 impl<'bump> Quantifier<'bump> {
     pub fn get_output_sort(&self) -> Sort<'bump> {
@@ -71,7 +71,8 @@ impl<'bump> Quantifier<'bump> {
         //     Quantifier::Forall { variables: _ } => BOOL.as_ref(),
         //     // Quantifier::FindSuchThat { variables: _ } => MESSAGE.as_ref(),
         // }
-        self.status().into()
+        // self.status().into()
+        BOOL.as_sort()
     }
 
     pub fn get_variables(&self) -> &Arc<[Variable<'bump>]> {
@@ -82,23 +83,23 @@ impl<'bump> Quantifier<'bump> {
         }
     }
 
-    pub fn status(&self) -> Status {
-        match self {
-            Self::Exists { status, .. } | Self::Forall { status, .. } => *status,
-        }
-    }
+    // pub fn status(&self) -> Status {
+    //     match self {
+    //         Self::Exists { status, .. } | Self::Forall { status, .. } => *status,
+    //     }
+    // }
 
     pub fn exists(variables: implvec!(Variable<'bump>)) -> Self {
         Self::Exists {
             variables: variables.into_iter().collect(),
-            status: Status::Bool,
+            // status: Status::Bool,
         }
     }
 
     pub fn forall(variables: implvec!(Variable<'bump>)) -> Self {
         Self::Forall {
             variables: variables.into_iter().collect(),
-            status: Status::Bool,
+            // status: Status::Bool,
         }
     }
 

@@ -3,18 +3,24 @@ use std::borrow::Cow;
 use itertools::Itertools;
 
 use crate::formula::{
+    self,
     formula::{ARichFormula, RichFormula},
-    function::{inner::evaluate::Evaluator, traits::MaybeEvaluatable},
+    function::{
+        inner::{
+            evaluate::Evaluator,
+            term_algebra::quantifier::{self, InnerQuantifier, Quantifier},
+        },
+        traits::MaybeEvaluatable,
+    },
+    manipulation::FrozenSubstF,
     variable::Variable,
 };
 
-pub fn preprocess<'bump>(
-    assertion: ARichFormula<'bump>,
+pub fn propagate_evaluate<'bump>(
+    assertion: &RichFormula<'bump>,
     env: &Evaluator<'bump>,
 ) -> ARichFormula<'bump> {
-    preprocess_before_eval(assertion.as_ref(), env)
-        .as_ref()
-        .into()
+    preprocess_before_eval(assertion, env).as_ref().into()
 }
 
 fn preprocess_before_eval<'a, 'bump>(
@@ -58,20 +64,59 @@ fn preprocess_after_eval<'bump>(
     env: &Evaluator<'bump>,
 ) -> RichFormula<'bump> {
     match assertion {
-        RichFormula::Var(v) if v.sort().is_evaluatable() => RichFormula::Var(Variable {
+        RichFormula::Var(v) if v.sort().is_evaluatable() => Some(RichFormula::Var(Variable {
             sort: v.sort().evaluated_sort().unwrap(),
             ..*v
-        }),
+        })),
         RichFormula::Fun(fun, args) => match fun.as_ref().maybe_get_evaluated() {
-            Some(f) => RichFormula::Fun(
+            Some(f) => Some(RichFormula::Fun(
                 f,
                 args.iter()
                     .map(|arg| preprocess_after_eval(arg, env).into_arc())
                     .collect(),
-            ),
-            None => env.eval(assertion).into_inner(),
+            )),
+            None => match fun
+                .precise_as_term_algebra()
+                .and_then(|ta| ta.as_quantifier())
+            {
+                Some(Quantifier {
+                    bound_variables,
+                    free_variables,
+                    id,
+                    inner,
+                }) => match inner {
+                    InnerQuantifier::FindSuchThat { .. } => None,
+                    InnerQuantifier::Forall { content } | InnerQuantifier::Exists { content } => {
+                        Some({
+                            let content = content.apply_substitution2(&FrozenSubstF::new_from(
+                                bound_variables.iter().map(Variable::id).collect_vec(),
+                                args,
+                            ));
+                            let content = preprocess_after_eval(content.as_ref(), env);
+
+                            let q = match inner {
+                                InnerQuantifier::Forall { .. } => {
+                                    formula::quantifier::Quantifier::Forall {
+                                        variables: free_variables.clone(),
+                                    }
+                                }
+                                InnerQuantifier::Exists { .. } => {
+                                    formula::quantifier::Quantifier::Exists {
+                                        variables: free_variables.clone(),
+                                    }
+                                }
+                                _ => unreachable!(),
+                            };
+
+                            RichFormula::Quantifier(q, content.into())
+                        })
+                    }
+                },
+                None => None,
+            },
         },
         RichFormula::Quantifier(_, _) => unreachable!(),
-        _ => env.eval(assertion).into_inner(),
+        _ => None,
     }
+    .unwrap_or_else(|| env.eval(assertion).into_inner())
 }

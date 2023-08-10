@@ -30,6 +30,32 @@ pub enum InnerQuantifier<'bump> {
     },
 }
 
+impl<'bump> InnerQuantifier<'bump> {
+    /// Returns `true` if the inner quantifier is [`FindSuchThat`].
+    ///
+    /// [`FindSuchThat`]: InnerQuantifier::FindSuchThat
+    #[must_use]
+    pub fn is_find_such_that(&self) -> bool {
+        matches!(self, Self::FindSuchThat { .. })
+    }
+
+    /// Returns `true` if the inner quantifier is [`Exists`].
+    ///
+    /// [`Exists`]: InnerQuantifier::Exists
+    #[must_use]
+    pub fn is_exists(&self) -> bool {
+        matches!(self, Self::Exists { .. })
+    }
+
+    /// Returns `true` if the inner quantifier is [`Forall`].
+    ///
+    /// [`Forall`]: InnerQuantifier::Forall
+    #[must_use]
+    pub fn is_forall(&self) -> bool {
+        matches!(self, Self::Forall { .. })
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Quantifier<'bump> {
     pub bound_variables: Arc<[Variable<'bump>]>,

@@ -316,18 +316,18 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Quantifier<'a> {
         bvars.truncate(bn);
 
         let q = {
-            let status = match state.get_realm() {
-                Realm::Evaluated => formula::quantifier::Status::Bool,
-                Realm::Symbolic => formula::quantifier::Status::Condition,
-            };
+            // let status = match state.get_realm() {
+            //     Realm::Evaluated => formula::quantifier::Status::Bool,
+            //     Realm::Symbolic => formula::quantifier::Status::Condition,
+            // };
             match kind {
                 ast::QuantifierKind::Forall => formula::quantifier::Quantifier::Forall {
                     variables: vars,
-                    status,
+                    // status,
                 },
                 ast::QuantifierKind::Exists => formula::quantifier::Quantifier::Exists {
                     variables: vars,
-                    status,
+                    // status,
                 },
             }
         };

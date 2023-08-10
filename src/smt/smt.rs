@@ -246,15 +246,13 @@ impl<'bump> SmtFormula<'bump> {
         match formula {
             RichFormula::Var(v) => SmtFormula::Var(*v),
             RichFormula::Quantifier(q, arg) => match q {
-                Quantifier::Exists { variables, status } => {
-                    assert!(status.is_bool());
+                Quantifier::Exists { variables } => {
                     SmtFormula::Exists(
                         variables.clone(),
                         Box::new(Self::from_arichformula(env, arg.as_ref())),
                     )
                 }
-                Quantifier::Forall { variables, status } => {
-                    assert!(status.is_bool());
+                Quantifier::Forall { variables } => {
                     SmtFormula::Forall(
                         variables.clone(),
                         Box::new(Self::from_arichformula(env, arg.as_ref())),
