@@ -1,7 +1,5 @@
 use std::sync::Arc;
 
-use itertools::Itertools;
-
 use crate::{
     formula::{
         formula::{ARichFormula, RichFormula},

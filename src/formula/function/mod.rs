@@ -12,7 +12,6 @@ pub use function::{new_static_function, Function};
 use std::hash::Hash;
 
 use bitflags::bitflags;
-use itertools::Itertools;
 
 // use crate::problem::step::Step;
 

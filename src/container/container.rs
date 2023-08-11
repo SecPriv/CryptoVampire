@@ -12,7 +12,6 @@ use crate::{
 use super::allocator::Container;
 use super::contained::Contained;
 use hashbrown::HashSet;
-use itertools::Itertools;
 
 use std::fmt::Debug;
 

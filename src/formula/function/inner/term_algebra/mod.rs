@@ -1,7 +1,4 @@
-use crate::{
-    assert_variance, formula::function::traits::FixedSignature, match_as_trait,
-    utils::string_ref::StrRef, variants, CustomDerive,
-};
+use crate::{assert_variance, match_as_trait, utils::string_ref::StrRef, variants, CustomDerive};
 
 use self::{
     base_function::BaseFunction,
