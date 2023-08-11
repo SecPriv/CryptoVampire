@@ -56,6 +56,20 @@ impl<'bump> Containable<'bump> for InnerMemoryCell<'bump> {}
 asssert_trait!(sync_send_cell; InnerMemoryCell; Sync, Send);
 
 impl<'bump> InnerMemoryCell<'bump> {
+    pub fn new(
+        name: String,
+        args: Vec<Sort<'bump>>,
+        function: Function<'bump>,
+        assignements: Vec<Assignement<'bump>>,
+    ) -> Self {
+        Self {
+            name,
+            args,
+            function,
+            assignements,
+        }
+    }
+
     pub fn function(&self) -> Function<'bump> {
         self.function
     }

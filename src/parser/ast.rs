@@ -4,7 +4,7 @@ use derivative::Derivative;
 use itertools::Itertools;
 use pest::{error::Error, iterators::Pair, Parser, Span};
 
-use crate::{destvec, f};
+use crate::{destvec, f, utils::vecref::VecRef};
 
 use super::*;
 
@@ -466,6 +466,13 @@ impl<'a> Application<'a> {
             Application::ConstVar { span, .. } | Application::Application { span, .. } => *span,
         }
     }
+
+    pub fn args(&self) -> VecRef<'_, Term<'a>> {
+        match self {
+            Application::ConstVar { .. } => VecRef::Empty,
+            Application::Application { args, .. } => args.as_slice().into(),
+        }
+    }
 }
 boiler_plate!(Application<'a>, 'a, application; |p| {
     let span = p.as_span();
@@ -642,7 +649,6 @@ boiler_plate!(DeclareCell<'a>, 'a, declare_cell; |p| {
     dest_rule!(span in [name, args, sort] = p);
     Ok(Self { span, name, args, sort })
 });
-
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

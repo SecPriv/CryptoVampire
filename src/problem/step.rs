@@ -62,6 +62,26 @@ pub struct InnerStep<'bump> {
     function: Function<'bump>,
 }
 
+impl<'bump> InnerStep<'bump> {
+    pub fn new(
+        name: String,
+        free_variables: Arc<[Variable<'bump>]>,
+        used_variables: Arc<[Variable<'bump>]>,
+        condition: ARichFormula<'bump>,
+        message: ARichFormula<'bump>,
+        function: Function<'bump>,
+    ) -> Self {
+        Self {
+            name,
+            free_variables,
+            used_variables,
+            condition,
+            message,
+            function,
+        }
+    }
+}
+
 asssert_trait!(sync_send_step; InnerStep; Sync, Send);
 assert_variance!(Step);
 unsafe impl<'bump> Sync for Step<'bump> {}

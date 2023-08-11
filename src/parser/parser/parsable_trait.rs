@@ -48,6 +48,13 @@ pub struct VarProxy<'bump> {
     sort: SortProxy<'bump>,
 }
 
+impl<'bump> VarProxy<'bump> {
+    pub fn try_into_variable(&self) -> Option<Variable<'bump>> {
+        let VarProxy { id, sort } = self;
+        sort.as_option().map(|sort| Variable { id:*id, sort })
+    }
+}
+
 impl<'bump> From<Variable<'bump>> for VarProxy<'bump> {
     fn from(value: Variable<'bump>) -> Self {
         Self {

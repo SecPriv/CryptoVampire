@@ -210,6 +210,7 @@ where
         &self.right
     }
 
+    /// if the right is just a variable, this return the substitution
     pub fn is_unifying_to_variable(&self) -> Option<OneVarSubstF<'bump>> {
         if_chain! {
             if self.left.subst.is_empty();

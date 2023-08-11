@@ -129,6 +129,14 @@ impl<'str, 'bump> FunctionCache<'str, 'bump> {
         assert!(self.is_function() || self.is_step());
         unsafe { std::mem::transmute(&self) } // only MemoryCell is invariant
     }
+
+    pub fn as_memory_cell(&self) -> Option<&CellCache<'bump>> {
+        if let Self::MemoryCell(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
 }
 
 impl<'str, 'bump> From<Function<'bump>> for FunctionCache<'str, 'bump> {
