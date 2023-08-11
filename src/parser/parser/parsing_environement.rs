@@ -32,7 +32,7 @@ pub struct Macro<'bump, 'a> {
     pub content: ast::Term<'a>,
 }
 
-pub use cache::FunctionCache;
+pub use cache::{CellCache, FunctionCache, StepCache};
 
 mod cache;
 
@@ -74,9 +74,11 @@ impl<'bump, 'a> MaybeInvalid for Environement<'bump, 'a> {
         } = self;
 
         functions.values().all(|v| match v {
-            FunctionCache::Function { function } => function.is_valid(),
-            FunctionCache::Step { function, step, .. } => function.is_valid() && step.is_valid(),
-            FunctionCache::MemoryCell { cell, function, .. } => {
+            FunctionCache::Function(function) => function.is_valid(),
+            FunctionCache::Step(StepCache { function, step, .. }) => {
+                function.is_valid() && step.is_valid()
+            }
+            FunctionCache::MemoryCell(CellCache { cell, function, .. }) => {
                 function.is_valid() && cell.is_valid()
             }
         })
@@ -99,7 +101,7 @@ impl<'bump, 'a> Environement<'bump, 'a> {
             .map(|f| {
                 (
                     f.name().into(),
-                    cache::FunctionCache::Function { function: f },
+                    cache::FunctionCache::Function(f),
                 )
             })
             .collect();

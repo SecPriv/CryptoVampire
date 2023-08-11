@@ -161,13 +161,13 @@ fn declare_step<'str, 'bump>(
         .container
         .alloc_inner(InnerFunction::Step(StepFunction::from(step)));
 
-    let cache = FunctionCache::Step {
+    let cache = FunctionCache::Step(StepCache {
         args: input_sorts?.into(),
         args_name: fun.args_names().collect(),
         ast: Box::new(fun.clone()),
         function,
         step,
-    };
+    });
 
     let r = env.functions.insert(name.to_string(), cache);
     assert_eq!(None, r);
@@ -199,12 +199,12 @@ fn declare_cell<'str, 'bump>(
             cell,
         ))));
 
-    let cache = FunctionCache::MemoryCell {
+    let cache = FunctionCache::MemoryCell(CellCache {
         args: input_sorts?.into(),
         cell,
         function,
         assignements: Default::default(),
-    };
+    });
 
     let r = env.functions.insert(name.to_string(), cache);
     assert_eq!(None, r);

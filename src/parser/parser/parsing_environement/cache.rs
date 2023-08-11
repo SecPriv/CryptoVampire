@@ -1,4 +1,6 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+
+use derivative::Derivative;
 
 use crate::{
     formula::{
@@ -12,40 +14,37 @@ use crate::{
         },
     },
     parser::ast,
-    problem::{cell::{MemoryCell, Assignement}, step::Step},
+    problem::{
+        cell::{Assignement, MemoryCell},
+        step::Step,
+    },
     utils::{arc_into_iter::ArcIntoIter, vecref::VecRefClone},
 };
 
-#[derive(Hash, PartialEq, Eq, Debug, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub enum FunctionCache<'str, 'bump> {
-    Function {
-        function: Function<'bump>,
-    },
-    Step {
-        args: Arc<[Sort<'bump>]>,
-        args_name: Arc<[&'str str]>,
-        ast: Box<ast::Step<'str>>,
-        function: Function<'bump>,
-        step: Step<'bump>,
-    },
-    MemoryCell {
-        args: Arc<[Sort<'bump>]>,
-        cell: MemoryCell<'bump>,
-        function: Function<'bump>,
-        assignements: Vec<Assignement<'bump>>
-    },
+    Function(Function<'bump>),
+    Step(StepCache<'str, 'bump>),
+    MemoryCell(CellCache<'bump>),
 }
 
-#[derive(Hash, Clone, PartialEq, Eq, Debug, PartialOrd, Ord)]
-pub struct MSignature<'str, 'bump> {
-    names: Box<[&'str str]>,
-    sorts: Arc<[Sort<'bump>]>,
+#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub struct StepCache<'str, 'bump> {
+    pub args: Arc<[Sort<'bump>]>,
+    pub args_name: Arc<[&'str str]>,
+    pub ast: Box<ast::Step<'str>>,
+    pub function: Function<'bump>,
+    pub step: Step<'bump>,
 }
 
-impl<'str, 'bump> MSignature<'str, 'bump> {
-    pub fn new(names: Box<[&'str str]>, sorts: Arc<[Sort<'bump>]>) -> Self {
-        Self { names, sorts }
-    }
+#[derive(Derivative)]
+#[derivative(Debug, PartialEq, Eq, Hash)]
+pub struct CellCache<'bump> {
+    pub args: Arc<[Sort<'bump>]>,
+    pub cell: MemoryCell<'bump>,
+    pub function: Function<'bump>,
+    #[derivative(PartialEq = "ignore", Hash = "ignore")]
+    pub assignements: Mutex<Vec<Assignement<'bump>>>,
 }
 
 impl<'str, 'bump> FunctionCache<'str, 'bump> {
@@ -58,7 +57,7 @@ impl<'str, 'bump> FunctionCache<'str, 'bump> {
     }
 
     pub fn as_function(&self) -> Option<&Function<'bump>> {
-        if let Self::Function { function } = self {
+        if let Self::Function(function) = self {
             Some(function)
         } else {
             None
@@ -66,7 +65,7 @@ impl<'str, 'bump> FunctionCache<'str, 'bump> {
     }
 
     pub fn try_into_function(self) -> Result<Function<'bump>, Self> {
-        if let Self::Function { function } = self {
+        if let Self::Function(function) = self {
             Ok(function)
         } else {
             Err(self)
@@ -75,7 +74,7 @@ impl<'str, 'bump> FunctionCache<'str, 'bump> {
 
     pub fn as_step_ast(&self) -> Option<&ast::Step<'str>> {
         match self {
-            Self::Step { ast, .. } => Some(ast),
+            Self::Step(StepCache { ast, .. }) => Some(ast),
             _ => None,
         }
     }
@@ -98,24 +97,22 @@ impl<'str, 'bump> FunctionCache<'str, 'bump> {
 
     pub fn get_function(&self) -> Function<'bump> {
         match self {
-            FunctionCache::Function { function }
-            | FunctionCache::Step { function, .. }
-            | FunctionCache::MemoryCell { function, .. } => *function,
+            FunctionCache::Function(function)
+            | FunctionCache::Step(StepCache { function, .. })
+            | FunctionCache::MemoryCell(CellCache { function, .. }) => *function,
         }
     }
 
     pub fn signature(&self) -> impl Signature<'bump> + '_ {
         match self {
-            FunctionCache::Function { function } => Lazy::A(function.signature()),
-            FunctionCache::Step { args, .. } => Lazy::B(Lazy::A(FixedRefSignature::new(
-                STEP.as_sort(),
-                args.clone(),
-            ))),
-            FunctionCache::MemoryCell { args, .. } => {
+            FunctionCache::Function(function) => Lazy::A(function.signature()),
+            FunctionCache::Step(StepCache { args, .. }) => Lazy::B(Lazy::A(
+                FixedRefSignature::new(STEP.as_sort(), args.clone()),
+            )),
+            FunctionCache::MemoryCell(CellCache { args, .. }) => {
                 Lazy::B(Lazy::B(FixedRefSignature::new(
                     MESSAGE.as_sort(),
-                    args
-                        .iter()
+                    args.iter()
                         .cloned()
                         .chain([STEP.as_sort()])
                         .collect::<VecRefClone<_>>(),
@@ -123,10 +120,19 @@ impl<'str, 'bump> FunctionCache<'str, 'bump> {
             }
         }
     }
+
+    pub fn enforce_variance<'str2, 'bump2>(&self) -> &FunctionCache<'str2, 'bump2>
+    where
+        'str: 'str2,
+        'bump: 'bump2,
+    {
+        assert!(self.is_function() || self.is_step());
+        unsafe { std::mem::transmute(&self) } // only MemoryCell is invariant
+    }
 }
 
 impl<'str, 'bump> From<Function<'bump>> for FunctionCache<'str, 'bump> {
     fn from(value: Function<'bump>) -> Self {
-        Self::Function { function: value }
+        Self::Function(value)
     }
 }

@@ -413,7 +413,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Application<'a> {
                             Realm::Symbolic => Deref::deref(&NOT_TA_CACHE),
                             Realm::Evaluated => Deref::deref(&NOT_CACHE),
                         }
-                        .into()),
+                        .enforce_variance()),
                         _ => Err(e),
                     },
                 }
@@ -651,7 +651,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
                     state,
                     bvars,
                     expected_sort,
-                    Deref::deref(&EQUALITY_TA_CACHE),
+                    EQUALITY_TA_CACHE.enforce_variance(),
                     &self.terms,
                 ),
                 _ => Self {
@@ -672,7 +672,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
                     state,
                     bvars,
                     expected_sort,
-                    Deref::deref(&EQUALITY_CACHE),
+                    EQUALITY_CACHE.enforce_variance(),
                     &self.terms,
                 ),
                 Realm::Symbolic => Self {
@@ -712,7 +712,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
                     state,
                     bvars,
                     expected_sort,
-                    Deref::deref(&IFF_CACHE),
+                    IFF_CACHE.enforce_variance(),
                     &self.terms,
                 ),
                 Realm::Symbolic => Self {
@@ -730,7 +730,8 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
                 let function = match state.get_realm() {
                     Realm::Symbolic => Deref::deref(&IMPLIES_TA_CACHE),
                     Realm::Evaluated => Deref::deref(&IMPLIES_CACHE),
-                };
+                }
+                .enforce_variance();
                 parse_application(
                     env,
                     &self.span,
@@ -749,7 +750,8 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
                     (Realm::Evaluated, ast::Operation::And) => Deref::deref(&AND_CACHE),
                     (Realm::Evaluated, ast::Operation::Or) => Deref::deref(&OR_CACHE),
                     _ => unreachable!(),
-                };
+                }
+                .enforce_variance();
 
                 match realm {
                     Realm::Evaluated => parse_application(
