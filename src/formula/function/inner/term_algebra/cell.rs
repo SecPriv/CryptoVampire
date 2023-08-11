@@ -39,7 +39,7 @@ impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for Cell<'bump> {
     fn as_fixed_signature(&'a self) -> FixedRefSignature<'a, 'bump> {
         FixedRefSignature {
             out: MESSAGE.as_sort(),
-            args: self.memory_cell().args().as_slice().into(),
+            args: self.memory_cell().args().into(),
         }
     }
 }
