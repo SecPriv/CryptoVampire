@@ -5,7 +5,7 @@ use derivative::Derivative;
 use crate::{
     formula::{
         function::{
-            signature::{AsFixedSignature, FixedRefSignature, Lazy, Signature},
+            signature::{FixedRefSignature, Lazy, Signature},
             Function,
         },
         sort::{
@@ -18,7 +18,7 @@ use crate::{
         cell::{Assignement, MemoryCell},
         step::Step,
     },
-    utils::{arc_into_iter::ArcIntoIter, vecref::VecRefClone},
+    utils::vecref::VecRefClone,
 };
 
 #[derive(Debug, PartialEq, Eq, Hash)]

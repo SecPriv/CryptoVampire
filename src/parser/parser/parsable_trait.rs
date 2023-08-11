@@ -2,7 +2,6 @@ use std::ops::Deref;
 mod cached_builtins;
 
 use itertools::Itertools;
-use static_init::dynamic;
 
 use crate::{
     environement::traits::{KnowsRealm, Realm},
@@ -12,10 +11,7 @@ use crate::{
         formula::{ARichFormula, RichFormula},
         function::{
             self,
-            builtin::{
-                AND, AND_TA, EQUALITY, EQUALITY_TA, IFF, IF_THEN_ELSE, IF_THEN_ELSE_TA, IMPLIES,
-                IMPLIES_TA, INPUT, OR, OR_TA,
-            },
+            builtin::{IF_THEN_ELSE, IF_THEN_ELSE_TA, INPUT},
             inner::term_algebra::TermAlgebra,
             signature::Signature,
             Function,
@@ -51,7 +47,7 @@ pub struct VarProxy<'bump> {
 impl<'bump> VarProxy<'bump> {
     pub fn try_into_variable(&self) -> Option<Variable<'bump>> {
         let VarProxy { id, sort } = self;
-        sort.as_option().map(|sort| Variable { id:*id, sort })
+        sort.as_option().map(|sort| Variable { id: *id, sort })
     }
 }
 

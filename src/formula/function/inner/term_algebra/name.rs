@@ -18,7 +18,10 @@ use crate::{
         },
     },
     implvec,
-    utils::{vecref::{VecRef, VecRefClone}, string_ref::StrRef},
+    utils::{
+        string_ref::StrRef,
+        vecref::{VecRef, VecRefClone},
+    },
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

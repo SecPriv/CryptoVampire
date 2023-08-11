@@ -1,6 +1,6 @@
 use crate::{
     assert_variance, formula::sort::builtins::STEP, problem::step::Step, static_signature,
-    CustomDerive, utils::string_ref::StrRef,
+    CustomDerive,
 };
 
 use super::super::{

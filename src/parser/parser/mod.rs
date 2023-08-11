@@ -6,7 +6,9 @@ mod declare;
 pub use declare::{declare_fun_step_cell_let, declare_sorts};
 
 mod parsing_environement;
-pub use parsing_environement::{Environement, Macro, get_function, get_sort, FunctionCache,StepCache, CellCache};
+pub use parsing_environement::{
+    get_function, get_sort, CellCache, Environement, FunctionCache, Macro, StepCache,
+};
 
 mod parse_step_cell;
 pub use parse_step_cell::*;

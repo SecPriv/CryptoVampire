@@ -26,7 +26,7 @@ impl<'a, 'bump: 'a> RefNamed<'a> for &'a InnerFunction<'bump> {
             InnerFunction::Step(x) => x.name().into(),
             InnerFunction::Subterm(x) => x.name.as_str().into(),
             InnerFunction::TermAlgebra(x) => x.name(),
-            InnerFunction::IfThenElse(x) => IfThenElse::name().into(),
+            InnerFunction::IfThenElse(_x) => IfThenElse::name().into(),
             InnerFunction::Evaluate(x) => x.name().into(),
             InnerFunction::Predicate(x) => x.name().into(),
             InnerFunction::Tmp(x) => x.name().into(),

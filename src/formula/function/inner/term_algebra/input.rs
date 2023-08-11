@@ -10,7 +10,9 @@ use crate::{
 pub struct Input;
 
 impl Input {
-    pub fn name(&self) -> &'static str {"input"}
+    pub fn name(&self) -> &'static str {
+        "input"
+    }
 }
 
 impl<'bump> MaybeEvaluatable<'bump> for Input {

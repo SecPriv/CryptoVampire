@@ -1,6 +1,18 @@
-use crate::{implvec, assert_variance, container::{allocator::ContainerTools, reference::Reference}, formula::{function::{Function, InnerFunction, inner::term_algebra::{TermAlgebra, cell::Cell}}, sort::Sort}, utils::{utils::AlreadyInitialized, precise_as_ref::PreciseAsRef}};
+use crate::{
+    assert_variance,
+    container::{allocator::ContainerTools, reference::Reference},
+    formula::{
+        function::{
+            inner::term_algebra::{cell::Cell, TermAlgebra},
+            Function, InnerFunction,
+        },
+        sort::Sort,
+    },
+    implvec,
+    utils::{precise_as_ref::PreciseAsRef, utils::AlreadyInitialized},
+};
 
-use super::{InnerMemoryCell, Assignement};
+use super::{Assignement, InnerMemoryCell};
 
 pub type MemoryCell<'bump> = Reference<'bump, InnerMemoryCell<'bump>>;
 

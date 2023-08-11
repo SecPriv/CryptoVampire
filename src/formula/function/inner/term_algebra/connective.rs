@@ -2,8 +2,8 @@ use crate::{
     formula::{
         function::{
             builtin::{AND, EQUALITY, IFF, IMPLIES, NOT, OR},
-            signature::{AsFixedSignature, FixedRefSignature, Impossible, Lazy, Signature},
-            traits::{Evaluatable, FixedSignature, MaybeFixedSignature},
+            signature::{FixedRefSignature, Impossible, Signature},
+            traits::{Evaluatable, FixedSignature},
             Function,
         },
         sort::{
@@ -46,7 +46,6 @@ impl Connective {
         }
     }
 }
-
 
 static_signature!(EQ_SIGNATURE: (MESSAGE, MESSAGE) -> CONDITION);
 impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for Equality {

@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use crate::{formula::formula::ARichFormula, problem::step::Step};
 
-
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Assignement<'bump> {
     pub step: Step<'bump>,

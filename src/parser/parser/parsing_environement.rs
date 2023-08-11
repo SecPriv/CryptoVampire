@@ -17,7 +17,6 @@ use crate::{
             Function,
         },
         sort::Sort,
-        variable::Variable,
     },
     implderef, implvec,
     parser::{ast, merr, E},
@@ -98,12 +97,7 @@ impl<'bump, 'a> Environement<'bump, 'a> {
             .collect();
         let function_hash: HashMap<_, _> = function_hash
             .into_iter()
-            .map(|f| {
-                (
-                    f.name().into(),
-                    cache::FunctionCache::Function(f),
-                )
-            })
+            .map(|f| (f.name().into(), cache::FunctionCache::Function(f)))
             .collect();
 
         let names = function_hash

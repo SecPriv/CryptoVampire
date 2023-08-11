@@ -15,8 +15,8 @@ use crate::formula::function::{
 };
 use crate::formula::sort::Sort;
 use crate::parser::ast::extra::AsFunction;
-use crate::problem::cell::{InnerMemoryCell, MemoryCell};
-use crate::problem::step::{InnerStep, Step};
+use crate::problem::cell::InnerMemoryCell;
+use crate::problem::step::InnerStep;
 
 use crate::container::{allocator::ContainerTools, ScopedContainer};
 use crate::formula::sort::builtins::*;

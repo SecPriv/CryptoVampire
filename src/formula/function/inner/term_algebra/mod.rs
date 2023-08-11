@@ -1,12 +1,6 @@
 use crate::{
-    assert_variance,
-    formula::function::{
-        signature::{Lazy, Signature},
-        traits::FixedSignature,
-    },
-    match_as_trait,
-    utils::string_ref::StrRef,
-    variants, CustomDerive,
+    assert_variance, formula::function::traits::FixedSignature, match_as_trait,
+    utils::string_ref::StrRef, variants, CustomDerive,
 };
 
 use self::{

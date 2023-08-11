@@ -3,15 +3,18 @@ use std::sync::{
     Arc,
 };
 
-use crate::{formula::{
-    formula::ARichFormula,
-    function::{
-        signature::FixedRefSignature,
-        traits::{FixedSignature, MaybeEvaluatable},
+use crate::{
+    formula::{
+        formula::ARichFormula,
+        function::{
+            signature::FixedRefSignature,
+            traits::{FixedSignature, MaybeEvaluatable},
+        },
+        sort::builtins::{CONDITION, MESSAGE},
+        variable::Variable,
     },
-    sort::builtins::{CONDITION, MESSAGE},
-    variable::Variable,
-}, utils::string_ref::StrRef};
+    utils::string_ref::StrRef,
+};
 
 static N_QUANTIFIERS: AtomicUsize = AtomicUsize::new(0);
 
