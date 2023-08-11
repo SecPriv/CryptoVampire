@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::{ops::Deref, sync::Arc};
 
 use hashbrown::{HashMap, HashSet};
 use itertools::Itertools;
@@ -27,7 +27,8 @@ use crate::{
 #[derive(Hash, Clone, PartialEq, Eq, Debug, PartialOrd, Ord)]
 pub struct Macro<'bump, 'a> {
     // name: &'a str,
-    pub args: Vec<(&'a str, Variable<'bump>)>,
+    pub args: Arc<[Sort<'bump>]>,
+    pub args_name: Arc<[&'a str]>,
     pub content: ast::Term<'a>,
 }
 
@@ -52,7 +53,7 @@ pub struct Environement<'bump, 'str> {
     pub evaluator: Evaluator<'bump>,
 
     /// For [Macro]s
-    pub macro_hash: HashMap<&'str str, Macro<'bump, 'str>>,
+    pub macro_hash: HashMap<String, Macro<'bump, 'str>>,
     /// # Macro look up table
     // pub step_lut_to_parse: HashMap<&'str str, ast::Step<'str>>,
     pub functions: HashMap<String, FunctionCache<'str, 'bump>>,
@@ -127,6 +128,10 @@ impl<'bump, 'a> Environement<'bump, 'a> {
 
     pub fn contains_name_with_var<'b>(&self, name: &'b str, vars: implvec!(&'b str)) -> bool {
         self.contains_name(name) || vars.into_iter().contains(&name)
+    }
+
+    pub fn container_macro_name(&self, name: &str) -> bool {
+        self.macro_hash.contains_key(name) || self.used_name.contains(&format!("{name}!"))
     }
 
     // pub fn finalize(&mut self) {

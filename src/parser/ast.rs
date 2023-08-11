@@ -722,6 +722,12 @@ boiler_plate!(Macro<'a>, 'a, mlet ; |p| {
     Ok(Self {span, name, args, term})
 });
 
+impl<'a> Macro<'a> {
+    pub fn args_names(&'_ self) -> impl Iterator<Item = &'a str> + '_ {
+        self.args.bindings.iter().map(|vb| vb.variable.name())
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum Assert<'a> {
     Assertion(Assertion<'a>),

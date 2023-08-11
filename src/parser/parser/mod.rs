@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use itertools::Either;
 
-use self::parsing_environement::{get_sort, Environement, FunctionCache};
+use self::parsing_environement::{get_sort, Environement, FunctionCache, Macro};
 
 use super::{
     ast::{
@@ -201,7 +203,7 @@ fn declare_cell<'str, 'bump>(
     Ok(())
 }
 
-pub fn declare_fun_step_cell<'str, 'bump>(
+pub fn declare_fun_step_cell_let<'str, 'bump>(
     env: &mut Environement<'bump, 'str>,
     ast: &ASTList<'str>,
 ) -> Result<(), E> {
@@ -212,42 +214,45 @@ pub fn declare_fun_step_cell<'str, 'bump>(
                 Declaration::Cell(cell) => Some(Either::Left(Either::Right(cell))),
                 _ => None,
             },
-            AST::Step(step) => Some(Either::Right(Box::as_ref(step))),
+            AST::Step(step) => Some(Either::Right(Either::Left(Box::as_ref(step)))),
+            AST::Let(mlet) => Some(Either::Right(Either::Right(Box::as_ref(mlet)))),
             _ => None,
         })
         .try_for_each(|ast| match ast {
             Either::Left(Either::Left(fun)) => declare_function(env, fun),
             Either::Left(Either::Right(cell)) => declare_cell(env, cell),
-            Either::Right(step) => declare_step(env, step),
+            Either::Right(Either::Left(step)) => declare_step(env, step),
+            Either::Right(Either::Right(mlet)) => declare_let(env, mlet),
         })
 }
 
+fn declare_let<'bump, 'a>(
+    env: &mut Environement<'bump, 'a>,
+    mlet: &ast::Macro<'a>,
+) -> Result<(), E> {
+    let super::ast::Macro { name, .. } = mlet;
+    let SnN { span, name } = name.into();
+    if env.container_macro_name(&name) {
+        err(merr(*span, f!("the macro {}! is already in use", name)))
+    } else {
+        // the input sorts (will gracefully error out later if a sort is undefined)
+        let args: Result<Arc<[_]>, _> = mlet
+            .args()
+            .into_iter()
+            .map(|idn| get_sort(env, *idn.span, idn.name))
+            .collect();
+        let args_name = mlet.args_names().collect();
 
-fn declare_let<'bump, 'a>(env: &mut Environement<'bump, 'a>, ast: &ASTList<'a>) -> Result<(), E> {
-    ast.into_iter()
-        .filter_map(|ast| match ast {
-            AST::Let(b) => Some(b.as_ref()),
-            _ => None,
-        })
-        .try_for_each(|mlet| {
-            let super::ast::Macro { name, .. } = mlet;
-            let SnN { span, name } = name.into();
-            // TODO: no hard-coded values
-            if env.macro_hash.contains_key(name.as_ref())
-                || ["msg", "cond"].contains(&name.as_ref())
-            {
-                err(merr(*span, f!("the macro {}! is already in use", name)))
-            } else {
-                // the input sorts (will gracefully error out later if a sort is undefined)
-                let _input_sorts: Result<Vec<_>, _> = mlet
-                    .args()
-                    .into_iter()
-                    .map(|idn| get_sort(env, *idn.span, idn.name))
-                    .collect();
+        let maco_env = Macro {
+            args: args?,
+            args_name,
+            content: mlet.term.clone(),
+        };
 
-                todo!()
-            }
-        })
+        let r = env.macro_hash.insert(name.to_string(), maco_env);
+        assert_eq!(None, r);
+        Ok(())
+    }
 }
 
 // /// declare the user function (e.g., tuple & co)

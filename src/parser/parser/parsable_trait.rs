@@ -598,7 +598,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::AppMacro<'a> {
                         .args
                         .iter()
                         .zip(args)
-                        .map(|((_, v), arg)| arg.parse(env, bvars, state, Some(v.sort().into())))
+                        .map(|(v, arg)| arg.parse(env, bvars, state, Some(v.into())))
                         .collect()
                 } else {
                     err(merr(
@@ -615,20 +615,23 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::AppMacro<'a> {
                     let mut bvars = mmacro
                         .args
                         .iter()
-                        .map(|(s, v)| (*s, (*v).into()))
+                        .zip(mmacro.args_name.iter())
+                        .enumerate()
+                        .map(|(id, (var_sort, var_name))| {
+                            (*var_name, Variable::new(id, *var_sort).into())
+                        })
                         .collect_vec();
                     mmacro.content.parse(env, &mut bvars, state, expected_sort)
                 }?;
 
                 Ok(term
                     .owned_into_inner()
-                    .apply_substitution(mmacro.args.iter().map(|(_, v)| v.id), &args)
+                    .apply_substitution(0..mmacro.args.len(), &args)
                     .into())
             }
         }
     }
 }
-
 
 impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
     type R = ARichFormula<'bump>;
@@ -726,7 +729,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
             ast::Operation::Implies => {
                 let function = match state.get_realm() {
                     Realm::Symbolic => Deref::deref(&IMPLIES_TA_CACHE),
-                    Realm::Evaluated => Deref::deref(&IMPLIES_CACHE)
+                    Realm::Evaluated => Deref::deref(&IMPLIES_CACHE),
                 };
                 parse_application(
                     env,
@@ -765,7 +768,8 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
                                 .unwrap()
                                 .parse(env, bvars, state, expected_sort.clone())?; // can't fail
                         iter.try_fold(first, |acc, t| {
-                            Ok(function.get_function()
+                            Ok(function
+                                .get_function()
                                 .f_a([acc, t.parse(env, bvars, state, expected_sort.clone())?]))
                         })
                     }
