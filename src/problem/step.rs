@@ -74,7 +74,7 @@ pub enum MessageOrCondition {
 }
 
 impl<'bump> Step<'bump> {
-    pub(crate) fn new<C>(
+    pub fn new<C>(
         container: &'bump C,
         name: implderef!(str),
         args: implvec!(Variable<'bump>),
@@ -119,18 +119,33 @@ impl<'bump> Step<'bump> {
         step
     }
 
-    /// new step overwriting `old_function`.
+    /// **not thread safe**
     ///
-    /// **Not thread safe**
-    pub(crate) unsafe fn new_with_function(
-        _container: &'bump impl ContainerTools<'bump, InnerStep<'bump>, R<'bump> = Self>,
-        _old_function: Function<'bump>,
-        _name: implderef!(str),
+    /// returns an error if `step` or `function` was already initialized.
+    ///
+    /// # Safety
+    /// This will mutate `step` and `function` make sure nobody is mutating them
+    /// in another thread. Thanks to the check on initialization no one can alias
+    /// `step` or `function` other that with an [C::initialize()] function.
+    ///
+    /// # Panic
+    /// This panics `args` does not contain all the free variables in `message` and
+    /// `condition`. (Tt can contain more)
+    pub unsafe fn new_with_uninit<C>(
+        _container: &'bump C,
+        name: implderef!(str),
         args: implvec!(Variable<'bump>),
         message: ARichFormula<'bump>,
         condition: ARichFormula<'bump>,
-    ) -> Result<Self, AlreadyInitialized> {
-        let free_variables = args.into_iter().collect_vec();
+
+        step: &Step<'bump>,
+        function: &Function<'bump>,
+    ) -> Result<(), AlreadyInitialized>
+    where
+        C: ContainerTools<'bump, InnerStep<'bump>, R<'bump> = Self>
+            + ContainerTools<'bump, InnerFunction<'bump>, R<'bump> = Function<'bump>>,
+    {
+        let free_variables: Arc<[_]> = args.into_iter().collect();
         assert!(message
             .get_free_vars()
             .iter()
@@ -139,33 +154,23 @@ impl<'bump> Step<'bump> {
             .get_free_vars()
             .iter()
             .all(|v| free_variables.contains(v)));
+        let used_variables =
+            ARichFormula::iter_used_varibales([message.clone(), condition.clone()])
+                .unique()
+                .collect();
+        let inner_step = InnerStep {
+            name: name.to_string(),
+            free_variables,
+            used_variables,
+            condition,
+            message,
+            function: *function,
+        };
+        let inner_function = InnerFunction::Step(StepFunction::Step(InnerStepFuction::new(*step)));
 
-        // let used_variables = RichFormula::iter_used_varibales([&message, &condition])
-        //     .unique()
-        //     .collect_vec();
-        // let name = name.to_string();
-        // let inner = {
-        //     let inner_step = InnerStep {
-        //         name: name.to_string(),
-        //         free_variables,
-        //         used_variables,
-        //         condition,
-        //         message,
-        //         function: old_function,
-        //     };
-        //     let inner_step_ref = container.alloc();
-        //     std::ptr::write(inner_step_ref.as_ptr(), inner_step);
-        //     inner_step_ref
-        // };
-        // let step = Step {
-        //     inner,
-        //     container: Default::default(),
-        // };
-        // old_function.initiallize(InnerFunction::Step(StepFunction::Step(
-        //     InnerStepFuction::new(step),
-        // )))?;
-        // Ok(step)
-        todo!()
+        C::initialize(step, inner_step)?;
+        C::initialize(function, inner_function)?;
+        Ok(())
     }
 
     pub fn name(&self) -> &'bump str {

@@ -1,10 +1,11 @@
 use std::ops::Deref;
 
-use hashbrown::HashMap;
+use hashbrown::{HashMap, HashSet};
+use itertools::Itertools;
 use pest::Span;
 
 use crate::{
-    container::{allocator::ContainerTools, ScopedContainer},
+    container::ScopedContainer,
     environement::traits::KnowsRealm,
     f,
     formula::{
@@ -13,18 +14,15 @@ use crate::{
                 evaluate::Evaluator,
                 term_algebra::name::{NameCasterCollection, DEFAULT_NAME_CASTER},
             },
-            Function, InnerFunction,
+            Function,
         },
         sort::Sort,
         variable::Variable,
     },
     implderef, implvec,
-    parser::{ast, merr, parser::guard::Guard, E},
-    problem::{cell::InnerMemoryCell, step::InnerStep},
+    parser::{ast, merr, E},
     utils::utils::MaybeInvalid,
 };
-
-use super::guard::{GuardedFunction, GuardedMemoryCell, GuardedStep};
 
 #[derive(Hash, Clone, PartialEq, Eq, Debug, PartialOrd, Ord)]
 pub struct Macro<'bump, 'a> {
@@ -32,6 +30,10 @@ pub struct Macro<'bump, 'a> {
     pub args: Vec<(&'a str, Variable<'bump>)>,
     pub content: ast::Term<'a>,
 }
+
+pub use cache::FunctionCache;
+
+mod cache;
 
 #[derive(Debug)]
 pub struct Environement<'bump, 'str> {
@@ -45,30 +47,17 @@ pub struct Environement<'bump, 'str> {
     /// This one is for [Sort]
     pub sort_hash: HashMap<String, Sort<'bump>>,
     /// That one for [Function]s
-    pub function_hash: HashMap<String, Function<'bump>>,
-
+    // pub function_hash: HashMap<String, Function<'bump>>,
     pub name_caster_collection: NameCasterCollection<'bump>,
     pub evaluator: Evaluator<'bump>,
 
     /// For [Macro]s
     pub macro_hash: HashMap<&'str str, Macro<'bump, 'str>>,
     /// # Macro look up table
-    pub step_lut_to_parse: HashMap<&'str str, ast::Step<'str>>,
+    // pub step_lut_to_parse: HashMap<&'str str, ast::Step<'str>>,
+    pub functions: HashMap<String, FunctionCache<'str, 'bump>>,
 
-    /// List of things to initialize
-    ///
-    /// Those are recurive structure or immutable structure which cannot be built at once.
-    /// Instead we define them incrementally and once the parsing is done, we call [Self::finalize()]
-    ///
-    /// We use [`Guard<T>`] to ensure only the trait we know won't call the underlying `T` in
-    /// that are not initialized yet.
-    ///
-    /// This one is for [Function]
-    pub functions_initialize: HashMap<GuardedFunction<'bump>, Option<InnerFunction<'bump>>>,
-    /// For [Step][crate::problem::step::Step]
-    pub steps_initialize: HashMap<GuardedStep<'bump>, Option<InnerStep<'bump>>>,
-    /// For [MemoryCell][crate::problem::cell::MemoryCell]
-    pub cells_initialize: HashMap<GuardedMemoryCell<'bump>, Option<InnerMemoryCell<'bump>>>,
+    pub used_name: HashSet<String>,
 }
 
 impl<'bump, 'a> MaybeInvalid for Environement<'bump, 'a> {
@@ -77,24 +66,19 @@ impl<'bump, 'a> MaybeInvalid for Environement<'bump, 'a> {
             name_caster_collection: _,
             container: _,
             sort_hash: _,
-            function_hash: _,
             macro_hash: _,
             evaluator: _,
-            step_lut_to_parse: _,
-            functions_initialize,
-            steps_initialize,
-            cells_initialize,
+            functions,
+            used_name: _,
         } = self;
 
-        functions_initialize
-            .iter()
-            .all(|(k, v)| k.is_valid() && v.is_some())
-            && steps_initialize
-                .iter()
-                .all(|(k, v)| k.is_valid() && v.is_some())
-            && cells_initialize
-                .iter()
-                .all(|(k, v)| k.is_valid() && v.is_some())
+        functions.values().all(|v| match v {
+            FunctionCache::Function { function } => function.is_valid(),
+            FunctionCache::Step { function, step, .. } => function.is_valid() && step.is_valid(),
+            FunctionCache::MemoryCell { cell, function, .. } => {
+                function.is_valid() && cell.is_valid()
+            }
+        })
     }
 }
 
@@ -103,61 +87,78 @@ impl<'bump, 'a> Environement<'bump, 'a> {
         container: &'bump ScopedContainer<'bump>,
         sort_hash: implvec!(Sort<'bump>),
         function_hash: implvec!(Function<'bump>),
+        extra_names: implvec!(String),
     ) -> Self {
         let sort_hash = sort_hash
             .into_iter()
             .map(|s| (s.name().into_string(), s))
             .collect();
-        let function_hash = function_hash
+        let function_hash: HashMap<_, _> = function_hash
             .into_iter()
-            .map(|f| (f.name().into(), f))
+            .map(|f| {
+                (
+                    f.name().into(),
+                    cache::FunctionCache::Function { function: f },
+                )
+            })
+            .collect();
+
+        let names = function_hash
+            .keys()
+            .cloned()
+            .chain(extra_names.into_iter())
             .collect();
 
         Self {
             name_caster_collection: DEFAULT_NAME_CASTER.clone(),
             container,
             sort_hash,
-            function_hash,
             evaluator: Default::default(),
             /// those start empty
-            step_lut_to_parse: Default::default(),
             macro_hash: Default::default(),
-            functions_initialize: Default::default(),
-            steps_initialize: Default::default(),
-            cells_initialize: Default::default(),
+            functions: function_hash,
+            used_name: names,
         }
     }
 
-    pub fn finalize(&mut self) {
-        fn finalize_hash_map<'bump, C, T>(
-            _container: &C,
-            h: &mut HashMap<Guard<C::R<'bump>>, Option<T>>,
-        ) where
-            C: ContainerTools<'bump, T>,
-        {
-            std::mem::take(h)
-                .into_iter()
-                // This returns shortcuts to `None` if `fun` is `None`
-                .try_for_each(|(g, fun)| {
-                    fun.map(|fun| unsafe { C::initialize(&g, fun) })
-                        .expect("unreachable: all inner should be ready")
-                })
-                .expect("unreachable: nothing was initialized before") // should never crash
-        }
-
-        let Environement {
-            functions_initialize,
-            steps_initialize,
-            cells_initialize,
-            ..
-        } = self;
-
-        finalize_hash_map(self.container, functions_initialize);
-        finalize_hash_map(self.container, steps_initialize);
-        finalize_hash_map(self.container, cells_initialize);
-
-        assert!(self.is_valid(), "something went wrong while initializing");
+    pub fn contains_name(&self, name: &str) -> bool {
+        self.functions.contains_key(name) || self.used_name.contains(name)
     }
+
+    pub fn contains_name_with_var<'b>(&self, name: &'b str, vars: implvec!(&'b str)) -> bool {
+        self.contains_name(name) || vars.into_iter().contains(&name)
+    }
+
+    // pub fn finalize(&mut self) {
+    //     fn finalize_hash_map<'bump, C, T>(
+    //         _container: &C,
+    //         h: &mut HashMap<Guard<C::R<'bump>>, Option<T>>,
+    //     ) where
+    //         C: ContainerTools<'bump, T>,
+    //     {
+    //         std::mem::take(h)
+    //             .into_iter()
+    //             // This returns shortcuts to `None` if `fun` is `None`
+    //             .try_for_each(|(g, fun)| {
+    //                 fun.map(|fun| unsafe { C::initialize(&g, fun) })
+    //                     .expect("unreachable: all inner should be ready")
+    //             })
+    //             .expect("unreachable: nothing was initialized before") // should never crash
+    //     }
+
+    //     let Environement {
+    //         functions_initialize,
+    //         steps_initialize,
+    //         cells_initialize,
+    //         ..
+    //     } = self;
+
+    //     finalize_hash_map(self.container, functions_initialize);
+    //     finalize_hash_map(self.container, steps_initialize);
+    //     finalize_hash_map(self.container, cells_initialize);
+
+    //     assert!(self.is_valid(), "something went wrong while initializing");
+    // }
 }
 
 /// Find the [Sort] in already declared in [Environement::sort_hash]
@@ -173,15 +174,15 @@ pub fn get_sort<'a, 'bump>(
 }
 
 /// Find the [Function] in already declared in [Environement::sort_function]
-pub fn get_function<'a, 'bump>(
-    env: &Environement<'bump, 'a>,
+pub fn get_function<'b, 'a, 'bump>(
+    env: &'b Environement<'bump, 'a>,
     span: Span<'a>,
     str: implderef!(str),
-) -> Result<Function<'bump>, E> {
-    env.function_hash
+) -> Result<&'b FunctionCache<'a, 'bump>, E> {
+    env.functions
         .get(Deref::deref(&str))
         .ok_or_else(|| merr(span, f!("undefined function {}", Deref::deref(&str))))
-        .map(|s| *s)
+    // .map(|s| *s)
 }
 
 impl<'a, 'bump> KnowsRealm for Environement<'bump, 'a> {

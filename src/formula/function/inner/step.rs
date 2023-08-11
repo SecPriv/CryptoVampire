@@ -25,6 +25,12 @@ pub struct InnerStepFuction<'bump> {
     step: Step<'bump>,
 }
 
+impl<'bump> From<Step<'bump>> for StepFunction<'bump> {
+    fn from(value: Step<'bump>) -> Self {
+        Self::Step(InnerStepFuction { step: value })
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct Pred();
 

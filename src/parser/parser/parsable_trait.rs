@@ -1,4 +1,8 @@
+use std::ops::Deref;
+mod cached_builtins;
+
 use itertools::Itertools;
+use static_init::dynamic;
 
 use crate::{
     environement::traits::{KnowsRealm, Realm},
@@ -10,7 +14,7 @@ use crate::{
             self,
             builtin::{
                 AND, AND_TA, EQUALITY, EQUALITY_TA, IFF, IF_THEN_ELSE, IF_THEN_ELSE_TA, IMPLIES,
-                IMPLIES_TA, INPUT, NOT, NOT_TA, OR, OR_TA,
+                IMPLIES_TA, INPUT, OR, OR_TA,
             },
             inner::term_algebra::TermAlgebra,
             signature::Signature,
@@ -30,8 +34,10 @@ use crate::{
     },
 };
 
+use self::cached_builtins::*;
+
 use super::{
-    parsing_environement::{get_function, get_sort},
+    parsing_environement::{get_function, get_sort, FunctionCache},
     state::State,
     Environement,
 };
@@ -191,7 +197,9 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
                 } = v;
 
                 // ensures the name is free
-                if env.function_hash.contains_key(variable.name()) {
+                if env.functions.contains_key(variable.name())
+                    || bvars.iter().map(|(n, _)| n).contains(&variable.name())
+                {
                     return err(merr(
                         variable.0.span,
                         f!("the name {} is already taken", variable.name()),
@@ -284,7 +292,9 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Quantifier<'a> {
 
                 let vname = variable.name();
                 // ensures the name is free
-                if env.function_hash.contains_key(vname) {
+                if env.functions.contains_key(vname)
+                    || bvars.iter().map(|(n, _)| n).contains(&vname)
+                {
                     return err(merr(
                         variable.0.span,
                         f!("the name {} is already taken", vname),
@@ -400,9 +410,10 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Application<'a> {
                     Ok(f) => Ok(f),
                     Err(e) => match content {
                         "not" => Ok(match state.get_realm() {
-                            Realm::Symbolic => NOT_TA.clone(),
-                            Realm::Evaluated => NOT.clone(),
-                        }),
+                            Realm::Symbolic => Deref::deref(&NOT_TA_CACHE),
+                            Realm::Evaluated => Deref::deref(&NOT_CACHE),
+                        }
+                        .into()),
                         _ => Err(e),
                     },
                 }
@@ -419,7 +430,7 @@ fn parse_application<'b, 'a, 'bump: 'a>(
     state: State<'b, 'a, 'bump>,
     bvars: &'b mut Vec<(&'a str, VarProxy<'bump>)>,
     expected_sort: Option<SortProxy<'bump>>,
-    function: Function<'bump>,
+    function: &FunctionCache<'a, 'bump>,
     args: implvec!(&'b ast::Term<'a>),
 ) -> Result<ARichFormula<'bump>, E> {
     // get the evaluated version if needed
@@ -470,13 +481,14 @@ fn parse_application<'b, 'a, 'bump: 'a>(
         ));
     }
 
+    let ifun = function.get_function();
     // if it's a name, cast it
-    let formula = if let Some(name) = function.as_term_algebra().and_then(|f| f.as_name()) {
+    let formula = if let Some(name) = ifun.as_term_algebra().and_then(|f| f.as_name()) {
         formula_realm = Some(Realm::Symbolic); // names are symbolic
         env.name_caster_collection
-            .cast(name.target(), function.f_a(n_args))
+            .cast(name.target(), ifun.f_a(n_args))
     } else {
-        function.f_a(n_args)
+        ifun.f_a(n_args)
     };
     // if we are in evaluated land, evaluate
     let formula = match (state.get_realm(), formula_realm) {
@@ -513,12 +525,16 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::AppMacro<'a> {
                         )
                 }?;
 
-                let step = env.step_lut_to_parse.get(app.name()).ok_or_else(|| {
-                    merr(
-                        app.name_span(),
-                        f!("{} is not a known step name", app.name()),
-                    )
-                })?;
+                let step = env
+                    .functions
+                    .get(app.name())
+                    .and_then(|fc| fc.as_step_ast())
+                    .ok_or_else(|| {
+                        merr(
+                            app.name_span(),
+                            f!("{} is not a known step name", app.name()),
+                        )
+                    })?;
 
                 let nbvars: Result<Vec<_>, _> = step
                     .args
@@ -612,6 +628,8 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::AppMacro<'a> {
         }
     }
 }
+
+
 impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
     type R = ARichFormula<'bump>;
 
@@ -630,7 +648,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
                     state,
                     bvars,
                     expected_sort,
-                    EQUALITY_TA.clone(),
+                    Deref::deref(&EQUALITY_TA_CACHE),
                     &self.terms,
                 ),
                 _ => Self {
@@ -651,7 +669,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
                     state,
                     bvars,
                     expected_sort,
-                    EQUALITY.clone(),
+                    Deref::deref(&EQUALITY_CACHE),
                     &self.terms,
                 ),
                 Realm::Symbolic => Self {
@@ -691,7 +709,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
                     state,
                     bvars,
                     expected_sort,
-                    IFF.clone(),
+                    Deref::deref(&IFF_CACHE),
                     &self.terms,
                 ),
                 Realm::Symbolic => Self {
@@ -707,8 +725,8 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
             },
             ast::Operation::Implies => {
                 let function = match state.get_realm() {
-                    Realm::Symbolic => IMPLIES_TA.clone(),
-                    Realm::Evaluated => IMPLIES.clone(),
+                    Realm::Symbolic => Deref::deref(&IMPLIES_TA_CACHE),
+                    Realm::Evaluated => Deref::deref(&IMPLIES_CACHE)
                 };
                 parse_application(
                     env,
@@ -723,10 +741,10 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
             ast::Operation::Or | ast::Operation::And => {
                 let realm = state.get_realm();
                 let function = match (realm, self.operation) {
-                    (Realm::Symbolic, ast::Operation::And) => AND_TA.clone(),
-                    (Realm::Symbolic, ast::Operation::Or) => OR_TA.clone(),
-                    (Realm::Evaluated, ast::Operation::And) => AND.clone(),
-                    (Realm::Evaluated, ast::Operation::Or) => OR.clone(),
+                    (Realm::Symbolic, ast::Operation::And) => Deref::deref(&AND_TA_CACHE),
+                    (Realm::Symbolic, ast::Operation::Or) => Deref::deref(&OR_TA_CACHE),
+                    (Realm::Evaluated, ast::Operation::And) => Deref::deref(&AND_CACHE),
+                    (Realm::Evaluated, ast::Operation::Or) => Deref::deref(&OR_CACHE),
                     _ => unreachable!(),
                 };
 
@@ -747,7 +765,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
                                 .unwrap()
                                 .parse(env, bvars, state, expected_sort.clone())?; // can't fail
                         iter.try_fold(first, |acc, t| {
-                            Ok(function
+                            Ok(function.get_function()
                                 .f_a([acc, t.parse(env, bvars, state, expected_sort.clone())?]))
                         })
                     }

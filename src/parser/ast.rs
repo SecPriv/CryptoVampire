@@ -643,6 +643,7 @@ boiler_plate!(DeclareCell<'a>, 'a, declare_cell; |p| {
     Ok(Self { span, name, args, sort })
 });
 
+
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Step<'a> {
@@ -653,6 +654,12 @@ pub struct Step<'a> {
     pub condition: Term<'a>,
     pub message: Term<'a>,
     pub assignements: Option<Assignements<'a>>,
+}
+
+impl<'a> Step<'a> {
+    pub fn args_names(&'_ self) -> impl Iterator<Item = &'a str> + '_ {
+        self.args.bindings.iter().map(|vb| vb.variable.name())
+    }
 }
 boiler_plate!(Step<'a>, 'a, step; |p| {
     let span = p.as_span();

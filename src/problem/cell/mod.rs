@@ -3,9 +3,19 @@
 use crate::{
     assert_variance, asssert_trait,
     container::{allocator::ContainerTools, contained::Containable, reference::Reference},
-    formula::{formula::ARichFormula, function::Function, sort::Sort},
+    formula::{
+        formula::ARichFormula,
+        function::{
+            inner::term_algebra::{cell::Cell, TermAlgebra},
+            Function, InnerFunction,
+        },
+        sort::Sort,
+    },
     implderef, implvec,
-    utils::{precise_as_ref::PreciseAsRef, string_ref::StrRef, traits::RefNamed},
+    utils::{
+        precise_as_ref::PreciseAsRef, string_ref::StrRef, traits::RefNamed,
+        utils::AlreadyInitialized,
+    },
 };
 use core::fmt::Debug;
 use std::sync::Arc;
@@ -89,7 +99,7 @@ impl<'bump> std::hash::Hash for InnerMemoryCell<'bump> {
 
 impl<'bump> InnerMemoryCell<'bump> {}
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Assignement<'bump> {
     pub step: Step<'bump>,
     // pub vars: Vec<Variable>, // those are the step's free variables
@@ -101,76 +111,65 @@ pub struct Assignement<'bump> {
 }
 
 impl<'bump> MemoryCell<'bump> {
+    /// make a new [MemoryCell] and allocate a [Function] for it
     pub fn new<C>(
-        _container: &'bump C,
-        _name: implderef!(str),
-        _args: implvec!(Sort<'bump>),
-        _assignements: implvec!(Assignement<'bump>),
+        container: &'bump C,
+        name: impl Into<String>,
+        args: implvec!(Sort<'bump>),
+        assignements: implvec!(Assignement<'bump>),
     ) -> Self
     where
-        C: ContainerTools<'bump, (Self, Function<'bump>)>,
+        C: ContainerTools<'bump, InnerFunction<'bump>, R<'bump> = Function<'bump>>
+            + ContainerTools<'bump, InnerMemoryCell<'bump>, R<'bump> = Self>,
     {
-        // let name = name.to_string();
-        // let args = args.into_iter().collect();
-        // let assignements = assignements.into_iter().collect();
-
-        // let (_, cell) = unsafe {
-        //     Function::new_cyclic(container, |function| {
-        //         let inner_content = InnerMemoryCell {
-        //             name,
-        //             args,
-        //             function,
-        //             assignements,
-        //         };
-        //         let inner = container.alloc();
-        //         std::ptr::write(inner.as_ptr(), inner_content);
-        //         let memory_cell = MemoryCell {
-        //             inner,
-        //             container: Default::default(),
-        //         };
-        //         (
-        //             InnerFunction::TermAlgebra(TermAlgebra::Cell(Cell::new(memory_cell))),
-        //             memory_cell,
-        //         )
-        //     })
-        // };
-        // cell
-        todo!()
+        let (cell, _) = C::alloc_cyclic(container, |(cell, function)| {
+            let inner_cell = InnerMemoryCell {
+                name: name.into(),
+                args: args.into_iter().collect(),
+                function: *function,
+                assignements: assignements.into_iter().collect(),
+            };
+            let inner_function = InnerFunction::TermAlgebra(TermAlgebra::Cell(Cell::new(*cell)));
+            (inner_cell, inner_function)
+        })
+        .unwrap();
+        cell
     }
 
-    pub unsafe fn new_with_function<C>(
+    /// not thread safe
+    ///
+    /// returns an error if `cell` or `function` was already initialized.
+    ///
+    /// # Safety
+    /// This will mutate `cell` and `function` make sure nobody is mutating them
+    /// in another thread. Thanks to the check on initialization no one can alias
+    /// `cell` or `function` other that with an [C::initialize()] function.
+    pub unsafe fn new_with_uninit<C>(
         _container: &'bump C,
-        _old_function: Function<'bump>,
-        _name: implderef!(str),
-        _args: implvec!(Sort<'bump>),
-        _assignements: implvec!(Assignement<'bump>),
-    ) -> Self
+        name: impl Into<String>,
+        args: implvec!(Sort<'bump>),
+        assignements: implvec!(Assignement<'bump>),
+
+        cell: &MemoryCell<'bump>,
+        function: &Function<'bump>,
+    ) -> Result<(), AlreadyInitialized>
     where
-        C: ContainerTools<'bump, InnerMemoryCell<'bump>>,
+        C: ContainerTools<'bump, InnerFunction<'bump>, R<'bump> = Function<'bump>>
+            + ContainerTools<'bump, InnerMemoryCell<'bump>, R<'bump> = Self>,
     {
-        // let name = name.to_string();
-        // let args = args.into_iter().collect();
-        // let assignements = assignements.into_iter().collect();
-        // let cell = {
-        //     let inner_content = InnerMemoryCell {
-        //         name,
-        //         args,
-        //         function: old_function,
-        //         assignements,
-        //     };
-        //     let inner = container.alloc();
-        //     std::ptr::write(inner.as_ptr(), inner_content);
-        //     MemoryCell {
-        //         inner,
-        //         container: Default::default(),
-        //     }
-        // };
-        // old_function.initiallize(InnerFunction::TermAlgebra(TermAlgebra::Cell(Cell::new(
-        //     cell,
-        // ))));
-        // cell
-        todo!()
+        let inner_cell = InnerMemoryCell {
+            name: name.into(),
+            args: args.into_iter().collect(),
+            function: *function,
+            assignements: assignements.into_iter().collect(),
+        };
+        let inner_function = InnerFunction::TermAlgebra(TermAlgebra::Cell(Cell::new(*cell)));
+
+        C::initialize(cell, inner_cell)?;
+        C::initialize(function, inner_function)?;
+        Ok(())
     }
+
     pub fn name(&self) -> &'bump str {
         &self.precise_as_ref().name
     }
