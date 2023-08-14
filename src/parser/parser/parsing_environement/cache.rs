@@ -25,24 +25,25 @@ use crate::{
 pub enum FunctionCache<'str, 'bump> {
     Function(Function<'bump>),
     Step(StepCache<'str, 'bump>),
-    MemoryCell(CellCache<'bump>),
+    MemoryCell(CellCache<'str, 'bump>),
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct StepCache<'str, 'bump> {
     pub args: Arc<[Sort<'bump>]>,
     pub args_name: Arc<[&'str str]>,
-    pub ast: Box<ast::Step<'str>>,
+    pub ast: &'str ast::Step<'str>,
     pub function: Function<'bump>,
     pub step: Step<'bump>,
 }
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, Hash)]
-pub struct CellCache<'bump> {
+pub struct CellCache<'str, 'bump> {
     pub args: Arc<[Sort<'bump>]>,
     pub cell: MemoryCell<'bump>,
     pub function: Function<'bump>,
+    pub ast : &'str ast::DeclareCell<'str>,
     #[derivative(PartialEq = "ignore", Hash = "ignore")]
     pub assignements: Mutex<Vec<Assignement<'bump>>>,
 }
@@ -130,7 +131,7 @@ impl<'str, 'bump> FunctionCache<'str, 'bump> {
         unsafe { std::mem::transmute(&self) } // only MemoryCell is invariant
     }
 
-    pub fn as_memory_cell(&self) -> Option<&CellCache<'bump>> {
+    pub fn as_memory_cell(&self) -> Option<&CellCache<'str, 'bump>> {
         if let Self::MemoryCell(v) = self {
             Some(v)
         } else {

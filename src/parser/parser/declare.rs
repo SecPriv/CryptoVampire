@@ -66,7 +66,7 @@ The sort name {} somehow reintroduced itself in the hash",
 
 pub fn declare_fun_step_cell_let<'str, 'bump>(
     env: &mut Environement<'bump, 'str>,
-    ast: &ASTList<'str>,
+    ast: &'str ASTList<'str>,
 ) -> Result<(), E> {
     ast.into_iter()
         .filter_map(|ast| match ast {
@@ -142,7 +142,7 @@ The function name {} somehow reintroduced itself in the hash",
 
 fn declare_step<'str, 'bump>(
     env: &mut Environement<'bump, 'str>,
-    fun: &ast::Step<'str>,
+    fun: &'str ast::Step<'str>,
 ) -> Result<(), E> {
     let SnN { span, name } = fun.name();
     if env.contains_name(&name) {
@@ -164,7 +164,7 @@ fn declare_step<'str, 'bump>(
     let cache = FunctionCache::Step(StepCache {
         args: input_sorts?.into(),
         args_name: fun.args_names().collect(),
-        ast: Box::new(fun.clone()),
+        ast: fun,
         function,
         step,
     });
@@ -177,7 +177,7 @@ fn declare_step<'str, 'bump>(
 
 fn declare_cell<'str, 'bump>(
     env: &mut Environement<'bump, 'str>,
-    fun: &ast::DeclareCell<'str>,
+    fun: &'str ast::DeclareCell<'str>,
 ) -> Result<(), E> {
     let SnN { span, name } = fun.name();
     if env.contains_name(&name) {
@@ -204,6 +204,7 @@ fn declare_cell<'str, 'bump>(
         cell,
         function,
         assignements: Default::default(),
+        ast: fun
     });
 
     let r = env.functions.insert(name.to_string(), cache);

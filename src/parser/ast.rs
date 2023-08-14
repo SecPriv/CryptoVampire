@@ -193,6 +193,16 @@ boiler_plate!(Function<'a>, 'a, function; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
+impl<'a> Function<'a> {
+    pub fn name(&self) -> &'a str {
+        self.0.content.content
+    }
+
+    pub fn span(&self) -> Span<'a> {
+        self.0.span
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct MacroName<'a>(pub Sub<'a, Ident<'a>>);
 boiler_plate!(MacroName<'a>, 'a, function; |p| {
@@ -226,6 +236,12 @@ pub struct StepName<'a>(pub Sub<'a, Ident<'a>>);
 boiler_plate!(StepName<'a>, 'a, step_name; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
+
+impl<'a> StepName<'a> {
+    pub fn name(&self) -> &'a str {
+        self.0.content.content
+    }
+}
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
