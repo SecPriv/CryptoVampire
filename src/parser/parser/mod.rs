@@ -3,15 +3,15 @@ pub mod parsable_trait;
 pub mod state;
 
 mod declare;
-pub use declare::{declare_fun_step_cell_let, declare_sorts};
+pub use declare::{fetch_all, declare_sorts};
 
 mod parsing_environement;
 pub use parsing_environement::{
     get_function, get_sort, CellCache, Environement, FunctionCache, Macro, StepCache,
 };
 
-mod parse_step_cell;
-pub use parse_step_cell::*;
+mod parse_step_cell_asserts;
+pub use parse_step_cell_asserts::*;
 // /// declare the user function (e.g., tuple & co)
 // pub fn declare_functions<'a, 'bump>(
 //     env: &mut Environement<'bump, 'a>,

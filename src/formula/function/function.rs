@@ -454,7 +454,10 @@ impl<'bump> Function<'bump> {
                     })),
                 ));
                 let InnerFunction::TermAlgebra(TermAlgebra::Function(base_main_fun)) =
-            main_fun.precise_as_ref() else {unreachable!()};
+                        main_fun.precise_as_ref()
+                    else {
+                        unreachable!()
+                    };
 
                 (
                     InnerFunction::TermAlgebra(TermAlgebra::Function(BaseFunction::Eval(

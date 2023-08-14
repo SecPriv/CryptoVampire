@@ -6,7 +6,7 @@ use pest::Span;
 
 use crate::{
     container::ScopedContainer,
-    environement::traits::KnowsRealm,
+    environement::traits::{KnowsRealm, Realm},
     f,
     formula::{
         function::{
@@ -19,7 +19,16 @@ use crate::{
         sort::Sort,
     },
     implderef, implvec,
-    parser::{ast, merr, E},
+    parser::{
+        ast::{self, ASTList},
+        merr,
+        parser::{
+            parse_assert_with_bvars, parse_asserts_with_bvars, parse_cells,
+            parse_orders_with_bvars, parse_steps,
+        },
+        E,
+    },
+    problem::{cell::MemoryCell, problem::Problem, protocol::Protocol, step::Step},
     utils::utils::MaybeInvalid,
 };
 
@@ -32,6 +41,8 @@ pub struct Macro<'bump, 'a> {
 }
 
 pub use cache::{CellCache, FunctionCache, StepCache};
+
+use super::{declare_sorts, fetch_all};
 
 mod cache;
 
@@ -100,11 +111,7 @@ impl<'bump, 'a> Environement<'bump, 'a> {
             .map(|f| (f.name().into(), cache::FunctionCache::Function(f)))
             .collect();
 
-        let names = function_hash
-            .keys()
-            .cloned()
-            .chain(extra_names.into_iter())
-            .collect();
+        let names = extra_names.into_iter().collect();
 
         Self {
             name_caster_collection: DEFAULT_NAME_CASTER.clone(),
@@ -160,6 +167,91 @@ impl<'bump, 'a> Environement<'bump, 'a> {
 
     //     assert!(self.is_valid(), "something went wrong while initializing");
     // }
+
+    fn get_steps(&self) -> impl Iterator<Item = Step<'bump>> + '_ {
+        self.functions
+            .values()
+            .filter_map(|f| f.as_step())
+            .map(|StepCache { step, .. }| *step)
+    }
+
+    fn get_cells(&self) -> impl Iterator<Item = MemoryCell<'bump>> + '_ {
+        self.functions
+            .values()
+            .filter_map(|f| f.as_memory_cell())
+            .map(|CellCache { cell, .. }| *cell)
+    }
+
+    fn get_functions(&self) -> impl Iterator<Item = Function<'bump>> + '_ {
+        self.functions
+            .values()
+            .filter_map(|f| f.as_function())
+            .cloned()
+    }
+
+    fn get_sorts(&self) -> impl Iterator<Item = Sort<'bump>> + '_ {
+        self.sort_hash.values().cloned()
+    }
+
+    pub fn parse_str(
+        container: &'bump ScopedContainer<'bump>,
+        sort_hash: implvec!(Sort<'bump>),
+        function_hash: implvec!(Function<'bump>),
+        extra_names: implvec!(String),
+        str: &'a str,
+    ) -> Result<Problem<'bump>, E> {
+        let ast: ASTList<'a> = str.try_into()?;
+        let mut env = Environement::new(container, sort_hash, function_hash, extra_names);
+
+        declare_sorts(&mut env, &ast)?;
+
+        let mut assertions = Vec::new();
+        let mut lemmas = Vec::new();
+        let mut orders = Vec::new();
+
+        let query = fetch_all(&mut env, &ast, &mut assertions, &mut lemmas, &mut orders)?;
+
+        parse_steps(&env, env.functions.values().filter_map(|f| f.as_step()))?;
+        parse_cells(
+            &env,
+            env.functions.values().filter_map(|f| f.as_memory_cell()),
+        )?;
+
+        let mut bvars = Vec::new();
+        let assertions: Vec<_> = parse_asserts_with_bvars(&env, assertions, &mut bvars)?;
+        let lemmas: Vec<_> = parse_asserts_with_bvars(&env, lemmas, &mut bvars)?;
+        let query = parse_assert_with_bvars(&env, query, &mut bvars)?;
+        let orders: Vec<_> = parse_orders_with_bvars(&env, orders, &mut bvars)?;
+        let _ = bvars;
+
+        assert!(env.is_valid());
+
+        let protocol = Protocol::new(env.get_steps(), env.get_cells(), orders);
+
+        let pbl = Problem {
+            functions: env.get_functions().collect(),
+            sorts: env.get_sorts().collect(),
+            evaluator: Arc::new(env.evaluator.clone()),
+            name_caster: Arc::new(env.name_caster_collection.clone()),
+            protocol,
+            assertions,
+            crypto_assertions: todo!(),
+            lemmas,
+            query,
+            container,
+        };
+
+        // Ok(())
+        todo!()
+    }
+
+    pub fn find_function<'b>(&'b self, span: Span<'a>, name: &str) -> Result<&'b FunctionCache<'a, 'bump>, E> {
+        get_function(self, span, name)
+    }
+
+    pub fn find_sort<'b>(&'b self, span: Span<'a>, name: &str) -> Result<Sort<'bump>, E> {
+        get_sort(self, span, name)
+    }
 }
 
 /// Find the [Sort] in already declared in [Environement::sort_hash]
@@ -187,7 +279,7 @@ pub fn get_function<'b, 'a, 'bump>(
 }
 
 impl<'a, 'bump> KnowsRealm for Environement<'bump, 'a> {
-    fn get_realm(&self) -> crate::environement::traits::Realm {
-        todo!()
+    fn get_realm(&self) -> Realm {
+        Realm::Evaluated
     }
 }

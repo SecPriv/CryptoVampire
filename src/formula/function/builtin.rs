@@ -2,11 +2,13 @@ use std::sync::Arc;
 
 use static_init::dynamic;
 
+use crate::container::StaticContainer;
 use crate::formula::sort::builtins::{BITSTRING, MESSAGE};
 use crate::formula::{formula::RichFormula, sort::builtins::STEP};
 
 use super::inner::evaluate::Evaluate;
 
+use super::inner::term_algebra::base_function::BaseFunctionTuple;
 use super::inner::term_algebra::name::NameCaster;
 use super::inner::term_algebra::{self, TermAlgebra};
 use super::{new_static_function, Function, InnerFunction};
@@ -23,7 +25,17 @@ pub static TRUE_F: Function<'static> = new_static_function(InnerFunction::Bool(
 ));
 
 #[dynamic]
+pub static TRUE_F_TA: Function<'static> = new_static_function(InnerFunction::Bool(
+    Booleans::Connective(booleans::Connective::True),
+));
+
+#[dynamic]
 pub static FALSE_F: Function<'static> = new_static_function(InnerFunction::Bool(
+    Booleans::Connective(booleans::Connective::False),
+));
+
+#[dynamic]
+pub static FALSE_F_TA: Function<'static> = new_static_function(InnerFunction::Bool(
     Booleans::Connective(booleans::Connective::False),
 ));
 
@@ -142,3 +154,13 @@ pub static NAME_TO_MESSAGE: Function<'static> = new_static_function(InnerFunctio
 pub static MESSAGE_TO_BITSTRING: Function<'static> = new_static_function(InnerFunction::Evaluate(
     Evaluate::new("evaluate".into(), MESSAGE.as_sort(), BITSTRING.as_sort()),
 ));
+
+#[dynamic]
+static EMPTY_TUPLE_FUNCTION: BaseFunctionTuple<'static> =
+    Function::new_user_term_algebra(&StaticContainer, "empty", [], MESSAGE.clone());
+
+#[dynamic]
+pub static EMPTY: Function<'static> = (&EMPTY_TUPLE_FUNCTION).main.clone();
+
+#[dynamic]
+pub static EMPTY_EVALUATED: Function<'static> = (&EMPTY_TUPLE_FUNCTION).eval.clone();

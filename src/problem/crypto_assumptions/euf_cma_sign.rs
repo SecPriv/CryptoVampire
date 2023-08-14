@@ -2,13 +2,14 @@ use std::{cell::RefCell, hash::Hash, sync::Arc};
 
 use if_chain::if_chain;
 use itertools::Itertools;
+use static_init::dynamic;
 
 use crate::{
     environement::environement::Environement,
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::{self, forall, meq, ARichFormula, RichFormula},
-        function::inner::{subterm::Subsubterm, term_algebra::name::NameCasterCollection},
+        function::{inner::{subterm::Subsubterm, term_algebra::name::NameCasterCollection}, signature::StaticSignature},
         function::Function,
         sort::{
             builtins::{MESSAGE, NAME},
@@ -27,20 +28,25 @@ use crate::{
             Subterm,
         },
     },
-    utils::arc_into_iter::ArcIntoIter,
+    utils::arc_into_iter::ArcIntoIter, static_signature,
 };
 
 pub type SubtermEufCmaSignMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
 pub type SubtermEufCmaSignKey<'bump> = Subterm<'bump, KeyAux<'bump>>;
 
+static_signature!((pub) EUF_CMA_SIGN_SIGNATURE: (MESSAGE, MESSAGE) -> MESSAGE);
+#[dynamic]
+static EUF_CMA_VERIFY_SIGNATURE: StaticSignature<'static, 3> = super::EUF_CMA_VERIFY_SIGNATURE.clone();
+static_signature!((pub) EUF_CMA_PK_SIGNATURE: (MESSAGE) -> MESSAGE);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct EufCmaSign<'bump> {
     /// mac(Message, Key) -> Signature
-    sign: Function<'bump>,
+    pub sign: Function<'bump>,
     /// verify(Signature, Message, Key) -> bool
-    verify: Function<'bump>,
+    pub verify: Function<'bump>,
     /// verify(Key) -> pKey
-    pk: Function<'bump>,
+    pub pk: Function<'bump>,
 }
 
 impl<'bump> EufCmaSign<'bump> {

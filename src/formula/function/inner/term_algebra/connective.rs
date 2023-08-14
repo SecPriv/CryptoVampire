@@ -1,7 +1,7 @@
 use crate::{
     formula::{
         function::{
-            builtin::{AND, EQUALITY, IFF, IMPLIES, NOT, OR},
+            builtin::*,
             signature::{FixedRefSignature, Impossible, Signature},
             traits::{Evaluatable, FixedSignature},
             Function,
@@ -33,6 +33,8 @@ pub enum BaseConnective {
     Not,
     Implies,
     Iff,
+    True,
+    False,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Default)]
@@ -62,6 +64,8 @@ impl BaseConnective {
             BaseConnective::Not => NOT.clone(),
             BaseConnective::Implies => IMPLIES.clone(),
             BaseConnective::Iff => IFF.clone(),
+            BaseConnective::True => TRUE_F.clone(),
+            BaseConnective::False => FALSE_F.clone(),
         }
     }
 
@@ -72,6 +76,8 @@ impl BaseConnective {
             BaseConnective::Not => "ta$not",
             BaseConnective::Implies => "ta$implies",
             BaseConnective::Iff => "ta$iff",
+            BaseConnective::True => "ta$true",
+            BaseConnective::False => "ta$false",
         }
     }
 }
@@ -81,6 +87,8 @@ static_signature!(OR_SIGNATURE: (CONDITION, CONDITION) -> CONDITION);
 static_signature!(IMPLIES_SIGNATURE: (CONDITION, CONDITION) -> CONDITION);
 static_signature!(IFF_SIGNATURE: (CONDITION, CONDITION) -> CONDITION);
 static_signature!(NOT_SIGNATURE: (CONDITION) -> CONDITION);
+static_signature!(TRUE_SIGNATURE: () -> CONDITION);
+static_signature!(FALSE_SIGNATURE: () -> CONDITION);
 
 impl<'bump> Evaluatable<'bump> for BaseConnective {
     fn get_evaluated(&self) -> Function<'bump> {
@@ -105,6 +113,8 @@ where
             BaseConnective::Not => NOT_SIGNATURE.as_ref(),
             BaseConnective::Implies => IMPLIES_SIGNATURE.as_ref(),
             BaseConnective::Iff => IFF_SIGNATURE.as_ref(),
+            BaseConnective::True => TRUE_SIGNATURE.as_ref(),
+            BaseConnective::False => FALSE_SIGNATURE.as_ref(),
         }
     }
 }

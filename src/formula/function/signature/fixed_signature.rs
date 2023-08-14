@@ -104,13 +104,13 @@ impl<'bump, const N: usize> Display for StaticSignature<'bump, N> {
 #[macro_export]
 macro_rules! static_signature {
 
-    ($name:ident: ($($arg:expr),*) -> $out:expr) => {
+    ($(($pub:tt))? $name:ident: ($($arg:expr),*) -> $out:expr) => {
     paste::paste!{
         const [<$name _ARGS_LEN>] : usize = $crate::static_signature!(@inner ($($arg,)*));
     }
 
     #[static_init::dynamic]
-    static $name: $crate::formula::function::signature::StaticSignature<'static, paste::paste!{ [<$name _ARGS_LEN>] }> =
+    $($pub)? static $name: $crate::formula::function::signature::StaticSignature<'static, paste::paste!{ [<$name _ARGS_LEN>] }> =
         $crate::formula::function::signature::StaticSignature {
             out: $out.as_sort(),
             args:  [$($arg.as_sort()),*]

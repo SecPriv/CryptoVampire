@@ -27,7 +27,7 @@ use super::{
 
 #[derive(Debug, Clone)]
 pub struct Problem<'bump> {
-    container: &'bump ScopedContainer<'bump>,
+    pub container: &'bump ScopedContainer<'bump>,
     /// functions to declare (not already declared somewhere else)
     pub functions: Vec<Function<'bump>>, // to keep track of 'static functions
     pub sorts: Vec<Sort<'bump>>, // same
@@ -36,6 +36,7 @@ pub struct Problem<'bump> {
     pub protocol: Protocol<'bump>,
     pub assertions: Vec<ARichFormula<'bump>>,
     pub crypto_assertions: Vec<CryptoAssumption<'bump>>,
+    pub lemmas: Vec<ARichFormula<'bump>>,
     pub query: ARichFormula<'bump>,
 }
 

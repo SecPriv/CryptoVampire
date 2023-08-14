@@ -2,22 +2,24 @@ use std::sync::Arc;
 
 use itertools::Itertools;
 
-use crate::container::allocator::ContainerTools;
-use crate::container::ScopedContainer;
-use crate::formula::function::builtin::INPUT;
-use crate::formula::manipulation::OneVarSubst;
-use crate::formula::sort::builtins::{CONDITION, MESSAGE};
-use crate::formula::variable::Variable;
-use crate::implvec;
-use crate::parser::parser::{CellCache, FunctionCache};
-use crate::parser::{merr, E};
-use crate::problem::cell::{Assignement, InnerMemoryCell};
-use crate::problem::step::InnerStep;
+use crate::{
+    container::{allocator::ContainerTools, ScopedContainer},
+    formula::{
+        function::builtin::INPUT,
+        manipulation::OneVarSubst,
+        sort::builtins::{CONDITION, MESSAGE},
+        variable::Variable,
+    },
+    implvec,
+    parser::{
+        merr,
+        parser::{parsable_trait::Parsable, state::State, CellCache, FunctionCache},
+        E,
+    },
+    problem::{cell::Assignement, step::InnerStep},
+};
 
-use super::super::ast;
-use super::parsable_trait::Parsable;
-use super::state::State;
-use super::{Environement, StepCache};
+use super::super::{super::ast, Environement, StepCache};
 
 /// parse a step and assign the assignements
 ///
@@ -170,7 +172,7 @@ fn parse_step<'bump, 'str>(
 }
 
 pub fn parse_steps<'a, 'bump, 'str>(
-    env: &'a mut Environement<'bump, 'str>, // mut for safety
+    env: &'a Environement<'bump, 'str>, // mut for safety
     steps: implvec!(&'a StepCache<'str, 'bump>),
 ) -> Result<(), E> {
     steps
@@ -184,53 +186,9 @@ pub fn parse_steps<'a, 'bump, 'str>(
             match r_err {
                 Err(_) => Err(merr(
                     ast.name.0.span,
-                    format!("step {} hash already been defined", ast.name.name()),
+                    format!("step {} has already been defined", ast.name.name()),
                 )),
                 Ok(()) => Ok(()),
             }
         })
-}
-
-pub fn parse_cells<'a, 'str, 'bump>(
-    env: &'a mut Environement<'bump, 'str>,
-    cells: implvec!(&'a CellCache<'str, 'bump>),
-) -> Result<(), E> {
-    cells
-        .into_iter()
-        .try_for_each(|cc @ CellCache { cell, ast, .. }| {
-            let inner = parse_cell(env, cc)?;
-            let r_err = unsafe {
-                <ScopedContainer as ContainerTools<InnerMemoryCell<'bump>>>::initialize(cell, inner)
-            };
-
-            match r_err {
-                Err(_) => Err(merr(
-                    ast.name.span(),
-                    format!("step {} hash already been defined", ast.name.name()),
-                )),
-                Ok(()) => Ok(()),
-            }
-        })
-}
-
-fn parse_cell<'a, 'bump, 'str>(
-    _env: &'a mut Environement<'bump, 'str>, // mut for safety
-    cell: &CellCache<'str, 'bump>,
-) -> Result<InnerMemoryCell<'bump>, E> {
-    let CellCache {
-        args,
-        function,
-        assignements,
-        ast,
-        ..
-    } = cell;
-    let name = ast.name.name();
-
-    let inner = InnerMemoryCell::new(
-        name.to_string(),
-        args.iter().cloned().collect(),
-        *function,
-        assignements.lock().unwrap().iter().cloned().collect(),
-    );
-    Ok(inner)
 }

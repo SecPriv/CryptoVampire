@@ -2,6 +2,8 @@ mod ast;
 mod parser;
 // mod builders;
 
+use std::ops::Index;
+
 use pest::{error::Error, Span};
 use pest_derive::Parser;
 
@@ -39,7 +41,10 @@ fn merr<'a>(s: Span<'a>, msg: String) -> E {
 
 // pub(crate) use merr;
 
-use crate::{f, formula::sort::sort_proxy::InferenceError};
+use crate::{
+    f,
+    formula::{function::signature::CheckError, sort::sort_proxy::InferenceError},
+};
 
 trait IntoRuleResult<T, Err> {
     fn into_rr<'a>(self, span: Span<'a>) -> Result<T, E>;
@@ -51,5 +56,33 @@ impl<'bump, T> IntoRuleResult<T, InferenceError<'bump>> for Result<T, InferenceE
             Ok(x) => Ok(x),
             Err(e) => err(merr(span, f!("{}", e))),
         }
+    }
+}
+
+trait IntoRuleResultFunction<T, Err> {
+    fn into_rr<'a, I>(self, fun: Span<'a>, args: I) -> Result<T, E>
+    where
+        I: Index<usize, Output = Span<'a>>;
+}
+
+impl<'bump, T> IntoRuleResultFunction<T, CheckError<'bump>> for Result<T, CheckError<'bump>> {
+    fn into_rr<'a, I>(self, fun: Span<'a>, args: I) -> Result<T, E>
+    where
+        I: Index<usize, Output = Span<'a>>,
+    {
+        self.map_err(|err| match err {
+            CheckError::WrongNumberOfArguments { got, expected } => merr(
+                fun,
+                format!("wring number of arguments: expected {expected:?}, got {got}"),
+            ),
+            CheckError::SortError {
+                position: None,
+                error,
+            } => merr(fun, f!("{error}")),
+            CheckError::SortError {
+                position: Some(idx),
+                error,
+            } => merr(args[idx], f!("{error}")),
+        })
     }
 }

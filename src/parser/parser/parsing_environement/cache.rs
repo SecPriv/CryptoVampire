@@ -43,7 +43,7 @@ pub struct CellCache<'str, 'bump> {
     pub args: Arc<[Sort<'bump>]>,
     pub cell: MemoryCell<'bump>,
     pub function: Function<'bump>,
-    pub ast : &'str ast::DeclareCell<'str>,
+    pub ast: &'str ast::DeclareCell<'str>,
     #[derivative(PartialEq = "ignore", Hash = "ignore")]
     pub assignements: Mutex<Vec<Assignement<'bump>>>,
 }
@@ -133,6 +133,14 @@ impl<'str, 'bump> FunctionCache<'str, 'bump> {
 
     pub fn as_memory_cell(&self) -> Option<&CellCache<'str, 'bump>> {
         if let Self::MemoryCell(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_step(&self) -> Option<&StepCache<'str, 'bump>> {
+        if let Self::Step(v) = self {
             Some(v)
         } else {
             None

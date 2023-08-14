@@ -5,11 +5,13 @@ mod nonce;
 
 pub use nonce::SubtermNonce;
 
-pub use euf_cma_mac::SubtermEufCmaMacKey;
-pub use euf_cma_mac::SubtermEufCmaMacMain;
+pub use euf_cma_mac::{
+    SubtermEufCmaMacKey, SubtermEufCmaMacMain, EUF_CMA_MAC_SIGNATURE, EUF_CMA_VERIFY_SIGNATURE,
+};
 
-pub use euf_cma_sign::SubtermEufCmaSignKey;
-pub use euf_cma_sign::SubtermEufCmaSignMain;
+pub use euf_cma_sign::{
+    SubtermEufCmaSignKey, SubtermEufCmaSignMain, EUF_CMA_PK_SIGNATURE, EUF_CMA_SIGN_SIGNATURE,
+};
 
 pub use int_ctxt::SubtermIntCtxtKey;
 pub use int_ctxt::SubtermIntCtxtMain;
@@ -23,9 +25,9 @@ use crate::formula::{
     variable::Variable,
 };
 
-use self::euf_cma_mac::EufCmaMac;
-use self::euf_cma_sign::EufCmaSign;
-use self::nonce::Nonce;
+pub use self::euf_cma_mac::EufCmaMac;
+pub use self::euf_cma_sign::EufCmaSign;
+pub use self::nonce::Nonce;
 
 use super::generator::Generator;
 use super::problem::Problem;

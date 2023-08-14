@@ -61,8 +61,6 @@ impl<'bump> From<Variable<'bump>> for VarProxy<'bump> {
 }
 
 pub trait Parsable<'bump, 'str>
-where
-    'bump: 'str,
 {
     type R;
     fn parse(
@@ -74,7 +72,7 @@ where
     ) -> Result<Self::R, E>;
 }
 
-impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::LetIn<'a> {
+impl<'a, 'bump> Parsable<'bump, 'a> for ast::LetIn<'a> {
     type R = ARichFormula<'bump>;
 
     fn parse(
@@ -112,7 +110,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::LetIn<'a> {
         Ok(t2.owned_into_inner().apply_substitution([vn], [&t1]).into())
     }
 }
-impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::IfThenElse<'a> {
+impl<'a, 'bump> Parsable<'bump, 'a> for ast::IfThenElse<'a> {
     type R = ARichFormula<'bump>;
 
     fn parse(
@@ -153,7 +151,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::IfThenElse<'a> {
     }
 }
 
-impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
+impl<'a, 'bump> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
     type R = ARichFormula<'bump>;
 
     fn parse(
@@ -253,7 +251,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
         })
     }
 }
-impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Quantifier<'a> {
+impl<'a, 'bump> Parsable<'bump, 'a> for ast::Quantifier<'a> {
     type R = ARichFormula<'bump>;
 
     fn parse(
@@ -362,7 +360,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Quantifier<'a> {
         })
     }
 }
-impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Application<'a> {
+impl<'a, 'bump> Parsable<'bump, 'a> for ast::Application<'a> {
     type R = ARichFormula<'bump>;
 
     fn parse(
@@ -392,11 +390,18 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Application<'a> {
                     })
                     // otherwise look for a function
                     .unwrap_or_else(|| {
-                        match get_function(env, *span, *content) {
-                            Ok(f) => Ok(f),
-                            Err(e) => match *content {
-                                _ => Err(e),
-                            },
+                        match *content {
+                            "true" | "True" => Ok(match state.get_realm() {
+                                Realm::Symbolic => Deref::deref(&TRUE_TA_CACHE),
+                                Realm::Evaluated => Deref::deref(&TRUE_CACHE),
+                            }
+                            .enforce_variance()),
+                            "false" | "False" => Ok(match state.get_realm() {
+                                Realm::Symbolic => Deref::deref(&FALSE_TA_CACHE),
+                                Realm::Evaluated => Deref::deref(&FALSE_CACHE),
+                            }
+                            .enforce_variance()),
+                            content => get_function(env, *span, content),
                         }
                         .and_then(|f| {
                             parse_application(env, span, state, bvars, expected_sort, f, [])
@@ -409,16 +414,14 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Application<'a> {
                 args,
             } => {
                 let content = function.0.content.content;
-                match get_function(env, *span, content) {
-                    Ok(f) => Ok(f),
-                    Err(e) => match content {
-                        "not" => Ok(match state.get_realm() {
-                            Realm::Symbolic => Deref::deref(&NOT_TA_CACHE),
-                            Realm::Evaluated => Deref::deref(&NOT_CACHE),
-                        }
-                        .enforce_variance()),
-                        _ => Err(e),
-                    },
+
+                match content {
+                    "not" => Ok(match state.get_realm() {
+                        Realm::Symbolic => Deref::deref(&NOT_TA_CACHE),
+                        Realm::Evaluated => Deref::deref(&NOT_CACHE),
+                    }
+                    .enforce_variance()),
+                    _ => get_function(env, *span, content),
                 }
                 .and_then(|f| parse_application(env, span, state, bvars, expected_sort, f, args))
             }
@@ -427,7 +430,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Application<'a> {
 }
 
 /// parse a function application (when we know it is definitly a function and not a variable)
-fn parse_application<'b, 'a, 'bump: 'a>(
+fn parse_application<'b, 'a, 'bump>(
     env: &'b Environement<'bump, 'a>,
     span: &'b pest::Span<'a>,
     state: State<'b, 'a, 'bump>,
@@ -501,7 +504,7 @@ fn parse_application<'b, 'a, 'bump: 'a>(
     Ok(formula)
 }
 
-impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::AppMacro<'a> {
+impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
     type R = ARichFormula<'bump>;
 
     fn parse(
@@ -636,7 +639,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::AppMacro<'a> {
     }
 }
 
-impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
+impl<'a, 'bump> Parsable<'bump, 'a> for ast::Infix<'a> {
     type R = ARichFormula<'bump>;
 
     fn parse(
@@ -784,7 +787,7 @@ impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Infix<'a> {
     }
 }
 
-fn as_pair_of_term<'a, 'b: 'a>(
+fn as_pair_of_term<'a, 'b:'a>(
     span: pest::Span<'b>,
     op: ast::Operation,
     iter: impl IntoIterator<Item = (&'a Term<'b>, &'a Term<'b>)>,
@@ -801,7 +804,7 @@ fn as_pair_of_term<'a, 'b: 'a>(
         .collect()
 }
 
-impl<'a, 'bump: 'a> Parsable<'bump, 'a> for ast::Term<'a> {
+impl<'a, 'bump> Parsable<'bump, 'a> for ast::Term<'a> {
     type R = ARichFormula<'bump>;
 
     fn parse(

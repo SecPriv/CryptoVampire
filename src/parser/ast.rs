@@ -2,7 +2,8 @@ use std::{fmt::Display, slice::Iter};
 
 use derivative::Derivative;
 use itertools::Itertools;
-use pest::{error::Error, iterators::Pair, Parser, Span};
+use pest::{error::Error, iterators::Pair, Parser, Position, Span};
+use static_init::dynamic;
 
 use crate::{destvec, f, utils::vecref::VecRef};
 
@@ -109,18 +110,31 @@ macro_rules! dest_rule {
     };
 }
 
+#[dynamic]
+pub static INIT_STEP_AST: Step<'static> = {
+    let ASTList { content, .. } = "step init(){true}{empty}".try_into().unwrap();
+    match content.into_iter().next() {
+        Some(AST::Step(s)) => *s,
+        _ => unreachable!(),
+    }
+};
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct ASTList<'a>(pub Vec<AST<'a>>);
+pub struct ASTList<'a> {
+    pub content: Vec<AST<'a>>,
+    pub begining: Position<'a>,
+}
 
 impl<'a> TryFrom<&'a str> for ASTList<'a> {
     type Error = E;
 
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
-        Ok(ASTList(
-            MainParser::parse(Rule::file, value)?
+        Ok(ASTList {
+            content: MainParser::parse(Rule::file, value)?
                 .map(TryInto::try_into)
                 .try_collect()?,
-        ))
+            begining: Position::from_start(value),
+        })
     }
 }
 
@@ -130,7 +144,7 @@ impl<'str, 'b> IntoIterator for &'b ASTList<'str> {
     type IntoIter = Iter<'b, AST<'str>>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.0.iter()
+        self.content.iter()
     }
 }
 

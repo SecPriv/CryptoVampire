@@ -1,6 +1,11 @@
 use std::cell::RefCell;
 
-use crate::formula::{formula::ARichFormula, variable::Variable};
+use itertools::Itertools;
+
+use crate::{
+    formula::{formula::ARichFormula, variable::Variable},
+    implvec,
+};
 
 use super::{
     cell::{Assignement, MemoryCell},
@@ -8,15 +13,47 @@ use super::{
     step::Step,
 };
 
+/// A protocol
 #[derive(Debug, Clone)]
 pub struct Protocol<'bump> {
+    /// This is the graph of various dependancies
+    /// between memorycells and steps.
+    ///
+    /// We talk about dependancies in the sense that
+    /// if `A(...)` appears in the step `B` or in an
+    /// assignement of the cell `B`, then `B` "depends"
+    /// on `A`
     pub graph: DependancyGraph<'bump>,
+    /// the [Step]s
+    ///
+    /// `init` should be the first step
     pub steps: Vec<Step<'bump>>,
+    /// the [MemoryCell]s
     pub memory_cells: Vec<MemoryCell<'bump>>,
+    /// Extra ordering information between steps
     pub ordering: Vec<ARichFormula<'bump>>,
 }
 
 impl<'bump> Protocol<'bump> {
+    /// favor [Vec] for the iterators
+    pub fn new(
+        steps: implvec!(Step<'bump>),
+        cells: implvec!(MemoryCell<'bump>),
+        ordering: implvec!(ARichFormula<'bump>),
+    ) -> Self {
+        let steps = steps.into_iter().collect_vec();
+        let memory_cells = cells.into_iter().collect_vec();
+        let ordering = ordering.into_iter().collect_vec();
+        let graph = DependancyGraph::new(steps.clone(), memory_cells.iter().cloned());
+
+        Self {
+            graph,
+            steps,
+            memory_cells,
+            ordering,
+        }
+    }
+
     pub fn list_top_level_terms<'a>(
         &'a self,
     ) -> impl Iterator<Item = &'bump ARichFormula<'bump>> + 'a

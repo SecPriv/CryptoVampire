@@ -36,3 +36,15 @@ pub(crate) static OR_TA_CACHE: FunctionCache<'static, 'static> = OR_TA.clone().i
 
 #[dynamic]
 pub(crate) static OR_CACHE: FunctionCache<'static, 'static> = OR.clone().into();
+
+#[dynamic]
+pub(crate) static TRUE_TA_CACHE: FunctionCache<'static, 'static> = TRUE_F_TA.clone().into();
+
+#[dynamic]
+pub(crate) static TRUE_CACHE: FunctionCache<'static, 'static> = TRUE_F.clone().into();
+
+#[dynamic]
+pub(crate) static FALSE_TA_CACHE: FunctionCache<'static, 'static> = FALSE_F_TA.clone().into();
+
+#[dynamic]
+pub(crate) static FALSE_CACHE: FunctionCache<'static, 'static> = FALSE_F.clone().into();

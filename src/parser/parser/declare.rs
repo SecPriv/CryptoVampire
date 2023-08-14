@@ -64,27 +64,78 @@ The sort name {} somehow reintroduced itself in the hash",
         })
 }
 
-pub fn declare_fun_step_cell_let<'str, 'bump>(
+pub fn fetch_all<'str, 'bump>(
     env: &mut Environement<'bump, 'str>,
     ast: &'str ASTList<'str>,
-) -> Result<(), E> {
+    assertions: &mut impl Extend<&'str ast::Assertion<'str>>,
+    lemmas: &mut impl Extend<&'str ast::Assertion<'str>>,
+    orders: &mut Vec<&'str ast::Order<'str>>,
+) -> Result<&'str ast::Assertion<'str>, E> {
+    let mut did_initilise_init = false;
+    let mut query = Ok(None);
     ast.into_iter()
-        .filter_map(|ast| match ast {
-            AST::Declaration(b) => match Box::as_ref(b) {
-                Declaration::Function(fun) => Some(Either::Left(Either::Left(fun))),
-                Declaration::Cell(cell) => Some(Either::Left(Either::Right(cell))),
+        .filter_map(|ast| {
+            if query.is_err() {
+                return None;
+            };
+            match ast {
+                AST::Declaration(b) => match Box::as_ref(b) {
+                    Declaration::Function(fun) => Some(Either::Left(Either::Left(fun))),
+                    Declaration::Cell(cell) => Some(Either::Left(Either::Right(cell))),
+                    _ => None,
+                },
+                AST::Step(step) => Some(Either::Right(Either::Left(Box::as_ref(step)))),
+                AST::Let(mlet) => Some(Either::Right(Either::Right(Box::as_ref(mlet)))),
+                AST::Assert(a) => {
+                    match Box::as_ref(a) {
+                        ast::Assert::Assertion(a) => assertions.extend([a]),
+                        ast::Assert::Lemma(l) => lemmas.extend([l]),
+                        ast::Assert::Query(q) => match query {
+                            Err(_) => unreachable!("should be caught before"),
+                            Ok(inner_query) => {
+                                query = match inner_query {
+                                    Some(_) => {
+                                        Err(merr(q.span, "only one query is allowed".to_string()))
+                                    }
+                                    None => Ok(Some(q)),
+                                }
+                            }
+                        },
+                    };
+                    None
+                }
+                AST::Order(o) => {
+                    orders.extend([Box::as_ref(o)]);
+                    None
+                }
                 _ => None,
-            },
-            AST::Step(step) => Some(Either::Right(Either::Left(Box::as_ref(step)))),
-            AST::Let(mlet) => Some(Either::Right(Either::Right(Box::as_ref(mlet)))),
-            _ => None,
+            }
         })
         .try_for_each(|ast| match ast {
             Either::Left(Either::Left(fun)) => declare_function(env, fun),
             Either::Left(Either::Right(cell)) => declare_cell(env, cell),
-            Either::Right(Either::Left(step)) => declare_step(env, step),
+            Either::Right(Either::Left(step)) => {
+                declare_step(env, step)?;
+                if step.name.name() == "init" {
+                    did_initilise_init = true;
+                }
+                Ok(())
+            }
             Either::Right(Either::Right(mlet)) => declare_let(env, mlet),
-        })
+        })?;
+
+    if !did_initilise_init {
+        declare_step(env, &ast::INIT_STEP_AST)?
+    }
+
+    query.and_then(|q| {
+        q.ok_or(pest::error::Error::new_from_pos(
+            pest::error::ErrorVariant::CustomError {
+                message: "no query".to_string(),
+            },
+            ast.begining,
+        ))
+    })
 }
 
 fn declare_function<'str, 'bump>(
@@ -204,7 +255,7 @@ fn declare_cell<'str, 'bump>(
         cell,
         function,
         assignements: Default::default(),
-        ast: fun
+        ast: fun,
     });
 
     let r = env.functions.insert(name.to_string(), cache);
