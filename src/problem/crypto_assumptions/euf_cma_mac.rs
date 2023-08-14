@@ -10,7 +10,7 @@ use crate::{
         formula::{self, forall, meq, ARichFormula, RichFormula},
         function::inner::{subterm::Subsubterm, term_algebra::name::NameCasterCollection},
         function::Function,
-        sort::builtins::{MESSAGE, NAME, CONDITION},
+        sort::builtins::{CONDITION, MESSAGE, NAME},
         utils::formula_expander::DeeperKinds,
         variable::Variable,
     },
@@ -24,12 +24,12 @@ use crate::{
             Subterm,
         },
     },
-    utils::arc_into_iter::ArcIntoIter, static_signature,
+    static_signature,
+    utils::arc_into_iter::ArcIntoIter,
 };
 
 pub type SubtermEufCmaMacMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
 pub type SubtermEufCmaMacKey<'bump> = Subterm<'bump, KeyAux<'bump>>;
-
 
 static_signature!((pub) EUF_CMA_MAC_SIGNATURE: (MESSAGE, MESSAGE) -> MESSAGE);
 static_signature!((pub) EUF_CMA_VERIFY_SIGNATURE: (MESSAGE, MESSAGE, MESSAGE) -> CONDITION);

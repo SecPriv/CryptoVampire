@@ -9,8 +9,11 @@ use crate::{
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::{self, forall, meq, ARichFormula, RichFormula},
-        function::{inner::{subterm::Subsubterm, term_algebra::name::NameCasterCollection}, signature::StaticSignature},
         function::Function,
+        function::{
+            inner::{subterm::Subsubterm, term_algebra::name::NameCasterCollection},
+            signature::StaticSignature,
+        },
         sort::{
             builtins::{MESSAGE, NAME},
             Sort,
@@ -28,7 +31,8 @@ use crate::{
             Subterm,
         },
     },
-    utils::arc_into_iter::ArcIntoIter, static_signature,
+    static_signature,
+    utils::arc_into_iter::ArcIntoIter,
 };
 
 pub type SubtermEufCmaSignMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
@@ -36,7 +40,8 @@ pub type SubtermEufCmaSignKey<'bump> = Subterm<'bump, KeyAux<'bump>>;
 
 static_signature!((pub) EUF_CMA_SIGN_SIGNATURE: (MESSAGE, MESSAGE) -> MESSAGE);
 #[dynamic]
-static EUF_CMA_VERIFY_SIGNATURE: StaticSignature<'static, 3> = super::EUF_CMA_VERIFY_SIGNATURE.clone();
+static EUF_CMA_VERIFY_SIGNATURE: StaticSignature<'static, 3> =
+    super::EUF_CMA_VERIFY_SIGNATURE.clone();
 static_signature!((pub) EUF_CMA_PK_SIGNATURE: (MESSAGE) -> MESSAGE);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

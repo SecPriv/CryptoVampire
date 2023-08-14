@@ -99,7 +99,7 @@ fn parse_int_ctxt<'str, 'bump>(
             verify_sign!(env; ast_dec, dec, INT_CTXT_DEC_SIGNATURE, 2);
             verify_sign!(env; ast_verify, verify, INT_CTXT_VERIFY_SIGNATURE, 2);
 
-            Ok(todo!())
+            todo!()
         }
         i => Err(merr(
             span,

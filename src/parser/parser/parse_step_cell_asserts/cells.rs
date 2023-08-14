@@ -16,9 +16,7 @@ pub fn parse_cells<'a, 'str, 'bump>(
         .try_for_each(|cc @ CellCache { cell, ast, .. }| {
             let inner = parse_cell(env, cc)?;
             let r_err = unsafe {
-                <ScopedContainer as ContainerTools<InnerMemoryCell<'bump>>>::initialize(
-                    cell, inner,
-                )
+                <ScopedContainer as ContainerTools<InnerMemoryCell<'bump>>>::initialize(cell, inner)
             };
 
             match r_err {

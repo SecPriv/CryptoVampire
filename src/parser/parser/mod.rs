@@ -3,7 +3,7 @@ pub mod parsable_trait;
 pub mod state;
 
 mod declare;
-pub use declare::{fetch_all, declare_sorts};
+pub use declare::{declare_sorts, fetch_all};
 
 mod parsing_environement;
 pub use parsing_environement::{

@@ -83,7 +83,7 @@ pub fn fetch_all<'str, 'bump>(
                 AST::Declaration(b) => match Box::as_ref(b) {
                     Declaration::Function(fun) => Some(Either::Left(Either::Left(fun))),
                     Declaration::Cell(cell) => Some(Either::Left(Either::Right(cell))),
-                    _ => None,
+                    Declaration::Type(_) => None, // was done before
                 },
                 AST::Step(step) => Some(Either::Right(Either::Left(Box::as_ref(step)))),
                 AST::Let(mlet) => Some(Either::Right(Either::Right(Box::as_ref(mlet)))),
@@ -113,7 +113,6 @@ pub fn fetch_all<'str, 'bump>(
                     asserts_crypto.extend([Box::as_ref(a)]);
                     None
                 }
-                _ => None,
             }
         })
         .try_for_each(|ast| match ast {

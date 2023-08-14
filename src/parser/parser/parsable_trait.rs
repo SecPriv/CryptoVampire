@@ -60,8 +60,7 @@ impl<'bump> From<Variable<'bump>> for VarProxy<'bump> {
     }
 }
 
-pub trait Parsable<'bump, 'str>
-{
+pub trait Parsable<'bump, 'str> {
     type R;
     fn parse(
         &self,
@@ -787,7 +786,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Infix<'a> {
     }
 }
 
-fn as_pair_of_term<'a, 'b:'a>(
+fn as_pair_of_term<'a, 'b: 'a>(
     span: pest::Span<'b>,
     op: ast::Operation,
     iter: impl IntoIterator<Item = (&'a Term<'b>, &'a Term<'b>)>,

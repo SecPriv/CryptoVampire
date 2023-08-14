@@ -23,8 +23,8 @@ use crate::{
         ast::{self, ASTList},
         merr,
         parser::{
-            parse_assert_crypto, parse_assert_with_bvars, parse_asserts_crypto,
-            parse_asserts_with_bvars, parse_cells, parse_orders_with_bvars, parse_steps,
+            parse_assert_with_bvars, parse_asserts_crypto, parse_asserts_with_bvars, parse_cells,
+            parse_orders_with_bvars, parse_steps,
         },
         E,
     },
