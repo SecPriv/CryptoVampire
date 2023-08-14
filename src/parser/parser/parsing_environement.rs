@@ -23,8 +23,8 @@ use crate::{
         ast::{self, ASTList},
         merr,
         parser::{
-            parse_assert_with_bvars, parse_asserts_with_bvars, parse_cells,
-            parse_orders_with_bvars, parse_steps,
+            parse_assert_crypto, parse_assert_with_bvars, parse_asserts_crypto,
+            parse_asserts_with_bvars, parse_cells, parse_orders_with_bvars, parse_steps,
         },
         E,
     },
@@ -208,23 +208,31 @@ impl<'bump, 'a> Environement<'bump, 'a> {
         let mut assertions = Vec::new();
         let mut lemmas = Vec::new();
         let mut orders = Vec::new();
+        let mut asserts_crypto = Vec::new();
 
-        let query = fetch_all(&mut env, &ast, &mut assertions, &mut lemmas, &mut orders)?;
+        let query = fetch_all(
+            &mut env,
+            &ast,
+            &mut assertions,
+            &mut lemmas,
+            &mut orders,
+            &mut asserts_crypto,
+        )?;
 
         parse_steps(&env, env.functions.values().filter_map(|f| f.as_step()))?;
         parse_cells(
             &env,
             env.functions.values().filter_map(|f| f.as_memory_cell()),
         )?;
+        assert!(env.is_valid());
 
         let mut bvars = Vec::new();
         let assertions: Vec<_> = parse_asserts_with_bvars(&env, assertions, &mut bvars)?;
         let lemmas: Vec<_> = parse_asserts_with_bvars(&env, lemmas, &mut bvars)?;
         let query = parse_assert_with_bvars(&env, query, &mut bvars)?;
         let orders: Vec<_> = parse_orders_with_bvars(&env, orders, &mut bvars)?;
+        let asserts_crypto = parse_asserts_crypto(&env, asserts_crypto)?;
         let _ = bvars;
-
-        assert!(env.is_valid());
 
         let protocol = Protocol::new(env.get_steps(), env.get_cells(), orders);
 
@@ -235,17 +243,20 @@ impl<'bump, 'a> Environement<'bump, 'a> {
             name_caster: Arc::new(env.name_caster_collection.clone()),
             protocol,
             assertions,
-            crypto_assertions: todo!(),
             lemmas,
             query,
             container,
+            crypto_assertions: asserts_crypto,
         };
 
-        // Ok(())
-        todo!()
+        Ok(pbl)
     }
 
-    pub fn find_function<'b>(&'b self, span: Span<'a>, name: &str) -> Result<&'b FunctionCache<'a, 'bump>, E> {
+    pub fn find_function<'b>(
+        &'b self,
+        span: Span<'a>,
+        name: &str,
+    ) -> Result<&'b FunctionCache<'a, 'bump>, E> {
         get_function(self, span, name)
     }
 

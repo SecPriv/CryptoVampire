@@ -13,9 +13,10 @@ pub use euf_cma_sign::{
     SubtermEufCmaSignKey, SubtermEufCmaSignMain, EUF_CMA_PK_SIGNATURE, EUF_CMA_SIGN_SIGNATURE,
 };
 
-pub use int_ctxt::SubtermIntCtxtKey;
-pub use int_ctxt::SubtermIntCtxtMain;
-pub use int_ctxt::SubtermIntCtxtRand;
+pub use int_ctxt::{
+    SubtermIntCtxtKey, SubtermIntCtxtMain, SubtermIntCtxtRand, INT_CTXT_DEC_SIGNATURE,
+    INT_CTXT_ENC_SIGNATURE, INT_CTXT_VERIFY_SIGNATURE,
+};
 
 use crate::environement::environement::Environement;
 use crate::formula::{

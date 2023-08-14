@@ -11,7 +11,7 @@ use crate::{
         function::inner::{subterm::Subsubterm, term_algebra::name::NameCasterCollection},
         function::Function,
         sort::{
-            builtins::{MESSAGE, NAME},
+            builtins::{CONDITION, MESSAGE, NAME},
             Sort,
         },
         utils::formula_expander::DeeperKinds,
@@ -27,6 +27,7 @@ use crate::{
             Subterm,
         },
     },
+    static_signature,
     utils::arc_into_iter::ArcIntoIter,
 };
 
@@ -34,14 +35,18 @@ pub type SubtermIntCtxtMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
 pub type SubtermIntCtxtKey<'bump> = Subterm<'bump, KeyAux<'bump>>;
 pub type SubtermIntCtxtRand<'bump> = Subterm<'bump, RandAux<'bump>>;
 
+static_signature!((pub) INT_CTXT_ENC_SIGNATURE: (MESSAGE, MESSAGE, MESSAGE) -> MESSAGE);
+static_signature!((pub) INT_CTXT_DEC_SIGNATURE: (MESSAGE, MESSAGE) -> MESSAGE);
+static_signature!((pub) INT_CTXT_VERIFY_SIGNATURE: (MESSAGE, MESSAGE) -> CONDITION);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct IntCtxt<'bump> {
     /// mac(Message, rand,) -> cipher
-    enc: Function<'bump>,
+    pub enc: Function<'bump>,
     /// dec(cipher, Key) -> mess
-    dec: Function<'bump>,
+    pub dec: Function<'bump>,
     /// verify(cipher, key) -> bool
-    verify: Function<'bump>,
+    pub verify: Function<'bump>,
 }
 
 impl<'bump> IntCtxt<'bump> {

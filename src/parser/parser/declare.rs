@@ -69,7 +69,8 @@ pub fn fetch_all<'str, 'bump>(
     ast: &'str ASTList<'str>,
     assertions: &mut impl Extend<&'str ast::Assertion<'str>>,
     lemmas: &mut impl Extend<&'str ast::Assertion<'str>>,
-    orders: &mut Vec<&'str ast::Order<'str>>,
+    orders: &mut impl Extend<&'str ast::Order<'str>>, // Vec<&'str ast::Order<'str>>,
+    asserts_crypto: &mut impl Extend<&'str ast::AssertCrypto<'str>>,
 ) -> Result<&'str ast::Assertion<'str>, E> {
     let mut did_initilise_init = false;
     let mut query = Ok(None);
@@ -106,6 +107,10 @@ pub fn fetch_all<'str, 'bump>(
                 }
                 AST::Order(o) => {
                     orders.extend([Box::as_ref(o)]);
+                    None
+                }
+                AST::AssertCrypto(a) => {
+                    asserts_crypto.extend([Box::as_ref(a)]);
                     None
                 }
                 _ => None,
