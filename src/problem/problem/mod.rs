@@ -23,7 +23,7 @@ use crate::{
         sort::Sort,
         variable::Variable,
     },
-    implvec, parser,
+    implvec, parser, utils::traits::NicerError,
 };
 
 use super::{
@@ -56,7 +56,7 @@ impl<'bump> Problem<'bump> {
         extra_names: implvec!(String),
         str: &'a str,
     ) -> Result<Self, parser::E> {
-        parser::parse_str(container, sort_hash, function_hash, extra_names, str)
+        parser::parse_str(container, sort_hash, function_hash, extra_names, str).debug_continue()
     }
 
     pub fn list_top_level_terms<'a>(&'a self) -> impl Iterator<Item = &'a ARichFormula<'bump>>

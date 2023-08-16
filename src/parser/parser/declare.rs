@@ -20,6 +20,7 @@ use crate::problem::step::InnerStep;
 
 use crate::container::{allocator::ContainerTools, ScopedContainer};
 use crate::formula::sort::builtins::*;
+use crate::utils::traits::NicerError;
 
 use super::super::ast::{self, extra::SnN, ASTList, Declaration, DeclareFunction, Ident, AST};
 
@@ -45,21 +46,21 @@ pub fn declare_sorts<'a, 'bump>(
                 ))
             } else {
                 let (sort, _) = Sort::new_user(env.container, name.to_owned().into_boxed_str());
-                env.sort_hash
-                    .insert(sort.name().into_string(), sort)
-                    .ok_or_else(|| {
-                        merr(
-                            *s.get_name_span(),
-                            f!(
-                                "!UNREACHABLE!(line {} in {}) \
+                let out = env.sort_hash.insert(sort.name().into_string(), sort);
+
+                match out {
+                    Some(_) => err(merr(
+                        *s.get_name_span(),
+                        f!(
+                            "!UNREACHABLE!(line {} in {}) \
 The sort name {} somehow reintroduced itself in the hash",
-                                line!(),
-                                file!(),
-                                name
-                            ),
-                        )
-                    })
-                    .map(|_| ())
+                            line!(),
+                            file!(),
+                            name
+                        ),
+                    )),
+                    _ => Ok(()),
+                }
             }
         })
 }
@@ -116,10 +117,10 @@ pub fn fetch_all<'str, 'bump>(
             }
         })
         .try_for_each(|ast| match ast {
-            Either::Left(Either::Left(fun)) => declare_function(env, fun),
-            Either::Left(Either::Right(cell)) => declare_cell(env, cell),
+            Either::Left(Either::Left(fun)) => declare_function(env, fun).debug_continue(),
+            Either::Left(Either::Right(cell)) => declare_cell(env, cell).debug_continue(),
             Either::Right(Either::Left(step)) => {
-                declare_step(env, step)?;
+                declare_step(env, step).debug_continue()?;
                 if step.name.name() == "init" {
                     did_initilise_init = true;
                     if step.args().len() >= 1 {
@@ -148,6 +149,14 @@ pub fn fetch_all<'str, 'bump>(
     })
 }
 
+fn user_bool_to_condtion<'a>(s: Sort<'a>) -> Sort<'a> {
+    if s == BOOL.as_sort() {
+        CONDITION.clone()
+    } else {
+        s
+    }
+}
+
 fn declare_function<'str, 'bump>(
     env: &mut Environement<'bump, 'str>,
     fun: &DeclareFunction<'str>,
@@ -165,10 +174,16 @@ fn declare_function<'str, 'bump>(
         let input_sorts: Result<Vec<_>, _> = fun
             .args()
             .map(|idn| get_sort(env, idn.span, idn.content))
+            .map(|s| {
+                // user defined bool functions are condition
+                s.map(user_bool_to_condtion)
+            })
             .collect();
         let output_sort = {
             let idn = fun.out();
             get_sort(env, idn.span, idn.content)
+                // user defined bool functions are condition
+                .map(user_bool_to_condtion)
         }?;
         let fun = if output_sort == NAME.as_sort() {
             Function::new_from_inner(

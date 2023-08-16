@@ -1,4 +1,4 @@
-use std::{convert::Infallible, error::Error};
+use std::{convert::Infallible, error::Error, fmt::Debug, ptr::NonNull};
 
 use itertools::Itertools;
 
@@ -6,15 +6,31 @@ use crate::utils::utils::AlreadyInitialized;
 
 use super::contained::{Containable, Contained};
 
+#[derive(Debug, Default)]
+pub struct Residual<I, T> {
+    // inner or reference
+    pub content: I,
+    pub residual: T,
+}
+
+impl<'bump, I, T: Default> From<I> for Residual<I, T> {
+    fn from(content: I) -> Self {
+        Residual {
+            content,
+            residual: Default::default(),
+        }
+    }
+}
+
 pub trait Container<'bump, I>
 where
     I: Contained<'bump>,
 {
-    fn allocate_pointee(&'bump self, content: Option<I>) -> &'bump Option<I>;
-    fn allocate_uninit(&'bump self) -> &'bump Option<I> {
+    fn allocate_pointee(&'bump self, content: Option<I>) -> NonNull<Option<I>>;
+    fn allocate_uninit(&'bump self) -> NonNull<Option<I>> {
         self.allocate_pointee(Default::default())
     }
-    fn allocate_inner(&'bump self, inner: I) -> &'bump Option<I> {
+    fn allocate_inner(&'bump self, inner: I) -> NonNull<Option<I>> {
         self.allocate_pointee(Some(inner))
     }
 }
@@ -39,44 +55,52 @@ pub trait ContainerTools<'bump, I> {
         F: for<'b> FnOnce(&'b Self::R<'bump>) -> I,
         // 'bump: 'a,
     {
-        self.try_alloc_cyclic_with_residual(|u| Ok::<_, Infallible>((f(u), ())))
-            .map(|(r, _)| r)
+        self.try_alloc_cyclic_with_residual(|u| Ok::<_, Infallible>(f(u).into()))
+            .map(
+                |Residual {
+                     content,
+                     residual: (),
+                 }| content,
+            )
     }
 
     fn alloc_cyclic_with_residual<F, T>(
         &'bump self,
         f: F,
-    ) -> Result<(Self::R<'bump>, T), AlreadyInitialized>
+    ) -> Result<Residual<Self::R<'bump>, T>, AlreadyInitialized>
     where
-        F: for<'b> FnOnce(&'b Self::R<'bump>) -> (I, T),
+        F: for<'b> FnOnce(&'b Self::R<'bump>) -> Residual<I, T>,
         // 'bump: 'a,
     {
         self.try_alloc_cyclic_with_residual(|u| {
-            let (res, inner) = f(u);
-            Ok::<_, Infallible>((res, inner))
+            // let (inner, res) = f(u);
+            Ok::<_, Infallible>(f(u))
         })
     }
 
     fn try_alloc_cyclic_with_residual<F, T, E1, E2>(
         &'bump self,
         f: F,
-    ) -> Result<(Self::R<'bump>, T), E2>
+    ) -> Result<Residual<Self::R<'bump>, T>, E2>
     where
-        F: for<'b> FnOnce(&'b Self::R<'bump>) -> Result<(I, T), E1>,
+        F: for<'b> FnOnce(&'b Self::R<'bump>) -> Result<Residual<I, T>, E1>,
         E1: Error,
         E2: Error + From<E1> + From<AlreadyInitialized>,
     {
         let uninit = self.alloc_uninit();
-        let (inner, res) = f(&uninit)?;
-        unsafe { Self::initialize(&uninit, inner) }?;
-        Ok((uninit, res))
+        let Residual { content, residual } = f(&uninit)?;
+        unsafe { Self::initialize(&uninit, content) }?;
+        Ok(Residual {
+            content: uninit,
+            residual,
+        })
     }
 }
 
 impl<'bump, C, I> ContainerTools<'bump, I> for C
 where
     C: Container<'bump, I>,
-    I: Contained<'bump> + Containable<'bump>,
+    I: Contained<'bump> + Containable<'bump> + Debug,
 {
     type R<'a> = I::Pointer<'a> where 'bump:'a;
 
@@ -98,6 +122,11 @@ where
 // where
     //     'bump: 'a,
     {
+        // if cfg!(debug_assertions) {
+            if let Some(p) = I::ptr_to_ref(reference) {
+                eprintln!("{p:?}")
+            }
+        // }
         I::initialize_with(reference, inner).map(|_| ())
     }
     // type R<'a> = I::Pointer<'a> where 'bump:'a;

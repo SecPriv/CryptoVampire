@@ -25,3 +25,36 @@ impl<T> MyWriteTo for T where T:Display {
         write!(f, "{self}")
     }
 }
+
+pub trait NicerError {
+    type Out;
+    fn unwrap_display(self) -> Self::Out;
+    fn expect_display(self, msg:&str) -> Self::Out;
+    fn debug_continue(self) -> Self;
+}
+
+impl<T, E> NicerError for Result<T, E> where E:Error + std::fmt::Display {
+    type Out = T;
+
+    fn unwrap_display(self) -> Self::Out {
+        match self {
+            Ok(o) => o,
+            Err(err) => panic!("{err}"),
+        }
+    }
+
+    fn expect_display(self, msg:&str) -> Self::Out {
+        match self {
+            Ok(o) => o,
+            Err(err) => panic!("{msg}: {err}"),
+        }
+    }
+
+    fn debug_continue(self) -> Self {
+        if cfg!(debug_assertions) {
+            Ok(self.unwrap_display())
+        } else {
+            self
+        }
+    }
+}

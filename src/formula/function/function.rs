@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use itertools::Itertools;
 
-use crate::container::allocator::ContainerTools;
+use crate::container::allocator::{ContainerTools, Residual};
 use crate::container::contained::Containable;
 use crate::container::reference::Reference;
 use crate::container::utils::NameFinder;
@@ -173,9 +173,9 @@ impl<'bump> Function<'bump> {
     }
 
     /// *safety*: do not call `f`, it is not initialised yet
-    pub unsafe fn new_cyclic<F, T>(container: container!(), f: F) -> (Self, T)
+    pub unsafe fn new_cyclic<F, T>(container: container!(), f: F) -> Residual<Self, T>
     where
-        F: for<'a> FnOnce(&'a Function<'bump>) -> (InnerFunction<'bump>, T),
+        F: for<'a> FnOnce(&'a Function<'bump>) -> Residual<InnerFunction<'bump>, T>,
         T: Sized,
     {
         // let ptr = container.alloc();
@@ -399,6 +399,16 @@ impl<'bump> Function<'bump> {
         input_sorts: implvec!(Sort<'bump>),
         output_sort: Sort<'bump>,
     ) -> BaseFunctionTuple<'bump> {
+        let input_sorts = input_sorts.into_iter().collect_vec();
+        // debug_print::debug_println!("{}{} -> {}", name.deref(), input_sorts, output_sort);
+        if cfg!(debug_assertions) {
+            println!("new_user_term_algebra");
+            print!("\t{}(", name.deref());
+            for s in &input_sorts {
+                print!("{s},")
+            }
+            println!(") -> {output_sort}")
+        }
         assert!(output_sort.is_term_algebra());
         //     let (eval, main) =
         //         Self::new_with_residual(container, |eval_fun| {
@@ -443,7 +453,10 @@ impl<'bump> Function<'bump> {
         //     })
         //     .unwrap();
 
-        let (eval, main) = container
+        let Residual {
+            content: eval,
+            residual: main,
+        } = container
             .alloc_cyclic_with_residual(|eval_fun| {
                 let main_fun: Function<'bump> = container.alloc_inner(InnerFunction::TermAlgebra(
                     TermAlgebra::Function(BaseFunction::Base(InnerBaseFunction {
@@ -459,12 +472,12 @@ impl<'bump> Function<'bump> {
                         unreachable!()
                     };
 
-                (
-                    InnerFunction::TermAlgebra(TermAlgebra::Function(BaseFunction::Eval(
+                Residual {
+                    content: InnerFunction::TermAlgebra(TermAlgebra::Function(BaseFunction::Eval(
                         &base_main_fun,
                     ))),
-                    main_fun,
-                )
+                    residual: main_fun,
+                }
             })
             .unwrap();
         BaseFunctionTuple { main, eval }

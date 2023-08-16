@@ -1,27 +1,34 @@
+use std::{ptr::NonNull, marker::PhantomData};
+
 use crate::utils::utils::{AccessToInvalidData, AlreadyInitialized};
 
 use super::{allocator::Container, reference::Reference};
 
 pub trait Containable<'bump> {}
 
-pub trait Contained<'bump>: 'bump + Sized {
+pub trait Contained<'bump>: 'bump + Sized + std::fmt::Debug{
     type Pointer<'a>: Sized
     where
         'bump: 'a;
 
-    fn ptr_from_ref<'a>(ptr: &'bump Option<Self>) -> Self::Pointer<'a>
+    fn ptr_from_raw<'a>(ptr: NonNull<Option<Self>>, lt: PhantomData<&'bump Option<Self>>) -> Self::Pointer<'a>
     where
         'bump: 'a;
+
+    fn ptr_to_raw(ptr: &Self::Pointer<'bump>) -> NonNull<Option<Self>>;
+
     fn ptr_to_ref<'a>(ptr: &Self::Pointer<'bump>) -> &'a Option<Self>
     where
-        'bump: 'a;
+        'bump: 'a {
+            unsafe { Self::ptr_to_raw(ptr).as_ref() }
+        }
 
     fn new_ptr_uninit<'a, C>(container: &'bump C) -> Self::Pointer<'a>
     where
         C: Container<'bump, Self>,
         'bump: 'a,
     {
-        Self::ptr_from_ref(container.allocate_uninit())
+        Self::ptr_from_raw(container.allocate_uninit(), Default::default())
     }
 
     fn new_ptr_from_inner<'a, C>(container: &'bump C, content: Self) -> Self::Pointer<'a>
@@ -29,7 +36,7 @@ pub trait Contained<'bump>: 'bump + Sized {
         C: Container<'bump, Self>,
         'bump: 'a,
     {
-        Self::ptr_from_ref(container.allocate_inner(content))
+        Self::ptr_from_raw(container.allocate_inner(content), Default::default())
     }
 
     fn maybe_precise_as_ref(
@@ -46,8 +53,9 @@ pub trait Contained<'bump>: 'bump + Sized {
         ptr: &'b Self::Pointer<'bump>,
         content: Self,
     ) -> Result<&'b Self::Pointer<'bump>, AlreadyInitialized> {
-        if Self::is_ptr_valid(ptr) {
-            let nn_ptr = Self::ptr_to_ref(ptr) as *const _ as *mut Option<Self>;
+        if !Self::is_ptr_valid(ptr) {
+            let nn_ptr = Self::ptr_to_raw(ptr).as_mut();
+            // TODO change
             core::ptr::drop_in_place(nn_ptr);
             core::ptr::write(nn_ptr, Some(content));
             Ok(ptr)
@@ -63,22 +71,25 @@ pub trait Contained<'bump>: 'bump + Sized {
 
 impl<'bump, T> Contained<'bump> for T
 where
-    T: Containable<'bump> + Sized + 'bump,
+    T: Containable<'bump> + Sized + 'bump + std::fmt::Debug,
 {
     type Pointer<'a> = Reference<'a, Self> where 'bump: 'a;
 
-    fn ptr_from_ref<'a>(ptr: &'bump Option<Self>) -> Self::Pointer<'a>
-    //Self::Pointer<'a>
-    where
-        'bump: 'a,
-    {
-        ptr.into()
-    }
 
     fn ptr_to_ref<'a>(ptr: &Self::Pointer<'bump>) -> &'a Option<Self>
     where
         'bump: 'a,
     {
         ptr.as_option_ref()
+    }
+
+    fn ptr_to_raw(ptr: &Self::Pointer<'bump>) -> NonNull<Option<Self>> {
+        ptr.to_raw()
+    }
+
+    fn ptr_from_raw<'a>(ptr: NonNull<Option<Self>>, lt: PhantomData<&'bump Option<Self>>) -> Self::Pointer<'a>
+    where
+        'bump: 'a {
+        Reference::from_raw(ptr, lt)
     }
 }

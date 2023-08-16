@@ -1,5 +1,6 @@
 use std::{
     cell::RefCell,
+    ptr::NonNull,
     sync::atomic::{self, AtomicU16},
 };
 
@@ -18,10 +19,10 @@ use std::fmt::Debug;
 // type InnerContainer<'bump, T> = RefCell<Vec<&'bump RefPointee<'bump, T>>>;
 
 pub struct ScopedContainer<'bump> {
-    sorts: RefCell<Vec<&'bump Option<InnerSort<'bump>>>>,
-    functions: RefCell<Vec<&'bump Option<InnerFunction<'bump>>>>,
-    steps: RefCell<Vec<&'bump Option<InnerStep<'bump>>>>,
-    cells: RefCell<Vec<&'bump Option<InnerMemoryCell<'bump>>>>,
+    sorts: RefCell<Vec<NonNull<Option<InnerSort<'bump>>>>>,
+    functions: RefCell<Vec<NonNull<Option<InnerFunction<'bump>>>>>,
+    steps: RefCell<Vec<NonNull<Option<InnerStep<'bump>>>>>,
+    cells: RefCell<Vec<NonNull<Option<InnerMemoryCell<'bump>>>>>,
 }
 
 // unsafe fn aux_alloc<T>(mut vec: impl DerefMut<Target = Vec<NonNull<T>>>) -> NonNull<T> {
@@ -37,8 +38,8 @@ macro_rules! make_scope_allocator {
             fn allocate_pointee(
                 &'bump self,
                 content: Option<$inner<'bump>>,
-            ) -> &'bump Option<$inner> {
-                let uninit_ref = &*Box::leak(Box::new(content));
+            ) -> NonNull<Option<$inner>> {
+                let uninit_ref = NonNull::from(Box::leak(Box::new(content)));
                 self.$fun.borrow_mut().push(uninit_ref);
                 uninit_ref
             }
@@ -47,7 +48,16 @@ macro_rules! make_scope_allocator {
 }
 
 make_scope_allocator!(functions, Function, InnerFunction);
-make_scope_allocator!(sorts, Sort, InnerSort);
+impl<'bump> Container<'bump, InnerSort<'bump>> for ScopedContainer<'bump> {
+    fn allocate_pointee(
+        &'bump self,
+        content: Option<InnerSort<'bump>>,
+    ) -> NonNull<Option<InnerSort>> {
+        let uninit_ref = NonNull::from(Box::leak(Box::new(content)));
+        self.sorts.borrow_mut().push(uninit_ref);
+        uninit_ref
+    }
+}
 make_scope_allocator!(steps, Step, InnerStep);
 make_scope_allocator!(cells, MemoryCell, InnerMemoryCell);
 
@@ -142,13 +152,20 @@ impl<'bump> ScopedContainer<'bump> {
 
         fn populate<'a, 'bump, T>(
             h: &mut HashSet<StrRef<'a>>,
-            vec: &'a RefCell<Vec<&'bump Option<T>>>,
+            vec: &'a RefCell<Vec<NonNull<Option<T>>>>,
         ) where
             'bump: 'a,
             &'a T: RefNamed<'a>,
         {
             let vec = vec.borrow();
-            h.extend(vec.iter().filter_map(|x| x.as_ref()).map(|n| n.name_ref()))
+            h.extend(
+                vec.iter()
+                    .filter_map(|x| {
+                        debug_print::debug_println!("deref NonNull at {} in {}", line!(), file!());
+                        unsafe { x.as_ref() }.as_ref()
+                    })
+                    .map(|n| n.name_ref()),
+            )
         }
 
         let mut h = HashSet::with_capacity(
@@ -220,7 +237,7 @@ impl<I> Container<'static, I> for StaticContainer
 where
     I: Contained<'static> + 'static,
 {
-    fn allocate_pointee(&'static self, content: Option<I>) -> &'static Option<I> {
-        Box::leak(Box::new(content))
+    fn allocate_pointee(&'static self, content: Option<I>) -> NonNull<Option<I>> {
+        NonNull::from(Box::leak(Box::new(content)))
     }
 }

@@ -1,12 +1,12 @@
 use std::{fmt::Display, slice::Iter};
 
-use const_format::{formatcp, concatcp};
+use const_format::{concatcp, formatcp};
 use derivative::Derivative;
 use itertools::Itertools;
 use pest::{error::Error, iterators::Pair, Parser, Position, Span};
 use static_init::dynamic;
 
-use crate::{destvec, f, utils::vecref::VecRef, problem::step::INIT_STEP_NAME};
+use crate::{destvec, f, problem::step::INIT_STEP_NAME, utils::vecref::VecRef};
 
 use super::*;
 
@@ -106,12 +106,12 @@ macro_rules! dest_rule {
     ($span:ident in [$($arg:ident),*] = $vec:expr) => {
         as_array!($span in [$($arg),*] = macro_helper::AsInner::m_into_inner($vec));
         $(
-            let $arg = $arg.try_into()?;
+            let $arg = $arg.try_into().debug_continue()?;
         )*
     };
 }
 
-const INIT_STEP_STRING : &'static str = concatcp!("step ", INIT_STEP_NAME, "(){true}{empty}");
+const INIT_STEP_STRING: &'static str = concatcp!("step ", INIT_STEP_NAME, "(){true}{empty}");
 
 #[dynamic]
 pub static INIT_STEP_AST: Step<'static> = {
@@ -132,10 +132,17 @@ impl<'a> TryFrom<&'a str> for ASTList<'a> {
     type Error = E;
 
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+        let mut pairs = MainParser::parse(Rule::file, value).debug_continue()?;
+
         Ok(ASTList {
-            content: MainParser::parse(Rule::file, value)?
-                .map(TryInto::try_into)
-                .try_collect()?,
+            content: pairs.next().unwrap().into_inner()
+                .filter(|p| p.as_rule() == Rule::content)
+                .map(|p| {
+                    debug_print::debug_println!(" --> {}", p.as_str());
+                    p.try_into().debug_continue()
+                })
+                .try_collect()
+                .debug_continue()?,
             begining: Position::from_start(value),
         })
     }
@@ -222,7 +229,7 @@ impl<'a> Function<'a> {
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct MacroName<'a>(pub Sub<'a, Ident<'a>>);
-boiler_plate!(MacroName<'a>, 'a, function; |p| {
+boiler_plate!(MacroName<'a>, 'a, macro_name; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
@@ -319,35 +326,43 @@ boiler_plate!(InnerTerm<'s>, 's, inner_term; |p| {
     as_array!(span in [nxt] = p.into_inner());
     match nxt.as_rule() {
         Rule::infix_term => {
-            dest_rule!(span in [inner] = nxt.into_inner());
-            Ok(InnerTerm::Infix(Box::new(inner)))
+            // let mut nxt_inner = nxt.into_inner();
+            // debug_print::debug_println!("{:?}", nxt_inner);
+            // dest_rule!(span in [inner] = nxt_inner);
+            Ok(InnerTerm::Infix(Box::new(nxt.try_into()?)))
         }
         Rule::commun_base => {
             as_array!(span in [cmn_rule] = nxt.into_inner());
             match cmn_rule.as_rule(){
                 Rule::let_in => {
-                    dest_rule!(span in [inner] = cmn_rule.into_inner());
-                    Ok(InnerTerm::LetIn(Box::new(inner)))
+                    // dest_rule!(span in [inner] = cmn_rule.into_inner());
+                    // Ok(InnerTerm::LetIn(Box::new(inner)))
+                    Ok(InnerTerm::LetIn(Box::new(cmn_rule.try_into()?)))
                 },
                 Rule::if_then_else => {
-                    dest_rule!(span in [inner] = cmn_rule.into_inner());
-                    Ok(InnerTerm::If(Box::new(inner)))
+                    // dest_rule!(span in [inner] = cmn_rule.into_inner());
+                    // Ok(InnerTerm::If(Box::new(inner)))
+                    Ok(InnerTerm::If(Box::new(cmn_rule.try_into()?)))
                 },
                 Rule::find_such_that => {
-                    dest_rule!(span in [inner] = cmn_rule.into_inner());
-                    Ok(InnerTerm::Fndst(Box::new(inner)))
+                    // dest_rule!(span in [inner] = cmn_rule.into_inner());
+                    // Ok(InnerTerm::Fndst(Box::new(inner)))
+                    Ok(InnerTerm::Fndst(Box::new(cmn_rule.try_into()?)))
                 },
                 Rule::quantifier => {
-                    dest_rule!(span in [inner] = cmn_rule.into_inner());
-                    Ok(InnerTerm::Quant(Box::new(inner)))
+                    // dest_rule!(span in [inner] = cmn_rule.into_inner());
+                    // Ok(InnerTerm::Quant(Box::new(inner)))
+                    Ok(InnerTerm::Quant(Box::new(cmn_rule.try_into()?)))
                 },
                 Rule::application => {
-                    dest_rule!(span in [inner] = cmn_rule.into_inner());
-                    Ok(InnerTerm::Application(Box::new(inner)))
+                    // dest_rule!(span in [inner] = cmn_rule.into_inner());
+                    // Ok(InnerTerm::Application(Box::new(inner)))
+                    Ok(InnerTerm::Application(Box::new(cmn_rule.try_into()?)))
                 },
                 Rule::macro_application => {
-                    dest_rule!(span in [inner] = cmn_rule.into_inner());
-                    Ok(InnerTerm::Macro(Box::new(inner)))
+                    // dest_rule!(span in [inner] = cmn_rule.into_inner());
+                    // Ok(InnerTerm::Macro(Box::new(inner)))
+                    Ok(InnerTerm::Macro(Box::new(cmn_rule.try_into()?)))
                 }
                 r => unreachable_rules!(span, r; let_in, if_then_else, find_such_that, quantifier, application)
             }
@@ -774,9 +789,9 @@ pub enum Assert<'a> {
     Lemma(Assertion<'a>),
 }
 boiler_plate!(l Assert<'a>, 'a, assertion | query | lemma ; |p| {
-    assertion => { Ok(Assert::Assertion(p.try_into()?)) }
-    query => { Ok(Assert::Query(p.try_into()?)) }
-    lemma => { Ok(Assert::Lemma(p.try_into()?)) }
+    assertion_inner => { Ok(Assert::Assertion(p.try_into()?)) }
+    query_inner => { Ok(Assert::Query(p.try_into()?)) }
+    lemma_inner => { Ok(Assert::Lemma(p.try_into()?)) }
 });
 
 #[derive(Derivative)]
@@ -786,7 +801,7 @@ pub struct Assertion<'a> {
     pub span: Span<'a>,
     pub content: Term<'a>,
 }
-boiler_plate!(Assertion<'a>, 'a, assertion | query | lemma ; |p| {
+boiler_plate!(Assertion<'a>, 'a, assertion_inner | query_inner | lemma_inner ; |p| {
     let span = p.as_span();
     dest_rule!(span in [content] = p);
     Ok(Self {span, content})
@@ -832,7 +847,7 @@ pub enum OrderOperation {
     Lt,
     Gt,
 }
-boiler_plate!(OrderOperation, operation; {
+boiler_plate!(OrderOperation, ordering_operation; {
     order_incompatible => Incompatible,
     order_lt => Lt,
     order_gt => Gt

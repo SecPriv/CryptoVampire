@@ -15,7 +15,8 @@ pub struct Reference<'bump, T> {
 
 impl<'bump, T> Reference<'bump, T> {
     pub fn as_option_ref(&self) -> &'bump Option<T> {
-        unsafe { self.inner.as_ref() }
+        debug_print::debug_println!("deref NonNul at {} in {}\n\t(for {})", line!(), file!(), std::any::type_name::<Self>());
+        unsafe { self.to_raw().as_ref() }
     }
 
     pub fn as_inner(&self) -> &T {
@@ -26,8 +27,15 @@ impl<'bump, T> Reference<'bump, T> {
         self.as_option_ref().as_ref()
     }
 
-    pub fn from_ref(ptr: &'bump Option<T>) -> Self {
-        Self::from(ptr)
+    pub fn from_raw(ptr: NonNull<Option<T>>, lt: PhantomData<&'bump Option<T>>) -> Self {
+        Self {
+            inner: ptr,
+            lt: Default::default()
+        }
+    }
+
+    pub fn to_raw(&self) -> NonNull<Option<T>> {
+        self.inner
     }
 }
 
@@ -75,14 +83,14 @@ impl<'bump, T> MaybeInvalid for Reference<'bump, T> {
     }
 }
 
-impl<'bump, T> From<&'bump Option<T>> for Reference<'bump, T> {
-    fn from(value: &'bump Option<T>) -> Self {
-        Self {
-            inner: NonNull::from(value),
-            lt: Default::default(),
-        }
-    }
-}
+// impl<'bump, T> From<&'bump Option<T>> for Reference<'bump, T> {
+//     fn from(value: &'bump Option<T>) -> Self {
+//         Self {
+//             inner: NonNull::from(value),
+//             lt: Default::default(),
+//         }
+//     }
+// }
 
 impl<'bump, T> Clone for Reference<'bump, T> {
     fn clone(&self) -> Self {

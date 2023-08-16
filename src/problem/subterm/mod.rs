@@ -7,7 +7,7 @@ use std::{
 use itertools::Itertools;
 
 use crate::{
-    container::allocator::ContainerTools,
+    container::allocator::{ContainerTools, Residual},
     formula::{
         file_descriptior::declare::{self, Declaration},
         formula::{self, exists, forall, meq, ARichFormula},
@@ -104,7 +104,9 @@ where
         F: FnOnce(Arc<Self>) -> function::inner::subterm::Subsubterm<'bump>,
     {
         let ignored_functions = ignored_functions.into_iter().collect();
-        let (_, self_rc) = unsafe {
+        let Residual {
+            residual: self_rc, ..
+        } = unsafe {
             Function::new_cyclic(container, |function| {
                 // let subterm = ;
                 let self_rc = Arc::new_cyclic(|weak| Subterm {
@@ -120,7 +122,10 @@ where
                     subterm: to_enum(Arc::clone(&self_rc)),
                     name,
                 };
-                (inner.into_inner_function(), self_rc)
+                Residual {
+                    content: inner.into_inner_function(),
+                    residual: self_rc,
+                }
             })
         };
         self_rc

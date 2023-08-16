@@ -17,7 +17,7 @@ use crate::{
             Function,
         },
         sort::{
-            builtins::{BOOL, CONDITION, MESSAGE, STEP},
+            builtins::{BOOL, CONDITION, MESSAGE, NAME, STEP},
             sort_proxy::SortProxy,
             Sort,
         },
@@ -450,9 +450,17 @@ fn parse_application<'b, 'a, 'bump>(
     let signature = function.signature();
     let mut formula_realm = signature.realm();
 
+    let is_name = signature.out().as_option() == Some(NAME.as_sort());
+
     // check output sort
     let _ = expected_sort
-        .map(|es| es.unify(&signature.out(), &state))
+        .map(|es| {
+            if is_name {
+                es.unify(&MESSAGE.as_sort().into(), &state)
+            } else {
+                es.unify(&signature.out(), &state)
+            }
+        })
         .transpose()
         .into_rr(*span)?;
 
@@ -489,6 +497,7 @@ fn parse_application<'b, 'a, 'bump>(
     let ifun = function.get_function();
     // if it's a name, cast it
     let formula = if let Some(name) = ifun.as_term_algebra().and_then(|f| f.as_name()) {
+        assert!(is_name);
         formula_realm = Some(Realm::Symbolic); // names are symbolic
         env.name_caster_collection
             .cast(name.target(), ifun.f_a(n_args))

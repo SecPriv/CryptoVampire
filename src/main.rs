@@ -36,28 +36,50 @@ use automator::{
     parser,
     problem::{PblIterator, Problem},
     smt::smt::SmtFile,
-    utils::traits::MyWriteTo,
+    utils::traits::{MyWriteTo, NicerError},
 };
 use clap::Parser;
 
+
 fn main() {
-    let args = Args::parse();
+
+
+
+
+
+    // let args = Args::parse();
+    let args = Args {
+        file: Some(PathBuf::from("/tmp/basic-hash-1.ptcl")),
+        output_location: PathBuf::from("../test.smt"),
+        lemmas: false,
+        eval_rewrite: false,
+        crypto_rewrite: false,
+        vampire_subterm: false,
+        assert_theory: false,
+        skolemnise: false,
+        preprocessing: false,
+        legacy_evaluate: false,
+        no_bitstring: false,
+        cvc5: false,
+        no_symbolic: false,
+    };
 
     ScopedContainer::scoped(|container| {
         let env = Environement::from_args(&args, &*container);
 
-        let str = if let Some(file) = &args.file {
-            read_to_string(file).unwrap_or_else(|_| {
-                panic!(
-                    "file \"{}\" not found",
-                    file.to_str().unwrap_or("[non-unicode file name]")
-                )
-            })
-        } else {
-            let mut buf = String::new();
-            Read::read_to_string(&mut io::stdin(), &mut buf).expect("unable to read stdin");
-            buf
-        };
+        // let str = if let Some(file) = &args.file {
+        //     read_to_string(file).unwrap_or_else(|_| {
+        //         panic!(
+        //             "file \"{}\" not found",
+        //             file.to_str().unwrap_or("[non-unicode file name]")
+        //         )
+        //     })
+        // } else {
+        //     let mut buf = String::new();
+        //     Read::read_to_string(&mut io::stdin(), &mut buf).expect("unable to read stdin");
+        //     buf
+        // };
+        let str = TEST_FILE;
 
         let pbl = Problem::try_from_str(
             container,
@@ -66,36 +88,37 @@ fn main() {
             parser::USED_KEYWORDS.iter().map(|s| s.to_string()),
             &str,
         )
-        .unwrap();
+        .expect_display("parsing error:");
 
-        if args.lemmas {
-            assert!(!args.output_location.is_file());
+        // if args.lemmas {
+        //     assert!(!args.output_location.is_file());
 
-            fs::create_dir_all(&args.output_location).expect("couldn't create dir");
+        //     fs::create_dir_all(&args.output_location).expect("couldn't create dir");
 
-            let mut i = 0;
-            // for (i, smt) in smts.enumerate() {
-            //     let path = args.output_location.join(Path::new(&format!("{}.smt", i)));
-            //     write_to_file(&path, smt);
-            // }
+        //     let mut i = 0;
+        //     // for (i, smt) in smts.enumerate() {
+        //     //     let path = args.output_location.join(Path::new(&format!("{}.smt", i)));
+        //     //     write_to_file(&path, smt);
+        //     // }
 
-            let mut pbliter = PblIterator::from(pbl);
+        //     let mut pbliter = PblIterator::from(pbl);
 
-            while let Some(pbl) = pbliter.next() {
-                let path = args.output_location.join(Path::new(&format!("{}.smt", i)));
+        //     while let Some(pbl) = pbliter.next() {
+        //         let path = args.output_location.join(Path::new(&format!("{}.smt", i)));
 
-                write_to_file(
-                    &path,
-                    SmtFile::from_general_file(&env, pbl.into_general_file(&env)),
-                );
+        //         write_to_file(
+        //             &path,
+        //             SmtFile::from_general_file(&env, pbl.into_general_file(&env)),
+        //         );
 
-                i += 1;
-            }
-        } else {
-            assert!(!args.output_location.is_dir());
-            let smt = SmtFile::from_general_file(&env, pbl.into_general_file(&env));
-            write_to_file(&args.output_location, smt);
-        }
+        //         i += 1;
+        //     }
+        // } else {
+        //     assert!(!args.output_location.is_dir());
+        //     let smt = SmtFile::from_general_file(&env, pbl.into_general_file(&env));
+        //     write_to_file(&args.output_location, smt);
+        // }
+        println!("\n\n\n\n\n\n{}", SmtFile::from_general_file(&env, pbl.into_general_file(&env)))
     });
 
     //     let pbl = match parse_protocol(env, &str) {
@@ -153,3 +176,89 @@ fn write_to_file(path: &PathBuf, smt: impl MyWriteTo) {
 // fn main() {
 //     // parser::parse_string("").unwrap()
 // }
+
+
+const TEST_FILE: &'static str = r"
+
+
+type index;
+fun tpl(Message, Message):Message
+
+type session
+
+fun hash(Message, Message):Message
+fun verify(Message, Message, Message):Bool
+
+fun sel1of2(Message):Message;
+fun sel2of2(Message):Message
+fun ok:Message
+fun ko:Message
+
+/* the Nonces */
+fun nt(session, index): Name
+fun nr(session): Name
+fun key(index):Name
+
+step reader(i:session, j:index)
+    /*{ (hash(sel1of2(input(reader(i, j))), key(j))
+                    == sel2of2(input(reader(i, j)))) }*/
+    { verify(
+        sel2of2(input(reader(i, j))),
+        sel1of2(input(reader(i, j))),
+        key(j)
+    ) }
+    { ok }
+
+step reader_fail(i:session)
+    { not(exists (j:index) {cond(reader(i, j))}) }
+    { ko }
+
+step tag(i:session, j:index)
+    { true }
+    { tpl(
+        nt(i,j),
+        hash(
+            nt(i,j),
+            key(j)
+        )
+    )}
+
+assert
+    forall (m1:Message, m2:Message) {
+        (
+            (m1 == sel1of2(tpl(m1,m2))) 
+            && (m2 == sel2of2(tpl(m1,m2)))
+        )
+    }
+
+assert
+    forall (s:Message, m:Message, k:Nonce) {
+        (verify(s, m, k) <=> (s == hash(m, k)))
+    }
+
+order forall (i:session, j:index) 
+    { reader_fail(i) <> reader(i, j) }
+
+order forall (i:session, j:index, j2:index) 
+    { reader(i, j2) <> reader(i, j) }
+
+let conclusion!(i:session, j:index) = exists (k:session) {(
+    lt(tag(k, j), reader(i, j))
+    && (sel1of2(msg(tag(k, j))) == sel1of2(input(reader(i, j))))
+    && (sel2of2(msg(tag(k, j))) == sel2of2(input(reader(i, j))))
+)}
+
+let premise!(i:session, j:index) = /*(
+    hash(sel1of2(input(reader(i, j))), key(j)) 
+                    == sel2of2(input(reader(i, j)))
+)*/ cond(reader(i, j))
+
+query forall (i:session, j:index) {(
+    happens(reader(i, j))
+        => (conclusion![i, j] <=> premise![i, j]) 
+)}
+
+assert-crypto euf-cma hash verify;
+assert-crypto nonce;
+
+";

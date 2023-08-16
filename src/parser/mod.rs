@@ -49,7 +49,7 @@ pub type E = Error<Rule>;
 /// it properly bubles up the error in release mode
 fn err<E: std::error::Error, T>(err: E) -> Result<T, E> {
     if cfg!(debug_assertions) {
-        Err(err).unwrap()
+        Err(err).unwrap_display()
     } else {
         Err(err)
     }
@@ -74,7 +74,7 @@ fn merr<'a>(s: Span<'a>, msg: String) -> E {
 
 use crate::{
     f,
-    formula::{function::signature::CheckError, sort::sort_proxy::InferenceError},
+    formula::{function::signature::CheckError, sort::sort_proxy::InferenceError}, utils::traits::NicerError,
 };
 
 trait IntoRuleResult<T, Err> {

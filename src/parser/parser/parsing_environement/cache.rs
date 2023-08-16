@@ -122,14 +122,14 @@ impl<'str, 'bump> FunctionCache<'str, 'bump> {
         }
     }
 
-    pub fn enforce_variance<'str2, 'bump2>(&self) -> &FunctionCache<'str2, 'bump2>
-    where
-        'str: 'str2,
-        'bump: 'bump2,
-    {
-        assert!(self.is_function() || self.is_step());
-        unsafe { std::mem::transmute(&self) } // only MemoryCell is invariant
-    }
+    // pub fn enforce_variance<'str2, 'bump2>(&self) -> &FunctionCache<'str2, 'bump2>
+    // where
+    //     'str: 'str2,
+    //     'bump: 'bump2,
+    // {
+    //     assert!(self.is_function() || self.is_step());
+    //     unsafe { std::mem::transmute(&self) } // only MemoryCell is invariant
+    // }
 
     pub fn as_memory_cell(&self) -> Option<&CellCache<'str, 'bump>> {
         if let Self::MemoryCell(v) = self {
