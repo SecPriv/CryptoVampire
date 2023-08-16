@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
+    environement::traits::KnowsRealm,
     formula::{
         formula::{ARichFormula, RichFormula},
         function::builtin::{EQUALITY, HAPPENS, LESS_THAN_STEP},
@@ -71,9 +72,9 @@ fn parse_order_with_bvars<'str, 'bump>(
     bvars.extend(args.iter().map(|(name, var)| (*name, (*var).into())));
     let variables: Arc<[_]> = args.into_iter().map(|(_, v)| v).collect();
 
-    let t1 = t1.parse(env, bvars, env.into(), Some(STEP.as_sort().into()))?;
+    let t1 = t1.parse(env, bvars, env, Some(STEP.as_sort().into()))?;
     bvars.truncate(variables.len());
-    let t2 = t2.parse(env, bvars, env.into(), Some(STEP.as_sort().into()))?;
+    let t2 = t2.parse(env, bvars, env, Some(STEP.as_sort().into()))?;
 
     let happens = HAPPENS.clone();
     let lt = LESS_THAN_STEP.clone();

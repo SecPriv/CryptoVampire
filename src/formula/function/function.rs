@@ -12,7 +12,7 @@ use crate::force_lifetime;
 
 use crate::formula::formula::ARichFormula;
 use crate::formula::function::signature::Lazy::{A, B};
-use crate::utils::traits::RefNamed;
+use crate::utils::traits::{NicerError, RefNamed};
 use crate::utils::utils::MaybeInvalid;
 use crate::{
     assert_variance, asssert_trait,
@@ -107,8 +107,9 @@ impl<'bump> Sorted<'bump> for Function<'bump> {
     fn sort(&self, args: &[Sort<'bump>]) -> Result<Sort<'bump>, SortedError> {
         let s = self.signature();
         let partial_s = OnlyArgsSignature::new(args);
-        s.unify(&partial_s, &Realm::default())?;
-        s.out().as_option().ok_or(SortedError::Impossible)
+        println!("{}{}", self.name(), self.signature().as_display());
+        s.unify(&partial_s, &Realm::default()).debug_continue()?;
+        s.out().as_option().ok_or(SortedError::Impossible).debug_continue()
     }
 }
 

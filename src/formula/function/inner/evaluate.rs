@@ -1,14 +1,21 @@
 use hashbrown::HashMap;
 
-use crate::formula::{
-    formula::ARichFormula,
-    function::{
-        builtin::MESSAGE_TO_BITSTRING,
-        signature::FixedRefSignature,
-        traits::{FixedSignature, MaybeEvaluatable},
-        Function,
+use crate::{
+    formula::{
+        formula::ARichFormula,
+        function::{
+            builtin::{CONDITION_TO_BOOL, MESSAGE_TO_BITSTRING},
+            signature::FixedRefSignature,
+            traits::{FixedSignature, MaybeEvaluatable},
+            Function,
+        },
+        sort::{
+            builtins::{CONDITION, MESSAGE},
+            sorted::SortedError,
+            Sort,
+        },
     },
-    sort::{builtins::MESSAGE, sorted::SortedError, Sort},
+    utils::traits::NicerError,
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -54,7 +61,15 @@ impl<'bump> Evaluator<'bump> {
         f: impl Into<ARichFormula<'bump>>,
     ) -> Result<ARichFormula<'bump>, SortedError> {
         let f: ARichFormula = f.into();
-        Ok(self.functions.get(&f.get_sort()?).unwrap().f_a([f]))
+        let sort = f
+            .get_sort()
+            .debug_continue_msg(&format!("{f} doesn't have a known sort"))?;
+        let fun = self
+            .functions
+            .get(&sort)
+            .ok_or(SortedError::Impossible)
+            .debug_continue_msg(&format!("{} isn't in the hashmap", sort.name().as_ref()))?;
+        Ok(fun.f_a([f]))
     }
 
     pub fn functions_mut(&mut self) -> &mut HashMap<Sort<'bump>, Function<'bump>> {
@@ -69,7 +84,11 @@ impl<'bump> Evaluator<'bump> {
 impl<'bump> Default for Evaluator<'bump> {
     fn default() -> Self {
         Self {
-            functions: [(MESSAGE.as_sort(), MESSAGE_TO_BITSTRING.clone())].into(),
+            functions: [
+                (MESSAGE.as_sort(), MESSAGE_TO_BITSTRING.clone()),
+                (CONDITION.as_sort(), CONDITION_TO_BOOL.clone()),
+            ]
+            .into(),
         }
     }
 }

@@ -35,7 +35,7 @@ pub const USED_KEYWORDS: &'static [&'static str] = &[
     "define-sort",
     "Int",
     "Real",
-    "Array"
+    "Array",
 ];
 
 #[derive(Parser, Debug)]
@@ -74,7 +74,8 @@ fn merr<'a>(s: Span<'a>, msg: String) -> E {
 
 use crate::{
     f,
-    formula::{function::signature::CheckError, sort::sort_proxy::InferenceError}, utils::traits::NicerError,
+    formula::{function::signature::CheckError, sort::sort_proxy::InferenceError},
+    utils::traits::NicerError,
 };
 
 trait IntoRuleResult<T, Err> {

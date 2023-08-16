@@ -23,7 +23,8 @@ use crate::{
         sort::Sort,
         variable::Variable,
     },
-    implvec, parser, utils::traits::NicerError,
+    implvec, parser,
+    utils::traits::NicerError,
 };
 
 use super::{

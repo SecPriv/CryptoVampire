@@ -123,9 +123,9 @@ where
     //     'bump: 'a,
     {
         // if cfg!(debug_assertions) {
-            if let Some(p) = I::ptr_to_ref(reference) {
-                eprintln!("{p:?}")
-            }
+        if let Some(p) = I::ptr_to_ref(reference) {
+            eprintln!("{p:?}")
+        }
         // }
         I::initialize_with(reference, inner).map(|_| ())
     }

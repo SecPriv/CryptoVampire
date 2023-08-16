@@ -19,7 +19,7 @@ pub fn parse_assert_with_bvars<'a, 'str, 'bump>(
     let ast::Assertion { content, .. } = assertion;
 
     bvars.clear();
-    content.parse(env, bvars, env.into(), Some(BOOL.as_sort().into()))
+    content.parse(env, bvars, env, Some(BOOL.as_sort().into()))
 }
 
 pub fn parse_asserts_with_bvars<'a, 'str, 'bump, B>(

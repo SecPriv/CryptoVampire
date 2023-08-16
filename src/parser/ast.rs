@@ -135,7 +135,10 @@ impl<'a> TryFrom<&'a str> for ASTList<'a> {
         let mut pairs = MainParser::parse(Rule::file, value).debug_continue()?;
 
         Ok(ASTList {
-            content: pairs.next().unwrap().into_inner()
+            content: pairs
+                .next()
+                .unwrap()
+                .into_inner()
                 .filter(|p| p.as_rule() == Rule::content)
                 .map(|p| {
                     debug_print::debug_println!(" --> {}", p.as_str());
@@ -378,6 +381,17 @@ pub struct AppMacro<'a> {
     pub span: Span<'a>,
     pub inner: InnerAppMacro<'a>,
 }
+
+fn from_term_to_application<'a>(p: Pair<'a, Rule>) -> Result<Application<'a>, E> {
+    debug_rule!(p, term);
+    let p = p.into_inner().next().unwrap();
+    debug_rule!(p, inner_term);
+    let p = p.into_inner().next().unwrap();
+    debug_rule!(p, commun_base);
+    let p = p.into_inner().next().unwrap();
+    p.try_into()
+}
+
 boiler_plate!(AppMacro<'a>, 'a, macro_application; |p| {
     let span = p.as_span();
     let mut p = p.into_inner();
@@ -385,8 +399,8 @@ boiler_plate!(AppMacro<'a>, 'a, macro_application; |p| {
         let name: MacroName = p.next().unwrap().try_into()?;
 
         match name.0.content.content {
-            "msg" => InnerAppMacro::Msg(p.next().unwrap().try_into()?),
-            "cond" => InnerAppMacro::Cond(p.next().unwrap().try_into()?),
+            "msg" => InnerAppMacro::Msg(from_term_to_application(p.next().unwrap())?),
+            "cond" => InnerAppMacro::Cond(from_term_to_application(p.next().unwrap())?),
             _ => {
                 let args : Result<Vec<_>, _> = p.map(TryInto::try_into).collect();
                 InnerAppMacro::Other { name, args: args? }

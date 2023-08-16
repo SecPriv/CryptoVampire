@@ -213,6 +213,10 @@ impl<'a> Sort<'a> {
         }
     }
 
+    pub fn short_name(&self) -> char {
+        self.name().chars().next().unwrap()
+    }
+
     force_lifetime!(Sort, 'a);
 }
 

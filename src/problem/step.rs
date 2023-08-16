@@ -280,7 +280,7 @@ impl<'bump> Step<'bump> {
 
     /// is it the init step
     pub fn is_init_step(&self) -> bool {
-        self.name() ==  INIT_STEP_NAME
+        self.name() == INIT_STEP_NAME
     }
 
     // return `self` as a formula of type `U` using the variables of [free_variables]
@@ -307,7 +307,6 @@ impl<'bump> Step<'bump> {
     //     self.precise_as_ref()
     // }
 }
-
 
 impl<'a, 'bump: 'a> RefNamed<'a> for &'a InnerStep<'bump> {
     fn name_ref(&self) -> StrRef<'a> {

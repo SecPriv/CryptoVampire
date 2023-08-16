@@ -15,7 +15,7 @@ pub struct Variable<'bump> {
 }
 impl<'bump> fmt::Display for Variable<'bump> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "X{}", self.id)
+        write!(f, "{}X{}", self.sort.short_name(), self.id)
     }
 }
 

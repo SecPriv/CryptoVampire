@@ -1,6 +1,8 @@
 // use core::slice::SlicePattern;
 
-use std::sync::Arc;
+use std::{fmt::Display, sync::Arc};
+
+use itertools::Itertools;
 
 use crate::implvec;
 
@@ -104,6 +106,16 @@ impl<'bump> Quantifier<'bump> {
         match self {
             Quantifier::Exists { .. } => "exist",
             Quantifier::Forall { .. } => "forall",
+        }
+    }
+}
+
+impl<'bump> Display for Quantifier<'bump> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let vars = self.get_variables().iter().join(",");
+        match self {
+            Self::Exists { .. } => write!(f, "∃({}). ", vars),
+            Self::Forall { .. } => write!(f, "∀({}). ", vars),
         }
     }
 }

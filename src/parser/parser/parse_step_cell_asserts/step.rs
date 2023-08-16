@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use debug_print::debug_println;
+use hashbrown::HashSet;
 use itertools::Itertools;
 
 use crate::{
@@ -58,8 +60,9 @@ fn parse_step<'bump, 'str>(
         .map(|(id, &sort)| Variable { id, sort })
         .collect();
     // ALL the variables used in the step. We start the free ones
-    let mut used_variables: Vec<_> = free_variables.iter().cloned().collect();
+    // let mut used_variables: Vec<_> = free_variables.iter().cloned().collect();
     // the variable pile. i.e., free_varible + "in"
+    let input_var_id = free_variables.len();
     let mut bvars = args_name
         .iter()
         .cloned()
@@ -67,7 +70,7 @@ fn parse_step<'bump, 'str>(
         .chain([(
             "in",
             Variable {
-                id: free_variables.len(),
+                id: input_var_id,
                 sort: MESSAGE.clone(),
             },
         )])
@@ -78,7 +81,7 @@ fn parse_step<'bump, 'str>(
 
     // substitution to replace the "in" variable
     let substitution = OneVarSubst {
-        id: n - 1,
+        id: input_var_id,
         f: INPUT.f_a([function.f_a(
             args.iter()
                 .enumerate()
@@ -88,22 +91,14 @@ fn parse_step<'bump, 'str>(
 
     //---- parse
     // message
-    let message = message.parse(env, &mut bvars, state, Some(MESSAGE.clone().into()))?;
-    used_variables.extend(
-        // get the variables used
-        bvars
-            .drain(n..)
-            .filter_map(|(_, vp)| vp.try_into_variable()),
-    );
+    let message = message.parse(env, &mut bvars, &state, Some(MESSAGE.clone().into()))?;
+    let msg_used_vars = message.get_used_variables();
+    bvars.truncate(n);
 
     // condition
-    let condition = condition.parse(env, &mut bvars, state, Some(CONDITION.clone().into()))?;
-    used_variables.extend(
-        // get the variables used
-        bvars
-            .drain(n..)
-            .filter_map(|(_, vp)| vp.try_into_variable()),
-    );
+    let condition = condition.parse(env, &mut bvars, &state, Some(CONDITION.clone().into()))?;
+    let cond_used_vars = condition.get_used_variables();
+    bvars.truncate(n);
 
     // remove the "in"
     let message = message.apply_substitution2(&substitution);
@@ -138,7 +133,7 @@ fn parse_step<'bump, 'str>(
                 .map(|(arg, sort)| {
                     // reste `bvars`
                     bvars.truncate(n);
-                    arg.parse(env, &mut bvars, state, Some(sort.into()))
+                    arg.parse(env, &mut bvars, &state, Some(sort.into()))
                         // remove the "in"
                         .map(|arg| arg.apply_substitution2(&substitution))
                 })
@@ -148,7 +143,7 @@ fn parse_step<'bump, 'str>(
             // ensure `bvars` is reseted
             bvars.truncate(n);
             let content = term
-                .parse(env, &mut bvars, state, Some(MESSAGE.clone().into()))?
+                .parse(env, &mut bvars, &state, Some(MESSAGE.clone().into()))?
                 // remove the "in"
                 .apply_substitution2(&substitution);
 
@@ -161,10 +156,12 @@ fn parse_step<'bump, 'str>(
         }
     }
 
+    let used_variables = msg_used_vars.into_iter().chain(cond_used_vars).collect();
+
     Ok(InnerStep::new(
         name.to_string(),
         free_variables,
-        used_variables.into(),
+        used_variables,
         condition,
         message,
         *function,

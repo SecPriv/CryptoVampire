@@ -40,13 +40,9 @@ use automator::{
 };
 use clap::Parser;
 
+const USE_MIRI: bool = false;
 
 fn main() {
-
-
-
-
-
     // let args = Args::parse();
     let args = Args {
         file: Some(PathBuf::from("/tmp/basic-hash-1.ptcl")),
@@ -67,19 +63,23 @@ fn main() {
     ScopedContainer::scoped(|container| {
         let env = Environement::from_args(&args, &*container);
 
-        // let str = if let Some(file) = &args.file {
-        //     read_to_string(file).unwrap_or_else(|_| {
-        //         panic!(
-        //             "file \"{}\" not found",
-        //             file.to_str().unwrap_or("[non-unicode file name]")
-        //         )
-        //     })
-        // } else {
-        //     let mut buf = String::new();
-        //     Read::read_to_string(&mut io::stdin(), &mut buf).expect("unable to read stdin");
-        //     buf
-        // };
-        let str = TEST_FILE;
+        // let str = ;
+        let str = if USE_MIRI {
+            TEST_FILE.to_string()
+        } else {
+            if let Some(file) = &args.file {
+                read_to_string(file).unwrap_or_else(|_| {
+                    panic!(
+                        "file \"{}\" not found",
+                        file.to_str().unwrap_or("[non-unicode file name]")
+                    )
+                })
+            } else {
+                let mut buf = String::new();
+                Read::read_to_string(&mut io::stdin(), &mut buf).expect("unable to read stdin");
+                buf
+            }
+        };
 
         let pbl = Problem::try_from_str(
             container,
@@ -90,35 +90,41 @@ fn main() {
         )
         .expect_display("parsing error:");
 
-        // if args.lemmas {
-        //     assert!(!args.output_location.is_file());
+        if USE_MIRI {
+            println!(
+                "\n\n\n\n\n\n{}",
+                SmtFile::from_general_file(&env, pbl.into_general_file(&env))
+            )
+        } else {
+            if args.lemmas {
+                assert!(!args.output_location.is_file());
 
-        //     fs::create_dir_all(&args.output_location).expect("couldn't create dir");
+                fs::create_dir_all(&args.output_location).expect("couldn't create dir");
 
-        //     let mut i = 0;
-        //     // for (i, smt) in smts.enumerate() {
-        //     //     let path = args.output_location.join(Path::new(&format!("{}.smt", i)));
-        //     //     write_to_file(&path, smt);
-        //     // }
+                let mut i = 0;
+                // for (i, smt) in smts.enumerate() {
+                //     let path = args.output_location.join(Path::new(&format!("{}.smt", i)));
+                //     write_to_file(&path, smt);
+                // }
 
-        //     let mut pbliter = PblIterator::from(pbl);
+                let mut pbliter = PblIterator::from(pbl);
 
-        //     while let Some(pbl) = pbliter.next() {
-        //         let path = args.output_location.join(Path::new(&format!("{}.smt", i)));
+                while let Some(pbl) = pbliter.next() {
+                    let path = args.output_location.join(Path::new(&format!("{}.smt", i)));
 
-        //         write_to_file(
-        //             &path,
-        //             SmtFile::from_general_file(&env, pbl.into_general_file(&env)),
-        //         );
+                    write_to_file(
+                        &path,
+                        SmtFile::from_general_file(&env, pbl.into_general_file(&env)),
+                    );
 
-        //         i += 1;
-        //     }
-        // } else {
-        //     assert!(!args.output_location.is_dir());
-        //     let smt = SmtFile::from_general_file(&env, pbl.into_general_file(&env));
-        //     write_to_file(&args.output_location, smt);
-        // }
-        println!("\n\n\n\n\n\n{}", SmtFile::from_general_file(&env, pbl.into_general_file(&env)))
+                    i += 1;
+                }
+            } else {
+                assert!(!args.output_location.is_dir());
+                let smt = SmtFile::from_general_file(&env, pbl.into_general_file(&env));
+                write_to_file(&args.output_location, smt);
+            }
+        }
     });
 
     //     let pbl = match parse_protocol(env, &str) {
@@ -176,7 +182,6 @@ fn write_to_file(path: &PathBuf, smt: impl MyWriteTo) {
 // fn main() {
 //     // parser::parse_string("").unwrap()
 // }
-
 
 const TEST_FILE: &'static str = r"
 
@@ -251,7 +256,7 @@ let conclusion!(i:session, j:index) = exists (k:session) {(
 let premise!(i:session, j:index) = /*(
     hash(sel1of2(input(reader(i, j))), key(j)) 
                     == sel2of2(input(reader(i, j)))
-)*/ cond(reader(i, j))
+)*/ cond!(reader(i, j))
 
 query forall (i:session, j:index) {(
     happens(reader(i, j))

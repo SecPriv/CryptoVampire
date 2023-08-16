@@ -1,4 +1,5 @@
 use std::{
+    fmt::Display,
     ops::{BitAnd, BitOr, Not, Shr},
     sync::Arc,
 };
@@ -37,6 +38,7 @@ pub enum RichFormula<'bump> {
 
 impl<'bump> RichFormula<'bump> {
     pub fn get_sort(&self) -> Result<Sort<'bump>, SortedError> {
+        println!("  checksort -> {self}");
         match self {
             RichFormula::Var(Variable { sort, .. }) => Ok(*sort),
             RichFormula::Fun(fun, args) => {
@@ -199,7 +201,9 @@ impl<'bump> RichFormula<'bump> {
     {
         let vars = vars.into_iter().collect_vec();
         let fs = fs.into_iter().collect_vec();
-        debug_assert_eq!(vars.len(), fs.len());
+        if cfg!(debug_assertions) && vars.len() != fs.len() {
+            panic!("assertion failed:\n{vars:?}\n[{}]", fs.iter().join(", "))
+        }
         self.apply_some(|v| {
             vars.iter()
                 .position(|v2| v2 == &v.id)
@@ -358,6 +362,18 @@ impl<'bump> Shr for RichFormula<'bump> {
 
     fn shr(self, rhs: Self) -> Self::Output {
         IMPLIES.f([self, rhs])
+    }
+}
+
+impl<'bump> Display for RichFormula<'bump> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RichFormula::Var(v) => v.fmt(f),
+            RichFormula::Fun(fun, args) => {
+                write!(f, "{}({})", fun.name(), args.iter().join(", "))
+            }
+            RichFormula::Quantifier(q, arg) => write!(f, "{q} {arg}"),
+        }
     }
 }
 

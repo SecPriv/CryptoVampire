@@ -161,7 +161,9 @@ impl<'bump> ScopedContainer<'bump> {
             h.extend(
                 vec.iter()
                     .filter_map(|x| {
-                        debug_print::debug_println!("deref NonNull at {} in {}", line!(), file!());
+                        if super::PRINT_DEREF {
+                            println!("deref NonNull at {} in {}", line!(), file!());
+                        }
                         unsafe { x.as_ref() }.as_ref()
                     })
                     .map(|n| n.name_ref()),

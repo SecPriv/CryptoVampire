@@ -1,5 +1,6 @@
 use std::{
     borrow::Borrow,
+    fmt::Display,
     ops::{BitAnd, BitOr, Deref, DerefMut, Not, Shr},
 };
 
@@ -209,5 +210,11 @@ impl<'bump> Shr for ARichFormula<'bump> {
 
     fn shr(self, rhs: Self) -> Self::Output {
         IMPLIES.f_a([self, rhs])
+    }
+}
+
+impl<'bump> Display for ARichFormula<'bump> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_inner())
     }
 }

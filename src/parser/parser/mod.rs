@@ -6,8 +6,8 @@ mod declare;
 pub use declare::{declare_sorts, fetch_all};
 
 mod parsing_environement;
-pub use parsing_environement::{ parse_str,
-    get_function, get_sort, CellCache, Environement, FunctionCache, Macro, StepCache,
+pub use parsing_environement::{
+    get_function, get_sort, parse_str, CellCache, Environement, FunctionCache, Macro, StepCache,
 };
 
 mod parse_step_cell_asserts;

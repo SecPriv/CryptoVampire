@@ -55,6 +55,18 @@ impl<T> From<(usize, T)> for OneVarSubst<T> {
 impl<'a, 'bump: 'a> Substitution<'bump> for OneVarSubstF<'bump> {
     fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump> {
         if var.id == self.id {
+            if cfg!(debug_assertions) {
+                if let Some(s) = self.f.get_sort().ok() {
+                    if s != var.sort {
+                        panic!(
+                            "wrong sort in substitution: subtituting {} for {s}",
+                            var.sort
+                        )
+                    }
+                } else {
+                    eprintln!("mhm...")
+                }
+            }
             self.f.clone()
         } else {
             RichFormula::from(*var).into()

@@ -15,7 +15,14 @@ pub struct Reference<'bump, T> {
 
 impl<'bump, T> Reference<'bump, T> {
     pub fn as_option_ref(&self) -> &'bump Option<T> {
-        debug_print::debug_println!("deref NonNul at {} in {}\n\t(for {})", line!(), file!(), std::any::type_name::<Self>());
+        if super::PRINT_DEREF {
+            println!(
+                "deref NonNul at {} in {}\n\t(for {})",
+                line!(),
+                file!(),
+                std::any::type_name::<Self>()
+            );
+        }
         unsafe { self.to_raw().as_ref() }
     }
 
@@ -30,7 +37,7 @@ impl<'bump, T> Reference<'bump, T> {
     pub fn from_raw(ptr: NonNull<Option<T>>, lt: PhantomData<&'bump Option<T>>) -> Self {
         Self {
             inner: ptr,
-            lt: Default::default()
+            lt: Default::default(),
         }
     }
 
@@ -105,7 +112,7 @@ impl<'bump, T> Copy for Reference<'bump, T> {}
 
 impl<'bump, T: Hash> Hash for Reference<'bump, T> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.as_option_ref().hash(state);
+        self.inner.hash(state);
     }
 }
 

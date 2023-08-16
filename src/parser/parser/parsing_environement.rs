@@ -29,7 +29,7 @@ use crate::{
         E,
     },
     problem::{cell::MemoryCell, problem::Problem, protocol::Protocol, step::Step},
-    utils::{utils::MaybeInvalid, traits::NicerError},
+    utils::{traits::NicerError, utils::MaybeInvalid},
 };
 
 #[derive(Hash, Clone, PartialEq, Eq, Debug, PartialOrd, Ord)]
@@ -260,13 +260,15 @@ pub fn parse_str<'a, 'bump>(
         &mut lemmas,
         &mut orders,
         &mut asserts_crypto,
-    ).debug_continue()?;
+    )
+    .debug_continue()?;
 
     parse_steps(&env, env.functions.values().filter_map(|f| f.as_step())).debug_continue()?;
     parse_cells(
         &env,
         env.functions.values().filter_map(|f| f.as_memory_cell()),
-    ).debug_continue()?;
+    )
+    .debug_continue()?;
     assert!(env.is_valid());
 
     let mut bvars = Vec::new();

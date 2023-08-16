@@ -8,5 +8,5 @@ pub(crate) mod protocol;
 pub(crate) mod step;
 pub(crate) mod subterm;
 
-pub use problem::{Problem, PblIterator};
+pub use problem::{PblIterator, Problem};
 pub use protocol::Protocol;

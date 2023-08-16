@@ -5,6 +5,8 @@ pub mod contained;
 pub mod reference;
 pub mod utils;
 
+const PRINT_DEREF: bool = false;
+
 // pub trait ScopeAllocator<'bump, T> {
 //     unsafe fn alloc(&'bump self) -> NonNull<T>;
 // }

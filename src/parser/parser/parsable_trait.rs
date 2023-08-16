@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::{borrow::Cow, fmt::Display, ops::Deref};
 mod cached_builtins;
 
 use itertools::Itertools;
@@ -28,6 +28,7 @@ use crate::{
         ast::{self, extra::SnN, Term, VariableBinding},
         err, merr, IntoRuleResult, E,
     },
+    utils::maybe_owned::MOw,
 };
 
 use self::cached_builtins::*;
@@ -51,6 +52,17 @@ impl<'bump> VarProxy<'bump> {
     }
 }
 
+impl<'bump> Display for VarProxy<'bump> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let VarProxy { id, sort } = self;
+        write!(f, "(X{id}: ");
+        match sort.as_option() {
+            Some(s) => write!(f, "{s})"),
+            None => write!(f, "_)"),
+        }
+    }
+}
+
 impl<'bump> From<Variable<'bump>> for VarProxy<'bump> {
     fn from(value: Variable<'bump>) -> Self {
         Self {
@@ -66,7 +78,7 @@ pub trait Parsable<'bump, 'str> {
         &self,
         env: &Environement<'bump, 'str>,
         bvars: &mut Vec<(&'str str, VarProxy<'bump>)>,
-        state: State<'_, 'str, 'bump>,
+        state: &impl KnowsRealm, // State<'_, 'str, 'bump>,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> Result<Self::R, E>;
 }
@@ -78,7 +90,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::LetIn<'a> {
         &self,
         env: &Environement<'bump, 'a>,
         bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
-        state: State<'_, 'a, 'bump>,
+        state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> Result<Self::R, E> {
         // current length of the pile of variable
@@ -116,7 +128,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::IfThenElse<'a> {
         &self,
         env: &Environement<'bump, 'a>,
         bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
-        state: State<'_, 'a, 'bump>,
+        state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> Result<Self::R, E> {
         // generate the expected sorts
@@ -157,7 +169,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
         &self,
         env: &Environement<'bump, 'a>,
         bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
-        state: State<'_, 'a, 'bump>,
+        state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> Result<Self::R, E> {
         expected_sort
@@ -173,12 +185,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
         } = self;
 
         // parse the default case without the extra variables
-        let right = right.parse(
-            env,
-            bvars,
-            state.to_symbolic(),
-            Some(MESSAGE.as_sort().into()),
-        )?;
+        let right = right.parse(env, bvars, &Realm::Symbolic, Some(MESSAGE.as_sort().into()))?;
 
         // for unique ids and truncate
         let bn = bvars.len();
@@ -227,15 +234,10 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
         let condition = condition.parse(
             env,
             bvars,
-            state.to_symbolic(),
+            &Realm::Symbolic,
             Some(CONDITION.as_sort().into()),
         )?;
-        let left = left.parse(
-            env,
-            bvars,
-            state.to_symbolic(),
-            Some(MESSAGE.as_sort().into()),
-        )?;
+        let left = left.parse(env, bvars, &Realm::Symbolic, Some(MESSAGE.as_sort().into()))?;
 
         // remove variables
         bvars.truncate(bn);
@@ -257,7 +259,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Quantifier<'a> {
         &self,
         env: &Environement<'bump, 'a>,
         bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
-        state: State<'_, 'a, 'bump>,
+        state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> Result<Self::R, E> {
         let ast::Quantifier {
@@ -366,7 +368,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Application<'a> {
         &self,
         env: &Environement<'bump, 'a>,
         bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
-        state: State<'_, 'a, 'bump>,
+        state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> Result<Self::R, E> {
         match self {
@@ -377,6 +379,15 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Application<'a> {
                     .find(|(s, _)| s == content)
                     .map(|(_, v)| {
                         let VarProxy { id, sort } = v;
+
+                        if sort.is_sosrt(NAME.as_sort()) {
+                            err(merr(
+                                *span,
+                                "assertions with variables of sort Name have a debatable soundness"
+                                    .to_string(),
+                            ))?
+                        }
+
                         let sort = expected_sort
                             .clone()
                             .map(|es| sort.unify(&es, &state).into_rr(*span))
@@ -391,19 +402,25 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Application<'a> {
                     .unwrap_or_else(|| {
                         match *content {
                             "true" | "True" => Ok(match state.get_realm() {
-                                Realm::Symbolic => Deref::deref(&TRUE_TA_CACHE),
-                                Realm::Evaluated => Deref::deref(&TRUE_CACHE),
-                            }
-                            .enforce_variance()),
+                                Realm::Symbolic => TRUE_TA_CACHE(),
+                                Realm::Evaluated => TRUE_CACHE(),
+                            }),
                             "false" | "False" => Ok(match state.get_realm() {
-                                Realm::Symbolic => Deref::deref(&FALSE_TA_CACHE),
-                                Realm::Evaluated => Deref::deref(&FALSE_CACHE),
-                            }
-                            .enforce_variance()),
-                            content => get_function(env, *span, content),
+                                Realm::Symbolic => FALSE_TA_CACHE(),
+                                Realm::Evaluated => FALSE_CACHE(),
+                            }),
+                            content => get_function(env, *span, content).map(MOw::Borrowed),
                         }
                         .and_then(|f| {
-                            parse_application(env, span, state, bvars, expected_sort, f, [])
+                            parse_application(
+                                env,
+                                span,
+                                state,
+                                bvars,
+                                expected_sort,
+                                Deref::deref(&f),
+                                [],
+                            )
                         })
                     })
             }
@@ -416,13 +433,12 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Application<'a> {
 
                 match content {
                     "not" => Ok(match state.get_realm() {
-                        Realm::Symbolic => Deref::deref(&NOT_TA_CACHE),
-                        Realm::Evaluated => Deref::deref(&NOT_CACHE),
-                    }
-                    .enforce_variance()),
-                    _ => get_function(env, *span, content),
+                        Realm::Symbolic => NOT_TA_CACHE(),
+                        Realm::Evaluated => NOT_CACHE(),
+                    }),
+                    _ => get_function(env, *span, content).map(MOw::Borrowed),
                 }
-                .and_then(|f| parse_application(env, span, state, bvars, expected_sort, f, args))
+                .and_then(|f| parse_application(env, span, state, bvars, expected_sort, &f, args))
             }
         }
     }
@@ -432,7 +448,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Application<'a> {
 fn parse_application<'b, 'a, 'bump>(
     env: &'b Environement<'bump, 'a>,
     span: &'b pest::Span<'a>,
-    state: State<'b, 'a, 'bump>,
+    state: &impl KnowsRealm,
     bvars: &'b mut Vec<(&'a str, VarProxy<'bump>)>,
     expected_sort: Option<SortProxy<'bump>>,
     function: &FunctionCache<'a, 'bump>,
@@ -450,32 +466,32 @@ fn parse_application<'b, 'a, 'bump>(
     let signature = function.signature();
     let mut formula_realm = signature.realm();
 
-    let is_name = signature.out().as_option() == Some(NAME.as_sort());
+    // let is_name = signature.out().as_option() == Some(NAME.as_sort());
 
     // check output sort
-    let _ = expected_sort
-        .map(|es| {
-            if is_name {
-                es.unify(&MESSAGE.as_sort().into(), &state)
-            } else {
-                es.unify(&signature.out(), &state)
-            }
-        })
-        .transpose()
-        .into_rr(*span)?;
+    // let _ = expected_sort
+    //     .map(|es| {
+    //         if is_name {
+    //             es.unify_rev(&MESSAGE.as_sort().into(), &state)
+    //         } else {
+    //             es.unify_rev(&signature.out(), &state)
+    //         }
+    //     })
+    //     .transpose()
+    //     .into_rr(*span)?;
 
     // parse further
     let n_args: Result<Vec<_>, _> = {
         // propagate the right state if it changed
         let state = match &formula_realm {
-            Some(r) => state.to_realm(r),
-            None => state,
+            Some(r) => *r,
+            None => state.get_realm(),
         };
         signature
             .args()
             .into_iter()
             .zip(args.into_iter())
-            .map(|(es, t)| t.parse(env, bvars, state, Some(es)))
+            .map(|(es, t)| t.parse(env, bvars, &state, Some(es)))
             .collect()
     };
     let n_args = n_args?;
@@ -497,7 +513,7 @@ fn parse_application<'b, 'a, 'bump>(
     let ifun = function.get_function();
     // if it's a name, cast it
     let formula = if let Some(name) = ifun.as_term_algebra().and_then(|f| f.as_name()) {
-        assert!(is_name);
+        // assert!(is_name);
         formula_realm = Some(Realm::Symbolic); // names are symbolic
         env.name_caster_collection
             .cast(name.target(), ifun.f_a(n_args))
@@ -509,6 +525,29 @@ fn parse_application<'b, 'a, 'bump>(
         (Realm::Evaluated, Some(Realm::Symbolic)) => env.evaluator.try_eval(formula).unwrap(),
         _ => formula,
     };
+
+    // check output sort
+    let out_sort = {
+        let mut out_sort = signature.out();
+        if out_sort.is_sosrt(NAME.as_sort()) {
+            out_sort = MESSAGE.as_sort().into()
+        }
+        if_chain::if_chain! {
+            if state.get_realm() == Realm::Evaluated;
+            if formula_realm == Some(Realm::Symbolic);
+            if let Some(s) = out_sort.as_option();
+            if let Some(es) = s.evaluated_sort();
+            then {
+                out_sort = es.into()
+            }
+        }
+        out_sort
+    };
+    expected_sort
+        .map(|es| es.unify_rev(&out_sort, state))
+        .transpose()
+        .into_rr(*span)?;
+
     Ok(formula)
 }
 
@@ -519,7 +558,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
         &self,
         env: &Environement<'bump, 'a>,
         bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
-        state: State<'_, 'a, 'bump>,
+        state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> Result<Self::R, E> {
         let Self {
@@ -598,7 +637,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
                 let input = INPUT.f_a([step_as_term.clone()]);
                 Ok(term
                     .owned_into_inner()
-                    .apply_substitution(0..=n, [input].iter().chain(args.iter()))
+                    .apply_substitution(0..n, args.iter().chain([&input]))
                     .into())
             }
             ast::InnerAppMacro::Other { name, args } => {
@@ -654,7 +693,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Infix<'a> {
         &self,
         env: &Environement<'bump, 'a>,
         bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
-        state: State<'_, 'a, 'bump>,
+        state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> Result<Self::R, E> {
         match self.operation {
@@ -665,7 +704,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Infix<'a> {
                     state,
                     bvars,
                     expected_sort,
-                    EQUALITY_TA_CACHE.enforce_variance(),
+                    &EQUALITY_TA_CACHE(),
                     &self.terms,
                 ),
                 _ => Self {
@@ -686,7 +725,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Infix<'a> {
                     state,
                     bvars,
                     expected_sort,
-                    EQUALITY_CACHE.enforce_variance(),
+                    &EQUALITY_CACHE(),
                     &self.terms,
                 ),
                 Realm::Symbolic => Self {
@@ -726,7 +765,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Infix<'a> {
                     state,
                     bvars,
                     expected_sort,
-                    IFF_CACHE.enforce_variance(),
+                    &IFF_CACHE(),
                     &self.terms,
                 ),
                 Realm::Symbolic => Self {
@@ -742,30 +781,28 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Infix<'a> {
             },
             ast::Operation::Implies => {
                 let function = match state.get_realm() {
-                    Realm::Symbolic => Deref::deref(&IMPLIES_TA_CACHE),
-                    Realm::Evaluated => Deref::deref(&IMPLIES_CACHE),
-                }
-                .enforce_variance();
+                    Realm::Symbolic => IMPLIES_TA_CACHE(),
+                    Realm::Evaluated => IMPLIES_CACHE(),
+                };
                 parse_application(
                     env,
                     &self.span,
                     state,
                     bvars,
                     expected_sort,
-                    function,
+                    &function,
                     &self.terms,
                 )
             }
             ast::Operation::Or | ast::Operation::And => {
                 let realm = state.get_realm();
                 let function = match (realm, self.operation) {
-                    (Realm::Symbolic, ast::Operation::And) => Deref::deref(&AND_TA_CACHE),
-                    (Realm::Symbolic, ast::Operation::Or) => Deref::deref(&OR_TA_CACHE),
-                    (Realm::Evaluated, ast::Operation::And) => Deref::deref(&AND_CACHE),
-                    (Realm::Evaluated, ast::Operation::Or) => Deref::deref(&OR_CACHE),
+                    (Realm::Symbolic, ast::Operation::And) => AND_TA_CACHE(),
+                    (Realm::Symbolic, ast::Operation::Or) => OR_TA_CACHE(),
+                    (Realm::Evaluated, ast::Operation::And) => AND_CACHE(),
+                    (Realm::Evaluated, ast::Operation::Or) => OR_CACHE(),
                     _ => unreachable!(),
-                }
-                .enforce_variance();
+                };
 
                 match realm {
                     Realm::Evaluated => parse_application(
@@ -774,7 +811,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Infix<'a> {
                         state,
                         bvars,
                         expected_sort,
-                        function,
+                        &function,
                         &self.terms,
                     ),
                     Realm::Symbolic => {
@@ -819,9 +856,18 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Term<'a> {
         &self,
         env: &Environement<'bump, 'a>,
         bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
-        state: State<'_, 'a, 'bump>,
+        state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> Result<Self::R, E> {
+        if cfg!(debug_assertions) {
+            if bvars.iter().map(|(_, v)| v.id).unique().count() != bvars.len() {
+                panic!(
+                    "there are duplicates:\n\t[{}]",
+                    bvars.iter().map(|(_, v)| v).join(", ")
+                )
+            }
+        }
+
         match_as_trait!(ast::InnerTerm, |x| in &self.inner => LetIn | If | Fndst | Quant | Application | Infix | Macro
                     {x.parse(env, bvars, state, expected_sort)})
     }

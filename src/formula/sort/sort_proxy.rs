@@ -15,6 +15,24 @@ pub enum InferenceError<'bump> {
     },
 }
 
+impl<'bump> InferenceError<'bump> {
+    /// the what is expected and what was recieved
+    pub fn flip(self) -> Self {
+        match self {
+            InferenceError::CantInfer { .. } => self,
+            InferenceError::SortMismatch {
+                proxy,
+                expected,
+                recieved,
+            } => InferenceError::SortMismatch {
+                proxy,
+                expected: recieved,
+                recieved: expected,
+            },
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Error)]
 pub enum UpdateError {
     #[error("the sort is read only")]
@@ -121,6 +139,14 @@ impl<'bump> SortProxy<'bump> {
         }
     }
 
+    pub fn unify_rev<'a>(
+        &self,
+        other: &Self,
+        realm: &impl KnowsRealm,
+    ) -> Result<Sort<'bump>, InferenceError<'bump>> {
+        self.unify(other, realm).map_err(|err| err.flip())
+    }
+
     pub fn set(&self, sort: Sort<'bump>) -> Result<&Self, UpdateError> {
         // *RefCell::borrow_mut(&self.0.as_ref()) = Some(sort);
         match self {
@@ -144,6 +170,13 @@ impl<'bump> SortProxy<'bump> {
 
     pub fn as_owned(&self) -> Option<Self> {
         self.as_option().map(Into::into)
+    }
+
+    /// check is `self` is already set to `other`
+    ///
+    /// similar to `maches` or `expect` but without modifying `self`
+    pub fn is_sosrt(&self, other: Sort<'bump>) -> bool {
+        self.as_option() == Some(other)
     }
 }
 
