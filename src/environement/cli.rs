@@ -71,7 +71,7 @@ pub struct Args {
 
     /// remove the bitstring functions, evaluation must then be handeled by somthing else
     #[arg(long)]
-    pub no_bitstring_fun: bool,
+    pub no_bitstring: bool,
 
     /// use `(assert (not ...))` instead of `(assert-not ...)` for the query
     #[arg(long)]
@@ -81,5 +81,5 @@ pub struct Args {
     ///
     /// NB: the program will crash it subterms are required somewhere
     #[arg(long, short)]
-    pub no_term_algebra: bool,
+    pub no_symbolic: bool,
 }

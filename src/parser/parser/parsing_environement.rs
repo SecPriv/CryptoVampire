@@ -271,7 +271,7 @@ pub fn parse_str<'a, 'bump>(
 
     let mut bvars = Vec::new();
     let assertions: Vec<_> = parse_asserts_with_bvars(&env, assertions, &mut bvars)?;
-    let lemmas: Vec<_> = parse_asserts_with_bvars(&env, lemmas, &mut bvars)?;
+    let lemmas = parse_asserts_with_bvars(&env, lemmas, &mut bvars)?;
     let query = parse_assert_with_bvars(&env, query, &mut bvars)?;
     let orders: Vec<_> = parse_orders_with_bvars(&env, orders, &mut bvars)?;
     let asserts_crypto = parse_asserts_crypto(&env, asserts_crypto)?;

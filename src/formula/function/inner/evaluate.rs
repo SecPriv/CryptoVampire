@@ -60,6 +60,10 @@ impl<'bump> Evaluator<'bump> {
     pub fn functions_mut(&mut self) -> &mut HashMap<Sort<'bump>, Function<'bump>> {
         &mut self.functions
     }
+
+    pub fn functions(&self) -> &HashMap<Sort<'bump>, Function<'bump>> {
+        &self.functions
+    }
 }
 
 impl<'bump> Default for Evaluator<'bump> {

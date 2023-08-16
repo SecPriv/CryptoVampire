@@ -587,6 +587,11 @@ impl<'bump> Function<'bump> {
         self.into()
     }
 
+    /// functions that **always** are datatypes
+    pub fn is_datatype(&self) -> bool {
+        self.is_step() || (self.as_term_algebra().map(|f| f.is_name()) == Some(true))
+    }
+
     force_lifetime!(Function, 'bump);
 }
 

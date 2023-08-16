@@ -2,16 +2,47 @@ mod ast;
 mod parser;
 // mod builders;
 
+pub(crate) use parser::parse_str;
+
 use std::ops::Index;
 
 use pest::{error::Error, Span};
 use pest_derive::Parser;
 
+pub const USED_KEYWORDS: &'static [&'static str] = &[
+    "and",
+    "or",
+    "not",
+    "ite",
+    "assert",
+    "assert-not",
+    "assert-theory",
+    "rewrite",
+    "subterm",
+    "True",
+    "False",
+    "true",
+    "false",
+    "implies",
+    "forall",
+    "exists",
+    "match",
+    "declare-datatype",
+    "declare-fun",
+    "declare-sort",
+    "define-fun",
+    "define-fun-rec",
+    "define-sort",
+    "Int",
+    "Real",
+    "Array"
+];
+
 #[derive(Parser, Debug)]
 #[grammar = "grammar.pest"]
 struct MainParser;
 
-type E = Error<Rule>;
+pub type E = Error<Rule>;
 
 #[inline(always)]
 /// imediadly crashes in debug mode (to get the stacktrace and everything)

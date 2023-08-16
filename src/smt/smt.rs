@@ -1,12 +1,16 @@
 use std::{
-    fmt::{self},
+    fmt::{self, Display},
     sync::Arc,
 };
 
 use crate::{
     environement::environement::Environement,
     formula::{
-        file_descriptior::axioms::{Axiom, Rewrite, RewriteKind},
+        file_descriptior::{
+            axioms::{Axiom, Rewrite, RewriteKind},
+            declare::Declaration,
+            GeneralFile,
+        },
         formula::RichFormula,
         function::{
             inner::{
@@ -19,8 +23,14 @@ use crate::{
         sort::Sort,
         variable::Variable,
     },
+    implvec,
     problem::subterm::kind::SubtermKind,
 };
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct SmtFile<'bump> {
+    content: Vec<Smt<'bump>>,
+}
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum SmtFormula<'bump> {
@@ -58,6 +68,10 @@ pub enum Smt<'bump> {
     AssertNot(SmtFormula<'bump>),
     DeclareFun(Function<'bump>),
     DeclareSort(Sort<'bump>),
+    DeclareSortAlias {
+        from: Sort<'bump>,
+        to: Sort<'bump>,
+    },
 
     DeclareSubtermRelation(Function<'bump>, Vec<Function<'bump>>),
 
@@ -69,7 +83,7 @@ pub enum Smt<'bump> {
     },
 
     DeclareDatatypes {
-        sorts: Arc<[Sort<'bump>]>,
+        sorts: Vec<Sort<'bump>>,
         cons: Vec<Vec<SmtCons<'bump>>>,
     },
     Comment(String),
@@ -155,6 +169,9 @@ impl<'bump> fmt::Display for Smt<'bump> {
                 write!(f, ") {})", fun.fast_outsort().unwrap())
             }
             Smt::DeclareSort(sort) => write!(f, "(declare-sort {} 0)", sort),
+            Smt::DeclareSortAlias { from, to } => {
+                write!(f, "(define-sort {} () {}", to.name(), from.name())
+            }
             Smt::DeclareSubtermRelation(fun, funs) => {
                 write!(f, "(declare-subterm-relation {} ", fun.name())?;
                 for fun in funs {
@@ -360,5 +377,73 @@ impl<'bump> Smt<'bump> {
                 }
             }
         }
+    }
+
+    pub fn from_declaration(_env: &Environement<'bump>, dec: Declaration<'bump>) -> Self {
+        match dec {
+            Declaration::Sort(s) => Self::DeclareSort(s),
+            Declaration::FreeFunction(fun) => Self::DeclareFun(fun),
+            Declaration::DataTypes(dt) => {
+                let (sorts, cons) = dt
+                    .into_iter()
+                    .map(|dt| {
+                        (
+                            dt.sort,
+                            dt.constructor_destructors
+                                .into_iter()
+                                .map(|cd| SmtCons {
+                                    fun: cd.constructor,
+                                    dest: cd.destructor,
+                                })
+                                .collect(),
+                        )
+                    })
+                    .unzip();
+                Self::DeclareDatatypes { sorts, cons }
+            }
+            Declaration::Subterm(sub) => {
+                Self::DeclareSubtermRelation(sub.function, sub.comutative_functions)
+            }
+            Declaration::SortAlias { from, to } => Self::DeclareSortAlias { from, to },
+        }
+    }
+}
+
+impl<'bump> SmtFile<'bump> {
+    pub fn new(content: implvec!(Smt<'bump>)) -> Self {
+        Self {
+            content: content.into_iter().collect(),
+        }
+    }
+
+    pub fn content(&self) -> &[Smt<'bump>] {
+        self.content.as_ref()
+    }
+
+    pub fn content_mut(&mut self) -> &mut Vec<Smt<'bump>> {
+        &mut self.content
+    }
+
+    pub fn from_general_file(
+        env: &Environement<'bump>,
+        GeneralFile {
+            assertions,
+            declarations,
+        }: GeneralFile<'bump>,
+    ) -> Self {
+        let declarations = declarations
+            .into_iter()
+            .map(|d| Smt::from_declaration(env, d));
+        let assertions = assertions.into_iter().map(|ax| Smt::from_axiom(env, ax));
+        let other = [Smt::CheckSat];
+
+        let content = itertools::chain!(declarations, assertions, other).collect();
+        Self { content }
+    }
+}
+
+impl<'bump> Display for SmtFile<'bump> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.content.iter().try_for_each(|smt| writeln!(f, "{smt}"))
     }
 }

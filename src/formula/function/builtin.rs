@@ -19,6 +19,23 @@ use super::inner::{
     predicate::Predicate,
 };
 
+macro_rules! builtin {
+    ($($name:ident),* $(,)?) => {
+        const __BUILT_IN_FUNCTION_LENGTH : usize = builtin!(@count $($name,)*);
+
+        #[dynamic]
+        pub static BUILT_IN_FUNCTIONS: [Function<'static>; __BUILT_IN_FUNCTION_LENGTH]
+            = [$($name.clone()),*];
+    };
+
+    (@count ) => {0};
+
+    (@count $a:tt, $($b:tt,)*) => {
+        1 + builtin!(@count $($b,)*)
+    };
+
+}
+
 #[dynamic]
 pub static TRUE_F: Function<'static> = new_static_function(InnerFunction::Bool(
     Booleans::Connective(booleans::Connective::True),
@@ -164,3 +181,31 @@ pub static EMPTY: Function<'static> = (&EMPTY_TUPLE_FUNCTION).main.clone();
 
 #[dynamic]
 pub static EMPTY_EVALUATED: Function<'static> = (&EMPTY_TUPLE_FUNCTION).eval.clone();
+
+builtin!(
+    AND,
+    AND_TA,
+    EMPTY,
+    EMPTY_EVALUATED,
+    EQUALITY,
+    EQUALITY_TA,
+    FALSE_F,
+    FALSE_F_TA,
+    TRUE_F,
+    TRUE_F_TA,
+    HAPPENS,
+    IF_THEN_ELSE,
+    IF_THEN_ELSE_TA,
+    IFF,
+    IFF_TA,
+    IMPLIES,
+    IMPLIES_TA,
+    INPUT,
+    LESS_THAN_STEP,
+    MESSAGE_TO_BITSTRING,
+    NAME_TO_MESSAGE,
+    NOT,
+    NOT_TA,
+    OR,
+    OR_TA,
+);

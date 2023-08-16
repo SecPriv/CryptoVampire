@@ -142,4 +142,8 @@ impl<'bump> Protocol<'bump> {
             ordering,
         }
     }
+
+    pub fn is_statefull(&self) -> bool {
+        !self.memory_cells().is_empty()
+    }
 }

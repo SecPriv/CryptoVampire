@@ -41,6 +41,6 @@ impl<'bump> ConstructorDestructor<'bump> {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Subterm<'bump> {
-    pub name: String,
-    pub functions: Vec<Function<'bump>>,
+    pub function: Function<'bump>,
+    pub comutative_functions: Vec<Function<'bump>>,
 }

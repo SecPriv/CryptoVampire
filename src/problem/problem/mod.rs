@@ -1,6 +1,12 @@
 // pub mod builder;
+mod pbl_iterator;
+pub use pbl_iterator::PblIterator;
 
-use std::{cell::RefCell, collections::HashMap, sync::Arc};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, VecDeque},
+    sync::Arc,
+};
 
 use crate::{
     container::ScopedContainer,
@@ -9,6 +15,7 @@ use crate::{
         file_descriptior::{
             axioms::Axiom,
             declare::{ConstructorDestructor, DataType, Declaration},
+            GeneralFile,
         },
         formula::ARichFormula,
         function::inner::{evaluate::Evaluator, term_algebra::name::NameCasterCollection},
@@ -16,6 +23,7 @@ use crate::{
         sort::Sort,
         variable::Variable,
     },
+    implvec, parser,
 };
 
 use super::{
@@ -36,11 +44,21 @@ pub struct Problem<'bump> {
     pub protocol: Protocol<'bump>,
     pub assertions: Vec<ARichFormula<'bump>>,
     pub crypto_assertions: Vec<CryptoAssumption<'bump>>,
-    pub lemmas: Vec<ARichFormula<'bump>>,
+    pub lemmas: VecDeque<ARichFormula<'bump>>,
     pub query: ARichFormula<'bump>,
 }
 
 impl<'bump> Problem<'bump> {
+    pub fn try_from_str<'a>(
+        container: &'bump ScopedContainer<'bump>,
+        sort_hash: implvec!(Sort<'bump>),
+        function_hash: implvec!(Function<'bump>),
+        extra_names: implvec!(String),
+        str: &'a str,
+    ) -> Result<Self, parser::E> {
+        parser::parse_str(container, sort_hash, function_hash, extra_names, str)
+    }
+
     pub fn list_top_level_terms<'a>(&'a self) -> impl Iterator<Item = &'a ARichFormula<'bump>>
     where
         'bump: 'a,
@@ -64,6 +82,17 @@ impl<'bump> Problem<'bump> {
     pub fn container(&self) -> &'bump ScopedContainer<'bump> {
         self.container
     }
+
+    pub fn into_general_file(&self, env: &Environement<'bump>) -> GeneralFile<'bump> {
+        let mut assertions = Vec::new();
+        let mut declarations = Vec::new();
+        self.generate(&mut assertions, &mut declarations, env, self);
+
+        GeneralFile {
+            assertions,
+            declarations,
+        }
+    }
 }
 
 impl<'bump> Generator<'bump> for Problem<'bump> {
@@ -81,7 +110,10 @@ impl<'bump> Generator<'bump> for Problem<'bump> {
             // let mut datatypes = Vec::new();
             let mut datatypes = HashMap::new();
             for &fun in &self.functions {
-                if fun.is_term_algebra() && !env.not_as_term_algebra() {
+                // declare the function as datatypes if
+                //  - it must always be a datatype
+                //  - it's a symbolic term and we're in the symbolic realm
+                if fun.is_datatype() || (fun.is_term_algebra() && env.is_symbolic_realm()) {
                     let constr: &mut Vec<_> =
                         datatypes.entry(fun.fast_outsort().unwrap()).or_default();
                     constr.push(ConstructorDestructor::new_unused(self.container, fun))
