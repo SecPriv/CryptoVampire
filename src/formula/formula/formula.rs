@@ -231,8 +231,8 @@ impl<'bump> RichFormula<'bump> {
             content: self.into(),
         }
         .expand(
-            ptcl.steps.iter().cloned(),
-            &ptcl.graph,
+            ptcl.steps().iter().cloned(),
+            ptcl.graph(),
             with_args,
             deeper_kind,
         )

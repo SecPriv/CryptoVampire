@@ -23,15 +23,22 @@ pub struct Protocol<'bump> {
     /// if `A(...)` appears in the step `B` or in an
     /// assignement of the cell `B`, then `B` "depends"
     /// on `A`
-    pub graph: DependancyGraph<'bump>,
+    graph: DependancyGraph<'bump>,
     /// the [Step]s
     ///
     /// `init` should be the first step
-    pub steps: Vec<Step<'bump>>,
+    steps: Vec<Step<'bump>>,
     /// the [MemoryCell]s
-    pub memory_cells: Vec<MemoryCell<'bump>>,
+    memory_cells: Vec<MemoryCell<'bump>>,
     /// Extra ordering information between steps
-    pub ordering: Vec<ARichFormula<'bump>>,
+    ordering: Vec<ARichFormula<'bump>>,
+}
+
+pub struct ProtocolStruct<'a, 'bump> {
+    pub graph: &'a DependancyGraph<'bump>,
+    pub steps: &'a [Step<'bump>],
+    pub memory_cells: &'a [MemoryCell<'bump>],
+    pub ordering: &'a [ARichFormula<'bump>],
 }
 
 impl<'bump> Protocol<'bump> {
@@ -41,10 +48,16 @@ impl<'bump> Protocol<'bump> {
         cells: implvec!(MemoryCell<'bump>),
         ordering: implvec!(ARichFormula<'bump>),
     ) -> Self {
-        let steps = steps.into_iter().collect_vec();
+        let mut steps = steps.into_iter().collect_vec();
         let memory_cells = cells.into_iter().collect_vec();
         let ordering = ordering.into_iter().collect_vec();
         let graph = DependancyGraph::new(steps.clone(), memory_cells.iter().cloned());
+
+        let i = steps
+            .iter()
+            .position(|s| s.is_init_step())
+            .expect("no init step !");
+        steps.swap(0, i);
 
         Self {
             graph,
@@ -97,5 +110,36 @@ impl<'bump> Protocol<'bump> {
 
     pub fn init_step(&self) -> Step<'bump> {
         *self.steps.first().unwrap()
+    }
+
+    pub fn graph(&self) -> &DependancyGraph<'bump> {
+        &self.graph
+    }
+
+    pub fn steps(&self) -> &[Step<'bump>] {
+        self.steps.as_ref()
+    }
+
+    pub fn memory_cells(&self) -> &[MemoryCell<'bump>] {
+        self.memory_cells.as_ref()
+    }
+
+    pub fn ordering(&self) -> &[ARichFormula<'bump>] {
+        self.ordering.as_ref()
+    }
+
+    pub fn as_struct(&self) -> ProtocolStruct<'_, 'bump> {
+        let Protocol {
+            graph,
+            steps,
+            memory_cells,
+            ordering,
+        } = self;
+        ProtocolStruct {
+            graph,
+            steps,
+            memory_cells,
+            ordering,
+        }
     }
 }

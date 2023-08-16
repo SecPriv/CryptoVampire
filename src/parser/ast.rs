@@ -1,11 +1,12 @@
 use std::{fmt::Display, slice::Iter};
 
+use const_format::{formatcp, concatcp};
 use derivative::Derivative;
 use itertools::Itertools;
 use pest::{error::Error, iterators::Pair, Parser, Position, Span};
 use static_init::dynamic;
 
-use crate::{destvec, f, utils::vecref::VecRef};
+use crate::{destvec, f, utils::vecref::VecRef, problem::step::INIT_STEP_NAME};
 
 use super::*;
 
@@ -110,9 +111,11 @@ macro_rules! dest_rule {
     };
 }
 
+const INIT_STEP_STRING : &'static str = concatcp!("step ", INIT_STEP_NAME, "(){true}{empty}");
+
 #[dynamic]
 pub static INIT_STEP_AST: Step<'static> = {
-    let ASTList { content, .. } = "step init(){true}{empty}".try_into().unwrap();
+    let ASTList { content, .. } = INIT_STEP_STRING.try_into().unwrap();
     match content.into_iter().next() {
         Some(AST::Step(s)) => *s,
         _ => unreachable!(),
@@ -846,7 +849,6 @@ impl<'a, 'b> IntoIterator for &'b TypedArgument<'a> {
 }
 
 pub mod extra {
-    use enum_dispatch::enum_dispatch;
     use pest::Span;
 
     use crate::{formula::sort::builtins::STEP, utils::string_ref::StrRef};
@@ -927,7 +929,6 @@ pub mod extra {
         }
     }
 
-    #[enum_dispatch]
     pub trait AsFunction<'a, 'b> {
         fn name(self) -> SnN<'a, 'b>;
         fn args(self) -> Vec<SnN<'a, 'b>>;

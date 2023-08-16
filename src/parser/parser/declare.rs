@@ -122,6 +122,12 @@ pub fn fetch_all<'str, 'bump>(
                 declare_step(env, step)?;
                 if step.name.name() == "init" {
                     did_initilise_init = true;
+                    if step.args().len() >= 1 {
+                        return err(merr(
+                            step.args.span,
+                            "the init step should have any arguments".to_string(),
+                        ));
+                    }
                 }
                 Ok(())
             }

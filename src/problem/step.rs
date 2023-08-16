@@ -41,6 +41,8 @@ use crate::{
 //     }
 // }
 
+pub const INIT_STEP_NAME: &'static str = "init";
+
 pub type Step<'bump> = Reference<'bump, InnerStep<'bump>>;
 impl<'bump> Containable<'bump> for InnerStep<'bump> {}
 // #[derive(Hash, PartialEq, Eq, Clone, Copy)]
@@ -276,6 +278,11 @@ impl<'bump> Step<'bump> {
         Self::strict_before(a.clone(), b.clone()) | meq(a, b)
     }
 
+    /// is it the init step
+    pub fn is_init_step(&self) -> bool {
+        self.name() ==  INIT_STEP_NAME
+    }
+
     // return `self` as a formula of type `U` using the variables of [free_variables]
     // pub fn as_formula<T, U>(&self, ctx: &T) -> U
     // where
@@ -300,6 +307,7 @@ impl<'bump> Step<'bump> {
     //     self.precise_as_ref()
     // }
 }
+
 
 impl<'a, 'bump: 'a> RefNamed<'a> for &'a InnerStep<'bump> {
     fn name_ref(&self) -> StrRef<'a> {

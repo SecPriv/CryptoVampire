@@ -286,7 +286,7 @@ where
         keep_guard: bool,
         deeper_kind: DeeperKinds,
     ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
-        let steps = &ptcl.steps;
+        let steps = ptcl.steps();
 
         // let pile = vec![(ExpantionState::None, m)];
         let pile = repeat_n_zip(ExpantionState::None, m).collect_vec();
@@ -300,7 +300,7 @@ where
                     state: state.clone(),
                     content: f.clone(),
                 }
-                .expand(steps.iter().cloned(), &ptcl.graph, false, deeper_kind)
+                .expand(steps.iter().cloned(), ptcl.graph(), false, deeper_kind)
                 .into_iter()
                 .map(|ec| ec.as_tuple());
                 let SubtermResult { unifier, nexts } = self.aux.eval_and_next(x, &f);

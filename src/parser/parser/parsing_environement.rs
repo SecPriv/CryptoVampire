@@ -193,65 +193,6 @@ impl<'bump, 'a> Environement<'bump, 'a> {
         self.sort_hash.values().cloned()
     }
 
-    pub fn parse_str(
-        container: &'bump ScopedContainer<'bump>,
-        sort_hash: implvec!(Sort<'bump>),
-        function_hash: implvec!(Function<'bump>),
-        extra_names: implvec!(String),
-        str: &'a str,
-    ) -> Result<Problem<'bump>, E> {
-        let ast: ASTList<'a> = str.try_into()?;
-        let mut env = Environement::new(container, sort_hash, function_hash, extra_names);
-
-        declare_sorts(&mut env, &ast)?;
-
-        let mut assertions = Vec::new();
-        let mut lemmas = Vec::new();
-        let mut orders = Vec::new();
-        let mut asserts_crypto = Vec::new();
-
-        let query = fetch_all(
-            &mut env,
-            &ast,
-            &mut assertions,
-            &mut lemmas,
-            &mut orders,
-            &mut asserts_crypto,
-        )?;
-
-        parse_steps(&env, env.functions.values().filter_map(|f| f.as_step()))?;
-        parse_cells(
-            &env,
-            env.functions.values().filter_map(|f| f.as_memory_cell()),
-        )?;
-        assert!(env.is_valid());
-
-        let mut bvars = Vec::new();
-        let assertions: Vec<_> = parse_asserts_with_bvars(&env, assertions, &mut bvars)?;
-        let lemmas: Vec<_> = parse_asserts_with_bvars(&env, lemmas, &mut bvars)?;
-        let query = parse_assert_with_bvars(&env, query, &mut bvars)?;
-        let orders: Vec<_> = parse_orders_with_bvars(&env, orders, &mut bvars)?;
-        let asserts_crypto = parse_asserts_crypto(&env, asserts_crypto)?;
-        let _ = bvars;
-
-        let protocol = Protocol::new(env.get_steps(), env.get_cells(), orders);
-
-        let pbl = Problem {
-            functions: env.get_functions().collect(),
-            sorts: env.get_sorts().collect(),
-            evaluator: Arc::new(env.evaluator.clone()),
-            name_caster: Arc::new(env.name_caster_collection.clone()),
-            protocol,
-            assertions,
-            lemmas,
-            query,
-            container,
-            crypto_assertions: asserts_crypto,
-        };
-
-        Ok(pbl)
-    }
-
     pub fn find_function<'b>(
         &'b self,
         span: Span<'a>,
@@ -293,4 +234,63 @@ impl<'a, 'bump> KnowsRealm for Environement<'bump, 'a> {
     fn get_realm(&self) -> Realm {
         Realm::Evaluated
     }
+}
+
+pub fn parse_str<'a, 'bump>(
+    container: &'bump ScopedContainer<'bump>,
+    sort_hash: implvec!(Sort<'bump>),
+    function_hash: implvec!(Function<'bump>),
+    extra_names: implvec!(String),
+    str: &'a str,
+) -> Result<Problem<'bump>, E> {
+    let ast: ASTList<'a> = str.try_into()?;
+    let mut env = Environement::new(container, sort_hash, function_hash, extra_names);
+
+    declare_sorts(&mut env, &ast)?;
+
+    let mut assertions = Vec::new();
+    let mut lemmas = Vec::new();
+    let mut orders = Vec::new();
+    let mut asserts_crypto = Vec::new();
+
+    let query = fetch_all(
+        &mut env,
+        &ast,
+        &mut assertions,
+        &mut lemmas,
+        &mut orders,
+        &mut asserts_crypto,
+    )?;
+
+    parse_steps(&env, env.functions.values().filter_map(|f| f.as_step()))?;
+    parse_cells(
+        &env,
+        env.functions.values().filter_map(|f| f.as_memory_cell()),
+    )?;
+    assert!(env.is_valid());
+
+    let mut bvars = Vec::new();
+    let assertions: Vec<_> = parse_asserts_with_bvars(&env, assertions, &mut bvars)?;
+    let lemmas: Vec<_> = parse_asserts_with_bvars(&env, lemmas, &mut bvars)?;
+    let query = parse_assert_with_bvars(&env, query, &mut bvars)?;
+    let orders: Vec<_> = parse_orders_with_bvars(&env, orders, &mut bvars)?;
+    let asserts_crypto = parse_asserts_crypto(&env, asserts_crypto)?;
+    let _ = bvars;
+
+    let protocol = Protocol::new(env.get_steps(), env.get_cells(), orders);
+
+    let pbl = Problem {
+        functions: env.get_functions().collect(),
+        sorts: env.get_sorts().collect(),
+        evaluator: Arc::new(env.evaluator.clone()),
+        name_caster: Arc::new(env.name_caster_collection.clone()),
+        protocol,
+        assertions,
+        lemmas,
+        query,
+        container,
+        crypto_assertions: asserts_crypto,
+    };
+
+    Ok(pbl)
 }

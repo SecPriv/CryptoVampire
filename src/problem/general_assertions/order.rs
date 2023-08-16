@@ -56,6 +56,6 @@ pub fn generate<'bump>(
         ]
         .into_iter()
         .map(Axiom::theory)
-        .chain(pbl.protocol.ordering.iter().cloned().map(Axiom::base)),
+        .chain(pbl.protocol.ordering().iter().cloned().map(Axiom::base)),
     );
 }
