@@ -104,6 +104,9 @@ impl<'bump> Generator<'bump> for Problem<'bump> {
         env: &Environement<'bump>,
         _: &Problem<'bump>,
     ) {
+        debug_print::debug_println!("genrating problem file...");
+
+        debug_print::debug_println!("[G]\t- sort declarations...");
         declarations.extend(self.sorts.iter().map(|s| Declaration::Sort(*s)));
 
         {
@@ -133,16 +136,25 @@ impl<'bump> Generator<'bump> for Problem<'bump> {
                     .collect(),
             ));
         }
+        debug_print::debug_println!("[G]\t\t[DONE]");
 
+        debug_print::debug_println!("[G]\t- ordering...");
         order::generate(assertions, declarations, env, self);
+        debug_print::debug_println!("[G]\t\t[DONE]");
 
+        debug_print::debug_println!("[G]\t- evaluate...");
         general_assertions::evaluate::generate(assertions, declarations, env, self);
+        debug_print::debug_println!("[G]\t\t[DONE]");
 
+        debug_print::debug_println!("[G]\t- crypto...");
         assertions.push(Axiom::Comment("crypto".into()));
         for crypto in &self.crypto_assertions {
+            debug_print::debug_println!("{:?}", crypto);
             crypto.generate(assertions, declarations, env, self)
         }
+        debug_print::debug_println!("[G]\t\t[DONE]");
 
+        debug_print::debug_println!("[G]\t- user assertions...");
         assertions.push(Axiom::Comment("user asserts".into()));
         assertions.extend(
             self.assertions
@@ -151,10 +163,15 @@ impl<'bump> Generator<'bump> for Problem<'bump> {
                 .map(|a| propagate_evaluate(a.as_ref(), &self.evaluator))
                 .map(Axiom::base),
         );
+        debug_print::debug_println!("[G]\t\t[DONE]");
 
+        debug_print::debug_println!("[G]\t- query...");
         assertions.push(Axiom::Comment("query".into()));
         assertions.push(Axiom::Query {
             formula: propagate_evaluate(self.query.as_ref(), &self.evaluator),
-        })
+        });
+
+        debug_print::debug_println!("[G]\t\t[DONE]");
+        debug_print::debug_println!("generation done");
     }
 }

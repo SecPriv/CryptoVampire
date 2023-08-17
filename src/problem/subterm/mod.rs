@@ -198,7 +198,7 @@ where
         let max_var = max_var + 1;
         let x_f = x.into_aformula();
         funs.map(move |fun| {
-            assert!(!fun.is_default_subterm());
+            debug_assert!(!fun.is_default_subterm() || self.ignored_functions.contains(&fun));
 
             let f_sorts = fun
                 .fast_insort()

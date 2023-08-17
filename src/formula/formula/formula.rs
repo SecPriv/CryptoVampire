@@ -38,10 +38,13 @@ pub enum RichFormula<'bump> {
 
 impl<'bump> RichFormula<'bump> {
     pub fn get_sort(&self) -> Result<Sort<'bump>, SortedError> {
-        println!("  checksort -> {self}");
+        debug_print::debug_println!("  checksort -> {self}");
         match self {
             RichFormula::Var(Variable { sort, .. }) => Ok(*sort),
             RichFormula::Fun(fun, args) => {
+                if let Some(s) = fun.signature().out().as_option() {
+                    return Ok(s);
+                }
                 let args: Result<Vec<_>, _> = args.iter().map(|arg| arg.get_sort()).collect();
                 fun.sort(args?.as_slice())
             }

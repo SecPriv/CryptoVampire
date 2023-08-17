@@ -15,10 +15,10 @@ use crate::{
     implvec,
     parser::{
         merr,
-        parser::{parsable_trait::Parsable, state::State, CellCache, FunctionCache},
+        parser::{parsable_trait::Parsable, state::State, CellCache, FunctionCache, NamedVariable},
         E,
     },
-    problem::{cell::Assignement, step::InnerStep},
+    problem::{cell::Assignement, step::InnerStep}, environement::traits::Realm,
 };
 
 use super::super::{super::ast, Environement, StepCache};
@@ -30,16 +30,15 @@ use super::super::{super::ast, Environement, StepCache};
 /// The function returns a [InnerStep] to *maybe* mutlipthread things on day...
 fn parse_step<'bump, 'str>(
     env: &Environement<'bump, 'str>,
-    step: &StepCache<'str, 'bump>,
+    step_cache: &StepCache<'str, 'bump>,
     // name: &str,
 ) -> Result<InnerStep<'bump>, E> {
     let StepCache {
-        args,
-        args_name,
         ast,
         function,
         step,
-    } = step;
+        ..
+    } = step_cache;
 
     let ast::Step {
         message,
@@ -52,42 +51,16 @@ fn parse_step<'bump, 'str>(
     let name = name.name();
 
     // symbolic
-    let state = State::from(env).to_symbolic();
+    let state = Realm::Symbolic;
     // the free variables used in the step (i.e., the arguments)
-    let free_variables: Arc<[_]> = args
-        .iter()
-        .enumerate()
-        .map(|(id, &sort)| Variable { id, sort })
-        .collect();
-    // ALL the variables used in the step. We start the free ones
-    // let mut used_variables: Vec<_> = free_variables.iter().cloned().collect();
-    // the variable pile. i.e., free_varible + "in"
-    let input_var_id = free_variables.len();
-    let mut bvars = args_name
-        .iter()
-        .cloned()
-        .zip(free_variables.iter().cloned())
-        .chain([(
-            "in",
-            Variable {
-                id: input_var_id,
-                sort: MESSAGE.clone(),
-            },
-        )])
-        .map(|(name, var)| (name, var.into()))
-        .collect_vec();
+    let free_variables: Arc<[_]> = step_cache.args_vars().map(|v| v.variable).collect();
+
+    let mut bvars = step_cache.args_vars_with_input().map_into().collect_vec();
     // the length of the "static" part of `bvar`, to ease reseting it
     let n = bvars.len();
 
     // substitution to replace the "in" variable
-    let substitution = OneVarSubst {
-        id: input_var_id,
-        f: INPUT.f_a([function.f_a(
-            args.iter()
-                .enumerate()
-                .map(|(id, &sort)| Variable { id, sort }),
-        )]),
-    };
+    let substitution = step_cache.substitution_input();
 
     //---- parse
     // message

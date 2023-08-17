@@ -51,6 +51,11 @@ pub enum SortProxy<'bump> {
 }
 
 impl<'bump> SortProxy<'bump> {
+
+    pub fn is_known(&self) -> bool {
+        self.as_option().is_some()
+    }
+
     /// Check or set that `self` is `s`.
     ///
     /// The error is set up so that it expects `self` to be `s`

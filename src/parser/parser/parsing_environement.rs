@@ -40,7 +40,7 @@ pub struct Macro<'bump, 'a> {
     pub content: ast::Term<'a>,
 }
 
-pub use cache::{CellCache, FunctionCache, StepCache};
+pub use cache::{CellCache, FunctionCache, StepCache, NamedVariable};
 
 use super::{declare_sorts, fetch_all};
 
@@ -243,9 +243,14 @@ pub fn parse_str<'a, 'bump>(
     extra_names: implvec!(String),
     str: &'a str,
 ) -> Result<Problem<'bump>, E> {
+    debug_print::debug_println!("[P] parsing...");
+
+    debug_print::debug_println!("[P] \tinto ast...");
     let ast: ASTList<'a> = str.try_into().debug_continue()?;
     let mut env = Environement::new(container, sort_hash, function_hash, extra_names);
+    debug_print::debug_println!("[P] \t[DONE]");
 
+    debug_print::debug_println!("[P] \t- sorts...");
     declare_sorts(&mut env, &ast).debug_continue()?;
 
     let mut assertions = Vec::new();
@@ -253,6 +258,7 @@ pub fn parse_str<'a, 'bump>(
     let mut orders = Vec::new();
     let mut asserts_crypto = Vec::new();
 
+    debug_print::debug_println!("[P] \t- fetch all...");
     let query = fetch_all(
         &mut env,
         &ast,
@@ -262,15 +268,21 @@ pub fn parse_str<'a, 'bump>(
         &mut asserts_crypto,
     )
     .debug_continue()?;
+    debug_print::debug_println!("[P] \t[DONE]");
 
+    debug_print::debug_println!("[P] \t- parse steps...");
     parse_steps(&env, env.functions.values().filter_map(|f| f.as_step())).debug_continue()?;
+    debug_print::debug_println!("[P] \t[DONE]");
+    debug_print::debug_println!("[P] \t- parse cells...");
     parse_cells(
         &env,
         env.functions.values().filter_map(|f| f.as_memory_cell()),
     )
     .debug_continue()?;
+    debug_print::debug_println!("[P] \t[DONE]");
     assert!(env.is_valid());
 
+    debug_print::debug_println!("[P] \t- parse assertions...");
     let mut bvars = Vec::new();
     let assertions: Vec<_> = parse_asserts_with_bvars(&env, assertions, &mut bvars)?;
     let lemmas = parse_asserts_with_bvars(&env, lemmas, &mut bvars)?;
@@ -278,9 +290,13 @@ pub fn parse_str<'a, 'bump>(
     let orders: Vec<_> = parse_orders_with_bvars(&env, orders, &mut bvars)?;
     let asserts_crypto = parse_asserts_crypto(&env, asserts_crypto)?;
     let _ = bvars;
+    debug_print::debug_println!("[P] \t[DONE]");
 
+    debug_print::debug_println!("[P] \t- into problem...");
     let protocol = Protocol::new(env.get_steps(), env.get_cells(), orders);
+    debug_print::debug_println!("[P] \t[DONE]");
 
+    debug_print::debug_println!("[P] \tparsing done");
     let pbl = Problem {
         functions: env.get_functions().collect(),
         sorts: env.get_sorts().collect(),

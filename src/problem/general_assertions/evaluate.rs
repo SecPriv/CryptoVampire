@@ -18,6 +18,7 @@ use crate::{
                 quantifier::{InnerQuantifier, Quantifier},
                 TermAlgebra,
             },
+            traits::FixedSignature,
             Function, InnerFunction,
         },
         sort::{
@@ -208,9 +209,17 @@ fn generate_connectives<'bump>(
             })))
         }
         Connective::BaseConnective(c) => {
-            assertions.push(Axiom::base(mforall!(a!0:cond, b!0:cond; {
-                pbl.evaluator.eval(function.f_a([a, b])) >>
-                    c.evaluated().f_a([pbl.evaluator.eval(a), pbl.evaluator.eval(b)])
+            let signature = c.as_fixed_signature();
+            let f_eval = c.evaluated();
+            let args = signature
+                .args
+                .iter()
+                .enumerate()
+                .map(|(id, &sort)| Variable { id, sort })
+                .collect_vec();
+            assertions.push(Axiom::base(mforall!(args.clone(), {
+                pbl.evaluator.eval(function.f_a(&args))
+                    >> f_eval.f_a(args.iter().map(|v| pbl.evaluator.eval(v)))
             })))
         }
     }

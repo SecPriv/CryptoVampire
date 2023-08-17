@@ -107,9 +107,17 @@ impl<'bump> Sorted<'bump> for Function<'bump> {
     fn sort(&self, args: &[Sort<'bump>]) -> Result<Sort<'bump>, SortedError> {
         let s = self.signature();
         let partial_s = OnlyArgsSignature::new(args);
-        println!("{}{}", self.name(), self.signature().as_display());
+        debug_print::debug_println!(
+            "function check sort:\n\t{}{}\n\targs:[{}]",
+            self.name(),
+            self.signature().as_display(),
+            args.iter().join(", ")
+        );
         s.unify(&partial_s, &Realm::default()).debug_continue()?;
-        s.out().as_option().ok_or(SortedError::Impossible).debug_continue()
+        s.out()
+            .as_option()
+            .ok_or(SortedError::Impossible)
+            .debug_continue()
     }
 }
 

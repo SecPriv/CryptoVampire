@@ -2,6 +2,7 @@ use std::{borrow::Cow, fmt::Display, ops::Deref};
 mod cached_builtins;
 
 use itertools::Itertools;
+use pest::Span;
 
 use crate::{
     environement::traits::{KnowsRealm, Realm},
@@ -11,7 +12,7 @@ use crate::{
         formula::{ARichFormula, RichFormula},
         function::{
             self,
-            builtin::{IF_THEN_ELSE, IF_THEN_ELSE_TA, INPUT},
+            builtin::{IF_THEN_ELSE, IF_THEN_ELSE_TA, INPUT, NAME_TO_MESSAGE},
             inner::term_algebra::TermAlgebra,
             signature::Signature,
             Function,
@@ -28,7 +29,7 @@ use crate::{
         ast::{self, extra::SnN, Term, VariableBinding},
         err, merr, IntoRuleResult, E,
     },
-    utils::maybe_owned::MOw,
+    utils::{maybe_owned::MOw, traits::NicerError},
 };
 
 use self::cached_builtins::*;
@@ -578,10 +579,10 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
                         )
                 }?;
 
-                let step = env
+                let step_cache = env
                     .functions
                     .get(app.name())
-                    .and_then(|fc| fc.as_step_ast())
+                    .and_then(|fc| fc.as_step())
                     .ok_or_else(|| {
                         merr(
                             app.name_span(),
@@ -589,55 +590,57 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
                         )
                     })?;
 
-                let nbvars: Result<Vec<_>, _> = step
-                    .args
-                    .into_iter()
-                    .enumerate()
-                    .map(|(i, v)| {
-                        let name = v.variable.name();
-                        let sort = env.sort_hash.get(v.type_name.name()).ok_or_else(|| {
-                            merr(
-                                v.type_name.name_span(),
-                                f!("{} is not a known type", v.type_name.name()),
-                            )
-                        })?;
-                        Ok((
-                            name,
-                            VarProxy {
-                                id: i + 1,
-                                sort: sort.into(),
-                            },
-                        ))
-                    })
-                    .chain([Ok((
-                        "in",
-                        VarProxy {
-                            id: 0,
-                            sort: MESSAGE.as_sort().into(),
-                        },
-                    ))])
-                    .collect();
-                let mut nbvars = nbvars?;
-                let n = bvars.len();
+                let mut nbvars = step_cache.args_vars_with_input().map_into().collect();
+                // let nbvars: Result<Vec<_>, _> = step
+                //     .args
+                //     .into_iter()
+                //     .enumerate()
+                //     .map(|(i, v)| {
+                //         let name = v.variable.name();
+                //         let sort = env.sort_hash.get(v.type_name.name()).ok_or_else(|| {
+                //             merr(
+                //                 v.type_name.name_span(),
+                //                 f!("{} is not a known type", v.type_name.name()),
+                //             )
+                //         })?;
+                //         Ok((
+                //             name,
+                //             VarProxy {
+                //                 id: i + 1,
+                //                 sort: sort.into(),
+                //             },
+                //         ))
+                //     })
+                //     .chain([Ok((
+                //         "in",
+                //         VarProxy {
+                //             id: 0,
+                //             sort: MESSAGE.as_sort().into(),
+                //         },
+                //     ))])
+                //     .collect();
+                // let mut nbvars = nbvars?;
+                // let n = bvars.len();
 
-                let (to_parse, n_es) = match inner {
-                    ast::InnerAppMacro::Msg(_) => (&step.message, MESSAGE.as_sort()),
-                    ast::InnerAppMacro::Cond(_) => (&step.condition, CONDITION.as_sort()),
+                let (to_parse, _) = match inner {
+                    ast::InnerAppMacro::Msg(_) => (&step_cache.ast.message, MESSAGE.as_sort()),
+                    ast::InnerAppMacro::Cond(_) => (&step_cache.ast.condition, CONDITION.as_sort()),
                     _ => unreachable!(),
                 };
-                if let Some(es) = expected_sort {
-                    let n_es_2 = SortProxy::from(n_es)
-                        .unify(&es, &state)
-                        .into_rr(*main_span)?;
-                    assert_eq!(n_es, n_es_2);
-                };
+                // if let Some(es) = expected_sort {
+                //     let n_es_2 = SortProxy::from(n_es)
+                //         .unify(&es, &state)
+                //         .into_rr(*main_span)?;
+                //     assert_eq!(n_es, n_es_2);
+                // };
 
-                let term = to_parse.parse(env, &mut nbvars, state, Some(n_es.into()))?;
+                let term = to_parse
+                    .parse(env, &mut nbvars, state, expected_sort)
+                    .debug_continue()?;
 
-                let input = INPUT.f_a([step_as_term.clone()]);
                 Ok(term
                     .owned_into_inner()
-                    .apply_substitution(0..n, args.iter().chain([&input]))
+                    .apply_substitution2(&step_cache.substitution(args.as_ref()))
                     .into())
             }
             ast::InnerAppMacro::Other { name, args } => {
@@ -651,7 +654,14 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
                         .args
                         .iter()
                         .zip(args)
-                        .map(|(v, arg)| arg.parse(env, bvars, state, Some(v.into())))
+                        .map(|(v, arg)| {
+                            arg.parse(
+                                env,
+                                bvars,
+                                &v.realm().unwrap_or(state.get_realm()),
+                                Some(v.into()),
+                            )
+                        })
                         .collect()
                 } else {
                     err(merr(
@@ -870,5 +880,41 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Term<'a> {
 
         match_as_trait!(ast::InnerTerm, |x| in &self.inner => LetIn | If | Fndst | Quant | Application | Infix | Macro
                     {x.parse(env, bvars, state, expected_sort)})
+    }
+}
+
+fn check_out_sort<'str, 'bump>(
+    env: &Environement<'bump, 'str>,
+    span: Span<'str>,
+    realm: &impl KnowsRealm,
+    expected_sort: Option<SortProxy<'bump>>,
+    out_sort: Option<SortProxy<'bump>>,
+    mut forumla: ARichFormula<'bump>,
+) -> Result<ARichFormula<'bump>, E> {
+    match (out_sort, expected_sort) {
+        (None, _) | (_, None) => Ok(forumla),
+        (Some(os), Some(es)) => match os.as_option() {
+            None => {
+                os.unify(&es, realm).unwrap_display(); // should never fail
+                Ok(forumla)
+            }
+            Some(os) => {
+                let mut out = os;
+                if out == NAME.as_sort() {
+                    out = MESSAGE.as_sort();
+                    forumla = env.name_caster_collection.cast(MESSAGE.as_sort(), forumla);
+                    debug_print::debug_println!("name cast in: {}", &forumla);
+                }
+                if realm.get_realm() == Realm::Evaluated && out.realm() == Some(Realm::Symbolic) {
+                    forumla = env.evaluator.get_eval_function(out).unwrap().f_a([forumla]);
+                    out = out.evaluated_sort().unwrap();
+                    debug_print::debug_println!("evalluation in: {}", &forumla);
+                }
+                es.unify_rev(&out.into(), realm)
+                    .into_rr(span)
+                    .debug_continue()?;
+                Ok(forumla)
+            }
+        },
     }
 }

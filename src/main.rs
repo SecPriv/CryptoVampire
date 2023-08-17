@@ -61,9 +61,11 @@ fn main() {
     };
 
     ScopedContainer::scoped(|container| {
+        debug_print::debug_println!("start");
         let env = Environement::from_args(&args, &*container);
 
         // let str = ;
+        debug_print::debug_println!("read input...");
         let str = if USE_MIRI {
             TEST_FILE.to_string()
         } else {

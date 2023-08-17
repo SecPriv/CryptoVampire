@@ -221,6 +221,6 @@ impl<'bump> Environement<'bump> {
 
 impl<'bump> KnowsRealm for Environement<'bump> {
     fn get_realm(&self) -> super::traits::Realm {
-        todo!()
+        self.realm
     }
 }

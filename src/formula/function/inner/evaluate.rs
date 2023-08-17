@@ -61,6 +61,7 @@ impl<'bump> Evaluator<'bump> {
         f: impl Into<ARichFormula<'bump>>,
     ) -> Result<ARichFormula<'bump>, SortedError> {
         let f: ARichFormula = f.into();
+        debug_print::debug_println!("try eval: {}", f);
         let sort = f
             .get_sort()
             .debug_continue_msg(&format!("{f} doesn't have a known sort"))?;
@@ -78,6 +79,10 @@ impl<'bump> Evaluator<'bump> {
 
     pub fn functions(&self) -> &HashMap<Sort<'bump>, Function<'bump>> {
         &self.functions
+    }
+
+    pub fn get_eval_function(&self, sort: Sort<'bump>) -> Option<Function<'bump>> {
+        self.functions.get(&sort).cloned()
     }
 }
 

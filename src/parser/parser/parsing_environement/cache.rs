@@ -2,6 +2,9 @@ use std::sync::{Arc, Mutex};
 
 use derivative::Derivative;
 
+mod step;
+pub use step::{StepCache, NamedVariable};
+
 use crate::{
     formula::{
         function::{
@@ -26,15 +29,6 @@ pub enum FunctionCache<'str, 'bump> {
     Function(Function<'bump>),
     Step(StepCache<'str, 'bump>),
     MemoryCell(CellCache<'str, 'bump>),
-}
-
-#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone)]
-pub struct StepCache<'str, 'bump> {
-    pub args: Arc<[Sort<'bump>]>,
-    pub args_name: Arc<[&'str str]>,
-    pub ast: &'str ast::Step<'str>,
-    pub function: Function<'bump>,
-    pub step: Step<'bump>,
 }
 
 #[derive(Derivative)]
