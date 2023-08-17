@@ -262,6 +262,10 @@ impl From<Infallible> for AlreadyInitialized {
     }
 }
 
+pub fn print_type<T>(_: &T) -> &'static str {
+    std::any::type_name::<T>()
+}
+
 // pub trait LateInitializable: MaybeInvalid {
 //     type Inner;
 

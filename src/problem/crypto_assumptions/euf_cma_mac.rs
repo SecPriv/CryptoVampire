@@ -25,7 +25,7 @@ use crate::{
         },
     },
     static_signature,
-    utils::arc_into_iter::ArcIntoIter,
+    utils::{arc_into_iter::ArcIntoIter, utils::print_type},
 };
 
 pub type SubtermEufCmaMacMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
@@ -230,6 +230,8 @@ fn define_subterms<'bump>(
         let subterm = subterm_main.as_ref();
         declarations.push(subterm.declare(pbl));
 
+        debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
+
         if let SubtermKind::Vampire = kind {
         } else {
             assertions.extend(
@@ -244,6 +246,9 @@ fn define_subterms<'bump>(
                     .map(|f| Axiom::base(f)),
             );
         }
+        debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
+        debug_print::debug_println!("subterm type: {}", print_type(subterm));
+        debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
         assertions.extend(
             subterm
                 .preprocess_special_assertion_from_pbl(pbl, true)

@@ -46,16 +46,20 @@ pub trait SubtermAux<'bump> {
                     unifier: Some(Unifier::one_variable_unifier(v, m.shallow_copy())),
                     nexts,
                 },
-                _ => {
-                    if let Some(unifier) = Unifier::mgu(x, m) {
-                        SubtermResult {
-                            unifier: Some(unifier),
-                            nexts,
-                        }
-                    } else {
-                        unreachable!("Inconsistent mgu result with `var_eval_and_next`");
-                    }
-                }
+                // _ => {
+                //     if let Some(unifier) = Unifier::mgu(x, m) {
+                //         SubtermResult {
+                //             unifier: Some(unifier),
+                //             nexts,
+                //         }
+                //     } else {
+                //         unreachable!("Inconsistent mgu result with `var_eval_and_next`");
+                //     }
+                // }
+                _ => SubtermResult {
+                    unifier: Unifier::mgu(x, m),
+                    nexts,
+                },
             }
         } else {
             SubtermResult {

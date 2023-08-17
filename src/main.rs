@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+// #![allow(dead_code)]
 // // #![feature(box_syntax)]
 // // #![feature(box_patterns)]
 
@@ -38,7 +38,6 @@ use automator::{
     smt::smt::SmtFile,
     utils::traits::{MyWriteTo, NicerError},
 };
-use clap::Parser;
 
 const USE_MIRI: bool = false;
 

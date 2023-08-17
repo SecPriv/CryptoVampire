@@ -207,8 +207,11 @@ where
             let vars_f = vars.iter().map(|v| v.into_aformula()).collect_vec();
             let f_f = fun.f_a(vars_f);
 
+            debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
+
             // no variable collision
             let f = self.preprocess_term_to_formula(ptcl, &x_f, f_f.clone(), keep_guard);
+            debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
             forall(
                 vars.into_iter().chain(std::iter::once(x)),
                 self.f_a(x_f.clone(), f_f) >> f,
@@ -229,6 +232,7 @@ where
                     && (!f.is_default_subterm() || self.ignored_functions.contains(f))
             })
             .cloned();
+        debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
         self.generate_special_functions_assertions(funs, &pbl.protocol, keep_guard)
     }
 
@@ -259,6 +263,7 @@ where
         m: ARichFormula<'bump>,
         keep_guard: bool,
     ) -> ARichFormula<'bump> {
+        debug_print::debug_println!("preprocess_term_to_formula -> {}:{}:{}", file!(), line!(), column!());
         formula::ors(self.preprocess_term(ptcl, x, m, keep_guard, self.deeper_kind))
     }
 
@@ -275,6 +280,7 @@ where
         keep_guard: bool,
         deeper_kind: DeeperKinds,
     ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
+        debug_print::debug_println!("preprocess_term -> {}:{}:{}", file!(), line!(), column!());
         self.preprocess_terms(ptcl, &x, [m], keep_guard, deeper_kind)
     }
 
@@ -291,6 +297,7 @@ where
         keep_guard: bool,
         deeper_kind: DeeperKinds,
     ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
+        debug_print::debug_println!("preprocess_terms -> {}:{}:{}", file!(), line!(), column!());
         let steps = ptcl.steps();
 
         // let pile = vec![(ExpantionState::None, m)];
@@ -301,6 +308,7 @@ where
             passed_along: None,
             flags: IteratorFlags::default(),
             f: move |state: ExpantionState<'bump>, f| {
+                debug_print::debug_println!("\t\t{x} ⊑ {}", &f);
                 let inner_iter = ExpantionContent {
                     state: state.clone(),
                     content: f.clone(),
@@ -308,6 +316,7 @@ where
                 .expand(steps.iter().cloned(), ptcl.graph(), false, deeper_kind)
                 .into_iter()
                 .map(|ec| ec.as_tuple());
+                debug_print::debug_println!("inner subterm -> {}:{}:{}", file!(), line!(), column!());
                 let SubtermResult { unifier, nexts } = self.aux.eval_and_next(x, &f);
                 (
                     unifier.map(|u| {
