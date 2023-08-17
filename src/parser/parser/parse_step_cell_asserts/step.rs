@@ -6,6 +6,7 @@ use itertools::Itertools;
 
 use crate::{
     container::{allocator::ContainerTools, ScopedContainer},
+    environement::traits::Realm,
     formula::{
         function::builtin::INPUT,
         manipulation::OneVarSubst,
@@ -18,7 +19,7 @@ use crate::{
         parser::{parsable_trait::Parsable, state::State, CellCache, FunctionCache, NamedVariable},
         E,
     },
-    problem::{cell::Assignement, step::InnerStep}, environement::traits::Realm,
+    problem::{cell::Assignement, step::InnerStep},
 };
 
 use super::super::{super::ast, Environement, StepCache};

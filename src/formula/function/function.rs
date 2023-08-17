@@ -169,15 +169,6 @@ macro_rules! container {
 
 impl<'bump> Function<'bump> {
     pub fn new_from_inner(container: container!(), inner: InnerFunction<'bump>) -> Self {
-        // unsafe {
-        //     let ptr = container.alloc();
-        //     std::ptr::write(ptr.as_ptr(), inner);
-        //     Function {
-        //         inner: ptr,
-        //         container: Default::default(),
-        //     }
-        // }
-        // Self::new_from(container, inner)
         container.alloc_inner(inner)
     }
 
@@ -187,16 +178,9 @@ impl<'bump> Function<'bump> {
         F: for<'a> FnOnce(&'a Function<'bump>) -> Residual<InnerFunction<'bump>, T>,
         T: Sized,
     {
-        // let ptr = container.alloc();
-        // let fun = Function {
-        //     inner: ptr,
-        //     container: Default::default(),
-        // };
-        // let (inner, t) = f(fun);
-        // std::ptr::write(fun.inner.as_ptr(), inner);
-        // (fun, t)
-        // Self::new_with_residual(container, f)?
-        container.alloc_cyclic_with_residual(f).unwrap()
+        container
+            .alloc_cyclic_with_residual(f)
+            .expect("function already initialized as")
     }
 
     pub fn new_spliting(
@@ -221,18 +205,7 @@ impl<'bump> Function<'bump> {
             args: sorts.into_iter().collect(),
         });
 
-        // Self::new_from(container, inner)
         container.alloc_inner(inner)
-
-        // let inner = unsafe {
-        //     let ptr = container.alloc();
-        //     std::ptr::write(ptr.as_ptr(), inner);
-        //     ptr
-        // };
-        // Function {
-        //     inner,
-        //     container: Default::default(),
-        // }
     }
 
     pub fn new_unused_destructors(container: container!(nf), constructor: Self) -> Vec<Self> {
@@ -281,16 +254,6 @@ impl<'bump> Function<'bump> {
             });
             // Self::new_from(container, inner)
             container.alloc_inner(inner)
-
-            // let inner = unsafe {
-            //     let ptr = container.alloc();
-            //     std::ptr::write(ptr.as_ptr(), inner);
-            //     ptr
-            // };
-            // Function {
-            //     inner,
-            //     container: Default::default(),
-            // }
         }
     }
 
@@ -324,16 +287,6 @@ impl<'bump> Function<'bump> {
             id,
             inner,
         }));
-        // let inner = unsafe {
-        //     let ptr = container.alloc();
-        //     std::ptr::write(ptr.as_ptr(), inner);
-        //     ptr
-        // };
-        // Function {
-        //     inner,
-        //     container: Default::default(),
-        // }
-        // Self::new_from(container, iner)
         container.alloc_inner(inner)
     }
 
@@ -386,22 +339,6 @@ impl<'bump> Function<'bump> {
         (container.alloc_inner(inner), free_variables)
     }
 
-    // pub fn new_uninit(
-    //     container: &'bump impl Container<'bump, Self>,
-    //     // name: Option<implderef!(str)>,
-    //     // input_sorts: Option<implvec!(Sort<'bump>)>,
-    //     // output_sort: Option<Sort<'bump>>,
-    // ) -> Self {
-    //     Self::new_from_inner(
-    //         container,
-    //         InnerFunction::Invalid(InvalidFunction {
-    //             // name: name.map(|n| n.to_owned().into()),
-    //             // args: input_sorts.map(|i| i.into_iter().collect()),
-    //             // sort: output_sort,
-    //         }),
-    //     )
-    // }
-
     pub fn new_user_term_algebra(
         container: container!(),
         name: implderef!(str),
@@ -419,48 +356,6 @@ impl<'bump> Function<'bump> {
             println!(") -> {output_sort}")
         }
         assert!(output_sort.is_term_algebra());
-        //     let (eval, main) =
-        //         Self::new_with_residual(container, |eval_fun| {
-        //             let main_fun = Self::new_from_inner(
-        //                 container,
-        //                 InnerFunction::TermAlgebra(TermAlgebra::Function(BaseFunction::Base(
-        //                     InnerBaseFunction {
-        //                         name: name.to_string().into(),
-        //                         args: input_sorts.into_iter().collect(),
-        //                         out: output_sort,
-        //                         eval_fun,
-        //                     },
-        //                 ))),
-        //             );
-        //             let ref_to_main_inner = match main_fun.precise_as_ref() {
-        //                 InnerFunction::TermAlgebra(TermAlgebra::Function(bfun)) => bfun,
-        //                 _ => unreachable!(),
-        //             };
-
-        //             let eval_inner = InnerFunction::TermAlgebra(TermAlgebra::Function(
-        //                 BaseFunction::Eval(ref_to_main_inner),
-        //             ));
-
-        //             (eval_inner, main_fun)
-        // });
-
-        // let (eval, main) = container
-        //     .alloc_cyclic(|(eval_fun, main_fun)| {
-        //         let main_inner = InnerFunction::TermAlgebra(TermAlgebra::Function(
-        //             BaseFunction::Base(InnerBaseFunction {
-        //                 name: name.to_string().into(),
-        //                 args: input_sorts.into_iter().collect(),
-        //                 out: output_sort,
-        //                 eval_fun: *eval_fun,
-        //             }),
-        //         ));
-
-        //         let eval_inner = InnerFunction::TermAlgebra(TermAlgebra::Function(
-        //             BaseFunction::Eval(*main_fun),
-        //         ));
-        //         (eval_inner, main_inner)
-        //     })
-        //     .unwrap();
 
         let Residual {
             content: eval,
@@ -584,12 +479,12 @@ impl<'bump> Function<'bump> {
         }
     }
 
-    // pub(crate) fn from_ptr_inner(inner: NonNull<Option<InnerFunction<'bump>>>) -> Self {
-    //     Function {
-    //         inner,
-    //         container: Default::default(),
-    //     }
-    // }
+    pub fn is_builtin(&self) -> bool {
+        matches!(
+            self.as_inner(),
+            InnerFunction::Bool(_) | InnerFunction::IfThenElse(_)
+        )
+    }
 
     variants_ref!(InnerFunction, 'bump;
         Bool:Booleans,

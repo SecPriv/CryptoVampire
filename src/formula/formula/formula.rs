@@ -234,15 +234,10 @@ impl<'bump> RichFormula<'bump> {
         deeper_kind: DeeperKinds,
     ) -> Vec<ExpantionContent<'bump>> {
         ExpantionContent {
-            state: ExpantionState::None,
+            state: ExpantionState::from_deeper_kind(deeper_kind),
             content: self.into(),
         }
-        .expand(
-            ptcl.steps().iter().cloned(),
-            ptcl.graph(),
-            with_args,
-            deeper_kind,
-        )
+        .expand(ptcl.steps().iter().cloned(), ptcl.graph(), with_args)
     }
 
     pub fn into_arc(self) -> ARichFormula<'bump> {

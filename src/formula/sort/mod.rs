@@ -117,6 +117,19 @@ impl<'bump> InnerSort<'bump> {
             None
         }
     }
+
+    pub fn is_datatype(&self, realm: &impl KnowsRealm) -> bool {
+        match self {
+            InnerSort::Other(Other::Name) | InnerSort::Other(Other::Step) => true,
+            InnerSort::UserEvaluatable(UserEvaluatable::Symbolic { .. })
+            | InnerSort::Base(TermBase::Message)
+            | InnerSort::Base(TermBase::Condition) => realm.get_realm() == Realm::Symbolic,
+            InnerSort::Base(TermBase::Bitstring)
+            | InnerSort::Base(TermBase::Bool)
+            | InnerSort::UserEvaluatable(UserEvaluatable::Evaluated { .. })
+            | InnerSort::Index(_) => false,
+        }
+    }
 }
 
 impl<'a> Display for Sort<'a> {
@@ -215,6 +228,10 @@ impl<'a> Sort<'a> {
 
     pub fn short_name(&self) -> char {
         self.name().chars().next().unwrap()
+    }
+
+    pub fn is_datatype(&self, realm: &impl KnowsRealm) -> bool {
+        self.as_inner().is_datatype(realm)
     }
 
     force_lifetime!(Sort, 'a);

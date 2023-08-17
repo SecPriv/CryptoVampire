@@ -51,7 +51,6 @@ pub enum SortProxy<'bump> {
 }
 
 impl<'bump> SortProxy<'bump> {
-
     pub fn is_known(&self) -> bool {
         self.as_option().is_some()
     }

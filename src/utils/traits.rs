@@ -33,7 +33,7 @@ pub trait NicerError {
     fn unwrap_display(self) -> Self::Out;
     fn expect_display(self, msg: &str) -> Self::Out;
     fn debug_continue(self) -> Self;
-    fn debug_continue_msg(self, msg:&str) -> Self;
+    fn debug_continue_msg(self, msg: &str) -> Self;
 }
 
 impl<T, E> NicerError for Result<T, E>
@@ -64,7 +64,7 @@ where
         }
     }
 
-    fn debug_continue_msg(self, msg:&str) -> Self {
+    fn debug_continue_msg(self, msg: &str) -> Self {
         if cfg!(debug_assertions) {
             Ok(self.expect_display(msg))
         } else {

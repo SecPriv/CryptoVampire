@@ -263,7 +263,12 @@ where
         m: ARichFormula<'bump>,
         keep_guard: bool,
     ) -> ARichFormula<'bump> {
-        debug_print::debug_println!("preprocess_term_to_formula -> {}:{}:{}", file!(), line!(), column!());
+        debug_print::debug_println!(
+            "preprocess_term_to_formula -> {}:{}:{}",
+            file!(),
+            line!(),
+            column!()
+        );
         formula::ors(self.preprocess_term(ptcl, x, m, keep_guard, self.deeper_kind))
     }
 
@@ -301,7 +306,7 @@ where
         let steps = ptcl.steps();
 
         // let pile = vec![(ExpantionState::None, m)];
-        let pile = repeat_n_zip(ExpantionState::None, m).collect_vec();
+        let pile = repeat_n_zip(ExpantionState::from_deeper_kind(deeper_kind), m).collect_vec();
 
         FormulaIterator {
             pile: StackBox::new(pile),
@@ -313,10 +318,15 @@ where
                     state: state.clone(),
                     content: f.clone(),
                 }
-                .expand(steps.iter().cloned(), ptcl.graph(), false, deeper_kind)
+                .expand(steps.iter().cloned(), ptcl.graph(), false)
                 .into_iter()
                 .map(|ec| ec.as_tuple());
-                debug_print::debug_println!("inner subterm -> {}:{}:{}", file!(), line!(), column!());
+                debug_print::debug_println!(
+                    "inner subterm -> {}:{}:{}",
+                    file!(),
+                    line!(),
+                    column!()
+                );
                 let SubtermResult { unifier, nexts } = self.aux.eval_and_next(x, &f);
                 (
                     unifier.map(|u| {

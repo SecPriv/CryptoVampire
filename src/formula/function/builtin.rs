@@ -172,14 +172,20 @@ pub static NAME_TO_MESSAGE: Function<'static> = new_static_function(InnerFunctio
 ));
 
 #[dynamic]
-pub static MESSAGE_TO_BITSTRING: Function<'static> = new_static_function(InnerFunction::Evaluate(
-    Evaluate::new("evaluate_msg".into(), MESSAGE.as_sort(), BITSTRING.as_sort()),
-));
+pub static MESSAGE_TO_BITSTRING: Function<'static> =
+    new_static_function(InnerFunction::Evaluate(Evaluate::new(
+        "evaluate_msg".into(),
+        MESSAGE.as_sort(),
+        BITSTRING.as_sort(),
+    )));
 
 #[dynamic]
-pub static CONDITION_TO_BOOL: Function<'static> = new_static_function(InnerFunction::Evaluate(
-    Evaluate::new("evaluate_cond".into(), MESSAGE.as_sort(), BITSTRING.as_sort()),
-));
+pub static CONDITION_TO_BOOL: Function<'static> =
+    new_static_function(InnerFunction::Evaluate(Evaluate::new(
+        "evaluate_cond".into(),
+        MESSAGE.as_sort(),
+        BITSTRING.as_sort(),
+    )));
 
 #[dynamic]
 static EMPTY_TUPLE_FUNCTION: BaseFunctionTuple<'static> =

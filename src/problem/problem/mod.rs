@@ -10,7 +10,7 @@ use std::{
 
 use crate::{
     container::ScopedContainer,
-    environement::environement::Environement,
+    environement::{environement::Environement, traits::KnowsRealm},
     formula::{
         file_descriptior::{
             axioms::Axiom,
@@ -107,17 +107,23 @@ impl<'bump> Generator<'bump> for Problem<'bump> {
         debug_print::debug_println!("genrating problem file...");
 
         debug_print::debug_println!("[G]\t- sort declarations...");
-        declarations.extend(self.sorts.iter().map(|s| Declaration::Sort(*s)));
+        declarations.extend(
+            self.sorts
+                .iter()
+                .filter(|s| !s.is_datatype(env))
+                .map(|s| Declaration::Sort(*s)),
+        );
 
         {
             declarations.reserve(self.functions.len());
             // let mut datatypes = Vec::new();
             let mut datatypes = HashMap::new();
-            for &fun in &self.functions {
+            for &fun in self.functions.iter().filter(|f| !f.is_builtin()) {
                 // declare the function as datatypes if
                 //  - it must always be a datatype
                 //  - it's a symbolic term and we're in the symbolic realm
                 if fun.is_datatype() || (fun.is_term_algebra() && env.is_symbolic_realm()) {
+                    debug_assert_eq!(fun.fast_outsort().map(|s| s.is_datatype(env)), Some(true));
                     let constr: &mut Vec<_> =
                         datatypes.entry(fun.fast_outsort().unwrap()).or_default();
                     constr.push(ConstructorDestructor::new_unused(self.container, fun))

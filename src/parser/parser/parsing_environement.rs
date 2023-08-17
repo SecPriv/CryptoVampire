@@ -40,7 +40,7 @@ pub struct Macro<'bump, 'a> {
     pub content: ast::Term<'a>,
 }
 
-pub use cache::{CellCache, FunctionCache, StepCache, NamedVariable};
+pub use cache::{CellCache, FunctionCache, NamedVariable, StepCache};
 
 use super::{declare_sorts, fetch_all};
 

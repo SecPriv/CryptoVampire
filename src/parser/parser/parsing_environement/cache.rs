@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use derivative::Derivative;
 
 mod step;
-pub use step::{StepCache, NamedVariable};
+pub use step::{NamedVariable, StepCache};
 
 use crate::{
     formula::{

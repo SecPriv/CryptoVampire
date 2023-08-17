@@ -163,7 +163,10 @@ impl<'bump> fmt::Display for Smt<'bump> {
             Smt::AssertNot(e) => write!(f, "(assert-not {})", e),
             Smt::DeclareFun(fun) => {
                 write!(f, "(declare-fun {} (", fun.name())?;
-                for s in fun.fast_insort().expect("todo") {
+                for s in fun
+                    .fast_insort()
+                    .expect(&format!("all function defined here have known sort: {}", fun.name()))
+                {
                     write!(f, "{} ", s.name())?;
                 }
                 write!(f, ") {})", fun.fast_outsort().unwrap())
@@ -444,6 +447,16 @@ impl<'bump> SmtFile<'bump> {
 
 impl<'bump> Display for SmtFile<'bump> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if cfg!(debug_assertions) {
+            self.content
+                .iter()
+                .filter_map(|smt| match smt {
+                    Smt::DeclareFun(f) => Some(f),
+                    _ => None,
+                })
+                .for_each(|f| println!("trying to define {}", f.name()))
+        }
+
         self.content.iter().try_for_each(|smt| writeln!(f, "{smt}"))
     }
 }
