@@ -59,7 +59,9 @@ pub trait ContainerTools<'bump, I> {
         'bump: 'a,
         B: FromIterator<Self::R<'a>>,
     {
-        std::iter::from_fn(|| Some(self.alloc_uninit())).take(n).collect()
+        std::iter::from_fn(|| Some(self.alloc_uninit()))
+            .take(n)
+            .collect()
     }
 
     fn alloc_inner<'a>(&'bump self, inner: I) -> Self::R<'a>

@@ -1,4 +1,4 @@
-use crate::{container::ScopedContainer, problem::protocol::Protocol};
+use crate::container::ScopedContainer;
 
 use bitflags::bitflags;
 

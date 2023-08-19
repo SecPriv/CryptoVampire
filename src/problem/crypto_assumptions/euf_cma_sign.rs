@@ -26,7 +26,7 @@ use crate::{
         generator::Generator,
         problem::Problem,
         subterm::{
-            kind::{SubtermKind, SubtermKindConstr},
+            kind::SubtermKindConstr,
             traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
             Subterm,
         },

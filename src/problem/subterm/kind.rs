@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 
-use hashbrown::HashMap;
 use itertools::Itertools;
 
 use crate::{

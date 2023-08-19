@@ -4,7 +4,7 @@ pub use pbl_iterator::PblIterator;
 
 use std::{
     cell::RefCell,
-    collections::{HashMap, VecDeque, BTreeMap},
+    collections::{BTreeMap, VecDeque},
     sync::Arc,
 };
 

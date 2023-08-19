@@ -10,10 +10,9 @@ use crate::{
     f,
     formula::{
         function::{
-            inner::{
-                evaluate::Evaluator,
-            },
-            Function, name_caster_collection::{NameCasterCollection, DEFAULT_NAME_CASTER},
+            inner::evaluate::Evaluator,
+            name_caster_collection::{NameCasterCollection, DEFAULT_NAME_CASTER},
+            Function,
         },
         sort::Sort,
     },

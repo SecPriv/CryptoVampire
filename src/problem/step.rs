@@ -4,7 +4,7 @@ use std::{ops::Range, sync::Arc};
 use itertools::Itertools;
 
 use crate::{
-    assert_variance, asssert_trait,
+    assert_variance,
     container::{allocator::ContainerTools, contained::Containable, reference::Reference},
     formula::{
         formula::{meq, ARichFormula, RichFormula},

@@ -8,7 +8,7 @@ use crate::{
 
 use self::{
     base_function::BaseFunction, cell::Cell, connective::Connective, if_then_else::IfThenElse,
-    input::Input, quantifier::Quantifier, name_caster::NameCaster,
+    input::Input, name_caster::NameCaster, quantifier::Quantifier,
 };
 
 pub mod base_function;
@@ -16,8 +16,8 @@ pub mod cell;
 pub mod connective;
 pub mod if_then_else;
 pub mod input;
-pub mod quantifier;
 pub mod name_caster;
+pub mod quantifier;
 
 use macro_attr::*;
 

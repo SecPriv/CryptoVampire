@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use crate::{
-    environement::traits::KnowsRealm,
     formula::{
         formula::{ARichFormula, RichFormula},
         function::builtin::{EQUALITY, HAPPENS, LESS_THAN_STEP},

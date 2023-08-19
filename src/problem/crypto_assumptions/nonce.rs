@@ -10,11 +10,7 @@ use crate::{
     problem::{
         generator::Generator,
         problem::Problem,
-        subterm::{
-            kind::{AbsSubtermKindG, SubtermKind, SubtermKindConstr},
-            traits::DefaultAuxSubterm,
-            Subterm,
-        },
+        subterm::{kind::SubtermKindConstr, traits::DefaultAuxSubterm, Subterm},
     },
 };
 

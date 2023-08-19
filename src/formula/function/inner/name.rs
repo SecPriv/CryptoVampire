@@ -1,27 +1,15 @@
-use std::{ops::Deref, sync::Arc};
-
-use hashbrown::HashMap;
-use static_init::dynamic;
+use std::sync::Arc;
 
 use crate::{
     formula::{
-        formula::ARichFormula,
         function::{
-            builtin::NAME_TO_MESSAGE,
             signature::FixedRefSignature,
             traits::{FixedSignature, MaybeEvaluatable},
             Function,
         },
-        sort::{
-            builtins::{MESSAGE, NAME},
-            Sort,
-        },
+        sort::{builtins::NAME, Sort},
     },
     implvec,
-    utils::{
-        string_ref::StrRef,
-        vecref::{VecRef, VecRefClone},
-    },
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -52,8 +40,6 @@ impl<'bump> Name<'bump> {
         self.name.as_ref()
     }
 }
-
-
 
 impl<'bump> MaybeEvaluatable<'bump> for Name<'bump> {
     fn maybe_get_evaluated(&self) -> Option<Function<'bump>> {

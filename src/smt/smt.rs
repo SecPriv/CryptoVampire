@@ -13,10 +13,7 @@ use crate::{
         },
         formula::RichFormula,
         function::{
-            inner::{
-                booleans::{Booleans, Connective},
-                subterm::Subterm,
-            },
+            inner::booleans::{Booleans, Connective},
             Function, InnerFunction,
         },
         quantifier::Quantifier,
@@ -163,10 +160,10 @@ impl<'bump> fmt::Display for Smt<'bump> {
             Smt::AssertNot(e) => write!(f, "(assert-not {})", e),
             Smt::DeclareFun(fun) => {
                 write!(f, "(declare-fun {} (", fun.name())?;
-                for s in fun
-                    .fast_insort()
-                    .expect(&format!("all function defined here have known sort: {}", fun.name()))
-                {
+                for s in fun.fast_insort().expect(&format!(
+                    "all function defined here have known sort: {}",
+                    fun.name()
+                )) {
                     write!(f, "{} ", s.name())?;
                 }
                 write!(f, ") {})", fun.fast_outsort().unwrap())

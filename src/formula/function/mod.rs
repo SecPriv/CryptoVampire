@@ -1,9 +1,9 @@
 pub mod builtin;
 pub mod dispacher;
 pub mod inner;
+pub mod name_caster_collection;
 pub mod signature;
 pub mod traits;
-pub mod name_caster_collection;
 
 mod function;
 
@@ -12,24 +12,24 @@ pub use function::{new_static_function, Function};
 // pub mod equality;
 use std::hash::Hash;
 
-use bitflags::bitflags;
-
 // use crate::problem::step::Step;
 
-use crate::{match_as_trait, variants, variants_ref_try_into, CustomDerive};
+use crate::{variants, variants_ref_try_into};
 
 use self::{
     inner::{
         booleans::Booleans,
         evaluate::Evaluate,
+        evaluated_fun::EvaluatedFun,
         if_then_else::IfThenElse,
+        name::Name,
         // nonce::Nonce,
         predicate::Predicate,
         skolem::Skolem,
         step::StepFunction,
         subterm::Subterm,
         term_algebra::TermAlgebra,
-        unused::Tmp, name::{Name}, evaluated_fun::EvaluatedFun,
+        unused::Tmp,
     },
     traits::{MaybeEvaluatable, MaybeFixedSignature},
 };
@@ -99,7 +99,7 @@ pub enum InnerFunction<'bump> {
 
     Name(Name<'bump>),
 
-    EvaluatedFun(EvaluatedFun<'bump>)
+    EvaluatedFun(EvaluatedFun<'bump>),
 }
 
 impl<'bump> InnerFunction<'bump> {
@@ -147,7 +147,7 @@ impl<'bump> MaybeEvaluatable<'bump> for InnerFunction<'bump> {
             Self::Tmp(x) => x.maybe_get_evaluated(),
             Self::Skolem(x) => x.maybe_get_evaluated(),
             Self::EvaluatedFun(x) => x.maybe_get_evaluated(),
-            Self::Name(x) => x.maybe_get_evaluated()
+            Self::Name(x) => x.maybe_get_evaluated(),
         }
     }
 }
@@ -169,7 +169,7 @@ where
             Self::Tmp(x) => x.maybe_fixed_signature(),
             Self::Skolem(x) => x.maybe_fixed_signature(),
             Self::EvaluatedFun(x) => x.maybe_fixed_signature(),
-            Self::Name(x) => x.maybe_fixed_signature()
+            Self::Name(x) => x.maybe_fixed_signature(),
         }
     }
 }

@@ -17,10 +17,7 @@ use crate::{
         },
     },
     parser::ast,
-    problem::{
-        cell::{Assignement, MemoryCell},
-        step::Step,
-    },
+    problem::cell::{Assignement, MemoryCell},
     utils::vecref::VecRefClone,
 };
 

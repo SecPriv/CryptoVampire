@@ -8,8 +8,8 @@ use crate::{
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::{self, forall, meq, ARichFormula, RichFormula},
-        function::{inner::{subterm::Subsubterm}, name_caster_collection::NameCasterCollection},
         function::Function,
+        function::{inner::subterm::Subsubterm, name_caster_collection::NameCasterCollection},
         sort::builtins::{CONDITION, MESSAGE, NAME},
         utils::formula_expander::DeeperKinds,
         variable::Variable,
@@ -19,7 +19,7 @@ use crate::{
         generator::Generator,
         problem::Problem,
         subterm::{
-            kind::{SubtermKind, SubtermKindConstr},
+            kind::SubtermKindConstr,
             traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
             Subterm,
         },

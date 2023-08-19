@@ -12,14 +12,14 @@ pub mod evaluate;
 pub mod if_then_else;
 pub mod invalid_function;
 // pub mod nonce;
+pub mod evaluated_fun;
+pub mod name;
 pub mod predicate;
 pub mod skolem;
 pub mod step;
 pub mod subterm;
 pub mod term_algebra;
 pub mod unused;
-pub mod name;
-pub mod evaluated_fun;
 
 impl<'a, 'bump: 'a> RefNamed<'a> for &'a InnerFunction<'bump> {
     fn name_ref(&self) -> StrRef<'a> {

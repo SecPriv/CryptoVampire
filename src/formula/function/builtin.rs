@@ -3,7 +3,7 @@ use std::sync::Arc;
 use static_init::dynamic;
 
 use crate::container::StaticContainer;
-use crate::formula::sort::builtins::{BITSTRING, MESSAGE, CONDITION, BOOL};
+use crate::formula::sort::builtins::{BITSTRING, BOOL, CONDITION, MESSAGE};
 use crate::formula::{formula::RichFormula, sort::builtins::STEP};
 
 use super::inner::evaluate::Evaluate;
@@ -180,12 +180,9 @@ pub static MESSAGE_TO_BITSTRING: Function<'static> =
     )));
 
 #[dynamic]
-pub static CONDITION_TO_BOOL: Function<'static> =
-    new_static_function(InnerFunction::Evaluate(Evaluate::new(
-        "evaluate_cond".into(),
-        CONDITION.as_sort(),
-        BOOL.as_sort(),
-    )));
+pub static CONDITION_TO_BOOL: Function<'static> = new_static_function(InnerFunction::Evaluate(
+    Evaluate::new("evaluate_cond".into(), CONDITION.as_sort(), BOOL.as_sort()),
+));
 
 #[dynamic]
 static EMPTY_TUPLE_FUNCTION: BaseFunctionTuple<'static> =

@@ -1,6 +1,6 @@
 use std::{fmt::Display, slice::Iter};
 
-use const_format::{concatcp, formatcp};
+use const_format::concatcp;
 use derivative::Derivative;
 use itertools::Itertools;
 use pest::{error::Error, iterators::Pair, Parser, Position, Span};

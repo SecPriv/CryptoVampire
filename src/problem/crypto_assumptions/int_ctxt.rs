@@ -22,7 +22,7 @@ use crate::{
         generator::Generator,
         problem::Problem,
         subterm::{
-            kind::{SubtermKind, SubtermKindConstr},
+            kind::SubtermKindConstr,
             traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
             Subterm,
         },
@@ -296,7 +296,7 @@ impl<'bump> IntCtxt<'bump> {
 }
 
 fn define_subterm<'bump>(
-    env: &Environement<'bump>,
+    _env: &Environement<'bump>,
     pbl: &Problem<'bump>,
     assertions: &mut Vec<Axiom<'bump>>,
     declarations: &mut Vec<Declaration<'bump>>,

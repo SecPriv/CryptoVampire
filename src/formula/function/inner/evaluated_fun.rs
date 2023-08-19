@@ -1,6 +1,10 @@
 use crate::{
-    formula::function::{signature::FixedRefSignature, traits::{FixedSignature, MaybeEvaluatable}, Function},
-    utils::{vecref::VecRefClone, string_ref::StrRef},
+    formula::function::{
+        signature::FixedRefSignature,
+        traits::{FixedSignature, MaybeEvaluatable},
+        Function,
+    },
+    utils::{string_ref::StrRef, vecref::VecRefClone},
 };
 
 use super::term_algebra::base_function::BaseFunction;
@@ -40,8 +44,7 @@ where
     'bump: 'a,
 {
     fn as_fixed_signature(&'a self) -> FixedRefSignature<'a, 'bump> {
-        let FixedRefSignature { out, args } =
-            self.inner_baase().as_fixed_signature();
+        let FixedRefSignature { out, args } = self.inner_baase().as_fixed_signature();
         let out = out.evaluated_sort().unwrap();
         let args: Option<VecRefClone<_>> = args.into_iter().map(|s| s.evaluated_sort()).collect();
         let args = args.unwrap();

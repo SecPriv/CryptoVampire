@@ -2,8 +2,6 @@ use crate::{formula::function::builtin::*, utils::maybe_owned::MOw};
 
 use super::super::parsing_environement::FunctionCache;
 
-use static_init::dynamic;
-
 // #[dynamic]
 pub(crate) fn NOT_TA_CACHE<'a, 'str, 'bump>() -> MOw<'a, FunctionCache<'str, 'bump>> {
     MOw::Owned(NOT_TA.clone().into())

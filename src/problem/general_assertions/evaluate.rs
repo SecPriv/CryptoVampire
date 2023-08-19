@@ -13,7 +13,6 @@ use crate::{
         function::{
             builtin::{EQUALITY, IF_THEN_ELSE},
             inner::term_algebra::{
-                base_function::BaseFunction,
                 connective::{BaseConnective, Connective},
                 quantifier::{InnerQuantifier, Quantifier},
                 TermAlgebra,

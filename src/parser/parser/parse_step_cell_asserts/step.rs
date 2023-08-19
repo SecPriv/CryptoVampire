@@ -1,22 +1,15 @@
 use std::sync::Arc;
 
-use debug_print::debug_println;
-use hashbrown::HashSet;
 use itertools::Itertools;
 
 use crate::{
     container::{allocator::ContainerTools, ScopedContainer},
     environement::traits::Realm,
-    formula::{
-        function::builtin::INPUT,
-        manipulation::OneVarSubst,
-        sort::builtins::{CONDITION, MESSAGE},
-        variable::Variable,
-    },
+    formula::sort::builtins::{CONDITION, MESSAGE},
     implvec,
     parser::{
         merr,
-        parser::{parsable_trait::Parsable, state::State, CellCache, FunctionCache, NamedVariable},
+        parser::{parsable_trait::Parsable, CellCache, FunctionCache},
         E,
     },
     problem::{cell::Assignement, step::InnerStep},

@@ -1,4 +1,4 @@
-use std::{borrow::Cow, fmt::Display, ops::Deref};
+use std::{fmt::Display, ops::Deref};
 mod cached_builtins;
 
 use itertools::Itertools;
@@ -12,7 +12,7 @@ use crate::{
         formula::{ARichFormula, RichFormula},
         function::{
             self,
-            builtin::{IF_THEN_ELSE, IF_THEN_ELSE_TA, INPUT, NAME_TO_MESSAGE},
+            builtin::{IF_THEN_ELSE, IF_THEN_ELSE_TA},
             inner::term_algebra::TermAlgebra,
             signature::Signature,
             Function,
@@ -36,7 +36,6 @@ use self::cached_builtins::*;
 
 use super::{
     parsing_environement::{get_function, get_sort, FunctionCache},
-    state::State,
     Environement,
 };
 

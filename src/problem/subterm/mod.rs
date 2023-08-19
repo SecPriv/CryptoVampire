@@ -23,18 +23,15 @@ use crate::{
         },
         variable::{sorts_to_variables, Variable},
     },
-    implvec, mforall, partial_order,
+    mforall, partial_order,
     utils::{
         traits::NicerError,
         utils::{repeat_n_zip, AlreadyInitialized, StackBox},
-        vecref::VecRef,
     },
 };
 
 use self::{
-    kind::{
-        AbsSubtermKindG, SubtermKind, SubtermKindConstr, SubtermKindWFunction, SubtermKindWSort,
-    },
+    kind::{AbsSubtermKindG, SubtermKind, SubtermKindConstr, SubtermKindWFunction},
     traits::{SubtermAux, SubtermResult},
 };
 
@@ -384,7 +381,7 @@ where
         let steps = ptcl.steps();
 
         // let pile = vec![(ExpantionState::None, m)];
-        let mut pile = repeat_n_zip(ExpantionState::from_deeper_kind(deeper_kind), m).collect_vec();
+        let pile = repeat_n_zip(ExpantionState::from_deeper_kind(deeper_kind), m).collect_vec();
 
         // std::iter::from_fn(move || {
         //     pile.pop().map(|(state, f)| {
@@ -532,7 +529,7 @@ pub struct SubtermSearchElement<'bump> {
 pub trait AsSubterm<'bump> {
     fn generate_function_assertions(&self, funs: &[Function<'bump>]) -> Vec<ARichFormula<'bump>>;
     fn f(&self, x: ARichFormula<'bump>, m: ARichFormula<'bump>) -> ARichFormula<'bump>;
-    fn function(&self) -> Function<'bump>;
+    // fn function(&self) -> Function<'bump>;
     fn ignored_functions(&self) -> &[Function<'bump>];
     fn sort(&self) -> Sort<'bump>;
 }
@@ -548,9 +545,7 @@ where
     fn f(&self, x: ARichFormula<'bump>, m: ARichFormula<'bump>) -> ARichFormula<'bump> {
         Subterm::f_a(self, x, m)
     }
-    fn function(&self) -> Function<'bump> {
-        Self::function(&self)
-    }
+
     fn ignored_functions(&self) -> &[Function<'bump>] {
         Self::ignored_functions(&self)
     }

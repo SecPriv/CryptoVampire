@@ -1,6 +1,4 @@
-use std::{
-    borrow::Borrow, cmp::Ordering, fmt::Debug, hash::Hash, marker::PhantomData, ptr::NonNull,
-};
+use std::{cmp::Ordering, fmt::Debug, hash::Hash, marker::PhantomData, ptr::NonNull};
 
 use crate::utils::{
     precise_as_ref::PreciseAsRef, string_ref::StrRef, traits::RefNamed, utils::MaybeInvalid,
@@ -45,7 +43,7 @@ impl<'bump, T> Reference<'bump, T> {
         self.as_option_ref().as_ref()
     }
 
-    pub fn from_raw(ptr: NonNull<Option<T>>, lt: PhantomData<&'bump Option<T>>) -> Self {
+    pub fn from_raw(ptr: NonNull<Option<T>>, _lt: PhantomData<&'bump Option<T>>) -> Self {
         Self {
             inner: ptr,
             lt: Default::default(),

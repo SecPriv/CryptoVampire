@@ -17,7 +17,7 @@ use crate::formula::function::signature::Lazy::{A, B};
 use crate::utils::traits::{NicerError, RefNamed};
 use crate::utils::utils::MaybeInvalid;
 use crate::{
-    assert_variance, asssert_trait,
+    assert_variance,
     formula::{
         formula::RichFormula,
         function::inner::term_algebra::base_function::BaseFunction,
@@ -378,7 +378,7 @@ impl<'bump> Function<'bump> {
                         eval_fun: *eval_fun,
                     }),
                 ));
-                let InnerFunction::TermAlgebra(TermAlgebra::Function(base_main_fun)) =
+                let InnerFunction::TermAlgebra(TermAlgebra::Function(_base_main_fun)) =
                         main_fun.precise_as_ref()
                     else {
                         unreachable!()

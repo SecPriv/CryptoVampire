@@ -3,14 +3,12 @@ use crate::{
     formula::{
         function::{
             signature::FixedRefSignature,
-            traits::{Evaluatable, FixedSignature, MaybeEvaluatable},
+            traits::{Evaluatable, FixedSignature},
             Function,
         },
         sort::Sort,
     },
-    utils::{string_ref::StrRef, vecref::VecRefClone},
 };
-
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct BaseFunction<'bump> {
@@ -19,7 +17,6 @@ pub struct BaseFunction<'bump> {
     pub out: Sort<'bump>,
     pub eval_fun: Function<'bump>,
 }
-
 
 assert_variance!(BaseFunction);
 
@@ -51,7 +48,6 @@ impl<'bump> Evaluatable<'bump> for BaseFunction<'bump> {
         self.eval_fun()
     }
 }
-
 
 impl<'a, 'bump> FixedSignature<'a, 'bump> for BaseFunction<'bump>
 where
