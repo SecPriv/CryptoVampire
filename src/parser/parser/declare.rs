@@ -4,12 +4,13 @@ use std::sync::Arc;
 use super::*;
 
 use crate::f;
+use crate::formula::function::inner::name::Name;
 use crate::parser::{err, merr, E};
 
 use crate::formula::function::{
     inner::{
         step::StepFunction,
-        term_algebra::{cell::Cell, name::Name, TermAlgebra},
+        term_algebra::{cell::Cell,  TermAlgebra},
     },
     Function, InnerFunction,
 };
@@ -188,11 +189,11 @@ fn declare_function<'str, 'bump>(
         let fun = if output_sort == NAME.as_sort() {
             Function::new_from_inner(
                 env.container,
-                InnerFunction::TermAlgebra(TermAlgebra::Name(Name::new(
+                InnerFunction::Name(Name::new(
                     name.to_string(),
                     MESSAGE.as_sort(),
                     input_sorts?,
-                ))),
+                )),
             )
 
             // add to env. name_caster_collection

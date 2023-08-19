@@ -288,13 +288,15 @@ impl<'bump> SmtFormula<'bump> {
                     | InnerFunction::Predicate(_)
                     | InnerFunction::Tmp(_)
                     | InnerFunction::Skolem(_)
+                    | InnerFunction::Name(_)
+                    | InnerFunction::EvaluatedFun(_)
                     | InnerFunction::Evaluate(_) => SmtFormula::Fun(*f, args),
-                    InnerFunction::Subterm(Subterm { subterm, .. }) => {
+                    InnerFunction::Subterm(subterm) => {
                         let kind = subterm.kind();
 
                         match kind {
-                            SubtermKind::Regular => SmtFormula::Fun(*f, args),
-                            SubtermKind::Vampire => {
+                            SubtermKind::Regular(_) => SmtFormula::Fun(*f, args),
+                            SubtermKind::Vampire(_) => {
                                 unpack_args!([a, b] =  args; {
                                     SmtFormula::Subterm(*f, Box::new(a), Box::new(b))
                                 })

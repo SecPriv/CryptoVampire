@@ -18,19 +18,23 @@ pub mod step;
 pub mod subterm;
 pub mod term_algebra;
 pub mod unused;
+pub mod name;
+pub mod evaluated_fun;
 
 impl<'a, 'bump: 'a> RefNamed<'a> for &'a InnerFunction<'bump> {
     fn name_ref(&self) -> StrRef<'a> {
         match self {
             InnerFunction::Bool(x) => x.name().into(),
             InnerFunction::Step(x) => x.name().into(),
-            InnerFunction::Subterm(x) => x.name.as_str().into(),
+            InnerFunction::Subterm(x) => x.name().into(),
             InnerFunction::TermAlgebra(x) => x.name(),
             InnerFunction::IfThenElse(_x) => IfThenElse::name().into(),
             InnerFunction::Evaluate(x) => x.name().into(),
             InnerFunction::Predicate(x) => x.name().into(),
             InnerFunction::Tmp(x) => x.name().into(),
             InnerFunction::Skolem(x) => x.name().into(),
+            InnerFunction::Name(x) => x.name().into(),
+            InnerFunction::EvaluatedFun(x) => x.name(),
         }
     }
 }

@@ -11,7 +11,7 @@ use crate::{
         formula::{self, forall, meq, ARichFormula, RichFormula},
         function::Function,
         function::{
-            inner::{subterm::Subsubterm, term_algebra::name::NameCasterCollection},
+            inner::subterm::Subsubterm, name_caster_collection::NameCasterCollection,
             signature::StaticSignature,
         },
         sort::{
@@ -26,7 +26,7 @@ use crate::{
         generator::Generator,
         problem::Problem,
         subterm::{
-            kind::SubtermKind,
+            kind::{SubtermKind, SubtermKindConstr},
             traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
             Subterm,
         },
@@ -66,13 +66,13 @@ impl<'bump> EufCmaSign<'bump> {
         let message_sort = MESSAGE.clone();
         let ev = &pbl.evaluator;
         let nc = &pbl.name_caster;
-        let kind = env.into();
+        let kind = SubtermKindConstr::as_constr(pbl, env);
 
         let subterm_main = Subterm::new(
             env.container,
             env.container
                 .find_free_function_name("subterm_euf_cma_main"),
-            kind,
+            &kind,
             DefaultAuxSubterm::new(message_sort),
             [],
             DeeperKinds::default(),
@@ -82,7 +82,7 @@ impl<'bump> EufCmaSign<'bump> {
         let subterm_key = Subterm::new(
             env.container,
             env.container.find_free_function_name("subterm_euf_cma_key"),
-            kind,
+            &kind,
             KeyAux {
                 euf_cma: *self,
                 name_caster: Arc::clone(&pbl.name_caster),
@@ -215,12 +215,11 @@ fn define_subterms<'bump>(
     subterm_main: &Arc<Subterm<'bump, impl SubtermAux<'bump>>>,
 ) {
     let _nonce_sort = NAME.clone();
-    let kind = env.into();
     {
         let subterm = subterm_key.as_ref();
-        declarations.push(subterm.declare(pbl));
+        subterm.declare(pbl, declarations);
 
-        if let SubtermKind::Vampire = kind {
+        if subterm.kind().is_vampire() {
         } else {
             assertions.extend(
                 subterm
@@ -242,9 +241,9 @@ fn define_subterms<'bump>(
     }
     {
         let subterm = subterm_main.as_ref();
-        declarations.push(subterm.declare(pbl));
+        subterm.declare(pbl, declarations);
 
-        if let SubtermKind::Vampire = kind {
+        if subterm.kind().is_vampire() {
         } else {
             assertions.extend(
                 subterm

@@ -47,8 +47,11 @@ pub fn generate<'bump>(
         .functions
         .iter()
         .filter_map(|f| match f.as_inner() {
-            InnerFunction::TermAlgebra(TermAlgebra::Function(BaseFunction::Base(b))) => {
-                assert_eq!(f.fast_outsort().map(|s| s.is_evaluatable()), Some(true));
+            InnerFunction::TermAlgebra(TermAlgebra::Function(b)) => {
+                assert!(
+                    b.as_fixed_signature().out.is_evaluatable(),
+                    "not evaluatable"
+                );
                 Some((f, b))
             }
             _ => None,
@@ -172,7 +175,7 @@ pub fn generate<'bump>(
                 InnerFunction::TermAlgebra(ta) => {
                     match ta {
                     TermAlgebra::Function(_) => continue, // already done
-                    TermAlgebra::Cell(_) | TermAlgebra::Input(_) | TermAlgebra::Name(_) | TermAlgebra::NameCaster(_) => continue, // nothing specific to be done here
+                    TermAlgebra::Cell(_) | TermAlgebra::Input(_) | TermAlgebra::NameCaster(_) => continue, // nothing specific to be done here
                     TermAlgebra::IfThenElse(_) => {
                         assertions.push(Axiom::base(mforall!(c!0:cond, l!1:msg, r!2:msg; {
                             pbl.evaluator.eval(function.f_a([c, l, r]))

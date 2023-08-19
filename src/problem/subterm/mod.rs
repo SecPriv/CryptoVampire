@@ -1,4 +1,5 @@
 use std::{
+    convert::Infallible,
     hash::Hash,
     rc::Rc,
     sync::{Arc, Weak},
@@ -22,12 +23,15 @@ use crate::{
         },
         variable::{sorts_to_variables, Variable},
     },
-    mforall, partial_order,
-    utils::utils::{repeat_n_zip, StackBox},
+    implvec, mforall, partial_order,
+    utils::{
+        traits::NicerError,
+        utils::{repeat_n_zip, AlreadyInitialized, StackBox}, vecref::VecRef,
+    },
 };
 
 use self::{
-    kind::SubtermKind,
+    kind::{AbsSubtermKindG, SubtermKind, SubtermKindWFunction, SubtermKindWSort, SubtermKindConstr},
     traits::{SubtermAux, SubtermResult},
 };
 
@@ -41,10 +45,9 @@ pub struct Subterm<'bump, Aux>
 where
     Aux: SubtermAux<'bump>,
 {
-    function: Function<'bump>,
     aux: Aux,
     ignored_functions: Vec<Function<'bump>>,
-    pub kind: SubtermKind,
+    kind: SubtermKindWFunction<'bump>,
     weak: Weak<Self>, // sort: Sort<'bump>,
     deeper_kind: DeeperKinds,
 }
@@ -62,15 +65,14 @@ impl<'bump, Aux> PartialOrd for Subterm<'bump, Aux>
 where
     Aux: SubtermAux<'bump> + PartialOrd,
 {
-    partial_order!(function, aux, kind, ignored_functions);
+    partial_order!(aux, kind, ignored_functions);
 }
 impl<'bump, Aux> PartialEq for Subterm<'bump, Aux>
 where
     Aux: SubtermAux<'bump> + PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
-        self.function == other.function
-            && self.kind == other.kind
+        self.kind == other.kind
             && self.aux == other.aux
             && self.ignored_functions == other.ignored_functions
     }
@@ -80,7 +82,6 @@ where
     Aux: SubtermAux<'bump> + Hash,
 {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.function.hash(state);
         self.aux.hash(state);
         self.ignored_functions.hash(state);
         self.kind.hash(state);
@@ -91,22 +92,96 @@ impl<'bump, Aux> Subterm<'bump, Aux>
 where
     Aux: SubtermAux<'bump>,
 {
-    pub fn new<F>(
+    pub fn new<'a, F>(
         container: &'bump impl ContainerTools<'bump, InnerFunction<'bump>, R<'bump> = Function<'bump>>,
         name: String,
-        kind: SubtermKind,
+        kind: &SubtermKindConstr<'a, 'bump>,
         aux: Aux,
         ignored_functions: impl IntoIterator<Item = Function<'bump>>,
         deeper_kind: DeeperKinds,
         to_enum: F,
     ) -> Arc<Self>
     where
-        F: FnOnce(Arc<Self>) -> function::inner::subterm::Subsubterm<'bump>,
+        F: Fn(Arc<Self>) -> function::inner::subterm::Subsubterm<'bump>,
     {
         let ignored_functions = ignored_functions.into_iter().collect();
-        let Residual {
-            residual: self_rc, ..
-        } = unsafe {
+        let self_rc = match kind {
+            AbsSubtermKindG::Vampire(_) => {
+                {
+                    container.alloc_cyclic_with_residual(|function| {
+                        let self_rc = Arc::new_cyclic(|weak| Subterm {
+                            aux,
+                            ignored_functions,
+                            kind: SubtermKindWFunction::Vampire(*function),
+                            weak: Weak::clone(weak),
+                            deeper_kind,
+                        });
+                        //  Rc::new(subterm);
+                        let inner = function::inner::subterm::Subterm::new(
+                            to_enum(Arc::clone(&self_rc)),
+                            name,
+                            AbsSubtermKindG::vampire(),
+                        );
+                        Residual {
+                            content: inner.into_inner_function(),
+                            residual: self_rc,
+                        }
+                    })
+                }
+                .unwrap_display()
+                .residual
+            }
+            AbsSubtermKindG::Regular(sorts) => {
+                {
+                    {
+                        container
+                        .try_alloc_mulitple_cyclic_with_residual::<_, _, _, AlreadyInitialized, _>(
+                            sorts.len(),
+                            |functions| {
+                                let map = sorts
+                                    .iter()
+                                    .zip_eq(functions)
+                                    .map(|(s, fun)| ((*s).into(), *fun))
+                                    .collect();
+
+                                let self_rc = Arc::new_cyclic(|weak| Subterm {
+                                    aux,
+                                    ignored_functions,
+                                    kind: SubtermKindWFunction::Regular(map),
+                                    weak: Weak::clone(weak),
+                                    deeper_kind,
+                                });
+
+                                let inner = sorts.iter().map(|s| {
+                                    function::inner::subterm::Subterm::new(
+                                        to_enum(Arc::clone(&self_rc)),
+                                        name.clone(),
+                                        AbsSubtermKindG::Regular(*s),
+                                    )
+                                    .into_inner_function()
+                                }).collect_vec();
+
+                                Ok::<_, Infallible>(Residual {
+                                    content: inner,
+                                    residual: self_rc,
+                                })
+                            },
+                        )
+                    }
+                }
+                .unwrap_display()
+                .residual
+            }
+        };
+
+        /* unsafe {
+            match kind {
+                SubtermKindWSort::Vampire => {
+
+                },
+                SubtermKindWSort::Regular(sorts) => todo!(),
+            }
+
             Function::new_cyclic(container, |function| {
                 // let subterm = ;
                 let self_rc = Arc::new_cyclic(|weak| Subterm {
@@ -127,7 +202,7 @@ where
                     residual: self_rc,
                 }
             })
-        };
+        } */
         self_rc
     }
 
@@ -357,12 +432,21 @@ where
     where
         I: Into<ARichFormula<'bump>>,
     {
-        self.function.f_a([x, m])
+        match &self.kind {
+            AbsSubtermKindG::Vampire(fun) => fun.f_a([x, m]),
+            AbsSubtermKindG::Regular(funs) => {
+                let [x, m]: [ARichFormula; 2] = [x.into(), m.into()];
+                let sort = m.get_sort().expect_display("term algebra has a sort");
+                funs.get(&sort)
+                    .expect(&format!("unsupported sort: {sort}"))
+                    .f_a([x, m])
+            }
+        }
     }
 
-    pub fn function(&self) -> Function<'bump> {
-        self.function
-    }
+    // pub fn function(&self) -> Function<'bump> {
+    //     self.function
+    // }
 
     pub fn ignored_functions(&self) -> &[Function<'bump>] {
         self.ignored_functions.as_ref()
@@ -387,14 +471,26 @@ where
             .map(|s| mforall!(x!0:self.sort(), m!1:s; {!self.f_a(x, m)}))
     }
 
-    pub fn declare(&self, pbl: &Problem<'bump>) -> Declaration<'bump> {
-        match self.kind {
-            SubtermKind::Regular => Declaration::FreeFunction(self.function),
-            SubtermKind::Vampire => Declaration::Subterm(declare::Subterm {
-                function: self.function,
-                comutative_functions: self.list_default_subterm_functions(pbl).collect(),
-            }),
+    pub fn declare(
+        &self,
+        pbl: &Problem<'bump>,
+        declarations: &mut impl Extend<Declaration<'bump>>,
+    ) {
+        match &self.kind {
+            AbsSubtermKindG::Vampire(function) => {
+                declarations.extend([Declaration::Subterm(declare::Subterm {
+                    function: *function,
+                    comutative_functions: self.list_default_subterm_functions(pbl).collect(),
+                })])
+            }
+            AbsSubtermKindG::Regular(funs) => {
+                declarations.extend(funs.values().map(|&fun| Declaration::FreeFunction(fun)))
+            }
         }
+    }
+
+    pub fn kind(&self) -> SubtermKind {
+        self.kind.as_subterm_kind()
     }
 }
 

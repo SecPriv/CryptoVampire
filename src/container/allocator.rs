@@ -13,6 +13,16 @@ pub struct Residual<I, T> {
     pub residual: T,
 }
 
+impl<I, T> Residual<I, T> {
+    pub fn content(&self) -> &I {
+        &self.content
+    }
+
+    pub fn residual(&self) -> &T {
+        &self.residual
+    }
+}
+
 impl<'bump, I, T: Default> From<I> for Residual<I, T> {
     fn from(content: I) -> Self {
         Residual {
@@ -43,6 +53,15 @@ pub trait ContainerTools<'bump, I> {
     fn alloc_uninit<'a>(&'bump self) -> Self::R<'a>
     where
         'bump: 'a;
+
+    fn alloc_mulitple_uninit<'a, B>(&'bump self, n: usize) -> B
+    where
+        'bump: 'a,
+        B: FromIterator<Self::R<'a>>,
+    {
+        std::iter::from_fn(|| Some(self.alloc_uninit())).take(n).collect()
+    }
+
     fn alloc_inner<'a>(&'bump self, inner: I) -> Self::R<'a>
     where
         'bump: 'a;
@@ -90,6 +109,32 @@ pub trait ContainerTools<'bump, I> {
         let uninit = self.alloc_uninit();
         let Residual { content, residual } = f(&uninit)?;
         unsafe { Self::initialize(&uninit, content) }?;
+        Ok(Residual {
+            content: uninit,
+            residual,
+        })
+    }
+
+    fn try_alloc_mulitple_cyclic_with_residual<F, T, E1, E2, Iter1>(
+        &'bump self,
+        n: usize,
+        f: F,
+    ) -> Result<Residual<Vec<Self::R<'bump>>, T>, E2>
+    where
+        F: for<'b> FnOnce(&'b [Self::R<'bump>]) -> Result<Residual<Iter1, T>, E1>,
+        E1: Error,
+        E2: Error + From<E1> + From<AlreadyInitialized>,
+        Iter1: IntoIterator<Item = I>,
+    {
+        // let uninit = self.alloc_uninit();
+        let uninit: Vec<_> = self.alloc_mulitple_uninit(n);
+        let Residual { content, residual } = f(&uninit)?;
+        uninit
+            .iter()
+            .zip_eq(content)
+            .try_for_each(|(reference, inner)| unsafe { Self::initialize(reference, inner) })?;
+
+        // unsafe { Self::initialize(&uninit, content) }?;
         Ok(Residual {
             content: uninit,
             residual,
@@ -210,28 +255,10 @@ where
     unsafe fn initialize(
         reference: &Self::R<'bump>,
         inner: [I; N],
-    ) -> Result<(), AlreadyInitialized>
-// where
-    //     'bump: 'a,
-    {
+    ) -> Result<(), AlreadyInitialized> {
         inner
             .into_iter()
             .zip_eq(reference.iter())
             .try_for_each(|(inner, reference)| unsafe { C::initialize(reference, inner) })
     }
-
-    // fn alloc_uninit<'a>(&'a self) -> [I; N] {
-    //     std::array::from_fn(|_| self.alloc_uninit())
-    // }
-
-    // unsafe fn initialize(reference: &[I; N], inner: [I; N]) -> Result<(), AlreadyInitialized> {
-    //     inner
-    //         .into_iter()
-    //         .zip_eq(reference.iter())
-    //         .try_for_each(|(inner, reference)| unsafe { C::initialize(reference, inner) })
-    // }
-
-    // fn alloc_inner(&'bump self, inner: [I; N]) -> [I; N] {
-    //     inner.map(|inner| self.alloc_inner(inner))
-    // }
 }

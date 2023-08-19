@@ -7,7 +7,7 @@ use crate::{
             SubtermEufCmaMacKey, SubtermEufCmaMacMain, SubtermEufCmaSignKey, SubtermEufCmaSignMain,
             SubtermIntCtxtKey, SubtermIntCtxtMain, SubtermIntCtxtRand, SubtermNonce,
         },
-        subterm::kind::SubtermKind,
+        subterm::kind::{SubtermKind, SubtermKindWSort},
     },
 };
 
@@ -18,17 +18,42 @@ use super::super::{
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Subterm<'bump> {
-    pub subterm: Subsubterm<'bump>,
-    pub name: String,
+    subterm: Subsubterm<'bump>,
+    name: String,
+    target_sort: SubtermKindWSort<'bump>,
 }
 
 impl<'bump> Subterm<'bump> {
+    pub fn new(
+        subterm: Subsubterm<'bump>,
+        name: String,
+        target_sort: SubtermKindWSort<'bump>,
+    ) -> Self {
+        Self {
+            subterm,
+            name,
+            target_sort,
+        }
+    }
+
     pub fn into_inner_function(self) -> InnerFunction<'bump> {
         InnerFunction::Subterm(self)
     }
 
     pub fn signature(&self) -> impl Signature<'bump> {
         signature::SubtermSignature::new(self.subterm.sort())
+    }
+
+    pub fn subterm(&self) -> &Subsubterm<'bump> {
+        &self.subterm
+    }
+
+    pub fn name(&self) -> &str {
+        self.name.as_ref()
+    }
+
+    pub fn kind(&self) -> SubtermKind {
+        self.subterm.kind()
     }
 }
 
@@ -43,6 +68,13 @@ macro_rules! generate {
             pub fn sort(&self) -> Sort<'bump> {
                 match self {
                     $(Self::$name(x) => x.sort()),*
+                }
+            }
+
+            pub fn kind(&self) -> SubtermKind {
+
+                match self {
+                    $(Self::$name(x) => x.kind()),*
                 }
             }
         }
@@ -69,17 +101,6 @@ generate!(
     IntCtxtRand: SubtermIntCtxtRand<'bump>
 );
 //  Nonce, EufCmaMacMain, EufCmaMacKey, EufCmaSignMain, EufCmaSignKey, IntCtxtMain, IntCtxtKey, IntCtxtRand
-
-impl<'bump> Subsubterm<'bump> {
-    pub fn kind(&self) -> SubtermKind {
-        do_for_all_subterms!(
-                Nonce, EufCmaMacMain, EufCmaMacKey, EufCmaSignMain,
-                    EufCmaSignKey, IntCtxtMain, IntCtxtKey, IntCtxtRand;
-        self; s -> {
-            s.kind
-        })
-    }
-}
 
 // #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 // pub enum Subsubterm<'bump> {

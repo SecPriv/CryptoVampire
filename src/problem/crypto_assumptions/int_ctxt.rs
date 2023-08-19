@@ -8,8 +8,8 @@ use crate::{
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::{self, meq, ARichFormula, RichFormula},
-        function::inner::{subterm::Subsubterm, term_algebra::name::NameCasterCollection},
         function::Function,
+        function::{inner::subterm::Subsubterm, name_caster_collection::NameCasterCollection},
         sort::{
             builtins::{CONDITION, MESSAGE, NAME},
             Sort,
@@ -22,7 +22,7 @@ use crate::{
         generator::Generator,
         problem::Problem,
         subterm::{
-            kind::SubtermKind,
+            kind::{SubtermKind, SubtermKindConstr},
             traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
             Subterm,
         },
@@ -61,13 +61,13 @@ impl<'bump> IntCtxt<'bump> {
         let message_sort = MESSAGE.clone();
         let ev = &pbl.evaluator;
         let nc = &pbl.name_caster;
-        let kind = env.into();
+        let kind = SubtermKindConstr::as_constr(pbl, env);
 
         let subterm_main = Subterm::new(
             env.container,
             env.container
                 .find_free_function_name("subterm_int_ctxt_main"),
-            kind,
+            &kind,
             DefaultAuxSubterm::new(message_sort),
             [],
             DeeperKinds::default(),
@@ -78,7 +78,7 @@ impl<'bump> IntCtxt<'bump> {
             env.container,
             env.container
                 .find_free_function_name("subterm_int_ctxt_key"),
-            kind,
+            &kind,
             KeyAux {
                 int_ctxt: *self,
                 name_caster: Arc::clone(&pbl.name_caster),
@@ -92,7 +92,7 @@ impl<'bump> IntCtxt<'bump> {
             env.container,
             env.container
                 .find_free_function_name("subterm_int_ctxt_rand"),
-            kind,
+            &kind,
             RandAux {
                 int_ctxt: *self,
                 name_caster: Arc::clone(&pbl.name_caster),
@@ -303,9 +303,9 @@ fn define_subterm<'bump>(
     subterm: &Arc<Subterm<'bump, impl SubtermAux<'bump>>>,
     keep_guard: bool,
 ) {
-    let kind = env.into();
-    declarations.push(subterm.declare(pbl));
-    if let SubtermKind::Vampire = kind {
+    let kind = subterm.kind();
+    subterm.declare(pbl, declarations);
+    if kind.is_vampire() {
     } else {
         assertions.extend(
             subterm

@@ -1,13 +1,14 @@
-use crate::{assert_variance, match_as_trait, utils::string_ref::StrRef, variants, CustomDerive};
+use crate::{
+    assert_variance,
+    environement::traits::{KnowsRealm, Realm},
+    match_as_trait,
+    utils::string_ref::StrRef,
+    variants, CustomDerive,
+};
 
 use self::{
-    base_function::BaseFunction,
-    cell::Cell,
-    connective::Connective,
-    if_then_else::IfThenElse,
-    input::Input,
-    name::{Name, NameCaster},
-    quantifier::Quantifier,
+    base_function::BaseFunction, cell::Cell, connective::Connective, if_then_else::IfThenElse,
+    input::Input, quantifier::Quantifier, name_caster::NameCaster,
 };
 
 pub mod base_function;
@@ -15,8 +16,8 @@ pub mod cell;
 pub mod connective;
 pub mod if_then_else;
 pub mod input;
-pub mod name;
 pub mod quantifier;
+pub mod name_caster;
 
 use macro_attr::*;
 
@@ -30,10 +31,15 @@ macro_attr! {
         Quantifier(Quantifier<'bump>),
         Function(BaseFunction<'bump>),
         Cell(Cell<'bump>),
-        Name(Name<'bump>),
         NameCaster(NameCaster<'bump>),
         Input(Input),
         IfThenElse(IfThenElse),
+    }
+}
+
+impl<'bump> KnowsRealm for TermAlgebra<'bump> {
+    fn get_realm(&self) -> Realm {
+        Realm::Symbolic
     }
 }
 
@@ -43,8 +49,7 @@ impl<'bump> TermAlgebra<'bump> {
             TermAlgebra::Condition(_)
             | TermAlgebra::Function(_)
             | TermAlgebra::IfThenElse(_)
-            | TermAlgebra::NameCaster(_)
-            | TermAlgebra::Name(_) => true,
+            | TermAlgebra::NameCaster(_) => true,
             TermAlgebra::Quantifier(_) | TermAlgebra::Cell(_) | TermAlgebra::Input(_) => false,
         }
     }
@@ -53,11 +58,10 @@ impl<'bump> TermAlgebra<'bump> {
         match_as_trait!(self => {
             TermAlgebra::Quantifier(x)
                 | TermAlgebra::NameCaster(x)
-                | TermAlgebra::Function(x)
                     => {x.name()},
             TermAlgebra::Condition(x)
+                | TermAlgebra::Function(x)
                 | TermAlgebra::Cell(x)
-                | TermAlgebra::Name(x)
                 | TermAlgebra::Input(x)
                 | TermAlgebra::IfThenElse(x)
                     => {x.name().into()}
@@ -82,8 +86,7 @@ impl<'bump> TermAlgebra<'bump> {
         Quantifier:Quantifier<'bump>,
         Function:BaseFunction<'bump>,
         Cell:Cell<'bump>,
-        NameCaster:NameCaster<'bump>,
-        Name:Name<'bump>);
+        NameCaster:NameCaster<'bump>);
 }
 
 assert_variance!(TermAlgebra);

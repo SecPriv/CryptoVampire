@@ -1,4 +1,6 @@
-use std::{cmp::Ordering, fmt::Debug, hash::Hash, marker::PhantomData, ptr::NonNull};
+use std::{
+    borrow::Borrow, cmp::Ordering, fmt::Debug, hash::Hash, marker::PhantomData, ptr::NonNull,
+};
 
 use crate::utils::{
     precise_as_ref::PreciseAsRef, string_ref::StrRef, traits::RefNamed, utils::MaybeInvalid,
@@ -12,6 +14,14 @@ pub struct Reference<'bump, T> {
     inner: NonNull<Option<T>>,
     lt: PhantomData<&'bump ()>,
 }
+
+unsafe impl<'bump, T: Sync> Sync for Reference<'bump, T> {}
+unsafe impl<'bump, T: Sync> Send for Reference<'bump, T> {}
+
+/// [Reference] but with a forced order based on the value of the pointer.
+///
+/// This is non-deterministic
+pub struct FORef<'bump, T>(Reference<'bump, T>);
 
 impl<'bump, T> Reference<'bump, T> {
     pub fn as_option_ref(&self) -> &'bump Option<T> {
@@ -122,5 +132,71 @@ where
 {
     fn name_ref(&self) -> StrRef<'a> {
         self.precise_as_ref().name_ref()
+    }
+}
+
+// -----------------------------------------------------------------------------
+// ---------------------------------- FORef ------------------------------------
+// -----------------------------------------------------------------------------
+
+impl<'bump, T> FORef<'bump, T> {
+    pub fn as_reference(&self) -> Reference<'bump, T> {
+        self.0
+    }
+}
+
+impl<'bump, T> PartialOrd for FORef<'bump, T> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(&other))
+    }
+}
+impl<'bump, T> Ord for FORef<'bump, T> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.inner.cmp(&other.0.inner)
+    }
+}
+impl<'bump, T> Hash for FORef<'bump, T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.inner.hash(state);
+    }
+}
+impl<'bump, T> Eq for FORef<'bump, T> {}
+impl<'bump, T> PartialEq for FORef<'bump, T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.inner == other.0.inner
+    }
+}
+impl<'bump, T> Copy for FORef<'bump, T> {}
+impl<'bump, T> Clone for FORef<'bump, T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl<'bump, T: Debug> Debug for FORef<'bump, T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.as_reference().fmt(f)
+    }
+}
+
+// -----------------------------------------------------------------------------
+// -------------------------------- From & co ----------------------------------
+// -----------------------------------------------------------------------------
+
+impl<'bump, T> From<Reference<'bump, T>> for FORef<'bump, T> {
+    fn from(value: Reference<'bump, T>) -> Self {
+        FORef(value)
+    }
+}
+
+impl<'bump, T> From<FORef<'bump, T>> for Reference<'bump, T> {
+    fn from(value: FORef<'bump, T>) -> Self {
+        value.0
+    }
+}
+
+impl<'bump, T> Borrow<Reference<'bump, T>> for FORef<'bump, T> {
+    fn borrow(&self) -> &Reference<'bump, T> {
+        &self.0
     }
 }

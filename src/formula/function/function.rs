@@ -11,6 +11,7 @@ use crate::environement::traits::Realm;
 use crate::force_lifetime;
 
 use crate::formula::formula::ARichFormula;
+use crate::formula::function::inner::evaluated_fun::EvaluatedFun;
 use crate::formula::function::signature::Lazy::{A, B};
 use crate::utils::traits::{NicerError, RefNamed};
 use crate::utils::utils::MaybeInvalid;
@@ -18,7 +19,7 @@ use crate::{
     assert_variance, asssert_trait,
     formula::{
         formula::RichFormula,
-        function::inner::term_algebra::base_function::{BaseFunction, InnerBaseFunction},
+        function::inner::term_algebra::base_function::BaseFunction,
         quantifier,
         sort::{
             sort_proxy::SortProxy,
@@ -33,6 +34,7 @@ use crate::{
 };
 
 use super::dispacher::Dispacher;
+use super::inner::name::Name;
 use super::signature::{AsFixedSignature, OnlyArgsSignature, OnlyArgsSignatureProxy};
 use super::traits::FixedSignature;
 use super::{
@@ -73,12 +75,12 @@ pub type Function<'bump> = Reference<'bump, InnerFunction<'bump>>;
 
 impl<'bump> Containable<'bump> for InnerFunction<'bump> {}
 
-asssert_trait!(sync_and_send; InnerFunction; Sync, Send);
+// asssert_trait!(sync_and_send; InnerFunction; Sync, Send);
 // assert_variance!(Function);
 assert_variance!(InnerFunction);
 
-unsafe impl<'bump> Sync for Function<'bump> {}
-unsafe impl<'bump> Send for Function<'bump> {}
+// unsafe impl<'bump> Sync for Function<'bump> {}
+// unsafe impl<'bump> Send for Function<'bump> {}
 
 // impl<'bump> AsRef<RefPointee<'bump, Self>> for Function<'bump> {
 //     fn as_ref(&self) -> &RefPointee<'bump, Self> {
@@ -363,12 +365,12 @@ impl<'bump> Function<'bump> {
         } = container
             .alloc_cyclic_with_residual(|eval_fun| {
                 let main_fun: Function<'bump> = container.alloc_inner(InnerFunction::TermAlgebra(
-                    TermAlgebra::Function(BaseFunction::Base(InnerBaseFunction {
+                    TermAlgebra::Function(BaseFunction {
                         name: name.to_string().into(),
                         args: input_sorts.into_iter().collect(),
                         out: output_sort,
                         eval_fun: *eval_fun,
-                    })),
+                    }),
                 ));
                 let InnerFunction::TermAlgebra(TermAlgebra::Function(base_main_fun)) =
                         main_fun.precise_as_ref()
@@ -377,9 +379,7 @@ impl<'bump> Function<'bump> {
                     };
 
                 Residual {
-                    content: InnerFunction::TermAlgebra(TermAlgebra::Function(BaseFunction::Eval(
-                        &base_main_fun,
-                    ))),
+                    content: InnerFunction::EvaluatedFun(EvaluatedFun::new(main_fun)),
                     residual: main_fun,
                 }
             })
@@ -399,15 +399,18 @@ impl<'bump> Function<'bump> {
 
     pub fn signature<'a>(&'a self) -> impl Signature<'bump> + 'bump {
         match self.precise_as_ref() {
-            InnerFunction::TermAlgebra(x) => A(x.as_fixed_signature()),
             InnerFunction::Bool(x) => B(A(x.signature())),
-            InnerFunction::Step(x) => B(B(A(x.as_fixed_signature()))),
-            InnerFunction::Subterm(x) => B(B(B(A(x.signature())))),
-            InnerFunction::IfThenElse(_x) => B(B(B(B(A(IfThenElse::signature()))))),
-            InnerFunction::Evaluate(x) => B(B(B(B(B(A(x.as_fixed_signature())))))),
-            InnerFunction::Predicate(x) => B(B(B(B(B(B(A(x.as_fixed_signature()))))))),
-            InnerFunction::Tmp(x) => B(B(B(B(B(B(B(A(x.as_fixed_signature())))))))),
-            InnerFunction::Skolem(x) => B(B(B(B(B(B(B(B(x.as_fixed_signature())))))))),
+            InnerFunction::Subterm(x) => B(B(A(x.signature()))),
+            InnerFunction::IfThenElse(_x) => B(B(B(IfThenElse::signature()))),
+            // fixed signature
+            InnerFunction::TermAlgebra(x) => A(x.as_fixed_signature()),
+            InnerFunction::Step(x) => A(x.as_fixed_signature()),
+            InnerFunction::Evaluate(x) => A(x.as_fixed_signature()),
+            InnerFunction::Predicate(x) => A(x.as_fixed_signature()),
+            InnerFunction::Tmp(x) => A(x.as_fixed_signature()),
+            InnerFunction::Skolem(x) => A(x.as_fixed_signature()),
+            InnerFunction::Name(x) => A(x.as_fixed_signature()),
+            InnerFunction::EvaluatedFun(x) => A(x.as_fixed_signature()),
         }
     }
 
@@ -497,6 +500,8 @@ impl<'bump> Function<'bump> {
         Predicate:Predicate<'bump>,
         Tmp:Tmp<'bump>,
         Skolem:Skolem<'bump>,
+        Name:Name<'bump>,
+        EvaluatedFun:EvaluatedFun<'bump>
         // Invalid:InvalidFunction,
     );
 
@@ -506,7 +511,10 @@ impl<'bump> Function<'bump> {
 
     /// functions that **always** are datatypes
     pub fn is_datatype(&self) -> bool {
-        self.is_step() || (self.as_term_algebra().map(|f| f.is_name()) == Some(true))
+        matches!(
+            self.as_inner(),
+            InnerFunction::Step(_) | InnerFunction::Name(_)
+        )
     }
 
     force_lifetime!(Function, 'bump);

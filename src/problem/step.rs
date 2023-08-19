@@ -84,10 +84,10 @@ impl<'bump> InnerStep<'bump> {
     }
 }
 
-asssert_trait!(sync_send_step; InnerStep; Sync, Send);
 assert_variance!(Step);
-unsafe impl<'bump> Sync for Step<'bump> {}
-unsafe impl<'bump> Send for Step<'bump> {}
+// asssert_trait!(sync_send_step; InnerStep; Sync, Send);
+// unsafe impl<'bump> Sync for Step<'bump> {}
+// unsafe impl<'bump> Send for Step<'bump> {}
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum MessageOrCondition {

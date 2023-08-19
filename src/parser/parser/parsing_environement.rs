@@ -12,9 +12,8 @@ use crate::{
         function::{
             inner::{
                 evaluate::Evaluator,
-                term_algebra::name::{NameCasterCollection, DEFAULT_NAME_CASTER},
             },
-            Function,
+            Function, name_caster_collection::{NameCasterCollection, DEFAULT_NAME_CASTER},
         },
         sort::Sort,
     },

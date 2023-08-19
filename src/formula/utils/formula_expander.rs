@@ -238,7 +238,6 @@ impl<'bump> ExpantionContent<'bump> {
 						// writting everything down to get notified by the type checker in case of changes
 						TermAlgebra::Condition(_)
 						| TermAlgebra::Function(_)
-						| TermAlgebra::Name(_)
 						| TermAlgebra::NameCaster(_)
 						| TermAlgebra::IfThenElse(_)
 						| TermAlgebra::Quantifier(_)
@@ -253,7 +252,8 @@ impl<'bump> ExpantionContent<'bump> {
 					| InnerFunction::Predicate(_)
 					| InnerFunction::Tmp(_)
 					| InnerFunction::Skolem(_)
-					| InnerFunction::Evaluate(_) => iter.collect(),
+					| InnerFunction::Evaluate(_) |
+                    InnerFunction::Name(_) | InnerFunction::EvaluatedFun(_) => iter.collect(),
 					// InnerFunction::Invalid(_) => iter.collect(), // we continue anyway
 				}
             }

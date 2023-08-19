@@ -17,8 +17,8 @@ use super::{Assignement, InnerMemoryCell};
 pub type MemoryCell<'bump> = Reference<'bump, InnerMemoryCell<'bump>>;
 
 assert_variance!(MemoryCell);
-unsafe impl<'bump> Sync for MemoryCell<'bump> {}
-unsafe impl<'bump> Send for MemoryCell<'bump> {}
+// unsafe impl<'bump> Sync for MemoryCell<'bump> {}
+// unsafe impl<'bump> Send for MemoryCell<'bump> {}
 
 impl<'bump> MemoryCell<'bump> {
     /// make a new [MemoryCell] and allocate a [Function] for it

@@ -10,7 +10,11 @@ use crate::{
     problem::{
         generator::Generator,
         problem::Problem,
-        subterm::{kind::SubtermKind, traits::DefaultAuxSubterm, Subterm},
+        subterm::{
+            kind::{AbsSubtermKindG, SubtermKind, SubtermKindConstr},
+            traits::DefaultAuxSubterm,
+            Subterm,
+        },
     },
 };
 
@@ -32,20 +36,20 @@ impl Nonce {
         let ev = &pbl.evaluator;
         let nc = &pbl.name_caster;
 
-        let kind = env.into();
+        let kind = SubtermKindConstr::as_constr(pbl, env);
         let subterm = Subterm::new(
             env.container,
             env.container.find_free_function_name("subterm_nonce"),
-            kind,
+            &kind,
             DefaultAuxSubterm::new(nonce_sort),
             [],
             Default::default(),
             |rc| Subsubterm::Nonce(rc),
         );
 
-        declarations.push(subterm.declare(pbl));
+        subterm.declare(pbl, declarations);
 
-        if let SubtermKind::Vampire = kind {
+        if kind.is_vampire() {
         } else {
             assertions.extend(
                 subterm

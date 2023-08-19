@@ -9,7 +9,7 @@ use crate::formula::{formula::RichFormula, sort::builtins::STEP};
 use super::inner::evaluate::Evaluate;
 
 use super::inner::term_algebra::base_function::BaseFunctionTuple;
-use super::inner::term_algebra::name::NameCaster;
+use super::inner::term_algebra::name_caster::NameCaster;
 use super::inner::term_algebra::{self, TermAlgebra};
 use super::{new_static_function, Function, InnerFunction};
 

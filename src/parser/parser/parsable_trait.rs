@@ -513,7 +513,7 @@ fn parse_application<'b, 'a, 'bump>(
 
     let ifun = function.get_function();
     // if it's a name, cast it
-    let formula = if let Some(name) = ifun.as_term_algebra().and_then(|f| f.as_name()) {
+    let formula = if let Some(name) = ifun.as_name() {
         // assert!(is_name);
         formula_realm = Some(Realm::Symbolic); // names are symbolic
         env.name_caster_collection

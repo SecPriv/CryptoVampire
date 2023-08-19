@@ -9,7 +9,7 @@ pub mod inner;
 
 use crate::{
     container::{
-        allocator::ContainerTools, contained::Containable, reference::Reference, StaticContainer,
+        allocator::ContainerTools, contained::Containable, reference::{Reference, FORef}, StaticContainer,
     },
     environement::traits::{KnowsRealm, Realm},
     force_lifetime,
@@ -19,11 +19,12 @@ use crate::{
 use self::inner::{Index, Other, TermBase, UserEvaluatable};
 
 pub type Sort<'bump> = Reference<'bump, InnerSort<'bump>>;
+pub type FOSort<'bump> = FORef<'bump, InnerSort<'bump>>;
 
 impl<'bump> Containable<'bump> for InnerSort<'bump> {}
 
-unsafe impl<'bump> Sync for Sort<'bump> {}
-unsafe impl<'bump> Send for Sort<'bump> {}
+// unsafe impl<'bump> Sync for Sort<'bump> {}
+// unsafe impl<'bump> Send for Sort<'bump> {}
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum InnerSort<'bump> {
