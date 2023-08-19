@@ -100,7 +100,7 @@ impl<'bump> EufCmaMac<'bump> {
 
         if env.with_general_crypto_axiom() && env.define_subterm() {
             let max_var = pbl.max_var() + 1;
-            let split = Function::new_spliting(env.container_full_life_time(), [message_sort]);
+            let split = Function::new_spliting(env.container_full_life_time(), [nonce_sort]);
             declarations.push(Declaration::FreeFunction(split));
 
             assertions.push(Axiom::base({

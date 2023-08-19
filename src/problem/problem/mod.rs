@@ -10,7 +10,7 @@ use std::{
 
 use crate::{
     container::ScopedContainer,
-    environement::{environement::Environement, traits::KnowsRealm},
+    environement::environement::Environement,
     formula::{
         file_descriptior::{
             axioms::Axiom,

@@ -55,7 +55,7 @@ impl<'bump> VarProxy<'bump> {
 impl<'bump> Display for VarProxy<'bump> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let VarProxy { id, sort } = self;
-        write!(f, "(X{id}: ");
+        write!(f, "(X{id}: ")?;
         match sort.as_option() {
             Some(s) => write!(f, "{s})"),
             None => write!(f, "_)"),
@@ -388,15 +388,46 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Application<'a> {
                             ))?
                         }
 
-                        let sort = expected_sort
-                            .clone()
-                            .map(|es| sort.unify(&es, &state).into_rr(*span))
-                            .unwrap_or_else(|| {
-                                Into::<Option<Sort>>::into(sort)
-                                    .ok_or_else(|| merr(*span, f!("can't infer sort")))
-                            })?;
+                        match (
+                            sort.as_option().and_then(|s| s.evaluated_sort()),
+                            state.get_realm(),
+                        ) {
+                            (Some(s), r @ Realm::Evaluated) => {
+                                let sort = sort.as_option().unwrap();
+                                let formula = env
+                                    .evaluator
+                                    .get_eval_function(sort)
+                                    .expect(&format!(
+                                        "{sort} is evaluatable but not in the evaluator..."
+                                    ))
+                                    .f_a([Variable { id: *id, sort }]);
 
-                        Ok(Variable { id: *id, sort }.into())
+                                expected_sort
+                                    .as_ref()
+                                    .map(|es| es.matches(s, &r))
+                                    .transpose()
+                                    .into_rr(*span)
+                                    .map(|_| formula)
+                            }
+                            (_, r) => expected_sort
+                                .as_ref()
+                                .map(|es| es.unify_rev(sort, &r).into_rr(*span))
+                                .unwrap_or(
+                                    sort.as_option()
+                                        .ok_or(merr(*span, "can't infer sort".to_string())),
+                                )
+                                .map(|sort| Variable { id: *id, sort }.into()),
+                        }
+
+                        // let sort = expected_sort
+                        //     .clone()
+                        //     .map(|es| sort.unify(&es, &state).into_rr(*span))
+                        //     .unwrap_or_else(|| {
+                        //         Into::<Option<Sort>>::into(sort)
+                        //             .ok_or_else(|| merr(*span, f!("can't infer sort")))
+                        //     })?;
+
+                        // Ok(Variable { id: *id, sort }.into())
                     })
                     // otherwise look for a function
                     .unwrap_or_else(|| {

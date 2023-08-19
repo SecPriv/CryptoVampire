@@ -1,12 +1,11 @@
 use std::sync::Arc;
 
-use itertools::Itertools;
 
 use crate::{
     formula::{
         formula::ARichFormula,
         function::{builtin::INPUT, Function},
-        manipulation::{FrozenSubst, FrozenSubstF, OneVarSubst, OneVarSubstF, Substitution},
+        manipulation::{FrozenSubst, FrozenSubstF, OneVarSubst, OneVarSubstF},
         sort::{builtins::MESSAGE, Sort},
         variable::Variable,
     },

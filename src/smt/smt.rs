@@ -155,9 +155,9 @@ impl<'bump> fmt::Display for SmtFormula<'bump> {
 impl<'bump> fmt::Display for Smt<'bump> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Smt::Assert(e) => write!(f, "(assert {})", e),
-            Smt::AssertTh(e) => write!(f, "(assert-theory {})", e),
-            Smt::AssertNot(e) => write!(f, "(assert-not {})", e),
+            Smt::Assert(e) => writeln!(f, "(assert {})", e),
+            Smt::AssertTh(e) => writeln!(f, "(assert-theory {})", e),
+            Smt::AssertNot(e) => writeln!(f, "(assert-not {})", e),
             Smt::DeclareFun(fun) => {
                 write!(f, "(declare-fun {} (", fun.name())?;
                 for s in fun.fast_insort().expect(&format!(
@@ -166,18 +166,18 @@ impl<'bump> fmt::Display for Smt<'bump> {
                 )) {
                     write!(f, "{} ", s.name())?;
                 }
-                write!(f, ") {})", fun.fast_outsort().unwrap())
+                writeln!(f, ") {})", fun.fast_outsort().unwrap())
             }
-            Smt::DeclareSort(sort) => write!(f, "(declare-sort {} 0)", sort),
+            Smt::DeclareSort(sort) => writeln!(f, "(declare-sort {} 0)", sort),
             Smt::DeclareSortAlias { from, to } => {
-                write!(f, "(define-sort {} () {}", to.name(), from.name())
+                writeln!(f, "(define-sort {} () {}", to.name(), from.name())
             }
             Smt::DeclareSubtermRelation(fun, funs) => {
                 write!(f, "(declare-subterm-relation {} ", fun.name())?;
                 for fun in funs {
                     write!(f, "{} ", fun.name())?;
                 }
-                write!(f, ")")
+                writeln!(f, ")")
             }
             Smt::DeclareRewrite {
                 rewrite_fun,
@@ -193,7 +193,7 @@ impl<'bump> fmt::Display for Smt<'bump> {
                     RewriteKind::Bool => "=>".into(),
                     RewriteKind::Other(f) => f.name(),
                 };
-                write!(f, ") ({} {} {})))", op, lhs, rhs)
+                writeln!(f, ") ({} {} {})))", op, lhs, rhs)
             }
             Smt::DeclareDatatypes { sorts, cons } => {
                 write!(f, "(declare-datatypes\n")?;
@@ -219,14 +219,14 @@ impl<'bump> fmt::Display for Smt<'bump> {
                     }
                     write!(f, "\t\t)\n")?;
                 }
-                write!(f, "\t)\n)")
+                writeln!(f, "\t)\n)")
             }
 
-            Smt::CheckSat => write!(f, "(check-sat)"),
-            Smt::Comment(s) => write!(f, "\n; {}\n", s),
-            Smt::GetProof => write!(f, "(get-proof)"),
-            Smt::SetOption(option, arg) => write!(f, "(set-option :{} {})", option, arg),
-            Smt::SetLogic(logic) => write!(f, "(set-logic {})", logic),
+            Smt::CheckSat => writeln!(f, "(check-sat)"),
+            Smt::Comment(s) => writeln!(f, "\n; {}\n", s),
+            Smt::GetProof => writeln!(f, "(get-proof)"),
+            Smt::SetOption(option, arg) => writeln!(f, "(set-option :{} {})", option, arg),
+            Smt::SetLogic(logic) => writeln!(f, "(set-logic {})", logic),
         }
     }
 }

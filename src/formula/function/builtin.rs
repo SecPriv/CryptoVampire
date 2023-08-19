@@ -191,14 +191,14 @@ static EMPTY_TUPLE_FUNCTION: BaseFunctionTuple<'static> =
 #[dynamic]
 pub static EMPTY: Function<'static> = (&EMPTY_TUPLE_FUNCTION).main.clone();
 
-#[dynamic]
-pub static EMPTY_EVALUATED: Function<'static> = (&EMPTY_TUPLE_FUNCTION).eval.clone();
+// #[dynamic]
+// pub static EMPTY_EVALUATED: Function<'static> = (&EMPTY_TUPLE_FUNCTION).eval.clone();
 
 builtin!(
     AND,
     AND_TA,
     EMPTY,
-    EMPTY_EVALUATED,
+    // EMPTY_EVALUATED,
     EQUALITY,
     EQUALITY_TA,
     FALSE_F,
@@ -214,7 +214,6 @@ builtin!(
     IMPLIES_TA,
     INPUT,
     LESS_THAN_STEP,
-    MESSAGE_TO_BITSTRING,
     NAME_TO_MESSAGE,
     NOT,
     NOT_TA,

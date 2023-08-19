@@ -41,7 +41,7 @@ pub enum UpdateError {
     AlreadySet,
 }
 
-use crate::environement::traits::KnowsRealm;
+use crate::environement::traits::{KnowsRealm, Realm};
 
 use super::Sort;
 #[derive(Debug, Clone)]
@@ -181,6 +181,10 @@ impl<'bump> SortProxy<'bump> {
     /// similar to `maches` or `expect` but without modifying `self`
     pub fn is_sosrt(&self, other: Sort<'bump>) -> bool {
         self.as_option() == Some(other)
+    }
+
+    pub fn realm(&self) -> Option<Realm> {
+        self.as_option().and_then(|s| s.realm())
     }
 }
 
