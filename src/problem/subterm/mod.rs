@@ -26,12 +26,15 @@ use crate::{
     implvec, mforall, partial_order,
     utils::{
         traits::NicerError,
-        utils::{repeat_n_zip, AlreadyInitialized, StackBox}, vecref::VecRef,
+        utils::{repeat_n_zip, AlreadyInitialized, StackBox},
+        vecref::VecRef,
     },
 };
 
 use self::{
-    kind::{AbsSubtermKindG, SubtermKind, SubtermKindWFunction, SubtermKindWSort, SubtermKindConstr},
+    kind::{
+        AbsSubtermKindG, SubtermKind, SubtermKindConstr, SubtermKindWFunction, SubtermKindWSort,
+    },
     traits::{SubtermAux, SubtermResult},
 };
 
@@ -381,7 +384,28 @@ where
         let steps = ptcl.steps();
 
         // let pile = vec![(ExpantionState::None, m)];
-        let pile = repeat_n_zip(ExpantionState::from_deeper_kind(deeper_kind), m).collect_vec();
+        let mut pile = repeat_n_zip(ExpantionState::from_deeper_kind(deeper_kind), m).collect_vec();
+
+        // std::iter::from_fn(move || {
+        //     pile.pop().map(|(state, f)| {
+        //         debug_print::debug_println!("\t\t{x} ⊑ {}", &f);
+        //         let inner_iter = ExpantionContent {
+        //             state: state.clone(),
+        //             content: f.clone(),
+        //         }
+        //         .expand(steps.iter().cloned(), ptcl.graph(), false)
+        //         .into_iter()
+        //         .map(|ec| ec.as_tuple());
+        //         debug_print::debug_println!(
+        //             "inner subterm -> {}:{}:{}",
+        //             file!(),
+        //             line!(),
+        //             column!()
+        //         );
+        //         let SubtermResult { unifier, nexts } = self.aux.eval_and_next(x, &f);
+        //         pile.extend(inner_iter.chain(repeat_n_zip(state.clone(), nexts)))
+        //     })
+        // })
 
         FormulaIterator {
             pile: StackBox::new(pile),
@@ -437,8 +461,13 @@ where
             AbsSubtermKindG::Regular(funs) => {
                 let [x, m]: [ARichFormula; 2] = [x.into(), m.into()];
                 let sort = m.get_sort().expect_display("term algebra has a sort");
-                funs.get(&sort)
-                    .expect(&format!("unsupported sort: {sort}"))
+                debug_print::debug_println!(
+                    "[{}]",
+                    funs.keys().map(|fsort| fsort.as_reference()).join(", ")
+                );
+                debug_print::debug_println!("{:?}", &funs);
+                funs.get(&sort.as_fo())
+                    .expect(&format!("unsupported sort: {sort}, {sort:?}"))
                     .f_a([x, m])
             }
         }

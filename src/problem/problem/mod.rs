@@ -121,7 +121,7 @@ impl<'bump> Generator<'bump> for Problem<'bump> {
                 // declare the function as datatypes if
                 //  - it must always be a datatype
                 //  - it's a symbolic term and we're in the symbolic realm
-                if fun.is_datatype() || (fun.is_term_algebra() && env.is_symbolic_realm()) {
+                if fun.is_always_datatype() || (fun.is_term_algebra() && env.is_symbolic_realm()) {
                     debug_assert_eq!(fun.fast_outsort().map(|s| s.is_datatype(env)), Some(true));
                     let constr: &mut Vec<_> =
                         datatypes.entry(fun.fast_outsort().unwrap()).or_default();

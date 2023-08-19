@@ -1,14 +1,19 @@
 use std::sync::Arc;
 
 use crate::{
-    formula::{function::signature::Signature, sort::Sort},
+    formula::{
+        function::signature::{Lazy, Signature},
+        sort::{builtins::BOOL, Sort},
+    },
     problem::{
         crypto_assumptions::{
             SubtermEufCmaMacKey, SubtermEufCmaMacMain, SubtermEufCmaSignKey, SubtermEufCmaSignMain,
             SubtermIntCtxtKey, SubtermIntCtxtMain, SubtermIntCtxtRand, SubtermNonce,
         },
-        subterm::kind::{SubtermKind, SubtermKindWSort},
+        subterm::kind::{AbsSubtermKindG, SubtermKind, SubtermKindWSort},
     },
+    static_signature,
+    utils::string_ref::StrRef,
 };
 
 use super::super::{
@@ -41,15 +46,26 @@ impl<'bump> Subterm<'bump> {
     }
 
     pub fn signature(&self) -> impl Signature<'bump> {
-        signature::SubtermSignature::new(self.subterm.sort())
+        match self.target_sort {
+            AbsSubtermKindG::Regular(s) => {
+                Lazy::A(static_signature!((self.subterm.sort(), s) -> BOOL.as_sort()))
+            }
+            AbsSubtermKindG::Vampire(_) => {
+                Lazy::B(signature::SubtermSignature::new(self.subterm.sort()))
+            }
+        }
     }
 
     pub fn subterm(&self) -> &Subsubterm<'bump> {
         &self.subterm
     }
 
-    pub fn name(&self) -> &str {
-        self.name.as_ref()
+    pub fn name(&self) -> StrRef<'_> {
+        // self.name.as_ref()
+        match self.target_sort {
+            AbsSubtermKindG::Vampire(()) => self.name.as_str().into(),
+            AbsSubtermKindG::Regular(sort) => format!("{sort}${}", self.name).into(),
+        }
     }
 
     pub fn kind(&self) -> SubtermKind {

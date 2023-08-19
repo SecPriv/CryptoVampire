@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::sync::Arc;
 
 use itertools::Itertools;
@@ -211,7 +212,12 @@ impl<'bump> Function<'bump> {
     }
 
     pub fn new_unused_destructors(container: container!(nf), constructor: Self) -> Vec<Self> {
-        assert!(constructor.is_term_algebra());
+        let assertion = constructor.can_be_datatype();
+        if cfg!(debug_assertions) && !assertion {
+            println!("{}", constructor.as_display());
+            println!("{:?}", constructor.as_inner());
+        }
+        assert!(assertion);
 
         let o_sort = constructor.fast_outsort().unwrap();
         constructor
@@ -510,11 +516,19 @@ impl<'bump> Function<'bump> {
     }
 
     /// functions that **always** are datatypes
-    pub fn is_datatype(&self) -> bool {
+    pub fn is_always_datatype(&self) -> bool {
         matches!(
             self.as_inner(),
             InnerFunction::Step(_) | InnerFunction::Name(_)
         )
+    }
+
+    pub fn can_be_datatype(&self) -> bool {
+        self.is_always_datatype() || self.is_term_algebra()
+    }
+
+    pub fn as_display(&self) -> DisplayFunction<'bump> {
+        DisplayFunction(*self)
     }
 
     force_lifetime!(Function, 'bump);
@@ -523,6 +537,14 @@ impl<'bump> Function<'bump> {
 pub fn new_static_function(inner: InnerFunction<'static>) -> Function<'static> {
     // Function::new_from(&StaticContainer, inner)
     StaticContainer.alloc_inner(inner)
+}
+
+pub struct DisplayFunction<'bump>(Function<'bump>);
+
+impl<'bump> Display for DisplayFunction<'bump> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}{}", self.0.name(), self.0.signature().as_display())
+    }
 }
 
 // impl<'bump> FromNN<'bump> for Function<'bump> {

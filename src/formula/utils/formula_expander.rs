@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, rc::Rc};
 
 use crate::{
     formula::{
@@ -28,7 +28,7 @@ bitflags! {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum ExpantionStateEnum<'bump> {
     None,
-    BoundingVariables(Arc<[Variable<'bump>]>),
+    BoundingVariables(Rc<[Variable<'bump>]>),
     Deeper(InnerExpantionState<'bump>),
 }
 

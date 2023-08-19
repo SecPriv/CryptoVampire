@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use hashbrown::HashMap;
+use itertools::Itertools;
 
 use crate::{
     environement::environement::Environement,
@@ -70,7 +71,9 @@ impl<'a, 'bump> SubtermKindConstr<'a, 'bump> {
         if env.use_vampire_subterm() {
             AbsSubtermKindG::Vampire(())
         } else {
-            AbsSubtermKindG::Regular(pbl.sorts.iter().filter(|s| s.is_evaluatable()).collect())
+            debug_print::debug_println!("[{}]", pbl.sorts.iter().join(", "));
+            // AbsSubtermKindG::Regular(pbl.sorts.iter().filter(|s| s.is_evaluatable()).collect())
+            AbsSubtermKindG::Regular(VecRef::Ref(&pbl.sorts))
         }
     }
 }

@@ -39,7 +39,7 @@ use automator::{
     utils::traits::{MyWriteTo, NicerError},
 };
 
-const USE_MIRI: bool = false;
+const USE_MIRI: bool = true;
 
 fn main() {
     // let args = Args::parse();
@@ -184,87 +184,4 @@ fn write_to_file(path: &PathBuf, smt: impl MyWriteTo) {
 //     // parser::parse_string("").unwrap()
 // }
 
-const TEST_FILE: &'static str = r"
-
-
-type index;
-fun tpl(Message, Message):Message
-
-type session
-
-fun hash(Message, Message):Message
-fun verify(Message, Message, Message):Bool
-
-fun sel1of2(Message):Message;
-fun sel2of2(Message):Message
-fun ok:Message
-fun ko:Message
-
-/* the Nonces */
-fun nt(session, index): Name
-fun nr(session): Name
-fun key(index):Name
-
-step reader(i:session, j:index)
-    /*{ (hash(sel1of2(input(reader(i, j))), key(j))
-                    == sel2of2(input(reader(i, j)))) }*/
-    { verify(
-        sel2of2(input(reader(i, j))),
-        sel1of2(input(reader(i, j))),
-        key(j)
-    ) }
-    { ok }
-
-step reader_fail(i:session)
-    { not(exists (j:index) {cond(reader(i, j))}) }
-    { ko }
-
-step tag(i:session, j:index)
-    { true }
-    { tpl(
-        nt(i,j),
-        hash(
-            nt(i,j),
-            key(j)
-        )
-    )}
-
-assert
-    forall (m1:Message, m2:Message) {
-        (
-            (m1 == sel1of2(tpl(m1,m2))) 
-            && (m2 == sel2of2(tpl(m1,m2)))
-        )
-    }
-
-assert
-    forall (s:Message, m:Message, k:Nonce) {
-        (verify(s, m, k) <=> (s == hash(m, k)))
-    }
-
-order forall (i:session, j:index) 
-    { reader_fail(i) <> reader(i, j) }
-
-order forall (i:session, j:index, j2:index) 
-    { reader(i, j2) <> reader(i, j) }
-
-let conclusion!(i:session, j:index) = exists (k:session) {(
-    lt(tag(k, j), reader(i, j))
-    && (sel1of2(msg(tag(k, j))) == sel1of2(input(reader(i, j))))
-    && (sel2of2(msg(tag(k, j))) == sel2of2(input(reader(i, j))))
-)}
-
-let premise!(i:session, j:index) = /*(
-    hash(sel1of2(input(reader(i, j))), key(j)) 
-                    == sel2of2(input(reader(i, j)))
-)*/ cond!(reader(i, j))
-
-query forall (i:session, j:index) {(
-    happens(reader(i, j))
-        => (conclusion![i, j] <=> premise![i, j]) 
-)}
-
-assert-crypto euf-cma hash verify;
-assert-crypto nonce;
-
-";
+const TEST_FILE: &'static str = include_str!("/tmp/basic-hash-1.ptcl");

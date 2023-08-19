@@ -21,6 +21,7 @@ unsafe impl<'bump, T: Sync> Send for Reference<'bump, T> {}
 /// [Reference] but with a forced order based on the value of the pointer.
 ///
 /// This is non-deterministic
+// #[deprecated]
 pub struct FORef<'bump, T>(Reference<'bump, T>);
 
 impl<'bump, T> Reference<'bump, T> {
@@ -53,6 +54,10 @@ impl<'bump, T> Reference<'bump, T> {
 
     pub fn to_raw(&self) -> NonNull<Option<T>> {
         self.inner
+    }
+
+    pub fn as_fo(&self) -> FORef<'bump, T> {
+        (*self).into()
     }
 }
 
@@ -143,6 +148,10 @@ impl<'bump, T> FORef<'bump, T> {
     pub fn as_reference(&self) -> Reference<'bump, T> {
         self.0
     }
+
+    pub fn as_usize(&self) -> usize {
+        self.0.inner.as_ptr() as usize
+    }
 }
 
 impl<'bump, T> PartialOrd for FORef<'bump, T> {
@@ -195,8 +204,8 @@ impl<'bump, T> From<FORef<'bump, T>> for Reference<'bump, T> {
     }
 }
 
-impl<'bump, T> Borrow<Reference<'bump, T>> for FORef<'bump, T> {
-    fn borrow(&self) -> &Reference<'bump, T> {
-        &self.0
-    }
-}
+// impl<'bump, T> Borrow<Reference<'bump, T>> for FORef<'bump, T> {
+//     fn borrow(&self) -> &Reference<'bump, T> {
+//         &self.0
+//     }
+// }

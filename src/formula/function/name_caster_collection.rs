@@ -27,7 +27,7 @@ impl<'bump> NameCasterCollection<'bump> {
     }
 
     pub fn cast_function(&self, sort: &Sort<'bump>) -> Option<&Function<'bump>> {
-        self.content.get(sort)
+        self.content.get(&sort.as_fo())
     }
 
     pub fn cast(
