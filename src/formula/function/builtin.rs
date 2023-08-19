@@ -3,7 +3,7 @@ use std::sync::Arc;
 use static_init::dynamic;
 
 use crate::container::StaticContainer;
-use crate::formula::sort::builtins::{BITSTRING, MESSAGE};
+use crate::formula::sort::builtins::{BITSTRING, MESSAGE, CONDITION, BOOL};
 use crate::formula::{formula::RichFormula, sort::builtins::STEP};
 
 use super::inner::evaluate::Evaluate;
@@ -183,8 +183,8 @@ pub static MESSAGE_TO_BITSTRING: Function<'static> =
 pub static CONDITION_TO_BOOL: Function<'static> =
     new_static_function(InnerFunction::Evaluate(Evaluate::new(
         "evaluate_cond".into(),
-        MESSAGE.as_sort(),
-        BITSTRING.as_sort(),
+        CONDITION.as_sort(),
+        BOOL.as_sort(),
     )));
 
 #[dynamic]

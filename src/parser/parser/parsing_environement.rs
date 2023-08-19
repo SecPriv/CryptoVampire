@@ -184,8 +184,8 @@ impl<'bump, 'a> Environement<'bump, 'a> {
     fn get_functions(&self) -> impl Iterator<Item = Function<'bump>> + '_ {
         self.functions
             .values()
-            .filter_map(|f| f.as_function())
-            .cloned()
+            // .filter_map(|f| f.as_function())
+            .map(|f| f.get_function())
     }
 
     fn get_sorts(&self) -> impl Iterator<Item = Sort<'bump>> + '_ {

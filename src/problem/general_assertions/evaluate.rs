@@ -67,14 +67,18 @@ pub fn generate<'bump>(
         })
         .collect_vec();
 
-    declarations.extend(relevant_sorts.iter().map(|(sort, evalluated_sort)| {
-        if env.is_symbolic_realm() {
-            Declaration::Sort(*evalluated_sort)
+    declarations.extend(relevant_sorts.iter().filter_map(|(sort, evalluated_sort)| {
+        if evalluated_sort.is_solver_built_in() {
+            None
         } else {
-            Declaration::SortAlias {
-                from: **sort,
-                to: *evalluated_sort,
-            }
+            Some(if env.is_symbolic_realm() {
+                Declaration::Sort(*evalluated_sort)
+            } else {
+                Declaration::SortAlias {
+                    from: **sort,
+                    to: *evalluated_sort,
+                }
+            })
         }
     }));
     // declare the evaluation functions

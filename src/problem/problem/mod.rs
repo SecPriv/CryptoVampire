@@ -4,7 +4,7 @@ pub use pbl_iterator::PblIterator;
 
 use std::{
     cell::RefCell,
-    collections::{HashMap, VecDeque},
+    collections::{HashMap, VecDeque, BTreeMap},
     sync::Arc,
 };
 
@@ -18,7 +18,9 @@ use crate::{
             GeneralFile,
         },
         formula::ARichFormula,
-        function::{Function, inner::evaluate::Evaluator, name_caster_collection::NameCasterCollection},
+        function::{
+            inner::evaluate::Evaluator, name_caster_collection::NameCasterCollection, Function,
+        },
         sort::Sort,
         variable::Variable,
     },
@@ -109,14 +111,14 @@ impl<'bump> Generator<'bump> for Problem<'bump> {
         declarations.extend(
             self.sorts
                 .iter()
-                .filter(|s| !s.is_datatype(env))
+                .filter(|s| !(s.is_datatype(env) || s.is_solver_built_in() || s.is_evaluated()))
                 .map(|s| Declaration::Sort(*s)),
         );
 
         {
             declarations.reserve(self.functions.len());
             // let mut datatypes = Vec::new();
-            let mut datatypes = HashMap::new();
+            let mut datatypes = BTreeMap::new();
             for &fun in self.functions.iter().filter(|f| !f.is_builtin()) {
                 // declare the function as datatypes if
                 //  - it must always be a datatype
@@ -159,6 +161,8 @@ impl<'bump> Generator<'bump> for Problem<'bump> {
         }
         debug_print::debug_println!("[G]\t\t[DONE]");
 
+        // assertions.sort();
+
         debug_print::debug_println!("[G]\t- user assertions...");
         assertions.push(Axiom::Comment("user asserts".into()));
         assertions.extend(
@@ -178,5 +182,7 @@ impl<'bump> Generator<'bump> for Problem<'bump> {
 
         debug_print::debug_println!("[G]\t\t[DONE]");
         debug_print::debug_println!("generation done");
+
+        declarations.sort();
     }
 }

@@ -10,7 +10,7 @@ use crate::parser::{err, merr, E};
 use crate::formula::function::{
     inner::{
         step::StepFunction,
-        term_algebra::{cell::Cell,  TermAlgebra},
+        term_algebra::{cell::Cell, TermAlgebra},
     },
     Function, InnerFunction,
 };
@@ -46,7 +46,7 @@ pub fn declare_sorts<'a, 'bump>(
                     f!("the sort name {} is already in use", name),
                 ))
             } else {
-                let (sort, _) = Sort::new_user(env.container, name.to_owned().into_boxed_str());
+                let sort = Sort::new_index(env.container, name.to_owned().into_boxed_str());
                 let out = env.sort_hash.insert(sort.name().into_string(), sort);
 
                 match out {
@@ -189,11 +189,7 @@ fn declare_function<'str, 'bump>(
         let fun = if output_sort == NAME.as_sort() {
             Function::new_from_inner(
                 env.container,
-                InnerFunction::Name(Name::new(
-                    name.to_string(),
-                    MESSAGE.as_sort(),
-                    input_sorts?,
-                )),
+                InnerFunction::Name(Name::new(name.to_string(), MESSAGE.as_sort(), input_sorts?)),
             )
 
             // add to env. name_caster_collection

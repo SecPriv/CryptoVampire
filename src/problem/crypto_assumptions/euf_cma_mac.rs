@@ -193,7 +193,7 @@ impl<'bump> EufCmaMac<'bump> {
 }
 
 fn define_subterms<'bump>(
-    env: &Environement<'bump>,
+    _env: &Environement<'bump>,
     pbl: &Problem<'bump>,
     assertions: &mut Vec<Axiom<'bump>>,
     declarations: &mut Vec<Declaration<'bump>>,

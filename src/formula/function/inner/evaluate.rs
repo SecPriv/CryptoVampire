@@ -101,8 +101,8 @@ impl<'bump> Default for Evaluator<'bump> {
 impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for Evaluate<'bump> {
     fn as_fixed_signature(&'a self) -> FixedRefSignature<'a, 'bump> {
         FixedRefSignature {
-            out: self.input_sort,
-            args: [self.ouput_sort].into(),
+            out: self.ouput_sort,
+            args: [self.input_sort].into(),
         }
     }
 }

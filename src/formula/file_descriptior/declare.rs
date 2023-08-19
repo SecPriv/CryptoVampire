@@ -10,8 +10,8 @@ use crate::{
 pub enum Declaration<'bump> {
     Sort(Sort<'bump>),
     SortAlias { from: Sort<'bump>, to: Sort<'bump> },
-    FreeFunction(Function<'bump>),
     DataTypes(Vec<DataType<'bump>>),
+    FreeFunction(Function<'bump>),
     Subterm(Subterm<'bump>),
 }
 

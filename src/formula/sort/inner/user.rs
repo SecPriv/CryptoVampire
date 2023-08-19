@@ -48,6 +48,8 @@ impl<'bump> UserEvaluatable<'bump> {
 }
 
 impl Index {
+    pub fn new(name: Box<str>) -> Self { Self { name } }
+
     pub fn name(&self) -> StrRef<'_> {
         self.name.as_ref().into()
     }

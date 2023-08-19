@@ -120,7 +120,7 @@ impl<'bump> ScopedContainer<'bump> {
     /// find a name starting by `name` that isn't assigned to any function yet
     pub fn find_free_function_name(&self, name: &str) -> String {
         let id = UNIQUE_FUNCTIONS.fetch_add(1, atomic::Ordering::AcqRel);
-        format!("{id}${name}")
+        format!("_{id:?}${name}")
     }
 
     pub fn is_name_available(&'bump self, name: &str) -> bool {

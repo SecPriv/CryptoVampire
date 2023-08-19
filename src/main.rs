@@ -39,7 +39,7 @@ use automator::{
     utils::traits::{MyWriteTo, NicerError},
 };
 
-const USE_MIRI: bool = true;
+const USE_MIRI: bool = false;
 
 fn main() {
     // let args = Args::parse();

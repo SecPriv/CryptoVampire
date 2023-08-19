@@ -9,7 +9,10 @@ pub mod inner;
 
 use crate::{
     container::{
-        allocator::ContainerTools, contained::Containable, reference::{Reference, FORef}, StaticContainer,
+        allocator::ContainerTools,
+        contained::Containable,
+        reference::{FORef, Reference},
+        StaticContainer,
     },
     environement::traits::{KnowsRealm, Realm},
     force_lifetime,
@@ -131,6 +134,9 @@ impl<'bump> InnerSort<'bump> {
             | InnerSort::Index(_) => false,
         }
     }
+    pub fn is_solver_built_in(&self) -> bool {
+        matches!(self, InnerSort::Base(TermBase::Bool))
+    }
 }
 
 impl<'a> Display for Sort<'a> {
@@ -149,6 +155,10 @@ impl<'a> Sort<'a> {
         self.as_ref().is_base()
     }
 
+    pub fn is_solver_built_in(&self) -> bool {
+        self.as_inner().is_solver_built_in()
+    }
+
     pub fn is_evaluatable(&self) -> bool {
         match self.as_ref() {
             InnerSort::Base(TermBase::Condition)
@@ -158,7 +168,22 @@ impl<'a> Sort<'a> {
         }
     }
 
+    pub fn is_datatype(&self, realm: &impl KnowsRealm) -> bool {
+        self.as_inner().is_datatype(realm)
+    }
+
+    pub fn is_evaluated(&self) -> bool {
+        self.as_inner().is_evaluated()
+    }
+
     // ~~~~~~~~~~~~~~~ builders ~~~~~~~~~~~~~~~~~
+    pub fn new_index<C>(container: &'a C, name: Box<str>) -> Self
+    where
+        C: ContainerTools<'a, InnerSort<'a>, R<'a> = Self>,
+    {
+        container.alloc_inner(InnerSort::Index(Index::new(name)))
+    }
+
     pub fn new_user<C>(container: &'a C, name: Box<str>) -> (Sort<'a>, Sort<'a>)
     where
         C: ContainerTools<'a, InnerSort<'a>, R<'a> = Self>,
@@ -229,10 +254,6 @@ impl<'a> Sort<'a> {
 
     pub fn short_name(&self) -> char {
         self.name().chars().next().unwrap()
-    }
-
-    pub fn is_datatype(&self, realm: &impl KnowsRealm) -> bool {
-        self.as_inner().is_datatype(realm)
     }
 
     force_lifetime!(Sort, 'a);
