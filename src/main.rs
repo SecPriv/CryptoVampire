@@ -39,7 +39,7 @@ use automator::{
     utils::traits::{MyWriteTo, NicerError},
 };
 
-const USE_MIRI: bool = false;
+const USE_MIRI: bool = true;
 
 fn main() {
     // let args = Args::parse();
@@ -56,7 +56,7 @@ fn main() {
         legacy_evaluate: false,
         no_bitstring: false,
         cvc5: false,
-        no_symbolic: false,
+        no_symbolic: true,
     };
 
     ScopedContainer::scoped(|container| {

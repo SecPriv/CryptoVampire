@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-
 use crate::{
     formula::{
         formula::ARichFormula,

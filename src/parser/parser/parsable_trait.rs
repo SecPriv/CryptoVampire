@@ -20,7 +20,6 @@ use crate::{
         sort::{
             builtins::{BOOL, CONDITION, MESSAGE, NAME, STEP},
             sort_proxy::SortProxy,
-            Sort,
         },
         variable::Variable,
     },

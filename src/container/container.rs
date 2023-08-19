@@ -65,7 +65,7 @@ macro_rules! my_drop {
     ($($fun:ident),*) => {
         $(
             for e in $fun.get_mut() {
-                unsafe { Box::from_raw(e.as_mut()) };
+                drop(unsafe { Box::from_raw(e.as_mut()) });
             }
         )*
     };

@@ -170,7 +170,7 @@ impl<'bump> fmt::Display for Smt<'bump> {
             }
             Smt::DeclareSort(sort) => writeln!(f, "(declare-sort {} 0)", sort),
             Smt::DeclareSortAlias { from, to } => {
-                writeln!(f, "(define-sort {} () {}", to.name(), from.name())
+                writeln!(f, "(define-sort {} () {})", to.name(), from.name())
             }
             Smt::DeclareSubtermRelation(fun, funs) => {
                 write!(f, "(declare-subterm-relation {} ", fun.name())?;
