@@ -39,12 +39,12 @@ use automator::{
     utils::traits::{MyWriteTo, NicerError},
 };
 
-const USE_MIRI: bool = true;
+const USE_MIRI: bool = false;
 
 fn main() {
     // let args = Args::parse();
     let args = Args {
-        file: Some(PathBuf::from("/tmp/basic-hash-1.ptcl")),
+        file: Some(PathBuf::from("../result-table/protocols/basic-hash-1-new.ptcl")),
         output_location: PathBuf::from("../test.smt"),
         lemmas: false,
         eval_rewrite: false,
@@ -56,7 +56,7 @@ fn main() {
         legacy_evaluate: false,
         no_bitstring: false,
         cvc5: false,
-        no_symbolic: true,
+        no_symbolic: false,
     };
 
     ScopedContainer::scoped(|container| {
@@ -184,4 +184,4 @@ fn write_to_file(path: &PathBuf, smt: impl MyWriteTo) {
 //     // parser::parse_string("").unwrap()
 // }
 
-const TEST_FILE: &'static str = include_str!("/tmp/basic-hash-1.ptcl");
+const TEST_FILE: &'static str = include_str!("../../result-table/protocols/basic-hash-1-new.ptcl");

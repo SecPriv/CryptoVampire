@@ -276,7 +276,7 @@ impl<'bump> Function<'bump> {
         let free_variables = arg
             .get_free_vars()
             .into_iter()
-            .filter(|v| q.get_variables().contains(v))
+            .filter(|v| !q.get_variables().contains(v))
             .collect();
 
         let inner = match &q {

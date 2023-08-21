@@ -22,7 +22,7 @@ use crate::{
         string_ref::StrRef,
         traits::RefNamed,
         utils::{AlreadyInitialized, MaybeInvalid},
-    },
+    }, smt::smt::{Smt, SmtFormula},
 };
 
 // #[derive(Debug)]
@@ -73,6 +73,23 @@ impl<'bump> InnerStep<'bump> {
         message: ARichFormula<'bump>,
         function: Function<'bump>,
     ) -> Self {
+        debug_assert!(
+            {
+                itertools::chain!(message.get_free_vars(), condition.get_free_vars())
+                    .all(|v| free_variables.contains(&v))
+            },
+            "in {name}:\n\tmesg: [{}] in {}\n\tcond: [{}] in {}\n\targs: [{}]",
+            message.get_free_vars().iter().join(", "),
+            SmtFormula::from_arichformula(message.as_ref()),
+            condition.get_free_vars().iter().join(", "),
+            SmtFormula::from_arichformula(condition.as_ref()),
+            free_variables.iter().join(", ")
+        );
+        debug_assert!({
+            itertools::chain!(message.get_used_variables(), condition.get_used_variables())
+                .all(|v| free_variables.contains(&v))
+        });
+
         Self {
             name,
             free_variables,

@@ -28,6 +28,7 @@ use crate::{
         ast::{self, extra::SnN, Term, VariableBinding},
         err, merr, IntoRuleResult, E,
     },
+    smt::smt::SmtFormula,
     utils::{maybe_owned::MOw, traits::NicerError},
 };
 
@@ -342,6 +343,19 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Quantifier<'a> {
             }
         };
 
+        if cfg!(debug_assertions) {
+            println!(
+                "parsing quantifier:\t ({}:{}:{})",
+                file!(),
+                line!(),
+                column!()
+            );
+            println!(
+                "\t{}",
+                SmtFormula::from_arichformula(&RichFormula::Quantifier(q.clone(), content.clone()))
+            )
+        }
+
         Ok(match state.get_realm() {
             Realm::Evaluated => RichFormula::Quantifier(q, content).into(),
             Realm::Symbolic => {
@@ -620,48 +634,12 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
                     })?;
 
                 let mut nbvars = step_cache.args_vars_with_input().map_into().collect();
-                // let nbvars: Result<Vec<_>, _> = step
-                //     .args
-                //     .into_iter()
-                //     .enumerate()
-                //     .map(|(i, v)| {
-                //         let name = v.variable.name();
-                //         let sort = env.sort_hash.get(v.type_name.name()).ok_or_else(|| {
-                //             merr(
-                //                 v.type_name.name_span(),
-                //                 f!("{} is not a known type", v.type_name.name()),
-                //             )
-                //         })?;
-                //         Ok((
-                //             name,
-                //             VarProxy {
-                //                 id: i + 1,
-                //                 sort: sort.into(),
-                //             },
-                //         ))
-                //     })
-                //     .chain([Ok((
-                //         "in",
-                //         VarProxy {
-                //             id: 0,
-                //             sort: MESSAGE.as_sort().into(),
-                //         },
-                //     ))])
-                //     .collect();
-                // let mut nbvars = nbvars?;
-                // let n = bvars.len();
 
                 let (to_parse, _) = match inner {
                     ast::InnerAppMacro::Msg(_) => (&step_cache.ast.message, MESSAGE.as_sort()),
                     ast::InnerAppMacro::Cond(_) => (&step_cache.ast.condition, CONDITION.as_sort()),
                     _ => unreachable!(),
                 };
-                // if let Some(es) = expected_sort {
-                //     let n_es_2 = SortProxy::from(n_es)
-                //         .unify(&es, &state)
-                //         .into_rr(*main_span)?;
-                //     assert_eq!(n_es, n_es_2);
-                // };
 
                 let term = to_parse
                     .parse(env, &mut nbvars, state, expected_sort)
@@ -677,6 +655,17 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
                     .macro_hash
                     .get(name.name())
                     .ok_or_else(|| merr(name.span(), f!("{} is not a known macro", name.name())))?;
+
+                if cfg!(debug_assertions) {
+                    println!("in macro parsing: {}", name.name());
+                    println!(
+                        "\tbvars: [{}]",
+                        bvars
+                            .iter()
+                            .map(|(name, var)| format!("({name} -> {var})"))
+                            .join(", ")
+                    )
+                }
 
                 let args: Vec<_> = if mmacro.args.len() == args.len() {
                     mmacro

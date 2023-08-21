@@ -59,7 +59,7 @@ impl<'str, 'bump> StepCache<'str, 'bump> {
     pub fn substitution_input(&self) -> OneVarSubstF<'bump> {
         OneVarSubst {
             id: self.input_named_var().id(),
-            f: INPUT.f_a(self.args_vars().map(|v| v.variable)),
+            f: INPUT.f_a([self.function.f_a(self.args_vars().map(|v| v.variable))]),
         }
     }
 
@@ -67,7 +67,11 @@ impl<'str, 'bump> StepCache<'str, 'bump> {
         assert_eq!(args.len(), self.args.len());
 
         let vars = self.args_vars_with_input().map(|v| v.id()).collect();
-        let formulas = args.iter().cloned().chain([INPUT.f_a(args)]).collect();
+        let formulas = args
+            .iter()
+            .cloned()
+            .chain([INPUT.f_a([self.function.f_a(args)])])
+            .collect();
 
         FrozenSubst::new(vars, formulas)
     }

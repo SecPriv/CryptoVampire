@@ -38,7 +38,7 @@ pub enum RichFormula<'bump> {
 
 impl<'bump> RichFormula<'bump> {
     pub fn get_sort(&self) -> Result<Sort<'bump>, SortedError> {
-        debug_print::debug_println!("  checksort -> {self}");
+        // debug_print::debug_println!("  checksort -> {self}");
         match self {
             RichFormula::Var(Variable { sort, .. }) => Ok(*sort),
             RichFormula::Fun(fun, args) => {
@@ -429,4 +429,46 @@ pub fn ands_owned<'bump>(args: impl IntoIterator<Item = RichFormula<'bump>>) -> 
 
 pub fn ors_owned<'bump>(args: impl IntoIterator<Item = RichFormula<'bump>>) -> RichFormula<'bump> {
     OR.f(args)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        formula::{
+            formula::ARichFormula,
+            function::builtin::CONDITION_TO_BOOL,
+            sort::builtins::{BOOL, CONDITION, STEP},
+            variable::Variable,
+        },
+        mexists, mforall,
+    };
+
+    use super::meq;
+
+    #[test]
+    fn free_vars() {
+        let [v1, v2, v3, v4] = [
+            (1, BOOL.as_sort()),
+            (57, BOOL.as_sort()),
+            (3, STEP.as_sort()),
+            (4, CONDITION.as_sort()),
+        ]
+        .map(|(id, sort)| Variable { id, sort });
+
+        let formula = CONDITION_TO_BOOL.f_a([&v4])
+            >> mforall!(a!346:STEP.as_sort(); {
+                ARichFormula::from(&v1) & (v2.into())
+                    & mexists!(s!4398:STEP.as_sort(); {
+                        meq(&v3, s)
+                    })
+            });
+
+        let mut vars = [v1, v2, v3, v4];
+        vars.sort();
+
+        let mut fvars = formula.get_free_vars();
+        fvars.sort();
+
+        assert_eq!(&vars, fvars.as_slice())
+    }
 }

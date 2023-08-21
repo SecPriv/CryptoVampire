@@ -259,23 +259,23 @@ macro_rules! unpack_args {
 }
 
 impl<'bump> SmtFormula<'bump> {
-    pub fn from_arichformula(env: &Environement<'bump>, formula: &RichFormula<'bump>) -> Self {
+    pub fn from_arichformula(/* env: &Environement<'bump>,*/ formula: &RichFormula<'bump>) -> Self {
         match formula {
             RichFormula::Var(v) => SmtFormula::Var(*v),
             RichFormula::Quantifier(q, arg) => match q {
                 Quantifier::Exists { variables } => SmtFormula::Exists(
                     variables.clone(),
-                    Box::new(Self::from_arichformula(env, arg.as_ref())),
+                    Box::new(Self::from_arichformula(/* env, */ arg.as_ref())),
                 ),
                 Quantifier::Forall { variables } => SmtFormula::Forall(
                     variables.clone(),
-                    Box::new(Self::from_arichformula(env, arg.as_ref())),
+                    Box::new(Self::from_arichformula(/* env, */ arg.as_ref())),
                 ),
             },
             RichFormula::Fun(f, args) => {
                 let mut args = args
                     .into_iter()
-                    .map(|f| Self::from_arichformula(env, f.as_ref()))
+                    .map(|f| Self::from_arichformula(/* env, */ f.as_ref()))
                     .collect();
 
                 match f.as_inner() {
@@ -333,10 +333,10 @@ impl<'bump> Smt<'bump> {
         match ax {
             Axiom::Comment(str) => Smt::Comment(str.into()),
             Axiom::Base { formula } => {
-                Smt::Assert(SmtFormula::from_arichformula(env, formula.as_ref()))
+                Smt::Assert(SmtFormula::from_arichformula(/* env, */ formula.as_ref()))
             }
             Axiom::Theory { formula } => {
-                let f = SmtFormula::from_arichformula(env, formula.as_ref());
+                let f = SmtFormula::from_arichformula(/* env, */ formula.as_ref());
                 if env.use_assert_theory() {
                     Smt::AssertTh(f)
                 } else {
@@ -344,7 +344,7 @@ impl<'bump> Smt<'bump> {
                 }
             }
             Axiom::Query { formula } => {
-                let f = SmtFormula::from_arichformula(env, formula.as_ref());
+                let f = SmtFormula::from_arichformula(/* env, */ formula.as_ref());
                 if env.use_assert_not() {
                     Smt::AssertNot(f)
                 } else {
@@ -358,8 +358,8 @@ impl<'bump> Smt<'bump> {
                     pre,
                     post,
                 } = *rewrite;
-                let pre = SmtFormula::from_arichformula(env, pre.as_ref());
-                let post = SmtFormula::from_arichformula(env, post.as_ref());
+                let pre = SmtFormula::from_arichformula(/* env, */ pre.as_ref());
+                let post = SmtFormula::from_arichformula(/* env, */ post.as_ref());
                 if env.no_rewrite() {
                     Smt::Assert(SmtFormula::Forall(
                         vars,

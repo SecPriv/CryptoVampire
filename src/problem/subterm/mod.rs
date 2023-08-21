@@ -17,7 +17,7 @@ use crate::{
         sort::Sort,
         utils::{
             formula_expander::{
-                DeeperKinds, ExpantionContent, ExpantionState, InnerExpantionState,
+                DeeperKinds, ExpantionContent, ExpantionState,
             },
             formula_iterator::{FormulaIterator, IteratorFlags},
         },
@@ -285,7 +285,7 @@ where
             debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
 
             // no variable collision
-            let f = self.preprocess_term_to_formula(ptcl, &x_f, f_f.clone(), keep_guard);
+            let f = self.preprocess_term_to_formula(ptcl, &x_f, f_f.clone(), Rc::new([]), keep_guard);
             debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
             forall(
                 vars.into_iter().chain(std::iter::once(x)),
@@ -320,7 +320,7 @@ where
         self.preprocess_terms(
             ptcl,
             formula,
-            ptcl.list_top_level_terms_short_lifetime().cloned(),
+            ptcl.list_top_level_terms_short_lifetime_and_bvars(),
             false,
             DeeperKinds::QUANTIFIER,
         )
@@ -336,6 +336,7 @@ where
         ptcl: &'a Protocol<'bump>,
         x: &ARichFormula<'bump>,
         m: ARichFormula<'bump>,
+        bvars: Rc<[Variable<'bump>]>,
         keep_guard: bool,
     ) -> ARichFormula<'bump> {
         debug_print::debug_println!(
@@ -344,7 +345,7 @@ where
             line!(),
             column!()
         );
-        formula::ors(self.preprocess_term(ptcl, x, m, keep_guard, self.deeper_kind))
+        formula::ors(self.preprocess_term(ptcl, x, m, bvars,  keep_guard, self.deeper_kind))
     }
 
     /// preprocess a subterm search going through inputs and cells. Returns a list to ored.
@@ -357,11 +358,21 @@ where
         ptcl: &'a Protocol<'bump>,
         x: &'a ARichFormula<'bump>,
         m: ARichFormula<'bump>,
+        bvars: Rc<[Variable<'bump>]>,
         keep_guard: bool,
         deeper_kind: DeeperKinds,
     ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
         debug_print::debug_println!("preprocess_term -> {}:{}:{}", file!(), line!(), column!());
-        self.preprocess_terms(ptcl, &x, [m], keep_guard, deeper_kind)
+        self.preprocess_terms(
+            ptcl,
+            &x,
+            [FrlmAndBVars {
+                formula: m,
+                bounded_variables: bvars,
+            }],
+            keep_guard,
+            deeper_kind,
+        )
     }
 
     /// preprocess a subterm search going through inputs and cells. Returns a list to ored.
@@ -373,7 +384,7 @@ where
         &'a self,
         ptcl: &'a Protocol<'bump>,
         x: &'a ARichFormula<'bump>,
-        m: impl IntoIterator<Item = ARichFormula<'bump>>,
+        m: impl IntoIterator<Item = FrlmAndBVars<'bump>>,
         keep_guard: bool,
         deeper_kind: DeeperKinds,
     ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
@@ -381,7 +392,10 @@ where
         let steps = ptcl.steps();
 
         // let pile = vec![(ExpantionState::None, m)];
-        let pile = repeat_n_zip(ExpantionState::from_deeper_kind(deeper_kind), m).collect_vec();
+        let pile = //repeat_n_zip(ExpantionState::from_deeper_kind(deeper_kind), m).collect_vec();
+            m.into_iter().map(|FrlmAndBVars { bounded_variables, formula }| {
+                (ExpantionState::from_deeped_kind_and_vars(deeper_kind, bounded_variables), formula)
+            }).collect_vec();
 
         // std::iter::from_fn(move || {
         //     pile.pop().map(|(state, f)| {
@@ -438,8 +452,9 @@ where
                         exists(
                             state
                                 .bound_variables()
-                                .into_iter()
-                                .flat_map(|vars| vars.iter().cloned()),
+                                .iter()
+                                // .flat_map(|vars| vars.iter().cloned()),
+                                .cloned(),
                             formula::ands(guard),
                         )
                     }),
@@ -520,7 +535,7 @@ where
     }
 }
 
-pub type GuardAndBound<'bump> = InnerExpantionState<'bump>;
+pub type GuardAndBound<'bump> = ExpantionState<'bump>;
 pub struct SubtermSearchElement<'bump> {
     pub inner_state: Rc<GuardAndBound<'bump>>,
     pub unifier: Unifier<'bump>,
@@ -551,5 +566,41 @@ where
     }
     fn sort(&self) -> Sort<'bump> {
         Self::sort(&self)
+    }
+}
+
+// -----------------------------------------------------------------------------
+// --------------------------- other inner structs -----------------------------
+// -----------------------------------------------------------------------------
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct FrlmAndBVars<'bump> {
+    pub bounded_variables: Rc<[Variable<'bump>]>,
+    pub formula: ARichFormula<'bump>,
+}
+
+impl<'bump> FrlmAndBVars<'bump> {
+    pub fn new(bounded_variables: Rc<[Variable<'bump>]>, formula: ARichFormula<'bump>) -> Self {
+        Self {
+            bounded_variables,
+            formula,
+        }
+    }
+
+    pub fn bounded_variables(&self) -> &[Variable<'_>] {
+        self.bounded_variables.as_ref()
+    }
+
+    pub fn formula(&self) -> &ARichFormula<'bump> {
+        &self.formula
+    }
+}
+
+impl<'bump> From<ARichFormula<'bump>> for FrlmAndBVars<'bump> {
+    fn from(value: ARichFormula<'bump>) -> Self {
+        FrlmAndBVars {
+            bounded_variables: Rc::new([]),
+            formula: value,
+        }
     }
 }

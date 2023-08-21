@@ -74,6 +74,7 @@ impl<'bump> Quantifier<'bump> {
         BOOL.as_sort()
     }
 
+    /// the variables bound by the quantifier
     pub fn get_variables(&self) -> &Arc<[Variable<'bump>]> {
         match self {
             Quantifier::Exists { variables, .. }

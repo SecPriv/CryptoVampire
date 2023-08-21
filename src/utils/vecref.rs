@@ -232,6 +232,13 @@ impl<'a, T> From<&'a Box<[T]>> for VecRef<'a, T> {
     }
 }
 
+impl<'a, U> Extend<&'a U> for VecRef<'a, U> {
+    fn extend<T: IntoIterator<Item = &'a U>>(&mut self, iter: T) {
+        let new = Self::Vec(self.iter().chain(iter).collect());
+        *self = new;
+    }
+}
+
 /// a [VecRef] with one more case when it needs to own the content
 ///
 /// `T` must then be [Clone] because the owned [Iterator] cannot return
@@ -482,6 +489,14 @@ impl<'a, T: Clone> From<Arc<[T]>> for VecRefClone<'a, T> {
 impl<'a, 'b, T: Clone> From<&'b Arc<[T]>> for VecRefClone<'a, T> {
     fn from(value: &'b Arc<[T]>) -> Self {
         Self::Vec(Arc::clone(value))
+    }
+}
+
+impl<'a, U: Clone> Extend<U> for VecRefClone<'a, U> {
+    /// This is *very* expensive for this type
+    fn extend<T: IntoIterator<Item = U>>(&mut self, iter: T) {
+        let new = Self::Vec(self.clone().into_iter().chain(iter).collect());
+        *self = new;
     }
 }
 

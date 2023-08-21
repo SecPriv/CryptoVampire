@@ -232,9 +232,8 @@ impl<'bump> IntCtxt<'bump> {
                             &pbl.protocol,
                             &key,
                             pbl.protocol
-                                .list_top_level_terms_short_lifetime()
-                                .chain([&cipher])
-                                .cloned(),
+                                .list_top_level_terms_short_lifetime_and_bvars()
+                                .chain([cipher.shallow_copy().into()]),
                             false,
                             DeeperKinds::NO_MACROS,
                         )
@@ -247,7 +246,7 @@ impl<'bump> IntCtxt<'bump> {
                     let disjunction = subterm_main.preprocess_terms(
                         &pbl.protocol,
                         &n_c_f,
-                        [cipher.shallow_copy()],
+                        [cipher.shallow_copy().into()],
                         true,
                         DeeperKinds::all(),
                     );

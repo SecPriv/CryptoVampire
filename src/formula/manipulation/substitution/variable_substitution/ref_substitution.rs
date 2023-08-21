@@ -6,6 +6,7 @@ use crate::{
         manipulation::Substitution,
         variable::Variable,
     },
+    implvec,
     utils::vecref::VecRefClone,
 };
 
@@ -61,6 +62,14 @@ impl<'a, T: Clone> FrozenSubst<'a, T> {
 
     pub fn valid(&self) -> bool {
         self.vars.len() == self.formulas.len()
+    }
+
+    pub fn extend_clone(&self, vars_idx: implvec!(usize), content: implvec!(T)) -> Self {
+        let mut new = self.clone();
+        new.vars.extend(vars_idx);
+        new.formulas.extend(content);
+        assert!(new.valid());
+        new
     }
 }
 

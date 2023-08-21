@@ -186,11 +186,11 @@ impl<'bump> EufCmaSign<'bump> {
                 let u_f = u_var.into_aformula();
 
                 let k_sc = subterm_key.preprocess_terms(&pbl.protocol, &key,
-                    pbl.protocol.list_top_level_terms_short_lifetime()
-                        .chain([&message, &signature]).cloned()
+                    pbl.protocol.list_top_level_terms_short_lifetime_and_bvars()
+                        .chain([&message, &signature].map(|t|t.shallow_copy().into()))
                     , false, DeeperKinds::NO_MACROS).next().is_none();
                 if k_sc {
-            let disjunction = subterm_main.preprocess_terms(&pbl.protocol, &u_f, [&message, &signature].map(|x| x.shallow_copy()), true, DeeperKinds::all());
+            let disjunction = subterm_main.preprocess_terms(&pbl.protocol, &u_f, [&message, &signature].map(|x| x.shallow_copy().into()), true, DeeperKinds::all());
 
                 Some(mforall!(free_vars, {
                     pbl.evaluator.eval(self.verify.f([message.clone(), signature.clone(), self.pk.f_a([ pbl.name_caster.cast(MESSAGE.as_sort(), key.clone())])]))
