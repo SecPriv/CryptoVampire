@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use hashbrown::HashMap;
 
 use crate::{
@@ -12,7 +14,7 @@ use crate::{
         sort::{
             builtins::{CONDITION, MESSAGE},
             sorted::SortedError,
-            Sort,
+            Sort, FOSort,
         },
     },
     utils::traits::NicerError,
@@ -41,11 +43,11 @@ impl<'bump> Evaluate<'bump> {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Evaluator<'bump> {
-    functions: HashMap<Sort<'bump>, Function<'bump>>,
+    functions: BTreeMap<FOSort<'bump>, Function<'bump>>,
 }
 
 impl<'bump> Evaluator<'bump> {
-    pub fn new(functions: HashMap<Sort<'bump>, Function<'bump>>) -> Self {
+    pub fn new(functions: BTreeMap<FOSort<'bump>, Function<'bump>>) -> Self {
         Self { functions }
     }
 
@@ -67,31 +69,44 @@ impl<'bump> Evaluator<'bump> {
             .debug_continue_msg(&format!("{f} doesn't have a known sort"))?;
         let fun = self
             .functions
-            .get(&sort)
+            .get(&sort.into())
             .ok_or(SortedError::Impossible)
             .debug_continue_msg(&format!("{} isn't in the hashmap", sort.name().as_ref()))?;
         Ok(fun.f_a([f]))
     }
 
-    pub fn functions_mut(&mut self) -> &mut HashMap<Sort<'bump>, Function<'bump>> {
+    pub fn functions_mut(&mut self) -> &mut BTreeMap<FOSort<'bump>, Function<'bump>> {
         &mut self.functions
     }
 
-    pub fn functions(&self) -> &HashMap<Sort<'bump>, Function<'bump>> {
+    fn functions(&self) -> &BTreeMap<FOSort<'bump>, Function<'bump>>{
         &self.functions
     }
 
     pub fn get_eval_function(&self, sort: Sort<'bump>) -> Option<Function<'bump>> {
-        self.functions.get(&sort).cloned()
+        self.functions.get(&sort.into()).cloned()
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = (Sort<'bump>, Function<'bump>)> + '_ {
+        self.functions().iter().map(|(s, f)| (s.as_reference(), *f))
+    }
+
+    pub fn iter_functions(&self) -> impl Iterator<Item = Function<'bump>> + '_ {
+        self.functions().values().cloned()
+    }
+
+    pub fn iter_sorts(&self) -> impl Iterator<Item = Sort<'bump>> + '_ {
+        self.functions().keys().map(|s| s.as_reference())
+    }
+
 }
 
 impl<'bump> Default for Evaluator<'bump> {
     fn default() -> Self {
         Self {
             functions: [
-                (MESSAGE.as_sort(), MESSAGE_TO_BITSTRING.clone()),
-                (CONDITION.as_sort(), CONDITION_TO_BOOL.clone()),
+                (MESSAGE.as_sort().into(), MESSAGE_TO_BITSTRING.clone()),
+                (CONDITION.as_sort().into(), CONDITION_TO_BOOL.clone()),
             ]
             .into(),
         }

@@ -44,7 +44,9 @@ const USE_MIRI: bool = false;
 fn main() {
     // let args = Args::parse();
     let args = Args {
-        file: Some(PathBuf::from("../result-table/protocols/basic-hash-1-new.ptcl")),
+        file: Some(PathBuf::from(
+            "../result-table/protocols/basic-hash-1-new.ptcl",
+        )),
         output_location: PathBuf::from("../test.smt"),
         lemmas: false,
         eval_rewrite: false,
@@ -52,11 +54,11 @@ fn main() {
         vampire_subterm: false,
         assert_theory: false,
         skolemnise: false,
-        preprocessing: false,
+        preprocessing: true,
         legacy_evaluate: false,
         no_bitstring: false,
         cvc5: false,
-        no_symbolic: false,
+        no_symbolic: true,
     };
 
     ScopedContainer::scoped(|container| {

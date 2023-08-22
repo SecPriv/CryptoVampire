@@ -4,7 +4,7 @@ use if_chain::if_chain;
 use itertools::Itertools;
 
 use crate::{
-    environement::environement::Environement,
+    environement::{environement::Environement, traits::KnowsRealm},
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::{self, meq, ARichFormula, RichFormula},
@@ -104,7 +104,7 @@ impl<'bump> IntCtxt<'bump> {
 
         if env.preprocess_instances() {
             assertions.extend(
-                self.preprocess(pbl, subterm_main.as_ref(), subterm_key.as_ref())
+                self.preprocess(env, pbl, subterm_main.as_ref(), subterm_key.as_ref())
                     .map(Axiom::base),
             )
         }
@@ -125,11 +125,11 @@ impl<'bump> IntCtxt<'bump> {
                         let c2 = self.enc.f_a([m.into(), r_f.clone(), k_f.clone()]);
                         meq(ev.eval(c), ev.eval(c2.clone())) &
                         (
-                            subterm_main.f_a( c2.clone(), c.into()) |
-                            subterm_key.f_a( k, c) |
-                            subterm_rand.f_a(r, c) |
+                            subterm_main.f_a(env,  c2.clone(), c.into()) |
+                            subterm_key.f_a(env,  k, c) |
+                            subterm_rand.f_a(env, r, c) |
                             (mexists!(m2!6:message_sort, k2!7:message_sort, r2!8:message_sort; {
-                                subterm_main.f_a(self.enc.f_a([m2.clone(), r2.clone(), k.into()]), c.into())
+                                subterm_main.f_a(env, self.enc.f_a([m2.clone(), r2.clone(), k.into()]), c.into())
                                 & (
                                     (mforall!(n!9:nonce_sort; {!meq(r2.clone(), nc.cast(message_sort, n))})) |
                                     ( meq(r2, r_f.clone()) &
@@ -146,6 +146,7 @@ impl<'bump> IntCtxt<'bump> {
 
     pub fn preprocess<'a>(
         &'a self,
+        env: &impl KnowsRealm,
         pbl: &'a Problem<'bump>,
         subterm_main: &'a Subterm<'bump, impl SubtermAux<'bump>>,
         subterm_key: &'a Subterm<'bump, impl SubtermAux<'bump>>,
@@ -154,6 +155,7 @@ impl<'bump> IntCtxt<'bump> {
         let max_var = pbl.max_var();
         // let pile1 = RefCell::new(Vec::new());
         let pile2 = RefCell::new(Vec::new());
+        let realm = env.get_realm();
         let candidates_verif = pbl
             .list_top_level_terms()
             .flat_map(move |f:&ARichFormula<'bump>| f.iter()) // sad...
@@ -229,6 +231,7 @@ impl<'bump> IntCtxt<'bump> {
                 let k_sc = side_condition
                     && subterm_key
                         .preprocess_terms(
+                            &realm,
                             &pbl.protocol,
                             &key,
                             pbl.protocol
@@ -244,6 +247,7 @@ impl<'bump> IntCtxt<'bump> {
                     let n_c_f = self.enc.f_a([u_f.clone(), r_f.clone(), k_f.clone()]);
 
                     let disjunction = subterm_main.preprocess_terms(
+                        &realm,
                         &pbl.protocol,
                         &n_c_f,
                         [cipher.shallow_copy().into()],
@@ -294,8 +298,9 @@ impl<'bump> IntCtxt<'bump> {
     }
 }
 
+#[allow(unused_labels)]
 fn define_subterm<'bump>(
-    _env: &Environement<'bump>,
+    env: &Environement<'bump>,
     pbl: &Problem<'bump>,
     assertions: &mut Vec<Axiom<'bump>>,
     declarations: &mut Vec<Declaration<'bump>>,
@@ -303,23 +308,23 @@ fn define_subterm<'bump>(
     keep_guard: bool,
 ) {
     let kind = subterm.kind();
-    subterm.declare(pbl, declarations);
+    subterm.declare(env, pbl, declarations);
     if kind.is_vampire() {
     } else {
         assertions.extend(
             subterm
-                .generate_function_assertions_from_pbl(pbl)
+                .generate_function_assertions_from_pbl(env, pbl)
                 .into_iter()
-                .chain(
-                    subterm
-                        .not_of_sort(pbl.sorts.iter().filter(|&&s| s != subterm.sort()).cloned()),
-                )
+                .chain(subterm.not_of_sort(
+                    env,
+                    pbl.sorts.iter().filter(|&&s| s != subterm.sort()).cloned(),
+                ))
                 .map(|f| Axiom::base(f)),
         );
     }
     assertions.extend(
         subterm
-            .preprocess_special_assertion_from_pbl(pbl, keep_guard)
+            .preprocess_special_assertion_from_pbl(env, pbl, keep_guard)
             .map(|f| Axiom::base(f)),
     );
 }

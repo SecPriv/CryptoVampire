@@ -4,7 +4,7 @@ use crate::{
     formula::{
         formula::{ARichFormula, RichFormula},
         function::{inner::term_algebra::TermAlgebra, InnerFunction},
-        manipulation::{FrozenOVSubstF, FrozenSubstF},
+        manipulation::{FrozenOVSubstF, FrozenSubst, FrozenSubstF},
         variable::Variable,
     },
     implvec,
@@ -17,6 +17,7 @@ use crate::{
 };
 
 use bitflags::bitflags;
+use itertools::Itertools;
 bitflags! {
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
         pub struct DeeperKinds: u8 {
@@ -27,30 +28,11 @@ bitflags! {
         }
 }
 
-// impl Default for DeeperKinds {
-//     fn default() -> Self {
-//         DeeperKinds::empty()
-//     }
-// }
-
-// #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-// pub enum ExpantionStateEnum<'bump> {
-//     None,
-//     BoundingVariables(Rc<[Variable<'bump>]>),
-//     Deeper(InnerExpantionState<'bump>),
-// }
-
-// #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-// pub struct InnerExpantionState<'bump> {
-//     pub bound_variables: Rc<[Variable<'bump>]>,
-//     pub content: ARichFormula<'bump>,
-// }
-
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct ExpantionState<'bump> {
     deeper_kind: DeeperKinds,
     bound_variables: Rc<[Variable<'bump>]>, // faster that Vec in our usecase
-    substitution: Rc<Option<FrozenSubstF<'bump, 'bump>>>,
+    // substitution: Rc<Option<FrozenSubstF<'bump, 'bump>>>,
     guard: Option<ARichFormula<'bump>>,
 }
 
@@ -60,7 +42,7 @@ impl<'bump> Default for ExpantionState<'bump> {
             deeper_kind: Default::default(),
             bound_variables: Rc::new([]),
             guard: Default::default(),
-            substitution: Default::default(),
+            // substitution: Default::default(),
         }
     }
 }
@@ -131,95 +113,32 @@ impl<'bump> ExpantionState<'bump> {
         self.deeper_kind
     }
 
-    pub fn add_substitution(
-        &self,
-        vars_idx: implvec!(usize),
-        formulas: implvec!(ARichFormula<'bump>),
-    ) -> Self {
-        let new = self.clone();
-        let substitution = Rc::new(Some(if let Some(subst) = new.substitution.as_ref() {
-            subst.extend_clone(vars_idx, formulas)
-        } else {
-            let mut vars_idx = vars_idx.into_iter().peekable();
-            if let Some(_) = vars_idx.peek() {
-                FrozenSubstF::new(vars_idx.collect(), formulas.into_iter().collect())
-            } else {
-                return new;
-            }
-        }));
-        Self {
-            substitution,
-            ..new
-        }
-    }
+    // pub fn add_substitution(
+    //     &self,
+    //     vars_idx: implvec!(usize),
+    //     formulas: implvec!(ARichFormula<'bump>),
+    // ) -> Self {
+    //     let new = self.clone();
+    //     let substitution = Rc::new(Some(if let Some(subst) = new.substitution.as_ref() {
+    //         subst.extend_clone(vars_idx, formulas)
+    //     } else {
+    //         let mut vars_idx = vars_idx.into_iter().peekable();
+    //         if let Some(_) = vars_idx.peek() {
+    //             FrozenSubstF::new(vars_idx.collect(), formulas.into_iter().collect())
+    //         } else {
+    //             return new;
+    //         }
+    //     }));
+    //     Self {
+    //         substitution,
+    //         ..new
+    //     }
+    // }
+
+    // pub fn substitution(&self) -> &Option<FrozenSubst<'_, ARichFormula<'_>>> {
+    //     self.substitution.as_ref()
+    // }
 }
-
-// impl<'bump> ExpantionStateEnum<'bump> {
-//     pub fn add_variables(&self, vars: impl IntoIterator<Item = Variable<'bump>>) -> Self {
-//         match self {
-//             ExpantionStateEnum::None => {
-//                 ExpantionStateEnum::BoundingVariables(vars.into_iter().collect())
-//             }
-//             ExpantionStateEnum::BoundingVariables(old_vars) => {
-//                 ExpantionStateEnum::BoundingVariables(
-//                     vars.into_iter().chain(old_vars.iter().cloned()).collect(),
-//                 )
-//             }
-//             ExpantionStateEnum::Deeper(inner) => {
-//                 let InnerExpantionState {
-//                     bound_variables,
-//                     content,
-//                 } = inner;
-//                 ExpantionStateEnum::Deeper(InnerExpantionState {
-//                     bound_variables: bound_variables
-//                         .iter()
-//                         .cloned()
-//                         .chain(vars.into_iter())
-//                         .collect(),
-//                     content: content.shallow_copy(),
-//                 })
-//             }
-//         }
-//     }
-
-//     pub fn bound_variables(&self) -> Option<&[Variable<'bump>]> {
-//         match self {
-//             ExpantionStateEnum::None => None,
-//             ExpantionStateEnum::BoundingVariables(vars) => Some(vars.as_ref()),
-//             ExpantionStateEnum::Deeper(inner) => Some(inner.bound_variables.as_ref()),
-//         }
-//     }
-
-//     pub fn condition(&self) -> Option<&ARichFormula<'bump>> {
-//         match self {
-//             ExpantionStateEnum::Deeper(inner) => Some(&inner.content),
-//             _ => None,
-//         }
-//     }
-
-//     pub fn add_condition(
-//         &self,
-//         vars: impl IntoIterator<Item = Variable<'bump>>,
-//         condition: ARichFormula<'bump>,
-//     ) -> Self {
-//         let old_vars = self.bound_variables();
-//         let old_condition = self.condition();
-
-//         let new_vars = match old_vars {
-//             Some(v) => vars.into_iter().chain(v.iter().cloned()).collect(),
-//             None => vars.into_iter().collect(),
-//         };
-//         let new_condition = match old_condition {
-//             Some(c) => c.clone() & condition,
-//             None => condition,
-//         };
-
-//         ExpantionStateEnum::Deeper(InnerExpantionState {
-//             bound_variables: new_vars,
-//             content: new_condition.shallow_copy(),
-//         })
-//     }
-// }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct ExpantionContent<'bump> {
@@ -259,17 +178,22 @@ impl<'bump> ExpantionContent<'bump> {
 						TermAlgebra::Quantifier(q)
 							if deeper_kinds.contains(DeeperKinds::QUANTIFIER) =>
 						{
+                            let substitution = FrozenSubst::new_from(
+                                q.free_variables.iter().map(|v| v.id).collect_vec(), args.iter().cloned().collect_vec());
                             let new_state = self
 										.state
 										.add_variables(q.bound_variables.iter().cloned())
-                                        .add_substitution(q.free_variables.iter().map(|v| v.id), args.iter().cloned())
+                                        // .add_substitution(q.free_variables.iter().map(|v| v.id), args.iter().cloned())
                                         ;
-							iter.chain(q.get_content().into_vec().iter().cloned().map(|f| {
+                            let quantifier_iter = q.get_content().into_vec().into_iter().map(|f| {
 								ExpantionContent {
 									state: new_state.clone(),
-									content: f,
+									content: f.apply_substitution2(&substitution),
 								}
-							}))
+							});
+                            itertools::chain!(
+                                // iter,
+                                quantifier_iter)
 							.collect()
 						}
 						TermAlgebra::Input(_) if deeper_kinds.contains(DeeperKinds::INPUT) => {
@@ -408,24 +332,6 @@ where
 // -----------------------------------------------------------------------------
 // ------------------------ conversion implementation --------------------------
 // -----------------------------------------------------------------------------
-
-// impl<'a, 'bump> From<&'a ARichFormula<'bump>> for ExpantionContent<'bump> {
-// 	fn from(value: &'a ARichFormula<'bump>) -> Self {
-// 		ExpantionContent {
-// 			state: ExpantionState::None,
-// 			content: value.shallow_copy(),
-// 		}
-// 	}
-// }
-
-// impl<'a, 'bump> From<ARichFormula<'bump>> for ExpantionContent<'bump> {
-// 	fn from(value: ARichFormula<'bump>) -> Self {
-// 		ExpantionContent {
-// 			state: ExpantionState::None,
-// 			content: value,
-// 		}
-// 	}
-// }
 
 impl Default for DeeperKinds {
     fn default() -> Self {

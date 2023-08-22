@@ -9,16 +9,18 @@ use itertools::Itertools;
 
 use crate::{
     container::allocator::{ContainerTools, Residual},
+    environement::{
+        environement::Environement,
+        traits::{KnowsRealm, Realm},
+    },
     formula::{
         file_descriptior::declare::{self, Declaration},
         formula::{self, exists, forall, meq, ARichFormula},
-        function::{self, Function, InnerFunction},
+        function::{self, builtin::TRUE, Function, InnerFunction},
         manipulation::Unifier,
         sort::Sort,
         utils::{
-            formula_expander::{
-                DeeperKinds, ExpantionContent, ExpantionState,
-            },
+            formula_expander::{DeeperKinds, ExpantionContent, ExpantionState},
             formula_iterator::{FormulaIterator, IteratorFlags},
         },
         variable::{sorts_to_variables, Variable},
@@ -94,6 +96,7 @@ where
 {
     pub fn new<'a, F>(
         container: &'bump impl ContainerTools<'bump, InnerFunction<'bump>, R<'bump> = Function<'bump>>,
+        // env: &impl KnowsRealm,
         name: String,
         kind: &SubtermKindConstr<'a, 'bump>,
         aux: Aux,
@@ -174,35 +177,6 @@ where
             }
         };
 
-        /* unsafe {
-            match kind {
-                SubtermKindWSort::Vampire => {
-
-                },
-                SubtermKindWSort::Regular(sorts) => todo!(),
-            }
-
-            Function::new_cyclic(container, |function| {
-                // let subterm = ;
-                let self_rc = Arc::new_cyclic(|weak| Subterm {
-                    function: *function,
-                    aux,
-                    ignored_functions,
-                    kind,
-                    weak: Weak::clone(weak),
-                    deeper_kind,
-                });
-                //  Rc::new(subterm);
-                let inner = function::inner::subterm::Subterm {
-                    subterm: to_enum(Arc::clone(&self_rc)),
-                    name,
-                };
-                Residual {
-                    content: inner.into_inner_function(),
-                    residual: self_rc,
-                }
-            })
-        } */
         self_rc
     }
 
@@ -211,6 +185,7 @@ where
     /// This should not be used with "special functions" (it will crash anyway)
     fn generate_functions_assertions(
         &self,
+        env: &impl KnowsRealm,
         funs: impl Iterator<Item = Function<'bump>>,
     ) -> Vec<ARichFormula<'bump>> {
         funs.map(|fun| {
@@ -228,7 +203,8 @@ where
             forall(vars, {
                 let applied_fun = fun.f_a(vars_f.clone());
 
-                let mut ors = formula::ors(vars_f.into_iter().map(|f| self.f_a(x_f.clone(), f)));
+                let mut ors =
+                    formula::ors(vars_f.into_iter().map(|f| self.f_a(env, x_f.clone(), f)));
 
                 {
                     let o_sort = applied_fun.get_sort();
@@ -237,7 +213,7 @@ where
                     }
                 }
 
-                self.f_a(x_f, applied_fun) >> ors
+                self.f_a(env, x_f, applied_fun) >> ors
             })
         })
         .collect()
@@ -257,14 +233,16 @@ where
 
     pub fn generate_function_assertions_from_pbl(
         &self,
+        env: &impl KnowsRealm,
         pbl: &Problem<'bump>,
     ) -> Vec<ARichFormula<'bump>> {
-        self.generate_functions_assertions(self.list_default_subterm_functions(pbl))
+        self.generate_functions_assertions(env, self.list_default_subterm_functions(pbl))
     }
 
     pub fn generate_special_functions_assertions<'a>(
         &'a self,
         funs: impl Iterator<Item = Function<'bump>> + 'a,
+        env: &impl KnowsRealm,
         ptcl: &'a Protocol<'bump>,
         keep_guard: bool,
     ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
@@ -272,6 +250,7 @@ where
         let x = Variable::new(max_var, self.sort());
         let max_var = max_var + 1;
         let x_f = x.into_aformula();
+        let realm = env.get_realm();
         funs.map(move |fun| {
             debug_assert!(!fun.is_default_subterm() || self.ignored_functions.contains(&fun));
 
@@ -285,17 +264,19 @@ where
             debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
 
             // no variable collision
-            let f = self.preprocess_term_to_formula(ptcl, &x_f, f_f.clone(), Rc::new([]), keep_guard);
+            let f =
+                self.preprocess_term_to_formula(&realm, ptcl, &x_f, f_f.clone(), Rc::new([]), keep_guard);
             debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
             forall(
                 vars.into_iter().chain(std::iter::once(x)),
-                self.f_a(x_f.clone(), f_f) >> f,
+                self.f_a(&realm, x_f.clone(), f_f) >> f,
             )
         })
     }
 
     pub fn preprocess_special_assertion_from_pbl<'a>(
         &'a self,
+        env: &impl KnowsRealm,
         pbl: &'a Problem<'bump>,
         keep_guard: bool,
     ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
@@ -308,16 +289,18 @@ where
             })
             .cloned();
         debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
-        self.generate_special_functions_assertions(funs, &pbl.protocol, keep_guard)
+        self.generate_special_functions_assertions(funs, env, &pbl.protocol, keep_guard)
     }
 
     /// whach out for variable clash
     pub fn preprocess_whole_ptcl<'a>(
         &'a self,
+        env: &impl KnowsRealm,
         ptcl: &'a Protocol<'bump>,
         formula: &'a ARichFormula<'bump>,
     ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
         self.preprocess_terms(
+            env,
             ptcl,
             formula,
             ptcl.list_top_level_terms_short_lifetime_and_bvars(),
@@ -333,6 +316,7 @@ where
     /// This function *will not* take care of it (nor check)
     pub fn preprocess_term_to_formula<'a>(
         &'a self,
+        env: &impl KnowsRealm,
         ptcl: &'a Protocol<'bump>,
         x: &ARichFormula<'bump>,
         m: ARichFormula<'bump>,
@@ -345,7 +329,7 @@ where
             line!(),
             column!()
         );
-        formula::ors(self.preprocess_term(ptcl, x, m, bvars,  keep_guard, self.deeper_kind))
+        formula::ors(self.preprocess_term(env, ptcl, x, m, bvars, keep_guard, self.deeper_kind))
     }
 
     /// preprocess a subterm search going through inputs and cells. Returns a list to ored.
@@ -355,6 +339,7 @@ where
     /// This function *will not* take care of it (nor check)
     pub fn preprocess_term<'a>(
         &'a self,
+        env: &impl KnowsRealm,
         ptcl: &'a Protocol<'bump>,
         x: &'a ARichFormula<'bump>,
         m: ARichFormula<'bump>,
@@ -364,9 +349,10 @@ where
     ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
         debug_print::debug_println!("preprocess_term -> {}:{}:{}", file!(), line!(), column!());
         self.preprocess_terms(
+            env,
             ptcl,
             &x,
-            [FrlmAndBVars {
+            [FormlAndVars {
                 formula: m,
                 bounded_variables: bvars,
             }],
@@ -382,41 +368,23 @@ where
     /// This function *will not* take care of it (nor check)
     pub fn preprocess_terms<'a, 'b>(
         &'a self,
+        env: &impl KnowsRealm,
         ptcl: &'a Protocol<'bump>,
         x: &'a ARichFormula<'bump>,
-        m: impl IntoIterator<Item = FrlmAndBVars<'bump>>,
+        m: impl IntoIterator<Item = FormlAndVars<'bump>>,
         keep_guard: bool,
         deeper_kind: DeeperKinds,
     ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
+        let realm = env.get_realm();
+
         debug_print::debug_println!("preprocess_terms -> {}:{}:{}", file!(), line!(), column!());
         let steps = ptcl.steps();
 
         // let pile = vec![(ExpantionState::None, m)];
         let pile = //repeat_n_zip(ExpantionState::from_deeper_kind(deeper_kind), m).collect_vec();
-            m.into_iter().map(|FrlmAndBVars { bounded_variables, formula }| {
+            m.into_iter().map(|FormlAndVars { bounded_variables, formula }| {
                 (ExpantionState::from_deeped_kind_and_vars(deeper_kind, bounded_variables), formula)
             }).collect_vec();
-
-        // std::iter::from_fn(move || {
-        //     pile.pop().map(|(state, f)| {
-        //         debug_print::debug_println!("\t\t{x} ⊑ {}", &f);
-        //         let inner_iter = ExpantionContent {
-        //             state: state.clone(),
-        //             content: f.clone(),
-        //         }
-        //         .expand(steps.iter().cloned(), ptcl.graph(), false)
-        //         .into_iter()
-        //         .map(|ec| ec.as_tuple());
-        //         debug_print::debug_println!(
-        //             "inner subterm -> {}:{}:{}",
-        //             file!(),
-        //             line!(),
-        //             column!()
-        //         );
-        //         let SubtermResult { unifier, nexts } = self.aux.eval_and_next(x, &f);
-        //         pile.extend(inner_iter.chain(repeat_n_zip(state.clone(), nexts)))
-        //     })
-        // })
 
         FormulaIterator {
             pile: StackBox::new(pile),
@@ -443,7 +411,7 @@ where
                         let mut guard = u
                             .is_unifying_to_variable()
                             .and_then(|ovs| {
-                                (ovs.f() == x).then(|| vec![self.f_a(x.clone(), f.clone())])
+                                (ovs.f() == x).then(|| vec![self.f_a(&realm, x.clone(), f.clone())])
                             })
                             .unwrap_or_else(|| u.as_equalities().unwrap());
                         if keep_guard {
@@ -464,23 +432,27 @@ where
         }
     }
 
-    pub fn f_a<I>(&self, x: I, m: I) -> ARichFormula<'bump>
+    pub fn f_a<I>(&self, env: &impl KnowsRealm, x: I, m: I) -> ARichFormula<'bump>
     where
         I: Into<ARichFormula<'bump>>,
     {
-        match &self.kind {
-            AbsSubtermKindG::Vampire(fun) => fun.f_a([x, m]),
-            AbsSubtermKindG::Regular(funs) => {
-                let [x, m]: [ARichFormula; 2] = [x.into(), m.into()];
-                let sort = m.get_sort().expect_display("term algebra has a sort");
-                debug_print::debug_println!(
-                    "[{}]",
-                    funs.keys().map(|fsort| fsort.as_reference()).join(", ")
-                );
-                debug_print::debug_println!("{:?}", &funs);
-                funs.get(&sort.as_fo())
-                    .expect(&format!("unsupported sort: {sort}, {sort:?}"))
-                    .f_a([x, m])
+        if !self.is_sound_in_smt(env) {
+            TRUE.clone().into()
+        } else {
+            match &self.kind {
+                AbsSubtermKindG::Vampire(fun) => fun.f_a([x, m]),
+                AbsSubtermKindG::Regular(funs) => {
+                    let [x, m]: [ARichFormula; 2] = [x.into(), m.into()];
+                    let sort = m.get_sort().expect_display("term algebra has a sort");
+                    debug_print::debug_println!(
+                        "[{}]",
+                        funs.keys().map(|fsort| fsort.as_reference()).join(", ")
+                    );
+                    debug_print::debug_println!("{:?}", &funs);
+                    funs.get(&sort.as_fo())
+                        .expect(&format!("unsupported sort: {sort}, {sort:?}"))
+                        .f_a([x, m])
+                }
             }
         }
     }
@@ -499,24 +471,29 @@ where
 
     pub fn reflexivity(&self) -> ARichFormula<'bump> {
         mforall!(x!0:self.sort(); {
-            self.f_a(x, x)
+            self.f_a(&Realm::Symbolic,x, x)
         })
     }
 
     pub fn not_of_sort<'a>(
         &'a self,
+        env: &impl KnowsRealm,
         sorts: impl IntoIterator<Item = Sort<'bump>> + 'a,
     ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
-        sorts
-            .into_iter()
-            .map(|s| mforall!(x!0:self.sort(), m!1:s; {!self.f_a(x, m)}))
+        let realm = env.get_realm();
+        sorts.into_iter().map(move |s| {
+            debug_assert!(!s.is_term_algebra());
+            mforall!(x!0:self.sort(), m!1:s; {!self.f_a(&realm, x, m)})
+        })
     }
 
     pub fn declare(
         &self,
+        env: &Environement,
         pbl: &Problem<'bump>,
         declarations: &mut impl Extend<Declaration<'bump>>,
     ) {
+        self.assert_sound_in_smt(env).unwrap();
         match &self.kind {
             AbsSubtermKindG::Vampire(function) => {
                 declarations.extend([Declaration::Subterm(declare::Subterm {
@@ -533,6 +510,20 @@ where
     pub fn kind(&self) -> SubtermKind {
         self.kind.as_subterm_kind()
     }
+
+    pub fn is_sound_in_smt(&self, env: &impl KnowsRealm) -> bool {
+        self.sort().is_datatype(env) || !env.get_realm().is_evaluated()
+    }
+
+    #[must_use]
+    pub fn assert_sound_in_smt(&self, env: &impl KnowsRealm) -> anyhow::Result<()> {
+        if self.is_sound_in_smt(env) {
+            Ok(())
+        } else {
+            // Err(format!("{} => {} is wrong", self.sort(), env.get_realm()))
+            anyhow::bail!("{} => {} is wrong", self.sort(), env.get_realm())
+        }
+    }
 }
 
 pub type GuardAndBound<'bump> = ExpantionState<'bump>;
@@ -542,8 +533,17 @@ pub struct SubtermSearchElement<'bump> {
 }
 
 pub trait AsSubterm<'bump> {
-    fn generate_function_assertions(&self, funs: &[Function<'bump>]) -> Vec<ARichFormula<'bump>>;
-    fn f(&self, x: ARichFormula<'bump>, m: ARichFormula<'bump>) -> ARichFormula<'bump>;
+    fn generate_function_assertions<R: KnowsRealm>(
+        &self,
+        env: &R,
+        funs: &[Function<'bump>],
+    ) -> Vec<ARichFormula<'bump>>;
+    fn f<R: KnowsRealm>(
+        &self,
+        env: &R,
+        x: ARichFormula<'bump>,
+        m: ARichFormula<'bump>,
+    ) -> ARichFormula<'bump>;
     // fn function(&self) -> Function<'bump>;
     fn ignored_functions(&self) -> &[Function<'bump>];
     fn sort(&self) -> Sort<'bump>;
@@ -553,12 +553,21 @@ impl<'bump, Aux> AsSubterm<'bump> for Subterm<'bump, Aux>
 where
     Aux: SubtermAux<'bump>,
 {
-    fn generate_function_assertions(&self, funs: &[Function<'bump>]) -> Vec<ARichFormula<'bump>> {
-        Subterm::generate_functions_assertions(self, funs.iter().cloned())
+    fn generate_function_assertions<R: KnowsRealm>(
+        &self,
+        env: &R,
+        funs: &[Function<'bump>],
+    ) -> Vec<ARichFormula<'bump>> {
+        Subterm::generate_functions_assertions(self, env, funs.iter().cloned())
     }
 
-    fn f(&self, x: ARichFormula<'bump>, m: ARichFormula<'bump>) -> ARichFormula<'bump> {
-        Subterm::f_a(self, x, m)
+    fn f<R: KnowsRealm>(
+        &self,
+        env: &R,
+        x: ARichFormula<'bump>,
+        m: ARichFormula<'bump>,
+    ) -> ARichFormula<'bump> {
+        Subterm::f_a(self, env, x, m)
     }
 
     fn ignored_functions(&self) -> &[Function<'bump>] {
@@ -574,12 +583,12 @@ where
 // -----------------------------------------------------------------------------
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct FrlmAndBVars<'bump> {
+pub struct FormlAndVars<'bump> {
     pub bounded_variables: Rc<[Variable<'bump>]>,
     pub formula: ARichFormula<'bump>,
 }
 
-impl<'bump> FrlmAndBVars<'bump> {
+impl<'bump> FormlAndVars<'bump> {
     pub fn new(bounded_variables: Rc<[Variable<'bump>]>, formula: ARichFormula<'bump>) -> Self {
         Self {
             bounded_variables,
@@ -596,9 +605,9 @@ impl<'bump> FrlmAndBVars<'bump> {
     }
 }
 
-impl<'bump> From<ARichFormula<'bump>> for FrlmAndBVars<'bump> {
+impl<'bump> From<ARichFormula<'bump>> for FormlAndVars<'bump> {
     fn from(value: ARichFormula<'bump>) -> Self {
-        FrlmAndBVars {
+        FormlAndVars {
             bounded_variables: Rc::new([]),
             formula: value,
         }

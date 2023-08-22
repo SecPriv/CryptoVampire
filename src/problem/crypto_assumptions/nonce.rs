@@ -43,31 +43,35 @@ impl Nonce {
             |rc| Subsubterm::Nonce(rc),
         );
 
-        subterm.declare(pbl, declarations);
+        subterm.declare(env, pbl, declarations);
 
         if kind.is_vampire() {
         } else {
             assertions.extend(
                 subterm
-                    .generate_function_assertions_from_pbl(pbl)
+                    .generate_function_assertions_from_pbl(env, pbl)
                     .into_iter()
                     .chain(
-                        subterm
-                            .not_of_sort(pbl.sorts.iter().filter(|&&s| s != nonce_sort).cloned()),
+                        subterm.not_of_sort(env,
+                            pbl.sorts
+                                .iter()
+                                .filter(|&&s| !(s == nonce_sort  || s.is_term_algebra()))
+                                .cloned(),
+                        ),
                     )
                     .map(|f| Axiom::base(f)),
             );
         }
         assertions.extend(
             subterm
-                .preprocess_special_assertion_from_pbl(pbl, true)
+                .preprocess_special_assertion_from_pbl(env, pbl, true)
                 .map(|f| Axiom::base(f)),
         );
 
         assertions.extend(
             [mforall!(n!0:nonce_sort, m!1:message_sort; {
                 meq(ev.eval(nc.cast(message_sort, n.clone())),
-                    ev.eval(m.clone())) >> subterm.f_a(n, m)
+                    ev.eval(m.clone())) >> subterm.f_a(env, n, m)
             }),
             mforall!(n1!0:nonce_sort, n2!1:nonce_sort; {
                 meq(ev.eval(nc.cast(message_sort, n1.clone())), ev.eval(nc.cast(message_sort, n2.clone())))

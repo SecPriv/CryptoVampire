@@ -4,7 +4,7 @@ use if_chain::if_chain;
 use itertools::Itertools;
 
 use crate::{
-    environement::environement::Environement,
+    environement::{environement::Environement, traits::KnowsRealm},
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::{self, forall, meq, ARichFormula, RichFormula},
@@ -82,7 +82,7 @@ impl<'bump> EufCmaMac<'bump> {
 
         if env.preprocess_instances() {
             assertions.extend(
-                self.preprocess(pbl, subterm_main.as_ref(), subterm_key.as_ref())
+                self.preprocess(env, pbl, subterm_main.as_ref(), subterm_key.as_ref())
                     .map(Axiom::base),
             )
         }
@@ -109,7 +109,7 @@ impl<'bump> EufCmaMac<'bump> {
                     sort: nonce_sort,
                 };
                 let k_f = k.into_aformula();
-                let ors = formula::ors(subterm_key.preprocess_whole_ptcl(&pbl.protocol, &k_f));
+                let ors = formula::ors(subterm_key.preprocess_whole_ptcl(env, &pbl.protocol, &k_f));
 
                 forall([k], split.f_a([k_f]) >> ors)
             }));
@@ -121,10 +121,10 @@ impl<'bump> EufCmaMac<'bump> {
                     mexists!(u!4:message_sort; {
                         meq(ev.eval(u.clone()), ev.eval(m.clone())) &
                         (
-                            subterm_main.f_a( self.mac.f_a([u.into(), k_f.clone()]), m.into()) |
-                            subterm_main.f_a( self.mac.f_a([u.into(), k_f.clone()]), sigma.into()) |
-                            subterm_key.f_a( k, m) |
-                            subterm_key.f_a( k, sigma) |
+                            subterm_main.f_a( env,self.mac.f_a([u.into(), k_f.clone()]), m.into()) |
+                            subterm_main.f_a(env, self.mac.f_a([u.into(), k_f.clone()]), sigma.into()) |
+                            subterm_key.f_a(env, k, m) |
+                            subterm_key.f_a(env, k, sigma) |
                             split.f_a([k])
                         )
                     })
@@ -135,6 +135,7 @@ impl<'bump> EufCmaMac<'bump> {
 
     pub fn preprocess<'a>(
         &'a self,
+        env: &impl KnowsRealm,
         pbl: &'a Problem<'bump>,
         subterm_main: &'a Subterm<'bump, impl SubtermAux<'bump>>,
         subterm_key: &'a Subterm<'bump, impl SubtermAux<'bump>>,
@@ -142,6 +143,7 @@ impl<'bump> EufCmaMac<'bump> {
         let max_var = pbl.max_var();
         // let pile1 = RefCell::new(Vec::new());
         let pile2 = RefCell::new(Vec::new());
+        let realm = env.get_realm();
         let candidates = pbl
             .list_top_level_terms()
             .flat_map(move |f| f.iter()) // sad...
@@ -169,21 +171,25 @@ impl<'bump> EufCmaMac<'bump> {
                     // .cloned()
                     .unique();
                 let u_var = Variable {id: max_var, sort: MESSAGE.as_sort()};
-                let u_f = u_var.into_aformula();
+                // let u_f = u_var.into_aformula();
 
-                let k_sc = subterm_key.preprocess_terms(&pbl.protocol, &key,
+                let h_of_u = self.mac.f_a([u_var.into(), pbl.name_caster.cast(MESSAGE.as_sort(), &key)]);
+
+                let k_sc = subterm_key.preprocess_terms(&realm, &pbl.protocol, &key,
                     pbl.protocol.list_top_level_terms_short_lifetime_and_bvars()
                         .chain([&message, &signature].map(|t| t.shallow_copy().into()))
                     , false, DeeperKinds::NO_MACROS).next().is_none();
                 if k_sc {
-            let disjunction = subterm_main.preprocess_terms(&pbl.protocol, &u_f, [&message, &signature].map(|f| f.shallow_copy().into()), true, DeeperKinds::all());
+                    let disjunction =
+                        subterm_main.preprocess_terms(&realm, &pbl.protocol, &h_of_u, [&message, &signature].map(|f| f.shallow_copy().into()), true, DeeperKinds::all());
 
-                Some(mforall!(free_vars, {
-                    pbl.evaluator.eval(self.verify.f([message.clone(), signature.clone(), pbl.name_caster.cast( MESSAGE.as_sort(), key.clone())]))
-                    >> mexists!([u_var], {
-                            formula::ors(disjunction)
-                        })
-                }))
+                    Some(mforall!(free_vars, {
+                        pbl.evaluator.eval(self.verify.f([message.clone(), signature.clone(), pbl.name_caster.cast( MESSAGE.as_sort(), key.clone())]))
+                        >> mexists!([u_var], {
+                                meq(pbl.evaluator.eval(u_var), pbl.evaluator.eval(&message)) &
+                                formula::ors(disjunction)
+                            })
+                    }))
                 } else {None}
             });
 
@@ -192,8 +198,9 @@ impl<'bump> EufCmaMac<'bump> {
     }
 }
 
+#[allow(unused_labels)]
 fn define_subterms<'bump>(
-    _env: &Environement<'bump>,
+    env: &Environement<'bump>,
     pbl: &Problem<'bump>,
     assertions: &mut Vec<Axiom<'bump>>,
     declarations: &mut Vec<Declaration<'bump>>,
@@ -201,19 +208,23 @@ fn define_subterms<'bump>(
     subterm_main: &Arc<Subterm<'bump, impl SubtermAux<'bump>>>,
 ) {
     let _nonce_sort = NAME.clone();
-    {
+    'key: {
         let subterm = subterm_key.as_ref();
-        subterm.declare(pbl, declarations);
+        subterm.declare(env, pbl, declarations);
 
         if subterm.kind().is_vampire() {
         } else {
             assertions.extend(
                 subterm
-                    .generate_function_assertions_from_pbl(pbl)
+                    .generate_function_assertions_from_pbl(env, pbl)
                     .into_iter()
                     .chain(
                         subterm.not_of_sort(
-                            pbl.sorts.iter().filter(|&&s| s != subterm.sort()).cloned(),
+                            env,
+                            pbl.sorts
+                                .iter()
+                                .filter(|&&s| !(s == subterm.sort() || s.is_term_algebra()))
+                                .cloned(),
                         ),
                     )
                     .map(|f| Axiom::base(f)),
@@ -221,13 +232,17 @@ fn define_subterms<'bump>(
         }
         assertions.extend(
             subterm
-                .preprocess_special_assertion_from_pbl(pbl, false)
+                .preprocess_special_assertion_from_pbl(env, pbl, false)
                 .map(|f| Axiom::base(f)),
         );
     }
-    {
+    'main: {
+        if env.is_evaluated_realm() {
+            break 'main;
+        }
+
         let subterm = subterm_main.as_ref();
-        subterm.declare(pbl, declarations);
+        subterm.declare(env, pbl, declarations);
 
         debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
 
@@ -235,11 +250,15 @@ fn define_subterms<'bump>(
         } else {
             assertions.extend(
                 subterm
-                    .generate_function_assertions_from_pbl(pbl)
+                    .generate_function_assertions_from_pbl(env, pbl)
                     .into_iter()
                     .chain(
                         subterm.not_of_sort(
-                            pbl.sorts.iter().filter(|&&s| s != subterm.sort()).cloned(),
+                            env,
+                            pbl.sorts
+                                .iter()
+                                .filter(|&&s| (s != subterm.sort()) && !s.is_term_algebra())
+                                .cloned(),
                         ),
                     )
                     .map(|f| Axiom::base(f)),
@@ -250,7 +269,7 @@ fn define_subterms<'bump>(
         debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
         assertions.extend(
             subterm
-                .preprocess_special_assertion_from_pbl(pbl, true)
+                .preprocess_special_assertion_from_pbl(env, pbl, true)
                 .map(|f| Axiom::base(f)),
         );
     }

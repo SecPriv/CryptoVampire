@@ -259,7 +259,9 @@ macro_rules! unpack_args {
 }
 
 impl<'bump> SmtFormula<'bump> {
-    pub fn from_arichformula(/* env: &Environement<'bump>,*/ formula: &RichFormula<'bump>) -> Self {
+    pub fn from_arichformula(
+        /* env: &Environement<'bump>,*/ formula: &RichFormula<'bump>,
+    ) -> Self {
         match formula {
             RichFormula::Var(v) => SmtFormula::Var(*v),
             RichFormula::Quantifier(q, arg) => match q {
@@ -333,7 +335,9 @@ impl<'bump> Smt<'bump> {
         match ax {
             Axiom::Comment(str) => Smt::Comment(str.into()),
             Axiom::Base { formula } => {
-                Smt::Assert(SmtFormula::from_arichformula(/* env, */ formula.as_ref()))
+                Smt::Assert(SmtFormula::from_arichformula(
+                    /* env, */ formula.as_ref(),
+                ))
             }
             Axiom::Theory { formula } => {
                 let f = SmtFormula::from_arichformula(/* env, */ formula.as_ref());

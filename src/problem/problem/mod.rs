@@ -21,7 +21,7 @@ use crate::{
         function::{
             inner::evaluate::Evaluator, name_caster_collection::NameCasterCollection, Function,
         },
-        sort::Sort,
+        sort::{Sort, builtins::CONDITION},
         variable::Variable,
     },
     implvec, parser,
@@ -112,6 +112,7 @@ impl<'bump> Generator<'bump> for Problem<'bump> {
             self.sorts
                 .iter()
                 .filter(|s| !(s.is_datatype(env) || s.is_solver_built_in() || s.is_evaluated()))
+                .filter(|&&s| s != CONDITION.as_sort())
                 .map(|s| Declaration::Sort(*s)),
         );
 

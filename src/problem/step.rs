@@ -17,12 +17,13 @@ use crate::{
         variable::Variable,
     },
     implderef, implvec,
+    smt::smt::{Smt, SmtFormula},
     utils::{
         precise_as_ref::PreciseAsRef,
         string_ref::StrRef,
         traits::RefNamed,
         utils::{AlreadyInitialized, MaybeInvalid},
-    }, smt::smt::{Smt, SmtFormula},
+    },
 };
 
 // #[derive(Debug)]

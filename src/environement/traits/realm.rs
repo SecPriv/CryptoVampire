@@ -1,4 +1,4 @@
-use std::ops::BitAnd;
+use std::{ops::BitAnd, fmt::Display};
 
 /// Are we in the lower or higher logic
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Default)]
@@ -112,5 +112,14 @@ where
     #[inline]
     fn get_realm(&self) -> Realm {
         self.inner.get_realm() & self.outer.get_realm()
+    }
+}
+
+impl Display for Realm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Realm::Symbolic => write!(f, "Symbolic"),
+            Realm::Evaluated => write!(f, "Evaluated"),
+        }
     }
 }

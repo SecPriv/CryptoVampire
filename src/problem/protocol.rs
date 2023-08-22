@@ -11,7 +11,7 @@ use super::{
     cell::{Assignement, MemoryCell},
     cell_dependancies::graph::DependancyGraph,
     step::Step,
-    subterm::FrlmAndBVars,
+    subterm::FormlAndVars,
 };
 
 /// A protocol
@@ -101,18 +101,18 @@ impl<'bump> Protocol<'bump> {
 
     pub fn list_top_level_terms_short_lifetime_and_bvars<'a>(
         &'a self,
-    ) -> impl Iterator<Item = FrlmAndBVars<'bump>> + 'a {
+    ) -> impl Iterator<Item = FormlAndVars<'bump>> + 'a {
         itertools::chain!(
             self.steps.iter().flat_map(|s| {
                 let vars: Rc<[_]> = s.free_variables().iter().cloned().collect();
                 [s.condition_arc(), s.message_arc()]
-                    .map(|t| FrlmAndBVars::new(Rc::clone(&vars), t.shallow_copy()))
+                    .map(|t| FormlAndVars::new(Rc::clone(&vars), t.shallow_copy()))
             }),
             self.memory_cells.iter().flat_map(|c| {
                 c.assignements()
                     .iter()
                     .map(|Assignement { content, step, .. }| {
-                        FrlmAndBVars::new(
+                        FormlAndVars::new(
                             step.free_variables().iter().cloned().collect(),
                             content.shallow_copy(),
                         )

@@ -1,4 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::Arc,
+};
 
 use itertools::Itertools;
 
@@ -24,7 +27,7 @@ use crate::{
         manipulation::FrozenSubst,
         sort::{
             builtins::{BOOL, CONDITION, MESSAGE},
-            Sort,
+            FOSort, Sort,
         },
         variable::{sorts_to_variables, Variable},
     },
@@ -88,17 +91,15 @@ pub fn generate<'bump>(
     if env.is_evaluated_realm() {
         // bool and condition are dealt with separatly
         declarations.push(Declaration::SortAlias {
-            from: CONDITION.as_sort(),
-            to: BOOL.as_sort(),
+            to: CONDITION.as_sort(),
+            from: BOOL.as_sort(),
         })
     }
 
     // declare the evaluation functions
     declarations.extend(
         pbl.evaluator
-            .functions()
-            .values()
-            .cloned()
+            .iter_functions()
             .map(Declaration::FreeFunction),
     );
 
@@ -108,10 +109,9 @@ pub fn generate<'bump>(
     if env.is_evaluated_realm() {
         assertions.extend(
             pbl.evaluator
-                .functions()
                 .iter()
                 .map(|(s, fun)| {
-                    mforall!(x!1:*s; {
+                    mforall!(x!1:s; {
                         EQUALITY.f_a([fun.f_a([x]), x.into()])
                     })
                 })
@@ -129,7 +129,7 @@ pub fn generate<'bump>(
 
             // assertions.extend(relevant_functions.iter().map())
             declarations.reserve(relevant_sorts.len());
-            let rewrite_funs: HashMap<_, _> = relevant_sorts
+            let rewrite_funs: BTreeMap<FOSort, _> = relevant_sorts
                 .into_iter()
                 .map(|(s, s2)| {
                     if s2 == bool {
@@ -140,6 +140,7 @@ pub fn generate<'bump>(
                         (s, RewriteKind::Other(fun))
                     }
                 })
+                .map(|(s, e)| ((*s).into(), e))
                 .collect();
 
             assertions.extend(
@@ -147,7 +148,7 @@ pub fn generate<'bump>(
                     .iter()
                     .map(|(f, ibf)| {
                         let ev = ibf.eval_fun();
-                        let rw_kind = rewrite_funs.get(&ibf.out()).unwrap();
+                        let rw_kind = rewrite_funs.get(&ibf.out().into()).unwrap();
                         let vars: Arc<[_]> = sorts_to_variables(0, ibf.args());
                         Rewrite {
                             kind: rw_kind.clone(),
@@ -198,8 +199,8 @@ pub fn generate<'bump>(
                     TermAlgebra::Cell(_) | TermAlgebra::Input(_) | TermAlgebra::NameCaster(_) => continue, // nothing specific to be done here
                     TermAlgebra::IfThenElse(_) => {
                         assertions.push(Axiom::base(mforall!(c!0:cond, l!1:msg, r!2:msg; {
-                            pbl.evaluator.eval(function.f_a([c, l, r]))
-                                >> IF_THEN_ELSE.f_a([c, l, r].into_iter().map(|v| pbl.evaluator.eval(v)))
+                            meq(pbl.evaluator.eval(function.f_a([c, l, r])),
+                                IF_THEN_ELSE.f_a([c, l, r].into_iter().map(|v| pbl.evaluator.eval(v))))
                         })))
                     },
                     TermAlgebra::Quantifier(q) => generate_quantifier(assertions, declarations, env, pbl, function, q),
@@ -310,9 +311,10 @@ fn generate_connectives<'bump>(
     cond: Sort<'bump>,
 ) {
     match connective {
-        Connective::Equality(_) => assertions.push(Axiom::base(mforall!(a!0:msg, b!0:msg; {
-            pbl.evaluator.eval(function.f([a.clone(), b.clone()])) >>
-                meq(pbl.evaluator.eval(a), pbl.evaluator.eval(b))
+        Connective::Equality(_) => assertions.push(Axiom::base(mforall!(a!0:msg, b!1:msg; {
+            meq(
+            pbl.evaluator.eval(function.f([a.clone(), b.clone()])),
+                meq(pbl.evaluator.eval(a), pbl.evaluator.eval(b)))
         }))),
         Connective::BaseConnective(BaseConnective::Not) => {
             assertions.push(Axiom::base(mforall!(a!0:cond; {
@@ -330,8 +332,10 @@ fn generate_connectives<'bump>(
                 .map(|(id, &sort)| Variable { id, sort })
                 .collect_vec();
             assertions.push(Axiom::base(mforall!(args.clone(), {
-                pbl.evaluator.eval(function.f_a(&args))
-                    >> f_eval.f_a(args.iter().map(|v| pbl.evaluator.eval(v)))
+                meq(
+                    pbl.evaluator.eval(function.f_a(&args)),
+                    f_eval.f_a(args.iter().map(|v| pbl.evaluator.eval(v))),
+                )
             })))
         }
     }
