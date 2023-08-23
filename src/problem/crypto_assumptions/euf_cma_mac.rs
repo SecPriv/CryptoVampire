@@ -207,27 +207,26 @@ fn define_subterms<'bump>(
     subterm_key: &Arc<Subterm<'bump, impl SubtermAux<'bump>>>,
     subterm_main: &Arc<Subterm<'bump, impl SubtermAux<'bump>>>,
 ) {
+    // if you're in the evaluated realm we don't need to define anything because it wouldn't be sound
+    if env.is_evaluated_realm() {
+        return;
+    }
+
     let _nonce_sort = NAME.clone();
-    'key: {
+    {
         let subterm = subterm_key.as_ref();
         subterm.declare(env, pbl, declarations);
 
         if subterm.kind().is_vampire() {
         } else {
             assertions.extend(
-                subterm
-                    .generate_function_assertions_from_pbl(env, pbl)
-                    .into_iter()
-                    .chain(
-                        subterm.not_of_sort(
-                            env,
-                            pbl.sorts
-                                .iter()
-                                .filter(|&&s| !(s == subterm.sort() || s.is_term_algebra()))
-                                .cloned(),
-                        ),
-                    )
-                    .map(|f| Axiom::base(f)),
+                itertools::chain!(
+                    subterm
+                        .generate_function_assertions_from_pbl(env, pbl)
+                        .into_iter(),
+                    subterm.not_of_sort_auto(env, pbl)
+                )
+                .map(|f| Axiom::base(f)),
             );
         }
         assertions.extend(
@@ -236,11 +235,8 @@ fn define_subterms<'bump>(
                 .map(|f| Axiom::base(f)),
         );
     }
-    'main: {
-        if env.is_evaluated_realm() {
-            break 'main;
-        }
 
+    {
         let subterm = subterm_main.as_ref();
         subterm.declare(env, pbl, declarations);
 
@@ -249,19 +245,13 @@ fn define_subterms<'bump>(
         if subterm.kind().is_vampire() {
         } else {
             assertions.extend(
-                subterm
-                    .generate_function_assertions_from_pbl(env, pbl)
-                    .into_iter()
-                    .chain(
-                        subterm.not_of_sort(
-                            env,
-                            pbl.sorts
-                                .iter()
-                                .filter(|&&s| (s != subterm.sort()) && !s.is_term_algebra())
-                                .cloned(),
-                        ),
-                    )
-                    .map(|f| Axiom::base(f)),
+                itertools::chain!(
+                    subterm
+                        .generate_function_assertions_from_pbl(env, pbl)
+                        .into_iter(),
+                    subterm.not_of_sort_auto(env, pbl)
+                )
+                .map(|f| Axiom::base(f)),
             );
         }
         debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());

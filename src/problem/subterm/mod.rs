@@ -264,8 +264,14 @@ where
             debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
 
             // no variable collision
-            let f =
-                self.preprocess_term_to_formula(&realm, ptcl, &x_f, f_f.clone(), Rc::new([]), keep_guard);
+            let f = self.preprocess_term_to_formula(
+                &realm,
+                ptcl,
+                &x_f,
+                f_f.clone(),
+                Rc::new([]),
+                keep_guard,
+            );
             debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
             forall(
                 vars.into_iter().chain(std::iter::once(x)),
@@ -487,22 +493,48 @@ where
         })
     }
 
+    /// Same as [Subterm::not_of_sort()] but automatically figures out the
+    /// sort iterator
+    pub fn not_of_sort_auto<'a>(
+        &'a self,
+        env: &impl KnowsRealm,
+        pbl: &'a Problem<'bump>,
+    ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
+        let realm = env.get_realm();
+        let sorts = pbl
+            .sorts
+            .iter()
+            .filter(move |&&s| {
+                (s != self.sort())
+                    && !s.is_term_algebra()
+                    && if let Realm::Evaluated = realm {
+                        !s.is_evaluated()
+                    } else {
+                        true
+                    }
+            })
+            .cloned();
+        self.not_of_sort(env, sorts)
+    }
+
     pub fn declare(
         &self,
         env: &Environement,
         pbl: &Problem<'bump>,
         declarations: &mut impl Extend<Declaration<'bump>>,
     ) {
-        self.assert_sound_in_smt(env).unwrap();
-        match &self.kind {
-            AbsSubtermKindG::Vampire(function) => {
-                declarations.extend([Declaration::Subterm(declare::Subterm {
-                    function: *function,
-                    comutative_functions: self.list_default_subterm_functions(pbl).collect(),
-                })])
-            }
-            AbsSubtermKindG::Regular(funs) => {
-                declarations.extend(funs.values().map(|&fun| Declaration::FreeFunction(fun)))
+        if self.is_sound_in_smt(env) {
+            self.assert_sound_in_smt(env).unwrap();
+            match &self.kind {
+                AbsSubtermKindG::Vampire(function) => {
+                    declarations.extend([Declaration::Subterm(declare::Subterm {
+                        function: *function,
+                        comutative_functions: self.list_default_subterm_functions(pbl).collect(),
+                    })])
+                }
+                AbsSubtermKindG::Regular(funs) => {
+                    declarations.extend(funs.values().map(|&fun| Declaration::FreeFunction(fun)))
+                }
             }
         }
     }
