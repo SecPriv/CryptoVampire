@@ -10,6 +10,7 @@ use crate::{
         formula::{self, forall, meq, ARichFormula, RichFormula},
         function::Function,
         function::{inner::subterm::Subsubterm, name_caster_collection::NameCasterCollection},
+        manipulation::OneVarSubst,
         sort::builtins::{CONDITION, MESSAGE, NAME},
         utils::formula_expander::DeeperKinds,
         variable::Variable,
@@ -183,6 +184,7 @@ impl<'bump> EufCmaMac<'bump> {
                     let disjunction =
                         subterm_main.preprocess_terms(&realm, &pbl.protocol, &h_of_u, [&message, &signature].map(|f| f.shallow_copy().into()), true, DeeperKinds::all());
 
+                    if realm.is_symbolic_realm() {
                     Some(mforall!(free_vars, {
                         pbl.evaluator.eval(self.verify.f([message.clone(), signature.clone(), pbl.name_caster.cast( MESSAGE.as_sort(), key.clone())]))
                         >> mexists!([u_var], {
@@ -190,6 +192,13 @@ impl<'bump> EufCmaMac<'bump> {
                                 formula::ors(disjunction)
                             })
                     }))
+                } else {
+
+                    Some(mforall!(free_vars, {
+                        pbl.evaluator.eval(self.verify.f([message.clone(), signature.clone(), pbl.name_caster.cast( MESSAGE.as_sort(), key.clone())]))
+                        >> formula::ors(disjunction).apply_substitution2(&OneVarSubst{id: u_var.id, f: message.clone()})
+                    }))
+                }
                 } else {None}
             });
 
