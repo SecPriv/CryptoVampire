@@ -4,7 +4,10 @@ use std::{
 };
 
 use crate::{
-    environement::environement::Environement,
+    environement::{
+        environement::Environement,
+        traits::{KnowsRealm, Realm},
+    },
     formula::{
         file_descriptior::{
             axioms::{Axiom, Rewrite, RewriteKind},
@@ -23,6 +26,8 @@ use crate::{
     implvec,
     problem::subterm::kind::SubtermKind,
 };
+
+use self::display::{SmtDisplayer, SmtEnv};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct SmtFile<'bump> {
@@ -97,139 +102,7 @@ pub struct SmtCons<'bump> {
     pub dest: Vec<Function<'bump>>,
 }
 
-impl<'bump> fmt::Display for SmtFormula<'bump> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            SmtFormula::Var(v) => v.fmt(f),
-            SmtFormula::Fun(fun, args) => {
-                if args.len() > 0 {
-                    write!(f, "({} ", fun.name())?;
-                    for arg in args {
-                        write!(f, "{} ", arg)?;
-                    }
-                    write!(f, ")")
-                } else {
-                    write!(f, "{} ", fun.name())
-                }
-            }
-            SmtFormula::Forall(vars, formula) | SmtFormula::Exists(vars, formula)
-                if vars.is_empty() =>
-            {
-                formula.fmt(f)
-            }
-            SmtFormula::Forall(vars, formula) => {
-                write!(f, "(forall (")?;
-                for v in vars.into_iter() {
-                    write!(f, "({} {}) ", v, v.sort)?;
-                }
-                write!(f, ") {})", formula)
-            }
-            SmtFormula::Exists(vars, formula) => {
-                write!(f, "(exists (")?;
-                for v in vars.into_iter() {
-                    write!(f, "({} {}) ", v, v.sort)?;
-                }
-                write!(f, ") {})", formula)
-            }
-            SmtFormula::True => write!(f, "true"),
-            SmtFormula::False => write!(f, "false"),
-            SmtFormula::And(args) if args.is_empty() => SmtFormula::True.fmt(f),
-            SmtFormula::And(args) => fun_list_fmt(f, "and", args.iter()),
-            SmtFormula::Or(args) if args.is_empty() => SmtFormula::False.fmt(f),
-            SmtFormula::Or(args) => fun_list_fmt(f, "or", args.iter()),
-            SmtFormula::Eq(args) | SmtFormula::Neq(args) if args.len() <= 1 => {
-                SmtFormula::True.fmt(f)
-            }
-            SmtFormula::Eq(args) => fun_list_fmt(f, "=", args.iter()),
-            SmtFormula::Neq(args) => fun_list_fmt(f, "distinct", args.iter()),
-            SmtFormula::Ite(c, r, l) => {
-                write!(f, "(ite {} {} {})", c, r, l)
-            }
-            SmtFormula::Implies(a, b) => write!(f, "(=> {} {})", a, b),
-            SmtFormula::Subterm(fun, a, b) => write!(f, "(subterm {} {} {})", fun.name(), a, b),
-            SmtFormula::Not(a) => write!(f, "(not {})", a),
-        }
-    }
-}
-
-impl<'bump> fmt::Display for Smt<'bump> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Smt::Assert(e) => writeln!(f, "(assert {})", e),
-            Smt::AssertTh(e) => writeln!(f, "(assert-theory {})", e),
-            Smt::AssertNot(e) => writeln!(f, "(assert-not {})", e),
-            Smt::DeclareFun(fun) => {
-                write!(f, "(declare-fun {} (", fun.name())?;
-                for s in fun.fast_insort().expect(&format!(
-                    "all function defined here have known sort: {}",
-                    fun.name()
-                )) {
-                    write!(f, "{} ", s.name())?;
-                }
-                writeln!(f, ") {})", fun.fast_outsort().unwrap())
-            }
-            Smt::DeclareSort(sort) => writeln!(f, "(declare-sort {} 0)", sort),
-            Smt::DeclareSortAlias { from, to } => {
-                writeln!(f, "(define-sort {} () {})", to.name(), from.name())
-            }
-            Smt::DeclareSubtermRelation(fun, funs) => {
-                write!(f, "(declare-subterm-relation {} ", fun.name())?;
-                for fun in funs {
-                    write!(f, "{} ", fun.name())?;
-                }
-                writeln!(f, ")")
-            }
-            Smt::DeclareRewrite {
-                rewrite_fun,
-                vars,
-                lhs,
-                rhs,
-            } => {
-                write!(f, "(declare-rewrite (forall (")?;
-                for v in vars.into_iter() {
-                    write!(f, "({} {}) ", v, v.sort)?;
-                }
-                let op = match rewrite_fun {
-                    RewriteKind::Bool => "=>".into(),
-                    RewriteKind::Other(f) => f.name(),
-                };
-                writeln!(f, ") ({} {} {})))", op, lhs, rhs)
-            }
-            Smt::DeclareDatatypes { sorts, cons } => {
-                write!(f, "(declare-datatypes\n")?;
-                // name of types
-                write!(f, "\t(")?;
-                for s in sorts.into_iter() {
-                    write!(f, "({} 0) ", s)?;
-                }
-                write!(f, ")\n\t(\n")?;
-
-                // cons
-                for (j, vc) in cons.iter().enumerate() {
-                    write!(f, "\t\t(\n")?;
-                    for c in vc {
-                        assert_eq!(sorts[j], c.fun.fast_outsort().unwrap());
-
-                        write!(f, "\t\t\t({} ", c.fun.name())?;
-
-                        for (i, s) in c.fun.fast_insort().expect("todo").iter().enumerate() {
-                            write!(f, "({} {}) ", c.dest.get(i).unwrap().name(), s)?;
-                        }
-                        write!(f, ")\n")?;
-                    }
-                    write!(f, "\t\t)\n")?;
-                }
-                writeln!(f, "\t)\n)")
-            }
-
-            Smt::CheckSat => writeln!(f, "(check-sat)"),
-            Smt::Comment(s) => writeln!(f, "\n; {}\n", s),
-            Smt::GetProof => writeln!(f, "(get-proof)"),
-            Smt::SetOption(option, arg) => writeln!(f, "(set-option :{} {})", option, arg),
-            Smt::SetLogic(logic) => writeln!(f, "(set-logic {})", logic),
-        }
-    }
-}
+mod display;
 
 fn fun_list_fmt<I: Iterator<Item = impl fmt::Display>>(
     f: &mut fmt::Formatter,
@@ -328,6 +201,37 @@ impl<'bump> SmtFormula<'bump> {
             }
         }
     }
+
+    pub fn default_display(&self) -> impl fmt::Display + '_ {
+        SmtDisplayer {
+            env: SmtEnv {
+                realm: Realm::Symbolic,
+            },
+            content: self,
+        }
+    }
+
+    pub fn as_display(self, env: &impl KnowsRealm) -> impl fmt::Display + 'bump {
+        SmtDisplayer {
+            env: SmtEnv {
+                realm: env.get_realm(),
+            },
+            content: self,
+        }
+    }
+
+    pub fn as_display_ref(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_ {
+        SmtDisplayer {
+            env: SmtEnv {
+                realm: env.get_realm(),
+            },
+            content: self,
+        }
+    }
+
+    fn prop<D, T>(&self, disp: SmtDisplayer<D, T>) -> SmtDisplayer<D, &Self> {
+        disp.propagate(&self)
+    }
 }
 
 impl<'bump> Smt<'bump> {
@@ -413,6 +317,28 @@ impl<'bump> Smt<'bump> {
             Declaration::SortAlias { from, to } => Self::DeclareSortAlias { from, to },
         }
     }
+
+    pub fn as_display(self, env: &impl KnowsRealm) -> impl fmt::Display + 'bump {
+        SmtDisplayer {
+            env: SmtEnv {
+                realm: env.get_realm(),
+            },
+            content: self,
+        }
+    }
+
+    pub fn as_display_ref(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_ {
+        SmtDisplayer {
+            env: SmtEnv {
+                realm: env.get_realm(),
+            },
+            content: self,
+        }
+    }
+
+    fn prop<D, T>(&self, disp: SmtDisplayer<D, T>) -> SmtDisplayer<D, &Self> {
+        disp.propagate(&self)
+    }
 }
 
 impl<'bump> SmtFile<'bump> {
@@ -446,20 +372,13 @@ impl<'bump> SmtFile<'bump> {
         let content = itertools::chain!(declarations, assertions, other).collect();
         Self { content }
     }
-}
 
-impl<'bump> Display for SmtFile<'bump> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if cfg!(debug_assertions) {
-            self.content
-                .iter()
-                .filter_map(|smt| match smt {
-                    Smt::DeclareFun(f) => Some(f),
-                    _ => None,
-                })
-                .for_each(|f| println!("trying to define {}", f.name()))
+    pub fn as_diplay(&self, env: &impl  KnowsRealm) -> impl fmt::Display + '_ {
+        SmtDisplayer {
+            env: SmtEnv {
+                realm: env.get_realm()
+            },
+            content: self
         }
-
-        self.content.iter().try_for_each(|smt| writeln!(f, "{smt}"))
     }
 }

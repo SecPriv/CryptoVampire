@@ -8,7 +8,7 @@ use crate::container::contained::Containable;
 use crate::container::reference::Reference;
 use crate::container::utils::NameFinder;
 use crate::container::StaticContainer;
-use crate::environement::traits::Realm;
+use crate::environement::traits::{Realm, KnowsRealm};
 use crate::force_lifetime;
 
 use crate::formula::formula::ARichFormula;
@@ -80,32 +80,6 @@ impl<'bump> Containable<'bump> for InnerFunction<'bump> {}
 // assert_variance!(Function);
 assert_variance!(InnerFunction);
 
-// unsafe impl<'bump> Sync for Function<'bump> {}
-// unsafe impl<'bump> Send for Function<'bump> {}
-
-// impl<'bump> AsRef<RefPointee<'bump, Self>> for Function<'bump> {
-//     fn as_ref(&self) -> &RefPointee<'bump, Self> {
-//         unsafe { self.inner.as_ref() }
-//     }
-// }
-
-// pub type MFunction<'bump> = Reference<'bump, InnerFunction<'bump>>;
-
-// impl<'bump> Reference<'bump> for Function<'bump> {
-//     type Inner<'a> = InnerFunction<'a> where 'a:'bump;
-
-//     fn from_ref(ptr: &'bump Option<InnerFunction<'bump>>) -> Self {
-//         Self {
-//             inner: NonNull::from(ptr),
-//             container: Default::default(),
-//         }
-//     }
-
-//     fn to_ref(&self) -> &'bump Option<Self::Inner<'bump>> {
-//         unsafe { self.inner.as_ref() }
-//     }
-// }
-
 impl<'bump> Sorted<'bump> for Function<'bump> {
     fn sort(&self, args: &[Sort<'bump>]) -> Result<Sort<'bump>, SortedError> {
         let s = self.signature();
@@ -124,42 +98,6 @@ impl<'bump> Sorted<'bump> for Function<'bump> {
     }
 }
 
-// impl<'b> Debug for Function<'b> {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         self.inner.fmt(f)
-//     }
-// }
-
-// impl<'bump> Ord for Function<'bump> {
-//     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-//         if self == other {
-//             Ordering::Equal
-//         } else {
-//             Ord::cmp(self.as_inner(), other.as_inner())
-//         }
-//     }
-// }
-
-// impl<'bump> PartialOrd for Function<'bump> {
-//     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-//         Some(self.cmp(&other))
-//     }
-// }
-
-// impl<'bump> LateInitializable for Function<'bump> {
-//     type Inner = InnerFunction<'bump>;
-
-//     unsafe fn initiallize(&self, other: Self::Inner) {
-//         std::ptr::drop_in_place(self.inner.as_ptr());
-//         std::ptr::write(self.inner.as_ptr(), other);
-//     }
-// }
-
-// impl<'bump> PreciseAsRef<'bump, InnerFunction<'bump>> for Function<'bump> {
-//     fn precise_as_ref(&self) -> &'bump InnerFunction<'bump> {
-//         unsafe { self.inner.as_ref() } // container is alive
-//     }
-// }
 
 macro_rules! container {
     () => {
@@ -435,13 +373,6 @@ impl<'bump> Function<'bump> {
         self.name_ref()
     }
 
-    // pub fn get_cell(&self) -> Option<MemoryCell<'bump>> {
-    //     match self.as_ref() {
-    //         InnerFunction::TermAlgebra(TermAlgebra::Cell(c)) => Some(c.memory_cell()),
-    //         _ => None,
-    //     }
-    // }
-
     pub fn f<'bbump, I>(&self, args: impl IntoIterator<Item = I>) -> RichFormula<'bbump>
     where
         'bump: 'bbump,
@@ -531,6 +462,10 @@ impl<'bump> Function<'bump> {
         DisplayFunction(*self)
     }
 
+    pub fn is_no_op(&self, realm: &impl KnowsRealm) -> bool {
+        matches!(self.as_inner(), InnerFunction::Evaluate(_))
+    }
+
     force_lifetime!(Function, 'bump);
 }
 
@@ -546,21 +481,3 @@ impl<'bump> Display for DisplayFunction<'bump> {
         write!(f, "{}{}", self.0.name(), self.0.signature().as_display())
     }
 }
-
-// impl<'bump> FromNN<'bump> for Function<'bump> {
-//     type Inner = InnerFunction<'bump>;
-
-//     unsafe fn from_nn(inner: NonNull<Self::Inner>) -> Self {
-//         Function {
-//             inner,
-//             container: Default::default(),
-//         }
-//     }
-// }
-
-// impl<'bump> MaybeInvalid for Function<'bump> {
-//     fn is_valid(&self) -> bool {
-//         let Function { inner, .. } = self;
-//         (!inner.as_ptr().is_null()) && self.as_ref().is_valid()
-//     }
-// }

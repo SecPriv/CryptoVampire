@@ -81,9 +81,9 @@ impl<'bump> InnerStep<'bump> {
             },
             "in {name}:\n\tmesg: [{}] in {}\n\tcond: [{}] in {}\n\targs: [{}]",
             message.get_free_vars().iter().join(", "),
-            SmtFormula::from_arichformula(message.as_ref()),
+            SmtFormula::from_arichformula(message.as_ref()).default_display(),
             condition.get_free_vars().iter().join(", "),
-            SmtFormula::from_arichformula(condition.as_ref()),
+            SmtFormula::from_arichformula(condition.as_ref()).default_display(),
             free_variables.iter().join(", ")
         );
         debug_assert!({

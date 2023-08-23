@@ -96,7 +96,7 @@ fn main() {
         if USE_MIRI {
             println!(
                 "\n\n\n\n\n\n{}",
-                SmtFile::from_general_file(&env, pbl.into_general_file(&env))
+                SmtFile::from_general_file(&env, pbl.into_general_file(&env)).as_diplay(&env)
             )
         } else {
             if args.lemmas {
@@ -117,7 +117,7 @@ fn main() {
 
                     write_to_file(
                         &path,
-                        SmtFile::from_general_file(&env, pbl.into_general_file(&env)),
+                        SmtFile::from_general_file(&env, pbl.into_general_file(&env)).as_diplay(&env),
                     );
 
                     i += 1;
@@ -125,7 +125,7 @@ fn main() {
             } else {
                 assert!(!args.output_location.is_dir());
                 let smt = SmtFile::from_general_file(&env, pbl.into_general_file(&env));
-                write_to_file(&args.output_location, smt);
+                write_to_file(&args.output_location, smt.as_diplay(&env));
             }
         }
     });

@@ -352,7 +352,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Quantifier<'a> {
             );
             println!(
                 "\t{}",
-                SmtFormula::from_arichformula(&RichFormula::Quantifier(q.clone(), content.clone()))
+                SmtFormula::from_arichformula(&RichFormula::Quantifier(q.clone(), content.clone())).default_display()
             )
         }
 
