@@ -30,7 +30,7 @@ impl<'bump, T> OwnedVarSubst<T> {
 
 impl<'bump> OwnedVarSubstF<'bump> {
     pub fn add(&mut self, id: usize, r: ARichFormula<'bump>) {
-        debug_assert!(self.subst.iter().all(|ovs| ovs.is_id(id)));
+        debug_assert!(self.subst.iter().all(|ovs| !ovs.is_id(id)));
         debug_assert!(match r.as_ref() {
             RichFormula::Var(v) => v.id != id,
             _ => true,

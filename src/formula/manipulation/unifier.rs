@@ -176,9 +176,7 @@ impl<'bump> Unifier<'bump> {
                 (RichFormula::Fun(fl, args_l), RichFormula::Fun(fr, args_r))
                     if fl == fr && args_l.len() == args_r.len() =>
                 {
-                    args_l
-                        .iter()
-                        .zip(args_r.iter())
+                    itertools::zip_eq(args_l.iter(), args_r.iter())
                         .all(|(left, right)| aux(left, right, left_p, right_p))
                 }
                 _ => false,
@@ -261,5 +259,146 @@ impl<'bump> OneWayUnifier<'bump> {
 
     pub fn vars<'b: 'bump>(&'b self) -> impl Iterator<Item = usize> + 'b {
         self.subst.subst.iter().map(OneVarSubst::id)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        container::ScopedContainer,
+        formula::{
+            formula,
+            function::{
+                builtin::INPUT,
+                name_caster_collection::{NameCasterCollection, DEFAULT_NAME_CASTER},
+                Function,
+            },
+            sort::{
+                builtins::{MESSAGE, NAME, STEP},
+                Sort,
+            },
+            variable::Variable,
+        },
+    };
+
+    use super::Unifier;
+    fn vars<'bump, const N: usize>(mut i: usize, sorts: [Sort<'bump>; N]) -> [Variable<'bump>; N] {
+        sorts.map(|sort| {
+            i += 1;
+            Variable { id: i, sort }
+        })
+    }
+
+    struct A<'bump> {
+        hash: Function<'bump>,
+        k0: Function<'bump>,
+        k1: Function<'bump>,
+        name_caster: NameCasterCollection<'bump>,
+    }
+
+    fn setup<F>(f: F)
+    where
+        F: for<'a> FnOnce(A<'a>),
+    {
+        let message = MESSAGE.as_sort();
+        let step = STEP.as_sort();
+
+        ScopedContainer::scoped(|container| {
+            let hash =
+                Function::new_user_term_algebra(container, "hash", [message; 2], message).main;
+            let k0 =
+                Function::new_user_term_algebra(container, "key", [step; 2], NAME.as_sort()).main;
+            let k1 =
+                Function::new_user_term_algebra(container, "key2", [step; 2], NAME.as_sort()).main;
+            let name_caster = DEFAULT_NAME_CASTER.clone();
+
+            let a = A {
+                hash,
+                k0,
+                k1,
+                name_caster,
+            };
+            f(a)
+        })
+    }
+
+    #[test]
+    fn mgu1() {
+        let message = MESSAGE.as_sort();
+        let step = STEP.as_sort();
+
+        setup(
+            |A {
+                 hash,
+                 k1,
+                 name_caster,
+                 ..
+             }| {
+                let [v1, v2, v3, v4, v5] = vars(0, [message, step, step, step, message]);
+
+                let a = hash.f_a([v1.into(), name_caster.cast(message, k1.f_a([v2, v3]))]);
+                println!("a = {a}");
+                let b = hash.f_a([v5.into(), name_caster.cast(message, k1.f_a([v3, v4]))]);
+                println!("b = {b}");
+
+                let u = Unifier::mgu(&a, &b).unwrap();
+
+                let u_str = formula::ands(u.as_equalities().unwrap());
+                println!("{u_str}")
+            },
+        )
+    }
+
+    #[test]
+    fn mgu2() {
+        let message = MESSAGE.as_sort();
+        let step = STEP.as_sort();
+
+        setup(
+            |A {
+                 hash,
+                 k1,
+                 name_caster,
+                 ..
+             }| {
+                let [v1, v2, v3, v4, _] = vars(0, [message, step, step, step, message]);
+
+                let a = hash.f_a([v1.into(), name_caster.cast(message, k1.f_a([v2, v3]))]);
+                println!("a = {a}");
+                let b = hash.f_a([INPUT.f_a([v2]), name_caster.cast(message, k1.f_a([v3, v4]))]);
+                println!("b = {b}");
+
+                let u = Unifier::mgu(&a, &b).unwrap();
+
+                let u_str = formula::ands(u.as_equalities().unwrap());
+                println!("{u_str}")
+            },
+        )
+    }
+
+    #[test]
+    fn mgu_fail() {
+        let message = MESSAGE.as_sort();
+        let step = STEP.as_sort();
+
+        setup(
+            |A {
+                 hash,
+                 k1,
+                 k0,
+                 name_caster,
+                 ..
+             }| {
+                let [v1, v2, v3, v4, v5] = vars(0, [message, step, step, step, message]);
+
+                let a = hash.f_a([v1.into(), name_caster.cast(message, k1.f_a([v2, v3]))]);
+                println!("a = {a}");
+                let b = hash.f_a([v5.into(), name_caster.cast(message, k0.f_a([v3, v4]))]);
+                println!("b = {b}");
+
+                let u = Unifier::mgu(&a, &b);
+                assert!(u.is_none())
+            },
+        )
     }
 }

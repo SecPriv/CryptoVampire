@@ -271,6 +271,15 @@ impl<'bump> RichFormula<'bump> {
     pub fn clone_as_arc(&self) -> ARichFormula<'bump> {
         self.into()
     }
+
+    #[must_use]
+    pub fn as_var(&self) -> Option<&Variable<'bump>> {
+        if let Self::Var(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
 }
 
 // pub trait AFormula<'bump> {
