@@ -52,10 +52,11 @@ impl Nonce {
                     .generate_function_assertions_from_pbl(env, pbl)
                     .into_iter()
                     .chain(
-                        subterm.not_of_sort(env,
+                        subterm.not_of_sort(
+                            env,
                             pbl.sorts
                                 .iter()
-                                .filter(|&&s| !(s == nonce_sort  || s.is_term_algebra()))
+                                .filter(|&&s| !(s == nonce_sort || s.is_term_algebra()))
                                 .cloned(),
                         ),
                     )
@@ -69,7 +70,12 @@ impl Nonce {
         );
 
         assertions.extend(
-            [mforall!(n!0:nonce_sort, m!1:message_sort; {
+            [
+                mforall!(n1!0:nonce_sort, n2!1:nonce_sort; {
+                    subterm.f_a(env, n1, n2) >> meq(n1, n2)
+                })
+                ,
+                mforall!(n!0:nonce_sort, m!1:message_sort; {
                 meq(ev.eval(nc.cast(message_sort, n.clone())),
                     ev.eval(m.clone())) >> subterm.f_a(env, n, m)
             }),

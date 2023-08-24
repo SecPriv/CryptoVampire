@@ -22,6 +22,7 @@ use crate::{
         generator::Generator,
         problem::Problem,
         subterm::{
+            into_exist_formula,
             kind::SubtermKindConstr,
             traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
             Subterm,
@@ -280,7 +281,7 @@ impl<'bump> IntCtxt<'bump> {
                             .eval(self.verify.f([cipher.clone(), k_f.clone()]))
                             & mforall!([r_var], { formula::ands(other_sc) })
                                 >> mexists!([u_var, r_var], {
-                                    formula::ors(disjunction)
+                                    into_exist_formula(disjunction)
                                         & meq(
                                             pbl.evaluator.eval(cipher.clone()),
                                             pbl.evaluator.eval(n_c_f),

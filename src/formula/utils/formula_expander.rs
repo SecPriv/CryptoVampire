@@ -77,7 +77,13 @@ impl<'bump> ExpantionState<'bump> {
     }
 
     pub fn add_variables(&self, vars: impl IntoIterator<Item = Variable<'bump>>) -> Self {
-        let bound_variables: Rc<[_]> = self.bound_variables.iter().cloned().chain(vars).collect();
+        let bound_variables: Rc<[_]> = self
+            .bound_variables
+            .iter()
+            .cloned()
+            .chain(vars)
+            .unique_by(|v| v.id)
+            .collect();
         Self {
             bound_variables,
             ..self.clone()
@@ -87,6 +93,11 @@ impl<'bump> ExpantionState<'bump> {
     pub fn bound_variables(&self) -> &[Variable<'bump>] {
         &self.bound_variables
     }
+
+    pub fn owned_bound_variable(&self) -> Rc<[Variable<'bump>]> {
+        self.bound_variables.clone()
+    }
+
     pub fn condition(&self) -> Option<&ARichFormula<'bump>> {
         self.guard.as_ref()
     }
@@ -198,7 +209,7 @@ impl<'bump> ExpantionContent<'bump> {
 						}
 						TermAlgebra::Input(_) if deeper_kinds.contains(DeeperKinds::INPUT) => {
 							let nstate = self.state.map_dk(|dk| {
-								dk ^ DeeperKinds::INPUT
+								dk - DeeperKinds::INPUT
 							});
 
 							iter
@@ -208,7 +219,7 @@ impl<'bump> ExpantionContent<'bump> {
 							if deeper_kinds.contains(DeeperKinds::MEMORY_CELLS) =>
 						{
 							let nstate = self.state.map_dk(|dk| {
-								dk ^ DeeperKinds::MEMORY_CELLS
+								dk - DeeperKinds::MEMORY_CELLS
 							});
 							iter.chain(expand_process_deeper(
 								steps,
@@ -265,6 +276,7 @@ where
             content: arg.shallow_copy(),
         })
 }
+/// `deeper` is [None] if comming from an input
 fn expand_process_deeper<'b, 'bump>(
     steps: impl IntoIterator<Item = Step<'bump>> + 'b,
     graph: &DependancyGraph<'bump>,
@@ -290,9 +302,9 @@ where
             let state = state.add_condition(
                 vars.iter().cloned(),
                 if is_input {
-                    Step::strict_before(step_origin.shallow_copy(), step_f)
+                    Step::strict_before(step_f, step_origin.shallow_copy())
                 } else {
-                    Step::before(step_origin.shallow_copy(), step_f)
+                    Step::before(step_f, step_origin.shallow_copy())
                 },
             );
 
@@ -313,7 +325,7 @@ where
 
                         let state = state.add_condition(
                             vars.iter().cloned(),
-                            Step::strict_before(step_origin.clone(), step_f.shallow_copy()),
+                            Step::strict_before(step_f.shallow_copy(), step_origin.clone()),
                         );
 
                         ExpantionContent {

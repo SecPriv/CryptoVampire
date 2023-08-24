@@ -56,10 +56,16 @@ pub trait SubtermAux<'bump> {
                 //         unreachable!("Inconsistent mgu result with `var_eval_and_next`");
                 //     }
                 // }
-                _ => SubtermResult {
-                    unifier: Unifier::mgu(x, m),
+                _ => {
+                    let mgu = Unifier::mgu(x, m);
+                    if cfg!(debug_assertions) && mgu.is_some() {
+                        println!("\t\t\tmatch!");
+                    }
+
+                    SubtermResult {
+                    unifier: mgu,
                     nexts,
-                },
+                }},
             }
         } else {
             SubtermResult {
@@ -136,6 +142,7 @@ impl<'bump> SubtermAux<'bump> for DefaultAuxSubterm<'bump> {
     ) -> VarSubtermResult<'bump, Self::IntoIter> {
         let nexts = match m.as_ref() {
             RichFormula::Fun(_, args) => args.into(),
+            RichFormula::Quantifier(_, arg) => [arg.shallow_copy()].into(),
             _ => [].into(),
         };
 
@@ -143,7 +150,7 @@ impl<'bump> SubtermAux<'bump> for DefaultAuxSubterm<'bump> {
         let m_sort = m.get_sort();
 
         VarSubtermResult {
-            unified: m_sort.is_err() || x_sort == m_sort.unwrap(),
+            unified: m_sort.map(|m_sort| x_sort == m_sort).unwrap_or(true), // m_sort.is_err() || x_sort == m_sort.unwrap(),
             nexts,
         }
     }

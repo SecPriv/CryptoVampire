@@ -339,6 +339,14 @@ impl<'bump> Smt<'bump> {
     fn prop<D, T>(&self, disp: SmtDisplayer<D, T>) -> SmtDisplayer<D, &Self> {
         disp.propagate(&self)
     }
+
+    /// Returns `true` if the smt is [`Assert`].
+    ///
+    /// [`Assert`]: Smt::Assert
+    #[must_use]
+    pub fn is_any_assert(&self) -> bool {
+        matches!(self, Self::Assert(..) | Self::AssertNot(..) | Self::AssertTh(..))
+    }
 }
 
 impl<'bump> SmtFile<'bump> {

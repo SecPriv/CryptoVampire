@@ -1,10 +1,13 @@
 use std::{
+    collections::{BTreeMap, BTreeSet},
     convert::Infallible,
     hash::Hash,
     rc::Rc,
     sync::{Arc, Weak},
 };
 
+use debug_print::debug_println;
+use if_chain::if_chain;
 use itertools::Itertools;
 
 use crate::{
@@ -25,7 +28,7 @@ use crate::{
         },
         variable::{sorts_to_variables, Variable},
     },
-    mforall, partial_order,
+    implvec, mforall, partial_order,
     utils::{
         traits::NicerError,
         utils::{repeat_n_zip, AlreadyInitialized, StackBox},
@@ -304,7 +307,7 @@ where
         env: &impl KnowsRealm,
         ptcl: &'a Protocol<'bump>,
         formula: &'a ARichFormula<'bump>,
-    ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
+    ) -> impl Iterator<Item = (Rc<[Variable<'bump>]>, ARichFormula<'bump>)> + 'a {
         self.preprocess_terms(
             env,
             ptcl,
@@ -335,7 +338,9 @@ where
             line!(),
             column!()
         );
-        formula::ors(self.preprocess_term(env, ptcl, x, m, bvars, keep_guard, self.deeper_kind))
+
+        let iter = self.preprocess_term(env, ptcl, x, m, bvars, keep_guard, self.deeper_kind);
+        into_exist_formula(iter)
     }
 
     /// preprocess a subterm search going through inputs and cells. Returns a list to ored.
@@ -352,7 +357,7 @@ where
         bvars: Rc<[Variable<'bump>]>,
         keep_guard: bool,
         deeper_kind: DeeperKinds,
-    ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
+    ) -> impl Iterator<Item = (Rc<[Variable<'bump>]>, ARichFormula<'bump>)> + 'a {
         debug_print::debug_println!("preprocess_term -> {}:{}:{}", file!(), line!(), column!());
         self.preprocess_terms(
             env,
@@ -380,7 +385,7 @@ where
         m: impl IntoIterator<Item = FormlAndVars<'bump>>,
         keep_guard: bool,
         deeper_kind: DeeperKinds,
-    ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
+    ) -> impl Iterator<Item = (Rc<[Variable<'bump>]>, ARichFormula<'bump>)> + 'a {
         let realm = env.get_realm();
 
         debug_print::debug_println!("preprocess_terms -> {}:{}:{}", file!(), line!(), column!());
@@ -412,26 +417,38 @@ where
                     column!()
                 );
                 let SubtermResult { unifier, nexts } = self.aux.eval_and_next(x, &f);
-                (
-                    unifier.map(|u| {
-                        let mut guard = u
-                            .is_unifying_to_variable()
-                            .and_then(|ovs| {
-                                (ovs.f() == x).then(|| vec![self.f_a(&realm, x.clone(), f.clone())])
-                            })
-                            .unwrap_or_else(|| u.as_equalities().unwrap());
+
+                let return_value = match unifier {
+                    None => None,
+                    Some(u) => {
+                        let mut guard = if_chain!(
+                            if let Some(ovs) = u.is_unifying_to_variable();
+                            if ovs.f() == x;
+                            then {
+                                vec![self.f_a(&realm, x.clone(), f.clone())]
+                            } else {
+                                u.as_equalities().unwrap()
+                            }
+                        );
                         if keep_guard {
                             guard.extend(state.condition().into_iter().cloned())
                         }
-                        exists(
-                            state
-                                .bound_variables()
-                                .iter()
-                                // .flat_map(|vars| vars.iter().cloned()),
-                                .cloned(),
-                            formula::ands(guard),
-                        )
-                    }),
+                        // let formula = exists(
+                        //     state
+                        //         .bound_variables()
+                        //         .iter()
+                        //         // .flat_map(|vars| vars.iter().cloned()),
+                        //         .cloned(),
+                        //     formula::ands(guard),
+                        // );
+                        let formula = formula::ands(guard);
+                        debug_println!("{}:{}:{} -> {formula}", file!(), line!(), column!());
+                        Some((state.owned_bound_variable(), formula))
+                    }
+                };
+
+                (
+                    return_value,
                     inner_iter.chain(repeat_n_zip(state.clone(), nexts)),
                 )
             },
@@ -642,6 +659,101 @@ impl<'bump> From<ARichFormula<'bump>> for FormlAndVars<'bump> {
         FormlAndVars {
             bounded_variables: Rc::new([]),
             formula: value,
+        }
+    }
+}
+
+pub fn into_exist_formula<'bump>(
+    f: implvec!((Rc<[Variable<'bump>]>, ARichFormula<'bump>)),
+) -> ARichFormula<'bump> {
+    // let (vars, ors): (Vec<_>, Vec<_>) = f.into_iter().unzip();
+    // let vars = vars.iter().flat_map(|v| v.iter()).cloned().unique();
+    // let ors =
+    let content = f.into_iter().collect_vec();
+    let mut vars = BTreeMap::new();
+
+    for (i, (inner_vars, _)) in content.iter().enumerate() {
+        for var in inner_vars.as_ref() {
+            vars.entry(*var)
+                .and_modify(|f_idx: &mut BTreeSet<usize>| {f_idx.insert(i);})
+                .or_insert(BTreeSet::from_iter([i]));
+        }
+    }
+    // further expand vars
+    for (var, f_idx) in vars.iter_mut() {
+        for (i, (vars, _)) in content.iter().enumerate() {
+            if !vars.iter().map(|v| v.id).contains(&var.id) {
+                // if `var` doesn't clash with any variables in `vars` we can add the formula to the bag
+                f_idx.insert(i);
+            }
+        }
+    }
+
+
+    if cfg!(debug_assertions) {
+        println!("into_exists: {}:{}:{}", file!(), line!(), column!());
+        for s in vars.iter().map(|(v, idx)| {
+            let fs = idx.iter().map(|&i| content[i].1.shallow_copy()).join(", ");
+            format!("{v} -> [{fs}]")
+        }) {
+            println!("\t\t{s}")
+        }
+    }
+
+    let max = {
+        let max = vars.iter().max_set_by_key(|(_, f_idx_vec)| (f_idx_vec.len(), *f_idx_vec));
+        if let Some((_, max_f)) = max.first() {
+            let max_f = *max_f;
+            let vars : BTreeSet<_> = max.into_iter().map(|(v, _)| *v).collect();
+            Some((max_f, vars))
+        } else {
+            None
+        }
+        // let max_f = max.first().map(|(_, f)| *f);
+        // let mut rev_max = BTreeMap::new();
+        // for (v, f_idx) in max {
+        //     rev_max
+        //         .entry(f_idx.as_slice())
+        //         .and_modify(|vars: &mut BTreeSet<Variable>| {
+        //             vars.insert(*v);
+        //         })
+        //         .or_insert(BTreeSet::new());
+        // }
+
+        // rev_max.pop_last()
+    };
+
+    match max {
+        // no bound variables
+        None => {
+            assert!(content.iter().all(|(v, _)| v.is_empty()));
+            formula::ors(content.into_iter().map(|(_, f)| f))
+        }
+        // position -> set of idx of formula with boundings in vars_max
+        // vars_max -> variables bindings commun to all position_max
+        Some((position_max, vars_max)) => {
+            let ors1 = position_max
+                .iter()
+                .map(|&idx| {
+                    let (inner_vars, f) = content.get(idx).unwrap();
+                    exists(
+                        // add the remaining variables
+                        inner_vars.iter().filter(|v| !vars_max.contains(v)).cloned(),
+                        f,
+                    )
+                })
+                .collect_vec();
+
+            let mut ors = Vec::with_capacity(content.len() - position_max.len() + 1);
+            ors.push(exists(vars_max.into_iter(), formula::ors(ors1)));
+            ors.extend(
+                content
+                    .into_iter()
+                    .enumerate()
+                    .filter(|(i, _)| !position_max.contains(i))
+                    .map(|(_, (vars, formula))| exists(vars.iter().cloned(), formula)),
+            );
+            formula::ors(ors)
         }
     }
 }

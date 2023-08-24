@@ -1,6 +1,9 @@
-use std::fmt;
+use std::{fmt, ops::Deref};
 
-use crate::{environement::traits::{Realm, KnowsRealm}, formula::file_descriptior::axioms::RewriteKind};
+use crate::{
+    environement::traits::{KnowsRealm, Realm},
+    formula::file_descriptior::axioms::RewriteKind,
+};
 
 use super::{fun_list_fmt, Smt, SmtFile, SmtFormula};
 
@@ -55,6 +58,13 @@ impl<D, T> SmtDisplayer<D, T> {
     }
 }
 
+impl<D, T> Deref for SmtDisplayer<D, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.content
+    }
+}
 
 macro_rules! generate_diplay {
     ($t:ident) => {
@@ -159,12 +169,7 @@ impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a SmtFormula<'bump>>
                 let [c, r, l] = [c, r, l].map(|smt| smt.prop(*self));
                 write!(f, "(ite {c} {r} {l})")
             }
-            SmtFormula::Implies(a, b) => write!(
-                f,
-                "(=> {} {})",
-                a.prop(*self),
-                b.prop(*self),
-            ),
+            SmtFormula::Implies(a, b) => write!(f, "(=> {} {})", a.prop(*self), b.prop(*self),),
             SmtFormula::Subterm(fun, a, b) => write!(
                 f,
                 "(subterm {} {} {})",
@@ -261,7 +266,8 @@ generate_diplay!(SmtFile);
 impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a SmtFile<'bump>> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if cfg!(debug_assertions) {
-            self.content.content
+            self.content
+                .content
                 .iter()
                 .filter_map(|smt| match smt {
                     Smt::DeclareFun(f) => Some(f),
@@ -269,11 +275,18 @@ impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a SmtFile<'bump>> {
                 })
                 .for_each(|f| println!("trying to define {}", f.name()))
         }
+        let mut i = 1;
 
         self.content
             .content
             .iter()
             .map(|smt| smt.prop(*self))
-            .try_for_each(|smt| writeln!(f, "{smt}"))
+            .try_for_each(move |smt| {
+                if smt.is_any_assert() {
+                    writeln!(f, "; {i}")?;
+                    i += 1;
+                }
+                writeln!(f, "{smt}")
+            })
     }
 }
