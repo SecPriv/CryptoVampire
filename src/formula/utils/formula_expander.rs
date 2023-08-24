@@ -294,12 +294,17 @@ where
     let is_input = deeper.is_none();
 
     let cells_iter = cells.into_iter().flat_map(|c| c.assignements().iter()).map(
-        move |Assignement { step, content, .. }| {
+        move |Assignement {
+                  step,
+                  content,
+                  fresh_vars,
+                  ..
+              }| {
             let vars = step.free_variables();
             let step_f = step.function().f_a(vars.iter().map(|v| v.into_formula()));
 
             let state = state.add_condition(
-                vars.iter().cloned(),
+                itertools::chain!(vars.iter(), fresh_vars.iter()).cloned(),
                 if is_input {
                     Step::strict_before(step_f, step_origin.shallow_copy())
                 } else {

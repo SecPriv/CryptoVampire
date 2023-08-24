@@ -480,6 +480,7 @@ pub mod graph {
                 step,
                 args,
                 content,
+                fresh_vars: _,
             } in cell.assignements()
             {
                 let from = FromNode::CellCall(InnerCellCall {

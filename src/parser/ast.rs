@@ -768,11 +768,35 @@ pub struct Assignement<'a> {
     pub span: Span<'a>,
     pub cell: Application<'a>,
     pub term: Term<'a>,
+    pub fresh_vars: Option<TypedArgument<'a>>,
 }
 boiler_plate!(Assignement<'a>, 'a, assignement; |p| {
     let span = p.as_span();
-    dest_rule!(span in [cell, term] = p);
-    Ok(Self { span, cell, term })
+    let p = p.into_inner().collect_vec();
+    // dest_rule!(span in [cell, term] = p);
+    match p.len() {
+        2 => {
+            as_array!(span in [cell, term] = p);
+            Ok(Self {
+                span,
+                cell: cell.try_into().debug_continue()?,
+                term: term.try_into().debug_continue()?,
+                fresh_vars: None
+            })
+        }
+        3 => {
+            as_array!(span in [vars, cell, term] = p);
+            Ok(Self {
+                span,
+                cell: cell.try_into().debug_continue()?,
+                term: term.try_into().debug_continue()?,
+                fresh_vars: Some(vars.try_into().debug_continue()?)
+            })
+        }
+        _ => unreachable!()
+    }
+
+    // Ok(Self { span, cell, term })
 });
 
 #[derive(Derivative)]

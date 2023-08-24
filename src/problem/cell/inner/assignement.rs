@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{formula::formula::ARichFormula, problem::step::Step};
+use crate::{formula::{formula::ARichFormula, variable::Variable}, problem::step::Step};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Assignement<'bump> {
@@ -11,4 +11,5 @@ pub struct Assignement<'bump> {
     /// `args.len() == InnerMemoryCell::args.len()`
     pub args: Arc<[ARichFormula<'bump>]>,
     pub content: ARichFormula<'bump>,
+    pub fresh_vars: Arc<[Variable<'bump>]>
 }

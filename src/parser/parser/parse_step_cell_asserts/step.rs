@@ -5,7 +5,10 @@ use itertools::Itertools;
 use crate::{
     container::{allocator::ContainerTools, ScopedContainer},
     environement::traits::Realm,
-    formula::sort::builtins::{CONDITION, MESSAGE},
+    formula::{
+        sort::builtins::{CONDITION, MESSAGE},
+        variable::Variable,
+    },
     implvec,
     parser::{
         merr,
@@ -76,9 +79,52 @@ fn parse_step<'bump, 'str>(
         for ast::Assignement {
             cell: cell_ast,
             term,
+            fresh_vars,
             ..
         } in &assignements.assignements
         {
+            let fresh_vars = if let Some(vars) = fresh_vars.as_ref() {
+                bvars.reserve(vars.bindings.len());
+                let vars: Result<Arc<_>, _> = vars
+                    .bindings
+                    .iter()
+                    .enumerate()
+                    .map(
+                        |(
+                            i,
+                            ast::VariableBinding {
+                                type_name,
+                                variable,
+                                ..
+                            },
+                        )| {
+                            let sort = env.find_sort(type_name.name_span(), type_name.name())?;
+                            let id = n + i;
+                            let var = Variable { id, sort };
+
+                            if env.contains_name_with_var(
+                                variable.name(),
+                                bvars.iter().map(|(n, _)| *n),
+                            ) {
+                                Err(merr(
+                                    variable.0.span,
+                                    format!("name {} is already taken", variable.name()),
+                                ))
+                            } else {
+                                bvars.push((variable.name(), var.into()));
+                                Ok(var)
+                            }
+                        },
+                    )
+                    .collect();
+                vars?
+                // env.contains_name_with_var(name, vars)
+            } else {
+                Arc::new([])
+            };
+
+            let n = n + fresh_vars.len();
+
             // get the cell cache or crash
             let cell_name = cell_ast.name();
             let CellCache {
@@ -119,6 +165,7 @@ fn parse_step<'bump, 'str>(
                 step: *step,
                 args: cell_args,
                 content,
+                fresh_vars
             })
         }
     }
