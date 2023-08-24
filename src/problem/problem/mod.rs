@@ -21,7 +21,7 @@ use crate::{
         function::{
             inner::evaluate::Evaluator, name_caster_collection::NameCasterCollection, Function,
         },
-        sort::{Sort, builtins::CONDITION},
+        sort::{builtins::CONDITION, Sort},
         variable::Variable,
     },
     implvec, parser,

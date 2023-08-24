@@ -675,7 +675,9 @@ pub fn into_exist_formula<'bump>(
     for (i, (inner_vars, _)) in content.iter().enumerate() {
         for var in inner_vars.as_ref() {
             vars.entry(*var)
-                .and_modify(|f_idx: &mut BTreeSet<usize>| {f_idx.insert(i);})
+                .and_modify(|f_idx: &mut BTreeSet<usize>| {
+                    f_idx.insert(i);
+                })
                 .or_insert(BTreeSet::from_iter([i]));
         }
     }
@@ -689,7 +691,6 @@ pub fn into_exist_formula<'bump>(
         }
     }
 
-
     if cfg!(debug_assertions) {
         println!("into_exists: {}:{}:{}", file!(), line!(), column!());
         for s in vars.iter().map(|(v, idx)| {
@@ -701,10 +702,12 @@ pub fn into_exist_formula<'bump>(
     }
 
     let max = {
-        let max = vars.iter().max_set_by_key(|(_, f_idx_vec)| (f_idx_vec.len(), *f_idx_vec));
+        let max = vars
+            .iter()
+            .max_set_by_key(|(_, f_idx_vec)| (f_idx_vec.len(), *f_idx_vec));
         if let Some((_, max_f)) = max.first() {
             let max_f = *max_f;
-            let vars : BTreeSet<_> = max.into_iter().map(|(v, _)| *v).collect();
+            let vars: BTreeSet<_> = max.into_iter().map(|(v, _)| *v).collect();
             Some((max_f, vars))
         } else {
             None

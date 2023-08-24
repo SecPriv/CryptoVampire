@@ -118,7 +118,8 @@ fn main() {
 
                     write_to_file(
                         &path,
-                        SmtFile::from_general_file(&env, pbl.into_general_file(&env)).as_diplay(&env),
+                        SmtFile::from_general_file(&env, pbl.into_general_file(&env))
+                            .as_diplay(&env),
                     );
 
                     i += 1;

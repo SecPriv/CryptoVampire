@@ -1,7 +1,4 @@
-use std::{
-    collections::{BTreeMap, HashMap},
-    sync::Arc,
-};
+use std::{collections::BTreeMap, sync::Arc};
 
 use itertools::Itertools;
 
@@ -12,11 +9,10 @@ use crate::{
             axioms::{Axiom, Rewrite, RewriteKind},
             declare::Declaration,
         },
-        formula::{self, exists, forall, meq},
+        formula::{self, meq},
         function::{
             builtin::{EQUALITY, IF_THEN_ELSE},
             inner::term_algebra::{
-                self,
                 connective::{BaseConnective, Connective},
                 quantifier::{InnerQuantifier, Quantifier},
                 TermAlgebra,
@@ -24,7 +20,6 @@ use crate::{
             traits::FixedSignature,
             Function, InnerFunction,
         },
-        manipulation::FrozenSubst,
         sort::{
             builtins::{BOOL, CONDITION, MESSAGE},
             FOSort, Sort,
@@ -33,7 +28,6 @@ use crate::{
     },
     mexists, mforall,
     problem::problem::Problem,
-    utils::vecref::VecRefClone,
 };
 
 pub fn generate<'bump>(

@@ -1,4 +1,4 @@
-use std::{ops::BitAnd, fmt::Display};
+use std::{fmt::Display, ops::BitAnd};
 
 /// Are we in the lower or higher logic
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Default)]

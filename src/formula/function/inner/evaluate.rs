@@ -1,7 +1,5 @@
 use std::collections::BTreeMap;
 
-use hashbrown::HashMap;
-
 use crate::{
     formula::{
         formula::ARichFormula,
@@ -14,7 +12,7 @@ use crate::{
         sort::{
             builtins::{CONDITION, MESSAGE},
             sorted::SortedError,
-            Sort, FOSort,
+            FOSort, Sort,
         },
     },
     utils::traits::NicerError,
@@ -79,7 +77,7 @@ impl<'bump> Evaluator<'bump> {
         &mut self.functions
     }
 
-    fn functions(&self) -> &BTreeMap<FOSort<'bump>, Function<'bump>>{
+    fn functions(&self) -> &BTreeMap<FOSort<'bump>, Function<'bump>> {
         &self.functions
     }
 
@@ -98,7 +96,6 @@ impl<'bump> Evaluator<'bump> {
     pub fn iter_sorts(&self) -> impl Iterator<Item = Sort<'bump>> + '_ {
         self.functions().keys().map(|s| s.as_reference())
     }
-
 }
 
 impl<'bump> Default for Evaluator<'bump> {

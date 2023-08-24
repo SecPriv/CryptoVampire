@@ -1,13 +1,12 @@
-use std::{rc::Rc, sync::Arc, usize};
+use std::{rc::Rc, sync::Arc};
 
 use crate::{
     formula::{
         formula::{ARichFormula, RichFormula},
         function::{inner::term_algebra::TermAlgebra, InnerFunction},
-        manipulation::{FrozenOVSubstF, FrozenSubst, FrozenSubstF},
+        manipulation::FrozenSubst,
         variable::Variable,
     },
-    implvec,
     problem::{
         cell::{Assignement, MemoryCell},
         cell_dependancies::graph::{Ancestors, DependancyGraph},

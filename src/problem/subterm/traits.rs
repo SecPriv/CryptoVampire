@@ -63,9 +63,10 @@ pub trait SubtermAux<'bump> {
                     }
 
                     SubtermResult {
-                    unifier: mgu,
-                    nexts,
-                }},
+                        unifier: mgu,
+                        nexts,
+                    }
+                }
             }
         } else {
             SubtermResult {

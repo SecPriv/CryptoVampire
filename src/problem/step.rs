@@ -17,7 +17,7 @@ use crate::{
         variable::Variable,
     },
     implderef, implvec,
-    smt::smt::{Smt, SmtFormula},
+    smt::smt::SmtFormula,
     utils::{
         precise_as_ref::PreciseAsRef,
         string_ref::StrRef,

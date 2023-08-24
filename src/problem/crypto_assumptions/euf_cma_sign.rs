@@ -8,7 +8,7 @@ use crate::{
     environement::{environement::Environement, traits::KnowsRealm},
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
-        formula::{self, forall, meq, ARichFormula, RichFormula},
+        formula::{forall, meq, ARichFormula, RichFormula},
         function::Function,
         function::{
             inner::subterm::Subsubterm, name_caster_collection::NameCasterCollection,
@@ -26,9 +26,10 @@ use crate::{
         generator::Generator,
         problem::Problem,
         subterm::{
+            into_exist_formula,
             kind::SubtermKindConstr,
             traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
-            Subterm, into_exist_formula,
+            Subterm,
         },
     },
     static_signature,
@@ -121,7 +122,8 @@ impl<'bump> EufCmaSign<'bump> {
                     sort: nonce_sort,
                 };
                 let k_f = k.into_aformula();
-                let ors = into_exist_formula(subterm_key.preprocess_whole_ptcl(env, &pbl.protocol, &k_f));
+                let ors =
+                    into_exist_formula(subterm_key.preprocess_whole_ptcl(env, &pbl.protocol, &k_f));
 
                 forall([k], split.f_a([k_f]) >> ors)
             }));

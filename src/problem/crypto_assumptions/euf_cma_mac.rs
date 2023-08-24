@@ -7,7 +7,7 @@ use crate::{
     environement::{environement::Environement, traits::KnowsRealm},
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
-        formula::{self, exists, forall, meq, ARichFormula, RichFormula},
+        formula::{forall, meq, ARichFormula, RichFormula},
         function::Function,
         function::{inner::subterm::Subsubterm, name_caster_collection::NameCasterCollection},
         manipulation::OneVarSubst,

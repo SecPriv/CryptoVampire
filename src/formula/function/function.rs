@@ -8,7 +8,7 @@ use crate::container::contained::Containable;
 use crate::container::reference::Reference;
 use crate::container::utils::NameFinder;
 use crate::container::StaticContainer;
-use crate::environement::traits::{Realm, KnowsRealm};
+use crate::environement::traits::{KnowsRealm, Realm};
 use crate::force_lifetime;
 
 use crate::formula::formula::ARichFormula;
@@ -97,7 +97,6 @@ impl<'bump> Sorted<'bump> for Function<'bump> {
             .debug_continue()
     }
 }
-
 
 macro_rules! container {
     () => {
@@ -462,7 +461,7 @@ impl<'bump> Function<'bump> {
         DisplayFunction(*self)
     }
 
-    pub fn is_no_op(&self, realm: &impl KnowsRealm) -> bool {
+    pub fn is_no_op(&self, _realm: &impl KnowsRealm) -> bool {
         matches!(self.as_inner(), InnerFunction::Evaluate(_))
     }
 

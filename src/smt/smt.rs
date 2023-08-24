@@ -1,5 +1,5 @@
 use std::{
-    fmt::{self, Display},
+    fmt::{self},
     sync::Arc,
 };
 
@@ -345,7 +345,10 @@ impl<'bump> Smt<'bump> {
     /// [`Assert`]: Smt::Assert
     #[must_use]
     pub fn is_any_assert(&self) -> bool {
-        matches!(self, Self::Assert(..) | Self::AssertNot(..) | Self::AssertTh(..))
+        matches!(
+            self,
+            Self::Assert(..) | Self::AssertNot(..) | Self::AssertTh(..)
+        )
     }
 }
 
@@ -381,12 +384,12 @@ impl<'bump> SmtFile<'bump> {
         Self { content }
     }
 
-    pub fn as_diplay(&self, env: &impl  KnowsRealm) -> impl fmt::Display + '_ {
+    pub fn as_diplay(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_ {
         SmtDisplayer {
             env: SmtEnv {
-                realm: env.get_realm()
+                realm: env.get_realm(),
             },
-            content: self
+            content: self,
         }
     }
 }
