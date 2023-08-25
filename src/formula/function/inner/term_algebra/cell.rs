@@ -5,7 +5,7 @@ use crate::{
             traits::{FixedSignature, MaybeEvaluatable},
             Function,
         },
-        sort::builtins::MESSAGE,
+        sort::builtins::{MESSAGE, STEP},
     },
     problem::cell::MemoryCell,
 };
@@ -39,7 +39,13 @@ impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for Cell<'bump> {
     fn as_fixed_signature(&'a self) -> FixedRefSignature<'a, 'bump> {
         FixedRefSignature {
             out: MESSAGE.as_sort(),
-            args: self.memory_cell().args().into(),
+            args: self
+                .memory_cell()
+                .args()
+                .iter()
+                .cloned()
+                .chain([STEP.as_sort()])
+                .collect(),
         }
     }
 }

@@ -39,7 +39,7 @@ impl<'bump> Ord for InnerMemoryCell<'bump> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.name
             .cmp(&other.name)
-            .then(self.function.cmp(&other.function))
+            // .then(self.function.cmp(&other.function))
             .then(self.args.cmp(&other.args))
     }
 }

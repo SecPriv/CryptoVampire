@@ -84,6 +84,7 @@ fn parse_step<'bump, 'str>(
         } in &assignements.assignements
         {
             let fresh_vars = if let Some(vars) = fresh_vars.as_ref() {
+                bvars.truncate(n);
                 bvars.reserve(vars.bindings.len());
                 let vars: Result<Arc<_>, _> = vars
                     .bindings

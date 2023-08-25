@@ -14,6 +14,7 @@ use crate::{
             inner::subterm::Subsubterm, name_caster_collection::NameCasterCollection,
             signature::StaticSignature,
         },
+        manipulation::OneVarSubst,
         sort::{
             builtins::{MESSAGE, NAME},
             Sort,
@@ -158,77 +159,84 @@ impl<'bump> EufCmaSign<'bump> {
         // let pile1 = RefCell::new(Vec::new());
         let pile2 = RefCell::new(Vec::new());
         let realm = env.get_realm();
-        let candidates =
-            pbl.list_top_level_terms()
-                .flat_map(|f| f.iter()) // sad...
-                .filter_map(move |formula| match formula.as_ref() {
-                    RichFormula::Fun(fun, args) => {
-                        if_chain! {
-                            if fun == &self.verify;
-                            if let RichFormula::Fun(mpk, args2) = args[2].as_ref();
-                            if mpk == &self.pk;
-                            if let RichFormula::Fun(nf, args3) = args2[0].as_ref();
-                            if nf == pbl.name_caster.cast_function(&MESSAGE.as_sort()).unwrap();
-                            then {
-                                let [message, signature, key] =
-                                    [&args[1], &args[0], &args3[0]]
-                                    .map(|f| f.translate_vars(max_var).into_arc());
+        let candidates = pbl
+            .list_top_level_terms()
+            .flat_map(|f| f.iter()) // sad...
+            .filter_map(move |formula| match formula.as_ref() {
+                RichFormula::Fun(fun, args) => {
+                    if_chain! {
+                        if fun == &self.verify;
+                        if let RichFormula::Fun(mpk, args2) = args[2].as_ref();
+                        if mpk == &self.pk;
+                        if let RichFormula::Fun(nf, args3) = args2[0].as_ref();
+                        if nf == pbl.name_caster.cast_function(&MESSAGE.as_sort()).unwrap();
+                        then {
+                            let [message, signature, key] =
+                                [&args[1], &args[0], &args3[0]]
+                                .map(|f| f.translate_vars(max_var).into_arc());
 
-                                Some(EufCandidate {message, signature, key})
-                            } else {None}
-                        }
+                            Some(EufCandidate {message, signature, key})
+                        } else {None}
                     }
-                    _ => None,
-                })
-                .unique()
-                .filter_map(
-                    move |EufCandidate {
-                              message,
-                              signature,
-                              key,
-                          }| {
-                        let array = [&message, &signature, &key];
-                        let max_var = array
-                            .iter()
-                            .flat_map(|f| f.used_variables_iter_with_pile(pile2.borrow_mut()))
-                            .map(|Variable { id, .. }| id)
-                            .max()
-                            .unwrap_or(max_var)
-                            + 1;
-                        let free_vars = array
-                            .iter()
-                            .flat_map(|f| f.get_free_vars().into_iter())
-                            // .cloned()
-                            .unique();
-                        let u_var = Variable {
-                            id: max_var,
-                            sort: MESSAGE.as_sort(),
-                        };
-                        let u_f = u_var.into_aformula();
+                }
+                _ => None,
+            })
+            .unique()
+            .filter_map(
+                move |EufCandidate {
+                          message,
+                          signature,
+                          key,
+                      }| {
+                    let array = [&message, &signature, &key];
+                    let max_var = array
+                        .iter()
+                        .flat_map(|f| f.used_variables_iter_with_pile(pile2.borrow_mut()))
+                        .map(|Variable { id, .. }| id)
+                        .max()
+                        .unwrap_or(max_var)
+                        + 1;
+                    let free_vars = array
+                        .iter()
+                        .flat_map(|f| f.get_free_vars().into_iter())
+                        // .cloned()
+                        .unique();
+                    let u_var = Variable {
+                        id: max_var,
+                        sort: MESSAGE.as_sort(),
+                    };
+                    let u_f = u_var.into_aformula();
+                    let sign_of_u = self.sign.f_a([
+                        u_f,
+                        pbl.name_caster.cast(MESSAGE.as_sort(), &key),
+                    ]);
 
-                        let k_sc = subterm_key
-                            .preprocess_terms(
-                                &realm,
-                                &pbl.protocol,
-                                &key,
-                                pbl.protocol
-                                    .list_top_level_terms_short_lifetime_and_bvars()
-                                    .chain([&message, &signature].map(|t| t.shallow_copy().into())),
-                                false,
-                                DeeperKinds::NO_MACROS,
-                            )
-                            .next()
-                            .is_none();
-                        if k_sc {
+                    let k_sc = subterm_key
+                        .preprocess_terms(
+                            &realm,
+                            &pbl.protocol,
+                            &key,
+                            pbl.protocol
+                                .list_top_level_terms_short_lifetime_and_bvars()
+                                .chain([&message, &signature].map(|t| t.shallow_copy().into())),
+                            false,
+                            DeeperKinds::NO_MACROS,
+                        )
+                        .next()
+                        .is_none();
+                    if k_sc {
+                        let mformula = {
                             let disjunction = subterm_main.preprocess_terms(
                                 &realm,
                                 &pbl.protocol,
-                                &u_f,
+                                &sign_of_u,
                                 [&message, &signature].map(|x| x.shallow_copy().into()),
                                 true,
                                 DeeperKinds::all(),
                             );
-
+                            into_exist_formula(disjunction)
+                        };
+                        if realm.is_symbolic_realm() {
                             Some(mforall!(free_vars, {
                                 pbl.evaluator.eval(self.verify.f([
                                     signature.clone(),
@@ -236,13 +244,40 @@ impl<'bump> EufCmaSign<'bump> {
                                     self.pk.f_a([
                                         pbl.name_caster.cast(MESSAGE.as_sort(), key.clone()),
                                     ]),
-                                ])) >> mexists!([u_var], { into_exist_formula(disjunction) })
+                                ])) >> mexists!([u_var], {
+                                    meq(pbl.evaluator.eval(u_var), pbl.evaluator.eval(&message))
+                                        & mformula
+                                })
                             }))
                         } else {
-                            None
+                            Some(mforall!(free_vars, {
+                                pbl.evaluator.eval(self.verify.f([
+                                    signature.clone(),
+                                    message.clone(),
+                                    self.pk.f_a([
+                                        pbl.name_caster.cast(MESSAGE.as_sort(), key.clone()),
+                                    ]),
+                                ])) >> mformula.apply_substitution2(&OneVarSubst {
+                                    id: u_var.id,
+                                    f: message.clone(),
+                                })
+                            }))
                         }
-                    },
-                );
+
+                        // Some(mforall!(free_vars, {
+                        //     pbl.evaluator.eval(self.verify.f([
+                        //         signature.clone(),
+                        //         message.clone(),
+                        //         self.pk.f_a([
+                        //             pbl.name_caster.cast(MESSAGE.as_sort(), key.clone()),
+                        //         ]),
+                        //     ])) >> mexists!([u_var], { into_exist_formula(disjunction) })
+                        // }))
+                    } else {
+                        None
+                    }
+                },
+            );
 
         // [].into_iter()
         candidates
@@ -266,14 +301,13 @@ fn define_subterms<'bump>(
         if subterm.kind().is_vampire() {
         } else {
             assertions.extend(
-                subterm
-                    .generate_function_assertions_from_pbl(env, pbl)
-                    .into_iter()
-                    .chain(subterm.not_of_sort(
-                        env,
-                        pbl.sorts.iter().filter(|&&s| s != subterm.sort()).cloned(),
-                    ))
-                    .map(|f| Axiom::base(f)),
+                itertools::chain!(
+                    subterm
+                        .generate_function_assertions_from_pbl(env, pbl)
+                        .into_iter(),
+                    subterm.not_of_sort_auto(env, pbl)
+                )
+                .map(|f| Axiom::base(f)),
             );
         }
         assertions.extend(
@@ -293,14 +327,13 @@ fn define_subterms<'bump>(
         if subterm.kind().is_vampire() {
         } else {
             assertions.extend(
-                subterm
-                    .generate_function_assertions_from_pbl(env, pbl)
-                    .into_iter()
-                    .chain(subterm.not_of_sort(
-                        env,
-                        pbl.sorts.iter().filter(|&&s| s != subterm.sort()).cloned(),
-                    ))
-                    .map(|f| Axiom::base(f)),
+                itertools::chain!(
+                    subterm
+                        .generate_function_assertions_from_pbl(env, pbl)
+                        .into_iter(),
+                    subterm.not_of_sort_auto(env, pbl)
+                )
+                .map(|f| Axiom::base(f)),
             );
         }
         assertions.extend(

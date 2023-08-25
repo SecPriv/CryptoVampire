@@ -449,7 +449,7 @@ impl<'bump> Function<'bump> {
     pub fn is_always_datatype(&self) -> bool {
         matches!(
             self.as_inner(),
-            InnerFunction::Step(_) | InnerFunction::Name(_)
+            InnerFunction::Step(StepFunction::Step(_)) | InnerFunction::Name(_)
         )
     }
 

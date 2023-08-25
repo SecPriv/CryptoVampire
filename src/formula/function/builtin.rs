@@ -8,6 +8,7 @@ use crate::formula::{formula::RichFormula, sort::builtins::STEP};
 
 use super::inner::evaluate::Evaluate;
 
+use super::inner::step::StepFunction;
 use super::inner::term_algebra::base_function::BaseFunctionTuple;
 use super::inner::term_algebra::name_caster::NameCaster;
 use super::inner::term_algebra::{self, TermAlgebra};
@@ -191,6 +192,10 @@ static EMPTY_TUPLE_FUNCTION: BaseFunctionTuple<'static> =
 #[dynamic]
 pub static EMPTY: Function<'static> = (&EMPTY_TUPLE_FUNCTION).main.clone();
 
+#[dynamic]
+pub static PRED: Function<'static> =
+    new_static_function(InnerFunction::Step(StepFunction::Pred(Default::default())));
+
 // #[dynamic]
 // pub static EMPTY_EVALUATED: Function<'static> = (&EMPTY_TUPLE_FUNCTION).eval.clone();
 
@@ -219,4 +224,5 @@ builtin!(
     NOT_TA,
     OR,
     OR_TA,
+    PRED
 );

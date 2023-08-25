@@ -31,7 +31,7 @@ impl<'bump> From<Step<'bump>> for StepFunction<'bump> {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Default)]
 pub struct Pred();
 
 impl<'bump> InnerStepFuction<'bump> {

@@ -7,7 +7,6 @@ use crate::utils::{
 // pub type RefPointee<'bump, R> = Option<<R as Reference<'bump>>::Inner>;
 // pub type RefInner<'bump, R> = <R as Reference<'bump>>::Inner;
 
-#[derive(PartialEq, Eq)]
 pub struct Reference<'bump, T> {
     inner: NonNull<Option<T>>,
     lt: PhantomData<&'bump ()>,
@@ -71,12 +70,23 @@ impl<'bump, T> AsRef<T> for Reference<'bump, T> {
     }
 }
 
+impl<'bump, T> PartialEq for Reference<'bump, T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.inner == other.inner
+    }
+}
+
+impl<'bump, T> Eq for Reference<'bump, T> {}
+
 impl<'bump, T: Ord> Ord for Reference<'bump, T> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         if self == other {
             Ordering::Equal
         } else {
-            Ord::cmp(self.as_inner(), other.as_inner())
+            match Ord::cmp(self.as_inner(), other.as_inner()) {
+                Ordering::Equal => Ord::cmp(&self.inner, &other.inner),
+                o => o,
+            }
         }
     }
 }
@@ -86,7 +96,10 @@ impl<'bump, T: PartialOrd> PartialOrd for Reference<'bump, T> {
         if self == other {
             Some(Ordering::Equal)
         } else {
-            PartialOrd::partial_cmp(self.as_inner(), other.as_inner())
+            match PartialOrd::partial_cmp(self.as_inner(), other.as_inner()) {
+                Some(Ordering::Equal) => PartialOrd::partial_cmp(&self.inner, &other.inner),
+                o => o,
+            }
         }
     }
 }

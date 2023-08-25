@@ -505,7 +505,7 @@ where
     ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
         let realm = env.get_realm();
         sorts.into_iter().map(move |s| {
-            debug_assert!(!s.is_term_algebra());
+            debug_assert!(!s.is_term_algebra(), "because of {s}");
             mforall!(x!0:self.sort(), m!1:s; {!self.f_a(&realm, x, m)})
         })
     }

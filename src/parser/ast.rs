@@ -1012,10 +1012,10 @@ pub mod extra {
                 .args
                 .iter()
                 .map(|tn| tn.into())
-                .chain([SnN {
-                    span: &self.span,
-                    name: STEP.name(),
-                }])
+                // .chain([SnN {
+                //     span: &self.span,
+                //     name: STEP.name(),
+                // }])
                 .collect()
         }
 
