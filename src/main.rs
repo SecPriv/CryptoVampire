@@ -29,7 +29,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use automator::{
+use cryptovampire::{
     container::ScopedContainer,
     environement::{cli::Args, environement::Environement},
     formula::{function::builtin::BUILT_IN_FUNCTIONS, sort::builtins::BUILT_IN_SORTS},
@@ -38,7 +38,6 @@ use automator::{
     smt::smt::SmtFile,
     utils::traits::{MyWriteTo, NicerError},
 };
-use clap::Parser;
 
 const USE_MIRI: bool = false;
 

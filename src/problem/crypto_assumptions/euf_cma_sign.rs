@@ -206,10 +206,9 @@ impl<'bump> EufCmaSign<'bump> {
                         sort: MESSAGE.as_sort(),
                     };
                     let u_f = u_var.into_aformula();
-                    let sign_of_u = self.sign.f_a([
-                        u_f,
-                        pbl.name_caster.cast(MESSAGE.as_sort(), &key),
-                    ]);
+                    let sign_of_u = self
+                        .sign
+                        .f_a([u_f, pbl.name_caster.cast(MESSAGE.as_sort(), &key)]);
 
                     let k_sc = subterm_key
                         .preprocess_terms(

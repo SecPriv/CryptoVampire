@@ -316,10 +316,10 @@ impl<'bump> Function<'bump> {
                     }),
                 ));
                 let InnerFunction::TermAlgebra(TermAlgebra::Function(_base_main_fun)) =
-                        main_fun.precise_as_ref()
-                    else {
-                        unreachable!()
-                    };
+                    main_fun.precise_as_ref()
+                else {
+                    unreachable!()
+                };
 
                 Residual {
                     content: InnerFunction::EvaluatedFun(EvaluatedFun::new(main_fun)),

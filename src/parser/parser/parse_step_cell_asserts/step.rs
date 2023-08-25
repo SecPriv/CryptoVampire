@@ -166,7 +166,7 @@ fn parse_step<'bump, 'str>(
                 step: *step,
                 args: cell_args,
                 content,
-                fresh_vars
+                fresh_vars,
             })
         }
     }
