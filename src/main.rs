@@ -25,10 +25,11 @@
 
 use std::{
     fs::{self, read_to_string, File},
-    io::{self, Read},
+    io::{self, Read, BufWriter},
     path::{Path, PathBuf},
 };
 
+use clap::Parser;
 use cryptovampire::{
     container::ScopedContainer,
     environement::{cli::Args, environement::Environement},
@@ -42,24 +43,24 @@ use cryptovampire::{
 const USE_MIRI: bool = false;
 
 fn main() {
-    // let args = Args::parse();
-    let args = Args {
-        file: Some(PathBuf::from(
-            "../result-table/protocols/payement_channel.ptcl",
-        )),
-        output_location: PathBuf::from("../test.smt"),
-        lemmas: false,
-        eval_rewrite: false,
-        crypto_rewrite: false,
-        vampire_subterm: false,
-        assert_theory: true,
-        skolemnise: false,
-        preprocessing: true,
-        legacy_evaluate: false,
-        no_bitstring: false,
-        cvc5: false,
-        no_symbolic: true,
-    };
+    let args = Args::parse();
+    // let args = Args {
+    //     file: Some(PathBuf::from(
+    //         "../result-table/protocols/payement_channel.ptcl",
+    //     )),
+    //     output_location: PathBuf::from("../test.smt"),
+    //     lemmas: false,
+    //     eval_rewrite: false,
+    //     crypto_rewrite: false,
+    //     vampire_subterm: false,
+    //     assert_theory: true,
+    //     skolemnise: false,
+    //     preprocessing: true,
+    //     legacy_evaluate: false,
+    //     no_bitstring: false,
+    //     cvc5: false,
+    //     no_symbolic: true,
+    // };
 
     ScopedContainer::scoped(|container| {
         debug_print::debug_println!("start");
@@ -168,19 +169,15 @@ fn main() {
 }
 
 fn write_to_file(path: &PathBuf, smt: impl MyWriteTo) {
-    let mut f = File::options()
+    let f = File::options()
         .write(true)
         .truncate(true)
         .create(true)
         .open(path)
-        .unwrap_or_else(|_| {
-            panic!(
-                "error while open the file {}",
-                path.as_os_str().to_str().unwrap_or("invalid")
-            )
-        });
+        .unwrap_display();
+    let mut bw = BufWriter::new(f);
 
-    smt.write_to_io(&mut f).unwrap()
+    smt.write_to_io(&mut bw).unwrap()
 }
 
 // fn main() {
