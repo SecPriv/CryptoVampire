@@ -144,7 +144,8 @@ pub fn generate<'bump>(
                         let ev = ibf.eval_fun();
                         let rw_kind = rewrite_funs.get(&ibf.out().into()).unwrap();
                         let vars: Arc<[_]> = sorts_to_variables(0, ibf.args());
-                        Rewrite {
+                        debug_print::debug_println!("evaluating -> {}", f.name());
+                        let out = Rewrite {
                             kind: rw_kind.clone(),
                             vars: vars.clone(),
                             pre: pbl
@@ -152,7 +153,9 @@ pub fn generate<'bump>(
                                 .eval(f.f(vars.iter().map(|v| v.into_formula()))),
                             post: ev
                                 .f_a(vars.iter().map(|v| pbl.evaluator.eval(v.into_aformula()))),
-                        }
+                        };
+                        debug_print::debug_println!("{:?}", out);
+                        out
                     })
                     .map(|r| Axiom::Rewrite {
                         rewrite: Box::new(r),

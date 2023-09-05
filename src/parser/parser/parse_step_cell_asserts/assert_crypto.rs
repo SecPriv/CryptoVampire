@@ -38,6 +38,7 @@ pub fn parse_assert_crypto<'str, 'bump>(
 
     match name.content {
         "nonce" => Ok(CryptoAssumption::Nonce(Nonce)),
+        "memory_cell" => Ok(CryptoAssumption::MemoryCell(Default::default())),
         "euf-cma" => parse_euf_cma(env, functions, *span),
         "int-ctxt" => parse_int_ctxt(env, functions, *span),
         _ => Err(merr(name.span, "unknown crypto assertion".to_string())),

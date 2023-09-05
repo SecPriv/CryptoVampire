@@ -1,4 +1,7 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::{OnceCell, RefCell},
+    rc::Rc,
+};
 
 use itertools::Itertools;
 
@@ -33,6 +36,7 @@ pub struct Protocol<'bump> {
     memory_cells: Vec<MemoryCell<'bump>>,
     /// Extra ordering information between steps
     ordering: Vec<ARichFormula<'bump>>,
+    max_var: OnceCell<usize>,
 }
 
 pub struct ProtocolStruct<'a, 'bump> {
@@ -54,17 +58,21 @@ impl<'bump> Protocol<'bump> {
         let ordering = ordering.into_iter().collect_vec();
         let graph = DependancyGraph::new(steps.clone(), memory_cells.iter().cloned());
 
-        let i = steps
-            .iter()
-            .position(|s| s.is_init_step())
-            .expect("no init step !");
-        steps.swap(0, i);
+        {
+            // make the init step the first one
+            let i = steps
+                .iter()
+                .position(|s| s.is_init_step())
+                .expect("no init step !");
+            steps.swap(0, i);
+        }
 
         Self {
             graph,
             steps,
             memory_cells,
             ordering,
+            max_var: OnceCell::new(),
         }
     }
 
@@ -122,13 +130,19 @@ impl<'bump> Protocol<'bump> {
     }
 
     pub fn max_var(&self) -> usize {
-        let pile = RefCell::new(Vec::new());
-
-        self.list_top_level_terms()
-            .flat_map(|f| f.used_variables_iter_with_pile(pile.borrow_mut()))
-            .map(|Variable { id, .. }| id)
-            .max()
-            .unwrap_or(0)
+        *self.max_var.get_or_init(|| {
+            self.steps()
+                .iter()
+                .flat_map(|s| s.occuring_variables())
+                .chain(
+                    self.memory_cells()
+                        .iter()
+                        .flat_map(|c| c.assignements().iter().flat_map(|a| a.fresh_vars.iter())),
+                )
+                .map(|v| v.id)
+                .max()
+                .unwrap_or(0)
+        })+1
     }
 
     pub fn init_step(&self) -> Step<'bump> {
@@ -157,6 +171,7 @@ impl<'bump> Protocol<'bump> {
             steps,
             memory_cells,
             ordering,
+            ..
         } = self;
         ProtocolStruct {
             graph,
@@ -167,6 +182,10 @@ impl<'bump> Protocol<'bump> {
     }
 
     pub fn is_statefull(&self) -> bool {
-        !self.memory_cells().is_empty()
+        !self.is_stateless()
+    }
+
+    pub fn is_stateless(&self) -> bool {
+        self.memory_cells().is_empty()
     }
 }

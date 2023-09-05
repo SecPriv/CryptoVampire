@@ -3,7 +3,7 @@ use crate::{
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::{self, meq},
-        function::builtin::{HAPPENS, LESS_THAN_STEP},
+        function::builtin::{HAPPENS, LESS_THAN_STEP, PRED},
         sort::builtins::STEP,
         variable::Variable,
     },
@@ -54,6 +54,9 @@ pub fn generate<'bump>(
                 (!happens.f_a([s2.clone()]))])
             }),
             happens.f_a([init.clone()]),
+            mforall!(s!0:step; {
+                lt.f_a([PRED.f_a([s]), s.into()]) | meq(s, init)
+            }),
         ]
         .into_iter()
         .map(Axiom::theory)

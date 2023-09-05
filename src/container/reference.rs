@@ -107,6 +107,7 @@ impl<'bump, T: PartialOrd> PartialOrd for Reference<'bump, T> {
 impl<'b, T: Debug> Debug for Reference<'b, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.inner.fmt(f)
+        // write!(f, "Ref {{ptr: {:?}, inner: {:?} }}", self.inner, self.as_inner())
     }
 }
 

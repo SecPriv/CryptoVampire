@@ -461,8 +461,8 @@ impl<'bump> Function<'bump> {
         DisplayFunction(*self)
     }
 
-    pub fn is_no_op(&self, _realm: &impl KnowsRealm) -> bool {
-        matches!(self.as_inner(), InnerFunction::Evaluate(_))
+    pub fn is_no_op(&self, realm: &impl KnowsRealm) -> bool {
+        (realm.is_evaluated_realm() && matches!(self.as_inner(), InnerFunction::Evaluate(_)))
     }
 
     force_lifetime!(Function, 'bump);

@@ -292,8 +292,11 @@ fn define_subterms<'bump>(
     subterm_key: &Arc<Subterm<'bump, impl SubtermAux<'bump>>>,
     subterm_main: &Arc<Subterm<'bump, impl SubtermAux<'bump>>>,
 ) {
+    if env.is_evaluated_realm() {
+        return;
+    }
     let _nonce_sort = NAME.clone();
-    'key: {
+    {
         let subterm = subterm_key.as_ref();
         subterm.declare(env, pbl, declarations);
 
@@ -315,11 +318,7 @@ fn define_subterms<'bump>(
                 .map(|f| Axiom::base(f)),
         );
     }
-    'main: {
-        if env.is_evaluated_realm() {
-            break 'main;
-        }
-
+    {
         let subterm = subterm_main.as_ref();
         subterm.declare(env, pbl, declarations);
 

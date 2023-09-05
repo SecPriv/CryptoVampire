@@ -2,6 +2,7 @@ mod euf_cma_mac;
 mod euf_cma_sign;
 mod int_ctxt;
 mod nonce;
+mod cell;
 
 pub use nonce::SubtermNonce;
 
@@ -26,6 +27,7 @@ use crate::formula::{
     variable::Variable,
 };
 
+use self::cell::Cell;
 pub use self::euf_cma_mac::EufCmaMac;
 pub use self::euf_cma_sign::EufCmaSign;
 pub use self::nonce::Nonce;
@@ -45,6 +47,7 @@ pub enum CryptoAssumption<'bump> {
         verify: Function<'bump>,
     },
     Nonce(Nonce),
+    MemoryCell(Cell)
 }
 
 impl<'bump> Generator<'bump> for CryptoAssumption<'bump> {
@@ -65,6 +68,7 @@ impl<'bump> Generator<'bump> for CryptoAssumption<'bump> {
                 verify: _,
             } => todo!(),
             CryptoAssumption::Nonce(nonce) => nonce.generate(assertions, declarations, env, pbl),
+            CryptoAssumption::MemoryCell(cell) => cell.generate(assertions, declarations, env, pbl),
         }
     }
 }
@@ -121,13 +125,13 @@ impl<'bump> Generator<'bump> for CryptoAssumption<'bump> {
 //     },
 // }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-struct DijBranch<'bump> {
-    /// extra variables required to express `content`
-    vars: Vec<Variable<'bump>>,
-    guard: Box<RichFormula<'bump>>,
-    content: Box<RichFormula<'bump>>,
-}
+// #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+// struct DijBranch<'bump> {
+//     /// extra variables required to express `content`
+//     vars: Vec<Variable<'bump>>,
+//     guard: Box<RichFormula<'bump>>,
+//     content: Box<RichFormula<'bump>>,
+// }
 
 // impl<'pbl, T> Provenance<'pbl, T> {
 //     pub fn candidate(&self) -> &T {
