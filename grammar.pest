@@ -40,8 +40,10 @@ bracketed_term = _{"{" ~ term ~ "}"}
 infix_term = {"(" ~ term ~ (operation ~ term)+ ~ ")" }
     // inner_infix_term = { commun_base ~ infix_term }
 
-application = {(function | variable) ~ ("(" ~ (term ~ ",")* ~ term? ~ ")")?}
-macro_application = {macro_name ~ ("[" ~ (term ~ ",")* ~ term? ~ "]")?}
+application = {(function | variable) ~ inner_application?}
+    inner_application = _{(  "(" ~ inner_inner_application ~")"  ) | ("[" ~ inner_inner_application ~ "]") }
+    inner_inner_application = _{(term ~ ",")* ~ term?}
+macro_application = {macro_name ~ inner_application?}
 if_then_else = {"if" ~ term ~ bracketed_term ~ "else" ~ bracketed_term}
 find_such_that = {"try" ~ "find" ~
                     typed_arguments ~
