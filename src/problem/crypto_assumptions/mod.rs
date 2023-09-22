@@ -30,6 +30,7 @@ use crate::formula::{
 use self::cell::Cell;
 pub use self::euf_cma_mac::EufCmaMac;
 pub use self::euf_cma_sign::EufCmaSign;
+pub use self::int_ctxt::IntCtxt;
 pub use self::nonce::Nonce;
 
 use super::generator::Generator;
@@ -40,12 +41,7 @@ use super::problem::Problem;
 pub enum CryptoAssumption<'bump> {
     EufCmaMac(EufCmaMac<'bump>),
     EufCmaSign(EufCmaSign<'bump>),
-    IntCtxtSenc {
-        enc: Function<'bump>,
-        dec: Function<'bump>,
-        fail: Function<'bump>,
-        verify: Function<'bump>,
-    },
+    IntCtxtSenc(IntCtxt<'bump>),
     Nonce(Nonce),
     MemoryCell(Cell)
 }
@@ -61,12 +57,7 @@ impl<'bump> Generator<'bump> for CryptoAssumption<'bump> {
         match self {
             CryptoAssumption::EufCmaMac(euf) => euf.generate(assertions, declarations, env, pbl),
             CryptoAssumption::EufCmaSign(euf) => euf.generate(assertions, declarations, env, pbl),
-            CryptoAssumption::IntCtxtSenc {
-                enc: _,
-                dec: _,
-                fail: _,
-                verify: _,
-            } => todo!(),
+            CryptoAssumption::IntCtxtSenc(intctx)=> intctx.generate(assertions, declarations, env, pbl),
             CryptoAssumption::Nonce(nonce) => nonce.generate(assertions, declarations, env, pbl),
             CryptoAssumption::MemoryCell(cell) => cell.generate(assertions, declarations, env, pbl),
         }

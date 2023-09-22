@@ -9,8 +9,9 @@ use crate::{
     problem::crypto_assumptions::{
         CryptoAssumption, EufCmaMac, EufCmaSign, Nonce, EUF_CMA_MAC_SIGNATURE,
         EUF_CMA_PK_SIGNATURE, EUF_CMA_SIGN_SIGNATURE, EUF_CMA_VERIFY_SIGNATURE,
-        INT_CTXT_DEC_SIGNATURE, INT_CTXT_ENC_SIGNATURE, INT_CTXT_VERIFY_SIGNATURE,
+        INT_CTXT_DEC_SIGNATURE, INT_CTXT_ENC_SIGNATURE, INT_CTXT_VERIFY_SIGNATURE, IntCtxt,
     },
+    utils::traits::NicerError,
 };
 
 pub fn parse_asserts_crypto<'a, 'str, 'bump, B>(
@@ -43,6 +44,7 @@ pub fn parse_assert_crypto<'str, 'bump>(
         "int-ctxt" => parse_int_ctxt(env, functions, *span),
         _ => Err(merr(name.span, "unknown crypto assertion".to_string())),
     }
+    .debug_continue()
 }
 
 macro_rules! verify_sign {
@@ -93,18 +95,19 @@ fn parse_int_ctxt<'str, 'bump>(
     functions: &[ast::Function<'str>],
     span: Span<'str>,
 ) -> Result<CryptoAssumption<'bump>, E> {
-    match functions.len() {
-        3 => {
-            destvec!([ast_enc, ast_dec, ast_verify] = functions);
-            verify_sign!(env; ast_enc, enc, INT_CTXT_ENC_SIGNATURE, 3);
-            verify_sign!(env; ast_dec, dec, INT_CTXT_DEC_SIGNATURE, 2);
-            verify_sign!(env; ast_verify, verify, INT_CTXT_VERIFY_SIGNATURE, 2);
-
-            todo!()
-        }
+    let functions = match functions.len() {
+        3 | 4 => Ok(&functions[..3]),
         i => Err(merr(
             span,
-            format!("wrong number of arguments: expected 3, got {i}"),
+            format!("wrong number of arguments: expected 3 (or 4), got {i}"),
         )),
     }
+    .debug_continue()?;
+    destvec!([ast_enc, ast_dec, ast_verify] = functions);
+
+    verify_sign!(env; ast_enc, enc, INT_CTXT_ENC_SIGNATURE, 3);
+    verify_sign!(env; ast_dec, dec, INT_CTXT_DEC_SIGNATURE, 2);
+    verify_sign!(env; ast_verify, verify, INT_CTXT_VERIFY_SIGNATURE, 2);
+
+    Ok(CryptoAssumption::IntCtxtSenc(IntCtxt { enc, dec, verify }))
 }

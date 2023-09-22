@@ -316,9 +316,9 @@ fn define_subterm<'bump>(
             subterm
                 .generate_function_assertions_from_pbl(env, pbl)
                 .into_iter()
-                .chain(subterm.not_of_sort(
+                .chain(subterm.not_of_sort_auto(
                     env,
-                    pbl.sorts.iter().filter(|&&s| s != subterm.sort()).cloned(),
+                    pbl,
                 ))
                 .map(|f| Axiom::base(f)),
         );
