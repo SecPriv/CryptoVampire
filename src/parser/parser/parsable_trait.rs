@@ -29,6 +29,7 @@ use crate::{
         err, merr, IntoRuleResult, E,
     },
     smt::smt::SmtFormula,
+    try_println,
     utils::{maybe_owned::MOw, traits::NicerError},
 };
 
@@ -350,7 +351,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Quantifier<'a> {
                 line!(),
                 column!()
             );
-            println!(
+            try_println!(
                 "\t{}",
                 SmtFormula::from_arichformula(&RichFormula::Quantifier(q.clone(), content.clone()))
                     .default_display()
@@ -499,6 +500,9 @@ fn parse_application<'b, 'a, 'bump>(
     function: &FunctionCache<'a, 'bump>,
     args: implvec!(&'b ast::Term<'a>),
 ) -> Result<ARichFormula<'bump>, E> {
+    if cfg!(debug_assertions){
+        try_println!("\tparsing head: {}", function.get_function().name())
+    }
     // get the evaluated version if needed
     // let fun = match state.get_realm() {
     //     Realm::Evaluated => function

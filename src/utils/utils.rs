@@ -289,3 +289,16 @@ pub fn print_type<T>(_: &T) -> &'static str {
 //         }
 //     }
 // }
+
+#[macro_export]
+macro_rules! try_println {
+    ($($t:tt)*) => {
+        if cfg!(debug_assertions) {
+            std::panic::catch_unwind(|| {
+                std::println!($($t)*);
+            }).unwrap_or_else(|_|{
+                std::println!("error while printing");
+            })
+        }
+    };
+}
