@@ -17,6 +17,7 @@ use crate::{
 
 use bitflags::bitflags;
 use itertools::Itertools;
+use log::trace;
 bitflags! {
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
         pub struct DeeperKinds: u8 {
@@ -286,9 +287,9 @@ fn expand_process_deeper<'b, 'bump>(
 where
     'bump: 'b,
 {
-    debug_print::debug_println!("process_deeper -> {}:{}:{}", file!(), line!(), column!());
+    trace!("process_deeper -> {}:{}:{}", file!(), line!(), column!());
     let Ancestors { input, cells } = graph.ancestors(deeper.clone()).unwrap();
-    debug_print::debug_println!("process_deeper -> {}:{}:{}", file!(), line!(), column!());
+    trace!("process_deeper -> {}:{}:{}", file!(), line!(), column!());
 
     let step_origin = args.last().unwrap();
     let is_input = deeper.is_none();

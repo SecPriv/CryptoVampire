@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use std::{
     collections::{BTreeMap, BTreeSet},
     convert::Infallible,
@@ -8,7 +9,7 @@ use std::{
 
 use if_chain::if_chain;
 use itertools::Itertools;
-use log::trace;
+use log::{trace, log_enabled};
 
 use crate::{
     container::allocator::{ContainerTools, Residual},
@@ -691,14 +692,15 @@ pub fn into_exist_formula<'bump>(
         }
     }
 
-    if cfg!(debug_assertions) {
-        println!("into_exists: {}:{}:{}", file!(), line!(), column!());
+    if log_enabled!(log::Level::Trace) {
+        let mut str = String::new();
         for s in vars.iter().map(|(v, idx)| {
             let fs = idx.iter().map(|&i| content[i].1.shallow_copy()).join(", ");
             format!("{v} -> [{fs}]")
         }) {
-            println!("\t\t{s}")
+            writeln!(&mut str, "\t\t{s}").unwrap();
         }
+        trace!("into_exists:\n{str}");
     }
 
     let max = {

@@ -1,5 +1,8 @@
 use std::{fmt, ops::Deref};
 
+use itertools::Itertools;
+use log::{log_enabled, trace};
+
 use crate::{
     environement::traits::{KnowsRealm, Realm},
     formula::file_descriptior::axioms::RewriteKind,
@@ -265,15 +268,16 @@ impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a Smt<'bump>> {
 generate_diplay!(SmtFile);
 impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a SmtFile<'bump>> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if cfg!(debug_assertions) {
-            self.content
+        if log_enabled!(log::Level::Trace) {
+            let str = self.content
                 .content
                 .iter()
                 .filter_map(|smt| match smt {
                     Smt::DeclareFun(f) => Some(f),
                     _ => None,
                 })
-                .for_each(|f| println!("trying to define {}", f.name()))
+                .map(|f| f.name()).join(", ");
+            trace!("trying to define:\n\t{str}")
         }
         let mut i = 1;
 

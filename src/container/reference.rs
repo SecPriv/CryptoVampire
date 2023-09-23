@@ -1,5 +1,7 @@
 use std::{cmp::Ordering, fmt::Debug, hash::Hash, marker::PhantomData, ptr::NonNull};
 
+use log::error;
+
 use crate::utils::{
     precise_as_ref::PreciseAsRef, string_ref::StrRef, traits::RefNamed, utils::MaybeInvalid,
 };
@@ -24,7 +26,7 @@ pub struct FORef<'bump, T>(Reference<'bump, T>);
 impl<'bump, T> Reference<'bump, T> {
     pub fn as_option_ref(&self) -> &'bump Option<T> {
         if super::PRINT_DEREF {
-            println!(
+            error!(
                 "deref NonNul at {} in {}\n\t(for {})",
                 line!(),
                 file!(),

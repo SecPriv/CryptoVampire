@@ -13,6 +13,7 @@ use crate::{
 use super::allocator::Container;
 use super::contained::Contained;
 use hashbrown::HashSet;
+use log::error;
 
 use std::fmt::Debug;
 
@@ -162,7 +163,7 @@ impl<'bump> ScopedContainer<'bump> {
                 vec.iter()
                     .filter_map(|x| {
                         if super::PRINT_DEREF {
-                            println!("deref NonNull at {} in {}", line!(), file!());
+                            error!("deref NonNull at {} in {}", line!(), file!());
                         }
                         unsafe { x.as_ref() }.as_ref()
                     })

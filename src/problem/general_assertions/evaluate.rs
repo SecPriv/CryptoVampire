@@ -1,6 +1,7 @@
 use std::{collections::BTreeMap, sync::Arc};
 
 use itertools::Itertools;
+use log::trace;
 
 use crate::{
     environement::environement::Environement,
@@ -144,7 +145,7 @@ pub fn generate<'bump>(
                         let ev = ibf.eval_fun();
                         let rw_kind = rewrite_funs.get(&ibf.out().into()).unwrap();
                         let vars: Arc<[_]> = sorts_to_variables(0, ibf.args());
-                        debug_print::debug_println!("evaluating -> {}", f.name());
+                        trace!("evaluating -> {}", f.name());
                         let out = Rewrite {
                             kind: rw_kind.clone(),
                             vars: vars.clone(),
@@ -154,7 +155,7 @@ pub fn generate<'bump>(
                             post: ev
                                 .f_a(vars.iter().map(|v| pbl.evaluator.eval(v.into_aformula()))),
                         };
-                        debug_print::debug_println!("{:?}", out);
+                        trace!("{:?}", out);
                         out
                     })
                     .map(|r| Axiom::Rewrite {

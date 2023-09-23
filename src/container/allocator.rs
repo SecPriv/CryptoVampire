@@ -1,6 +1,8 @@
 use std::{convert::Infallible, error::Error, fmt::Debug, ptr::NonNull};
 
+use clap::error;
 use itertools::Itertools;
+use log::error;
 
 use crate::utils::utils::AlreadyInitialized;
 
@@ -171,7 +173,7 @@ where
     {
         // if cfg!(debug_assertions) {
         if let Some(p) = I::ptr_to_ref(reference) {
-            eprintln!("{p:?}")
+            error!("{p:?}")
         }
         // }
         I::initialize_with(reference, inner).map(|_| ())

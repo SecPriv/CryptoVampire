@@ -32,6 +32,6 @@ const_format = "0.2.31"
 # bumpalo = { version = "3.12.0", features = ["boxed", "collections"] }
 # typed-arena = "2.0.2"
 # either = "1.8.1"
-log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"] }
+log = { version = "0.4", features = ["release_max_level_warn"] }
 env_logger = "0.10.0"
 chrono = "0.4.31"

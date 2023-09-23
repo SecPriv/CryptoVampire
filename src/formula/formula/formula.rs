@@ -38,7 +38,7 @@ pub enum RichFormula<'bump> {
 
 impl<'bump> RichFormula<'bump> {
     pub fn get_sort(&self) -> Result<Sort<'bump>, SortedError> {
-        // debug_print::debug_println!("  checksort -> {self}");
+        // trace!("  checksort -> {self}");
         match self {
             RichFormula::Var(Variable { sort, .. }) => Ok(*sort),
             RichFormula::Fun(fun, args) => {

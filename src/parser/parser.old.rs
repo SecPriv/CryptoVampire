@@ -172,7 +172,6 @@ pub fn parse_protocol(env: Environement, str: &str) -> Result<Problem, E> {
     let mut ctx = env.into();
 
     let c = MainParser::parse(Rule::content, str)?.next().unwrap();
-    // println!("{:?}", c);
 
     for p in c.into_inner() {
         let span = p.as_span();

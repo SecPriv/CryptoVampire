@@ -2,6 +2,7 @@ use std::{fmt::Display, ops::Deref};
 mod cached_builtins;
 
 use itertools::Itertools;
+use log::{trace, log_enabled};
 use pest::Span;
 
 use crate::{
@@ -29,7 +30,7 @@ use crate::{
         err, merr, IntoRuleResult, E,
     },
     smt::smt::SmtFormula,
-    try_println,
+    try_trace,
     utils::{maybe_owned::MOw, traits::NicerError},
 };
 
@@ -350,14 +351,8 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Quantifier<'a> {
         };
 
         if cfg!(debug_assertions) {
-            println!(
-                "parsing quantifier:\t ({}:{}:{})",
-                file!(),
-                line!(),
-                column!()
-            );
-            try_println!(
-                "\t{}",
+            try_trace!(
+                "parsing quantifier\n\t{}",
                 SmtFormula::from_arichformula(&RichFormula::Quantifier(q.clone(), content.clone()))
                     .default_display()
             )
@@ -506,7 +501,7 @@ fn parse_application<'b, 'a, 'bump>(
     args: implvec!(&'b ast::Term<'a>),
 ) -> Result<ARichFormula<'bump>, E> {
     if cfg!(debug_assertions){
-        try_println!("\tparsing head: {}", function.get_function().name())
+        try_trace!("\tparsing head: {}", function.get_function().name())
     }
     // get the evaluated version if needed
     // let fun = match state.get_realm() {
@@ -666,9 +661,9 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
                     .get(name.name())
                     .ok_or_else(|| merr(name.span(), f!("{} is not a known macro", name.name())))?;
 
-                if cfg!(debug_assertions) {
-                    println!("in macro parsing: {}", name.name());
-                    println!(
+                if log_enabled!(log::Level::Trace) {
+                    trace!("in macro parsing: {}", name.name());
+                    trace!(
                         "\tbvars: [{}]",
                         bvars
                             .iter()
@@ -931,12 +926,12 @@ fn check_out_sort<'str, 'bump>(
                 if out == NAME.as_sort() {
                     out = MESSAGE.as_sort();
                     forumla = env.name_caster_collection.cast(MESSAGE.as_sort(), forumla);
-                    debug_print::debug_println!("name cast in: {}", &forumla);
+                    trace!("name cast in: {}", &forumla);
                 }
                 if realm.get_realm() == Realm::Evaluated && out.realm() == Some(Realm::Symbolic) {
                     forumla = env.evaluator.get_eval_function(out).unwrap().f_a([forumla]);
                     out = out.maybe_evaluated_sort().unwrap();
-                    debug_print::debug_println!("evalluation in: {}", &forumla);
+                    trace!("evalluation in: {}", &forumla);
                 }
                 es.unify_rev(&out.into(), realm)
                     .into_rr(span)

@@ -1,7 +1,9 @@
+use std::fmt::Write;
 use std::fmt::Display;
 use std::sync::Arc;
 
 use itertools::Itertools;
+use log::{trace, debug, log_enabled};
 
 use crate::container::allocator::{ContainerTools, Residual};
 use crate::container::contained::Containable;
@@ -84,7 +86,7 @@ impl<'bump> Sorted<'bump> for Function<'bump> {
     fn sort(&self, args: &[Sort<'bump>]) -> Result<Sort<'bump>, SortedError> {
         let s = self.signature();
         let partial_s = OnlyArgsSignature::new(args);
-        debug_print::debug_println!(
+        trace!(
             "function check sort:\n\t{}{}\n\targs:[{}]",
             self.name(),
             self.signature().as_display(),
@@ -151,8 +153,9 @@ impl<'bump> Function<'bump> {
     pub fn new_unused_destructors(container: container!(nf), constructor: Self) -> Vec<Self> {
         let assertion = constructor.can_be_datatype();
         if cfg!(debug_assertions) && !assertion {
-            println!("{}", constructor.as_display());
-            println!("{:?}", constructor.as_inner());
+            trace!(".");
+            debug!("{}", constructor.as_display());
+            debug!("{:?}", constructor.as_inner());
         }
         assert!(assertion);
 
@@ -291,14 +294,14 @@ impl<'bump> Function<'bump> {
         output_sort: Sort<'bump>,
     ) -> BaseFunctionTuple<'bump> {
         let input_sorts = input_sorts.into_iter().collect_vec();
-        // debug_print::debug_println!("{}{} -> {}", name.deref(), input_sorts, output_sort);
-        if cfg!(debug_assertions) {
-            println!("new_user_term_algebra");
-            print!("\t{}(", name.deref());
+        if log_enabled!(log::Level::Trace) {
+            let mut str = String::new();
+            write!(&mut str, "\t{}(", name.deref());
             for s in &input_sorts {
-                print!("{s},")
+                write!( &mut str, "{s},");
             }
-            println!(") -> {output_sort}")
+            write!(&mut str, ") -> {output_sort}");
+            trace!("new_user_term_algebra:\n\t{str}")
         }
         assert!(output_sort.is_term_algebra());
 

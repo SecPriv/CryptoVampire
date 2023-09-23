@@ -39,6 +39,8 @@ use cryptovampire::{
     smt::smt::SmtFile,
     utils::traits::{MyWriteTo, NicerError},
 };
+use log::{LevelFilter, trace};
+use std::io::Write;
 
 const USE_MIRI: bool = false;
 
@@ -65,25 +67,26 @@ fn main() {
 
     env_logger::Builder::new()
     .format(|buf, record| {
+        let str = record.args().to_string().replace("\n", "\t\n");
         writeln!(
             buf,
-            "{}:{} {} [{}]:\n\t{}",
+            "[{}] in {}:{}\n\t{}",
+            record.level(),
+            // chrono::Local::now().format("%Y-%m-%dT%H:%M:%S"),
             record.file().unwrap_or("unknown"),
             record.line().unwrap_or(0),
-            chrono::Local::now().format("%Y-%m-%dT%H:%M:%S"),
-            record.level(),
-            record.args()
+            str
         )
     })
-    .filter(Some("trace"), LevelFilter::Trace)
+    .filter(None, LevelFilter::Trace)
     .init();
 
     ScopedContainer::scoped(|container| {
-        debug_print::debug_println!("start");
+        trace!("start");
         let env = Environement::from_args(&args, &*container);
 
         // let str = ;
-        debug_print::debug_println!("read input...");
+        trace!("read input...");
         let str = if USE_MIRI {
             TEST_FILE.to_string()
         } else {

@@ -2,6 +2,7 @@ use std::{cell::RefCell, hash::Hash, sync::Arc};
 
 use if_chain::if_chain;
 use itertools::Itertools;
+use log::trace;
 
 use crate::{
     environement::{environement::Environement, traits::KnowsRealm},
@@ -310,7 +311,7 @@ fn define_subterms<'bump>(
         let subterm = subterm_main.as_ref();
         subterm.declare(env, pbl, declarations);
 
-        debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
+        trace!(".");
 
         if subterm.kind().is_vampire() {
         } else {
@@ -324,9 +325,7 @@ fn define_subterms<'bump>(
                 .map(|f| Axiom::base(f)),
             );
         }
-        debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
-        debug_print::debug_println!("subterm type: {}", print_type(subterm));
-        debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
+        trace!("subterm type: {}", print_type(subterm));
         assertions.extend(
             subterm
                 .preprocess_special_assertion_from_pbl(env, pbl, true)

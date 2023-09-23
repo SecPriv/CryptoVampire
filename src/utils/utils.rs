@@ -291,13 +291,13 @@ pub fn print_type<T>(_: &T) -> &'static str {
 // }
 
 #[macro_export]
-macro_rules! try_println {
+macro_rules! try_trace {
     ($($t:tt)*) => {
-        if cfg!(debug_assertions) {
+        if log::log_enabled!(log::Level::Trace) {
             std::panic::catch_unwind(|| {
-                std::println!($($t)*);
+                log::trace!($($t)*);
             }).unwrap_or_else(|_|{
-                std::println!("error while printing");
+                log::trace!("error while printing");
             })
         }
     };

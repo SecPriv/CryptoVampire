@@ -1,5 +1,6 @@
 // pub mod builder;
 mod pbl_iterator;
+use log::trace;
 pub use pbl_iterator::PblIterator;
 
 use std::{
@@ -105,9 +106,9 @@ impl<'bump> Generator<'bump> for Problem<'bump> {
         env: &Environement<'bump>,
         _: &Problem<'bump>,
     ) {
-        debug_print::debug_println!("genrating problem file...");
+        trace!("genrating problem file...");
 
-        debug_print::debug_println!("[G]\t- sort declarations...");
+        trace!("[G]\t- sort declarations...");
         declarations.extend(
             self.sorts
                 .iter()
@@ -144,27 +145,27 @@ impl<'bump> Generator<'bump> for Problem<'bump> {
                     .collect(),
             ));
         }
-        debug_print::debug_println!("[G]\t\t[DONE]");
+        trace!("[G]\t\t[DONE]");
 
-        debug_print::debug_println!("[G]\t- ordering...");
+        trace!("[G]\t- ordering...");
         order::generate(assertions, declarations, env, self);
-        debug_print::debug_println!("[G]\t\t[DONE]");
+        trace!("[G]\t\t[DONE]");
 
-        debug_print::debug_println!("[G]\t- evaluate...");
+        trace!("[G]\t- evaluate...");
         general_assertions::evaluate::generate(assertions, declarations, env, self);
-        debug_print::debug_println!("[G]\t\t[DONE]");
+        trace!("[G]\t\t[DONE]");
 
-        debug_print::debug_println!("[G]\t- crypto...");
+        trace!("[G]\t- crypto...");
         assertions.push(Axiom::Comment("crypto".into()));
         for crypto in &self.crypto_assertions {
-            debug_print::debug_println!("{:?}", crypto);
+            trace!("{:?}", crypto);
             crypto.generate(assertions, declarations, env, self)
         }
-        debug_print::debug_println!("[G]\t\t[DONE]");
+        trace!("[G]\t\t[DONE]");
 
         // assertions.sort();
 
-        debug_print::debug_println!("[G]\t- user assertions...");
+        trace!("[G]\t- user assertions...");
         assertions.push(Axiom::Comment("user asserts".into()));
         assertions.extend(
             self.assertions
@@ -173,16 +174,16 @@ impl<'bump> Generator<'bump> for Problem<'bump> {
                 .map(|a| propagate_evaluate(a.as_ref(), &self.evaluator))
                 .map(Axiom::base),
         );
-        debug_print::debug_println!("[G]\t\t[DONE]");
+        trace!("[G]\t\t[DONE]");
 
-        debug_print::debug_println!("[G]\t- query...");
+        trace!("[G]\t- query...");
         assertions.push(Axiom::Comment("query".into()));
         assertions.push(Axiom::Query {
             formula: propagate_evaluate(self.query.as_ref(), &self.evaluator),
         });
 
-        debug_print::debug_println!("[G]\t\t[DONE]");
-        debug_print::debug_println!("generation done");
+        trace!("[G]\t\t[DONE]");
+        trace!("generation done");
 
         declarations.sort();
     }

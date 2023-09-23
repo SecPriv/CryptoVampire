@@ -3,6 +3,7 @@ use std::{fmt::Display, slice::Iter};
 use const_format::concatcp;
 use derivative::Derivative;
 use itertools::Itertools;
+use log::trace;
 use pest::{error::Error, iterators::Pair, Parser, Position, Span};
 use static_init::dynamic;
 
@@ -141,7 +142,7 @@ impl<'a> TryFrom<&'a str> for ASTList<'a> {
                 .into_inner()
                 .filter(|p| p.as_rule() == Rule::content)
                 .map(|p| {
-                    debug_print::debug_println!(" --> {}", p.as_str());
+                    trace!(" --> {}", p.as_str());
                     p.try_into().debug_continue()
                 })
                 .try_collect()
@@ -330,7 +331,7 @@ boiler_plate!(InnerTerm<'s>, 's, inner_term; |p| {
     match nxt.as_rule() {
         Rule::infix_term => {
             // let mut nxt_inner = nxt.into_inner();
-            // debug_print::debug_println!("{:?}", nxt_inner);
+            // trace!("{:?}", nxt_inner);
             // dest_rule!(span in [inner] = nxt_inner);
             Ok(InnerTerm::Infix(Box::new(nxt.try_into()?)))
         }

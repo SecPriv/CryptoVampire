@@ -1,3 +1,5 @@
+use log::{log_enabled, error};
+
 use crate::formula::{
     formula::{ARichFormula, RichFormula},
     manipulation::Substitution,
@@ -55,7 +57,7 @@ impl<T> From<(usize, T)> for OneVarSubst<T> {
 impl<'a, 'bump: 'a> Substitution<'bump> for OneVarSubstF<'bump> {
     fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump> {
         if var.id == self.id {
-            if cfg!(debug_assertions) {
+            if log_enabled!(log::Level::Trace) {
                 if let Some(s) = self.f.get_sort().ok() {
                     if s != var.sort {
                         panic!(
@@ -64,7 +66,7 @@ impl<'a, 'bump: 'a> Substitution<'bump> for OneVarSubstF<'bump> {
                         )
                     }
                 } else {
-                    eprintln!("mhm...")
+                    error!("mhm...")
                 }
             }
             self.f.clone()
