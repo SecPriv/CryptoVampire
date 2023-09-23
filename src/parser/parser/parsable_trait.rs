@@ -87,6 +87,8 @@ pub trait Parsable<'bump, 'str> {
 impl<'a, 'bump> Parsable<'bump, 'a> for ast::LetIn<'a> {
     type R = ARichFormula<'bump>;
 
+    #[allow(unreachable_code)]
+    #[allow(unused_assignments)]
     fn parse(
         &self,
         env: &Environement<'bump, 'a>,
@@ -94,32 +96,35 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::LetIn<'a> {
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> Result<Self::R, E> {
-        // current length of the pile of variable
-        // to be reused for variable indexing, and troncating the pile
-        let vn = bvars.len();
+        return err(merr(self.span, "let ... in are not supported yet".to_owned()));
+        todo!()
 
-        // retrieve data
-        let ast::LetIn { var, t1, t2, .. } = self;
+        // // current length of the pile of variable
+        // // to be reused for variable indexing, and troncating the pile
+        // let vn = bvars.len();
 
-        // defined a new variable of unknown type
-        let v = VarProxy {
-            id: vn,
-            sort: Default::default(),
-        };
+        // // retrieve data
+        // let ast::LetIn { var, t1, t2, .. } = self;
 
-        // parse t1 expecting the unknown sort
-        let t1 = t1.parse(env, bvars, state, Some(v.sort.clone()))?;
+        // // defined a new variable of unknown type
+        // let v = VarProxy {
+        //     id: vn,
+        //     sort: Default::default(),
+        // };
 
-        // parse t2
-        let t2 = {
-            bvars.push((var.name(), v.clone())); // add var to the pile
-            let t2 = t2.parse(env, bvars, state, expected_sort.clone())?;
-            bvars.truncate(vn); // remove it from the pile
-            t2
-        };
+        // // parse t1 expecting the unknown sort
+        // let t1 = t1.parse(env, bvars, &Realm::Symbolic, Some(v.sort.clone()))?;
 
-        // replace `v` by its content: `t1`
-        Ok(t2.owned_into_inner().apply_substitution([vn], [&t1]).into())
+        // // parse t2
+        // let t2 = {
+        //     bvars.push((var.name(), v.clone())); // add var to the pile
+        //     let t2 = t2.parse(env, bvars, state, expected_sort.clone())?;
+        //     bvars.truncate(vn); // remove it from the pile
+        //     t2
+        // };
+
+        // // replace `v` by its content: `t1`
+        // Ok(t2.owned_into_inner().apply_substitution([vn], [&t1]).into())
     }
 }
 impl<'a, 'bump> Parsable<'bump, 'a> for ast::IfThenElse<'a> {
@@ -404,7 +409,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Application<'a> {
                         }
 
                         match (
-                            sort.as_option().and_then(|s| s.evaluated_sort()),
+                            sort.as_option().and_then(|s| s.maybe_evaluated_sort()),
                             state.get_realm(),
                         ) {
                             (Some(s), r @ Realm::Evaluated) => {
@@ -585,7 +590,7 @@ fn parse_application<'b, 'a, 'bump>(
             if state.get_realm() == Realm::Evaluated;
             if formula_realm == Some(Realm::Symbolic);
             if let Some(s) = out_sort.as_option();
-            if let Some(es) = s.evaluated_sort();
+            if let Some(es) = s.maybe_evaluated_sort();
             then {
                 out_sort = es.into()
             }
@@ -930,7 +935,7 @@ fn check_out_sort<'str, 'bump>(
                 }
                 if realm.get_realm() == Realm::Evaluated && out.realm() == Some(Realm::Symbolic) {
                     forumla = env.evaluator.get_eval_function(out).unwrap().f_a([forumla]);
-                    out = out.evaluated_sort().unwrap();
+                    out = out.maybe_evaluated_sort().unwrap();
                     debug_print::debug_println!("evalluation in: {}", &forumla);
                 }
                 es.unify_rev(&out.into(), realm)

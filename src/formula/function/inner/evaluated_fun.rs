@@ -45,9 +45,9 @@ where
 {
     fn as_fixed_signature(&'a self) -> FixedRefSignature<'a, 'bump> {
         let FixedRefSignature { out, args } = self.inner_baase().as_fixed_signature();
-        let out = out.evaluated_sort().unwrap();
-        let args: Option<VecRefClone<_>> = args.into_iter().map(|s| s.evaluated_sort()).collect();
-        let args = args.unwrap();
+        let out = out.evaluated_sort();
+        let args = args.into_iter().map(|s| s.evaluated_sort()).collect();
+        // let args = args.unwrap();
         FixedRefSignature { out, args }
     }
 }

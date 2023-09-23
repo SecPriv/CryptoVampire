@@ -62,7 +62,7 @@ pub fn generate<'bump>(
         .sorts
         .iter()
         .filter_map(|sort| {
-            sort.evaluated_sort()
+            sort.maybe_evaluated_sort()
                 .map(|evaluated_sort| (sort, evaluated_sort))
         })
         .collect_vec();

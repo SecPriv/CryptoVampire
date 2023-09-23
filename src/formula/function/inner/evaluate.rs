@@ -56,6 +56,9 @@ impl<'bump> Evaluator<'bump> {
         self.try_eval(f).unwrap()
     }
 
+    /// Try to evaluate a term. That is calling the right 'evaluate' function on it
+    /// 
+    /// Return error if it can't decide the sort
     pub fn try_eval(
         &self,
         f: impl Into<ARichFormula<'bump>>,
@@ -65,12 +68,11 @@ impl<'bump> Evaluator<'bump> {
         let sort = f
             .get_sort()
             .debug_continue_msg(&format!("{f} doesn't have a known sort"))?;
-        let fun = self
-            .functions
-            .get(&sort.into())
-            .ok_or(SortedError::Impossible)
-            .debug_continue_msg(&format!("{} isn't in the hashmap", sort.name().as_ref()))?;
-        Ok(fun.f_a([f]))
+        let fun = self.functions.get(&sort.into());
+        match fun {
+            None => Ok(f), // unevaluatable sort don't need to be evaluated
+            Some(fun) => Ok(fun.f_a([f])),
+        }
     }
 
     pub fn functions_mut(&mut self) -> &mut BTreeMap<FOSort<'bump>, Function<'bump>> {

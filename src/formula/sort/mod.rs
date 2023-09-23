@@ -90,7 +90,7 @@ impl<'bump> InnerSort<'bump> {
         self.name_ref()
     }
 
-    pub fn evaluated_sort(&self) -> Option<Sort<'bump>> {
+    pub fn maybe_evaluated_sort(&self) -> Option<Sort<'bump>> {
         match self {
             InnerSort::Base(b) => b.evaluated_sort(),
             InnerSort::UserEvaluatable(ue) => ue.evaluated_sort(),
@@ -148,7 +148,7 @@ impl<'a> Display for Sort<'a> {
 impl<'a> Sort<'a> {
     // ~~~~~~~~~~~~~~~~~~ is ~~~~~~~~~~~~~~~~~~~~
     pub fn is_term_algebra(&self) -> bool {
-        self.as_inner().evaluated_sort().is_some() || self.as_inner().is_other()
+        self.as_inner().maybe_evaluated_sort().is_some() || self.as_inner().is_other()
     }
 
     pub fn is_built_in(&self) -> bool {
@@ -221,8 +221,12 @@ impl<'a> Sort<'a> {
         self.precise_as_ref().name()
     }
 
-    pub fn evaluated_sort(&self) -> Option<Sort<'a>> {
-        self.precise_as_ref().evaluated_sort()
+    pub fn maybe_evaluated_sort(&self) -> Option<Sort<'a>> {
+        self.precise_as_ref().maybe_evaluated_sort()
+    }
+
+    pub fn evaluated_sort(&self) -> Sort<'a> {
+        self.maybe_evaluated_sort().unwrap_or(*self)
     }
 
     /// Equality modulo a [Realm]
@@ -238,7 +242,8 @@ impl<'a> Sort<'a> {
             || match realm.get_realm() {
                 Realm::Symbolic => false,
                 Realm::Evaluated => {
-                    self.is_evaluatable() && (self.evaluated_sort() == other.evaluated_sort())
+                    self.is_evaluatable()
+                        && (self.maybe_evaluated_sort() == other.maybe_evaluated_sort())
                 }
             }
     }

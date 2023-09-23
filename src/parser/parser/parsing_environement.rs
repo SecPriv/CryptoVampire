@@ -222,9 +222,15 @@ pub fn get_function<'b, 'a, 'bump>(
     span: Span<'a>,
     str: implderef!(str),
 ) -> Result<&'b FunctionCache<'a, 'bump>, E> {
-    env.functions
-        .get(Deref::deref(&str))
-        .ok_or_else(|| merr(span, f!("undefined function {}", Deref::deref(&str))))
+    env.functions.get(Deref::deref(&str)).ok_or_else(|| {
+        merr(
+            span,
+            f!(
+                "undefined function {}\nhint: If you looked for a macro, maybe you forgot the '!'",
+                Deref::deref(&str)
+            ),
+        )
+    })
     // .map(|s| *s)
 }
 
@@ -282,7 +288,8 @@ pub fn parse_str<'a, 'bump>(
 
     debug_print::debug_println!("[P] \t- parse assertions...");
     let mut bvars = Vec::new();
-    let assertions: Vec<_> = parse_asserts_with_bvars(&env, assertions, &mut bvars).debug_continue()?;
+    let assertions: Vec<_> =
+        parse_asserts_with_bvars(&env, assertions, &mut bvars).debug_continue()?;
     let lemmas = parse_asserts_with_bvars(&env, lemmas, &mut bvars).debug_continue()?;
     let query = parse_assert_with_bvars(&env, query, &mut bvars).debug_continue()?;
     let orders: Vec<_> = parse_orders_with_bvars(&env, orders, &mut bvars).debug_continue()?;

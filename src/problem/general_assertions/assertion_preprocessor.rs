@@ -65,7 +65,7 @@ fn preprocess_after_eval<'bump>(
 ) -> RichFormula<'bump> {
     match assertion {
         RichFormula::Var(v) if v.sort().is_evaluatable() => Some(RichFormula::Var(Variable {
-            sort: v.sort().evaluated_sort().unwrap(),
+            sort: v.sort().maybe_evaluated_sort().unwrap(),
             ..*v
         })),
         RichFormula::Fun(fun, args) => match fun.as_ref().maybe_get_evaluated() {
