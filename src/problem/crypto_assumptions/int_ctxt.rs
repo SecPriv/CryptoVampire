@@ -113,7 +113,7 @@ impl<'bump> IntCtxt<'bump> {
         if env.define_subterm() {
             define_subterm(env, pbl, assertions, declarations, &subterm_main, true);
             define_subterm(env, pbl, assertions, declarations, &subterm_key, false);
-            define_subterm(env, pbl, assertions, declarations, &subterm_key, false);
+            define_subterm(env, pbl, assertions, declarations, &subterm_rand, false);
         }
 
         if env.with_general_crypto_axiom() && env.define_subterm() {
