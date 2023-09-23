@@ -6,9 +6,9 @@ use std::{
     sync::{Arc, Weak},
 };
 
-use debug_print::debug_println;
 use if_chain::if_chain;
 use itertools::Itertools;
+use log::trace;
 
 use crate::{
     container::allocator::{ContainerTools, Residual},
@@ -264,7 +264,7 @@ where
             let vars_f = vars.iter().map(|v| v.into_aformula()).collect_vec();
             let f_f = fun.f_a(vars_f);
 
-            debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
+            trace!("{}:{}:{}", file!(), line!(), column!());
 
             // no variable collision
             let f = self.preprocess_term_to_formula(
@@ -275,7 +275,7 @@ where
                 Rc::new([]),
                 keep_guard,
             );
-            debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
+            trace!("{}:{}:{}", file!(), line!(), column!());
             forall(
                 vars.into_iter().chain(std::iter::once(x)),
                 self.f_a(&realm, x_f.clone(), f_f) >> f,
@@ -297,7 +297,7 @@ where
                     && (!f.is_default_subterm() || self.ignored_functions.contains(f))
             })
             .cloned();
-        debug_print::debug_println!("{}:{}:{}", file!(), line!(), column!());
+        trace!("{}:{}:{}", file!(), line!(), column!());
         self.generate_special_functions_assertions(funs, env, &pbl.protocol, keep_guard)
     }
 
@@ -332,7 +332,7 @@ where
         bvars: Rc<[Variable<'bump>]>,
         keep_guard: bool,
     ) -> ARichFormula<'bump> {
-        debug_print::debug_println!(
+        trace!(
             "preprocess_term_to_formula -> {}:{}:{}",
             file!(),
             line!(),
@@ -358,7 +358,7 @@ where
         keep_guard: bool,
         deeper_kind: DeeperKinds,
     ) -> impl Iterator<Item = (Rc<[Variable<'bump>]>, ARichFormula<'bump>)> + 'a {
-        debug_print::debug_println!("preprocess_term -> {}:{}:{}", file!(), line!(), column!());
+        trace!("preprocess_term -> {}:{}:{}", file!(), line!(), column!());
         self.preprocess_terms(
             env,
             ptcl,
@@ -388,7 +388,7 @@ where
     ) -> impl Iterator<Item = (Rc<[Variable<'bump>]>, ARichFormula<'bump>)> + 'a {
         let realm = env.get_realm();
 
-        debug_print::debug_println!("preprocess_terms -> {}:{}:{}", file!(), line!(), column!());
+        trace!("preprocess_terms -> {}:{}:{}", file!(), line!(), column!());
         let steps = ptcl.steps();
 
         // let pile = vec![(ExpantionState::None, m)];
@@ -402,7 +402,7 @@ where
             passed_along: None,
             flags: IteratorFlags::default(),
             f: move |state: ExpantionState<'bump>, f| {
-                debug_print::debug_println!("\t\t{x} ⊑ {}", &f);
+                trace!("\t\t{x} ⊑ {}", &f);
                 let inner_iter = ExpantionContent {
                     state: state.clone(),
                     content: f.clone(),
@@ -410,13 +410,13 @@ where
                 .expand(steps.iter().cloned(), ptcl.graph(), false)
                 .into_iter()
                 .map(|ec| ec.as_tuple());
-                debug_print::debug_println!(
+                trace!(
                     "inner subterm -> {}:{}:{}",
                     file!(),
                     line!(),
                     column!()
                 );
-                let SubtermResult { unifier, nexts } = self.aux.eval_and_next(x, &f);
+                let SubtermResult { unifier, nexts } = self.aux.is_subterm_and_next(x, &f);
 
                 let return_value = match unifier {
                     None => None,
@@ -442,7 +442,7 @@ where
                         //     formula::ands(guard),
                         // );
                         let formula = formula::ands(guard);
-                        debug_println!("{}:{}:{} -> {formula}", file!(), line!(), column!());
+                        trace!("{}:{}:{} -> {formula}", file!(), line!(), column!());
                         Some((state.owned_bound_variable(), formula))
                     }
                 };
@@ -467,11 +467,11 @@ where
                 AbsSubtermKindG::Regular(funs) => {
                     let [x, m]: [ARichFormula; 2] = [x.into(), m.into()];
                     let sort = m.get_sort().expect_display("term algebra has a sort");
-                    debug_print::debug_println!(
+                    trace!(
                         "[{}]",
                         funs.keys().map(|fsort| fsort.as_reference()).join(", ")
                     );
-                    debug_print::debug_println!("{:?}", &funs);
+                    trace!("{:?}", &funs);
                     funs.get(&sort.as_fo())
                         .expect(&format!("unsupported sort: {sort}, {sort:?}"))
                         .f_a([x, m])

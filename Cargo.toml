@@ -27,9 +27,11 @@ derivative = {version = "2.2.0"}
 macro-attr = "0.2.0"
 hashbrown = "0.14.0"
 const_format = "0.2.31"
-debug_print = "1.0.0"
 # qcell = "0.5.3"
 # match_deref = "0.1.1"
 # bumpalo = { version = "3.12.0", features = ["boxed", "collections"] }
 # typed-arena = "2.0.2"
 # either = "1.8.1"
+log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"] }
+env_logger = "0.10.0"
+chrono = "0.4.31"

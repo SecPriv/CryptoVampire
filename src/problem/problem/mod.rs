@@ -78,7 +78,7 @@ impl<'bump> Problem<'bump> {
             .flat_map(|f| f.used_variables_iter_with_pile(pile.borrow_mut()))
             .map(|Variable { id, .. }| id)
             .max()
-            .unwrap_or(0)
+            .unwrap_or(0) + 1
     }
 
     pub fn container(&self) -> &'bump ScopedContainer<'bump> {

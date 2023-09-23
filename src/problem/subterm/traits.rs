@@ -1,3 +1,5 @@
+use log::trace;
+
 use crate::{
     formula::{
         formula::{ARichFormula, RichFormula},
@@ -31,7 +33,7 @@ where
 pub trait SubtermAux<'bump> {
     type IntoIter: IntoIterator<Item = ARichFormula<'bump>>;
 
-    fn eval_and_next(
+    fn is_subterm_and_next(
         &self,
         x: &ARichFormula<'bump>,
         m: &ARichFormula<'bump>,
@@ -59,7 +61,7 @@ pub trait SubtermAux<'bump> {
                 _ => {
                     let mgu = Unifier::mgu(x, m);
                     if cfg!(debug_assertions) && mgu.is_some() {
-                        println!("\t\t\tmatch!");
+                        trace!("match!:\n{x}\n{m}")
                     }
 
                     SubtermResult {
@@ -86,7 +88,7 @@ pub trait SubtermAux<'bump> {
             sort: self.sort(),
         }
         .into_aformula();
-        let SubtermResult { unifier, nexts } = self.eval_and_next(&x, m);
+        let SubtermResult { unifier, nexts } = self.is_subterm_and_next(&x, m);
         VarSubtermResult {
             unified: unifier.is_some(),
             nexts,
@@ -94,11 +96,11 @@ pub trait SubtermAux<'bump> {
     }
 
     fn eval(&self, x: &ARichFormula<'bump>, m: &ARichFormula<'bump>) -> bool {
-        self.eval_and_next(x, m).unifier.is_some()
+        self.is_subterm_and_next(x, m).unifier.is_some()
     }
 
     fn nexts(&self, x: &ARichFormula<'bump>, m: &ARichFormula<'bump>) -> Self::IntoIter {
-        self.eval_and_next(x, m).nexts
+        self.is_subterm_and_next(x, m).nexts
     }
 
     fn sort(&self) -> Sort<'bump>;

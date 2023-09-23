@@ -171,8 +171,8 @@ impl<'bump> ExpantionContent<'bump> {
         let deeper_kinds = self.state.deeper_kind();
         match self.content.as_ref() {
             RichFormula::Var(_) => vec![],
-            RichFormula::Quantifier(_, args) => {
-                expand_process_arg(self, Arc::new([args.shallow_copy()])).collect()
+            RichFormula::Quantifier(_, arg) => {
+                expand_process_arg(self, Arc::new([arg.shallow_copy()])).collect()
             }
             RichFormula::Fun(fun, args) => {
                 let iter = (if with_args {

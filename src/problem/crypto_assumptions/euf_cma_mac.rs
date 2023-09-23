@@ -170,6 +170,7 @@ impl<'bump> EufCmaMac<'bump> {
                             let [message, signature, key] =
                                 [&args[1], &args[0], &args2[0]]
                                 .map(|f| f.translate_vars(max_var).into_arc());
+                            // panic!("{}", max_var);
 
                             Some(EufCandidate {message, signature, key})
                         } else {None}

@@ -62,6 +62,22 @@ fn main() {
     //     no_symbolic: true,
     // };
 
+
+    env_logger::Builder::new()
+    .format(|buf, record| {
+        writeln!(
+            buf,
+            "{}:{} {} [{}]:\n\t{}",
+            record.file().unwrap_or("unknown"),
+            record.line().unwrap_or(0),
+            chrono::Local::now().format("%Y-%m-%dT%H:%M:%S"),
+            record.level(),
+            record.args()
+        )
+    })
+    .filter(Some("trace"), LevelFilter::Trace)
+    .init();
+
     ScopedContainer::scoped(|container| {
         debug_print::debug_println!("start");
         let env = Environement::from_args(&args, &*container);
