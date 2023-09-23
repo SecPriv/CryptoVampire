@@ -6,13 +6,17 @@ use std::{
 
 use crate::{
     formula::{
-        function::builtin::{AND, IMPLIES, NOT, OR},
+        function::{
+            builtin::{AND, IMPLIES, NOT, OR},
+            Function,
+        },
         utils::formula_iterator::{FormulaIterator, IteratorFlags},
         variable::Variable,
     },
     utils::{
         arc_into_iter::ArcIntoIter,
         utils::{repeat_n_zip, StackBox},
+        vecref::{VecRef, VecRefClone},
     },
 };
 
@@ -108,14 +112,39 @@ impl<'bump> ARichFormula<'bump> {
         self.used_variables_iter_with_pile(StackBox::new(Vec::with_capacity(1)))
     }
 
-    pub fn used_variables_iter_with_pile<V>(&self, pile: V) -> impl Iterator<Item = Variable<'bump>>
+    pub fn used_variables_iter_with_pile<V>(
+        &self,
+        mut pile: V,
+    ) -> impl Iterator<Item = Variable<'bump>>
     where
         V: DerefMut<Target = Vec<((), Self)>> + Deref<Target = Vec<((), Self)>>,
     {
-        self.iter_with_pile(pile).filter_map(|f| match f.as_ref() {
-            RichFormula::Var(v) => Some(*v),
-            _ => None,
-        })
+        pile.clear();
+        pile.push(((), self.clone()));
+        FormulaIterator {
+            pile,
+            passed_along: None,
+            flags: IteratorFlags::QUANTIFIER,
+            f: |_, f| {
+                // let next = match f.as_ref() {
+                //     RichFormula::Fun(_, args) => Some(ArcIntoIter::from(args)),
+                //     _ => None,
+                // };
+                // (Some(f), repeat_n_zip((), next.into_iter().flatten()))
+                let (v, n) = match f.as_ref() {
+                    RichFormula::Fun(fun, args) => {
+                        let bvars = fun
+                            .as_quantifer()
+                            .map(|q| VecRefClone::Vec(Arc::clone(&q.bound_variables)));
+                        (bvars, VecRefClone::Vec(Arc::clone(&args)))
+                    }
+                    RichFormula::Var(v) => (Some(VecRefClone::Owned(*v)), Default::default()),
+                    _ => (None, Default::default()),
+                };
+                (v, repeat_n_zip((), n))
+            },
+        }
+        .flat_map(|iv| iv.into_iter())
     }
 
     pub fn iter_with_pile<V>(&self, mut pile: V) -> impl Iterator<Item = ARichFormula<'bump>>

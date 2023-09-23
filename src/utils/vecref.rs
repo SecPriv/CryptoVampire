@@ -253,17 +253,20 @@ where
 {
     VecRef(VecRef<'a, T>),
     Vec(Arc<[T]>),
+    Owned(T),
 }
 
 impl<'a, T: Clone> VecRefClone<'a, T> {
     pub fn len(&self) -> usize {
-        match_as_trait!(self => {Self::VecRef(x) | Self::Vec(x) => {x.len()}})
+        match_as_trait!(self => {Self::VecRef(x) | Self::Vec(x) => {x.len()}, _ => {1}})
     }
 
     pub fn get(&self, i: usize) -> Option<&T> {
         match self {
             Self::VecRef(x) => x.get(i),
             Self::Vec(x) => x.get(i),
+            Self::Owned(x) if i == 0 => Some(x),
+            _ => None,
         }
     }
 
@@ -295,6 +298,7 @@ impl<'b, 'a: 'b, T: Clone> IntoIterator for &'b VecRefClone<'a, T> {
         match self {
             VecRefClone::VecRef(x) => x.into_iter(),
             VecRefClone::Vec(x) => VecRef::from(x).into_iter(),
+            VecRefClone::Owned(x) => VecRef::Single(x).into_iter(),
         }
     }
 }
@@ -308,6 +312,7 @@ impl<'a, T: Clone> IntoIterator for VecRefClone<'a, T> {
         match self {
             VecRefClone::VecRef(x) => IntoIterVecRefClone::VecRef(x.into_iter()),
             VecRefClone::Vec(x) => IntoIterVecRefClone::Vec(x.into()),
+            VecRefClone::Owned(x) => IntoIterVecRefClone::One(x),
         }
     }
 }
@@ -319,6 +324,7 @@ where
 {
     VecRef(IterVecRef<'a, 'a, T>),
     Vec(ArcIntoIter<T>),
+    One(T),
 }
 
 #[derive(Debug, Clone)]
@@ -337,11 +343,25 @@ where
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match_as_trait!(self => {Self::VecRef(x) | Self::Vec(x) => {x.next().map(|e| e.clone())}})
+        match self {
+            Self::VecRef(x) => x.next().map(|e| e.clone()),
+            Self::Vec(x) => x.next().map(|e| e.clone()),
+            Self::One(_) => {
+                if let Self::One(x) = std::mem::replace(self, Self::VecRef(IterVecRef::Empty)) {
+                    Some(x)
+                } else {
+                    unreachable!()
+                }
+            }
+        }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        match_as_trait!(self => {Self::VecRef(x) | Self::Vec(x) => {x.size_hint()}})
+        match self {
+            Self::VecRef(x) => x.size_hint(),
+            Self::Vec(x) => x.size_hint(),
+            _ => (1, Some(1)),
+        }
     }
 
     fn collect<B: FromIterator<Self::Item>>(self) -> B
@@ -351,6 +371,7 @@ where
         match self {
             Self::VecRef(x) => B::from_iter(x.cloned()),
             Self::Vec(x) => B::from_iter(x),
+            Self::One(x) => B::from_iter([x]),
         }
     }
 }
@@ -361,7 +382,11 @@ impl<'a, T: Clone> ExactSizeIterator for IntoIterVecRefClone<'a, T> {}
 
 impl<'a, T: Clone> DoubleEndedIterator for IntoIterVecRefClone<'a, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        match_as_trait!(self => {Self::VecRef(x) | Self::Vec(x) => {x.next_back().map(|e| e.clone())}})
+        match self {
+            Self::VecRef(x) => x.next_back().map(|e| e.clone()),
+            Self::Vec(x) => x.next_back().map(|e| e.clone()),
+            Self::One(_) => self.next()
+        }
     }
 }
 

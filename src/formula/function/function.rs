@@ -465,7 +465,11 @@ impl<'bump> Function<'bump> {
     }
 
     pub fn is_no_op(&self, realm: &impl KnowsRealm) -> bool {
-        (realm.is_evaluated_realm() && matches!(self.as_inner(), InnerFunction::Evaluate(_)))
+        realm.is_evaluated_realm() && matches!(self.as_inner(), InnerFunction::Evaluate(_))
+    }
+
+    pub fn as_quantifer(&self) -> Option<&'bump Quantifier<'bump>> {
+        self.precise_as_term_algebra().and_then(|ta| ta.as_quantifier())
     }
 
     force_lifetime!(Function, 'bump);

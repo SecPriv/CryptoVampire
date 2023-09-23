@@ -1,7 +1,9 @@
-use std::sync::{
+use std::{sync::{
     atomic::{self, AtomicUsize},
     Arc,
-};
+}, fmt::{Display, write}};
+
+use itertools::Itertools;
 
 use crate::{
     formula::{
@@ -73,6 +75,20 @@ pub struct Quantifier<'bump> {
     pub free_variables: Arc<[Variable<'bump>]>,
     pub id: usize,
     pub inner: InnerQuantifier<'bump>,
+}
+
+impl<'bump> Display for Quantifier<'bump> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.inner {
+            InnerQuantifier::Forall { .. } => write!(f, "forall"),
+            InnerQuantifier::Exists { .. } => write!(f, "exists"),
+            InnerQuantifier::FindSuchThat { .. } => write!(f, "findst"),
+        }?;
+        write!(f, "{}{}", "#", self.id)?;
+        write!(f, "{{{}}}", self.free_variables.iter().join(", "))?;
+        write!(f, " ({})", self.bound_variables.iter().join(", "))?;
+        write!(f, " {{ {} }}", self.get_content().iter().join(" }{ "))
+    }
 }
 
 pub fn get_next_quantifer_id() -> usize {

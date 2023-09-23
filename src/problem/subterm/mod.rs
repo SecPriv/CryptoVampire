@@ -1,4 +1,5 @@
 use std::fmt::Write;
+use std::ops::RangeInclusive;
 use std::{
     collections::{BTreeMap, BTreeSet},
     convert::Infallible,
@@ -9,7 +10,7 @@ use std::{
 
 use if_chain::if_chain;
 use itertools::Itertools;
-use log::{trace, log_enabled};
+use log::{error, log_enabled, trace};
 
 use crate::{
     container::allocator::{ContainerTools, Residual},
@@ -359,7 +360,15 @@ where
         keep_guard: bool,
         deeper_kind: DeeperKinds,
     ) -> impl Iterator<Item = (Rc<[Variable<'bump>]>, ARichFormula<'bump>)> + 'a {
-        trace!("preprocess_term -> {}:{}:{}", file!(), line!(), column!());
+        trace!("-------------------- preprocess_term (single) ----------------");
+        if cfg!(debug_assertions) && check_variable_collision(x, &m) {
+            panic!("collision in the variables")
+        }
+
+        if log_enabled!(log::Level::Trace) {
+            // check min_var(c) > max_var(m)
+        }
+
         self.preprocess_terms(
             env,
             ptcl,
@@ -387,14 +396,19 @@ where
         keep_guard: bool,
         deeper_kind: DeeperKinds,
     ) -> impl Iterator<Item = (Rc<[Variable<'bump>]>, ARichFormula<'bump>)> + 'a {
+        trace!("------------------- preprocess_terms ---------------------");
         let realm = env.get_realm();
-
-        trace!("preprocess_terms -> {}:{}:{}", file!(), line!(), column!());
         let steps = ptcl.steps();
 
         // let pile = vec![(ExpantionState::None, m)];
         let pile = //repeat_n_zip(ExpantionState::from_deeper_kind(deeper_kind), m).collect_vec();
             m.into_iter().map(|FormlAndVars { bounded_variables, formula }| {
+
+                if cfg!(debug_assertions) &&
+                 check_variable_collision(x, &formula) && 
+                 check_variable_collision_list(x, &bounded_variables) {
+                    panic!("collision in the variables")
+                }
                 (ExpantionState::from_deeped_kind_and_vars(deeper_kind, bounded_variables), formula)
             }).collect_vec();
 
@@ -403,7 +417,7 @@ where
             passed_along: None,
             flags: IteratorFlags::default(),
             f: move |state: ExpantionState<'bump>, f| {
-                trace!("\t\t{x} ⊑ {}", &f);
+                trace!("{x} ⊑ {}", &f);
                 let inner_iter = ExpantionContent {
                     state: state.clone(),
                     content: f.clone(),
@@ -411,12 +425,6 @@ where
                 .expand(steps.iter().cloned(), ptcl.graph(), false)
                 .into_iter()
                 .map(|ec| ec.as_tuple());
-                trace!(
-                    "inner subterm -> {}:{}:{}",
-                    file!(),
-                    line!(),
-                    column!()
-                );
                 let SubtermResult { unifier, nexts } = self.aux.is_subterm_and_next(x, &f);
 
                 let return_value = match unifier {
@@ -434,16 +442,8 @@ where
                         if keep_guard {
                             guard.extend(state.condition().into_iter().cloned())
                         }
-                        // let formula = exists(
-                        //     state
-                        //         .bound_variables()
-                        //         .iter()
-                        //         // .flat_map(|vars| vars.iter().cloned()),
-                        //         .cloned(),
-                        //     formula::ands(guard),
-                        // );
                         let formula = formula::ands(guard);
-                        trace!("{}:{}:{} -> {formula}", file!(), line!(), column!());
+                        trace!("{formula}");
                         Some((state.owned_bound_variable(), formula))
                     }
                 };
@@ -469,10 +469,10 @@ where
                     let [x, m]: [ARichFormula; 2] = [x.into(), m.into()];
                     let sort = m.get_sort().expect_display("term algebra has a sort");
                     trace!(
-                        "[{}]",
-                        funs.keys().map(|fsort| fsort.as_reference()).join(", ")
+                        "[{}]\n{:?}",
+                        funs.keys().map(|fsort| fsort.as_reference()).join(", "),
+                        &funs
                     );
-                    trace!("{:?}", &funs);
                     funs.get(&sort.as_fo())
                         .expect(&format!("unsupported sort: {sort}, {sort:?}"))
                         .f_a([x, m])
@@ -573,6 +573,62 @@ where
             // Err(format!("{} => {} is wrong", self.sort(), env.get_realm()))
             anyhow::bail!("{} => {} is wrong", self.sort(), env.get_realm())
         }
+    }
+}
+
+fn check_variable_collision(x: &ARichFormula<'_>, m: &ARichFormula<'_>) -> bool {
+    let varx = x
+        .get_used_variables()
+        .iter()
+        .map(|v| v.id)
+        .minmax()
+        .into_option()
+        .map(|(a, b)| a..=b);
+    let varm = m
+        .get_used_variables()
+        .iter()
+        .map(|v| v.id)
+        .minmax()
+        .into_option();
+    match (varx, varm) {
+        (Some(r), Some((vminm, vmaxm))) if r.contains(&vminm) || r.contains(&vmaxm) => {
+            error!(
+                "variable collided:\n\t- [{}, {}] {}\n\t- [{}, {}] {}",
+                r.start(),
+                r.end(),
+                x,
+                vminm,
+                vmaxm,
+                &m
+            );
+            true
+        }
+        _ => false,
+    }
+}
+
+fn check_variable_collision_list(x: &ARichFormula<'_>, m: &[Variable<'_>]) -> bool {
+    let varx = x
+        .get_used_variables()
+        .iter()
+        .map(|v| v.id)
+        .minmax()
+        .into_option()
+        .map(|(a, b)| a..=b);
+    let varm = m.iter().map(|v| v.id).minmax().into_option();
+    match (varx, varm) {
+        (Some(r), Some((vminm, vmaxm))) if r.contains(&vminm) || r.contains(&vmaxm) => {
+            error!(
+                "variable collided with list:\n\t- [{}, {}] {}\n\t- [{}, {}]",
+                r.start(),
+                r.end(),
+                x,
+                vminm,
+                vmaxm,
+            );
+            true
+        }
+        _ => false,
     }
 }
 
@@ -714,18 +770,6 @@ pub fn into_exist_formula<'bump>(
         } else {
             None
         }
-        // let max_f = max.first().map(|(_, f)| *f);
-        // let mut rev_max = BTreeMap::new();
-        // for (v, f_idx) in max {
-        //     rev_max
-        //         .entry(f_idx.as_slice())
-        //         .and_modify(|vars: &mut BTreeSet<Variable>| {
-        //             vars.insert(*v);
-        //         })
-        //         .or_insert(BTreeSet::new());
-        // }
-
-        // rev_max.pop_last()
     };
 
     match max {

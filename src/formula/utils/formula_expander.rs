@@ -17,7 +17,7 @@ use crate::{
 
 use bitflags::bitflags;
 use itertools::Itertools;
-use log::trace;
+use log::{log_enabled, trace};
 bitflags! {
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
         pub struct DeeperKinds: u8 {
@@ -84,6 +84,11 @@ impl<'bump> ExpantionState<'bump> {
             .chain(vars)
             .unique_by(|v| v.id)
             .collect();
+        trace!(
+            "adding variables:\n\t[{}] -> [{}]",
+            self.bound_variables.iter().join(", "),
+            bound_variables.iter().join(", ")
+        );
         Self {
             bound_variables,
             ..self.clone()
@@ -189,6 +194,7 @@ impl<'bump> ExpantionContent<'bump> {
 						TermAlgebra::Quantifier(q)
 							if deeper_kinds.contains(DeeperKinds::QUANTIFIER) =>
 						{
+                            trace!("expanding quantifier:\n\t{q}");
                             let substitution = FrozenSubst::new_from(
                                 q.free_variables.iter().map(|v| v.id).collect_vec(), args.iter().cloned().collect_vec());
                             let new_state = self
@@ -202,6 +208,7 @@ impl<'bump> ExpantionContent<'bump> {
 									content: f.apply_substitution2(&substitution),
 								}
 							});
+
                             itertools::chain!(
                                 // iter,
                                 quantifier_iter)

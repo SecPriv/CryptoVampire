@@ -67,7 +67,7 @@ fn main() {
 
     env_logger::Builder::new()
     .format(|buf, record| {
-        let str = record.args().to_string().replace("\n", "\t\n");
+        let str = record.args().to_string().replace("\n", "\n\t");
         writeln!(
             buf,
             "[{}] in {}:{}\n\t{}",
