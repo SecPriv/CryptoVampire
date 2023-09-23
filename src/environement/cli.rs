@@ -11,7 +11,7 @@ pub struct Args {
     /// output location
     ///
     /// This should be a file unless `lemmas` is set
-    #[arg(short, long, value_name = "FILE|DIR")]
+    #[arg(short, long, value_name = "FILE|DIR", default_value = "/dev/stdout")]
     pub output_location: PathBuf,
 
     /// uses the lemmas

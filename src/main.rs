@@ -78,7 +78,8 @@ fn main() {
             str
         )
     })
-    .filter(None, LevelFilter::Trace)
+    // .filter(None, LevelFilter::Trace)
+    .parse_default_env()
     .init();
 
     ScopedContainer::scoped(|container| {

@@ -10,7 +10,7 @@ use std::{
 
 use if_chain::if_chain;
 use itertools::Itertools;
-use log::{error, log_enabled, trace};
+use log::{error, log_enabled, trace, warn};
 
 use crate::{
     container::allocator::{ContainerTools, Residual},
@@ -362,7 +362,7 @@ where
     ) -> impl Iterator<Item = (Rc<[Variable<'bump>]>, ARichFormula<'bump>)> + 'a {
         trace!("-------------------- preprocess_term (single) ----------------");
         if cfg!(debug_assertions) && check_variable_collision(x, &m) {
-            panic!("collision in the variables")
+            error!("collision in the variables")
         }
 
         if log_enabled!(log::Level::Trace) {
@@ -405,9 +405,9 @@ where
             m.into_iter().map(|FormlAndVars { bounded_variables, formula }| {
 
                 if cfg!(debug_assertions) &&
-                 check_variable_collision(x, &formula) && 
-                 check_variable_collision_list(x, &bounded_variables) {
-                    panic!("collision in the variables")
+                 (check_variable_collision(x, &formula) || 
+                 check_variable_collision_list(x, &bounded_variables)) {
+                    error!("collision in the variables")
                 }
                 (ExpantionState::from_deeped_kind_and_vars(deeper_kind, bounded_variables), formula)
             }).collect_vec();
@@ -592,7 +592,7 @@ fn check_variable_collision(x: &ARichFormula<'_>, m: &ARichFormula<'_>) -> bool 
         .into_option();
     match (varx, varm) {
         (Some(r), Some((vminm, vmaxm))) if r.contains(&vminm) || r.contains(&vmaxm) => {
-            error!(
+            warn!(
                 "variable collided:\n\t- [{}, {}] {}\n\t- [{}, {}] {}",
                 r.start(),
                 r.end(),
@@ -618,7 +618,7 @@ fn check_variable_collision_list(x: &ARichFormula<'_>, m: &[Variable<'_>]) -> bo
     let varm = m.iter().map(|v| v.id).minmax().into_option();
     match (varx, varm) {
         (Some(r), Some((vminm, vmaxm))) if r.contains(&vminm) || r.contains(&vmaxm) => {
-            error!(
+            warn!(
                 "variable collided with list:\n\t- [{}, {}] {}\n\t- [{}, {}]",
                 r.start(),
                 r.end(),

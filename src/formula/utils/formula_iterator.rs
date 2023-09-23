@@ -3,11 +3,14 @@ use std::ops::{Deref, DerefMut};
 // use crate::problem::problem::Problem;
 
 use bitflags::bitflags;
+use itertools::Itertools;
+use log::trace;
 
 use crate::{
     formula::{
         formula::{ARichFormula, RichFormula},
         function::{inner::term_algebra::TermAlgebra, InnerFunction},
+        manipulation::FrozenSubst,
     },
     utils::utils::repeat_n_zip,
 };
@@ -51,12 +54,21 @@ where
             None => None,
             Some((p, formula)) => {
                 match formula.as_ref() {
-                    RichFormula::Fun(fun, _args) => match fun.as_inner() {
+                    RichFormula::Fun(fun, args) => match fun.as_inner() {
                         InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q))
                             if self.flags.contains(IteratorFlags::QUANTIFIER) =>
                         {
-                            let iter = q.get_content();
-                            let iter = repeat_n_zip(p.clone(), iter.iter().cloned()); //.map(|(p, f)| (p, f));
+                            trace!("iter thorugh quantifier");
+                            let substitution = FrozenSubst::new_from(
+                                q.free_variables.iter().map(|v| v.id).collect_vec(),
+                                args.iter().cloned().collect_vec(),
+                            );
+                            let iter = q
+                                .get_content()
+                                .into_vec()
+                                .into_iter()
+                                .map(move |f| f.apply_substitution2(&substitution));
+                            let iter = repeat_n_zip(p.clone(), iter); //.map(|(p, f)| (p, f));
                             self.pile.extend(iter)
                         }
                         _ => {}
