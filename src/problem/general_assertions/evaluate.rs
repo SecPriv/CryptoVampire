@@ -21,6 +21,7 @@ use crate::{
             traits::FixedSignature,
             Function, InnerFunction,
         },
+        manipulation::FrozenOVSubstF,
         sort::{
             builtins::{BOOL, CONDITION, MESSAGE},
             FOSort, Sort,
@@ -385,34 +386,24 @@ pub fn generate_quantifier<'bump>(
 
             declarations.extend(skolems.iter().map(|f| Declaration::FreeFunction(*f)));
 
-            let subst_source = q.bound_variables.iter().map(|v| v.id).collect_vec();
-            let subst_target = skolems
-                .iter()
-                .map(|f| f.f_a(q.free_variables.iter()))
-                .collect_vec();
+            let substitution = {
+                let subst_source = q.bound_variables.iter().map(|v| v.id);
+                let subst_target = skolems.iter().map(|f| f.f_a(q.free_variables.iter()));
 
-            let applied_condition = condition
-                .into_inner()
-                .apply_substitution(subst_source.clone(), &subst_target);
-            let applied_l = success
-                .into_inner()
-                .apply_substitution(subst_source.clone(), &subst_target);
-            let applied_r = faillure
-                .into_inner()
-                .apply_substitution(subst_source.clone(), &subst_target);
+                FrozenOVSubstF::from_iter(subst_source.zip_eq(subst_target).map_into())
+            };
+
+            let applied_condition = condition.apply_substitution2(&substitution);
+            let applied_l = success.apply_substitution2(&substitution);
+            let applied_r = faillure.apply_substitution2(&substitution);
 
             assertions.extend(
                 [
-                    mforall!(
-                        q.free_variables
-                            .iter()
-                            .chain(q.bound_variables.iter())
-                            .cloned(),
-                        {
-                            pbl.evaluator.eval(condition)
-                                >> pbl.evaluator.eval(applied_condition.clone())
-                        }
-                    ),
+                    mforall!(q.free_variables.iter().cloned(), {
+                        mforall!(q.bound_variables.iter().cloned(), {
+                            !pbl.evaluator.eval(condition)
+                        }) | pbl.evaluator.eval(applied_condition.clone())
+                    }),
                     mforall!(q.free_variables.iter().cloned(), {
                         meq(
                             pbl.evaluator.eval(

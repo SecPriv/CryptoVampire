@@ -29,6 +29,12 @@ impl<'a, T: Clone> FrozenOVSubst<'a, T> {
     }
 }
 
+impl<'a, A:Clone> FromIterator<OneVarSubst<A>> for FrozenOVSubst<'a, A> {
+    fn from_iter<T: IntoIterator<Item = OneVarSubst<A>>>(iter: T) -> Self {
+        Self { content:  iter.into_iter().collect()}
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct FrozenSubst<'a, T: Clone> {
     vars: VecRefClone<'a, usize>,
