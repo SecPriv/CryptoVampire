@@ -7,7 +7,7 @@ use crate::{
     environement::{environement::Environement, traits::KnowsRealm},
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
-        formula::{self, forall, meq, ARichFormula, RichFormula},
+        formula::{self, ands, forall, meq, ARichFormula, RichFormula},
         function::{
             builtin::{self, TRUE},
             Function,
@@ -115,9 +115,15 @@ impl<'bump> IntCtxt<'bump> {
         }
 
         if env.define_subterm() {
-            define_subterm(env, pbl, assertions, declarations, &subterm_main, true);
-            define_subterm(env, pbl, assertions, declarations, &subterm_key, false);
-            define_subterm(env, pbl, assertions, declarations, &subterm_rand, false);
+            define_subterms(
+                env,
+                pbl,
+                assertions,
+                declarations,
+                &subterm_main,
+                &subterm_key,
+                &subterm_rand,
+            );
         }
 
         if env.with_general_crypto_axiom() && env.define_subterm() {
@@ -147,6 +153,22 @@ impl<'bump> IntCtxt<'bump> {
                 }),
             ))
         }
+
+        // general axioms
+        assertions.extend(
+            [
+                mforall!(m!0:message_sort, c!1:message_sort, k!2:message_sort; {
+                    meq(
+                        pbl.evaluator.eval(m),
+                        pbl.evaluator.eval(self.dec.f_a([self.enc.f_a([m, c, k]), k.into()]))
+                    )
+                }),
+                mforall!(m!0:message_sort, c!1:message_sort, k!2:message_sort; {
+                        pbl.evaluator.eval(self.verify.f_a([self.enc.f_a([m, c, k]), k.into()]))
+                }),
+            ]
+            .map(Axiom::base),
+        )
     }
 
     pub fn preprocess<'a>(
@@ -183,6 +205,8 @@ impl<'bump> IntCtxt<'bump> {
             .unique()
             .collect_vec();
 
+        // term of the for enc(_, nonce(_), _)
+        // with variables unchanged
         let candidates_enc = pbl
             .list_top_level_terms()
             .flat_map(move |f| f.iter()) // sad...
@@ -195,7 +219,8 @@ impl<'bump> IntCtxt<'bump> {
                             then {
                             let [message, key, rand] =
                                 [&args[0], &args[2], &args2[0]]
-                                .map(|f| f.translate_vars(max_var).into_arc());
+                                // .map(|f| f.translate_vars(max_var).into_arc());
+                                .map(|f| f.clone());
                                 Some(IntCtxtEncCandidates {
                                         message,
                                         key,
@@ -219,13 +244,15 @@ impl<'bump> IntCtxt<'bump> {
         let candidates = candidates_verif.into_iter().filter_map(
             move |IntCtxtVerifCandidates { cipher, key }| {
                 let array = [&cipher, &key];
-                let max_var = array
-                    .iter()
-                    .flat_map(|f| f.used_variables_iter_with_pile(pile2.borrow_mut()))
-                    .map(|Variable { id, .. }| id)
-                    .max()
-                    .unwrap_or(max_var)
-                    + 1;
+                let max_var = std::cmp::max(
+                    array
+                        .iter()
+                        .flat_map(|f| f.used_variables_iter_with_pile(pile2.borrow_mut()))
+                        .map(|Variable { id, .. }| id)
+                        .max()
+                        .unwrap_or(0),
+                    max_var,
+                ) + 1;
                 let free_vars = array
                     .iter()
                     .flat_map(|f| f.get_free_vars().into_iter())
@@ -237,7 +264,7 @@ impl<'bump> IntCtxt<'bump> {
                 let r_f = pbl
                     .name_caster
                     .cast(MESSAGE.as_sort(), r_var.into_formula());
-                let _max_var = max_var + 2;
+                let max_var = max_var + 2;
 
                 let k_sc = side_condition
                     && subterm_key
@@ -266,47 +293,64 @@ impl<'bump> IntCtxt<'bump> {
                         DeeperKinds::all(),
                     );
 
-                    let key_variables: BTreeSet<_> = key.get_free_vars().into_iter().collect();
+                    // let key_variables: BTreeSet<_> = key.get_free_vars().into_iter().collect();
 
                     let other_sc = {
                         // ensure r is well used
                         // the candidate with the right key (message, rand, unifier_key)
-                        candidates_enc
+                        let candidates_enc = candidates_enc
                             .iter()
-                            .filter_map(|IntCtxtEncCandidates { rand, message, key }| {
-                                let unifier_key: Arc<[_]> = Unifier::mgu(&k_f, &key)?
-                                    .as_equalities()
-                                    .unwrap_or(vec![TRUE.into_arc()])
-                                    .into();
-                                let mut free_vars = key_variables.clone();
-                                free_vars.extend(key.get_free_vars().into_iter());
-                                Some((message, rand, unifier_key, Rc::new(free_vars)))
-                            })
                             .tuple_combinations::<(_, _)>()
                             .filter_map(
                                 |(
-                                    (message1, rand1, unifier_key1, free_vars1),
-                                    (message2, rand2, unifier_key2, free_vars2),
+                                    IntCtxtEncCandidates {
+                                        rand: r1,
+                                        message: m1,
+                                        key: k1,
+                                    },
+                                    IntCtxtEncCandidates {
+                                        rand: r2,
+                                        message: m2,
+                                        key: k2,
+                                    },
                                 )| {
-                                    let unifier_rand = Unifier::mgu(rand1, rand2)?
-                                        .as_equalities()
-                                        .unwrap_or(vec![TRUE.into_arc()])
-                                        .into();
-                                    let mut free_vars: BTreeSet<_> =
-                                        free_vars1.union(&free_vars2).cloned().collect();
-                                    free_vars.extend(itertools::chain!(
-                                        rand1.get_free_vars().into_iter(),
-                                        rand2.get_free_vars().into_iter(),
-                                    ));
-                                    todo!()
-                                    // forall(free_vars,
-                                    //     unifier_rand.
-                                    // )
+                                    fn unify<'bump>(
+                                        a: &ARichFormula<'bump>,
+                                        b: &ARichFormula<'bump>,
+                                    ) -> Option<Vec<ARichFormula<'bump>>>
+                                    {
+                                        Unifier::mgu(a, b).map(|u| {
+                                            u.as_equalities()
+                                                .unwrap_or(vec![TRUE.clone().into_arc()])
+                                        })
+                                    }
+                                    let unifier_k = unify(&k_f, &k1)?;
+
+                                    let r2 = r2.translate_vars(max_var).into_arc();
+                                    let unfier_r = unify(&r1, &r2)?;
+
+                                    let k2 = k2.translate_vars(max_var).into_arc();
+                                    let unifier_k12 = unify(&k1, &k2)?;
+
+                                    let m2 = m2.translate_vars(max_var).into_arc();
+                                    let unifier_m = unify(&m1, &m2)?;
+
+                                    let free_vars = BTreeSet::from_iter(
+                                        [&r1, &m1, &k1, &r2, &m2, &r2]
+                                            .into_iter()
+                                            .flat_map(|f| f.get_free_vars().into_iter()),
+                                    );
+
+                                    Some(forall(
+                                        free_vars,
+                                        ands(itertools::chain!(unfier_r, unifier_k,))
+                                            >> ands(itertools::chain!(unifier_k12, unifier_m)),
+                                    ))
                                 },
                             );
-
-                        todo!();
+                        ands(candidates_enc)
                     };
+                    let max_var = 2 * max_var;
                     // candidates_enc
                     //     .iter()
                     //     .map(|IntCtxtEncCandidates { rand, message, key }| {
@@ -327,16 +371,17 @@ impl<'bump> IntCtxt<'bump> {
                     //     });
 
                     Some(mforall!(free_vars, {
-                        pbl.evaluator
+                        (pbl.evaluator
                             .eval(self.verify.f([cipher.clone(), k_f.clone()]))
-                            & mforall!([r_var], { formula::ands(other_sc) })
-                                >> mexists!([u_var, r_var], {
-                                    into_exist_formula(disjunction)
-                                        & meq(
-                                            pbl.evaluator.eval(cipher.clone()),
-                                            pbl.evaluator.eval(n_c_f),
-                                        )
-                                })
+                            // & mforall!([r_var], { other_sc })
+                            & other_sc)
+                            >> mexists!([u_var, r_var], {
+                                into_exist_formula(disjunction)
+                                    & meq(
+                                        pbl.evaluator.eval(cipher.clone()),
+                                        pbl.evaluator.eval(n_c_f),
+                                    )
+                            })
                     }))
                 } else {
                     None
@@ -347,6 +392,24 @@ impl<'bump> IntCtxt<'bump> {
         // [].into_iter()
         candidates
     }
+}
+
+fn define_subterms<'bump>(
+    env: &Environement<'bump>,
+    pbl: &Problem<'bump>,
+    assertions: &mut Vec<Axiom<'bump>>,
+    declarations: &mut Vec<Declaration<'bump>>,
+    subterm_main: &Arc<Subterm<'bump, impl SubtermAux<'bump>>>,
+    subterm_key: &Arc<Subterm<'bump, impl SubtermAux<'bump>>>,
+    subterm_rand: &Arc<Subterm<'bump, impl SubtermAux<'bump>>>,
+) {
+    // if you're in the evaluated realm we don't need to define anything because it wouldn't be sound
+    if env.is_evaluated_realm() {
+        return;
+    }
+    define_subterm(env, pbl, assertions, declarations, subterm_main, true);
+    define_subterm(env, pbl, assertions, declarations, subterm_key, false);
+    define_subterm(env, pbl, assertions, declarations, subterm_rand, false);
 }
 
 #[allow(unused_labels)]
