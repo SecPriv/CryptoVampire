@@ -66,10 +66,17 @@ impl<'bump> Problem<'bump> {
     where
         'bump: 'a,
     {
-        self.assertions
-            .iter()
-            .chain(std::iter::once(&self.query))
-            .chain(self.protocol.list_top_level_terms_short_lifetime())
+        // self.assertions
+        //     .iter()
+        //     .chain(std::iter::once(&self.query))
+        //     .chain(self.protocol.list_top_level_terms_short_lifetime())
+
+        itertools::chain!(
+            &self.assertions,
+            [&self.query],
+            &self.lemmas,
+            self.protocol.list_top_level_terms_short_lifetime()
+        )
     }
 
     pub fn max_var(&self) -> usize {
@@ -79,7 +86,8 @@ impl<'bump> Problem<'bump> {
             .flat_map(|f| f.used_variables_iter_with_pile(pile.borrow_mut()))
             .map(|Variable { id, .. }| id)
             .max()
-            .unwrap_or(0) + 1
+            .unwrap_or(0)
+            + 1
     }
 
     pub fn container(&self) -> &'bump ScopedContainer<'bump> {
