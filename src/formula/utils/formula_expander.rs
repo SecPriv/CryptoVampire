@@ -17,7 +17,7 @@ use crate::{
 
 use bitflags::bitflags;
 use itertools::Itertools;
-use log::{log_enabled, trace};
+use log::trace;
 bitflags! {
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
         pub struct DeeperKinds: u8 {

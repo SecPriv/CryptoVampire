@@ -1,7 +1,10 @@
-use std::{sync::{
-    atomic::{self, AtomicUsize},
-    Arc,
-}, fmt::{Display, write}};
+use std::{
+    fmt::Display,
+    sync::{
+        atomic::{self, AtomicUsize},
+        Arc,
+    },
+};
 
 use itertools::Itertools;
 

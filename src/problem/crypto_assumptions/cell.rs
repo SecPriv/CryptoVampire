@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use itertools::Itertools;
 
 use crate::{
@@ -45,7 +43,7 @@ impl Cell {
                             sort,
                         })
                         .collect();
-                    let max_var = max_var + vars.len();
+                    let _max_var = max_var + vars.len();
 
                     let cell_call = c.function().f_a(vars.iter().chain([&step_var]));
 

@@ -59,7 +59,7 @@ impl<'bump> Evaluator<'bump> {
     }
 
     /// Try to evaluate a term. That is calling the right 'evaluate' function on it
-    /// 
+    ///
     /// Return error if it can't decide the sort
     pub fn try_eval(
         &self,

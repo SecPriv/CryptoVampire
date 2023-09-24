@@ -2,7 +2,7 @@ use std::{fmt::Display, ops::Deref};
 mod cached_builtins;
 
 use itertools::Itertools;
-use log::{trace, log_enabled};
+use log::{log_enabled, trace};
 use pest::Span;
 
 use crate::{
@@ -92,12 +92,15 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::LetIn<'a> {
     #[allow(unused_assignments)]
     fn parse(
         &self,
-        env: &Environement<'bump, 'a>,
-        bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
-        state: &impl KnowsRealm,
-        expected_sort: Option<SortProxy<'bump>>,
+        _env: &Environement<'bump, 'a>,
+        _bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
+        _state: &impl KnowsRealm,
+        _expected_sort: Option<SortProxy<'bump>>,
     ) -> Result<Self::R, E> {
-        return err(merr(self.span, "let ... in are not supported yet".to_owned()));
+        return err(merr(
+            self.span,
+            "let ... in are not supported yet".to_owned(),
+        ));
         todo!()
 
         // // current length of the pile of variable
@@ -500,7 +503,7 @@ fn parse_application<'b, 'a, 'bump>(
     function: &FunctionCache<'a, 'bump>,
     args: implvec!(&'b ast::Term<'a>),
 ) -> Result<ARichFormula<'bump>, E> {
-    if cfg!(debug_assertions){
+    if cfg!(debug_assertions) {
         try_trace!("\tparsing head: {}", function.get_function().name())
     }
     // get the evaluated version if needed

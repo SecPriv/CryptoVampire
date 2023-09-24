@@ -7,9 +7,9 @@ use crate::{
     implvec,
     parser::{ast, merr, parser::Environement, IntoRuleResultFunction, E},
     problem::crypto_assumptions::{
-        CryptoAssumption, EufCmaMac, EufCmaSign, Nonce, EUF_CMA_MAC_SIGNATURE,
+        CryptoAssumption, EufCmaMac, EufCmaSign, IntCtxt, Nonce, EUF_CMA_MAC_SIGNATURE,
         EUF_CMA_PK_SIGNATURE, EUF_CMA_SIGN_SIGNATURE, EUF_CMA_VERIFY_SIGNATURE,
-        INT_CTXT_DEC_SIGNATURE, INT_CTXT_ENC_SIGNATURE, INT_CTXT_VERIFY_SIGNATURE, IntCtxt,
+        INT_CTXT_DEC_SIGNATURE, INT_CTXT_ENC_SIGNATURE, INT_CTXT_VERIFY_SIGNATURE,
     },
     utils::traits::NicerError,
 };

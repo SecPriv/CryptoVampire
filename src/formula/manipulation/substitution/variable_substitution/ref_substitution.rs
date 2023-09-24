@@ -61,7 +61,7 @@ impl<'a, T: Clone> FrozenSubst<'a, T> {
     }
 
     /// panics if not valid
-    pub fn assert_valid(&self)  {
+    pub fn assert_valid(&self) {
         assert_eq!(self.vars.len(), self.formulas.len())
     }
 

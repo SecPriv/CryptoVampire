@@ -1,11 +1,14 @@
 use std::{
-    cell::{RefCell, Ref},
+    cell::RefCell,
     ptr::NonNull,
     sync::atomic::{self, AtomicU16},
 };
 
 use crate::{
-    formula::{function::{InnerFunction, Function}, sort::InnerSort},
+    formula::{
+        function::{Function, InnerFunction},
+        sort::InnerSort,
+    },
     problem::{cell::InnerMemoryCell, step::InnerStep},
     utils::{string_ref::StrRef, traits::RefNamed},
 };
@@ -234,11 +237,16 @@ impl<'bump> ScopedContainer<'bump> {
         }
     }
 
-    pub fn get_functions_vec_filtered<F>(&'bump self, f:F) -> Vec<Function<'bump>> where F:Fn(&Function<'bump>) -> bool {
+    pub fn get_functions_vec_filtered<F>(&'bump self, f: F) -> Vec<Function<'bump>>
+    where
+        F: Fn(&Function<'bump>) -> bool,
+    {
         let function = self.functions.borrow();
-        function.iter().map(|f| 
-            Function::from_raw(*f, Default::default())
-        ).filter(f).collect_vec()
+        function
+            .iter()
+            .map(|f| Function::from_raw(*f, Default::default()))
+            .filter(f)
+            .collect_vec()
     }
 }
 

@@ -1,6 +1,5 @@
 use std::{convert::Infallible, error::Error, fmt::Debug, ptr::NonNull};
 
-use clap::error;
 use itertools::Itertools;
 use log::error;
 

@@ -1,8 +1,8 @@
+mod cell;
 mod euf_cma_mac;
 mod euf_cma_sign;
 mod int_ctxt;
 mod nonce;
-mod cell;
 
 pub use nonce::SubtermNonce;
 
@@ -20,12 +20,7 @@ pub use int_ctxt::{
 };
 
 use crate::environement::environement::Environement;
-use crate::formula::{
-    file_descriptior::{axioms::Axiom, declare::Declaration},
-    formula::RichFormula,
-    function::Function,
-    variable::Variable,
-};
+use crate::formula::file_descriptior::{axioms::Axiom, declare::Declaration};
 
 use self::cell::Cell;
 pub use self::euf_cma_mac::EufCmaMac;
@@ -43,7 +38,7 @@ pub enum CryptoAssumption<'bump> {
     EufCmaSign(EufCmaSign<'bump>),
     IntCtxtSenc(IntCtxt<'bump>),
     Nonce(Nonce),
-    MemoryCell(Cell)
+    MemoryCell(Cell),
 }
 
 impl<'bump> Generator<'bump> for CryptoAssumption<'bump> {
@@ -57,7 +52,9 @@ impl<'bump> Generator<'bump> for CryptoAssumption<'bump> {
         match self {
             CryptoAssumption::EufCmaMac(euf) => euf.generate(assertions, declarations, env, pbl),
             CryptoAssumption::EufCmaSign(euf) => euf.generate(assertions, declarations, env, pbl),
-            CryptoAssumption::IntCtxtSenc(intctx)=> intctx.generate(assertions, declarations, env, pbl),
+            CryptoAssumption::IntCtxtSenc(intctx) => {
+                intctx.generate(assertions, declarations, env, pbl)
+            }
             CryptoAssumption::Nonce(nonce) => nonce.generate(assertions, declarations, env, pbl),
             CryptoAssumption::MemoryCell(cell) => cell.generate(assertions, declarations, env, pbl),
         }

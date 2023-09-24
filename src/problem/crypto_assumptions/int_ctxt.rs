@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::BTreeSet, hash::Hash, rc::Rc, sync::Arc};
+use std::{cell::RefCell, collections::BTreeSet, hash::Hash, sync::Arc};
 
 use if_chain::if_chain;
 use itertools::Itertools;
@@ -7,11 +7,8 @@ use crate::{
     environement::{environement::Environement, traits::KnowsRealm},
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
-        formula::{self, ands, forall, meq, ARichFormula, RichFormula},
-        function::{
-            builtin::{self, TRUE},
-            Function,
-        },
+        formula::{ands, forall, meq, ARichFormula, RichFormula},
+        function::{builtin::TRUE, Function},
         function::{inner::subterm::Subsubterm, name_caster_collection::NameCasterCollection},
         manipulation::Unifier,
         sort::{
@@ -350,7 +347,7 @@ impl<'bump> IntCtxt<'bump> {
                             );
                         ands(candidates_enc)
                     };
-                    let max_var = 2 * max_var;
+                    let _max_var = 2 * max_var;
                     // candidates_enc
                     //     .iter()
                     //     .map(|IntCtxtEncCandidates { rand, message, key }| {

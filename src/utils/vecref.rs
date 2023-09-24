@@ -385,7 +385,7 @@ impl<'a, T: Clone> DoubleEndedIterator for IntoIterVecRefClone<'a, T> {
         match self {
             Self::VecRef(x) => x.next_back().map(|e| e.clone()),
             Self::Vec(x) => x.next_back().map(|e| e.clone()),
-            Self::One(_) => self.next()
+            Self::One(_) => self.next(),
         }
     }
 }

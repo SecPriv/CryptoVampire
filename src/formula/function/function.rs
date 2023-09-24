@@ -285,11 +285,11 @@ impl<'bump> Function<'bump> {
         let input_sorts = input_sorts.into_iter().collect_vec();
         if log_enabled!(log::Level::Trace) {
             let mut str = String::new();
-            write!(&mut str, "\t{}(", name.deref());
+            write!(&mut str, "\t{}(", name.deref()).unwrap();
             for s in &input_sorts {
-                write!(&mut str, "{s},");
+                write!(&mut str, "{s},").unwrap();
             }
-            write!(&mut str, ") -> {output_sort}");
+            write!(&mut str, ") -> {output_sort}").unwrap();
             trace!("new_user_term_algebra:\n\t{str}")
         }
         assert!(output_sort.is_term_algebra());

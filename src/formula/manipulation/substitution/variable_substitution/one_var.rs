@@ -1,4 +1,4 @@
-use log::{log_enabled, error};
+use log::{error, log_enabled};
 
 use crate::formula::{
     formula::{ARichFormula, RichFormula},

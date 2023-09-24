@@ -6,17 +6,14 @@ use std::{
 
 use crate::{
     formula::{
-        function::{
-            builtin::{AND, IMPLIES, NOT, OR},
-            Function,
-        },
+        function::builtin::{AND, IMPLIES, NOT, OR},
         utils::formula_iterator::{FormulaIterator, IteratorFlags},
         variable::Variable,
     },
     utils::{
         arc_into_iter::ArcIntoIter,
         utils::{repeat_n_zip, StackBox},
-        vecref::{VecRef, VecRefClone},
+        vecref::VecRefClone,
     },
 };
 

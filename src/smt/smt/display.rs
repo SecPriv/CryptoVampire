@@ -269,14 +269,16 @@ generate_diplay!(SmtFile);
 impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a SmtFile<'bump>> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if log_enabled!(log::Level::Trace) {
-            let str = self.content
+            let str = self
+                .content
                 .content
                 .iter()
                 .filter_map(|smt| match smt {
                     Smt::DeclareFun(f) => Some(f),
                     _ => None,
                 })
-                .map(|f| f.name()).join(", ");
+                .map(|f| f.name())
+                .join(", ");
             trace!("trying to define:\n\t{str}")
         }
         let mut i = 1;

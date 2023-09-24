@@ -2,7 +2,7 @@ use std::{ops::Deref, sync::Arc};
 
 use hashbrown::{HashMap, HashSet};
 use itertools::Itertools;
-use log::{trace, error};
+use log::trace;
 use pest::Span;
 
 use crate::{
@@ -11,7 +11,7 @@ use crate::{
     f,
     formula::{
         function::{
-            inner::{evaluate::Evaluator, term_algebra::quantifier},
+            inner::evaluate::Evaluator,
             name_caster_collection::{NameCasterCollection, DEFAULT_NAME_CASTER},
             Function,
         },
@@ -28,7 +28,7 @@ use crate::{
         E,
     },
     problem::{cell::MemoryCell, problem::Problem, protocol::Protocol, step::Step},
-    utils::{string_ref::StrRef, traits::NicerError, utils::MaybeInvalid},
+    utils::{traits::NicerError, utils::MaybeInvalid},
 };
 
 #[derive(Hash, Clone, PartialEq, Eq, Debug, PartialOrd, Ord)]

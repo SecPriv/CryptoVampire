@@ -1,14 +1,8 @@
-use std::{
-    cell::{OnceCell, RefCell},
-    rc::Rc,
-};
+use std::{cell::OnceCell, rc::Rc};
 
 use itertools::Itertools;
 
-use crate::{
-    formula::{formula::ARichFormula, variable::Variable},
-    implvec,
-};
+use crate::{formula::formula::ARichFormula, implvec};
 
 use super::{
     cell::{Assignement, MemoryCell},
@@ -142,7 +136,7 @@ impl<'bump> Protocol<'bump> {
                 .map(|v| v.id)
                 .max()
                 .unwrap_or(0)
-        })+1
+        }) + 1
     }
 
     pub fn init_step(&self) -> Step<'bump> {

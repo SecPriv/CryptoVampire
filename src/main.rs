@@ -25,7 +25,7 @@
 
 use std::{
     fs::{self, read_to_string, File},
-    io::{self, Read, BufWriter},
+    io::{self, BufWriter, Read},
     path::{Path, PathBuf},
 };
 
@@ -39,7 +39,7 @@ use cryptovampire::{
     smt::smt::SmtFile,
     utils::traits::{MyWriteTo, NicerError},
 };
-use log::{LevelFilter, trace};
+use log::trace;
 use std::io::Write;
 
 const USE_MIRI: bool = false;
@@ -64,23 +64,22 @@ fn main() {
     //     no_symbolic: true,
     // };
 
-
     env_logger::Builder::new()
-    .format(|buf, record| {
-        let str = record.args().to_string().replace("\n", "\n\t");
-        writeln!(
-            buf,
-            "[{}] in {}:{}\n\t{}",
-            record.level(),
-            // chrono::Local::now().format("%Y-%m-%dT%H:%M:%S"),
-            record.file().unwrap_or("unknown"),
-            record.line().unwrap_or(0),
-            str
-        )
-    })
-    // .filter(None, LevelFilter::Trace)
-    .parse_default_env()
-    .init();
+        .format(|buf, record| {
+            let str = record.args().to_string().replace("\n", "\n\t");
+            writeln!(
+                buf,
+                "[{}] in {}:{}\n\t{}",
+                record.level(),
+                // chrono::Local::now().format("%Y-%m-%dT%H:%M:%S"),
+                record.file().unwrap_or("unknown"),
+                record.line().unwrap_or(0),
+                str
+            )
+        })
+        // .filter(None, LevelFilter::Trace)
+        .parse_default_env()
+        .init();
 
     ScopedContainer::scoped(|container| {
         trace!("start");

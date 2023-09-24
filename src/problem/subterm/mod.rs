@@ -1,5 +1,5 @@
 use std::fmt::Write;
-use std::ops::RangeInclusive;
+
 use std::{
     collections::{BTreeMap, BTreeSet},
     convert::Infallible,
@@ -405,7 +405,7 @@ where
             m.into_iter().map(|FormlAndVars { bounded_variables, formula }| {
 
                 if cfg!(debug_assertions) &&
-                 (check_variable_collision(x, &formula) || 
+                 (check_variable_collision(x, &formula) ||
                  check_variable_collision_list(x, &bounded_variables)) {
                     error!("collision in the variables")
                 }

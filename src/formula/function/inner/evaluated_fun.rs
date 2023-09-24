@@ -4,7 +4,7 @@ use crate::{
         traits::{FixedSignature, MaybeEvaluatable},
         Function,
     },
-    utils::{string_ref::StrRef, vecref::VecRefClone},
+    utils::string_ref::StrRef,
 };
 
 use super::term_algebra::base_function::BaseFunction;
