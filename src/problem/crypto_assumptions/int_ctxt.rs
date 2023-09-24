@@ -140,7 +140,7 @@ impl<'bump> IntCtxt<'bump> {
                             subterm_key.f_a(env,  k, c) |
                             subterm_rand.f_a(env, r, c) |
                             (mexists!(m2!6:message_sort, k2!7:message_sort, r2!8:message_sort; {
-                                subterm_main.f_a(env, self.enc.f_a([m2.clone(), r2.clone(), k.into()]), c.into())
+                                subterm_main.f_a(env, self.enc.f_a([m2.into(), r2.into(), k_f.clone()]), c.into())
                                 & (
                                     (mforall!(n!9:nonce_sort; {!meq(r2.clone(), nc.cast(message_sort, n))})) |
                                     ( meq(r2, r_f.clone()) &
