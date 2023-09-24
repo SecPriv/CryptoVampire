@@ -8,7 +8,8 @@ pub struct PblIterator<'bump> {
 impl<'bump> PblIterator<'bump> {
     pub fn next(&mut self) -> Option<&Problem<'bump>> {
         if let Some(nq) = self.pbl.lemmas.pop_front() {
-            self.pbl.query = nq;
+            let old_q = std::mem::replace(&mut self.pbl.query, nq);
+            self.pbl.assertions.push(old_q);
             Some(&self.pbl)
         } else {
             None
