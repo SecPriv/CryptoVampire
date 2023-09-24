@@ -1,9 +1,9 @@
-use std::fmt::Write;
 use std::fmt::Display;
+use std::fmt::Write;
 use std::sync::Arc;
 
 use itertools::Itertools;
-use log::{trace, debug, log_enabled};
+use log::{debug, log_enabled, trace};
 
 use crate::container::allocator::{ContainerTools, Residual};
 use crate::container::contained::Containable;
@@ -213,20 +213,17 @@ impl<'bump> Function<'bump> {
         let id = get_next_quantifer_id();
         // let name = container.find_free_name(&format!("c_{}_{}", q.name(), id));
 
+        let bound_variables = Arc::clone(q.get_variables());
+
         let free_variables = arg
             .get_free_vars()
             .into_iter()
-            .filter(|v| !q.get_variables().contains(v))
+            .filter(|v| !bound_variables.contains(v))
             .collect();
 
         let inner = match &q {
             quantifier::Quantifier::Exists { .. } => InnerQuantifier::Exists { content: arg },
             quantifier::Quantifier::Forall { .. } => InnerQuantifier::Forall { content: arg },
-        };
-
-        let bound_variables = match q {
-            quantifier::Quantifier::Exists { variables, .. }
-            | quantifier::Quantifier::Forall { variables, .. } => variables.into(),
         };
 
         let inner = InnerFunction::TermAlgebra(TermAlgebra::Quantifier(Quantifier {
@@ -257,19 +254,11 @@ impl<'bump> Function<'bump> {
             .unique()
             .collect();
 
-        if cfg!(debug_assertions) {
-            for (v1, v2) in itertools::Itertools::cartesian_product(
-                free_variables.iter(),
-                free_variables.iter(),
-            ) {
-                assert!(
-                    (v1.id != v2.id) || (v1.sort == v2.sort),
-                    "\n\tv1: {:?}\n\tv2: {:?}",
-                    v1,
-                    v2
-                )
-            }
-        }
+        debug_assert!(
+            free_variables.iter().all_unique(),
+            "[{}]",
+            free_variables.iter().join(", ")
+        );
 
         let inner = InnerFunction::TermAlgebra(TermAlgebra::Quantifier(
             inner::term_algebra::quantifier::Quantifier {
@@ -298,7 +287,7 @@ impl<'bump> Function<'bump> {
             let mut str = String::new();
             write!(&mut str, "\t{}(", name.deref());
             for s in &input_sorts {
-                write!( &mut str, "{s},");
+                write!(&mut str, "{s},");
             }
             write!(&mut str, ") -> {output_sort}");
             trace!("new_user_term_algebra:\n\t{str}")
@@ -469,7 +458,8 @@ impl<'bump> Function<'bump> {
     }
 
     pub fn as_quantifer(&self) -> Option<&'bump Quantifier<'bump>> {
-        self.precise_as_term_algebra().and_then(|ta| ta.as_quantifier())
+        self.precise_as_term_algebra()
+            .and_then(|ta| ta.as_quantifier())
     }
 
     force_lifetime!(Function, 'bump);

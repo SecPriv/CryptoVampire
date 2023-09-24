@@ -2,7 +2,7 @@ use std::{ops::Deref, sync::Arc};
 
 use hashbrown::{HashMap, HashSet};
 use itertools::Itertools;
-use log::trace;
+use log::{trace, error};
 use pest::Span;
 
 use crate::{
@@ -11,7 +11,7 @@ use crate::{
     f,
     formula::{
         function::{
-            inner::evaluate::Evaluator,
+            inner::{evaluate::Evaluator, term_algebra::quantifier},
             name_caster_collection::{NameCasterCollection, DEFAULT_NAME_CASTER},
             Function,
         },
@@ -28,7 +28,7 @@ use crate::{
         E,
     },
     problem::{cell::MemoryCell, problem::Problem, protocol::Protocol, step::Step},
-    utils::{traits::NicerError, utils::MaybeInvalid},
+    utils::{string_ref::StrRef, traits::NicerError, utils::MaybeInvalid},
 };
 
 #[derive(Hash, Clone, PartialEq, Eq, Debug, PartialOrd, Ord)]
@@ -301,6 +301,22 @@ pub fn parse_str<'a, 'bump>(
     trace!("[P] \t- into problem...");
     let protocol = Protocol::new(env.get_steps(), env.get_cells(), orders);
     trace!("[P] \t[DONE]");
+
+    trace!("[P] \t-gathering quantifiers");
+    {
+        let quantifier = container.get_functions_vec_filtered(|f| f.as_quantifer().is_some());
+        env.functions.extend(
+            quantifier
+                .into_iter()
+                .map(|f| (f.name().to_string(), f.into())),
+        );
+    }
+
+    if cfg!(debug_assertions) {
+        for f in env.get_functions() {
+            trace!("{} is valid", f.name())
+        }
+    }
 
     trace!("[P] \tparsing done");
     let pbl = Problem {

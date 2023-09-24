@@ -143,7 +143,7 @@ impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for Quantifier<'bump> {
 
         FixedRefSignature {
             out,
-            args: self.bound_variables.iter().map(|v| v.sort).collect(),
+            args: self.free_variables.iter().map(|v| v.sort).collect(),
         }
     }
 }

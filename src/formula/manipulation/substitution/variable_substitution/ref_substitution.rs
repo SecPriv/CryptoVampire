@@ -49,7 +49,7 @@ impl<'a, T: Clone> FrozenSubst<'a, T> {
             vars: var.into(),
             formulas: formulas.into(),
         };
-        assert!(r.valid());
+        r.assert_valid();
         r
     }
     pub fn vars(&self) -> &VecRefClone<'a, usize> {
@@ -58,6 +58,11 @@ impl<'a, T: Clone> FrozenSubst<'a, T> {
 
     pub fn formulas(&self) -> &VecRefClone<'a, T> {
         &self.formulas
+    }
+
+    /// panics if not valid
+    pub fn assert_valid(&self)  {
+        assert_eq!(self.vars.len(), self.formulas.len())
     }
 
     pub fn valid(&self) -> bool {

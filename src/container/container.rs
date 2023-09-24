@@ -1,11 +1,11 @@
 use std::{
-    cell::RefCell,
+    cell::{RefCell, Ref},
     ptr::NonNull,
     sync::atomic::{self, AtomicU16},
 };
 
 use crate::{
-    formula::{function::InnerFunction, sort::InnerSort},
+    formula::{function::{InnerFunction, Function}, sort::InnerSort},
     problem::{cell::InnerMemoryCell, step::InnerStep},
     utils::{string_ref::StrRef, traits::RefNamed},
 };
@@ -13,6 +13,7 @@ use crate::{
 use super::allocator::Container;
 use super::contained::Contained;
 use hashbrown::HashSet;
+use itertools::Itertools;
 use log::error;
 
 use std::fmt::Debug;
@@ -231,6 +232,13 @@ impl<'bump> ScopedContainer<'bump> {
             drop(container); // result can't refer to anything in container, it can be safely dropped
             result
         }
+    }
+
+    pub fn get_functions_vec_filtered<F>(&'bump self, f:F) -> Vec<Function<'bump>> where F:Fn(&Function<'bump>) -> bool {
+        let function = self.functions.borrow();
+        function.iter().map(|f| 
+            Function::from_raw(*f, Default::default())
+        ).filter(f).collect_vec()
     }
 }
 
