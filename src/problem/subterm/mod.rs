@@ -726,7 +726,8 @@ pub fn into_exist_formula<'bump>(
     // let (vars, ors): (Vec<_>, Vec<_>) = f.into_iter().unzip();
     // let vars = vars.iter().flat_map(|v| v.iter()).cloned().unique();
     // let ors =
-    let content = f.into_iter().collect_vec();
+    let content = f.into_iter().unique().collect_vec();
+    // (variables, list of formula_idx that depend on it)
     let mut vars = BTreeMap::new();
 
     for (i, (inner_vars, _)) in content.iter().enumerate() {
@@ -741,7 +742,7 @@ pub fn into_exist_formula<'bump>(
     // further expand vars
     for (var, f_idx) in vars.iter_mut() {
         for (i, (vars, _)) in content.iter().enumerate() {
-            if !vars.iter().map(|v| v.id).contains(&var.id) {
+            if !vars.iter().contains(&var) {
                 // if `var` doesn't clash with any variables in `vars` we can add the formula to the bag
                 f_idx.insert(i);
             }

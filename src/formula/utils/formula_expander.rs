@@ -4,9 +4,10 @@ use crate::{
     formula::{
         formula::{ARichFormula, RichFormula},
         function::{inner::term_algebra::TermAlgebra, InnerFunction},
-        manipulation::FrozenSubst,
+        manipulation::{FrozenOVSubst, FrozenSubst, OneVarSubst, Substitution},
         variable::Variable,
     },
+    implvec,
     problem::{
         cell::{Assignement, MemoryCell},
         cell_dependancies::graph::{Ancestors, DependancyGraph},
@@ -16,7 +17,7 @@ use crate::{
 };
 
 use bitflags::bitflags;
-use itertools::Itertools;
+use itertools::{chain, Itertools};
 use log::trace;
 bitflags! {
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -82,13 +83,14 @@ impl<'bump> ExpantionState<'bump> {
             .iter()
             .cloned()
             .chain(vars)
-            .unique_by(|v| v.id)
+            // .unique_by(|v| v.id)
             .collect();
         trace!(
             "adding variables:\n\t[{}] -> [{}]",
             self.bound_variables.iter().join(", "),
             bound_variables.iter().join(", ")
         );
+        assert!(bound_variables.iter().all_unique());
         Self {
             bound_variables,
             ..self.clone()
@@ -197,15 +199,22 @@ impl<'bump> ExpantionContent<'bump> {
                             trace!("expanding quantifier:\n\t{q}");
                             let substitution = FrozenSubst::new_from(
                                 q.free_variables.iter().map(|v| v.id).collect_vec(), args.iter().cloned().collect_vec());
+                            let collistion_avoidance = {
+                                let to_avoid = chain!(
+                                    q.free_variables.iter(),
+                                    self.state.bound_variables()
+                                ).cloned().collect_vec();
+                                collision_substitution(q.bound_variables.iter(), &to_avoid)
+                            };
                             let new_state = self
 										.state
-										.add_variables(q.bound_variables.iter().cloned())
+										.add_variables(q.bound_variables.iter().map(|v| collistion_avoidance.get_var(v)))
                                         // .add_substitution(q.free_variables.iter().map(|v| v.id), args.iter().cloned())
                                         ;
                             let quantifier_iter = q.get_content().into_vec().into_iter().map(|f| {
 								ExpantionContent {
 									state: new_state.clone(),
-									content: f.apply_substitution2(&substitution),
+									content: f.apply_substitution2(&collistion_avoidance).apply_substitution2(&substitution),
 								}
 							});
 
@@ -294,9 +303,11 @@ fn expand_process_deeper<'b, 'bump>(
 where
     'bump: 'b,
 {
-    trace!("process_deeper -> {}:{}:{}", file!(), line!(), column!());
+    let state_variables = state.bound_variables();
+    // let max_var = state_variables.iter().map(|v| v.id).max().unwrap_or(0);
+    trace!("process_deeper");
     let Ancestors { input, cells } = graph.ancestors(deeper.clone()).unwrap();
-    trace!("process_deeper -> {}:{}:{}", file!(), line!(), column!());
+    trace!("-");
 
     let step_origin = args.last().unwrap();
     let is_input = deeper.is_none();
@@ -308,11 +319,21 @@ where
                   fresh_vars,
                   ..
               }| {
+            trace!("in assignement");
             let vars = step.free_variables();
-            let step_f = step.function().f_a(vars.iter().map(|v| v.into_formula()));
+
+            let collision_var =
+                collision_substitution(chain!(vars.iter(), fresh_vars.iter()), state_variables);
+
+            let step_f = step
+                .function()
+                .f_a(vars.iter().map(|v| collision_var.get(v)));
+
+            // let step_origin = step_origin.apply_substitution2(&collision_var);
+            // ^^^^^^^^^^^^^^^ this one is unchanged
 
             let state = state.add_condition(
-                itertools::chain!(vars.iter(), fresh_vars.iter()).cloned(),
+                itertools::chain!(vars.iter(), fresh_vars.iter()).map(|v| collision_var.get_var(v)),
                 if is_input {
                     Step::strict_before(step_f, step_origin.shallow_copy())
                 } else {
@@ -322,27 +343,31 @@ where
 
             ExpantionContent {
                 state,
-                content: content.shallow_copy(),
+                content: content.apply_substitution2(&collision_var),
             }
         },
     );
     let input_iter = input
         .then(move || {
             steps.into_iter().flat_map(move |step| {
+                trace!("in input");
+                let vars = step.free_variables();
+                let collision_var = collision_substitution(vars, state_variables);
+                let step_f = step
+                    .function()
+                    .f_a(vars.iter().map(|v| collision_var.get(v)));
+
                 [step.message_arc(), step.condition_arc()]
                     .into_iter()
                     .map(move |content| {
-                        let vars = step.free_variables();
-                        let step_f = step.function().f_a(vars.iter().map(|v| v.into_formula()));
-
                         let state = state.add_condition(
-                            vars.iter().cloned(),
+                            vars.iter().map(|v| collision_var.get_var(v)),
                             Step::strict_before(step_f.shallow_copy(), step_origin.clone()),
                         );
 
                         ExpantionContent {
                             state,
-                            content: content.shallow_copy(),
+                            content: content.apply_substitution2(&collision_var),
                         }
                     })
             })
@@ -351,6 +376,23 @@ where
         .flatten();
 
     itertools::chain!(cells_iter, input_iter)
+}
+
+/// create a substitution that remaps `vars` such that it doesn't collide with `base`
+fn collision_substitution<'a, 'bump: 'a>(
+    vars: implvec!(&'a Variable<'bump>),
+    base: &[Variable<'bump>],
+) -> FrozenOVSubst<'bump, Variable<'bump>> {
+    let vars = vars.into_iter().cloned().collect_vec();
+
+    let max_var = chain!(base, &vars).map(Variable::id).max().unwrap_or(0);
+    vars.into_iter()
+        .filter(|v| base.contains(&v))
+        .map(|v| OneVarSubst {
+            id: v.id,
+            f: v + max_var,
+        })
+        .collect()
 }
 
 // -----------------------------------------------------------------------------

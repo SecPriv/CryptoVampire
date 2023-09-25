@@ -123,11 +123,6 @@ impl<'bump> ARichFormula<'bump> {
             passed_along: None,
             flags: IteratorFlags::QUANTIFIER,
             f: |_, f| {
-                // let next = match f.as_ref() {
-                //     RichFormula::Fun(_, args) => Some(ArcIntoIter::from(args)),
-                //     _ => None,
-                // };
-                // (Some(f), repeat_n_zip((), next.into_iter().flatten()))
                 let (v, n) = match f.as_ref() {
                     RichFormula::Fun(fun, args) => {
                         let bvars = fun

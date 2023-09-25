@@ -29,9 +29,11 @@ impl<'a, T: Clone> FrozenOVSubst<'a, T> {
     }
 }
 
-impl<'a, A:Clone> FromIterator<OneVarSubst<A>> for FrozenOVSubst<'a, A> {
+impl<'a, A: Clone> FromIterator<OneVarSubst<A>> for FrozenOVSubst<'a, A> {
     fn from_iter<T: IntoIterator<Item = OneVarSubst<A>>>(iter: T) -> Self {
-        Self { content:  iter.into_iter().collect()}
+        Self {
+            content: iter.into_iter().collect(),
+        }
     }
 }
 
@@ -84,6 +86,16 @@ impl<'a, T: Clone> FrozenSubst<'a, T> {
     }
 }
 
+impl<'a, 'bump> FrozenOVSubst<'a, Variable<'bump>> {
+    pub fn get_var(&self, var: &Variable<'bump>) -> Variable<'bump> {
+        self.content()
+            .into_iter()
+            .find(|ovs| ovs.id() == var.id)
+            .map(|ovs| (*ovs.f()).into())
+            .unwrap_or(*var)
+    }
+}
+
 impl<'a, T: Clone> Default for FrozenOVSubst<'a, T> {
     fn default() -> Self {
         Self {
@@ -133,6 +145,17 @@ impl<'a, 'bump: 'a> Substitution<'bump> for FrozenOVSubstF<'a, 'bump> {
             .find(|ovs| ovs.id() == var.id)
             .map(|ovs| ovs.get(var))
             .unwrap_or(RichFormula::Var(*var).into())
+    }
+}
+
+impl<'a, 'bump: 'a> Substitution<'bump> for FrozenOVSubst<'a, Variable<'bump>> {
+    fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump> {
+        // self.content()
+        //     .into_iter()
+        //     .find(|ovs| ovs.id() == var.id)
+        //     .map(|ovs| ovs.f().into())
+        //     .unwrap_or(RichFormula::Var(*var).into())
+        self.get_var(var).into()
     }
 }
 

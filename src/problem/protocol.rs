@@ -1,6 +1,6 @@
 use std::{cell::OnceCell, rc::Rc};
 
-use itertools::Itertools;
+use itertools::{Itertools, chain};
 
 use crate::{formula::formula::ARichFormula, implvec};
 
@@ -111,14 +111,19 @@ impl<'bump> Protocol<'bump> {
                     .map(|t| FormlAndVars::new(Rc::clone(&vars), t.shallow_copy()))
             }),
             self.memory_cells.iter().flat_map(|c| {
-                c.assignements()
-                    .iter()
-                    .map(|Assignement { content, step, .. }| {
+                c.assignements().iter().map(
+                    |Assignement {
+                         content,
+                         step,
+                         fresh_vars,
+                         args: _,
+                     }| {
                         FormlAndVars::new(
-                            step.free_variables().iter().cloned().collect(),
+                            chain!(step.free_variables(), fresh_vars.iter()).cloned().collect(),
                             content.shallow_copy(),
                         )
-                    })
+                    },
+                )
             })
         )
     }
