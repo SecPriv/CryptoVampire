@@ -67,6 +67,10 @@ pub enum SmtFormula<'bump> {
 pub enum Smt<'bump> {
     Assert(SmtFormula<'bump>),
     AssertTh(SmtFormula<'bump>),
+    AssertGround{
+        sort: Sort<'bump>,
+        formula: SmtFormula<'bump>
+    },
     AssertNot(SmtFormula<'bump>),
     DeclareFun(Function<'bump>),
     DeclareSort(Sort<'bump>),
@@ -285,6 +289,9 @@ impl<'bump> Smt<'bump> {
                         rhs: Box::new(post),
                     }
                 }
+            },
+            Axiom::Ground { sort, formula } => {
+                Smt::AssertGround { sort, formula: SmtFormula::from_arichformula(&formula) }
             }
         }
     }

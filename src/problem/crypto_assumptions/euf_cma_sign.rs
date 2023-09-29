@@ -129,8 +129,9 @@ impl<'bump> EufCmaSign<'bump> {
                 forall([k], split.f_a([k_f]) >> ors)
             }));
 
-            assertions.push(Axiom::base(
-                mforall!(m!1:message_sort, sigma!2:message_sort, k!3:nonce_sort; {
+            assertions.push(Axiom::Ground{
+                sort: message_sort,
+                formula: mforall!(m!1:message_sort, sigma!2:message_sort, k!3:nonce_sort; {
                     let k_f = nc.cast(message_sort, k);
                     ev.eval(self.verify.f([m.into(), sigma.into(), self.pk.f_a([ k_f.clone()])])) >>
                     mexists!(u!4:message_sort; {
@@ -144,7 +145,7 @@ impl<'bump> EufCmaSign<'bump> {
                         )
                     })
                 }),
-            ))
+            })
         }
     }
 

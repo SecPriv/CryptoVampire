@@ -191,6 +191,9 @@ impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a Smt<'bump>> {
         match self.content {
             Smt::Assert(e) => writeln!(f, "(assert {})", e.prop(*self)),
             Smt::AssertTh(e) => writeln!(f, "(assert-theory {})", e.prop(*self)),
+            Smt::AssertGround { sort, formula } => {
+                writeln!(f, "(assert-ground {sort} {})", formula.prop(*self))
+            }
             Smt::AssertNot(e) => writeln!(f, "(assert-not {})", e.prop(*self)),
             Smt::DeclareFun(fun) => {
                 write!(f, "(declare-fun {} (", fun.name())?;

@@ -128,8 +128,9 @@ impl<'bump> EufCmaMac<'bump> {
             }));
 
             // general crypto axiom
-            assertions.push(Axiom::base(
-                mforall!(m!1:message_sort, sigma!2:message_sort, k!3:nonce_sort; {
+            assertions.push(Axiom::Ground{
+                sort: message_sort,
+                formula : mforall!(m!1:message_sort, sigma!2:message_sort, k!3:nonce_sort; {
                     let k_f = nc.cast(message_sort, k.clone());
                     ev.eval(self.verify.f_a([m.into(), sigma.into(), k_f.clone()])) >>
                     mexists!(u!4:message_sort; {
@@ -143,7 +144,7 @@ impl<'bump> EufCmaMac<'bump> {
                         )
                     })
                 }),
-            ))
+        })
         }
     }
 

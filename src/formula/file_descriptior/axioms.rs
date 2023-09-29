@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
-use crate::formula::{formula::ARichFormula, function::Function, variable::Variable};
+use crate::formula::{formula::ARichFormula, function::Function, variable::Variable, sort::Sort};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Axiom<'bump> {
     Comment(Box<str>),
     Base { formula: ARichFormula<'bump> },
+    Ground { sort: Sort<'bump>, formula: ARichFormula<'bump>},
     Theory { formula: ARichFormula<'bump> },
     Query { formula: ARichFormula<'bump> },
     Rewrite { rewrite: Box<Rewrite<'bump>> },

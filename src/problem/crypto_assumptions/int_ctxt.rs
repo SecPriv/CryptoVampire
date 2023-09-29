@@ -124,8 +124,9 @@ impl<'bump> IntCtxt<'bump> {
         }
 
         if env.with_general_crypto_axiom() && env.define_subterm() {
-            assertions.push(Axiom::base(
-                mforall!(c!1:message_sort, k!3:nonce_sort; {
+            assertions.push(Axiom::Ground{
+                sort: message_sort,
+                formula: mforall!(c!1:message_sort, k!3:nonce_sort; {
                     let k_f = nc.cast(message_sort, k.clone());
                     ev.eval(self.verify.f([c.into(), k_f.clone()])) >>
                     mexists!(m!4:message_sort, r!5:nonce_sort; {
@@ -148,7 +149,7 @@ impl<'bump> IntCtxt<'bump> {
                         )
                     })
                 }),
-            ))
+            })
         }
 
         // general axioms
