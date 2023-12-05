@@ -57,6 +57,9 @@ pub fn generate<'bump>(
             mforall!(s!0:step; {
                 lt.f_a([PRED.f_a([s]), s.into()]) | meq(s, init)
             }),
+            mforall!(s1!0:step, s2!1:step; {
+                lt.f_a([s1, s2]) >> (lt.f_a([s1.into(), PRED.f_a([s2])]) | meq(s1, PRED.f_a([s2])))
+            })
         ]
         .into_iter()
         .map(Axiom::theory)
