@@ -1,3 +1,5 @@
+use crate::formula::function::builtin::TRUE;
+
 use super::Problem;
 
 #[derive(Debug, Clone)]
@@ -28,6 +30,7 @@ impl<'bump> PblIterator<'bump> {
 impl<'bump> From<Problem<'bump>> for PblIterator<'bump> {
     fn from(mut pbl: Problem<'bump>) -> Self {
         pbl.lemmas.push_back(pbl.query.clone());
+        pbl.query = TRUE.clone_as_arc();
         Self { pbl }
     }
 }
