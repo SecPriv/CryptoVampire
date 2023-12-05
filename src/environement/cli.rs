@@ -74,8 +74,13 @@ pub struct Args {
     pub no_bitstring: bool,
 
     /// use `(assert (not ...))` instead of `(assert-not ...)` for the query
+    /// and no `assert-ground` either
     #[arg(long)]
     pub cvc5: bool,
+
+    /// *deprecated* use `assert-ground`
+    #[arg(long)]
+    pub assert_ground: bool,
 
     /// deactivate subterm and optimises evaluates
     ///

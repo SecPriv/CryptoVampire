@@ -23,7 +23,7 @@ struct Options {
 
 bitflags! {
     #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug )]
-    struct Flags: u8 {
+    struct Flags: u16 {
         const LEMMA =                   1 << 0;
         const ASSERT_THEORY =           1 << 2; // non smt standard
         const SKOLEMNISE =              1 << 3;
@@ -31,6 +31,7 @@ bitflags! {
         const NO_BITSTRING =            1 << 5;
         const NOT_AS_TERM_ALGEBRA =     1 << 6;
         const ASSERT_NOT =              1 << 7; // non smt standard
+        const ASSERT_GROUND =           1 << 8; // non smt standard
     }
 
     #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug )]
@@ -78,6 +79,7 @@ impl<'bump> Environement<'bump> {
             no_bitstring,
             cvc5,
             no_symbolic,
+            assert_ground,
             ..
         } = args;
         let pure_smt = *cvc5;
@@ -90,6 +92,7 @@ impl<'bump> Environement<'bump> {
         let flags = mk_bitflag!(
             *lemmas => Flags::LEMMA,
             *assert_theory && !pure_smt => Flags::ASSERT_THEORY,
+            *assert_ground && !pure_smt => Flags::ASSERT_GROUND,
             !pure_smt => Flags::ASSERT_NOT,
             *legacy_evaluate => Flags::LEGACY_EVALUATE,
             *skolemnise => Flags::SKOLEMNISE,
@@ -173,6 +176,10 @@ impl<'bump> Environement<'bump> {
 
     pub fn use_assert_not(&self) -> bool {
         self.options.flags.contains(Flags::ASSERT_NOT)
+    }
+
+    pub fn use_assert_ground(&self) -> bool {
+        self.options.flags.contains(Flags::ASSERT_GROUND)
     }
 
     // pub fn skolemnise(&self) -> bool {
