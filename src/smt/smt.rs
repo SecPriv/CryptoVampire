@@ -276,7 +276,8 @@ impl<'bump> Smt<'bump> {
                     Smt::Assert(SmtFormula::Forall(
                         vars,
                         Box::new(if kind == RewriteKind::Bool {
-                            SmtFormula::Implies(Box::new(pre), Box::new(post))
+                            // SmtFormula::Implies(Box::new(pre), Box::new(post))
+                            SmtFormula::Eq(vec![pre, post])
                         } else {
                             SmtFormula::Eq(vec![pre, post])
                         }),
