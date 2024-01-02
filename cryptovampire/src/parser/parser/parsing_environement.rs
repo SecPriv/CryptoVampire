@@ -118,7 +118,7 @@ impl<'bump, 'a> Environement<'bump, 'a> {
             container,
             sort_hash,
             evaluator: Default::default(),
-            /// those start empty
+            // those start empty
             macro_hash: Default::default(),
             functions: function_hash,
             used_name: names,

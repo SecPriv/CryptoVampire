@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use derivative::Derivative;
 
 mod step;
-pub use step::{NamedVariable, StepCache};
+pub use step::StepCache;
 
 use crate::parser::ast;
 use cryptovampire_lib::{
