@@ -3,25 +3,24 @@ use std::sync::Arc;
 
 use super::*;
 
-use crate::f;
-use crate::formula::function::inner::name::Name;
-use crate::parser::{err, merr, E};
+use crate::parser::{ast::extra::AsFunction, err, merr, E};
 
-use crate::formula::function::{
-    inner::{
-        step::StepFunction,
-        term_algebra::{cell::Cell, TermAlgebra},
+use cryptovampire_lib::{
+    container::{allocator::ContainerTools, ScopedContainer},
+    formula::function::{
+        inner::{
+            name::Name,
+            step::StepFunction,
+            term_algebra::{cell::Cell, TermAlgebra},
+        },
+        Function, InnerFunction,
     },
-    Function, InnerFunction,
+    formula::sort::builtins::*,
+    formula::sort::Sort,
+    problem::cell::InnerMemoryCell,
+    problem::step::InnerStep,
 };
-use crate::formula::sort::Sort;
-use crate::parser::ast::extra::AsFunction;
-use crate::problem::cell::InnerMemoryCell;
-use crate::problem::step::InnerStep;
-
-use crate::container::{allocator::ContainerTools, ScopedContainer};
-use crate::formula::sort::builtins::*;
-use crate::utils::traits::NicerError;
+use utils::{f, traits::NicerError};
 
 use super::super::ast::{self, extra::SnN, ASTList, Declaration, DeclareFunction, Ident, AST};
 

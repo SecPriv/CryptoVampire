@@ -5,10 +5,18 @@ use itertools::Itertools;
 use log::trace;
 use pest::Span;
 
-use crate::{
+use crate::parser::{
+    ast::{self, ASTList},
+    merr,
+    parser::{
+        parse_assert_with_bvars, parse_asserts_crypto, parse_asserts_with_bvars, parse_cells,
+        parse_orders_with_bvars, parse_steps,
+    },
+    E,
+};
+use cryptovampire_lib::{
     container::ScopedContainer,
     environement::traits::{KnowsRealm, Realm},
-    f,
     formula::{
         function::{
             inner::evaluate::Evaluator,
@@ -17,18 +25,11 @@ use crate::{
         },
         sort::Sort,
     },
-    implderef, implvec,
-    parser::{
-        ast::{self, ASTList},
-        merr,
-        parser::{
-            parse_assert_with_bvars, parse_asserts_crypto, parse_asserts_with_bvars, parse_cells,
-            parse_orders_with_bvars, parse_steps,
-        },
-        E,
-    },
     problem::{cell::MemoryCell, problem::Problem, protocol::Protocol, step::Step},
-    utils::{traits::NicerError, utils::MaybeInvalid},
+};
+use utils::{
+    f, implderef, implvec,
+    {traits::NicerError, utils::MaybeInvalid},
 };
 
 #[derive(Hash, Clone, PartialEq, Eq, Debug, PartialOrd, Ord)]

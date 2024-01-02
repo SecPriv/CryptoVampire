@@ -1,4 +1,4 @@
-use crate::environement::traits::{KnowsRealm, Realm, RealmMerger};
+use cryptovampire_lib::environement::traits::{KnowsRealm, Realm, RealmMerger};
 
 use super::parsing_environement::Environement;
 

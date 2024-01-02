@@ -1,24 +1,22 @@
 use std::sync::Arc;
 
-use crate::{
-    formula::{
-        formula::{ARichFormula, RichFormula},
-        function::builtin::{EQUALITY, HAPPENS, LESS_THAN_STEP},
-        quantifier::Quantifier,
-        sort::builtins::STEP,
-        variable::Variable,
-    },
-    implvec,
+use crate::parser::{
+    ast,
     parser::{
-        ast,
-        parser::{
-            get_sort,
-            parsable_trait::{Parsable, VarProxy},
-            Environement,
-        },
-        E,
+        get_sort,
+        parsable_trait::{Parsable, VarProxy},
+        Environement,
     },
+    E,
 };
+use cryptovampire_lib::formula::{
+    formula::{ARichFormula, RichFormula},
+    function::builtin::{EQUALITY, HAPPENS, LESS_THAN_STEP},
+    quantifier::Quantifier,
+    sort::builtins::STEP,
+    variable::Variable,
+};
+use utils::implvec;
 
 pub fn parse_orders_with_bvars<'a, 'str, 'bump, B>(
     env: &'a Environement<'bump, 'str>,

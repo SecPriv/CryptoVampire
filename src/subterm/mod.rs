@@ -44,11 +44,14 @@ use self::{
 
 use super::{problem::Problem, protocol::Protocol};
 
-pub mod kind;
-pub mod traits;
+
+pub(crate) mod kind;
+pub(crate) mod traits;
+
+pub use kind::SubetermKind;
 
 #[derive(Debug, Clone)]
-pub struct Subterm<'bump, Aux>
+pub(crate) struct Subterm<'bump, Aux>
 where
     Aux: SubtermAux<'bump>,
 {

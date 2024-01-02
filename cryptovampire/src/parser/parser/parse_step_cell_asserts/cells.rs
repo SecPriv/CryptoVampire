@@ -1,9 +1,9 @@
-use crate::{
+use crate::parser::{merr, parser::CellCache, E};
+use cryptovampire_lib::{
     container::{allocator::ContainerTools, ScopedContainer},
-    implvec,
-    parser::{merr, parser::CellCache, E},
     problem::cell::InnerMemoryCell,
 };
+use utils::implvec;
 
 use super::super::Environement;
 

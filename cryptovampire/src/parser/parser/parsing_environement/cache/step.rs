@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use crate::{
+use crate::parser::{ast, parser::parsable_trait::VarProxy};
+use cryptovampire_lib::{
     formula::{
         formula::ARichFormula,
         function::{builtin::INPUT, Function},
@@ -8,7 +9,6 @@ use crate::{
         sort::{builtins::MESSAGE, Sort},
         variable::Variable,
     },
-    parser::{ast, parser::parsable_trait::VarProxy},
     problem::step::Step,
 };
 

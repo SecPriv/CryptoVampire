@@ -117,7 +117,7 @@ macro_rules! variants_ref {
 macro_rules! variants_ref_try_into {
     ($path:path:$from:ty => {$variant:ident :$to:ty}; $($other_lt:lifetime),*) => {
         impl<'ref_lt, $($other_lt),*> core::convert::TryInto<&'ref_lt $to> for &'ref_lt $from where $($other_lt : 'ref_lt),* {
-            type Error = $crate::utils::enum_utils::ConversionError<$from, $to>;
+            type Error = $crate::enum_utils::ConversionError<$from, $to>;
 
             fn try_into(self) -> Result<&'ref_lt $to, Self::Error> {
                 match self {

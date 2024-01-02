@@ -7,7 +7,8 @@ use log::trace;
 use pest::{error::Error, iterators::Pair, Parser, Position, Span};
 use static_init::dynamic;
 
-use crate::{destvec, f, problem::step::INIT_STEP_NAME, utils::vecref::VecRef};
+use cryptovampire_lib::INIT_STEP_NAME;
+use utils::{destvec, f, vecref::VecRef};
 
 use super::*;
 
@@ -905,7 +906,8 @@ impl<'a, 'b> IntoIterator for &'b TypedArgument<'a> {
 pub mod extra {
     use pest::Span;
 
-    use crate::{formula::sort::builtins::STEP, utils::string_ref::StrRef};
+    use cryptovampire_lib::formula::sort::builtins::STEP;
+    use utils::string_ref::StrRef;
 
     use super::{
         DeclareCell, DeclareFunction, Function, Macro, MacroName, Step, StepName, TypeName,

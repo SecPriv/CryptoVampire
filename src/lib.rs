@@ -2,7 +2,8 @@
 pub mod container;
 pub mod environement;
 pub mod formula;
-pub mod parser;
+// pub mod parser;
 pub mod problem;
-pub mod smt;
-pub mod utils;
+// pub mod smt;
+pub(crate) mod utils;
+pub mod subterm

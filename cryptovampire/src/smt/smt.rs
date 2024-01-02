@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::{
+use cryptovampire_lib::{
     environement::{
         environement::Environement,
         traits::{KnowsRealm, Realm},
@@ -23,9 +23,10 @@ use crate::{
         sort::Sort,
         variable::Variable,
     },
-    implvec,
-    problem::subterm::kind::SubtermKind,
+    SubtermKind,
 };
+
+use utils::implvec;
 
 use self::display::{SmtDisplayer, SmtEnv};
 

@@ -2,21 +2,21 @@ use std::sync::Arc;
 
 use itertools::Itertools;
 
-use crate::{
+use crate::parser::{
+    merr,
+    parser::{parsable_trait::Parsable, CellCache, FunctionCache},
+    E,
+};
+use cryptovampire_lib::{
     container::{allocator::ContainerTools, ScopedContainer},
     environement::traits::Realm,
     formula::{
         sort::builtins::{CONDITION, MESSAGE},
         variable::Variable,
     },
-    implvec,
-    parser::{
-        merr,
-        parser::{parsable_trait::Parsable, CellCache, FunctionCache},
-        E,
-    },
     problem::{cell::Assignement, step::InnerStep},
 };
+use utils::implvec;
 
 use super::super::{super::ast, Environement, StepCache};
 

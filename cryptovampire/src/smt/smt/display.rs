@@ -3,7 +3,7 @@ use std::{fmt, ops::Deref};
 use itertools::Itertools;
 use log::{log_enabled, trace};
 
-use crate::{
+use cryptovampire_lib::{
     environement::traits::{KnowsRealm, Realm},
     formula::file_descriptior::axioms::RewriteKind,
 };

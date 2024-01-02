@@ -1,18 +1,16 @@
 use pest::Span;
 
-use crate::{
-    destvec,
+use crate::parser::{ast, merr, parser::Environement, IntoRuleResultFunction, E};
+use cryptovampire_lib::{
     environement::traits::Realm,
     formula::function::signature::Signature,
-    implvec,
-    parser::{ast, merr, parser::Environement, IntoRuleResultFunction, E},
     problem::crypto_assumptions::{
         CryptoAssumption, EufCmaMac, EufCmaSign, IntCtxt, Nonce, EUF_CMA_MAC_SIGNATURE,
         EUF_CMA_PK_SIGNATURE, EUF_CMA_SIGN_SIGNATURE, EUF_CMA_VERIFY_SIGNATURE,
         INT_CTXT_DEC_SIGNATURE, INT_CTXT_ENC_SIGNATURE, INT_CTXT_VERIFY_SIGNATURE,
     },
-    utils::traits::NicerError,
 };
+use utils::{destvec, implvec, traits::NicerError};
 
 pub fn parse_asserts_crypto<'a, 'str, 'bump, B>(
     env: &'a Environement<'bump, 'str>,

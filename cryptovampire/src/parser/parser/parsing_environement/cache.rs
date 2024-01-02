@@ -5,7 +5,8 @@ use derivative::Derivative;
 mod step;
 pub use step::{NamedVariable, StepCache};
 
-use crate::{
+use crate::parser::ast;
+use cryptovampire_lib::{
     formula::{
         function::{
             signature::{FixedRefSignature, Lazy, Signature},
@@ -16,10 +17,9 @@ use crate::{
             Sort,
         },
     },
-    parser::ast,
     problem::cell::{Assignement, MemoryCell},
-    utils::vecref::VecRefClone,
 };
+use utils::vecref::VecRefClone;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum FunctionCache<'str, 'bump> {

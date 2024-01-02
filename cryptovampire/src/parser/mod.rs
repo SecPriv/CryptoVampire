@@ -72,11 +72,10 @@ fn merr<'a>(s: Span<'a>, msg: String) -> E {
 
 // pub(crate) use merr;
 
-use crate::{
-    f,
-    formula::{function::signature::CheckError, sort::sort_proxy::InferenceError},
-    utils::traits::NicerError,
+use cryptovampire_lib::formula::{
+    function::signature::CheckError, sort::sort_proxy::InferenceError,
 };
+use utils::{f, traits::NicerError};
 
 trait IntoRuleResult<T, Err> {
     fn into_rr<'a>(self, span: Span<'a>) -> Result<T, E>;

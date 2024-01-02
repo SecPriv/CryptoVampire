@@ -51,15 +51,6 @@ pub struct Problem<'bump> {
 }
 
 impl<'bump> Problem<'bump> {
-    // pub fn try_from_str<'a>(
-    //     container: &'bump ScopedContainer<'bump>,
-    //     sort_hash: implvec!(Sort<'bump>),
-    //     function_hash: implvec!(Function<'bump>),
-    //     extra_names: implvec!(String),
-    //     str: &'a str,
-    // ) -> Result<Self, parser::E> {
-    //     parser::parse_str(container, sort_hash, function_hash, extra_names, str).debug_continue()
-    // }
 
     pub fn list_top_level_terms<'a>(&'a self) -> impl Iterator<Item = &'a ARichFormula<'bump>>
     where

@@ -6,7 +6,7 @@ pub(crate) mod generator;
 pub(crate) mod problem;
 pub(crate) mod protocol;
 pub(crate) mod step;
-pub(crate) mod subterm;
+// pub(crate) mod subterm;
 
 pub use problem::{PblIterator, Problem};
 pub use protocol::Protocol;

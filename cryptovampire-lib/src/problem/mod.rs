@@ -1,11 +1,11 @@
-pub(crate) mod cell;
+pub mod cell;
 pub(crate) mod cell_dependancies;
-pub(crate) mod crypto_assumptions;
+pub mod crypto_assumptions;
 pub(crate) mod general_assertions;
-pub(crate) mod generator;
-pub(crate) mod problem;
-pub(crate) mod protocol;
-pub(crate) mod step;
+pub mod generator;
+pub mod problem;
+pub mod protocol;
+pub mod step;
 // pub(crate) mod subterm;
 
 pub use problem::{PblIterator, Problem};

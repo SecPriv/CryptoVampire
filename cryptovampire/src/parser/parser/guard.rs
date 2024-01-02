@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use crate::{
+use cryptovampire_lib::{
     formula::function::Function,
     problem::{cell::MemoryCell, step::Step},
 };

@@ -5,9 +5,12 @@ use itertools::Itertools;
 use log::{log_enabled, trace};
 use pest::Span;
 
-use crate::{
+use crate::{parser::{
+    ast::{self, extra::SnN, Term, VariableBinding},
+    err, merr, IntoRuleResult, E,
+}, smt::smt::SmtFormula};
+use cryptovampire_lib::{
     environement::traits::{KnowsRealm, Realm},
-    f,
     formula::{
         self,
         formula::{ARichFormula, RichFormula},
@@ -24,15 +27,8 @@ use crate::{
         },
         variable::Variable,
     },
-    implvec, match_as_trait,
-    parser::{
-        ast::{self, extra::SnN, Term, VariableBinding},
-        err, merr, IntoRuleResult, E,
-    },
-    smt::smt::SmtFormula,
-    try_trace,
-    utils::{maybe_owned::MOw, traits::NicerError},
 };
+use utils::{f, implvec, match_as_trait, maybe_owned::MOw, traits::NicerError, try_trace};
 
 use self::cached_builtins::*;
 

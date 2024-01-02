@@ -1,15 +1,13 @@
-use crate::{
-    formula::{formula::ARichFormula, sort::builtins::BOOL},
-    implvec,
+use crate::parser::{
+    ast,
     parser::{
-        ast,
-        parser::{
-            parsable_trait::{Parsable, VarProxy},
-            Environement,
-        },
-        E,
+        parsable_trait::{Parsable, VarProxy},
+        Environement,
     },
+    E,
 };
+use cryptovampire_lib::formula::{formula::ARichFormula, sort::builtins::BOOL};
+use utils::implvec;
 
 pub fn parse_assert_with_bvars<'a, 'str, 'bump>(
     env: &'a Environement<'bump, 'str>,
