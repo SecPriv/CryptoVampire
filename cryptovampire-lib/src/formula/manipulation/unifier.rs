@@ -47,7 +47,7 @@ impl<'bump> Unifier<'bump> {
 
         {
             // ensure there is no colisions of variables
-            let (small, big) = ord_utils::sort_by(|a, b| a.len() < b.len(), left, right);
+            let (small, big) = utils::ord_util::sort_by(|a, b| a.len() < b.len(), left, right);
 
             let id_small = small.iter().map(OneVarSubst::id).collect_vec();
             if let Some(id) = big

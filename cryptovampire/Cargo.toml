@@ -12,7 +12,6 @@ pest = "2.5.1"
 pest_derive = "2.5.1"
 clap = { version = "4.0.32", features = ["derive"] }
 derivative = { version = "2.2.0" }
-macro-attr = "0.2.0"
 const_format = "0.2.31"
 env_logger = "0.10.0"
 
@@ -22,3 +21,4 @@ hashbrown = { workspace = true }
 log = { workspace = true }
 static_init = { workspace = true }
 paste = { workspace = true }
+macro-attr ={ workspace = true }
