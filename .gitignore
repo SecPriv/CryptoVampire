@@ -1,1 +1,4 @@
 out/*
+.vscode/*
+**/.DS_Store
+**/._*
