@@ -44,11 +44,6 @@ impl<T> DerefMut for StackBox<T> {
     }
 }
 
-// pub(crate) fn reset_vec<'a, 'b, T>(v: &'a mut Vec<*const T>) -> &'a mut Vec<&'b T> {
-//     v.clear();
-//     unsafe { std::mem::transmute(v) }
-// }
-
 pub(crate) fn transpose<A: Eq + Clone, B: Eq>(vec: Vec<(A, Vec<B>)>) -> Vec<(B, Vec<A>)> {
     let mut result = vec![];
 
@@ -265,30 +260,6 @@ impl From<Infallible> for AlreadyInitialized {
 pub fn print_type<T>(_: &T) -> &'static str {
     std::any::type_name::<T>()
 }
-
-// pub trait LateInitializable: MaybeInvalid {
-//     type Inner;
-
-//     /// Replace the underlying function
-//     ///
-//     /// *Not thread safe*
-//     unsafe fn inner_overwrite(&self, other: Self::Inner);
-
-//     /// **DO NOT OVERWRITE THIS FUNCTION**
-//     #[must_use]
-//     unsafe fn initiallize(&self, other: Self::Inner) -> Result<&Self, AlreadyInitialized> {
-//         if !self.is_valid() {
-//             self.inner_overwrite(other);
-//             Ok(self)
-//         } else {
-//             if cfg!(debug_assertions) {
-//                 unreachable!("{}", AlreadyInitialized::default())
-//             } else {
-//                 Err(Default::default())
-//             }
-//         }
-//     }
-// }
 
 #[macro_export]
 macro_rules! try_trace {

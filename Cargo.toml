@@ -2,7 +2,7 @@
 members = ["cryptovampire", "cryptovampire-lib", "utils"]
 
 [workspace.dependencies]
-itertools = "0.11"
+itertools = "0.12"
 if_chain = "1.0.2"
 hashbrown = "0.14.0"
 log = { version = "0.4", features = ["release_max_level_warn"] }
