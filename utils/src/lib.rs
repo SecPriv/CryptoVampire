@@ -12,3 +12,4 @@ pub mod test_utils;
 pub mod traits;
 pub mod utils;
 pub mod vecref;
+pub mod from_with;

@@ -5,16 +5,16 @@ use std::{
 };
 
 use clap::Parser;
-use cryptovampire::{parser, smt::smt::SmtFile, problem_try_from_str};
+use cryptovampire::{parser, smt::smt::SmtFile, problem_try_from_str, cli::{ Args}};
 use cryptovampire_lib::{
     container::ScopedContainer,
-    environement::{cli::Args, environement::Environement},
+    environement::{ environement::Environement},
     formula::{function::builtin::BUILT_IN_FUNCTIONS, sort::builtins::BUILT_IN_SORTS},
     problem::{PblIterator, Problem},
 };
 use log::trace;
 use std::io::Write;
-use utils::traits::{MyWriteTo, NicerError};
+use utils::{traits::{MyWriteTo, NicerError}, from_with::FromWith};
 
 const USE_MIRI: bool = false;
 
@@ -57,7 +57,7 @@ fn main() {
 
     ScopedContainer::scoped(|container| {
         trace!("start");
-        let env = Environement::from_args(&args, &*container);
+        let env = Environement::from_with(&args, &*container);
 
         // let str = ;
         trace!("read input...");

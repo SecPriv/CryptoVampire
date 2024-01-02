@@ -3,7 +3,7 @@ use crate::container::ScopedContainer;
 use bitflags::bitflags;
 
 use super::{
-    cli::Args,
+    // cli::Args,
     traits::{KnowsRealm, Realm},
 };
 
@@ -15,15 +15,15 @@ pub struct Environement<'bump> {
 }
 
 #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-struct Options {
-    flags: Flags,
-    rewrite_flags: RewriteFlags,
-    subterm_flags: SubtermFlags,
+pub struct Options {
+    pub flags: Flags,
+    pub rewrite_flags: RewriteFlags,
+    pub subterm_flags: SubtermFlags,
 }
 
 bitflags! {
     #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug )]
-    struct Flags: u16 {
+    pub struct Flags: u16 {
         const LEMMA =                   1 << 0;
         const ASSERT_THEORY =           1 << 2; // non smt standard
         const SKOLEMNISE =              1 << 3;
@@ -35,13 +35,13 @@ bitflags! {
     }
 
     #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug )]
-    struct RewriteFlags: u8 { // non standard
+    pub struct RewriteFlags: u8 { // non standard
         const EVALUATE =                1 << 0;
         const CRYPTOGRAPHY =            1 << 1;
     }
 
     #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug )]
-    struct SubtermFlags: u8 {
+    pub struct SubtermFlags: u8 {
         const DEFINED =                 1 << 0;
         const PREPROCESS_INSTANCES =               1 << 1;
         const PREPROCESS_INPUTS =                  1 << 2 | SubtermFlags::DEFINED.bits();
@@ -51,76 +51,70 @@ bitflags! {
     }
 }
 
-macro_rules! mk_bitflag {
-    ($bool:expr => $flag:expr) => {
-        if $bool {
-            $flag
-        } else {
-            Default::default()
-        }
-    };
-
-    ($($bool:expr => $flag:expr),+ $(,)?) => {
-        $(mk_bitflag!($bool => $flag))|+
-    };
-}
-
 impl<'bump> Environement<'bump> {
-    pub fn from_args(args: &Args, container: &'bump ScopedContainer<'bump>) -> Self {
-        let Args {
-            lemmas,
-            eval_rewrite,
-            crypto_rewrite,
-            vampire_subterm,
-            assert_theory,
-            skolemnise,
-            preprocessing,
-            legacy_evaluate,
-            no_bitstring,
-            cvc5,
-            no_symbolic,
-            assert_ground,
-            ..
-        } = args;
-        let pure_smt = *cvc5;
-        let realm = if *no_symbolic {
-            Realm::Evaluated
-        } else {
-            Realm::Symbolic
-        };
-
-        let flags = mk_bitflag!(
-            *lemmas => Flags::LEMMA,
-            *assert_theory && !pure_smt => Flags::ASSERT_THEORY,
-            *assert_ground && !pure_smt => Flags::ASSERT_GROUND,
-            !pure_smt => Flags::ASSERT_NOT,
-            *legacy_evaluate => Flags::LEGACY_EVALUATE,
-            *skolemnise => Flags::SKOLEMNISE,
-            *no_bitstring && realm.is_symbolic() => Flags::NO_BITSTRING
-        );
-
-        let rewrite_flags = mk_bitflag!(
-            *eval_rewrite => RewriteFlags::EVALUATE,
-            *crypto_rewrite => RewriteFlags::CRYPTOGRAPHY
-        );
-
-        let subterm_flags = SubtermFlags::PREPROCESS_INPUTS
-            | SubtermFlags::PREPROCESS_CELLS
-            | mk_bitflag!(
-                *preprocessing => SubtermFlags::PREPROCESS_INSTANCES,
-                *vampire_subterm && !pure_smt => SubtermFlags::VAMPIRE
-            );
-
-        Environement {
+    pub fn new(container: &'bump ScopedContainer<'bump>, realm: Realm, options: Options) -> Self {
+        Self {
             container,
             realm,
-            options: Options {
-                flags,
-                rewrite_flags,
-                subterm_flags,
-            },
+            options,
         }
     }
+
+    // pub fn from_args(args: &Args, container: &'bump ScopedContainer<'bump>) -> Self {
+    //     let Args {
+    //         lemmas,
+    //         eval_rewrite,
+    //         crypto_rewrite,
+    //         vampire_subterm,
+    //         assert_theory,
+    //         skolemnise,
+    //         preprocessing,
+    //         legacy_evaluate,
+    //         no_bitstring,
+    //         cvc5,
+    //         no_symbolic,
+    //         assert_ground,
+    //         ..
+    //     } = args;
+    //     let pure_smt = *cvc5;
+    //     let realm = if *no_symbolic {
+    //         Realm::Evaluated
+    //     } else {
+    //         Realm::Symbolic
+    //     };
+
+    //     let flags = mk_bitflag!(
+    //         *lemmas => Flags::LEMMA,
+    //         *assert_theory && !pure_smt => Flags::ASSERT_THEORY,
+    //         *assert_ground && !pure_smt => Flags::ASSERT_GROUND,
+    //         !pure_smt => Flags::ASSERT_NOT,
+    //         *legacy_evaluate => Flags::LEGACY_EVALUATE,
+    //         *skolemnise => Flags::SKOLEMNISE,
+    //         *no_bitstring && realm.is_symbolic() => Flags::NO_BITSTRING
+    //     );
+
+    //     let rewrite_flags = mk_bitflag!(
+    //         *eval_rewrite => RewriteFlags::EVALUATE,
+    //         *crypto_rewrite => RewriteFlags::CRYPTOGRAPHY
+    //     );
+
+    //     let subterm_flags = SubtermFlags::PREPROCESS_INPUTS
+    //         | SubtermFlags::PREPROCESS_CELLS
+    //         | mk_bitflag!(
+    //             *preprocessing => SubtermFlags::PREPROCESS_INSTANCES,
+    //             *vampire_subterm && !pure_smt => SubtermFlags::VAMPIRE
+    //         );
+
+    //     Environement {
+    //         container,
+    //         realm,
+    //         options: Options {
+    //             flags,
+    //             rewrite_flags,
+    //             subterm_flags,
+    //         },
+    //     }
+    // }
 
     /// use `rewrite` in evaluate
     pub fn rewrite_evaluate(&self) -> bool {

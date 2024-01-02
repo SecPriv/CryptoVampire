@@ -7,17 +7,10 @@ edition = "2021"
 
 [dependencies]
 utils ={ path = "../utils"}
-pest = "2.5.1"
-pest_derive = "2.5.1"
-static_init = "1.0.3"
-paste = "1.0.9"
 ord-utils = { git = "https://github.com/puyral/ord-utils" }
 bitflags = "2.0.2"
 # crossbeam-utils = "0.8.1 4" # because I made poor choices
-itertools = "0.11"
-clap = { version = "4.0.32", features = ["derive"] }
 # take_mut = "0.2.2"
-if_chain = "1.0.2"
 thiserror = "1.0.38"
 anyhow = "1.0.68"
 # ouroboros = "0.17.0"
@@ -26,13 +19,18 @@ derivative = {version = "2.2.0"}
 # qcell = "0.5.3"
 # enum_dispatch = "0.3.11"
 macro-attr = "0.2.0"
-hashbrown = "0.14.0"
 const_format = "0.2.31"
 # qcell = "0.5.3"
 # match_deref = "0.1.1"
 # bumpalo = { version = "3.12.0", features = ["boxed", "collections"] }
 # typed-arena = "2.0.2"
 # either = "1.8.1"
-log = { version = "0.4", features = ["release_max_level_warn"] }
 env_logger = "0.10.0"
 chrono = "0.4.31"
+
+itertools = { workspace = true }
+if_chain = { workspace = true }
+hashbrown = { workspace = true }
+log = { workspace = true }
+static_init = { workspace = true }
+paste = { workspace = true }

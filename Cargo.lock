@@ -259,9 +259,6 @@ dependencies = [
 name = "cryptovampire"
 version = "0.2.2"
 dependencies = [
- "anyhow",
- "bitflags 2.3.3",
- "chrono",
  "clap",
  "const_format",
  "cryptovampire-lib",
@@ -272,12 +269,10 @@ dependencies = [
  "itertools",
  "log",
  "macro-attr",
- "ord-utils",
  "paste",
  "pest",
  "pest_derive",
  "static_init",
- "thiserror",
  "utils",
 ]
 
@@ -288,7 +283,6 @@ dependencies = [
  "anyhow",
  "bitflags 2.3.3",
  "chrono",
- "clap",
  "const_format",
  "derivative",
  "env_logger",
@@ -299,8 +293,6 @@ dependencies = [
  "macro-attr",
  "ord-utils",
  "paste",
- "pest",
- "pest_derive",
  "static_init",
  "thiserror",
  "utils",
