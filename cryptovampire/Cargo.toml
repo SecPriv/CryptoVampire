@@ -1,0 +1,24 @@
+[package]
+name = "cryptovampire"
+version = "0.2.2"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cryptovampire-lib = { path = "../cryptovampire-lib" }
+utils = { path = "../utils" }
+pest = "2.5.1"
+pest_derive = "2.5.1"
+clap = { version = "4.0.32", features = ["derive"] }
+derivative = { version = "2.2.0" }
+const_format = "0.2.31"
+env_logger = "0.10.0"
+
+itertools = { workspace = true }
+if_chain = { workspace = true }
+hashbrown = { workspace = true }
+log = { workspace = true }
+static_init = { workspace = true }
+paste = { workspace = true }
+macro-attr ={ workspace = true }
