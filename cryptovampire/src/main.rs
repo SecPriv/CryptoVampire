@@ -10,7 +10,7 @@ use cryptovampire_lib::{
     container::ScopedContainer,
     environement::environement::Environement,
     formula::{function::builtin::BUILT_IN_FUNCTIONS, sort::builtins::BUILT_IN_SORTS},
-    problem::{PblIterator, Problem},
+    problem::{PblIterator},
 };
 use log::trace;
 use std::io::Write;

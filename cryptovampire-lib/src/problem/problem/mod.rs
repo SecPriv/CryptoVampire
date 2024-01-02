@@ -26,7 +26,7 @@ use crate::{
         variable::Variable,
     },
 };
-use utils::{implvec, traits::NicerError};
+
 
 use super::{
     crypto_assumptions::CryptoAssumption,

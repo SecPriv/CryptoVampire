@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 use cryptovampire_lib::{
-    container::{self, ScopedContainer},
+    container::{ScopedContainer},
     environement::{
         environement::{Environement, Flags, Options, RewriteFlags, SubtermFlags},
         traits::Realm,
