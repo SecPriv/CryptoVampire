@@ -2,10 +2,8 @@ use std::iter::Cloned;
 
 use itertools::{Itertools, MapInto};
 
-use crate::{
-    formula::sort::{sort_proxy::SortProxy, Sort},
-};
-use     utils::vecref::{IterVecRef, VecRef};
+use crate::formula::sort::{sort_proxy::SortProxy, Sort};
+use utils::vecref::{IterVecRef, VecRef};
 
 use super::{Impossible, Signature};
 

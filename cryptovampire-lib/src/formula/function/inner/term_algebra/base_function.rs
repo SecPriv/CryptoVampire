@@ -1,12 +1,10 @@
-use crate::{
-    formula::{
-        function::{
-            signature::FixedRefSignature,
-            traits::{Evaluatable, FixedSignature},
-            Function,
-        },
-        sort::Sort,
+use crate::formula::{
+    function::{
+        signature::FixedRefSignature,
+        traits::{Evaluatable, FixedSignature},
+        Function,
     },
+    sort::Sort,
 };
 
 use utils::assert_variance;

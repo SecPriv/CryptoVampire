@@ -51,7 +51,6 @@ pub struct Problem<'bump> {
 }
 
 impl<'bump> Problem<'bump> {
-
     pub fn list_top_level_terms<'a>(&'a self) -> impl Iterator<Item = &'a ARichFormula<'bump>>
     where
         'bump: 'a,

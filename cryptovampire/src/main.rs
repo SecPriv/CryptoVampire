@@ -5,16 +5,19 @@ use std::{
 };
 
 use clap::Parser;
-use cryptovampire::{parser, smt::smt::SmtFile, problem_try_from_str, cli::{ Args}};
+use cryptovampire::{cli::Args, parser, problem_try_from_str, smt::smt::SmtFile};
 use cryptovampire_lib::{
     container::ScopedContainer,
-    environement::{ environement::Environement},
+    environement::environement::Environement,
     formula::{function::builtin::BUILT_IN_FUNCTIONS, sort::builtins::BUILT_IN_SORTS},
     problem::{PblIterator, Problem},
 };
 use log::trace;
 use std::io::Write;
-use utils::{traits::{MyWriteTo, NicerError}, from_with::FromWith};
+use utils::{
+    from_with::FromWith,
+    traits::{MyWriteTo, NicerError},
+};
 
 const USE_MIRI: bool = false;
 

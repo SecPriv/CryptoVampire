@@ -5,10 +5,13 @@ use itertools::Itertools;
 use log::{log_enabled, trace};
 use pest::Span;
 
-use crate::{parser::{
-    ast::{self, extra::SnN, Term, VariableBinding},
-    err, merr, IntoRuleResult, E,
-}, smt::smt::SmtFormula};
+use crate::{
+    parser::{
+        ast::{self, extra::SnN, Term, VariableBinding},
+        err, merr, IntoRuleResult, E,
+    },
+    smt::smt::SmtFormula,
+};
 use cryptovampire_lib::{
     environement::traits::{KnowsRealm, Realm},
     formula::{

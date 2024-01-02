@@ -1,6 +1,4 @@
-use crate::{
-    formula::function::inner::if_then_else::IfThenElse,
-};
+use crate::formula::function::inner::if_then_else::IfThenElse;
 use utils::{string_ref::StrRef, traits::RefNamed};
 
 use super::InnerFunction;

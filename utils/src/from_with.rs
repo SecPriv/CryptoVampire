@@ -12,7 +12,10 @@ pub trait IntoWith<T, U> {
 //     }
 // }
 
-impl<T, U, V> FromWith<V, U> for T where V: IntoWith<T, U> {
+impl<T, U, V> FromWith<V, U> for T
+where
+    V: IntoWith<T, U>,
+{
     fn from_with(other: V, arg: U) -> Self {
         other.into_with(arg)
     }

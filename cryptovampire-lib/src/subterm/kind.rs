@@ -11,7 +11,7 @@ use crate::{
     },
     problem::Problem,
 };
-use     utils::vecref::VecRef;
+use utils::vecref::VecRef;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub enum AbsSubtermKindG<U, V> {

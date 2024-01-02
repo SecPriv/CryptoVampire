@@ -8,7 +8,7 @@ use crate::{
     container::contained::Containable,
     formula::{function::Function, sort::Sort},
 };
-use utils::{string_ref::StrRef, traits::RefNamed, asssert_trait};
+use utils::{asssert_trait, string_ref::StrRef, traits::RefNamed};
 
 #[derive(Debug)]
 pub struct InnerMemoryCell<'bump> {

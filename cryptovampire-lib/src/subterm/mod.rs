@@ -42,12 +42,11 @@ pub(crate) mod kind;
 pub(crate) mod traits;
 
 use self::{
-    kind::{AbsSubtermKindG, SubtermKindConstr, SubtermKind, SubtermKindWFunction},
+    kind::{AbsSubtermKindG, SubtermKind, SubtermKindConstr, SubtermKindWFunction},
     traits::{SubtermAux, SubtermResult},
 };
 
 use crate::problem::{protocol::Protocol, Problem};
-
 
 #[derive(Debug, Clone)]
 pub(crate) struct Subterm<'bump, Aux>

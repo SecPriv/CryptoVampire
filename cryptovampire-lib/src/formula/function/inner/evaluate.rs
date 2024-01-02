@@ -2,23 +2,21 @@ use std::collections::BTreeMap;
 
 use log::trace;
 
-use crate::{
-    formula::{
-        formula::ARichFormula,
-        function::{
-            builtin::{CONDITION_TO_BOOL, MESSAGE_TO_BITSTRING},
-            signature::FixedRefSignature,
-            traits::{FixedSignature, MaybeEvaluatable},
-            Function,
-        },
-        sort::{
-            builtins::{CONDITION, MESSAGE},
-            sorted::SortedError,
-            FOSort, Sort,
-        },
+use crate::formula::{
+    formula::ARichFormula,
+    function::{
+        builtin::{CONDITION_TO_BOOL, MESSAGE_TO_BITSTRING},
+        signature::FixedRefSignature,
+        traits::{FixedSignature, MaybeEvaluatable},
+        Function,
+    },
+    sort::{
+        builtins::{CONDITION, MESSAGE},
+        sorted::SortedError,
+        FOSort, Sort,
     },
 };
-use     utils::traits::NicerError;
+use utils::traits::NicerError;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Evaluate<'bump> {

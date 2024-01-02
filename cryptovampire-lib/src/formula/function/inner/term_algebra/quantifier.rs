@@ -8,18 +8,16 @@ use std::{
 
 use itertools::Itertools;
 
-use crate::{
-    formula::{
-        formula::ARichFormula,
-        function::{
-            signature::FixedRefSignature,
-            traits::{FixedSignature, MaybeEvaluatable},
-        },
-        sort::builtins::{CONDITION, MESSAGE},
-        variable::Variable,
+use crate::formula::{
+    formula::ARichFormula,
+    function::{
+        signature::FixedRefSignature,
+        traits::{FixedSignature, MaybeEvaluatable},
     },
+    sort::builtins::{CONDITION, MESSAGE},
+    variable::Variable,
 };
-use     utils::string_ref::StrRef;
+use utils::string_ref::StrRef;
 
 static N_QUANTIFIERS: AtomicUsize = AtomicUsize::new(0);
 

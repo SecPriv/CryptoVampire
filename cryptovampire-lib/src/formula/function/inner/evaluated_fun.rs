@@ -1,11 +1,9 @@
-use crate::{
-    formula::function::{
-        signature::FixedRefSignature,
-        traits::{FixedSignature, MaybeEvaluatable},
-        Function,
-    },
+use crate::formula::function::{
+    signature::FixedRefSignature,
+    traits::{FixedSignature, MaybeEvaluatable},
+    Function,
 };
-use     utils::string_ref::StrRef;
+use utils::string_ref::StrRef;
 
 use super::term_algebra::base_function::BaseFunction;
 

@@ -17,7 +17,7 @@ use crate::{
     environement::traits::{KnowsRealm, Realm},
     formula::sort::{sort_proxy::SortProxy, Sort},
 };
-use     utils::infinity::Infinity;
+use utils::infinity::Infinity;
 
 /// A very general trait of what should be a signature of a function
 pub trait Signature<'bump>: Sized {

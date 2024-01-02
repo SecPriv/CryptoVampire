@@ -1,14 +1,12 @@
 use std::sync::Arc;
 
-use crate::{
-    formula::{
-        function::{
-            signature::FixedRefSignature,
-            traits::{FixedSignature, MaybeEvaluatable},
-            Function,
-        },
-        sort::{builtins::NAME, Sort},
+use crate::formula::{
+    function::{
+        signature::FixedRefSignature,
+        traits::{FixedSignature, MaybeEvaluatable},
+        Function,
     },
+    sort::{builtins::NAME, Sort},
 };
 use utils::implvec;
 

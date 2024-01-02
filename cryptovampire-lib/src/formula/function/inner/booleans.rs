@@ -210,7 +210,7 @@ mod signatures {
         },
         static_signature,
     };
-    use         utils::infinity::Infinity;
+    use utils::infinity::Infinity;
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Default)]
     pub struct EqualitySignature<'bump> {

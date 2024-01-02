@@ -16,7 +16,7 @@ use crate::{
     },
     environement::traits::{KnowsRealm, Realm},
 };
-use utils::{force_lifetime,  precise_as_ref::PreciseAsRef, string_ref::StrRef, traits::RefNamed};
+use utils::{force_lifetime, precise_as_ref::PreciseAsRef, string_ref::StrRef, traits::RefNamed};
 
 use self::inner::{Index, Other, TermBase, UserEvaluatable};
 
