@@ -257,7 +257,33 @@ dependencies = [
 
 [[package]]
 name = "cryptovampire"
-version = "0.2.1"
+version = "0.2.2"
+dependencies = [
+ "anyhow",
+ "bitflags 2.3.3",
+ "chrono",
+ "clap",
+ "const_format",
+ "cryptovampire-lib",
+ "derivative",
+ "env_logger",
+ "hashbrown",
+ "if_chain",
+ "itertools",
+ "log",
+ "macro-attr",
+ "ord-utils",
+ "paste",
+ "pest",
+ "pest_derive",
+ "static_init",
+ "thiserror",
+ "utils",
+]
+
+[[package]]
+name = "cryptovampire-lib"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "bitflags 2.3.3",
@@ -277,6 +303,7 @@ dependencies = [
  "pest_derive",
  "static_init",
  "thiserror",
+ "utils",
 ]
 
 [[package]]
@@ -786,6 +813,14 @@ name = "utf8parse"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
+
+[[package]]
+name = "utils"
+version = "0.1.0"
+dependencies = [
+ "hashbrown",
+ "thiserror",
+]
 
 [[package]]
 name = "version_check"

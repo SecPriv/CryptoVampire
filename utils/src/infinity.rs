@@ -40,7 +40,7 @@ impl<Idx> From<Idx> for Infinity<Idx> {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::infinity::Infinity;
+    use crate::infinity::Infinity;
 
     #[test]
     fn lower_infinity_is_smaller() {

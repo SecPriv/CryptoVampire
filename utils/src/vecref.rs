@@ -527,7 +527,7 @@ impl<'a, U: Clone> Extend<U> for VecRefClone<'a, U> {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::vecref::{VecRef, VecRefClone};
+    use crate::vecref::{VecRef, VecRefClone};
 
     #[test]
     fn they_are_small() {

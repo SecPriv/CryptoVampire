@@ -1,28 +1,3 @@
-// #![allow(dead_code)]
-// // #![feature(box_syntax)]
-// // #![feature(box_patterns)]
-
-// use std::{
-//     fs::{self, read_to_string, File},
-//     io::{self, Read, Write},
-//     path::{Path, PathBuf},
-//     rc::Rc,
-// };
-
-// use automator::{
-//     formula::{cli::Args, env::Environement},
-//     parser::parse_protocol,
-//     smt::{
-//         smt::Smt,
-//         writer::{problem_smts_with_lemma, problem_to_smt},
-//     },
-// };
-// use clap::Parser;
-
-// extern crate pest_derive;
-
-// extern crate paste;
-
 use std::{
     fs::{self, read_to_string, File},
     io::{self, BufWriter, Read},
