@@ -1,20 +1,18 @@
 use std::sync::Arc;
 
+use crate::subterm::kind::{AbsSubtermKindG, SubtermKind, SubtermKindWSort};
 use crate::{
     formula::{
         function::signature::{Lazy, Signature},
         sort::{builtins::BOOL, Sort},
     },
-    problem::{
-        crypto_assumptions::{
-            SubtermEufCmaMacKey, SubtermEufCmaMacMain, SubtermEufCmaSignKey, SubtermEufCmaSignMain,
-            SubtermIntCtxtKey, SubtermIntCtxtMain, SubtermIntCtxtRand, SubtermNonce,
-        },
-        subterm::kind::{AbsSubtermKindG, SubtermKind, SubtermKindWSort},
+    problem::crypto_assumptions::{
+        SubtermEufCmaMacKey, SubtermEufCmaMacMain, SubtermEufCmaSignKey, SubtermEufCmaSignMain,
+        SubtermIntCtxtKey, SubtermIntCtxtMain, SubtermIntCtxtRand, SubtermNonce,
     },
     static_signature,
 };
-use     utils::string_ref::StrRef;
+use utils::string_ref::StrRef;
 
 use super::super::{
     traits::{MaybeEvaluatable, MaybeFixedSignature},

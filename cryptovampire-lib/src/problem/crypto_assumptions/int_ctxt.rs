@@ -3,6 +3,12 @@ use std::{cell::RefCell, collections::BTreeSet, hash::Hash, sync::Arc};
 use if_chain::if_chain;
 use itertools::Itertools;
 
+use crate::subterm::{
+    into_exist_formula,
+    kind::SubtermKindConstr,
+    traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
+    Subterm,
+};
 use crate::{
     environement::{environement::Environement, traits::KnowsRealm},
     formula::{
@@ -19,19 +25,10 @@ use crate::{
         variable::Variable,
     },
     mexists, mforall,
-    problem::{
-        generator::Generator,
-        problem::Problem,
-        subterm::{
-            into_exist_formula,
-            kind::SubtermKindConstr,
-            traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
-            Subterm,
-        },
-    },
+    problem::{generator::Generator, problem::Problem},
     static_signature,
 };
-use     utils::arc_into_iter::ArcIntoIter;
+use utils::arc_into_iter::ArcIntoIter;
 
 pub type SubtermIntCtxtMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
 pub type SubtermIntCtxtKey<'bump> = Subterm<'bump, KeyAux<'bump>>;

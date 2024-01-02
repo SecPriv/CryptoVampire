@@ -38,18 +38,20 @@ use utils::{
     utils::{repeat_n_zip, AlreadyInitialized, StackBox},
 };
 
+pub(crate) mod kind;
+pub(crate) mod traits;
+
 use self::{
-    kind::{AbsSubtermKindG, SubtermKind, SubtermKindConstr, SubtermKindWFunction},
+    kind::{AbsSubtermKindG, SubtermKindConstr, SubtermKindWFunction},
     traits::{SubtermAux, SubtermResult},
 };
 
-use super::{problem::Problem, protocol::Protocol};
+use crate::problem::{protocol::Protocol, Problem};
 
-pub mod kind;
-pub mod traits;
+pub use kind::SubtermKind;
 
 #[derive(Debug, Clone)]
-pub struct Subterm<'bump, Aux>
+pub(crate) struct Subterm<'bump, Aux>
 where
     Aux: SubtermAux<'bump>,
 {

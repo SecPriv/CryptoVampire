@@ -1,3 +1,4 @@
+use crate::subterm::{kind::SubtermKindConstr, traits::DefaultAuxSubterm, Subterm};
 use crate::{
     environement::environement::Environement,
     formula::{
@@ -7,11 +8,7 @@ use crate::{
         sort::builtins::{MESSAGE, NAME},
     },
     mforall,
-    problem::{
-        generator::Generator,
-        problem::Problem,
-        subterm::{kind::SubtermKindConstr, traits::DefaultAuxSubterm, Subterm},
-    },
+    problem::{generator::Generator, problem::Problem},
 };
 
 pub type SubtermNonce<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;

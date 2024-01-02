@@ -9,8 +9,8 @@ use super::{
     cell::{Assignement, MemoryCell},
     cell_dependancies::graph::DependancyGraph,
     step::Step,
-    subterm::FormlAndVars,
 };
+use crate::subterm::FormlAndVars;
 
 /// A protocol
 #[derive(Debug, Clone)]
