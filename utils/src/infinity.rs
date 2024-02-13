@@ -49,8 +49,9 @@ mod tests {
     }
     #[test]
     fn high_infinity_is_bigger() {
-        assert!(Infinity::LowInfinity::<usize> > Infinity::HighInfinty);
+        assert!(Infinity::LowInfinity::<usize> < Infinity::HighInfinty);
         assert!(Infinity::HighInfinty > Infinity::Num(34));
+        assert!(Infinity::LowInfinity < Infinity::Num(34));
     }
 
     #[test]

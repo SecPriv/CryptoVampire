@@ -231,7 +231,10 @@ impl<'a> Sort<'a> {
     /// Equality modulo a [Realm]
     ///
     /// ```rust
-    /// assert!(BOOL.eq_realm(CONDITION.as_ref(), Realm::Evaluated))
+    /// use cryptovampire_lib::environement::traits::Realm;
+    ///
+    /// use cryptovampire_lib::formula::sort::builtins::{CONDITION, BOOL};
+    /// assert!(BOOL.eq_realm(&CONDITION, &Realm::Evaluated))
     /// ```
     pub fn eq_realm<R>(&self, other: &Self, realm: &R) -> bool
     where
@@ -241,8 +244,9 @@ impl<'a> Sort<'a> {
             || match realm.get_realm() {
                 Realm::Symbolic => false,
                 Realm::Evaluated => {
-                    self.is_evaluatable()
-                        && (self.maybe_evaluated_sort() == other.maybe_evaluated_sort())
+                    (self.is_evaluatable() || other.is_evaluatable())
+                        && ((self.maybe_evaluated_sort().as_ref() == Some(other))
+                            || (other.maybe_evaluated_sort().as_ref() == Some(self)))
                 }
             }
     }
@@ -275,5 +279,19 @@ impl<'a, 'bump: 'a> RefNamed<'a> for &'a InnerSort<'bump> {
             InnerSort::Index(idx) => idx.name(),
             InnerSort::Other(o) => o.name(),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{
+        environement::traits::{KnowsRealm, Realm},
+        formula::sort::builtins::{BOOL, CONDITION},
+    };
+
+    #[test]
+    pub fn test_eq_realm() {
+        let realm = &Realm::Evaluated;
+        assert!(BOOL.eq_realm(&CONDITION, realm))
     }
 }
