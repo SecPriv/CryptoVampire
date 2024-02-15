@@ -99,7 +99,7 @@ macro_rules! implvec {
 ///
 /// Base usage
 /// ```
-/// # use automator::destvec;
+/// # use utils::destvec;
 /// let vec = vec![1,3,4];
 ///
 /// destvec!([a, b, c] = vec);
@@ -113,7 +113,7 @@ macro_rules! implvec {
 ///
 ///
 /// ```
-/// # use automator::destvec;
+/// # use utils::destvec;
 /// let vec = vec![1,3,4,5];
 ///
 /// destvec!([a, b, c] = vec; |err| { println!("{}",err); 0 });
@@ -156,7 +156,7 @@ macro_rules! destvec {
 ///
 ///
 /// ```rust
-/// use automator::match_as_trait;
+/// use utils::match_as_trait;
 ///
 /// #[derive(Debug)]
 /// struct A;

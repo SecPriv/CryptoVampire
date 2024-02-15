@@ -1,5 +1,6 @@
 [workspace]
 members = ["cryptovampire", "cryptovampire-lib", "utils"]
+resolver = "2"
 
 [workspace.dependencies]
 itertools = "0.12"
