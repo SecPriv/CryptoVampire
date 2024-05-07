@@ -4,3 +4,4 @@ out/*
 **/._*
 target
 .direnv
+result
