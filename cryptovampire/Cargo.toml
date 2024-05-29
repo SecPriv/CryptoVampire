@@ -22,3 +22,4 @@ log = { workspace = true }
 static_init = { workspace = true }
 paste = { workspace = true }
 macro-attr ={ workspace = true }
+# regex = "1.10.4"

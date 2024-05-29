@@ -23,3 +23,6 @@ static_init = { workspace = true }
 paste = { workspace = true }
 thiserror = { workspace = true }
 macro-attr ={ workspace = true }
+
+# dashmap = "5.5.3"
+# smol = "2.0.0"
