@@ -25,6 +25,7 @@
         formatter = nixpkgs.legacyPackages.${system}.nixfmt;
 
         devShell = pkgs.mkShell {
+          RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
 
           buildInputs = with pkgs;
             defaultPackage.buildInputs
