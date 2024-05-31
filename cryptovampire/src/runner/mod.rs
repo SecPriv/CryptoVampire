@@ -1,10 +1,6 @@
 use hashbrown::HashSet;
 mod tmpformula;
-
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct VampireRunner {
-    vampire_location: String,
-}
+mod vampire_runner;
 
 
 /// A possibly thread-safe dump for formulas

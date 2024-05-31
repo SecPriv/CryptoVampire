@@ -9,7 +9,6 @@ edition = "2021"
 utils ={ path = "../utils"}
 # ord-utils = { git = "https://github.com/puyral/ord-utils" }
 bitflags = "2.0.2"
-anyhow = "1.0.68"
 
 # qcell = "0.5.3"
 # bumpalo = { version = "3.12.0", features = ["boxed", "collections"] }
@@ -23,6 +22,7 @@ static_init = { workspace = true }
 paste = { workspace = true }
 thiserror = { workspace = true }
 macro-attr ={ workspace = true }
+anyhow = { workspace = true }
 
 # dashmap = "5.5.3"
 # smol = "2.0.0"
