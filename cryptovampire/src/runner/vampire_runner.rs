@@ -3,14 +3,14 @@ use std::{
     process::{Command, Stdio},
     usize,
 };
+use thiserror::Error;
+use anyhow::{bail, Context};
+use utils::implvec;
 
 #[derive(Debug, Clone)]
 pub struct VampireExec {
-    location: String,
-}
-
-trait ToArgs<const N: usize> {
-    fn to_args(&self) -> [Box<str>; N];
+    pub location: String,
+    pub extra_args: Vec<VampireArg>,
 }
 macro_rules! option {
       ($($variant:ident($name:literal, $content:ty)),*,) => {
@@ -83,6 +83,10 @@ pub mod vampire_suboptions {
     suboption!(SatSolver, (Minisat, "minisat"), (Z3, "z3"),);
 }
 
+trait ToArgs<const N: usize> {
+    fn to_args(&self) -> [Box<str>; N];
+}
+
 impl ToArgs<1> for u64 {
     fn to_args(&self) -> [Box<str>; 1] {
         [self.to_string().into()]
@@ -101,8 +105,22 @@ impl ToArgs<1> for bool {
     }
 }
 
+pub enum VampireOutput {
+    Unsat(String),
+    TimeOut(String),
+}
+
+#[derive(Debug, Error)]
+pub enum VampireError {
+    #[error("vampire failed in an unsupported way")]
+    UnknownError(String)
+}
+
+const SUCCESS_RC:i32 = 0;
+const TIMEOUT_RC:i32 = 4;
+
 impl VampireExec {
-    pub fn run(&self, args: &[VampireArg], pbl: &str) -> anyhow::Result<String> {
+    pub fn run<'a>(&self, args: implvec!(&'a VampireArg), pbl: &str) -> anyhow::Result<VampireOutput> {
         let mut cmd = Command::new(&self.location);
         for arg in args {
             let [a, b] = arg.to_args();
@@ -112,31 +130,29 @@ impl VampireExec {
         let mut child = cmd
             .stdin(Stdio::piped()) // We want to write to stdin
             .stdout(Stdio::piped()) // Capture the stdout
-            .spawn()?;
+            .spawn()
+            .with_context(|| format!("Failed to start vampire ({:})", &self.location))?;
 
         // Get the stdin handle of the child process
         if let Some(mut stdin) = child.stdin.take() {
             // Write the content to stdin
-            stdin.write_all(pbl.as_bytes())?;
+            stdin
+                .write_all(pbl.as_bytes())
+                .with_context(|| format!("Failed to write to vampire ({:})'s stdin", &self.location))?;
         } else {
-            Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Failed to open stdin",
-            ))?;
+            bail!("Failed to open vampire ({:})'s stdin", &self.location)
         }
 
-        // Optionally, you can read the output from the process
-        let output = child.wait_with_output()?;
-
-        // Print the output
-        Ok(String::from_utf8(output.stdout)?)
-    }
-}
-
-impl Default for VampireExec {
-    fn default() -> Self {
-        Self {
-            location: "vampire".into(),
+        // read the output from the process
+        let output = child
+            .wait_with_output()
+            .with_context(|| format!("Failed to read vampire ({:})'s stdout", &self.location))?;
+        let stdout = String::from_utf8(output.stdout).with_context(|| format!("vampire ({:})'s output isn't in utf-8", &self.location))?;
+        let return_code = output.status.code().with_context(|| "terminated by signal")?;
+        match return_code {
+            SUCCESS_RC => Ok(VampireOutput::Unsat(stdout)),
+            TIMEOUT_RC => Ok(VampireOutput::TimeOut(stdout)),
+            _ => {Err(VampireError::UnknownError(stdout))?}
         }
     }
 }

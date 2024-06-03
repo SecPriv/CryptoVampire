@@ -227,6 +227,7 @@ dependencies = [
  "pest",
  "pest_derive",
  "static_init",
+ "thiserror",
  "utils",
 ]
 

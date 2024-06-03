@@ -23,23 +23,6 @@ const USE_MIRI: bool = false;
 
 fn main() {
     let args = Args::parse();
-    // let args = Args {
-    //     file: Some(PathBuf::from(
-    //         "../result-table/protocols/payement_channel.ptcl",
-    //     )),
-    //     output_location: PathBuf::from("../test.smt"),
-    //     lemmas: false,
-    //     eval_rewrite: false,
-    //     crypto_rewrite: false,
-    //     vampire_subterm: false,
-    //     assert_theory: true,
-    //     skolemnise: false,
-    //     preprocessing: true,
-    //     legacy_evaluate: false,
-    //     no_bitstring: false,
-    //     cvc5: false,
-    //     no_symbolic: true,
-    // };
 
     env_logger::Builder::new()
         .format(|buf, record| {
@@ -48,13 +31,11 @@ fn main() {
                 buf,
                 "[{}] in {}:{}\n\t{}",
                 record.level(),
-                // chrono::Local::now().format("%Y-%m-%dT%H:%M:%S"),
                 record.file().unwrap_or("unknown"),
                 record.line().unwrap_or(0),
                 str
             )
         })
-        // .filter(None, LevelFilter::Trace)
         .parse_default_env()
         .init();
 
@@ -128,40 +109,6 @@ fn main() {
         }
     });
 
-    //     let pbl = match parse_protocol(env, &str) {
-    //         Ok(p) => p,
-    //         Err(e) => {
-    //             let file = if let Some(f) = &args.file {
-    //                 f.to_str().unwrap_or("[non-unicode file name]")
-    //             } else {
-    //                 "stdin"
-    //             };
-    //             panic!("error while parsing {}:\n{}", file, e)
-    //         }
-    //     };
-
-    //     if args.lemmas {
-    //         assert!(!args.output_location.is_file());
-
-    //         fs::create_dir_all(&args.output_location).expect("couldn't create dir");
-
-    //         let smts = problem_smts_with_lemma(pbl);
-    //         for (i, smt) in smts.enumerate() {
-    //             let path = args.output_location.join(Path::new(&format!("{}.smt", i)));
-    //             write_to_file(&path, smt);
-    //         }
-    //     } else {
-    //         assert!(!args.output_location.is_dir());
-    //         let smt = problem_to_smt(pbl);
-    //         write_to_file(&args.output_location, smt);
-    //     }
-
-    //     // println!("{:?}", p)
-
-    //     // for s in smt {
-    //     //     println!("{}\n", s);
-    //     // }
-    // }
 }
 
 fn write_to_file(path: &PathBuf, smt: impl MyWriteTo) {
@@ -175,9 +122,4 @@ fn write_to_file(path: &PathBuf, smt: impl MyWriteTo) {
 
     smt.write_to_io(&mut bw).unwrap()
 }
-
-// fn main() {
-//     // parser::parse_string("").unwrap()
-// }
-
 const TEST_FILE: &'static str = include_str!("../../test/basic-hash-1.ptcl");

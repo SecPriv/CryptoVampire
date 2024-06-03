@@ -1,4 +1,20 @@
+use std::fmt::{write, Display};
+
+use anyhow::{anyhow, bail};
+use clap::Arg;
+use cryptovampire_lib::{
+    environement::traits::Realm,
+    formula::{
+        formula::RichFormula,
+        function::{signature::Signature, Function},
+        sort::{sort_proxy::SortProxy, Sort},
+        variable::Variable,
+    },
+};
+use hashbrown::HashMap;
+use if_chain::if_chain;
 use itertools::Itertools;
+use utils::string_ref::StrRef;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct TmpFormula {
@@ -71,6 +87,64 @@ impl TmpFormula {
 
     pub fn args(&self) -> &[TmpFormula] {
         &self.args
+    }
+
+    pub fn to_rich_formula<'a, 'bump>(
+        &'a self,
+        functions: &HashMap<StrRef<'bump>, Function<'bump>>,
+        expected_sort: SortProxy<'bump>,
+        variables: &mut HashMap<&'a Self, Variable<'bump>>,
+    ) -> anyhow::Result<RichFormula<'bump>> {
+        let realm = &Realm::Symbolic;
+        let head = self.head();
+        let f = functions.get(head);
+        if let Some(f) = f {
+            let sign = f.signature();
+            sign.out()
+                .unify(&expected_sort, realm)
+                .map_err(|_| anyhow!("infernce error"))?;
+            let mut args = vec![];
+            for e in self.args().iter().zip_longest(sign.args()) {
+                match e {
+                    itertools::EitherOrBoth::Left(_) => {
+                        bail!("more arguments that expected in {:}", &self)
+                    }
+                    itertools::EitherOrBoth::Right(_) => break,
+                    itertools::EitherOrBoth::Both(arg, sort) => {
+                        args.push(arg.to_rich_formula(functions, sort, variables)?.into_arc())
+                    }
+                }
+            }
+            Ok(RichFormula::Fun(*f, args.into()))
+        } else {
+            if let Some(&v) = variables
+                .get(self)
+                .and_then(|v| expected_sort.expects(*v.sort(), realm).ok().map(|_| v))
+            {
+                Ok(RichFormula::Var(v))
+            } else if let Some(s) = expected_sort.as_option() {
+                let i = variables.len();
+
+                // i is fresh
+                debug_assert!(variables.values().map(|v| v.id()).all(|j| i != j));
+
+                let v = Variable::new(i, s);
+                variables.insert(self, v);
+                Ok(RichFormula::Var(v))
+            } else {
+                bail!("inference error")
+            }
+        }
+    }
+}
+
+impl Display for TmpFormula {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:}(", &self.head)?;
+        for arg in self.args() {
+            write!(f, "{:}, ", arg)?;
+        }
+        write!(f, ")")
     }
 }
 

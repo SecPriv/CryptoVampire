@@ -50,13 +50,13 @@ pub struct Args {
 
     /// use vampire's special subterm
     ///
-    /// NB: not in the smt standard
+    /// NB: not in the smt standard, requires modified vampire
     #[arg(long)]
     pub vampire_subterm: bool,
 
     /// use vampire's 'assert-theory'
     ///
-    /// NB: not in the smt standard
+    /// NB: not in the smt standard, requires vampire
     #[arg(long)]
     pub assert_theory: bool,
 
@@ -86,7 +86,7 @@ pub struct Args {
     #[arg(long)]
     pub cvc5: bool,
 
-    /// *deprecated* use `assert-ground`
+    /// *deprecated* use vampire's `assert-ground`. Requires modified vampire
     #[arg(long)]
     pub assert_ground: bool,
 
@@ -95,6 +95,26 @@ pub struct Args {
     /// NB: the program will crash it subterms are required somewhere
     #[arg(long, short)]
     pub no_symbolic: bool,
+
+    /// Use vampire cryptovampire's builtin runner
+    /// 
+    /// This opens (and activates by default) the ability to automatically learn about a given vampire run. This is incompatible with lemmas.
+    #[arg(short, long, default_value_t = false)]
+    pub auto_retry: bool,
+
+    /// Location of the `vampire` executable
+    #[arg(long, default_value = "vampire")]
+    pub vampire_location: PathBuf,
+    
+    /// Upper bound of how many tries on the vampire runner
+    /// 
+    /// 0 for an infinite number of tries
+    #[arg(long, default_value = "0")]
+    pub num_of_retry: u32,
+
+    /// Vampire execution time
+    #[arg(long, default_value = "1")]
+    pub vampire_exec_time: u32,
 }
 
 macro_rules! mk_bitflag {
