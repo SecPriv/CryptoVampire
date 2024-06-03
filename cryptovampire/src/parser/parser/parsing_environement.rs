@@ -331,6 +331,7 @@ pub fn parse_str<'a, 'bump>(
         query,
         container,
         crypto_assertions: asserts_crypto,
+        extra_instances: Default::default()
     };
 
     Ok(pbl)

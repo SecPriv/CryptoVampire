@@ -226,6 +226,7 @@ dependencies = [
  "paste",
  "pest",
  "pest_derive",
+ "regex",
  "static_init",
  "thiserror",
  "utils",

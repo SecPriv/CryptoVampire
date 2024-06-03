@@ -1,6 +1,8 @@
-use crate::container::ScopedContainer;
+use crate::{container::ScopedContainer, formula::function::Function};
 
 use bitflags::bitflags;
+use hashbrown::HashMap;
+use utils::string_ref::StrRef;
 
 use super::{
     // cli::Args,
@@ -217,6 +219,10 @@ impl<'bump> Environement<'bump> {
 
     pub fn container_full_life_time(&self) -> &'bump ScopedContainer<'bump> {
         self.container
+    }
+
+    pub fn get_function_hash(&self) -> HashMap<StrRef<'bump>, Function<'bump>> {
+        self.container.get_function_hash_map()
     }
 }
 

@@ -408,7 +408,7 @@ where
                 if cfg!(debug_assertions) &&
                  (check_variable_collision(x, &formula) ||
                  check_variable_collision_list(x, &bounded_variables)) {
-                    error!("collision in the variables")
+                    error!("collision in the variables ({:?} in {:?})", &formula, &bounded_variables)
                 }
                 (ExpantionState::from_deeped_kind_and_vars(deeper_kind, bounded_variables), formula)
             }).collect_vec();

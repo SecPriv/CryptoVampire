@@ -37,6 +37,7 @@ fn main() {
             )
         })
         .parse_default_env()
+        .filter_level(log::LevelFilter::Debug)
         .init();
 
     ScopedContainer::scoped(|container| {
