@@ -2,18 +2,18 @@ use anyhow::{anyhow, bail};
 use cryptovampire_lib::{environement::environement::Environement, problem::Problem};
 use itertools::Itertools;
 use searcher::InstanceSearcher;
-use vampire_runner::VampireExec;
+use vampire_runner::{VampireArg, VampireExec};
 
 use crate::smt::smt::SmtFile;
 mod searcher;
 mod tmpformula;
-mod vampire_runner;
+pub mod vampire_runner;
 
 pub fn run_multiple_time<'bump>(
     ntimes: u32,
-    vampire: VampireExec,
+    vampire: &VampireExec,
     env: &Environement<'bump>,
-    mut pbl: Problem<'bump>,
+    pbl: &mut Problem<'bump>,
 ) -> anyhow::Result<String> {
     if ntimes == 0 {}
     let n = if ntimes == 0 { u32::MAX } else { ntimes };
@@ -22,7 +22,8 @@ pub fn run_multiple_time<'bump>(
         let smt = SmtFile::from_general_file(env, pbl.into_general_file(&env))
             .as_diplay(env)
             .to_string();
-        let out = vampire.run([], &smt)?;
+        let out = vampire.run([&VampireArg::InputSyntax(vampire_runner::vampire_suboptions::InputSyntax::SmtLib2)], &smt)?;
+        
         let to_search = match out {
             vampire_runner::VampireOutput::Unsat(proof) => return Ok(proof),
             vampire_runner::VampireOutput::TimeOut(out) => out,

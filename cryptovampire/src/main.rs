@@ -5,12 +5,20 @@ use std::{
 };
 
 use clap::Parser;
-use cryptovampire::{cli::Args, parser, problem_try_from_str, smt::smt::SmtFile};
+use cryptovampire::{
+    cli::Args,
+    parser, problem_try_from_str,
+    runner::{
+        run_multiple_time,
+        vampire_runner::{VampireArg, VampireExec},
+    },
+    smt::smt::SmtFile,
+};
 use cryptovampire_lib::{
     container::ScopedContainer,
     environement::environement::Environement,
     formula::{function::builtin::BUILT_IN_FUNCTIONS, sort::builtins::BUILT_IN_SORTS},
-    problem::{PblIterator},
+    problem::PblIterator,
 };
 use log::trace;
 use std::io::Write;
@@ -37,7 +45,7 @@ fn main() {
             )
         })
         .parse_default_env()
-        .filter_level(log::LevelFilter::Debug)
+        // .filter_level(log::LevelFilter::Trace)
         .init();
 
     ScopedContainer::scoped(|container| {
@@ -63,7 +71,7 @@ fn main() {
             }
         };
 
-        let pbl = problem_try_from_str(
+        let mut pbl = problem_try_from_str(
             container,
             BUILT_IN_SORTS.iter().cloned(),
             BUILT_IN_FUNCTIONS.iter().cloned(),
@@ -79,7 +87,14 @@ fn main() {
             )
         } else {
             if args.lemmas {
-                assert!(!args.output_location.is_file());
+                assert!(
+                    !args.auto_retry,
+                    "Can't auto run vampire with lemma ativated"
+                );
+                assert!(
+                    !args.output_location.is_file(),
+                    "the oupput is a file, it should be a directory"
+                );
 
                 fs::create_dir_all(&args.output_location).expect("couldn't create dir");
 
@@ -102,6 +117,15 @@ fn main() {
 
                     i += 1;
                 }
+            } else if args.auto_retry {
+                let vampire = VampireExec {
+                    location: args.vampire_location,
+                    extra_args: vec![VampireArg::TimeLimit(args.vampire_exec_time)],
+                };
+                print!(
+                    "{:}",
+                    run_multiple_time(args.num_of_retry, &vampire, &env, &mut pbl).unwrap()
+                )
             } else {
                 assert!(!args.output_location.is_dir());
                 let smt = SmtFile::from_general_file(&env, pbl.into_general_file(&env));
@@ -109,7 +133,6 @@ fn main() {
             }
         }
     });
-
 }
 
 fn write_to_file(path: &PathBuf, smt: impl MyWriteTo) {

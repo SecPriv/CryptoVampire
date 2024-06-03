@@ -114,7 +114,7 @@ pub struct Args {
 
     /// Vampire execution time
     #[arg(long, default_value = "1")]
-    pub vampire_exec_time: u32,
+    pub vampire_exec_time: u64,
 }
 
 macro_rules! mk_bitflag {

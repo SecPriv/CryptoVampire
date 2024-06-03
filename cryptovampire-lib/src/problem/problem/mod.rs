@@ -69,9 +69,16 @@ impl<'bump> Problem<'bump> {
     where
         'bump: 'a,
     {
+        // itertools::chain!(
+        //     self.list_top_level_terms_no_extra(),
+        //     &self.extra_instances
+        // )
         itertools::chain!(
-            self.list_top_level_terms_no_extra(),
-            &self.extra_instances
+            &self.assertions,
+            [&self.query],
+            &self.lemmas,
+            self.protocol.list_top_level_terms_short_lifetime(),
+            // &self.extra_instances
         )
     }
 

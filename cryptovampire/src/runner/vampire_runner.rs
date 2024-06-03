@@ -1,7 +1,5 @@
 use std::{
-    io::Write,
-    process::{Command, Stdio},
-    usize,
+    io::Write, path::PathBuf, process::{Command, Stdio}, usize
 };
 use thiserror::Error;
 use anyhow::{bail, Context};
@@ -9,7 +7,7 @@ use utils::implvec;
 
 #[derive(Debug, Clone)]
 pub struct VampireExec {
-    pub location: String,
+    pub location: PathBuf,
     pub extra_args: Vec<VampireArg>,
 }
 macro_rules! option {
@@ -131,23 +129,23 @@ impl VampireExec {
             .stdin(Stdio::piped()) // We want to write to stdin
             .stdout(Stdio::piped()) // Capture the stdout
             .spawn()
-            .with_context(|| format!("Failed to start vampire ({:})", &self.location))?;
+            .with_context(|| format!("Failed to start vampire ({:?})", &self.location))?;
 
         // Get the stdin handle of the child process
         if let Some(mut stdin) = child.stdin.take() {
             // Write the content to stdin
             stdin
                 .write_all(pbl.as_bytes())
-                .with_context(|| format!("Failed to write to vampire ({:})'s stdin", &self.location))?;
+                .with_context(|| format!("Failed to write to vampire ({:?})'s stdin", &self.location))?;
         } else {
-            bail!("Failed to open vampire ({:})'s stdin", &self.location)
+            bail!("Failed to open vampire ({:?})'s stdin", &self.location)
         }
 
         // read the output from the process
         let output = child
             .wait_with_output()
-            .with_context(|| format!("Failed to read vampire ({:})'s stdout", &self.location))?;
-        let stdout = String::from_utf8(output.stdout).with_context(|| format!("vampire ({:})'s output isn't in utf-8", &self.location))?;
+            .with_context(|| format!("Failed to read vampire ({:?})'s stdout", &self.location))?;
+        let stdout = String::from_utf8(output.stdout).with_context(|| format!("vampire ({:?})'s output isn't in utf-8", &self.location))?;
         let return_code = output.status.code().with_context(|| "terminated by signal")?;
         match return_code {
             SUCCESS_RC => Ok(VampireOutput::Unsat(stdout)),
