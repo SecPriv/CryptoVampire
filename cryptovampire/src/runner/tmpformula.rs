@@ -1,7 +1,7 @@
-use std::fmt::{write, Display};
+use std::fmt::Display;
 
 use anyhow::{anyhow, bail};
-use clap::Arg;
+
 use cryptovampire_lib::{
     environement::traits::Realm,
     formula::{
@@ -11,7 +11,7 @@ use cryptovampire_lib::{
             signature::Signature,
             Function,
         },
-        sort::{sort_proxy::SortProxy, Sort},
+        sort::sort_proxy::SortProxy,
         variable::Variable,
     },
 };
@@ -211,7 +211,7 @@ impl TmpFormula {
         let head = self.head();
         let f = head.and_then(|head| functions.get(head));
         if let Some(f) = f {
-            let head = head.unwrap(); // can't fail bc of check on f
+            let _head = head.unwrap(); // can't fail bc of check on f
             let sign = f.signature();
             sign.out()
                 .unify(&expected_sort, realm)

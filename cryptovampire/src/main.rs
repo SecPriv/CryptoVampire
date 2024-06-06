@@ -127,10 +127,10 @@ fn main() {
                     location: location.to_owned(),
                     extra_args: vec![VampireArg::TimeLimit(*exec_time)],
                 };
-                print!(
-                    "{:}",
-                    run_multiple_time(*num_retry, &vampire, &env, &mut pbl).unwrap()
-                )
+                let result = run_multiple_time(*num_retry, &vampire, &env, &mut pbl).unwrap();
+                let mut bw = BufWriter::new(io::stdout());
+                write!(&mut bw, "{result}").unwrap();
+                
             } else {
                 assert!(!args.output_location.is_dir());
                 let smt = SmtFile::from_general_file(&env, pbl.into_general_file(&env));

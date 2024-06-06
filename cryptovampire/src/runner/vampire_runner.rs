@@ -125,7 +125,7 @@ ${cmd}
         stdout: String,
         // stdin: String,
         cmd: String,
-        return_code: i32
+        return_code: i32,
     },
 }
 
@@ -173,7 +173,11 @@ impl VampireExec {
         match return_code {
             SUCCESS_RC => Ok(VampireOutput::Unsat(stdout)),
             TIMEOUT_RC => Ok(VampireOutput::TimeOut(stdout)),
-            _ => Err(VampireError::UnknownError { cmd:format!("{:?}", cmd),  stdout,  return_code })?,
+            _ => Err(VampireError::UnknownError {
+                cmd: format!("{:?}", cmd),
+                stdout,
+                return_code,
+            })?,
         }
     }
 }

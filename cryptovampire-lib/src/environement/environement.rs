@@ -156,8 +156,8 @@ impl<'bump> KnowsRealm for Environement<'bump> {
 
 #[derive(Default, Clone, PartialEq, PartialOrd, Debug)]
 pub struct AutomatedVampire {
-    pub location: PathBuf, 
+    pub location: PathBuf,
     pub num_retry: u32,
     pub exec_time: f64,
-    pub smt_debug: Option<PathBuf>
+    pub smt_debug: Option<PathBuf>,
 }

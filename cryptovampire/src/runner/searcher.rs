@@ -1,14 +1,8 @@
-use std::process::exit;
-
 use cryptovampire_lib::{
     environement::environement::Environement,
     formula::{
-        formula::{ARichFormula, RichFormula},
-        function,
-        sort::{
-            builtins::{BOOL, MESSAGE},
-            sort_proxy::SortProxy,
-        },
+        formula::ARichFormula,
+        sort::{builtins::BOOL, sort_proxy::SortProxy},
     },
     problem::crypto_assumptions::{CryptoAssumption, EufCmaMac, EufCmaSign, IntCtxt},
 };
@@ -97,15 +91,19 @@ impl<'bump> InstanceSearcher<'bump> for EufCmaSign<'bump> {
             })
             .filter_map(|(s, f)| {
                 f.to_rich_formula(&functions, Default::default(), &mut Default::default())
-                    .ok().map(|f| (s, f))
+                    .ok()
+                    .map(|f| (s, f))
             })
-            .map(|(s, f)| {debug!("found {} from {}", f, s); f})
+            .map(|(s, f)| {
+                debug!("found {} from {}", f, s);
+                f
+            })
             .map_into()
             .collect()
     }
 }
 impl<'bump> InstanceSearcher<'bump> for IntCtxt<'bump> {
-    fn search_instances(&self, str: &str, env: &Environement<'bump>) -> Vec<ARichFormula<'bump>> {
+    fn search_instances(&self, _str: &str, _env: &Environement<'bump>) -> Vec<ARichFormula<'bump>> {
         todo!()
     }
 }

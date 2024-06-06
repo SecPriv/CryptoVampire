@@ -28,7 +28,6 @@ use crate::{
     },
 };
 
-
 use super::{
     crypto_assumptions::CryptoAssumption,
     general_assertions::{self, assertion_preprocessor::propagate_evaluate, order},
@@ -49,7 +48,7 @@ pub struct Problem<'bump> {
     pub crypto_assertions: Vec<CryptoAssumption<'bump>>,
     pub lemmas: VecDeque<ARichFormula<'bump>>,
     pub query: ARichFormula<'bump>,
-    pub extra_instances: HashSet<ARichFormula<'bump>>
+    pub extra_instances: HashSet<ARichFormula<'bump>>,
 }
 
 impl<'bump> Problem<'bump> {
