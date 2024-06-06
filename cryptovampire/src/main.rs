@@ -16,7 +16,7 @@ use cryptovampire::{
 };
 use cryptovampire_lib::{
     container::ScopedContainer,
-    environement::environement::Environement,
+    environement::environement::{AutomatedVampire, Environement},
     formula::{function::builtin::BUILT_IN_FUNCTIONS, sort::builtins::BUILT_IN_SORTS},
     problem::PblIterator,
 };
@@ -45,7 +45,6 @@ fn main() {
             )
         })
         .parse_default_env()
-        .filter_level(log::LevelFilter::Debug)
         .init();
 
     ScopedContainer::scoped(|container| {
@@ -117,14 +116,20 @@ fn main() {
 
                     i += 1;
                 }
-            } else if args.auto_retry {
+            } else if let Some(AutomatedVampire {
+                location,
+                num_retry,
+                exec_time,
+                ..
+            }) = env.get_automated_vampire()
+            {
                 let vampire = VampireExec {
-                    location: args.vampire_location,
-                    extra_args: vec![VampireArg::TimeLimit(args.vampire_exec_time)],
+                    location: location.to_owned(),
+                    extra_args: vec![VampireArg::TimeLimit(*exec_time)],
                 };
                 print!(
                     "{:}",
-                    run_multiple_time(args.num_of_retry, &vampire, &env, &mut pbl).unwrap()
+                    run_multiple_time(*num_retry, &vampire, &env, &mut pbl).unwrap()
                 )
             } else {
                 assert!(!args.output_location.is_dir());

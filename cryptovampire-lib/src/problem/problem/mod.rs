@@ -78,7 +78,7 @@ impl<'bump> Problem<'bump> {
             [&self.query],
             &self.lemmas,
             self.protocol.list_top_level_terms_short_lifetime(),
-            // &self.extra_instances
+            &self.extra_instances
         )
     }
 

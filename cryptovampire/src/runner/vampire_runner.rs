@@ -35,7 +35,7 @@ option!(
     MemoryLimit("memory_limit", u64),
     Mode("mode", vampire_suboptions::Mode),
     Slowness("slowness", u64),
-    TimeLimit("time_limit", u64),
+    TimeLimit("time_limit", f64),
     InputSyntax("input_syntax", vampire_suboptions::InputSyntax),
     NewCnf("newcnf", bool),
     SaturationAlgorithm(

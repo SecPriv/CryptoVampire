@@ -24,6 +24,15 @@ use tptp::{
 };
 use utils::{match_as_trait, string_ref::StrRef};
 
+// I need to remove the `'` from some function names
+fn trim_quotes(str: String) -> String {
+    let mut chars = str.chars();
+    match (chars.next(), str.chars().last()) {
+        (Some('\''), Some('\'')) => chars.take(str.len() - 2).collect(),
+        _ => str,
+    }
+}
+
 // TODO: remove error
 macro_rules! mtry_from {
     ($l:lifetime, $name:ty; |$value:ident| $b:block) => {
@@ -41,11 +50,11 @@ macro_rules! final_term_like {
     ($name:ident) => {
         mtry_from!('a, $name<'a>; |value| {
             Ok(match value {
-                $name::Constant(c) => Self::new_const(c.to_string()),
+                $name::Constant(c) => Self::new_const(trim_quotes(c.to_string())),
                 $name::Function(f, args) => {
                     let Arguments(args) = *args;
                     let rargs: Result<Vec<_>, _> = args.into_iter().map(|x| x.try_into()).collect();
-                    Self::new(f.to_string(), rargs?)
+                    Self::new(trim_quotes(f.to_string()), rargs?)
                 }
             })
         });
@@ -169,7 +178,7 @@ impl TmpFormula {
         litteral.into_iter().map(|l| l.try_into()).collect()
     }
 
-    pub fn parse(str:&str) -> anyhow::Result<Self> {
+    pub fn parse(str: &str) -> anyhow::Result<Self> {
         let str = format!("{}.", str);
         let litteral: tptp::Result<Literal, ()> = Literal::parse(str.as_bytes());
         match litteral {

@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::{container::ScopedContainer, formula::function::Function};
 
 use bitflags::bitflags;
@@ -16,11 +18,12 @@ pub struct Environement<'bump> {
     options: Options,
 }
 
-#[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[derive(Default, Clone, PartialEq, PartialOrd, Debug)]
 pub struct Options {
     pub flags: Flags,
     pub rewrite_flags: RewriteFlags,
     pub subterm_flags: SubtermFlags,
+    pub automated_vampire: Option<AutomatedVampire>,
 }
 
 bitflags! {
@@ -62,62 +65,6 @@ impl<'bump> Environement<'bump> {
         }
     }
 
-    // pub fn from_args(args: &Args, container: &'bump ScopedContainer<'bump>) -> Self {
-    //     let Args {
-    //         lemmas,
-    //         eval_rewrite,
-    //         crypto_rewrite,
-    //         vampire_subterm,
-    //         assert_theory,
-    //         skolemnise,
-    //         preprocessing,
-    //         legacy_evaluate,
-    //         no_bitstring,
-    //         cvc5,
-    //         no_symbolic,
-    //         assert_ground,
-    //         ..
-    //     } = args;
-    //     let pure_smt = *cvc5;
-    //     let realm = if *no_symbolic {
-    //         Realm::Evaluated
-    //     } else {
-    //         Realm::Symbolic
-    //     };
-
-    //     let flags = mk_bitflag!(
-    //         *lemmas => Flags::LEMMA,
-    //         *assert_theory && !pure_smt => Flags::ASSERT_THEORY,
-    //         *assert_ground && !pure_smt => Flags::ASSERT_GROUND,
-    //         !pure_smt => Flags::ASSERT_NOT,
-    //         *legacy_evaluate => Flags::LEGACY_EVALUATE,
-    //         *skolemnise => Flags::SKOLEMNISE,
-    //         *no_bitstring && realm.is_symbolic() => Flags::NO_BITSTRING
-    //     );
-
-    //     let rewrite_flags = mk_bitflag!(
-    //         *eval_rewrite => RewriteFlags::EVALUATE,
-    //         *crypto_rewrite => RewriteFlags::CRYPTOGRAPHY
-    //     );
-
-    //     let subterm_flags = SubtermFlags::PREPROCESS_INPUTS
-    //         | SubtermFlags::PREPROCESS_CELLS
-    //         | mk_bitflag!(
-    //             *preprocessing => SubtermFlags::PREPROCESS_INSTANCES,
-    //             *vampire_subterm && !pure_smt => SubtermFlags::VAMPIRE
-    //         );
-
-    //     Environement {
-    //         container,
-    //         realm,
-    //         options: Options {
-    //             flags,
-    //             rewrite_flags,
-    //             subterm_flags,
-    //         },
-    //     }
-    // }
-
     /// use `rewrite` in evaluate
     pub fn rewrite_evaluate(&self) -> bool {
         self.options.rewrite_flags.contains(RewriteFlags::EVALUATE)
@@ -137,22 +84,6 @@ impl<'bump> Environement<'bump> {
             .contains(SubtermFlags::PREPROCESS_INSTANCES)
             || !self.define_subterm()
     }
-
-    // /// preprocess inputs
-    // ///
-    // /// Always true if there are states
-    // pub fn preprocess_inputs<'a>(&self, ptcl: &Protocol<'a>) -> bool {
-    //     self.options
-    //         .subterm_flags
-    //         .contains(SubtermFlags::PREPROCESS_INPUTS)
-    //         || ptcl.is_statefull()
-    // }
-
-    // pub fn preprocess_cell(&self) -> bool {
-    //     self.options
-    //         .subterm_flags
-    //         .contains(SubtermFlags::PREPROCESS_CELLS)
-    // }
 
     pub fn use_vampire_subterm(&self) -> bool {
         self.options.subterm_flags.contains(SubtermFlags::VAMPIRE) && self.is_symbolic_realm()
@@ -178,11 +109,6 @@ impl<'bump> Environement<'bump> {
         self.options.flags.contains(Flags::ASSERT_GROUND)
     }
 
-    // pub fn skolemnise(&self) -> bool {
-    //     // self.options.flags.contains(Flags::SKOLEMNISE)
-    //     false
-    // }
-
     pub fn use_legacy_evaluate(&self) -> bool {
         self.options.flags.contains(Flags::LEGACY_EVALUATE) && self.is_symbolic_realm()
     }
@@ -193,14 +119,6 @@ impl<'bump> Environement<'bump> {
     pub fn no_bitstring_functions(&self) -> bool {
         self.options.flags.contains(Flags::NO_BITSTRING)
     }
-
-    // pub fn no_evaluate(&self) -> bool {
-    //     self.not_as_term_algebra()
-    // }
-
-    // pub fn not_as_term_algebra(&self) -> bool {
-    //     self.options.flags.contains(Flags::NOT_AS_TERM_ALGEBRA)
-    // }
 
     /// see [KnowsRealm]
     pub fn is_symbolic_realm(&self) -> bool {
@@ -224,10 +142,22 @@ impl<'bump> Environement<'bump> {
     pub fn get_function_hash(&self) -> HashMap<StrRef<'bump>, Function<'bump>> {
         self.container.get_function_hash_map()
     }
+
+    pub fn get_automated_vampire(&self) -> Option<&AutomatedVampire> {
+        self.options.automated_vampire.as_ref()
+    }
 }
 
 impl<'bump> KnowsRealm for Environement<'bump> {
     fn get_realm(&self) -> super::traits::Realm {
         self.realm
     }
+}
+
+#[derive(Default, Clone, PartialEq, PartialOrd, Debug)]
+pub struct AutomatedVampire {
+    pub location: PathBuf, 
+    pub num_retry: u32,
+    pub exec_time: f64,
+    pub smt_debug: Option<PathBuf>
 }

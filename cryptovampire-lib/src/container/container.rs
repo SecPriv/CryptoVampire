@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     formula::{
-        function::{Function, InnerFunction},
+        function::{builtin::BUILT_IN_FUNCTIONS, Function, InnerFunction},
         sort::InnerSort,
     },
     problem::{cell::InnerMemoryCell, step::InnerStep},
@@ -193,6 +193,7 @@ impl<'bump> ScopedContainer<'bump> {
             .borrow()
             .iter()
             .map(|f| Function::from_raw(*f, Default::default()))
+            .chain(BUILT_IN_FUNCTIONS.iter().map(|f| *f))
             .map(|f| (f.name(), f))
             .collect()
     }
