@@ -6,87 +6,190 @@ use cryptovampire_lib::{
     environement::traits::Realm,
     formula::{
         formula::RichFormula,
-        function::{signature::Signature, Function},
+        function::{
+            builtin::{EQUALITY, NOT, NOT_TA},
+            signature::Signature,
+            Function,
+        },
         sort::{sort_proxy::SortProxy, Sort},
         variable::Variable,
     },
 };
 use hashbrown::HashMap;
-use if_chain::if_chain;
 use itertools::Itertools;
-use utils::string_ref::StrRef;
+use tptp::{
+    cnf::{Disjunction, Literal},
+    fof::*,
+    Parse,
+};
+use utils::{match_as_trait, string_ref::StrRef};
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct TmpFormula {
-    head: String,
-    args: Vec<TmpFormula>,
+// TODO: remove error
+macro_rules! mtry_from {
+    ($l:lifetime, $name:ty; |$value:ident| $b:block) => {
+        impl<$l> TryFrom<$name> for TmpFormula {
+            type Error = anyhow::Error;
+
+            fn try_from($value: $name) -> Result<Self, Self::Error> {
+                $b
+            }
+        }
+    };
 }
+
+macro_rules! final_term_like {
+    ($name:ident) => {
+        mtry_from!('a, $name<'a>; |value| {
+            Ok(match value {
+                $name::Constant(c) => Self::new_const(c.to_string()),
+                $name::Function(f, args) => {
+                    let Arguments(args) = *args;
+                    let rargs: Result<Vec<_>, _> = args.into_iter().map(|x| x.try_into()).collect();
+                    Self::new(f.to_string(), rargs?)
+                }
+            })
+        });
+    };
+    ($($name:ident),*,) => {
+        $(final_term_like!($name);)*
+    }
+}
+
+macro_rules! continue_term_like {
+    ($name:ident) => {
+        mtry_from!('a, $name<'a>; |value| {
+            TryFrom::try_from(value.0)
+        });
+    };
+    ($($name:ident),*,) => {
+        $(continue_term_like!($name);)*
+    }
+}
+
+/// A very simplified AST from the [tptp] crate.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub enum TmpFormula {
+    App { head: String, args: Vec<TmpFormula> },
+    Var(String),
+}
+final_term_like!(PlainTerm, SystemTerm, DefinedPlainTerm,);
+continue_term_like!(
+    SystemAtomicFormula,
+    DefinedPlainFormula,
+    PlainAtomicFormula,
+    DefinedAtomicTerm,
+);
+
+mtry_from!('a, Literal<'a>; |value| {
+    match value {
+        Literal::Atomic(a) => a.try_into(),
+        Literal::NegatedAtomic(a) => Ok(TmpFormula::new(
+            NOT_TA.name().to_string(),
+            vec![a.try_into()?],
+        )),
+        Literal::Infix(i) => i.try_into(),
+    }
+});
+
+impl<'a> TryFrom<InfixUnary<'a>> for TmpFormula {
+    type Error = anyhow::Error;
+    fn try_from(value: InfixUnary<'a>) -> Result<Self, Self::Error> {
+        {
+            let left: TmpFormula = (*value.left).try_into()?;
+            let right: TmpFormula = (*value.right).try_into()?;
+            Ok(TmpFormula::new(
+                NOT.name().to_string(),
+                vec![TmpFormula::new(
+                    EQUALITY.name().to_string(),
+                    vec![left, right],
+                )],
+            ))
+        }
+    }
+}
+
+mtry_from!('a, AtomicFormula<'a>; |value| {
+    match_as_trait!(AtomicFormula, |x| in value => Plain | Defined | System {x.try_into()})
+});
+
+mtry_from!('a, FunctionTerm<'a>; |value| {
+    match_as_trait!(FunctionTerm, |x| in value => Plain | Defined | System {x.try_into()})
+});
+
+mtry_from!('a, tptp::fof::Term<'a>; |value| {
+    match value {
+        Term::Function(f) => (*f).try_into(),
+        Term::Variable(v) => Ok(TmpFormula::Var(v.to_string())),
+    }
+});
+
+mtry_from!('a, DefinedAtomicFormula<'a>; |value| {
+    match value {
+        DefinedAtomicFormula::Plain(df) => df.try_into(),
+        DefinedAtomicFormula::Infix(dif) => dif.try_into(),
+    }
+});
+
+mtry_from!('a, DefinedInfixFormula<'a>; |value| {
+    let left: TmpFormula = (*value.left).try_into()?;
+    let right: TmpFormula = (*value.right).try_into()?;
+    Ok(TmpFormula::new(
+        EQUALITY.name().to_string(),
+        vec![left, right]
+    ))
+});
+
+mtry_from!('a, DefinedTerm<'a>; |value| {
+    match value {
+        DefinedTerm::Defined(d) => Ok(TmpFormula::new_const(d.to_string())),
+        DefinedTerm::Atomic(a) => a.try_into(),
+    }
+});
 
 impl TmpFormula {
     pub fn new(head: String, args: Vec<TmpFormula>) -> Self {
-        Self { head, args }
+        Self::App { head, args }
+    }
+
+    pub fn new_const(head: String) -> Self {
+        Self::App { head, args: vec![] }
     }
     pub fn new_ref(head: &str, args: &[TmpFormula]) -> Self {
-        Self {
-            head: head.to_string(),
-            args: args.to_vec(),
+        Self::new(head.to_string(), args.to_vec())
+    }
+
+    pub fn parse_disjunction(str: &str) -> anyhow::Result<Vec<Self>> {
+        let str = format!("{}.", str);
+        let disjunction: tptp::Result<Disjunction, ()> = Disjunction::parse(str.as_bytes());
+        let litteral = match disjunction {
+            Ok((_, Disjunction(l))) => l,
+            Err(e) => bail!("{}", e),
+        };
+
+        litteral.into_iter().map(|l| l.try_into()).collect()
+    }
+
+    pub fn parse(str:&str) -> anyhow::Result<Self> {
+        let str = format!("{}.", str);
+        let litteral: tptp::Result<Literal, ()> = Literal::parse(str.as_bytes());
+        match litteral {
+            Ok((_, l)) => l.try_into(),
+            Err(e) => bail!("{}", e),
         }
     }
 
-    pub fn parse(str: &str) -> Option<Self> {
-        Self::parse_next(&mut str.trim_start())
-    }
-
-    /// parses `str` setting it to leftover string after parsing.
-    ///
-    ///  - no space in the begining of `str``
-    ///  - may modify `str` even when returning `None`
-    fn parse_next(str: &mut &str) -> Option<Self> {
-        let head = Self::parse_head(str)?;
-        let mut chars = str.chars();
-        if let Some('(') = chars.next() {
-            let mut args = vec![];
-            let mut tail = chars.as_str().trim_start();
-            loop {
-                args.push(Self::parse_next(&mut tail)?);
-
-                let tmp = tail.trim_start();
-                let mut chars = tmp.chars();
-                let c = chars.next();
-                tail = chars.as_str().trim_start();
-                match c {
-                    Some(')') => break,
-                    Some(',') => (),
-                    _ => return None,
-                }
-            }
-            *str = tail;
-            Some(Self::new(head.to_string(), args))
-        } else {
-            Some(Self::new(head.to_string(), vec![]))
+    pub fn head(&self) -> Option<&str> {
+        match self {
+            Self::App { head, .. } => Some(head),
+            _ => None,
         }
     }
 
-    /// parses the head function
-    /// - no space at the start
-    fn parse_head<'a>(str: &mut &'a str) -> Option<&'a str> {
-        let tail = *str;
-        if let Some(i) = tail.find(|c: char| !c.is_alphanumeric()) {
-            let (head, tail) = tail.split_at(i);
-            *str = tail;
-            Some(head)
-        } else {
-            *str = "";
-            Some(tail)
+    pub fn args(&self) -> Option<&[TmpFormula]> {
+        match self {
+            Self::App { args, .. } => Some(args.as_ref()),
+            _ => None,
         }
-    }
-
-    pub fn head(&self) -> &str {
-        &self.head
-    }
-
-    pub fn args(&self) -> &[TmpFormula] {
-        &self.args
     }
 
     pub fn to_rich_formula<'a, 'bump>(
@@ -97,14 +200,15 @@ impl TmpFormula {
     ) -> anyhow::Result<RichFormula<'bump>> {
         let realm = &Realm::Symbolic;
         let head = self.head();
-        let f = functions.get(head);
+        let f = head.and_then(|head| functions.get(head));
         if let Some(f) = f {
+            let head = head.unwrap(); // can't fail bc of check on f
             let sign = f.signature();
             sign.out()
                 .unify(&expected_sort, realm)
                 .map_err(|_| anyhow!("infernce error"))?;
             let mut args = vec![];
-            for e in self.args().iter().zip_longest(sign.args()) {
+            for e in self.args().unwrap().iter().zip_longest(sign.args()) {
                 match e {
                     itertools::EitherOrBoth::Left(_) => {
                         bail!("more arguments that expected in {:}", &self)
@@ -140,37 +244,15 @@ impl TmpFormula {
 
 impl Display for TmpFormula {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:}(", &self.head)?;
-        for arg in self.args() {
-            write!(f, "{:}, ", arg)?;
+        match self {
+            TmpFormula::App { head, args } => {
+                write!(f, "{:}(", &head)?;
+                for arg in args {
+                    write!(f, "{:}, ", arg)?;
+                }
+                write!(f, ")")
+            }
+            TmpFormula::Var(s) => s.fmt(f),
         }
-        write!(f, ")")
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::runner::tmpformula::TmpFormula;
-
-    #[test]
-    fn tmpformula_parsing_success() {
-        let str = "f(a, b,g( c))";
-        assert_eq!(
-            TmpFormula::parse(str),
-            Some(TmpFormula::new_ref(
-                "f",
-                &[
-                    TmpFormula::new_ref("a", &[]),
-                    TmpFormula::new_ref("b", &[]),
-                    TmpFormula::new_ref("g", &[TmpFormula::new_ref("c", &[])])
-                ]
-            ))
-        )
-    }
-
-    #[test]
-    fn tmpformula_parsing_faillure() {
-        let str = "f(a, b,g( c)";
-        assert_eq!(TmpFormula::parse(str), None)
     }
 }

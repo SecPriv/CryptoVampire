@@ -1,6 +1,7 @@
 use anyhow::{anyhow, bail};
 use cryptovampire_lib::{environement::environement::Environement, problem::Problem};
 use itertools::Itertools;
+use log::debug;
 use searcher::InstanceSearcher;
 use vampire_runner::{VampireArg, VampireExec};
 
@@ -18,12 +19,18 @@ pub fn run_multiple_time<'bump>(
     if ntimes == 0 {}
     let n = if ntimes == 0 { u32::MAX } else { ntimes };
 
-    for _ in 0..n {
+    for i in 0..n {
+        debug!("running vampire {:}/{:}...", i, n);
         let smt = SmtFile::from_general_file(env, pbl.into_general_file(&env))
             .as_diplay(env)
             .to_string();
-        let out = vampire.run([&VampireArg::InputSyntax(vampire_runner::vampire_suboptions::InputSyntax::SmtLib2)], &smt)?;
-        
+        let out = vampire.run(
+            [&VampireArg::InputSyntax(
+                vampire_runner::vampire_suboptions::InputSyntax::SmtLib2,
+            )],
+            &smt,
+        )?;
+
         let to_search = match out {
             vampire_runner::VampireOutput::Unsat(proof) => return Ok(proof),
             vampire_runner::VampireOutput::TimeOut(out) => out,
@@ -35,6 +42,15 @@ pub fn run_multiple_time<'bump>(
             .map(|ca| ca.search_instances(&to_search, env))
             .collect_vec();
         let max_var_no_instances = pbl.max_var_no_extras();
+        if cfg!(debug_assertions) {
+            let str: String = tmp
+                .iter()
+                .flatten()
+                .map(|t| format!("{:}", t))
+                .intersperse(", ".to_owned())
+                .collect();
+            debug!("instances found:\n\t[{:}]", str)
+        }
         pbl.extra_instances.extend(
             tmp.into_iter()
                 .flatten()

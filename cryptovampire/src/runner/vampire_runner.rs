@@ -1,8 +1,11 @@
+use anyhow::{bail, Context};
 use std::{
-    io::Write, path::PathBuf, process::{Command, Stdio}, usize
+    io::Write,
+    path::PathBuf,
+    process::{Command, Stdio},
+    usize,
 };
 use thiserror::Error;
-use anyhow::{bail, Context};
 use utils::implvec;
 
 #[derive(Debug, Clone)]
@@ -110,17 +113,33 @@ pub enum VampireOutput {
 
 #[derive(Debug, Error)]
 pub enum VampireError {
-    #[error("vampire failed in an unsupported way")]
-    UnknownError(String)
+    #[error(
+        "\
+vampire failed in an unsupported way:
+${cmd}
+ ==> {return_code}
+------------out------------
+{stdout}"
+    )]
+    UnknownError {
+        stdout: String,
+        // stdin: String,
+        cmd: String,
+        return_code: i32
+    },
 }
 
-const SUCCESS_RC:i32 = 0;
-const TIMEOUT_RC:i32 = 4;
+const SUCCESS_RC: i32 = 0;
+const TIMEOUT_RC: i32 = 1;
 
 impl VampireExec {
-    pub fn run<'a>(&self, args: implvec!(&'a VampireArg), pbl: &str) -> anyhow::Result<VampireOutput> {
+    pub fn run<'a>(
+        &'a self,
+        args: implvec!(&'a VampireArg),
+        pbl: &str,
+    ) -> anyhow::Result<VampireOutput> {
         let mut cmd = Command::new(&self.location);
-        for arg in args {
+        for arg in self.extra_args.iter().chain(args.into_iter()) {
             let [a, b] = arg.to_args();
             cmd.arg(a.as_ref()).arg(b.as_ref());
         }
@@ -134,9 +153,9 @@ impl VampireExec {
         // Get the stdin handle of the child process
         if let Some(mut stdin) = child.stdin.take() {
             // Write the content to stdin
-            stdin
-                .write_all(pbl.as_bytes())
-                .with_context(|| format!("Failed to write to vampire ({:?})'s stdin", &self.location))?;
+            stdin.write_all(pbl.as_bytes()).with_context(|| {
+                format!("Failed to write to vampire ({:?})'s stdin", &self.location)
+            })?;
         } else {
             bail!("Failed to open vampire ({:?})'s stdin", &self.location)
         }
@@ -145,12 +164,16 @@ impl VampireExec {
         let output = child
             .wait_with_output()
             .with_context(|| format!("Failed to read vampire ({:?})'s stdout", &self.location))?;
-        let stdout = String::from_utf8(output.stdout).with_context(|| format!("vampire ({:?})'s output isn't in utf-8", &self.location))?;
-        let return_code = output.status.code().with_context(|| "terminated by signal")?;
+        let stdout = String::from_utf8(output.stdout)
+            .with_context(|| format!("vampire ({:?})'s output isn't in utf-8", &self.location))?;
+        let return_code = output
+            .status
+            .code()
+            .with_context(|| "terminated by signal")?;
         match return_code {
             SUCCESS_RC => Ok(VampireOutput::Unsat(stdout)),
             TIMEOUT_RC => Ok(VampireOutput::TimeOut(stdout)),
-            _ => {Err(VampireError::UnknownError(stdout))?}
+            _ => Err(VampireError::UnknownError { cmd:format!("{:?}", cmd),  stdout,  return_code })?,
         }
     }
 }
