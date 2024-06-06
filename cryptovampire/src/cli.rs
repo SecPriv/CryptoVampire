@@ -101,6 +101,7 @@ pub struct Args {
     /// Use vampire cryptovampire's builtin runner
     ///
     /// This opens (and activates by default) the ability to automatically learn about a given vampire run. This is incompatible with lemmas.
+    /// *NB*: This deactivates AVATAR
     #[arg(short, long, default_value_t = false)]
     pub auto_retry: bool,
 
