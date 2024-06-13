@@ -123,9 +123,8 @@ pub struct Args {
     #[arg(long)]
     pub vampire_smt_debug: Option<PathBuf>,
 
-
     /// Deactivate the lemmas.
-    /// 
+    ///
     /// CryptoVampire will ignore the lemmas as a whole and work as if there weren't any. This is used for testing purposes.
     #[arg(long)]
     pub ignore_lemmas: bool,

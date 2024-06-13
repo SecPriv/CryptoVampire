@@ -71,12 +71,12 @@ Options:
       --vampire-subterm
           use vampire's special subterm
           
-          NB: not in the smt standard
+          NB: not in the smt standard, requires modified vampire
 
       --assert-theory
           use vampire's 'assert-theory'
           
-          NB: not in the smt standard
+          NB: not in the smt standard, requires vampire
 
   -s, --skolemnise
           skolemnise before passing to sat solver
@@ -94,18 +94,49 @@ Options:
           use `(assert (not ...))` instead of `(assert-not ...)` for the query and no `assert-ground` either
 
       --assert-ground
-          *deprecated* use `assert-ground`
+          *deprecated* use vampire's `assert-ground`. Requires modified vampire
 
   -n, --no-symbolic
           deactivate subterm and optimises evaluates
           
           NB: the program will crash it subterms are required somewhere
 
+  -a, --auto-retry
+          Use vampire cryptovampire's builtin runner
+          
+          This opens (and activates by default) the ability to automatically learn about a given vampire run. This is incompatible with lemmas. *NB*: This deactivates AVATAR
+
+      --vampire-location <VAMPIRE_LOCATION>
+          Location of the `vampire` executable
+          
+          [default: vampire]
+
+      --num-of-retry <NUM_OF_RETRY>
+          Upper bound of how many tries on the vampire runner
+          
+          0 for an infinite number of tries
+          
+          [default: 5]
+
+      --vampire-exec-time <VAMPIRE_EXEC_TIME>
+          Vampire execution time
+          
+          [default: 1]
+
+      --vampire-smt-debug <VAMPIRE_SMT_DEBUG>
+          A folder to put temporary smt files
+
+      --ignore-lemmas
+          Deactivate the lemmas.
+          
+          CryptoVampire will ignore the lemmas as a whole and work as if there weren't any. This is used for testing purposes.
+
   -h, --help
           Print help (see a summary with '-h')
 
   -V, --version
           Print version
+
 ```
 
 **Notes**

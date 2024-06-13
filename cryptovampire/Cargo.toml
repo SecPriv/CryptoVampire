@@ -14,7 +14,7 @@ pest_derive = "2.5.1"
 clap = { version = "4.0.32", features = ["derive"] }
 derivative = { version = "2.2.0" }
 const_format = "0.2.31"
-env_logger = "0.10.0"
+env_logger = "0.11"
 
 itertools = { workspace = true }
 if_chain = { workspace = true }
