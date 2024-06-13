@@ -79,6 +79,11 @@ fn main() {
         )
         .expect_display("parsing error:");
 
+        if env.are_lemmas_ignored() {
+            pbl.lemmas.clear();
+            pbl.lemmas.shrink_to_fit();
+        }
+
         if USE_MIRI {
             println!(
                 "\n\n\n\n\n\n{}",

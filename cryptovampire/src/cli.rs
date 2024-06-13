@@ -112,7 +112,7 @@ pub struct Args {
     /// Upper bound of how many tries on the vampire runner
     ///
     /// 0 for an infinite number of tries
-    #[arg(long, default_value = "0")]
+    #[arg(long, default_value = "5")]
     pub num_of_retry: u32,
 
     /// Vampire execution time
@@ -122,6 +122,13 @@ pub struct Args {
     /// A folder to put temporary smt files
     #[arg(long)]
     pub vampire_smt_debug: Option<PathBuf>,
+
+
+    /// Deactivate the lemmas.
+    /// 
+    /// CryptoVampire will ignore the lemmas as a whole and work as if there weren't any. This is used for testing purposes.
+    #[arg(long)]
+    pub ignore_lemmas: bool,
 }
 
 macro_rules! mk_bitflag {
@@ -158,6 +165,7 @@ impl<'bump> IntoWith<Environement<'bump>, &'bump ScopedContainer<'bump>> for &Ar
             vampire_exec_time,
             vampire_smt_debug,
             vampire_location,
+            ignore_lemmas,
             ..
         } = self;
         let pure_smt = *cvc5;
@@ -174,7 +182,8 @@ impl<'bump> IntoWith<Environement<'bump>, &'bump ScopedContainer<'bump>> for &Ar
             !pure_smt => Flags::ASSERT_NOT,
             *legacy_evaluate => Flags::LEGACY_EVALUATE,
             *skolemnise => Flags::SKOLEMNISE,
-            *no_bitstring && realm.is_symbolic() => Flags::NO_BITSTRING
+            *no_bitstring && realm.is_symbolic() => Flags::NO_BITSTRING,
+            *ignore_lemmas => Flags::IGNORE_LEMMAS
         );
 
         let rewrite_flags = mk_bitflag!(

@@ -37,6 +37,7 @@ bitflags! {
         const NOT_AS_TERM_ALGEBRA =     1 << 6;
         const ASSERT_NOT =              1 << 7; // non smt standard
         const ASSERT_GROUND =           1 << 8; // non smt standard
+        const IGNORE_LEMMAS =           1 << 9;
     }
 
     #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug )]
@@ -145,6 +146,10 @@ impl<'bump> Environement<'bump> {
 
     pub fn get_automated_vampire(&self) -> Option<&AutomatedVampire> {
         self.options.automated_vampire.as_ref()
+    }
+
+    pub fn are_lemmas_ignored(&self) -> bool {
+        self.options.flags.contains(Flags::IGNORE_LEMMAS)
     }
 }
 

@@ -211,6 +211,9 @@ impl TmpFormula {
         let head = self.head();
         let f = head.and_then(|head| functions.get(head));
         if let Some(f) = f {
+            if f.is_tmp() {
+                bail!("tmp function")
+            }
             let _head = head.unwrap(); // can't fail bc of check on f
             let sign = f.signature();
             sign.out()
