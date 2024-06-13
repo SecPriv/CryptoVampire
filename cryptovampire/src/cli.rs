@@ -2,9 +2,11 @@ use std::path::PathBuf;
 
 use clap::Parser;
 use cryptovampire_lib::{
-    container::{ScopedContainer},
+    container::ScopedContainer,
     environement::{
-        environement::{Environement, Flags, Options, RewriteFlags, SubtermFlags},
+        environement::{
+            AutomatedVampire, Environement, Flags, Options, RewriteFlags, SubtermFlags,
+        },
         traits::Realm,
     },
 };
@@ -50,13 +52,13 @@ pub struct Args {
 
     /// use vampire's special subterm
     ///
-    /// NB: not in the smt standard
+    /// NB: not in the smt standard, requires modified vampire
     #[arg(long)]
     pub vampire_subterm: bool,
 
     /// use vampire's 'assert-theory'
     ///
-    /// NB: not in the smt standard
+    /// NB: not in the smt standard, requires vampire
     #[arg(long)]
     pub assert_theory: bool,
 
@@ -86,7 +88,7 @@ pub struct Args {
     #[arg(long)]
     pub cvc5: bool,
 
-    /// *deprecated* use `assert-ground`
+    /// *deprecated* use vampire's `assert-ground`. Requires modified vampire
     #[arg(long)]
     pub assert_ground: bool,
 
@@ -95,6 +97,38 @@ pub struct Args {
     /// NB: the program will crash it subterms are required somewhere
     #[arg(long, short)]
     pub no_symbolic: bool,
+
+    /// Use vampire cryptovampire's builtin runner
+    ///
+    /// This opens (and activates by default) the ability to automatically learn about a given vampire run. This is incompatible with lemmas.
+    /// *NB*: This deactivates AVATAR
+    #[arg(short, long, default_value_t = false)]
+    pub auto_retry: bool,
+
+    /// Location of the `vampire` executable
+    #[arg(long, default_value = "vampire")]
+    pub vampire_location: PathBuf,
+
+    /// Upper bound of how many tries on the vampire runner
+    ///
+    /// 0 for an infinite number of tries
+    #[arg(long, default_value = "5")]
+    pub num_of_retry: u32,
+
+    /// Vampire execution time
+    #[arg(long, default_value = "1")]
+    pub vampire_exec_time: f64,
+
+    /// A folder to put temporary smt files
+    #[arg(long)]
+    pub vampire_smt_debug: Option<PathBuf>,
+
+
+    /// Deactivate the lemmas.
+    /// 
+    /// CryptoVampire will ignore the lemmas as a whole and work as if there weren't any. This is used for testing purposes.
+    #[arg(long)]
+    pub ignore_lemmas: bool,
 }
 
 macro_rules! mk_bitflag {
@@ -126,6 +160,12 @@ impl<'bump> IntoWith<Environement<'bump>, &'bump ScopedContainer<'bump>> for &Ar
             cvc5,
             no_symbolic,
             assert_ground,
+            auto_retry,
+            num_of_retry,
+            vampire_exec_time,
+            vampire_smt_debug,
+            vampire_location,
+            ignore_lemmas,
             ..
         } = self;
         let pure_smt = *cvc5;
@@ -142,7 +182,8 @@ impl<'bump> IntoWith<Environement<'bump>, &'bump ScopedContainer<'bump>> for &Ar
             !pure_smt => Flags::ASSERT_NOT,
             *legacy_evaluate => Flags::LEGACY_EVALUATE,
             *skolemnise => Flags::SKOLEMNISE,
-            *no_bitstring && realm.is_symbolic() => Flags::NO_BITSTRING
+            *no_bitstring && realm.is_symbolic() => Flags::NO_BITSTRING,
+            *ignore_lemmas => Flags::IGNORE_LEMMAS
         );
 
         let rewrite_flags = mk_bitflag!(
@@ -157,6 +198,17 @@ impl<'bump> IntoWith<Environement<'bump>, &'bump ScopedContainer<'bump>> for &Ar
                 *vampire_subterm && !pure_smt => SubtermFlags::VAMPIRE
             );
 
+        let automated_vampire = if *auto_retry {
+            Some(AutomatedVampire {
+                location: vampire_location.to_owned(),
+                num_retry: *num_of_retry,
+                exec_time: *vampire_exec_time,
+                smt_debug: vampire_smt_debug.to_owned(),
+            })
+        } else {
+            None
+        };
+
         Environement::new(
             container,
             realm,
@@ -164,6 +216,7 @@ impl<'bump> IntoWith<Environement<'bump>, &'bump ScopedContainer<'bump>> for &Ar
                 flags,
                 rewrite_flags,
                 subterm_flags,
+                automated_vampire,
             },
         )
     }

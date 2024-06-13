@@ -153,6 +153,7 @@ impl<'bump> EufCmaMac<'bump> {
         subterm_key: &'a Subterm<'bump, impl SubtermAux<'bump>>,
     ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
         let max_var = pbl.max_var();
+        trace!("max_var = {:?}", max_var);
         // let pile1 = RefCell::new(Vec::new());
         let pile2 = RefCell::new(Vec::new());
         let realm = env.get_realm();
@@ -166,10 +167,12 @@ impl<'bump> EufCmaMac<'bump> {
                         if let RichFormula::Fun(nf, args2) = args[2].as_ref();
                         if nf == pbl.name_caster.cast_function(&MESSAGE.as_sort()).unwrap();
                         then {
+                            trace!("candidate found as m={:}, s={:}, k={:}", &args[1], &args[0], &args2[0]);
                             let [message, signature, key] =
                                 [&args[1], &args[0], &args2[0]]
                                 .map(|f| f.translate_vars(max_var).into_arc());
                             // panic!("{}", max_var);
+                            trace!("after var remmap m={:}, s={:}, k={:}", &message, &signature, &key);
 
                             Some(EufCandidate {message, signature, key})
                         } else {None}

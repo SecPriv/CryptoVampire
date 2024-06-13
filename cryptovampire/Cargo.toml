@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 cryptovampire-lib = { path = "../cryptovampire-lib" }
 utils = { path = "../utils" }
+
 pest = "2.5.1"
 pest_derive = "2.5.1"
 clap = { version = "4.0.32", features = ["derive"] }
@@ -22,3 +23,7 @@ log = { workspace = true }
 static_init = { workspace = true }
 paste = { workspace = true }
 macro-attr ={ workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+regex = "1.10.4"
+tptp = "0.31.1"

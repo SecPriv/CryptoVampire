@@ -8,6 +8,7 @@ use cryptovampire_lib::{
 use utils::{implvec, traits::NicerError};
 pub mod cli;
 pub mod parser;
+pub mod runner;
 pub mod smt;
 
 pub fn problem_try_from_str<'a, 'bump>(

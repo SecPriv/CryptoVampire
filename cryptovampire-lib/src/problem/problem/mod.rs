@@ -1,5 +1,6 @@
 // pub mod builder;
 mod pbl_iterator;
+use hashbrown::HashSet;
 use log::trace;
 pub use pbl_iterator::PblIterator;
 
@@ -27,7 +28,6 @@ use crate::{
     },
 };
 
-
 use super::{
     crypto_assumptions::CryptoAssumption,
     general_assertions::{self, assertion_preprocessor::propagate_evaluate, order},
@@ -48,23 +48,36 @@ pub struct Problem<'bump> {
     pub crypto_assertions: Vec<CryptoAssumption<'bump>>,
     pub lemmas: VecDeque<ARichFormula<'bump>>,
     pub query: ARichFormula<'bump>,
+    pub extra_instances: HashSet<ARichFormula<'bump>>,
 }
 
 impl<'bump> Problem<'bump> {
-    pub fn list_top_level_terms<'a>(&'a self) -> impl Iterator<Item = &'a ARichFormula<'bump>>
+    fn list_top_level_terms_no_extra<'a>(&'a self) -> impl Iterator<Item = &'a ARichFormula<'bump>>
     where
         'bump: 'a,
     {
-        // self.assertions
-        //     .iter()
-        //     .chain(std::iter::once(&self.query))
-        //     .chain(self.protocol.list_top_level_terms_short_lifetime())
-
         itertools::chain!(
             &self.assertions,
             [&self.query],
             &self.lemmas,
-            self.protocol.list_top_level_terms_short_lifetime()
+            self.protocol.list_top_level_terms_short_lifetime(),
+            // &self.extra_instances
+        )
+    }
+    pub fn list_top_level_terms<'a>(&'a self) -> impl Iterator<Item = &'a ARichFormula<'bump>>
+    where
+        'bump: 'a,
+    {
+        // itertools::chain!(
+        //     self.list_top_level_terms_no_extra(),
+        //     &self.extra_instances
+        // )
+        itertools::chain!(
+            &self.assertions,
+            [&self.query],
+            &self.lemmas,
+            self.protocol.list_top_level_terms_short_lifetime(),
+            &self.extra_instances
         )
     }
 
@@ -72,6 +85,18 @@ impl<'bump> Problem<'bump> {
         let pile = RefCell::new(Vec::new());
 
         self.list_top_level_terms()
+            .flat_map(|f| f.used_variables_iter_with_pile(pile.borrow_mut()))
+            .map(|Variable { id, .. }| id)
+            .max()
+            .unwrap_or(0)
+            + 1
+    }
+
+    /// [Self::max_var] without [Self::extra_instances]
+    pub fn max_var_no_extras(&self) -> usize {
+        let pile = RefCell::new(Vec::new());
+
+        self.list_top_level_terms_no_extra()
             .flat_map(|f| f.used_variables_iter_with_pile(pile.borrow_mut()))
             .map(|Variable { id, .. }| id)
             .max()

@@ -285,7 +285,7 @@ impl<'a, 'bump: 'a> RefNamed<'a> for &'a InnerSort<'bump> {
 #[cfg(test)]
 mod test {
     use crate::{
-        environement::traits::{KnowsRealm, Realm},
+        environement::traits::Realm,
         formula::sort::builtins::{BOOL, CONDITION},
     };
 
