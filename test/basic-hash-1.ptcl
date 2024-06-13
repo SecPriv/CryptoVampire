@@ -1,3 +1,4 @@
+/* this is a comment */
 
 type index;
 fun tpl(Message, Message):Message
@@ -18,6 +19,7 @@ fun nr(session): Name
 fun key(index):Name
 
 
+/* This is a macro that will be blindly inlined during parsing */
 let condition_reader!(j:index, in:Message) =
     verify(
         sel2of2(in),
@@ -26,7 +28,9 @@ let condition_reader!(j:index, in:Message) =
     )
 
 
-step reader(i:session, j:index)
+step reader(i:session, j:index) 
+    /* use `in` as a shortcut for `input(reader(i, j))` 
+        while defining a step */
     { condition_reader![j, in] }
     { ok }
 
@@ -57,6 +61,7 @@ assert
         (verify(s, m, k) <=> (s == hash(m, k)))
     }
 
+/* `<>` for mutual exclusion, `<` for ordering */
 order forall (i:session, j:index)
     { reader_fail(i) <> reader(i, j) }
 
@@ -76,5 +81,6 @@ query forall (i:session, j:index) {(
         => (premise![i, j] <=> conclusion![i, j])
 )}
 
+/* describe which cryptography to use */
 assert-crypto euf-cma hash verify;
 assert-crypto nonce;
