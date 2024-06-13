@@ -49,7 +49,7 @@ use self::{
 use crate::problem::{protocol::Protocol, Problem};
 
 #[derive(Debug, Clone)]
-pub(crate) struct Subterm<'bump, Aux>
+pub struct Subterm<'bump, Aux>
 where
     Aux: SubtermAux<'bump>,
 {

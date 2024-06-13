@@ -44,27 +44,27 @@ impl<T> DerefMut for StackBox<T> {
     }
 }
 
-pub(crate) fn transpose<A: Eq + Clone, B: Eq>(vec: Vec<(A, Vec<B>)>) -> Vec<(B, Vec<A>)> {
-    let mut result = vec![];
+// pub(crate) fn transpose<A: Eq + Clone, B: Eq>(vec: Vec<(A, Vec<B>)>) -> Vec<(B, Vec<A>)> {
+//     let mut result = vec![];
 
-    for (a, v) in vec {
-        for b in v {
-            let i = result
-                .iter()
-                .position(|(b2, _)| b2 == &b)
-                .unwrap_or_else(|| {
-                    let i = result.len();
-                    result.push((b, vec![]));
-                    i
-                });
-            let bvec = &mut result[i].1;
-            if !bvec.contains(&a) {
-                bvec.push(a.clone())
-            }
-        }
-    }
-    result
-}
+//     for (a, v) in vec {
+//         for b in v {
+//             let i = result
+//                 .iter()
+//                 .position(|(b2, _)| b2 == &b)
+//                 .unwrap_or_else(|| {
+//                     let i = result.len();
+//                     result.push((b, vec![]));
+//                     i
+//                 });
+//             let bvec = &mut result[i].1;
+//             if !bvec.contains(&a) {
+//                 bvec.push(a.clone())
+//             }
+//         }
+//     }
+//     result
+// }
 
 pub fn repeat_n_zip<P, I, T>(p: P, iter: I) -> impl Iterator<Item = (P, T)>
 where
