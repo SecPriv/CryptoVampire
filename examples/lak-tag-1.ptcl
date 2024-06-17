@@ -1,0 +1,88 @@
+type index;
+fun tpl(Message, Message):Message
+
+
+fun sel1of2(Message):Message;
+fun sel2of2(Message):Message
+fun hash(Message, Message):Message
+fun verify(Message, Message, Message):Bool
+fun ok:Message
+fun ko:Message
+fun tag1:Message
+fun tag2:Message
+
+/* the Names */
+fun nt(index, index): Name
+fun nr(index): Name
+
+/* to quickly change version on key (one or 2 parameters) */
+fun key(index):Name
+let mkey!(i:index, k:index) = key(i)
+
+let m_condition_fst!(i:index, j:index, k:index, m_in: Message) = 
+    /* ( hash(tpl(tpl(nr(j),sel1of2(m_in)), tag1), mkey!(i, k)) 
+                    == sel2of2(m_in) ) */
+    verify(sel2of2(m_in), tpl(tpl(nr(j),sel1of2(m_in)), tag1), mkey!(i, k))
+
+step reader1(i:index) 
+    { true }
+    { nr(i) }
+
+step reader2(j:index)
+    { true }
+    {
+        try find (i:index, k:index) 
+            such that { m_condition_fst!(i, j, k, input(reader2(j))) }
+            then { hash(tpl(tpl(nr(j),sel1of2(input(reader2(j)))), tag2), mkey!(i, k)) } 
+            else { ko }
+    }
+let condition_fst!(i:index, j:index, k:index) = m_condition_fst!(i,j,k,input(reader2(j)))
+
+step tag(i:index, k:index)
+    { true }
+    { tpl(
+        nt(i,k),
+        hash(
+            tpl(tpl(input(tag(i,k)),nt(i,k)), tag1),
+            mkey!(i, k)
+        )
+    )}
+
+assert
+    forall (m1:Message, m2:Message) {
+        (
+            (m1 == sel1of2(tpl(m1,m2))) 
+            && (m2 == sel2of2(tpl(m1,m2)))
+        )
+    }
+
+assert
+    forall (s:Message, m:Message, k:Message) {
+        (verify(s, m, k) <=> (s == hash(m, k)))
+    }
+
+assert (ko != ok)
+assert (tag1 != tag2)
+
+order forall (j:index) 
+    reader1(j) < reader2(j)
+
+let conclusion!(j:index) = 
+  exists (i:index, k:index) {(
+    lt(tag(i, k), reader2(j)) && lt(reader1(j), tag(i, k))
+    && (sel1of2(msg!(tag(i, k))) == sel1of2(input(reader2(j))))
+    && (sel2of2(msg!(tag(i, k))) == sel2of2(input(reader2(j))))
+    && (input(tag(i, k)) == msg!(reader1(j)))
+)}
+
+let premise!(j:index) = 
+    /* cond(reader(i,j)) */
+    exists (i:index, k:index) { condition_fst!(i, j, k) }
+
+query forall (j:index) {(
+    happens(reader2(j))
+        => (conclusion!(j) <=> premise!(j)) 
+)}
+
+assert-crypto euf-cma hash verify;
+assert-crypto nonce;

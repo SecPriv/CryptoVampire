@@ -1,0 +1,110 @@
+type index;
+fun tpl(Message, Message):Message
+
+type session
+
+
+fun mfst(Message):Message;
+fun msnd(Message):Message
+fun ok:Message
+fun ko:Message
+fun whatever:Message
+
+fun mexp(Message, Message):Message
+
+/* the Names */
+fun skP: Name
+fun skS: Name
+fun a(index):Name
+fun b(index):Name
+fun k(index, index):Name
+
+fun g:Message
+
+fun sign(Message, Message):Message
+fun checksign(Message, Message, Message):Bool
+fun pk(Message):Message
+
+assert-crypto euf-cma sign checksign pk;
+assert-crypto nonce;
+
+/* P */
+let pkS!(i:index) = mfst(mfst(input(P2(i))))
+let gS!(i:index) = msnd(mfst(input(P2(i))))
+let x2!(i:index) = input(P2(i))
+
+step P1(i:index){true} { tpl(pk(skP), mexp(g, a(i))) }
+
+step P2(i:index) 
+    {( checksign(msnd(x2!(i)), tpl(tpl(mexp(g, a(i)), gS!(i)), pk(skP)), pkS!(i)) && (pkS!(i) == pk(skS)) )}
+    { sign(tpl(tpl(gS!(i), mexp(g, a(i))), pkS!(i)), skP) }
+
+order forall (i:index) { P1(i) < P2(i)}
+
+
+/* S */
+let gp!(i:index) = msnd(input(S1(i)))
+let pkp!(i:index) = mfst(input(S1(i)))
+let x3!(j:index) = input(S2(j))
+
+step S1(j:index)
+    {(pkp!(j) == pk(skP))}
+    { tpl(tpl(pk(skS), mexp(g, b(j))), sign(tpl(tpl(gp!(j), mexp(g, b(j))),pkp!(j)),skS)) }
+
+step S2(j:index)
+    {(cond!(S1(j)) && checksign(x3!(j), tpl(tpl(mexp(g, b(j)), gp!(j)), pk(skS)), pkp!(j)))}
+    { ok }
+
+let challenge!(i:index, j:index) = (gp!(j) == mexp(g, a(i)))
+step Schall_succ(i:index, j:index)
+    {(cond!(S2(j)) && challenge!(i, j))}
+    { whatever }
+
+step Schall_fail(j:index)
+    {(cond!(S2(j)) && not(exists (i:index) {challenge!(i, j)}))}
+    { ko }
+
+order forall (j:index) { S1(j) < S2(j)}
+order forall (i:index, j:index) { S2(j) < Schall_succ(i, j)}
+order forall ( j:index) { S2(j) < Schall_fail(j)}
+order forall(i:index, j:index, j2:index) { Schall_succ(i, j) <> Schall_succ(i, j2)}
+order forall(i:index, j:index) { Schall_succ(i, j) <> Schall_fail(i)}
+
+
+/* phatom lemmas to trigger the preprocessing */
+lemma forall(i:index) {(
+    ( checksign(msnd(x2!(i)), tpl(tpl(mexp(g, a(i)), gS!(i)), pk(skP)), pkS!(i)) && (pkS!(i) == pk(skS)) )
+    => checksign(msnd(x2!(i)), tpl(tpl(mexp(g, a(i)), gS!(i)), pk(skP)), pk(skS))
+)}
+
+lemma forall(j:index) {(
+    ( checksign(x3!(j), tpl(tpl(mexp(g, b(j)), gp!(j)), pk(skS)), pkp!(j)) && (pkp!(j) == pk(skP)) )
+    => checksign(x3!(j), tpl(tpl(mexp(g, b(j)), gp!(j)), pk(skS)), pk(skP))
+)}
+
+/* query */
+
+assert
+    forall (m1:Message, m2:Message) {
+        (
+            (m1 == mfst(tpl(m1,m2))) 
+            && (m2 == msnd(tpl(m1,m2)))
+        )
+    }
+
+let exec!(t:Step) = (
+    forall (i:index) {((lt(P1(i), t) || (P1(i) == t)) => cond!(P1(i)))} &&
+    forall (i:index) {((lt(P2(i), t) || (P2(i) == t)) => cond!(P2(i)))} &&
+    forall (i:index) {((lt(S1(i), t) || (S1(i) == t)) => cond!(S1(i)))} &&
+    forall (i:index) {((lt(S2(i), t) || (S2(i) == t)) => cond!(S2(i)))} &&
+    forall (i:index, j:index)
+        {((lt(Schall_succ(i, j), t) || (Schall_succ(i, j) == t)) => cond!(Schall_succ(i, j)))} &&
+    forall (i:index) {((lt(Schall_fail(i), t) || (Schall_fail(i) == t)) => cond!(Schall_fail(i)))} 
+)
+
+/* S_charac */
+query forall (j:index) {(
+    happens(S2(j)) => 
+        (exec!(S2(j)) =>
+            exists (i:index) {(msnd(input(S1(j))) == mexp(g, a(i)))})
+)}

@@ -1,0 +1,125 @@
+type index;
+fun tpl(Message, Message):Message
+
+
+fun sel1of2(Message):Message;
+fun sel2of2(Message):Message
+fun hash(Message, Message):Message
+fun verify(Message, Message, Message):Bool
+
+fun m_xor(Message, Message):Message
+fun zero:Message
+
+fun ok:Message
+fun ko:Message
+fun tag1:Message
+fun tag2:Message
+
+/* the Names */
+fun nt(index, index): Name
+fun nr(index): Name
+
+/* to quickly change version on key (one or 2 parameters) */
+fun key(index, index):Name
+let mkey!(i:index, k:index) = key(i, k)
+
+/* same but for id */
+fun id(index, index):Message
+let mid!(i:index, k:index) = id(i, k)
+
+let m_condition_fst!(i:index, j:index, k:index, m_in: Message) = 
+    /*( hash(tpl(tpl(nr(j),sel1of2(m_in)), tag1), mkey!(i, k)) 
+                    == m_xor(mid!(i, k), sel2of2(m_in)))*/
+    verify(m_xor(mid!(i, k), sel2of2(m_in)), tpl(tpl(nr(j),sel1of2(m_in)), tag1), mkey!(i, k))
+
+step reader1(i:index) 
+    { true }
+    { nr(i) }
+
+step reader2(j:index)
+    { true }
+    {
+        try find (i:index, k:index) 
+            such that { m_condition_fst!(i, j, k, input(reader2(j))) }
+            then { m_xor(mid!(i,k), hash(tpl(tpl(nr(j),sel1of2(input(reader2(j)))), tag2), mkey!(i, k))) } 
+            else { ko }
+    }
+
+let condition_fst!(i:index, j:index, k:index) = m_condition_fst!(i,j,k,input(reader2(j)))
+
+step tag(i:index, k:index)
+    { true }
+    { tpl(
+        nt(i,k),
+        m_xor(mid!(i,k), hash(tpl(tpl(input(tag(i,k)),nt(i,k)), tag1), mkey!(i, k)))
+    )}
+
+assert
+    forall (m1:Message, m2:Message) {
+        (
+            (m1 == sel1of2(tpl(m1,m2))) 
+            && (m2 == sel2of2(tpl(m1,m2)))
+        )
+    }
+assert
+    forall (m1:Message, m2:Message, m3:Message, m4:Message) {
+        (
+            (tpl(m1,m2) == tpl(m3, m4))
+                => (
+                    (m1 == m3)
+                    && (m2 == m4)
+                )
+        )
+    }
+
+assert
+    forall (s:Message, m:Message, k:Message) {
+        (verify(s, m, k) <=> (s == hash(m, k)))
+    }
+
+assert (ko != ok)
+assert (tag1 != tag2)
+
+assert forall (m:Message, m':Message) {(
+    m_xor(m, m_xor(m, m')) == m'
+)}
+
+order forall (j:index) 
+    reader1(j) < reader2(j)
+
+let conclusion!(j:index) = 
+  exists (i:index, k:index) {(
+    lt(tag(i, k), reader2(j)) && lt(reader1(j), tag(i, k)) 
+    && (sel1of2(msg!(tag(i, k))) == sel1of2(input(reader2(j))))
+    && (sel2of2(msg!(tag(i, k))) == sel2of2(input(reader2(j))))
+    && (input(tag(i, k)) == msg!(reader1(j)))
+)}
+
+let premise!(j:index) = 
+    /* cond(reader(i,j)) */
+    exists (i:index, k:index) { condition_fst!(i, j, k) }
+
+query forall (j:index) {(
+    happens(reader2(j))
+        => (premise!(j) <=> conclusion!(j)) 
+)}
+
+assert-crypto euf-cma hash verify;
+assert-crypto nonce;
+
+/* lemma forall (i:index, j:index, k:index) {(
+    (
+        (input(tag(i, j)) == nr(k))
+        && lt(tag(i, j), reader2(k))
+    ) =>
+        lt(reader1(k), tag(i, j))
+)}
+
+lemma forall (i:index, j:index, k:index) {(
+    condition_fst!(i, j, k)
+        => (
+            m_xor(
+                mid!(i,k), 
+                hash(tpl(tpl(nr(j),sel1of2(input(reader2(j)))), tag1), mkey!(i, k))) 
+              == sel2of2(input(reader2(j))))
+)} */
