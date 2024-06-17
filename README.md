@@ -5,8 +5,9 @@ CryptoVampire is an automated computationally sound protocol verifier. It turns 
 ## Compiling
 
 ### `cargo`
+The favored way to install `rust` and all its tooling is through [`rustup`](https://rustup.rs/) (this installs `rustc` (the rust compiler) and `cargo`)
 
-As for all `rust` projects you can compile or run them using cargo:
+Then, as for all `rust` projects, you can compile or run them using cargo:
 
 ```bash
 # compile
@@ -16,7 +17,7 @@ cargo build
 cargo run -- <args>
 ```
 
-Note that `cargo` is configured to write to `"/tmp/ccsa/build/dir"`. To overwrite this behavior, you can use the `--target-dir <`dir>` argument to cargo.
+For Windows users especially, note that `cargo` is configured to write to `"/tmp/ccsa/build/dir"`. To overwrite this behavior, you can use the `--target-dir <`dir>` argument to cargo.
 
 ### `nix`
 
@@ -28,13 +29,13 @@ This project is set up to work with `nix` as well.
 
 #### `nix build` & `nix run`
 
-Work as expected.
+Works as expected.
 
 ## Usage
 
 **Usability is known to be somewhat poor at the moment**
 
-To get all the options use `cryptovampire --help`:
+To get all the options use `cryptovampire --help` (or `cargo run -- --help` or `nix run -- --help` depending on you installation method):
 ```
 $ cryptovampire --help
 Usage: cryptovampire [OPTIONS] [FILE]
