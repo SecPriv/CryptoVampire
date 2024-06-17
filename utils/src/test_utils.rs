@@ -1,9 +1,12 @@
 #[cfg(test)]
 pub mod tests {
 
+    #[allow(dead_code)]
     fn is_sync<T: Sync>() -> bool {
         true
     }
+
+    #[allow(dead_code)]
     fn is_send<T: Send>() -> bool {
         true
     }
