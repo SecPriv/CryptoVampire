@@ -22,6 +22,9 @@ where
     iter.map(|e| e.clone())
 }
 
+/// A box that points to the stack,
+///
+/// This is mostly used to trick the type system when using [DerefMut]
 pub struct StackBox<T>(T);
 
 impl<T> StackBox<T> {
@@ -86,6 +89,20 @@ macro_rules! implderef {
 }
 
 #[macro_export]
+/// Alias for arguments that take any list-like object
+///
+/// ```rust
+/// use utils::implvec;
+///
+/// fn foo<'a>(arg: implvec!(&'a u8)) -> Vec<&'a u8> {
+///     arg.into_iter().collect()
+/// }
+///
+/// fn main() {
+///     assert_eq!(vec![&1, &2], foo(&[1, 2]));
+///     assert_eq!(vec![&1, &2], foo(&vec![1, 2]));
+/// }
+/// ```
 macro_rules! implvec {
     ($t:ty) => {
         impl std::iter::IntoIterator<Item = $t>

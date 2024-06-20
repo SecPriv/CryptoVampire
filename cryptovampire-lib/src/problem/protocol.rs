@@ -6,9 +6,7 @@ use crate::formula::formula::ARichFormula;
 use utils::implvec;
 
 use super::{
-    cell::{Assignement, MemoryCell},
-    cell_dependancies::graph::DependancyGraph,
-    step::Step,
+    cell::{Assignement, MemoryCell}, cell_dependancies::PreprocessedDependancyGraph, step::Step
 };
 use crate::subterm::FormlAndVars;
 
@@ -22,7 +20,7 @@ pub struct Protocol<'bump> {
     /// if `A(...)` appears in the step `B` or in an
     /// assignement of the cell `B`, then `B` "depends"
     /// on `A`
-    graph: DependancyGraph<'bump>,
+    graph: PreprocessedDependancyGraph<'bump>,
     /// the [Step]s
     ///
     /// `init` should be the first step
@@ -35,7 +33,7 @@ pub struct Protocol<'bump> {
 }
 
 pub struct ProtocolStruct<'a, 'bump> {
-    pub graph: &'a DependancyGraph<'bump>,
+    pub graph: &'a PreprocessedDependancyGraph<'bump>,
     pub steps: &'a [Step<'bump>],
     pub memory_cells: &'a [MemoryCell<'bump>],
     pub ordering: &'a [ARichFormula<'bump>],
@@ -51,7 +49,7 @@ impl<'bump> Protocol<'bump> {
         let mut steps = steps.into_iter().collect_vec();
         let memory_cells = cells.into_iter().collect_vec();
         let ordering = ordering.into_iter().collect_vec();
-        let graph = DependancyGraph::new(steps.clone(), memory_cells.iter().cloned());
+        let graph = PreprocessedDependancyGraph::new(steps.clone(), memory_cells.iter().cloned());
 
         {
             // make the init step the first one
@@ -151,7 +149,7 @@ impl<'bump> Protocol<'bump> {
         *self.steps.first().unwrap()
     }
 
-    pub fn graph(&self) -> &DependancyGraph<'bump> {
+    pub fn graph(&self) -> &PreprocessedDependancyGraph<'bump> {
         &self.graph
     }
 

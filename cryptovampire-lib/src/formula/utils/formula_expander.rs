@@ -9,7 +9,7 @@ use crate::{
     },
     problem::{
         cell::{Assignement, MemoryCell},
-        cell_dependancies::graph::{Ancestors, DependancyGraph},
+        cell_dependancies::{Ancestors, CellOrInput, PreprocessedDependancyGraph},
         step::Step,
     },
 };
@@ -172,7 +172,7 @@ impl<'bump> ExpantionContent<'bump> {
     pub fn expand(
         &self,
         steps: impl IntoIterator<Item = Step<'bump>>,
-        graph: &DependancyGraph<'bump>,
+        graph: &PreprocessedDependancyGraph<'bump>,
         with_args: bool,
     ) -> Vec<ExpantionContent<'bump>> {
         let deeper_kinds = self.state.deeper_kind();
@@ -228,7 +228,7 @@ impl<'bump> ExpantionContent<'bump> {
 							});
 
 							iter
-							.chain(expand_process_deeper(steps, graph, None, &nstate, args.as_ref()))
+							.chain(expand_process_deeper(steps, graph, CellOrInput::Input, &nstate, args.as_ref()))
 							.collect()},
 						TermAlgebra::Cell(c)
 							if deeper_kinds.contains(DeeperKinds::MEMORY_CELLS) =>
@@ -239,7 +239,7 @@ impl<'bump> ExpantionContent<'bump> {
 							iter.chain(expand_process_deeper(
 								steps,
 								graph,
-								Some(c.memory_cell()),
+								CellOrInput::Cell(c.memory_cell()),
 								&nstate,
 								args.as_ref(),
 							))
@@ -294,8 +294,8 @@ where
 /// `deeper` is [None] if comming from an input
 fn expand_process_deeper<'b, 'bump>(
     steps: impl IntoIterator<Item = Step<'bump>> + 'b,
-    graph: &DependancyGraph<'bump>,
-    deeper: Option<MemoryCell<'bump>>,
+    graph: &'b PreprocessedDependancyGraph<'bump>,
+    deeper: CellOrInput<'bump>,
     state: &'b ExpantionState<'bump>,
     args: &'b [ARichFormula<'bump>],
 ) -> impl Iterator<Item = ExpantionContent<'bump>> + 'b
@@ -305,11 +305,11 @@ where
     let state_variables = state.bound_variables();
     // let max_var = state_variables.iter().map(|v| v.id).max().unwrap_or(0);
     trace!("process_deeper");
-    let Ancestors { input, cells } = graph.ancestors(deeper.clone()).unwrap();
+    let Ancestors { input, cells } = graph.ancestors(deeper).unwrap();
     trace!("-");
 
     let step_origin = args.last().unwrap();
-    let is_input = deeper.is_none();
+    let is_input = deeper.is_input();
 
     let cells_iter = cells.into_iter().flat_map(|c| c.assignements().iter()).map(
         move |ma@Assignement {
