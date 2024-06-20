@@ -312,13 +312,13 @@ where
     let is_input = deeper.is_none();
 
     let cells_iter = cells.into_iter().flat_map(|c| c.assignements().iter()).map(
-        move |Assignement {
+        move |ma@Assignement {
                   step,
                   content,
                   fresh_vars,
                   ..
               }| {
-            trace!("in assignement");
+            trace!("in assignement\n\t{:}", &ma);
             let vars = step.free_variables();
 
             let collision_var =
