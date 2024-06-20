@@ -68,8 +68,7 @@ impl<'bump> InstanceSearcher<'bump> for EufCmaSign<'bump> {
                 functions
                     .keys()
                     .map(|f| f.as_ref().to_string())
-                    .intersperse(", ".to_owned())
-                    .collect::<String>()
+                    .join(", ")
             )
         }
 
