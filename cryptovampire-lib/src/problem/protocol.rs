@@ -6,7 +6,9 @@ use crate::formula::formula::ARichFormula;
 use utils::implvec;
 
 use super::{
-    cell::{Assignement, MemoryCell}, cell_dependancies::PreprocessedDependancyGraph, step::Step
+    cell::{Assignement, MemoryCell},
+    cell_dependancies::PreprocessedDependancyGraph,
+    step::Step,
 };
 use crate::subterm::FormlAndVars;
 

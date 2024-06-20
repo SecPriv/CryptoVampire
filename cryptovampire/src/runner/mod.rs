@@ -75,11 +75,7 @@ pub fn run_multiple_time<'bump>(
             .collect_vec();
         let max_var_no_instances = pbl.max_var_no_extras();
         if cfg!(debug_assertions) {
-            let str = tmp
-                .iter()
-                .flatten()
-                .map(|t| format!("{:}", t))
-                .join(", ");
+            let str = tmp.iter().flatten().map(|t| format!("{:}", t)).join(", ");
             debug!("instances found ({:?}):\n\t[{:}]", tmp.len(), str)
         }
         pbl.extra_instances.extend(

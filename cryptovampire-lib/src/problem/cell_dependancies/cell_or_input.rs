@@ -30,7 +30,7 @@ impl<'bump> CellOrInput<'bump> {
 
     #[must_use]
     pub fn as_cell(&self) -> Option<MemoryCell<'bump>> {
-      self.into_option()
+        self.into_option()
     }
 
     #[must_use]

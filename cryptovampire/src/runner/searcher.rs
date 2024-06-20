@@ -65,10 +65,7 @@ impl<'bump> InstanceSearcher<'bump> for EufCmaSign<'bump> {
         if cfg!(debug_assertions) && false {
             debug!(
                 "saved functions [{}]",
-                functions
-                    .keys()
-                    .map(|f| f.as_ref().to_string())
-                    .join(", ")
+                functions.keys().map(|f| f.as_ref().to_string()).join(", ")
             )
         }
 

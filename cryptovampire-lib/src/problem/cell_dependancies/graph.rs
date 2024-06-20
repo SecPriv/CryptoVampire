@@ -1,20 +1,16 @@
-use std::{cell::RefCell, convert::identity, hash::Hash, sync::Arc};
+use std::{cell::RefCell, hash::Hash, sync::Arc};
 
-use hashbrown::HashMap;
 use itertools::Itertools;
 
 use crate::{
-    formula::{
-        formula::ARichFormula, function::inner::term_algebra::TermAlgebra, sort::builtins::STEP,
-        variable::Variable,
-    },
+    formula::formula::ARichFormula,
     problem::{cell::MemoryCell, step::Step},
 };
-use utils::{arc_into_iter::ArcIntoIter, implvec, utils::repeat_n_zip};
+use utils::implvec;
 
 use super::{
     call::{CellCall, InputCall, OutGoingCall, StepCall},
-    Ancestors, CellOrInput, Dependancy, DependancyFromStep, PreprocessedDependancyGraph,
+    Ancestors, CellOrInput, Dependancy, PreprocessedDependancyGraph,
 };
 use anyhow::{Ok, Result};
 use thiserror::Error;

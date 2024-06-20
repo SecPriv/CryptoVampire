@@ -21,12 +21,14 @@ pub struct Assignement<'bump> {
 
 impl<'bump> Display for Assignement<'bump> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-
         let step = self.step.name();
         let args = self.args.iter().map(|a| a.to_string()).join(", ");
         let content = self.content.to_string();
         let fresh_vars = self.fresh_vars.iter().map(|a| a.to_string()).join(", ");
         // write!(f, r"{")?;
-        write!(f, "{{step: {step}, args: [{args}], content: {content}, fresh_vars: [{fresh_vars}]}}")
+        write!(
+            f,
+            "{{step: {step}, args: [{args}], content: {content}, fresh_vars: [{fresh_vars}]}}"
+        )
     }
 }

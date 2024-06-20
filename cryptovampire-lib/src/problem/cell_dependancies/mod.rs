@@ -1,8 +1,5 @@
 //! This file help to solve searching though the dependency graph of memorycells
 //!  and inputs looking for subterm
-use std::sync::Arc;
-
-use crate::formula::{formula::ARichFormula, function::inner::term_algebra::input::Input};
 
 use super::{cell::MemoryCell, step::Step};
 

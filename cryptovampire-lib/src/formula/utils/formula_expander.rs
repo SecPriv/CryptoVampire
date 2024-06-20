@@ -8,7 +8,7 @@ use crate::{
         variable::Variable,
     },
     problem::{
-        cell::{Assignement, MemoryCell},
+        cell::Assignement,
         cell_dependancies::{Ancestors, CellOrInput, PreprocessedDependancyGraph},
         step::Step,
     },
@@ -312,7 +312,7 @@ where
     let is_input = deeper.is_input();
 
     let cells_iter = cells.into_iter().flat_map(|c| c.assignements().iter()).map(
-        move |ma@Assignement {
+        move |ma @ Assignement {
                   step,
                   content,
                   fresh_vars,

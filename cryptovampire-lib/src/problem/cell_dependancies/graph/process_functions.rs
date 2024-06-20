@@ -11,8 +11,6 @@ use utils::utils::repeat_n_zip;
 
 use super::InnerCellCall;
 
-use super::CellCall;
-
 use super::ToNode;
 
 use crate::formula::function::InnerFunction;
