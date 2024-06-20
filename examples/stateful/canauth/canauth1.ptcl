@@ -1,0 +1,77 @@
+type index
+
+fun sk(index): Name
+fun msgA(index, index): Name
+fun msgB(index, index): Name
+
+fun SIGN: Message
+fun myZero: Message
+fun ok: Message
+
+cell cellA(index):Message
+cell cellB(index):Message
+
+fun hmac(Message, Message):Message
+fun verify(Message, Message, Message):Bool
+
+fun mySucc(Message): Message
+fun mlt(Message, Message): Bool
+
+fun tpl(Message, Message):Message
+fun fst(Message):Message;
+fun snd(Message):Message
+
+assert forall (m1:Message, m2:Message) {
+        ((m1 == fst(tpl(m1,m2))) && (m2 == snd(tpl(m1,m2))))
+    }
+
+step init
+  {true}
+  {empty} 
+  {
+    (i:index) cellA(i) <- myZero,
+    (i:index) cellB(i) <- myZero
+  }
+
+step ReceiveA(i:index, j:index)
+  { ((fst(snd(fst(in))) == SIGN)
+     && mlt(cellA(i, ReceiveA(i, j)), snd(snd(fst(in))))
+     && (snd(in) == hmac(tpl(snd(snd(fst(in))),fst(fst(in))),sk(i)))) }
+  { ok }
+  {cellA(i) <- mySucc(cellA(i, ReceiveA(i, j)))}
+
+step ReceiveB(i:index, j:index)
+  { ((fst(snd(fst(in))) == SIGN)
+     && mlt(cellB(i, ReceiveB(i, j)), snd(snd(fst(in))))
+     && (snd(in) == hmac(tpl(snd(snd(fst(in))),fst(fst(in))),sk(i)))) }
+  { ok }
+  {cellB(i) <- mySucc(cellB(i, ReceiveB(i, j)))}
+
+step SenderA(i:index, j:index)
+  { true }
+  {
+    tpl( tpl( msgA(i, j), tpl(SIGN, mySucc(cellA(i, SenderA(i, j)))) ), hmac( tpl(mySucc(cellA(i, SenderA(i, j))), msgA(i, j) ), sk(i) ) )
+  }
+  { cellA(i) <- mySucc(cellA(i, SenderA(i, j))) }
+
+step SenderB(i:index, j:index)
+  { true }
+  {
+    tpl( tpl( msgB(i, j), tpl(SIGN, mySucc(cellB(i, SenderB(i, j)))) ), hmac( tpl(mySucc(cellB(i, SenderB(i, j))), msgB(i, j) ), sk(i) ) )
+  }
+  { cellB(i) <- mySucc(cellB(i, SenderB(i, j))) }
+
+assert forall (n:Message, n2:Message) {( (n == n2) => mlt(n, mySucc(n2)) )}
+assert forall (n1:Message, n2:Message, n3:Message) {((mlt(n1, n2) && mlt(n2, n3)) => mlt(n1, n3))}
+assert forall (n1:Message, n2:Message) {(( (n1 == n2) => mlt(n1, n2)) => false)}
+assert forall (n1:Message, n2:Message) {( mlt(n1, mySucc(n2)) => ((n1==n2) || mlt(n1, n2)) )}
+
+assert-crypto euf-cma hmac verify;
+assert-crypto nonce;
+
+/* the lemma `orderBetween` wouldn't really be sound to prove */
+
+query forall (i:index, j:index) {(
+  (happens(SenderA(i, j)) => cond![SenderA(i, j)])
+    => mlt(cellA(i, pred(SenderA(i, j))), cellA(i, SenderA(i, j)))
+)}
