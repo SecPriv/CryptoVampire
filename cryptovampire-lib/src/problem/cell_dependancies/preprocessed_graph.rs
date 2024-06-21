@@ -28,6 +28,7 @@ impl<'bump> PreprocessedDependancyGraph<'bump> {
         &self.cells
     }
 
+    /// Get the ancestor (if it exists) of a [MemoryCell] or an input
     pub fn ancestors(&self, arg: CellOrInput<'bump>) -> Option<&Ancestors<'bump>> {
         match arg {
             CellOrInput::Input => Some(self.input()),

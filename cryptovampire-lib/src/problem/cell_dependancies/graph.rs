@@ -1,3 +1,5 @@
+//! The modules with the building and using the [DependancyGraph]
+
 use std::{cell::RefCell, hash::Hash, sync::Arc};
 
 use itertools::Itertools;
@@ -26,7 +28,7 @@ pub enum DependancyError {
 ///
 /// The graph is represented as an adjency list.
 ///
-/// We gathe the cells in an array for later efficiency
+/// We gather the cells in an array for later efficiency
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default)]
 pub struct DependancyGraph<'bump> {
     /// the [MemoryCell] in an internal representation
