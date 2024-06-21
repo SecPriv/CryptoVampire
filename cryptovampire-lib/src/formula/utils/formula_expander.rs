@@ -346,7 +346,7 @@ fn collision_substitution<'a, 'bump: 'a>(
 ) -> FrozenMultipleVarSubst<'bump, Variable<'bump>> {
     let vars = vars.into_iter().cloned().collect_vec();
 
-    let max_var = chain!(base, &vars).map(Variable::id).max().unwrap_or(0);
+    let max_var = chain!(base, &vars).map(Variable::id).max().unwrap_or(0) + 1;
     vars.into_iter()
         .filter(|v| base.contains(&v))
         .map(|v| OneVarSubst {
