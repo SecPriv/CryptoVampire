@@ -8,9 +8,13 @@ use super::{
     sort::Sort,
 };
 
+/// Alias for the name of varibles
+#[allow(non_camel_case_types)]
+pub type uvar = usize;
+
 #[derive(Debug, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct Variable<'bump> {
-    pub id: usize,
+    pub id: uvar,
     pub sort: Sort<'bump>,
 }
 impl<'bump> fmt::Display for Variable<'bump> {
@@ -37,7 +41,7 @@ impl<'bump> PartialEq for Variable<'bump> {
 impl<'bump> Eq for Variable<'bump> {}
 
 impl<'bump> Variable<'bump> {
-    pub fn new(id: usize, sort: Sort<'bump>) -> Self {
+    pub fn new(id: uvar, sort: Sort<'bump>) -> Self {
         Self { id, sort }
     }
 
@@ -49,26 +53,19 @@ impl<'bump> Variable<'bump> {
         RichFormula::Var(*self).into()
     }
 
-    // pub fn clone_to_formula<T, U>(&self, ctx: &T) -> U
-    // where
-    //     T: FormulaUser<U>,
-    // {
-    //     self.clone().as_formula(ctx)
-    // }
-
     pub fn sort(&self) -> &Sort<'bump> {
         &self.sort
     }
 
-    pub fn id(&self) -> usize {
+    pub fn id(&self) -> uvar {
         self.id
     }
 }
 
-impl<'bump> Add<usize> for Variable<'bump> {
+impl<'bump> Add<uvar> for Variable<'bump> {
     type Output = Variable<'bump>;
 
-    fn add(self, rhs: usize) -> Self::Output {
+    fn add(self, rhs: uvar) -> Self::Output {
         Variable {
             id: self.id + rhs,
             ..self
@@ -76,7 +73,7 @@ impl<'bump> Add<usize> for Variable<'bump> {
     }
 }
 
-pub fn sorts_to_variables<'bump, I, I2>(from: usize, s: impl IntoIterator<Item = I>) -> I2
+pub fn sorts_to_variables<'bump, I, I2>(from: uvar, s: impl IntoIterator<Item = I>) -> I2
 //Vec<Variable<'bump>>
 where
     I: Deref<Target = Sort<'bump>>,
@@ -88,21 +85,21 @@ where
         .collect()
 }
 
-// impl<'bump> From<(usize, Sort<'bump>)> for Variable<'bump> {
-//     fn from(arg: (usize, Sort<'bump>)) -> Self {
+// impl<'bump> From<(uvar, Sort<'bump>)> for Variable<'bump> {
+//     fn from(arg: (uvar, Sort<'bump>)) -> Self {
 //         let (id, sort) = arg;
 //         Variable { id, sort }
 //     }
 // }
-// impl<'bump> From<(Sort<'bump>, usize)> for Variable<'bump> {
-//     fn from(arg: (Sort<'bump>, usize)) -> Self {
+// impl<'bump> From<(Sort<'bump>, uvar)> for Variable<'bump> {
+//     fn from(arg: (Sort<'bump>, uvar)) -> Self {
 //         let (sort, id) = arg;
 //         Variable { id, sort }
 //     }
 // }
 
-impl<'bump, 'a: 'bump> From<(usize, &'a Sort<'bump>)> for Variable<'bump> {
-    fn from(arg: (usize, &'a Sort)) -> Self {
+impl<'bump, 'a: 'bump> From<(uvar, &'a Sort<'bump>)> for Variable<'bump> {
+    fn from(arg: (uvar, &'a Sort)) -> Self {
         let (id, sort) = arg;
         Variable {
             id,
@@ -110,8 +107,8 @@ impl<'bump, 'a: 'bump> From<(usize, &'a Sort<'bump>)> for Variable<'bump> {
         }
     }
 }
-impl<'bump, 'a: 'bump> From<(&'a Sort<'bump>, usize)> for Variable<'bump> {
-    fn from(arg: (&'a Sort, usize)) -> Self {
+impl<'bump, 'a: 'bump> From<(&'a Sort<'bump>, uvar)> for Variable<'bump> {
+    fn from(arg: (&'a Sort, uvar)) -> Self {
         let (sort, id) = arg;
         Variable {
             id,
@@ -120,7 +117,7 @@ impl<'bump, 'a: 'bump> From<(&'a Sort<'bump>, usize)> for Variable<'bump> {
     }
 }
 
-fn enlarge<'a, 'b>(q: Variable<'a>) -> Variable<'b>
+fn _enlarge<'a, 'b>(q: Variable<'a>) -> Variable<'b>
 where
     'a: 'b,
 {
