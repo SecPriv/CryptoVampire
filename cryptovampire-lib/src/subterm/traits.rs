@@ -115,27 +115,9 @@ impl<'bump> DefaultAuxSubterm<'bump> {
     }
 }
 
-static EMPTY_SLICE: [RichFormula<'static>; 0] = [];
 
 impl<'bump> SubtermAux<'bump> for DefaultAuxSubterm<'bump> {
     type IntoIter = ArcIntoIter<ARichFormula<'bump>>;
-
-    // fn eval_and_next<'a>(
-    //     &self,
-    //     x: ARichFormula<'bump>,
-    //     m: ARichFormula<'bump>,
-    // ) -> SubtermResult<'a, 'bump, Self::IntoIter<'a>>
-    // where
-    //     'bump: 'a,
-    // {
-    //     let unifier = Unifier::mgu(x, m);
-    //     let nexts = match m {
-    //         RichFormula::Fun(_, args) => PE::new(args.as_slice()), //args.as_slice(),
-    //         _ => PE::empty(),
-    //     };
-
-    //     SubtermResult { unifier, nexts }
-    // }
 
     fn var_eval_and_next(
         &self,
@@ -160,6 +142,3 @@ impl<'bump> SubtermAux<'bump> for DefaultAuxSubterm<'bump> {
         self.sort
     }
 }
-
-// mod possibly_empty {
-// }

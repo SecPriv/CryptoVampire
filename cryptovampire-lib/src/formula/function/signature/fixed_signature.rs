@@ -116,7 +116,7 @@ macro_rules! static_signature {
         const [<$name _ARGS_LEN>] : usize = $crate::static_signature!(@inner ($($arg,)*));
     }
 
-    #[static_init::dynamic]
+    #[static_init::dynamic] #[allow(dead_code)]
     $($pub)? static $name: $crate::formula::function::signature::StaticSignature<'static, paste::paste!{ [<$name _ARGS_LEN>] }> =
         static_signature!(($($arg),*) -> $out);
     };

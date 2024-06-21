@@ -101,6 +101,7 @@ pub trait Signature<'bump>: Sized {
 }
 
 /// Shortcut to get to the [Iterator] hidden in [Signature::Args]
+#[allow(dead_code)]
 type SignatureArgs<'a, 'bump, T> = <<T as Signature<'bump>>::Args<'a> as IntoIterator>::IntoIter;
 
 pub trait AsFixedSignature<'bump> {

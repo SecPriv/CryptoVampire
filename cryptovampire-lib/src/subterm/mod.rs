@@ -57,6 +57,7 @@ where
     aux: Aux,
     ignored_functions: Vec<Function<'bump>>,
     kind: SubtermKindWFunction<'bump>,
+    #[allow(dead_code)]
     weak: Weak<Self>, // sort: Sort<'bump>,
     deeper_kind: UnfoldFlags,
 }

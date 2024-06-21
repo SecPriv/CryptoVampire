@@ -11,8 +11,8 @@ use crate::{
 use utils::implvec;
 
 use super::{
-    call::{CellCall, InputCall, OutGoingCall, StepCall},
-    Ancestors, CellOrInput, Dependancy, PreprocessedDependancyGraph,
+    call::{CellCall, InputCall, StepCall},
+    Ancestors, CellOrInput,  PreprocessedDependancyGraph,
 };
 use anyhow::{Ok, Result};
 use thiserror::Error;
@@ -183,60 +183,5 @@ impl<'bump> DependancyGraph<'bump> {
     /// The cells in the graph
     pub fn cells<'a>(&'a self) -> impl Iterator<Item = MemoryCell<'bump>> + 'a {
         self.cells.iter().map(|GlobNode { cell, .. }| *cell)
-    }
-}
-
-impl<'bump> InnerCellCall<'bump> {
-    fn as_cell_call(&self, graph: &DependancyGraph<'bump>) -> CellCall<'bump> {
-        let InnerCellCall {
-            cell_idx: cell,
-            timepoint: step,
-            args,
-        } = self;
-        CellCall {
-            cell: graph.cells.get(*cell).unwrap().cell,
-            timepoint: step.clone(),
-            args: args.clone(),
-        }
-    }
-}
-
-impl<'bump> Edges<'bump> {
-    fn as_dependancy(&self, graph: &DependancyGraph<'bump>) -> Option<Dependancy<'bump>> {
-        match self {
-            Edges {
-                from: FromNode::Input { .. },
-                to: _,
-            } => None,
-
-            Edges {
-                from: FromNode::CellCall(call),
-                to: ToNode::Input(icall),
-            } => Some(Dependancy {
-                from: call.as_cell_call(graph),
-                depends_on: OutGoingCall::Input(icall.clone()),
-            }),
-            Edges {
-                from: FromNode::CellCall(fcall),
-                to: ToNode::CellCall(tcall),
-            } => Some(Dependancy {
-                from: fcall.as_cell_call(graph),
-                depends_on: OutGoingCall::Cell(tcall.as_cell_call(graph)),
-            }),
-        }
-    }
-
-    fn from(&self) -> Option<usize> {
-        match &self.from {
-            FromNode::Input { .. } => None,
-            FromNode::CellCall(InnerCellCall { cell_idx: cell, .. }) => Some(*cell),
-        }
-    }
-
-    fn to(&self) -> Option<usize> {
-        match &self.to {
-            ToNode::Input(_) => None,
-            ToNode::CellCall(InnerCellCall { cell_idx: cell, .. }) => Some(*cell),
-        }
     }
 }

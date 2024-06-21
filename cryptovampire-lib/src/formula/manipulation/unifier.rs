@@ -24,11 +24,6 @@ pub struct Unifier<'bump> {
     right: MultipleVarSubst<ARichFormula<'bump>>,
 }
 
-#[derive(Debug, Clone)]
-pub struct OneWayUnifier<'bump> {
-    subst: MultipleVarSubst<ARichFormula<'bump>>,
-}
-
 #[derive(Debug, Error)]
 pub enum UnifierAsEqualityErr {
     #[error("found tow variables with the same id on both sides: {id:?}")]
@@ -220,45 +215,6 @@ where
                 None
             }
         }
-    }
-}
-
-impl<'bump> OneWayUnifier<'bump> {
-    pub fn new(from: &ARichFormula<'bump>, to: &ARichFormula<'bump>) -> Option<Self> {
-        fn aux<'a, 'bump>(
-            from: &ARichFormula<'bump>,
-            to: &ARichFormula<'bump>,
-            p: &mut MultipleVarSubst<ARichFormula<'bump>>,
-        ) -> bool {
-            match (from.as_ref(), to.as_ref()) {
-                (RichFormula::Var(v), _) => {
-                    if let Some(nf) = p.maybe_get(v.id) {
-                        nf == to
-                    } else {
-                        p.add(v.id, to.shallow_copy());
-                        true
-                    }
-                }
-                (RichFormula::Fun(funl, argsl), RichFormula::Fun(funr, argsr))
-                    if funl == funr && argsl.len() == argsr.len() =>
-                {
-                    argsl.iter().zip(argsr.iter()).all(|(l, r)| aux(l, r, p))
-                }
-                _ => false,
-            }
-        }
-
-        let mut p = MultipleVarSubst::new();
-
-        if aux(from, to, &mut p) {
-            Some(OneWayUnifier { subst: p })
-        } else {
-            None
-        }
-    }
-
-    pub fn vars<'b: 'bump>(&'b self) -> impl Iterator<Item = usize> + 'b {
-        self.subst.subst().iter().map(OneVarSubst::id)
     }
 }
 

@@ -89,7 +89,3 @@ where
         }
     }
 }
-
-pub struct FormulaIterator2<'bump, 'f> {
-    to_do: Vec<&'f RichFormula<'bump>>,
-}

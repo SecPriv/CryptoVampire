@@ -4,12 +4,6 @@
 use super::{cell::MemoryCell, step::Step};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Dependancy<'bump> {
-    pub from: call::CellCall<'bump>,
-    pub depends_on: call::OutGoingCall<'bump>,
-}
-
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct DependancyFromStep<'bump> {
     pub steps_origin: Vec<Step<'bump>>,
     pub cell: Option<MemoryCell<'bump>>,
@@ -27,29 +21,4 @@ pub use preprocessed_graph::PreprocessedDependancyGraph;
 pub struct Ancestors<'bump> {
     pub input: bool,
     pub cells: Vec<MemoryCell<'bump>>,
-}
-
-/// The graph itself
-
-fn some_iter<T, I: IntoIterator<Item = T>>(iter: Option<I>) -> impl Iterator<Item = T> {
-    enum PossiblyEmptyIterator<T, I: IntoIterator<Item = T>> {
-        Empty,
-        Contains(<I as IntoIterator>::IntoIter),
-    }
-
-    impl<T, I: IntoIterator<Item = T>> Iterator for PossiblyEmptyIterator<T, I> {
-        type Item = T;
-
-        fn next(&mut self) -> Option<Self::Item> {
-            match self {
-                PossiblyEmptyIterator::Empty => None,
-                PossiblyEmptyIterator::Contains(i) => i.next(),
-            }
-        }
-    }
-
-    match iter {
-        Some(i) => PossiblyEmptyIterator::<T, I>::Contains(i.into_iter()),
-        None => PossiblyEmptyIterator::Empty,
-    }
 }

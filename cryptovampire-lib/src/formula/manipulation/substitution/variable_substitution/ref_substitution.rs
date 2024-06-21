@@ -87,14 +87,6 @@ impl<'a, T: Clone> FrozenSubst<'a, T> {
                 true
             }
     }
-
-    // pub fn extend_clone(&self, vars_idx: implvec!(usize), content: implvec!(T)) -> Self {
-    //     let mut new = self.clone();
-    //     new.vars.extend(vars_idx);
-    //     new.formulas.extend(content);
-    //     assert!(new.valid());
-    //     new
-    // }
 }
 
 impl<'a, 'bump> FrozenMultipleVarSubst<'a, Variable<'bump>> {

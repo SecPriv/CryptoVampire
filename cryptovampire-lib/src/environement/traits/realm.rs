@@ -18,7 +18,9 @@ pub enum Realm {
     Evaluated,
 }
 
+#[allow(dead_code)]
 pub const LOW: Realm = Realm::Evaluated;
+#[allow(dead_code)]
 pub const HIGH: Realm = Realm::Symbolic;
 
 impl Realm {

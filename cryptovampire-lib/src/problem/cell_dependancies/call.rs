@@ -7,12 +7,6 @@ use crate::{
     problem::{cell::MemoryCell, step::Step},
 };
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum OutGoingCall<'bump> {
-    Input(InputCall<'bump>),
-    Cell(CellCall<'bump>),
-}
-
 /// call `cell(args, step)`
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct CellCall<'bump> {

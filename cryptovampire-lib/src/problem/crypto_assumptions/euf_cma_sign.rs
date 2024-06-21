@@ -38,7 +38,7 @@ pub type SubtermEufCmaSignMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>
 pub type SubtermEufCmaSignKey<'bump> = Subterm<'bump, KeyAux<'bump>>;
 
 static_signature!((pub) EUF_CMA_SIGN_SIGNATURE: (MESSAGE, MESSAGE) -> MESSAGE);
-#[dynamic]
+#[dynamic] #[allow(dead_code)]
 static EUF_CMA_VERIFY_SIGNATURE: StaticSignature<'static, 3> =
     super::EUF_CMA_VERIFY_SIGNATURE.clone();
 static_signature!((pub) EUF_CMA_PK_SIGNATURE: (MESSAGE) -> MESSAGE);
