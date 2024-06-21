@@ -26,7 +26,7 @@ use crate::{
         manipulation::Unifier,
         sort::Sort,
         utils::{
-            formula_expander::{UnfoldFlags, Unfolder, UnfoldingState},
+            formula_expander::{UnfoldFlags, UnfoldingState},
             formula_iterator::{FormulaIterator, IteratorFlags},
         },
         variable::{sorts_to_variables, Variable},

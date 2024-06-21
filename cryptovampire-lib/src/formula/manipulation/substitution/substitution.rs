@@ -1,5 +1,3 @@
-use utils::implderef;
-
 use crate::formula::{
     formula::{ARichFormula, RichFormula},
     variable::Variable,

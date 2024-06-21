@@ -5,7 +5,7 @@ use crate::formula::{
     manipulation::Substitution,
     variable::Variable,
 };
-use utils::{implvec, vecref::VecRefClone};
+use utils::vecref::VecRefClone;
 
 use super::OneVarSubst;
 
@@ -38,7 +38,7 @@ impl<'a, A: Clone> FromIterator<OneVarSubst<A>> for FrozenMultipleVarSubst<'a, A
 }
 
 /// Immutable substitution of multiple variable. It is functionnally the same as [FrozenMultipleVarSubst]
-/// 
+///
 /// The content must follow the invariant checked by [Self::valid]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct FrozenSubst<'a, T: Clone> {

@@ -1,4 +1,4 @@
-use std::{default, rc::Rc, sync::Arc};
+use std::{rc::Rc, sync::Arc};
 
 use crate::{
     formula::{
@@ -17,7 +17,7 @@ use crate::{
     },
 };
 use derive_builder::Builder;
-use utils::{arc_into_iter::ArcIntoIter, implvec};
+use utils::implvec;
 
 use bitflags::bitflags;
 use itertools::{chain, Itertools};
@@ -228,7 +228,7 @@ impl<'bump> Unfolder<'bump> {
             let to_avoid = chain!(q.free_variables.iter(), self.state.bound_variables())
                 .cloned()
                 .collect_vec();
-            collision_substitution(q.bound_variables.iter(), &to_avoid)
+            make_collision_avoiding_subst(q.bound_variables.iter(), &to_avoid)
         };
         let new_state = self.state.add_variables(
             q.bound_variables
@@ -283,8 +283,10 @@ where
             trace!("in assignement\n\t{:}", &ma);
             let vars = step.free_variables();
 
-            let collision_var =
-                collision_substitution(chain!(vars.iter(), fresh_vars.iter()), state_variables);
+            let collision_var = make_collision_avoiding_subst(
+                chain!(vars.iter(), fresh_vars.iter()),
+                state_variables,
+            );
 
             let step_f = step
                 .function()
@@ -313,7 +315,7 @@ where
             steps.into_iter().flat_map(move |step| {
                 trace!("in input");
                 let vars = step.free_variables();
-                let collision_var = collision_substitution(vars, state_variables);
+                let collision_var = make_collision_avoiding_subst(vars, state_variables);
                 let step_f = step
                     .function()
                     .f_a(vars.iter().map(|v| collision_var.get(v)));
@@ -340,7 +342,7 @@ where
 }
 
 /// create a substitution that remaps `vars` such that it doesn't collide with `base`
-fn collision_substitution<'a, 'bump: 'a>(
+fn make_collision_avoiding_subst<'a, 'bump: 'a>(
     vars: implvec!(&'a Variable<'bump>),
     base: &[Variable<'bump>],
 ) -> FrozenMultipleVarSubst<'bump, Variable<'bump>> {

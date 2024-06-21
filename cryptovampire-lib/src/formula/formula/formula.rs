@@ -7,27 +7,21 @@ use std::{
 use hashbrown::HashSet;
 use itertools::Itertools;
 
-use crate::{
-    formula::{
-        formula::ARichFormula,
-        function::{
-            builtin::{AND, EQUALITY, IMPLIES, NOT, OR},
-            signature::Signature,
-            Function,
-        },
-        manipulation::{Substitution, Translate},
-        quantifier::Quantifier,
-        sort::{
-            builtins::BOOL,
-            sorted::{Sorted, SortedError},
-            Sort,
-        },
-        utils::formula_expander::{
-            UnfoldFlags, Unfolder, UnfolderBuilder, UnfoldingStateBuilder, UnfoldingState,
-        },
-        variable::Variable,
+use crate::formula::{
+    formula::ARichFormula,
+    function::{
+        builtin::{AND, EQUALITY, IMPLIES, NOT, OR},
+        signature::Signature,
+        Function,
     },
-    problem::protocol::Protocol,
+    manipulation::{Substitution, Translate},
+    quantifier::Quantifier,
+    sort::{
+        builtins::BOOL,
+        sorted::{Sorted, SortedError},
+        Sort,
+    },
+    variable::Variable,
 };
 use utils::implvec;
 

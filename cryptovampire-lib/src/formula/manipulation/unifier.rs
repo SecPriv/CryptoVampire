@@ -11,7 +11,7 @@ use super::{
         variable::Variable,
     },
     substitution::variable_substitution::{
-        OneVarSubst, OneVarSubstF, MultipleVarSubst, MulitpleVarSubstF,
+        MulitpleVarSubstF, MultipleVarSubst, OneVarSubst, OneVarSubstF,
     },
     Substitution,
 };

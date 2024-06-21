@@ -9,7 +9,7 @@ use crate::formula::{
 use super::MultipleVarSubst;
 
 /// A [Substitution] on only one variable
-/// 
+///
 /// `OneVarSubst{id: x, f: y}` is the substitution $\{ x \mapsto y \}$
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Copy)]
 pub struct OneVarSubst<T> {
