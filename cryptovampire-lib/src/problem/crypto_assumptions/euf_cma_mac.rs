@@ -19,7 +19,7 @@ use crate::{
         function::{inner::subterm::Subsubterm, name_caster_collection::NameCasterCollection},
         manipulation::OneVarSubst,
         sort::builtins::{CONDITION, MESSAGE, NAME},
-        utils::formula_expander::DeeperKinds,
+        utils::formula_expander::UnfoldFlags,
         variable::Variable,
     },
     mexists, mforall,
@@ -63,7 +63,7 @@ impl<'bump> EufCmaMac<'bump> {
             &kind,
             DefaultAuxSubterm::new(message_sort),
             [],
-            DeeperKinds::default(),
+            UnfoldFlags::default(),
             |rc| Subsubterm::EufCmaMacMain(rc),
         );
 
@@ -76,7 +76,7 @@ impl<'bump> EufCmaMac<'bump> {
                 name_caster: Arc::clone(&pbl.name_caster),
             },
             [self.mac, self.verify],
-            DeeperKinds::NO_MACROS,
+            UnfoldFlags::NO_MACROS,
             |rc| Subsubterm::EufCmaMacKey(rc),
         );
 
@@ -219,7 +219,7 @@ impl<'bump> EufCmaMac<'bump> {
                                 .list_top_level_terms_short_lifetime_and_bvars()
                                 .chain([&message, &signature].map(|t| t.shallow_copy().into())),
                             false,
-                            DeeperKinds::NO_MACROS,
+                            UnfoldFlags::NO_MACROS,
                         )
                         .next()
                         .is_none();
@@ -231,7 +231,7 @@ impl<'bump> EufCmaMac<'bump> {
                                 &h_of_u,
                                 [&message, &signature].map(|f| f.shallow_copy().into()),
                                 true,
-                                DeeperKinds::all(),
+                                UnfoldFlags::all(),
                             );
                             into_exist_formula(iter)
                         };

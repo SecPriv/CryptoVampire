@@ -12,6 +12,7 @@ use if_chain::if_chain;
 use itertools::Itertools;
 use log::{error, log_enabled, trace, warn};
 
+use crate::formula::utils::formula_expander::{UnfolderBuilder, UnfoldingStateBuilder};
 use crate::{
     container::allocator::{ContainerTools, Residual},
     environement::{
@@ -25,7 +26,7 @@ use crate::{
         manipulation::Unifier,
         sort::Sort,
         utils::{
-            formula_expander::{DeeperKinds, ExpantionContent, ExpantionState},
+            formula_expander::{UnfoldFlags, Unfolder, UnfoldingState},
             formula_iterator::{FormulaIterator, IteratorFlags},
         },
         variable::{sorts_to_variables, Variable},
@@ -57,7 +58,7 @@ where
     ignored_functions: Vec<Function<'bump>>,
     kind: SubtermKindWFunction<'bump>,
     weak: Weak<Self>, // sort: Sort<'bump>,
-    deeper_kind: DeeperKinds,
+    deeper_kind: UnfoldFlags,
 }
 
 impl<'bump, Aux> Eq for Subterm<'bump, Aux> where Aux: SubtermAux<'bump> + Eq {}
@@ -107,7 +108,7 @@ where
         kind: &SubtermKindConstr<'a, 'bump>,
         aux: Aux,
         ignored_functions: impl IntoIterator<Item = Function<'bump>>,
-        deeper_kind: DeeperKinds,
+        deeper_kind: UnfoldFlags,
         to_enum: F,
     ) -> Arc<Self>
     where
@@ -317,7 +318,7 @@ where
             formula,
             ptcl.list_top_level_terms_short_lifetime_and_bvars(),
             false,
-            DeeperKinds::QUANTIFIER,
+            UnfoldFlags::QUANTIFIER,
         )
     }
 
@@ -359,7 +360,7 @@ where
         m: ARichFormula<'bump>,
         bvars: Rc<[Variable<'bump>]>,
         keep_guard: bool,
-        deeper_kind: DeeperKinds,
+        deeper_kind: UnfoldFlags,
     ) -> impl Iterator<Item = (Rc<[Variable<'bump>]>, ARichFormula<'bump>)> + 'a {
         trace!("-------------------- preprocess_term (single) ----------------");
         if cfg!(debug_assertions) && check_variable_collision(x, &m) {
@@ -395,7 +396,7 @@ where
         x: &'a ARichFormula<'bump>,
         m: impl IntoIterator<Item = FormlAndVars<'bump>>,
         keep_guard: bool,
-        deeper_kind: DeeperKinds,
+        deeper_kind: UnfoldFlags,
     ) -> impl Iterator<Item = (Rc<[Variable<'bump>]>, ARichFormula<'bump>)> + 'a {
         trace!("------------------- preprocess_terms ---------------------");
         let realm = env.get_realm();
@@ -413,22 +414,23 @@ where
                     // But this is soundly expected.
                     warn!("collision in the variables ({:} in {:}, {:?})",x, &formula, &bounded_variables)
                 }
-                (ExpantionState::from_deeped_kind_and_vars(deeper_kind, bounded_variables), formula)
+                (UnfoldingStateBuilder::default().flags(deeper_kind).bound_variables(bounded_variables).build().unwrap(), formula)
             }).collect_vec();
 
         FormulaIterator {
             pile: StackBox::new(pile),
             passed_along: None,
             flags: IteratorFlags::default(),
-            f: move |state: ExpantionState<'bump>, f| {
+            f: move |state: UnfoldingState<'bump>, f| {
                 trace!("{x} ⊑ {}", &f);
-                let inner_iter = ExpantionContent {
-                    state: state.clone(),
-                    content: f.clone(),
-                }
-                .expand(steps.iter().cloned(), ptcl.graph(), false)
-                .into_iter()
-                .map(|ec| ec.as_tuple());
+                let inner_iter = UnfolderBuilder::default()
+                    .state(state.clone())
+                    .content(f.clone())
+                    .build()
+                    .unwrap()
+                    .unfold(steps.iter().cloned(), ptcl.graph())
+                    .into_iter()
+                    .map(|ec| ec.as_tuple());
                 let SubtermResult { unifier, nexts } = self.aux.is_subterm_and_next(x, &f);
 
                 let return_value = match unifier {
@@ -636,7 +638,7 @@ fn check_variable_collision_list(x: &ARichFormula<'_>, m: &[Variable<'_>]) -> bo
     }
 }
 
-pub type GuardAndBound<'bump> = ExpantionState<'bump>;
+pub type GuardAndBound<'bump> = UnfoldingState<'bump>;
 pub struct SubtermSearchElement<'bump> {
     pub inner_state: Rc<GuardAndBound<'bump>>,
     pub unifier: Unifier<'bump>,

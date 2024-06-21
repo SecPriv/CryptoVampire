@@ -22,7 +22,9 @@ use crate::{
             sorted::{Sorted, SortedError},
             Sort,
         },
-        utils::formula_expander::{DeeperKinds, ExpantionContent, ExpantionState},
+        utils::formula_expander::{
+            UnfoldFlags, Unfolder, UnfolderBuilder, UnfoldingStateBuilder, UnfoldingState,
+        },
         variable::Variable,
     },
     problem::protocol::Protocol,
@@ -223,23 +225,6 @@ impl<'bump> RichFormula<'bump> {
             .owned_into_inner()
     }
 
-    // pub fn smt(&self) -> SmtFormula {
-    //     self.into()
-    // }
-
-    pub fn expand_clone(
-        &self,
-        ptcl: &Protocol<'bump>,
-        with_args: bool,
-        deeper_kind: DeeperKinds,
-    ) -> Vec<ExpantionContent<'bump>> {
-        ExpantionContent {
-            state: ExpantionState::from_deeper_kind(deeper_kind),
-            content: self.into(),
-        }
-        .expand(ptcl.steps().iter().cloned(), ptcl.graph(), with_args)
-    }
-
     pub fn into_arc(self) -> ARichFormula<'bump> {
         self.into()
     }
@@ -282,21 +267,11 @@ impl<'bump> RichFormula<'bump> {
     }
 }
 
-// pub trait AFormula<'bump> {
-//     fn expand(
-//         &self,
-//         ptcl: &Protocol<'bump>,
-//         with_args: bool,
-//         deeper_kind: DeeperKinds,
-//     ) -> Vec<ExpantionContent<'bump>>;
-
-//     fn iter_with_pile<'a, V>(
-//         &'a self,
-//         mut pile: V,
-//     ) -> impl Iterator<Item = &'a RichFormula<'bump>>
-//     where
-//         V: DerefMut<Target = Vec<((), &'a Self)>> + Deref<Target = Vec<((), &'a Self)>>;
-// }
+impl<'bump> AsRef<Self> for RichFormula<'bump> {
+    fn as_ref(&self) -> &Self {
+        self
+    }
+}
 
 impl<'bump> From<Variable<'bump>> for RichFormula<'bump> {
     fn from(v: Variable<'bump>) -> Self {
@@ -308,37 +283,6 @@ impl<'bump> From<&Variable<'bump>> for RichFormula<'bump> {
         v.clone().into()
     }
 }
-
-// impl<'bump> Display for RichFormula<'bump> {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         SmtFormula::from(self).fmt(f)
-//     }
-// }
-
-// pub fn get_eval_msg(env:&Environement) -> impl Fn(RichFormula) -> RichFormula {
-//     let eval = env.get_f(EVAL_MSG_NAME).unwrap().clone();
-//     let no_ta = env.no_ta();
-//     move |f| {
-//         if !no_ta {
-//             RichFormula::Fun(eval.clone(), vec![f])
-//         } else {
-//             f
-//         }
-//     }
-// }
-
-// pub fn get_eval_cond(env:&Environement) -> impl Fn(RichFormula) -> RichFormula {
-//     let eval = env.get_f(EVAL_COND_NAME).unwrap().clone();
-//     // let ctrue = env.get_f(CTRUE_NAME).unwrap().clone();
-//     let no_ta = env.no_ta();
-//     move |f| {
-//         if !no_ta {
-//             RichFormula::Fun(eval.clone(), vec![f])
-//         } else {
-//             RichFormula::Fun(eval.clone(), vec![f])
-//         }
-//     }
-// }
 
 impl<'bump> BitAnd for RichFormula<'bump> {
     type Output = Self;

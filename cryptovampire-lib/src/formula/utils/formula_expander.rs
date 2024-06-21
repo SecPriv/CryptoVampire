@@ -1,77 +1,71 @@
-use std::{rc::Rc, sync::Arc};
+use std::{default, rc::Rc, sync::Arc};
 
 use crate::{
     formula::{
         formula::{ARichFormula, RichFormula},
-        function::{inner::term_algebra::TermAlgebra, InnerFunction},
-        manipulation::{FrozenOVSubst, FrozenSubst, OneVarSubst, Substitution},
+        function::{
+            inner::term_algebra::{quantifier::Quantifier, TermAlgebra},
+            InnerFunction,
+        },
+        manipulation::{FrozenMultipleVarSubst, FrozenSubst, OneVarSubst, Substitution},
         variable::Variable,
     },
     problem::{
         cell::{Assignement, MemoryCell},
-        cell_dependancies::graph::{Ancestors, DependancyGraph},
+        cell_dependancies::{Ancestors, CellOrInput, PreprocessedDependancyGraph},
         step::Step,
     },
 };
+use derive_builder::Builder;
 use utils::{arc_into_iter::ArcIntoIter, implvec};
 
 use bitflags::bitflags;
 use itertools::{chain, Itertools};
 use log::trace;
 bitflags! {
+        /// Some flags to control the search.
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-        pub struct DeeperKinds: u8 {
+        pub struct UnfoldFlags: u8 {
+                /// Look through ta quantifiers
                 const QUANTIFIER = 1 << 0;
+                /// Look through inputs
                 const INPUT = 1 << 1;
+                /// Look though memory cells
                 const MEMORY_CELLS = 1 << 2;
+                /// Don't look though anything that looks like a macro
                 const NO_MACROS = Self::QUANTIFIER.bits();
         }
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct ExpantionState<'bump> {
-    deeper_kind: DeeperKinds,
-    bound_variables: Rc<[Variable<'bump>]>, // faster that Vec in our usecase
-    // substitution: Rc<Option<FrozenSubstF<'bump, 'bump>>>,
+/// State of the seach
+///
+/// The struct is design for quick We use a [Rc<[Variable]>] for [UnfoldingState::bound_variables] because we copy the s
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Builder)]
+pub struct UnfoldingState<'bump> {
+    /// The flag on how deep to look
+    #[builder(default)]
+    flags: UnfoldFlags,
+    /// The variables bound by the search (quantifiers or otherwise)
+    #[builder(setter(into), default = "Rc::new([])")]
+    bound_variables: Rc<[Variable<'bump>]>, // faster than Vec in our usecase
+    /// Some condition to get here
+    #[builder(setter(into, strip_option), default)]
     guard: Option<ARichFormula<'bump>>,
 }
 
-impl<'bump> Default for ExpantionState<'bump> {
+impl<'bump> Default for UnfoldingState<'bump> {
     fn default() -> Self {
-        Self {
-            deeper_kind: Default::default(),
-            bound_variables: Rc::new([]),
-            guard: Default::default(),
-            // substitution: Default::default(),
-        }
+        UnfoldingStateBuilder::default().build().unwrap()
     }
 }
 
-impl<'bump> ExpantionState<'bump> {
-    pub fn from_deeper_kind(deeper_kind: DeeperKinds) -> Self {
-        Self {
-            deeper_kind,
-            ..Default::default()
-        }
-    }
-
-    pub fn from_deeped_kind_and_vars(
-        deeper_kind: DeeperKinds,
-        vars: Rc<[Variable<'bump>]>,
-    ) -> Self {
-        Self {
-            deeper_kind,
-            bound_variables: vars,
-            ..Default::default()
-        }
-    }
-
+impl<'bump> UnfoldingState<'bump> {
     pub fn map_dk<F>(&self, f: F) -> Self
     where
-        F: FnOnce(DeeperKinds) -> DeeperKinds,
+        F: FnOnce(UnfoldFlags) -> UnfoldFlags,
     {
         Self {
-            deeper_kind: f(self.deeper_kind),
+            flags: f(self.flags),
             ..self.clone()
         }
     }
@@ -100,6 +94,7 @@ impl<'bump> ExpantionState<'bump> {
         &self.bound_variables
     }
 
+    /// Same as [Self::bound_variables()] but with an owned [Rc]
     pub fn owned_bound_variable(&self) -> Rc<[Variable<'bump>]> {
         self.bound_variables.clone()
     }
@@ -122,129 +117,55 @@ impl<'bump> ExpantionState<'bump> {
         Self { guard, ..new }
     }
 
-    // pub fn state(&self) -> &ExpantionStateEnum<'bump> {
-    //     &self.state
-    // }
-
-    pub fn deeper_kind(&self) -> DeeperKinds {
-        self.deeper_kind
+    pub fn deeper_kind(&self) -> UnfoldFlags {
+        self.flags
     }
-
-    // pub fn add_substitution(
-    //     &self,
-    //     vars_idx: implvec!(usize),
-    //     formulas: implvec!(ARichFormula<'bump>),
-    // ) -> Self {
-    //     let new = self.clone();
-    //     let substitution = Rc::new(Some(if let Some(subst) = new.substitution.as_ref() {
-    //         subst.extend_clone(vars_idx, formulas)
-    //     } else {
-    //         let mut vars_idx = vars_idx.into_iter().peekable();
-    //         if let Some(_) = vars_idx.peek() {
-    //             FrozenSubstF::new(vars_idx.collect(), formulas.into_iter().collect())
-    //         } else {
-    //             return new;
-    //         }
-    //     }));
-    //     Self {
-    //         substitution,
-    //         ..new
-    //     }
-    // }
-
-    // pub fn substitution(&self) -> &Option<FrozenSubst<'_, ARichFormula<'_>>> {
-    //     self.substitution.as_ref()
-    // }
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct ExpantionContent<'bump> {
-    pub state: ExpantionState<'bump>,
-    pub content: ARichFormula<'bump>,
+/// Container object to ease the use of [Self::unfold].
+///
+/// Is build through [UnfolderBuilder]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Builder)]
+pub struct Unfolder<'bump> {
+    #[builder(default)]
+    state: UnfoldingState<'bump>,
+    #[builder(setter(into))]
+    content: ARichFormula<'bump>,
 }
 
-impl<'bump> ExpantionContent<'bump> {
-    /// expand a formula
+impl<'bump> Unfolder<'bump> {
+    /// expand a formula once according to the parameters of its [Self::state].
+    /// If the formula is a macro like object, then it will expand it (if [Self::state] calls for it), otherwise it does nothing.
+    ///
+    /// It returns list of new [Unfolder] (possibly empty if nothing needs to be done).
+    /// The [Self::state] of thoses [Unfolder] is modified accordingly.
     ///
     ///  - `steps`: a list of steps (where `input` will look)
     ///  - `graph`: the graph of dependancies
-    ///  - `with_args`: when called on `f(*args)` should `args` be returned with the "hidden" terms? (`true` to return `args`, `false` otherwise)
-    pub fn expand(
+    pub fn unfold(
         &self,
         steps: impl IntoIterator<Item = Step<'bump>>,
-        graph: &DependancyGraph<'bump>,
-        with_args: bool,
-    ) -> Vec<ExpantionContent<'bump>> {
+        graph: &PreprocessedDependancyGraph<'bump>,
+    ) -> Vec<Unfolder<'bump>> {
         let deeper_kinds = self.state.deeper_kind();
         match self.content.as_ref() {
             RichFormula::Var(_) => vec![],
             RichFormula::Quantifier(_, arg) => {
-                expand_process_arg(self, Arc::new([arg.shallow_copy()])).collect()
+                vec![Unfolder {
+                    state: self.state.clone(),
+                    content: arg.shallow_copy(),
+                }]
             }
             RichFormula::Fun(fun, args) => {
-                let iter = (if with_args {
-                    Some(expand_process_arg(self, Arc::clone(args)))
-                } else {
-                    None
-                })
-                .into_iter()
-                .flatten();
-
                 match fun.as_inner() {
 					InnerFunction::TermAlgebra(ta) => match ta {
 						TermAlgebra::Quantifier(q)
-							if deeper_kinds.contains(DeeperKinds::QUANTIFIER) =>
-						{
-                            trace!("expanding quantifier:\n\t{q}");
-                            let substitution = FrozenSubst::new_from(
-                                q.free_variables.iter().map(|v| v.id).collect_vec(), args.iter().cloned().collect_vec());
-                            let collistion_avoidance = {
-                                let to_avoid = chain!(
-                                    q.free_variables.iter(),
-                                    self.state.bound_variables()
-                                ).cloned().collect_vec();
-                                collision_substitution(q.bound_variables.iter(), &to_avoid)
-                            };
-                            let new_state = self
-										.state
-										.add_variables(q.bound_variables.iter().map(|v| collistion_avoidance.get_var(v)))
-                                        // .add_substitution(q.free_variables.iter().map(|v| v.id), args.iter().cloned())
-                                        ;
-                            let quantifier_iter = q.get_content().into_vec().into_iter().map(|f| {
-								ExpantionContent {
-									state: new_state.clone(),
-									content: f.apply_substitution2(&collistion_avoidance).apply_substitution2(&substitution),
-								}
-							});
-
-                            itertools::chain!(
-                                // iter,
-                                quantifier_iter)
-							.collect()
-						}
-						TermAlgebra::Input(_) if deeper_kinds.contains(DeeperKinds::INPUT) => {
-							let nstate = self.state.map_dk(|dk| {
-								dk - DeeperKinds::INPUT
-							});
-
-							iter
-							.chain(expand_process_deeper(steps, graph, None, &nstate, args.as_ref()))
-							.collect()},
+							if deeper_kinds.contains(UnfoldFlags::QUANTIFIER) =>
+						self.unfold_quantifier(q, args),
+						TermAlgebra::Input(_) if deeper_kinds.contains(UnfoldFlags::INPUT) => self.unfold_input(steps, graph, args),
 						TermAlgebra::Cell(c)
-							if deeper_kinds.contains(DeeperKinds::MEMORY_CELLS) =>
-						{
-							let nstate = self.state.map_dk(|dk| {
-								dk - DeeperKinds::MEMORY_CELLS
-							});
-							iter.chain(expand_process_deeper(
-								steps,
-								graph,
-								Some(c.memory_cell()),
-								&nstate,
-								args.as_ref(),
-							))
-							.collect()
-						}
+							if deeper_kinds.contains(UnfoldFlags::MEMORY_CELLS) =>
+						self.unfold_cell(steps, graph, c.memory_cell(), args),
 
 						// writting everything down to get notified by the type checker in case of changes
 						TermAlgebra::Condition(_)
@@ -253,7 +174,7 @@ impl<'bump> ExpantionContent<'bump> {
 						| TermAlgebra::IfThenElse(_)
 						| TermAlgebra::Quantifier(_)
 						| TermAlgebra::Input(_)
-						| TermAlgebra::Cell(_) => iter.collect(),
+						| TermAlgebra::Cell(_) => vec![],
 					},
 					InnerFunction::Bool(_)
 					// | Innerfunction::inner::Nonce(_)
@@ -264,61 +185,102 @@ impl<'bump> ExpantionContent<'bump> {
 					| InnerFunction::Tmp(_)
 					| InnerFunction::Skolem(_)
 					| InnerFunction::Evaluate(_) |
-                    InnerFunction::Name(_) | InnerFunction::EvaluatedFun(_) => iter.collect(),
+                    InnerFunction::Name(_) | InnerFunction::EvaluatedFun(_) => vec![],
 					// InnerFunction::Invalid(_) => iter.collect(), // we continue anyway
 				}
             }
         }
     }
 
-    pub fn as_tuple(self) -> (ExpantionState<'bump>, ARichFormula<'bump>) {
-        let ExpantionContent { state, content } = self;
+    fn unfold_cell(
+        &self,
+        steps: implvec!(Step<'bump>),
+        graph: &PreprocessedDependancyGraph<'bump>,
+        c: MemoryCell<'bump>,
+        args: &[ARichFormula<'bump>],
+    ) -> Vec<Unfolder<'bump>> {
+        let nstate = self.state.map_dk(|dk| dk - UnfoldFlags::MEMORY_CELLS);
+        unfold_cell_or_input(steps, graph, CellOrInput::Cell(c), &nstate, args.as_ref()).collect()
+    }
+
+    fn unfold_input(
+        &self,
+        steps: implvec!(Step<'bump>),
+        graph: &PreprocessedDependancyGraph<'bump>,
+        args: &[ARichFormula<'bump>],
+    ) -> Vec<Unfolder<'bump>> {
+        let nstate = self.state.map_dk(|dk| dk - UnfoldFlags::INPUT);
+        unfold_cell_or_input(steps, graph, CellOrInput::Input, &nstate, args.as_ref()).collect()
+    }
+
+    /// Expand a ta quantifier.
+    fn unfold_quantifier(
+        &self,
+        q: &Quantifier<'bump>,
+        args: &Arc<[ARichFormula<'bump>]>,
+    ) -> Vec<Unfolder<'bump>> {
+        trace!("expanding quantifier:\n\t{q}");
+        let substitution = FrozenSubst::new_from(
+            q.free_variables.iter().map(|v| v.id).collect_vec(),
+            args.iter().cloned().collect_vec(),
+        );
+        let collistion_avoidance = {
+            let to_avoid = chain!(q.free_variables.iter(), self.state.bound_variables())
+                .cloned()
+                .collect_vec();
+            collision_substitution(q.bound_variables.iter(), &to_avoid)
+        };
+        let new_state = self.state.add_variables(
+            q.bound_variables
+                .iter()
+                .map(|v| collistion_avoidance.get_var(v)),
+        );
+        let quantifier_iter = q.get_content().into_vec().into_iter().map(|f| Unfolder {
+            state: new_state.clone(),
+            content: f
+                .apply_substitution2(&collistion_avoidance)
+                .apply_substitution2(&substitution),
+        });
+        itertools::chain!(
+            // iter,
+            quantifier_iter
+        )
+        .collect()
+    }
+
+    pub fn as_tuple(self) -> (UnfoldingState<'bump>, ARichFormula<'bump>) {
+        let Unfolder { state, content } = self;
         (state, content)
     }
 }
 
-fn expand_process_arg<'a, 'b, 'c, 'bump>(
-    expc: &'b ExpantionContent<'bump>,
-    args: Arc<[ARichFormula<'bump>]>,
-) -> impl Iterator<Item = ExpantionContent<'bump>> + 'b
-where
-    'bump: 'a,
-{
-    ArcIntoIter::from(args)
-        .into_iter()
-        .map(move |arg| ExpantionContent {
-            state: expc.state.clone(),
-            content: arg.shallow_copy(),
-        })
-}
-/// `deeper` is [None] if comming from an input
-fn expand_process_deeper<'b, 'bump>(
+fn unfold_cell_or_input<'b, 'bump>(
     steps: impl IntoIterator<Item = Step<'bump>> + 'b,
-    graph: &DependancyGraph<'bump>,
-    deeper: Option<MemoryCell<'bump>>,
-    state: &'b ExpantionState<'bump>,
+    graph: &'b PreprocessedDependancyGraph<'bump>,
+    to_expand: CellOrInput<'bump>,
+    state: &'b UnfoldingState<'bump>,
     args: &'b [ARichFormula<'bump>],
-) -> impl Iterator<Item = ExpantionContent<'bump>> + 'b
+) -> impl Iterator<Item = Unfolder<'bump>> + 'b
 where
     'bump: 'b,
 {
     let state_variables = state.bound_variables();
     // let max_var = state_variables.iter().map(|v| v.id).max().unwrap_or(0);
-    trace!("process_deeper");
-    let Ancestors { input, cells } = graph.ancestors(deeper.clone()).unwrap();
+    trace!("expand_cell_or_input");
+    let Ancestors { input, cells } = graph.ancestors(to_expand).unwrap();
     trace!("-");
 
     let step_origin = args.last().unwrap();
-    let is_input = deeper.is_none();
+    let is_input = to_expand.is_input();
 
     let cells_iter = cells.into_iter().flat_map(|c| c.assignements().iter()).map(
-        move |Assignement {
+        move |ma @ Assignement {
                   step,
                   content,
                   fresh_vars,
                   ..
               }| {
-            trace!("in assignement");
+            trace!("in assignement\n\t{:}", &ma);
             let vars = step.free_variables();
 
             let collision_var =
@@ -340,7 +302,7 @@ where
                 },
             );
 
-            ExpantionContent {
+            Unfolder {
                 state,
                 content: content.apply_substitution2(&collision_var),
             }
@@ -364,7 +326,7 @@ where
                             Step::strict_before(step_f.shallow_copy(), step_origin.clone()),
                         );
 
-                        ExpantionContent {
+                        Unfolder {
                             state,
                             content: content.apply_substitution2(&collision_var),
                         }
@@ -381,10 +343,10 @@ where
 fn collision_substitution<'a, 'bump: 'a>(
     vars: implvec!(&'a Variable<'bump>),
     base: &[Variable<'bump>],
-) -> FrozenOVSubst<'bump, Variable<'bump>> {
+) -> FrozenMultipleVarSubst<'bump, Variable<'bump>> {
     let vars = vars.into_iter().cloned().collect_vec();
 
-    let max_var = chain!(base, &vars).map(Variable::id).max().unwrap_or(0);
+    let max_var = chain!(base, &vars).map(Variable::id).max().unwrap_or(0) + 1;
     vars.into_iter()
         .filter(|v| base.contains(&v))
         .map(|v| OneVarSubst {
@@ -398,7 +360,7 @@ fn collision_substitution<'a, 'bump: 'a>(
 // ------------------------ conversion implementation --------------------------
 // -----------------------------------------------------------------------------
 
-impl Default for DeeperKinds {
+impl Default for UnfoldFlags {
     fn default() -> Self {
         Self::all()
     }

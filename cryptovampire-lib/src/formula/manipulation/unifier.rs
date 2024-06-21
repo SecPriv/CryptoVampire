@@ -11,7 +11,7 @@ use super::{
         variable::Variable,
     },
     substitution::variable_substitution::{
-        OneVarSubst, OneVarSubstF, OwnedVarSubst, OwnedVarSubstF,
+        OneVarSubst, OneVarSubstF, MultipleVarSubst, MulitpleVarSubstF,
     },
     Substitution,
 };
@@ -19,14 +19,14 @@ use super::{
 #[derive(Debug, Clone)]
 pub struct Unifier<'bump> {
     /// variables on the left mapped to terms on the right
-    left: OwnedVarSubst<ARichFormula<'bump>>,
+    left: MultipleVarSubst<ARichFormula<'bump>>,
     /// variables on the right mapped to terms on the left
-    right: OwnedVarSubst<ARichFormula<'bump>>,
+    right: MultipleVarSubst<ARichFormula<'bump>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct OneWayUnifier<'bump> {
-    subst: OwnedVarSubst<ARichFormula<'bump>>,
+    subst: MultipleVarSubst<ARichFormula<'bump>>,
 }
 
 #[derive(Debug, Error)]
@@ -42,8 +42,8 @@ impl<'bump> Unifier<'bump> {
     ///
     /// It returns an error if it can't deduce the sort of one of the variables or if a variables is used on the left *and* the right
     pub fn as_equalities(&'_ self) -> Result<Vec<ARichFormula<'bump>>, UnifierAsEqualityErr> {
-        let left = &self.left.subst;
-        let right = &self.right.subst;
+        let left = self.left.subst();
+        let right = self.right.subst();
 
         {
             // ensure there is no colisions of variables
@@ -80,7 +80,7 @@ impl<'bump> Unifier<'bump> {
         let Variable { id, .. } = left_variable;
         Unifier {
             left: [(*id, right_formula)].into(),
-            right: OwnedVarSubst::default(),
+            right: MultipleVarSubst::default(),
         }
     }
 
@@ -95,10 +95,10 @@ impl<'bump> Unifier<'bump> {
                     .all(|(l, r)| self.does_unify(l, r))
             }
             (RichFormula::Var(v), _) => {
-                if let Some(left) = self.left.get(v.id) {
+                if let Some(left) = self.left.maybe_get(v.id) {
                     self.does_unify(left.as_ref(), right)
                 } else if let RichFormula::Var(v2) = right {
-                    if let Some(right) = self.right.get(v2.id) {
+                    if let Some(right) = self.right.maybe_get(v2.id) {
                         self.does_unify(left, right.as_ref())
                     } else {
                         v == v2
@@ -108,10 +108,10 @@ impl<'bump> Unifier<'bump> {
                 }
             }
             (_, RichFormula::Var(v)) => {
-                if let Some(right) = self.right.get(v.id) {
+                if let Some(right) = self.right.maybe_get(v.id) {
                     self.does_unify(left, right.as_ref())
                 } else if let RichFormula::Var(v2) = right {
-                    if let Some(left) = self.left.get(v2.id) {
+                    if let Some(left) = self.left.maybe_get(v2.id) {
                         self.does_unify(left.as_ref(), right)
                     } else {
                         v == v2
@@ -128,16 +128,16 @@ impl<'bump> Unifier<'bump> {
         fn aux<'bump>(
             left: &ARichFormula<'bump>,
             right: &ARichFormula<'bump>,
-            left_p: &mut OwnedVarSubstF<'bump>,
-            right_p: &mut OwnedVarSubstF<'bump>,
+            left_p: &mut MulitpleVarSubstF<'bump>,
+            right_p: &mut MulitpleVarSubstF<'bump>,
         ) -> bool {
             match (left.as_ref(), right.as_ref()) {
                 (RichFormula::Var(vl), RichFormula::Var(vr)) if vl == vr => true,
-                (RichFormula::Var(v), _) => match left_p.get(v.id).cloned() {
+                (RichFormula::Var(v), _) => match left_p.maybe_get(v.id).cloned() {
                     Some(nl) if nl.is_var() => match (nl.as_ref(), right.as_ref()) {
                         (RichFormula::Var(v2), RichFormula::Var(v3)) => {
                             v2 == v3 || {
-                                if let Some(r) = right_p.get_as_rf(v3.id) {
+                                if let Some(r) = right_p.maybe_get_as_rf(v3.id) {
                                     nl.as_ref() == r
                                 } else {
                                     right_p.add(v3.id, nl.shallow_copy());
@@ -153,11 +153,11 @@ impl<'bump> Unifier<'bump> {
                         true
                     }
                 },
-                (_, RichFormula::Var(v)) => match right_p.get(v.id).cloned() {
+                (_, RichFormula::Var(v)) => match right_p.maybe_get(v.id).cloned() {
                     Some(nr) if nr.is_var() => match (nr.as_ref(), left.as_ref()) {
                         (RichFormula::Var(v2), RichFormula::Var(v3)) => {
                             v2 == v3 || {
-                                if let Some(r) = left_p.get(v3.id) {
+                                if let Some(r) = left_p.maybe_get(v3.id) {
                                     &nr == r
                                 } else {
                                     left_p.add(v3.id, nr.shallow_copy());
@@ -183,8 +183,8 @@ impl<'bump> Unifier<'bump> {
             }
         }
 
-        let mut left_p = OwnedVarSubst::new();
-        let mut right_p = OwnedVarSubst::new();
+        let mut left_p = MultipleVarSubst::new();
+        let mut right_p = MultipleVarSubst::new();
 
         if aux(left, right, &mut left_p, &mut right_p) {
             Some(Unifier {
@@ -211,11 +211,11 @@ where
     /// if the right is just a variable, this return the substitution
     pub fn is_unifying_to_variable(&self) -> Option<OneVarSubstF<'bump>> {
         if_chain! {
-            if self.left.subst.is_empty();
-            if self.right.subst.len() == 1;
+            if self.left.subst().is_empty();
+            if self.right.subst().len() == 1;
             // if let Some(ovs) = self.right.field1.first();
             then {
-                self.right.subst.first().cloned()
+                self.right.subst().first().cloned()
             } else {
                 None
             }
@@ -228,11 +228,11 @@ impl<'bump> OneWayUnifier<'bump> {
         fn aux<'a, 'bump>(
             from: &ARichFormula<'bump>,
             to: &ARichFormula<'bump>,
-            p: &mut OwnedVarSubst<ARichFormula<'bump>>,
+            p: &mut MultipleVarSubst<ARichFormula<'bump>>,
         ) -> bool {
             match (from.as_ref(), to.as_ref()) {
                 (RichFormula::Var(v), _) => {
-                    if let Some(nf) = p.get(v.id) {
+                    if let Some(nf) = p.maybe_get(v.id) {
                         nf == to
                     } else {
                         p.add(v.id, to.shallow_copy());
@@ -248,7 +248,7 @@ impl<'bump> OneWayUnifier<'bump> {
             }
         }
 
-        let mut p = OwnedVarSubst::new();
+        let mut p = MultipleVarSubst::new();
 
         if aux(from, to, &mut p) {
             Some(OneWayUnifier { subst: p })
@@ -258,7 +258,7 @@ impl<'bump> OneWayUnifier<'bump> {
     }
 
     pub fn vars<'b: 'bump>(&'b self) -> impl Iterator<Item = usize> + 'b {
-        self.subst.subst.iter().map(OneVarSubst::id)
+        self.subst.subst().iter().map(OneVarSubst::id)
     }
 }
 

@@ -1,0 +1,53 @@
+
+type index;
+type session
+
+fun hash1(Message, Message):Message
+fun hash2(Message, Message):Message
+fun verify1(Message, Message, Message):Bool
+fun verify2(Message, Message, Message):Bool
+
+fun ok:Message
+fun ko:Message
+
+/* the Names */
+fun s0(session):Name
+fun key1(index):Name
+fun key2(index):Name
+
+cell st(index):Message
+cell sr(index):Message
+
+step tag(i:session, j:index)
+    { true }
+    { hash2(st(j,tag(i, j)), key2(j)) }
+    { st(j) <- hash1(st(j, pred(tag(i, j))), key1(j)) }
+
+let condition_reader!(j:index, s:Step) =
+    verify2(input(s), sr(j, s), key2(j))
+
+step reader(i:session, j:index)
+    { condition_reader![j, reader(i, j)] }
+    { ok }
+    { sr(j) <- hash1(sr(j, pred(reader(i, j))), key1(j)) }
+
+assert
+    forall (s:Message, m:Message, k:Message) {(
+        (verify1(s, m, k) <=> (s == hash1(m, k))) &&
+        (verify2(s, m, k) <=> (s == hash2(m, k)))
+    )}
+
+let conclusion!(i:session, j:index) = exists (k:session) {(
+    lt(tag(k, j), reader(i, j))
+    && (st(j, tag(k, j)) == sr(j, reader(i, j)))
+)}
+
+let premise!(i:session, j:index) = cond![reader(i, j)]
+
+query forall (i:session, j:index) {(
+    happens(reader(i, j))
+        => (premise![i, j] => conclusion![i, j])
+)}
+
+assert-crypto euf-cma hash2 verify2;
+assert-crypto nonce;

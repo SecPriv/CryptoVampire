@@ -6,14 +6,18 @@ use crate::formula::{
     variable::Variable,
 };
 
-use super::OwnedVarSubst;
+use super::MultipleVarSubst;
 
+/// A [Substitution] on only one variable
+/// 
+/// `OneVarSubst{id: x, f: y}` is the substitution $\{ x \mapsto y \}$
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Copy)]
 pub struct OneVarSubst<T> {
     pub id: usize,
     pub f: T,
 }
 
+/// Shorthand for subtitions with [ARichFormula]
 pub type OneVarSubstF<'bump> = OneVarSubst<ARichFormula<'bump>>;
 
 impl<T> OneVarSubst<T> {
@@ -25,11 +29,12 @@ impl<T> OneVarSubst<T> {
         &self.f
     }
 
+    /// Is this the identity substitution
     pub fn is_id(&self, id: usize) -> bool {
         self.id == id
     }
 
-    pub fn add<U>(self, value: U) -> OwnedVarSubst<T>
+    pub fn add<U>(self, value: U) -> MultipleVarSubst<T>
     where
         Self: From<U>,
     {
@@ -43,6 +48,7 @@ impl<T> OneVarSubst<T> {
 }
 
 impl<T: Clone> OneVarSubst<T> {
+    /// Apply [OneVarSubst::f] and then clones the result
     pub fn fc(&self) -> T {
         self.f().clone()
     }

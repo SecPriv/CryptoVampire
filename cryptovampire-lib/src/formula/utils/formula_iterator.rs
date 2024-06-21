@@ -20,6 +20,7 @@ bitflags! {
     }
 }
 
+/// An iterator over formulas
 pub struct FormulaIterator<'bump, V, P, F, I, T>
 where
     F: FnMut(P, ARichFormula<'bump>) -> (Option<T>, I),

@@ -1,4 +1,6 @@
-use std::sync::Arc;
+use std::{fmt::Display, sync::Arc};
+
+use itertools::Itertools;
 
 use crate::{
     formula::{formula::ARichFormula, variable::Variable},
@@ -15,4 +17,18 @@ pub struct Assignement<'bump> {
     pub args: Arc<[ARichFormula<'bump>]>,
     pub content: ARichFormula<'bump>,
     pub fresh_vars: Arc<[Variable<'bump>]>,
+}
+
+impl<'bump> Display for Assignement<'bump> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let step = self.step.name();
+        let args = self.args.iter().map(|a| a.to_string()).join(", ");
+        let content = self.content.to_string();
+        let fresh_vars = self.fresh_vars.iter().map(|a| a.to_string()).join(", ");
+        // write!(f, r"{")?;
+        write!(
+            f,
+            "{{step: {step}, args: [{args}], content: {content}, fresh_vars: [{fresh_vars}]}}"
+        )
+    }
 }
