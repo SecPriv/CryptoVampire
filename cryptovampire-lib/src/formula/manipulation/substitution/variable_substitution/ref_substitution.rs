@@ -9,12 +9,15 @@ use utils::{implvec, vecref::VecRefClone};
 
 use super::OneVarSubst;
 
+/// Immutable version of [super::MultipleVarSubst] that allows for easy cloning.
+///
+/// It makes use of [VecRefClone] under the hood instead of [Vec]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct FrozenOVSubst<'a, T: Clone> {
+pub struct FrozenMultipleVarSubst<'a, T: Clone> {
     content: VecRefClone<'a, OneVarSubst<T>>,
 }
 
-impl<'a, T: Clone> FrozenOVSubst<'a, T> {
+impl<'a, T: Clone> FrozenMultipleVarSubst<'a, T> {
     pub fn new<VRC: Into<VecRefClone<'a, OneVarSubst<T>>>>(content: VRC) -> Self {
         Self {
             content: content.into(),
@@ -26,7 +29,7 @@ impl<'a, T: Clone> FrozenOVSubst<'a, T> {
     }
 }
 
-impl<'a, A: Clone> FromIterator<OneVarSubst<A>> for FrozenOVSubst<'a, A> {
+impl<'a, A: Clone> FromIterator<OneVarSubst<A>> for FrozenMultipleVarSubst<'a, A> {
     fn from_iter<T: IntoIterator<Item = OneVarSubst<A>>>(iter: T) -> Self {
         Self {
             content: iter.into_iter().collect(),
@@ -34,6 +37,9 @@ impl<'a, A: Clone> FromIterator<OneVarSubst<A>> for FrozenOVSubst<'a, A> {
     }
 }
 
+/// Immutable substitution of multiple variable. It is functionnally the same as [FrozenMultipleVarSubst]
+/// 
+/// The content must follow the invariant checked by [Self::valid]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct FrozenSubst<'a, T: Clone> {
     vars: VecRefClone<'a, usize>,
@@ -70,20 +76,28 @@ impl<'a, T: Clone> FrozenSubst<'a, T> {
         assert_eq!(self.vars.len(), self.formulas.len())
     }
 
+    /// Check that the [FrozenSubst], that is [FrozenSubst::vars] and [FrozenSubst::formulas] are the same length
+    ///
+    /// In debug mode, it checks for the unicity of all varibles as well
     pub fn valid(&self) -> bool {
         self.vars.len() == self.formulas.len()
+            && if cfg!(debug_assertions) {
+                self.vars.iter().all_unique()
+            } else {
+                true
+            }
     }
 
-    pub fn extend_clone(&self, vars_idx: implvec!(usize), content: implvec!(T)) -> Self {
-        let mut new = self.clone();
-        new.vars.extend(vars_idx);
-        new.formulas.extend(content);
-        assert!(new.valid());
-        new
-    }
+    // pub fn extend_clone(&self, vars_idx: implvec!(usize), content: implvec!(T)) -> Self {
+    //     let mut new = self.clone();
+    //     new.vars.extend(vars_idx);
+    //     new.formulas.extend(content);
+    //     assert!(new.valid());
+    //     new
+    // }
 }
 
-impl<'a, 'bump> FrozenOVSubst<'a, Variable<'bump>> {
+impl<'a, 'bump> FrozenMultipleVarSubst<'a, Variable<'bump>> {
     pub fn get_var(&self, var: &Variable<'bump>) -> Variable<'bump> {
         self.content()
             .into_iter()
@@ -93,7 +107,7 @@ impl<'a, 'bump> FrozenOVSubst<'a, Variable<'bump>> {
     }
 }
 
-impl<'a, T: Clone> Default for FrozenOVSubst<'a, T> {
+impl<'a, T: Clone> Default for FrozenMultipleVarSubst<'a, T> {
     fn default() -> Self {
         Self {
             content: Default::default(),
@@ -110,8 +124,8 @@ impl<'a, T: Clone> Default for FrozenSubst<'a, T> {
     }
 }
 
-impl<'a, T: Clone> From<FrozenOVSubst<'a, T>> for FrozenSubst<'a, T> {
-    fn from(value: FrozenOVSubst<'a, T>) -> Self {
+impl<'a, T: Clone> From<FrozenMultipleVarSubst<'a, T>> for FrozenSubst<'a, T> {
+    fn from(value: FrozenMultipleVarSubst<'a, T>) -> Self {
         let (vars, formulas): (Vec<_>, Vec<_>) = value
             .content
             .into_iter()
@@ -121,7 +135,7 @@ impl<'a, T: Clone> From<FrozenOVSubst<'a, T>> for FrozenSubst<'a, T> {
     }
 }
 
-impl<'a, T: Clone> From<FrozenSubst<'a, T>> for FrozenOVSubst<'a, T> {
+impl<'a, T: Clone> From<FrozenSubst<'a, T>> for FrozenMultipleVarSubst<'a, T> {
     fn from(FrozenSubst { vars, formulas }: FrozenSubst<'a, T>) -> Self {
         // let FrozenSubst { vars, formulas } = value;
         // assert_eq!(vars.len(), formulas.len());
@@ -134,7 +148,7 @@ impl<'a, T: Clone> From<FrozenSubst<'a, T>> for FrozenOVSubst<'a, T> {
     }
 }
 
-pub type FrozenOVSubstF<'a, 'bump> = FrozenOVSubst<'a, ARichFormula<'bump>>;
+pub type FrozenOVSubstF<'a, 'bump> = FrozenMultipleVarSubst<'a, ARichFormula<'bump>>;
 impl<'a, 'bump: 'a> Substitution<'bump> for FrozenOVSubstF<'a, 'bump> {
     fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump> {
         self.content()
@@ -145,7 +159,7 @@ impl<'a, 'bump: 'a> Substitution<'bump> for FrozenOVSubstF<'a, 'bump> {
     }
 }
 
-impl<'a, 'bump: 'a> Substitution<'bump> for FrozenOVSubst<'a, Variable<'bump>> {
+impl<'a, 'bump: 'a> Substitution<'bump> for FrozenMultipleVarSubst<'a, Variable<'bump>> {
     fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump> {
         // self.content()
         //     .into_iter()

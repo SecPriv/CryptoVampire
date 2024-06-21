@@ -21,7 +21,7 @@ use crate::{
             builtins::{CONDITION, MESSAGE, NAME},
             Sort,
         },
-        utils::formula_expander::DeeperKinds,
+        utils::formula_expander::UnfoldFlags,
         variable::Variable,
     },
     mexists, mforall,
@@ -69,7 +69,7 @@ impl<'bump> IntCtxt<'bump> {
             &kind,
             DefaultAuxSubterm::new(message_sort),
             [],
-            DeeperKinds::default(),
+            UnfoldFlags::default(),
             |rc| Subsubterm::IntCtxtMain(rc),
         );
 
@@ -83,7 +83,7 @@ impl<'bump> IntCtxt<'bump> {
                 name_caster: Arc::clone(&pbl.name_caster),
             },
             [self.enc, self.dec, self.verify],
-            DeeperKinds::all(),
+            UnfoldFlags::all(),
             |rc| Subsubterm::IntCtxtKey(rc),
         );
 
@@ -97,7 +97,7 @@ impl<'bump> IntCtxt<'bump> {
                 name_caster: Arc::clone(&pbl.name_caster),
             },
             [self.enc],
-            DeeperKinds::all(),
+            UnfoldFlags::all(),
             |rc| Subsubterm::IntCtxtRand(rc),
         );
 
@@ -271,7 +271,7 @@ impl<'bump> IntCtxt<'bump> {
                                 .list_top_level_terms_short_lifetime_and_bvars()
                                 .chain([cipher.shallow_copy().into()]),
                             false,
-                            DeeperKinds::NO_MACROS,
+                            UnfoldFlags::NO_MACROS,
                         )
                         .next()
                         .is_none();
@@ -285,7 +285,7 @@ impl<'bump> IntCtxt<'bump> {
                         &n_c_f,
                         [cipher.shallow_copy().into()],
                         true,
-                        DeeperKinds::all(),
+                        UnfoldFlags::all(),
                     );
 
                     // let key_variables: BTreeSet<_> = key.get_free_vars().into_iter().collect();

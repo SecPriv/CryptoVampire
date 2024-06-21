@@ -1,25 +1,36 @@
+use utils::implderef;
+
 use crate::formula::{
     formula::{ARichFormula, RichFormula},
     variable::Variable,
 };
 
+/// To model substitutions, i.e., replacing varibales with some other formulas
 pub trait Substitution<'bump> {
+    /// get the substitued term associated to the [Variable] `var`.
+    /// By convention, we expect the substitution to be defined on all [Variable], possibly becoming the identity function.
     fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump>;
 
-    fn apply(&self, f: &RichFormula<'bump>) -> ARichFormula<'bump> {
-        match f {
+    /// Recursively apply [Substitution::get] to substitute all the variables in `f`
+    fn apply(&self, f: impl AsRef<RichFormula<'bump>>) -> ARichFormula<'bump> {
+        match f.as_ref() {
             RichFormula::Var(v) => self.get(v),
             RichFormula::Fun(fun, args) => RichFormula::Fun(
                 fun.clone(),
-                args.iter().map(|arg| self.apply(arg.as_ref())).collect(),
+                args.iter().map(|arg| self.apply(arg)).collect(),
             )
             .into_arc(),
             RichFormula::Quantifier(q, arg) => {
-                RichFormula::Quantifier(q.clone(), self.apply(arg.as_ref())).into_arc()
+                RichFormula::Quantifier(q.clone(), self.apply(arg)).into_arc()
             }
         }
     }
 
+    /// To chain two substitutions.
+    ///
+    /// The resulting substitution apply the current `self` *then* `other`.
+    ///
+    /// See [Chain]
     fn chain<O>(self: Self, other: O) -> Chain<Self, O>
     where
         Self: Sized,
@@ -28,6 +39,11 @@ pub trait Substitution<'bump> {
         Chain(self, other)
     }
 
+    /// To translate the result by `i` (to ensure unicity of the variables)
+    ///
+    /// This is simply calling `self.chain(Translate(i))`.
+    ///
+    /// See [Translate]
     fn translate(self, i: usize) -> Chain<Self, Translate>
     where
         Self: Sized,
@@ -36,6 +52,12 @@ pub trait Substitution<'bump> {
     }
 }
 
+/// To chain two substitutions.
+///
+/// The resulting substitution apply the current `self` *then* `other`.
+///
+/// See [Substitution::chain], it is the only way to build such a substitution
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Copy)]
 pub struct Chain<A, B>(A, B);
 
 impl<'bump, A: Substitution<'bump>, B: Substitution<'bump>> Substitution<'bump> for Chain<A, B> {
@@ -44,6 +66,8 @@ impl<'bump, A: Substitution<'bump>, B: Substitution<'bump>> Substitution<'bump> 
     }
 }
 
+/// Translate the variables by a fixed `i`. (i.e., adds `i` to their [Variable::id])
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Copy)]
 pub struct Translate(usize);
 
 impl Translate {

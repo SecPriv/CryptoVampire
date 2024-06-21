@@ -25,7 +25,7 @@ use crate::{
             builtins::{MESSAGE, NAME},
             Sort,
         },
-        utils::formula_expander::DeeperKinds,
+        utils::formula_expander::UnfoldFlags,
         variable::Variable,
     },
     mexists, mforall,
@@ -74,7 +74,7 @@ impl<'bump> EufCmaSign<'bump> {
             &kind,
             DefaultAuxSubterm::new(message_sort),
             [],
-            DeeperKinds::default(),
+            UnfoldFlags::default(),
             |rc| Subsubterm::EufCmaSignMain(rc),
         );
 
@@ -87,7 +87,7 @@ impl<'bump> EufCmaSign<'bump> {
                 name_caster: Arc::clone(&pbl.name_caster),
             },
             [self.sign, self.pk],
-            DeeperKinds::NO_MACROS,
+            UnfoldFlags::NO_MACROS,
             |rc| Subsubterm::EufCmaSignKey(rc),
         );
 
@@ -217,7 +217,7 @@ impl<'bump> EufCmaSign<'bump> {
                                 .list_top_level_terms_short_lifetime_and_bvars()
                                 .chain([&message, &signature].map(|t| t.shallow_copy().into())),
                             false,
-                            DeeperKinds::NO_MACROS,
+                            UnfoldFlags::NO_MACROS,
                         )
                         .next()
                         .is_none();
@@ -229,7 +229,7 @@ impl<'bump> EufCmaSign<'bump> {
                                 &sign_of_u,
                                 [&message, &signature].map(|x| x.shallow_copy().into()),
                                 true,
-                                DeeperKinds::all(),
+                                UnfoldFlags::all(),
                             );
                             into_exist_formula(disjunction)
                         };

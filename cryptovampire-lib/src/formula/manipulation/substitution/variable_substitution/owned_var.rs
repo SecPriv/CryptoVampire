@@ -8,15 +8,21 @@ use crate::formula::formula::RichFormula;
 
 use super::OneVarSubst;
 
+/// List of [OneVarSubst], to more easily deal with the substitution of mulitple variables.
+///
+/// Note that this is *not* the same as chaining [OneVarSubst]s as only the first matching substitution is applied.
+///
+/// ### Invariants
+/// There should be no two duplicates in the list. That is, no variables should points to two different terms
 #[derive(Debug, Clone)]
-pub struct OwnedVarSubst<T> {
-    pub subst: Vec<OneVarSubst<T>>,
+pub struct MultipleVarSubst<T> {
+    subst: Vec<OneVarSubst<T>>,
 }
 
-pub type OwnedVarSubstF<'bump> = OwnedVarSubst<ARichFormula<'bump>>;
+pub type MulitpleVarSubstF<'bump> = MultipleVarSubst<ARichFormula<'bump>>;
 
-impl<'bump, T> OwnedVarSubst<T> {
-    pub fn get(&self, id: usize) -> Option<&T> {
+impl<'bump, T> MultipleVarSubst<T> {
+    pub fn maybe_get(&self, id: usize) -> Option<&T> {
         self.subst
             .iter()
             .find(|ovs| ovs.is_id(id))
@@ -26,9 +32,16 @@ impl<'bump, T> OwnedVarSubst<T> {
     pub fn new() -> Self {
         Self { subst: Vec::new() }
     }
+
+    pub fn subst(&self) -> &[OneVarSubst<T>] {
+        &self.subst
+    }
 }
 
-impl<'bump> OwnedVarSubstF<'bump> {
+impl<'bump> MulitpleVarSubstF<'bump> {
+    /// add a substitution to the list such that the variable number `id` will be replaced by `r`
+    ///
+    /// In debug mode, it checks that the invariant is held.
     pub fn add(&mut self, id: usize, r: ARichFormula<'bump>) {
         debug_assert!(self.subst.iter().all(|ovs| !ovs.is_id(id)));
         debug_assert!(match r.as_ref() {
@@ -38,12 +51,12 @@ impl<'bump> OwnedVarSubstF<'bump> {
         self.subst.push((id, r).into())
     }
 
-    pub fn get_as_rf(&self, id: usize) -> Option<&RichFormula<'bump>> {
-        self.get(id).map(ARichFormula::as_ref)
+    pub fn maybe_get_as_rf(&self, id: usize) -> Option<&RichFormula<'bump>> {
+        self.maybe_get(id).map(ARichFormula::as_ref)
     }
 }
 
-impl<T, U> FromIterator<U> for OwnedVarSubst<T>
+impl<T, U> FromIterator<U> for MultipleVarSubst<T>
 where
     OneVarSubst<T>: From<U>,
 {
@@ -54,7 +67,7 @@ where
     }
 }
 
-impl<I, T, U> From<I> for OwnedVarSubst<T>
+impl<I, T, U> From<I> for MultipleVarSubst<T>
 where
     I: IntoIterator<Item = U>,
     OneVarSubst<T>: From<U>,
@@ -64,7 +77,7 @@ where
     }
 }
 
-impl<T> Default for OwnedVarSubst<T> {
+impl<T> Default for MultipleVarSubst<T> {
     fn default() -> Self {
         Self {
             subst: Default::default(),
@@ -72,17 +85,13 @@ impl<T> Default for OwnedVarSubst<T> {
     }
 }
 
-impl<'a, 'bump> Substitution<'bump> for OwnedVarSubst<ARichFormula<'bump>>
+impl<'a, 'bump> Substitution<'bump> for MultipleVarSubst<ARichFormula<'bump>>
 where
     'bump: 'a,
 {
     fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump> {
-        self.subst
-            .iter()
-            .find(|ovs| ovs.is_id(var.id))
-            // .map(|ovs| RichFormula::clone(*ovs.f()))
-            .map(OneVarSubst::fc)
-            // .cloned()
+        self.maybe_get(var.id)
+            .cloned()
             .unwrap_or_else(|| RichFormula::Var(var.clone()).into())
     }
 }

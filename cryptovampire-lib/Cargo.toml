@@ -23,6 +23,7 @@ paste = { workspace = true }
 thiserror = { workspace = true }
 macro-attr ={ workspace = true }
 anyhow = { workspace = true }
+derive_builder = "0.20.0"
 
 # dashmap = "5.5.3"
 # smol = "2.0.0"
