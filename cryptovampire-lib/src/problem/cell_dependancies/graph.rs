@@ -11,8 +11,8 @@ use crate::{
 use utils::implvec;
 
 use super::{
-    call::{CellCall, InputCall, StepCall},
-    Ancestors, CellOrInput,  PreprocessedDependancyGraph,
+    call::{InputCall, StepCall},
+    Ancestors, CellOrInput, PreprocessedDependancyGraph,
 };
 use anyhow::{Ok, Result};
 use thiserror::Error;

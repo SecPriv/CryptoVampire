@@ -115,7 +115,6 @@ impl<'bump> DefaultAuxSubterm<'bump> {
     }
 }
 
-
 impl<'bump> SubtermAux<'bump> for DefaultAuxSubterm<'bump> {
     type IntoIter = ArcIntoIter<ARichFormula<'bump>>;
 
