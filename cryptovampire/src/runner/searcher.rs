@@ -1,7 +1,7 @@
 use cryptovampire_lib::{
     environement::environement::Environement,
     formula::{
-        formula::ARichFormula,
+        formula::{tmpformula::TmpFormula, ARichFormula},
         sort::{builtins::BOOL, sort_proxy::SortProxy},
     },
     problem::crypto_assumptions::{CryptoAssumption, EufCmaMac, EufCmaSign, IntCtxt},
@@ -11,7 +11,8 @@ use log::debug;
 use regex::Regex;
 use static_init::dynamic;
 
-use crate::runner::tmpformula::TmpFormula;
+use super::tptp::TptpParse;
+
 
 #[dynamic]
 static EXTRACT_FORMULA: Regex = Regex::new(r"\[SA\] new: \d*?\. (.*?) \[.*?\]").unwrap();

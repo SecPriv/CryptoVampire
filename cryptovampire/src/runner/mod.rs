@@ -15,8 +15,8 @@ use vampire_runner::{VampireArg, VampireExec};
 
 use crate::smt::smt::SmtFile;
 mod searcher;
-mod tmpformula;
 pub mod vampire_runner;
+mod tptp;
 
 pub fn run_multiple_time<'bump>(
     ntimes: u32,
@@ -87,3 +87,4 @@ pub fn run_multiple_time<'bump>(
 
     Err(anyhow!("Ran out of tries"))
 }
+
