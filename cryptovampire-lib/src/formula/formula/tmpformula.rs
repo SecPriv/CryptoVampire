@@ -7,19 +7,15 @@ use crate::{
     environement::traits::Realm,
     formula::{
         formula::RichFormula,
-        function::{
-            builtin::{EQUALITY, NOT, NOT_TA},
-            signature::Signature,
-            Function,
-        },
+        function::{signature::Signature, Function},
         sort::sort_proxy::SortProxy,
         variable::Variable,
     },
 };
 use hashbrown::HashMap;
 use itertools::Itertools;
-    
-/// A very simplified AST 
+
+/// A very simplified AST
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum TmpFormula {
     App { head: String, args: Vec<TmpFormula> },

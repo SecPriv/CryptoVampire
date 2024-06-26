@@ -13,7 +13,6 @@ use static_init::dynamic;
 
 use super::tptp::TptpParse;
 
-
 #[dynamic]
 static EXTRACT_FORMULA: Regex = Regex::new(r"\[SA\] new: \d*?\. (.*?) \[.*?\]").unwrap();
 

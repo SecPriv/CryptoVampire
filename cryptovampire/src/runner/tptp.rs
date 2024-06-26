@@ -33,12 +33,8 @@ impl TptpParse for TmpFormula {
 }
 
 use itertools::Itertools;
-use tptp::{
-    cnf::{Disjunction, Literal},
-    fof::*,
-    Parse,
-};
-use utils::{implvec, match_as_trait, string_ref::StrRef};
+use tptp::{cnf::Literal, fof::*, Parse};
+use utils::{implvec, match_as_trait};
 
 // I need to remove the `'` from some function names
 fn trim_quotes(str: String) -> String {
