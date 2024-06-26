@@ -2,6 +2,7 @@ use crate::{
     environement::traits::{KnowsRealm, Realm},
     CustomDerive,
 };
+use step_macro::Macro;
 use utils::{assert_variance, match_as_trait, string_ref::StrRef, variants};
 
 use self::{
@@ -16,6 +17,7 @@ pub mod if_then_else;
 pub mod input;
 pub mod name_caster;
 pub mod quantifier;
+pub mod step_macro;
 
 use macro_attr::*;
 
@@ -32,6 +34,7 @@ macro_attr! {
         NameCaster(NameCaster<'bump>),
         Input(Input),
         IfThenElse(IfThenElse),
+        Macro(Macro)
     }
 }
 
@@ -48,7 +51,10 @@ impl<'bump> TermAlgebra<'bump> {
             | TermAlgebra::Function(_)
             | TermAlgebra::IfThenElse(_)
             | TermAlgebra::NameCaster(_) => true,
-            TermAlgebra::Quantifier(_) | TermAlgebra::Cell(_) | TermAlgebra::Input(_) => false,
+            TermAlgebra::Quantifier(_)
+            | TermAlgebra::Cell(_)
+            | TermAlgebra::Input(_)
+            | TermAlgebra::Macro(_) => false,
         }
     }
 
@@ -62,6 +68,7 @@ impl<'bump> TermAlgebra<'bump> {
                 | TermAlgebra::Cell(x)
                 | TermAlgebra::Input(x)
                 | TermAlgebra::IfThenElse(x)
+                | TermAlgebra::Macro(x)
                     => {x.name().into()}
         })
     }
@@ -84,7 +91,8 @@ impl<'bump> TermAlgebra<'bump> {
         Quantifier:Quantifier<'bump>,
         Function:BaseFunction<'bump>,
         Cell:Cell<'bump>,
-        NameCaster:NameCaster<'bump>);
+        NameCaster:NameCaster<'bump>,
+        Macro:Macro);
 }
 
 assert_variance!(TermAlgebra);

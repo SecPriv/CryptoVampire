@@ -32,8 +32,10 @@ bitflags! {
                 const INPUT = 1 << 1;
                 /// Look though memory cells
                 const MEMORY_CELLS = 1 << 2;
+                /// look though `cond` and `msg`
+                const STEP_MACROS = 1 << 3;
                 /// Don't look though anything that looks like a macro
-                const NO_MACROS = Self::QUANTIFIER.bits();
+                const NO_MACROS = Self::QUANTIFIER.bits() | Self::STEP_MACROS.bits();
         }
 }
 
@@ -166,6 +168,7 @@ impl<'bump> Unfolder<'bump> {
 						TermAlgebra::Cell(c)
 							if deeper_kinds.contains(UnfoldFlags::MEMORY_CELLS) =>
 						self.unfold_cell(steps, graph, c.memory_cell(), args),
+                        TermAlgebra::Macro(_) if deeper_kinds.contains(UnfoldFlags::STEP_MACROS) => todo!(),
 
 						// writting everything down to get notified by the type checker in case of changes
 						TermAlgebra::Condition(_)
@@ -174,7 +177,8 @@ impl<'bump> Unfolder<'bump> {
 						| TermAlgebra::IfThenElse(_)
 						| TermAlgebra::Quantifier(_)
 						| TermAlgebra::Input(_)
-						| TermAlgebra::Cell(_) => vec![],
+						| TermAlgebra::Cell(_)
+                        | TermAlgebra::Macro(_) => vec![],
 					},
 					InnerFunction::Bool(_)
 					// | Innerfunction::inner::Nonce(_)

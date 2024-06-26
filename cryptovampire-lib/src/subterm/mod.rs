@@ -319,7 +319,7 @@ where
             formula,
             ptcl.list_top_level_terms_short_lifetime_and_bvars(),
             false,
-            UnfoldFlags::QUANTIFIER,
+            UnfoldFlags::NO_MACROS,
         )
     }
 

@@ -204,6 +204,7 @@ pub fn generate<'bump>(
                     },
                     TermAlgebra::Quantifier(q) => generate_quantifier(assertions, declarations, env, pbl, function, q),
                     TermAlgebra::Condition(connective) => generate_connectives( function, connective, assertions, pbl, msg, cond),
+                    TermAlgebra::Macro(_) => todo!()
                 }
             }
             _ => continue,
