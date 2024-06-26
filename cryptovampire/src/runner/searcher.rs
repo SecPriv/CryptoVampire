@@ -1,8 +1,9 @@
 use cryptovampire_lib::{
     environement::environement::Environement,
     formula::{
-        formula::{tmpformula::TmpFormula, ARichFormula},
+        formula::ARichFormula,
         sort::{builtins::BOOL, sort_proxy::SortProxy},
+        TmpFormula,
     },
     problem::crypto_assumptions::{CryptoAssumption, EufCmaMac, EufCmaSign, IntCtxt},
 };

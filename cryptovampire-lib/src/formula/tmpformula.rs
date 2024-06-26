@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use anyhow::{anyhow, bail};
+use serde::{Deserialize, Serialize};
 use utils::string_ref::StrRef;
 
 use crate::{
@@ -16,7 +17,7 @@ use hashbrown::HashMap;
 use itertools::Itertools;
 
 /// A very simplified AST
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Serialize, Deserialize)]
 pub enum TmpFormula {
     App { head: String, args: Vec<TmpFormula> },
     Var(String),

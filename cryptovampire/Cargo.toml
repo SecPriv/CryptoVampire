@@ -1,20 +1,14 @@
 [package]
 name = "cryptovampire"
-version = "0.2.2"
+version = "0.3.0"
 edition = "2021"
+authors = ["Simon Jeanteur <7871851+puyral@users.noreply.github.com>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cryptovampire-lib = { path = "../cryptovampire-lib" }
+cryptovampire-lib = { path = "../cryptovampire-lib", features = ["serde"] }
 utils = { path = "../utils" }
-
-pest = "2.5.1"
-pest_derive = "2.5.1"
-clap = { version = "4.0.32", features = ["derive"] }
-derivative = { version = "2.2.0" }
-const_format = "0.2.31"
-env_logger = "0.11"
 
 itertools = { workspace = true }
 if_chain = { workspace = true }
@@ -25,5 +19,12 @@ paste = { workspace = true }
 macro-attr ={ workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
-regex = "1.10.4"
-tptp = "0.31.1"
+
+pest = "2.5.1"
+pest_derive = "2.5.1"
+clap = { version = "4", features = ["derive"] }
+derivative = { version = "2.2" }
+const_format = "0.2"
+env_logger = "0.11"
+regex = "1.10"
+tptp = "0.31"

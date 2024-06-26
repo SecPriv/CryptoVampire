@@ -3,7 +3,6 @@ pub use arc::*;
 
 mod formula;
 pub use formula::*;
-pub mod tmpformula;
 
 pub mod macros {
     #[macro_export]

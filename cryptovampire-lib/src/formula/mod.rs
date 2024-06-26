@@ -18,3 +18,5 @@ pub mod sort;
 pub mod file_descriptior;
 
 pub mod formula;
+mod tmpformula;
+pub use tmpformula::TmpFormula;

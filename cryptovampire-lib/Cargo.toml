@@ -1,14 +1,14 @@
 [package]
 name = "cryptovampire-lib"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2021"
+authors = ["Simon Jeanteur <7871851+puyral@users.noreply.github.com>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 utils ={ path = "../utils"}
 # ord-utils = { git = "https://github.com/puyral/ord-utils" }
-bitflags = "2.0.2"
 
 # qcell = "0.5.3"
 # bumpalo = { version = "3.12.0", features = ["boxed", "collections"] }
@@ -23,7 +23,10 @@ paste = { workspace = true }
 thiserror = { workspace = true }
 macro-attr ={ workspace = true }
 anyhow = { workspace = true }
+
+bitflags = "2.0"
 derive_builder = "0.20.0"
+serde = { version = "1.0", features = ["derive"], optional = true}
 
 # dashmap = "5.5.3"
 # smol = "2.0.0"

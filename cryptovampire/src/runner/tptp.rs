@@ -1,7 +1,7 @@
 use anyhow::{bail, Result};
 use cryptovampire_lib::formula::{
-    formula::tmpformula::TmpFormula,
     function::builtin::{EQUALITY, NOT, NOT_TA},
+    TmpFormula,
 };
 
 struct A(TmpFormula);
