@@ -20,7 +20,7 @@ use cryptovampire_lib::{
     formula::{function::builtin::BUILT_IN_FUNCTIONS, sort::builtins::BUILT_IN_SORTS},
     problem::PblIterator,
 };
-use log::trace;
+use log::{log_enabled, trace};
 use std::io::Write;
 use utils::{
     from_with::FromWith,
@@ -134,7 +134,18 @@ fn main() {
                 };
                 let result = run_multiple_time(*num_retry, &vampire, &env, &mut pbl).unwrap();
                 let mut bw = BufWriter::new(io::stdout());
-                write!(&mut bw, "{result}").unwrap();
+                if log_enabled!(log::Level::Debug) {
+                write!(&mut bw, "{result}").unwrap();}
+                else {
+                    for l in result.lines() {
+                        if l.starts_with("[SA] new:") {
+                            continue;
+                        }
+                        else {
+                            writeln!(&mut bw, "{l}").unwrap();
+                        }
+                    }
+                }
             } else {
                 assert!(!args.output_location.is_dir());
                 let smt = SmtFile::from_general_file(&env, pbl.into_general_file(&env));

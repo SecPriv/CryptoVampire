@@ -45,6 +45,7 @@ option!(
     Avatar("avatar", bool),
     SatSolver("sat_solver", vampire_suboptions::SatSolver),
     ShowNew("show_new", bool),
+    InlineLet("inline_let", bool),
 );
 
 pub mod vampire_suboptions {

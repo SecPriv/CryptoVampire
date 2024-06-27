@@ -62,6 +62,7 @@ impl<'bump> EufCmaSign<'bump> {
         env: &Environement<'bump>,
         pbl: &Problem<'bump>,
     ) {
+        assertions.push(Axiom::Comment("euf-cma sign".into()));
         let nonce_sort = NAME.clone();
         let message_sort = MESSAGE.clone();
         let ev = &pbl.evaluator;

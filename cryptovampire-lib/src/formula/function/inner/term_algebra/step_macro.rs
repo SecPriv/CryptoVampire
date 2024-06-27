@@ -9,7 +9,7 @@ use crate::{
     static_signature,
 };
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub enum Macro {
     Condition,
     Message,

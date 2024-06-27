@@ -59,6 +59,7 @@ pub fn run_multiple_time<'bump>(
                 VampireArg::InputSyntax(vampire_runner::vampire_suboptions::InputSyntax::SmtLib2),
                 VampireArg::ShowNew(true),
                 VampireArg::Avatar(false),
+                VampireArg::InlineLet(true)
             ],
             &smt,
         )?;
@@ -72,15 +73,19 @@ pub fn run_multiple_time<'bump>(
             .crypto_assertions
             .iter()
             .map(|ca| ca.search_instances(&to_search, env))
+            .flatten()
             .collect_vec();
+        if tmp.is_empty() {
+            bail!("no new instances")
+        }
+
         let max_var_no_instances = pbl.max_var_no_extras();
         if cfg!(debug_assertions) {
-            let str = tmp.iter().flatten().map(|t| format!("{:}", t)).join(", ");
+            let str = tmp.iter().map(|t| format!("{:}", t)).join(", ");
             debug!("instances found ({:?}):\n\t[{:}]", tmp.len(), str)
         }
         pbl.extra_instances.extend(
             tmp.into_iter()
-                .flatten()
                 .map(|t| t.translate_vars(max_var_no_instances).into()),
         )
     }

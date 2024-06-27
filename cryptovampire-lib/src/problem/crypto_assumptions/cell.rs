@@ -1,4 +1,6 @@
-use itertools::Itertools;
+use std::rc::Rc;
+
+use itertools::{chain, Itertools};
 
 use crate::{
     environement::environement::Environement,
@@ -29,6 +31,7 @@ impl Cell {
             sort: STEP.as_sort(),
         };
         let max_var = max_var + 1;
+        assertions.push(Axiom::Comment("cells".into()));
         assertions.extend(
             pbl.protocol
                 .memory_cells()
@@ -43,9 +46,10 @@ impl Cell {
                             sort,
                         })
                         .collect();
-                    let _max_var = max_var + vars.len();
+                    let max_var = max_var + vars.len();
 
-                    let cell_call = c.function().f_a(vars.iter().chain([&step_var]));
+                    let nvars: Rc<[_]> = vars.iter().chain([&step_var]).cloned().collect();
+                    let cell_call = c.function().f_a(nvars.as_ref());
 
                     let (positive, negative): (Vec<_>, Vec<_>) = c
                         .assignements()
@@ -72,7 +76,7 @@ impl Cell {
                                 );
 
                                 (
-                                    formula::exists(
+                                    formula::forall(
                                         bvars.clone(),
                                         ands.shallow_copy() >> formula::meq(&cell_call, content),
                                     ),
@@ -81,24 +85,37 @@ impl Cell {
                             },
                         )
                         .unzip();
-                    let nvars = vars.iter().chain([&step_var]).cloned().collect_vec();
-                    let cell_call = c.function().f_a(nvars.as_slice());
+                    // let cell_call = c.function().f_a(nvars.as_slice());
                     let cell_call_prev = c.function().f_a(
                         vars.iter()
                             .cloned()
                             .map_into()
                             .chain([PRED.f_a([step_var])]),
                     );
-                    formula::forall(
-                        nvars,
-                        (formula::ands(negative)
-                            >> formula::meq(
-                                pbl.evaluator.eval(cell_call),
-                                pbl.evaluator.eval(cell_call_prev),
-                            ))
-                            & formula::ands(positive),
+                    // formula::forall(
+                    //     nvars,
+                    //     ((!formula::ands(negative))
+                    //         >> formula::meq(
+                    //             pbl.evaluator.eval(cell_call),
+                    //             pbl.evaluator.eval(cell_call_prev),
+                    //         ))
+                    //         & formula::ands(positive),
+                    // )
+                    chain!(
+                        [formula::forall(
+                            nvars.clone().iter().cloned(),
+                            (formula::ands(negative))
+                                >> formula::meq(
+                                    pbl.evaluator.eval(cell_call),
+                                    pbl.evaluator.eval(cell_call_prev),
+                                )
+                        )],
+                        positive
+                            .into_iter()
+                            .map(move |f| formula::forall(nvars.clone().iter().cloned(), f))
                     )
                 })
+                .flatten()
                 .map(Axiom::base),
         );
     }

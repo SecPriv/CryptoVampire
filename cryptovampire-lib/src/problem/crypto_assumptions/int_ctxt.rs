@@ -56,6 +56,7 @@ impl<'bump> IntCtxt<'bump> {
         env: &Environement<'bump>,
         pbl: &Problem<'bump>,
     ) {
+        assertions.push(Axiom::Comment("int ctxt".into()));
         let nonce_sort = NAME.clone();
         let message_sort = MESSAGE.clone();
         let ev = &pbl.evaluator;

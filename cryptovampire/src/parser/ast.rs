@@ -104,7 +104,7 @@ mod macro_helper {
     }
 }
 
-macro_rules! dest_rule {
+macro_rules! destruct_rule {
     ($span:ident in [$($arg:ident),*] = $vec:expr) => {
         as_array!($span in [$($arg),*] = macro_helper::AsInner::m_into_inner($vec));
         $(
@@ -282,7 +282,7 @@ pub struct VariableBinding<'a> {
 }
 boiler_plate!(VariableBinding<'s>, 's, variable_binding; |p| {
     let span = p.as_span();
-    dest_rule!(span in [variable, type_name] = p.into_inner());
+    destruct_rule!(span in [variable, type_name] = p.into_inner());
     Ok(VariableBinding{span, variable, type_name})
 });
 
@@ -312,7 +312,7 @@ pub struct Term<'a> {
 }
 boiler_plate!(Term<'s>, 's, term; |p| {
     let span = p.as_span();
-    dest_rule!(span in [inner] = p.into_inner());
+    destruct_rule!(span in [inner] = p.into_inner());
     Ok(Term{span, inner})
 });
 
@@ -562,7 +562,7 @@ pub struct IfThenElse<'a> {
 }
 boiler_plate!(IfThenElse<'a>, 'a, if_then_else; |p| {
     let span = p.as_span();
-    dest_rule!(span in [condition, left, right] = p.into_inner());
+    destruct_rule!(span in [condition, left, right] = p.into_inner());
     Ok(IfThenElse { span, condition, left, right})
 });
 
@@ -578,7 +578,7 @@ pub struct FindSuchThat<'a> {
 }
 boiler_plate!(FindSuchThat<'a>, 'a, find_such_that; |p| {
     let span = p.as_span();
-    dest_rule!(span in [vars, condition, left, right] = p.into_inner());
+    destruct_rule!(span in [vars, condition, left, right] = p.into_inner());
     Ok(Self { vars, span, condition, left, right})
 });
 
@@ -593,7 +593,7 @@ pub struct Quantifier<'a> {
 }
 boiler_plate!(Quantifier<'a>, 'a, quantifier; |p| {
     let span = p.as_span();
-    dest_rule!(span in [kind, vars, content] = p.into_inner());
+    destruct_rule!(span in [kind, vars, content] = p.into_inner());
     Ok(Self { kind, vars, span, content})
 });
 
@@ -618,7 +618,7 @@ pub struct LetIn<'a> {
 }
 boiler_plate!(LetIn<'a>, 'a, let_in; |p| {
     let span = p.as_span();
-    dest_rule!(span in [var, t1, t2] = p.into_inner());
+    destruct_rule!(span in [var, t1, t2] = p.into_inner());
     Ok(Self { span, var, t1, t2})
 });
 
@@ -643,7 +643,7 @@ pub struct DeclareType<'a> {
 }
 boiler_plate!(DeclareType<'a>, 'a, declare_type; |p| {
     let span = p.as_span();
-    dest_rule!(span in [name] = p);
+    destruct_rule!(span in [name] = p);
     Ok(Self { span, name })
 });
 
@@ -668,7 +668,7 @@ pub struct DeclareFunction<'a> {
 }
 boiler_plate!(DeclareFunction<'a>, 'a, declare_function; |p| {
     let span = p.as_span();
-    dest_rule!(span in [name, args, sort] = p);
+    destruct_rule!(span in [name, args, sort] = p);
     Ok(Self { span, name, args, sort })
 });
 
@@ -710,7 +710,7 @@ pub struct DeclareCell<'a> {
 }
 boiler_plate!(DeclareCell<'a>, 'a, declare_cell; |p| {
     let span = p.as_span();
-    dest_rule!(span in [name, args, sort] = p);
+    destruct_rule!(span in [name, args, sort] = p);
     Ok(Self { span, name, args, sort })
 });
 
@@ -812,7 +812,7 @@ pub struct Macro<'a> {
 }
 boiler_plate!(Macro<'a>, 'a, mlet ; |p| {
     let span = p.as_span();
-    dest_rule!(span in [name, args, term] = p);
+    destruct_rule!(span in [name, args, term] = p);
     Ok(Self {span, name, args, term})
 });
 
@@ -843,7 +843,7 @@ pub struct Assertion<'a> {
 }
 boiler_plate!(Assertion<'a>, 'a, assertion_inner | query_inner | lemma_inner ; |p| {
     let span = p.as_span();
-    dest_rule!(span in [content] = p);
+    destruct_rule!(span in [content] = p);
     Ok(Self {span, content})
 });
 
@@ -877,7 +877,7 @@ pub struct Order<'a> {
 }
 boiler_plate!(Order<'a>, 'a, order ; |p| {
     let span = p.as_span();
-    dest_rule!(span in [quantifier, args, t1, kind, t2] = p);
+    destruct_rule!(span in [quantifier, args, t1, kind, t2] = p);
     Ok(Self {span, quantifier, args, t1, t2, kind})
 });
 

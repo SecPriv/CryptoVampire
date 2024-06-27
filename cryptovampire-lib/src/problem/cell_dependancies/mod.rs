@@ -1,4 +1,4 @@
-//! This file help to solve searching though the dependency graph of memorycells
+//! This module help to solve searching though the dependency graph of memorycells
 //!  and inputs looking for subterm
 
 use super::{cell::MemoryCell, step::Step};

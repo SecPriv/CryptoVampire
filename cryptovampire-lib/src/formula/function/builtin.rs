@@ -11,6 +11,7 @@ use super::inner::evaluate::Evaluate;
 use super::inner::step::StepFunction;
 use super::inner::term_algebra::base_function::BaseFunctionTuple;
 use super::inner::term_algebra::name_caster::NameCaster;
+use super::inner::term_algebra::step_macro::Macro;
 use super::inner::term_algebra::{self, TermAlgebra};
 use super::{new_static_function, Function, InnerFunction};
 
@@ -196,8 +197,15 @@ pub static EMPTY: Function<'static> = (&EMPTY_TUPLE_FUNCTION).main.clone();
 pub static PRED: Function<'static> =
     new_static_function(InnerFunction::Step(StepFunction::Pred(Default::default())));
 
-// #[dynamic]
-// pub static EMPTY_EVALUATED: Function<'static> = (&EMPTY_TUPLE_FUNCTION).eval.clone();
+#[dynamic]
+pub static CONDITION_MACRO: Function<'static> = new_static_function(InnerFunction::TermAlgebra(
+    TermAlgebra::Macro(Macro::Condition),
+));
+
+#[dynamic]
+pub static MESSAGE_MACRO: Function<'static> = new_static_function(InnerFunction::TermAlgebra(
+    TermAlgebra::Macro(Macro::Message),
+));
 
 builtin!(
     AND,
@@ -224,5 +232,7 @@ builtin!(
     NOT_TA,
     OR,
     OR_TA,
-    PRED
+    PRED,
+    CONDITION_MACRO,
+    MESSAGE_MACRO
 );

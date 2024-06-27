@@ -1,7 +1,7 @@
 [workspace]
 members = ["cryptovampire", "cryptovampire-lib", "utils"]
 resolver = "2"
-authors = ["Simon Jeanteur <7871851+puyral@users.noreply.github.com>"]
+# authors = ["Simon Jeanteur <7871851+puyral@users.noreply.github.com>"]
 
 [workspace.dependencies]
 itertools = "0.13"

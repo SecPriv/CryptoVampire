@@ -2,9 +2,9 @@ use std::{rc::Rc, sync::Arc};
 
 use crate::{
     formula::{
-        formula::{ARichFormula, RichFormula},
+        formula::{meq, ARichFormula, RichFormula},
         function::{
-            inner::term_algebra::{quantifier::Quantifier, TermAlgebra},
+            inner::term_algebra::{quantifier::Quantifier, step_macro, TermAlgebra},
             InnerFunction,
         },
         manipulation::{FrozenMultipleVarSubst, FrozenSubst, OneVarSubst, Substitution},
@@ -17,7 +17,7 @@ use crate::{
     },
 };
 use derive_builder::Builder;
-use utils::implvec;
+use utils::{destvec, implvec};
 
 use bitflags::bitflags;
 use itertools::{chain, Itertools};
@@ -168,7 +168,7 @@ impl<'bump> Unfolder<'bump> {
 						TermAlgebra::Cell(c)
 							if deeper_kinds.contains(UnfoldFlags::MEMORY_CELLS) =>
 						self.unfold_cell(steps, graph, c.memory_cell(), args),
-                        TermAlgebra::Macro(_) if deeper_kinds.contains(UnfoldFlags::STEP_MACROS) => todo!(),
+                        TermAlgebra::Macro(kind) if deeper_kinds.contains(UnfoldFlags::STEP_MACROS) => self.unfold_step_macro(args, steps, kind),
 
 						// writting everything down to get notified by the type checker in case of changes
 						TermAlgebra::Condition(_)
@@ -194,6 +194,39 @@ impl<'bump> Unfolder<'bump> {
 				}
             }
         }
+    }
+
+    fn unfold_step_macro(
+        &self,
+        args: &Arc<[ARichFormula<'bump>]>,
+        steps: implvec!(Step<'bump>),
+        kind: &step_macro::Macro,
+    ) -> Vec<Unfolder<'bump>> {
+        destvec!([arg] = args);
+        let state_variables = self.state.bound_variables();
+        steps
+            .into_iter()
+            .map(|s| {
+                let content = match kind {
+                    step_macro::Macro::Condition => s.condition_arc(),
+                    step_macro::Macro::Message => s.message_arc(),
+                }
+                .shallow_copy();
+
+                let collision_var =
+                    make_collision_avoiding_subst(s.free_variables(), state_variables);
+                let nvars = s
+                    .free_variables()
+                    .iter()
+                    .map(|v| collision_var.get_var(v))
+                    .collect_vec();
+                let state = self.state.add_condition(
+                    nvars.iter().map(|v| *v),
+                    meq(arg, s.function().f_a(nvars.iter().map(ARichFormula::from))),
+                );
+                Unfolder { state, content }
+            })
+            .collect_vec()
     }
 
     fn unfold_cell(

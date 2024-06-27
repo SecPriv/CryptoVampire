@@ -72,7 +72,6 @@ assert-crypto memory_cell;
 
 /* the lemma `orderBetween` wouldn't really be sound to prove */
 
-query forall (i:index, j:index) {(
-  (happens(SenderA(i, j)) => cond![SenderA(i, j)])
-    => mlt(cellA(i, pred(SenderA(i, j))), cellA(i, SenderA(i, j)))
-)}
+query forall (n1:Message, n2:Message) {
+  (mlt(n1, n2) => (mlt(n2, mySucc(n1)) => false))
+}
