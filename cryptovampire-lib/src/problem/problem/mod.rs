@@ -40,8 +40,9 @@ use super::{
 #[derive(Debug, Clone, Builder)]
 pub struct Problem<'bump> {
     container: &'bump ScopedContainer<'bump>,
-    /// functions to declare (not already declared somewhere else)
+    /// [Function]s to declare (not already declared somewhere else)
     functions: Vec<Function<'bump>>, // to keep track of 'static functions
+    /// [Sort]s to declare (not already declared somewhere else)
     sorts: Vec<Sort<'bump>>, // same
     evaluator: Arc<Evaluator<'bump>>,
     name_caster: Arc<NameCasterCollection<'bump>>,

@@ -10,7 +10,6 @@ use crate::{
         ast::{self, extra::SnN, Term, VariableBinding},
         err, merr, IntoRuleResult, E,
     },
-    smt::smt::SmtFormula,
 };
 use cryptovampire_lib::{
     environement::traits::{KnowsRealm, Realm},
@@ -29,7 +28,7 @@ use cryptovampire_lib::{
             sort_proxy::SortProxy,
         },
         variable::Variable,
-    },
+    }, smt::SmtFormula,
 };
 use utils::{f, implvec, match_as_trait, maybe_owned::MOw, traits::NicerError, try_trace};
 

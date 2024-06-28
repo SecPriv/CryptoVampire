@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::{container::ScopedContainer, formula::function::Function};
+use crate::{container::ScopedContainer, formula::function::Function, runner::vampire_runner::VampireExec};
 
 use bitflags::bitflags;
 use hashbrown::HashMap;
@@ -165,4 +165,10 @@ pub struct AutomatedVampire {
     pub num_retry: u32,
     pub exec_time: f64,
     pub smt_debug: Option<PathBuf>,
+}
+
+impl AutomatedVampire {
+    pub fn to_vampire_exec(&self) -> VampireExec {
+todo!()
+    }
 }

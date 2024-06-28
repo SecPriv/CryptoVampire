@@ -8,17 +8,9 @@ use clap::Parser;
 use cryptovampire::{
     cli::Args,
     parser, problem_try_from_str,
-    runner::{
-        run_multiple_time,
-        vampire_runner::{VampireArg, VampireExec},
-    },
-    smt::smt::SmtFile,
 };
 use cryptovampire_lib::{
-    container::ScopedContainer,
-    environement::environement::{AutomatedVampire, Environement},
-    formula::{function::builtin::BUILT_IN_FUNCTIONS, sort::builtins::BUILT_IN_SORTS},
-    problem::PblIterator,
+    container::ScopedContainer, environement::environement::{AutomatedVampire, Environement}, formula::{function::builtin::BUILT_IN_FUNCTIONS, sort::builtins::BUILT_IN_SORTS}, problem::PblIterator, runner::{run_multiple_time, vampire_runner::{VampireArg, VampireExec}}, smt::SmtFile
 };
 use log::{log_enabled, trace};
 use std::io::Write;

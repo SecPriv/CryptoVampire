@@ -4,19 +4,29 @@ use std::{
 };
 
 use anyhow::{anyhow, bail};
-use cryptovampire_lib::{
+use crate::{
     environement::environement::{AutomatedVampire, Environement},
     problem::Problem,
 };
 use itertools::Itertools;
 use log::debug;
 use searcher::InstanceSearcher;
+use utils::implvec;
 use vampire_runner::{VampireArg, VampireExec};
 
-use crate::smt::smt::SmtFile;
+use crate::smt::SmtFile;
 mod searcher;
 mod tptp;
 pub mod vampire_runner;
+
+// pub fn auto_run_iter<'a, 'bump:'a>(
+//     nretry: u32,
+//     vampire: &VampireExec,
+//     env: &Environement<'bump>,
+//     pbl: impl IntoIterator<Item =  &'a mut Problem<'bump> >
+// ) -> impl IntoIterator<Item = anyhow::Result<String> > +'a {
+    
+// }
 
 pub fn run_multiple_time<'bump>(
     ntimes: u32,
