@@ -11,7 +11,6 @@ use itertools::Itertools;
 use log::{debug, trace};
 use regex::Regex;
 use static_init::dynamic;
-use utils::traits::NicerError;
 
 use super::tptp::TptpParse;
 
@@ -39,7 +38,7 @@ impl<'bump> InstanceSearcher<'bump> for EufCmaMac<'bump> {
         let macname = self.mac.name();
         let verifyname = self.verify.name();
         let functions = env.get_function_hash();
-        let bool = SortProxy::from(BOOL.as_sort());
+        let _bool = SortProxy::from(BOOL.as_sort());
 
         EXTRACT_FORMULA
             .captures_iter(str)

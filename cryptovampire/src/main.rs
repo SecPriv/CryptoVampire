@@ -1,24 +1,13 @@
 use std::{
-    fs::{self, read_to_string, File},
-    io::{self, BufWriter, Read},
-    path::{Path, PathBuf},
+    fs::read_to_string,
+    io::{self, Read},
 };
 
 use clap::Parser;
-use cryptovampire::{cli::Args, parser, problem_try_from_str, run};
-use cryptovampire_lib::{
-    container::ScopedContainer,
-    environement::environement::{AutomatedVampire, Environement},
-    formula::{function::builtin::BUILT_IN_FUNCTIONS, sort::builtins::BUILT_IN_SORTS},
-    problem::PblIterator,
-    smt::SmtFile,
-};
-use log::{log_enabled, trace};
+use cryptovampire::{cli::Args, run};
+
+use log::trace;
 use std::io::Write;
-use utils::{
-    from_with::FromWith,
-    traits::{MyWriteTo, NicerError},
-};
 
 fn main() {
     let args = Args::parse();

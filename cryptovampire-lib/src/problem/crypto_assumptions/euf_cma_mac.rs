@@ -9,7 +9,12 @@ use crate::{
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::{forall, meq, ARichFormula, RichFormula},
-        function::{builtin::{EQUALITY_TA, MESSAGE_TO_BITSTRING}, inner::subterm::Subsubterm, name_caster_collection::NameCasterCollection, Function},
+        function::{
+            builtin::{EQUALITY_TA, MESSAGE_TO_BITSTRING},
+            inner::subterm::Subsubterm,
+            name_caster_collection::NameCasterCollection,
+            Function,
+        },
         manipulation::OneVarSubst,
         sort::builtins::{CONDITION, MESSAGE, NAME},
         utils::formula_expander::UnfoldFlags,
@@ -28,7 +33,7 @@ use crate::{
         Subterm,
     },
 };
-use utils::{arc_into_iter::ArcIntoIter, or_chain, utils::print_type};
+use utils::{arc_into_iter::ArcIntoIter, utils::print_type};
 
 pub type SubtermEufCmaMacMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
 pub type SubtermEufCmaMacKey<'bump> = Subterm<'bump, KeyAux<'bump>>;
@@ -74,7 +79,7 @@ impl<'bump> EufCmaMac<'bump> {
             &kind,
             KeyAux {
                 euf_cma: *self,
-                name_caster: pbl.owned_name_caster()
+                name_caster: pbl.owned_name_caster(),
             },
             [self.mac, self.verify],
             UnfoldFlags::NO_MACROS,

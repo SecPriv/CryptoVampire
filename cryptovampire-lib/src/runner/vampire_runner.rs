@@ -2,7 +2,7 @@ use anyhow::{bail, ensure, Context};
 use itertools::Itertools;
 use log::{debug, trace};
 use std::{
-    io::{BufWriter, Write},
+    io::BufWriter,
     num::NonZeroU32,
     path::{Path, PathBuf},
     process::{Command, Stdio},
@@ -13,7 +13,9 @@ use thiserror::Error;
 use utils::{implvec, traits::MyWriteTo};
 
 use crate::{
-    environement::environement::Environement, problem::Problem, runner::searcher::InstanceSearcher,
+    environement::environement::Environement,
+    problem::Problem,
+    runner::searcher::InstanceSearcher,
     smt::{SmtFile, SMT_FILE_EXTENSION},
 };
 
@@ -158,7 +160,7 @@ impl VampireExec {
         cmd.arg(pbl_file); // encode the file
         debug!("running vampire with {cmd:?}");
 
-        let mut child = cmd
+        let child = cmd
             // .stdin(Stdio::piped()) // We want to write to stdin
             .stdout(Stdio::piped()) // Capture the stdout
             .spawn()
@@ -272,7 +274,6 @@ impl VampireExec {
     }
 }
 
-
 pub const DEFAULT_VAMPIRE_ARGS: [VampireArg; 5] = [
     VampireArg::InputSyntax(vampire_suboptions::InputSyntax::SmtLib2),
     VampireArg::ShowNew(true),
@@ -280,7 +281,6 @@ pub const DEFAULT_VAMPIRE_ARGS: [VampireArg; 5] = [
     VampireArg::InlineLet(true),
     VampireArg::NewCnf(true),
 ];
-
 
 impl VampireOutput {
     /// Returns `true` if the vampire output is [`TimeOut`].

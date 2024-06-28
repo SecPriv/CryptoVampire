@@ -120,8 +120,11 @@ impl<'bump> EufCmaSign<'bump> {
                     sort: nonce_sort,
                 };
                 let k_f = k.into_aformula();
-                let ors =
-                    into_exist_formula(subterm_key.preprocess_whole_ptcl(env, pbl.protocol(), &k_f));
+                let ors = into_exist_formula(subterm_key.preprocess_whole_ptcl(
+                    env,
+                    pbl.protocol(),
+                    &k_f,
+                ));
 
                 forall([k], split.f_a([k_f]) >> ors)
             }));

@@ -82,10 +82,12 @@ impl<'str, 'bump> NamedVariable<'str, 'bump> {
         self.variable
     }
 
+    #[allow(dead_code)]
     pub fn name(&self) -> &'str str {
         self.name
     }
 
+    #[allow(dead_code)]
     pub fn sort(&self) -> Sort<'bump> {
         self.variable.sort
     }

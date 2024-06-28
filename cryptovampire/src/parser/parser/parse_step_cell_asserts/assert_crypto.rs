@@ -15,8 +15,7 @@ use utils::{destvec, implvec, traits::NicerError};
 pub fn parse_asserts_crypto<'a, 'str, 'bump>(
     env: &'a Environement<'bump, 'str>,
     crypto: implvec!(&'a ast::AssertCrypto<'str>),
-) -> Result<Vec<CryptoAssumption<'bump>>, E>
-{
+) -> Result<Vec<CryptoAssumption<'bump>>, E> {
     crypto
         .into_iter()
         .map(|ac| parse_assert_crypto(env, ac))

@@ -21,6 +21,7 @@ mod state {
         ///
         /// [`WithLemma`]: State::WithLemma
         #[must_use]
+        #[allow(dead_code)]
         pub fn is_with_lemma(&self) -> bool {
             matches!(self, Self::WithLemma)
         }
@@ -29,6 +30,7 @@ mod state {
         ///
         /// [`Done`]: State::Done
         #[must_use]
+        #[allow(dead_code)]
         pub fn is_done(&self) -> bool {
             matches!(self, Self::Done)
         }
@@ -37,6 +39,7 @@ mod state {
         ///
         /// [`NoLemma`]: State::NoLemma
         #[must_use]
+        #[allow(dead_code)]
         pub fn is_no_lemma(&self) -> bool {
             matches!(self, Self::NoLemma)
         }

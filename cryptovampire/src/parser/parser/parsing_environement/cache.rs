@@ -44,6 +44,7 @@ impl<'str, 'bump> FunctionCache<'str, 'bump> {
     ///
     /// [`Function`]: FunctionCache::Function
     #[must_use]
+    #[allow(dead_code)]
     pub fn is_function(&self) -> bool {
         matches!(self, Self::Function { .. })
     }
@@ -56,6 +57,7 @@ impl<'str, 'bump> FunctionCache<'str, 'bump> {
         }
     }
 
+    #[allow(dead_code)]
     pub fn try_into_function(self) -> Result<Function<'bump>, Self> {
         if let Self::Function(function) = self {
             Ok(function)
@@ -64,6 +66,7 @@ impl<'str, 'bump> FunctionCache<'str, 'bump> {
         }
     }
 
+    #[allow(dead_code)]
     pub fn as_step_ast(&self) -> Option<&ast::Step<'str>> {
         match self {
             Self::Step(StepCache { ast, .. }) => Some(ast),
@@ -75,6 +78,7 @@ impl<'str, 'bump> FunctionCache<'str, 'bump> {
     ///
     /// [`Step`]: FunctionCache::Step
     #[must_use]
+    #[allow(dead_code)]
     pub fn is_step(&self) -> bool {
         matches!(self, Self::Step { .. })
     }
@@ -83,6 +87,7 @@ impl<'str, 'bump> FunctionCache<'str, 'bump> {
     ///
     /// [`MemoryCell`]: FunctionCache::MemoryCell
     #[must_use]
+    #[allow(dead_code)]
     pub fn is_memory_cell(&self) -> bool {
         matches!(self, Self::MemoryCell { .. })
     }
@@ -112,15 +117,6 @@ impl<'str, 'bump> FunctionCache<'str, 'bump> {
             }
         }
     }
-
-    // pub fn enforce_variance<'str2, 'bump2>(&self) -> &FunctionCache<'str2, 'bump2>
-    // where
-    //     'str: 'str2,
-    //     'bump: 'bump2,
-    // {
-    //     assert!(self.is_function() || self.is_step());
-    //     unsafe { std::mem::transmute(&self) } // only MemoryCell is invariant
-    // }
 
     pub fn as_memory_cell(&self) -> Option<&CellCache<'str, 'bump>> {
         if let Self::MemoryCell(v) = self {

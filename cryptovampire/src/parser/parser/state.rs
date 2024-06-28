@@ -21,24 +21,29 @@ impl<'a, 'str, 'bump> KnowsRealm for State<'a, 'str, 'bump> {
 }
 
 impl<'a, 'str, 'bump> State<'a, 'str, 'bump> {
+    #[allow(dead_code)]
     pub fn to_low(&self) -> Self {
         Self(RealmMerger {
             inner: Realm::Evaluated,
             ..self.0
         })
     }
+    #[allow(dead_code)]
     pub fn to_high(&self) -> Self {
         Self(RealmMerger {
             inner: Realm::Symbolic,
             ..self.0
         })
     }
+    #[allow(dead_code)]
     pub fn to_evaluated(&self) -> Self {
         self.to_low()
     }
+    #[allow(dead_code)]
     pub fn to_symbolic(&self) -> Self {
         self.to_high()
     }
+    #[allow(dead_code)]
     pub fn to_realm(&self, realm: &impl KnowsRealm) -> Self {
         Self(RealmMerger {
             inner: realm.get_realm(),

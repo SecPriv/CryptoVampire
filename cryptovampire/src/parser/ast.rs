@@ -914,36 +914,6 @@ pub mod extra {
     };
 
     #[derive(Debug, PartialEq, Eq, Clone, Hash)]
-    pub enum MAsFunction<'a, 'b> {
-        // Function(DeclareFunction<'a>),
-        Step(&'b Step<'a>),
-        Cell(&'b DeclareCell<'a>),
-    }
-
-    impl<'a, 'b, 'c> AsFunction<'a, 'b> for &'c MAsFunction<'a, 'b> {
-        fn name(self) -> SnN<'a, 'b> {
-            match self {
-                MAsFunction::Step(s) => s.name(),
-                MAsFunction::Cell(c) => c.name(),
-            }
-        }
-
-        fn args(self) -> Vec<SnN<'a, 'b>> {
-            match self {
-                MAsFunction::Step(s) => s.args(),
-                MAsFunction::Cell(c) => c.args(),
-            }
-        }
-
-        fn out(self) -> SnN<'a, 'b> {
-            match self {
-                MAsFunction::Step(s) => s.out(),
-                MAsFunction::Cell(c) => c.out(),
-            }
-        }
-    }
-
-    #[derive(Debug, PartialEq, Eq, Clone, Hash)]
     pub struct SnN<'a, 'b> {
         pub span: &'b Span<'a>,
         pub name: StrRef<'a>,
