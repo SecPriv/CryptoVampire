@@ -5,6 +5,7 @@ use utils::{infinity::Infinity, match_as_trait};
 
 use super::{AsFixedSignature, Signature};
 
+#[derive(Debug)]
 pub enum Lazy<A, B> {
     A(A),
     B(B),
@@ -47,6 +48,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub enum LazyFxSignature<A, B> {
     A(A),
     B(B),

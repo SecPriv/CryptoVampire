@@ -63,7 +63,7 @@ impl BaseConnective {
             BaseConnective::Or => OR.clone(),
             BaseConnective::Not => NOT.clone(),
             BaseConnective::Implies => IMPLIES.clone(),
-            BaseConnective::Iff => IFF.clone(),
+            BaseConnective::Iff => EQUALITY.clone(),
             BaseConnective::True => TRUE_F.clone(),
             BaseConnective::False => FALSE_F.clone(),
         }

@@ -116,10 +116,10 @@ pub static IMPLIES_TA: Function<'static> = new_static_function(InnerFunction::Te
     )),
 ));
 
-#[dynamic]
-pub static IFF: Function<'static> = new_static_function(InnerFunction::Bool(Booleans::Connective(
-    booleans::Connective::Iff,
-)));
+// #[dynamic]
+// pub static IFF: Function<'static> = new_static_function(InnerFunction::Bool(Booleans::Connective(
+//     booleans::Connective::Iff,
+// )));
 
 #[dynamic]
 pub static IFF_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(
@@ -221,7 +221,7 @@ builtin!(
     HAPPENS,
     IF_THEN_ELSE,
     IF_THEN_ELSE_TA,
-    IFF,
+    // IFF,
     IFF_TA,
     IMPLIES,
     IMPLIES_TA,

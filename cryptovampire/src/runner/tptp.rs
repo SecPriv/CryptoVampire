@@ -20,14 +20,14 @@ pub trait TptpParse {
 
 impl TptpParse for TmpFormula {
     fn parse(str: &str) -> anyhow::Result<Self> {
-        let str = format!("{}.", str);
+        let str = format!("{}.", str.trim());
         let litteral: tptp::Result<Literal, ()> = Literal::parse(str.as_bytes());
         match litteral {
             Ok((_, l)) => {
                 let tmp: A = l.try_into()?;
                 Ok(tmp.0)
             }
-            Err(e) => bail!("{}", e),
+            Err(e) => bail!("from tptp: {}", e),
         }
     }
 }

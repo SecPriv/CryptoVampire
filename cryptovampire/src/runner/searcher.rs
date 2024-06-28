@@ -8,9 +8,10 @@ use cryptovampire_lib::{
     problem::crypto_assumptions::{CryptoAssumption, EufCmaMac, EufCmaSign, IntCtxt},
 };
 use itertools::Itertools;
-use log::debug;
+use log::{debug, trace};
 use regex::Regex;
 use static_init::dynamic;
+use utils::traits::NicerError;
 
 use super::tptp::TptpParse;
 
@@ -43,15 +44,30 @@ impl<'bump> InstanceSearcher<'bump> for EufCmaMac<'bump> {
         EXTRACT_FORMULA
             .captures_iter(str)
             .map(|c| {
-                debug!("found {:?}", &c);
+                trace!("new clause {:?}", &c);
                 c.extract()
             })
             .flat_map(|(_, [content])| content.split("|"))
             .filter(|s| s.contains(macname.as_ref()) || s.contains(verifyname.as_ref()))
-            .filter_map(|s| TmpFormula::parse(s).ok())
-            .filter_map(|f| {
-                f.to_rich_formula(&functions, bool.clone(), &mut Default::default())
+            .map(|s| {
+                debug!("new potential instance {:?}", &s);
+                s
+            })
+            .filter_map(|s| match TmpFormula::parse(s) {
+                Ok(f) => Some((s, f)),
+                Err(e) => {
+                    debug!("{s} failed ({e:?})");
+                    None
+                }
+            })
+            .filter_map(|(s, f)| {
+                f.to_rich_formula(&functions, Default::default(), &mut Default::default())
                     .ok()
+                    .map(|f| (s, f))
+            })
+            .map(|(s, f)| {
+                debug!("found {} from {}", f, s);
+                f
             })
             .map_into()
             .collect()
@@ -79,6 +95,10 @@ impl<'bump> InstanceSearcher<'bump> for EufCmaSign<'bump> {
             })
             .flat_map(|(_, [content])| content.split("|"))
             .filter(|s| s.contains(signname.as_ref()) || s.contains(verifyname.as_ref()))
+            .map(|s| {
+                debug!("new potential instance {:?}", &s);
+                s
+            })
             .filter_map(|s| match TmpFormula::parse(s) {
                 Ok(f) => Some((s, f)),
                 Err(_) => {

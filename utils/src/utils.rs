@@ -290,3 +290,13 @@ macro_rules! try_trace {
         }
     };
 }
+
+#[macro_export]
+macro_rules! or_chain {
+    ($b0:block) => {$crate::or_chain!($b0,)};
+    ($b0:block,  $($b:block),*,) => {$crate::or_chain!($b0,$($b),*)};
+
+    ($b0:block,  $($b:block),*) => {
+        $b0$(.or_else(|| $b))*
+    };
+}

@@ -20,7 +20,7 @@ use crate::{
 use utils::infinity::Infinity;
 
 /// A very general trait of what should be a signature of a function
-pub trait Signature<'bump>: Sized {
+pub trait Signature<'bump>: Sized + std::fmt::Debug {
     /// [Iterator] over the argument's [SortProxy]. See [Self::args()]
     type Args<'a>: IntoIterator<Item = SortProxy<'bump>> + 'a
     where
@@ -104,7 +104,7 @@ pub trait Signature<'bump>: Sized {
 #[allow(dead_code)]
 type SignatureArgs<'a, 'bump, T> = <<T as Signature<'bump>>::Args<'a> as IntoIterator>::IntoIter;
 
-pub trait AsFixedSignature<'bump> {
+pub trait AsFixedSignature<'bump> : std::fmt::Debug {
     type Args<'a>: IntoIterator<Item = Sort<'bump>> + 'a
     where
         Self: 'a,

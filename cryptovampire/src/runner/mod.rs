@@ -59,7 +59,8 @@ pub fn run_multiple_time<'bump>(
                 VampireArg::InputSyntax(vampire_runner::vampire_suboptions::InputSyntax::SmtLib2),
                 VampireArg::ShowNew(true),
                 VampireArg::Avatar(false),
-                VampireArg::InlineLet(true)
+                VampireArg::InlineLet(true),
+                VampireArg::NewCnf(true)
             ],
             &smt,
         )?;

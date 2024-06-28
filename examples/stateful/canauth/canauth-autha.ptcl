@@ -79,6 +79,11 @@ assert-crypto nonce;
 assert-crypto memory_cell;
 
 
+assert
+    forall (s:Message, m:Message, k:Message) {
+        (verify(s, m, k) <=> (s == hmac(m, k)))
+    }
+
 query forall (i:index, j:index) {(
   happens(ReceiverA(i,j)) => (exec![ReceiverA(i, j)] =>
   exists (j':index) {(

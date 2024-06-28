@@ -198,7 +198,7 @@ impl<'bump> SmtFormula<'bump> {
                                     SmtFormula::Implies(Box::new(a), Box::new(b))
                                 })
                             }
-                            Connective::Iff => SmtFormula::Eq(args),
+                            // Connective::Iff => SmtFormula::Eq(args),
                         },
                     },
                     // InnerFunction::Invalid(_) => unreachable!("the function is invalid")

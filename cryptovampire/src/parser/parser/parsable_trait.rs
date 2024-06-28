@@ -800,7 +800,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Infix<'a> {
                     state,
                     bvars,
                     expected_sort,
-                    &IFF_CACHE(),
+                    &EQUALITY_CACHE(),
                     &self.terms,
                 ),
                 Realm::Symbolic => Self {

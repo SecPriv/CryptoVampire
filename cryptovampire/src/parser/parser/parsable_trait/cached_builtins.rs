@@ -28,10 +28,10 @@ pub(crate) fn EQUALITY_TA_CACHE<'a, 'str, 'bump>() -> MOw<'a, FunctionCache<'str
 }
 
 // #[dynamic]
-#[allow(non_snake_case)]
-pub(crate) fn IFF_CACHE<'a, 'str, 'bump>() -> MOw<'a, FunctionCache<'str, 'bump>> {
-    MOw::Owned(IFF.clone().into())
-}
+// #[allow(non_snake_case)]
+// pub(crate) fn IFF_CACHE<'a, 'str, 'bump>() -> MOw<'a, FunctionCache<'str, 'bump>> {
+//     MOw::Owned(IFF.clone().into())
+// }
 
 // #[dynamic]
 #[allow(non_snake_case)]

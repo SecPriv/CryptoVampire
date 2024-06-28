@@ -18,7 +18,7 @@ pub enum Connective {
     Or,
     Not,
     Implies,
-    Iff,
+    // Iff,
     True,
     False,
 }
@@ -30,7 +30,7 @@ impl Connective {
             Connective::Or => "or",
             Connective::Not => "not",
             Connective::Implies => "=>",
-            Connective::Iff => "=",
+            // Connective::Iff => "=",
             Connective::True => "true",
             Connective::False => "false",
         }
@@ -46,7 +46,7 @@ impl Connective {
             Connective::Or => Lazy::A(signatures::InfiniteBoolSignature),
             Connective::Not => Lazy::B(NOT_SIGNATURE.as_ref()),
             Connective::Implies => Lazy::B(IMPLIES_SIGNATURE.as_ref()),
-            Connective::Iff => Lazy::B(IFF_SIGNATURE.as_ref()),
+            // Connective::Iff => Lazy::B(IFF_SIGNATURE.as_ref()),
             Connective::True => Lazy::B(TRUE_SIGNATURE.as_ref()),
             Connective::False => Lazy::B(FALSE_SIGNATURE.as_ref()),
         }
@@ -74,7 +74,7 @@ impl<'a> Sorted<'a> for Connective {
                             expected: format!("1 arguments of type {:?}", BOOL.as_sort()),
                             got: format!("{:?}", args),
                         }),
-                        Connective::Implies | Connective::Iff if args.len() != 2 => {
+                        Connective::Implies /* | Connective::Iff */ if args.len() != 2 => {
                             Err(SortedError::WrongArguments {
                                 expected: format!("2 arguments of type {:?}", BOOL.as_sort()),
                                 got: format!("{:?}", args),
@@ -172,7 +172,7 @@ impl<'a, 'bump: 'a> MaybeFixedSignature<'a, 'bump> for Connective {
         match self {
             Connective::Not => Some(NOT_SIGNATURE.as_ref()),
             Connective::Implies => Some(IMPLIES_SIGNATURE.as_ref()),
-            Connective::Iff => Some(IFF_SIGNATURE.as_ref()),
+            // Connective::Iff => Some(IFF_SIGNATURE.as_ref()),
             Connective::True => Some(TRUE_SIGNATURE.as_ref()),
             Connective::False => Some(FALSE_SIGNATURE.as_ref()),
             _ => None,

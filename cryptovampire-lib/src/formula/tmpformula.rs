@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use anyhow::{anyhow, bail};
+use log::{debug, log_enabled, trace, warn};
 use serde::{Deserialize, Serialize};
 use utils::string_ref::StrRef;
 
@@ -75,22 +76,27 @@ impl TmpFormula {
         expected_sort: SortProxy<'bump>,
         variables: &mut HashMap<&'a Self, Variable<'bump>>,
     ) -> anyhow::Result<RichFormula<'bump>> {
-        let realm = &Realm::Symbolic;
+        trace!("to_rich_formula({self}, {expected_sort})");
+        let realm = &Realm::Evaluated;
         let head = self.head();
         let f = head.and_then(|head| functions.get(head));
         if let Some(f) = f {
             if f.is_tmp() {
+                debug!("failed: tmp function\n\t=>{self}");
                 bail!("tmp function")
             }
             let _head = head.unwrap(); // can't fail bc of check on f
             let sign = f.signature();
-            sign.out()
-                .unify(&expected_sort, realm)
-                .map_err(|_| anyhow!("infernce error"))?;
+            trace!("{:?} : {sign:?}", f.as_inner());
+            sign.out().unify(&expected_sort, realm).map_err(|_| {
+                warn!("failed: inference error\n\t=>{self}\n{realm}\n{expected_sort}");
+                anyhow!("infernce error")
+            })?;
             let mut args = vec![];
             for e in self.args().unwrap().iter().zip_longest(sign.args()) {
                 match e {
                     itertools::EitherOrBoth::Left(_) => {
+                        debug!("failed: more arguments that expected\n\t=>{self}");
                         bail!("more arguments that expected in {:}", &self)
                     }
                     itertools::EitherOrBoth::Right(_) => break,
@@ -116,6 +122,7 @@ impl TmpFormula {
                 variables.insert(self, v);
                 Ok(RichFormula::Var(v))
             } else {
+                debug!("failed: infernce error\n\t=>{self}");
                 bail!("inference error")
             }
         }
