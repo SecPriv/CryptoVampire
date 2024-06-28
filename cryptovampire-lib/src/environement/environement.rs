@@ -1,6 +1,10 @@
 use std::path::PathBuf;
 
-use crate::{container::ScopedContainer, formula::function::Function, runner::vampire_runner::VampireExec};
+use crate::{
+    container::ScopedContainer,
+    formula::function::Function,
+    runner::{VampireArg, VampireExec},
+};
 
 use bitflags::bitflags;
 use hashbrown::HashMap;
@@ -169,6 +173,9 @@ pub struct AutomatedVampire {
 
 impl AutomatedVampire {
     pub fn to_vampire_exec(&self) -> VampireExec {
-todo!()
+        VampireExec {
+            location: self.location.to_owned(),
+            extra_args: vec![VampireArg::TimeLimit(self.exec_time)],
+        }
     }
 }

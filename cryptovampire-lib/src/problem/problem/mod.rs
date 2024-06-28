@@ -127,46 +127,51 @@ impl<'bump> Problem<'bump> {
         }
     }
 
-    pub fn extend_extra_instances(&mut self, instances: implvec!(ARichFormula<'bump>)) {
-        self.extra_instances.extend(instances.into_iter())
+    /// return the number of new instances added
+    pub fn extend_extra_instances(&mut self, instances: implvec!(ARichFormula<'bump>)) -> usize {
+        let pre = self.extra_instances.len();
+        self.extra_instances.extend(instances.into_iter());
+        let n = self.extra_instances.len() - pre;
+        trace!("added {n} instances");
+        n
     }
-    
+
     pub fn functions(&self) -> &[Function<'bump>] {
         &self.functions
     }
-    
+
     pub fn sorts(&self) -> &[Sort<'bump>] {
         &self.sorts
     }
-    
+
     pub fn evaluator(&self) -> &Evaluator<'bump> {
         &self.evaluator
     }
-    
+
     pub fn name_caster(&self) -> &NameCasterCollection<'bump> {
         &self.name_caster
     }
-    
+
     pub fn owned_name_caster(&self) -> Arc<NameCasterCollection<'bump>> {
         Arc::clone(&self.name_caster)
     }
-    
+
     pub fn protocol(&self) -> &Protocol<'bump> {
         &self.protocol
     }
-    
+
     pub fn assertions(&self) -> &[ARichFormula<'bump>] {
         &self.assertions
     }
-    
+
     pub fn crypto_assertions(&self) -> &[CryptoAssumption<'bump>] {
         &self.crypto_assertions
     }
-    
+
     pub fn lemmas(&self) -> &VecDeque<ARichFormula<'bump>> {
         &self.lemmas
     }
-    
+
     pub fn query(&self) -> &ARichFormula<'bump> {
         &self.query
     }

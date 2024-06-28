@@ -1,12 +1,21 @@
-use anyhow::{bail, Context};
+use anyhow::{bail, ensure, Context};
+use itertools::Itertools;
+use log::{debug, trace};
 use std::{
-    io::Write,
-    path::PathBuf,
+    io::{BufWriter, Write},
+    num::NonZeroU32,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
     usize,
 };
+use tempfile::Builder;
 use thiserror::Error;
-use utils::implvec;
+use utils::{implvec, traits::MyWriteTo};
+
+use crate::{
+    environement::environement::Environement, problem::Problem, runner::searcher::InstanceSearcher,
+    smt::{SmtFile, SMT_FILE_EXTENSION},
+};
 
 #[derive(Debug, Clone)]
 pub struct VampireExec {
@@ -107,6 +116,7 @@ impl ToArgs<1> for bool {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum VampireOutput {
     Unsat(String),
     TimeOut(String),
@@ -137,29 +147,22 @@ impl VampireExec {
     pub fn run<'a>(
         &'a self,
         args: implvec!(&'a VampireArg),
-        pbl: &str,
+        pbl_file: &Path,
     ) -> anyhow::Result<VampireOutput> {
         let mut cmd = Command::new(&self.location);
         for arg in self.extra_args.iter().chain(args.into_iter()) {
+            // encode the arguments
             let [a, b] = arg.to_args();
             cmd.arg(a.as_ref()).arg(b.as_ref());
         }
+        cmd.arg(pbl_file); // encode the file
+        debug!("running vampire with {cmd:?}");
 
         let mut child = cmd
-            .stdin(Stdio::piped()) // We want to write to stdin
+            // .stdin(Stdio::piped()) // We want to write to stdin
             .stdout(Stdio::piped()) // Capture the stdout
             .spawn()
             .with_context(|| format!("Failed to start vampire ({:?})", &self.location))?;
-
-        // Get the stdin handle of the child process
-        if let Some(mut stdin) = child.stdin.take() {
-            // Write the content to stdin
-            stdin.write_all(pbl.as_bytes()).with_context(|| {
-                format!("Failed to write to vampire ({:?})'s stdin", &self.location)
-            })?;
-        } else {
-            bail!("Failed to open vampire ({:?})'s stdin", &self.location)
-        }
 
         // read the output from the process
         let output = child
@@ -180,5 +183,119 @@ impl VampireExec {
                 return_code,
             })?,
         }
+    }
+
+    /// run vampire on the [Problem] `pbl`. It will run vampire `ntimes` times and modify `pbl` each time
+    ///
+    /// If `save_to` is not
+    ///
+    /// ## Error
+    /// It fails
+    pub fn auto_run_vampire<'bump>(
+        &self,
+        env: &Environement<'bump>,
+        pbl: &mut Problem<'bump>,
+        ntimes: Option<NonZeroU32>,
+        save_to: Option<&Path>,
+    ) -> anyhow::Result<Vec<VampireOutput>> {
+        if let Some(p) = save_to {
+            // make sure the directory exists
+            ensure!(
+                !p.is_file(),
+                "{} is a file",
+                p.to_str().unwrap_or("[non unicode]")
+            );
+            std::fs::create_dir_all(p)?
+        }
+        let n: u32 = ntimes.map(NonZeroU32::get).unwrap_or(u32::MAX);
+        let mut ret = if let Some(n) = ntimes {
+            Vec::with_capacity(n.get() as usize)
+        } else {
+            vec![]
+        };
+        let mut tmp_builder = Builder::new();
+        tmp_builder.suffix(SMT_FILE_EXTENSION);
+
+        for i in 0..n {
+            debug!("running vampire {i:}/{n:}");
+            let mut file = tmp_builder.tempfile()?; // gen tmp file
+            SmtFile::from_general_file(env, pbl.into_general_file(&env)) // gen smt
+                .as_diplay(env)
+                .write_to_io(&mut BufWriter::new(&mut file))?; // write to tmp file
+
+            let out = self.run(&DEFAULT_VAMPIRE_ARGS, file.path())?; // run vampire
+            trace!("saving vampire's output");
+            ret.push(out);
+            let out = ret.last().unwrap(); // we just pushed to the array
+
+            if let Some(p) = save_to {
+                let name = p.join(file.path().file_name().unwrap()); // can't end in ".."
+                trace!("copying file to {name:?}");
+                std::fs::copy(file.path(), name)?;
+            }
+
+            let new_instances_str = match out {
+                VampireOutput::Unsat(_) => return Ok(ret),
+                VampireOutput::TimeOut(out) => out,
+            };
+
+            // find new instances
+            let new_instances = pbl
+                .crypto_assertions()
+                .iter()
+                .map(|ca| ca.search_instances(new_instances_str, env))
+                .flatten()
+                .collect_vec();
+            if new_instances.is_empty() {
+                // no new instances, no need to try again
+                bail!("no new instances")
+            }
+
+            let max_var_no_instances = pbl.max_var_no_extras();
+            if cfg!(debug_assertions) {
+                let str = new_instances.iter().map(|t| format!("{:}", t)).join(", ");
+                debug!("instances found ({:?}):\n\t[{:}]", new_instances.len(), str)
+            }
+            let n_new_instances = pbl.extend_extra_instances(
+                new_instances
+                    .into_iter()
+                    .map(|t| t.translate_vars(max_var_no_instances).into()),
+            );
+
+            if n_new_instances == 0 {
+                // if all the instances were found before, we bail
+                bail!("no new instances")
+            }
+        }
+
+        bail!("ran out of tries (at most {n})")
+    }
+}
+
+
+pub const DEFAULT_VAMPIRE_ARGS: [VampireArg; 5] = [
+    VampireArg::InputSyntax(vampire_suboptions::InputSyntax::SmtLib2),
+    VampireArg::ShowNew(true),
+    VampireArg::Avatar(false),
+    VampireArg::InlineLet(true),
+    VampireArg::NewCnf(true),
+];
+
+
+impl VampireOutput {
+    /// Returns `true` if the vampire output is [`TimeOut`].
+    ///
+    /// [`TimeOut`]: VampireOutput::TimeOut
+    #[must_use]
+    pub fn is_time_out(&self) -> bool {
+        matches!(self, Self::TimeOut(..))
+    }
+
+    /// Returns `true` if the vampire output is [`Unsat`].
+    ///
+    /// [`Unsat`]: VampireOutput::Unsat
+    #[must_use]
+    pub fn is_unsat(&self) -> bool {
+        matches!(self, Self::Unsat(..))
     }
 }
