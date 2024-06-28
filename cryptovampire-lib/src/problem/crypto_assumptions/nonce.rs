@@ -27,8 +27,8 @@ impl Nonce {
         assertions.push(Axiom::Comment("nonce".into()));
         let nonce_sort = NAME.clone();
         let message_sort = MESSAGE.clone();
-        let ev = &pbl.evaluator;
-        let nc = &pbl.name_caster;
+        let ev = pbl.evaluator();
+        let nc = pbl.name_caster();
 
         let kind = SubtermKindConstr::as_constr(pbl, env);
         let subterm = Subterm::new(
@@ -52,7 +52,7 @@ impl Nonce {
                     .chain(
                         subterm.not_of_sort(
                             env,
-                            pbl.sorts
+                            pbl.sorts()
                                 .iter()
                                 .filter(|&&s| !(s == nonce_sort || s.is_term_algebra()))
                                 .cloned(),

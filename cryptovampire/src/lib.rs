@@ -17,6 +17,7 @@ pub fn problem_try_from_str<'a, 'bump>(
     function_hash: implvec!(Function<'bump>),
     extra_names: implvec!(String),
     str: &'a str,
+    ignore_lemmas: bool
 ) -> Result<Problem<'bump>, parser::E> {
-    parser::parse_str(container, sort_hash, function_hash, extra_names, str).debug_continue()
+    parser::parse_str(container, sort_hash, function_hash, extra_names, str, ignore_lemmas).debug_continue()
 }

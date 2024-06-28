@@ -25,7 +25,7 @@ impl Cell {
         _env: &Environement<'bump>,
         pbl: &Problem<'bump>,
     ) {
-        let max_var = pbl.protocol.max_var();
+        let max_var = pbl.protocol().max_var();
         let step_var = Variable {
             id: max_var,
             sort: STEP.as_sort(),
@@ -33,7 +33,7 @@ impl Cell {
         let max_var = max_var + 1;
         assertions.push(Axiom::Comment("cells".into()));
         assertions.extend(
-            pbl.protocol
+            pbl.protocol()
                 .memory_cells()
                 .iter()
                 .map(|c| {
@@ -106,8 +106,8 @@ impl Cell {
                             nvars.clone().iter().cloned(),
                             (formula::ands(negative))
                                 >> formula::meq(
-                                    pbl.evaluator.eval(cell_call),
-                                    pbl.evaluator.eval(cell_call_prev),
+                                    pbl.evaluator().eval(cell_call),
+                                    pbl.evaluator().eval(cell_call_prev),
                                 )
                         )],
                         positive

@@ -45,7 +45,7 @@ pub fn generate<'bump>(
     assertions.push(Axiom::Comment("evaluate".into()));
 
     let relevant_functions = pbl
-        .functions
+        .functions()
         .iter()
         .filter_map(|f| match f.as_inner() {
             InnerFunction::TermAlgebra(TermAlgebra::Function(b)) => {
@@ -61,7 +61,7 @@ pub fn generate<'bump>(
 
     // [(Base Sort, Evaluated Sort)]
     let relevant_sorts = pbl
-        .sorts
+        .sorts()
         .iter()
         .filter_map(|sort| {
             sort.maybe_evaluated_sort()
@@ -94,7 +94,7 @@ pub fn generate<'bump>(
 
     // declare the evaluation functions
     declarations.extend(
-        pbl.evaluator
+        pbl.evaluator()
             .iter_functions()
             .map(Declaration::FreeFunction),
     );
@@ -104,7 +104,7 @@ pub fn generate<'bump>(
 
     if env.is_evaluated_realm() {
         assertions.extend(
-            pbl.evaluator
+            pbl.evaluator()
                 .iter()
                 .map(|(s, fun)| {
                     mforall!(x!1:s; {
@@ -151,10 +151,10 @@ pub fn generate<'bump>(
                             kind: rw_kind.clone(),
                             vars: vars.clone(),
                             pre: pbl
-                                .evaluator
+                                .evaluator()
                                 .eval(f.f(vars.iter().map(|v| v.into_formula()))),
                             post: ev
-                                .f_a(vars.iter().map(|v| pbl.evaluator.eval(v.into_aformula()))),
+                                .f_a(vars.iter().map(|v| pbl.evaluator().eval(v.into_aformula()))),
                         };
                         trace!("{:?}", out);
                         out
@@ -175,11 +175,11 @@ pub fn generate<'bump>(
 
                         let premise =
                             formula::ands(vars1.iter().zip(vars2.iter()).map(|(v1, _v2)| {
-                                meq(pbl.evaluator.eval(v1), pbl.evaluator.eval(v1))
+                                meq(pbl.evaluator().eval(v1), pbl.evaluator().eval(v1))
                             }));
                         let conclusion = meq(
-                            pbl.evaluator.eval(f.f_a(&vars1)), //.map(|v| v.into_formula()))),
-                            pbl.evaluator.eval(f.f_a(&vars2)),
+                            pbl.evaluator().eval(f.f_a(&vars1)), //.map(|v| v.into_formula()))),
+                            pbl.evaluator().eval(f.f_a(&vars2)),
                         );
                         mforall!(vars1.into_iter().chain(vars2.into_iter()), {
                             premise >> conclusion
@@ -190,7 +190,7 @@ pub fn generate<'bump>(
         }
     }
 
-    for function in &pbl.functions {
+    for function in pbl.functions() {
         match function.as_inner() {
             InnerFunction::TermAlgebra(ta) => {
                 match ta {
@@ -198,8 +198,8 @@ pub fn generate<'bump>(
                     TermAlgebra::Cell(_) | TermAlgebra::Input(_) | TermAlgebra::NameCaster(_) => continue, // nothing specific to be done here
                     TermAlgebra::IfThenElse(_) => {
                         assertions.push(Axiom::base(mforall!(c!0:cond, l!1:msg, r!2:msg; {
-                            meq(pbl.evaluator.eval(function.f_a([c, l, r])),
-                                IF_THEN_ELSE.f_a([c, l, r].into_iter().map(|v| pbl.evaluator.eval(v))))
+                            meq(pbl.evaluator().eval(function.f_a([c, l, r])),
+                                IF_THEN_ELSE.f_a([c, l, r].into_iter().map(|v| pbl.evaluator().eval(v))))
                         })))
                     },
                     TermAlgebra::Quantifier(q) => generate_quantifier(assertions, declarations, env, pbl, function, q),
@@ -313,13 +313,13 @@ fn generate_connectives<'bump>(
     match connective {
         Connective::Equality(_) => assertions.push(Axiom::base(mforall!(a!0:msg, b!1:msg; {
             meq(
-            pbl.evaluator.eval(function.f([a.clone(), b.clone()])),
-                meq(pbl.evaluator.eval(a), pbl.evaluator.eval(b)))
+            pbl.evaluator().eval(function.f([a.clone(), b.clone()])),
+                meq(pbl.evaluator().eval(a), pbl.evaluator().eval(b)))
         }))),
         Connective::BaseConnective(BaseConnective::Not) => {
             assertions.push(Axiom::base(mforall!(a!0:cond; {
-                pbl.evaluator.eval(function.f([a.clone()])) >>
-                    !pbl.evaluator.eval(a)
+                pbl.evaluator().eval(function.f([a.clone()])) >>
+                    !pbl.evaluator().eval(a)
             })))
         }
         Connective::BaseConnective(c) => {
@@ -333,8 +333,8 @@ fn generate_connectives<'bump>(
                 .collect_vec();
             assertions.push(Axiom::base(mforall!(args.clone(), {
                 meq(
-                    pbl.evaluator.eval(function.f_a(&args)),
-                    f_eval.f_a(args.iter().map(|v| pbl.evaluator.eval(v))),
+                    pbl.evaluator().eval(function.f_a(&args)),
+                    f_eval.f_a(args.iter().map(|v| pbl.evaluator().eval(v))),
                 )
             })))
         }
@@ -352,19 +352,19 @@ pub fn generate_quantifier<'bump>(
     match q.inner() {
         InnerQuantifier::Forall { content } => {
             assertions.push(Axiom::base(mforall!(q.free_variables.iter().cloned(), {
-                pbl.evaluator
+                pbl.evaluator()
                     .eval(function.f(q.free_variables.iter().map(|v| v.into_formula())))
                     >> mforall!(q.bound_variables.iter().cloned(), {
-                        pbl.evaluator.eval(content)
+                        pbl.evaluator().eval(content)
                     })
             })))
         }
         InnerQuantifier::Exists { content } => {
             assertions.push(Axiom::base(mforall!(q.free_variables.iter().cloned(), {
-                pbl.evaluator
+                pbl.evaluator()
                     .eval(function.f(q.free_variables.iter().map(|v| v.into_formula())))
                     >> mexists!(q.bound_variables.iter().cloned(), {
-                        pbl.evaluator.eval(content)
+                        pbl.evaluator().eval(content)
                     })
             })))
         }
@@ -402,17 +402,17 @@ pub fn generate_quantifier<'bump>(
                 [
                     mforall!(q.free_variables.iter().cloned(), {
                         mforall!(q.bound_variables.iter().cloned(), {
-                            !pbl.evaluator.eval(condition)
-                        }) | pbl.evaluator.eval(applied_condition.clone())
+                            !pbl.evaluator().eval(condition)
+                        }) | pbl.evaluator().eval(applied_condition.clone())
                     }),
                     mforall!(q.free_variables.iter().cloned(), {
                         meq(
-                            pbl.evaluator.eval(
+                            pbl.evaluator().eval(
                                 function.f(q.free_variables.iter().map(|v| v.into_formula())),
                             ),
                             IF_THEN_ELSE.f([applied_condition, applied_l, applied_r]
                                 .into_iter()
-                                .map(|f| pbl.evaluator.eval(f))),
+                                .map(|f| pbl.evaluator().eval(f))),
                         )
                     }),
                 ]

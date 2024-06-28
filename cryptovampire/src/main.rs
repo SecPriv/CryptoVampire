@@ -76,13 +76,14 @@ fn main() {
             BUILT_IN_FUNCTIONS.iter().cloned(),
             parser::USED_KEYWORDS.iter().map(|s| s.to_string()),
             &str,
+            env.are_lemmas_ignored()
         )
         .expect_display("parsing error:");
 
-        if env.are_lemmas_ignored() {
-            pbl.lemmas.clear();
-            pbl.lemmas.shrink_to_fit();
-        }
+        // if env.are_lemmas_ignored() {
+        //     pbl.lemmas.clear();
+        //     pbl.lemmas.shrink_to_fit();
+        // }
 
         if USE_MIRI {
             println!(

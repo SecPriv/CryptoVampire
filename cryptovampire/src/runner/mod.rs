@@ -71,7 +71,7 @@ pub fn run_multiple_time<'bump>(
         };
 
         let tmp = pbl
-            .crypto_assertions
+            .crypto_assertions()
             .iter()
             .map(|ca| ca.search_instances(&to_search, env))
             .flatten()
@@ -85,7 +85,7 @@ pub fn run_multiple_time<'bump>(
             let str = tmp.iter().map(|t| format!("{:}", t)).join(", ");
             debug!("instances found ({:?}):\n\t[{:}]", tmp.len(), str)
         }
-        pbl.extra_instances.extend(
+        pbl.extend_extra_instances(
             tmp.into_iter()
                 .map(|t| t.translate_vars(max_var_no_instances).into()),
         )

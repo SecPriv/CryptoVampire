@@ -59,8 +59,8 @@ impl<'bump> IntCtxt<'bump> {
         assertions.push(Axiom::Comment("int ctxt".into()));
         let nonce_sort = NAME.clone();
         let message_sort = MESSAGE.clone();
-        let ev = &pbl.evaluator;
-        let nc = &pbl.name_caster;
+        let ev = pbl.evaluator();
+        let nc = pbl.owned_name_caster();
         let kind = SubtermKindConstr::as_constr(pbl, env);
 
         let subterm_main = Subterm::new(
@@ -81,7 +81,7 @@ impl<'bump> IntCtxt<'bump> {
             &kind,
             KeyAux {
                 int_ctxt: *self,
-                name_caster: Arc::clone(&pbl.name_caster),
+                name_caster: Arc::clone(&nc),
             },
             [self.enc, self.dec, self.verify],
             UnfoldFlags::all(),
@@ -95,7 +95,7 @@ impl<'bump> IntCtxt<'bump> {
             &kind,
             RandAux {
                 int_ctxt: *self,
-                name_caster: Arc::clone(&pbl.name_caster),
+                name_caster: Arc::clone(&nc),
             },
             [self.enc],
             UnfoldFlags::all(),
@@ -155,12 +155,12 @@ impl<'bump> IntCtxt<'bump> {
             [
                 mforall!(m!0:message_sort, c!1:message_sort, k!2:message_sort; {
                     meq(
-                        pbl.evaluator.eval(m),
-                        pbl.evaluator.eval(self.dec.f_a([self.enc.f_a([m, c, k]), k.into()]))
+                        ev.eval(m),
+                        ev.eval(self.dec.f_a([self.enc.f_a([m, c, k]), k.into()]))
                     )
                 }),
                 mforall!(m!0:message_sort, c!1:message_sort, k!2:message_sort; {
-                        pbl.evaluator.eval(self.verify.f_a([self.enc.f_a([m, c, k]), k.into()]))
+                        ev.eval(self.verify.f_a([self.enc.f_a([m, c, k]), k.into()]))
                 }),
             ]
             .map(Axiom::base),
@@ -187,7 +187,7 @@ impl<'bump> IntCtxt<'bump> {
                     if_chain! {
                         if fun == &self.verify;
                         if let RichFormula::Fun(nf, args2) = args[1].as_ref();
-                        if nf == pbl.name_caster.cast_function(&MESSAGE.as_sort()).unwrap();
+                        if nf == pbl.name_caster().cast_function(&MESSAGE.as_sort()).unwrap();
                         then {
                             let [cipher,  key] =
                                 [&args[0],  &args2[0]]
@@ -211,7 +211,7 @@ impl<'bump> IntCtxt<'bump> {
                     if fun == &self.enc {
                         if_chain! {
                             if let RichFormula::Fun(nf, args2) = args[1].as_ref();
-                            if nf == pbl.name_caster.cast_function(&MESSAGE.as_sort()).unwrap();
+                            if nf == pbl.name_caster().cast_function(&MESSAGE.as_sort()).unwrap();
                             then {
                             let [message, key, rand] =
                                 [&args[0], &args[2], &args2[0]]
@@ -258,7 +258,7 @@ impl<'bump> IntCtxt<'bump> {
                 let u_f = u_var.into_aformula();
                 let r_var = Variable::new(max_var + 1, NAME.as_sort());
                 let r_f = pbl
-                    .name_caster
+                    .name_caster()
                     .cast(MESSAGE.as_sort(), r_var.into_formula());
                 let max_var = max_var + 2;
 
@@ -266,9 +266,9 @@ impl<'bump> IntCtxt<'bump> {
                     && subterm_key
                         .preprocess_terms(
                             &realm,
-                            &pbl.protocol,
+                            pbl.protocol(),
                             &key,
-                            pbl.protocol
+                            pbl.protocol()
                                 .list_top_level_terms_short_lifetime_and_bvars()
                                 .chain([cipher.shallow_copy().into()]),
                             false,
@@ -277,12 +277,12 @@ impl<'bump> IntCtxt<'bump> {
                         .next()
                         .is_none();
                 if k_sc {
-                    let k_f = pbl.name_caster.cast(MESSAGE.as_sort(), key.clone());
+                    let k_f = pbl.name_caster().cast(MESSAGE.as_sort(), key.clone());
                     let n_c_f = self.enc.f_a([u_f.clone(), r_f.clone(), k_f.clone()]);
 
                     let disjunction = subterm_main.preprocess_terms(
                         &realm,
-                        &pbl.protocol,
+                        pbl.protocol(),
                         &n_c_f,
                         [cipher.shallow_copy().into()],
                         true,
@@ -367,15 +367,15 @@ impl<'bump> IntCtxt<'bump> {
                     //     });
 
                     Some(mforall!(free_vars, {
-                        (pbl.evaluator
+                        (pbl.evaluator()
                             .eval(self.verify.f([cipher.clone(), k_f.clone()]))
                             // & mforall!([r_var], { other_sc })
                             & other_sc)
                             >> mexists!([u_var, r_var], {
                                 into_exist_formula(disjunction)
                                     & meq(
-                                        pbl.evaluator.eval(cipher.clone()),
-                                        pbl.evaluator.eval(n_c_f),
+                                        pbl.evaluator().eval(cipher.clone()),
+                                        pbl.evaluator().eval(n_c_f),
                                     )
                             })
                     }))

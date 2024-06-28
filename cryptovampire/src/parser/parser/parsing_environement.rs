@@ -25,7 +25,12 @@ use cryptovampire_lib::{
         },
         sort::Sort,
     },
-    problem::{cell::MemoryCell, problem::Problem, protocol::Protocol, step::Step},
+    problem::{
+        cell::MemoryCell,
+        problem::{Problem, ProblemBuilder},
+        protocol::Protocol,
+        step::Step,
+    },
 };
 use utils::{
     f, implderef, implvec,
@@ -248,6 +253,7 @@ pub fn parse_str<'a, 'bump>(
     function_hash: implvec!(Function<'bump>),
     extra_names: implvec!(String),
     str: &'a str,
+    ignore_lemmas: bool,
 ) -> Result<Problem<'bump>, E> {
     trace!("[P] parsing...");
 
@@ -320,19 +326,36 @@ pub fn parse_str<'a, 'bump>(
     }
 
     trace!("[P] \tparsing done");
-    let pbl = Problem {
-        functions: env.get_functions().collect(),
-        sorts: env.get_sorts().collect(),
-        evaluator: Arc::new(env.evaluator.clone()),
-        name_caster: Arc::new(env.name_caster_collection.clone()),
-        protocol,
-        assertions,
-        lemmas,
-        query,
-        container,
-        crypto_assertions: asserts_crypto,
-        extra_instances: Default::default(),
-    };
+    // let pbl = Problem {
+    //     functions: env.get_functions().collect(),
+    //     sorts: env.get_sorts().collect(),
+    //     evaluator: Arc::new(env.evaluator.clone()),
+    //     name_caster: Arc::new(env.name_caster_collection.clone()),
+    //     protocol,
+    //     assertions,
+    //     lemmas,
+    //     query,
+    //     container,
+    //     crypto_assertions: asserts_crypto,
+    //     extra_instances: Default::default(),
+    // };
 
-    Ok(pbl)
+    // Ok(pbl)
+    let mut pbl_builder = ProblemBuilder::default();
+    pbl_builder
+        .functions(env.get_functions().collect())
+        .sorts(env.get_sorts().collect())
+        .evaluator(Arc::new(env.evaluator.clone()))
+        .name_caster(Arc::new(env.name_caster_collection.clone()))
+        .protocol(protocol)
+        .assertions(assertions)
+        // .lemmas(lemmas)
+        .query(query)
+        .container(container)
+        .crypto_assertions(asserts_crypto);
+
+    if !ignore_lemmas {
+        pbl_builder.lemmas(lemmas);
+    }
+    Ok(pbl_builder.build().unwrap())
 }

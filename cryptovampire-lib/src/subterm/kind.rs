@@ -71,9 +71,9 @@ impl<'a, 'bump> SubtermKindConstr<'a, 'bump> {
         if env.use_vampire_subterm() {
             AbsSubtermKindG::Vampire(())
         } else {
-            trace!("[{}]", pbl.sorts.iter().join(", "));
+            trace!("[{}]", pbl.sorts().iter().join(", "));
             // AbsSubtermKindG::Regular(pbl.sorts.iter().filter(|s| s.is_evaluatable()).collect())
-            AbsSubtermKindG::Regular(VecRef::Ref(&pbl.sorts))
+            AbsSubtermKindG::Regular(VecRef::Ref(pbl.sorts()))
         }
     }
 }
