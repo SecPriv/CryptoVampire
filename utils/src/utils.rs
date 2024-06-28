@@ -107,6 +107,9 @@ macro_rules! implvec {
     ($t:ty) => {
         impl std::iter::IntoIterator<Item = $t>
     };
+    ($t:ty : $lt:lifetime) => {
+        impl std::iter::IntoIterator<Item = $t> + $tl
+    };
 
 }
 

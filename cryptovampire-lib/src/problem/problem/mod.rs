@@ -1,8 +1,10 @@
 // pub mod builder;
 mod pbl_iterator;
+use derive_builder::Builder;
 use hashbrown::HashSet;
 use log::trace;
 pub use pbl_iterator::PblIterator;
+use utils::implvec;
 
 use std::{
     cell::RefCell,
@@ -35,20 +37,26 @@ use super::{
     protocol::Protocol,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Builder)]
 pub struct Problem<'bump> {
-    pub container: &'bump ScopedContainer<'bump>,
-    /// functions to declare (not already declared somewhere else)
-    pub functions: Vec<Function<'bump>>, // to keep track of 'static functions
-    pub sorts: Vec<Sort<'bump>>, // same
-    pub evaluator: Arc<Evaluator<'bump>>,
-    pub name_caster: Arc<NameCasterCollection<'bump>>,
-    pub protocol: Protocol<'bump>,
-    pub assertions: Vec<ARichFormula<'bump>>,
-    pub crypto_assertions: Vec<CryptoAssumption<'bump>>,
-    pub lemmas: VecDeque<ARichFormula<'bump>>,
-    pub query: ARichFormula<'bump>,
-    pub extra_instances: HashSet<ARichFormula<'bump>>,
+    container: &'bump ScopedContainer<'bump>,
+    /// [Function]s to declare (not already declared somewhere else)
+    functions: Vec<Function<'bump>>, // to keep track of 'static functions
+    /// [Sort]s to declare (not already declared somewhere else)
+    sorts: Vec<Sort<'bump>>, // same
+    evaluator: Arc<Evaluator<'bump>>,
+    name_caster: Arc<NameCasterCollection<'bump>>,
+    protocol: Protocol<'bump>,
+    #[builder(default)]
+    assertions: Vec<ARichFormula<'bump>>,
+    #[builder(default)]
+    crypto_assertions: Vec<CryptoAssumption<'bump>>,
+    #[builder(default)]
+    lemmas: VecDeque<ARichFormula<'bump>>,
+    #[builder(setter(into))]
+    query: ARichFormula<'bump>,
+    #[builder(default)]
+    extra_instances: HashSet<ARichFormula<'bump>>,
 }
 
 impl<'bump> Problem<'bump> {
@@ -117,6 +125,55 @@ impl<'bump> Problem<'bump> {
             assertions,
             declarations,
         }
+    }
+
+    /// return the number of new instances added
+    pub fn extend_extra_instances(&mut self, instances: implvec!(ARichFormula<'bump>)) -> usize {
+        let pre = self.extra_instances.len();
+        self.extra_instances.extend(instances.into_iter());
+        let n = self.extra_instances.len() - pre;
+        trace!("added {n} instances");
+        n
+    }
+
+    pub fn functions(&self) -> &[Function<'bump>] {
+        &self.functions
+    }
+
+    pub fn sorts(&self) -> &[Sort<'bump>] {
+        &self.sorts
+    }
+
+    pub fn evaluator(&self) -> &Evaluator<'bump> {
+        &self.evaluator
+    }
+
+    pub fn name_caster(&self) -> &NameCasterCollection<'bump> {
+        &self.name_caster
+    }
+
+    pub fn owned_name_caster(&self) -> Arc<NameCasterCollection<'bump>> {
+        Arc::clone(&self.name_caster)
+    }
+
+    pub fn protocol(&self) -> &Protocol<'bump> {
+        &self.protocol
+    }
+
+    pub fn assertions(&self) -> &[ARichFormula<'bump>] {
+        &self.assertions
+    }
+
+    pub fn crypto_assertions(&self) -> &[CryptoAssumption<'bump>] {
+        &self.crypto_assertions
+    }
+
+    pub fn lemmas(&self) -> &VecDeque<ARichFormula<'bump>> {
+        &self.lemmas
+    }
+
+    pub fn query(&self) -> &ARichFormula<'bump> {
+        &self.query
     }
 }
 

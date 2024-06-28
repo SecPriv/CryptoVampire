@@ -9,7 +9,12 @@ use crate::{
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::{forall, meq, ARichFormula, RichFormula},
-        function::{builtin::{EQUALITY_TA, MESSAGE_TO_BITSTRING}, inner::subterm::Subsubterm, name_caster_collection::NameCasterCollection, Function},
+        function::{
+            builtin::{EQUALITY_TA, MESSAGE_TO_BITSTRING},
+            inner::subterm::Subsubterm,
+            name_caster_collection::NameCasterCollection,
+            Function,
+        },
         manipulation::OneVarSubst,
         sort::builtins::{CONDITION, MESSAGE, NAME},
         utils::formula_expander::UnfoldFlags,
@@ -28,7 +33,7 @@ use crate::{
         Subterm,
     },
 };
-use utils::{arc_into_iter::ArcIntoIter, or_chain, utils::print_type};
+use utils::{arc_into_iter::ArcIntoIter, utils::print_type};
 
 pub type SubtermEufCmaMacMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
 pub type SubtermEufCmaMacKey<'bump> = Subterm<'bump, KeyAux<'bump>>;
@@ -55,8 +60,6 @@ impl<'bump> EufCmaMac<'bump> {
         assertions.push(Axiom::Comment("euf-cma mac".into()));
         let nonce_sort = NAME.clone();
         let message_sort = MESSAGE.clone();
-        let ev = &pbl.evaluator;
-        let nc = &pbl.name_caster;
         let kind = SubtermKindConstr::as_constr(pbl, env);
 
         let subterm_main = Subterm::new(
@@ -76,7 +79,7 @@ impl<'bump> EufCmaMac<'bump> {
             &kind,
             KeyAux {
                 euf_cma: *self,
-                name_caster: Arc::clone(&pbl.name_caster),
+                name_caster: pbl.owned_name_caster(),
             },
             [self.mac, self.verify],
             UnfoldFlags::NO_MACROS,
@@ -85,7 +88,7 @@ impl<'bump> EufCmaMac<'bump> {
 
         // base axiom
         assertions.push(Axiom::base(mforall!(m!1:message_sort, k!0:message_sort; {
-            pbl.evaluator.eval(self.verify.f_a([self.mac.f_a([m, k]), m.into(), k.into()]))
+            pbl.evaluator().eval(self.verify.f_a([self.mac.f_a([m, k]), m.into(), k.into()]))
         })));
 
         // preprocessing
@@ -120,7 +123,7 @@ impl<'bump> EufCmaMac<'bump> {
                 };
                 let k_f = k.into_aformula();
                 let formula = {
-                    let iter = subterm_key.preprocess_whole_ptcl(env, &pbl.protocol, &k_f);
+                    let iter = subterm_key.preprocess_whole_ptcl(env, pbl.protocol(), &k_f);
                     into_exist_formula(iter)
                 };
 
@@ -131,7 +134,8 @@ impl<'bump> EufCmaMac<'bump> {
             assertions.push(Axiom::Ground{
                 sort: message_sort,
                 formula : mforall!(m!1:message_sort, sigma!2:message_sort, k!3:nonce_sort; {
-                    let k_f = nc.cast(message_sort, k.clone());
+                    let k_f = pbl.name_caster().cast(message_sort, k.clone());
+                    let ev = pbl.evaluator();
                     ev.eval(self.verify.f_a([m.into(), sigma.into(), k_f.clone()])) >>
                     mexists!(u!4:message_sort; {
                         meq(ev.eval(u.clone()), ev.eval(m.clone())) &
@@ -160,6 +164,7 @@ impl<'bump> EufCmaMac<'bump> {
         // let pile1 = RefCell::new(Vec::new());
         let pile2 = RefCell::new(Vec::new());
         let realm = env.get_realm();
+        let cast_messages = pbl.name_caster().cast_function(&MESSAGE.as_sort()).unwrap();
         let candidates = pbl
             .list_top_level_terms()
             .flat_map(move |f| f.iter()) // sad...
@@ -169,7 +174,7 @@ impl<'bump> EufCmaMac<'bump> {
                         if_chain! { // verify
                             if fun == &self.verify;
                             if let RichFormula::Fun(nf, args2) = args[2].as_ref();
-                            if nf == pbl.name_caster.cast_function(&MESSAGE.as_sort()).unwrap();
+                            if nf == cast_messages;
                             then {
                                 Some(prepare_candidate(max_var, &args[1], &args[0], &args2[0]))
                             } else {None}
@@ -180,7 +185,7 @@ impl<'bump> EufCmaMac<'bump> {
                             if let RichFormula::Fun(hmac, argshash) = args[0].as_ref();
                             if hmac == &self.mac;
                             if let RichFormula::Fun(nf, argk) = argshash[1].as_ref();
-                            if nf == pbl.name_caster.cast_function(&MESSAGE.as_sort()).unwrap();
+                            if nf == cast_messages;
                             then {
                                 Some(prepare_candidate(max_var, &argshash[0], &args[1], &argk[0]))
                             } else {None}
@@ -191,7 +196,7 @@ impl<'bump> EufCmaMac<'bump> {
                             if let RichFormula::Fun(hmac, argshash) = args[1].as_ref();
                             if hmac == &self.mac;
                             if let RichFormula::Fun(nf, argk) = argshash[1].as_ref();
-                            if nf == pbl.name_caster.cast_function(&MESSAGE.as_sort()).unwrap();
+                            if nf == cast_messages;
                             then {
                                 Some(prepare_candidate(max_var, &argshash[1], &args[0], &argk[0]))
                             } else {None}
@@ -205,7 +210,7 @@ impl<'bump> EufCmaMac<'bump> {
                             if let RichFormula::Fun(hmac, argshash) = argevalhash[0].as_ref();
                             if hmac == &self.mac;
                             if let RichFormula::Fun(nf, argk) = argshash[1].as_ref();
-                            if nf == pbl.name_caster.cast_function(&MESSAGE.as_sort()).unwrap();
+                            if nf == cast_messages;
                             then {
                                 Some(prepare_candidate(max_var, &argshash[0], &argevalsigma[0], &argk[0]))
                             } else {None}
@@ -219,7 +224,7 @@ impl<'bump> EufCmaMac<'bump> {
                             if let RichFormula::Fun(hmac, argshash) = argevalhash[0].as_ref();
                             if hmac == &self.mac;
                             if let RichFormula::Fun(nf, argk) = argshash[1].as_ref();
-                            if nf == pbl.name_caster.cast_function(&MESSAGE.as_sort()).unwrap();
+                            if nf == cast_messages;
                             then {
                                 Some(prepare_candidate(max_var, &argshash[0], &argevalsigma[0], &argk[0]))
                             } else {None}
@@ -230,7 +235,7 @@ impl<'bump> EufCmaMac<'bump> {
                             if let RichFormula::Fun(hmac, argshash) = args[0].as_ref();
                             if hmac == &self.mac;
                             if let RichFormula::Fun(nf, argk) = argshash[1].as_ref();
-                            if nf == pbl.name_caster.cast_function(&MESSAGE.as_sort()).unwrap();
+                            if nf == cast_messages;
                             then {
                                 Some(prepare_candidate(max_var, &argshash[0], &args[1], &argk[0]))
                             } else {None}
@@ -241,7 +246,7 @@ impl<'bump> EufCmaMac<'bump> {
                             if let RichFormula::Fun(hmac, argshash) = args[1].as_ref();
                             if hmac == &self.mac;
                             if let RichFormula::Fun(nf, argk) = argshash[1].as_ref();
-                            if nf == pbl.name_caster.cast_function(&MESSAGE.as_sort()).unwrap();
+                            if nf == cast_messages;
                             then {
                                 Some(prepare_candidate(max_var, &argshash[1], &args[0], &argk[0]))
                             } else {None}
@@ -278,14 +283,14 @@ impl<'bump> EufCmaMac<'bump> {
 
                     let h_of_u = self
                         .mac
-                        .f_a([u_var.into(), pbl.name_caster.cast(MESSAGE.as_sort(), &key)]);
+                        .f_a([u_var.into(), pbl.name_caster().cast(MESSAGE.as_sort(), &key)]);
 
                     let k_sc = subterm_key
                         .preprocess_terms(
                             &realm,
-                            &pbl.protocol,
+                            pbl.protocol(),
                             &key,
-                            pbl.protocol
+                            pbl.protocol()
                                 .list_top_level_terms_short_lifetime_and_bvars()
                                 .chain([&message, &signature].map(|t| t.shallow_copy().into())),
                             false,
@@ -297,7 +302,7 @@ impl<'bump> EufCmaMac<'bump> {
                         let mformula = {
                             let iter = subterm_main.preprocess_terms(
                                 &realm,
-                                &pbl.protocol,
+                                pbl.protocol(),
                                 &h_of_u,
                                 [&message, &signature].map(|f| f.shallow_copy().into()),
                                 true,
@@ -308,21 +313,21 @@ impl<'bump> EufCmaMac<'bump> {
 
                         if realm.is_symbolic_realm() {
                             Some(mforall!(free_vars, {
-                                pbl.evaluator.eval(self.verify.f([
+                                pbl.evaluator().eval(self.verify.f([
                                     signature.clone(),
                                     message.clone(),
-                                    pbl.name_caster.cast(MESSAGE.as_sort(), key.clone()),
+                                    pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),
                                 ])) >> mexists!([u_var], {
-                                    meq(pbl.evaluator.eval(u_var), pbl.evaluator.eval(&message))
+                                    meq(pbl.evaluator().eval(u_var), pbl.evaluator().eval(&message))
                                         & mformula
                                 })
                             }))
                         } else {
                             Some(mforall!(free_vars, {
-                                pbl.evaluator.eval(self.verify.f([
+                                pbl.evaluator().eval(self.verify.f([
                                     signature.clone(),
                                     message.clone(),
-                                    pbl.name_caster.cast(MESSAGE.as_sort(), key.clone()),
+                                    pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),
                                 ])) >> mformula.apply_substitution2(&OneVarSubst {
                                     id: u_var.id,
                                     f: message.clone(),

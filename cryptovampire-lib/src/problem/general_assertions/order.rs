@@ -23,7 +23,7 @@ pub fn generate<'bump>(
     let happens = HAPPENS.clone();
     let step = STEP.clone();
     let init = pbl
-        .protocol
+        .protocol()
         .init_step()
         .function()
         .f_a::<Variable<'bump>>([]);
@@ -63,6 +63,6 @@ pub fn generate<'bump>(
         ]
         .into_iter()
         .map(Axiom::theory)
-        .chain(pbl.protocol.ordering().iter().cloned().map(Axiom::base)),
+        .chain(pbl.protocol().ordering().iter().cloned().map(Axiom::base)),
     );
 }

@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use cryptovampire_lib::{
+use crate::{
     environement::{
         environement::Environement,
         traits::{KnowsRealm, Realm},

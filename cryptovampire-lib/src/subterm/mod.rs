@@ -232,7 +232,7 @@ where
         &'a self,
         pbl: &'a Problem<'bump>,
     ) -> impl Iterator<Item = Function<'bump>> + 'a {
-        pbl.functions
+        pbl.functions()
             .iter()
             .filter(|f| f.is_default_subterm())
             .filter(|fun| !self.ignored_functions.contains(fun))
@@ -295,7 +295,7 @@ where
         keep_guard: bool,
     ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
         let funs = pbl
-            .functions
+            .functions()
             .iter()
             .filter(|f| {
                 f.is_term_algebra()
@@ -303,7 +303,7 @@ where
             })
             .cloned();
         trace!("{}:{}:{}", file!(), line!(), column!());
-        self.generate_special_functions_assertions(funs, env, &pbl.protocol, keep_guard)
+        self.generate_special_functions_assertions(funs, env, pbl.protocol(), keep_guard)
     }
 
     /// whach out for variable clash
@@ -527,7 +527,7 @@ where
     ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
         let realm = env.get_realm();
         let sorts = pbl
-            .sorts
+            .sorts()
             .iter()
             .filter(move |&&s| {
                 (s != self.sort())

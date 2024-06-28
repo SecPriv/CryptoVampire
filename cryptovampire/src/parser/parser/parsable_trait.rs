@@ -3,14 +3,11 @@ mod cached_builtins;
 
 use itertools::Itertools;
 use log::{log_enabled, trace};
-use pest::Span;
 
-use crate::{
-    parser::{
-        ast::{self, extra::SnN, Term, VariableBinding},
-        err, merr, IntoRuleResult, E,
-    },
-    smt::smt::SmtFormula,
+
+use crate::parser::{
+    ast::{self, extra::SnN, Term, VariableBinding},
+    err, merr, IntoRuleResult, E,
 };
 use cryptovampire_lib::{
     environement::traits::{KnowsRealm, Realm},
@@ -30,6 +27,7 @@ use cryptovampire_lib::{
         },
         variable::Variable,
     },
+    smt::SmtFormula,
 };
 use utils::{f, implvec, match_as_trait, maybe_owned::MOw, traits::NicerError, try_trace};
 
@@ -47,6 +45,7 @@ pub struct VarProxy<'bump> {
 }
 
 impl<'bump> VarProxy<'bump> {
+    #[allow(dead_code)]
     pub fn try_into_variable(&self) -> Option<Variable<'bump>> {
         let VarProxy { id, sort } = self;
         sort.as_option().map(|sort| Variable { id: *id, sort })
@@ -905,41 +904,5 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Term<'a> {
 
         match_as_trait!(ast::InnerTerm, |x| in &self.inner => LetIn | If | Fndst | Quant | Application | Infix | Macro
                     {x.parse(env, bvars, state, expected_sort)})
-    }
-}
-
-fn check_out_sort<'str, 'bump>(
-    env: &Environement<'bump, 'str>,
-    span: Span<'str>,
-    realm: &impl KnowsRealm,
-    expected_sort: Option<SortProxy<'bump>>,
-    out_sort: Option<SortProxy<'bump>>,
-    mut forumla: ARichFormula<'bump>,
-) -> Result<ARichFormula<'bump>, E> {
-    match (out_sort, expected_sort) {
-        (None, _) | (_, None) => Ok(forumla),
-        (Some(os), Some(es)) => match os.as_option() {
-            None => {
-                os.unify(&es, realm).unwrap_display(); // should never fail
-                Ok(forumla)
-            }
-            Some(os) => {
-                let mut out = os;
-                if out == NAME.as_sort() {
-                    out = MESSAGE.as_sort();
-                    forumla = env.name_caster_collection.cast(MESSAGE.as_sort(), forumla);
-                    trace!("name cast in: {}", &forumla);
-                }
-                if realm.get_realm() == Realm::Evaluated && out.realm() == Some(Realm::Symbolic) {
-                    forumla = env.evaluator.get_eval_function(out).unwrap().f_a([forumla]);
-                    out = out.maybe_evaluated_sort().unwrap();
-                    trace!("evalluation in: {}", &forumla);
-                }
-                es.unify_rev(&out.into(), realm)
-                    .into_rr(span)
-                    .debug_continue()?;
-                Ok(forumla)
-            }
-        },
     }
 }

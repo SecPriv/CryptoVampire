@@ -12,13 +12,10 @@ use cryptovampire_lib::{
 };
 use utils::{destvec, implvec, traits::NicerError};
 
-pub fn parse_asserts_crypto<'a, 'str, 'bump, B>(
+pub fn parse_asserts_crypto<'a, 'str, 'bump>(
     env: &'a Environement<'bump, 'str>,
     crypto: implvec!(&'a ast::AssertCrypto<'str>),
-) -> Result<B, E>
-where
-    B: FromIterator<CryptoAssumption<'bump>>,
-{
+) -> Result<Vec<CryptoAssumption<'bump>>, E> {
     crypto
         .into_iter()
         .map(|ac| parse_assert_crypto(env, ac))

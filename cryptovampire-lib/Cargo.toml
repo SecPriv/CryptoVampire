@@ -27,6 +27,9 @@ anyhow = { workspace = true }
 bitflags = "2.0"
 derive_builder = "0.20.0"
 serde = { version = "1.0", features = ["derive"], optional = true}
+tptp = "0.31"
+regex = "1.10"
+tempfile = "3.10"
 
 # dashmap = "5.5.3"
 # smol = "2.0.0"

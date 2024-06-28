@@ -1,9 +1,6 @@
 use std::ops::Deref;
 
-use cryptovampire_lib::{
-    formula::function::Function,
-    problem::{cell::MemoryCell, step::Step},
-};
+
 
 #[derive(Hash, Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Guard<T>(T);
@@ -21,7 +18,3 @@ impl<T> From<T> for Guard<T> {
         Guard(value)
     }
 }
-
-pub type GuardedFunction<'bump> = Guard<Function<'bump>>;
-pub type GuardedStep<'bump> = Guard<Step<'bump>>;
-pub type GuardedMemoryCell<'bump> = Guard<MemoryCell<'bump>>;

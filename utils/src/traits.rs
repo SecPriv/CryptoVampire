@@ -24,7 +24,8 @@ where
     }
 
     fn write_to_io<U: std::io::Write>(&self, f: &mut U) -> std::io::Result<()> {
-        write!(f, "{self}")
+        write!(f, "{self}")?;
+        f.flush()
     }
 }
 

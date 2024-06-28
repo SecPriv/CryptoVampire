@@ -65,8 +65,6 @@ impl<'bump> EufCmaSign<'bump> {
         assertions.push(Axiom::Comment("euf-cma sign".into()));
         let nonce_sort = NAME.clone();
         let message_sort = MESSAGE.clone();
-        let ev = &pbl.evaluator;
-        let nc = &pbl.name_caster;
         let kind = SubtermKindConstr::as_constr(pbl, env);
 
         let subterm_main = Subterm::new(
@@ -86,7 +84,7 @@ impl<'bump> EufCmaSign<'bump> {
             &kind,
             KeyAux {
                 euf_cma: *self,
-                name_caster: Arc::clone(&pbl.name_caster),
+                name_caster: pbl.owned_name_caster(),
             },
             [self.sign, self.pk],
             UnfoldFlags::NO_MACROS,
@@ -122,8 +120,11 @@ impl<'bump> EufCmaSign<'bump> {
                     sort: nonce_sort,
                 };
                 let k_f = k.into_aformula();
-                let ors =
-                    into_exist_formula(subterm_key.preprocess_whole_ptcl(env, &pbl.protocol, &k_f));
+                let ors = into_exist_formula(subterm_key.preprocess_whole_ptcl(
+                    env,
+                    pbl.protocol(),
+                    &k_f,
+                ));
 
                 forall([k], split.f_a([k_f]) >> ors)
             }));
@@ -131,7 +132,8 @@ impl<'bump> EufCmaSign<'bump> {
             assertions.push(Axiom::Ground{
                 sort: message_sort,
                 formula: mforall!(m!1:message_sort, sigma!2:message_sort, k!3:nonce_sort; {
-                    let k_f = nc.cast(message_sort, k);
+                    let k_f = pbl.name_caster().cast(message_sort, k);
+                    let ev = pbl.evaluator();
                     ev.eval(self.verify.f([m.into(), sigma.into(), self.pk.f_a([ k_f.clone()])])) >>
                     mexists!(u!4:message_sort; {
                         meq(ev.eval(u.clone()), ev.eval(m)) &
@@ -169,7 +171,7 @@ impl<'bump> EufCmaSign<'bump> {
                         if let RichFormula::Fun(mpk, args2) = args[2].as_ref();
                         if mpk == &self.pk;
                         if let RichFormula::Fun(nf, args3) = args2[0].as_ref();
-                        if nf == pbl.name_caster.cast_function(&MESSAGE.as_sort()).unwrap();
+                        if nf == pbl.name_caster().cast_function(&MESSAGE.as_sort()).unwrap();
                         then {
                             let [message, signature, key] =
                                 [&args[1], &args[0], &args3[0]]
@@ -208,14 +210,14 @@ impl<'bump> EufCmaSign<'bump> {
                     let u_f = u_var.into_aformula();
                     let sign_of_u = self
                         .sign
-                        .f_a([u_f, pbl.name_caster.cast(MESSAGE.as_sort(), &key)]);
+                        .f_a([u_f, pbl.name_caster().cast(MESSAGE.as_sort(), &key)]);
 
                     let k_sc = subterm_key
                         .preprocess_terms(
                             &realm,
-                            &pbl.protocol,
+                            pbl.protocol(),
                             &key,
-                            pbl.protocol
+                            pbl.protocol()
                                 .list_top_level_terms_short_lifetime_and_bvars()
                                 .chain([&message, &signature].map(|t| t.shallow_copy().into())),
                             false,
@@ -227,7 +229,7 @@ impl<'bump> EufCmaSign<'bump> {
                         let mformula = {
                             let disjunction = subterm_main.preprocess_terms(
                                 &realm,
-                                &pbl.protocol,
+                                pbl.protocol(),
                                 &sign_of_u,
                                 [&message, &signature].map(|x| x.shallow_copy().into()),
                                 true,
@@ -237,24 +239,24 @@ impl<'bump> EufCmaSign<'bump> {
                         };
                         if realm.is_symbolic_realm() {
                             Some(mforall!(free_vars, {
-                                pbl.evaluator.eval(self.verify.f([
+                                pbl.evaluator().eval(self.verify.f([
                                     signature.clone(),
                                     message.clone(),
                                     self.pk.f_a([
-                                        pbl.name_caster.cast(MESSAGE.as_sort(), key.clone()),
+                                        pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),
                                     ]),
                                 ])) >> mexists!([u_var], {
-                                    meq(pbl.evaluator.eval(u_var), pbl.evaluator.eval(&message))
+                                    meq(pbl.evaluator().eval(u_var), pbl.evaluator().eval(&message))
                                         & mformula
                                 })
                             }))
                         } else {
                             Some(mforall!(free_vars, {
-                                pbl.evaluator.eval(self.verify.f([
+                                pbl.evaluator().eval(self.verify.f([
                                     signature.clone(),
                                     message.clone(),
                                     self.pk.f_a([
-                                        pbl.name_caster.cast(MESSAGE.as_sort(), key.clone()),
+                                        pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),
                                     ]),
                                 ])) >> mformula.apply_substitution2(&OneVarSubst {
                                     id: u_var.id,

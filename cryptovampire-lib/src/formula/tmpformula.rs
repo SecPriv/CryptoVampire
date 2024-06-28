@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use anyhow::{anyhow, bail};
-use log::{debug, log_enabled, trace, warn};
+use log::{debug, trace, warn};
 use serde::{Deserialize, Serialize};
 use utils::string_ref::StrRef;
 

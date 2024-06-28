@@ -1,8 +1,8 @@
-use anyhow::{bail, Result};
-use cryptovampire_lib::formula::{
+use crate::formula::{
     function::builtin::{EQUALITY, NOT, NOT_TA},
     TmpFormula,
 };
+use anyhow::{bail, Result};
 
 struct A(TmpFormula);
 
