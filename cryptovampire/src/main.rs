@@ -78,7 +78,7 @@ fn main() {
             &str,
             env.are_lemmas_ignored()
         )
-        .expect_display("parsing error:");
+        .expect("parsing error:");
 
         // if env.are_lemmas_ignored() {
         //     pbl.lemmas.clear();

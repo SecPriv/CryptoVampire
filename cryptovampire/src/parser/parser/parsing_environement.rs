@@ -1,4 +1,4 @@
-use std::{ops::Deref, sync::Arc};
+use std::{collections::VecDeque, ops::Deref, sync::Arc};
 
 use hashbrown::{HashMap, HashSet};
 use itertools::Itertools;
@@ -18,6 +18,7 @@ use cryptovampire_lib::{
     container::ScopedContainer,
     environement::traits::{KnowsRealm, Realm},
     formula::{
+        formula::ARichFormula,
         function::{
             inner::evaluate::Evaluator,
             name_caster_collection::{NameCasterCollection, DEFAULT_NAME_CASTER},
@@ -142,37 +143,6 @@ impl<'bump, 'a> Environement<'bump, 'a> {
         self.macro_hash.contains_key(name) || self.used_name.contains(&format!("{name}!"))
     }
 
-    // pub fn finalize(&mut self) {
-    //     fn finalize_hash_map<'bump, C, T>(
-    //         _container: &C,
-    //         h: &mut HashMap<Guard<C::R<'bump>>, Option<T>>,
-    //     ) where
-    //         C: ContainerTools<'bump, T>,
-    //     {
-    //         std::mem::take(h)
-    //             .into_iter()
-    //             // This returns shortcuts to `None` if `fun` is `None`
-    //             .try_for_each(|(g, fun)| {
-    //                 fun.map(|fun| unsafe { C::initialize(&g, fun) })
-    //                     .expect("unreachable: all inner should be ready")
-    //             })
-    //             .expect("unreachable: nothing was initialized before") // should never crash
-    //     }
-
-    //     let Environement {
-    //         functions_initialize,
-    //         steps_initialize,
-    //         cells_initialize,
-    //         ..
-    //     } = self;
-
-    //     finalize_hash_map(self.container, functions_initialize);
-    //     finalize_hash_map(self.container, steps_initialize);
-    //     finalize_hash_map(self.container, cells_initialize);
-
-    //     assert!(self.is_valid(), "something went wrong while initializing");
-    // }
-
     fn get_steps(&self) -> impl Iterator<Item = Step<'bump>> + '_ {
         self.functions
             .values()
@@ -208,6 +178,18 @@ impl<'bump, 'a> Environement<'bump, 'a> {
 
     pub fn find_sort<'b>(&'b self, span: Span<'a>, name: &str) -> Result<Sort<'bump>, E> {
         get_sort(self, span, name)
+    }
+
+    /// consume `self` to build a [Problem]
+    pub fn into_problem<'b>(
+        self,
+        pbl_builder: &'b mut ProblemBuilder<'bump>,
+    ) -> &'b mut ProblemBuilder<'bump> {
+        pbl_builder
+            .functions(self.get_functions().collect())
+            .sorts(self.get_sorts().collect())
+            .evaluator(Arc::new(self.evaluator.clone()))
+            .name_caster(Arc::new(self.name_caster_collection.clone()))
     }
 }
 
@@ -254,7 +236,9 @@ pub fn parse_str<'a, 'bump>(
     extra_names: implvec!(String),
     str: &'a str,
     ignore_lemmas: bool,
-) -> Result<Problem<'bump>, E> {
+) -> anyhow::Result<Problem<'bump>> {
+    let mut pbl_builder = ProblemBuilder::default();
+    pbl_builder.container(container);
     trace!("[P] parsing...");
 
     trace!("[P] \tinto ast...");
@@ -283,30 +267,35 @@ pub fn parse_str<'a, 'bump>(
     trace!("[P] \t[DONE]");
 
     trace!("[P] \t- parse steps...");
-    parse_steps(&env, env.functions.values().filter_map(|f| f.as_step())).debug_continue()?;
+    parse_steps(&env, env.functions.values().filter_map(|f| f.as_step()))?;
     trace!("[P] \t[DONE]");
     trace!("[P] \t- parse cells...");
     parse_cells(
         &env,
         env.functions.values().filter_map(|f| f.as_memory_cell()),
-    )
-    .debug_continue()?;
+    )?;
     trace!("[P] \t[DONE]");
     assert!(env.is_valid());
 
     trace!("[P] \t- parse assertions...");
     let mut bvars = Vec::new();
-    let assertions: Vec<_> =
-        parse_asserts_with_bvars(&env, assertions, &mut bvars).debug_continue()?;
-    let lemmas = parse_asserts_with_bvars(&env, lemmas, &mut bvars).debug_continue()?;
-    let query = parse_assert_with_bvars(&env, query, &mut bvars).debug_continue()?;
-    let orders: Vec<_> = parse_orders_with_bvars(&env, orders, &mut bvars).debug_continue()?;
-    let asserts_crypto = parse_asserts_crypto(&env, asserts_crypto).debug_continue()?;
+    pbl_builder
+        .assertions(parse_asserts_with_bvars::<Vec<ARichFormula<'bump>>>(
+            &env, assertions, &mut bvars,
+        )?)
+        .query(parse_assert_with_bvars(&env, query, &mut bvars)?)
+        .crypto_assertions(parse_asserts_crypto(&env, asserts_crypto)?);
+    if !ignore_lemmas {
+        pbl_builder.lemmas(parse_asserts_with_bvars::<VecDeque<ARichFormula<'bump>>>(
+            &env, lemmas, &mut bvars,
+        )?);
+    }
+    let orders: Vec<_> = parse_orders_with_bvars(&env, orders, &mut bvars)?;
     let _ = bvars;
     trace!("[P] \t[DONE]");
 
     trace!("[P] \t- into problem...");
-    let protocol = Protocol::new(env.get_steps(), env.get_cells(), orders);
+    pbl_builder.protocol(Protocol::new(env.get_steps(), env.get_cells(), orders));
     trace!("[P] \t[DONE]");
 
     trace!("[P] \t-gathering quantifiers");
@@ -326,36 +315,7 @@ pub fn parse_str<'a, 'bump>(
     }
 
     trace!("[P] \tparsing done");
-    // let pbl = Problem {
-    //     functions: env.get_functions().collect(),
-    //     sorts: env.get_sorts().collect(),
-    //     evaluator: Arc::new(env.evaluator.clone()),
-    //     name_caster: Arc::new(env.name_caster_collection.clone()),
-    //     protocol,
-    //     assertions,
-    //     lemmas,
-    //     query,
-    //     container,
-    //     crypto_assertions: asserts_crypto,
-    //     extra_instances: Default::default(),
-    // };
+    env.into_problem(&mut pbl_builder);
 
-    // Ok(pbl)
-    let mut pbl_builder = ProblemBuilder::default();
-    pbl_builder
-        .functions(env.get_functions().collect())
-        .sorts(env.get_sorts().collect())
-        .evaluator(Arc::new(env.evaluator.clone()))
-        .name_caster(Arc::new(env.name_caster_collection.clone()))
-        .protocol(protocol)
-        .assertions(assertions)
-        // .lemmas(lemmas)
-        .query(query)
-        .container(container)
-        .crypto_assertions(asserts_crypto);
-
-    if !ignore_lemmas {
-        pbl_builder.lemmas(lemmas);
-    }
-    Ok(pbl_builder.build().unwrap())
+    Ok(pbl_builder.build()?)
 }
