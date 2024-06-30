@@ -203,7 +203,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
             .into_iter()
             .zip(0..)
             .map(|(v, i)| {
-                let id = i + (bn as uvar);
+                let id = i + uvar::try_from(bn).unwrap();
                 let ast::VariableBinding {
                     variable,
                     type_name,
@@ -292,7 +292,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Quantifier<'a> {
             .into_iter()
             .zip(0..)
             .map(|(v, i)| {
-                let id = i + (bn as uvar);
+                let id = i + uvar::try_from(bn).unwrap();
                 let VariableBinding {
                     variable,
                     type_name,
@@ -712,7 +712,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
 
                 Ok(term
                     .owned_into_inner()
-                    .apply_substitution(0..(mmacro.args.len() as uvar), &args)
+                    .apply_substitution(0..uvar::try_from(mmacro.args.len()).unwrap(), &args)
                     .into())
             }
         }

@@ -100,7 +100,7 @@ fn parse_step<'bump, 'str>(
                             i,
                         )| {
                             let sort = env.find_sort(type_name.name_span(), type_name.name())?;
-                            let id = (n as uvar) + i;
+                            let id = uvar::try_from(n).unwrap() + i;
                             let var = Variable { id, sort };
 
                             if env.contains_name_with_var(

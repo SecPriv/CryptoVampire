@@ -80,8 +80,8 @@ where
     I2: FromIterator<Variable<'bump>>,
 {
     s.into_iter()
-        .enumerate()
-        .map(|(i, s)| Variable::new((i as uvar) + from, s.clone()))
+        .zip(0..)
+        .map(|(s, i)| Variable::new(i + from, s.clone()))
         .collect()
 }
 

@@ -46,8 +46,7 @@ impl Cell {
                             sort,
                         })
                         .collect();
-                    let _max_var = max_var + (vars.len() as uvar);
-
+                    let _max_var = max_var + uvar::try_from(vars.len()).unwrap();
                     let nvars: Rc<[_]> = vars.iter().chain([&step_var]).cloned().collect();
                     let cell_call = c.function().f_a(nvars.as_ref());
 

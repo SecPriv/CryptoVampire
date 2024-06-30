@@ -173,7 +173,7 @@ pub fn generate<'bump>(
                         let vars1: Vec<_> = sorts_to_variables(0, ibf.args());
                         let vars2 = vars1
                             .iter()
-                            .map(|&v| v + (vars1.len() as uvar))
+                            .map(|&v| v + uvar::try_from(vars1.len()).unwrap())
                             .collect_vec();
 
                         let premise =

@@ -281,7 +281,7 @@ impl<'bump> Step<'bump> {
 
     pub fn arity(&self) -> uvar {
         self.assert_valid().unwrap();
-        self.as_inner().free_variables.len() as uvar
+        self.as_inner().free_variables.len().try_into().unwrap()
     }
 
     /// strict happen before relation
