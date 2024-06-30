@@ -4,7 +4,6 @@ mod cached_builtins;
 use itertools::Itertools;
 use log::{log_enabled, trace};
 
-
 use crate::parser::{
     ast::{self, extra::SnN, Term, VariableBinding},
     err, merr, IntoRuleResult, E,
@@ -25,7 +24,7 @@ use cryptovampire_lib::{
             builtins::{BOOL, CONDITION, MESSAGE, NAME, STEP},
             sort_proxy::SortProxy,
         },
-        variable::Variable,
+        variable::{uvar, Variable},
     },
     smt::SmtFormula,
 };
@@ -40,7 +39,7 @@ use super::{
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct VarProxy<'bump> {
-    id: usize,
+    id: uvar,
     sort: SortProxy<'bump>,
 }
 
@@ -202,9 +201,9 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
         bvars.reserve(vars.into_iter().len());
         let vars: Result<Vec<_>, _> = vars
             .into_iter()
-            .enumerate()
-            .map(|(i, v)| {
-                let id = i + bn;
+            .zip(0..)
+            .map(|(v, i)| {
+                let id = i + uvar::try_from(bn).unwrap();
                 let ast::VariableBinding {
                     variable,
                     type_name,
@@ -291,9 +290,9 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Quantifier<'a> {
         bvars.reserve(vars.into_iter().len());
         let vars: Result<Vec<_>, _> = vars
             .into_iter()
-            .enumerate()
-            .map(|(i, v)| {
-                let id = i + bn;
+            .zip(0..)
+            .map(|(v, i)| {
+                let id = i + uvar::try_from(bn).unwrap();
                 let VariableBinding {
                     variable,
                     type_name,
@@ -703,8 +702,8 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
                         .args
                         .iter()
                         .zip(mmacro.args_name.iter())
-                        .enumerate()
-                        .map(|(id, (var_sort, var_name))| {
+                        .zip(0..)
+                        .map(|((var_sort, var_name), id)| {
                             (*var_name, Variable::new(id, *var_sort).into())
                         })
                         .collect_vec();
@@ -713,7 +712,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
 
                 Ok(term
                     .owned_into_inner()
-                    .apply_substitution(0..mmacro.args.len(), &args)
+                    .apply_substitution(0..uvar::try_from(mmacro.args.len()).unwrap(), &args)
                     .into())
             }
         }

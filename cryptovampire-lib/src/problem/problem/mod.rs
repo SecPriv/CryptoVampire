@@ -26,7 +26,7 @@ use crate::{
             inner::evaluate::Evaluator, name_caster_collection::NameCasterCollection, Function,
         },
         sort::{builtins::CONDITION, Sort},
-        variable::Variable,
+        variable::{uvar, Variable},
     },
 };
 
@@ -89,7 +89,7 @@ impl<'bump> Problem<'bump> {
         )
     }
 
-    pub fn max_var(&self) -> usize {
+    pub fn max_var(&self) -> uvar {
         let pile = RefCell::new(Vec::new());
 
         self.list_top_level_terms()
@@ -101,7 +101,7 @@ impl<'bump> Problem<'bump> {
     }
 
     /// [Self::max_var] without [Self::extra_instances]
-    pub fn max_var_no_extras(&self) -> usize {
+    pub fn max_var_no_extras(&self) -> uvar {
         let pile = RefCell::new(Vec::new());
 
         self.list_top_level_terms_no_extra()

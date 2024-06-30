@@ -163,10 +163,7 @@ impl A {
         U: Into<String>,
         V: Into<TmpFormula>,
     {
-        A(TmpFormula::new(
-            head.into(),
-            args.into_iter().map_into(),
-        ))
+        A(TmpFormula::new(head.into(), args.into_iter().map_into()))
     }
 
     pub fn new_const(head: String) -> Self {

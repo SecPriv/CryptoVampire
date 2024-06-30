@@ -26,7 +26,7 @@ use crate::{
             builtins::{BOOL, CONDITION, MESSAGE},
             FOSort, Sort,
         },
-        variable::{sorts_to_variables, Variable},
+        variable::{sorts_to_variables, uvar, Variable},
     },
     mexists, mforall,
     problem::problem::Problem,
@@ -171,7 +171,10 @@ pub fn generate<'bump>(
                     .iter()
                     .map(|(&f, ibf)| {
                         let vars1: Vec<_> = sorts_to_variables(0, ibf.args());
-                        let vars2 = vars1.iter().map(|&v| v + vars1.len()).collect_vec();
+                        let vars2 = vars1
+                            .iter()
+                            .map(|&v| v + uvar::try_from(vars1.len()).unwrap())
+                            .collect_vec();
 
                         let premise =
                             formula::ands(vars1.iter().zip(vars2.iter()).map(|(v1, _v2)| {
@@ -328,8 +331,8 @@ fn generate_connectives<'bump>(
             let args = signature
                 .args
                 .iter()
-                .enumerate()
-                .map(|(id, &sort)| Variable { id, sort })
+                .zip(0..)
+                .map(|(&sort, id)| Variable { id, sort })
                 .collect_vec();
             assertions.push(Axiom::base(mforall!(args.clone(), {
                 meq(

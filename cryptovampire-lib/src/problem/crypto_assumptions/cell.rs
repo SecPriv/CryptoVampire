@@ -9,7 +9,7 @@ use crate::{
         formula,
         function::builtin::PRED,
         sort::builtins::STEP,
-        variable::Variable,
+        variable::{uvar, Variable},
     },
     problem::{cell::Assignement, Problem},
 };
@@ -40,14 +40,13 @@ impl Cell {
                     let vars: Vec<_> = c
                         .args()
                         .iter()
-                        .enumerate()
-                        .map(|(id, &sort)| Variable {
+                        .zip(0..)
+                        .map(|(&sort, id)| Variable {
                             id: id + max_var,
                             sort,
                         })
                         .collect();
-                    let _max_var = max_var + vars.len();
-
+                    let _max_var = max_var + uvar::try_from(vars.len()).unwrap();
                     let nvars: Rc<[_]> = vars.iter().chain([&step_var]).cloned().collect();
                     let cell_call = c.function().f_a(nvars.as_ref());
 

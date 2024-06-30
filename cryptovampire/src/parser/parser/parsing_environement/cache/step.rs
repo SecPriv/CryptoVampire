@@ -7,10 +7,11 @@ use cryptovampire_lib::{
         function::{builtin::INPUT, Function},
         manipulation::{FrozenSubst, FrozenSubstF, OneVarSubst, OneVarSubstF},
         sort::{builtins::MESSAGE, Sort},
-        variable::Variable,
+        variable::{uvar, Variable},
     },
     problem::step::Step,
 };
+use itertools::izip;
 
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct StepCache<'str, 'bump> {
@@ -30,14 +31,10 @@ pub struct NamedVariable<'str, 'bump> {
 
 impl<'str, 'bump> StepCache<'str, 'bump> {
     pub fn args_vars(&self) -> impl Iterator<Item = NamedVariable<'str, 'bump>> + '_ {
-        self.args
-            .iter()
-            .zip(self.args_name.iter())
-            .enumerate()
-            .map(|(id, (sort, name))| NamedVariable {
-                name: *name,
-                variable: Variable { id, sort: *sort },
-            })
+        izip!(0.., self.args.iter(), self.args_name.iter()).map(|(id, sort, name)| NamedVariable {
+            name: *name,
+            variable: Variable { id, sort: *sort },
+        })
     }
 
     /// all the [NamedVariable] that should be visible within a [ast::Step]
@@ -50,7 +47,7 @@ impl<'str, 'bump> StepCache<'str, 'bump> {
         NamedVariable {
             name: "in",
             variable: Variable {
-                id: self.args.len(),
+                id: self.args.len().try_into().unwarp(),
                 sort: MESSAGE.as_sort(),
             },
         }
@@ -92,7 +89,7 @@ impl<'str, 'bump> NamedVariable<'str, 'bump> {
         self.variable.sort
     }
 
-    pub fn id(&self) -> usize {
+    pub fn id(&self) -> uvar {
         self.variable.id
     }
 }

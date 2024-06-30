@@ -48,15 +48,15 @@ fn parse_order_with_bvars<'str, 'bump>(
 
     let args: Result<Vec<_>, _> = args
         .into_iter()
-        .enumerate()
+        .zip(0..)
         .map(
             |(
-                id,
                 ast::VariableBinding {
                     variable,
                     type_name,
                     ..
                 },
+                id,
             )| {
                 let sort = get_sort(env, type_name.name_span(), type_name.name())?;
                 Ok((variable.name(), Variable { id, sort }))

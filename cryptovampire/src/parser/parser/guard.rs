@@ -1,7 +1,5 @@
 use std::ops::Deref;
 
-
-
 #[derive(Hash, Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Guard<T>(T);
 

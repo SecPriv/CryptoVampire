@@ -3,7 +3,7 @@ use itertools::Itertools;
 use crate::formula::{
     formula::{ARichFormula, RichFormula},
     manipulation::Substitution,
-    variable::Variable,
+    variable::{uvar, Variable},
 };
 use utils::vecref::VecRefClone;
 
@@ -42,18 +42,18 @@ impl<'a, A: Clone> FromIterator<OneVarSubst<A>> for FrozenMultipleVarSubst<'a, A
 /// The content must follow the invariant checked by [Self::valid]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct FrozenSubst<'a, T: Clone> {
-    vars: VecRefClone<'a, usize>,
+    vars: VecRefClone<'a, uvar>,
     formulas: VecRefClone<'a, T>,
 }
 
 impl<'a, T: Clone> FrozenSubst<'a, T> {
-    pub fn new(vars: VecRefClone<'a, usize>, formulas: VecRefClone<'a, T>) -> Self {
+    pub fn new(vars: VecRefClone<'a, uvar>, formulas: VecRefClone<'a, T>) -> Self {
         Self { vars, formulas }
     }
 
-    pub fn new_from<VRCusize, VCRT>(var: VRCusize, formulas: VCRT) -> Self
+    pub fn new_from<VRCuvar, VCRT>(var: VRCuvar, formulas: VCRT) -> Self
     where
-        VRCusize: Into<VecRefClone<'a, usize>>,
+        VRCuvar: Into<VecRefClone<'a, uvar>>,
         VCRT: Into<VecRefClone<'a, T>>,
     {
         let r = Self {
@@ -63,7 +63,7 @@ impl<'a, T: Clone> FrozenSubst<'a, T> {
         r.assert_valid();
         r
     }
-    pub fn vars(&self) -> &VecRefClone<'a, usize> {
+    pub fn vars(&self) -> &VecRefClone<'a, uvar> {
         &self.vars
     }
 
