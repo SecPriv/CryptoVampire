@@ -1,12 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use std::{
-    fs::File,
-    io::BufWriter,
-    num::NonZeroU32,
-    path::{Path},
-};
+use std::{fs::File, io::BufWriter, num::NonZeroU32, path::Path};
 
 use crate::cli::Args;
 use anyhow::{bail, ensure, Context};
@@ -24,11 +19,7 @@ use cryptovampire_lib::{
 };
 use itertools::Either;
 
-use utils::{
-    from_with::FromWith,
-    implvec,
-    traits::{MyWriteTo},
-};
+use utils::{from_with::FromWith, implvec, traits::MyWriteTo};
 pub mod cli;
 pub mod parser;
 

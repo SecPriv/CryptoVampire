@@ -2,7 +2,7 @@ use std::{cell::OnceCell, rc::Rc};
 
 use itertools::{chain, Itertools};
 
-use crate::formula::formula::ARichFormula;
+use crate::formula::{formula::ARichFormula, variable::uvar};
 use utils::implvec;
 
 use super::{
@@ -31,7 +31,7 @@ pub struct Protocol<'bump> {
     memory_cells: Vec<MemoryCell<'bump>>,
     /// Extra ordering information between steps
     ordering: Vec<ARichFormula<'bump>>,
-    max_var: OnceCell<usize>,
+    max_var: OnceCell<uvar>,
 }
 
 pub struct ProtocolStruct<'a, 'bump> {
@@ -131,7 +131,7 @@ impl<'bump> Protocol<'bump> {
         )
     }
 
-    pub fn max_var(&self) -> usize {
+    pub fn max_var(&self) -> uvar {
         *self.max_var.get_or_init(|| {
             self.steps()
                 .iter()

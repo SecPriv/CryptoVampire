@@ -1,6 +1,6 @@
 use crate::formula::{
     formula::{ARichFormula, RichFormula},
-    variable::Variable,
+    variable::{uvar, Variable},
 };
 
 /// To model substitutions, i.e., replacing varibales with some other formulas
@@ -42,7 +42,7 @@ pub trait Substitution<'bump> {
     /// This is simply calling `self.chain(Translate(i))`.
     ///
     /// See [Translate]
-    fn translate(self, i: usize) -> Chain<Self, Translate>
+    fn translate(self, i: uvar) -> Chain<Self, Translate>
     where
         Self: Sized,
     {
@@ -66,10 +66,10 @@ impl<'bump, A: Substitution<'bump>, B: Substitution<'bump>> Substitution<'bump> 
 
 /// Translate the variables by a fixed `i`. (i.e., adds `i` to their [Variable::id])
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Copy)]
-pub struct Translate(usize);
+pub struct Translate(uvar);
 
 impl Translate {
-    pub fn new(i: usize) -> Self {
+    pub fn new(i: uvar) -> Self {
         Translate(i)
     }
 }

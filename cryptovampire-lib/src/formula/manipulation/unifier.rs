@@ -2,7 +2,7 @@ use if_chain::if_chain;
 use itertools::Itertools;
 use thiserror::Error;
 
-use crate::formula::formula::ARichFormula;
+use crate::formula::{formula::ARichFormula, variable::uvar};
 
 use super::{
     super::{
@@ -27,7 +27,7 @@ pub struct Unifier<'bump> {
 #[derive(Debug, Error)]
 pub enum UnifierAsEqualityErr {
     #[error("found tow variables with the same id on both sides: {id:?}")]
-    NonDisjointVariables { id: usize },
+    NonDisjointVariables { id: uvar },
     #[error("sort is not defined in some of the formulas: {0:?}")]
     SortError(SortedError),
 }
@@ -233,12 +233,12 @@ mod tests {
                 builtins::{MESSAGE, NAME, STEP},
                 Sort,
             },
-            variable::Variable,
+            variable::{uvar, Variable},
         },
     };
 
     use super::Unifier;
-    fn vars<'bump, const N: usize>(mut i: usize, sorts: [Sort<'bump>; N]) -> [Variable<'bump>; N] {
+    fn vars<'bump, const N: usize>(mut i: uvar, sorts: [Sort<'bump>; N]) -> [Variable<'bump>; N] {
         sorts.map(|sort| {
             i += 1;
             Variable { id: i, sort }

@@ -3,7 +3,7 @@ use log::{error, log_enabled};
 use crate::formula::{
     formula::{ARichFormula, RichFormula},
     manipulation::Substitution,
-    variable::Variable,
+    variable::{uvar, Variable},
 };
 
 use super::MultipleVarSubst;
@@ -13,7 +13,7 @@ use super::MultipleVarSubst;
 /// `OneVarSubst{id: x, f: y}` is the substitution $\{ x \mapsto y \}$
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Copy)]
 pub struct OneVarSubst<T> {
-    pub id: usize,
+    pub id: uvar,
     pub f: T,
 }
 
@@ -21,7 +21,7 @@ pub struct OneVarSubst<T> {
 pub type OneVarSubstF<'bump> = OneVarSubst<ARichFormula<'bump>>;
 
 impl<T> OneVarSubst<T> {
-    pub fn id(&self) -> usize {
+    pub fn id(&self) -> uvar {
         self.id
     }
 
@@ -30,7 +30,7 @@ impl<T> OneVarSubst<T> {
     }
 
     /// Is this the identity substitution
-    pub fn is_id(&self, id: usize) -> bool {
+    pub fn is_id(&self, id: uvar) -> bool {
         self.id == id
     }
 
@@ -54,8 +54,8 @@ impl<T: Clone> OneVarSubst<T> {
     }
 }
 
-impl<T> From<(usize, T)> for OneVarSubst<T> {
-    fn from((id, f): (usize, T)) -> Self {
+impl<T> From<(uvar, T)> for OneVarSubst<T> {
+    fn from((id, f): (uvar, T)) -> Self {
         Self { id, f }
     }
 }

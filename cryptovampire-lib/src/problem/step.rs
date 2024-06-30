@@ -13,7 +13,7 @@ use crate::{
             Function, InnerFunction,
         },
         sort::Sort,
-        variable::Variable,
+        variable::{uvar, Variable},
     },
 };
 use utils::{
@@ -229,7 +229,7 @@ impl<'bump> Step<'bump> {
         self.precise_as_ref().used_variables.as_ref()
     }
 
-    pub fn vairable_range(&self) -> Range<usize> {
+    pub fn vairable_range(&self) -> Range<uvar> {
         self.assert_valid().unwrap();
         let min = self
             .occuring_variables()
@@ -279,9 +279,9 @@ impl<'bump> Step<'bump> {
         self.message().clone().apply_substitution(vars, args)
     }
 
-    pub fn arity(&self) -> usize {
+    pub fn arity(&self) -> uvar {
         self.assert_valid().unwrap();
-        self.as_inner().free_variables.len()
+        self.as_inner().free_variables.len() as uvar
     }
 
     /// strict happen before relation

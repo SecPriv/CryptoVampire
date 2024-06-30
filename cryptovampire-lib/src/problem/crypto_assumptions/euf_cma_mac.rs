@@ -18,7 +18,7 @@ use crate::{
         manipulation::OneVarSubst,
         sort::builtins::{CONDITION, MESSAGE, NAME},
         utils::formula_expander::UnfoldFlags,
-        variable::Variable,
+        variable::{uvar, Variable},
     },
     mexists, mforall,
     problem::{generator::Generator, problem::Problem},
@@ -503,7 +503,7 @@ impl<'bump> Generator<'bump> for EufCmaMac<'bump> {
 }
 
 fn prepare_candidate<'bump>(
-    max_var: usize,
+    max_var: uvar,
     message: &ARichFormula<'bump>,
     signature: &ARichFormula<'bump>,
     key: &ARichFormula<'bump>,

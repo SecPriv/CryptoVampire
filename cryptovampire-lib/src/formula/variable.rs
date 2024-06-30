@@ -10,7 +10,7 @@ use super::{
 
 /// Alias for the name of varibles
 #[allow(non_camel_case_types)]
-pub type uvar = usize;
+pub type uvar = u32;
 
 #[derive(Debug, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct Variable<'bump> {
@@ -81,7 +81,7 @@ where
 {
     s.into_iter()
         .enumerate()
-        .map(|(i, s)| Variable::new(i + from, s.clone()))
+        .map(|(i, s)| Variable::new((i as uvar) + from, s.clone()))
         .collect()
 }
 

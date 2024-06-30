@@ -21,7 +21,7 @@ use crate::formula::{
         sorted::{Sorted, SortedError},
         Sort,
     },
-    variable::Variable,
+    variable::{uvar, Variable},
 };
 use utils::implvec;
 
@@ -192,7 +192,7 @@ impl<'bump> RichFormula<'bump> {
 
     pub fn apply_substitution<'a>(
         self,
-        vars: implvec!(usize),
+        vars: implvec!(uvar),
         fs: implvec!(&'a ARichFormula<'bump>),
     ) -> ARichFormula<'bump>
     where
@@ -214,7 +214,7 @@ impl<'bump> RichFormula<'bump> {
         per.apply(self)
     }
 
-    pub fn translate_vars(&self, i: usize) -> Self {
+    pub fn translate_vars(&self, i: uvar) -> Self {
         self.apply_substitution2(&Translate::new(i))
             .owned_into_inner()
     }

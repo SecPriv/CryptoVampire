@@ -1,6 +1,9 @@
 use itertools::Itertools;
 
-use crate::formula::{formula::ARichFormula, variable::Variable};
+use crate::formula::{
+    formula::ARichFormula,
+    variable::{uvar, Variable},
+};
 
 use super::super::substitution::Substitution;
 
@@ -22,7 +25,7 @@ pub struct MultipleVarSubst<T> {
 pub type MulitpleVarSubstF<'bump> = MultipleVarSubst<ARichFormula<'bump>>;
 
 impl<'bump, T> MultipleVarSubst<T> {
-    pub fn maybe_get(&self, id: usize) -> Option<&T> {
+    pub fn maybe_get(&self, id: uvar) -> Option<&T> {
         self.subst
             .iter()
             .find(|ovs| ovs.is_id(id))
@@ -42,7 +45,7 @@ impl<'bump> MulitpleVarSubstF<'bump> {
     /// add a substitution to the list such that the variable number `id` will be replaced by `r`
     ///
     /// In debug mode, it checks that the invariant is held.
-    pub fn add(&mut self, id: usize, r: ARichFormula<'bump>) {
+    pub fn add(&mut self, id: uvar, r: ARichFormula<'bump>) {
         debug_assert!(self.subst.iter().all(|ovs| !ovs.is_id(id)));
         debug_assert!(match r.as_ref() {
             RichFormula::Var(v) => v.id != id,
@@ -51,7 +54,7 @@ impl<'bump> MulitpleVarSubstF<'bump> {
         self.subst.push((id, r).into())
     }
 
-    pub fn maybe_get_as_rf(&self, id: usize) -> Option<&RichFormula<'bump>> {
+    pub fn maybe_get_as_rf(&self, id: uvar) -> Option<&RichFormula<'bump>> {
         self.maybe_get(id).map(ARichFormula::as_ref)
     }
 }
