@@ -165,7 +165,7 @@ impl A {
     {
         A(TmpFormula::new(
             head.into(),
-            args.into_iter().map_into().collect(),
+            args.into_iter().map_into(),
         ))
     }
 
