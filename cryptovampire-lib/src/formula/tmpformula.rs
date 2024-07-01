@@ -247,7 +247,7 @@ impl<'a> TmpOrStr<'a> {
         {
             v
         } else if let Some(s) = expected_sort.as_option() {
-            let i: uvar = variables.len().try_into().unwarp();
+            let i: uvar = variables.len().try_into().unwrap();
 
             // i is fresh
             debug_assert!(variables.values().map(|v| v.id()).all(|j| i != j));

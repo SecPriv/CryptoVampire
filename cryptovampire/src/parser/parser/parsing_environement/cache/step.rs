@@ -47,7 +47,7 @@ impl<'str, 'bump> StepCache<'str, 'bump> {
         NamedVariable {
             name: "in",
             variable: Variable {
-                id: self.args.len().try_into().unwarp(),
+                id: self.args.len().try_into().unwrap(),
                 sort: MESSAGE.as_sort(),
             },
         }
