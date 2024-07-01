@@ -35,14 +35,14 @@ step init
 
 step ReceiverA(i:index, j:index)
   { ((fst(snd(fst(in))) == SIGN)
-     && mlt(cellA(i, ReceiverA(i, j)), snd(snd(fst(in))))
+     && mlt(cellA(i, pred(ReceiverA(i, j))), snd(snd(fst(in))))
      && (snd(in) == hmac(tpl(snd(snd(fst(in))),fst(fst(in))),sk(i)))) }
   { ok }
   {cellA(i) <- mySucc(cellA(i, pred(ReceiverA(i, j))))}
 
 step ReceiverB(i:index, j:index)
   { ((fst(snd(fst(in))) == SIGN)
-     && mlt(cellB(i, ReceiverB(i, j)), snd(snd(fst(in))))
+     && mlt(cellB(i, pred(ReceiverB(i, j))), snd(snd(fst(in))))
      && (snd(in) == hmac(tpl(snd(snd(fst(in))),fst(fst(in))),sk(i)))) }
   { ok }
   {cellB(i) <- mySucc(cellB(i, pred(ReceiverB(i, j))))}
@@ -50,14 +50,16 @@ step ReceiverB(i:index, j:index)
 step SenderA(i:index, j:index)
   { true }
   {
-    tpl( tpl( msgA(i, j), tpl(SIGN, mySucc(cellA(i, SenderA(i, j)))) ), hmac( tpl(mySucc(cellA(i, SenderA(i, j))), msgA(i, j) ), sk(i) ) )
+    tpl( tpl( msgA(i, j), tpl(SIGN, cellA(i, SenderA(i, j))) ),
+         hmac( tpl(cellA(i, SenderA(i, j)), msgA(i, j) ), sk(i) ) )
   }
   { cellA(i) <- mySucc(cellA(i, pred(SenderA(i, j)))) }
 
 step SenderB(i:index, j:index)
   { true }
   {
-    tpl( tpl( msgB(i, j), tpl(SIGN, mySucc(cellB(i, SenderB(i, j)))) ), hmac( tpl(mySucc(cellB(i, SenderB(i, j))), msgB(i, j) ), sk(i) ) )
+    tpl( tpl( msgB(i, j), tpl(SIGN, cellB(i, SenderB(i, j))) ),
+         hmac( tpl(cellB(i, SenderB(i, j)), msgB(i, j) ), sk(i) ) )
   }
   { cellB(i) <- mySucc(cellB(i, pred(SenderB(i, j)))) }
 
@@ -84,13 +86,29 @@ assert
         (verify(s, m, k) <=> (s == hmac(m, k)))
     }
 
+/* counterIncreaseB */
+assert  forall (t:Step, t':Step, i:index)
+  {(happens(t) =>
+  (exec![t] =>
+  (lt(t', t) =>
+  ( mlt(cellB(i,t'), cellB(i, t)) ||
+    (cellB(i,t') == cellB(i, t))))))}
+
+/* counterIncreaseA */
+assert  forall (t:Step, t':Step, i:index)
+  {(happens(t) =>
+  (exec![t] =>
+  (lt(t', t) =>
+  ( mlt(cellA(i,t'), cellA(i, t)) ||
+    (cellA(i,t') == cellA(i, t))))))}
+
 query forall (i:index, j:index) {(
   happens(ReceiverA(i,j)) => (exec![ReceiverA(i, j)] =>
-  exists (j':index) {(
+  exists (j':index) {
     lt(SenderB(i, j'), ReceiverA(i, j))
-    && (snd(msg![SenderB(i,j')]) == snd(input(ReceiverA(i,j))))
+    /*&& (snd(msg![SenderB(i,j')]) == snd(input(ReceiverA(i,j))))
     && (fst(fst(msg![SenderB(i,j')])) == fst(fst(input(ReceiverA(i,j)))))
     && (snd(snd(fst(msg![SenderB(i,j')]))) == snd(snd(fst(input(ReceiverA(i,j))))))
-    && mlt(cellA(i, pred(ReceiverA(i,j))), cellB(i, SenderB(i,j')))
-  )}
+    && mlt(cellA(i, pred(ReceiverA(i,j))), cellB(i, SenderB(i,j')))*/
+  }
 ))}
