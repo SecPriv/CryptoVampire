@@ -1,8 +1,10 @@
 use std::{cell::RefCell, hash::Hash, sync::Arc};
 
+use derive_builder::Builder;
 use if_chain::if_chain;
 use itertools::{chain, Itertools};
 use log::trace;
+use static_init::dynamic;
 
 use crate::{
     environement::{environement::Environement, traits::KnowsRealm},
@@ -13,10 +15,14 @@ use crate::{
             builtin::{EQUALITY_TA, MESSAGE_TO_BITSTRING},
             inner::subterm::Subsubterm,
             name_caster_collection::NameCasterCollection,
+            signature::StaticSignature,
             Function,
         },
         manipulation::OneVarSubst,
-        sort::builtins::{CONDITION, MESSAGE, NAME},
+        sort::{
+            builtins::{CONDITION, MESSAGE, NAME},
+            Sort,
+        },
         utils::formula_expander::UnfoldFlags,
         variable::{uvar, Variable},
     },
@@ -35,21 +41,55 @@ use crate::{
 };
 use utils::{arc_into_iter::ArcIntoIter, utils::print_type};
 
-pub type SubtermEufCmaMacMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
-pub type SubtermEufCmaMacKey<'bump> = Subterm<'bump, KeyAux<'bump>>;
+use super::CryptoFlag;
 
-static_signature!((pub) EUF_CMA_MAC_SIGNATURE: (MESSAGE, MESSAGE) -> MESSAGE);
-static_signature!((pub) EUF_CMA_VERIFY_SIGNATURE: (MESSAGE, MESSAGE, MESSAGE) -> CONDITION);
+mod subterm;
+pub use subterm::{KeyAux, UfCmaMainSubtAux};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct EufCmaMac<'bump> {
+pub type SubtermUfCmaMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
+pub type SubtermUfCmaKey<'bump> = Subterm<'bump, KeyAux<'bump>>;
+
+static_signature!((pub) UF_CMA_MAC_SIGNATURE: (MESSAGE, MESSAGE) -> MESSAGE);
+#[dynamic]
+#[allow(dead_code)]
+pub static UF_CMA_VERIFY_SIGNATURE: StaticSignature<'static, 3> =
+    super::EUF_CMA_VERIFY_SIGNATURE.clone();
+
+/// Uf-Cma for MAC.
+///
+/// This contains `mac`, `verify`
+///
+///
+/// See [paper](https://link.springer.com/chapter/10.1007/978-3-642-29011-4_22)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Builder)]
+pub struct UfCma<'bump> {
     /// mac(Message, Key) -> Signature
-    pub mac: Function<'bump>,
+    mac: Function<'bump>,
     /// verify(Signature, Message, Key) -> bool
-    pub verify: Function<'bump>,
+    verify: Function<'bump>,
+    #[builder(default)]
+    flags: CryptoFlag,
 }
 
-impl<'bump> EufCmaMac<'bump> {
+impl<'bump> UfCma<'bump> {
+    pub fn flags(&self) -> &CryptoFlag {
+        &self.flags
+    }
+
+    /// verify(Signature, Message, Key) -> bool
+    pub fn verify(&self) -> Function<'bump> {
+        self.verify
+    }
+
+    /// mac(Message, Key) -> Signature
+    pub fn mac(&self) -> Function<'bump> {
+        self.mac
+    }
+
+    pub fn is_hmac(&self) -> bool {
+        self.flags.contains(CryptoFlag::HMAC)
+    }
+
     pub fn generate(
         &self,
         assertions: &mut Vec<Axiom<'bump>>,
@@ -57,7 +97,7 @@ impl<'bump> EufCmaMac<'bump> {
         env: &Environement<'bump>,
         pbl: &Problem<'bump>,
     ) {
-        assertions.push(Axiom::Comment("euf-cma mac".into()));
+        assertions.push(Axiom::Comment("uf-cma".into()));
         let nonce_sort = NAME.clone();
         let message_sort = MESSAGE.clone();
         let kind = SubtermKindConstr::as_constr(pbl, env);
@@ -65,7 +105,7 @@ impl<'bump> EufCmaMac<'bump> {
         let subterm_main = Subterm::new(
             env.container,
             env.container
-                .find_free_function_name("subterm_euf_cma_main"),
+                .find_free_function_name("subterm_uf_cma_main"),
             &kind,
             DefaultAuxSubterm::new(message_sort),
             [],
@@ -75,12 +115,9 @@ impl<'bump> EufCmaMac<'bump> {
 
         let subterm_key = Subterm::new(
             env.container,
-            env.container.find_free_function_name("subterm_euf_cma_key"),
+            env.container.find_free_function_name("subterm_uf_cma_key"),
             &kind,
-            KeyAux {
-                euf_cma: *self,
-                name_caster: pbl.owned_name_caster(),
-            },
+            KeyAux::new(*self, pbl.owned_name_caster()),
             [self.mac, self.verify],
             UnfoldFlags::NO_MACROS,
             |rc| Subsubterm::EufCmaMacKey(rc),
@@ -179,7 +216,8 @@ impl<'bump> EufCmaMac<'bump> {
                                 Some(prepare_candidate(max_var, &args[1], &args[0], &args2[0]))
                             } else {None}
                         },
-                        if_chain! { // hash(m, k) = sigma, with no evaluate
+                        if_chain! { // hash(m, k) = sigma, with no evaluate (hmac)
+                            if self.is_hmac();
                             if realm.is_evaluated();
                             if fun == &EQUALITY.clone();
                             if let RichFormula::Fun(hmac, argshash) = args[0].as_ref();
@@ -191,6 +229,7 @@ impl<'bump> EufCmaMac<'bump> {
                             } else {None}
                         },
                         if_chain! { // sigma = hash(m, k), with no evaluate
+                            if self.is_hmac();
                             if realm.is_evaluated();
                             if fun == &EQUALITY.clone();
                             if let RichFormula::Fun(hmac, argshash) = args[1].as_ref();
@@ -202,6 +241,7 @@ impl<'bump> EufCmaMac<'bump> {
                             } else {None}
                         },
                         if_chain! { // |hash(m, k)| = |sigma|
+                            if self.is_hmac();
                             if realm.is_symbolic();
                             if fun == &EQUALITY.clone();
                             if let RichFormula::Fun(eval1, argevalhash) = args[0].as_ref();
@@ -216,6 +256,7 @@ impl<'bump> EufCmaMac<'bump> {
                             } else {None}
                         },
                         if_chain! { // |sigma| = |hash(m, k)|
+                            if self.is_hmac();
                             if realm.is_symbolic();
                             if fun == &EQUALITY.clone();
                             if let RichFormula::Fun(eval1, argevalhash) = args[1].as_ref();
@@ -230,6 +271,7 @@ impl<'bump> EufCmaMac<'bump> {
                             } else {None}
                         },
                         if_chain! { // | ... hash(m, k) === sigma ... |
+                            if self.is_hmac();
                             if realm.is_symbolic();
                             if fun == &EQUALITY_TA.clone();
                             if let RichFormula::Fun(hmac, argshash) = args[0].as_ref();
@@ -241,6 +283,7 @@ impl<'bump> EufCmaMac<'bump> {
                             } else {None}
                         },
                         if_chain! { // | .... sigma = hash(m, k) ... |, with no evaluate
+                            if self.is_hmac();
                             if realm.is_symbolic();
                             if fun == &EQUALITY_TA.clone();
                             if let RichFormula::Fun(hmac, argshash) = args[1].as_ref();
@@ -257,7 +300,7 @@ impl<'bump> EufCmaMac<'bump> {
             })
             .unique()
             .filter_map(
-                move |EufCandidate {
+                move |UfCmaCandidate {
                           message,
                           signature,
                           key,
@@ -411,86 +454,13 @@ fn define_subterms<'bump>(
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-struct EufCandidate<'bump> {
+struct UfCmaCandidate<'bump> {
     message: ARichFormula<'bump>,
     signature: ARichFormula<'bump>,
     key: ARichFormula<'bump>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct KeyAux<'bump> {
-    euf_cma: EufCmaMac<'bump>,
-    name_caster: Arc<NameCasterCollection<'bump>>,
-}
-
-impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
-    type IntoIter = ArcIntoIter<ARichFormula<'bump>>;
-
-    fn sort(&self) -> crate::formula::sort::Sort<'bump> {
-        NAME.clone()
-    }
-
-    fn var_eval_and_next(
-        &self,
-        m: &ARichFormula<'bump>,
-    ) -> VarSubtermResult<'bump, Self::IntoIter> {
-        let nexts = match m.as_ref() {
-            RichFormula::Fun(fun, args) => 'function: {
-                if_chain! {
-                    if fun == &self.euf_cma.mac;
-                    if let RichFormula::Fun(nf, _args2) = args[1].as_ref();
-                    if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
-                    then {
-                        // break 'function VecRef::Vec(vec![&args[0], &args2[0]])
-                        break 'function [args[0].clone()].into()
-                    }
-                }
-                if_chain! {
-                    if fun == &self.euf_cma.verify;
-                    if let RichFormula::Fun(nf, _args2) = args[2].as_ref();
-                    if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
-                    then {
-                        // break 'function VecRef::Vec(vec![&args[0], &args[1], &args2[0]])
-                        break 'function [args[0].clone(), args[1].clone()].into()
-                    }
-                }
-                ArcIntoIter::from(args)
-            }
-            _ => [].into(),
-        };
-
-        let m_sort = m.get_sort();
-
-        VarSubtermResult {
-            unified: m_sort.is_err() || self.sort() == m_sort.unwrap(),
-            nexts,
-        }
-    }
-}
-
-impl<'bump> PartialOrd for KeyAux<'bump> {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(Ord::cmp(&self, &other))
-    }
-}
-impl<'bump> Ord for KeyAux<'bump> {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        Ord::cmp(&self.euf_cma, &other.euf_cma).then_with(|| {
-            Ord::cmp(
-                &Arc::as_ptr(&self.name_caster),
-                &Arc::as_ptr(&other.name_caster),
-            )
-        })
-    }
-}
-impl<'bump> Hash for KeyAux<'bump> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.euf_cma.hash(state);
-        self.name_caster.hash(state);
-    }
-}
-
-impl<'bump> Generator<'bump> for EufCmaMac<'bump> {
+impl<'bump> Generator<'bump> for UfCma<'bump> {
     fn generate(
         &self,
         assertions: &mut Vec<Axiom<'bump>>,
@@ -507,7 +477,7 @@ fn prepare_candidate<'bump>(
     message: &ARichFormula<'bump>,
     signature: &ARichFormula<'bump>,
     key: &ARichFormula<'bump>,
-) -> EufCandidate<'bump> {
+) -> UfCmaCandidate<'bump> {
     trace!(
         "candidate found as m={:}, s={:}, k={:}",
         message,
@@ -522,9 +492,23 @@ fn prepare_candidate<'bump>(
         &signature,
         &key
     );
-    EufCandidate {
+    UfCmaCandidate {
         message,
         signature,
         key,
+    }
+}
+
+impl<'bump> UfCmaBuilder<'bump> {
+    #[allow(dead_code)]
+    pub fn hmac(&mut self, v: bool) -> &mut Self {
+        if v {
+            let tmp = self
+                .flags
+                .map(|f| f | CryptoFlag::HMAC)
+                .unwrap_or(CryptoFlag::HMAC);
+            self.flags = Some(tmp);
+        }
+        self
     }
 }

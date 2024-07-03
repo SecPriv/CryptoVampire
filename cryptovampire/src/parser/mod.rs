@@ -3,6 +3,7 @@ mod parser;
 // mod builders;
 
 pub(crate) use parser::parse_str;
+use thiserror::Error;
 
 use std::ops::Index;
 
@@ -43,6 +44,12 @@ pub const USED_KEYWORDS: &'static [&'static str] = &[
 struct MainParser;
 
 pub type E = Error<Rule>;
+
+#[derive(Error, Debug)]
+pub enum ParsingError {
+    #[error("Localisable error")]
+    PestError(#[from] Box<Error<Rule>>)
+}
 
 #[inline(always)]
 /// imediadly crashes in debug mode (to get the stacktrace and everything)

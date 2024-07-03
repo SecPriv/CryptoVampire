@@ -150,7 +150,23 @@ macro_rules! destvec {
         }}
     };
 
+    ([$($arg:ident),*,..$leftover:ident] = $vec:expr) => {
+        destvec!{ [$($arg),*,..$leftover] = $vec; |err| {
+            panic!("{}", err);
+        }}
+    };
+
     ([$($arg:ident),*] = $vec:expr; |$err:ident| $err_handling:block) => {
+        destvec!{  [$($arg),*,.. leftover] = $vec; |$err| $err_handling }
+        if !leftover.next().is_none() {
+            {
+                let $err = "too many elements";
+                $err_handling ;
+            }
+        }
+    };
+
+    ([$($arg:ident),*,..$leftover:ident] = $vec:expr; |$err:ident| $err_handling:block) => {
         let mut iter = $vec.into_iter();
         $(
             let $arg = if let Some(tmp) = iter.next() {
@@ -162,12 +178,8 @@ macro_rules! destvec {
                 }
             };
         )*
-        if !iter.next().is_none() {
-            {
-                let $err = "too many elements";
-                $err_handling ;
-            }
-        }
+
+        let mut $leftover = iter;
     }
 }
 

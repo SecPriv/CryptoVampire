@@ -61,7 +61,7 @@ step SenderB(i:index, j:index)
     tpl( tpl( msgB(i, j), tpl(SIGN, cellB(i, SenderB(i, j))) ),
          hmac( tpl(cellB(i, SenderB(i, j)), msgB(i, j) ), sk(i) ) )
   }
-  { cellB(i) <- mySucc(cellB(i, pred(SenderB(i, j)))) }
+  { cellB(i) <- mySucc(cellB(i, pred(SenderB(i, j)))) };
 
 let leq!(s:Step, s':Step) = (lt(s, s') || (s == s'))
 let exec!(t:Step) = (
@@ -76,7 +76,7 @@ assert forall (n1:Message, n2:Message, n3:Message) {((mlt(n1, n2) && mlt(n2, n3)
 assert forall (n1:Message) { not(mlt(n1, n1))}
 assert forall (n1:Message, n2:Message) {( mlt(n1, mySucc(n2)) => ((n1==n2) || mlt(n1, n2)) )}
 
-assert-crypto euf-cma hmac verify;
+assert-crypto uf-cma hmac verify [hmac];
 assert-crypto nonce;
 assert-crypto memory_cell;
 

@@ -5,7 +5,7 @@ use crate::{
         sort::{builtins::BOOL, sort_proxy::SortProxy},
         TmpFormula,
     },
-    problem::crypto_assumptions::{CryptoAssumption, EufCmaMac, EufCmaSign, IntCtxt},
+    problem::crypto_assumptions::{CryptoAssumption, UfCma, EufCma, IntCtxt},
 };
 use itertools::Itertools;
 use log::{debug, trace};
@@ -24,7 +24,7 @@ pub trait InstanceSearcher<'bump> {
 impl<'bump> InstanceSearcher<'bump> for CryptoAssumption<'bump> {
     fn search_instances(&self, str: &str, env: &Environement<'bump>) -> Vec<ARichFormula<'bump>> {
         match self {
-            CryptoAssumption::EufCmaMac(a) => a.search_instances(str, env),
+            CryptoAssumption::UfCma(a) => a.search_instances(str, env),
             CryptoAssumption::EufCmaSign(a) => a.search_instances(str, env),
             CryptoAssumption::IntCtxtSenc(a) => a.search_instances(str, env),
             CryptoAssumption::Nonce(_) | CryptoAssumption::MemoryCell(_) => vec![],
@@ -32,11 +32,11 @@ impl<'bump> InstanceSearcher<'bump> for CryptoAssumption<'bump> {
     }
 }
 
-impl<'bump> InstanceSearcher<'bump> for EufCmaMac<'bump> {
+impl<'bump> InstanceSearcher<'bump> for UfCma<'bump> {
     fn search_instances(&self, str: &str, env: &Environement<'bump>) -> Vec<ARichFormula<'bump>> {
         // TODO: add support for eq
-        let macname = self.mac.name();
-        let verifyname = self.verify.name();
+        let macname = self.mac().name();
+        let verifyname = self.verify().name();
         let functions = env.get_function_hash();
         let _bool = SortProxy::from(BOOL.as_sort());
 
@@ -72,7 +72,7 @@ impl<'bump> InstanceSearcher<'bump> for EufCmaMac<'bump> {
             .collect()
     }
 }
-impl<'bump> InstanceSearcher<'bump> for EufCmaSign<'bump> {
+impl<'bump> InstanceSearcher<'bump> for EufCma<'bump> {
     fn search_instances(&self, str: &str, env: &Environement<'bump>) -> Vec<ARichFormula<'bump>> {
         let signname = self.sign.name();
         let verifyname = self.verify.name();
