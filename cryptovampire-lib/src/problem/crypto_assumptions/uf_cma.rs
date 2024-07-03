@@ -46,7 +46,7 @@ use super::CryptoFlag;
 mod subterm;
 pub use subterm::{KeyAux, UfCmaMainSubtAux};
 
-pub type SubtermUfCmaMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
+pub type SubtermUfCmaMain<'bump> = Subterm<'bump, UfCmaMainSubtAux<'bump>>;
 pub type SubtermUfCmaKey<'bump> = Subterm<'bump, KeyAux<'bump>>;
 
 static_signature!((pub) UF_CMA_MAC_SIGNATURE: (MESSAGE, MESSAGE) -> MESSAGE);
@@ -107,8 +107,8 @@ impl<'bump> UfCma<'bump> {
             env.container
                 .find_free_function_name("subterm_uf_cma_main"),
             &kind,
-            DefaultAuxSubterm::new(message_sort),
-            [],
+            UfCmaMainSubtAux::new(*self),
+            [self.mac, self.verify],
             UnfoldFlags::default(),
             |rc| Subsubterm::EufCmaMacMain(rc),
         );
