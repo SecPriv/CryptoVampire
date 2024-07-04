@@ -63,13 +63,6 @@ step SenderB(i:index, j:index)
   }
   { cellB(i) <- mySucc(cellB(i, pred(SenderB(i, j)))) };
 
-let leq!(s:Step, s':Step) = (lt(s, s') || (s == s'))
-let exec!(t:Step) = (
-  forall (i:index, j:index) {(leq![ReceiverA(i, j), t] => cond![ReceiverA(i, j)])}
-  && forall (i:index, j:index) {(leq![ReceiverB(i, j), t] => cond![ReceiverB(i, j)])}
-  && forall (i:index, j:index) {(leq![SenderA(i, j), t] => cond![SenderA(i, j)])}
-  && forall (i:index, j:index) {(leq![SenderB(i, j), t] => cond![SenderB(i, j)])}
-)
 
 assert forall (n:Message, n2:Message) {( (n == n2) => mlt(n, mySucc(n2)) )}
 assert forall (n1:Message, n2:Message, n3:Message) {((mlt(n1, n2) && mlt(n2, n3)) => mlt(n1, n3))}
@@ -80,6 +73,18 @@ assert-crypto uf-cma hmac verify [hmac];
 assert-crypto nonce;
 assert-crypto memory_cell;
 
+fun mexec(Step):Bool
+
+let leq!(s:Step, s':Step) = (lt(s, s') || (s == s'))
+let exec!(t:Step) = (
+  forall (i:index, j:index) {(leq![ReceiverA(i, j), t] => cond![ReceiverA(i, j)])}
+  && forall (i:index, j:index) {(leq![ReceiverB(i, j), t] => cond![ReceiverB(i, j)])}
+  && forall (i:index, j:index) {(leq![SenderA(i, j), t] => cond![SenderA(i, j)])}
+  && forall (i:index, j:index) {(leq![SenderB(i, j), t] => cond![SenderB(i, j)])}
+)
+
+assert forall(t:Step) {( mexec(t) <=> exec![t])}
+
 
 assert
     forall (s:Message, m:Message, k:Message) {
@@ -89,7 +94,7 @@ assert
 /* counterIncreaseB */
 assert  forall (t:Step, t':Step, i:index)
   {(happens(t) =>
-  (exec![t] =>
+  (mexec(t) =>
   (lt(t', t) =>
   ( mlt(cellB(i,t'), cellB(i, t)) ||
     (cellB(i,t') == cellB(i, t))))))}
@@ -97,13 +102,13 @@ assert  forall (t:Step, t':Step, i:index)
 /* counterIncreaseA */
 assert  forall (t:Step, t':Step, i:index)
   {(happens(t) =>
-  (exec![t] =>
+  (mexec(t) =>
   (lt(t', t) =>
   ( mlt(cellA(i,t'), cellA(i, t)) ||
     (cellA(i,t') == cellA(i, t))))))}
 
 query forall (i:index, j:index) {(
-  happens(ReceiverA(i,j)) => (exec![ReceiverA(i, j)] =>
+  happens(ReceiverA(i,j)) => (mexec(ReceiverA(i, j)) =>
   exists (j':index) {
     lt(SenderB(i, j'), ReceiverA(i, j))
     /*&& (snd(msg![SenderB(i,j')]) == snd(input(ReceiverA(i,j))))
