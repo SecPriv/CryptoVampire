@@ -25,7 +25,7 @@ use crate::{
         function::{
             inner::evaluate::Evaluator, name_caster_collection::NameCasterCollection, Function,
         },
-        sort::{builtins::CONDITION, Sort},
+        sort::{builtins::{CONDITION, STEP}, Sort},
         variable::{uvar, Variable},
     },
 };

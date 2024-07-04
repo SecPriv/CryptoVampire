@@ -8,20 +8,15 @@ use hashbrown::HashSet;
 use itertools::Itertools;
 
 use crate::formula::{
-    formula::ARichFormula,
-    function::{
+    formula::ARichFormula, function::{
         builtin::{AND, EQUALITY, IMPLIES, NOT, OR},
         signature::Signature,
         Function,
-    },
-    manipulation::{Substitution, Translate},
-    quantifier::Quantifier,
-    sort::{
+    }, manipulation::{Substitution, Translate}, quantifier::Quantifier, sort::{
         builtins::BOOL,
         sorted::{Sorted, SortedError},
         Sort,
-    },
-    variable::{uvar, Variable},
+    }, utils::formula_iterator::FormulaIterator, variable::{uvar, IntoVariableIter, Variable}
 };
 use utils::implvec;
 

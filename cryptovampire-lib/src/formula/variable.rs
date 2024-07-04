@@ -132,7 +132,7 @@ pub trait IntoVariableIter<'bump> {
     where
         Self: Sized,
     {
-        self.vars_iter().map(|v| v.id).max().unwrap_or(0)
+        self.vars_iter().map(|v| v.id).max().unwrap_or(0)+1
     }
 }
 
@@ -149,5 +149,11 @@ where
 impl<'bump> IntoVariableIter<'bump> for Variable<'bump> {
     fn vars_iter(self) -> impl Iterator<Item = Variable<'bump>> {
         [self].into_iter()
+    }
+}
+
+impl<'a, 'bump> IntoVariableIter<'bump> for &'a Variable<'bump> {
+    fn vars_iter(self) -> impl Iterator<Item = Variable<'bump>> {
+        [*self].into_iter()
     }
 }
