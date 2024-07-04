@@ -123,3 +123,31 @@ where
 {
     q
 }
+
+/// To get the maxvar
+pub trait IntoVariableIter<'bump> {
+    fn vars_iter(self) -> impl Iterator<Item = Variable<'bump>>;
+
+    fn max_var(self) -> uvar
+    where
+        Self: Sized,
+    {
+        self.vars_iter().map(|v| v.id).max().unwrap_or(0)
+    }
+}
+
+impl<'bump, U, V> IntoVariableIter<'bump> for U
+where
+    U: IntoIterator<Item = V>,
+    V: IntoVariableIter<'bump>,
+{
+    fn vars_iter(self) -> impl Iterator<Item = Variable<'bump>> {
+        self.into_iter().flat_map(|i| i.vars_iter())
+    }
+}
+
+impl<'bump> IntoVariableIter<'bump> for Variable<'bump> {
+    fn vars_iter(self) -> impl Iterator<Item = Variable<'bump>> {
+        [self].into_iter()
+    }
+}
