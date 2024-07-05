@@ -2,24 +2,14 @@ use std::{cell::RefCell, hash::Hash, sync::Arc};
 
 use if_chain::if_chain;
 use itertools::Itertools;
-use static_init::dynamic;
 
-use crate::subterm::{
-    into_exist_formula,
-    kind::SubtermKindConstr,
-    traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
-    Subterm,
-};
 use crate::{
     environement::{environement::Environement, traits::KnowsRealm},
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::{forall, meq, ARichFormula, RichFormula},
         function::Function,
-        function::{
-            inner::subterm::Subsubterm, name_caster_collection::NameCasterCollection,
-            signature::StaticSignature,
-        },
+        function::{inner::subterm::Subsubterm, name_caster_collection::NameCasterCollection},
         manipulation::OneVarSubst,
         sort::{
             builtins::{MESSAGE, NAME},
@@ -32,20 +22,26 @@ use crate::{
     problem::{generator::Generator, problem::Problem},
     static_signature,
 };
+use crate::{
+    formula::sort::builtins::CONDITION,
+    subterm::{
+        into_exist_formula,
+        kind::SubtermKindConstr,
+        traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
+        Subterm,
+    },
+};
 use utils::arc_into_iter::ArcIntoIter;
 
 pub type SubtermEufCmaSignMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
 pub type SubtermEufCmaSignKey<'bump> = Subterm<'bump, KeyAux<'bump>>;
 
 static_signature!((pub) EUF_CMA_SIGN_SIGNATURE: (MESSAGE, MESSAGE) -> MESSAGE);
-#[dynamic]
-#[allow(dead_code)]
-static EUF_CMA_VERIFY_SIGNATURE: StaticSignature<'static, 3> =
-    super::EUF_CMA_VERIFY_SIGNATURE.clone();
+static_signature!((pub) EUF_CMA_VERIFY_SIGNATURE: (MESSAGE, MESSAGE, MESSAGE) -> CONDITION);
 static_signature!((pub) EUF_CMA_PK_SIGNATURE: (MESSAGE) -> MESSAGE);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct EufCmaSign<'bump> {
+pub struct EufCma<'bump> {
     /// mac(Message, Key) -> Signature
     pub sign: Function<'bump>,
     /// verify(Signature, Message, Key) -> bool
@@ -54,7 +50,7 @@ pub struct EufCmaSign<'bump> {
     pub pk: Function<'bump>,
 }
 
-impl<'bump> EufCmaSign<'bump> {
+impl<'bump> EufCma<'bump> {
     pub fn generate(
         &self,
         assertions: &mut Vec<Axiom<'bump>>,
@@ -353,7 +349,7 @@ struct EufCandidate<'bump> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyAux<'bump> {
-    euf_cma: EufCmaSign<'bump>,
+    euf_cma: EufCma<'bump>,
     name_caster: Arc<NameCasterCollection<'bump>>,
 }
 
@@ -390,6 +386,7 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
                 }
                 ArcIntoIter::from(args)
             }
+            RichFormula::Quantifier(_, arg) => [arg.shallow_copy()].into(),
             _ => [].into(),
         };
 
@@ -424,7 +421,7 @@ impl<'bump> Hash for KeyAux<'bump> {
     }
 }
 
-impl<'bump> Generator<'bump> for EufCmaSign<'bump> {
+impl<'bump> Generator<'bump> for EufCma<'bump> {
     fn generate(
         &self,
         assertions: &mut Vec<Axiom<'bump>>,

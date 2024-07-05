@@ -33,6 +33,10 @@ impl<'bump> Axiom<'bump> {
     pub fn query(f: ARichFormula<'bump>) -> Self {
         Self::Query { formula: f }
     }
+
+    pub fn comment(c: impl Into<Box<str>>) -> Self {
+        Self::Comment(c.into())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

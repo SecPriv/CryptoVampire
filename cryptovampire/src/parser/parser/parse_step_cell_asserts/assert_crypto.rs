@@ -1,13 +1,19 @@
 use pest::Span;
 
-use crate::parser::{ast, merr, parser::Environement, IntoRuleResultFunction, E};
+use crate::parser::{
+    ast::{self, Options},
+    merr,
+    parser::Environement,
+    IntoRuleResultFunction, E,
+};
 use cryptovampire_lib::{
     environement::traits::Realm,
     formula::function::signature::Signature,
     problem::crypto_assumptions::{
-        CryptoAssumption, EufCmaMac, EufCmaSign, IntCtxt, Nonce, EUF_CMA_MAC_SIGNATURE,
-        EUF_CMA_PK_SIGNATURE, EUF_CMA_SIGN_SIGNATURE, EUF_CMA_VERIFY_SIGNATURE,
-        INT_CTXT_DEC_SIGNATURE, INT_CTXT_ENC_SIGNATURE, INT_CTXT_VERIFY_SIGNATURE,
+        CryptoAssumption, EufCma, IntCtxt, Nonce, UfCmaBuilder, EUF_CMA_PK_SIGNATURE,
+        EUF_CMA_SIGN_SIGNATURE, EUF_CMA_VERIFY_SIGNATURE, INT_CTXT_DEC_SIGNATURE,
+        INT_CTXT_ENC_SIGNATURE, INT_CTXT_VERIFY_SIGNATURE, UF_CMA_MAC_SIGNATURE,
+        UF_CMA_VERIFY_SIGNATURE,
     },
 };
 use utils::{destvec, implvec, traits::NicerError};
@@ -30,12 +36,14 @@ pub fn parse_assert_crypto<'str, 'bump>(
         span,
         name,
         functions,
+        options,
     } = crypto;
 
     match name.content {
         "nonce" => Ok(CryptoAssumption::Nonce(Nonce)),
         "memory_cell" => Ok(CryptoAssumption::MemoryCell(Default::default())),
-        "euf-cma" => parse_euf_cma(env, functions, *span),
+        "euf-cma" => parse_euf_cma(env, functions, options, *span),
+        "uf-cma" => parse_uf_cma(env, functions, options, *span),
         "int-ctxt" => parse_int_ctxt(env, functions, *span),
         _ => Err(merr(name.span, "unknown crypto assertion".to_string())),
     }
@@ -58,31 +66,50 @@ macro_rules! verify_sign {
 fn parse_euf_cma<'str, 'bump>(
     env: &Environement<'bump, 'str>,
     functions: &[ast::Function<'str>],
+    options: &Options<'str>,
     span: Span<'str>,
 ) -> Result<CryptoAssumption<'bump>, E> {
     match functions.len() {
-        2 => {
-            destvec!([ast_mac, ast_verify] = functions);
-            verify_sign!(env; ast_mac, mac, EUF_CMA_MAC_SIGNATURE, 2);
-            verify_sign!(env; ast_verify, verify, EUF_CMA_VERIFY_SIGNATURE, 3);
-            Ok(CryptoAssumption::EufCmaMac(EufCmaMac { mac, verify }))
-        }
+        2 => parse_uf_cma(env, functions, options, span),
         3 => {
             destvec!([ast_sign, ast_verify, ast_pk] = functions);
             verify_sign!(env; ast_sign, sign, EUF_CMA_SIGN_SIGNATURE, 2);
             verify_sign!(env; ast_verify, verify, EUF_CMA_VERIFY_SIGNATURE, 3);
             verify_sign!(env; ast_pk, pk, EUF_CMA_PK_SIGNATURE, 1);
-            Ok(CryptoAssumption::EufCmaSign(EufCmaSign {
-                sign,
-                verify,
-                pk,
-            }))
+            Ok(CryptoAssumption::EufCmaSign(EufCma { sign, verify, pk }))
         }
         i => Err(merr(
             span,
             format!("wrong number of arguments: expected 2 or 3, got {i}"),
         )),
     }
+}
+
+fn parse_uf_cma<'str, 'bump>(
+    env: &Environement<'bump, 'str>,
+    functions: &[ast::Function<'str>],
+    options: &Options<'str>,
+    s: Span<'str>,
+) -> Result<CryptoAssumption<'bump>, E> {
+    let mut builder = UfCmaBuilder::default();
+    if let [ast_mac, ast_verify] = functions {
+        verify_sign!(env; ast_mac, mac, UF_CMA_MAC_SIGNATURE, 2);
+        verify_sign!(env; ast_verify, verify, UF_CMA_VERIFY_SIGNATURE, 3);
+        builder.mac(mac).verify(verify);
+    } else {
+        return Err(merr(
+            s,
+            format!(
+                "wrong number of arguments: expected 2, got {:}",
+                functions.len()
+            ),
+        ));
+    }
+    if options.contains("hmac") {
+        builder.hmac(true);
+    }
+
+    Ok(CryptoAssumption::UfCma(builder.build().unwrap()))
 }
 
 fn parse_int_ctxt<'str, 'bump>(

@@ -1,8 +1,7 @@
-use std::{borrow::Borrow, fmt::Display, sync::Arc};
+use std::fmt::Display;
 
-use anyhow::{anyhow, bail, Context};
+use anyhow::{anyhow, bail};
 use log::{debug, trace, warn};
-use serde::{Deserialize, Serialize};
 use utils::{implvec, string_ref::StrRef};
 
 use crate::{
@@ -19,7 +18,8 @@ use hashbrown::HashMap;
 use itertools::Itertools;
 
 /// A very simplified AST
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum TmpFormula {
     Binder {
         head: String,

@@ -12,6 +12,9 @@ use super::{
 };
 use crate::subterm::FormlAndVars;
 
+mod ordering;
+pub use ordering::{Ordering, OrderingKind};
+
 /// A protocol
 #[derive(Debug, Clone)]
 pub struct Protocol<'bump> {
@@ -30,7 +33,7 @@ pub struct Protocol<'bump> {
     /// the [MemoryCell]s
     memory_cells: Vec<MemoryCell<'bump>>,
     /// Extra ordering information between steps
-    ordering: Vec<ARichFormula<'bump>>,
+    ordering: Vec<Ordering<'bump>>,
     max_var: OnceCell<uvar>,
 }
 
@@ -38,7 +41,7 @@ pub struct ProtocolStruct<'a, 'bump> {
     pub graph: &'a PreprocessedDependancyGraph<'bump>,
     pub steps: &'a [Step<'bump>],
     pub memory_cells: &'a [MemoryCell<'bump>],
-    pub ordering: &'a [ARichFormula<'bump>],
+    pub ordering: &'a [Ordering<'bump>],
 }
 
 impl<'bump> Protocol<'bump> {
@@ -46,7 +49,7 @@ impl<'bump> Protocol<'bump> {
     pub fn new(
         steps: implvec!(Step<'bump>),
         cells: implvec!(MemoryCell<'bump>),
-        ordering: implvec!(ARichFormula<'bump>),
+        ordering: implvec!(Ordering<'bump>),
     ) -> Self {
         let mut steps = steps.into_iter().collect_vec();
         let memory_cells = cells.into_iter().collect_vec();
@@ -163,7 +166,7 @@ impl<'bump> Protocol<'bump> {
         self.memory_cells.as_ref()
     }
 
-    pub fn ordering(&self) -> &[ARichFormula<'bump>] {
+    pub fn ordering(&self) -> &[Ordering<'bump>] {
         self.ordering.as_ref()
     }
 

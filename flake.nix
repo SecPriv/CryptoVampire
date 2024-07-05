@@ -17,6 +17,11 @@
         src = ./cryptovampire;
         custom-pkgs = custom.packages.${system};
         manifest = (pkgs.lib.importTOML "${src}/Cargo.toml").package;
+
+        my-z3 = pkgs.z3;
+
+        my-python = pkgs.python311.withPackages
+          (ps: with ps; [ numpy (toPythonModule my-z3).python ]);
       in rec {
         packages.cryptovampire = pkgs.rustPlatform.buildRustPackage {
           name = manifest.name;
@@ -41,6 +46,8 @@
               rustfmt
               clippy
               rust-analyzer
+              my-python
+              graphviz
             ];
         };
 

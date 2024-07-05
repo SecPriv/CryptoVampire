@@ -21,6 +21,8 @@ fun tpl(Message, Message):Message
 fun fst(Message):Message;
 fun snd(Message):Message
 
+fun mexec(Step):Bool
+
 assert forall (m1:Message, m2:Message) {
         ((m1 == fst(tpl(m1,m2))) && (m2 == snd(tpl(m1,m2))))
     }
@@ -33,19 +35,19 @@ step init
     (i:index) cellB(i) <- myZero
   }
 
-step ReceiveA(i:index, j:index)
+step ReceiverA(i:index, j:index)
   { ((fst(snd(fst(in))) == SIGN)
-     && mlt(cellA(i, ReceiveA(i, j)), snd(snd(fst(in))))
+     && mlt(cellA(i, ReceiverA(i, j)), snd(snd(fst(in))))
      && (snd(in) == hmac(tpl(snd(snd(fst(in))),fst(fst(in))),sk(i)))) }
   { ok }
-  {cellA(i) <- mySucc(cellA(i, pred(ReceiveA(i, j))))}
+  {cellA(i) <- mySucc(cellA(i, pred(ReceiverA(i, j))))}
 
-step ReceiveB(i:index, j:index)
+step ReceiverB(i:index, j:index)
   { ((fst(snd(fst(in))) == SIGN)
-     && mlt(cellB(i, ReceiveB(i, j)), snd(snd(fst(in))))
+     && mlt(cellB(i, ReceiverB(i, j)), snd(snd(fst(in))))
      && (snd(in) == hmac(tpl(snd(snd(fst(in))),fst(fst(in))),sk(i)))) }
   { ok }
-  {cellB(i) <- mySucc(cellB(i, pred(ReceiveB(i, j))))}
+  {cellB(i) <- mySucc(cellB(i, pred(ReceiverB(i, j))))}
 
 step SenderA(i:index, j:index)
   { true }
@@ -66,13 +68,38 @@ assert forall (n1:Message, n2:Message, n3:Message) {((mlt(n1, n2) && mlt(n2, n3)
 assert forall (n1:Message) { not(mlt(n1, n1))}
 assert forall (n1:Message, n2:Message) {( mlt(n1, mySucc(n2)) => ((n1==n2) || mlt(n1, n2)) )}
 
-assert-crypto euf-cma hmac verify;
+assert-crypto uf-cma hmac verify [hmac];
 assert-crypto nonce;
 assert-crypto memory_cell;
 
-/* the lemma `orderBetween` wouldn't really be sound to prove */
+let leq!(s:Step, s':Step) = (lt(s, s') || (s == s'))
+let exec!(t:Step) = (
+  forall (i:index, j:index) {(leq![ReceiverA(i, j), t] => cond![ReceiverA(i, j)])}
+  && forall (i:index, j:index) {(leq![ReceiverB(i, j), t] => cond![ReceiverB(i, j)])}
+  && forall (i:index, j:index) {(leq![SenderA(i, j), t] => cond![SenderA(i, j)])}
+  && forall (i:index, j:index) {(leq![SenderB(i, j), t] => cond![SenderB(i, j)])}
+)
 
-query forall (i:index, j:index) {(
-  (happens(SenderA(i, j)) => cond![SenderA(i, j)])
-    => mlt(cellA(i, pred(SenderA(i, j))), cellA(i, SenderA(i, j)))
-)}
+assert forall(t:Step) {( mexec(t) <=> exec![t])}
+
+
+/* counterIncreaseB */
+assert  forall (t:Step, t':Step, i:index)
+  {(happens(t) =>
+  (mexec(t) =>
+  (lt(t', t) =>
+  ( mlt(cellB(i,t'), cellB(i, t)) ||
+    (cellB(i,t') == cellB(i, t))))))}
+
+/* counterIncreaseA */
+assert  forall (t:Step, t':Step, i:index)
+  {(happens(t) =>
+  (mexec(t) =>
+  (lt(t', t) =>
+  ( mlt(cellA(i,t'), cellA(i, t)) ||
+    (cellA(i,t') == cellA(i, t))))))}
+
+query forall (i:index, j1:index, t:Step){( happens(SenderA(i,j1)) =>
+    ((lt(t, SenderA(i,j1)) && mexec(SenderA(i,j1))) =>
+      mlt(cellA(i, t), cellA(i, SenderA(i,j1))))
+      )}

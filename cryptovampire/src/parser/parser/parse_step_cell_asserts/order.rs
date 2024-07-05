@@ -9,12 +9,9 @@ use crate::parser::{
     },
     E,
 };
-use cryptovampire_lib::formula::{
-    formula::{ARichFormula, RichFormula},
-    function::builtin::{EQUALITY, HAPPENS, LESS_THAN_STEP},
-    quantifier::Quantifier,
-    sort::builtins::STEP,
-    variable::Variable,
+use cryptovampire_lib::{
+    formula::{quantifier::Quantifier, sort::builtins::STEP, variable::Variable},
+    problem::protocol::{Ordering, OrderingKind},
 };
 use utils::implvec;
 
@@ -24,7 +21,7 @@ pub fn parse_orders_with_bvars<'a, 'str, 'bump, B>(
     bvars: &'a mut Vec<(&'str str, VarProxy<'bump>)>,
 ) -> Result<B, E>
 where
-    B: FromIterator<ARichFormula<'bump>>,
+    B: FromIterator<Ordering<'bump>>,
 {
     orders
         .into_iter()
@@ -36,7 +33,7 @@ fn parse_order_with_bvars<'str, 'bump>(
     env: &Environement<'bump, 'str>,
     order: &ast::Order<'str>,
     bvars: &mut Vec<(&'str str, VarProxy<'bump>)>,
-) -> Result<ARichFormula<'bump>, E> {
+) -> Result<Ordering<'bump>, E> {
     let ast::Order {
         quantifier,
         args,
@@ -73,21 +70,18 @@ fn parse_order_with_bvars<'str, 'bump>(
     bvars.truncate(variables.len());
     let t2 = t2.parse(env, bvars, env, Some(STEP.as_sort().into()))?;
 
-    let happens = HAPPENS.clone();
-    let lt = LESS_THAN_STEP.clone();
     let content = match kind {
-        ast::OrderOperation::Incompatible => {
-            (happens.f_a([&t1]) & happens.f_a([&t2])) >> EQUALITY.f_a([t1, t2])
-        }
-        ast::OrderOperation::Lt => lt.f_a([t1, t2]),
-        ast::OrderOperation::Gt => lt.f_a([t2, t1]),
+        ast::OrderOperation::Incompatible => OrderingKind::Exclusive(t1, t2),
+        ast::OrderOperation::Lt => OrderingKind::LT(t1, t2),
+        ast::OrderOperation::Gt => OrderingKind::LT(t2, t1),
     };
 
     let quantifier = match quantifier {
         ast::QuantifierKind::Forall => Quantifier::Forall { variables },
         ast::QuantifierKind::Exists => Quantifier::Exists { variables },
     };
-    let content = RichFormula::Quantifier(quantifier, content);
+    let content = Ordering::new(quantifier, content);
+    debug_assert!(content.check().is_ok());
 
     Ok(content.into())
 }

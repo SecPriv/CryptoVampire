@@ -7,7 +7,7 @@ use std::{
 use crate::formula::{
     function::builtin::{AND, IMPLIES, NOT, OR},
     utils::formula_iterator::{FormulaIterator, IteratorFlags},
-    variable::Variable,
+    variable::{IntoVariableIter, Variable},
 };
 
 use super::RichFormula;
@@ -235,5 +235,17 @@ impl<'bump> Shr for ARichFormula<'bump> {
 impl<'bump> Display for ARichFormula<'bump> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_inner())
+    }
+}
+
+impl<'a, 'bump> IntoVariableIter<'bump> for &'a ARichFormula<'bump> {
+    fn vars_iter(self) -> impl Iterator<Item = Variable<'bump>> {
+        self.used_variables_iter()
+    }
+}
+
+impl<'bump> IntoVariableIter<'bump> for ARichFormula<'bump> {
+    fn vars_iter(self) -> impl Iterator<Item = Variable<'bump>> {
+        self.used_variables_iter()
     }
 }

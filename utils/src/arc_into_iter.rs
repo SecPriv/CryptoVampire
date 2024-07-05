@@ -150,3 +150,10 @@ impl<T: Clone> ClonableArc<T> for Arc<[T]> {
         self
     }
 }
+
+impl<T> FromIterator<T> for ArcIntoIter<T> {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        let data: Arc<[_]> = iter.into_iter().collect();
+        data.into()
+    }
+}

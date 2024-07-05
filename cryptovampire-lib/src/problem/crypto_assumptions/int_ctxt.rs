@@ -494,6 +494,7 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
                 }
                 args.into()
             }
+            RichFormula::Quantifier(_, arg) => [arg.shallow_copy()].into(),
             _ => [].into(),
         };
 
@@ -569,6 +570,7 @@ impl<'bump> SubtermAux<'bump> for RandAux<'bump> {
                 }
                 args.into()
             }
+            RichFormula::Quantifier(_, arg) => [arg.shallow_copy()].into(),
             _ => [].into(),
         };
 

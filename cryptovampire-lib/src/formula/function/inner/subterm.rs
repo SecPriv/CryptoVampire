@@ -7,8 +7,8 @@ use crate::{
         sort::{builtins::BOOL, Sort},
     },
     problem::crypto_assumptions::{
-        SubtermEufCmaMacKey, SubtermEufCmaMacMain, SubtermEufCmaSignKey, SubtermEufCmaSignMain,
-        SubtermIntCtxtKey, SubtermIntCtxtMain, SubtermIntCtxtRand, SubtermNonce,
+        SubtermEufCmaSignKey, SubtermEufCmaSignMain, SubtermIntCtxtKey, SubtermIntCtxtMain,
+        SubtermIntCtxtRand, SubtermNonce, SubtermUfCmaKey, SubtermUfCmaMain,
     },
     static_signature,
 };
@@ -106,8 +106,8 @@ macro_rules! do_for_all_subterms {
 
 generate!(
     Nonce: SubtermNonce<'bump>,
-    EufCmaMacMain: SubtermEufCmaMacMain<'bump>,
-    EufCmaMacKey: SubtermEufCmaMacKey<'bump>,
+    EufCmaMacMain: SubtermUfCmaMain<'bump>,
+    EufCmaMacKey: SubtermUfCmaKey<'bump>,
     EufCmaSignMain: SubtermEufCmaSignMain<'bump>,
     EufCmaSignKey: SubtermEufCmaSignKey<'bump>,
     IntCtxtMain: SubtermIntCtxtMain<'bump>,
