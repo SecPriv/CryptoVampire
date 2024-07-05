@@ -7,13 +7,16 @@ use cryptovampire_lib::{
     formula::{function::builtin::BUILT_IN_FUNCTIONS, sort::builtins::BUILT_IN_SORTS},
     smt::SmtFile,
 };
+use log::trace;
 use utils::from_with::FromWith;
 
-use crate::{cli::Args, parser, problem_try_from_str};
+use crate::{cli::Args, init_logger, parser, problem_try_from_str};
 
 #[test]
 fn miri() {
+    init_logger();
     ScopedContainer::scoped(|container| {
+        trace!("running");
         let env = Environement::from_with(&Args::parse_from::<_, OsString>([]), &*container);
 
         let pbl = problem_try_from_str(

@@ -4,28 +4,14 @@ use std::{
 };
 
 use clap::Parser;
-use cryptovampire::{cli::Args, run};
+use cryptovampire::{cli::Args, init_logger, run};
 
 use log::trace;
-use std::io::Write;
 
 fn main() {
     let args = Args::parse();
 
-    env_logger::Builder::new()
-        .format(|buf, record| {
-            let str = record.args().to_string().replace("\n", "\n\t");
-            writeln!(
-                buf,
-                "[{}] in {}:{}\n\t{}",
-                record.level(),
-                record.file().unwrap_or("unknown"),
-                record.line().unwrap_or(0),
-                str
-            )
-        })
-        .parse_default_env()
-        .init();
+    init_logger();
 
     trace!("start");
     trace!("read input...");

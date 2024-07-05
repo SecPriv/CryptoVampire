@@ -5,7 +5,7 @@ use std::{
 
 use const_format::concatcp;
 use derivative::Derivative;
-use itertools::Itertools;
+use itertools::{chain, Itertools};
 use log::trace;
 use pest::{error::Error, iterators::Pair, Parser, Position, Span};
 use static_init::dynamic;
@@ -949,12 +949,18 @@ boiler_plate!(AssertCrypto<'a>, 'a, assertion_crypto ; |p| {
     let name = p.next().unwrap().try_into()?;
     let mut p = p.collect_vec();
     // try to parse the option, if it fails, it means there weren't any
-    let options = p.last().and_then(|r| r.clone().try_into().ok());
-    if options.is_some() {
-        p.pop();
+    let mut options  = Options::empty(span);
+    let mut extra_fun = None;
+
+    if let Some(r) = p.pop() {
+        if let Rule::options = r.as_rule() {
+            options = r.into_inner().next().unwrap().try_into()?;
+        } else {
+            extra_fun = Some(r)
+        }
     }
-    let functions = p.into_iter().map(TryInto::try_into).try_collect()?;
-    let options = options.unwrap_or(Options::empty(span));
+
+    let functions = chain!(p.into_iter(), extra_fun).map(TryInto::try_into).try_collect()?;
 
     Ok(Self {span, name, functions, options})
 });

@@ -1,4 +1,3 @@
-/* this is a comment */
 
 type index;
 fun tpl(Message, Message):Message
@@ -18,24 +17,19 @@ fun nt(session, index): Name
 fun nr(session): Name
 fun key(index):Name
 
-
-/* This is a macro that will be blindly inlined during parsing */
-let condition_reader!(j:index, in:Message) =
+let mcond!(i:session, j:index, in:Message) =
     verify(
         sel2of2(in),
         sel1of2(in),
         key(j)
     )
 
-
-step reader(i:session, j:index) 
-    /* use `in` as a shortcut for `input(reader(i, j))` 
-        while defining a step */
-    { condition_reader![j, in] }
+step reader(i:session, j:index)
+    { mcond!(i, j, in) }
     { ok }
 
 step reader_fail(i:session)
-    { not(exists (j:index) {condition_reader![j, in]}) }
+    { not(exists (j:index) {mcond!(i, j, in)}) }
     { ko }
 
 step tag(i:session, j:index)
@@ -61,7 +55,6 @@ assert
         (verify(s, m, k) <=> (s == hash(m, k)))
     }
 
-/* `<>` for mutual exclusion, `<` for ordering */
 order forall (i:session, j:index)
     { reader_fail(i) <> reader(i, j) }
 
@@ -70,17 +63,16 @@ order forall (i:session, j:index, j2:index)
 
 let conclusion!(i:session, j:index) = exists (k:session) {(
     lt(tag(k, j), reader(i, j))
-    && (sel1of2(msg![tag(k, j)]) == sel1of2(input(reader(i, j))))
-    && (sel2of2(msg![tag(k, j)]) == sel2of2(input(reader(i, j))))
+    && (sel1of2(msg!(tag(k, j))) == sel1of2(input(reader(i, j))))
+    && (sel2of2(msg!(tag(k, j))) == sel2of2(input(reader(i, j))))
 )}
 
-let premise!(i:session, j:index) = cond![reader(i, j)]
+let premise!(i:session, j:index) =  cond!(reader(i, j))
 
 query forall (i:session, j:index) {(
     happens(reader(i, j))
-        => (premise![i, j] <=> conclusion![i, j])
+        => (conclusion!(i, j) <=> premise!(i, j))
 )}
 
-/* describe which cryptography to use */
 assert-crypto euf-cma hash verify;
 assert-crypto nonce;

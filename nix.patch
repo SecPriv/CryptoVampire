@@ -1,7 +1,7 @@
-diff --git a/.cargo/config b/.cargo/config
+diff --git a/.cargo/config.toml b/.cargo/config.toml
 index 507cdea..8b07d7e 100644
---- a/.cargo/config
-+++ b/.cargo/config
+--- a/.cargo/config.toml
++++ b/.cargo/config.toml
 @@ -1,2 +1,2 @@
  [build]
 -target-dir = "/tmp/ccsa/build/dir"

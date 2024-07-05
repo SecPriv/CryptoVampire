@@ -159,3 +159,21 @@ fn save_to_file<'bump>(
         .write_to_io(&mut BufWriter::new(file))?;
     Ok(())
 }
+
+use std::io::Write;
+pub fn init_logger() {
+    env_logger::Builder::new()
+        .format(|buf, record| {
+            let str = record.args().to_string().replace("\n", "\n\t");
+            writeln!(
+                buf,
+                "[{}] in {}:{}\n\t{}",
+                record.level(),
+                record.file().unwrap_or("unknown"),
+                record.line().unwrap_or(0),
+                str
+            )
+        })
+        .parse_default_env()
+        .init();
+}

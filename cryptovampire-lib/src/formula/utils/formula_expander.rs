@@ -8,7 +8,7 @@ use crate::{
             InnerFunction,
         },
         manipulation::{FrozenMultipleVarSubst, FrozenSubst, OneVarSubst, Substitution},
-        variable::Variable,
+        variable::{IntoVariableIter, Variable},
     },
     problem::{
         cell::{Assignement, MemoryCell},
@@ -387,7 +387,7 @@ fn make_collision_avoiding_subst<'a, 'bump: 'a>(
 
     let max_var = chain!(base, &vars).map(Variable::id).max().unwrap_or(0) + 1;
     vars.into_iter()
-        .filter(|v| base.contains(&v))
+        .filter(|v| base.contains_var(v))
         .map(|v| OneVarSubst {
             id: v.id,
             f: v + max_var,

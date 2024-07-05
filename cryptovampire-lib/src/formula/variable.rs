@@ -3,6 +3,8 @@ use std::{
     ops::{Add, Deref},
 };
 
+use itertools::Itertools;
+
 use super::{
     formula::{ARichFormula, RichFormula},
     sort::Sort,
@@ -27,7 +29,11 @@ impl<'bump> PartialEq for Variable<'bump> {
     fn eq(&self, other: &Self) -> bool {
         if cfg!(debug_assertions) {
             if self.id == other.id {
-                assert_eq!(self.sort, other.sort);
+                assert_eq!(
+                    self.sort, other.sort,
+                    "{self:} ({:}) != {other:} ({:})",
+                    self.sort, other.sort
+                );
                 true
             } else {
                 false
@@ -128,11 +134,25 @@ where
 pub trait IntoVariableIter<'bump> {
     fn vars_iter(self) -> impl Iterator<Item = Variable<'bump>>;
 
+    fn vars_id_iter(self) -> impl Iterator<Item = uvar>
+    where
+        Self: Sized,
+    {
+        self.vars_iter().map(|v| v.id)
+    }
+
     fn max_var(self) -> uvar
     where
         Self: Sized,
     {
-        self.vars_iter().map(|v| v.id).max().unwrap_or(0) + 1
+        self.vars_id_iter().max().unwrap_or(0) + 1
+    }
+
+    fn contains_var(self, Variable { id, .. }: &Variable) -> bool
+    where
+        Self: Sized,
+    {
+        self.vars_id_iter().contains(id)
     }
 }
 

@@ -13,6 +13,7 @@ use itertools::Itertools;
 use log::{error, log_enabled, trace, warn};
 
 use crate::formula::utils::formula_expander::{UnfolderBuilder, UnfoldingStateBuilder};
+use crate::formula::variable::IntoVariableIter;
 use crate::{
     container::allocator::{ContainerTools, Residual},
     environement::{
@@ -749,7 +750,7 @@ pub fn into_exist_formula<'bump>(
     // further expand vars
     for (var, f_idx) in vars.iter_mut() {
         for (i, (vars, _)) in content.iter().enumerate() {
-            if !vars.iter().contains(&var) {
+            if !vars.contains_var(&var) {
                 // if `var` doesn't clash with any variables in `vars` we can add the formula to the bag
                 f_idx.insert(i);
             }
