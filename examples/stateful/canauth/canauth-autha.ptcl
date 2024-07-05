@@ -91,7 +91,7 @@ assert
         (verify(s, m, k) <=> (s == hmac(m, k)))
     }
 
-/* counterIncreaseB */
+/*
 assert  forall (t:Step, t':Step, i:index)
   {(happens(t) =>
   (mexec(t) =>
@@ -99,21 +99,28 @@ assert  forall (t:Step, t':Step, i:index)
   ( mlt(cellB(i,t'), cellB(i, t)) ||
     (cellB(i,t') == cellB(i, t))))))}
 
-/* counterIncreaseA */
 assert  forall (t:Step, t':Step, i:index)
   {(happens(t) =>
   (mexec(t) =>
   (lt(t', t) =>
   ( mlt(cellA(i,t'), cellA(i, t)) ||
-    (cellA(i,t') == cellA(i, t))))))}
+    (cellA(i,t') == cellA(i, t))))))}*/
+
+/* counterIncreaseStrictRA */
+assert forall (i:index, j1:index, t:Step) {(
+  happens(ReceiverA(i, j1)) => (
+    (lt(t, ReceiverA(i, j1)) && mexec(ReceiverA(i, j1)))
+    => mlt(cellA(i, t), cellA(i, ReceiverA(i, j1)))
+  )
+)}
 
 query forall (i:index, j:index) {(
   happens(ReceiverA(i,j)) => (mexec(ReceiverA(i, j)) =>
-  exists (j':index) {
+  exists (j':index) {(
     lt(SenderB(i, j'), ReceiverA(i, j))
-    /*&& (snd(msg![SenderB(i,j')]) == snd(input(ReceiverA(i,j))))
+    && (snd(msg![SenderB(i,j')]) == snd(input(ReceiverA(i,j))))
     && (fst(fst(msg![SenderB(i,j')])) == fst(fst(input(ReceiverA(i,j)))))
     && (snd(snd(fst(msg![SenderB(i,j')]))) == snd(snd(fst(input(ReceiverA(i,j))))))
-    && mlt(cellA(i, pred(ReceiverA(i,j))), cellB(i, SenderB(i,j')))*/
-  }
+    && mlt(cellA(i, pred(ReceiverA(i,j))), cellB(i, SenderB(i,j')))
+  )}
 ))}

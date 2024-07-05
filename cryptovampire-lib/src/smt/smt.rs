@@ -396,7 +396,7 @@ impl<'bump> SmtFile<'bump> {
         let assertions = assertions.into_iter().map(|ax| Smt::from_axiom(env, ax));
         let other = [Smt::CheckSat];
 
-        let content = itertools::chain!([Smt::SetLogic("UFDT".into())], declarations, assertions, other).collect();
+        let content = itertools::chain!(declarations, assertions, other).collect();
         Self { content }
     }
 

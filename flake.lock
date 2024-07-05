@@ -9,11 +9,11 @@
         "opam-nix": "opam-nix"
       },
       "locked": {
-        "lastModified": 1717670046,
-        "narHash": "sha256-7AAPFk0Ylhi2VVfcxNOSDC3otGT5R+B99+lrzMRwUbQ=",
+        "lastModified": 1720104986,
+        "narHash": "sha256-na8dQ126eLoMDCM8MHWq+c9i34K56DMTJuSkKr76iVU=",
         "owner": "puyral",
         "repo": "custom-nix",
-        "rev": "52787f68faaea619d057eaf13fa4f4f4c3e5f455",
+        "rev": "9ed1d1f0489e7cf3f26a0fd831044aecce92940e",
         "type": "github"
       },
       "original": {
@@ -123,11 +123,11 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1718160348,
-        "narHash": "sha256-9YrUjdztqi4Gz8n3mBuqvCkMo4ojrA6nASwyIKWMpus=",
+        "lastModified": 1719848872,
+        "narHash": "sha256-H3+EC5cYuq+gQW8y0lSrrDZfH71LB4DAf+TDFyvwCNA=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "57d6973abba7ea108bac64ae7629e7431e0199b6",
+        "rev": "00d80d13810dbfea8ab4ed1009b09100cca86ba8",
         "type": "github"
       },
       "original": {
