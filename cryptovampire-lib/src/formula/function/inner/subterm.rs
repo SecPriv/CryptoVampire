@@ -7,8 +7,8 @@ use crate::{
         sort::{builtins::BOOL, Sort},
     },
     problem::crypto_assumptions::{
-        SubtermUfCmaKey, SubtermUfCmaMain, SubtermEufCmaSignKey, SubtermEufCmaSignMain,
-        SubtermIntCtxtKey, SubtermIntCtxtMain, SubtermIntCtxtRand, SubtermNonce,
+        SubtermEufCmaSignKey, SubtermEufCmaSignMain, SubtermIntCtxtKey, SubtermIntCtxtMain,
+        SubtermIntCtxtRand, SubtermNonce, SubtermUfCmaKey, SubtermUfCmaMain,
     },
     static_signature,
 };

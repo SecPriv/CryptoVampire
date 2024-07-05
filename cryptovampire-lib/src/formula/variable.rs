@@ -132,7 +132,7 @@ pub trait IntoVariableIter<'bump> {
     where
         Self: Sized,
     {
-        self.vars_iter().map(|v| v.id).max().unwrap_or(0)+1
+        self.vars_iter().map(|v| v.id).max().unwrap_or(0) + 1
     }
 }
 

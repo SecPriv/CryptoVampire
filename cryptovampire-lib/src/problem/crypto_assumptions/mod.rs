@@ -8,8 +8,7 @@ use itertools::Itertools;
 pub use nonce::SubtermNonce;
 
 pub use uf_cma::{
-    SubtermUfCmaKey, SubtermUfCmaMain, UF_CMA_MAC_SIGNATURE, UF_CMA_VERIFY_SIGNATURE,
-    UfCmaBuilder
+    SubtermUfCmaKey, SubtermUfCmaMain, UfCmaBuilder, UF_CMA_MAC_SIGNATURE, UF_CMA_VERIFY_SIGNATURE,
 };
 
 pub use euf_cma::{

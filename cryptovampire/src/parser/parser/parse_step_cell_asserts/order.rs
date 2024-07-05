@@ -9,13 +9,10 @@ use crate::parser::{
     },
     E,
 };
-use cryptovampire_lib::{formula::{
-    formula::{ARichFormula, RichFormula},
-    function::builtin::{EQUALITY, HAPPENS, LESS_THAN_STEP},
-    quantifier::Quantifier,
-    sort::builtins::STEP,
-    variable::Variable,
-}, problem::protocol::{Ordering, OrderingKind}};
+use cryptovampire_lib::{
+    formula::{quantifier::Quantifier, sort::builtins::STEP, variable::Variable},
+    problem::protocol::{Ordering, OrderingKind},
+};
 use utils::implvec;
 
 pub fn parse_orders_with_bvars<'a, 'str, 'bump, B>(
@@ -74,9 +71,7 @@ fn parse_order_with_bvars<'str, 'bump>(
     let t2 = t2.parse(env, bvars, env, Some(STEP.as_sort().into()))?;
 
     let content = match kind {
-        ast::OrderOperation::Incompatible => {
-            OrderingKind::Exclusive(t1, t2)
-        }
+        ast::OrderOperation::Incompatible => OrderingKind::Exclusive(t1, t2),
         ast::OrderOperation::Lt => OrderingKind::LT(t1, t2),
         ast::OrderOperation::Gt => OrderingKind::LT(t2, t1),
     };

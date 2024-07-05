@@ -143,7 +143,7 @@ impl<'bump> UfCmaMainSubtAux<'bump> {
     pub fn new(uf_cma: UfCma<'bump>) -> Self {
         Self { uf_cma }
     }
-    
+
     fn var_eval_and_next_fun(
         &self,
         f: Function<'bump>,

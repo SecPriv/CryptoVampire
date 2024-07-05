@@ -2,24 +2,14 @@ use std::{cell::RefCell, hash::Hash, sync::Arc};
 
 use if_chain::if_chain;
 use itertools::Itertools;
-use static_init::dynamic;
 
-use crate::{formula::sort::builtins::CONDITION, subterm::{
-    into_exist_formula,
-    kind::SubtermKindConstr,
-    traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
-    Subterm,
-}};
 use crate::{
     environement::{environement::Environement, traits::KnowsRealm},
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::{forall, meq, ARichFormula, RichFormula},
         function::Function,
-        function::{
-            inner::subterm::Subsubterm, name_caster_collection::NameCasterCollection,
-            signature::StaticSignature,
-        },
+        function::{inner::subterm::Subsubterm, name_caster_collection::NameCasterCollection},
         manipulation::OneVarSubst,
         sort::{
             builtins::{MESSAGE, NAME},
@@ -31,6 +21,15 @@ use crate::{
     mexists, mforall,
     problem::{generator::Generator, problem::Problem},
     static_signature,
+};
+use crate::{
+    formula::sort::builtins::CONDITION,
+    subterm::{
+        into_exist_formula,
+        kind::SubtermKindConstr,
+        traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
+        Subterm,
+    },
 };
 use utils::arc_into_iter::ArcIntoIter;
 

@@ -14,15 +14,11 @@ use crate::{
         function::{
             builtin::{EQUALITY_TA, MESSAGE_TO_BITSTRING},
             inner::subterm::Subsubterm,
-            name_caster_collection::NameCasterCollection,
             signature::StaticSignature,
             Function,
         },
         manipulation::OneVarSubst,
-        sort::{
-            builtins::{CONDITION, MESSAGE, NAME},
-            Sort,
-        },
+        sort::builtins::{MESSAGE, NAME},
         utils::formula_expander::UnfoldFlags,
         variable::{uvar, Variable},
     },
@@ -32,14 +28,9 @@ use crate::{
 };
 use crate::{
     formula::function::builtin::EQUALITY,
-    subterm::{
-        into_exist_formula,
-        kind::SubtermKindConstr,
-        traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
-        Subterm,
-    },
+    subterm::{into_exist_formula, kind::SubtermKindConstr, traits::SubtermAux, Subterm},
 };
-use utils::{arc_into_iter::ArcIntoIter, utils::print_type};
+use utils::utils::print_type;
 
 use super::CryptoFlag;
 
@@ -207,7 +198,8 @@ impl<'bump> UfCma<'bump> {
             .flat_map(move |formula| match formula.as_ref() {
                 RichFormula::Fun(fun, args) => {
                     trace!("{:}", formula.as_ref());
-                    chain![ // <-- using chain to not miss situations like hash(x, y) = hash(w, z)
+                    chain![
+                        // <-- using chain to not miss situations like hash(x, y) = hash(w, z)
                         if_chain! { // verify
                             if fun == &self.verify;
                             if let [sign, mess, key] = args.as_ref();
@@ -318,7 +310,8 @@ impl<'bump> UfCma<'bump> {
                                 Some(prepare_candidate(max_var, mess, sign, key))
                             } else {None}
                         },
-                    ].collect_vec()
+                    ]
+                    .collect_vec()
                 }
                 _ => vec![],
             })
@@ -348,9 +341,10 @@ impl<'bump> UfCma<'bump> {
                     };
                     // let u_f = u_var.into_aformula();
 
-                    let h_of_u = self
-                        .mac
-                        .f_a([u_var.into(), pbl.name_caster().cast(MESSAGE.as_sort(), &key)]);
+                    let h_of_u = self.mac.f_a([
+                        u_var.into(),
+                        pbl.name_caster().cast(MESSAGE.as_sort(), &key),
+                    ]);
 
                     let k_sc = subterm_key
                         .preprocess_terms(

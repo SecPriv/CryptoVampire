@@ -5,7 +5,7 @@ use crate::{
         sort::{builtins::BOOL, sort_proxy::SortProxy},
         TmpFormula,
     },
-    problem::crypto_assumptions::{CryptoAssumption, UfCma, EufCma, IntCtxt},
+    problem::crypto_assumptions::{CryptoAssumption, EufCma, IntCtxt, UfCma},
 };
 use itertools::Itertools;
 use log::{debug, trace};

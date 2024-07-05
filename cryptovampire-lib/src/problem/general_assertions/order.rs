@@ -1,12 +1,10 @@
-use std::env::var;
-
 use itertools::{izip, Itertools};
 
 use crate::{
     environement::environement::Environement,
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
-        formula::{self, ands, forall, meq, ors, RichFormula},
+        formula::{ands, meq, ors, RichFormula},
         function::builtin::{HAPPENS, LESS_THAN_EQ_STEP, LESS_THAN_STEP, PRED},
         sort::builtins::STEP,
         variable::{IntoVariableIter, Variable},
@@ -21,7 +19,6 @@ pub fn generate<'bump>(
     _: &Environement<'bump>,
     pbl: &Problem<'bump>,
 ) {
-
     let lt = LESS_THAN_STEP.clone();
     let leq = LESS_THAN_EQ_STEP.clone();
     let happens = HAPPENS.clone();
@@ -39,7 +36,8 @@ pub fn generate<'bump>(
     // general axioms
     assertions.extend(
         // stolen from
-        [ // !!!!! leq is *not* reflexive !!!
+        [
+            // !!!!! leq is *not* reflexive !!!
             mforall!(t1!1:step, t2!2:step;
                 {meq(leq.f_a([t1, t2]) & !meq(t1, t2), lt.f_a([t1, t2]))}),
             happens.f_a([init.clone()]), // ax1

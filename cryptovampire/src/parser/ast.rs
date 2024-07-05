@@ -1,4 +1,7 @@
-use std::{fmt::Display, slice::{self, Iter}};
+use std::{
+    fmt::Display,
+    slice::{self, Iter},
+};
 
 use const_format::concatcp;
 use derivative::Derivative;
@@ -8,7 +11,7 @@ use pest::{error::Error, iterators::Pair, Parser, Position, Span};
 use static_init::dynamic;
 
 use cryptovampire_lib::INIT_STEP_NAME;
-use utils::{destvec, f, implvec, vecref::VecRef};
+use utils::{destvec, f, vecref::VecRef};
 
 use super::*;
 
@@ -876,20 +879,23 @@ boiler_plate!(Options<'a>, 'a, options; |p| {
     Ok(Self { span, options })
 });
 impl<'a> Options<'a> {
-    pub fn empty(span : Span<'a>) -> Self {
-        Self { span, options: Default::default() }
+    pub fn empty(span: Span<'a>) -> Self {
+        Self {
+            span,
+            options: Default::default(),
+        }
     }
 
-    pub fn as_str_list<'b>(&'b self) -> impl Iterator<Item=&'a str> + 'b {
+    pub fn as_str_list<'b>(&'b self) -> impl Iterator<Item = &'a str> + 'b {
         self.options.iter().map(|MOption(i)| i.content)
     }
-     
+
     pub fn iter<'b>(&'b self) -> <&'b Self as IntoIterator>::IntoIter {
         (&self).into_iter()
     }
-     pub fn contains(&self, str:&str) -> bool {
+    pub fn contains(&self, str: &str) -> bool {
         self.as_str_list().any(|s| s == str)
-     }
+    }
 }
 
 impl<'a, 'b> IntoIterator for &'b Options<'a> {
@@ -901,8 +907,6 @@ impl<'a, 'b> IntoIterator for &'b Options<'a> {
         self.options.iter()
     }
 }
-
-
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum Assert<'a> {
@@ -1050,6 +1054,7 @@ pub mod extra {
     pub trait AsFunction<'a, 'b> {
         fn name(self) -> SnN<'a, 'b>;
         fn args(self) -> Vec<SnN<'a, 'b>>;
+        #[allow(dead_code)]
         fn out(self) -> SnN<'a, 'b>;
     }
 

@@ -1,11 +1,7 @@
 use anyhow::ensure;
-use itertools::{chain, Itertools};
-use utils::implvec;
+use itertools::Itertools;
 
-use crate::{
-    formula::{formula::ARichFormula, quantifier::Quantifier, sort::builtins::STEP, variable::Variable},
-    problem::step::Step,
-};
+use crate::formula::{formula::ARichFormula, quantifier::Quantifier, sort::builtins::STEP};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Ordering<'bump> {
@@ -19,14 +15,15 @@ pub enum OrderingKind<'bump> {
     Exclusive(ARichFormula<'bump>, ARichFormula<'bump>),
 }
 
-
 impl<'bump> Ordering<'bump> {
     pub fn new(vars: Quantifier<'bump>, kind: OrderingKind<'bump>) -> Self {
-        Self { quantifier: vars, kind }
+        Self {
+            quantifier: vars,
+            kind,
+        }
     }
-    
-    pub fn check(&self
-    ) -> anyhow::Result<()> {
+
+    pub fn check(&self) -> anyhow::Result<()> {
         let vars = self.quantifier().get_variables().as_ref();
         for f in self.formulas() {
             ensure!(
@@ -50,7 +47,7 @@ impl<'bump> Ordering<'bump> {
         }
         .into_iter()
     }
-    
+
     pub fn quantifier(&self) -> &Quantifier<'bump> {
         &self.quantifier
     }

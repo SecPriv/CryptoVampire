@@ -48,7 +48,7 @@ pub type E = Error<Rule>;
 #[derive(Error, Debug)]
 pub enum ParsingError {
     #[error("Localisable error")]
-    PestError(#[from] Box<Error<Rule>>)
+    PestError(#[from] Box<Error<Rule>>),
 }
 
 #[inline(always)]
