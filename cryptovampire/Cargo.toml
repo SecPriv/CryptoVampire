@@ -7,7 +7,7 @@ authors = ["Simon Jeanteur <7871851+puyral@users.noreply.github.com>"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cryptovampire-lib = { path = "../cryptovampire-lib", features = ["serde"] }
+cryptovampire-lib = { path = "../cryptovampire-lib"}
 utils = { path = "../utils" }
 
 itertools = { workspace = true }

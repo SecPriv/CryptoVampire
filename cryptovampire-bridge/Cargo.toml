@@ -1,18 +1,15 @@
 [package]
-name = "cryptovampire-lib"
-version = "0.2.4"
+name = "cryptovampire-bridge"
+version = "0.3.1"
 edition = "2021"
 authors = ["Simon Jeanteur <7871851+puyral@users.noreply.github.com>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-utils ={ path = "../utils"}
-# ord-utils = { git = "https://github.com/puyral/ord-utils" }
-
-# qcell = "0.5.3"
-# bumpalo = { version = "3.12.0", features = ["boxed", "collections"] }
-# typed-arena = "2.0.2"
+cryptovampire = { path = "../cryptovampire" }
+cryptovampire-lib = { path = "../cryptovampire-lib", features = ["serde"] }
+utils = { path = "../utils" }
 
 itertools = { workspace = true }
 if_chain = { workspace = true }
@@ -20,16 +17,9 @@ hashbrown = { workspace = true }
 log = { workspace = true }
 static_init = { workspace = true }
 paste = { workspace = true }
-thiserror = { workspace = true }
 macro-attr ={ workspace = true }
 anyhow = { workspace = true }
-serde = { workspace = true, optional = true}
+thiserror = { workspace = true }
+serde = { workspace = true }
 
-bitflags = "2.0"
-derive_builder = "0.20.0"
-tptp = "0.31"
-regex = "1.10"
-tempfile = "3.10"
-
-# dashmap = "5.5.3"
-# smol = "2.0.0"
+env_logger = "0.11"
