@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 #[serde(rename_all = "PascalCase")]
 pub struct SquirrelDump {
-    condition: Box<Term>,
-    hypetheses: Vec<Term>,
+    conclusion: Box<Term>,
+    hypotheses: Vec<Term>,
     variables: Vec<Variable>,
     functions: Vec<Operator>,
     names: Vec<Operator>,
@@ -84,7 +84,10 @@ pub enum Type {
     Boolean,
     Index,
     Timestamp,
-    TBase(String),
+    #[serde(rename_all = "PascalCase")]
+    TBase {
+        string: String,
+    },
     #[serde(rename_all = "PascalCase")]
     TVar {
         id: uvar,
@@ -133,6 +136,7 @@ pub struct Macro {
 
 #[cfg(test)]
 mod tests {
+    use paste::paste;
     use std::{
         fs::{self, File},
         io::BufReader,
@@ -161,22 +165,35 @@ mod tests {
             }),
         };
         let t = SquirrelDump {
-            condition: Box::new(t.clone()),
-            hypetheses: vec![],
+            conclusion: Box::new(t.clone()),
+            hypotheses: vec![],
             variables: vec![],
             functions: vec![],
             names: vec![],
             macros: vec![],
         };
 
-        println!("{}", serde_json::to_string(&t).unwrap())
+        let result = "{\"Conclusion\":{\"Constructor\":\"Quant\",\"Quantificator\":\"ForAll\",\"Vars\":[{\"Constructor\":\"Var\",\"Id\":2,\"Name\":\"t\"},{\"Constructor\":\"Var\",\"Id\":3,\"Name\":\"t\"}],\"Term\":{\"Constructor\":\"App\",\"Fsymb\":{\"Constructor\":\"Fun\",\"Fname\":\"and\"},\"Arguments\":[{\"Constructor\":\"Var\",\"Id\":2,\"Name\":\"t\"},{\"Constructor\":\"Var\",\"Id\":3,\"Name\":\"t\"}]}},\"Hypotheses\":[],\"Variables\":[],\"Functions\":[],\"Names\":[],\"Macros\":[]}";
+        let parsed = serde_json::to_string(&t).unwrap();
+
+        assert_eq!(result, parsed);
     }
 
-    #[test]
-    fn pasring() {
-        let file_path = "tests/assets/squirrel-output/term1.json";
-        let content = File::open(file_path).expect("Unable to read file");
-        let parsing: Result<Term, _> = serde_json::from_reader(BufReader::new(content));
-        parsing.unwrap();
+    macro_rules! test_json_parser {
+        ($f:ident :  $t:ty) => {
+            paste! {
+                    #[test]
+                    fn [<parse_$f>]() {
+                        let file_path = format!("tests/assets/squirrel-output/{}.json", stringify!($f));
+                        let content = File::open(file_path).expect("Unable to read file");
+                        let deserializer = &mut serde_json::Deserializer::from_reader(BufReader::new(content));
+                        let result: Result<$t, _> = serde_path_to_error::deserialize(deserializer);
+                        result.unwrap();
+                    }
+                }
+        };
     }
+
+    test_json_parser!(full1:SquirrelDump);
+    test_json_parser!(term1:Term);
 }
