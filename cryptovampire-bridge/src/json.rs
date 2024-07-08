@@ -24,53 +24,47 @@ pub enum Quant {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 #[serde(tag = "Constructor", rename_all = "PascalCase")]
 pub enum Term {
+    #[serde(rename_all = "PascalCase")]
     App {
-        asymb: Box<Term>,
-        arguements: Vec<Term>,
+        fsymb: Box<Term>,
+        arguments: Vec<Term>,
     },
-    Fun {
-        name: String,
-    },
-    Name {
-        fsymb: String,
-        arguements: Vec<Term>,
-    },
+    #[serde(rename_all = "PascalCase")]
+    Fun { fname: String },
+    #[serde(rename_all = "PascalCase")]
+    Name { nsymb: String, arguments: Vec<Term> },
+    #[serde(rename_all = "PascalCase")]
     Macro {
         msymb: String,
-        arguements: Vec<Term>,
+        arguments: Vec<Term>,
         timestamp: Box<Term>,
     },
-    Action {
-        asymb: String,
-        arguements: Vec<Term>,
-    },
-    Var {
-        id: uvar,
-        name: String,
-    },
+    #[serde(rename_all = "PascalCase")]
+    Action { asymb: String, arguments: Vec<Term> },
+    #[serde(rename_all = "PascalCase")]
+    Var { id: uvar, name: String },
+    #[serde(rename_all = "PascalCase")]
     Let {
         var: Box<Term>,
         term1: Box<Term>,
         term2: Box<Term>,
     },
-    Tuple {
-        elements: Box<[Term; 2]>,
-    },
-    Proj {
-        id: u8,
-        term: Box<Term>,
-    },
-    Diff {
-        terms: Vec<Diff>,
-    },
+    #[serde(rename_all = "PascalCase")]
+    Tuple { elements: Box<[Term; 2]> },
+    #[serde(rename_all = "PascalCase")]
+    Proj { id: u8, term: Box<Term> },
+    #[serde(rename_all = "PascalCase")]
+    Diff { terms: Vec<Diff> },
+    #[serde(rename_all = "PascalCase")]
     Find {
         vars: Vec<Term>,
         term1: Box<Term>,
         term2: Box<Term>,
         term3: Box<Term>,
     },
+    #[serde(rename_all = "PascalCase")]
     Quant {
-        quantficator: Quant,
+        quantificator: Quant,
         vars: Vec<Term>,
         term: Box<Term>,
     },
@@ -91,10 +85,25 @@ pub enum Type {
     Index,
     Timestamp,
     TBase(String),
-    TVar { id: uvar, name: String },
-    TUnivar { id: String, name: String },
-    Tuple { elements: Vec<Type> },
-    Fun { type1: Box<Type>, type2: Box<Type> },
+    #[serde(rename_all = "PascalCase")]
+    TVar {
+        id: uvar,
+        name: String,
+    },
+    #[serde(rename_all = "PascalCase")]
+    TUnivar {
+        id: String,
+        name: String,
+    },
+    #[serde(rename_all = "PascalCase")]
+    Tuple {
+        elements: Vec<Type>,
+    },
+    #[serde(rename_all = "PascalCase")]
+    Fun {
+        type1: Box<Type>,
+        type2: Box<Type>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -124,10 +133,15 @@ pub struct Macro {
 
 #[cfg(test)]
 mod tests {
+    use std::{
+        fs::{self, File},
+        io::BufReader,
+    };
+
     use super::{SquirrelDump, Term};
 
     #[test]
-    fn testing() {
+    fn serializing() {
         let v1 = Term::Var {
             id: 2,
             name: "t".into(),
@@ -137,11 +151,13 @@ mod tests {
             name: "t".into(),
         };
         let t = Term::Quant {
-            quantficator: super::Quant::ForAll,
+            quantificator: super::Quant::ForAll,
             vars: vec![v1.clone(), v2.clone()],
             term: Box::new(Term::App {
-                asymb: Box::new(Term::Fun { name: "and".into() }),
-                arguements: vec![v1, v2],
+                fsymb: Box::new(Term::Fun {
+                    fname: "and".into(),
+                }),
+                arguments: vec![v1, v2],
             }),
         };
         let t = SquirrelDump {
@@ -154,5 +170,13 @@ mod tests {
         };
 
         println!("{}", serde_json::to_string(&t).unwrap())
+    }
+
+    #[test]
+    fn pasring() {
+        let file_path = "tests/assets/squirrel-output/term1.json";
+        let content = File::open(file_path).expect("Unable to read file");
+        let parsing: Result<Term, _> = serde_json::from_reader(BufReader::new(content));
+        parsing.unwrap();
     }
 }
