@@ -32,6 +32,7 @@ regex = "1.10"
 tempfile = "3.10"
 shared_child = "1.0.0"
 once_cell = "1.19.0"
+which = "6.0.1"
 
 # dashmap = "5.5.3"
 # smol = "2.0.0"

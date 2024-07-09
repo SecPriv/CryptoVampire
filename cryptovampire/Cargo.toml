@@ -26,3 +26,4 @@ clap = { version = "4", features = ["derive"] }
 derivative = { version = "2.2" }
 const_format = "0.2"
 env_logger = "0.11"
+clap_complete = "4.5.7"

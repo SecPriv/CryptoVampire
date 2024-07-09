@@ -1,4 +1,6 @@
+use core::time;
 use std::{
+    convert::Infallible,
     io::BufWriter,
     num::NonZeroU32,
     path::Path,
@@ -11,17 +13,18 @@ use std::{
 };
 
 use anyhow::{bail, ensure};
-use log::{debug, trace};
+use if_chain::if_chain;
+use log::{debug, info, trace};
 use shared_child::SharedChild;
 use tempfile::Builder;
 use thiserror::Error;
 
 use crate::{
-    environement::environement::Environement,
+    environement::environement::{EnabledSolvers, Environement, SolverConfig},
     problem::{crypto_assumptions::CryptoAssumption, Problem},
 };
 
-use super::{searcher::InstanceSearcher, z3::Z3Runner, VampireExec};
+use super::{searcher::InstanceSearcher, z3::Z3Runner, VampireArg, VampireExec};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum RunnerOut<S, U, T, O> {
@@ -85,15 +88,17 @@ pub trait Runner {
 
         let mut file = tmp_builder.tempfile()?; // gen tmp file
 
-        self.write(env, pbl, &mut BufWriter::new(&mut file))?;
-        let r = self.run(handler, args, file.path())?;
+        self.write(env, pbl, &mut BufWriter::new(&mut file))?; // write to it
 
+        // save it if relevant
         if let Some(p) = save_to {
             debug_assert_ne!("..", Self::get_file_suffix());
             let name = p.join(file.path().file_name().unwrap()); // can't end in ".."
-            trace!("copying file to {name:?}");
+            info!("copying file to {name:?}");
             std::fs::copy(file.path(), name)?;
         };
+
+        let r = self.run(handler, args, file.path())?;
         return Ok(r);
     }
 
@@ -196,11 +201,12 @@ impl RunnerHandler for () {
 pub struct Runners {
     pub vampire: Option<VampireExec>,
     pub z3: Option<Z3Runner>,
+    pub cvc5: Option<Infallible>,
 }
 
 impl Runners {
     pub fn all_empty(&self) -> bool {
-        matches!(&self.vampire, None)
+        matches!(&self.vampire, None) && matches!(&self.z3, None) && matches!(&self.cvc5, None)
     }
 
     pub fn autorun<'bump>(
@@ -235,6 +241,8 @@ impl Runners {
                         s.spawn(|| z3.run_to_tmp(handler, env, pbl, z3.default_args(), save_to))
                     });
                 } // handler dropped here
+
+                thread::sleep(time::Duration::from_secs(1));
 
                 let mut res = false;
                 for r in unkillable_recv {
@@ -276,5 +284,46 @@ impl Runners {
             }
         }
         bail!("ran out of tries (at most {n})")
+    }
+}
+
+#[derive(Debug, Clone, Copy, Error)]
+pub enum RunnersCreationError {
+    #[error("no valid solver available")]
+    NoSolver,
+}
+
+impl TryFrom<SolverConfig> for Runners {
+    type Error = RunnersCreationError;
+
+    fn try_from(value: SolverConfig) -> Result<Self, Self::Error> {
+        let timeout = value.timeout;
+        let vampire = if !value.enable_solvers.contains(EnabledSolvers::VAMPIRE) {
+            None
+        } else {
+            which::which(&value.locations.vampire).ok()
+        };
+        let vampire = vampire.map(|location| VampireExec {
+            location,
+            extra_args: vec![VampireArg::TimeLimit(timeout)],
+        });
+
+        let z3 = if !value.enable_solvers.contains(EnabledSolvers::Z3) {
+            None
+        } else {
+            which::which(&value.locations.z3).ok()
+        };
+        let z3 = z3.map(|location| Z3Runner {
+            location,
+            extra_args: vec![format!("-T:{timeout:}")],
+        });
+
+        let cvc5 = None;
+
+        if vampire.is_none() && z3.is_none() && cvc5.is_none() {
+            Err(RunnersCreationError::NoSolver)
+        } else {
+            Ok(Runners { vampire, z3, cvc5 })
+        }
     }
 }
