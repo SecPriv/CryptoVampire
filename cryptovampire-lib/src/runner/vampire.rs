@@ -15,9 +15,11 @@ use utils::{implvec, traits::MyWriteTo};
 use crate::{
     environement::environement::Environement,
     problem::Problem,
-    runner::searcher::InstanceSearcher,
+    runner::{runner::RunnerOut, searcher::InstanceSearcher},
     smt::{SmtFile, SMT_FILE_EXTENSION},
 };
+
+use super::runner::{Runner, RunnerOutI};
 
 #[derive(Debug, Clone)]
 pub struct VampireExec {
@@ -60,7 +62,7 @@ option!(
 );
 
 pub mod vampire_suboptions {
-    use crate::runner::vampire_runner::ToArgs;
+    use crate::runner::vampire::ToArgs;
     macro_rules! suboption {
       ($name:ident, $(($variant:ident, $content:literal)),*,) => {
           #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, Hash, Copy)]
@@ -144,6 +146,65 @@ ${cmd}
 
 const SUCCESS_RC: i32 = 0;
 const TIMEOUT_RC: i32 = 1;
+
+impl Runner for VampireExec {
+    type Args<'a> = &'a [VampireArg];
+
+    type SatR = String;
+
+    type UnsatR = String;
+
+    type TimeoutR = String;
+
+    type OtherR = String;
+
+    fn run<'a>(&self, args: Self::Args<'a>, pbl_file: &Path) -> anyhow::Result<RunnerOutI<Self>> {
+        ensure!(
+            // check the file exists
+            pbl_file.is_file(),
+            "{} is not a file",
+            pbl_file.to_str().unwrap_or("[not unicode]")
+        );
+        let mut cmd = Command::new(&self.location);
+        for arg in self.extra_args.iter().chain(args.into_iter()) {
+            // encode the arguments
+            let [a, b] = arg.to_args();
+            cmd.arg(a.as_ref()).arg(b.as_ref());
+        }
+        cmd.arg(pbl_file); // encode the file
+        debug!("running vampire with {cmd:?}");
+
+        let child = cmd
+            // .stdin(Stdio::piped()) // We want to write to stdin
+            .stdout(Stdio::piped()) // Capture the stdout
+            .spawn()
+            .with_context(|| format!("Failed to start vampire ({:?})", &self.location))?;
+
+        // read the output from the process
+        let output = child
+            .wait_with_output()
+            .with_context(|| format!("Failed to read vampire ({:?})'s stdout", &self.location))?;
+        let stdout = String::from_utf8(output.stdout)
+            .with_context(|| format!("vampire ({:?})'s output isn't in utf-8", &self.location))?;
+        let return_code = output
+            .status
+            .code()
+            .with_context(|| "terminated by signal")?;
+        match return_code {
+            SUCCESS_RC => Ok(RunnerOut::Unsat(stdout)),
+            TIMEOUT_RC => Ok(RunnerOut::Timeout(stdout)),
+            _ => Err(VampireError::UnknownError {
+                cmd: format!("{:?}", cmd),
+                stdout,
+                return_code,
+            })?,
+        }
+    }
+
+    fn get_file_prefix() -> &'static str {
+        "vampire"
+    }
+}
 
 impl VampireExec {
     /// calls `vampire` on `pbl_file` with the extra arguements `args` added to [DEFAULT_VAMPIRE_ARGS]
