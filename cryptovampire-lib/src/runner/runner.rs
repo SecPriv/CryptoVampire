@@ -1,7 +1,18 @@
-use std::{io::BufWriter, num::NonZeroU32, path::Path};
+use std::{
+    io::BufWriter,
+    num::NonZeroU32,
+    path::Path,
+    process::{Child, Command},
+    sync::{
+        mpsc::{channel, Sender},
+        Arc, Mutex,
+    },
+    thread,
+};
 
 use anyhow::{bail, ensure};
 use log::{debug, trace};
+use shared_child::SharedChild;
 use tempfile::Builder;
 use thiserror::Error;
 use utils::traits::MyWriteTo;
@@ -12,7 +23,7 @@ use crate::{
     smt::SmtFile,
 };
 
-use super::{searcher::InstanceSearcher, VampireExec};
+use super::{searcher::InstanceSearcher, z3::Z3Runner, VampireExec};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum RunnerOut<S, U, T, O> {
@@ -31,6 +42,12 @@ pub type RunnerOutI<X> = RunnerOut<
     <X as Runner>::OtherR,
 >;
 
+pub trait RunnerHandler {
+    type Error: std::error::Error + Send + Sync + 'static;
+    fn spawn_killable_child(self, child: &mut Command) -> Result<Arc<SharedChild>, Self::Error>;
+    fn spawn_unkillable_child(self, child: &mut Command) -> Result<Arc<SharedChild>, Self::Error>;
+}
+
 pub trait Runner {
     type Args<'a>;
     type SatR;
@@ -39,15 +56,26 @@ pub trait Runner {
     type OtherR;
 
     /// Run `pbl_file` using the parameter defined by `args`
-    fn run<'a>(&self, args: Self::Args<'a>, pbl_file: &Path) -> anyhow::Result<RunnerOutI<Self>>;
-
-    fn run_to_tmp<'a, 'bump>(
+    fn run<'a, R>(
         &self,
+        handler: R,
+        args: Self::Args<'a>,
+        pbl_file: &Path,
+    ) -> anyhow::Result<RunnerOutI<Self>>
+    where
+        R: RunnerHandler + Clone;
+
+    fn run_to_tmp<'a, 'bump, R>(
+        &self,
+        handler: R,
         env: &Environement<'bump>,
         pbl: &Problem<'bump>,
         args: Self::Args<'a>,
         save_to: Option<&Path>,
-    ) -> anyhow::Result<RunnerOutI<Self>> {
+    ) -> anyhow::Result<RunnerOutI<Self>>
+    where
+        R: RunnerHandler + Clone,
+    {
         if let Some(p) = save_to {
             std::fs::create_dir_all(p)?
         }
@@ -60,7 +88,7 @@ pub trait Runner {
         let mut file = tmp_builder.tempfile()?; // gen tmp file
 
         self.write(env, pbl, &mut BufWriter::new(&mut file))?;
-        let r = self.run(args, file.path())?;
+        let r = self.run(handler, args, file.path())?;
 
         if let Some(p) = save_to {
             debug_assert_ne!("..", Self::get_file_suffix());
@@ -109,8 +137,67 @@ where
     ) -> Result<(), DiscovererError>;
 }
 
+#[derive(Debug, Clone)]
+struct Handler {
+    killable: Sender<Arc<SharedChild>>,
+    unkillable: Sender<Arc<SharedChild>>,
+}
+
+#[derive(Debug, Error)]
+pub enum HandlerError {
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
+    #[error("no more reciever, child killed")]
+    NoMoreReciever,
+}
+
+impl RunnerHandler for Handler {
+    type Error = HandlerError;
+
+    fn spawn_killable_child(self, child: &mut Command) -> Result<Arc<SharedChild>, Self::Error> {
+        let child = Arc::new(SharedChild::spawn(child)?);
+        match self.killable.send(Arc::clone(&child)) {
+            Err(_) => {
+                debug!("no more reciever, trying to kill child");
+                child.kill()?;
+                child.wait()?;
+                Err(HandlerError::NoMoreReciever)?
+            }
+            _ => (),
+        };
+        Ok(child)
+    }
+
+    fn spawn_unkillable_child(self, child: &mut Command) -> Result<Arc<SharedChild>, Self::Error> {
+        let child = Arc::new(SharedChild::spawn(child)?);
+        match self.unkillable.send(Arc::clone(&child)) {
+            Err(_) => {
+                debug!("no more reciever, trying to kill child");
+                child.kill()?;
+                child.wait()?;
+                Err(HandlerError::NoMoreReciever)?
+            }
+            _ => (),
+        };
+        Ok(child)
+    }
+}
+
+impl RunnerHandler for () {
+    type Error = std::io::Error;
+
+    fn spawn_killable_child(self, child: &mut Command) -> Result<Arc<SharedChild>, Self::Error> {
+        Ok(Arc::new(SharedChild::spawn(child)?))
+    }
+
+    fn spawn_unkillable_child(self, child: &mut Command) -> Result<Arc<SharedChild>, Self::Error> {
+        Ok(Arc::new(SharedChild::spawn(child)?))
+    }
+}
+
 pub struct Runners {
     pub vampire: Option<VampireExec>,
+    pub z3: Option<Z3Runner>,
 }
 
 impl Runners {
@@ -130,11 +217,53 @@ impl Runners {
 
         for i in 0..n {
             debug!("running {i:}/{n:}");
-            let vout = self
-                .vampire
-                .as_ref()
-                .map(|vr| vr.run_to_tmp(env, pbl, vr.default_args(), save_to))
-                .transpose()?;
+            let (killable_send, killable_recv) = channel();
+            let (unkillable_send, unkillable_recv) = channel();
+
+            let res: anyhow::Result<_> = thread::scope(|s| {
+                let vjh;
+                let z3jh;
+                {
+                    let handler = Handler {
+                        killable: killable_send,
+                        unkillable: unkillable_send,
+                    };
+                    vjh = self.vampire.as_ref().map(|vr| {
+                        let handler = handler.clone();
+                        s.spawn(|| vr.run_to_tmp(handler, env, pbl, vr.default_args(), save_to))
+                    });
+                    z3jh = self.z3.as_ref().map(|z3| {
+                        let handler = handler.clone();
+                        s.spawn(|| z3.run_to_tmp(handler, env, pbl, z3.default_args(), save_to))
+                    });
+                } // handler dropped here
+
+                let mut res = false;
+                for r in unkillable_recv {
+                    res = res || r.wait()?.success();
+                }
+
+                // TODO: make sure they failled before killing everyone
+
+                for r in killable_recv {
+                    r.kill()?;
+                    r.wait()?; // avoid zombie
+                }
+                Ok((
+                    vjh.map(|h| h.join().unwrap()),
+                    z3jh.map(|h| h.join().unwrap()),
+                ))
+            });
+            let (vout, z3out) = res?;
+
+            let vout = vout.transpose()?;
+            let z3out = z3out.transpose()?;
+
+            match z3out {
+                Some(RunnerOut::Unsat(_)) => return Ok("z3 found a solution".into()),
+                Some(RunnerOut::Sat(_)) => bail!("z3 disproved the problem"),
+                _ => (),
+            }
 
             let data = match vout {
                 Some(RunnerOut::Unsat(proof)) => return Ok(proof),

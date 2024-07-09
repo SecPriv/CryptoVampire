@@ -59,6 +59,8 @@ pub struct Problem<'bump> {
     extra_instances: HashSet<ARichFormula<'bump>>,
 }
 
+
+
 impl<'bump> Problem<'bump> {
     fn list_top_level_terms_no_extra<'a>(&'a self) -> impl Iterator<Item = &'a ARichFormula<'bump>>
     where

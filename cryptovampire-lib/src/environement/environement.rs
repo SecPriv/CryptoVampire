@@ -42,6 +42,11 @@ bitflags! {
         const ASSERT_NOT =              1 << 7; // non smt standard
         const ASSERT_GROUND =           1 << 8; // non smt standard
         const IGNORE_LEMMAS =           1 << 9;
+
+        const NON_SMT_STANDARD =
+            Flags::ASSERT_NOT.bits()
+            | Flags::ASSERT_THEORY.bits()
+            | Flags::ASSERT_GROUND.bits();
     }
 
     #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug )]
@@ -155,7 +160,7 @@ impl<'bump> Environement<'bump> {
     pub fn are_lemmas_ignored(&self) -> bool {
         self.options.flags.contains(Flags::IGNORE_LEMMAS)
     }
-    
+
     pub fn options_mut(&mut self) -> &mut Options {
         &mut self.options
     }
