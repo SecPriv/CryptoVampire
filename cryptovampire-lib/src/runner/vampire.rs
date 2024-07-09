@@ -1,16 +1,19 @@
 use anyhow::{bail, ensure, Context};
 use itertools::Itertools;
 use log::debug;
+use utils::traits::MyWriteTo;
 use std::{
+    io::BufWriter,
     path::{Path, PathBuf},
     process::{Command, Stdio},
     usize,
 };
 
 use crate::{
-    environement::environement::Environement,
+    environement::environement::{Environement, Flags},
     problem::Problem,
     runner::{runner::RunnerOut, searcher::InstanceSearcher},
+    smt::SmtFile,
 };
 
 use super::runner::{Discoverer, DiscovererError, Runner, RunnerOutI};
@@ -173,6 +176,21 @@ impl Runner for VampireExec {
 
     fn default_args(&self) -> Self::Args<'_> {
         &DEFAULT_VAMPIRE_ARGS
+    }
+
+    fn write<'bump, W: std::io::Write>(
+        &self,
+        env: &Environement<'bump>,
+        pbl: &Problem<'bump>,
+        mut file: W,
+    ) -> anyhow::Result<()> {
+        let mut env = env.clone();
+        env.options_mut().flags |= Flags::ASSERT_NOT | Flags::ASSERT_THEORY;
+        let env = &env;
+
+        SmtFile::from_general_file(env, pbl.into_general_file(env)) // gen smt
+            .as_diplay(env)
+            .write_to_io(&mut file).with_context(|| "couldn't write") // write to tmp file
     }
 }
 

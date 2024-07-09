@@ -59,9 +59,7 @@ pub trait Runner {
 
         let mut file = tmp_builder.tempfile()?; // gen tmp file
 
-        SmtFile::from_general_file(env, pbl.into_general_file(&env)) // gen smt
-            .as_diplay(env)
-            .write_to_io(&mut BufWriter::new(&mut file))?; // write to tmp file
+        self.write(env, pbl, &mut BufWriter::new(&mut file))?;
         let r = self.run(args, file.path())?;
 
         if let Some(p) = save_to {
@@ -72,6 +70,13 @@ pub trait Runner {
         };
         return Ok(r);
     }
+
+    fn write<'bump, W: std::io::Write>(
+        &self,
+        env: &Environement<'bump>,
+        pbl: &Problem<'bump>,
+        file: W,
+    ) -> anyhow::Result<()>;
 
     /// The file extension for the temporary file, defaults to `".smt"`
     fn get_file_suffix() -> &'static str {

@@ -155,6 +155,10 @@ impl<'bump> Environement<'bump> {
     pub fn are_lemmas_ignored(&self) -> bool {
         self.options.flags.contains(Flags::IGNORE_LEMMAS)
     }
+    
+    pub fn options_mut(&mut self) -> &mut Options {
+        &mut self.options
+    }
 }
 
 impl<'bump> KnowsRealm for Environement<'bump> {
