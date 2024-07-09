@@ -1,13 +1,19 @@
-use std::{future::Future, io::BufWriter, path::Path};
+use std::{future::Future, io::BufWriter, num::NonZeroU32, path::Path};
 
-use anyhow::ensure;
-use log::trace;
+use anyhow::{bail, ensure};
+use log::{debug, trace};
 use tempfile::Builder;
+use thiserror::Error;
 use utils::traits::MyWriteTo;
 
-use crate::{environement::environement::Environement, problem::{crypto_assumptions::CryptoAssumption, Problem}, smt::SmtFile};
+use crate::{
+    environement::environement::Environement,
+    problem::{crypto_assumptions::CryptoAssumption, Problem},
+    runner::DEFAULT_VAMPIRE_ARGS,
+    smt::SmtFile,
+};
 
-use super::searcher::InstanceSearcher;
+use super::{searcher::InstanceSearcher, VampireExec};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum RunnerOut<S, U, T, O> {
@@ -71,6 +77,66 @@ pub trait Runner {
     fn get_file_prefix() -> &'static str;
 }
 
-pub trait AutoDiscoverer where Self: Runner + Sized,  for<'bump> CryptoAssumption<'bump>:InstanceSearcher<'bump, Self> {
-    fn run_and_discover()
+#[derive(Debug, Error)]
+pub enum DiscovererError {
+    #[error("no new instances")]
+    NoNewInstances,
+    #[error("other error {0}")]
+    Other(#[from] anyhow::Error),
+}
+
+pub trait Discoverer
+where
+    Self: Runner + Sized,
+    for<'bump> CryptoAssumption<'bump>: InstanceSearcher<'bump, Self>,
+{
+    fn discover<'bump>(
+        &self,
+        env: &Environement<'bump>,
+        pbl: &mut Problem<'bump>,
+        out: &<Self as Runner>::TimeoutR,
+    ) -> Result<(), DiscovererError>;
+}
+
+pub struct Runners {
+    pub vampire: Option<VampireExec>,
+}
+
+impl Runners {
+    pub fn all_empty(&self) -> bool {
+        matches!(&self.vampire, None)
+    }
+
+    pub fn autorun<'bump>(
+        &self,
+        env: &Environement<'bump>,
+        pbl: &mut Problem<'bump>,
+        ntimes: Option<NonZeroU32>,
+        save_to: Option<&Path>,
+    ) -> anyhow::Result<String> {
+        ensure!(!self.all_empty(), "no solver to run :'(");
+        let n: u32 = ntimes.map(NonZeroU32::get).unwrap_or(u32::MAX);
+
+        for i in 0..n {
+            debug!("running {i:}/{n:}");
+            let vout = self
+                .vampire
+                .as_ref()
+                .map(|vr| vr.run_to_tmp(env, pbl, &DEFAULT_VAMPIRE_ARGS, save_to))
+                .transpose()?;
+
+            let data = match vout {
+                Some(RunnerOut::Unsat(proof)) => return Ok(proof),
+                Some(RunnerOut::Timeout(data)) => Some(data),
+                Some(RunnerOut::Sat(proof)) => bail!("the query is false:\n{proof}"),
+                None => None,
+                _ => bail!("unknown error"),
+            };
+            match (&self.vampire, data) {
+                (Some(vr), Some(out)) => vr.discover(env, pbl, &out)?,
+                _ => (),
+            }
+        }
+        bail!("ran out of tries (at most {n})")
+    }
 }

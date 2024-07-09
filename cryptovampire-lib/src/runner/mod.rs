@@ -6,4 +6,4 @@ pub use vampire::{
 };
 
 mod runner;
-pub use runner::{Runner, RunnerOut, RunnerOutI, RunnerBase};
+pub use runner::{Runner, RunnerOut, RunnerOutI, RunnerBase, Runners, Discoverer};

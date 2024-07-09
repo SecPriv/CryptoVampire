@@ -14,7 +14,7 @@ use cryptovampire_lib::{
         sort::{builtins::BUILT_IN_SORTS, Sort},
     },
     problem::{PblIterator, Problem},
-    runner::VampireOutput,
+    runner::{Runners, VampireOutput},
     smt::{SmtFile, SMT_FILE_EXTENSION},
 };
 use itertools::Either;
@@ -63,12 +63,7 @@ pub fn run(args: Args, str: &str) -> anyhow::Result<()> {
             let out = auto_run(&env, pblsiter, av)?
                 .pop()
                 .with_context(|| "empty output, nothing ran?")?;
-            match out {
-                VampireOutput::Unsat(proof) => println!("{proof}"),
-                VampireOutput::TimeOut(fail) => {
-                    bail!("last one timed out and this wasn't caught somehow:\n{fail}")
-                }
-            };
+            println!("{out}");
         } else if args.lemmas {
             run_to_dir(&env, pblsiter, &args.output_location)?;
         } else {
@@ -83,16 +78,16 @@ pub fn auto_run<'bump>(
     env: &Environement<'bump>,
     mut pbls: PblIterator<'bump>,
     parms: &AutomatedVampire,
-) -> anyhow::Result<Vec<VampireOutput>> {
-    let exec = parms.to_vampire_exec();
+) -> anyhow::Result<Vec<String>> {
+    let runners = Runners {vampire: Some(parms.to_vampire_exec())};
     let ntimes = NonZeroU32::new(parms.num_retry);
     let save_to = parms.smt_debug.as_ref().map(|p| p.as_ref());
 
-    pbls.map(&mut |pbl| exec.auto_run_vampire(env, pbl, ntimes, save_to))
-        .flat_map(|r| match r {
-            Ok(v) => Either::Left(v.into_iter().map(Ok)),
-            Err(e) => Either::Right([Err(e)].into_iter()),
-        })
+    pbls.map(&mut |pbl| runners.autorun(env, pbl, ntimes, save_to))
+        // .map(|r| match r {
+        //     Ok(v) => Either::Left(v.into_iter().map(Ok)),
+        //     Err(e) => Either::Right([Err(e)].into_iter()),
+        // })
         .collect()
 }
 
