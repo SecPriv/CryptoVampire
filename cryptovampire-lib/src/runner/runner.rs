@@ -9,7 +9,6 @@ use utils::traits::MyWriteTo;
 use crate::{
     environement::environement::Environement,
     problem::{crypto_assumptions::CryptoAssumption, Problem},
-    runner::DEFAULT_VAMPIRE_ARGS,
     smt::SmtFile,
 };
 
@@ -80,6 +79,8 @@ pub trait Runner {
     }
 
     fn get_file_prefix() -> &'static str;
+
+    fn default_args(&self) -> Self::Args<'_>;
 }
 
 #[derive(Debug, Error)]
@@ -127,7 +128,7 @@ impl Runners {
             let vout = self
                 .vampire
                 .as_ref()
-                .map(|vr| vr.run_to_tmp(env, pbl, &DEFAULT_VAMPIRE_ARGS, save_to))
+                .map(|vr| vr.run_to_tmp(env, pbl, vr.default_args(), save_to))
                 .transpose()?;
 
             let data = match vout {
