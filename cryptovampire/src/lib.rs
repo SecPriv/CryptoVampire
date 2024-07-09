@@ -4,7 +4,7 @@ mod tests;
 use std::{fs::File, io::BufWriter, num::NonZeroU32, path::Path};
 
 use crate::cli::Args;
-use anyhow::{bail, ensure, Context};
+use anyhow::{ensure, Context};
 
 use cryptovampire_lib::{
     container::ScopedContainer,
@@ -14,10 +14,9 @@ use cryptovampire_lib::{
         sort::{builtins::BUILT_IN_SORTS, Sort},
     },
     problem::{PblIterator, Problem},
-    runner::{Runners, VampireOutput},
+    runner::Runners,
     smt::{SmtFile, SMT_FILE_EXTENSION},
 };
-use itertools::Either;
 
 use utils::{from_with::FromWith, implvec, traits::MyWriteTo};
 pub mod cli;
@@ -79,7 +78,9 @@ pub fn auto_run<'bump>(
     mut pbls: PblIterator<'bump>,
     parms: &AutomatedVampire,
 ) -> anyhow::Result<Vec<String>> {
-    let runners = Runners {vampire: Some(parms.to_vampire_exec())};
+    let runners = Runners {
+        vampire: Some(parms.to_vampire_exec()),
+    };
     let ntimes = NonZeroU32::new(parms.num_retry);
     let save_to = parms.smt_debug.as_ref().map(|p| p.as_ref());
 

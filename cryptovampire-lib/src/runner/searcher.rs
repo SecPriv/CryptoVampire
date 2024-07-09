@@ -17,12 +17,20 @@ use super::{tptp::TptpParse, Runner, VampireExec};
 #[dynamic]
 static EXTRACT_FORMULA: Regex = Regex::new(r"\[SA\] new: \d*?\. (.*?) \[.*?\]").unwrap();
 
-pub trait InstanceSearcher<'bump, R:Runner> {
-    fn search_instances(&self, str: &R::TimeoutR, env: &Environement<'bump>) -> Vec<ARichFormula<'bump>>;
+pub trait InstanceSearcher<'bump, R: Runner> {
+    fn search_instances(
+        &self,
+        str: &R::TimeoutR,
+        env: &Environement<'bump>,
+    ) -> Vec<ARichFormula<'bump>>;
 }
 
 impl<'bump> InstanceSearcher<'bump, VampireExec> for CryptoAssumption<'bump> {
-    fn search_instances(&self, str: &<VampireExec as Runner>::TimeoutR, env: &Environement<'bump>) -> Vec<ARichFormula<'bump>> {
+    fn search_instances(
+        &self,
+        str: &<VampireExec as Runner>::TimeoutR,
+        env: &Environement<'bump>,
+    ) -> Vec<ARichFormula<'bump>> {
         match self {
             CryptoAssumption::UfCma(a) => a.search_instances(str, env),
             CryptoAssumption::EufCmaSign(a) => a.search_instances(str, env),
@@ -33,7 +41,11 @@ impl<'bump> InstanceSearcher<'bump, VampireExec> for CryptoAssumption<'bump> {
 }
 
 impl<'bump> InstanceSearcher<'bump, VampireExec> for UfCma<'bump> {
-    fn search_instances(&self, str: &<VampireExec as Runner>::TimeoutR, env: &Environement<'bump>) -> Vec<ARichFormula<'bump>> {
+    fn search_instances(
+        &self,
+        str: &<VampireExec as Runner>::TimeoutR,
+        env: &Environement<'bump>,
+    ) -> Vec<ARichFormula<'bump>> {
         // TODO: add support for eq
         let macname = self.mac().name();
         let verifyname = self.verify().name();
@@ -73,7 +85,11 @@ impl<'bump> InstanceSearcher<'bump, VampireExec> for UfCma<'bump> {
     }
 }
 impl<'bump> InstanceSearcher<'bump, VampireExec> for EufCma<'bump> {
-    fn search_instances(&self, str: &<VampireExec as Runner>::TimeoutR, env: &Environement<'bump>) -> Vec<ARichFormula<'bump>> {
+    fn search_instances(
+        &self,
+        str: &<VampireExec as Runner>::TimeoutR,
+        env: &Environement<'bump>,
+    ) -> Vec<ARichFormula<'bump>> {
         let signname = self.sign.name();
         let verifyname = self.verify.name();
         let functions = env.get_function_hash();
@@ -119,7 +135,11 @@ impl<'bump> InstanceSearcher<'bump, VampireExec> for EufCma<'bump> {
     }
 }
 impl<'bump> InstanceSearcher<'bump, VampireExec> for IntCtxt<'bump> {
-    fn search_instances(&self, _str: &<VampireExec as Runner>::TimeoutR, _env: &Environement<'bump>) -> Vec<ARichFormula<'bump>> {
+    fn search_instances(
+        &self,
+        _str: &<VampireExec as Runner>::TimeoutR,
+        _env: &Environement<'bump>,
+    ) -> Vec<ARichFormula<'bump>> {
         todo!()
     }
 }

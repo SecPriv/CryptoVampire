@@ -1,4 +1,4 @@
-use std::{future::Future, io::BufWriter, num::NonZeroU32, path::Path};
+use std::{io::BufWriter, num::NonZeroU32, path::Path};
 
 use anyhow::{bail, ensure};
 use log::{debug, trace};
@@ -25,7 +25,12 @@ pub enum RunnerOut<S, U, T, O> {
 
 pub type RunnerBase = RunnerOut<(), (), (), ()>;
 
-pub type RunnerOutI<X: Runner> = RunnerOut<X::SatR, X::UnsatR, X::TimeoutR, X::OtherR>;
+pub type RunnerOutI<X> = RunnerOut<
+    <X as Runner>::SatR,
+    <X as Runner>::UnsatR,
+    <X as Runner>::TimeoutR,
+    <X as Runner>::OtherR,
+>;
 
 pub trait Runner {
     type Args<'a>;

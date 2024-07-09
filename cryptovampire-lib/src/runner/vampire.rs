@@ -1,22 +1,18 @@
-use anyhow::{bail, ensure, Context};
+use anyhow::{ensure, Context};
 use itertools::Itertools;
-use log::{debug, trace};
+use log::debug;
 use std::{
-    io::BufWriter,
-    num::NonZeroU32,
     path::{Path, PathBuf},
     process::{Command, Stdio},
     usize,
 };
-use tempfile::Builder;
+
 use thiserror::Error;
-use utils::{implvec, traits::MyWriteTo};
 
 use crate::{
     environement::environement::Environement,
     problem::Problem,
     runner::{runner::RunnerOut, searcher::InstanceSearcher},
-    smt::{SmtFile, SMT_FILE_EXTENSION},
 };
 
 use super::runner::{Discoverer, DiscovererError, Runner, RunnerOutI};
