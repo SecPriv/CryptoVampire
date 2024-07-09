@@ -80,7 +80,7 @@ pub fn auto_run<'bump>(
 ) -> anyhow::Result<Vec<String>> {
     let runners = Runners {
         vampire: Some(parms.to_vampire_exec()),
-        z3: None
+        z3: None,
     };
     let ntimes = NonZeroU32::new(parms.num_retry);
     let save_to = parms.smt_debug.as_ref().map(|p| p.as_ref());

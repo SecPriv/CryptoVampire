@@ -2,9 +2,9 @@ use anyhow::{bail, ensure, Context};
 use itertools::Itertools;
 use log::debug;
 use std::{
-    io::{BufWriter, Read},
+    io::Read,
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::Command,
     usize,
 };
 use utils::traits::MyWriteTo;

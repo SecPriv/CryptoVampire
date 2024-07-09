@@ -2,10 +2,10 @@ use std::{
     io::BufWriter,
     num::NonZeroU32,
     path::Path,
-    process::{Child, Command},
+    process::Command,
     sync::{
         mpsc::{channel, Sender},
-        Arc, Mutex,
+        Arc,
     },
     thread,
 };
@@ -15,12 +15,10 @@ use log::{debug, trace};
 use shared_child::SharedChild;
 use tempfile::Builder;
 use thiserror::Error;
-use utils::traits::MyWriteTo;
 
 use crate::{
     environement::environement::Environement,
     problem::{crypto_assumptions::CryptoAssumption, Problem},
-    smt::SmtFile,
 };
 
 use super::{searcher::InstanceSearcher, z3::Z3Runner, VampireExec};

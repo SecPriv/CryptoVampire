@@ -1,7 +1,9 @@
 use std::{
-    cell::RefCell,
     ptr::NonNull,
-    sync::{atomic::{self, AtomicU16}, Mutex},
+    sync::{
+        atomic::{self, AtomicU16},
+        Mutex,
+    },
 };
 
 use crate::{
@@ -29,7 +31,7 @@ pub struct ScopedContainer<'bump> {
     steps: Mutex<Vec<NonNull<Option<InnerStep<'bump>>>>>,
     cells: Mutex<Vec<NonNull<Option<InnerMemoryCell<'bump>>>>>,
 }
-unsafe impl<'bump> Sync for ScopedContainer<'bump>{}
+unsafe impl<'bump> Sync for ScopedContainer<'bump> {}
 
 // unsafe fn aux_alloc<T>(mut vec: impl DerefMut<Target = Vec<NonNull<T>>>) -> NonNull<T> {
 //     // let ptr = NonNull::new_unchecked(alloc(Layout::new::<T>()) as *mut T);
