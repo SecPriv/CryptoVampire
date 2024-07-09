@@ -306,17 +306,16 @@ impl<'bump> IntoWith<Environement<'bump>, &'bump ScopedContainer<'bump>> for &Ar
 impl Into<SolverConfig> for Auto {
     fn into(self) -> SolverConfig {
         let Auto {
-            lemmas,
             num_of_retry,
             timeout,
             solver_file_debug,
-            ignore_lemmas,
             vampire_location,
             z3_location,
             cvc5_location,
             disable_vampire,
             disable_z3,
             disable_cvc5,
+            ..
         } = self;
         let locations = Locations {
             vampire: vampire_location,

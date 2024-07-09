@@ -46,7 +46,6 @@ impl<'bump> InstanceSearcher<'bump, VampireExec> for UfCma<'bump> {
         str: &<VampireExec as Runner>::TimeoutR,
         env: &Environement<'bump>,
     ) -> Vec<ARichFormula<'bump>> {
-        // TODO: add support for eq
         let macname = self.mac().name();
         let verifyname = self.verify().name();
         let functions = env.get_function_hash();

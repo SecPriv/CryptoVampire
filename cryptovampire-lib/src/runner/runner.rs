@@ -13,8 +13,7 @@ use std::{
 };
 
 use anyhow::{bail, ensure};
-use if_chain::if_chain;
-use log::{debug, info, trace};
+use log::{debug, info};
 use shared_child::SharedChild;
 use tempfile::Builder;
 use thiserror::Error;
@@ -242,6 +241,7 @@ impl Runners {
                     });
                 } // handler dropped here
 
+                // TODO remove
                 thread::sleep(time::Duration::from_secs(1));
 
                 let mut res = false;
