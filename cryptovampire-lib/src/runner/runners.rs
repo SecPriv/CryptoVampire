@@ -266,7 +266,7 @@ fn autorun_many<'bump>(
                 (_, Ok(RunnerOut::Sat(_))) => {
                     trace!("sat, killall");
                     killall(killable_recv, unkillable_recv, hr)?;
-                    bail!("disproved the query")
+                    bail!("disproved the query");
                 }
                 (_, Ok(RunnerOut::Unsat(_))) => {
                     trace!("unsat, killall");
@@ -276,6 +276,12 @@ fn autorun_many<'bump>(
                 (dyn_traits::RunnerAndDiscoverer::Discoverer(d), Ok(RunnerOut::Timeout(t))) => {
                     trace!("timeout in discoverer");
                     to_analyse.push((d, t))
+                }
+                (_, e@Err(_)) => {
+                    trace!("error in one of the solver");
+                    killall(killable_recv, unkillable_recv, hr)?;
+                    e?;
+                    unreachable!();
                 }
                 _ => {
                     trace!("other result, ignoring");
