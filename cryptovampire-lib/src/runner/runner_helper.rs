@@ -1,8 +1,6 @@
 use std::{
     io::Read,
     process::{Command, Stdio},
-    thread,
-    time::Duration,
 };
 
 use anyhow::Context;
@@ -34,9 +32,9 @@ where
     let stdout = {
         let mut out = String::default();
         child
-            .take_stdout().with_context(|| "couldn't build the stdout handle")?
-        // stdout
-            
+            .take_stdout()
+            .with_context(|| "couldn't build the stdout handle")?
+            // stdout
             .read_to_string(&mut out)
             // .map(|mut s| s.read_to_string(&mut out))
             // .transpose()

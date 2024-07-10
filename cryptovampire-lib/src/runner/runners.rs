@@ -1,8 +1,15 @@
 use std::{
-    convert::Infallible, io, num::NonZeroU32, path::Path, process::Command, sync::{
+    convert::Infallible,
+    io,
+    num::NonZeroU32,
+    path::Path,
+    process::Command,
+    sync::{
         mpsc::{channel, Receiver, Sender},
         Arc,
-    }, thread::{self, ScopedJoinHandle}, time::Duration
+    },
+    thread::{self, ScopedJoinHandle},
+    time::Duration,
 };
 
 use anyhow::{bail, ensure};
