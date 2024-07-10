@@ -2,7 +2,7 @@ use std::{io::Read, process::Command};
 
 use anyhow::Context;
 
-use super::{runner::ChildKind, Runner, RunnerHandler};
+use super::{Runner, RunnerHandler};
 
 #[derive(Debug)]
 pub struct RetCodeAndStdout {
@@ -44,8 +44,6 @@ where
     })
 }
 
-
-
 pub mod dyn_traits {
     use std::{any::Any, path::Path};
 
@@ -56,11 +54,16 @@ pub mod dyn_traits {
         problem::{crypto_assumptions::CryptoAssumption, Problem},
         runner::{
             runner::DiscovererError, searcher::InstanceSearcher, Discoverer, Runner, RunnerHandler,
-            RunnerOut, RunnerOutI,
+            RunnerOut,
         },
     };
 
-    pub type RunnerOutDyn = RunnerOut<Box<dyn Any + Send>, Box<dyn Any + Send>, Box<dyn Any+Send>, Box<dyn Any+Send>>;
+    pub type RunnerOutDyn = RunnerOut<
+        Box<dyn Any + Send>,
+        Box<dyn Any + Send>,
+        Box<dyn Any + Send>,
+        Box<dyn Any + Send>,
+    >;
 
     pub trait DynRunner<R>
     where
@@ -90,24 +93,6 @@ pub mod dyn_traits {
     pub enum RunnerAndDiscoverer<R: RunnerHandler + Clone> {
         Runner(Box<dyn DynRunner<R> + Sync>),
         Discoverer(Box<dyn DynDiscovered<R> + Sync>),
-    }
-
-    impl<R: RunnerHandler + Clone> RunnerAndDiscoverer<R> {
-        /// Returns `true` if the runner and discoverer is [`Runner`].
-        ///
-        /// [`Runner`]: RunnerAndDiscoverer::Runner
-        #[must_use]
-        pub fn is_runner(&self) -> bool {
-            matches!(self, Self::Runner(..))
-        }
-
-        /// Returns `true` if the runner and discoverer is [`Discoverer`].
-        ///
-        /// [`Discoverer`]: RunnerAndDiscoverer::Discoverer
-        #[must_use]
-        pub fn is_discoverer(&self) -> bool {
-            matches!(self, Self::Discoverer(..))
-        }
     }
 
     impl<R> DynRunner<R> for RunnerAndDiscoverer<R>
@@ -144,13 +129,9 @@ pub mod dyn_traits {
             pbl: &Problem<'bump>,
             save_to: Option<&Path>,
         ) -> anyhow::Result<RunnerOutDyn> {
-            Ok(self.run_to_tmp(
-                handler,
-                env,
-                pbl,
-                self.default_args(),
-                save_to,
-            )?.into_dyn())
+            Ok(self
+                .run_to_tmp(handler, env, pbl, self.default_args(), save_to)?
+                .into_dyn())
         }
     }
 

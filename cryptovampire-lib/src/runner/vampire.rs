@@ -2,7 +2,6 @@ use anyhow::{bail, ensure, Context};
 use itertools::Itertools;
 use log::debug;
 use std::{
-    io::Read,
     path::{Path, PathBuf},
     process::{Command, Stdio},
     usize,
@@ -12,7 +11,11 @@ use utils::traits::MyWriteTo;
 use crate::{
     environement::environement::{Environement, Flags},
     problem::Problem,
-    runner::{exec_cmd, runner::{ChildKind, RunnerOut}, searcher::InstanceSearcher},
+    runner::{
+        exec_cmd,
+        runner::{ChildKind, RunnerOut},
+        searcher::InstanceSearcher,
+    },
     smt::SmtFile,
 };
 
@@ -161,7 +164,7 @@ impl Runner for VampireExec {
         match result.return_code {
             SUCCESS_RC => Ok(RunnerOut::Unsat(result.stdout)),
             TIMEOUT_RC => Ok(RunnerOut::Timeout(result.stdout)),
-            _ => bail!("Unknow Error while running vampire:\n\tcmd:{cmd:?}\n\t{result:?}")
+            _ => bail!("Unknow Error while running vampire:\n\tcmd:{cmd:?}\n\t{result:?}"),
         }
     }
 
@@ -184,11 +187,11 @@ impl Runner for VampireExec {
             .write_to_io(&mut file)
             .with_context(|| "couldn't write") // write to tmp file
     }
-    
+
     fn name() -> &'static str {
         "vampire"
     }
-    
+
     fn kind(&self) -> ChildKind {
         ChildKind::Unkillable
     }

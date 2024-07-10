@@ -8,25 +8,24 @@ use std::{
         Arc,
     },
     thread::{self, ScopedJoinHandle},
-    time,
 };
 
 use anyhow::{bail, ensure};
 use itertools::{chain, Itertools};
-use log::{debug, trace};
+use log::debug;
 use shared_child::SharedChild;
 use thiserror::Error;
 
 use crate::{
     environement::environement::{EnabledSolvers, Environement, SolverConfig},
     problem::Problem,
-    runner::{Discoverer, Runner, RunnerOut},
+    runner::RunnerOut,
 };
 
 use super::{
     dyn_traits::{self, DynRunner},
     z3::Z3Runner,
-    RunnerBase, RunnerHandler, VampireArg, VampireExec,
+    RunnerHandler, VampireArg, VampireExec,
 };
 
 #[derive(Debug, Clone)]
@@ -51,7 +50,7 @@ impl Runners {
         ensure!(!self.all_empty(), "no solver to run :'(");
         let n: u32 = ntimes.map(NonZeroU32::get).unwrap_or(u32::MAX);
 
-        let Runners { vampire, z3, cvc5 } = self;
+        let Runners { vampire, z3, .. } = self;
 
         let v = vampire.map(|v| dyn_traits::RunnerAndDiscoverer::Discoverer(Box::new(v)));
         let z3 = z3.map(|v| dyn_traits::RunnerAndDiscoverer::Runner(Box::new(v)));
@@ -286,7 +285,7 @@ fn autorun_many<'bump>(
         for (discoverer, out) in to_analyse {
             discoverer.dyn_discover(env, pbl, out.as_ref())?
         }
-        Ok((RunnerOut::Timeout(())))
+        Ok(RunnerOut::Timeout(()))
     } else {
         Ok(RunnerOut::Unsat(()))
     }

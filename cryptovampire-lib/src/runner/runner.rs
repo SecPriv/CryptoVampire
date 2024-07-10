@@ -1,30 +1,16 @@
-use core::time;
-use std::{
-    convert::Infallible,
-    io::BufWriter,
-    num::NonZeroU32,
-    path::Path,
-    process::Command,
-    sync::{
-        mpsc::{channel, Sender},
-        Arc,
-    },
-    thread,
-};
+use std::{io::BufWriter, path::Path, process::Command, sync::Arc};
 
-use anyhow::{bail, ensure};
-use log::{debug, info, trace};
+use log::{info, trace};
 use shared_child::SharedChild;
 use tempfile::Builder;
 use thiserror::Error;
-use utils::match_as_trait;
 
 use crate::{
-    environement::environement::{EnabledSolvers, Environement, SolverConfig},
+    environement::environement::Environement,
     problem::{crypto_assumptions::CryptoAssumption, Problem},
 };
 
-use super::{dyn_traits, searcher::InstanceSearcher, z3::Z3Runner, VampireArg, VampireExec};
+use super::{dyn_traits, searcher::InstanceSearcher};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum RunnerOut<S, U, T, O> {
