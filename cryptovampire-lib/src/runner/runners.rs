@@ -255,6 +255,7 @@ fn autorun_many<'bump>(
                 })
                 .collect_vec()
         };
+        drop(finished_send);
 
         let mut to_analyse = Vec::new();
 

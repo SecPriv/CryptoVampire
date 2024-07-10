@@ -1,4 +1,4 @@
-use std::{io::Read, process::Command};
+use std::{io::Read, process::{Command, Stdio}, thread, time::Duration};
 
 use anyhow::Context;
 use log::trace;
@@ -16,6 +16,7 @@ where
     H: RunnerHandler,
     R: Runner,
 {
+  cmd.stdout(Stdio::piped());
     let child = handler
         .spawn_child(cmd, runner.kind())
         .with_context(|| format!("Failed to start {} ($ {cmd:?})", R::name()))?;
@@ -23,6 +24,7 @@ where
     // wait for the proccess
     trace!("waiting for {cmd:?}");
     let exit_status = child.wait()?;
+    trace!("done waiting for {cmd:?}");
 
     // read the output from the process
     let stdout = {
@@ -79,6 +81,7 @@ pub mod dyn_traits {
             pbl: &Problem<'bump>,
             save_to: Option<&Path>,
         ) -> anyhow::Result<RunnerOutDyn>;
+
     }
 
     pub trait DynDiscovered<R>: DynRunner<R>
