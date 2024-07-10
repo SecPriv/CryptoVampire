@@ -4,7 +4,7 @@ use log::debug;
 use std::{
     io::Read,
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, Stdio},
     usize,
 };
 use utils::traits::MyWriteTo;
@@ -12,7 +12,7 @@ use utils::traits::MyWriteTo;
 use crate::{
     environement::environement::{Environement, Flags},
     problem::Problem,
-    runner::{runner::RunnerOut, searcher::InstanceSearcher},
+    runner::{run_cmd, runner::{ChildKind, RunnerOut}, searcher::InstanceSearcher},
     smt::SmtFile,
 };
 
@@ -152,38 +152,17 @@ impl Runner for VampireExec {
             let [a, b] = arg.to_args();
             cmd.arg(a.as_ref()).arg(b.as_ref());
         }
-        cmd.arg(pbl_file); // encode the file
+        cmd.arg(pbl_file) // encode the file
+            .stdout(Stdio::piped());
         debug!("running vampire with {cmd:?}");
 
-        let child = handler
-            .spawn_unkillable_child(&mut cmd)
-            .with_context(|| format!("Failed to start vampire ({:?})", &self.location))?;
+        let result = run_cmd(handler, &mut cmd, ChildKind::Unkillable)?;
 
-        // wait for the proccess
-        let exit_status = child.wait()?;
-
-        // read the output from the process
-        let stdout = {
-            let mut out = String::default();
-            child
-                .take_stdout()
-                .map(|mut s| s.read_to_string(&mut out))
-                .transpose()
-                .with_context(|| {
-                    format!("vampire ({:?})'s output isn't in utf-8", &self.location)
-                })?;
-            out
-        };
-        let return_code = exit_status.code().with_context(|| "terminated by signal")?;
-        match return_code {
-            SUCCESS_RC => Ok(RunnerOut::Unsat(stdout)),
-            TIMEOUT_RC => Ok(RunnerOut::Timeout(stdout)),
-            _ => bail!("Unknow Error while running vampire:\n\tcmd:{cmd:?}\n\treturn code:{return_code:}\n\tstdout:\n{stdout}")
+        match result.return_code {
+            SUCCESS_RC => Ok(RunnerOut::Unsat(result.stdout)),
+            TIMEOUT_RC => Ok(RunnerOut::Timeout(result.stdout)),
+            _ => bail!("Unknow Error while running vampire:\n\tcmd:{cmd:?}\n\t{result:?}")
         }
-    }
-
-    fn get_file_prefix() -> &'static str {
-        "vampire"
     }
 
     fn default_args(&self) -> Self::Args<'_> {
@@ -204,6 +183,10 @@ impl Runner for VampireExec {
             .as_diplay(env)
             .write_to_io(&mut file)
             .with_context(|| "couldn't write") // write to tmp file
+    }
+    
+    fn name() -> &'static str {
+        "vampire"
     }
 }
 

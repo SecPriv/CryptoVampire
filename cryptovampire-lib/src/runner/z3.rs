@@ -1,4 +1,8 @@
-use std::{io::Read, path::PathBuf, process::Command};
+use std::{
+    io::Read,
+    path::PathBuf,
+    process::{Command, Stdio},
+};
 
 use anyhow::{bail, ensure, Context};
 use itertools::chain;
@@ -42,10 +46,6 @@ impl Runner for Z3Runner {
             .with_context(|| "couldn't write") // write to tmp file
     }
 
-    fn get_file_prefix() -> &'static str {
-        "z3"
-    }
-
     fn default_args(&self) -> Self::Args<'_> {
         &[]
     }
@@ -66,9 +66,10 @@ impl Runner for Z3Runner {
             pbl_file.to_str().unwrap_or("[not unicode]")
         );
         let mut cmd = Command::new(&self.location);
-        cmd.args(chain!(&self.extra_args, args));
-        cmd.arg(pbl_file); // encode the file
-        debug!("running vampire with {cmd:?}");
+        cmd.args(chain!(&self.extra_args, args))
+            .arg(pbl_file) // encode the file
+            .stdout(Stdio::piped());
+        debug!("running z3 with {cmd:?}");
         let child = handler.spawn_killable_child(&mut cmd)?;
 
         // wait for the proccess
@@ -94,5 +95,9 @@ impl Runner for Z3Runner {
         }
 
         bail!("Error while running z3:\n\tcmd:{cmd:?}\n\tstdout:\n{stdout}")
+    }
+    
+    fn name() -> &'static str {
+        "z3"
     }
 }
