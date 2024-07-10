@@ -12,7 +12,7 @@ use std::{
 
 use anyhow::{bail, ensure};
 use itertools::{chain, Itertools};
-use log::debug;
+use log::{debug, trace};
 use shared_child::SharedChild;
 use thiserror::Error;
 
@@ -263,17 +263,23 @@ fn autorun_many<'bump>(
         while let Some(r) = finished_iter.next() {
             match r {
                 (_, Ok(RunnerOut::Sat(_))) => {
+                    trace!("sat, killall");
                     killall(killable_recv, unkillable_recv, hr)?;
                     bail!("disproved the query")
                 }
                 (_, Ok(RunnerOut::Unsat(_))) => {
+                    trace!("unsat, killall");
                     killall(killable_recv, unkillable_recv, hr)?;
                     return Ok(None);
                 }
                 (dyn_traits::RunnerAndDiscoverer::Discoverer(d), Ok(RunnerOut::Timeout(t))) => {
+                    trace!("timeout in discoverer");
                     to_analyse.push((d, t))
                 }
-                _ => continue,
+                _ => {
+                    trace!("other result, ignoring");
+                    continue;
+                }
             }
         }
         killall(killable_recv, unkillable_recv, hr)?;
@@ -296,6 +302,7 @@ fn killall<'a, 's, T>(
     unkillalble: Receiver<Arc<SharedChild>>,
     threads: Vec<ScopedJoinHandle<'s, T>>,
 ) -> anyhow::Result<()> {
+    debug!("killing all");
     chain!(killalble.into_iter(), unkillalble.into_iter())
         .map(|c| {
             c.kill()?;

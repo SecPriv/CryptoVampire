@@ -1,6 +1,7 @@
 use std::{io::Read, process::Command};
 
 use anyhow::Context;
+use log::trace;
 
 use super::{Runner, RunnerHandler};
 
@@ -20,6 +21,7 @@ where
         .with_context(|| format!("Failed to start {} ($ {cmd:?})", R::name()))?;
 
     // wait for the proccess
+    trace!("waiting for {cmd:?}");
     let exit_status = child.wait()?;
 
     // read the output from the process
@@ -38,6 +40,7 @@ where
             R::name()
         )
     })?;
+    trace!("process ended successfully ({cmd:?})\nstdout: {stdout}");
     Ok(RetCodeAndStdout {
         stdout,
         return_code,

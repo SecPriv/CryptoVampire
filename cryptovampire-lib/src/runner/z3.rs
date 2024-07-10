@@ -86,6 +86,7 @@ impl Runner for Z3Runner {
             match last_line {
                 "unsat" => return Ok(RunnerOut::Unsat(())),
                 "sat" => return Ok(RunnerOut::Sat(())),
+                "timeout" => return Ok(RunnerOut::Timeout(())),
                 _ => return Ok(RunnerOut::Other(result.stdout)),
             }
         }
