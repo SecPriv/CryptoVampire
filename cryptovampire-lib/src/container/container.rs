@@ -1,7 +1,9 @@
 use std::{
-    cell::RefCell,
     ptr::NonNull,
-    sync::atomic::{self, AtomicU16},
+    sync::{
+        atomic::{self, AtomicU16},
+        Mutex,
+    },
 };
 
 use crate::{
@@ -24,11 +26,12 @@ use std::fmt::Debug;
 // type InnerContainer<'bump, T> = RefCell<Vec<&'bump RefPointee<'bump, T>>>;
 
 pub struct ScopedContainer<'bump> {
-    sorts: RefCell<Vec<NonNull<Option<InnerSort<'bump>>>>>,
-    functions: RefCell<Vec<NonNull<Option<InnerFunction<'bump>>>>>,
-    steps: RefCell<Vec<NonNull<Option<InnerStep<'bump>>>>>,
-    cells: RefCell<Vec<NonNull<Option<InnerMemoryCell<'bump>>>>>,
+    sorts: Mutex<Vec<NonNull<Option<InnerSort<'bump>>>>>,
+    functions: Mutex<Vec<NonNull<Option<InnerFunction<'bump>>>>>,
+    steps: Mutex<Vec<NonNull<Option<InnerStep<'bump>>>>>,
+    cells: Mutex<Vec<NonNull<Option<InnerMemoryCell<'bump>>>>>,
 }
+unsafe impl<'bump> Sync for ScopedContainer<'bump> {}
 
 // unsafe fn aux_alloc<T>(mut vec: impl DerefMut<Target = Vec<NonNull<T>>>) -> NonNull<T> {
 //     // let ptr = NonNull::new_unchecked(alloc(Layout::new::<T>()) as *mut T);
@@ -45,7 +48,7 @@ macro_rules! make_scope_allocator {
                 content: Option<$inner<'bump>>,
             ) -> NonNull<Option<$inner>> {
                 let uninit_ref = NonNull::from(Box::leak(Box::new(content)));
-                self.$fun.borrow_mut().push(uninit_ref);
+                self.$fun.lock().expect("poisoned mutex").push(uninit_ref);
                 uninit_ref
             }
         }
@@ -59,7 +62,7 @@ impl<'bump> Container<'bump, InnerSort<'bump>> for ScopedContainer<'bump> {
         content: Option<InnerSort<'bump>>,
     ) -> NonNull<Option<InnerSort>> {
         let uninit_ref = NonNull::from(Box::leak(Box::new(content)));
-        self.sorts.borrow_mut().push(uninit_ref);
+        self.sorts.lock().expect("poisoned mutex").push(uninit_ref);
         uninit_ref
     }
 }
@@ -69,7 +72,7 @@ make_scope_allocator!(cells, MemoryCell, InnerMemoryCell);
 macro_rules! my_drop {
     ($($fun:ident),*) => {
         $(
-            for e in $fun.get_mut() {
+            for e in $fun.lock().expect("poisoned mutex").iter_mut() {
                 drop(unsafe { Box::from_raw(e.as_mut()) });
             }
         )*
@@ -91,33 +94,13 @@ impl<'bump> Drop for ScopedContainer<'bump> {
 impl<'bump> Debug for ScopedContainer<'bump> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Container")
-            .field("sorts", &self.sorts.try_borrow())
-            .field("functions", &self.functions.try_borrow())
-            .field("steps", &self.steps.try_borrow())
-            .field("cells", &self.cells.try_borrow())
+            .field("sorts", &self.sorts.lock().expect("poisoned mutex"))
+            .field("functions", &self.functions.lock().expect("poisoned mutex"))
+            .field("steps", &self.steps.lock().expect("poisoned mutex"))
+            .field("cells", &self.cells.lock().expect("poisoned mutex"))
             .finish()
     }
 }
-
-// macro_rules! make_into_iters {
-//     ($name:ident, $out:ident, $inner:ident, $bump:lifetime) => {
-//         paste! {
-//             pub(crate) fn [< $name _into_iter >]<'a> (
-//                 &'a self,
-//             ) -> VecRefWrapperMap<
-//                 'a,
-//                 &$bump Option<$inner<$bump>>,
-//                 $out<'bump>,
-//                 fn(&&Option<$inner<$bump>>) -> $out<$bump>,
-//             > where 'bump:'a {
-//                 VecRefWrapperMap {
-//                     r: self.$name.borrow(),
-//                     f: |i| $out::<$bump>::from_ref(*i),
-//                 }
-//             }
-//         }
-//     };
-// }
 
 static UNIQUE_FUNCTIONS: AtomicU16 = AtomicU16::new(0);
 
@@ -129,12 +112,6 @@ impl<'bump> ScopedContainer<'bump> {
     }
 
     pub fn is_name_available(&'bump self, name: &str) -> bool {
-        // self.functions_into_iter()
-        //     .into_iter()
-        //     .all(|f| f.name().as_ref() != name)
-        //     && self.sorts_into_iter().into_iter().all(|s| s.name() != name)
-        //     && self.steps_into_iter().into_iter().all(|s| s.name() != name)
-        //     && self.cells_into_iter().into_iter().all(|c| c.name() != name)
         self.name_hash_set().contains(name)
     }
 
@@ -142,27 +119,14 @@ impl<'bump> ScopedContainer<'bump> {
     where
         'bump: 'a,
     {
-        // let f_iter = self.functions_into_iter();
-        // let sort_iter = self.sorts_into_iter();
-        // let step_iter = self.steps_into_iter();
-        // let cell_iter = self.cells_into_iter();
-
-        // chain!(
-        //     f_iter.into_iter().map(|f| f.name().into()),
-        //     sort_iter.into_iter().map(|s| s.name().into()),
-        //     step_iter.into_iter().map(|s| s.name().into()),
-        //     cell_iter.into_iter().map(|c| c.name().into()),
-        // )
-        // .collect()
-
         fn populate<'a, 'bump, T>(
             h: &mut HashSet<StrRef<'a>>,
-            vec: &'a RefCell<Vec<NonNull<Option<T>>>>,
+            vec: &'a Mutex<Vec<NonNull<Option<T>>>>,
         ) where
             'bump: 'a,
             &'a T: RefNamed<'a>,
         {
-            let vec = vec.borrow();
+            let vec = vec.lock().expect("poisoned mutex");
             h.extend(
                 vec.iter()
                     .filter_map(|x| {
@@ -176,10 +140,10 @@ impl<'bump> ScopedContainer<'bump> {
         }
 
         let mut h = HashSet::with_capacity(
-            self.functions.borrow().len()
-                + self.sorts.borrow().len()
-                + self.cells.borrow().len()
-                + self.steps.borrow().len(),
+            self.functions.lock().expect("poisoned mutex").len()
+                + self.sorts.lock().expect("poised mutex").len()
+                + self.cells.lock().expect("poised mutex").len()
+                + self.steps.lock().expect("poised mutex").len(),
         );
         populate(&mut h, &self.functions);
         populate(&mut h, &self.sorts);
@@ -189,19 +153,14 @@ impl<'bump> ScopedContainer<'bump> {
     }
 
     pub fn get_function_hash_map(&self) -> HashMap<StrRef<'bump>, Function<'bump>> {
-        self.functions
-            .borrow()
-            .iter()
-            .map(|f| Function::from_raw(*f, Default::default()))
+        let functions = self.functions.lock().expect("poisoned mutex").clone();
+        functions
+            .into_iter()
+            .map(|f| Function::from_raw(f, Default::default()))
             .chain(BUILT_IN_FUNCTIONS.iter().map(|f| *f))
             .map(|f| (f.name(), f))
             .collect()
     }
-
-    // make_into_iters!(functions, Function, InnerFunction, 'bump);
-    // make_into_iters!(sorts, Sort, InnerSort, 'bump);
-    // make_into_iters!(steps, Step, InnerStep, 'bump);
-    // make_into_iters!(cells, MemoryCell, InnerMemoryCell, 'bump);
 
     /// Creates a new [Container]
     ///
@@ -251,7 +210,7 @@ impl<'bump> ScopedContainer<'bump> {
     where
         F: Fn(&Function<'bump>) -> bool,
     {
-        let function = self.functions.borrow();
+        let function = self.functions.lock().expect("poisoned mutex").clone();
         function
             .iter()
             .map(|f| Function::from_raw(*f, Default::default()))

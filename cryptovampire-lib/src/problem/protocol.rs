@@ -1,4 +1,5 @@
-use std::{cell::OnceCell, rc::Rc};
+use once_cell::sync::OnceCell;
+use std::rc::Rc;
 
 use itertools::{chain, Itertools};
 
