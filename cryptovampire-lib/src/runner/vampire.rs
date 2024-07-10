@@ -12,7 +12,7 @@ use utils::traits::MyWriteTo;
 use crate::{
     environement::environement::{Environement, Flags},
     problem::Problem,
-    runner::{run_cmd, runner::{ChildKind, RunnerOut}, searcher::InstanceSearcher},
+    runner::{exec_cmd, runner::{ChildKind, RunnerOut}, searcher::InstanceSearcher},
     smt::SmtFile,
 };
 
@@ -156,7 +156,7 @@ impl Runner for VampireExec {
             .stdout(Stdio::piped());
         debug!("running vampire with {cmd:?}");
 
-        let result = run_cmd(handler, &mut cmd, ChildKind::Unkillable)?;
+        let result = exec_cmd(self, handler, &mut cmd)?;
 
         match result.return_code {
             SUCCESS_RC => Ok(RunnerOut::Unsat(result.stdout)),
@@ -187,6 +187,10 @@ impl Runner for VampireExec {
     
     fn name() -> &'static str {
         "vampire"
+    }
+    
+    fn kind(&self) -> ChildKind {
+        ChildKind::Unkillable
     }
 }
 

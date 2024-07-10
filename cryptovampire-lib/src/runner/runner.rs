@@ -17,13 +17,14 @@ use log::{debug, info, trace};
 use shared_child::SharedChild;
 use tempfile::Builder;
 use thiserror::Error;
+use utils::match_as_trait;
 
 use crate::{
     environement::environement::{EnabledSolvers, Environement, SolverConfig},
     problem::{crypto_assumptions::CryptoAssumption, Problem},
 };
 
-use super::{searcher::InstanceSearcher, z3::Z3Runner, VampireArg, VampireExec};
+use super::{dyn_traits, searcher::InstanceSearcher, z3::Z3Runner, VampireArg, VampireExec};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum RunnerOut<S, U, T, O> {
@@ -34,6 +35,10 @@ pub enum RunnerOut<S, U, T, O> {
 }
 
 pub type RunnerBase = RunnerOut<(), (), (), ()>;
+const SAT: RunnerBase = RunnerOut::Sat(());
+const UNSAT: RunnerBase = RunnerOut::Unsat(());
+const TIMEOUT: RunnerBase = RunnerOut::Timeout(());
+const OTHER: RunnerBase = RunnerOut::Other(());
 
 pub type RunnerOutI<X> = RunnerOut<
     <X as Runner>::SatR,
@@ -41,6 +46,66 @@ pub type RunnerOutI<X> = RunnerOut<
     <X as Runner>::TimeoutR,
     <X as Runner>::OtherR,
 >;
+
+impl<S, U, T, O> RunnerOut<S, U, T, O> {
+    /// Returns `true` if the runner out is [`Sat`].
+    ///
+    /// [`Sat`]: RunnerOut::Sat
+    #[must_use]
+    pub fn is_sat(&self) -> bool {
+        matches!(self, Self::Sat(..))
+    }
+
+    /// Returns `true` if the runner out is [`Unsat`].
+    ///
+    /// [`Unsat`]: RunnerOut::Unsat
+    #[must_use]
+    pub fn is_unsat(&self) -> bool {
+        matches!(self, Self::Unsat(..))
+    }
+
+    /// Returns `true` if the runner out is [`Timeout`].
+    ///
+    /// [`Timeout`]: RunnerOut::Timeout
+    #[must_use]
+    pub fn is_timeout(&self) -> bool {
+        matches!(self, Self::Timeout(..))
+    }
+
+    /// Returns `true` if the runner out is [`Other`].
+    ///
+    /// [`Other`]: RunnerOut::Other
+    #[must_use]
+    pub fn is_other(&self) -> bool {
+        matches!(self, Self::Other(..))
+    }
+
+    pub fn into_dyn(self) -> dyn_traits::RunnerOutDyn
+    where
+        S: Send + 'static,
+        U: Send + 'static,
+        T: Send + 'static,
+        O: Send + 'static,
+    {
+        match self {
+            RunnerOut::Sat(s) => RunnerOut::Sat(Box::new(s)),
+            RunnerOut::Unsat(u) => RunnerOut::Unsat(Box::new(u)),
+            RunnerOut::Timeout(t) => RunnerOut::Timeout(Box::new(t)),
+            RunnerOut::Other(o) => RunnerOut::Other(Box::new(o)),
+        }
+    }
+}
+
+impl<S, U, T, O> AsRef<RunnerBase> for RunnerOut<S, U, T, O> {
+    fn as_ref(&self) -> &RunnerBase {
+        match self {
+            RunnerOut::Sat(_) => &SAT,
+            RunnerOut::Unsat(_) => &UNSAT,
+            RunnerOut::Timeout(_) => &TIMEOUT,
+            RunnerOut::Other(_) => &OTHER,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ChildKind {
@@ -141,6 +206,8 @@ pub trait Runner {
 
     /// A name for debug purposes
     fn name() -> &'static str;
+
+    fn kind(&self) -> ChildKind;
 }
 
 #[derive(Debug, Error)]

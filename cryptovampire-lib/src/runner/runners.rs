@@ -4,13 +4,15 @@ use std::{
     path::Path,
     process::Command,
     sync::{
-        mpsc::{channel, Sender},
+        mpsc::{channel, Receiver, Sender},
         Arc,
     },
-    thread, time,
+    thread::{self, ScopedJoinHandle},
+    time,
 };
 
 use anyhow::{bail, ensure};
+use itertools::{chain, Itertools};
 use log::{debug, trace};
 use shared_child::SharedChild;
 use thiserror::Error;
@@ -21,8 +23,13 @@ use crate::{
     runner::{Discoverer, Runner, RunnerOut},
 };
 
-use super::{z3::Z3Runner, RunnerHandler, VampireArg, VampireExec};
+use super::{
+    dyn_traits::{self, DynRunner},
+    z3::Z3Runner,
+    RunnerBase, RunnerHandler, VampireArg, VampireExec,
+};
 
+#[derive(Debug, Clone)]
 pub struct Runners {
     pub vampire: Option<VampireExec>,
     pub z3: Option<Z3Runner>,
@@ -35,7 +42,7 @@ impl Runners {
     }
 
     pub fn autorun<'bump>(
-        &self,
+        self,
         env: &Environement<'bump>,
         pbl: &mut Problem<'bump>,
         ntimes: Option<NonZeroU32>,
@@ -44,74 +51,89 @@ impl Runners {
         ensure!(!self.all_empty(), "no solver to run :'(");
         let n: u32 = ntimes.map(NonZeroU32::get).unwrap_or(u32::MAX);
 
+        let Runners { vampire, z3, cvc5 } = self;
+
+        let v = vampire.map(|v| dyn_traits::RunnerAndDiscoverer::Discoverer(Box::new(v)));
+        let z3 = z3.map(|v| dyn_traits::RunnerAndDiscoverer::Runner(Box::new(v)));
+        let runners = [v, z3].into_iter().flatten().collect_vec();
+
         for i in 0..n {
             debug!("running {i:}/{n:}");
-            let (killable_send, killable_recv) = channel();
-            let (unkillable_send, unkillable_recv) = channel();
 
-            let res: anyhow::Result<_> = thread::scope(|s| {
-                let vjh;
-                let z3jh;
-                {
-                    let handler = Handler {
-                        killable: killable_send,
-                        unkillable: unkillable_send,
-                    };
-                    vjh = self.vampire.as_ref().map(|vr| {
-                        let handler = handler.clone();
-                        s.spawn(|| vr.run_to_tmp(handler, env, pbl, vr.default_args(), save_to))
-                    });
-                    z3jh = self.z3.as_ref().map(|z3| {
-                        let handler = handler.clone();
-                        s.spawn(|| z3.run_to_tmp(handler, env, pbl, z3.default_args(), save_to))
-                    });
-                } // handler dropped here
+            let res = autorun_many(env, pbl, save_to, &runners)?;
 
-                // TODO remove
-                thread::sleep(time::Duration::from_secs(1));
-
-                let mut res = false;
-                for r in unkillable_recv {
-                    trace!("waiting for unkillable child ({:})", r.id());
-                    res = res || r.wait()?.success();
-                }
-
-                // TODO: make sure they failled before killing everyone
-
-                for r in killable_recv {
-                    trace!("killing unfinished child ({:})", r.id());
-                    r.kill()?;
-                    r.wait()?; // avoid zombie
-                    trace!("child killed ({:})", r.id())
-                }
-                trace!("all child killed, joining threads and returning");
-                Ok((
-                    vjh.map(|h| h.join().unwrap()),
-                    z3jh.map(|h| h.join().unwrap()),
-                ))
-            });
-            let (vout, z3out) = res?;
-
-            let vout = vout.transpose()?;
-            let z3out = z3out.transpose()?;
-
-            match z3out {
-                Some(RunnerOut::Unsat(_)) => return Ok("z3 found a solution".into()),
-                Some(RunnerOut::Sat(_)) => bail!("z3 disproved the problem"),
-                _ => (),
+            match res {
+                RunnerOut::Unsat(_) => return Ok("proven".into()),
+                RunnerOut::Timeout(_) => continue,
+                _ => unreachable!(),
             }
 
-            let data = match vout {
-                Some(RunnerOut::Unsat(proof)) => return Ok(proof),
-                Some(RunnerOut::Timeout(data)) => Some(data),
-                Some(RunnerOut::Sat(proof)) => bail!("the query is false:\n{proof}"),
-                None => None,
-                _ => bail!("unknown error"),
-            };
-            match (&self.vampire, data) {
-                (Some(vr), Some(out)) => vr.discover(env, pbl, &out)?,
-                _ => (),
-            }
+            // let (killable_send, killable_recv) = channel();
+            // let (unkillable_send, unkillable_recv) = channel();
+
+            // let res: anyhow::Result<_> = thread::scope(|s| {
+            //     let vjh;
+            //     let z3jh;
+            //     {
+            //         let handler = Handler {
+            //             killable: killable_send,
+            //             unkillable: unkillable_send,
+            //         };
+            //         vjh = self.vampire.as_ref().map(|vr| {
+            //             let handler = handler.clone();
+            //             s.spawn(|| vr.run_to_tmp(handler, env, pbl, vr.default_args(), save_to))
+            //         });
+            //         z3jh = self.z3.as_ref().map(|z3| {
+            //             let handler = handler.clone();
+            //             s.spawn(|| z3.run_to_tmp(handler, env, pbl, z3.default_args(), save_to))
+            //         });
+            //     } // handler dropped here
+
+            //     // TODO remove
+            //     thread::sleep(time::Duration::from_secs(1));
+
+            //     let mut res = false;
+            //     for r in unkillable_recv {
+            //         trace!("waiting for unkillable child ({:})", r.id());
+            //         res = res || r.wait()?.success();
+            //     }
+
+            //     // TODO: make sure they failled before killing everyone
+
+            //     for r in killable_recv {
+            //         trace!("killing unfinished child ({:})", r.id());
+            //         r.kill()?;
+            //         r.wait()?; // avoid zombie
+            //         trace!("child killed ({:})", r.id())
+            //     }
+            //     trace!("all child killed, joining threads and returning");
+            //     Ok((
+            //         vjh.map(|h| h.join().unwrap()),
+            //         z3jh.map(|h| h.join().unwrap()),
+            //     ))
+            // });
+            // let (vout, z3out) = res?;
+
+            // let vout = vout.transpose()?;
+            // let z3out = z3out.transpose()?;
+
+            // match z3out {
+            //     Some(RunnerOut::Unsat(_)) => return Ok("z3 found a solution".into()),
+            //     Some(RunnerOut::Sat(_)) => bail!("z3 disproved the problem"),
+            //     _ => (),
+            // }
+
+            // let data = match vout {
+            //     Some(RunnerOut::Unsat(proof)) => return Ok(proof),
+            //     Some(RunnerOut::Timeout(data)) => Some(data),
+            //     Some(RunnerOut::Sat(proof)) => bail!("the query is false:\n{proof}"),
+            //     None => None,
+            //     _ => bail!("unknown error"),
+            // };
+            // match (&self.vampire, data) {
+            //     (Some(vr), Some(out)) => vr.discover(env, pbl, &out)?,
+            //     _ => (),
+            // }
         }
         bail!("ran out of tries (at most {n})")
     }
@@ -202,4 +224,98 @@ impl RunnerHandler for Handler {
         };
         Ok(child)
     }
+}
+
+fn autorun_many<'bump>(
+    env: &Environement<'bump>,
+    pbl: &mut Problem<'bump>,
+    save_to: Option<&Path>,
+    runners: &[dyn_traits::RunnerAndDiscoverer<Handler>],
+) -> anyhow::Result<RunnerOut<Infallible, (), (), Infallible>> {
+    let to_analyse = thread::scope(|s| {
+        let (killable_send, killable_recv) = channel();
+        let (unkillable_send, unkillable_recv) = channel();
+        let (finished_send, finished_recv) = channel();
+        let hr = {
+            let handler = Handler {
+                killable: killable_send,
+                unkillable: unkillable_send,
+            };
+            runners
+                .iter()
+                .map(|runner| {
+                    let handler = handler.clone();
+                    let finished = finished_send.clone();
+                    let env = &env;
+                    let pbl = &pbl;
+                    let handle = s.spawn(move || {
+                        finished.send((runner, runner.dyn_run_to_tmp(handler, env, pbl, save_to)))
+                    });
+                    // HandleAndRunner { handle, runner }
+                    handle
+                })
+                .collect_vec()
+        };
+
+        let mut to_analyse = Vec::new();
+
+        let mut finished_iter = finished_recv.into_iter();
+
+        while let Some(r) = finished_iter.next() {
+            match r {
+                (_, Ok(RunnerOut::Sat(_))) => {
+                    killall(killable_recv, unkillable_recv, hr)?;
+                    bail!("disproved the query")
+                }
+                (_, Ok(RunnerOut::Unsat(_))) => {
+                    killall(killable_recv, unkillable_recv, hr)?;
+                    return Ok(None);
+                }
+                (dyn_traits::RunnerAndDiscoverer::Discoverer(d), Ok(RunnerOut::Timeout(t))) => {
+                    to_analyse.push((d, t))
+                }
+                _ => continue,
+            }
+        }
+        killall(killable_recv, unkillable_recv, hr)?;
+        Ok(Some(to_analyse))
+    })?;
+
+    // analysed gathered data
+    if let Some(to_analyse) = to_analyse {
+        for (discoverer, out) in to_analyse {
+            discoverer.dyn_discover(env, pbl, out.as_ref())?
+        }
+        Ok((RunnerOut::Timeout(())))
+    } else {
+        Ok(RunnerOut::Unsat(()))
+    }
+}
+
+fn killall<'a, 's, T>(
+    killalble: Receiver<Arc<SharedChild>>,
+    unkillalble: Receiver<Arc<SharedChild>>,
+    threads: Vec<ScopedJoinHandle<'s, T>>,
+) -> anyhow::Result<()> {
+    chain!(killalble.into_iter(), unkillalble.into_iter())
+        .map(|c| {
+            c.kill()?;
+            c.wait()?;
+            Ok(())
+        })
+        .collect_vec() // make sure we stop them all
+        .into_iter()
+        .try_for_each(|x: anyhow::Result<()>| x)?;
+
+    threads
+        .into_iter()
+        .map(|h| h.join())
+        // .collect_vec()
+        // .into_iter()
+        .for_each(|r| match r {
+            Ok(_) => (),
+            Err(e) => std::panic::resume_unwind(e), // keep panicing
+        });
+
+    Ok(())
 }

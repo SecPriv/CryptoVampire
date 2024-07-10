@@ -97,7 +97,7 @@ pub fn auto_run<'bump>(
     let ntimes = NonZeroU32::new(num_retry);
     let save_to = smt_debug;
 
-    pbls.map(&mut |pbl| runners.autorun(env, pbl, ntimes, save_to))
+    pbls.map(&mut |pbl| runners.clone().autorun(env, pbl, ntimes, save_to))
         .collect()
 }
 
