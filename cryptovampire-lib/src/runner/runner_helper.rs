@@ -1,4 +1,9 @@
-use std::{io::Read, process::{Command, Stdio}, thread, time::Duration};
+use std::{
+    io::Read,
+    process::{Command, Stdio},
+    thread,
+    time::Duration,
+};
 
 use anyhow::Context;
 use log::trace;
@@ -16,26 +21,34 @@ where
     H: RunnerHandler,
     R: Runner,
 {
-  cmd.stdout(Stdio::piped());
+    cmd.stdout(Stdio::piped()) // instead of piped, this lets us wait on the child
+        // .stdin(Stdio::null())
+        // .stderr(Stdio::null())
+        ;
     let child = handler
         .spawn_child(cmd, runner.kind())
         .with_context(|| format!("Failed to start {} ($ {cmd:?})", R::name()))?;
 
-    // wait for the proccess
+    trace!("process spawned, reading the output till EOF");
+    // take the stdout
+    let stdout = {
+        let mut out = String::default();
+        child
+            .take_stdout().with_context(|| "couldn't build the stdout handle")?
+        // stdout
+            
+            .read_to_string(&mut out)
+            // .map(|mut s| s.read_to_string(&mut out))
+            // .transpose()
+            .with_context(|| format!("{}'s output isn't in utf-8 ($ {cmd:?})", R::name()))?;
+        // drops and close the
+        out
+    };
+    // The process should have ended by now but we still wait for it to get the exit status
     trace!("waiting for {cmd:?}");
     let exit_status = child.wait()?;
     trace!("done waiting for {cmd:?}");
 
-    // read the output from the process
-    let stdout = {
-        let mut out = String::default();
-        child
-            .take_stdout()
-            .map(|mut s| s.read_to_string(&mut out))
-            .transpose()
-            .with_context(|| format!("{}'s output isn't in utf-8 ($ {cmd:?})", R::name()))?;
-        out
-    };
     let return_code = exit_status.code().with_context(|| {
         format!(
             "{} terminated by signal.\n\t$ {cmd:?}\n\tstoud:\n{stdout}",
@@ -81,7 +94,6 @@ pub mod dyn_traits {
             pbl: &Problem<'bump>,
             save_to: Option<&Path>,
         ) -> anyhow::Result<RunnerOutDyn>;
-
     }
 
     pub trait DynDiscovered<R>: DynRunner<R>

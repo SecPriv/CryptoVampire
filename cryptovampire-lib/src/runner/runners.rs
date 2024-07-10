@@ -1,13 +1,8 @@
 use std::{
-    convert::Infallible,
-    num::NonZeroU32,
-    path::Path,
-    process::Command,
-    sync::{
+    convert::Infallible, io, num::NonZeroU32, path::Path, process::Command, sync::{
         mpsc::{channel, Receiver, Sender},
         Arc,
-    },
-    thread::{self, ScopedJoinHandle},
+    }, thread::{self, ScopedJoinHandle}, time::Duration
 };
 
 use anyhow::{bail, ensure};
@@ -201,8 +196,7 @@ impl RunnerHandler for Handler {
         match self.killable.send(Arc::clone(&child)) {
             Err(_) => {
                 debug!("no more reciever, trying to kill child");
-                child.kill()?;
-                child.wait()?;
+                kill_shared_child(&child)?;
                 Err(HandlerError::NoMoreReciever)?
             }
             _ => (),
@@ -215,8 +209,7 @@ impl RunnerHandler for Handler {
         match self.unkillable.send(Arc::clone(&child)) {
             Err(_) => {
                 debug!("no more reciever, trying to kill child");
-                child.kill()?;
-                child.wait()?;
+                kill_shared_child(&child)?;
                 Err(HandlerError::NoMoreReciever)?
             }
             _ => (),
@@ -277,7 +270,7 @@ fn autorun_many<'bump>(
                     trace!("timeout in discoverer");
                     to_analyse.push((d, t))
                 }
-                (_, e@Err(_)) => {
+                (_, e @ Err(_)) => {
                     trace!("error in one of the solver");
                     killall(killable_recv, unkillable_recv, hr)?;
                     e?;
@@ -311,14 +304,10 @@ fn killall<'a, 's, T>(
 ) -> anyhow::Result<()> {
     debug!("killing all");
     chain!(killalble.into_iter(), unkillalble.into_iter())
-        .map(|c| {
-            c.kill()?;
-            c.wait()?;
-            Ok(())
-        })
+        .map(|c| kill_shared_child(&c))
         .collect_vec() // make sure we stop them all
         .into_iter()
-        .try_for_each(|x: anyhow::Result<()>| x)?;
+        .try_for_each(|x: io::Result<()>| x)?;
 
     threads
         .into_iter()
@@ -330,5 +319,13 @@ fn killall<'a, 's, T>(
             Err(e) => std::panic::resume_unwind(e), // keep panicing
         });
 
+    Ok(())
+}
+
+fn kill_shared_child(child: &SharedChild) -> io::Result<()> {
+    debug!("killing {}", child.id());
+    child.kill()?;
+    thread::sleep(Duration::from_millis(5));
+    child.wait()?;
     Ok(())
 }

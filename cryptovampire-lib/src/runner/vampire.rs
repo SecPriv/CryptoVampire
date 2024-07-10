@@ -164,7 +164,7 @@ impl Runner for VampireExec {
         match result.return_code {
             SUCCESS_RC => Ok(RunnerOut::Unsat(result.stdout)),
             TIMEOUT_RC => Ok(RunnerOut::Timeout(result.stdout)),
-            _ => bail!("Unknow Error while running vampire:\n\tcmd:{cmd:?}\n\t{result:?}"),
+            _ => bail!("Unknow Error while running vampire:\n\tcmd:{cmd:?}\n\treturn code: {:}\n\tstdout:\n{}", result.return_code, result.stdout),
         }
     }
 
