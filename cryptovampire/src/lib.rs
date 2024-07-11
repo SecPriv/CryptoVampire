@@ -4,20 +4,19 @@ mod tests;
 use std::{fs::File, io::BufWriter, num::NonZeroU32, path::Path};
 
 use crate::cli::Args;
-use anyhow::{bail, ensure, Context};
+use anyhow::{ensure, Context};
 
 use cryptovampire_lib::{
     container::ScopedContainer,
-    environement::environement::{AutomatedVampire, Environement},
+    environement::environement::{Environement, SolverConfig},
     formula::{
         function::{builtin::BUILT_IN_FUNCTIONS, Function},
         sort::{builtins::BUILT_IN_SORTS, Sort},
     },
     problem::{PblIterator, Problem},
-    runner::VampireOutput,
+    runner::Runners,
     smt::{SmtFile, SMT_FILE_EXTENSION},
 };
-use itertools::Either;
 
 use utils::{from_with::FromWith, implvec, traits::MyWriteTo};
 pub mod cli;
@@ -55,24 +54,33 @@ pub fn run(args: Args, str: &str) -> anyhow::Result<()> {
             env.are_lemmas_ignored(),
         )?;
 
-        let with_lemmas = env.are_lemmas_ignored() && args.lemmas;
+        let with_lemmas = env.use_lemmas();
 
         let pblsiter = PblIterator::new(pbl, with_lemmas);
 
-        if let Some(av) = env.get_automated_vampire() {
-            let out = auto_run(&env, pblsiter, av)?
-                .pop()
-                .with_context(|| "empty output, nothing ran?")?;
-            match out {
-                VampireOutput::Unsat(proof) => println!("{proof}"),
-                VampireOutput::TimeOut(fail) => {
-                    bail!("last one timed out and this wasn't caught somehow:\n{fail}")
-                }
-            };
-        } else if args.lemmas {
-            run_to_dir(&env, pblsiter, &args.output_location)?;
+        if let Some(output_location) = args.get_output_location() {
+            if env.use_lemmas() {
+                run_to_dir(&env, pblsiter, output_location)?;
+            } else {
+                run_to_file(&env, pblsiter, output_location)?;
+            }
         } else {
-            run_to_file(&env, pblsiter, &args.output_location)?;
+            let SolverConfig {
+                num_of_retry,
+                smt_debug,
+                ..
+            } = env.solver_configuration();
+            let runner = env.solver_configuration().clone().try_into()?;
+            let out = auto_run(
+                &env,
+                pblsiter,
+                &runner,
+                *num_of_retry,
+                smt_debug.as_ref().map(|p| p.as_path()),
+            )?
+            .pop()
+            .with_context(|| "empty output, nothing ran?")?;
+            println!("{out}");
         }
         Ok(())
     })
@@ -82,17 +90,14 @@ pub fn run(args: Args, str: &str) -> anyhow::Result<()> {
 pub fn auto_run<'bump>(
     env: &Environement<'bump>,
     mut pbls: PblIterator<'bump>,
-    parms: &AutomatedVampire,
-) -> anyhow::Result<Vec<VampireOutput>> {
-    let exec = parms.to_vampire_exec();
-    let ntimes = NonZeroU32::new(parms.num_retry);
-    let save_to = parms.smt_debug.as_ref().map(|p| p.as_ref());
+    runners: &Runners,
+    num_retry: u32,
+    smt_debug: Option<&Path>,
+) -> anyhow::Result<Vec<String>> {
+    let ntimes = NonZeroU32::new(num_retry);
+    let save_to = smt_debug;
 
-    pbls.map(&mut |pbl| exec.auto_run_vampire(env, pbl, ntimes, save_to))
-        .flat_map(|r| match r {
-            Ok(v) => Either::Left(v.into_iter().map(Ok)),
-            Err(e) => Either::Right([Err(e)].into_iter()),
-        })
+    pbls.map(&mut |pbl| runners.clone().autorun(env, pbl, ntimes, save_to))
         .collect()
 }
 

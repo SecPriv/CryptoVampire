@@ -20,6 +20,7 @@ pub struct Environement<'bump> {
     pub container: &'bump ScopedContainer<'bump>,
     realm: Realm,
     options: Options,
+    solver_configuration: SolverConfig,
 }
 
 #[derive(Default, Clone, PartialEq, PartialOrd, Debug)]
@@ -27,7 +28,6 @@ pub struct Options {
     pub flags: Flags,
     pub rewrite_flags: RewriteFlags,
     pub subterm_flags: SubtermFlags,
-    pub automated_vampire: Option<AutomatedVampire>,
 }
 
 bitflags! {
@@ -42,6 +42,11 @@ bitflags! {
         const ASSERT_NOT =              1 << 7; // non smt standard
         const ASSERT_GROUND =           1 << 8; // non smt standard
         const IGNORE_LEMMAS =           1 << 9;
+
+        const NON_SMT_STANDARD =
+            Flags::ASSERT_NOT.bits()
+            | Flags::ASSERT_THEORY.bits()
+            | Flags::ASSERT_GROUND.bits();
     }
 
     #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug )]
@@ -62,11 +67,17 @@ bitflags! {
 }
 
 impl<'bump> Environement<'bump> {
-    pub fn new(container: &'bump ScopedContainer<'bump>, realm: Realm, options: Options) -> Self {
+    pub fn new(
+        container: &'bump ScopedContainer<'bump>,
+        realm: Realm,
+        options: Options,
+        solver_configuration: SolverConfig,
+    ) -> Self {
         Self {
             container,
             realm,
             options,
+            solver_configuration,
         }
     }
 
@@ -148,12 +159,23 @@ impl<'bump> Environement<'bump> {
         self.container.get_function_hash_map()
     }
 
-    pub fn get_automated_vampire(&self) -> Option<&AutomatedVampire> {
-        self.options.automated_vampire.as_ref()
-    }
-
     pub fn are_lemmas_ignored(&self) -> bool {
         self.options.flags.contains(Flags::IGNORE_LEMMAS)
+    }
+
+    pub fn use_lemmas(&self) -> bool {
+        self.options.flags.contains(Flags::LEMMA) && {
+            assert!(!self.are_lemmas_ignored());
+            true
+        }
+    }
+
+    pub fn options_mut(&mut self) -> &mut Options {
+        &mut self.options
+    }
+
+    pub fn solver_configuration(&self) -> &SolverConfig {
+        &self.solver_configuration
     }
 }
 
@@ -163,19 +185,36 @@ impl<'bump> KnowsRealm for Environement<'bump> {
     }
 }
 
+bitflags! {
+    #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug )]
+    pub struct EnabledSolvers : u8 {
+        const VAMPIRE = 1<<0;
+        const Z3 = 1<<1;
+        const CVC5 = 1<<2;
+    }
+}
+
 #[derive(Default, Clone, PartialEq, PartialOrd, Debug)]
-pub struct AutomatedVampire {
-    pub location: PathBuf,
-    pub num_retry: u32,
-    pub exec_time: f64,
+pub struct SolverConfig {
+    pub locations: Locations,
+    pub enable_solvers: EnabledSolvers,
+    pub num_of_retry: u32,
+    pub timeout: f64,
     pub smt_debug: Option<PathBuf>,
 }
 
-impl AutomatedVampire {
+#[derive(Default, Clone, PartialEq, PartialOrd, Debug)]
+pub struct Locations {
+    pub vampire: PathBuf,
+    pub z3: PathBuf,
+    pub cvc5: PathBuf,
+}
+
+impl SolverConfig {
     pub fn to_vampire_exec(&self) -> VampireExec {
         VampireExec {
-            location: self.location.to_owned(),
-            extra_args: vec![VampireArg::TimeLimit(self.exec_time)],
+            location: self.locations.vampire.to_owned(),
+            extra_args: vec![VampireArg::TimeLimit(self.timeout)],
         }
     }
 }

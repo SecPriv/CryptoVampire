@@ -954,7 +954,7 @@ boiler_plate!(AssertCrypto<'a>, 'a, assertion_crypto ; |p| {
 
     if let Some(r) = p.pop() {
         if let Rule::options = r.as_rule() {
-            options = r.into_inner().next().unwrap().try_into()?;
+            options = r.try_into()?;
         } else {
             extra_fun = Some(r)
         }
