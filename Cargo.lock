@@ -278,7 +278,6 @@ dependencies = [
  "once_cell",
  "paste",
  "regex",
- "serde",
  "shared_child",
  "static_init",
  "tempfile",

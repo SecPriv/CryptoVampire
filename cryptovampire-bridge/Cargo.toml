@@ -8,7 +8,7 @@ authors = ["Simon Jeanteur <7871851+puyral@users.noreply.github.com>"]
 
 [dependencies]
 cryptovampire = { path = "../cryptovampire" }
-cryptovampire-lib = { path = "../cryptovampire-lib", features = ["serde"] }
+cryptovampire-lib = { path = "../cryptovampire-lib"}
 utils = { path = "../utils" }
 
 itertools = { workspace = true }

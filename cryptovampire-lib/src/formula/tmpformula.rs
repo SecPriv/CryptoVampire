@@ -19,7 +19,6 @@ use itertools::Itertools;
 
 /// A very simplified AST
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum TmpFormula {
     Binder {
         head: String,
