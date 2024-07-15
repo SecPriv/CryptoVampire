@@ -1,15 +1,18 @@
+use std::borrow::Cow;
+
 use cryptovampire_lib::formula::variable::uvar;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub struct SquirrelDump {
-    query: Box<Term>,
-    hypotheses: Vec<Term>,
-    variables: Vec<Variable>,
-    actions: Vec<Action>,
-    names: Vec<Name>,
-    operators: Vec<Operator>,
-    macros: Vec<Macro>,
+pub struct SquirrelDump<'a> {
+    #[serde(borrow)]
+    query: Box<Term<'a>>,
+    hypotheses: Vec<Term<'a>>,
+    variables: Vec<Variable<'a>>,
+    actions: Vec<Action<'a>>,
+    names: Vec<Name<'a>>,
+    operators: Vec<Operator<'a>>,
+    macros: Vec<Macro<'a>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -22,191 +25,200 @@ pub enum Quant {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 #[serde(tag = "constructor")]
-pub enum Term {
+pub enum Term<'a> {
     // #[serde(rename_all = "PascalCase")]
     App {
-        f: Box<Term>,
-        args: Vec<Term>,
+        f: Box<Term<'a>>,
+        args: Vec<Term<'a>>,
     },
     // #[serde(rename_all = "PascalCase")]
     Fun {
-        symb: String,
+        symb: Cow<'a, str>,
     },
     // #[serde(rename_all = "PascalCase")]
     Name {
-        symb: String,
-        args: Vec<Term>,
+        symb: Cow<'a, str>,
+        args: Vec<Term<'a>>,
     },
     // #[serde(rename_all = "PascalCase")]
     Macro {
-        symb: String,
-        args: Vec<Term>,
-        timestamp: Box<Term>,
+        symb: Cow<'a, str>,
+        args: Vec<Term<'a>>,
+        timestamp: Box<Term<'a>>,
     },
     // #[serde(rename_all = "PascalCase")]
     Action {
-        symb: String,
-        args: Vec<Term>,
+        symb: Cow<'a, str>,
+        args: Vec<Term<'a>>,
     },
     // #[serde(rename_all = "PascalCase")]
     Var {
-        #[serde(flatten)]
-        var: Variable
+        #[serde(flatten, borrow)]
+        var: Variable<'a>,
     },
     // #[serde(rename_all = "PascalCase")]
     Let {
-        var: Box<Term>,
-        decl: Box<Term>,
-        body: Box<Term>,
+        var: Box<Term<'a>>,
+        decl: Box<Term<'a>>,
+        body: Box<Term<'a>>,
     },
     // #[serde(rename_all = "PascalCase")]
     Tuple {
-        elements: Vec<Term>,
+        elements: Vec<Term<'a>>,
     },
     // #[serde(rename_all = "PascalCase")]
     Proj {
         id: u8,
-        body: Box<Term>,
+        body: Box<Term<'a>>,
     },
     // #[serde(rename_all = "PascalCase")]
     Diff {
-        terms: Vec<Diff>,
+        terms: Vec<Diff<'a>>,
     },
     // #[serde(rename_all = "PascalCase")]
     Find {
-        vars: Vec<Term>,
-        condition: Box<Term>,
-        success: Box<Term>,
-        faillure: Box<Term>,
+        vars: Vec<Term<'a>>,
+        condition: Box<Term<'a>>,
+        success: Box<Term<'a>>,
+        faillure: Box<Term<'a>>,
     },
     // #[serde(rename_all = "PascalCase")]
     Quant {
         quantificator: Quant,
-        vars: Vec<Term>,
-        body: Box<Term>,
+        vars: Vec<Term<'a>>,
+        body: Box<Term<'a>>,
     },
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 // #[serde(rename_all = "PascalCase")]
-pub struct Diff {
-    proj: String,
-    term: Term,
+pub struct Diff<'a> {
+    pub proj: Cow<'a, str>,
+    #[serde(borrow)]
+    pub term: Term<'a>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub struct Ident {
-    name: String,
+pub struct Ident<'a> {
+    name: Cow<'a, str>,
     tag: i32,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub enum Type {
+pub enum Type<'a> {
     Message,
     Boolean,
     Index,
     Timestamp,
     // #[serde(rename_all = "PascalCase")]
-    TBase(String),
+    TBase(Cow<'a, str>),
     // #[serde(rename_all = "PascalCase")]
     TVar {
         #[serde(flatten)]
-        ident: Ident,
+        ident: Ident<'a>,
     },
     // #[serde(rename_all = "PascalCase")]
     TUnivar {
         #[serde(flatten)]
-        ident: Ident,
+        ident: Ident<'a>,
     },
     // #[serde(rename_all = "PascalCase")]
     Tuple {
-        elements: Vec<Type>,
+        elements: Vec<Type<'a>>,
     },
     // #[serde(rename_all = "PascalCase")]
     Fun {
         #[serde(rename = "in")]
-        t_in: Box<Type>,
-        out: Box<Type>,
+        t_in: Box<Type<'a>>,
+        out: Box<Type<'a>>,
     },
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 // #[serde(rename_all = "PascalCase")]
-pub struct Variable {
-    id: Ident,
+pub struct Variable<'a> {
+    #[serde(borrow)]
+    id: Ident<'a>,
     #[serde(rename = "ty")]
-    sort: Box<Type>,
+    sort: Box<Type<'a>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub struct TypeVariable {
-    #[serde(flatten)]
-    id: Ident,
+pub struct TypeVariable<'a> {
+    #[serde(flatten, borrow)]
+    id: Ident<'a>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub struct Channel(String);
+pub struct Channel<'a>(Cow<'a, str>);
 
 pub mod action {
     use super::*;
     use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-    pub struct Condition {
-        vars: Vec<Variable>,
-        term: Term,
+    pub struct Condition<'a> {
+        #[serde(borrow)]
+        vars: Vec<Variable<'a>>,
+        term: Term<'a>,
     }
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-    pub struct Ouptut {
-        channel: Channel,
-        term: Term,
+    pub struct Ouptut<'a> {
+        #[serde(borrow)]
+        channel: Channel<'a>,
+        term: Term<'a>,
     }
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-    pub struct Update {
-        symb: String,
-        args: Vec<Term>,
-        body: Term,
+    pub struct Update<'a> {
+        symb: Cow<'a, str>,
+        #[serde(borrow)]
+        args: Vec<Term<'a>>,
+        body: Term<'a>,
     }
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-    pub struct Item<A>{
+    pub struct Item<A> {
         par_choice: (u32, A),
-        sum_choice: (u32, A)
+        sum_choice: (u32, A),
     }
 
     pub type T<A> = Vec<Item<A>>;
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-    pub struct Action {
-        name: String,
-        action: T<Vec<Variable>>, // this is an `action_v`
-        input: Channel,
-        indices: Vec<Variable>,
-        condition: Condition,
-        updates: Vec<Term>,
-        output: Ouptut,
-        globals: Vec<String>,
+    pub struct Action<'a> {
+        name: Cow<'a, str>,
+        #[serde(borrow)]
+        action: T<Vec<Variable<'a>>>, // this is an `action_v`
+        input: Channel<'a>,
+        indices: Vec<Variable<'a>>,
+        condition: Condition<'a>,
+        updates: Vec<Term<'a>>,
+        output: Ouptut<'a>,
+        globals: Vec<Cow<'a, str>>,
     }
 }
 pub use action::Action;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub struct Content<U> {
-    symb: String,
+pub struct Content<'a, U> {
+    symb: Cow<'a, str>,
     data: U,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub struct FunctionType {
-    vars: Vec<TypeVariable>,
-    args: Vec<Type>,
-    out: Type,
+pub struct FunctionType<'a> {
+    #[serde(borrow)]
+    vars: Vec<TypeVariable<'a>>,
+    args: Vec<Type<'a>>,
+    out: Type<'a>,
 }
 
-pub type Name = Content<FunctionType>;
+pub type Name<'a> = Content<'a, FunctionType<'a>>;
 pub mod operator {
+    use std::borrow::Cow;
+
     use serde::{Deserialize, Serialize};
 
     use super::*;
@@ -247,39 +259,41 @@ pub mod operator {
     }
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-    pub struct Concrete {
-        name: String,
-        type_variables: Vec<TypeVariable>,
-        args: Vec<Variable>,
-        out_type: Type,
-        body: Term,
+    pub struct Concrete<'a> {
+        name: Cow<'a, str>,
+        #[serde(borrow)]
+        type_variables: Vec<TypeVariable<'a>>,
+        args: Vec<Variable<'a>>,
+        out_type: Type<'a>,
+        body: Term<'a>,
     }
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
     #[serde(untagged)]
-    pub enum Def {
+    pub enum Def<'a> {
         Abstract {
             abstract_def: AbstractDef,
-            associated_fun: Vec<String>,
+            #[serde(borrow)]
+            associated_fun: Vec<Cow<'a, str>>,
         },
-        Concrete(Concrete),
+        Concrete(Concrete<'a>),
     }
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-    pub struct Data {
-        #[serde(rename = "type")]
-        sort: FunctionType,
-        def: Def,
+    pub struct Data<'a> {
+        #[serde(rename = "type", borrow)]
+        sort: FunctionType<'a>,
+        def: Def<'a>,
     }
 }
-pub type Operator = Content<operator::Data>;
+pub type Operator<'a> = Content<'a, operator::Data<'a>>;
 
 mod mmacro {
     use super::*;
     use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-    pub enum Data {
+    pub enum Data<'a> {
         Input,
         Output,
         Cond,
@@ -288,17 +302,18 @@ mod mmacro {
         Global,
         State {
             arity: usize,
-            #[serde(rename = "type")]
-            sort: Type,
+            #[serde(rename = "type", borrow)]
+            sort: Type<'a>,
         },
     }
 }
-pub type Macro = Content<mmacro::Data>;
+pub type Macro<'a> = Content<'a, mmacro::Data<'a>>;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct CryptoVampireCall {
+pub struct CryptoVampireCall<'a> {
     parameters: Parameters,
-    context: SquirrelDump,
+    #[serde(borrow = "'a")]
+    context: SquirrelDump<'a>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -318,7 +333,6 @@ mod tests {
     use crate::json::action;
 
     use super::{CryptoVampireCall, SquirrelDump, Term, Type};
-
 
     macro_rules! test_json_parser {
         ($f:ident :  $t:ty) => {
@@ -344,12 +358,15 @@ mod tests {
     #[test]
     fn operator_def() {
         use super::operator::*;
-        let t = Def::Abstract { abstract_def: 
-                AbstractDef::Abstract(SymbType::Infix(Assoc::Right))
-            
-            , associated_fun: vec![] };
+        let t = Def::Abstract {
+            abstract_def: AbstractDef::Abstract(SymbType::Infix(Assoc::Right)),
+            associated_fun: vec![],
+        };
         println!("{}", serde_json::to_string(&t).unwrap());
-        assert_eq!("{\"abstract_def\":{\"Abstract\":{\"Infix\":\"Right\"}},\"associated_fun\":[]}", &serde_json::to_string(&t).unwrap());
+        assert_eq!(
+            "{\"abstract_def\":{\"Abstract\":{\"Infix\":\"Right\"}},\"associated_fun\":[]}",
+            &serde_json::to_string(&t).unwrap()
+        );
     }
 
     test_json_parser!(full4:CryptoVampireCall);
