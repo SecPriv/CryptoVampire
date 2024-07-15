@@ -2,18 +2,17 @@ use cryptovampire_lib::formula::variable::uvar;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-#[serde(rename_all = "PascalCase")]
 pub struct SquirrelDump {
-    conclusion: Box<Term>,
+    query: Box<Term>,
     hypotheses: Vec<Term>,
     variables: Vec<Variable>,
-    functions: Vec<Operator>,
-    names: Vec<Operator>,
+    actions: Vec<Action>,
+    names: Vec<Name>,
+    operators: Vec<Operator>,
     macros: Vec<Macro>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-#[serde(rename_all = "PascalCase")]
 pub enum Quant {
     ForAll,
     Exists,
@@ -22,116 +21,290 @@ pub enum Quant {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-#[serde(tag = "Constructor", rename_all = "PascalCase")]
+#[serde(tag = "constructor")]
 pub enum Term {
-    #[serde(rename_all = "PascalCase")]
+    // #[serde(rename_all = "PascalCase")]
     App {
-        fsymb: Box<Term>,
-        arguments: Vec<Term>,
+        f: Box<Term>,
+        args: Vec<Term>,
     },
-    #[serde(rename_all = "PascalCase")]
-    Fun { fname: String },
-    #[serde(rename_all = "PascalCase")]
-    Name { nsymb: String, arguments: Vec<Term> },
-    #[serde(rename_all = "PascalCase")]
+    // #[serde(rename_all = "PascalCase")]
+    Fun {
+        symb: String,
+    },
+    // #[serde(rename_all = "PascalCase")]
+    Name {
+        symb: String,
+        args: Vec<Term>,
+    },
+    // #[serde(rename_all = "PascalCase")]
     Macro {
-        msymb: String,
-        arguments: Vec<Term>,
+        symb: String,
+        args: Vec<Term>,
         timestamp: Box<Term>,
     },
-    #[serde(rename_all = "PascalCase")]
-    Action { asymb: String, arguments: Vec<Term> },
-    #[serde(rename_all = "PascalCase")]
-    Var { id: uvar, name: String },
-    #[serde(rename_all = "PascalCase")]
+    // #[serde(rename_all = "PascalCase")]
+    Action {
+        symb: String,
+        args: Vec<Term>,
+    },
+    // #[serde(rename_all = "PascalCase")]
+    Var {
+        #[serde(flatten)]
+        var: Variable
+    },
+    // #[serde(rename_all = "PascalCase")]
     Let {
         var: Box<Term>,
-        term1: Box<Term>,
-        term2: Box<Term>,
+        decl: Box<Term>,
+        body: Box<Term>,
     },
-    #[serde(rename_all = "PascalCase")]
-    Tuple { elements: Box<[Term; 2]> },
-    #[serde(rename_all = "PascalCase")]
-    Proj { id: u8, term: Box<Term> },
-    #[serde(rename_all = "PascalCase")]
-    Diff { terms: Vec<Diff> },
-    #[serde(rename_all = "PascalCase")]
+    // #[serde(rename_all = "PascalCase")]
+    Tuple {
+        elements: Vec<Term>,
+    },
+    // #[serde(rename_all = "PascalCase")]
+    Proj {
+        id: u8,
+        body: Box<Term>,
+    },
+    // #[serde(rename_all = "PascalCase")]
+    Diff {
+        terms: Vec<Diff>,
+    },
+    // #[serde(rename_all = "PascalCase")]
     Find {
         vars: Vec<Term>,
-        term1: Box<Term>,
-        term2: Box<Term>,
-        term3: Box<Term>,
+        condition: Box<Term>,
+        success: Box<Term>,
+        faillure: Box<Term>,
     },
-    #[serde(rename_all = "PascalCase")]
+    // #[serde(rename_all = "PascalCase")]
     Quant {
         quantificator: Quant,
         vars: Vec<Term>,
-        term: Box<Term>,
+        body: Box<Term>,
     },
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-#[serde(rename_all = "PascalCase")]
+// #[serde(rename_all = "PascalCase")]
 pub struct Diff {
     proj: String,
     term: Term,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-#[serde(tag = "Constructor", rename_all = "PascalCase")]
+pub struct Ident {
+    name: String,
+    tag: i32,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum Type {
     Message,
     Boolean,
     Index,
     Timestamp,
-    #[serde(rename_all = "PascalCase")]
-    TBase {
-        string: String,
-    },
-    #[serde(rename_all = "PascalCase")]
+    // #[serde(rename_all = "PascalCase")]
+    TBase(String),
+    // #[serde(rename_all = "PascalCase")]
     TVar {
-        id: uvar,
-        name: String,
+        #[serde(flatten)]
+        ident: Ident,
     },
-    #[serde(rename_all = "PascalCase")]
+    // #[serde(rename_all = "PascalCase")]
     TUnivar {
-        id: String,
-        name: String,
+        #[serde(flatten)]
+        ident: Ident,
     },
-    #[serde(rename_all = "PascalCase")]
+    // #[serde(rename_all = "PascalCase")]
     Tuple {
         elements: Vec<Type>,
     },
-    #[serde(rename_all = "PascalCase")]
+    // #[serde(rename_all = "PascalCase")]
     Fun {
-        type1: Box<Type>,
-        type2: Box<Type>,
+        #[serde(rename = "in")]
+        t_in: Box<Type>,
+        out: Box<Type>,
     },
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-#[serde(rename_all = "PascalCase")]
+// #[serde(rename_all = "PascalCase")]
 pub struct Variable {
-    id: uvar,
-    name: String,
-    #[serde(rename = "Type")]
+    id: Ident,
+    #[serde(rename = "ty")]
     sort: Box<Type>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-#[serde(rename_all = "PascalCase")]
-pub struct Operator {
-    name: String,
-    type_args: Vec<Type>,
-    type_out: Box<Type>,
+pub struct TypeVariable {
+    #[serde(flatten)]
+    id: Ident,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-#[serde(rename_all = "PascalCase")]
-pub struct Macro {
-    name: String,
-    index_arity: usize,
-    type_out: Box<Type>,
+pub struct Channel(String);
+
+pub mod action {
+    use super::*;
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+    pub struct Condition {
+        vars: Vec<Variable>,
+        term: Term,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+    pub struct Ouptut {
+        channel: Channel,
+        term: Term,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+    pub struct Update {
+        symb: String,
+        args: Vec<Term>,
+        body: Term,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+    pub struct Item<A>{
+        par_choice: (u32, A),
+        sum_choice: (u32, A)
+    }
+
+    pub type T<A> = Vec<Item<A>>;
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+    pub struct Action {
+        name: String,
+        action: T<Vec<Variable>>, // this is an `action_v`
+        input: Channel,
+        indices: Vec<Variable>,
+        condition: Condition,
+        updates: Vec<Term>,
+        output: Ouptut,
+        globals: Vec<String>,
+    }
+}
+pub use action::Action;
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+pub struct Content<U> {
+    symb: String,
+    data: U,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+pub struct FunctionType {
+    vars: Vec<TypeVariable>,
+    args: Vec<Type>,
+    out: Type,
+}
+
+pub type Name = Content<FunctionType>;
+pub mod operator {
+    use serde::{Deserialize, Serialize};
+
+    use super::*;
+
+    #[allow(non_camel_case_types)]
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Copy)]
+    pub enum DhHyp {
+        DH_DDH,
+        DH_CDH,
+        DH_GDH,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Copy)]
+    pub enum Assoc {
+        Right,
+        Left,
+        NonAssoc,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Copy)]
+    pub enum SymbType {
+        Prefix,
+        Infix(Assoc),
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+    pub enum AbstractDef {
+        Hash,
+        DHgen(Vec<DhHyp>),
+        AEnc,
+        ADec,
+        SEnc,
+        SDec,
+        Sign,
+        CheckSign,
+        PublicKey,
+        Abstract(SymbType),
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+    pub struct Concrete {
+        name: String,
+        type_variables: Vec<TypeVariable>,
+        args: Vec<Variable>,
+        out_type: Type,
+        body: Term,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+    #[serde(untagged)]
+    pub enum Def {
+        Abstract {
+            abstract_def: AbstractDef,
+            associated_fun: Vec<String>,
+        },
+        Concrete(Concrete),
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+    pub struct Data {
+        #[serde(rename = "type")]
+        sort: FunctionType,
+        def: Def,
+    }
+}
+pub type Operator = Content<operator::Data>;
+
+mod mmacro {
+    use super::*;
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+    pub enum Data {
+        Input,
+        Output,
+        Cond,
+        Exec,
+        Frame,
+        Global,
+        State {
+            arity: usize,
+            #[serde(rename = "type")]
+            sort: Type,
+        },
+    }
+}
+pub type Macro = Content<mmacro::Data>;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct CryptoVampireCall {
+    parameters: Parameters,
+    context: SquirrelDump,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Parameters {
+    num_retry: u32,
+    timeout: f64,
 }
 
 #[cfg(test)]
@@ -142,42 +315,10 @@ mod tests {
         io::BufReader,
     };
 
-    use super::{SquirrelDump, Term};
+    use crate::json::action;
 
-    #[test]
-    fn serializing() {
-        let v1 = Term::Var {
-            id: 2,
-            name: "t".into(),
-        };
-        let v2 = Term::Var {
-            id: 3,
-            name: "t".into(),
-        };
-        let t = Term::Quant {
-            quantificator: super::Quant::ForAll,
-            vars: vec![v1.clone(), v2.clone()],
-            term: Box::new(Term::App {
-                fsymb: Box::new(Term::Fun {
-                    fname: "and".into(),
-                }),
-                arguments: vec![v1, v2],
-            }),
-        };
-        let t = SquirrelDump {
-            conclusion: Box::new(t.clone()),
-            hypotheses: vec![],
-            variables: vec![],
-            functions: vec![],
-            names: vec![],
-            macros: vec![],
-        };
+    use super::{CryptoVampireCall, SquirrelDump, Term, Type};
 
-        let result = "{\"Conclusion\":{\"Constructor\":\"Quant\",\"Quantificator\":\"ForAll\",\"Vars\":[{\"Constructor\":\"Var\",\"Id\":2,\"Name\":\"t\"},{\"Constructor\":\"Var\",\"Id\":3,\"Name\":\"t\"}],\"Term\":{\"Constructor\":\"App\",\"Fsymb\":{\"Constructor\":\"Fun\",\"Fname\":\"and\"},\"Arguments\":[{\"Constructor\":\"Var\",\"Id\":2,\"Name\":\"t\"},{\"Constructor\":\"Var\",\"Id\":3,\"Name\":\"t\"}]}},\"Hypotheses\":[],\"Variables\":[],\"Functions\":[],\"Names\":[],\"Macros\":[]}";
-        let parsed = serde_json::to_string(&t).unwrap();
-
-        assert_eq!(result, parsed);
-    }
 
     macro_rules! test_json_parser {
         ($f:ident :  $t:ty) => {
@@ -194,6 +335,23 @@ mod tests {
         };
     }
 
-    test_json_parser!(full1:SquirrelDump);
+    #[test]
+    fn types() {
+        let t = Type::TBase("LP".into());
+        assert_eq!("{\"TBase\":\"LP\"}", &serde_json::to_string(&t).unwrap());
+    }
+
+    #[test]
+    fn operator_def() {
+        use super::operator::*;
+        let t = Def::Abstract { abstract_def: 
+                AbstractDef::Abstract(SymbType::Infix(Assoc::Right))
+            
+            , associated_fun: vec![] };
+        println!("{}", serde_json::to_string(&t).unwrap());
+        assert_eq!("{\"abstract_def\":{\"Abstract\":{\"Infix\":\"Right\"}},\"associated_fun\":[]}", &serde_json::to_string(&t).unwrap());
+    }
+
+    test_json_parser!(full4:CryptoVampireCall);
     test_json_parser!(term1:Term);
 }
