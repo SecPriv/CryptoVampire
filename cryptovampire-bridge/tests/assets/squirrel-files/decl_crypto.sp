@@ -67,7 +67,7 @@ process Signature =
  let ch : boolean = checksign(mT, s, mypk) in
  out (c, empty).
 
-system (Senc | Signature | Aenc | (!_i A: in(c,x); out(c,x))) .
+system (Senc | Signature | Aenc | (!_i in(c,x); in(c, y); out(c,<x,y>))) .
 
 lemma test: forall (m:T, pk:LP, sig:C), (checksign(m,sig, pk) && true ) => true.
 Proof.

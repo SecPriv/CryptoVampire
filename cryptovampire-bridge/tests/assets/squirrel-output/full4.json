@@ -16,17 +16,17 @@
                 "elements": [
                   {
                     "constructor": "Var",
-                    "id": { "name": "x", "tag": 149 },
+                    "id": { "name": "x", "tag": 163 },
                     "ty": { "TBase": "T" }
                   },
                   {
                     "constructor": "Var",
-                    "id": { "name": "sig", "tag": 153 },
+                    "id": { "name": "sig", "tag": 167 },
                     "ty": { "TBase": "C" }
                   },
                   {
                     "constructor": "Var",
-                    "id": { "name": "pk", "tag": 151 },
+                    "id": { "name": "pk", "tag": 165 },
                     "ty": { "TBase": "LP" }
                   }
                 ]
@@ -38,9 +38,9 @@
       }
     ],
     "variables": [
-      { "id": { "name": "pk", "tag": 151 }, "ty": { "TBase": "LP" } },
-      { "id": { "name": "sig", "tag": 153 }, "ty": { "TBase": "C" } },
-      { "id": { "name": "x", "tag": 149 }, "ty": { "TBase": "T" } }
+      { "id": { "name": "pk", "tag": 165 }, "ty": { "TBase": "LP" } },
+      { "id": { "name": "sig", "tag": 167 }, "ty": { "TBase": "C" } },
+      { "id": { "name": "x", "tag": 163 }, "ty": { "TBase": "T" } }
     ],
     "actions": [
       {
@@ -112,13 +112,37 @@
         "action": [
           {
             "par_choice": [
-              3, [ { "id": { "name": "i", "tag": 156 }, "ty": "Index" } ]
+              3, [ { "id": { "name": "i", "tag": 170 }, "ty": "Index" } ]
             ],
             "sum_choice": [ 0, [] ]
           }
         ],
         "input": "c",
-        "indices": [ { "id": { "name": "i", "tag": 156 }, "ty": "Index" } ],
+        "indices": [ { "id": { "name": "i", "tag": 170 }, "ty": "Index" } ],
+        "condition": {
+          "vars": [],
+          "term": { "constructor": "Fun", "symb": "true" }
+        },
+        "updates": [],
+        "output": {
+          "channel": "ø",
+          "term": { "constructor": "Fun", "symb": "empty" }
+        },
+        "globals": []
+      },
+      {
+        "name": "A1",
+        "action": [
+          {
+            "par_choice": [
+              3, [ { "id": { "name": "i", "tag": 172 }, "ty": "Index" } ]
+            ],
+            "sum_choice": [ 0, [] ]
+          },
+          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] }
+        ],
+        "input": "c",
+        "indices": [ { "id": { "name": "i", "tag": 172 }, "ty": "Index" } ],
         "condition": {
           "vars": [],
           "term": { "constructor": "Fun", "symb": "true" }
@@ -127,20 +151,42 @@
         "output": {
           "channel": "c",
           "term": {
-            "constructor": "Macro",
-            "symb": "input",
-            "args": [],
-            "timestamp": {
-              "constructor": "Action",
-              "symb": "A",
-              "args": [
-                {
-                  "constructor": "Var",
-                  "id": { "name": "i", "tag": 156 },
-                  "ty": "Index"
+            "constructor": "App",
+            "f": { "constructor": "Fun", "symb": "pair" },
+            "args": [
+              {
+                "constructor": "Macro",
+                "symb": "input",
+                "args": [],
+                "timestamp": {
+                  "constructor": "Action",
+                  "symb": "A",
+                  "args": [
+                    {
+                      "constructor": "Var",
+                      "id": { "name": "i", "tag": 172 },
+                      "ty": "Index"
+                    }
+                  ]
                 }
-              ]
-            }
+              },
+              {
+                "constructor": "Macro",
+                "symb": "input",
+                "args": [],
+                "timestamp": {
+                  "constructor": "Action",
+                  "symb": "A1",
+                  "args": [
+                    {
+                      "constructor": "Var",
+                      "id": { "name": "i", "tag": 172 },
+                      "ty": "Index"
+                    }
+                  ]
+                }
+              }
+            ]
           }
         },
         "globals": []
@@ -767,6 +813,13 @@
       { "symb": "ch", "data": "Global" },
       { "symb": "c2", "data": "Global" },
       { "symb": "c1", "data": "Global" }
+    ],
+    "types": [
+      { "symb": "T", "data": [] },
+      { "symb": "R", "data": [ "Large" ] },
+      { "symb": "LP", "data": [ "Large" ] },
+      { "symb": "L", "data": [ "Large" ] },
+      { "symb": "C", "data": [] }
     ]
   }
 }

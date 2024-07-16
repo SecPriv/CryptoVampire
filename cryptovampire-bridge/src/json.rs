@@ -4,15 +4,16 @@ use cryptovampire_lib::formula::variable::uvar;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub struct SquirrelDump<'a, T=Term<'a>,V=Variable<'a>> {
-    query: Box<T>,
-    hypotheses: Vec<T>,
-    variables: Vec<V>,
+pub struct SquirrelDump<'a, T = Term<'a>, V = Variable<'a>> {
+    pub query: Box<T>,
+    pub hypotheses: Vec<T>,
+    pub variables: Vec<V>,
     #[serde(borrow)]
-    actions: Vec<Action<'a, T, V>>,
-    names: Vec<Name<'a>>,
-    operators: Vec<Operator<'a>>,
-    macros: Vec<Macro<'a>>,
+    pub actions: Vec<Action<'a, T, V>>,
+    pub names: Vec<Name<'a>>,
+    pub operators: Vec<Operator<'a, T, V>>,
+    pub macros: Vec<Macro<'a>>,
+    pub types: Vec<Sort<'a>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -92,7 +93,7 @@ pub enum Term<'a> {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 // #[serde(rename_all = "PascalCase")]
-pub struct Diff<'a, T=Term<'a>> {
+pub struct Diff<'a, T = Term<'a>> {
     pub proj: Cow<'a, str>,
     pub term: T,
 }
@@ -135,17 +136,17 @@ pub enum Type<'a> {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 // #[serde(rename_all = "PascalCase")]
-pub struct Variable<'a, Ty=Type<'a>> {
+pub struct Variable<'a, Ty = Type<'a>> {
     #[serde(borrow)]
-    id: Ident<'a>,
+    pub id: Ident<'a>,
     #[serde(rename = "ty")]
-    sort: Box<Ty>,
+    pub sort: Box<Ty>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct TypeVariable<'a> {
     #[serde(flatten, borrow)]
-    id: Ident<'a>,
+    pub id: Ident<'a>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -157,63 +158,69 @@ pub mod action {
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
     pub struct Condition<T, V> {
-        vars: Vec<V>,
-        term: T,
+        pub vars: Vec<V>,
+        pub term: T,
     }
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-    pub struct Ouptut<'a> {
+    pub struct Ouptut<'a, T> {
         #[serde(borrow)]
-        channel: Channel<'a>,
-        term: Term<'a>,
+        pub channel: Channel<'a>,
+        pub term: T,
     }
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-    pub struct Update<'a> {
-        symb: Cow<'a, str>,
-        #[serde(borrow)]
-        args: Vec<Term<'a>>,
-        body: Term<'a>,
+    pub struct Update<'a, T> {
+        pub symb: Cow<'a, str>,
+        pub args: Vec<T>,
+        pub body: T,
     }
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
     pub struct Item<A> {
-        par_choice: (u32, A),
-        sum_choice: (u32, A),
+        pub par_choice: (u32, A),
+        pub sum_choice: (u32, A),
     }
 
     pub type AT<A> = Vec<Item<A>>;
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-    pub struct Action<'a, T=Term<'a>, V=Variable<'a>> {
-        name: Cow<'a, str>,
-        action: AT<Vec<V>>, // this is an `action_v`
-        input: Channel<'a>,
-        indices: Vec<V>,
-        condition: Condition<T, V>,
+    pub struct Action<'a, T = Term<'a>, V = Variable<'a>> {
+        pub name: Cow<'a, str>,
+        /// argh... From what I understands this represents the control flow
+        /// in a somewhat raw way.
+        /// 
+        /// The control flow is encoded by layers (the first vec in [AT]).
+        /// you have paralell actions ([Item::par_choice]) and exclusive
+        /// ones ([Item::sum_choice])
+        pub action: AT<Vec<V>>, // this is an `action_v`
+        pub input: Channel<'a>,
+        pub indices: Vec<V>,
+        pub condition: Condition<T, V>,
         #[serde(borrow)]
-        updates: Vec<Update<'a>>,
-        output: Ouptut<'a>,
-        globals: Vec<Cow<'a, str>>,
+        pub updates: Vec<Update<'a, T>>,
+        pub output: Ouptut<'a, T>,
+        pub globals: Vec<Cow<'a, str>>,
     }
 }
 pub use action::Action;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct Content<'a, U> {
-    symb: Cow<'a, str>,
-    data: U,
+    pub symb: Cow<'a, str>,
+    pub data: U,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub struct FunctionType<'a> {
+pub struct FunctionType<'a, Ty> {
     #[serde(borrow)]
-    vars: Vec<TypeVariable<'a>>,
-    args: Vec<Type<'a>>,
-    out: Type<'a>,
+    pub vars: Vec<TypeVariable<'a>>,
+    pub args: Vec<Ty>,
+    pub out: Ty,
 }
 
-pub type Name<'a> = Content<'a, FunctionType<'a>>;
+pub type Name<'a, Ty = Type<'a>> = Content<'a, FunctionType<'a, Ty>>;
+
 pub mod operator {
     use std::borrow::Cow;
 
@@ -257,41 +264,43 @@ pub mod operator {
     }
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-    pub struct Concrete<'a> {
-        name: Cow<'a, str>,
+    pub struct Concrete<'a, T, V, Ty> {
+        pub name: Cow<'a, str>,
         #[serde(borrow)]
-        type_variables: Vec<TypeVariable<'a>>,
-        args: Vec<Variable<'a>>,
-        out_type: Type<'a>,
-        body: Term<'a>,
+        pub type_variables: Vec<TypeVariable<'a>>,
+        pub args: Vec<V>,
+        pub out_type: Ty,
+        pub body: T,
     }
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
     #[serde(untagged)]
-    pub enum Def<'a> {
+    pub enum Def<'a, T, V, Ty> {
         Abstract {
             abstract_def: AbstractDef,
             #[serde(borrow)]
             associated_fun: Vec<Cow<'a, str>>,
         },
-        Concrete(Concrete<'a>),
+        Concrete(Concrete<'a, T, V, Ty>),
     }
+    pub type DefaultDef<'a> = Def<'a, Term<'a>, Variable<'a>, Type<'a>>;
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-    pub struct Data<'a> {
+    pub struct Data<'a, T = Term<'a>, V = Variable<'a>, Ty = Type<'a>> {
         #[serde(rename = "type", borrow)]
-        sort: FunctionType<'a>,
-        def: Def<'a>,
+        pub sort: FunctionType<'a, Ty>,
+        pub def: Def<'a, T, V, Ty>,
     }
 }
-pub type Operator<'a> = Content<'a, operator::Data<'a>>;
+pub type Operator<'a, T = Term<'a>, V = Variable<'a>, Ty = Type<'a>> =
+    Content<'a, operator::Data<'a, T, V, Ty>>;
 
 mod mmacro {
     use super::*;
     use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-    pub enum Data<'a> {
+    pub enum Data<Ty> {
         Input,
         Output,
         Cond,
@@ -300,24 +309,42 @@ mod mmacro {
         Global,
         State {
             arity: usize,
-            #[serde(rename = "type", borrow)]
-            sort: Type<'a>,
+            #[serde(rename = "type")]
+            sort: Ty,
         },
     }
 }
-pub type Macro<'a> = Content<'a, mmacro::Data<'a>>;
+pub type Macro<'a, Ty = Type<'a>> = Content<'a, mmacro::Data<Ty>>;
+
+mod mtype {
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+    pub enum SortKind {
+        Large,
+        NameFixedLength,
+        Finite,
+        Fixed,
+        WellFounded,
+        Enum,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+    pub struct SortData(Vec<SortKind>);
+}
+pub type Sort<'a> = Content<'a, mtype::SortData>;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CryptoVampireCall<'a> {
-    parameters: Parameters,
+    pub parameters: Parameters,
     #[serde(borrow = "'a")]
-    context: SquirrelDump<'a>,
+    pub context: SquirrelDump<'a>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Parameters {
-    num_retry: u32,
-    timeout: f64,
+    pub num_retry: u32,
+    pub timeout: f64,
 }
 
 #[cfg(test)]
@@ -356,7 +383,7 @@ mod tests {
     #[test]
     fn operator_def() {
         use super::operator::*;
-        let t = Def::Abstract {
+        let t = DefaultDef::Abstract {
             abstract_def: AbstractDef::Abstract(SymbType::Infix(Assoc::Right)),
             associated_fun: vec![],
         };
