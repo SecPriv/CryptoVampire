@@ -295,7 +295,7 @@ pub mod operator {
 pub type Operator<'a, T = Term<'a>, V = Variable<'a>, Ty = Type<'a>> =
     Content<'a, operator::Data<'a, T, V, Ty>>;
 
-mod mmacro {
+pub mod mmacro {
     use super::*;
     use serde::{Deserialize, Serialize};
 
@@ -316,10 +316,10 @@ mod mmacro {
 }
 pub type Macro<'a, Ty = Type<'a>> = Content<'a, mmacro::Data<Ty>>;
 
-mod mtype {
+pub mod mtype {
     use serde::{Deserialize, Serialize};
 
-    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Copy)]
     pub enum SortKind {
         Large,
         NameFixedLength,
@@ -329,8 +329,17 @@ mod mtype {
         Enum,
     }
 
+    impl SortKind {
+        pub fn can_be_index(&self) -> bool {
+            match self{
+                SortKind::Finite | SortKind::Fixed | SortKind::Enum => true,
+                _ => false
+            }
+        }
+    }
+
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-    pub struct SortData(Vec<SortKind>);
+    pub struct SortData(pub Vec<SortKind>);
 }
 pub type Sort<'a> = Content<'a, mtype::SortData>;
 

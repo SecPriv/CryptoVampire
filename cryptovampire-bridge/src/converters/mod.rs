@@ -1,34 +1,42 @@
-
 use thiserror::Error;
 
+/// inline lets, keep the sq types
 mod stage0;
+/// switch to a structure more cv like of terms, but is still a dumb transform
 mod stage1;
+/// get as close as possible to a format that can be typechecked by cv
 mod stage2;
 
+mod stage3;
+
 #[derive(Debug, Error, Ord, Eq, PartialEq, PartialOrd, Clone)]
-enum ConversiontError {
+pub enum ConversiontError {
     #[error("unsupported binder")]
     UnsupportedBinder,
     #[error("unsuported macro: frame and global macros are not supported")]
     UnsupportedMacro,
     #[error("The fun constructor is misplaced")]
     MisplacedFun,
-    #[error("Unsupported head. (usually because an apllied Name or Macros was put as a head")]
+    #[error("Unsupported head. (usually because an applied Name or Macros was put as a head")]
     UnssupportedHead,
     #[error("A binder has parameters that aren't variables")]
     NonVariableInQuantifier,
     #[error("The only supported binders are forall, exists and fins such that.")]
-    UnssupportedQuantifier,
-    #[error(
-        "The problem makes use of high order functions which cannot be simplified by CryptoVampire"
-    )]
-    HighOrder,
+    UnsupportedQuantifier,
+    #[error("More high order than CryptoVampire can handle")]
+    TooMuchHighOrder,
     #[error("Diffs don't inlude the same number of protocol each time")]
     InconsistenDiff,
     #[error("Wrong number of arguments, expected {expected:}, got {got:}")]
     WrongNumberOfArguements { expected: usize, got: usize },
     #[error("A variable is not assigned")]
     UnassignedVariable,
+    #[error("Invalid Diff operators. (Incosistent or 0 arity)")]
+    InvalidDiff,
+    #[error("More polymorphism than CryptoVampire can handle")]
+    TooMuchPolymorphism,
+    #[error("Undeclared name, operator, ...")]
+    UndeclaredOp,
     #[error("Other converstion error: {0}")]
     Other(Box<str>),
 }
@@ -43,4 +51,4 @@ enum SQuant {
     FindSuchThat,
 }
 
-type Result<A> = std::result::Result<A, ConversiontError>;
+pub type Result<A> = std::result::Result<A, ConversiontError>;

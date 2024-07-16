@@ -150,7 +150,7 @@ pub fn convert_json_to_1<'a>(t: json::Term<'a>) -> Result<TF1<'a>> {
             let head = match quantificator {
                 json::Quant::ForAll => SQuant::Forall,
                 json::Quant::Exists => SQuant::Exists,
-                _ => return Err(ConversiontError::UnssupportedQuantifier),
+                _ => return Err(ConversiontError::UnsupportedQuantifier),
             };
             let vars = vars
                 .into_iter()

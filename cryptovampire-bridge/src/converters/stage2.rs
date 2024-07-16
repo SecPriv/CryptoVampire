@@ -9,7 +9,7 @@ use hashbrown::HashSet;
 use itertools::Itertools;
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
-enum Fun2<'a> {
+pub enum Fun2<'a> {
     Name(Cow<'a, str>),
     Macro(Cow<'a, str>),
     Step(Cow<'a, str>),
@@ -24,7 +24,8 @@ enum Fun2<'a> {
 #[derive(Debug, Clone)]
 pub struct SVariable(uvar);
 
-type TF2<'a> = BaseFormula<SQuant, Fun2<'a>, SVariable>;
+pub type TF2<'a> = BaseFormula<SQuant, Fun2<'a>, SVariable>;
+pub type SquirrelDump2<'a> = SquirrelDump<'a, TF2<'a>, SVariable>;
 
 mod varset {
   use cryptovampire_lib::formula::variable::from_usize;
@@ -116,7 +117,7 @@ fn convert_1_to_2<'a>(varset: &mut varset::VarSet<'a>, f: TF1<'a>) -> Result<TF2
       TF1::App {
           head: Fun1::Term(_),
           args: _,
-      } => Err(ConversiontError::HighOrder),
+      } => Err(ConversiontError::TooMuchHighOrder),
       TF1::App {
           // fold tuples
           head: Fun1::Tuple(i),
@@ -205,18 +206,7 @@ fn from_json_to_2<'a>(free_vars: &mut VarSet<'a>, f: json::Term<'a>) -> Result<T
   convert_1_to_2(free_vars, f)
 }
 
-fn find_used_symbols<'a>(symbs: &mut HashSet<Fun2<'a>>, f: &TF2<'a>) {
-  match f {
-      BaseFormula::Binder { args, .. } => args.iter().for_each(|f| find_used_symbols(symbs, f)),
-      BaseFormula::App { head, args } => {
-          symbs.insert(head.clone());
-          args.iter().for_each(|f| find_used_symbols(symbs, f))
-      }
-      BaseFormula::Var(_) => (),
-  }
-}
 
-type SquirrelDump2<'a> = SquirrelDump<'a, TF2<'a>, SVariable>;
 
 mod sq_to_2 {
   use itertools::Itertools;
