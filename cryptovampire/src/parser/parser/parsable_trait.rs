@@ -24,7 +24,7 @@ use cryptovampire_lib::{
             builtins::{BOOL, CONDITION, MESSAGE, NAME, STEP},
             sort_proxy::SortProxy,
         },
-        variable::{uvar, Variable},
+        variable::{from_usize, uvar, Variable},
     },
     smt::SmtFormula,
 };
@@ -203,7 +203,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
             .into_iter()
             .zip(0..)
             .map(|(v, i)| {
-                let id = i + uvar::try_from(bn).unwrap();
+                let id = i + from_usize(bn);
                 let ast::VariableBinding {
                     variable,
                     type_name,
@@ -292,7 +292,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Quantifier<'a> {
             .into_iter()
             .zip(0..)
             .map(|(v, i)| {
-                let id = i + uvar::try_from(bn).unwrap();
+                let id = i + from_usize(bn);
                 let VariableBinding {
                     variable,
                     type_name,
@@ -712,7 +712,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
 
                 Ok(term
                     .owned_into_inner()
-                    .apply_substitution(0..uvar::try_from(mmacro.args.len()).unwrap(), &args)
+                    .apply_substitution(0..from_usize(mmacro.args.len()), &args)
                     .into())
             }
         }

@@ -1,4 +1,5 @@
 mod tmp_formula;
+mod iterator;
 use std::fmt::Display;
 
 pub use tmp_formula::TmpFormula;
@@ -18,6 +19,7 @@ pub enum BaseFormula<B, F, V> {
     },
     Var(V),
 }
+
 
 impl<B, F, V> BaseFormula<B, F, V> {
     pub fn new(head: F, args: implvec!(Self)) -> Self {

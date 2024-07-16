@@ -26,7 +26,7 @@ use crate::{
             builtins::{BOOL, CONDITION, MESSAGE},
             FOSort, Sort,
         },
-        variable::{sorts_to_variables, uvar, Variable},
+        variable::{from_usize, sorts_to_variables, uvar, Variable},
     },
     mexists, mforall,
     problem::problem::Problem,
@@ -173,7 +173,7 @@ pub fn generate<'bump>(
                         let vars1: Vec<_> = sorts_to_variables(0, ibf.args());
                         let vars2 = vars1
                             .iter()
-                            .map(|&v| v + uvar::try_from(vars1.len()).unwrap())
+                            .map(|&v| v + from_usize(vars1.len()))
                             .collect_vec();
 
                         let premise =

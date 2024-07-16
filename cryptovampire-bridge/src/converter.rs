@@ -1,9 +1,10 @@
 use std::borrow::Cow;
 
 use cryptovampire_lib::formula::{sort::inner::Other, variable::uvar, BaseFormula};
-use hashbrown::HashMap;
+use hashbrown::{HashMap, HashSet};
 use itertools::Itertools;
 use thiserror::Error;
+use utils::implvec;
 
 use crate::json;
 
@@ -25,6 +26,12 @@ enum ConversiontError {
         "The problem makes use of high order functions which cannot be simplified by CryptoVampire"
     )]
     HighOrder,
+    #[error("Diffs don't inlude the same number of protocol each time")]
+    InconsistenDiff,
+    #[error("Wrong number of arguments, expected {expected:}, got {got:}")]
+    WrongNumberOfArguements { expected: usize, got: usize },
+    #[error("A variable is not assigned")]
+    UnassignedVariable,
     #[error("Other converstion error: {0}")]
     Other(Box<str>),
 }
@@ -44,7 +51,7 @@ enum Fun1<'a> {
     Diff,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 enum Fun2<'a> {
     Name(Cow<'a, str>),
     Macro(Cow<'a, str>),
@@ -53,6 +60,8 @@ enum Fun2<'a> {
     Tuple,
     ProjL,
     ProjR,
+    Diff,
+    Empty,
 }
 
 #[derive(Debug, Clone)]
@@ -82,14 +91,17 @@ fn try_into_vars<'a>(t: json::Term<'a>) -> Option<json::Variable<'a>> {
 /// There most be:
 /// * no lets
 /// * only terms supported by cv.
-fn convert<'a>(t: json::Term<'a>) -> Result<TF1<'a>> {
+fn convert_json_to_1<'a>(t: json::Term<'a>) -> Result<TF1<'a>> {
     use json::Term::*;
     match t {
         App { f, args } => {
-            let args = args.into_iter().map(|x| convert(x)).try_collect()?;
+            let args = args
+                .into_iter()
+                .map(|x| convert_json_to_1(x))
+                .try_collect()?;
             match *f {
                 App { .. } => Ok(TF1::App {
-                    head: Fun1::Term(Box::new(convert(*f)?)),
+                    head: Fun1::Term(Box::new(convert_json_to_1(*f)?)),
                     args,
                 }),
                 Fun { symb } => Ok(TF1::App {
@@ -100,7 +112,10 @@ fn convert<'a>(t: json::Term<'a>) -> Result<TF1<'a>> {
             }
         }
         Name { symb, args } => {
-            let args = args.into_iter().map(|x| convert(x)).try_collect()?;
+            let args = args
+                .into_iter()
+                .map(|x| convert_json_to_1(x))
+                .try_collect()?;
             Ok(TF1::App {
                 head: Fun1::Name(symb),
                 args,
@@ -114,7 +129,7 @@ fn convert<'a>(t: json::Term<'a>) -> Result<TF1<'a>> {
             let args = args
                 .into_iter()
                 .chain([*timestamp])
-                .map(|x| convert(x))
+                .map(|x| convert_json_to_1(x))
                 .try_collect()?;
             Ok(TF1::App {
                 head: Fun1::Macro(symb),
@@ -122,7 +137,10 @@ fn convert<'a>(t: json::Term<'a>) -> Result<TF1<'a>> {
             })
         }
         Action { symb, args } => {
-            let args = args.into_iter().map(|x| convert(x)).try_collect()?;
+            let args = args
+                .into_iter()
+                .map(|x| convert_json_to_1(x))
+                .try_collect()?;
             Ok(TF1::App {
                 head: Fun1::Step(symb),
                 args,
@@ -131,14 +149,20 @@ fn convert<'a>(t: json::Term<'a>) -> Result<TF1<'a>> {
         Var { var } => Ok(TF1::Var(var)),
         Tuple { elements } => {
             let n = elements.len() as utuple;
-            let args = elements.into_iter().map(|x| convert(x)).try_collect()?;
+            let args = elements
+                .into_iter()
+                .map(|x| convert_json_to_1(x))
+                .try_collect()?;
             Ok(TF1::App {
                 head: Fun1::Tuple(n),
                 args,
             })
         }
         Proj { id, body } => {
-            let args = [*body].into_iter().map(|x| convert(x)).try_collect()?;
+            let args = [*body]
+                .into_iter()
+                .map(|x| convert_json_to_1(x))
+                .try_collect()?;
             Ok(TF1::App {
                 head: Fun1::Proj(id),
                 args,
@@ -148,7 +172,7 @@ fn convert<'a>(t: json::Term<'a>) -> Result<TF1<'a>> {
             let args = terms
                 .into_iter()
                 .sorted_by(|a, b| Ord::cmp(&a.proj, &b.proj))
-                .map(|x| convert(x.term))
+                .map(|x| convert_json_to_1(x.term))
                 .try_collect()?;
             Ok(TF1::App {
                 head: Fun1::Diff,
@@ -167,7 +191,7 @@ fn convert<'a>(t: json::Term<'a>) -> Result<TF1<'a>> {
                 .try_collect()?;
             let args = [*condition, *success, *faillure]
                 .into_iter()
-                .map(|x| convert(x))
+                .map(|x| convert_json_to_1(x))
                 .try_collect()?;
             Ok(TF1::Binder {
                 head: SQuant::FindSuchThat,
@@ -189,7 +213,10 @@ fn convert<'a>(t: json::Term<'a>) -> Result<TF1<'a>> {
                 .into_iter()
                 .map(|v| try_into_vars(v).ok_or(ConversiontError::NonVariableInQuantifier))
                 .try_collect()?;
-            let args = [*body].into_iter().map(|x| convert(x)).try_collect()?;
+            let args = [*body]
+                .into_iter()
+                .map(|x| convert_json_to_1(x))
+                .try_collect()?;
             Ok(TF1::Binder { head, vars, args })
         }
         Let { .. } => Err(ConversiontError::Other("no lets at this point".into())),
@@ -314,6 +341,173 @@ fn convert_fun<'a>(f1: Fun1<'a>) -> Fun2<'a> {
         Fun1::Tuple(2) => Fun2::Tuple,
         Fun1::Proj(0) => Fun2::ProjL,
         Fun1::Proj(1) => Fun2::ProjR,
-        _ => unreachable!("unsupported `Term` and `Diff` variant, or unsuported projection"),
+        Fun1::Diff => Fun2::Diff,
+        _ => unreachable!("unsupported `Term` variant, or unsuported projection"),
+    }
+}
+
+mod varset {
+    use cryptovampire_lib::formula::variable::from_usize;
+    use utils::implvec;
+
+    use crate::json;
+
+    use super::SVariable;
+
+    pub(crate) struct VarSet<'a>(Vec<json::Variable<'a>>);
+
+    impl<'a> VarSet<'a> {
+        pub fn get_var(&mut self, var: &json::Variable<'a>) -> Option<SVariable> {
+            self.0
+                .iter()
+                .rev()
+                .position(|x| x == var)
+                .map(from_usize)
+                .map(SVariable)
+        }
+
+        pub fn with_new_vars<F, U>(&mut self, vars: implvec!(json::Variable<'a>), f: F) -> U
+        where
+            for<'b> F: FnOnce(&'b mut Self, Vec<SVariable>) -> U,
+        {
+            let n = self.0.len();
+            self.0.extend(vars);
+            let nvars = (n..self.0.len()).map(from_usize).map(SVariable).collect();
+            let ret = f(self, nvars); // call the function
+            self.0.truncate(n);
+            ret
+        }
+    }
+
+    impl<'a> IntoIterator for VarSet<'a> {
+        type Item = <Vec<json::Variable<'a>> as IntoIterator>::Item;
+
+        type IntoIter = <Vec<json::Variable<'a>> as IntoIterator>::IntoIter;
+
+        fn into_iter(self) -> Self::IntoIter {
+            self.0.into_iter()
+        }
+    }
+
+    impl<'a> FromIterator<json::Variable<'a>> for VarSet<'a> {
+        fn from_iter<T: IntoIterator<Item = json::Variable<'a>>>(iter: T) -> Self {
+            Self(Vec::from_iter(iter))
+        }
+    }
+}
+
+fn convert_1_to_2<'a>(varset: &mut varset::VarSet<'a>, f: TF1<'a>) -> Result<TF2<'a>> {
+    match f {
+        TF1::Binder { head, vars, args } => varset.with_new_vars(vars, |varset, vars| {
+            let args = args
+                .into_iter()
+                .map(|x| convert_1_to_2(varset, x))
+                .try_collect()?;
+            Ok(TF2::Binder { head, vars, args })
+        }),
+        TF1::App {
+            head: Fun1::Term(_),
+            args: _,
+        } => Err(ConversiontError::HighOrder),
+        TF1::App {
+            // fold tuples
+            head: Fun1::Tuple(i),
+            args,
+        } => {
+            if (i as usize) != args.len() {
+                // u8 < usize, so no problem
+                return Err(ConversiontError::WrongNumberOfArguements {
+                    expected: i as usize,
+                    got: args.len(),
+                });
+            }
+            let mut args: Vec<_> = args
+                .into_iter()
+                .map(|x| convert_1_to_2(varset, x))
+                .try_collect()?;
+            Ok(match i {
+                0 => TF2::App {
+                    head: Fun2::Empty,
+                    args: vec![],
+                },
+                1 => {
+                    let [arg]: [_; 1] = args.try_into().unwrap();
+                    arg
+                }
+                _ => {
+                    let right = args.pop().unwrap(); // can't fail
+                    let left = args.pop().unwrap(); //can't fail
+                    let init = TF2::App {
+                        head: Fun2::Tuple,
+                        args: vec![left, right],
+                    };
+                    args.into_iter().fold(init, |tail, head| TF2::App {
+                        head: Fun2::Tuple,
+                        args: vec![head, tail],
+                    })
+                }
+            })
+        }
+        TF1::App {
+            head: Fun1::Proj(i),
+            args,
+        } => {
+            let [arg] = <[_; 1] as TryFrom<Vec<_>>>::try_from(args)
+                .map_err(|args| ConversiontError::WrongNumberOfArguements {
+                    expected: 1,
+                    got: args.len(),
+                })?
+                .map(|x| convert_1_to_2(varset, x));
+            fn aux<'a>(n: u8, arg: TF2<'a>) -> TF2<'a> {
+                match n {
+                    0 => TF2::App {
+                        head: Fun2::ProjL,
+                        args: vec![arg],
+                    },
+                    1 => TF2::App {
+                        head: Fun2::ProjR,
+                        args: vec![arg],
+                    },
+                    _ => TF2::App {
+                        head: Fun2::ProjR,
+                        args: vec![aux(n - 1, arg)],
+                    },
+                }
+            }
+            Ok(aux(i, arg?))
+        }
+        TF1::App { head, args } => {
+            let head = convert_fun(head);
+            let args = args
+                .into_iter()
+                .map(|x| convert_1_to_2(varset, x))
+                .try_collect()?;
+            Ok(TF2::App { head, args })
+        }
+        TF1::Var(v) => varset
+            .get_var(&v)
+            .map(TF2::Var)
+            .ok_or(ConversiontError::UnassignedVariable),
+    }
+}
+
+fn from_json_to_2<'a>(
+    free_vars: implvec!(json::Variable<'a>),
+    f: json::Term<'a>,
+) -> Result<TF2<'a>> {
+    let mut vars = free_vars.into_iter().collect();
+    let f = inline_lets(&mut Default::default(), f);
+    let f = convert_json_to_1(f)?;
+    convert_1_to_2(&mut vars, f)
+}
+
+fn find_used_symbols<'a>(symbs: &mut HashSet<Fun2<'a>>, f: &TF2<'a>) {
+    match f {
+        BaseFormula::Binder { args, .. } => args.iter().for_each(|f| find_used_symbols(symbs, f)),
+        BaseFormula::App { head, args } => {
+            symbs.insert(head.clone());
+            args.iter().for_each(|f| find_used_symbols(symbs, f))
+        }
+        BaseFormula::Var(_) => (),
     }
 }

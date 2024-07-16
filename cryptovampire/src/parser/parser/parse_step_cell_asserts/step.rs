@@ -12,7 +12,7 @@ use cryptovampire_lib::{
     environement::traits::Realm,
     formula::{
         sort::builtins::{CONDITION, MESSAGE},
-        variable::{uvar, Variable},
+        variable::{from_usize, uvar, Variable},
     },
     problem::{cell::Assignement, step::InnerStep},
 };
@@ -100,7 +100,7 @@ fn parse_step<'bump, 'str>(
                             i,
                         )| {
                             let sort = env.find_sort(type_name.name_span(), type_name.name())?;
-                            let id = uvar::try_from(n).unwrap() + i;
+                            let id = from_usize(n) + i;
                             let var = Variable { id, sort };
 
                             if env.contains_name_with_var(

@@ -177,3 +177,10 @@ impl<'a, 'bump> IntoVariableIter<'bump> for &'a Variable<'bump> {
         [*self].into_iter()
     }
 }
+
+/// convert [usize] to [uvar] crashing if impossible.
+/// 
+/// This is usefull when making ids for variable out of array lengths and the likes
+pub fn from_usize(i:usize) -> uvar {
+    uvar::try_from(i).expect("value out of range, can't make a variable out of it")
+}

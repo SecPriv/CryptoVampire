@@ -4,12 +4,12 @@ use cryptovampire_lib::formula::variable::uvar;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub struct SquirrelDump<'a> {
+pub struct SquirrelDump<'a, T=Term<'a>,V=Variable<'a>> {
+    query: Box<T>,
+    hypotheses: Vec<T>,
+    variables: Vec<V>,
     #[serde(borrow)]
-    query: Box<Term<'a>>,
-    hypotheses: Vec<Term<'a>>,
-    variables: Vec<Variable<'a>>,
-    actions: Vec<Action<'a>>,
+    actions: Vec<Action<'a, T, V>>,
     names: Vec<Name<'a>>,
     operators: Vec<Operator<'a>>,
     macros: Vec<Macro<'a>>,
@@ -92,10 +92,9 @@ pub enum Term<'a> {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 // #[serde(rename_all = "PascalCase")]
-pub struct Diff<'a> {
+pub struct Diff<'a, T=Term<'a>> {
     pub proj: Cow<'a, str>,
-    #[serde(borrow)]
-    pub term: Term<'a>,
+    pub term: T,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -136,11 +135,11 @@ pub enum Type<'a> {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 // #[serde(rename_all = "PascalCase")]
-pub struct Variable<'a> {
+pub struct Variable<'a, Ty=Type<'a>> {
     #[serde(borrow)]
     id: Ident<'a>,
     #[serde(rename = "ty")]
-    sort: Box<Type<'a>>,
+    sort: Box<Ty>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -157,10 +156,9 @@ pub mod action {
     use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-    pub struct Condition<'a> {
-        #[serde(borrow)]
-        vars: Vec<Variable<'a>>,
-        term: Term<'a>,
+    pub struct Condition<T, V> {
+        vars: Vec<V>,
+        term: T,
     }
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -184,17 +182,17 @@ pub mod action {
         sum_choice: (u32, A),
     }
 
-    pub type T<A> = Vec<Item<A>>;
+    pub type AT<A> = Vec<Item<A>>;
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-    pub struct Action<'a> {
+    pub struct Action<'a, T=Term<'a>, V=Variable<'a>> {
         name: Cow<'a, str>,
-        #[serde(borrow)]
-        action: T<Vec<Variable<'a>>>, // this is an `action_v`
+        action: AT<Vec<V>>, // this is an `action_v`
         input: Channel<'a>,
-        indices: Vec<Variable<'a>>,
-        condition: Condition<'a>,
-        updates: Vec<Term<'a>>,
+        indices: Vec<V>,
+        condition: Condition<T, V>,
+        #[serde(borrow)]
+        updates: Vec<Update<'a>>,
         output: Ouptut<'a>,
         globals: Vec<Cow<'a, str>>,
     }
