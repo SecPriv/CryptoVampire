@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 
 use super::Result;
+use anyhow::Context;
 use cryptovampire_lib::{
     container::{utils::NameFinder, ScopedContainer},
     formula::{
@@ -17,17 +18,76 @@ use hashbrown::{HashMap, HashSet};
 use itertools::{chain, Itertools};
 use utils::{implvec, string_ref::StrRef};
 
-use crate::squirrel::{
-    converters::ConversiontError,
-    json::{
-        self,
-        action::Update,
-        operator::{Concrete, Def},
-        Action, Content, FunctionType,
+use crate::{
+    err_at,
+    parser::{ast, InputError, Location, MResult},
+    squirrel::{
+        converters::ConversiontError,
+        json::{
+            self,
+            action::Update,
+            operator::{Concrete, Def},
+            Action, Content, FunctionType,
+        },
     },
 };
 
 use super::stage2::{Fun2, SVariable, SquirrelDump2, TF2};
+
+fn try_into_array<A, B, const N: usize>(a: Vec<A>) -> MResult<[B; N]>
+where
+    A: TryInto<B, Error = InputError>,
+{
+    let tmp: std::result::Result<Vec<B>, InputError> =
+        a.into_iter().map(|x| x.try_into()).collect();
+    Ok(tmp?
+        .try_into()
+        .map_err(|_| err_at!(&Location::none(), "wrong number of arguments"))?)
+}
+
+impl<'a> TryInto<ast::Term<'static>> for TF2<'a> {
+    type Error = InputError;
+    fn try_into(self) -> MResult<ast::Term<'static>> {
+        let span = Location::none();
+        let inner = match self {
+            BaseFormula::Binder { head, vars, args } => {
+                let vars = vars.into_iter().map(|x| x.try_into()).try_collect()?;
+                match head {
+                    super::SQuant::Forall | super::SQuant::Exists => {
+                        let [content]: [_; 1] = try_into_array(args)?;
+                        let kind = match head {
+                            super::SQuant::Exists => ast::QuantifierKind::Exists,
+                            super::SQuant::Forall => ast::QuantifierKind::Forall,
+                            _ => unreachable!(),
+                        };
+                        ast::InnerTerm::Quant(Box::new(ast::Quantifier {
+                            span,
+                            vars,
+                            kind,
+                            content,
+                        }))
+                    }
+                    super::SQuant::FindSuchThat => {
+                        let [condition, left, right]: [_; 3] = try_into_array(args)?;
+                        ast::InnerTerm::Fndst(Box::new(ast::FindSuchThat {
+                            span,
+                            vars,
+                            condition,
+                            left,
+                            right,
+                        }))
+                    }
+                }
+            }
+            BaseFormula::App { head, args } => todo!(),
+            BaseFormula::Var(v) => {
+                ast::InnerTerm::Application(ast::Application::ConstVar { span, content: v.id.name })
+            },
+        };
+
+        Ok(ast::Term { span, inner })
+    }
+}
 
 #[derive(Debug)]
 struct SquirrelData<'a> {
@@ -35,46 +95,46 @@ struct SquirrelData<'a> {
     pub types: HashMap<String, json::mtype::SortData>,
     pub actions: HashMap<String, Action<'a, TF2<'a>, SVariable>>,
     pub names: HashMap<String, FunctionType<'a, json::Type<'a>>>,
-    pub macros: HashMap<String, json::mmacro::Data<json::Type<'a>>>
+    pub macros: HashMap<String, json::mmacro::Data<json::Type<'a>>>,
 }
 
-fn gather_sq_data<'a>(
-    SquirrelDump2 {
-        // query,
-        // hypotheses,
-        actions,
-        operators,
-        // variables,
-        names,
-        // macros,
-        types,
-        ..
-    }: SquirrelDump2<'a>,
-) -> SquirrelData<'a> {
-    // let actions = actions
-    //     .into_iter()
-    //     .map(|a| (a.name.as_ref().into(), a))
-    //     .collect();
-    // let types = types
-    //     .into_iter()
-    //     .map(|Content { data, symb }| (symb.into(), data))
-    //     .collect();
-    // let operators = operators
-    //     .into_iter()
-    //     .map(|Content { symb, data }| (symb.into(), data))
-    //     .collect();
-    // let names = names
-    //     .into_iter()
-    //     .map(|Content { symb, data }| (symb.into(), data))
-    //     .collect();
-    todo!()
-    // SquirrelData {
-    //     operators,
-    //     types,
-    //     actions,
-    //     names,
-    // }
-}
+// fn gather_sq_data<'a>(
+//     SquirrelDump2 {
+//         // query,
+//         // hypotheses,
+//         actions,
+//         operators,
+//         // variables,
+//         names,
+//         // macros,
+//         types,
+//         ..
+//     }: SquirrelDump2<'a>,
+// ) -> SquirrelData<'a> {
+//     let actions = actions
+//         .into_iter()
+//         .map(|a| (a.name.as_ref().into(), a))
+//         .collect();
+//     let types = types
+//         .into_iter()
+//         .map(|Content { data, symb }| (symb.into(), data))
+//         .collect();
+//     let operators = operators
+//         .into_iter()
+//         .map(|Content { symb, data }| (symb.into(), data))
+//         .collect();
+//     let names = names
+//         .into_iter()
+//         .map(|Content { symb, data }| (symb.into(), data))
+//         .collect();
+//     todo!()
+//     // SquirrelData {
+//     //     operators,
+//     //     types,
+//     //     actions,
+//     //     names,
+//     // }
+// }
 
 #[derive(Debug)]
 struct AnlysedSq<'a> {
@@ -150,17 +210,15 @@ fn analyse<'a>(
     Ok(ansq)
 }
 
-struct SortFinder<'bump>{
-    index: Sort<'bump>
+struct SortFinder<'bump> {
+    index: Sort<'bump>,
 }
 
 impl<'bump> SortFinder<'bump> {
-    pub fn new(
-        container: &'bump ScopedContainer<'bump>,
-    ) -> Self {
+    pub fn new(container: &'bump ScopedContainer<'bump>) -> Self {
         let idxname = container.find_free_name("idx");
         let index = Sort::new_index(container, idxname.into());
-        Self {index}
+        Self { index }
         // tys.into_iter()
         //     .map(|(name, t)| {
         //         if !t.0.iter().any(|x| x.can_be_index()) {
@@ -174,15 +232,14 @@ impl<'bump> SortFinder<'bump> {
         //     .map(Self)
     }
 
-    pub fn get_sort<'a>(&self, s:&json::Type<'a>) -> Option<Sort<'bump>> {
+    pub fn get_sort<'a>(&self, s: &json::Type<'a>) -> Option<Sort<'bump>> {
         match s {
             json::Type::Message => Some(MESSAGE.clone()),
             json::Type::Boolean => Some(CONDITION.clone()),
             json::Type::Index => Some(self.index),
             json::Type::Timestamp => Some(STEP.clone()),
             json::Type::TBase(_) => Some(MESSAGE.clone()), // no support for types
-            json::Type::TVar { ident } |
-            json::Type::TUnivar { ident } => unimplemented!(),
+            json::Type::TVar { ident } | json::Type::TUnivar { ident } => unimplemented!(),
             json::Type::Tuple { elements } => Some(MESSAGE.clone()),
             json::Type::Fun { t_in, out } => unimplemented!(),
         }
@@ -214,18 +271,17 @@ where
                 let sqname = sqop
                     .names
                     .get(n.as_ref())
-                    .ok_or(ConversiontError::UndeclaredOp).unwrap();
-                let input_sorts = sqname
-                    .args
-                    .iter()
-                    .map(|x| type_map.get_sort(x).unwrap());
-                let nf = Function::new_user_term_algebra(container, name, input_sorts, NAME.clone());
+                    .ok_or(ConversiontError::UndeclaredOp)
+                    .unwrap();
+                let input_sorts = sqname.args.iter().map(|x| type_map.get_sort(x).unwrap());
+                let nf =
+                    Function::new_user_term_algebra(container, name, input_sorts, NAME.clone());
                 (f, nf)
             }
             Fun2::Macro(m) => {
                 // container.
                 todo!()
-            },
+            }
             Fun2::Step(_) => todo!(),
             Fun2::Fun(_) => todo!(),
             Fun2::Tuple => todo!(),

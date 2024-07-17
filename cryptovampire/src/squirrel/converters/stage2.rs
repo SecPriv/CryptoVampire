@@ -24,8 +24,8 @@ pub enum Fun2<'a> {
 #[derive(Debug, Clone)]
 pub struct SVariable(uvar);
 
-pub type TF2<'a> = BaseFormula<SQuant, Fun2<'a>, SVariable>;
-pub type SquirrelDump2<'a> = SquirrelDump<'a, TF2<'a>, SVariable>;
+pub type TF2<'a> = BaseFormula<SQuant, Fun2<'a>, json::Variable<'a>>;
+pub type SquirrelDump2<'a> = SquirrelDump<'a, TF2<'a>, json::Variable<'a>>;
 
 mod varset {
   use cryptovampire_lib::formula::variable::from_usize;

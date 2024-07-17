@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use itertools::Either;
 use std::sync::Arc;
 
@@ -158,12 +159,13 @@ pub fn fetch_all<'str, 'bump>(
     query.and_then(|q| {
         q.ok_or_else(|| {
             use pest::error::*;
-            let pest = Error::new_from_pos(
-                ErrorVariant::CustomError { message: "".into() },
-                ast.begining,
-            );
             let err = anyhow::anyhow!("no query");
-            InputError::new_with_pest(pest, err)
+            if let Some(b) = ast.begining {
+                let pest = Error::new_from_pos(ErrorVariant::CustomError { message: "".into() }, b);
+                InputError::new_with_pest(pest, err)
+            } else {
+                InputError::Other(err)
+            }
         })
     })
 }

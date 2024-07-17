@@ -1,4 +1,5 @@
-mod ast;
+
+pub mod ast;
 mod parser;
 // mod builders;
 
@@ -43,7 +44,7 @@ pub const USED_KEYWORDS: &'static [&'static str] = &[
 #[grammar = "grammar.pest"]
 struct MainParser;
 
-type MResult<T> = std::result::Result<T, error::InputError>;
+pub type MResult<T> = std::result::Result<T, error::InputError>;
 
 // #[inline(always)]
 // /// imediadly crashes in debug mode (to get the stacktrace and everything)
@@ -249,6 +250,10 @@ mod error {
                 ),
                 InnerLocation::None => InputError::Other(e.into()),
             })
+        }
+
+        pub fn none() -> Self {
+            Self(InnerLocation::None)
         }
     }
 

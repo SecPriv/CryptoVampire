@@ -100,8 +100,8 @@ pub struct Diff<'a, T = Term<'a>> {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct Ident<'a> {
-    name: Cow<'a, str>,
-    tag: i32,
+    pub name: Cow<'a, str>,
+    pub tag: i32,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
