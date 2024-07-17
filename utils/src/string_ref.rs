@@ -93,6 +93,12 @@ impl<'a> Into<String> for StrRef<'a> {
     }
 }
 
+impl<'a> Into<Box<str>> for StrRef<'a> {
+    fn into(self) -> Box<str> {
+        <Self as Into<String>>::into(self).into_boxed_str()
+    }
+}
+
 impl<'a> Deref for StrRef<'a> {
     type Target = str;
 

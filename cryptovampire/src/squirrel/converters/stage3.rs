@@ -17,7 +17,7 @@ use hashbrown::{HashMap, HashSet};
 use itertools::{chain, Itertools};
 use utils::{implvec, string_ref::StrRef};
 
-use crate::{
+use crate::squirrel::{
     converters::ConversiontError,
     json::{
         self,
@@ -51,28 +51,29 @@ fn gather_sq_data<'a>(
         ..
     }: SquirrelDump2<'a>,
 ) -> SquirrelData<'a> {
-    let actions = actions
-        .into_iter()
-        .map(|a| (a.name.as_ref().into(), a))
-        .collect();
-    let types = types
-        .into_iter()
-        .map(|Content { data, symb }| (symb.into(), data))
-        .collect();
-    let operators = operators
-        .into_iter()
-        .map(|Content { symb, data }| (symb.into(), data))
-        .collect();
-    let names = names
-        .into_iter()
-        .map(|Content { symb, data }| (symb.into(), data))
-        .collect();
-    SquirrelData {
-        operators,
-        types,
-        actions,
-        names,
-    }
+    // let actions = actions
+    //     .into_iter()
+    //     .map(|a| (a.name.as_ref().into(), a))
+    //     .collect();
+    // let types = types
+    //     .into_iter()
+    //     .map(|Content { data, symb }| (symb.into(), data))
+    //     .collect();
+    // let operators = operators
+    //     .into_iter()
+    //     .map(|Content { symb, data }| (symb.into(), data))
+    //     .collect();
+    // let names = names
+    //     .into_iter()
+    //     .map(|Content { symb, data }| (symb.into(), data))
+    //     .collect();
+    todo!()
+    // SquirrelData {
+    //     operators,
+    //     types,
+    //     actions,
+    //     names,
+    // }
 }
 
 #[derive(Debug)]
@@ -151,7 +152,7 @@ fn analyse<'a>(
 
 struct SortFinder<'bump>{
     index: Sort<'bump>
-};
+}
 
 impl<'bump> SortFinder<'bump> {
     pub fn new(
@@ -222,7 +223,8 @@ where
                 (f, nf)
             }
             Fun2::Macro(m) => {
-                container.
+                // container.
+                todo!()
             },
             Fun2::Step(_) => todo!(),
             Fun2::Fun(_) => todo!(),

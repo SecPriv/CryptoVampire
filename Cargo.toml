@@ -1,5 +1,5 @@
 [workspace]
-members = ["cryptovampire", "cryptovampire-lib", "cryptovampire-bridge", "utils"]
+members = ["cryptovampire", "cryptovampire-lib", "utils"]
 resolver = "2"
 # authors = ["Simon Jeanteur <7871851+puyral@users.noreply.github.com>"]
 default-members = ["cryptovampire", "cryptovampire-lib"]

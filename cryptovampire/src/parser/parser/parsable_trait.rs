@@ -1,12 +1,16 @@
 use std::{fmt::Display, ops::Deref};
 mod cached_builtins;
 
+use anyhow::Context;
 use itertools::Itertools;
 use log::{log_enabled, trace};
 
-use crate::parser::{
-    ast::{self, extra::SnN, Term, VariableBinding},
-    err, merr, IntoRuleResult, E,
+use crate::{
+    bail_at, err_at, parser::{
+        ast::{self, extra::SnN, Term, VariableBinding},
+        error::WithLocation,
+        InputError, Location, MResult,
+    }
 };
 use cryptovampire_lib::{
     environement::traits::{KnowsRealm, Realm},
@@ -79,7 +83,7 @@ pub trait Parsable<'bump, 'str> {
         bvars: &mut Vec<(&'str str, VarProxy<'bump>)>,
         state: &impl KnowsRealm, // State<'_, 'str, 'bump>,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> Result<Self::R, E>;
+    ) -> MResult<Self::R>;
 }
 
 impl<'a, 'bump> Parsable<'bump, 'a> for ast::LetIn<'a> {
@@ -93,11 +97,12 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::LetIn<'a> {
         _bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
         _state: &impl KnowsRealm,
         _expected_sort: Option<SortProxy<'bump>>,
-    ) -> Result<Self::R, E> {
-        return err(merr(
-            self.span,
-            "let ... in are not supported yet".to_owned(),
-        ));
+    ) -> MResult<Self::R> {
+        bail_at!(self.span, "let ... in are not supported yet");
+        // return err(merr(
+        //     self.span,
+        //     "let ... in are not supported yet".to_owned(),
+        // ));
         todo!()
 
         // // current length of the pile of variable
@@ -137,7 +142,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::IfThenElse<'a> {
         bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> Result<Self::R, E> {
+    ) -> MResult<Self::R> {
         // generate the expected sorts
         let (es_condition, es_branches): (SortProxy, SortProxy) = match state.get_realm() {
             Realm::Evaluated => (BOOL.as_sort().into(), Default::default()),
@@ -146,7 +151,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::IfThenElse<'a> {
 
         // check sort
         if let Some(es) = &expected_sort {
-            es_branches.unify(es, &state).into_rr(self.span)?;
+            es_branches.unify(es, &state).with_location(&self.span)?;
         }
 
         let ast::IfThenElse {
@@ -178,10 +183,11 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
         bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> Result<Self::R, E> {
-        expected_sort
-            .into_iter()
-            .try_for_each(|s| s.expects(MESSAGE.as_sort(), &state).into_rr(self.span))?;
+    ) -> MResult<Self::R> {
+        expected_sort.into_iter().try_for_each(|s| {
+            s.expects(MESSAGE.as_sort(), &state)
+                .with_location(&self.span)
+        })?;
 
         let ast::FindSuchThat {
             vars,
@@ -199,7 +205,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
 
         // build the bound variables
         bvars.reserve(vars.into_iter().len());
-        let vars: Result<Vec<_>, _> = vars
+        let vars: Result<Vec<_>, InputError> = vars
             .into_iter()
             .zip(0..)
             .map(|(v, i)| {
@@ -214,10 +220,15 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
                 if env.functions.contains_key(variable.name())
                     || bvars.iter().map(|(n, _)| n).contains(&variable.name())
                 {
-                    return err(merr(
+                    // return err(merr(
+                    //     variable.0.span,
+                    //     f!("the name {} is already taken", variable.name()),
+                    // ));
+                    bail_at!(
                         variable.0.span,
-                        f!("the name {} is already taken", variable.name()),
-                    ));
+                        "the name {} is already taken",
+                        variable.name()
+                    )
                 }
 
                 let SnN { span, name } = type_name.into();
@@ -268,7 +279,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Quantifier<'a> {
         bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> Result<Self::R, E> {
+    ) -> MResult<Self::R> {
         let ast::Quantifier {
             kind,
             span,
@@ -283,12 +294,12 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Quantifier<'a> {
         };
         expected_sort
             .into_iter()
-            .try_for_each(|s| s.expects(es, &state).into_rr(*span))?;
+            .try_for_each(|s| s.expects(es, &state).with_location(span))?;
 
         let bn = bvars.len();
 
         bvars.reserve(vars.into_iter().len());
-        let vars: Result<Vec<_>, _> = vars
+        let vars: Result<Vec<_>, InputError> = vars
             .into_iter()
             .zip(0..)
             .map(|(v, i)| {
@@ -304,10 +315,11 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Quantifier<'a> {
                 if env.functions.contains_key(vname)
                     || bvars.iter().map(|(n, _)| n).contains(&vname)
                 {
-                    return err(merr(
-                        variable.0.span,
-                        f!("the name {} is already taken", vname),
-                    ));
+                    // return err(merr(
+                    //     variable.0.span,
+                    //     f!("the name {} is already taken", vname),
+                    // ));
+                    bail_at!(variable.0.span, "the name {vname} is already taken")
                 }
 
                 let SnN { span, name } = type_name.into();
@@ -385,7 +397,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Application<'a> {
         bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> Result<Self::R, E> {
+    ) -> MResult<Self::R> {
         match self {
             ast::Application::ConstVar { span, content } => {
                 // check if it is a variable
@@ -396,11 +408,15 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Application<'a> {
                         let VarProxy { id, sort } = v;
 
                         if sort.is_sosrt(NAME.as_sort()) {
-                            err(merr(
-                                *span,
+                            // err(merr(
+                            //     *span,
+                            //     "assertions with variables of sort Name have a debatable soundness"
+                            //         .to_string(),
+                            // ))?
+                            bail_at!(
+                                span,
                                 "assertions with variables of sort Name have a debatable soundness"
-                                    .to_string(),
-                            ))?
+                            )
                         }
 
                         match (
@@ -421,22 +437,22 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Application<'a> {
                                     .as_ref()
                                     .map(|es| es.matches(s, &r))
                                     .transpose()
-                                    .into_rr(*span)
+                                    // .with_location(*span)
+                                    .with_location(span)
                                     .map(|_| formula)
                             }
                             (_, r) => expected_sort
                                 .as_ref()
-                                .map(|es| es.unify_rev(sort, &r).into_rr(*span))
-                                .unwrap_or(
-                                    sort.as_option()
-                                        .ok_or(merr(*span, "can't infer sort".to_string())),
-                                )
+                                .map(|es| es.unify_rev(sort, &r).with_location(span))
+                                .unwrap_or_else(|| {
+                                    sort.as_option().ok_or(span.err_with(|| "can't infer sort"))
+                                })
                                 .map(|sort| Variable { id: *id, sort }.into()),
                         }
 
                         // let sort = expected_sort
                         //     .clone()
-                        //     .map(|es| sort.unify(&es, &state).into_rr(*span))
+                        //     .map(|es| sort.unify(&es, &state).with_location(*span))
                         //     .unwrap_or_else(|| {
                         //         Into::<Option<Sort>>::into(sort)
                         //             .ok_or_else(|| merr(*span, f!("can't infer sort")))
@@ -493,13 +509,13 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Application<'a> {
 /// parse a function application (when we know it is definitly a function and not a variable)
 fn parse_application<'b, 'a, 'bump>(
     env: &'b Environement<'bump, 'a>,
-    span: &'b pest::Span<'a>,
+    span: &'b Location<'a>,
     state: &impl KnowsRealm,
     bvars: &'b mut Vec<(&'a str, VarProxy<'bump>)>,
     expected_sort: Option<SortProxy<'bump>>,
     function: &FunctionCache<'a, 'bump>,
     args: implvec!(&'b ast::Term<'a>),
-) -> Result<ARichFormula<'bump>, E> {
+) -> MResult<ARichFormula<'bump>> {
     if cfg!(debug_assertions) {
         try_trace!("\tparsing head: {}", function.get_function().name())
     }
@@ -527,7 +543,7 @@ fn parse_application<'b, 'a, 'bump>(
     //         }
     //     })
     //     .transpose()
-    //     .into_rr(*span)?;
+    //     .with_location(*span)?;
 
     // parse further
     let n_args: Result<Vec<_>, _> = {
@@ -548,15 +564,22 @@ fn parse_application<'b, 'a, 'bump>(
     // check arity
     if !signature.args_size().contains(&n_args.len().into()) {
         let range = signature.args_size();
-        return err(merr(
-            *span,
-            f!(
-                "wrong number of arguments: got {}, expected [{}, {}]",
-                n_args.len(),
-                range.start(),
-                range.end()
-            ),
-        ));
+        // return err(merr(
+        //     *span,
+        //     f!(
+        //         "wrong number of arguments: got {}, expected [{}, {}]",
+        //         n_args.len(),
+        //         range.start(),
+        //         range.end()
+        //     ),
+        // ));
+        bail_at!(
+            span,
+            "wrong number of arguments: got {}, expected [{}, {}]",
+            n_args.len(),
+            range.start(),
+            range.end()
+        )
     }
 
     let ifun = function.get_function();
@@ -595,7 +618,7 @@ fn parse_application<'b, 'a, 'bump>(
     expected_sort
         .map(|es| es.unify_rev(&out_sort, state))
         .transpose()
-        .into_rr(*span)?;
+        .with_location(span)?;
 
     Ok(formula)
 }
@@ -609,7 +632,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
         bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> Result<Self::R, E> {
+    ) -> MResult<Self::R> {
         let Self {
             span: main_span,
             inner,
@@ -620,23 +643,27 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
                 let step_as_term = app.parse(env, bvars, state, Some(STEP.as_sort().into()))?;
 
                 let args = if let RichFormula::Fun(_, args) = step_as_term.as_ref() {
-                    Ok(args)
+                    args
                 } else {
-                    err(
-                            merr(app.span(), f!("this can only be a plain reference to a step (not just a term of sort {}))", STEP.name()))
-                        )
-                }?;
+                    bail_at!(app.span(), "this can only be a plain reference to a step (not just a term of sort {}))", STEP.name())
+                    // err(
+                    //         merr(app.span(), f!("this can only be a plain reference to a step (not just a term of sort {}))", STEP.name()))
+                    //     )
+                };
 
                 let step_cache = env
                     .functions
                     .get(app.name())
                     .and_then(|fc| fc.as_step())
-                    .ok_or_else(|| {
-                        merr(
-                            app.name_span(),
-                            f!("{} is not a known step name", app.name()),
-                        )
-                    })?;
+                    .with_context(|| f!("{} is not a known step name", app.name()))
+                    .with_location(&app.name_span())
+                    // .ok_or_else(|| {
+                    //     merr(
+                    //         app.name_span(),
+                    //         f!("{} is not a known step name", app.name()),
+                    //     )
+                    // })?;
+                    ?;
 
                 let mut nbvars = step_cache.args_vars_with_input().map_into().collect();
 
@@ -659,7 +686,10 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
                 let mmacro = env
                     .macro_hash
                     .get(name.name())
-                    .ok_or_else(|| merr(name.span(), f!("{} is not a known macro", name.name())))?;
+                    .with_context(|| f!("{} is not a known macro", name.name()))
+                    .with_location(name.span())
+                    // .ok_or_else(|| merr(name.span(), ))?;
+                    ?;
 
                 if log_enabled!(log::Level::Trace) {
                     trace!("in macro parsing: {}", name.name());
@@ -687,14 +717,20 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
                         })
                         .collect()
                 } else {
-                    err(merr(
-                        *main_span,
-                        f!(
-                            "not enough arguments: expected {}, got {}",
-                            mmacro.args.len(),
-                            args.len()
-                        ),
+                    Err(err_at!(
+                        main_span,
+                        "not enough arguments: expected {}, got {}",
+                        mmacro.args.len(),
+                        args.len(),
                     ))
+                    // err(merr(
+                    //     *main_span,
+                    //     f!(
+                    //         "not enough arguments: expected {}, got {}",
+                    //         mmacro.args.len(),
+                    //         args.len()
+                    //     ),
+                    // ))
                 }?;
 
                 let term = {
@@ -728,7 +764,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Infix<'a> {
         bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> Result<Self::R, E> {
+    ) -> MResult<Self::R> {
         match self.operation {
             ast::Operation::HardEq => match self.terms.len() {
                 2 => parse_application(
@@ -866,7 +902,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Infix<'a> {
 }
 
 fn as_pair_of_term<'a, 'b: 'a>(
-    span: pest::Span<'b>,
+    span: Location<'b>,
     op: ast::Operation,
     iter: impl IntoIterator<Item = (&'a Term<'b>, &'a Term<'b>)>,
 ) -> Vec<Term<'b>> {
@@ -891,7 +927,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Term<'a> {
         bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> Result<Self::R, E> {
+    ) -> MResult<Self::R> {
         if cfg!(debug_assertions) {
             if bvars.iter().map(|(_, v)| v.id).unique().count() != bvars.len() {
                 panic!(

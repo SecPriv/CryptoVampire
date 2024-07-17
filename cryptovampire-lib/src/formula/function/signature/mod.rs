@@ -51,7 +51,7 @@ pub trait Signature<'bump>: Sized + std::fmt::Debug {
     /// Unifies `self` with `other`.
     ///
     /// The errors will be thrown out assuming `self` is the grounder truth
-    fn unify<S, R>(&self, other: &S, env: &R) -> Result<(), CheckError<'bump>>
+    fn unify<S, R>(&self, other: &S, env: &R) -> Result<(), CheckError>
     where
         S: Signature<'bump>,
         R: KnowsRealm,

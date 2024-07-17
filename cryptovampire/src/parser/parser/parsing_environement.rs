@@ -5,15 +5,13 @@ use itertools::Itertools;
 use log::trace;
 use pest::Span;
 
-use crate::parser::{
+use crate::{err_at, parser::{
     ast::{self, ASTList},
-    merr,
     parser::{
         parse_assert_with_bvars, parse_asserts_crypto, parse_asserts_with_bvars, parse_cells,
         parse_orders_with_bvars, parse_steps,
-    },
-    E,
-};
+    }, Location, MResult,
+}};
 use cryptovampire_lib::{
     container::ScopedContainer,
     environement::traits::{KnowsRealm, Realm},
@@ -170,13 +168,13 @@ impl<'bump, 'a> Environement<'bump, 'a> {
 
     pub fn find_function<'b>(
         &'b self,
-        span: Span<'a>,
+        span: Location<'a>,
         name: &str,
-    ) -> Result<&'b FunctionCache<'a, 'bump>, E> {
+    ) -> MResult<&'b FunctionCache<'a, 'bump>> {
         get_function(self, span, name)
     }
 
-    pub fn find_sort<'b>(&'b self, span: Span<'a>, name: &str) -> Result<Sort<'bump>, E> {
+    pub fn find_sort<'b>(&'b self, span: Location<'a>, name: &str) -> MResult<Sort<'bump>> {
         get_sort(self, span, name)
     }
 
@@ -196,29 +194,24 @@ impl<'bump, 'a> Environement<'bump, 'a> {
 /// Find the [Sort] in already declared in [Environement::sort_hash]
 pub fn get_sort<'a, 'bump>(
     env: &Environement<'bump, 'a>,
-    span: Span<'a>,
+    span: Location<'a>,
     str: implderef!(str),
-) -> Result<Sort<'bump>, E> {
+) -> MResult<Sort<'bump>> {
     env.sort_hash
         .get(Deref::deref(&str))
-        .ok_or_else(|| merr(span, f!("undefined sort {}", Deref::deref(&str))))
+        .ok_or_else(|| err_at!(&span, "undefined sort {}", Deref::deref(&str)))
         .map(|s| *s)
 }
 
 /// Find the [Function] in already declared in [Environement::sort_function]
 pub fn get_function<'b, 'a, 'bump>(
     env: &'b Environement<'bump, 'a>,
-    span: Span<'a>,
+    span: Location<'a>,
     str: implderef!(str),
-) -> Result<&'b FunctionCache<'a, 'bump>, E> {
+) -> MResult<&'b FunctionCache<'a, 'bump>> {
     env.functions.get(Deref::deref(&str)).ok_or_else(|| {
-        merr(
-            span,
-            f!(
-                "undefined function {}\nhint: If you looked for a macro, maybe you forgot the '!'",
-                Deref::deref(&str)
-            ),
-        )
+        err_at!(&span, "undefined function {}\nhint: If you looked for a macro, maybe you forgot the '!'",
+                Deref::deref(&str))
     })
     // .map(|s| *s)
 }

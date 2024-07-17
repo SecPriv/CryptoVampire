@@ -236,25 +236,6 @@ dependencies = [
  "paste",
  "pest",
  "pest_derive",
- "static_init",
- "thiserror",
- "utils",
-]
-
-[[package]]
-name = "cryptovampire-bridge"
-version = "0.3.1"
-dependencies = [
- "anyhow",
- "cryptovampire",
- "cryptovampire-lib",
- "env_logger",
- "hashbrown",
- "if_chain",
- "itertools",
- "log",
- "macro-attr",
- "paste",
  "serde",
  "serde_json",
  "serde_path_to_error",

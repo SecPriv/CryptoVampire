@@ -1,6 +1,6 @@
 
 use std::borrow::Cow;
-use crate::json::{self, SquirrelDump};
+use crate::squirrel::json::{self, SquirrelDump};
 
 use super::{stage0::inline_lets, stage1::convert_json_to_1, Result};
 
@@ -31,7 +31,7 @@ mod varset {
   use cryptovampire_lib::formula::variable::from_usize;
   use utils::implvec;
 
-  use crate::json;
+  use crate::squirrel::json;
 
   use super::SVariable;
 
@@ -211,7 +211,7 @@ fn from_json_to_2<'a>(free_vars: &mut VarSet<'a>, f: json::Term<'a>) -> Result<T
 mod sq_to_2 {
   use itertools::Itertools;
 
-  use crate::{
+  use crate::squirrel::{
       json::{self, action::Action, Operator, SquirrelDump},
   };
 
@@ -223,7 +223,7 @@ mod sq_to_2 {
       use cryptovampire_lib::formula::variable::from_usize;
       use itertools::Itertools;
 
-      use crate::{
+      use crate::squirrel::{
           converters::stage2::{from_json_to_2, SVariable, VarSet, TF2}, json::{self, action}
       };
 
@@ -336,7 +336,7 @@ mod sq_to_2 {
   }
 
   mod operator {
-      use crate::{
+      use crate::squirrel::{
           converters::stage2::{from_json_to_2, Result, SVariable, TF2},
           json::{
               self,

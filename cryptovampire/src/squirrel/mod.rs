@@ -1,13 +1,7 @@
 use thiserror::Error;
 
-/// inline lets, keep the sq types
-mod stage0;
-/// switch to a structure more cv like of terms, but is still a dumb transform
-mod stage1;
-/// get as close as possible to a format that can be typechecked by cv
-mod stage2;
-
-mod stage3;
+pub(crate) mod json;
+mod converters;
 
 #[derive(Debug, Error, Ord, Eq, PartialEq, PartialOrd, Clone)]
 pub enum ConversiontError {
@@ -40,15 +34,3 @@ pub enum ConversiontError {
     #[error("Other converstion error: {0}")]
     Other(Box<str>),
 }
-
-#[allow(non_camel_case_types)]
-type utuple = u8;
-
-#[derive(Debug, Clone)]
-enum SQuant {
-    Forall,
-    Exists,
-    FindSuchThat,
-}
-
-pub type Result<A> = std::result::Result<A, ConversiontError>;

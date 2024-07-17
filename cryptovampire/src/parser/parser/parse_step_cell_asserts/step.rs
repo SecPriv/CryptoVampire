@@ -1,11 +1,15 @@
 use std::sync::Arc;
 
+use anyhow::Context;
 use itertools::Itertools;
 
-use crate::parser::{
-    merr,
-    parser::{parsable_trait::Parsable, CellCache, FunctionCache},
-    E,
+use crate::{
+    bail_at,
+    parser::{
+        error::WithLocation,
+        parser::{parsable_trait::Parsable, CellCache, FunctionCache},
+        InputError, MResult,
+    },
 };
 use cryptovampire_lib::{
     container::{allocator::ContainerTools, ScopedContainer},
@@ -29,7 +33,7 @@ fn parse_step<'bump, 'str>(
     env: &Environement<'bump, 'str>,
     step_cache: &StepCache<'str, 'bump>,
     // name: &str,
-) -> Result<InnerStep<'bump>, E> {
+) -> MResult<InnerStep<'bump>> {
     let StepCache {
         ast,
         function,
@@ -86,7 +90,7 @@ fn parse_step<'bump, 'str>(
             let fresh_vars = if let Some(vars) = fresh_vars.as_ref() {
                 bvars.truncate(n);
                 bvars.reserve(vars.bindings.len());
-                let vars: Result<Arc<_>, _> = vars
+                let vars: Result<Arc<_>, InputError> = vars
                     .bindings
                     .iter()
                     .zip(0..)
@@ -107,10 +111,15 @@ fn parse_step<'bump, 'str>(
                                 variable.name(),
                                 bvars.iter().map(|(n, _)| *n),
                             ) {
-                                Err(merr(
+                                // Err(merr(
+                                //     variable.0.span,
+                                //     format!("name {} is already taken", variable.name()),
+                                // ))
+                                bail_at!(
                                     variable.0.span,
-                                    format!("name {} is already taken", variable.name()),
-                                ))
+                                    "name {} is already taken",
+                                    variable.name()
+                                )
                             } else {
                                 bvars.push((variable.name(), var.into()));
                                 Ok(var)
@@ -134,10 +143,13 @@ fn parse_step<'bump, 'str>(
                 .functions
                 .get(cell_name)
                 .and_then(FunctionCache::as_memory_cell)
-                .ok_or(merr(
-                    cell_ast.span(),
-                    format!("cell {cell_name} doesn't exists"),
-                ))?;
+                .with_context(|| format!("cell {cell_name} doesn't exists"))
+                .with_location(cell_ast.span())
+                // .ok_or(merr(
+                //     cell_ast.span(),
+                //     format!("cell {cell_name} doesn't exists"),
+                // ))
+                ?;
 
             // get the arguments and apply substitution
             let cell_args: Result<Arc<[_]>, _> = cell_ast
@@ -186,7 +198,7 @@ fn parse_step<'bump, 'str>(
 pub fn parse_steps<'a, 'bump, 'str>(
     env: &'a Environement<'bump, 'str>, // mut for safety
     steps: implvec!(&'a StepCache<'str, 'bump>),
-) -> Result<(), E> {
+) -> MResult<()> {
     steps
         .into_iter()
         .try_for_each(|step_cache @ StepCache { ast, step, .. }| {
@@ -195,12 +207,19 @@ pub fn parse_steps<'a, 'bump, 'str>(
                 <ScopedContainer as ContainerTools<InnerStep<'bump>>>::initialize(step, inner)
             };
 
-            match r_err {
-                Err(_) => Err(merr(
-                    ast.name.0.span,
-                    format!("step {} has already been defined", ast.name.name()),
-                )),
-                Ok(()) => Ok(()),
-            }
+            r_err.map_err(|_| {
+                ast.name
+                    .0
+                    .span
+                    .err_with(|| format!("step {} has already been defined", ast.name.name()))
+            })
+
+            // match r_err {
+            //     Err(_) => Err(merr(
+            //         ast.name.0.span,
+            //         format!("step {} has already been defined", ast.name.name()),
+            //     )),
+            //     Ok(()) => Ok(()),
+            // }
         })
 }

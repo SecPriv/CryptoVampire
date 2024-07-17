@@ -1,13 +1,11 @@
 use std::sync::Arc;
 
 use crate::parser::{
-    ast,
-    parser::{
+    ast, parser::{
         get_sort,
         parsable_trait::{Parsable, VarProxy},
         Environement,
-    },
-    E,
+    }, InputError, MResult
 };
 use cryptovampire_lib::{
     formula::{quantifier::Quantifier, sort::builtins::STEP, variable::Variable},
@@ -19,7 +17,7 @@ pub fn parse_orders_with_bvars<'a, 'str, 'bump, B>(
     env: &'a Environement<'bump, 'str>,
     orders: implvec!(&'a ast::Order<'str>),
     bvars: &'a mut Vec<(&'str str, VarProxy<'bump>)>,
-) -> Result<B, E>
+) -> MResult<B>
 where
     B: FromIterator<Ordering<'bump>>,
 {
@@ -33,7 +31,7 @@ fn parse_order_with_bvars<'str, 'bump>(
     env: &Environement<'bump, 'str>,
     order: &ast::Order<'str>,
     bvars: &mut Vec<(&'str str, VarProxy<'bump>)>,
-) -> Result<Ordering<'bump>, E> {
+) -> MResult<Ordering<'bump>> {
     let ast::Order {
         quantifier,
         args,
@@ -43,7 +41,7 @@ fn parse_order_with_bvars<'str, 'bump>(
         ..
     } = order;
 
-    let args: Result<Vec<_>, _> = args
+    let args: Result<Vec<_>, InputError> = args
         .into_iter()
         .zip(0..)
         .map(

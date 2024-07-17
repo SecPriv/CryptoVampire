@@ -364,7 +364,7 @@ mod tests {
         io::BufReader,
     };
 
-    use crate::json::action;
+    use crate::squirrel::json::action;
 
     use super::{CryptoVampireCall, SquirrelDump, Term, Type};
 

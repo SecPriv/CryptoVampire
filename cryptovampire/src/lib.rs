@@ -21,6 +21,7 @@ use cryptovampire_lib::{
 use utils::{from_with::FromWith, implvec, traits::MyWriteTo};
 pub mod cli;
 pub mod parser;
+pub mod squirrel;
 
 /// parse a [Problem] object form a string
 pub fn problem_try_from_str<'a, 'bump>(

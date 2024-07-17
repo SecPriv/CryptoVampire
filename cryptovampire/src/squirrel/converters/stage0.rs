@@ -1,6 +1,6 @@
 use hashbrown::HashMap;
 
-use crate::json;
+use super::super::json;
 
 
 pub fn inline_lets<'a>(

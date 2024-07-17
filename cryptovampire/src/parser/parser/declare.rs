@@ -3,7 +3,10 @@ use std::sync::Arc;
 
 use super::*;
 
-use crate::parser::{ast::extra::AsFunction, err, merr, E};
+use crate::{
+    bail_at, err_at,
+    parser::{ast::extra::AsFunction, InputError, MResult},
+};
 
 use cryptovampire_lib::{
     container::{allocator::ContainerTools, ScopedContainer},
@@ -28,7 +31,7 @@ use super::super::ast::{self, extra::SnN, ASTList, Declaration, DeclareFunction,
 pub fn declare_sorts<'a, 'bump>(
     env: &mut Environement<'bump, 'a>,
     ast: &ASTList<'a>,
-) -> Result<(), E> {
+) -> MResult<()> {
     ast.into_iter()
         .filter_map(|ast| match ast {
             AST::Declaration(d) => match d.as_ref() {
@@ -40,24 +43,27 @@ pub fn declare_sorts<'a, 'bump>(
         .try_for_each(|s| {
             let name = s.name();
             if env.sort_hash.contains_key(name) {
-                err(merr(
-                    *s.get_name_span(),
-                    f!("the sort name {} is already in use", name),
+                // err(merr(
+                //     *s.get_name_span(),
+                //     f!("the sort name {} is already in use", name),
+                // ))
+                Err(err_at!(
+                    s.get_name_span(),
+                    "the sort name {} is already in use",
+                    name
                 ))
             } else {
                 let sort = Sort::new_index(env.container, name.to_owned().into_boxed_str());
                 let out = env.sort_hash.insert(sort.name().into_string(), sort);
 
                 match out {
-                    Some(_) => err(merr(
-                        *s.get_name_span(),
-                        f!(
-                            "!UNREACHABLE!(line {} in {}) \
+                    Some(_) => Err(err_at!(
+                        s.get_name_span(),
+                        "!UNREACHABLE!(line {} in {}) \
 The sort name {} somehow reintroduced itself in the hash",
-                            line!(),
-                            file!(),
-                            name
-                        ),
+                        line!(),
+                        file!(),
+                        name
                     )),
                     _ => Ok(()),
                 }
@@ -72,7 +78,7 @@ pub fn fetch_all<'str, 'bump>(
     lemmas: &mut impl Extend<&'str ast::Assertion<'str>>,
     orders: &mut impl Extend<&'str ast::Order<'str>>, // Vec<&'str ast::Order<'str>>,
     asserts_crypto: &mut impl Extend<&'str ast::AssertCrypto<'str>>,
-) -> Result<&'str ast::Assertion<'str>, E> {
+) -> MResult<&'str ast::Assertion<'str>> {
     let mut did_initilise_init = false;
     let mut query = Ok(None);
     ast.into_iter()
@@ -96,9 +102,7 @@ pub fn fetch_all<'str, 'bump>(
                             Err(_) => unreachable!("should be caught before"),
                             Ok(inner_query) => {
                                 query = match inner_query {
-                                    Some(_) => {
-                                        Err(merr(q.span, "only one query is allowed".to_string()))
-                                    }
+                                    Some(_) => Err(q.span.err_with(|| "only one query is allowed")),
                                     None => Ok(Some(q)),
                                 }
                             }
@@ -124,10 +128,11 @@ pub fn fetch_all<'str, 'bump>(
                 if step.name.name() == "init" {
                     did_initilise_init = true;
                     if step.args().len() >= 1 {
-                        return err(merr(
-                            step.args.span,
-                            "the init step should have any arguments".to_string(),
-                        ));
+                        // return err(merr(
+                        //     step.args.span,
+                        //     "the init step should have any arguments".to_string(),
+                        // ));
+                        bail_at!(step.args.span, "the init step should have any arguments")
                     }
                 }
                 Ok(())
@@ -139,13 +144,27 @@ pub fn fetch_all<'str, 'bump>(
         declare_step(env, &ast::INIT_STEP_AST)?
     }
 
+    // query.and_then(|q| {
+    //     q.ok_or(
+    //         InputError::new_with_pest(pest, err)
+
+    //         pest::error::Error::new_from_pos(
+    //         pest::error::ErrorVariant::CustomError {
+    //             message: "no query".to_string(),
+    //         },
+    //         ast.begining,
+    //     ))
+    // })
     query.and_then(|q| {
-        q.ok_or(pest::error::Error::new_from_pos(
-            pest::error::ErrorVariant::CustomError {
-                message: "no query".to_string(),
-            },
-            ast.begining,
-        ))
+        q.ok_or_else(|| {
+            use pest::error::*;
+            let pest = Error::new_from_pos(
+                ErrorVariant::CustomError { message: "".into() },
+                ast.begining,
+            );
+            let err = anyhow::anyhow!("no query");
+            InputError::new_with_pest(pest, err)
+        })
     })
 }
 
@@ -160,16 +179,17 @@ fn user_bool_to_condtion<'a>(s: Sort<'a>) -> Sort<'a> {
 fn declare_function<'str, 'bump>(
     env: &mut Environement<'bump, 'str>,
     fun: &DeclareFunction<'str>,
-) -> Result<(), E> {
+) -> MResult<()> {
     let Ident {
         span,
         content: name,
     } = fun.name();
     if env.contains_name(name) {
-        err(merr(
-            span,
-            f!("the function name {} is already in use", name),
-        ))
+        bail_at!(span, "the function name {} is already in use", name)
+        // err(merr(
+        //     span,
+        //     f!("the function name {} is already in use", name),
+        // ))
     } else {
         let input_sorts: Result<Vec<_>, _> = fun
             .args()
@@ -196,16 +216,14 @@ fn declare_function<'str, 'bump>(
             Function::new_user_term_algebra(env.container, name, input_sorts?, output_sort).main
         };
         if let Some(_) = env.functions.insert(fun.name().to_string(), fun.into()) {
-            err(merr(
+            bail_at!(
                 span,
-                f!(
-                    "!UNREACHABLE!(line {} in {}) \
+                "!UNREACHABLE!(line {} in {}) \
 The function name {} somehow reintroduced itself in the hash",
-                    line!(),
-                    file!(),
-                    name
-                ),
-            ))
+                line!(),
+                file!(),
+                name
+            )
         } else {
             Ok(())
         }
@@ -215,10 +233,11 @@ The function name {} somehow reintroduced itself in the hash",
 fn declare_step<'str, 'bump>(
     env: &mut Environement<'bump, 'str>,
     fun: &'str ast::Step<'str>,
-) -> Result<(), E> {
+) -> MResult<()> {
     let SnN { span, name } = fun.name();
     if env.contains_name(&name) {
-        return err(merr(*span, f!("the step name {} is already in use", &name)));
+        bail_at!(span, "the step name {} is already in use", &name)
+        // return err(merr(*span, f!("the step name {} is already in use", &name)));
     }
 
     let input_sorts: Result<Vec<_>, _> = fun
@@ -250,10 +269,11 @@ fn declare_step<'str, 'bump>(
 fn declare_cell<'str, 'bump>(
     env: &mut Environement<'bump, 'str>,
     fun: &'str ast::DeclareCell<'str>,
-) -> Result<(), E> {
+) -> MResult<()> {
     let SnN { span, name } = fun.name();
     if env.contains_name(&name) {
-        return err(merr(*span, f!("the cell name {} is already in use", &name)));
+        bail_at!(span, "the cell name {} is already in use", &name)
+        // return err(merr(*span, f!("the cell name {} is already in use", &name)));
     }
 
     let input_sorts: Result<Vec<_>, _> = fun
@@ -285,14 +305,12 @@ fn declare_cell<'str, 'bump>(
     Ok(())
 }
 
-fn declare_let<'bump, 'a>(
-    env: &mut Environement<'bump, 'a>,
-    mlet: &ast::Macro<'a>,
-) -> Result<(), E> {
+fn declare_let<'bump, 'a>(env: &mut Environement<'bump, 'a>, mlet: &ast::Macro<'a>) -> MResult<()> {
     let ast::Macro { name, .. } = mlet;
     let SnN { span, name } = name.into();
     if env.container_macro_name(&name) {
-        err(merr(*span, f!("the macro {}! is already in use", name)))
+        bail_at!(span, "the macro {} is already in use", &name)
+        // err(merr(*span, f!("the macro {}! is already in use", name)))
     } else {
         // the input sorts (will gracefully error out later if a sort is undefined)
         let args: Result<Arc<[_]>, _> = mlet

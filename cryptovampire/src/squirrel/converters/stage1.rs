@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use cryptovampire_lib::formula::BaseFormula;
 use itertools::Itertools;
 
-use crate::{converters::{utuple, ConversiontError}, json};
+use super::super::{converters::{utuple, ConversiontError}, json};
 
 use super::{SQuant, Result};
 

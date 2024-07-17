@@ -6,7 +6,7 @@ use crate::formula::sort::sort_proxy::InferenceError;
 use utils::infinity::Infinity;
 
 #[derive(Debug, PartialEq, Eq, Clone, Error)]
-pub enum CheckError<'bump> {
+pub enum CheckError {
     #[error("wrong number of arguments (got {got}, expected in [{}, {}])", .expected.start(), .expected.end())]
     WrongNumberOfArguments {
         got: Infinity<usize>,
@@ -15,12 +15,12 @@ pub enum CheckError<'bump> {
     #[error("unsolvable sort problem at position {position:?}, caused by {error}")]
     SortError {
         position: Option<usize>,
-        error: InferenceError<'bump>,
+        #[source] error: InferenceError,
     },
 }
 
-impl<'bump> CheckError<'bump> {
-    pub fn from_inference(error: InferenceError<'bump>, position: Option<usize>) -> Self {
+impl<'bump> CheckError {
+    pub fn from_inference(error: InferenceError, position: Option<usize>) -> Self {
         Self::SortError { position, error }
     }
 }
