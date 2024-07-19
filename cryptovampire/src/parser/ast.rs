@@ -1,5 +1,5 @@
 use std::{
-    fmt::Display,
+    fmt::{write, Display},
     slice::{self, Iter},
 };
 
@@ -10,7 +10,7 @@ use log::trace;
 use pest::{iterators::Pair, Parser, Position};
 
 use cryptovampire_lib::INIT_STEP_NAME;
-use utils::{destvec, vecref::VecRef};
+use utils::{destvec, match_as_trait, vecref::VecRef};
 
 use super::*;
 use crate::bail_at;
@@ -235,6 +235,13 @@ boiler_plate!(l AST<'a>, 'a, content; |p| {
     mlet => { Ok(AST::Let(Box::new(p.try_into()?))) }
 });
 
+impl<'a, S: Display> Display for AST<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match_as_trait!(Self, |x| in self => Declaration | Step | Order | AssertCrypto | Assert | Let
+            {writeln!(f, "{x}")})
+    }
+}
+
 /// [Rule::ident]
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
@@ -261,6 +268,11 @@ impl<'s, S> Ident<'s, S> {
     }
 }
 
+impl<'a, S: Display> Display for Ident<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.name().fmt(f)
+    }
+}
 /// [Rule::type_name]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct TypeName<'a, S = &'a str>(pub Sub<'a, Ident<'a, S>>);
@@ -275,6 +287,11 @@ impl<'a, S> TypeName<'a, S> {
 
     pub fn name_span(&self) -> Location<'a> {
         self.0.span
+    }
+}
+impl<'a, S: Display> Display for TypeName<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.name().fmt(f)
     }
 }
 
@@ -295,6 +312,11 @@ impl<'a, S> MacroName<'a, S> {
     }
 }
 
+impl<'a, S: Display> Display for MacroName<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.name().fmt(f)
+    }
+}
 /// [Rule::function]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Function<'a, S = &'a str>(pub Sub<'a, Ident<'a, S>>);
@@ -316,6 +338,11 @@ impl<'a, S> Function<'a, S> {
     }
 }
 
+impl<'a, S: Display> Display for Function<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.name().fmt(f)
+    }
+}
 /// [Rule::variable]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Variable<'a, S = &'a str>(pub Sub<'a, S>);
@@ -329,6 +356,11 @@ impl<'a, S> Variable<'a, S> {
     }
 }
 
+impl<'a, S: Display> Display for Variable<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.name().fmt(f)
+    }
+}
 /// [Rule::step_name]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct StepName<'a, S = &'a str>(pub Sub<'a, Ident<'a, S>>);
@@ -349,6 +381,11 @@ impl<'a, S> StepName<'a, S> {
     }
 }
 
+impl<'a, S: Display> Display for StepName<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.name().fmt(f)
+    }
+}
 // operation in `Infix`
 
 /// [Rule::typed_arguments]
@@ -374,6 +411,11 @@ impl<'a, S> Default for TypedArgument<'a, S> {
     }
 }
 
+impl<'a, S: Display> Display for TypedArgument<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({})", self.bindings.iter().format(", "))
+    }
+}
 /// [Rule::variable_binding]
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -388,6 +430,12 @@ boiler_plate!(VariableBinding<'s>, 's, variable_binding; |p| {
     destruct_rule!(span in [variable, type_name] = p.into_inner());
     Ok(VariableBinding{span, variable, type_name})
 });
+
+impl<'a, S: Display> Display for VariableBinding<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:{}", &self.variable, &self.type_name)
+    }
+}
 
 // -----------------------------------------------------------------------------
 // ---------------------------------- terms ------------------------------------
@@ -420,6 +468,11 @@ impl<'a, S> Term<'a, S> {
     }
 }
 
+impl<'a, S: Display> Display for Term<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.inner.fmt(f)
+    }
+}
 /// Gather many rules at once, namely:
 /// - [Rule::infix_term]
 /// - [Rule::commun_base]
@@ -467,6 +520,12 @@ boiler_plate!(InnerTerm<'s>, 's, inner_term; |p| {
         r => unreachable_rules!(span, r; infix_term, commun_base)
     }
 });
+impl<'a, S: Display> Display for InnerTerm<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match_as_trait!(ast::InnerTerm, |x| in self => LetIn | If | Fndst | Quant | Application | Infix | Macro
+                    {x.fmt(f)})
+    }
+}
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -505,6 +564,11 @@ boiler_plate!(AppMacro<'a>, 'a, macro_application; |p| {
     Ok(Self{span, inner})
 });
 
+impl<'a, S: Display> Display for AppMacro<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.inner.fmt(f)
+    }
+}
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum InnerAppMacro<'a, S = &'a str> {
     Msg(Application<'a, S>),
@@ -515,6 +579,17 @@ pub enum InnerAppMacro<'a, S = &'a str> {
     },
 }
 
+impl<'a, S: Display> Display for InnerAppMacro<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InnerAppMacro::Msg(arg) => write!(f, "msg!({arg})"),
+            InnerAppMacro::Cond(arg) => write!(f, "cond!({arg})"),
+            InnerAppMacro::Other { name, args } => {
+                write!(f, "{name}({})", args.iter().format(", "))
+            }
+        }
+    }
+}
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Infix<'a, S = &'a str> {
@@ -550,6 +625,13 @@ boiler_plate!(Infix<'a>, 'a, infix_term; |p| {
     }
     Ok(Infix { span, operation, terms })
 });
+
+impl<'a, S: Display> Display for Infix<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let op = format!(" {} ", &self.operation);
+        write!(f, "({})", self.terms.iter().format(&op))
+    }
+}
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum Operation {
@@ -653,6 +735,17 @@ boiler_plate!(Application<'a>, 'a, application; |p| {
     }
 });
 
+impl<'a, S: Display> Display for Application<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Application::ConstVar { content, .. } => content.fmt(f),
+            Application::Application { function, args, .. } => {
+                write!(f, "{function}({})", args.iter().format(", "))
+            }
+        }
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct IfThenElse<'a, S = &'a str> {
@@ -667,6 +760,18 @@ boiler_plate!(IfThenElse<'a>, 'a, if_then_else; |p| {
     destruct_rule!(span in [condition, left, right] = p.into_inner());
     Ok(IfThenElse { span, condition, left, right})
 });
+
+impl<'a, S: Display> Display for IfThenElse<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self {
+            condition,
+            left,
+            right,
+            ..
+        } = self;
+        write!(f, "if {condition} {{{left}}} else {{{right}}}")
+    }
+}
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -684,6 +789,22 @@ boiler_plate!(FindSuchThat<'a>, 'a, find_such_that; |p| {
     Ok(Self { vars, span, condition, left, right})
 });
 
+impl<'a, S: Display> Display for FindSuchThat<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self {
+            vars,
+            condition,
+            left,
+            right,
+            ..
+        } = self;
+        write!(
+            f,
+            "find {vars} such that {condition} then {{{left}}} else {{{right}}}"
+        )
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Quantifier<'a, S = &'a str> {
@@ -699,6 +820,13 @@ boiler_plate!(Quantifier<'a>, 'a, quantifier; |p| {
     Ok(Self { kind, vars, span, content})
 });
 
+impl<'a, S:Display> Display for Quantifier<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self { kind,  vars, content,.. } = self;
+        write!(f, "{kind} {vars} {{{content}}}")
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum QuantifierKind {
     Forall,
@@ -708,6 +836,15 @@ boiler_plate!(QuantifierKind, quantifier_op; {
     forall => Forall,
     exists => Exists
 });
+
+impl Display for QuantifierKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            QuantifierKind::Forall => write!(f, "∀"),
+            QuantifierKind::Exists => write!(f, "∃"),
+        }
+    }
+}
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -724,6 +861,12 @@ boiler_plate!(LetIn<'a>, 'a, let_in; |p| {
     Ok(Self { span, var, t1, t2})
 });
 
+impl<'a, S:Display> Display for LetIn<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self {  var, t1, t2,.. } = self;
+        write!(f, "let {var} = {t1} in {t2}")
+    }
+}
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum Declaration<'a, S = &'a str> {
     Type(DeclareType<'a, S>),
@@ -735,6 +878,14 @@ boiler_plate!(l Declaration<'a>, 'a, declaration; |p| {
     declare_function => { Ok(Declaration::Function(p.try_into()?)) }
     declare_cell => { Ok(Declaration::Cell(p.try_into()?)) }
 });
+
+
+impl<'a, S: Display> Display for Declaration<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match_as_trait!(ast::Declaration, |x| in self => Type | Function | Cell
+                    {x.fmt(f)})
+    }
+}
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -757,6 +908,13 @@ impl<'a, S> DeclareType<'a, S> {
 
     pub fn name_span(&self) -> &Location<'a> {
         &self.name.0.span
+    }
+}
+
+impl<'a, S:Display> Display for DeclareType<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self { name, options,.. }=self;
+        write!(f, "type {name} {options}")
     }
 }
 
@@ -790,6 +948,13 @@ impl<'a, S> DeclareFunction<'a, S> {
     }
 }
 
+impl<'a, S:Display> Display for DeclareFunction<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self { name, args, sort, options,.. }=self;
+        write!(f, "fun {name}{args}:{sort} {options}")
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct DeclareFunctionArgs<'a, S = &'a str> {
@@ -803,6 +968,16 @@ boiler_plate!(DeclareFunctionArgs<'a>, 'a, declare_function_args; |p| {
     Ok(Self { span, args })
 });
 
+impl<'a, S:Display> Display for DeclareFunctionArgs<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.args.is_empty() {
+            Ok(())
+        } else {
+            write!(f, "({})", self.args.iter().format(", "))
+        }
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct DeclareCell<'a, S = &'a str> {
@@ -811,13 +986,20 @@ pub struct DeclareCell<'a, S = &'a str> {
     pub name: Function<'a, S>,
     pub args: DeclareFunctionArgs<'a, S>,
     pub sort: TypeName<'a, S>,
+    pub options: Options<'a, S>,
 }
 boiler_plate!(DeclareCell<'a>, 'a, declare_cell; |p| {
     let span = p.as_span().into();
-    destruct_rule!(span in [name, args, sort] = p);
-    Ok(Self { span, name, args, sort })
+    destruct_rule!(span in [name, args, sort, ?options] = p);
+    Ok(Self { span, name, args, sort, options })
 });
 
+impl<'a, S:Display> Display for DeclareCell<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self {  name, args, sort, options,.. }=self;
+        write!(f, "cell {name}{args}:{sort} {options}")
+    }
+}
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Step<'a, S = &'a str> {
@@ -865,6 +1047,17 @@ boiler_plate!(Step<'a>, 'a, step; |p| {
     Ok(Self { span, name, args, condition, message, assignements, options})
 });
 
+impl<'a, S:Display> Display for Step<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self {  name, args, condition, message, assignements, options,.. } = self;
+        write!(f, "step {name}{args}\n\t{{{condition}}}\n\t{{{message}}}")?;
+        if let Some(a) = assignements {
+            write!(f, "\n\t{a}")?;
+        }
+        write!(f,"\n{options}")
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Assignements<'a, S = &'a str> {
@@ -877,6 +1070,13 @@ boiler_plate!(Assignements<'a>, 'a, assignements; |p| {
     let assignements = p.into_inner().map(TryInto::try_into).try_collect()?;
     Ok(Self { span, assignements })
 });
+
+
+impl<'a, S:Display> Display for Assignements<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.assignements.iter().format(", "))
+    }
+}
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -916,6 +1116,17 @@ boiler_plate!(Assignement<'a>, 'a, assignement; |p| {
     // Ok(Self { span, cell, term })
 });
 
+
+impl<'a, S:Display> Display for Assignement<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self {  cell, term, fresh_vars,.. }=self;
+        if let Some(fv) = fresh_vars {
+            write!(f, "{fv} ")?;
+        }
+        write!(f, "{cell} <- {term}")
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Macro<'a, S = &'a str> {
@@ -938,6 +1149,13 @@ impl<'a, S> Macro<'a, S> {
     }
 }
 
+impl<'a, S:Display> Display for Macro<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self { name, args, term, options,.. } = self;
+        write!(f, "let {name}{args} = {term} {options}")
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Options<'a, S = &'a str> {
@@ -952,6 +1170,12 @@ impl<'a, S> Default for Options<'a, S> {
             span: Default::default(),
             options: Default::default(),
         }
+    }
+}
+
+impl<'a, S: Display> Display for Options<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{}]", self.options.iter().format(", "))
     }
 }
 
@@ -992,6 +1216,12 @@ impl<'a, S> Options<'a, S> {
     }
 }
 
+impl<'a, S: Display> Display for MOption<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
 impl<'a, 'b, S> IntoIterator for &'b Options<'a, S> {
     type Item = &'b MOption<'a, S>;
 
@@ -1014,6 +1244,16 @@ boiler_plate!(l Assert<'a>, 'a, assertion | query | lemma ; |p| {
     lemma_inner => { Ok(Assert::Lemma(p.try_into()?)) }
 });
 
+impl<'a, S: Display> Display for Assert<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Assert::Assertion(a) => write!(f, "assert {a}"),
+            Assert::Query(a) =>write!(f, "query {a}"),
+            Assert::Lemma(a) => write!(f, "lemma {a}"),
+        }
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Assertion<'a, S = &'a str> {
@@ -1027,6 +1267,15 @@ boiler_plate!(Assertion<'a>, 'a, assertion_inner | query_inner | lemma_inner ; |
     destruct_rule!(span in [content, ?options] = p);
     Ok(Self {span, content, options})
 });
+
+
+impl<'a, S:Display> Display for Assertion<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self {  content, options,.. } = self;
+        write!(f, "{content} {options}")
+    }
+}
+
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -1058,6 +1307,13 @@ boiler_plate!(AssertCrypto<'a>, 'a, assertion_crypto ; |p| {
 
     Ok(Self {span, name, functions, options})
 });
+impl<'a, S: Display> Display for AssertCrypto<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self { name, functions, options,.. }=self;
+        write!(f, "assert-crypto {name} {} {options}", functions.iter().format(", "))
+    }
+}
+
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -1077,6 +1333,14 @@ boiler_plate!(Order<'a>, 'a, order ; |p| {
     Ok(Self {span, quantifier, args, t1, t2, kind, options})
 });
 
+impl<'a, S: Display> Display for Order<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self { quantifier, args, t1, t2, kind, options,.. } = self;
+        write!(f, "order {quantifier}{args}{{{t1} {kind} {t2}}} {options}")
+    }
+}
+
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum OrderOperation {
     Incompatible,
@@ -1088,6 +1352,17 @@ boiler_plate!(OrderOperation, ordering_operation; {
     order_lt => Lt,
     order_gt => Gt
 });
+impl Display for OrderOperation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let op = match self {
+            OrderOperation::Incompatible => "<>",
+            OrderOperation::Lt => "<",
+            OrderOperation::Gt => ">",
+        };
+        write!(f, "{op}")
+    }
+}
+
 
 impl<'a, 'b, S> IntoIterator for &'b TypedArgument<'a, S> {
     type Item = &'b VariableBinding<'a, S>;

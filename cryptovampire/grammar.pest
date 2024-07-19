@@ -83,8 +83,8 @@ query = {"query" ~ query_inner ~ options? }
 lemma = {"lemma" ~ lemma_inner ~ options? }
     lemma_inner= { term }
 
-order = {"order" ~ options? ~ quantifier_op ~ typed_arguments ~
-    (inner_order | "{" ~ inner_order ~ "}") }
+order = {"order" ~ quantifier_op ~ typed_arguments ~
+    (inner_order | "{" ~ inner_order ~ "}")  ~ options?}
     inner_order = _{term ~ ordering_operation ~ term}
     ordering_operation = { order_incompatible | order_lt | order_gt }
         order_incompatible = {"<>"}
