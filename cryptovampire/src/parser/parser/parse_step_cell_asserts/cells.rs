@@ -1,16 +1,16 @@
-use crate::parser::{ parser::CellCache, MResult, };
+use crate::parser::{ parser::CellCache, MResult, Pstr, };
 use cryptovampire_lib::{
     container::{allocator::ContainerTools, ScopedContainer},
     problem::cell::InnerMemoryCell,
 };
-use utils::implvec;
+use utils::{implvec, string_ref::StrRef};
 
 use super::super::Environement;
 
-pub fn parse_cells<'a, 'str, 'bump>(
-    env: &'a Environement<'bump, 'str>,
-    cells: implvec!(&'a CellCache<'str, 'bump>),
-) -> MResult<()> {
+pub fn parse_cells<'a, 'str, 'bump, S>(
+    env: &'a Environement<'bump, 'str, S>,
+    cells: implvec!(&'a CellCache<'str, 'bump, S>),
+) -> MResult<()>  where S:Pstr, for <'b> StrRef<'b>:From<&'b S>{
     cells
         .into_iter()
         .try_for_each(|cc @ CellCache { cell, ast, .. }| {
@@ -36,10 +36,10 @@ pub fn parse_cells<'a, 'str, 'bump>(
         })
 }
 
-fn parse_cell<'a, 'bump, 'str>(
-    _env: &'a Environement<'bump, 'str>, // mut for safety
-    cell: &CellCache<'str, 'bump>,
-) -> MResult<InnerMemoryCell<'bump>> {
+fn parse_cell<'a, 'bump, 'str, S>(
+    _env: &'a Environement<'bump, 'str, S>, // mut for safety
+    cell: &CellCache<'str, 'bump, S>,
+) -> MResult<InnerMemoryCell<'bump>>  where S:Pstr, for <'b> StrRef<'b>:From<&'b S>{
     let CellCache {
         args,
         function,

@@ -1,12 +1,14 @@
-
 pub mod ast;
 mod parser;
 // mod builders;
 
+use ast::INIT_STEP_AST;
+use hashbrown::Equivalent;
 pub(crate) use parser::parse_str;
+use static_init::dynamic;
 use thiserror::Error;
 
-use std::{convert::Infallible, ops::Index};
+use std::{borrow::Borrow, convert::Infallible, ops::Index};
 
 use pest::{error::Error, Span};
 use pest_derive::Parser;
@@ -93,7 +95,7 @@ macro_rules! lbail {
 use cryptovampire_lib::formula::{
     function::signature::CheckError, sort::sort_proxy::InferenceError,
 };
-use utils::{f, traits::NicerError};
+use utils::{f, string_ref::StrRef, traits::NicerError};
 
 // trait IntoRuleResult<T, Err> {
 //     fn into_rr<'a>(self, span: Span<'a>) -> Result<T>;
@@ -142,6 +144,7 @@ use utils::{f, traits::NicerError};
 
 mod error {
 
+    use std::default;
     use std::fmt::Display;
 
     use anyhow::anyhow;
@@ -191,12 +194,13 @@ mod error {
         }
     }
 
-    #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+    #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default)]
     pub struct Location<'a>(InnerLocation<'a>);
 
-    #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+    #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default)]
     enum InnerLocation<'a> {
         Span(Span<'a>),
+        #[default]
         None,
     }
 
@@ -224,11 +228,17 @@ mod error {
     }
 
     impl<'a> Location<'a> {
-        pub fn err_with<S>(&self, f: impl FnOnce() -> S) -> InputError where S:Display {
+        pub fn err_with<S>(&self, f: impl FnOnce() -> S) -> InputError
+        where
+            S: Display,
+        {
             InputError::new_with_location(self, anyhow!("{:}", f()))
         }
 
-        pub fn bail_with<T, S>(&self, f: impl FnOnce() -> S) -> super::MResult<T> where S:Display {
+        pub fn bail_with<T, S>(&self, f: impl FnOnce() -> S) -> super::MResult<T>
+        where
+            S: Display,
+        {
             Err(anyhow!("{:}", f())).with_location(self)
         }
 
@@ -258,14 +268,19 @@ mod error {
     }
 
     pub trait WithLocation<T> {
-        fn with_location<'a, I>(self, location: I) -> MResult<T> where Location<'a>:From<I>;
+        fn with_location<'a, I>(self, location: I) -> MResult<T>
+        where
+            Location<'a>: From<I>;
     }
 
     impl<T, E> WithLocation<T> for std::result::Result<T, E>
     where
         anyhow::Error: From<E>,
     {
-        fn with_location<'a, I>(self, location: I) -> MResult<T> where Location<'a>: From<I> {
+        fn with_location<'a, I>(self, location: I) -> MResult<T>
+        where
+            Location<'a>: From<I>,
+        {
             self.map_err(|err| InputError::new_with_location(&location.into(), err.into()))
         }
     }
@@ -310,3 +325,70 @@ mod error {
     }
 }
 pub use error::{InputError, Location};
+
+trait HasInitStep: Sized {
+    fn ref_init_step_ast<'a>() -> &'a ast::Step<'a, Self>;
+    // fn from_static(s:&'static str) -> Self;
+}
+
+trait FromStaticString {
+    fn from_static(s:&'static str) -> Self;
+}
+
+#[dynamic]
+static INIT_STEP_AST_STR: ast::Step<'static, &'static str> = INIT_STEP_AST();
+
+#[dynamic]
+static INIT_STEP_AST_STRREF: ast::Step<'static, StrRef<'static>> = INIT_STEP_AST();
+
+impl<'str> HasInitStep for &'str str {
+    fn ref_init_step_ast<'a>() -> &'a ast::Step<'a, Self> {
+        &INIT_STEP_AST_STR
+    }
+}
+
+impl<'str> FromStaticString for &'str str {
+    fn from_static(s:&'static str) -> Self {
+        s
+    }
+}
+
+impl<'str> HasInitStep for StrRef<'str> {
+    fn ref_init_step_ast<'a>() -> &'a ast::Step<'a, Self> {
+        &INIT_STEP_AST_STRREF
+    }
+}
+
+impl<'str> FromStaticString for StrRef<'str> {
+    fn from_static(s:&'static str) -> Self {
+        s.into()
+    }
+}
+
+pub trait Pstr:
+    Borrow<str>
+    + std::hash::Hash
+    + Clone
+    + std::fmt::Display
+    + Eq
+    // + From<&'static str>
+    + std::fmt::Debug
+    + HasInitStep
+    + FromStaticString
+{
+    fn as_str(&self) -> &str {
+        self.borrow()
+    }
+}
+impl<T> Pstr for T where
+    T: Borrow<str>
+        + std::hash::Hash
+        + Clone
+        + std::fmt::Display
+        + Eq
+        // + From<&'static str>
+        + std::fmt::Debug
+        + HasInitStep
+        +FromStaticString
+{
+}

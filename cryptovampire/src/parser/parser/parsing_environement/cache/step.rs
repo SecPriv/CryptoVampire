@@ -1,6 +1,6 @@
-use std::sync::Arc;
+use std::{rc::Rc, sync::Arc};
 
-use crate::parser::{ast, parser::parsable_trait::VarProxy};
+use crate::parser::{ast, parser::parsable_trait::VarProxy, FromStaticString};
 use cryptovampire_lib::{
     formula::{
         formula::ARichFormula,
@@ -14,38 +14,38 @@ use cryptovampire_lib::{
 use itertools::izip;
 
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone)]
-pub struct StepCache<'str, 'bump> {
+pub struct StepCache<'str, 'bump, S> {
     pub args: Arc<[Sort<'bump>]>,
-    pub args_name: Arc<[&'str str]>,
-    pub ast: &'str ast::Step<'str>,
+    pub args_name: Arc<[S]>,
+    pub ast: &'str ast::Step<'str, S>,
     pub function: Function<'bump>,
     pub step: Step<'bump>,
 }
 
 /// convenient struct to model named arguments
-#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-pub struct NamedVariable<'str, 'bump> {
-    pub name: &'str str,
+#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub struct NamedVariable<'bump, S> {
+    pub name: S,
     pub variable: Variable<'bump>,
 }
 
-impl<'str, 'bump> StepCache<'str, 'bump> {
-    pub fn args_vars(&self) -> impl Iterator<Item = NamedVariable<'str, 'bump>> + '_ {
+impl<'str, 'bump, S> StepCache<'str, 'bump, S> where S:Clone + FromStaticString {
+    pub fn args_vars(&self) -> impl Iterator<Item = NamedVariable<'bump, S>> + '_ {
         izip!(0.., self.args.iter(), self.args_name.iter()).map(|(id, sort, name)| NamedVariable {
-            name: *name,
+            name: name.clone(),
             variable: Variable { id, sort: *sort },
         })
     }
 
     /// all the [NamedVariable] that should be visible within a [ast::Step]
-    pub fn args_vars_with_input(&self) -> impl Iterator<Item = NamedVariable<'str, 'bump>> + '_ {
+    pub fn args_vars_with_input(&self) -> impl Iterator<Item = NamedVariable<'bump, S>> + '_ {
         self.args_vars().chain([self.input_named_var()])
     }
 
     /// the special `in` variable
-    pub fn input_named_var(&self) -> NamedVariable<'str, 'bump> {
+    pub fn input_named_var(&self) -> NamedVariable< 'bump, S>{
         NamedVariable {
-            name: "in",
+            name: S::from_static("in"),
             variable: Variable {
                 id: self.args.len().try_into().unwrap(),
                 sort: MESSAGE.as_sort(),
@@ -74,14 +74,14 @@ impl<'str, 'bump> StepCache<'str, 'bump> {
     }
 }
 
-impl<'str, 'bump> NamedVariable<'str, 'bump> {
+impl<'bump, S> NamedVariable< 'bump, S> {
     pub fn variable(&self) -> Variable<'bump> {
         self.variable
     }
 
     #[allow(dead_code)]
-    pub fn name(&self) -> &'str str {
-        self.name
+    pub fn name(&self) -> &S {
+        &self.name
     }
 
     #[allow(dead_code)]
@@ -94,14 +94,14 @@ impl<'str, 'bump> NamedVariable<'str, 'bump> {
     }
 }
 
-impl<'str, 'bump> Into<(&'str str, VarProxy<'bump>)> for NamedVariable<'str, 'bump> {
-    fn into(self) -> (&'str str, VarProxy<'bump>) {
+impl<'str, 'bump, S:Clone> Into<(S, VarProxy<'bump>)> for NamedVariable< 'bump, S> {
+    fn into(self) -> (S, VarProxy<'bump>) {
         let NamedVariable { name, variable } = self;
-        (name, variable.into())
+        (name.clone(), variable.into())
     }
 }
 
-impl<'str, 'bump> Into<Variable<'bump>> for NamedVariable<'str, 'bump> {
+impl<'bump, S> Into<Variable<'bump>> for NamedVariable< 'bump, S> {
     fn into(self) -> Variable<'bump> {
         self.variable()
     }

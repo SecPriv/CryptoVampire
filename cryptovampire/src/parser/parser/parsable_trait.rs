@@ -1,4 +1,4 @@
-use std::{fmt::Display, ops::Deref};
+use std::{borrow::Borrow, fmt::Display, ops::Deref};
 mod cached_builtins;
 
 use anyhow::Context;
@@ -7,9 +7,9 @@ use log::{log_enabled, trace};
 
 use crate::{
     bail_at, err_at, parser::{
-        ast::{self, extra::SnN, Term, VariableBinding},
+        ast::{self,  extra::SnN, Term, VariableBinding},
         error::WithLocation,
-        InputError, Location, MResult,
+        InputError, Location, MResult, Pstr,
     }
 };
 use cryptovampire_lib::{
@@ -32,7 +32,7 @@ use cryptovampire_lib::{
     },
     smt::SmtFormula,
 };
-use utils::{f, implvec, match_as_trait, maybe_owned::MOw, traits::NicerError, try_trace};
+use utils::{f, implvec, match_as_trait, maybe_owned::MOw, string_ref::StrRef, traits::NicerError, try_trace};
 
 use self::cached_builtins::*;
 
@@ -77,24 +77,26 @@ impl<'bump> From<Variable<'bump>> for VarProxy<'bump> {
 
 pub trait Parsable<'bump, 'str> {
     type R;
+    type S;
     fn parse(
         &self,
-        env: &Environement<'bump, 'str>,
-        bvars: &mut Vec<(&'str str, VarProxy<'bump>)>,
+        env: &Environement<'bump, 'str, Self::S>,
+        bvars: &mut Vec<(Self::S, VarProxy<'bump>)>,
         state: &impl KnowsRealm, // State<'_, 'str, 'bump>,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> MResult<Self::R>;
 }
 
-impl<'a, 'bump> Parsable<'bump, 'a> for ast::LetIn<'a> {
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::LetIn<'a, S> where S:Pstr, for <'b> StrRef<'b>:From<&'b S> {
     type R = ARichFormula<'bump>;
+    type S = S;
 
     #[allow(unreachable_code)]
     #[allow(unused_assignments)]
     fn parse(
         &self,
-        _env: &Environement<'bump, 'a>,
-        _bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
+        _env: &Environement<'bump, 'a, Self::S>,
+        _bvars: &mut Vec<(S, VarProxy<'bump>)>,
         _state: &impl KnowsRealm,
         _expected_sort: Option<SortProxy<'bump>>,
     ) -> MResult<Self::R> {
@@ -133,13 +135,14 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::LetIn<'a> {
         // Ok(t2.owned_into_inner().apply_substitution([vn], [&t1]).into())
     }
 }
-impl<'a, 'bump> Parsable<'bump, 'a> for ast::IfThenElse<'a> {
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::IfThenElse<'a, S> where S:Pstr, for <'b> StrRef<'b>:From<&'b S> {
     type R = ARichFormula<'bump>;
+    type S = S;
 
     fn parse(
         &self,
-        env: &Environement<'bump, 'a>,
-        bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
+        env: &Environement<'bump, 'a, S>,
+        bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> MResult<Self::R> {
@@ -174,13 +177,15 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::IfThenElse<'a> {
     }
 }
 
-impl<'a, 'bump> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::FindSuchThat<'a, S> where S:Pstr, for <'b> StrRef<'b>:From<&'b S> {
+    // where for <'b> StrRef<'b> : From<&'b Self>
     type R = ARichFormula<'bump>;
+    type S = S;
 
     fn parse(
         &self,
-        env: &Environement<'bump, 'a>,
-        bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
+        env: &Environement<'bump, 'a, S>,
+        bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> MResult<Self::R> {
@@ -206,7 +211,8 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
         // build the bound variables
         bvars.reserve(vars.into_iter().len());
         let vars: Result<Vec<_>, InputError> = vars
-            .into_iter()
+            // .iter()
+            .bindings.iter()
             .zip(0..)
             .map(|(v, i)| {
                 let id = i + from_usize(bn);
@@ -217,7 +223,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
                 } = v;
 
                 // ensures the name is free
-                if env.functions.contains_key(variable.name())
+                if env.functions.contains_key(variable.name().borrow())
                     || bvars.iter().map(|(n, _)| n).contains(&variable.name())
                 {
                     // return err(merr(
@@ -240,7 +246,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
 
                 // sneakly expand `bvars`
                 // we need this here to keep the name
-                let content = (variable.name(), var.into());
+                let content = (variable.name().clone(), var.into());
                 bvars.push(content);
 
                 Ok(var)
@@ -270,13 +276,14 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::FindSuchThat<'a> {
         })
     }
 }
-impl<'a, 'bump> Parsable<'bump, 'a> for ast::Quantifier<'a> {
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Quantifier<'a, S> where S:Pstr, for <'b> StrRef<'b>:From<&'b S> {
     type R = ARichFormula<'bump>;
+    type S = S;
 
     fn parse(
         &self,
-        env: &Environement<'bump, 'a>,
-        bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
+        env: &Environement<'bump, 'a, S>,
+        bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> MResult<Self::R> {
@@ -287,6 +294,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Quantifier<'a> {
             content,
             ..
         } = self;
+        
 
         let es = match state.get_realm() {
             Realm::Evaluated => BOOL.as_sort().into(),
@@ -301,6 +309,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Quantifier<'a> {
         bvars.reserve(vars.into_iter().len());
         let vars: Result<Vec<_>, InputError> = vars
             .into_iter()
+            // .bindings.iter()
             .zip(0..)
             .map(|(v, i)| {
                 let id = i + from_usize(bn);
@@ -312,7 +321,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Quantifier<'a> {
 
                 let vname = variable.name();
                 // ensures the name is free
-                if env.functions.contains_key(vname)
+                if env.functions.contains_key(vname.borrow())
                     || bvars.iter().map(|(n, _)| n).contains(&vname)
                 {
                     // return err(merr(
@@ -331,7 +340,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Quantifier<'a> {
 
                 // sneakly expand `bvars`
                 // we need this here to keep the name
-                let content = (variable.name(), var.into());
+                let content = (variable.name().clone(), var.into());
                 bvars.push(content);
 
                 Ok(var)
@@ -362,13 +371,13 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Quantifier<'a> {
             }
         };
 
-        if cfg!(debug_assertions) {
-            try_trace!(
-                "parsing quantifier\n\t{}",
-                SmtFormula::from_arichformula(&RichFormula::Quantifier(q.clone(), content.clone()))
-                    .default_display()
-            )
-        }
+        // if cfg!(debug_assertions) {
+        //     try_trace!(
+        //         "parsing quantifier\n\t{}",
+        //         SmtFormula::from_arichformula(&RichFormula::Quantifier(q.clone(), content.clone()))
+        //             .default_display()
+        //     )
+        // }
 
         Ok(match state.get_realm() {
             Realm::Evaluated => RichFormula::Quantifier(q, content).into(),
@@ -388,13 +397,14 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Quantifier<'a> {
         })
     }
 }
-impl<'a, 'bump> Parsable<'bump, 'a> for ast::Application<'a> {
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Application<'a, S> where S:Pstr, for <'b> StrRef<'b>:From<&'b S> {
     type R = ARichFormula<'bump>;
+    type S = S;
 
     fn parse(
         &self,
-        env: &Environement<'bump, 'a>,
-        bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
+        env: &Environement<'bump, 'a, S>,
+        bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> MResult<Self::R> {
@@ -462,7 +472,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Application<'a> {
                     })
                     // otherwise look for a function
                     .unwrap_or_else(|| {
-                        match *content {
+                        match content.borrow() {
                             "true" | "True" => Ok(match state.get_realm() {
                                 Realm::Symbolic => TRUE_TA_CACHE(),
                                 Realm::Evaluated => TRUE_CACHE(),
@@ -471,7 +481,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Application<'a> {
                                 Realm::Symbolic => FALSE_TA_CACHE(),
                                 Realm::Evaluated => FALSE_CACHE(),
                             }),
-                            content => get_function(env, *span, content).map(MOw::Borrowed),
+                            _ => get_function(env, *span, content.borrow()).map(MOw::Borrowed),
                         }
                         .and_then(|f| {
                             parse_application(
@@ -491,34 +501,34 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Application<'a> {
                 function,
                 args,
             } => {
-                let content = function.0.content.content;
+                let content = function.name();
 
-                match content {
+                match content.borrow() {
                     "not" => Ok(match state.get_realm() {
                         Realm::Symbolic => NOT_TA_CACHE(),
                         Realm::Evaluated => NOT_CACHE(),
                     }),
-                    _ => get_function(env, *span, content).map(MOw::Borrowed),
+                    _ => get_function(env, *span, content.borrow()).map(MOw::Borrowed),
                 }
-                .and_then(|f| parse_application(env, span, state, bvars, expected_sort, &f, args))
+                .and_then(|f| parse_application(env, span, state, bvars, expected_sort, f.borrow(), args))
             }
         }
     }
 }
 
 /// parse a function application (when we know it is definitly a function and not a variable)
-fn parse_application<'b, 'a, 'bump>(
-    env: &'b Environement<'bump, 'a>,
+fn parse_application<'b, 'a, 'bump, S>(
+    env: &'b Environement<'bump, 'a, S>,
     span: &'b Location<'a>,
     state: &impl KnowsRealm,
-    bvars: &'b mut Vec<(&'a str, VarProxy<'bump>)>,
+    bvars: &'b mut Vec<(S, VarProxy<'bump>)>,
     expected_sort: Option<SortProxy<'bump>>,
-    function: &FunctionCache<'a, 'bump>,
-    args: implvec!(&'b ast::Term<'a>),
-) -> MResult<ARichFormula<'bump>> {
-    if cfg!(debug_assertions) {
-        try_trace!("\tparsing head: {}", function.get_function().name())
-    }
+    function: &FunctionCache<'a, 'bump, S>,
+    args: implvec!(&'b ast::Term<'a, S>),
+) -> MResult<ARichFormula<'bump>> where S:Pstr, for <'c> StrRef<'c>:From<&'c S> {
+    // if cfg!(debug_assertions) {
+    //     try_trace!("\tparsing head: {}", function.get_function().name())
+    // }
     // get the evaluated version if needed
     // let fun = match state.get_realm() {
     //     Realm::Evaluated => function
@@ -623,13 +633,14 @@ fn parse_application<'b, 'a, 'bump>(
     Ok(formula)
 }
 
-impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::AppMacro<'a,S> where S:Pstr, for <'b> StrRef<'b>:From<&'b S> {
     type R = ARichFormula<'bump>;
+    type S = S;
 
     fn parse(
         &self,
-        env: &Environement<'bump, 'a>,
-        bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
+        env: &Environement<'bump, 'a, S>,
+        bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> MResult<Self::R> {
@@ -653,7 +664,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
 
                 let step_cache = env
                     .functions
-                    .get(app.name())
+                    .get(app.name().borrow())
                     .and_then(|fc| fc.as_step())
                     .with_context(|| f!("{} is not a known step name", app.name()))
                     .with_location(&app.name_span())
@@ -685,7 +696,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
             ast::InnerAppMacro::Other { name, args } => {
                 let mmacro = env
                     .macro_hash
-                    .get(name.name())
+                    .get(name.name().borrow())
                     .with_context(|| f!("{} is not a known macro", name.name()))
                     .with_location(name.span())
                     // .ok_or_else(|| merr(name.span(), ))?;
@@ -740,7 +751,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
                         .zip(mmacro.args_name.iter())
                         .zip(0..)
                         .map(|((var_sort, var_name), id)| {
-                            (*var_name, Variable::new(id, *var_sort).into())
+                            (var_name.clone(), Variable::new(id, *var_sort).into())
                         })
                         .collect_vec();
                     mmacro.content.parse(env, &mut bvars, state, expected_sort)
@@ -755,13 +766,14 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::AppMacro<'a> {
     }
 }
 
-impl<'a, 'bump> Parsable<'bump, 'a> for ast::Infix<'a> {
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Infix<'a, S> where S:Pstr, for <'b> StrRef<'b>:From<&'b S> {
     type R = ARichFormula<'bump>;
+    type S = S;
 
     fn parse(
         &self,
-        env: &Environement<'bump, 'a>,
-        bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
+        env: &Environement<'bump, 'a, S>,
+        bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> MResult<Self::R> {
@@ -814,7 +826,7 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Infix<'a> {
                         span: self.span,
                         content: ast::Ident {
                             span: self.span,
-                            content: "not",
+                            content: S::from_static("not"),
                         },
                     }),
                     args: vec![ast::Term {
@@ -901,11 +913,11 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Infix<'a> {
     }
 }
 
-fn as_pair_of_term<'a, 'b: 'a>(
+fn as_pair_of_term<'a, 'b: 'a, S>(
     span: Location<'b>,
     op: ast::Operation,
-    iter: impl IntoIterator<Item = (&'a Term<'b>, &'a Term<'b>)>,
-) -> Vec<Term<'b>> {
+    iter: impl IntoIterator<Item = (&'a Term<'b, S>, &'a Term<'b, S>)>,
+) -> Vec<Term<'b, S>> where S:Pstr + 'a, for <'c> StrRef<'c>:From<&'c S> {
     iter.into_iter()
         .map(|(a, b)| ast::Term {
             span,
@@ -918,13 +930,14 @@ fn as_pair_of_term<'a, 'b: 'a>(
         .collect()
 }
 
-impl<'a, 'bump> Parsable<'bump, 'a> for ast::Term<'a> {
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Term<'a, S>  where S:Pstr, for <'b> StrRef<'b>:From<&'b S>{
     type R = ARichFormula<'bump>;
+    type S = S;
 
     fn parse(
         &self,
-        env: &Environement<'bump, 'a>,
-        bvars: &mut Vec<(&'a str, VarProxy<'bump>)>,
+        env: &Environement<'bump, 'a, S>,
+        bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> MResult<Self::R> {
@@ -941,3 +954,121 @@ impl<'a, 'bump> Parsable<'bump, 'a> for ast::Term<'a> {
                     {x.parse(env, bvars, state, expected_sort)})
     }
 }
+
+    // fn parse<'a, 'bump>(
+    //     x:&ast::Quantifier<'a>,
+    //     env: &Environement<'bump, 'a>,
+    //     bvars: &mut Vec<(S, VarProxy<'bump>)>,
+    //     state: &impl KnowsRealm,
+    //     expected_sort: Option<SortProxy<'bump>>,
+    // ) -> () {
+    //     let ast::Quantifier {
+    //         kind,
+    //         span,
+    //         vars,
+    //         content,
+    //         ..
+    //     } = x;
+        
+
+    //     // let es = match state.get_realm() {
+    //     //     Realm::Evaluated => BOOL.as_sort().into(),
+    //     //     Realm::Symbolic => CONDITION.as_sort().into(),
+    //     // };
+    //     // expected_sort
+    //     //     .into_iter()
+    //     //     .try_for_each(|s| s.expects(es, &state).with_location(span))?;
+
+    //     let bn = bvars.len();
+
+    //     bvars.reserve(vars.into_iter().len());
+    //     let vars: Result<Vec<_>, InputError> = vars
+    //         .into_iter()
+    //         // .bindings.iter()
+    //         .zip(0..)
+    //         .map(|(v, i)| {
+    //             let id = i + from_usize(bn);
+    //             let VariableBinding {
+    //                 variable,
+    //                 type_name,
+    //                 ..
+    //             } = v;
+
+    //             // let vname = variable.name();
+    //             // // ensures the name is free
+    //             // if env.functions.contains_key(vname)
+    //             //     || bvars.iter().map(|(n, _)| n).contains(&vname)
+    //             // {
+    //             //     // return err(merr(
+    //             //     //     variable.0.span,
+    //             //     //     f!("the name {} is already taken", vname),
+    //             //     // ));
+    //             //     bail_at!(variable.0.span, "the name {vname} is already taken")
+    //             // }
+
+    //             let SnN { span, name } = type_name.into();
+
+    //             let var = Variable {
+    //                 id,
+    //                 sort: get_sort(env, *span, name)?,
+    //             };
+
+    //             // // sneakly expand `bvars`
+    //             // // we need this here to keep the name
+    //             let content = (variable.name(), var.into());
+    //             bvars.push(content);
+
+    //             // Ok(var)
+    //             Ok(())
+    //         })
+    //         .collect();
+    //     // let vars = vars?.into();
+
+    //     // // parse body
+    //     // let content = content.parse(env, bvars, state, Some(es.into()))?;
+
+    //     // // remove bounded variables from pile
+    //     // bvars.truncate(bn);
+
+    //     // let q = {
+    //     //     // let status = match state.get_realm() {
+    //     //     //     Realm::Evaluated => formula::quantifier::Status::Bool,
+    //     //     //     Realm::Symbolic => formula::quantifier::Status::Condition,
+    //     //     // };
+    //     //     match kind {
+    //     //         ast::QuantifierKind::Forall => formula::quantifier::Quantifier::Forall {
+    //     //             variables: vars,
+    //     //             // status,
+    //     //         },
+    //     //         ast::QuantifierKind::Exists => formula::quantifier::Quantifier::Exists {
+    //     //             variables: vars,
+    //     //             // status,
+    //     //         },
+    //     //     }
+    //     // };
+
+    //     // if cfg!(debug_assertions) {
+    //     //     try_trace!(
+    //     //         "parsing quantifier\n\t{}",
+    //     //         SmtFormula::from_arichformula(&RichFormula::Quantifier(q.clone(), content.clone()))
+    //     //             .default_display()
+    //     //     )
+    //     // }
+
+    //     // Ok(match state.get_realm() {
+    //     //     Realm::Evaluated => RichFormula::Quantifier(q, content).into(),
+    //     //     Realm::Symbolic => {
+    //     //         let fq = Function::new_quantifier_from_quantifier(env.container, q, content);
+
+    //     //         let args = match fq.as_inner() {
+    //     //             function::InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q)) => {
+    //     //                 q.free_variables.iter()
+    //     //             }
+    //     //             _ => unreachable!(),
+    //     //         }
+    //     //         .map(ARichFormula::from);
+
+    //     //         fq.f_a(args)
+    //     //     }
+    //     // })
+    // }

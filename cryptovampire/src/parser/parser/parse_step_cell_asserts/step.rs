@@ -8,7 +8,7 @@ use crate::{
     parser::{
         error::WithLocation,
         parser::{parsable_trait::Parsable, CellCache, FunctionCache},
-        InputError, MResult,
+        InputError, MResult, Pstr,
     },
 };
 use cryptovampire_lib::{
@@ -20,7 +20,7 @@ use cryptovampire_lib::{
     },
     problem::{cell::Assignement, step::InnerStep},
 };
-use utils::implvec;
+use utils::{implvec, string_ref::StrRef};
 
 use super::super::{super::ast, Environement, StepCache};
 
@@ -29,11 +29,11 @@ use super::super::{super::ast, Environement, StepCache};
 /// This should be done farily late. Only takes a [StepCache].
 ///
 /// The function returns a [InnerStep] to *maybe* mutlipthread things on day...
-fn parse_step<'bump, 'str>(
-    env: &Environement<'bump, 'str>,
-    step_cache: &StepCache<'str, 'bump>,
+fn parse_step<'bump, 'str, S>(
+    env: &Environement<'bump, 'str, S>,
+    step_cache: &StepCache<'str, 'bump, S>,
     // name: &str,
-) -> MResult<InnerStep<'bump>> {
+) -> MResult<InnerStep<'bump>> where S:Pstr, for <'b> StrRef<'b>:From<&'b S>  {
     let StepCache {
         ast,
         function,
@@ -103,13 +103,13 @@ fn parse_step<'bump, 'str>(
                             },
                             i,
                         )| {
-                            let sort = env.find_sort(type_name.name_span(), type_name.name())?;
+                            let sort = env.find_sort(type_name.name_span(), type_name.name().borrow())?;
                             let id = from_usize(n) + i;
                             let var = Variable { id, sort };
 
                             if env.contains_name_with_var(
-                                variable.name(),
-                                bvars.iter().map(|(n, _)| *n),
+                                variable.name().borrow(),
+                                bvars.iter().map(|(n, _)| n.borrow()),
                             ) {
                                 // Err(merr(
                                 //     variable.0.span,
@@ -121,7 +121,7 @@ fn parse_step<'bump, 'str>(
                                     variable.name()
                                 )
                             } else {
-                                bvars.push((variable.name(), var.into()));
+                                bvars.push((variable.name().clone(), var.into()));
                                 Ok(var)
                             }
                         },
@@ -141,7 +141,7 @@ fn parse_step<'bump, 'str>(
                 args, assignements, ..
             } = env
                 .functions
-                .get(cell_name)
+                .get(cell_name.borrow())
                 .and_then(FunctionCache::as_memory_cell)
                 .with_context(|| format!("cell {cell_name} doesn't exists"))
                 .with_location(cell_ast.span())
@@ -195,10 +195,10 @@ fn parse_step<'bump, 'str>(
     ))
 }
 
-pub fn parse_steps<'a, 'bump, 'str>(
-    env: &'a Environement<'bump, 'str>, // mut for safety
-    steps: implvec!(&'a StepCache<'str, 'bump>),
-) -> MResult<()> {
+pub fn parse_steps<'a, 'bump, 'str, S>(
+    env: &'a Environement<'bump, 'str, S>, // mut for safety
+    steps: implvec!(&'a StepCache<'str, 'bump, S>),
+) -> MResult<()>where S:Pstr, for <'b> StrRef<'b>:From<&'b S>  {
     steps
         .into_iter()
         .try_for_each(|step_cache @ StepCache { ast, step, .. }| {

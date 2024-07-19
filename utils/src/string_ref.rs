@@ -52,6 +52,13 @@ impl<'a> From<&'a str> for StrRef<'a> {
     }
 }
 
+impl<'a, 'b> From<&'b &'a str> for StrRef<'b> {
+    #[inline]
+    fn from(value: &'b &'a str) -> Self {
+        StrRef::Ref(value)
+    }
+}
+
 impl<'a> From<String> for StrRef<'a> {
     #[inline]
     fn from(value: String) -> Self {

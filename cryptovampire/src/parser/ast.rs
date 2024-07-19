@@ -132,24 +132,29 @@ macro_rules! destruct_rule {
     }
 }
 
-const INIT_STEP_STRING: &'static str = concatcp!("step ", INIT_STEP_NAME, "(){true}{empty}");
+// const INIT_STEP_STRING: &'static str = concatcp!("step ", INIT_STEP_NAME, "(){true}{empty}");
 
-#[dynamic]
-pub static INIT_STEP_AST: Step<'static> = {
-    let ASTList { content, .. } = INIT_STEP_STRING.try_into().unwrap();
-    match content.into_iter().next() {
-        Some(AST::Step(s)) => *s,
-        _ => unreachable!(),
-    }
-};
+pub fn INIT_STEP_AST<S>()-> Step<'static, S> where S:From<&'static str>{
+    let condition = Term::new_default_const("true".into());
+    let message = Term::new_default_const("empty".into());
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct ASTList<'a> {
-    pub content: Vec<AST<'a>>,
-    pub begining: Position<'a>,
+    Step { span: Location::default(), name: StepName::from_S(INIT_STEP_NAME.into()), args: TypedArgument::default(), 
+        condition , message, assignements: Default::default(), options:  Default::default()}
 }
 
-impl<'a> TryFrom<&'a str> for ASTList<'a> {
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct ASTList<'str, S=&'str str> {
+    pub content: Vec<AST<'str, S>>,
+    pub begining: Option<Position<'str>>,
+}
+
+impl<'str, S> ASTList<'str, S> {
+    pub fn shorten_ref<'a>(&'a self) -> &'a ASTList<'a, S> {
+        self
+    }
+}
+
+impl<'a> TryFrom<&'a str> for ASTList<'a, &'a str> {
     type Error = InputError;
 
     fn try_from(value: &'a str) -> MResult<Self> {
@@ -167,15 +172,15 @@ impl<'a> TryFrom<&'a str> for ASTList<'a> {
                 })
                 .try_collect()
                 .debug_continue()?,
-            begining: Position::from_start(value),
+            begining: Some(Position::from_start(value)),
         })
     }
 }
 
-impl<'str, 'b> IntoIterator for &'b ASTList<'str> {
-    type Item = &'b AST<'str>;
+impl<'str, 'b, S> IntoIterator for &'b ASTList<'str, S> {
+    type Item = &'b AST<'str, S>;
 
-    type IntoIter = Iter<'b, AST<'str>>;
+    type IntoIter = Iter<'b, AST<'str, S>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.content.iter()
@@ -190,14 +195,21 @@ pub struct Sub<'s, T> {
     pub content: T,
 }
 
+impl<'s, T> Sub<'s, T> {
+    /// using [Location::default]
+    pub fn from_content(c:T) -> Self {
+        Self { span: Default::default(), content: c }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub enum AST<'a> {
-    Declaration(Box<Declaration<'a>>),
-    Step(Box<Step<'a>>),
-    Order(Box<Order<'a>>),
-    AssertCrypto(Box<AssertCrypto<'a>>),
-    Assert(Box<Assert<'a>>),
-    Let(Box<Macro<'a>>),
+pub enum AST<'a, S=&'a str> {
+    Declaration(Box<Declaration<'a, S>>),
+    Step(Box<Step<'a, S>>),
+    Order(Box<Order<'a, S>>),
+    AssertCrypto(Box<AssertCrypto<'a, S>>),
+    Assert(Box<Assert<'a, S>>),
+    Let(Box<Macro<'a, S>>),
 }
 boiler_plate!(l AST<'a>, 'a, content; |p| {
     declaration => { Ok(AST::Declaration(Box::new(p.try_into()?))) }
@@ -211,25 +223,36 @@ boiler_plate!(l AST<'a>, 'a, content; |p| {
 /// [Rule::ident]
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-pub struct Ident<'s> {
+pub struct Ident<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'s>,
-    pub content: &'s str,
+    pub span: Location<'a>,
+    pub content: S,
 }
 boiler_plate!(Ident<'s>, 's, ident; |p| {
     Ok(Ident { span: p.as_span().into(), content: p.as_str()})
 });
 
+impl<'s, S> Ident<'s, S> {
+    pub fn name(&self) -> &S {
+        &self.content
+    }
+     
+    /// using [Location::default]
+    pub fn from_content(s:S) -> Self {
+        Ident { span: Default::default(), content: s }
+    }
+}
+
 /// [Rule::type_name]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct TypeName<'a>(pub Sub<'a, Ident<'a>>);
+pub struct TypeName<'a, S=&'a str>(pub Sub<'a, Ident<'a, S>>);
 boiler_plate!(TypeName<'a>, 'a, type_name; |p| {
     Ok(Self(Sub { span: p.as_span().into(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
-impl<'a> TypeName<'a> {
-    pub fn name(&self) -> &'a str {
-        self.0.content.content
+impl<'a,S> TypeName<'a, S> {
+    pub fn name(&self) -> &S {
+        self.0.content.name()
     }
 
     pub fn name_span(&self) -> Location<'a> {
@@ -239,14 +262,14 @@ impl<'a> TypeName<'a> {
 
 /// [Rule::macro_name]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct MacroName<'a>(pub Sub<'a, Ident<'a>>);
+pub struct MacroName<'a, S=&'a str>(pub Sub<'a, Ident<'a, S>>);
 boiler_plate!(MacroName<'a>, 'a, macro_name; |p| {
     Ok(Self(Sub { span: p.as_span().into(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
-impl<'a> MacroName<'a> {
-    pub fn name(&self) -> &'a str {
-        self.0.content.content
+impl<'a, S> MacroName<'a, S> {
+    pub fn name(&self) -> &S {
+        self.0.content.name()
     }
 
     pub fn span(&self) -> Location<'a> {
@@ -256,44 +279,52 @@ impl<'a> MacroName<'a> {
 
 /// [Rule::function]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Function<'a>(pub Sub<'a, Ident<'a>>);
+pub struct Function<'a, S=&'a str>(pub Sub<'a, Ident<'a, S>>);
 boiler_plate!(Function<'a>, 'a, function; |p| {
     Ok(Self(Sub { span: p.as_span().into(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
-impl<'a> Function<'a> {
-    pub fn name(&self) -> &'a str {
-        self.0.content.content
+impl<'a, S> Function<'a, S> {
+    pub fn name(&self) -> &S {
+        self.0.content.name()
     }
 
     pub fn span(&self) -> Location<'a> {
         self.0.span
     }
+
+    pub fn from_name(s:S) -> Self {
+        Self(Sub::from_content(Ident::from_content(s)))
+    }
 }
 
 /// [Rule::variable]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Variable<'a>(pub Sub<'a, &'a str>);
+pub struct Variable<'a, S=&'a str>(pub Sub<'a, S>);
 boiler_plate!(Variable<'a>, 'a, variable; |p| {
     Ok(Self(Sub { span: p.as_span().into(), content: p.as_str() }))
 });
 
-impl<'a> Variable<'a> {
-    pub fn name(&self) -> &'a str {
-        self.0.content
+impl<'a, S> Variable<'a, S> {
+    pub fn name(&self) -> &S{
+        &self.0.content
     }
 }
 
 /// [Rule::step_name]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct StepName<'a>(pub Sub<'a, Ident<'a>>);
+pub struct StepName<'a, S=&'a str>(pub Sub<'a, Ident<'a, S>>);
 boiler_plate!(StepName<'a>, 'a, step_name; |p| {
     Ok(Self(Sub { span: p.as_span().into(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
-impl<'a> StepName<'a> {
-    pub fn name(&self) -> &'a str {
-        self.0.content.content
+impl<'a, S> StepName<'a, S> {
+    pub fn name(&self) -> &S {
+        self.0.content.name()
+    }
+
+    pub fn from_S(s:S)-> Self {
+        Self(Sub { span: Default::default(), content: Ident::from_content(s) })
     }
 }
 
@@ -302,10 +333,10 @@ impl<'a> StepName<'a> {
 /// [Rule::typed_arguments]
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct TypedArgument<'a> {
+pub struct TypedArgument<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
-    pub bindings: Vec<VariableBinding<'a>>,
+    pub bindings: Vec<VariableBinding<'a, S>>,
 }
 boiler_plate!(TypedArgument<'a>, 'a, typed_arguments; |p| {
     let span = p.as_span().into();
@@ -313,14 +344,21 @@ boiler_plate!(TypedArgument<'a>, 'a, typed_arguments; |p| {
     Ok(TypedArgument { span, bindings: bindings? })
 });
 
+impl<'a, S> Default for TypedArgument<'a, S> {
+    fn default() -> Self {
+        Self { span: Default::default(), bindings: Default::default() }
+    }
+}
+
+
 /// [Rule::variable_binding]
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct VariableBinding<'a> {
+pub struct VariableBinding<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
-    pub variable: Variable<'a>,
-    pub type_name: TypeName<'a>,
+    pub variable: Variable<'a, S>,
+    pub type_name: TypeName<'a, S>,
 }
 boiler_plate!(VariableBinding<'s>, 's, variable_binding; |p| {
     let span = p.as_span().into();
@@ -334,10 +372,10 @@ boiler_plate!(VariableBinding<'s>, 's, variable_binding; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Term<'a> {
+pub struct Term<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
-    pub inner: InnerTerm<'a>,
+    pub inner: InnerTerm<'a, S>,
 }
 boiler_plate!(Term<'s>, 's, term; |p| {
     let span = p.as_span().into();
@@ -345,18 +383,26 @@ boiler_plate!(Term<'s>, 's, term; |p| {
     Ok(Term{span, inner})
 });
 
+impl<'a, S> Term<'a, S> {
+    /// build a new constant term, relying on the implementation of [Location::default]
+    pub fn new_default_const(s:S) -> Self {
+        Term { span: Default::default(), inner: InnerTerm::Application(Box::new(
+            Application::Application { span: Default::default(), function: Function::from_name(s), args: Default::default() }))}
+    }
+}
+
 /// Gather many rules at once, namely:
 /// - [Rule::infix_term]
 /// - [Rule::commun_base]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub enum InnerTerm<'a> {
-    LetIn(Box<LetIn<'a>>),
-    If(Box<IfThenElse<'a>>),
-    Fndst(Box<FindSuchThat<'a>>),
-    Quant(Box<Quantifier<'a>>),
-    Application(Box<Application<'a>>),
-    Infix(Box<Infix<'a>>),
-    Macro(Box<AppMacro<'a>>),
+pub enum InnerTerm<'a, S=&'a str> {
+    LetIn(Box<LetIn<'a, S>>),
+    If(Box<IfThenElse<'a, S>>),
+    Fndst(Box<FindSuchThat<'a, S>>),
+    Quant(Box<Quantifier<'a, S>>),
+    Application(Box<Application<'a, S>>),
+    Infix(Box<Infix<'a, S>>),
+    Macro(Box<AppMacro<'a, S>>),
 }
 boiler_plate!(InnerTerm<'s>, 's, inner_term; |p| {
     let span: Location = p.as_span().into();
@@ -395,10 +441,10 @@ boiler_plate!(InnerTerm<'s>, 's, inner_term; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct AppMacro<'a> {
+pub struct AppMacro<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
-    pub inner: InnerAppMacro<'a>,
+    pub inner: InnerAppMacro<'a, S>,
 }
 
 fn from_term_to_application<'a>(p: Pair<'a, Rule>) -> MResult<Application<'a>> {
@@ -431,22 +477,22 @@ boiler_plate!(AppMacro<'a>, 'a, macro_application; |p| {
 });
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum InnerAppMacro<'a> {
-    Msg(Application<'a>),
-    Cond(Application<'a>),
+pub enum InnerAppMacro<'a, S=&'a str> {
+    Msg(Application<'a, S>),
+    Cond(Application<'a, S>),
     Other {
-        name: MacroName<'a>,
-        args: Vec<Term<'a>>,
+        name: MacroName<'a, S>,
+        args: Vec<Term<'a, S>>,
     },
 }
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Infix<'a> {
+pub struct Infix<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
     pub operation: Operation,
-    pub terms: Vec<Term<'a>>,
+    pub terms: Vec<Term<'a, S>>,
 }
 boiler_plate!(Infix<'a>, 'a, infix_term; |p| {
     let span = p.as_span().into();
@@ -518,27 +564,36 @@ boiler_plate!(Operation, operation; {
     Hash,
     Clone
 )]
-pub enum Application<'a> {
+pub enum Application<'a, S=&'a str> {
     ConstVar {
         #[derivative(PartialOrd = "ignore", Ord = "ignore")]
         span: Location<'a>,
-        content: &'a str,
+        content: S,
     },
     Application {
         #[derivative(PartialOrd = "ignore", Ord = "ignore")]
         span: Location<'a>,
-        function: Function<'a>,
-        args: Vec<Term<'a>>,
+        function: Function<'a, S>,
+        args: Vec<Term<'a, S>>,
     },
 }
 
-impl<'a> Application<'a> {
-    pub fn name(&self) -> &'a str {
+impl<'a, S> Application<'a, S> {
+    pub fn name(&self) -> &S {
         match self {
-            Application::ConstVar { content, .. } => *content,
-            Application::Application { function, .. } => function.0.content.content,
+            Application::ConstVar { content, .. } => content,
+            Application::Application { function, .. } => function.name(),
         }
     }
+
+    pub fn args(&self) -> VecRef<'_, Term<'a, S>> {
+        match self {
+            Application::ConstVar { .. } => VecRef::Empty,
+            Application::Application { args, .. } => args.as_slice().into(),
+        }
+    }
+// }
+// impl<'a> Application<'a> {
     pub fn name_span(&self) -> Location<'a> {
         match self {
             Application::ConstVar { span, .. } => *span,
@@ -549,13 +604,6 @@ impl<'a> Application<'a> {
     pub fn span(&self) -> Location<'a> {
         match self {
             Application::ConstVar { span, .. } | Application::Application { span, .. } => *span,
-        }
-    }
-
-    pub fn args(&self) -> VecRef<'_, Term<'a>> {
-        match self {
-            Application::ConstVar { .. } => VecRef::Empty,
-            Application::Application { args, .. } => args.as_slice().into(),
         }
     }
 }
@@ -574,12 +622,12 @@ boiler_plate!(Application<'a>, 'a, application; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct IfThenElse<'a> {
+pub struct IfThenElse<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
-    pub condition: Term<'a>,
-    pub left: Term<'a>,
-    pub right: Term<'a>,
+    pub condition: Term<'a, S>,
+    pub left: Term<'a, S>,
+    pub right: Term<'a, S>,
 }
 boiler_plate!(IfThenElse<'a>, 'a, if_then_else; |p| {
     let span = p.as_span().into();
@@ -589,13 +637,13 @@ boiler_plate!(IfThenElse<'a>, 'a, if_then_else; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct FindSuchThat<'a> {
+pub struct FindSuchThat<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
-    pub vars: TypedArgument<'a>,
-    pub condition: Term<'a>,
-    pub left: Term<'a>,
-    pub right: Term<'a>,
+    pub vars: TypedArgument<'a, S>,
+    pub condition: Term<'a, S>,
+    pub left: Term<'a, S>,
+    pub right: Term<'a, S>,
 }
 boiler_plate!(FindSuchThat<'a>, 'a, find_such_that; |p| {
     let span = p.as_span().into();
@@ -605,18 +653,19 @@ boiler_plate!(FindSuchThat<'a>, 'a, find_such_that; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Quantifier<'a> {
+pub struct Quantifier<'a, S=&'a str> {
     pub kind: QuantifierKind,
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
-    pub vars: TypedArgument<'a>,
-    pub content: Term<'a>,
+    pub vars: TypedArgument<'a, S>,
+    pub content: Term<'a, S>,
 }
 boiler_plate!(Quantifier<'a>, 'a, quantifier; |p| {
     let span = p.as_span().into();
     destruct_rule!(span in [kind, vars, content] = p.into_inner());
     Ok(Self { kind, vars, span, content})
 });
+
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum QuantifierKind {
@@ -630,12 +679,12 @@ boiler_plate!(QuantifierKind, quantifier_op; {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct LetIn<'a> {
+pub struct LetIn<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
-    pub var: Variable<'a>,
-    pub t1: Term<'a>,
-    pub t2: Term<'a>,
+    pub var: Variable<'a, S>,
+    pub t1: Term<'a, S>,
+    pub t2: Term<'a, S>,
 }
 boiler_plate!(LetIn<'a>, 'a, let_in; |p| {
     let span = p.as_span().into();
@@ -644,10 +693,10 @@ boiler_plate!(LetIn<'a>, 'a, let_in; |p| {
 });
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub enum Declaration<'a> {
-    Type(DeclareType<'a>),
-    Function(DeclareFunction<'a>),
-    Cell(DeclareCell<'a>),
+pub enum Declaration<'a, S=&'a str> {
+    Type(DeclareType<'a, S>),
+    Function(DeclareFunction<'a, S>),
+    Cell(DeclareCell<'a, S>),
 }
 boiler_plate!(l Declaration<'a>, 'a, declaration; |p| {
     declare_type => { Ok(Declaration::Type(p.try_into()?)) }
@@ -657,11 +706,11 @@ boiler_plate!(l Declaration<'a>, 'a, declaration; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct DeclareType<'a> {
+pub struct DeclareType<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
-    pub name: TypeName<'a>,
-    pub options: Options<'a>,
+    pub name: TypeName<'a, S>,
+    pub options: Options<'a, S>,
 }
 boiler_plate!(DeclareType<'a>, 'a, declare_type; |p| {
     let span = p.as_span().into();
@@ -669,25 +718,25 @@ boiler_plate!(DeclareType<'a>, 'a, declare_type; |p| {
     Ok(Self { span, name, options })
 });
 
-impl<'a> DeclareType<'a> {
-    pub fn name(&self) -> &'a str {
-        self.name.0.content.content
+impl<'a, S> DeclareType<'a, S> {
+    pub fn name(&self) -> &S {
+        self.name.name()
     }
 
-    pub fn get_name_span(&self) -> &Location<'a> {
+    pub fn name_span(&self) -> &Location<'a> {
         &self.name.0.span
     }
 }
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct DeclareFunction<'a> {
+pub struct DeclareFunction<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
-    pub name: Function<'a>,
-    pub args: DeclareFunctionArgs<'a>,
-    pub sort: TypeName<'a>,
-    pub options: Options<'a>,
+    pub name: Function<'a, S>,
+    pub args: DeclareFunctionArgs<'a, S>,
+    pub sort: TypeName<'a, S>,
+    pub options: Options<'a, S>,
 }
 boiler_plate!(DeclareFunction<'a>, 'a, declare_function; |p| {
     let span = p.as_span().into();
@@ -695,26 +744,26 @@ boiler_plate!(DeclareFunction<'a>, 'a, declare_function; |p| {
     Ok(Self { span, name, args, sort, options })
 });
 
-impl<'a> DeclareFunction<'a> {
-    pub fn name(&self) -> Ident<'a> {
-        self.name.0.content
+impl<'a, S> DeclareFunction<'a, S> {
+    pub fn name(&self) -> &Ident<'a, S> {
+        &self.name.0.content
     }
 
-    pub fn args(&'_ self) -> impl Iterator<Item = Ident<'a>> + '_ {
-        self.args.args.iter().map(|tn| tn.0.content)
+    pub fn args(&'_ self) -> impl Iterator<Item = &'_ Ident<'a, S>> + '_ {
+        self.args.args.iter().map(|tn| &tn.0.content)
     }
 
-    pub fn out(&self) -> Ident<'a> {
-        self.sort.0.content
+    pub fn out(&self) -> &Ident<'a, S> {
+        &self.sort.0.content
     }
 }
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct DeclareFunctionArgs<'a> {
+pub struct DeclareFunctionArgs<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
-    pub args: Vec<TypeName<'a>>,
+    pub args: Vec<TypeName<'a, S>>,
 }
 boiler_plate!(DeclareFunctionArgs<'a>, 'a, declare_function_args; |p| {
     let span = p.as_span().into();
@@ -724,12 +773,12 @@ boiler_plate!(DeclareFunctionArgs<'a>, 'a, declare_function_args; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct DeclareCell<'a> {
+pub struct DeclareCell<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
-    pub name: Function<'a>,
-    pub args: DeclareFunctionArgs<'a>,
-    pub sort: TypeName<'a>,
+    pub name: Function<'a, S>,
+    pub args: DeclareFunctionArgs<'a, S>,
+    pub sort: TypeName<'a, S>,
 }
 boiler_plate!(DeclareCell<'a>, 'a, declare_cell; |p| {
     let span = p.as_span().into();
@@ -739,19 +788,19 @@ boiler_plate!(DeclareCell<'a>, 'a, declare_cell; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Step<'a> {
+pub struct Step<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
-    pub name: StepName<'a>,
-    pub args: TypedArgument<'a>,
-    pub condition: Term<'a>,
-    pub message: Term<'a>,
-    pub assignements: Option<Assignements<'a>>,
-    pub options: Options<'a>,
+    pub name: StepName<'a, S>,
+    pub args: TypedArgument<'a, S>,
+    pub condition: Term<'a, S>,
+    pub message: Term<'a, S>,
+    pub assignements: Option<Assignements<'a, S>>,
+    pub options: Options<'a, S>,
 }
 
-impl<'a> Step<'a> {
-    pub fn args_names(&'_ self) -> impl Iterator<Item = &'a str> + '_ {
+impl<'a, S> Step<'a, S> {
+    pub fn args_names(&'_ self) -> impl Iterator<Item = &'_ S> + '_ {
         self.args.bindings.iter().map(|vb| vb.variable.name())
     }
 }
@@ -786,10 +835,10 @@ boiler_plate!(Step<'a>, 'a, step; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Assignements<'a> {
+pub struct Assignements<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
-    pub assignements: Vec<Assignement<'a>>,
+    pub assignements: Vec<Assignement<'a, S>>,
 }
 boiler_plate!(Assignements<'a>, 'a, assignements; |p| {
     let span = p.as_span().into();
@@ -799,12 +848,12 @@ boiler_plate!(Assignements<'a>, 'a, assignements; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Assignement<'a> {
+pub struct Assignement<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
-    pub cell: Application<'a>,
-    pub term: Term<'a>,
-    pub fresh_vars: Option<TypedArgument<'a>>,
+    pub cell: Application<'a, S>,
+    pub term: Term<'a, S>,
+    pub fresh_vars: Option<TypedArgument<'a, S>>,
 }
 boiler_plate!(Assignement<'a>, 'a, assignement; |p| {
     let span = p.as_span().into();
@@ -837,13 +886,13 @@ boiler_plate!(Assignement<'a>, 'a, assignement; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Macro<'a> {
+pub struct Macro<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
-    pub name: MacroName<'a>,
-    pub args: TypedArgument<'a>,
-    pub term: Term<'a>,
-    pub options: Options<'a>,
+    pub name: MacroName<'a, S>,
+    pub args: TypedArgument<'a, S>,
+    pub term: Term<'a, S>,
+    pub options: Options<'a, S>,
 }
 boiler_plate!(Macro<'a>, 'a, mlet ; |p| {
     let span = p.as_span().into();
@@ -851,25 +900,31 @@ boiler_plate!(Macro<'a>, 'a, mlet ; |p| {
     Ok(Self {span, name, args, term, options})
 });
 
-impl<'a> Macro<'a> {
-    pub fn args_names(&'_ self) -> impl Iterator<Item = &'a str> + '_ {
+impl<'a, S> Macro<'a, S> {
+    pub fn args_names(&'_ self) -> impl Iterator<Item = &'_ S> + '_ {
         self.args.bindings.iter().map(|vb| vb.variable.name())
     }
 }
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Options<'a> {
+pub struct Options<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
-    pub options: Vec<MOption<'a>>,
+    pub options: Vec<MOption<'a, S>>,
+}
+
+impl<'a, S> Default for Options<'a, S> {
+    fn default() -> Self {
+        Self { span: Default::default(), options: Default::default() }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct MOption<'a>(Ident<'a>);
+pub struct MOption<'a, S=&'a str>(Ident<'a, S>);
 
-impl<'a> From<Ident<'a>> for MOption<'a> {
-    fn from(value: Ident<'a>) -> Self {
+impl<'a, S> From<Ident<'a, S>> for MOption<'a, S> {
+    fn from(value: Ident<'a, S>) -> Self {
         Self(value)
     }
 }
@@ -879,7 +934,7 @@ boiler_plate!(Options<'a>, 'a, options; |p| {
     let options = p.into_inner().map(Ident::try_from).map(|r| r.map(MOption::from)).try_collect()?;
     Ok(Self { span, options })
 });
-impl<'a> Options<'a> {
+impl<'a, S> Options<'a, S> {
     pub fn empty(span: Location<'a>) -> Self {
         Self {
             span,
@@ -887,22 +942,22 @@ impl<'a> Options<'a> {
         }
     }
 
-    pub fn as_str_list<'b>(&'b self) -> impl Iterator<Item = &'a str> + 'b {
-        self.options.iter().map(|MOption(i)| i.content)
+    pub fn as_str_list<'b>(&'b self) -> impl Iterator<Item = &'_ S> + 'b {
+        self.options.iter().map(|MOption(i)| &i.content)
     }
 
     pub fn iter<'b>(&'b self) -> <&'b Self as IntoIterator>::IntoIter {
         (&self).into_iter()
     }
-    pub fn contains(&self, str: &str) -> bool {
-        self.as_str_list().any(|s| s == str)
+    pub fn contains(&self, str: &str) -> bool where S:Borrow<str> {
+        self.as_str_list().any(|s| s.borrow() == str)
     }
 }
 
-impl<'a, 'b> IntoIterator for &'b Options<'a> {
-    type Item = &'b MOption<'a>;
+impl<'a, 'b, S> IntoIterator for &'b Options<'a, S> {
+    type Item = &'b MOption<'a, S>;
 
-    type IntoIter = slice::Iter<'b, MOption<'a>>;
+    type IntoIter = slice::Iter<'b, MOption<'a, S>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.options.iter()
@@ -910,10 +965,10 @@ impl<'a, 'b> IntoIterator for &'b Options<'a> {
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub enum Assert<'a> {
-    Assertion(Assertion<'a>),
-    Query(Assertion<'a>),
-    Lemma(Assertion<'a>),
+pub enum Assert<'a, S=&'a str> {
+    Assertion(Assertion<'a, S>),
+    Query(Assertion<'a, S>),
+    Lemma(Assertion<'a, S>),
 }
 boiler_plate!(l Assert<'a>, 'a, assertion | query | lemma ; |p| {
     assertion_inner => { Ok(Assert::Assertion(p.try_into()?)) }
@@ -923,11 +978,11 @@ boiler_plate!(l Assert<'a>, 'a, assertion | query | lemma ; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Assertion<'a> {
+pub struct Assertion<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
-    pub content: Term<'a>,
-    pub options: Options<'a>,
+    pub content: Term<'a, S>,
+    pub options: Options<'a, S>,
 }
 boiler_plate!(Assertion<'a>, 'a, assertion_inner | query_inner | lemma_inner ; |p| {
     let span = p.as_span().into();
@@ -937,12 +992,12 @@ boiler_plate!(Assertion<'a>, 'a, assertion_inner | query_inner | lemma_inner ; |
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct AssertCrypto<'a> {
+pub struct AssertCrypto<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
-    pub name: Ident<'a>,
-    pub functions: Vec<Function<'a>>,
-    pub options: Options<'a>,
+    pub name: Ident<'a, S>,
+    pub functions: Vec<Function<'a, S>>,
+    pub options: Options<'a, S>,
 }
 boiler_plate!(AssertCrypto<'a>, 'a, assertion_crypto ; |p| {
     let span = p.as_span().into();
@@ -968,15 +1023,15 @@ boiler_plate!(AssertCrypto<'a>, 'a, assertion_crypto ; |p| {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Order<'a> {
+pub struct Order<'a, S=&'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
     pub quantifier: QuantifierKind,
-    pub args: TypedArgument<'a>,
-    pub t1: Term<'a>,
-    pub t2: Term<'a>,
+    pub args: TypedArgument<'a, S>,
+    pub t1: Term<'a, S>,
+    pub t2: Term<'a, S>,
     pub kind: OrderOperation,
-    pub options: Options<'a>,
+    pub options: Options<'a, S>,
 }
 boiler_plate!(Order<'a>, 'a, order ; |p| {
     let span = p.as_span().into();
@@ -996,10 +1051,10 @@ boiler_plate!(OrderOperation, ordering_operation; {
     order_gt => Gt
 });
 
-impl<'a, 'b> IntoIterator for &'b TypedArgument<'a> {
-    type Item = &'b VariableBinding<'a>;
+impl<'a, 'b, S> IntoIterator for &'b TypedArgument<'a, S> {
+    type Item = &'b VariableBinding<'a, S>;
 
-    type IntoIter = Iter<'b, VariableBinding<'a>>;
+    type IntoIter = Iter<'b, VariableBinding<'a, S>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.bindings.iter()
@@ -1016,44 +1071,45 @@ pub mod extra {
         error::Location, DeclareCell, DeclareFunction, Function, Macro, MacroName, Step, StepName, TypeName
     };
 
+    /// Span and Name
     #[derive(Debug, PartialEq, Eq, Clone, Hash)]
     pub struct SnN<'a, 'b> {
         pub span: &'b Location<'a>,
         pub name: StrRef<'a>,
     }
 
-    impl<'a, 'b> From<&'b TypeName<'a>> for SnN<'a, 'b> {
-        fn from(value: &'b TypeName<'a>) -> Self {
+    impl<'a, 'b, S> From<&'b TypeName<'a, S>> for SnN<'a, 'b> where StrRef<'a>:From<&'b S>{
+        fn from(value: &'b TypeName<'a, S>) -> Self {
             SnN {
                 span: &value.0.span,
-                name: value.0.content.content.into(),
+                name: value.name().into(),
             }
         }
     }
 
-    impl<'a, 'b> From<&'b Function<'a>> for SnN<'a, 'b> {
-        fn from(value: &'b Function<'a>) -> Self {
+    impl<'a, 'b, S> From<&'b Function<'a, S>> for SnN<'a, 'b> where StrRef<'a>:From<&'b S>{
+        fn from(value: &'b Function<'a, S>) -> Self {
             SnN {
                 span: &value.0.span,
-                name: value.0.content.content.into(),
+                name: value.name().into(),
             }
         }
     }
 
-    impl<'a, 'b> From<&'b StepName<'a>> for SnN<'a, 'b> {
-        fn from(value: &'b StepName<'a>) -> Self {
+    impl<'a, 'b, S> From<&'b StepName<'a, S>> for SnN<'a, 'b> where StrRef<'a>:From<&'b S>{
+        fn from(value: &'b StepName<'a, S>) -> Self {
             SnN {
                 span: &value.0.span,
-                name: value.0.content.content.into(),
+                name: value.name().into(),
             }
         }
     }
 
-    impl<'a, 'b> From<&'b MacroName<'a>> for SnN<'a, 'b> {
-        fn from(value: &'b MacroName<'a>) -> Self {
+    impl<'a, 'b, S> From<&'b MacroName<'a, S>> for SnN<'a, 'b> where StrRef<'a>:From<&'b S>{
+        fn from(value: &'b MacroName<'a, S>) -> Self {
             SnN {
                 span: &value.0.span,
-                name: value.0.content.content.into(),
+                name: value.name().into(),
             }
         }
     }
@@ -1065,7 +1121,7 @@ pub mod extra {
         fn out(self) -> SnN<'a, 'b>;
     }
 
-    impl<'a, 'b> AsFunction<'a, 'b> for &'b DeclareFunction<'a> {
+    impl<'a, 'b, S> AsFunction<'a, 'b> for &'b DeclareFunction<'a, S> where StrRef<'a>:From<&'b S> {
         fn name(self) -> SnN<'a, 'b> {
             From::from(&self.name)
         }
@@ -1079,7 +1135,7 @@ pub mod extra {
         }
     }
 
-    impl<'a, 'b> AsFunction<'a, 'b> for &'b DeclareCell<'a> {
+    impl<'a, 'b, S> AsFunction<'a, 'b> for &'b DeclareCell<'a, S> where StrRef<'a>:From<&'b S> {
         fn name(self) -> SnN<'a, 'b> {
             From::from(&self.name)
         }
@@ -1101,7 +1157,7 @@ pub mod extra {
         }
     }
 
-    impl<'a, 'b> AsFunction<'a, 'b> for &'b Step<'a> {
+    impl<'a, 'b, S> AsFunction<'a, 'b> for &'b Step<'a, S> where StrRef<'a>:From<&'b S> {
         fn name(self) -> SnN<'a, 'b> {
             From::from(&self.name)
         }
@@ -1122,7 +1178,7 @@ pub mod extra {
         }
     }
 
-    impl<'a, 'b> AsFunction<'a, 'b> for &'b Macro<'a> {
+    impl<'a, 'b, S> AsFunction<'a, 'b> for &'b Macro<'a, S> where StrRef<'a>:From<&'b S> {
         fn name(self) -> SnN<'a, 'b> {
             From::from(&self.name)
         }
