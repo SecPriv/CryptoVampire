@@ -3,7 +3,8 @@ use crate::parser::{
     parser::{
         parsable_trait::{Parsable, VarProxy},
         Environement,
-    }, MResult, Pstr,
+    },
+    MResult, Pstr,
 };
 use cryptovampire_lib::formula::{formula::ARichFormula, sort::builtins::BOOL};
 use utils::{implvec, string_ref::StrRef};
@@ -12,7 +13,11 @@ pub fn parse_assert_with_bvars<'a, 'str, 'bump, S>(
     env: &'a Environement<'bump, 'str, S>,
     assertion: &ast::Assertion<'str, S>,
     bvars: &'a mut Vec<(S, VarProxy<'bump>)>,
-) -> MResult<ARichFormula<'bump>>  where S:Pstr, for <'b> StrRef<'b>:From<&'b S> {
+) -> MResult<ARichFormula<'bump>>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     let ast::Assertion { content, .. } = assertion;
 
     bvars.clear();
@@ -25,7 +30,9 @@ pub fn parse_asserts_with_bvars<'a, 'str, 'bump, B, S>(
     bvars: &'a mut Vec<(S, VarProxy<'bump>)>,
 ) -> MResult<B>
 where
-    B: FromIterator<ARichFormula<'bump>>,  S:Pstr, for <'b> StrRef<'b>:From<&'b S>
+    B: FromIterator<ARichFormula<'bump>>,
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
 {
     assertions
         .into_iter()

@@ -16,7 +16,7 @@ use cryptovampire_lib::{
     environement::traits::Realm,
     formula::{
         sort::builtins::{CONDITION, MESSAGE},
-        variable::{from_usize, uvar, Variable},
+        variable::{from_usize, Variable},
     },
     problem::{cell::Assignement, step::InnerStep},
 };
@@ -33,7 +33,11 @@ fn parse_step<'bump, 'str, S>(
     env: &Environement<'bump, 'str, S>,
     step_cache: &StepCache<'str, 'bump, S>,
     // name: &str,
-) -> MResult<InnerStep<'bump>> where S:Pstr, for <'b> StrRef<'b>:From<&'b S>  {
+) -> MResult<InnerStep<'bump>>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     let StepCache {
         ast,
         function,
@@ -103,7 +107,8 @@ fn parse_step<'bump, 'str, S>(
                             },
                             i,
                         )| {
-                            let sort = env.find_sort(type_name.name_span(), type_name.name().borrow())?;
+                            let sort =
+                                env.find_sort(type_name.name_span(), type_name.name().borrow())?;
                             let id = from_usize(n) + i;
                             let var = Variable { id, sort };
 
@@ -198,7 +203,11 @@ fn parse_step<'bump, 'str, S>(
 pub fn parse_steps<'a, 'bump, 'str, S>(
     env: &'a Environement<'bump, 'str, S>, // mut for safety
     steps: implvec!(&'a StepCache<'str, 'bump, S>),
-) -> MResult<()>where S:Pstr, for <'b> StrRef<'b>:From<&'b S>  {
+) -> MResult<()>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     steps
         .into_iter()
         .try_for_each(|step_cache @ StepCache { ast, step, .. }| {

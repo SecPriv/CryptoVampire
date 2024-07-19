@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 use itertools::Either;
 use std::{borrow::Borrow, sync::Arc};
 
@@ -24,7 +23,7 @@ use cryptovampire_lib::{
     problem::cell::InnerMemoryCell,
     problem::step::InnerStep,
 };
-use utils::{f, string_ref::StrRef, traits::NicerError};
+use utils::{string_ref::StrRef, traits::NicerError};
 
 use super::super::ast::{self, extra::SnN, ASTList, Declaration, DeclareFunction, Ident, AST};
 
@@ -32,7 +31,11 @@ use super::super::ast::{self, extra::SnN, ASTList, Declaration, DeclareFunction,
 pub fn declare_sorts<'str, 'bump, S>(
     env: &mut Environement<'bump, 'str, S>,
     ast: &'str ASTList<'str, S>,
-) -> MResult<()> where S:Pstr, for<'a> StrRef<'a> : From<&'a S> {
+) -> MResult<()>
+where
+    S: Pstr,
+    for<'a> StrRef<'a>: From<&'a S>,
+{
     ast.into_iter()
         .filter_map(|ast| match ast {
             AST::Declaration(d) => match d.as_ref() {
@@ -54,7 +57,8 @@ pub fn declare_sorts<'str, 'bump, S>(
                     name
                 ))
             } else {
-                let sort = Sort::new_index(env.container, String::from(name.borrow()).into_boxed_str());
+                let sort =
+                    Sort::new_index(env.container, String::from(name.borrow()).into_boxed_str());
                 let out = env.sort_hash.insert(sort.name().into_string(), sort);
 
                 match out {
@@ -79,7 +83,11 @@ pub fn fetch_all<'str, 'bump, S>(
     lemmas: &mut impl Extend<&'str ast::Assertion<'str, S>>,
     orders: &mut impl Extend<&'str ast::Order<'str, S>>, // Vec<&'str ast::Order<'str>>,
     asserts_crypto: &mut impl Extend<&'str ast::AssertCrypto<'str, S>>,
-) -> MResult<&'str ast::Assertion<'str, S>> where S:Pstr, for<'a> StrRef<'a> : From<&'a S> {
+) -> MResult<&'str ast::Assertion<'str, S>>
+where
+    S: Pstr,
+    for<'a> StrRef<'a>: From<&'a S>,
+{
     let mut did_initilise_init = false;
     let mut query = Ok(None);
     ast.into_iter()
@@ -181,7 +189,11 @@ fn user_bool_to_condtion<'bump>(s: Sort<'bump>) -> Sort<'bump> {
 fn declare_function<'str, 'bump, S>(
     env: &mut Environement<'bump, 'str, S>,
     fun: &DeclareFunction<'str, S>,
-) -> MResult<()> where S:Pstr, for<'a> StrRef<'a> : From<&'a S> {
+) -> MResult<()>
+where
+    S: Pstr,
+    for<'a> StrRef<'a>: From<&'a S>,
+{
     let Ident {
         span,
         content: name,
@@ -215,7 +227,8 @@ fn declare_function<'str, 'bump, S>(
 
             // add to env. name_caster_collection
         } else {
-            Function::new_user_term_algebra(env.container, name.borrow(), input_sorts?, output_sort).main
+            Function::new_user_term_algebra(env.container, name.borrow(), input_sorts?, output_sort)
+                .main
         };
         if let Some(_) = env.functions.insert(fun.name().to_string(), fun.into()) {
             bail_at!(
@@ -235,7 +248,11 @@ The function name {} somehow reintroduced itself in the hash",
 fn declare_step<'a, 'str, 'bump, S>(
     env: &mut Environement<'bump, 'str, S>,
     fun: &'str ast::Step<'str, S>,
-) -> MResult<()> where S:Pstr, for<'c> StrRef<'c> : From<&'c S>{
+) -> MResult<()>
+where
+    S: Pstr,
+    for<'c> StrRef<'c>: From<&'c S>,
+{
     let SnN { span, name } = (&fun.name).into();
     if env.contains_name(&name) {
         bail_at!(span, "the step name {} is already in use", &name)
@@ -271,7 +288,11 @@ fn declare_step<'a, 'str, 'bump, S>(
 fn declare_cell<'str, 'bump, S>(
     env: &mut Environement<'bump, 'str, S>,
     fun: &'str ast::DeclareCell<'str, S>,
-) -> MResult<()> where S:Pstr, for<'a> StrRef<'a> : From<&'a S> {
+) -> MResult<()>
+where
+    S: Pstr,
+    for<'a> StrRef<'a>: From<&'a S>,
+{
     let SnN { span, name } = (&fun.name).into();
     if env.contains_name(&name) {
         bail_at!(span, "the cell name {} is already in use", &name)
@@ -307,7 +328,14 @@ fn declare_cell<'str, 'bump, S>(
     Ok(())
 }
 
-fn declare_let<'bump, 'a, S>(env: &mut Environement<'bump, 'a, S>, mlet: &ast::Macro<'a, S>) -> MResult<()>  where S:Pstr, for <'b> StrRef<'b>:From<&'b S>{
+fn declare_let<'bump, 'a, S>(
+    env: &mut Environement<'bump, 'a, S>,
+    mlet: &ast::Macro<'a, S>,
+) -> MResult<()>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     let ast::Macro { name, .. } = mlet;
     let SnN { span, name } = name.into();
     if env.container_macro_name(&name) {

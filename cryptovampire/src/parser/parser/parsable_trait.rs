@@ -6,11 +6,12 @@ use itertools::Itertools;
 use log::{log_enabled, trace};
 
 use crate::{
-    bail_at, err_at, parser::{
-        ast::{self,  extra::SnN, Term, VariableBinding},
+    bail_at, err_at,
+    parser::{
+        ast::{self, extra::SnN, Term, VariableBinding},
         error::WithLocation,
         InputError, Location, MResult, Pstr,
-    }
+    },
 };
 use cryptovampire_lib::{
     environement::traits::{KnowsRealm, Realm},
@@ -30,9 +31,8 @@ use cryptovampire_lib::{
         },
         variable::{from_usize, uvar, Variable},
     },
-    smt::SmtFormula,
 };
-use utils::{f, implvec, match_as_trait, maybe_owned::MOw, string_ref::StrRef, traits::NicerError, try_trace};
+use utils::{f, implvec, match_as_trait, maybe_owned::MOw, string_ref::StrRef, traits::NicerError};
 
 use self::cached_builtins::*;
 
@@ -87,7 +87,11 @@ pub trait Parsable<'bump, 'str> {
     ) -> MResult<Self::R>;
 }
 
-impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::LetIn<'a, S> where S:Pstr, for <'b> StrRef<'b>:From<&'b S> {
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::LetIn<'a, S>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     type R = ARichFormula<'bump>;
     type S = S;
 
@@ -135,7 +139,11 @@ impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::LetIn<'a, S> where S:Pstr, for <
         // Ok(t2.owned_into_inner().apply_substitution([vn], [&t1]).into())
     }
 }
-impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::IfThenElse<'a, S> where S:Pstr, for <'b> StrRef<'b>:From<&'b S> {
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::IfThenElse<'a, S>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     type R = ARichFormula<'bump>;
     type S = S;
 
@@ -177,7 +185,11 @@ impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::IfThenElse<'a, S> where S:Pstr, 
     }
 }
 
-impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::FindSuchThat<'a, S> where S:Pstr, for <'b> StrRef<'b>:From<&'b S> {
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::FindSuchThat<'a, S>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     // where for <'b> StrRef<'b> : From<&'b Self>
     type R = ARichFormula<'bump>;
     type S = S;
@@ -212,7 +224,8 @@ impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::FindSuchThat<'a, S> where S:Pstr
         bvars.reserve(vars.into_iter().len());
         let vars: Result<Vec<_>, InputError> = vars
             // .iter()
-            .bindings.iter()
+            .bindings
+            .iter()
             .zip(0..)
             .map(|(v, i)| {
                 let id = i + from_usize(bn);
@@ -276,7 +289,11 @@ impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::FindSuchThat<'a, S> where S:Pstr
         })
     }
 }
-impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Quantifier<'a, S> where S:Pstr, for <'b> StrRef<'b>:From<&'b S> {
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Quantifier<'a, S>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     type R = ARichFormula<'bump>;
     type S = S;
 
@@ -294,7 +311,6 @@ impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Quantifier<'a, S> where S:Pstr, 
             content,
             ..
         } = self;
-        
 
         let es = match state.get_realm() {
             Realm::Evaluated => BOOL.as_sort().into(),
@@ -397,7 +413,11 @@ impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Quantifier<'a, S> where S:Pstr, 
         })
     }
 }
-impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Application<'a, S> where S:Pstr, for <'b> StrRef<'b>:From<&'b S> {
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Application<'a, S>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     type R = ARichFormula<'bump>;
     type S = S;
 
@@ -510,7 +530,9 @@ impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Application<'a, S> where S:Pstr,
                     }),
                     _ => get_function(env, *span, content.borrow()).map(MOw::Borrowed),
                 }
-                .and_then(|f| parse_application(env, span, state, bvars, expected_sort, f.borrow(), args))
+                .and_then(|f| {
+                    parse_application(env, span, state, bvars, expected_sort, f.borrow(), args)
+                })
             }
         }
     }
@@ -525,7 +547,11 @@ fn parse_application<'b, 'a, 'bump, S>(
     expected_sort: Option<SortProxy<'bump>>,
     function: &FunctionCache<'a, 'bump, S>,
     args: implvec!(&'b ast::Term<'a, S>),
-) -> MResult<ARichFormula<'bump>> where S:Pstr, for <'c> StrRef<'c>:From<&'c S> {
+) -> MResult<ARichFormula<'bump>>
+where
+    S: Pstr,
+    for<'c> StrRef<'c>: From<&'c S>,
+{
     // if cfg!(debug_assertions) {
     //     try_trace!("\tparsing head: {}", function.get_function().name())
     // }
@@ -633,7 +659,11 @@ fn parse_application<'b, 'a, 'bump, S>(
     Ok(formula)
 }
 
-impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::AppMacro<'a,S> where S:Pstr, for <'b> StrRef<'b>:From<&'b S> {
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::AppMacro<'a, S>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     type R = ARichFormula<'bump>;
     type S = S;
 
@@ -766,7 +796,11 @@ impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::AppMacro<'a,S> where S:Pstr, for
     }
 }
 
-impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Infix<'a, S> where S:Pstr, for <'b> StrRef<'b>:From<&'b S> {
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Infix<'a, S>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     type R = ARichFormula<'bump>;
     type S = S;
 
@@ -917,7 +951,11 @@ fn as_pair_of_term<'a, 'b: 'a, S>(
     span: Location<'b>,
     op: ast::Operation,
     iter: impl IntoIterator<Item = (&'a Term<'b, S>, &'a Term<'b, S>)>,
-) -> Vec<Term<'b, S>> where S:Pstr + 'a, for <'c> StrRef<'c>:From<&'c S> {
+) -> Vec<Term<'b, S>>
+where
+    S: Pstr + 'a,
+    for<'c> StrRef<'c>: From<&'c S>,
+{
     iter.into_iter()
         .map(|(a, b)| ast::Term {
             span,
@@ -930,7 +968,11 @@ fn as_pair_of_term<'a, 'b: 'a, S>(
         .collect()
 }
 
-impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Term<'a, S>  where S:Pstr, for <'b> StrRef<'b>:From<&'b S>{
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Term<'a, S>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     type R = ARichFormula<'bump>;
     type S = S;
 
@@ -955,120 +997,119 @@ impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Term<'a, S>  where S:Pstr, for <
     }
 }
 
-    // fn parse<'a, 'bump>(
-    //     x:&ast::Quantifier<'a>,
-    //     env: &Environement<'bump, 'a>,
-    //     bvars: &mut Vec<(S, VarProxy<'bump>)>,
-    //     state: &impl KnowsRealm,
-    //     expected_sort: Option<SortProxy<'bump>>,
-    // ) -> () {
-    //     let ast::Quantifier {
-    //         kind,
-    //         span,
-    //         vars,
-    //         content,
-    //         ..
-    //     } = x;
-        
+// fn parse<'a, 'bump>(
+//     x:&ast::Quantifier<'a>,
+//     env: &Environement<'bump, 'a>,
+//     bvars: &mut Vec<(S, VarProxy<'bump>)>,
+//     state: &impl KnowsRealm,
+//     expected_sort: Option<SortProxy<'bump>>,
+// ) -> () {
+//     let ast::Quantifier {
+//         kind,
+//         span,
+//         vars,
+//         content,
+//         ..
+//     } = x;
 
-    //     // let es = match state.get_realm() {
-    //     //     Realm::Evaluated => BOOL.as_sort().into(),
-    //     //     Realm::Symbolic => CONDITION.as_sort().into(),
-    //     // };
-    //     // expected_sort
-    //     //     .into_iter()
-    //     //     .try_for_each(|s| s.expects(es, &state).with_location(span))?;
+//     // let es = match state.get_realm() {
+//     //     Realm::Evaluated => BOOL.as_sort().into(),
+//     //     Realm::Symbolic => CONDITION.as_sort().into(),
+//     // };
+//     // expected_sort
+//     //     .into_iter()
+//     //     .try_for_each(|s| s.expects(es, &state).with_location(span))?;
 
-    //     let bn = bvars.len();
+//     let bn = bvars.len();
 
-    //     bvars.reserve(vars.into_iter().len());
-    //     let vars: Result<Vec<_>, InputError> = vars
-    //         .into_iter()
-    //         // .bindings.iter()
-    //         .zip(0..)
-    //         .map(|(v, i)| {
-    //             let id = i + from_usize(bn);
-    //             let VariableBinding {
-    //                 variable,
-    //                 type_name,
-    //                 ..
-    //             } = v;
+//     bvars.reserve(vars.into_iter().len());
+//     let vars: Result<Vec<_>, InputError> = vars
+//         .into_iter()
+//         // .bindings.iter()
+//         .zip(0..)
+//         .map(|(v, i)| {
+//             let id = i + from_usize(bn);
+//             let VariableBinding {
+//                 variable,
+//                 type_name,
+//                 ..
+//             } = v;
 
-    //             // let vname = variable.name();
-    //             // // ensures the name is free
-    //             // if env.functions.contains_key(vname)
-    //             //     || bvars.iter().map(|(n, _)| n).contains(&vname)
-    //             // {
-    //             //     // return err(merr(
-    //             //     //     variable.0.span,
-    //             //     //     f!("the name {} is already taken", vname),
-    //             //     // ));
-    //             //     bail_at!(variable.0.span, "the name {vname} is already taken")
-    //             // }
+//             // let vname = variable.name();
+//             // // ensures the name is free
+//             // if env.functions.contains_key(vname)
+//             //     || bvars.iter().map(|(n, _)| n).contains(&vname)
+//             // {
+//             //     // return err(merr(
+//             //     //     variable.0.span,
+//             //     //     f!("the name {} is already taken", vname),
+//             //     // ));
+//             //     bail_at!(variable.0.span, "the name {vname} is already taken")
+//             // }
 
-    //             let SnN { span, name } = type_name.into();
+//             let SnN { span, name } = type_name.into();
 
-    //             let var = Variable {
-    //                 id,
-    //                 sort: get_sort(env, *span, name)?,
-    //             };
+//             let var = Variable {
+//                 id,
+//                 sort: get_sort(env, *span, name)?,
+//             };
 
-    //             // // sneakly expand `bvars`
-    //             // // we need this here to keep the name
-    //             let content = (variable.name(), var.into());
-    //             bvars.push(content);
+//             // // sneakly expand `bvars`
+//             // // we need this here to keep the name
+//             let content = (variable.name(), var.into());
+//             bvars.push(content);
 
-    //             // Ok(var)
-    //             Ok(())
-    //         })
-    //         .collect();
-    //     // let vars = vars?.into();
+//             // Ok(var)
+//             Ok(())
+//         })
+//         .collect();
+//     // let vars = vars?.into();
 
-    //     // // parse body
-    //     // let content = content.parse(env, bvars, state, Some(es.into()))?;
+//     // // parse body
+//     // let content = content.parse(env, bvars, state, Some(es.into()))?;
 
-    //     // // remove bounded variables from pile
-    //     // bvars.truncate(bn);
+//     // // remove bounded variables from pile
+//     // bvars.truncate(bn);
 
-    //     // let q = {
-    //     //     // let status = match state.get_realm() {
-    //     //     //     Realm::Evaluated => formula::quantifier::Status::Bool,
-    //     //     //     Realm::Symbolic => formula::quantifier::Status::Condition,
-    //     //     // };
-    //     //     match kind {
-    //     //         ast::QuantifierKind::Forall => formula::quantifier::Quantifier::Forall {
-    //     //             variables: vars,
-    //     //             // status,
-    //     //         },
-    //     //         ast::QuantifierKind::Exists => formula::quantifier::Quantifier::Exists {
-    //     //             variables: vars,
-    //     //             // status,
-    //     //         },
-    //     //     }
-    //     // };
+//     // let q = {
+//     //     // let status = match state.get_realm() {
+//     //     //     Realm::Evaluated => formula::quantifier::Status::Bool,
+//     //     //     Realm::Symbolic => formula::quantifier::Status::Condition,
+//     //     // };
+//     //     match kind {
+//     //         ast::QuantifierKind::Forall => formula::quantifier::Quantifier::Forall {
+//     //             variables: vars,
+//     //             // status,
+//     //         },
+//     //         ast::QuantifierKind::Exists => formula::quantifier::Quantifier::Exists {
+//     //             variables: vars,
+//     //             // status,
+//     //         },
+//     //     }
+//     // };
 
-    //     // if cfg!(debug_assertions) {
-    //     //     try_trace!(
-    //     //         "parsing quantifier\n\t{}",
-    //     //         SmtFormula::from_arichformula(&RichFormula::Quantifier(q.clone(), content.clone()))
-    //     //             .default_display()
-    //     //     )
-    //     // }
+//     // if cfg!(debug_assertions) {
+//     //     try_trace!(
+//     //         "parsing quantifier\n\t{}",
+//     //         SmtFormula::from_arichformula(&RichFormula::Quantifier(q.clone(), content.clone()))
+//     //             .default_display()
+//     //     )
+//     // }
 
-    //     // Ok(match state.get_realm() {
-    //     //     Realm::Evaluated => RichFormula::Quantifier(q, content).into(),
-    //     //     Realm::Symbolic => {
-    //     //         let fq = Function::new_quantifier_from_quantifier(env.container, q, content);
+//     // Ok(match state.get_realm() {
+//     //     Realm::Evaluated => RichFormula::Quantifier(q, content).into(),
+//     //     Realm::Symbolic => {
+//     //         let fq = Function::new_quantifier_from_quantifier(env.container, q, content);
 
-    //     //         let args = match fq.as_inner() {
-    //     //             function::InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q)) => {
-    //     //                 q.free_variables.iter()
-    //     //             }
-    //     //             _ => unreachable!(),
-    //     //         }
-    //     //         .map(ARichFormula::from);
+//     //         let args = match fq.as_inner() {
+//     //             function::InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q)) => {
+//     //                 q.free_variables.iter()
+//     //             }
+//     //             _ => unreachable!(),
+//     //         }
+//     //         .map(ARichFormula::from);
 
-    //     //         fq.f_a(args)
-    //     //     }
-    //     // })
-    // }
+//     //         fq.f_a(args)
+//     //     }
+//     // })
+// }

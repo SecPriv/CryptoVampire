@@ -9,7 +9,7 @@ use crate::{
         formula,
         function::builtin::PRED,
         sort::builtins::STEP,
-        variable::{from_usize, uvar, Variable},
+        variable::{from_usize, Variable},
     },
     problem::{cell::Assignement, Problem},
 };

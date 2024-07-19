@@ -19,7 +19,7 @@ pub enum SortedError {
     #[error("wrong argument")]
     InferenceError { msg: String },
     #[error(transparent)]
-    CheckError(#[from] CheckError)
+    CheckError(#[from] CheckError),
 }
 
 // impl<'bump> From<CheckError> for SortedError {

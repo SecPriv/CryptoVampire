@@ -15,7 +15,8 @@ pub enum CheckError {
     #[error("unsolvable sort problem at position {position:?}, caused by {error}")]
     SortError {
         position: Option<usize>,
-        #[source] error: InferenceError,
+        #[source]
+        error: InferenceError,
     },
 }
 

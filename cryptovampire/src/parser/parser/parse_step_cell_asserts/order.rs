@@ -1,11 +1,13 @@
 use std::{borrow::Borrow, sync::Arc};
 
 use crate::parser::{
-    ast, parser::{
+    ast,
+    parser::{
         get_sort,
         parsable_trait::{Parsable, VarProxy},
         Environement,
-    }, InputError, MResult, Pstr
+    },
+    InputError, MResult, Pstr,
 };
 use cryptovampire_lib::{
     formula::{quantifier::Quantifier, sort::builtins::STEP, variable::Variable},
@@ -19,7 +21,9 @@ pub fn parse_orders_with_bvars<'a, 'str, 'bump, B, S>(
     bvars: &'a mut Vec<(S, VarProxy<'bump>)>,
 ) -> MResult<B>
 where
-    B: FromIterator<Ordering<'bump>>,S:Pstr, for <'b> StrRef<'b>:From<&'b S>
+    B: FromIterator<Ordering<'bump>>,
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
 {
     orders
         .into_iter()
@@ -31,7 +35,11 @@ fn parse_order_with_bvars<'str, 'bump, S>(
     env: &Environement<'bump, 'str, S>,
     order: &ast::Order<'str, S>,
     bvars: &mut Vec<(S, VarProxy<'bump>)>,
-) -> MResult<Ordering<'bump>> where S:Pstr, for <'b> StrRef<'b>:From<&'b S> {
+) -> MResult<Ordering<'bump>>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     let ast::Order {
         quantifier,
         args,
@@ -61,7 +69,10 @@ fn parse_order_with_bvars<'str, 'bump, S>(
     let args = args?;
 
     bvars.clear();
-    bvars.extend(args.iter().map(|(name, var)| ((*name).clone(), (*var).into())));
+    bvars.extend(
+        args.iter()
+            .map(|(name, var)| ((*name).clone(), (*var).into())),
+    );
     let variables: Arc<[_]> = args.into_iter().map(|(_, v)| v).collect();
 
     let t1 = t1.parse(env, bvars, env, Some(STEP.as_sort().into()))?;

@@ -3,14 +3,11 @@ mod parser;
 // mod builders;
 
 use ast::INIT_STEP_AST;
-use hashbrown::Equivalent;
 pub(crate) use parser::parse_str;
 use static_init::dynamic;
-use thiserror::Error;
 
-use std::{borrow::Borrow, convert::Infallible, ops::Index};
+use std::borrow::Borrow;
 
-use pest::{error::Error, Span};
 use pest_derive::Parser;
 
 pub const USED_KEYWORDS: &'static [&'static str] = &[
@@ -92,10 +89,7 @@ macro_rules! lbail {
     };
 }
 
-use cryptovampire_lib::formula::{
-    function::signature::CheckError, sort::sort_proxy::InferenceError,
-};
-use utils::{f, string_ref::StrRef, traits::NicerError};
+use utils::{string_ref::StrRef, traits::NicerError};
 
 // trait IntoRuleResult<T, Err> {
 //     fn into_rr<'a>(self, span: Span<'a>) -> Result<T>;
@@ -144,7 +138,6 @@ use utils::{f, string_ref::StrRef, traits::NicerError};
 
 mod error {
 
-    use std::default;
     use std::fmt::Display;
 
     use anyhow::anyhow;
@@ -332,7 +325,7 @@ trait HasInitStep: Sized {
 }
 
 trait FromStaticString {
-    fn from_static(s:&'static str) -> Self;
+    fn from_static(s: &'static str) -> Self;
 }
 
 #[dynamic]
@@ -348,7 +341,7 @@ impl<'str> HasInitStep for &'str str {
 }
 
 impl<'str> FromStaticString for &'str str {
-    fn from_static(s:&'static str) -> Self {
+    fn from_static(s: &'static str) -> Self {
         s
     }
 }
@@ -360,7 +353,7 @@ impl<'str> HasInitStep for StrRef<'str> {
 }
 
 impl<'str> FromStaticString for StrRef<'str> {
-    fn from_static(s:&'static str) -> Self {
+    fn from_static(s: &'static str) -> Self {
         s.into()
     }
 }
@@ -389,6 +382,6 @@ impl<T> Pstr for T where
         // + From<&'static str>
         + std::fmt::Debug
         + HasInitStep
-        +FromStaticString
+        + FromStaticString
 {
 }

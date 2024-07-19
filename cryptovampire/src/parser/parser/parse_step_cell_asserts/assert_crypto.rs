@@ -1,5 +1,4 @@
 use anyhow::Context;
-use pest::Span;
 
 use crate::{
     bail_at,
@@ -25,7 +24,11 @@ use utils::{destvec, implvec, string_ref::StrRef, traits::NicerError};
 pub fn parse_asserts_crypto<'a, 'str, 'bump, S>(
     env: &'a Environement<'bump, 'str, S>,
     crypto: implvec!(&'a ast::AssertCrypto<'str, S>),
-) -> MResult<Vec<CryptoAssumption<'bump>>>  where S:Pstr, for <'b> StrRef<'b>:From<&'b S>  {
+) -> MResult<Vec<CryptoAssumption<'bump>>>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     crypto
         .into_iter()
         .map(|ac| parse_assert_crypto(env, ac))
@@ -35,7 +38,11 @@ pub fn parse_asserts_crypto<'a, 'str, 'bump, S>(
 pub fn parse_assert_crypto<'str, 'bump, S>(
     env: &Environement<'bump, 'str, S>,
     crypto: &ast::AssertCrypto<'str, S>,
-) -> MResult<CryptoAssumption<'bump>>  where S:Pstr, for <'b> StrRef<'b>:From<&'b S>  {
+) -> MResult<CryptoAssumption<'bump>>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     let ast::AssertCrypto {
         span,
         name,
@@ -73,9 +80,13 @@ macro_rules! verify_sign {
 fn parse_euf_cma<'str, 'bump, S>(
     env: &Environement<'bump, 'str, S>,
     functions: &[ast::Function<'str, S>],
-    options: &Options<'str,S>,
+    options: &Options<'str, S>,
     span: Location<'str>,
-) -> MResult<CryptoAssumption<'bump>>  where S:Pstr, for <'b> StrRef<'b>:From<&'b S>  {
+) -> MResult<CryptoAssumption<'bump>>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     match functions.len() {
         2 => parse_uf_cma(env, functions, options, span),
         3 => {
@@ -94,7 +105,11 @@ fn parse_uf_cma<'str, 'bump, S>(
     functions: &[ast::Function<'str, S>],
     options: &Options<'str, S>,
     s: Location<'str>,
-) -> MResult<CryptoAssumption<'bump>>  where S:Pstr, for <'b> StrRef<'b>:From<&'b S>  {
+) -> MResult<CryptoAssumption<'bump>>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     let mut builder = UfCmaBuilder::default();
     if let [ast_mac, ast_verify] = functions {
         verify_sign!(env; ast_mac, mac, UF_CMA_MAC_SIGNATURE, 2);
@@ -125,7 +140,11 @@ fn parse_int_ctxt<'str, 'bump, S>(
     env: &Environement<'bump, 'str, S>,
     functions: &[ast::Function<'str, S>],
     span: Location<'str>,
-) -> MResult<CryptoAssumption<'bump>>  where S:Pstr, for <'b> StrRef<'b>:From<&'b S>  {
+) -> MResult<CryptoAssumption<'bump>>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     let functions = match functions.len() {
         3 | 4 => Ok(&functions[..3]),
         i => span.bail_with(|| format!("wrong number of arguments: expected 3 (or 4), got {i}")),

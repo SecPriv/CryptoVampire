@@ -87,7 +87,7 @@ impl<'bump> SortProxy<'bump> {
                 Ok(())
             }
             // Some(s2) => err(merr!(span; "wrong sort: {} instead of {}", s2.name(), s.name())),
-            Some(s2) => Err(InferenceError::mismach(self, s, s2) ),
+            Some(s2) => Err(InferenceError::mismach(self, s, s2)),
         }
     }
 
@@ -134,7 +134,7 @@ impl<'bump> SortProxy<'bump> {
                 if Sort::eq_realm(&s, &s2, realm) {
                     Ok(s)
                 } else {
-                    Err(InferenceError::mismach(self, s2, s) )
+                    Err(InferenceError::mismach(self, s2, s))
                 }
             }
             (None, Some(s2)) => {

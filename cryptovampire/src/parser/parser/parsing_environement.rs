@@ -1,9 +1,8 @@
-use std::{borrow::Borrow, collections::VecDeque, ops::Deref, sync::Arc};
+use std::{collections::VecDeque, ops::Deref, sync::Arc};
 
 use hashbrown::{HashMap, HashSet};
 use itertools::Itertools;
 use log::trace;
-use pest::Span;
 
 use crate::{
     err_at,
@@ -13,14 +12,13 @@ use crate::{
             parse_assert_with_bvars, parse_asserts_crypto, parse_asserts_with_bvars, parse_cells,
             parse_orders_with_bvars, parse_steps,
         },
-        HasInitStep, Location, MResult, Pstr,
+        Location, MResult, Pstr,
     },
 };
 use cryptovampire_lib::{
     container::ScopedContainer,
     environement::traits::{KnowsRealm, Realm},
     formula::{
-        formula::ARichFormula,
         function::{
             inner::evaluate::Evaluator,
             name_caster_collection::{NameCasterCollection, DEFAULT_NAME_CASTER},
@@ -35,7 +33,7 @@ use cryptovampire_lib::{
         step::Step,
     },
 };
-use utils::{f, implderef, implvec, string_ref::StrRef, traits::NicerError, utils::MaybeInvalid};
+use utils::{implderef, implvec, string_ref::StrRef, traits::NicerError, utils::MaybeInvalid};
 
 #[derive(Hash, Clone, PartialEq, Eq, Debug, PartialOrd, Ord)]
 pub struct Macro<'bump, 'a, S> {
@@ -251,7 +249,7 @@ pub fn parse_str<'a, 'bump>(
     let pbl = {
         trace!("[P] \tinto ast...");
         let ast = ASTList::try_from(str).debug_continue()?;
-        let mut env = Environement::new(container, sort_hash, function_hash, extra_names);
+        let env = Environement::new(container, sort_hash, function_hash, extra_names);
         trace!("[P] \t[DONE]");
 
         prbl_from_ast(

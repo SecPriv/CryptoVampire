@@ -17,6 +17,6 @@ pub mod sort;
 // pub mod as_formula;
 pub mod file_descriptior;
 
-pub mod formula;
 mod base_formula;
-pub use base_formula::{TmpFormula, BaseFormula};
+pub mod formula;
+pub use base_formula::{BaseFormula, TmpFormula};

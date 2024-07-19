@@ -26,7 +26,7 @@ use crate::{
             builtins::{BOOL, CONDITION, MESSAGE},
             FOSort, Sort,
         },
-        variable::{from_usize, sorts_to_variables, uvar, Variable},
+        variable::{from_usize, sorts_to_variables, Variable},
     },
     mexists, mforall,
     problem::problem::Problem,
