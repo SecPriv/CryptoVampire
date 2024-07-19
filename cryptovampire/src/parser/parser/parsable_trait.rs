@@ -173,9 +173,9 @@ where
         } = self;
 
         // parse the argumeents
-        let condition = condition.parse(env, bvars, state, Some(es_condition))?;
-        let left = left.parse(env, bvars, state, Some(es_branches.clone()))?;
-        let right = right.parse(env, bvars, state, Some(es_branches))?;
+        let condition = condition.parse(env, bvars, state, Some(es_condition)).debug_continue()?;
+        let left = left.parse(env, bvars, state, Some(es_branches.clone())).debug_continue()?;
+        let right = right.parse(env, bvars, state, Some(es_branches)).debug_continue()?;
 
         Ok(match state.get_realm() {
             Realm::Evaluated => IF_THEN_ELSE.clone(),
@@ -204,7 +204,7 @@ where
         expected_sort.into_iter().try_for_each(|s| {
             s.expects(MESSAGE.as_sort(), &state)
                 .with_location(&self.span)
-        })?;
+        }).debug_continue()?;
 
         let ast::FindSuchThat {
             vars,
@@ -273,8 +273,8 @@ where
             bvars,
             &Realm::Symbolic,
             Some(CONDITION.as_sort().into()),
-        )?;
-        let left = left.parse(env, bvars, &Realm::Symbolic, Some(MESSAGE.as_sort().into()))?;
+        ).debug_continue()?;
+        let left = left.parse(env, bvars, &Realm::Symbolic, Some(MESSAGE.as_sort().into())).debug_continue()?;
 
         // remove variables
         bvars.truncate(bn);
@@ -318,7 +318,7 @@ where
         };
         expected_sort
             .into_iter()
-            .try_for_each(|s| s.expects(es, &state).with_location(span))?;
+            .try_for_each(|s| s.expects(es, &state).with_location(span).debug_continue())?;
 
         let bn = bvars.len();
 
@@ -469,6 +469,7 @@ where
                                     .transpose()
                                     // .with_location(*span)
                                     .with_location(span)
+                                    .debug_continue()
                                     .map(|_| formula)
                             }
                             (_, r) => expected_sort
@@ -477,6 +478,7 @@ where
                                 .unwrap_or_else(|| {
                                     sort.as_option().ok_or(span.err_with(|| "can't infer sort"))
                                 })
+                                .debug_continue()
                                 .map(|sort| Variable { id: *id, sort }.into()),
                         }
 
@@ -502,7 +504,7 @@ where
                                 Realm::Evaluated => FALSE_CACHE(),
                             }),
                             _ => get_function(env, *span, content.borrow()).map(MOw::Borrowed),
-                        }
+                        }.debug_continue()
                         .and_then(|f| {
                             parse_application(
                                 env,
@@ -512,7 +514,7 @@ where
                                 expected_sort,
                                 Deref::deref(&f),
                                 [],
-                            )
+                            ).debug_continue()
                         })
                     })
             }
@@ -531,7 +533,7 @@ where
                     _ => get_function(env, *span, content.borrow()).map(MOw::Borrowed),
                 }
                 .and_then(|f| {
-                    parse_application(env, span, state, bvars, expected_sort, f.borrow(), args)
+                    parse_application(env, span, state, bvars, expected_sort, f.borrow(), args).debug_continue()
                 })
             }
         }
@@ -592,7 +594,7 @@ where
             .args()
             .into_iter()
             .zip(args.into_iter())
-            .map(|(es, t)| t.parse(env, bvars, &state, Some(es)))
+            .map(|(es, t)| t.parse(env, bvars, &state, Some(es)).debug_continue())
             .collect()
     };
     let n_args = n_args?;
@@ -654,7 +656,8 @@ where
     expected_sort
         .map(|es| es.unify_rev(&out_sort, state))
         .transpose()
-        .with_location(span)?;
+        .with_location(span)
+        .debug_continue()?;
 
     Ok(formula)
 }
@@ -698,6 +701,7 @@ where
                     .and_then(|fc| fc.as_step())
                     .with_context(|| f!("{} is not a known step name", app.name()))
                     .with_location(&app.name_span())
+                    .debug_continue()
                     // .ok_or_else(|| {
                     //     merr(
                     //         app.name_span(),
@@ -729,6 +733,7 @@ where
                     .get(name.name().borrow())
                     .with_context(|| f!("{} is not a known macro", name.name()))
                     .with_location(name.span())
+                    .debug_continue()
                     // .ok_or_else(|| merr(name.span(), ))?;
                     ?;
 
@@ -755,15 +760,22 @@ where
                                 &v.realm().unwrap_or(state.get_realm()),
                                 Some(v.into()),
                             )
+                            .debug_continue()
                         })
-                        .collect()
+                        .try_collect()?
                 } else {
-                    Err(err_at!(
+                    bail_at!(
                         main_span,
                         "not enough arguments: expected {}, got {}",
                         mmacro.args.len(),
                         args.len(),
-                    ))
+                    )
+                    // Err(err_at!(
+                    //     main_span,
+                    //     "not enough arguments: expected {}, got {}",
+                    //     mmacro.args.len(),
+                    //     args.len(),
+                    // ))
                     // err(merr(
                     //     *main_span,
                     //     f!(
@@ -772,7 +784,7 @@ where
                     //         args.len()
                     //     ),
                     // ))
-                }?;
+                };
 
                 let term = {
                     let mut bvars = mmacro
@@ -784,7 +796,10 @@ where
                             (var_name.clone(), Variable::new(id, *var_sort).into())
                         })
                         .collect_vec();
-                    mmacro.content.parse(env, &mut bvars, state, expected_sort)
+                    mmacro
+                        .content
+                        .parse(env, &mut bvars, state, expected_sort)
+                        .debug_continue()
                 }?;
 
                 Ok(term
@@ -821,7 +836,8 @@ where
                     expected_sort,
                     &EQUALITY_TA_CACHE(),
                     &self.terms,
-                ),
+                )
+                .debug_continue(),
                 _ => Self {
                     operation: ast::Operation::And,
                     span: self.span,
@@ -831,7 +847,8 @@ where
                         self.terms.iter().tuple_windows(),
                     ),
                 }
-                .parse(env, bvars, state, expected_sort),
+                .parse(env, bvars, state, expected_sort)
+                .debug_continue(),
             },
             ast::Operation::Eq => match state.get_realm() {
                 Realm::Evaluated => parse_application(
@@ -842,12 +859,14 @@ where
                     expected_sort,
                     &EQUALITY_CACHE(),
                     &self.terms,
-                ),
+                )
+                .debug_continue(),
                 Realm::Symbolic => Self {
                     operation: ast::Operation::HardEq,
                     ..self.clone()
                 }
-                .parse(env, bvars, state, expected_sort),
+                .parse(env, bvars, state, expected_sort)
+                .debug_continue(),
             },
             ast::Operation::Neq => {
                 // let not_fun = match state.get_realm() {
@@ -872,6 +891,7 @@ where
                     }],
                 }
                 .parse(env, bvars, state, expected_sort)
+                .debug_continue()
             }
             ast::Operation::Iff => match state.get_realm() {
                 Realm::Evaluated => parse_application(
@@ -882,7 +902,8 @@ where
                     expected_sort,
                     &EQUALITY_CACHE(),
                     &self.terms,
-                ),
+                )
+                .debug_continue(),
                 Realm::Symbolic => Self {
                     operation: ast::Operation::And,
                     span: self.span,
@@ -892,7 +913,8 @@ where
                         self.terms.iter().tuple_windows(),
                     ),
                 }
-                .parse(env, bvars, state, expected_sort),
+                .parse(env, bvars, state, expected_sort)
+                .debug_continue(),
             },
             ast::Operation::Implies => {
                 let function = match state.get_realm() {
@@ -908,6 +930,7 @@ where
                     &function,
                     &self.terms,
                 )
+                .debug_continue()
             }
             ast::Operation::Or | ast::Operation::And => {
                 let realm = state.get_realm();
@@ -931,19 +954,23 @@ where
                     ),
                     Realm::Symbolic => {
                         let mut iter = self.terms.iter();
-                        let first =
-                            iter.next()
-                                .unwrap()
-                                .parse(env, bvars, state, expected_sort.clone())?; // can't fail
+                        let first = iter
+                            .next()
+                            .unwrap() // can't fail
+                            .parse(env, bvars, state, expected_sort.clone())
+                            .debug_continue()?;
                         iter.try_fold(first, |acc, t| {
-                            Ok(function
-                                .get_function()
-                                .f_a([acc, t.parse(env, bvars, state, expected_sort.clone())?]))
+                            Ok(function.get_function().f_a([
+                                acc,
+                                t.parse(env, bvars, state, expected_sort.clone())
+                                    .debug_continue()?,
+                            ]))
                         })
                     }
                 }
             }
         }
+        .debug_continue()
     }
 }
 
@@ -996,120 +1023,3 @@ where
                     {x.parse(env, bvars, state, expected_sort)})
     }
 }
-
-// fn parse<'a, 'bump>(
-//     x:&ast::Quantifier<'a>,
-//     env: &Environement<'bump, 'a>,
-//     bvars: &mut Vec<(S, VarProxy<'bump>)>,
-//     state: &impl KnowsRealm,
-//     expected_sort: Option<SortProxy<'bump>>,
-// ) -> () {
-//     let ast::Quantifier {
-//         kind,
-//         span,
-//         vars,
-//         content,
-//         ..
-//     } = x;
-
-//     // let es = match state.get_realm() {
-//     //     Realm::Evaluated => BOOL.as_sort().into(),
-//     //     Realm::Symbolic => CONDITION.as_sort().into(),
-//     // };
-//     // expected_sort
-//     //     .into_iter()
-//     //     .try_for_each(|s| s.expects(es, &state).with_location(span))?;
-
-//     let bn = bvars.len();
-
-//     bvars.reserve(vars.into_iter().len());
-//     let vars: Result<Vec<_>, InputError> = vars
-//         .into_iter()
-//         // .bindings.iter()
-//         .zip(0..)
-//         .map(|(v, i)| {
-//             let id = i + from_usize(bn);
-//             let VariableBinding {
-//                 variable,
-//                 type_name,
-//                 ..
-//             } = v;
-
-//             // let vname = variable.name();
-//             // // ensures the name is free
-//             // if env.functions.contains_key(vname)
-//             //     || bvars.iter().map(|(n, _)| n).contains(&vname)
-//             // {
-//             //     // return err(merr(
-//             //     //     variable.0.span,
-//             //     //     f!("the name {} is already taken", vname),
-//             //     // ));
-//             //     bail_at!(variable.0.span, "the name {vname} is already taken")
-//             // }
-
-//             let SnN { span, name } = type_name.into();
-
-//             let var = Variable {
-//                 id,
-//                 sort: get_sort(env, *span, name)?,
-//             };
-
-//             // // sneakly expand `bvars`
-//             // // we need this here to keep the name
-//             let content = (variable.name(), var.into());
-//             bvars.push(content);
-
-//             // Ok(var)
-//             Ok(())
-//         })
-//         .collect();
-//     // let vars = vars?.into();
-
-//     // // parse body
-//     // let content = content.parse(env, bvars, state, Some(es.into()))?;
-
-//     // // remove bounded variables from pile
-//     // bvars.truncate(bn);
-
-//     // let q = {
-//     //     // let status = match state.get_realm() {
-//     //     //     Realm::Evaluated => formula::quantifier::Status::Bool,
-//     //     //     Realm::Symbolic => formula::quantifier::Status::Condition,
-//     //     // };
-//     //     match kind {
-//     //         ast::QuantifierKind::Forall => formula::quantifier::Quantifier::Forall {
-//     //             variables: vars,
-//     //             // status,
-//     //         },
-//     //         ast::QuantifierKind::Exists => formula::quantifier::Quantifier::Exists {
-//     //             variables: vars,
-//     //             // status,
-//     //         },
-//     //     }
-//     // };
-
-//     // if cfg!(debug_assertions) {
-//     //     try_trace!(
-//     //         "parsing quantifier\n\t{}",
-//     //         SmtFormula::from_arichformula(&RichFormula::Quantifier(q.clone(), content.clone()))
-//     //             .default_display()
-//     //     )
-//     // }
-
-//     // Ok(match state.get_realm() {
-//     //     Realm::Evaluated => RichFormula::Quantifier(q, content).into(),
-//     //     Realm::Symbolic => {
-//     //         let fq = Function::new_quantifier_from_quantifier(env.container, q, content);
-
-//     //         let args = match fq.as_inner() {
-//     //             function::InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q)) => {
-//     //                 q.free_variables.iter()
-//     //             }
-//     //             _ => unreachable!(),
-//     //         }
-//     //         .map(ARichFormula::from);
-
-//     //         fq.f_a(args)
-//     //     }
-//     // })
-// }

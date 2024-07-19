@@ -475,7 +475,7 @@ where
                 AbsSubtermKindG::Vampire(fun) => fun.f_a([x, m]),
                 AbsSubtermKindG::Regular(funs) => {
                     let [x, m]: [ARichFormula; 2] = [x.into(), m.into()];
-                    let sort = m.get_sort().expect_display("term algebra has a sort");
+                    let sort = m.get_sort().expect_display(|| "term algebra has a sort");
                     trace!(
                         "[{}]\n{:?}",
                         funs.keys().map(|fsort| fsort.as_reference()).join(", "),

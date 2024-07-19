@@ -39,9 +39,13 @@ macro_rules! boiler_plate {
             type Error = $crate::parser::InputError;
 
             fn try_from($p: Pair<$lt, Rule>) -> std::result::Result<$t, Self::Error> {
+                let str = $p.as_str();
+                trace!("parsing {str}");
                 debug_rule!($p, $($rule)|+);
 
-                $content
+                let r = {$content};
+                trace!("successfully parsed {str}");
+                r
             }
         }
     };
@@ -531,13 +535,17 @@ boiler_plate!(Infix<'a>, 'a, infix_term; |p| {
 
     while let Some(n_op) = p.next() {
         let n_op_span = n_op.as_span();
-        if_chain!{
-            if let Ok(tmp) = Operation::try_from(n_op);
-            if tmp == operation;
-            then {
-                bail_at!(n_op_span, "should be {}", operation)
-            }
+        if operation != Operation::try_from(n_op)? {
+            bail_at!(n_op_span, "should be {}", operation)
         }
+
+        // if_chain!{
+        //     if let Ok(tmp) = ;
+        //     if tmp == operation;
+        //     then {
+        //         bail_at!(n_op_span, "should be {}", operation)
+        //     }
+        // }
         terms.push(p.next().unwrap().try_into()?)
     }
     Ok(Infix { span, operation, terms })

@@ -20,7 +20,7 @@ use cryptovampire_lib::{
     },
     problem::{cell::Assignement, step::InnerStep},
 };
-use utils::{implvec, string_ref::StrRef};
+use utils::{implvec, string_ref::StrRef, traits::NicerError};
 
 use super::super::{super::ast, Environement, StepCache};
 
@@ -69,12 +69,16 @@ where
 
     //---- parse
     // message
-    let message = message.parse(env, &mut bvars, &state, Some(MESSAGE.clone().into()))?;
+    let message = message
+        .parse(env, &mut bvars, &state, Some(MESSAGE.clone().into()))
+        .debug_continue()?;
     let msg_used_vars = message.get_used_variables();
     bvars.truncate(n);
 
     // condition
-    let condition = condition.parse(env, &mut bvars, &state, Some(CONDITION.clone().into()))?;
+    let condition = condition
+        .parse(env, &mut bvars, &state, Some(CONDITION.clone().into()))
+        .debug_continue()?;
     let cond_used_vars = condition.get_used_variables();
     bvars.truncate(n);
 
@@ -211,17 +215,19 @@ where
     steps
         .into_iter()
         .try_for_each(|step_cache @ StepCache { ast, step, .. }| {
-            let inner = parse_step(env, step_cache)?;
+            let inner = parse_step(env, step_cache).debug_continue()?;
             let r_err = unsafe {
                 <ScopedContainer as ContainerTools<InnerStep<'bump>>>::initialize(step, inner)
             };
 
-            r_err.map_err(|_| {
-                ast.name
-                    .0
-                    .span
-                    .err_with(|| format!("step {} has already been defined", ast.name.name()))
-            })
+            Ok(r_err
+                .map_err(|_| {
+                    ast.name
+                        .0
+                        .span
+                        .err_with(|| format!("step {} has already been defined", ast.name.name()))
+                })
+                .debug_continue()?)
 
             // match r_err {
             //     Err(_) => Err(merr(

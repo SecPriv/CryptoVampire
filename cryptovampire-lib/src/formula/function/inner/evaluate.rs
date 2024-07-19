@@ -67,7 +67,7 @@ impl<'bump> Evaluator<'bump> {
         trace!("try eval: {}", f);
         let sort = f
             .get_sort()
-            .debug_continue_msg(&format!("{f} doesn't have a known sort"))?;
+            .debug_continue_msg(|| format!("{f} doesn't have a known sort"))?;
         let fun = self.functions.get(&sort.into());
         match fun {
             None => Ok(f), // unevaluatable sort don't need to be evaluated

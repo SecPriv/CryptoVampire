@@ -85,7 +85,7 @@ macro_rules! lerr {
 
 macro_rules! lbail {
     ($loc:expr, $($arg:tt)*) => {
-        lerr!($loc, $($arg:tt)*)?
+        utils::traits::NicerError::debug_continue(lerr!($loc, $($arg:tt)*))?
     };
 }
 
@@ -138,6 +138,7 @@ use utils::{string_ref::StrRef, traits::NicerError};
 
 mod error {
 
+    use std::backtrace;
     use std::fmt::Display;
 
     use anyhow::anyhow;
@@ -158,7 +159,7 @@ mod error {
             err: anyhow::Error,
         },
 
-        #[error("{0}")]
+        #[error("No location:\n{0}")]
         Other(#[source] anyhow::Error),
     }
 
