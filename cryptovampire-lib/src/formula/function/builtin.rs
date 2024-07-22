@@ -194,9 +194,11 @@ pub static CONDITION_TO_BOOL: Function<'static> = new_static_function(InnerFunct
     Evaluate::new("evaluate_cond".into(), CONDITION.as_sort(), BOOL.as_sort()),
 ));
 
+pub const EMPTY_FUN_NAME :&'static str = "empty";
+
 #[dynamic]
 static EMPTY_TUPLE_FUNCTION: BaseFunctionTuple<'static> =
-    Function::new_user_term_algebra(&StaticContainer, "empty", [], MESSAGE.clone());
+    Function::new_user_term_algebra(&StaticContainer, EMPTY_FUN_NAME, [], MESSAGE.clone());
 
 #[dynamic]
 pub static EMPTY: Function<'static> = (&EMPTY_TUPLE_FUNCTION).main.clone();

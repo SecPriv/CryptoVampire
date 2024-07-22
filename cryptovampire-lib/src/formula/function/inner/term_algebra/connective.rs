@@ -56,6 +56,14 @@ impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for Equality {
     }
 }
 
+pub const AND_NAME : &'static str = "ta$and";
+pub const OR_NAME : &'static str = "ta$or";
+pub const NOT_NAME : &'static str = "ta$not";
+pub const IMPLIES_NAME : &'static str = "ta$implies";
+pub const IFF_NAME : &'static str = "ta$iff";
+pub const TRUE_NAME : &'static str = "ta$true";
+pub const FALSE_NAME : &'static str = "ta$false";
+
 impl BaseConnective {
     pub fn evaluated(&self) -> Function<'static> {
         match self {
@@ -71,13 +79,13 @@ impl BaseConnective {
 
     pub fn name(&self) -> &'static str {
         match self {
-            BaseConnective::And => "ta$and",
-            BaseConnective::Or => "ta$or",
-            BaseConnective::Not => "ta$not",
-            BaseConnective::Implies => "ta$implies",
-            BaseConnective::Iff => "ta$iff",
-            BaseConnective::True => "ta$true",
-            BaseConnective::False => "ta$false",
+            BaseConnective::And => AND_NAME,
+            BaseConnective::Or => OR_NAME,
+            BaseConnective::Not => NOT_NAME,
+            BaseConnective::Implies => IMPLIES_NAME,
+            BaseConnective::Iff => IFF_NAME,
+            BaseConnective::True => TRUE_NAME,
+            BaseConnective::False => FALSE_NAME,
         }
     }
 }

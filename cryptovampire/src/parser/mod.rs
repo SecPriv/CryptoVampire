@@ -320,12 +320,12 @@ mod error {
 }
 pub use error::{InputError, Location};
 
-trait HasInitStep: Sized {
+pub trait HasInitStep: Sized {
     fn ref_init_step_ast<'a>() -> &'a ast::Step<'a, Self>;
     // fn from_static(s:&'static str) -> Self;
 }
 
-trait FromStaticString {
+pub trait FromStaticString {
     fn from_static(s: &'static str) -> Self;
 }
 

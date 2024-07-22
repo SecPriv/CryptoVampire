@@ -9,7 +9,10 @@ use itertools::{chain, Itertools};
 use log::trace;
 use pest::{iterators::Pair, Parser, Position};
 
-use cryptovampire_lib::INIT_STEP_NAME;
+use cryptovampire_lib::{
+    formula::function::{builtin, inner::term_algebra},
+    INIT_STEP_NAME,
+};
 use utils::{destvec, match_as_trait, vecref::VecRef};
 
 use super::*;
@@ -134,14 +137,17 @@ macro_rules! destruct_rule {
     }
 }
 
-// const INIT_STEP_STRING: &'static str = concatcp!("step ", INIT_STEP_NAME, "(){true}{empty}");
-
+/// The default init step when it's not defined. This is a function because
+/// it needs to be generic.
+///
+/// See [HasInitStep::ref_init_step_ast] a degenericied version
+#[allow(non_snake_case)]
 pub fn INIT_STEP_AST<S>() -> Step<'static, S>
 where
     S: From<&'static str>,
 {
-    let condition = Term::new_default_const("true".into());
-    let message = Term::new_default_const("empty".into());
+    let condition = Term::new_default_const(term_algebra::connective::TRUE_NAME.into());
+    let message = Term::new_default_const(builtin::EMPTY_FUN_NAME.into());
 
     Step {
         span: Location::default(),
@@ -820,9 +826,14 @@ boiler_plate!(Quantifier<'a>, 'a, quantifier; |p| {
     Ok(Self { kind, vars, span, content})
 });
 
-impl<'a, S:Display> Display for Quantifier<'a, S> {
+impl<'a, S: Display> Display for Quantifier<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self { kind,  vars, content,.. } = self;
+        let Self {
+            kind,
+            vars,
+            content,
+            ..
+        } = self;
         write!(f, "{kind} {vars} {{{content}}}")
     }
 }
@@ -861,9 +872,9 @@ boiler_plate!(LetIn<'a>, 'a, let_in; |p| {
     Ok(Self { span, var, t1, t2})
 });
 
-impl<'a, S:Display> Display for LetIn<'a, S> {
+impl<'a, S: Display> Display for LetIn<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self {  var, t1, t2,.. } = self;
+        let Self { var, t1, t2, .. } = self;
         write!(f, "let {var} = {t1} in {t2}")
     }
 }
@@ -878,7 +889,6 @@ boiler_plate!(l Declaration<'a>, 'a, declaration; |p| {
     declare_function => { Ok(Declaration::Function(p.try_into()?)) }
     declare_cell => { Ok(Declaration::Cell(p.try_into()?)) }
 });
-
 
 impl<'a, S: Display> Display for Declaration<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -911,9 +921,9 @@ impl<'a, S> DeclareType<'a, S> {
     }
 }
 
-impl<'a, S:Display> Display for DeclareType<'a, S> {
+impl<'a, S: Display> Display for DeclareType<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self { name, options,.. }=self;
+        let Self { name, options, .. } = self;
         write!(f, "type {name} {options}")
     }
 }
@@ -948,9 +958,15 @@ impl<'a, S> DeclareFunction<'a, S> {
     }
 }
 
-impl<'a, S:Display> Display for DeclareFunction<'a, S> {
+impl<'a, S: Display> Display for DeclareFunction<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self { name, args, sort, options,.. }=self;
+        let Self {
+            name,
+            args,
+            sort,
+            options,
+            ..
+        } = self;
         write!(f, "fun {name}{args}:{sort} {options}")
     }
 }
@@ -968,7 +984,7 @@ boiler_plate!(DeclareFunctionArgs<'a>, 'a, declare_function_args; |p| {
     Ok(Self { span, args })
 });
 
-impl<'a, S:Display> Display for DeclareFunctionArgs<'a, S> {
+impl<'a, S: Display> Display for DeclareFunctionArgs<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.args.is_empty() {
             Ok(())
@@ -994,9 +1010,15 @@ boiler_plate!(DeclareCell<'a>, 'a, declare_cell; |p| {
     Ok(Self { span, name, args, sort, options })
 });
 
-impl<'a, S:Display> Display for DeclareCell<'a, S> {
+impl<'a, S: Display> Display for DeclareCell<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self {  name, args, sort, options,.. }=self;
+        let Self {
+            name,
+            args,
+            sort,
+            options,
+            ..
+        } = self;
         write!(f, "cell {name}{args}:{sort} {options}")
     }
 }
@@ -1047,14 +1069,22 @@ boiler_plate!(Step<'a>, 'a, step; |p| {
     Ok(Self { span, name, args, condition, message, assignements, options})
 });
 
-impl<'a, S:Display> Display for Step<'a, S> {
+impl<'a, S: Display> Display for Step<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self {  name, args, condition, message, assignements, options,.. } = self;
+        let Self {
+            name,
+            args,
+            condition,
+            message,
+            assignements,
+            options,
+            ..
+        } = self;
         write!(f, "step {name}{args}\n\t{{{condition}}}\n\t{{{message}}}")?;
         if let Some(a) = assignements {
             write!(f, "\n\t{a}")?;
         }
-        write!(f,"\n{options}")
+        write!(f, "\n{options}")
     }
 }
 
@@ -1071,8 +1101,7 @@ boiler_plate!(Assignements<'a>, 'a, assignements; |p| {
     Ok(Self { span, assignements })
 });
 
-
-impl<'a, S:Display> Display for Assignements<'a, S> {
+impl<'a, S: Display> Display for Assignements<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.assignements.iter().format(", "))
     }
@@ -1116,10 +1145,14 @@ boiler_plate!(Assignement<'a>, 'a, assignement; |p| {
     // Ok(Self { span, cell, term })
 });
 
-
-impl<'a, S:Display> Display for Assignement<'a, S> {
+impl<'a, S: Display> Display for Assignement<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self {  cell, term, fresh_vars,.. }=self;
+        let Self {
+            cell,
+            term,
+            fresh_vars,
+            ..
+        } = self;
         if let Some(fv) = fresh_vars {
             write!(f, "{fv} ")?;
         }
@@ -1149,9 +1182,15 @@ impl<'a, S> Macro<'a, S> {
     }
 }
 
-impl<'a, S:Display> Display for Macro<'a, S> {
+impl<'a, S: Display> Display for Macro<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self { name, args, term, options,.. } = self;
+        let Self {
+            name,
+            args,
+            term,
+            options,
+            ..
+        } = self;
         write!(f, "let {name}{args} = {term} {options}")
     }
 }
@@ -1248,7 +1287,7 @@ impl<'a, S: Display> Display for Assert<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Assert::Assertion(a) => write!(f, "assert {a}"),
-            Assert::Query(a) =>write!(f, "query {a}"),
+            Assert::Query(a) => write!(f, "query {a}"),
             Assert::Lemma(a) => write!(f, "lemma {a}"),
         }
     }
@@ -1268,14 +1307,14 @@ boiler_plate!(Assertion<'a>, 'a, assertion_inner | query_inner | lemma_inner ; |
     Ok(Self {span, content, options})
 });
 
-
-impl<'a, S:Display> Display for Assertion<'a, S> {
+impl<'a, S: Display> Display for Assertion<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self {  content, options,.. } = self;
+        let Self {
+            content, options, ..
+        } = self;
         write!(f, "{content} {options}")
     }
 }
-
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -1309,11 +1348,19 @@ boiler_plate!(AssertCrypto<'a>, 'a, assertion_crypto ; |p| {
 });
 impl<'a, S: Display> Display for AssertCrypto<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self { name, functions, options,.. }=self;
-        write!(f, "assert-crypto {name} {} {options}", functions.iter().format(", "))
+        let Self {
+            name,
+            functions,
+            options,
+            ..
+        } = self;
+        write!(
+            f,
+            "assert-crypto {name} {} {options}",
+            functions.iter().format(", ")
+        )
     }
 }
-
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -1335,11 +1382,18 @@ boiler_plate!(Order<'a>, 'a, order ; |p| {
 
 impl<'a, S: Display> Display for Order<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self { quantifier, args, t1, t2, kind, options,.. } = self;
+        let Self {
+            quantifier,
+            args,
+            t1,
+            t2,
+            kind,
+            options,
+            ..
+        } = self;
         write!(f, "order {quantifier}{args}{{{t1} {kind} {t2}}} {options}")
     }
 }
-
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum OrderOperation {
@@ -1362,7 +1416,6 @@ impl Display for OrderOperation {
         write!(f, "{op}")
     }
 }
-
 
 impl<'a, 'b, S> IntoIterator for &'b TypedArgument<'a, S> {
     type Item = &'b VariableBinding<'a, S>;
