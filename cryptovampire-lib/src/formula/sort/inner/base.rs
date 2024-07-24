@@ -15,6 +15,16 @@ pub enum TermBase {
     Bitstring,
 }
 
+pub mod constants {
+    pub const MESSAGE_NAME: &'static str = "Message";
+
+    pub const BOOL_NAME: &'static str = "Bool";
+
+    pub const CONDITION_NAME: &'static str = "Condition";
+
+    pub const BITSTRING_NAME: &'static str = "Bitstring";
+}
+
 impl TermBase {
     pub fn evaluated_sort<'a>(&self) -> Option<Sort<'a>> {
         match self {
@@ -30,10 +40,10 @@ impl TermBase {
 
     pub fn name(&self) -> StrRef<'static> {
         match self {
-            TermBase::Bool => "Bool",
-            TermBase::Condition => "Condition",
-            TermBase::Message => "Message",
-            TermBase::Bitstring => "Bitstring",
+            TermBase::Bool => constants::BOOL_NAME,
+            TermBase::Condition => constants::CONDITION_NAME,
+            TermBase::Message => constants::MESSAGE_NAME,
+            TermBase::Bitstring => constants::BITSTRING_NAME,
         }
         .into()
     }

@@ -1,9 +1,9 @@
-use std::{borrow::Borrow, fmt::Display, hash::Hash, ops::Deref, sync::Arc};
+use std::{borrow::{Borrow, Cow}, fmt::Display, hash::Hash, ops::Deref, sync::Arc};
 
 #[derive(Debug, Clone)]
 /// A boxed string that can also be a `&str`
 pub enum StrRef<'a> {
-    Ref(&'a str),
+    Borrowed(&'a str),
     Owned(Arc<str>),
 }
 
@@ -48,14 +48,14 @@ impl<'a> StrRef<'a> {
 impl<'a> From<&'a str> for StrRef<'a> {
     #[inline]
     fn from(value: &'a str) -> Self {
-        StrRef::Ref(value)
+        StrRef::Borrowed(value)
     }
 }
 
 impl<'a, 'b> From<&'b &'a str> for StrRef<'b> {
     #[inline]
     fn from(value: &'b &'a str) -> Self {
-        StrRef::Ref(value)
+        StrRef::Borrowed(value)
     }
 }
 
@@ -73,11 +73,20 @@ impl<'a> From<Box<str>> for StrRef<'a> {
     }
 }
 
+impl<'a> From<Cow<'a, str>> for StrRef<'a> {
+    fn from(value: Cow<'a, str>) -> Self {
+        match value {
+            Cow::Borrowed(s) => s.into(),
+            Cow::Owned(s) => s.into(),
+        }
+    }
+}
+
 impl<'a> AsRef<str> for StrRef<'a> {
     #[inline]
     fn as_ref(&self) -> &str {
         match self {
-            StrRef::Ref(s) => *s,
+            StrRef::Borrowed(s) => *s,
             StrRef::Owned(s) => s.as_ref(),
         }
     }
@@ -87,7 +96,7 @@ impl<'a> Into<Arc<str>> for StrRef<'a> {
     #[inline]
     fn into(self) -> Arc<str> {
         match self {
-            StrRef::Ref(s) => Arc::from(s),
+            StrRef::Borrowed(s) => Arc::from(s),
             StrRef::Owned(s) => s,
         }
     }

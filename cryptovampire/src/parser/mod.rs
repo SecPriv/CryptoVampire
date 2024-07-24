@@ -146,6 +146,7 @@ mod error {
     use pest::Span;
     use thiserror::Error;
     use utils::implvec;
+    use utils::iter_array;
 
     use super::MResult;
     use super::Rule;
@@ -186,6 +187,7 @@ mod error {
                 err,
             }
         }
+
     }
 
     #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default)]
@@ -278,6 +280,15 @@ mod error {
             self.map_err(|err| InputError::new_with_location(&location.into(), err.into()))
         }
     }
+    impl<T> WithLocation<T> for Option<T>
+    {
+        fn with_location<'a, I>(self, location: I) -> MResult<T>
+        where
+            Location<'a>: From<I>,
+        {
+            self.ok_or_else(|| InputError::new_with_location(&location.into(), anyhow!("None")))
+        }
+    }
 
     impl From<pest::error::Error<Rule>> for InputError {
         fn from(value: pest::error::Error<Rule>) -> Self {
@@ -302,6 +313,8 @@ mod error {
     }
 
     err_from!(anyhow::Error);
+    err_from!(iter_array::WrongLengthError);
+    err_from!(iter_array::NotEnoughItemError);
 
     #[macro_export]
     macro_rules! err_at {
@@ -318,7 +331,7 @@ mod error {
         };
     }
 }
-pub use error::{InputError, Location};
+pub use error::{InputError, Location, WithLocation};
 
 pub trait HasInitStep: Sized {
     fn ref_init_step_ast<'a>() -> &'a ast::Step<'a, Self>;

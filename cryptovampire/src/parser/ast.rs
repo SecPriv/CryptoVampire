@@ -10,7 +10,10 @@ use log::trace;
 use pest::{iterators::Pair, Parser, Position};
 
 use cryptovampire_lib::{
-    formula::function::{builtin, inner::term_algebra},
+    formula::{
+        function::{builtin, inner::term_algebra},
+        variable,
+    },
     INIT_STEP_NAME,
 };
 use utils::{destvec, match_as_trait, vecref::VecRef};
@@ -151,7 +154,7 @@ where
 
     Step {
         span: Location::default(),
-        name: StepName::from_S(INIT_STEP_NAME.into()),
+        name: StepName::from_s(INIT_STEP_NAME.into()),
         args: TypedArgument::default(),
         condition,
         message,
@@ -223,6 +226,12 @@ impl<'s, T> Sub<'s, T> {
     }
 }
 
+impl<'s, T> From<T> for Sub<'s, T> {
+    fn from(c: T) -> Self {
+        Self::from_content(c)
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum AST<'a, S = &'a str> {
     Declaration(Box<Declaration<'a, S>>),
@@ -279,6 +288,13 @@ impl<'a, S: Display> Display for Ident<'a, S> {
         self.name().fmt(f)
     }
 }
+
+impl<'a, S> From<S> for Ident<'a, S> {
+    fn from(value: S) -> Self {
+        Self::from_content(value)
+    }
+}
+
 /// [Rule::type_name]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct TypeName<'a, S = &'a str>(pub Sub<'a, Ident<'a, S>>);
@@ -298,6 +314,12 @@ impl<'a, S> TypeName<'a, S> {
 impl<'a, S: Display> Display for TypeName<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.name().fmt(f)
+    }
+}
+
+impl<'a, S> From<S> for TypeName<'a, S> {
+    fn from(value: S) -> Self {
+        TypeName(Sub::from(Ident::from(value)))
     }
 }
 
@@ -367,6 +389,12 @@ impl<'a, S: Display> Display for Variable<'a, S> {
         self.name().fmt(f)
     }
 }
+
+impl<'a, S> From<S> for Variable<'a, S> {
+    fn from(value: S) -> Self {
+        Variable(value.into())
+    }
+}
 /// [Rule::step_name]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct StepName<'a, S = &'a str>(pub Sub<'a, Ident<'a, S>>);
@@ -379,7 +407,7 @@ impl<'a, S> StepName<'a, S> {
         self.0.content.name()
     }
 
-    pub fn from_S(s: S) -> Self {
+    pub fn from_s(s: S) -> Self {
         Self(Sub {
             span: Default::default(),
             content: Ident::from_content(s),
@@ -422,6 +450,20 @@ impl<'a, S: Display> Display for TypedArgument<'a, S> {
         write!(f, "({})", self.bindings.iter().format(", "))
     }
 }
+
+impl<'a, S, U> FromIterator<U> for TypedArgument<'a, S>
+where
+    VariableBinding<'a, S>: From<U>,
+{
+    fn from_iter<T: IntoIterator<Item = U>>(iter: T) -> Self {
+        let bindings = iter.into_iter().map_into().collect();
+        Self {
+            span: Default::default(),
+            bindings,
+        }
+    }
+}
+
 /// [Rule::variable_binding]
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -440,6 +482,22 @@ boiler_plate!(VariableBinding<'s>, 's, variable_binding; |p| {
 impl<'a, S: Display> Display for VariableBinding<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}:{}", &self.variable, &self.type_name)
+    }
+}
+
+impl<'a, S, V, T> From<(V, T)> for VariableBinding<'a, S>
+where
+    Variable<'a, S>: From<V>,
+    TypeName<'a, S>: From<T>,
+{
+    fn from((variable, type_name): (V, T)) -> Self {
+        let variable = variable.into();
+        let type_name = type_name.into();
+        Self {
+            span: Default::default(),
+            variable,
+            type_name,
+        }
     }
 }
 

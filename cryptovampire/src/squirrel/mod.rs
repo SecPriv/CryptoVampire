@@ -1,7 +1,8 @@
 use thiserror::Error;
+use utils::iter_array;
 
-// pub(crate) mod json;
-// mod converters;
+pub(crate) mod json;
+mod converters;
 
 #[derive(Debug, Error, Ord, Eq, PartialEq, PartialOrd, Clone)]
 pub enum ConversiontError {

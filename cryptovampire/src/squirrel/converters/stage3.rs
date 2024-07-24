@@ -7,7 +7,9 @@ use cryptovampire_lib::{
     formula::{
         function::{inner::name::Name, Function},
         sort::{
+            self,
             builtins::{BOOL, CONDITION, MESSAGE, NAME, STEP},
+            inner::{BOOL_NAME, MESSAGE_NAME},
             Sort,
         },
         variable::uvar,
@@ -16,11 +18,14 @@ use cryptovampire_lib::{
 };
 use hashbrown::{HashMap, HashSet};
 use itertools::{chain, Itertools};
-use utils::{implvec, string_ref::StrRef};
+use utils::{implvec, iter_array::IntoArray, string_ref::StrRef};
 
 use crate::{
     err_at,
-    parser::{ast, InputError, Location, MResult},
+    parser::{
+        ast::{self, TypedArgument},
+        InputError, Location, MResult, WithLocation,
+    },
     squirrel::{
         converters::ConversiontError,
         json::{
@@ -34,59 +39,159 @@ use crate::{
 
 use super::stage2::{Fun2, SVariable, SquirrelDump2, TF2};
 
-fn try_into_array<A, B, const N: usize>(a: Vec<A>) -> MResult<[B; N]>
-where
-    A: TryInto<B, Error = InputError>,
-{
-    let tmp: std::result::Result<Vec<B>, InputError> =
-        a.into_iter().map(|x| x.try_into()).collect();
-    Ok(tmp?
-        .try_into()
-        .map_err(|_| err_at!(&Location::none(), "wrong number of arguments"))?)
+// fn try_into_array<A, B, const N: usize>(a: Vec<A>) -> MResult<[B; N]>
+// where
+//     A: TryInto<B, Error = InputError>,
+// {
+//     let tmp: std::result::Result<Vec<B>, InputError> =
+//         a.into_iter().map(|x| x.try_into()).collect();
+//     Ok(tmp?
+//         .try_into()
+//         .map_err(|_| err_at!(&Location::none(), "wrong number of arguments"))?)
+// }
+
+type SortsMap<'a> = HashMap<StrRef<'a>, StrRef<'a>>;
+type FunsMap<'a> = HashMap<Fun2<'a>, StrRef<'a>>;
+
+#[derive(Debug)]
+struct Ctx<'a> {
+    sorts: SortsMap<'a>,
+    funs: FunsMap<'a>,
+    flatten_tuple: HashSet<Fun2<'a>>,
 }
 
-impl<'a> TryInto<ast::Term<'static>> for TF2<'a> {
-    type Error = InputError;
-    fn try_into(self) -> MResult<ast::Term<'static>> {
-        let span = Location::none();
-        let inner = match self {
-            BaseFormula::Binder { head, vars, args } => {
-                let vars = vars.into_iter().map(|x| x.try_into()).try_collect()?;
-                match head {
-                    super::SQuant::Forall | super::SQuant::Exists => {
-                        let [content]: [_; 1] = try_into_array(args)?;
-                        let kind = match head {
-                            super::SQuant::Exists => ast::QuantifierKind::Exists,
-                            super::SQuant::Forall => ast::QuantifierKind::Forall,
-                            _ => unreachable!(),
-                        };
-                        ast::InnerTerm::Quant(Box::new(ast::Quantifier {
-                            span,
-                            vars,
-                            kind,
-                            content,
-                        }))
-                    }
-                    super::SQuant::FindSuchThat => {
-                        let [condition, left, right]: [_; 3] = try_into_array(args)?;
-                        ast::InnerTerm::Fndst(Box::new(ast::FindSuchThat {
-                            span,
-                            vars,
-                            condition,
-                            left,
-                            right,
-                        }))
-                    }
+impl<'a> Ctx<'a> {
+    pub fn flatten_tuple(&self, f: &Fun2<'a>) -> bool {
+        self.flatten_tuple.contains(f)
+    }
+}
+
+fn mk_sort_data<'a>(sorts: &[json::Sort<'a>]) -> SortsMap<'a> {
+    sorts
+        .iter()
+        .map(|json::Content { symb, data }| {
+            let nsymb: StrRef<'a> = symb.clone().into();
+            if data.can_be_index() {
+                (nsymb, format!("sq_{symb}").into())
+            } else {
+                (nsymb.clone(), MESSAGE.name())
+            }
+        })
+        .collect()
+}
+
+fn get_sort_str<'a>(sorts: &SortsMap<'a>, symb: &json::Type<'a>) -> Option<StrRef<'a>> {
+    match symb {
+        json::Type::Message => Some(MESSAGE.name()),
+        json::Type::Boolean => Some(BOOL.name()),
+        json::Type::Index => Some("index".into()),
+        json::Type::Timestamp => Some(STEP.name()),
+        json::Type::TBase(s) => sorts.get(s.as_ref()).cloned(),
+        json::Type::TVar { .. }
+        | json::Type::TUnivar { .. }
+        | json::Type::Tuple { .. }
+        | json::Type::Fun { .. } => None,
+    }
+}
+
+fn flatten_args<U:Clone, const N: usize>(arg: [Vec<U>; N]) -> Vec<[U; N]> {
+    if N == 0 {
+        return vec![];
+    } else {
+        let max_diff = arg.iter().map(|e| e.len()).max().unwrap(); // because N != 0
+        assert!(
+            arg.iter().all(|e| !e.is_empty()),
+            "empty diffs are not supported"
+        );
+        (0..max_diff)
+            .into_iter()
+            .map(|i| std::array::from_fn(|j| arg[i][j].clone()))
+            .collect()
+    }
+}
+
+type Term<'a> = ast::Term<'static, StrRef<'a>>;
+
+trait CollectArgArray<'a> {
+    fn collect_arg_array<const N: usize>(
+        self,
+        ctx: &Ctx<'a>,
+        which_diff: Option<usize>,
+    ) -> MResult<[Term<'a>; N]>;
+}
+impl<'a, I> CollectArgArray<'a> for I
+where
+    I: IntoIterator<Item = TF2<'a>>,
+{
+    fn collect_arg_array<const N: usize>(
+        self,
+        ctx: &Ctx<'a>,
+        which_diff: Option<usize>,
+    ) -> MResult<[Term<'a>; N]> {
+        let tmp: std::result::Result<MResult<[ast::Term<_>; N]>, _> = self
+            .into_iter()
+            .map(|t| convert_term(ctx, which_diff, t))
+            .collect_array_exact();
+        tmp?
+    }
+}
+
+fn convert_term<'a>(ctx: &Ctx<'a>, which_diff: Option<usize>, t: TF2<'a>) -> MResult<Term<'a>> {
+    let span = Location::default();
+
+    let inner = match t {
+        BaseFormula::Binder { head, vars, args } => {
+            let vars: Option<TypedArgument<_>> = vars
+                .into_iter()
+                .map(|x| Some((x.name(), get_sort_str(&ctx.sorts, x.sort.as_ref())?)))
+                .collect();
+            let vars = vars.with_location(&span)?;
+            match head {
+                super::SQuant::Forall | super::SQuant::Exists => {
+                    let [content]: [ast::Term<_>; 1] = args.collect_arg_array(ctx, which_diff)?;
+                    let kind = match head {
+                        super::SQuant::Exists => ast::QuantifierKind::Exists,
+                        super::SQuant::Forall => ast::QuantifierKind::Forall,
+                        _ => unreachable!(),
+                    };
+                    ast::InnerTerm::Quant(Box::new(ast::Quantifier {
+                        span,
+                        vars,
+                        kind,
+                        content,
+                    }))
+                }
+                super::SQuant::FindSuchThat => {
+                    let [condition, left, right]: [_; 3] =
+                        args.collect_arg_array(ctx, which_diff)?;
+                    ast::InnerTerm::Fndst(Box::new(ast::FindSuchThat {
+                        span,
+                        vars,
+                        condition,
+                        left,
+                        right,
+                    }))
                 }
             }
-            BaseFormula::App { head, args } => todo!(),
-            BaseFormula::Var(v) => {
-                ast::InnerTerm::Application(ast::Application::ConstVar { span, content: v.id.name })
-            },
-        };
+        }
+        BaseFormula::Var(v) => ast::InnerTerm::Application(Box::new(ast::Application::ConstVar {
+            span,
+            content: v.name().into(),
+        })),
+        BaseFormula::App { head, args } => {
+            if let Fun2::Diff = head {}
+            /*
+             TODO:
+             - a map from `head` to cv function
+             - recognising macros
+             - recognising function with tuple as arguments
+            */
 
-        Ok(ast::Term { span, inner })
-    }
+            todo!()
+        }
+    };
+
+    Ok(ast::Term { span, inner })
 }
 
 #[derive(Debug)]

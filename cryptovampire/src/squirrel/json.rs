@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, fmt::Display};
 
 use cryptovampire_lib::formula::variable::uvar;
 use serde::{Deserialize, Serialize};
@@ -104,6 +104,13 @@ pub struct Ident<'a> {
     pub tag: i32,
 }
 
+impl<'a> Display for Ident<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self { name, tag } = self;
+        write!(f, "{name}_{tag:}")
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum Type<'a> {
     Message,
@@ -143,11 +150,18 @@ pub struct Variable<'a, Ty = Type<'a>> {
     pub sort: Box<Ty>,
 }
 
+impl<'a, Ty> Variable<'a, Ty> {
+    pub fn name(&self) -> StrRef<'a> {
+        self.id.to_string().into()
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct TypeVariable<'a> {
     #[serde(flatten, borrow)]
     pub id: Ident<'a>,
 }
+
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct Channel<'a>(Cow<'a, str>);
@@ -204,6 +218,7 @@ pub mod action {
     }
 }
 pub use action::Action;
+use utils::string_ref::StrRef;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct Content<'a, U> {
@@ -340,6 +355,13 @@ pub mod mtype {
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
     pub struct SortData(pub Vec<SortKind>);
+
+    impl SortData {
+
+        pub fn can_be_index(&self) -> bool {
+           self.0.iter().all(|k| k.can_be_index())
+        }
+    }
 }
 pub type Sort<'a> = Content<'a, mtype::SortData>;
 
