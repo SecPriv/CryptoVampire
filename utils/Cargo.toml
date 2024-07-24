@@ -9,3 +9,5 @@ authors = ["Simon Jeanteur <7871851+puyral@users.noreply.github.com>"]
 [dependencies]
 hashbrown = { workspace = true }
 thiserror = { workspace = true }
+if_chain = { workspace = true }
+itertools = { workspace = true }
