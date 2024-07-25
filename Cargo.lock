@@ -920,6 +920,8 @@ name = "utils"
 version = "0.1.0"
 dependencies = [
  "hashbrown",
+ "if_chain",
+ "itertools",
  "thiserror",
 ]
 

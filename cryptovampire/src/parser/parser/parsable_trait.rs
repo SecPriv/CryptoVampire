@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, fmt::Display, ops::Deref};
+use std::{borrow::Borrow, fmt::Display, ops::Deref, sync::Arc};
 mod cached_builtins;
 
 use anyhow::Context;
@@ -884,7 +884,7 @@ where
                     }),
                     args: vec![ast::Term {
                         span: self.span,
-                        inner: ast::InnerTerm::Infix(Box::new(Self {
+                        inner: ast::InnerTerm::Infix(Arc::new(Self {
                             operation: ast::Operation::Eq,
                             ..self.clone()
                         })),
@@ -986,7 +986,7 @@ where
     iter.into_iter()
         .map(|(a, b)| ast::Term {
             span,
-            inner: ast::InnerTerm::Infix(Box::new(ast::Infix {
+            inner: ast::InnerTerm::Infix(Arc::new(ast::Infix {
                 operation: op,
                 span,
                 terms: vec![a.clone(), b.clone()],

@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, default, ops::Index, sync::Arc};
 
 use super::Result;
 use anyhow::Context;
@@ -17,8 +17,16 @@ use cryptovampire_lib::{
     },
 };
 use hashbrown::{HashMap, HashSet};
+use if_chain::if_chain;
 use itertools::{chain, Itertools};
-use utils::{implvec, iter_array::IntoArray, string_ref::StrRef};
+use utils::{all_or_one::AllOrOne, monad::Monad};
+use utils::{
+    all_or_one::{AllOrOneShape, AoOV},
+    implvec,
+    iter_array::IntoArray,
+    mdo,
+    string_ref::StrRef,
+};
 
 use crate::{
     err_at,
@@ -50,19 +58,29 @@ use super::stage2::{Fun2, SVariable, SquirrelDump2, TF2};
 //         .map_err(|_| err_at!(&Location::none(), "wrong number of arguments"))?)
 // }
 
+#[derive(Debug, Clone)]
+enum FunctionKind<'a> {
+    Concrete(StrRef<'a>),
+    WithTuple(StrRef<'a>),
+    Direct(StrRef<'a>),
+}
+
 type SortsMap<'a> = HashMap<StrRef<'a>, StrRef<'a>>;
-type FunsMap<'a> = HashMap<Fun2<'a>, StrRef<'a>>;
+type FunsMap<'a> = HashMap<Fun2<'a>, FunctionKind<'a>>;
+type RAoO<T> = MResult<AoOV<T>>;
 
 #[derive(Debug)]
 struct Ctx<'a> {
     sorts: SortsMap<'a>,
     funs: FunsMap<'a>,
-    flatten_tuple: HashSet<Fun2<'a>>,
 }
 
 impl<'a> Ctx<'a> {
-    pub fn flatten_tuple(&self, f: &Fun2<'a>) -> bool {
-        self.flatten_tuple.contains(f)
+    pub fn get_function(&self, f: &Fun2<'a>) -> Option<&FunctionKind<'a>> {
+        self.funs.get(f)
+    }
+    pub fn get_sort(&self, f: &StrRef<'a>) -> Option<&StrRef<'a>> {
+        self.sorts.get(f)
     }
 }
 
@@ -94,52 +112,45 @@ fn get_sort_str<'a>(sorts: &SortsMap<'a>, symb: &json::Type<'a>) -> Option<StrRe
     }
 }
 
-fn flatten_args<U:Clone, const N: usize>(arg: [Vec<U>; N]) -> Vec<[U; N]> {
-    if N == 0 {
-        return vec![];
-    } else {
-        let max_diff = arg.iter().map(|e| e.len()).max().unwrap(); // because N != 0
-        assert!(
-            arg.iter().all(|e| !e.is_empty()),
-            "empty diffs are not supported"
-        );
-        (0..max_diff)
-            .into_iter()
-            .map(|i| std::array::from_fn(|j| arg[i][j].clone()))
-            .collect()
-    }
-}
-
 type Term<'a> = ast::Term<'static, StrRef<'a>>;
 
 trait CollectArgArray<'a> {
+    fn collect_args(self, ctx: &Ctx<'a>, shape: AllOrOneShape) -> RAoO<Vec<Term<'a>>>;
+
     fn collect_arg_array<const N: usize>(
         self,
         ctx: &Ctx<'a>,
-        which_diff: Option<usize>,
-    ) -> MResult<[Term<'a>; N]>;
+        shape: AllOrOneShape,
+    ) -> RAoO<[Term<'a>; N]>
+    where
+        Self: Sized,
+    {
+        mdo! {
+            l <- self.collect_args(ctx, shape);
+            block {
+                l.collect_array_exact().map(|arr| AllOrOne::Any(arr)).map_err(|e| e.into())
+            }
+        }
+    }
 }
 impl<'a, I> CollectArgArray<'a> for I
 where
     I: IntoIterator<Item = TF2<'a>>,
 {
-    fn collect_arg_array<const N: usize>(
-        self,
-        ctx: &Ctx<'a>,
-        which_diff: Option<usize>,
-    ) -> MResult<[Term<'a>; N]> {
-        let tmp: std::result::Result<MResult<[ast::Term<_>; N]>, _> = self
+    fn collect_args(self, ctx: &Ctx<'a>, shape: AllOrOneShape) -> RAoO<Vec<Term<'a>>> {
+        let res: Vec<_> = self
             .into_iter()
-            .map(|t| convert_term(ctx, which_diff, t))
-            .collect_array_exact();
-        tmp?
+            .map(|t| convert_term(ctx, shape, t))
+            .try_collect()?;
+        Ok(AoOV::transpose(res))
     }
 }
 
-fn convert_term<'a>(ctx: &Ctx<'a>, which_diff: Option<usize>, t: TF2<'a>) -> MResult<Term<'a>> {
+fn convert_term<'a>(ctx: &Ctx<'a>, shape: AllOrOneShape, t: TF2<'a>) -> RAoO<Term<'a>> {
     let span = Location::default();
 
-    let inner = match t {
+    /* let term: RAoO<Term<'a>> = */
+    match t {
         BaseFormula::Binder { head, vars, args } => {
             let vars: Option<TypedArgument<_>> = vars
                 .into_iter()
@@ -148,38 +159,89 @@ fn convert_term<'a>(ctx: &Ctx<'a>, which_diff: Option<usize>, t: TF2<'a>) -> MRe
             let vars = vars.with_location(&span)?;
             match head {
                 super::SQuant::Forall | super::SQuant::Exists => {
-                    let [content]: [ast::Term<_>; 1] = args.collect_arg_array(ctx, which_diff)?;
                     let kind = match head {
                         super::SQuant::Exists => ast::QuantifierKind::Exists,
                         super::SQuant::Forall => ast::QuantifierKind::Forall,
                         _ => unreachable!(),
                     };
-                    ast::InnerTerm::Quant(Box::new(ast::Quantifier {
-                        span,
-                        vars,
-                        kind,
-                        content,
-                    }))
+                    mdo! {
+                     [content] <- args.collect_arg_array(ctx, shape);
+                     pure {ast::Quantifier {
+                         span,
+                         vars: vars.clone(),
+                         kind,
+                         content: content.clone(),
+                     }.into()}
+                    }
                 }
                 super::SQuant::FindSuchThat => {
-                    let [condition, left, right]: [_; 3] =
-                        args.collect_arg_array(ctx, which_diff)?;
-                    ast::InnerTerm::Fndst(Box::new(ast::FindSuchThat {
-                        span,
-                        vars,
-                        condition,
-                        left,
-                        right,
-                    }))
+                    mdo! {
+                        [condition, left, right] <- args.collect_arg_array(ctx, shape);
+                        pure {ast::FindSuchThat {
+                                span,
+                                vars: vars.clone(),
+                                condition,
+                                left,
+                                right,
+                            }.into()}
+                    }
                 }
             }
         }
-        BaseFormula::Var(v) => ast::InnerTerm::Application(Box::new(ast::Application::ConstVar {
-            span,
-            content: v.name().into(),
-        })),
-        BaseFormula::App { head, args } => {
-            if let Fun2::Diff = head {}
+        BaseFormula::Var(v) => {
+            mdo! {
+                pure {ast::Application::ConstVar {
+                    span,
+                    content: v.name().into(),
+                }.into()}
+            }
+        }
+        BaseFormula::App { head, mut args } => {
+            if let Fun2::Diff = head {
+                match shape {
+                    AllOrOne::All(_) | AllOrOne::Any(_) => {
+                        let vec: Vec<_> = args
+                            .into_iter()
+                            .enumerate()
+                            .map(|(i, t)| convert_term(ctx, AllOrOne::One(i, ()), t))
+                            .try_collect()?;
+                        Ok(AllOrOne::All(
+                            vec.into_iter()
+                                .enumerate()
+                                .map(|(i, t)| t.owned_get(i))
+                                .collect(),
+                        ))
+                    }
+                    AllOrOne::One(i, _) => {
+                        let arg = args.swap_remove(i);
+                        convert_term(ctx, AllOrOne::One(i, ()), arg)
+                    }
+                }
+            } else {
+                match head {
+                    Fun2::Name(str) => ,
+                    Fun2::Macro(_) => todo!(),
+                    Fun2::Step(_) => todo!(),
+                    Fun2::Fun(_) => todo!(),
+                    Fun2::Tuple => todo!(),
+                    Fun2::ProjL => todo!(),
+                    Fun2::ProjR => todo!(),
+                    Fun2::Diff => todo!(),
+                    Fun2::Empty => todo!(),
+                }
+                match ctx
+                    .get_function(&head)
+                    .with_context(|| "undeclared function")
+                    .with_location(span)?
+                {
+                    FunctionKind::Concrete(str) => {
+                        // ast::AppMacro {span, inner: ast::InnerAppMacro::Other { name: (), args: () }};
+                        todo!()
+                    }
+                    FunctionKind::WithTuple(_) => todo!(),
+                    FunctionKind::Direct(_) => todo!(),
+                }
+            }
             /*
              TODO:
              - a map from `head` to cv function
@@ -187,11 +249,11 @@ fn convert_term<'a>(ctx: &Ctx<'a>, which_diff: Option<usize>, t: TF2<'a>) -> MRe
              - recognising function with tuple as arguments
             */
 
-            todo!()
+            // todo!()
         }
-    };
+    }
 
-    Ok(ast::Term { span, inner })
+    // Ok(ast::Term { span, inner })
 }
 
 #[derive(Debug)]
@@ -200,7 +262,7 @@ struct SquirrelData<'a> {
     pub types: HashMap<String, json::mtype::SortData>,
     pub actions: HashMap<String, Action<'a, TF2<'a>, SVariable>>,
     pub names: HashMap<String, FunctionType<'a, json::Type<'a>>>,
-    pub macros: HashMap<String, json::mmacro::Data<json::Type<'a>>>,
+    pub macros: HashMap<String, json::mmacro::Data<'a, TF2<'a>, json::Type<'a>>>,
 }
 
 // fn gather_sq_data<'a>(

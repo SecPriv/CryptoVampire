@@ -26,61 +26,6 @@ pub struct SVariable(uvar);
 pub type TF2<'a> = BaseFormula<SQuant, Fun2<'a>, json::Variable<'a>>;
 pub type SquirrelDump2<'a> = SquirrelDump<'a, TF2<'a>, json::Variable<'a>>;
 
-// mod varset {
-//   use cryptovampire_lib::formula::variable::from_usize;
-//   use utils::implvec;
-
-//   use crate::squirrel::json;
-
-//   use super::SVariable;
-
-//   pub struct VarSet<'a>(Vec<json::Variable<'a>>);
-
-//   impl<'a> VarSet<'a> {
-//       pub fn get_var(&mut self, var: &json::Variable<'a>) -> Option<SVariable> {
-//           self.0
-//               .iter()
-//               .rev()
-//               .position(|x| x == var)
-//               .map(from_usize)
-//               .map(SVariable)
-//       }
-
-//       pub fn with_new_vars<F, U>(&mut self, vars: implvec!(json::Variable<'a>), f: F) -> U
-//       where
-//           for<'b> F: FnOnce(&'b mut Self, Vec<SVariable>) -> U,
-//       {
-//           let n = self.0.len();
-//           self.0.extend(vars);
-//           let nvars = (n..self.0.len()).map(from_usize).map(SVariable).collect();
-//           let ret = f(self, nvars); // call the function
-//           self.0.truncate(n);
-//           ret
-//       }
-
-//       pub fn into_svarlist(self) -> Vec<SVariable> {
-//           (0..self.0.len()).map(from_usize).map(SVariable).collect()
-//       }
-//   }
-
-//   impl<'a> IntoIterator for VarSet<'a> {
-//       type Item = <Vec<json::Variable<'a>> as IntoIterator>::Item;
-
-//       type IntoIter = <Vec<json::Variable<'a>> as IntoIterator>::IntoIter;
-
-//       fn into_iter(self) -> Self::IntoIter {
-//           self.0.into_iter()
-//       }
-//   }
-
-//   impl<'a> FromIterator<json::Variable<'a>> for VarSet<'a> {
-//       fn from_iter<T: IntoIterator<Item = json::Variable<'a>>>(iter: T) -> Self {
-//           Self(Vec::from_iter(iter))
-//       }
-//   }
-// }
-
-// pub use varset::VarSet;
 
 use super::{
     stage1::{Fun1, TF1},
@@ -219,47 +164,6 @@ mod sq_to_2 {
             converters::stage2::{from_json_to_2, SVariable, TF2},
             json::{self, action},
         };
-
-        /// Convert the [json::Action::action] field. That is a squirrel `action_v` type.
-        ///
-        /// I'm assuming the variables are not linked in anyway to the rest of
-        /// the declaration. Thus, I am just making sure that each variable is
-        /// unique and that when two json::Variables are the same then the SVariable
-        /// are also the same */
-        //   pub fn convert_shape<'a>(
-        //       a: action::AT<Vec<json::Variable<'a>>>,
-        //   ) -> action::AT<Vec<SVariable>> {
-        //       let mut aux2 = {
-        //           let mut tmp = vec![];
-        //           move |x| {
-        //               tmp.iter().position(|y| &x == y).unwrap_or_else(|| {
-        //                   let n = tmp.len();
-        //                   tmp.push(x);
-        //                   n
-        //               })
-        //           }
-        //       };
-        //       a.into_iter()
-        //           .map(
-        //               |action::Item {
-        //                    par_choice: (ip, vp),
-        //                    sum_choice: (is, vs),
-        //                }| {
-        //                   let [vp, vs] = [vp, vs].map(|v| {
-        //                       v.into_iter()
-        //                           .map(&mut aux2)
-        //                           .map(from_usize)
-        //                           .map(SVariable)
-        //                           .collect()
-        //                   });
-        //                   action::Item {
-        //                       par_choice: (ip, vp),
-        //                       sum_choice: (is, vs),
-        //                   }
-        //               },
-        //           )
-        //           .collect()
-        //   }
 
         pub fn convert_condition<'a>(
             //   free_vars: &mut VarSet<'a>,

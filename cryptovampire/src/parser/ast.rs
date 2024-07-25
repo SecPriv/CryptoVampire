@@ -1,6 +1,7 @@
 use std::{
     fmt::{write, Display},
     slice::{self, Iter},
+    sync::Arc,
 };
 
 use derivative::Derivative;
@@ -234,20 +235,20 @@ impl<'s, T> From<T> for Sub<'s, T> {
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum AST<'a, S = &'a str> {
-    Declaration(Box<Declaration<'a, S>>),
-    Step(Box<Step<'a, S>>),
-    Order(Box<Order<'a, S>>),
-    AssertCrypto(Box<AssertCrypto<'a, S>>),
-    Assert(Box<Assert<'a, S>>),
-    Let(Box<Macro<'a, S>>),
+    Declaration(Arc<Declaration<'a, S>>),
+    Step(Arc<Step<'a, S>>),
+    Order(Arc<Order<'a, S>>),
+    AssertCrypto(Arc<AssertCrypto<'a, S>>),
+    Assert(Arc<Assert<'a, S>>),
+    Let(Arc<Macro<'a, S>>),
 }
 boiler_plate!(l AST<'a>, 'a, content; |p| {
-    declaration => { Ok(AST::Declaration(Box::new(p.try_into()?))) }
-    step => { Ok(AST::Step(Box::new(p.try_into()?))) }
-    order => { Ok(AST::Order(Box::new(p.try_into()?))) }
-    assertion_crypto => { Ok(AST::AssertCrypto(Box::new(p.try_into()?))) }
-    assertion | query | lemma => { Ok(AST::Assert(Box::new(p.try_into()?))) }
-    mlet => { Ok(AST::Let(Box::new(p.try_into()?))) }
+    declaration => { Ok(AST::Declaration(Arc::new(p.try_into()?))) }
+    step => { Ok(AST::Step(Arc::new(p.try_into()?))) }
+    order => { Ok(AST::Order(Arc::new(p.try_into()?))) }
+    assertion_crypto => { Ok(AST::AssertCrypto(Arc::new(p.try_into()?))) }
+    assertion | query | lemma => { Ok(AST::Assert(Arc::new(p.try_into()?))) }
+    mlet => { Ok(AST::Let(Arc::new(p.try_into()?))) }
 });
 
 impl<'a, S: Display> Display for AST<'a, S> {
@@ -523,7 +524,7 @@ impl<'a, S> Term<'a, S> {
     pub fn new_default_const(s: S) -> Self {
         Term {
             span: Default::default(),
-            inner: InnerTerm::Application(Box::new(Application::Application {
+            inner: InnerTerm::Application(Arc::new(Application::Application {
                 span: Default::default(),
                 function: Function::from_name(s),
                 args: Default::default(),
@@ -537,46 +538,75 @@ impl<'a, S: Display> Display for Term<'a, S> {
         self.inner.fmt(f)
     }
 }
+
+macro_rules! from_i_term {
+    ($v:ident, $t:ident) => {
+        impl<'a, S> From<$t<'a, S>> for Term<'a, S> {
+            fn from(value: $t<'a, S>) -> Self {
+                Term {
+                    span: value.span,
+                    inner: InnerTerm::$v(Arc::new(value)),
+                }
+            }
+        }
+    };
+}
+
+from_i_term!(LetIn, LetIn);
+from_i_term!(If, IfThenElse);
+from_i_term!(Fndst, FindSuchThat);
+from_i_term!(Quant, Quantifier);
+from_i_term!(Infix, Infix);
+from_i_term!(Macro, AppMacro);
+impl<'a, S> From<Application<'a, S>> for Term<'a, S> {
+    fn from(value: Application<'a, S>) -> Self {
+        Term {
+            span: value.span(),
+            inner: InnerTerm::Application(Arc::new(value)),
+        }
+    }
+}
+
 /// Gather many rules at once, namely:
 /// - [Rule::infix_term]
 /// - [Rule::commun_base]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum InnerTerm<'a, S = &'a str> {
-    LetIn(Box<LetIn<'a, S>>),
-    If(Box<IfThenElse<'a, S>>),
-    Fndst(Box<FindSuchThat<'a, S>>),
-    Quant(Box<Quantifier<'a, S>>),
-    Application(Box<Application<'a, S>>),
-    Infix(Box<Infix<'a, S>>),
-    Macro(Box<AppMacro<'a, S>>),
+    LetIn(Arc<LetIn<'a, S>>),
+    If(Arc<IfThenElse<'a, S>>),
+    Fndst(Arc<FindSuchThat<'a, S>>),
+    Quant(Arc<Quantifier<'a, S>>),
+    Application(Arc<Application<'a, S>>),
+    Infix(Arc<Infix<'a, S>>),
+    Macro(Arc<AppMacro<'a, S>>),
 }
 boiler_plate!(InnerTerm<'s>, 's, inner_term; |p| {
     let span: Location = p.as_span().into();
     as_array!(span in [nxt] = p.into_inner());
     match nxt.as_rule() {
         Rule::infix_term => {
-            Ok(InnerTerm::Infix(Box::new(nxt.try_into()?)))
+            Ok(InnerTerm::Infix(Arc::new(nxt.try_into()?)))
         }
         Rule::commun_base => {
             as_array!(span in [cmn_rule] = nxt.into_inner());
             match cmn_rule.as_rule(){
                 Rule::let_in => {
-                    Ok(InnerTerm::LetIn(Box::new(cmn_rule.try_into()?)))
+                    Ok(InnerTerm::LetIn(Arc::new(cmn_rule.try_into()?)))
                 },
                 Rule::if_then_else => {
-                    Ok(InnerTerm::If(Box::new(cmn_rule.try_into()?)))
+                    Ok(InnerTerm::If(Arc::new(cmn_rule.try_into()?)))
                 },
                 Rule::find_such_that => {
-                    Ok(InnerTerm::Fndst(Box::new(cmn_rule.try_into()?)))
+                    Ok(InnerTerm::Fndst(Arc::new(cmn_rule.try_into()?)))
                 },
                 Rule::quantifier => {
-                    Ok(InnerTerm::Quant(Box::new(cmn_rule.try_into()?)))
+                    Ok(InnerTerm::Quant(Arc::new(cmn_rule.try_into()?)))
                 },
                 Rule::application => {
-                    Ok(InnerTerm::Application(Box::new(cmn_rule.try_into()?)))
+                    Ok(InnerTerm::Application(Arc::new(cmn_rule.try_into()?)))
                 },
                 Rule::macro_application => {
-                    Ok(InnerTerm::Macro(Box::new(cmn_rule.try_into()?)))
+                    Ok(InnerTerm::Macro(Arc::new(cmn_rule.try_into()?)))
                 }
                 r => unreachable_rules!(span, r; let_in, if_then_else, find_such_that, quantifier, application)
             }
@@ -896,7 +926,7 @@ impl<'a, S: Display> Display for Quantifier<'a, S> {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum QuantifierKind {
     Forall,
     Exists,

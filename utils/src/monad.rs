@@ -21,27 +21,30 @@ macro_rules! mdo {
   (pure $e:expr ) => {$crate::monad::Monad::pure($e)};
   (let!($t:ty) $v:ident = $e:expr; $($rest:tt)*) => {
     <$t as $crate::monad::Monad<_>>::pure($e)
-      .bind(move |$v| { $crate::mdo!($($rest)*)} )
+      .bind(|$v| { $crate::mdo!($($rest)*)} )
   };
   (let!($t:ty) $v:ident : $t2:ty = $e:expr; $($rest:tt)*) => {
     <$t as $crate::monad::Monad<$t2>>::pure($e)
-      .bind(move |$v| { $crate::mdo!($($rest)*)} )
+      .bind(|$v| { $crate::mdo!($($rest)*)} )
   };
   (let!($t:ty) [ $($v:ident),* ] : $t2:ty = $e:expr; $($rest:tt)*) => {
     <$t as $crate::monad::Monad<[$t2; _]>>::pure($e)
-      .bind(move |[$($v),*]| { $crate::mdo!($($rest)*)} )
+      .bind(|[$($v),*]| { $crate::mdo!($($rest)*)} )
   };
   (_ <- $monad:expr ; $($rest:tt)* ) => {
-    ($monad).bind( move |_| { mdo!($($rest)*)})
+    ($monad).bind( |_| { mdo!($($rest)*)})
   };
   ($v:ident <- pure $e:expr ; $($rest:tt)* ) => {
-    $crate::monad::pure($e).bind( move |$v| { $crate::mdo!($($rest)*)})
+    $crate::monad::pure($e).bind( |$v| { $crate::mdo!($($rest)*)})
   };
   ($v:ident <- $monad:expr ; $($rest:tt)* ) => {
-    ($monad).bind( move |$v| { $crate::mdo!($($rest)*)})
+    ($monad).bind( |$v| { $crate::mdo!($($rest)*)})
+  };
+  (mut $v:ident <- $monad:expr ; $($rest:tt)* ) => {
+    ($monad).bind( |mut $v| { $crate::mdo!($($rest)*)})
   };
   ([$($v:ident),*] <- $monad:expr ; $($rest:tt)* ) => {
-    ($monad).bind( move |[$($v),*]| { $crate::mdo!($($rest)*)})
+    ($monad).bind( |[$($v),*]| { $crate::mdo!($($rest)*)})
   };
   (block $monad:block) => {$monad};
   ($monad:expr;!) => {$monad};

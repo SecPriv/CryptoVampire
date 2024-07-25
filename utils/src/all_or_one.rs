@@ -4,7 +4,7 @@ use if_chain::if_chain;
 use itertools::Itertools;
 use std::ops::Deref;
 
-use crate::monad::{Monad, MonadFamily, MonadFamilyMember};
+use crate::{implvec, mdo, monad::{Monad, MonadFamily, MonadFamilyMember}};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum AllOrOne<U, V> {
@@ -176,26 +176,38 @@ impl<U> AoOV<U> {
             AllOrOne::One(i, e) => AllOrOne::One(i, f(e).owned_get(i)),
         }
     }
+
+    pub fn any(u: U) -> Self {
+        Self::Any(u)
+    }
 }
 
 impl<U: Clone> AoOV<U> {
     pub fn transpose_array<const N: usize>(args: [Self; N]) -> AoOV<[U; N]> {
-        if N == 0 {
-            AllOrOne::All(vec![])
-        } else {
-            let goal = args
-                .iter()
-                .map(|x| x.shape())
-                .fold(AllOrOne::default(), AllOrOne::merge);
+        let args = Vec::from(args);
+        mdo!{
+            l <- AoOV::transpose(args);
+            pure l.try_into().map_err(|_| ()).unwrap()
+        }
+    }
 
-            match goal {
-                AllOrOne::All(size) => AllOrOne::All(
-                    (0..size)
-                        .map(|i| std::array::from_fn(|j| args[j].get(i).unwrap().clone()))
-                        .collect(),
-                ),
-                AllOrOne::Any(_) => AllOrOne::Any(args.map(|x| x.owned_get(0))),
-                AllOrOne::One(i, _) => AllOrOne::One(i, args.map(|x| x.owned_get(i))),
+    /// keep the length of the array
+    pub fn transpose(args: implvec!(Self)) -> AoOV<Vec<U>> {
+        let args : Vec<_> = args.into_iter().collect();
+        let goal = args
+            .iter()
+            .map(|x| x.shape())
+            .fold(AllOrOne::default(), AllOrOne::merge);
+
+        match goal {
+            AllOrOne::All(size) => AllOrOne::All(
+                (0..size)
+                    .map(|i| args.iter().map(|x| x.get(i).unwrap().clone()).collect())
+                    .collect(),
+            ),
+            AllOrOne::Any(_) => AllOrOne::Any(args.into_iter().map(|x| x.owned_get(0)).collect()),
+            AllOrOne::One(i, _) => {
+                AllOrOne::One(i, args.into_iter().map(|x| x.owned_get(i)).collect())
             }
         }
     }

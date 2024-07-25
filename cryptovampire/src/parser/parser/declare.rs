@@ -96,15 +96,15 @@ where
                 return None;
             };
             match ast {
-                AST::Declaration(b) => match Box::as_ref(b) {
+                AST::Declaration(b) => match Arc::as_ref(b) {
                     Declaration::Function(fun) => Some(Either::Left(Either::Left(fun))),
                     Declaration::Cell(cell) => Some(Either::Left(Either::Right(cell))),
                     Declaration::Type(_) => None, // was done before
                 },
-                AST::Step(step) => Some(Either::Right(Either::Left(Box::as_ref(step)))),
-                AST::Let(mlet) => Some(Either::Right(Either::Right(Box::as_ref(mlet)))),
+                AST::Step(step) => Some(Either::Right(Either::Left(Arc::as_ref(step)))),
+                AST::Let(mlet) => Some(Either::Right(Either::Right(Arc::as_ref(mlet)))),
                 AST::Assert(a) => {
-                    match Box::as_ref(a) {
+                    match Arc::as_ref(a) {
                         ast::Assert::Assertion(a) => assertions.extend([a]),
                         ast::Assert::Lemma(l) => lemmas.extend([l]),
                         ast::Assert::Query(q) => match query {
@@ -120,11 +120,11 @@ where
                     None
                 }
                 AST::Order(o) => {
-                    orders.extend([Box::as_ref(o)]);
+                    orders.extend([Arc::as_ref(o)]);
                     None
                 }
                 AST::AssertCrypto(a) => {
-                    asserts_crypto.extend([Box::as_ref(a)]);
+                    asserts_crypto.extend([Arc::as_ref(a)]);
                     None
                 }
             }

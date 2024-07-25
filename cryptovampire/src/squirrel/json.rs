@@ -12,7 +12,7 @@ pub struct SquirrelDump<'a, T = Term<'a>, V = Variable<'a>> {
     pub actions: Vec<Action<'a, T, V>>,
     pub names: Vec<Name<'a>>,
     pub operators: Vec<Operator<'a, T, V>>,
-    pub macros: Vec<Macro<'a>>,
+    pub macros: Vec<Macro<'a, T, Type<'a>>>,
     pub types: Vec<Sort<'a>>,
 }
 
@@ -162,7 +162,6 @@ pub struct TypeVariable<'a> {
     pub id: Ident<'a>,
 }
 
-
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct Channel<'a>(Cow<'a, str>);
 
@@ -203,7 +202,7 @@ pub mod action {
         pub name: Cow<'a, str>,
         /// argh... From what I understands this represents the control flow
         /// in a somewhat raw way.
-        /// 
+        ///
         /// The control flow is encoded by layers (the first vec in [AT]).
         /// you have paralell actions ([Item::par_choice]) and exclusive
         /// ones ([Item::sum_choice])
@@ -216,6 +215,9 @@ pub mod action {
         pub output: Ouptut<'a, T>,
         pub globals: Vec<Cow<'a, str>>,
     }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+    pub struct Shape(AT<u32>);
 }
 pub use action::Action;
 use utils::string_ref::StrRef;
@@ -310,26 +312,77 @@ pub mod operator {
 pub type Operator<'a, T = Term<'a>, V = Variable<'a>, Ty = Type<'a>> =
     Content<'a, operator::Data<'a, T, V, Ty>>;
 
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+pub struct SingleSystem<'a> {
+    #[serde(borrow)]
+    system: Cow<'a, str>,
+    projection: Cow<'a, str>,
+}
+
 pub mod mmacro {
     use super::*;
     use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-    pub enum Data<Ty> {
+    pub enum Data<'a, T, Ty> {
         Input,
         Output,
         Cond,
         Exec,
         Frame,
-        Global,
+        Global {
+            arity: usize,
+            #[serde(rename = "type")]
+            sort: Ty,
+            #[serde(borrow)]
+            data: Box<GlobalData<'a, T, Ty>>,
+        },
         State {
             arity: usize,
             #[serde(rename = "type")]
             sort: Ty,
         },
     }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+    pub struct GlobalData<'a, T, Ty> {
+        action: action::Action,
+        #[serde(borrow)]
+        inputs: Vec<Variable<'a, Ty>>,
+        indices: Vec<Variable<'a, Ty>>,
+        ts: Variable<'a, Ty>,
+        ty: Ty,
+        bodies: Vec<Body<'a, T>>,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+    pub struct Body<'a, T> {
+        #[serde(borrow)]
+        single_system: SingleSystem<'a>,
+        body: T,
+    }
+
+    pub mod action {
+        use serde::{Deserialize, Serialize};
+
+        use crate::squirrel::json::action;
+
+        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+        pub struct Action {
+            kind: Kind,
+            shape: action::Shape,
+        }
+
+        #[derive(
+            Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash,
+        )]
+        pub enum Kind {
+            Large,
+            Strict,
+        }
+    }
 }
-pub type Macro<'a, Ty = Type<'a>> = Content<'a, mmacro::Data<Ty>>;
+pub type Macro<'a, T = Term<'a>, Ty = Type<'a>> = Content<'a, mmacro::Data<'a, T, Ty>>;
 
 pub mod mtype {
     use serde::{Deserialize, Serialize};
@@ -346,9 +399,9 @@ pub mod mtype {
 
     impl SortKind {
         pub fn can_be_index(&self) -> bool {
-            match self{
+            match self {
                 SortKind::Finite | SortKind::Fixed | SortKind::Enum => true,
-                _ => false
+                _ => false,
             }
         }
     }
@@ -357,9 +410,8 @@ pub mod mtype {
     pub struct SortData(pub Vec<SortKind>);
 
     impl SortData {
-
         pub fn can_be_index(&self) -> bool {
-           self.0.iter().all(|k| k.can_be_index())
+            self.0.iter().all(|k| k.can_be_index())
         }
     }
 }
