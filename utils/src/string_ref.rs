@@ -10,12 +10,14 @@ use std::{
 
 #[cfg(feature = "serde")]
 use serde::{de::Visitor, Deserialize, Serialize};
-use validated_strref::{TrueValidator, ValidationError, Validator};
+
+#[cfg(feature = "serde")]
+pub use validator::{ValidationError, Validator, TrivialValidator};
 
 pub type CRc = Arc<str>;
 
 /// A boxed string that can also be a `&str`
-pub struct StrRef<'a, V = TrueValidator> {
+pub struct StrRef<'a, V = TrivialValidator> {
     validator: PhantomData<V>,
     inner: Inner<'a>,
 }
@@ -289,10 +291,10 @@ where
 }
 
 #[cfg(feature = "serde")]
-impl<'a, V: Validator> Deserialize<'a> for StrRef<'a, V> {
+impl<'a, 'de: 'a , V: Validator> Deserialize<'de> for StrRef<'a, V> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'a>,
+        D: serde::Deserializer<'de>,
     {
         deserializer.deserialize_str(StrRefVisistor::default())
     }
@@ -308,7 +310,7 @@ impl<'a, V> Serialize for StrRef<'a, V> {
     }
 }
 
-mod validated_strref {
+mod validator {
     use thiserror::Error;
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Error, Default)]
@@ -321,8 +323,8 @@ mod validated_strref {
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-    pub struct TrueValidator;
-    impl Validator for TrueValidator {
+    pub struct TrivialValidator;
+    impl Validator for TrivialValidator {
         #[inline]
         fn validate(_: &str) -> bool {
             true
