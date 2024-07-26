@@ -11,3 +11,5 @@ hashbrown = { workspace = true }
 thiserror = { workspace = true }
 if_chain = { workspace = true }
 itertools = { workspace = true }
+
+serde = {workspace = true, optional = true}
