@@ -59,7 +59,7 @@ where
             } else {
                 let sort =
                     Sort::new_index(env.container, String::from(name.borrow()).into_boxed_str());
-                let out = env.sort_hash.insert(sort.name().into_string(), sort);
+                let out = env.sort_hash.insert(sort.name().to_string(), sort);
 
                 match out {
                     Some(_) => Err(err_at!(

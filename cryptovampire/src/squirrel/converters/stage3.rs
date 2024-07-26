@@ -219,7 +219,7 @@ fn convert_term<'a>(ctx: &Ctx<'a>, shape: AllOrOneShape, t: TF2<'a>) -> RAoO<Ter
                 }
             } else {
                 match head {
-                    Fun2::Name(str) => ,
+                    Fun2::Name(str) => todo!(),
                     Fun2::Macro(_) => todo!(),
                     Fun2::Step(_) => todo!(),
                     Fun2::Fun(_) => todo!(),

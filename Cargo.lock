@@ -922,6 +922,7 @@ dependencies = [
  "hashbrown",
  "if_chain",
  "itertools",
+ "serde",
  "thiserror",
 ]
 

@@ -34,4 +34,4 @@ fn miri() {
         )
     })
 }
-const TEST_FILE: &'static str = include_str!("../../../test/basic-hash-1.ptcl");
+const TEST_FILE: &'static str = include_str!("../../../tests/basic-hash-1.ptcl");

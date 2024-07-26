@@ -117,7 +117,7 @@ where
     ) -> Self {
         let sort_hash = sort_hash
             .into_iter()
-            .map(|s| (s.name().into_string(), s))
+            .map(|s| (s.name().to_string(), s))
             .collect();
         let function_hash: HashMap<_, _> = function_hash
             .into_iter()
