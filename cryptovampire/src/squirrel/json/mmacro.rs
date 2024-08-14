@@ -84,9 +84,7 @@ pub mod action {
         pub shape: action::Shape,
     }
 
-    #[derive(
-        Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash,
-    )]
+    #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
     pub enum Kind {
         Large,
         Strict,

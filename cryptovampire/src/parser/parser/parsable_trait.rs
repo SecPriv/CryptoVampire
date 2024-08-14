@@ -6,7 +6,7 @@ use itertools::Itertools;
 use log::{log_enabled, trace};
 
 use crate::{
-    bail_at, err_at,
+    bail_at,
     parser::{
         ast::{self, extra::SnN, Term, VariableBinding},
         error::WithLocation,
@@ -173,9 +173,15 @@ where
         } = self;
 
         // parse the argumeents
-        let condition = condition.parse(env, bvars, state, Some(es_condition)).debug_continue()?;
-        let left = left.parse(env, bvars, state, Some(es_branches.clone())).debug_continue()?;
-        let right = right.parse(env, bvars, state, Some(es_branches)).debug_continue()?;
+        let condition = condition
+            .parse(env, bvars, state, Some(es_condition))
+            .debug_continue()?;
+        let left = left
+            .parse(env, bvars, state, Some(es_branches.clone()))
+            .debug_continue()?;
+        let right = right
+            .parse(env, bvars, state, Some(es_branches))
+            .debug_continue()?;
 
         Ok(match state.get_realm() {
             Realm::Evaluated => IF_THEN_ELSE.clone(),
@@ -201,10 +207,13 @@ where
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> MResult<Self::R> {
-        expected_sort.into_iter().try_for_each(|s| {
-            s.expects(MESSAGE.as_sort(), &state)
-                .with_location(&self.span)
-        }).debug_continue()?;
+        expected_sort
+            .into_iter()
+            .try_for_each(|s| {
+                s.expects(MESSAGE.as_sort(), &state)
+                    .with_location(&self.span)
+            })
+            .debug_continue()?;
 
         let ast::FindSuchThat {
             vars,
@@ -268,13 +277,17 @@ where
         let vars = vars?;
 
         // parse the rest
-        let condition = condition.parse(
-            env,
-            bvars,
-            &Realm::Symbolic,
-            Some(CONDITION.as_sort().into()),
-        ).debug_continue()?;
-        let left = left.parse(env, bvars, &Realm::Symbolic, Some(MESSAGE.as_sort().into())).debug_continue()?;
+        let condition = condition
+            .parse(
+                env,
+                bvars,
+                &Realm::Symbolic,
+                Some(CONDITION.as_sort().into()),
+            )
+            .debug_continue()?;
+        let left = left
+            .parse(env, bvars, &Realm::Symbolic, Some(MESSAGE.as_sort().into()))
+            .debug_continue()?;
 
         // remove variables
         bvars.truncate(bn);
@@ -504,7 +517,8 @@ where
                                 Realm::Evaluated => FALSE_CACHE(),
                             }),
                             _ => get_function(env, *span, content.borrow()).map(MOw::Borrowed),
-                        }.debug_continue()
+                        }
+                        .debug_continue()
                         .and_then(|f| {
                             parse_application(
                                 env,
@@ -514,7 +528,8 @@ where
                                 expected_sort,
                                 Deref::deref(&f),
                                 [],
-                            ).debug_continue()
+                            )
+                            .debug_continue()
                         })
                     })
             }
@@ -533,7 +548,8 @@ where
                     _ => get_function(env, *span, content.borrow()).map(MOw::Borrowed),
                 }
                 .and_then(|f| {
-                    parse_application(env, span, state, bvars, expected_sort, f.borrow(), args).debug_continue()
+                    parse_application(env, span, state, bvars, expected_sort, f.borrow(), args)
+                        .debug_continue()
                 })
             }
         }

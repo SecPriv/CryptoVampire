@@ -1,7 +1,3 @@
-use thiserror::Error;
-
-use super::ConversiontError;
-
 mod ast_convertion {
 
     // FIXME: do it better
@@ -25,7 +21,7 @@ mod ast_convertion {
         bail_at, err_at,
         parser::{
             ast::{self, FindSuchThat},
-            FromStaticString, InputError, WithLocation,
+            FromStaticString, InputError,
         },
         squirrel::json::{self, Named, Pathed, ProcessedSquirrelDump},
     };
@@ -148,7 +144,7 @@ mod ast_convertion {
                 }
                 json::Term::App { f, args } => match f.as_ref() {
                     json::Term::Fun { symb } => {
-                        let args : Vec<_> = if_chain! {
+                        let args: Vec<_> = if_chain! {
                             if let Some(f) = ctx.dump.get_operator(symb);
                             let args_type = f.sort.args.as_slice();
                             if args_type.len() == 1;

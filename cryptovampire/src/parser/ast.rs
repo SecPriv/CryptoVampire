@@ -1,20 +1,16 @@
 use std::{
-    fmt::{write, Display},
+    fmt::Display,
     slice::{self, Iter},
     sync::Arc,
 };
 
 use derivative::Derivative;
-use if_chain::if_chain;
 use itertools::{chain, Itertools};
 use log::trace;
 use pest::{iterators::Pair, Parser, Position};
 
 use cryptovampire_lib::{
-    formula::{
-        function::{builtin, inner::term_algebra},
-        variable,
-    },
+    formula::function::{builtin, inner::term_algebra},
     INIT_STEP_NAME,
 };
 use utils::{destvec, implvec, match_as_trait, vecref::VecRef};

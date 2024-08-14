@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use super::Content;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Copy)]
 pub enum SortKind {

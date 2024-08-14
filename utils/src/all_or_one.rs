@@ -4,7 +4,10 @@ use if_chain::if_chain;
 use itertools::Itertools;
 use std::ops::Deref;
 
-use crate::{implvec, mdo, monad::{Monad, MonadFamily, MonadFamilyMember}};
+use crate::{
+    implvec, mdo,
+    monad::{Monad, MonadFamily, MonadFamilyMember},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum AllOrOne<U, V> {
@@ -185,7 +188,7 @@ impl<U> AoOV<U> {
 impl<U: Clone> AoOV<U> {
     pub fn transpose_array<const N: usize>(args: [Self; N]) -> AoOV<[U; N]> {
         let args = Vec::from(args);
-        mdo!{
+        mdo! {
             let! l = AoOV::transpose(args);
             pure l.try_into().map_err(|_| ()).unwrap()
         }
@@ -193,7 +196,7 @@ impl<U: Clone> AoOV<U> {
 
     /// keep the length of the array
     pub fn transpose(args: implvec!(Self)) -> AoOV<Vec<U>> {
-        let args : Vec<_> = args.into_iter().collect();
+        let args: Vec<_> = args.into_iter().collect();
         let goal = args
             .iter()
             .map(|x| x.shape())

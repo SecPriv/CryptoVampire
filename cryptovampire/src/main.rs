@@ -35,14 +35,6 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        fs::read_to_string,
-        io::{self, Read},
-    };
-
-    use clap::Parser;
-    use cryptovampire::{cli::Args, init_logger, run};
-    use log::trace;
 
     // #[test]
     // fn debug() {

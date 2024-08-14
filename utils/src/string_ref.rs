@@ -338,7 +338,10 @@ mod validator {
         }
     }
 
-    impl<F> Validator for F where F:Fn(&str) -> bool {
+    impl<F> Validator for F
+    where
+        F: Fn(&str) -> bool,
+    {
         fn validate(&self, str: &str) -> bool {
             self(str)
         }

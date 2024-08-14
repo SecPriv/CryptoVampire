@@ -138,7 +138,6 @@ use utils::{string_ref::StrRef, traits::NicerError};
 
 mod error {
 
-    use std::backtrace;
     use std::fmt::Display;
 
     use anyhow::anyhow;
@@ -187,7 +186,6 @@ mod error {
                 err,
             }
         }
-
     }
 
     #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default)]
@@ -280,8 +278,7 @@ mod error {
             self.map_err(|err| InputError::new_with_location(&location.into(), err.into()))
         }
     }
-    impl<T> WithLocation<T> for Option<T>
-    {
+    impl<T> WithLocation<T> for Option<T> {
         fn with_location<'a, I>(self, location: I) -> MResult<T>
         where
             Location<'a>: From<I>,

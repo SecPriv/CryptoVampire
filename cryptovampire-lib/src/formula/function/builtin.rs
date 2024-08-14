@@ -194,7 +194,7 @@ pub static CONDITION_TO_BOOL: Function<'static> = new_static_function(InnerFunct
     Evaluate::new("evaluate_cond".into(), CONDITION.as_sort(), BOOL.as_sort()),
 ));
 
-pub const EMPTY_FUN_NAME :&'static str = "empty";
+pub const EMPTY_FUN_NAME: &'static str = "empty";
 
 #[dynamic]
 static EMPTY_TUPLE_FUNCTION: BaseFunctionTuple<'static> =

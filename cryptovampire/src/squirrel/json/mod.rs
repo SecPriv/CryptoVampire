@@ -1,8 +1,7 @@
-use std::{borrow::Cow, fmt::Display};
+use std::fmt::Display;
 
-use cryptovampire_lib::formula::variable::uvar;
-use serde::{Deserialize, Serialize};
 pub use path::Pathed;
+use serde::{Deserialize, Serialize};
 
 /// Forbiden characters in cv's input
 const FORBIDDEN: &'static str = ";$#";
@@ -26,7 +25,7 @@ pub mod path;
 use path::{ISymb, Path};
 
 mod squirrel_dump;
-pub use squirrel_dump::{SquirrelDump, ProcessedSquirrelDump};
+pub use squirrel_dump::{ProcessedSquirrelDump, SquirrelDump};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum Quant {
@@ -214,14 +213,9 @@ pub struct Parameters {
 #[cfg(test)]
 mod tests {
     use paste::paste;
-    use std::{
-        fs::{self, File},
-        io::BufReader,
-    };
+    use std::{fs::File, io::BufReader};
 
-    use crate::squirrel::json::action;
-
-    use super::{CryptoVampireCall, SquirrelDump, Term, Type};
+    use super::CryptoVampireCall;
 
     macro_rules! test_json_parser {
         ($f:ident :  $t:ty) => {

@@ -91,7 +91,6 @@ where
     }
 }
 
-
 impl<I, U, const N: usize> IntoArray<U, Option<[U; N]>> for I
 where
     I: IntoIterator<Item = Option<U>>,
