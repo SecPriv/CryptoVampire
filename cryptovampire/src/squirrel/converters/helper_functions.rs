@@ -1,26 +1,12 @@
-use cryptovampire_lib::formula::{
-    function::builtin::EMPTY_FUN_NAME,
-    sort::builtins::{BOOL, MESSAGE, STEP},
-};
-use if_chain::if_chain;
-use itertools::{chain, Itertools};
-use utils::{
-    all_or_one::{AllOrOneShape, AoOV},
-    implvec, mdo,
-    string_ref::StrRef,
-};
+use itertools::Itertools;
+use utils::{all_or_one::AoOV, implvec, mdo, string_ref::StrRef};
 
 use crate::{
-    bail_at, err_at,
-    parser::{
-        ast::{self, FindSuchThat, Term, TypedArgument},
-        FromStaticString, InputError,
-    },
+    err_at,
+    parser::ast::{self, TypedArgument},
     squirrel::{
-        converters::ast_convertion::{
-            ToAst, DEFAULT_FST_PROJ_NAME, DEFAULT_SND_PROJ_NAME, DEFAULT_TUPLE_NAME,
-        },
-        json::{self, mmacro, Named, Pathed, ProcessedSquirrelDump},
+        converters::ast_convertion::ToAst,
+        json::{self, Named},
     },
 };
 

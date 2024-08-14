@@ -1,21 +1,11 @@
-use cryptovampire_lib::formula::{
-    function::builtin::EMPTY_FUN_NAME,
-    sort::builtins::{BOOL, MESSAGE, STEP},
-};
+use cryptovampire_lib::formula::function::builtin::EMPTY_FUN_NAME;
 use if_chain::if_chain;
 use itertools::{chain, Itertools};
-use utils::{
-    all_or_one::{AllOrOneShape, AoOV},
-    implvec, mdo,
-    string_ref::StrRef,
-};
+use utils::{all_or_one::AoOV, mdo, string_ref::StrRef};
 
 use crate::{
     bail_at, err_at,
-    parser::{
-        ast::{self, FindSuchThat, Term, TypedArgument},
-        FromStaticString, InputError,
-    },
+    parser::ast::{self, FindSuchThat, Term},
     squirrel::{
         converters::{
             ast_convertion::{
@@ -23,7 +13,7 @@ use crate::{
             },
             helper_functions::to_variable_binding,
         },
-        json::{self, mmacro, Named, Pathed, ProcessedSquirrelDump},
+        json::{self, mmacro, Pathed},
     },
 };
 
@@ -95,40 +85,54 @@ pub fn convert_macro_application<'a, 'b>(
     let symb = symb.s_symb.as_ref();
     let args = chain!(args.iter(), [timestamp]);
     match ctx.dump().get_macro(symb) {
-    Some(mmacro::Data::General(mmacro::GeneralMacro::ProtocolMacro(p))) => {
-        timestamp.convert(ctx).bind(|t| {
-            match &t.inner {
-                ast::InnerTerm::Application(app) => {
-                    let inner = match p {
-                    mmacro::ProtocolMacro::Output =>
-                        ast::InnerAppMacro::Msg((**app).clone()),
-                    mmacro::ProtocolMacro::Cond =>
-                        ast::InnerAppMacro::Cond((**app).clone()),
+        Some(mmacro::Data::General(mmacro::GeneralMacro::ProtocolMacro(p))) => {
+            timestamp.convert(ctx).bind(|t| {
+                match &t.inner {
+                    ast::InnerTerm::Application(app) => {
+                        let inner = match p {
+                            mmacro::ProtocolMacro::Output => {
+                                ast::InnerAppMacro::Msg((**app).clone())
+                            }
+                            mmacro::ProtocolMacro::Cond => {
+                                ast::InnerAppMacro::Cond((**app).clone())
+                            }
+                        };
+                        Ok(AoOV::any(
+                            ast::AppMacro {
+                                span: Default::default(),
+                                inner,
+                            }
+                            .into(),
+                        ))
+                    }
+                    _ => {
+                        let msg = "output/cond/msg macro are only supported \
+                                    when applied to a concrete timepoint";
+                        Err(err_at!(@ "{msg}"))
+                    }
+                }
+            })
+        }
+        Some(mmacro::Data::General(mmacro::GeneralMacro::Structured(_)))
+        | Some(mmacro::Data::State(_)) => apply_fun(symb.equiv_name_ref(), args, ctx),
+        Some(mmacro::Data::Global(_)) => {
+            let args: Vec<_> = args.map(|arg| arg.convert(ctx)).try_collect()?;
+            Ok(AoOV::transpose(args)).bind(|args| {
+                let inner = ast::InnerAppMacro::Other {
+                    name: symb.equiv_name_ref().into(),
+                    args,
                 };
-                Ok(AoOV::any(ast::AppMacro {
-                    span:Default::default(),
-                    inner
-                }.into()))
-            }
-            _ => Err(err_at!(@ "output/cond/msg macro are only supported when applied to a concrete timepoint"))
-            }
-        })
+                Ok(AoOV::any(
+                    ast::AppMacro {
+                        span: Default::default(),
+                        inner,
+                    }
+                    .into(),
+                ))
+            })
+        }
+        None => Err(err_at!(@ "unknown macro")),
     }
-    Some( mmacro::Data::General(mmacro::GeneralMacro::Structured(_)))
-    | Some(mmacro::Data::State(_)) => {
-        apply_fun(symb.equiv_name_ref(), args, ctx)
-    }
-    Some(mmacro::Data::Global(_)) => {
-        let args : Vec<_> = args.map(|arg| arg.convert(ctx)).try_collect()?;
-        Ok(AoOV::transpose(args)).bind(|args| {
-            let inner = ast::InnerAppMacro::Other
-                { name: symb.equiv_name_ref().into(), args };
-             Ok(AoOV::any(ast::AppMacro
-                    { span: Default::default(),inner }.into()))
-        })
-    }
-    None => Err(err_at!(@ "unknown macro"))
-}
 }
 
 pub fn convert_diff<'a, 'b>(

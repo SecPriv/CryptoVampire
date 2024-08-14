@@ -3,31 +3,14 @@ pub const DEFAULT_TUPLE_NAME: StrRef<'static> = StrRef::from_static("_$tuple");
 pub const DEFAULT_FST_PROJ_NAME: StrRef<'static> = StrRef::from_static("_$fst");
 pub const DEFAULT_SND_PROJ_NAME: StrRef<'static> = StrRef::from_static("_$snd");
 
-use cryptovampire_lib::formula::{
-    function::builtin::EMPTY_FUN_NAME,
-    sort::builtins::{BOOL, MESSAGE, STEP},
-};
-use if_chain::if_chain;
-use itertools::{chain, Itertools};
-use utils::{
-    all_or_one::{AllOrOne, AllOrOneShape, AoOV},
-    implvec, mdo,
-    string_ref::StrRef,
-};
+use cryptovampire_lib::formula::sort::builtins::{BOOL, MESSAGE, STEP};
+use utils::{all_or_one::AllOrOneShape, mdo, string_ref::StrRef};
 
 use crate::{
     bail_at, err_at,
-    parser::{
-        ast::{self, FindSuchThat, Term, TypedArgument},
-        FromStaticString, InputError,
-    },
-    squirrel::{
-        converters::helper_functions::to_variable_binding,
-        json::{self, mmacro, Named, Pathed, ProcessedSquirrelDump},
-    },
+    parser::ast::{self},
+    squirrel::json::{self, Named, Pathed, ProcessedSquirrelDump},
 };
-
-use utils::monad::Monad;
 
 use super::{helper_functions::*, RAoO};
 
@@ -98,7 +81,6 @@ impl<'a> ToAst<'a> for json::Term<'a> {
         }
     }
 }
-
 
 impl<'a> ToAst<'a> for json::sort::Type<'a> {
     type Target = ast::TypeName<'a, StrRef<'a>>;
