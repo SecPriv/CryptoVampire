@@ -1,0 +1,84 @@
+use cryptovampire_lib::formula::{
+    function::builtin::EMPTY_FUN_NAME,
+    sort::builtins::{BOOL, MESSAGE, STEP},
+};
+use if_chain::if_chain;
+use itertools::{chain, Itertools};
+use utils::{
+    all_or_one::{AllOrOneShape, AoOV},
+    implvec, mdo,
+    string_ref::StrRef,
+};
+
+use crate::{
+    bail_at, err_at,
+    parser::{
+        ast::{self, FindSuchThat, Term, TypedArgument},
+        FromStaticString, InputError,
+    },
+    squirrel::{
+        converters::ast_convertion::{
+            ToAst, DEFAULT_FST_PROJ_NAME, DEFAULT_SND_PROJ_NAME, DEFAULT_TUPLE_NAME,
+        },
+        json::{self, mmacro, Named, Pathed, ProcessedSquirrelDump},
+    },
+};
+
+use utils::monad::Monad;
+
+use super::{ast_convertion::Context, RAoO};
+
+pub use convertion_functions::*;
+
+mod convertion_functions;
+
+pub fn apply_fun<'a, 'b, 'c>(
+    fun: StrRef<'a>,
+    args: implvec!(&'b json::Term<'a>),
+    ctx: Context<'c, 'a>,
+) -> RAoO<ast::Term<'a, StrRef<'a>>>
+where
+    'a: 'b,
+{
+    let args: Vec<_> = args.into_iter().map(|arg| arg.convert(ctx)).try_collect()?;
+    mdo! {
+        let! args = Ok(AoOV::transpose(args));
+        pure ast::Application::new_app(fun.clone(), args).into()
+    }
+}
+
+/// Turn a list of [json::Term] that should only contain [json::Term::Var] into a [ast::TypedArgument]
+pub fn to_variable_binding<'a, 'b>(
+    vars: &[json::Term<'a>],
+    ctx: Context<'b, 'a>,
+) -> RAoO<TypedArgument<'a, StrRef<'a>>> {
+    let mut res = Ok(()); // to keep track if something went wrong
+
+    let iter = vars
+        .iter()
+        .map(|t| match t {
+            json::Term::Var { var } => Ok(var),
+            _ => Err(err_at!(@ "not a variable")),
+        })
+        .map(|x| {
+            x.and_then(|var| {
+                mdo! {
+                    let! sort = var.sort.convert(ctx);
+                    pure (var.id.name().drop_guard(), sort)
+                }
+            })
+        })
+        .filter_map(|x| match x {
+            Ok(v) => Some(v),
+            Err(e) => {
+                res = Err(e);
+                None
+            }
+        });
+
+    let out = AoOV::transpose(iter); // save the temporary result to update `res`
+    mdo! {
+        let! res = res.map(|_| out);
+        pure res.into_iter().collect()
+    }
+}

@@ -19,12 +19,15 @@ pub struct SquirrelDump<'a> {
     pub types: Vec<Sort<'a>>,
 }
 
+/// Same as [SquirrelDump] but with easier access to various field using [HashMap]s
+///
+/// `names`, `operators`, `macros` and `types` are [HashMap]s to make them efficiently seachable
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ProcessedSquirrelDump<'a> {
     query: Box<Term<'a>>,
     hypotheses: Vec<Term<'a>>,
     variables: Vec<Variable<'a>>,
-    actions: Vec<Action<'a>>,
+    actions: HashMap<Path<'a>, Action<'a>>,
     names: HashMap<Path<'a>, FunctionType<'a>>,
     operators: HashMap<Path<'a>, operator::Data<'a>>,
     macros: HashMap<Path<'a>, mmacro::Data<'a>>,
@@ -43,10 +46,6 @@ impl<'a> ProcessedSquirrelDump<'a> {
 
     pub fn variables(&self) -> &[Variable<'a>] {
         &self.variables
-    }
-
-    pub fn actions(&self) -> &[Action<'a>] {
-        &self.actions
     }
 
     pub fn names(&self) -> &HashMap<Path<'a>, FunctionType<'a>> {
@@ -80,6 +79,14 @@ impl<'a> ProcessedSquirrelDump<'a> {
     pub fn get_type(&self, k: &Path<'a>) -> Option<&mtype::SortData> {
         self.types.get(k)
     }
+
+    pub fn actions(&self) -> &HashMap<Path<'a>, Action<'a>> {
+        &self.actions
+    }
+
+    pub fn get_action(&self, k: &Path<'a>) -> Option<&Action<'a>> {
+        self.actions.get(k)
+    }
 }
 
 impl<'a> From<SquirrelDump<'a>> for ProcessedSquirrelDump<'a> {
@@ -99,6 +106,13 @@ impl<'a> From<SquirrelDump<'a>> for ProcessedSquirrelDump<'a> {
         let operators = convert_content_list(operators);
         let macros = convert_content_list(macros);
         let types = convert_content_list(types);
+        let actions = actions
+            .into_iter()
+            .map(|a| {
+                let x = a.name.clone();
+                (x, a)
+            })
+            .collect();
 
         Self {
             query,

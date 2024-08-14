@@ -342,6 +342,13 @@ impl<'a, S: Display> Display for MacroName<'a, S> {
         self.name().fmt(f)
     }
 }
+
+impl<'a, S> From<S> for MacroName<'a, S> {
+    fn from(value: S) -> Self {
+        MacroName(Sub::from(Ident::from(value)))
+    }
+}
+
 /// [Rule::function]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Function<'a, S = &'a str>(pub Sub<'a, Ident<'a, S>>);
