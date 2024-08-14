@@ -20,7 +20,7 @@ mod ast_convertion {
     use crate::{
         bail_at, err_at,
         parser::{
-            ast::{self, FindSuchThat},
+            ast::{self, FindSuchThat, TypedArgument},
             FromStaticString, InputError,
         },
         squirrel::json::{self, Named, Pathed, ProcessedSquirrelDump},
@@ -86,12 +86,9 @@ mod ast_convertion {
                         let! vars = to_variable_binding(vars, ctx);
                         pure ast::Quantifier {
                             kind, span: Default::default(),
-                            vars: vars.into_iter().collect(), content: content.clone()
+                            vars, content: content.clone()
                         }.into()
                     }
-
-                    // ast::Quantifier
-                    // todo!()
                 }
                 json::Term::Find {
                     vars,
@@ -105,7 +102,7 @@ mod ast_convertion {
                     let! vars = to_variable_binding(vars, ctx);
                     pure FindSuchThat {
                         span: Default::default(),
-                        vars: vars.into_iter().collect(),
+                        vars,
                         condition: condition.clone(),
                         left: success.clone(),
                         right: faillure.clone()
@@ -168,11 +165,12 @@ mod ast_convertion {
         }
     }
 
+    /// Turn a list of [json::Term] that should only contain [json::Term::Var] into a [ast::TypedArgument]
     fn to_variable_binding<'a, 'b>(
         vars: &[json::Term<'a>],
         ctx: Context<'b, 'a>,
-    ) -> RAoO<Vec<(StrRef<'a>, ast::TypeName<'a, StrRef<'a>>)>> {
-        let mut res = Ok(());
+    ) -> RAoO<TypedArgument<'a, StrRef<'a>>> {
+        let mut res = Ok(()); // to keep track if something went wrong
 
         let iter = vars
             .iter()
@@ -196,15 +194,17 @@ mod ast_convertion {
                 }
             });
 
-        let out = AoOV::transpose(iter);
-        res.map(|_| out)
+        let out = AoOV::transpose(iter); // save the temporary result to update `res`
+        mdo!{
+            let! res = res.map(|_| out);
+            pure res.into_iter().collect()
+        }
     }
-    // ()
 
     impl<'a> ToAst<'a> for json::sort::Type<'a> {
         type Target = ast::TypeName<'a, StrRef<'a>>;
 
-        fn convert<'b>(&self, ctx: Context<'b, 'a>) -> RAoO<Self::Target> {
+        fn convert<'b>(&self, _: Context<'b, 'a>) -> RAoO<Self::Target> {
             match self {
                 json::Type::Message => mdo!(pure MESSAGE.name().into()),
                 json::Type::Boolean => mdo!(pure BOOL.name().into()),
