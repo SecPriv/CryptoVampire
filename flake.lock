@@ -3,17 +3,19 @@
     "custom": {
       "inputs": {
         "flake-utils": "flake-utils",
+        "isw-src": "isw-src",
         "nixpkgs": [
           "nixpkgs"
         ],
-        "opam-nix": "opam-nix"
+        "opam-nix": "opam-nix",
+        "vampire-master-src": "vampire-master-src"
       },
       "locked": {
-        "lastModified": 1720104986,
-        "narHash": "sha256-na8dQ126eLoMDCM8MHWq+c9i34K56DMTJuSkKr76iVU=",
+        "lastModified": 1723456210,
+        "narHash": "sha256-fbqw+TSehjhrnIgJRolEtVpZPQ3NNC7At/mkkA+VvM8=",
         "owner": "puyral",
         "repo": "custom-nix",
-        "rev": "9ed1d1f0489e7cf3f26a0fd831044aecce92940e",
+        "rev": "90ba803c6c77aa19dfd7b853cc9372bf47d3b62e",
         "type": "github"
       },
       "original": {
@@ -89,6 +91,22 @@
         "type": "github"
       }
     },
+    "isw-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1582745508,
+        "narHash": "sha256-HN3egLX08CC9SLxldpCj5KHSiyV1F3HeR5NXk68NXY0=",
+        "owner": "YoyPa",
+        "repo": "isw",
+        "rev": "7c88670504ecd4462b1825a55bdb0be2944dfe94",
+        "type": "github"
+      },
+      "original": {
+        "owner": "YoyPa",
+        "repo": "isw",
+        "type": "github"
+      }
+    },
     "mirage-opam-overlays": {
       "flake": false,
       "locked": {
@@ -123,11 +141,11 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1720418205,
-        "narHash": "sha256-cPJoFPXU44GlhWg4pUk9oUPqurPlCFZ11ZQPk21GTPU=",
+        "lastModified": 1723362943,
+        "narHash": "sha256-dFZRVSgmJkyM0bkPpaYRtG/kRMRTorUIDj8BxoOt1T4=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "655a58a72a6601292512670343087c2d75d859c1",
+        "rev": "a58bc8ad779655e790115244571758e8de055e3d",
         "type": "github"
       },
       "original": {
@@ -249,6 +267,22 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "vampire-master-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1723206185,
+        "narHash": "sha256-2x+BpzgD+pEdH6YzkxNWEIdVj/b4a2Zt6/grPgaWMiY=",
+        "owner": "vprover",
+        "repo": "vampire",
+        "rev": "44b72ec98ae705fa56b588dc1e5e41ede07bf051",
+        "type": "github"
+      },
+      "original": {
+        "owner": "vprover",
+        "repo": "vampire",
         "type": "github"
       }
     }
