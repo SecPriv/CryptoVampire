@@ -5,7 +5,12 @@ pub const DEFAULT_SND_PROJ_NAME: StrRef<'static> = StrRef::from_static("_$snd");
 
 use cryptovampire_lib::formula::sort::builtins::{BOOL, MESSAGE, STEP};
 use itertools::Itertools;
-use utils::{all_or_one::{AllOrOneShape, AoOV}, mdo, monad::Monad, string_ref::StrRef};
+use utils::{
+    all_or_one::{AllOrOneShape, AoOV},
+    mdo,
+    monad::Monad,
+    string_ref::StrRef,
+};
 
 use crate::{
     bail_at, err_at,
@@ -107,25 +112,47 @@ impl<'a> ToAst<'a> for json::Action<'a> {
     fn convert<'b>(&self, ctx: Context<'b, 'a>) -> RAoO<Self::Target> {
         let Self {
             name,
-            action,
-            input,
             indices,
             condition,
             updates,
             output,
-            globals,
+            action: _,
+            input: _,
+            globals: _,
         } = self;
 
-        let name : ast::StepName<'a, StrRef<'a>> = name.into();
-        let args : Vec<_> = indices.iter().map(|var| {
-            mdo! {
-                let! sort = var.sort.convert(ctx);
-                pure (var.id.name().drop_guard(), sort)
-            }
-    }).try_collect()?;
+        let name = ast::StepName::from(name.equiv_name_ref());
+        let args: Vec<_> = indices
+            .iter()
+            .map(|var| {
+                mdo! {
+                    let! sort = var.sort.convert(ctx);
+                    pure (var.id.name().drop_guard(), sort)
+                }
+            })
+            .try_collect()?;
+        let assignements: Vec<_> = updates.iter().map(|upd| upd.convert(ctx)).try_collect()?;
 
-    let options = Options::default();
-    todo!();
+        let options = Options::default();
+
+        // FIXME: make this work
+        assert!(condition.vars.is_empty());
+
+        mdo! {
+            let! message = output.term.convert(ctx);
+            let! condition = condition.term.convert(ctx);
+            let! assignements = Ok(AoOV::transpose(assignements.clone()));
+            let! args = Ok(AoOV::transpose(args.clone()));
+            pure ast::Step {
+                name: name.clone(),
+                span: Default::default(),
+                args: args.into_iter().collect(),
+                condition: condition.clone(),
+                message: message.clone(),
+                assignements: Some(assignements.iter().cloned().collect()),
+                options: options.clone()
+            }
+        }
     }
 }
 
@@ -136,8 +163,8 @@ impl<'a> ToAst<'a> for json::action::Update<'a> {
         let Self { symb, args, body } = self;
 
         // let cell = apply_fun(symb.clone(), args, ctx)?;
-        let args : Vec<_> = args.iter().map(|arg| arg.convert(ctx)).try_collect()?;
-        mdo!{
+        let args: Vec<_> = args.iter().map(|arg| arg.convert(ctx)).try_collect()?;
+        mdo! {
             let! args = Ok(AoOV::transpose(args));
             let! term = body.convert(ctx);
             pure ast::Assignement {

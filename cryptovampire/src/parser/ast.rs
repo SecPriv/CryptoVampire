@@ -1221,6 +1221,15 @@ impl<'a, S: Display> Display for Assignements<'a, S> {
     }
 }
 
+impl<'a, S> FromIterator<Assignement<'a, S>> for Assignements<'a, S> {
+    fn from_iter<T: IntoIterator<Item = Assignement<'a, S>>>(iter: T) -> Self {
+        Self {
+            span: Default::default(),
+            assignements: iter.into_iter().collect(),
+        }
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Assignement<'a, S = &'a str> {
