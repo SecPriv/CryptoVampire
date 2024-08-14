@@ -45,6 +45,7 @@ pub fn convert_application<'a, 'b>(
     }
 }
 
+/// Convert the application of a name
 pub fn convert_name_application<'a, 'b>(
     symb: &json::path::ISymb<'a>,
     args: &[json::Term<'a>],
@@ -53,6 +54,13 @@ pub fn convert_name_application<'a, 'b>(
     apply_fun(symb.equiv_name_ref(), args, ctx)
 }
 
+/// Convert the application of a function.
+///
+/// The trickiest point of the functio is to take care of functions that take
+/// tuples as arguments. There is a discrepency between `squirrel` and `cryptovampire`
+/// with that regard. `squirrel` uses tuples to avoid partial application of certain
+/// cryptographic function (e.g., `enc`); there is no such problem in `cryptovampire`
+/// so such a work around was never implemented, and I'm not planning to implement one.
 fn convert_function_application<'a, 'b>(
     symb: &json::path::Path<'a>,
     args: &[json::Term<'a>],
@@ -76,6 +84,25 @@ fn convert_function_application<'a, 'b>(
     }
 }
 
+/// Convertion of `squirrel` macros
+///
+/// `squirrel` macros don't match `cryptovampire`'s macros. As a reminder,
+/// in `cryptovampire`, macros are simply meta programing for the lazy developper
+/// namely, they don't reach the smt solver. However, in `squirrel`, macros have
+/// some semantic. This must be translated.
+///
+/// Thus:
+/// - `output` and `cond` are translated to `msg!` and `cond!` and only support
+///   being applied to steps (until [this](https://gitlab.secpriv.tuwien.ac.at/secpriv/protocols/cryptovampire/-/issues/3)
+///   lands that is)
+/// - "general" macros are translated "as is", letting cryptovampire parser
+///   error out if they are not recognise. In this category we find `input`,
+///   `exec`, `frame` and a bunch of quantum stuff. The supported macros are
+///   built into `cryptovampire`, those which aren't are not supported
+/// - "global" macros are what `squirrel` introduces with `let`s. This
+///   converniently mean we don't need to deal with `let`s anymore. These
+///   macro will be declared as `cryptovampire` macros. The parser will
+///   then unfold them.
 pub fn convert_macro_application<'a, 'b>(
     symb: &json::path::ISymb<'a>,
     args: &[json::Term<'a>],
@@ -86,30 +113,24 @@ pub fn convert_macro_application<'a, 'b>(
     let args = chain!(args.iter(), [timestamp]);
     match ctx.dump().get_macro(symb) {
         Some(mmacro::Data::General(mmacro::GeneralMacro::ProtocolMacro(p))) => {
-            timestamp.convert(ctx).bind(|t| {
-                match &t.inner {
-                    ast::InnerTerm::Application(app) => {
-                        let inner = match p {
-                            mmacro::ProtocolMacro::Output => {
-                                ast::InnerAppMacro::Msg((**app).clone())
-                            }
-                            mmacro::ProtocolMacro::Cond => {
-                                ast::InnerAppMacro::Cond((**app).clone())
-                            }
-                        };
-                        Ok(AoOV::any(
-                            ast::AppMacro {
-                                span: Default::default(),
-                                inner,
-                            }
-                            .into(),
-                        ))
-                    }
-                    _ => {
-                        let msg = "output/cond/msg macro are only supported \
+            timestamp.convert(ctx).bind(|t| match &t.inner {
+                ast::InnerTerm::Application(app) => {
+                    let inner = match p {
+                        mmacro::ProtocolMacro::Output => ast::InnerAppMacro::Msg((**app).clone()),
+                        mmacro::ProtocolMacro::Cond => ast::InnerAppMacro::Cond((**app).clone()),
+                    };
+                    Ok(AoOV::any(
+                        ast::AppMacro {
+                            span: Default::default(),
+                            inner,
+                        }
+                        .into(),
+                    ))
+                }
+                _ => {
+                    let msg = "output/cond/msg macro are only supported \
                                     when applied to a concrete timepoint";
-                        Err(err_at!(@ "{msg}"))
-                    }
+                    Err(err_at!(@ "{msg}"))
                 }
             })
         }
@@ -135,6 +156,13 @@ pub fn convert_macro_application<'a, 'b>(
     }
 }
 
+/// Converts a `diff`.
+///
+/// This is the reason of all the [AoOV] monad thing. We want to extract every
+/// system. Hence once we reach a diff we fork and apply the `convert` functions
+/// to all possible branches. The monad makes sure everything merges properly.
+/// [Context::shape] in `ctx` ensure branches that will be discarded are not
+/// computed (e.g., when there is another `diff` after a first `diff`)
 pub fn convert_diff<'a, 'b>(
     terms: &[json::Diff<'a>],
     ctx: Context<'b, 'a>,
@@ -155,6 +183,10 @@ pub fn convert_diff<'a, 'b>(
     }
 }
 
+/// Convert projections
+///
+/// For simplicity we only support tuple of size 2. This builds the inverse of
+/// [convert_tuple]
 pub fn convert_projection<'a, 'b>(
     id: u8,
     body: &json::Term<'a>,
@@ -217,6 +249,10 @@ pub fn convert_quantifier<'a, 'b>(
     }
 }
 
+/// Convert `squirrel` tuples
+///
+/// For simplicity and to avoid mutliplying axioms regarding tuples,
+/// we only consider $2$-uple. $n$-uples are translated into nested $2$-uples
 pub fn convert_tuple<'a, 'b>(
     elements: &[json::Term<'a>],
     ctx: Context<'b, 'a>,
