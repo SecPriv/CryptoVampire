@@ -4,11 +4,12 @@ pub const DEFAULT_FST_PROJ_NAME: StrRef<'static> = StrRef::from_static("_$fst");
 pub const DEFAULT_SND_PROJ_NAME: StrRef<'static> = StrRef::from_static("_$snd");
 
 use cryptovampire_lib::formula::sort::builtins::{BOOL, MESSAGE, STEP};
-use utils::{all_or_one::AllOrOneShape, mdo, string_ref::StrRef};
+use itertools::Itertools;
+use utils::{all_or_one::{AllOrOneShape, AoOV}, mdo, monad::Monad, string_ref::StrRef};
 
 use crate::{
     bail_at, err_at,
-    parser::ast::{self},
+    parser::ast::{self, Options},
     squirrel::json::{self, Named, Pathed, ProcessedSquirrelDump},
 };
 
@@ -96,6 +97,55 @@ impl<'a> ToAst<'a> for json::sort::Type<'a> {
             | json::Type::TUnivar { .. }
             | json::Type::Tuple { .. }
             | json::Type::Fun { .. } => Err(err_at!(@ "arg")),
+        }
+    }
+}
+
+impl<'a> ToAst<'a> for json::Action<'a> {
+    type Target = ast::Step<'a, StrRef<'a>>;
+
+    fn convert<'b>(&self, ctx: Context<'b, 'a>) -> RAoO<Self::Target> {
+        let Self {
+            name,
+            action,
+            input,
+            indices,
+            condition,
+            updates,
+            output,
+            globals,
+        } = self;
+
+        let name : ast::StepName<'a, StrRef<'a>> = name.into();
+        let args : Vec<_> = indices.iter().map(|var| {
+            mdo! {
+                let! sort = var.sort.convert(ctx);
+                pure (var.id.name().drop_guard(), sort)
+            }
+    }).try_collect()?;
+
+    let options = Options::default();
+    todo!();
+    }
+}
+
+impl<'a> ToAst<'a> for json::action::Update<'a> {
+    type Target = ast::Assignement<'a, StrRef<'a>>;
+
+    fn convert<'b>(&self, ctx: Context<'b, 'a>) -> RAoO<Self::Target> {
+        let Self { symb, args, body } = self;
+
+        // let cell = apply_fun(symb.clone(), args, ctx)?;
+        let args : Vec<_> = args.iter().map(|arg| arg.convert(ctx)).try_collect()?;
+        mdo!{
+            let! args = Ok(AoOV::transpose(args));
+            let! term = body.convert(ctx);
+            pure ast::Assignement {
+                span: Default::default(),
+                cell: ast::Application::new_app(symb.clone().drop_guard(), args.clone()),
+                term,
+                fresh_vars: None
+            }
         }
     }
 }

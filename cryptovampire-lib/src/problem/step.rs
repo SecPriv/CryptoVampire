@@ -164,7 +164,7 @@ impl<'bump> Step<'bump> {
     /// # Safety
     /// This will mutate `step` and `function` make sure nobody is mutating them
     /// in another thread. Thanks to the check on initialization no one can alias
-    /// `step` or `function` other that with an [C::initialize()] function.
+    /// `step` or `function` other that with an [ContainerTools::initialize()] function.
     ///
     /// # Panic
     /// This panics `args` does not contain all the free variables in `message` and

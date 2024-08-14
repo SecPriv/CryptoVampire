@@ -212,7 +212,7 @@ pub fn get_sort<'a, 'bump, S>(
         .map(|s| *s)
 }
 
-/// Find the [Function] in already declared in [Environement::sort_function]
+/// Find the [Function] in already declared in [Environement::functions]
 pub fn get_function<'b, 'a, 'bump, S>(
     env: &'b Environement<'bump, 'a, S>,
     span: Location<'a>,

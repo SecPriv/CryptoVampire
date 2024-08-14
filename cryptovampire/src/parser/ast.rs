@@ -424,6 +424,12 @@ impl<'a, S: Display> Display for StepName<'a, S> {
         self.name().fmt(f)
     }
 }
+
+impl<'a, S> From<S> for StepName<'a, S> {
+    fn from(value: S) -> Self {
+        StepName(Ident::from_content(value).into())
+    }
+}
 // operation in `Infix`
 
 /// [Rule::typed_arguments]

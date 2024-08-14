@@ -77,9 +77,9 @@ use core::fmt::Debug;
 pub enum InnerFunction<'bump> {
     ///Boolean connective like `and`, `or`, `=`, etc...
     /// Basically the builtin functions that have type
-    /// [BOOL](automator::formula::sort::builtins::BOOL).
+    /// [BOOL](crate::formula::sort::builtins::BOOL).
     Bool(Booleans),
-    /// The [Step](automator::problem::step)s
+    /// The [Step](crate::problem::step)s
     Step(StepFunction<'bump>),
     /// A subterm function. By it a `vampire` special one, or a pure FOL one
     Subterm(Subterm<'bump>),

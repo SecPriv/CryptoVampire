@@ -51,7 +51,7 @@ where
 // =========================================================
 /// Function that have an "evaluated" version of themselves
 ///
-/// These are exclusively [TermAlgebra](super::term_algebra::TermAlgebra)
+/// These are exclusively [TermAlgebra](super::inner::term_algebra::TermAlgebra)
 /// functions.
 pub trait Evaluatable<'bump> {
     fn get_evaluated(&self) -> Function<'bump>;

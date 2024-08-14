@@ -169,7 +169,7 @@ impl<'bump> ScopedContainer<'bump> {
     ///
     /// Any `'a` shorter that the lifetime of the container is fine.
     /// Since achieving this requires some "convicing" of borrow checker,
-    /// favor using [scoped()] or [Self::new_leaked()].
+    /// favor using [Self::scoped()] or [Self::new_leaked()].
     pub unsafe fn new_unbounded<'a>() -> ScopedContainer<'a> {
         ScopedContainer {
             sorts: Default::default(),
