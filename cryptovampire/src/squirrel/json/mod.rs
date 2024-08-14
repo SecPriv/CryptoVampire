@@ -2,24 +2,21 @@ use std::{borrow::Cow, fmt::Display};
 
 use cryptovampire_lib::formula::variable::uvar;
 use serde::{Deserialize, Serialize};
+pub use path::Pathed;
 
 /// Forbiden characters in cv's input
-const FORBIDDEN: &'static str = "$#";
+const FORBIDDEN: &'static str = ";$#";
 
 pub trait Named<'a> {
     fn name(&self) -> Symb<'a>;
 }
 
-pub trait Pathed<'a> {
-    fn path(&self) -> &Path<'a>;
-}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct CryptoVampireStrValidator;
 
 impl utils::string_ref::Validator for CryptoVampireStrValidator {
-    fn validate(str: &str) -> bool {
-        println!("{str}");
+    fn validate(&self, str: &str) -> bool {
         !str.chars().any(|x| FORBIDDEN.contains(x))
-        // false
     }
 }
 
@@ -28,18 +25,8 @@ pub type Symb<'a> = utils::string_ref::StrRef<'a, CryptoVampireStrValidator>;
 pub mod path;
 use path::{ISymb, Path};
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub struct SquirrelDump<'a> {
-    #[serde(borrow)]
-    pub query: Box<Term<'a>>,
-    pub hypotheses: Vec<Term<'a>>,
-    pub variables: Vec<Variable<'a>>,
-    pub actions: Vec<Action<'a>>,
-    pub names: Vec<Name<'a>>,
-    pub operators: Vec<Operator<'a>>,
-    pub macros: Vec<Macro<'a>>,
-    pub types: Vec<Sort<'a>>,
-}
+mod squirrel_dump;
+pub use squirrel_dump::{SquirrelDump, ProcessedSquirrelDump};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum Quant {

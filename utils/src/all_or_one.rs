@@ -186,7 +186,7 @@ impl<U: Clone> AoOV<U> {
     pub fn transpose_array<const N: usize>(args: [Self; N]) -> AoOV<[U; N]> {
         let args = Vec::from(args);
         mdo!{
-            l <- AoOV::transpose(args);
+            let! l = AoOV::transpose(args);
             pure l.try_into().map_err(|_| ()).unwrap()
         }
     }

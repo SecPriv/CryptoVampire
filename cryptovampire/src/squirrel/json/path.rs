@@ -1,10 +1,16 @@
+use std::fmt::{write, Display};
+
 use super::{Symb, Type};
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use utils::string_ref::StrRef;
+
+const SEPARATOR: &'static str = "$#$";
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct NamesPath<'a> {
     #[serde(borrow)]
-    npath: Vec<Symb<'a>>,
+    pub npath: Vec<Symb<'a>>,
     // ignored field
     // id: u32,
 }
@@ -12,8 +18,8 @@ pub struct NamesPath<'a> {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct Path<'a> {
     #[serde(borrow)]
-    npath: NamesPath<'a>,
-    symb: Symb<'a>,
+    pub npath: NamesPath<'a>,
+    pub symb: Symb<'a>,
     // ignored field
     // id: u32,
 }
@@ -21,6 +27,40 @@ pub struct Path<'a> {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct ISymb<'a> {
     #[serde(borrow)]
-    s_symb: Box<Path<'a>>,
-    s_typ: Box<Type<'a>>,
+    pub s_symb: Box<Path<'a>>,
+    pub s_typ: Box<Type<'a>>,
+}
+
+impl<'a> Display for Path<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.npath
+                .npath
+                .iter()
+                .chain([&self.symb].into_iter())
+                .format(SEPARATOR),
+        )
+    }
+}
+
+pub trait Pathed<'a> {
+    fn path(&self) -> &Path<'a>;
+
+    fn equiv_name_ref(&self) -> StrRef<'a> {
+        self.path().to_string().into()
+    }
+}
+
+impl<'a> Pathed<'a> for Path<'a> {
+    fn path(&self) -> &Path<'a> {
+        self
+    }
+}
+
+impl<'a> Pathed<'a> for ISymb<'a> {
+    fn path(&self) -> &Path<'a> {
+        self.s_symb.as_ref()
+    }
 }

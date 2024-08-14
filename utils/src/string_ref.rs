@@ -11,14 +11,14 @@ use std::{
 #[cfg(feature = "serde")]
 use serde::{de::Visitor, Deserialize, Serialize};
 
-#[cfg(feature = "serde")]
-pub use validator::{ValidationError, Validator, TrivialValidator};
+pub use validator::{TrivialValidator, ValidationError, Validator};
 
 pub type CRc = Arc<str>;
 
 /// A boxed string that can also be a `&str`
+#[derive(Clone)]
 pub struct StrRef<'a, V = TrivialValidator> {
-    validator: PhantomData<V>,
+    validator: V,
     inner: Inner<'a>,
 }
 
@@ -40,13 +40,14 @@ impl<'a, V> StrRef<'a, V> {
     where
         V: 'b,
     {
-        match self.inner {
+        let Self { validator, inner } = self;
+        match inner {
             Inner::Borrowed(b) => StrRef {
-                validator: Default::default(),
+                validator,
                 inner: Inner::Owned(b.into()),
             },
             Inner::Owned(o) => StrRef {
-                validator: Default::default(),
+                validator,
                 inner: Inner::Owned(o),
             },
         }
@@ -63,16 +64,21 @@ impl<'a, V> StrRef<'a, V> {
             inner,
         }
     }
+
+    pub fn validator(&self) -> &V {
+        &self.validator
+    }
 }
-impl<'a, V: Validator> StrRef<'a, V> {
+impl<'a, V: Validator + Default> StrRef<'a, V> {
     pub fn new_owned<U>(v: U) -> Result<Self, ValidationError>
     where
         CRc: From<U>,
     {
         let i: CRc = v.into();
-        if V::validate(i.as_ref()) {
+        let validator = V::default();
+        if validator.validate(i.as_ref()) {
             Ok(StrRef {
-                validator: Default::default(),
+                validator,
                 inner: Inner::Owned(i),
             })
         } else {
@@ -81,13 +87,23 @@ impl<'a, V: Validator> StrRef<'a, V> {
     }
 
     pub fn new_borrowed(v: &'a str) -> Result<Self, ValidationError> {
-        if V::validate(v) {
+        let validator = V::default();
+        if validator.validate(v) {
             Ok(StrRef {
-                validator: Default::default(),
+                validator,
                 inner: Inner::Borrowed(v),
             })
         } else {
             Err(ValidationError)
+        }
+    }
+}
+
+impl<'a> StrRef<'a> {
+    pub const fn from_static(str: &'a str) -> Self {
+        Self {
+            validator: TrivialValidator,
+            inner: Inner::Borrowed(str),
         }
     }
 }
@@ -118,14 +134,14 @@ impl<'a, V> Hash for StrRef<'a, V> {
     }
 }
 
-impl<'a, V: Validator> From<&'a str> for StrRef<'a, V> {
+impl<'a, V: Validator + Default> From<&'a str> for StrRef<'a, V> {
     #[inline]
     fn from(value: &'a str) -> Self {
         Self::new_borrowed(value).unwrap()
     }
 }
 
-impl<'a, 'b, V: Validator> From<&'b &'a str> for StrRef<'b, V> {
+impl<'a, 'b, V: Validator + Default> From<&'b &'a str> for StrRef<'b, V> {
     #[inline]
     fn from(value: &'b &'a str) -> Self {
         Self::new_borrowed(value).unwrap()
@@ -220,15 +236,6 @@ impl<'a, V> hashbrown::Equivalent<String> for StrRef<'a, V> {
     }
 }
 
-impl<'a, V> Clone for StrRef<'a, V> {
-    fn clone(&self) -> Self {
-        Self {
-            validator: Default::default(),
-            inner: self.inner.clone(),
-        }
-    }
-}
-
 impl<'a, V> Debug for StrRef<'a, V> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let val = type_name::<V>();
@@ -256,7 +263,7 @@ impl<V: Validator> Default for StrRefVisistor<V> {
 #[cfg(feature = "serde")]
 impl<'a, V> Visitor<'a> for StrRefVisistor<V>
 where
-    V: Validator,
+    V: Validator + Default,
 {
     type Value = StrRef<'a, V>;
 
@@ -291,7 +298,7 @@ where
 }
 
 #[cfg(feature = "serde")]
-impl<'a, 'de: 'a , V: Validator> Deserialize<'de> for StrRef<'a, V> {
+impl<'a, 'de: 'a, V: Validator + Default> Deserialize<'de> for StrRef<'a, V> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -319,15 +326,21 @@ mod validator {
     pub struct ValidationError;
 
     pub trait Validator {
-        fn validate(str: &str) -> bool;
+        fn validate(&self, str: &str) -> bool;
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
     pub struct TrivialValidator;
     impl Validator for TrivialValidator {
         #[inline]
-        fn validate(_: &str) -> bool {
+        fn validate(&self, _: &str) -> bool {
             true
+        }
+    }
+
+    impl<F> Validator for F where F:Fn(&str) -> bool {
+        fn validate(&self, str: &str) -> bool {
+            self(str)
         }
     }
 }

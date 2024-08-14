@@ -17,7 +17,7 @@ use cryptovampire_lib::{
     },
     INIT_STEP_NAME,
 };
-use utils::{destvec, match_as_trait, vecref::VecRef};
+use utils::{destvec, implvec, match_as_trait, vecref::VecRef};
 
 use super::*;
 use crate::bail_at;
@@ -815,6 +815,14 @@ impl<'a, S> Application<'a, S> {
             Application::ConstVar { span, .. } | Application::Application { span, .. } => *span,
         }
     }
+
+    pub fn new_app(fun: S, args: implvec!(Term<'a, S>)) -> Self {
+        Self::Application {
+            span: Default::default(),
+            function: Function::from_name(fun),
+            args: args.into_iter().collect(),
+        }
+    }
 }
 boiler_plate!(Application<'a>, 'a, application; |p| {
     let span = p.as_span().into();
@@ -836,6 +844,15 @@ impl<'a, S: Display> Display for Application<'a, S> {
             Application::Application { function, args, .. } => {
                 write!(f, "{function}({})", args.iter().format(", "))
             }
+        }
+    }
+}
+
+impl<'a, S> From<S> for Application<'a, S> {
+    fn from(value: S) -> Self {
+        Application::ConstVar {
+            span: Default::default(),
+            content: value.into(),
         }
     }
 }

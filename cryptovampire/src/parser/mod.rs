@@ -322,12 +322,18 @@ mod error {
             $crate::parser::InputError::new_with_location($location, anyhow::anyhow!($($args)*))
             // $crate::parser::Location::from($location).err_with(|| f!($($args)*))
         };
+        (@ $($args:tt)*) => {
+            $crate::err_at!(&$crate::parser::Location::default(), $($args)* )
+        };
     }
 
     #[macro_export]
     macro_rules! bail_at {
         ($location:expr, $($args:tt)*) => {
             $crate::parser::Location::from($location).bail_with(|| utils::f!($($args)*))?
+        };
+        (@ $($args:tt)*) => {
+            $crate::parser::Location::from($crate::parser::Location::default()).bail_with(|| utils::f!($($args)*))?
         };
     }
 }
