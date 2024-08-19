@@ -184,13 +184,6 @@ pub type Name<'a> = Content<'a, FunctionType<'a>>;
 pub mod operator;
 pub use operator::Operator;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub struct SingleSystem<'a> {
-    #[serde(borrow)]
-    system: Path<'a>,
-    projection: Symb<'a>,
-}
-
 pub mod mmacro;
 pub use mmacro::Macro;
 

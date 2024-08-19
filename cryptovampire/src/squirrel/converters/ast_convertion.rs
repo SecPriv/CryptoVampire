@@ -4,17 +4,21 @@ pub const DEFAULT_FST_PROJ_NAME: StrRef<'static> = StrRef::from_static("_$fst");
 pub const DEFAULT_SND_PROJ_NAME: StrRef<'static> = StrRef::from_static("_$snd");
 
 use cryptovampire_lib::formula::sort::builtins::{BOOL, MESSAGE, STEP};
-use itertools::Itertools;
+use itertools::{chain, Itertools};
 use utils::{
     all_or_one::{AllOrOneShape, AoOV},
     mdo,
     monad::Monad,
+    pure,
     string_ref::StrRef,
 };
 
 use crate::{
     bail_at, err_at,
-    parser::ast::{self, Options},
+    parser::{
+        ast::{self, Options},
+        Location,
+    },
     squirrel::json::{self, Named, Pathed, ProcessedSquirrelDump},
 };
 
@@ -136,7 +140,10 @@ impl<'a> ToAst<'a> for json::Action<'a> {
         let options = Options::default();
 
         // FIXME: make this work
-        assert!(condition.vars.is_empty());
+        assert!(
+            condition.vars.is_empty(),
+            "free variables in a condition (and I'm not sure what this means)"
+        );
 
         mdo! {
             let! message = output.term.convert(ctx);
@@ -173,6 +180,51 @@ impl<'a> ToAst<'a> for json::action::Update<'a> {
                 term,
                 fresh_vars: None
             }
+        }
+    }
+}
+
+impl<'a> ToAst<'a> for json::Macro<'a> {
+    type Target = Option<ast::Macro<'a, StrRef<'a>>>;
+
+    fn convert<'b>(&self, ctx: Context<'b, 'a>) -> RAoO<Self::Target> {
+        use json::mmacro::*;
+        let json::Content { symb, data } = self;
+        match data {
+            Data::Global(GlobalMacro {
+                arity: _,
+                sort: _,
+                data:
+                    GlobalData {
+                        inputs,
+                        indices,
+                        ts,
+                        body,
+                        action:_,
+                        ty:_,
+                    },
+            }) => {
+                let args: Vec<_> = chain!(indices.iter(), inputs.iter(), [ts])
+                    .map(|var| {
+                        mdo! {
+                            let! sort = var.sort.convert(ctx);
+                            pure (var.id.name().drop_guard(), sort)
+                        }
+                    })
+                    .try_collect()?;
+                mdo! {
+                    let! args = Ok(AoOV::transpose(args));
+                    let! term = body.convert(ctx);
+                    pure Some(ast::Macro {
+                        span: Location::default(),
+                        name: symb.equiv_name_ref().into(),
+                        args:args.iter().cloned().collect(),
+                        term,
+                        options: Options::default()
+                    })
+                }
+            }
+            _ => pure!(None),
         }
     }
 }

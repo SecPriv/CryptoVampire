@@ -43,6 +43,13 @@ macro_rules! mdo {
   ($monad:expr;!) => {$monad};
 }
 
+#[macro_export]
+macro_rules! pure {
+    ($e:expr) => {
+        $crate::mdo!(pure $e)
+    };
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
