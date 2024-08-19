@@ -63,13 +63,6 @@ pub struct GlobalData<'a> {
     pub indices: Vec<Variable<'a>>,
     pub ts: Variable<'a>,
     pub ty: Type<'a>,
-    pub bodies: Vec<Body<'a>>,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub struct Body<'a> {
-    #[serde(borrow)]
-    pub single_system: SingleSystem<'a>,
     pub body: Term<'a>,
 }
 
