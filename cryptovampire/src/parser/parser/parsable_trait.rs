@@ -105,38 +105,8 @@ where
         _expected_sort: Option<SortProxy<'bump>>,
     ) -> MResult<Self::R> {
         bail_at!(self.span, "let ... in are not supported yet");
-        // return err(merr(
-        //     self.span,
-        //     "let ... in are not supported yet".to_owned(),
-        // ));
+        // FIXME: implement
         todo!()
-
-        // // current length of the pile of variable
-        // // to be reused for variable indexing, and troncating the pile
-        // let vn = bvars.len();
-
-        // // retrieve data
-        // let ast::LetIn { var, t1, t2, .. } = self;
-
-        // // defined a new variable of unknown type
-        // let v = VarProxy {
-        //     id: vn,
-        //     sort: Default::default(),
-        // };
-
-        // // parse t1 expecting the unknown sort
-        // let t1 = t1.parse(env, bvars, &Realm::Symbolic, Some(v.sort.clone()))?;
-
-        // // parse t2
-        // let t2 = {
-        //     bvars.push((var.name(), v.clone())); // add var to the pile
-        //     let t2 = t2.parse(env, bvars, state, expected_sort.clone())?;
-        //     bvars.truncate(vn); // remove it from the pile
-        //     t2
-        // };
-
-        // // replace `v` by its content: `t1`
-        // Ok(t2.owned_into_inner().apply_substitution([vn], [&t1]).into())
     }
 }
 impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::IfThenElse<'a, S>
@@ -570,34 +540,8 @@ where
     S: Pstr,
     for<'c> StrRef<'c>: From<&'c S>,
 {
-    // if cfg!(debug_assertions) {
-    //     try_trace!("\tparsing head: {}", function.get_function().name())
-    // }
-    // get the evaluated version if needed
-    // let fun = match state.get_realm() {
-    //     Realm::Evaluated => function
-    //         .as_term_algebra()
-    //         .maybe_get_evaluated()
-    //         .unwrap_or(function),
-    //     Realm::Symbolic => function,
-    // };
-
     let signature = function.signature();
     let mut formula_realm = signature.realm();
-
-    // let is_name = signature.out().as_option() == Some(NAME.as_sort());
-
-    // check output sort
-    // let _ = expected_sort
-    //     .map(|es| {
-    //         if is_name {
-    //             es.unify_rev(&MESSAGE.as_sort().into(), &state)
-    //         } else {
-    //             es.unify_rev(&signature.out(), &state)
-    //         }
-    //     })
-    //     .transpose()
-    //     .with_location(*span)?;
 
     // parse further
     let n_args: Result<Vec<_>, _> = {
@@ -618,15 +562,6 @@ where
     // check arity
     if !signature.args_size().contains(&n_args.len().into()) {
         let range = signature.args_size();
-        // return err(merr(
-        //     *span,
-        //     f!(
-        //         "wrong number of arguments: got {}, expected [{}, {}]",
-        //         n_args.len(),
-        //         range.start(),
-        //         range.end()
-        //     ),
-        // ));
         bail_at!(
             span,
             "wrong number of arguments: got {}, expected [{}, {}]",
@@ -706,9 +641,6 @@ where
                     args
                 } else {
                     bail_at!(app.span(), "this can only be a plain reference to a step (not just a term of sort {}))", STEP.name())
-                    // err(
-                    //         merr(app.span(), f!("this can only be a plain reference to a step (not just a term of sort {}))", STEP.name()))
-                    //     )
                 };
 
                 let step_cache = env
@@ -717,14 +649,7 @@ where
                     .and_then(|fc| fc.as_step())
                     .with_context(|| f!("{} is not a known step name", app.name()))
                     .with_location(&app.name_span())
-                    .debug_continue()
-                    // .ok_or_else(|| {
-                    //     merr(
-                    //         app.name_span(),
-                    //         f!("{} is not a known step name", app.name()),
-                    //     )
-                    // })?;
-                    ?;
+                    .debug_continue()?;
 
                 let mut nbvars = step_cache.args_vars_with_input().map_into().collect();
 
@@ -749,9 +674,7 @@ where
                     .get(name.name().borrow())
                     .with_context(|| f!("{} is not a known macro", name.name()))
                     .with_location(name.span())
-                    .debug_continue()
-                    // .ok_or_else(|| merr(name.span(), ))?;
-                    ?;
+                    .debug_continue()?;
 
                 if log_enabled!(log::Level::Trace) {
                     trace!("in macro parsing: {}", name.name());
@@ -786,20 +709,6 @@ where
                         mmacro.args.len(),
                         args.len(),
                     )
-                    // Err(err_at!(
-                    //     main_span,
-                    //     "not enough arguments: expected {}, got {}",
-                    //     mmacro.args.len(),
-                    //     args.len(),
-                    // ))
-                    // err(merr(
-                    //     *main_span,
-                    //     f!(
-                    //         "not enough arguments: expected {}, got {}",
-                    //         mmacro.args.len(),
-                    //         args.len()
-                    //     ),
-                    // ))
                 };
 
                 let term = {

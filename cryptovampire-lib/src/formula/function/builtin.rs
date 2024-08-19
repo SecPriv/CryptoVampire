@@ -3,6 +3,7 @@ use std::sync::Arc;
 use static_init::dynamic;
 
 use crate::container::StaticContainer;
+use crate::formula::formula::ARichFormula;
 use crate::formula::sort::builtins::{BITSTRING, BOOL, CONDITION, MESSAGE};
 use crate::formula::{formula::RichFormula, sort::builtins::STEP};
 
@@ -64,6 +65,9 @@ pub static FALSE_F_TA: Function<'static> = new_static_function(InnerFunction::Te
 
 #[dynamic]
 pub static TRUE: RichFormula<'static> = RichFormula::Fun(TRUE_F.clone(), Arc::new([]));
+
+#[dynamic]
+pub static TRUE_ARC: ARichFormula<'static> = TRUE.clone_as_arc();
 
 #[dynamic]
 pub static FALSE: RichFormula<'static> = RichFormula::Fun(TRUE_F.clone(), Arc::new([]));

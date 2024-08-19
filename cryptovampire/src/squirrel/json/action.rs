@@ -52,4 +52,31 @@ pub struct Action<'a> {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub struct Shape(AT<u32>);
+pub struct Shape(AT<usize>);
+
+impl AsRef<AT<usize>> for Shape {
+    fn as_ref(&self) -> &AT<usize> {
+        &self.0
+    }
+}
+
+impl<'a> Action<'a> {
+    pub fn shape(&self) -> Shape {
+        Shape(
+            self.action
+                .iter()
+                .map(
+                    |Item {
+                         par_choice: (ip, vp),
+                         sum_choice: (is, vs),
+                     }| {
+                        Item {
+                            par_choice: (*ip, vp.len()),
+                            sum_choice: (*is, vs.len()),
+                        }
+                    },
+                )
+                .collect(),
+        )
+    }
+}

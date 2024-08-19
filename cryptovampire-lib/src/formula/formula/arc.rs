@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::formula::{
-    function::builtin::{AND, IMPLIES, NOT, OR},
+    function::builtin::{AND, IMPLIES, NOT, OR, TRUE_ARC},
     utils::formula_iterator::{FormulaIterator, IteratorFlags},
     variable::{IntoVariableIter, Variable},
 };
@@ -247,5 +247,11 @@ impl<'a, 'bump> IntoVariableIter<'bump> for &'a ARichFormula<'bump> {
 impl<'bump> IntoVariableIter<'bump> for ARichFormula<'bump> {
     fn vars_iter(self) -> impl Iterator<Item = Variable<'bump>> {
         self.used_variables_iter()
+    }
+}
+
+impl<'bump> Default for ARichFormula<'bump> {
+    fn default() -> Self {
+        TRUE_ARC.clone()
     }
 }

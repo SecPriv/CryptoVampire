@@ -119,14 +119,12 @@ pub fn generate<'bump>(
         pbl.protocol()
             .ordering()
             .iter()
-            .map(|o| match o.kind() {
-                OrderingKind::LT(a, b) => {
-                    RichFormula::Quantifier(o.quantifier().clone(), leq.f_a([a, b]))
-                }
-                OrderingKind::Exclusive(a, b) => RichFormula::Quantifier(
-                    o.quantifier().clone(),
-                    !(happens.f_a([a]) & happens.f_a([b])),
-                ),
+            .map(|o| {
+                let inner = match o.kind() {
+                    OrderingKind::LT(a, b) => leq.f_a([a, b]),
+                    OrderingKind::Exclusive(a, b) => !(happens.f_a([a]) & happens.f_a([b])),
+                };
+                RichFormula::Quantifier(o.quantifier().clone(), o.guard().clone() >> inner)
             })
             .map_into()
             .map(Axiom::base),

@@ -3,14 +3,18 @@ use std::{borrow::Borrow, sync::Arc};
 use crate::parser::{
     ast,
     parser::{
-        get_sort,
+        get_sort, guard,
         parsable_trait::{Parsable, VarProxy},
         Environement,
     },
     InputError, MResult, Pstr,
 };
 use cryptovampire_lib::{
-    formula::{quantifier::Quantifier, sort::builtins::STEP, variable::Variable},
+    formula::{
+        quantifier::Quantifier,
+        sort::builtins::{BOOL, STEP},
+        variable::Variable,
+    },
     problem::protocol::{Ordering, OrderingKind},
 };
 use utils::{implvec, string_ref::StrRef};
@@ -46,6 +50,7 @@ where
         t1,
         t2,
         kind,
+        guard,
         ..
     } = order;
 
@@ -75,9 +80,17 @@ where
     );
     let variables: Arc<[_]> = args.into_iter().map(|(_, v)| v).collect();
 
+    let guard = guard
+        .as_ref()
+        .map(|guard| guard.parse(env, bvars, env, Some(BOOL.as_sort().into())))
+        .transpose()?
+        .unwrap_or_default();
+    bvars.truncate(variables.len());
+
     let t1 = t1.parse(env, bvars, env, Some(STEP.as_sort().into()))?;
     bvars.truncate(variables.len());
     let t2 = t2.parse(env, bvars, env, Some(STEP.as_sort().into()))?;
+    bvars.truncate(variables.len());
 
     let content = match kind {
         ast::OrderOperation::Incompatible => OrderingKind::Exclusive(t1, t2),
@@ -89,8 +102,8 @@ where
         ast::QuantifierKind::Forall => Quantifier::Forall { variables },
         ast::QuantifierKind::Exists => Quantifier::Exists { variables },
     };
-    let content = Ordering::new(quantifier, content);
-    debug_assert!(content.check().is_ok());
 
+    let content = Ordering::new_guarded(quantifier, content, guard);
+    debug_assert!(content.check().is_ok());
     Ok(content.into())
 }

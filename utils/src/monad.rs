@@ -19,14 +19,10 @@ pub trait Monad<A>: MonadFamilyMember<A> {
 #[macro_export]
 macro_rules! mdo {
   (pure $e:expr ) => {$crate::monad::Monad::pure($e)};
-  (let($t:ty) $v:pat = $e:expr; $($rest:tt)*) => {
-    <$t as $crate::monad::Monad<_>>::pure($e)
-      .bind(|$v| { $crate::mdo!($($rest)*)} )
-  };
-  (let($t:ty) $v:pat = $t2:ty = $e:expr; $($rest:tt)*) => {
-    <$t as $crate::monad::Monad<$t2>>::pure($e)
-      .bind(|$v| { $crate::mdo!($($rest)*)} )
-  };
+  (let $v:pat = $e:expr; $($rest:tt)*) => {{
+    let $v = $e;
+    $crate::mdo!($($rest)*)
+  }};
   (let! $v:pat = $monad:expr ; $($rest:tt)* ) => {
     ($monad).bind( |$v| { $crate::mdo!($($rest)*)})
   };
@@ -80,7 +76,7 @@ mod test {
     #[test]
     fn test() {
         let array = mdo! {
-          let(Vec<i32>) x = 3 ;
+          let x = 3 ;
           let! a = vec![4, 5];
           let! [b] = vec![[6], [7]];
           pure (x * a * b)

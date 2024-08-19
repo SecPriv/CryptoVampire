@@ -10,7 +10,10 @@ use log::trace;
 use pest::{iterators::Pair, Parser, Position};
 
 use cryptovampire_lib::{
-    formula::function::{builtin, inner::term_algebra},
+    formula::function::{
+        builtin,
+        inner::term_algebra::{self},
+    },
     INIT_STEP_NAME,
 };
 use utils::{destvec, implvec, match_as_trait, vecref::VecRef};
@@ -515,483 +518,30 @@ where
 // ---------------------------------- terms ------------------------------------
 // -----------------------------------------------------------------------------
 
-#[derive(Derivative)]
-#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Term<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub inner: InnerTerm<'a, S>,
-}
-boiler_plate!(Term<'s>, 's, term; |p| {
-    let span = p.as_span().into();
-    destruct_rule!(span in [inner] = p.into_inner());
-    Ok(Term{span, inner})
-});
+mod term;
+pub use term::{InnerTerm, Term};
 
-impl<'a, S> Term<'a, S> {
-    /// build a new constant term, relying on the implementation of [Location::default]
-    pub fn new_default_const(s: S) -> Self {
-        Term {
-            span: Default::default(),
-            inner: InnerTerm::Application(Arc::new(Application::Application {
-                span: Default::default(),
-                function: Function::from_name(s),
-                args: Default::default(),
-            })),
-        }
-    }
-}
+pub use mmacro::*;
+mod mmacro;
 
-impl<'a, S: Display> Display for Term<'a, S> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.inner.fmt(f)
-    }
-}
+pub use infix::*;
+mod infix;
 
-macro_rules! from_i_term {
-    ($v:ident, $t:ident) => {
-        impl<'a, S> From<$t<'a, S>> for Term<'a, S> {
-            fn from(value: $t<'a, S>) -> Self {
-                Term {
-                    span: value.span,
-                    inner: InnerTerm::$v(Arc::new(value)),
-                }
-            }
-        }
-    };
-}
+pub use application::*;
+mod application;
 
-from_i_term!(LetIn, LetIn);
-from_i_term!(If, IfThenElse);
-from_i_term!(Fndst, FindSuchThat);
-from_i_term!(Quant, Quantifier);
-from_i_term!(Infix, Infix);
-from_i_term!(Macro, AppMacro);
-impl<'a, S> From<Application<'a, S>> for Term<'a, S> {
-    fn from(value: Application<'a, S>) -> Self {
-        Term {
-            span: value.span(),
-            inner: InnerTerm::Application(Arc::new(value)),
-        }
-    }
-}
+pub use if_then_else::*;
+mod if_then_else;
 
-/// Gather many rules at once, namely:
-/// - [Rule::infix_term]
-/// - [Rule::commun_base]
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub enum InnerTerm<'a, S = &'a str> {
-    LetIn(Arc<LetIn<'a, S>>),
-    If(Arc<IfThenElse<'a, S>>),
-    Fndst(Arc<FindSuchThat<'a, S>>),
-    Quant(Arc<Quantifier<'a, S>>),
-    Application(Arc<Application<'a, S>>),
-    Infix(Arc<Infix<'a, S>>),
-    Macro(Arc<AppMacro<'a, S>>),
-}
-boiler_plate!(InnerTerm<'s>, 's, inner_term; |p| {
-    let span: Location = p.as_span().into();
-    as_array!(span in [nxt] = p.into_inner());
-    match nxt.as_rule() {
-        Rule::infix_term => {
-            Ok(InnerTerm::Infix(Arc::new(nxt.try_into()?)))
-        }
-        Rule::commun_base => {
-            as_array!(span in [cmn_rule] = nxt.into_inner());
-            match cmn_rule.as_rule(){
-                Rule::let_in => {
-                    Ok(InnerTerm::LetIn(Arc::new(cmn_rule.try_into()?)))
-                },
-                Rule::if_then_else => {
-                    Ok(InnerTerm::If(Arc::new(cmn_rule.try_into()?)))
-                },
-                Rule::find_such_that => {
-                    Ok(InnerTerm::Fndst(Arc::new(cmn_rule.try_into()?)))
-                },
-                Rule::quantifier => {
-                    Ok(InnerTerm::Quant(Arc::new(cmn_rule.try_into()?)))
-                },
-                Rule::application => {
-                    Ok(InnerTerm::Application(Arc::new(cmn_rule.try_into()?)))
-                },
-                Rule::macro_application => {
-                    Ok(InnerTerm::Macro(Arc::new(cmn_rule.try_into()?)))
-                }
-                r => unreachable_rules!(span, r; let_in, if_then_else, find_such_that, quantifier, application)
-            }
-        },
-        r => unreachable_rules!(span, r; infix_term, commun_base)
-    }
-});
-impl<'a, S: Display> Display for InnerTerm<'a, S> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match_as_trait!(ast::InnerTerm, |x| in self => LetIn | If | Fndst | Quant | Application | Infix | Macro
-                    {x.fmt(f)})
-    }
-}
+pub use find_such_that::*;
+mod find_such_that;
 
-#[derive(Derivative)]
-#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct AppMacro<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub inner: InnerAppMacro<'a, S>,
-}
+pub use quantifier::*;
+mod quantifier;
 
-fn from_term_to_application<'a>(p: Pair<'a, Rule>) -> MResult<Application<'a>> {
-    debug_rule!(p, term);
-    let p = p.into_inner().next().unwrap();
-    debug_rule!(p, inner_term);
-    let p = p.into_inner().next().unwrap();
-    debug_rule!(p, commun_base);
-    let p = p.into_inner().next().unwrap();
-    p.try_into()
-}
+pub use let_in::*;
+mod let_in;
 
-boiler_plate!(AppMacro<'a>, 'a, macro_application; |p| {
-    let span = p.as_span().into();
-    let mut p = p.into_inner();
-    let inner = {
-        let name: MacroName = p.next().unwrap().try_into()?;
-
-        match name.0.content.content {
-            "msg" => InnerAppMacro::Msg(from_term_to_application(p.next().unwrap())?),
-            "cond" => InnerAppMacro::Cond(from_term_to_application(p.next().unwrap())?),
-            _ => {
-                let args : Result<Vec<_>, _> = p.map(TryInto::try_into).collect();
-                InnerAppMacro::Other { name, args: args? }
-            }
-        }
-    };
-
-    Ok(Self{span, inner})
-});
-
-impl<'a, S: Display> Display for AppMacro<'a, S> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.inner.fmt(f)
-    }
-}
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum InnerAppMacro<'a, S = &'a str> {
-    Msg(Application<'a, S>),
-    Cond(Application<'a, S>),
-    Other {
-        name: MacroName<'a, S>,
-        args: Vec<Term<'a, S>>,
-    },
-}
-
-impl<'a, S: Display> Display for InnerAppMacro<'a, S> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            InnerAppMacro::Msg(arg) => write!(f, "msg!({arg})"),
-            InnerAppMacro::Cond(arg) => write!(f, "cond!({arg})"),
-            InnerAppMacro::Other { name, args } => {
-                write!(f, "{name}({})", args.iter().format(", "))
-            }
-        }
-    }
-}
-#[derive(Derivative)]
-#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Infix<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub operation: Operation,
-    pub terms: Vec<Term<'a, S>>,
-}
-boiler_plate!(Infix<'a>, 'a, infix_term; |p| {
-    let span = p.as_span().into();
-    let mut terms = Vec::new();
-
-    let mut p = p.into_inner();
-
-    terms.push(p.next().unwrap().try_into()?);
-    let operation : Operation = p.next().unwrap().try_into()?;
-    terms.push(p.next().unwrap().try_into()?);
-
-    while let Some(n_op) = p.next() {
-        let n_op_span = n_op.as_span();
-        if operation != Operation::try_from(n_op)? {
-            bail_at!(n_op_span, "should be {}", operation)
-        }
-
-        // if_chain!{
-        //     if let Ok(tmp) = ;
-        //     if tmp == operation;
-        //     then {
-        //         bail_at!(n_op_span, "should be {}", operation)
-        //     }
-        // }
-        terms.push(p.next().unwrap().try_into()?)
-    }
-    Ok(Infix { span, operation, terms })
-});
-
-impl<'a, S: Display> Display for Infix<'a, S> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let op = format!(" {} ", &self.operation);
-        write!(f, "({})", self.terms.iter().format(&op))
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
-pub enum Operation {
-    HardEq,
-    Eq,
-    Neq,
-    Or,
-    And,
-    Implies,
-    Iff,
-}
-
-impl Display for Operation {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Operation::HardEq => "===",
-            Operation::Eq => "==",
-            Operation::Neq => "!=",
-            Operation::Or => "||",
-            Operation::And => "&&",
-            Operation::Implies => "=>",
-            Operation::Iff => "<=>",
-        }
-        .fmt(f)
-    }
-}
-
-boiler_plate!(Operation, operation; {
-    hard_eq => HardEq,
-    eq => Eq,
-    neq => Neq,
-    or => Or,
-    and => And,
-    implies => Implies,
-    iff => Iff
-});
-
-#[derive(Derivative)]
-#[derivative(
-    Debug,
-    PartialEq,
-    Eq,
-    PartialOrd = "feature_allow_slow_enum",
-    Ord = "feature_allow_slow_enum",
-    Hash,
-    Clone
-)]
-pub enum Application<'a, S = &'a str> {
-    ConstVar {
-        #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-        span: Location<'a>,
-        content: S,
-    },
-    Application {
-        #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-        span: Location<'a>,
-        function: Function<'a, S>,
-        args: Vec<Term<'a, S>>,
-    },
-}
-
-impl<'a, S> Application<'a, S> {
-    pub fn name(&self) -> &S {
-        match self {
-            Application::ConstVar { content, .. } => content,
-            Application::Application { function, .. } => function.name(),
-        }
-    }
-
-    pub fn args(&self) -> VecRef<'_, Term<'a, S>> {
-        match self {
-            Application::ConstVar { .. } => VecRef::Empty,
-            Application::Application { args, .. } => args.as_slice().into(),
-        }
-    }
-    // }
-    // impl<'a> Application<'a> {
-    pub fn name_span(&self) -> Location<'a> {
-        match self {
-            Application::ConstVar { span, .. } => *span,
-            Application::Application { function, .. } => function.0.span,
-        }
-    }
-
-    pub fn span(&self) -> Location<'a> {
-        match self {
-            Application::ConstVar { span, .. } | Application::Application { span, .. } => *span,
-        }
-    }
-
-    pub fn new_app(fun: S, args: implvec!(Term<'a, S>)) -> Self {
-        Self::Application {
-            span: Default::default(),
-            function: Function::from_name(fun),
-            args: args.into_iter().collect(),
-        }
-    }
-}
-boiler_plate!(Application<'a>, 'a, application; |p| {
-    let span = p.as_span().into();
-    let mut p = p.into_inner();
-    let name = p.next().unwrap();
-
-    if let None = p.peek() {
-        Ok(Application::ConstVar { span, content: name.as_str() })
-    } else {
-        let args : Result<Vec<_>, _> = p.map(TryInto::try_into).collect();
-        Ok(Application::Application { span, function: name.try_into()?, args: args? })
-    }
-});
-
-impl<'a, S: Display> Display for Application<'a, S> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Application::ConstVar { content, .. } => content.fmt(f),
-            Application::Application { function, args, .. } => {
-                write!(f, "{function}({})", args.iter().format(", "))
-            }
-        }
-    }
-}
-
-impl<'a, S> From<S> for Application<'a, S> {
-    fn from(value: S) -> Self {
-        Application::ConstVar {
-            span: Default::default(),
-            content: value.into(),
-        }
-    }
-}
-
-#[derive(Derivative)]
-#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct IfThenElse<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub condition: Term<'a, S>,
-    pub left: Term<'a, S>,
-    pub right: Term<'a, S>,
-}
-boiler_plate!(IfThenElse<'a>, 'a, if_then_else; |p| {
-    let span = p.as_span().into();
-    destruct_rule!(span in [condition, left, right] = p.into_inner());
-    Ok(IfThenElse { span, condition, left, right})
-});
-
-impl<'a, S: Display> Display for IfThenElse<'a, S> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self {
-            condition,
-            left,
-            right,
-            ..
-        } = self;
-        write!(f, "if {condition} {{{left}}} else {{{right}}}")
-    }
-}
-
-#[derive(Derivative)]
-#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct FindSuchThat<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub vars: TypedArgument<'a, S>,
-    pub condition: Term<'a, S>,
-    pub left: Term<'a, S>,
-    pub right: Term<'a, S>,
-}
-boiler_plate!(FindSuchThat<'a>, 'a, find_such_that; |p| {
-    let span = p.as_span().into();
-    destruct_rule!(span in [vars, condition, left, right] = p.into_inner());
-    Ok(Self { vars, span, condition, left, right})
-});
-
-impl<'a, S: Display> Display for FindSuchThat<'a, S> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self {
-            vars,
-            condition,
-            left,
-            right,
-            ..
-        } = self;
-        write!(
-            f,
-            "find {vars} such that {condition} then {{{left}}} else {{{right}}}"
-        )
-    }
-}
-
-#[derive(Derivative)]
-#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Quantifier<'a, S = &'a str> {
-    pub kind: QuantifierKind,
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub vars: TypedArgument<'a, S>,
-    pub content: Term<'a, S>,
-}
-boiler_plate!(Quantifier<'a>, 'a, quantifier; |p| {
-    let span = p.as_span().into();
-    destruct_rule!(span in [kind, vars, content] = p.into_inner());
-    Ok(Self { kind, vars, span, content})
-});
-
-impl<'a, S: Display> Display for Quantifier<'a, S> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self {
-            kind,
-            vars,
-            content,
-            ..
-        } = self;
-        write!(f, "{kind} {vars} {{{content}}}")
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
-pub enum QuantifierKind {
-    Forall,
-    Exists,
-}
-boiler_plate!(QuantifierKind, quantifier_op; {
-    forall => Forall,
-    exists => Exists
-});
-
-impl Display for QuantifierKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            QuantifierKind::Forall => write!(f, "∀"),
-            QuantifierKind::Exists => write!(f, "∃"),
-        }
-    }
-}
-
-#[derive(Derivative)]
-#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct LetIn<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub var: Variable<'a, S>,
-    pub t1: Term<'a, S>,
-    pub t2: Term<'a, S>,
-}
-boiler_plate!(LetIn<'a>, 'a, let_in; |p| {
-    let span = p.as_span().into();
-    destruct_rule!(span in [var, t1, t2] = p.into_inner());
-    Ok(Self { span, var, t1, t2})
-});
-
-impl<'a, S: Display> Display for LetIn<'a, S> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self { var, t1, t2, .. } = self;
-        write!(f, "let {var} = {t1} in {t2}")
-    }
-}
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum Declaration<'a, S = &'a str> {
     Type(DeclareType<'a, S>),
@@ -1496,11 +1046,34 @@ pub struct Order<'a, S = &'a str> {
     pub t2: Term<'a, S>,
     pub kind: OrderOperation,
     pub options: Options<'a, S>,
+    pub guard: Option<Term<'a, S>>,
 }
 boiler_plate!(Order<'a>, 'a, order ; |p| {
     let span = p.as_span().into();
-    destruct_rule!(span in [quantifier, args, t1, kind, t2, ?options] = p);
-    Ok(Self {span, quantifier, args, t1, t2, kind, options})
+    let mut p = p.into_inner();
+    let quantifier = p.next().unwrap().try_into()?;
+    let args = p.next().unwrap().try_into()?;
+    let (guard, nxt) = {
+        let n = p.next().unwrap();
+        match n.as_rule() {
+            Rule::order_guard => {
+                let guard = n.into_inner().next()
+                                .unwrap().try_into()?;
+                (Some(guard), p.next().unwrap())
+            }
+            _ => (None, n)
+        }
+    };
+    let t1 = nxt.try_into()?;
+    let kind = p.next().unwrap().try_into()?;
+    let t2 = p.next().unwrap().try_into()?;
+    let options = p.next().map(|r| r.try_into().debug_continue())
+                    .transpose()?.unwrap_or(Options::empty(span));
+    if let Some(_) = p.next() {
+        bail_at!(&span, "too many arguments")
+    }
+
+    Ok(Self {span, quantifier, args, t1, t2, kind, options, guard})
 });
 
 impl<'a, S: Display> Display for Order<'a, S> {
