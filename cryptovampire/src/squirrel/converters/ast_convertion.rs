@@ -229,6 +229,7 @@ impl<'a> ToAst<'a> for json::Macro<'a> {
     }
 }
 
+/// see [mk_depends_mutex_lemmas]
 mod convert_order {
     use super::{Context, ToAst};
     use std::{cmp::Ordering, fmt::Debug, process::id};
@@ -246,6 +247,13 @@ mod convert_order {
         squirrel::json::{self, action::AT, Named, Pathed},
     };
 
+    /// This is a somewhat dump copy of `Lemma.mk_depends_mutex` in `squirrel`.
+    /// As this is expection a `squirrel` input this *should* be fine.
+    ///
+    /// I still don't fully understand what's the format squirrel is giving me
+    /// and especially what are the invariants. I do believe some edge cases
+    /// still aren't supported, but I believes this comes from squirrel not
+    /// supporting them itself.
     pub fn mk_depends_mutex_lemmas<'a, 'b, I>(
         steps: I,
         ctx: Context<'b, 'a>,
@@ -268,8 +276,16 @@ mod convert_order {
 
     // copied for squirrel with some optimisation
 
-    #[derive(Debug, PartialEq)]
+    #[derive(Debug, PartialEq, Clone, Copy)]
     struct MAT<'a, A>(&'a json::action::AT<A>);
+
+    impl<'a, A> std::ops::Deref for MAT<'a, A> {
+        type Target = json::action::AT<A>;
+
+        fn deref(&self) -> &Self::Target {
+            self.0
+        }
+    }
 
     impl<'a, A: PartialEq + Debug> PartialOrd for MAT<'a, A> {
         fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
@@ -278,8 +294,8 @@ mod convert_order {
             if PartialEq::eq(a, b) {
                 Some(Ordering::Equal)
             } else {
-                if izip!(a.0.iter(), b.0.iter()).all(|(a, b)| a == b) {
-                    if a.0.len() < b.0.len() {
+                if izip!(a.iter(), b.iter()).all(|(a, b)| a == b) {
+                    if a.len() < b.len() {
                         Some(Ordering::Less)
                     } else {
                         Some(Ordering::Greater)
@@ -354,11 +370,16 @@ mod convert_order {
                 for (a, b) in izip!(a.iter(), b.iter()) {
                     if a.par_choice == b.par_choice {
                         if a.sum_choice == b.sum_choice {
+                            // if we are taking the same ctrl flow branch,
+                            // we look deeper
                             continue;
                         } else {
+                            // if we find an incompatibility, we bail out
+                            // with the result
                             break 'm true;
                         }
                     } else {
+                        // if no incompatibility are found, then we say so
                         break 'm false;
                     }
                 }

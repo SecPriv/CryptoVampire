@@ -63,7 +63,7 @@ impl<'bump> Ordering<'bump> {
     pub fn quantifier(&self) -> &Quantifier<'bump> {
         &self.quantifier
     }
-    
+
     pub fn guard(&self) -> &ARichFormula<'bump> {
         &self.guard
     }
