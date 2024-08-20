@@ -28,7 +28,7 @@ where
 {
     let args: Vec<_> = args.into_iter().map(|arg| arg.convert(ctx)).try_collect()?;
     mdo! {
-        let! args = Ok(AoOV::transpose(args));
+        let! args = Ok(AoOV::transpose_iter(args));
         pure ast::Application::new_app(fun.clone(), args).into()
     }
 }
@@ -62,7 +62,7 @@ pub fn to_variable_binding<'a, 'b>(
             }
         });
 
-    let out = AoOV::transpose(iter); // save the temporary result to update `res`
+    let out = AoOV::transpose_iter(iter); // save the temporary result to update `res`
     mdo! {
         let! res = res.map(|_| out);
         pure res.into_iter().collect()
@@ -70,5 +70,5 @@ pub fn to_variable_binding<'a, 'b>(
 }
 
 pub fn transpose_raov<U>(arg: RAoO<Option<U>>) -> Option<RAoO<U>> {
-    arg.map(|arg| arg.transpose_option()).transpose()
+    arg.map(|arg| arg.transpose()).transpose()
 }

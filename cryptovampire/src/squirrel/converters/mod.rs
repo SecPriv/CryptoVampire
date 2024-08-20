@@ -19,3 +19,8 @@ mod convert_order;
 
 pub use top_level_converter::convert_squirrel_dump;
 mod top_level_converter;
+
+// FIXME: do it better
+const DEFAULT_TUPLE_NAME: StrRef<'static> = StrRef::from_static("_$tuple");
+const DEFAULT_FST_PROJ_NAME: StrRef<'static> = StrRef::from_static("_$fst");
+const DEFAULT_SND_PROJ_NAME: StrRef<'static> = StrRef::from_static("_$snd");

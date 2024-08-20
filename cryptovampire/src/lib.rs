@@ -23,30 +23,13 @@ pub mod cli;
 pub mod parser;
 pub mod squirrel;
 
-/// parse a [Problem] object form a string
-pub fn problem_try_from_str<'a, 'bump>(
-    container: &'bump ScopedContainer<'bump>,
-    sort_hash: implvec!(Sort<'bump>),
-    function_hash: implvec!(Function<'bump>),
-    extra_names: implvec!(String),
-    str: &'a str,
-    ignore_lemmas: bool,
-) -> anyhow::Result<Problem<'bump>> {
-    parser::parse_str(
-        container,
-        sort_hash,
-        function_hash,
-        extra_names,
-        str,
-        ignore_lemmas,
-    )
-}
+pub use parser::{parse_pbl_from_str, parse_pbl_from_ast};
 
 pub fn run(args: Args, str: &str) -> anyhow::Result<()> {
     ScopedContainer::scoped(|container| {
         let env = Environement::from_with(&args, &*container);
 
-        let pbl = problem_try_from_str(
+        let pbl = parse_pbl_from_str(
             container,
             BUILT_IN_SORTS.iter().cloned(),
             BUILT_IN_FUNCTIONS.iter().cloned(),

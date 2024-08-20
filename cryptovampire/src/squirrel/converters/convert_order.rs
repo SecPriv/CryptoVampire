@@ -119,7 +119,7 @@ fn mk_depends_lemma<'a, 'b>(
         .try_collect()?;
 
     Ok(mdo!{
-        let! args = AoOV::transpose(args);
+        let! args = AoOV::transpose_iter(args);
         let quantifier = QuantifierKind::Forall;
         let kind = OrderOperation::Lt;
         let t1 = Application::new_app(a.name.equiv_name_ref(), idx_a.clone()).into();
@@ -182,7 +182,7 @@ fn mk_mutex_lemma<'a, 'b>(
     });
 
     Ok(mdo!{
-        let! args = AoOV::transpose(args);
+        let! args = AoOV::transpose_iter(args);
         let quantifier = QuantifierKind::Forall;
         let kind = OrderOperation::Incompatible;
         let t1 = Application::new_app(a.name.equiv_name_ref(), idx_a.clone()).into();

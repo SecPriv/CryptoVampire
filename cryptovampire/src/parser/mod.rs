@@ -3,7 +3,7 @@ mod parser;
 // mod builders;
 
 use ast::INIT_STEP_AST;
-pub(crate) use parser::parse_str;
+pub use parser::{parse_pbl_from_str, parse_pbl_from_ast};
 use static_init::dynamic;
 
 use std::borrow::Borrow;

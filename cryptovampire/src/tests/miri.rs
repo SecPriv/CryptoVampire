@@ -10,7 +10,7 @@ use cryptovampire_lib::{
 use log::trace;
 use utils::from_with::FromWith;
 
-use crate::{cli::Args, init_logger, parser, problem_try_from_str};
+use crate::{cli::Args, init_logger, parse_pbl_from_str, parser};
 
 #[test]
 fn miri() {
@@ -19,7 +19,7 @@ fn miri() {
         trace!("running");
         let env = Environement::from_with(&Args::parse_from::<_, OsString>([]), &*container);
 
-        let pbl = problem_try_from_str(
+        let pbl = parse_pbl_from_str(
             container,
             BUILT_IN_SORTS.iter().cloned(),
             BUILT_IN_FUNCTIONS.iter().cloned(),

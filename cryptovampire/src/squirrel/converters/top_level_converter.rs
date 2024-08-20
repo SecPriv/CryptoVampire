@@ -38,7 +38,7 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
 
     let all: Vec<_> = chain!([query], types, cells, macros, steps, funs).try_collect()?;
     mdo! {
-      let! content = Ok(AoOV::transpose(all));
+      let! content = Ok(AoOV::transpose_iter(all));
       pure ast::ASTList {content, begining: None}
     }
 }
@@ -100,7 +100,7 @@ fn mk_cells<'a, 'b>(
             mdo! {
                 let! sort = sort.convert(ctx);
                 let args : Vec<_> = vars.iter().map(|v| v.sort().convert(ctx)).try_collect()?;
-                let! args = Ok(AoOV::transpose(args));
+                let! args = Ok(AoOV::transpose_iter(args));
                 pure ast::DeclareCell::new(symb.equiv_name_ref(), args, sort.clone())
             }
         })
@@ -154,7 +154,7 @@ fn mk_funs<'a, 'b>(
             mdo! {
                 let! sort = out.convert(ctx);
                 let args : Vec<_> = args.iter().map(|arg| arg.convert(ctx)).try_collect()?;
-                let! args = Ok(AoOV::transpose(args));
+                let! args = Ok(AoOV::transpose_iter(args));
                 pure ast::DeclareFunction::new(symb.equiv_name_ref(), args, sort.clone())
             }
         })

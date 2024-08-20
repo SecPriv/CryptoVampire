@@ -1,7 +1,7 @@
-use std::{error::Error, fmt::Debug, marker::PhantomData, ops::DerefMut};
+use std::{error::Error, fmt::Debug, marker::PhantomData, ops::DerefMut };
 
 use if_chain::if_chain;
-use itertools::Itertools;
+use itertools::{Either, Itertools};
 use std::ops::Deref;
 
 use crate::{
@@ -189,13 +189,13 @@ impl<U: Clone> AoOV<U> {
     pub fn transpose_array<const N: usize>(args: [Self; N]) -> AoOV<[U; N]> {
         let args = Vec::from(args);
         mdo! {
-            let! l = AoOV::transpose(args);
+            let! l = AoOV::transpose_iter(args);
             pure l.try_into().map_err(|_| ()).unwrap()
         }
     }
 
     /// keep the length of the array
-    pub fn transpose(args: implvec!(Self)) -> AoOV<Vec<U>> {
+    pub fn transpose_iter(args: implvec!(Self)) -> AoOV<Vec<U>> {
         let args: Vec<_> = args.into_iter().collect();
         let goal = args
             .iter()
@@ -217,7 +217,7 @@ impl<U: Clone> AoOV<U> {
 }
 
 impl<U> AoOV<Option<U>> {
-    pub fn transpose_option(self) -> Option<AoOV<U>> {
+    pub fn transpose(self) -> Option<AoOV<U>> {
         match self {
             AllOrOne::All(arg) => {
                 let arg: Option<Vec<_>> = arg.into_iter().collect();
@@ -226,6 +226,33 @@ impl<U> AoOV<Option<U>> {
             AllOrOne::Any(Some(arg)) => Some(AllOrOne::Any(arg)),
             AllOrOne::One(i, Some(arg)) => Some(AllOrOne::One(i, arg)),
             _ => None,
+        }
+    }
+}
+
+impl<U, E> AoOV<Result<U, E>> {
+    pub fn transpose(self) -> Result<AoOV<U>, E> {
+        match self {
+            AllOrOne::All(arg) => {
+                let arg: Result<Vec<_>, E> = arg.into_iter().collect();
+                arg.map(|arg| AllOrOne::All(arg))
+            }
+            AllOrOne::Any(Ok(arg)) => Ok(AllOrOne::Any(arg)),
+            AllOrOne::One(i, Ok(arg)) => Ok(AllOrOne::One(i, arg)),
+            AllOrOne::Any(Err(e)) | AllOrOne::One(_, Err(e)) => Err(e),
+        }
+    }
+}
+
+impl<U> IntoIterator for AoOV<U> {
+    type Item = U;
+
+    type IntoIter = Either<std::vec::IntoIter<U>, std::array::IntoIter<U, 1>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self {
+            AllOrOne::All(v) => Either::Left(v.into_iter()),
+            AllOrOne::Any(x) | AllOrOne::One(_, x) => Either::Right([x].into_iter()),
         }
     }
 }
@@ -284,22 +311,5 @@ impl<T, E: Error> Monad<T> for Result<AoOV<T>, E> {
             }
             AllOrOne::One(i, e) => AllOrOne::One(i, f(e)?.owned_get(i)),
         })
-    }
-}
-
-fn flip_result<T, E>(s: AoOV<Result<T, E>>) -> Result<AoOV<T>, E> {
-    match s {
-        AllOrOne::All(l) => {
-            let l = l.into_iter().try_collect()?;
-            Ok(AllOrOne::All(l))
-        }
-        AllOrOne::Any(r) => {
-            let r = r?;
-            Ok(AllOrOne::Any(r))
-        }
-        AllOrOne::One(i, r) => {
-            let r = r?;
-            Ok(AllOrOne::One(i, r))
-        }
     }
 }

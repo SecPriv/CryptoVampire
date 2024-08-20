@@ -8,10 +8,7 @@ use crate::{
     parser::ast::{self, FindSuchThat, Term},
     squirrel::{
         converters::{
-            ast_convertion::{
-                ToAst, DEFAULT_FST_PROJ_NAME, DEFAULT_SND_PROJ_NAME, DEFAULT_TUPLE_NAME,
-            },
-            helper_functions::to_variable_binding,
+            ast_convertion::ToAst, helper_functions::to_variable_binding, DEFAULT_FST_PROJ_NAME, DEFAULT_SND_PROJ_NAME, DEFAULT_TUPLE_NAME
         },
         json::{self, mmacro, Pathed},
     },
@@ -79,7 +76,7 @@ fn convert_function_application<'a, 'b>(
     .map(|arg| arg.convert(ctx))
     .try_collect()?;
     mdo! {
-        let! args = Ok(AoOV::transpose(args));
+        let! args = Ok(AoOV::transpose_iter(args));
         pure ast::Application::new_app(symb.equiv_name_ref(), args).into()
     }
 }
@@ -138,7 +135,7 @@ pub fn convert_macro_application<'a, 'b>(
         | Some(mmacro::Data::State(_)) => apply_fun(symb.equiv_name_ref(), args, ctx),
         Some(mmacro::Data::Global(_)) => {
             let args: Vec<_> = args.map(|arg| arg.convert(ctx)).try_collect()?;
-            Ok(AoOV::transpose(args)).bind(|args| {
+            Ok(AoOV::transpose_iter(args)).bind(|args| {
                 let inner = ast::InnerAppMacro::Other {
                     name: symb.equiv_name_ref().into(),
                     args,

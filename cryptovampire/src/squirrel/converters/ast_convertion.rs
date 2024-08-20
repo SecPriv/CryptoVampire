@@ -1,7 +1,3 @@
-// FIXME: do it better
-pub const DEFAULT_TUPLE_NAME: StrRef<'static> = StrRef::from_static("_$tuple");
-pub const DEFAULT_FST_PROJ_NAME: StrRef<'static> = StrRef::from_static("_$fst");
-pub const DEFAULT_SND_PROJ_NAME: StrRef<'static> = StrRef::from_static("_$snd");
 
 pub use super::convert_order::mk_depends_mutex_lemmas;
 use cryptovampire_lib::formula::sort::builtins::{BOOL, MESSAGE, STEP};
@@ -151,8 +147,8 @@ impl<'a> ToAst<'a> for json::Action<'a> {
         mdo! {
             let! message = output.term.convert(ctx);
             let! condition = condition.term.convert(ctx);
-            let! assignements = Ok(AoOV::transpose(assignements.clone()));
-            let! args = Ok(AoOV::transpose(args.clone()));
+            let! assignements = Ok(AoOV::transpose_iter(assignements.clone()));
+            let! args = Ok(AoOV::transpose_iter(args.clone()));
             pure ast::Step {
                 name: name.clone(),
                 span: Default::default(),
@@ -175,7 +171,7 @@ impl<'a> ToAst<'a> for json::action::Update<'a> {
         // let cell = apply_fun(symb.clone(), args, ctx)?;
         let args: Vec<_> = args.iter().map(|arg| arg.convert(ctx)).try_collect()?;
         mdo! {
-            let! args = Ok(AoOV::transpose(args));
+            let! args = Ok(AoOV::transpose_iter(args));
             let! term = body.convert(ctx);
             pure ast::Assignement {
                 span: Default::default(),
@@ -243,7 +239,7 @@ impl<'a, 'b> ToAst<'a> for ConcreteMacro<'a, 'b> {
             })
             .try_collect()?;
         mdo! {
-            let! args = Ok(AoOV::transpose(args));
+            let! args = Ok(AoOV::transpose_iter(args));
             let! term = body.convert(ctx);
             pure ast::Macro {
                 span: Location::default(),

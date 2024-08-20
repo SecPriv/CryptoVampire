@@ -234,7 +234,10 @@ impl<'a, 'bump, S> KnowsRealm for Environement<'bump, 'a, S> {
     }
 }
 
-pub fn parse_str<'a, 'bump>(
+/// Create a problem from a [str]
+///
+/// related to [parse_pbl_from_ast]
+pub fn parse_pbl_from_str<'a, 'bump>(
     container: &'bump ScopedContainer<'bump>,
     sort_hash: implvec!(Sort<'bump>),
     function_hash: implvec!(Function<'bump>),
@@ -251,7 +254,6 @@ pub fn parse_str<'a, 'bump>(
         let ast = ASTList::try_from(str).debug_continue()?;
         let env = Environement::new(container, sort_hash, function_hash, extra_names);
         trace!("[P] \t[DONE]");
-
         prbl_from_ast(
             env.shorten_life(),
             &*&ast,
@@ -262,6 +264,30 @@ pub fn parse_str<'a, 'bump>(
     };
 
     Ok(pbl)
+}
+
+/// Create a problem from a [ast::ASTList]
+///
+/// see [parse_pbl_from_str]
+pub fn parse_pbl_from_ast<'a, 'bump>(
+    container: &'bump ScopedContainer<'bump>,
+    sort_hash: implvec!(Sort<'bump>),
+    function_hash: implvec!(Function<'bump>),
+    extra_names: implvec!(String),
+    ast: ASTList<'a, StrRef<'a>>,
+    ignore_lemmas: bool,
+) -> anyhow::Result<Problem<'bump>> {
+    trace!("[P] parsing from ast...");
+    let mut pbl_builder = ProblemBuilder::default();
+    pbl_builder.container(container);
+    let env = Environement::new(container, sort_hash, function_hash, extra_names);
+    prbl_from_ast(
+        env.shorten_life(),
+        &*&ast,
+        pbl_builder,
+        ignore_lemmas,
+        container,
+    )
 }
 
 // pub fn parse_test<'a, 'bump>(
