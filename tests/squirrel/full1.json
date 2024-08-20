@@ -7,12 +7,12 @@
       "vars": [
         {
           "constructor": "Var",
-          "id": { "name": "s", "tag": 152 },
+          "id": { "name": "s", "tag": 157 },
           "ty": { "TBase": { "npath": { "npath": [] }, "symb": "L" } }
         },
         {
           "constructor": "Var",
-          "id": { "name": "m", "tag": 153 },
+          "id": { "name": "m", "tag": 158 },
           "ty": { "TBase": { "npath": { "npath": [] }, "symb": "T" } }
         }
       ],
@@ -43,7 +43,7 @@
                 "elements": [
                   {
                     "constructor": "Var",
-                    "id": { "name": "m", "tag": 153 },
+                    "id": { "name": "m", "tag": 158 },
                     "ty": {
                       "TBase": { "npath": { "npath": [] }, "symb": "T" }
                     }
@@ -64,7 +64,7 @@
                         "elements": [
                           {
                             "constructor": "Var",
-                            "id": { "name": "m", "tag": 153 },
+                            "id": { "name": "m", "tag": 158 },
                             "ty": {
                               "TBase": {
                                 "npath": { "npath": [] },
@@ -74,7 +74,7 @@
                           },
                           {
                             "constructor": "Var",
-                            "id": { "name": "s", "tag": 152 },
+                            "id": { "name": "s", "tag": 157 },
                             "ty": {
                               "TBase": {
                                 "npath": { "npath": [] },
@@ -99,7 +99,7 @@
                     "args": [
                       {
                         "constructor": "Var",
-                        "id": { "name": "s", "tag": 152 },
+                        "id": { "name": "s", "tag": 157 },
                         "ty": {
                           "TBase": { "npath": { "npath": [] }, "symb": "L" }
                         }
@@ -178,12 +178,67 @@
         "condition": {
           "vars": [],
           "term": {
-            "constructor": "Fun",
-            "symb": {
-              "npath": { "npath": [], "id": 0 },
-              "symb": "true",
-              "id": 18
-            }
+            "constructor": "App",
+            "f": {
+              "constructor": "Fun",
+              "symb": {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "&&",
+                "id": 19
+              }
+            },
+            "args": [
+              {
+                "constructor": "Macro",
+                "symb": {
+                  "s_symb": {
+                    "npath": { "npath": [], "id": 0 },
+                    "symb": "ch",
+                    "id": 88
+                  },
+                  "s_typ": "Boolean"
+                },
+                "args": [],
+                "timestamp": {
+                  "constructor": "Action",
+                  "symb": {
+                    "npath": { "npath": [], "id": 0 },
+                    "symb": "Signature",
+                    "id": 89
+                  },
+                  "args": []
+                }
+              },
+              {
+                "constructor": "App",
+                "f": {
+                  "constructor": "Fun",
+                  "symb": {
+                    "npath": { "npath": [], "id": 0 },
+                    "symb": "&&",
+                    "id": 19
+                  }
+                },
+                "args": [
+                  {
+                    "constructor": "Fun",
+                    "symb": {
+                      "npath": { "npath": [], "id": 0 },
+                      "symb": "true",
+                      "id": 18
+                    }
+                  },
+                  {
+                    "constructor": "Fun",
+                    "symb": {
+                      "npath": { "npath": [], "id": 0 },
+                      "symb": "true",
+                      "id": 18
+                    }
+                  }
+                ]
+              }
+            ]
           }
         },
         "updates": [],
@@ -212,8 +267,119 @@
       {
         "name": {
           "npath": { "npath": [], "id": 0 },
+          "symb": "Signature1",
+          "id": 90
+        },
+        "action": [ { "par_choice": [ 0, [] ], "sum_choice": [ 1, [] ] } ],
+        "input": { "npath": { "npath": [], "id": 0 }, "symb": "c", "id": 61 },
+        "indices": [],
+        "condition": {
+          "vars": [],
+          "term": {
+            "constructor": "App",
+            "f": {
+              "constructor": "Fun",
+              "symb": {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "not",
+                "id": 23
+              }
+            },
+            "args": [
+              {
+                "constructor": "App",
+                "f": {
+                  "constructor": "Fun",
+                  "symb": {
+                    "npath": { "npath": [], "id": 0 },
+                    "symb": "&&",
+                    "id": 19
+                  }
+                },
+                "args": [
+                  {
+                    "constructor": "Macro",
+                    "symb": {
+                      "s_symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "ch",
+                        "id": 88
+                      },
+                      "s_typ": "Boolean"
+                    },
+                    "args": [],
+                    "timestamp": {
+                      "constructor": "Action",
+                      "symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "Signature1",
+                        "id": 90
+                      },
+                      "args": []
+                    }
+                  },
+                  {
+                    "constructor": "App",
+                    "f": {
+                      "constructor": "Fun",
+                      "symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "&&",
+                        "id": 19
+                      }
+                    },
+                    "args": [
+                      {
+                        "constructor": "Fun",
+                        "symb": {
+                          "npath": { "npath": [], "id": 0 },
+                          "symb": "true",
+                          "id": 18
+                        }
+                      },
+                      {
+                        "constructor": "Fun",
+                        "symb": {
+                          "npath": { "npath": [], "id": 0 },
+                          "symb": "true",
+                          "id": 18
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "updates": [],
+        "output": {
+          "channel": {
+            "npath": { "npath": [], "id": 0 },
+            "symb": "ø",
+            "id": 13
+          },
+          "term": {
+            "constructor": "Fun",
+            "symb": {
+              "npath": { "npath": [], "id": 0 },
+              "symb": "empty",
+              "id": 41
+            }
+          }
+        },
+        "globals": [
+          { "npath": { "npath": [], "id": 0 }, "symb": "ch", "id": 88 },
+          { "npath": { "npath": [], "id": 0 }, "symb": "mT", "id": 84 },
+          { "npath": { "npath": [], "id": 0 }, "symb": "mypk", "id": 86 },
+          { "npath": { "npath": [], "id": 0 }, "symb": "s", "id": 87 }
+        ]
+      },
+      {
+        "name": {
+          "npath": { "npath": [], "id": 0 },
           "symb": "Senc",
-          "id": 95
+          "id": 96
         },
         "action": [ { "par_choice": [ 1, [] ], "sum_choice": [ 0, [] ] } ],
         "input": { "npath": { "npath": [], "id": 0 }, "symb": "c", "id": 61 },
@@ -246,23 +412,23 @@
           }
         },
         "globals": [
-          { "npath": { "npath": [], "id": 0 }, "symb": "c1", "id": 93 },
-          { "npath": { "npath": [], "id": 0 }, "symb": "d", "id": 94 },
-          { "npath": { "npath": [], "id": 0 }, "symb": "mT1", "id": 90 }
+          { "npath": { "npath": [], "id": 0 }, "symb": "c1", "id": 94 },
+          { "npath": { "npath": [], "id": 0 }, "symb": "d", "id": 95 },
+          { "npath": { "npath": [], "id": 0 }, "symb": "mT1", "id": 91 }
         ]
       },
       {
-        "name": { "npath": { "npath": [], "id": 0 }, "symb": "A", "id": 96 },
+        "name": { "npath": { "npath": [], "id": 0 }, "symb": "A", "id": 97 },
         "action": [
           {
             "par_choice": [
-              2, [ { "id": { "name": "i", "tag": 170 }, "ty": "Index" } ]
+              2, [ { "id": { "name": "i", "tag": 175 }, "ty": "Index" } ]
             ],
             "sum_choice": [ 0, [] ]
           }
         ],
         "input": { "npath": { "npath": [], "id": 0 }, "symb": "c", "id": 61 },
-        "indices": [ { "id": { "name": "i", "tag": 170 }, "ty": "Index" } ],
+        "indices": [ { "id": { "name": "i", "tag": 175 }, "ty": "Index" } ],
         "condition": {
           "vars": [],
           "term": {
@@ -293,18 +459,18 @@
         "globals": []
       },
       {
-        "name": { "npath": { "npath": [], "id": 0 }, "symb": "A1", "id": 97 },
+        "name": { "npath": { "npath": [], "id": 0 }, "symb": "A1", "id": 98 },
         "action": [
           {
             "par_choice": [
-              2, [ { "id": { "name": "i", "tag": 172 }, "ty": "Index" } ]
+              2, [ { "id": { "name": "i", "tag": 177 }, "ty": "Index" } ]
             ],
             "sum_choice": [ 0, [] ]
           },
           { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] }
         ],
         "input": { "npath": { "npath": [], "id": 0 }, "symb": "c", "id": 61 },
-        "indices": [ { "id": { "name": "i", "tag": 172 }, "ty": "Index" } ],
+        "indices": [ { "id": { "name": "i", "tag": 177 }, "ty": "Index" } ],
         "condition": {
           "vars": [],
           "term": {
@@ -335,11 +501,11 @@
         "globals": []
       },
       {
-        "name": { "npath": { "npath": [], "id": 0 }, "symb": "A2", "id": 98 },
+        "name": { "npath": { "npath": [], "id": 0 }, "symb": "A2", "id": 99 },
         "action": [
           {
             "par_choice": [
-              2, [ { "id": { "name": "i", "tag": 174 }, "ty": "Index" } ]
+              2, [ { "id": { "name": "i", "tag": 179 }, "ty": "Index" } ]
             ],
             "sum_choice": [ 0, [] ]
           },
@@ -351,7 +517,7 @@
           "symb": "ø",
           "id": 13
         },
-        "indices": [ { "id": { "name": "i", "tag": 174 }, "ty": "Index" } ],
+        "indices": [ { "id": { "name": "i", "tag": 179 }, "ty": "Index" } ],
         "condition": {
           "vars": [],
           "term": {
@@ -397,12 +563,12 @@
                   "symb": {
                     "npath": { "npath": [], "id": 0 },
                     "symb": "A",
-                    "id": 96
+                    "id": 97
                   },
                   "args": [
                     {
                       "constructor": "Var",
-                      "id": { "name": "i", "tag": 174 },
+                      "id": { "name": "i", "tag": 179 },
                       "ty": "Index"
                     }
                   ]
@@ -424,12 +590,12 @@
                   "symb": {
                     "npath": { "npath": [], "id": 0 },
                     "symb": "A1",
-                    "id": 97
+                    "id": 98
                   },
                   "args": [
                     {
                       "constructor": "Var",
-                      "id": { "name": "i", "tag": 174 },
+                      "id": { "name": "i", "tag": 179 },
                       "ty": "Index"
                     }
                   ]
@@ -441,11 +607,15 @@
         "globals": []
       },
       {
-        "name": { "npath": { "npath": [], "id": 0 }, "symb": "A3", "id": 99 },
+        "name": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "A3",
+          "id": 100
+        },
         "action": [
           {
             "par_choice": [
-              2, [ { "id": { "name": "i", "tag": 176 }, "ty": "Index" } ]
+              2, [ { "id": { "name": "i", "tag": 181 }, "ty": "Index" } ]
             ],
             "sum_choice": [ 0, [] ]
           },
@@ -457,7 +627,7 @@
           "symb": "ø",
           "id": 13
         },
-        "indices": [ { "id": { "name": "i", "tag": 176 }, "ty": "Index" } ],
+        "indices": [ { "id": { "name": "i", "tag": 181 }, "ty": "Index" } ],
         "condition": {
           "vars": [],
           "term": {
@@ -503,12 +673,12 @@
                   "symb": {
                     "npath": { "npath": [], "id": 0 },
                     "symb": "A1",
-                    "id": 97
+                    "id": 98
                   },
                   "args": [
                     {
                       "constructor": "Var",
-                      "id": { "name": "i", "tag": 176 },
+                      "id": { "name": "i", "tag": 181 },
                       "ty": "Index"
                     }
                   ]
@@ -530,12 +700,12 @@
                   "symb": {
                     "npath": { "npath": [], "id": 0 },
                     "symb": "A",
-                    "id": 96
+                    "id": 97
                   },
                   "args": [
                     {
                       "constructor": "Var",
-                      "id": { "name": "i", "tag": 176 },
+                      "id": { "name": "i", "tag": 181 },
                       "ty": "Index"
                     }
                   ]
@@ -557,7 +727,7 @@
         }
       },
       {
-        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "r", "id": 92 },
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "r", "id": 93 },
         "data": {
           "vars": [],
           "args": [],
@@ -565,7 +735,7 @@
         }
       },
       {
-        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "k", "id": 91 },
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "k", "id": 92 },
         "data": {
           "vars": [],
           "args": [],
@@ -1950,7 +2120,7 @@
                 { "id": { "name": "m", "tag": 82 }, "ty": "Message" }
               ],
               "indices": [],
-              "ts": { "id": { "name": "τ", "tag": 104 }, "ty": "Timestamp" },
+              "ts": { "id": { "name": "τ", "tag": 108 }, "ty": "Timestamp" },
               "ty": { "TBase": { "npath": { "npath": [] }, "symb": "C" } },
               "body": {
                 "constructor": "App",
@@ -1984,7 +2154,7 @@
                         "args": [],
                         "timestamp": {
                           "constructor": "Var",
-                          "id": { "name": "τ", "tag": 104 },
+                          "id": { "name": "τ", "tag": 108 },
                           "ty": "Timestamp"
                         }
                       },
@@ -2037,7 +2207,7 @@
                 { "id": { "name": "m", "tag": 82 }, "ty": "Message" }
               ],
               "indices": [],
-              "ts": { "id": { "name": "τ", "tag": 104 }, "ty": "Timestamp" },
+              "ts": { "id": { "name": "τ", "tag": 108 }, "ty": "Timestamp" },
               "ty": { "TBase": { "npath": { "npath": [] }, "symb": "LP" } },
               "body": {
                 "constructor": "App",
@@ -2074,7 +2244,7 @@
         "symb": {
           "npath": { "npath": [], "id": 0 },
           "symb": "mT1",
-          "id": 90
+          "id": 91
         },
         "data": {
           "Global": {
@@ -2086,7 +2256,7 @@
                 { "id": { "name": "m", "tag": 60 }, "ty": "Message" }
               ],
               "indices": [],
-              "ts": { "id": { "name": "τ", "tag": 104 }, "ty": "Timestamp" },
+              "ts": { "id": { "name": "τ", "tag": 108 }, "ty": "Timestamp" },
               "ty": { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
               "body": {
                 "constructor": "App",
@@ -2122,7 +2292,7 @@
                 { "id": { "name": "m", "tag": 82 }, "ty": "Message" }
               ],
               "indices": [],
-              "ts": { "id": { "name": "τ", "tag": 104 }, "ty": "Timestamp" },
+              "ts": { "id": { "name": "τ", "tag": 108 }, "ty": "Timestamp" },
               "ty": { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
               "body": {
                 "constructor": "App",
@@ -2502,7 +2672,7 @@
         }
       },
       {
-        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "d", "id": 94 },
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "d", "id": 95 },
         "data": {
           "Global": {
             "arity": 0,
@@ -2513,7 +2683,7 @@
                 { "id": { "name": "m", "tag": 60 }, "ty": "Message" }
               ],
               "indices": [],
-              "ts": { "id": { "name": "τ", "tag": 104 }, "ty": "Timestamp" },
+              "ts": { "id": { "name": "τ", "tag": 108 }, "ty": "Timestamp" },
               "ty": { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
               "body": {
                 "constructor": "App",
@@ -2535,7 +2705,7 @@
                           "s_symb": {
                             "npath": { "npath": [], "id": 0 },
                             "symb": "c1",
-                            "id": 93
+                            "id": 94
                           },
                           "s_typ": {
                             "TBase": {
@@ -2547,7 +2717,7 @@
                         "args": [],
                         "timestamp": {
                           "constructor": "Var",
-                          "id": { "name": "τ", "tag": 104 },
+                          "id": { "name": "τ", "tag": 108 },
                           "ty": "Timestamp"
                         }
                       },
@@ -2557,7 +2727,7 @@
                           "s_symb": {
                             "npath": { "npath": [], "id": 0 },
                             "symb": "k",
-                            "id": 91
+                            "id": 92
                           },
                           "s_typ": {
                             "TBase": {
@@ -2596,7 +2766,7 @@
                 { "id": { "name": "m", "tag": 82 }, "ty": "Message" }
               ],
               "indices": [],
-              "ts": { "id": { "name": "τ", "tag": 104 }, "ty": "Timestamp" },
+              "ts": { "id": { "name": "τ", "tag": 108 }, "ty": "Timestamp" },
               "ty": "Boolean",
               "body": {
                 "constructor": "App",
@@ -2630,7 +2800,7 @@
                         "args": [],
                         "timestamp": {
                           "constructor": "Var",
-                          "id": { "name": "τ", "tag": 104 },
+                          "id": { "name": "τ", "tag": 108 },
                           "ty": "Timestamp"
                         }
                       },
@@ -2652,7 +2822,7 @@
                         "args": [],
                         "timestamp": {
                           "constructor": "Var",
-                          "id": { "name": "τ", "tag": 104 },
+                          "id": { "name": "τ", "tag": 108 },
                           "ty": "Timestamp"
                         }
                       },
@@ -2674,7 +2844,7 @@
                         "args": [],
                         "timestamp": {
                           "constructor": "Var",
-                          "id": { "name": "τ", "tag": 104 },
+                          "id": { "name": "τ", "tag": 108 },
                           "ty": "Timestamp"
                         }
                       }
@@ -2687,7 +2857,7 @@
         }
       },
       {
-        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "c1", "id": 93 },
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "c1", "id": 94 },
         "data": {
           "Global": {
             "arity": 0,
@@ -2698,7 +2868,7 @@
                 { "id": { "name": "m", "tag": 60 }, "ty": "Message" }
               ],
               "indices": [],
-              "ts": { "id": { "name": "τ", "tag": 104 }, "ty": "Timestamp" },
+              "ts": { "id": { "name": "τ", "tag": 108 }, "ty": "Timestamp" },
               "ty": { "TBase": { "npath": { "npath": [] }, "symb": "C" } },
               "body": {
                 "constructor": "App",
@@ -2720,7 +2890,7 @@
                           "s_symb": {
                             "npath": { "npath": [], "id": 0 },
                             "symb": "mT1",
-                            "id": 90
+                            "id": 91
                           },
                           "s_typ": {
                             "TBase": {
@@ -2732,7 +2902,7 @@
                         "args": [],
                         "timestamp": {
                           "constructor": "Var",
-                          "id": { "name": "τ", "tag": 104 },
+                          "id": { "name": "τ", "tag": 108 },
                           "ty": "Timestamp"
                         }
                       },
@@ -2742,7 +2912,7 @@
                           "s_symb": {
                             "npath": { "npath": [], "id": 0 },
                             "symb": "r",
-                            "id": 92
+                            "id": 93
                           },
                           "s_typ": {
                             "TBase": {
@@ -2759,7 +2929,7 @@
                           "s_symb": {
                             "npath": { "npath": [], "id": 0 },
                             "symb": "k",
-                            "id": 91
+                            "id": 92
                           },
                           "s_typ": {
                             "TBase": {

@@ -68,3 +68,7 @@ pub fn to_variable_binding<'a, 'b>(
         pure res.into_iter().collect()
     }
 }
+
+pub fn transpose_raov<U>(arg: RAoO<Option<U>>) -> Option<RAoO<U>> {
+    arg.map(|arg| arg.transpose_option()).transpose()
+}

@@ -216,6 +216,20 @@ impl<U: Clone> AoOV<U> {
     }
 }
 
+impl<U> AoOV<Option<U>> {
+    pub fn transpose_option(self) -> Option<AoOV<U>> {
+        match self {
+            AllOrOne::All(arg) => {
+                let arg: Option<Vec<_>> = arg.into_iter().collect();
+                arg.map(|arg| AllOrOne::All(arg))
+            }
+            AllOrOne::Any(Some(arg)) => Some(AllOrOne::Any(arg)),
+            AllOrOne::One(i, Some(arg)) => Some(AllOrOne::One(i, arg)),
+            _ => None,
+        }
+    }
+}
+
 pub struct AllOrOneMonadicFamilly;
 
 impl MonadFamily for AllOrOneMonadicFamilly {

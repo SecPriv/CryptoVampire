@@ -7,7 +7,7 @@ use utils::string_ref::StrRef;
 
 const SEPARATOR: &'static str = "$#$";
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Default)]
 pub struct NamesPath<'a> {
     #[serde(borrow)]
     pub npath: Vec<Symb<'a>>,
@@ -62,5 +62,14 @@ impl<'a> Pathed<'a> for Path<'a> {
 impl<'a> Pathed<'a> for ISymb<'a> {
     fn path(&self) -> &Path<'a> {
         self.s_symb.as_ref()
+    }
+}
+
+impl<'a> From<Symb<'a>> for Path<'a> {
+    fn from(symb: Symb<'a>) -> Self {
+        Self {
+            npath: Default::default(),
+            symb,
+        }
     }
 }

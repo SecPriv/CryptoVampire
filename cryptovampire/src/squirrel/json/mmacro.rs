@@ -52,7 +52,14 @@ pub struct StateMacro<'a> {
     pub arity: usize,
     #[serde(rename = "type", borrow)]
     pub sort: Type<'a>,
-    // the rest isn't implemented yet
+    pub init: StateMacroDef<'a>
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+pub struct StateMacroDef<'a> {
+    #[serde(borrow)]
+    pub vars: Vec<Variable<'a>>,
+    pub init: Term<'a>
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -84,3 +91,4 @@ pub mod action {
     }
 }
 pub type Macro<'a> = Content<'a, mmacro::Data<'a>>;
+pub type MacroRef<'a, 'b> = ContentRef<'a, 'b, mmacro::Data<'a>>;

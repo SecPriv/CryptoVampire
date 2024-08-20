@@ -3,6 +3,7 @@ pub const DEFAULT_TUPLE_NAME: StrRef<'static> = StrRef::from_static("_$tuple");
 pub const DEFAULT_FST_PROJ_NAME: StrRef<'static> = StrRef::from_static("_$fst");
 pub const DEFAULT_SND_PROJ_NAME: StrRef<'static> = StrRef::from_static("_$snd");
 
+pub use super::convert_order::mk_depends_mutex_lemmas;
 use cryptovampire_lib::formula::sort::builtins::{BOOL, MESSAGE, STEP};
 use itertools::{chain, izip, Itertools};
 use utils::{
@@ -11,6 +12,7 @@ use utils::{
     monad::Monad,
     pure,
     string_ref::StrRef,
+    vecref::VecRef,
 };
 
 use crate::{
@@ -19,7 +21,7 @@ use crate::{
         ast::{self, Options},
         Location,
     },
-    squirrel::json::{self, Named, Pathed, ProcessedSquirrelDump},
+    squirrel::json::{self, path::Path, Named, Pathed, ProcessedSquirrelDump},
 };
 
 use super::{helper_functions::*, RAoO};
@@ -92,6 +94,7 @@ impl<'a> ToAst<'a> for json::Term<'a> {
     }
 }
 
+pub const INDEX_SORT_NAME: &'static str = "index";
 impl<'a> ToAst<'a> for json::sort::Type<'a> {
     type Target = ast::TypeName<'a, StrRef<'a>>;
 
@@ -100,7 +103,7 @@ impl<'a> ToAst<'a> for json::sort::Type<'a> {
             json::Type::Message => mdo!(pure MESSAGE.name().into()),
             json::Type::Boolean => mdo!(pure BOOL.name().into()),
             json::Type::Timestamp => mdo!(pure STEP.name().into()),
-            json::Type::Index => mdo!(pure StrRef::from_static("index").into()),
+            json::Type::Index => mdo!(pure StrRef::from_static(INDEX_SORT_NAME).into()),
             json::Type::TBase(p) => mdo!(pure p.equiv_name_ref().into()),
             json::Type::TVar { .. }
             | json::Type::TUnivar { .. }
@@ -184,12 +187,12 @@ impl<'a> ToAst<'a> for json::action::Update<'a> {
     }
 }
 
-impl<'a> ToAst<'a> for json::Macro<'a> {
+impl<'a, 'c> ToAst<'a> for json::MacroRef<'a, 'c> {
     type Target = Option<ast::Macro<'a, StrRef<'a>>>;
 
     fn convert<'b>(&self, ctx: Context<'b, 'a>) -> RAoO<Self::Target> {
         use json::mmacro::*;
-        let json::Content { symb, data } = self;
+        let json::ContentRef { symb, data } = self;
         match data {
             Data::Global(GlobalMacro {
                 arity: _,
@@ -204,24 +207,13 @@ impl<'a> ToAst<'a> for json::Macro<'a> {
                         ty: _,
                     },
             }) => {
-                let args: Vec<_> = chain!(indices.iter(), inputs.iter(), [ts])
-                    .map(|var| {
-                        mdo! {
-                            let! sort = var.sort.convert(ctx);
-                            pure (var.id.name().drop_guard(), sort)
-                        }
-                    })
-                    .try_collect()?;
                 mdo! {
-                    let! args = Ok(AoOV::transpose(args));
-                    let! term = body.convert(ctx);
-                    pure Some(ast::Macro {
-                        span: Location::default(),
-                        name: symb.equiv_name_ref().into(),
-                        args:args.iter().cloned().collect(),
-                        term,
-                        options: Options::default()
-                    })
+                    let! res = ConcreteMacro {
+                        symb,
+                        body,
+                        args: chain!(indices.iter(), inputs.iter(), [ts]).collect()
+                    }.convert(ctx);
+                    pure Some(res)
                 }
             }
             _ => pure!(None),
@@ -229,119 +221,19 @@ impl<'a> ToAst<'a> for json::Macro<'a> {
     }
 }
 
-/// see [mk_depends_mutex_lemmas]
-mod convert_order {
-    use super::{Context, ToAst};
-    use std::{cmp::Ordering, fmt::Debug, process::id};
-    use utils::{monad::Monad, pure};
+pub struct ConcreteMacro<'a, 'b> {
+    pub symb: &'b Path<'a>,
+    pub body: &'b json::Term<'a>,
+    pub args: VecRef<'b, json::Variable<'a>>,
+}
 
-    use itertools::{izip, Itertools};
-    use utils::{all_or_one::AoOV, mdo, string_ref::StrRef};
+impl<'a, 'b> ToAst<'a> for ConcreteMacro<'a, 'b> {
+    type Target = ast::Macro<'a, StrRef<'a>>;
 
-    use crate::{
-        bail_at,
-        parser::{
-            ast::{self, Application, InnerTerm, Order, OrderOperation, QuantifierKind},
-            InputError,
-        },
-        squirrel::json::{self, action::AT, Named, Pathed},
-    };
+    fn convert<'c>(&self, ctx: Context<'c, 'a>) -> RAoO<Self::Target> {
+        let Self { symb, body, args } = self;
 
-    /// This is a somewhat dump copy of `Lemma.mk_depends_mutex` in `squirrel`.
-    /// As this is expection a `squirrel` input this *should* be fine.
-    ///
-    /// I still don't fully understand what's the format squirrel is giving me
-    /// and especially what are the invariants. I do believe some edge cases
-    /// still aren't supported, but I believes this comes from squirrel not
-    /// supporting them itself.
-    pub fn mk_depends_mutex_lemmas<'a, 'b, I>(
-        steps: I,
-        ctx: Context<'b, 'a>,
-    ) -> Result<Vec<ast::Order<'a, StrRef<'a>>>, InputError>
-    where
-        I: IntoIterator<Item = &'b json::Action<'a>>,
-        I::IntoIter: Clone,
-        'a: 'b,
-    {
-        steps
-            .into_iter()
-            .tuple_combinations()
-            .map(|(a, b)| match mk_depends_lemma(a, b, ctx)? {
-                Some(l) => Ok(Some(l)),
-                None => mk_mutex_lemma(a, b, ctx),
-            })
-            .filter_map(Result::transpose)
-            .collect()
-    }
-
-    // copied for squirrel with some optimisation
-
-    #[derive(Debug, PartialEq, Clone, Copy)]
-    struct MAT<'a, A>(&'a json::action::AT<A>);
-
-    impl<'a, A> std::ops::Deref for MAT<'a, A> {
-        type Target = json::action::AT<A>;
-
-        fn deref(&self) -> &Self::Target {
-            self.0
-        }
-    }
-
-    impl<'a, A: PartialEq + Debug> PartialOrd for MAT<'a, A> {
-        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-            let a = self;
-            let b = other;
-            if PartialEq::eq(a, b) {
-                Some(Ordering::Equal)
-            } else {
-                if izip!(a.iter(), b.iter()).all(|(a, b)| a == b) {
-                    if a.len() < b.len() {
-                        Some(Ordering::Less)
-                    } else {
-                        Some(Ordering::Greater)
-                    }
-                } else {
-                    None
-                }
-            }
-        }
-    }
-    /// Wrapper arround [MAT]'s [PartialOrd]. Returns `Some(true)` when `a` strictly depends on `b`,
-    /// `Some(false)` when `b` strictly depends on `a` and `None` in any other situation
-    fn depends<A: Eq + Debug>(a: &AT<A>, b: &AT<A>) -> Option<bool> {
-        match PartialOrd::partial_cmp(&MAT(a), &MAT(b))? {
-            Ordering::Less => Some(true),
-            Ordering::Equal => None,
-            Ordering::Greater => Some(false),
-        }
-    }
-
-    fn mk_depends_lemma<'a, 'b>(
-        a: &json::Action<'a>,
-        b: &json::Action<'a>,
-        ctx: Context<'b, 'a>,
-    ) -> Result<Option<ast::Order<'a, StrRef<'a>>>, InputError> {
-        let cmp = depends(&a.action, &b.action);
-
-        let (a, b) = match cmp {
-            // flip to be in the same order
-            None => return Ok(None),
-            Some(true) => (a, b),
-            Some(false) => (b, a),
-        };
-        if !(b.indices.len() >= a.indices.len()) {
-            let err_msg = "b has to few indices, this contradicts an implicit requirement of squirrel's `Lemma.mk_depends_lemma`";
-            bail_at!(@ "{err_msg}")
-        }
-
-        let [idx_a, idx_b] = [a, b].map(|x| {
-            x.indices
-                .iter()
-                .map(|v| Application::from(v.name().drop_guard()).into())
-                .collect_vec()
-        });
-        let args: Vec<_> = b
-            .indices
+        let args: Vec<_> = args
             .iter()
             .map(|var| {
                 mdo! {
@@ -350,81 +242,16 @@ mod convert_order {
                 }
             })
             .try_collect()?;
-
-        Ok(mdo!{
-            let! args = AoOV::transpose(args);
-            let quantifier = QuantifierKind::Forall;
-            let kind = OrderOperation::Lt;
-            let t1 = Application::new_app(a.name.equiv_name_ref(), idx_a.clone()).into();
-            let t2 = Application::new_app(a.name.equiv_name_ref(), idx_b.clone()).into();
-            let span = Default::default();
-            let options = Default::default();
-            let guard = None;
-            pure Some(Order { span, quantifier, args: args.into_iter().collect(), t1, t2, kind, options, guard})
-        }.owned_get(0))
-    }
-
-    fn mutex<A: Eq + Debug>(a: &AT<A>, b: &AT<A>) -> bool {
-        a.len() == b.len() && {
-            'm: {
-                for (a, b) in izip!(a.iter(), b.iter()) {
-                    if a.par_choice == b.par_choice {
-                        if a.sum_choice == b.sum_choice {
-                            // if we are taking the same ctrl flow branch,
-                            // we look deeper
-                            continue;
-                        } else {
-                            // if we find an incompatibility, we bail out
-                            // with the result
-                            break 'm true;
-                        }
-                    } else {
-                        // if no incompatibility are found, then we say so
-                        break 'm false;
-                    }
-                }
-                false
+        mdo! {
+            let! args = Ok(AoOV::transpose(args));
+            let! term = body.convert(ctx);
+            pure ast::Macro {
+                span: Location::default(),
+                name: symb.equiv_name_ref().into(),
+                args:args.iter().cloned().collect(),
+                term,
+                options: Options::default()
             }
         }
-    }
-
-    fn mk_mutex_lemma<'a, 'b>(
-        a: &json::Action<'a>,
-        b: &json::Action<'a>,
-        ctx: Context<'b, 'a>,
-    ) -> Result<Option<ast::Order<'a, StrRef<'a>>>, InputError> {
-        if !mutex(a.shape().as_ref(), b.shape().as_ref()) {
-            return Ok(None);
-        }
-
-        let args: Vec<_> = b
-            .indices
-            .iter()
-            .map(|var| {
-                mdo! {
-                    let! sort = var.sort.convert(ctx);
-                    pure (var.id.name().drop_guard(), sort)
-                }
-            })
-            .try_collect()?;
-        let [idx_a, idx_b] = [a, b].map(|x| {
-            x.indices
-                .iter()
-                .map(|v| Application::from(v.name().drop_guard()).into())
-                .collect_vec()
-        });
-
-        Ok(mdo!{
-            let! args = AoOV::transpose(args);
-            let quantifier = QuantifierKind::Forall;
-            let kind = OrderOperation::Incompatible;
-            let t1 = Application::new_app(a.name.equiv_name_ref(), idx_a.clone()).into();
-            let t2 = Application::new_app(a.name.equiv_name_ref(), idx_b.clone()).into();
-            let span = Default::default();
-            let options = Default::default();
-            let guard = None;
-            pure Some(Order { span, quantifier, args: args.into_iter().collect(), t1, t2, kind, options, guard})
-        }.owned_get(0))
     }
 }
-pub use convert_order::mk_depends_mutex_lemmas;

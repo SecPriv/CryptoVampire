@@ -58,6 +58,25 @@ pub enum Def<'a> {
     },
     Concrete(Concrete<'a>),
 }
+
+impl<'a> Def<'a> {
+    /// Returns `true` if the def is [`Concrete`].
+    ///
+    /// [`Concrete`]: Def::Concrete
+    #[must_use]
+    pub fn is_concrete(&self) -> bool {
+        matches!(self, Self::Concrete(..))
+    }
+
+    #[must_use]
+    pub fn as_concrete(&self) -> Option<&Concrete<'a>> {
+        if let Self::Concrete(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+}
 // pub type DefaultDef<'a> = Def<'a>;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]

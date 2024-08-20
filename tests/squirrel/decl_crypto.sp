@@ -65,6 +65,7 @@ process Signature =
  let mypk : LP = spk(sk) in
  let s : C = sign(mT,sk) in
  let ch : boolean = checksign(mT, s, mypk) in
+ if (ch && true && true) then
  out (c, empty).
 
 system Signature | Senc | !_i(in(c, x); in(c, y); (out(c, <x, y>) | out(c, <y, x>)) ).

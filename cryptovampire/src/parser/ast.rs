@@ -583,6 +583,14 @@ impl<'a, S> DeclareType<'a, S> {
     pub fn name_span(&self) -> &Location<'a> {
         &self.name.0.span
     }
+
+    pub fn new(name: TypeName<'a, S>) -> Self {
+        Self {
+            span: Default::default(),
+            name,
+            options: Default::default(),
+        }
+    }
 }
 
 impl<'a, S: Display> Display for DeclareType<'a, S> {
@@ -619,6 +627,22 @@ impl<'a, S> DeclareFunction<'a, S> {
 
     pub fn out(&self) -> &Ident<'a, S> {
         &self.sort.0.content
+    }
+
+    pub fn new<TN>(name: S, args: implvec!(TN), sort: TN) -> Self
+    where
+        TypeName<'a, S>: From<TN>,
+    {
+        Self {
+            span: Default::default(),
+            name: Function::from_name(name),
+            args: DeclareFunctionArgs {
+                span: Default::default(),
+                args: args.into_iter().map_into().collect(),
+            },
+            sort: sort.into(),
+            options: Default::default(),
+        }
     }
 }
 
@@ -668,6 +692,7 @@ pub struct DeclareCell<'a, S = &'a str> {
     pub sort: TypeName<'a, S>,
     pub options: Options<'a, S>,
 }
+
 boiler_plate!(DeclareCell<'a>, 'a, declare_cell; |p| {
     let span = p.as_span().into();
     destruct_rule!(span in [name, args, sort, ?options] = p);
@@ -686,6 +711,24 @@ impl<'a, S: Display> Display for DeclareCell<'a, S> {
         write!(f, "cell {name}{args}:{sort} {options}")
     }
 }
+impl<'a, S> DeclareCell<'a, S> {
+    pub fn new<TN>(name: S, args: implvec!(TN), sort: TN) -> Self
+    where
+        TypeName<'a, S>: From<TN>,
+    {
+        Self {
+            span: Default::default(),
+            name: Function::from_name(name),
+            args: DeclareFunctionArgs {
+                span: Default::default(),
+                args: args.into_iter().map_into().collect(),
+            },
+            sort: sort.into(),
+            options: Default::default(),
+        }
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Step<'a, S = &'a str> {

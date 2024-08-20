@@ -14,6 +14,13 @@ pub trait Monad<A>: MonadFamilyMember<A> {
         self,
         f: impl FnMut(A) -> <Self::Of as MonadFamily>::Member<B>,
     ) -> <Self::Of as MonadFamily>::Member<B>;
+
+    fn mmap<B>(self, mut f: impl FnMut(A) -> B) -> <Self::Of as MonadFamily>::Member<B>
+    where
+        Self: Sized,
+    {
+        self.bind::<B>(|r: A| <Self::Of as MonadFamily>::Member::<B>::pure(f(r)))
+    }
 }
 
 #[macro_export]
@@ -21,6 +28,10 @@ macro_rules! mdo {
   (pure $e:expr ) => {$crate::monad::Monad::pure($e)};
   (let $v:pat = $e:expr; $($rest:tt)*) => {{
     let $v = $e;
+    $crate::mdo!($($rest)*)
+  }};
+  (let $v:ident : $t:ty = $e:expr; $($rest:tt)*) => {{
+    let $v : $t = $e;
     $crate::mdo!($($rest)*)
   }};
   (let! $v:pat = $monad:expr ; $($rest:tt)* ) => {
