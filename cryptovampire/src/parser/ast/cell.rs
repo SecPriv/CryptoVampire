@@ -55,9 +55,9 @@ pub struct Assignements<'a, S = &'a str> {
     pub assignements: Vec<Assignement<'a, S>>,
 }
 boiler_plate!(Assignements<'a>, 'a, assignements; |p| {
-let span = p.as_span().into();
-let assignements = p.into_inner().map(TryInto::try_into).try_collect()?;
-Ok(Self { span, assignements })
+    let span = p.as_span().into();
+    let assignements = p.into_inner().map(TryInto::try_into).try_collect()?;
+    Ok(Self { span, assignements })
 });
 
 impl<'a, S: Display> Display for Assignements<'a, S> {

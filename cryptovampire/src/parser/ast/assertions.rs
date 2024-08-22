@@ -1,3 +1,5 @@
+use crate::err_at;
+
 use super::*;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -6,10 +8,16 @@ pub enum Assert<'a, S = &'a str> {
     Query(Assertion<'a, S>),
     Lemma(Assertion<'a, S>),
 }
-boiler_plate!(l Assert<'a>, 'a, assertion | query | lemma ; |p| {
-    assertion_inner => { Ok(Assert::Assertion(p.try_into()?)) }
-    query_inner => { Ok(Assert::Query(p.try_into()?)) }
-    lemma_inner => { Ok(Assert::Lemma(p.try_into()?)) }
+boiler_plate!(Assert<'a>, 'a, assertion | query | lemma ; |p| {
+    let span = p.as_span();
+    let rule = p.as_rule();
+    let p = p.into_inner().next().unwrap();
+    match rule {
+        Rule::assertion => { Ok(Assert::Assertion(p.try_into()?)) }
+        Rule::query => { Ok(Assert::Query(p.try_into()?)) }
+        Rule::lemma => { Ok(Assert::Lemma(p.try_into()?)) }
+        r => Err(err_at!(&p.as_span().into(), "got a {r:?} expected assertion, query or lemma"))
+    }
 });
 
 impl<'a, S: Display> Display for Assert<'a, S> {
@@ -30,7 +38,7 @@ pub struct Assertion<'a, S = &'a str> {
     pub content: Term<'a, S>,
     pub options: Options<'a, S>,
 }
-boiler_plate!(Assertion<'a>, 'a, assertion_inner | query_inner | lemma_inner ; |p| {
+boiler_plate!(Assertion<'a>, 'a, assertion_inner ; |p| {
     let span = p.as_span().into();
     destruct_rule!(span in [content, ?options] = p);
     Ok(Self {span, content, options})

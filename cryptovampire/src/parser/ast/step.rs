@@ -54,14 +54,33 @@ boiler_plate!(Step<'a>, 'a, step; |p| {
     let assignement_rule = p.next();
     let options_rule = p.next();
 
+    // save the actual rule of the assignement for err management later
+    let assignement_rule_rule = assignement_rule.as_ref().map(|a| a.as_rule());
+
     // replace it by the right object
-    let assignements = assignement_rule.clone().map(TryInto::try_into).transpose()?;
+    let assignements = assignement_rule.clone().map(TryInto::try_into).transpose();
     let options = {
         // if assignement is not a [Assignements<'a>] then either it is an [Options<'a>]
         // or the parsing should fail anyway
-        let rule = if assignements.is_none() { assignement_rule } else { options_rule };
-        rule.map(TryInto::try_into).transpose()?
-    }.unwrap_or(Options::empty(span));
+        let rule = if assignements.is_err() { assignement_rule } else { options_rule };
+        rule.map(TryInto::try_into).transpose()
+    };
+
+    let (assignements, options) = match (assignements, options) {
+        (Err(ea), Err(eo)) => {
+            Err(match assignement_rule_rule {
+                Some(Rule::assignements) => ea,
+                _ => eo
+            })
+        }
+        (a, o) => {
+            // if a is an err, we know o isn't because of our current branch, so we ignore
+            let a = a.ok().flatten();
+            // if parsing o failed (i.e., there is something *and* it fail, we want to crash)
+            let o = o?.unwrap_or(Options::empty(span));
+            Ok((a, o))
+        }
+    }?;
 
     if let Some(np) = p.next() { // whatever happens, there shouldn't be anything left
         bail_at!(&np, "too many arguments (expected at most 6, got {})", (7 + p.len()))

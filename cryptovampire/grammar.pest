@@ -72,16 +72,14 @@ step = {"step" ~ step_name ~ typed_arguments ~
     assignement = {typed_arguments ~ application ~ "<-" ~ term}
     assignements= {"{" ~ (assignement ~ ",")* ~ assignement? ~ "}"}
 
-assertion = {"assert" ~ assertion_inner ~ options? }
-    assertion_inner = { term }
+assertion = {"assert" ~ assertion_inner }
+    assertion_inner = { term ~ options? }
 
 assertion_crypto = {"assert-crypto" ~ ident ~ function* ~ options?}
 
-query = {"query" ~ query_inner ~ options? }
-    query_inner = { term }
+query = {"query" ~ assertion_inner }
 
-lemma = {"lemma" ~ lemma_inner ~ options? }
-    lemma_inner= { term }
+lemma = {"lemma" ~ assertion_inner }
 
 order = {"order" ~ quantifier_op ~ typed_arguments ~
     (inner_order | "{" ~ inner_order ~ "}")  ~ options?}
