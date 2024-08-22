@@ -93,7 +93,7 @@ impl<'a, S: Display> Display for InnerAppMacro<'a, S> {
             InnerAppMacro::Msg(arg) => write!(f, "msg!({arg})"),
             InnerAppMacro::Cond(arg) => write!(f, "cond!({arg})"),
             InnerAppMacro::Other { name, args } => {
-                write!(f, "{name}({})", args.iter().format(", "))
+                write!(f, "{name}[{}]", args.iter().format(", "))
             }
         }
     }

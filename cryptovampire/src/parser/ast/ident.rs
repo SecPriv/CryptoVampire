@@ -85,7 +85,7 @@ impl<'a, S> MacroName<'a, S> {
 
 impl<'a, S: Display> Display for MacroName<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.name().fmt(f)
+        write!(f, "{}!", self.name())
     }
 }
 

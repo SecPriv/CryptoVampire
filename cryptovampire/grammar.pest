@@ -11,7 +11,7 @@ c_like_comments = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
 ml_like_comments = _{ "(*" ~ (!"*)" ~ ANY)* ~ "*)" }
 EOL = _{";"}
 
-ident = @{  ASCII_ALPHA ~ ( ASCII_ALPHANUMERIC | "_" | "-" | "'" )* }
+ident = @{  LETTER ~ ( ASCII_ALPHANUMERIC | LETTER | "_" | "-" | "'" )* }
 underscore = {"_"}
 
 

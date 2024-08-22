@@ -25,7 +25,16 @@ pub fn run_from_json(mut args: Args, str: &str) -> anyhow::Result<()> {
         .into_iter()
         .enumerate()
         .map(|(i, ast)| {
-            trace!("runnig the {i}th problem with ast:\n\t{ast}");
+            if cfg!(debug_assertions) {
+                match std::env::var("CRYTPOVAMPIRE_DUMP") {
+                    Ok(f) => std::fs::write(f, ast.to_string()).unwrap(),
+                    Err(std::env::VarError::NotPresent) => (),
+                    x => {
+                        x.unwrap();
+                    }
+                }
+                trace!("runnig the {i}th problem with ast:\n\t{ast}");
+            }
 
             match args.get_mut_output_location() {
                 None => (),
