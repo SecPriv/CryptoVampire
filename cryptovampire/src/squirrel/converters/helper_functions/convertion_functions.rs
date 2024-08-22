@@ -5,7 +5,7 @@ use utils::{all_or_one::AoOV, mdo, pure, string_ref::StrRef};
 
 use crate::{
     bail_at, err_at,
-    parser::ast::{self, FindSuchThat, Term},
+    parser::ast::{self, FindSuchThat, Operation, Term},
     squirrel::{
         converters::{
             ast_convertion::ToAst, helper_functions::to_variable_binding, DEFAULT_FST_PROJ_NAME,
@@ -76,9 +76,15 @@ fn convert_function_application<'a, 'b>(
     .iter()
     .map(|arg| arg.convert(ctx))
     .try_collect()?;
+    let symb = symb.equiv_name_ref(&ctx);
+    let op = Operation::get_operation(symb.as_str());
     mdo! {
         let! args = Ok(AoOV::transpose_iter(args));
-        pure ast::Application::new_app(symb.equiv_name_ref(&ctx), args).into()
+        pure if let Some(operation) = op {
+            ast::Infix{span: Default::default(), operation, terms: args}.into()
+        } else {
+            ast::Application::new_app(symb.clone(), args).into()
+        }
     }
 }
 

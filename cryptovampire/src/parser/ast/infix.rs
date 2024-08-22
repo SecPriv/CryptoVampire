@@ -46,18 +46,19 @@ pub enum Operation {
     Iff,
 }
 
+pub const OPERATION_LIST: [Operation; 7] = [
+    Operation::HardEq,
+    Operation::Eq,
+    Operation::Neq,
+    Operation::Or,
+    Operation::And,
+    Operation::Implies,
+    Operation::Iff,
+];
+
 impl Display for Operation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Operation::HardEq => "===",
-            Operation::Eq => "==",
-            Operation::Neq => "!=",
-            Operation::Or => "||",
-            Operation::And => "&&",
-            Operation::Implies => "=>",
-            Operation::Iff => "<=>",
-        }
-        .fmt(f)
+        (*self).as_str().fmt(f)
     }
 }
 
@@ -70,3 +71,21 @@ boiler_plate!(Operation, operation; {
   implies => Implies,
   iff => Iff
 });
+
+impl Operation {
+    pub fn get_operation(str: &str) -> Option<Self> {
+        OPERATION_LIST.iter().find(|x| x.as_str() == str).cloned()
+    }
+
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Operation::HardEq => "===",
+            Operation::Eq => "==",
+            Operation::Neq => "!=",
+            Operation::Or => "||",
+            Operation::And => "&&",
+            Operation::Implies => "=>",
+            Operation::Iff => "<=>",
+        }
+    }
+}
