@@ -37,9 +37,9 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
 
     /* TODO:
         - [x] add builtin functions
+        - [x] convert known function (e.g. && => and)
         - [x] declare names
-        - [ ] make init step
-        - [ ] convert known function (e.g. && => and)
+        - [-] make init step; possibly not needed
         - [ ] assert tuples
         - [ ] assert crypto
         - [ ] <> (i.e., !=)
