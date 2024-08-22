@@ -1,9 +1,12 @@
 use std::fmt::Display;
 
 use ast_convertion::{ConcreteMacro, ToAst, INDEX_SORT_NAME};
+use clap::builder;
 use cryptovampire_lib::formula::function::builtin::{
-    AND, EMPTY, EQUALITY, FALSE, FALSE_F, HAPPENS, IMPLIES, LESS_THAN_EQ_STEP, LESS_THAN_STEP, NOT, OR, PRED, TRUE, TRUE_F
+    AND, EMPTY, EQUALITY, FALSE, FALSE_F, HAPPENS, IMPLIES, LESS_THAN_EQ_STEP, LESS_THAN_STEP, NOT,
+    OR, PRED, TRUE, TRUE_F,
 };
+use derive_builder::Builder;
 use hashbrown::{HashMap, HashSet};
 use itertools::{chain, Itertools};
 use log::trace;
@@ -72,30 +75,59 @@ const DEFAULT_TUPLE_NAME: StrRef<'static> = StrRef::from_static("_$tuple");
 const DEFAULT_FST_PROJ_NAME: StrRef<'static> = StrRef::from_static("_$fst");
 const DEFAULT_SND_PROJ_NAME: StrRef<'static> = StrRef::from_static("_$snd");
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Builder)]
+#[builder(name = "ContextBuilder")]
 struct Context<'a, 'str> {
-    pub shape: AllOrOneShape,
-    pub dump: &'a ProcessedSquirrelDump<'str>,
-    pub builtin_function: &'static HashMap<&'static str, StrRef<'static>>,
-    pub forbidden_function: &'static HashSet<&'static str>,
+    #[builder(default)]
+    shape: AllOrOneShape,
+    dump: &'a ProcessedSquirrelDump<'str>,
+    #[builder(default = "&BUILTIN_FUNCTIONS")]
+    builtin_function: &'static HashMap<&'static str, StrRef<'static>>,
+    #[builder(default = "&FORBIDDEN_FUNCTIONS")]
+    forbidden_function: &'static HashSet<&'static str>,
+    #[builder(default)]
+    current_step: Option<&'a json::Action<'str>>,
+}
+
+impl<'a, 'str> From<Context<'a, 'str>> for ContextBuilder<'a, 'str> {
+    fn from(
+        Context {
+            shape,
+            dump,
+            builtin_function,
+            forbidden_function,
+            current_step,
+        }: Context<'a, 'str>,
+    ) -> Self {
+        let mut ctx = ContextBuilder::create_empty();
+        ctx.shape(shape)
+            .dump(dump)
+            .builtin_function(builtin_function)
+            .forbidden_function(forbidden_function)
+            .current_step(current_step);
+        ctx
+    }
 }
 
 impl<'a, 'str> Context<'a, 'str> {
-    pub fn new(dump: &'a ProcessedSquirrelDump<'str>) -> Self {
-        Self {
-            shape: AllOrOneShape::Any(()),
-            dump,
-            builtin_function: &BUILTIN_FUNCTIONS,
-            forbidden_function: &FORBIDDEN_FUNCTIONS,
-        }
-    }
-
     pub fn dump(&self) -> &ProcessedSquirrelDump<'str> {
         self.dump
     }
 
     pub fn shape(&self) -> AllOrOneShape {
         self.shape
+    }
+
+    fn current_step(&self) -> Option<&'a json::Action<'str>> {
+        self.current_step
+    }
+    
+    fn builtin_function(&self) -> &'static HashMap<&'static str, StrRef<'static>> {
+        self.builtin_function
+    }
+    
+    fn forbidden_function(&self) -> &'static HashSet<&'static str> {
+        self.forbidden_function
     }
 }
 
@@ -109,7 +141,7 @@ impl<'a, 'str> Sanitizer for Context<'a, 'str> {
 }
 
 trait MDebugIter<U> {
-    fn debug(self, msg:impl Display+'static) -> impl Iterator<Item = U>;
+    fn debug(self, msg: impl Display + 'static) -> impl Iterator<Item = U>;
 }
 
 impl<I, S> MDebugIter<S> for I
@@ -117,12 +149,9 @@ where
     I: Iterator<Item = S>,
     S: Serialize,
 {
-    fn debug(self, msg: impl Display+'static) -> impl Iterator<Item = S> {
+    fn debug(self, msg: impl Display + 'static) -> impl Iterator<Item = S> {
         self.map(move |x| {
-            trace!(
-                "{msg}{}",
-                serde_json::to_string_pretty(&x).unwrap()
-            );
+            trace!("{msg}{}", serde_json::to_string_pretty(&x).unwrap());
             x
         })
     }

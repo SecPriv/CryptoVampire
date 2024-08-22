@@ -227,6 +227,7 @@ dependencies = [
  "const_format",
  "cryptovampire-lib",
  "derivative",
+ "derive_builder",
  "env_logger",
  "hashbrown",
  "if_chain",

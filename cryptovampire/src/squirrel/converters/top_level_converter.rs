@@ -9,7 +9,7 @@ use super::*;
 pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a, StrRef<'a>>> {
     let pdump = &ProcessedSquirrelDump::from(dump);
 
-    let ctx = Context::new(pdump);
+    let ctx = ContextBuilder::create_empty().dump(pdump).build().unwrap();
 
     let types = mk_types(pdump, ctx)
         .map(|r| r.mmap(|d| ast::AST::Declaration(Arc::new(ast::Declaration::Type(d)))));
