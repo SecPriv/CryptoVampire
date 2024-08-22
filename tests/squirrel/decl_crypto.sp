@@ -1,7 +1,7 @@
 channel c.
 
-type T
-type C
+type T  [large]
+type C  [large]
 type L  [large]
 type R  [large]
 type LP [large]

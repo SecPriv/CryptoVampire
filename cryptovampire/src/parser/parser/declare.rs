@@ -199,11 +199,7 @@ where
         content: name,
     } = fun.name();
     if env.contains_name(name.borrow()) {
-        bail_at!(span, "the function name {} is already in use", name)
-        // err(merr(
-        //     span,
-        //     f!("the function name {} is already in use", name),
-        // ))
+        bail_at!(span, "the function name '{}' is already in use", name)
     } else {
         let input_sorts: Result<Vec<_>, _> = fun
             .args()

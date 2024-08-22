@@ -1,7 +1,7 @@
 use cryptovampire_lib::formula::function::builtin::EMPTY_FUN_NAME;
 use if_chain::if_chain;
 use itertools::{chain, Itertools};
-use utils::{all_or_one::AoOV, mdo, string_ref::StrRef};
+use utils::{all_or_one::AoOV, mdo, pure, string_ref::StrRef};
 
 use crate::{
     bail_at, err_at,
@@ -11,7 +11,7 @@ use crate::{
             ast_convertion::ToAst, helper_functions::to_variable_binding, DEFAULT_FST_PROJ_NAME,
             DEFAULT_SND_PROJ_NAME, DEFAULT_TUPLE_NAME,
         },
-        json::{self, mmacro, Pathed},
+        json::{self, mmacro, path::Path, Pathed},
     },
 };
 
@@ -272,4 +272,22 @@ pub fn convert_action_application<'a, 'b>(
     ctx: Context<'b, 'a>,
 ) -> RAoO<ast::Term<'a, StrRef<'a>>> {
     apply_fun(symb.equiv_name_ref(&ctx), args, ctx)
+}
+
+/// Convert a function term to a [ast::Term] while making sure this is
+/// possible in FOL. This does not always fail as `squirrel` sometime
+/// give constant (e.g., `true`) as unapplied functions with no parameters
+pub fn convert_function<'a, 'b>(
+    symb: &Path<'a>,
+    ctx: Context<'b, 'a>,
+) -> RAoO<ast::Term<'a, StrRef<'a>>> {
+    if let Some(true) = ctx
+        .dump()
+        .get_operator(symb)
+        .map(|f| f.sort.args.is_empty())
+    {
+        pure!(ast::Application::new_app(symb.equiv_name_ref(&ctx), []).into())
+    } else {
+        bail_at!(@ "no high order...")
+    }
 }

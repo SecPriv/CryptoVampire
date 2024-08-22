@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use ast_convertion::{ConcreteMacro, ToAst, INDEX_SORT_NAME};
 use cryptovampire_lib::formula::function::builtin::{
-    AND, EQUALITY, IMPLIES, LESS_THAN_EQ_STEP, LESS_THAN_STEP, OR,
+    AND, EMPTY, EQUALITY, FALSE, FALSE_F, HAPPENS, IMPLIES, LESS_THAN_EQ_STEP, LESS_THAN_STEP, NOT, OR, PRED, TRUE, TRUE_F
 };
 use hashbrown::{HashMap, HashSet};
 use itertools::{chain, Itertools};
@@ -27,12 +27,21 @@ use crate::{
 static BUILTIN_FUNCTIONS: HashMap<&'static str, StrRef<'static>> = {
     [
         ("&&", AND.name()),
+        ("and", AND.name()),
         ("||", OR.name()),
+        ("or", OR.name()),
         ("<=>", EQUALITY.name()),
         ("=>", IMPLIES.name()),
         ("=", EQUALITY.name()),
         ("<=", LESS_THAN_EQ_STEP.name()),
         ("<", LESS_THAN_STEP.name()),
+        ("not", NOT.name()),
+        ("true", TRUE_F.name()),
+        ("false", FALSE_F.name()),
+        ("empty", EMPTY.name()),
+        ("ø", EMPTY.name()),
+        ("happens", HAPPENS.name()),
+        ("pred", PRED.name()),
     ]
     .into_iter()
     .collect()

@@ -26,9 +26,7 @@ impl<'a> ToAst<'a> for json::Term<'a> {
 
     fn convert<'b>(&self, ctx: Context<'b, 'a>) -> RAoO<Self::Target> {
         match self {
-            json::Term::Fun { .. } => {
-                bail_at!(@ "no high order")
-            }
+            json::Term::Fun { symb } => convert_function(symb, ctx),
             json::Term::Let { .. } => bail_at!(@ "no lets"),
             // actual work
             json::Term::Var { var } => {
@@ -70,7 +68,13 @@ impl<'a> ToAst<'a> for json::sort::Type<'a> {
             json::Type::Boolean => mdo!(pure BOOL.name().into()),
             json::Type::Timestamp => mdo!(pure STEP.name().into()),
             json::Type::Index => mdo!(pure StrRef::from_static(INDEX_SORT_NAME).into()),
-            json::Type::TBase(p) => mdo!(pure p.equiv_name_ref(&ctx).into()),
+            json::Type::TBase(p) => {
+                if let Some(true) = ctx.dump().get_type(p).map(|s| s.is_large()) {
+                    pure!(MESSAGE.name().into())
+                } else {
+                    pure!(p.equiv_name_ref(&ctx).into())
+                }
+            }
             json::Type::TVar { .. }
             | json::Type::TUnivar { .. }
             | json::Type::Tuple { .. }
