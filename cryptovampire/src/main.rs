@@ -4,7 +4,7 @@ use std::{
 };
 
 use clap::Parser;
-use cryptovampire::{cli::Args, init_logger, run};
+use cryptovampire::{cli::Args, init_logger, run_from_cv, squirrel::run_from_json};
 
 use log::trace;
 
@@ -29,7 +29,12 @@ fn main() {
             buf
         }
     };
-    run(args, &str).unwrap();
+    match args.input_format {
+        cryptovampire::cli::Input::Cryptovampire => run_from_cv(args, &str),
+        cryptovampire::cli::Input::SquirrelJSON => run_from_json(args, &str),
+    }
+    .unwrap();
+
     trace!("done")
 }
 

@@ -234,49 +234,16 @@ impl<'a, 'bump, S> KnowsRealm for Environement<'bump, 'a, S> {
     }
 }
 
-/// Create a problem from a [str]
-///
-/// related to [parse_pbl_from_ast]
-pub fn parse_pbl_from_str<'a, 'bump>(
-    container: &'bump ScopedContainer<'bump>,
-    sort_hash: implvec!(Sort<'bump>),
-    function_hash: implvec!(Function<'bump>),
-    extra_names: implvec!(String),
-    str: &'a str,
-    ignore_lemmas: bool,
-) -> anyhow::Result<Problem<'bump>> {
-    let mut pbl_builder = ProblemBuilder::default();
-    pbl_builder.container(container);
-    trace!("[P] parsing...");
-
-    let pbl = {
-        trace!("[P] \tinto ast...");
-        let ast = ASTList::try_from(str).debug_continue()?;
-        let env = Environement::new(container, sort_hash, function_hash, extra_names);
-        trace!("[P] \t[DONE]");
-        prbl_from_ast(
-            env.shorten_life(),
-            &*&ast,
-            pbl_builder,
-            ignore_lemmas,
-            container,
-        )?
-    };
-
-    Ok(pbl)
-}
-
 /// Create a problem from a [ast::ASTList]
-///
-/// see [parse_pbl_from_str]
-pub fn parse_pbl_from_ast<'a, 'bump>(
+pub fn parse_pbl_from_ast<'a, 'bump, S>(
     container: &'bump ScopedContainer<'bump>,
     sort_hash: implvec!(Sort<'bump>),
     function_hash: implvec!(Function<'bump>),
     extra_names: implvec!(String),
-    ast: ASTList<'a, StrRef<'a>>,
+    ast: ASTList<'a, S>,
     ignore_lemmas: bool,
-) -> anyhow::Result<Problem<'bump>> {
+) -> anyhow::Result<Problem<'bump>> where S: Pstr,
+for<'b> StrRef<'b>: From<&'b S>, {
     trace!("[P] parsing from ast...");
     let mut pbl_builder = ProblemBuilder::default();
     pbl_builder.container(container);
@@ -289,45 +256,6 @@ pub fn parse_pbl_from_ast<'a, 'bump>(
         container,
     )
 }
-
-// pub fn parse_test<'a, 'bump>(
-//     container: &'bump ScopedContainer<'bump>,
-//     sort_hash: Vec<Sort<'bump>>,
-//     function_hash: Vec<Function<'bump>>,
-//     extra_names: Vec<String>,
-//     str: &'a str,
-//     ignore_lemmas: bool,
-// ) -> anyhow::Result<Problem<'bump>> {
-//     let mut pbl_builder: ProblemBuilder<'bump> = ProblemBuilder::default();
-//     pbl_builder.container(container);
-
-//     let ast = ASTList::try_from(str).debug_continue()?;
-//     let env = Environement::new(container, sort_hash, function_hash, extra_names);
-
-//     prbl_from_ast_test(
-//         env,
-//         &ast,
-//         pbl_builder,
-//         ignore_lemmas,
-//         container,
-//     );
-//     todo!();
-
-//     // Ok(pbl)
-// }
-
-// fn prbl_from_ast_test<'a, 'bump, S>(
-//     mut env: Environement<'bump, 'a, S>,
-//     ast: &'a ASTList<'a, S>,
-//     mut pbl_builder: ProblemBuilder<'bump>,
-//     ignore_lemmas: bool,
-//     container: &'bump ScopedContainer<'bump>,
-// ) -> Result<Problem<'bump>, anyhow::Error>
-// where
-//     S: From<&'static str>,
-// {
-//     todo!()
-// }
 
 fn prbl_from_ast<'a, 'bump, S>(
     mut env: Environement<'bump, 'a, S>,

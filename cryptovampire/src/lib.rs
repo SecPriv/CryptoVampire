@@ -18,23 +18,33 @@ use cryptovampire_lib::{
     smt::{SmtFile, SMT_FILE_EXTENSION},
 };
 
-use utils::{from_with::FromWith, implvec, traits::MyWriteTo};
+use parser::{ast::ASTList, Pstr};
+use utils::{from_with::FromWith, implvec, string_ref::StrRef, traits::MyWriteTo};
 pub mod cli;
 pub mod parser;
 pub mod squirrel;
 
-pub use parser::{parse_pbl_from_str, parse_pbl_from_ast};
+pub use parser::{parse_pbl_from_ast};
 
-pub fn run(args: Args, str: &str) -> anyhow::Result<()> {
+pub fn run_from_cv(args: Args, str: &str) -> anyhow::Result<()> {
+    let ast = ASTList::try_from(str)?;
+    run_from_ast(&args, ast)
+}
+
+fn run_from_ast<'a, S>(args: &Args, ast: ASTList<'a, S>) -> anyhow::Result<()>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     ScopedContainer::scoped(|container| {
-        let env = Environement::from_with(&args, &*container);
+        let env = Environement::from_with(args, &*container);
 
-        let pbl = parse_pbl_from_str(
+        let pbl = parse_pbl_from_ast(
             container,
             BUILT_IN_SORTS.iter().cloned(),
             BUILT_IN_FUNCTIONS.iter().cloned(),
             parser::USED_KEYWORDS.iter().map(|s| s.to_string()),
-            &str,
+            ast,
             env.are_lemmas_ignored(),
         )?;
 
@@ -70,7 +80,8 @@ pub fn run(args: Args, str: &str) -> anyhow::Result<()> {
     })
 }
 
-/// automatically run all the problems in `pbls` using `vampire`, retrying as many as `parms` requests it
+/// automatically run all the problems in `pbls` using `vampire`, retrying as many
+/// as `parms` requests it
 pub fn auto_run<'bump>(
     env: &Environement<'bump>,
     mut pbls: PblIterator<'bump>,
