@@ -15,6 +15,7 @@ use cryptovampire_lib::{
     smt::{SmtFile, SMT_FILE_EXTENSION},
 };
 
+use log::trace;
 use parser::{ast::ASTList, Pstr};
 use utils::{from_with::FromWith, string_ref::StrRef, traits::MyWriteTo};
 pub mod cli;
@@ -24,6 +25,7 @@ pub mod squirrel;
 pub use parser::parse_pbl_from_ast;
 
 pub fn run_from_cv(args: Args, str: &str) -> anyhow::Result<()> {
+    trace!("running for cv file");
     let ast = ASTList::try_from(str)?;
     run_from_ast(&args, ast)
 }
@@ -33,6 +35,7 @@ where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
 {
+    trace!("running from ast file");
     ScopedContainer::scoped(|container| {
         let env = Environement::from_with(args, &*container);
 

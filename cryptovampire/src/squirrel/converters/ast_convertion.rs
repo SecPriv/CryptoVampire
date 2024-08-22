@@ -74,7 +74,7 @@ impl<'a> ToAst<'a> for json::sort::Type<'a> {
             json::Type::TVar { .. }
             | json::Type::TUnivar { .. }
             | json::Type::Tuple { .. }
-            | json::Type::Fun { .. } => Err(err_at!(@ "arg")),
+            | json::Type::Fun { .. } => Err(err_at!(@ "unsupported argument")),
 
             json::Type::Name => pure!(NAME.name().into()),
         }

@@ -1,9 +1,13 @@
+use std::fmt::Display;
+
 use ast_convertion::{ConcreteMacro, ToAst, INDEX_SORT_NAME};
 use cryptovampire_lib::formula::function::builtin::{
     AND, EQUALITY, IMPLIES, LESS_THAN_EQ_STEP, LESS_THAN_STEP, OR,
 };
 use hashbrown::{HashMap, HashSet};
 use itertools::{chain, Itertools};
+use log::trace;
+use serde::Serialize;
 use static_init::dynamic;
 use utils::{
     all_or_one::{AllOrOneShape, AoOV},
@@ -92,5 +96,25 @@ impl<'a, 'str> Sanitizer for Context<'a, 'str> {
             .get(str.as_ref())
             .unwrap_or(str)
             .clone()
+    }
+}
+
+trait MDebugIter<U> {
+    fn debug(self, msg:impl Display+'static) -> impl Iterator<Item = U>;
+}
+
+impl<I, S> MDebugIter<S> for I
+where
+    I: Iterator<Item = S>,
+    S: Serialize,
+{
+    fn debug(self, msg: impl Display+'static) -> impl Iterator<Item = S> {
+        self.map(move |x| {
+            trace!(
+                "{msg}{}",
+                serde_json::to_string_pretty(&x).unwrap()
+            );
+            x
+        })
     }
 }

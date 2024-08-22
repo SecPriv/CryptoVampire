@@ -1,6 +1,7 @@
 use converters::convert_squirrel_dump;
 use cryptovampire_lib::container::ScopedContainer;
-use json::SquirrelDump;
+use json::{CryptoVampireCall, SquirrelDump};
+use log::{debug, trace};
 use utils::string_ref::StrRef;
 
 use crate::{cli::Args, run_from_ast};
@@ -9,21 +10,29 @@ mod converters;
 pub(crate) mod json;
 
 pub fn run_from_json(mut args: Args, str: &str) -> anyhow::Result<()> {
+    debug!("running from json");
     assert!(args.input_format.is_squirrel_json());
 
-    let dump: SquirrelDump = serde_json::from_str(str)?;
+    debug!("parsing json");
+    let dump = {
+        let tmp: CryptoVampireCall = serde_json::from_str(str)?;
+        tmp.context
+    };
+    trace!("parsing successful");
+
+    trace!("converting to ast");
     convert_squirrel_dump(dump)?
         .into_iter()
         .enumerate()
         .map(|(i, ast)| {
-            ScopedContainer::scoped(|container| {
-                match args.get_mut_output_location() {
-                    None => (),
-                    Some(location) => *location = location.join(&format!("{i}")),
-                }
+            trace!("runnig the {i}th problem with ast:\n\t{ast}");
 
-                run_from_ast(&args, ast)
-            })
+            match args.get_mut_output_location() {
+                None => (),
+                Some(location) => *location = location.join(&format!("{i}")),
+            }
+
+            run_from_ast(&args, ast)
         })
         .collect()
 }

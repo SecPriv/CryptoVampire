@@ -29,6 +29,7 @@ fn main() {
             buf
         }
     };
+    trace!("input read");
     match args.input_format {
         cryptovampire::cli::Input::Cryptovampire => run_from_cv(args, &str),
         cryptovampire::cli::Input::SquirrelJSON => run_from_json(args, &str),

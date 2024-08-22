@@ -10,6 +10,10 @@ impl<'str, S> ASTList<'str, S> {
     pub fn shorten_ref<'a>(&'a self) -> &'a ASTList<'a, S> {
         self
     }
+
+    pub fn as_slice(&self) -> &[AST<'str, S>] {
+        self.content.as_slice()
+    }
 }
 
 impl<'a> TryFrom<&'a str> for ASTList<'a, &'a str> {
@@ -42,6 +46,12 @@ impl<'str, 'b, S> IntoIterator for &'b ASTList<'str, S> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.content.iter()
+    }
+}
+
+impl<'a, S: Display> Display for ASTList<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.as_slice().iter().try_for_each(|ast| ast.fmt(f))
     }
 }
 

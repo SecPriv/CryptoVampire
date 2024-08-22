@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use log::{info, trace};
+
 use super::Context;
 
 use super::*;
@@ -40,7 +42,21 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
         - [ ] <> (i.e., !=)
     */
 
-    let all: Vec<_> = chain!(types, cells, macros, funs, steps, [query]).try_collect()?;
+    let all: Vec<_> = chain!(types, cells, macros, funs, steps, [query])
+        .map(|x| {
+            if cfg!(debug_assertions) {
+                mdo! {
+                    let! x = x;
+                    pure {
+                        trace!("converted:\n\t{x}");
+                        x
+                    }
+                }
+            } else {
+                x
+            }
+        })
+        .try_collect()?;
     mdo! {
       let! content = Ok(AoOV::transpose_iter(all));
       pure ast::ASTList {content, begining: None}
@@ -51,7 +67,11 @@ fn mk_steps<'a, 'b>(
     pdump: &'b ProcessedSquirrelDump<'a>,
     ctx: Context<'b, 'a>,
 ) -> impl Iterator<Item = RAoO<ast::Step<'a, StrRef<'a>>>> + 'b {
-    pdump.actions().values().map(move |a| a.convert(ctx))
+    pdump
+        .actions()
+        .values()
+        .debug("attempting to convert step:\n\t")
+        .map(move |a| a.convert(ctx))
 }
 
 fn mk_query<'a, 'b>(
@@ -142,6 +162,7 @@ fn mk_funs_and_names<'a, 'b>(
     let names = pdump
         .names()
         .iter()
+        .debug("attempting to convert name:\n\t")
         .map(move |(symb, json::FunctionType { vars, args, out })| {
             (symb.equiv_name_ref(&ctx), vars, args, &json::Type::Name)
         });
@@ -149,6 +170,7 @@ fn mk_funs_and_names<'a, 'b>(
     let functions = pdump
         .operators()
         .iter()
+        .debug("attempting to convert function:\n\t")
         .filter_map(move |(symb, data)| {
             // filtering out builtin and forbidden functions
             let symb = symb.equiv_name_ref(&ctx);
@@ -166,17 +188,33 @@ fn mk_funs_and_names<'a, 'b>(
             )| { (!def.is_concrete()).then_some((symb, vars, args, out)) },
         );
 
-    chain!(names, functions).map(move |(symb, vars, args, out)| {
-        if !vars.is_empty() {
-            bail_at!(@ "polymorphism...")
-        }
-        mdo! {
-            let! sort = out.convert(ctx);
-            let args : Vec<_> = args.iter().map(|arg| arg.convert(ctx)).try_collect()?;
-            let! args = Ok(AoOV::transpose_iter(args));
-            pure ast::DeclareFunction::new(symb.clone(), args, sort.clone())
-        }
-    })
+    chain!(names, functions)
+        .filter(|(symb, vars, _, _)| {
+            if cfg!(debug_assertions) && !vars.is_empty() {
+                info!("skipping {symb} because of polymorphism");
+            };
+            vars.is_empty()
+        })
+        .map(move |(symb, vars, args, out)| {
+            trace!("converting {symb}...");
+            if !vars.is_empty() {
+                bail_at!(@ "polymorphism...")
+            }
+            out.convert(ctx).bind(|sort| {
+                // let args: Vec<_> = args.iter().map(|arg| arg.convert(ctx)).try_collect()?;
+                let args: Vec<_> = {
+                    let args = match args.last() {
+                        Some(json::Type::Tuple { elements }) => elements,
+                        _ => args,
+                    };
+                    args.iter().map(|arg| arg.convert(ctx)).try_collect()
+                }?;
+                mdo! {
+                    let! args = Ok(AoOV::transpose_iter(args));
+                    pure ast::DeclareFunction::new(symb.clone(), args, sort.clone())
+                }
+            })
+        })
 }
 
 fn mk_types<'a, 'b>(
