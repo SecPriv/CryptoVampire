@@ -1,6 +1,6 @@
 
 pub use super::convert_order::mk_depends_mutex_lemmas;
-use cryptovampire_lib::formula::sort::builtins::{BOOL, MESSAGE, STEP};
+use cryptovampire_lib::formula::sort::builtins::{BOOL, MESSAGE, NAME, STEP};
 use hashbrown::{HashMap, HashSet};
 use itertools::{chain, izip, Itertools};
 use utils::{
@@ -86,6 +86,8 @@ impl<'a> ToAst<'a> for json::sort::Type<'a> {
             | json::Type::TUnivar { .. }
             | json::Type::Tuple { .. }
             | json::Type::Fun { .. } => Err(err_at!(@ "arg")),
+
+            json::Type::Name => pure!(NAME.name().into())
         }
     }
 }

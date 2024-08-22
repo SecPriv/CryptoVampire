@@ -17,7 +17,7 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
     let types = mk_types(pdump, ctx)
         .map(|r| r.mmap(|d| ast::AST::Declaration(Arc::new(ast::Declaration::Type(d)))));
 
-    let funs = mk_funs(pdump, ctx)
+    let funs = mk_funs_and_names(pdump, ctx)
         .map(|r| r.mmap(|d| ast::AST::Declaration(Arc::new(ast::Declaration::Function(d)))));
 
     let cells = mk_cells(pdump, ctx)
@@ -37,7 +37,7 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
 
     /* TODO:
         - [x] add builtin functions
-        - [ ] declare names
+        - [x] declare names
         - [ ] make init step
         - [ ] convert known function (e.g. && => and)
         - [ ] assert tuples
@@ -140,14 +140,22 @@ fn mk_macros<'a, 'b>(
     chain!(base, concrete_functions)
 }
 
-fn mk_funs<'a, 'b>(
+fn mk_funs_and_names<'a, 'b>(
     pdump: &'b ProcessedSquirrelDump<'a>,
     ctx: Context<'b, 'a>,
 ) -> impl Iterator<Item = RAoO<ast::DeclareFunction<'a, StrRef<'a>>>> + 'b {
-    pdump
+    let names = pdump
+        .names()
+        .iter()
+        .map(move |(symb, json::FunctionType { vars, args, out })| {
+            (symb.equiv_name_ref(&ctx), vars, args, &json::Type::Name)
+        });
+
+    let functions = pdump
         .operators()
         .iter()
-        .filter_map(move |(symb, data)| { // filtering out builtin and forbidden functions
+        .filter_map(move |(symb, data)| {
+            // filtering out builtin and forbidden functions
             let symb = symb.equiv_name_ref(&ctx);
             (!(ctx.forbidden_function.contains(symb.as_ref())
                 || ctx.builtin_function.contains_key(symb.as_ref())))
@@ -161,18 +169,19 @@ fn mk_funs<'a, 'b>(
                     def,
                 },
             )| { (!def.is_concrete()).then_some((symb, vars, args, out)) },
-        )
-        .map(move |(symb, vars, args, out)| {
-            if !vars.is_empty() {
-                bail_at!(@ "polymorphism...")
-            }
-            mdo! {
-                let! sort = out.convert(ctx);
-                let args : Vec<_> = args.iter().map(|arg| arg.convert(ctx)).try_collect()?;
-                let! args = Ok(AoOV::transpose_iter(args));
-                pure ast::DeclareFunction::new(symb.clone(), args, sort.clone())
-            }
-        })
+        );
+
+    chain!(names, functions).map(move |(symb, vars, args, out)| {
+        if !vars.is_empty() {
+            bail_at!(@ "polymorphism...")
+        }
+        mdo! {
+            let! sort = out.convert(ctx);
+            let args : Vec<_> = args.iter().map(|arg| arg.convert(ctx)).try_collect()?;
+            let! args = Ok(AoOV::transpose_iter(args));
+            pure ast::DeclareFunction::new(symb.clone(), args, sort.clone())
+        }
+    })
 }
 
 fn mk_types<'a, 'b>(
