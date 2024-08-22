@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use crate::squirrel::Sanitizer;
+
 use super::{Symb, Type};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -48,8 +50,13 @@ impl<'a> Display for Path<'a> {
 pub trait Pathed<'a> {
     fn path(&self) -> &Path<'a>;
 
-    fn equiv_name_ref(&self) -> StrRef<'a> {
-        self.path().to_string().into()
+    /// Turn a [Path]-like object into a string while also ensuring it matches
+    /// some invariants enforced by the [Sanitizer].
+    ///
+    /// We use [StrRef] for efficiency (and consistency with the rest of cv).
+    #[allow(private_bounds)]
+    fn equiv_name_ref<S: Sanitizer>(&self, s: &S) -> StrRef<'a> {
+        s.sanitize(&StrRef::from(self.path().to_string()))
     }
 }
 

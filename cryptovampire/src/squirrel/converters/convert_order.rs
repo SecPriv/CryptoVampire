@@ -1,4 +1,4 @@
-use super::ast_convertion::{Context, ToAst};
+use super::{ast_convertion::ToAst, Context};
 use std::{cmp::Ordering, fmt::Debug, process::id};
 use utils::{monad::Monad, pure};
 
@@ -122,8 +122,8 @@ fn mk_depends_lemma<'a, 'b>(
         let! args = AoOV::transpose_iter(args);
         let quantifier = QuantifierKind::Forall;
         let kind = OrderOperation::Lt;
-        let t1 = Application::new_app(a.name.equiv_name_ref(), idx_a.clone()).into();
-        let t2 = Application::new_app(a.name.equiv_name_ref(), idx_b.clone()).into();
+        let t1 = Application::new_app(a.name.equiv_name_ref(&ctx), idx_a.clone()).into();
+        let t2 = Application::new_app(a.name.equiv_name_ref(&ctx), idx_b.clone()).into();
         let span = Default::default();
         let options = Default::default();
         let guard = None;
@@ -185,8 +185,8 @@ fn mk_mutex_lemma<'a, 'b>(
         let! args = AoOV::transpose_iter(args);
         let quantifier = QuantifierKind::Forall;
         let kind = OrderOperation::Incompatible;
-        let t1 = Application::new_app(a.name.equiv_name_ref(), idx_a.clone()).into();
-        let t2 = Application::new_app(a.name.equiv_name_ref(), idx_b.clone()).into();
+        let t1 = Application::new_app(a.name.equiv_name_ref(&ctx), idx_a.clone()).into();
+        let t2 = Application::new_app(a.name.equiv_name_ref(&ctx), idx_b.clone()).into();
         let span = Default::default();
         let options = Default::default();
         let guard = None;

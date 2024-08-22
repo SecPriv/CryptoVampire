@@ -7,6 +7,7 @@ use cryptovampire_lib::{
 };
 use itertools::Either;
 use json::SquirrelDump;
+use utils::string_ref::StrRef;
 
 use crate::{auto_run, parse_pbl_from_ast, parser};
 
@@ -40,4 +41,9 @@ pub fn run_from_json(str: &str) -> anyhow::Result<Vec<String>> {
             Err(e) => Either::Right([Err(e)].into_iter()),
         })
         .collect()
+}
+
+
+trait Sanitizer {
+    fn sanitize<'a>(&self, str:&StrRef<'a>) -> StrRef<'a>;
 }

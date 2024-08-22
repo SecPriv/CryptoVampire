@@ -1,11 +1,18 @@
 use std::sync::Arc;
 
+use super::Context;
+use cryptovampire_lib::formula::function::{
+    builtin::{AND, EQUALITY, IMPLIES, LESS_THAN_EQ_STEP, LESS_THAN_STEP, OR},
+    inner::term_algebra::connective::AND_NAME,
+};
+use hashbrown::{HashMap, HashSet};
+
 use super::*;
 
 pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a, StrRef<'a>>> {
     let pdump = &ProcessedSquirrelDump::from(dump);
 
-    let ctx = ast_convertion::Context::new(pdump);
+    let ctx = Context::new(pdump);
 
     let types = mk_types(pdump, ctx)
         .map(|r| r.mmap(|d| ast::AST::Declaration(Arc::new(ast::Declaration::Type(d)))));
@@ -29,14 +36,16 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
     });
 
     /* TODO:
-        - add builtin functions
-        - make init step
-        - convert known function (e.g. && => and)
-        - assert tuples
-        - assert crypto
+        - [x] add builtin functions
+        - [ ] declare names
+        - [ ] make init step
+        - [ ] convert known function (e.g. && => and)
+        - [ ] assert tuples
+        - [ ] assert crypto
+        - [ ] <> (i.e., !=)
     */
 
-    let all: Vec<_> = chain!([query], types, cells, macros, steps, funs).try_collect()?;
+    let all: Vec<_> = chain!(types, cells, macros, funs, steps, [query]).try_collect()?;
     mdo! {
       let! content = Ok(AoOV::transpose_iter(all));
       pure ast::ASTList {content, begining: None}
@@ -101,7 +110,7 @@ fn mk_cells<'a, 'b>(
                 let! sort = sort.convert(ctx);
                 let args : Vec<_> = vars.iter().map(|v| v.sort().convert(ctx)).try_collect()?;
                 let! args = Ok(AoOV::transpose_iter(args));
-                pure ast::DeclareCell::new(symb.equiv_name_ref(), args, sort.clone())
+                pure ast::DeclareCell::new(symb.equiv_name_ref(&ctx), args, sort.clone())
             }
         })
 }
@@ -138,6 +147,12 @@ fn mk_funs<'a, 'b>(
     pdump
         .operators()
         .iter()
+        .filter_map(move |(symb, data)| { // filtering out builtin and forbidden functions
+            let symb = symb.equiv_name_ref(&ctx);
+            (!(ctx.forbidden_function.contains(symb.as_ref())
+                || ctx.builtin_function.contains_key(symb.as_ref())))
+            .then_some((symb, data))
+        })
         .filter_map(
             |(
                 symb,
@@ -155,21 +170,21 @@ fn mk_funs<'a, 'b>(
                 let! sort = out.convert(ctx);
                 let args : Vec<_> = args.iter().map(|arg| arg.convert(ctx)).try_collect()?;
                 let! args = Ok(AoOV::transpose_iter(args));
-                pure ast::DeclareFunction::new(symb.equiv_name_ref(), args, sort.clone())
+                pure ast::DeclareFunction::new(symb.clone(), args, sort.clone())
             }
         })
 }
 
 fn mk_types<'a, 'b>(
     pdump: &'b ProcessedSquirrelDump<'a>,
-    _: Context<'b, 'a>,
+    ctx: Context<'b, 'a>,
 ) -> impl Iterator<Item = RAoO<ast::DeclareType<'a, StrRef<'a>>>> + 'b {
     pdump
         .types()
         .iter()
-        .filter_map(|(symb, data)| {
+        .filter_map(move |(symb, data)| {
             if data.can_be_index() {
-                Some(ast::DeclareType::new(symb.equiv_name_ref().into()))
+                Some(ast::DeclareType::new(symb.equiv_name_ref(&ctx).into()))
             } else {
                 None
             }

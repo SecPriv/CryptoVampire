@@ -1,6 +1,7 @@
 
 pub use super::convert_order::mk_depends_mutex_lemmas;
 use cryptovampire_lib::formula::sort::builtins::{BOOL, MESSAGE, STEP};
+use hashbrown::{HashMap, HashSet};
 use itertools::{chain, izip, Itertools};
 use utils::{
     all_or_one::{AllOrOneShape, AoOV},
@@ -20,30 +21,10 @@ use crate::{
     squirrel::json::{self, path::Path, Named, Pathed, ProcessedSquirrelDump},
 };
 
-use super::{helper_functions::*, RAoO};
+use super::{helper_functions::*, RAoO, BUILTIN_FUNCTIONS, FORBIDDEN_FUNCTIONS};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Context<'a, 'str> {
-    pub shape: AllOrOneShape,
-    pub dump: &'a ProcessedSquirrelDump<'str>,
-}
+use super::Context;
 
-impl<'a, 'str> Context<'a, 'str> {
-    pub fn new(dump: &'a ProcessedSquirrelDump<'str>) -> Self {
-        Self {
-            shape: AllOrOneShape::Any(()),
-            dump,
-        }
-    }
-
-    pub fn dump(&self) -> &ProcessedSquirrelDump<'str> {
-        self.dump
-    }
-
-    pub fn shape(&self) -> AllOrOneShape {
-        self.shape
-    }
-}
 
 pub trait ToAst<'a> {
     type Target;
@@ -94,13 +75,13 @@ pub const INDEX_SORT_NAME: &'static str = "index";
 impl<'a> ToAst<'a> for json::sort::Type<'a> {
     type Target = ast::TypeName<'a, StrRef<'a>>;
 
-    fn convert<'b>(&self, _: Context<'b, 'a>) -> RAoO<Self::Target> {
+    fn convert<'b>(&self, ctx: Context<'b, 'a>) -> RAoO<Self::Target> {
         match self {
             json::Type::Message => mdo!(pure MESSAGE.name().into()),
             json::Type::Boolean => mdo!(pure BOOL.name().into()),
             json::Type::Timestamp => mdo!(pure STEP.name().into()),
             json::Type::Index => mdo!(pure StrRef::from_static(INDEX_SORT_NAME).into()),
-            json::Type::TBase(p) => mdo!(pure p.equiv_name_ref().into()),
+            json::Type::TBase(p) => mdo!(pure p.equiv_name_ref(&ctx).into()),
             json::Type::TVar { .. }
             | json::Type::TUnivar { .. }
             | json::Type::Tuple { .. }
@@ -124,7 +105,7 @@ impl<'a> ToAst<'a> for json::Action<'a> {
             globals: _,
         } = self;
 
-        let name = ast::StepName::from(name.equiv_name_ref());
+        let name = ast::StepName::from(name.equiv_name_ref(&ctx));
         let args: Vec<_> = indices
             .iter()
             .map(|var| {
@@ -243,7 +224,7 @@ impl<'a, 'b> ToAst<'a> for ConcreteMacro<'a, 'b> {
             let! term = body.convert(ctx);
             pure ast::Macro {
                 span: Location::default(),
-                name: symb.equiv_name_ref().into(),
+                name: symb.equiv_name_ref(&ctx).into(),
                 args:args.iter().cloned().collect(),
                 term,
                 options: Options::default()

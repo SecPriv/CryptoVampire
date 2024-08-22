@@ -17,7 +17,7 @@ use crate::{
 use utils::monad::Monad;
 
 use super::{
-    super::{ast_convertion::Context, RAoO},
+    super::{Context, RAoO},
     apply_fun,
 };
 
@@ -48,7 +48,7 @@ pub fn convert_name_application<'a, 'b>(
     args: &[json::Term<'a>],
     ctx: Context<'b, 'a>,
 ) -> RAoO<Term<'a, StrRef<'a>>> {
-    apply_fun(symb.equiv_name_ref(), args, ctx)
+    apply_fun(symb.equiv_name_ref(&ctx), args, ctx)
 }
 
 /// Convert the application of a function.
@@ -77,7 +77,7 @@ fn convert_function_application<'a, 'b>(
     .try_collect()?;
     mdo! {
         let! args = Ok(AoOV::transpose_iter(args));
-        pure ast::Application::new_app(symb.equiv_name_ref(), args).into()
+        pure ast::Application::new_app(symb.equiv_name_ref(&ctx), args).into()
     }
 }
 
@@ -132,12 +132,12 @@ pub fn convert_macro_application<'a, 'b>(
             })
         }
         Some(mmacro::Data::General(mmacro::GeneralMacro::Structured(_)))
-        | Some(mmacro::Data::State(_)) => apply_fun(symb.equiv_name_ref(), args, ctx),
+        | Some(mmacro::Data::State(_)) => apply_fun(symb.equiv_name_ref(&ctx), args, ctx),
         Some(mmacro::Data::Global(_)) => {
             let args: Vec<_> = args.map(|arg| arg.convert(ctx)).try_collect()?;
             Ok(AoOV::transpose_iter(args)).bind(|args| {
                 let inner = ast::InnerAppMacro::Other {
-                    name: symb.equiv_name_ref().into(),
+                    name: symb.equiv_name_ref(&ctx).into(),
                     args,
                 };
                 Ok(AoOV::any(
@@ -270,5 +270,5 @@ pub fn convert_action_application<'a, 'b>(
     args: &[json::Term<'a>],
     ctx: Context<'b, 'a>,
 ) -> RAoO<ast::Term<'a, StrRef<'a>>> {
-    apply_fun(symb.equiv_name_ref(), args, ctx)
+    apply_fun(symb.equiv_name_ref(&ctx), args, ctx)
 }
