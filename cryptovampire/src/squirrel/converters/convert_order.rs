@@ -1,6 +1,6 @@
 use super::{ast_convertion::ToAst, Context};
-use std::{cmp::Ordering, fmt::Debug, process::id};
-use utils::{monad::Monad, pure};
+use std::{cmp::Ordering, fmt::Debug};
+use utils::monad::Monad;
 
 use itertools::{izip, Itertools};
 use utils::{all_or_one::AoOV, mdo, string_ref::StrRef};
@@ -8,7 +8,7 @@ use utils::{all_or_one::AoOV, mdo, string_ref::StrRef};
 use crate::{
     bail_at,
     parser::{
-        ast::{self, Application, InnerTerm, Order, OrderOperation, QuantifierKind},
+        ast::{self, Application, Order, OrderOperation, QuantifierKind},
         InputError,
     },
     squirrel::json::{self, action::AT, Named, Pathed},

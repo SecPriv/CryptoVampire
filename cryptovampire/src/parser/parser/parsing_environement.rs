@@ -242,8 +242,11 @@ pub fn parse_pbl_from_ast<'a, 'bump, S>(
     extra_names: implvec!(String),
     ast: ASTList<'a, S>,
     ignore_lemmas: bool,
-) -> anyhow::Result<Problem<'bump>> where S: Pstr,
-for<'b> StrRef<'b>: From<&'b S>, {
+) -> anyhow::Result<Problem<'bump>>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     trace!("[P] parsing from ast...");
     let mut pbl_builder = ProblemBuilder::default();
     pbl_builder.container(container);

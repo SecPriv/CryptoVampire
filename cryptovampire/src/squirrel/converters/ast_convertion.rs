@@ -1,16 +1,6 @@
-
-pub use super::convert_order::mk_depends_mutex_lemmas;
 use cryptovampire_lib::formula::sort::builtins::{BOOL, MESSAGE, NAME, STEP};
-use hashbrown::{HashMap, HashSet};
-use itertools::{chain, izip, Itertools};
-use utils::{
-    all_or_one::{AllOrOneShape, AoOV},
-    implvec, mdo,
-    monad::Monad,
-    pure,
-    string_ref::StrRef,
-    vecref::VecRef,
-};
+use itertools::{chain, Itertools};
+use utils::{all_or_one::AoOV, mdo, monad::Monad, pure, string_ref::StrRef, vecref::VecRef};
 
 use crate::{
     bail_at, err_at,
@@ -18,13 +8,12 @@ use crate::{
         ast::{self, Options},
         Location,
     },
-    squirrel::json::{self, path::Path, Named, Pathed, ProcessedSquirrelDump},
+    squirrel::json::{self, path::Path, Named, Pathed},
 };
 
-use super::{helper_functions::*, RAoO, BUILTIN_FUNCTIONS, FORBIDDEN_FUNCTIONS};
+use super::{helper_functions::*, RAoO};
 
 use super::Context;
-
 
 pub trait ToAst<'a> {
     type Target;
@@ -87,7 +76,7 @@ impl<'a> ToAst<'a> for json::sort::Type<'a> {
             | json::Type::Tuple { .. }
             | json::Type::Fun { .. } => Err(err_at!(@ "arg")),
 
-            json::Type::Name => pure!(NAME.name().into())
+            json::Type::Name => pure!(NAME.name().into()),
         }
     }
 }

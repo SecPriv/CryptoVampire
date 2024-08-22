@@ -10,7 +10,11 @@ use cryptovampire_lib::{
 use log::trace;
 use utils::from_with::FromWith;
 
-use crate::{cli::Args, init_logger, parse_pbl_from_ast, parser::{self, ast::ASTList}};
+use crate::{
+    cli::Args,
+    init_logger, parse_pbl_from_ast,
+    parser::{self, ast::ASTList},
+};
 
 #[test]
 fn miri() {

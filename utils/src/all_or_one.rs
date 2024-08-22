@@ -1,4 +1,4 @@
-use std::{error::Error, fmt::Debug, marker::PhantomData, ops::DerefMut };
+use std::{error::Error, fmt::Debug, marker::PhantomData, ops::DerefMut};
 
 use if_chain::if_chain;
 use itertools::{Either, Itertools};

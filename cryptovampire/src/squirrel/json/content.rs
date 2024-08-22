@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use super::*;
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct Content<'a, U> {

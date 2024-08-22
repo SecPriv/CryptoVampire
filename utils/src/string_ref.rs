@@ -174,9 +174,12 @@ impl<'a> From<Cow<'a, str>> for StrRef<'a> {
 }
 
 impl<'a, 'b, V: Clone> From<&'b StrRef<'a, V>> for StrRef<'b, V> {
-    fn from(value@StrRef { validator, .. }: &'b StrRef<'a, V>) -> Self {
+    fn from(value @ StrRef { validator, .. }: &'b StrRef<'a, V>) -> Self {
         let inner = Inner::Borrowed(value.as_ref());
-        Self { validator: validator.clone(), inner }
+        Self {
+            validator: validator.clone(),
+            inner,
+        }
         // value.clone()
     }
 }

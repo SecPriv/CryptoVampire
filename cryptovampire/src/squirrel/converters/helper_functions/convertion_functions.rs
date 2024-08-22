@@ -8,7 +8,8 @@ use crate::{
     parser::ast::{self, FindSuchThat, Term},
     squirrel::{
         converters::{
-            ast_convertion::ToAst, helper_functions::to_variable_binding, DEFAULT_FST_PROJ_NAME, DEFAULT_SND_PROJ_NAME, DEFAULT_TUPLE_NAME
+            ast_convertion::ToAst, helper_functions::to_variable_binding, DEFAULT_FST_PROJ_NAME,
+            DEFAULT_SND_PROJ_NAME, DEFAULT_TUPLE_NAME,
         },
         json::{self, mmacro, Pathed},
     },

@@ -2,7 +2,7 @@ pub mod ast;
 mod parser;
 
 use ast::INIT_STEP_AST;
-pub use parser::{parse_pbl_from_ast};
+pub use parser::parse_pbl_from_ast;
 use static_init::dynamic;
 
 use std::borrow::Borrow;

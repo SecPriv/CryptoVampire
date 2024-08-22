@@ -7,7 +7,6 @@ use super::{
     TypeName,
 };
 
-
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Sub<'s, T> {
@@ -120,11 +119,7 @@ where
     }
 
     fn args(self) -> Vec<SnN<'a, 'b>> {
-        self.args
-            .args
-            .iter()
-            .map(|tn| tn.into())
-            .collect()
+        self.args.args.iter().map(|tn| tn.into()).collect()
     }
 
     fn out(self) -> SnN<'a, 'b> {

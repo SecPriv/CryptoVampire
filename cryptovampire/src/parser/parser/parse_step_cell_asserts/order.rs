@@ -3,7 +3,7 @@ use std::{borrow::Borrow, sync::Arc};
 use crate::parser::{
     ast,
     parser::{
-        get_sort, guard,
+        get_sort,
         parsable_trait::{Parsable, VarProxy},
         Environement,
     },

@@ -1,6 +1,5 @@
 use super::*;
 
-
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct DeclareCell<'a, S = &'a str> {
@@ -51,9 +50,9 @@ impl<'a, S> DeclareCell<'a, S> {
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Assignements<'a, S = &'a str> {
-#[derivative(PartialOrd = "ignore", Ord = "ignore")]
-pub span: Location<'a>,
-pub assignements: Vec<Assignement<'a, S>>,
+    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
+    pub span: Location<'a>,
+    pub assignements: Vec<Assignement<'a, S>>,
 }
 boiler_plate!(Assignements<'a>, 'a, assignements; |p| {
 let span = p.as_span().into();
@@ -62,28 +61,28 @@ Ok(Self { span, assignements })
 });
 
 impl<'a, S: Display> Display for Assignements<'a, S> {
-fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{}", self.assignements.iter().format(", "))
-}
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.assignements.iter().format(", "))
+    }
 }
 
 impl<'a, S> FromIterator<Assignement<'a, S>> for Assignements<'a, S> {
-fn from_iter<T: IntoIterator<Item = Assignement<'a, S>>>(iter: T) -> Self {
-    Self {
-        span: Default::default(),
-        assignements: iter.into_iter().collect(),
+    fn from_iter<T: IntoIterator<Item = Assignement<'a, S>>>(iter: T) -> Self {
+        Self {
+            span: Default::default(),
+            assignements: iter.into_iter().collect(),
+        }
     }
-}
 }
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Assignement<'a, S = &'a str> {
-#[derivative(PartialOrd = "ignore", Ord = "ignore")]
-pub span: Location<'a>,
-pub cell: Application<'a, S>,
-pub term: Term<'a, S>,
-pub fresh_vars: Option<TypedArgument<'a, S>>,
+    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
+    pub span: Location<'a>,
+    pub cell: Application<'a, S>,
+    pub term: Term<'a, S>,
+    pub fresh_vars: Option<TypedArgument<'a, S>>,
 }
 boiler_plate!(Assignement<'a>, 'a, assignement; |p| {
 let span = p.as_span().into();
@@ -115,16 +114,16 @@ match p.len() {
 });
 
 impl<'a, S: Display> Display for Assignement<'a, S> {
-fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    let Self {
-        cell,
-        term,
-        fresh_vars,
-        ..
-    } = self;
-    if let Some(fv) = fresh_vars {
-        write!(f, "{fv} ")?;
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self {
+            cell,
+            term,
+            fresh_vars,
+            ..
+        } = self;
+        if let Some(fv) = fresh_vars {
+            write!(f, "{fv} ")?;
+        }
+        write!(f, "{cell} <- {term}")
     }
-    write!(f, "{cell} <- {term}")
-}
 }

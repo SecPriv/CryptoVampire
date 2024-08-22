@@ -108,10 +108,9 @@ impl<'a> Location<'a> {
             negatives,
         };
         Err(match &self.0 {
-            InnerLocation::Span(span) => InputError::new_with_pest(
-                pest::error::Error::new_from_span(e, *span),
-                anyhow!(""),
-            ),
+            InnerLocation::Span(span) => {
+                InputError::new_with_pest(pest::error::Error::new_from_span(e, *span), anyhow!(""))
+            }
             InnerLocation::None => InputError::Other(e.into()),
         })
     }

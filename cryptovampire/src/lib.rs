@@ -9,22 +9,19 @@ use anyhow::{ensure, Context};
 use cryptovampire_lib::{
     container::ScopedContainer,
     environement::environement::{Environement, SolverConfig},
-    formula::{
-        function::{builtin::BUILT_IN_FUNCTIONS, Function},
-        sort::{builtins::BUILT_IN_SORTS, Sort},
-    },
+    formula::{function::builtin::BUILT_IN_FUNCTIONS, sort::builtins::BUILT_IN_SORTS},
     problem::{PblIterator, Problem},
     runner::Runners,
     smt::{SmtFile, SMT_FILE_EXTENSION},
 };
 
 use parser::{ast::ASTList, Pstr};
-use utils::{from_with::FromWith, implvec, string_ref::StrRef, traits::MyWriteTo};
+use utils::{from_with::FromWith, string_ref::StrRef, traits::MyWriteTo};
 pub mod cli;
 pub mod parser;
 pub mod squirrel;
 
-pub use parser::{parse_pbl_from_ast};
+pub use parser::parse_pbl_from_ast;
 
 pub fn run_from_cv(args: Args, str: &str) -> anyhow::Result<()> {
     let ast = ASTList::try_from(str)?;

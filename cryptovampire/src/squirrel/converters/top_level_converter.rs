@@ -1,11 +1,6 @@
 use std::sync::Arc;
 
 use super::Context;
-use cryptovampire_lib::formula::function::{
-    builtin::{AND, EQUALITY, IMPLIES, LESS_THAN_EQ_STEP, LESS_THAN_STEP, OR},
-    inner::term_algebra::connective::AND_NAME,
-};
-use hashbrown::{HashMap, HashSet};
 
 use super::*;
 

@@ -30,7 +30,7 @@ pub enum Type<'a> {
         t_in: Box<Type<'a>>,
         out: Box<Type<'a>>,
     },
-    
+
     /// Isn't part of `squirrel` but greatly simplifies things
     Name,
 }

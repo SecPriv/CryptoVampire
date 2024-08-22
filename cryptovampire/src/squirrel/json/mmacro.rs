@@ -52,14 +52,14 @@ pub struct StateMacro<'a> {
     pub arity: usize,
     #[serde(rename = "type", borrow)]
     pub sort: Type<'a>,
-    pub init: StateMacroDef<'a>
+    pub init: StateMacroDef<'a>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct StateMacroDef<'a> {
     #[serde(borrow)]
     pub vars: Vec<Variable<'a>>,
-    pub init: Term<'a>
+    pub init: Term<'a>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]

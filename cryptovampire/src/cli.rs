@@ -405,7 +405,8 @@ impl Args {
     pub fn get_mut_output_location(&mut self) -> Option<&mut PathBuf> {
         match &mut self.command {
             Some(Command::ToFile(ToFile {
-                ref mut output_location, ..
+                ref mut output_location,
+                ..
             })) => Some(output_location),
             _ => None,
         }

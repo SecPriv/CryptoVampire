@@ -1,9 +1,7 @@
 use anyhow::ensure;
 use itertools::Itertools;
 
-use crate::formula::{
-    formula::ARichFormula, function::builtin::TRUE, quantifier::Quantifier, sort::builtins::STEP,
-};
+use crate::formula::{formula::ARichFormula, quantifier::Quantifier, sort::builtins::STEP};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Ordering<'bump> {
