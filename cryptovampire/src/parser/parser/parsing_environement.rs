@@ -37,9 +37,11 @@ use utils::{implderef, implvec, string_ref::StrRef, traits::NicerError, utils::M
 
 #[derive(Hash, Clone, PartialEq, Eq, Debug, PartialOrd, Ord)]
 pub struct Macro<'bump, 'a, S> {
-    // name: &'a str,
+    /// The sort of the arguments
     pub args: Arc<[Sort<'bump>]>,
+    /// Their name
     pub args_name: Arc<[S]>,
+    /// The body
     pub content: ast::Term<'a, S>,
 }
 

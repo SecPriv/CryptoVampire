@@ -336,7 +336,6 @@ where
     let SnN { span, name } = name.into();
     if env.container_macro_name(&name) {
         bail_at!(span, "the macro {} is already in use", &name)
-        // err(merr(*span, f!("the macro {}! is already in use", name)))
     } else {
         // the input sorts (will gracefully error out later if a sort is undefined)
         let args: Result<Arc<[_]>, _> = mlet
