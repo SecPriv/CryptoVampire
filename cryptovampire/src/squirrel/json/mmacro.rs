@@ -13,7 +13,9 @@ impl<'a> Data<'a> {
         match self {
             Data::Global(gm) => Some(gm.inputs()),
             _ => None,
-        }.into_iter().flatten()
+        }
+        .into_iter()
+        .flatten()
     }
 }
 

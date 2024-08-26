@@ -8,7 +8,10 @@ use log::{log_enabled, trace};
 use crate::{
     bail_at,
     parser::{
-        ast::{self, extra::SnN, LetIn, Term, VariableBinding}, error::WithLocation, parser::parsing_environement::get_function_mow, InputError, Location, MResult, Pstr
+        ast::{self, extra::SnN, LetIn, Term},
+        error::WithLocation,
+        parser::parsing_environement::get_function_mow,
+        InputError, Location, MResult, Pstr,
     },
 };
 use cryptovampire_lib::{
@@ -31,12 +34,12 @@ use cryptovampire_lib::{
         variable::{from_usize, uvar, Variable},
     },
 };
-use utils::{f, implvec, match_as_trait, maybe_owned::MOw, string_ref::StrRef, traits::NicerError};
+use utils::{f, implvec, match_as_trait, string_ref::StrRef, traits::NicerError};
 
 pub(crate) use self::cached_builtins::*;
 
 use super::{
-    parsing_environement::{get_function, get_sort, FunctionCache},
+    parsing_environement::{get_sort, FunctionCache},
     Environement,
 };
 
@@ -480,16 +483,7 @@ where
                 args,
             } => {
                 let content = function.name();
-
-                // match content.borrow() {
-                //     "not" => Ok(match state.get_realm() {
-                //         Realm::Symbolic => NOT_TA_CACHE(),
-                //         Realm::Evaluated => NOT_CACHE(),
-                //     }),
-                //     _ => get_function(env, *span, content.borrow()).map(MOw::Borrowed),
-                // }
-                get_function_mow(content, state, env, span)
-                .and_then(|f| {
+                get_function_mow(content, state, env, span).and_then(|f| {
                     parse_application(env, span, state, bvars, expected_sort, f.borrow(), args)
                         .debug_continue()
                 })

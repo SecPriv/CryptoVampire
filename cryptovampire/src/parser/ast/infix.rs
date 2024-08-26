@@ -74,7 +74,10 @@ boiler_plate!(Operation, operation; {
 
 impl Operation {
     pub fn get_operation(str: &str) -> Option<Self> {
-        OPERATION_LIST.iter().find(|x| x.as_str_alias().contains(&str)).cloned()
+        OPERATION_LIST
+            .iter()
+            .find(|x| x.as_str_alias().contains(&str))
+            .cloned()
     }
 
     pub const fn as_str(self) -> &'static str {

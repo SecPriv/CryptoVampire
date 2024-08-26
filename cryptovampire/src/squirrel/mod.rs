@@ -1,6 +1,5 @@
 use converters::convert_squirrel_dump;
-use cryptovampire_lib::container::ScopedContainer;
-use json::{CryptoVampireCall, SquirrelDump};
+use json::CryptoVampireCall;
 use log::{debug, trace};
 use utils::string_ref::StrRef;
 

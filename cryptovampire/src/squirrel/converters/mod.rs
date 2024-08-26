@@ -1,10 +1,9 @@
 use std::fmt::Display;
 
 use ast_convertion::{ConcreteMacro, ToAst, INDEX_SORT_NAME};
-use clap::builder;
 use cryptovampire_lib::formula::function::builtin::{
-    AND, EMPTY, EQUALITY, FALSE, FALSE_F, HAPPENS, IMPLIES, LESS_THAN_EQ_STEP, LESS_THAN_STEP, NOT,
-    OR, PRED, TRUE, TRUE_F,
+    AND, EMPTY, EQUALITY, FALSE_F, HAPPENS, IMPLIES, LESS_THAN_EQ_STEP, LESS_THAN_STEP, NOT, OR,
+    PRED, TRUE_F,
 };
 use derive_builder::Builder;
 use hashbrown::{HashMap, HashSet};
@@ -94,9 +93,7 @@ impl<'a, 'str> From<Context<'a, 'str>> for ContextBuilder<'a, 'str> {
         }: Context<'a, 'str>,
     ) -> Self {
         let mut ctx = ContextBuilder::create_empty();
-        ctx.shape(shape)
-            .dump(dump)
-            .current_step(current_step);
+        ctx.shape(shape).dump(dump).current_step(current_step);
         ctx
     }
 }
@@ -113,13 +110,13 @@ impl<'a, 'str> Context<'a, 'str> {
     fn current_step(&self) -> Option<&'a json::Action<'str>> {
         self.current_step
     }
-    
+
     fn builtin_function(&self) -> &'static HashMap<&'static str, StrRef<'static>> {
         &BUILTIN_FUNCTIONS
     }
-    
+
     fn forbidden_function(&self) -> &'static HashSet<&'static str> {
-       &FORBIDDEN_FUNCTIONS
+        &FORBIDDEN_FUNCTIONS
     }
 }
 

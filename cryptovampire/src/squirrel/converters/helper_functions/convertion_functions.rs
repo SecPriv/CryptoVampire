@@ -14,11 +14,7 @@ use crate::{
             ast_convertion::ToAst, helper_functions::to_variable_binding, DEFAULT_FST_PROJ_NAME,
             DEFAULT_SND_PROJ_NAME, DEFAULT_TUPLE_NAME,
         },
-        json::{
-            self, mmacro,
-            path::{ISymb, Path},
-            Pathed,
-        },
+        json::{self, mmacro, path::Path, Pathed},
     },
 };
 
@@ -162,8 +158,7 @@ pub fn convert_macro_application<'a, 'b>(
         Some(mmacro::Data::Global(g)) => {
             // we keep the input variables as input to the macro *and*
             // we keep their name
-            let iargs = g.inputs().cloned()
-                .map(|var| json::Term::Var { var });
+            let iargs = g.inputs().cloned().map(|var| json::Term::Var { var });
 
             let args: Vec<_> = chain!(
                 args.iter().map(Cow::Borrowed),

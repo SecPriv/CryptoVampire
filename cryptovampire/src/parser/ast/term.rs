@@ -178,7 +178,13 @@ impl<'a, S> Term<'a, S> {
         .into()
     }
 
-    pub fn letin(var: VariableBinding<'a, S>, t1: Self, t2:Self) -> Self {
-        ast::LetIn { span: Default::default(), var, t1, t2 }.into()
+    pub fn letin(var: VariableBinding<'a, S>, t1: Self, t2: Self) -> Self {
+        ast::LetIn {
+            span: Default::default(),
+            var,
+            t1,
+            t2,
+        }
+        .into()
     }
 }

@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use cryptovampire_lib::formula::sort::builtins::{BOOL, MESSAGE, NAME, STEP};
 use itertools::{chain, Itertools};
 use utils::{all_or_one::AoOV, mdo, monad::Monad, pure, string_ref::StrRef, vecref::VecRef};
@@ -244,19 +242,21 @@ impl<'a, 'c> ToAst<'a> for json::MacroRef<'a, 'c> {
         use json::mmacro::*;
         let json::ContentRef { symb, data } = self;
         match data {
-            Data::Global(g@GlobalMacro {
-                arity: _,
-                sort: _,
-                data:
-                    GlobalData {
-                        indices,
-                        ts,
-                        body,
-                        inputs: _, // called someway else
-                        action: _,
-                        ty: _,
-                    },
-            }) => {
+            Data::Global(
+                g @ GlobalMacro {
+                    arity: _,
+                    sort: _,
+                    data:
+                        GlobalData {
+                            indices,
+                            ts,
+                            body,
+                            inputs: _, // called someway else
+                            action: _,
+                            ty: _,
+                        },
+                },
+            ) => {
                 mdo! {
                     let! res = ConcreteMacro {
                         symb,

@@ -1,6 +1,5 @@
 use std::{hash::Hash, sync::Arc};
 
-use action::ActionV;
 use hashbrown::HashMap;
 use paste::paste;
 use serde::{Deserialize, Serialize};
@@ -95,7 +94,10 @@ impl<'a> ProcessedSquirrelDump<'a> {
         self.actions.get(k).map(Arc::as_ref)
     }
 
-    pub fn get_action_from_action_v(&self, v: &[action::Item<Vec<Variable<'a>>>]) -> Option<&Action<'a>> {
+    pub fn get_action_from_action_v(
+        &self,
+        v: &[action::Item<Vec<Variable<'a>>>],
+    ) -> Option<&Action<'a>> {
         self.actions_from_action_v.get(v).map(Arc::as_ref)
     }
 }

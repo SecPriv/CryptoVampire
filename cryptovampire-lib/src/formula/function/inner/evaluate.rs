@@ -1,7 +1,5 @@
 use std::collections::BTreeMap;
 
-use log::trace;
-
 use crate::formula::{
     formula::ARichFormula,
     function::{
@@ -16,7 +14,7 @@ use crate::formula::{
         FOSort, Sort,
     },
 };
-use utils::{traits::NicerError, utils::MaybeInvalid};
+use utils::traits::NicerError;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Evaluate<'bump> {
