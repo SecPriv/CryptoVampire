@@ -9,11 +9,27 @@ pub struct Condition<'a> {
     pub term: Term<'a>,
 }
 
+impl<'a> Condition<'a> {
+    pub fn term(&self) -> &Term<'a> {
+        &self.term
+    }
+    
+    pub fn vars(&self) -> &[Variable<'a>] {
+        &self.vars
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct Ouptut<'a> {
     #[serde(borrow)]
     pub channel: Channel<'a>,
     pub term: Term<'a>,
+}
+
+impl<'a> Ouptut<'a> {
+    pub fn term(&self) -> &Term<'a> {
+        &self.term
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -72,6 +88,10 @@ impl<'a> Action<'a> {
     /// FIXME: understand
     pub fn as_term(&self) -> Term<'a> {
         Term::Action { symb: self.name.clone(), args: self.get_args().collect() }
+    }
+    
+    pub fn name(&self) -> &Path<'a> {
+        &self.name
     }
 }
 

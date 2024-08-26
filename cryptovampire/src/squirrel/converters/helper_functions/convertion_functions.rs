@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use cryptovampire_lib::formula::function::builtin::EMPTY_FUN_NAME;
 use if_chain::if_chain;
 use itertools::{chain, Itertools};
@@ -119,6 +121,8 @@ fn convert_function_application<'a, 'b>(
 /// Gloabl macros have a somewhat wierd behaviour regarding inputs. They remember
 /// the name of the input variable and it's up to the caller to figure out by
 /// `input(...)` term to replace it by.
+/// Most of the logic to use them is implemented in [json::Action::prepare_term]
+/// and [json::Action::convert]
 pub fn convert_macro_application<'a, 'b>(
     symb: &json::path::ISymb<'a>,
     args: &[json::Term<'a>],
@@ -159,50 +163,20 @@ pub fn convert_macro_application<'a, 'b>(
             data: mmacro::GlobalData { inputs, .. },
             ..
         })) => {
-
-            // get the action it's applied to. Crash if there aren't,
-            // or if there aren't enough actions to fill the inputs
-            let (action, action_args) = if_chain! {
-                if let json::Term::Action{ symb, args} = timestamp;
-                if let Some(action) = ctx.dump().get_action(symb);
-                if action.action.len() >= inputs.len();
-                then {
-                    (action, args.as_slice())
-                } else {
-                    trace!("{}", serde_json::to_string_pretty(timestamp).unwrap());
-                    bail_at!(@ "something went wrong while applying the macro {symb:} \
-                                reguarding the timestamp")
-                }
-            };
-
-            // let rev_action = &action.action[0..inputs.len()];
-
-            let iargs: Result<Vec<_>, crate::parser::InputError> = inputs
+            // we keep the input variables as input to the macro *and*
+            // we keep their name
+            let iargs = inputs
                 .iter()
-                .rev()
-                .enumerate() // we start by the first input which appears
-                // at the end of the list, hence we reverse
-                .map(|(i, _)| {
-                    let a = ctx
-                        .dump()
-                        .get_action_from_action_v(&action.action[0..i])
-                        .ok_or_else(|| {
-                            err_at!(@ "cannot find an action from its shape while\
-                                                    building the application of {symb:}")
-                        })?;
-                    Ok(json::Term::Macro {
-                        symb: ISymb::input(),
-                        args: vec![],
-                        timestamp: Box::new(a.as_term()),
-                    })
-                })
-                .rev() // then we re-reverse
-                .try_collect();
-            let iargs = iargs?;
+                .cloned()
+                .map(|var| json::Term::Var { var });
 
-            let args: Vec<_> = chain!(args.iter(), iargs.iter(), [timestamp].into_iter())
-                .map(|arg| arg.convert(ctx))
-                .try_collect()?;
+            let args: Vec<_> = chain!(
+                args.iter().map(Cow::Borrowed),
+                iargs.map(Cow::Owned),
+                [timestamp].into_iter().map(Cow::Borrowed)
+            )
+            .map(|arg| arg.convert(ctx))
+            .try_collect()?;
             Ok(AoOV::transpose_iter(args)).bind(|args| {
                 let inner = ast::InnerAppMacro::Other {
                     name: symb.equiv_name_ref(&ctx).into(),

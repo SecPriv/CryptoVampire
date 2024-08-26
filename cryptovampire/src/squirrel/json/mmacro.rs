@@ -8,6 +8,15 @@ pub enum Data<'a> {
     State(StateMacro<'a>),
 }
 
+impl<'a> Data<'a> {
+    pub fn inputs(&self) -> Option<&[Variable<'a>]> {
+        match self {
+            Data::Global(gm) => Some(gm.inputs()),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 #[serde(untagged)]
 pub enum GeneralMacro<'a> {
@@ -47,6 +56,12 @@ pub struct GlobalMacro<'a> {
     pub data: GlobalData<'a>,
 }
 
+impl<'a> GlobalMacro<'a> {
+    pub fn inputs(&self) -> &[Variable<'a>] {
+        self.data.inputs()
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct StateMacro<'a> {
     pub arity: usize,
@@ -71,6 +86,12 @@ pub struct GlobalData<'a> {
     pub ts: Variable<'a>,
     pub ty: Type<'a>,
     pub body: Term<'a>,
+}
+
+impl<'a> GlobalData<'a> {
+    pub fn inputs(&self) -> &[Variable<'a>] {
+        &self.inputs
+    }
 }
 
 pub mod action {

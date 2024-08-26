@@ -11,10 +11,11 @@ pub struct Term<'a, S = &'a str> {
     pub span: Location<'a>,
     pub inner: InnerTerm<'a, S>,
 }
+
 boiler_plate!(Term<'s>, 's, term; |p| {
-  let span = p.as_span().into();
-  destruct_rule!(span in [inner] = p.into_inner());
-  Ok(Term{span, inner})
+    let span = p.as_span().into();
+    destruct_rule!(span in [inner] = p.into_inner());
+    Ok(Term{span, inner})
 });
 
 impl<'a, S> Term<'a, S> {
@@ -79,38 +80,38 @@ pub enum InnerTerm<'a, S = &'a str> {
     Macro(Arc<AppMacro<'a, S>>),
 }
 boiler_plate!(InnerTerm<'s>, 's, inner_term; |p| {
-let span: Location = p.as_span().into();
-as_array!(span in [nxt] = p.into_inner());
-match nxt.as_rule() {
-    Rule::infix_term => {
-        Ok(InnerTerm::Infix(Arc::new(nxt.try_into()?)))
-    }
-    Rule::commun_base => {
-        as_array!(span in [cmn_rule] = nxt.into_inner());
-        match cmn_rule.as_rule(){
-            Rule::let_in => {
-                Ok(InnerTerm::LetIn(Arc::new(cmn_rule.try_into()?)))
-            },
-            Rule::if_then_else => {
-                Ok(InnerTerm::If(Arc::new(cmn_rule.try_into()?)))
-            },
-            Rule::find_such_that => {
-                Ok(InnerTerm::Fndst(Arc::new(cmn_rule.try_into()?)))
-            },
-            Rule::quantifier => {
-                Ok(InnerTerm::Quant(Arc::new(cmn_rule.try_into()?)))
-            },
-            Rule::application => {
-                Ok(InnerTerm::Application(Arc::new(cmn_rule.try_into()?)))
-            },
-            Rule::macro_application => {
-                Ok(InnerTerm::Macro(Arc::new(cmn_rule.try_into()?)))
-            }
-            r => unreachable_rules!(span, r; let_in, if_then_else, find_such_that, quantifier, application)
+    let span: Location = p.as_span().into();
+    as_array!(span in [nxt] = p.into_inner());
+    match nxt.as_rule() {
+        Rule::infix_term => {
+            Ok(InnerTerm::Infix(Arc::new(nxt.try_into()?)))
         }
-    },
-    r => unreachable_rules!(span, r; infix_term, commun_base)
-}
+        Rule::commun_base => {
+            as_array!(span in [cmn_rule] = nxt.into_inner());
+            match cmn_rule.as_rule(){
+                Rule::let_in => {
+                    Ok(InnerTerm::LetIn(Arc::new(cmn_rule.try_into()?)))
+                },
+                Rule::if_then_else => {
+                    Ok(InnerTerm::If(Arc::new(cmn_rule.try_into()?)))
+                },
+                Rule::find_such_that => {
+                    Ok(InnerTerm::Fndst(Arc::new(cmn_rule.try_into()?)))
+                },
+                Rule::quantifier => {
+                    Ok(InnerTerm::Quant(Arc::new(cmn_rule.try_into()?)))
+                },
+                Rule::application => {
+                    Ok(InnerTerm::Application(Arc::new(cmn_rule.try_into()?)))
+                },
+                Rule::macro_application => {
+                    Ok(InnerTerm::Macro(Arc::new(cmn_rule.try_into()?)))
+                }
+                r => unreachable_rules!(span, r; let_in, if_then_else, find_such_that, quantifier, application)
+            }
+        },
+        r => unreachable_rules!(span, r; infix_term, commun_base)
+    }
 });
 impl<'a, S: Display> Display for InnerTerm<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -175,5 +176,9 @@ impl<'a, S> Term<'a, S> {
             operation: Operation::Or,
         }
         .into()
+    }
+
+    pub fn letin(var: VariableBinding<'a, S>, t1: Self, t2:Self) -> Self {
+        ast::LetIn { span: Default::default(), var, t1, t2 }.into()
     }
 }

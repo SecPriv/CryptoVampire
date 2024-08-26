@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use cryptovampire_lib::formula::sort::builtins::{BOOL, MESSAGE, NAME, STEP};
 use itertools::{chain, Itertools};
 use utils::{all_or_one::AoOV, mdo, monad::Monad, pure, string_ref::StrRef, vecref::VecRef};
@@ -5,12 +7,12 @@ use utils::{all_or_one::AoOV, mdo, monad::Monad, pure, string_ref::StrRef, vecre
 use crate::{
     bail_at, err_at,
     parser::{
-        ast::{self, Options},
-        Location,
+        ast::{self, Options, Term},
+        InputError, Location,
     },
     squirrel::{
         converters::ContextBuilder,
-        json::{self, path::Path, Named, Pathed},
+        json::{self, mmacro, path::Path, Named, Pathed},
     },
 };
 
@@ -100,7 +102,7 @@ impl<'a> ToAst<'a> for json::Action<'a> {
             output,
             action: _,
             input: _,
-            globals: _,
+            globals,
         } = self;
 
         let name = ast::StepName::from(name.equiv_name_ref(&ctx));
@@ -128,9 +130,17 @@ impl<'a> ToAst<'a> for json::Action<'a> {
             .build()
             .unwrap();
 
+        let fst_global_macro = globals
+            .iter()
+            .filter_map(|symb| {
+                // FIXME: better deal with the option
+                ctx.dump().get_macro(symb)
+            })
+            .next();
+
         mdo! {
-            let! message = output.term.convert(ctx);
-            let! condition = condition.term.convert(ctx);
+            let! message = self.prepare_term(output.term(), fst_global_macro, ctx);
+            let! condition = self.prepare_term(condition.term(), fst_global_macro, ctx);
             let! assignements = Ok(AoOV::transpose_iter(assignements.clone()));
             let! args = Ok(AoOV::transpose_iter(args.clone()));
             pure ast::Step {
@@ -143,6 +153,57 @@ impl<'a> ToAst<'a> for json::Action<'a> {
                 options: options.clone()
             }
         }
+    }
+}
+
+impl<'a> json::Action<'a> {
+    /// This adds `let..in` in from of a term so that the global macros may be properly defined
+    fn prepare_term<'b>(
+        &self,
+        term: &json::Term<'a>,
+        fst_global_macro: Option<&mmacro::Data<'a>>,
+        ctx: Context<'b, 'a>,
+    ) -> RAoO<ast::Term<'a, StrRef<'a>>> {
+        let output = term.convert(ctx).bind(|term| {
+            fst_global_macro
+                .iter()
+                .flat_map(|g| g.inputs())
+                .flat_map(|inputs| inputs.iter().rev().enumerate())
+                .map(|(i, v)| {
+                    let a = ctx
+                        .dump()
+                        .get_action_from_action_v(&self.action[0..i])
+                        .ok_or_else(|| {
+                            let actions = self.action[0..i]
+                                .iter()
+                                .map(serde_json::to_string_pretty)
+                                .map(Result::unwrap)
+                                .join(";\n");
+                            err_at!(@ "cannot find an action from its shape while \
+                            building the output of {:}\n{actions}", self.name(),
+                            )
+                        })?;
+                    Ok((
+                        v,
+                        json::Term::Macro {
+                            symb: json::path::ISymb::input(),
+                            args: vec![],
+                            timestamp: Box::new(a.as_term()),
+                        },
+                    ))
+                })
+                .try_fold(AoOV::pure(term), |acc, t: Result<_, InputError>| {
+                    let (var, input) = t?;
+                    mdo! {
+                        let! acc = Ok(acc);
+                        let! input = input.convert(ctx);
+                        let! sort = var.sort().convert(ctx);
+                        let var = (var.id.name().drop_guard(), sort).into();
+                        pure Term::letin(var, input.clone(), acc.clone())
+                    }
+                })
+        });
+        output
     }
 }
 
@@ -170,9 +231,11 @@ impl<'a> ToAst<'a> for json::action::Update<'a> {
 /// *danger*
 ///
 /// The way global macros are handeled in `squirrel` is... wierd. Notably they
-/// behave wierdly with reguards to `input`s. I have to delay dealing with it
+/// behave wierdly with reguards to `input`s.
+/// ~I have to delay dealing with it
 /// the moment I apply a macro. Hence most of the logic is in
-/// [convert_macro_application].
+/// [convert_macro_application].~
+/// I moved it to [json::Action::convert]
 ///
 /// A macro signature is (indices ++ inputs ++ [time]).
 impl<'a, 'c> ToAst<'a> for json::MacroRef<'a, 'c> {
