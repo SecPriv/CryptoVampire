@@ -74,7 +74,7 @@ boiler_plate!(Operation, operation; {
 
 impl Operation {
     pub fn get_operation(str: &str) -> Option<Self> {
-        OPERATION_LIST.iter().find(|x| x.as_str() == str).cloned()
+        OPERATION_LIST.iter().find(|x| x.as_str_alias().contains(&str)).cloned()
     }
 
     pub const fn as_str(self) -> &'static str {
@@ -86,6 +86,20 @@ impl Operation {
             Operation::And => "&&",
             Operation::Implies => "=>",
             Operation::Iff => "<=>",
+        }
+    }
+
+    /// Like [Operation::as_str] but taking into account some wide spread
+    /// possible aliases.
+    pub const fn as_str_alias(self) -> &'static [&'static str] {
+        match self {
+            Operation::HardEq => &["===", "meq"],
+            Operation::Eq => &["==", "eq"],
+            Operation::Neq => &["!=", "neq"],
+            Operation::Or => &["||", "or", "ors"],
+            Operation::And => &["&&", "and", "ands"],
+            Operation::Implies => &["=>", "implies", "==>"],
+            Operation::Iff => &["<=>", "iff"],
         }
     }
 }
