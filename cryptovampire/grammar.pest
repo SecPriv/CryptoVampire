@@ -32,7 +32,7 @@ operation = { eq | neq | or | and | implies | iff }
 typed_arguments = {("(" ~ (variable_binding ~ ",")* ~ variable_binding? ~ ")")?}
     variable_binding = {variable ~ ":" ~ type_name }
 
-commun_base = { /* let_in |*/ if_then_else | find_such_that | quantifier | macro_application | application  }
+commun_base = { let_in | if_then_else | find_such_that | quantifier | macro_application | application  }
 term = { /* "(" ~ inner_term ~ ")" | */  inner_term }
     inner_term = { commun_base | infix_term}
 bracketed_term = _{"{" ~ term ~ "}"}
