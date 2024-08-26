@@ -26,11 +26,29 @@ pub struct Path<'a> {
     // id: u32,
 }
 
+impl<'a> Path<'a> {
+    pub fn input() -> Self {
+        Self {
+            npath: NamesPath { npath: vec![] },
+            symb: "input".into(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct ISymb<'a> {
     #[serde(borrow)]
     pub s_symb: Box<Path<'a>>,
     pub s_typ: Box<Type<'a>>,
+}
+
+impl<'a> ISymb<'a> {
+    pub fn input() -> Self {
+        Self {
+            s_symb: Box::new(Path::input()),
+            s_typ: Box::new(Type::Message),
+        }
+    }
 }
 
 impl<'a> Display for Path<'a> {

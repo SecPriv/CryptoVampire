@@ -15,7 +15,7 @@ pub struct CryptoVampireStrValidator;
 
 impl utils::string_ref::Validator for CryptoVampireStrValidator {
     fn validate(&self, str: &str) -> bool {
-        !str.chars().any(|x| FORBIDDEN.contains(x))
+        str == "$dummy" || !str.chars().any(|x| FORBIDDEN.contains(x))
     }
 }
 

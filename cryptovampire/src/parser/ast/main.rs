@@ -20,7 +20,9 @@ impl<'a> TryFrom<&'a str> for ASTList<'a, &'a str> {
     type Error = InputError;
 
     fn try_from(value: &'a str) -> MResult<Self> {
+        trace!("running pest");
         let mut pairs = MainParser::parse(Rule::file, value).debug_continue()?;
+        trace!("pest ran successfully");
 
         Ok(ASTList {
             content: pairs

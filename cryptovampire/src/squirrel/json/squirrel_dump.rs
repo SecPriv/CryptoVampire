@@ -1,6 +1,8 @@
-use std::hash::Hash;
+use std::{hash::Hash, sync::Arc};
 
+use action::ActionV;
 use hashbrown::HashMap;
+use paste::paste;
 use serde::{Deserialize, Serialize};
 use utils::implvec;
 
@@ -27,11 +29,39 @@ pub struct ProcessedSquirrelDump<'a> {
     query: Box<Term<'a>>,
     hypotheses: Vec<Term<'a>>,
     variables: Vec<Variable<'a>>,
-    actions: HashMap<Path<'a>, Action<'a>>,
+    actions: HashMap<Path<'a>, Arc<Action<'a>>>,
+    actions_from_action_v: HashMap<action::ActionV<'a>, Arc<Action<'a>>>,
     names: HashMap<Path<'a>, FunctionType<'a>>,
     operators: HashMap<Path<'a>, operator::Data<'a>>,
     macros: HashMap<Path<'a>, mmacro::Data<'a>>,
     types: HashMap<Path<'a>, mtype::SortData>,
+}
+
+/// Make getter for most of the [HashMap]-based field. It generate getters to get
+/// an iterator over the elements with or without the [Path], and to fetch a single
+/// element.
+///
+/// `name` is the name of the field *in singular*, the macro will turn in into plural
+/// on its own
+macro_rules! mk_getters {
+    ($name:ident : $t:ty) => {
+        paste! {
+            #[doc="get the an [Iterator] of [<$name s>]"]
+            pub fn [<$name s>]<'b>(&'b self) -> impl Iterator<Item = &'b $t> {
+                self.[<$name s>].values()
+            }
+
+            #[doc="get the an [Iterator] of [<$name s>] with its symbol"]
+            pub fn [<$name s_with_symb>]<'b>(&'b self) -> impl Iterator<Item = (&'b Path<'a>, &'b $t)> {
+                self.[<$name s>].iter()
+            }
+
+            #[doc="get a specifi $name"]
+            pub fn [<get_$name>](&self, symb: &Path<'a>) -> Option<&$t> {
+                self.[<$name s>].get(symb)
+            }
+        }
+    };
 }
 
 #[allow(dead_code)]
@@ -48,44 +78,25 @@ impl<'a> ProcessedSquirrelDump<'a> {
         &self.variables
     }
 
-    pub fn names(&self) -> &HashMap<Path<'a>, FunctionType<'a>> {
-        &self.names
+    mk_getters!(name: FunctionType<'a>);
+    mk_getters!(operator: operator::Data<'a>);
+    mk_getters!(macro: mmacro::Data<'a>);
+    mk_getters!(type: mtype::SortData);
+
+    pub fn actions<'b>(&'b self) -> impl Iterator<Item = &'b Action<'a>> {
+        self.actions_with_symb().map(|(x, y)| y)
     }
 
-    pub fn get_name(&self, k: &Path<'a>) -> Option<&FunctionType<'a>> {
-        self.names.get(k)
-    }
-
-    pub fn operators(&self) -> &HashMap<Path<'a>, operator::Data<'a>> {
-        &self.operators
-    }
-
-    pub fn get_operator(&self, k: &Path<'a>) -> Option<&operator::Data<'a>> {
-        self.operators.get(k)
-    }
-
-    pub fn macros(&self) -> &HashMap<Path<'a>, mmacro::Data<'a>> {
-        &self.macros
-    }
-
-    pub fn get_macro(&self, k: &Path<'a>) -> Option<&mmacro::Data<'a>> {
-        self.macros.get(k)
-    }
-
-    pub fn types(&self) -> &HashMap<Path<'a>, mtype::SortData> {
-        &self.types
-    }
-
-    pub fn get_type(&self, k: &Path<'a>) -> Option<&mtype::SortData> {
-        self.types.get(k)
-    }
-
-    pub fn actions(&self) -> &HashMap<Path<'a>, Action<'a>> {
-        &self.actions
+    pub fn actions_with_symb<'b>(&'b self) -> impl Iterator<Item = (&'b Path<'a>, &'b Action<'a>)> {
+        self.actions.iter().map(|(x, y)| (x, Arc::as_ref(y)))
     }
 
     pub fn get_action(&self, k: &Path<'a>) -> Option<&Action<'a>> {
-        self.actions.get(k)
+        self.actions.get(k).map(Arc::as_ref)
+    }
+
+    pub fn get_action_from_action_v(&self, v: &[action::Item<Vec<Variable<'a>>>]) -> Option<&Action<'a>> {
+        self.actions_from_action_v.get(v).map(Arc::as_ref)
     }
 }
 
@@ -106,12 +117,16 @@ impl<'a> From<SquirrelDump<'a>> for ProcessedSquirrelDump<'a> {
         let operators = convert_content_list(operators);
         let macros = convert_content_list(macros);
         let types = convert_content_list(types);
-        let actions = actions
+        let actions: HashMap<_, _> = actions
             .into_iter()
             .map(|a| {
                 let x = a.name.clone();
-                (x, a)
+                (x, Arc::new(a))
             })
+            .collect();
+        let actions_from_action_v = actions
+            .values()
+            .map(|a| (a.action.clone(), Arc::clone(a)))
             .collect();
 
         Self {
@@ -123,6 +138,7 @@ impl<'a> From<SquirrelDump<'a>> for ProcessedSquirrelDump<'a> {
             operators,
             macros,
             types,
+            actions_from_action_v,
         }
     }
 }

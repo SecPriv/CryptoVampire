@@ -10,6 +10,7 @@ abstract f : index -> message.
 
 abstract to_T : message -> T.
 abstract from_T : T -> message.
+abstract tuple_t: (T * T) -> T.
 
 (*------------------------------------------------------------------*)
 (* Hash function *)
@@ -58,9 +59,15 @@ process Senc =
 
 signature sign, checksign, spk where m:T sig:C sk:L pk:LP.
 
-process Signature =
+process Signature(i:index) =
+ in(c,m');
+ out(c, empty);
+ out(c, empty);
+ out(c, empty);
  in(c,m);
- let mT = to_T (m) in
+ let my_add_a = to_T (m) in
+ let my_add_b = to_T (m') in
+ let mT = tuple_t(to_T (m), to_T(m')) in
  new sk : L;
  let mypk : LP = spk(sk) in
  let s : C = sign(mT,sk) in
@@ -68,7 +75,7 @@ process Signature =
  if (ch && true && true) then
  out (c, empty).
 
-system Signature | Senc | !_i(in(c, x); in(c, y); (out(c, <x, y>) | out(c, <y, x>)) ).
+system !_i Signature(i) | Senc | !_i(in(c, x); in(c, y); (out(c, <x, y>) | out(c, <y, x>)) ).
 
 lemma trival:
   forall (s:L, m:T),

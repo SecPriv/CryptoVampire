@@ -1,4 +1,5 @@
 use super::*;
+use itertools::chain;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -31,6 +32,8 @@ pub struct Item<A> {
 
 pub type AT<A> = Vec<Item<A>>;
 
+pub type ActionV<'a> = AT<Vec<Variable<'a>>>;
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct Action<'a> {
     #[serde(borrow)]
@@ -41,7 +44,7 @@ pub struct Action<'a> {
     /// The control flow is encoded by layers (the first vec in [AT]).
     /// you have paralell actions ([Item::par_choice]) and exclusive
     /// ones ([Item::sum_choice])
-    pub action: AT<Vec<Variable<'a>>>, // this is an `action_v`
+    pub action: ActionV<'a>, // this is an `action_v`
     pub input: Channel<'a>,
     pub indices: Vec<Variable<'a>>,
     pub condition: Condition<'a>,
@@ -49,6 +52,27 @@ pub struct Action<'a> {
     pub updates: Vec<Update<'a>>,
     pub output: Ouptut<'a>,
     pub globals: Vec<Path<'a>>,
+}
+
+impl<'a> Action<'a> {
+    pub fn get_args<'b>(&'b self) -> impl Iterator<Item = Term<'a>> + 'b {
+        self.action
+            .iter()
+            .flat_map(
+                |Item {
+                     par_choice,
+                     sum_choice,
+                 }| { chain!(par_choice.1.iter(), sum_choice.1.iter()) },
+            )
+            .map(|v| Term::Var { var: v.clone() })
+    }
+
+    /// This is just magic and I don't like it
+    /// 
+    /// FIXME: understand
+    pub fn as_term(&self) -> Term<'a> {
+        Term::Action { symb: self.name.clone(), args: self.get_args().collect() }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]

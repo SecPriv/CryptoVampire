@@ -39,7 +39,7 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
         - [-] make init step; possibly not needed
         - [ ] assert tuples
         - [ ] assert crypto
-        - [ ] <> (i.e., !=)
+        - [ ] <> (i.e., !=); maybe using infix
     */
 
     let all: Vec<_> = chain!(types, cells, macros, funs, steps, [query])
@@ -69,7 +69,6 @@ fn mk_steps<'a, 'b>(
 ) -> impl Iterator<Item = RAoO<ast::Step<'a, StrRef<'a>>>> + 'b {
     pdump
         .actions()
-        .values()
         .debug("attempting to convert step:\n\t")
         .map(move |a| a.convert(ctx))
 }
@@ -110,8 +109,7 @@ fn mk_cells<'a, 'b>(
     ctx: Context<'b, 'a>,
 ) -> impl Iterator<Item = RAoO<ast::DeclareCell<'a, StrRef<'a>>>> + 'b {
     pdump
-        .macros()
-        .iter()
+        .macros_with_symb()
         .filter_map(|(symb, data)| match data {
             json::mmacro::Data::State(json::mmacro::StateMacro {
                 sort,
@@ -135,14 +133,12 @@ fn mk_macros<'a, 'b>(
     ctx: Context<'b, 'a>,
 ) -> impl Iterator<Item = RAoO<ast::Macro<'a, StrRef<'a>>>> + 'b {
     let base = pdump
-        .macros()
-        .iter()
+        .macros_with_symb()
         .map_into()
         .map(move |m: MacroRef| m.convert(ctx))
         .filter_map(helper_functions::transpose_raov);
     let concrete_functions = pdump
-        .operators()
-        .iter()
+        .operators_with_symb()
         .filter_map(|(symb, json::operator::Data { def, .. })| def.as_concrete().map(|c| (symb, c)))
         .map(move |(symb, json::operator::Concrete { args, body, .. })| {
             ConcreteMacro {
@@ -160,22 +156,20 @@ fn mk_funs_and_names<'a, 'b>(
     ctx: Context<'b, 'a>,
 ) -> impl Iterator<Item = RAoO<ast::DeclareFunction<'a, StrRef<'a>>>> + 'b {
     let names = pdump
-        .names()
-        .iter()
+        .names_with_symb()
         .debug("attempting to convert name:\n\t")
         .map(move |(symb, json::FunctionType { vars, args, out })| {
             (symb.equiv_name_ref(&ctx), vars, args, &json::Type::Name)
         });
 
     let functions = pdump
-        .operators()
-        .iter()
+        .operators_with_symb()
         .debug("attempting to convert function:\n\t")
         .filter_map(move |(symb, data)| {
             // filtering out builtin and forbidden functions
             let symb = symb.equiv_name_ref(&ctx);
-            (!(ctx.forbidden_function.contains(symb.as_ref())
-                || ctx.builtin_function.contains_key(symb.as_ref())))
+            (!(ctx.forbidden_function().contains(symb.as_ref())
+                || ctx.builtin_function().contains_key(symb.as_ref())))
             .then_some((symb, data))
         })
         .filter_map(
@@ -222,8 +216,7 @@ fn mk_types<'a, 'b>(
     ctx: Context<'b, 'a>,
 ) -> impl Iterator<Item = RAoO<ast::DeclareType<'a, StrRef<'a>>>> + 'b {
     pdump
-        .types()
-        .iter()
+        .types_with_symb()
         .filter_map(move |(symb, data)| {
             if data.can_be_index() {
                 Some(ast::DeclareType::new(symb.equiv_name_ref(&ctx).into()))

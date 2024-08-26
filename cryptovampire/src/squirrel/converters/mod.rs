@@ -81,10 +81,6 @@ struct Context<'a, 'str> {
     #[builder(default)]
     shape: AllOrOneShape,
     dump: &'a ProcessedSquirrelDump<'str>,
-    #[builder(default = "&BUILTIN_FUNCTIONS")]
-    builtin_function: &'static HashMap<&'static str, StrRef<'static>>,
-    #[builder(default = "&FORBIDDEN_FUNCTIONS")]
-    forbidden_function: &'static HashSet<&'static str>,
     #[builder(default)]
     current_step: Option<&'a json::Action<'str>>,
 }
@@ -94,16 +90,12 @@ impl<'a, 'str> From<Context<'a, 'str>> for ContextBuilder<'a, 'str> {
         Context {
             shape,
             dump,
-            builtin_function,
-            forbidden_function,
             current_step,
         }: Context<'a, 'str>,
     ) -> Self {
         let mut ctx = ContextBuilder::create_empty();
         ctx.shape(shape)
             .dump(dump)
-            .builtin_function(builtin_function)
-            .forbidden_function(forbidden_function)
             .current_step(current_step);
         ctx
     }
@@ -123,17 +115,17 @@ impl<'a, 'str> Context<'a, 'str> {
     }
     
     fn builtin_function(&self) -> &'static HashMap<&'static str, StrRef<'static>> {
-        self.builtin_function
+        &BUILTIN_FUNCTIONS
     }
     
     fn forbidden_function(&self) -> &'static HashSet<&'static str> {
-        self.forbidden_function
+       &FORBIDDEN_FUNCTIONS
     }
 }
 
 impl<'a, 'str> Sanitizer for Context<'a, 'str> {
     fn sanitize<'b>(&self, str: &StrRef<'b>) -> StrRef<'b> {
-        self.builtin_function
+        self.builtin_function()
             .get(str.as_ref())
             .unwrap_or(str)
             .clone()

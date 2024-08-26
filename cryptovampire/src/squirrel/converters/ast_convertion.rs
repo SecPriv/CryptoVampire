@@ -8,7 +8,10 @@ use crate::{
         ast::{self, Options},
         Location,
     },
-    squirrel::json::{self, path::Path, Named, Pathed},
+    squirrel::{
+        converters::ContextBuilder,
+        json::{self, path::Path, Named, Pathed},
+    },
 };
 
 use super::{helper_functions::*, RAoO};
@@ -120,6 +123,11 @@ impl<'a> ToAst<'a> for json::Action<'a> {
             "free variables in a condition (and I'm not sure what this means)"
         );
 
+        let ctx = ContextBuilder::from(ctx)
+            .current_step(Some(self))
+            .build()
+            .unwrap();
+
         mdo! {
             let! message = output.term.convert(ctx);
             let! condition = condition.term.convert(ctx);
@@ -159,6 +167,14 @@ impl<'a> ToAst<'a> for json::action::Update<'a> {
     }
 }
 
+/// *danger*
+///
+/// The way global macros are handeled in `squirrel` is... wierd. Notably they
+/// behave wierdly with reguards to `input`s. I have to delay dealing with it
+/// the moment I apply a macro. Hence most of the logic is in
+/// [convert_macro_application].
+///
+/// A macro signature is (indices ++ inputs ++ [time]).
 impl<'a, 'c> ToAst<'a> for json::MacroRef<'a, 'c> {
     type Target = Option<ast::Macro<'a, StrRef<'a>>>;
 
@@ -183,7 +199,7 @@ impl<'a, 'c> ToAst<'a> for json::MacroRef<'a, 'c> {
                     let! res = ConcreteMacro {
                         symb,
                         body,
-                        args: chain!(indices.iter(), inputs.iter(), [ts]).collect()
+                        args: chain!(indices.iter(), inputs.iter(), [ts].into_iter()).collect()
                     }.convert(ctx);
                     pure Some(res)
                 }
