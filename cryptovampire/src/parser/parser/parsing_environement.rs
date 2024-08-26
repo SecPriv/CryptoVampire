@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, ops::Deref, sync::Arc};
+use std::{borrow::Borrow, collections::VecDeque, ops::Deref, sync::Arc};
 
 use hashbrown::{HashMap, HashSet};
 use itertools::Itertools;
@@ -33,7 +33,10 @@ use cryptovampire_lib::{
         step::Step,
     },
 };
-use utils::{implderef, implvec, string_ref::StrRef, traits::NicerError, utils::MaybeInvalid};
+use utils::{
+    implderef, implvec, maybe_owned::MOw, string_ref::StrRef, traits::NicerError,
+    utils::MaybeInvalid,
+};
 
 #[derive(Hash, Clone, PartialEq, Eq, Debug, PartialOrd, Ord)]
 pub struct Macro<'bump, 'a, S> {
@@ -47,7 +50,12 @@ pub struct Macro<'bump, 'a, S> {
 
 pub use cache::{CellCache, FunctionCache, StepCache};
 
-use super::{declare_sorts, fetch_all};
+use super::{
+    declare_sorts, fetch_all,
+    parsable_trait::{
+        FALSE_CACHE, FALSE_TA_CACHE, NOT_CACHE, NOT_TA_CACHE, TRUE_CACHE, TRUE_TA_CACHE,
+    },
+};
 
 mod cache;
 
@@ -228,6 +236,32 @@ pub fn get_function<'b, 'a, 'bump, S>(
         )
     })
     // .map(|s| *s)
+}
+
+pub fn get_function_mow<'b, 'a, 'bump, S>(
+    content: &S,
+    state: &impl KnowsRealm,
+    env: &'b Environement<'bump, 'a, S>,
+    span: &Location<'a>,
+) -> MResult<MOw<'b, FunctionCache<'a, 'bump, S>>>
+where
+    S: Borrow<str>,
+{
+    match content.borrow() {
+        "true" | "True" => Ok(match state.get_realm() {
+            Realm::Symbolic => TRUE_TA_CACHE(),
+            Realm::Evaluated => TRUE_CACHE(),
+        }),
+        "false" | "False" => Ok(match state.get_realm() {
+            Realm::Symbolic => FALSE_TA_CACHE(),
+            Realm::Evaluated => FALSE_CACHE(),
+        }),
+        "not" => Ok(match state.get_realm() {
+            Realm::Symbolic => NOT_TA_CACHE(),
+            Realm::Evaluated => NOT_CACHE(),
+        }),
+        _ => get_function(env, *span, content.borrow()).map(MOw::Borrowed),
+    }
 }
 
 impl<'a, 'bump, S> KnowsRealm for Environement<'bump, 'a, S> {

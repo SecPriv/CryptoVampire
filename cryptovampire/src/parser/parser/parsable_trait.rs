@@ -8,9 +8,7 @@ use log::{log_enabled, trace};
 use crate::{
     bail_at,
     parser::{
-        ast::{self, extra::SnN, LetIn, Term, VariableBinding},
-        error::WithLocation,
-        InputError, Location, MResult, Pstr,
+        ast::{self, extra::SnN, LetIn, Term, VariableBinding}, error::WithLocation, parser::parsing_environement::get_function_mow, InputError, Location, MResult, Pstr
     },
 };
 use cryptovampire_lib::{
@@ -35,7 +33,7 @@ use cryptovampire_lib::{
 };
 use utils::{f, implvec, match_as_trait, maybe_owned::MOw, string_ref::StrRef, traits::NicerError};
 
-use self::cached_builtins::*;
+pub(crate) use self::cached_builtins::*;
 
 use super::{
     parsing_environement::{get_function, get_sort, FunctionCache},
@@ -409,6 +407,7 @@ where
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> MResult<Self::R> {
+        trace!("parsing {self}");
         match self {
             ast::Application::ConstVar { span, content } => {
                 // check if it is a variable
@@ -418,7 +417,7 @@ where
                     .map(|(_, v)| {
                         let VarProxy { id, sort } = v;
 
-                        if sort.is_sosrt(NAME.as_sort()) {
+                        if sort.is_sort(NAME.as_sort()) {
                             bail_at!(
                                 span,
                                 "assertions with variables of sort Name have a debatable soundness"
@@ -459,30 +458,20 @@ where
                     })
                     // otherwise look for a function
                     .unwrap_or_else(|| {
-                        match content.borrow() {
-                            "true" | "True" => Ok(match state.get_realm() {
-                                Realm::Symbolic => TRUE_TA_CACHE(),
-                                Realm::Evaluated => TRUE_CACHE(),
-                            }),
-                            "false" | "False" => Ok(match state.get_realm() {
-                                Realm::Symbolic => FALSE_TA_CACHE(),
-                                Realm::Evaluated => FALSE_CACHE(),
-                            }),
-                            _ => get_function(env, *span, content.borrow()).map(MOw::Borrowed),
-                        }
-                        .debug_continue()
-                        .and_then(|f| {
-                            parse_application(
-                                env,
-                                span,
-                                state,
-                                bvars,
-                                expected_sort,
-                                Deref::deref(&f),
-                                [],
-                            )
+                        get_function_mow(content, state, env, span)
                             .debug_continue()
-                        })
+                            .and_then(|f| {
+                                parse_application(
+                                    env,
+                                    span,
+                                    state,
+                                    bvars,
+                                    expected_sort,
+                                    Deref::deref(&f),
+                                    [],
+                                )
+                                .debug_continue()
+                            })
                     })
             }
             ast::Application::Application {
@@ -492,13 +481,14 @@ where
             } => {
                 let content = function.name();
 
-                match content.borrow() {
-                    "not" => Ok(match state.get_realm() {
-                        Realm::Symbolic => NOT_TA_CACHE(),
-                        Realm::Evaluated => NOT_CACHE(),
-                    }),
-                    _ => get_function(env, *span, content.borrow()).map(MOw::Borrowed),
-                }
+                // match content.borrow() {
+                //     "not" => Ok(match state.get_realm() {
+                //         Realm::Symbolic => NOT_TA_CACHE(),
+                //         Realm::Evaluated => NOT_CACHE(),
+                //     }),
+                //     _ => get_function(env, *span, content.borrow()).map(MOw::Borrowed),
+                // }
+                get_function_mow(content, state, env, span)
                 .and_then(|f| {
                     parse_application(env, span, state, bvars, expected_sort, f.borrow(), args)
                         .debug_continue()
@@ -572,7 +562,7 @@ where
     // check output sort
     let out_sort = {
         let mut out_sort = signature.out();
-        if out_sort.is_sosrt(NAME.as_sort()) {
+        if out_sort.is_sort(NAME.as_sort()) {
             out_sort = MESSAGE.as_sort().into()
         }
         if_chain::if_chain! {
@@ -733,6 +723,7 @@ where
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> MResult<Self::R> {
+        trace!("parsing {self}");
         match self.operation {
             ast::Operation::HardEq => match self.terms.len() {
                 2 => parse_application(

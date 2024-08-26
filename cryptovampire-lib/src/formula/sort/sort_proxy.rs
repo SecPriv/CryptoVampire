@@ -185,7 +185,7 @@ impl<'bump> SortProxy<'bump> {
     /// check is `self` is already set to `other`
     ///
     /// similar to `maches` or `expect` but without modifying `self`
-    pub fn is_sosrt(&self, other: Sort<'bump>) -> bool {
+    pub fn is_sort(&self, other: Sort<'bump>) -> bool {
         self.as_option() == Some(other)
     }
 
