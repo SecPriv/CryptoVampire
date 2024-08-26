@@ -13,7 +13,7 @@ use crate::formula::{
 use super::RichFormula;
 use utils::{
     arc_into_iter::ArcIntoIter,
-    utils::{repeat_n_zip, StackBox},
+    utils::{repeat_n_zip, MaybeInvalid, StackBox},
     vecref::VecRefClone,
 };
 
@@ -234,7 +234,13 @@ impl<'bump> Shr for ARichFormula<'bump> {
 
 impl<'bump> Display for ARichFormula<'bump> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_inner())
+        if self.is_valid() {
+            write!(f, "{}", self.as_inner())
+        } else if cfg!(debug_assertions) {
+            write!(f, "(unintialized formula) {:?}", self.as_inner())
+        } else {
+            panic!("The formula contains some uninitialized bit. This should not happen please report it")
+        }
     }
 }
 
@@ -253,5 +259,11 @@ impl<'bump> IntoVariableIter<'bump> for ARichFormula<'bump> {
 impl<'bump> Default for ARichFormula<'bump> {
     fn default() -> Self {
         TRUE_ARC.clone()
+    }
+}
+
+impl<'bump> MaybeInvalid for ARichFormula<'bump> {
+    fn is_valid(&self) -> bool {
+        RichFormula::is_valid(self.as_ref())
     }
 }

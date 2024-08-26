@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 /// Forbiden characters in cv's input
 const FORBIDDEN: &'static str = ";$#";
 
+pub const DUMMY_VAR : &'static str = "$dummy";
+
 pub trait Named<'a> {
     fn name(&self) -> Symb<'a>;
 }
@@ -13,9 +15,10 @@ pub trait Named<'a> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct CryptoVampireStrValidator;
 
+
 impl utils::string_ref::Validator for CryptoVampireStrValidator {
     fn validate(&self, str: &str) -> bool {
-        str == "$dummy" || !str.chars().any(|x| FORBIDDEN.contains(x))
+        str == DUMMY_VAR || !str.chars().any(|x| FORBIDDEN.contains(x))
     }
 }
 
@@ -66,6 +69,10 @@ pub struct Variable<'a> {
 impl<'a> Variable<'a> {
     pub fn sort(&self) -> &Type<'a> {
         &self.sort
+    }
+
+    pub fn is_dummy(&self) -> bool {
+        self.name().as_str() == DUMMY_VAR
     }
 }
 

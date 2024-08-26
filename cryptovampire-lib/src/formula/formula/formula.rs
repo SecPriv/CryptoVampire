@@ -23,7 +23,7 @@ use crate::formula::{
     },
     variable::{uvar, Variable},
 };
-use utils::implvec;
+use utils::{implvec, utils::MaybeInvalid};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum RichFormula<'bump> {
@@ -318,6 +318,16 @@ impl<'bump> Display for RichFormula<'bump> {
                 write!(f, "{}({})", fun.name(), args.iter().join(", "))
             }
             RichFormula::Quantifier(q, arg) => write!(f, "{q} {arg}"),
+        }
+    }
+}
+
+impl<'bump> MaybeInvalid for RichFormula<'bump> {
+    fn is_valid(&self) -> bool {
+        match self {
+            RichFormula::Var(v) => v.is_valid(),
+            RichFormula::Fun(f, args) => f.is_valid() && args.iter().all(MaybeInvalid::is_valid),
+            RichFormula::Quantifier(_, arg) => arg.is_valid(),
         }
     }
 }

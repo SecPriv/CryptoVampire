@@ -159,15 +159,10 @@ pub fn convert_macro_application<'a, 'b>(
             let args = chain!(args.iter(), [timestamp]);
             apply_fun(symb.equiv_name_ref(&ctx), args, ctx)
         }
-        Some(mmacro::Data::Global(mmacro::GlobalMacro {
-            data: mmacro::GlobalData { inputs, .. },
-            ..
-        })) => {
+        Some(mmacro::Data::Global(g)) => {
             // we keep the input variables as input to the macro *and*
             // we keep their name
-            let iargs = inputs
-                .iter()
-                .cloned()
+            let iargs = g.inputs().cloned()
                 .map(|var| json::Term::Var { var });
 
             let args: Vec<_> = chain!(

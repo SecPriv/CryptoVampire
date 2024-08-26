@@ -4,6 +4,7 @@ use std::{
 };
 
 use itertools::Itertools;
+use utils::utils::MaybeInvalid;
 
 use super::{
     formula::{ARichFormula, RichFormula},
@@ -175,6 +176,12 @@ impl<'bump> IntoVariableIter<'bump> for Variable<'bump> {
 impl<'a, 'bump> IntoVariableIter<'bump> for &'a Variable<'bump> {
     fn vars_iter(self) -> impl Iterator<Item = Variable<'bump>> {
         [*self].into_iter()
+    }
+}
+
+impl<'bump> MaybeInvalid for Variable<'bump> {
+    fn is_valid(&self) -> bool {
+        self.sort().is_valid()
     }
 }
 

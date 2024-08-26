@@ -167,8 +167,7 @@ impl<'a> json::Action<'a> {
         let output = term.convert(ctx).bind(|term| {
             fst_global_macro
                 .iter()
-                .flat_map(|g| g.inputs())
-                .flat_map(|inputs| inputs.iter().rev().enumerate())
+                .flat_map(|g| g.inputs().rev().enumerate())
                 .map(|(i, v)| {
                     let a = ctx
                         .dump()
@@ -245,15 +244,15 @@ impl<'a, 'c> ToAst<'a> for json::MacroRef<'a, 'c> {
         use json::mmacro::*;
         let json::ContentRef { symb, data } = self;
         match data {
-            Data::Global(GlobalMacro {
+            Data::Global(g@GlobalMacro {
                 arity: _,
                 sort: _,
                 data:
                     GlobalData {
-                        inputs,
                         indices,
                         ts,
                         body,
+                        inputs: _, // called someway else
                         action: _,
                         ty: _,
                     },
@@ -262,7 +261,7 @@ impl<'a, 'c> ToAst<'a> for json::MacroRef<'a, 'c> {
                     let! res = ConcreteMacro {
                         symb,
                         body,
-                        args: chain!(indices.iter(), inputs.iter(), [ts].into_iter()).collect()
+                        args: chain!(indices.iter(), g.inputs(), [ts].into_iter()).collect()
                     }.convert(ctx);
                     pure Some(res)
                 }

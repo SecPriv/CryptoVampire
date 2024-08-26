@@ -16,7 +16,7 @@ use crate::formula::{
         FOSort, Sort,
     },
 };
-use utils::traits::NicerError;
+use utils::{traits::NicerError, utils::MaybeInvalid};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Evaluate<'bump> {
@@ -64,7 +64,8 @@ impl<'bump> Evaluator<'bump> {
         f: impl Into<ARichFormula<'bump>>,
     ) -> Result<ARichFormula<'bump>, SortedError> {
         let f: ARichFormula = f.into();
-        trace!("try eval: {}", f);
+        // FIXME: can fail because of validity
+        // trace!("try eval: {:}", f);
         let sort = f
             .get_sort()
             .debug_continue_msg(|| format!("{f} doesn't have a known sort"))?;
