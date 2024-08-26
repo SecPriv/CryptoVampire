@@ -8,7 +8,7 @@ use log::{log_enabled, trace};
 use crate::{
     bail_at,
     parser::{
-        ast::{self, extra::SnN, Term, VariableBinding},
+        ast::{self, extra::SnN, LetIn, Term, VariableBinding},
         error::WithLocation,
         InputError, Location, MResult, Pstr,
     },
@@ -25,6 +25,7 @@ use cryptovampire_lib::{
             signature::Signature,
             Function,
         },
+        manipulation::OneVarSubstF,
         sort::{
             builtins::{BOOL, CONDITION, MESSAGE, NAME, STEP},
             sort_proxy::SortProxy,
@@ -78,6 +79,23 @@ impl<'bump> From<Variable<'bump>> for VarProxy<'bump> {
 pub trait Parsable<'bump, 'str> {
     type R;
     type S;
+    /// parse [self] into [Parsable::R].
+    ///
+    /// ## arguments
+    ///  - `env`: the [Environement] used to extract all the information about
+    ///     what's already been parsed / partially parsed. It is not used as
+    ///     a [KnowsRealm].
+    ///  - `bvar`: the currenlty bounded variables. The contract is to leave
+    ///     as it was found, that is the caller may modify `bvar` but it has
+    ///     to revert it to its old state.
+    ///     
+    ///     **NB**: there is one notable exception to this rule which is
+    ///             [VariableBinding] which add its returned [Variable] to
+    ///             `bvar`
+    ///  - `state`: the [KnowsRealm]
+    ///  - `expected_sort`: the sort that is expected. Set to [None] if we don't
+    ///     expect any sort. It also is a [SortProxy] therefore we can use it to
+    ///     unify sorts (useful for things like equalities).
     fn parse(
         &self,
         env: &Environement<'bump, 'str, Self::S>,
@@ -99,14 +117,22 @@ where
     #[allow(unused_assignments)]
     fn parse(
         &self,
-        _env: &Environement<'bump, 'a, Self::S>,
-        _bvars: &mut Vec<(S, VarProxy<'bump>)>,
-        _state: &impl KnowsRealm,
-        _expected_sort: Option<SortProxy<'bump>>,
+        env: &Environement<'bump, 'a, Self::S>,
+        bvars: &mut Vec<(S, VarProxy<'bump>)>,
+        state: &impl KnowsRealm,
+        expected_sort: Option<SortProxy<'bump>>,
     ) -> MResult<Self::R> {
-        bail_at!(self.span, "let ... in are not supported yet");
-        // FIXME: implement
-        todo!()
+        let LetIn {
+            span: _,
+            var,
+            t1,
+            t2,
+        } = self;
+        let var = var.parse(env, bvars, state, None)?;
+        let t1 = t1.parse(env, bvars, state, Some(var.sort().into()))?;
+        let t2 = t2.parse(env, bvars, state, expected_sort)?;
+
+        Ok(t2.apply_substitution2(&OneVarSubstF::new(var, t1)))
     }
 }
 impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::IfThenElse<'a, S>
@@ -166,7 +192,6 @@ where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
 {
-    // where for <'b> StrRef<'b> : From<&'b Self>
     type R = ARichFormula<'bump>;
     type S = S;
 
@@ -202,47 +227,9 @@ where
         // build the bound variables
         bvars.reserve(vars.into_iter().len());
         let vars: Result<Vec<_>, InputError> = vars
-            // .iter()
             .bindings
             .iter()
-            .zip(0..)
-            .map(|(v, i)| {
-                let id = i + from_usize(bn);
-                let ast::VariableBinding {
-                    variable,
-                    type_name,
-                    ..
-                } = v;
-
-                // ensures the name is free
-                if env.functions.contains_key(variable.name().borrow())
-                    || bvars.iter().map(|(n, _)| n).contains(&variable.name())
-                {
-                    // return err(merr(
-                    //     variable.0.span,
-                    //     f!("the name {} is already taken", variable.name()),
-                    // ));
-                    bail_at!(
-                        variable.0.span,
-                        "the name {} is already taken",
-                        variable.name()
-                    )
-                }
-
-                let SnN { span, name } = type_name.into();
-
-                let var = Variable {
-                    id,
-                    sort: get_sort(env, *span, name)?,
-                };
-
-                // sneakly expand `bvars`
-                // we need this here to keep the name
-                let content = (variable.name().clone(), var.into());
-                bvars.push(content);
-
-                Ok(var)
-            })
+            .map(|v| Parsable::parse(v, env, bvars, state, None))
             .collect();
         let vars = vars?;
 
@@ -272,6 +259,63 @@ where
         })
     }
 }
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::VariableBinding<'a, S>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
+    type R = Variable<'bump>;
+    type S = S;
+
+    fn parse(
+        &self,
+        env: &Environement<'bump, 'a, Self::S>,
+        bvars: &mut Vec<(Self::S, VarProxy<'bump>)>,
+        realm: &impl KnowsRealm,
+        expected_sort: Option<SortProxy<'bump>>,
+    ) -> MResult<Self::R> {
+        let ast::VariableBinding {
+            variable,
+            type_name,
+            ..
+        } = self;
+        if env.functions.contains_key(variable.name().borrow())
+            || bvars.iter().map(|(n, _)| n).contains(&variable.name())
+        {
+            bail_at!(
+                variable.0.span,
+                "the name {} is already taken",
+                variable.name()
+            )
+        }
+        let SnN { span, name } = type_name.into();
+        let sort = {
+            // get the sort, possibly changing it depending on the realm
+            let sort = get_sort(env, *span, name)?;
+            // if realm.is_evaluated_realm() && false{
+            //     sort.maybe_evaluated_sort().unwrap_or(sort)
+            // } else {
+            //     sort
+            // }
+            // FIXME: things seem to go wrong with the realm here...
+            sort
+        };
+        if let Some(e) = expected_sort {
+            // check if it is what we expected / unify it
+            e.expects(sort, realm).with_location(span)?;
+        }
+
+        let var = Variable {
+            id: from_usize(bvars.len()),
+            sort,
+        };
+
+        let content = (variable.name().clone(), var.into());
+        bvars.push(content); // add it to bvars
+        Ok(var)
+    }
+}
+
 impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Quantifier<'a, S>
 where
     S: Pstr,
@@ -305,45 +349,11 @@ where
 
         let bn = bvars.len();
 
+        // bind the variables
         bvars.reserve(vars.into_iter().len());
         let vars: Result<Vec<_>, InputError> = vars
             .into_iter()
-            // .bindings.iter()
-            .zip(0..)
-            .map(|(v, i)| {
-                let id = i + from_usize(bn);
-                let VariableBinding {
-                    variable,
-                    type_name,
-                    ..
-                } = v;
-
-                let vname = variable.name();
-                // ensures the name is free
-                if env.functions.contains_key(vname.borrow())
-                    || bvars.iter().map(|(n, _)| n).contains(&vname)
-                {
-                    // return err(merr(
-                    //     variable.0.span,
-                    //     f!("the name {} is already taken", vname),
-                    // ));
-                    bail_at!(variable.0.span, "the name {vname} is already taken")
-                }
-
-                let SnN { span, name } = type_name.into();
-
-                let var = Variable {
-                    id,
-                    sort: get_sort(env, *span, name)?,
-                };
-
-                // sneakly expand `bvars`
-                // we need this here to keep the name
-                let content = (variable.name().clone(), var.into());
-                bvars.push(content);
-
-                Ok(var)
-            })
+            .map(|v| Parsable::parse(v, env, bvars, state, None))
             .collect();
         let vars = vars?.into();
 
@@ -354,10 +364,6 @@ where
         bvars.truncate(bn);
 
         let q = {
-            // let status = match state.get_realm() {
-            //     Realm::Evaluated => formula::quantifier::Status::Bool,
-            //     Realm::Symbolic => formula::quantifier::Status::Condition,
-            // };
             match kind {
                 ast::QuantifierKind::Forall => formula::quantifier::Quantifier::Forall {
                     variables: vars,
@@ -369,14 +375,6 @@ where
                 },
             }
         };
-
-        // if cfg!(debug_assertions) {
-        //     try_trace!(
-        //         "parsing quantifier\n\t{}",
-        //         SmtFormula::from_arichformula(&RichFormula::Quantifier(q.clone(), content.clone()))
-        //             .default_display()
-        //     )
-        // }
 
         Ok(match state.get_realm() {
             Realm::Evaluated => RichFormula::Quantifier(q, content).into(),
@@ -421,11 +419,6 @@ where
                         let VarProxy { id, sort } = v;
 
                         if sort.is_sosrt(NAME.as_sort()) {
-                            // err(merr(
-                            //     *span,
-                            //     "assertions with variables of sort Name have a debatable soundness"
-                            //         .to_string(),
-                            // ))?
                             bail_at!(
                                 span,
                                 "assertions with variables of sort Name have a debatable soundness"
@@ -450,7 +443,6 @@ where
                                     .as_ref()
                                     .map(|es| es.matches(s, &r))
                                     .transpose()
-                                    // .with_location(*span)
                                     .with_location(span)
                                     .debug_continue()
                                     .map(|_| formula)
@@ -464,16 +456,6 @@ where
                                 .debug_continue()
                                 .map(|sort| Variable { id: *id, sort }.into()),
                         }
-
-                        // let sort = expected_sort
-                        //     .clone()
-                        //     .map(|es| sort.unify(&es, &state).with_location(*span))
-                        //     .unwrap_or_else(|| {
-                        //         Into::<Option<Sort>>::into(sort)
-                        //             .ok_or_else(|| merr(*span, f!("can't infer sort")))
-                        //     })?;
-
-                        // Ok(Variable { id: *id, sort }.into())
                     })
                     // otherwise look for a function
                     .unwrap_or_else(|| {
@@ -793,31 +775,25 @@ where
                 .parse(env, bvars, state, expected_sort)
                 .debug_continue(),
             },
-            ast::Operation::Neq => {
-                // let not_fun = match state.get_realm() {
-                //     Realm::Symbolic => NOT_TA.clone(),
-                //     Realm::Evaluated => NOT.clone(),
-                // };
-                ast::Application::Application {
+            ast::Operation::Neq => ast::Application::Application {
+                span: self.span,
+                function: ast::Function(ast::Sub {
                     span: self.span,
-                    function: ast::Function(ast::Sub {
+                    content: ast::Ident {
                         span: self.span,
-                        content: ast::Ident {
-                            span: self.span,
-                            content: S::from_static("not"),
-                        },
-                    }),
-                    args: vec![ast::Term {
-                        span: self.span,
-                        inner: ast::InnerTerm::Infix(Arc::new(Self {
-                            operation: ast::Operation::Eq,
-                            ..self.clone()
-                        })),
-                    }],
-                }
-                .parse(env, bvars, state, expected_sort)
-                .debug_continue()
+                        content: S::from_static("not"),
+                    },
+                }),
+                args: vec![ast::Term {
+                    span: self.span,
+                    inner: ast::InnerTerm::Infix(Arc::new(Self {
+                        operation: ast::Operation::Eq,
+                        ..self.clone()
+                    })),
+                }],
             }
+            .parse(env, bvars, state, expected_sort)
+            .debug_continue(),
             ast::Operation::Iff => match state.get_realm() {
                 Realm::Evaluated => parse_application(
                     env,

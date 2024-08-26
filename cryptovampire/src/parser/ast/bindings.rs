@@ -52,9 +52,9 @@ pub struct VariableBinding<'a, S = &'a str> {
     pub type_name: TypeName<'a, S>,
 }
 boiler_plate!(VariableBinding<'s>, 's, variable_binding; |p| {
-let span = p.as_span().into();
-destruct_rule!(span in [variable, type_name] = p.into_inner());
-Ok(VariableBinding{span, variable, type_name})
+    let span = p.as_span().into();
+    destruct_rule!(span in [variable, type_name] = p.into_inner());
+    Ok(VariableBinding{span, variable, type_name})
 });
 
 impl<'a, S: Display> Display for VariableBinding<'a, S> {

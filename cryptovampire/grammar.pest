@@ -50,7 +50,7 @@ find_such_that = {"try" ~ "find" ~
                     "such" ~ "that"  ~ bracketed_term ~
                     "then" ~ bracketed_term ~
                     "else" ~ bracketed_term}
-let_in = {"let" ~ variable ~ "=" ~ term ~ "in" ~ term}
+let_in = {"let" ~ variable_binding ~ "=" ~ term ~ "in" ~ term}
 
 quantifier = {quantifier_op ~ typed_arguments ~ bracketed_term }
     quantifier_op = {exists | forall }

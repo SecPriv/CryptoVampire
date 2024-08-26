@@ -5,7 +5,7 @@ use super::*;
 pub struct LetIn<'a, S = &'a str> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore")]
     pub span: Location<'a>,
-    pub var: Variable<'a, S>,
+    pub var: VariableBinding<'a, S>,
     pub t1: Term<'a, S>,
     pub t2: Term<'a, S>,
 }
