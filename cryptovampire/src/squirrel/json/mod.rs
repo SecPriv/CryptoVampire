@@ -34,7 +34,8 @@ mod term;
 pub struct Ident<'a> {
     #[serde(borrow)]
     pub name: Symb<'a>,
-    pub tag: i32,
+    // ignored
+    // pub tag: i32,
 }
 
 impl<'a> Named<'a> for Ident<'a> {
@@ -45,8 +46,8 @@ impl<'a> Named<'a> for Ident<'a> {
 
 impl<'a> Display for Ident<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self { name, tag } = self;
-        write!(f, "{name}_{tag:}")
+        let Self { name, .. } = self;
+        write!(f, "{name}")
     }
 }
 
