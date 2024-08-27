@@ -49,7 +49,7 @@ impl<'a> ISymb<'a> {
             s_typ: Box::new(Type::Message),
         }
     }
-    
+
     pub fn path(&self) -> &Path<'a> {
         &self.s_symb
     }

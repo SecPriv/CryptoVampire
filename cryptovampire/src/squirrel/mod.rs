@@ -1,5 +1,3 @@
-use std::io::BufReader;
-
 use converters::convert_squirrel_dump;
 use json::CryptoVampireCall;
 use log::{debug, trace};

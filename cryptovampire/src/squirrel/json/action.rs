@@ -43,7 +43,7 @@ pub struct Update<'a> {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct UpdateRef<'a, 'b> {
     pub action: &'b Action<'a>,
-    pub update: &'b Update<'a>
+    pub update: &'b Update<'a>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -102,7 +102,7 @@ impl<'a> Action<'a> {
     pub fn name(&self) -> &Path<'a> {
         &self.name
     }
-    
+
     pub fn indices(&self) -> &[Variable<'a>] {
         &self.indices
     }
