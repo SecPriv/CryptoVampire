@@ -1,5 +1,6 @@
 use std::ops::{BitAnd, BitOr, Not, Shr};
 
+use cryptovampire_lib::formula::utils::Applicable;
 use term_algebra::connective::NOT_NAME;
 
 use super::*;
@@ -186,5 +187,124 @@ impl<'a, S> Term<'a, S> {
             t2,
         }
         .into()
+    }
+
+    pub fn forall<V>(vars: implvec!(V), arg: Self) -> Self
+    where
+        VariableBinding<'a, S>: From<V>,
+    {
+        ast::Quantifier {
+            kind: ast::QuantifierKind::Forall,
+            span: Default::default(),
+            vars: vars.into_iter().collect(),
+            content: arg,
+        }
+        .into()
+    }
+
+    pub fn exists<V>(vars: implvec!(V), arg: Self) -> Self
+    where
+        VariableBinding<'a, S>: From<V>,
+    {
+        ast::Quantifier {
+            kind: ast::QuantifierKind::Exists,
+            span: Default::default(),
+            vars: vars.into_iter().collect(),
+            content: arg,
+        }
+        .into()
+    }
+}
+
+pub trait StrApplicable {
+    type Term;
+
+    fn app<U, I>(self, args: I) -> Self::Term
+    where
+        I: IntoIterator<Item = U>,
+        Self::Term: From<U>;
+
+    fn to_const(self) -> Self::Term
+    where
+        Self: Sized,
+    {
+        self.app([])
+    }
+}
+
+impl<'a> StrApplicable for &'a str {
+    type Term = Term<'a, StrRef<'a>>;
+
+    fn app<U, I>(self, args: I) -> Self::Term
+    where
+        I: IntoIterator<Item = U>,
+        Self::Term: From<U>,
+    {
+        Function::from_name(self.into()).f(args)
+    }
+}
+
+impl<'a> StrApplicable for &StrRef<'a> {
+    type Term = Term<'a, StrRef<'a>>;
+
+    fn app<U, I>(self, args: I) -> Self::Term
+    where
+        I: IntoIterator<Item = U>,
+        Self::Term: From<U>,
+    {
+        Function::from_name(self.clone()).f(args)
+    }
+}
+
+impl<'a, S: Clone> From<VariableBinding<'a, S>> for Term<'a, S> {
+    fn from(value: VariableBinding<'a, S>) -> Self {
+        Application::ConstVar {
+            span: Default::default(),
+            content: S::clone(value.variable.name()),
+        }
+        .into()
+    }
+}
+
+mod macros {
+    use super::*;
+    /// same as [cryptovampire_lib::mforall] but for [Term]
+    #[macro_export]
+    macro_rules! ast_forall {
+        ($($var:ident:$sort:expr),*; $content:block) => {{
+            $(
+                let $var = $crate::parser::ast::VariableBinding {
+                    span: std::default::Default::default(),
+                    variable: $crate::parser::ast::Variable::from(utils::string_ref::StrRef::from(std::stringify!($var))),
+                    type_name: $crate::parser::ast::TypeName::from(utils::string_ref::StrRef::from($sort))
+                };
+            )*
+            $crate::parser::ast::Term::forall([$($var.clone()),*], {
+                $content
+            })
+        }};
+        ($vars:expr, $content:block) => {
+            $crate::parser::ast::term::Term::forall($vars, $content)
+        }
+    }
+
+    /// same as [cryptovampire_lib::mexists] but for [Term]
+    #[macro_export]
+    macro_rules! ast_exists {
+        ($($var:ident:$sort:expr),*; $content:block) => {{
+            $(
+                let $var = $crate::parser::ast::VariableBinding {
+                    span: std::default::Default::default(),
+                    variable: $crate::parser::ast::Variable::from(utils::string_ref::StrRef::from(std::stringify!($var))),
+                    type_name: $crate::parser::ast::TypeName::from(utils::string_ref::StrRef::from($sort))
+                };
+            )*
+            $crate::parser::ast::Term::exists([$($var.clone()),*], {
+                $content
+            })
+        }};
+        ($vars:expr, $content:block) => {
+            $crate::parser::ast::term::Term::forall($vars, $content)
+        }
     }
 }

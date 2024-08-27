@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use crate::formula::utils::Applicable;
 use crate::formula::{
     formula::ARichFormula,
     function::{
@@ -70,7 +71,7 @@ impl<'bump> Evaluator<'bump> {
         let fun = self.functions.get(&sort.into());
         match fun {
             None => Ok(f), // unevaluatable sort don't need to be evaluated
-            Some(fun) => Ok(fun.f_a([f])),
+            Some(fun) => Ok(fun.f([f])),
         }
     }
 

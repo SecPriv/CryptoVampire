@@ -3,6 +3,7 @@ use std::{cell::RefCell, hash::Hash, sync::Arc};
 use if_chain::if_chain;
 use itertools::Itertools;
 
+use crate::formula::utils::Applicable;
 use crate::{
     environement::{environement::Environement, traits::KnowsRealm},
     formula::{
@@ -122,7 +123,7 @@ impl<'bump> EufCma<'bump> {
                     &k_f,
                 ));
 
-                forall([k], split.f_a([k_f]) >> ors)
+                forall([k], split.f([k_f]) >> ors)
             }));
 
             assertions.push(Axiom::Ground{
@@ -130,15 +131,15 @@ impl<'bump> EufCma<'bump> {
                 formula: mforall!(m!1:message_sort, sigma!2:message_sort, k!3:nonce_sort; {
                     let k_f = pbl.name_caster().cast(message_sort, k);
                     let ev = pbl.evaluator();
-                    ev.eval(self.verify.f([m.into(), sigma.into(), self.pk.f_a([ k_f.clone()])])) >>
+                    ev.eval(self.verify.apply([m.into(), sigma.into(), self.pk.f([ k_f.clone()])])) >>
                     mexists!(u!4:message_sort; {
                         meq(ev.eval(u.clone()), ev.eval(m)) &
                         (
-                            subterm_main.f_a(env, self.sign.f_a([u.into(), k_f.clone()]), m.into()) |
-                            subterm_main.f_a(env, self.sign.f_a([u.into(), k_f.clone()]), sigma.into()) |
+                            subterm_main.f_a(env, self.sign.f([u.into(), k_f.clone()]), m.into()) |
+                            subterm_main.f_a(env, self.sign.f([u.into(), k_f.clone()]), sigma.into()) |
                             subterm_key.f_a(env, k.clone(), m.clone()) |
                             subterm_key.f_a(env, k.clone(), sigma.clone()) |
-                            split.f_a([k])
+                            split.f([k])
                         )
                     })
                 }),
@@ -206,7 +207,7 @@ impl<'bump> EufCma<'bump> {
                     let u_f = u_var.into_aformula();
                     let sign_of_u = self
                         .sign
-                        .f_a([u_f, pbl.name_caster().cast(MESSAGE.as_sort(), &key)]);
+                        .f([u_f, pbl.name_caster().cast(MESSAGE.as_sort(), &key)]);
 
                     let k_sc = subterm_key
                         .preprocess_terms(
@@ -235,10 +236,10 @@ impl<'bump> EufCma<'bump> {
                         };
                         if realm.is_symbolic_realm() {
                             Some(mforall!(free_vars, {
-                                pbl.evaluator().eval(self.verify.f([
+                                pbl.evaluator().eval(self.verify.apply([
                                     signature.clone(),
                                     message.clone(),
-                                    self.pk.f_a([
+                                    self.pk.f([
                                         pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),
                                     ]),
                                 ])) >> mexists!([u_var], {
@@ -248,10 +249,10 @@ impl<'bump> EufCma<'bump> {
                             }))
                         } else {
                             Some(mforall!(free_vars, {
-                                pbl.evaluator().eval(self.verify.f([
+                                pbl.evaluator().eval(self.verify.apply([
                                     signature.clone(),
                                     message.clone(),
-                                    self.pk.f_a([
+                                    self.pk.f([
                                         pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),
                                     ]),
                                 ])) >> mformula.apply_substitution2(&OneVarSubst {

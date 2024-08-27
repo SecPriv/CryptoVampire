@@ -1,5 +1,6 @@
 use std::{rc::Rc, sync::Arc};
 
+use crate::formula::utils::Applicable;
 use crate::{
     formula::{
         formula::{meq, ARichFormula, RichFormula},
@@ -222,7 +223,7 @@ impl<'bump> Unfolder<'bump> {
                     .collect_vec();
                 let state = self.state.add_condition(
                     nvars.iter().map(|v| *v),
-                    meq(arg, s.function().f_a(nvars.iter().map(ARichFormula::from))),
+                    meq(arg, s.function().f(nvars.iter().map(ARichFormula::from))),
                 );
                 Unfolder { state, content }
             })
@@ -325,9 +326,7 @@ where
                 state_variables,
             );
 
-            let step_f = step
-                .function()
-                .f_a(vars.iter().map(|v| collision_var.get(v)));
+            let step_f = step.function().f(vars.iter().map(|v| collision_var.get(v)));
 
             // let step_origin = step_origin.apply_substitution2(&collision_var);
             // ^^^^^^^^^^^^^^^ this one is unchanged
@@ -353,9 +352,7 @@ where
                 trace!("in input");
                 let vars = step.free_variables();
                 let collision_var = make_collision_avoiding_subst(vars, state_variables);
-                let step_f = step
-                    .function()
-                    .f_a(vars.iter().map(|v| collision_var.get(v)));
+                let step_f = step.function().f(vars.iter().map(|v| collision_var.get(v)));
 
                 [step.message_arc(), step.condition_arc()]
                     .into_iter()

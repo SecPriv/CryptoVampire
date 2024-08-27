@@ -7,6 +7,7 @@ use cryptovampire_lib::{
         function::{builtin::INPUT, Function},
         manipulation::{FrozenSubst, FrozenSubstF, OneVarSubst, OneVarSubstF},
         sort::{builtins::MESSAGE, Sort},
+        utils::Applicable,
         variable::{uvar, Variable},
     },
     problem::step::Step,
@@ -59,7 +60,7 @@ where
     pub fn substitution_input(&self) -> OneVarSubstF<'bump> {
         OneVarSubst {
             id: self.input_named_var().id(),
-            f: INPUT.f_a([self.function.f_a(self.args_vars().map(|v| v.variable))]),
+            f: INPUT.f([self.function.f(self.args_vars().map(|v| v.variable))]),
         }
     }
 
@@ -70,7 +71,7 @@ where
         let formulas = args
             .iter()
             .cloned()
-            .chain([INPUT.f_a([self.function.f_a(args)])])
+            .chain([INPUT.f([self.function.f(args)])])
             .collect();
 
         FrozenSubst::new(vars, formulas)

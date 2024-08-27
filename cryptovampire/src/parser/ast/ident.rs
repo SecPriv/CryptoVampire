@@ -1,3 +1,5 @@
+use cryptovampire_lib::formula::utils::Applicable;
+
 use super::*;
 
 /// [Rule::ident]
@@ -119,6 +121,26 @@ impl<'a, S> Function<'a, S> {
 impl<'a, S: Display> Display for Function<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.name().fmt(f)
+    }
+}
+
+impl<'a, 'b, S: Clone + Borrow<str>> Applicable for &'b Function<'a, S> {
+    type Term = ast::Term<'a, S>;
+
+    fn f<U, I>(self, args: I) -> Self::Term
+    where
+        I: IntoIterator<Item = U>,
+        Self::Term: From<U>,
+    {
+        match Operation::get_operation(self.name().borrow()) {
+            Some(op) => op.apply(args.into_iter().map_into()),
+            None => ast::Application::Application {
+                span: Default::default(),
+                function: Function::clone(self),
+                args: args.into_iter().map_into().collect(),
+            }
+            .into(),
+        }
     }
 }
 

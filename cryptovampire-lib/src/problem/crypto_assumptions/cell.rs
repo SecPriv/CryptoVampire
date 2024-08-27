@@ -2,6 +2,7 @@ use std::rc::Rc;
 
 use itertools::{chain, Itertools};
 
+use crate::formula::utils::Applicable;
 use crate::{
     environement::environement::Environement,
     formula::{
@@ -48,7 +49,7 @@ impl Cell {
                         .collect();
                     let _max_var = max_var + from_usize(vars.len());
                     let nvars: Rc<[_]> = vars.iter().chain([&step_var]).cloned().collect();
-                    let cell_call = c.function().f_a(nvars.as_ref());
+                    let cell_call = c.function().f(nvars.as_ref());
 
                     let (positive, negative): (Vec<_>, Vec<_>) = c
                         .assignements()
@@ -66,7 +67,7 @@ impl Cell {
                                     .chain(fresh_vars.iter())
                                     .cloned()
                                     .collect_vec();
-                                let step_call = step.function().f_a(step.free_variables());
+                                let step_call = step.function().f(step.free_variables());
                                 let ands = formula::ands(
                                     vars.iter()
                                         .zip_eq(args.iter())
@@ -85,12 +86,9 @@ impl Cell {
                         )
                         .unzip();
                     // let cell_call = c.function().f_a(nvars.as_slice());
-                    let cell_call_prev = c.function().f_a(
-                        vars.iter()
-                            .cloned()
-                            .map_into()
-                            .chain([PRED.f_a([step_var])]),
-                    );
+                    let cell_call_prev =
+                        c.function()
+                            .f(vars.iter().cloned().map_into().chain([PRED.f([step_var])]));
                     // formula::forall(
                     //     nvars,
                     //     ((!formula::ands(negative))

@@ -13,6 +13,7 @@ use itertools::Itertools;
 use log::{error, log_enabled, trace, warn};
 
 use crate::formula::utils::formula_expander::{UnfolderBuilder, UnfoldingStateBuilder};
+use crate::formula::utils::Applicable;
 use crate::formula::variable::IntoVariableIter;
 use crate::{
     container::allocator::{ContainerTools, Residual},
@@ -210,7 +211,7 @@ where
 
             vars.push(x);
             forall(vars, {
-                let applied_fun = fun.f_a(vars_f.clone());
+                let applied_fun = fun.f(vars_f.clone());
 
                 let mut ors =
                     formula::ors(vars_f.into_iter().map(|f| self.f_a(env, x_f.clone(), f)));
@@ -268,7 +269,7 @@ where
                 .expect(&format!("failed here: {}", line!()));
             let vars: Vec<_> = sorts_to_variables(max_var, f_sorts.iter());
             let vars_f = vars.iter().map(|v| v.into_aformula()).collect_vec();
-            let f_f = fun.f_a(vars_f);
+            let f_f = fun.f(vars_f);
 
             trace!("{}:{}:{}", file!(), line!(), column!());
 
@@ -464,15 +465,15 @@ where
         }
     }
 
-    pub fn f_a<I>(&self, env: &impl KnowsRealm, x: I, m: I) -> ARichFormula<'bump>
+    pub fn f_a<V>(&self, env: &impl KnowsRealm, x: V, m: V) -> ARichFormula<'bump>
     where
-        I: Into<ARichFormula<'bump>>,
+        ARichFormula<'bump>: From<V>,
     {
         if !self.is_sound_in_smt(env) {
             TRUE.clone().into()
         } else {
             match &self.kind {
-                AbsSubtermKindG::Vampire(fun) => fun.f_a([x, m]),
+                AbsSubtermKindG::Vampire(fun) => fun.f([x, m]),
                 AbsSubtermKindG::Regular(funs) => {
                     let [x, m]: [ARichFormula; 2] = [x.into(), m.into()];
                     let sort = m.get_sort().expect_display(|| "term algebra has a sort");
@@ -483,7 +484,7 @@ where
                     );
                     funs.get(&sort.as_fo())
                         .expect(&format!("unsupported sort: {sort}, {sort:?}"))
-                        .f_a([x, m])
+                        .f::<ARichFormula<'bump>, _>([x, m])
                 }
             }
         }
@@ -652,7 +653,7 @@ pub trait AsSubterm<'bump> {
         env: &R,
         funs: &[Function<'bump>],
     ) -> Vec<ARichFormula<'bump>>;
-    fn f<R: KnowsRealm>(
+    fn apply<R: KnowsRealm>(
         &self,
         env: &R,
         x: ARichFormula<'bump>,
@@ -675,7 +676,7 @@ where
         Subterm::generate_functions_assertions(self, env, funs.iter().cloned())
     }
 
-    fn f<R: KnowsRealm>(
+    fn apply<R: KnowsRealm>(
         &self,
         env: &R,
         x: ARichFormula<'bump>,

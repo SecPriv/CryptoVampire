@@ -31,6 +31,7 @@ use cryptovampire_lib::{
             builtins::{BOOL, CONDITION, MESSAGE, NAME, STEP},
             sort_proxy::SortProxy,
         },
+        utils::Applicable,
         variable::{from_usize, uvar, Variable},
     },
 };
@@ -184,7 +185,7 @@ where
             Realm::Evaluated => IF_THEN_ELSE.clone(),
             Realm::Symbolic => IF_THEN_ELSE_TA.clone(),
         }
-        .f_a([condition, left, right]))
+        .f([condition, left, right]))
     }
 }
 
@@ -253,7 +254,7 @@ where
         let (f /* the function */, fvars /* the free vars */) =
             Function::new_find_such_that(env.container, vars, condition, left, right);
 
-        let ret = f.f_a(fvars.iter());
+        let ret = f.f(fvars.iter());
         Ok(match state.get_realm() {
             Realm::Symbolic => ret,
             _ => env.evaluator.eval(ret),
@@ -390,7 +391,7 @@ where
                 }
                 .map(ARichFormula::from);
 
-                fq.f_a(args)
+                fq.f(args)
             }
         })
     }
@@ -439,7 +440,7 @@ where
                                     .expect(&format!(
                                         "{sort} is evaluatable but not in the evaluator..."
                                     ))
-                                    .f_a([Variable { id: *id, sort }]);
+                                    .f([Variable { id: *id, sort }]);
 
                                 expected_sort
                                     .as_ref()
@@ -543,9 +544,9 @@ where
         // assert!(is_name);
         formula_realm = Some(Realm::Symbolic); // names are symbolic
         env.name_caster_collection
-            .cast(name.target(), ifun.f_a(n_args))
+            .cast(name.target(), ifun.f(n_args))
     } else {
-        ifun.f_a(n_args)
+        ifun.f(n_args)
     };
     // if we are in evaluated land, evaluate
     let formula = match (state.get_realm(), formula_realm) {
@@ -846,7 +847,7 @@ where
                             .parse(env, bvars, state, expected_sort.clone())
                             .debug_continue()?;
                         iter.try_fold(first, |acc, t| {
-                            Ok(function.get_function().f_a([
+                            Ok(function.get_function().f([
                                 acc,
                                 t.parse(env, bvars, state, expected_sort.clone())
                                     .debug_continue()?,

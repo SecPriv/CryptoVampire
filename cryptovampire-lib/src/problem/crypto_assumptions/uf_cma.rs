@@ -6,6 +6,7 @@ use itertools::{chain, Itertools};
 use log::trace;
 use static_init::dynamic;
 
+use crate::formula::utils::Applicable;
 use crate::{
     environement::{environement::Environement, traits::KnowsRealm},
     formula::{
@@ -115,7 +116,7 @@ impl<'bump> UfCma<'bump> {
 
         // base axiom
         assertions.push(Axiom::base(mforall!(m!1:message_sort, k!0:message_sort; {
-            pbl.evaluator().eval(self.verify.f_a([self.mac.f_a([m, k]), m.into(), k.into()]))
+            pbl.evaluator().eval(self.verify.f([self.mac.f([m, k]), m.into(), k.into()]))
         })));
 
         // preprocessing
@@ -154,7 +155,7 @@ impl<'bump> UfCma<'bump> {
                     into_exist_formula(iter)
                 };
 
-                forall([k], split.f_a([k_f]) >> formula)
+                forall([k], split.f([k_f]) >> formula)
             }));
 
             // general crypto axiom
@@ -163,15 +164,15 @@ impl<'bump> UfCma<'bump> {
                 formula : mforall!(m!1:message_sort, sigma!2:message_sort, k!3:nonce_sort; {
                     let k_f = pbl.name_caster().cast(message_sort, k.clone());
                     let ev = pbl.evaluator();
-                    ev.eval(self.verify.f_a([m.into(), sigma.into(), k_f.clone()])) >>
+                    ev.eval(self.verify.f([m.into(), sigma.into(), k_f.clone()])) >>
                     mexists!(u!4:message_sort; {
                         meq(ev.eval(u.clone()), ev.eval(m.clone())) &
                         (
-                            subterm_main.f_a( env,self.mac.f_a([u.into(), k_f.clone()]), m.into()) |
-                            subterm_main.f_a(env, self.mac.f_a([u.into(), k_f.clone()]), sigma.into()) |
+                            subterm_main.f_a( env,self.mac.f([u.into(), k_f.clone()]), m.into()) |
+                            subterm_main.f_a(env, self.mac.f([u.into(), k_f.clone()]), sigma.into()) |
                             subterm_key.f_a(env, k, m) |
                             subterm_key.f_a(env, k, sigma) |
-                            split.f_a([k])
+                            split.f([k])
                         )
                     })
                 }),
@@ -341,7 +342,7 @@ impl<'bump> UfCma<'bump> {
                     };
                     // let u_f = u_var.into_aformula();
 
-                    let h_of_u = self.mac.f_a([
+                    let h_of_u = self.mac.f([
                         u_var.into(),
                         pbl.name_caster().cast(MESSAGE.as_sort(), &key),
                     ]);
@@ -374,7 +375,7 @@ impl<'bump> UfCma<'bump> {
 
                         if realm.is_symbolic_realm() {
                             Some(mforall!(free_vars, {
-                                pbl.evaluator().eval(self.verify.f([
+                                pbl.evaluator().eval(self.verify.apply([
                                     signature.clone(),
                                     message.clone(),
                                     pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),
@@ -385,7 +386,7 @@ impl<'bump> UfCma<'bump> {
                             }))
                         } else {
                             Some(mforall!(free_vars, {
-                                pbl.evaluator().eval(self.verify.f([
+                                pbl.evaluator().eval(self.verify.apply([
                                     signature.clone(),
                                     message.clone(),
                                     pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),

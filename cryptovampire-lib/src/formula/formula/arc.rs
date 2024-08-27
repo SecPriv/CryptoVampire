@@ -4,6 +4,7 @@ use std::{
     ops::{BitAnd, BitOr, Deref, DerefMut, Not, Shr},
 };
 
+use crate::formula::utils::Applicable;
 use crate::formula::{
     function::builtin::{AND, IMPLIES, NOT, OR, TRUE_ARC},
     utils::formula_iterator::{FormulaIterator, IteratorFlags},
@@ -204,7 +205,7 @@ impl<'bump> BitAnd for ARichFormula<'bump> {
     type Output = Self;
 
     fn bitand(self, rhs: Self) -> Self::Output {
-        AND.f_a([self, rhs])
+        AND.f([self, rhs])
     }
 }
 
@@ -212,7 +213,7 @@ impl<'bump> BitOr for ARichFormula<'bump> {
     type Output = Self;
 
     fn bitor(self, rhs: Self) -> Self::Output {
-        OR.f_a([self, rhs])
+        OR.f([self, rhs])
     }
 }
 
@@ -220,7 +221,7 @@ impl<'bump> Not for ARichFormula<'bump> {
     type Output = Self;
 
     fn not(self) -> Self::Output {
-        NOT.f_a([self])
+        NOT.f([self])
     }
 }
 
@@ -228,7 +229,7 @@ impl<'bump> Shr for ARichFormula<'bump> {
     type Output = Self;
 
     fn shr(self, rhs: Self) -> Self::Output {
-        IMPLIES.f_a([self, rhs])
+        IMPLIES.f([self, rhs])
     }
 }
 

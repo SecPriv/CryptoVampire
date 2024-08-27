@@ -3,6 +3,7 @@ use std::{collections::BTreeMap, sync::Arc};
 use itertools::Itertools;
 use log::trace;
 
+use crate::formula::utils::Applicable;
 use crate::{
     environement::environement::Environement,
     formula::{
@@ -108,7 +109,7 @@ pub fn generate<'bump>(
                 .iter()
                 .map(|(s, fun)| {
                     mforall!(x!1:s; {
-                        EQUALITY.f_a([fun.f_a([x]), x.into()])
+                        EQUALITY.f([fun.f([x]), x.into()])
                     })
                 })
                 .map(Axiom::base),
@@ -152,9 +153,9 @@ pub fn generate<'bump>(
                             vars: vars.clone(),
                             pre: pbl
                                 .evaluator()
-                                .eval(f.f(vars.iter().map(|v| v.into_formula()))),
+                                .eval(f.apply(vars.iter().map(|v| v.into_formula()))),
                             post: ev
-                                .f_a(vars.iter().map(|v| pbl.evaluator().eval(v.into_aformula()))),
+                                .f(vars.iter().map(|v| pbl.evaluator().eval(v.into_aformula()))),
                         };
                         trace!("{:?}", out);
                         out
@@ -181,8 +182,8 @@ pub fn generate<'bump>(
                                 meq(pbl.evaluator().eval(v1), pbl.evaluator().eval(v1))
                             }));
                         let conclusion = meq(
-                            pbl.evaluator().eval(f.f_a(&vars1)), //.map(|v| v.into_formula()))),
-                            pbl.evaluator().eval(f.f_a(&vars2)),
+                            pbl.evaluator().eval(f.f(&vars1)), //.map(|v| v.into_formula()))),
+                            pbl.evaluator().eval(f.f(&vars2)),
                         );
                         mforall!(vars1.into_iter().chain(vars2.into_iter()), {
                             premise >> conclusion
@@ -201,8 +202,8 @@ pub fn generate<'bump>(
                     TermAlgebra::Cell(_) | TermAlgebra::Input(_) | TermAlgebra::NameCaster(_) => continue, // nothing specific to be done here
                     TermAlgebra::IfThenElse(_) => {
                         assertions.push(Axiom::base(mforall!(c!0:cond, l!1:msg, r!2:msg; {
-                            meq(pbl.evaluator().eval(function.f_a([c, l, r])),
-                                IF_THEN_ELSE.f_a([c, l, r].into_iter().map(|v| pbl.evaluator().eval(v))))
+                            meq(pbl.evaluator().eval(function.f([c, l, r])),
+                                IF_THEN_ELSE.f([c, l, r].into_iter().map(|v| pbl.evaluator().eval(v))))
                         })))
                     },
                     TermAlgebra::Quantifier(q) => generate_quantifier(assertions, declarations, env, pbl, function, q),
@@ -316,12 +317,12 @@ fn generate_connectives<'bump>(
     match connective {
         Connective::Equality(_) => assertions.push(Axiom::base(mforall!(a!0:msg, b!1:msg; {
             meq(
-            pbl.evaluator().eval(function.f([a.clone(), b.clone()])),
+            pbl.evaluator().eval(function.apply([a.clone(), b.clone()])),
                 meq(pbl.evaluator().eval(a), pbl.evaluator().eval(b)))
         }))),
         Connective::BaseConnective(BaseConnective::Not) => {
             assertions.push(Axiom::base(mforall!(a!0:cond; {
-                pbl.evaluator().eval(function.f([a.clone()])) >>
+                pbl.evaluator().eval(function.apply([a.clone()])) >>
                     !pbl.evaluator().eval(a)
             })))
         }
@@ -336,8 +337,8 @@ fn generate_connectives<'bump>(
                 .collect_vec();
             assertions.push(Axiom::base(mforall!(args.clone(), {
                 meq(
-                    pbl.evaluator().eval(function.f_a(&args)),
-                    f_eval.f_a(args.iter().map(|v| pbl.evaluator().eval(v))),
+                    pbl.evaluator().eval(function.f(&args)),
+                    f_eval.f(args.iter().map(|v| pbl.evaluator().eval(v))),
                 )
             })))
         }
@@ -356,7 +357,7 @@ pub fn generate_quantifier<'bump>(
         InnerQuantifier::Forall { content } => {
             assertions.push(Axiom::base(mforall!(q.free_variables.iter().cloned(), {
                 pbl.evaluator()
-                    .eval(function.f(q.free_variables.iter().map(|v| v.into_formula())))
+                    .eval(function.apply(q.free_variables.iter().map(|v| v.into_formula())))
                     >> mforall!(q.bound_variables.iter().cloned(), {
                         pbl.evaluator().eval(content)
                     })
@@ -365,7 +366,7 @@ pub fn generate_quantifier<'bump>(
         InnerQuantifier::Exists { content } => {
             assertions.push(Axiom::base(mforall!(q.free_variables.iter().cloned(), {
                 pbl.evaluator()
-                    .eval(function.f(q.free_variables.iter().map(|v| v.into_formula())))
+                    .eval(function.apply(q.free_variables.iter().map(|v| v.into_formula())))
                     >> mexists!(q.bound_variables.iter().cloned(), {
                         pbl.evaluator().eval(content)
                     })
@@ -392,7 +393,7 @@ pub fn generate_quantifier<'bump>(
 
             let substitution = {
                 let subst_source = q.bound_variables.iter().map(|v| v.id);
-                let subst_target = skolems.iter().map(|f| f.f_a(q.free_variables.iter()));
+                let subst_target = skolems.iter().map(|f| f.f(q.free_variables.iter()));
 
                 FrozenOVSubstF::from_iter(subst_source.zip_eq(subst_target).map_into())
             };
@@ -411,11 +412,13 @@ pub fn generate_quantifier<'bump>(
                     mforall!(q.free_variables.iter().cloned(), {
                         meq(
                             pbl.evaluator().eval(
-                                function.f(q.free_variables.iter().map(|v| v.into_formula())),
+                                function.apply(q.free_variables.iter().map(|v| v.into_formula())),
                             ),
-                            IF_THEN_ELSE.f([applied_condition, applied_l, applied_r]
-                                .into_iter()
-                                .map(|f| pbl.evaluator().eval(f))),
+                            IF_THEN_ELSE.apply(
+                                [applied_condition, applied_l, applied_r]
+                                    .into_iter()
+                                    .map(|f| pbl.evaluator().eval(f)),
+                            ),
                         )
                     }),
                 ]

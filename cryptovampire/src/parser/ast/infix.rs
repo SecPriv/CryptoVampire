@@ -1,3 +1,5 @@
+use cryptovampire_lib::formula::utils::Applicable;
+
 use super::*;
 
 #[derive(Derivative)]
@@ -104,5 +106,14 @@ impl Operation {
             Operation::Implies => &["=>", "implies", "==>"],
             Operation::Iff => &["<=>", "iff"],
         }
+    }
+
+    pub fn apply<'a, S>(self, args: implvec!(ast::Term<'a, S>)) -> ast::Term<'a, S> {
+        Infix {
+            span: Default::default(),
+            operation: self,
+            terms: args.into_iter().collect(),
+        }
+        .into()
     }
 }

@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
+use ast::StrApplicable;
 use log::{info, trace};
+
+use crate::ast_forall;
 
 use super::Context;
 
@@ -24,6 +27,24 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
 
     let steps = mk_steps(pdump, ctx).map(|r| r.mmap(|d| ast::AST::Step(Arc::new(d))));
 
+    let assertions = [
+        ast_forall!(x:"Message",y:"Message"; {
+            "==".app([DEFAULT_FST_PROJ_NAME.app([DEFAULT_TUPLE_NAME.app([x.clone(), y.clone()])]), x.into()])
+        }),
+        ast_forall!(x:"Message",y:"Message"; {
+            "==".app([DEFAULT_SND_PROJ_NAME.app([DEFAULT_TUPLE_NAME.app([x.clone(), y.clone()])]), y.into()])
+        }),
+    ]
+    .map(|x| ast::Assertion {
+        span: Default::default(),
+        content: x,
+        options: Default::default(),
+    })
+    .map(ast::Assert::Assertion)
+    .map(Arc::new)
+    .map(ast::AST::Assert)
+    .map(RAoO::pure);
+
     let query = mk_query(pdump, ctx).mmap(|content| {
         ast::AST::Assert(Arc::new(ast::Assert::Query(ast::Assertion {
             span: Default::default(),
@@ -42,7 +63,7 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
         - [ ] <> (i.e., !=); maybe using infix
     */
 
-    let all: Vec<_> = chain!(types, cells, macros, funs, steps, [query])
+    let all: Vec<_> = chain!(types, cells, funs, macros, steps, assertions, [query])
         .map(|x| {
             if cfg!(debug_assertions) {
                 mdo! {

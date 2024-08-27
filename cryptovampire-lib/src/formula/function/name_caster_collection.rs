@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use static_init::dynamic;
 
+use crate::formula::utils::Applicable;
 use crate::formula::{
     formula::ARichFormula,
     sort::{builtins::MESSAGE, FOSort, Sort},
@@ -30,12 +31,11 @@ impl<'bump> NameCasterCollection<'bump> {
         self.content.get(&sort.as_fo())
     }
 
-    pub fn cast(
-        &self,
-        sort: Sort<'bump>,
-        f: impl Into<ARichFormula<'bump>>,
-    ) -> ARichFormula<'bump> {
-        self.cast_function(&sort).unwrap().f_a([f])
+    pub fn cast<F>(&self, sort: Sort<'bump>, f: F) -> ARichFormula<'bump>
+    where
+        ARichFormula<'bump>: From<F>,
+    {
+        self.cast_function(&sort).unwrap().f([f])
     }
 
     pub fn content_mut(&mut self) -> &mut BTreeMap<FOSort<'bump>, Function<'bump>> {

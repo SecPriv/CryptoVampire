@@ -171,7 +171,7 @@ pub use bindings::*;
 
 /// [Term]
 mod term;
-pub use term::{InnerTerm, Term};
+pub use term::{InnerTerm, StrApplicable, Term};
 
 /// Infix terms
 mod infix;
