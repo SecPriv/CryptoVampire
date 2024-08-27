@@ -102,7 +102,7 @@ impl<'a, S: Display> Display for Step<'a, S> {
         } = self;
         write!(f, "step {name}{args}\n\t{{{condition}}}\n\t{{{message}}}")?;
         if let Some(a) = assignements {
-            write!(f, "\n\t{a}")?;
+            write!(f, "\n\t{{{a}}}")?;
         }
         write!(f, "\n{options}")
     }

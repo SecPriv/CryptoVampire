@@ -1,3 +1,4 @@
+use itertools::chain;
 use utils::implvec;
 
 use super::*;
@@ -76,6 +77,12 @@ pub struct Diff<'a> {
     pub term: Term<'a>,
 }
 
+impl<'a> Diff<'a> {
+    pub fn term(&self) -> &Term<'a> {
+        &self.term
+    }
+}
+
 impl<'a> Term<'a> {
     pub fn mk_app<S>(s: S, args: implvec!(Self)) -> Self
     where
@@ -85,5 +92,55 @@ impl<'a> Term<'a> {
             f: Box::new(Self::Fun { symb: s.into() }),
             args: args.into_iter().collect(),
         }
+    }
+
+    /// Iterate over all subterms of [self]
+    pub fn iter<'b>(&'b self) -> impl Iterator<Item = &'b Self> {
+        SubTermIterator { pile: vec![self] }
+    }
+
+    /// Iterate over all variable appering in [self]
+    /// (makes no distinction between bound and unbound variables)
+    pub fn vars<'b>(&'b self) -> impl Iterator<Item = &'b Variable<'a>> {
+        self.iter().filter_map(|t| match t {
+            Term::Var { var } => Some(var),
+            _ => None,
+        })
+    }
+}
+
+struct SubTermIterator<'a, 'b> {
+    pile: Vec<&'b Term<'a>>,
+}
+
+impl<'a, 'b> Iterator for SubTermIterator<'a, 'b> {
+    type Item = &'b Term<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.pile.pop().map(|t| {
+            match t {
+                Term::Fun { .. } | Term::Var { .. } => (),
+                Term::Action { args, .. } | Term::Name { args, .. } => {
+                    self.pile.extend(args.iter())
+                }
+                Term::App { args, f: e }
+                | Term::Macro {
+                    args, timestamp: e, ..
+                } => self.pile.extend(chain!(args.iter(), [e.as_ref()])),
+                Term::Let { decl, body, .. } => self.pile.extend([decl, body].map(Box::as_ref)),
+                Term::Tuple { elements } => self.pile.extend(elements.iter()),
+                Term::Quant { body, .. } | Term::Proj { body, .. } => self.pile.push(body.as_ref()),
+                Term::Find {
+                    condition,
+                    success,
+                    faillure,
+                    ..
+                } => self
+                    .pile
+                    .extend([condition, success, faillure].map(Box::as_ref)),
+                Term::Diff { terms } => self.pile.extend(terms.iter().map(Diff::term)),
+            };
+            t
+        })
     }
 }

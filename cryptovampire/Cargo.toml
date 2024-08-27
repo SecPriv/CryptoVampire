@@ -21,6 +21,7 @@ anyhow = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true }
 derive_builder = { workspace = true }
+bitflags = { workspace = true }
 
 pest = "2.7"
 pest_derive = "2.7"

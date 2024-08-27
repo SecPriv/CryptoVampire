@@ -72,7 +72,7 @@ impl<'a> ToAst<'a> for json::sort::Type<'a> {
             json::Type::Timestamp => mdo!(pure STEP.name().into()),
             json::Type::Index => mdo!(pure StrRef::from_static(INDEX_SORT_NAME).into()),
             json::Type::TBase(p) => {
-                if let Some(true) = ctx.dump().get_type(p).map(|s| s.is_large()) {
+                if let Some(true) = ctx.dump().get_type(p).map(|s| !s.can_be_index()) {
                     pure!(MESSAGE.name().into())
                 } else {
                     pure!(p.equiv_name_ref(&ctx).into())
@@ -113,7 +113,16 @@ impl<'a> ToAst<'a> for json::Action<'a> {
                 }
             })
             .try_collect()?;
-        let assignements: Vec<_> = updates.iter().map(|upd| upd.convert(ctx)).try_collect()?;
+        let assignements: Vec<_> = updates
+            .iter()
+            .map(|update| {
+                json::action::UpdateRef {
+                    action: self,
+                    update,
+                }
+                .convert(ctx)
+            })
+            .try_collect()?;
 
         let options = Options::default();
 
@@ -204,22 +213,43 @@ impl<'a> json::Action<'a> {
     }
 }
 
-impl<'a> ToAst<'a> for json::action::Update<'a> {
+impl<'a, 'b> ToAst<'a> for json::action::UpdateRef<'a, 'b> {
     type Target = ast::Assignement<'a, StrRef<'a>>;
 
-    fn convert<'b>(&self, ctx: Context<'b, 'a>) -> RAoO<Self::Target> {
-        let Self { symb, args, body } = self;
+    fn convert<'c>(&self, ctx: Context<'c, 'a>) -> RAoO<Self::Target> {
+        let Self {
+            action,
+            update: json::action::Update { symb, args, body },
+        } = self;
 
         // let cell = apply_fun(symb.clone(), args, ctx)?;
+        let fresh_vars: Vec<_> = args
+            .iter()
+            .flat_map(|t| t.vars())
+            .filter(|v| !action.indices.contains(v))
+            .map(|json::Variable { id, sort }| {
+                mdo! {
+                    let! sort = sort.convert(ctx);
+                    pure (ast::Variable::from(id.name().drop_guard()), sort)
+                }
+            })
+            .try_collect()?;
         let args: Vec<_> = args.iter().map(|arg| arg.convert(ctx)).try_collect()?;
         mdo! {
             let! args = Ok(AoOV::transpose_iter(args));
+            let! fresh_vars = Ok(AoOV::transpose_iter(fresh_vars.clone()));
             let! term = body.convert(ctx);
             pure ast::Assignement {
                 span: Default::default(),
-                cell: ast::Application::new_app(symb.clone().drop_guard(), args.clone()),
+                cell: ast::Application::new_app(symb.equiv_name_ref(&ctx), args.clone()),
                 term,
-                fresh_vars: None
+                fresh_vars: {
+                    if fresh_vars.is_empty() {
+                        None
+                    } else {
+                        Some(fresh_vars.iter().cloned().collect())
+                    }
+                }
             }
         }
     }

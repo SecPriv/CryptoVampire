@@ -4,6 +4,7 @@ use hashbrown::HashMap;
 use paste::paste;
 use serde::{Deserialize, Serialize};
 use utils::implvec;
+use bitflags::bitflags;
 
 use super::*;
 
@@ -55,12 +56,22 @@ macro_rules! mk_getters {
                 self.[<$name s>].iter()
             }
 
-            #[doc="get a specifi $name"]
+            #[doc="get a specific $name"]
             pub fn [<get_$name>](&self, symb: &Path<'a>) -> Option<&$t> {
                 self.[<$name s>].get(symb)
             }
         }
     };
+}
+
+bitflags! {
+    pub struct SearchKind: u8 {
+        const NAME = 1 << 0;
+        const OPERATOR = 1 << 1;
+        const ACTION = 1 << 2;
+        const CELL = 1 << 3;
+        const MACRO = 1 << 4;
+    }
 }
 
 #[allow(dead_code)]
@@ -81,6 +92,7 @@ impl<'a> ProcessedSquirrelDump<'a> {
     mk_getters!(operator: operator::Data<'a>);
     mk_getters!(macro: mmacro::Data<'a>);
     mk_getters!(type: mtype::SortData);
+
 
     pub fn actions<'b>(&'b self) -> impl Iterator<Item = &'b Action<'a>> {
         self.actions_with_symb().map(|(x, y)| y)

@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use log::trace;
 pub use path::Pathed;
 use serde::{Deserialize, Serialize};
 
@@ -16,8 +17,14 @@ pub trait Named<'a> {
 pub struct CryptoVampireStrValidator;
 
 impl utils::string_ref::Validator for CryptoVampireStrValidator {
+    #[inline]
     fn validate(&self, str: &str) -> bool {
-        str == DUMMY_VAR || !str.chars().any(|x| FORBIDDEN.contains(x))
+        let res = str == DUMMY_VAR || !str.chars().any(|x| FORBIDDEN.contains(x));
+
+        if cfg!(debug_assertions) && !res {
+            trace!("{str}");
+        }
+        res
     }
 }
 
@@ -183,5 +190,6 @@ mod tests {
     // }
 
     test_json_parser!(full1:CryptoVampireCall);
+    test_json_parser!(canauth:CryptoVampireCall);
     // test_json_parser!(term1:Term);
 }

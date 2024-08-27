@@ -97,7 +97,7 @@ impl Operation {
     pub const fn as_str_alias(self) -> &'static [&'static str] {
         match self {
             Operation::HardEq => &["===", "meq"],
-            Operation::Eq => &["==", "eq"],
+            Operation::Eq => &["=", "==", "eq"],
             Operation::Neq => &["!=", "neq"],
             Operation::Or => &["||", "or", "ors"],
             Operation::And => &["&&", "and", "ands"],

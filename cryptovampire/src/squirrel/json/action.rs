@@ -35,9 +35,15 @@ impl<'a> Ouptut<'a> {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct Update<'a> {
     #[serde(borrow)]
-    pub symb: Symb<'a>,
+    pub symb: Path<'a>,
     pub args: Vec<Term<'a>>,
     pub body: Term<'a>,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+pub struct UpdateRef<'a, 'b> {
+    pub action: &'b Action<'a>,
+    pub update: &'b Update<'a>
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]

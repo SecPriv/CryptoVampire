@@ -24,8 +24,8 @@ thiserror = { workspace = true }
 macro-attr ={ workspace = true }
 anyhow = { workspace = true }
 derive_builder = { workspace = true }
+bitflags = { workspace = true }
 
-bitflags = "2.0"
 tptp = "0.31"
 regex = "1.10"
 tempfile = "3.10"

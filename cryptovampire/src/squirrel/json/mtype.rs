@@ -12,12 +12,12 @@ pub enum SortKind {
 }
 
 impl SortKind {
-    pub fn can_be_index(&self) -> bool {
-        match self {
-            SortKind::Finite | SortKind::Fixed | SortKind::Enum => true,
-            _ => false,
-        }
-    }
+    // pub fn can_be_index(&self) -> bool {
+    //     match self {
+    //         SortKind::Finite | SortKind::Fixed | SortKind::Enum => true,
+    //         _ => false,
+    //     }
+    // }
 
     /// Returns `true` if the sort kind is [`Enum`].
     ///
@@ -87,7 +87,8 @@ macro_rules! mk_is_funs {
 
 impl SortData {
     pub fn can_be_index(&self) -> bool {
-        self.0.iter().all(|k| k.can_be_index())
+        (self.0.contains(&SortKind::Finite) && self.0.contains(&SortKind::Fixed))
+            || self.0.contains(&SortKind::Enum)
     }
 
     mk_is_funs!(

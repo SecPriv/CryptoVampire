@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use itertools::Itertools;
+use log::trace;
 
 use crate::{
     bail_at,
@@ -215,6 +216,7 @@ where
     steps
         .into_iter()
         .try_for_each(|step_cache @ StepCache { ast, step, .. }| {
+            trace!("parsing step {}", ast.name);
             let inner = parse_step(env, step_cache).debug_continue()?;
             let r_err = unsafe {
                 <ScopedContainer as ContainerTools<InnerStep<'bump>>>::initialize(step, inner)

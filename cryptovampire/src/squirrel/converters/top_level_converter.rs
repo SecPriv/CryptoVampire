@@ -58,7 +58,7 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
         - [x] convert known function (e.g. && => and)
         - [x] declare names
         - [-] make init step; possibly not needed
-        - [ ] assert tuples
+        - [x] assert tuples
         - [ ] assert crypto
         - [ ] <> (i.e., !=); maybe using infix
     */
