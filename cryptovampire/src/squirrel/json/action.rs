@@ -77,7 +77,7 @@ pub struct Action<'a> {
 }
 
 impl<'a> Action<'a> {
-    pub fn get_args<'b>(&'b self) -> impl Iterator<Item = Term<'a>> + 'b {
+    fn get_args<'b>(&'b self) -> impl Iterator<Item = Term<'a>> + 'b {
         self.action
             .iter()
             .flat_map(
@@ -101,6 +101,10 @@ impl<'a> Action<'a> {
 
     pub fn name(&self) -> &Path<'a> {
         &self.name
+    }
+    
+    pub fn indices(&self) -> &[Variable<'a>] {
+        &self.indices
     }
 }
 

@@ -31,7 +31,7 @@ pub fn convert_application<'a, 'b>(
     ctx: Context<'b, 'a>,
 ) -> RAoO<Term<'a, StrRef<'a>>> {
     match f {
-        json::Term::Fun { symb } => convert_function_application(symb, args, ctx),
+        json::Term::Fun { symb } => convert_function_or_name_application(symb, args, ctx),
         json::Term::Macro { .. }
         | json::Term::App { .. }
         | json::Term::Var { .. }
@@ -46,15 +46,6 @@ pub fn convert_application<'a, 'b>(
     }
 }
 
-/// Convert the application of a name
-pub fn convert_name_application<'a, 'b>(
-    symb: &json::path::ISymb<'a>,
-    args: &[json::Term<'a>],
-    ctx: Context<'b, 'a>,
-) -> RAoO<Term<'a, StrRef<'a>>> {
-    apply_fun(symb.equiv_name_ref(&ctx), args, ctx)
-}
-
 /// Convert the application of a function.
 ///
 /// The trickiest point of the functio is to take care of functions that take
@@ -62,14 +53,14 @@ pub fn convert_name_application<'a, 'b>(
 /// with that regard. `squirrel` uses tuples to avoid partial application of certain
 /// cryptographic function (e.g., `enc`); there is no such problem in `cryptovampire`
 /// so such a work around was never implemented, and I'm not planning to implement one.
-fn convert_function_application<'a, 'b>(
+pub fn convert_function_or_name_application<'a, 'b>(
     symb: &json::path::Path<'a>,
     args: &[json::Term<'a>],
     ctx: Context<'b, 'a>,
 ) -> RAoO<Term<'a, StrRef<'a>>> {
     let args: Vec<_> = if_chain! {
-        if let Some(f) = ctx.dump().get_operator(symb);
-        let args_type = f.sort.args.as_slice();
+        if let Some(f) = ctx.dump().get_name_or_operator_fun_type(symb);
+        let args_type = f.args.as_slice();
         if args_type.len() == 1;
         if let Some(json::sort::Type::Tuple {..}) = args_type.first();
         if let Some(json::Term::Tuple { elements }) = args.first();

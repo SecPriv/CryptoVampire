@@ -4,9 +4,12 @@ use hashbrown::HashMap;
 use paste::paste;
 use serde::{Deserialize, Serialize};
 use utils::implvec;
-use bitflags::bitflags;
 
 use super::*;
+
+// // for the documentation
+// #[cfg(doc)]
+// use super::action::ActionV;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct SquirrelDump<'a> {
@@ -64,16 +67,6 @@ macro_rules! mk_getters {
     };
 }
 
-bitflags! {
-    pub struct SearchKind: u8 {
-        const NAME = 1 << 0;
-        const OPERATOR = 1 << 1;
-        const ACTION = 1 << 2;
-        const CELL = 1 << 3;
-        const MACRO = 1 << 4;
-    }
-}
-
 #[allow(dead_code)]
 impl<'a> ProcessedSquirrelDump<'a> {
     pub fn query(&self) -> &Term<'a> {
@@ -93,9 +86,18 @@ impl<'a> ProcessedSquirrelDump<'a> {
     mk_getters!(macro: mmacro::Data<'a>);
     mk_getters!(type: mtype::SortData);
 
+    /// Get the [FunctionType] associated to an [Operator] or a [Name] given it's
+    /// [Path]. It returns [None] if it cannot find either.
+    ///
+    /// **NB**: this will look for an [Operator] first
+    pub fn get_name_or_operator_fun_type(&self, symb: &Path<'a>) -> Option<&FunctionType<'a>> {
+        self.get_operator(symb)
+            .map(|o| &o.sort)
+            .or_else(|| self.get_name(symb))
+    }
 
     pub fn actions<'b>(&'b self) -> impl Iterator<Item = &'b Action<'a>> {
-        self.actions_with_symb().map(|(x, y)| y)
+        self.actions_with_symb().map(|(_, y)| y)
     }
 
     pub fn actions_with_symb<'b>(&'b self) -> impl Iterator<Item = (&'b Path<'a>, &'b Action<'a>)> {
@@ -106,6 +108,11 @@ impl<'a> ProcessedSquirrelDump<'a> {
         self.actions.get(k).map(Arc::as_ref)
     }
 
+    /// Try to mach some magic the magic `squirrel` to use
+    /// [ActionV] to find an [Action]. The type of `v` corresponds to an
+    /// [ActionV] using a slice instead of a [Vec].
+    ///
+    /// [ActionV]: super::action::ActionV
     pub fn get_action_from_action_v(
         &self,
         v: &[action::Item<Vec<Variable<'a>>>],

@@ -50,7 +50,9 @@ impl<'a> ToAst<'a> for json::Term<'a> {
             json::Term::Proj { id, body } => convert_projection(*id, body, ctx),
             json::Term::Diff { terms } => convert_diff(terms, ctx),
             json::Term::App { f, args } => convert_application(f, args, ctx),
-            json::Term::Name { symb, args } => convert_name_application(symb, args, ctx),
+            json::Term::Name { symb, args } => {
+                convert_function_or_name_application(symb.path(), args, ctx)
+            }
             json::Term::Macro {
                 symb,
                 args,
