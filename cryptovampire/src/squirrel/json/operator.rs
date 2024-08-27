@@ -85,4 +85,10 @@ pub struct Data<'a> {
     pub sort: FunctionType<'a>,
     pub def: Def<'a>,
 }
+
+impl<'a> Data<'a> {
+    pub fn def(&self) -> &Def<'a> {
+        &self.def
+    }
+}
 pub type Operator<'a> = Content<'a, operator::Data<'a>>;

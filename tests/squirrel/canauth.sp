@@ -109,5 +109,6 @@ lemma counterIncreaseUpdateSA(i,j:index):
   cond@SenderA(i,j) =>
   cellA(i)@pred(SenderA(i,j)) ~< cellA(i)@SenderA(i,j).
 Proof.
+  use orderSucc. use orderEqSucc. use orderStrict. use orderTrans.
   cryptovampire.
 Qed.

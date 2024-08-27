@@ -44,6 +44,7 @@ static BUILTIN_FUNCTIONS: HashMap<&'static str, StrRef<'static>> = {
         ("ø", EMPTY.name()),
         ("happens", HAPPENS.name()),
         ("pred", PRED.name()),
+        ("xor", "_$xor".into())
     ]
     .into_iter()
     .collect()

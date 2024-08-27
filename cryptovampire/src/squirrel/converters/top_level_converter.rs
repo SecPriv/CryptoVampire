@@ -27,23 +27,12 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
 
     let steps = mk_steps(pdump, ctx).map(|r| r.mmap(|d| ast::AST::Step(Arc::new(d))));
 
-    let assertions = [
-        ast_forall!(x:"Message",y:"Message"; {
-            "==".app([DEFAULT_FST_PROJ_NAME.app([DEFAULT_TUPLE_NAME.app([x.clone(), y.clone()])]), x.into()])
-        }),
-        ast_forall!(x:"Message",y:"Message"; {
-            "==".app([DEFAULT_SND_PROJ_NAME.app([DEFAULT_TUPLE_NAME.app([x.clone(), y.clone()])]), y.into()])
-        }),
-    ]
-    .map(|x| ast::Assertion {
-        span: Default::default(),
-        content: x,
-        options: Default::default(),
-    })
-    .map(ast::Assert::Assertion)
-    .map(Arc::new)
-    .map(ast::AST::Assert)
-    .map(RAoO::pure);
+    let assertions = mk_assertions()
+        .map(Arc::new)
+        .map(ast::AST::Assert)
+        .map(RAoO::pure);
+
+    let assert_crypto = assert_crypto(pdump, ctx).map(RAoO::pure);
 
     let query = mk_query(pdump, ctx).mmap(|content| {
         ast::AST::Assert(Arc::new(ast::Assert::Query(ast::Assertion {
@@ -63,24 +52,157 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
         - [ ] <> (i.e., !=); maybe using infix
     */
 
-    let all: Vec<_> = chain!(types, cells, funs, macros, steps, assertions, [query])
-        .map(|x| {
-            if cfg!(debug_assertions) {
-                mdo! {
-                    let! x = x;
-                    pure {
-                        trace!("converted:\n\t{x}");
-                        x
-                    }
+    let all: Vec<_> = chain!(
+        types,
+        cells,
+        funs,
+        macros,
+        steps,
+        assertions,
+        assert_crypto,
+        [query]
+    )
+    .map(|x| {
+        if cfg!(debug_assertions) {
+            mdo! {
+                let! x = x;
+                pure {
+                    trace!("converted:\n\t{x}");
+                    x
                 }
-            } else {
-                x
             }
-        })
-        .try_collect()?;
+        } else {
+            x
+        }
+    })
+    .try_collect()?;
     mdo! {
       let! content = Ok(AoOV::transpose_iter(all));
       pure ast::ASTList {content, begining: None}
+    }
+}
+
+/// Make basic assertions
+fn mk_assertions<'a>() -> [ast::Assert<'a, StrRef<'a>>; 2] {
+    [
+        ast_forall!(x:"Message",y:"Message"; {
+            "==".app([DEFAULT_FST_PROJ_NAME.app([DEFAULT_TUPLE_NAME.app([x.clone(), y.clone()])]), x.into()])
+        }),
+        ast_forall!(x:"Message",y:"Message"; {
+            "==".app([DEFAULT_SND_PROJ_NAME.app([DEFAULT_TUPLE_NAME.app([x.clone(), y.clone()])]), y.into()])
+        }),
+    ]
+    .map(|x| ast::Assertion {
+        span: Default::default(),
+        content: x,
+        options: Default::default(),
+    })
+    .map(ast::Assert::Assertion)
+}
+
+use assert_crypto::assert_crypto;
+mod assert_crypto {
+    use cryptovampire_lib::formula::sort::builtins::{BOOL, MESSAGE};
+    use itertools::Either;
+    use json::path::Path;
+
+    use super::*;
+
+    pub fn assert_crypto<'a, 'b>(
+        pdump: &'b ProcessedSquirrelDump<'a>,
+        ctx: Context<'b, 'a>,
+    ) -> impl Iterator<Item = ast::AST<'a, StrRef<'a>>> + 'b {
+        chain!(
+            ["nonce", "memory_cell"].map(|s| {
+                ast::AST::AssertCrypto(Arc::new(ast::AssertCrypto {
+                    span: Default::default(),
+                    name: StrRef::from(s).into(),
+                    functions: vec![],
+                    options: Default::default(),
+                }))
+            }),
+            pdump
+                .operators_with_symb()
+                .filter_map(move |(symb, f)| {
+                    use json::operator::{AbstractDef, Def};
+                    match f.def() {
+                        Def::Concrete(_) => None,
+                        Def::Abstract {
+                            abstract_def,
+                            associated_fun,
+                        } => match abstract_def {
+                            AbstractDef::Hash => {
+                                Some(Either::Left(assert_euf(ctx, symb, None, None)))
+                            }
+                            AbstractDef::SEnc => {
+                                let sdec = associated_fun
+                                    .first()
+                                    .expect("missing associated function in sdec");
+                                Some(Either::Right(
+                                    [assert_int_ctxt(ctx, symb, sdec)].into_iter(),
+                                ))
+                            }
+                            AbstractDef::CheckSign => {
+                                let mut iter = associated_fun.iter();
+                                let sign =
+                                    iter.next().expect("missing associated function in sign");
+                                let vk = iter.next();
+                                Some(Either::Left(assert_euf(ctx, sign, Some(symb), vk)))
+                            }
+                            _ => None,
+                        },
+                    }
+                })
+                .flatten()
+        )
+    }
+
+    fn assert_euf<'a, 'b>(
+        ctx: Context<'b, 'a>,
+        hash: &Path<'a>,
+        verify: Option<&Path<'a>>,
+        vk: Option<&Path<'a>>,
+    ) -> impl Iterator<Item = ast::AST<'a, StrRef<'a>>> + 'b {
+        let mut new_fun = None;
+        let verify = if let Some(verify) = verify {
+            ast::Function::from_name(verify.equiv_name_ref(&ctx))
+        } else {
+            // declare a dummy verify
+            let name: StrRef = format!("verify${}", hash.equiv_name_ref(&ctx)).into();
+            new_fun = Some(ast::DeclareFunction::new(
+                name.clone(),
+                std::iter::repeat(MESSAGE.name()).take(3),
+                BOOL.name(),
+            ));
+            ast::Function::from_name(name)
+        };
+        let vk = vk.map(|vk| ast::Function::from_name(vk.equiv_name_ref(&ctx)));
+        let hash = ast::Function::from_name(hash.equiv_name_ref(&ctx));
+        chain!(
+            [ast::AssertCrypto {
+                span: Default::default(),
+                name: StrRef::from("euf-cma").into(),
+                functions: chain!([hash, verify], vk).collect(),
+                options: Default::default(),
+            }]
+            .map(Arc::new)
+            .map(ast::AST::AssertCrypto),
+            new_fun.map(|d| ast::AST::Declaration(Arc::new(ast::Declaration::Function(d))))
+        )
+    }
+
+    fn assert_int_ctxt<'a, 'b>(
+        ctx: Context<'b, 'a>,
+        senc: &Path<'a>,
+        sdec: &Path<'a>,
+    ) -> ast::AST<'a, StrRef<'a>> {
+        let funs = [senc, sdec].map(|f| ast::Function::from_name(f.equiv_name_ref(&ctx)));
+        ast::AST::AssertCrypto(Arc::new(ast::AssertCrypto {
+            span: Default::default(),
+            name: StrRef::from("int_ctxt").into(),
+            functions: funs.into(),
+            options: Default::default(),
+        }))
     }
 }
 
