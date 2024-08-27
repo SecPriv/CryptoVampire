@@ -11,7 +11,6 @@ pub enum Quant {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-#[serde(tag = "constructor")]
 pub enum Term<'a> {
     App {
         #[serde(borrow)]
