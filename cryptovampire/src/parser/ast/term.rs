@@ -267,7 +267,7 @@ impl<'a, S: Clone> From<VariableBinding<'a, S>> for Term<'a, S> {
 }
 
 mod macros {
-    use super::*;
+
     /// same as [cryptovampire_lib::mforall] but for [Term]
     #[macro_export]
     macro_rules! ast_forall {

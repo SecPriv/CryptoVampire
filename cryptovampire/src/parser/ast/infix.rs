@@ -1,5 +1,3 @@
-use cryptovampire_lib::formula::utils::Applicable;
-
 use super::*;
 
 #[derive(Derivative)]
