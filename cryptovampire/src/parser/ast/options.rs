@@ -75,3 +75,21 @@ impl<'a, 'b, S> IntoIterator for &'b Options<'a, S> {
         self.options.iter()
     }
 }
+
+impl<'a, S> FromIterator<S> for Options<'a, S> {
+    fn from_iter<T: IntoIterator<Item = S>>(iter: T) -> Self {
+        iter.into_iter()
+            .map(Ident::from)
+            .map(MOption::from)
+            .collect()
+    }
+}
+
+impl<'a, S> FromIterator<MOption<'a, S>> for Options<'a, S> {
+    fn from_iter<T: IntoIterator<Item = MOption<'a, S>>>(iter: T) -> Self {
+        Options {
+            span: Default::default(),
+            options: iter.into_iter().collect(),
+        }
+    }
+}

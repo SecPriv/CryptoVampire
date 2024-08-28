@@ -165,6 +165,7 @@ mod assert_crypto {
         vk: Option<&OperatorName<'a>>,
     ) -> impl Iterator<Item = ast::AST<'a, StrRef<'a>>> + 'b {
         let mut new_fun = None;
+        let is_hmac = verify.is_none();
         let verify = if let Some(verify) = verify {
             ast::Function::from_name(verify.sanitized(&ctx))
         } else {
@@ -179,12 +180,20 @@ mod assert_crypto {
         };
         let vk = vk.map(|vk| ast::Function::from_name(vk.sanitized(&ctx)));
         let hash = ast::Function::from_name(hash.sanitized(&ctx));
+        let options = if is_hmac {
+            assert!(vk.is_none());
+            [StrRef::from("hmac")]
+                .into_iter()
+                .collect()
+        } else {
+            Default::default()
+        };
         chain!(
             [ast::AssertCrypto {
                 span: Default::default(),
                 name: StrRef::from("euf-cma").into(),
                 functions: chain!([hash, verify], vk).collect(),
-                options: Default::default(),
+                options,
             }]
             .map(Arc::new)
             .map(ast::AST::AssertCrypto),
