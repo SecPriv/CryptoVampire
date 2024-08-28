@@ -6,7 +6,7 @@ use crate::{
     parser::ast::{self, TypedArgument},
     squirrel::{
         converters::ast_convertion::ToAst,
-        json::{self},
+        json::{self}, Sanitizable,
     },
 };
 
@@ -50,8 +50,8 @@ pub fn to_variable_binding<'a, 'b>(
         .map(|x| {
             x.and_then(|var| {
                 mdo! {
-                    let! sort = var.sort.convert(ctx);
-                    pure (var.id.name().drop_guard(), sort)
+                    let! sort = var.sort().convert(ctx);
+                    pure (var.sanitized(&ctx), sort)
                 }
             })
         })

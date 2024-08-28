@@ -112,8 +112,8 @@ fn mk_depends_lemma<'a, 'b>(
         .iter()
         .map(|var| {
             mdo! {
-                let! sort = var.sort.convert(ctx);
-                pure (var.id.name().drop_guard(), sort)
+                let! sort = var.sort().convert(ctx);
+                pure (var.sanitized(&ctx), sort)
             }
         })
         .try_collect()?;
@@ -169,7 +169,7 @@ fn mk_mutex_lemma<'a, 'b>(
         .iter()
         .map(|var| {
             mdo! {
-                let! sort = var.sort.convert(ctx);
+                let! sort = var.sort().convert(ctx);
                 pure (var.sanitized(&ctx), sort)
             }
         })

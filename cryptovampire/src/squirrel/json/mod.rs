@@ -120,9 +120,9 @@ pub use sort::Type;
 // #[serde(rename_all = "PascalCase")]
 pub struct Variable<'a> {
     #[serde(borrow)]
-    pub id: Ident<'a>,
+    id: Ident<'a>,
     #[serde(rename = "ty")]
-    pub sort: Box<Type<'a>>,
+    sort: Box<Type<'a>>,
 }
 
 impl<'a> Variable<'a> {

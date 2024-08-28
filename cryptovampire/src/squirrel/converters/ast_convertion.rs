@@ -1,6 +1,9 @@
 use cryptovampire_lib::formula::sort::builtins::{BOOL, MESSAGE, NAME, STEP};
 use itertools::{chain, Either, Itertools};
-use utils::{all_or_one::AoOV, mdo, monad::Monad, pure, string_ref::StrRef, traits::NicerError, vecref::VecRef};
+use utils::{
+    all_or_one::AoOV, mdo, monad::Monad, pure, string_ref::StrRef, traits::NicerError,
+    vecref::VecRef,
+};
 
 use crate::{
     bail_at, err_at,
@@ -10,7 +13,13 @@ use crate::{
     },
     squirrel::{
         converters::ContextBuilder,
-        json::{self, mmacro, operator::{OperatorName, OperatorNameRef}, path::Path, NameNameRef, Pathed}, Sanitizable,
+        json::{
+            self, mmacro,
+            operator::{OperatorName, OperatorNameRef},
+            path::Path,
+            NameNameRef, Pathed,
+        },
+        Sanitizable,
     },
 };
 
@@ -52,7 +61,11 @@ impl<'a> ToAst<'a> for json::Term<'a> {
             json::Term::App { f, args } => convert_application(f, args, ctx),
             json::Term::Name { symb, args } => {
                 let symb = NameNameRef(symb.path());
-                convert_function_or_name_application::<_, OperatorName>(Either::Left(&symb), args, ctx)
+                convert_function_or_name_application::<_, OperatorName>(
+                    Either::Left(&symb),
+                    args,
+                    ctx,
+                )
             }
             json::Term::Macro {
                 symb,
@@ -81,13 +94,14 @@ impl<'a> ToAst<'a> for json::sort::Type<'a> {
                     pure!(p.sanitized(&ctx).into())
                 }
             }
-            json::Type::TVar { .. }
-            | json::Type::TUnivar { .. }
-            | json::Type::Tuple { .. }
-            | json::Type::Fun { .. } => Err(err_at!(@ "unsupported argument: {}", serde_json::to_string_pretty(self).unwrap())),
+            json::Type::Tuple { .. } => pure!(MESSAGE.name().into()),
+            json::Type::TVar { .. } | json::Type::TUnivar { .. } | json::Type::Fun { .. } => Err(
+                err_at!(@ "unsupported argument: {}", serde_json::to_string_pretty(self).unwrap()),
+            ),
 
             json::Type::Name => pure!(NAME.name().into()),
-        }.debug_continue()
+        }
+        .debug_continue()
     }
 }
 
@@ -111,8 +125,8 @@ impl<'a> ToAst<'a> for json::Action<'a> {
             .iter()
             .map(|var| {
                 mdo! {
-                    let! sort = var.sort.convert(ctx);
-                    pure (var.id.name().drop_guard(), sort)
+                    let! sort = var.sort().convert(ctx);
+                    pure (var.sanitized(&ctx), sort)
                 }
             })
             .try_collect()?;
@@ -207,7 +221,7 @@ impl<'a> json::Action<'a> {
                         let! acc = Ok(acc);
                         let! input = input.convert(ctx);
                         let! sort = var.sort().convert(ctx);
-                        let var = (var.id.name().drop_guard(), sort).into();
+                        let var = (var.sanitized(&ctx), sort).into();
                         pure Term::letin(var, input.clone(), acc.clone())
                     }
                 })
@@ -230,10 +244,10 @@ impl<'a, 'b> ToAst<'a> for json::action::UpdateRef<'a, 'b> {
             .iter()
             .flat_map(|t| t.vars())
             .filter(|v| !action.indices.contains(v))
-            .map(|json::Variable { id, sort }| {
+            .map(|var| {
                 mdo! {
-                    let! sort = sort.convert(ctx);
-                    pure (ast::Variable::from(id.name().drop_guard()), sort)
+                    let! sort = var.sort().convert(ctx);
+                    pure (ast::Variable::from(var.sanitized(&ctx)), sort)
                 }
             })
             .try_collect()?;
@@ -320,8 +334,8 @@ impl<'a, 'b> ToAst<'a> for ConcreteMacro<'a, 'b> {
             .iter()
             .map(|var| {
                 mdo! {
-                    let! sort = var.sort.convert(ctx);
-                    pure (var.id.name().drop_guard(), sort)
+                    let! sort = var.sort().convert(ctx);
+                    pure (var.sanitized(&ctx), sort)
                 }
             })
             .try_collect()?;

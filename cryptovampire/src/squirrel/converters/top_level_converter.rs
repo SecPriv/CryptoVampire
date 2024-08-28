@@ -311,10 +311,10 @@ fn mk_funs_and_names<'a, 'b>(
         .debug("attempting to convert function:\n\t")
         .filter_map(move |(symb, data)| {
             // filtering out builtin and forbidden functions
-            let symb = symb.sanitized(&ctx);
-            (!(ctx.forbidden_function().contains(symb.as_ref())
-                || ctx.builtin_function().contains_key(symb.as_ref())))
-            .then_some((symb, data))
+            let symb_str_ref = symb.to_str_ref();
+            (!(ctx.forbidden_function().contains(symb_str_ref.as_ref())
+                || ctx.builtin_function().contains(symb_str_ref.as_ref())))
+            .then(|| (symb.sanitized(&ctx), data))
         })
         .filter_map(
             |(

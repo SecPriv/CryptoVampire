@@ -22,12 +22,19 @@ use utils::{
 use crate::{
     bail_at,
     parser::{ast, InputError},
-    squirrel::json::{self, MacroRef, Pathed},
+    squirrel::json::{self, MacroRef, Pathed,},
+    // squirrel::Sanitizable
 };
 
-/// Functions that already exists in cv and need to be renamed
+
+/// Functions who name is fixed
+/// 
+/// When the symbol's [Sanitizable::to_str_ref] is in the keys,
+/// then we use the associated value
+/// 
+/// [Sanitizable]: crate::squirrel::Sanitizable
 #[dynamic]
-static BUILTIN_FUNCTIONS: HashMap<&'static str, StrRef<'static>> = {
+static REMMAPPED_FUNCTION: HashMap<&'static str, StrRef<'static>> = {
     [
         ("&&", AND.name()),
         ("and", AND.name()),
@@ -45,7 +52,12 @@ static BUILTIN_FUNCTIONS: HashMap<&'static str, StrRef<'static>> = {
         ("ø", EMPTY.name()),
         ("happens", HAPPENS.name()),
         ("pred", PRED.name()),
-        ("xor", "_$xor".into()),
+        // ("xor", "_$xor".into()),
+        ("init", "init".into()),
+        (DEFAULT_TUPLE_NAME_NAME, DEFAULT_TUPLE_NAME.clone()),
+        (DEFAULT_FST_PROJ_NAME_NAME, DEFAULT_FST_PROJ_NAME.clone()),
+        (DEFAULT_SND_PROJ_NAME_NAME, DEFAULT_SND_PROJ_NAME.clone()),
+        ("input", "input".into())
     ]
     .into_iter()
     .collect()
@@ -55,6 +67,15 @@ static BUILTIN_FUNCTIONS: HashMap<&'static str, StrRef<'static>> = {
 #[dynamic]
 static FORBIDDEN_FUNCTIONS: HashSet<&'static str> =
     ["diff", ">", ">=", "att", "qatt"].into_iter().collect();
+
+/// Symbols that should not be decalred
+#[dynamic]
+static BUILTIN_FUNCTION: HashSet<&'static str> = [
+    "&&", "||", "and", "or", "<=>", "=>", "=", "<=", "<", "not", "true",
+    "false", "empty", "ø", "happens", "pred"
+]
+.into_iter()
+.collect();
 
 use super::{
     json::{ProcessedSquirrelDump, SquirrelDump},
@@ -72,9 +93,14 @@ pub use top_level_converter::convert_squirrel_dump;
 mod top_level_converter;
 
 // FIXME: do it better
-const DEFAULT_TUPLE_NAME: StrRef<'static> = StrRef::from_static("pair");
-const DEFAULT_FST_PROJ_NAME: StrRef<'static> = StrRef::from_static("fst");
-const DEFAULT_SND_PROJ_NAME: StrRef<'static> = StrRef::from_static("snd");
+
+const DEFAULT_TUPLE_NAME_NAME: &'static str = "pair";
+const DEFAULT_FST_PROJ_NAME_NAME: &'static str = "fst";
+const DEFAULT_SND_PROJ_NAME_NAME: &'static str = "snd";
+
+const DEFAULT_TUPLE_NAME: StrRef<'static> = StrRef::from_static(&DEFAULT_TUPLE_NAME_NAME);
+const DEFAULT_FST_PROJ_NAME: StrRef<'static> = StrRef::from_static(&DEFAULT_FST_PROJ_NAME_NAME);
+const DEFAULT_SND_PROJ_NAME: StrRef<'static> = StrRef::from_static(&DEFAULT_SND_PROJ_NAME_NAME);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Builder)]
 #[builder(name = "ContextBuilder")]
@@ -113,12 +139,16 @@ impl<'a, 'str> Context<'a, 'str> {
     //     self.current_step
     // }
 
-    fn builtin_function(&self) -> &'static HashMap<&'static str, StrRef<'static>> {
-        &BUILTIN_FUNCTIONS
+    fn remmaped_function(&self) -> &'static HashMap<&'static str, StrRef<'static>> {
+        &REMMAPPED_FUNCTION
     }
 
     fn forbidden_function(&self) -> &'static HashSet<&'static str> {
         &FORBIDDEN_FUNCTIONS
+    }
+
+    fn builtin_function(&self) -> &'static HashSet<&'static str> {
+        &BUILTIN_FUNCTION
     }
 }
 
@@ -137,7 +167,7 @@ static SMT_SAFE: Result<base64::engine::GeneralPurpose, base64::alphabet::ParseA
 impl<'a, 'str> Sanitizer for Context<'a, 'str> {
     fn sanitize<'b, S: super::Sanitizable<'b>>(&self, str: &S) -> StrRef<'b> {
         let str_ref = str.to_str_ref();
-        self.builtin_function()
+        self.remmaped_function()
             .get(str_ref.as_str())
             .cloned()
             .unwrap_or_else(|| {

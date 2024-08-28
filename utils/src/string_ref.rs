@@ -108,6 +108,15 @@ impl<'a> StrRef<'a> {
     }
 }
 
+impl<V> StrRef<'static, V> {
+    pub fn as_static_str(&'static self) -> &'static str {
+        match &self.inner {
+            Inner::Borrowed(s) => s,
+            Inner::Owned(s) => s.as_ref(),
+        }
+    }
+}
+
 impl<'a, T> PartialEq for StrRef<'a, T> {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
