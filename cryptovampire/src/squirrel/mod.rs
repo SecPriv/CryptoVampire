@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use anyhow::Context;
 use converters::convert_squirrel_dump;
 use itertools::{Either, Itertools};
@@ -57,6 +59,21 @@ pub enum SanitizeKind {
     Cell,
     Name,
     Sort
+}
+
+impl Display for SanitizeKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
+            SanitizeKind::Variable => "var",
+            SanitizeKind::Function => "fun",
+            SanitizeKind::Step => "step",
+            SanitizeKind::Macro => "macro",
+            SanitizeKind::Cell => "cell",
+            SanitizeKind::Name => "name",
+            SanitizeKind::Sort => "sort",
+        };
+        write!(f, "{str}$")
+    }
 }
 
 pub trait Sanitizable<'a> {

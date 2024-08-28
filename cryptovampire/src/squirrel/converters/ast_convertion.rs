@@ -1,6 +1,6 @@
 use cryptovampire_lib::formula::sort::builtins::{BOOL, MESSAGE, NAME, STEP};
 use itertools::{chain, Either, Itertools};
-use utils::{all_or_one::AoOV, mdo, monad::Monad, pure, string_ref::StrRef, vecref::VecRef};
+use utils::{all_or_one::AoOV, mdo, monad::Monad, pure, string_ref::StrRef, traits::NicerError, vecref::VecRef};
 
 use crate::{
     bail_at, err_at,
@@ -84,10 +84,10 @@ impl<'a> ToAst<'a> for json::sort::Type<'a> {
             json::Type::TVar { .. }
             | json::Type::TUnivar { .. }
             | json::Type::Tuple { .. }
-            | json::Type::Fun { .. } => Err(err_at!(@ "unsupported argument")),
+            | json::Type::Fun { .. } => Err(err_at!(@ "unsupported argument: {}", serde_json::to_string_pretty(self).unwrap())),
 
             json::Type::Name => pure!(NAME.name().into()),
-        }
+        }.debug_continue()
     }
 }
 

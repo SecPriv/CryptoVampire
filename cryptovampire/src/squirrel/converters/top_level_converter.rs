@@ -339,6 +339,7 @@ fn mk_funs_and_names<'a, 'b>(
                 bail_at!(@ "polymorphism...")
             }
             out.convert(ctx).bind(|sort| {
+                trace!("converting {symb} with sort {sort}");
                 // let args: Vec<_> = args.iter().map(|arg| arg.convert(ctx)).try_collect()?;
                 let args: Vec<_> = {
                     let args = match args.last() {

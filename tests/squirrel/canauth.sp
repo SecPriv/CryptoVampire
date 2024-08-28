@@ -21,6 +21,7 @@ SECURITY PROPERTIES
 - authentication
 - injectivity
 *******************************************************************************)
+set postQuantumSound=false./var/folders/hs/0fptdsj112q2nsknls1433x00000gn/T/cryptovampire-stdin855325.json
 
 hash hmac
 

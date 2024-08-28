@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use ast_convertion::{ConcreteMacro, ToAst, INDEX_SORT_NAME};
+use base64::Engine;
 use cryptovampire_lib::formula::function::builtin::{
     AND, EMPTY, EQUALITY, FALSE_F, HAPPENS, IMPLIES, LESS_THAN_EQ_STEP, LESS_THAN_STEP, NOT, OR,
     PRED, TRUE_F,
@@ -121,9 +122,33 @@ impl<'a, 'str> Context<'a, 'str> {
     }
 }
 
+static SMT_SAFE: Result<base64::engine::GeneralPurpose, base64::alphabet::ParseAlphabetError> = {
+    match base64::alphabet::Alphabet::new(
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789#$",
+    ) {
+        Ok(a) => Ok(base64::engine::GeneralPurpose::new(
+            &a,
+            base64::engine::general_purpose::NO_PAD,
+        )),
+        Err(e) => Err(e),
+    }
+};
+
 impl<'a, 'str> Sanitizer for Context<'a, 'str> {
     fn sanitize<'b, S: super::Sanitizable<'b>>(&self, str: &S) -> StrRef<'b> {
-        todo!()
+        let str_ref = str.to_str_ref();
+        self.builtin_function()
+            .get(str_ref.as_str())
+            .cloned()
+            .unwrap_or_else(|| {
+                let str_ref = if str_ref.chars().all(|s| s.is_alphanumeric()) {
+                    str_ref.as_str()
+                } else {
+                    let encoded = SMT_SAFE.as_ref().unwrap().encode(str_ref.as_str());
+                    &format!("$base64${encoded}")
+                };
+                format!("{:}{str_ref}", str.sanitize_kind()).into()
+            })
     }
     // fn sanitize<'b>(&self, str: &StrRef<'b>) -> StrRef<'b> {
     //     // self.builtin_function()
