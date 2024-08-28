@@ -174,7 +174,7 @@ impl<'a, 'str> Sanitizer for Context<'a, 'str> {
                     str_ref.as_str()
                 } else {
                     let encoded = SMT_SAFE.as_ref().unwrap().encode(str_ref.as_str());
-                    &format!("$base64${encoded}")
+                    &format!("_base64_{encoded}")
                 };
                 format!("{:}{str_ref}", str.sanitize_kind()).into()
             })

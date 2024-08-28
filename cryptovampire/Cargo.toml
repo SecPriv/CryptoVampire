@@ -34,3 +34,4 @@ base64 = "0.22.1"
 
 [dev-dependencies]
 serde_path_to_error = "0.1"
+

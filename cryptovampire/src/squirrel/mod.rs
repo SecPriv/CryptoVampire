@@ -43,7 +43,7 @@ pub fn run_from_json(mut args: Args, str: &str) -> anyhow::Result<Vec<Return>> {
                 None => (),
                 Some(location) => *location = location.join(&format!("{i}")),
             }
-            run_from_ast(&args, ast).with_context(|| format!("failed running the {i:}th problem"))
+            run_from_ast(&args, ast)
         })
         .try_collect()
 }
@@ -70,7 +70,7 @@ impl Display for SanitizeKind {
             SanitizeKind::Name => "name",
             SanitizeKind::Sort => "sort",
         };
-        write!(f, "{str}$")
+        write!(f, "{str}_")
     }
 }
 

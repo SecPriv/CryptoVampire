@@ -95,7 +95,7 @@ impl<'a, S: Display> Display for AssertCrypto<'a, S> {
         write!(
             f,
             "assert-crypto {name} {} {options}",
-            functions.iter().format(", ")
+            functions.iter().format(" ")
         )
     }
 }

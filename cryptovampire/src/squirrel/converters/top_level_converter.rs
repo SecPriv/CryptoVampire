@@ -169,7 +169,7 @@ mod assert_crypto {
             ast::Function::from_name(verify.sanitized(&ctx))
         } else {
             // declare a dummy verify
-            let name: StrRef = format!("verify${}", hash.sanitized(&ctx)).into();
+            let name: StrRef = format!("verify_{}", hash.sanitized(&ctx)).into();
             new_fun = Some(ast::DeclareFunction::new(
                 name.clone(),
                 std::iter::repeat(MESSAGE.name()).take(3),
