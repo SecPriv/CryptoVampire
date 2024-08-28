@@ -36,6 +36,12 @@ fn main() {
         cryptovampire::cli::Input::SquirrelJSON => run_from_json(args, &str).map(Return::Many),
     };
 
+    let res = if cfg!(debug_assertions) {
+        Ok(res.unwrap())
+    } else {
+        res
+    };
+
     match output_format {
         cryptovampire::cli::Output::Quiet => (),
         cryptovampire::cli::Output::Stdout => {

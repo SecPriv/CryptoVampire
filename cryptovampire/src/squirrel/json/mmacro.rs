@@ -1,6 +1,8 @@
 use super::*;
 use serde::{Deserialize, Serialize};
 
+new_name!(MacroName:Macro);
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum Data<'a> {
     General(#[serde(borrow)] GeneralMacro<'a>),
@@ -113,5 +115,6 @@ pub mod action {
         Strict,
     }
 }
-pub type Macro<'a> = Content<'a, mmacro::Data<'a>>;
-pub type MacroRef<'a, 'b> = ContentRef<'a, 'b, mmacro::Data<'a>>;
+
+pub type Macro<'a> = Content<MacroName<'a>, Data<'a>>;
+pub type MacroRef<'a, 'b> = ContentRef<'b, MacroName<'a>, Data<'a>>;

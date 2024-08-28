@@ -11,7 +11,7 @@ use crate::{
         ast::{self, Application, Order, OrderOperation, QuantifierKind},
         InputError,
     },
-    squirrel::json::{self, action::AT, Named, Pathed},
+    squirrel::{json::{self, action::AT,  Pathed}, Sanitizable},
 };
 
 /// This is a somewhat dump copy of `Lemma.mk_depends_mutex` in `squirrel`.
@@ -104,7 +104,7 @@ fn mk_depends_lemma<'a, 'b>(
     let [idx_a, idx_b] = [a, b].map(|x| {
         x.indices
             .iter()
-            .map(|v| Application::from(v.name().drop_guard()).into())
+            .map(|v| Application::from(v.sanitized(&ctx)).into())
             .collect_vec()
     });
     let args: Vec<_> = b
@@ -122,8 +122,8 @@ fn mk_depends_lemma<'a, 'b>(
         let! args = AoOV::transpose_iter(args);
         let quantifier = QuantifierKind::Forall;
         let kind = OrderOperation::Lt;
-        let t1 = Application::new_app(a.name.equiv_name_ref(&ctx), idx_a.clone()).into();
-        let t2 = Application::new_app(a.name.equiv_name_ref(&ctx), idx_b.clone()).into();
+        let t1 = Application::new_app(a.name.sanitized(&ctx), idx_a.clone()).into();
+        let t2 = Application::new_app(a.name.sanitized(&ctx), idx_b.clone()).into();
         let span = Default::default();
         let options = Default::default();
         let guard = None;
@@ -170,14 +170,14 @@ fn mk_mutex_lemma<'a, 'b>(
         .map(|var| {
             mdo! {
                 let! sort = var.sort.convert(ctx);
-                pure (var.id.name().drop_guard(), sort)
+                pure (var.sanitized(&ctx), sort)
             }
         })
         .try_collect()?;
     let [idx_a, idx_b] = [a, b].map(|x| {
         x.indices
             .iter()
-            .map(|v| Application::from(v.name().drop_guard()).into())
+            .map(|v| Application::from(v.sanitized(&ctx)).into())
             .collect_vec()
     });
 
@@ -185,8 +185,8 @@ fn mk_mutex_lemma<'a, 'b>(
         let! args = AoOV::transpose_iter(args);
         let quantifier = QuantifierKind::Forall;
         let kind = OrderOperation::Incompatible;
-        let t1 = Application::new_app(a.name.equiv_name_ref(&ctx), idx_a.clone()).into();
-        let t2 = Application::new_app(a.name.equiv_name_ref(&ctx), idx_b.clone()).into();
+        let t1 = Application::new_app(a.name.sanitized(&ctx), idx_a.clone()).into();
+        let t2 = Application::new_app(a.name.sanitized(&ctx), idx_b.clone()).into();
         let span = Default::default();
         let options = Default::default();
         let guard = None;

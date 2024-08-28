@@ -6,7 +6,7 @@ use crate::{
     parser::ast::{self, TypedArgument},
     squirrel::{
         converters::ast_convertion::ToAst,
-        json::{self, Named},
+        json::{self},
     },
 };
 

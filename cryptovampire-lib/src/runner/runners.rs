@@ -213,11 +213,10 @@ fn autorun_many<'bump>(
                     trace!("timeout in discoverer");
                     to_analyse.push((d, t))
                 }
-                (_, e @ Err(_)) => {
+                (_, Err(e)) => {
                     trace!("error in one of the solver");
                     killall(killable_recv, unkillable_recv, hr)?;
-                    e?;
-                    unreachable!();
+                    return Err(e)
                 }
                 _ => {
                     trace!("other result, ignoring");

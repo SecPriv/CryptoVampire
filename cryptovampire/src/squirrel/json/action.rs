@@ -1,5 +1,6 @@
 use super::*;
 use itertools::chain;
+use mmacro::MacroName;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -35,7 +36,7 @@ impl<'a> Ouptut<'a> {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct Update<'a> {
     #[serde(borrow)]
-    pub symb: Path<'a>,
+    pub symb: MacroName<'a>,
     pub args: Vec<Term<'a>>,
     pub body: Term<'a>,
 }
@@ -59,7 +60,7 @@ pub type ActionV<'a> = AT<Vec<Variable<'a>>>;
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct Action<'a> {
     #[serde(borrow)]
-    pub name: Path<'a>,
+    pub name: ActionName<'a>,
     /// argh... From what I understands this represents the control flow
     /// in a somewhat raw way.
     ///
@@ -99,7 +100,7 @@ impl<'a> Action<'a> {
         }
     }
 
-    pub fn name(&self) -> &Path<'a> {
+    pub fn name(&self) -> &ActionName<'a> {
         &self.name
     }
 
@@ -137,3 +138,4 @@ impl<'a> Action<'a> {
         )
     }
 }
+new_name!(ActionName:Step);

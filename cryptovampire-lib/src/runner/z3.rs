@@ -66,7 +66,7 @@ impl Runner for Z3Runner {
             // check the file exists
             pbl_file.is_file(),
             "{} is not a file",
-            pbl_file.to_str().unwrap_or("[not unicode]")
+            pbl_file.to_string_lossy()
         );
         let mut cmd = Command::new(&self.location);
         cmd.args(chain!(&self.extra_args, args))

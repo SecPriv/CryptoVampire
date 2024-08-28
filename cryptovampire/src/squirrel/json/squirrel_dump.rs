@@ -1,6 +1,11 @@
-use std::{hash::Hash, sync::Arc};
+use std::{borrow::Borrow, hash::Hash, sync::Arc};
 
-use hashbrown::HashMap;
+use action::ActionName;
+use hashbrown::{Equivalent, HashMap};
+use itertools::Either;
+use mmacro::MacroName;
+use mtype::SortName;
+use operator::OperatorName;
 use paste::paste;
 use serde::{Deserialize, Serialize};
 use utils::implvec;
@@ -32,12 +37,12 @@ pub struct ProcessedSquirrelDump<'a> {
     query: Box<Term<'a>>,
     hypotheses: Vec<Term<'a>>,
     variables: Vec<Variable<'a>>,
-    actions: HashMap<Path<'a>, Arc<Action<'a>>>,
+    actions: HashMap<ActionName<'a>, Arc<Action<'a>>>,
     actions_from_action_v: HashMap<action::ActionV<'a>, Arc<Action<'a>>>,
-    names: HashMap<Path<'a>, FunctionType<'a>>,
-    operators: HashMap<Path<'a>, operator::Data<'a>>,
-    macros: HashMap<Path<'a>, mmacro::Data<'a>>,
-    types: HashMap<Path<'a>, mtype::SortData>,
+    names: HashMap<NameName<'a>, FunctionType<'a>>,
+    operators: HashMap<OperatorName<'a>, operator::Data<'a>>,
+    macros: HashMap<MacroName<'a>, mmacro::Data<'a>>,
+    types: HashMap<SortName<'a>, mtype::SortData>,
 }
 
 /// Make getter for most of the [HashMap]-based field. It generate getters to get
@@ -47,7 +52,7 @@ pub struct ProcessedSquirrelDump<'a> {
 /// `name` is the name of the field *in singular*, the macro will turn in into plural
 /// on its own
 macro_rules! mk_getters {
-    ($name:ident : $t:ty) => {
+    ($name:ident : $nname:ty => $t:ty) => {
         paste! {
             #[doc="get the an [Iterator] of [<$name s>]"]
             pub fn [<$name s>]<'b>(&'b self) -> impl Iterator<Item = &'b $t> {
@@ -55,12 +60,12 @@ macro_rules! mk_getters {
             }
 
             #[doc="get the an [Iterator] of [<$name s>] with its symbol"]
-            pub fn [<$name s_with_symb>]<'b>(&'b self) -> impl Iterator<Item = (&'b Path<'a>, &'b $t)> {
+            pub fn [<$name s_with_symb>]<'b>(&'b self) -> impl Iterator<Item = (&'b $nname, &'b $t)> {
                 self.[<$name s>].iter()
             }
 
             #[doc="get a specific $name"]
-            pub fn [<get_$name>](&self, symb: &Path<'a>) -> Option<&$t> {
+            pub fn [<get_$name>]<K>(&self, symb: &K) -> Option<&$t> where K: hashbrown::Equivalent<$nname> + Hash {
                 self.[<$name s>].get(symb)
             }
         }
@@ -81,30 +86,43 @@ impl<'a> ProcessedSquirrelDump<'a> {
         &self.variables
     }
 
-    mk_getters!(name: FunctionType<'a>);
-    mk_getters!(operator: operator::Data<'a>);
-    mk_getters!(macro: mmacro::Data<'a>);
-    mk_getters!(type: mtype::SortData);
+    mk_getters!(name:NameName<'a> => FunctionType<'a>);
+    mk_getters!(operator: OperatorName<'a> => operator::Data<'a>);
+    mk_getters!(macro: MacroName<'a> => mmacro::Data<'a>);
+    mk_getters!(type: SortName<'a> =>  mtype::SortData);
 
     /// Get the [FunctionType] associated to an [Operator] or a [Name] given it's
     /// [Path]. It returns [None] if it cannot find either.
     ///
     /// **NB**: this will look for an [Operator] first
-    pub fn get_name_or_operator_fun_type(&self, symb: &Path<'a>) -> Option<&FunctionType<'a>> {
-        self.get_operator(symb)
-            .map(|o| &o.sort)
-            .or_else(|| self.get_name(symb))
+    pub fn get_name_or_operator_fun_type<N, O>(
+        &self,
+        symb: Either<&N, &O>,
+    ) -> Option<&FunctionType<'a>>
+    where
+        N: Equivalent<NameName<'a>> + std::hash::Hash,
+        O: Equivalent<OperatorName<'a>> + std::hash::Hash,
+    {
+        match symb {
+            Either::Left(name) => self.get_name(name),
+            Either::Right(op) => self.get_operator(op).map(|o| &o.sort),
+        }
+        // self.inner_get_operator(symb.borrow())
+        //     .map(|o| &o.sort)
+        //     .or_else(|| self.inner_get_name(symb.borrow()))
     }
 
     pub fn actions<'b>(&'b self) -> impl Iterator<Item = &'b Action<'a>> {
         self.actions_with_symb().map(|(_, y)| y)
     }
 
-    pub fn actions_with_symb<'b>(&'b self) -> impl Iterator<Item = (&'b Path<'a>, &'b Action<'a>)> {
+    pub fn actions_with_symb<'b>(
+        &'b self,
+    ) -> impl Iterator<Item = (&'b ActionName<'a>, &'b Action<'a>)> {
         self.actions.iter().map(|(x, y)| (x, Arc::as_ref(y)))
     }
 
-    pub fn get_action(&self, k: &Path<'a>) -> Option<&Action<'a>> {
+    pub fn get_action(&self, k: &ActionName<'a>) -> Option<&Action<'a>> {
         self.actions.get(k).map(Arc::as_ref)
     }
 
@@ -164,7 +182,7 @@ impl<'a> From<SquirrelDump<'a>> for ProcessedSquirrelDump<'a> {
     }
 }
 
-fn convert_content_list<'a, U>(l: implvec!(Content<'a, U>)) -> HashMap<Path<'a>, U> {
+fn convert_content_list<N: Hash + Eq, U>(l: implvec!(Content<N, U>)) -> HashMap<N, U> {
     l.into_iter()
         .map(|Content { symb, data }| (symb, data))
         .collect()

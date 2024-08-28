@@ -1,4 +1,5 @@
 use super::*;
+use mtype::SortName;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -9,7 +10,7 @@ pub enum Type<'a> {
     Timestamp,
     // #[serde(rename_all = "PascalCase")]
     #[serde(borrow)]
-    TBase(Path<'a>),
+    TBase(SortName<'a>),
     // #[serde(rename_all = "PascalCase")]
     TVar {
         #[serde(flatten)]

@@ -81,8 +81,8 @@ struct Context<'a, 'str> {
     #[builder(default)]
     shape: AllOrOneShape,
     dump: &'a ProcessedSquirrelDump<'str>,
-    #[builder(default)]
-    current_step: Option<&'a json::Action<'str>>,
+    // #[builder(default)]
+    // current_step: Option<&'a json::Action<'str>>,
 }
 
 impl<'a, 'str> From<Context<'a, 'str>> for ContextBuilder<'a, 'str> {
@@ -90,11 +90,11 @@ impl<'a, 'str> From<Context<'a, 'str>> for ContextBuilder<'a, 'str> {
         Context {
             shape,
             dump,
-            current_step,
+            // current_step,
         }: Context<'a, 'str>,
     ) -> Self {
         let mut ctx = ContextBuilder::create_empty();
-        ctx.shape(shape).dump(dump).current_step(current_step);
+        ctx.shape(shape).dump(dump)/* .current_step(current_step) */;
         ctx
     }
 }
@@ -108,9 +108,9 @@ impl<'a, 'str> Context<'a, 'str> {
         self.shape
     }
 
-    fn current_step(&self) -> Option<&'a json::Action<'str>> {
-        self.current_step
-    }
+    // fn current_step(&self) -> Option<&'a json::Action<'str>> {
+    //     self.current_step
+    // }
 
     fn builtin_function(&self) -> &'static HashMap<&'static str, StrRef<'static>> {
         &BUILTIN_FUNCTIONS
@@ -122,12 +122,15 @@ impl<'a, 'str> Context<'a, 'str> {
 }
 
 impl<'a, 'str> Sanitizer for Context<'a, 'str> {
-    fn sanitize<'b>(&self, str: &StrRef<'b>) -> StrRef<'b> {
-        self.builtin_function()
-            .get(str.as_ref())
-            .unwrap_or(str)
-            .clone()
+    fn sanitize<'b, S: super::Sanitizable<'b>>(&self, str: &S) -> StrRef<'b> {
+        todo!()
     }
+    // fn sanitize<'b>(&self, str: &StrRef<'b>) -> StrRef<'b> {
+    //     // self.builtin_function()
+    //     //     .get(str.as_ref())
+    //     //     .unwrap_or(str)
+    //     //     .clone()
+    // }
 }
 
 trait MDebugIter<U> {

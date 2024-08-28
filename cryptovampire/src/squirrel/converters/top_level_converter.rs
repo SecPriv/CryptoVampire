@@ -4,6 +4,7 @@ use ast::StrApplicable;
 use log::{info, trace};
 
 use crate::ast_forall;
+use crate::squirrel::Sanitizable;
 
 use super::Context;
 
@@ -104,7 +105,7 @@ use assert_crypto::assert_crypto;
 mod assert_crypto {
     use cryptovampire_lib::formula::sort::builtins::{BOOL, MESSAGE};
     use itertools::Either;
-    use json::path::Path;
+    use json::{operator::OperatorName, path::Path};
 
     use super::*;
 
@@ -159,16 +160,16 @@ mod assert_crypto {
 
     fn assert_euf<'a, 'b>(
         ctx: Context<'b, 'a>,
-        hash: &Path<'a>,
-        verify: Option<&Path<'a>>,
-        vk: Option<&Path<'a>>,
+        hash: &OperatorName<'a>,
+        verify: Option<&OperatorName<'a>>,
+        vk: Option<&OperatorName<'a>>,
     ) -> impl Iterator<Item = ast::AST<'a, StrRef<'a>>> + 'b {
         let mut new_fun = None;
         let verify = if let Some(verify) = verify {
-            ast::Function::from_name(verify.equiv_name_ref(&ctx))
+            ast::Function::from_name(verify.sanitized(&ctx))
         } else {
             // declare a dummy verify
-            let name: StrRef = format!("verify${}", hash.equiv_name_ref(&ctx)).into();
+            let name: StrRef = format!("verify${}", hash.sanitized(&ctx)).into();
             new_fun = Some(ast::DeclareFunction::new(
                 name.clone(),
                 std::iter::repeat(MESSAGE.name()).take(3),
@@ -176,8 +177,8 @@ mod assert_crypto {
             ));
             ast::Function::from_name(name)
         };
-        let vk = vk.map(|vk| ast::Function::from_name(vk.equiv_name_ref(&ctx)));
-        let hash = ast::Function::from_name(hash.equiv_name_ref(&ctx));
+        let vk = vk.map(|vk| ast::Function::from_name(vk.sanitized(&ctx)));
+        let hash = ast::Function::from_name(hash.sanitized(&ctx));
         chain!(
             [ast::AssertCrypto {
                 span: Default::default(),
@@ -193,10 +194,10 @@ mod assert_crypto {
 
     fn assert_int_ctxt<'a, 'b>(
         ctx: Context<'b, 'a>,
-        senc: &Path<'a>,
-        sdec: &Path<'a>,
+        senc: &OperatorName<'a>,
+        sdec: &OperatorName<'a>,
     ) -> ast::AST<'a, StrRef<'a>> {
-        let funs = [senc, sdec].map(|f| ast::Function::from_name(f.equiv_name_ref(&ctx)));
+        let funs = [senc, sdec].map(|f| ast::Function::from_name(f.sanitized(&ctx)));
         ast::AST::AssertCrypto(Arc::new(ast::AssertCrypto {
             span: Default::default(),
             name: StrRef::from("int_ctxt").into(),
@@ -266,7 +267,7 @@ fn mk_cells<'a, 'b>(
                 let! sort = sort.convert(ctx);
                 let args : Vec<_> = vars.iter().map(|v| v.sort().convert(ctx)).try_collect()?;
                 let! args = Ok(AoOV::transpose_iter(args));
-                pure ast::DeclareCell::new(symb.equiv_name_ref(&ctx), args, sort.clone())
+                pure ast::DeclareCell::new(symb.sanitized(&ctx), args, sort.clone())
             }
         })
 }
@@ -285,7 +286,7 @@ fn mk_macros<'a, 'b>(
         .filter_map(|(symb, json::operator::Data { def, .. })| def.as_concrete().map(|c| (symb, c)))
         .map(move |(symb, json::operator::Concrete { args, body, .. })| {
             ConcreteMacro {
-                symb,
+                symb: symb.as_ref(),
                 body,
                 args: args.as_slice().into(),
             }
@@ -302,7 +303,7 @@ fn mk_funs_and_names<'a, 'b>(
         .names_with_symb()
         .debug("attempting to convert name:\n\t")
         .map(move |(symb, json::FunctionType { vars, args, out })| {
-            (symb.equiv_name_ref(&ctx), vars, args, &json::Type::Name)
+            (symb.sanitized(&ctx), vars, args, &json::Type::Name)
         });
 
     let functions = pdump
@@ -310,7 +311,7 @@ fn mk_funs_and_names<'a, 'b>(
         .debug("attempting to convert function:\n\t")
         .filter_map(move |(symb, data)| {
             // filtering out builtin and forbidden functions
-            let symb = symb.equiv_name_ref(&ctx);
+            let symb = symb.sanitized(&ctx);
             (!(ctx.forbidden_function().contains(symb.as_ref())
                 || ctx.builtin_function().contains_key(symb.as_ref())))
             .then_some((symb, data))
@@ -362,7 +363,7 @@ fn mk_types<'a, 'b>(
         .types_with_symb()
         .filter_map(move |(symb, data)| {
             if data.can_be_index() {
-                Some(ast::DeclareType::new(symb.equiv_name_ref(&ctx).into()))
+                Some(ast::DeclareType::new(symb.sanitized(&ctx).into()))
             } else {
                 None
             }

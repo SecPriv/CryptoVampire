@@ -9,8 +9,61 @@ const FORBIDDEN: &'static str = ";$#";
 
 pub const DUMMY_VAR: &'static str = "$dummy";
 
-pub trait Named<'a> {
-    fn name(&self) -> Symb<'a>;
+macro_rules! new_name {
+    ($name:ident: $kind:ident) => {
+        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+        pub struct $name<'a>(#[serde(borrow)] pub $crate::squirrel::json::Path<'a>);
+
+        impl<'a> $crate::squirrel::Sanitizable<'a> for $name<'a> {
+            fn to_str_ref(&self) -> utils::string_ref::StrRef<'a> {
+                self.0.to_str_ref()
+            }
+
+            fn sanitize_kind(&self) -> $crate::squirrel::SanitizeKind {
+                $crate::squirrel::SanitizeKind::$kind
+            }
+        }
+
+        impl<'a> std::borrow::Borrow<$crate::squirrel::json::path::Path<'a>> for $name<'a> {
+            fn borrow(&self) -> &$crate::squirrel::json::path::Path<'a> {
+                &self.0
+            }
+        }
+
+
+        paste::paste! {
+            #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Copy)]
+            pub struct [<$name Ref>]<'a, 'b>(pub &'b $crate::squirrel::json::Path<'a>);
+
+            impl<'a, 'b> $crate::squirrel::Sanitizable<'a> for [<$name Ref>]<'a, 'b> {
+                fn to_str_ref(&self) -> utils::string_ref::StrRef<'a> {
+                    self.0.to_str_ref()
+                }
+
+                fn sanitize_kind(&self) -> $crate::squirrel::SanitizeKind {
+                    $crate::squirrel::SanitizeKind::$kind
+                }
+            }
+
+            impl<'a, 'b> std::borrow::Borrow<$crate::squirrel::json::path::Path<'a>> for [<$name Ref>]<'a, 'b> {
+                fn borrow(&self) -> &$crate::squirrel::json::path::Path<'a> {
+                    self.0
+                }
+            }
+
+            impl<'a, 'b> hashbrown::Equivalent<$name<'a>> for [<$name Ref>]<'a, 'b> {
+                fn equivalent(&self, key: &$name<'a>) -> bool {
+                    self.0 == &key.0
+                }
+            }
+
+            impl<'a> $name<'a> {
+                pub fn as_ref<'b>(&'b self) -> [<$name Ref>]<'a, 'b> {
+                    [<$name Ref>](&self.0)
+                }
+            }
+        }
+    };
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -47,8 +100,8 @@ pub struct Ident<'a> {
     // pub tag: i32,
 }
 
-impl<'a> Named<'a> for Ident<'a> {
-    fn name(&self) -> Symb<'a> {
+impl<'a> Ident<'a> {
+    pub fn name(&self) -> Symb<'a> {
         self.name.clone()
     }
 }
@@ -78,13 +131,17 @@ impl<'a> Variable<'a> {
     }
 
     pub fn is_dummy(&self) -> bool {
-        self.name().as_str() == DUMMY_VAR
+        self.to_str_ref().as_str() == DUMMY_VAR
     }
 }
 
-impl<'a> Named<'a> for Variable<'a> {
-    fn name(&self) -> Symb<'a> {
-        self.id.name()
+impl<'a> Sanitizable<'a> for Variable<'a> {
+    fn to_str_ref(&self) -> StrRef<'a> {
+        self.id.name().drop_guard()
+    }
+
+    fn sanitize_kind(&self) -> SanitizeKind {
+        SanitizeKind::Variable
     }
 }
 
@@ -94,9 +151,13 @@ pub struct TypeVariable<'a> {
     pub id: Ident<'a>,
 }
 
-impl<'a> Named<'a> for TypeVariable<'a> {
-    fn name(&self) -> Symb<'a> {
-        self.id.name()
+impl<'a> Sanitizable<'a> for TypeVariable<'a> {
+    fn to_str_ref(&self) -> StrRef<'a> {
+        self.id.name().drop_guard()
+    }
+
+    fn sanitize_kind(&self) -> SanitizeKind {
+        SanitizeKind::Variable
     }
 }
 
@@ -123,7 +184,8 @@ pub struct FunctionType<'a> {
     pub out: Type<'a>,
 }
 
-pub type Name<'a> = Content<'a, FunctionType<'a>>;
+new_name!(NameName:Name);
+pub type Name<'a> = Content<NameName<'a>, FunctionType<'a>>;
 
 pub mod operator;
 pub use operator::Operator;
@@ -133,6 +195,9 @@ pub use mmacro::{Macro, MacroRef};
 
 pub mod mtype;
 pub use mtype::Sort;
+use utils::string_ref::StrRef;
+
+use super::{Sanitizable, SanitizeKind};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CryptoVampireCall<'a> {
@@ -168,26 +233,6 @@ mod tests {
                 }
         };
     }
-
-    // #[test]
-    // fn types() {
-    //     let t = Type::TBase("LP".into());
-    //     assert_eq!("{\"TBase\":\"LP\"}", &serde_json::to_string(&t).unwrap());
-    // }
-
-    // #[test]
-    // fn operator_def() {
-    //     use super::operator::*;
-    //     let t = DefaultDef::Abstract {
-    //         abstract_def: AbstractDef::Abstract(SymbType::Infix(Assoc::Right)),
-    //         associated_fun: vec![],
-    //     };
-    //     println!("{}", serde_json::to_string(&t).unwrap());
-    //     assert_eq!(
-    //         "{\"abstract_def\":{\"Abstract\":{\"Infix\":\"Right\"}},\"associated_fun\":[]}",
-    //         &serde_json::to_string(&t).unwrap()
-    //     );
-    // }
 
     test_json_parser!(full1:CryptoVampireCall);
     test_json_parser!(canauth:CryptoVampireCall);

@@ -1,6 +1,6 @@
 use anyhow::Context;
 use converters::convert_squirrel_dump;
-use itertools::Itertools;
+use itertools::{Either, Itertools};
 use json::CryptoVampireCall;
 use log::{debug, trace};
 use utils::string_ref::StrRef;
@@ -41,13 +41,34 @@ pub fn run_from_json(mut args: Args, str: &str) -> anyhow::Result<Vec<Return>> {
                 None => (),
                 Some(location) => *location = location.join(&format!("{i}")),
             }
-
             run_from_ast(&args, ast)
-            .with_context(|| "failed running the {i:}th problem")
+            .with_context(|| format!("failed running the {i:}th problem"))
         })
         .try_collect()
 }
 
-trait Sanitizer {
-    fn sanitize<'a>(&self, str: &StrRef<'a>) -> StrRef<'a>;
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+pub enum SanitizeKind {
+    Variable,
+    Function,
+    Step,
+    Macro,
+    Cell,
+    Name,
+    Sort
+}
+
+pub trait Sanitizable<'a> {
+    fn to_str_ref(&self) -> StrRef<'a>;
+
+    fn sanitize_kind(&self) -> SanitizeKind;
+
+    fn sanitized<S:Sanitizer>(&self, sanitizer: &S) -> StrRef<'a> where Self:Sized{
+        sanitizer.sanitize(self)
+    }
+}
+
+pub trait Sanitizer {
+    fn sanitize<'a, S: Sanitizable<'a>>(&self, str: &S) -> StrRef<'a>;
 }

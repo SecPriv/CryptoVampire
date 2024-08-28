@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::squirrel::Sanitizer;
+use crate::squirrel::{Sanitizable, SanitizeKind, Sanitizer};
 
 use super::{Symb, Type};
 use itertools::Itertools;
@@ -17,6 +17,16 @@ pub struct NamesPath<'a> {
     // id: u32,
 }
 
+impl<'a, 'b> Sanitizable<'b> for NamesPath<'a> {
+    fn to_str_ref(&self) -> StrRef<'b> {
+        self.npath.iter().map(|s| s.as_str()).join(SEPARATOR).into()
+    }
+
+    fn sanitize_kind(&self) -> SanitizeKind {
+        SanitizeKind::Name
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct Path<'a> {
     #[serde(borrow)]
@@ -31,6 +41,14 @@ impl<'a> Path<'a> {
         Self {
             npath: NamesPath { npath: vec![] },
             symb: "input".into(),
+        }
+    }
+
+    pub fn to_str_ref(&self) -> StrRef<'a> {
+        if self.npath.npath.is_empty() {
+            self.symb.clone().drop_guard()
+        } else {
+            self.to_string().into()
         }
     }
 }
@@ -72,14 +90,14 @@ impl<'a> Display for Path<'a> {
 pub trait Pathed<'a> {
     fn path(&self) -> &Path<'a>;
 
-    /// Turn a [Path]-like object into a string while also ensuring it matches
-    /// some invariants enforced by the [Sanitizer].
-    ///
-    /// We use [StrRef] for efficiency (and consistency with the rest of cv).
-    #[allow(private_bounds)]
-    fn equiv_name_ref<S: Sanitizer>(&self, s: &S) -> StrRef<'a> {
-        s.sanitize(&StrRef::from(self.path().to_string()))
-    }
+    // /// Turn a [Path]-like object into a string while also ensuring it matches
+    // /// some invariants enforced by the [Sanitizer].
+    // ///
+    // /// We use [StrRef] for efficiency (and consistency with the rest of cv).
+    // #[allow(private_bounds)]
+    // fn equiv_name_ref<S: Sanitizer>(&self, s: &S) -> StrRef<'a> {
+    //     s.sanitize(&StrRef::from(self.path().to_string()))
+    // }
 }
 
 impl<'a> Pathed<'a> for Path<'a> {

@@ -1,4 +1,6 @@
+use action::ActionName;
 use itertools::chain;
+use operator::OperatorName;
 use utils::implvec;
 
 use super::*;
@@ -18,7 +20,7 @@ pub enum Term<'a> {
         args: Vec<Term<'a>>,
     },
     Fun {
-        symb: Path<'a>,
+        symb: OperatorName<'a>,
     },
     Name {
         #[serde(borrow)]
@@ -33,7 +35,7 @@ pub enum Term<'a> {
     },
     Action {
         #[serde(borrow)]
-        symb: Path<'a>,
+        symb: ActionName<'a>,
         args: Vec<Term<'a>>,
     },
     Var {
@@ -88,7 +90,7 @@ impl<'a> Term<'a> {
         Path<'a>: From<S>,
     {
         Self::App {
-            f: Box::new(Self::Fun { symb: s.into() }),
+            f: Box::new(Self::Fun { symb: OperatorName(s.into()) }),
             args: args.into_iter().collect(),
         }
     }

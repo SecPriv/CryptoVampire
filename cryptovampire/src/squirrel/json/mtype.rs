@@ -100,4 +100,5 @@ impl SortData {
         is_large
     );
 }
-pub type Sort<'a> = Content<'a, SortData>;
+new_name!(SortName:Sort);
+pub type Sort<'a> = Content<SortName<'a>, SortData>;

@@ -54,7 +54,7 @@ pub enum Def<'a> {
     Abstract {
         abstract_def: AbstractDef,
         #[serde(borrow)]
-        associated_fun: Vec<Path<'a>>,
+        associated_fun: Vec<OperatorName<'a>>,
     },
     Concrete(Concrete<'a>),
 }
@@ -91,4 +91,5 @@ impl<'a> Data<'a> {
         &self.def
     }
 }
-pub type Operator<'a> = Content<'a, operator::Data<'a>>;
+new_name!(OperatorName:Function);
+pub type Operator<'a> = Content<OperatorName<'a>, operator::Data<'a>>;

@@ -1,5 +1,5 @@
 use cryptovampire_lib::formula::sort::builtins::{BOOL, MESSAGE, NAME, STEP};
-use itertools::{chain, Itertools};
+use itertools::{chain, Either, Itertools};
 use utils::{all_or_one::AoOV, mdo, monad::Monad, pure, string_ref::StrRef, vecref::VecRef};
 
 use crate::{
@@ -10,7 +10,7 @@ use crate::{
     },
     squirrel::{
         converters::ContextBuilder,
-        json::{self, mmacro, path::Path, Named, Pathed},
+        json::{self, mmacro, operator::{OperatorName, OperatorNameRef}, path::Path, NameNameRef, Pathed}, Sanitizable,
     },
 };
 
@@ -33,7 +33,7 @@ impl<'a> ToAst<'a> for json::Term<'a> {
             json::Term::Let { .. } => bail_at!(@ "no lets"),
             // actual work
             json::Term::Var { var } => {
-                mdo!(pure ast::Application::from(var.name().drop_guard()).into())
+                mdo!(pure ast::Application::from(var.sanitized(&ctx)).into())
             }
             json::Term::Tuple { elements } => convert_tuple(elements, ctx),
             json::Term::Quant {
@@ -51,7 +51,8 @@ impl<'a> ToAst<'a> for json::Term<'a> {
             json::Term::Diff { terms } => convert_diff(terms, ctx),
             json::Term::App { f, args } => convert_application(f, args, ctx),
             json::Term::Name { symb, args } => {
-                convert_function_or_name_application(symb.path(), args, ctx)
+                let symb = NameNameRef(symb.path());
+                convert_function_or_name_application::<_, OperatorName>(Either::Left(&symb), args, ctx)
             }
             json::Term::Macro {
                 symb,
@@ -77,7 +78,7 @@ impl<'a> ToAst<'a> for json::sort::Type<'a> {
                 if let Some(true) = ctx.dump().get_type(p).map(|s| !s.can_be_index()) {
                     pure!(MESSAGE.name().into())
                 } else {
-                    pure!(p.equiv_name_ref(&ctx).into())
+                    pure!(p.sanitized(&ctx).into())
                 }
             }
             json::Type::TVar { .. }
@@ -105,7 +106,7 @@ impl<'a> ToAst<'a> for json::Action<'a> {
             globals,
         } = self;
 
-        let name = ast::StepName::from(name.equiv_name_ref(&ctx));
+        let name = ast::StepName::from(name.sanitized(&ctx));
         let args: Vec<_> = indices
             .iter()
             .map(|var| {
@@ -135,7 +136,7 @@ impl<'a> ToAst<'a> for json::Action<'a> {
         );
 
         let ctx = ContextBuilder::from(ctx)
-            .current_step(Some(self))
+            // .current_step(Some(self))
             .build()
             .unwrap();
 
@@ -188,7 +189,7 @@ impl<'a> json::Action<'a> {
                                 .map(Result::unwrap)
                                 .join(";\n");
                             err_at!(@ "cannot find an action from its shape while \
-                            building the output of {:}\n{actions}", self.name(),
+                            building the output of {:}\n{actions}", self.name().sanitized(&ctx),
                             )
                         })?;
                     Ok((
@@ -243,7 +244,7 @@ impl<'a, 'b> ToAst<'a> for json::action::UpdateRef<'a, 'b> {
             let! term = body.convert(ctx);
             pure ast::Assignement {
                 span: Default::default(),
-                cell: ast::Application::new_app(symb.equiv_name_ref(&ctx), args.clone()),
+                cell: ast::Application::new_app(symb.sanitized(&ctx), args.clone()),
                 term,
                 fresh_vars: {
                     if fresh_vars.is_empty() {
@@ -291,7 +292,7 @@ impl<'a, 'c> ToAst<'a> for json::MacroRef<'a, 'c> {
             ) => {
                 mdo! {
                     let! res = ConcreteMacro {
-                        symb,
+                        symb: OperatorNameRef(&symb.0),
                         body,
                         args: chain!(indices.iter(), g.inputs(), [ts].into_iter()).collect()
                     }.convert(ctx);
@@ -304,7 +305,7 @@ impl<'a, 'c> ToAst<'a> for json::MacroRef<'a, 'c> {
 }
 
 pub struct ConcreteMacro<'a, 'b> {
-    pub symb: &'b Path<'a>,
+    pub symb: OperatorNameRef<'a, 'b>,
     pub body: &'b json::Term<'a>,
     pub args: VecRef<'b, json::Variable<'a>>,
 }
@@ -329,7 +330,7 @@ impl<'a, 'b> ToAst<'a> for ConcreteMacro<'a, 'b> {
             let! term = body.convert(ctx);
             pure ast::Macro {
                 span: Location::default(),
-                name: symb.equiv_name_ref(&ctx).into(),
+                name: symb.sanitized(&ctx).into(),
                 args:args.iter().cloned().collect(),
                 term,
                 options: Options::default()

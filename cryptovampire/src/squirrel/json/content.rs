@@ -1,13 +1,12 @@
 use super::*;
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub struct Content<'a, U> {
-    #[serde(borrow)]
-    pub symb: Path<'a>,
+pub struct Content< N, U> {
+    pub symb: N,
     pub data: U,
 }
 
-impl<'a, U> Content<'a, U> {
-    pub fn as_ref<'b>(&'b self) -> ContentRef<'a, 'b, U> {
+impl< N, U> Content< N, U> {
+    pub fn as_ref<'b>(&'b self) -> ContentRef< 'b,N,  U> {
         ContentRef {
             symb: &self.symb,
             data: &self.data,
@@ -16,12 +15,12 @@ impl<'a, U> Content<'a, U> {
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ContentRef<'a, 'b, U> {
-    pub symb: &'b Path<'a>,
+pub struct ContentRef<'b, N, U> {
+    pub symb: &'b N,
     pub data: &'b U,
 }
 
-impl<'a, 'b, U> Clone for ContentRef<'a, 'b, U> {
+impl<'b, N, U> Clone for ContentRef< 'b,N, U> {
     fn clone(&self) -> Self {
         Self {
             symb: self.symb,
@@ -30,10 +29,10 @@ impl<'a, 'b, U> Clone for ContentRef<'a, 'b, U> {
     }
 }
 
-impl<'a, 'b, U> Copy for ContentRef<'a, 'b, U> {}
+impl<'b, N, U> Copy for ContentRef<'b, N, U> {}
 
-impl<'a, 'b, U> From<(&'b Path<'a>, &'b U)> for ContentRef<'a, 'b, U> {
-    fn from((symb, data): (&'b Path<'a>, &'b U)) -> Self {
+impl<'b, N, U> From<(&'b N, &'b U)> for ContentRef< 'b,N,  U> {
+    fn from((symb, data): (&'b N, &'b U)) -> Self {
         Self { symb, data }
     }
 }
