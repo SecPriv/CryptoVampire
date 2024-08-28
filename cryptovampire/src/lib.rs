@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod tests;
 
-use std::{fs::File, io::BufWriter, num::NonZeroU32, path::Path};
+use std::{fs::File, io::BufWriter, num::NonZeroU32, path::{Path, PathBuf}};
 
 use crate::cli::Args;
-use anyhow::{ensure, Context};
+use anyhow::{bail, ensure, Context};
 
 use cryptovampire_lib::{
     container::ScopedContainer,
@@ -24,13 +24,16 @@ pub mod squirrel;
 
 pub use parser::parse_pbl_from_ast;
 
-pub fn run_from_cv(args: Args, str: &str) -> anyhow::Result<()> {
-    trace!("running for cv file");
+pub use return_value::Return;
+mod return_value;
+
+pub fn run_from_cv(args: Args, str: &str) -> anyhow::Result<Return> {
+    trace!("running for cryptovampire file");
     let ast = ASTList::try_from(str)?;
     run_from_ast(&args, ast)
 }
 
-fn run_from_ast<'a, S>(args: &Args, ast: ASTList<'a, S>) -> anyhow::Result<()>
+fn run_from_ast<'a, S>(args: &Args, ast: ASTList<'a, S>) -> anyhow::Result<Return>
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
@@ -57,7 +60,8 @@ where
                 run_to_dir(&env, pblsiter, output_location)?;
             } else {
                 run_to_file(&env, pblsiter, output_location)?;
-            }
+            };
+            Ok(Return::ToFile(output_location.to_path_buf()))
         } else {
             let SolverConfig {
                 num_of_retry,
@@ -71,12 +75,12 @@ where
                 &runner,
                 *num_of_retry,
                 smt_debug.as_ref().map(|p| p.as_path()),
-            )?
-            .pop()
-            .with_context(|| "empty output, nothing ran?")?;
-            println!("{out}");
+            )?;
+            if out.is_empty() {
+                bail!("empty output, nothing ran?")
+            }
+            Ok(Return::AutoRun(out))
         }
-        Ok(())
     })
 }
 

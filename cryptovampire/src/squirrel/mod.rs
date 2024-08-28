@@ -1,14 +1,16 @@
+use anyhow::Context;
 use converters::convert_squirrel_dump;
+use itertools::Itertools;
 use json::CryptoVampireCall;
 use log::{debug, trace};
 use utils::string_ref::StrRef;
 
-use crate::{cli::Args, run_from_ast};
+use crate::{cli::Args, run_from_ast, Return};
 
 mod converters;
 pub(crate) mod json;
 
-pub fn run_from_json(mut args: Args, str: &str) -> anyhow::Result<()> {
+pub fn run_from_json(mut args: Args, str: &str) -> anyhow::Result<Vec<Return>> {
     debug!("running from json");
     assert!(args.input_format.is_squirrel_json());
 
@@ -41,8 +43,9 @@ pub fn run_from_json(mut args: Args, str: &str) -> anyhow::Result<()> {
             }
 
             run_from_ast(&args, ast)
+            .with_context(|| "failed running the {i:}th problem")
         })
-        .collect()
+        .try_collect()
 }
 
 trait Sanitizer {

@@ -42,6 +42,9 @@ impl Runners {
         matches!(&self.vampire, None) && matches!(&self.z3, None) && matches!(&self.cvc5, None)
     }
 
+    /// Automatically runs `pbl` using the [Runner] available in [self]
+    /// 
+    /// If it succeeds it returns some information about the succeding solver.
     pub fn autorun<'bump>(
         self,
         env: &Environement<'bump>,
@@ -68,73 +71,6 @@ impl Runners {
                 RunnerOut::Timeout(_) => continue,
                 _ => unreachable!(),
             }
-
-            // let (killable_send, killable_recv) = channel();
-            // let (unkillable_send, unkillable_recv) = channel();
-
-            // let res: anyhow::Result<_> = thread::scope(|s| {
-            //     let vjh;
-            //     let z3jh;
-            //     {
-            //         let handler = Handler {
-            //             killable: killable_send,
-            //             unkillable: unkillable_send,
-            //         };
-            //         vjh = self.vampire.as_ref().map(|vr| {
-            //             let handler = handler.clone();
-            //             s.spawn(|| vr.run_to_tmp(handler, env, pbl, vr.default_args(), save_to))
-            //         });
-            //         z3jh = self.z3.as_ref().map(|z3| {
-            //             let handler = handler.clone();
-            //             s.spawn(|| z3.run_to_tmp(handler, env, pbl, z3.default_args(), save_to))
-            //         });
-            //     } // handler dropped here
-
-            //     // TODO remove
-            //     thread::sleep(time::Duration::from_secs(1));
-
-            //     let mut res = false;
-            //     for r in unkillable_recv {
-            //         trace!("waiting for unkillable child ({:})", r.id());
-            //         res = res || r.wait()?.success();
-            //     }
-
-            //     // TODO: make sure they failled before killing everyone
-
-            //     for r in killable_recv {
-            //         trace!("killing unfinished child ({:})", r.id());
-            //         r.kill()?;
-            //         r.wait()?; // avoid zombie
-            //         trace!("child killed ({:})", r.id())
-            //     }
-            //     trace!("all child killed, joining threads and returning");
-            //     Ok((
-            //         vjh.map(|h| h.join().unwrap()),
-            //         z3jh.map(|h| h.join().unwrap()),
-            //     ))
-            // });
-            // let (vout, z3out) = res?;
-
-            // let vout = vout.transpose()?;
-            // let z3out = z3out.transpose()?;
-
-            // match z3out {
-            //     Some(RunnerOut::Unsat(_)) => return Ok("z3 found a solution".into()),
-            //     Some(RunnerOut::Sat(_)) => bail!("z3 disproved the problem"),
-            //     _ => (),
-            // }
-
-            // let data = match vout {
-            //     Some(RunnerOut::Unsat(proof)) => return Ok(proof),
-            //     Some(RunnerOut::Timeout(data)) => Some(data),
-            //     Some(RunnerOut::Sat(proof)) => bail!("the query is false:\n{proof}"),
-            //     None => None,
-            //     _ => bail!("unknown error"),
-            // };
-            // match (&self.vampire, data) {
-            //     (Some(vr), Some(out)) => vr.discover(env, pbl, &out)?,
-            //     _ => (),
-            // }
         }
         bail!("ran out of tries (at most {n})")
     }

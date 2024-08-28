@@ -4,12 +4,13 @@ use std::{
 };
 
 use clap::Parser;
-use cryptovampire::{cli::Args, init_logger, run_from_cv, squirrel::run_from_json};
+use cryptovampire::{cli::Args, init_logger, run_from_cv, squirrel::run_from_json, Return};
 
 use log::trace;
 
 fn main() {
     let args = Args::parse();
+    let output_format = args.output_format;
 
     init_logger();
 
@@ -30,11 +31,26 @@ fn main() {
         }
     };
     trace!("input read");
-    match args.input_format {
+    let res = match args.input_format {
         cryptovampire::cli::Input::Cryptovampire => run_from_cv(args, &str),
-        cryptovampire::cli::Input::SquirrelJSON => run_from_json(args, &str),
+        cryptovampire::cli::Input::SquirrelJSON => run_from_json(args, &str).map(Return::Many),
+    };
+
+    match output_format {
+        cryptovampire::cli::Output::Quiet => (),
+        cryptovampire::cli::Output::Stdout => {
+            let res = res.unwrap();
+            println!("{res}")
+        }
+        cryptovampire::cli::Output::JSON => {
+            let res = res.map_err(|e| format!("{e:}"));
+            println!("{}", serde_json::to_string(&res).unwrap())
+        }
+        cryptovampire::cli::Output::PrettyJSON => {
+            let res = res.map_err(|e| format!("{e:}"));
+            println!("{}", serde_json::to_string(&res).unwrap())
+        }
     }
-    .unwrap();
 
     trace!("done")
 }

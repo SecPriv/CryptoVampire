@@ -1,4 +1,5 @@
 use std::{
+    default,
     fmt::Display,
     path::{Path, PathBuf},
 };
@@ -71,6 +72,10 @@ pub struct Args {
     #[arg(long, default_value_t = Input::Cryptovampire)]
     pub input_format: Input,
 
+    /// What should the output format be?
+    #[arg(long, default_value_t = Output::Stdout)]
+    pub output_format: Output,
+
     /// Defaults to `auto`
     #[command(subcommand)]
     pub command: Option<Command>,
@@ -78,7 +83,9 @@ pub struct Args {
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum Command {
+    /// *default* runs the solvers automatically (and try to learn from each runs)
     Auto(Auto),
+    /// build smts files to be ran manually
     ToFile(ToFile),
 }
 
@@ -219,6 +226,30 @@ impl Display for Input {
         match self {
             Self::Cryptovampire => write!(f, "cryptovampire"),
             Self::SquirrelJSON => write!(f, "squirrel-json"),
+        }
+    }
+}
+
+#[derive(clap::ValueEnum, Clone, Default, Debug, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Output {
+    /// standard to stdout
+    #[default]
+    Stdout,
+    /// JSON output
+    JSON,
+    /// JSON output, prettyfied
+    PrettyJSON,
+    /// No output
+    Quiet,
+}
+
+impl Display for Output {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Output::Stdout => write!(f, "stdout"),
+            Output::JSON => write!(f, "json"),
+            Output::Quiet => write!(f, "quiet"),
+            Output::PrettyJSON => write!(f, "pretty-json"),
         }
     }
 }
