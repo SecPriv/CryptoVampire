@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::squirrel::{Sanitizable, SanitizeKind, Sanitizer};
+use crate::squirrel::{Sanitizable, SanitizeKind};
 
 use super::{Symb, Type};
 use itertools::Itertools;

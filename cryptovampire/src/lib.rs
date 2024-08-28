@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use std::{fs::File, io::BufWriter, num::NonZeroU32, path::{Path, PathBuf}};
+use std::{fs::File, io::BufWriter, num::NonZeroU32, path::Path};
 
 use crate::cli::Args;
 use anyhow::{bail, ensure, Context};

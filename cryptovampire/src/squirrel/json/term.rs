@@ -90,7 +90,9 @@ impl<'a> Term<'a> {
         Path<'a>: From<S>,
     {
         Self::App {
-            f: Box::new(Self::Fun { symb: OperatorName(s.into()) }),
+            f: Box::new(Self::Fun {
+                symb: OperatorName(s.into()),
+            }),
             args: args.into_iter().collect(),
         }
     }

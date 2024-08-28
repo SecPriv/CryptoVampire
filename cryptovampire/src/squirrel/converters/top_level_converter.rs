@@ -105,7 +105,7 @@ use assert_crypto::assert_crypto;
 mod assert_crypto {
     use cryptovampire_lib::formula::sort::builtins::{BOOL, MESSAGE};
     use itertools::Either;
-    use json::{operator::OperatorName, path::Path};
+    use json::operator::OperatorName;
 
     use super::*;
 

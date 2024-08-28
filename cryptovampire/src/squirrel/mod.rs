@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use anyhow::Context;
 use converters::convert_squirrel_dump;
-use itertools::{Either, Itertools};
+use itertools::Itertools;
 use json::CryptoVampireCall;
 use log::{debug, trace};
 use utils::string_ref::StrRef;
@@ -43,12 +43,10 @@ pub fn run_from_json(mut args: Args, str: &str) -> anyhow::Result<Vec<Return>> {
                 None => (),
                 Some(location) => *location = location.join(&format!("{i}")),
             }
-            run_from_ast(&args, ast)
-            .with_context(|| format!("failed running the {i:}th problem"))
+            run_from_ast(&args, ast).with_context(|| format!("failed running the {i:}th problem"))
         })
         .try_collect()
 }
-
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub enum SanitizeKind {
@@ -58,7 +56,7 @@ pub enum SanitizeKind {
     Macro,
     Cell,
     Name,
-    Sort
+    Sort,
 }
 
 impl Display for SanitizeKind {
@@ -81,7 +79,10 @@ pub trait Sanitizable<'a> {
 
     fn sanitize_kind(&self) -> SanitizeKind;
 
-    fn sanitized<S:Sanitizer>(&self, sanitizer: &S) -> StrRef<'a> where Self:Sized{
+    fn sanitized<S: Sanitizer>(&self, sanitizer: &S) -> StrRef<'a>
+    where
+        Self: Sized,
+    {
         sanitizer.sanitize(self)
     }
 }

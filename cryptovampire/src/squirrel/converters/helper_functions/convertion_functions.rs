@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use cryptovampire_lib::formula::function::{builtin::EMPTY_FUN_NAME, inner::name::Name};
+use cryptovampire_lib::formula::function::builtin::EMPTY_FUN_NAME;
 use hashbrown::Equivalent;
 use if_chain::if_chain;
 use itertools::{chain, Either, Itertools};
@@ -16,7 +16,11 @@ use crate::{
             DEFAULT_SND_PROJ_NAME, DEFAULT_TUPLE_NAME,
         },
         json::{
-            self, action::ActionName, mmacro::{self, MacroNameRef}, operator::OperatorName, path::Path, NameName, Pathed,
+            self,
+            action::ActionName,
+            mmacro::{self, MacroNameRef},
+            operator::OperatorName,
+            NameName, Pathed,
         },
         Sanitizable,
     },

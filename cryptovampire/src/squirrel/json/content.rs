@@ -1,12 +1,12 @@
 use super::*;
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub struct Content< N, U> {
+pub struct Content<N, U> {
     pub symb: N,
     pub data: U,
 }
 
-impl< N, U> Content< N, U> {
-    pub fn as_ref<'b>(&'b self) -> ContentRef< 'b,N,  U> {
+impl<N, U> Content<N, U> {
+    pub fn as_ref<'b>(&'b self) -> ContentRef<'b, N, U> {
         ContentRef {
             symb: &self.symb,
             data: &self.data,
@@ -20,7 +20,7 @@ pub struct ContentRef<'b, N, U> {
     pub data: &'b U,
 }
 
-impl<'b, N, U> Clone for ContentRef< 'b,N, U> {
+impl<'b, N, U> Clone for ContentRef<'b, N, U> {
     fn clone(&self) -> Self {
         Self {
             symb: self.symb,
@@ -31,7 +31,7 @@ impl<'b, N, U> Clone for ContentRef< 'b,N, U> {
 
 impl<'b, N, U> Copy for ContentRef<'b, N, U> {}
 
-impl<'b, N, U> From<(&'b N, &'b U)> for ContentRef< 'b,N,  U> {
+impl<'b, N, U> From<(&'b N, &'b U)> for ContentRef<'b, N, U> {
     fn from((symb, data): (&'b N, &'b U)) -> Self {
         Self { symb, data }
     }

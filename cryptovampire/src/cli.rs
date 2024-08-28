@@ -1,5 +1,4 @@
 use std::{
-    default,
     fmt::Display,
     path::{Path, PathBuf},
 };

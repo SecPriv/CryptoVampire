@@ -22,14 +22,14 @@ impl Display for Return {
                 write!(f, "ran automatically:")?;
                 r.iter()
                     .enumerate()
-                    .map(|(i, s)| (i+1, s))
+                    .map(|(i, s)| (i + 1, s))
                     .try_for_each(|(i, s)| write!(f, "\n\t- {i:}th run: \"{s}\""))
             }
             Return::Many(m) => {
                 writeln!(f, "ran many times:\n---------")?;
                 m.iter()
                     .enumerate()
-                    .map(|(i, s)| (i+1, s))
+                    .map(|(i, s)| (i + 1, s))
                     .try_for_each(|(i, r)| write!(f, "#{i}:\n{r}"))?;
                 write!(f, "\n---------")
             }

@@ -22,16 +22,15 @@ use utils::{
 use crate::{
     bail_at,
     parser::{ast, InputError},
-    squirrel::json::{self, MacroRef, Pathed,},
+    squirrel::json::{self, MacroRef},
     // squirrel::Sanitizable
 };
 
-
 /// Functions who name is fixed
-/// 
+///
 /// When the symbol's [Sanitizable::to_str_ref] is in the keys,
 /// then we use the associated value
-/// 
+///
 /// [Sanitizable]: crate::squirrel::Sanitizable
 #[dynamic]
 static REMMAPPED_FUNCTION: HashMap<&'static str, StrRef<'static>> = {
@@ -57,7 +56,7 @@ static REMMAPPED_FUNCTION: HashMap<&'static str, StrRef<'static>> = {
         (DEFAULT_TUPLE_NAME_NAME, DEFAULT_TUPLE_NAME.clone()),
         (DEFAULT_FST_PROJ_NAME_NAME, DEFAULT_FST_PROJ_NAME.clone()),
         (DEFAULT_SND_PROJ_NAME_NAME, DEFAULT_SND_PROJ_NAME.clone()),
-        ("input", "input".into())
+        ("input", "input".into()),
     ]
     .into_iter()
     .collect()
@@ -71,8 +70,8 @@ static FORBIDDEN_FUNCTIONS: HashSet<&'static str> =
 /// Symbols that should not be decalred
 #[dynamic]
 static BUILTIN_FUNCTION: HashSet<&'static str> = [
-    "&&", "||", "and", "or", "<=>", "=>", "=", "<=", "<", "not", "true",
-    "false", "empty", "ø", "happens", "pred"
+    "&&", "||", "and", "or", "<=>", "=>", "=", "<=", "<", "not", "true", "false", "empty", "ø",
+    "happens", "pred",
 ]
 .into_iter()
 .collect();

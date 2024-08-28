@@ -43,7 +43,7 @@ impl Runners {
     }
 
     /// Automatically runs `pbl` using the [Runner] available in [self]
-    /// 
+    ///
     /// If it succeeds it returns some information about the succeding solver.
     pub fn autorun<'bump>(
         self,
@@ -216,7 +216,7 @@ fn autorun_many<'bump>(
                 (_, Err(e)) => {
                     trace!("error in one of the solver");
                     killall(killable_recv, unkillable_recv, hr)?;
-                    return Err(e)
+                    return Err(e);
                 }
                 _ => {
                     trace!("other result, ignoring");

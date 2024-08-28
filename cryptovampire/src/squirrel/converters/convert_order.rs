@@ -11,7 +11,10 @@ use crate::{
         ast::{self, Application, Order, OrderOperation, QuantifierKind},
         InputError,
     },
-    squirrel::{json::{self, action::AT,  Pathed}, Sanitizable},
+    squirrel::{
+        json::{self, action::AT},
+        Sanitizable,
+    },
 };
 
 /// This is a somewhat dump copy of `Lemma.mk_depends_mutex` in `squirrel`.

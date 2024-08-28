@@ -6,7 +6,8 @@ use crate::{
     parser::ast::{self, TypedArgument},
     squirrel::{
         converters::ast_convertion::ToAst,
-        json::{self}, Sanitizable,
+        json::{self},
+        Sanitizable,
     },
 };
 
