@@ -1,24 +1,24 @@
-use std::{collections::VecDeque, ops::Deref, sync::Arc};
+use std::{borrow::Borrow, collections::VecDeque, ops::Deref, sync::Arc};
 
 use hashbrown::{HashMap, HashSet};
 use itertools::Itertools;
 use log::trace;
-use pest::Span;
 
-use crate::parser::{
-    ast::{self, ASTList},
-    merr,
+use crate::{
+    err_at,
     parser::{
-        parse_assert_with_bvars, parse_asserts_crypto, parse_asserts_with_bvars, parse_cells,
-        parse_orders_with_bvars, parse_steps,
+        ast::{self, ASTList},
+        parser::{
+            parse_assert_with_bvars, parse_asserts_crypto, parse_asserts_with_bvars, parse_cells,
+            parse_orders_with_bvars, parse_steps,
+        },
+        Location, MResult, Pstr,
     },
-    E,
 };
 use cryptovampire_lib::{
     container::ScopedContainer,
     environement::traits::{KnowsRealm, Realm},
     formula::{
-        formula::ARichFormula,
         function::{
             inner::evaluate::Evaluator,
             name_caster_collection::{NameCasterCollection, DEFAULT_NAME_CASTER},
@@ -34,26 +34,33 @@ use cryptovampire_lib::{
     },
 };
 use utils::{
-    f, implderef, implvec,
-    {traits::NicerError, utils::MaybeInvalid},
+    implderef, implvec, maybe_owned::MOw, string_ref::StrRef, traits::NicerError,
+    utils::MaybeInvalid,
 };
 
 #[derive(Hash, Clone, PartialEq, Eq, Debug, PartialOrd, Ord)]
-pub struct Macro<'bump, 'a> {
-    // name: &'a str,
+pub struct Macro<'bump, 'a, S> {
+    /// The sort of the arguments
     pub args: Arc<[Sort<'bump>]>,
-    pub args_name: Arc<[&'a str]>,
-    pub content: ast::Term<'a>,
+    /// Their name
+    pub args_name: Arc<[S]>,
+    /// The body
+    pub content: ast::Term<'a, S>,
 }
 
 pub use cache::{CellCache, FunctionCache, StepCache};
 
-use super::{declare_sorts, fetch_all};
+use super::{
+    declare_sorts, fetch_all,
+    parsable_trait::{
+        FALSE_CACHE, FALSE_TA_CACHE, NOT_CACHE, NOT_TA_CACHE, TRUE_CACHE, TRUE_TA_CACHE,
+    },
+};
 
 mod cache;
 
 #[derive(Debug)]
-pub struct Environement<'bump, 'str> {
+pub struct Environement<'bump, 'str, S> {
     /// the main memory
     pub container: &'bump ScopedContainer<'bump>,
 
@@ -69,15 +76,15 @@ pub struct Environement<'bump, 'str> {
     pub evaluator: Evaluator<'bump>,
 
     /// For [Macro]s
-    pub macro_hash: HashMap<String, Macro<'bump, 'str>>,
+    pub macro_hash: HashMap<String, Macro<'bump, 'str, S>>,
     /// # Macro look up table
     // pub step_lut_to_parse: HashMap<&'str str, ast::Step<'str>>,
-    pub functions: HashMap<String, FunctionCache<'str, 'bump>>,
+    pub functions: HashMap<String, FunctionCache<'str, 'bump, S>>,
 
     pub used_name: HashSet<String>,
 }
 
-impl<'bump, 'a> MaybeInvalid for Environement<'bump, 'a> {
+impl<'bump, 'a, S> MaybeInvalid for Environement<'bump, 'a, S> {
     fn is_valid(&self) -> bool {
         let Environement {
             name_caster_collection: _,
@@ -101,7 +108,17 @@ impl<'bump, 'a> MaybeInvalid for Environement<'bump, 'a> {
     }
 }
 
-impl<'bump, 'a> Environement<'bump, 'a> {
+impl<'bump, 'str, S> Environement<'bump, 'str, S>
+where
+    'str: 'str,
+{
+    pub fn shorten_life<'a>(self) -> Environement<'bump, 'a, S>
+    where
+        'str: 'a,
+    {
+        self
+    }
+
     pub fn new(
         container: &'bump ScopedContainer<'bump>,
         sort_hash: implvec!(Sort<'bump>),
@@ -110,7 +127,7 @@ impl<'bump, 'a> Environement<'bump, 'a> {
     ) -> Self {
         let sort_hash = sort_hash
             .into_iter()
-            .map(|s| (s.name().into_string(), s))
+            .map(|s| (s.name().to_string(), s))
             .collect();
         let function_hash: HashMap<_, _> = function_hash
             .into_iter()
@@ -170,13 +187,13 @@ impl<'bump, 'a> Environement<'bump, 'a> {
 
     pub fn find_function<'b>(
         &'b self,
-        span: Span<'a>,
+        span: Location<'str>,
         name: &str,
-    ) -> Result<&'b FunctionCache<'a, 'bump>, E> {
+    ) -> MResult<&'b FunctionCache<'str, 'bump, S>> {
         get_function(self, span, name)
     }
 
-    pub fn find_sort<'b>(&'b self, span: Span<'a>, name: &str) -> Result<Sort<'bump>, E> {
+    pub fn find_sort<'b>(&'b self, span: Location<'str>, name: &str) -> MResult<Sort<'bump>> {
         get_sort(self, span, name)
     }
 
@@ -194,60 +211,105 @@ impl<'bump, 'a> Environement<'bump, 'a> {
 }
 
 /// Find the [Sort] in already declared in [Environement::sort_hash]
-pub fn get_sort<'a, 'bump>(
-    env: &Environement<'bump, 'a>,
-    span: Span<'a>,
+pub fn get_sort<'a, 'bump, S>(
+    env: &Environement<'bump, 'a, S>,
+    span: Location<'a>,
     str: implderef!(str),
-) -> Result<Sort<'bump>, E> {
+) -> MResult<Sort<'bump>> {
     env.sort_hash
         .get(Deref::deref(&str))
-        .ok_or_else(|| merr(span, f!("undefined sort {}", Deref::deref(&str))))
+        .ok_or_else(|| err_at!(&span, "undefined sort {}", Deref::deref(&str)))
         .map(|s| *s)
 }
 
-/// Find the [Function] in already declared in [Environement::sort_function]
-pub fn get_function<'b, 'a, 'bump>(
-    env: &'b Environement<'bump, 'a>,
-    span: Span<'a>,
+/// Find the [Function] in already declared in [Environement::functions]
+pub fn get_function<'b, 'a, 'bump, S>(
+    env: &'b Environement<'bump, 'a, S>,
+    span: Location<'a>,
     str: implderef!(str),
-) -> Result<&'b FunctionCache<'a, 'bump>, E> {
+) -> MResult<&'b FunctionCache<'a, 'bump, S>> {
     env.functions.get(Deref::deref(&str)).ok_or_else(|| {
-        merr(
-            span,
-            f!(
-                "undefined function {}\nhint: If you looked for a macro, maybe you forgot the '!'",
-                Deref::deref(&str)
-            ),
+        err_at!(
+            &span,
+            "undefined function {}\nhint: If you looked for a macro, maybe you forgot the '!'",
+            Deref::deref(&str)
         )
     })
     // .map(|s| *s)
 }
 
-impl<'a, 'bump> KnowsRealm for Environement<'bump, 'a> {
+pub fn get_function_mow<'b, 'a, 'bump, S>(
+    content: &S,
+    state: &impl KnowsRealm,
+    env: &'b Environement<'bump, 'a, S>,
+    span: &Location<'a>,
+) -> MResult<MOw<'b, FunctionCache<'a, 'bump, S>>>
+where
+    S: Borrow<str>,
+{
+    match content.borrow() {
+        "true" | "True" => Ok(match state.get_realm() {
+            Realm::Symbolic => TRUE_TA_CACHE(),
+            Realm::Evaluated => TRUE_CACHE(),
+        }),
+        "false" | "False" => Ok(match state.get_realm() {
+            Realm::Symbolic => FALSE_TA_CACHE(),
+            Realm::Evaluated => FALSE_CACHE(),
+        }),
+        "not" => Ok(match state.get_realm() {
+            Realm::Symbolic => NOT_TA_CACHE(),
+            Realm::Evaluated => NOT_CACHE(),
+        }),
+        _ => get_function(env, *span, content.borrow()).map(MOw::Borrowed),
+    }
+}
+
+impl<'a, 'bump, S> KnowsRealm for Environement<'bump, 'a, S> {
     fn get_realm(&self) -> Realm {
         Realm::Evaluated
     }
 }
 
-pub fn parse_str<'a, 'bump>(
+/// Create a problem from a [ast::ASTList]
+pub fn parse_pbl_from_ast<'a, 'bump, S>(
     container: &'bump ScopedContainer<'bump>,
     sort_hash: implvec!(Sort<'bump>),
     function_hash: implvec!(Function<'bump>),
     extra_names: implvec!(String),
-    str: &'a str,
+    ast: ASTList<'a, S>,
     ignore_lemmas: bool,
-) -> anyhow::Result<Problem<'bump>> {
+) -> anyhow::Result<Problem<'bump>>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
+    trace!("[P] parsing from ast...");
     let mut pbl_builder = ProblemBuilder::default();
     pbl_builder.container(container);
-    trace!("[P] parsing...");
+    let env = Environement::new(container, sort_hash, function_hash, extra_names);
+    prbl_from_ast(
+        env.shorten_life(),
+        &*&ast,
+        pbl_builder,
+        ignore_lemmas,
+        container,
+    )
+}
 
-    trace!("[P] \tinto ast...");
-    let ast: ASTList<'a> = str.try_into().debug_continue()?;
-    let mut env = Environement::new(container, sort_hash, function_hash, extra_names);
-    trace!("[P] \t[DONE]");
-
+fn prbl_from_ast<'a, 'bump, S>(
+    mut env: Environement<'bump, 'a, S>,
+    ast: &'a ASTList<'a, S>,
+    mut pbl_builder: ProblemBuilder<'bump>,
+    ignore_lemmas: bool,
+    container: &'bump ScopedContainer<'bump>,
+) -> Result<Problem<'bump>, anyhow::Error>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     trace!("[P] \t- sorts...");
-    declare_sorts(&mut env, &ast).debug_continue()?;
+    declare_sorts::<S>(&mut env, &ast).debug_continue()?;
+    //             ^^^^^^^^^ why ???
 
     let mut assertions = Vec::new();
     let mut lemmas = Vec::new();
@@ -255,7 +317,8 @@ pub fn parse_str<'a, 'bump>(
     let mut asserts_crypto = Vec::new();
 
     trace!("[P] \t- fetch all...");
-    let query = fetch_all(
+    let query = fetch_all::<S>(
+        //                 ^^^^^^^^^ same ???
         &mut env,
         &ast,
         &mut assertions,
@@ -267,10 +330,10 @@ pub fn parse_str<'a, 'bump>(
     trace!("[P] \t[DONE]");
 
     trace!("[P] \t- parse steps...");
-    parse_steps(&env, env.functions.values().filter_map(|f| f.as_step()))?;
+    parse_steps::<S>(&env, env.functions.values().filter_map(|f| f.as_step()))?;
     trace!("[P] \t[DONE]");
     trace!("[P] \t- parse cells...");
-    parse_cells(
+    parse_cells::<S>(
         &env,
         env.functions.values().filter_map(|f| f.as_memory_cell()),
     )?;
@@ -280,17 +343,17 @@ pub fn parse_str<'a, 'bump>(
     trace!("[P] \t- parse assertions...");
     let mut bvars = Vec::new();
     pbl_builder
-        .assertions(parse_asserts_with_bvars::<Vec<ARichFormula<'bump>>>(
+        .assertions(parse_asserts_with_bvars::<Vec<_>, S>(
             &env, assertions, &mut bvars,
         )?)
-        .query(parse_assert_with_bvars(&env, query, &mut bvars)?)
-        .crypto_assertions(parse_asserts_crypto(&env, asserts_crypto)?);
+        .query(parse_assert_with_bvars::<S>(&env, query, &mut bvars)?)
+        .crypto_assertions(parse_asserts_crypto::<S>(&env, asserts_crypto)?);
     if !ignore_lemmas {
-        pbl_builder.lemmas(parse_asserts_with_bvars::<VecDeque<ARichFormula<'bump>>>(
+        pbl_builder.lemmas(parse_asserts_with_bvars::<VecDeque<_>, S>(
             &env, lemmas, &mut bvars,
         )?);
     }
-    let orders: Vec<_> = parse_orders_with_bvars(&env, orders, &mut bvars)?;
+    let orders: Vec<_> = parse_orders_with_bvars::<Vec<_>, S>(&env, orders, &mut bvars)?;
     let _ = bvars;
     trace!("[P] \t[DONE]");
 

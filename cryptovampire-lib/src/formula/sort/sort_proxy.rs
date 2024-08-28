@@ -4,18 +4,18 @@ use std::{cell::RefCell, fmt::Display, rc::Rc};
 use thiserror::Error;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Error)]
-pub enum InferenceError<'bump> {
-    #[error("can't infer a sort")]
-    CantInfer { proxy: SortProxy<'bump> },
-    #[error("sort mismatch: (expected {}, got {})", .expected.name(), .recieved.name())]
+pub enum InferenceError {
+    #[error("can't infer a sort {0}")]
+    CantInfer(Box<str>),
+    #[error("sort mismatch in {proxy}: (expected {expected}, got {recieved})")]
     SortMismatch {
-        proxy: SortProxy<'bump>,
-        expected: Sort<'bump>,
-        recieved: Sort<'bump>,
+        proxy: Box<str>,
+        expected: Box<str>,
+        recieved: Box<str>,
     },
 }
 
-impl<'bump> InferenceError<'bump> {
+impl InferenceError {
     /// the what is expected and what was recieved
     pub fn flip(self) -> Self {
         match self {
@@ -30,6 +30,22 @@ impl<'bump> InferenceError<'bump> {
                 recieved: expected,
             },
         }
+    }
+
+    pub fn mismach<'bump>(
+        proxy: &SortProxy<'bump>,
+        expected: Sort<'bump>,
+        recieved: Sort<'bump>,
+    ) -> Self {
+        Self::SortMismatch {
+            proxy: proxy.to_string().into_boxed_str(),
+            expected: expected.name().into(),
+            recieved: recieved.name().into(),
+        }
+    }
+
+    pub fn cant_infer<'bump>(source: &SortProxy<'bump>) -> Self {
+        Self::CantInfer(source.to_string().into_boxed_str())
     }
 }
 
@@ -62,7 +78,7 @@ impl<'bump> SortProxy<'bump> {
         &self,
         s: Sort<'bump>,
         realm: &impl KnowsRealm,
-    ) -> Result<(), InferenceError<'bump>> {
+    ) -> Result<(), InferenceError> {
         match self.as_option() {
             Some(s2) if Sort::eq_realm(&s2, &s, realm) => Ok(()),
             None => {
@@ -71,11 +87,7 @@ impl<'bump> SortProxy<'bump> {
                 Ok(())
             }
             // Some(s2) => err(merr!(span; "wrong sort: {} instead of {}", s2.name(), s.name())),
-            Some(s2) => Err(InferenceError::SortMismatch {
-                proxy: self.clone(),
-                expected: s,
-                recieved: s2,
-            }),
+            Some(s2) => Err(InferenceError::mismach(self, s, s2)),
         }
     }
 
@@ -86,7 +98,7 @@ impl<'bump> SortProxy<'bump> {
         &self,
         s: Sort<'bump>,
         realm: &impl KnowsRealm,
-    ) -> Result<(), InferenceError<'bump>> {
+    ) -> Result<(), InferenceError> {
         match self.expects(s, realm) {
             Err(InferenceError::SortMismatch {
                 proxy,
@@ -105,7 +117,7 @@ impl<'bump> SortProxy<'bump> {
         s1: Sort<'bump>,
         s2: Sort<'bump>,
         realm: &impl KnowsRealm,
-    ) -> Result<(), InferenceError<'bump>> {
+    ) -> Result<(), InferenceError> {
         Self::matches(&s1.into(), s2, realm)
     }
 
@@ -116,17 +128,13 @@ impl<'bump> SortProxy<'bump> {
         &self,
         other: &Self,
         realm: &impl KnowsRealm,
-    ) -> Result<Sort<'bump>, InferenceError<'bump>> {
+    ) -> Result<Sort<'bump>, InferenceError> {
         match (self.into(), other.into()) {
             (Some(s), Some(s2)) => {
                 if Sort::eq_realm(&s, &s2, realm) {
                     Ok(s)
                 } else {
-                    Err(InferenceError::SortMismatch {
-                        proxy: self.clone(),
-                        expected: s2,
-                        recieved: s,
-                    })
+                    Err(InferenceError::mismach(self, s2, s))
                 }
             }
             (None, Some(s2)) => {
@@ -137,9 +145,7 @@ impl<'bump> SortProxy<'bump> {
                 other.set(s).unwrap(); // cannot fail
                 Ok(s)
             }
-            _ => Err(InferenceError::CantInfer {
-                proxy: self.clone(),
-            }),
+            _ => Err(InferenceError::cant_infer(self)),
         }
     }
 
@@ -147,7 +153,7 @@ impl<'bump> SortProxy<'bump> {
         &self,
         other: &Self,
         realm: &impl KnowsRealm,
-    ) -> Result<Sort<'bump>, InferenceError<'bump>> {
+    ) -> Result<Sort<'bump>, InferenceError> {
         self.unify(other, realm).map_err(|err| err.flip())
     }
 
@@ -179,7 +185,7 @@ impl<'bump> SortProxy<'bump> {
     /// check is `self` is already set to `other`
     ///
     /// similar to `maches` or `expect` but without modifying `self`
-    pub fn is_sosrt(&self, other: Sort<'bump>) -> bool {
+    pub fn is_sort(&self, other: Sort<'bump>) -> bool {
         self.as_option() == Some(other)
     }
 

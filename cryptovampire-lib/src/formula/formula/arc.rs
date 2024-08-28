@@ -4,8 +4,9 @@ use std::{
     ops::{BitAnd, BitOr, Deref, DerefMut, Not, Shr},
 };
 
+use crate::formula::utils::Applicable;
 use crate::formula::{
-    function::builtin::{AND, IMPLIES, NOT, OR},
+    function::builtin::{AND, IMPLIES, NOT, OR, TRUE_ARC},
     utils::formula_iterator::{FormulaIterator, IteratorFlags},
     variable::{IntoVariableIter, Variable},
 };
@@ -13,7 +14,7 @@ use crate::formula::{
 use super::RichFormula;
 use utils::{
     arc_into_iter::ArcIntoIter,
-    utils::{repeat_n_zip, StackBox},
+    utils::{repeat_n_zip, MaybeInvalid, StackBox},
     vecref::VecRefClone,
 };
 
@@ -204,7 +205,7 @@ impl<'bump> BitAnd for ARichFormula<'bump> {
     type Output = Self;
 
     fn bitand(self, rhs: Self) -> Self::Output {
-        AND.f_a([self, rhs])
+        AND.f([self, rhs])
     }
 }
 
@@ -212,7 +213,7 @@ impl<'bump> BitOr for ARichFormula<'bump> {
     type Output = Self;
 
     fn bitor(self, rhs: Self) -> Self::Output {
-        OR.f_a([self, rhs])
+        OR.f([self, rhs])
     }
 }
 
@@ -220,7 +221,7 @@ impl<'bump> Not for ARichFormula<'bump> {
     type Output = Self;
 
     fn not(self) -> Self::Output {
-        NOT.f_a([self])
+        NOT.f([self])
     }
 }
 
@@ -228,13 +229,19 @@ impl<'bump> Shr for ARichFormula<'bump> {
     type Output = Self;
 
     fn shr(self, rhs: Self) -> Self::Output {
-        IMPLIES.f_a([self, rhs])
+        IMPLIES.f([self, rhs])
     }
 }
 
 impl<'bump> Display for ARichFormula<'bump> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_inner())
+        if self.is_valid() {
+            write!(f, "{}", self.as_inner())
+        } else if cfg!(debug_assertions) {
+            write!(f, "(unintialized formula) {:?}", self.as_inner())
+        } else {
+            panic!("The formula contains some uninitialized bit. This should not happen please report it")
+        }
     }
 }
 
@@ -247,5 +254,17 @@ impl<'a, 'bump> IntoVariableIter<'bump> for &'a ARichFormula<'bump> {
 impl<'bump> IntoVariableIter<'bump> for ARichFormula<'bump> {
     fn vars_iter(self) -> impl Iterator<Item = Variable<'bump>> {
         self.used_variables_iter()
+    }
+}
+
+impl<'bump> Default for ARichFormula<'bump> {
+    fn default() -> Self {
+        TRUE_ARC.clone()
+    }
+}
+
+impl<'bump> MaybeInvalid for ARichFormula<'bump> {
+    fn is_valid(&self) -> bool {
+        RichFormula::is_valid(self.as_ref())
     }
 }

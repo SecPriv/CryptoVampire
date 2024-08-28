@@ -10,7 +10,11 @@ use cryptovampire_lib::{
 use log::trace;
 use utils::from_with::FromWith;
 
-use crate::{cli::Args, init_logger, parser, problem_try_from_str};
+use crate::{
+    cli::Args,
+    init_logger, parse_pbl_from_ast,
+    parser::{self, ast::ASTList},
+};
 
 #[test]
 fn miri() {
@@ -18,13 +22,14 @@ fn miri() {
     ScopedContainer::scoped(|container| {
         trace!("running");
         let env = Environement::from_with(&Args::parse_from::<_, OsString>([]), &*container);
+        let ast = ASTList::try_from(TEST_FILE).unwrap();
 
-        let pbl = problem_try_from_str(
+        let pbl = parse_pbl_from_ast(
             container,
             BUILT_IN_SORTS.iter().cloned(),
             BUILT_IN_FUNCTIONS.iter().cloned(),
             parser::USED_KEYWORDS.iter().map(|s| s.to_string()),
-            &TEST_FILE,
+            ast,
             env.are_lemmas_ignored(),
         )
         .expect("parsing error:");
@@ -34,4 +39,4 @@ fn miri() {
         )
     })
 }
-const TEST_FILE: &'static str = include_str!("../../../test/basic-hash-1.ptcl");
+const TEST_FILE: &'static str = include_str!("../../../tests/basic-hash-1.ptcl");

@@ -90,26 +90,6 @@ pub(crate) fn preprocess<B>(
         max_var,
         &dependency_graph,
     );
-
-    // {
-    //     // input
-    //     let mut ors = Vec::new();
-    //     let input_f = sfun!(input; tp.clone());
-    //     if subt.sort() == msg {
-    //         ors.push(seq!(m.clone(), input_f.clone()))
-    //     }
-    //     inputs(ctx, &tp, &m, todo, &mut ors, subt, max_var, lt);
-    //     assertions.push(Smt::Assert(SmtFormula::Forall(
-    //         vars.clone(),
-    //         Box::new(simplies!(ctx.env();
-    //             subt.f(m.clone(), input_f, &msg),
-    //             SmtFormula::Or(ors)
-    //         )),
-    //     )));
-    // }
-
-    // // memory cells
-    // memory_cells(assertions, ctx, max_var, subt, msg, lt, tp, m);
 }
 
 /// preprocess memory cells

@@ -1,5 +1,6 @@
 use itertools::{izip, Itertools};
 
+use crate::formula::utils::Applicable;
 use crate::{
     environement::environement::Environement,
     formula::{
@@ -27,7 +28,7 @@ pub fn generate<'bump>(
         .protocol()
         .init_step()
         .function()
-        .f_a::<Variable<'bump>>([]);
+        .f::<Variable<'bump>, _>([]);
     let pred = PRED.clone();
 
     assertions.push(Axiom::comment("ordering"));
@@ -39,29 +40,29 @@ pub fn generate<'bump>(
         [
             // !!!!! leq is *not* reflexive !!!
             mforall!(t1!1:step, t2!2:step;
-                {meq(leq.f_a([t1, t2]) & !meq(t1, t2), lt.f_a([t1, t2]))}),
-            happens.f_a([init.clone()]), // ax1
+                {meq(leq.f([t1, t2]) & !meq(t1, t2), lt.f([t1, t2]))}),
+            happens.f([init.clone()]), // ax1
             mforall!(t!1:step;
-                {happens.f_a([t]) >> leq.f_a([init.shallow_copy(), t.into()])}), // ax2
+                {happens.f([t]) >> leq.f([init.shallow_copy(), t.into()])}), // ax2
             mforall!(t!0:step;
-                {happens.f_a([t]) >> (meq(t, init) | happens.f_a([pred.f_a([t])]))}), // ax3
+                {happens.f([t]) >> (meq(t, init) | happens.f([pred.f([t])]))}), // ax3
             mforall!(t1!1:step, t2!2:step;
-                {happens.f_a([t1]) | happens.f_a([t2]) | meq(t1, t2)}), // ax4
+                {happens.f([t1]) | happens.f([t2]) | meq(t1, t2)}), // ax4
             mforall!(t1!1:step, t2!2:step, t3!3:step;
-                {(leq.f_a([t1, t2]) & leq.f_a([t2, t3])) >> leq.f_a([t1, t3])}), // ax5
+                {(leq.f([t1, t2]) & leq.f([t2, t3])) >> leq.f([t1, t3])}), // ax5
             mforall!(t1!1:step, t2!2:step;
-                {(leq.f_a([t1, t2]) & leq.f_a([t2, t1])) >> meq(t1, t2) }), // ax6
+                {(leq.f([t1, t2]) & leq.f([t2, t1])) >> meq(t1, t2) }), // ax6
             mforall!(t1!1:step, t2!2:step;
-                {meq(happens.f_a([t1]) & happens.f_a([t2]), leq.f_a([t1, t2]) | leq.f_a([t2, t1]))}), // ax7
+                {meq(happens.f([t1]) & happens.f([t2]), leq.f([t1, t2]) | leq.f([t2, t1]))}), // ax7
             mforall!(t!0:step;
-                {happens.f_a([pred.f_a([t])]) >> leq.f_a([pred.f_a([t]), t.into()])}), // ax8
+                {happens.f([pred.f([t])]) >> leq.f([pred.f([t]), t.into()])}), // ax8
             mforall!(t!0:step;
-                {happens.f_a([t]) >> !meq(pred.f_a([t]), t)}), // ax9
+                {happens.f([t]) >> !meq(pred.f([t]), t)}), // ax9
             mforall!(t!0:step;
-                {happens.f_a([pred.f_a([t])]) >> happens.f_a([t])}), // ax10
+                {happens.f([pred.f([t])]) >> happens.f([t])}), // ax10
             mforall!(t1!1:step, t2!2:step;
-                {(happens.f_a([pred.f_a([t1])]) & happens.f_a([t2])) >>
-                    (leq.f_a([t2.into(), pred.f([t1])]) | leq.f_a([t1, t2]))}), // ax11
+                {(happens.f([pred.f([t1])]) & happens.f([t2])) >>
+                    (leq.f([t2.into(), pred.apply([t1])]) | leq.f([t1, t2]))}), // ax11
         ]
         .into_iter()
         .map(Axiom::theory), // .chain(pbl.protocol().ordering().iter().cloned().map(Axiom::base)),
@@ -76,12 +77,12 @@ pub fn generate<'bump>(
             .map(|s| {
                 let vars = s.free_variables();
                 let max_vars = vars.max_var();
-                let t = s.function().f_a(vars);
+                let t = s.function().f(vars);
                 let mands = ands(pbl.protocol().steps().iter().map(|s2| {
                     if s == s2 {
                         // A(i) = A(j) => i = j
                         let vars2 = vars.iter().map(|v| (*v) + max_vars).collect_vec();
-                        let t2 = s2.function().f_a(&vars2);
+                        let t2 = s2.function().f(&vars2);
                         mforall!(vars2.iter().cloned(), {
                             meq(&t, t2) >> ands(izip!(vars, &vars2).map(|(v1, v2)| meq(v1, v2)))
                         })
@@ -92,11 +93,11 @@ pub fn generate<'bump>(
                             .iter()
                             .map(|v| (*v) + max_vars)
                             .collect_vec();
-                        let t2 = s2.function().f_a(&vars2);
+                        let t2 = s2.function().f(&vars2);
                         mforall!(vars2, { !meq(&t, t2) })
                     }
                 }));
-                mforall!(vars.iter().cloned(), { happens.f_a([t]) >> mands })
+                mforall!(vars.iter().cloned(), { happens.f([t]) >> mands })
             })
             .map(Axiom::base),
     );
@@ -108,10 +109,10 @@ pub fn generate<'bump>(
         let t = Variable::new(max_var, step);
         let mors = ors(steps.iter().map(|s| {
             let vars = s.free_variables();
-            let t2 = s.function().f_a(vars);
+            let t2 = s.function().f(vars);
             mexists!(vars.iter().cloned(), { meq(&t, t2) })
         }));
-        mforall!([t], { happens.f_a([t]) >> mors })
+        mforall!([t], { happens.f([t]) >> mors })
     }));
 
     // user ordering
@@ -119,14 +120,12 @@ pub fn generate<'bump>(
         pbl.protocol()
             .ordering()
             .iter()
-            .map(|o| match o.kind() {
-                OrderingKind::LT(a, b) => {
-                    RichFormula::Quantifier(o.quantifier().clone(), leq.f_a([a, b]))
-                }
-                OrderingKind::Exclusive(a, b) => RichFormula::Quantifier(
-                    o.quantifier().clone(),
-                    !(happens.f_a([a]) & happens.f_a([b])),
-                ),
+            .map(|o| {
+                let inner = match o.kind() {
+                    OrderingKind::LT(a, b) => leq.f([a, b]),
+                    OrderingKind::Exclusive(a, b) => !(happens.f([a]) & happens.f([b])),
+                };
+                RichFormula::Quantifier(o.quantifier().clone(), o.guard().clone() >> inner)
             })
             .map_into()
             .map(Axiom::base),

@@ -61,10 +61,11 @@ order forall (i:session, j:index)
 order forall (i:session, j:index, j2:index)
     { reader(i, j2) <> reader(i, j) }
 
-let conclusion!(i:session, j:index) = exists (k:session) {(
-    lt(tag(k, j), reader(i, j))
-    && (sel1of2(msg!(tag(k, j))) == sel1of2(input(reader(i, j))))
-    && (sel2of2(msg!(tag(k, j))) == sel2of2(input(reader(i, j))))
+let conclusion!(i:session, j:index) = exists (k:session) {
+    let m_in: Message = input(reader(i, j)) in 
+    (lt(tag(k, j), reader(i, j))
+    && (sel1of2(msg!(tag(k, j))) == sel1of2(m_in))
+    && (sel2of2(msg!(tag(k, j))) == sel2of2(m_in))
 )}
 
 let premise!(i:session, j:index) =  cond!(reader(i, j))

@@ -1,2 +1,4 @@
 [build]
 target-dir = "/tmp/ccsa/build/dir"
+
+rustdocflags = [ "--html-in-header", "./docs-header.html" ]

@@ -45,13 +45,13 @@ pub trait Signature<'bump>: Sized + std::fmt::Debug {
 
     /// The number of arguments
     ///
-    /// This should be compatible with [Self::Args::size_hint()]
+    /// This should be compatible with [`Self::Args::size_hint()`](Iterator::size_hint)
     fn args_size(&self) -> RangeInclusive<Infinity<usize>>;
 
     /// Unifies `self` with `other`.
     ///
     /// The errors will be thrown out assuming `self` is the grounder truth
-    fn unify<S, R>(&self, other: &S, env: &R) -> Result<(), CheckError<'bump>>
+    fn unify<S, R>(&self, other: &S, env: &R) -> Result<(), CheckError>
     where
         S: Signature<'bump>,
         R: KnowsRealm,
@@ -116,7 +116,7 @@ pub trait AsFixedSignature<'bump>: std::fmt::Debug {
         'bump: 'a;
 }
 
-/// Shortcut to get to the [Iterator] hidden in [FixedSignature::Args]
+/// Shortcut to get to the [Iterator] hidden in [AsFixedSignature::Args]
 type FixedSignatureArgs<'a, 'bump, T> =
     <<T as AsFixedSignature<'bump>>::Args<'a> as IntoIterator>::IntoIter;
 

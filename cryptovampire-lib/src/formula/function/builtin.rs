@@ -3,6 +3,7 @@ use std::sync::Arc;
 use static_init::dynamic;
 
 use crate::container::StaticContainer;
+use crate::formula::formula::ARichFormula;
 use crate::formula::sort::builtins::{BITSTRING, BOOL, CONDITION, MESSAGE};
 use crate::formula::{formula::RichFormula, sort::builtins::STEP};
 
@@ -64,6 +65,9 @@ pub static FALSE_F_TA: Function<'static> = new_static_function(InnerFunction::Te
 
 #[dynamic]
 pub static TRUE: RichFormula<'static> = RichFormula::Fun(TRUE_F.clone(), Arc::new([]));
+
+#[dynamic]
+pub static TRUE_ARC: ARichFormula<'static> = TRUE.clone_as_arc();
 
 #[dynamic]
 pub static FALSE: RichFormula<'static> = RichFormula::Fun(TRUE_F.clone(), Arc::new([]));
@@ -194,9 +198,11 @@ pub static CONDITION_TO_BOOL: Function<'static> = new_static_function(InnerFunct
     Evaluate::new("evaluate_cond".into(), CONDITION.as_sort(), BOOL.as_sort()),
 ));
 
+pub const EMPTY_FUN_NAME: &'static str = "empty";
+
 #[dynamic]
 static EMPTY_TUPLE_FUNCTION: BaseFunctionTuple<'static> =
-    Function::new_user_term_algebra(&StaticContainer, "empty", [], MESSAGE.clone());
+    Function::new_user_term_algebra(&StaticContainer, EMPTY_FUN_NAME, [], MESSAGE.clone());
 
 #[dynamic]
 pub static EMPTY: Function<'static> = (&EMPTY_TUPLE_FUNCTION).main.clone();

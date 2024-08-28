@@ -29,12 +29,22 @@ where
     }
 }
 
+/// While [std::backtrace::Backtrace] is not supported by `thiserror` this leverages
+/// rust builtin backtrace by immediatly crashing when reaching an Err(_) instead of
+/// passing it along when compiling in debug mode. The hope is that this becomes a
+/// no op once in release mode
 pub trait NicerError {
     type Out;
     fn unwrap_display(self) -> Self::Out;
-    fn expect_display(self, msg: &str) -> Self::Out;
+    fn expect_display<F, D>(self, msg: F) -> Self::Out
+    where
+        F: FnOnce() -> D,
+        D: Display;
     fn debug_continue(self) -> Self;
-    fn debug_continue_msg(self, msg: &str) -> Self;
+    fn debug_continue_msg<F, D>(self, msg: F) -> Self
+    where
+        F: FnOnce() -> D,
+        D: Display;
 }
 
 impl<T, E> NicerError for Result<T, E>
@@ -50,10 +60,14 @@ where
         }
     }
 
-    fn expect_display(self, msg: &str) -> Self::Out {
+    fn expect_display<F, D>(self, msg: F) -> Self::Out
+    where
+        F: FnOnce() -> D,
+        D: Display,
+    {
         match self {
             Ok(o) => o,
-            Err(err) => panic!("{msg}: {err}"),
+            Err(err) => panic!("{}: {err}", msg()),
         }
     }
 
@@ -65,7 +79,11 @@ where
         }
     }
 
-    fn debug_continue_msg(self, msg: &str) -> Self {
+    fn debug_continue_msg<F, D>(self, msg: F) -> Self
+    where
+        F: FnOnce() -> D,
+        D: Display,
+    {
         if cfg!(debug_assertions) {
             Ok(self.expect_display(msg))
         } else {

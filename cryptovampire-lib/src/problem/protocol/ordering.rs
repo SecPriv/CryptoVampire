@@ -7,6 +7,7 @@ use crate::formula::{formula::ARichFormula, quantifier::Quantifier, sort::builti
 pub struct Ordering<'bump> {
     quantifier: Quantifier<'bump>,
     kind: OrderingKind<'bump>,
+    guard: ARichFormula<'bump>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -17,9 +18,18 @@ pub enum OrderingKind<'bump> {
 
 impl<'bump> Ordering<'bump> {
     pub fn new(vars: Quantifier<'bump>, kind: OrderingKind<'bump>) -> Self {
+        Self::new_guarded(vars, kind, Default::default())
+    }
+
+    pub fn new_guarded(
+        vars: Quantifier<'bump>,
+        kind: OrderingKind<'bump>,
+        guard: ARichFormula<'bump>,
+    ) -> Self {
         Self {
             quantifier: vars,
             kind,
+            guard,
         }
     }
 
@@ -50,5 +60,9 @@ impl<'bump> Ordering<'bump> {
 
     pub fn quantifier(&self) -> &Quantifier<'bump> {
         &self.quantifier
+    }
+
+    pub fn guard(&self) -> &ARichFormula<'bump> {
+        &self.guard
     }
 }

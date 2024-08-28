@@ -3,6 +3,7 @@ use std::{ops::Range, sync::Arc};
 
 use itertools::Itertools;
 
+use crate::formula::utils::Applicable;
 use crate::{
     container::{allocator::ContainerTools, contained::Containable, reference::Reference},
     formula::{
@@ -164,7 +165,7 @@ impl<'bump> Step<'bump> {
     /// # Safety
     /// This will mutate `step` and `function` make sure nobody is mutating them
     /// in another thread. Thanks to the check on initialization no one can alias
-    /// `step` or `function` other that with an [C::initialize()] function.
+    /// `step` or `function` other that with an [ContainerTools::initialize()] function.
     ///
     /// # Panic
     /// This panics `args` does not contain all the free variables in `message` and
@@ -286,7 +287,7 @@ impl<'bump> Step<'bump> {
 
     /// strict happen before relation
     pub fn strict_before(a: ARichFormula<'bump>, b: ARichFormula<'bump>) -> ARichFormula<'bump> {
-        LESS_THAN_STEP.f_a([a, b])
+        LESS_THAN_STEP.f([a, b])
     }
 
     /// happen before or equal

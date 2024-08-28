@@ -7,6 +7,7 @@ use std::{
 use hashbrown::HashSet;
 use itertools::Itertools;
 
+use crate::formula::utils::Applicable;
 use crate::formula::{
     formula::ARichFormula,
     function::{
@@ -23,7 +24,7 @@ use crate::formula::{
     },
     variable::{uvar, Variable},
 };
-use utils::implvec;
+use utils::{implvec, utils::MaybeInvalid};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum RichFormula<'bump> {
@@ -282,7 +283,7 @@ impl<'bump> BitAnd for RichFormula<'bump> {
     type Output = Self;
 
     fn bitand(self, rhs: Self) -> Self::Output {
-        AND.f([self, rhs])
+        AND.apply([self, rhs])
     }
 }
 
@@ -290,7 +291,7 @@ impl<'bump> BitOr for RichFormula<'bump> {
     type Output = Self;
 
     fn bitor(self, rhs: Self) -> Self::Output {
-        OR.f([self, rhs])
+        OR.apply([self, rhs])
     }
 }
 
@@ -298,7 +299,7 @@ impl<'bump> Not for RichFormula<'bump> {
     type Output = Self;
 
     fn not(self) -> Self::Output {
-        NOT.f([self])
+        NOT.apply([self])
     }
 }
 
@@ -306,7 +307,7 @@ impl<'bump> Shr for RichFormula<'bump> {
     type Output = Self;
 
     fn shr(self, rhs: Self) -> Self::Output {
-        IMPLIES.f([self, rhs])
+        IMPLIES.apply([self, rhs])
     }
 }
 
@@ -318,6 +319,16 @@ impl<'bump> Display for RichFormula<'bump> {
                 write!(f, "{}({})", fun.name(), args.iter().join(", "))
             }
             RichFormula::Quantifier(q, arg) => write!(f, "{q} {arg}"),
+        }
+    }
+}
+
+impl<'bump> MaybeInvalid for RichFormula<'bump> {
+    fn is_valid(&self) -> bool {
+        match self {
+            RichFormula::Var(v) => v.is_valid(),
+            RichFormula::Fun(f, args) => f.is_valid() && args.iter().all(MaybeInvalid::is_valid),
+            RichFormula::Quantifier(_, arg) => arg.is_valid(),
         }
     }
 }
@@ -359,27 +370,28 @@ pub fn meq<'bump>(
     lhs: impl Into<ARichFormula<'bump>>,
     rhs: impl Into<ARichFormula<'bump>>,
 ) -> ARichFormula<'bump> {
-    EQUALITY.f_a([lhs.into(), rhs.into()])
+    EQUALITY.f([lhs.into(), rhs.into()])
 }
 
 pub fn ands<'bump>(args: impl IntoIterator<Item = ARichFormula<'bump>>) -> ARichFormula<'bump> {
-    AND.f_a(args)
-}
-
-pub fn ors<'bump>(args: impl IntoIterator<Item = ARichFormula<'bump>>) -> ARichFormula<'bump> {
-    OR.f_a(args)
-}
-
-pub fn ands_owned<'bump>(args: impl IntoIterator<Item = RichFormula<'bump>>) -> RichFormula<'bump> {
     AND.f(args)
 }
 
-pub fn ors_owned<'bump>(args: impl IntoIterator<Item = RichFormula<'bump>>) -> RichFormula<'bump> {
+pub fn ors<'bump>(args: impl IntoIterator<Item = ARichFormula<'bump>>) -> ARichFormula<'bump> {
     OR.f(args)
+}
+
+pub fn ands_owned<'bump>(args: impl IntoIterator<Item = RichFormula<'bump>>) -> RichFormula<'bump> {
+    AND.apply(args)
+}
+
+pub fn ors_owned<'bump>(args: impl IntoIterator<Item = RichFormula<'bump>>) -> RichFormula<'bump> {
+    OR.apply(args)
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::formula::utils::Applicable;
     use crate::{
         formula::{
             formula::ARichFormula,
@@ -402,7 +414,7 @@ mod tests {
         ]
         .map(|(id, sort)| Variable { id, sort });
 
-        let formula = CONDITION_TO_BOOL.f_a([&v4])
+        let formula = CONDITION_TO_BOOL.f([&v4])
             >> mforall!(a!346:STEP.as_sort(); {
                 ARichFormula::from(&v1) & (v2.into())
                     & mexists!(s!4398:STEP.as_sort(); {

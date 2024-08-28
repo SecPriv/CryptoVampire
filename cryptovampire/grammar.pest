@@ -11,7 +11,7 @@ c_like_comments = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
 ml_like_comments = _{ "(*" ~ (!"*)" ~ ANY)* ~ "*)" }
 EOL = _{";"}
 
-ident = @{  ASCII_ALPHA ~ ( ASCII_ALPHANUMERIC | "_" | "-" | "'" )* }
+ident = @{  LETTER ~ ( ASCII_ALPHANUMERIC | LETTER | "_" | "-" | "'" )* }
 underscore = {"_"}
 
 
@@ -32,7 +32,7 @@ operation = { eq | neq | or | and | implies | iff }
 typed_arguments = {("(" ~ (variable_binding ~ ",")* ~ variable_binding? ~ ")")?}
     variable_binding = {variable ~ ":" ~ type_name }
 
-commun_base = { /* let_in |*/ if_then_else | find_such_that | quantifier | macro_application | application  }
+commun_base = { let_in | if_then_else | find_such_that | quantifier | macro_application | application  }
 term = { /* "(" ~ inner_term ~ ")" | */  inner_term }
     inner_term = { commun_base | infix_term}
 bracketed_term = _{"{" ~ term ~ "}"}
@@ -50,7 +50,7 @@ find_such_that = {"try" ~ "find" ~
                     "such" ~ "that"  ~ bracketed_term ~
                     "then" ~ bracketed_term ~
                     "else" ~ bracketed_term}
-let_in = {"let" ~ variable ~ "=" ~ term ~ "in" ~ term}
+let_in = {"let" ~ variable_binding ~ "=" ~ term ~ "in" ~ term}
 
 quantifier = {quantifier_op ~ typed_arguments ~ bracketed_term }
     quantifier_op = {exists | forall }
@@ -72,24 +72,23 @@ step = {"step" ~ step_name ~ typed_arguments ~
     assignement = {typed_arguments ~ application ~ "<-" ~ term}
     assignements= {"{" ~ (assignement ~ ",")* ~ assignement? ~ "}"}
 
-assertion = {"assert" ~ assertion_inner ~ options? }
-    assertion_inner = { term }
+assertion = {"assert" ~ assertion_inner }
+    assertion_inner = { term ~ options? }
 
 assertion_crypto = {"assert-crypto" ~ ident ~ function* ~ options?}
 
-query = {"query" ~ query_inner ~ options? }
-    query_inner = { term }
+query = {"query" ~ assertion_inner }
 
-lemma = {"lemma" ~ lemma_inner ~ options? }
-    lemma_inner= { term }
+lemma = {"lemma" ~ assertion_inner }
 
-order = {"order" ~ options? ~ quantifier_op ~ typed_arguments ~
-    (inner_order | "{" ~ inner_order ~ "}") }
-    inner_order = _{term ~ ordering_operation ~ term}
+order = {"order" ~ quantifier_op ~ typed_arguments ~
+    (inner_order | "{" ~ inner_order ~ "}")  ~ options?}
+    inner_order = _{order_guard? ~ term ~ ordering_operation ~ term}
     ordering_operation = { order_incompatible | order_lt | order_gt }
         order_incompatible = {"<>"}
         order_lt = { "<" }
         order_gt = { ">" }
+    order_guard = { term ~ implies }
 
 mlet = {"let" ~ macro_name ~ typed_arguments ~ "=" ~ term ~ options? }
 

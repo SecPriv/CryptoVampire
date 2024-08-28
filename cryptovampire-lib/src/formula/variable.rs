@@ -4,6 +4,7 @@ use std::{
 };
 
 use itertools::Itertools;
+use utils::utils::MaybeInvalid;
 
 use super::{
     formula::{ARichFormula, RichFormula},
@@ -176,4 +177,17 @@ impl<'a, 'bump> IntoVariableIter<'bump> for &'a Variable<'bump> {
     fn vars_iter(self) -> impl Iterator<Item = Variable<'bump>> {
         [*self].into_iter()
     }
+}
+
+impl<'bump> MaybeInvalid for Variable<'bump> {
+    fn is_valid(&self) -> bool {
+        self.sort().is_valid()
+    }
+}
+
+/// convert [usize] to [uvar] crashing if impossible.
+///
+/// This is usefull when making ids for variable out of array lengths and the likes
+pub fn from_usize(i: usize) -> uvar {
+    uvar::try_from(i).expect("value out of range, can't make a variable out of it")
 }

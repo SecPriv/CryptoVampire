@@ -3,6 +3,7 @@ use std::{cell::RefCell, collections::BTreeSet, hash::Hash, sync::Arc};
 use if_chain::if_chain;
 use itertools::Itertools;
 
+use crate::formula::utils::Applicable;
 use crate::subterm::{
     into_exist_formula,
     kind::SubtermKindConstr,
@@ -126,17 +127,17 @@ impl<'bump> IntCtxt<'bump> {
                 sort: message_sort,
                 formula: mforall!(c!1:message_sort, k!3:nonce_sort; {
                     let k_f = nc.cast(message_sort, k.clone());
-                    ev.eval(self.verify.f([c.into(), k_f.clone()])) >>
+                    ev.eval(self.verify.apply([c.into(), k_f.clone()])) >>
                     mexists!(m!4:message_sort, r!5:nonce_sort; {
                         let r_f = nc.cast(message_sort, r.clone());
-                        let c2 = self.enc.f_a([m.into(), r_f.clone(), k_f.clone()]);
+                        let c2 = self.enc.f([m.into(), r_f.clone(), k_f.clone()]);
                         meq(ev.eval(c), ev.eval(c2.clone())) &
                         (
                             subterm_main.f_a(env,  c2.clone(), c.into()) |
                             subterm_key.f_a(env,  k, c) |
                             subterm_rand.f_a(env, r, c) |
                             (mexists!(m2!6:message_sort, k2!7:message_sort, r2!8:message_sort; {
-                                subterm_main.f_a(env, self.enc.f_a([m2.into(), r2.into(), k_f.clone()]), c.into())
+                                subterm_main.f_a(env, self.enc.f([m2.into(), r2.into(), k_f.clone()]), c.into())
                                 & (
                                     (mforall!(n!9:nonce_sort; {!meq(r2.clone(), nc.cast(message_sort, n))})) |
                                     ( meq(r2, r_f.clone()) &
@@ -156,11 +157,11 @@ impl<'bump> IntCtxt<'bump> {
                 mforall!(m!0:message_sort, c!1:message_sort, k!2:message_sort; {
                     meq(
                         ev.eval(m),
-                        ev.eval(self.dec.f_a([self.enc.f_a([m, c, k]), k.into()]))
+                        ev.eval(self.dec.f([self.enc.f([m, c, k]), k.into()]))
                     )
                 }),
                 mforall!(m!0:message_sort, c!1:message_sort, k!2:message_sort; {
-                        ev.eval(self.verify.f_a([self.enc.f_a([m, c, k]), k.into()]))
+                        ev.eval(self.verify.f([self.enc.f([m, c, k]), k.into()]))
                 }),
             ]
             .map(Axiom::base),
@@ -278,7 +279,7 @@ impl<'bump> IntCtxt<'bump> {
                         .is_none();
                 if k_sc {
                     let k_f = pbl.name_caster().cast(MESSAGE.as_sort(), key.clone());
-                    let n_c_f = self.enc.f_a([u_f.clone(), r_f.clone(), k_f.clone()]);
+                    let n_c_f = self.enc.f([u_f.clone(), r_f.clone(), k_f.clone()]);
 
                     let disjunction = subterm_main.preprocess_terms(
                         &realm,
@@ -368,7 +369,7 @@ impl<'bump> IntCtxt<'bump> {
 
                     Some(mforall!(free_vars, {
                         (pbl.evaluator()
-                            .eval(self.verify.f([cipher.clone(), k_f.clone()]))
+                            .eval(self.verify.apply([cipher.clone(), k_f.clone()]))
                             // & mforall!([r_var], { other_sc })
                             & other_sc)
                             >> mexists!([u_var, r_var], {

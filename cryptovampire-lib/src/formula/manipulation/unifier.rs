@@ -15,6 +15,7 @@ use super::{
     },
     Substitution,
 };
+use crate::formula::utils::Applicable;
 
 #[derive(Debug, Clone)]
 pub struct Unifier<'bump> {
@@ -220,6 +221,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::formula::utils::Applicable;
     use crate::{
         container::ScopedContainer,
         formula::{
@@ -292,9 +294,9 @@ mod tests {
              }| {
                 let [v1, v2, v3, v4, v5] = vars(0, [message, step, step, step, message]);
 
-                let a = hash.f_a([v1.into(), name_caster.cast(message, k1.f_a([v2, v3]))]);
+                let a = hash.f([v1.into(), name_caster.cast(message, k1.f([v2, v3]))]);
                 println!("a = {a}");
-                let b = hash.f_a([v5.into(), name_caster.cast(message, k1.f_a([v3, v4]))]);
+                let b = hash.f([v5.into(), name_caster.cast(message, k1.f([v3, v4]))]);
                 println!("b = {b}");
 
                 let u = Unifier::mgu(&a, &b).unwrap();
@@ -319,9 +321,9 @@ mod tests {
              }| {
                 let [v1, v2, v3, v4, _] = vars(0, [message, step, step, step, message]);
 
-                let a = hash.f_a([v1.into(), name_caster.cast(message, k1.f_a([v2, v3]))]);
+                let a = hash.f([v1.into(), name_caster.cast(message, k1.f([v2, v3]))]);
                 println!("a = {a}");
-                let b = hash.f_a([INPUT.f_a([v2]), name_caster.cast(message, k1.f_a([v3, v4]))]);
+                let b = hash.f([INPUT.f([v2]), name_caster.cast(message, k1.f([v3, v4]))]);
                 println!("b = {b}");
 
                 let u = Unifier::mgu(&a, &b).unwrap();
@@ -347,9 +349,9 @@ mod tests {
              }| {
                 let [v1, v2, v3, v4, v5] = vars(0, [message, step, step, step, message]);
 
-                let a = hash.f_a([v1.into(), name_caster.cast(message, k1.f_a([v2, v3]))]);
+                let a = hash.f([v1.into(), name_caster.cast(message, k1.f([v2, v3]))]);
                 println!("a = {a}");
-                let b = hash.f_a([v5.into(), name_caster.cast(message, k0.f_a([v3, v4]))]);
+                let b = hash.f([v5.into(), name_caster.cast(message, k0.f([v3, v4]))]);
                 println!("b = {b}");
 
                 let u = Unifier::mgu(&a, &b);

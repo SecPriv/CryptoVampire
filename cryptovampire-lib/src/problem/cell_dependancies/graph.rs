@@ -53,7 +53,7 @@ struct GlobNode<'bump> {
 
 /// To represent a call to a cell like `cell_idx(args, timepoint)`
 ///
-/// see [CellCall]
+/// see [FromNode::CellCall] and [ToNode::CellCall]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 struct InnerCellCall<'bump> {
     /// the index of the cell in [DependancyGraph::cells]

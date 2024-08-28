@@ -4,53 +4,50 @@ mod tests;
 use std::{fs::File, io::BufWriter, num::NonZeroU32, path::Path};
 
 use crate::cli::Args;
-use anyhow::{ensure, Context};
+use anyhow::{bail, ensure, Context};
 
 use cryptovampire_lib::{
     container::ScopedContainer,
     environement::environement::{Environement, SolverConfig},
-    formula::{
-        function::{builtin::BUILT_IN_FUNCTIONS, Function},
-        sort::{builtins::BUILT_IN_SORTS, Sort},
-    },
+    formula::{function::builtin::BUILT_IN_FUNCTIONS, sort::builtins::BUILT_IN_SORTS},
     problem::{PblIterator, Problem},
     runner::Runners,
     smt::{SmtFile, SMT_FILE_EXTENSION},
 };
 
-use utils::{from_with::FromWith, implvec, traits::MyWriteTo};
+use log::trace;
+use parser::{ast::ASTList, Pstr};
+use utils::{from_with::FromWith, string_ref::StrRef, traits::MyWriteTo};
 pub mod cli;
 pub mod parser;
+pub mod squirrel;
 
-/// parse a [Problem] object form a string
-pub fn problem_try_from_str<'a, 'bump>(
-    container: &'bump ScopedContainer<'bump>,
-    sort_hash: implvec!(Sort<'bump>),
-    function_hash: implvec!(Function<'bump>),
-    extra_names: implvec!(String),
-    str: &'a str,
-    ignore_lemmas: bool,
-) -> anyhow::Result<Problem<'bump>> {
-    parser::parse_str(
-        container,
-        sort_hash,
-        function_hash,
-        extra_names,
-        str,
-        ignore_lemmas,
-    )
+pub use parser::parse_pbl_from_ast;
+
+pub use return_value::Return;
+mod return_value;
+
+pub fn run_from_cv(args: Args, str: &str) -> anyhow::Result<Return> {
+    trace!("running for cryptovampire file");
+    let ast = ASTList::try_from(str)?;
+    run_from_ast(&args, ast)
 }
 
-pub fn run(args: Args, str: &str) -> anyhow::Result<()> {
+fn run_from_ast<'a, S>(args: &Args, ast: ASTList<'a, S>) -> anyhow::Result<Return>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
+    trace!("running from ast file");
     ScopedContainer::scoped(|container| {
-        let env = Environement::from_with(&args, &*container);
+        let env = Environement::from_with(args, &*container);
 
-        let pbl = problem_try_from_str(
+        let pbl = parse_pbl_from_ast(
             container,
             BUILT_IN_SORTS.iter().cloned(),
             BUILT_IN_FUNCTIONS.iter().cloned(),
             parser::USED_KEYWORDS.iter().map(|s| s.to_string()),
-            &str,
+            ast,
             env.are_lemmas_ignored(),
         )?;
 
@@ -63,7 +60,8 @@ pub fn run(args: Args, str: &str) -> anyhow::Result<()> {
                 run_to_dir(&env, pblsiter, output_location)?;
             } else {
                 run_to_file(&env, pblsiter, output_location)?;
-            }
+            };
+            Ok(Return::ToFile(output_location.to_path_buf()))
         } else {
             let SolverConfig {
                 num_of_retry,
@@ -77,16 +75,17 @@ pub fn run(args: Args, str: &str) -> anyhow::Result<()> {
                 &runner,
                 *num_of_retry,
                 smt_debug.as_ref().map(|p| p.as_path()),
-            )?
-            .pop()
-            .with_context(|| "empty output, nothing ran?")?;
-            println!("{out}");
+            )?;
+            if out.is_empty() {
+                bail!("empty output, nothing ran?")
+            }
+            Ok(Return::AutoRun(out))
         }
-        Ok(())
     })
 }
 
-/// automatically run all the problems in `pbls` using `vampire`, retrying as many as `parms` requests it
+/// automatically run all the problems in `pbls` using `vampire`, retrying as many
+/// as `parms` requests it
 pub fn auto_run<'bump>(
     env: &Environement<'bump>,
     mut pbls: PblIterator<'bump>,

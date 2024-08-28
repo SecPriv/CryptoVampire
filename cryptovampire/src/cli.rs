@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    fmt::Display,
+    path::{Path, PathBuf},
+};
 
 use clap::{Parser, Subcommand};
 use cryptovampire_lib::{
@@ -64,6 +67,14 @@ pub struct Args {
     #[arg(long, short)]
     pub no_symbolic: bool,
 
+    /// What should the input format be?
+    #[arg(long, default_value_t = Input::Cryptovampire)]
+    pub input_format: Input,
+
+    /// What should the output format be?
+    #[arg(long, default_value_t = Output::Stdout)]
+    pub output_format: Output,
+
     /// Defaults to `auto`
     #[command(subcommand)]
     pub command: Option<Command>,
@@ -71,7 +82,9 @@ pub struct Args {
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum Command {
+    /// *default* runs the solvers automatically (and try to learn from each runs)
     Auto(Auto),
+    /// build smts files to be ran manually
     ToFile(ToFile),
 }
 
@@ -146,7 +159,7 @@ pub struct Auto {
     pub timeout: f64,
 
     /// A folder to put temporary smt files
-    #[arg(long)]
+    #[arg(long, value_name = "DIR")]
     pub solver_file_debug: Option<PathBuf>,
 
     /// Deactivate the lemmas.
@@ -156,15 +169,15 @@ pub struct Auto {
     pub ignore_lemmas: bool,
 
     /// Location of the `vampire` executable
-    #[arg(long, default_value = "vampire")]
+    #[arg(long, default_value = "vampire", value_name = "EXE_FILE")]
     pub vampire_location: PathBuf,
 
     /// Location of the `z3` executable
-    #[arg(long, default_value = "z3")]
+    #[arg(long, default_value = "z3", value_name = "EXE_FILE")]
     pub z3_location: PathBuf,
 
     /// Location of the `cvc5` executable
-    #[arg(long, default_value = "cvc5")]
+    #[arg(long, default_value = "cvc5", value_name = "EXE_FILE")]
     pub cvc5_location: PathBuf,
 
     #[arg(long)]
@@ -175,6 +188,69 @@ pub struct Auto {
 
     #[arg(long)]
     pub disable_cvc5: bool,
+}
+
+#[derive(clap::ValueEnum, Clone, Default, Debug, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Input {
+    /// use a cryptovampire file
+    #[default]
+    Cryptovampire,
+
+    /// use a json file produced by squirrel using the `cryptovampire` tactic
+    ///
+    /// https://github.com/squirrel-prover/squirrel-prover/
+    SquirrelJSON,
+}
+
+impl Input {
+    /// Returns `true` if the input is [`Cryptovampire`].
+    ///
+    /// [`Cryptovampire`]: Input::Cryptovampire
+    #[must_use]
+    pub fn is_cryptovampire(&self) -> bool {
+        matches!(self, Self::Cryptovampire)
+    }
+
+    /// Returns `true` if the input is [`SquirrelJSON`].
+    ///
+    /// [`SquirrelJSON`]: Input::SquirrelJSON
+    #[must_use]
+    pub fn is_squirrel_json(&self) -> bool {
+        matches!(self, Self::SquirrelJSON)
+    }
+}
+
+impl Display for Input {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Cryptovampire => write!(f, "cryptovampire"),
+            Self::SquirrelJSON => write!(f, "squirrel-json"),
+        }
+    }
+}
+
+#[derive(clap::ValueEnum, Clone, Default, Debug, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Output {
+    /// standard to stdout
+    #[default]
+    Stdout,
+    /// JSON output
+    JSON,
+    /// JSON output, prettyfied
+    PrettyJSON,
+    /// No output
+    Quiet,
+}
+
+impl Display for Output {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Output::Stdout => write!(f, "stdout"),
+            Output::JSON => write!(f, "json"),
+            Output::Quiet => write!(f, "quiet"),
+            Output::PrettyJSON => write!(f, "pretty-json"),
+        }
+    }
 }
 
 impl Default for Auto {
@@ -353,6 +429,15 @@ impl Args {
             Some(Command::ToFile(ToFile {
                 output_location, ..
             })) => Some(output_location.as_path()),
+            _ => None,
+        }
+    }
+    pub fn get_mut_output_location(&mut self) -> Option<&mut PathBuf> {
+        match &mut self.command {
+            Some(Command::ToFile(ToFile {
+                ref mut output_location,
+                ..
+            })) => Some(output_location),
             _ => None,
         }
     }

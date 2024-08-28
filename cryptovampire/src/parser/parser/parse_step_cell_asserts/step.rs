@@ -1,22 +1,27 @@
 use std::sync::Arc;
 
+use anyhow::Context;
 use itertools::Itertools;
+use log::trace;
 
-use crate::parser::{
-    merr,
-    parser::{parsable_trait::Parsable, CellCache, FunctionCache},
-    E,
+use crate::{
+    bail_at,
+    parser::{
+        error::WithLocation,
+        parser::{parsable_trait::Parsable, CellCache, FunctionCache},
+        InputError, MResult, Pstr,
+    },
 };
 use cryptovampire_lib::{
     container::{allocator::ContainerTools, ScopedContainer},
     environement::traits::Realm,
     formula::{
         sort::builtins::{CONDITION, MESSAGE},
-        variable::{uvar, Variable},
+        variable::{from_usize, Variable},
     },
     problem::{cell::Assignement, step::InnerStep},
 };
-use utils::implvec;
+use utils::{implvec, string_ref::StrRef, traits::NicerError};
 
 use super::super::{super::ast, Environement, StepCache};
 
@@ -25,11 +30,15 @@ use super::super::{super::ast, Environement, StepCache};
 /// This should be done farily late. Only takes a [StepCache].
 ///
 /// The function returns a [InnerStep] to *maybe* mutlipthread things on day...
-fn parse_step<'bump, 'str>(
-    env: &Environement<'bump, 'str>,
-    step_cache: &StepCache<'str, 'bump>,
+fn parse_step<'bump, 'str, S>(
+    env: &Environement<'bump, 'str, S>,
+    step_cache: &StepCache<'str, 'bump, S>,
     // name: &str,
-) -> Result<InnerStep<'bump>, E> {
+) -> MResult<InnerStep<'bump>>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     let StepCache {
         ast,
         function,
@@ -61,12 +70,16 @@ fn parse_step<'bump, 'str>(
 
     //---- parse
     // message
-    let message = message.parse(env, &mut bvars, &state, Some(MESSAGE.clone().into()))?;
+    let message = message
+        .parse(env, &mut bvars, &state, Some(MESSAGE.clone().into()))
+        .debug_continue()?;
     let msg_used_vars = message.get_used_variables();
     bvars.truncate(n);
 
     // condition
-    let condition = condition.parse(env, &mut bvars, &state, Some(CONDITION.clone().into()))?;
+    let condition = condition
+        .parse(env, &mut bvars, &state, Some(CONDITION.clone().into()))
+        .debug_continue()?;
     let cond_used_vars = condition.get_used_variables();
     bvars.truncate(n);
 
@@ -86,7 +99,7 @@ fn parse_step<'bump, 'str>(
             let fresh_vars = if let Some(vars) = fresh_vars.as_ref() {
                 bvars.truncate(n);
                 bvars.reserve(vars.bindings.len());
-                let vars: Result<Arc<_>, _> = vars
+                let vars: Result<Arc<_>, InputError> = vars
                     .bindings
                     .iter()
                     .zip(0..)
@@ -99,20 +112,26 @@ fn parse_step<'bump, 'str>(
                             },
                             i,
                         )| {
-                            let sort = env.find_sort(type_name.name_span(), type_name.name())?;
-                            let id = uvar::try_from(n).unwrap() + i;
+                            let sort =
+                                env.find_sort(type_name.name_span(), type_name.name().borrow())?;
+                            let id = from_usize(n) + i;
                             let var = Variable { id, sort };
 
                             if env.contains_name_with_var(
-                                variable.name(),
-                                bvars.iter().map(|(n, _)| *n),
+                                variable.name().borrow(),
+                                bvars.iter().map(|(n, _)| n.borrow()),
                             ) {
-                                Err(merr(
+                                // Err(merr(
+                                //     variable.0.span,
+                                //     format!("name {} is already taken", variable.name()),
+                                // ))
+                                bail_at!(
                                     variable.0.span,
-                                    format!("name {} is already taken", variable.name()),
-                                ))
+                                    "name {} is already taken",
+                                    variable.name()
+                                )
                             } else {
-                                bvars.push((variable.name(), var.into()));
+                                bvars.push((variable.name().clone(), var.into()));
                                 Ok(var)
                             }
                         },
@@ -132,12 +151,15 @@ fn parse_step<'bump, 'str>(
                 args, assignements, ..
             } = env
                 .functions
-                .get(cell_name)
+                .get(cell_name.borrow())
                 .and_then(FunctionCache::as_memory_cell)
-                .ok_or(merr(
-                    cell_ast.span(),
-                    format!("cell {cell_name} doesn't exists"),
-                ))?;
+                .with_context(|| format!("cell {cell_name} doesn't exists"))
+                .with_location(cell_ast.span())
+                // .ok_or(merr(
+                //     cell_ast.span(),
+                //     format!("cell {cell_name} doesn't exists"),
+                // ))
+                ?;
 
             // get the arguments and apply substitution
             let cell_args: Result<Arc<[_]>, _> = cell_ast
@@ -183,24 +205,38 @@ fn parse_step<'bump, 'str>(
     ))
 }
 
-pub fn parse_steps<'a, 'bump, 'str>(
-    env: &'a Environement<'bump, 'str>, // mut for safety
-    steps: implvec!(&'a StepCache<'str, 'bump>),
-) -> Result<(), E> {
+pub fn parse_steps<'a, 'bump, 'str, S>(
+    env: &'a Environement<'bump, 'str, S>, // mut for safety
+    steps: implvec!(&'a StepCache<'str, 'bump, S>),
+) -> MResult<()>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
     steps
         .into_iter()
         .try_for_each(|step_cache @ StepCache { ast, step, .. }| {
-            let inner = parse_step(env, step_cache)?;
+            trace!("parsing step {}", ast.name);
+            let inner = parse_step(env, step_cache).debug_continue()?;
             let r_err = unsafe {
                 <ScopedContainer as ContainerTools<InnerStep<'bump>>>::initialize(step, inner)
             };
 
-            match r_err {
-                Err(_) => Err(merr(
-                    ast.name.0.span,
-                    format!("step {} has already been defined", ast.name.name()),
-                )),
-                Ok(()) => Ok(()),
-            }
+            Ok(r_err
+                .map_err(|_| {
+                    ast.name
+                        .0
+                        .span
+                        .err_with(|| format!("step {} has already been defined", ast.name.name()))
+                })
+                .debug_continue()?)
+
+            // match r_err {
+            //     Err(_) => Err(merr(
+            //         ast.name.0.span,
+            //         format!("step {} has already been defined", ast.name.name()),
+            //     )),
+            //     Ok(()) => Ok(()),
+            // }
         })
 }

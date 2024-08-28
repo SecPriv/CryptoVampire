@@ -3,10 +3,10 @@ use cryptovampire_lib::environement::traits::{KnowsRealm, Realm, RealmMerger};
 use super::parsing_environement::Environement;
 
 #[derive(Debug, Clone, Copy)]
-pub struct State<'a, 'str, 'bump>(RealmMerger<Realm, &'a Environement<'bump, 'str>>);
+pub struct State<'a, 'str, 'bump, S>(RealmMerger<Realm, &'a Environement<'bump, 'str, S>>);
 
-impl<'a, 'str, 'bump> From<&'a Environement<'bump, 'str>> for State<'a, 'str, 'bump> {
-    fn from(value: &'a Environement<'bump, 'str>) -> Self {
+impl<'a, 'str, 'bump, S> From<&'a Environement<'bump, 'str, S>> for State<'a, 'str, 'bump, S> {
+    fn from(value: &'a Environement<'bump, 'str, S>) -> Self {
         Self(RealmMerger {
             inner: Default::default(),
             outer: value,
@@ -14,13 +14,13 @@ impl<'a, 'str, 'bump> From<&'a Environement<'bump, 'str>> for State<'a, 'str, 'b
     }
 }
 
-impl<'a, 'str, 'bump> KnowsRealm for State<'a, 'str, 'bump> {
+impl<'a, 'str, 'bump, S> KnowsRealm for State<'a, 'str, 'bump, S> {
     fn get_realm(&self) -> Realm {
         self.0.get_realm()
     }
 }
 
-impl<'a, 'str, 'bump> State<'a, 'str, 'bump> {
+impl<'a, 'str, 'bump, S> State<'a, 'str, 'bump, S> {
     #[allow(dead_code)]
     pub fn to_low(&self) -> Self {
         Self(RealmMerger {

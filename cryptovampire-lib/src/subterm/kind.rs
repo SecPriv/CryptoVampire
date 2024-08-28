@@ -28,7 +28,7 @@ pub type SubtermKindConstr<'a, 'bump> = AbsSubtermKindG<VecRef<'a, Sort<'bump>>,
 impl<U, V> AbsSubtermKindG<U, V> {
     /// Returns `true` if the subterm kind general is [`Regular`].
     ///
-    /// [`Regular`]: SubtermKindGeneral::Regular
+    /// [`Regular`]: AbsSubtermKindG::Regular
     #[must_use]
     pub fn is_regular(&self) -> bool {
         matches!(self, Self::Regular(..))
@@ -44,7 +44,7 @@ impl<U, V> AbsSubtermKindG<U, V> {
 
     /// Returns `true` if the subterm kind general is [`Vampire`].
     ///
-    /// [`Vampire`]: SubtermKindGeneral::Vampire
+    /// [`Vampire`]: AbsSubtermKindG::Vampire
     #[must_use]
     pub fn is_vampire(&self) -> bool {
         matches!(self, Self::Vampire(..))

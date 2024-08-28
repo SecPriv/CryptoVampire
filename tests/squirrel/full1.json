@@ -1,0 +1,3738 @@
+{
+  "parameters": { "num_retry": 5, "timeout": 1 },
+  "context": {
+    "query": {
+      "Quant": {
+        "quantificator": "ForAll",
+        "vars": [
+          {
+            "Var": {
+              "id": { "name": "s", "tag": 211 },
+              "ty": { "TBase": { "npath": { "npath": [] }, "symb": "L" } }
+            }
+          },
+          {
+            "Var": {
+              "id": { "name": "m", "tag": 212 },
+              "ty": { "TBase": { "npath": { "npath": [] }, "symb": "T" } }
+            }
+          }
+        ],
+        "body": {
+          "App": {
+            "f": {
+              "Fun": {
+                "symb": {
+                  "npath": { "npath": [], "id": 0 },
+                  "symb": "=>",
+                  "id": 21
+                }
+              }
+            },
+            "args": [
+              {
+                "App": {
+                  "f": {
+                    "Fun": {
+                      "symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "checksign",
+                        "id": 82
+                      }
+                    }
+                  },
+                  "args": [
+                    {
+                      "Tuple": {
+                        "elements": [
+                          {
+                            "Var": {
+                              "id": { "name": "m", "tag": 212 },
+                              "ty": {
+                                "TBase": {
+                                  "npath": { "npath": [] },
+                                  "symb": "T"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "App": {
+                              "f": {
+                                "Fun": {
+                                  "symb": {
+                                    "npath": { "npath": [], "id": 0 },
+                                    "symb": "sign",
+                                    "id": 80
+                                  }
+                                }
+                              },
+                              "args": [
+                                {
+                                  "Tuple": {
+                                    "elements": [
+                                      {
+                                        "Var": {
+                                          "id": { "name": "m", "tag": 212 },
+                                          "ty": {
+                                            "TBase": {
+                                              "npath": { "npath": [] },
+                                              "symb": "T"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "Var": {
+                                          "id": { "name": "s", "tag": 211 },
+                                          "ty": {
+                                            "TBase": {
+                                              "npath": { "npath": [] },
+                                              "symb": "L"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "App": {
+                              "f": {
+                                "Fun": {
+                                  "symb": {
+                                    "npath": { "npath": [], "id": 0 },
+                                    "symb": "spk",
+                                    "id": 81
+                                  }
+                                }
+                              },
+                              "args": [
+                                {
+                                  "Var": {
+                                    "id": { "name": "s", "tag": 211 },
+                                    "ty": {
+                                      "TBase": {
+                                        "npath": { "npath": [] },
+                                        "symb": "L"
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "Fun": {
+                  "symb": {
+                    "npath": { "npath": [], "id": 0 },
+                    "symb": "false",
+                    "id": 17
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "hypotheses": [],
+    "variables": [],
+    "actions": [
+      {
+        "name": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "init",
+          "id": 0
+        },
+        "action": [],
+        "input": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "ø",
+          "id": 13
+        },
+        "indices": [],
+        "condition": {
+          "vars": [],
+          "term": {
+            "Fun": {
+              "symb": {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "true",
+                "id": 18
+              }
+            }
+          }
+        },
+        "updates": [],
+        "output": {
+          "channel": {
+            "npath": { "npath": [], "id": 0 },
+            "symb": "ø",
+            "id": 13
+          },
+          "term": {
+            "Fun": {
+              "symb": {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "empty",
+                "id": 41
+              }
+            }
+          }
+        },
+        "globals": []
+      },
+      {
+        "name": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "Signature",
+          "id": 85
+        },
+        "action": [
+          {
+            "par_choice": [
+              0, [ { "id": { "name": "i", "tag": 229 }, "ty": "Index" } ]
+            ],
+            "sum_choice": [ 0, [] ]
+          }
+        ],
+        "input": { "npath": { "npath": [], "id": 0 }, "symb": "c", "id": 61 },
+        "indices": [ { "id": { "name": "i", "tag": 229 }, "ty": "Index" } ],
+        "condition": {
+          "vars": [],
+          "term": {
+            "Fun": {
+              "symb": {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "true",
+                "id": 18
+              }
+            }
+          }
+        },
+        "updates": [],
+        "output": {
+          "channel": {
+            "npath": { "npath": [], "id": 0 },
+            "symb": "c",
+            "id": 61
+          },
+          "term": {
+            "Fun": {
+              "symb": {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "empty",
+                "id": 41
+              }
+            }
+          }
+        },
+        "globals": []
+      },
+      {
+        "name": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "Signature1",
+          "id": 86
+        },
+        "action": [
+          {
+            "par_choice": [
+              0, [ { "id": { "name": "i", "tag": 231 }, "ty": "Index" } ]
+            ],
+            "sum_choice": [ 0, [] ]
+          },
+          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] }
+        ],
+        "input": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "ø",
+          "id": 13
+        },
+        "indices": [ { "id": { "name": "i", "tag": 231 }, "ty": "Index" } ],
+        "condition": {
+          "vars": [],
+          "term": {
+            "Fun": {
+              "symb": {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "true",
+                "id": 18
+              }
+            }
+          }
+        },
+        "updates": [],
+        "output": {
+          "channel": {
+            "npath": { "npath": [], "id": 0 },
+            "symb": "c",
+            "id": 61
+          },
+          "term": {
+            "Fun": {
+              "symb": {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "empty",
+                "id": 41
+              }
+            }
+          }
+        },
+        "globals": []
+      },
+      {
+        "name": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "Signature2",
+          "id": 87
+        },
+        "action": [
+          {
+            "par_choice": [
+              0, [ { "id": { "name": "i", "tag": 233 }, "ty": "Index" } ]
+            ],
+            "sum_choice": [ 0, [] ]
+          },
+          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] },
+          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] }
+        ],
+        "input": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "ø",
+          "id": 13
+        },
+        "indices": [ { "id": { "name": "i", "tag": 233 }, "ty": "Index" } ],
+        "condition": {
+          "vars": [],
+          "term": {
+            "Fun": {
+              "symb": {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "true",
+                "id": 18
+              }
+            }
+          }
+        },
+        "updates": [],
+        "output": {
+          "channel": {
+            "npath": { "npath": [], "id": 0 },
+            "symb": "c",
+            "id": 61
+          },
+          "term": {
+            "Fun": {
+              "symb": {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "empty",
+                "id": 41
+              }
+            }
+          }
+        },
+        "globals": []
+      },
+      {
+        "name": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "Signature3",
+          "id": 95
+        },
+        "action": [
+          {
+            "par_choice": [
+              0, [ { "id": { "name": "i", "tag": 235 }, "ty": "Index" } ]
+            ],
+            "sum_choice": [ 0, [] ]
+          },
+          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] },
+          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] },
+          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] }
+        ],
+        "input": { "npath": { "npath": [], "id": 0 }, "symb": "c", "id": 61 },
+        "indices": [ { "id": { "name": "i", "tag": 235 }, "ty": "Index" } ],
+        "condition": {
+          "vars": [],
+          "term": {
+            "App": {
+              "f": {
+                "Fun": {
+                  "symb": {
+                    "npath": { "npath": [], "id": 0 },
+                    "symb": "&&",
+                    "id": 19
+                  }
+                }
+              },
+              "args": [
+                {
+                  "Macro": {
+                    "symb": {
+                      "s_symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "ch",
+                        "id": 94
+                      },
+                      "s_typ": "Boolean"
+                    },
+                    "args": [
+                      {
+                        "Var": {
+                          "id": { "name": "i", "tag": 235 },
+                          "ty": "Index"
+                        }
+                      }
+                    ],
+                    "timestamp": {
+                      "Action": {
+                        "symb": {
+                          "npath": { "npath": [], "id": 0 },
+                          "symb": "Signature3",
+                          "id": 95
+                        },
+                        "args": [
+                          {
+                            "Var": {
+                              "id": { "name": "i", "tag": 235 },
+                              "ty": "Index"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+                {
+                  "App": {
+                    "f": {
+                      "Fun": {
+                        "symb": {
+                          "npath": { "npath": [], "id": 0 },
+                          "symb": "&&",
+                          "id": 19
+                        }
+                      }
+                    },
+                    "args": [
+                      {
+                        "Fun": {
+                          "symb": {
+                            "npath": { "npath": [], "id": 0 },
+                            "symb": "true",
+                            "id": 18
+                          }
+                        }
+                      },
+                      {
+                        "Fun": {
+                          "symb": {
+                            "npath": { "npath": [], "id": 0 },
+                            "symb": "true",
+                            "id": 18
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "updates": [],
+        "output": {
+          "channel": {
+            "npath": { "npath": [], "id": 0 },
+            "symb": "c",
+            "id": 61
+          },
+          "term": {
+            "Fun": {
+              "symb": {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "empty",
+                "id": 41
+              }
+            }
+          }
+        },
+        "globals": [
+          { "npath": { "npath": [], "id": 0 }, "symb": "ch", "id": 94 },
+          { "npath": { "npath": [], "id": 0 }, "symb": "mT", "id": 90 },
+          { "npath": { "npath": [], "id": 0 }, "symb": "my_add_a", "id": 88 },
+          { "npath": { "npath": [], "id": 0 }, "symb": "my_add_b", "id": 89 },
+          { "npath": { "npath": [], "id": 0 }, "symb": "mypk", "id": 92 },
+          { "npath": { "npath": [], "id": 0 }, "symb": "s", "id": 93 }
+        ]
+      },
+      {
+        "name": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "Signature4",
+          "id": 96
+        },
+        "action": [
+          {
+            "par_choice": [
+              0, [ { "id": { "name": "i", "tag": 237 }, "ty": "Index" } ]
+            ],
+            "sum_choice": [ 0, [] ]
+          },
+          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] },
+          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] },
+          { "par_choice": [ 0, [] ], "sum_choice": [ 1, [] ] }
+        ],
+        "input": { "npath": { "npath": [], "id": 0 }, "symb": "c", "id": 61 },
+        "indices": [ { "id": { "name": "i", "tag": 237 }, "ty": "Index" } ],
+        "condition": {
+          "vars": [],
+          "term": {
+            "App": {
+              "f": {
+                "Fun": {
+                  "symb": {
+                    "npath": { "npath": [], "id": 0 },
+                    "symb": "not",
+                    "id": 23
+                  }
+                }
+              },
+              "args": [
+                {
+                  "App": {
+                    "f": {
+                      "Fun": {
+                        "symb": {
+                          "npath": { "npath": [], "id": 0 },
+                          "symb": "&&",
+                          "id": 19
+                        }
+                      }
+                    },
+                    "args": [
+                      {
+                        "Macro": {
+                          "symb": {
+                            "s_symb": {
+                              "npath": { "npath": [], "id": 0 },
+                              "symb": "ch",
+                              "id": 94
+                            },
+                            "s_typ": "Boolean"
+                          },
+                          "args": [
+                            {
+                              "Var": {
+                                "id": { "name": "i", "tag": 237 },
+                                "ty": "Index"
+                              }
+                            }
+                          ],
+                          "timestamp": {
+                            "Action": {
+                              "symb": {
+                                "npath": { "npath": [], "id": 0 },
+                                "symb": "Signature4",
+                                "id": 96
+                              },
+                              "args": [
+                                {
+                                  "Var": {
+                                    "id": { "name": "i", "tag": 237 },
+                                    "ty": "Index"
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "App": {
+                          "f": {
+                            "Fun": {
+                              "symb": {
+                                "npath": { "npath": [], "id": 0 },
+                                "symb": "&&",
+                                "id": 19
+                              }
+                            }
+                          },
+                          "args": [
+                            {
+                              "Fun": {
+                                "symb": {
+                                  "npath": { "npath": [], "id": 0 },
+                                  "symb": "true",
+                                  "id": 18
+                                }
+                              }
+                            },
+                            {
+                              "Fun": {
+                                "symb": {
+                                  "npath": { "npath": [], "id": 0 },
+                                  "symb": "true",
+                                  "id": 18
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "updates": [],
+        "output": {
+          "channel": {
+            "npath": { "npath": [], "id": 0 },
+            "symb": "ø",
+            "id": 13
+          },
+          "term": {
+            "Fun": {
+              "symb": {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "empty",
+                "id": 41
+              }
+            }
+          }
+        },
+        "globals": [
+          { "npath": { "npath": [], "id": 0 }, "symb": "ch", "id": 94 },
+          { "npath": { "npath": [], "id": 0 }, "symb": "mT", "id": 90 },
+          { "npath": { "npath": [], "id": 0 }, "symb": "my_add_a", "id": 88 },
+          { "npath": { "npath": [], "id": 0 }, "symb": "my_add_b", "id": 89 },
+          { "npath": { "npath": [], "id": 0 }, "symb": "mypk", "id": 92 },
+          { "npath": { "npath": [], "id": 0 }, "symb": "s", "id": 93 }
+        ]
+      },
+      {
+        "name": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "Senc",
+          "id": 102
+        },
+        "action": [ { "par_choice": [ 1, [] ], "sum_choice": [ 0, [] ] } ],
+        "input": { "npath": { "npath": [], "id": 0 }, "symb": "c", "id": 61 },
+        "indices": [],
+        "condition": {
+          "vars": [],
+          "term": {
+            "Fun": {
+              "symb": {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "true",
+                "id": 18
+              }
+            }
+          }
+        },
+        "updates": [],
+        "output": {
+          "channel": {
+            "npath": { "npath": [], "id": 0 },
+            "symb": "c",
+            "id": 61
+          },
+          "term": {
+            "Fun": {
+              "symb": {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "empty",
+                "id": 41
+              }
+            }
+          }
+        },
+        "globals": [
+          { "npath": { "npath": [], "id": 0 }, "symb": "c1", "id": 100 },
+          { "npath": { "npath": [], "id": 0 }, "symb": "d", "id": 101 },
+          { "npath": { "npath": [], "id": 0 }, "symb": "mT1", "id": 97 }
+        ]
+      },
+      {
+        "name": { "npath": { "npath": [], "id": 0 }, "symb": "A", "id": 103 },
+        "action": [
+          {
+            "par_choice": [
+              2, [ { "id": { "name": "i", "tag": 239 }, "ty": "Index" } ]
+            ],
+            "sum_choice": [ 0, [] ]
+          }
+        ],
+        "input": { "npath": { "npath": [], "id": 0 }, "symb": "c", "id": 61 },
+        "indices": [ { "id": { "name": "i", "tag": 239 }, "ty": "Index" } ],
+        "condition": {
+          "vars": [],
+          "term": {
+            "Fun": {
+              "symb": {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "true",
+                "id": 18
+              }
+            }
+          }
+        },
+        "updates": [],
+        "output": {
+          "channel": {
+            "npath": { "npath": [], "id": 0 },
+            "symb": "ø",
+            "id": 13
+          },
+          "term": {
+            "Fun": {
+              "symb": {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "empty",
+                "id": 41
+              }
+            }
+          }
+        },
+        "globals": []
+      },
+      {
+        "name": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "A1",
+          "id": 104
+        },
+        "action": [
+          {
+            "par_choice": [
+              2, [ { "id": { "name": "i", "tag": 241 }, "ty": "Index" } ]
+            ],
+            "sum_choice": [ 0, [] ]
+          },
+          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] }
+        ],
+        "input": { "npath": { "npath": [], "id": 0 }, "symb": "c", "id": 61 },
+        "indices": [ { "id": { "name": "i", "tag": 241 }, "ty": "Index" } ],
+        "condition": {
+          "vars": [],
+          "term": {
+            "Fun": {
+              "symb": {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "true",
+                "id": 18
+              }
+            }
+          }
+        },
+        "updates": [],
+        "output": {
+          "channel": {
+            "npath": { "npath": [], "id": 0 },
+            "symb": "ø",
+            "id": 13
+          },
+          "term": {
+            "Fun": {
+              "symb": {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "empty",
+                "id": 41
+              }
+            }
+          }
+        },
+        "globals": []
+      },
+      {
+        "name": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "A2",
+          "id": 105
+        },
+        "action": [
+          {
+            "par_choice": [
+              2, [ { "id": { "name": "i", "tag": 243 }, "ty": "Index" } ]
+            ],
+            "sum_choice": [ 0, [] ]
+          },
+          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] },
+          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] }
+        ],
+        "input": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "ø",
+          "id": 13
+        },
+        "indices": [ { "id": { "name": "i", "tag": 243 }, "ty": "Index" } ],
+        "condition": {
+          "vars": [],
+          "term": {
+            "Fun": {
+              "symb": {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "true",
+                "id": 18
+              }
+            }
+          }
+        },
+        "updates": [],
+        "output": {
+          "channel": {
+            "npath": { "npath": [], "id": 0 },
+            "symb": "c",
+            "id": 61
+          },
+          "term": {
+            "App": {
+              "f": {
+                "Fun": {
+                  "symb": {
+                    "npath": { "npath": [], "id": 0 },
+                    "symb": "pair",
+                    "id": 37
+                  }
+                }
+              },
+              "args": [
+                {
+                  "Macro": {
+                    "symb": {
+                      "s_symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "input",
+                        "id": 1
+                      },
+                      "s_typ": "Message"
+                    },
+                    "args": [],
+                    "timestamp": {
+                      "Action": {
+                        "symb": {
+                          "npath": { "npath": [], "id": 0 },
+                          "symb": "A",
+                          "id": 103
+                        },
+                        "args": [
+                          {
+                            "Var": {
+                              "id": { "name": "i", "tag": 243 },
+                              "ty": "Index"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+                {
+                  "Macro": {
+                    "symb": {
+                      "s_symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "input",
+                        "id": 1
+                      },
+                      "s_typ": "Message"
+                    },
+                    "args": [],
+                    "timestamp": {
+                      "Action": {
+                        "symb": {
+                          "npath": { "npath": [], "id": 0 },
+                          "symb": "A1",
+                          "id": 104
+                        },
+                        "args": [
+                          {
+                            "Var": {
+                              "id": { "name": "i", "tag": 243 },
+                              "ty": "Index"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "globals": []
+      },
+      {
+        "name": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "A3",
+          "id": 106
+        },
+        "action": [
+          {
+            "par_choice": [
+              2, [ { "id": { "name": "i", "tag": 245 }, "ty": "Index" } ]
+            ],
+            "sum_choice": [ 0, [] ]
+          },
+          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] },
+          { "par_choice": [ 1, [] ], "sum_choice": [ 0, [] ] }
+        ],
+        "input": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "ø",
+          "id": 13
+        },
+        "indices": [ { "id": { "name": "i", "tag": 245 }, "ty": "Index" } ],
+        "condition": {
+          "vars": [],
+          "term": {
+            "Fun": {
+              "symb": {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "true",
+                "id": 18
+              }
+            }
+          }
+        },
+        "updates": [],
+        "output": {
+          "channel": {
+            "npath": { "npath": [], "id": 0 },
+            "symb": "c",
+            "id": 61
+          },
+          "term": {
+            "App": {
+              "f": {
+                "Fun": {
+                  "symb": {
+                    "npath": { "npath": [], "id": 0 },
+                    "symb": "pair",
+                    "id": 37
+                  }
+                }
+              },
+              "args": [
+                {
+                  "Macro": {
+                    "symb": {
+                      "s_symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "input",
+                        "id": 1
+                      },
+                      "s_typ": "Message"
+                    },
+                    "args": [],
+                    "timestamp": {
+                      "Action": {
+                        "symb": {
+                          "npath": { "npath": [], "id": 0 },
+                          "symb": "A1",
+                          "id": 104
+                        },
+                        "args": [
+                          {
+                            "Var": {
+                              "id": { "name": "i", "tag": 245 },
+                              "ty": "Index"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+                {
+                  "Macro": {
+                    "symb": {
+                      "s_symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "input",
+                        "id": 1
+                      },
+                      "s_typ": "Message"
+                    },
+                    "args": [],
+                    "timestamp": {
+                      "Action": {
+                        "symb": {
+                          "npath": { "npath": [], "id": 0 },
+                          "symb": "A",
+                          "id": 103
+                        },
+                        "args": [
+                          {
+                            "Var": {
+                              "id": { "name": "i", "tag": 245 },
+                              "ty": "Index"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "globals": []
+      }
+    ],
+    "names": [
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "sk", "id": 91 },
+        "data": {
+          "vars": [],
+          "args": [ "Index" ],
+          "out": { "TBase": { "npath": { "npath": [] }, "symb": "L" } }
+        }
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "r", "id": 99 },
+        "data": {
+          "vars": [],
+          "args": [],
+          "out": { "TBase": { "npath": { "npath": [] }, "symb": "R" } }
+        }
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "k", "id": 98 },
+        "data": {
+          "vars": [],
+          "args": [],
+          "out": { "TBase": { "npath": { "npath": [] }, "symb": "L" } }
+        }
+      }
+    ],
+    "operators": [
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "||", "id": 20 },
+        "data": {
+          "type": {
+            "vars": [],
+            "args": [ "Boolean", "Boolean" ],
+            "out": "Boolean"
+          },
+          "def": {
+            "abstract_def": { "Abstract": { "Infix": "Right" } },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "zeroes",
+          "id": 44
+        },
+        "data": {
+          "type": { "vars": [], "args": [ "Message" ], "out": "Message" },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "zero",
+          "id": 33
+        },
+        "data": {
+          "type": { "vars": [], "args": [], "out": "Message" },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "xor",
+          "id": 32
+        },
+        "data": {
+          "type": {
+            "vars": [],
+            "args": [ "Message", "Message" ],
+            "out": "Message"
+          },
+          "def": {
+            "abstract_def": { "Abstract": { "Infix": "Right" } },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "witness",
+          "id": 43
+        },
+        "data": {
+          "type": {
+            "vars": [ { "name": "a", "tag": 11 } ],
+            "args": [],
+            "out": { "TVar": { "name": "a", "tag": 11 } }
+          },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "tuple_t",
+          "id": 70
+        },
+        "data": {
+          "type": {
+            "vars": [],
+            "args": [
+              {
+                "Tuple": {
+                  "elements": [
+                    { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
+                    { "TBase": { "npath": { "npath": [] }, "symb": "T" } }
+                  ]
+                }
+              }
+            ],
+            "out": { "TBase": { "npath": { "npath": [] }, "symb": "T" } }
+          },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "true",
+          "id": 18
+        },
+        "data": {
+          "type": { "vars": [], "args": [], "out": "Boolean" },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "to_T",
+          "id": 68
+        },
+        "data": {
+          "type": {
+            "vars": [],
+            "args": [ "Message" ],
+            "out": { "TBase": { "npath": { "npath": [] }, "symb": "T" } }
+          },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "succ",
+          "id": 34
+        },
+        "data": {
+          "type": { "vars": [], "args": [ "Message" ], "out": "Message" },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "spk",
+          "id": 81
+        },
+        "data": {
+          "type": {
+            "vars": [],
+            "args": [
+              { "TBase": { "npath": { "npath": [] }, "symb": "L" } }
+            ],
+            "out": { "TBase": { "npath": { "npath": [] }, "symb": "LP" } }
+          },
+          "def": { "abstract_def": "PublicKey", "associated_fun": [] }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "snd",
+          "id": 39
+        },
+        "data": {
+          "type": { "vars": [], "args": [ "Message" ], "out": "Message" },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "sign",
+          "id": 80
+        },
+        "data": {
+          "type": {
+            "vars": [],
+            "args": [
+              {
+                "Tuple": {
+                  "elements": [
+                    { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
+                    { "TBase": { "npath": { "npath": [] }, "symb": "L" } }
+                  ]
+                }
+              }
+            ],
+            "out": { "TBase": { "npath": { "npath": [] }, "symb": "C" } }
+          },
+          "def": { "abstract_def": "Sign", "associated_fun": [] }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "sencr",
+          "id": 77
+        },
+        "data": {
+          "type": {
+            "vars": [],
+            "args": [
+              {
+                "Tuple": {
+                  "elements": [
+                    { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
+                    { "TBase": { "npath": { "npath": [] }, "symb": "R" } },
+                    { "TBase": { "npath": { "npath": [] }, "symb": "L" } }
+                  ]
+                }
+              }
+            ],
+            "out": { "TBase": { "npath": { "npath": [] }, "symb": "C" } }
+          },
+          "def": {
+            "abstract_def": "SEnc",
+            "associated_fun": [
+              {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "sdecr",
+                "id": 78
+              }
+            ]
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "sdecr",
+          "id": 78
+        },
+        "data": {
+          "type": {
+            "vars": [],
+            "args": [
+              {
+                "Tuple": {
+                  "elements": [
+                    { "TBase": { "npath": { "npath": [] }, "symb": "C" } },
+                    { "TBase": { "npath": { "npath": [] }, "symb": "L" } }
+                  ]
+                }
+              }
+            ],
+            "out": { "TBase": { "npath": { "npath": [] }, "symb": "T" } }
+          },
+          "def": {
+            "abstract_def": "SDec",
+            "associated_fun": [
+              {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "sencr",
+                "id": 77
+              }
+            ]
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "qatt",
+          "id": 36
+        },
+        "data": {
+          "type": {
+            "vars": [],
+            "args": [
+              {
+                "Tuple": {
+                  "elements": [
+                    "Timestamp",
+                    "Message",
+                    {
+                      "TBase": {
+                        "npath": { "npath": [] },
+                        "symb": "quantum_message"
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "out": {
+              "Tuple": {
+                "elements": [
+                  "Message",
+                  {
+                    "TBase": {
+                      "npath": { "npath": [] },
+                      "symb": "quantum_message"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "pred",
+          "id": 16
+        },
+        "data": {
+          "type": { "vars": [], "args": [ "Timestamp" ], "out": "Timestamp" },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "pkgen",
+          "id": 73
+        },
+        "data": {
+          "type": {
+            "vars": [],
+            "args": [
+              { "TBase": { "npath": { "npath": [] }, "symb": "L" } }
+            ],
+            "out": { "TBase": { "npath": { "npath": [] }, "symb": "LP" } }
+          },
+          "def": { "abstract_def": "PublicKey", "associated_fun": [] }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "pair",
+          "id": 37
+        },
+        "data": {
+          "type": {
+            "vars": [],
+            "args": [ "Message", "Message" ],
+            "out": "Message"
+          },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "of_bool",
+          "id": 40
+        },
+        "data": {
+          "type": { "vars": [], "args": [ "Boolean" ], "out": "Message" },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "not",
+          "id": 23
+        },
+        "data": {
+          "type": { "vars": [], "args": [ "Boolean" ], "out": "Boolean" },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "myhash",
+          "id": 71
+        },
+        "data": {
+          "type": {
+            "vars": [],
+            "args": [
+              {
+                "Tuple": {
+                  "elements": [
+                    { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
+                    { "TBase": { "npath": { "npath": [] }, "symb": "L" } }
+                  ]
+                }
+              }
+            ],
+            "out": { "TBase": { "npath": { "npath": [] }, "symb": "T" } }
+          },
+          "def": { "abstract_def": "Hash", "associated_fun": [] }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "len",
+          "id": 42
+        },
+        "data": {
+          "type": {
+            "vars": [ { "name": "t", "tag": 2 } ],
+            "args": [ { "TVar": { "name": "t", "tag": 2 } } ],
+            "out": "Message"
+          },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "if", "id": 24 },
+        "data": {
+          "type": {
+            "vars": [ { "name": "t", "tag": 1 } ],
+            "args": [
+              "Boolean",
+              { "TVar": { "name": "t", "tag": 1 } },
+              { "TVar": { "name": "t", "tag": 1 } }
+            ],
+            "out": { "TVar": { "name": "t", "tag": 1 } }
+          },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "happens",
+          "id": 15
+        },
+        "data": {
+          "type": { "vars": [], "args": [ "Timestamp" ], "out": "Boolean" },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "fst",
+          "id": 38
+        },
+        "data": {
+          "type": { "vars": [], "args": [ "Message" ], "out": "Message" },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "from_T",
+          "id": 69
+        },
+        "data": {
+          "type": {
+            "vars": [],
+            "args": [
+              { "TBase": { "npath": { "npath": [] }, "symb": "T" } }
+            ],
+            "out": "Message"
+          },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "false",
+          "id": 17
+        },
+        "data": {
+          "type": { "vars": [], "args": [], "out": "Boolean" },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "fail",
+          "id": 31
+        },
+        "data": {
+          "type": { "vars": [], "args": [], "out": "Message" },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "f", "id": 67 },
+        "data": {
+          "type": { "vars": [], "args": [ "Index" ], "out": "Message" },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "enc",
+          "id": 74
+        },
+        "data": {
+          "type": {
+            "vars": [],
+            "args": [
+              {
+                "Tuple": {
+                  "elements": [
+                    { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
+                    { "TBase": { "npath": { "npath": [] }, "symb": "R" } },
+                    { "TBase": { "npath": { "npath": [] }, "symb": "LP" } }
+                  ]
+                }
+              }
+            ],
+            "out": { "TBase": { "npath": { "npath": [] }, "symb": "C" } }
+          },
+          "def": {
+            "abstract_def": "AEnc",
+            "associated_fun": [
+              { "npath": { "npath": [], "id": 0 }, "symb": "dec", "id": 75 },
+              {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "pkgen",
+                "id": 73
+              }
+            ]
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "empty",
+          "id": 41
+        },
+        "data": {
+          "type": { "vars": [], "args": [], "out": "Message" },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "diff",
+          "id": 14
+        },
+        "data": {
+          "type": {
+            "vars": [],
+            "args": [ "Message", "Message" ],
+            "out": "Message"
+          },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "dec",
+          "id": 75
+        },
+        "data": {
+          "type": {
+            "vars": [],
+            "args": [
+              {
+                "Tuple": {
+                  "elements": [
+                    { "TBase": { "npath": { "npath": [] }, "symb": "C" } },
+                    { "TBase": { "npath": { "npath": [] }, "symb": "L" } }
+                  ]
+                }
+              }
+            ],
+            "out": { "TBase": { "npath": { "npath": [] }, "symb": "T" } }
+          },
+          "def": {
+            "abstract_def": "ADec",
+            "associated_fun": [
+              { "npath": { "npath": [], "id": 0 }, "symb": "enc", "id": 74 },
+              {
+                "npath": { "npath": [], "id": 0 },
+                "symb": "pkgen",
+                "id": 73
+              }
+            ]
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "checksign",
+          "id": 82
+        },
+        "data": {
+          "type": {
+            "vars": [],
+            "args": [
+              {
+                "Tuple": {
+                  "elements": [
+                    { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
+                    { "TBase": { "npath": { "npath": [] }, "symb": "C" } },
+                    { "TBase": { "npath": { "npath": [] }, "symb": "LP" } }
+                  ]
+                }
+              }
+            ],
+            "out": "Boolean"
+          },
+          "def": {
+            "abstract_def": "CheckSign",
+            "associated_fun": [
+              { "npath": { "npath": [], "id": 0 }, "symb": "sign", "id": 80 },
+              { "npath": { "npath": [], "id": 0 }, "symb": "spk", "id": 81 }
+            ]
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "att",
+          "id": 35
+        },
+        "data": {
+          "type": { "vars": [], "args": [ "Message" ], "out": "Message" },
+          "def": {
+            "abstract_def": { "Abstract": "Prefix" },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": ">=", "id": 29 },
+        "data": {
+          "type": {
+            "vars": [ { "name": "a", "tag": 9 } ],
+            "args": [
+              { "TVar": { "name": "a", "tag": 9 } },
+              { "TVar": { "name": "a", "tag": 9 } }
+            ],
+            "out": "Boolean"
+          },
+          "def": {
+            "abstract_def": { "Abstract": { "Infix": "Left" } },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": ">", "id": 30 },
+        "data": {
+          "type": {
+            "vars": [ { "name": "a", "tag": 10 } ],
+            "args": [
+              { "TVar": { "name": "a", "tag": 10 } },
+              { "TVar": { "name": "a", "tag": 10 } }
+            ],
+            "out": "Boolean"
+          },
+          "def": {
+            "abstract_def": { "Abstract": { "Infix": "Left" } },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "=>", "id": 21 },
+        "data": {
+          "type": {
+            "vars": [],
+            "args": [ "Boolean", "Boolean" ],
+            "out": "Boolean"
+          },
+          "def": {
+            "abstract_def": { "Abstract": { "Infix": "Right" } },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "=", "id": 25 },
+        "data": {
+          "type": {
+            "vars": [ { "name": "a", "tag": 5 } ],
+            "args": [
+              { "TVar": { "name": "a", "tag": 5 } },
+              { "TVar": { "name": "a", "tag": 5 } }
+            ],
+            "out": "Boolean"
+          },
+          "def": {
+            "abstract_def": { "Abstract": { "Infix": "Left" } },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "<>", "id": 26 },
+        "data": {
+          "type": {
+            "vars": [ { "name": "a", "tag": 6 } ],
+            "args": [
+              { "TVar": { "name": "a", "tag": 6 } },
+              { "TVar": { "name": "a", "tag": 6 } }
+            ],
+            "out": "Boolean"
+          },
+          "def": {
+            "abstract_def": { "Abstract": { "Infix": "Left" } },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "<=>",
+          "id": 22
+        },
+        "data": {
+          "type": {
+            "vars": [],
+            "args": [ "Boolean", "Boolean" ],
+            "out": "Boolean"
+          },
+          "def": {
+            "abstract_def": { "Abstract": { "Infix": "NonAssoc" } },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "<=", "id": 27 },
+        "data": {
+          "type": {
+            "vars": [ { "name": "a", "tag": 7 } ],
+            "args": [
+              { "TVar": { "name": "a", "tag": 7 } },
+              { "TVar": { "name": "a", "tag": 7 } }
+            ],
+            "out": "Boolean"
+          },
+          "def": {
+            "abstract_def": { "Abstract": { "Infix": "Left" } },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "<", "id": 28 },
+        "data": {
+          "type": {
+            "vars": [ { "name": "a", "tag": 8 } ],
+            "args": [
+              { "TVar": { "name": "a", "tag": 8 } },
+              { "TVar": { "name": "a", "tag": 8 } }
+            ],
+            "out": "Boolean"
+          },
+          "def": {
+            "abstract_def": { "Abstract": { "Infix": "Left" } },
+            "associated_fun": []
+          }
+        }
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "&&", "id": 19 },
+        "data": {
+          "type": {
+            "vars": [],
+            "args": [ "Boolean", "Boolean" ],
+            "out": "Boolean"
+          },
+          "def": {
+            "abstract_def": { "Abstract": { "Infix": "Right" } },
+            "associated_fun": []
+          }
+        }
+      }
+    ],
+    "macros": [
+      {
+        "symb": {
+          "npath": { "npath": [ "Q" ], "id": 1 },
+          "symb": "qstate",
+          "id": 9
+        },
+        "data": {
+          "General": {
+            "name": {
+              "npath": { "npath": [ "Q" ], "id": 1 },
+              "symb": "qinput",
+              "id": 7
+            },
+            "default": {
+              "Fun": {
+                "symb": {
+                  "npath": { "npath": [], "id": 0 },
+                  "symb": "witness",
+                  "id": 43
+                }
+              }
+            },
+            "tinit": {
+              "Fun": {
+                "symb": {
+                  "npath": { "npath": [], "id": 0 },
+                  "symb": "witness",
+                  "id": 43
+                }
+              }
+            },
+            "body": {
+              "var": { "id": { "name": "τ", "tag": 14 }, "ty": "Timestamp" },
+              "body": {
+                "Proj": {
+                  "id": 2,
+                  "body": {
+                    "App": {
+                      "f": {
+                        "Fun": {
+                          "symb": {
+                            "npath": { "npath": [], "id": 0 },
+                            "symb": "qatt",
+                            "id": 36
+                          }
+                        }
+                      },
+                      "args": [
+                        {
+                          "Tuple": {
+                            "elements": [
+                              {
+                                "Var": {
+                                  "id": { "name": "τ", "tag": 14 },
+                                  "ty": "Timestamp"
+                                }
+                              },
+                              {
+                                "Macro": {
+                                  "symb": {
+                                    "s_symb": {
+                                      "npath": { "npath": [ "Q" ], "id": 1 },
+                                      "symb": "qframe",
+                                      "id": 12
+                                    },
+                                    "s_typ": "Message"
+                                  },
+                                  "args": [],
+                                  "timestamp": {
+                                    "App": {
+                                      "f": {
+                                        "Fun": {
+                                          "symb": {
+                                            "npath": { "npath": [], "id": 0 },
+                                            "symb": "pred",
+                                            "id": 16
+                                          }
+                                        }
+                                      },
+                                      "args": [
+                                        {
+                                          "Var": {
+                                            "id": { "name": "τ", "tag": 14 },
+                                            "ty": "Timestamp"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "Macro": {
+                                  "symb": {
+                                    "s_symb": {
+                                      "npath": { "npath": [ "Q" ], "id": 1 },
+                                      "symb": "qstate",
+                                      "id": 9
+                                    },
+                                    "s_typ": {
+                                      "TBase": {
+                                        "npath": { "npath": [] },
+                                        "symb": "quantum_message"
+                                      }
+                                    }
+                                  },
+                                  "args": [],
+                                  "timestamp": {
+                                    "App": {
+                                      "f": {
+                                        "Fun": {
+                                          "symb": {
+                                            "npath": { "npath": [], "id": 0 },
+                                            "symb": "pred",
+                                            "id": 16
+                                          }
+                                        }
+                                      },
+                                      "args": [
+                                        {
+                                          "Var": {
+                                            "id": { "name": "τ", "tag": 14 },
+                                            "ty": "Timestamp"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "rec_ty": "Timestamp",
+            "ty": {
+              "TBase": {
+                "npath": { "npath": [] },
+                "symb": "quantum_message"
+              }
+            }
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [ "Q" ], "id": 1 },
+          "symb": "qoutput",
+          "id": 8
+        },
+        "data": { "General": "Output" }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [ "Q" ], "id": 1 },
+          "symb": "qinput",
+          "id": 7
+        },
+        "data": {
+          "General": {
+            "name": {
+              "npath": { "npath": [ "Q" ], "id": 1 },
+              "symb": "qinput",
+              "id": 7
+            },
+            "default": {
+              "Fun": {
+                "symb": {
+                  "npath": { "npath": [], "id": 0 },
+                  "symb": "empty",
+                  "id": 41
+                }
+              }
+            },
+            "tinit": {
+              "Fun": {
+                "symb": {
+                  "npath": { "npath": [], "id": 0 },
+                  "symb": "empty",
+                  "id": 41
+                }
+              }
+            },
+            "body": {
+              "var": { "id": { "name": "τ", "tag": 14 }, "ty": "Timestamp" },
+              "body": {
+                "Proj": {
+                  "id": 1,
+                  "body": {
+                    "App": {
+                      "f": {
+                        "Fun": {
+                          "symb": {
+                            "npath": { "npath": [], "id": 0 },
+                            "symb": "qatt",
+                            "id": 36
+                          }
+                        }
+                      },
+                      "args": [
+                        {
+                          "Tuple": {
+                            "elements": [
+                              {
+                                "Var": {
+                                  "id": { "name": "τ", "tag": 14 },
+                                  "ty": "Timestamp"
+                                }
+                              },
+                              {
+                                "Macro": {
+                                  "symb": {
+                                    "s_symb": {
+                                      "npath": { "npath": [ "Q" ], "id": 1 },
+                                      "symb": "qframe",
+                                      "id": 12
+                                    },
+                                    "s_typ": "Message"
+                                  },
+                                  "args": [],
+                                  "timestamp": {
+                                    "App": {
+                                      "f": {
+                                        "Fun": {
+                                          "symb": {
+                                            "npath": { "npath": [], "id": 0 },
+                                            "symb": "pred",
+                                            "id": 16
+                                          }
+                                        }
+                                      },
+                                      "args": [
+                                        {
+                                          "Var": {
+                                            "id": { "name": "τ", "tag": 14 },
+                                            "ty": "Timestamp"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "Macro": {
+                                  "symb": {
+                                    "s_symb": {
+                                      "npath": { "npath": [ "Q" ], "id": 1 },
+                                      "symb": "qstate",
+                                      "id": 9
+                                    },
+                                    "s_typ": {
+                                      "TBase": {
+                                        "npath": { "npath": [] },
+                                        "symb": "quantum_message"
+                                      }
+                                    }
+                                  },
+                                  "args": [],
+                                  "timestamp": {
+                                    "App": {
+                                      "f": {
+                                        "Fun": {
+                                          "symb": {
+                                            "npath": { "npath": [], "id": 0 },
+                                            "symb": "pred",
+                                            "id": 16
+                                          }
+                                        }
+                                      },
+                                      "args": [
+                                        {
+                                          "Var": {
+                                            "id": { "name": "τ", "tag": 14 },
+                                            "ty": "Timestamp"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "rec_ty": "Timestamp",
+            "ty": "Message"
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [ "Q" ], "id": 1 },
+          "symb": "qframe",
+          "id": 12
+        },
+        "data": {
+          "General": {
+            "name": {
+              "npath": { "npath": [ "Q" ], "id": 1 },
+              "symb": "qframe",
+              "id": 12
+            },
+            "default": {
+              "Fun": {
+                "symb": {
+                  "npath": { "npath": [], "id": 0 },
+                  "symb": "empty",
+                  "id": 41
+                }
+              }
+            },
+            "tinit": {
+              "Fun": {
+                "symb": {
+                  "npath": { "npath": [], "id": 0 },
+                  "symb": "zero",
+                  "id": 33
+                }
+              }
+            },
+            "body": {
+              "var": { "id": { "name": "τ", "tag": 14 }, "ty": "Timestamp" },
+              "body": {
+                "App": {
+                  "f": {
+                    "Fun": {
+                      "symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "pair",
+                        "id": 37
+                      }
+                    }
+                  },
+                  "args": [
+                    {
+                      "Macro": {
+                        "symb": {
+                          "s_symb": {
+                            "npath": { "npath": [ "Q" ], "id": 1 },
+                            "symb": "qframe",
+                            "id": 12
+                          },
+                          "s_typ": "Message"
+                        },
+                        "args": [],
+                        "timestamp": {
+                          "App": {
+                            "f": {
+                              "Fun": {
+                                "symb": {
+                                  "npath": { "npath": [], "id": 0 },
+                                  "symb": "pred",
+                                  "id": 16
+                                }
+                              }
+                            },
+                            "args": [
+                              {
+                                "Var": {
+                                  "id": { "name": "τ", "tag": 14 },
+                                  "ty": "Timestamp"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "App": {
+                        "f": {
+                          "Fun": {
+                            "symb": {
+                              "npath": { "npath": [], "id": 0 },
+                              "symb": "pair",
+                              "id": 37
+                            }
+                          }
+                        },
+                        "args": [
+                          {
+                            "App": {
+                              "f": {
+                                "Fun": {
+                                  "symb": {
+                                    "npath": { "npath": [], "id": 0 },
+                                    "symb": "of_bool",
+                                    "id": 40
+                                  }
+                                }
+                              },
+                              "args": [
+                                {
+                                  "Macro": {
+                                    "symb": {
+                                      "s_symb": {
+                                        "npath": {
+                                          "npath": [ "Q" ],
+                                          "id": 1
+                                        },
+                                        "symb": "qexec",
+                                        "id": 11
+                                      },
+                                      "s_typ": "Boolean"
+                                    },
+                                    "args": [],
+                                    "timestamp": {
+                                      "Var": {
+                                        "id": { "name": "τ", "tag": 14 },
+                                        "ty": "Timestamp"
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "App": {
+                              "f": {
+                                "Fun": {
+                                  "symb": {
+                                    "npath": { "npath": [], "id": 0 },
+                                    "symb": "if",
+                                    "id": 24
+                                  }
+                                }
+                              },
+                              "args": [
+                                {
+                                  "Macro": {
+                                    "symb": {
+                                      "s_symb": {
+                                        "npath": {
+                                          "npath": [ "Q" ],
+                                          "id": 1
+                                        },
+                                        "symb": "qexec",
+                                        "id": 11
+                                      },
+                                      "s_typ": "Boolean"
+                                    },
+                                    "args": [],
+                                    "timestamp": {
+                                      "Var": {
+                                        "id": { "name": "τ", "tag": 14 },
+                                        "ty": "Timestamp"
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "Macro": {
+                                    "symb": {
+                                      "s_symb": {
+                                        "npath": {
+                                          "npath": [ "Q" ],
+                                          "id": 1
+                                        },
+                                        "symb": "qoutput",
+                                        "id": 8
+                                      },
+                                      "s_typ": "Message"
+                                    },
+                                    "args": [],
+                                    "timestamp": {
+                                      "Var": {
+                                        "id": { "name": "τ", "tag": 14 },
+                                        "ty": "Timestamp"
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "Fun": {
+                                    "symb": {
+                                      "npath": { "npath": [], "id": 0 },
+                                      "symb": "zero",
+                                      "id": 33
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "rec_ty": "Timestamp",
+            "ty": "Message"
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [ "Q" ], "id": 1 },
+          "symb": "qexec",
+          "id": 11
+        },
+        "data": {
+          "General": {
+            "name": {
+              "npath": { "npath": [ "Q" ], "id": 1 },
+              "symb": "qexec",
+              "id": 11
+            },
+            "default": {
+              "Fun": {
+                "symb": {
+                  "npath": { "npath": [], "id": 0 },
+                  "symb": "false",
+                  "id": 17
+                }
+              }
+            },
+            "tinit": {
+              "Fun": {
+                "symb": {
+                  "npath": { "npath": [], "id": 0 },
+                  "symb": "true",
+                  "id": 18
+                }
+              }
+            },
+            "body": {
+              "var": { "id": { "name": "τ", "tag": 14 }, "ty": "Timestamp" },
+              "body": {
+                "App": {
+                  "f": {
+                    "Fun": {
+                      "symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "&&",
+                        "id": 19
+                      }
+                    }
+                  },
+                  "args": [
+                    {
+                      "Macro": {
+                        "symb": {
+                          "s_symb": {
+                            "npath": { "npath": [ "Q" ], "id": 1 },
+                            "symb": "qexec",
+                            "id": 11
+                          },
+                          "s_typ": "Boolean"
+                        },
+                        "args": [],
+                        "timestamp": {
+                          "App": {
+                            "f": {
+                              "Fun": {
+                                "symb": {
+                                  "npath": { "npath": [], "id": 0 },
+                                  "symb": "pred",
+                                  "id": 16
+                                }
+                              }
+                            },
+                            "args": [
+                              {
+                                "Var": {
+                                  "id": { "name": "τ", "tag": 14 },
+                                  "ty": "Timestamp"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "Macro": {
+                        "symb": {
+                          "s_symb": {
+                            "npath": { "npath": [ "Q" ], "id": 1 },
+                            "symb": "qcond",
+                            "id": 10
+                          },
+                          "s_typ": "Boolean"
+                        },
+                        "args": [],
+                        "timestamp": {
+                          "Var": {
+                            "id": { "name": "τ", "tag": 14 },
+                            "ty": "Timestamp"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "rec_ty": "Timestamp",
+            "ty": "Boolean"
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [ "Q" ], "id": 1 },
+          "symb": "qcond",
+          "id": 10
+        },
+        "data": { "General": "Cond" }
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "s", "id": 93 },
+        "data": {
+          "Global": {
+            "arity": 1,
+            "type": { "TBase": { "npath": { "npath": [] }, "symb": "C" } },
+            "data": {
+              "action": {
+                "kind": "Strict",
+                "shape": [
+                  { "par_choice": [ 0, 1 ], "sum_choice": [ 0, 0 ] },
+                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] },
+                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] }
+                ]
+              },
+              "inputs": [
+                { "id": { "name": "m", "tag": 84 }, "ty": "Message" },
+                { "id": { "name": "$dummy", "tag": 136 }, "ty": "Message" },
+                { "id": { "name": "$dummy", "tag": 136 }, "ty": "Message" },
+                { "id": { "name": "m'", "tag": 83 }, "ty": "Message" }
+              ],
+              "indices": [
+                { "id": { "name": "i", "tag": 131 }, "ty": "Index" }
+              ],
+              "ts": { "id": { "name": "τ", "tag": 123 }, "ty": "Timestamp" },
+              "ty": { "TBase": { "npath": { "npath": [] }, "symb": "C" } },
+              "body": {
+                "App": {
+                  "f": {
+                    "Fun": {
+                      "symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "sign",
+                        "id": 80
+                      }
+                    }
+                  },
+                  "args": [
+                    {
+                      "Tuple": {
+                        "elements": [
+                          {
+                            "Macro": {
+                              "symb": {
+                                "s_symb": {
+                                  "npath": { "npath": [], "id": 0 },
+                                  "symb": "mT",
+                                  "id": 90
+                                },
+                                "s_typ": {
+                                  "TBase": {
+                                    "npath": { "npath": [] },
+                                    "symb": "T"
+                                  }
+                                }
+                              },
+                              "args": [
+                                {
+                                  "Var": {
+                                    "id": { "name": "i", "tag": 131 },
+                                    "ty": "Index"
+                                  }
+                                }
+                              ],
+                              "timestamp": {
+                                "Var": {
+                                  "id": { "name": "τ", "tag": 123 },
+                                  "ty": "Timestamp"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "Name": {
+                              "symb": {
+                                "s_symb": {
+                                  "npath": { "npath": [], "id": 0 },
+                                  "symb": "sk",
+                                  "id": 91
+                                },
+                                "s_typ": {
+                                  "TBase": {
+                                    "npath": { "npath": [] },
+                                    "symb": "L"
+                                  }
+                                }
+                              },
+                              "args": [
+                                {
+                                  "Var": {
+                                    "id": { "name": "i", "tag": 131 },
+                                    "ty": "Index"
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "output",
+          "id": 2
+        },
+        "data": { "General": "Output" }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "mypk",
+          "id": 92
+        },
+        "data": {
+          "Global": {
+            "arity": 1,
+            "type": { "TBase": { "npath": { "npath": [] }, "symb": "LP" } },
+            "data": {
+              "action": {
+                "kind": "Strict",
+                "shape": [
+                  { "par_choice": [ 0, 1 ], "sum_choice": [ 0, 0 ] },
+                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] },
+                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] }
+                ]
+              },
+              "inputs": [
+                { "id": { "name": "m", "tag": 84 }, "ty": "Message" },
+                { "id": { "name": "$dummy", "tag": 136 }, "ty": "Message" },
+                { "id": { "name": "$dummy", "tag": 136 }, "ty": "Message" },
+                { "id": { "name": "m'", "tag": 83 }, "ty": "Message" }
+              ],
+              "indices": [
+                { "id": { "name": "i", "tag": 131 }, "ty": "Index" }
+              ],
+              "ts": { "id": { "name": "τ", "tag": 123 }, "ty": "Timestamp" },
+              "ty": { "TBase": { "npath": { "npath": [] }, "symb": "LP" } },
+              "body": {
+                "App": {
+                  "f": {
+                    "Fun": {
+                      "symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "spk",
+                        "id": 81
+                      }
+                    }
+                  },
+                  "args": [
+                    {
+                      "Name": {
+                        "symb": {
+                          "s_symb": {
+                            "npath": { "npath": [], "id": 0 },
+                            "symb": "sk",
+                            "id": 91
+                          },
+                          "s_typ": {
+                            "TBase": {
+                              "npath": { "npath": [] },
+                              "symb": "L"
+                            }
+                          }
+                        },
+                        "args": [
+                          {
+                            "Var": {
+                              "id": { "name": "i", "tag": 131 },
+                              "ty": "Index"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "my_add_b",
+          "id": 89
+        },
+        "data": {
+          "Global": {
+            "arity": 1,
+            "type": { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
+            "data": {
+              "action": {
+                "kind": "Strict",
+                "shape": [
+                  { "par_choice": [ 0, 1 ], "sum_choice": [ 0, 0 ] },
+                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] },
+                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] }
+                ]
+              },
+              "inputs": [
+                { "id": { "name": "m", "tag": 84 }, "ty": "Message" },
+                { "id": { "name": "$dummy", "tag": 136 }, "ty": "Message" },
+                { "id": { "name": "$dummy", "tag": 136 }, "ty": "Message" },
+                { "id": { "name": "m'", "tag": 83 }, "ty": "Message" }
+              ],
+              "indices": [
+                { "id": { "name": "i", "tag": 131 }, "ty": "Index" }
+              ],
+              "ts": { "id": { "name": "τ", "tag": 123 }, "ty": "Timestamp" },
+              "ty": { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
+              "body": {
+                "App": {
+                  "f": {
+                    "Fun": {
+                      "symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "to_T",
+                        "id": 68
+                      }
+                    }
+                  },
+                  "args": [
+                    {
+                      "Macro": {
+                        "symb": {
+                          "s_symb": {
+                            "npath": { "npath": [], "id": 0 },
+                            "symb": "input",
+                            "id": 1
+                          },
+                          "s_typ": "Message"
+                        },
+                        "args": [],
+                        "timestamp": {
+                          "Action": {
+                            "symb": {
+                              "npath": { "npath": [], "id": 0 },
+                              "symb": "Signature",
+                              "id": 85
+                            },
+                            "args": [
+                              {
+                                "Var": {
+                                  "id": { "name": "i", "tag": 131 },
+                                  "ty": "Index"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "my_add_a",
+          "id": 88
+        },
+        "data": {
+          "Global": {
+            "arity": 1,
+            "type": { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
+            "data": {
+              "action": {
+                "kind": "Strict",
+                "shape": [
+                  { "par_choice": [ 0, 1 ], "sum_choice": [ 0, 0 ] },
+                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] },
+                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] }
+                ]
+              },
+              "inputs": [
+                { "id": { "name": "m", "tag": 84 }, "ty": "Message" },
+                { "id": { "name": "$dummy", "tag": 136 }, "ty": "Message" },
+                { "id": { "name": "$dummy", "tag": 136 }, "ty": "Message" },
+                { "id": { "name": "m'", "tag": 83 }, "ty": "Message" }
+              ],
+              "indices": [
+                { "id": { "name": "i", "tag": 131 }, "ty": "Index" }
+              ],
+              "ts": { "id": { "name": "τ", "tag": 123 }, "ty": "Timestamp" },
+              "ty": { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
+              "body": {
+                "App": {
+                  "f": {
+                    "Fun": {
+                      "symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "to_T",
+                        "id": 68
+                      }
+                    }
+                  },
+                  "args": [
+                    {
+                      "Var": {
+                        "id": { "name": "m", "tag": 84 },
+                        "ty": "Message"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "mT1",
+          "id": 97
+        },
+        "data": {
+          "Global": {
+            "arity": 0,
+            "type": { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
+            "data": {
+              "action": { "kind": "Strict", "shape": [] },
+              "inputs": [
+                { "id": { "name": "m", "tag": 60 }, "ty": "Message" }
+              ],
+              "indices": [],
+              "ts": { "id": { "name": "τ", "tag": 123 }, "ty": "Timestamp" },
+              "ty": { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
+              "body": {
+                "App": {
+                  "f": {
+                    "Fun": {
+                      "symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "to_T",
+                        "id": 68
+                      }
+                    }
+                  },
+                  "args": [
+                    {
+                      "Var": {
+                        "id": { "name": "m", "tag": 60 },
+                        "ty": "Message"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "mT", "id": 90 },
+        "data": {
+          "Global": {
+            "arity": 1,
+            "type": { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
+            "data": {
+              "action": {
+                "kind": "Strict",
+                "shape": [
+                  { "par_choice": [ 0, 1 ], "sum_choice": [ 0, 0 ] },
+                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] },
+                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] }
+                ]
+              },
+              "inputs": [
+                { "id": { "name": "m", "tag": 84 }, "ty": "Message" },
+                { "id": { "name": "$dummy", "tag": 136 }, "ty": "Message" },
+                { "id": { "name": "$dummy", "tag": 136 }, "ty": "Message" },
+                { "id": { "name": "m'", "tag": 83 }, "ty": "Message" }
+              ],
+              "indices": [
+                { "id": { "name": "i", "tag": 131 }, "ty": "Index" }
+              ],
+              "ts": { "id": { "name": "τ", "tag": 123 }, "ty": "Timestamp" },
+              "ty": { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
+              "body": {
+                "App": {
+                  "f": {
+                    "Fun": {
+                      "symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "tuple_t",
+                        "id": 70
+                      }
+                    }
+                  },
+                  "args": [
+                    {
+                      "Tuple": {
+                        "elements": [
+                          {
+                            "App": {
+                              "f": {
+                                "Fun": {
+                                  "symb": {
+                                    "npath": { "npath": [], "id": 0 },
+                                    "symb": "to_T",
+                                    "id": 68
+                                  }
+                                }
+                              },
+                              "args": [
+                                {
+                                  "Var": {
+                                    "id": { "name": "m", "tag": 84 },
+                                    "ty": "Message"
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "App": {
+                              "f": {
+                                "Fun": {
+                                  "symb": {
+                                    "npath": { "npath": [], "id": 0 },
+                                    "symb": "to_T",
+                                    "id": 68
+                                  }
+                                }
+                              },
+                              "args": [
+                                {
+                                  "Macro": {
+                                    "symb": {
+                                      "s_symb": {
+                                        "npath": { "npath": [], "id": 0 },
+                                        "symb": "input",
+                                        "id": 1
+                                      },
+                                      "s_typ": "Message"
+                                    },
+                                    "args": [],
+                                    "timestamp": {
+                                      "Action": {
+                                        "symb": {
+                                          "npath": { "npath": [], "id": 0 },
+                                          "symb": "Signature",
+                                          "id": 85
+                                        },
+                                        "args": [
+                                          {
+                                            "Var": {
+                                              "id": {
+                                                "name": "i",
+                                                "tag": 131
+                                              },
+                                              "ty": "Index"
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "input",
+          "id": 1
+        },
+        "data": {
+          "General": {
+            "name": {
+              "npath": { "npath": [], "id": 0 },
+              "symb": "input",
+              "id": 1
+            },
+            "default": {
+              "Fun": {
+                "symb": {
+                  "npath": { "npath": [], "id": 0 },
+                  "symb": "empty",
+                  "id": 41
+                }
+              }
+            },
+            "tinit": {
+              "Fun": {
+                "symb": {
+                  "npath": { "npath": [], "id": 0 },
+                  "symb": "empty",
+                  "id": 41
+                }
+              }
+            },
+            "body": {
+              "var": { "id": { "name": "τ", "tag": 16 }, "ty": "Timestamp" },
+              "body": {
+                "App": {
+                  "f": {
+                    "Fun": {
+                      "symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "att",
+                        "id": 35
+                      }
+                    }
+                  },
+                  "args": [
+                    {
+                      "Macro": {
+                        "symb": {
+                          "s_symb": {
+                            "npath": { "npath": [], "id": 0 },
+                            "symb": "frame",
+                            "id": 5
+                          },
+                          "s_typ": "Message"
+                        },
+                        "args": [],
+                        "timestamp": {
+                          "App": {
+                            "f": {
+                              "Fun": {
+                                "symb": {
+                                  "npath": { "npath": [], "id": 0 },
+                                  "symb": "pred",
+                                  "id": 16
+                                }
+                              }
+                            },
+                            "args": [
+                              {
+                                "Var": {
+                                  "id": { "name": "τ", "tag": 16 },
+                                  "ty": "Timestamp"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "rec_ty": "Timestamp",
+            "ty": "Message"
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "frame",
+          "id": 5
+        },
+        "data": {
+          "General": {
+            "name": {
+              "npath": { "npath": [], "id": 0 },
+              "symb": "frame",
+              "id": 5
+            },
+            "default": {
+              "Fun": {
+                "symb": {
+                  "npath": { "npath": [], "id": 0 },
+                  "symb": "empty",
+                  "id": 41
+                }
+              }
+            },
+            "tinit": {
+              "Fun": {
+                "symb": {
+                  "npath": { "npath": [], "id": 0 },
+                  "symb": "zero",
+                  "id": 33
+                }
+              }
+            },
+            "body": {
+              "var": { "id": { "name": "τ", "tag": 16 }, "ty": "Timestamp" },
+              "body": {
+                "App": {
+                  "f": {
+                    "Fun": {
+                      "symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "pair",
+                        "id": 37
+                      }
+                    }
+                  },
+                  "args": [
+                    {
+                      "Macro": {
+                        "symb": {
+                          "s_symb": {
+                            "npath": { "npath": [], "id": 0 },
+                            "symb": "frame",
+                            "id": 5
+                          },
+                          "s_typ": "Message"
+                        },
+                        "args": [],
+                        "timestamp": {
+                          "App": {
+                            "f": {
+                              "Fun": {
+                                "symb": {
+                                  "npath": { "npath": [], "id": 0 },
+                                  "symb": "pred",
+                                  "id": 16
+                                }
+                              }
+                            },
+                            "args": [
+                              {
+                                "Var": {
+                                  "id": { "name": "τ", "tag": 16 },
+                                  "ty": "Timestamp"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "App": {
+                        "f": {
+                          "Fun": {
+                            "symb": {
+                              "npath": { "npath": [], "id": 0 },
+                              "symb": "pair",
+                              "id": 37
+                            }
+                          }
+                        },
+                        "args": [
+                          {
+                            "App": {
+                              "f": {
+                                "Fun": {
+                                  "symb": {
+                                    "npath": { "npath": [], "id": 0 },
+                                    "symb": "of_bool",
+                                    "id": 40
+                                  }
+                                }
+                              },
+                              "args": [
+                                {
+                                  "Macro": {
+                                    "symb": {
+                                      "s_symb": {
+                                        "npath": { "npath": [], "id": 0 },
+                                        "symb": "exec",
+                                        "id": 4
+                                      },
+                                      "s_typ": "Boolean"
+                                    },
+                                    "args": [],
+                                    "timestamp": {
+                                      "Var": {
+                                        "id": { "name": "τ", "tag": 16 },
+                                        "ty": "Timestamp"
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "App": {
+                              "f": {
+                                "Fun": {
+                                  "symb": {
+                                    "npath": { "npath": [], "id": 0 },
+                                    "symb": "if",
+                                    "id": 24
+                                  }
+                                }
+                              },
+                              "args": [
+                                {
+                                  "Macro": {
+                                    "symb": {
+                                      "s_symb": {
+                                        "npath": { "npath": [], "id": 0 },
+                                        "symb": "exec",
+                                        "id": 4
+                                      },
+                                      "s_typ": "Boolean"
+                                    },
+                                    "args": [],
+                                    "timestamp": {
+                                      "Var": {
+                                        "id": { "name": "τ", "tag": 16 },
+                                        "ty": "Timestamp"
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "Macro": {
+                                    "symb": {
+                                      "s_symb": {
+                                        "npath": { "npath": [], "id": 0 },
+                                        "symb": "output",
+                                        "id": 2
+                                      },
+                                      "s_typ": "Message"
+                                    },
+                                    "args": [],
+                                    "timestamp": {
+                                      "Var": {
+                                        "id": { "name": "τ", "tag": 16 },
+                                        "ty": "Timestamp"
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "Fun": {
+                                    "symb": {
+                                      "npath": { "npath": [], "id": 0 },
+                                      "symb": "zero",
+                                      "id": 33
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "rec_ty": "Timestamp",
+            "ty": "Message"
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "exec",
+          "id": 4
+        },
+        "data": {
+          "General": {
+            "name": {
+              "npath": { "npath": [], "id": 0 },
+              "symb": "exec",
+              "id": 4
+            },
+            "default": {
+              "Fun": {
+                "symb": {
+                  "npath": { "npath": [], "id": 0 },
+                  "symb": "false",
+                  "id": 17
+                }
+              }
+            },
+            "tinit": {
+              "Fun": {
+                "symb": {
+                  "npath": { "npath": [], "id": 0 },
+                  "symb": "true",
+                  "id": 18
+                }
+              }
+            },
+            "body": {
+              "var": { "id": { "name": "τ", "tag": 16 }, "ty": "Timestamp" },
+              "body": {
+                "App": {
+                  "f": {
+                    "Fun": {
+                      "symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "&&",
+                        "id": 19
+                      }
+                    }
+                  },
+                  "args": [
+                    {
+                      "Macro": {
+                        "symb": {
+                          "s_symb": {
+                            "npath": { "npath": [], "id": 0 },
+                            "symb": "exec",
+                            "id": 4
+                          },
+                          "s_typ": "Boolean"
+                        },
+                        "args": [],
+                        "timestamp": {
+                          "App": {
+                            "f": {
+                              "Fun": {
+                                "symb": {
+                                  "npath": { "npath": [], "id": 0 },
+                                  "symb": "pred",
+                                  "id": 16
+                                }
+                              }
+                            },
+                            "args": [
+                              {
+                                "Var": {
+                                  "id": { "name": "τ", "tag": 16 },
+                                  "ty": "Timestamp"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "Macro": {
+                        "symb": {
+                          "s_symb": {
+                            "npath": { "npath": [], "id": 0 },
+                            "symb": "cond",
+                            "id": 3
+                          },
+                          "s_typ": "Boolean"
+                        },
+                        "args": [],
+                        "timestamp": {
+                          "Var": {
+                            "id": { "name": "τ", "tag": 16 },
+                            "ty": "Timestamp"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "rec_ty": "Timestamp",
+            "ty": "Boolean"
+          }
+        }
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "d", "id": 101 },
+        "data": {
+          "Global": {
+            "arity": 0,
+            "type": { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
+            "data": {
+              "action": { "kind": "Strict", "shape": [] },
+              "inputs": [
+                { "id": { "name": "m", "tag": 60 }, "ty": "Message" }
+              ],
+              "indices": [],
+              "ts": { "id": { "name": "τ", "tag": 123 }, "ty": "Timestamp" },
+              "ty": { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
+              "body": {
+                "App": {
+                  "f": {
+                    "Fun": {
+                      "symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "sdecr",
+                        "id": 78
+                      }
+                    }
+                  },
+                  "args": [
+                    {
+                      "Tuple": {
+                        "elements": [
+                          {
+                            "Macro": {
+                              "symb": {
+                                "s_symb": {
+                                  "npath": { "npath": [], "id": 0 },
+                                  "symb": "c1",
+                                  "id": 100
+                                },
+                                "s_typ": {
+                                  "TBase": {
+                                    "npath": { "npath": [] },
+                                    "symb": "C"
+                                  }
+                                }
+                              },
+                              "args": [],
+                              "timestamp": {
+                                "Var": {
+                                  "id": { "name": "τ", "tag": 123 },
+                                  "ty": "Timestamp"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "Name": {
+                              "symb": {
+                                "s_symb": {
+                                  "npath": { "npath": [], "id": 0 },
+                                  "symb": "k",
+                                  "id": 98
+                                },
+                                "s_typ": {
+                                  "TBase": {
+                                    "npath": { "npath": [] },
+                                    "symb": "L"
+                                  }
+                                }
+                              },
+                              "args": []
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "cond",
+          "id": 3
+        },
+        "data": { "General": "Cond" }
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "ch", "id": 94 },
+        "data": {
+          "Global": {
+            "arity": 1,
+            "type": "Boolean",
+            "data": {
+              "action": {
+                "kind": "Strict",
+                "shape": [
+                  { "par_choice": [ 0, 1 ], "sum_choice": [ 0, 0 ] },
+                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] },
+                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] }
+                ]
+              },
+              "inputs": [
+                { "id": { "name": "m", "tag": 84 }, "ty": "Message" },
+                { "id": { "name": "$dummy", "tag": 136 }, "ty": "Message" },
+                { "id": { "name": "$dummy", "tag": 136 }, "ty": "Message" },
+                { "id": { "name": "m'", "tag": 83 }, "ty": "Message" }
+              ],
+              "indices": [
+                { "id": { "name": "i", "tag": 131 }, "ty": "Index" }
+              ],
+              "ts": { "id": { "name": "τ", "tag": 123 }, "ty": "Timestamp" },
+              "ty": "Boolean",
+              "body": {
+                "App": {
+                  "f": {
+                    "Fun": {
+                      "symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "checksign",
+                        "id": 82
+                      }
+                    }
+                  },
+                  "args": [
+                    {
+                      "Tuple": {
+                        "elements": [
+                          {
+                            "Macro": {
+                              "symb": {
+                                "s_symb": {
+                                  "npath": { "npath": [], "id": 0 },
+                                  "symb": "mT",
+                                  "id": 90
+                                },
+                                "s_typ": {
+                                  "TBase": {
+                                    "npath": { "npath": [] },
+                                    "symb": "T"
+                                  }
+                                }
+                              },
+                              "args": [
+                                {
+                                  "Var": {
+                                    "id": { "name": "i", "tag": 131 },
+                                    "ty": "Index"
+                                  }
+                                }
+                              ],
+                              "timestamp": {
+                                "Var": {
+                                  "id": { "name": "τ", "tag": 123 },
+                                  "ty": "Timestamp"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "Macro": {
+                              "symb": {
+                                "s_symb": {
+                                  "npath": { "npath": [], "id": 0 },
+                                  "symb": "s",
+                                  "id": 93
+                                },
+                                "s_typ": {
+                                  "TBase": {
+                                    "npath": { "npath": [] },
+                                    "symb": "C"
+                                  }
+                                }
+                              },
+                              "args": [
+                                {
+                                  "Var": {
+                                    "id": { "name": "i", "tag": 131 },
+                                    "ty": "Index"
+                                  }
+                                }
+                              ],
+                              "timestamp": {
+                                "Var": {
+                                  "id": { "name": "τ", "tag": 123 },
+                                  "ty": "Timestamp"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "Macro": {
+                              "symb": {
+                                "s_symb": {
+                                  "npath": { "npath": [], "id": 0 },
+                                  "symb": "mypk",
+                                  "id": 92
+                                },
+                                "s_typ": {
+                                  "TBase": {
+                                    "npath": { "npath": [] },
+                                    "symb": "LP"
+                                  }
+                                }
+                              },
+                              "args": [
+                                {
+                                  "Var": {
+                                    "id": { "name": "i", "tag": 131 },
+                                    "ty": "Index"
+                                  }
+                                }
+                              ],
+                              "timestamp": {
+                                "Var": {
+                                  "id": { "name": "τ", "tag": 123 },
+                                  "ty": "Timestamp"
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "c1",
+          "id": 100
+        },
+        "data": {
+          "Global": {
+            "arity": 0,
+            "type": { "TBase": { "npath": { "npath": [] }, "symb": "C" } },
+            "data": {
+              "action": { "kind": "Strict", "shape": [] },
+              "inputs": [
+                { "id": { "name": "m", "tag": 60 }, "ty": "Message" }
+              ],
+              "indices": [],
+              "ts": { "id": { "name": "τ", "tag": 123 }, "ty": "Timestamp" },
+              "ty": { "TBase": { "npath": { "npath": [] }, "symb": "C" } },
+              "body": {
+                "App": {
+                  "f": {
+                    "Fun": {
+                      "symb": {
+                        "npath": { "npath": [], "id": 0 },
+                        "symb": "sencr",
+                        "id": 77
+                      }
+                    }
+                  },
+                  "args": [
+                    {
+                      "Tuple": {
+                        "elements": [
+                          {
+                            "Macro": {
+                              "symb": {
+                                "s_symb": {
+                                  "npath": { "npath": [], "id": 0 },
+                                  "symb": "mT1",
+                                  "id": 97
+                                },
+                                "s_typ": {
+                                  "TBase": {
+                                    "npath": { "npath": [] },
+                                    "symb": "T"
+                                  }
+                                }
+                              },
+                              "args": [],
+                              "timestamp": {
+                                "Var": {
+                                  "id": { "name": "τ", "tag": 123 },
+                                  "ty": "Timestamp"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "Name": {
+                              "symb": {
+                                "s_symb": {
+                                  "npath": { "npath": [], "id": 0 },
+                                  "symb": "r",
+                                  "id": 99
+                                },
+                                "s_typ": {
+                                  "TBase": {
+                                    "npath": { "npath": [] },
+                                    "symb": "R"
+                                  }
+                                }
+                              },
+                              "args": []
+                            }
+                          },
+                          {
+                            "Name": {
+                              "symb": {
+                                "s_symb": {
+                                  "npath": { "npath": [], "id": 0 },
+                                  "symb": "k",
+                                  "id": 98
+                                },
+                                "s_typ": {
+                                  "TBase": {
+                                    "npath": { "npath": [] },
+                                    "symb": "L"
+                                  }
+                                }
+                              },
+                              "args": []
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    ],
+    "types": [
+      {
+        "symb": {
+          "npath": { "npath": [], "id": 0 },
+          "symb": "quantum_message",
+          "id": 59
+        },
+        "data": []
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "T", "id": 62 },
+        "data": [ "Large" ]
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "R", "id": 65 },
+        "data": [ "Large" ]
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "LP", "id": 66 },
+        "data": [ "Large" ]
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "L", "id": 64 },
+        "data": [ "Large" ]
+      },
+      {
+        "symb": { "npath": { "npath": [], "id": 0 }, "symb": "C", "id": 63 },
+        "data": [ "Large" ]
+      }
+    ]
+  }
+}

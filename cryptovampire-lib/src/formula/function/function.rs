@@ -11,6 +11,7 @@ use crate::container::reference::Reference;
 use crate::container::utils::NameFinder;
 use crate::container::StaticContainer;
 use crate::environement::traits::{KnowsRealm, Realm};
+use crate::formula::utils::Applicable;
 use utils::force_lifetime;
 
 use crate::formula::formula::ARichFormula;
@@ -362,7 +363,7 @@ impl<'bump> Function<'bump> {
         self.name_ref()
     }
 
-    pub fn f<'bbump, I>(&self, args: impl IntoIterator<Item = I>) -> RichFormula<'bbump>
+    pub fn apply<'bbump, I>(&self, args: impl IntoIterator<Item = I>) -> RichFormula<'bbump>
     where
         'bump: 'bbump,
         I: Into<ARichFormula<'bbump>>,
@@ -373,22 +374,22 @@ impl<'bump> Function<'bump> {
         RichFormula::Fun(*self, args.into_iter().map_into().collect())
     }
 
-    pub fn f_a<'bbump, I>(&self, args: impl IntoIterator<Item = I>) -> ARichFormula<'bbump>
-    where
-        'bump: 'bbump,
-        I: Into<ARichFormula<'bbump>>,
-    {
-        self.f(args).into_arc()
-    }
+    // pub fn f<'bbump, I>(&self, args: impl IntoIterator<Item = I>) -> ARichFormula<'bbump>
+    // where
+    //     'bump: 'bbump,
+    //     I: Into<ARichFormula<'bbump>>,
+    // {
+    //     self.apply(args).into_arc()
+    // }
 
-    pub fn f_rf<'bbump>(
+    pub fn apply_rf<'bbump>(
         &self,
         args: impl IntoIterator<Item = RichFormula<'bbump>>,
     ) -> RichFormula<'bbump>
     where
         'bump: 'bbump,
     {
-        self.f(args)
+        self.apply(args)
     }
 
     pub fn is_default_subterm(&self) -> bool {
@@ -473,5 +474,17 @@ pub struct DisplayFunction<'bump>(Function<'bump>);
 impl<'bump> Display for DisplayFunction<'bump> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}{}", self.0.name(), self.0.signature().as_display())
+    }
+}
+
+impl<'bump> Applicable for Function<'bump> {
+    type Term = ARichFormula<'bump>;
+
+    fn f<U, I>(self, args: I) -> Self::Term
+    where
+        I: IntoIterator<Item = U>,
+        Self::Term: From<U>,
+    {
+        self.apply(args).into_arc()
     }
 }

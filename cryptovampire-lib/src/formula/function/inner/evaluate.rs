@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 
-use log::trace;
-
+use crate::formula::utils::Applicable;
 use crate::formula::{
     formula::ARichFormula,
     function::{
@@ -64,14 +63,15 @@ impl<'bump> Evaluator<'bump> {
         f: impl Into<ARichFormula<'bump>>,
     ) -> Result<ARichFormula<'bump>, SortedError> {
         let f: ARichFormula = f.into();
-        trace!("try eval: {}", f);
+        // FIXME: can fail because of validity
+        // trace!("try eval: {:}", f);
         let sort = f
             .get_sort()
-            .debug_continue_msg(&format!("{f} doesn't have a known sort"))?;
+            .debug_continue_msg(|| format!("{f} doesn't have a known sort"))?;
         let fun = self.functions.get(&sort.into());
         match fun {
             None => Ok(f), // unevaluatable sort don't need to be evaluated
-            Some(fun) => Ok(fun.f_a([f])),
+            Some(fun) => Ok(fun.f([f])),
         }
     }
 

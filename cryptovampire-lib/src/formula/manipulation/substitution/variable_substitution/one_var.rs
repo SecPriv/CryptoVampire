@@ -81,3 +81,9 @@ impl<'a, 'bump: 'a> Substitution<'bump> for OneVarSubstF<'bump> {
         }
     }
 }
+
+impl<'bump> OneVarSubstF<'bump> {
+    pub fn new(Variable { id, .. }: Variable<'bump>, f: ARichFormula<'bump>) -> Self {
+        Self { id, f }
+    }
+}

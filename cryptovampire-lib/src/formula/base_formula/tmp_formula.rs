@@ -1,8 +1,10 @@
+use super::BaseFormula;
+
 use std::fmt::Display;
 
 use anyhow::{anyhow, bail};
 use log::{debug, trace, warn};
-use utils::{implvec, string_ref::StrRef};
+use utils::string_ref::StrRef;
 
 use crate::{
     environement::traits::Realm,
@@ -17,45 +19,9 @@ use crate::{
 use hashbrown::HashMap;
 use itertools::Itertools;
 
-/// A very simplified AST
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum TmpFormula {
-    Binder {
-        head: String,
-        vars: Vec<String>,
-        args: Vec<TmpFormula>,
-    },
-    App {
-        head: String,
-        args: Vec<TmpFormula>,
-    },
-    Var(String),
-}
+pub type TmpFormula = BaseFormula<String, String, String>;
 
 impl TmpFormula {
-    pub fn new(head: String, args: implvec!(TmpFormula)) -> Self {
-        Self::App {
-            head,
-            args: args.into_iter().collect(),
-        }
-    }
-
-    pub fn new_const(head: String) -> Self {
-        Self::App { head, args: vec![] }
-    }
-    pub fn new_from_ref(head: &str, args: &[TmpFormula]) -> Self {
-        Self::new(head.to_string(), args.to_vec())
-    }
-
-    pub fn head(&self) -> Option<&str> {
-        match self {
-            Self::App { head, .. } | Self::Binder { head, .. } => Some(head),
-
-            _ => None,
-        }
-    }
-
     pub fn args(&self) -> Option<&[TmpFormula]> {
         match self {
             Self::App { args, .. } | Self::Binder { args, .. } => Some(args.as_ref()),
@@ -196,32 +162,6 @@ impl TmpFormula {
         Ok(RichFormula::Var(
             TmpOrStr::from(self).to_rich_formula_variable(variables, expected_sort, realm)?,
         ))
-    }
-}
-
-impl Display for TmpFormula {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TmpFormula::App { head, args } => {
-                write!(f, "{:}(", &head)?;
-                for arg in args {
-                    write!(f, "{:}, ", arg)?;
-                }
-                write!(f, ")")
-            }
-            TmpFormula::Binder { head, vars, args } => {
-                write!(f, "{:}(", &head)?;
-                for var in vars {
-                    write!(f, "{:}, ", var)?;
-                }
-                write!(f, ") {{")?;
-                for arg in args {
-                    write!(f, "{:}; ", arg)?;
-                }
-                write!(f, "}}")
-            }
-            TmpFormula::Var(s) => s.fmt(f),
-        }
     }
 }
 

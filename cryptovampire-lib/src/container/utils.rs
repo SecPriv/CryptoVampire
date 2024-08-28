@@ -4,7 +4,7 @@ use crate::formula::function::Function;
 
 use super::ScopedContainer;
 
-/// from https://stackoverflow.com/a/33542412/10875409
+/// from <https://stackoverflow.com/a/33542412/10875409>
 #[derive(Debug)]
 pub struct VecRefWrapperMap<'a, T: 'a, U, F>
 where

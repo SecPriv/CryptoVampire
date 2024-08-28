@@ -18,18 +18,20 @@ pub enum SortedError {
     Impossible,
     #[error("wrong argument")]
     InferenceError { msg: String },
+    #[error(transparent)]
+    CheckError(#[from] CheckError),
 }
 
-impl<'bump> From<CheckError<'bump>> for SortedError {
-    fn from(value: CheckError<'bump>) -> Self {
-        match value {
-            CheckError::WrongNumberOfArguments { got, expected } => Self::WrongArguments {
-                expected: format!("{expected:?}"),
-                got: format!("{got:?}"),
-            },
-            e @ CheckError::SortError { .. } => Self::InferenceError {
-                msg: format!("{e:?}"),
-            },
-        }
-    }
-}
+// impl<'bump> From<CheckError> for SortedError {
+//     fn from(value: CheckError) -> Self {
+//         match value {
+//             CheckError::WrongNumberOfArguments { got, expected } => Self::WrongArguments {
+//                 expected: format!("{expected:?}"),
+//                 got: format!("{got:?}"),
+//             },
+//             e @ CheckError::SortError { .. } => Self::InferenceError {
+//                 msg: format!("{e:?}"),
+//             },
+//         }
+//     }
+// }
