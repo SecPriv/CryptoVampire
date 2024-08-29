@@ -294,15 +294,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1724921078,
-        "narHash": "sha256-g6Zb7OrlNEM1lep9e/Neqn8Z+0VgCXAakF03GjtSfA8=",
+        "lastModified": 1724912665,
+        "narHash": "sha256-29cabSYFmIIfIR29ReoJsrvC95gtxmzQeEnFRlcLdH0=",
         "owner": "nlewo",
         "repo": "nix2container",
-        "rev": "505c19a99771ca2f7b049b3c64f190ccc158861f",
+        "rev": "80e34774e5904aae7a3542bc3b70dab1fe048587",
         "type": "github"
       },
       "original": {
         "owner": "nlewo",
+        "ref": "update-patch-hash",
         "repo": "nix2container",
         "type": "github"
       }
@@ -548,7 +549,8 @@
         "type": "github"
       },
       "original": {
-        "owner": "squirrel-prover",
+        "owner": "puyral",
+        "ref": "cryptovampire",
         "repo": "squirrel-prover",
         "type": "github"
       }

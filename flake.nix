@@ -12,7 +12,7 @@
       # inputs.cryptovampire-src.url = ".";
     };
     nix2container = {
-      url = "github:nlewo/nix2container";
+      url = "github:nlewo/nix2container?ref=update-patch-hash";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -70,7 +70,7 @@
         };
 
 
-        dockerImage = nix2container.buildimage {
+        dockerImage = with nix2container.packages.${system}.nix2container; buildImage {
           name = "cryptovampire";
           layers = let
             commonLayer = {
@@ -86,14 +86,14 @@
             layerDefs = [
               {
                 deps = [ custom-pkgs.squirrel-prover ];
-                layers = [ (nix2container.buildLayer commonLayer) ];
+                layers = [ (buildLayer commonLayer) ];
               }
               {
                 deps = [ cryptovampire ];
-                layers = [ (nix2container.buildLayer commonLayer) ];
+                layers = [ (buildLayer commonLayer) ];
               }
             ];
-          in builtins.map nix2container.buildLayer layerDefs;
+          in builtins.map buildLayer layerDefs;
           config = {
             Env = [
               (let
