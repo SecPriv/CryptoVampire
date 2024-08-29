@@ -98,7 +98,7 @@ impl Operation {
         match self {
             Operation::HardEq => &["===", "meq"],
             Operation::Eq => &["=", "==", "eq"],
-            Operation::Neq => &["!=", "neq"],
+            Operation::Neq => &["!=", "neq", "<>"],
             Operation::Or => &["||", "or", "ors"],
             Operation::And => &["&&", "and", "ands"],
             Operation::Implies => &["=>", "implies", "==>"],

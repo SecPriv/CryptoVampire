@@ -41,6 +41,7 @@ static REMMAPPED_FUNCTION: HashMap<&'static str, StrRef<'static>> = {
         ("<=>", EQUALITY.name()),
         ("=>", IMPLIES.name()),
         ("=", EQUALITY.name()),
+        ("<>", "!=".into()),
         ("<=", LESS_THAN_EQ_STEP.name()),
         ("<", LESS_THAN_STEP.name()),
         (">", GREATER_THAN_STEP.name()),
@@ -71,7 +72,7 @@ static FORBIDDEN_FUNCTIONS: HashSet<&'static str> =
 #[dynamic]
 static BUILTIN_FUNCTION: HashSet<&'static str> = [
     "&&", "||", "and", "or", "<=>", "=>", "=", "<=", "<", "not", "true", "false", "empty", "ø",
-    "happens", "pred",
+    "happens", "pred"
 ]
 .into_iter()
 .collect();

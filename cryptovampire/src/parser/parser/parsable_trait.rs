@@ -282,8 +282,8 @@ where
             ..
         } = self;
 
-        if (env.functions.contains_key(variable.name().borrow())
-            || bvars.iter().map(|(n, _)| n).contains(&variable.name()))
+        if env.functions.contains_key(variable.name().borrow())
+            || bvars.iter().map(|(n, _)| n).contains(&variable.name())
         {
             if env.allow_shadowing() {
                 warn!(
