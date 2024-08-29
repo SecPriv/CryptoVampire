@@ -65,10 +65,7 @@ pub fn generate<'bump>(
             mforall!(t1!1:step, t2!2:step;
                 {(happens.f([pred.f([t1])]) & happens.f([t2])) >>
                     (leq.f([t2.into(), pred.apply([t1])]) | leq.f([t1, t2]))}), // ax11
-
-
             // other
-
             mforall!(a!0:step, b!1:step;
                 {!meq(gt.f([a, b]), lt.f([b, a]))}),
         ]

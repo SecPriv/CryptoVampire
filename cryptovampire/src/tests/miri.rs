@@ -31,7 +31,7 @@ fn miri() {
             parser::USED_KEYWORDS.iter().map(|s| s.to_string()),
             ast,
             env.are_lemmas_ignored(),
-            true
+            true,
         )
         .expect("parsing error:");
         println!(

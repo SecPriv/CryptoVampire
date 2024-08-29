@@ -286,10 +286,7 @@ where
             || bvars.iter().map(|(n, _)| n).contains(&variable.name())
         {
             if env.allow_shadowing() {
-                warn!(
-                    "the name {} is already taken, shadowing",
-                    variable.name()
-                )
+                warn!("the name {} is already taken, shadowing", variable.name())
             } else {
                 bail_at!(
                     variable.0.span,

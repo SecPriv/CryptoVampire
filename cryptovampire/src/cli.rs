@@ -70,10 +70,10 @@ pub struct Args {
     pub output_format: Output,
 
     /// forbid variable shadowing
-    /// 
+    ///
     /// by default, cryptovampire lets you shadown any symbol with a variable
     #[arg(long)]
-    pub disallow_shadowing:bool,
+    pub disallow_shadowing: bool,
 
     /// Defaults to `auto`
     #[command(subcommand)]

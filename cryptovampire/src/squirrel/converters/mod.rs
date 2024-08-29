@@ -3,7 +3,8 @@ use std::fmt::Display;
 use ast_convertion::{ConcreteMacro, ToAst, INDEX_SORT_NAME};
 use base64::Engine;
 use cryptovampire_lib::formula::function::builtin::{
-    AND, EMPTY, EQUALITY, FALSE_F, GREATER_THAN_STEP, HAPPENS, IMPLIES, LESS_THAN_EQ_STEP, LESS_THAN_STEP, NOT, OR, PRED, TRUE_F
+    AND, EMPTY, EQUALITY, FALSE_F, GREATER_THAN_STEP, HAPPENS, IMPLIES, LESS_THAN_EQ_STEP,
+    LESS_THAN_STEP, NOT, OR, PRED, TRUE_F,
 };
 use derive_builder::Builder;
 use hashbrown::{HashMap, HashSet};
@@ -72,7 +73,7 @@ static FORBIDDEN_FUNCTIONS: HashSet<&'static str> =
 #[dynamic]
 static BUILTIN_FUNCTION: HashSet<&'static str> = [
     "&&", "||", "and", "or", "<=>", "=>", "=", "<=", "<", "not", "true", "false", "empty", "ø",
-    "happens", "pred"
+    "happens", "pred",
 ]
 .into_iter()
 .collect();
