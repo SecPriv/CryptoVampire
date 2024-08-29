@@ -162,7 +162,7 @@ pub struct Auto {
     #[arg(long, value_name = "DIR")]
     pub solver_file_debug: Option<PathBuf>,
 
-    /// Deactivate the lemmas.
+    /// skip parsing lemmas.
     ///
     /// CryptoVampire will ignore the lemmas as a whole and work as if there weren't any. This is used for testing purposes.
     #[arg(long)]
