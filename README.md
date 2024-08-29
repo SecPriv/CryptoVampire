@@ -1,6 +1,6 @@
 # CryptoVampire
 
-CryptoVampire is an automated, computationally sound protocol verifier. It turns a protocol specification into an `smt` file to be proven by some other FOL theorem prover.
+[CryptoVampire](https://eprint.iacr.org/2024/534) is an automated, computationally sound protocol verifier. It turns a protocol specification into an `smt` file to be proven by some other FOL theorem prover.
 
 It can run standalone (see [Usage](#usage)) or through [`squirrel`](https://squirrel-prover.github.io/) (see [Squirrel](#squirrel)).
 
