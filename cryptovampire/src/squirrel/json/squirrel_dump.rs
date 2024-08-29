@@ -112,13 +112,13 @@ impl<'a> ProcessedSquirrelDump<'a> {
         //     .or_else(|| self.inner_get_name(symb.borrow()))
     }
 
-    pub fn actions<'b>(&'b self) -> impl Iterator<Item = &'b Action<'a>> {
+    pub fn actions<'b>(&'b self) -> impl Iterator<Item = &'b Action<'a>> + Clone {
         self.actions_with_symb().map(|(_, y)| y)
     }
 
     pub fn actions_with_symb<'b>(
         &'b self,
-    ) -> impl Iterator<Item = (&'b ActionName<'a>, &'b Action<'a>)> {
+    ) -> impl Iterator<Item = (&'b ActionName<'a>, &'b Action<'a>)> + Clone {
         self.actions.iter().map(|(x, y)| (x, Arc::as_ref(y)))
     }
 

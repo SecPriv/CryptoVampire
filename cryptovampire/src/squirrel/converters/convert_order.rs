@@ -1,4 +1,4 @@
-use super::{ast_convertion::ToAst, Context};
+use super::{ast_convertion::ToAst, Context, RAoO};
 use std::{cmp::Ordering, fmt::Debug};
 use utils::monad::Monad;
 
@@ -27,21 +27,21 @@ use crate::{
 pub fn mk_depends_mutex_lemmas<'a, 'b, I>(
     steps: I,
     ctx: Context<'b, 'a>,
-) -> Result<Vec<ast::Order<'a, StrRef<'a>>>, InputError>
+) -> impl Iterator<Item = RAoO<ast::Order<'a, StrRef<'a>>>> + 'b
 where
-    I: IntoIterator<Item = &'b json::Action<'a>>,
+    I: IntoIterator<Item = &'b json::Action<'a>> + 'b,
     I::IntoIter: Clone,
     'a: 'b,
 {
     steps
         .into_iter()
         .tuple_combinations()
-        .map(|(a, b)| match mk_depends_lemma(a, b, ctx)? {
+        .map(move |(a, b)| match mk_depends_lemma(a, b, ctx)? {
             Some(l) => Ok(Some(l)),
             None => mk_mutex_lemma(a, b, ctx),
         })
         .filter_map(Result::transpose)
-        .collect()
+        .map(|x| {RAoO::pure(x?)})
 }
 
 // copied for squirrel with some optimisation

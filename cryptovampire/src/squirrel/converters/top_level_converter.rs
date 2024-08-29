@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use ast::StrApplicable;
+use convert_order::mk_depends_mutex_lemmas;
 use log::{info, trace};
 
 use crate::ast_forall;
@@ -35,6 +36,13 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
 
     let assert_crypto = assert_crypto(pdump, ctx).map(RAoO::pure);
 
+    let order = {
+        mk_depends_mutex_lemmas(pdump.actions(), ctx).map(|o| {mdo!{
+            let! order = o;
+            pure ast::AST::Order(Arc::new(order))
+        }})
+    };
+
     let query = mk_query(pdump, ctx).mmap(|content| {
         ast::AST::Assert(Arc::new(ast::Assert::Query(ast::Assertion {
             span: Default::default(),
@@ -49,7 +57,8 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
         - [x] declare names
         - [-] make init step; possibly not needed
         - [x] assert tuples
-        - [ ] assert crypto
+        - [x] assert crypto
+        - [ ] ordering
         - [ ] <> (i.e., !=); maybe using infix
     */
 
@@ -58,8 +67,9 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
         cells,
         funs,
         macros,
-        steps,
         assertions,
+        steps,
+        order,
         assert_crypto,
         [query]
     )
