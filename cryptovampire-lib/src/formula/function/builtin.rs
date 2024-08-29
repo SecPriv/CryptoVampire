@@ -156,6 +156,14 @@ pub static LESS_THAN_STEP: Function<'static> =
     }));
 
 #[dynamic]
+pub static GREATER_THAN_STEP: Function<'static> =
+    new_static_function(InnerFunction::Predicate(Predicate {
+        name: "gt".into(),
+        args: Box::new([STEP.clone(), STEP.clone()]),
+        // out: BOOL.clone(),
+    }));
+
+#[dynamic]
 pub static LESS_THAN_EQ_STEP: Function<'static> =
     new_static_function(InnerFunction::Predicate(Predicate {
         name: "leq".into(),
@@ -241,6 +249,7 @@ builtin!(
     IMPLIES_TA,
     INPUT,
     LESS_THAN_STEP,
+    GREATER_THAN_STEP,
     LESS_THAN_EQ_STEP,
     NAME_TO_MESSAGE,
     NOT,

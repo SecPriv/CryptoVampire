@@ -1,5 +1,6 @@
 use itertools::{izip, Itertools};
 
+use crate::formula::function::builtin::GREATER_THAN_STEP;
 use crate::formula::utils::Applicable;
 use crate::{
     environement::environement::Environement,
@@ -22,6 +23,7 @@ pub fn generate<'bump>(
 ) {
     let lt = LESS_THAN_STEP.clone();
     let leq = LESS_THAN_EQ_STEP.clone();
+    let gt = GREATER_THAN_STEP.clone();
     let happens = HAPPENS.clone();
     let step = STEP.clone();
     let init = &pbl
@@ -63,6 +65,12 @@ pub fn generate<'bump>(
             mforall!(t1!1:step, t2!2:step;
                 {(happens.f([pred.f([t1])]) & happens.f([t2])) >>
                     (leq.f([t2.into(), pred.apply([t1])]) | leq.f([t1, t2]))}), // ax11
+
+
+            // other
+
+            mforall!(a!0:step, b!1:step;
+                {!meq(gt.f([a, b]), lt.f([b, a]))}),
         ]
         .into_iter()
         .map(Axiom::theory), // .chain(pbl.protocol().ordering().iter().cloned().map(Axiom::base)),
