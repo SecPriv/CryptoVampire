@@ -16,8 +16,9 @@ use cryptovampire_lib::{
 };
 use utils::from_with::IntoWith;
 
+/// A computationnally sound automated cryptographic protocol verifier based on the CCSA.
 #[derive(Parser, Debug, Clone)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version, about)]
 pub struct Args {
     #[arg(value_name = "FILE")]
     pub file: Option<PathBuf>,
@@ -41,31 +42,24 @@ pub struct Args {
     pub vampire_subterm: bool,
 
     /// skolemnise before passing to sat solver
-    #[arg(long, short)]
+    #[arg(long)]
     pub skolemnise: bool,
 
-    // this is now activated by default
-    /// preprocess subterm of input
-    // #[arg(long, short)]
-    // pub input_subterm_preprocessed: bool,
-
-    /// do as much preprocessing as possible
-    #[arg(long, short)]
-    pub preprocessing: bool,
+    /// deactivates preprocessing
+    #[arg(long)]
+    pub no_preprocessing: bool,
 
     /// add (|x1| == |x1'|)/\.../\(|xn| == |xn'|) => |f(x1,...,xn)| == |f(x1',...,xn')| axioms
     #[arg(long)]
     pub legacy_evaluate: bool,
 
-    /// remove the bitstring functions, evaluation must then be handeled by somthing else
+    /// remove the bitstring functions, evaluation must then be handeled by something else
     #[arg(long)]
     pub no_bitstring: bool,
 
-    /// deactivate subterm and optimises evaluates
-    ///
-    /// NB: the program will crash it subterms are required somewhere
-    #[arg(long, short)]
-    pub no_symbolic: bool,
+    /// keep the symbolic reasoning
+    #[arg(long)]
+    pub symbolic: bool,
 
     /// What should the input format be?
     #[arg(long, default_value_t = Input::Cryptovampire)]
@@ -292,16 +286,16 @@ impl<'bump> IntoWith<Environement<'bump>, &'bump ScopedContainer<'bump>> for &Ar
             crypto_rewrite,
             vampire_subterm,
             skolemnise,
-            preprocessing,
+            no_preprocessing,
             legacy_evaluate,
             no_bitstring,
-            no_symbolic,
+            symbolic,
             command,
             ..
         } = self;
         let tmp = Default::default();
         let command = command.as_ref().unwrap_or(&tmp);
-        let realm = if *no_symbolic {
+        let realm = if !*symbolic {
             Realm::Evaluated
         } else {
             Realm::Symbolic
@@ -326,7 +320,7 @@ impl<'bump> IntoWith<Environement<'bump>, &'bump ScopedContainer<'bump>> for &Ar
         let mut subterm_flags = SubtermFlags::PREPROCESS_INPUTS
             | SubtermFlags::PREPROCESS_CELLS
             | mk_bitflag!(
-                *preprocessing => SubtermFlags::PREPROCESS_INSTANCES,
+                !*no_preprocessing => SubtermFlags::PREPROCESS_INSTANCES,
                 *vampire_subterm  => SubtermFlags::VAMPIRE
             );
         let solver_configuration = match command {

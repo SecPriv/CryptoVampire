@@ -72,6 +72,7 @@
 
         dockerImage = with nix2container.packages.${system}.nix2container; buildImage {
           name = "cryptovampire";
+          tag="latest";
           layers = let
             commonLayer = {
               deps = with pkgs; [
@@ -110,7 +111,6 @@
               in "PATH=${path}:${custom-pkgs.squirrel-prover}")
               "CRYTPOVAMPIRE_LOCATION=${cryptovampire}/bin/cryptovampire"
             ];
-            Entrypoint = ["bash"];
           };
         };
 
