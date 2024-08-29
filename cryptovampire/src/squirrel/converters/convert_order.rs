@@ -35,6 +35,7 @@ where
 {
     steps
         .into_iter()
+        .filter(|x| !x.is_init())
         .tuple_combinations()
         .map(move |(a, b)| match mk_depends_lemma(a, b, ctx)? {
             Some(l) => Ok(Some(l)),

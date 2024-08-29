@@ -110,6 +110,10 @@ impl<'a> Action<'a> {
     pub fn indices(&self) -> &[Variable<'a>] {
         &self.indices
     }
+
+    pub fn is_init(&self) -> bool {
+        self.name().to_str_ref().as_str() == "init"
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
