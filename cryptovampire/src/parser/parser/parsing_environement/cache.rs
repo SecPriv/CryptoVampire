@@ -40,7 +40,9 @@ pub struct CellCache<'str, 'bump, S> {
 }
 
 impl<'str, 'bump, S> FunctionCache<'str, 'bump, S> {
-    pub fn shorten_life<'a>(self) -> FunctionCache<'a, 'bump, S>
+    /// to make sure things are still as variant as they should
+    #[allow(dead_code)]
+    fn shorten_life<'a>(self) -> FunctionCache<'a, 'bump, S>
     where
         'str: 'a,
     {

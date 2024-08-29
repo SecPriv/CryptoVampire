@@ -6,6 +6,7 @@ pub struct Content<N, U> {
 }
 
 impl<N, U> Content<N, U> {
+    #[allow(dead_code)]
     pub fn as_ref<'b>(&'b self) -> ContentRef<'b, N, U> {
         ContentRef {
             symb: &self.symb,

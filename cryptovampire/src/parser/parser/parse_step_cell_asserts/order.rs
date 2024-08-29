@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, sync::Arc};
+use std::sync::Arc;
 
 use crate::parser::{
     ast,

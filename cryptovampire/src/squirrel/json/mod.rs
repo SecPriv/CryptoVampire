@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
 use log::trace;
-pub use path::Pathed;
 use serde::{Deserialize, Serialize};
 
 /// Forbiden characters in cv's input
@@ -32,6 +31,7 @@ macro_rules! new_name {
 
 
         paste::paste! {
+            #[allow(dead_code)]
             #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Copy)]
             pub struct [<$name Ref>]<'a, 'b>(pub &'b $crate::squirrel::json::Path<'a>);
 
@@ -57,6 +57,7 @@ macro_rules! new_name {
                 }
             }
 
+            #[allow(dead_code)]
             impl<'a> $name<'a> {
                 pub fn as_ref<'b>(&'b self) -> [<$name Ref>]<'a, 'b> {
                     [<$name Ref>](&self.0)
@@ -164,11 +165,7 @@ impl<'a> Sanitizable<'a> for TypeVariable<'a> {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 
 pub struct Channel<'a>(#[serde(borrow)] Path<'a>);
-impl<'a> Pathed<'a> for Channel<'a> {
-    fn path(&self) -> &Path<'a> {
-        &self.0
-    }
-}
+
 
 pub mod action;
 pub use action::Action;

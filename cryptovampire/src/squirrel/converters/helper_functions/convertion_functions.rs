@@ -20,7 +20,7 @@ use crate::{
             action::ActionName,
             mmacro::{self, MacroNameRef},
             operator::OperatorName,
-            NameName, Pathed,
+            NameName,
         },
         Sanitizable,
     },
@@ -133,9 +133,8 @@ pub fn convert_macro_application<'a, 'b>(
     let symb = MacroNameRef(symb.path());
     match ctx.dump().get_macro(&symb) {
         Some(mmacro::Data::General(mmacro::GeneralMacro::ProtocolMacro(p))) => {
-            let args = chain!(args.iter(), [timestamp]);
             timestamp.convert(ctx).bind(|t| match &t.inner {
-                ast::InnerTerm::Application(app) => {
+                ast::InnerTerm::Application(app) if args.is_empty() => {
                     let inner = match p {
                         mmacro::ProtocolMacro::Output => ast::InnerAppMacro::Msg((**app).clone()),
                         mmacro::ProtocolMacro::Cond => ast::InnerAppMacro::Cond((**app).clone()),
@@ -150,7 +149,7 @@ pub fn convert_macro_application<'a, 'b>(
                 }
                 _ => {
                     let msg = "output/cond/msg macro are only supported \
-                                    when applied to a concrete timepoint";
+                                    when applied to a concrete timepoint (and only that)";
                     Err(err_at!(@ "{msg}"))
                 }
             })

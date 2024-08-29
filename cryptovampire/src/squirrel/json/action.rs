@@ -15,6 +15,7 @@ impl<'a> Condition<'a> {
         &self.term
     }
 
+    #[allow(dead_code)]
     pub fn vars(&self) -> &[Variable<'a>] {
         &self.vars
     }
@@ -100,10 +101,12 @@ impl<'a> Action<'a> {
         }
     }
 
+    #[allow(dead_code)]
     pub fn name(&self) -> &ActionName<'a> {
         &self.name
     }
 
+    #[allow(dead_code)]
     pub fn indices(&self) -> &[Variable<'a>] {
         &self.indices
     }

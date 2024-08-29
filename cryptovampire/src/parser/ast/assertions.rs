@@ -9,7 +9,7 @@ pub enum Assert<'a, S = &'a str> {
     Lemma(Assertion<'a, S>),
 }
 boiler_plate!(Assert<'a>, 'a, assertion | query | lemma ; |p| {
-    let span = p.as_span();
+    // let span = p.as_span();
     let rule = p.as_rule();
     let p = p.into_inner().next().unwrap();
     match rule {

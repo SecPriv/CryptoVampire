@@ -1,4 +1,4 @@
-use std::{fmt::Display, iter};
+use std::fmt::Display;
 
 use thiserror::Error;
 
@@ -20,7 +20,7 @@ impl Display for NotEnoughItemError {
 }
 
 impl From<NotEnoughItemError> for WrongLengthError {
-    fn from(value: NotEnoughItemError) -> Self {
+    fn from(_: NotEnoughItemError) -> Self {
         WrongLengthError::NotEnough
     }
 }

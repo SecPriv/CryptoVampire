@@ -1,5 +1,5 @@
 use itertools::Either;
-use std::{borrow::Borrow, sync::Arc};
+use std::sync::Arc;
 
 use super::*;
 

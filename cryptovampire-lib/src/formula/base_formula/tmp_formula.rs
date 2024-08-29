@@ -1,6 +1,5 @@
 use super::BaseFormula;
 
-use std::fmt::Display;
 
 use anyhow::{anyhow, bail};
 use log::{debug, trace, warn};

@@ -15,7 +15,6 @@ use super::{
     },
     Substitution,
 };
-use crate::formula::utils::Applicable;
 
 #[derive(Debug, Clone)]
 pub struct Unifier<'bump> {

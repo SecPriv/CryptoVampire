@@ -321,7 +321,7 @@ fn mk_funs_and_names<'a, 'b>(
     let names = pdump
         .names_with_symb()
         .debug("attempting to convert name:\n\t")
-        .map(move |(symb, json::FunctionType { vars, args, out })| {
+        .map(move |(symb, json::FunctionType { vars, args, .. })| {
             (symb.sanitized(&ctx), vars, args, &json::Type::Name)
         });
 

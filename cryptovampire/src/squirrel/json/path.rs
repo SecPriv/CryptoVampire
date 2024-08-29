@@ -87,31 +87,6 @@ impl<'a> Display for Path<'a> {
     }
 }
 
-pub trait Pathed<'a> {
-    fn path(&self) -> &Path<'a>;
-
-    // /// Turn a [Path]-like object into a string while also ensuring it matches
-    // /// some invariants enforced by the [Sanitizer].
-    // ///
-    // /// We use [StrRef] for efficiency (and consistency with the rest of cv).
-    // #[allow(private_bounds)]
-    // fn equiv_name_ref<S: Sanitizer>(&self, s: &S) -> StrRef<'a> {
-    //     s.sanitize(&StrRef::from(self.path().to_string()))
-    // }
-}
-
-impl<'a> Pathed<'a> for Path<'a> {
-    fn path(&self) -> &Path<'a> {
-        self
-    }
-}
-
-impl<'a> Pathed<'a> for ISymb<'a> {
-    fn path(&self) -> &Path<'a> {
-        self.s_symb.as_ref()
-    }
-}
-
 impl<'a> From<Symb<'a>> for Path<'a> {
     fn from(symb: Symb<'a>) -> Self {
         Self {

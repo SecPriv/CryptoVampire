@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-use anyhow::Context;
 use converters::convert_squirrel_dump;
 use itertools::Itertools;
 use json::CryptoVampireCall;
