@@ -3,7 +3,7 @@ mod cached_builtins;
 
 use anyhow::Context;
 use itertools::Itertools;
-use log::{log_enabled, trace};
+use log::{log_enabled, trace, warn};
 
 use crate::{
     bail_at,
@@ -281,14 +281,22 @@ where
             type_name,
             ..
         } = self;
-        if env.functions.contains_key(variable.name().borrow())
-            || bvars.iter().map(|(n, _)| n).contains(&variable.name())
+
+        if (env.functions.contains_key(variable.name().borrow())
+            || bvars.iter().map(|(n, _)| n).contains(&variable.name()))
         {
-            bail_at!(
-                variable.0.span,
-                "the name {} is already taken",
-                variable.name()
-            )
+            if env.allow_shadowing() {
+                warn!(
+                    "the name {} is already taken, shadowing",
+                    variable.name()
+                )
+            } else {
+                bail_at!(
+                    variable.0.span,
+                    "the name {} is already taken",
+                    variable.name()
+                )
+            }
         }
         let SnN { span, name } = type_name.into();
         let sort = {

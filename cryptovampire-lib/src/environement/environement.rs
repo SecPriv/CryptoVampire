@@ -42,6 +42,7 @@ bitflags! {
         const ASSERT_NOT =              1 << 7; // non smt standard
         const ASSERT_GROUND =           1 << 8; // non smt standard
         const IGNORE_LEMMAS =           1 << 9;
+        const DISALLOW_SHADOWING =      1 << 10;
 
         const NON_SMT_STANDARD =
             Flags::ASSERT_NOT.bits()
@@ -168,6 +169,10 @@ impl<'bump> Environement<'bump> {
             assert!(!self.are_lemmas_ignored());
             true
         }
+    }
+
+    pub fn allow_shadowing(&self) -> bool {
+        !self.options.flags.contains(Flags::DISALLOW_SHADOWING)
     }
 
     pub fn options_mut(&mut self) -> &mut Options {

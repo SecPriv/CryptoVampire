@@ -82,6 +82,7 @@ pub struct Environement<'bump, 'str, S> {
     pub functions: HashMap<String, FunctionCache<'str, 'bump, S>>,
 
     pub used_name: HashSet<String>,
+    pub allow_shadowing:bool,
 }
 
 impl<'bump, 'a, S> MaybeInvalid for Environement<'bump, 'a, S> {
@@ -94,6 +95,7 @@ impl<'bump, 'a, S> MaybeInvalid for Environement<'bump, 'a, S> {
             evaluator: _,
             functions,
             used_name: _,
+            allow_shadowing:_,
         } = self;
 
         functions.values().all(|v| match v {
@@ -124,6 +126,7 @@ where
         sort_hash: implvec!(Sort<'bump>),
         function_hash: implvec!(Function<'bump>),
         extra_names: implvec!(String),
+        allow_shadowing: bool
     ) -> Self {
         let sort_hash = sort_hash
             .into_iter()
@@ -145,6 +148,7 @@ where
             macro_hash: Default::default(),
             functions: function_hash,
             used_name: names,
+            allow_shadowing
         }
     }
 
@@ -207,6 +211,10 @@ where
             .sorts(self.get_sorts().collect())
             .evaluator(Arc::new(self.evaluator.clone()))
             .name_caster(Arc::new(self.name_caster_collection.clone()))
+    }
+    
+    pub fn allow_shadowing(&self) -> bool {
+        self.allow_shadowing
     }
 }
 
@@ -278,6 +286,7 @@ pub fn parse_pbl_from_ast<'a, 'bump, S>(
     extra_names: implvec!(String),
     ast: ASTList<'a, S>,
     ignore_lemmas: bool,
+    allow_shadowing:bool,
 ) -> anyhow::Result<Problem<'bump>>
 where
     S: Pstr,
@@ -286,7 +295,7 @@ where
     trace!("[P] parsing from ast...");
     let mut pbl_builder = ProblemBuilder::default();
     pbl_builder.container(container);
-    let env = Environement::new(container, sort_hash, function_hash, extra_names);
+    let env = Environement::new(container, sort_hash, function_hash, extra_names, allow_shadowing);
     prbl_from_ast(
         env.shorten_life(),
         &*&ast,

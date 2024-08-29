@@ -49,6 +49,7 @@ where
             parser::USED_KEYWORDS.iter().map(|s| s.to_string()),
             ast,
             env.are_lemmas_ignored(),
+            env.allow_shadowing()
         )?;
 
         let with_lemmas = env.use_lemmas();

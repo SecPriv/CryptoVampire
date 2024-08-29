@@ -69,6 +69,12 @@ pub struct Args {
     #[arg(long, default_value_t = Output::Stdout)]
     pub output_format: Output,
 
+    /// forbid variable shadowing
+    /// 
+    /// by default, cryptovampire lets you shadown any symbol with a variable
+    #[arg(long)]
+    pub disallow_shadowing:bool,
+
     /// Defaults to `auto`
     #[command(subcommand)]
     pub command: Option<Command>,
@@ -291,6 +297,7 @@ impl<'bump> IntoWith<Environement<'bump>, &'bump ScopedContainer<'bump>> for &Ar
             no_bitstring,
             symbolic,
             command,
+            disallow_shadowing,
             ..
         } = self;
         let tmp = Default::default();
@@ -348,6 +355,7 @@ impl<'bump> IntoWith<Environement<'bump>, &'bump ScopedContainer<'bump>> for &Ar
                     *lemmas => Flags::LEMMA,
                     *assert_theory=> Flags::ASSERT_THEORY,
                     *assert_ground => Flags::ASSERT_GROUND,
+                    *disallow_shadowing => Flags::DISALLOW_SHADOWING
                 );
                 if *cvc5 {
                     flags -= Flags::ASSERT_GROUND | Flags::ASSERT_NOT | Flags::ASSERT_THEORY;
