@@ -166,7 +166,6 @@ impl<'a> Sanitizable<'a> for TypeVariable<'a> {
 
 pub struct Channel<'a>(#[serde(borrow)] Path<'a>);
 
-
 pub mod action;
 pub use action::Action;
 

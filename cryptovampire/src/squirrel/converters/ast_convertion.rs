@@ -16,7 +16,7 @@ use crate::{
         json::{
             self, mmacro,
             operator::{OperatorName, OperatorNameRef},
-            NameNameRef, 
+            NameNameRef,
         },
         Sanitizable,
     },

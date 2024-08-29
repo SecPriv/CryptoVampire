@@ -37,10 +37,12 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
     let assert_crypto = assert_crypto(pdump, ctx).map(RAoO::pure);
 
     let order = {
-        mk_depends_mutex_lemmas(pdump.actions(), ctx).map(|o| {mdo!{
-            let! order = o;
-            pure ast::AST::Order(Arc::new(order))
-        }})
+        mk_depends_mutex_lemmas(pdump.actions(), ctx).map(|o| {
+            mdo! {
+                let! order = o;
+                pure ast::AST::Order(Arc::new(order))
+            }
+        })
     };
 
     let query = mk_query(pdump, ctx).mmap(|content| {
@@ -192,9 +194,7 @@ mod assert_crypto {
         let hash = ast::Function::from_name(hash.sanitized(&ctx));
         let options = if is_hmac {
             assert!(vk.is_none());
-            [StrRef::from("hmac")]
-                .into_iter()
-                .collect()
+            [StrRef::from("hmac")].into_iter().collect()
         } else {
             Default::default()
         };

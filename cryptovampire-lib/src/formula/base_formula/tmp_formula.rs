@@ -1,6 +1,5 @@
 use super::BaseFormula;
 
-
 use anyhow::{anyhow, bail};
 use log::{debug, trace, warn};
 use utils::string_ref::StrRef;

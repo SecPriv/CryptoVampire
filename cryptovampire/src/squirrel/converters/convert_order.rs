@@ -41,7 +41,7 @@ where
             None => mk_mutex_lemma(a, b, ctx),
         })
         .filter_map(Result::transpose)
-        .map(|x| {RAoO::pure(x?)})
+        .map(|x| RAoO::pure(x?))
 }
 
 // copied for squirrel with some optimisation
