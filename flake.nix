@@ -11,9 +11,13 @@
         "github:puyral/squirrel-prover?ref=cryptovampire";
       # inputs.cryptovampire-src.url = ".";
     };
+    nix2container = {
+      url = "github:nlewo/nix2container";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = inputs@{ self, nixpkgs, flake-utils, custom, ... }:
+  outputs = inputs@{ self, nixpkgs, flake-utils, custom, nix2container, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -55,7 +59,7 @@
             ];
         };
 
-        dockerShell = pkgs.mkShell {
+        dockerShell_old = pkgs.mkShell {
           buildInputs = [ cryptovampire ]
             ++ (with custom-pkgs; [ squirrel-prover vampire ])
             ++ (with pkgs; [ z3 cvc5 emacs vim ]);
@@ -65,14 +69,53 @@
           '';
         };
 
-      in rec {
-        packages = {
-          inherit cryptovampire;
-          dockerImage = pkgs.dockerTools.streamNixShellImage {
-            tag = "latest";
-            drv = dockerShell;
+
+        dockerImage = nix2container.buildimage {
+          name = "cryptovampire";
+          layers = let
+            commonLayer = {
+              deps = with pkgs; [
+                bashInteractive
+                emacs
+                vim
+                z3
+                cvc5
+                custom-pkgs.vampire
+              ];
+            };
+            layerDefs = [
+              {
+                deps = [ custom-pkgs.squirrel-prover ];
+                layers = [ (nix2container.buildLayer commonLayer) ];
+              }
+              {
+                deps = [ cryptovampire ];
+                layers = [ (nix2container.buildLayer commonLayer) ];
+              }
+            ];
+          in builtins.map nix2container.buildLayer layerDefs;
+          config = {
+            Env = [
+              (let
+                path = with pkgs;
+                  lib.makeBinPath [
+                    bashInteractive
+                    custom-pkgs.squirrel-prover
+                    cryptovampire
+                    emacs
+                    vim
+                    z3
+                    cvc5
+                  ];
+              in "PATH=${path}:${custom-pkgs.squirrel-prover}")
+              "CRYTPOVAMPIRE_LOCATION=${cryptovampire}/bin/cryptovampire"
+            ];
+            Entrypoint = ["bash"];
           };
         };
+
+      in rec {
+        packages = { inherit cryptovampire dockerImage; };
         formatter = nixpkgs.legacyPackages.${system}.nixfmt;
 
         devShell = defaultDevShell;
