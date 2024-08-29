@@ -7,6 +7,9 @@
     custom = {
       url = "github:puyral/custom-nix";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.squirrel-prover-src.url =
+        "github:puyral/squirrel-prover?ref=cryptovampire";
+      # inputs.cryptovampire-src.url = ".";
     };
   };
 
@@ -22,21 +25,22 @@
 
         my-python = pkgs.python311.withPackages
           (ps: with ps; [ numpy (toPythonModule my-z3).python ]);
-      in rec {
-        packages.cryptovampire = pkgs.rustPlatform.buildRustPackage {
+
+        mrustPlateform = pkgs.rustPlatform;
+
+        cryptovampire = mrustPlateform.buildRustPackage {
           name = manifest.name;
           version = manifest.version;
           cargoLock.lockFile = ./Cargo.lock;
           src = pkgs.lib.cleanSource ./.;
           patches = [ ./nix.patch ];
         };
-        formatter = nixpkgs.legacyPackages.${system}.nixfmt;
 
-        devShell = pkgs.mkShell {
-          RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
+        defaultDevShell = pkgs.mkShell {
+          RUST_SRC_PATH = "${mrustPlateform.rustLibSrc}";
 
           buildInputs = with pkgs;
-            defaultPackage.buildInputs ++ [
+            cryptovampire.buildInputs ++ [
               cargo
               rustc
               nil
@@ -50,6 +54,28 @@
               graphviz
             ];
         };
+
+        dockerShell = pkgs.mkShell {
+          buildInputs = [ cryptovampire ]
+            ++ (with custom-pkgs; [ squirrel-prover vampire ])
+            ++ (with pkgs; [ z3 cvc5 emacs vim ]);
+          shellHook = ''
+            export PAHT=PATH:${custom-pkgs.squirrel-prover}
+            export CRYTPOVAMPIRE_LOCATION=${cryptovampire}/bin/cryptovampire
+          '';
+        };
+
+      in rec {
+        packages = {
+          inherit cryptovampire;
+          dockerImage = pkgs.dockerTools.streamNixShellImage {
+            tag = "latest";
+            drv = dockerShell;
+          };
+        };
+        formatter = nixpkgs.legacyPackages.${system}.nixfmt;
+
+        devShell = defaultDevShell;
 
         defaultPackage = packages.cryptovampire;
         apps.cryptovampire =
