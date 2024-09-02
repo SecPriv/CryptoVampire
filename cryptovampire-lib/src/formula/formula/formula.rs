@@ -4,9 +4,8 @@ use std::{
     sync::Arc,
 };
 
-use hashbrown::HashSet;
 use itertools::{Either, Itertools};
-use logic_formula::{Destructed, Formula, Head};
+use logic_formula::{Destructed, Head};
 
 use crate::formula::utils::Applicable;
 use crate::formula::{
@@ -301,7 +300,6 @@ pub fn ands_owned<'bump>(args: impl IntoIterator<Item = RichFormula<'bump>>) -> 
 pub fn ors_owned<'bump>(args: impl IntoIterator<Item = RichFormula<'bump>>) -> RichFormula<'bump> {
     OR.apply(args)
 }
-
 
 impl<'a, 'bump> logic_formula::Formula for &'a RichFormula<'bump> {
     type Var = Variable<'bump>;

@@ -35,7 +35,10 @@ pub trait Formula: Sized {
         self.iter_with(FreeVariableIterator::default(), 0)
     }
 
-    fn used_vars_iter(self)  -> impl Iterator<Item = Self::Var> where Self::Var: Eq + Clone {
+    fn used_vars_iter(self) -> impl Iterator<Item = Self::Var>
+    where
+        Self::Var: Eq + Clone,
+    {
         self.iter_with(UsedVariableIterator, ())
     }
 }

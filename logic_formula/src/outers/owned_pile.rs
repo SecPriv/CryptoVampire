@@ -12,11 +12,10 @@ pub type OwnedIter<F, I> =
     OwnedPile<Content<<I as FormulaIterator<F>>::U, F, <I as FormulaIterator<F>>::Passing>, I>;
 
 impl<F, I> OwnedPile<F, I> {
-
     pub fn new(pile: Vec<F>, iterator: I) -> Self {
         Self { pile, iterator }
     }
-    
+
     pub fn as_mut<'a>(&'a mut self) -> RefPile<'a, F, ()> {
         let Self {
             ref mut pile,

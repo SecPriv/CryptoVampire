@@ -1,24 +1,19 @@
 use std::{
     borrow::Borrow,
     fmt::Display,
-    ops::{BitAnd, BitOr, Deref, DerefMut, Not, Shr},
+    ops::{BitAnd, BitOr, Deref, Not, Shr},
 };
 
-use crate::formula::{function::Function, quantifier::Quantifier, utils::Applicable};
 use crate::formula::{
     function::builtin::{AND, IMPLIES, NOT, OR, TRUE_ARC},
-    utils::formula_iterator::{FormulaIterator, IteratorFlags},
     variable::{IntoVariableIter, Variable},
 };
+use crate::formula::{function::Function, quantifier::Quantifier, utils::Applicable};
 
 use super::{Expander, RichFormula};
 use itertools::Either;
 use logic_formula::{Destructed, Formula, Head};
-use utils::{
-    arc_into_iter::ArcIntoIter,
-    utils::{repeat_n_zip, MaybeInvalid, StackBox},
-    vecref::VecRefClone,
-};
+use utils::utils::MaybeInvalid;
 
 use std::sync::Arc;
 

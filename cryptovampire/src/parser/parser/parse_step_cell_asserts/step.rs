@@ -155,8 +155,7 @@ where
                 .get(cell_name.borrow())
                 .and_then(FunctionCache::as_memory_cell)
                 .with_context(|| format!("cell {cell_name} doesn't exists"))
-                .with_location(cell_ast.span())
-                ?;
+                .with_location(cell_ast.span())?;
 
             // get the arguments and apply substitution
             let cell_args: Result<Arc<[_]>, _> = cell_ast

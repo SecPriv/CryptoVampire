@@ -109,7 +109,9 @@ impl<'bump> Quantifier<'bump> {
         self.get_content_iter().cloned().collect()
     }
 
-    pub fn get_content_iter<'a>(&'a self) -> impl Iterator<Item = &'a ARichFormula<'bump>> + ExactSizeIterator {
+    pub fn get_content_iter<'a>(
+        &'a self,
+    ) -> impl Iterator<Item = &'a ARichFormula<'bump>> + ExactSizeIterator {
         match &self.inner {
             InnerQuantifier::Forall { content } | InnerQuantifier::Exists { content } => {
                 Either::Left([content])
@@ -119,7 +121,8 @@ impl<'bump> Quantifier<'bump> {
                 success,
                 faillure,
             } => Either::Right([condition, success, faillure]),
-        }.into_iter()
+        }
+        .into_iter()
     }
 
     pub fn inner(&self) -> &InnerQuantifier<'bump> {

@@ -5,7 +5,7 @@ mod arc;
 pub use arc::*;
 
 mod expanding_formula;
-pub use expanding_formula::{Expander, EitherQuantifier};
+pub use expanding_formula::{EitherQuantifier, Expander};
 
 pub mod macros {
     #[macro_export]

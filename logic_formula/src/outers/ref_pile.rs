@@ -46,7 +46,7 @@ where
 impl<'a, U, F, Passing, I> Iterator for RefPile<'a, Content<U, F, Passing>, I>
 where
     F: Formula,
-    I: FormulaIterator< F, Passing = Passing, U = U>,
+    I: FormulaIterator<F, Passing = Passing, U = U>,
 {
     type Item = I::U;
 

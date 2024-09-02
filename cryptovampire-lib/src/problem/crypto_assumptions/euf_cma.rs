@@ -1,9 +1,7 @@
-use std::{cell::RefCell, hash::Hash, sync::Arc};
+use std::{hash::Hash, sync::Arc};
 
 use if_chain::if_chain;
 use itertools::Itertools;
-use logic_formula::iterators::{FreeVariableIterator, UsedVariableIterator};
-use logic_formula::outers::{OwnedPile, RefCellPile};
 
 use crate::formula::utils::Applicable;
 use crate::formula::variable::IntoVariableIter;
@@ -35,7 +33,7 @@ use crate::{
         Subterm,
     },
 };
-use logic_formula::{Formula, IteratorHelper};
+use logic_formula::Formula;
 use utils::arc_into_iter::ArcIntoIter;
 
 pub type SubtermEufCmaSignMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;

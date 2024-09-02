@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::BTreeSet, hash::Hash, sync::Arc};
+use std::{collections::BTreeSet, hash::Hash, sync::Arc};
 
 use if_chain::if_chain;
 use itertools::Itertools;
@@ -30,8 +30,8 @@ use crate::{
     problem::{generator::Generator, problem::Problem},
     static_signature,
 };
-use utils::arc_into_iter::ArcIntoIter;
 use logic_formula::Formula;
+use utils::arc_into_iter::ArcIntoIter;
 
 pub type SubtermIntCtxtMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
 pub type SubtermIntCtxtKey<'bump> = Subterm<'bump, KeyAux<'bump>>;

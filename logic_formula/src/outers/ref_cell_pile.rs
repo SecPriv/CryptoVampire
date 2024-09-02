@@ -10,7 +10,6 @@ pub struct RefCellPile<'a, F, I> {
     iterator: I,
 }
 
-
 impl<'a, F, I> RefCellPile<'a, F, I> {
     pub fn new(pile: &'a RefCell<Vec<F>>, iterator: I) -> Self {
         Self {
@@ -27,7 +26,6 @@ impl<'a, F, I> RefCellPile<'a, F, I> {
         RefPile::new(pile, ())
     }
 }
-
 
 impl<'a, F, Passing, I, U> Iterator for RefCellPile<'a, Content<U, F, Passing>, I>
 where

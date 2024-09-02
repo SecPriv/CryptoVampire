@@ -593,11 +593,7 @@ fn check_variable_collision(x: &ARichFormula<'_>, m: &ARichFormula<'_>) -> bool 
         .minmax()
         .into_option()
         .map(|(a, b)| a..=b);
-    let varm = m
-        .used_vars_iter()
-        .map(|v| v.id)
-        .minmax()
-        .into_option();
+    let varm = m.used_vars_iter().map(|v| v.id).minmax().into_option();
     match (varx, varm) {
         (Some(r), Some((vminm, vmaxm))) if r.contains(&vminm) || r.contains(&vmaxm) => {
             warn!(

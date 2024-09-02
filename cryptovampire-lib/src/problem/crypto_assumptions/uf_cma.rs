@@ -1,4 +1,4 @@
-use std::{cell::RefCell, hash::Hash, sync::Arc};
+use std::{hash::Hash, sync::Arc};
 
 use derive_builder::Builder;
 use if_chain::if_chain;
@@ -32,8 +32,8 @@ use crate::{
     formula::function::builtin::EQUALITY,
     subterm::{into_exist_formula, kind::SubtermKindConstr, traits::SubtermAux, Subterm},
 };
-use utils::utils::print_type;
 use logic_formula::Formula;
+use utils::utils::print_type;
 
 use super::CryptoFlag;
 

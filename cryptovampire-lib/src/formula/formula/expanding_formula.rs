@@ -118,7 +118,6 @@ impl<'a, 'bump> From<&'a ARichFormula<'bump>> for Expander<'a, 'bump> {
     }
 }
 
-
 /// Gather regular quantifiers and ta quantifiers
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum EitherQuantifier<'bump> {
@@ -126,15 +125,13 @@ pub enum EitherQuantifier<'bump> {
     TermAlgebra(&'bump term_algebra::quantifier::Quantifier<'bump>),
 }
 
-impl<'bump> From<&'bump term_algebra::quantifier::Quantifier<'bump>>
-    for EitherQuantifier< 'bump>
-{
+impl<'bump> From<&'bump term_algebra::quantifier::Quantifier<'bump>> for EitherQuantifier<'bump> {
     fn from(v: &'bump term_algebra::quantifier::Quantifier<'bump>) -> Self {
         Self::TermAlgebra(v)
     }
 }
 
-impl<'bump> From<Quantifier<'bump>> for EitherQuantifier< 'bump> {
+impl<'bump> From<Quantifier<'bump>> for EitherQuantifier<'bump> {
     fn from(v: Quantifier<'bump>) -> Self {
         Self::Bool(v)
     }
@@ -144,6 +141,7 @@ impl<'bump> Bounder<Variable<'bump>> for EitherQuantifier<'bump> {
         match self {
             EitherQuantifier::Bool(q) => q.get_variables().iter(),
             EitherQuantifier::TermAlgebra(q) => q.bound_variables.iter(),
-        }.cloned()
+        }
+        .cloned()
     }
 }

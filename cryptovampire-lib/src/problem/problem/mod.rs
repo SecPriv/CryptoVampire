@@ -8,7 +8,6 @@ pub use pbl_iterator::PblIterator;
 use utils::implvec;
 
 use std::{
-    cell::RefCell,
     collections::{BTreeMap, VecDeque},
     sync::Arc,
 };
@@ -27,7 +26,7 @@ use crate::{
             inner::evaluate::Evaluator, name_caster_collection::NameCasterCollection, Function,
         },
         sort::{builtins::CONDITION, Sort},
-        variable::{uvar, IntoVariableIter, Variable},
+        variable::{uvar, IntoVariableIter},
     },
 };
 
