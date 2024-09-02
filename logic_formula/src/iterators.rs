@@ -1,11 +1,17 @@
-use crate::{Bounder, Destructed, Formula, FormulaIterator};
+use crate::{outers::OwnedIter, Bounder, Destructed, Formula, FormulaIterator};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct VariableIterator;
+pub struct UsedVariableIterator;
+
+impl UsedVariableIterator {
+    pub fn with<F:Formula>(formulas: impl IntoIterator<Item = F>) -> impl Iterator<Item = F::Var> {
+        OwnedIter::new(formulas.into_iter().map(|f| (f, ())).map(Into::into).collect(), UsedVariableIterator)
+    }
+}
 
 
-impl<F: Formula + Clone> FormulaIterator<F> for VariableIterator {
+impl<F: Formula> FormulaIterator<F> for UsedVariableIterator {
 
     type Passing = ();
     type U = F::Var;
@@ -29,7 +35,7 @@ impl<F: Formula + Clone> FormulaIterator<F> for VariableIterator {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DepthIterator ;
 
-impl<F: Formula + Clone> FormulaIterator<F> for DepthIterator {
+impl<F: Formula> FormulaIterator<F> for DepthIterator {
 
     type Passing = u32;
     type U = u32;
@@ -43,6 +49,8 @@ impl<F: Formula + Clone> FormulaIterator<F> for DepthIterator {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FreeVariableIterator<Var>
 {
     bvars: Vec<Var>,

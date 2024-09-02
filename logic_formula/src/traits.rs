@@ -1,5 +1,5 @@
 use crate::{
-    iterators::FreeVariableIterator,
+    iterators::{FreeVariableIterator, UsedVariableIterator},
     outers::{Content, OwnedIter, OwnedPile},
     Destructed, Head,
 };
@@ -19,6 +19,7 @@ pub trait Formula: Sized {
         self.destruct().args
     }
 
+    #[allow(private_interfaces)]
     fn iter_with<I>(self, iter: I, init: I::Passing) -> OwnedIter<Self, I>
     where
         I: FormulaIterator<Self>,
@@ -32,6 +33,10 @@ pub trait Formula: Sized {
         Self::Var: Eq + Clone,
     {
         self.iter_with(FreeVariableIterator::default(), 0)
+    }
+
+    fn used_vars_iter(self)  -> impl Iterator<Item = Self::Var> where Self::Var: Eq + Clone {
+        self.iter_with(UsedVariableIterator, ())
     }
 }
 

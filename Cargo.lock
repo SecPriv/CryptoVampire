@@ -240,6 +240,7 @@ dependencies = [
  "if_chain",
  "itertools",
  "log",
+ "logic_formula",
  "macro-attr",
  "paste",
  "pest",

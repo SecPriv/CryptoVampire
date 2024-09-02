@@ -3,6 +3,7 @@ mod pbl_iterator;
 use derive_builder::Builder;
 use hashbrown::HashSet;
 use log::trace;
+use logic_formula::iterators::UsedVariableIterator;
 pub use pbl_iterator::PblIterator;
 use utils::implvec;
 
@@ -26,7 +27,7 @@ use crate::{
             inner::evaluate::Evaluator, name_caster_collection::NameCasterCollection, Function,
         },
         sort::{builtins::CONDITION, Sort},
-        variable::{uvar, Variable},
+        variable::{uvar, IntoVariableIter, Variable},
     },
 };
 
@@ -90,26 +91,12 @@ impl<'bump> Problem<'bump> {
     }
 
     pub fn max_var(&self) -> uvar {
-        let pile = RefCell::new(Vec::new());
-
-        self.list_top_level_terms()
-            .flat_map(|f| f.used_variables_iter_with_pile(pile.borrow_mut()))
-            .map(|Variable { id, .. }| id)
-            .max()
-            .unwrap_or(0)
-            + 1
+        UsedVariableIterator::with(self.list_top_level_terms()).max_var()
     }
 
     /// [Self::max_var] without [Self::extra_instances]
     pub fn max_var_no_extras(&self) -> uvar {
-        let pile = RefCell::new(Vec::new());
-
-        self.list_top_level_terms_no_extra()
-            .flat_map(|f| f.used_variables_iter_with_pile(pile.borrow_mut()))
-            .map(|Variable { id, .. }| id)
-            .max()
-            .unwrap_or(0)
-            + 1
+        UsedVariableIterator::with(self.list_top_level_terms_no_extra()).max_var()
     }
 
     pub fn container(&self) -> &'bump ScopedContainer<'bump> {

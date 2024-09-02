@@ -142,11 +142,20 @@ pub trait IntoVariableIter<'bump> {
         self.vars_iter().map(|v| v.id)
     }
 
+    /// find the biggest [Variable::id] or default to 0
     fn max_var(self) -> uvar
     where
         Self: Sized,
     {
-        self.vars_id_iter().max().unwrap_or(0) + 1
+        self.max_var_or_max(0)
+    }
+
+    /// find the biggest [Variable::id] that if larger than `max` or return `max`
+    fn max_var_or_max(self, max: uvar) -> uvar
+    where
+        Self: Sized,
+    {
+        std::cmp::max(max, self.vars_id_iter().max().unwrap_or(max)) + 1
     }
 
     fn contains_var(self, Variable { id, .. }: &Variable) -> bool

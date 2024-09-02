@@ -2,6 +2,8 @@ use core::fmt::Debug;
 use std::{ops::Range, sync::Arc};
 
 use itertools::Itertools;
+use logic_formula::iterators::UsedVariableIterator;
+use logic_formula::Formula;
 
 use crate::formula::utils::Applicable;
 use crate::{
@@ -75,7 +77,7 @@ impl<'bump> InnerStep<'bump> {
     ) -> Self {
         debug_assert!(
             {
-                itertools::chain!(message.get_free_vars(), condition.get_free_vars())
+                itertools::chain!(message.free_vars_iter(), condition.free_vars_iter())
                     .all(|v| free_variables.contains(&v))
             },
             // "in {name}:\n\tmesg: [{}] in {}\n\tcond: [{}] in {}\n\targs: [{}]",
@@ -86,7 +88,7 @@ impl<'bump> InnerStep<'bump> {
             // free_variables.iter().join(", ")
         );
         debug_assert!({
-            itertools::chain!(message.get_used_variables(), condition.get_used_variables())
+            itertools::chain!(message.used_vars_iter(), condition.used_vars_iter())
                 .all(|v| free_variables.contains(&v))
         });
 
@@ -126,18 +128,15 @@ impl<'bump> Step<'bump> {
     {
         let free_variables: Arc<[_]> = args.into_iter().collect();
         assert!(message
-            .get_free_vars()
-            .iter()
-            .all(|v| free_variables.contains(v)));
+            .free_vars_iter()
+            .all(|v| free_variables.contains(&v)));
         assert!(condition
-            .get_free_vars()
-            .iter()
-            .all(|v| free_variables.contains(v)));
+            .free_vars_iter()
+            .all(|v| free_variables.contains(&v)));
 
-        let used_variables =
-            ARichFormula::iter_used_varibales([message.clone(), condition.clone()])
-                .unique()
-                .collect();
+        let used_variables = UsedVariableIterator::with([&message, &condition])
+            .unique()
+            .collect();
 
         let (step, _) = container
             .alloc_cyclic(|(step, function)| {
@@ -186,17 +185,14 @@ impl<'bump> Step<'bump> {
     {
         let free_variables: Arc<[_]> = args.into_iter().collect();
         assert!(message
-            .get_free_vars()
-            .iter()
-            .all(|v| free_variables.contains(v)));
+            .free_vars_iter()
+            .all(|v| free_variables.contains(&v)));
         assert!(condition
-            .get_free_vars()
-            .iter()
-            .all(|v| free_variables.contains(v)));
-        let used_variables =
-            ARichFormula::iter_used_varibales([message.clone(), condition.clone()])
-                .unique()
-                .collect();
+            .free_vars_iter()
+            .all(|v| free_variables.contains(&v)));
+        let used_variables = UsedVariableIterator::with([&message, &condition])
+            .unique()
+            .collect();
         let inner_step = InnerStep {
             name: name.to_string(),
             free_variables,

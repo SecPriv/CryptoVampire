@@ -1,5 +1,5 @@
 pub mod iterators;
-mod outers;
+pub mod outers;
 mod traits;
 
 use std::{fmt::Debug, hash::Hash};

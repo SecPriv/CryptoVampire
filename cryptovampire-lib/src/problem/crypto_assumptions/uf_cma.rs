@@ -7,6 +7,7 @@ use log::trace;
 use static_init::dynamic;
 
 use crate::formula::utils::Applicable;
+use crate::formula::variable::IntoVariableIter;
 use crate::{
     environement::{environement::Environement, traits::KnowsRealm},
     formula::{
@@ -32,6 +33,7 @@ use crate::{
     subterm::{into_exist_formula, kind::SubtermKindConstr, traits::SubtermAux, Subterm},
 };
 use utils::utils::print_type;
+use logic_formula::Formula;
 
 use super::CryptoFlag;
 
@@ -190,12 +192,12 @@ impl<'bump> UfCma<'bump> {
         let max_var = pbl.max_var();
         trace!("max_var = {:?}", max_var);
         // let pile1 = RefCell::new(Vec::new());
-        let pile2 = RefCell::new(Vec::new());
+        // let pile2 = RefCell::new(Vec::new());
         let realm = env.get_realm();
         let cast_messages = pbl.name_caster().cast_function(&MESSAGE.as_sort()).unwrap();
         let candidates = pbl
             .list_top_level_terms()
-            .flat_map(move |f| f.iter()) // sad...
+            // .flat_map(move |f| f.iter()) // sad...
             .flat_map(move |formula| match formula.as_ref() {
                 RichFormula::Fun(fun, args) => {
                     trace!("{:}", formula.as_ref());
@@ -324,16 +326,17 @@ impl<'bump> UfCma<'bump> {
                           key,
                       }| {
                     let array = [&message, &signature, &key];
-                    let max_var = array
-                        .iter()
-                        .flat_map(|f| f.used_variables_iter_with_pile(pile2.borrow_mut()))
-                        .map(|Variable { id, .. }| id)
-                        .max()
-                        .unwrap_or(max_var)
-                        + 1;
+                    // let max_var = array
+                    //     .iter()
+                    //     .flat_map(|f| f.used_variables_iter_with_pile(pile2.borrow_mut()))
+                    //     .map(|Variable { id, .. }| id)
+                    //     .max()
+                    //     .unwrap_or(max_var)
+                    //     + 1;
+                    let max_var = array.iter().map(|f| *f).max_var_or_max(max_var);
                     let free_vars = array
                         .iter()
-                        .flat_map(|f| f.get_free_vars().into_iter())
+                        .flat_map(|f| (*f).free_vars_iter())
                         // .cloned()
                         .unique();
                     let u_var = Variable {

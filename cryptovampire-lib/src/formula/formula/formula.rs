@@ -57,95 +57,6 @@ impl<'bump> RichFormula<'bump> {
             RichFormula::Quantifier(_, _) => Some(BOOL.as_sort()),
         }
     }
-    pub fn get_free_vars(&'_ self) -> Vec<Variable<'bump>> {
-        // let mut free_vars = Vec::new();
-        // let mut todo = vec![self];
-        // Self::get_free_vars_with_pile(&mut todo, &mut free_vars);
-        // free_vars
-        self.free_vars_iter().unique().collect()
-    }
-
-    pub fn get_free_vars_with_pile<'a>(
-        todo: &mut Vec<&'a RichFormula<'bump>>,
-        free_vars: &mut Vec<Variable<'bump>>,
-    ) where
-        'bump: 'a,
-    {
-        let mut bound_vars = Vec::new();
-        let mut var_stack = vec![(todo.len(), 0)];
-
-        fn decr<'a, 'bump: 'a>(
-            var_stack: &mut Vec<(usize, usize)>,
-            bound_vars: &mut Vec<Variable<'bump>>,
-        ) {
-            let (depth, vars) = var_stack.last_mut().unwrap();
-            *depth -= 1;
-            if *depth == 0 {
-                bound_vars.truncate(bound_vars.len() - *vars);
-                var_stack.pop();
-            }
-        }
-
-        fn incr<'a, 'bump: 'a>(
-            var_stack: &mut Vec<(usize, usize)>,
-            bound_vars: &mut Vec<Variable<'bump>>,
-            todo: &mut Vec<&'a RichFormula<'bump>>,
-            args: &'a [ARichFormula<'bump>],
-        ) {
-            todo.extend(args.iter().map(|af| af.as_ref()));
-            var_stack.last_mut().unwrap().0 += args.len();
-            decr(var_stack, bound_vars)
-        }
-
-        fn add_vars<'a, 'bump: 'a>(
-            bound_vars: &mut Vec<Variable<'bump>>,
-            var_stack: &mut Vec<(usize, usize)>,
-            vars: &'a [Variable<'bump>],
-        ) {
-            bound_vars.extend(vars.iter());
-            var_stack.push((1, vars.len()));
-        }
-
-        while let Some(t) = todo.pop() {
-            match t {
-                RichFormula::Var(v) => {
-                    if !(bound_vars.contains(v) || free_vars.contains(v)) {
-                        free_vars.push(*v);
-                    }
-                    decr(&mut var_stack, &mut bound_vars)
-                }
-                RichFormula::Fun(_, args) => {
-                    // quantifier are taken care of automatically
-                    incr(&mut var_stack, &mut bound_vars, todo, args.as_ref())
-                }
-                RichFormula::Quantifier(q, formula) => {
-                    add_vars(&mut bound_vars, &mut var_stack, q.get_variables());
-                    todo.push(formula.as_ref())
-                }
-            }
-        }
-    }
-
-    /// doesn't go though all quantifiers
-    pub fn get_used_variables(&'_ self) -> HashSet<Variable<'bump>> {
-        fn aux<'a, 'bump>(data: &mut HashSet<Variable<'bump>>, f: &RichFormula<'bump>) {
-            match f {
-                RichFormula::Var(v) => {
-                    data.insert(*v);
-                }
-                RichFormula::Fun(_, args) => args.iter().for_each(|f| aux(data, f.as_ref())),
-                RichFormula::Quantifier(q, args) => {
-                    data.extend(q.get_variables().iter().cloned());
-                    // args.iter().for_each(|f| aux(data, f))
-                    aux(data, args.as_ref())
-                }
-            }
-        }
-
-        let mut data = HashSet::new();
-        aux(&mut data, self);
-        data
-    }
 
     pub fn map<F>(self, f: &mut F) -> ARichFormula<'bump>
     where
@@ -419,6 +330,9 @@ impl<'a, 'bump> logic_formula::Formula for &'a RichFormula<'bump> {
 
 #[cfg(test)]
 mod tests {
+    use itertools::Itertools;
+    use logic_formula::Formula;
+
     use crate::formula::utils::Applicable;
     use crate::{
         formula::{
@@ -453,8 +367,7 @@ mod tests {
         let mut vars = [v1, v2, v3, v4];
         vars.sort();
 
-        let mut fvars = formula.get_free_vars();
-        fvars.sort();
+        let fvars = formula.free_vars_iter().unique().sorted().collect_vec();
 
         assert_eq!(&vars, fvars.as_slice())
     }

@@ -1,23 +1,25 @@
-use std::iter::FusedIterator;
+use std::{
+    cell::{RefCell, RefMut},
+    iter::FusedIterator,
+};
 
 use super::*;
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct OwnedPile<F, I> {
-    pile: Vec<F>,
+#[derive(Debug)]
+pub struct RefCellPile<'a, F, I> {
+    pile: RefMut<'a, Vec<F>>,
     iterator: I,
 }
 
-#[allow(private_interfaces)]
-pub type OwnedIter<F, I> =
-    OwnedPile<Content<<I as FormulaIterator<F>>::U, F, <I as FormulaIterator<F>>::Passing>, I>;
 
-impl<F, I> OwnedPile<F, I> {
-
-    pub fn new(pile: Vec<F>, iterator: I) -> Self {
-        Self { pile, iterator }
+impl<'a, F, I> RefCellPile<'a, F, I> {
+    pub fn new(pile: &'a RefCell<Vec<F>>, iterator: I) -> Self {
+        Self {
+            pile: pile.borrow_mut(),
+            iterator,
+        }
     }
-    
-    pub fn as_mut<'a>(&'a mut self) -> RefPile<'a, F, ()> {
+
+    pub fn as_mut<'b>(&'b mut self) -> RefPile<'b, F, ()> {
         let Self {
             ref mut pile,
             iterator: _,
@@ -26,7 +28,8 @@ impl<F, I> OwnedPile<F, I> {
     }
 }
 
-impl<F, Passing, I, U> Iterator for OwnedPile<Content<U, F, Passing>, I>
+
+impl<'a, F, Passing, I, U> Iterator for RefCellPile<'a, Content<U, F, Passing>, I>
 where
     F: Formula,
     I: FormulaIterator<F, Passing = Passing, U = U>,
@@ -47,7 +50,7 @@ where
     }
 }
 
-impl<F, Passing, I, U> FusedIterator for OwnedPile<Content<U, F, Passing>, I>
+impl<'a, F, Passing, I, U> FusedIterator for RefCellPile<'a, Content<U, F, Passing>, I>
 where
     F: Formula,
     I: FormulaIterator<F, Passing = Passing, U = U>,

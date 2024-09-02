@@ -11,6 +11,7 @@ use std::{
 use if_chain::if_chain;
 use itertools::Itertools;
 use log::{error, log_enabled, trace, warn};
+use logic_formula::Formula;
 
 use crate::formula::utils::formula_expander::{UnfolderBuilder, UnfoldingStateBuilder};
 use crate::formula::utils::Applicable;
@@ -587,15 +588,13 @@ where
 
 fn check_variable_collision(x: &ARichFormula<'_>, m: &ARichFormula<'_>) -> bool {
     let varx = x
-        .get_used_variables()
-        .iter()
+        .used_vars_iter()
         .map(|v| v.id)
         .minmax()
         .into_option()
         .map(|(a, b)| a..=b);
     let varm = m
-        .get_used_variables()
-        .iter()
+        .used_vars_iter()
         .map(|v| v.id)
         .minmax()
         .into_option();
@@ -618,8 +617,7 @@ fn check_variable_collision(x: &ARichFormula<'_>, m: &ARichFormula<'_>) -> bool 
 
 fn check_variable_collision_list(x: &ARichFormula<'_>, m: &[Variable<'_>]) -> bool {
     let varx = x
-        .get_used_variables()
-        .iter()
+        .used_vars_iter()
         .map(|v| v.id)
         .minmax()
         .into_option()
