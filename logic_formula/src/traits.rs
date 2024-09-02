@@ -1,4 +1,8 @@
-use crate::{outers::OwnedPile, Destructed, Head};
+use crate::{
+    iterators::FreeVariableIterator,
+    outers::{Content, OwnedIter, OwnedPile},
+    Destructed, Head,
+};
 
 pub trait Formula: Sized {
     type Var;
@@ -15,14 +19,19 @@ pub trait Formula: Sized {
         self.destruct().args
     }
 
-    fn iter_with<I>(self, iter: I, init: I::Passing) -> impl Iterator<Item = I::U>
+    fn iter_with<I>(self, iter: I, init: I::Passing) -> OwnedIter<Self, I>
     where
-        I: FormulaIterator<F = Self>,
-        Self: Clone,
+        I: FormulaIterator<Self>,
     {
-        let mut pile = OwnedPile::new(iter);
-        pile.as_mut().push_child(self, init);
-        pile
+        Vec::new().with(self, iter, init)
+    }
+
+    fn free_vars_iter(self) -> impl Iterator<Item = Self::Var>
+    where
+        Self::Quant: Bounder<Self::Var>,
+        Self::Var: Eq + Clone,
+    {
+        self.iter_with(FreeVariableIterator::default(), 0)
     }
 }
 
@@ -31,7 +40,7 @@ pub trait IteratorHelper {
     type Passing;
     type U;
 
-    fn push_result(&mut self, result:Self::U) -> &mut Self {
+    fn push_result(&mut self, result: Self::U) -> &mut Self {
         self.extend_result([result])
     }
 
@@ -65,19 +74,40 @@ pub trait IteratorHelper {
     }
 }
 
-pub trait FormulaIterator {
-    type F: Formula;
+pub trait FormulaIterator<F: Formula> {
     type Passing;
 
     type U;
 
-    fn next<H>(&mut self, current: Self::F, passing: &Self::Passing, helper: &mut H)
+    fn next<H>(&mut self, current: F, passing: &Self::Passing, helper: &mut H)
     where
-        H: IteratorHelper<F = Self::F, Passing = Self::Passing, U=Self::U>;
+        H: IteratorHelper<F = F, Passing = Self::Passing, U = Self::U>;
 }
 
-
 pub trait Bounder<Var> {
+    fn bounds(&self) -> impl Iterator<Item = Var>;
+}
 
-  fn bounds(&self) -> impl Iterator<Item = Var>;
+pub trait IteratorContainer<F, I>
+where
+    F: Formula,
+    I: FormulaIterator<F>,
+{
+    type Iter: Iterator<Item = I::U>;
+    fn with(self, formula: F, iterator: I, init: I::Passing) -> Self::Iter;
+}
+
+impl<F, I> IteratorContainer<F, I> for Vec<Content<I::U, F, I::Passing>>
+where
+    F: Formula,
+    I: FormulaIterator<F>,
+{
+    type Iter = OwnedIter<F, I>;
+
+    fn with(mut self, formula: F, iterator: I, init: I::Passing) -> Self::Iter {
+        self.clear();
+        let mut pile = OwnedPile::new(self, iterator);
+        pile.as_mut().push_child(formula, init);
+        pile
+    }
 }

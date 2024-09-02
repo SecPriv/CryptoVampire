@@ -11,6 +11,7 @@ license-file = "../LICENCE"
 
 [dependencies]
 utils ={ path = "../utils", features = ["serde"]}
+logic_formula = {path = "../logic_formula", features = ["serde"]}
 # ord-utils = { git = "https://github.com/puyral/ord-utils" }
 
 # qcell = "0.5.3"

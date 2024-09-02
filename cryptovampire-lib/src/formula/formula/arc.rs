@@ -4,7 +4,7 @@ use std::{
     ops::{BitAnd, BitOr, Deref, DerefMut, Not, Shr},
 };
 
-use crate::formula::utils::Applicable;
+use crate::formula::{function::Function, quantifier::Quantifier, utils::Applicable};
 use crate::formula::{
     function::builtin::{AND, IMPLIES, NOT, OR, TRUE_ARC},
     utils::formula_iterator::{FormulaIterator, IteratorFlags},
@@ -12,6 +12,8 @@ use crate::formula::{
 };
 
 use super::RichFormula;
+use itertools::Either;
+use logic_formula::{Destructed, Head};
 use utils::{
     arc_into_iter::ArcIntoIter,
     utils::{repeat_n_zip, MaybeInvalid, StackBox},
@@ -266,5 +268,30 @@ impl<'bump> Default for ARichFormula<'bump> {
 impl<'bump> MaybeInvalid for ARichFormula<'bump> {
     fn is_valid(&self) -> bool {
         RichFormula::is_valid(self.as_ref())
+    }
+}
+
+impl<'a, 'bump> logic_formula::Formula for &'a ARichFormula<'bump> {
+    type Var = Variable<'bump>;
+
+    type Fun = Function<'bump>;
+
+    type Quant = Quantifier<'bump>;
+
+    fn destruct(self) -> logic_formula::Destructed<Self, impl Iterator<Item = Self>> {
+        match self.as_ref() {
+            RichFormula::Var(v) => Destructed {
+                head: Head::<&'a ARichFormula<'bump>>::Var(*v),
+                args: Either::Left(std::iter::empty()),
+            },
+            RichFormula::Fun(f, args) => Destructed {
+                head: Head::<&'a ARichFormula<'bump>>::Fun(*f),
+                args: Either::Right(Either::Left(args.as_ref().into_iter())),
+            },
+            RichFormula::Quantifier(q, arg) => Destructed {
+                head: Head::<&'a ARichFormula<'bump>>::Quant(q.clone()),
+                args: Either::Right(Either::Right([arg].into_iter())),
+            },
+        }
     }
 }

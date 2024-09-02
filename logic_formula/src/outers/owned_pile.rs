@@ -2,34 +2,33 @@ use std::iter::FusedIterator;
 
 use super::*;
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct OwnedPile<F,  I> {
+pub struct OwnedPile<F, I> {
     pile: Vec<F>,
     iterator: I,
 }
 
-pub type OwnedIter<I> = OwnedPile<Content<<I as FormulaIterator>::U, <I as FormulaIterator>::F, <I as FormulaIterator>::Passing>,  I>;
+pub type OwnedIter<F, I> =
+    OwnedPile<Content<<I as FormulaIterator<F>>::U, F, <I as FormulaIterator<F>>::Passing>, I>;
 
-impl<F,  I> OwnedPile<F,  I> {
-    pub fn new(iterator: I) -> Self {
-        Self {
-            pile: Vec::new(),
-            iterator,
-        }
+impl<F, I> OwnedPile<F, I> {
+
+    pub fn new(pile: Vec<F>, iterator: I) -> Self {
+        Self { pile, iterator }
     }
-
-    pub fn as_mut<'a>(&'a mut self) -> RefPile<'a, F,  ()> {
+    
+    pub fn as_mut<'a>(&'a mut self) -> RefPile<'a, F, ()> {
         let Self {
             ref mut pile,
             iterator: _,
         } = self;
-        RefPile::new(pile,  ())
+        RefPile::new(pile, ())
     }
 }
 
-impl<F,  Passing, I, U> Iterator for OwnedPile<Content<U, F, Passing>,  I>
+impl<F, Passing, I, U> Iterator for OwnedPile<Content<U, F, Passing>, I>
 where
     F: Formula,
-    I: FormulaIterator<F = F, Passing = Passing, U = U>,
+    I: FormulaIterator<F, Passing = Passing, U = U>,
 {
     type Item = I::U;
 
@@ -47,9 +46,9 @@ where
     }
 }
 
-impl<F,  Passing, I, U> FusedIterator for OwnedPile<Content<U, F, Passing>,  I>
+impl<F, Passing, I, U> FusedIterator for OwnedPile<Content<U, F, Passing>, I>
 where
     F: Formula,
-    I: FormulaIterator<F = F, Passing = Passing, U = U>,
+    I: FormulaIterator<F, Passing = Passing, U = U>,
 {
 }

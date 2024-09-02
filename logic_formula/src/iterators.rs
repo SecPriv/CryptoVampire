@@ -1,23 +1,11 @@
-use std::marker::PhantomData;
-
 use crate::{Bounder, Destructed, Formula, FormulaIterator};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct VariableIterator<F> {
-    g: PhantomData<F>,
-}
+pub struct VariableIterator;
 
-impl<F> Default for VariableIterator<F> {
-    fn default() -> Self {
-        Self {
-            g: Default::default(),
-        }
-    }
-}
 
-impl<F: Formula + Clone> FormulaIterator for VariableIterator<F> {
-    type F = F;
+impl<F: Formula + Clone> FormulaIterator<F> for VariableIterator {
 
     type Passing = ();
     type U = F::Var;
@@ -39,12 +27,9 @@ impl<F: Formula + Clone> FormulaIterator for VariableIterator<F> {
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct DepthIterator<F> {
-    g: PhantomData<F>,
-}
+pub struct DepthIterator ;
 
-impl<F: Formula + Clone> FormulaIterator for DepthIterator<F> {
-    type F = F;
+impl<F: Formula + Clone> FormulaIterator<F> for DepthIterator {
 
     type Passing = u32;
     type U = u32;
@@ -58,35 +43,31 @@ impl<F: Formula + Clone> FormulaIterator for DepthIterator<F> {
     }
 }
 
-pub struct BoundedVariableIterator<F>
-where
-    F: Formula,
+pub struct FreeVariableIterator<Var>
 {
-    g: PhantomData<F>,
-    bvars: Vec<<F as Formula>::Var>,
+    bvars: Vec<Var>,
 }
 
-impl<F> FormulaIterator for BoundedVariableIterator<F>
+impl<F> FormulaIterator<F> for FreeVariableIterator<F::Var>
 where
     F: Formula,
     F::Quant: Bounder<F::Var>,
     F::Var: Eq + Clone,
 {
-    type F = F;
 
     type Passing = usize;
 
     type U = F::Var;
 
-    fn next<H>(&mut self, current: Self::F, passing: &Self::Passing, helper: &mut H)
+    fn next<H>(&mut self, current: F, passing: &Self::Passing, helper: &mut H)
     where
-        H: crate::IteratorHelper<F = Self::F, Passing = Self::Passing, U = Self::U>,
+        H: crate::IteratorHelper<F = F, Passing = Self::Passing, U = Self::U>,
     {
         self.bvars.truncate(*passing);
         let Destructed { head, args } = current.destruct();
         match head {
             crate::HeadSk::Var(v) => {
-                if self.bvars.contains(&v) {
+                if !self.bvars.contains(&v) {
                     helper.push_result(v);
                 }
             }
@@ -102,10 +83,9 @@ where
     }
 }
 
-impl<F: Formula> Default for BoundedVariableIterator<F> {
+impl<V> Default for FreeVariableIterator<V> {
     fn default() -> Self {
         Self {
-            g: Default::default(),
             bvars: Default::default(),
         }
     }

@@ -5,7 +5,8 @@ use std::{
 };
 
 use hashbrown::HashSet;
-use itertools::Itertools;
+use itertools::{Either, Itertools};
+use logic_formula::{Destructed, Formula, Head};
 
 use crate::formula::utils::Applicable;
 use crate::formula::{
@@ -57,10 +58,11 @@ impl<'bump> RichFormula<'bump> {
         }
     }
     pub fn get_free_vars(&'_ self) -> Vec<Variable<'bump>> {
-        let mut free_vars = Vec::new();
-        let mut todo = vec![self];
-        Self::get_free_vars_with_pile(&mut todo, &mut free_vars);
-        free_vars
+        // let mut free_vars = Vec::new();
+        // let mut todo = vec![self];
+        // Self::get_free_vars_with_pile(&mut todo, &mut free_vars);
+        // free_vars
+        self.free_vars_iter().unique().collect()
     }
 
     pub fn get_free_vars_with_pile<'a>(
@@ -387,6 +389,32 @@ pub fn ands_owned<'bump>(args: impl IntoIterator<Item = RichFormula<'bump>>) -> 
 
 pub fn ors_owned<'bump>(args: impl IntoIterator<Item = RichFormula<'bump>>) -> RichFormula<'bump> {
     OR.apply(args)
+}
+
+
+impl<'a, 'bump> logic_formula::Formula for &'a RichFormula<'bump> {
+    type Var = Variable<'bump>;
+
+    type Fun = Function<'bump>;
+
+    type Quant = Quantifier<'bump>;
+
+    fn destruct(self) -> logic_formula::Destructed<Self, impl Iterator<Item = Self>> {
+        match self.as_ref() {
+            RichFormula::Var(v) => Destructed {
+                head: Head::<&'a RichFormula<'bump>>::Var(*v),
+                args: Either::Left(std::iter::empty()),
+            },
+            RichFormula::Fun(f, args) => Destructed {
+                head: Head::<&'a RichFormula<'bump>>::Fun(*f),
+                args: Either::Right(Either::Left(args.iter().map(|a| a.as_ref()))),
+            },
+            RichFormula::Quantifier(q, arg) => Destructed {
+                head: Head::<&'a RichFormula<'bump>>::Quant(q.clone()),
+                args: Either::Right(Either::Right([arg.as_ref()].into_iter())),
+            },
+        }
+    }
 }
 
 #[cfg(test)]
