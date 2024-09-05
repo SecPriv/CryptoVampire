@@ -12,7 +12,7 @@ use if_chain::if_chain;
 use itertools::Itertools;
 use log::{error, log_enabled, trace, warn};
 use logic_formula::outers::OwnedPile;
-use logic_formula::{iterators, Formula, FormulaIterator};
+use logic_formula::{Formula, FormulaIterator};
 
 use crate::formula::utils::formula_expander::{UnfolderBuilder, UnfoldingStateBuilder};
 use crate::formula::utils::Applicable;
@@ -34,11 +34,7 @@ use crate::{
     },
     mforall,
 };
-use utils::{
-    implvec, partial_order,
-    traits::NicerError,
-    utils::{repeat_n_zip, AlreadyInitialized, StackBox},
-};
+use utils::{implvec, partial_order, traits::NicerError, utils::AlreadyInitialized};
 
 pub(crate) mod kind;
 pub(crate) mod traits;
@@ -800,14 +796,6 @@ where
         >,
     {
         trace!("{} ⊑ {}", self.x, &f);
-        let inner_iter = UnfolderBuilder::default()
-            .state(state.clone())
-            .content(f.clone())
-            .build()
-            .unwrap()
-            .unfold(self.ptcl.steps().iter().cloned(), self.ptcl.graph())
-            .into_iter()
-            .map(|ec| ec.as_tuple());
         let SubtermResult { unifier, nexts } = self.subterm.aux.is_subterm_and_next(self.x, &f);
 
         unifier

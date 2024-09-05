@@ -75,12 +75,10 @@ impl<'bump> InnerStep<'bump> {
         message: ARichFormula<'bump>,
         function: Function<'bump>,
     ) -> Self {
-        debug_assert!(
-            {
-                itertools::chain!((&message).free_vars_iter(), (&condition).free_vars_iter())
-                    .all(|v| free_variables.contains(&v))
-            },
-        );
+        debug_assert!({
+            itertools::chain!((&message).free_vars_iter(), (&condition).free_vars_iter())
+                .all(|v| free_variables.contains(&v))
+        },);
 
         Self {
             name,

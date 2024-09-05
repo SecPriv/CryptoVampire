@@ -4,14 +4,10 @@ use crate::formula::function::inner::term_algebra::TermAlgebra;
 use crate::problem::cell::Assignement;
 
 use logic_formula::outers::OwnedPile;
-use logic_formula::outers::RefCellPile;
 use logic_formula::FormulaIterator;
 use logic_formula::IteratorHelper;
-use utils::arc_into_iter::ArcIntoIter;
 
 use super::super::call::InputCall;
-
-use utils::utils::repeat_n_zip;
 
 use super::InnerCellCall;
 
@@ -30,8 +26,6 @@ use super::FromNode;
 use super::Edges;
 
 use super::GlobNode;
-
-use std::cell::RefCell;
 
 use crate::problem::step::Step;
 

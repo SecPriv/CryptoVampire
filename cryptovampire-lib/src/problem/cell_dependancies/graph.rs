@@ -1,6 +1,6 @@
 //! The modules with the building and using the [DependancyGraph]
 
-use std::{cell::RefCell, hash::Hash, sync::Arc};
+use std::{hash::Hash, sync::Arc};
 
 use itertools::Itertools;
 

@@ -4,15 +4,14 @@ mod traits;
 
 use std::{fmt::Debug, hash::Hash};
 
-pub use traits::*;
 pub use outers::Content;
+pub use traits::*;
 
 pub use head::*;
 mod head;
 
 pub use desctucted::*;
 mod desctucted;
-
 
 // mod substitution {
 //     use crate::Formula;
