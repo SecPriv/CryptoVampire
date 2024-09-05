@@ -796,8 +796,20 @@ where
         >,
     {
         trace!("{} ⊑ {}", self.x, &f);
-        let SubtermResult { unifier, nexts } = self.subterm.aux.is_subterm_and_next(self.x, &f);
 
+        // if this term "hides" some other terms to look for (e.g., macros, quantifiers) we queue them
+        helper.extend_child(
+            UnfolderBuilder::default()
+                .state(state.clone())
+                .content(f.clone())
+                .build()
+                .unwrap()
+                .unfold(self.ptcl.steps().iter().cloned(), self.ptcl.graph())
+                .into_iter()
+                .map(|ec| ec.as_tuple()),
+        );
+
+        let SubtermResult { unifier, nexts } = self.subterm.aux.is_subterm_and_next(self.x, &f);
         unifier
             .map(|u| {
                 let mut guard = if_chain!(
