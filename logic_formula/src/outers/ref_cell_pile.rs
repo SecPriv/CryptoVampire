@@ -12,8 +12,11 @@ pub struct RefCellPile<'a, F, I> {
 
 impl<'a, F, I> RefCellPile<'a, F, I> {
     pub fn new(pile: &'a RefCell<Vec<F>>, iterator: I) -> Self {
+        Self::new_mut(pile.borrow_mut(), iterator)
+    }
+    pub fn new_mut(pile: RefMut<'a, Vec<F>>, iterator: I) -> Self {
         Self {
-            pile: pile.borrow_mut(),
+            pile,
             iterator,
         }
     }
@@ -24,6 +27,10 @@ impl<'a, F, I> RefCellPile<'a, F, I> {
             iterator: _,
         } = self;
         RefPile::new(pile, ())
+    }
+
+    pub fn clear(&mut self){
+      self.pile.clear()
     }
 }
 

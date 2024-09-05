@@ -74,14 +74,14 @@ where
     let message = message
         .parse(env, &mut bvars, &state, Some(MESSAGE.clone().into()))
         .debug_continue()?;
-    let msg_used_vars = message.used_vars_iter();
+    let msg_used_vars = (&message).used_vars_iter();
     bvars.truncate(n);
 
     // condition
     let condition = condition
         .parse(env, &mut bvars, &state, Some(CONDITION.clone().into()))
         .debug_continue()?;
-    let cond_used_vars = condition.used_vars_iter();
+    let cond_used_vars = (&condition).used_vars_iter();
     bvars.truncate(n);
 
     // remove the "in"

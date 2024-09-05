@@ -2,7 +2,7 @@ use crate::{Formula, FormulaIterator, IteratorHelper};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub(crate) enum Content<U, F, Passing> {
+pub enum Content<U, F, Passing> {
     Resutl(U),
     Next { formula: F, passing: Passing },
 }

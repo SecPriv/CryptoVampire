@@ -77,20 +77,10 @@ impl<'bump> InnerStep<'bump> {
     ) -> Self {
         debug_assert!(
             {
-                itertools::chain!(message.free_vars_iter(), condition.free_vars_iter())
+                itertools::chain!((&message).free_vars_iter(), (&condition).free_vars_iter())
                     .all(|v| free_variables.contains(&v))
             },
-            // "in {name}:\n\tmesg: [{}] in {}\n\tcond: [{}] in {}\n\targs: [{}]",
-            // message.get_free_vars().iter().join(", "),
-            // SmtFormula::from_arichformula(message.as_ref()).default_display(),
-            // condition.get_free_vars().iter().join(", "),
-            // SmtFormula::from_arichformula(condition.as_ref()).default_display(),
-            // free_variables.iter().join(", ")
         );
-        debug_assert!({
-            itertools::chain!(message.used_vars_iter(), condition.used_vars_iter())
-                .all(|v| free_variables.contains(&v))
-        });
 
         Self {
             name,
@@ -127,10 +117,10 @@ impl<'bump> Step<'bump> {
             + ContainerTools<'bump, InnerFunction<'bump>, R<'bump> = Function<'bump>>,
     {
         let free_variables: Arc<[_]> = args.into_iter().collect();
-        assert!(message
+        assert!((&message)
             .free_vars_iter()
             .all(|v| free_variables.contains(&v)));
-        assert!(condition
+        assert!((&condition)
             .free_vars_iter()
             .all(|v| free_variables.contains(&v)));
 
@@ -184,10 +174,10 @@ impl<'bump> Step<'bump> {
             + ContainerTools<'bump, InnerFunction<'bump>, R<'bump> = Function<'bump>>,
     {
         let free_variables: Arc<[_]> = args.into_iter().collect();
-        assert!(message
+        assert!((&message)
             .free_vars_iter()
             .all(|v| free_variables.contains(&v)));
-        assert!(condition
+        assert!((&condition)
             .free_vars_iter()
             .all(|v| free_variables.contains(&v)));
         let used_variables = UsedVariableIterator::with([&message, &condition])

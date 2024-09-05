@@ -338,7 +338,7 @@ impl<'bump> IntCtxt<'bump> {
                                     let free_vars = BTreeSet::from_iter(
                                         [&r1, &m1, &k1, &r2, &m2, &r2]
                                             .into_iter()
-                                            .flat_map(|f| (*f).free_vars_iter()),
+                                            .flat_map(|f| f.free_vars_iter()),
                                     );
 
                                     Some(forall(
