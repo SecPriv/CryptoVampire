@@ -29,8 +29,7 @@ pub fn generate<'bump>(
     let init = &pbl
         .protocol()
         .init_step()
-        .function()
-        .f::<Variable<'bump>, _>([]);
+        .into_formula();
     let pred = PRED.clone();
 
     assertions.push(Axiom::comment("ordering"));
@@ -38,7 +37,7 @@ pub fn generate<'bump>(
 
     // general axioms
     assertions.extend(
-        // stolen from
+        // stolen from Stanislas
         [
             // !!!!! leq is *not* reflexive !!!
             mforall!(t1!1:step, t2!2:step;

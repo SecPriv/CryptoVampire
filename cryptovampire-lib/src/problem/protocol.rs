@@ -163,6 +163,11 @@ impl<'bump> Protocol<'bump> {
         self.steps.as_ref()
     }
 
+    pub fn steps_without_init(&self) -> &[Step<'bump>] {
+        // since `init` is the first step
+        &self.steps()[1..]
+    }
+
     pub fn memory_cells(&self) -> &[MemoryCell<'bump>] {
         self.memory_cells.as_ref()
     }

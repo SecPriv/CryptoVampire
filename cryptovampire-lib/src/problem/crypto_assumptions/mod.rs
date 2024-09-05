@@ -3,6 +3,7 @@ mod euf_cma;
 mod int_ctxt;
 mod nonce;
 mod uf_cma;
+mod unfolding;
 
 use itertools::Itertools;
 pub use nonce::SubtermNonce;
@@ -30,6 +31,7 @@ pub use self::euf_cma::EufCma;
 pub use self::int_ctxt::IntCtxt;
 pub use self::nonce::Nonce;
 pub use self::uf_cma::UfCma;
+pub use unfolding::Unfolding;
 
 use super::generator::Generator;
 use super::problem::Problem;
@@ -71,6 +73,15 @@ bitflags::bitflags! {
         const STRONG    = 1 << 0;
         /// Asume it is an Hmac
         const HMAC      = 1 << 1;
+        /// Recursive exec macro.
+        ///
+        /// Use the recursive defintion of exec
+        const RECURSIVE_EXEC = 1 << 2;
+        /// Quantified exec macro.
+        ///
+        /// Use the 'exists' equivalent definition of exec.
+        /// This is the default, as this doesn't imply recursion
+        const DIRECT_EXEC = 1 << 3;
     }
 }
 
