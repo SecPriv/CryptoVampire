@@ -1,8 +1,11 @@
+mod formula;
+pub use formula::*;
+
 mod arc;
 pub use arc::*;
 
-mod formula;
-pub use formula::*;
+mod expanding_formula;
+pub use expanding_formula::{EitherQuantifier, Expander};
 
 pub mod macros {
     #[macro_export]

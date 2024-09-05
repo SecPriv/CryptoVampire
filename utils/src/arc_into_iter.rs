@@ -10,6 +10,12 @@ pub enum ArcIntoIter<T> {
     },
 }
 
+impl<T> ArcIntoIter<T> {
+    pub fn empty() -> Self {
+        Self::default()
+    }
+}
+
 impl<T: Clone> Iterator for ArcIntoIter<T> {
     type Item = T;
 
@@ -132,19 +138,6 @@ where
     }
 }
 
-// impl<I, T> IntoIterator for I
-// where
-//     I: ClonableArc<T>,
-//     T: Clone,
-// {
-//     type Item = T;
-
-//     type IntoIter = ArcIntoIter<T>;
-
-//     fn into_iter(self) -> Self::IntoIter {
-//         ArcIntoIter::from(self.clonnable_arc())
-//     }
-// }
 impl<T: Clone> ClonableArc<T> for Arc<[T]> {
     fn clonnable_arc(self) -> Arc<[T]> {
         self

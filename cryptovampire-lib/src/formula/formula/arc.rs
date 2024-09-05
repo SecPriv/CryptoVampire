@@ -1,21 +1,21 @@
 use std::{
     borrow::Borrow,
     fmt::Display,
-    ops::{BitAnd, BitOr, Deref, DerefMut, Not, Shr},
+    ops::{BitAnd, BitOr, Deref, Not, Shr},
 };
 
-use crate::formula::utils::Applicable;
 use crate::formula::{
     function::builtin::{AND, IMPLIES, NOT, OR, TRUE_ARC},
-    utils::formula_iterator::{FormulaIterator, IteratorFlags},
     variable::{IntoVariableIter, Variable},
 };
+use crate::formula::{function::Function, quantifier::Quantifier, utils::Applicable};
 
-use super::RichFormula;
+use super::{Expander, RichFormula};
+use itertools::Either;
+use logic_formula::{Destructed, Formula, Head};
 use utils::{
-    arc_into_iter::ArcIntoIter,
-    utils::{repeat_n_zip, MaybeInvalid, StackBox},
-    vecref::VecRefClone,
+    arc_into_iter::{ArcIntoIter, ClonableArc},
+    utils::MaybeInvalid,
 };
 
 use std::sync::Arc;
@@ -104,100 +104,8 @@ impl<'bump> ARichFormula<'bump> {
         }
     }
 
-    pub fn used_variables_iter(&self) -> impl Iterator<Item = Variable<'bump>> {
-        self.used_variables_iter_with_pile(StackBox::new(Vec::with_capacity(1)))
-    }
-
-    pub fn used_variables_iter_with_pile<V>(
-        &self,
-        mut pile: V,
-    ) -> impl Iterator<Item = Variable<'bump>>
-    where
-        V: DerefMut<Target = Vec<((), Self)>> + Deref<Target = Vec<((), Self)>>,
-    {
-        pile.clear();
-        pile.push(((), self.clone()));
-        FormulaIterator {
-            pile,
-            passed_along: None,
-            flags: IteratorFlags::QUANTIFIER,
-            f: |_, f| {
-                let (v, n) = match f.as_ref() {
-                    RichFormula::Fun(fun, args) => {
-                        let bvars = fun
-                            .as_quantifer()
-                            .map(|q| VecRefClone::Vec(Arc::clone(&q.bound_variables)));
-                        (bvars, VecRefClone::Vec(Arc::clone(&args)))
-                    }
-                    RichFormula::Var(v) => (Some(VecRefClone::Owned(*v)), Default::default()),
-                    _ => (None, Default::default()),
-                };
-                (v, repeat_n_zip((), n))
-            },
-        }
-        .flat_map(|iv| iv.into_iter())
-    }
-
-    pub fn iter_with_pile<V>(&self, mut pile: V) -> impl Iterator<Item = ARichFormula<'bump>>
-    where
-        V: DerefMut<Target = Vec<((), Self)>> + Deref<Target = Vec<((), Self)>>,
-    {
-        pile.clear();
-        pile.push(((), self.clone()));
-        FormulaIterator {
-            pile,
-            passed_along: None,
-            flags: IteratorFlags::QUANTIFIER,
-            f: |_, f| {
-                let next = match f.as_ref() {
-                    RichFormula::Fun(_, args) => Some(ArcIntoIter::from(args)),
-                    _ => None,
-                };
-                (Some(f), repeat_n_zip((), next.into_iter().flatten()))
-            },
-        }
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = ARichFormula<'bump>> {
-        self.iter_with_pile(StackBox::new(vec![]))
-    }
-
-    pub fn iter_used_varibales_with_pile<'a, V, D>(
-        mut pile: V,
-        fs: impl IntoIterator<Item = Self>,
-    ) -> impl Iterator<Item = Variable<'bump>> + 'a
-    where
-        V: DerefMut<Target = Vec<(D, Self)>> + Deref<Target = Vec<(D, Self)>> + 'a,
-        D: Default + Clone + 'a,
-        'bump: 'a,
-    {
-        pile.clear();
-        pile.extend(fs.into_iter().map(|f| (Default::default(), f)));
-        FormulaIterator {
-            pile,
-            passed_along: None,
-            flags: IteratorFlags::QUANTIFIER,
-            f: |_, f| {
-                let (current, next) = match f.as_ref() {
-                    RichFormula::Var(v) => (Some(*v), None),
-                    RichFormula::Fun(_, args) => (None, Some(ArcIntoIter::from(args))),
-                    _ => (None, None),
-                };
-                (
-                    current,
-                    next.into_iter().flatten().map(|f| (Default::default(), f)),
-                )
-            },
-        }
-    }
-
-    pub fn iter_used_varibales<'a>(
-        fs: impl IntoIterator<Item = Self>,
-    ) -> impl Iterator<Item = Variable<'bump>> + 'a
-    where
-        'bump: 'a,
-    {
-        Self::iter_used_varibales_with_pile(StackBox::new(Vec::<((), _)>::new()), fs)
+    pub fn as_expander<'a>(&'a self) -> Expander<'a, 'bump> {
+        self.into()
     }
 }
 
@@ -247,13 +155,7 @@ impl<'bump> Display for ARichFormula<'bump> {
 
 impl<'a, 'bump> IntoVariableIter<'bump> for &'a ARichFormula<'bump> {
     fn vars_iter(self) -> impl Iterator<Item = Variable<'bump>> {
-        self.used_variables_iter()
-    }
-}
-
-impl<'bump> IntoVariableIter<'bump> for ARichFormula<'bump> {
-    fn vars_iter(self) -> impl Iterator<Item = Variable<'bump>> {
-        self.used_variables_iter()
+        self.as_expander().used_vars_iter()
     }
 }
 
@@ -266,5 +168,55 @@ impl<'bump> Default for ARichFormula<'bump> {
 impl<'bump> MaybeInvalid for ARichFormula<'bump> {
     fn is_valid(&self) -> bool {
         RichFormula::is_valid(self.as_ref())
+    }
+}
+
+impl<'a, 'bump> logic_formula::Formula for &'a ARichFormula<'bump> {
+    type Var = Variable<'bump>;
+
+    type Fun = Function<'bump>;
+
+    type Quant = Quantifier<'bump>;
+
+    fn destruct(self) -> logic_formula::Destructed<Self, impl Iterator<Item = Self>> {
+        match self.as_ref() {
+            RichFormula::Var(v) => Destructed {
+                head: Head::<&'a ARichFormula<'bump>>::Var(*v),
+                args: Either::Left(std::iter::empty()),
+            },
+            RichFormula::Fun(f, args) => Destructed {
+                head: Head::<&'a ARichFormula<'bump>>::Fun(*f),
+                args: Either::Right(Either::Left(args.as_ref().into_iter())),
+            },
+            RichFormula::Quantifier(q, arg) => Destructed {
+                head: Head::<&'a ARichFormula<'bump>>::Quant(q.clone()),
+                args: Either::Right(Either::Right([arg].into_iter())),
+            },
+        }
+    }
+}
+
+impl<'bump> logic_formula::Formula for ARichFormula<'bump> {
+    type Var = Variable<'bump>;
+
+    type Fun = Function<'bump>;
+
+    type Quant = Quantifier<'bump>;
+
+    fn destruct(self) -> logic_formula::Destructed<Self, impl Iterator<Item = Self>> {
+        match self.as_ref() {
+            RichFormula::Var(v) => Destructed {
+                head: Head::<ARichFormula<'bump>>::Var(*v),
+                args: Either::Left(ArcIntoIter::empty()),
+            },
+            RichFormula::Fun(f, args) => Destructed {
+                head: Head::<ARichFormula<'bump>>::Fun(*f),
+                args: Either::Left(ArcIntoIter::from(args)),
+            },
+            RichFormula::Quantifier(q, arg) => Destructed {
+                head: Head::<ARichFormula<'bump>>::Quant(q.clone()),
+                args: Either::Right([arg.shallow_copy()].into_iter()),
+            },
+        }
     }
 }

@@ -1,5 +1,5 @@
 [workspace]
-members = ["cryptovampire", "cryptovampire-lib", "utils"]
+members = ["cryptovampire", "cryptovampire-lib", "utils", "logic_formula"]
 resolver = "2"
 # authors = ["Simon Jeanteur <7871851+puyral@users.noreply.github.com>"]
 default-members = ["cryptovampire", "cryptovampire-lib"]
@@ -17,3 +17,6 @@ anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"]}
 derive_builder = "0.20.0"
 bitflags = "2.6"
+
+[all.package.lints.rust]
+elided_lifetimes_in_paths = "error"

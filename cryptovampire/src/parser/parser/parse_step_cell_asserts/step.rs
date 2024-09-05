@@ -24,6 +24,7 @@ use cryptovampire_lib::{
 use utils::{implvec, string_ref::StrRef, traits::NicerError};
 
 use super::super::{super::ast, Environement, StepCache};
+use logic_formula::Formula;
 
 /// parse a step and assign the assignements
 ///
@@ -73,14 +74,14 @@ where
     let message = message
         .parse(env, &mut bvars, &state, Some(MESSAGE.clone().into()))
         .debug_continue()?;
-    let msg_used_vars = message.get_used_variables();
+    let msg_used_vars = (&message).used_vars_iter();
     bvars.truncate(n);
 
     // condition
     let condition = condition
         .parse(env, &mut bvars, &state, Some(CONDITION.clone().into()))
         .debug_continue()?;
-    let cond_used_vars = condition.get_used_variables();
+    let cond_used_vars = (&condition).used_vars_iter();
     bvars.truncate(n);
 
     // remove the "in"
@@ -154,12 +155,7 @@ where
                 .get(cell_name.borrow())
                 .and_then(FunctionCache::as_memory_cell)
                 .with_context(|| format!("cell {cell_name} doesn't exists"))
-                .with_location(cell_ast.span())
-                // .ok_or(merr(
-                //     cell_ast.span(),
-                //     format!("cell {cell_name} doesn't exists"),
-                // ))
-                ?;
+                .with_location(cell_ast.span())?;
 
             // get the arguments and apply substitution
             let cell_args: Result<Arc<[_]>, _> = cell_ast

@@ -1,6 +1,6 @@
 //! The modules with the building and using the [DependancyGraph]
 
-use std::{cell::RefCell, hash::Hash, sync::Arc};
+use std::{hash::Hash, sync::Arc};
 
 use itertools::Itertools;
 
@@ -97,9 +97,8 @@ impl<'bump> DependancyGraph<'bump> {
         let mut edges = Vec::new();
         let mut input_edges = Vec::new();
 
-        let pile = RefCell::new(vec![]);
-        process_functions::process_steps(&steps, &pile, &cells, &mut input_edges, &mut edges);
-        process_functions::process_cell(&steps, &pile, &cells, &mut input_edges, &mut edges);
+        process_functions::process_steps(&steps, &cells, &mut input_edges, &mut edges);
+        process_functions::process_cell(&steps, &cells, &mut input_edges, &mut edges);
 
         let input = InputNode {
             edges_starts: edges.len(),

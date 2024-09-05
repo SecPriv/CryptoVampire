@@ -1,5 +1,6 @@
 use anyhow::ensure;
 use itertools::Itertools;
+use logic_formula::Formula;
 
 use crate::formula::{formula::ARichFormula, quantifier::Quantifier, sort::builtins::STEP};
 
@@ -37,7 +38,7 @@ impl<'bump> Ordering<'bump> {
         let vars = self.quantifier().get_variables().as_ref();
         for f in self.formulas() {
             ensure!(
-                f.get_free_vars().iter().all(|v| vars.contains(v)),
+                f.free_vars_iter().all(|v| vars.contains(&v)),
                 "{f:} contains variables not it vars [{}]",
                 vars.iter().map(|v| format!("{v:}")).join(", ")
             );

@@ -11,6 +11,8 @@ use std::{
 use if_chain::if_chain;
 use itertools::Itertools;
 use log::{error, log_enabled, trace, warn};
+use logic_formula::outers::OwnedPile;
+use logic_formula::{Formula, FormulaIterator};
 
 use crate::formula::utils::formula_expander::{UnfolderBuilder, UnfoldingStateBuilder};
 use crate::formula::utils::Applicable;
@@ -27,19 +29,12 @@ use crate::{
         function::{self, builtin::TRUE, Function, InnerFunction},
         manipulation::Unifier,
         sort::Sort,
-        utils::{
-            formula_expander::{UnfoldFlags, UnfoldingState},
-            formula_iterator::{FormulaIterator, IteratorFlags},
-        },
+        utils::formula_expander::{UnfoldFlags, UnfoldingState},
         variable::{sorts_to_variables, Variable},
     },
     mforall,
 };
-use utils::{
-    implvec, partial_order,
-    traits::NicerError,
-    utils::{repeat_n_zip, AlreadyInitialized, StackBox},
-};
+use utils::{implvec, partial_order, traits::NicerError, utils::AlreadyInitialized};
 
 pub(crate) mod kind;
 pub(crate) mod traits;
@@ -403,7 +398,6 @@ where
     ) -> impl Iterator<Item = (Rc<[Variable<'bump>]>, ARichFormula<'bump>)> + 'a {
         trace!("------------------- preprocess_terms ---------------------");
         let realm = env.get_realm();
-        let steps = ptcl.steps();
 
         // let pile = vec![(ExpantionState::None, m)];
         let pile = //repeat_n_zip(ExpantionState::from_deeper_kind(deeper_kind), m).collect_vec();
@@ -417,52 +411,20 @@ where
                     // But this is soundly expected.
                     warn!("collision in the variables ({:} in {:}, {:?})",x, &formula, &bounded_variables)
                 }
-                (UnfoldingStateBuilder::default().flags(deeper_kind).bound_variables(bounded_variables).build().unwrap(), formula)
+                // (, formula)
+                let passing = UnfoldingStateBuilder::default().flags(deeper_kind).bound_variables(bounded_variables).build().unwrap();
+                logic_formula::Content::Next { formula, passing }
             }).collect_vec();
-
-        FormulaIterator {
-            pile: StackBox::new(pile),
-            passed_along: None,
-            flags: IteratorFlags::default(),
-            f: move |state: UnfoldingState<'bump>, f| {
-                trace!("{x} ⊑ {}", &f);
-                let inner_iter = UnfolderBuilder::default()
-                    .state(state.clone())
-                    .content(f.clone())
-                    .build()
-                    .unwrap()
-                    .unfold(steps.iter().cloned(), ptcl.graph())
-                    .into_iter()
-                    .map(|ec| ec.as_tuple());
-                let SubtermResult { unifier, nexts } = self.aux.is_subterm_and_next(x, &f);
-
-                let return_value = match unifier {
-                    None => None,
-                    Some(u) => {
-                        let mut guard = if_chain!(
-                            if let Some(ovs) = u.is_unifying_to_variable();
-                            if ovs.f() == x;
-                            then {
-                                vec![self.f_a(&realm, x.clone(), f.clone())]
-                            } else {
-                                u.as_equalities().unwrap()
-                            }
-                        );
-                        if keep_guard {
-                            guard.extend(state.condition().into_iter().cloned())
-                        }
-                        let formula = formula::ands(guard);
-                        trace!("{formula}");
-                        Some((state.owned_bound_variable(), formula))
-                    }
-                };
-
-                (
-                    return_value,
-                    inner_iter.chain(repeat_n_zip(state.clone(), nexts)),
-                )
+        OwnedPile::new(
+            pile,
+            PreprocessTermIterator {
+                subterm: self,
+                ptcl,
+                realm,
+                x,
+                keep_guard,
             },
-        }
+        )
     }
 
     pub fn f_a<V>(&self, env: &impl KnowsRealm, x: V, m: V) -> ARichFormula<'bump>
@@ -587,18 +549,12 @@ where
 
 fn check_variable_collision(x: &ARichFormula<'_>, m: &ARichFormula<'_>) -> bool {
     let varx = x
-        .get_used_variables()
-        .iter()
+        .used_vars_iter()
         .map(|v| v.id)
         .minmax()
         .into_option()
         .map(|(a, b)| a..=b);
-    let varm = m
-        .get_used_variables()
-        .iter()
-        .map(|v| v.id)
-        .minmax()
-        .into_option();
+    let varm = m.used_vars_iter().map(|v| v.id).minmax().into_option();
     match (varx, varm) {
         (Some(r), Some((vminm, vmaxm))) if r.contains(&vminm) || r.contains(&vmaxm) => {
             warn!(
@@ -618,8 +574,7 @@ fn check_variable_collision(x: &ARichFormula<'_>, m: &ARichFormula<'_>) -> bool 
 
 fn check_variable_collision_list(x: &ARichFormula<'_>, m: &[Variable<'_>]) -> bool {
     let varx = x
-        .get_used_variables()
-        .iter()
+        .used_vars_iter()
         .map(|v| v.id)
         .minmax()
         .into_option()
@@ -732,11 +687,7 @@ impl<'bump> From<ARichFormula<'bump>> for FormlAndVars<'bump> {
 pub fn into_exist_formula<'bump>(
     f: implvec!((Rc<[Variable<'bump>]>, ARichFormula<'bump>)),
 ) -> ARichFormula<'bump> {
-    // let (vars, ors): (Vec<_>, Vec<_>) = f.into_iter().unzip();
-    // let vars = vars.iter().flat_map(|v| v.iter()).cloned().unique();
-    // let ors =
     let content = f.into_iter().unique().collect_vec();
-    // (variables, list of formula_idx that depend on it)
     let mut vars = BTreeMap::new();
 
     for (i, (inner_vars, _)) in content.iter().enumerate() {
@@ -814,5 +765,74 @@ pub fn into_exist_formula<'bump>(
             );
             formula::ors(ors)
         }
+    }
+}
+
+struct PreprocessTermIterator<'a, 'bump, Aux>
+where
+    Aux: SubtermAux<'bump>,
+{
+    subterm: &'a Subterm<'bump, Aux>,
+    ptcl: &'a Protocol<'bump>,
+    realm: Realm,
+    x: &'a ARichFormula<'bump>,
+    keep_guard: bool,
+}
+
+impl<'a, 'bump, Aux> FormulaIterator<ARichFormula<'bump>> for PreprocessTermIterator<'a, 'bump, Aux>
+where
+    Aux: SubtermAux<'bump>,
+{
+    type Passing = UnfoldingState<'bump>;
+
+    type U = (Rc<[Variable<'bump>]>, ARichFormula<'bump>);
+
+    fn next<H>(&mut self, f: ARichFormula<'bump>, state: &Self::Passing, helper: &mut H)
+    where
+        H: logic_formula::IteratorHelper<
+            F = ARichFormula<'bump>,
+            Passing = Self::Passing,
+            U = Self::U,
+        >,
+    {
+        trace!("{} ⊑ {}", self.x, &f);
+
+        // if this term "hides" some other terms to look for (e.g., macros, quantifiers) we queue them
+        helper.extend_child(
+            UnfolderBuilder::default()
+                .state(state.clone())
+                .content(f.clone())
+                .build()
+                .unwrap()
+                .unfold(self.ptcl.steps().iter().cloned(), self.ptcl.graph())
+                .into_iter()
+                .map(|ec| ec.as_tuple()),
+        );
+
+        let SubtermResult { unifier, nexts } = self.subterm.aux.is_subterm_and_next(self.x, &f);
+        unifier
+            .map(|u| {
+                let mut guard = if_chain!(
+                    if let Some(ovs) = u.is_unifying_to_variable();
+                    if ovs.f() == self.x;
+                    then {
+                        vec![self.subterm.f_a(&self.realm, self.x.clone(), f.clone())]
+                    } else {
+                        u.as_equalities().unwrap()
+                    }
+                );
+                if self.keep_guard {
+                    guard.extend(state.condition().into_iter().cloned())
+                }
+                let formula = formula::ands(guard);
+                trace!("{formula}");
+                (state.owned_bound_variable(), formula)
+            })
+            .into_iter()
+            .for_each(|r| {
+                helper.push_result(r);
+            });
+
+        helper.extend_child_same_passing(nexts, &state);
     }
 }

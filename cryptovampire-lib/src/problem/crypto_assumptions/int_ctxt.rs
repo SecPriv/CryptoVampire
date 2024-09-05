@@ -1,9 +1,10 @@
-use std::{cell::RefCell, collections::BTreeSet, hash::Hash, sync::Arc};
+use std::{collections::BTreeSet, hash::Hash, sync::Arc};
 
 use if_chain::if_chain;
 use itertools::Itertools;
 
 use crate::formula::utils::Applicable;
+use crate::formula::variable::IntoVariableIter;
 use crate::subterm::{
     into_exist_formula,
     kind::SubtermKindConstr,
@@ -29,6 +30,7 @@ use crate::{
     problem::{generator::Generator, problem::Problem},
     static_signature,
 };
+use logic_formula::Formula;
 use utils::arc_into_iter::ArcIntoIter;
 
 pub type SubtermIntCtxtMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
@@ -178,11 +180,11 @@ impl<'bump> IntCtxt<'bump> {
         let mut side_condition = true;
         let max_var = pbl.max_var();
         // let pile1 = RefCell::new(Vec::new());
-        let pile2 = RefCell::new(Vec::new());
+        // let pile2 = RefCell::new(Vec::new());
         let realm = env.get_realm();
         let candidates_verif = pbl
             .list_top_level_terms()
-            .flat_map(move |f: &ARichFormula<'bump>| f.iter()) // sad...
+            // .flat_map(move |f: &ARichFormula<'bump>| f.iter()) // sad...
             .filter_map(|formula| match formula.as_ref() {
                 RichFormula::Fun(fun, args) => {
                     if_chain! {
@@ -206,7 +208,7 @@ impl<'bump> IntCtxt<'bump> {
         // with variables unchanged
         let candidates_enc = pbl
             .list_top_level_terms()
-            .flat_map(move |f| f.iter()) // sad...
+            // .flat_map(move |f| f.iter()) // sad...
             .filter_map(|formula| match formula.as_ref() {
                 RichFormula::Fun(fun, args) => {
                     if fun == &self.enc {
@@ -241,18 +243,19 @@ impl<'bump> IntCtxt<'bump> {
         let candidates = candidates_verif.into_iter().filter_map(
             move |IntCtxtVerifCandidates { cipher, key }| {
                 let array = [&cipher, &key];
-                let max_var = std::cmp::max(
-                    array
-                        .iter()
-                        .flat_map(|f| f.used_variables_iter_with_pile(pile2.borrow_mut()))
-                        .map(|Variable { id, .. }| id)
-                        .max()
-                        .unwrap_or(0),
-                    max_var,
-                ) + 1;
+                // let max_var = std::cmp::max(
+                //     array
+                //         .iter()
+                //         .flat_map(|f| f.used_variables_iter_with_pile(pile2.borrow_mut()))
+                //         .map(|Variable { id, .. }| id)
+                //         .max()
+                //         .unwrap_or(0),
+                //     max_var,
+                // ) + 1;
+                let max_var = array.iter().map(|f| *f).max_var_or_max(max_var);
                 let free_vars = array
                     .iter()
-                    .flat_map(|f| f.get_free_vars().into_iter())
+                    .flat_map(|f| (*f).free_vars_iter())
                     // .cloned()
                     .unique();
                 let u_var = Variable::new(max_var, MESSAGE.as_sort());
@@ -335,7 +338,7 @@ impl<'bump> IntCtxt<'bump> {
                                     let free_vars = BTreeSet::from_iter(
                                         [&r1, &m1, &k1, &r2, &m2, &r2]
                                             .into_iter()
-                                            .flat_map(|f| f.get_free_vars().into_iter()),
+                                            .flat_map(|f| f.free_vars_iter()),
                                     );
 
                                     Some(forall(

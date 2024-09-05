@@ -6,7 +6,7 @@ use std::{
     },
 };
 
-use itertools::Itertools;
+use itertools::{Either, Itertools};
 
 use crate::formula::{
     formula::ARichFormula,
@@ -97,7 +97,7 @@ pub fn get_next_quantifer_id() -> usize {
     let id = N_QUANTIFIERS.fetch_add(1, atomic::Ordering::AcqRel);
     if id == usize::MAX {
         panic!(
-            "what do you think you're doing ??? {} quantifiers should be enough !\nI can't ensure that the soundness of future quantifier, so I stop here.",
+            "what do you think you're doing??? {} quantifiers should be enough!\nI can't ensure that the soundness of future quantifier, so I stop here.",
             usize::MAX - 1
         )
     }
@@ -106,16 +106,23 @@ pub fn get_next_quantifer_id() -> usize {
 
 impl<'bump> Quantifier<'bump> {
     pub fn get_content(&self) -> Box<[ARichFormula<'bump>]> {
+        self.get_content_iter().cloned().collect()
+    }
+
+    pub fn get_content_iter<'a>(
+        &'a self,
+    ) -> impl Iterator<Item = &'a ARichFormula<'bump>> + ExactSizeIterator {
         match &self.inner {
             InnerQuantifier::Forall { content } | InnerQuantifier::Exists { content } => {
-                Box::new([content.shallow_copy()])
+                Either::Left([content])
             }
             InnerQuantifier::FindSuchThat {
                 condition,
                 success,
                 faillure,
-            } => Box::new([condition, success, faillure].map(|fa| fa.shallow_copy())),
+            } => Either::Right([condition, success, faillure]),
         }
+        .into_iter()
     }
 
     pub fn inner(&self) -> &InnerQuantifier<'bump> {

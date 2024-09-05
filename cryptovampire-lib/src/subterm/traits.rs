@@ -11,10 +11,7 @@ use utils::arc_into_iter::ArcIntoIter;
 // use self::possibly_empty::PE;
 
 #[derive(Debug, Clone)]
-pub struct SubtermResult<'bump, I>
-where
-    I: IntoIterator<Item = ARichFormula<'bump>>,
-{
+pub struct SubtermResult<'bump, I> {
     pub unifier: Option<Unifier<'bump>>,
     pub nexts: I,
 }

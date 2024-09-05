@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use itertools::Itertools;
 use log::{debug, log_enabled, trace};
+use logic_formula::Formula;
 
 use crate::container::allocator::{ContainerTools, Residual};
 use crate::container::contained::Containable;
@@ -214,8 +215,8 @@ impl<'bump> Function<'bump> {
 
         let bound_variables = Arc::clone(q.get_variables());
 
-        let free_variables = arg
-            .get_free_vars()
+        let free_variables = (&arg)
+            .free_vars_iter()
             .into_iter()
             .filter(|v| !bound_variables.contains(v))
             .collect();
@@ -248,7 +249,7 @@ impl<'bump> Function<'bump> {
 
         let free_variables: Arc<[_]> = [&condition, &success, &faillure]
             .into_iter()
-            .flat_map(|f| f.get_free_vars().into_iter())
+            .flat_map(|f| f.free_vars_iter())
             .filter(|v| !vars.contains(v))
             .unique()
             .collect();

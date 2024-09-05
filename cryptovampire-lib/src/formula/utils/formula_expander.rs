@@ -286,9 +286,9 @@ impl<'bump> Unfolder<'bump> {
         .collect()
     }
 
-    pub fn as_tuple(self) -> (UnfoldingState<'bump>, ARichFormula<'bump>) {
+    pub fn as_tuple(self) -> (ARichFormula<'bump>, UnfoldingState<'bump>) {
         let Unfolder { state, content } = self;
-        (state, content)
+        (content, state)
     }
 }
 

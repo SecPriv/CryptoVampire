@@ -9,6 +9,7 @@ authors = ["Simon Jeanteur <simon.jeanteur@tuwien.ac.at>"]
 [dependencies]
 cryptovampire-lib = { path = "../cryptovampire-lib"}
 utils = { path = "../utils" }
+logic_formula = {path = "../logic_formula", features = ["serde"]}
 
 itertools = { workspace = true }
 if_chain = { workspace = true }
