@@ -13,7 +13,10 @@ use crate::formula::{function::Function, quantifier::Quantifier, utils::Applicab
 use super::{Expander, RichFormula};
 use itertools::Either;
 use logic_formula::{Destructed, Formula, Head};
-use utils::utils::MaybeInvalid;
+use utils::{
+    arc_into_iter::{ArcIntoIter, ClonableArc},
+    utils::MaybeInvalid,
+};
 
 use std::sync::Arc;
 
@@ -188,6 +191,31 @@ impl<'a, 'bump> logic_formula::Formula for &'a ARichFormula<'bump> {
             RichFormula::Quantifier(q, arg) => Destructed {
                 head: Head::<&'a ARichFormula<'bump>>::Quant(q.clone()),
                 args: Either::Right(Either::Right([arg].into_iter())),
+            },
+        }
+    }
+}
+
+impl<'bump> logic_formula::Formula for ARichFormula<'bump> {
+    type Var = Variable<'bump>;
+
+    type Fun = Function<'bump>;
+
+    type Quant = Quantifier<'bump>;
+
+    fn destruct(self) -> logic_formula::Destructed<Self, impl Iterator<Item = Self>> {
+        match self.as_ref() {
+            RichFormula::Var(v) => Destructed {
+                head: Head::<ARichFormula<'bump>>::Var(*v),
+                args: Either::Left(ArcIntoIter::empty()),
+            },
+            RichFormula::Fun(f, args) => Destructed {
+                head: Head::<ARichFormula<'bump>>::Fun(*f),
+                args: Either::Left(ArcIntoIter::from(args)),
+            },
+            RichFormula::Quantifier(q, arg) => Destructed {
+                head: Head::<ARichFormula<'bump>>::Quant(q.clone()),
+                args: Either::Right([arg.shallow_copy()].into_iter()),
             },
         }
     }

@@ -215,7 +215,7 @@ impl<'bump> Function<'bump> {
 
         let bound_variables = Arc::clone(q.get_variables());
 
-        let free_variables = arg
+        let free_variables = (&arg)
             .free_vars_iter()
             .into_iter()
             .filter(|v| !bound_variables.contains(v))
