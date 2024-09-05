@@ -48,6 +48,7 @@ impl<'bump> Unfolding<'bump> {
     pub fn use_recusive_def(&self) -> bool {
         self.exec().is_some() && self.flags().contains(CryptoFlag::RECURSIVE_EXEC)
     }
+
     pub fn use_direct_def(&self) -> bool {
         self.exec().is_some()
             && (self.flags().contains(CryptoFlag::DIRECT_EXEC)
@@ -61,11 +62,62 @@ impl<'bump> Unfolding<'bump> {
         _: &Environement<'bump>,
         pbl: &Problem<'bump>,
     ) {
+        assertions.extend(chain! {
+          [Axiom::Comment("unfolding".into())],
+          self.generate_msg_cond(pbl), self.generate_exec(pbl)
+        })
+    }
+
+    fn generate_exec<'a>(
+        &'a self,
+        pbl: &'a Problem<'bump>,
+    ) -> impl Iterator<Item = Axiom<'bump>> + 'a {
         let ev = pbl.evaluator();
         let step = STEP.as_sort();
-        // message & condition
-        let iter_msg_cond = pbl
-            .protocol()
+
+        self.exec()
+            .into_iter()
+            .flat_map(move |exec| {
+                let recusive = self
+                    .use_recusive_def()
+                    .then(move || {
+                        pbl.protocol().steps_without_init().iter().map(move |s| {
+                            let tau = s.into_formula();
+                            mforall!(s.free_variables().iter().cloned(), {
+                                HAPPENS.f([tau.clone()])
+                                    >> meq(
+                                        ev.eval(exec.f([tau.clone()])),
+                                        ev.eval(self.cond().f([tau.clone()]))
+                                            & ev.eval(exec.f([PRED.f([tau.clone()])])),
+                                    )
+                            })
+                        })
+                    })
+                    .into_iter()
+                    .flatten();
+
+                let direct = self.use_direct_def().then(|| {
+                    mforall!(s!1:step; {HAPPENS.f([s]) >>
+                  meq(ev.eval(exec.f([s])),
+                  mforall!(s2!2:step;
+                      {LESS_THAN_EQ_STEP.f([s2, s]) >> ev.eval(self.cond().f([s]))}))})
+                });
+
+                chain!(
+                    [ev.eval(exec.f([pbl.protocol().init_step().into_formula()]))],
+                    recusive,
+                    direct
+                )
+            })
+            .map(Axiom::base)
+    }
+
+    fn generate_msg_cond<'a>(
+        &'a self,
+        pbl: &'a Problem<'bump>,
+    ) -> impl Iterator<Item = Axiom<'bump>> + 'a {
+        let ev = pbl.evaluator();
+        pbl.protocol()
             .steps()
             .iter()
             .map(|s| {
@@ -81,48 +133,6 @@ impl<'bump> Unfolding<'bump> {
                             & meq(ev.eval(self.msg().f([tau.clone()])), ev.eval(msg)))
                 })
             })
-            .map(Axiom::base);
-
-        let iter_exec = self.exec().into_iter().flat_map(|exec| {
-            let recusive = self
-                .use_recusive_def()
-                .then(move || {
-                    pbl.protocol()
-                        .steps_without_init()
-                        .iter()
-                        .map(move |s| {
-                            let tau = s.into_formula();
-                            mforall!(s.free_variables().iter().cloned(), {
-                                HAPPENS.f([tau.clone()])
-                                    >> meq(
-                                        ev.eval(exec.f([tau.clone()])),
-                                        ev.eval(self.cond().f([tau.clone()]))
-                                            & ev.eval(exec.f([PRED.f([tau.clone()])])),
-                                    )
-                            })
-                        })
-                })
-                .into_iter()
-                .flatten();
-
-            let direct = self.use_direct_def().then(|| {
-                mforall!(s!1:step; {HAPPENS.f([s]) >>
-                  meq(ev.eval(exec.f([s])),
-                  mforall!(s2!2:step;
-                      {LESS_THAN_EQ_STEP.f([s2, s]) >> ev.eval(self.cond().f([s]))}))})
-            });
-
-            chain!(
-              [ev.eval(exec.f([pbl.protocol().init_step().into_formula()]))],
-              recusive,
-              direct
-            )
-        }).map(Axiom::base);
-
-        assertions.extend(chain! {
-          [Axiom::Comment("unfolding".into())],
-          iter_msg_cond,
-          iter_exec
-        })
+            .map(Axiom::base)
     }
 }
