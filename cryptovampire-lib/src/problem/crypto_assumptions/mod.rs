@@ -31,7 +31,7 @@ pub use self::euf_cma::EufCma;
 pub use self::int_ctxt::IntCtxt;
 pub use self::nonce::Nonce;
 pub use self::uf_cma::UfCma;
-pub use unfolding::Unfolding;
+pub use unfolding::*;
 
 use super::generator::Generator;
 use super::problem::Problem;
@@ -44,6 +44,7 @@ pub enum CryptoAssumption<'bump> {
     IntCtxtSenc(IntCtxt<'bump>),
     Nonce(Nonce),
     MemoryCell(Cell),
+    Unfolding(Unfolding<'bump>)
 }
 
 impl<'bump> Generator<'bump> for CryptoAssumption<'bump> {
@@ -62,6 +63,7 @@ impl<'bump> Generator<'bump> for CryptoAssumption<'bump> {
             }
             CryptoAssumption::Nonce(nonce) => nonce.generate(assertions, declarations, env, pbl),
             CryptoAssumption::MemoryCell(cell) => cell.generate(assertions, declarations, env, pbl),
+            CryptoAssumption::Unfolding(u) => u.generate(assertions, declarations, env, pbl),
         }
     }
 }

@@ -35,7 +35,9 @@ impl<'bump> InstanceSearcher<'bump, VampireExec> for CryptoAssumption<'bump> {
             CryptoAssumption::UfCma(a) => a.search_instances(str, env),
             CryptoAssumption::EufCmaSign(a) => a.search_instances(str, env),
             CryptoAssumption::IntCtxtSenc(a) => a.search_instances(str, env),
-            CryptoAssumption::Nonce(_) | CryptoAssumption::MemoryCell(_) => vec![],
+            CryptoAssumption::Nonce(_)
+            | CryptoAssumption::MemoryCell(_)
+            | CryptoAssumption::Unfolding(_) => vec![],
         }
     }
 }

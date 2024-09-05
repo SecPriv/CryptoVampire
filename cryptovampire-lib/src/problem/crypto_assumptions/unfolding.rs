@@ -10,25 +10,32 @@ use crate::{
             builtin::{HAPPENS, LESS_THAN_EQ_STEP, LESS_THAN_STEP, PRED},
             Function,
         },
-        sort::builtins::STEP,
+        sort::builtins::{CONDITION, MESSAGE, STEP},
         utils::Applicable,
     },
     mforall,
-    problem::Problem,
+    problem::Problem, static_signature,
 };
 
 use super::CryptoFlag;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Builder)]
+static_signature!((pub) UNFOLDING_MESSAGE_SIGNATURE: (STEP) -> MESSAGE);
+static_signature!((pub) UNFOLDING_CONDITION_SIGNATURE: (STEP) -> CONDITION);
+static_signature!((pub) UNFOLDING_EXEC_SIGNATURE: (STEP) -> CONDITION);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Unfolding<'bump> {
     msg: Function<'bump>,
     cond: Function<'bump>,
     exec: Option<Function<'bump>>,
-    #[builder(default)]
     flags: CryptoFlag,
 }
 
 impl<'bump> Unfolding<'bump> {
+    pub fn new(msg: Function<'bump>, cond: Function<'bump>, exec: Option<Function<'bump>>, flags: CryptoFlag) -> Self {
+        Self { msg, cond, exec, flags }
+    }
+    
     pub fn flags(&self) -> CryptoFlag {
         self.flags
     }

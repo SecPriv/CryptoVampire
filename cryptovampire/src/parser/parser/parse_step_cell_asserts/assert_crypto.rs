@@ -10,13 +10,14 @@ use crate::{
     },
 };
 use cryptovampire_lib::{
-    environement::traits::Realm,
+    environement::{environement::Flags, traits::Realm},
     formula::function::signature::Signature,
     problem::crypto_assumptions::{
-        CryptoAssumption, EufCma, IntCtxt, Nonce, UfCmaBuilder, EUF_CMA_PK_SIGNATURE,
-        EUF_CMA_SIGN_SIGNATURE, EUF_CMA_VERIFY_SIGNATURE, INT_CTXT_DEC_SIGNATURE,
-        INT_CTXT_ENC_SIGNATURE, INT_CTXT_VERIFY_SIGNATURE, UF_CMA_MAC_SIGNATURE,
-        UF_CMA_VERIFY_SIGNATURE,
+        CryptoAssumption, CryptoFlag, EufCma, IntCtxt, Nonce, UfCmaBuilder, Unfolding,
+        EUF_CMA_PK_SIGNATURE, EUF_CMA_SIGN_SIGNATURE, EUF_CMA_VERIFY_SIGNATURE,
+        INT_CTXT_DEC_SIGNATURE, INT_CTXT_ENC_SIGNATURE, INT_CTXT_VERIFY_SIGNATURE,
+        UF_CMA_MAC_SIGNATURE, UF_CMA_VERIFY_SIGNATURE, UNFOLDING_CONDITION_SIGNATURE,
+        UNFOLDING_EXEC_SIGNATURE, UNFOLDING_MESSAGE_SIGNATURE,
     },
 };
 use utils::{destvec, implvec, string_ref::StrRef, traits::NicerError};
@@ -56,6 +57,7 @@ where
         "euf-cma" => parse_euf_cma(env, functions, options, *span),
         "uf-cma" => parse_uf_cma(env, functions, options, *span),
         "int-ctxt" => parse_int_ctxt(env, functions, *span),
+        "unfolding" => parse_unfolding(env, functions, options, *span),
         _ => name.span.bail_with(|| "unknown crypto assertion"),
     }
     .debug_continue()
@@ -121,13 +123,6 @@ where
             "wrong number of arguments: expected 2, got {:}",
             functions.len()
         )
-        // return Err(merr(
-        //     s,
-        //     format!(
-        //         "wrong number of arguments: expected 2, got {:}",
-        //         functions.len()
-        //     ),
-        // ));
     }
     if options.contains("hmac") {
         builder.hmac(true);
@@ -157,4 +152,43 @@ where
     verify_sign!(env; ast_verify, verify, INT_CTXT_VERIFY_SIGNATURE, 2);
 
     Ok(CryptoAssumption::IntCtxtSenc(IntCtxt { enc, dec, verify }))
+}
+
+fn parse_unfolding<'str, 'bump, S>(
+    env: &Environement<'bump, 'str, S>,
+    functions: &[ast::Function<'str, S>],
+    options: &Options<'str, S>,
+    s: Location<'str>,
+) -> MResult<CryptoAssumption<'bump>>
+where
+    S: Pstr,
+    for<'b> StrRef<'b>: From<&'b S>,
+{
+    destvec!([ast_msg, ast_cond, ..others] = functions);
+
+    verify_sign!(env; ast_msg, msg, UNFOLDING_MESSAGE_SIGNATURE, 1);
+    verify_sign!(env; ast_cond, cond, UNFOLDING_CONDITION_SIGNATURE, 1);
+
+    let exec = if let Some(ast_exec) = others.next() {
+        verify_sign!(env; ast_exec, exec, UNFOLDING_EXEC_SIGNATURE, 1);
+        Some(exec)
+    } else {
+        None
+    };
+
+    if others.next().is_some() {
+        bail_at!(s, "expected at most 3 parameters")
+    }
+
+    let mut flags = Default::default();
+    if options.contains("recurisve") {
+        flags |= CryptoFlag::RECURSIVE_EXEC
+    };
+    if options.contains("direct") {
+        flags |= CryptoFlag::DIRECT_EXEC
+    };
+
+    Ok(CryptoAssumption::Unfolding(Unfolding::new(
+        msg, cond, exec, flags,
+    )))
 }
