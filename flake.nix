@@ -51,6 +51,7 @@
               z3
               cvc5
               custom-pkgs.vampire-master
+              custom-pkgs.squirrel-prover
               rustfmt
               clippy
               rust-analyzer

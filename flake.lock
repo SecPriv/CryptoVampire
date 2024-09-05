@@ -4,13 +4,18 @@
       "inputs": {
         "custom": "custom_2",
         "flake-utils": "flake-utils_3",
-        "nixpkgs": "nixpkgs_2"
+        "nixpkgs": [
+          "custom",
+          "nixpkgs"
+        ]
       },
       "locked": {
-        "lastModified": 0,
-        "narHash": "sha256-tO6ID7jYktGz2+DbqUk1p+9u/MVkDZGBUwYJVdwD5s8=",
-        "path": "/nix/store/z9njva64hzmr1jpwdjp07npjfw88nyx8-source",
-        "type": "path"
+        "lastModified": 1724883544,
+        "narHash": "sha256-IcppOhpykDlMxFApw+0/5Yf7DFTg3hsGfzmSTEE8YUA=",
+        "owner": "SecPriv",
+        "repo": "CryptoVampire",
+        "rev": "140196476e4332164f2acb7a5dd4d232956aed88",
+        "type": "github"
       },
       "original": {
         "owner": "SecPriv",
@@ -326,22 +331,6 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1724819573,
-        "narHash": "sha256-GnR7/ibgIH1vhoy8cYdmXE6iyZqKqFxQSVkFgosBh6w=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "71e91c409d1e654808b2621f28a327acfdad8dc2",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "nixos-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
-    "nixpkgs_3": {
-      "locked": {
         "lastModified": 1682362401,
         "narHash": "sha256-/UMUHtF2CyYNl4b60Z2y4wwTTdIWGKhj9H301EDcT9M=",
         "owner": "nixos",
@@ -356,7 +345,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_4": {
+    "nixpkgs_3": {
       "locked": {
         "lastModified": 1724819573,
         "narHash": "sha256-GnR7/ibgIH1vhoy8cYdmXE6iyZqKqFxQSVkFgosBh6w=",
@@ -401,7 +390,7 @@
         "flake-compat": "flake-compat_2",
         "flake-utils": "flake-utils_5",
         "mirage-opam-overlays": "mirage-opam-overlays_2",
-        "nixpkgs": "nixpkgs_3",
+        "nixpkgs": "nixpkgs_2",
         "opam-overlays": "opam-overlays_2",
         "opam-repository": "opam-repository_2",
         "opam2json": "opam2json_2"
@@ -535,22 +524,21 @@
         "custom": "custom",
         "flake-utils": "flake-utils_6",
         "nix2container": "nix2container",
-        "nixpkgs": "nixpkgs_4"
+        "nixpkgs": "nixpkgs_3"
       }
     },
     "squirrel-prover-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1724854840,
-        "narHash": "sha256-ywr1NjwXXGnhuJSw+DPDMai4UfnpyFxVgsJyGImh8dE=",
+        "lastModified": 1724944712,
+        "narHash": "sha256-jJV5agBYFMYcUzcRZDTE9kKm4XSgUqKQXdAxVI+OQXM=",
         "owner": "puyral",
         "repo": "squirrel-prover",
-        "rev": "d7a0e2324c467f9874bee5d596f488ddf14363ab",
+        "rev": "8029db981569ea6171b2fd1ea5e2dda0dc61717c",
         "type": "github"
       },
       "original": {
-        "owner": "puyral",
-        "ref": "cryptovampire",
+        "owner": "squirrel-prover",
         "repo": "squirrel-prover",
         "type": "github"
       }
