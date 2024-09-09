@@ -10,10 +10,10 @@ pub struct DependancyFromStep<'bump> {
 }
 
 mod call;
-mod cell_or_input;
+mod macro_ref;
 mod graph;
 mod preprocessed_graph;
-pub use cell_or_input::CellOrInput;
+pub use macro_ref::MacroRef;
 pub use graph::DependancyGraph;
 pub use preprocessed_graph::PreprocessedDependancyGraph;
 

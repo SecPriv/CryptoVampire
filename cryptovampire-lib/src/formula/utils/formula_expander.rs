@@ -13,7 +13,7 @@ use crate::{
     },
     problem::{
         cell::{Assignement, MemoryCell},
-        cell_dependancies::{Ancestors, CellOrInput, PreprocessedDependancyGraph},
+        cell_dependancies::{Ancestors, MacroRef, PreprocessedDependancyGraph},
         step::Step,
     },
 };
@@ -238,7 +238,7 @@ impl<'bump> Unfolder<'bump> {
         args: &[ARichFormula<'bump>],
     ) -> Vec<Unfolder<'bump>> {
         let nstate = self.state.map_dk(|dk| dk - UnfoldFlags::MEMORY_CELLS);
-        unfold_cell_or_input(steps, graph, CellOrInput::Cell(c), &nstate, args.as_ref()).collect()
+        unfold_cell_or_input(steps, graph, MacroRef::Cell(c), &nstate, args.as_ref()).collect()
     }
 
     fn unfold_input(
@@ -248,7 +248,7 @@ impl<'bump> Unfolder<'bump> {
         args: &[ARichFormula<'bump>],
     ) -> Vec<Unfolder<'bump>> {
         let nstate = self.state.map_dk(|dk| dk - UnfoldFlags::INPUT);
-        unfold_cell_or_input(steps, graph, CellOrInput::Input, &nstate, args.as_ref()).collect()
+        unfold_cell_or_input(steps, graph, MacroRef::Input, &nstate, args.as_ref()).collect()
     }
 
     /// Expand a ta quantifier.
@@ -295,7 +295,7 @@ impl<'bump> Unfolder<'bump> {
 fn unfold_cell_or_input<'b, 'bump>(
     steps: impl IntoIterator<Item = Step<'bump>> + 'b,
     graph: &'b PreprocessedDependancyGraph<'bump>,
-    to_expand: CellOrInput<'bump>,
+    to_expand: MacroRef<'bump>,
     state: &'b UnfoldingState<'bump>,
     args: &'b [ARichFormula<'bump>],
 ) -> impl Iterator<Item = Unfolder<'bump>> + 'b

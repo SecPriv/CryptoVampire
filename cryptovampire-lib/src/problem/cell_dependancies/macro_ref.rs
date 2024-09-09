@@ -1,12 +1,13 @@
 use crate::problem::cell::MemoryCell;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-pub enum CellOrInput<'bump> {
+pub enum MacroRef<'bump> {
     Input,
+    Exec,
     Cell(MemoryCell<'bump>),
 }
 
-impl<'bump> CellOrInput<'bump> {
+impl<'bump> MacroRef<'bump> {
     #[must_use]
     pub fn into_option(self) -> Option<MemoryCell<'bump>> {
         self.into()
@@ -41,9 +42,17 @@ impl<'bump> CellOrInput<'bump> {
             Err(self)
         }
     }
+
+    /// Returns `true` if the macro ref is [`Exec`].
+    ///
+    /// [`Exec`]: MacroRef::Exec
+    #[must_use]
+    pub fn is_exec(&self) -> bool {
+        matches!(self, Self::Exec)
+    }
 }
 
-impl<'bump, F> From<Option<F>> for CellOrInput<'bump>
+impl<'bump, F> From<Option<F>> for MacroRef<'bump>
 where
     F: Into<MemoryCell<'bump>>,
 {
@@ -54,7 +63,7 @@ where
         }
     }
 }
-impl<'bump, F> From<F> for CellOrInput<'bump>
+impl<'bump, F> From<F> for MacroRef<'bump>
 where
     F: Into<MemoryCell<'bump>>,
 {
@@ -63,10 +72,10 @@ where
     }
 }
 
-impl<'bump> Into<Option<MemoryCell<'bump>>> for CellOrInput<'bump> {
+impl<'bump> Into<Option<MemoryCell<'bump>>> for MacroRef<'bump> {
     fn into(self) -> Option<MemoryCell<'bump>> {
         match self {
-            Self::Input => None,
+            Self::Input | Self::Exec => None,
             Self::Cell(x) => Some(x),
         }
     }

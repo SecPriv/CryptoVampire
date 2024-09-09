@@ -229,6 +229,11 @@ pub static MESSAGE_MACRO: Function<'static> = new_static_function(InnerFunction:
     TermAlgebra::Macro(Macro::Message),
 ));
 
+#[dynamic]
+pub static EXEC_MACRO: Function<'static> = new_static_function(InnerFunction::TermAlgebra(
+    TermAlgebra::Macro(Macro::Exec),
+));
+
 builtin!(
     AND,
     AND_TA,

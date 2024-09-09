@@ -199,7 +199,7 @@ pub fn generate<'bump>(
             InnerFunction::TermAlgebra(ta) => {
                 match ta {
                     TermAlgebra::Function(_) => continue, // already done
-                    TermAlgebra::Cell(_) | TermAlgebra::Input(_) | TermAlgebra::NameCaster(_) => continue, // nothing specific to be done here
+                    TermAlgebra::Cell(_) | TermAlgebra::Macro(_) | TermAlgebra::NameCaster(_) => continue, // nothing specific to be done here
                     TermAlgebra::IfThenElse(_) => {
                         assertions.push(Axiom::base(mforall!(c!0:cond, l!1:msg, r!2:msg; {
                             meq(pbl.evaluator().eval(function.f([c, l, r])),
@@ -208,103 +208,12 @@ pub fn generate<'bump>(
                     },
                     TermAlgebra::Quantifier(q) => generate_quantifier(assertions, declarations, env, pbl, function, q),
                     TermAlgebra::Condition(connective) => generate_connectives( function, connective, assertions, pbl, msg, cond),
-                    TermAlgebra::Macro(_) => continue, // dealt with by the unfold library
                 }
             }
             _ => continue,
         }
     }
 }
-
-/* fn symbolic_quantifiers(
-    assertions: &mut Vec<Axiom<'_>>,
-    pbl: &Problem<'_>,
-    env: &Environement<'_>,
-    declarations: &mut Vec<Declaration<'_>>,
-) {
-    assertions.extend(
-        pbl.functions
-            .iter()
-            .filter_map(|f| match f.as_inner() {
-                InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q)) => Some((f, q)),
-                _ => None,
-            })
-            .map(|(fun, q)| match q.inner() {
-                qi @ InnerQuantifier::Forall { content }
-                | qi @ InnerQuantifier::Exists { content } => {
-                    let content = super::assertion_preprocessor::propagate_evaluate(
-                        pbl.evaluator.eval(content).as_ref(),
-                        &pbl.evaluator,
-                    );
-
-                    let free_vars = q.free_variables.clone();
-                    let bound_vars = q.bound_variables.iter().cloned();
-
-                    forall(
-                        free_vars.iter().cloned(),
-                        pbl.evaluator.eval(fun.f_a(free_vars.iter()))
-                            >> match qi {
-                                InnerQuantifier::Forall { .. } => forall(bound_vars, content),
-                                InnerQuantifier::Exists { .. } => exists(bound_vars, content),
-                                _ => unreachable!(),
-                            },
-                    )
-                }
-                InnerQuantifier::FindSuchThat {
-                    condition,
-                    success,
-                    faillure,
-                } => {
-                    let free_vars = q.free_variables.clone();
-                    let bound_vars = q.bound_variables.iter().cloned().collect_vec();
-
-                    let (skolems_fun, idx): (Vec<_>, Vec<_>) = bound_vars
-                        .iter()
-                        .map(|&v| {
-                            (
-                                Function::new_skolem(
-                                    env.container,
-                                    free_vars.iter().map(|v| v.sort),
-                                    v.sort,
-                                ),
-                                v.id,
-                            )
-                        })
-                        .unzip();
-                    declarations.extend(skolems_fun.iter().map(|f| Declaration::FreeFunction(*f)));
-
-                    let skolems: VecRefClone<_> = skolems_fun
-                        .into_iter()
-                        .map(|f| f.f_a(free_vars.iter()))
-                        .collect();
-
-                    let substitution = FrozenSubst::new(idx.into(), skolems);
-
-                    let plain_condition = super::assertion_preprocessor::propagate_evaluate(
-                        pbl.evaluator.eval(condition).as_ref(),
-                        &pbl.evaluator,
-                    );
-                    let ite = [condition, success, faillure].map(|f| {
-                        super::assertion_preprocessor::propagate_evaluate(
-                            pbl.evaluator.eval(f).as_ref(),
-                            &pbl.evaluator,
-                        )
-                        .apply_substitution2(&substitution)
-                    });
-                    let condition = ite[0].shallow_copy();
-
-                    let evaluated_fndst = pbl.evaluator.eval(fun.f_a(free_vars.iter()));
-
-                    forall(
-                        free_vars.iter().cloned(),
-                        (meq(&evaluated_fndst, IF_THEN_ELSE.f_a(&ite)))
-                            & ((!condition) >> forall(bound_vars, !plain_condition)),
-                    )
-                }
-            })
-            .map(Axiom::base),
-    );
-} */
 
 fn generate_connectives<'bump>(
     function: &Function<'bump>,
