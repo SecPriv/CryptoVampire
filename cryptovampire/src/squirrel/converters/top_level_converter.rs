@@ -60,7 +60,7 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
         - [-] make init step; possibly not needed
         - [x] assert tuples
         - [x] assert crypto
-        - [ ] ordering
+        - [x] ordering
         - [ ] <> (i.e., !=); maybe using infix
     */
 

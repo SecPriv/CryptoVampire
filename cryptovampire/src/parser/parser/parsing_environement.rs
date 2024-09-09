@@ -295,6 +295,7 @@ where
     trace!("[P] parsing from ast...");
     let mut pbl_builder = ProblemBuilder::default();
     pbl_builder.container(container);
+
     let env = Environement::new(
         container,
         sort_hash,

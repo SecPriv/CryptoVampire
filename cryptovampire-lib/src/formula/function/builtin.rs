@@ -265,5 +265,6 @@ builtin!(
     OR_TA,
     PRED,
     CONDITION_MACRO,
-    MESSAGE_MACRO
+    MESSAGE_MACRO,
+    EXEC_MACRO
 );
