@@ -377,27 +377,34 @@ impl<'bump> UfCma<'bump> {
                             into_exist_formula(iter)
                         };
 
+                        let app_key = pbl.name_caster().cast(MESSAGE.as_sort(), key.clone());
                         if realm.is_symbolic_realm() {
                             Some(mforall!(free_vars, {
-                                pbl.evaluator().eval(self.verify.apply([
-                                    signature.clone(),
-                                    message.clone(),
-                                    pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),
-                                ])) >> mexists!([u_var], {
-                                    meq(pbl.evaluator().eval(u_var), pbl.evaluator().eval(&message))
-                                        & mformula
-                                })
+                                // pbl.evaluator().eval(self.verify.apply([
+                                //     signature.clone(),
+                                //     message.clone(),
+                                //     pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),
+                                // ]))
+                                self.apply_eval_verify(pbl, signature.clone(), message.clone(), app_key)
+                                    >> mexists!([u_var], {
+                                        meq(
+                                            pbl.evaluator().eval(u_var),
+                                            pbl.evaluator().eval(&message),
+                                        ) & mformula
+                                    })
                             }))
                         } else {
                             Some(mforall!(free_vars, {
-                                pbl.evaluator().eval(self.verify.apply([
-                                    signature.clone(),
-                                    message.clone(),
-                                    pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),
-                                ])) >> mformula.apply_substitution2(&OneVarSubst {
-                                    id: u_var.id,
-                                    f: message.clone(),
-                                })
+                                // pbl.evaluator().eval(self.verify.apply([
+                                //     signature.clone(),
+                                //     message.clone(),
+                                //     pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),
+                                // ]))
+                                self.apply_eval_verify(pbl, signature.clone(), message.clone(), app_key)
+                                    >> mformula.apply_substitution2(&OneVarSubst {
+                                        id: u_var.id,
+                                        f: message.clone(),
+                                    })
                             }))
                         }
                     } else {
@@ -408,6 +415,21 @@ impl<'bump> UfCma<'bump> {
 
         // [].into_iter()
         candidates
+    }
+
+    pub fn apply_eval_verify(
+        &self,
+        pbl: &Problem<'bump>,
+        signature: ARichFormula<'bump>,
+        message: ARichFormula<'bump>,
+        key: ARichFormula<'bump>,
+    ) -> ARichFormula<'bump> {
+        let ev = pbl.evaluator();
+        if self.is_hmac() {
+            meq(ev.eval(signature), ev.eval(self.mac.f([message, key])))
+        } else {
+            ev.eval(self.verify.f([signature, message, key]))
+        }
     }
 }
 

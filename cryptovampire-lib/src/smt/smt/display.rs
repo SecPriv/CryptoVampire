@@ -227,7 +227,7 @@ impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a Smt<'bump>> {
                     write!(f, "({} {}) ", v, v.sort)?;
                 }
                 let op = match rewrite_fun {
-                    RewriteKind::Bool => "=>".into(),
+                    RewriteKind::Bool => "=".into(),
                     RewriteKind::Other(f) => f.name(),
                 };
                 writeln!(f, ") ({} {} {})))", op, lhs.prop(*self), rhs.prop(*self))
