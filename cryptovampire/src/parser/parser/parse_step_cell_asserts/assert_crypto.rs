@@ -171,6 +171,7 @@ where
     if options.contains("recurisve") {
         flags |= CryptoFlag::RECURSIVE_EXEC
     };
+    // default
     if options.contains("direct") {
         flags |= CryptoFlag::DIRECT_EXEC
     };

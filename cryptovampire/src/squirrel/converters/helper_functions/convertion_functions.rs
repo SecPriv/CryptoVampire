@@ -153,7 +153,7 @@ pub fn convert_macro_application<'a, 'b>(
             //         Err(err_at!(@ "{msg}"))
             //     }
             // })
-            apply_fun(StrRef::from(p.name()), args, ctx)
+            apply_fun(symb.sanitized(&ctx), [timestamp], ctx)
         }
         Some(mmacro::Data::General(mmacro::GeneralMacro::Structured(_)))
         | Some(mmacro::Data::State(_)) => {
