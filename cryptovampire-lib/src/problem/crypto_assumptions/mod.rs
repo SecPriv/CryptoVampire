@@ -44,7 +44,7 @@ pub enum CryptoAssumption<'bump> {
     IntCtxtSenc(IntCtxt<'bump>),
     Nonce(Nonce),
     MemoryCell(Cell),
-    Unfolding(Unfolding<'bump>)
+    Unfolding(Unfolding<'bump>),
 }
 
 impl<'bump> Generator<'bump> for CryptoAssumption<'bump> {

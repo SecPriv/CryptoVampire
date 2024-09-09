@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 
-use derive_builder::Builder;
 use itertools::chain;
 
 use crate::{
@@ -10,8 +9,7 @@ use crate::{
         formula::meq,
         function::{
             builtin::{
-                CONDITION_MACRO, EXEC_MACRO, HAPPENS, LESS_THAN_EQ_STEP, LESS_THAN_STEP,
-                MESSAGE_MACRO, PRED,
+                CONDITION_MACRO, EXEC_MACRO, HAPPENS, LESS_THAN_EQ_STEP, MESSAGE_MACRO, PRED,
             },
             Function,
         },
@@ -72,8 +70,8 @@ impl<'bump> Unfolding<'bump> {
     pub fn use_direct_def(&self) -> bool {
         /* self.exec().is_some()
         && */
-        (self.flags().contains(CryptoFlag::DIRECT_EXEC)
-            || !self.flags().contains(CryptoFlag::RECURSIVE_EXEC))
+        self.flags().contains(CryptoFlag::DIRECT_EXEC)
+            || !self.flags().contains(CryptoFlag::RECURSIVE_EXEC)
     }
 
     pub fn generate(

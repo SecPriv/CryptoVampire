@@ -26,10 +26,7 @@ pub fn generate<'bump>(
     let gt = GREATER_THAN_STEP.clone();
     let happens = HAPPENS.clone();
     let step = STEP.clone();
-    let init = &pbl
-        .protocol()
-        .init_step()
-        .into_formula();
+    let init = &pbl.protocol().init_step().into_formula();
     let pred = PRED.clone();
 
     assertions.push(Axiom::comment("ordering"));

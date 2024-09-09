@@ -4,10 +4,8 @@ use crate::formula::function::inner::step::StepFunction;
 use crate::formula::function::inner::term_algebra::step_macro;
 use crate::formula::function::inner::term_algebra::TermAlgebra;
 use crate::problem::cell::Assignement;
-use crate::problem::step::InnerStep;
 
 use if_chain::if_chain;
-use logic_formula::outers::OwnedPile;
 use logic_formula::outers::RefPile;
 use logic_formula::Content;
 use logic_formula::FormulaIterator;

@@ -203,8 +203,7 @@ impl<'bump> DependancyGraph<'bump> {
                     .unwrap_or(input_edges.as_slice()) // if out of bound, it's an input
                     .iter()
                     .map(|ei| &self.edges[*ei])
-                    .map(|edge| edge.to.get_cell_idx().unwrap_or(input_idx))
-                    // .filter(|i| !visited[*i]),
+                    .map(|edge| edge.to.get_cell_idx().unwrap_or(input_idx)), // .filter(|i| !visited[*i]),
             )
         }
 

@@ -285,7 +285,7 @@ impl<'bump> Step<'bump> {
     }
 
     /// 'default' term representing this step
-    /// 
+    ///
     /// It applies the step function to its free variables
     pub fn into_formula(&self) -> ARichFormula<'bump> {
         self.function().f(self.free_variables())

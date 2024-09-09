@@ -10,14 +10,13 @@ use crate::{
     },
 };
 use cryptovampire_lib::{
-    environement::{environement::Flags, traits::Realm},
+    environement::traits::Realm,
     formula::function::signature::Signature,
     problem::crypto_assumptions::{
         CryptoAssumption, CryptoFlag, EufCma, IntCtxt, Nonce, UfCmaBuilder, Unfolding,
         EUF_CMA_PK_SIGNATURE, EUF_CMA_SIGN_SIGNATURE, EUF_CMA_VERIFY_SIGNATURE,
         INT_CTXT_DEC_SIGNATURE, INT_CTXT_ENC_SIGNATURE, INT_CTXT_VERIFY_SIGNATURE,
-        UF_CMA_MAC_SIGNATURE, UF_CMA_VERIFY_SIGNATURE, UNFOLDING_CONDITION_SIGNATURE,
-        UNFOLDING_EXEC_SIGNATURE, UNFOLDING_MESSAGE_SIGNATURE,
+        UF_CMA_MAC_SIGNATURE, UF_CMA_VERIFY_SIGNATURE,
     },
 };
 use utils::{destvec, implvec, string_ref::StrRef, traits::NicerError};
@@ -164,7 +163,7 @@ where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
 {
-    if !functions.is_empty(){
+    if !functions.is_empty() {
         bail_at!(s, "there should be no arguments")
     }
 
@@ -176,7 +175,5 @@ where
         flags |= CryptoFlag::DIRECT_EXEC
     };
 
-    Ok(CryptoAssumption::Unfolding(Unfolding::new(
-        flags,
-    )))
+    Ok(CryptoAssumption::Unfolding(Unfolding::new(flags)))
 }

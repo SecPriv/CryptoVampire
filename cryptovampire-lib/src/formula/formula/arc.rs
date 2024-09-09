@@ -1,5 +1,5 @@
 use std::{
-    borrow::{Borrow, Cow},
+    borrow::Borrow,
     fmt::Display,
     ops::{BitAnd, BitOr, Deref, Not, Shr},
 };
