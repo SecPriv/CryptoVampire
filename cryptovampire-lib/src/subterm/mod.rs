@@ -14,7 +14,7 @@ use log::{error, log_enabled, trace, warn};
 use logic_formula::outers::OwnedPile;
 use logic_formula::{Formula, FormulaIterator};
 
-use crate::formula::utils::formula_expander::{UnfolderBuilder, UnfoldingStateBuilder};
+use crate::formula::utils::formula_expander::{UnfolderBuilder, UnfoldingStateBuilder, NO_REC_MACRO};
 use crate::formula::utils::Applicable;
 use crate::formula::variable::IntoVariableIter;
 use crate::{
@@ -316,7 +316,7 @@ where
             formula,
             ptcl.list_top_level_terms_short_lifetime_and_bvars(),
             false,
-            UnfoldFlags::NO_MACROS,
+            NO_REC_MACRO,
         )
     }
 

@@ -155,7 +155,8 @@ where
 }
 
 fn parse_unfolding<'str, 'bump, S>(
-    env: &Environement<'bump, 'str, S>,
+    _env: &Environement<'bump, 'str, S>,
+    functions: &[ast::Function<'str, S>],
     options: &Options<'str, S>,
     s: Location<'str>,
 ) -> MResult<CryptoAssumption<'bump>>
@@ -163,20 +164,8 @@ where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
 {
-    destvec!([ast_msg, ast_cond, ..others] = functions);
-
-    verify_sign!(env; ast_msg, msg, UNFOLDING_MESSAGE_SIGNATURE, 1);
-    verify_sign!(env; ast_cond, cond, UNFOLDING_CONDITION_SIGNATURE, 1);
-
-    let exec = if let Some(ast_exec) = others.next() {
-        verify_sign!(env; ast_exec, exec, UNFOLDING_EXEC_SIGNATURE, 1);
-        Some(exec)
-    } else {
-        None
-    };
-
-    if others.next().is_some() {
-        bail_at!(s, "expected at most 3 parameters")
+    if !functions.is_empty(){
+        bail_at!(s, "there should be no arguments")
     }
 
     let mut flags = Default::default();

@@ -401,14 +401,14 @@ impl<'bump> Function<'bump> {
     }
 
     /// does this function hide something (ie. quantifier, memory cell, input,...)
-    pub fn need_extraction(&self) -> bool {
-        match self.as_inner() {
-            InnerFunction::TermAlgebra(TermAlgebra::Cell(_))
-            | InnerFunction::TermAlgebra(TermAlgebra::Quantifier(_))
-            | InnerFunction::TermAlgebra(TermAlgebra::Input(_)) => true,
-            _ => false,
-        }
-    }
+    // pub fn need_extraction(&self) -> bool {
+    //     match self.as_inner() {
+    //         InnerFunction::TermAlgebra(TermAlgebra::Cell(_))
+    //         | InnerFunction::TermAlgebra(TermAlgebra::Quantifier(_))
+    //         | InnerFunction::TermAlgebra(TermAlgebra::Input(_)) => true,
+    //         _ => false,
+    //     }
+    // }
 
     pub fn is_builtin(&self) -> bool {
         matches!(

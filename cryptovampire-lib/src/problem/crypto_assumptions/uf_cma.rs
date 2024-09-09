@@ -6,6 +6,7 @@ use itertools::{chain, Itertools};
 use log::trace;
 use static_init::dynamic;
 
+use crate::formula::utils::formula_expander::NO_REC_MACRO;
 use crate::formula::utils::Applicable;
 use crate::formula::variable::IntoVariableIter;
 use crate::{
@@ -112,7 +113,7 @@ impl<'bump> UfCma<'bump> {
             &kind,
             KeyAux::new(*self, pbl.owned_name_caster()),
             [self.mac, self.verify],
-            UnfoldFlags::NO_MACROS,
+            NO_REC_MACRO,
             |rc| Subsubterm::EufCmaMacKey(rc),
         );
 
@@ -359,7 +360,7 @@ impl<'bump> UfCma<'bump> {
                                 .list_top_level_terms_short_lifetime_and_bvars()
                                 .chain([&message, &signature].map(|t| t.shallow_copy().into())),
                             false,
-                            UnfoldFlags::NO_MACROS,
+                            NO_REC_MACRO,
                         )
                         .next()
                         .is_none();

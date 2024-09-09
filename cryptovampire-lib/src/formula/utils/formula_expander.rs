@@ -1,5 +1,6 @@
 use std::{rc::Rc, sync::Arc};
 
+use crate::formula::function::inner::term_algebra::step_macro::InputOrExec;
 use crate::formula::utils::Applicable;
 use crate::{
     formula::{
@@ -24,21 +25,27 @@ use bitflags::bitflags;
 use itertools::{chain, Itertools};
 use log::trace;
 bitflags! {
-        /// Some flags to control the search.
-        #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-        pub struct UnfoldFlags: u8 {
-                /// Look through ta quantifiers
-                const QUANTIFIER = 1 << 0;
-                /// Look through inputs
-                const INPUT = 1 << 1;
-                /// Look though memory cells
-                const MEMORY_CELLS = 1 << 2;
-                /// look though `cond` and `msg`
-                const STEP_MACROS = 1 << 3;
-                /// Don't look though anything that looks like a macro
-                const NO_MACROS = Self::QUANTIFIER.bits() | Self::STEP_MACROS.bits();
-        }
+    /// Some flags to control the search.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+    pub struct UnfoldFlags: u8 {
+        /// Look through ta quantifiers
+        const UNFOLD_TA_QUANTIFIER = 1 << 0;
+        /// Look through inputs
+        const UNFOLD_INPUT = 1 << 1;
+        /// Look though memory cells
+        const UNFOLD_MEMORY_CELLS = 1 << 2;
+        /// look though `cond` and `msg`
+        const UNFOLD_STEP_MACROS = 1 << 3;
+        /// Look through exec
+        const UNFOLD_EXEC = 1 << 4;
+    }
 }
+pub const REC_MACRO: UnfoldFlags = UnfoldFlags::UNFOLD_INPUT
+    .union(UnfoldFlags::UNFOLD_MEMORY_CELLS)
+    .union(UnfoldFlags::UNFOLD_STEP_MACROS);
+
+/// Don't look though anything that looks like a macro
+pub const NO_REC_MACRO: UnfoldFlags = UnfoldFlags::all().difference(REC_MACRO);
 
 /// State of the seach
 ///
@@ -163,13 +170,17 @@ impl<'bump> Unfolder<'bump> {
                 match fun.as_inner() {
 					InnerFunction::TermAlgebra(ta) => match ta {
 						TermAlgebra::Quantifier(q)
-							if deeper_kinds.contains(UnfoldFlags::QUANTIFIER) =>
+							if deeper_kinds.contains(UnfoldFlags::UNFOLD_TA_QUANTIFIER) =>
 						self.unfold_quantifier(q, args),
-						TermAlgebra::Input(_) if deeper_kinds.contains(UnfoldFlags::INPUT) => self.unfold_input(steps, graph, args),
 						TermAlgebra::Cell(c)
-							if deeper_kinds.contains(UnfoldFlags::MEMORY_CELLS) =>
+							if deeper_kinds.contains(UnfoldFlags::UNFOLD_MEMORY_CELLS) =>
 						self.unfold_cell(steps, graph, c.memory_cell(), args),
-                        TermAlgebra::Macro(kind) if deeper_kinds.contains(UnfoldFlags::STEP_MACROS) => self.unfold_step_macro(args, steps, kind),
+                        TermAlgebra::Macro(kind) if deeper_kinds.contains(kind.unfold_flag()) => {
+                            use step_macro::MacroKind;
+                            match kind.into_kind() {
+                            MacroKind::Step(kind) => self.unfold_step_macro(args, steps, kind),
+                            MacroKind::Rec(kind) => self.unfold_rec_macro(kind, steps, graph, args),
+                        } },
 
 						// writting everything down to get notified by the type checker in case of changes
 						TermAlgebra::Condition(_)
@@ -177,7 +188,6 @@ impl<'bump> Unfolder<'bump> {
 						| TermAlgebra::NameCaster(_)
 						| TermAlgebra::IfThenElse(_)
 						| TermAlgebra::Quantifier(_)
-						| TermAlgebra::Input(_)
 						| TermAlgebra::Cell(_)
                         | TermAlgebra::Macro(_) => vec![],
 					},
@@ -201,7 +211,7 @@ impl<'bump> Unfolder<'bump> {
         &self,
         args: &Arc<[ARichFormula<'bump>]>,
         steps: implvec!(Step<'bump>),
-        kind: &step_macro::Macro,
+        kind: step_macro::MessageOrCondition,
     ) -> Vec<Unfolder<'bump>> {
         destvec!([arg] = args);
         let state_variables = self.state.bound_variables();
@@ -209,8 +219,8 @@ impl<'bump> Unfolder<'bump> {
             .into_iter()
             .map(|s| {
                 let content = match kind {
-                    step_macro::Macro::Condition => s.condition_arc(),
-                    step_macro::Macro::Message => s.message_arc(),
+                    step_macro::MessageOrCondition::Condition => s.condition_arc(),
+                    step_macro::MessageOrCondition::Message => s.message_arc(),
                 }
                 .shallow_copy();
 
@@ -237,18 +247,21 @@ impl<'bump> Unfolder<'bump> {
         c: MemoryCell<'bump>,
         args: &[ARichFormula<'bump>],
     ) -> Vec<Unfolder<'bump>> {
-        let nstate = self.state.map_dk(|dk| dk - UnfoldFlags::MEMORY_CELLS);
+        let nstate = self
+            .state
+            .map_dk(|dk| dk - UnfoldFlags::UNFOLD_MEMORY_CELLS);
         unfold_cell_or_input(steps, graph, MacroRef::Cell(c), &nstate, args.as_ref()).collect()
     }
 
-    fn unfold_input(
+    fn unfold_rec_macro(
         &self,
+        kind: InputOrExec,
         steps: implvec!(Step<'bump>),
         graph: &PreprocessedDependancyGraph<'bump>,
         args: &[ARichFormula<'bump>],
     ) -> Vec<Unfolder<'bump>> {
-        let nstate = self.state.map_dk(|dk| dk - UnfoldFlags::INPUT);
-        unfold_cell_or_input(steps, graph, MacroRef::Input, &nstate, args.as_ref()).collect()
+        let nstate = self.state.map_dk(|dk| dk - kind.unfold_flag());
+        unfold_cell_or_input(steps, graph, kind.into_macro_ref(), &nstate, args.as_ref()).collect()
     }
 
     /// Expand a ta quantifier.
