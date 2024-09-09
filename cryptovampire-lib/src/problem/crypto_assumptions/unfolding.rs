@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use derive_builder::Builder;
 use itertools::chain;
 
@@ -7,14 +9,18 @@ use crate::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::meq,
         function::{
-            builtin::{HAPPENS, LESS_THAN_EQ_STEP, LESS_THAN_STEP, PRED},
+            builtin::{
+                CONDITION_MACRO, EXEC_MACRO, HAPPENS, LESS_THAN_EQ_STEP, LESS_THAN_STEP,
+                MESSAGE_MACRO, PRED,
+            },
             Function,
         },
         sort::builtins::{CONDITION, MESSAGE, STEP},
         utils::Applicable,
     },
     mforall,
-    problem::Problem, static_signature,
+    problem::Problem,
+    static_signature,
 };
 
 use super::CryptoFlag;
@@ -25,41 +31,49 @@ static_signature!((pub) UNFOLDING_EXEC_SIGNATURE: (STEP) -> CONDITION);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Unfolding<'bump> {
-    msg: Function<'bump>,
-    cond: Function<'bump>,
-    exec: Option<Function<'bump>>,
+    // msg: Function<'bump>,
+    // cond: Function<'bump>,
+    // exec: Option<Function<'bump>>,
     flags: CryptoFlag,
+    lt: PhantomData<Function<'bump>>,
 }
 
 impl<'bump> Unfolding<'bump> {
-    pub fn new(msg: Function<'bump>, cond: Function<'bump>, exec: Option<Function<'bump>>, flags: CryptoFlag) -> Self {
-        Self { msg, cond, exec, flags }
+    pub fn new(flags: CryptoFlag) -> Self {
+        Self {
+            flags,
+            lt: Default::default(),
+        }
     }
-    
+
     pub fn flags(&self) -> CryptoFlag {
         self.flags
     }
 
-    pub fn exec(&self) -> Option<Function<'bump>> {
-        self.exec
+    pub fn exec(&self) -> Function<'bump> {
+        EXEC_MACRO.clone()
     }
 
     pub fn cond(&self) -> Function<'bump> {
-        self.cond
+        // self.cond
+        CONDITION_MACRO.clone()
     }
 
     pub fn msg(&self) -> Function<'bump> {
-        self.msg
+        // self.msg
+        MESSAGE_MACRO.clone()
     }
 
     pub fn use_recusive_def(&self) -> bool {
-        self.exec().is_some() && self.flags().contains(CryptoFlag::RECURSIVE_EXEC)
+        /* self.exec().is_some() && */
+        self.flags().contains(CryptoFlag::RECURSIVE_EXEC)
     }
 
     pub fn use_direct_def(&self) -> bool {
-        self.exec().is_some()
-            && (self.flags().contains(CryptoFlag::DIRECT_EXEC)
-                || !self.flags().contains(CryptoFlag::RECURSIVE_EXEC))
+        /* self.exec().is_some()
+        && */
+        (self.flags().contains(CryptoFlag::DIRECT_EXEC)
+            || !self.flags().contains(CryptoFlag::RECURSIVE_EXEC))
     }
 
     pub fn generate(
@@ -81,42 +95,41 @@ impl<'bump> Unfolding<'bump> {
     ) -> impl Iterator<Item = Axiom<'bump>> + 'a {
         let ev = pbl.evaluator();
         let step = STEP.as_sort();
+        let exec = self.exec();
 
-        self.exec()
-            .into_iter()
-            .flat_map(move |exec| {
-                let recusive = self
-                    .use_recusive_def()
-                    .then(move || {
-                        pbl.protocol().steps_without_init().iter().map(move |s| {
-                            let tau = s.into_formula();
-                            mforall!(s.free_variables().iter().cloned(), {
-                                HAPPENS.f([tau.clone()])
-                                    >> meq(
-                                        ev.eval(exec.f([tau.clone()])),
-                                        ev.eval(self.cond().f([tau.clone()]))
-                                            & ev.eval(exec.f([PRED.f([tau.clone()])])),
-                                    )
-                            })
+        {
+            let recusive = self
+                .use_recusive_def()
+                .then(move || {
+                    pbl.protocol().steps_without_init().iter().map(move |s| {
+                        let tau = s.into_formula();
+                        mforall!(s.free_variables().iter().cloned(), {
+                            HAPPENS.f([tau.clone()])
+                                >> meq(
+                                    ev.eval(exec.f([tau.clone()])),
+                                    ev.eval(self.cond().f([tau.clone()]))
+                                        & ev.eval(exec.f([PRED.f([tau.clone()])])),
+                                )
                         })
                     })
-                    .into_iter()
-                    .flatten();
+                })
+                .into_iter()
+                .flatten();
 
-                let direct = self.use_direct_def().then(|| {
-                    mforall!(s!1:step; {HAPPENS.f([s]) >>
+            let direct = self.use_direct_def().then(|| {
+                mforall!(s!1:step; {HAPPENS.f([s]) >>
                   meq(ev.eval(exec.f([s])),
                   mforall!(s2!2:step;
                       {LESS_THAN_EQ_STEP.f([s2, s]) >> ev.eval(self.cond().f([s]))}))})
-                });
+            });
 
-                chain!(
-                    [ev.eval(exec.f([pbl.protocol().init_step().into_formula()]))],
-                    recusive,
-                    direct
-                )
-            })
-            .map(Axiom::base)
+            chain!(
+                [ev.eval(exec.f([pbl.protocol().init_step().into_formula()]))],
+                recusive,
+                direct
+            )
+        }
+        .map(Axiom::base)
     }
 
     fn generate_msg_cond<'a>(

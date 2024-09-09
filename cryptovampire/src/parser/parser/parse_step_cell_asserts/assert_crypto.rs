@@ -156,7 +156,6 @@ where
 
 fn parse_unfolding<'str, 'bump, S>(
     env: &Environement<'bump, 'str, S>,
-    functions: &[ast::Function<'str, S>],
     options: &Options<'str, S>,
     s: Location<'str>,
 ) -> MResult<CryptoAssumption<'bump>>
@@ -189,6 +188,6 @@ where
     };
 
     Ok(CryptoAssumption::Unfolding(Unfolding::new(
-        msg, cond, exec, flags,
+        flags,
     )))
 }
