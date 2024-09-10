@@ -105,12 +105,14 @@ axiom orderEqSucc (n1,n2:message):
 lemma orderBetween (n1,n2:message) :
  (n1 ~< n2) => (n2 ~< mySucc(n1)) => false.
 Proof.
-  intro Ord1 Ord2. 
+  (*intro Ord1 Ord2. 
   use orderEqSucc with n2, n1 => //.
   case H. 
     + by apply orderStrict in Ord1. 
     + use orderTrans with n1, n2, n1 => //. 
-      by apply orderStrict in H0. 
+      by apply orderStrict in H0. *)
+  use orderEqSucc. use orderStrict. use orderTrans.
+  cryptovampire.
 Qed.
 
 
@@ -122,8 +124,10 @@ lemma counterIncreaseUpdateSA(i,j:index):
   cond@SenderA(i,j) =>
   cellA(i)@pred(SenderA(i,j)) ~< cellA(i)@SenderA(i,j).
 Proof.
-  intro Hap Hcond @/cellA.
-  by apply orderSucc.
+  (* intro Hap Hcond @/cellA.
+  by apply orderSucc.*)
+  use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
+  cryptovampire.
 Qed.
 
 lemma counterIncreaseUpdateRA(i,j:index):
@@ -131,8 +135,10 @@ lemma counterIncreaseUpdateRA(i,j:index):
   cond@ReceiverA(i,j) =>
   cellA(i)@pred(ReceiverA(i,j)) ~< cellA(i)@ReceiverA(i,j).
 Proof.
-  intro Hap Hcond @/cellA.
-  by apply orderSucc.
+  (* intro Hap Hcond @/cellA.
+  by apply orderSucc. *)
+  use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
+  cryptovampire.
 Qed.
 
 
@@ -144,8 +150,10 @@ lemma counterIncreaseUpdateSB(i,j:index):
   cond@SenderB(i,j) =>
   cellB(i)@pred(SenderB(i,j)) ~< cellB(i)@SenderB(i,j).
 Proof.
-  intro Hap Hcond @/cellB.
-  by apply orderSucc. 
+  (* intro Hap Hcond @/cellB.
+  by apply orderSucc. *)
+  use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
+  cryptovampire.
 Qed.
 
 lemma counterIncreaseUpdateRB(i,j:index):
@@ -153,8 +161,10 @@ lemma counterIncreaseUpdateRB(i,j:index):
   cond@ReceiverB(i,j) =>
   cellB(i)@pred(ReceiverB(i,j)) ~< cellB(i)@ReceiverB(i,j).
 Proof.
-  intro Hap Hcond @/cellB.
-  by apply orderSucc. 
+  (*intro Hap Hcond @/cellB.
+  by apply orderSucc. *)
+  use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
+  cryptovampire.
 Qed.
 
 
@@ -167,7 +177,7 @@ lemma ScounterIncreasePredB(t:timestamp, i:index):
   exec@t =>
   (cellB(i)@t = mySucc(cellB(i)@pred(t)) || cellB(i)@t= cellB(i)@pred(t)).
 Proof.
-  intro Hap Ht Hexec.
+  (* intro Hap Ht Hexec.
   case t => // [i0 j _]. 
     (* Receiver *)
     + case (i = i0) => _. 
@@ -180,7 +190,9 @@ Proof.
       - left. 
         by rewrite /cellB if_true. 
       - right. 
-        by rewrite /cellB if_false. 
+        by rewrite /cellB if_false. *)
+  use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
+  cryptovampire.
 Qed.
 
 
@@ -190,7 +202,7 @@ lemma ScounterIncreasePredA(t:timestamp, i:index):
   exec@t =>
   (cellA(i)@t = mySucc(cellA(i)@pred(t)) || cellA(i)@t= cellA(i)@pred(t)).
 Proof.
-  intro Hap Ht Hexec.
+  (*intro Hap Ht Hexec.
   case t => // [i0 j _].
   (* Receiver *)
     + case (i = i0) => _.
@@ -203,7 +215,9 @@ Proof.
       - left. 
         by rewrite /cellA if_true. 
       - right. 
-        by rewrite /cellA if_false. 
+        by rewrite /cellA if_false. *)
+  use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
+  cryptovampire.
 Qed.
 
 
@@ -214,11 +228,13 @@ lemma counterIncreasePredA(t:timestamp, i:index):
     ( cellA(i)@pred(t) ~< cellA(i)@t
       || cellA(i)@pred(t) = cellA(i)@t ).
 Proof.
-  intro Hap [Ht Hexec].
+  (*intro Hap [Ht Hexec].
   use ScounterIncreasePredA with t, i => //.
   case H.
     + by left; rewrite H; apply orderSucc.
-    + by right.
+    + by right.*)
+  use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
+  cryptovampire.
 Qed.
 
 
@@ -227,11 +243,13 @@ lemma counterIncreasePredB(t:timestamp, i:index):
     ( cellB(i)@pred(t) ~< cellB(i)@t
       || cellB(i)@pred(t) = cellB(i)@t ).
 Proof.
-  intro Hap [Ht Hexec].
+  (*intro Hap [Ht Hexec].
      use ScounterIncreasePredB with t, i => //. 
      case H. 
        + by left; rewrite H; apply orderSucc.
-       + by right. 
+       + by right. *)
+  use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
+  cryptovampire.
 Qed.
 
 (* The counter increases (not strictly) between t' and t when t' < t. *)
@@ -244,7 +262,9 @@ lemma counterIncreaseA (t, t':timestamp, i:index):
     cellA(i)@t' = cellA(i)@t).
 Proof.
   induction t => t IH0 Hap Hexec Ht'.
-  assert (t' = pred(t) || t' < pred(t)) as H0;
+   use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
+cryptovampire.
+(*  assert (t' = pred(t) || t' < pred(t)) as H0;
   1: case t; constraints.
   case H0.
 
@@ -262,7 +282,8 @@ Proof.
                2: rewrite H3 in H0; left].
 
            * rewrite H0.
-             by case H3; [1: left | 2 : right].
+             by case H3; [1: left | 2 : right].*)
+  (* induction isn't supported by cv yet *)
 Qed.
 
 
@@ -274,7 +295,9 @@ lemma counterIncreaseB (t, t':timestamp, i:index):
     cellB(i)@t' = cellB(i)@t).
 Proof.
   induction t => t IH0 Hap Hexec Ht'.
-  assert (t' = pred(t) || t' < pred(t)) as H0;
+   use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
+cryptovampire.
+  (*assert (t' = pred(t) || t' < pred(t)) as H0;
   1: case t; constraints.
   case H0.
     + (* case t' = pred(t) *)
@@ -288,7 +311,8 @@ Proof.
           *  by case H3;
              [1: left; apply orderTrans _ (cellB(i)@pred(t)) _ |
               2: rewrite H3 in H0; left].
-          * rewrite H0. by case H3; [1: left | 2 : right].
+          * rewrite H0. by case H3; [1: left | 2 : right].*)
+  (* induction isn't supported by cv yet *)
 Qed.
 
 
@@ -300,7 +324,7 @@ lemma counterIncreaseStrictSA(i,j1:index, t:timestamp):
     (t < SenderA(i,j1) && exec@SenderA(i,j1)) =>
       cellA(i)@t ~< cellA(i)@SenderA(i,j1).
 Proof.
- intro Hap [Ht Hexec].
+ (* intro Hap [Ht Hexec].
  use counterIncreaseUpdateSA with i,j1 as Meq => //.
  assert (
    t < pred(SenderA(i,j1))
@@ -309,7 +333,10 @@ Proof.
  case H; 2: by rewrite H.
  use counterIncreaseA with pred(SenderA(i,j1)),t,i as H0 => //.
  case H0; 2: by rewrite H0.
- by apply orderTrans _ (cellA(i)@pred(SenderA(i,j1))).
+ by apply orderTrans _ (cellA(i)@pred(SenderA(i,j1))). *)
+  use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
+  use counterIncreaseA.
+  cryptovampire.
 Qed.
 
 lemma counterIncreaseStrictRA (i,j1:index, t:timestamp):
@@ -317,7 +344,7 @@ lemma counterIncreaseStrictRA (i,j1:index, t:timestamp):
     (t < ReceiverA(i,j1) && exec@ReceiverA(i,j1)) =>
       cellA(i)@t ~< cellA(i)@ReceiverA(i,j1).
 Proof.
- intro Hap [Ht Hexec].
+ (*intro Hap [Ht Hexec].
   use counterIncreaseUpdateRA with i,j1 as Meq => //.
   assert (
     t < pred(ReceiverA(i,j1))
@@ -326,7 +353,10 @@ Proof.
   case H; 2: by rewrite H.
   use counterIncreaseA with pred(ReceiverA(i,j1)),t,i as H0 => //.
   case H0; 2: by rewrite H0.
-  by apply orderTrans _ (cellA(i)@pred(ReceiverA(i,j1))).
+  by apply orderTrans _ (cellA(i)@pred(ReceiverA(i,j1))).*)
+  use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
+  use counterIncreaseA.
+  cryptovampire.
 Qed.
 
 (* The counter cellB(i) strictly increases between t and t'
@@ -337,7 +367,7 @@ lemma counterIncreaseStrictSB (i,j1:index, t:timestamp):
     (t < SenderB(i,j1) && exec@SenderB(i,j1)) =>
       cellB(i)@t ~< cellB(i)@SenderB(i,j1).
 Proof.
- intro Hap [Ht Hexec].
+ (*intro Hap [Ht Hexec].
  use counterIncreaseUpdateSB with i,j1 as Meq => //.
  assert (
    t < pred(SenderB(i,j1))
@@ -346,7 +376,10 @@ Proof.
  case H; 2: by rewrite H.
  use counterIncreaseB with pred(SenderB(i,j1)),t,i as H0 => //.
  case H0; 2: by rewrite H0.
- by apply orderTrans _ (cellB(i)@pred(SenderB(i,j1))).
+ by apply orderTrans _ (cellB(i)@pred(SenderB(i,j1))).*)
+  use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
+  use counterIncreaseB.
+  cryptovampire.
 Qed.
 
 lemma counterIncreaseStrictRB (i,j1:index, t:timestamp):
@@ -354,7 +387,7 @@ lemma counterIncreaseStrictRB (i,j1:index, t:timestamp):
     (t < ReceiverB(i,j1) && exec@ReceiverB(i,j1)) =>
       cellB(i)@t ~< cellB(i)@ReceiverB(i,j1).
 Proof.
- intro Hap [Ht Hexec].
+ (*intro Hap [Ht Hexec].
  use counterIncreaseUpdateRB with i,j1 as Meq => //.
  assert (
    t < pred(ReceiverB(i,j1))
@@ -363,7 +396,10 @@ Proof.
  case H; 2: by rewrite H.
  use counterIncreaseB with pred(ReceiverB(i,j1)),t,i as H0 => //.
  case H0; 2: by rewrite H0.
- by apply orderTrans _ (cellB(i)@pred(ReceiverB(i,j1))).
+ by apply orderTrans _ (cellB(i)@pred(ReceiverB(i,j1))).*)
+  use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
+  use counterIncreaseB.
+  cryptovampire.
 Qed.
 
 
@@ -402,7 +438,8 @@ Proof.
       rewrite H5 in H2.
       auto. *)
   use counterIncreaseStrictRA.
-  use orderBetween.
+  (* use orderBetween. *) (* <-- it works with this lemma as well, but using the other ones is faster *)
+  use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
   cryptovampire.
 Qed.
 
@@ -417,7 +454,7 @@ lemma authB(i,j:index) :
      && snd(snd(fst(output@SenderA(i,j')))) = snd(snd(fst(input@ReceiverB(i,j))))
      && cellB(i)@pred(ReceiverB(i,j)) ~< cellA(i)@SenderA(i,j')).
 Proof.
-  intro Hap @/exec @/cond [Hexecpred [H1 H2 H3]].
+  (*intro Hap @/exec @/cond [Hexecpred [H1 H2 H3]].
   euf H3.
   + intro [j0 [H4 [H5 _]]].
     exists j0.
@@ -428,7 +465,10 @@ Proof.
     rewrite H5 in H2.
     use counterIncreaseStrictRB with i,j, SenderB(i,j0) as Hyp => //.
     expand cellB(i)@ReceiverB(i,j).
-    by apply orderBetween in H2.
+    by apply orderBetween in H2. *)
+  use counterIncreaseStrictRB.
+  use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
+  cryptovampire.
 Qed.
 
 
@@ -445,7 +485,7 @@ lemma injectivity(i,j,j':index) :
 
 
 Proof.
-  intro [Hap Hap'] [Hexec Hexec'].
+  (*intro [Hap Hap'] [Hexec Hexec'].
   use authA with i,j as H => //.
   destruct H as [j1 [Ord Eq0  Eq1 Eq2 HCpt]].
   use authA with i,j' as H => //.
@@ -471,7 +511,10 @@ Proof.
         (* SenderB(i,j1') < SenderB(i,j1) *)
         - use counterIncreaseStrictSB with i, j1, SenderB(i,j1') => //=.
            * intro U. rewrite eq_sym in U; by apply orderStrict in U.
-           * executable ReceiverA(i,j) => // HexecPred. by apply HexecPred.
+           * executable ReceiverA(i,j) => // HexecPred. by apply HexecPred. *)
+    use counterIncreaseStrictRB.
+  use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
+  cryptovampire.
 Qed.
 
 
@@ -486,7 +529,7 @@ lemma injectivityAB(i,j,j':index) :
    && snd(snd(fst(input@ReceiverA(i,j)))) <> snd(snd(fst(input@ReceiverB(i,j'))))).
 
 Proof.
-  intro [Hap Hap'] [Hexec Hexec'].
+  (*intro [Hap Hap'] [Hexec Hexec'].
   use authA with i,j as H => //.
   destruct H as [j1 [Ord Eq0 Eq1 Eq2 HCpt]].
   use authB with i,j' as H => //.
@@ -534,7 +577,11 @@ Proof.
 
        - (* ReceiverA(i,j) < SenderA(i,j1') *)
          (* We have SendB < ReceiveA < SendA < ReceiveB < SendB ==> contradiction *)
-          auto.
+          auto. *)
+      use counterIncreaseStrictRB.
+      use counterIncreaseStrictRA.
+  use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
+  cryptovampire.
 Qed.
 
 
