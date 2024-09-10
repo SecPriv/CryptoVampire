@@ -1,18 +1,23 @@
 use super::{ast_convertion::ToAst, Context, RAoO};
+use hashbrown::HashSet;
+use log::trace;
 use std::{cmp::Ordering, fmt::Debug};
 use utils::monad::Monad;
 
-use itertools::{izip, Itertools};
+use itertools::{chain, izip, Itertools, ZipEq, ZipLongest};
 use utils::{all_or_one::AoOV, mdo, string_ref::StrRef};
 
 use crate::{
-    bail_at,
+    bail_at, err_at,
     parser::{
         ast::{self, Application, Order, OrderOperation, QuantifierKind},
         InputError,
     },
     squirrel::{
-        json::{self, action::AT},
+        json::{
+            self,
+            action::{Item, Shape, AT},
+        },
         Sanitizable,
     },
 };
@@ -135,28 +140,25 @@ fn mk_depends_lemma<'a, 'b>(
     }.owned_get(0))
 }
 
-fn mutex<A: Eq + Debug>(a: &AT<A>, b: &AT<A>) -> bool {
-    a.len() == b.len() && {
-        'm: {
-            for (a, b) in izip!(a.iter(), b.iter()) {
-                if a.par_choice == b.par_choice {
-                    if a.sum_choice == b.sum_choice {
-                        // if we are taking the same ctrl flow branch,
-                        // we look deeper
-                        continue;
-                    } else {
-                        // if we find an incompatibility, we bail out
-                        // with the result
-                        break 'm true;
-                    }
+// TODO: optimise
+fn mutex_commun_vars(a: &Shape, b: &Shape) -> Option<usize> {
+    fn aux(a: &[Item<usize>], b: &[Item<usize>]) -> Option<usize> {
+        match (a.split_first(), b.split_first()) {
+            (Some((hda, tla)), Some((hdb, tlb))) => {
+                if hda == hdb {
+                    Some(hda.par_choice.1 + hda.sum_choice.1 + aux(tla, tlb)?)
+                } else if hda.par_choice == hdb.par_choice && hda.sum_choice.0 != hdb.sum_choice.0 {
+                    // trace!("{a:?} --- {b:?}");
+                    Some(hda.par_choice.1)
                 } else {
-                    // if no incompatibility are found, then we say so
-                    break 'm false;
+                    None
                 }
             }
-            false
+            _ => None,
         }
     }
+
+    aux(a.as_ref(), b.as_ref())
 }
 
 fn mk_mutex_lemma<'a, 'b>(
@@ -164,13 +166,45 @@ fn mk_mutex_lemma<'a, 'b>(
     b: &json::Action<'a>,
     ctx: Context<'b, 'a>,
 ) -> Result<Option<ast::Order<'a, StrRef<'a>>>, InputError> {
-    if !mutex(a.shape().as_ref(), b.shape().as_ref()) {
-        return Ok(None);
-    }
+    // if !mutex(a.shape().as_ref(), b.shape().as_ref()) {
+    //     return Ok(None);
+    // }
+    let i_commun = match mutex_commun_vars(&a.shape(), &b.shape()) {
+        Some(i) => i,
+        _ => return Ok(None),
+    };
 
-    let args: Vec<_> = b
-        .indices
-        .iter()
+    assert!(!(a==b && (a.indices().len() == i_commun)));
+
+    let var_commun = &a.indices()[..i_commun];
+    // .split_at_checked(i_commun)
+    // .ok_or_else(|| err_at!(@ "not enough variable in step {}", a.name().sanitized(&ctx)))?;
+
+    // ensure there are no clashes in variables names
+    let other_b = {
+        let (_, others_b) = b
+            .indices()
+            .split_at_checked(i_commun)
+            .ok_or_else(|| err_at!(@ "not enough variable in step {}", b.name().sanitized(&ctx)))?;
+
+        let mut names: HashSet<_> = a
+            .indices()
+            .iter()
+            .map(|v| v.original_name().clone())
+            .collect();
+        others_b.iter().map(move |v| {
+            let mut v = v.clone();
+            let oname = v.original_name_mut();
+            while names.contains(oname) {
+                *oname = StrRef::new_owned(format!("{oname}_u")).unwrap();
+            }
+            names.insert(oname.clone());
+            v
+        })
+    }
+    .collect_vec();
+
+    let args: Vec<_> = chain!(a.indices.iter(), other_b.iter())
         .map(|var| {
             mdo! {
                 let! sort = var.sort().convert(ctx);
@@ -178,19 +212,27 @@ fn mk_mutex_lemma<'a, 'b>(
             }
         })
         .try_collect()?;
-    let [idx_a, idx_b] = [a, b].map(|x| {
-        x.indices
-            .iter()
-            .map(|v| Application::from(v.sanitized(&ctx)).into())
-            .collect_vec()
-    });
+    // let [idx_a, idx_b] = [a, b].map(|x| {
+    //     x.indices
+    //         .iter()
+    //         .map(|v| Application::from(v.sanitized(&ctx)).into())
+    //         .collect_vec()
+    // });
+    let idx_a = a
+        .indices()
+        .iter()
+        .map(|v| Application::from(v.sanitized(&ctx)).into())
+        .collect_vec();
+    let idx_b = chain!(var_commun.iter(), other_b.iter())
+        .map(|v| Application::from(v.sanitized(&ctx)).into())
+        .collect_vec();
 
     Ok(mdo!{
         let! args = AoOV::transpose_iter(args);
         let quantifier = QuantifierKind::Forall;
         let kind = OrderOperation::Incompatible;
         let t1 = Application::new_app(a.name.sanitized(&ctx), idx_a.clone()).into();
-        let t2 = Application::new_app(a.name.sanitized(&ctx), idx_b.clone()).into();
+        let t2 = Application::new_app(b.name.sanitized(&ctx), idx_b.clone()).into();
         let span = Default::default();
         let options = Default::default();
         let guard = None;

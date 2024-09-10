@@ -134,6 +134,13 @@ impl<'a> Variable<'a> {
     pub fn is_dummy(&self) -> bool {
         self.to_str_ref().as_str() == DUMMY_VAR
     }
+
+    pub fn original_name_mut(&mut self) -> &mut Symb<'a> {
+        &mut self.id.name
+    }
+    pub fn original_name(&self) -> & Symb<'a> {
+        & self.id.name
+    }
 }
 
 impl<'a> Sanitizable<'a> for Variable<'a> {
