@@ -10,6 +10,7 @@
       inputs.squirrel-prover-src.url =
         "github:puyral/squirrel-prover?ref=cryptovampire";
       # inputs.cryptovampire-src.url = ".";
+      inputs.vampire-master-src.url = "github:vprover/vampire";
     };
     nix2container = {
       url = "github:nlewo/nix2container?ref=update-patch-hash";
@@ -25,7 +26,7 @@
         custom-pkgs = custom.packages.${system};
         manifest = (pkgs.lib.importTOML "${src}/Cargo.toml").package;
 
-        my-z3 = pkgs.z3;
+        my-z3 = pkgs.z3_4_12;
 
         my-python = pkgs.python311.withPackages
           (ps: with ps; [ numpy (toPythonModule my-z3).python ]);
@@ -48,7 +49,7 @@
               cargo
               rustc
               nil
-              z3
+              my-z3
               cvc5
               custom-pkgs.vampire-master
               custom-pkgs.squirrel-prover
