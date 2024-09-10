@@ -38,6 +38,7 @@ use utils::{
 
 use super::dispacher::Dispacher;
 use super::inner::name::Name;
+use super::inner::term_algebra;
 use super::signature::{AsFixedSignature, OnlyArgsSignature, OnlyArgsSignatureProxy};
 use super::traits::FixedSignature;
 use super::{
@@ -401,14 +402,14 @@ impl<'bump> Function<'bump> {
     }
 
     /// does this function hide something (ie. quantifier, memory cell, input,...)
-    pub fn need_extraction(&self) -> bool {
-        match self.as_inner() {
-            InnerFunction::TermAlgebra(TermAlgebra::Cell(_))
-            | InnerFunction::TermAlgebra(TermAlgebra::Quantifier(_))
-            | InnerFunction::TermAlgebra(TermAlgebra::Input(_)) => true,
-            _ => false,
-        }
-    }
+    // pub fn need_extraction(&self) -> bool {
+    //     match self.as_inner() {
+    //         InnerFunction::TermAlgebra(TermAlgebra::Cell(_))
+    //         | InnerFunction::TermAlgebra(TermAlgebra::Quantifier(_))
+    //         | InnerFunction::TermAlgebra(TermAlgebra::Input(_)) => true,
+    //         _ => false,
+    //     }
+    // }
 
     pub fn is_builtin(&self) -> bool {
         matches!(
@@ -460,6 +461,10 @@ impl<'bump> Function<'bump> {
     pub fn as_quantifer(&self) -> Option<&'bump Quantifier<'bump>> {
         self.precise_as_term_algebra()
             .and_then(|ta| ta.as_quantifier())
+    }
+
+    pub fn as_macro(&self) -> Option<term_algebra::step_macro::Macro> {
+        self.as_term_algebra().and_then(|f| f.as_macro()).cloned()
     }
 
     force_lifetime!(Function, 'bump);

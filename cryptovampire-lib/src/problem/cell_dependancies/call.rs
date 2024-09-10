@@ -18,7 +18,11 @@ pub struct CellCall<'bump> {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct InputCall<'bump> {
     pub step: StepCall<'bump>,
-    // pub args: &'pbl [RichFormula],
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct ExecCall<'bump> {
+    pub step: StepCall<'bump>,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

@@ -284,29 +284,12 @@ impl<'bump> Step<'bump> {
         self.name() == INIT_STEP_NAME
     }
 
-    // return `self` as a formula of type `U` using the variables of [free_variables]
-    // pub fn as_formula<T, U>(&self, ctx: &T) -> U
-    // where
-    //     T: FormulaUser<U>,
-    // {
-    //     ctx.funf(
-    //         self.function().clone(),
-    //         self.free_variables()
-    //             .into_iter()
-    //             .cloned()
-    //             .map(|v| ctx.varf(v)),
-    //     )
-    // }
-
-    // pub fn maybe_precise_as_ref(&self) -> Result<&'bump InnerStep<'bump>, AccessToInvalidData> {
-    //     unsafe { self.inner.as_ref() }
-    //         .as_ref()
-    //         .ok_or(AccessToInvalidData::Error)
-    // }
-
-    // pub fn as_inner(&self) -> &InnerStep<'bump> {
-    //     self.precise_as_ref()
-    // }
+    /// 'default' term representing this step
+    ///
+    /// It applies the step function to its free variables
+    pub fn into_formula(&self) -> ARichFormula<'bump> {
+        self.function().f(self.free_variables())
+    }
 }
 
 impl<'a, 'bump: 'a> RefNamed<'a> for &'a InnerStep<'bump> {

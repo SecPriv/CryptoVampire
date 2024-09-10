@@ -4,12 +4,13 @@ use utils::implvec;
 
 use crate::problem::{cell::MemoryCell, step::Step};
 
-use super::{Ancestors, CellOrInput, DependancyGraph};
+use super::{Ancestors, DependancyGraph, MacroRef};
 
 /// Preprocess all the information currently retrivable from a [DependancyGraph]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct PreprocessedDependancyGraph<'bump> {
     input: Ancestors<'bump>,
+    exec: Ancestors<'bump>,
     cells: HashMap<MemoryCell<'bump>, Ancestors<'bump>>,
 }
 
@@ -29,11 +30,16 @@ impl<'bump> PreprocessedDependancyGraph<'bump> {
     }
 
     /// Get the ancestor (if it exists) of a [MemoryCell] or an input
-    pub fn ancestors(&self, arg: CellOrInput<'bump>) -> Option<&Ancestors<'bump>> {
+    pub fn ancestors(&self, arg: MacroRef<'bump>) -> Option<&Ancestors<'bump>> {
         match arg {
-            CellOrInput::Input => Some(self.input()),
-            CellOrInput::Cell(c) => self.cells().get(&c),
+            MacroRef::Exec => Some(self.exec()),
+            MacroRef::Input => Some(self.input()),
+            MacroRef::Cell(c) => self.cells().get(&c),
         }
+    }
+
+    pub fn exec(&self) -> &Ancestors<'bump> {
+        &self.exec
     }
 }
 
@@ -41,12 +47,13 @@ impl<'bump, 'a> From<&'a DependancyGraph<'bump>> for PreprocessedDependancyGraph
     fn from(depgraph: &'a DependancyGraph<'bump>) -> Self {
         let cells = depgraph
             .cells()
-            .map(|c| depgraph.ancestors(CellOrInput::Cell(c)).map(|a| (c, a)))
+            .map(|c| depgraph.ancestors(MacroRef::Cell(c)).map(|a| (c, a)))
             .try_collect()
             .unwrap();
-        let input = depgraph.ancestors(CellOrInput::Input).unwrap();
+        let input = depgraph.ancestors(MacroRef::Input).unwrap();
+        let exec = depgraph.ancestors(MacroRef::Exec).unwrap();
         // the unwrap shouldn't fails because the cells are part of `depgraph`
-        Self { input, cells }
+        Self { input, cells, exec }
     }
 }
 

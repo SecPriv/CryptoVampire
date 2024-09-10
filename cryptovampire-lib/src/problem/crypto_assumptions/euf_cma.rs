@@ -3,6 +3,7 @@ use std::{hash::Hash, sync::Arc};
 use if_chain::if_chain;
 use itertools::Itertools;
 
+use crate::formula::utils::formula_expander::NO_REC_MACRO;
 use crate::formula::utils::Applicable;
 use crate::formula::variable::IntoVariableIter;
 use crate::{
@@ -86,7 +87,7 @@ impl<'bump> EufCma<'bump> {
                 name_caster: pbl.owned_name_caster(),
             },
             [self.sign, self.pk],
-            UnfoldFlags::NO_MACROS,
+            NO_REC_MACRO,
             |rc| Subsubterm::EufCmaSignKey(rc),
         );
 
@@ -214,7 +215,7 @@ impl<'bump> EufCma<'bump> {
                                 .list_top_level_terms_short_lifetime_and_bvars()
                                 .chain([&message, &signature].map(|t| t.shallow_copy().into())),
                             false,
-                            UnfoldFlags::NO_MACROS,
+                            NO_REC_MACRO,
                         )
                         .next()
                         .is_none();

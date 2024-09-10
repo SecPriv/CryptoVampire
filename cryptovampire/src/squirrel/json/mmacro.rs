@@ -34,6 +34,15 @@ pub enum ProtocolMacro {
     Cond,
 }
 
+impl ProtocolMacro {
+    pub const fn name(&self) -> &'static str {
+        match self {
+            ProtocolMacro::Output => "output",
+            ProtocolMacro::Cond => "cond",
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct Structured<'a> {
     #[serde(borrow)]

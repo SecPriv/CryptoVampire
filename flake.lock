@@ -347,11 +347,11 @@
     },
     "nixpkgs_3": {
       "locked": {
-        "lastModified": 1724819573,
-        "narHash": "sha256-GnR7/ibgIH1vhoy8cYdmXE6iyZqKqFxQSVkFgosBh6w=",
+        "lastModified": 1725634671,
+        "narHash": "sha256-v3rIhsJBOMLR8e/RNWxr828tB+WywYIoajrZKFM+0Gg=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "71e91c409d1e654808b2621f28a327acfdad8dc2",
+        "rev": "574d1eac1c200690e27b8eb4e24887f8df7ac27c",
         "type": "github"
       },
       "original": {
@@ -637,11 +637,11 @@
     "vampire-master-src_2": {
       "flake": false,
       "locked": {
-        "lastModified": 1723206185,
-        "narHash": "sha256-2x+BpzgD+pEdH6YzkxNWEIdVj/b4a2Zt6/grPgaWMiY=",
+        "lastModified": 1725871600,
+        "narHash": "sha256-1r/mhv9WDMg34MFtyFJQP5Ofo/xoL4Q8niUWSH5/j8U=",
         "owner": "vprover",
         "repo": "vampire",
-        "rev": "44b72ec98ae705fa56b588dc1e5e41ede07bf051",
+        "rev": "039fa0ef9f14f788c29ff0685fc3d83f2a77bfa2",
         "type": "github"
       },
       "original": {

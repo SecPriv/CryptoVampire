@@ -184,9 +184,12 @@ pub static IF_THEN_ELSE_TA: Function<'static> = new_static_function(InnerFunctio
 ));
 
 #[dynamic]
-pub static INPUT: Function<'static> = new_static_function(InnerFunction::TermAlgebra(
-    super::inner::term_algebra::TermAlgebra::Input(Default::default()),
-));
+pub static INPUT: Function<'static> = {
+    use super::inner::term_algebra;
+    new_static_function(InnerFunction::TermAlgebra(
+        term_algebra::TermAlgebra::Macro(term_algebra::step_macro::Macro::Input),
+    ))
+};
 
 #[dynamic]
 pub static NAME_TO_MESSAGE: Function<'static> = new_static_function(InnerFunction::TermAlgebra(
@@ -229,6 +232,10 @@ pub static MESSAGE_MACRO: Function<'static> = new_static_function(InnerFunction:
     TermAlgebra::Macro(Macro::Message),
 ));
 
+#[dynamic]
+pub static EXEC_MACRO: Function<'static> =
+    new_static_function(InnerFunction::TermAlgebra(TermAlgebra::Macro(Macro::Exec)));
+
 builtin!(
     AND,
     AND_TA,
@@ -258,5 +265,6 @@ builtin!(
     OR_TA,
     PRED,
     CONDITION_MACRO,
-    MESSAGE_MACRO
+    MESSAGE_MACRO,
+    EXEC_MACRO
 );

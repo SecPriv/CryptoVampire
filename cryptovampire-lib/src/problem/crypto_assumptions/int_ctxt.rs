@@ -3,6 +3,7 @@ use std::{collections::BTreeSet, hash::Hash, sync::Arc};
 use if_chain::if_chain;
 use itertools::Itertools;
 
+use crate::formula::utils::formula_expander::NO_REC_MACRO;
 use crate::formula::utils::Applicable;
 use crate::formula::variable::IntoVariableIter;
 use crate::subterm::{
@@ -276,7 +277,7 @@ impl<'bump> IntCtxt<'bump> {
                                 .list_top_level_terms_short_lifetime_and_bvars()
                                 .chain([cipher.shallow_copy().into()]),
                             false,
-                            UnfoldFlags::NO_MACROS,
+                            NO_REC_MACRO,
                         )
                         .next()
                         .is_none();

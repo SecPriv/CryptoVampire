@@ -12,7 +12,7 @@ use utils::implvec;
 
 use super::{
     call::{InputCall, StepCall},
-    Ancestors, CellOrInput, PreprocessedDependancyGraph,
+    Ancestors, MacroRef, PreprocessedDependancyGraph,
 };
 use anyhow::{Ok, Result};
 use thiserror::Error;
@@ -72,14 +72,41 @@ struct Edges<'bump> {
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 enum FromNode<'bump> {
-    Input { step: Step<'bump> },
+    Message { step: Step<'bump> },
+    Condition { step: Step<'bump> },
     CellCall(InnerCellCall<'bump>),
+}
+
+impl<'bump> FromNode<'bump> {
+    pub fn message(step: Step<'bump>) -> Self {
+        Self::Message { step }
+    }
+    pub fn condition(step: Step<'bump>) -> Self {
+        Self::Condition { step }
+    }
+
+    /// Returns `true` if the from node is [`Condition`].
+    ///
+    /// [`Condition`]: FromNode::Condition
+    #[must_use]
+    fn is_condition(&self) -> bool {
+        matches!(self, Self::Condition { .. })
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 enum ToNode<'bump> {
     Input(InputCall<'bump>),
     CellCall(InnerCellCall<'bump>),
+}
+
+impl<'bump> ToNode<'bump> {
+    pub fn get_cell_idx(&self) -> Option<usize> {
+        match self {
+            ToNode::Input(_) => None,
+            ToNode::CellCall(InnerCellCall { cell_idx, .. }) => Some(*cell_idx),
+        }
+    }
 }
 
 impl<'bump> DependancyGraph<'bump> {
@@ -97,8 +124,23 @@ impl<'bump> DependancyGraph<'bump> {
         let mut edges = Vec::new();
         let mut input_edges = Vec::new();
 
-        process_functions::process_steps(&steps, &cells, &mut input_edges, &mut edges);
-        process_functions::process_cell(&steps, &cells, &mut input_edges, &mut edges);
+        {
+            let mut pile = Vec::new();
+            process_functions::process_steps(
+                &mut pile,
+                &steps,
+                &cells,
+                &mut input_edges,
+                &mut edges,
+            );
+            process_functions::process_cell(
+                &mut pile,
+                &steps,
+                &cells,
+                &mut input_edges,
+                &mut edges,
+            );
+        }
 
         let input = InputNode {
             edges_starts: edges.len(),
@@ -123,42 +165,45 @@ impl<'bump> DependancyGraph<'bump> {
     /// From which [MemoryCell] is `cell` called? Is it called by a step?
     ///
     /// set `cell` to [None] to search which [MemoryCell] call an input
-    pub fn ancestors(&self, cell: CellOrInput<'bump>) -> Result<Ancestors<'bump>> {
+    pub fn ancestors(&self, mmacro: MacroRef<'bump>) -> Result<Ancestors<'bump>> {
         let input_idx = self.cells.len();
-
-        // stating position in the `visted` array
-        let start_idx = cell
-            .into_option()
-            .map(|cell| {
-                self.cells
+        let mut visited = vec![false; input_idx + 1];
+        let mut to_visit_idx = match mmacro {
+            MacroRef::Input => vec![input_idx],
+            MacroRef::Cell(cell) => {
+                let idx = self
+                    .cells
                     .iter()
                     .position(|c| c.cell == cell)
-                    .ok_or(DependancyError::MemoryCellNotFound)
-            })
-            .transpose()?
-            .unwrap_or(input_idx);
+                    .ok_or(DependancyError::MemoryCellNotFound)?;
+                vec![idx]
+            }
+            // get the indices of anything coming from a condition
+            MacroRef::Exec => self
+                .edges
+                .iter()
+                .filter(|e| e.from.is_condition())
+                .map(|e| e.to.get_cell_idx().unwrap_or(input_idx))
+                .collect(),
+        };
 
-        let mut visited = vec![false; input_idx + 1];
-        visited[start_idx] = true;
-        let mut todo = vec![start_idx];
-        // range of indices of the edges to/from input
         let input_edges = (self.input.edges_starts..self.edges.len()).collect_vec();
 
-        while let Some(next) = todo.pop() {
+        while let Some(next) = to_visit_idx.pop() {
+            if visited[next] {
+                continue;
+            }
+
             visited[next] = true;
 
-            todo.extend(
+            to_visit_idx.extend(
                 self.cells
                     .get(next)
                     .map(|c| c.edges.as_slice())
                     .unwrap_or(input_edges.as_slice()) // if out of bound, it's an input
                     .iter()
                     .map(|ei| &self.edges[*ei])
-                    .map(|edge| match edge.to {
-                        ToNode::Input(_) => input_idx,
-                        ToNode::CellCall(InnerCellCall { cell_idx: cell, .. }) => cell,
-                    })
-                    .filter(|i| !visited[*i]),
+                    .map(|edge| edge.to.get_cell_idx().unwrap_or(input_idx)), // .filter(|i| !visited[*i]),
             )
         }
 

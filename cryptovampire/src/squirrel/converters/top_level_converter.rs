@@ -60,7 +60,7 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
         - [-] make init step; possibly not needed
         - [x] assert tuples
         - [x] assert crypto
-        - [ ] ordering
+        - [x] ordering
         - [ ] <> (i.e., !=); maybe using infix
     */
 
@@ -126,7 +126,7 @@ mod assert_crypto {
         ctx: Context<'b, 'a>,
     ) -> impl Iterator<Item = ast::AST<'a, StrRef<'a>>> + 'b {
         chain!(
-            ["nonce", "memory_cell"].map(|s| {
+            ["nonce", "memory_cell", "unfolding"].map(|s| {
                 ast::AST::AssertCrypto(Arc::new(ast::AssertCrypto {
                     span: Default::default(),
                     name: StrRef::from(s).into(),

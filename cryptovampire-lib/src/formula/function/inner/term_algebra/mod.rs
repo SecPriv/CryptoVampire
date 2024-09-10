@@ -7,14 +7,14 @@ use utils::{assert_variance, match_as_trait, string_ref::StrRef, variants};
 
 use self::{
     base_function::BaseFunction, cell::Cell, connective::Connective, if_then_else::IfThenElse,
-    input::Input, name_caster::NameCaster, quantifier::Quantifier,
+    /* input::Input, */ name_caster::NameCaster, quantifier::Quantifier,
 };
 
 pub mod base_function;
 pub mod cell;
 pub mod connective;
 pub mod if_then_else;
-pub mod input;
+// pub mod input;
 pub mod name_caster;
 pub mod quantifier;
 pub mod step_macro;
@@ -32,7 +32,7 @@ macro_attr! {
         Function(BaseFunction<'bump>),
         Cell(Cell<'bump>),
         NameCaster(NameCaster<'bump>),
-        Input(Input),
+        // Input(Input),
         IfThenElse(IfThenElse),
         Macro(Macro)
     }
@@ -53,7 +53,7 @@ impl<'bump> TermAlgebra<'bump> {
             | TermAlgebra::NameCaster(_) => true,
             TermAlgebra::Quantifier(_)
             | TermAlgebra::Cell(_)
-            | TermAlgebra::Input(_)
+            // | TermAlgebra::Input(_)
             | TermAlgebra::Macro(_) => false,
         }
     }
@@ -66,7 +66,7 @@ impl<'bump> TermAlgebra<'bump> {
             TermAlgebra::Condition(x)
                 | TermAlgebra::Function(x)
                 | TermAlgebra::Cell(x)
-                | TermAlgebra::Input(x)
+                // | TermAlgebra::Input(x)
                 | TermAlgebra::IfThenElse(x)
                 | TermAlgebra::Macro(x)
                     => {x.name().into()}
