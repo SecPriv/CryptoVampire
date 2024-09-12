@@ -15,8 +15,8 @@ use cryptovampire_lib::{
     problem::crypto_assumptions::{
         CryptoAssumption, CryptoFlag, EufCma, IntCtxt, Nonce, UfCmaBuilder, Unfolding,
         EUF_CMA_PK_SIGNATURE, EUF_CMA_SIGN_SIGNATURE, EUF_CMA_VERIFY_SIGNATURE,
-        INT_CTXT_DEC_SIGNATURE, INT_CTXT_ENC_SIGNATURE, INT_CTXT_VERIFY_SIGNATURE,
-        UF_CMA_MAC_SIGNATURE, UF_CMA_VERIFY_SIGNATURE,
+        INT_CTXT_DEC_SIGNATURE, INT_CTXT_ENC_SIGNATURE, INT_CTXT_FAIL_SIGNATURE,
+        INT_CTXT_VERIFY_SIGNATURE, UF_CMA_MAC_SIGNATURE, UF_CMA_VERIFY_SIGNATURE,
     },
 };
 use utils::{destvec, implvec, string_ref::StrRef, traits::NicerError};
@@ -53,11 +53,13 @@ where
     match name.content.borrow() {
         "nonce" => Ok(CryptoAssumption::Nonce(Nonce)),
         "memory_cell" => Ok(CryptoAssumption::MemoryCell(Default::default())),
-        "euf-cma" => parse_euf_cma(env, functions, options, *span),
-        "uf-cma" => parse_uf_cma(env, functions, options, *span),
-        "int-ctxt" => parse_int_ctxt(env, functions, *span),
+        "euf-cma" | "euf_cma" => parse_euf_cma(env, functions, options, *span),
+        "uf-cma" | "uf_cma" => parse_uf_cma(env, functions, options, *span),
+        "int-ctxt" | "int_ctxt" => parse_int_ctxt(env, functions, *span),
         "unfolding" => parse_unfolding(env, functions, options, *span),
-        _ => name.span.bail_with(|| "unknown crypto assertion"),
+        n => name
+            .span
+            .bail_with(|| format!("unknown crypto assertion: {n}")),
     }
     .debug_continue()
 }
@@ -141,16 +143,22 @@ where
 {
     let functions = match functions.len() {
         3 | 4 => Ok(&functions[..3]),
-        i => span.bail_with(|| format!("wrong number of arguments: expected 3 (or 4), got {i}")),
+        i => span.bail_with(|| {
+            format!(
+                "wrong number of arguments: expected 3 \
+        ('enc', 'dec' and 'fail'), got {i}"
+            )
+        }),
     }
     .debug_continue()?;
-    destvec!([ast_enc, ast_dec, ast_verify] = functions);
+    destvec!([ast_enc, ast_dec, ast_fail] = functions);
 
     verify_sign!(env; ast_enc, enc, INT_CTXT_ENC_SIGNATURE, 3);
     verify_sign!(env; ast_dec, dec, INT_CTXT_DEC_SIGNATURE, 2);
-    verify_sign!(env; ast_verify, verify, INT_CTXT_VERIFY_SIGNATURE, 2);
+    verify_sign!(env; ast_fail, fail, INT_CTXT_FAIL_SIGNATURE, 0);
+    // verify_sign!(env; ast_verify, verify, INT_CTXT_VERIFY_SIGNATURE, 2);
 
-    Ok(CryptoAssumption::IntCtxtSenc(IntCtxt { enc, dec, verify }))
+    Ok(CryptoAssumption::IntCtxtSenc(IntCtxt { enc, dec, fail }))
 }
 
 fn parse_unfolding<'str, 'bump, S>(

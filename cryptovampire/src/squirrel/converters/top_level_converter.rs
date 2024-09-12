@@ -119,6 +119,8 @@ mod assert_crypto {
     use itertools::Either;
     use json::operator::OperatorName;
 
+    use crate::squirrel::{FakeSanitizable, SanitizeKind};
+
     use super::*;
 
     pub fn assert_crypto<'a, 'b>(
@@ -217,10 +219,17 @@ mod assert_crypto {
         sdec: &OperatorName<'a>,
     ) -> ast::AST<'a, StrRef<'a>> {
         let funs = [senc, sdec].map(|f| ast::Function::from_name(f.sanitized(&ctx)));
+        let fail = ast::Function::from_name(
+            FakeSanitizable {
+                str: DEFAULT_FAIL_NAME,
+                kind: SanitizeKind::Function,
+            }
+            .sanitized(&ctx),
+        );
         ast::AST::AssertCrypto(Arc::new(ast::AssertCrypto {
             span: Default::default(),
             name: StrRef::from("int_ctxt").into(),
-            functions: funs.into(),
+            functions: chain!(funs, [fail]).collect(),
             options: Default::default(),
         }))
     }

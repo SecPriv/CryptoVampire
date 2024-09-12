@@ -132,7 +132,7 @@ fn mk_depends_lemma<'a, 'b>(
         let quantifier = QuantifierKind::Forall;
         let kind = OrderOperation::Lt;
         let t1 = Application::new_app(a.name.sanitized(&ctx), idx_a.clone()).into();
-        let t2 = Application::new_app(a.name.sanitized(&ctx), idx_b.clone()).into();
+        let t2 = Application::new_app(b.name.sanitized(&ctx), idx_b.clone()).into();
         let span = Default::default();
         let options = Default::default();
         let guard = None;

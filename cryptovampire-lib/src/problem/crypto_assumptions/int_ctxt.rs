@@ -1,7 +1,8 @@
 use std::{collections::BTreeSet, hash::Hash, sync::Arc};
 
 use if_chain::if_chain;
-use itertools::Itertools;
+use itertools::{chain, Itertools};
+use log::trace;
 
 use crate::formula::utils::formula_expander::NO_REC_MACRO;
 use crate::formula::utils::Applicable;
@@ -41,6 +42,7 @@ pub type SubtermIntCtxtRand<'bump> = Subterm<'bump, RandAux<'bump>>;
 static_signature!((pub) INT_CTXT_ENC_SIGNATURE: (MESSAGE, MESSAGE, MESSAGE) -> MESSAGE);
 static_signature!((pub) INT_CTXT_DEC_SIGNATURE: (MESSAGE, MESSAGE) -> MESSAGE);
 static_signature!((pub) INT_CTXT_VERIFY_SIGNATURE: (MESSAGE, MESSAGE) -> CONDITION);
+static_signature!((pub) INT_CTXT_FAIL_SIGNATURE: () -> MESSAGE);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct IntCtxt<'bump> {
@@ -49,10 +51,15 @@ pub struct IntCtxt<'bump> {
     /// dec(cipher, Key) -> mess
     pub dec: Function<'bump>,
     /// verify(cipher, key) -> bool
-    pub verify: Function<'bump>,
+    // pub verify: Function<'bump>,
+    pub fail: Function<'bump>,
 }
 
 impl<'bump> IntCtxt<'bump> {
+    pub fn fail(&self) -> ARichFormula<'bump> {
+        self.fail.f([] as [ARichFormula<'bump>; 0])
+    }
+
     pub fn generate(
         &self,
         assertions: &mut Vec<Axiom<'bump>>,
@@ -87,7 +94,7 @@ impl<'bump> IntCtxt<'bump> {
                 int_ctxt: *self,
                 name_caster: Arc::clone(&nc),
             },
-            [self.enc, self.dec, self.verify],
+            [self.enc, self.dec /* , self.verify */],
             UnfoldFlags::all(),
             |rc| Subsubterm::IntCtxtKey(rc),
         );
@@ -130,7 +137,8 @@ impl<'bump> IntCtxt<'bump> {
                 sort: message_sort,
                 formula: mforall!(c!1:message_sort, k!3:nonce_sort; {
                     let k_f = nc.cast(message_sort, k.clone());
-                    ev.eval(self.verify.apply([c.into(), k_f.clone()])) >>
+                    // ev.eval(self.verify.apply([c.into(), k_f.clone()])) >>
+                    (!meq(ev.eval(self.dec.f([c, k])), ev.eval(self.fail()))) >>
                     mexists!(m!4:message_sort, r!5:nonce_sort; {
                         let r_f = nc.cast(message_sort, r.clone());
                         let c2 = self.enc.f([m.into(), r_f.clone(), k_f.clone()]);
@@ -163,9 +171,9 @@ impl<'bump> IntCtxt<'bump> {
                         ev.eval(self.dec.f([self.enc.f([m, c, k]), k.into()]))
                     )
                 }),
-                mforall!(m!0:message_sort, c!1:message_sort, k!2:message_sort; {
-                        ev.eval(self.verify.f([self.enc.f([m, c, k]), k.into()]))
-                }),
+                // mforall!(m!0:message_sort, c!1:message_sort, k!2:message_sort; {
+                //         ev.eval(self.verify.f([self.enc.f([m, c, k]), k.into()]))
+                // }),
             ]
             .map(Axiom::base),
         )
@@ -183,22 +191,38 @@ impl<'bump> IntCtxt<'bump> {
         // let pile1 = RefCell::new(Vec::new());
         // let pile2 = RefCell::new(Vec::new());
         let realm = env.get_realm();
+        let cast_messages = pbl.name_caster().cast_function(&MESSAGE.as_sort()).unwrap();
+        let ev = pbl.evaluator();
         let candidates_verif = pbl
             .list_top_level_terms()
             // .flat_map(move |f: &ARichFormula<'bump>| f.iter()) // sad...
             .filter_map(|formula| match formula.as_ref() {
                 RichFormula::Fun(fun, args) => {
-                    if_chain! {
-                        if fun == &self.verify;
-                        if let RichFormula::Fun(nf, args2) = args[1].as_ref();
-                        if nf == pbl.name_caster().cast_function(&MESSAGE.as_sort()).unwrap();
-                        then {
-                            let [cipher,  key] =
-                                [&args[0],  &args2[0]]
-                                .map(|f| f.translate_vars(max_var).into_arc());
-                            Some(IntCtxtVerifCandidates {cipher,  key})
-                        } else {None}
-                    }
+                    // if_chain! {
+                    //     if fun == &self.verify;
+                    //     if let RichFormula::Fun(nf, args2) = args[1].as_ref();
+                    //     if nf == pbl.name_caster().cast_function(&MESSAGE.as_sort()).unwrap();
+                    //     then {
+                    //         let [cipher,  key] =
+                    //             [&args[0],  &args2[0]]
+                    //             .map(|f| f.translate_vars(max_var).into_arc());
+                    //         Some(IntCtxtVerifCandidates {cipher,  key})
+                    //     } else {None}
+                    // }
+                    trace!("{:}", formula.as_ref());
+                    // chain![
+                        if_chain! {
+                            if fun == &self.dec;
+                            if let [cipher, key] = args.as_ref();
+                            if let RichFormula::Fun(nf, argk) = key.as_ref();
+                            if nf == cast_messages;
+                            if let [key] = argk.as_ref();
+                            then {
+                                let [cipher, key] = [cipher, key].map(|f| f.translate_vars(max_var).into_arc());
+                                Some(IntCtxtVerifCandidates {cipher, key})
+                            } else {None}
+                        }
+                    // ]
                 }
                 _ => None,
             })
@@ -372,15 +396,16 @@ impl<'bump> IntCtxt<'bump> {
                     //     });
 
                     Some(mforall!(free_vars, {
-                        (pbl.evaluator()
-                            .eval(self.verify.apply([cipher.clone(), k_f.clone()]))
+                        (/* pbl.evaluator()
+                            // . eval(self.verify.apply([cipher.clone(), k_f.clone()])) */
+                            (!meq(ev.eval(self.dec.f([cipher.clone(), k_f.clone()])), ev.eval(self.fail())))
                             // & mforall!([r_var], { other_sc })
                             & other_sc)
                             >> mexists!([u_var, r_var], {
                                 into_exist_formula(disjunction)
                                     & meq(
-                                        pbl.evaluator().eval(cipher.clone()),
-                                        pbl.evaluator().eval(n_c_f),
+                                        ev.eval(cipher.clone()),
+                                        ev.eval(n_c_f),
                                     )
                             })
                     }))
@@ -481,14 +506,14 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
                         break 'function [args[0].shallow_copy()].into() // can't be the subterm of another nonce
                     }
                 }
-                if_chain! {
-                    if fun == &self.int_ctxt.verify;
-                    if let RichFormula::Fun(nf, _) = args[1].as_ref();
-                    if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
-                    then {
-                        break 'function [args[0].shallow_copy()].into() // can't be the subterm of another nonce
-                    }
-                }
+                // if_chain! {
+                //     if fun == &self.int_ctxt.verify;
+                //     if let RichFormula::Fun(nf, _) = args[1].as_ref();
+                //     if nf == self.name_caster.cast_function(&MESSAGE.clone()).unwrap();
+                //     then {
+                //         break 'function [args[0].shallow_copy()].into() // can't be the subterm of another nonce
+                //     }
+                // }
                 if_chain! {
                     if fun == &self.int_ctxt.enc;
                     if let RichFormula::Fun(nf, _) = args[2].as_ref();
