@@ -530,16 +530,15 @@
     "squirrel-prover-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1724944712,
-        "narHash": "sha256-jJV5agBYFMYcUzcRZDTE9kKm4XSgUqKQXdAxVI+OQXM=",
+        "lastModified": 1726147706,
+        "narHash": "sha256-Cor7jjBCx2yEItXx6tyJX71+SVaBRsixxs8ep2rziWs=",
         "owner": "puyral",
         "repo": "squirrel-prover",
-        "rev": "8029db981569ea6171b2fd1ea5e2dda0dc61717c",
+        "rev": "674e12f7283974e17241cad4f892d4a9bb47c2f6",
         "type": "github"
       },
       "original": {
-        "owner": "puyral",
-        "ref": "cryptovampire",
+        "owner": "squirrel-prover",
         "repo": "squirrel-prover",
         "type": "github"
       }
@@ -638,11 +637,11 @@
     "vampire-master-src_2": {
       "flake": false,
       "locked": {
-        "lastModified": 1725871600,
-        "narHash": "sha256-1r/mhv9WDMg34MFtyFJQP5Ofo/xoL4Q8niUWSH5/j8U=",
+        "lastModified": 1726137073,
+        "narHash": "sha256-/vPWr44Npm4xLog7nwY0fwC8kjTp3L5XuHvmlL6GgNU=",
         "owner": "vprover",
         "repo": "vampire",
-        "rev": "039fa0ef9f14f788c29ff0685fc3d83f2a77bfa2",
+        "rev": "363fe651d7c248529feaf75a6d3fbdba9bda40d0",
         "type": "github"
       },
       "original": {
