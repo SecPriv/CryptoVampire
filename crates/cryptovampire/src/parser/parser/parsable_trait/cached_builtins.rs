@@ -1,4 +1,4 @@
-use cryptovampire_lib::formula::function::builtin::*;
+use crate::formula::function::builtin::*;
 use utils::maybe_owned::MOw;
 
 use super::super::parsing_environement::FunctionCache;

@@ -14,7 +14,7 @@ use crate::{
         InputError, Location, MResult, Pstr,
     },
 };
-use cryptovampire_lib::{
+use crate::{
     environement::traits::{KnowsRealm, Realm},
     formula::{
         self,

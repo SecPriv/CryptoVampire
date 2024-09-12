@@ -6,7 +6,7 @@ use crate::parser::{
     },
     MResult, Pstr,
 };
-use cryptovampire_lib::formula::{formula::ARichFormula, sort::builtins::BOOL};
+use crate::formula::{formula::ARichFormula, sort::builtins::BOOL};
 use utils::{implvec, string_ref::StrRef};
 
 pub fn parse_assert_with_bvars<'a, 'str, 'bump, S>(

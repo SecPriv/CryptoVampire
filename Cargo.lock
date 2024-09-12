@@ -229,10 +229,10 @@ version = "0.5.0"
 dependencies = [
  "anyhow",
  "base64",
+ "bitflags 2.6.0",
  "clap",
  "clap_complete",
  "const_format",
- "cryptovampire-lib",
  "derivative",
  "derive_builder",
  "env_logger",
@@ -242,33 +242,14 @@ dependencies = [
  "log",
  "logic_formula",
  "macro-attr",
+ "once_cell",
  "paste",
  "pest",
  "pest_derive",
+ "regex",
  "serde",
  "serde_json",
  "serde_path_to_error",
- "static_init",
- "thiserror",
- "utils",
-]
-
-[[package]]
-name = "cryptovampire-lib"
-version = "0.5.0"
-dependencies = [
- "anyhow",
- "bitflags 2.6.0",
- "derive_builder",
- "hashbrown",
- "if_chain",
- "itertools",
- "log",
- "logic_formula",
- "macro-attr",
- "once_cell",
- "paste",
- "regex",
  "shared_child",
  "static_init",
  "tempfile",

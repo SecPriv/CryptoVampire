@@ -115,7 +115,7 @@ fn mk_assertions<'a>() -> [ast::Assert<'a, StrRef<'a>>; 2] {
 
 use assert_crypto::assert_crypto;
 mod assert_crypto {
-    use cryptovampire_lib::formula::sort::builtins::{BOOL, MESSAGE};
+    use crate::formula::sort::builtins::{BOOL, MESSAGE};
     use itertools::Either;
     use json::operator::OperatorName;
 

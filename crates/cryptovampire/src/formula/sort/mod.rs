@@ -231,9 +231,9 @@ impl<'a> Sort<'a> {
     /// Equality modulo a [Realm]
     ///
     /// ```rust
-    /// use cryptovampire_lib::environement::traits::Realm;
+    /// use crate::environement::traits::Realm;
     ///
-    /// use cryptovampire_lib::formula::sort::builtins::{CONDITION, BOOL};
+    /// use crate::formula::sort::builtins::{CONDITION, BOOL};
     /// assert!(BOOL.eq_realm(&CONDITION, &Realm::Evaluated))
     /// ```
     pub fn eq_realm<R>(&self, other: &Self, realm: &R) -> bool

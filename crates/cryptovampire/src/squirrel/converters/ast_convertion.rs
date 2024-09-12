@@ -1,4 +1,4 @@
-use cryptovampire_lib::formula::sort::builtins::{BOOL, MESSAGE, NAME, STEP};
+use crate::formula::sort::builtins::{BOOL, MESSAGE, NAME, STEP};
 use itertools::{chain, Either, Itertools};
 use utils::{
     all_or_one::AoOV, mdo, monad::Monad, pure, string_ref::StrRef, traits::NicerError,

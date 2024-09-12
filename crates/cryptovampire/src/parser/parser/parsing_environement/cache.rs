@@ -6,7 +6,7 @@ mod step;
 pub use step::StepCache;
 
 use crate::parser::ast;
-use cryptovampire_lib::{
+use crate::{
     formula::{
         function::{
             signature::{FixedRefSignature, Lazy, Signature},

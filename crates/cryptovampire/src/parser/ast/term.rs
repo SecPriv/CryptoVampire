@@ -1,6 +1,6 @@
 use std::ops::{BitAnd, BitOr, Not, Shr};
 
-use cryptovampire_lib::formula::utils::Applicable;
+use crate::formula::utils::Applicable;
 use term_algebra::connective::NOT_NAME;
 
 use super::*;
@@ -268,7 +268,7 @@ impl<'a, S: Clone> From<VariableBinding<'a, S>> for Term<'a, S> {
 
 mod macros {
 
-    /// same as [cryptovampire_lib::mforall] but for [Term]
+    /// same as [crate::mforall] but for [Term]
     #[macro_export]
     macro_rules! ast_forall {
         ($($var:ident:$sort:expr),*; $content:block) => {{
@@ -288,7 +288,7 @@ mod macros {
         }
     }
 
-    /// same as [cryptovampire_lib::mexists] but for [Term]
+    /// same as [crate::mexists] but for [Term]
     #[macro_export]
     macro_rules! ast_exists {
         ($($var:ident:$sort:expr),*; $content:block) => {{

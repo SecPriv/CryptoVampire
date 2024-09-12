@@ -1,4 +1,4 @@
-use cryptovampire_lib::formula::sort::builtins::STEP;
+use crate::formula::sort::builtins::STEP;
 use derivative::Derivative;
 use utils::string_ref::StrRef;
 

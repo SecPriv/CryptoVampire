@@ -9,7 +9,7 @@ use crate::parser::{
     },
     InputError, MResult, Pstr,
 };
-use cryptovampire_lib::{
+use crate::{
     formula::{
         quantifier::Quantifier,
         sort::builtins::{BOOL, STEP},

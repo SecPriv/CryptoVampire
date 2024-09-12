@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use ast_convertion::{ConcreteMacro, ToAst, INDEX_SORT_NAME};
 use base64::Engine;
-use cryptovampire_lib::formula::function::builtin::{
+use crate::formula::function::builtin::{
     AND, CONDITION_MACRO, EMPTY, EQUALITY, EXEC_MACRO, FALSE_F, GREATER_THAN_STEP, HAPPENS,
     IMPLIES, LESS_THAN_EQ_STEP, LESS_THAN_STEP, MESSAGE_MACRO, NOT, OR, PRED, TRUE_F,
 };

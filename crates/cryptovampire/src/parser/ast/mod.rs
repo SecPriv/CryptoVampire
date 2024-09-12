@@ -18,7 +18,7 @@ use itertools::{chain, Itertools};
 use log::trace;
 use pest::{iterators::Pair, Parser, Position};
 
-use cryptovampire_lib::{
+use crate::{
     formula::function::{
         builtin,
         inner::term_algebra::{self},

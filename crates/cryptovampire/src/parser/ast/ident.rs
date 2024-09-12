@@ -1,4 +1,4 @@
-use cryptovampire_lib::formula::utils::Applicable;
+use crate::formula::utils::Applicable;
 
 use super::*;
 

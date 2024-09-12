@@ -12,7 +12,7 @@ use crate::{
         InputError, MResult, Pstr,
     },
 };
-use cryptovampire_lib::{
+use crate::{
     container::{allocator::ContainerTools, ScopedContainer},
     environement::traits::Realm,
     formula::{

@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use cryptovampire_lib::formula::function::builtin::EMPTY_FUN_NAME;
+use crate::formula::function::builtin::EMPTY_FUN_NAME;
 use hashbrown::Equivalent;
 use if_chain::if_chain;
 use itertools::{chain, Either, Itertools};

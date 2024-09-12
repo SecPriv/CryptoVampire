@@ -1,5 +1,5 @@
 use crate::parser::{parser::CellCache, MResult, Pstr};
-use cryptovampire_lib::{
+use crate::{
     container::{allocator::ContainerTools, ScopedContainer},
     problem::cell::InnerMemoryCell,
 };

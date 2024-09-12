@@ -8,7 +8,7 @@ use crate::{
     parser::{ast::extra::AsFunction, InputError, MResult, Pstr},
 };
 
-use cryptovampire_lib::{
+use crate::{
     container::{allocator::ContainerTools, ScopedContainer},
     formula::function::{
         inner::{

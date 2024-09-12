@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::parser::{ast, parser::parsable_trait::VarProxy, FromStaticString};
-use cryptovampire_lib::{
+use crate::{
     formula::{
         formula::ARichFormula,
         function::{builtin::INPUT, Function},

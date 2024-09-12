@@ -15,7 +15,7 @@ use crate::{
         Location, MResult, Pstr,
     },
 };
-use cryptovampire_lib::{
+use crate::{
     container::ScopedContainer,
     environement::traits::{KnowsRealm, Realm},
     formula::{

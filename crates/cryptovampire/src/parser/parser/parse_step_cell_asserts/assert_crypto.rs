@@ -9,7 +9,7 @@ use crate::{
         Location, MResult, Pstr,
     },
 };
-use cryptovampire_lib::{
+use crate::{
     environement::traits::Realm,
     formula::function::signature::Signature,
     problem::crypto_assumptions::{
