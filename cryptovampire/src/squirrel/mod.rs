@@ -62,9 +62,8 @@ impl Display for SanitizeKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let str = match self {
             SanitizeKind::Variable => "var",
-            SanitizeKind::Function => "fun",
+            SanitizeKind::Function | SanitizeKind::Macro=> "fun",
             SanitizeKind::Step => "step",
-            SanitizeKind::Macro => "macro",
             SanitizeKind::Cell => "cell",
             SanitizeKind::Name => "name",
             SanitizeKind::Sort => "sort",
