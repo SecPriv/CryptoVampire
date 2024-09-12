@@ -184,8 +184,8 @@ fn mk_mutex_lemma<'a, 'b>(
     let other_b = {
         let (_, others_b) = b
             .indices()
-            .split_at_checked(i_commun)
-            .ok_or_else(|| err_at!(@ "not enough variable in step {}", b.name().sanitized(&ctx)))?;
+            .split_at(i_commun);
+            // .ok_or_else(|| err_at!(@ "not enough variable in step {}", b.name().sanitized(&ctx)))?;
 
         let mut names: HashSet<_> = a
             .indices()
