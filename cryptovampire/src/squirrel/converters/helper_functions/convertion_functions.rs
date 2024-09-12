@@ -132,27 +132,8 @@ pub fn convert_macro_application<'a, 'b>(
 ) -> RAoO<Term<'a, StrRef<'a>>> {
     let symb = MacroNameRef(symb.path());
     match ctx.dump().get_macro(&symb) {
-        Some(mmacro::Data::General(mmacro::GeneralMacro::ProtocolMacro(p))) => {
-            // timestamp.convert(ctx).bind(|t| match &t.inner {
-            //     ast::InnerTerm::Application(app) if args.is_empty() => {
-            //         let inner = match p {
-            //             mmacro::ProtocolMacro::Output => ast::InnerAppMacro::Msg((**app).clone()),
-            //             mmacro::ProtocolMacro::Cond => ast::InnerAppMacro::Cond((**app).clone()),
-            //         };
-            //         Ok(AoOV::any(
-            //             ast::AppMacro {
-            //                 span: Default::default(),
-            //                 inner,
-            //             }
-            //             .into(),
-            //         ))
-            //     }
-            //     _ => {
-            //         let msg = "output/cond/msg macro are only supported \
-            //                         when applied to a concrete timepoint (and only that)";
-            //         Err(err_at!(@ "{msg}"))
-            //     }
-            // })
+        Some(mmacro::Data::General(mmacro::GeneralMacro::ProtocolMacro(_))) => {
+            // we use the built-in `cond` function
             apply_fun(symb.sanitized(&ctx), [timestamp], ctx)
         }
         Some(mmacro::Data::General(mmacro::GeneralMacro::Structured(_)))

@@ -13,10 +13,7 @@ use crate::formula::{function::Function, quantifier::Quantifier, utils::Applicab
 use super::{Expander, RichFormula};
 use itertools::Either;
 use logic_formula::{Destructed, Formula, Head};
-use utils::{
-    arc_into_iter::{ArcIntoIter, ClonableArc},
-    utils::MaybeInvalid,
-};
+use utils::{arc_into_iter::ArcIntoIter, utils::MaybeInvalid};
 
 use std::sync::Arc;
 
