@@ -153,15 +153,15 @@ where
         expected_sort: Option<SortProxy<'bump>>,
     ) -> MResult<Self::R> {
         // generate the expected sorts
-        let (es_condition, es_branches): (SortProxy, SortProxy) = match state.get_realm() {
-            Realm::Evaluated => (BOOL.as_sort().into(), Default::default()),
-            Realm::Symbolic => (CONDITION.as_sort().into(), MESSAGE.as_sort().into()),
+        let (es_condition, es_branches): (SortProxy, Option<SortProxy>) = match state.get_realm() {
+            Realm::Evaluated => (BOOL.as_sort().into(), expected_sort),
+            Realm::Symbolic => (CONDITION.as_sort().into(), Some(MESSAGE.as_sort().into())),
         };
 
         // check sort
-        if let Some(es) = &expected_sort {
-            es_branches.unify(es, &state).with_location(&self.span)?;
-        }
+        // if let Some(es) = &expected_sort {
+        //     es_branches.unify(es, &state).with_location(&self.span).debug_continue()?;
+        // }
 
         let ast::IfThenElse {
             condition,
@@ -175,10 +175,10 @@ where
             .parse(env, bvars, state, Some(es_condition))
             .debug_continue()?;
         let left = left
-            .parse(env, bvars, state, Some(es_branches.clone()))
+            .parse(env, bvars, state, es_branches.clone())
             .debug_continue()?;
         let right = right
-            .parse(env, bvars, state, Some(es_branches))
+            .parse(env, bvars, state, es_branches)
             .debug_continue()?;
 
         Ok(match state.get_realm() {

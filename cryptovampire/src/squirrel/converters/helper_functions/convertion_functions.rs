@@ -85,13 +85,39 @@ where
     .map(|arg| arg.convert(ctx))
     .try_collect()?;
     let symb = match_as_trait!(symb => {Either::Left(x) | Either::Right(x) => {x.sanitized(&ctx)}});
-    let op = Operation::get_operation(symb.as_str());
+    // let op = Operation::get_operation(symb.as_str());
     mdo! {
         let! args = Ok(AoOV::transpose_iter(args));
-        pure if let Some(operation) = op {
-            ast::Infix{span: Default::default(), operation, terms: args}.into()
+        // pure if let Some(operation) = op {
+        //     ast::Infix{span: Default::default(), operation, terms: args}.into()
+        // } else {
+        //     ast::Application::new_app(symb.clone(), args).into()
+        // }
+        pure match symb.clone().into() {
+            SpecialFunction::Op(operation) => ast::Infix{span: Default::default(), operation, terms: args}.into(),
+            SpecialFunction::If => {
+                let [condition, left, right] = args.try_into().map_err(|_| err_at!(@ "wrong number of arguments to if"))?;
+                ast::IfThenElse {span: Default::default(), condition, left, right}.into()
+            }
+            SpecialFunction::Other(symb) => ast::Application::new_app(symb, args).into()
+        }
+    }
+}
+
+enum SpecialFunction<'a> {
+    Op(Operation),
+    If,
+    Other(StrRef<'a>)
+}
+
+impl<'a> From<StrRef<'a>> for SpecialFunction<'a> {
+    fn from(value: StrRef<'a>) -> Self {
+        if value.as_str() == "if" {
+            Self::If
+        } else if let Some(op) = Operation::get_operation(&value) {
+            Self::Op(op)
         } else {
-            ast::Application::new_app(symb.clone(), args).into()
+            Self::Other(value)
         }
     }
 }

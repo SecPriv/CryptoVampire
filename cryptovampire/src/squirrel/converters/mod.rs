@@ -63,6 +63,7 @@ static REMMAPPED_FUNCTION: HashMap<&'static str, StrRef<'static>> = {
         ("output", MESSAGE_MACRO.name()),
         ("exec", EXEC_MACRO.name()),
         (DEFAULT_FAIL_NAME_NAME, DEFAULT_FAIL_NAME.clone()),
+        ("if", "if".into())
     ]
     .into_iter()
     .collect()
@@ -77,7 +78,7 @@ static FORBIDDEN_FUNCTIONS: HashSet<&'static str> =
 #[dynamic]
 static BUILTIN_FUNCTION: HashSet<&'static str> = [
     "&&", "||", "and", "or", "<=>", "=>", "=", "<=", "<", "not", "true", "false", "empty", "ø",
-    "happens", "pred",
+    "happens", "pred", "if",
 ]
 .into_iter()
 .collect();

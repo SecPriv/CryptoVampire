@@ -27,7 +27,7 @@ impl<'a, S: Display> Display for FindSuchThat<'a, S> {
         } = self;
         write!(
             f,
-            "find {vars} such that {condition} then {{{left}}} else {{{right}}}"
+            "try find {vars}\nsuch that {{{condition}}}\nthen {{{left}}}\nelse {{{right}}}"
         )
     }
 }

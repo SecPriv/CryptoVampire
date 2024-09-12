@@ -23,6 +23,6 @@ impl<'a, S: Display> Display for IfThenElse<'a, S> {
             right,
             ..
         } = self;
-        write!(f, "if {condition} {{{left}}} else {{{right}}}")
+        write!(f, "if {condition}\n{{\n\t{left}\n}} else {{\n\t{right}\n}}")
     }
 }
