@@ -1,24 +1,31 @@
 #![recursion_limit = "256"]
 
+pub mod cli;
 pub mod container;
 pub mod environement;
 pub mod formula;
+pub mod parser;
 pub mod problem;
 pub mod runner;
 pub mod smt;
+pub mod squirrel;
 pub mod subterm;
-
-pub use problem::step::INIT_STEP_NAME;
-pub use subterm::kind::SubtermKind;
+mod return_value;
+mod error;
 
 #[cfg(test)]
 mod tests;
 
-use std::{fs::File, io::BufWriter, num::NonZeroU32, path::Path};
+// reexports
+pub use problem::step::INIT_STEP_NAME;
+pub use subterm::kind::SubtermKind;
+pub use parser::parse_pbl_from_ast;
+pub use return_value::Return;
 
+// other imports
+use std::{fs::File, io::BufWriter, num::NonZeroU32, path::Path};
 use crate::cli::Args;
 use anyhow::{bail, ensure, Context};
-
 use crate::{
     container::ScopedContainer,
     environement::environement::{Environement, SolverConfig},
@@ -27,18 +34,11 @@ use crate::{
     runner::Runners,
     smt::{SmtFile, SMT_FILE_EXTENSION},
 };
-
 use log::trace;
 use parser::{ast::ASTList, Pstr};
 use utils::{from_with::FromWith, string_ref::StrRef, traits::MyWriteTo};
-pub mod cli;
-pub mod parser;
-pub mod squirrel;
 
-pub use parser::parse_pbl_from_ast;
-
-pub use return_value::Return;
-mod return_value;
+// start of the file
 
 pub fn run_from_cv(args: Args, str: &str) -> anyhow::Result<Return> {
     trace!("running for cryptovampire file");
