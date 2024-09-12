@@ -138,10 +138,42 @@ impl<'bump> InstanceSearcher<'bump, VampireExec> for EufCma<'bump> {
 impl<'bump> InstanceSearcher<'bump, VampireExec> for IntCtxt<'bump> {
     fn search_instances(
         &self,
-        _str: &<VampireExec as Runner>::TimeoutR,
-        _env: &Environement<'bump>,
+        str: &<VampireExec as Runner>::TimeoutR,
+        env: &Environement<'bump>,
     ) -> Vec<ARichFormula<'bump>> {
-        todo!()
+        let dec = self.dec.name();
+        let functions = env.get_function_hash();
+
+        EXTRACT_FORMULA
+            .captures_iter(str)
+            .map(|c| {
+                // debug!("found {:?}", &c);
+                c.extract()
+            })
+            .flat_map(|(_, [content])| content.split("|"))
+            .filter(|s| s.contains(dec.as_ref()))
+            .map(|s| {
+                debug!("new potential instance {:?}", &s);
+                s
+            })
+            .filter_map(|s| match TmpFormula::parse(s) {
+                Ok(f) => Some((s, f)),
+                Err(_) => {
+                    debug!("{s} failed");
+                    None
+                }
+            })
+            .filter_map(|(s, f)| {
+                f.to_rich_formula(&functions, Default::default(), &mut Default::default())
+                    .ok()
+                    .map(|f| (s, f))
+            })
+            .map(|(s, f)| {
+                debug!("found {} from {}", f, s);
+                f
+            })
+            .map_into()
+            .collect()
     }
 }
 
