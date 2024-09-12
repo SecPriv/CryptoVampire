@@ -216,9 +216,10 @@ impl<'bump> Function<'bump> {
 
         let bound_variables = Arc::clone(q.get_variables());
 
-        let free_variables = (&arg)
+        let free_variables : Arc<[_]> = (&arg)
             .free_vars_iter()
             .into_iter()
+            .unique()
             .filter(|v| !bound_variables.contains(v))
             .collect();
 
@@ -251,8 +252,8 @@ impl<'bump> Function<'bump> {
         let free_variables: Arc<[_]> = [&condition, &success, &faillure]
             .into_iter()
             .flat_map(|f| f.free_vars_iter())
-            .filter(|v| !vars.contains(v))
             .unique()
+            .filter(|v| !vars.contains(v))
             .collect();
 
         debug_assert!(
