@@ -1,8 +1,8 @@
 [workspace]
-members = ["cryptovampire", "cryptovampire-lib", "utils", "logic_formula"]
+members = ["crates/cryptovampire", "crates/cryptovampire-lib", "crates/utils", "crates/logic_formula"]
 resolver = "2"
 # authors = ["Simon Jeanteur <7871851+puyral@users.noreply.github.com>"]
-default-members = ["cryptovampire", "cryptovampire-lib"]
+default-members = ["crates/cryptovampire", "crates/cryptovampire-lib"]
 
 [workspace.dependencies]
 itertools = "0.13"

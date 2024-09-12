@@ -227,7 +227,7 @@ mod tests {
             paste! {
                     #[test]
                     fn [<parse_$f>]() {
-                        let file_path = format!("../tests/squirrel/{}.json", stringify!($f));
+                        let file_path = format!("../../tests/squirrel/{}.json", stringify!($f));
                         let content = File::open(file_path).expect("Unable to read file");
                         let deserializer = &mut serde_json::Deserializer::from_reader(BufReader::new(content));
                         let result: Result<$t, _> = serde_path_to_error::deserialize(deserializer);
