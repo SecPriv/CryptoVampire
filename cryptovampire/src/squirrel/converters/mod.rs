@@ -106,7 +106,7 @@ const DEFAULT_FAIL_NAME_NAME: &'static str = "fail";
 const DEFAULT_TUPLE_NAME: StrRef<'static> = StrRef::from_static(&DEFAULT_TUPLE_NAME_NAME);
 const DEFAULT_FST_PROJ_NAME: StrRef<'static> = StrRef::from_static(&DEFAULT_FST_PROJ_NAME_NAME);
 const DEFAULT_SND_PROJ_NAME: StrRef<'static> = StrRef::from_static(&DEFAULT_SND_PROJ_NAME_NAME);
-const DEFAULT_FAIL_NAME: StrRef<'static> = StrRef::from_static(&DEFAULT_SND_PROJ_NAME_NAME);
+const DEFAULT_FAIL_NAME: StrRef<'static> = StrRef::from_static(&DEFAULT_FAIL_NAME_NAME);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Builder)]
 #[builder(name = "ContextBuilder")]
