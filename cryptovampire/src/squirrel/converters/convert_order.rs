@@ -1,14 +1,13 @@
 use super::{ast_convertion::ToAst, Context, RAoO};
 use hashbrown::HashSet;
-use log::trace;
 use std::{cmp::Ordering, fmt::Debug};
 use utils::monad::Monad;
 
-use itertools::{chain, izip, Itertools, ZipEq, ZipLongest};
+use itertools::{chain, izip, Itertools};
 use utils::{all_or_one::AoOV, mdo, string_ref::StrRef};
 
 use crate::{
-    bail_at, err_at,
+    bail_at,
     parser::{
         ast::{self, Application, Order, OrderOperation, QuantifierKind},
         InputError,
@@ -174,7 +173,7 @@ fn mk_mutex_lemma<'a, 'b>(
         _ => return Ok(None),
     };
 
-    assert!(!(a==b && (a.indices().len() == i_commun)));
+    assert!(!(a == b && (a.indices().len() == i_commun)));
 
     let var_commun = &a.indices()[..i_commun];
     // .split_at_checked(i_commun)
@@ -182,10 +181,8 @@ fn mk_mutex_lemma<'a, 'b>(
 
     // ensure there are no clashes in variables names
     let other_b = {
-        let (_, others_b) = b
-            .indices()
-            .split_at(i_commun);
-            // .ok_or_else(|| err_at!(@ "not enough variable in step {}", b.name().sanitized(&ctx)))?;
+        let (_, others_b) = b.indices().split_at(i_commun);
+        // .ok_or_else(|| err_at!(@ "not enough variable in step {}", b.name().sanitized(&ctx)))?;
 
         let mut names: HashSet<_> = a
             .indices()

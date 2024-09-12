@@ -19,7 +19,7 @@ pub use euf_cma::{
 
 pub use int_ctxt::{
     SubtermIntCtxtKey, SubtermIntCtxtMain, SubtermIntCtxtRand, INT_CTXT_DEC_SIGNATURE,
-    INT_CTXT_ENC_SIGNATURE, INT_CTXT_VERIFY_SIGNATURE, INT_CTXT_FAIL_SIGNATURE
+    INT_CTXT_ENC_SIGNATURE, INT_CTXT_FAIL_SIGNATURE, INT_CTXT_VERIFY_SIGNATURE,
 };
 use utils::implvec;
 

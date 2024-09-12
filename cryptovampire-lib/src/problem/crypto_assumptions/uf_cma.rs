@@ -385,13 +385,15 @@ impl<'bump> UfCma<'bump> {
                                 //     message.clone(),
                                 //     pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),
                                 // ]))
-                                self.apply_eval_verify(pbl, signature.clone(), message.clone(), app_key)
-                                    >> mexists!([u_var], {
-                                        meq(
-                                            pbl.evaluator().eval(u_var),
-                                            pbl.evaluator().eval(&message),
-                                        ) & mformula
-                                    })
+                                self.apply_eval_verify(
+                                    pbl,
+                                    signature.clone(),
+                                    message.clone(),
+                                    app_key,
+                                ) >> mexists!([u_var], {
+                                    meq(pbl.evaluator().eval(u_var), pbl.evaluator().eval(&message))
+                                        & mformula
+                                })
                             }))
                         } else {
                             Some(mforall!(free_vars, {
@@ -400,11 +402,15 @@ impl<'bump> UfCma<'bump> {
                                 //     message.clone(),
                                 //     pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),
                                 // ]))
-                                self.apply_eval_verify(pbl, signature.clone(), message.clone(), app_key)
-                                    >> mformula.apply_substitution2(&OneVarSubst {
-                                        id: u_var.id,
-                                        f: message.clone(),
-                                    })
+                                self.apply_eval_verify(
+                                    pbl,
+                                    signature.clone(),
+                                    message.clone(),
+                                    app_key,
+                                ) >> mformula.apply_substitution2(&OneVarSubst {
+                                    id: u_var.id,
+                                    f: message.clone(),
+                                })
                             }))
                         }
                     } else {

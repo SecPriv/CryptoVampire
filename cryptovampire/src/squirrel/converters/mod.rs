@@ -3,7 +3,8 @@ use std::fmt::Display;
 use ast_convertion::{ConcreteMacro, ToAst, INDEX_SORT_NAME};
 use base64::Engine;
 use cryptovampire_lib::formula::function::builtin::{
-    AND, CONDITION_MACRO, EMPTY, EQUALITY, EXEC_MACRO, FALSE_F, GREATER_THAN_STEP, HAPPENS, IMPLIES, LESS_THAN_EQ_STEP, LESS_THAN_STEP, MESSAGE_MACRO, NOT, OR, PRED, TRUE_F
+    AND, CONDITION_MACRO, EMPTY, EQUALITY, EXEC_MACRO, FALSE_F, GREATER_THAN_STEP, HAPPENS,
+    IMPLIES, LESS_THAN_EQ_STEP, LESS_THAN_STEP, MESSAGE_MACRO, NOT, OR, PRED, TRUE_F,
 };
 use derive_builder::Builder;
 use hashbrown::{HashMap, HashSet};

@@ -62,7 +62,7 @@ impl Display for SanitizeKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let str = match self {
             SanitizeKind::Variable => "var",
-            SanitizeKind::Function | SanitizeKind::Macro=> "fun",
+            SanitizeKind::Function | SanitizeKind::Macro => "fun",
             SanitizeKind::Step => "step",
             SanitizeKind::Cell => "cell",
             SanitizeKind::Name => "name",
@@ -92,7 +92,7 @@ pub trait Sanitizer {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct FakeSanitizable<'a> {
     pub str: StrRef<'a>,
-    pub kind: SanitizeKind
+    pub kind: SanitizeKind,
 }
 impl<'a> Sanitizable<'a> for FakeSanitizable<'a> {
     fn to_str_ref(&self) -> StrRef<'a> {

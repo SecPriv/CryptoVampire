@@ -138,8 +138,8 @@ impl<'a> Variable<'a> {
     pub fn original_name_mut(&mut self) -> &mut Symb<'a> {
         &mut self.id.name
     }
-    pub fn original_name(&self) -> & Symb<'a> {
-        & self.id.name
+    pub fn original_name(&self) -> &Symb<'a> {
+        &self.id.name
     }
 }
 

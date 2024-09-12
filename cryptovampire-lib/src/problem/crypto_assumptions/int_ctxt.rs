@@ -1,7 +1,7 @@
 use std::{collections::BTreeSet, hash::Hash, sync::Arc};
 
 use if_chain::if_chain;
-use itertools::{chain, Itertools};
+use itertools::Itertools;
 use log::trace;
 
 use crate::formula::utils::formula_expander::NO_REC_MACRO;

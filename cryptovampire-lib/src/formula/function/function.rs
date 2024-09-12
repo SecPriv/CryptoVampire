@@ -216,7 +216,7 @@ impl<'bump> Function<'bump> {
 
         let bound_variables = Arc::clone(q.get_variables());
 
-        let free_variables : Arc<[_]> = (&arg)
+        let free_variables: Arc<[_]> = (&arg)
             .free_vars_iter()
             .into_iter()
             .unique()

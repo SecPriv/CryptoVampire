@@ -16,7 +16,7 @@ use cryptovampire_lib::{
         CryptoAssumption, CryptoFlag, EufCma, IntCtxt, Nonce, UfCmaBuilder, Unfolding,
         EUF_CMA_PK_SIGNATURE, EUF_CMA_SIGN_SIGNATURE, EUF_CMA_VERIFY_SIGNATURE,
         INT_CTXT_DEC_SIGNATURE, INT_CTXT_ENC_SIGNATURE, INT_CTXT_FAIL_SIGNATURE,
-        INT_CTXT_VERIFY_SIGNATURE, UF_CMA_MAC_SIGNATURE, UF_CMA_VERIFY_SIGNATURE,
+        UF_CMA_MAC_SIGNATURE, UF_CMA_VERIFY_SIGNATURE,
     },
 };
 use utils::{destvec, implvec, string_ref::StrRef, traits::NicerError};
