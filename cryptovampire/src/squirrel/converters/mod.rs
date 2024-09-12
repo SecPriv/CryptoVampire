@@ -60,7 +60,8 @@ static REMMAPPED_FUNCTION: HashMap<&'static str, StrRef<'static>> = {
         ("input", "input".into()),
         ("cond", CONDITION_MACRO.name()),
         ("output", MESSAGE_MACRO.name()),
-        ("exec", EXEC_MACRO.name())
+        ("exec", EXEC_MACRO.name()),
+        (DEFAULT_FAIL_NAME_NAME, DEFAULT_FAIL_NAME.clone()),
     ]
     .into_iter()
     .collect()
@@ -100,10 +101,12 @@ mod top_level_converter;
 const DEFAULT_TUPLE_NAME_NAME: &'static str = "pair";
 const DEFAULT_FST_PROJ_NAME_NAME: &'static str = "fst";
 const DEFAULT_SND_PROJ_NAME_NAME: &'static str = "snd";
+const DEFAULT_FAIL_NAME_NAME: &'static str = "fail";
 
 const DEFAULT_TUPLE_NAME: StrRef<'static> = StrRef::from_static(&DEFAULT_TUPLE_NAME_NAME);
 const DEFAULT_FST_PROJ_NAME: StrRef<'static> = StrRef::from_static(&DEFAULT_FST_PROJ_NAME_NAME);
 const DEFAULT_SND_PROJ_NAME: StrRef<'static> = StrRef::from_static(&DEFAULT_SND_PROJ_NAME_NAME);
+const DEFAULT_FAIL_NAME: StrRef<'static> = StrRef::from_static(&DEFAULT_SND_PROJ_NAME_NAME);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Builder)]
 #[builder(name = "ContextBuilder")]

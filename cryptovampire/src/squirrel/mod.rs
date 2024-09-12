@@ -88,3 +88,18 @@ pub trait Sanitizable<'a> {
 pub trait Sanitizer {
     fn sanitize<'a, S: Sanitizable<'a>>(&self, str: &S) -> StrRef<'a>;
 }
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct FakeSanitizable<'a> {
+    pub str: StrRef<'a>,
+    pub kind: SanitizeKind
+}
+impl<'a> Sanitizable<'a> for FakeSanitizable<'a> {
+    fn to_str_ref(&self) -> StrRef<'a> {
+        self.str.clone()
+    }
+
+    fn sanitize_kind(&self) -> SanitizeKind {
+        self.kind
+    }
+}
