@@ -1,0 +1,45 @@
+[package]
+name = "cryptovampire"
+version = "0.5.0"
+edition = "2021"
+authors = ["Simon Jeanteur <simon.jeanteur@tuwien.ac.at>"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# cryptovampire-lib = { path = "../cryptovampire-lib"}
+utils = { path = "../utils", features = ["serde"] }
+logic_formula = {path = "../logic_formula", features = ["serde"]}
+
+itertools = { workspace = true }
+if_chain = { workspace = true }
+hashbrown = { workspace = true }
+log = { workspace = true }
+static_init = { workspace = true }
+paste = { workspace = true }
+macro-attr ={ workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true, features = ["derive"]}
+derive_builder = { workspace = true }
+bitflags = { workspace = true }
+
+pest = "2.7"
+pest_derive = "2.7"
+clap = { version = "4", features = ["derive"] }
+derivative = { version = "2.2" }
+const_format = "0.2"
+env_logger = "0.11"
+clap_complete = "4.5.7"
+serde_json = "1.0.120"
+base64 = "0.22.1"
+tptp = "0.31"
+regex = "1.10"
+tempfile = "3.10"
+shared_child = "1.0.0"
+once_cell = "1.19.0"
+which = "6.0.1"
+
+[dev-dependencies]
+serde_path_to_error = "0.1"
+

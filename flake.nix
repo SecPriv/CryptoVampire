@@ -22,7 +22,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        src = ./cryptovampire;
+        src = ./crates/cryptovampire;
         custom-pkgs = custom.packages.${system};
         manifest = (pkgs.lib.importTOML "${src}/Cargo.toml").package;
 
