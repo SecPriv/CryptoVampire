@@ -123,7 +123,7 @@ pub fn generate<'bump>(
             .iter()
             .map(|o| {
                 let inner = match o.kind() {
-                    OrderingKind::LT(a, b) => leq.f([a, b]),
+                    OrderingKind::LT(a, b) => happens.f([b]) >> leq.f([a, b]),
                     OrderingKind::Exclusive(a, b) => !(happens.f([a]) & happens.f([b])),
                 };
                 RichFormula::Quantifier(o.quantifier().clone(), o.guard().clone() >> inner)
