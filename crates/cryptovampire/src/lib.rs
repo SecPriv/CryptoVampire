@@ -1,3 +1,16 @@
+#![recursion_limit = "256"]
+
+pub mod container;
+pub mod environement;
+pub mod formula;
+pub mod problem;
+pub mod runner;
+pub mod smt;
+pub mod subterm;
+
+pub use problem::step::INIT_STEP_NAME;
+pub use subterm::kind::SubtermKind;
+
 #[cfg(test)]
 mod tests;
 
@@ -6,7 +19,7 @@ use std::{fs::File, io::BufWriter, num::NonZeroU32, path::Path};
 use crate::cli::Args;
 use anyhow::{bail, ensure, Context};
 
-use cryptovampire_lib::{
+use crate::{
     container::ScopedContainer,
     environement::environement::{Environement, SolverConfig},
     formula::{function::builtin::BUILT_IN_FUNCTIONS, sort::builtins::BUILT_IN_SORTS},
