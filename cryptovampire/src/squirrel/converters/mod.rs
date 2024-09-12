@@ -71,7 +71,7 @@ static REMMAPPED_FUNCTION: HashMap<&'static str, StrRef<'static>> = {
 /// Functions will break things if they are called as functions
 #[dynamic]
 static FORBIDDEN_FUNCTIONS: HashSet<&'static str> =
-    ["diff", ">", ">=", "att", "qatt"].into_iter().collect();
+    ["diff", ">", ">=", "qatt"].into_iter().collect();
 
 /// Symbols that should not be decalred
 #[dynamic]
