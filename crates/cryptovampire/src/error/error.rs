@@ -1,49 +1,19 @@
-use std::fmt::{Debug, Display};
+use std::{backtrace::Backtrace, fmt::{Debug, Display}};
 
 use serde::{Deserialize, Serialize};
 
-use super::{inner_error::InnerError, location::OwnedSpan, BaseError};
+use super::{inner_error::InnerError, location::{Location, OwnedSpan}, BaseError, CVResult};
 
 #[derive(Debug)]
 pub struct Error<L>(Box<InnerError<L>>);
 
-impl Display for Error<()> {
+impl<U> Display for Error<U> where U: Location {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Display::fmt(&self.0.error, f)?;
-        match &self.0.backtrace {
-            Some(bt) => write!(f, "\nbacktrace:\n{}", bt),
-            None => Ok(()),
-        }
+      Location::location_fmt(self, f)
     }
 }
 
-impl Display for Error<OwnedSpan> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let span = self.0.location.as_span();
-        let pest_error = match &self.0.error {
-            BaseError::PestErrorVariant(variant) => {
-                &pest::error::Error::new_from_span(variant.clone(), span)
-            }
-            BaseError::PestError(e) => e,
-            e => {
-                let variant = pest::error::ErrorVariant::<crate::parser::Rule>::CustomError {
-                    message: e.to_string(),
-                };
-                &pest::error::Error::new_from_span(variant, span)
-            }
-        };
-        Display::fmt(pest_error, f)?;
-        match &self.0.backtrace {
-            Some(bt) => write!(f, "\nbacktrace:\n{}", bt),
-            None => Ok(()),
-        }
-    }
-}
-
-impl<L> std::error::Error for Error<L>
-where
-    Error<L>: Display,
-    L: Debug,
+impl<L:Location> std::error::Error for Error<L>
 {
     fn cause(&self) -> Option<&dyn std::error::Error> {
         match &self.0.error {
@@ -54,8 +24,32 @@ where
     }
 }
 
-impl<L> Error<L> {
-    pub fn new(inner: InnerError<L>) -> Self {
-        Self(Box::new(inner))
+impl<L: Location> Error<L>
+{
+    pub fn new(location: L, error: BaseError) -> Self {
+        let inner = InnerError::new(location, error);
+        let r = Error(Box::new(inner));
+
+        if cfg!(debug_assertions) {
+            Err(r).expect("debug is on, giving up")
+        } else {
+            r
+        }
+    }
+
+    pub fn err<T>(location: L, error: BaseError) -> CVResult<T, L> {
+        Err(Self::new(location, error))
+    }
+
+    pub(crate) fn get_location(&self) -> &L {
+      &self.0.location
+    }
+
+    pub(crate) fn get_error(&self) -> &BaseError {
+      &self.0.error
+    }
+
+    pub(crate) fn get_backtrace(&self) -> Option<&Backtrace> {
+      self.0.backtrace.as_ref()
     }
 }

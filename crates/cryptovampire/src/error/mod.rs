@@ -9,7 +9,7 @@ pub use error::Error;
 mod inner_error;
 
 mod location;
-pub use location::OwnedSpan;
+pub use location::{OwnedSpan, Location};
 
 mod result;
 pub use result::CVContext;
@@ -30,11 +30,14 @@ pub enum BaseError {
 }
 
 impl BaseError {
-    pub fn with<L>(self, location: L) -> Error<L> {
-        Error::new(inner_error::InnerError::new(location, self))
+    pub fn with<L:crate::Location>(self, location: L) -> Error<L>
+    {
+        // Error::new(inner_error::InnerError::new(location, self))
+        Error::new(location, self)
     }
 
-    pub fn to_err<T, L>(self, location: L) -> CVResult<T, L> {
-        Err(self.with(location))
+    pub fn to_err<T, L:crate::Location>(self, location: L) -> CVResult<T, L>
+    {
+        Error::err(location, self)
     }
 }
