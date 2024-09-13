@@ -39,13 +39,13 @@ use utils::{
 };
 
 #[derive(Hash, Clone, PartialEq, Eq, Debug, PartialOrd, Ord)]
-pub struct Macro<'bump, 'a, S> {
+pub struct Macro<'bump, L, S> {
     /// The sort of the arguments
     pub args: Arc<[Sort<'bump>]>,
     /// Their name
     pub args_name: Arc<[S]>,
     /// The body
-    pub content: ast::Term<'a, S>,
+    pub content: ast::Term<L, S>,
 }
 
 pub use cache::{CellCache, FunctionCache, StepCache};
@@ -76,7 +76,7 @@ pub struct Environement<'bump, 'str, S> {
     pub evaluator: Evaluator<'bump>,
 
     /// For [Macro]s
-    pub macro_hash: HashMap<String, Macro<'bump, 'str, S>>,
+    pub macro_hash: HashMap<String, Macro<'bump, L, S>>,
     /// # Macro look up table
     // pub step_lut_to_parse: HashMap<&'str str, ast::Step<'str>>,
     pub functions: HashMap<String, FunctionCache<'str, 'bump, S>>,
@@ -279,12 +279,12 @@ impl<'a, 'bump, S> KnowsRealm for Environement<'bump, 'a, S> {
 }
 
 /// Create a problem from a [ast::ASTList]
-pub fn parse_pbl_from_ast<'a, 'bump, S>(
+pub fn parse_pbl_from_ast<'bump,L, S>(
     container: &'bump ScopedContainer<'bump>,
     sort_hash: implvec!(Sort<'bump>),
     function_hash: implvec!(Function<'bump>),
     extra_names: implvec!(String),
-    ast: ASTList<'a, S>,
+    ast: ASTList<L, S>,
     ignore_lemmas: bool,
     allow_shadowing: bool,
 ) -> anyhow::Result<Problem<'bump>>
@@ -312,9 +312,9 @@ where
     )
 }
 
-fn prbl_from_ast<'a, 'bump, S>(
+fn prbl_from_ast<'a, 'bump,L,  S>(
     mut env: Environement<'bump, 'a, S>,
-    ast: &'a ASTList<'a, S>,
+    ast: &'a ASTList<L, S>,
     mut pbl_builder: ProblemBuilder<'bump>,
     ignore_lemmas: bool,
     container: &'bump ScopedContainer<'bump>,

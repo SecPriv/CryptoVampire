@@ -31,9 +31,9 @@ use logic_formula::Formula;
 /// This should be done farily late. Only takes a [StepCache].
 ///
 /// The function returns a [InnerStep] to *maybe* mutlipthread things on day...
-fn parse_step<'bump, 'str, S>(
+fn parse_step<'bump, 'str, L,S>(
     env: &Environement<'bump, 'str, S>,
-    step_cache: &StepCache<'str, 'bump, S>,
+    step_cache: &StepCache<'str, 'bump, L,S>,
     // name: &str,
 ) -> MResult<InnerStep<'bump>>
 where
@@ -106,7 +106,7 @@ where
                     .zip(0..)
                     .map(
                         |(
-                            ast::VariableBinding {
+                            ast::VariableBinding::<L,_> {
                                 type_name,
                                 variable,
                                 ..

@@ -11,8 +11,8 @@ use pest_derive::Parser;
 use utils::{string_ref::StrRef, traits::NicerError};
 
 /// Errors used thoughout parsing
-mod error;
-pub use error::{InputError, Location, WithLocation};
+// mod error;
+// pub use error::{InputError, Location, WithLocation};
 
 /// The [Pstr] trait wich serves as a trick to gather many traits
 mod pstr;
@@ -47,7 +47,7 @@ pub const USED_KEYWORDS: &'static [&'static str] = &[
     "Array",
 ];
 
-pub type MResult<T> = std::result::Result<T, error::InputError>;
+// pub type MResult<T> = std::result::Result<T, error::InputError>;
 
 // -----------------------------------------------------------------------------
 // --------------------------------- parser ------------------------------------

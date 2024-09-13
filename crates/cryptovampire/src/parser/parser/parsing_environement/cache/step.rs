@@ -15,10 +15,10 @@ use crate::{
 use itertools::izip;
 
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone)]
-pub struct StepCache<'str, 'bump, S> {
+pub struct StepCache<'str, 'bump,L, S> {
     pub args: Arc<[Sort<'bump>]>,
     pub args_name: Arc<[S]>,
-    pub ast: &'str ast::Step<'str, S>,
+    pub ast: &'str ast::Step<L, S>,
     pub function: Function<'bump>,
     pub step: Step<'bump>,
 }
@@ -30,7 +30,7 @@ pub struct NamedVariable<'bump, S> {
     pub variable: Variable<'bump>,
 }
 
-impl<'str, 'bump, S> StepCache<'str, 'bump, S>
+impl<'str, 'bump,L,  S> StepCache<'str, 'bump, L,S>
 where
     S: Clone + FromStaticString,
 {

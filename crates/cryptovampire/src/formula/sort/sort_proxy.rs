@@ -13,6 +13,8 @@ pub enum InferenceError {
         expected: Box<str>,
         recieved: Box<str>,
     },
+    #[error(tranparent)]
+    UpdateError(#[from] UpdateError)
 }
 
 impl InferenceError {

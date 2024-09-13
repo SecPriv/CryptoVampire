@@ -20,7 +20,7 @@ pub type CVResult<T, L> = std::result::Result<T, Error<L>>;
 #[derive(Debug, thiserror::Error)]
 pub enum BaseError {
     #[error("typing error")]
-    TypingError,
+    TypingError(Inference),
     #[error("{:}", .0)]
     PestErrorVariant(pest::error::ErrorVariant<crate::parser::Rule>),
     #[error(transparent)]
