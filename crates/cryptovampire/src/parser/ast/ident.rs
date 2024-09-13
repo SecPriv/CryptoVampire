@@ -1,3 +1,5 @@
+use pest::Span;
+
 use crate::formula::utils::Applicable;
 
 use super::*;
@@ -5,36 +7,37 @@ use super::*;
 /// [Rule::ident]
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-pub struct Ident<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
+pub struct Ident<L, S> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    pub span: L,
     pub content: S,
 }
-boiler_plate!(Ident<'s>, 's, ident; |p| {
+boiler_plate!(@ Ident, 's, ident; |p| {
 Ok(Ident { span: p.as_span().into(), content: p.as_str()})
 });
 
-impl<'s, S> Ident<'s, S> {
+impl<L, S> Ident<L, S> {
     pub fn name(&self) -> &S {
         &self.content
     }
+}
 
-    /// using [Location::default]
+impl<L: Default, S> Ident<L, S> {
     pub fn from_content(s: S) -> Self {
         Ident {
-            span: Default::default(),
+            span: L::default(),
             content: s,
         }
     }
 }
 
-impl<'a, S: Display> Display for Ident<'a, S> {
+impl<L, S: Display> Display for Ident<L, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.name().fmt(f)
     }
 }
 
-impl<'a, S> From<S> for Ident<'a, S> {
+impl<S> From<S> for Ident<(), S> {
     fn from(value: S) -> Self {
         Self::from_content(value)
     }
@@ -42,27 +45,27 @@ impl<'a, S> From<S> for Ident<'a, S> {
 
 /// [Rule::type_name]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct TypeName<'a, S = &'a str>(pub Sub<'a, Ident<'a, S>>);
-boiler_plate!(TypeName<'a>, 'a, type_name; |p| {
-Ok(Self(Sub { span: p.as_span().into(), content: p.into_inner().next().unwrap().try_into()? }))
+pub struct TypeName<L, S>(pub Sub<L, Ident<L, S>>);
+boiler_plate!(TypeName<Span<'a>, &'a str>, 'a, type_name; |p| {
+Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
-impl<'a, S> TypeName<'a, S> {
+impl<L, S> TypeName<L, S> {
     pub fn name(&self) -> &S {
         self.0.content.name()
     }
 
-    pub fn name_span(&self) -> Location<'a> {
-        self.0.span
+    pub fn name_span(&self) -> &L {
+        &self.0.span
     }
 }
-impl<'a, S: Display> Display for TypeName<'a, S> {
+impl<'a, L, S: Display> Display for TypeName<L, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.name().fmt(f)
     }
 }
 
-impl<'a, S> From<S> for TypeName<'a, S> {
+impl<'a, S> From<S> for TypeName<(), S> {
     fn from(value: S) -> Self {
         TypeName(Sub::from(Ident::from(value)))
     }
@@ -70,28 +73,28 @@ impl<'a, S> From<S> for TypeName<'a, S> {
 
 /// [Rule::macro_name]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct MacroName<'a, S = &'a str>(pub Sub<'a, Ident<'a, S>>);
-boiler_plate!(MacroName<'a>, 'a, macro_name; |p| {
-    Ok(Self(Sub { span: p.as_span().into(), content: p.into_inner().next().unwrap().try_into()? }))
+pub struct MacroName<L, S>(pub Sub<L, Ident<L, S>>);
+boiler_plate!(MacroName<Span<'a>, &'a str>, 'a, macro_name; |p| {
+    Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
-impl<'a, S> MacroName<'a, S> {
+impl<L, S> MacroName<L, S> {
     pub fn name(&self) -> &S {
         self.0.content.name()
     }
 
-    pub fn span(&self) -> Location<'a> {
-        self.0.span
+    pub fn span(&self) -> &L {
+        &self.0.span
     }
 }
 
-impl<'a, S: Display> Display for MacroName<'a, S> {
+impl<'a, L, S: Display> Display for MacroName<L, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}!", self.name())
     }
 }
 
-impl<'a, S> From<S> for MacroName<'a, S> {
+impl<'a, S> From<S> for MacroName<(), S> {
     fn from(value: S) -> Self {
         MacroName(Sub::from(Ident::from(value)))
     }
@@ -99,33 +102,34 @@ impl<'a, S> From<S> for MacroName<'a, S> {
 
 /// [Rule::function]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Function<'a, S = &'a str>(pub Sub<'a, Ident<'a, S>>);
-boiler_plate!(Function<'a>, 'a, function; |p| {
-    Ok(Self(Sub { span: p.as_span().into(), content: p.into_inner().next().unwrap().try_into()? }))
+pub struct Function<L, S>(pub Sub<L, Ident<L, S>>);
+boiler_plate!(Function<Span<'a>, &'a str>, 'a, function; |p| {
+    Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
-impl<'a, S> Function<'a, S> {
+impl<L, S> Function<L, S> {
     pub fn name(&self) -> &S {
         self.0.content.name()
     }
 
-    pub fn span(&self) -> Location<'a> {
-        self.0.span
+    pub fn span(&self) -> &L {
+        &self.0.span
     }
-
+}
+impl<L: Default, S> Function<L, S> {
     pub fn from_name(s: S) -> Self {
         Self(Sub::from_content(Ident::from_content(s)))
     }
 }
 
-impl<'a, S: Display> Display for Function<'a, S> {
+impl<'a, L, S: Display> Display for Function<L, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.name().fmt(f)
     }
 }
 
-impl<'a, 'b, S: Clone + Borrow<str>> Applicable for &'b Function<'a, S> {
-    type Term = ast::Term<'a, S>;
+impl<'a, 'b, S: Clone + Borrow<str>> Applicable for &'b Function<(), S> {
+    type Term = ast::Term<(), S>;
 
     fn f<U, I>(self, args: I) -> Self::Term
     where
@@ -146,40 +150,41 @@ impl<'a, 'b, S: Clone + Borrow<str>> Applicable for &'b Function<'a, S> {
 
 /// [Rule::variable]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Variable<'a, S = &'a str>(pub Sub<'a, S>);
-boiler_plate!(Variable<'a>, 'a, variable; |p| {
-    Ok(Self(Sub { span: p.as_span().into(), content: p.as_str() }))
+pub struct Variable<L, S>(pub Sub<L, S>);
+boiler_plate!(Variable<Span<'a>, &'a str>, 'a, variable; |p| {
+    Ok(Self(Sub { span: p.as_span(), content: p.as_str() }))
 });
 
-impl<'a, S> Variable<'a, S> {
+impl<L, S> Variable<L, S> {
     pub fn name(&self) -> &S {
         &self.0.content
     }
 }
 
-impl<'a, S: Display> Display for Variable<'a, S> {
+impl<'a, L, S: Display> Display for Variable<L, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.name().fmt(f)
     }
 }
 
-impl<'a, S> From<S> for Variable<'a, S> {
+impl<S> From<S> for Variable<(), S> {
     fn from(value: S) -> Self {
         Variable(value.into())
     }
 }
 /// [Rule::step_name]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct StepName<'a, S = &'a str>(pub Sub<'a, Ident<'a, S>>);
-boiler_plate!(StepName<'a>, 'a, step_name; |p| {
-    Ok(Self(Sub { span: p.as_span().into(), content: p.into_inner().next().unwrap().try_into()? }))
+pub struct StepName<L, S>(pub Sub<L, Ident<L, S>>);
+boiler_plate!(StepName<Span<'a>, &'a str>, 'a, step_name; |p| {
+    Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
-impl<'a, S> StepName<'a, S> {
+impl<L, S> StepName<L, S> {
     pub fn name(&self) -> &S {
         self.0.content.name()
     }
-
+}
+impl<S> StepName<(), S> {
     pub fn from_s(s: S) -> Self {
         Self(Sub {
             span: Default::default(),
@@ -188,13 +193,13 @@ impl<'a, S> StepName<'a, S> {
     }
 }
 
-impl<'a, S: Display> Display for StepName<'a, S> {
+impl<'a, L, S: Display> Display for StepName<L, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.name().fmt(f)
     }
 }
 
-impl<'a, S> From<S> for StepName<'a, S> {
+impl<S> From<S> for StepName<(), S> {
     fn from(value: S) -> Self {
         StepName(Ident::from_content(value).into())
     }

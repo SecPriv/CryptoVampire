@@ -2,28 +2,31 @@ use super::*;
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct DeclareType<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub name: TypeName<'a, S>,
-    pub options: Options<'a, S>,
+pub struct DeclareType<L, S> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    pub span: L,
+    pub name: TypeName<L, S>,
+    pub options: Options<L, S>,
 }
-boiler_plate!(DeclareType<'a>, 'a, declare_type; |p| {
+boiler_plate!(@ DeclareType, 'a, declare_type; |p| {
     let span = p.as_span().into();
     destruct_rule!(span in [name, ?options] = p);
     Ok(Self { span, name, options })
 });
 
-impl<'a, S> DeclareType<'a, S> {
+impl<L, S> DeclareType<L, S> {
     pub fn name(&self) -> &S {
         self.name.name()
     }
 
-    pub fn name_span(&self) -> &Location<'a> {
+    pub fn name_span(&self) -> &L {
         &self.name.0.span
     }
 
-    pub fn new(name: TypeName<'a, S>) -> Self {
+    pub fn new(name: TypeName<L, S>) -> Self
+    where
+        L: Default,
+    {
         Self {
             span: Default::default(),
             name,
@@ -32,7 +35,7 @@ impl<'a, S> DeclareType<'a, S> {
     }
 }
 
-impl<'a, S: Display> Display for DeclareType<'a, S> {
+impl<L, S: Display> Display for DeclareType<L, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self { name, options, .. } = self;
         write!(f, "type {name} {options}")

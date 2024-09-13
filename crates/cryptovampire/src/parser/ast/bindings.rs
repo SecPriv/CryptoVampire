@@ -1,20 +1,22 @@
+use pest::Span;
+
 use super::*;
 
 /// [Rule::typed_arguments]
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct TypedArgument<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub bindings: Vec<VariableBinding<'a, S>>,
+pub struct TypedArgument<L, S> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    pub span: L,
+    pub bindings: Vec<VariableBinding<L, S>>,
 }
-boiler_plate!(TypedArgument<'a>, 'a, typed_arguments; |p| {
-    let span = p.as_span().into();
+boiler_plate!(@ TypedArgument, 'a, typed_arguments; |p| {
+    let span = p.as_span();
     let bindings : Result<Vec<_>, _> = p.into_inner().map(TryInto::try_into).collect();
     Ok(TypedArgument { span, bindings: bindings? })
 });
 
-impl<'a, S> Default for TypedArgument<'a, S> {
+impl<'a, L: Default, S> Default for TypedArgument<L, S> {
     fn default() -> Self {
         Self {
             span: Default::default(),
@@ -23,15 +25,15 @@ impl<'a, S> Default for TypedArgument<'a, S> {
     }
 }
 
-impl<'a, S: Display> Display for TypedArgument<'a, S> {
+impl<L, S: Display> Display for TypedArgument<L, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({})", self.bindings.iter().format(", "))
     }
 }
 
-impl<'a, S, U> FromIterator<U> for TypedArgument<'a, S>
+impl<L: Default, S, U> FromIterator<U> for TypedArgument<L, S>
 where
-    VariableBinding<'a, S>: From<U>,
+    VariableBinding<L, S>: From<U>,
 {
     fn from_iter<T: IntoIterator<Item = U>>(iter: T) -> Self {
         let bindings = iter.into_iter().map_into().collect();
@@ -45,28 +47,28 @@ where
 /// [Rule::variable_binding]
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct VariableBinding<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub variable: Variable<'a, S>,
-    pub type_name: TypeName<'a, S>,
+pub struct VariableBinding<L, S> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    pub span: L,
+    pub variable: Variable<L, S>,
+    pub type_name: TypeName<L, S>,
 }
-boiler_plate!(VariableBinding<'s>, 's, variable_binding; |p| {
+boiler_plate!(@ VariableBinding, 's, variable_binding; |p| {
     let span = p.as_span().into();
     destruct_rule!(span in [variable, type_name] = p.into_inner());
     Ok(VariableBinding{span, variable, type_name})
 });
 
-impl<'a, S: Display> Display for VariableBinding<'a, S> {
+impl<'a, L, S: Display> Display for VariableBinding<L, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}:{}", &self.variable, &self.type_name)
     }
 }
 
-impl<'a, S, V, T> From<(V, T)> for VariableBinding<'a, S>
+impl<'a, L: Default, S, V, T> From<(V, T)> for VariableBinding<L, S>
 where
-    Variable<'a, S>: From<V>,
-    TypeName<'a, S>: From<T>,
+    Variable<L, S>: From<V>,
+    TypeName<L, S>: From<T>,
 {
     fn from((variable, type_name): (V, T)) -> Self {
         let variable = variable.into();
@@ -79,10 +81,10 @@ where
     }
 }
 
-impl<'a, 'b, S> IntoIterator for &'b TypedArgument<'a, S> {
-    type Item = &'b VariableBinding<'a, S>;
+impl<'b, S, L> IntoIterator for &'b TypedArgument<L, S> {
+    type Item = &'b VariableBinding<L, S>;
 
-    type IntoIter = Iter<'b, VariableBinding<'a, S>>;
+    type IntoIter = Iter<'b, VariableBinding<L, S>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.bindings.iter()

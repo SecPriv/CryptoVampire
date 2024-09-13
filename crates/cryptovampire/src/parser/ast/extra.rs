@@ -9,23 +9,23 @@ use super::{
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Sub<'s, T> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'s>,
+pub struct Sub<L, T> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    pub span: L,
     pub content: T,
 }
 
-impl<'s, T> Sub<'s, T> {
+impl<L: Default, T> Sub<L, T> {
     /// using [Location::default]
     pub fn from_content(c: T) -> Self {
         Self {
-            span: Default::default(),
+            span: L::default(),
             content: c,
         }
     }
 }
 
-impl<'s, T> From<T> for Sub<'s, T> {
+impl<L: Default, T> From<T> for Sub<L, T> {
     fn from(c: T) -> Self {
         Self::from_content(c)
     }
@@ -33,16 +33,16 @@ impl<'s, T> From<T> for Sub<'s, T> {
 
 /// Span and Name
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
-pub struct SnN<'a, 'b> {
-    pub span: &'b Location<'a>,
+pub struct SnN<'a, 'b, L> {
+    pub span: &'b L,
     pub name: StrRef<'a>,
 }
 
-impl<'a, 'b, S> From<&'b TypeName<'a, S>> for SnN<'a, 'b>
+impl<'a, 'b, S, L> From<&'b TypeName<L, S>> for SnN<'a, 'b, L>
 where
     StrRef<'a>: From<&'b S>,
 {
-    fn from(value: &'b TypeName<'a, S>) -> Self {
+    fn from(value: &'b TypeName<L, S>) -> Self {
         SnN {
             span: &value.0.span,
             name: value.name().into(),
@@ -50,11 +50,11 @@ where
     }
 }
 
-impl<'a, 'b, S> From<&'b Function<'a, S>> for SnN<'a, 'b>
+impl<'a, 'b, S, L> From<&'b Function<L, S>> for SnN<'a, 'b, L>
 where
     StrRef<'a>: From<&'b S>,
 {
-    fn from(value: &'b Function<'a, S>) -> Self {
+    fn from(value: &'b Function<L, S>) -> Self {
         SnN {
             span: &value.0.span,
             name: value.name().into(),
@@ -62,11 +62,11 @@ where
     }
 }
 
-impl<'a, 'b, S> From<&'b StepName<'a, S>> for SnN<'a, 'b>
+impl<'a, 'b, L, S> From<&'b StepName<L, S>> for SnN<'a, 'b, L>
 where
     StrRef<'a>: From<&'b S>,
 {
-    fn from(value: &'b StepName<'a, S>) -> Self {
+    fn from(value: &'b StepName<L, S>) -> Self {
         SnN {
             span: &value.0.span,
             name: value.name().into(),
@@ -74,11 +74,11 @@ where
     }
 }
 
-impl<'a, 'b, S> From<&'b MacroName<'a, S>> for SnN<'a, 'b>
+impl<'a, 'b, L, S> From<&'b MacroName<L, S>> for SnN<'a, 'b, L>
 where
     StrRef<'a>: From<&'b S>,
 {
-    fn from(value: &'b MacroName<'a, S>) -> Self {
+    fn from(value: &'b MacroName<L, S>) -> Self {
         SnN {
             span: &value.0.span,
             name: value.name().into(),
@@ -86,56 +86,56 @@ where
     }
 }
 
-pub trait AsFunction<'a, 'b> {
-    fn name(self) -> SnN<'a, 'b>;
-    fn args(self) -> Vec<SnN<'a, 'b>>;
+pub trait AsFunction<'a, 'b, L> {
+    fn name(self) -> SnN<'a, 'b, L>;
+    fn args(self) -> Vec<SnN<'a, 'b, L>>;
     #[allow(dead_code)]
-    fn out(self) -> SnN<'a, 'b>;
+    fn out(self) -> SnN<'a, 'b, L>;
 }
 
-impl<'a, 'b, S> AsFunction<'a, 'b> for &'b DeclareFunction<'a, S>
+impl<'a, 'b, S, L> AsFunction<'a, 'b, L> for &'b DeclareFunction<L, S>
 where
     StrRef<'a>: From<&'b S>,
 {
-    fn name(self) -> SnN<'a, 'b> {
+    fn name(self) -> SnN<'a, 'b, L> {
         From::from(&self.name)
     }
 
-    fn args(self) -> Vec<SnN<'a, 'b>> {
+    fn args(self) -> Vec<SnN<'a, 'b, L>> {
         self.args.args.iter().map(|tn| tn.into()).collect()
     }
 
-    fn out(self) -> SnN<'a, 'b> {
+    fn out(self) -> SnN<'a, 'b, L> {
         From::from(&self.sort)
     }
 }
 
-impl<'a, 'b, S> AsFunction<'a, 'b> for &'b DeclareCell<'a, S>
+impl<'a, 'b, L, S> AsFunction<'a, 'b, L> for &'b DeclareCell<L, S>
 where
     StrRef<'a>: From<&'b S>,
 {
-    fn name(self) -> SnN<'a, 'b> {
+    fn name(self) -> SnN<'a, 'b, L> {
         From::from(&self.name)
     }
 
-    fn args(self) -> Vec<SnN<'a, 'b>> {
+    fn args(self) -> Vec<SnN<'a, 'b, L>> {
         self.args.args.iter().map(|tn| tn.into()).collect()
     }
 
-    fn out(self) -> SnN<'a, 'b> {
+    fn out(self) -> SnN<'a, 'b, L> {
         From::from(&self.sort)
     }
 }
 
-impl<'a, 'b, S> AsFunction<'a, 'b> for &'b Step<'a, S>
+impl<'a, 'b, S, L> AsFunction<'a, 'b, L> for &'b Step<L, S>
 where
     StrRef<'a>: From<&'b S>,
 {
-    fn name(self) -> SnN<'a, 'b> {
+    fn name(self) -> SnN<'a, 'b, L> {
         From::from(&self.name)
     }
 
-    fn args(self) -> Vec<SnN<'a, 'b>> {
+    fn args(self) -> Vec<SnN<'a, 'b, L>> {
         self.args
             .bindings
             .iter()
@@ -143,7 +143,7 @@ where
             .collect()
     }
 
-    fn out(self) -> SnN<'a, 'b> {
+    fn out(self) -> SnN<'a, 'b, L> {
         SnN {
             span: &self.span,
             name: STEP.name(),
@@ -151,15 +151,15 @@ where
     }
 }
 
-impl<'a, 'b, S> AsFunction<'a, 'b> for &'b Macro<'a, S>
+impl<'a, 'b, S, L> AsFunction<'a, 'b, L> for &'b Macro<L, S>
 where
     StrRef<'a>: From<&'b S>,
 {
-    fn name(self) -> SnN<'a, 'b> {
+    fn name(self) -> SnN<'a, 'b, L> {
         From::from(&self.name)
     }
 
-    fn args(self) -> Vec<SnN<'a, 'b>> {
+    fn args(self) -> Vec<SnN<'a, 'b, L>> {
         self.args
             .bindings
             .iter()
@@ -167,7 +167,7 @@ where
             .collect()
     }
 
-    fn out(self) -> SnN<'a, 'b> {
+    fn out(self) -> SnN<'a, 'b, L> {
         panic!()
     }
 }

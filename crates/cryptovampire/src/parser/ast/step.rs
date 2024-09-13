@@ -5,7 +5,7 @@ use super::*;
 ///
 /// See [HasInitStep::ref_init_step_ast] a degenericied version
 #[allow(non_snake_case)]
-pub fn INIT_STEP_AST<S>() -> Step<'static, S>
+pub fn INIT_STEP_AST<S>() -> Step<(), S>
 where
     S: From<&'static str>,
 {
@@ -13,7 +13,7 @@ where
     let message = Term::new_default_const(builtin::EMPTY_FUN_NAME.into());
 
     Step {
-        span: Location::default(),
+        span: (),
         name: StepName::from_s(INIT_STEP_NAME.into()),
         args: TypedArgument::default(),
         condition,
@@ -25,24 +25,24 @@ where
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Step<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub name: StepName<'a, S>,
-    pub args: TypedArgument<'a, S>,
-    pub condition: Term<'a, S>,
-    pub message: Term<'a, S>,
-    pub assignements: Option<Assignements<'a, S>>,
-    pub options: Options<'a, S>,
+pub struct Step<L, S> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    pub span: L,
+    pub name: StepName<L, S>,
+    pub args: TypedArgument<L, S>,
+    pub condition: Term<L, S>,
+    pub message: Term<L, S>,
+    pub assignements: Option<Assignements<L, S>>,
+    pub options: Options<L, S>,
 }
 
-impl<'a, S> Step<'a, S> {
+impl<L, S> Step<L, S> {
     pub fn args_names(&'_ self) -> impl Iterator<Item = &'_ S> + '_ {
         self.args.bindings.iter().map(|vb| vb.variable.name())
     }
 }
-boiler_plate!(Step<'a>, 'a, step; |p| {
-    let span = p.as_span().into();
+boiler_plate!(@ Step, 'a, step; |p| {
+    let span = p.as_span();
     // dest_rule!(span in [name, args, condition, message, assignements] = p);
     let mut p = p.into_inner();
     let name = p.next().unwrap().try_into()?;
@@ -89,7 +89,7 @@ boiler_plate!(Step<'a>, 'a, step; |p| {
     Ok(Self { span, name, args, condition, message, assignements, options})
 });
 
-impl<'a, S: Display> Display for Step<'a, S> {
+impl<L, S: Display> Display for Step<L, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
             name,

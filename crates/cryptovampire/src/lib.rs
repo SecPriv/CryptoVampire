@@ -12,6 +12,7 @@ pub mod squirrel;
 pub mod subterm;
 mod return_value;
 mod error;
+pub mod location;
 
 #[cfg(test)]
 mod tests;

@@ -2,20 +2,20 @@ use super::*;
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Quantifier<'a, S = &'a str> {
+pub struct Quantifier<L, S> {
     pub kind: QuantifierKind,
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub vars: TypedArgument<'a, S>,
-    pub content: Term<'a, S>,
+    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    pub span: L,
+    pub vars: TypedArgument<L, S>,
+    pub content: Term<L, S>,
 }
-boiler_plate!(Quantifier<'a>, 'a, quantifier; |p| {
-  let span = p.as_span().into();
+boiler_plate!(@ Quantifier, 'a, quantifier; |p| {
+  let span = p.as_span();
   destruct_rule!(span in [kind, vars, content] = p.into_inner());
   Ok(Self { kind, vars, span, content})
 });
 
-impl<'a, S: Display> Display for Quantifier<'a, S> {
+impl<L, S: Display> Display for Quantifier<L, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
             kind,
@@ -33,8 +33,8 @@ pub enum QuantifierKind {
     Exists,
 }
 boiler_plate!(QuantifierKind, quantifier_op; {
-forall => Forall,
-exists => Exists
+    forall => Forall,
+    exists => Exists
 });
 
 impl Display for QuantifierKind {

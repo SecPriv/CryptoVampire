@@ -1,23 +1,25 @@
+use pest::Span;
+
 use super::*;
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct DeclareCell<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub name: Function<'a, S>,
-    pub args: DeclareFunctionArgs<'a, S>,
-    pub sort: TypeName<'a, S>,
-    pub options: Options<'a, S>,
+pub struct DeclareCell<L, S> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    pub span: L,
+    pub name: Function<L, S>,
+    pub args: DeclareFunctionArgs<L, S>,
+    pub sort: TypeName<L, S>,
+    pub options: Options<L, S>,
 }
 
-boiler_plate!(DeclareCell<'a>, 'a, declare_cell; |p| {
-    let span = p.as_span().into();
+boiler_plate!(@ DeclareCell, 'a, declare_cell; |p| {
+    let span = p.as_span();
     destruct_rule!(span in [name, args, sort, ?options] = p);
     Ok(Self { span, name, args, sort, options })
 });
 
-impl<'a, S: Display> Display for DeclareCell<'a, S> {
+impl<'a, L, S: Display> Display for DeclareCell<L, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
             name,
@@ -29,16 +31,16 @@ impl<'a, S: Display> Display for DeclareCell<'a, S> {
         write!(f, "cell {name}{args}:{sort} {options}")
     }
 }
-impl<'a, S> DeclareCell<'a, S> {
-    pub fn new<TN>(name: S, args: implvec!(TN), sort: TN) -> Self
+impl<L: Default, S> DeclareCell<L, S> {
+    pub fn new<TN>(location: L, name: S, args: implvec!(TN), sort: TN) -> Self
     where
-        TypeName<'a, S>: From<TN>,
+        TypeName<L, S>: From<TN>,
     {
         Self {
-            span: Default::default(),
+            span: location,
             name: Function::from_name(name),
             args: DeclareFunctionArgs {
-                span: Default::default(),
+                span: L::default(),
                 args: args.into_iter().map_into().collect(),
             },
             sort: sort.into(),
@@ -49,27 +51,27 @@ impl<'a, S> DeclareCell<'a, S> {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Assignements<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub assignements: Vec<Assignement<'a, S>>,
+pub struct Assignements<L, S> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    pub span: L,
+    pub assignements: Vec<Assignement<L, S>>,
 }
-boiler_plate!(Assignements<'a>, 'a, assignements; |p| {
-    let span = p.as_span().into();
+boiler_plate!(@ Assignements, 'a, assignements; |p| {
+    let span = p.as_span();
     let assignements = p.into_inner().map(TryInto::try_into).try_collect()?;
     Ok(Self { span, assignements })
 });
 
-impl<'a, S: Display> Display for Assignements<'a, S> {
+impl<L, S: Display> Display for Assignements<L, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.assignements.iter().format(", "))
     }
 }
 
-impl<'a, S> FromIterator<Assignement<'a, S>> for Assignements<'a, S> {
-    fn from_iter<T: IntoIterator<Item = Assignement<'a, S>>>(iter: T) -> Self {
+impl<'a, L: Default, S> FromIterator<Assignement<L, S>> for Assignements<L, S> {
+    fn from_iter<T: IntoIterator<Item = Assignement<L, S>>>(iter: T) -> Self {
         Self {
-            span: Default::default(),
+            span: L::default(),
             assignements: iter.into_iter().collect(),
         }
     }
@@ -77,43 +79,43 @@ impl<'a, S> FromIterator<Assignement<'a, S>> for Assignements<'a, S> {
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Assignement<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub cell: Application<'a, S>,
-    pub term: Term<'a, S>,
-    pub fresh_vars: Option<TypedArgument<'a, S>>,
+pub struct Assignement<L, S> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    pub span: L,
+    pub cell: Application<L, S>,
+    pub term: Term<L, S>,
+    pub fresh_vars: Option<TypedArgument<L, S>>,
 }
-boiler_plate!(Assignement<'a>, 'a, assignement; |p| {
-let span = p.as_span().into();
-let p = p.into_inner().collect_vec();
-// dest_rule!(span in [cell, term] = p);
-match p.len() {
-    2 => {
-        as_array!(span in [cell, term] = p);
-        Ok(Self {
-            span,
-            cell: cell.try_into().debug_continue()?,
-            term: term.try_into().debug_continue()?,
-            fresh_vars: None
-        })
+boiler_plate!(@ Assignement, 'a, assignement; |p| {
+    let span = p.as_span();
+    let p = p.into_inner().collect_vec();
+    // dest_rule!(span in [cell, term] = p);
+    match p.len() {
+        2 => {
+            as_array!(span in [cell, term] = p);
+            Ok(Self {
+                span,
+                cell: cell.try_into().debug_continue()?,
+                term: term.try_into().debug_continue()?,
+                fresh_vars: None
+            })
+        }
+        3 => {
+            as_array!(span in [vars, cell, term] = p);
+            Ok(Self {
+                span,
+                cell: cell.try_into().debug_continue()?,
+                term: term.try_into().debug_continue()?,
+                fresh_vars: Some(vars.try_into().debug_continue()?)
+            })
+        }
+        _ => unreachable!()
     }
-    3 => {
-        as_array!(span in [vars, cell, term] = p);
-        Ok(Self {
-            span,
-            cell: cell.try_into().debug_continue()?,
-            term: term.try_into().debug_continue()?,
-            fresh_vars: Some(vars.try_into().debug_continue()?)
-        })
-    }
-    _ => unreachable!()
-}
 
-// Ok(Self { span, cell, term })
+    // Ok(Self { span, cell, term })
 });
 
-impl<'a, S: Display> Display for Assignement<'a, S> {
+impl<L, S: Display> Display for Assignement<L, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
             cell,

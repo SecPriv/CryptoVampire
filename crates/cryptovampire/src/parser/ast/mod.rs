@@ -34,9 +34,11 @@ use crate::bail_at;
 // ======================= macros ==========================
 // =========================================================
 
+// FIXME!
 macro_rules! unreachable_rules {
     ($span:expr, $urule:expr; $($rule:ident),* ) => {
-        $span.wrong_rule(vec![$(Rule::$rule),+], vec![$urule])?
+        // $span.wrong_rule(vec![$(Rule::$rule),+], vec![$urule])?
+        unreachable!()
     };
 }
 
@@ -91,6 +93,9 @@ macro_rules! boiler_plate {
 
     ($t:ty, $rule:ident; { $($pat:ident => $res:ident),* }) => {
         boiler_plate!(l $t, 'a, $rule; |p| {$($pat => { Ok(Self::$res) })*});
+    };
+    (@ $t:ident, $lt:lifetime, $($rule:ident)|+; |$p:ident| $content:block) => {
+        boiler_plate!($t<pest::Span<$lt>, &$lt str>, $lt, $($rule)|+; |$p| $content);
     }
 
 }

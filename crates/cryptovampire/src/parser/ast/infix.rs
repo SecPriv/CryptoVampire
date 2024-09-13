@@ -1,15 +1,17 @@
+use pest::Span;
+
 use super::*;
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Infix<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
+pub struct Infix<L, S> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    pub span: L,
     pub operation: Operation,
-    pub terms: Vec<Term<'a, S>>,
+    pub terms: Vec<Term<L, S>>,
 }
-boiler_plate!(Infix<'a>, 'a, infix_term; |p| {
-  let span = p.as_span().into();
+boiler_plate!(Infix<Span<'a>, &'a str>, 'a, infix_term; |p| {
+  let span = p.as_span();
   let mut terms = Vec::new();
 
   let mut p = p.into_inner();
@@ -28,7 +30,7 @@ boiler_plate!(Infix<'a>, 'a, infix_term; |p| {
   Ok(Infix { span, operation, terms })
 });
 
-impl<'a, S: Display> Display for Infix<'a, S> {
+impl<L, S: Display> Display for Infix<L, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let op = format!(" {} ", &self.operation);
         write!(f, "({})", self.terms.iter().format(&op))
@@ -106,7 +108,7 @@ impl Operation {
         }
     }
 
-    pub fn apply<'a, S>(self, args: implvec!(ast::Term<'a, S>)) -> ast::Term<'a, S> {
+    pub fn apply<L: Default + Clone, S>(self, args: implvec!(ast::Term<L, S>)) -> ast::Term<L, S> {
         Infix {
             span: Default::default(),
             operation: self,
