@@ -1,6 +1,6 @@
 use pest::Span;
 
-use crate::err_at;
+use crate::Error;
 
 use super::*;
 
@@ -10,15 +10,19 @@ pub enum Assert<L, S> {
     Query(Assertion<L, S>),
     Lemma(Assertion<L, S>),
 }
+
 boiler_plate!(Assert<Span<'a>, &'a str>, 'a, assertion | query | lemma ; |p| {
-    // let span = p.as_span();
+    let span = p.as_span();
     let rule = p.as_rule();
     let p = p.into_inner().next().unwrap();
     match rule {
         Rule::assertion => { Ok(Assert::Assertion(p.try_into()?)) }
         Rule::query => { Ok(Assert::Query(p.try_into()?)) }
         Rule::lemma => { Ok(Assert::Lemma(p.try_into()?)) }
-        r => Err(err_at!(&p.as_span().into(), "got a {r:?} expected assertion, query or lemma"))
+        r => Error::from_err(|| span,
+            pest::error::ErrorVariant::ParsingError {
+                positives: vec![Rule::assertion, Rule::query, Rule::lemma],
+                negatives: vec![r] })
     }
 });
 

@@ -13,7 +13,7 @@ pub enum InferenceError {
         expected: Box<str>,
         recieved: Box<str>,
     },
-    #[error(tranparent)]
+    #[error(transparent)]
     UpdateError(#[from] UpdateError)
 }
 
@@ -21,7 +21,6 @@ impl InferenceError {
     /// the what is expected and what was recieved
     pub fn flip(self) -> Self {
         match self {
-            InferenceError::CantInfer { .. } => self,
             InferenceError::SortMismatch {
                 proxy,
                 expected,
@@ -31,6 +30,7 @@ impl InferenceError {
                 expected: recieved,
                 recieved: expected,
             },
+            _ => self
         }
     }
 

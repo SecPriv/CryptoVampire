@@ -1,7 +1,7 @@
 use super::*;
 
 pub trait HasInitStep: Sized {
-    fn ref_init_step_ast<'a>() -> &'a ast::Step<'a, Self>;
+    fn ref_init_step_ast<'a>() -> &'a ast::Step<(), Self>;
     // fn from_static(s:&'static str) -> Self;
 }
 
@@ -10,13 +10,13 @@ pub trait FromStaticString {
 }
 
 #[dynamic]
-static INIT_STEP_AST_STR: ast::Step<'static, &'static str> = INIT_STEP_AST();
+static INIT_STEP_AST_STR: ast::Step<(), &'static str> = INIT_STEP_AST();
 
 #[dynamic]
-static INIT_STEP_AST_STRREF: ast::Step<'static, StrRef<'static>> = INIT_STEP_AST();
+static INIT_STEP_AST_STRREF: ast::Step<(), StrRef<'static>> = INIT_STEP_AST();
 
 impl<'str> HasInitStep for &'str str {
-    fn ref_init_step_ast<'a>() -> &'a ast::Step<'a, Self> {
+    fn ref_init_step_ast<'a>() -> &'a ast::Step<(), Self> {
         &INIT_STEP_AST_STR
     }
 }
@@ -28,7 +28,7 @@ impl<'str> FromStaticString for &'str str {
 }
 
 impl<'str> HasInitStep for StrRef<'str> {
-    fn ref_init_step_ast<'a>() -> &'a ast::Step<'a, Self> {
+    fn ref_init_step_ast<'a>() -> &'a ast::Step<(), Self> {
         &INIT_STEP_AST_STRREF
     }
 }

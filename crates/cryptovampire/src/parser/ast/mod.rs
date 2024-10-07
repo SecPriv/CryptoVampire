@@ -28,7 +28,6 @@ use crate::{
 use utils::{destvec, implvec, match_as_trait, vecref::VecRef};
 
 use super::*;
-use crate::bail_at;
 
 // =========================================================
 // ======================= macros ==========================
@@ -57,7 +56,7 @@ macro_rules! debug_rule {
 macro_rules! boiler_plate {
     ($t:ty, $lt:lifetime, $($rule:ident)|+; |$p:ident| $content:block) => {
         impl<$lt> TryFrom<Pair<$lt, Rule>> for $t {
-            type Error = $crate::parser::InputError;
+            type Error = $crate::Error<$crate::error::OwnedSpan>;
 
             fn try_from($p: Pair<$lt, Rule>) -> std::result::Result<$t, Self::Error> {
                 let str = $p.as_str();
@@ -73,7 +72,7 @@ macro_rules! boiler_plate {
 
     (l $t:ty, $lt:lifetime, $($rule:ident)|+; |$p:ident| { $($($pat:ident)|+ => $content:block)* }) => {
         boiler_plate!($t, 'a, $($rule)|+; |p| {
-            let span : Location<'a> = p.as_span().into();
+            let span = p.as_span();
             let mut p_iter = p.into_inner();
             let $p = p_iter.next().unwrap();
 

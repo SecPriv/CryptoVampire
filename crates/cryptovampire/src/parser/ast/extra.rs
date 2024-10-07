@@ -3,7 +3,7 @@ use derivative::Derivative;
 use utils::string_ref::StrRef;
 
 use super::{
-    error::Location, DeclareCell, DeclareFunction, Function, Macro, MacroName, Step, StepName,
+     DeclareCell, DeclareFunction, Function, Macro, MacroName, Step, StepName,
     TypeName,
 };
 

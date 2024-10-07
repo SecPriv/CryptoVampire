@@ -1,5 +1,7 @@
 use pest::Span;
 
+use crate::{error::OwnedSpan, CVResult};
+
 use super::*;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -19,9 +21,9 @@ impl<'str, L, S> ASTList<'str, L, S> {
 }
 
 impl<'a> TryFrom<&'a str> for ASTList<'a, Span<'a>, &'a str> {
-    type Error = InputError;
+    type Error = crate::Error<OwnedSpan>;
 
-    fn try_from(value: &'a str) -> MResult<Self> {
+    fn try_from(value: &'a str) -> CVResult<Self, OwnedSpan> {
         trace!("running pest");
         let mut pairs = MainParser::parse(Rule::file, value).debug_continue()?;
         trace!("pest ran successfully");
