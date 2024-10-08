@@ -1,5 +1,11 @@
 [workspace]
-members = ["crates/cryptovampire", "crates/utils", "crates/logic_formula"]
+members = [
+  "crates/cryptovampire", 
+  "crates/utils", 
+  "crates/logic_formula",
+  "crates/cryptovampire_macros",
+  "crates/test-crate"
+]
 resolver = "2"
 # authors = ["Simon Jeanteur <7871851+puyral@users.noreply.github.com>"]
 default-members = ["crates/cryptovampire"]
@@ -13,7 +19,7 @@ static_init = "1.0"
 paste = "1.0"
 thiserror = "1.0"
 macro-attr = "0.2"
-anyhow = "1.0"
+# anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"]}
 derive_builder = "0.20.0"
 bitflags = "2.6"
