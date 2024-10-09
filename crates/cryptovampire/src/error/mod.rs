@@ -3,13 +3,14 @@ use std::fmt::Display;
 use serde::{Deserialize, Serialize};
 
 mod error;
+mod macros;
 
 pub use error::Error;
 
 mod inner_error;
 
 mod location;
-pub use location::{OwnedSpan, Location, WithHasLocation, HasLocation, SelfLocation};
+pub use location::{OwnedSpan, Location, LocationProvider, PreLocation};
 
 mod result;
 pub use result::CVContext;
@@ -29,6 +30,9 @@ pub enum BaseError {
     PestError(#[from] pest::error::Error<crate::parser::Rule>),
     #[error(transparent)]
     IO(#[from] std::io::Error),
+
+    #[error("reason: {}", .0)]
+    Message(String)
 }
 
 impl BaseError {
@@ -53,5 +57,11 @@ impl From<crate::formula::sort::sort_proxy::UpdateError> for BaseError {
 impl From<pest::error::ErrorVariant<crate::parser::Rule>> for BaseError {
     fn from(value: pest::error::ErrorVariant<crate::parser::Rule>) -> Self {
         BaseError::PestErrorVariant(value)
+    }
+}
+
+impl<'a> From<&'a str> for BaseError {
+    fn from(value: &'a str) -> Self {
+        Self::Message(value.into())
     }
 }

@@ -77,7 +77,7 @@ macro_rules! boiler_plate {
             let $p = p_iter.next().unwrap();
 
             if let Some(p) = p_iter.next() {
-                bail_at!(&p, "too much")
+                $crate::bail_at!(&p, "too much")
                 // return err(merr(p.as_span().into(), f!("too much")))
             }
 
@@ -102,14 +102,14 @@ macro_rules! boiler_plate {
 macro_rules! as_array {
     ($span:ident in [$($arg:ident),*] = $vec:expr) => {
         destvec!{ [$($arg),*] = $vec; |err| {
-            bail_at!(&$span, "{}", err)
+            $crate::bail_at!($span, "{}", err)
         }}
     };
 
     ($span:ident in [$($arg:ident),*,..$leftover:ident] = $vec:expr) => {
         destvec!{ [$($arg),*,..$leftover] = $vec; |err| {
             // return Err(merr($span, f!("{}", err)))
-            bail_at!(&$span, "{}", err)
+            $crate::bail_at!($span, "{}", err)
         }}
     };
 }
@@ -151,7 +151,7 @@ macro_rules! destruct_rule {
         )*
         let $option = leftover.next().map(|r| r.try_into().debug_continue()).transpose()?.unwrap_or(Options::empty($span));
         if let Some(_) = leftover.next() {
-            bail_at!(&$span, "too many arguments")
+            $crate::bail_at!($span, "too many arguments")
             // return Err(merr($span, f!("too many arguments")))
         }
     }

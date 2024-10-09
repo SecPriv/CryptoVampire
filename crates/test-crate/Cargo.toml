@@ -1,0 +1,11 @@
+[package]
+name = "test-crate"
+version = "0.1.0"
+edition = "2021"
+authors = ["Simon Jeanteur <simon.jeanteur@tuwien.ac.at>"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# cryptovampire-lib = { path = "../cryptovampire-lib"}
+cryptovampire_macros = {path = "../cryptovampire_macros"}

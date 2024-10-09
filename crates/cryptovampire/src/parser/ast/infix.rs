@@ -1,5 +1,7 @@
 use pest::Span;
 
+use crate::bail_at;
+
 use super::*;
 
 #[derive(Derivative)]

@@ -47,6 +47,7 @@
           buildInputs = with pkgs;
             cryptovampire.buildInputs ++ [
               cargo
+              cargo-expand
               rustc
               nil
               my-z3

@@ -28,6 +28,7 @@ impl<L: Location> std::error::Error for Error<L> {
         match &self.0.error {
             BaseError::PestError(e) => Some(e),
             BaseError::IO(e) => Some(e),
+            BaseError::TypingError(e) => Some(e),
             _ => None,
         }
     }

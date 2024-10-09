@@ -23,7 +23,10 @@ impl<'a> From<pest::Span<'a>> for OwnedSpan {
 
 impl OwnedSpan {
     pub fn as_span<'a>(&'a self) -> pest::Span<'a> {
-        pest::Span::new(&self.input, self.start, self.end).expect("could not convert to span")
+        match pest::Span::new(&self.input, self.start, self.end) {
+            Some(x) => x,
+            None => panic!("could not convert to span: {self:?}")
+        }
     }
 }
 
@@ -77,45 +80,97 @@ impl Location for StrLocation {
     }
 }
 
-pub type SelfLocation<T> = <<T as HasLocation>::PreL as WithHasLocation>::L;
+// pub type SelfLocation<T> = <<T as HasLocation>::PreL as WithHasLocation>::L;
 
-pub trait HasLocation: Display + Sized {
-    type PreL: WithHasLocation;
+// pub trait HasLocation: Display + Sized {
+//     type PreL: WithHasLocation;
 
-    fn get_pre_location(&self) -> &Self::PreL;
+//     fn get_pre_location(&self) -> &Self::PreL;
 
-    fn get_location(&self) -> SelfLocation<Self> {
-        let pl = self.get_pre_location();
-        pl.produce_location(self)
-    }
-}
+//     fn get_location(&self) -> SelfLocation<Self> {
+//         let pl = self.get_pre_location();
+//         pl.produce_location(self)
+//     }
+// }
 
-pub trait WithHasLocation {
+// pub trait WithHasLocation {
+//     type L: Location;
+
+//     fn produce_location<T>(&self, t: &T) -> Self::L
+//     where
+//         T: HasLocation<PreL = Self> + Display;
+// }
+
+// impl<'a> WithHasLocation for pest::Span<'a> {
+//     type L = OwnedSpan;
+
+//     fn produce_location<T>(&self, _: &T) -> OwnedSpan
+//     where
+//         T: HasLocation<PreL = Self> + Display,
+//     {
+//         OwnedSpan::from(*self)
+//     }
+// }
+
+// impl<'a> WithHasLocation for () {
+//     type L = StrLocation;
+
+//     fn produce_location<T>(&self, t: &T) -> StrLocation
+//     where
+//         T: HasLocation<PreL = Self> + Display,
+//     {
+//         StrLocation(t.to_string().into_boxed_str())
+//     }
+// }
+
+pub trait PreLocation {
     type L: Location;
 
-    fn produce_location<T>(&self, t: &T) -> Self::L
-    where
-        T: HasLocation<PreL = Self> + Display;
+    fn help_provide<T>(&self, extra: &T) -> Self::L where T:Sized + Display;
 }
 
-impl<'a> WithHasLocation for pest::Span<'a> {
+impl<'str> PreLocation for pest::Span<'str> {
     type L = OwnedSpan;
 
-    fn produce_location<T>(&self, _: &T) -> OwnedSpan
-    where
-        T: HasLocation<PreL = Self> + Display,
-    {
-        OwnedSpan::from(*self)
+    fn help_provide<T>(&self, _: &T) -> Self::L where T:Sized + Display {
+        (*self).into()
     }
 }
 
-impl<'a> WithHasLocation for () {
+impl PreLocation for () {
     type L = StrLocation;
 
-    fn produce_location<T>(&self, t: &T) -> StrLocation
-    where
-        T: HasLocation<PreL = Self> + Display,
-    {
+    fn help_provide<T>(&self, t: &T) -> Self::L where T:Sized + Display {
         StrLocation(t.to_string().into_boxed_str())
     }
 }
+
+pub trait LocationProvider<L: Location> {
+    fn provide(self) -> L;
+}
+
+impl<L:Location> LocationProvider<L> for L {
+    fn provide(self) -> L {
+        self
+    }
+}
+
+impl<'a> LocationProvider<OwnedSpan> for pest::Span<'a> {
+    fn provide(self) -> OwnedSpan {
+        self.into()
+    }
+}
+
+impl<'a> LocationProvider<StrLocation> for &'a str {
+    fn provide(self) -> StrLocation {
+        StrLocation(self.into())
+    }
+}
+
+impl<'a, 'str, R: pest::RuleType> LocationProvider<OwnedSpan> for &'a pest::iterators::Pair<'str, R> {
+    fn provide(self) -> OwnedSpan {
+        self.as_span().into()
+    }
+}
+
+// impl ProvideLocation<OwnedSpan> for pest::
