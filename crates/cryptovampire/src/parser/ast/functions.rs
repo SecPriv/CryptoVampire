@@ -1,11 +1,13 @@
+use cryptovampire_macros::LocationProvider;
 use pest::Span;
 
 use super::*;
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct DeclareFunction<L, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    #[provider]
     pub span: L,
     pub name: Function<L, S>,
     pub args: DeclareFunctionArgs<L, S>,
@@ -62,10 +64,11 @@ impl<'a, L, S: Display> Display for DeclareFunction<L, S> {
     }
 }
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct DeclareFunctionArgs<L, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    #[provider]
     pub span: L,
     pub args: Vec<TypeName<L, S>>,
 }

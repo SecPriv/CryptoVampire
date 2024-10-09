@@ -1,4 +1,5 @@
 use pest::Span;
+use cryptovampire_macros::LocationProvider;
 
 use crate::Error;
 
@@ -36,10 +37,11 @@ impl<L, S: Display> Display for Assert<L, S> {
     }
 }
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Assertion<L, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    #[provider]
     pub span: L,
     pub content: Term<L, S>,
     pub options: Options<L, S>,
@@ -59,10 +61,11 @@ impl<L, S: Display> Display for Assertion<L, S> {
     }
 }
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct AssertCrypto<L, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    #[provider]
     pub span: L,
     pub name: Ident<L, S>,
     pub functions: Vec<Function<L, S>>,

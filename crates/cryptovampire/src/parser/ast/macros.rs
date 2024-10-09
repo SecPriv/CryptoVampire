@@ -1,11 +1,15 @@
+use cryptovampire_macros::LocationProvider;
 use pest::Span;
+
+use crate::{error::PestLocation, CVResult};
 
 use super::*;
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Macro<L, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    #[provider]
     pub span: L,
     pub name: MacroName<L, S>,
     pub args: TypedArgument<L, S>,
@@ -37,15 +41,16 @@ impl<L, S: Display> Display for Macro<L, S> {
     }
 }
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct AppMacro<L, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    #[provider]
     pub span: L,
     pub inner: InnerAppMacro<L, S>,
 }
 
-fn from_term_to_application<'a>(p: Pair<'a, Rule>) -> MResult<Application<Span<'a>, &'a str>> {
+fn from_term_to_application<'a>(p: Pair<'a, Rule>) -> CVResult<Application<Span<'a>, &'a str>, PestLocation> {
     debug_rule!(p, term);
     let p = p.into_inner().next().unwrap();
     debug_rule!(p, inner_term);

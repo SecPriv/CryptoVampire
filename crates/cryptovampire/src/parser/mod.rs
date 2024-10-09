@@ -17,6 +17,7 @@ use utils::{string_ref::StrRef, traits::NicerError};
 /// The [Pstr] trait wich serves as a trick to gather many traits
 mod pstr;
 pub use pstr::*;
+pub mod error;
 
 pub const USED_KEYWORDS: &'static [&'static str] = &[
     "and",

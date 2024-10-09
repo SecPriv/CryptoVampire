@@ -91,7 +91,7 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
     .try_collect()?;
     mdo! {
       let! content = Ok(AoOV::transpose_iter(all));
-      pure ast::ASTList {content, begining: None}
+      pure ast::ASTList {content, location: None}
     }
 }
 

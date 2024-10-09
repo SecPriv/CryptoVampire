@@ -23,4 +23,9 @@ impl<L> InnerError<L> {
             backtrace,
         }
     }
+
+    pub fn set_location<L2>(self, location:L2) -> InnerError<L2> {
+        let Self {  error, backtrace, .. } = self;
+        InnerError { location, error , backtrace }
+    }
 }

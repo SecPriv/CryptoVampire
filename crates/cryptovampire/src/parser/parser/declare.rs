@@ -4,8 +4,7 @@ use std::sync::Arc;
 use super::*;
 
 use crate::{
-    bail_at, err_at,
-    parser::{ast::extra::AsFunction, InputError, MResult, Pstr},
+    bail_at, err_at, error::LocationProvider, parser::{ast::extra::AsFunction, error::ParsingError, InputError, MResult, Pstr}, CVContext, CVResult, PreLocation
 };
 
 use crate::{
@@ -76,17 +75,18 @@ The sort name {} somehow reintroduced itself in the hash",
         })
 }
 
-pub fn fetch_all<'str, 'bump, S>(
-    env: &mut Environement<'bump, 'str, S>,
-    ast: &'str ASTList<'str, S>,
-    assertions: &mut impl Extend<&'str ast::Assertion<'str, S>>,
-    lemmas: &mut impl Extend<&'str ast::Assertion<'str, S>>,
-    orders: &mut impl Extend<&'str ast::Order<'str, S>>, // Vec<&'str ast::Order<'str>>,
-    asserts_crypto: &mut impl Extend<&'str ast::AssertCrypto<'str, S>>,
-) -> MResult<&'str ast::Assertion<'str, S>>
+pub fn fetch_all<'str, 'bump, L, S>(
+    env: &mut Environement<'bump, 'str, L, S>,
+    ast: &'str ASTList<L, S>,
+    assertions: &mut impl Extend<&'str ast::Assertion<L, S>>,
+    lemmas: &mut impl Extend<&'str ast::Assertion<L, S>>,
+    orders: &mut impl Extend<&'str ast::Order<L, S>>, // Vec<&'str ast::Order<'str>>,
+    asserts_crypto: &mut impl Extend<&'str ast::AssertCrypto<L, S>>,
+) -> CVResult<&'str ast::Assertion<L, S>, L::L>
 where
     S: Pstr,
     for<'a> StrRef<'a>: From<&'a S>,
+    L: PreLocation,
 {
     let mut did_initilise_init = false;
     let mut query = Ok(None);
@@ -111,7 +111,8 @@ where
                             Err(_) => unreachable!("should be caught before"),
                             Ok(inner_query) => {
                                 query = match inner_query {
-                                    Some(_) => Err(q.span.err_with(|| "only one query is allowed")),
+                                    Some(_) => ParsingError::OneOff("only one querry is allowed")
+                                        .with_location(|| q),
                                     None => Ok(Some(q)),
                                 }
                             }
@@ -137,11 +138,8 @@ where
                 if (*step.name.name()).as_str() == "init" {
                     did_initilise_init = true;
                     if step.args().len() >= 1 {
-                        // return err(merr(
-                        //     step.args.span,
-                        //     "the init step should have any arguments".to_string(),
-                        // ));
-                        bail_at!(step.args.span, "the init step should have any arguments")
+                        return ParsingError::OneOff("the init step should have any arguments")
+                            .with_location(|| &step.args);
                     }
                 }
                 Ok(())
@@ -150,7 +148,9 @@ where
         })?;
 
     if !did_initilise_init {
-        declare_step(env, S::ref_init_step_ast())?
+        declare_step(env, S::ref_init_step_ast()).map_err(|err| {
+            err.set_location(ast.provide())
+        })?
     }
 
     // query.and_then(|q| {
@@ -165,16 +165,8 @@ where
     //     ))
     // })
     query.and_then(|q| {
-        q.ok_or_else(|| {
-            use pest::error::*;
-            let err = anyhow::anyhow!("no query");
-            if let Some(b) = ast.begining {
-                let pest = Error::new_from_pos(ErrorVariant::CustomError { message: "".into() }, b);
-                InputError::new_with_pest(pest, err)
-            } else {
-                InputError::Other(err)
-            }
-        })
+        q.ok_or_else(|| ParsingError::OneOff("the querry is missing"))
+            .with_location(|| ast)
     })
 }
 
@@ -186,20 +178,22 @@ fn user_bool_to_condtion<'bump>(s: Sort<'bump>) -> Sort<'bump> {
     }
 }
 
-fn declare_function<'str, 'bump, S>(
-    env: &mut Environement<'bump, 'str, S>,
-    fun: &DeclareFunction<'str, S>,
-) -> MResult<()>
+fn declare_function<'str, 'bump, L, S>(
+    env: &mut Environement<'bump, 'str, L, S>,
+    fun: &DeclareFunction<L, S>,
+) -> CVResult<(), L::L>
 where
     S: Pstr,
     for<'a> StrRef<'a>: From<&'a S>,
+    L: PreLocation,
 {
     let Ident {
         span,
         content: name,
     } = fun.name();
     if env.contains_name(name.borrow()) {
-        bail_at!(span, "the function name '{}' is already in use", name)
+        // bail_at!(span, "the function name '{}' is already in use", name)
+        ParsingError::already_defined("function", name.as_str()).with_location(|| fun.name())
     } else {
         let input_sorts: Result<Vec<_>, _> = fun
             .args()
@@ -227,8 +221,7 @@ where
                 .main
         };
         if let Some(_) = env.functions.insert(fun.name().to_string(), fun.into()) {
-            bail_at!(
-                span,
+            unreachable!(
                 "!UNREACHABLE!(line {} in {}) \
 The function name {} somehow reintroduced itself in the hash",
                 line!(),
@@ -241,18 +234,18 @@ The function name {} somehow reintroduced itself in the hash",
     }
 }
 
-fn declare_step<'a, 'str, 'bump, S>(
-    env: &mut Environement<'bump, 'str, S>,
-    fun: &'str ast::Step<'str, S>,
-) -> MResult<()>
+fn declare_step<'str, 'bump, L, S>(
+    env: &mut Environement<'bump, 'str, L, S>,
+    fun: &'str ast::Step<L, S>,
+) -> CVResult<(), L::L>
 where
     S: Pstr,
     for<'c> StrRef<'c>: From<&'c S>,
+    L: PreLocation,
 {
     let SnN { span, name } = (&fun.name).into();
     if env.contains_name(&name) {
-        bail_at!(span, "the step name {} is already in use", &name)
-        // return err(merr(*span, f!("the step name {} is already in use", &name)));
+        ParsingError::already_defined("step", name.as_str()).with_location(|| &fun.name)?
     }
 
     let input_sorts: Result<Vec<_>, _> = fun
@@ -276,18 +269,19 @@ where
     });
 
     let r = env.functions.insert(name.to_string(), cache);
-    assert_eq!(None, r);
+    assert!(r.is_none());
 
     Ok(())
 }
 
-fn declare_cell<'str, 'bump, S>(
-    env: &mut Environement<'bump, 'str, S>,
-    fun: &'str ast::DeclareCell<'str, S>,
+fn declare_cell<'str, 'bump, L, S>(
+    env: &mut Environement<'bump, 'str,L,  S>,
+    fun: &'str ast::DeclareCell<L,  S>,
 ) -> MResult<()>
 where
     S: Pstr,
     for<'a> StrRef<'a>: From<&'a S>,
+    L:PreLocation
 {
     let SnN { span, name } = (&fun.name).into();
     if env.contains_name(&name) {

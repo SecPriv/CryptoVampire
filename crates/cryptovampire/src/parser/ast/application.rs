@@ -1,7 +1,8 @@
+use cryptovampire_macros::LocationProvider;
 use pest::Span;
 
 use super::*;
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(
     Debug,
     PartialEq,
@@ -14,11 +15,13 @@ use super::*;
 pub enum Application<L, S> {
     ConstVar {
         #[derivative(PartialOrd = "ignore", Ord = "ignore")]
+        #[provider]
         span: L,
         content: S,
     },
     Application {
         #[derivative(PartialOrd = "ignore", Ord = "ignore")]
+        #[provider]
         span: L,
         function: Function<L, S>,
         args: Vec<Term<L, S>>,

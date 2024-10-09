@@ -1,11 +1,13 @@
+use cryptovampire_macros::LocationProvider;
 use pest::Span;
 
 use super::*;
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct LetIn<L, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    #[provider]
     pub span: L,
     pub var: VariableBinding<L, S>,
     pub t1: Term<L, S>,

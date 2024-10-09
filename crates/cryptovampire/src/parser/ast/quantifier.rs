@@ -2,7 +2,7 @@ use cryptovampire_macros::LocationProvider;
 
 use super::*;
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Quantifier<L,  S> {
     pub kind: QuantifierKind,

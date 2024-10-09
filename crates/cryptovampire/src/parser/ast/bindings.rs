@@ -1,12 +1,14 @@
+use cryptovampire_macros::LocationProvider;
 use pest::Span;
 
 use super::*;
 
 /// [Rule::typed_arguments]
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct TypedArgument<L, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    #[provider]
     pub span: L,
     pub bindings: Vec<VariableBinding<L, S>>,
 }
@@ -45,10 +47,11 @@ where
 }
 
 /// [Rule::variable_binding]
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct VariableBinding<L, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    #[provider]
     pub span: L,
     pub variable: Variable<L, S>,
     pub type_name: TypeName<L, S>,

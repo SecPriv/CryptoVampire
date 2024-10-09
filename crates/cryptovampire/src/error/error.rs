@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     inner_error::InnerError,
-    location::{Location, OwnedSpan},
+    location::{Location, PestLocation},
     BaseError, CVResult,
 };
 
@@ -70,5 +70,9 @@ impl<L: Location> Error<L> {
 
     pub(crate) fn get_backtrace(&self) -> Option<&Backtrace> {
         self.0.backtrace.as_ref()
+    }
+
+    pub fn set_location<L2:Location>(self, location:L2) -> Error<L2> {
+        Error(Box::new(self.0.set_location(location)))
     }
 }

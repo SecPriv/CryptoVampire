@@ -1,3 +1,4 @@
+use cryptovampire_macros::LocationProvider;
 use pest::Span;
 
 use crate::formula::utils::Applicable;
@@ -5,10 +6,11 @@ use crate::formula::utils::Applicable;
 use super::*;
 
 /// [Rule::ident]
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct Ident<L, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    #[provider]
     pub span: L,
     pub content: S,
 }
@@ -47,7 +49,7 @@ impl<S> From<S> for Ident<(), S> {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct TypeName<L, S>(pub Sub<L, Ident<L, S>>);
 boiler_plate!(TypeName<Span<'a>, &'a str>, 'a, type_name; |p| {
-Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
+    Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
 impl<L, S> TypeName<L, S> {
@@ -204,3 +206,19 @@ impl<S> From<S> for StepName<(), S> {
         StepName(Ident::from_content(value).into())
     }
 }
+
+macro_rules! mk_location_provider {
+        ($name:ident) => {
+            impl<'a, L, S> crate::error::LocationProvider<<L as crate::error::PreLocation>::L> for &'a $name<L, S> where 
+                L: crate::error::PreLocation,
+                S: std::fmt::Display,{
+            fn provide(self) ->  <L as crate::error::PreLocation>::L {
+                self.0.span.help_provide(&self)
+            }
+        }
+    };
+}
+mk_location_provider!(Function);
+mk_location_provider!(MacroName);
+mk_location_provider!(StepName);
+mk_location_provider!(Variable);

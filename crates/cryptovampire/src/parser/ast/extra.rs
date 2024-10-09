@@ -1,4 +1,5 @@
 use crate::formula::sort::builtins::STEP;
+use cryptovampire_macros::LocationProvider;
 use derivative::Derivative;
 use utils::string_ref::StrRef;
 
@@ -9,10 +10,10 @@ use super::{
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Sub<L, T> {
+pub struct Sub<L, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     pub span: L,
-    pub content: T,
+    pub content: S,
 }
 
 impl<L: Default, T> Sub<L, T> {

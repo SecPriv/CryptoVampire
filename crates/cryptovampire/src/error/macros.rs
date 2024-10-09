@@ -4,7 +4,7 @@ macro_rules! bail_at {
         return {
           use $crate::error::CVContext;
           use $crate::error::LocationProvider;
-          format!($($t)*).with_location(LocationProvider::provide($location))
+          format!($($t)*).with_location(|| LocationProvider::provide($location))
         }
     };
 }

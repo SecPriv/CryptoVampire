@@ -1,3 +1,5 @@
+use cryptovampire_macros::LocationProvider;
+
 use super::*;
 
 /// The default init step when it's not defined. This is a function because
@@ -23,10 +25,11 @@ where
     }
 }
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Step<L, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    #[provider]
     pub span: L,
     pub name: StepName<L, S>,
     pub args: TypedArgument<L, S>,
@@ -83,7 +86,7 @@ boiler_plate!(@ Step, 'a, step; |p| {
     }?;
 
     if let Some(np) = p.next() { // whatever happens, there shouldn't be anything left
-        bail_at!(&np, "too many arguments (expected at most 6, got {})", (7 + p.len()))
+        crate::bail_at!(&np, "too many arguments (expected at most 6, got {})", (7 + p.len()))
     }
 
     Ok(Self { span, name, args, condition, message, assignements, options})

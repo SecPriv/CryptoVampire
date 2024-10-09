@@ -1,31 +1,29 @@
+use cryptovampire_macros::LocationProvider;
 use pest::Span;
 
-use crate::{error::OwnedSpan, CVResult};
+use crate::{error::{ PestLocation, StrLocation}, CVContext, CVResult, PreLocation};
 
 use super::*;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct ASTList<'str, L, S> {
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, LocationProvider)]
+pub struct ASTList< L, S> {
     pub content: Vec<AST<L, S>>,
-    pub begining: Option<Position<'str>>,
+    #[provider]
+    pub location: L,
 }
 
-impl<'str, L, S> ASTList<'str, L, S> {
-    pub fn shorten_ref<'a>(&'a self) -> &'a ASTList<'a, L, S> {
-        self
-    }
-
+impl<'str, L, S> ASTList< L, S> {
     pub fn as_slice(&self) -> &[AST<L, S>] {
         self.content.as_slice()
     }
 }
 
-impl<'a> TryFrom<&'a str> for ASTList<'a, Span<'a>, &'a str> {
-    type Error = crate::Error<OwnedSpan>;
+impl<'a> TryFrom<&'a str> for ASTList< Span<'a>, &'a str> {
+    type Error = crate::Error<PestLocation>;
 
-    fn try_from(value: &'a str) -> CVResult<Self, OwnedSpan> {
+    fn try_from(value: &'a str) -> CVResult<Self, PestLocation> {
         trace!("running pest");
-        let mut pairs = MainParser::parse(Rule::file, value).debug_continue()?;
+        let mut pairs = MainParser::parse(Rule::file, value).with_location(|| PestLocation::all(value))?;
         trace!("pest ran successfully");
 
         Ok(ASTList {
@@ -40,12 +38,12 @@ impl<'a> TryFrom<&'a str> for ASTList<'a, Span<'a>, &'a str> {
                 })
                 .try_collect()
                 .debug_continue()?,
-            begining: Some(Position::from_start(value)),
+            location: pest::Span::new(value, 0, value.len()).unwrap(),
         })
     }
 }
 
-impl<'str, 'b, L, S> IntoIterator for &'b ASTList<'str, L, S> {
+impl<'str, 'b, L, S> IntoIterator for &'b ASTList< L, S> {
     type Item = &'b AST<L, S>;
 
     type IntoIter = Iter<'b, AST<L, S>>;
@@ -55,7 +53,7 @@ impl<'str, 'b, L, S> IntoIterator for &'b ASTList<'str, L, S> {
     }
 }
 
-impl<'a, L, S: Display> Display for ASTList<'a, L, S> {
+impl<'a, L, S: Display> Display for ASTList< L, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.as_slice().iter().try_for_each(|ast| ast.fmt(f))
     }

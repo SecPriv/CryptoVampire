@@ -22,7 +22,7 @@ pub use problem::step::INIT_STEP_NAME;
 pub use subterm::kind::SubtermKind;
 pub use parser::parse_pbl_from_ast;
 pub use return_value::Return;
-pub use error::{Error, CVContext, CVResult, BaseError, Location};
+pub use error::{Error, CVContext, CVResult, BaseError, Location, PreLocation};
 
 // other imports
 use std::{fs::File, io::BufWriter, num::NonZeroU32, path::Path};

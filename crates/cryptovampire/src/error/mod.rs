@@ -10,7 +10,7 @@ pub use error::Error;
 mod inner_error;
 
 mod location;
-pub use location::{OwnedSpan, Location, LocationProvider, PreLocation};
+pub use location::{PestLocation, Location, LocationProvider, PreLocation, StrLocation};
 
 mod result;
 pub use result::CVContext;
@@ -18,6 +18,8 @@ pub use result::CVContext;
 use crate::formula::sort::sort_proxy::InferenceError;
 
 pub type CVResult<T, L> = std::result::Result<T, Error<L>>;
+
+// pub type Result<T> = CVResult<T, Box<dyn Location>>;
 
 #[non_exhaustive]
 #[derive(Debug, thiserror::Error)]
@@ -30,6 +32,9 @@ pub enum BaseError {
     PestError(#[from] pest::error::Error<crate::parser::Rule>),
     #[error(transparent)]
     IO(#[from] std::io::Error),
+
+    #[error(transparent)]
+    ParsingError(#[from] crate::parser::error::ParsingError),
 
     #[error("reason: {}", .0)]
     Message(String)

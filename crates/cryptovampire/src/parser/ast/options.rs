@@ -1,11 +1,15 @@
+use cryptovampire_macros::LocationProvider;
 use pest::Span;
+
+use crate::{error::PreLocation, Location};
 
 use super::*;
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Options<L, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    #[provider]
     pub span: L,
     pub options: Vec<MOption<L, S>>,
 }
@@ -65,6 +69,16 @@ impl<L, S> Options<L, S> {
 impl<L, S: Display> Display for MOption<L, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+impl<L, S> crate::error::LocationProvider<<L as PreLocation>::L> for MOption<L, S>
+where
+    S: std::fmt::Display,
+    L: PreLocation,
+{
+    fn provide(self) -> <L as PreLocation>::L {
+        self.0.span.help_provide(&self)
     }
 }
 

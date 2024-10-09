@@ -126,11 +126,13 @@ where
                                 //     variable.0.span,
                                 //     format!("name {} is already taken", variable.name()),
                                 // ))
-                                bail_at!(
-                                    variable.0.span,
-                                    "name {} is already taken",
-                                    variable.name()
-                                )
+                                return {
+    use crate::error::CVContext;
+    use crate::error::LocationProvider;
+    format!("name {} is already taken",variable.name()).with_location(LocationProvider::provide(||{
+        (&variable)
+    }))
+}
                             } else {
                                 bvars.push((variable.name().clone(), var.into()));
                                 Ok(var)

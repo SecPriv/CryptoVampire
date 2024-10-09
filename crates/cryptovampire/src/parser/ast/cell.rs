@@ -1,11 +1,13 @@
+use cryptovampire_macros::LocationProvider;
 use pest::Span;
 
 use super::*;
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct DeclareCell<L, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    #[provider]
     pub span: L,
     pub name: Function<L, S>,
     pub args: DeclareFunctionArgs<L, S>,
@@ -49,10 +51,11 @@ impl<L: Default, S> DeclareCell<L, S> {
     }
 }
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Assignements<L, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    #[provider]
     pub span: L,
     pub assignements: Vec<Assignement<L, S>>,
 }
@@ -77,10 +80,11 @@ impl<'a, L: Default, S> FromIterator<Assignement<L, S>> for Assignements<L, S> {
     }
 }
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Assignement<L, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    #[provider]
     pub span: L,
     pub cell: Application<L, S>,
     pub term: Term<L, S>,

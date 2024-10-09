@@ -1,9 +1,12 @@
+use cryptovampire_macros::LocationProvider;
+
 use super::*;
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct FindSuchThat<L, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    #[provider]
     pub span: L,
     pub vars: TypedArgument<L, S>,
     pub condition: Term<L, S>,

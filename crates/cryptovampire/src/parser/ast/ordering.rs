@@ -1,9 +1,12 @@
+use cryptovampire_macros::LocationProvider;
+
 use super::*;
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Order<L, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    #[provider]
     pub span: L,
     pub quantifier: QuantifierKind,
     pub args: TypedArgument<L, S>,
@@ -35,7 +38,7 @@ boiler_plate!(@ Order, 'a, order ; |p| {
     let options = p.next().map(|r| r.try_into().debug_continue())
                     .transpose()?.unwrap_or(Options::empty(span));
     if let Some(_) = p.next() {
-        bail_at!(&span, "too many arguments")
+        crate::bail_at!(span, "too many arguments")
     }
 
     Ok(Self {span, quantifier, args, t1, t2, kind, options, guard})

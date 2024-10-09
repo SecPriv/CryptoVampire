@@ -1,13 +1,15 @@
+use cryptovampire_macros::LocationProvider;
 use pest::Span;
 
 use crate::bail_at;
 
 use super::*;
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Infix<L, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    #[provider]
     pub span: L,
     pub operation: Operation,
     pub terms: Vec<Term<L, S>>,
