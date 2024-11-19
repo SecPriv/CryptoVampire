@@ -11,7 +11,7 @@ pub mod smt;
 pub mod squirrel;
 pub mod subterm;
 mod return_value;
-mod error;
+pub mod error;
 pub mod location;
 
 #[cfg(test)]
@@ -22,12 +22,11 @@ pub use problem::step::INIT_STEP_NAME;
 pub use subterm::kind::SubtermKind;
 pub use parser::parse_pbl_from_ast;
 pub use return_value::Return;
-pub use error::{Error, CVContext, CVResult, BaseError, Location, PreLocation};
+pub use error::{Result,Error};
 
 // other imports
 use std::{fs::File, io::BufWriter, num::NonZeroU32, path::Path};
 use crate::cli::Args;
-use anyhow::{bail, ensure, Context};
 use crate::{
     container::ScopedContainer,
     environement::environement::{Environement, SolverConfig},

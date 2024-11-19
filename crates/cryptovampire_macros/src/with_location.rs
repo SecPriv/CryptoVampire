@@ -36,7 +36,7 @@ fn find_field(
 
 fn finalize(
     input: &DeriveInput,
-    f_ty: &Type,
+    // f_ty: &Type,
     implementation: proc_macro2::TokenStream,
 ) -> TokenStream {
     let name = &input.ident;
@@ -53,17 +53,17 @@ fn finalize(
         let w = where_clause.map(|w| &w.predicates);
         quote! {
           where
-            #f_ty : crate::error::PreLocation,
-            S: std::fmt::Display,
+            // #f_ty : crate::error::PreLocation,
+            S: std::fmt::Display + std::fmt::Debug,
             #w
         }
     };
 
-    let l_ty = quote! {<#f_ty as crate::error::PreLocation>::L};
+    // let l_ty = quote! {<#f_ty as crate::error::PreLocation>::L};
 
     quote! {
-      impl #impl_generics crate::error::LocationProvider<#l_ty> for & #lt #name #ty_generics #where_clause {
-        fn provide(self) -> #l_ty {
+      impl #impl_generics crate::error::LocationProvider for & #lt #name #ty_generics #where_clause {
+        fn provide(self) -> crate::error::Location {
           #implementation
         }
       }
@@ -76,7 +76,7 @@ pub fn derive_struct(data: &DataStruct, input: &DeriveInput) -> TokenStream {
         Err(x) => return x.into(),
     };
 
-    let f_ty = &field.ty;
+    // let f_ty = &field.ty;
     let field_iden = match &field.ident {
         Some(x) => quote! {#x},
         None => quote! {#i},
@@ -86,22 +86,22 @@ pub fn derive_struct(data: &DataStruct, input: &DeriveInput) -> TokenStream {
       self.#field_iden.help_provide(&self)
     };
 
-    finalize(input, f_ty, implementation)
+    finalize(input, /* f_ty, */ implementation)
 }
 
 pub fn derive_enum(data: &DataEnum, input: &DeriveInput) -> TokenStream {
     let name = &input.ident;
-    let f_ty = &match data
-        .variants
-        .iter()
-        .next()
-        .map(|v| find_field(input.span(), &v.fields))
-    {
-        Some(Ok(f)) => f,
-        Some(Err(x)) => return x.into(),
-        None => return quote_spanned! {input.span() => compile_error!("empty enum!");}.into(),
-    }
-    .1.ty;
+    // let f_ty = &match data
+    //     .variants
+    //     .iter()
+    //     .next()
+    //     .map(|v| find_field(input.span(), &v.fields))
+    // {
+    //     Some(Ok(f)) => f,
+    //     Some(Err(x)) => return x.into(),
+    //     None => return quote_spanned! {input.span() => compile_error!("empty enum!");}.into(),
+    // }
+    // .1.ty;
 
     let implementations = data.variants.iter().map(|v| {
         let iden = &v.ident;
@@ -130,5 +130,5 @@ pub fn derive_enum(data: &DataEnum, input: &DeriveInput) -> TokenStream {
         #(#implementations)*
       }
     };
-    finalize(input, f_ty, implementation)
+    finalize(input, /* f_ty, */ implementation)
 }

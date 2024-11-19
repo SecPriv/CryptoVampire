@@ -1,6 +1,6 @@
 use std::default;
 
-use super::{Location, LocationProvider};
+use super::{Locate, LocationProvider};
 
 #[derive(Debug)]
 pub struct PestLocation {
@@ -10,8 +10,13 @@ pub struct PestLocation {
 
 #[derive(Debug, Clone, Copy, Default)]
 enum PestKind {
-    Span { start: usize, end: usize },
-    Position { pos: usize },
+    Span {
+        start: usize,
+        end: usize,
+    },
+    Position {
+        pos: usize,
+    },
     #[default]
     All,
 }
@@ -33,16 +38,17 @@ impl<'a> From<pest::Position<'a>> for PestLocation {
     fn from(value: pest::Position<'a>) -> Self {
         Self {
             input: value.span(&value).get_input().into(),
-            kind: PestKind::Position  {
-                pos: value.pos(),
-            },
+            kind: PestKind::Position { pos: value.pos() },
         }
     }
 }
 
 impl PestLocation {
     pub fn all(str: &str) -> Self {
-      PestLocation { input: str.into(), kind: PestKind::All }
+        PestLocation {
+            input: str.into(),
+            kind: PestKind::All,
+        }
     }
 
     fn as_pest(&self) -> SpanOrPosition<'_> {
@@ -85,27 +91,34 @@ enum SpanOrPosition<'a> {
     Position(pest::Position<'a>),
 }
 
-impl Location for PestLocation {
-    fn location_fmt(err: &crate::Error<Self>, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let location = err.get_location();
+impl Locate for PestLocation {
+    fn location_fmt(
+        &self,
+        err: &crate::error::BaseError,
+        backtrace: Option<&std::backtrace::Backtrace>,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
+        // fn location_fmt(err: &crate::Error<Self>, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 
-        let pest_error = match err.get_error() {
-            crate::BaseError::PestErrorVariant(variant) => {
-                &location.into_pest_error(variant.clone())
-            }
-            crate::BaseError::PestError(e) => e,
+        let pest_error = match err {
+            crate::error::BaseError::PestErrorVariant(variant) => &self.into_pest_error(variant.clone()),
+            crate::error::BaseError::PestError(e) => e,
             e => {
                 let variant = pest::error::ErrorVariant::<crate::parser::Rule>::CustomError {
                     message: e.to_string(),
                 };
-                &location.into_pest_error(variant)
+                &self.into_pest_error(variant)
             }
         };
         std::fmt::Display::fmt(pest_error, f)?;
-        match err.get_backtrace() {
+        match backtrace {
             Some(bt) => write!(f, "\nbacktrace:\n{}", bt),
             None => Ok(()),
         }
+    }
+    
+    fn to_location(&self) -> super::Location {
+        
     }
 }
 

@@ -1,6 +1,8 @@
 use cryptovampire_macros::LocationProvider;
 use pest::Span;
 
+use crate::error::{Location, LocationProvider};
+
 use super::*;
 #[derive(Derivative, LocationProvider)]
 #[derivative(
@@ -12,23 +14,23 @@ use super::*;
     Hash,
     Clone
 )]
-pub enum Application<L, S> {
+pub enum Application<S> {
     ConstVar {
         #[derivative(PartialOrd = "ignore", Ord = "ignore")]
         #[provider]
-        span: L,
+        span: Location,
         content: S,
     },
     Application {
         #[derivative(PartialOrd = "ignore", Ord = "ignore")]
         #[provider]
-        span: L,
-        function: Function<L, S>,
-        args: Vec<Term<L, S>>,
+        span: Location,
+        function: Function<S>,
+        args: Vec<Term< S>>,
     },
 }
 
-impl<S, L> Application<L, S> {
+impl<S> Application< S> {
     pub fn name(&self) -> &S {
         match self {
             Application::ConstVar { content, .. } => content,
@@ -36,7 +38,7 @@ impl<S, L> Application<L, S> {
         }
     }
 
-    pub fn args(&self) -> VecRef<'_, Term<L, S>> {
+    pub fn args(&self) -> VecRef<'_, Term< S>> {
         match self {
             Application::ConstVar { .. } => VecRef::Empty,
             Application::Application { args, .. } => args.as_slice().into(),
@@ -44,22 +46,20 @@ impl<S, L> Application<L, S> {
     }
     // }
     // impl<'a> Application<'a> {
-    pub fn name_span(&self) -> &L {
+    pub fn name_span(&self) -> &Location {
         match self {
             Application::ConstVar { span, .. } => span,
             Application::Application { function, .. } => &function.0.span,
         }
     }
 
-    pub fn span(&self) -> &L {
+    pub fn span(&self) -> &Location {
         match self {
             Application::ConstVar { span, .. } | Application::Application { span, .. } => span,
         }
     }
 
-    pub fn new_app(location: L, fun: S, args: implvec!(Term<L, S>)) -> Self
-    where
-        L: Default,
+    pub fn new_app(location: Location, fun: S, args: implvec!(Term< S>)) -> Self
     {
         Self::Application {
             span: location,
@@ -68,8 +68,8 @@ impl<S, L> Application<L, S> {
         }
     }
 }
-boiler_plate!(Application<Span<'a>, &'a str>, 'a, application; |p| {
-    let span = p.as_span();
+boiler_plate!(Application< &'a str>, 'a, application; |p| {
+    let span = p.provide();
     let mut p = p.into_inner();
     let name = p.next().unwrap();
 
@@ -81,7 +81,7 @@ boiler_plate!(Application<Span<'a>, &'a str>, 'a, application; |p| {
     }
 });
 
-impl<'a, L, S: Display> Display for Application<L, S> {
+impl<'a,  S: Display> Display for Application< S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Application::ConstVar { content, .. } => content.fmt(f),

@@ -1,127 +1,94 @@
-use std::fmt::{Debug, Display};
-
-pub trait Location: crate::Sealed + Sized + Debug {
-    fn location_fmt(err: &crate::Error<Self>, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result;
-}
+use std::{
+    fmt::{Debug, Display},
+    hash::Hash,
+};
 
 pub use pest_location::PestLocation;
 mod pest_location;
 
-mod unit_location {
-    use super::*;
+mod unit_location;
 
-    impl crate::Sealed for () {}
-    impl Location for () {
-        fn location_fmt(
-            err: &crate::Error<Self>,
-            f: &mut std::fmt::Formatter<'_>,
-        ) -> std::fmt::Result {
-            std::fmt::Display::fmt(err.get_error(), f)?;
-            match err.get_backtrace() {
-                Some(bt) => write!(f, "\nbacktrace:\n{}", bt),
-                None => Ok(()),
-            }
-        }
-    }
-    // impl LocationProvider<Self> for () {
-    //     fn provide(self) -> Self {
-    //         self
-    //     }
-    // }
+mod str_location;
+
+pub trait Locate: Debug {
+    fn location_fmt(
+        &self,
+        err: &crate::error::BaseError,
+        backtrace: Option<&std::backtrace::Backtrace>,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result;
+    fn to_location(&self) -> Location;
 }
 
-pub use str_location::StrLocation;
-mod str_location {
-    use super::{Location, LocationProvider};
-
-    #[derive(Debug)]
-    pub struct StrLocation(pub Box<str>);
-    impl crate::Sealed for StrLocation {}
-    impl Location for StrLocation {
-        fn location_fmt(
-            err: &crate::Error<Self>,
-            f: &mut std::fmt::Formatter<'_>,
-        ) -> std::fmt::Result {
-            writeln!(f, "error at: {}\ndecsciption:", err.get_location().0)?;
-            std::fmt::Display::fmt(err.get_error(), f)?;
-            match err.get_backtrace() {
-                Some(bt) => write!(f, "\nbacktrace:\n{}", bt),
-                None => Ok(()),
-            }
-        }
-    }
-
-    // impl LocationProvider<Self> for StrLocation {
-    //     fn provide(self) -> Self {
-    //         self
-    //     }
-    // }
+pub trait LocationProvider: Debug {
+    fn provide(self) -> Location;
+}
+pub trait RefLocationProvider: Debug {
+    fn provide(&self) -> Location;
 }
 
-pub trait PreLocation {
-    type L: Location;
+pub trait PreLocation: Debug {
+    fn help_provide(&self, extra: &dyn Display) -> Location;
+}
 
-    fn help_provide<T>(&self, extra: &T) -> Self::L
+#[derive(Debug)]
+pub struct Location(Box<dyn Locate + 'static + Sync + Send>);
+
+#[derive(Debug, Clone, Copy)]
+pub struct RefLocation<'a>(&'a (dyn Locate + Sync + Send));
+
+impl Location {
+    #[inline]
+    pub fn from_locate<L>(l: L)
     where
-        T: Sized + Display;
-}
-
-impl<'str> PreLocation for pest::Span<'str> {
-    type L = PestLocation;
-
-    fn help_provide<T>(&self, _: &T) -> Self::L
-    where
-        T: Sized + Display,
+        L: Locate + 'static + Sync + Send + Sized,
     {
-        (*self).into()
+        Self(Box::new(l))
     }
 }
 
-impl PreLocation for () {
-    type L = StrLocation;
-
-    fn help_provide<T>(&self, t: &T) -> Self::L
-    where
-        T: Sized + Display,
-    {
-        StrLocation(t.to_string().into_boxed_str())
+impl Locate for Location {
+    fn location_fmt(
+        &self,
+        err: &crate::error::BaseError,
+        backtrace: Option<&std::backtrace::Backtrace>,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
+        self.0.location_fmt(err, backtrace, f)
+    }
+    
+    fn to_location(&self) -> Location {
+        self.0.to_location()
     }
 }
 
-pub trait LocationProvider<L: Location> {
-    fn provide(self) -> L;
-}
-
-impl<L:Location> LocationProvider<L> for L {
-    fn provide(self) -> Self {
-        self
+impl<'a> Locate for RefLocation<'a> {
+    fn location_fmt(
+        &self,
+        err: &crate::error::BaseError,
+        backtrace: Option<&std::backtrace::Backtrace>,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
+        self.0.location_fmt(err, backtrace, f)
+    }
+    
+    fn to_location(&self) -> Location {
+        self.0.to_location()
     }
 }
 
-impl<'a> LocationProvider<PestLocation> for pest::Span<'a> {
-    fn provide(self) -> PestLocation {
-        self.into()
-    }
-}
-
-impl<'a> LocationProvider<PestLocation> for pest::Position<'a> {
-    fn provide(self) -> PestLocation {
-        self.into()
-    }
-}
-
-impl<'a> LocationProvider<StrLocation> for &'a str {
-    fn provide(self) -> StrLocation {
-        StrLocation(self.into())
-    }
-}
-
-impl<'a, 'str, R: pest::RuleType> LocationProvider<PestLocation>
-    for &'a pest::iterators::Pair<'str, R>
+impl<'a, U> RefLocationProvider for U
+where
+    &'a U: LocationProvider + 'a,
+    U: Debug,
 {
-    fn provide(self) -> PestLocation {
-        self.as_span().into()
+    fn provide(&self) -> Location {
+        self.provide()
     }
 }
 
-// impl ProvideLocation<OwnedSpan> for pest::
+impl Default for Location {
+    fn default() -> Self {
+        Location::from_locate(());
+    }
+}

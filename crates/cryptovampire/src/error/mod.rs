@@ -10,16 +10,19 @@ pub use error::Error;
 mod inner_error;
 
 mod location;
-pub use location::{PestLocation, Location, LocationProvider, PreLocation, StrLocation};
+pub use location::{PestLocation, Location, LocationProvider, PreLocation};
 
 mod result;
 pub use result::CVContext;
 
+mod anywhere;
+pub use anywhere::Anywhere;
+
 use crate::formula::sort::sort_proxy::InferenceError;
 
-pub type CVResult<T, L> = std::result::Result<T, Error<L>>;
+// pub type CVResult<T, L> = std::result::Result<T, Error<L>>;
 
-// pub type Result<T> = CVResult<T, Box<dyn Location>>;
+pub type Result<T> = std::result::Result<T, Error>;
 
 #[non_exhaustive]
 #[derive(Debug, thiserror::Error)]
@@ -41,13 +44,13 @@ pub enum BaseError {
 }
 
 impl BaseError {
-    pub fn strict_with<L:crate::Location>(self, location: L) -> Error<L>
+    pub fn strict_with(self, location: Location) -> Error
     {
         // Error::new(inner_error::InnerError::new(location, self))
         Error::new(location, self)
     }
 
-    pub fn strict_to_err<T, L:crate::Location>(self, location: L) -> CVResult<T, L>
+    pub fn strict_to_err<T>(self, location: Location) -> Result<T>
     {
         Error::err(location, self)
     }

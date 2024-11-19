@@ -94,7 +94,7 @@ macro_rules! boiler_plate {
         boiler_plate!(l $t, 'a, $rule; |p| {$($pat => { Ok(Self::$res) })*});
     };
     (@ $t:ident, $lt:lifetime, $($rule:ident)|+; |$p:ident| $content:block) => {
-        boiler_plate!($t<pest::Span<$lt>, &$lt str>, $lt, $($rule)|+; |$p| $content);
+        boiler_plate!($t<&$lt str>, $lt, $($rule)|+; |$p| $content);
     }
 
 }

@@ -1,16 +1,16 @@
-use super::{inner_error::InnerError, location::LocationProvider, CVResult};
+use super::{inner_error::InnerError, location::LocationProvider, Result};
 
 pub trait CVContext<T> {
-    fn with_location<L: crate::Location, P: LocationProvider<L>>(
+    fn with_location<P: LocationProvider>(
         self,
         location: impl FnOnce() -> P,
-    ) -> CVResult<T, L>;
+    ) -> Result<T>;
 
-    fn with_pre_location<L: crate::PreLocation, S: std::fmt::Display>(
+    fn with_pre_location<L: crate::error::PreLocation, S: std::fmt::Display>(
         self,
         location: L,
         str: &S,
-    ) -> CVResult<T, L::L>
+    ) -> Result<T>
     where
         Self: Sized,
     {
@@ -22,10 +22,10 @@ impl<T, E> CVContext<T> for std::result::Result<T, E>
 where
     super::BaseError: From<E>,
 {
-    fn with_location<L: crate::Location, P: LocationProvider<L>>(
+    fn with_location< P: LocationProvider>(
         self,
         location: impl FnOnce() -> P,
-    ) -> CVResult<T, L> {
+    ) -> Result<T> {
         match self {
             Ok(x) => Ok(x),
             Err(error) => crate::Error::err(location().provide(), error.into()),
@@ -37,10 +37,10 @@ impl<T, E> CVContext<T> for E
 where
     E: Into<super::BaseError>,
 {
-    fn with_location<L: crate::Location, P: LocationProvider<L>>(
+    fn with_location<P: LocationProvider>(
         self,
         location: impl FnOnce() -> P,
-    ) -> CVResult<T, L> {
+    ) -> Result<T> {
         crate::Error::err(location().provide(), self.into())
     }
 }

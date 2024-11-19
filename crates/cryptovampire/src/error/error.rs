@@ -8,22 +8,20 @@ use serde::{Deserialize, Serialize};
 use super::{
     inner_error::InnerError,
     location::{Location, PestLocation},
-    BaseError, CVResult,
+    BaseError, Result, LocationProvider,
 };
 
 #[derive(Debug)]
-pub struct Error<L>(Box<InnerError<L>>);
+pub struct Error(Box<InnerError>);
 
-impl<U> Display for Error<U>
-where
-    U: Location,
+impl Display for Error
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         Location::location_fmt(self, f)
     }
 }
 
-impl<L: Location> std::error::Error for Error<L> {
+impl std::error::Error for Error {
     fn cause(&self) -> Option<&dyn std::error::Error> {
         match &self.0.error {
             BaseError::PestError(e) => Some(e),
@@ -34,8 +32,8 @@ impl<L: Location> std::error::Error for Error<L> {
     }
 }
 
-impl<L: Location> Error<L> {
-    pub fn new(location: L, error: BaseError) -> Self {
+impl Error {
+    pub fn new(location: Location, error: BaseError) -> Self {
         let inner = InnerError::new(location, error);
         let r = Error(Box::new(inner));
 
@@ -46,21 +44,19 @@ impl<L: Location> Error<L> {
         }
     }
 
-    pub fn err<T>(location: L, error: BaseError) -> CVResult<T, L> {
+    pub fn err<T>(location: Location, error: BaseError) -> Result<T> {
         Err(Self::new(location, error))
     }
 
-    pub fn from_err<T, FU>(
-        location: impl FnOnce() -> FU,
+    pub fn from_err<T, P:LocationProvider>(
+        location: impl FnOnce() -> P,
         error: impl Into<BaseError>,
-    ) -> CVResult<T, L>
-    where
-        FU: Into<L>,
+    ) -> Result<T>
     {
-        Self::err(location().into(), error.into())
+        Self::err(location().provide(), error.into())
     }
 
-    pub(crate) fn get_location(&self) -> &L {
+    pub(crate) fn get_location(&self) -> &Location {
         &self.0.location
     }
 
@@ -72,7 +68,4 @@ impl<L: Location> Error<L> {
         self.0.backtrace.as_ref()
     }
 
-    pub fn set_location<L2:Location>(self, location:L2) -> Error<L2> {
-        Error(Box::new(self.0.set_location(location)))
-    }
 }

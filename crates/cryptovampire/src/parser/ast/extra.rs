@@ -1,4 +1,4 @@
-use crate::formula::sort::builtins::STEP;
+use crate::{error::Location, formula::sort::builtins::STEP};
 use cryptovampire_macros::LocationProvider;
 use derivative::Derivative;
 use utils::string_ref::StrRef;
@@ -10,23 +10,23 @@ use super::{
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Sub<L, S> {
+pub struct Sub< S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
-    pub span: L,
+    pub span: Location,
     pub content: S,
 }
 
-impl<L: Default, T> Sub<L, T> {
+impl< T> Sub< T> {
     /// using [Location::default]
     pub fn from_content(c: T) -> Self {
         Self {
-            span: L::default(),
+            span: Default::default(),
             content: c,
         }
     }
 }
 
-impl<L: Default, T> From<T> for Sub<L, T> {
+impl< T> From<T> for Sub< T> {
     fn from(c: T) -> Self {
         Self::from_content(c)
     }

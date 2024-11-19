@@ -1,19 +1,19 @@
 use pest::Span;
 use cryptovampire_macros::LocationProvider;
 
-use crate::Error;
+use crate::{error::{Location, LocationProvider}, Error};
 
 use super::*;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub enum Assert<L, S> {
-    Assertion(Assertion<L, S>),
-    Query(Assertion<L, S>),
-    Lemma(Assertion<L, S>),
+pub enum Assert<S> {
+    Assertion(Assertion< S>),
+    Query(Assertion<S>),
+    Lemma(Assertion< S>),
 }
 
-boiler_plate!(Assert<Span<'a>, &'a str>, 'a, assertion | query | lemma ; |p| {
-    let span = p.as_span();
+boiler_plate!(Assert<&'a str>, 'a, assertion | query | lemma ; |p| {
+    let span = p.provide();
     let rule = p.as_rule();
     let p = p.into_inner().next().unwrap();
     match rule {
@@ -27,7 +27,7 @@ boiler_plate!(Assert<Span<'a>, &'a str>, 'a, assertion | query | lemma ; |p| {
     }
 });
 
-impl<L, S: Display> Display for Assert<L, S> {
+impl<S: Display> Display for Assert<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Assert::Assertion(a) => write!(f, "assert {a}"),
@@ -39,20 +39,20 @@ impl<L, S: Display> Display for Assert<L, S> {
 
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Assertion<L, S> {
+pub struct Assertion< S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
-    pub span: L,
-    pub content: Term<L, S>,
-    pub options: Options<L, S>,
+    pub span: Location,
+    pub content: Term< S>,
+    pub options: Options< S>,
 }
-boiler_plate!(Assertion<Span<'a>, &'a str>, 'a, assertion_inner ; |p| {
-    let span = p.as_span();
+boiler_plate!(Assertion<&'a str>, 'a, assertion_inner ; |p| {
+    let span = p.provide();
     destruct_rule!(span in [content, ?options] = p);
     Ok(Self {span, content, options})
 });
 
-impl<L, S: Display> Display for Assertion<L, S> {
+impl<S: Display> Display for Assertion<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
             content, options, ..
@@ -63,16 +63,16 @@ impl<L, S: Display> Display for Assertion<L, S> {
 
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct AssertCrypto<L, S> {
+pub struct AssertCrypto< S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
-    pub span: L,
-    pub name: Ident<L, S>,
-    pub functions: Vec<Function<L, S>>,
-    pub options: Options<L, S>,
+    pub span: Location,
+    pub name: Ident< S>,
+    pub functions: Vec<Function< S>>,
+    pub options: Options< S>,
 }
-boiler_plate!(AssertCrypto<Span<'a>, &'a str>, 'a, assertion_crypto ; |p| {
-    let span = p.as_span();
+boiler_plate!(AssertCrypto< &'a str>, 'a, assertion_crypto ; |p| {
+    let span = p.provide();
     let mut p = p.into_inner();
     let name = p.next().unwrap().try_into()?;
     let mut p = p.collect_vec();
@@ -93,7 +93,7 @@ boiler_plate!(AssertCrypto<Span<'a>, &'a str>, 'a, assertion_crypto ; |p| {
     Ok(Self {span, name, functions, options})
 });
 
-impl<L, S: Display> Display for AssertCrypto<L, S> {
+impl< S: Display> Display for AssertCrypto< S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
             name,
