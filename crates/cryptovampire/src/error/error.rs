@@ -6,10 +6,9 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use super::{
-    inner_error::InnerError,
-    location::{Location, PestLocation},
-    BaseError, Result, LocationProvider,
+    inner_error::InnerError, BaseError, Location, LocationProvider, Result
 };
+
 
 #[derive(Debug)]
 pub struct Error(Box<InnerError>);

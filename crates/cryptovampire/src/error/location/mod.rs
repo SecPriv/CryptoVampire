@@ -2,93 +2,62 @@ use std::{
     fmt::{Debug, Display},
     hash::Hash,
 };
+mod location;
+pub use location::{Location, RefLocation};
 
-pub use pest_location::PestLocation;
-mod pest_location;
+mod location_helper;
+pub use location_helper::LocationHelper;
 
-mod unit_location;
+mod no_location;
+pub use no_location::NoLocation;
 
-mod str_location;
-
+/// Something that points a "location" in an input file
+/// 
+/// The idea is to have a somewhat lose definition of what
+/// a "location" is supposed to be, so that we can be as flexible as possible
 pub trait Locate: Debug {
+    /// Given the error variant and the backtrace (if any)
+    /// returns the error message.
+    /// 
+    /// This is what will be printed to the screen
     fn location_fmt(
         &self,
         err: &crate::error::BaseError,
         backtrace: Option<&std::backtrace::Backtrace>,
         f: &mut std::fmt::Formatter<'_>,
     ) -> std::fmt::Result;
-    fn to_location(&self) -> Location;
+    
+    /// To make it "clonable"
+    fn pseudo_clone(&self) -> Location;
 }
 
+/// Something that can give a location
+/// 
+/// This trait is useful for triggering errors
 pub trait LocationProvider: Debug {
     fn provide(self) -> Location;
 }
+
+pub trait LocateHelper : Debug {
+    fn help_provide(&self, str:&dyn std::fmt::Display) -> Location;
+}
+
+
+// =========================================================
+// ==================== Ref versions =======================
+// =========================================================
+
+/// Location provider on refs
 pub trait RefLocationProvider: Debug {
     fn provide(&self) -> Location;
-}
-
-pub trait PreLocation: Debug {
-    fn help_provide(&self, extra: &dyn Display) -> Location;
-}
-
-#[derive(Debug)]
-pub struct Location(Box<dyn Locate + 'static + Sync + Send>);
-
-#[derive(Debug, Clone, Copy)]
-pub struct RefLocation<'a>(&'a (dyn Locate + Sync + Send));
-
-impl Location {
-    #[inline]
-    pub fn from_locate<L>(l: L)
-    where
-        L: Locate + 'static + Sync + Send + Sized,
-    {
-        Self(Box::new(l))
-    }
-}
-
-impl Locate for Location {
-    fn location_fmt(
-        &self,
-        err: &crate::error::BaseError,
-        backtrace: Option<&std::backtrace::Backtrace>,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
-        self.0.location_fmt(err, backtrace, f)
-    }
-    
-    fn to_location(&self) -> Location {
-        self.0.to_location()
-    }
-}
-
-impl<'a> Locate for RefLocation<'a> {
-    fn location_fmt(
-        &self,
-        err: &crate::error::BaseError,
-        backtrace: Option<&std::backtrace::Backtrace>,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
-        self.0.location_fmt(err, backtrace, f)
-    }
-    
-    fn to_location(&self) -> Location {
-        self.0.to_location()
-    }
 }
 
 impl<'a, U> RefLocationProvider for U
 where
     &'a U: LocationProvider + 'a,
-    U: Debug,
+    U: std::fmt::Debug,
 {
     fn provide(&self) -> Location {
         self.provide()
-    }
-}
-
-impl Default for Location {
-    fn default() -> Self {
-        Location::from_locate(());
     }
 }

@@ -6,7 +6,7 @@ pub trait CVContext<T> {
         location: impl FnOnce() -> P,
     ) -> Result<T>;
 
-    fn with_pre_location<L: crate::error::PreLocation, S: std::fmt::Display>(
+    fn with_pre_location<L: crate::error::LocateHelper, S: std::fmt::Display>(
         self,
         location: L,
         str: &S,
