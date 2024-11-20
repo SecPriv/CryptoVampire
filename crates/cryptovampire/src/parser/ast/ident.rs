@@ -1,4 +1,6 @@
 use cryptovampire_macros::LocationProvider;
+use location::ASTLocation;
+use crate::error::Location;
 use pest::Span;
 
 use crate::formula::utils::Applicable;
@@ -7,39 +9,39 @@ use super::*;
 
 /// [Rule::ident]
 #[derive(Derivative, LocationProvider)]
-#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-pub struct Ident<L, S> {
+#[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct Ident<'str, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
-    pub span: L,
+    pub span: ASTLocation<'str>,
     pub content: S,
 }
 boiler_plate!(@ Ident, 's, ident; |p| {
 Ok(Ident { span: p.as_span().into(), content: p.as_str()})
 });
 
-impl<L, S> Ident<L, S> {
+impl<'str, S> Ident<'str, S> {
     pub fn name(&self) -> &S {
         &self.content
     }
 }
 
-impl<L: Default, S> Ident<L, S> {
+impl<'str, S> Ident<'str, S> {
     pub fn from_content(s: S) -> Self {
         Ident {
-            span: L::default(),
+            span: Default::default(),
             content: s,
         }
     }
 }
 
-impl<L, S: Display> Display for Ident<L, S> {
+impl<'str, S: Display> Display for Ident<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.name().fmt(f)
     }
 }
 
-impl<S> From<S> for Ident<(), S> {
+impl<'str, S> From<S> for Ident<'str, S> {
     fn from(value: S) -> Self {
         Self::from_content(value)
     }
@@ -47,27 +49,27 @@ impl<S> From<S> for Ident<(), S> {
 
 /// [Rule::type_name]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct TypeName<L, S>(pub Sub<L, Ident<L, S>>);
-boiler_plate!(TypeName<Span<'a>, &'a str>, 'a, type_name; |p| {
-    Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
+pub struct TypeName<'str, S>(pub Sub<'str, Ident<'str, S>>);
+boiler_plate!(TypeName<'a, &'a str>, 'a, type_name; |p| {
+    Ok(Self(Sub { span: p.as_span().into(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
-impl<L, S> TypeName<L, S> {
+impl<'str, S> TypeName<'str, S> {
     pub fn name(&self) -> &S {
         self.0.content.name()
     }
 
-    pub fn name_span(&self) -> &L {
+    pub fn name_span(&self) -> &ASTLocation<'str> {
         &self.0.span
     }
 }
-impl<'a, L, S: Display> Display for TypeName<L, S> {
+impl<'str, S: Display> Display for TypeName<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.name().fmt(f)
     }
 }
 
-impl<'a, S> From<S> for TypeName<(), S> {
+impl<'a, S> From<S> for TypeName<'a, S> {
     fn from(value: S) -> Self {
         TypeName(Sub::from(Ident::from(value)))
     }
@@ -75,28 +77,28 @@ impl<'a, S> From<S> for TypeName<(), S> {
 
 /// [Rule::macro_name]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct MacroName<L, S>(pub Sub<L, Ident<L, S>>);
-boiler_plate!(MacroName<Span<'a>, &'a str>, 'a, macro_name; |p| {
+pub struct MacroName<'str, S>(pub Sub<'str, Ident<'str, S>>);
+boiler_plate!(MacroName<'a, &'a str>, 'a, macro_name; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
-impl<L, S> MacroName<L, S> {
+impl<'str, S> MacroName<'str, S> {
     pub fn name(&self) -> &S {
         self.0.content.name()
     }
 
-    pub fn span(&self) -> &L {
+    pub fn span(&self) -> &ASTLocation<'str> {
         &self.0.span
     }
 }
 
-impl<'a, L, S: Display> Display for MacroName<L, S> {
+impl<'str,  S: Display> Display for MacroName<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}!", self.name())
     }
 }
 
-impl<'a, S> From<S> for MacroName<(), S> {
+impl<'a, S> From<S> for MacroName<'a, S> {
     fn from(value: S) -> Self {
         MacroName(Sub::from(Ident::from(value)))
     }
@@ -104,34 +106,34 @@ impl<'a, S> From<S> for MacroName<(), S> {
 
 /// [Rule::function]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Function<L, S>(pub Sub<L, Ident<L, S>>);
-boiler_plate!(Function<Span<'a>, &'a str>, 'a, function; |p| {
+pub struct Function<'str, S>(pub Sub<'str, Ident<'str, S>>);
+boiler_plate!(Function<'a, &'a str>, 'a, function; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
-impl<L, S> Function<L, S> {
+impl<'str, S> Function<'str, S> {
     pub fn name(&self) -> &S {
         self.0.content.name()
     }
 
-    pub fn span(&self) -> &L {
+    pub fn span(&self) -> &ASTLocation<'str> {
         &self.0.span
     }
 }
-impl<L: Default, S> Function<L, S> {
+impl<'str, S> Function<'str, S> {
     pub fn from_name(s: S) -> Self {
         Self(Sub::from_content(Ident::from_content(s)))
     }
 }
 
-impl<'a, L, S: Display> Display for Function<L, S> {
+impl<'str, S: Display> Display for Function<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.name().fmt(f)
     }
 }
 
-impl<'a, 'b, S: Clone + Borrow<str>> Applicable for &'b Function<(), S> {
-    type Term = ast::Term<(), S>;
+impl<'a, 'b, S: Clone + Borrow<str>> Applicable for &'b Function<'a, S> {
+    type Term = ast::Term<'a, S>;
 
     fn f<U, I>(self, args: I) -> Self::Term
     where
@@ -152,41 +154,42 @@ impl<'a, 'b, S: Clone + Borrow<str>> Applicable for &'b Function<(), S> {
 
 /// [Rule::variable]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Variable<L, S>(pub Sub<L, S>);
-boiler_plate!(Variable<Span<'a>, &'a str>, 'a, variable; |p| {
+pub struct Variable<'str, S>(pub Sub<'str, S>);
+boiler_plate!(Variable<'a, &'a str>, 'a, variable; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.as_str() }))
 });
 
-impl<L, S> Variable<L, S> {
+impl<'str, S> Variable<'str, S> {
     pub fn name(&self) -> &S {
         &self.0.content
     }
 }
 
-impl<'a, L, S: Display> Display for Variable<L, S> {
+impl<'str, S: Display> Display for Variable<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.name().fmt(f)
     }
 }
 
-impl<S> From<S> for Variable<(), S> {
+impl<'str, S> From<S> for Variable<'str, S> {
     fn from(value: S) -> Self {
         Variable(value.into())
     }
 }
+
 /// [Rule::step_name]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct StepName<L, S>(pub Sub<L, Ident<L, S>>);
-boiler_plate!(StepName<Span<'a>, &'a str>, 'a, step_name; |p| {
+pub struct StepName<'str, S>(pub Sub<'str, Ident<'str, S>>);
+boiler_plate!(StepName<'a, &'a str>, 'a, step_name; |p| {
     Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
-impl<L, S> StepName<L, S> {
+impl<'str, S> StepName<'str, S> {
     pub fn name(&self) -> &S {
         self.0.content.name()
     }
 }
-impl<S> StepName<(), S> {
+impl<'str, S> StepName<'str, S> {
     pub fn from_s(s: S) -> Self {
         Self(Sub {
             span: Default::default(),
@@ -195,13 +198,13 @@ impl<S> StepName<(), S> {
     }
 }
 
-impl<'a, L, S: Display> Display for StepName<L, S> {
+impl<'str, S: Display> Display for StepName<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.name().fmt(f)
     }
 }
 
-impl<S> From<S> for StepName<(), S> {
+impl<'str, S> From<S> for StepName<'str, S> {
     fn from(value: S) -> Self {
         StepName(Ident::from_content(value).into())
     }
@@ -209,10 +212,9 @@ impl<S> From<S> for StepName<(), S> {
 
 macro_rules! mk_location_provider {
         ($name:ident) => {
-            impl<'a, L, S> crate::error::LocationProvider<<L as crate::error::PreLocation>::L> for &'a $name<L, S> where 
-                L: crate::error::PreLocation,
+            impl<'a, 'str, S: std::fmt::Debug> crate::error::LocationProvider for &'a $name<'str, S> where 
                 S: std::fmt::Display,{
-            fn provide(self) ->  <L as crate::error::PreLocation>::L {
+            fn provide(self) -> Location {
                 self.0.span.help_provide(&self)
             }
         }

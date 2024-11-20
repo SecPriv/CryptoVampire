@@ -1,4 +1,4 @@
-use super::{Locate, LocationProvider, RefLocationProvider};
+use super::{Locate, LocationProvider,  RefLocationProvider};
 
 /// This is the main struct to use with [Locate]. We use dynamic dispatch
 #[derive(Debug)]
@@ -20,6 +20,10 @@ impl Location {
     {
         Self(l)
     }
+
+    pub fn from_display<D>(d: D) -> Self where D: std::fmt::Display {
+        Location::from_boxed_locate(d.to_string().into_boxed_str())
+    }
 }
 
 impl Locate for Location {
@@ -40,6 +44,12 @@ impl Locate for Location {
 impl LocationProvider for Location {
     fn provide(self) -> Location {
         self
+    }
+}
+
+impl Default for Location {
+    fn default() -> Self {
+        Self::from_locate(());
     }
 }
 

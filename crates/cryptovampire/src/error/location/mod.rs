@@ -8,8 +8,9 @@ pub use location::{Location, RefLocation};
 mod location_helper;
 pub use location_helper::LocationHelper;
 
-mod no_location;
-pub use no_location::NoLocation;
+mod empty;
+
+mod str;
 
 /// Something that points a "location" in an input file
 /// 

@@ -1,7 +1,8 @@
 use cryptovampire_macros::LocationProvider;
+use location::ASTLocation;
 use pest::Span;
 
-use crate::error::{Location, LocationProvider};
+use crate::error::{ LocationProvider};
 
 use super::*;
 #[derive(Derivative, LocationProvider)]
@@ -14,23 +15,23 @@ use super::*;
     Hash,
     Clone
 )]
-pub enum Application<S> {
+pub enum Application<'str, S> {
     ConstVar {
         #[derivative(PartialOrd = "ignore", Ord = "ignore")]
         #[provider]
-        span: Location,
+        span: ASTLocation<'str>,
         content: S,
     },
     Application {
         #[derivative(PartialOrd = "ignore", Ord = "ignore")]
         #[provider]
-        span: Location,
-        function: Function<S>,
-        args: Vec<Term< S>>,
+        span: ASTLocation<'str>,
+        function: Function<'str, S>,
+        args: Vec<Term<'str, S>>,
     },
 }
 
-impl<S> Application< S> {
+impl<'str, S> Application<'str,  S> {
     pub fn name(&self) -> &S {
         match self {
             Application::ConstVar { content, .. } => content,
@@ -46,20 +47,20 @@ impl<S> Application< S> {
     }
     // }
     // impl<'a> Application<'a> {
-    pub fn name_span(&self) -> &Location {
+    pub fn name_span(&self) -> &ASTLocation<'str> {
         match self {
             Application::ConstVar { span, .. } => span,
             Application::Application { function, .. } => &function.0.span,
         }
     }
 
-    pub fn span(&self) -> &Location {
+    pub fn span(&self) -> &ASTLocation<'str> {
         match self {
             Application::ConstVar { span, .. } | Application::Application { span, .. } => span,
         }
     }
 
-    pub fn new_app(location: Location, fun: S, args: implvec!(Term< S>)) -> Self
+    pub fn new_app(location: ASTLocation<'str>, fun: S, args: implvec!(Term< 'str, S>)) -> Self
     {
         Self::Application {
             span: location,
@@ -68,7 +69,7 @@ impl<S> Application< S> {
         }
     }
 }
-boiler_plate!(Application< &'a str>, 'a, application; |p| {
+boiler_plate!(Application<'a, &'a str>, 'a, application; |p| {
     let span = p.provide();
     let mut p = p.into_inner();
     let name = p.next().unwrap();
@@ -81,7 +82,7 @@ boiler_plate!(Application< &'a str>, 'a, application; |p| {
     }
 });
 
-impl<'a,  S: Display> Display for Application< S> {
+impl<'a,  S: Display> Display for Application<'a,  S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Application::ConstVar { content, .. } => content.fmt(f),

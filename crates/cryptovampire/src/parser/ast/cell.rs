@@ -1,20 +1,20 @@
 use cryptovampire_macros::LocationProvider;
+use location::ASTLocation;
 use pest::Span;
 
-use crate::error::Location;
 
 use super::*;
 
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct DeclareCell< S> {
+pub struct DeclareCell<'str,  S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
-    pub span: Location,
-    pub name: Function< S>,
-    pub args: DeclareFunctionArgs< S>,
-    pub sort: TypeName< S>,
-    pub options: Options< S>,
+    pub span: ASTLocation<'str>,
+    pub name: Function< 'str, S>,
+    pub args: DeclareFunctionArgs<'str,  S>,
+    pub sort: TypeName<'str,  S>,
+    pub options: Options<'str,  S>,
 }
 
 boiler_plate!(@ DeclareCell, 'a, declare_cell; |p| {
@@ -23,7 +23,7 @@ boiler_plate!(@ DeclareCell, 'a, declare_cell; |p| {
     Ok(Self { span, name, args, sort, options })
 });
 
-impl<'a,  S: Display> Display for DeclareCell<S> {
+impl<'a,  S: Display> Display for DeclareCell<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
             name,
@@ -35,16 +35,17 @@ impl<'a,  S: Display> Display for DeclareCell<S> {
         write!(f, "cell {name}{args}:{sort} {options}")
     }
 }
-impl< S> DeclareCell< S> {
-    pub fn new<TN>(location: Location, name: S, args: implvec!(TN), sort: TN) -> Self
+
+impl<'str,  S> DeclareCell<'str,  S> {
+    pub fn new<TN>(location: ASTLocation<'str>, name: S, args: implvec!(TN), sort: TN) -> Self
     where
-        TypeName< S>: From<TN>,
+        TypeName<'str,  S>: From<TN>,
     {
         Self {
             span: location,
             name: Function::from_name(name),
             args: DeclareFunctionArgs {
-                span: Location::from_locate(()),
+                span: ASTLocation::from_locate(()),
                 args: args.into_iter().map_into().collect(),
             },
             sort: sort.into(),
@@ -55,11 +56,11 @@ impl< S> DeclareCell< S> {
 
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Assignements< S> {
+pub struct Assignements<'str,  S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
-    pub span: Location,
-    pub assignements: Vec<Assignement< S>>,
+    pub span: ASTLocation<'str>,
+    pub assignements: Vec<Assignement<'str,  S>>,
 }
 boiler_plate!(@ Assignements, 'a, assignements; |p| {
     let span = p.as_span();
@@ -67,16 +68,16 @@ boiler_plate!(@ Assignements, 'a, assignements; |p| {
     Ok(Self { span, assignements })
 });
 
-impl< S: Display> Display for Assignements< S> {
+impl<'str,  S: Display> Display for Assignements<'str,  S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.assignements.iter().format(", "))
     }
 }
 
-impl<'a, S> FromIterator<Assignement<S>> for Assignements< S> {
-    fn from_iter<T: IntoIterator<Item = Assignement<S>>>(iter: T) -> Self {
+impl<'a, S> FromIterator<Assignement<'a, S>> for Assignements<'a,  S> {
+    fn from_iter<T: IntoIterator<Item = Assignement<'a, S>>>(iter: T) -> Self {
         Self {
-            span: L::default(),
+            span: Default::default(),
             assignements: iter.into_iter().collect(),
         }
     }
@@ -84,14 +85,15 @@ impl<'a, S> FromIterator<Assignement<S>> for Assignements< S> {
 
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Assignement< S> {
+pub struct Assignement<'str,  S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
-    pub span: Location,
-    pub cell: Application< S>,
-    pub term: Term<S>,
-    pub fresh_vars: Option<TypedArgument< S>>,
+    pub span: ASTLocation<'str>,
+    pub cell: Application<'str,  S>,
+    pub term: Term<'str, S>,
+    pub fresh_vars: Option<TypedArgument<'str,  S>>,
 }
+
 boiler_plate!(@ Assignement, 'a, assignement; |p| {
     let span = p.as_span();
     let p = p.into_inner().collect_vec();
@@ -121,7 +123,7 @@ boiler_plate!(@ Assignement, 'a, assignement; |p| {
     // Ok(Self { span, cell, term })
 });
 
-impl< S: Display> Display for Assignement< S> {
+impl<'str,  S: Display> Display for Assignement<'str,  S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
             cell,

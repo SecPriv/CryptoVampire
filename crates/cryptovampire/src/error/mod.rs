@@ -10,7 +10,7 @@ pub use error::Error;
 mod inner_error;
 
 mod location;
-pub use location::{Location, LocationProvider, LocateHelper};
+pub use location::{Location, LocationProvider, LocateHelper, Locate};
 
 mod result;
 pub use result::CVContext;

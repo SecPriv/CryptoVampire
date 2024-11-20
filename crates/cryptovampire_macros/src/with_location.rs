@@ -82,7 +82,7 @@ pub fn derive_struct(data: &DataStruct, input: &DeriveInput) -> TokenStream {
         None => quote! {#i},
     };
     let implementation = quote! {
-      use crate::error::PreLocation;
+      use crate::error::LocateHelper;
       self.#field_iden.help_provide(&self)
     };
 
@@ -112,7 +112,7 @@ pub fn derive_enum(data: &DataEnum, input: &DeriveInput) -> TokenStream {
                     None => quote! {#i},
                 };
                 quote! {#name::#iden {#field_iden: x, ..} => {
-                  use crate::error::PreLocation;
+                  use crate::error::LocateHelper;
                   x.help_provide(&self)
                 }}
             }

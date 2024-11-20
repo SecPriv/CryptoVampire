@@ -1,42 +1,42 @@
 use cryptovampire_macros::LocationProvider;
+use location::ASTLocation;
 use pest::Span;
 
 use super::*;
 
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct DeclareFunction<L, S> {
+pub struct DeclareFunction<'str, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
-    pub span: L,
-    pub name: Function<L, S>,
-    pub args: DeclareFunctionArgs<L, S>,
-    pub sort: TypeName<L, S>,
-    pub options: Options<L, S>,
+    pub span: ASTLocation<'str>,
+    pub name: Function<'str, S>,
+    pub args: DeclareFunctionArgs<'str, S>,
+    pub sort: TypeName<'str, S>,
+    pub options: Options<'str, S>,
 }
-boiler_plate!(DeclareFunction<Span<'a>, &'a str>, 'a, declare_function; |p| {
+boiler_plate!(DeclareFunction<'a, &'a str>, 'a, declare_function; |p| {
     let span = p.as_span();
     destruct_rule!(span in [name, args, sort, ?options] = p);
     Ok(Self { span, name, args, sort, options })
 });
 
-impl<L, S> DeclareFunction<L, S> {
-    pub fn name(&self) -> &Ident<L, S> {
+impl<'str, S> DeclareFunction<'str, S> {
+    pub fn name(&self) -> &Ident<'str, S> {
         &self.name.0.content
     }
 
-    pub fn args(&'_ self) -> impl Iterator<Item = &'_ Ident<L, S>> + '_ {
+    pub fn args(&'_ self) -> impl Iterator<Item = &'_ Ident<'str, S>> + '_ {
         self.args.args.iter().map(|tn| &tn.0.content)
     }
 
-    pub fn out(&self) -> &Ident<L, S> {
+    pub fn out(&self) -> &Ident<'str, S> {
         &self.sort.0.content
     }
 
-    pub fn new<TN>(location: L, name: S, args: implvec!(TN), sort: TN) -> Self
+    pub fn new<TN>(location: ASTLocation<'str>, name: S, args: implvec!(TN), sort: TN) -> Self
     where
-        TypeName<L, S>: From<TN>,
-        L: Clone + Default,
+        TypeName<'str, S>: From<TN>,
     {
         Self {
             span: location.clone(),
@@ -51,7 +51,7 @@ impl<L, S> DeclareFunction<L, S> {
     }
 }
 
-impl<'a, L, S: Display> Display for DeclareFunction<L, S> {
+impl<'str, S: Display> Display for DeclareFunction<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
             name,
@@ -66,19 +66,19 @@ impl<'a, L, S: Display> Display for DeclareFunction<L, S> {
 
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct DeclareFunctionArgs<L, S> {
+pub struct DeclareFunctionArgs<'str, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
-    pub span: L,
-    pub args: Vec<TypeName<L, S>>,
+    pub span: ASTLocation<'str>,
+    pub args: Vec<TypeName<'str, S>>,
 }
-boiler_plate!(DeclareFunctionArgs<Span<'a>, &'a str>, 'a, declare_function_args; |p| {
+boiler_plate!(DeclareFunctionArgs<'a, &'a str>, 'a, declare_function_args; |p| {
     let span = p.as_span();
     let args = p.into_inner().map(TryInto::try_into).try_collect()?;
     Ok(Self { span, args })
 });
 
-impl<'a, L, S: Display> Display for DeclareFunctionArgs<L, S> {
+impl<'str, S: Display> Display for DeclareFunctionArgs<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.args.is_empty() {
             Ok(())

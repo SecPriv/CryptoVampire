@@ -56,7 +56,7 @@ macro_rules! debug_rule {
 macro_rules! boiler_plate {
     ($t:ty, $lt:lifetime, $($rule:ident)|+; |$p:ident| $content:block) => {
         impl<$lt> TryFrom<Pair<$lt, Rule>> for $t {
-            type Error = $crate::Error<$crate::error::PestLocation>;
+            type Error = $crate::Error;
 
             fn try_from($p: Pair<$lt, Rule>) -> std::result::Result<$t, Self::Error> {
                 let str = $p.as_str();
@@ -94,7 +94,7 @@ macro_rules! boiler_plate {
         boiler_plate!(l $t, 'a, $rule; |p| {$($pat => { Ok(Self::$res) })*});
     };
     (@ $t:ident, $lt:lifetime, $($rule:ident)|+; |$p:ident| $content:block) => {
-        boiler_plate!($t<&$lt str>, $lt, $($rule)|+; |$p| $content);
+        boiler_plate!($t<$lt, &$lt str>, $lt, $($rule)|+; |$p| $content);
     }
 
 }

@@ -1,20 +1,22 @@
 use cryptovampire_macros::LocationProvider;
+use location::ASTLocation;
 use pest::Span;
 
-use crate::{error::PreLocation, Location};
+
+use crate::error::Location;
 
 use super::*;
 
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Options<L, S> {
+pub struct Options<'str, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
-    pub span: L,
-    pub options: Vec<MOption<L, S>>,
+    pub span: ASTLocation<'str>,
+    pub options: Vec<MOption<'str, S>>,
 }
 
-impl<L: Default, S> Default for Options<L, S> {
+impl<'str, S> Default for Options<'str, S> {
     fn default() -> Self {
         Self {
             span: Default::default(),
@@ -23,28 +25,29 @@ impl<L: Default, S> Default for Options<L, S> {
     }
 }
 
-impl<L, S: Display> Display for Options<L, S> {
+impl<'str, S: Display> Display for Options<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[{}]", self.options.iter().format(", "))
     }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct MOption<L, S>(Ident<L, S>);
+pub struct MOption<'str, S>(Ident<'str, S>);
 
-impl<L, S> From<Ident<L, S>> for MOption<L, S> {
-    fn from(value: Ident<L, S>) -> Self {
+impl<'str, S> From<Ident<'str, S>> for MOption<'str, S> {
+    fn from(value: Ident<'str, S>) -> Self {
         Self(value)
     }
 }
 
-boiler_plate!(Options<Span<'a>, &'a str>, 'a, options; |p| {
+boiler_plate!(Options<'a, &'a str>, 'a, options; |p| {
     let span = p.as_span();
     let options = p.into_inner().map(Ident::try_from).map(|r| r.map(MOption::from)).try_collect()?;
     Ok(Self { span, options })
 });
-impl<L, S> Options<L, S> {
-    pub fn empty(span: L) -> Self {
+
+impl<'str, S> Options<'str, S> {
+    pub fn empty(span: ASTLocation<'str>) -> Self {
         Self {
             span,
             options: Default::default(),
@@ -58,6 +61,7 @@ impl<L, S> Options<L, S> {
     pub fn iter<'b>(&'b self) -> <&'b Self as IntoIterator>::IntoIter {
         (&self).into_iter()
     }
+
     pub fn contains(&self, str: &str) -> bool
     where
         S: Borrow<str>,
@@ -66,33 +70,32 @@ impl<L, S> Options<L, S> {
     }
 }
 
-impl<L, S: Display> Display for MOption<L, S> {
+impl<'str, S: Display> Display for MOption<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
     }
 }
 
-impl<L, S> crate::error::LocationProvider<<L as PreLocation>::L> for MOption<L, S>
+impl<'str, S> crate::error::LocationProvider for MOption<'str, S>
 where
-    S: std::fmt::Display,
-    L: PreLocation,
+    S: std::fmt::Display + std::fmt::Debug,
 {
-    fn provide(self) -> <L as PreLocation>::L {
+    fn provide(self) -> Location {
         self.0.span.help_provide(&self)
     }
 }
 
-impl<'b, L, S> IntoIterator for &'b Options<L, S> {
-    type Item = &'b MOption<L, S>;
+impl<'b, 'str, S> IntoIterator for &'b Options<'str, S> {
+    type Item = &'b MOption<'str, S>;
 
-    type IntoIter = slice::Iter<'b, MOption<L, S>>;
+    type IntoIter = slice::Iter<'b, MOption<'str, S>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.options.iter()
     }
 }
 
-impl<'a, S> FromIterator<S> for Options<(), S> {
+impl<'a, S> FromIterator<S> for Options<'a, S> {
     fn from_iter<T: IntoIterator<Item = S>>(iter: T) -> Self {
         iter.into_iter()
             .map(Ident::from)
@@ -101,8 +104,8 @@ impl<'a, S> FromIterator<S> for Options<(), S> {
     }
 }
 
-impl<L: Default, S> FromIterator<MOption<L, S>> for Options<L, S> {
-    fn from_iter<T: IntoIterator<Item = MOption<L, S>>>(iter: T) -> Self {
+impl<'str, S> FromIterator<MOption<'str, S>> for Options<'str, S> {
+    fn from_iter<T: IntoIterator<Item = MOption<'str, S>>>(iter: T) -> Self {
         Options {
             span: Default::default(),
             options: iter.into_iter().collect(),

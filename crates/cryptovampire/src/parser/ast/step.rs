@@ -1,4 +1,5 @@
 use cryptovampire_macros::LocationProvider;
+use location::ASTLocation;
 
 use super::*;
 
@@ -7,7 +8,7 @@ use super::*;
 ///
 /// See [HasInitStep::ref_init_step_ast] a degenericied version
 #[allow(non_snake_case)]
-pub fn INIT_STEP_AST<S>() -> Step<(), S>
+pub fn INIT_STEP_AST<S>() -> Step<'static, S>
 where
     S: From<&'static str>,
 {
@@ -15,7 +16,7 @@ where
     let message = Term::new_default_const(builtin::EMPTY_FUN_NAME.into());
 
     Step {
-        span: (),
+        span: Default::default(),
         name: StepName::from_s(INIT_STEP_NAME.into()),
         args: TypedArgument::default(),
         condition,
@@ -27,19 +28,19 @@ where
 
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Step<L, S> {
+pub struct Step<'str, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
-    pub span: L,
-    pub name: StepName<L, S>,
-    pub args: TypedArgument<L, S>,
-    pub condition: Term<L, S>,
-    pub message: Term<L, S>,
-    pub assignements: Option<Assignements<L, S>>,
-    pub options: Options<L, S>,
+    pub span: ASTLocation<'str>,
+    pub name: StepName<'str, S>,
+    pub args: TypedArgument<'str, S>,
+    pub condition: Term<'str, S>,
+    pub message: Term<'str, S>,
+    pub assignements: Option<Assignements<'str, S>>,
+    pub options: Options<'str, S>,
 }
 
-impl<L, S> Step<L, S> {
+impl<'str, S> Step<'str, S> {
     pub fn args_names(&'_ self) -> impl Iterator<Item = &'_ S> + '_ {
         self.args.bindings.iter().map(|vb| vb.variable.name())
     }
@@ -92,7 +93,7 @@ boiler_plate!(@ Step, 'a, step; |p| {
     Ok(Self { span, name, args, condition, message, assignements, options})
 });
 
-impl<L, S: Display> Display for Step<L, S> {
+impl<'str, S: Display> Display for Step<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
             name,

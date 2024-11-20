@@ -19,6 +19,8 @@ mod pstr;
 pub use pstr::*;
 pub mod error;
 
+mod location;
+
 pub const USED_KEYWORDS: &'static [&'static str] = &[
     "and",
     "or",

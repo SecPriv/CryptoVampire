@@ -3,7 +3,6 @@ use super::*;
 pub trait HasInitStep: Sized {
     fn ref_init_step_ast<'a>() -> &'a ast::Step<(), Self>;
 
-    NE
     // fn from_static(s:&'static str) -> Self;
 }
 

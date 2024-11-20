@@ -1,20 +1,21 @@
 use cryptovampire_macros::LocationProvider;
+use location::ASTLocation;
 use pest::Span;
 
-use crate::{error::PestLocation, Result};
+use crate::{ Result};
 
 use super::*;
 
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Macro<L, S> {
+pub struct Macro<'str, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
-    pub span: L,
-    pub name: MacroName<L, S>,
-    pub args: TypedArgument<L, S>,
-    pub term: Term<L, S>,
-    pub options: Options<L, S>,
+    pub span: ASTLocation<'str>,
+    pub name: MacroName<'str, S>,
+    pub args: TypedArgument<'str, S>,
+    pub term: Term<'str, S>,
+    pub options: Options<'str, S>,
 }
 boiler_plate!(@ Macro, 'a, mlet ; |p| {
     let span = p.as_span().into();
@@ -22,13 +23,13 @@ boiler_plate!(@ Macro, 'a, mlet ; |p| {
     Ok(Self {span, name, args, term, options})
 });
 
-impl<L, S> Macro<L, S> {
+impl<'str, S> Macro<'str, S> {
     pub fn args_names(&'_ self) -> impl Iterator<Item = &'_ S> + '_ {
         self.args.bindings.iter().map(|vb| vb.variable.name())
     }
 }
 
-impl<L, S: Display> Display for Macro<L, S> {
+impl<'str, S: Display> Display for Macro<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
             name,
@@ -43,14 +44,14 @@ impl<L, S: Display> Display for Macro<L, S> {
 
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct AppMacro<L, S> {
+pub struct AppMacro<'str, S> {
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
-    pub span: L,
-    pub inner: InnerAppMacro<L, S>,
+    pub span: ASTLocation<'str>,
+    pub inner: InnerAppMacro<'str, S>,
 }
 
-fn from_term_to_application<'a>(p: Pair<'a, Rule>) -> Result<Application<Span<'a>, &'a str>> {
+fn from_term_to_application<'a>(p: Pair<'a, Rule>) -> Result<Application<'a, &'a str>> {
     debug_rule!(p, term);
     let p = p.into_inner().next().unwrap();
     debug_rule!(p, inner_term);
@@ -79,22 +80,22 @@ boiler_plate!(@ AppMacro, 'a, macro_application; |p| {
   Ok(Self{span, inner})
 });
 
-impl<L, S: Display> Display for AppMacro<L, S> {
+impl<'str, S: Display> Display for AppMacro<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.inner.fmt(f)
     }
 }
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum InnerAppMacro<L, S> {
-    Msg(Application<L, S>),
-    Cond(Application<L, S>),
+pub enum InnerAppMacro<'str, S> {
+    Msg(Application<'str, S>),
+    Cond(Application<'str, S>),
     Other {
-        name: MacroName<L, S>,
-        args: Vec<Term<L, S>>,
+        name: MacroName<'str, S>,
+        args: Vec<Term<'str, S>>,
     },
 }
 
-impl<L, S: Display> Display for InnerAppMacro<L, S> {
+impl<'str, S: Display> Display for InnerAppMacro<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             InnerAppMacro::Msg(arg) => write!(f, "msg!({arg})"),
