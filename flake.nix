@@ -59,7 +59,7 @@
               rust-analyzer
               my-python
               graphviz
-            ];
+            ] ++ lib.optional stdenv.isDarwin git;
         };
 
         dockerShell_old = pkgs.mkShell {
@@ -72,50 +72,50 @@
           '';
         };
 
-
-        dockerImage = with nix2container.packages.${system}.nix2container; buildImage {
-          name = "cryptovampire";
-          tag="latest";
-          layers = let
-            commonLayer = {
-              deps = with pkgs; [
-                bashInteractive
-                emacs
-                vim
-                z3
-                cvc5
-                custom-pkgs.vampire
+        dockerImage = with nix2container.packages.${system}.nix2container;
+          buildImage {
+            name = "cryptovampire";
+            tag = "latest";
+            layers = let
+              commonLayer = {
+                deps = with pkgs; [
+                  bashInteractive
+                  emacs
+                  vim
+                  z3
+                  cvc5
+                  custom-pkgs.vampire
+                ];
+              };
+              layerDefs = [
+                {
+                  deps = [ custom-pkgs.squirrel-prover ];
+                  layers = [ (buildLayer commonLayer) ];
+                }
+                {
+                  deps = [ cryptovampire ];
+                  layers = [ (buildLayer commonLayer) ];
+                }
+              ];
+            in builtins.map buildLayer layerDefs;
+            config = {
+              Env = [
+                (let
+                  path = with pkgs;
+                    lib.makeBinPath [
+                      bashInteractive
+                      custom-pkgs.squirrel-prover
+                      cryptovampire
+                      emacs
+                      vim
+                      z3
+                      cvc5
+                    ];
+                in "PATH=${path}:${custom-pkgs.squirrel-prover}")
+                "CRYTPOVAMPIRE_LOCATION=${cryptovampire}/bin/cryptovampire"
               ];
             };
-            layerDefs = [
-              {
-                deps = [ custom-pkgs.squirrel-prover ];
-                layers = [ (buildLayer commonLayer) ];
-              }
-              {
-                deps = [ cryptovampire ];
-                layers = [ (buildLayer commonLayer) ];
-              }
-            ];
-          in builtins.map buildLayer layerDefs;
-          config = {
-            Env = [
-              (let
-                path = with pkgs;
-                  lib.makeBinPath [
-                    bashInteractive
-                    custom-pkgs.squirrel-prover
-                    cryptovampire
-                    emacs
-                    vim
-                    z3
-                    cvc5
-                  ];
-              in "PATH=${path}:${custom-pkgs.squirrel-prover}")
-              "CRYTPOVAMPIRE_LOCATION=${cryptovampire}/bin/cryptovampire"
-            ];
           };
-        };
 
       in rec {
         packages = { inherit cryptovampire dockerImage; };
