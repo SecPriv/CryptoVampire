@@ -4,7 +4,7 @@ use std::sync::Arc;
 use super::*;
 
 use crate::{
-    bail_at, err_at, error::LocationProvider, parser::{ast::extra::AsFunction, error::ParsingError, InputError, MResult, Pstr}, CVContext, CVResult, PreLocation
+    bail_at, err_at, error::LocationProvider, parser::{ast::extra::AsFunction, error::ParsingError, Pstr}
 };
 
 use crate::{
@@ -30,7 +30,7 @@ use super::super::ast::{self, extra::SnN, ASTList, Declaration, DeclareFunction,
 pub fn declare_sorts<'str, 'bump, S>(
     env: &mut Environement<'bump, 'str, S>,
     ast: &'str ASTList<'str, S>,
-) -> MResult<()>
+) -> crate::Result<()>
 where
     S: Pstr,
     for<'a> StrRef<'a>: From<&'a S>,
@@ -50,43 +50,42 @@ where
                 //     *s.get_name_span(),
                 //     f!("the sort name {} is already in use", name),
                 // ))
-                Err(err_at!(
+                err_at!(
                     s.name_span(),
                     "the sort name {} is already in use",
                     name
-                ))
+                )
             } else {
                 let sort =
                     Sort::new_index(env.container, String::from(name.borrow()).into_boxed_str());
                 let out = env.sort_hash.insert(sort.name().to_string(), sort);
 
                 match out {
-                    Some(_) => Err(err_at!(
+                    Some(_) => err_at!(
                         s.name_span(),
                         "!UNREACHABLE!(line {} in {}) \
 The sort name {} somehow reintroduced itself in the hash",
                         line!(),
                         file!(),
                         name
-                    )),
+                    ),
                     _ => Ok(()),
                 }
             }
         })
 }
 
-pub fn fetch_all<'str, 'bump, L, S>(
-    env: &mut Environement<'bump, 'str, L, S>,
-    ast: &'str ASTList<L, S>,
-    assertions: &mut impl Extend<&'str ast::Assertion<L, S>>,
-    lemmas: &mut impl Extend<&'str ast::Assertion<L, S>>,
-    orders: &mut impl Extend<&'str ast::Order<L, S>>, // Vec<&'str ast::Order<'str>>,
-    asserts_crypto: &mut impl Extend<&'str ast::AssertCrypto<L, S>>,
-) -> CVResult<&'str ast::Assertion<L, S>, L::L>
+pub fn fetch_all<'str, 'bump, S>(
+    env: &mut Environement<'bump, 'str, S>,
+    ast: &'str ASTList<'str, S>,
+    assertions: &mut impl Extend<&'str ast::Assertion<'str, S>>,
+    lemmas: &mut impl Extend<&'str ast::Assertion<'str, S>>,
+    orders: &mut impl Extend<&'str ast::Order<'str, S>>, // Vec<&'str ast::Order<'str>>,
+    asserts_crypto: &mut impl Extend<&'str ast::AssertCrypto<'str, S>>,
+) -> crate::Result<&'str ast::Assertion<'str, S>>
 where
     S: Pstr,
     for<'a> StrRef<'a>: From<&'a S>,
-    L: PreLocation,
 {
     let mut did_initilise_init = false;
     let mut query = Ok(None);
@@ -179,13 +178,12 @@ fn user_bool_to_condtion<'bump>(s: Sort<'bump>) -> Sort<'bump> {
 }
 
 fn declare_function<'str, 'bump, L, S>(
-    env: &mut Environement<'bump, 'str, L, S>,
-    fun: &DeclareFunction<L, S>,
-) -> CVResult<(), L::L>
+    env: &mut Environement<'bump, 'str, S>,
+    fun: &DeclareFunction<'str, S>,
+) -> crate::Unit
 where
     S: Pstr,
     for<'a> StrRef<'a>: From<&'a S>,
-    L: PreLocation,
 {
     let Ident {
         span,
@@ -197,7 +195,7 @@ where
     } else {
         let input_sorts: Result<Vec<_>, _> = fun
             .args()
-            .map(|idn| get_sort(env, idn.span, idn.name().borrow()))
+            .map(|idn| get_sort(env, &idn.span, idn.name().borrow()))
             .map(|s| {
                 // user defined bool functions are condition
                 s.map(user_bool_to_condtion)
@@ -205,7 +203,7 @@ where
             .collect();
         let output_sort = {
             let idn = fun.out();
-            get_sort(env, idn.span, idn.name().borrow())
+            get_sort(env, &idn.span, idn.name().borrow())
                 // user defined bool functions are condition
                 .map(user_bool_to_condtion)
         }?;
@@ -234,14 +232,13 @@ The function name {} somehow reintroduced itself in the hash",
     }
 }
 
-fn declare_step<'str, 'bump, L, S>(
-    env: &mut Environement<'bump, 'str, L, S>,
-    fun: &'str ast::Step<L, S>,
-) -> CVResult<(), L::L>
+fn declare_step<'str, 'bump, S>(
+    env: &mut Environement<'bump, 'str, S>,
+    fun: &'str ast::Step<'str, S>,
+) -> crate::Unit
 where
     S: Pstr,
     for<'c> StrRef<'c>: From<&'c S>,
-    L: PreLocation,
 {
     let SnN { span, name } = (&fun.name).into();
     if env.contains_name(&name) {
@@ -251,7 +248,7 @@ where
     let input_sorts: Result<Vec<_>, _> = fun
         .args()
         .into_iter()
-        .map(|idn| get_sort(env, *idn.span, idn.name))
+        .map(|idn| get_sort(env, &idn.span, idn.name))
         .collect();
     let step = <ScopedContainer<'bump> as ContainerTools<'bump, InnerStep<'bump>>>::alloc_uninit::<
         'bump,
@@ -274,14 +271,13 @@ where
     Ok(())
 }
 
-fn declare_cell<'str, 'bump, L, S>(
-    env: &mut Environement<'bump, 'str,L,  S>,
-    fun: &'str ast::DeclareCell<L,  S>,
-) -> MResult<()>
+fn declare_cell<'str, 'bump, S>(
+    env: &mut Environement<'bump, 'str,  S>,
+    fun: &'str ast::DeclareCell<'str,  S>,
+) -> crate::Unit
 where
     S: Pstr,
     for<'a> StrRef<'a>: From<&'a S>,
-    L:PreLocation
 {
     let SnN { span, name } = (&fun.name).into();
     if env.contains_name(&name) {
@@ -292,7 +288,7 @@ where
     let input_sorts: Result<Vec<_>, _> = fun
         .args()
         .into_iter()
-        .map(|idn| get_sort(env, *idn.span, idn.name))
+        .map(|idn| get_sort(env, &idn.span, idn.name))
         .collect();
     let cell =
         <ScopedContainer<'bump> as ContainerTools<'bump, InnerMemoryCell<'bump>>>::alloc_uninit::<
@@ -321,7 +317,7 @@ where
 fn declare_let<'bump, 'a, S>(
     env: &mut Environement<'bump, 'a, S>,
     mlet: &ast::Macro<'a, S>,
-) -> MResult<()>
+) -> crate::Unit
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
@@ -329,13 +325,13 @@ where
     let ast::Macro { name, .. } = mlet;
     let SnN { span, name } = name.into();
     if env.container_macro_name(&name) {
-        bail_at!(span, "the macro {} is already in use", &name)
+        bail_at!(name, "the macro {} is already in use", &name)
     } else {
         // the input sorts (will gracefully error out later if a sort is undefined)
         let args: Result<Arc<[_]>, _> = mlet
             .args
             .into_iter()
-            .map(|idn| get_sort(env, idn.span, idn.type_name.name().borrow()))
+            .map(|idn| get_sort(env, &idn.span, idn.type_name.name().borrow()))
             .collect();
         let args_name = mlet.args_names().cloned().collect();
 

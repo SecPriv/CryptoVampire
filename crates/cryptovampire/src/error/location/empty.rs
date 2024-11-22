@@ -22,7 +22,7 @@ impl Locate for () {
 
 impl<'a> LocationProvider for &'a () {
     fn provide(self) -> Location {
-        Location::from_locate(self);
+        Location::from_locate(*self)
     }
 }
 

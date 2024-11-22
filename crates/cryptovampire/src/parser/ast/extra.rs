@@ -1,4 +1,4 @@
-use crate::{ formula::sort::builtins::STEP};
+use crate::{ error::{LocateHelper, LocationProvider}, formula::sort::builtins::STEP};
 use cryptovampire_macros::LocationProvider;
 use derivative::Derivative;
 use utils::string_ref::StrRef;
@@ -10,7 +10,6 @@ use super::{
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Sub<'str,  S> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     pub span: ASTLocation<'str>,
     pub content: S,
 }
@@ -85,6 +84,12 @@ where
             span: &value.0.span,
             name: value.name().into(),
         }
+    }
+}
+
+impl<'a, 'b> LocationProvider for SnN<'a, 'b> {
+    fn provide(self) -> crate::error::Location {
+        self.span.help_provide(&self.name)
     }
 }
 

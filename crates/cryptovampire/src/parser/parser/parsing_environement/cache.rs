@@ -22,27 +22,27 @@ use crate::{
 use utils::vecref::VecRefClone;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-pub enum FunctionCache<'str, 'bump, L, S> {
+pub enum FunctionCache<'str, 'bump, S> {
     Function(Function<'bump>),
-    Step(StepCache<'str, 'bump, L, S>),
-    MemoryCell(CellCache<'str, 'bump, L, S>),
+    Step(StepCache<'str, 'bump, S>),
+    MemoryCell(CellCache<'str, 'bump, S>),
 }
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, Hash)]
-pub struct CellCache<'str, 'bump, L, S> {
+pub struct CellCache<'str, 'bump, S> {
     pub args: Arc<[Sort<'bump>]>,
     pub cell: MemoryCell<'bump>,
     pub function: Function<'bump>,
-    pub ast: &'str ast::DeclareCell<L, S>,
+    pub ast: &'str ast::DeclareCell<'str, S>,
     #[derivative(PartialEq = "ignore", Hash = "ignore")]
     pub assignements: Mutex<Vec<Assignement<'bump>>>,
 }
 
-impl<'str, 'bump, L, S> FunctionCache<'str, 'bump, L, S> {
+impl<'str, 'bump,  S> FunctionCache<'str, 'bump,  S> {
     /// to make sure things are still as variant as they should
     #[allow(dead_code)]
-    fn shorten_life<'a>(self) -> FunctionCache<'a, 'bump, L, S>
+    fn shorten_life<'a>(self) -> FunctionCache<'a, 'bump,  S>
     where
         'str: 'a,
     {
@@ -76,7 +76,7 @@ impl<'str, 'bump, L, S> FunctionCache<'str, 'bump, L, S> {
     }
 
     #[allow(dead_code)]
-    pub fn as_step_ast(&self) -> Option<&ast::Step<L, S>> {
+    pub fn as_step_ast(&self) -> Option<&ast::Step<'str, S>> {
         match self {
             Self::Step(StepCache { ast, .. }) => Some(*ast),
             _ => None,
@@ -127,7 +127,7 @@ impl<'str, 'bump, L, S> FunctionCache<'str, 'bump, L, S> {
         }
     }
 
-    pub fn as_memory_cell(&self) -> Option<&CellCache<'str, 'bump, L, S>> {
+    pub fn as_memory_cell(&self) -> Option<&CellCache<'str, 'bump,  S>> {
         if let Self::MemoryCell(v) = self {
             Some(v)
         } else {
@@ -135,7 +135,7 @@ impl<'str, 'bump, L, S> FunctionCache<'str, 'bump, L, S> {
         }
     }
 
-    pub fn as_step(&self) -> Option<&StepCache<'str, 'bump, L, S>> {
+    pub fn as_step(&self) -> Option<&StepCache<'str, 'bump,  S>> {
         if let Self::Step(v) = self {
             Some(v)
         } else {
@@ -144,7 +144,7 @@ impl<'str, 'bump, L, S> FunctionCache<'str, 'bump, L, S> {
     }
 }
 
-impl<'str, 'bump, S, L> From<Function<'bump>> for FunctionCache<'str, 'bump, L, S> {
+impl<'str, 'bump, S> From<Function<'bump>> for FunctionCache<'str, 'bump,  S> {
     fn from(value: Function<'bump>) -> Self {
         Self::Function(value)
     }

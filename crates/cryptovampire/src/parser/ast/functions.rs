@@ -1,5 +1,5 @@
 use cryptovampire_macros::LocationProvider;
-use location::ASTLocation;
+use location::{ASTLocation, AsASTLocation};
 use pest::Span;
 
 use super::*;
@@ -7,7 +7,6 @@ use super::*;
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct DeclareFunction<'str, S> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
     pub span: ASTLocation<'str>,
     pub name: Function<'str, S>,
@@ -18,7 +17,7 @@ pub struct DeclareFunction<'str, S> {
 boiler_plate!(DeclareFunction<'a, &'a str>, 'a, declare_function; |p| {
     let span = p.as_span();
     destruct_rule!(span in [name, args, sort, ?options] = p);
-    Ok(Self { span, name, args, sort, options })
+    Ok(Self { span: span.into(), name, args, sort, options })
 });
 
 impl<'str, S> DeclareFunction<'str, S> {
@@ -75,7 +74,7 @@ pub struct DeclareFunctionArgs<'str, S> {
 boiler_plate!(DeclareFunctionArgs<'a, &'a str>, 'a, declare_function_args; |p| {
     let span = p.as_span();
     let args = p.into_inner().map(TryInto::try_into).try_collect()?;
-    Ok(Self { span, args })
+    Ok(Self { span: span.into(), args })
 });
 
 impl<'str, S: Display> Display for DeclareFunctionArgs<'str, S> {

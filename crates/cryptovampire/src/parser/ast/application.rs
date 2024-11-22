@@ -1,29 +1,18 @@
 use cryptovampire_macros::LocationProvider;
-use location::ASTLocation;
+use location::{ASTLocation, AsASTLocation};
 use pest::Span;
 
 use crate::error::{ LocationProvider};
 
 use super::*;
-#[derive(Derivative, LocationProvider)]
-#[derivative(
-    Debug,
-    PartialEq,
-    Eq,
-    PartialOrd = "feature_allow_slow_enum",
-    Ord = "feature_allow_slow_enum",
-    Hash,
-    Clone
-)]
+#[derive(Derivative, LocationProvider, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone)]
 pub enum Application<'str, S> {
     ConstVar {
-        #[derivative(PartialOrd = "ignore", Ord = "ignore")]
         #[provider]
         span: ASTLocation<'str>,
         content: S,
     },
     Application {
-        #[derivative(PartialOrd = "ignore", Ord = "ignore")]
         #[provider]
         span: ASTLocation<'str>,
         function: Function<'str, S>,
@@ -70,15 +59,15 @@ impl<'str, S> Application<'str,  S> {
     }
 }
 boiler_plate!(Application<'a, &'a str>, 'a, application; |p| {
-    let span = p.provide();
+    let span = p.as_span();
     let mut p = p.into_inner();
     let name = p.next().unwrap();
 
     if let None = p.peek() {
-        Ok(Application::ConstVar { span, content: name.as_str() })
+        Ok(Application::ConstVar { span: span.into(), content: name.as_str() })
     } else {
         let args : Result<Vec<_>, _> = p.map(TryInto::try_into).collect();
-        Ok(Application::Application { span, function: name.try_into()?, args: args? })
+        Ok(Application::Application { span: span.into(), function: name.try_into()?, args: args? })
     }
 });
 

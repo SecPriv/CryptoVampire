@@ -16,7 +16,7 @@ pub struct Quantifier<'str,  S> {
 boiler_plate!(@ Quantifier, 'a, quantifier; |p| {
   let span = p.as_span();
   destruct_rule!(span in [kind, vars, content] = p.into_inner());
-  Ok(Self { kind, vars, span, content})
+  Ok(Self { kind, vars, span: span.into(), content})
 });
 
 impl<'str, S: Display> Display for Quantifier<'str, S> {

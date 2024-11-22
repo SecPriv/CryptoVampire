@@ -9,7 +9,6 @@ use super::*;
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Infix<'str, S> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
     pub span: ASTLocation<'str>,
     pub operation: Operation,
@@ -32,7 +31,7 @@ boiler_plate!(Infix<'a, &'a str>, 'a, infix_term; |p| {
       }
       terms.push(p.next().unwrap().try_into()?)
   }
-  Ok(Infix { span, operation, terms })
+  Ok(Infix { span: span.into(), operation, terms })
 });
 
 impl<'str, S: Display> Display for Infix<'str, S> {

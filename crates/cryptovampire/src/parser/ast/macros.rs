@@ -18,9 +18,9 @@ pub struct Macro<'str, S> {
     pub options: Options<'str, S>,
 }
 boiler_plate!(@ Macro, 'a, mlet ; |p| {
-    let span = p.as_span().into();
+    let span = p.as_span();
     destruct_rule!(span in [name, args, term, ?options] = p);
-    Ok(Self {span, name, args, term, options})
+    Ok(Self {span:span.into(), name, args, term, options})
 });
 
 impl<'str, S> Macro<'str, S> {
@@ -65,19 +65,19 @@ boiler_plate!(@ AppMacro, 'a, macro_application; |p| {
     let span = p.as_span();
     let mut p = p.into_inner();
     let inner = {
-        let name: MacroName<Span, &str> = p.next().unwrap().try_into()?;
+        let name: MacroName< &str> = p.next().unwrap().try_into()?;
 
         match name.0.content.content {
             "msg" => InnerAppMacro::Msg(from_term_to_application(p.next().unwrap())?),
             "cond" => InnerAppMacro::Cond(from_term_to_application(p.next().unwrap())?),
             _ => {
-                let args : Result<Vec<_>, _> = p.map(TryInto::try_into).collect();
+                let args : Result<Vec<_>> = p.map(TryInto::try_into).collect();
                 InnerAppMacro::Other { name, args: args? }
             }
         }
   };
 
-  Ok(Self{span, inner})
+  Ok(Self{span: span.into(), inner})
 });
 
 impl<'str, S: Display> Display for AppMacro<'str, S> {

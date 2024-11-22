@@ -81,16 +81,16 @@ boiler_plate!(@ Step, 'a, step; |p| {
             // if a is an err, we know o isn't because of our current branch, so we ignore
             let a = a.ok().flatten();
             // if parsing o failed (i.e., there is something *and* it fail, we want to crash)
-            let o = o?.unwrap_or(Options::empty(span));
+            let o = o?.unwrap_or(Options::empty(span.into()));
             Ok((a, o))
         }
     }?;
 
     if let Some(np) = p.next() { // whatever happens, there shouldn't be anything left
-        crate::bail_at!(&np, "too many arguments (expected at most 6, got {})", (7 + p.len()))
+        crate::bail_at!(np.as_span(), "too many arguments (expected at most 6, got {})", (7 + p.len()))
     }
 
-    Ok(Self { span, name, args, condition, message, assignements, options})
+    Ok(Self { span: span.into(), name, args, condition, message, assignements, options})
 });
 
 impl<'str, S: Display> Display for Step<'str, S> {

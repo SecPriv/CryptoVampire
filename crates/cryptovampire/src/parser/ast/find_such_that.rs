@@ -15,9 +15,9 @@ pub struct FindSuchThat<'str, S> {
     pub right: Term<'str, S>,
 }
 boiler_plate!(@ FindSuchThat, 'a, find_such_that; |p| {
-  let span = p.as_span().into();
+  let span = p.as_span();
   destruct_rule!(span in [vars, condition, left, right] = p.into_inner());
-  Ok(Self { vars, span, condition, left, right})
+  Ok(Self { span:span.into(), vars, condition, left, right})
 });
 
 impl<'str, S: Display> Display for FindSuchThat<'str, S> {

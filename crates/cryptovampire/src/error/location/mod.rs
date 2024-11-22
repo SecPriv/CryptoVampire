@@ -9,8 +9,8 @@ mod location_helper;
 pub use location_helper::LocationHelper;
 
 mod empty;
-
 mod str;
+mod pest;
 
 /// Something that points a "location" in an input file
 /// 
@@ -53,12 +53,12 @@ pub trait RefLocationProvider: Debug {
     fn provide(&self) -> Location;
 }
 
-impl<'a, U> RefLocationProvider for U
+impl<U> RefLocationProvider for U
 where
-    &'a U: LocationProvider + 'a,
+    for<'a> &'a U: LocationProvider,
     U: std::fmt::Debug,
 {
     fn provide(&self) -> Location {
-        self.provide()
+        LocationProvider::provide(self)
     }
 }

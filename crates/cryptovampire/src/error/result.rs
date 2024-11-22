@@ -8,7 +8,7 @@ pub trait CVContext<T> {
 
     fn with_pre_location<L: crate::error::LocateHelper, S: std::fmt::Display>(
         self,
-        location: L,
+        location: &L,
         str: &S,
     ) -> Result<T>
     where

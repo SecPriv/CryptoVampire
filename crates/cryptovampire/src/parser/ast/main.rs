@@ -3,7 +3,7 @@ use location::ASTLocation;
 use pest::Span;
 
 
-use crate::error::Location;
+use crate::error::{CVContext, Location};
 
 use super::*;
 
@@ -40,7 +40,7 @@ impl<'a> TryFrom<&'a str> for ASTList<'a, &'a str> {
                 })
                 .try_collect()
                 .debug_continue()?,
-            location: pest::Span::new(value, 0, value.len()).unwrap(),
+            location: ASTLocation::all(value),
         })
     }
 }

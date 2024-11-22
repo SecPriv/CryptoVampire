@@ -77,7 +77,7 @@ macro_rules! boiler_plate {
             let $p = p_iter.next().unwrap();
 
             if let Some(p) = p_iter.next() {
-                $crate::bail_at!(&p, "too much")
+                $crate::bail_at!(p.as_span(), "too much")
                 // return err(merr(p.as_span().into(), f!("too much")))
             }
 
@@ -149,7 +149,7 @@ macro_rules! destruct_rule {
         $(
             let $arg = $arg.try_into().debug_continue()?;
         )*
-        let $option = leftover.next().map(|r| r.try_into().debug_continue()).transpose()?.unwrap_or(Options::empty($span));
+        let $option = leftover.next().map(|r| r.try_into().debug_continue()).transpose()?.unwrap_or(Options::empty($span.into()));
         if let Some(_) = leftover.next() {
             $crate::bail_at!($span, "too many arguments")
             // return Err(merr($span, f!("too many arguments")))

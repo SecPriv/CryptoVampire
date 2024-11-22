@@ -17,7 +17,8 @@ impl Locate for str {
     }
 
     fn pseudo_clone(&self) -> super::Location {
-        Location::from_boxed_locate(self.into());
+        let str = String::from(self);
+        Location::from_locate(str)
     }
 }
 
@@ -28,16 +29,17 @@ impl Locate for String {
         backtrace: Option<&std::backtrace::Backtrace>,
         f: &mut std::fmt::Formatter<'_>,
     ) -> std::fmt::Result {
-        self.as_ref().location_fmt(err, backtrace, f)
+        let str : &str = self.as_ref();
+        str.location_fmt(err, backtrace, f)
     }
 
     fn pseudo_clone(&self) -> Location {
-        Location::from_boxed_locate(self.into_boxed_str());
+        Location::from_locate(self.clone())
     }
 }
 
 impl LocateHelper for str {
-    fn help_provide(&self, str:&dyn std::fmt::Display) -> Location {
-        Location::from_boxed_locate(format!("{str}\nat: {self}").into_boxed_str())
+    fn help_provide(&self, str:&(dyn std::fmt::Display )) -> Location {
+        Location::from_locate(format!("{str}\nat: {self}"))
     }
 }

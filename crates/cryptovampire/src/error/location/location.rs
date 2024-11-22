@@ -1,12 +1,12 @@
-use super::{Locate, LocationProvider,  RefLocationProvider};
+use super::{Locate, LocationProvider};
 
 /// This is the main struct to use with [Locate]. We use dynamic dispatch
 #[derive(Debug)]
-pub struct Location(Box<dyn Locate + 'static + Sync + Send>);
+pub struct Location(Box<dyn Locate + 'static + Sync + Send >);
 
 impl Location {
     #[inline]
-    pub fn from_locate<L>(l: L)
+    pub fn from_locate<L>(l: L) -> Self
     where
         L: Locate + 'static + Sync + Send + Sized,
     {
@@ -14,15 +14,16 @@ impl Location {
     }
     
     #[inline]
-    pub fn from_boxed_locate<L>(l: Box<L>)
+    pub fn from_boxed_locate<L>(l: Box<L>) -> Self
     where
-        L: Locate + 'static + Sync + Send ,
+        L: Locate + 'static + Sync + Send + Sized,
     {
         Self(l)
     }
 
     pub fn from_display<D>(d: D) -> Self where D: std::fmt::Display {
-        Location::from_boxed_locate(d.to_string().into_boxed_str())
+        let str = d.to_string();
+        Location::from_locate(str)
     }
 }
 
@@ -49,7 +50,7 @@ impl LocationProvider for Location {
 
 impl Default for Location {
     fn default() -> Self {
-        Self::from_locate(());
+        Self::from_locate(())
     }
 }
 
@@ -63,7 +64,7 @@ pub struct RefLocation<'a>(&'a (dyn Locate + Sync + Send));
 
 impl<'a> RefLocation<'a> {
     #[inline]
-    pub fn from_location<L>(l: &'a L)
+    pub fn from_location<L>(l: &'a L) -> Self
     where
         L: Locate + Sync + Send,
     {

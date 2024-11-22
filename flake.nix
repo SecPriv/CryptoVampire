@@ -49,7 +49,7 @@
               cargo
               cargo-expand
               rustc
-              nil
+              nixd
               my-z3
               cvc5
               custom-pkgs.vampire-master

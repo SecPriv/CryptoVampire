@@ -37,12 +37,12 @@ boiler_plate!(@ Order, 'a, order ; |p| {
     let kind = p.next().unwrap().try_into()?;
     let t2 = p.next().unwrap().try_into()?;
     let options = p.next().map(|r| r.try_into().debug_continue())
-                    .transpose()?.unwrap_or(Options::empty(span));
+                    .transpose()?.unwrap_or(Options::empty(span.into()));
     if let Some(_) = p.next() {
         crate::bail_at!(span, "too many arguments")
     }
 
-    Ok(Self {span, quantifier, args, t1, t2, kind, options, guard})
+    Ok(Self {span:span.into(), quantifier, args, t1, t2, kind, options, guard})
 });
 
 impl<'str, S: Display> Display for Order<'str, S> {

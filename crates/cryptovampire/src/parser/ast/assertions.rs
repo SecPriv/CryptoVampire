@@ -1,4 +1,4 @@
-use location::ASTLocation;
+use location::{ASTLocation, AsASTLocation};
 use pest::Span;
 use cryptovampire_macros::LocationProvider;
 
@@ -14,14 +14,14 @@ pub enum Assert<'str, S> {
 }
 
 boiler_plate!(Assert<'a, &'a str>, 'a, assertion | query | lemma ; |p| {
-    let span = p.provide();
+    let span = p.ast_location();
     let rule = p.as_rule();
     let p = p.into_inner().next().unwrap();
     match rule {
         Rule::assertion => { Ok(Assert::Assertion(p.try_into()?)) }
         Rule::query => { Ok(Assert::Query(p.try_into()?)) }
         Rule::lemma => { Ok(Assert::Lemma(p.try_into()?)) }
-        r => Error::from_err(|| span,
+        r => Error::from_err(|| span.as_location(),
             pest::error::ErrorVariant::ParsingError {
                 positives: vec![Rule::assertion, Rule::query, Rule::lemma],
                 negatives: vec![r] })
@@ -41,16 +41,15 @@ impl<'str, S: Display> Display for Assert<'str, S> {
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Assertion< 'str, S> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
     pub span: ASTLocation<'str>,
     pub content: Term< 'str, S>,
     pub options: Options< 'str, S>,
 }
 boiler_plate!(Assertion<'a, &'a str>, 'a, assertion_inner ; |p| {
-    let span = p.provide();
+    let span = p.as_span();
     destruct_rule!(span in [content, ?options] = p);
-    Ok(Self {span, content, options})
+    Ok(Self {span:span.into(), content, options})
 });
 
 impl<'str, S: Display> Display for Assertion<'str, S> {
@@ -65,7 +64,6 @@ impl<'str, S: Display> Display for Assertion<'str, S> {
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct AssertCrypto< 'str, S> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
     pub span: ASTLocation<'str>,
     pub name: Ident< 'str,S>,
@@ -73,12 +71,12 @@ pub struct AssertCrypto< 'str, S> {
     pub options: Options< 'str,S>,
 }
 boiler_plate!(AssertCrypto< 'a, &'a str>, 'a, assertion_crypto ; |p| {
-    let span = p.provide();
+    let span = p.as_span();
     let mut p = p.into_inner();
     let name = p.next().unwrap().try_into()?;
     let mut p = p.collect_vec();
     // try to parse the option, if it fails, it means there weren't any
-    let mut options  = Options::empty(span);
+    let mut options  = Options::empty(span.into());
     let mut extra_fun = None;
 
     if let Some(r) = p.pop() {
@@ -91,7 +89,7 @@ boiler_plate!(AssertCrypto< 'a, &'a str>, 'a, assertion_crypto ; |p| {
 
     let functions = chain!(p.into_iter(), extra_fun).map(TryInto::try_into).try_collect()?;
 
-    Ok(Self {span, name, functions, options})
+    Ok(Self {span:span.into(), name, functions, options})
 });
 
 impl< 'str, S: Display> Display for AssertCrypto<'str,  S> {

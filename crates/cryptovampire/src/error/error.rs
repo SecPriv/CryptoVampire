@@ -6,7 +6,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use super::{
-    inner_error::InnerError, BaseError, Location, LocationProvider, Result
+    inner_error::InnerError, BaseError, Locate, Location, LocationProvider, Result
 };
 
 
@@ -16,7 +16,10 @@ pub struct Error(Box<InnerError>);
 impl Display for Error
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Location::location_fmt(self, f)
+        let location = self.get_location();
+        let backtrace = self.get_backtrace();
+        let err = self.get_error();
+        location.location_fmt(err, backtrace, f)
     }
 }
 
@@ -65,6 +68,11 @@ impl Error {
 
     pub(crate) fn get_backtrace(&self) -> Option<&Backtrace> {
         self.0.backtrace.as_ref()
+    }
+
+    pub fn msg_with_location(location: Location, str:String ) -> Self {
+        let error = BaseError::Message(str);
+        Self::new(location, error)
     }
 
 }

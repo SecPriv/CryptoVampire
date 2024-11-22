@@ -1,7 +1,8 @@
 use cryptovampire_macros::LocationProvider;
-use location::ASTLocation;
+use location::{ASTLocation, AsASTLocation};
 use crate::error::Location;
 use pest::Span;
+use crate::error::LocateHelper;
 
 use crate::formula::utils::Applicable;
 
@@ -11,7 +12,6 @@ use super::*;
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Ident<'str, S> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
     pub span: ASTLocation<'str>,
     pub content: S,
@@ -79,7 +79,7 @@ impl<'a, S> From<S> for TypeName<'a, S> {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct MacroName<'str, S>(pub Sub<'str, Ident<'str, S>>);
 boiler_plate!(MacroName<'a, &'a str>, 'a, macro_name; |p| {
-    Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
+    Ok(Self(Sub { span: p.ast_location(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
 impl<'str, S> MacroName<'str, S> {
@@ -108,7 +108,7 @@ impl<'a, S> From<S> for MacroName<'a, S> {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Function<'str, S>(pub Sub<'str, Ident<'str, S>>);
 boiler_plate!(Function<'a, &'a str>, 'a, function; |p| {
-    Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
+    Ok(Self(Sub { span: p.ast_location(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
 impl<'str, S> Function<'str, S> {
@@ -156,7 +156,7 @@ impl<'a, 'b, S: Clone + Borrow<str>> Applicable for &'b Function<'a, S> {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Variable<'str, S>(pub Sub<'str, S>);
 boiler_plate!(Variable<'a, &'a str>, 'a, variable; |p| {
-    Ok(Self(Sub { span: p.as_span(), content: p.as_str() }))
+    Ok(Self(Sub { span: p.ast_location(), content: p.as_str() }))
 });
 
 impl<'str, S> Variable<'str, S> {
@@ -181,7 +181,7 @@ impl<'str, S> From<S> for Variable<'str, S> {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct StepName<'str, S>(pub Sub<'str, Ident<'str, S>>);
 boiler_plate!(StepName<'a, &'a str>, 'a, step_name; |p| {
-    Ok(Self(Sub { span: p.as_span(), content: p.into_inner().next().unwrap().try_into()? }))
+    Ok(Self(Sub { span: p.ast_location(), content: p.into_inner().next().unwrap().try_into()? }))
 });
 
 impl<'str, S> StepName<'str, S> {
@@ -209,6 +209,7 @@ impl<'str, S> From<S> for StepName<'str, S> {
         StepName(Ident::from_content(value).into())
     }
 }
+
 
 macro_rules! mk_location_provider {
         ($name:ident) => {

@@ -13,9 +13,9 @@ pub struct DeclareType<'str, S> {
     pub options: Options<'str, S>,
 }
 boiler_plate!(@ DeclareType, 'a, declare_type; |p| {
-    let span = p.as_span().into();
+    let span = p.as_span();
     destruct_rule!(span in [name, ?options] = p);
-    Ok(Self { span, name, options })
+    Ok(Self { span:span.into(), name, options })
 });
 
 impl<'str, S> DeclareType<'str, S> {

@@ -3,14 +3,13 @@ use location::ASTLocation;
 use pest::Span;
 
 
-use crate::error::Location;
+use crate::error::{LocateHelper, Location};
 
 use super::*;
 
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Options<'str, S> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
     pub span: ASTLocation<'str>,
     pub options: Vec<MOption<'str, S>>,
@@ -43,7 +42,7 @@ impl<'str, S> From<Ident<'str, S>> for MOption<'str, S> {
 boiler_plate!(Options<'a, &'a str>, 'a, options; |p| {
     let span = p.as_span();
     let options = p.into_inner().map(Ident::try_from).map(|r| r.map(MOption::from)).try_collect()?;
-    Ok(Self { span, options })
+    Ok(Self { span:span.into(), options })
 });
 
 impl<'str, S> Options<'str, S> {

@@ -23,6 +23,7 @@ use crate::formula::sort::sort_proxy::InferenceError;
 // pub type CVResult<T, L> = std::result::Result<T, Error<L>>;
 
 pub type Result<T> = std::result::Result<T, Error>;
+pub type Unit = crate::Result<()>;
 
 #[non_exhaustive]
 #[derive(Debug, thiserror::Error)]

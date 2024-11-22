@@ -1,5 +1,5 @@
 use cryptovampire_macros::LocationProvider;
-use location::ASTLocation;
+use location::{ASTLocation, AsASTLocation};
 use pest::Span;
 
 
@@ -8,7 +8,6 @@ use super::*;
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct DeclareCell<'str,  S> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
     pub span: ASTLocation<'str>,
     pub name: Function< 'str, S>,
@@ -20,7 +19,7 @@ pub struct DeclareCell<'str,  S> {
 boiler_plate!(@ DeclareCell, 'a, declare_cell; |p| {
     let span = p.as_span();
     destruct_rule!(span in [name, args, sort, ?options] = p);
-    Ok(Self { span, name, args, sort, options })
+    Ok(Self { span: span.into(), name, args, sort, options })
 });
 
 impl<'a,  S: Display> Display for DeclareCell<'a, S> {
@@ -45,7 +44,7 @@ impl<'str,  S> DeclareCell<'str,  S> {
             span: location,
             name: Function::from_name(name),
             args: DeclareFunctionArgs {
-                span: ASTLocation::from_locate(()),
+                span: Default::default(),
                 args: args.into_iter().map_into().collect(),
             },
             sort: sort.into(),
@@ -57,7 +56,6 @@ impl<'str,  S> DeclareCell<'str,  S> {
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Assignements<'str,  S> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
     pub span: ASTLocation<'str>,
     pub assignements: Vec<Assignement<'str,  S>>,
@@ -65,7 +63,7 @@ pub struct Assignements<'str,  S> {
 boiler_plate!(@ Assignements, 'a, assignements; |p| {
     let span = p.as_span();
     let assignements = p.into_inner().map(TryInto::try_into).try_collect()?;
-    Ok(Self { span, assignements })
+    Ok(Self { span:span.into(), assignements })
 });
 
 impl<'str,  S: Display> Display for Assignements<'str,  S> {
@@ -86,7 +84,6 @@ impl<'a, S> FromIterator<Assignement<'a, S>> for Assignements<'a,  S> {
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Assignement<'str,  S> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
     pub span: ASTLocation<'str>,
     pub cell: Application<'str,  S>,
@@ -102,7 +99,7 @@ boiler_plate!(@ Assignement, 'a, assignement; |p| {
         2 => {
             as_array!(span in [cell, term] = p);
             Ok(Self {
-                span,
+                span:span.into(),
                 cell: cell.try_into().debug_continue()?,
                 term: term.try_into().debug_continue()?,
                 fresh_vars: None
@@ -111,7 +108,7 @@ boiler_plate!(@ Assignement, 'a, assignement; |p| {
         3 => {
             as_array!(span in [vars, cell, term] = p);
             Ok(Self {
-                span,
+                span:span.into(),
                 cell: cell.try_into().debug_continue()?,
                 term: term.try_into().debug_continue()?,
                 fresh_vars: Some(vars.try_into().debug_continue()?)

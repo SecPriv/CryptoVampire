@@ -1,5 +1,5 @@
 use cryptovampire_macros::LocationProvider;
-use location::ASTLocation;
+use location::{ASTLocation, AsASTLocation};
 use pest::Span;
 
 
@@ -9,13 +9,12 @@ use super::*;
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct TypedArgument<'str,  S> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
     pub span: ASTLocation<'str>,
     pub bindings: Vec<VariableBinding<'str, S>>,
 }
 boiler_plate!(@ TypedArgument, 'a, typed_arguments; |p| {
-    let span = p.as_span();
+    let span = p.ast_location();
     let bindings : Result<Vec<_>, _> = p.into_inner().map(TryInto::try_into).collect();
     Ok(TypedArgument { span, bindings: bindings? })
 });
@@ -52,16 +51,15 @@ where
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct VariableBinding<'str,  S> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]
     pub span: ASTLocation<'str>,
     pub variable: Variable< 'str, S>,
     pub type_name: TypeName< 'str, S>,
 }
 boiler_plate!(@ VariableBinding, 's, variable_binding; |p| {
-    let span = p.as_span().into();
+    let span = p.as_span();
     destruct_rule!(span in [variable, type_name] = p.into_inner());
-    Ok(VariableBinding{span, variable, type_name})
+    Ok(VariableBinding{span: span.into(), variable, type_name})
 });
 
 impl<'a, 'str, S: Display> Display for VariableBinding<'str, S> {

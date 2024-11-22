@@ -1,15 +1,12 @@
 use std::{borrow::Borrow, fmt::Display, ops::Deref, sync::Arc};
 mod cached_builtins;
 
-use anyhow::Context;
 use itertools::Itertools;
 use log::{log_enabled, trace, warn};
 
-use crate::{error::PreLocation, parser::{
-    ast::{self, extra::SnN, LetIn, Term},
-    parser::parsing_environement::get_function_mow,
-    Pstr,
-}, Location};
+use crate::{bail_at, error::{CVContext, LocateHelper}, parser::{
+    ast::{self, extra::SnN, LetIn, Term}, location::ASTLocation, parser::parsing_environement::get_function_mow, Pstr
+} };
 use crate::{
     environement::traits::{KnowsRealm, Realm},
     formula::{
@@ -30,7 +27,6 @@ use crate::{
         utils::Applicable,
         variable::{from_usize, uvar, Variable},
     },
-    CVContext, CVResult,
 };
 use utils::{f, implvec, match_as_trait, string_ref::StrRef, traits::NicerError};
 
@@ -75,7 +71,7 @@ impl<'bump> From<Variable<'bump>> for VarProxy<'bump> {
     }
 }
 
-pub trait Parsable<'bump, 'str, L> where L:Location{
+pub trait Parsable<'bump, 'str> {
     type R;
     type S;
     /// parse [self] into [Parsable::R].
@@ -101,14 +97,13 @@ pub trait Parsable<'bump, 'str, L> where L:Location{
         bvars: &mut Vec<(Self::S, VarProxy<'bump>)>,
         state: &impl KnowsRealm, // State<'_, 'str, 'bump>,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> CVResult<Self::R, L>;
+    ) -> crate::Result<Self::R>;
 }
 
-impl<'a, 'bump, S, L> Parsable<'bump, 'a, L::L> for ast::LetIn<L, S>
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::LetIn<'a, S>
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
-    L:PreLocation,
 {
     type R = ARichFormula<'bump>;
     type S = S;
@@ -121,7 +116,7 @@ where
         bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> CVResult<Self::R, L::L> {
+    ) -> crate::Result<Self::R> {
         let LetIn {
             span: _,
             var,
@@ -135,11 +130,10 @@ where
         Ok(t2.apply_substitution2(&OneVarSubstF::new(var, t1)))
     }
 }
-impl<'a, 'bump, S, L> Parsable<'bump, 'a, L::L> for ast::IfThenElse<L, S>
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::IfThenElse<'a, S>
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
-    L:PreLocation,
 {
     type R = ARichFormula<'bump>;
     type S = S;
@@ -150,7 +144,7 @@ where
         bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> CVResult<Self::R, L::L> {
+    ) -> crate::Result<Self::R> {
         // generate the expected sorts
         let (es_condition, es_branches): (SortProxy, Option<SortProxy>) = match state.get_realm() {
             Realm::Evaluated => (BOOL.as_sort().into(), expected_sort),
@@ -182,11 +176,10 @@ where
     }
 }
 
-impl<'a, 'bump, S, L> Parsable<'bump, 'a, L::L> for ast::FindSuchThat<L, S>
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::FindSuchThat<'a, S>
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
-    L:PreLocation,
 {
     type R = ARichFormula<'bump>;
     type S = S;
@@ -197,7 +190,7 @@ where
         bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> CVResult<Self::R, L::L> {
+    ) -> crate::Result<Self::R> {
         expected_sort.into_iter().try_for_each(|s| {
             s.expects(MESSAGE.as_sort(), &state)
                 .with_location(|| self)
@@ -219,7 +212,7 @@ where
 
         // build the bound variables
         bvars.reserve(vars.into_iter().len());
-        let vars: CVResult<Vec<_>, L::L> = vars
+        let vars: crate::Result<Vec<_>> = vars
             .bindings
             .iter()
             .map(|v| Parsable::parse(v, env, bvars, state, None))
@@ -248,11 +241,10 @@ where
         })
     }
 }
-impl<'a, 'bump, S, L> Parsable<'bump, 'a, L::L> for ast::VariableBinding<L, S>
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::VariableBinding<'a, S>
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
-    L:PreLocation,
 {
     type R = Variable<'bump>;
     type S = S;
@@ -263,7 +255,7 @@ where
         bvars: &mut Vec<(Self::S, VarProxy<'bump>)>,
         realm: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> CVResult<Self::R, L::L> {
+    ) -> crate::Result<Self::R> {
         let ast::VariableBinding {
             variable,
             type_name,
@@ -286,7 +278,7 @@ where
         let SnN { span, name } = type_name.into();
         let sort = {
             // get the sort, possibly changing it depending on the realm
-            let sort = get_sort(env, *span, name)?;
+            let sort = get_sort(env, &span, name)?;
             // if realm.is_evaluated_realm() && false{
             //     sort.maybe_evaluated_sort().unwrap_or(sort)
             // } else {
@@ -311,11 +303,10 @@ where
     }
 }
 
-impl<'a, 'bump, S, L> Parsable<'bump, 'a, L::L> for ast::Quantifier<L, S>
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Quantifier<'a, S>
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
-    L:PreLocation,
 {
     type R = ARichFormula<'bump>;
     type S = S;
@@ -326,7 +317,7 @@ where
         bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> CVResult<Self::R, L::L> {
+    ) -> crate::Result<Self::R> {
         let ast::Quantifier {
             kind,
             span,
@@ -347,7 +338,7 @@ where
 
         // bind the variables
         bvars.reserve(vars.into_iter().len());
-        let vars: CVResult<Vec<_>, L> = vars
+        let vars: crate::Result<Vec<_>> = vars
             .into_iter()
             .map(|v| Parsable::parse(v, env, bvars, state, None))
             .collect();
@@ -390,11 +381,10 @@ where
         })
     }
 }
-impl<'a, 'bump, S, L> Parsable<'bump, 'a, L::L> for ast::Application<L, S>
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Application<'a, S>
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
-    L:PreLocation,
 {
     type R = ARichFormula<'bump>;
     type S = S;
@@ -405,7 +395,7 @@ where
         bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> CVResult<Self::R, L::L> {
+    ) -> crate::Result<Self::R> {
         trace!("parsing {self}");
         match self {
             ast::Application::ConstVar { span, content } => {
@@ -495,13 +485,12 @@ fn parse_application<'b, 'a, 'bump, S, L>(
     state: &impl KnowsRealm,
     bvars: &'b mut Vec<(S, VarProxy<'bump>)>,
     expected_sort: Option<SortProxy<'bump>>,
-    function: &FunctionCache<'a, 'bump, L, S>,
-    args: implvec!(&'b ast::Term<L, S>),
-) -> CVResult<ARichFormula<'bump, L::L>>
+    function: &FunctionCache<'a, 'bump, S>,
+    args: implvec!(&'b ast::Term<'a, S>),
+) -> crate::Result<ARichFormula<'bump>>
 where
     S: Pstr,
     for<'c> StrRef<'c>: From<&'c S>,
-    L:PreLocation,
 {
     let signature = function.signature();
     let mut formula_realm = signature.realm();
@@ -576,11 +565,10 @@ where
     Ok(formula)
 }
 
-impl<'a, 'bump, S, L> Parsable<'bump, 'a, L::L> for ast::AppMacro<L, S>
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::AppMacro<'a, S>
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
-    L:PreLocation,
 {
     type R = ARichFormula<'bump>;
     type S = S;
@@ -591,7 +579,7 @@ where
         bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> CVResult<Self::R, L::L> {
+    ) -> crate::Result<Self::R> {
         let Self {
             span: main_span,
             inner,
@@ -700,11 +688,10 @@ where
     }
 }
 
-impl<'a, 'bump, S, L> Parsable<'bump, 'a, L::L> for ast::Infix<L, S>
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Infix<'a, S>
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
-    L:PreLocation,
 {
     type R = ARichFormula<'bump>;
     type S = S;
@@ -715,7 +702,7 @@ where
         bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> CVResult<Self::R, L::L> {
+    ) -> crate::Result<Self::R> {
         trace!("parsing {self}");
         match self.operation {
             ast::Operation::HardEq => match self.terms.len() {
@@ -860,32 +847,30 @@ where
 }
 
 fn as_pair_of_term<'a, 'b: 'a, S, L>(
-    span: L,
-    op: ast::Operation,
+    span: ASTLocation<'b> ,
+    operation: ast::Operation,
     iter: impl IntoIterator<Item = (&'a Term<'b, S>, &'a Term<'b, S>)>,
 ) -> Vec<Term<'b, S>>
 where
     S: Pstr + 'a,
     for<'c> StrRef<'c>: From<&'c S>,
-    L:PreLocation
 {
     iter.into_iter()
         .map(|(a, b)| ast::Term {
-            span,
+            span: span.clone(),
             inner: ast::InnerTerm::Infix(Arc::new(ast::Infix {
-                operation: op,
-                span,
+                operation,
+                span: span.clone(),
                 terms: vec![a.clone(), b.clone()],
             })),
         })
         .collect()
 }
 
-impl<'a, 'bump, S, L> Parsable<'bump, 'a, L::L> for ast::Term<L, S>
+impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::Term<'a, S>
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
-    L:PreLocation,
 {
     type R = ARichFormula<'bump>;
     type S = S;
@@ -896,7 +881,7 @@ where
         bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> CVResult<Self::R, L::L> {
+    ) -> crate::Result<Self::R> {
         if cfg!(debug_assertions) {
             if bvars.iter().map(|(_, v)| v.id).unique().count() != bvars.len() {
                 panic!(
