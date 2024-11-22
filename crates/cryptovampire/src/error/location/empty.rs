@@ -26,6 +26,12 @@ impl<'a> LocationProvider for &'a () {
     }
 }
 
+impl LocationProvider for () {
+    fn provide(self) -> Location {
+        (&()).provide()
+    }
+}
+
 impl LocateHelper for () {
     fn help_provide(&self, str:&dyn std::fmt::Display) -> Location {
         Location::from_display(str)

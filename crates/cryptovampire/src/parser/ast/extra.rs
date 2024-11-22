@@ -39,6 +39,16 @@ pub struct SnN<'str, 'b> {
     pub name: StrRef<'str>,
 }
 
+impl<'str, 'b> SnN<'str, 'b> {
+    pub fn span(&self) -> &ASTLocation<'str> {
+        self.span
+    }
+    
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
 impl<'a, 'b, S> From<&'b TypeName<'a, S>> for SnN<'a, 'b>
 where
     StrRef<'a>: From<&'b S>,

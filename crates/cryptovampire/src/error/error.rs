@@ -70,9 +70,20 @@ impl Error {
         self.0.backtrace.as_ref()
     }
 
+    pub(crate) fn set_location(mut self, l:Location) -> Self {
+        self.0.location = l;
+        self
+    }
+
     pub fn msg_with_location(location: Location, str:String ) -> Self {
         let error = BaseError::Message(str);
         Self::new(location, error)
     }
 
+}
+
+impl<U> From<U> for Error where U:Into<BaseError> {
+    fn from(value: U) -> Self {
+        crate::Error::new(Default::default(), value.into())
+    }
 }

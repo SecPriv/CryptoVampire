@@ -4,7 +4,7 @@ use std::sync::Arc;
 use super::*;
 
 use crate::{
-    bail_at, err_at, error::LocationProvider, parser::{ast::extra::AsFunction, error::ParsingError, Pstr}
+    bail_at, err_at, error::{CVContext, LocationProvider}, parser::{ast::extra::AsFunction, error::ParsingError, Pstr}
 };
 
 use crate::{
@@ -177,7 +177,7 @@ fn user_bool_to_condtion<'bump>(s: Sort<'bump>) -> Sort<'bump> {
     }
 }
 
-fn declare_function<'str, 'bump, L, S>(
+fn declare_function<'str, 'bump, S>(
     env: &mut Environement<'bump, 'str, S>,
     fun: &DeclareFunction<'str, S>,
 ) -> crate::Unit
@@ -248,7 +248,7 @@ where
     let input_sorts: Result<Vec<_>, _> = fun
         .args()
         .into_iter()
-        .map(|idn| get_sort(env, &idn.span, idn.name))
+        .map(|idn| get_sort(env, idn.span(), idn.name))
         .collect();
     let step = <ScopedContainer<'bump> as ContainerTools<'bump, InnerStep<'bump>>>::alloc_uninit::<
         'bump,
@@ -288,7 +288,7 @@ where
     let input_sorts: Result<Vec<_>, _> = fun
         .args()
         .into_iter()
-        .map(|idn| get_sort(env, &idn.span, idn.name))
+        .map(|idn| get_sort(env, idn.span(), idn.name()))
         .collect();
     let cell =
         <ScopedContainer<'bump> as ContainerTools<'bump, InnerMemoryCell<'bump>>>::alloc_uninit::<
@@ -325,7 +325,7 @@ where
     let ast::Macro { name, .. } = mlet;
     let SnN { span, name } = name.into();
     if env.container_macro_name(&name) {
-        bail_at!(name, "the macro {} is already in use", &name)
+        bail_at!(span, "the macro {} is already in use", &name)
     } else {
         // the input sorts (will gracefully error out later if a sort is undefined)
         let args: Result<Arc<[_]>, _> = mlet

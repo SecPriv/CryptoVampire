@@ -4,7 +4,7 @@ mod cached_builtins;
 use itertools::Itertools;
 use log::{log_enabled, trace, warn};
 
-use crate::{bail_at, error::{CVContext, LocateHelper}, parser::{
+use crate::{bail_at, error::{CVContext, ExtraOption, LocateHelper, LocationProvider}, parser::{
     ast::{self, extra::SnN, LetIn, Term}, location::ASTLocation, parser::parsing_environement::get_function_mow, Pstr
 } };
 use crate::{
@@ -278,7 +278,7 @@ where
         let SnN { span, name } = type_name.into();
         let sort = {
             // get the sort, possibly changing it depending on the realm
-            let sort = get_sort(env, &span, name)?;
+            let sort = get_sort(env, span, name)?;
             // if realm.is_evaluated_realm() && false{
             //     sort.maybe_evaluated_sort().unwrap_or(sort)
             // } else {
@@ -332,7 +332,7 @@ where
         };
         expected_sort
             .into_iter()
-            .try_for_each(|s| s.expects(es, &state).with_location(span).debug_continue())?;
+            .try_for_each(|s| s.expects(es, &state).with_location(|| span).debug_continue())?;
 
         let bn = bvars.len();
 
@@ -431,13 +431,13 @@ where
                                     .as_ref()
                                     .map(|es| es.matches(s, &r))
                                     .transpose()
-                                    .with_location(span)
+                                    .with_location(|| span)
                                     .debug_continue()
                                     .map(|_| formula)
                             }
                             (_, r) => expected_sort
                                 .as_ref()
-                                .map(|es| es.unify_rev(sort, &r).with_location(span))
+                                .map(|es| es.unify_rev(sort, &r).with_location(||span))
                                 .unwrap_or_else(|| {
                                     sort.as_option().ok_or(span.err_with(|| "can't infer sort"))
                                 })
@@ -479,9 +479,9 @@ where
 }
 
 /// parse a function application (when we know it is definitly a function and not a variable)
-fn parse_application<'b, 'a, 'bump, S, L>(
+fn parse_application<'b, 'a, 'bump, S >(
     env: &'b Environement<'bump, 'a, S>,
-    span: L,
+    span: &ASTLocation<'a>,
     state: &impl KnowsRealm,
     bvars: &'b mut Vec<(S, VarProxy<'bump>)>,
     expected_sort: Option<SortProxy<'bump>>,
@@ -599,8 +599,7 @@ where
                     .functions
                     .get(app.name().borrow())
                     .and_then(|fc| fc.as_step())
-                    .with_context(|| f!("{} is not a known step name", app.name()))
-                    .with_location(&app.name_span())
+                    .unknown_symbol(app, &"step", app.name())
                     .debug_continue()?;
 
                 let mut nbvars = step_cache.args_vars_with_input().map_into().collect();
@@ -624,8 +623,7 @@ where
                 let mmacro = env
                     .macro_hash
                     .get(name.name().borrow())
-                    .with_context(|| f!("{} is not a known macro", name.name()))
-                    .with_location(name.span())
+                    .unknown_symbol(name, &"macro", name.name())
                     .debug_continue()?;
 
                 if log_enabled!(log::Level::Trace) {
@@ -718,12 +716,12 @@ where
                 .debug_continue(),
                 _ => Self {
                     operation: ast::Operation::And,
-                    span: self.span,
                     terms: as_pair_of_term(
-                        self.span,
+                        &self.span,
                         self.operation,
                         self.terms.iter().tuple_windows(),
                     ),
+                    span: self.span.clone(),
                 }
                 .parse(env, bvars, state, expected_sort)
                 .debug_continue(),
@@ -747,16 +745,16 @@ where
                 .debug_continue(),
             },
             ast::Operation::Neq => ast::Application::Application {
-                span: self.span,
+                span: self.span.clone(),
                 function: ast::Function(ast::Sub {
-                    span: self.span,
+                    span: self.span.clone(),
                     content: ast::Ident {
-                        span: self.span,
+                        span: self.span.clone(),
                         content: S::from_static("not"),
                     },
                 }),
                 args: vec![ast::Term {
-                    span: self.span,
+                    span: self.span.clone(),
                     inner: ast::InnerTerm::Infix(Arc::new(Self {
                         operation: ast::Operation::Eq,
                         ..self.clone()
@@ -776,14 +774,15 @@ where
                     &self.terms,
                 )
                 .debug_continue(),
-                Realm::Symbolic => Self {
+                Realm::Symbolic => 
+                    Self {
                     operation: ast::Operation::And,
-                    span: self.span,
                     terms: as_pair_of_term(
-                        self.span,
+                        &self.span,
                         self.operation,
                         self.terms.iter().tuple_windows(),
                     ),
+                    span: self.span.clone(),
                 }
                 .parse(env, bvars, state, expected_sort)
                 .debug_continue(),
@@ -846,8 +845,8 @@ where
     }
 }
 
-fn as_pair_of_term<'a, 'b: 'a, S, L>(
-    span: ASTLocation<'b> ,
+fn as_pair_of_term<'a, 'b: 'a, S>(
+    span: &ASTLocation<'b> ,
     operation: ast::Operation,
     iter: impl IntoIterator<Item = (&'a Term<'b, S>, &'a Term<'b, S>)>,
 ) -> Vec<Term<'b, S>>

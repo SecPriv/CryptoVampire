@@ -290,7 +290,7 @@ where
         allow_shadowing,
     );
     prbl_from_ast(
-        env.shorten_life(),
+        env,
         &*&ast,
         pbl_builder,
         ignore_lemmas,

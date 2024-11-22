@@ -1,4 +1,6 @@
-use super::{Locate, LocateHelper, Location};
+use utils::string_ref::StrRef;
+
+use super::{Locate, LocateHelper, Location, LocationProvider};
 
 impl Locate for str {
     fn location_fmt(
@@ -41,5 +43,11 @@ impl Locate for String {
 impl LocateHelper for str {
     fn help_provide(&self, str:&(dyn std::fmt::Display )) -> Location {
         Location::from_locate(format!("{str}\nat: {self}"))
+    }
+}
+
+impl<'a, 'b> LocationProvider for &'b StrRef<'a> {
+    fn provide(self) -> Location {
+        Location::from_locate(self.to_string())
     }
 }

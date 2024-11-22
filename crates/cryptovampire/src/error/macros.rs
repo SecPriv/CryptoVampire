@@ -21,3 +21,10 @@ macro_rules! bail_at {
         return $crate::err_at!($location, $($t)*)
     };
 }
+
+#[macro_export]
+macro_rules! bail {
+    ($($t:tt)*) => {
+        $crate::bail_at!((), $($t)*)
+    };
+}

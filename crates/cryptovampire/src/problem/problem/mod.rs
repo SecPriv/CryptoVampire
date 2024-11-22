@@ -13,9 +13,7 @@ use std::{
 };
 
 use crate::{
-    container::ScopedContainer,
-    environement::environement::Environement,
-    formula::{
+    container::ScopedContainer, environement::environement::Environement, error::BaseError, formula::{
         file_descriptior::{
             axioms::Axiom,
             declare::{ConstructorDestructor, DataType, Declaration},
@@ -27,7 +25,7 @@ use crate::{
         },
         sort::{builtins::CONDITION, Sort},
         variable::{uvar, IntoVariableIter},
-    },
+    }
 };
 
 use super::{
@@ -57,6 +55,12 @@ pub struct Problem<'bump> {
     query: ARichFormula<'bump>,
     #[builder(default)]
     extra_instances: HashSet<ARichFormula<'bump>>,
+}
+
+impl Into<BaseError> for ProblemBuilderError {
+    fn into(self) -> BaseError {
+        BaseError::BuilderError(Box::new(self))
+    }
 }
 
 impl<'bump> Problem<'bump> {

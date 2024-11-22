@@ -8,7 +8,7 @@ use pest::error::ErrorVariant;
 use utils::string_ref::StrRef;
 
 use crate::{
-    error::{Locate, LocateHelper, Location},
+    error::{Locate, LocateHelper, Location, LocationProvider},
     squirrel::json::operator::Def,
 };
 
@@ -46,7 +46,13 @@ impl<'str> ASTLocation<'str> {
     }
 
     pub fn all(input: &'str str) -> Self {
-        pest::Position::new(input, 0).into()
+        pest::Position::new(input, 0).unwrap().into()
+    }
+}
+
+impl<'a, 'str> LocationProvider for &'a ASTLocation<'str> {
+    fn provide(self) -> Location {
+        self.as_location()
     }
 }
 

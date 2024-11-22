@@ -5,6 +5,8 @@ use std::fmt::Display;
 pub use tmp_formula::TmpFormula;
 use utils::implvec;
 
+use crate::error::{LocateHelper, LocationProvider};
+
 /// A very simplified AST
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum BaseFormula<B, F, V> {
@@ -61,5 +63,15 @@ where
             }
             Self::Var(s) => s.fmt(f),
         }
+    }
+}
+
+impl<'a, B, F, V> LocationProvider for &'a BaseFormula<B, F, V> where 
+    B: Display,
+    F: Display,
+    V: Display,
+{
+    fn provide(self) -> crate::error::Location {
+        ().help_provide(self)
     }
 }

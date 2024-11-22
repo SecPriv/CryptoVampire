@@ -13,7 +13,7 @@ mod location;
 pub use location::{Location, LocationProvider, LocateHelper, Locate};
 
 mod result;
-pub use result::CVContext;
+pub use result::{CVContext, ExtraOption};
 
 mod anywhere;
 pub use anywhere::Anywhere;
@@ -36,6 +36,14 @@ pub enum BaseError {
     PestError(#[from] pest::error::Error<crate::parser::Rule>),
     #[error(transparent)]
     IO(#[from] std::io::Error),
+    #[error("BuilderError: {0}")]
+    BuilderError(#[from] Box<dyn std::error::Error>),
+
+    #[error("unknown {kind} {name}")]
+    UnknownSymbol{
+        kind: String,
+        name: String
+    },
 
     #[error(transparent)]
     ParsingError(#[from] crate::parser::error::ParsingError),
