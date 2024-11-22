@@ -25,8 +25,8 @@ impl Nonce {
         pbl: &Problem<'bump>,
     ) {
         assertions.push(Axiom::Comment("nonce".into()));
-        let nonce_sort = NAME.clone();
-        let message_sort = MESSAGE.clone();
+        let nonce_sort = *NAME;
+        let message_sort = *MESSAGE;
         let ev = pbl.evaluator();
         let nc = pbl.name_caster();
 
@@ -38,7 +38,7 @@ impl Nonce {
             DefaultAuxSubterm::new(nonce_sort),
             [],
             Default::default(),
-            |rc| Subsubterm::Nonce(rc),
+            Subsubterm::Nonce,
         );
 
         subterm.declare(env, pbl, declarations);
@@ -58,13 +58,13 @@ impl Nonce {
                                 .cloned(),
                         ),
                     )
-                    .map(|f| Axiom::base(f)),
+                    .map(Axiom::base),
             );
         }
         assertions.extend(
             subterm
                 .preprocess_special_assertion_from_pbl(env, pbl, true)
-                .map(|f| Axiom::base(f)),
+                .map(Axiom::base),
         );
 
         assertions.extend(
@@ -74,65 +74,22 @@ impl Nonce {
                 })
                 ,
             mforall!(n1!0:nonce_sort, n2!1:nonce_sort; {
-                meq(ev.eval(nc.cast(message_sort, n1.clone())), ev.eval(nc.cast(message_sort, n2.clone())))
+                meq(ev.eval(nc.cast(message_sort, n1)), ev.eval(nc.cast(message_sort, n2)))
                     >> meq(n1, n2)
             })]
             .into_iter()
-            .map(|f| Axiom::base(f)),
+            .map(Axiom::base),
         );
 
         assertions.push(Axiom::Ground {
             sort: message_sort,
             formula: mforall!(n!0:nonce_sort, m!1:message_sort; {
-                meq(ev.eval(nc.cast(message_sort, n.clone())),
-                    ev.eval(m.clone())) >> subterm.f_a(env, n, m)
+                meq(ev.eval(nc.cast(message_sort, n)),
+                    ev.eval(m)) >> subterm.f_a(env, n, m)
             }),
         })
     }
 }
-
-// pub(crate) fn generate(assertions: &mut Vec<Smt>, declarations: &mut Vec<Smt>, ctx: &mut Ctx) {
-//     // if ctx.env().no_subterm() {
-//     //     return;
-//     // }
-
-//     // let eval_msg = get_eval_msg(ctx.env());
-//     let evaluator = Evaluator::new(ctx.env()).unwrap();
-//     let nonce = NONCE_MSG(ctx.env()).clone();
-//     let nonce_sort = NONCE(ctx.env()).clone();
-//     let msg = MSG(ctx.env()).clone();
-
-//     let subt_main = Subterm::new_and_init(
-//         assertions,
-//         declarations,
-//         ctx,
-//         "sbt$nonce_main".to_owned(),
-//         nonce_sort.clone(),
-//         [],
-//         Default::default(),
-//         DefaultBuilder(),
-//     );
-
-//     // assertions.push(Smt::Assert(sforall!(n!0:nonce_sort, m!1:msg;{
-//     //     simplies!(ctx.env();
-//     //         seq!(sfun!(eval_msg; sfun!(nonce; n.clone())), sfun!(eval_msg; m.clone())),
-//     //         subt_main.f(ctx, n.clone(), m.clone(), &msg)
-//     //     )
-//     // })))
-
-//     assertions.push(Smt::Assert(ctx.forallff(
-//         [(0, &nonce_sort), (1, &msg)],
-//         |[n, m]: [SmtFormula; 2]| {
-//             ctx.impliesf(
-//                 ctx.eqf(
-//                     evaluator.msg(ctx, nonce.cf(ctx, [n.clone()])),
-//                     evaluator.msg(ctx, m.clone()),
-//                 ),
-//                 subt_main.f(ctx, n, m, &msg),
-//             )
-//         },
-//     )))
-// }
 
 impl<'bump> Generator<'bump> for Nonce {
     fn generate(

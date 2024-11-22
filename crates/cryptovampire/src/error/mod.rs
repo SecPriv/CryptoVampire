@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+#[allow(clippy::module_inception)]
 mod error;
 mod macros;
 

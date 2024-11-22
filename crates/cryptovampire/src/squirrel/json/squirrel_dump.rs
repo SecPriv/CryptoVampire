@@ -55,7 +55,7 @@ macro_rules! mk_getters {
     ($name:ident : $nname:ty => $t:ty) => {
         paste! {
             #[doc="get the an [Iterator] of [<$name s>]"]
-            pub fn [<$name s>]<'b>(&'b self) -> impl Iterator<Item = &'b $t> {
+            pub fn [<$name s>](&self) -> impl Iterator<Item = &'_ $t> {
                 self.[<$name s>].values()
             }
 

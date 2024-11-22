@@ -48,6 +48,7 @@ where
 
 // copied for squirrel with some optimisation
 
+#[allow(clippy::upper_case_acronyms)] // FIXME: figure out what AT is supposed to mean
 #[derive(Debug, PartialEq, Clone, Copy)]
 struct MAT<'a, A>(&'a json::action::AT<A>);
 
@@ -65,16 +66,14 @@ impl<'a, A: PartialEq + Debug> PartialOrd for MAT<'a, A> {
         let b = other;
         if PartialEq::eq(a, b) {
             Some(Ordering::Equal)
-        } else {
-            if izip!(a.iter(), b.iter()).all(|(a, b)| a == b) {
-                if a.len() < b.len() {
-                    Some(Ordering::Less)
-                } else {
-                    Some(Ordering::Greater)
-                }
+        } else if izip!(a.iter(), b.iter()).all(|(a, b)| a == b) {
+            if a.len() < b.len() {
+                Some(Ordering::Less)
             } else {
-                None
+                Some(Ordering::Greater)
             }
+        } else {
+            None
         }
     }
 }
@@ -88,10 +87,10 @@ fn depends<A: Eq + Debug>(a: &AT<A>, b: &AT<A>) -> Option<bool> {
     }
 }
 
-fn mk_depends_lemma<'a, 'b>(
+fn mk_depends_lemma<'a>(
     a: &json::Action<'a>,
     b: &json::Action<'a>,
-    ctx: Context<'b, 'a>,
+    ctx: Context<'_, 'a>,
 ) -> crate::Result<Option<ast::Order<'a, StrRef<'a>>>> {
     let cmp = depends(&a.action, &b.action);
 
@@ -101,7 +100,7 @@ fn mk_depends_lemma<'a, 'b>(
         Some(true) => (a, b),
         Some(false) => (b, a),
     };
-    if !(b.indices.len() >= a.indices.len()) {
+    if b.indices.len() < a.indices.len() {
         let err_msg = "b has to few indices, this contradicts an implicit requirement of squirrel's `Lemma.mk_depends_lemma`";
         bail_at!(@ "{err_msg}")
     }
@@ -157,10 +156,10 @@ fn mutex_commun_vars(a: &Shape, b: &Shape) -> Option<usize> {
     aux(a.as_ref(), b.as_ref())
 }
 
-fn mk_mutex_lemma<'a, 'b>(
+fn mk_mutex_lemma<'a>(
     a: &json::Action<'a>,
     b: &json::Action<'a>,
-    ctx: Context<'b, 'a>,
+    ctx: Context<'_, 'a>,
 ) -> crate::Result<Option<ast::Order<'a, StrRef<'a>>>> {
     // if !mutex(a.shape().as_ref(), b.shape().as_ref()) {
     //     return Ok(None);

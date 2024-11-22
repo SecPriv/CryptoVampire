@@ -21,16 +21,16 @@ pub fn generate<'bump>(
     _: &Environement<'bump>,
     pbl: &Problem<'bump>,
 ) {
-    let lt = LESS_THAN_STEP.clone();
-    let leq = LESS_THAN_EQ_STEP.clone();
-    let gt = GREATER_THAN_STEP.clone();
-    let happens = HAPPENS.clone();
-    let step = STEP.clone();
+    let lt = *LESS_THAN_STEP;
+    let leq = *LESS_THAN_EQ_STEP;
+    let gt = *GREATER_THAN_STEP;
+    let happens = *HAPPENS;
+    let step = *STEP;
     let init = &pbl.protocol().init_step().into_formula();
-    let pred = PRED.clone();
+    let pred = *PRED;
 
     assertions.push(Axiom::comment("ordering"));
-    declarations.push(Declaration::Sort(STEP.clone()));
+    declarations.push(Declaration::Sort(*STEP));
 
     // general axioms
     assertions.extend(
@@ -111,7 +111,7 @@ pub fn generate<'bump>(
         let mors = ors(steps.iter().map(|s| {
             let vars = s.free_variables();
             let t2 = s.function().f(vars);
-            mexists!(vars.iter().cloned(), { meq(&t, t2) })
+            mexists!(vars.iter().cloned(), { meq(t, t2) })
         }));
         mforall!([t], { happens.f([t]) >> mors })
     }));

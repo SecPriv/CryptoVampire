@@ -34,7 +34,6 @@ impl<'bump> MacroRef<'bump> {
         self.into_option()
     }
 
-    #[must_use]
     pub fn try_into_cell(self) -> Result<MemoryCell<'bump>, Self> {
         if let Self::Cell(v) = self {
             Ok(v)
@@ -72,11 +71,11 @@ where
     }
 }
 
-impl<'bump> Into<Option<MemoryCell<'bump>>> for MacroRef<'bump> {
-    fn into(self) -> Option<MemoryCell<'bump>> {
-        match self {
-            Self::Input | Self::Exec => None,
-            Self::Cell(x) => Some(x),
+impl<'bump> From<MacroRef<'bump>> for Option<MemoryCell<'bump>> {
+    fn from(val: MacroRef<'bump>) -> Self {
+        match val {
+            MacroRef::Input | MacroRef::Exec => None,
+            MacroRef::Cell(x) => Some(x),
         }
     }
 }

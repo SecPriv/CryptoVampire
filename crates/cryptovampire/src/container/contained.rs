@@ -6,6 +6,7 @@ use super::{allocator::Container, reference::Reference};
 
 pub trait Containable<'bump> {}
 
+#[allow(clippy::missing_safety_doc)] // FIXME
 pub trait Contained<'bump>: 'bump + Sized + std::fmt::Debug {
     type Pointer<'a>: Sized
     where

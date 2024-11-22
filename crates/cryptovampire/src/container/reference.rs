@@ -128,6 +128,7 @@ impl<'bump, T> MaybeInvalid for Reference<'bump, T> {
 //     }
 // }
 
+#[allow(clippy::non_canonical_clone_impl)]
 impl<'bump, T> Clone for Reference<'bump, T> {
     fn clone(&self) -> Self {
         Self {
@@ -170,7 +171,7 @@ impl<'bump, T> FORef<'bump, T> {
 
 impl<'bump, T> PartialOrd for FORef<'bump, T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(&other))
+        Some(self.cmp(other))
     }
 }
 impl<'bump, T> Ord for FORef<'bump, T> {
@@ -191,9 +192,7 @@ impl<'bump, T> PartialEq for FORef<'bump, T> {
 }
 impl<'bump, T> Copy for FORef<'bump, T> {}
 impl<'bump, T> Clone for FORef<'bump, T> {
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
-    }
+    fn clone(&self) -> Self { *self }
 }
 
 impl<'bump, T: Debug> Debug for FORef<'bump, T> {

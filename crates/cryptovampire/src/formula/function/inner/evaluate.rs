@@ -104,8 +104,8 @@ impl<'bump> Default for Evaluator<'bump> {
     fn default() -> Self {
         Self {
             functions: [
-                (MESSAGE.as_sort().into(), MESSAGE_TO_BITSTRING.clone()),
-                (CONDITION.as_sort().into(), CONDITION_TO_BOOL.clone()),
+                (MESSAGE.as_sort().into(), *MESSAGE_TO_BITSTRING),
+                (CONDITION.as_sort().into(), *CONDITION_TO_BOOL),
             ]
             .into(),
         }

@@ -68,8 +68,8 @@ impl<'bump> IntCtxt<'bump> {
         pbl: &Problem<'bump>,
     ) {
         assertions.push(Axiom::Comment("int ctxt".into()));
-        let nonce_sort = NAME.clone();
-        let message_sort = MESSAGE.clone();
+        let nonce_sort = *NAME;
+        let message_sort = *MESSAGE;
         let ev = pbl.evaluator();
         let nc = pbl.owned_name_caster();
         let kind = SubtermKindConstr::as_constr(pbl, env);
@@ -82,7 +82,7 @@ impl<'bump> IntCtxt<'bump> {
             DefaultAuxSubterm::new(message_sort),
             [],
             UnfoldFlags::default(),
-            |rc| Subsubterm::IntCtxtMain(rc),
+            Subsubterm::IntCtxtMain,
         );
 
         let subterm_key = Subterm::new(
@@ -96,7 +96,7 @@ impl<'bump> IntCtxt<'bump> {
             },
             [self.enc, self.dec /* , self.verify */],
             UnfoldFlags::all(),
-            |rc| Subsubterm::IntCtxtKey(rc),
+            Subsubterm::IntCtxtKey,
         );
 
         let subterm_rand = Subterm::new(
@@ -110,7 +110,7 @@ impl<'bump> IntCtxt<'bump> {
             },
             [self.enc],
             UnfoldFlags::all(),
-            |rc| Subsubterm::IntCtxtRand(rc),
+            Subsubterm::IntCtxtRand,
         );
 
         if env.preprocess_instances() {
@@ -136,11 +136,11 @@ impl<'bump> IntCtxt<'bump> {
             assertions.push(Axiom::Ground{
                 sort: message_sort,
                 formula: mforall!(c!1:message_sort, k!3:nonce_sort; {
-                    let k_f = nc.cast(message_sort, k.clone());
+                    let k_f = nc.cast(message_sort, k);
                     // ev.eval(self.verify.apply([c.into(), k_f.clone()])) >>
                     (!meq(ev.eval(self.dec.f([c, k])), ev.eval(self.fail()))) >>
                     mexists!(m!4:message_sort, r!5:nonce_sort; {
-                        let r_f = nc.cast(message_sort, r.clone());
+                        let r_f = nc.cast(message_sort, r);
                         let c2 = self.enc.f([m.into(), r_f.clone(), k_f.clone()]);
                         meq(ev.eval(c), ev.eval(c2.clone())) &
                         (
@@ -150,9 +150,9 @@ impl<'bump> IntCtxt<'bump> {
                             (mexists!(m2!6:message_sort, k2!7:message_sort, r2!8:message_sort; {
                                 subterm_main.f_a(env, self.enc.f([m2.into(), r2.into(), k_f.clone()]), c.into())
                                 & (
-                                    (mforall!(n!9:nonce_sort; {!meq(r2.clone(), nc.cast(message_sort, n))})) |
+                                    (mforall!(n!9:nonce_sort; {!meq(r2, nc.cast(message_sort, n))})) |
                                     ( meq(r2, r_f.clone()) &
-                                        ((!meq(m2, m.clone())) | (!meq(k2, k_f.clone())))
+                                        ((!meq(m2, m)) | (!meq(k2, k_f.clone())))
                                     )
                                 )
                             }))
@@ -277,7 +277,7 @@ impl<'bump> IntCtxt<'bump> {
                 //         .unwrap_or(0),
                 //     max_var,
                 // ) + 1;
-                let max_var = array.iter().map(|f| *f).max_var_or_max(max_var);
+                let max_var = array.iter().copied().max_var_or_max(max_var);
                 let free_vars = array
                     .iter()
                     .flat_map(|f| (*f).free_vars_iter())
@@ -323,6 +323,7 @@ impl<'bump> IntCtxt<'bump> {
                     let other_sc = {
                         // ensure r is well used
                         // the candidate with the right key (message, rand, unifier_key)
+                        #[allow(clippy::needless_borrow)]
                         let candidates_enc = candidates_enc
                             .iter()
                             .tuple_combinations::<(_, _)>()
@@ -456,13 +457,13 @@ fn define_subterm<'bump>(
                 .generate_function_assertions_from_pbl(env, pbl)
                 .into_iter()
                 .chain(subterm.not_of_sort_auto(env, pbl))
-                .map(|f| Axiom::base(f)),
+                .map(Axiom::base),
         );
     }
     assertions.extend(
         subterm
             .preprocess_special_assertion_from_pbl(env, pbl, keep_guard)
-            .map(|f| Axiom::base(f)),
+            .map(Axiom::base),
     );
 }
 
@@ -489,7 +490,7 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
     type IntoIter = ArcIntoIter<ARichFormula<'bump>>;
 
     fn sort(&self) -> Sort<'bump> {
-        NAME.clone()
+        *NAME
     }
 
     fn var_eval_and_next(
@@ -581,7 +582,7 @@ impl<'bump> SubtermAux<'bump> for RandAux<'bump> {
     type IntoIter = ArcIntoIter<ARichFormula<'bump>>;
 
     fn sort(&self) -> Sort<'bump> {
-        NAME.clone()
+        *NAME
     }
 
     fn var_eval_and_next(

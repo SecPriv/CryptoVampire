@@ -15,6 +15,7 @@ use super::{
 #[allow(non_camel_case_types)]
 pub type uvar = u32;
 
+#[allow(clippy::derived_hash_with_manual_eq)] // <- for debug reasons
 #[derive(Debug, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct Variable<'bump> {
     pub id: uvar,
@@ -88,7 +89,7 @@ where
 {
     s.into_iter()
         .zip(0..)
-        .map(|(s, i)| Variable::new(i + from, s.clone()))
+        .map(|(s, i)| Variable::new(i + from, *s))
         .collect()
 }
 
@@ -110,7 +111,7 @@ impl<'bump, 'a: 'bump> From<(uvar, &'a Sort<'bump>)> for Variable<'bump> {
         let (id, sort) = arg;
         Variable {
             id,
-            sort: sort.clone(),
+            sort: *sort,
         }
     }
 }
@@ -119,7 +120,7 @@ impl<'bump, 'a: 'bump> From<(&'a Sort<'bump>, uvar)> for Variable<'bump> {
         let (sort, id) = arg;
         Variable {
             id,
-            sort: sort.clone(),
+            sort: *sort,
         }
     }
 }

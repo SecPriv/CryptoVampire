@@ -1,7 +1,4 @@
-use std::{
-    borrow::Cow,
-    fmt::{Display, Write},
-};
+use std::fmt::{Display, Write};
 
 use pest::error::ErrorVariant;
 
@@ -35,7 +32,7 @@ impl<'str> ASTLocation<'str> {
             InnerAstLocationHelper::Position(position) => {
                 Location::from_locate(PestLocation::from(*position))
             }
-            InnerAstLocationHelper::Str(str_ref) => Location::from_locate(str_ref.to_string()),
+            // InnerAstLocationHelper::Str(str_ref) => Location::from_locate(str_ref.to_string()),
             _ => Default::default(),
         }
     }
@@ -55,7 +52,7 @@ impl<'a, 'str> LocationProvider for &'a ASTLocation<'str> {
 enum InnerAstLocationHelper<'str> {
     Span(pest::Span<'str>),
     Position(pest::Position<'str>),
-    Str(Cow<'str, str>),
+    // Str(Cow<'str, str>),
     #[default]
     Nothing,
 }
@@ -67,7 +64,7 @@ impl<'str> LocateHelper for InnerAstLocationHelper<'str> {
             InnerAstLocationHelper::Position(position) => {
                 Location::from_locate(PestLocation::from(*position))
             }
-            InnerAstLocationHelper::Str(str_ref) => str_ref.help_provide(str),
+            // InnerAstLocationHelper::Str(str_ref) => str_ref.help_provide(str),
             InnerAstLocationHelper::Nothing => ().help_provide(str),
         }
     }
@@ -78,7 +75,7 @@ impl<'str> InnerAstLocationHelper<'str> {
         match self {
             InnerAstLocationHelper::Span(..) => 0,
             InnerAstLocationHelper::Position(..) => 1,
-            InnerAstLocationHelper::Str(..) => 2,
+            // InnerAstLocationHelper::Str(..) => 2,
             InnerAstLocationHelper::Nothing => 3,
         }
     }
@@ -106,7 +103,7 @@ impl<'str> Ord for InnerAstLocationHelper<'str> {
                     .cmp(s2.as_str())
                     .then(s1.start().cmp(&s2.start()))
             }
-            (Str(s1), Str(s2)) => s1.cmp(s2),
+            // (Str(s1), Str(s2)) => s1.cmp(s2),
             (x, y) => x.int().cmp(&y.int()),
         }
     }

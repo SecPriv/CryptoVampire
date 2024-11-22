@@ -5,9 +5,9 @@ use crate::formula::{
 
 struct A(TmpFormula);
 
-impl Into<TmpFormula> for A {
-    fn into(self) -> TmpFormula {
-        self.0
+impl From<A> for TmpFormula {
+    fn from(val: A) -> Self {
+        val.0
     }
 }
 

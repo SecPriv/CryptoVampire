@@ -1,16 +1,3 @@
-#[cfg(test)]
-pub mod tests {
-
-    #[allow(dead_code)]
-    fn is_sync<T: Sync>() -> bool {
-        true
-    }
-
-    #[allow(dead_code)]
-    fn is_send<T: Send>() -> bool {
-        true
-    }
-}
 
 /// makes sure traits are implemented
 #[macro_export]
@@ -51,4 +38,19 @@ macro_rules! force_lifetime {
             self
         }
     };
+}
+
+#[cfg(test)]
+#[allow(clippy::extra_unused_type_parameters)]
+pub mod tests {
+
+    #[allow(dead_code)]
+    fn is_sync<T: Sync>() -> bool {
+        true
+    }
+
+    #[allow(dead_code)]
+    fn is_send<T: Send>() -> bool {
+        true
+    }
 }

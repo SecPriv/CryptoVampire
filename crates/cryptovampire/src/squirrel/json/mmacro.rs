@@ -11,7 +11,7 @@ pub enum Data<'a> {
 }
 
 impl<'a> Data<'a> {
-    pub fn inputs<'b>(&'b self) -> impl Iterator<Item = &'b Variable<'a>> + DoubleEndedIterator {
+    pub fn inputs<'b>(&'b self) -> impl DoubleEndedIterator<Item = &'b Variable<'a>> {
         match self {
             Data::Global(gm) => Some(gm.inputs()),
             _ => None,
@@ -61,7 +61,7 @@ pub struct GlobalMacro<'a> {
 }
 
 impl<'a> GlobalMacro<'a> {
-    pub fn inputs<'b>(&'b self) -> impl Iterator<Item = &'b Variable<'a>> + DoubleEndedIterator {
+    pub fn inputs<'b>(&'b self) -> impl DoubleEndedIterator<Item = &'b Variable<'a>> {
         self.data.inputs()
     }
 }
@@ -93,7 +93,7 @@ pub struct GlobalData<'a> {
 }
 
 impl<'a> GlobalData<'a> {
-    pub fn inputs<'b>(&'b self) -> impl Iterator<Item = &'b Variable<'a>> + DoubleEndedIterator {
+    pub fn inputs<'b>(&'b self) -> impl DoubleEndedIterator<Item = &'b Variable<'a>> {
         self.inputs.iter().filter(|v| !v.is_dummy())
     }
 }

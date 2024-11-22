@@ -47,7 +47,7 @@ pub trait IntoArray<U, A> {
         Self: Sized,
     {
         let (arr, mut leftover) = self.collect_array()?;
-        if let Some(_) = leftover.next() {
+        if leftover.next().is_some() {
             Err(WrongLengthError::TooMany)
         } else {
             Ok(arr)
@@ -100,7 +100,7 @@ where
     ) -> Result<(Option<[U; N]>, impl Iterator<Item = U>), NotEnoughItemError> {
         let mut iter = self.into_iter();
         let vec: Option<Vec<_>> = iter.by_ref().take(N).collect();
-        let iter = iter.filter_map(|x| x);
+        let iter = iter.flatten();
         match vec {
             None => Ok((None, iter)),
             Some(vec) => match vec.try_into() {

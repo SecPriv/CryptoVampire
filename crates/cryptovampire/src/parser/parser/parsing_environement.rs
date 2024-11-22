@@ -220,8 +220,7 @@ pub fn get_sort<'str, 'bump, S, L: LocateHelper>(
     env.sort_hash
         .get(Deref::deref(&str))
         .ok_or_else(|| ParsingError::undefined_sort(&str))
-        .with_pre_location(span, &str.deref())
-        .map(|s| *s)
+        .with_pre_location(span, &str.deref()).copied()
 }
 
 /// Find the [Function] in already declared in [Environement::functions]
@@ -294,7 +293,7 @@ where
         extra_names,
         allow_shadowing,
     );
-    prbl_from_ast(env, &*&ast, pbl_builder, ignore_lemmas, container)
+    prbl_from_ast(env, &ast, pbl_builder, ignore_lemmas, container)
 }
 
 fn prbl_from_ast<'a, 'bump, S>(
@@ -309,7 +308,7 @@ where
     for<'b> StrRef<'b>: From<&'b S>,
 {
     trace!("[P] \t- sorts...");
-    declare_sorts::<S>(&mut env, &ast)?;
+    declare_sorts::<S>(&mut env, ast)?;
     //             ^^^^^^^^^ why ???
 
     let mut assertions = Vec::new();
@@ -321,7 +320,7 @@ where
     let query = fetch_all::<S>(
         //                 ^^^^^^^^^ same ???
         &mut env,
-        &ast,
+        ast,
         &mut assertions,
         &mut lemmas,
         &mut orders,

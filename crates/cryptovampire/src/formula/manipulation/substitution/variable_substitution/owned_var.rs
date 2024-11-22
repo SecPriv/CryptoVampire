@@ -24,7 +24,7 @@ pub struct MultipleVarSubst<T> {
 
 pub type MulitpleVarSubstF<'bump> = MultipleVarSubst<ARichFormula<'bump>>;
 
-impl<'bump, T> MultipleVarSubst<T> {
+impl< T> MultipleVarSubst<T> {
     pub fn maybe_get(&self, id: uvar) -> Option<&T> {
         self.subst
             .iter()
@@ -95,6 +95,6 @@ where
     fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump> {
         self.maybe_get(var.id)
             .cloned()
-            .unwrap_or_else(|| RichFormula::Var(var.clone()).into())
+            .unwrap_or_else(|| RichFormula::Var(*var).into())
     }
 }

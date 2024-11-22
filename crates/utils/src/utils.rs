@@ -14,14 +14,6 @@ pub fn replace_if_eq<T: Eq>(a: T, b: T, c: T) -> T {
     }
 }
 
-pub fn clone_iter<'a, E, I>(iter: I) -> impl Iterator<Item = E> + 'a
-where
-    E: Clone + 'a,
-    I: Iterator<Item = &'a E> + 'a,
-{
-    iter.map(|e| e.clone())
-}
-
 /// A box that points to the stack,
 ///
 /// This is mostly used to trick the type system when using [DerefMut]
@@ -255,7 +247,6 @@ macro_rules! f {
 pub trait MaybeInvalid {
     fn is_valid(&self) -> bool;
 
-    #[must_use]
     fn assert_valid(&self) -> Result<(), AccessToInvalidData> {
         if !self.is_valid() {
             if cfg!(debug_assertions) {

@@ -43,7 +43,7 @@ use utils::{
 //     }
 // }
 
-pub const INIT_STEP_NAME: &'static str = "init";
+pub const INIT_STEP_NAME: &str = "init";
 
 pub type Step<'bump> = Reference<'bump, InnerStep<'bump>>;
 impl<'bump> Containable<'bump> for InnerStep<'bump> {}
@@ -254,13 +254,13 @@ impl<'bump> Step<'bump> {
 
     pub fn apply_condition(&self, args: &[ARichFormula<'bump>]) -> ARichFormula<'bump> {
         self.assert_valid().unwrap();
-        let vars: Vec<_> = (1..=self.arity()).into_iter().collect_vec();
+        let vars: Vec<_> = (1..=self.arity()).collect_vec();
         self.condition().clone().apply_substitution(vars, args)
     }
 
     pub fn apply_message(&self, args: &[ARichFormula<'bump>]) -> ARichFormula<'bump> {
         self.assert_valid().unwrap();
-        let vars: Vec<_> = (1..=self.arity()).into_iter().collect_vec();
+        let vars: Vec<_> = (1..=self.arity()).collect_vec();
         self.message().clone().apply_substitution(vars, args)
     }
 

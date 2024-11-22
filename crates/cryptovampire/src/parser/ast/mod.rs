@@ -72,6 +72,7 @@ macro_rules! boiler_plate {
 
     (l $t:ty, $lt:lifetime, $($rule:ident)|+; |$p:ident| { $($($pat:ident)|+ => $content:block)* }) => {
         boiler_plate!($t, 'a, $($rule)|+; |p| {
+            #[allow(unused_variables)]
             let span = p.as_span();
             let mut p_iter = p.into_inner();
             let $p = p_iter.next().unwrap();
@@ -85,6 +86,7 @@ macro_rules! boiler_plate {
                 $(
                     $(Rule::$pat)|+ => $content,
                 )*
+                #[allow(unused_variables)]
                 r => unreachable_rules!(span, r; $($($pat),+),*)
             }
         });

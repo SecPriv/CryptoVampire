@@ -47,9 +47,7 @@ impl<'bump> Unifier<'bump> {
             let id_small = small.iter().map(OneVarSubst::id).collect_vec();
             if let Some(id) = big
                 .iter()
-                .map(OneVarSubst::id)
-                .filter(|id| id_small.contains(&id))
-                .next()
+                .map(OneVarSubst::id).find(|id| id_small.contains(id))
             {
                 return Err(UnifierAsEqualityErr::NonDisjointVariables { id });
             }
@@ -239,7 +237,7 @@ mod tests {
     };
 
     use super::Unifier;
-    fn vars<'bump, const N: usize>(mut i: uvar, sorts: [Sort<'bump>; N]) -> [Variable<'bump>; N] {
+    fn vars<const N: usize>(mut i: uvar, sorts: [Sort<'_>; N]) -> [Variable<'_>; N] {
         sorts.map(|sort| {
             i += 1;
             Variable { id: i, sort }

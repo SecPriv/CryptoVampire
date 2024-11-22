@@ -1,8 +1,7 @@
 use proc_macro::TokenStream;
-use quote::{quote, quote_spanned};
+use quote::quote_spanned;
 use syn::{
-    parse_macro_input, spanned::Spanned, DataEnum, DataStruct, DeriveInput, GenericParam, Lifetime,
-    LifetimeParam, PredicateType, WherePredicate,
+    parse_macro_input, spanned::Spanned, DeriveInput
 };
 
 #[proc_macro_derive(LocationProvider, attributes(provider))]

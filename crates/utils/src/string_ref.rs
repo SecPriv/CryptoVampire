@@ -127,7 +127,7 @@ impl<'a, T> Eq for StrRef<'a, T> {}
 impl<'a, T> PartialOrd for StrRef<'a, T> {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        PartialOrd::partial_cmp(self.as_ref(), other.as_ref())
+       Some(self.cmp(other))
     }
 }
 impl<'a, V> Ord for StrRef<'a, V> {
@@ -197,32 +197,33 @@ impl<'a, T> AsRef<str> for StrRef<'a, T> {
     #[inline]
     fn as_ref(&self) -> &str {
         match &self.inner {
-            Inner::Borrowed(s) => *s,
+            Inner::Borrowed(s) => s,
             Inner::Owned(s) => s.as_ref(),
         }
     }
 }
 
-impl<'a, V> Into<Arc<str>> for StrRef<'a, V> {
+impl<'a, V> From<StrRef<'a, V>> for Arc<str> {
     #[inline]
-    fn into(self) -> Arc<str> {
-        match self.inner {
+    fn from(val: StrRef<'a, V>) -> Self {
+        match val.inner {
             Inner::Borrowed(s) => Arc::from(s),
             Inner::Owned(s) => s,
         }
     }
 }
 
-impl<'a, V> Into<String> for StrRef<'a, V> {
+impl<'a, V> From<StrRef<'a, V>> for String {
     #[inline]
-    fn into(self) -> String {
-        Box::from(self).to_string()
+    fn from(val: StrRef<'a, V>) -> Self {
+        let b: Box<str> = Box::from(val);
+        b.to_string()
     }
 }
 
-impl<'a, V> Into<Box<str>> for StrRef<'a, V> {
-    fn into(self) -> Box<str> {
-        <Self as Into<String>>::into(self).into_boxed_str()
+impl<'a, V> From<StrRef<'a, V>> for Box<str> {
+    fn from(val: StrRef<'a, V>) -> Self {
+        <StrRef<'a, V> as Into<String>>::into(val).into_boxed_str()
     }
 }
 

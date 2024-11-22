@@ -107,9 +107,9 @@ impl Equality {
 
 impl<'a> Sorted<'a> for Equality {
     fn sort(&self, args: &[Sort<'a>]) -> Result<Sort<'a>, SortedError> {
-        if args.len() != 2 || args.get(0) != args.get(1) {
+        if args.len() != 2 || args.first() != args.get(1) {
             Err(SortedError::WrongArguments {
-                expected: format!("2 arguments the same type"),
+                expected: "2 arguments the same type".to_string(),
                 got: format!("{:?}", args),
             })
         } else {

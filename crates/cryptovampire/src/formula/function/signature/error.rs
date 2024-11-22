@@ -20,7 +20,7 @@ pub enum CheckError {
     },
 }
 
-impl<'bump> CheckError {
+impl CheckError {
     pub fn from_inference(error: InferenceError, position: Option<usize>) -> Self {
         Self::SortError { position, error }
     }

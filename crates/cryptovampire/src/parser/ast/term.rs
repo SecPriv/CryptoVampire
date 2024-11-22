@@ -110,9 +110,11 @@ boiler_plate!(InnerTerm<'s, &'s str>, 's, inner_term; |p| {
                 Rule::macro_application => {
                     Ok(InnerTerm::Macro(Arc::new(cmn_rule.try_into()?)))
                 }
+                #[allow(unused_variables)]
                 r => unreachable_rules!(span, r; let_in, if_then_else, find_such_that, quantifier, application)
             }
         },
+        #[allow(unused_variables)]
         r => unreachable_rules!(span, r; infix_term, commun_base)
     }
 });

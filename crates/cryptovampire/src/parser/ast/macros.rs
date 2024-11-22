@@ -50,7 +50,7 @@ pub struct AppMacro<'str, S> {
     pub inner: InnerAppMacro<'str, S>,
 }
 
-fn from_term_to_application<'a>(p: Pair<'a, Rule>) -> Result<Application<'a, &'a str>> {
+fn from_term_to_application(p: Pair<'_, Rule>) -> Result<Application<'_, &str>> {
     debug_rule!(p, term);
     let p = p.into_inner().next().unwrap();
     debug_rule!(p, inner_term);

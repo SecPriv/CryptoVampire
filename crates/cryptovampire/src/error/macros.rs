@@ -3,7 +3,7 @@ macro_rules! error_at {
   ($location:expr, $($t:tt)*) => {
     {
       use $crate::error::LocationProvider;
-      crate::Error::msg_with_location(LocationProvider::provide($location), format!($($t)*))
+      $crate::Error::msg_with_location(LocationProvider::provide($location), format!($($t)*))
     }
   };
   (@ $($t:tt)*) =>{

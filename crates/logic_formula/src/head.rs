@@ -36,7 +36,6 @@ impl<Var, Fun, Quant> HeadSk<Var, Fun, Quant> {
         }
     }
 
-    #[must_use]
     pub fn try_into_var(self) -> Result<Var, Self> {
         if let Self::Var(v) = self {
             Ok(v)
@@ -61,7 +60,6 @@ impl<Var, Fun, Quant> HeadSk<Var, Fun, Quant> {
         matches!(self, Self::Fun(..))
     }
 
-    #[must_use]
     pub fn try_into_fun(self) -> Result<Fun, Self> {
         if let Self::Fun(v) = self {
             Ok(v)
@@ -78,7 +76,6 @@ impl<Var, Fun, Quant> HeadSk<Var, Fun, Quant> {
         matches!(self, Self::Quant(..))
     }
 
-    #[must_use]
     pub fn try_into_quant(self) -> Result<Quant, Self> {
         if let Self::Quant(v) = self {
             Ok(v)

@@ -76,7 +76,7 @@ impl<'a> ToAst<'a> for json::Term<'a> {
     }
 }
 
-pub const INDEX_SORT_NAME: &'static str = "index";
+pub const INDEX_SORT_NAME: &str = "index";
 impl<'a> ToAst<'a> for json::sort::Type<'a> {
     type Target = ast::TypeName<'a, StrRef<'a>>;
 

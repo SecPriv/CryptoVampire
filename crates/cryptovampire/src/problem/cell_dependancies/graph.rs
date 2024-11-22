@@ -24,9 +24,9 @@ pub enum DependancyError {
     MemoryCellNotFound,
 }
 
-impl Into<BaseError> for DependancyError {
-    fn into(self) -> BaseError {
-        super::GraphError::from(self).into()
+impl From<DependancyError> for BaseError {
+    fn from(val: DependancyError) -> Self {
+        super::GraphError::from(val).into()
     }
 }
 
@@ -153,11 +153,8 @@ impl<'bump> DependancyGraph<'bump> {
         };
 
         for (i, Edges { from, .. }) in edges.iter().enumerate() {
-            match from {
-                FromNode::CellCall(InnerCellCall { cell_idx: cell, .. }) => {
-                    cells[*cell].edges.push(i)
-                }
-                _ => {}
+            if let FromNode::CellCall(InnerCellCall { cell_idx: cell, .. }) = from {
+                cells[*cell].edges.push(i)
             }
         }
         edges.extend(input_edges);

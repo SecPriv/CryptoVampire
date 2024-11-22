@@ -1,4 +1,5 @@
 pub mod ast;
+#[allow(clippy::module_inception)]
 mod parser;
 
 use ast::INIT_STEP_AST;
@@ -21,7 +22,7 @@ pub mod error;
 
 mod location;
 
-pub const USED_KEYWORDS: &'static [&'static str] = &[
+pub const USED_KEYWORDS: &[&str] = &[
     "and",
     "or",
     "not",

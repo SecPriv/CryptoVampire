@@ -39,7 +39,7 @@ pub struct Runners {
 
 impl Runners {
     pub fn all_empty(&self) -> bool {
-        matches!(&self.vampire, None) && matches!(&self.z3, None) && matches!(&self.cvc5, None)
+        self.vampire.is_none() && self.z3.is_none() && self.cvc5.is_none()
     }
 
     /// Automatically runs `pbl` using the [Runner] available in [self]
@@ -85,9 +85,9 @@ pub enum RunnersCreationError {
     NoSolver,
 }
 
-impl Into<BaseError> for RunnersCreationError {
-    fn into(self) -> BaseError {
-        RunnerError::from(self).into()
+impl From<RunnersCreationError> for BaseError {
+    fn from(val: RunnersCreationError) -> Self {
+        RunnerError::from(val).into()
     }
 }
 
@@ -139,9 +139,9 @@ pub enum HandlerError {
     #[error("no more reciever, child killed")]
     NoMoreReciever,
 }
-impl Into<BaseError> for HandlerError {
-    fn into(self) -> BaseError {
-        RunnerError::from(self).into()
+impl From<HandlerError> for BaseError {
+    fn from(val: HandlerError) -> Self {
+        RunnerError::from(val).into()
     }
 }
 
@@ -150,26 +150,20 @@ impl RunnerHandler for Handler {
 
     fn spawn_killable_child(self, child: &mut Command) -> Result<Arc<SharedChild>, Self::Error> {
         let child = Arc::new(SharedChild::spawn(child)?);
-        match self.killable.send(Arc::clone(&child)) {
-            Err(_) => {
-                debug!("no more reciever, trying to kill child");
-                kill_shared_child(&child)?;
-                Err(HandlerError::NoMoreReciever)?
-            }
-            _ => (),
+        if self.killable.send(Arc::clone(&child)).is_err() {
+            debug!("no more reciever, trying to kill child");
+            kill_shared_child(&child)?;
+            Err(HandlerError::NoMoreReciever)?
         };
         Ok(child)
     }
 
     fn spawn_unkillable_child(self, child: &mut Command) -> Result<Arc<SharedChild>, Self::Error> {
         let child = Arc::new(SharedChild::spawn(child)?);
-        match self.unkillable.send(Arc::clone(&child)) {
-            Err(_) => {
-                debug!("no more reciever, trying to kill child");
-                kill_shared_child(&child)?;
-                Err(HandlerError::NoMoreReciever)?
-            }
-            _ => (),
+        if self.unkillable.send(Arc::clone(&child)).is_err() {
+            debug!("no more reciever, trying to kill child");
+            kill_shared_child(&child)?;
+            Err(HandlerError::NoMoreReciever)?
         };
         Ok(child)
     }
@@ -209,11 +203,11 @@ fn autorun_many<'bump>(
 
         let mut to_analyse = Vec::new();
 
-        let mut finished_iter = finished_recv.into_iter();
+        let finished_iter = finished_recv.into_iter();
 
-        while let Some(r) = finished_iter.next() {
+        for r in finished_iter {
             match r {
-                (x, Ok(RunnerOut::Sat(_))) => {
+                (_, Ok(RunnerOut::Sat(_))) => {
                     trace!("sat, killall");
                     killall(killable_recv, unkillable_recv, hr)?;
                     // bail!("disproved the query");
@@ -254,10 +248,10 @@ fn autorun_many<'bump>(
     }
 }
 
-fn killall<'a, 's, T>(
+fn killall< T>(
     killalble: Receiver<Arc<SharedChild>>,
     unkillalble: Receiver<Arc<SharedChild>>,
-    threads: Vec<ScopedJoinHandle<'s, T>>,
+    threads: Vec<ScopedJoinHandle<'_, T>>,
 ) -> crate::Result<()> {
     debug!("killing all");
     chain!(killalble.into_iter(), unkillalble.into_iter())

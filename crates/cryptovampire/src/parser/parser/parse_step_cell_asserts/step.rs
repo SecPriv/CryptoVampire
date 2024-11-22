@@ -70,14 +70,14 @@ where
     //---- parse
     // message
     let message = message
-        .parse(env, &mut bvars, &state, Some(MESSAGE.clone().into()))
+        .parse(env, &mut bvars, &state, Some((*MESSAGE).into()))
         .debug_continue()?;
     let msg_used_vars = (&message).used_vars_iter();
     bvars.truncate(n);
 
     // condition
     let condition = condition
-        .parse(env, &mut bvars, &state, Some(CONDITION.clone().into()))
+        .parse(env, &mut bvars, &state, Some((*CONDITION).into()))
         .debug_continue()?;
     let cond_used_vars = (&condition).used_vars_iter();
     bvars.truncate(n);
@@ -120,8 +120,8 @@ where
                                 variable.name().borrow(),
                                 bvars.iter().map(|(n, _)| n.borrow()),
                             ) {
-                                return BaseError::duplicate_symbol(&"name", variable)
-                                    .with_location(variable);
+                                BaseError::duplicate_symbol(&"name", variable)
+                                    .with_location(variable)
                             } else {
                                 bvars.push((variable.name().clone(), var.into()));
                                 Ok(var)
@@ -165,7 +165,7 @@ where
             // ensure `bvars` is reseted
             bvars.truncate(n);
             let content = term
-                .parse(env, &mut bvars, &state, Some(MESSAGE.clone().into()))?
+                .parse(env, &mut bvars, &state, Some((*MESSAGE).into()))?
                 // remove the "in"
                 .apply_substitution2(&substitution);
 

@@ -183,7 +183,7 @@ impl<'a, 'bump> logic_formula::Formula for &'a ARichFormula<'bump> {
             },
             RichFormula::Fun(f, args) => Destructed {
                 head: Head::<&'a ARichFormula<'bump>>::Fun(*f),
-                args: Either::Right(Either::Left(args.as_ref().into_iter())),
+                args: Either::Right(Either::Left(args.as_ref().iter())),
             },
             RichFormula::Quantifier(q, arg) => Destructed {
                 head: Head::<&'a ARichFormula<'bump>>::Quant(q.clone()),

@@ -12,7 +12,7 @@ use super::{builtin::NAME_TO_MESSAGE, Function};
 
 #[dynamic]
 pub static DEFAULT_NAME_CASTER: NameCasterCollection<'static> = NameCasterCollection {
-    content: [(MESSAGE.as_sort().into(), NAME_TO_MESSAGE.clone())]
+    content: [(MESSAGE.as_sort().into(), *NAME_TO_MESSAGE)]
         .into_iter()
         .collect(),
 };

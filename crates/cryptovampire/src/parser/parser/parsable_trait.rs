@@ -176,8 +176,8 @@ where
         let right = right.parse(env, bvars, state, es_branches)?;
 
         Ok(match state.get_realm() {
-            Realm::Evaluated => IF_THEN_ELSE.clone(),
-            Realm::Symbolic => IF_THEN_ELSE_TA.clone(),
+            Realm::Evaluated => *IF_THEN_ELSE,
+            Realm::Symbolic => *IF_THEN_ELSE_TA,
         }
         .f([condition, left, right]))
     }
@@ -278,17 +278,8 @@ where
             }
         }
         let SnN { span, name } = type_name.into();
-        let sort = {
-            // get the sort, possibly changing it depending on the realm
-            let sort = get_sort(env, span, name)?;
-            // if realm.is_evaluated_realm() && false{
-            //     sort.maybe_evaluated_sort().unwrap_or(sort)
-            // } else {
-            //     sort
-            // }
-            // FIXME: things seem to go wrong with the realm here...
-            sort
-        };
+        let sort = get_sort(env, span, name)?;
+        
         if let Some(e) = expected_sort {
             // check if it is what we expected / unify it
             e.expects(sort, realm).with_location(|| span)?;
@@ -329,8 +320,8 @@ where
         } = self;
 
         let es = match state.get_realm() {
-            Realm::Evaluated => BOOL.as_sort().into(),
-            Realm::Symbolic => CONDITION.as_sort().into(),
+            Realm::Evaluated => BOOL.as_sort(),
+            Realm::Symbolic => CONDITION.as_sort(),
         };
         expected_sort.into_iter().try_for_each(|s| {
             s.expects(es, &state)
@@ -426,9 +417,7 @@ where
                                 let formula = env
                                     .evaluator
                                     .get_eval_function(sort)
-                                    .expect(&format!(
-                                        "{sort} is evaluatable but not in the evaluator..."
-                                    ))
+                                    .unwrap_or_else(|| panic!("{sort} is evaluatable but not in the evaluator..."))
                                     .f([Variable { id: *id, sort }]);
 
                                 expected_sort
@@ -509,7 +498,7 @@ where
         signature
             .args()
             .into_iter()
-            .zip(args.into_iter())
+            .zip(args)
             .map(|(es, t)| t.parse(env, bvars, &state, Some(es)).debug_continue())
             .collect()
     };
@@ -620,8 +609,7 @@ where
 
                 Ok(term
                     .owned_into_inner()
-                    .apply_substitution2(&step_cache.substitution(args.as_ref()))
-                    .into())
+                    .apply_substitution2(&step_cache.substitution(args.as_ref())))
             }
             ast::InnerAppMacro::Other { name, args } => {
                 let mmacro = env
@@ -683,8 +671,7 @@ where
 
                 Ok(term
                     .owned_into_inner()
-                    .apply_substitution(0..from_usize(mmacro.args.len()), &args)
-                    .into())
+                    .apply_substitution(0..from_usize(mmacro.args.len()), &args))
             }
         }
     }
@@ -884,13 +871,11 @@ where
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> crate::Result<Self::R> {
-        if cfg!(debug_assertions) {
-            if bvars.iter().map(|(_, v)| v.id).unique().count() != bvars.len() {
-                panic!(
-                    "there are duplicates:\n\t[{}]",
-                    bvars.iter().map(|(_, v)| v).join(", ")
-                )
-            }
+        if cfg!(debug_assertions) && bvars.iter().map(|(_, v)| v.id).unique().count() != bvars.len() {
+            panic!(
+                "there are duplicates:\n\t[{}]",
+                bvars.iter().map(|(_, v)| v).join(", ")
+            )
         }
 
         match_as_trait!(ast::InnerTerm, |x| in &self.inner => LetIn | If | Fndst | Quant | Application | Infix | Macro

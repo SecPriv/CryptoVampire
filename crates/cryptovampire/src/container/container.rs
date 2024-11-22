@@ -157,7 +157,7 @@ impl<'bump> ScopedContainer<'bump> {
         functions
             .into_iter()
             .map(|f| Function::from_raw(f, Default::default()))
-            .chain(BUILT_IN_FUNCTIONS.iter().map(|f| *f))
+            .chain(BUILT_IN_FUNCTIONS.iter().copied())
             .map(|f| (f.name(), f))
             .collect()
     }

@@ -79,11 +79,11 @@ impl<'bump> MemoryCell<'bump> {
     }
 
     pub fn name(&self) -> &'bump str {
-        &self.precise_as_ref().name()
+        self.precise_as_ref().name()
     }
 
     pub fn args(&self) -> &'bump [Sort<'bump>] {
-        &self.precise_as_ref().args()
+        self.precise_as_ref().args()
     }
 
     pub fn function(&self) -> Function<'bump> {

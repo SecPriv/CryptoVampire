@@ -127,21 +127,21 @@ pub trait Runner {
     type OtherR;
 
     /// Run `pbl_file` using the parameter defined by `args`
-    fn run<'a, R>(
+    fn run<R>(
         &self,
         handler: R,
-        args: Self::Args<'a>,
+        args: Self::Args<'_>,
         pbl_file: &Path,
     ) -> crate::Result<RunnerOutI<Self>>
     where
         R: RunnerHandler + Clone;
 
-    fn run_to_tmp<'a, 'bump, R>(
+    fn run_to_tmp<'bump, R>(
         &self,
         handler: R,
         env: &Environement<'bump>,
         pbl: &Problem<'bump>,
-        args: Self::Args<'a>,
+        args: Self::Args<'_>,
         save_to: Option<&Path>,
     ) -> crate::Result<RunnerOutI<Self>>
     where
@@ -170,7 +170,7 @@ pub trait Runner {
         };
 
         let r = self.run(handler, args, file.path())?;
-        return Ok(r);
+        Ok(r)
     }
 
     fn write<'bump, W: std::io::Write>(
@@ -221,9 +221,9 @@ pub enum DiscovererError {
     // Other(#[from] crate::Error),
 }
 
-impl Into<BaseError> for DiscovererError {
-    fn into(self) -> BaseError {
-        RunnerError::from(self).into()
+impl From<DiscovererError> for BaseError {
+    fn from(val: DiscovererError) -> Self {
+        RunnerError::from(val).into()
     }
 }
 

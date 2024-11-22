@@ -20,14 +20,14 @@ pub static NAME: Sort<'static> = new_static_sort(InnerSort::Other(Other::Name));
 
 #[dynamic]
 pub static BUILT_IN_SORTS: [Sort<'static>; 6] = [
-    BOOL.clone(),
-    CONDITION.clone(),
-    MESSAGE.clone(),
-    BITSTRING.clone(),
-    STEP.clone(),
-    NAME.clone(),
+    *BOOL,
+    *CONDITION,
+    *MESSAGE,
+    *BITSTRING,
+    *STEP,
+    *NAME,
 ];
 
 // alias
 #[dynamic]
-pub static TIME: Sort<'static> = STEP.clone();
+pub static TIME: Sort<'static> = *STEP;

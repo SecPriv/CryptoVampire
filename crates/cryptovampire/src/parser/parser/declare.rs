@@ -134,7 +134,7 @@ where
                 declare_step(env, step).debug_continue()?;
                 if (*step.name.name()).as_str() == "init" {
                     did_initilise_init = true;
-                    if step.args().len() >= 1 {
+                    if !step.args().is_empty() {
                         return ParsingError::OneOff("the init step should have any arguments")
                             .with_location(|| &step.args);
                     }
@@ -165,9 +165,9 @@ where
     })
 }
 
-fn user_bool_to_condtion<'bump>(s: Sort<'bump>) -> Sort<'bump> {
+fn user_bool_to_condtion(s: Sort<'_>) -> Sort<'_> {
     if s == BOOL.as_sort() {
-        CONDITION.clone()
+        *CONDITION
     } else {
         s
     }
@@ -182,8 +182,8 @@ where
     for<'a> StrRef<'a>: From<&'a S>,
 {
     let Ident {
-        span,
-        content: name,
+        content: name, 
+        ..
     } = fun.name();
     if env.contains_name(name.borrow()) {
         // bail_at!(span, "the function name '{}' is already in use", name)
@@ -214,7 +214,7 @@ where
             Function::new_user_term_algebra(env.container, name.borrow(), input_sorts?, output_sort)
                 .main
         };
-        if let Some(_) = env.functions.insert(fun.name().to_string(), fun.into()) {
+        if env.functions.insert(fun.name().to_string(), fun.into()).is_some() {
             unreachable!(
                 "!UNREACHABLE!(line {} in {}) \
 The function name {} somehow reintroduced itself in the hash",
@@ -236,7 +236,7 @@ where
     S: Pstr,
     for<'c> StrRef<'c>: From<&'c S>,
 {
-    let SnN { span, name } = (&fun.name).into();
+    let SnN {  name,.. } = (&fun.name).into();
     if env.contains_name(&name) {
         ParsingError::already_defined("step", name.as_str()).with_location(|| &fun.name)?
     }

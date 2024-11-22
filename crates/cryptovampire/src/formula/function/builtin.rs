@@ -64,13 +64,13 @@ pub static FALSE_F_TA: Function<'static> = new_static_function(InnerFunction::Te
 ));
 
 #[dynamic]
-pub static TRUE: RichFormula<'static> = RichFormula::Fun(TRUE_F.clone(), Arc::new([]));
+pub static TRUE: RichFormula<'static> = RichFormula::Fun(*TRUE_F, Arc::new([]));
 
 #[dynamic]
 pub static TRUE_ARC: ARichFormula<'static> = TRUE.clone_as_arc();
 
 #[dynamic]
-pub static FALSE: RichFormula<'static> = RichFormula::Fun(TRUE_F.clone(), Arc::new([]));
+pub static FALSE: RichFormula<'static> = RichFormula::Fun(*TRUE_F, Arc::new([]));
 
 #[dynamic]
 pub static AND: Function<'static> = new_static_function(InnerFunction::Bool(Booleans::Connective(
@@ -151,7 +151,7 @@ pub static IF_THEN_ELSE: Function<'static> =
 pub static LESS_THAN_STEP: Function<'static> =
     new_static_function(InnerFunction::Predicate(Predicate {
         name: "lt".into(),
-        args: Box::new([STEP.clone(), STEP.clone()]),
+        args: Box::new([*STEP, *STEP]),
         // out: BOOL.clone(),
     }));
 
@@ -159,7 +159,7 @@ pub static LESS_THAN_STEP: Function<'static> =
 pub static GREATER_THAN_STEP: Function<'static> =
     new_static_function(InnerFunction::Predicate(Predicate {
         name: "gt".into(),
-        args: Box::new([STEP.clone(), STEP.clone()]),
+        args: Box::new([*STEP, *STEP]),
         // out: BOOL.clone(),
     }));
 
@@ -167,14 +167,14 @@ pub static GREATER_THAN_STEP: Function<'static> =
 pub static LESS_THAN_EQ_STEP: Function<'static> =
     new_static_function(InnerFunction::Predicate(Predicate {
         name: "leq".into(),
-        args: Box::new([STEP.clone(), STEP.clone()]),
+        args: Box::new([*STEP, *STEP]),
         // out: BOOL.clone(),
     }));
 
 #[dynamic]
 pub static HAPPENS: Function<'static> = new_static_function(InnerFunction::Predicate(Predicate {
     name: "happens".into(),
-    args: Box::new([STEP.clone()]),
+    args: Box::new([*STEP]),
     // out: BOOL.clone(),
 }));
 
@@ -209,14 +209,14 @@ pub static CONDITION_TO_BOOL: Function<'static> = new_static_function(InnerFunct
     Evaluate::new("evaluate_cond".into(), CONDITION.as_sort(), BOOL.as_sort()),
 ));
 
-pub const EMPTY_FUN_NAME: &'static str = "empty";
+pub const EMPTY_FUN_NAME: &str = "empty";
 
 #[dynamic]
 static EMPTY_TUPLE_FUNCTION: BaseFunctionTuple<'static> =
-    Function::new_user_term_algebra(&StaticContainer, EMPTY_FUN_NAME, [], MESSAGE.clone());
+    Function::new_user_term_algebra(&StaticContainer, EMPTY_FUN_NAME, [], *MESSAGE);
 
 #[dynamic]
-pub static EMPTY: Function<'static> = (&EMPTY_TUPLE_FUNCTION).main.clone();
+pub static EMPTY: Function<'static> = EMPTY_TUPLE_FUNCTION.main;
 
 #[dynamic]
 pub static PRED: Function<'static> =

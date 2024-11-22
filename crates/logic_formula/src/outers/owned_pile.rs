@@ -16,7 +16,7 @@ impl<F, I> OwnedPile<F, I> {
         Self { pile, iterator }
     }
 
-    pub fn as_mut<'a>(&'a mut self) -> RefPile<'a, F, ()> {
+    pub fn as_mut(&mut self) -> RefPile<'_, F, ()> {
         let Self {
             ref mut pile,
             iterator: _,

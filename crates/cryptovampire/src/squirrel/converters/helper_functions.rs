@@ -36,9 +36,9 @@ where
 }
 
 /// Turn a list of [json::Term] that should only contain [json::Term::Var] into a [ast::TypedArgument]
-pub fn to_variable_binding<'a, 'b>(
+pub fn to_variable_binding<'a>(
     vars: &[json::Term<'a>],
-    ctx: Context<'b, 'a>,
+    ctx: Context<'_, 'a>,
 ) -> RAoO<TypedArgument<'a, StrRef<'a>>> {
     let mut res = Ok(()); // to keep track if something went wrong
 

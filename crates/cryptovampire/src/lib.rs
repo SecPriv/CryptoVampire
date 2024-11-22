@@ -1,4 +1,5 @@
 #![recursion_limit = "256"]
+#[allow(clippy::module_inception)]
 
 pub mod cli;
 pub mod container;
@@ -130,9 +131,11 @@ pub fn run_to_dir<'bump>(
     std::fs::create_dir_all(path)?;
 
     let mut i = 0;
+    #[allow(clippy::map_collect_result_unit)]
     pbls.map(&mut |pbl| {
         save_to_file(env, pbl, path.join(format!("{i:}{SMT_FILE_EXTENSION}")))?;
-        Ok(i += 1)
+        i += 1;
+        Ok(())
     })
     .collect()
 }
@@ -150,16 +153,16 @@ pub fn run_to_file<'bump>(
     path: &Path,
 ) -> crate::Result<()> {
     if !path.exists() {
-        std::fs::create_dir_all(path.parent().with_context(&(), || "already a root")?)?;
+        std::fs::create_dir_all(path.parent().with_context((), || "already a root")?)?;
     }
     ensure!(
         (),
         pbls.assert_one(),
         "More than one problem queued, are you using lemmas?"
-    );
+    )?;
 
-    let mut npbl = pbls.next().with_context(&(), || "no problems are queued")?;
-    save_to_file(env, &mut npbl, path)?;
+    let npbl = pbls.next().with_context((), || "no problems are queued")?;
+    save_to_file(env, npbl, path)?;
     debug_assert!(pbls.next().is_none());
     Ok(())
 }
@@ -175,7 +178,7 @@ fn save_to_file<'bump>(
         .truncate(true) // overwrite
         .create(true) // create if necessary
         .open(path)?;
-    SmtFile::from_general_file(env, pbl.into_general_file(&env)) // gen smt
+    SmtFile::from_general_file(env, pbl.into_general_file(env)) // gen smt
         .as_diplay(env)
         .write_to_io(&mut BufWriter::new(file))?;
     Ok(())
@@ -198,6 +201,3 @@ pub fn init_logger() {
         .parse_default_env()
         .init();
 }
-
-/// Sealed trait
-trait Sealed {}

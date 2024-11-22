@@ -20,6 +20,7 @@ pub mod term_algebra;
 pub mod unused;
 
 impl<'a, 'bump: 'a> RefNamed<'a> for &'a InnerFunction<'bump> {
+    #[allow(clippy::useless_conversion)]
     fn name_ref(&self) -> StrRef<'a> {
         match self {
             InnerFunction::Bool(x) => x.name().into(),

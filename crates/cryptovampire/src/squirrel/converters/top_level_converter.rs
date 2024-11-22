@@ -11,7 +11,7 @@ use super::Context;
 
 use super::*;
 
-pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a, StrRef<'a>>> {
+pub fn convert_squirrel_dump(dump: SquirrelDump<'_>) -> RAoO<ast::ASTList<'_, StrRef<'_>>> {
     let pdump = &ProcessedSquirrelDump::from(dump);
 
     let ctx = ContextBuilder::create_empty().dump(pdump).build().unwrap();
@@ -214,8 +214,8 @@ mod assert_crypto {
         )
     }
 
-    fn assert_int_ctxt<'a, 'b>(
-        ctx: Context<'b, 'a>,
+    fn assert_int_ctxt<'a>(
+        ctx: Context<'_, 'a>,
         senc: &OperatorName<'a>,
         sdec: &OperatorName<'a>,
     ) -> ast::AST<'a, StrRef<'a>> {

@@ -4,9 +4,9 @@ use log::trace;
 use serde::{Deserialize, Serialize};
 
 /// Forbiden characters in cv's input
-const FORBIDDEN: &'static str = ";$#";
+const FORBIDDEN: &str = ";$#";
 
-pub const DUMMY_VAR: &'static str = "$dummy";
+pub const DUMMY_VAR: &str = "$dummy";
 
 macro_rules! new_name {
     ($name:ident: $kind:ident) => {

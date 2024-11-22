@@ -3,7 +3,6 @@ use log::debug;
 use std::{
     path::{Path, PathBuf},
     process::{Command, Stdio},
-    usize,
 };
 use utils::traits::MyWriteTo;
 
@@ -138,10 +137,10 @@ impl Runner for VampireExec {
 
     type OtherR = String;
 
-    fn run<'a, R: RunnerHandler + Clone>(
+    fn run<R: RunnerHandler + Clone>(
         &self,
         handler: R,
-        args: Self::Args<'a>,
+        args: Self::Args<'_>,
         pbl_file: &Path,
     ) -> crate::Result<RunnerOutI<Self>> {
         ensure!(
@@ -150,9 +149,9 @@ impl Runner for VampireExec {
             pbl_file.is_file(),
             "{} is not a file",
             pbl_file.to_string_lossy()
-        );
+        )?;
         let mut cmd = Command::new(&self.location);
-        for arg in self.extra_args.iter().chain(args.into_iter()) {
+        for arg in self.extra_args.iter().chain(args.iter()) {
             // encode the arguments
             let [a, b] = arg.to_args();
             cmd.arg(a.as_ref()).arg(b.as_ref());
@@ -211,8 +210,7 @@ impl Discoverer for VampireExec {
         let new_instances = pbl
             .crypto_assertions()
             .iter()
-            .map(|ca| ca.search_instances(new_instances_str, env))
-            .flatten()
+            .flat_map(|ca| ca.search_instances(new_instances_str, env))
             .collect_vec();
         if new_instances.is_empty() {
             // no new instances, no need to try again

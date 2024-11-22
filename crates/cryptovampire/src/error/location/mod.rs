@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Display};
+#[allow(clippy::module_inception)]
 mod location;
 pub use location::Location;
 

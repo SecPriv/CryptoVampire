@@ -381,6 +381,7 @@ impl<'bump> IntoWith<Environement<'bump>, &'bump ScopedContainer<'bump>> for &Ar
     }
 }
 
+#[allow(clippy::from_over_into)] // <- cli things stay with the cli
 impl Into<SolverConfig> for Auto {
     fn into(self) -> SolverConfig {
         let Auto {

@@ -2,23 +2,21 @@ use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::{quote, quote_spanned};
 use syn::{
-    parse_macro_input, spanned::Spanned, DataEnum, DataStruct, DeriveInput, Field, Fields,
-    GenericParam, Generics, Ident, Lifetime, LifetimeParam, PredicateType, Type, WherePredicate,
+    spanned::Spanned, DataEnum, DataStruct, DeriveInput, Field, Fields,
+    GenericParam, Lifetime, LifetimeParam,
 };
 
 fn find_field(span: Span, fields: &Fields) -> Result<(usize, &Field), proc_macro2::TokenStream> {
     let mut iter = fields.iter().enumerate().filter(|(_, f)| {
         f.attrs
             .iter()
-            .filter(|attr| attr.path().is_ident("provider"))
-            .next()
-            .is_some()
+            .any(|attr| attr.path().is_ident("provider"))
     });
 
     let field = if let Some(field) = iter.next() {
         field
     } else {
-        return Err(quote_spanned! {span => compile_error!("no attribute 'provider'");}.into());
+        return Err(quote_spanned! {span => compile_error!("no attribute 'provider'");});
     };
 
     if let Some(f) = iter.next() {

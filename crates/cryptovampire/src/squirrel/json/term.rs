@@ -98,7 +98,7 @@ impl<'a> Term<'a> {
     }
 
     /// Iterate over all subterms of [self]
-    pub fn iter<'b>(&'b self) -> impl Iterator<Item = &'b Self> {
+    pub fn iter(&self) -> impl Iterator<Item = &'_ Self> {
         SubTermIterator { pile: vec![self] }
     }
 
@@ -120,7 +120,7 @@ impl<'a, 'b> Iterator for SubTermIterator<'a, 'b> {
     type Item = &'b Term<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.pile.pop().map(|t| {
+        self.pile.pop().inspect(|&t| {
             match t {
                 Term::Fun { .. } | Term::Var { .. } => (),
                 Term::Action { args, .. } | Term::Name { args, .. } => {
@@ -143,7 +143,6 @@ impl<'a, 'b> Iterator for SubTermIterator<'a, 'b> {
                     .extend([condition, success, faillure].map(Box::as_ref)),
                 Term::Diff { terms } => self.pile.extend(terms.iter().map(Diff::term)),
             };
-            t
         })
     }
 }

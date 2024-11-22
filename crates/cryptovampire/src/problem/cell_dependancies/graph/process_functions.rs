@@ -184,9 +184,9 @@ impl<'a, 'bump> FormulaIterator<ARichFormula<'bump>> for ToNodeIterator<'a, 'bum
 /// populate `input_edges` and `edges` using the content seen in the cell definitions
 ///
 /// The `pile` is used for efficiency
-pub(crate) fn process_cell<'a, 'bump>(
+pub(crate) fn process_cell< 'bump>(
     pile: &mut Vec<Content<ToNode<'bump>, ARichFormula<'bump>, ()>>,
-    _steps: &Vec<Step<'bump>>,
+    _steps: &[Step<'bump>],
     cells: &Vec<GlobNode<'bump>>,
     input_edges: &mut Vec<Edges<'bump>>,
     edges: &mut Vec<Edges<'bump>>,

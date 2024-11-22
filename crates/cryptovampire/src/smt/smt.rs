@@ -154,7 +154,7 @@ impl<'bump> SmtFormula<'bump> {
             },
             RichFormula::Fun(f, args) => {
                 let mut args = args
-                    .into_iter()
+                    .iter()
                     .map(|f| Self::from_arichformula(/* env, */ f.as_ref()))
                     .collect();
 
@@ -235,7 +235,7 @@ impl<'bump> SmtFormula<'bump> {
     }
 
     fn prop<D, T>(&self, disp: SmtDisplayer<D, T>) -> SmtDisplayer<D, &Self> {
-        disp.propagate(&self)
+        disp.propagate(self)
     }
 }
 
@@ -353,7 +353,7 @@ impl<'bump> Smt<'bump> {
     }
 
     fn prop<D, T>(&self, disp: SmtDisplayer<D, T>) -> SmtDisplayer<D, &Self> {
-        disp.propagate(&self)
+        disp.propagate(self)
     }
 
     /// Returns `true` if the smt is [`Assert`].

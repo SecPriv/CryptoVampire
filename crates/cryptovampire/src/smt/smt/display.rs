@@ -120,7 +120,7 @@ impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a SmtFormula<'bump>>
                 args[0].prop(*self).fmt(f)
             }
             SmtFormula::Fun(fun, args) => {
-                if args.len() > 0 {
+                if !args.is_empty() {
                     write!(f, "({} ", fun.name())?;
                     for arg in args {
                         write!(f, "{} ", self.propagate(arg))?;
@@ -137,14 +137,14 @@ impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a SmtFormula<'bump>>
             }
             SmtFormula::Forall(vars, formula) => {
                 write!(f, "(forall (")?;
-                for v in vars.into_iter() {
+                for v in vars.iter() {
                     write!(f, "({} {}) ", v, v.sort)?;
                 }
                 write!(f, ") {})", formula.prop(*self))
             }
             SmtFormula::Exists(vars, formula) => {
                 write!(f, "(exists (")?;
-                for v in vars.into_iter() {
+                for v in vars.iter() {
                     write!(f, "({} {}) ", v, v.sort)?;
                 }
                 write!(f, ") {})", formula.prop(*self))
@@ -197,10 +197,9 @@ impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a Smt<'bump>> {
             Smt::AssertNot(e) => writeln!(f, "(assert-not {})", e.prop(*self)),
             Smt::DeclareFun(fun) => {
                 write!(f, "(declare-fun {} (", fun.name())?;
-                for s in fun.fast_insort().expect(&format!(
-                    "all function defined here have known sort: {}",
-                    fun.name()
-                )) {
+                for s in fun.fast_insort()
+                .unwrap_or_else(|| panic!("all function defined here have known sort: {}",
+                    fun.name())) {
                     write!(f, "{} ", s.name())?;
                 }
                 writeln!(f, ") {})", fun.fast_outsort().unwrap())
@@ -223,7 +222,7 @@ impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a Smt<'bump>> {
                 rhs,
             } => {
                 write!(f, "(declare-rewrite (forall (")?;
-                for v in vars.into_iter() {
+                for v in vars.iter() {
                     write!(f, "({} {}) ", v, v.sort)?;
                 }
                 let op = match rewrite_fun {
@@ -233,17 +232,17 @@ impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a Smt<'bump>> {
                 writeln!(f, ") ({} {} {})))", op, lhs.prop(*self), rhs.prop(*self))
             }
             Smt::DeclareDatatypes { sorts, cons } => {
-                write!(f, "(declare-datatypes\n")?;
+                writeln!(f, "(declare-datatypes")?;
                 // name of types
                 write!(f, "\t(")?;
-                for s in sorts.into_iter() {
+                for s in sorts.iter() {
                     write!(f, "({} 0) ", s)?;
                 }
                 write!(f, ")\n\t(\n")?;
 
                 // cons
                 for (j, vc) in cons.iter().enumerate() {
-                    write!(f, "\t\t(\n")?;
+                    writeln!(f, "\t\t(")?;
                     for c in vc {
                         assert_eq!(sorts[j], c.fun.fast_outsort().unwrap());
 
@@ -252,9 +251,9 @@ impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a Smt<'bump>> {
                         for (i, s) in c.fun.fast_insort().expect("todo").iter().enumerate() {
                             write!(f, "({} {}) ", c.dest.get(i).unwrap().name(), s)?;
                         }
-                        write!(f, ")\n")?;
+                        writeln!(f, ")")?;
                     }
-                    write!(f, "\t\t)\n")?;
+                    writeln!(f, "\t\t)")?;
                 }
                 writeln!(f, "\t)\n)")
             }

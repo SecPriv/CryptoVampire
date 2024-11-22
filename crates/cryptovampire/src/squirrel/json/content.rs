@@ -7,7 +7,7 @@ pub struct Content<N, U> {
 
 impl<N, U> Content<N, U> {
     #[allow(dead_code)]
-    pub fn as_ref<'b>(&'b self) -> ContentRef<'b, N, U> {
+    pub fn as_ref(&self) -> ContentRef<'_, N, U> {
         ContentRef {
             symb: &self.symb,
             data: &self.data,
@@ -21,6 +21,7 @@ pub struct ContentRef<'b, N, U> {
     pub data: &'b U,
 }
 
+#[allow(clippy::non_canonical_clone_impl)]
 impl<'b, N, U> Clone for ContentRef<'b, N, U> {
     fn clone(&self) -> Self {
         Self {

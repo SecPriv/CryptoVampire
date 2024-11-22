@@ -41,24 +41,29 @@ impl<'a, T> VecRef<'a, T> {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn get(&self, i: usize) -> Option<&T> {
         match self {
-            VecRef::Vec(v) => v.get(i).map(|e| *e),
+            VecRef::Vec(v) => v.get(i).copied(),
             VecRef::Ref(v) => v.get(i),
-            VecRef::RefRef(v) => v.get(i).map(|e| *e),
-            VecRef::Single(e) => (i == 0).then(|| *e),
+            VecRef::RefRef(v) => v.get(i).copied(),
+            VecRef::Single(e) => (i == 0).then_some(*e),
             VecRef::Empty => None,
         }
     }
 
+    /// # Safety
+    /// Unedfined behaviour if the access is out of bounds
     pub unsafe fn get_unchecked(&self, i: usize) -> &'a T {
         match self {
             VecRef::Vec(v) => v.get_unchecked(i),
             VecRef::Ref(v) => v.get_unchecked(i),
             VecRef::RefRef(v) => v.get_unchecked(i),
             VecRef::Single(e) => {
-                assert_eq!(0, i);
-                *e
+                e
             }
             VecRef::Empty => panic!(),
         }
@@ -74,12 +79,12 @@ impl<'a, T> Index<usize> for VecRef<'a, T> {
 
     fn index(&self, i: usize) -> &Self::Output {
         match self {
-            VecRef::Vec(v) => &v[i],
+            VecRef::Vec(v) => v[i],
             VecRef::Ref(v) => &v[i],
             VecRef::RefRef(v) => v[i],
             VecRef::Single(e) => {
                 assert_eq!(i, 0);
-                *e
+                e
             }
             VecRef::Empty => panic!(),
         }
@@ -134,7 +139,7 @@ impl<'a, 'b, T> Iterator for IterVecRef<'a, 'b, T> {
         match self {
             IterVecRef::OwnedVec(iter) => iter.next(),
             IterVecRef::Vec(iter) => iter.next(),
-            IterVecRef::Ref(iter) => iter.next().map(|e| *e),
+            IterVecRef::Ref(iter) => iter.next().copied(),
             IterVecRef::Single(e) => {
                 let r = Some(*e);
                 *self = IterVecRef::Empty;
@@ -177,7 +182,7 @@ impl<'a, 'b, T> DoubleEndedIterator for IterVecRef<'a, 'b, T> {
         match self {
             IterVecRef::OwnedVec(iter) => iter.next_back(),
             IterVecRef::Vec(iter) => iter.next_back(),
-            IterVecRef::Ref(iter) => iter.next_back().map(|e| *e),
+            IterVecRef::Ref(iter) => iter.next_back().copied(),
             IterVecRef::Single(_) => self.next(),
             IterVecRef::Empty => None,
         }
@@ -259,6 +264,10 @@ where
 impl<'a, T: Clone> VecRefClone<'a, T> {
     pub fn len(&self) -> usize {
         match_as_trait!(self => {Self::VecRef(x) | Self::Vec(x) => {x.len()}, _ => {1}})
+    }
+
+    pub fn is_empty(&self) -> bool {
+        match_as_trait!(self => {Self::VecRef(x) | Self::Vec(x) => {x.is_empty()}, _ => {false}})
     }
 
     pub fn get(&self, i: usize) -> Option<&T> {
@@ -344,8 +353,8 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            Self::VecRef(x) => x.next().map(|e| e.clone()),
-            Self::Vec(x) => x.next().map(|e| e.clone()),
+            Self::VecRef(x) => x.next().cloned(),
+            Self::Vec(x) => x.next(),
             Self::One(_) => {
                 if let Self::One(x) = std::mem::replace(self, Self::VecRef(IterVecRef::Empty)) {
                     Some(x)
@@ -383,8 +392,8 @@ impl<'a, T: Clone> ExactSizeIterator for IntoIterVecRefClone<'a, T> {}
 impl<'a, T: Clone> DoubleEndedIterator for IntoIterVecRefClone<'a, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
         match self {
-            Self::VecRef(x) => x.next_back().map(|e| e.clone()),
-            Self::Vec(x) => x.next_back().map(|e| e.clone()),
+            Self::VecRef(x) => x.next_back().cloned(),
+            Self::Vec(x) => x.next_back(),
             Self::One(_) => self.next(),
         }
     }

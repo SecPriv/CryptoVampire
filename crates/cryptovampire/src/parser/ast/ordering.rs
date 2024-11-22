@@ -38,7 +38,7 @@ boiler_plate!(@ Order, 'a, order ; |p| {
     let t2 = p.next().unwrap().try_into()?;
     let options = p.next().map(|r| r.try_into().debug_continue())
                     .transpose()?.unwrap_or(Options::empty(span.into()));
-    if let Some(_) = p.next() {
+    if p.next().is_some() {
         crate::bail_at!(span, "too many arguments")
     }
 

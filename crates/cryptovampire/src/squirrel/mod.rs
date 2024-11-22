@@ -40,7 +40,7 @@ pub fn run_from_json(mut args: Args, str: &str) -> crate::Result<Vec<Return>> {
 
             match args.get_mut_output_location() {
                 None => (),
-                Some(location) => *location = location.join(&format!("{i}")),
+                Some(location) => *location = location.join(format!("{i}")),
             }
             run_from_ast(&args, ast)
         })

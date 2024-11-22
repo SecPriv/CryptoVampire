@@ -55,10 +55,10 @@ impl Runner for Z3Runner {
         &[]
     }
 
-    fn run<'a, R>(
+    fn run<R>(
         &self,
         handler: R,
-        args: Self::Args<'a>,
+        args: Self::Args<'_>,
         pbl_file: &std::path::Path,
     ) -> crate::Result<super::RunnerOutI<Self>>
     where
@@ -70,7 +70,7 @@ impl Runner for Z3Runner {
             pbl_file.is_file(),
             "{} is not a file",
             pbl_file.to_string_lossy()
-        );
+        )?;
         let mut cmd = Command::new(&self.location);
         cmd.args(chain!(&self.extra_args, args))
             .arg(pbl_file) // encode the file
@@ -94,7 +94,7 @@ impl Runner for Z3Runner {
             }
         }
 
-        return Self::unexpected_result(cmd, result).no_location();
+        Self::unexpected_result(cmd, result).no_location()
     }
 
     fn name() -> &'static str {

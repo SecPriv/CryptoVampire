@@ -67,6 +67,7 @@ pub struct RefLocation<'a>(&'a (dyn Locate + Sync + Send));
 
 impl<'a> RefLocation<'a> {
     #[inline]
+    #[allow(dead_code)]
     pub fn from_location<L>(l: &'a L) -> Self
     where
         L: Locate + Sync + Send,

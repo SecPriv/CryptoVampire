@@ -1,4 +1,5 @@
 mod error;
+#[allow(clippy::module_inception)]
 mod runner;
 mod runner_helper;
 mod runners;

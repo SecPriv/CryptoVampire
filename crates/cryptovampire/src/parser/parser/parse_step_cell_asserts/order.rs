@@ -105,5 +105,5 @@ where
 
     let content = Ordering::new_guarded(quantifier, content, guard);
     debug_assert!(content.check().is_ok());
-    Ok(content.into())
+    Ok(content)
 }

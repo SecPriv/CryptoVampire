@@ -60,9 +60,9 @@ pub struct Problem<'bump> {
     extra_instances: HashSet<ARichFormula<'bump>>,
 }
 
-impl Into<BaseError> for ProblemBuilderError {
-    fn into(self) -> BaseError {
-        BaseError::BuilderError(Box::new(self))
+impl From<ProblemBuilderError> for BaseError {
+    fn from(val: ProblemBuilderError) -> Self {
+        BaseError::BuilderError(Box::new(val))
     }
 }
 
@@ -123,7 +123,7 @@ impl<'bump> Problem<'bump> {
     /// return the number of new instances added
     pub fn extend_extra_instances(&mut self, instances: implvec!(ARichFormula<'bump>)) -> usize {
         let pre = self.extra_instances.len();
-        self.extra_instances.extend(instances.into_iter());
+        self.extra_instances.extend(instances);
         let n = self.extra_instances.len() - pre;
         trace!("added {n} instances");
         n

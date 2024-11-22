@@ -59,7 +59,7 @@ boiler_plate!(Application<'a, &'a str>, 'a, application; |p| {
     let mut p = p.into_inner();
     let name = p.next().unwrap();
 
-    if let None = p.peek() {
+    if p.peek().is_none() {
         Ok(Application::ConstVar { span: span.into(), content: name.as_str() })
     } else {
         let args : Result<Vec<_>, _> = p.map(TryInto::try_into).collect();
@@ -82,7 +82,7 @@ impl<'a, S> From<S> for Application<'a, S> {
     fn from(value: S) -> Self {
         Application::ConstVar {
             span: Default::default(),
-            content: value.into(),
+            content: value,
         }
     }
 }

@@ -16,13 +16,10 @@ pub enum TermBase {
 }
 
 pub mod constants {
-    pub const MESSAGE_NAME: &'static str = "Message";
-
-    pub const BOOL_NAME: &'static str = "Bool";
-
-    pub const CONDITION_NAME: &'static str = "Condition";
-
-    pub const BITSTRING_NAME: &'static str = "Bitstring";
+    pub const MESSAGE_NAME: &str = "Message";
+    pub const BOOL_NAME: &str = "Bool";
+    pub const CONDITION_NAME: &str = "Condition";
+    pub const BITSTRING_NAME: &str = "Bitstring";
 }
 
 impl TermBase {

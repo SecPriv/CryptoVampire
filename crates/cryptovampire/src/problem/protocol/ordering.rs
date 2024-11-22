@@ -1,4 +1,4 @@
-use std::fmt::{Display, Write};
+use std::fmt::Display;
 
 use itertools::Itertools;
 use logic_formula::Formula;
@@ -50,7 +50,7 @@ impl<'bump> Ordering<'bump> {
             )?;
             ensure!(
                 self,
-                f.sort() == Some(STEP.clone()),
+                f.sort() == Some(*STEP),
                 "{f:} is not of sort step"
             )?
         }

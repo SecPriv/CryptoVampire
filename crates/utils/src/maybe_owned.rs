@@ -12,7 +12,7 @@ impl<'a, T> Deref for MOw<'a, T> {
     fn deref(&self) -> &Self::Target {
         match self {
             MOw::Owned(o) => o,
-            MOw::Borrowed(b) => *b,
+            MOw::Borrowed(b) => b,
         }
     }
 }

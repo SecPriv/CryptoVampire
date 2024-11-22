@@ -51,12 +51,13 @@ impl<'str, S> Options<'str, S> {
         }
     }
 
+    #[allow(clippy::needless_lifetimes)]
     pub fn as_str_list<'b>(&'b self) -> impl Iterator<Item = &'_ S> + 'b {
         self.options.iter().map(|MOption(i)| &i.content)
     }
 
-    pub fn iter<'b>(&'b self) -> <&'b Self as IntoIterator>::IntoIter {
-        (&self).into_iter()
+    pub fn iter(&self) -> <&Self as IntoIterator>::IntoIter {
+        self.into_iter()
     }
 
     pub fn contains(&self, str: &str) -> bool

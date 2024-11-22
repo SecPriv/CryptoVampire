@@ -100,15 +100,15 @@ mod top_level_converter;
 
 // FIXME: do it better
 
-const DEFAULT_TUPLE_NAME_NAME: &'static str = "pair";
-const DEFAULT_FST_PROJ_NAME_NAME: &'static str = "fst";
-const DEFAULT_SND_PROJ_NAME_NAME: &'static str = "snd";
-const DEFAULT_FAIL_NAME_NAME: &'static str = "fail";
+const DEFAULT_TUPLE_NAME_NAME: &str = "pair";
+const DEFAULT_FST_PROJ_NAME_NAME: &str = "fst";
+const DEFAULT_SND_PROJ_NAME_NAME: &str = "snd";
+const DEFAULT_FAIL_NAME_NAME: &str = "fail";
 
-const DEFAULT_TUPLE_NAME: StrRef<'static> = StrRef::from_static(&DEFAULT_TUPLE_NAME_NAME);
-const DEFAULT_FST_PROJ_NAME: StrRef<'static> = StrRef::from_static(&DEFAULT_FST_PROJ_NAME_NAME);
-const DEFAULT_SND_PROJ_NAME: StrRef<'static> = StrRef::from_static(&DEFAULT_SND_PROJ_NAME_NAME);
-const DEFAULT_FAIL_NAME: StrRef<'static> = StrRef::from_static(&DEFAULT_FAIL_NAME_NAME);
+const DEFAULT_TUPLE_NAME: StrRef<'static> = StrRef::from_static(DEFAULT_TUPLE_NAME_NAME);
+const DEFAULT_FST_PROJ_NAME: StrRef<'static> = StrRef::from_static(DEFAULT_FST_PROJ_NAME_NAME);
+const DEFAULT_SND_PROJ_NAME: StrRef<'static> = StrRef::from_static(DEFAULT_SND_PROJ_NAME_NAME);
+const DEFAULT_FAIL_NAME: StrRef<'static> = StrRef::from_static(DEFAULT_FAIL_NAME_NAME);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Builder)]
 #[builder(name = "ContextBuilder")]
@@ -206,9 +206,8 @@ where
     S: Serialize,
 {
     fn debug(self, msg: impl Display + 'static) -> impl Iterator<Item = S> {
-        self.map(move |x| {
-            trace!("{msg}{}", serde_json::to_string_pretty(&x).unwrap());
-            x
+        self.inspect(move |x| {
+            trace!("{msg}{}", serde_json::to_string_pretty(x).unwrap());
         })
     }
 }

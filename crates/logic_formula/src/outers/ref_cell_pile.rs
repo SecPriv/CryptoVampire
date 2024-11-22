@@ -18,7 +18,7 @@ impl<'a, F, I> RefCellPile<'a, F, I> {
         Self { pile, iterator }
     }
 
-    pub fn as_mut<'b>(&'b mut self) -> RefPile<'b, F, ()> {
+    pub fn as_mut(&mut self) -> RefPile<'_, F, ()> {
         let Self {
             ref mut pile,
             iterator: _,

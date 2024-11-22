@@ -39,9 +39,9 @@ pub fn generate<'bump>(
     env: &Environement<'bump>,
     pbl: &Problem<'bump>,
 ) {
-    let bool = BOOL.clone();
-    let msg = MESSAGE.clone();
-    let cond = CONDITION.clone();
+    let bool = *BOOL;
+    let msg = *MESSAGE;
+    let cond = *CONDITION;
 
     assertions.push(Axiom::Comment("evaluate".into()));
 
@@ -149,7 +149,7 @@ pub fn generate<'bump>(
                         let vars: Arc<[_]> = sorts_to_variables(0, ibf.args());
                         trace!("evaluating -> {}", f.name());
                         let out = Rewrite {
-                            kind: rw_kind.clone(),
+                            kind: *rw_kind,
                             vars: vars.clone(),
                             pre: pbl
                                 .evaluator()
@@ -226,12 +226,12 @@ fn generate_connectives<'bump>(
     match connective {
         Connective::Equality(_) => assertions.push(Axiom::base(mforall!(a!0:msg, b!1:msg; {
             meq(
-            pbl.evaluator().eval(function.apply([a.clone(), b.clone()])),
+            pbl.evaluator().eval(function.apply([a, b])),
                 meq(pbl.evaluator().eval(a), pbl.evaluator().eval(b)))
         }))),
         Connective::BaseConnective(BaseConnective::Not) => {
             assertions.push(Axiom::base(mforall!(a!0:cond; {
-                pbl.evaluator().eval(function.apply([a.clone()])) >>
+                pbl.evaluator().eval(function.apply([a])) >>
                     !pbl.evaluator().eval(a)
             })))
         }

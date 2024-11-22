@@ -99,6 +99,7 @@ impl TmpFormula {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn convert_binder<'a, 'bump>(
         &'a self,
         functions: &HashMap<StrRef<'bump>, Function<'bump>>,
@@ -111,7 +112,7 @@ impl TmpFormula {
     ) -> crate::Result<RichFormula<'bump>> {
         // TODO: include more quantifiers
         expected_sort
-            .unify(&BOOL.clone().into(), realm)
+            .unify(&(*BOOL).into(), realm)
             .map_err(|_| error_at!(self, "quantifier are booleans, expected {expected_sort}"))?;
         // check that we expect a bool
         let vars: Result<Vec<_>, _> = vars // gather the vars
@@ -141,7 +142,7 @@ impl TmpFormula {
                 if we don't copy. Consider the case of (forall i. sk(i)) /\ (exists i. sk(i)).
                 Both `sk(i)` shouldn't be turned into the same variables.
                 */
-                arg.to_rich_formula(functions, BOOL.clone().into(), &mut variables)?
+                arg.to_rich_formula(functions, (*BOOL).into(), &mut variables)?
             }
             _ => bail_at!(self, "no enough of too many arguments"),
         };

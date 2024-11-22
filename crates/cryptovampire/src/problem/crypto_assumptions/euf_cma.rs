@@ -63,8 +63,8 @@ impl<'bump> EufCma<'bump> {
         pbl: &Problem<'bump>,
     ) {
         assertions.push(Axiom::Comment("euf-cma sign".into()));
-        let nonce_sort = NAME.clone();
-        let message_sort = MESSAGE.clone();
+        let nonce_sort = *NAME;
+        let message_sort = *MESSAGE;
         let kind = SubtermKindConstr::as_constr(pbl, env);
 
         let subterm_main = Subterm::new(
@@ -75,7 +75,7 @@ impl<'bump> EufCma<'bump> {
             DefaultAuxSubterm::new(message_sort),
             [],
             UnfoldFlags::default(),
-            |rc| Subsubterm::EufCmaSignMain(rc),
+            Subsubterm::EufCmaSignMain,
         );
 
         let subterm_key = Subterm::new(
@@ -88,7 +88,7 @@ impl<'bump> EufCma<'bump> {
             },
             [self.sign, self.pk],
             NO_REC_MACRO,
-            |rc| Subsubterm::EufCmaSignKey(rc),
+            Subsubterm::EufCmaSignKey,
         );
 
         if env.preprocess_instances() {
@@ -136,12 +136,12 @@ impl<'bump> EufCma<'bump> {
                     let ev = pbl.evaluator();
                     ev.eval(self.verify.apply([m.into(), sigma.into(), self.pk.f([ k_f.clone()])])) >>
                     mexists!(u!4:message_sort; {
-                        meq(ev.eval(u.clone()), ev.eval(m)) &
+                        meq(ev.eval(u), ev.eval(m)) &
                         (
                             subterm_main.f_a(env, self.sign.f([u.into(), k_f.clone()]), m.into()) |
                             subterm_main.f_a(env, self.sign.f([u.into(), k_f.clone()]), sigma.into()) |
-                            subterm_key.f_a(env, k.clone(), m.clone()) |
-                            subterm_key.f_a(env, k.clone(), sigma.clone()) |
+                            subterm_key.f_a(env, k, m) |
+                            subterm_key.f_a(env, k, sigma) |
                             split.f([k])
                         )
                     })
@@ -191,7 +191,7 @@ impl<'bump> EufCma<'bump> {
                           key,
                       }| {
                     let array = [&message, &signature, &key];
-                    let max_var = array.iter().map(|f| *f).max_var_or_max(max_var);
+                    let max_var = array.iter().copied().max_var_or_max(max_var);
                     let free_vars = array
                         .iter()
                         .flat_map(|f| f.free_vars_iter())
@@ -291,7 +291,7 @@ fn define_subterms<'bump>(
     if env.is_evaluated_realm() {
         return;
     }
-    let _nonce_sort = NAME.clone();
+    let _nonce_sort = *NAME;
     {
         let subterm = subterm_key.as_ref();
         subterm.declare(env, pbl, declarations);
@@ -305,13 +305,13 @@ fn define_subterms<'bump>(
                         .into_iter(),
                     subterm.not_of_sort_auto(env, pbl)
                 )
-                .map(|f| Axiom::base(f)),
+                .map(Axiom::base),
             );
         }
         assertions.extend(
             subterm
                 .preprocess_special_assertion_from_pbl(env, pbl, false)
-                .map(|f| Axiom::base(f)),
+                .map(Axiom::base),
         );
     }
     {
@@ -327,13 +327,13 @@ fn define_subterms<'bump>(
                         .into_iter(),
                     subterm.not_of_sort_auto(env, pbl)
                 )
-                .map(|f| Axiom::base(f)),
+                .map(Axiom::base),
             );
         }
         assertions.extend(
             subterm
                 .preprocess_special_assertion_from_pbl(env, pbl, true)
-                .map(|f| Axiom::base(f)),
+                .map(Axiom::base),
         );
     }
 }
@@ -355,7 +355,7 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
     type IntoIter = ArcIntoIter<ARichFormula<'bump>>;
 
     fn sort(&self) -> Sort<'bump> {
-        NAME.clone()
+        *NAME
     }
 
     fn var_eval_and_next(

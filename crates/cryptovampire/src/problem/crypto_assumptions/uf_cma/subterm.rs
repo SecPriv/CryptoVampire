@@ -42,7 +42,7 @@ impl<'bump> SubtermAux<'bump> for KeyAux<'bump> {
     type IntoIter = ArcIntoIter<ARichFormula<'bump>>;
 
     fn sort(&self) -> Sort<'bump> {
-        NAME.clone()
+        *NAME
     }
 
     fn var_eval_and_next(
@@ -116,7 +116,7 @@ impl<'bump> SubtermAux<'bump> for UfCmaMainSubtAux<'bump> {
     type IntoIter = ArcIntoIter<ARichFormula<'bump>>;
 
     fn sort(&self) -> Sort<'bump> {
-        MESSAGE.clone()
+        *MESSAGE
     }
 
     fn var_eval_and_next(
@@ -163,7 +163,7 @@ impl<'bump> UfCmaMainSubtAux<'bump> {
 
         if_chain! { // in case of equality
             if uf_cma.is_hmac();
-            if f == EQUALITY.clone() || f == EQUALITY_TA.clone();
+            if f == *EQUALITY || f == *EQUALITY_TA;
             if let [left, right] = args.as_ref();
             then {
                 let mut nexts = Vec::with_capacity(2*4);
