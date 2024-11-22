@@ -19,6 +19,7 @@ use crate::{
 pub struct Cell;
 
 impl Cell {
+    #[allow(clippy::ptr_arg)]
     pub fn generate<'bump>(
         &self,
         assertions: &mut Vec<Axiom<'bump>>,
@@ -37,7 +38,7 @@ impl Cell {
             pbl.protocol()
                 .memory_cells()
                 .iter()
-                .map(|c| {
+                .flat_map(|c| {
                     let vars: Vec<_> = c
                         .args()
                         .iter()
@@ -112,7 +113,6 @@ impl Cell {
                             .map(move |f| formula::forall(nvars.clone().iter().cloned(), f))
                     )
                 })
-                .flatten()
                 .map(Axiom::base),
         );
     }

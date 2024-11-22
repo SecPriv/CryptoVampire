@@ -1,16 +1,21 @@
 use super::BaseFormula;
 
-use anyhow::{anyhow, bail};
-use log::{debug, trace, warn};
+use log::{debug, trace};
 use utils::string_ref::StrRef;
 
 use crate::{
+    bail_at,
     environement::traits::Realm,
+    error::CVContext,
+    error_at,
     formula::{
         formula::RichFormula,
         function::{signature::Signature, Function},
         quantifier::Quantifier,
-        sort::{builtins::BOOL, sort_proxy::SortProxy},
+        sort::{
+            builtins::BOOL,
+            sort_proxy::{InferenceError, SortProxy},
+        },
         variable::{uvar, Variable},
     },
 };
@@ -43,7 +48,7 @@ impl TmpFormula {
         functions: &HashMap<StrRef<'bump>, Function<'bump>>,
         expected_sort: SortProxy<'bump>,
         variables: &mut VarHashMap<'a, 'bump>,
-    ) -> anyhow::Result<RichFormula<'bump>> {
+    ) -> crate::Result<RichFormula<'bump>> {
         trace!("to_rich_formula({self}, {expected_sort})");
         let realm = &Realm::Evaluated;
 
@@ -66,24 +71,21 @@ impl TmpFormula {
         realm: &Realm,
         head: &'a str,
         args: &'a [TmpFormula],
-    ) -> Result<RichFormula<'bump>, anyhow::Error> {
+    ) -> crate::Result<RichFormula<'bump>> {
         if let Some(f) = functions.get(head) {
             if f.is_tmp() {
                 debug!("failed: tmp function\n\t=>{self}");
-                bail!("tmp function")
+                bail_at!(self, "tmp function")
             }
             let sign = f.signature();
             trace!("{:?} : {sign:?}", f.as_inner());
-            sign.out().unify(&expected_sort, realm).map_err(|_| {
-                warn!("failed: inference error\n\t=>{self}\n{realm}\n{expected_sort}");
-                anyhow!("infernce error")
-            })?;
+            sign.out().unify(&expected_sort, realm)?;
             let mut rf_args = vec![];
             for e in args.iter().zip_longest(sign.args()) {
                 match e {
                     itertools::EitherOrBoth::Left(_) => {
                         debug!("failed: more arguments that expected\n\t=>{self}");
-                        bail!("more arguments that expected in {:}", &self)
+                        bail_at!(self, "more arguments that expected")
                     }
                     itertools::EitherOrBoth::Right(_) => break,
                     itertools::EitherOrBoth::Both(arg, sort) => {
@@ -97,6 +99,7 @@ impl TmpFormula {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn convert_binder<'a, 'bump>(
         &'a self,
         functions: &HashMap<StrRef<'bump>, Function<'bump>>,
@@ -106,11 +109,11 @@ impl TmpFormula {
         head: &'a str,
         vars: &'a [String],
         args: &'a [TmpFormula],
-    ) -> Result<RichFormula<'bump>, anyhow::Error> {
+    ) -> crate::Result<RichFormula<'bump>> {
         // TODO: include more quantifiers
         expected_sort
-            .unify(&BOOL.clone().into(), realm)
-            .map_err(|_| anyhow!("quantifier are booleans, expected {expected_sort} in {self}"))?;
+            .unify(&(*BOOL).into(), realm)
+            .map_err(|_| error_at!(self, "quantifier are booleans, expected {expected_sort}"))?;
         // check that we expect a bool
         let vars: Result<Vec<_>, _> = vars // gather the vars
             .iter()
@@ -128,7 +131,7 @@ impl TmpFormula {
             // get the binder
             "exists" => Quantifier::Exists { variables: vars },
             "forall" => Quantifier::Forall { variables: vars },
-            _ => bail!("unsopperted quantifier in {self}"),
+            _ => bail_at!(self, "unsopperted quantifier"),
         };
         let arg = match args {
             // get the arg
@@ -139,9 +142,9 @@ impl TmpFormula {
                 if we don't copy. Consider the case of (forall i. sk(i)) /\ (exists i. sk(i)).
                 Both `sk(i)` shouldn't be turned into the same variables.
                 */
-                arg.to_rich_formula(functions, BOOL.clone().into(), &mut variables)?
+                arg.to_rich_formula(functions, (*BOOL).into(), &mut variables)?
             }
-            _ => bail!("no enough of too many arguments in {self}"),
+            _ => bail_at!(self, "no enough of too many arguments"),
         };
         Ok(RichFormula::Quantifier(binder, arg.into()))
     }
@@ -156,7 +159,7 @@ impl TmpFormula {
         variables: &mut VarHashMap<'a, 'bump>,
         expected_sort: SortProxy<'bump>,
         realm: &Realm,
-    ) -> Result<RichFormula<'bump>, anyhow::Error> {
+    ) -> crate::Result<RichFormula<'bump>> {
         Ok(RichFormula::Var(
             TmpOrStr::from(self).to_rich_formula_variable(variables, expected_sort, realm)?,
         ))
@@ -178,7 +181,7 @@ impl<'a> TmpOrStr<'a> {
         variables: &mut VarHashMap<'a, 'bump>,
         expected_sort: SortProxy<'bump>,
         realm: &Realm,
-    ) -> Result<Variable<'bump>, anyhow::Error> {
+    ) -> crate::Result<Variable<'bump>> {
         let v = if let Some(&v) = variables
             .get(&self)
             .and_then(|v| expected_sort.expects(*v.sort(), realm).ok().map(|_| v))
@@ -195,7 +198,7 @@ impl<'a> TmpOrStr<'a> {
             v //Ok(RichFormula::Var(v))
         } else {
             debug!("failed: infernce error\n\t=>{self}");
-            bail!("inference error")
+            return InferenceError::cant_infer(&expected_sort).with_pre_location(&(), &self);
         };
         Ok(v)
     }

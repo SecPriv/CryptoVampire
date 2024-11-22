@@ -56,24 +56,24 @@ impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for Equality {
     }
 }
 
-pub const AND_NAME: &'static str = "ta$and";
-pub const OR_NAME: &'static str = "ta$or";
-pub const NOT_NAME: &'static str = "ta$not";
-pub const IMPLIES_NAME: &'static str = "ta$implies";
-pub const IFF_NAME: &'static str = "ta$iff";
-pub const TRUE_NAME: &'static str = "ta$true";
-pub const FALSE_NAME: &'static str = "ta$false";
+pub const AND_NAME: &str = "ta$and";
+pub const OR_NAME: &str = "ta$or";
+pub const NOT_NAME: &str = "ta$not";
+pub const IMPLIES_NAME: &str = "ta$implies";
+pub const IFF_NAME: &str = "ta$iff";
+pub const TRUE_NAME: &str = "ta$true";
+pub const FALSE_NAME: &str = "ta$false";
 
 impl BaseConnective {
     pub fn evaluated(&self) -> Function<'static> {
         match self {
-            BaseConnective::And => AND.clone(),
-            BaseConnective::Or => OR.clone(),
-            BaseConnective::Not => NOT.clone(),
-            BaseConnective::Implies => IMPLIES.clone(),
-            BaseConnective::Iff => EQUALITY.clone(),
-            BaseConnective::True => TRUE_F.clone(),
-            BaseConnective::False => FALSE_F.clone(),
+            BaseConnective::And => *AND,
+            BaseConnective::Or => *OR,
+            BaseConnective::Not => *NOT,
+            BaseConnective::Implies => *IMPLIES,
+            BaseConnective::Iff => *EQUALITY,
+            BaseConnective::True => *TRUE_F,
+            BaseConnective::False => *FALSE_F,
         }
     }
 
@@ -106,7 +106,7 @@ impl<'bump> Evaluatable<'bump> for BaseConnective {
 
 impl<'bump> Evaluatable<'bump> for Equality {
     fn get_evaluated(&self) -> Function<'bump> {
-        EQUALITY.clone()
+        *EQUALITY
     }
 }
 

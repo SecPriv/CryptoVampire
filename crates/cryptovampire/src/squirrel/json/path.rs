@@ -7,7 +7,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use utils::string_ref::StrRef;
 
-const SEPARATOR: &'static str = "$#$";
+const SEPARATOR: &str = "$#$";
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Default)]
 pub struct NamesPath<'a> {

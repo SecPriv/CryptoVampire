@@ -62,7 +62,7 @@ impl<'bump> Evaluator<'bump> {
         &self,
         f: impl Into<ARichFormula<'bump>>,
     ) -> Result<ARichFormula<'bump>, SortedError> {
-        let f: ARichFormula = f.into();
+        let f: ARichFormula<'bump> = f.into();
         // FIXME: can fail because of validity
         // trace!("try eval: {:}", f);
         let sort = f
@@ -104,8 +104,8 @@ impl<'bump> Default for Evaluator<'bump> {
     fn default() -> Self {
         Self {
             functions: [
-                (MESSAGE.as_sort().into(), MESSAGE_TO_BITSTRING.clone()),
-                (CONDITION.as_sort().into(), CONDITION_TO_BOOL.clone()),
+                (MESSAGE.as_sort().into(), *MESSAGE_TO_BITSTRING),
+                (CONDITION.as_sort().into(), *CONDITION_TO_BOOL),
             ]
             .into(),
         }

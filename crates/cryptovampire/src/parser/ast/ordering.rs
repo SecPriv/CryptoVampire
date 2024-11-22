@@ -1,20 +1,24 @@
+use cryptovampire_macros::LocationProvider;
+use location::ASTLocation;
+
 use super::*;
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Order<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
+pub struct Order<'str, S> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    #[provider]
+    pub span: ASTLocation<'str>,
     pub quantifier: QuantifierKind,
-    pub args: TypedArgument<'a, S>,
-    pub t1: Term<'a, S>,
-    pub t2: Term<'a, S>,
+    pub args: TypedArgument<'str, S>,
+    pub t1: Term<'str, S>,
+    pub t2: Term<'str, S>,
     pub kind: OrderOperation,
-    pub options: Options<'a, S>,
-    pub guard: Option<Term<'a, S>>,
+    pub options: Options<'str, S>,
+    pub guard: Option<Term<'str, S>>,
 }
-boiler_plate!(Order<'a>, 'a, order ; |p| {
-    let span = p.as_span().into();
+boiler_plate!(@ Order, 'a, order ; |p| {
+    let span = p.as_span();
     let mut p = p.into_inner();
     let quantifier = p.next().unwrap().try_into()?;
     let args = p.next().unwrap().try_into()?;
@@ -33,15 +37,15 @@ boiler_plate!(Order<'a>, 'a, order ; |p| {
     let kind = p.next().unwrap().try_into()?;
     let t2 = p.next().unwrap().try_into()?;
     let options = p.next().map(|r| r.try_into().debug_continue())
-                    .transpose()?.unwrap_or(Options::empty(span));
-    if let Some(_) = p.next() {
-        bail_at!(&span, "too many arguments")
+                    .transpose()?.unwrap_or(Options::empty(span.into()));
+    if p.next().is_some() {
+        crate::bail_at!(span, "too many arguments")
     }
 
-    Ok(Self {span, quantifier, args, t1, t2, kind, options, guard})
+    Ok(Self {span:span.into(), quantifier, args, t1, t2, kind, options, guard})
 });
 
-impl<'a, S: Display> Display for Order<'a, S> {
+impl<'str, S: Display> Display for Order<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
             quantifier,
@@ -63,9 +67,9 @@ pub enum OrderOperation {
     Gt,
 }
 boiler_plate!(OrderOperation, ordering_operation; {
-order_incompatible => Incompatible,
-order_lt => Lt,
-order_gt => Gt
+    order_incompatible => Incompatible,
+    order_lt => Lt,
+    order_gt => Gt
 });
 impl Display for OrderOperation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

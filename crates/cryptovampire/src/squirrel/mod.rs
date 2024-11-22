@@ -11,13 +11,13 @@ use crate::{cli::Args, run_from_ast, Return};
 mod converters;
 pub(crate) mod json;
 
-pub fn run_from_json(mut args: Args, str: &str) -> anyhow::Result<Vec<Return>> {
+pub fn run_from_json(mut args: Args, str: &str) -> crate::Result<Vec<Return>> {
     debug!("running from json");
     assert!(args.input_format.is_squirrel_json());
 
     debug!("parsing json");
     let dump = {
-        let tmp: CryptoVampireCall = serde_json::from_str(str)?;
+        let tmp: CryptoVampireCall<'_> = serde_json::from_str(str)?;
         tmp.context
     };
     trace!("parsing successful");
@@ -40,7 +40,7 @@ pub fn run_from_json(mut args: Args, str: &str) -> anyhow::Result<Vec<Return>> {
 
             match args.get_mut_output_location() {
                 None => (),
-                Some(location) => *location = location.join(&format!("{i}")),
+                Some(location) => *location = location.join(format!("{i}")),
             }
             run_from_ast(&args, ast)
         })

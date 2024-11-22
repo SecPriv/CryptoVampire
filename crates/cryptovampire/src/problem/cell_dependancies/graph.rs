@@ -5,6 +5,7 @@ use std::{hash::Hash, sync::Arc};
 use itertools::Itertools;
 
 use crate::{
+    error::BaseError,
     formula::formula::ARichFormula,
     problem::{cell::MemoryCell, step::Step},
 };
@@ -14,7 +15,6 @@ use super::{
     call::{InputCall, StepCall},
     Ancestors, MacroRef, PreprocessedDependancyGraph,
 };
-use anyhow::{Ok, Result};
 use thiserror::Error;
 mod process_functions;
 
@@ -22,6 +22,12 @@ mod process_functions;
 pub enum DependancyError {
     #[error("Cell not found")]
     MemoryCellNotFound,
+}
+
+impl From<DependancyError> for BaseError {
+    fn from(val: DependancyError) -> Self {
+        super::GraphError::from(val).into()
+    }
 }
 
 /// This is a call graph
@@ -147,11 +153,8 @@ impl<'bump> DependancyGraph<'bump> {
         };
 
         for (i, Edges { from, .. }) in edges.iter().enumerate() {
-            match from {
-                FromNode::CellCall(InnerCellCall { cell_idx: cell, .. }) => {
-                    cells[*cell].edges.push(i)
-                }
-                _ => {}
+            if let FromNode::CellCall(InnerCellCall { cell_idx: cell, .. }) = from {
+                cells[*cell].edges.push(i)
             }
         }
         edges.extend(input_edges);
@@ -165,7 +168,7 @@ impl<'bump> DependancyGraph<'bump> {
     /// From which [MemoryCell] is `cell` called? Is it called by a step?
     ///
     /// set `cell` to [None] to search which [MemoryCell] call an input
-    pub fn ancestors(&self, mmacro: MacroRef<'bump>) -> Result<Ancestors<'bump>> {
+    pub fn ancestors(&self, mmacro: MacroRef<'bump>) -> crate::Result<Ancestors<'bump>> {
         let input_idx = self.cells.len();
         let mut visited = vec![false; input_idx + 1];
         let mut to_visit_idx = match mmacro {

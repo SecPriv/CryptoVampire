@@ -37,10 +37,7 @@ fn preprocess_before_eval<'a, 'bump>(
                 .iter()
                 .map(|arg| preprocess_before_eval(arg, env))
                 .collect_vec();
-            if n_args.iter().all(|cow| match cow {
-                Cow::Borrowed(_) => true,
-                _ => false,
-            }) {
+            if n_args.iter().all(|cow| matches!(cow, Cow::Borrowed(_))) {
                 Cow::Borrowed(assertion)
             } else {
                 Cow::Owned(RichFormula::Fun(

@@ -20,8 +20,18 @@ pub enum CheckError {
     },
 }
 
-impl<'bump> CheckError {
+impl CheckError {
     pub fn from_inference(error: InferenceError, position: Option<usize>) -> Self {
         Self::SortError { position, error }
+    }
+    pub fn wrong_num_args<Idx: Into<Infinity<usize>>>(
+        got: Idx,
+        expected: RangeInclusive<Idx>,
+    ) -> Self {
+        let (start, end) = expected.into_inner();
+        Self::WrongNumberOfArguments {
+            got: got.into(),
+            expected: start.into()..=end.into(),
+        }
     }
 }

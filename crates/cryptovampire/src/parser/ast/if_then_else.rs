@@ -1,21 +1,24 @@
+use cryptovampire_macros::LocationProvider;
+use location::ASTLocation;
+
 use super::*;
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct IfThenElse<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub condition: Term<'a, S>,
-    pub left: Term<'a, S>,
-    pub right: Term<'a, S>,
+pub struct IfThenElse<'str, S> {
+    #[provider]
+    pub span: ASTLocation<'str>,
+    pub condition: Term<'str, S>,
+    pub left: Term<'str, S>,
+    pub right: Term<'str, S>,
 }
-boiler_plate!(IfThenElse<'a>, 'a, if_then_else; |p| {
-  let span = p.as_span().into();
+boiler_plate!(@ IfThenElse, 'a, if_then_else; |p| {
+  let span = p.as_span();
   destruct_rule!(span in [condition, left, right] = p.into_inner());
-  Ok(IfThenElse { span, condition, left, right})
+  Ok(IfThenElse { span: span.into(), condition, left, right})
 });
 
-impl<'a, S: Display> Display for IfThenElse<'a, S> {
+impl<'str, S: Display> Display for IfThenElse<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
             condition,

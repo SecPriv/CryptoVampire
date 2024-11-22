@@ -1,15 +1,20 @@
+use cryptovampire_macros::LocationProvider;
+use location::ASTLocation;
+
+use crate::bail_at;
+
 use super::*;
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Infix<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
+pub struct Infix<'str, S> {
+    #[provider]
+    pub span: ASTLocation<'str>,
     pub operation: Operation,
-    pub terms: Vec<Term<'a, S>>,
+    pub terms: Vec<Term<'str, S>>,
 }
-boiler_plate!(Infix<'a>, 'a, infix_term; |p| {
-  let span = p.as_span().into();
+boiler_plate!(Infix<'a, &'a str>, 'a, infix_term; |p| {
+  let span = p.as_span();
   let mut terms = Vec::new();
 
   let mut p = p.into_inner();
@@ -25,10 +30,10 @@ boiler_plate!(Infix<'a>, 'a, infix_term; |p| {
       }
       terms.push(p.next().unwrap().try_into()?)
   }
-  Ok(Infix { span, operation, terms })
+  Ok(Infix { span: span.into(), operation, terms })
 });
 
-impl<'a, S: Display> Display for Infix<'a, S> {
+impl<'str, S: Display> Display for Infix<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let op = format!(" {} ", &self.operation);
         write!(f, "({})", self.terms.iter().format(&op))
@@ -106,7 +111,7 @@ impl Operation {
         }
     }
 
-    pub fn apply<'a, S>(self, args: implvec!(ast::Term<'a, S>)) -> ast::Term<'a, S> {
+    pub fn apply<'str, S>(self, args: implvec!(ast::Term<'str, S>)) -> ast::Term<'str, S> {
         Infix {
             span: Default::default(),
             operation: self,

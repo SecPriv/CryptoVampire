@@ -12,7 +12,6 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{bail, ensure};
 use itertools::{chain, Itertools};
 use log::{debug, trace};
 use shared_child::SharedChild;
@@ -20,8 +19,9 @@ use thiserror::Error;
 
 use crate::{
     environement::environement::{EnabledSolvers, Environement, SolverConfig},
+    error::{BaseError, CVContext},
     problem::Problem,
-    runner::RunnerOut,
+    runner::{RunnerError, RunnerOut},
 };
 
 use super::{
@@ -39,7 +39,7 @@ pub struct Runners {
 
 impl Runners {
     pub fn all_empty(&self) -> bool {
-        matches!(&self.vampire, None) && matches!(&self.z3, None) && matches!(&self.cvc5, None)
+        self.vampire.is_none() && self.z3.is_none() && self.cvc5.is_none()
     }
 
     /// Automatically runs `pbl` using the [Runner] available in [self]
@@ -51,8 +51,11 @@ impl Runners {
         pbl: &mut Problem<'bump>,
         ntimes: Option<NonZeroU32>,
         save_to: Option<&Path>,
-    ) -> anyhow::Result<String> {
-        ensure!(!self.all_empty(), "no solver to run :'(");
+    ) -> crate::Result<String> {
+        // ensure!((), !self.all_empty(), "no solver to run :'(");
+        if self.all_empty() {
+            return RunnerError::nothing_to_do("no solvers to run :'(").no_location();
+        }
         let n: u32 = ntimes.map(NonZeroU32::get).unwrap_or(u32::MAX);
 
         let Runners { vampire, z3, .. } = self;
@@ -72,7 +75,7 @@ impl Runners {
                 _ => unreachable!(),
             }
         }
-        bail!("ran out of tries (at most {n})")
+        RunnerError::RanOutOfTries(n).no_location()
     }
 }
 
@@ -80,6 +83,12 @@ impl Runners {
 pub enum RunnersCreationError {
     #[error("no valid solver available")]
     NoSolver,
+}
+
+impl From<RunnersCreationError> for BaseError {
+    fn from(val: RunnersCreationError) -> Self {
+        RunnerError::from(val).into()
+    }
 }
 
 impl TryFrom<SolverConfig> for Runners {
@@ -130,32 +139,31 @@ pub enum HandlerError {
     #[error("no more reciever, child killed")]
     NoMoreReciever,
 }
+impl From<HandlerError> for BaseError {
+    fn from(val: HandlerError) -> Self {
+        RunnerError::from(val).into()
+    }
+}
 
 impl RunnerHandler for Handler {
     type Error = HandlerError;
 
     fn spawn_killable_child(self, child: &mut Command) -> Result<Arc<SharedChild>, Self::Error> {
         let child = Arc::new(SharedChild::spawn(child)?);
-        match self.killable.send(Arc::clone(&child)) {
-            Err(_) => {
-                debug!("no more reciever, trying to kill child");
-                kill_shared_child(&child)?;
-                Err(HandlerError::NoMoreReciever)?
-            }
-            _ => (),
+        if self.killable.send(Arc::clone(&child)).is_err() {
+            debug!("no more reciever, trying to kill child");
+            kill_shared_child(&child)?;
+            Err(HandlerError::NoMoreReciever)?
         };
         Ok(child)
     }
 
     fn spawn_unkillable_child(self, child: &mut Command) -> Result<Arc<SharedChild>, Self::Error> {
         let child = Arc::new(SharedChild::spawn(child)?);
-        match self.unkillable.send(Arc::clone(&child)) {
-            Err(_) => {
-                debug!("no more reciever, trying to kill child");
-                kill_shared_child(&child)?;
-                Err(HandlerError::NoMoreReciever)?
-            }
-            _ => (),
+        if self.unkillable.send(Arc::clone(&child)).is_err() {
+            debug!("no more reciever, trying to kill child");
+            kill_shared_child(&child)?;
+            Err(HandlerError::NoMoreReciever)?
         };
         Ok(child)
     }
@@ -166,7 +174,7 @@ fn autorun_many<'bump>(
     pbl: &mut Problem<'bump>,
     save_to: Option<&Path>,
     runners: &[dyn_traits::RunnerAndDiscoverer<Handler>],
-) -> anyhow::Result<RunnerOut<Infallible, (), (), Infallible>> {
+) -> crate::Result<RunnerOut<Infallible, (), (), Infallible>> {
     let to_analyse = thread::scope(|s| {
         let (killable_send, killable_recv) = channel();
         let (unkillable_send, unkillable_recv) = channel();
@@ -195,14 +203,15 @@ fn autorun_many<'bump>(
 
         let mut to_analyse = Vec::new();
 
-        let mut finished_iter = finished_recv.into_iter();
+        let finished_iter = finished_recv.into_iter();
 
-        while let Some(r) = finished_iter.next() {
+        for r in finished_iter {
             match r {
                 (_, Ok(RunnerOut::Sat(_))) => {
                     trace!("sat, killall");
                     killall(killable_recv, unkillable_recv, hr)?;
-                    bail!("disproved the query");
+                    // bail!("disproved the query");
+                    return RunnerError::Disprove.no_location();
                 }
                 (_, Ok(RunnerOut::Unsat(_))) => {
                     trace!("unsat, killall");
@@ -239,11 +248,11 @@ fn autorun_many<'bump>(
     }
 }
 
-fn killall<'a, 's, T>(
+fn killall<T>(
     killalble: Receiver<Arc<SharedChild>>,
     unkillalble: Receiver<Arc<SharedChild>>,
-    threads: Vec<ScopedJoinHandle<'s, T>>,
-) -> anyhow::Result<()> {
+    threads: Vec<ScopedJoinHandle<'_, T>>,
+) -> crate::Result<()> {
     debug!("killing all");
     chain!(killalble.into_iter(), unkillalble.into_iter())
         .map(|c| kill_shared_child(&c))

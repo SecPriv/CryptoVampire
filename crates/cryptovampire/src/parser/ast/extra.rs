@@ -1,21 +1,23 @@
-use crate::formula::sort::builtins::STEP;
+use crate::{
+    error::{LocateHelper, LocationProvider},
+    formula::sort::builtins::STEP,
+};
 use derivative::Derivative;
 use utils::string_ref::StrRef;
 
 use super::{
-    error::Location, DeclareCell, DeclareFunction, Function, Macro, MacroName, Step, StepName,
-    TypeName,
+    location::ASTLocation, DeclareCell, DeclareFunction, Function, Macro, MacroName, Step,
+    StepName, TypeName,
 };
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Sub<'s, T> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'s>,
-    pub content: T,
+pub struct Sub<'str, S> {
+    pub span: ASTLocation<'str>,
+    pub content: S,
 }
 
-impl<'s, T> Sub<'s, T> {
+impl<'str, T> Sub<'str, T> {
     /// using [Location::default]
     pub fn from_content(c: T) -> Self {
         Self {
@@ -25,17 +27,29 @@ impl<'s, T> Sub<'s, T> {
     }
 }
 
-impl<'s, T> From<T> for Sub<'s, T> {
+impl<'str, T> From<T> for Sub<'str, T> {
     fn from(c: T) -> Self {
         Self::from_content(c)
     }
 }
 
+// TODO: change this type. This effectively references the span but copies the
+// content. This is the reverse of what we'd likely want.
 /// Span and Name
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
-pub struct SnN<'a, 'b> {
-    pub span: &'b Location<'a>,
-    pub name: StrRef<'a>,
+pub struct SnN<'str, 'b> {
+    pub span: &'b ASTLocation<'str>,
+    pub name: StrRef<'str>,
+}
+
+impl<'str, 'b> SnN<'str, 'b> {
+    pub fn span(&self) -> &ASTLocation<'str> {
+        self.span
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }
 
 impl<'a, 'b, S> From<&'b TypeName<'a, S>> for SnN<'a, 'b>
@@ -50,11 +64,11 @@ where
     }
 }
 
-impl<'a, 'b, S> From<&'b Function<'a, S>> for SnN<'a, 'b>
+impl<'str, 'b, S> From<&'b Function<'str, S>> for SnN<'str, 'b>
 where
-    StrRef<'a>: From<&'b S>,
+    StrRef<'str>: From<&'b S>,
 {
-    fn from(value: &'b Function<'a, S>) -> Self {
+    fn from(value: &'b Function<'str, S>) -> Self {
         SnN {
             span: &value.0.span,
             name: value.name().into(),
@@ -62,11 +76,11 @@ where
     }
 }
 
-impl<'a, 'b, S> From<&'b StepName<'a, S>> for SnN<'a, 'b>
+impl<'str, 'b, S> From<&'b StepName<'str, S>> for SnN<'str, 'b>
 where
-    StrRef<'a>: From<&'b S>,
+    StrRef<'str>: From<&'b S>,
 {
-    fn from(value: &'b StepName<'a, S>) -> Self {
+    fn from(value: &'b StepName<'str, S>) -> Self {
         SnN {
             span: &value.0.span,
             name: value.name().into(),
@@ -83,6 +97,12 @@ where
             span: &value.0.span,
             name: value.name().into(),
         }
+    }
+}
+
+impl<'a, 'b> LocationProvider for SnN<'a, 'b> {
+    fn provide(self) -> crate::error::Location {
+        self.span.help_provide(&self.name)
     }
 }
 

@@ -45,7 +45,7 @@ impl<'bump> InnerStepFuction<'bump> {
 impl<'bump> StepFunction<'bump> {
     pub fn name(&self) -> &str {
         match self {
-            StepFunction::Pred(_) => "pred".into(),
+            StepFunction::Pred(_) => "pred",
             StepFunction::Step(s) => s.step.name(),
         }
     }
@@ -70,7 +70,7 @@ impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for Pred {
 impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for InnerStepFuction<'bump> {
     fn as_fixed_signature(&'a self) -> FixedRefSignature<'a, 'bump> {
         FixedRefSignature {
-            out: STEP.clone(),
+            out: *STEP,
             args: self
                 .step()
                 .free_variables()

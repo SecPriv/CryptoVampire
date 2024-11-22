@@ -66,7 +66,7 @@ impl<'bump> RichFormula<'bump> {
             RichFormula::Fun(fun, args) => {
                 let tmp = Self::Fun(
                     fun,
-                    args.into_iter()
+                    args.iter()
                         .map(|x| x.into_inner().map(f))
                         .map_into()
                         .collect(),
@@ -100,7 +100,7 @@ impl<'bump> RichFormula<'bump> {
     where
         F: Fn(&Variable<'bump>) -> Option<ARichFormula<'bump>>,
     {
-        self.apply(|v: &Variable| f(v).unwrap_or(v.into()))
+        self.apply(|v| f(v).unwrap_or(v.into()))
     }
 
     pub fn apply_substitution<'a>(
@@ -187,7 +187,7 @@ impl<'bump> From<Variable<'bump>> for RichFormula<'bump> {
 }
 impl<'bump> From<&Variable<'bump>> for RichFormula<'bump> {
     fn from(v: &Variable<'bump>) -> Self {
-        v.clone().into()
+        (*v).into()
     }
 }
 
@@ -257,7 +257,7 @@ pub fn forall<'bump>(
     arg: impl Into<ARichFormula<'bump>>,
 ) -> ARichFormula<'bump> {
     let mut vars = vars.into_iter().peekable();
-    if let Some(_) = vars.peek() {
+    if vars.peek().is_some() {
         // let variables = vars.collect_vec();
         RichFormula::Quantifier(Quantifier::forall(vars), arg.into()).into()
     } else {
@@ -270,7 +270,7 @@ pub fn exists<'bump>(
     arg: impl Into<ARichFormula<'bump>>,
 ) -> ARichFormula<'bump> {
     let mut vars = vars.into_iter().peekable();
-    if let Some(_) = vars.peek() {
+    if vars.peek().is_some() {
         // let variables = vars.collect_vec();
         RichFormula::Quantifier(Quantifier::exists(vars), arg.into()).into()
     } else {
@@ -309,7 +309,7 @@ impl<'a, 'bump> logic_formula::Formula for &'a RichFormula<'bump> {
     type Quant = Quantifier<'bump>;
 
     fn destruct(self) -> logic_formula::Destructed<Self, impl Iterator<Item = Self>> {
-        match self.as_ref() {
+        match self {
             RichFormula::Var(v) => Destructed {
                 head: Head::<&'a RichFormula<'bump>>::Var(*v),
                 args: Either::Left(std::iter::empty()),
@@ -323,6 +323,12 @@ impl<'a, 'bump> logic_formula::Formula for &'a RichFormula<'bump> {
                 args: Either::Right(Either::Right([arg.as_ref()].into_iter())),
             },
         }
+    }
+}
+
+impl<'a, 'bump> crate::error::LocationProvider for &'a RichFormula<'bump> {
+    fn provide(self) -> crate::error::Location {
+        crate::error::Location::from_display(self)
     }
 }
 
@@ -358,7 +364,7 @@ mod tests {
             >> mforall!(a!346:STEP.as_sort(); {
                 ARichFormula::from(&v1) & (v2.into())
                     & mexists!(s!4398:STEP.as_sort(); {
-                        meq(&v3, s)
+                        meq(v3, s)
                     })
             });
 

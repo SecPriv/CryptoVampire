@@ -115,7 +115,8 @@ impl<'bump> Function<'bump> {
         container.alloc_inner(inner)
     }
 
-    /// *safety*: do not call `f`, it is not initialised yet
+    /// # Safety
+    /// do not call `f`, it is not initialised yet
     pub unsafe fn new_cyclic<F, T>(container: container!(), f: F) -> Residual<Self, T>
     where
         F: for<'a> FnOnce(&'a Function<'bump>) -> Residual<InnerFunction<'bump>, T>,
@@ -218,7 +219,6 @@ impl<'bump> Function<'bump> {
 
         let free_variables: Arc<[_]> = (&arg)
             .free_vars_iter()
-            .into_iter()
             .unique()
             .filter(|v| !bound_variables.contains(v))
             .collect();

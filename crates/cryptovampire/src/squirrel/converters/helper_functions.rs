@@ -31,14 +31,14 @@ where
     let args: Vec<_> = args.into_iter().map(|arg| arg.convert(ctx)).try_collect()?;
     mdo! {
         let! args = Ok(AoOV::transpose_iter(args));
-        pure ast::Application::new_app(fun.clone(), args).into()
+        pure ast::Application::new_app(Default::default(), fun.clone(), args).into()
     }
 }
 
 /// Turn a list of [json::Term] that should only contain [json::Term::Var] into a [ast::TypedArgument]
-pub fn to_variable_binding<'a, 'b>(
+pub fn to_variable_binding<'a>(
     vars: &[json::Term<'a>],
-    ctx: Context<'b, 'a>,
+    ctx: Context<'_, 'a>,
 ) -> RAoO<TypedArgument<'a, StrRef<'a>>> {
     let mut res = Ok(()); // to keep track if something went wrong
 
@@ -46,7 +46,7 @@ pub fn to_variable_binding<'a, 'b>(
         .iter()
         .map(|t| match t {
             json::Term::Var { var } => Ok(var),
-            _ => Err(err_at!(@ "not a variable")),
+            _ => err_at!(@ "not a variable"),
         })
         .map(|x| {
             x.and_then(|var| {

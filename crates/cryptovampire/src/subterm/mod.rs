@@ -67,7 +67,7 @@ where
     Aux: SubtermAux<'bump> + Ord,
 {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        Self::partial_cmp(&self, &other).unwrap()
+        Self::partial_cmp(self, other).unwrap()
     }
 }
 impl<'bump, Aux> PartialOrd for Subterm<'bump, Aux>
@@ -263,7 +263,7 @@ where
 
             let f_sorts = fun
                 .fast_insort()
-                .expect(&format!("failed here: {}", line!()));
+                .unwrap_or_else(|| panic!("failed here: {}", line!()));
             let vars: Vec<_> = sorts_to_variables(max_var, f_sorts.iter());
             let vars_f = vars.iter().map(|v| v.into_aformula()).collect_vec();
             let f_f = fun.f(vars_f);
@@ -352,6 +352,7 @@ where
     /// **!!! Please ensure the variables are well placed to avoid colisions !!!**
     ///
     /// This function *will not* take care of it (nor check)
+    #[allow(clippy::too_many_arguments)]
     pub fn preprocess_term<'a>(
         &'a self,
         env: &impl KnowsRealm,
@@ -374,7 +375,7 @@ where
         self.preprocess_terms(
             env,
             ptcl,
-            &x,
+            x,
             [FormlAndVars {
                 formula: m,
                 bounded_variables: bvars,
@@ -439,7 +440,7 @@ where
             match &self.kind {
                 AbsSubtermKindG::Vampire(fun) => fun.f([x, m]),
                 AbsSubtermKindG::Regular(funs) => {
-                    let [x, m]: [ARichFormula; 2] = [x.into(), m.into()];
+                    let [x, m]: [ARichFormula<'bump>; 2] = [x.into(), m.into()];
                     let sort = m.get_sort().expect_display(|| "term algebra has a sort");
                     trace!(
                         "[{}]\n{:?}",
@@ -447,7 +448,7 @@ where
                         &funs
                     );
                     funs.get(&sort.as_fo())
-                        .expect(&format!("unsupported sort: {sort}, {sort:?}"))
+                        .unwrap_or_else(|| panic!("unsupported sort: {sort}, {sort:?}"))
                         .f::<ARichFormula<'bump>, _>([x, m])
                 }
             }
@@ -510,7 +511,7 @@ where
 
     pub fn declare(
         &self,
-        env: &Environement,
+        env: &Environement<'bump>,
         pbl: &Problem<'bump>,
         declarations: &mut impl Extend<Declaration<'bump>>,
     ) {
@@ -538,13 +539,12 @@ where
         self.sort().is_datatype(env) || !env.get_realm().is_evaluated()
     }
 
-    #[must_use]
-    pub fn assert_sound_in_smt(&self, env: &impl KnowsRealm) -> anyhow::Result<()> {
+    pub fn assert_sound_in_smt(&self, env: &impl KnowsRealm) -> crate::Result<()> {
         if self.is_sound_in_smt(env) {
             Ok(())
         } else {
             // Err(format!("{} => {} is wrong", self.sort(), env.get_realm()))
-            anyhow::bail!("{} => {} is wrong", self.sort(), env.get_realm())
+            crate::bail!("{} => {} is wrong", self.sort(), env.get_realm())
         }
     }
 }
@@ -643,10 +643,10 @@ where
     }
 
     fn ignored_functions(&self) -> &[Function<'bump>] {
-        Self::ignored_functions(&self)
+        Self::ignored_functions(self)
     }
     fn sort(&self) -> Sort<'bump> {
-        Self::sort(&self)
+        Self::sort(self)
     }
 }
 
@@ -704,7 +704,7 @@ pub fn into_exist_formula<'bump>(
     // further expand vars
     for (var, f_idx) in vars.iter_mut() {
         for (i, (vars, _)) in content.iter().enumerate() {
-            if !vars.contains_var(&var) {
+            if !vars.contains_var(var) {
                 // if `var` doesn't clash with any variables in `vars` we can add the formula to the bag
                 f_idx.insert(i);
             }
@@ -757,7 +757,7 @@ pub fn into_exist_formula<'bump>(
                 .collect_vec();
 
             let mut ors = Vec::with_capacity(content.len() - position_max.len() + 1);
-            ors.push(exists(vars_max.into_iter(), formula::ors(ors1)));
+            ors.push(exists(vars_max, formula::ors(ors1)));
             ors.extend(
                 content
                     .into_iter()
@@ -835,6 +835,6 @@ where
                 helper.push_result(r);
             });
 
-        helper.extend_child_same_passing(nexts, &state);
+        helper.extend_child_same_passing(nexts, state);
     }
 }

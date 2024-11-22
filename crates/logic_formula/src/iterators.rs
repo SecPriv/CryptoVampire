@@ -27,11 +27,8 @@ impl<F: Formula> FormulaIterator<F> for UsedVariableIterator {
     {
         let Destructed { head, args } = current.destruct();
         helper.extend_child_with_default(args);
-        match head {
-            crate::HeadSk::Var(v) => {
-                helper.push_result(v);
-            }
-            _ => (),
+        if let crate::HeadSk::Var(v) = head {
+            helper.push_result(v);
         }
     }
 }

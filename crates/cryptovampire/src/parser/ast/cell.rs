@@ -1,20 +1,23 @@
+use cryptovampire_macros::LocationProvider;
+use location::ASTLocation;
+
 use super::*;
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct DeclareCell<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub name: Function<'a, S>,
-    pub args: DeclareFunctionArgs<'a, S>,
-    pub sort: TypeName<'a, S>,
-    pub options: Options<'a, S>,
+pub struct DeclareCell<'str, S> {
+    #[provider]
+    pub span: ASTLocation<'str>,
+    pub name: Function<'str, S>,
+    pub args: DeclareFunctionArgs<'str, S>,
+    pub sort: TypeName<'str, S>,
+    pub options: Options<'str, S>,
 }
 
-boiler_plate!(DeclareCell<'a>, 'a, declare_cell; |p| {
-    let span = p.as_span().into();
+boiler_plate!(@ DeclareCell, 'a, declare_cell; |p| {
+    let span = p.as_span();
     destruct_rule!(span in [name, args, sort, ?options] = p);
-    Ok(Self { span, name, args, sort, options })
+    Ok(Self { span: span.into(), name, args, sort, options })
 });
 
 impl<'a, S: Display> Display for DeclareCell<'a, S> {
@@ -29,13 +32,14 @@ impl<'a, S: Display> Display for DeclareCell<'a, S> {
         write!(f, "cell {name}{args}:{sort} {options}")
     }
 }
-impl<'a, S> DeclareCell<'a, S> {
-    pub fn new<TN>(name: S, args: implvec!(TN), sort: TN) -> Self
+
+impl<'str, S> DeclareCell<'str, S> {
+    pub fn new<TN>(location: ASTLocation<'str>, name: S, args: implvec!(TN), sort: TN) -> Self
     where
-        TypeName<'a, S>: From<TN>,
+        TypeName<'str, S>: From<TN>,
     {
         Self {
-            span: Default::default(),
+            span: location,
             name: Function::from_name(name),
             args: DeclareFunctionArgs {
                 span: Default::default(),
@@ -47,20 +51,20 @@ impl<'a, S> DeclareCell<'a, S> {
     }
 }
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Assignements<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub assignements: Vec<Assignement<'a, S>>,
+pub struct Assignements<'str, S> {
+    #[provider]
+    pub span: ASTLocation<'str>,
+    pub assignements: Vec<Assignement<'str, S>>,
 }
-boiler_plate!(Assignements<'a>, 'a, assignements; |p| {
-    let span = p.as_span().into();
+boiler_plate!(@ Assignements, 'a, assignements; |p| {
+    let span = p.as_span();
     let assignements = p.into_inner().map(TryInto::try_into).try_collect()?;
-    Ok(Self { span, assignements })
+    Ok(Self { span:span.into(), assignements })
 });
 
-impl<'a, S: Display> Display for Assignements<'a, S> {
+impl<'str, S: Display> Display for Assignements<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.assignements.iter().format(", "))
     }
@@ -75,45 +79,46 @@ impl<'a, S> FromIterator<Assignement<'a, S>> for Assignements<'a, S> {
     }
 }
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Assignement<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub cell: Application<'a, S>,
-    pub term: Term<'a, S>,
-    pub fresh_vars: Option<TypedArgument<'a, S>>,
-}
-boiler_plate!(Assignement<'a>, 'a, assignement; |p| {
-let span = p.as_span().into();
-let p = p.into_inner().collect_vec();
-// dest_rule!(span in [cell, term] = p);
-match p.len() {
-    2 => {
-        as_array!(span in [cell, term] = p);
-        Ok(Self {
-            span,
-            cell: cell.try_into().debug_continue()?,
-            term: term.try_into().debug_continue()?,
-            fresh_vars: None
-        })
-    }
-    3 => {
-        as_array!(span in [vars, cell, term] = p);
-        Ok(Self {
-            span,
-            cell: cell.try_into().debug_continue()?,
-            term: term.try_into().debug_continue()?,
-            fresh_vars: Some(vars.try_into().debug_continue()?)
-        })
-    }
-    _ => unreachable!()
+pub struct Assignement<'str, S> {
+    #[provider]
+    pub span: ASTLocation<'str>,
+    pub cell: Application<'str, S>,
+    pub term: Term<'str, S>,
+    pub fresh_vars: Option<TypedArgument<'str, S>>,
 }
 
-// Ok(Self { span, cell, term })
+boiler_plate!(@ Assignement, 'a, assignement; |p| {
+    let span = p.as_span();
+    let p = p.into_inner().collect_vec();
+    // dest_rule!(span in [cell, term] = p);
+    match p.len() {
+        2 => {
+            as_array!(span in [cell, term] = p);
+            Ok(Self {
+                span:span.into(),
+                cell: cell.try_into().debug_continue()?,
+                term: term.try_into().debug_continue()?,
+                fresh_vars: None
+            })
+        }
+        3 => {
+            as_array!(span in [vars, cell, term] = p);
+            Ok(Self {
+                span:span.into(),
+                cell: cell.try_into().debug_continue()?,
+                term: term.try_into().debug_continue()?,
+                fresh_vars: Some(vars.try_into().debug_continue()?)
+            })
+        }
+        _ => unreachable!()
+    }
+
+    // Ok(Self { span, cell, term })
 });
 
-impl<'a, S: Display> Display for Assignement<'a, S> {
+impl<'str, S: Display> Display for Assignement<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
             cell,

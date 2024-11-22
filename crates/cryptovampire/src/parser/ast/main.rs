@@ -1,27 +1,30 @@
+use cryptovampire_macros::LocationProvider;
+use location::ASTLocation;
+
+use crate::error::CVContext;
+
 use super::*;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct ASTList<'str, S = &'str str> {
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, LocationProvider)]
+pub struct ASTList<'str, S> {
     pub content: Vec<AST<'str, S>>,
-    pub begining: Option<Position<'str>>,
+    #[provider]
+    pub location: ASTLocation<'str>,
 }
 
 impl<'str, S> ASTList<'str, S> {
-    pub fn shorten_ref<'a>(&'a self) -> &'a ASTList<'a, S> {
-        self
-    }
-
     pub fn as_slice(&self) -> &[AST<'str, S>] {
         self.content.as_slice()
     }
 }
 
 impl<'a> TryFrom<&'a str> for ASTList<'a, &'a str> {
-    type Error = InputError;
+    type Error = crate::Error;
 
-    fn try_from(value: &'a str) -> MResult<Self> {
+    fn try_from(value: &'a str) -> crate::Result<Self> {
         trace!("running pest");
-        let mut pairs = MainParser::parse(Rule::file, value).debug_continue()?;
+        let mut pairs =
+            MainParser::parse(Rule::file, value).with_location(|| location::all(value))?;
         trace!("pest ran successfully");
 
         Ok(ASTList {
@@ -36,7 +39,7 @@ impl<'a> TryFrom<&'a str> for ASTList<'a, &'a str> {
                 })
                 .try_collect()
                 .debug_continue()?,
-            begining: Some(Position::from_start(value)),
+            location: ASTLocation::all(value),
         })
     }
 }
@@ -51,22 +54,22 @@ impl<'str, 'b, S> IntoIterator for &'b ASTList<'str, S> {
     }
 }
 
-impl<'a, S: Display> Display for ASTList<'a, S> {
+impl<'str, S: Display> Display for ASTList<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.as_slice().iter().try_for_each(|ast| ast.fmt(f))
     }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub enum AST<'a, S = &'a str> {
-    Declaration(Arc<Declaration<'a, S>>),
-    Step(Arc<Step<'a, S>>),
-    Order(Arc<Order<'a, S>>),
-    AssertCrypto(Arc<AssertCrypto<'a, S>>),
-    Assert(Arc<Assert<'a, S>>),
-    Let(Arc<Macro<'a, S>>),
+pub enum AST<'str, S> {
+    Declaration(Arc<Declaration<'str, S>>),
+    Step(Arc<Step<'str, S>>),
+    Order(Arc<Order<'str, S>>),
+    AssertCrypto(Arc<AssertCrypto<'str, S>>),
+    Assert(Arc<Assert<'str, S>>),
+    Let(Arc<Macro<'str, S>>),
 }
-boiler_plate!(l AST<'a>, 'a, content; |p| {
+boiler_plate!(l AST<'a, &'a str>, 'a, content; |p| {
     declaration => { Ok(AST::Declaration(Arc::new(p.try_into()?))) }
     step => { Ok(AST::Step(Arc::new(p.try_into()?))) }
     order => { Ok(AST::Order(Arc::new(p.try_into()?))) }
@@ -75,7 +78,7 @@ boiler_plate!(l AST<'a>, 'a, content; |p| {
     mlet => { Ok(AST::Let(Arc::new(p.try_into()?))) }
 });
 
-impl<'a, S: Display> Display for AST<'a, S> {
+impl<'str, S: Display> Display for AST<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match_as_trait!(Self, |x| in self => Declaration | Step | Order | AssertCrypto | Assert | Let
         {writeln!(f, "{x}")})
@@ -83,18 +86,18 @@ impl<'a, S: Display> Display for AST<'a, S> {
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub enum Declaration<'a, S = &'a str> {
-    Type(DeclareType<'a, S>),
-    Function(DeclareFunction<'a, S>),
-    Cell(DeclareCell<'a, S>),
+pub enum Declaration<'str, S> {
+    Type(DeclareType<'str, S>),
+    Function(DeclareFunction<'str, S>),
+    Cell(DeclareCell<'str, S>),
 }
-boiler_plate!(l Declaration<'a>, 'a, declaration; |p| {
+boiler_plate!(l Declaration<'a, &'a str>, 'a, declaration; |p| {
     declare_type => { Ok(Declaration::Type(p.try_into()?)) }
     declare_function => { Ok(Declaration::Function(p.try_into()?)) }
     declare_cell => { Ok(Declaration::Cell(p.try_into()?)) }
 });
 
-impl<'a, S: Display> Display for Declaration<'a, S> {
+impl<'str, S: Display> Display for Declaration<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match_as_trait!(ast::Declaration, |x| in self => Type | Function | Cell
                     {x.fmt(f)})

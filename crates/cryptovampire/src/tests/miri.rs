@@ -1,12 +1,12 @@
 use std::ffi::OsString;
 
-use clap::Parser;
 use crate::{
     container::ScopedContainer,
     environement::environement::Environement,
     formula::{function::builtin::BUILT_IN_FUNCTIONS, sort::builtins::BUILT_IN_SORTS},
     smt::SmtFile,
 };
+use clap::Parser;
 use log::trace;
 use utils::from_with::FromWith;
 
@@ -40,4 +40,4 @@ fn miri() {
         )
     })
 }
-const TEST_FILE: &'static str = include_str!("../../../../tests/basic-hash-1.ptcl");
+const TEST_FILE: &str = include_str!("../../../../tests/basic-hash-1.ptcl");

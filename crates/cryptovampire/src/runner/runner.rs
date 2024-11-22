@@ -7,10 +7,11 @@ use thiserror::Error;
 
 use crate::{
     environement::environement::Environement,
+    error::BaseError,
     problem::{crypto_assumptions::CryptoAssumption, Problem},
 };
 
-use super::{dyn_traits, searcher::InstanceSearcher};
+use super::{dyn_traits, searcher::InstanceSearcher, RetCodeAndStdout, RunnerError};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum RunnerOut<S, U, T, O> {
@@ -99,7 +100,7 @@ pub enum ChildKind {
     Unkillable,
 }
 pub trait RunnerHandler {
-    type Error: std::error::Error + Send + Sync + 'static;
+    type Error: std::error::Error + Send + Sync + 'static + Into<BaseError>;
     fn spawn_killable_child(self, child: &mut Command) -> Result<Arc<SharedChild>, Self::Error>;
     fn spawn_unkillable_child(self, child: &mut Command) -> Result<Arc<SharedChild>, Self::Error>;
 
@@ -126,23 +127,23 @@ pub trait Runner {
     type OtherR;
 
     /// Run `pbl_file` using the parameter defined by `args`
-    fn run<'a, R>(
+    fn run<R>(
         &self,
         handler: R,
-        args: Self::Args<'a>,
+        args: Self::Args<'_>,
         pbl_file: &Path,
-    ) -> anyhow::Result<RunnerOutI<Self>>
+    ) -> crate::Result<RunnerOutI<Self>>
     where
         R: RunnerHandler + Clone;
 
-    fn run_to_tmp<'a, 'bump, R>(
+    fn run_to_tmp<'bump, R>(
         &self,
         handler: R,
         env: &Environement<'bump>,
         pbl: &Problem<'bump>,
-        args: Self::Args<'a>,
+        args: Self::Args<'_>,
         save_to: Option<&Path>,
-    ) -> anyhow::Result<RunnerOutI<Self>>
+    ) -> crate::Result<RunnerOutI<Self>>
     where
         R: RunnerHandler + Clone,
     {
@@ -169,7 +170,7 @@ pub trait Runner {
         };
 
         let r = self.run(handler, args, file.path())?;
-        return Ok(r);
+        Ok(r)
     }
 
     fn write<'bump, W: std::io::Write>(
@@ -177,7 +178,7 @@ pub trait Runner {
         env: &Environement<'bump>,
         pbl: &Problem<'bump>,
         file: W,
-    ) -> anyhow::Result<()>;
+    ) -> crate::Result<()>;
 
     /// The file extension for the temporary file, defaults to `".smt"`
     fn get_file_suffix() -> &'static str {
@@ -194,14 +195,36 @@ pub trait Runner {
     fn name() -> &'static str;
 
     fn kind(&self) -> ChildKind;
+
+    fn unexpected_result(
+        cmd: Command,
+        RetCodeAndStdout {
+            return_code,
+            stdout,
+        }: RetCodeAndStdout,
+    ) -> BaseError {
+        RunnerError::UnexpectedResult {
+            tool: Self::name(),
+            return_code,
+            cmd,
+            stdout,
+        }
+        .into()
+    }
 }
 
 #[derive(Debug, Error)]
 pub enum DiscovererError {
     #[error("no new instances")]
     NoNewInstances,
-    #[error("other error {0}")]
-    Other(#[from] anyhow::Error),
+    // #[error("other error {0}")]
+    // Other(#[from] crate::Error),
+}
+
+impl From<DiscovererError> for BaseError {
+    fn from(val: DiscovererError) -> Self {
+        RunnerError::from(val).into()
+    }
 }
 
 pub trait Discoverer
@@ -214,7 +237,7 @@ where
         env: &Environement<'bump>,
         pbl: &mut Problem<'bump>,
         out: &<Self as Runner>::TimeoutR,
-    ) -> Result<(), DiscovererError>;
+    ) -> crate::Result<()>;
 }
 
 impl RunnerHandler for () {

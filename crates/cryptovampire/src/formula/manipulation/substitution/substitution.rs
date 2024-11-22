@@ -13,11 +13,9 @@ pub trait Substitution<'bump> {
     fn apply(&self, f: impl AsRef<RichFormula<'bump>>) -> ARichFormula<'bump> {
         match f.as_ref() {
             RichFormula::Var(v) => self.get(v),
-            RichFormula::Fun(fun, args) => RichFormula::Fun(
-                fun.clone(),
-                args.iter().map(|arg| self.apply(arg)).collect(),
-            )
-            .into_arc(),
+            RichFormula::Fun(fun, args) => {
+                RichFormula::Fun(*fun, args.iter().map(|arg| self.apply(arg)).collect()).into_arc()
+            }
             RichFormula::Quantifier(q, arg) => {
                 RichFormula::Quantifier(q.clone(), self.apply(arg)).into_arc()
             }
@@ -29,7 +27,7 @@ pub trait Substitution<'bump> {
     /// The resulting substitution apply the current `self` *then* `other`.
     ///
     /// See [Chain]
-    fn chain<O>(self: Self, other: O) -> Chain<Self, O>
+    fn chain<O>(self, other: O) -> Chain<Self, O>
     where
         Self: Sized,
         O: Substitution<'bump> + Sized,
@@ -78,7 +76,7 @@ impl<'bump> Substitution<'bump> for Translate {
     fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump> {
         RichFormula::Var(Variable {
             id: var.id + self.0,
-            ..var.clone()
+            ..*var
         })
         .into_arc()
     }

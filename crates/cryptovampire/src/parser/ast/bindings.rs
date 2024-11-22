@@ -1,15 +1,18 @@
+use cryptovampire_macros::LocationProvider;
+use location::{ASTLocation, AsASTLocation};
+
 use super::*;
 
 /// [Rule::typed_arguments]
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct TypedArgument<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub bindings: Vec<VariableBinding<'a, S>>,
+pub struct TypedArgument<'str, S> {
+    #[provider]
+    pub span: ASTLocation<'str>,
+    pub bindings: Vec<VariableBinding<'str, S>>,
 }
-boiler_plate!(TypedArgument<'a>, 'a, typed_arguments; |p| {
-    let span = p.as_span().into();
+boiler_plate!(@ TypedArgument, 'a, typed_arguments; |p| {
+    let span = p.ast_location();
     let bindings : Result<Vec<_>, _> = p.into_inner().map(TryInto::try_into).collect();
     Ok(TypedArgument { span, bindings: bindings? })
 });
@@ -23,15 +26,15 @@ impl<'a, S> Default for TypedArgument<'a, S> {
     }
 }
 
-impl<'a, S: Display> Display for TypedArgument<'a, S> {
+impl<'str, S: Display> Display for TypedArgument<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({})", self.bindings.iter().format(", "))
     }
 }
 
-impl<'a, S, U> FromIterator<U> for TypedArgument<'a, S>
+impl<'str, S, U> FromIterator<U> for TypedArgument<'str, S>
 where
-    VariableBinding<'a, S>: From<U>,
+    VariableBinding<'str, S>: From<U>,
 {
     fn from_iter<T: IntoIterator<Item = U>>(iter: T) -> Self {
         let bindings = iter.into_iter().map_into().collect();
@@ -43,21 +46,21 @@ where
 }
 
 /// [Rule::variable_binding]
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct VariableBinding<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub variable: Variable<'a, S>,
-    pub type_name: TypeName<'a, S>,
+pub struct VariableBinding<'str, S> {
+    #[provider]
+    pub span: ASTLocation<'str>,
+    pub variable: Variable<'str, S>,
+    pub type_name: TypeName<'str, S>,
 }
-boiler_plate!(VariableBinding<'s>, 's, variable_binding; |p| {
-    let span = p.as_span().into();
+boiler_plate!(@ VariableBinding, 's, variable_binding; |p| {
+    let span = p.as_span();
     destruct_rule!(span in [variable, type_name] = p.into_inner());
-    Ok(VariableBinding{span, variable, type_name})
+    Ok(VariableBinding{span: span.into(), variable, type_name})
 });
 
-impl<'a, S: Display> Display for VariableBinding<'a, S> {
+impl<'str, S: Display> Display for VariableBinding<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}:{}", &self.variable, &self.type_name)
     }
@@ -79,10 +82,10 @@ where
     }
 }
 
-impl<'a, 'b, S> IntoIterator for &'b TypedArgument<'a, S> {
-    type Item = &'b VariableBinding<'a, S>;
+impl<'b, 'str, S> IntoIterator for &'b TypedArgument<'str, S> {
+    type Item = &'b VariableBinding<'str, S>;
 
-    type IntoIter = Iter<'b, VariableBinding<'a, S>>;
+    type IntoIter = Iter<'b, VariableBinding<'str, S>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.bindings.iter()

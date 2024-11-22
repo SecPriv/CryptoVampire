@@ -53,9 +53,7 @@ impl AllOrOneShape {
 
     pub fn monad_continue<U2>(self, mut f: impl FnMut() -> AoOV<U2>) -> AoOV<U2> {
         match self {
-            AllOrOne::All(l) => {
-                AllOrOne::All((0..l).into_iter().map(|i| f().owned_get(i)).collect())
-            }
+            AllOrOne::All(l) => AllOrOne::All((0..l).map(|i| f().owned_get(i)).collect()),
             AllOrOne::Any(_) => {
                 let r = f();
                 assert!(matches!(r, AllOrOne::All(_) | AllOrOne::Any(_)));
@@ -86,7 +84,7 @@ where
         }
     }
 
-    pub fn as_ref<'a>(&'a self) -> AllOrOne<&'a U, &'a [U]> {
+    pub fn as_ref(&self) -> AllOrOne<&U, &[U]> {
         match self {
             AllOrOne::All(l) => AllOrOne::All(l.as_ref()),
             AllOrOne::Any(u) => AllOrOne::Any(u),
@@ -108,6 +106,7 @@ where
         }
     }
 
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> Option<usize> {
         match self {
             Self::All(l) => Some(l.len()),

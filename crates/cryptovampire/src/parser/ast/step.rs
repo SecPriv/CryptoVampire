@@ -1,3 +1,6 @@
+use cryptovampire_macros::LocationProvider;
+use location::ASTLocation;
+
 use super::*;
 
 /// The default init step when it's not defined. This is a function because
@@ -13,7 +16,7 @@ where
     let message = Term::new_default_const(builtin::EMPTY_FUN_NAME.into());
 
     Step {
-        span: Location::default(),
+        span: Default::default(),
         name: StepName::from_s(INIT_STEP_NAME.into()),
         args: TypedArgument::default(),
         condition,
@@ -23,26 +26,27 @@ where
     }
 }
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Step<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub name: StepName<'a, S>,
-    pub args: TypedArgument<'a, S>,
-    pub condition: Term<'a, S>,
-    pub message: Term<'a, S>,
-    pub assignements: Option<Assignements<'a, S>>,
-    pub options: Options<'a, S>,
+pub struct Step<'str, S> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    #[provider]
+    pub span: ASTLocation<'str>,
+    pub name: StepName<'str, S>,
+    pub args: TypedArgument<'str, S>,
+    pub condition: Term<'str, S>,
+    pub message: Term<'str, S>,
+    pub assignements: Option<Assignements<'str, S>>,
+    pub options: Options<'str, S>,
 }
 
-impl<'a, S> Step<'a, S> {
+impl<'str, S> Step<'str, S> {
     pub fn args_names(&'_ self) -> impl Iterator<Item = &'_ S> + '_ {
         self.args.bindings.iter().map(|vb| vb.variable.name())
     }
 }
-boiler_plate!(Step<'a>, 'a, step; |p| {
-    let span = p.as_span().into();
+boiler_plate!(@ Step, 'a, step; |p| {
+    let span = p.as_span();
     // dest_rule!(span in [name, args, condition, message, assignements] = p);
     let mut p = p.into_inner();
     let name = p.next().unwrap().try_into()?;
@@ -77,19 +81,19 @@ boiler_plate!(Step<'a>, 'a, step; |p| {
             // if a is an err, we know o isn't because of our current branch, so we ignore
             let a = a.ok().flatten();
             // if parsing o failed (i.e., there is something *and* it fail, we want to crash)
-            let o = o?.unwrap_or(Options::empty(span));
+            let o = o?.unwrap_or(Options::empty(span.into()));
             Ok((a, o))
         }
     }?;
 
     if let Some(np) = p.next() { // whatever happens, there shouldn't be anything left
-        bail_at!(&np, "too many arguments (expected at most 6, got {})", (7 + p.len()))
+        crate::bail_at!(np.as_span(), "too many arguments (expected at most 6, got {})", (7 + p.len()))
     }
 
-    Ok(Self { span, name, args, condition, message, assignements, options})
+    Ok(Self { span: span.into(), name, args, condition, message, assignements, options})
 });
 
-impl<'a, S: Display> Display for Step<'a, S> {
+impl<'str, S: Display> Display for Step<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
             name,

@@ -1,31 +1,32 @@
 #![recursion_limit = "256"]
-
+#[allow(clippy::module_inception)]
 pub mod cli;
 pub mod container;
 pub mod environement;
+pub mod error;
 pub mod formula;
+pub mod location;
 pub mod parser;
 pub mod problem;
+mod return_value;
 pub mod runner;
 pub mod smt;
 pub mod squirrel;
 pub mod subterm;
-mod return_value;
-mod error;
 
 #[cfg(test)]
 mod tests;
 
+use error::BaseContext;
 // reexports
-pub use problem::step::INIT_STEP_NAME;
-pub use subterm::kind::SubtermKind;
+pub use error::{Error, Result, Unit};
 pub use parser::parse_pbl_from_ast;
+pub use problem::step::INIT_STEP_NAME;
 pub use return_value::Return;
+pub use subterm::kind::SubtermKind;
 
 // other imports
-use std::{fs::File, io::BufWriter, num::NonZeroU32, path::Path};
 use crate::cli::Args;
-use anyhow::{bail, ensure, Context};
 use crate::{
     container::ScopedContainer,
     environement::environement::{Environement, SolverConfig},
@@ -36,17 +37,18 @@ use crate::{
 };
 use log::trace;
 use parser::{ast::ASTList, Pstr};
+use std::{fs::File, io::BufWriter, num::NonZeroU32, path::Path};
 use utils::{from_with::FromWith, string_ref::StrRef, traits::MyWriteTo};
 
 // start of the file
 
-pub fn run_from_cv(args: Args, str: &str) -> anyhow::Result<Return> {
+pub fn run_from_cv(args: Args, str: &str) -> crate::Result<Return> {
     trace!("running for cryptovampire file");
     let ast = ASTList::try_from(str)?;
     run_from_ast(&args, ast)
 }
 
-fn run_from_ast<'a, S>(args: &Args, ast: ASTList<'a, S>) -> anyhow::Result<Return>
+fn run_from_ast<'a, S>(args: &Args, ast: ASTList<'a, S>) -> crate::Result<Return>
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
@@ -106,7 +108,7 @@ pub fn auto_run<'bump>(
     runners: &Runners,
     num_retry: u32,
     smt_debug: Option<&Path>,
-) -> anyhow::Result<Vec<String>> {
+) -> crate::Result<Vec<String>> {
     let ntimes = NonZeroU32::new(num_retry);
     let save_to = smt_debug;
 
@@ -124,13 +126,15 @@ pub fn run_to_dir<'bump>(
     env: &Environement<'bump>,
     mut pbls: PblIterator<'bump>,
     path: &Path,
-) -> anyhow::Result<()> {
+) -> crate::Result<()> {
     std::fs::create_dir_all(path)?;
 
     let mut i = 0;
+    #[allow(clippy::map_collect_result_unit)]
     pbls.map(&mut |pbl| {
         save_to_file(env, pbl, path.join(format!("{i:}{SMT_FILE_EXTENSION}")))?;
-        Ok(i += 1)
+        i += 1;
+        Ok(())
     })
     .collect()
 }
@@ -146,17 +150,18 @@ pub fn run_to_file<'bump>(
     env: &Environement<'bump>,
     mut pbls: PblIterator<'bump>,
     path: &Path,
-) -> anyhow::Result<()> {
+) -> crate::Result<()> {
     if !path.exists() {
-        std::fs::create_dir_all(path.parent().with_context(|| "already a root")?)?;
+        std::fs::create_dir_all(path.parent().with_context((), || "already a root")?)?;
     }
     ensure!(
+        (),
         pbls.assert_one(),
         "More than one problem queued, are you using lemmas?"
-    );
+    )?;
 
-    let mut npbl = pbls.next().with_context(|| "no problems are queued")?;
-    save_to_file(env, &mut npbl, path)?;
+    let npbl = pbls.next().with_context((), || "no problems are queued")?;
+    save_to_file(env, npbl, path)?;
     debug_assert!(pbls.next().is_none());
     Ok(())
 }
@@ -166,13 +171,13 @@ fn save_to_file<'bump>(
     env: &Environement<'bump>,
     pbl: &mut Problem<'bump>,
     path: impl AsRef<Path>,
-) -> anyhow::Result<()> {
+) -> crate::Result<()> {
     let file = File::options()
         .write(true) // write mode
         .truncate(true) // overwrite
         .create(true) // create if necessary
         .open(path)?;
-    SmtFile::from_general_file(env, pbl.into_general_file(&env)) // gen smt
+    SmtFile::from_general_file(env, pbl.into_general_file(env)) // gen smt
         .as_diplay(env)
         .write_to_io(&mut BufWriter::new(file))?;
     Ok(())

@@ -93,8 +93,8 @@ impl<'bump> UfCma<'bump> {
         pbl: &Problem<'bump>,
     ) {
         assertions.push(Axiom::Comment("uf-cma".into()));
-        let nonce_sort = NAME.clone();
-        let message_sort = MESSAGE.clone();
+        let nonce_sort = *NAME;
+        let message_sort = *MESSAGE;
         let kind = SubtermKindConstr::as_constr(pbl, env);
 
         let subterm_main = Subterm::new(
@@ -104,7 +104,7 @@ impl<'bump> UfCma<'bump> {
             UfCmaMainSubtAux::new(*self),
             [self.mac, self.verify],
             UnfoldFlags::default(),
-            |rc| Subsubterm::EufCmaMacMain(rc),
+            Subsubterm::EufCmaMacMain,
         );
 
         let subterm_key = Subterm::new(
@@ -114,7 +114,7 @@ impl<'bump> UfCma<'bump> {
             KeyAux::new(*self, pbl.owned_name_caster()),
             [self.mac, self.verify],
             NO_REC_MACRO,
-            |rc| Subsubterm::EufCmaMacKey(rc),
+            Subsubterm::EufCmaMacKey,
         );
 
         // base axiom
@@ -165,11 +165,11 @@ impl<'bump> UfCma<'bump> {
             assertions.push(Axiom::Ground{
                 sort: message_sort,
                 formula : mforall!(m!1:message_sort, sigma!2:message_sort, k!3:nonce_sort; {
-                    let k_f = pbl.name_caster().cast(message_sort, k.clone());
+                    let k_f = pbl.name_caster().cast(message_sort, k);
                     let ev = pbl.evaluator();
                     ev.eval(self.verify.f([m.into(), sigma.into(), k_f.clone()])) >>
                     mexists!(u!4:message_sort; {
-                        meq(ev.eval(u.clone()), ev.eval(m.clone())) &
+                        meq(ev.eval(u), ev.eval(m)) &
                         (
                             subterm_main.f_a( env,self.mac.f([u.into(), k_f.clone()]), m.into()) |
                             subterm_main.f_a(env, self.mac.f([u.into(), k_f.clone()]), sigma.into()) |
@@ -334,7 +334,7 @@ impl<'bump> UfCma<'bump> {
                     //     .max()
                     //     .unwrap_or(max_var)
                     //     + 1;
-                    let max_var = array.iter().map(|f| *f).max_var_or_max(max_var);
+                    let max_var = array.iter().copied().max_var_or_max(max_var);
                     let free_vars = array
                         .iter()
                         .flat_map(|f| (*f).free_vars_iter())
@@ -453,7 +453,7 @@ fn define_subterms<'bump>(
         return;
     }
 
-    let _nonce_sort = NAME.clone();
+    let _nonce_sort = *NAME;
     {
         let subterm = subterm_key.as_ref();
         subterm.declare(env, pbl, declarations);
@@ -467,13 +467,13 @@ fn define_subterms<'bump>(
                         .into_iter(),
                     subterm.not_of_sort_auto(env, pbl)
                 )
-                .map(|f| Axiom::base(f)),
+                .map(Axiom::base),
             );
         }
         assertions.extend(
             subterm
                 .preprocess_special_assertion_from_pbl(env, pbl, false)
-                .map(|f| Axiom::base(f)),
+                .map(Axiom::base),
         );
     }
 
@@ -492,14 +492,14 @@ fn define_subterms<'bump>(
                         .into_iter(),
                     subterm.not_of_sort_auto(env, pbl)
                 )
-                .map(|f| Axiom::base(f)),
+                .map(Axiom::base),
             );
         }
         trace!("subterm type: {}", print_type(subterm));
         assertions.extend(
             subterm
                 .preprocess_special_assertion_from_pbl(env, pbl, true)
-                .map(|f| Axiom::base(f)),
+                .map(Axiom::base),
         );
     }
 }

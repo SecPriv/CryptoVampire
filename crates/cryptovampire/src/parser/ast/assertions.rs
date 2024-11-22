@@ -1,26 +1,33 @@
-use crate::err_at;
+use cryptovampire_macros::LocationProvider;
+use location::{ASTLocation, AsASTLocation};
+
+use crate::Error;
 
 use super::*;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub enum Assert<'a, S = &'a str> {
-    Assertion(Assertion<'a, S>),
-    Query(Assertion<'a, S>),
-    Lemma(Assertion<'a, S>),
+pub enum Assert<'str, S> {
+    Assertion(Assertion<'str, S>),
+    Query(Assertion<'str, S>),
+    Lemma(Assertion<'str, S>),
 }
-boiler_plate!(Assert<'a>, 'a, assertion | query | lemma ; |p| {
-    // let span = p.as_span();
+
+boiler_plate!(Assert<'a, &'a str>, 'a, assertion | query | lemma ; |p| {
+    let span = p.ast_location();
     let rule = p.as_rule();
     let p = p.into_inner().next().unwrap();
     match rule {
         Rule::assertion => { Ok(Assert::Assertion(p.try_into()?)) }
         Rule::query => { Ok(Assert::Query(p.try_into()?)) }
         Rule::lemma => { Ok(Assert::Lemma(p.try_into()?)) }
-        r => Err(err_at!(&p.as_span().into(), "got a {r:?} expected assertion, query or lemma"))
+        r => Error::from_err(|| span.as_location(),
+            pest::error::ErrorVariant::ParsingError {
+                positives: vec![Rule::assertion, Rule::query, Rule::lemma],
+                negatives: vec![r] })
     }
 });
 
-impl<'a, S: Display> Display for Assert<'a, S> {
+impl<'str, S: Display> Display for Assert<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Assert::Assertion(a) => write!(f, "assert {a}"),
@@ -30,21 +37,21 @@ impl<'a, S: Display> Display for Assert<'a, S> {
     }
 }
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Assertion<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub content: Term<'a, S>,
-    pub options: Options<'a, S>,
+pub struct Assertion<'str, S> {
+    #[provider]
+    pub span: ASTLocation<'str>,
+    pub content: Term<'str, S>,
+    pub options: Options<'str, S>,
 }
-boiler_plate!(Assertion<'a>, 'a, assertion_inner ; |p| {
-    let span = p.as_span().into();
+boiler_plate!(Assertion<'a, &'a str>, 'a, assertion_inner ; |p| {
+    let span = p.as_span();
     destruct_rule!(span in [content, ?options] = p);
-    Ok(Self {span, content, options})
+    Ok(Self {span:span.into(), content, options})
 });
 
-impl<'a, S: Display> Display for Assertion<'a, S> {
+impl<'str, S: Display> Display for Assertion<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
             content, options, ..
@@ -53,22 +60,22 @@ impl<'a, S: Display> Display for Assertion<'a, S> {
     }
 }
 
-#[derive(Derivative)]
+#[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct AssertCrypto<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub name: Ident<'a, S>,
-    pub functions: Vec<Function<'a, S>>,
-    pub options: Options<'a, S>,
+pub struct AssertCrypto<'str, S> {
+    #[provider]
+    pub span: ASTLocation<'str>,
+    pub name: Ident<'str, S>,
+    pub functions: Vec<Function<'str, S>>,
+    pub options: Options<'str, S>,
 }
-boiler_plate!(AssertCrypto<'a>, 'a, assertion_crypto ; |p| {
-    let span = p.as_span().into();
+boiler_plate!(AssertCrypto< 'a, &'a str>, 'a, assertion_crypto ; |p| {
+    let span = p.as_span();
     let mut p = p.into_inner();
     let name = p.next().unwrap().try_into()?;
     let mut p = p.collect_vec();
     // try to parse the option, if it fails, it means there weren't any
-    let mut options  = Options::empty(span);
+    let mut options  = Options::empty(span.into());
     let mut extra_fun = None;
 
     if let Some(r) = p.pop() {
@@ -81,10 +88,10 @@ boiler_plate!(AssertCrypto<'a>, 'a, assertion_crypto ; |p| {
 
     let functions = chain!(p.into_iter(), extra_fun).map(TryInto::try_into).try_collect()?;
 
-    Ok(Self {span, name, functions, options})
+    Ok(Self {span:span.into(), name, functions, options})
 });
 
-impl<'a, S: Display> Display for AssertCrypto<'a, S> {
+impl<'str, S: Display> Display for AssertCrypto<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
             name,

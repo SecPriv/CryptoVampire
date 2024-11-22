@@ -61,9 +61,8 @@ impl<'bump> InstanceSearcher<'bump, VampireExec> for UfCma<'bump> {
             })
             .flat_map(|(_, [content])| content.split("|"))
             .filter(|s| s.contains(macname.as_ref()) || s.contains(verifyname.as_ref()))
-            .map(|s| {
-                debug!("new potential instance {:?}", &s);
-                s
+            .inspect(|s| {
+                debug!("new potential instance {:?}", s);
             })
             .filter_map(|s| match TmpFormula::parse(s) {
                 Ok(f) => Some((s, f)),
@@ -95,7 +94,7 @@ impl<'bump> InstanceSearcher<'bump, VampireExec> for EufCma<'bump> {
         let verifyname = self.verify.name();
         let functions = env.get_function_hash();
 
-        if cfg!(debug_assertions) && false {
+        if cfg!(debug_assertions) {
             debug!(
                 "saved functions [{}]",
                 functions.keys().map(|f| f.as_ref().to_string()).join(", ")
@@ -111,10 +110,7 @@ impl<'bump> InstanceSearcher<'bump, VampireExec> for EufCma<'bump> {
             })
             .flat_map(|(_, [content])| content.split("|"))
             .filter(|s| s.contains(signname.as_ref()) || s.contains(verifyname.as_ref()))
-            .map(|s| {
-                debug!("new potential instance {:?}", &s);
-                s
-            })
+            .inspect(|s| debug!("new potential instance {:?}", &s))
             .filter_map(|s| match TmpFormula::parse(s) {
                 Ok(f) => Some((s, f)),
                 Err(_) => {
@@ -152,9 +148,8 @@ impl<'bump> InstanceSearcher<'bump, VampireExec> for IntCtxt<'bump> {
             })
             .flat_map(|(_, [content])| content.split("|"))
             .filter(|s| s.contains(dec.as_ref()))
-            .map(|s| {
-                debug!("new potential instance {:?}", &s);
-                s
+            .inspect(|s| {
+                debug!("new potential instance {:?}", s);
             })
             .filter_map(|s| match TmpFormula::parse(s) {
                 Ok(f) => Some((s, f)),

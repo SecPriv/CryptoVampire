@@ -1,23 +1,10 @@
-#[cfg(test)]
-pub mod tests {
-
-    #[allow(dead_code)]
-    fn is_sync<T: Sync>() -> bool {
-        true
-    }
-
-    #[allow(dead_code)]
-    fn is_send<T: Send>() -> bool {
-        true
-    }
-}
-
 /// makes sure traits are implemented
 #[macro_export]
 macro_rules! asssert_trait {
     ($name:ident; $to_test:ty; $($trait:ty),*) => {
         ::paste::paste! {
             #[cfg(test)]
+            #[allow(elided_lifetimes_in_paths)]
             fn [<_$name:snake>]() {
                 $(
                 fn [<is_$trait:snake>]<T: $trait>() {}
@@ -50,4 +37,19 @@ macro_rules! force_lifetime {
             self
         }
     };
+}
+
+#[cfg(test)]
+#[allow(clippy::extra_unused_type_parameters)]
+pub mod tests {
+
+    #[allow(dead_code)]
+    fn is_sync<T: Sync>() -> bool {
+        true
+    }
+
+    #[allow(dead_code)]
+    fn is_send<T: Send>() -> bool {
+        true
+    }
 }

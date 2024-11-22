@@ -3,13 +3,14 @@ use std::{
     process::{Command, Stdio},
 };
 
-use anyhow::{bail, ensure, Context};
 use itertools::chain;
 use log::debug;
 use utils::traits::MyWriteTo;
 
 use crate::{
+    ensure,
     environement::environement::Flags,
+    error::{BaseContext, CVContext},
     runner::{exec_cmd, RunnerOut},
     smt::SmtFile,
 };
@@ -38,36 +39,38 @@ impl Runner for Z3Runner {
         env: &crate::environement::environement::Environement<'bump>,
         pbl: &crate::problem::Problem<'bump>,
         mut file: W,
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         let mut env = env.clone();
         env.options_mut().flags -= Flags::NON_SMT_STANDARD;
         let env = &env;
 
         SmtFile::from_general_file(env, pbl.into_general_file(env)) // gen smt
             .as_diplay(env)
-            .write_to_io(&mut file)
-            .with_context(|| "couldn't write") // write to tmp file
+            .write_to_io(&mut file)?;
+        Ok(())
+        // .with_context(|| "couldn't write") // write to tmp file
     }
 
     fn default_args(&self) -> Self::Args<'_> {
         &[]
     }
 
-    fn run<'a, R>(
+    fn run<R>(
         &self,
         handler: R,
-        args: Self::Args<'a>,
+        args: Self::Args<'_>,
         pbl_file: &std::path::Path,
-    ) -> anyhow::Result<super::RunnerOutI<Self>>
+    ) -> crate::Result<super::RunnerOutI<Self>>
     where
         R: super::RunnerHandler + Clone,
     {
         ensure!(
+            (),
             // check the file exists
             pbl_file.is_file(),
             "{} is not a file",
             pbl_file.to_string_lossy()
-        );
+        )?;
         let mut cmd = Command::new(&self.location);
         cmd.args(chain!(&self.extra_args, args))
             .arg(pbl_file) // encode the file
@@ -81,7 +84,7 @@ impl Runner for Z3Runner {
                 .stdout
                 .lines()
                 .last()
-                .with_context(|| "no output")?
+                .with_message(|| "no output")?
                 .trim();
             match last_line {
                 "unsat" => return Ok(RunnerOut::Unsat(())),
@@ -91,7 +94,7 @@ impl Runner for Z3Runner {
             }
         }
 
-        bail!("Error while running z3:\n\tcmd:{cmd:?}\n\t{result:?}")
+        Self::unexpected_result(cmd, result).no_location()
     }
 
     fn name() -> &'static str {

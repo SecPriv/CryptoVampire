@@ -34,7 +34,7 @@ impl<T> OneVarSubst<T> {
         self.id == id
     }
 
-    pub fn add<U>(self, value: U) -> MultipleVarSubst<T>
+    pub fn append<U>(self, value: U) -> MultipleVarSubst<T>
     where
         Self: From<U>,
     {
@@ -64,7 +64,7 @@ impl<'a, 'bump: 'a> Substitution<'bump> for OneVarSubstF<'bump> {
     fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump> {
         if var.id == self.id {
             if log_enabled!(log::Level::Trace) {
-                if let Some(s) = self.f.get_sort().ok() {
+                if let Ok(s) = self.f.get_sort() {
                     if s != var.sort {
                         panic!(
                             "wrong sort in substitution: subtituting {} for {s}",

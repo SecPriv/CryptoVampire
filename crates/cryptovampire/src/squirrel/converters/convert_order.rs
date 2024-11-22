@@ -8,10 +8,7 @@ use utils::{all_or_one::AoOV, mdo, string_ref::StrRef};
 
 use crate::{
     bail_at,
-    parser::{
-        ast::{self, Application, Order, OrderOperation, QuantifierKind},
-        InputError,
-    },
+    parser::ast::{self, Application, Order, OrderOperation, QuantifierKind},
     squirrel::{
         json::{
             self,
@@ -51,6 +48,7 @@ where
 
 // copied for squirrel with some optimisation
 
+#[allow(clippy::upper_case_acronyms)] // FIXME: figure out what AT is supposed to mean
 #[derive(Debug, PartialEq, Clone, Copy)]
 struct MAT<'a, A>(&'a json::action::AT<A>);
 
@@ -68,16 +66,14 @@ impl<'a, A: PartialEq + Debug> PartialOrd for MAT<'a, A> {
         let b = other;
         if PartialEq::eq(a, b) {
             Some(Ordering::Equal)
-        } else {
-            if izip!(a.iter(), b.iter()).all(|(a, b)| a == b) {
-                if a.len() < b.len() {
-                    Some(Ordering::Less)
-                } else {
-                    Some(Ordering::Greater)
-                }
+        } else if izip!(a.iter(), b.iter()).all(|(a, b)| a == b) {
+            if a.len() < b.len() {
+                Some(Ordering::Less)
             } else {
-                None
+                Some(Ordering::Greater)
             }
+        } else {
+            None
         }
     }
 }
@@ -91,11 +87,11 @@ fn depends<A: Eq + Debug>(a: &AT<A>, b: &AT<A>) -> Option<bool> {
     }
 }
 
-fn mk_depends_lemma<'a, 'b>(
+fn mk_depends_lemma<'a>(
     a: &json::Action<'a>,
     b: &json::Action<'a>,
-    ctx: Context<'b, 'a>,
-) -> Result<Option<ast::Order<'a, StrRef<'a>>>, InputError> {
+    ctx: Context<'_, 'a>,
+) -> crate::Result<Option<ast::Order<'a, StrRef<'a>>>> {
     let cmp = depends(&a.action, &b.action);
 
     let (a, b) = match cmp {
@@ -104,7 +100,7 @@ fn mk_depends_lemma<'a, 'b>(
         Some(true) => (a, b),
         Some(false) => (b, a),
     };
-    if !(b.indices.len() >= a.indices.len()) {
+    if b.indices.len() < a.indices.len() {
         let err_msg = "b has to few indices, this contradicts an implicit requirement of squirrel's `Lemma.mk_depends_lemma`";
         bail_at!(@ "{err_msg}")
     }
@@ -130,8 +126,8 @@ fn mk_depends_lemma<'a, 'b>(
         let! args = AoOV::transpose_iter(args);
         let quantifier = QuantifierKind::Forall;
         let kind = OrderOperation::Lt;
-        let t1 = Application::new_app(a.name.sanitized(&ctx), idx_a.clone()).into();
-        let t2 = Application::new_app(b.name.sanitized(&ctx), idx_b.clone()).into();
+        let t1 = Application::new_app(Default::default(), a.name.sanitized(&ctx), idx_a.clone()).into();
+        let t2 = Application::new_app(Default::default(), b.name.sanitized(&ctx), idx_b.clone()).into();
         let span = Default::default();
         let options = Default::default();
         let guard = None;
@@ -160,11 +156,11 @@ fn mutex_commun_vars(a: &Shape, b: &Shape) -> Option<usize> {
     aux(a.as_ref(), b.as_ref())
 }
 
-fn mk_mutex_lemma<'a, 'b>(
+fn mk_mutex_lemma<'a>(
     a: &json::Action<'a>,
     b: &json::Action<'a>,
-    ctx: Context<'b, 'a>,
-) -> Result<Option<ast::Order<'a, StrRef<'a>>>, InputError> {
+    ctx: Context<'_, 'a>,
+) -> crate::Result<Option<ast::Order<'a, StrRef<'a>>>> {
     // if !mutex(a.shape().as_ref(), b.shape().as_ref()) {
     //     return Ok(None);
     // }
@@ -228,8 +224,8 @@ fn mk_mutex_lemma<'a, 'b>(
         let! args = AoOV::transpose_iter(args);
         let quantifier = QuantifierKind::Forall;
         let kind = OrderOperation::Incompatible;
-        let t1 = Application::new_app(a.name.sanitized(&ctx), idx_a.clone()).into();
-        let t2 = Application::new_app(b.name.sanitized(&ctx), idx_b.clone()).into();
+        let t1 = Application::new_app(Default::default(), a.name.sanitized(&ctx), idx_a.clone()).into();
+        let t2 = Application::new_app(Default::default(), b.name.sanitized(&ctx), idx_b.clone()).into();
         let span = Default::default();
         let options = Default::default();
         let guard = None;

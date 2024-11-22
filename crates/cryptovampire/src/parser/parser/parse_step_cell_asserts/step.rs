@@ -1,17 +1,8 @@
 use std::sync::Arc;
 
-use anyhow::Context;
 use itertools::Itertools;
 use log::trace;
 
-use crate::{
-    bail_at,
-    parser::{
-        error::WithLocation,
-        parser::{parsable_trait::Parsable, CellCache, FunctionCache},
-        InputError, MResult, Pstr,
-    },
-};
 use crate::{
     container::{allocator::ContainerTools, ScopedContainer},
     environement::traits::Realm,
@@ -20,6 +11,13 @@ use crate::{
         variable::{from_usize, Variable},
     },
     problem::{cell::Assignement, step::InnerStep},
+};
+use crate::{
+    error::{BaseContext, BaseError, CVContext, ExtraOption},
+    parser::{
+        parser::{parsable_trait::Parsable, CellCache, FunctionCache},
+        Pstr,
+    },
 };
 use utils::{implvec, string_ref::StrRef, traits::NicerError};
 
@@ -35,7 +33,7 @@ fn parse_step<'bump, 'str, S>(
     env: &Environement<'bump, 'str, S>,
     step_cache: &StepCache<'str, 'bump, S>,
     // name: &str,
-) -> MResult<InnerStep<'bump>>
+) -> crate::Result<InnerStep<'bump>>
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
@@ -72,14 +70,14 @@ where
     //---- parse
     // message
     let message = message
-        .parse(env, &mut bvars, &state, Some(MESSAGE.clone().into()))
+        .parse(env, &mut bvars, &state, Some((*MESSAGE).into()))
         .debug_continue()?;
     let msg_used_vars = (&message).used_vars_iter();
     bvars.truncate(n);
 
     // condition
     let condition = condition
-        .parse(env, &mut bvars, &state, Some(CONDITION.clone().into()))
+        .parse(env, &mut bvars, &state, Some((*CONDITION).into()))
         .debug_continue()?;
     let cond_used_vars = (&condition).used_vars_iter();
     bvars.truncate(n);
@@ -100,13 +98,13 @@ where
             let fresh_vars = if let Some(vars) = fresh_vars.as_ref() {
                 bvars.truncate(n);
                 bvars.reserve(vars.bindings.len());
-                let vars: Result<Arc<_>, InputError> = vars
+                let vars: crate::Result<Arc<_>> = vars
                     .bindings
                     .iter()
                     .zip(0..)
                     .map(
                         |(
-                            ast::VariableBinding {
+                            ast::VariableBinding::<_> {
                                 type_name,
                                 variable,
                                 ..
@@ -122,15 +120,8 @@ where
                                 variable.name().borrow(),
                                 bvars.iter().map(|(n, _)| n.borrow()),
                             ) {
-                                // Err(merr(
-                                //     variable.0.span,
-                                //     format!("name {} is already taken", variable.name()),
-                                // ))
-                                bail_at!(
-                                    variable.0.span,
-                                    "name {} is already taken",
-                                    variable.name()
-                                )
+                                BaseError::duplicate_symbol(&"name", variable)
+                                    .with_location(variable)
                             } else {
                                 bvars.push((variable.name().clone(), var.into()));
                                 Ok(var)
@@ -154,8 +145,7 @@ where
                 .functions
                 .get(cell_name.borrow())
                 .and_then(FunctionCache::as_memory_cell)
-                .with_context(|| format!("cell {cell_name} doesn't exists"))
-                .with_location(cell_ast.span())?;
+                .unknown_symbol(cell_ast, &"cell", cell_name)?;
 
             // get the arguments and apply substitution
             let cell_args: Result<Arc<[_]>, _> = cell_ast
@@ -175,7 +165,7 @@ where
             // ensure `bvars` is reseted
             bvars.truncate(n);
             let content = term
-                .parse(env, &mut bvars, &state, Some(MESSAGE.clone().into()))?
+                .parse(env, &mut bvars, &state, Some((*MESSAGE).into()))?
                 // remove the "in"
                 .apply_substitution2(&substitution);
 
@@ -204,7 +194,7 @@ where
 pub fn parse_steps<'a, 'bump, 'str, S>(
     env: &'a Environement<'bump, 'str, S>, // mut for safety
     steps: implvec!(&'a StepCache<'str, 'bump, S>),
-) -> MResult<()>
+) -> crate::Result<()>
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
@@ -215,24 +205,11 @@ where
             trace!("parsing step {}", ast.name);
             let inner = parse_step(env, step_cache).debug_continue()?;
             let r_err = unsafe {
-                <ScopedContainer as ContainerTools<InnerStep<'bump>>>::initialize(step, inner)
+                <ScopedContainer<'bump> as ContainerTools<InnerStep<'bump>>>::initialize(
+                    step, inner,
+                )
             };
 
-            Ok(r_err
-                .map_err(|_| {
-                    ast.name
-                        .0
-                        .span
-                        .err_with(|| format!("step {} has already been defined", ast.name.name()))
-                })
-                .debug_continue()?)
-
-            // match r_err {
-            //     Err(_) => Err(merr(
-            //         ast.name.0.span,
-            //         format!("step {} has already been defined", ast.name.name()),
-            //     )),
-            //     Ok(()) => Ok(()),
-            // }
+            r_err.with_context(&ast.name, || "step already defined")
         })
 }

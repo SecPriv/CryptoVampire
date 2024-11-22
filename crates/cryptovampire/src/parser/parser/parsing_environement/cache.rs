@@ -121,7 +121,7 @@ impl<'str, 'bump, S> FunctionCache<'str, 'bump, S> {
                     args.iter()
                         .cloned()
                         .chain([STEP.as_sort()])
-                        .collect::<VecRefClone<_>>(),
+                        .collect::<VecRefClone<'_, _>>(),
                 )))
             }
         }

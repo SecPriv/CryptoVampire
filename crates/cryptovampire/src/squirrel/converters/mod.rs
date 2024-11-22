@@ -1,11 +1,11 @@
 use std::fmt::Display;
 
-use ast_convertion::{ConcreteMacro, ToAst, INDEX_SORT_NAME};
-use base64::Engine;
 use crate::formula::function::builtin::{
     AND, CONDITION_MACRO, EMPTY, EQUALITY, EXEC_MACRO, FALSE_F, GREATER_THAN_STEP, HAPPENS,
     IMPLIES, LESS_THAN_EQ_STEP, LESS_THAN_STEP, MESSAGE_MACRO, NOT, OR, PRED, TRUE_F,
 };
+use ast_convertion::{ConcreteMacro, ToAst, INDEX_SORT_NAME};
+use base64::Engine;
 use derive_builder::Builder;
 use hashbrown::{HashMap, HashSet};
 use itertools::{chain, Itertools};
@@ -21,7 +21,7 @@ use utils::{
 
 use crate::{
     bail_at,
-    parser::{ast, InputError},
+    parser::ast,
     squirrel::json::{self, MacroRef},
     // squirrel::Sanitizable
 };
@@ -63,7 +63,7 @@ static REMMAPPED_FUNCTION: HashMap<&'static str, StrRef<'static>> = {
         ("output", MESSAGE_MACRO.name()),
         ("exec", EXEC_MACRO.name()),
         (DEFAULT_FAIL_NAME_NAME, DEFAULT_FAIL_NAME.clone()),
-        ("if", "if".into())
+        ("if", "if".into()),
     ]
     .into_iter()
     .collect()
@@ -87,7 +87,7 @@ use super::{
     json::{ProcessedSquirrelDump, SquirrelDump},
     Sanitizer,
 };
-type RAoO<T> = Result<AoOV<T>, InputError>;
+type RAoO<T> = crate::Result<AoOV<T>>;
 
 mod ast_convertion;
 mod helper_functions;
@@ -100,15 +100,15 @@ mod top_level_converter;
 
 // FIXME: do it better
 
-const DEFAULT_TUPLE_NAME_NAME: &'static str = "pair";
-const DEFAULT_FST_PROJ_NAME_NAME: &'static str = "fst";
-const DEFAULT_SND_PROJ_NAME_NAME: &'static str = "snd";
-const DEFAULT_FAIL_NAME_NAME: &'static str = "fail";
+const DEFAULT_TUPLE_NAME_NAME: &str = "pair";
+const DEFAULT_FST_PROJ_NAME_NAME: &str = "fst";
+const DEFAULT_SND_PROJ_NAME_NAME: &str = "snd";
+const DEFAULT_FAIL_NAME_NAME: &str = "fail";
 
-const DEFAULT_TUPLE_NAME: StrRef<'static> = StrRef::from_static(&DEFAULT_TUPLE_NAME_NAME);
-const DEFAULT_FST_PROJ_NAME: StrRef<'static> = StrRef::from_static(&DEFAULT_FST_PROJ_NAME_NAME);
-const DEFAULT_SND_PROJ_NAME: StrRef<'static> = StrRef::from_static(&DEFAULT_SND_PROJ_NAME_NAME);
-const DEFAULT_FAIL_NAME: StrRef<'static> = StrRef::from_static(&DEFAULT_FAIL_NAME_NAME);
+const DEFAULT_TUPLE_NAME: StrRef<'static> = StrRef::from_static(DEFAULT_TUPLE_NAME_NAME);
+const DEFAULT_FST_PROJ_NAME: StrRef<'static> = StrRef::from_static(DEFAULT_FST_PROJ_NAME_NAME);
+const DEFAULT_SND_PROJ_NAME: StrRef<'static> = StrRef::from_static(DEFAULT_SND_PROJ_NAME_NAME);
+const DEFAULT_FAIL_NAME: StrRef<'static> = StrRef::from_static(DEFAULT_FAIL_NAME_NAME);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Builder)]
 #[builder(name = "ContextBuilder")]
@@ -206,9 +206,8 @@ where
     S: Serialize,
 {
     fn debug(self, msg: impl Display + 'static) -> impl Iterator<Item = S> {
-        self.map(move |x| {
-            trace!("{msg}{}", serde_json::to_string_pretty(&x).unwrap());
-            x
+        self.inspect(move |x| {
+            trace!("{msg}{}", serde_json::to_string_pretty(x).unwrap());
         })
     }
 }

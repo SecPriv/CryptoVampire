@@ -1,17 +1,17 @@
 use std::{borrow::Borrow, fmt::Display, ops::Deref, sync::Arc};
 mod cached_builtins;
 
-use anyhow::Context;
 use itertools::Itertools;
 use log::{log_enabled, trace, warn};
 
 use crate::{
     bail_at,
+    error::{CVContext, ExtraOption, LocationProvider},
     parser::{
         ast::{self, extra::SnN, LetIn, Term},
-        error::WithLocation,
+        location::ASTLocation,
         parser::parsing_environement::get_function_mow,
-        InputError, Location, MResult, Pstr,
+        Pstr,
     },
 };
 use crate::{
@@ -35,7 +35,7 @@ use crate::{
         variable::{from_usize, uvar, Variable},
     },
 };
-use utils::{f, implvec, match_as_trait, string_ref::StrRef, traits::NicerError};
+use utils::{implvec, match_as_trait, string_ref::StrRef, traits::NicerError};
 
 pub(crate) use self::cached_builtins::*;
 
@@ -104,7 +104,7 @@ pub trait Parsable<'bump, 'str> {
         bvars: &mut Vec<(Self::S, VarProxy<'bump>)>,
         state: &impl KnowsRealm, // State<'_, 'str, 'bump>,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> MResult<Self::R>;
+    ) -> crate::Result<Self::R>;
 }
 
 impl<'a, 'bump, S> Parsable<'bump, 'a> for ast::LetIn<'a, S>
@@ -123,7 +123,7 @@ where
         bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> MResult<Self::R> {
+    ) -> crate::Result<Self::R> {
         let LetIn {
             span: _,
             var,
@@ -151,12 +151,13 @@ where
         bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> MResult<Self::R> {
+    ) -> crate::Result<Self::R> {
         // generate the expected sorts
-        let (es_condition, es_branches): (SortProxy, Option<SortProxy>) = match state.get_realm() {
-            Realm::Evaluated => (BOOL.as_sort().into(), expected_sort),
-            Realm::Symbolic => (CONDITION.as_sort().into(), Some(MESSAGE.as_sort().into())),
-        };
+        let (es_condition, es_branches): (SortProxy<'bump>, Option<SortProxy<'bump>>) =
+            match state.get_realm() {
+                Realm::Evaluated => (BOOL.as_sort().into(), expected_sort),
+                Realm::Symbolic => (CONDITION.as_sort().into(), Some(MESSAGE.as_sort().into())),
+            };
 
         // check sort
         // if let Some(es) = &expected_sort {
@@ -171,19 +172,13 @@ where
         } = self;
 
         // parse the argumeents
-        let condition = condition
-            .parse(env, bvars, state, Some(es_condition))
-            .debug_continue()?;
-        let left = left
-            .parse(env, bvars, state, es_branches.clone())
-            .debug_continue()?;
-        let right = right
-            .parse(env, bvars, state, es_branches)
-            .debug_continue()?;
+        let condition = condition.parse(env, bvars, state, Some(es_condition))?;
+        let left = left.parse(env, bvars, state, es_branches.clone())?;
+        let right = right.parse(env, bvars, state, es_branches)?;
 
         Ok(match state.get_realm() {
-            Realm::Evaluated => IF_THEN_ELSE.clone(),
-            Realm::Symbolic => IF_THEN_ELSE_TA.clone(),
+            Realm::Evaluated => *IF_THEN_ELSE,
+            Realm::Symbolic => *IF_THEN_ELSE_TA,
         }
         .f([condition, left, right]))
     }
@@ -203,14 +198,10 @@ where
         bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> MResult<Self::R> {
+    ) -> crate::Result<Self::R> {
         expected_sort
             .into_iter()
-            .try_for_each(|s| {
-                s.expects(MESSAGE.as_sort(), &state)
-                    .with_location(&self.span)
-            })
-            .debug_continue()?;
+            .try_for_each(|s| s.expects(MESSAGE.as_sort(), &state).with_location(|| self))?;
 
         let ast::FindSuchThat {
             vars,
@@ -228,7 +219,7 @@ where
 
         // build the bound variables
         bvars.reserve(vars.into_iter().len());
-        let vars: Result<Vec<_>, InputError> = vars
+        let vars: crate::Result<Vec<_>> = vars
             .bindings
             .iter()
             .map(|v| Parsable::parse(v, env, bvars, state, None))
@@ -236,17 +227,13 @@ where
         let vars = vars?;
 
         // parse the rest
-        let condition = condition
-            .parse(
-                env,
-                bvars,
-                &Realm::Symbolic,
-                Some(CONDITION.as_sort().into()),
-            )
-            .debug_continue()?;
-        let left = left
-            .parse(env, bvars, &Realm::Symbolic, Some(MESSAGE.as_sort().into()))
-            .debug_continue()?;
+        let condition = condition.parse(
+            env,
+            bvars,
+            &Realm::Symbolic,
+            Some(CONDITION.as_sort().into()),
+        )?;
+        let left = left.parse(env, bvars, &Realm::Symbolic, Some(MESSAGE.as_sort().into()))?;
 
         // remove variables
         bvars.truncate(bn);
@@ -275,7 +262,7 @@ where
         bvars: &mut Vec<(Self::S, VarProxy<'bump>)>,
         realm: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> MResult<Self::R> {
+    ) -> crate::Result<Self::R> {
         let ast::VariableBinding {
             variable,
             type_name,
@@ -288,28 +275,15 @@ where
             if env.allow_shadowing() {
                 warn!("the name {} is already taken, shadowing", variable.name())
             } else {
-                bail_at!(
-                    variable.0.span,
-                    "the name {} is already taken",
-                    variable.name()
-                )
+                crate::bail_at!(variable, "the name {} is already taken", variable.name())
             }
         }
         let SnN { span, name } = type_name.into();
-        let sort = {
-            // get the sort, possibly changing it depending on the realm
-            let sort = get_sort(env, *span, name)?;
-            // if realm.is_evaluated_realm() && false{
-            //     sort.maybe_evaluated_sort().unwrap_or(sort)
-            // } else {
-            //     sort
-            // }
-            // FIXME: things seem to go wrong with the realm here...
-            sort
-        };
+        let sort = get_sort(env, span, name)?;
+
         if let Some(e) = expected_sort {
             // check if it is what we expected / unify it
-            e.expects(sort, realm).with_location(span)?;
+            e.expects(sort, realm).with_location(|| span)?;
         }
 
         let var = Variable {
@@ -337,7 +311,7 @@ where
         bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> MResult<Self::R> {
+    ) -> crate::Result<Self::R> {
         let ast::Quantifier {
             kind,
             span,
@@ -347,18 +321,20 @@ where
         } = self;
 
         let es = match state.get_realm() {
-            Realm::Evaluated => BOOL.as_sort().into(),
-            Realm::Symbolic => CONDITION.as_sort().into(),
+            Realm::Evaluated => BOOL.as_sort(),
+            Realm::Symbolic => CONDITION.as_sort(),
         };
-        expected_sort
-            .into_iter()
-            .try_for_each(|s| s.expects(es, &state).with_location(span).debug_continue())?;
+        expected_sort.into_iter().try_for_each(|s| {
+            s.expects(es, &state)
+                .with_location(|| span)
+                .debug_continue()
+        })?;
 
         let bn = bvars.len();
 
         // bind the variables
         bvars.reserve(vars.into_iter().len());
-        let vars: Result<Vec<_>, InputError> = vars
+        let vars: crate::Result<Vec<_>> = vars
             .into_iter()
             .map(|v| Parsable::parse(v, env, bvars, state, None))
             .collect();
@@ -415,7 +391,7 @@ where
         bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> MResult<Self::R> {
+    ) -> crate::Result<Self::R> {
         trace!("parsing {self}");
         match self {
             ast::Application::ConstVar { span, content } => {
@@ -427,7 +403,7 @@ where
                         let VarProxy { id, sort } = v;
 
                         if sort.is_sort(NAME.as_sort()) {
-                            bail_at!(
+                            crate::bail_at!(
                                 span,
                                 "assertions with variables of sort Name have a debatable soundness"
                             )
@@ -442,22 +418,22 @@ where
                                 let formula = env
                                     .evaluator
                                     .get_eval_function(sort)
-                                    .expect(&format!(
-                                        "{sort} is evaluatable but not in the evaluator..."
-                                    ))
+                                    .unwrap_or_else(|| {
+                                        panic!("{sort} is evaluatable but not in the evaluator...")
+                                    })
                                     .f([Variable { id: *id, sort }]);
 
                                 expected_sort
                                     .as_ref()
                                     .map(|es| es.matches(s, &r))
                                     .transpose()
-                                    .with_location(span)
+                                    .with_location(|| span)
                                     .debug_continue()
                                     .map(|_| formula)
                             }
                             (_, r) => expected_sort
                                 .as_ref()
-                                .map(|es| es.unify_rev(sort, &r).with_location(span))
+                                .map(|es| es.unify_rev(sort, &r).with_location(|| span))
                                 .unwrap_or_else(|| {
                                     sort.as_option().ok_or(span.err_with(|| "can't infer sort"))
                                 })
@@ -501,13 +477,13 @@ where
 /// parse a function application (when we know it is definitly a function and not a variable)
 fn parse_application<'b, 'a, 'bump, S>(
     env: &'b Environement<'bump, 'a, S>,
-    span: &'b Location<'a>,
+    span: &ASTLocation<'a>,
     state: &impl KnowsRealm,
     bvars: &'b mut Vec<(S, VarProxy<'bump>)>,
     expected_sort: Option<SortProxy<'bump>>,
     function: &FunctionCache<'a, 'bump, S>,
     args: implvec!(&'b ast::Term<'a, S>),
-) -> MResult<ARichFormula<'bump>>
+) -> crate::Result<ARichFormula<'bump>>
 where
     S: Pstr,
     for<'c> StrRef<'c>: From<&'c S>,
@@ -525,7 +501,7 @@ where
         signature
             .args()
             .into_iter()
-            .zip(args.into_iter())
+            .zip(args)
             .map(|(es, t)| t.parse(env, bvars, &state, Some(es)).debug_continue())
             .collect()
     };
@@ -599,7 +575,7 @@ where
         bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> MResult<Self::R> {
+    ) -> crate::Result<Self::R> {
         let Self {
             span: main_span,
             inner,
@@ -619,8 +595,7 @@ where
                     .functions
                     .get(app.name().borrow())
                     .and_then(|fc| fc.as_step())
-                    .with_context(|| f!("{} is not a known step name", app.name()))
-                    .with_location(&app.name_span())
+                    .unknown_symbol(app, &"step", app.name())
                     .debug_continue()?;
 
                 let mut nbvars = step_cache.args_vars_with_input().map_into().collect();
@@ -637,15 +612,13 @@ where
 
                 Ok(term
                     .owned_into_inner()
-                    .apply_substitution2(&step_cache.substitution(args.as_ref()))
-                    .into())
+                    .apply_substitution2(&step_cache.substitution(args.as_ref())))
             }
             ast::InnerAppMacro::Other { name, args } => {
                 let mmacro = env
                     .macro_hash
                     .get(name.name().borrow())
-                    .with_context(|| f!("{} is not a known macro", name.name()))
-                    .with_location(name.span())
+                    .unknown_symbol(name, &"macro", name.name())
                     .debug_continue()?;
 
                 if log_enabled!(log::Level::Trace) {
@@ -701,8 +674,7 @@ where
 
                 Ok(term
                     .owned_into_inner()
-                    .apply_substitution(0..from_usize(mmacro.args.len()), &args)
-                    .into())
+                    .apply_substitution(0..from_usize(mmacro.args.len()), &args))
             }
         }
     }
@@ -722,7 +694,7 @@ where
         bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> MResult<Self::R> {
+    ) -> crate::Result<Self::R> {
         trace!("parsing {self}");
         match self.operation {
             ast::Operation::HardEq => match self.terms.len() {
@@ -738,12 +710,12 @@ where
                 .debug_continue(),
                 _ => Self {
                     operation: ast::Operation::And,
-                    span: self.span,
                     terms: as_pair_of_term(
-                        self.span,
+                        &self.span,
                         self.operation,
                         self.terms.iter().tuple_windows(),
                     ),
+                    span: self.span.clone(),
                 }
                 .parse(env, bvars, state, expected_sort)
                 .debug_continue(),
@@ -767,16 +739,16 @@ where
                 .debug_continue(),
             },
             ast::Operation::Neq => ast::Application::Application {
-                span: self.span,
+                span: self.span.clone(),
                 function: ast::Function(ast::Sub {
-                    span: self.span,
+                    span: self.span.clone(),
                     content: ast::Ident {
-                        span: self.span,
+                        span: self.span.clone(),
                         content: S::from_static("not"),
                     },
                 }),
                 args: vec![ast::Term {
-                    span: self.span,
+                    span: self.span.clone(),
                     inner: ast::InnerTerm::Infix(Arc::new(Self {
                         operation: ast::Operation::Eq,
                         ..self.clone()
@@ -798,12 +770,12 @@ where
                 .debug_continue(),
                 Realm::Symbolic => Self {
                     operation: ast::Operation::And,
-                    span: self.span,
                     terms: as_pair_of_term(
-                        self.span,
+                        &self.span,
                         self.operation,
                         self.terms.iter().tuple_windows(),
                     ),
+                    span: self.span.clone(),
                 }
                 .parse(env, bvars, state, expected_sort)
                 .debug_continue(),
@@ -867,8 +839,8 @@ where
 }
 
 fn as_pair_of_term<'a, 'b: 'a, S>(
-    span: Location<'b>,
-    op: ast::Operation,
+    span: &ASTLocation<'b>,
+    operation: ast::Operation,
     iter: impl IntoIterator<Item = (&'a Term<'b, S>, &'a Term<'b, S>)>,
 ) -> Vec<Term<'b, S>>
 where
@@ -877,10 +849,10 @@ where
 {
     iter.into_iter()
         .map(|(a, b)| ast::Term {
-            span,
+            span: span.clone(),
             inner: ast::InnerTerm::Infix(Arc::new(ast::Infix {
-                operation: op,
-                span,
+                operation,
+                span: span.clone(),
                 terms: vec![a.clone(), b.clone()],
             })),
         })
@@ -901,14 +873,13 @@ where
         bvars: &mut Vec<(S, VarProxy<'bump>)>,
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
-    ) -> MResult<Self::R> {
-        if cfg!(debug_assertions) {
-            if bvars.iter().map(|(_, v)| v.id).unique().count() != bvars.len() {
-                panic!(
-                    "there are duplicates:\n\t[{}]",
-                    bvars.iter().map(|(_, v)| v).join(", ")
-                )
-            }
+    ) -> crate::Result<Self::R> {
+        if cfg!(debug_assertions) && bvars.iter().map(|(_, v)| v.id).unique().count() != bvars.len()
+        {
+            panic!(
+                "there are duplicates:\n\t[{}]",
+                bvars.iter().map(|(_, v)| v).join(", ")
+            )
         }
 
         match_as_trait!(ast::InnerTerm, |x| in &self.inner => LetIn | If | Fndst | Quant | Application | Infix | Macro

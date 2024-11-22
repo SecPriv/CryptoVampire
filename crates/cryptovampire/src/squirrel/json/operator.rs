@@ -10,6 +10,7 @@ pub enum DhHyp {
     DH_GDH,
 }
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Copy)]
 pub enum Assoc {
     Right,

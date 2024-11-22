@@ -13,13 +13,14 @@ pub enum InferenceError {
         expected: Box<str>,
         recieved: Box<str>,
     },
+    #[error(transparent)]
+    UpdateError(#[from] UpdateError),
 }
 
 impl InferenceError {
     /// the what is expected and what was recieved
     pub fn flip(self) -> Self {
         match self {
-            InferenceError::CantInfer { .. } => self,
             InferenceError::SortMismatch {
                 proxy,
                 expected,
@@ -29,6 +30,7 @@ impl InferenceError {
                 expected: recieved,
                 recieved: expected,
             },
+            _ => self,
         }
     }
 
@@ -44,7 +46,7 @@ impl InferenceError {
         }
     }
 
-    pub fn cant_infer<'bump>(source: &SortProxy<'bump>) -> Self {
+    pub fn cant_infer(source: &SortProxy<'_>) -> Self {
         Self::CantInfer(source.to_string().into_boxed_str())
     }
 }
@@ -74,11 +76,7 @@ impl<'bump> SortProxy<'bump> {
     /// Check or set that `self` is `s`.
     ///
     /// The error is set up so that it expects `self` to be `s`
-    pub fn expects<'a>(
-        &self,
-        s: Sort<'bump>,
-        realm: &impl KnowsRealm,
-    ) -> Result<(), InferenceError> {
+    pub fn expects(&self, s: Sort<'bump>, realm: &impl KnowsRealm) -> Result<(), InferenceError> {
         match self.as_option() {
             Some(s2) if Sort::eq_realm(&s2, &s, realm) => Ok(()),
             None => {
@@ -94,11 +92,7 @@ impl<'bump> SortProxy<'bump> {
     /// Check or set that `s` is `self`.
     ///
     /// The error is set up so that is expects `s` to be `self`
-    pub fn matches<'a>(
-        &self,
-        s: Sort<'bump>,
-        realm: &impl KnowsRealm,
-    ) -> Result<(), InferenceError> {
+    pub fn matches(&self, s: Sort<'bump>, realm: &impl KnowsRealm) -> Result<(), InferenceError> {
         match self.expects(s, realm) {
             Err(InferenceError::SortMismatch {
                 proxy,
@@ -124,7 +118,7 @@ impl<'bump> SortProxy<'bump> {
     /// unifies two [`SortProxies`](SortProxy) and set them
     ///
     /// The error is returned as if `self` is expected to be `other`
-    pub fn unify<'a>(
+    pub fn unify(
         &self,
         other: &Self,
         realm: &impl KnowsRealm,
@@ -149,7 +143,7 @@ impl<'bump> SortProxy<'bump> {
         }
     }
 
-    pub fn unify_rev<'a>(
+    pub fn unify_rev(
         &self,
         other: &Self,
         realm: &impl KnowsRealm,
@@ -207,17 +201,17 @@ impl<'bump, 'a> From<&'a Sort<'bump>> for SortProxy<'bump> {
     }
 }
 
-impl<'bump> Into<Option<Sort<'bump>>> for SortProxy<'bump> {
+impl<'bump> From<SortProxy<'bump>> for Option<Sort<'bump>> {
     #[inline]
-    fn into(self) -> Option<Sort<'bump>> {
-        (&self).into()
+    fn from(val: SortProxy<'bump>) -> Self {
+        (&val).into()
     }
 }
 
-impl<'bump, 'a> Into<Option<Sort<'bump>>> for &'a SortProxy<'bump> {
-    fn into(self) -> Option<Sort<'bump>> {
-        match self {
-            SortProxy::Var(v) => v.borrow().clone(),
+impl<'bump, 'a> From<&'a SortProxy<'bump>> for Option<Sort<'bump>> {
+    fn from(val: &'a SortProxy<'bump>) -> Self {
+        match val {
+            SortProxy::Var(v) => *v.borrow(),
             SortProxy::Static(s) => Some(*s),
         }
     }

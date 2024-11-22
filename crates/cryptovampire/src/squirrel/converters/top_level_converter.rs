@@ -11,7 +11,7 @@ use super::Context;
 
 use super::*;
 
-pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a, StrRef<'a>>> {
+pub fn convert_squirrel_dump(dump: SquirrelDump<'_>) -> RAoO<ast::ASTList<'_, StrRef<'_>>> {
     let pdump = &ProcessedSquirrelDump::from(dump);
 
     let ctx = ContextBuilder::create_empty().dump(pdump).build().unwrap();
@@ -91,7 +91,7 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
     .try_collect()?;
     mdo! {
       let! content = Ok(AoOV::transpose_iter(all));
-      pure ast::ASTList {content, begining: None}
+      pure ast::ASTList {content, location: Default::default()}
     }
 }
 
@@ -184,8 +184,9 @@ mod assert_crypto {
             ast::Function::from_name(verify.sanitized(&ctx))
         } else {
             // declare a dummy verify
-            let name: StrRef = format!("verify_{}", hash.sanitized(&ctx)).into();
+            let name: StrRef<'static> = format!("verify_{}", hash.sanitized(&ctx)).into();
             new_fun = Some(ast::DeclareFunction::new(
+                Default::default(),
                 name.clone(),
                 std::iter::repeat(MESSAGE.name()).take(3),
                 BOOL.name(),
@@ -213,8 +214,8 @@ mod assert_crypto {
         )
     }
 
-    fn assert_int_ctxt<'a, 'b>(
-        ctx: Context<'b, 'a>,
+    fn assert_int_ctxt<'a>(
+        ctx: Context<'_, 'a>,
         senc: &OperatorName<'a>,
         sdec: &OperatorName<'a>,
     ) -> ast::AST<'a, StrRef<'a>> {
@@ -295,7 +296,7 @@ fn mk_cells<'a, 'b>(
                 let! sort = sort.convert(ctx);
                 let args : Vec<_> = vars.iter().map(|v| v.sort().convert(ctx)).try_collect()?;
                 let! args = Ok(AoOV::transpose_iter(args));
-                pure ast::DeclareCell::new(symb.sanitized(&ctx), args, sort.clone())
+                pure ast::DeclareCell::new(Default::default(),symb.sanitized(&ctx), args, sort.clone())
             }
         })
 }
@@ -307,7 +308,7 @@ fn mk_macros<'a, 'b>(
     let base = pdump
         .macros_with_symb()
         .map_into()
-        .map(move |m: MacroRef| m.convert(ctx))
+        .map(move |m: MacroRef<'a, 'b>| m.convert(ctx))
         .filter_map(helper_functions::transpose_raov);
     let concrete_functions = pdump
         .operators_with_symb()
@@ -378,7 +379,7 @@ fn mk_funs_and_names<'a, 'b>(
                 }?;
                 mdo! {
                     let! args = Ok(AoOV::transpose_iter(args));
-                    pure ast::DeclareFunction::new(symb.clone(), args, sort.clone())
+                    pure ast::DeclareFunction::new(Default::default(),symb.clone(), args, sort.clone())
                 }
             })
         })

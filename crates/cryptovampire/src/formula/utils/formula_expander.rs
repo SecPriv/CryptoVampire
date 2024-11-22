@@ -232,7 +232,7 @@ impl<'bump> Unfolder<'bump> {
                     .map(|v| collision_var.get_var(v))
                     .collect_vec();
                 let state = self.state.add_condition(
-                    nvars.iter().map(|v| *v),
+                    nvars.iter().copied(),
                     meq(arg, s.function().f(nvars.iter().map(ARichFormula::from))),
                 );
                 Unfolder { state, content }
@@ -250,7 +250,7 @@ impl<'bump> Unfolder<'bump> {
         let nstate = self
             .state
             .map_dk(|dk| dk - UnfoldFlags::UNFOLD_MEMORY_CELLS);
-        unfold_cell_or_input(steps, graph, MacroRef::Cell(c), &nstate, args.as_ref()).collect()
+        unfold_cell_or_input(steps, graph, MacroRef::Cell(c), &nstate, args).collect()
     }
 
     fn unfold_rec_macro(
@@ -261,7 +261,7 @@ impl<'bump> Unfolder<'bump> {
         args: &[ARichFormula<'bump>],
     ) -> Vec<Unfolder<'bump>> {
         let nstate = self.state.map_dk(|dk| dk - kind.unfold_flag());
-        unfold_cell_or_input(steps, graph, kind.into_macro_ref(), &nstate, args.as_ref()).collect()
+        unfold_cell_or_input(steps, graph, kind.into_macro_ref(), &nstate, args).collect()
     }
 
     /// Expand a ta quantifier.
@@ -324,7 +324,7 @@ where
     let step_origin = args.last().unwrap();
     let is_input = to_expand.is_input();
 
-    let cells_iter = cells.into_iter().flat_map(|c| c.assignements().iter()).map(
+    let cells_iter = cells.iter().flat_map(|c| c.assignements().iter()).map(
         move |ma @ Assignement {
                   step,
                   content,

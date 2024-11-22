@@ -22,3 +22,9 @@ pub struct Ancestors<'bump> {
     pub input: bool,
     pub cells: Vec<MemoryCell<'bump>>,
 }
+
+#[derive(Debug, thiserror::Error)]
+pub enum GraphError {
+    #[error(transparent)]
+    DependancyError(#[from] graph::DependancyError),
+}

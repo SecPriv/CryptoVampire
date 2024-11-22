@@ -16,7 +16,7 @@ use std::{
 use derivative::Derivative;
 use itertools::{chain, Itertools};
 use log::trace;
-use pest::{iterators::Pair, Parser, Position};
+use pest::{iterators::Pair, Parser};
 
 use crate::{
     formula::function::{
@@ -28,15 +28,16 @@ use crate::{
 use utils::{destvec, implvec, match_as_trait, vecref::VecRef};
 
 use super::*;
-use crate::bail_at;
 
 // =========================================================
 // ======================= macros ==========================
 // =========================================================
 
+// FIXME!
 macro_rules! unreachable_rules {
     ($span:expr, $urule:expr; $($rule:ident),* ) => {
-        $span.wrong_rule(vec![$(Rule::$rule),+], vec![$urule])?
+        // $span.wrong_rule(vec![$(Rule::$rule),+], vec![$urule])?
+        unreachable!()
     };
 }
 
@@ -55,7 +56,7 @@ macro_rules! debug_rule {
 macro_rules! boiler_plate {
     ($t:ty, $lt:lifetime, $($rule:ident)|+; |$p:ident| $content:block) => {
         impl<$lt> TryFrom<Pair<$lt, Rule>> for $t {
-            type Error = $crate::parser::InputError;
+            type Error = $crate::Error;
 
             fn try_from($p: Pair<$lt, Rule>) -> std::result::Result<$t, Self::Error> {
                 let str = $p.as_str();
@@ -71,12 +72,13 @@ macro_rules! boiler_plate {
 
     (l $t:ty, $lt:lifetime, $($rule:ident)|+; |$p:ident| { $($($pat:ident)|+ => $content:block)* }) => {
         boiler_plate!($t, 'a, $($rule)|+; |p| {
-            let span : Location<'a> = p.as_span().into();
+            #[allow(unused_variables)]
+            let span = p.as_span();
             let mut p_iter = p.into_inner();
             let $p = p_iter.next().unwrap();
 
             if let Some(p) = p_iter.next() {
-                bail_at!(&p, "too much")
+                $crate::bail_at!(p.as_span(), "too much")
                 // return err(merr(p.as_span().into(), f!("too much")))
             }
 
@@ -84,6 +86,7 @@ macro_rules! boiler_plate {
                 $(
                     $(Rule::$pat)|+ => $content,
                 )*
+                #[allow(unused_variables)]
                 r => unreachable_rules!(span, r; $($($pat),+),*)
             }
         });
@@ -91,6 +94,9 @@ macro_rules! boiler_plate {
 
     ($t:ty, $rule:ident; { $($pat:ident => $res:ident),* }) => {
         boiler_plate!(l $t, 'a, $rule; |p| {$($pat => { Ok(Self::$res) })*});
+    };
+    (@ $t:ident, $lt:lifetime, $($rule:ident)|+; |$p:ident| $content:block) => {
+        boiler_plate!($t<$lt, &$lt str>, $lt, $($rule)|+; |$p| $content);
     }
 
 }
@@ -98,14 +104,14 @@ macro_rules! boiler_plate {
 macro_rules! as_array {
     ($span:ident in [$($arg:ident),*] = $vec:expr) => {
         destvec!{ [$($arg),*] = $vec; |err| {
-            bail_at!(&$span, "{}", err)
+            $crate::bail_at!($span, "{}", err)
         }}
     };
 
     ($span:ident in [$($arg:ident),*,..$leftover:ident] = $vec:expr) => {
         destvec!{ [$($arg),*,..$leftover] = $vec; |err| {
             // return Err(merr($span, f!("{}", err)))
-            bail_at!(&$span, "{}", err)
+            $crate::bail_at!($span, "{}", err)
         }}
     };
 }
@@ -145,9 +151,9 @@ macro_rules! destruct_rule {
         $(
             let $arg = $arg.try_into().debug_continue()?;
         )*
-        let $option = leftover.next().map(|r| r.try_into().debug_continue()).transpose()?.unwrap_or(Options::empty($span));
+        let $option = leftover.next().map(|r| r.try_into().debug_continue()).transpose()?.unwrap_or(Options::empty($span.into()));
         if let Some(_) = leftover.next() {
-            bail_at!(&$span, "too many arguments")
+            $crate::bail_at!($span, "too many arguments")
             // return Err(merr($span, f!("too many arguments")))
         }
     }

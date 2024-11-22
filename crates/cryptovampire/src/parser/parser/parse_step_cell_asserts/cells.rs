@@ -1,4 +1,5 @@
-use crate::parser::{parser::CellCache, MResult, Pstr};
+use crate::error::BaseContext;
+use crate::parser::{parser::CellCache, Pstr};
 use crate::{
     container::{allocator::ContainerTools, ScopedContainer},
     problem::cell::InnerMemoryCell,
@@ -10,7 +11,7 @@ use super::super::Environement;
 pub fn parse_cells<'a, 'str, 'bump, S>(
     env: &'a Environement<'bump, 'str, S>,
     cells: implvec!(&'a CellCache<'str, 'bump, S>),
-) -> MResult<()>
+) -> crate::Result<()>
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
@@ -20,30 +21,19 @@ where
         .try_for_each(|cc @ CellCache { cell, ast, .. }| {
             let inner = parse_cell(env, cc)?;
             let r_err = unsafe {
-                <ScopedContainer as ContainerTools<InnerMemoryCell<'bump>>>::initialize(cell, inner)
+                <ScopedContainer<'bump> as ContainerTools<InnerMemoryCell<'bump>>>::initialize(
+                    cell, inner,
+                )
             };
 
-            r_err.map_err(|_| {
-                ast.name
-                    .0
-                    .span
-                    .err_with(|| format!("cell {} has already been defined", ast.name.name()))
-            })
-
-            // match r_err {
-            //     Err(_) => Err(merr(
-            //         ast.name.span(),
-            //         format!("step {} has already been defined", ast.name.name()),
-            //     )),
-            //     Ok(()) => Ok(()),
-            // }
+            r_err.with_context(&ast.name, || "cell already defined")
         })
 }
 
 fn parse_cell<'a, 'bump, 'str, S>(
     _env: &'a Environement<'bump, 'str, S>, // mut for safety
     cell: &CellCache<'str, 'bump, S>,
-) -> MResult<InnerMemoryCell<'bump>>
+) -> crate::Result<InnerMemoryCell<'bump>>
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,

@@ -49,17 +49,17 @@ impl<'bump> Unfolding<'bump> {
     }
 
     pub fn exec(&self) -> Function<'bump> {
-        EXEC_MACRO.clone()
+        *EXEC_MACRO
     }
 
     pub fn cond(&self) -> Function<'bump> {
         // self.cond
-        CONDITION_MACRO.clone()
+        *CONDITION_MACRO
     }
 
     pub fn msg(&self) -> Function<'bump> {
         // self.msg
-        MESSAGE_MACRO.clone()
+        *MESSAGE_MACRO
     }
 
     pub fn use_recusive_def(&self) -> bool {

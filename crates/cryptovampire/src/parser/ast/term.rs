@@ -1,3 +1,4 @@
+use location::ASTLocation;
 use std::ops::{BitAnd, BitOr, Not, Shr};
 
 use crate::formula::utils::Applicable;
@@ -7,19 +8,19 @@ use super::*;
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Term<'a, S = &'a str> {
-    #[derivative(PartialOrd = "ignore", Ord = "ignore")]
-    pub span: Location<'a>,
-    pub inner: InnerTerm<'a, S>,
+pub struct Term<'str, S> {
+    #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
+    pub span: ASTLocation<'str>,
+    pub inner: InnerTerm<'str, S>,
 }
 
-boiler_plate!(Term<'s>, 's, term; |p| {
-    let span = p.as_span().into();
+boiler_plate!(Term<'s, &'s str>, 's, term; |p| {
+    let span = p.as_span();
     destruct_rule!(span in [inner] = p.into_inner());
-    Ok(Term{span, inner})
+    Ok(Term{span: span.into(), inner})
 });
 
-impl<'a, S> Term<'a, S> {
+impl<'str, S> Term<'str, S> {
     /// build a new constant term, relying on the implementation of [Location::default]
     pub fn new_default_const(s: S) -> Self {
         Term {
@@ -33,7 +34,7 @@ impl<'a, S> Term<'a, S> {
     }
 }
 
-impl<'a, S: Display> Display for Term<'a, S> {
+impl<'str, S: Display> Display for Term<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.inner.fmt(f)
     }
@@ -41,10 +42,10 @@ impl<'a, S: Display> Display for Term<'a, S> {
 
 macro_rules! from_i_term {
     ($v:ident, $t:ident) => {
-        impl<'a, S> From<$t<'a, S>> for Term<'a, S> {
-            fn from(value: $t<'a, S>) -> Self {
+        impl<'str, S> From<$t<'str, S>> for Term<'str, S> {
+            fn from(value: $t<'str, S>) -> Self {
                 Term {
-                    span: value.span,
+                    span: value.span.clone(),
                     inner: InnerTerm::$v(Arc::new(value)),
                 }
             }
@@ -58,10 +59,10 @@ from_i_term!(Fndst, FindSuchThat);
 from_i_term!(Quant, Quantifier);
 from_i_term!(Infix, Infix);
 from_i_term!(Macro, AppMacro);
-impl<'a, S> From<Application<'a, S>> for Term<'a, S> {
-    fn from(value: Application<'a, S>) -> Self {
+impl<'str, S> From<Application<'str, S>> for Term<'str, S> {
+    fn from(value: Application<'str, S>) -> Self {
         Term {
-            span: value.span(),
+            span: value.span().clone(),
             inner: InnerTerm::Application(Arc::new(value)),
         }
     }
@@ -71,17 +72,18 @@ impl<'a, S> From<Application<'a, S>> for Term<'a, S> {
 /// - [Rule::infix_term]
 /// - [Rule::commun_base]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub enum InnerTerm<'a, S = &'a str> {
-    LetIn(Arc<LetIn<'a, S>>),
-    If(Arc<IfThenElse<'a, S>>),
-    Fndst(Arc<FindSuchThat<'a, S>>),
-    Quant(Arc<Quantifier<'a, S>>),
-    Application(Arc<Application<'a, S>>),
-    Infix(Arc<Infix<'a, S>>),
-    Macro(Arc<AppMacro<'a, S>>),
+pub enum InnerTerm<'str, S> {
+    LetIn(Arc<LetIn<'str, S>>),
+    If(Arc<IfThenElse<'str, S>>),
+    Fndst(Arc<FindSuchThat<'str, S>>),
+    Quant(Arc<Quantifier<'str, S>>),
+    Application(Arc<Application<'str, S>>),
+    Infix(Arc<Infix<'str, S>>),
+    Macro(Arc<AppMacro<'str, S>>),
 }
-boiler_plate!(InnerTerm<'s>, 's, inner_term; |p| {
-    let span: Location = p.as_span().into();
+
+boiler_plate!(InnerTerm<'s, &'s str>, 's, inner_term; |p| {
+    let span = p.as_span();
     as_array!(span in [nxt] = p.into_inner());
     match nxt.as_rule() {
         Rule::infix_term => {
@@ -108,31 +110,34 @@ boiler_plate!(InnerTerm<'s>, 's, inner_term; |p| {
                 Rule::macro_application => {
                     Ok(InnerTerm::Macro(Arc::new(cmn_rule.try_into()?)))
                 }
+                #[allow(unused_variables)]
                 r => unreachable_rules!(span, r; let_in, if_then_else, find_such_that, quantifier, application)
             }
         },
+        #[allow(unused_variables)]
         r => unreachable_rules!(span, r; infix_term, commun_base)
     }
 });
-impl<'a, S: Display> Display for InnerTerm<'a, S> {
+
+impl<'str, S: Display> Display for InnerTerm<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match_as_trait!(ast::InnerTerm, |x| in self => LetIn | If | Fndst | Quant | Application | Infix | Macro
                 {x.fmt(f)})
     }
 }
 
-impl<'a, S> Not for Term<'a, S>
+impl<'str, S> Not for Term<'str, S>
 where
     S: FromStaticString,
 {
     type Output = Self;
 
     fn not(self) -> Self::Output {
-        Application::new_app(S::from_static(NOT_NAME), [self]).into()
+        Application::new_app(Default::default(), S::from_static(NOT_NAME), [self]).into()
     }
 }
 
-impl<'a, S> BitAnd for Term<'a, S> {
+impl<'str, S> BitAnd for Term<'str, S> {
     type Output = Self;
 
     fn bitand(self, rhs: Self) -> Self::Output {
@@ -140,7 +145,7 @@ impl<'a, S> BitAnd for Term<'a, S> {
     }
 }
 
-impl<'a, S> BitOr for Term<'a, S> {
+impl<'str, S> BitOr for Term<'str, S> {
     type Output = Self;
 
     fn bitor(self, rhs: Self) -> Self::Output {
@@ -148,7 +153,7 @@ impl<'a, S> BitOr for Term<'a, S> {
     }
 }
 
-impl<'a, S> Shr for Term<'a, S> {
+impl<'str, S> Shr for Term<'str, S> {
     type Output = Self;
 
     fn shr(self, rhs: Self) -> Self::Output {
@@ -161,7 +166,7 @@ impl<'a, S> Shr for Term<'a, S> {
     }
 }
 
-impl<'a, S> Term<'a, S> {
+impl<'str, S> Term<'str, S> {
     pub fn ands(args: implvec!(Self)) -> Self {
         Infix {
             span: Default::default(),
@@ -179,7 +184,7 @@ impl<'a, S> Term<'a, S> {
         .into()
     }
 
-    pub fn letin(var: VariableBinding<'a, S>, t1: Self, t2: Self) -> Self {
+    pub fn letin(var: VariableBinding<'str, S>, t1: Self, t2: Self) -> Self {
         ast::LetIn {
             span: Default::default(),
             var,
@@ -191,7 +196,7 @@ impl<'a, S> Term<'a, S> {
 
     pub fn forall<V>(vars: implvec!(V), arg: Self) -> Self
     where
-        VariableBinding<'a, S>: From<V>,
+        VariableBinding<'str, S>: From<V>,
     {
         ast::Quantifier {
             kind: ast::QuantifierKind::Forall,
@@ -204,7 +209,7 @@ impl<'a, S> Term<'a, S> {
 
     pub fn exists<V>(vars: implvec!(V), arg: Self) -> Self
     where
-        VariableBinding<'a, S>: From<V>,
+        VariableBinding<'str, S>: From<V>,
     {
         ast::Quantifier {
             kind: ast::QuantifierKind::Exists,
@@ -232,6 +237,7 @@ pub trait StrApplicable {
     }
 }
 
+// TODO: use str location
 impl<'a> StrApplicable for &'a str {
     type Term = Term<'a, StrRef<'a>>;
 
@@ -244,6 +250,7 @@ impl<'a> StrApplicable for &'a str {
     }
 }
 
+// TODO: use str location
 impl<'a> StrApplicable for &StrRef<'a> {
     type Term = Term<'a, StrRef<'a>>;
 
@@ -256,8 +263,8 @@ impl<'a> StrApplicable for &StrRef<'a> {
     }
 }
 
-impl<'a, S: Clone> From<VariableBinding<'a, S>> for Term<'a, S> {
-    fn from(value: VariableBinding<'a, S>) -> Self {
+impl<'str, S: Clone> From<VariableBinding<'str, S>> for Term<'str, S> {
+    fn from(value: VariableBinding<'str, S>) -> Self {
         Application::ConstVar {
             span: Default::default(),
             content: S::clone(value.variable.name()),

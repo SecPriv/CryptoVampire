@@ -15,6 +15,7 @@ use super::{
 #[allow(non_camel_case_types)]
 pub type uvar = u32;
 
+#[allow(clippy::derived_hash_with_manual_eq)] // <- for debug reasons
 #[derive(Debug, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct Variable<'bump> {
     pub id: uvar,
@@ -88,7 +89,7 @@ where
 {
     s.into_iter()
         .zip(0..)
-        .map(|(s, i)| Variable::new(i + from, s.clone()))
+        .map(|(s, i)| Variable::new(i + from, *s))
         .collect()
 }
 
@@ -106,21 +107,15 @@ where
 // }
 
 impl<'bump, 'a: 'bump> From<(uvar, &'a Sort<'bump>)> for Variable<'bump> {
-    fn from(arg: (uvar, &'a Sort)) -> Self {
+    fn from(arg: (uvar, &'a Sort<'bump>)) -> Self {
         let (id, sort) = arg;
-        Variable {
-            id,
-            sort: sort.clone(),
-        }
+        Variable { id, sort: *sort }
     }
 }
 impl<'bump, 'a: 'bump> From<(&'a Sort<'bump>, uvar)> for Variable<'bump> {
-    fn from(arg: (&'a Sort, uvar)) -> Self {
+    fn from(arg: (&'a Sort<'bump>, uvar)) -> Self {
         let (sort, id) = arg;
-        Variable {
-            id,
-            sort: sort.clone(),
-        }
+        Variable { id, sort: *sort }
     }
 }
 
@@ -158,7 +153,7 @@ pub trait IntoVariableIter<'bump> {
         std::cmp::max(max, self.vars_id_iter().max().unwrap_or(max)) + 1
     }
 
-    fn contains_var(self, Variable { id, .. }: &Variable) -> bool
+    fn contains_var(self, Variable { id, .. }: &Variable<'bump>) -> bool
     where
         Self: Sized,
     {

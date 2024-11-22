@@ -13,7 +13,7 @@ mod state {
     }
 
     impl State {
-        pub fn to_done(&mut self) {
+        pub fn set_to_done(&mut self) {
             *self = State::Done
         }
 
@@ -52,6 +52,7 @@ pub struct PblIterator<'bump> {
     state: State,
 }
 
+#[allow(clippy::should_implement_trait)]
 impl<'bump> PblIterator<'bump> {
     pub fn next(&mut self) -> Option<&mut Problem<'bump>> {
         if self.state.is_done() {
@@ -59,7 +60,7 @@ impl<'bump> PblIterator<'bump> {
         }
 
         if self.state.is_no_lemma() {
-            self.state.to_done();
+            self.state.set_to_done();
             return Some(&mut self.pbl);
         }
 
@@ -68,7 +69,7 @@ impl<'bump> PblIterator<'bump> {
             self.pbl.assertions.push(old_q);
             Some(&mut self.pbl)
         } else {
-            self.state.to_done();
+            self.state.set_to_done();
             None
         }
     }
@@ -79,6 +80,11 @@ impl<'bump> PblIterator<'bump> {
 
     pub fn len(&self) -> usize {
         self.pbl.lemmas.len()
+    }
+
+    #[allow(dead_code)]
+    pub fn is_empty(&self) -> bool {
+        self.pbl.lemmas.is_empty()
     }
 
     pub fn map<'a, F, U>(&'a mut self, f: &'a mut F) -> InnerPblIter<'bump, 'a, F, U>

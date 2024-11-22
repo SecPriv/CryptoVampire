@@ -15,6 +15,7 @@ use std::{
 use crate::{
     container::ScopedContainer,
     environement::environement::Environement,
+    error::BaseError,
     formula::{
         file_descriptior::{
             axioms::Axiom,
@@ -57,6 +58,12 @@ pub struct Problem<'bump> {
     query: ARichFormula<'bump>,
     #[builder(default)]
     extra_instances: HashSet<ARichFormula<'bump>>,
+}
+
+impl From<ProblemBuilderError> for BaseError {
+    fn from(val: ProblemBuilderError) -> Self {
+        BaseError::BuilderError(Box::new(val))
+    }
 }
 
 impl<'bump> Problem<'bump> {
@@ -116,7 +123,7 @@ impl<'bump> Problem<'bump> {
     /// return the number of new instances added
     pub fn extend_extra_instances(&mut self, instances: implvec!(ARichFormula<'bump>)) -> usize {
         let pre = self.extra_instances.len();
-        self.extra_instances.extend(instances.into_iter());
+        self.extra_instances.extend(instances);
         let n = self.extra_instances.len() - pre;
         trace!("added {n} instances");
         n

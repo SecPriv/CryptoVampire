@@ -24,7 +24,7 @@ impl<I, T> Residual<I, T> {
     }
 }
 
-impl<'bump, I, T: Default> From<I> for Residual<I, T> {
+impl<I, T: Default> From<I> for Residual<I, T> {
     fn from(content: I) -> Self {
         Residual {
             content,
@@ -46,6 +46,7 @@ where
     }
 }
 
+#[allow(clippy::missing_safety_doc)] // FIXME
 pub trait ContainerTools<'bump, I> {
     type R<'a>
     where
@@ -65,12 +66,11 @@ pub trait ContainerTools<'bump, I> {
             .collect()
     }
 
+    /// # Safety: This part is implementation specific and likely to make a heavy use of usafe
     fn alloc_inner<'a>(&'bump self, inner: I) -> Self::R<'a>
     where
         'bump: 'a;
     unsafe fn initialize(reference: &Self::R<'bump>, inner: I) -> Result<(), AlreadyInitialized>;
-    // where
-    //     'bump: 'a;
 
     fn alloc_cyclic<F>(&'bump self, f: F) -> Result<Self::R<'bump>, AlreadyInitialized>
     where
@@ -204,8 +204,8 @@ where
         'bump: 'a,
     {
         (
-            <C as ContainerTools<'bump, A>>::alloc_uninit(&self),
-            <C as ContainerTools<'bump, B>>::alloc_uninit(&self),
+            <C as ContainerTools<'bump, A>>::alloc_uninit(self),
+            <C as ContainerTools<'bump, B>>::alloc_uninit(self),
         )
     }
 
@@ -215,8 +215,8 @@ where
     {
         let (a, b) = inner;
         (
-            <C as ContainerTools<'bump, A>>::alloc_inner(&self, a),
-            <C as ContainerTools<'bump, B>>::alloc_inner(&self, b),
+            <C as ContainerTools<'bump, A>>::alloc_inner(self, a),
+            <C as ContainerTools<'bump, B>>::alloc_inner(self, b),
         )
     }
 

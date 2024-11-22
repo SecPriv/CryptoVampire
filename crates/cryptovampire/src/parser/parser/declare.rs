@@ -5,7 +5,8 @@ use super::*;
 
 use crate::{
     bail_at, err_at,
-    parser::{ast::extra::AsFunction, InputError, MResult, Pstr},
+    error::{CVContext, LocationProvider},
+    parser::{ast::extra::AsFunction, error::ParsingError, Pstr},
 };
 
 use crate::{
@@ -31,7 +32,7 @@ use super::super::ast::{self, extra::SnN, ASTList, Declaration, DeclareFunction,
 pub fn declare_sorts<'str, 'bump, S>(
     env: &mut Environement<'bump, 'str, S>,
     ast: &'str ASTList<'str, S>,
-) -> MResult<()>
+) -> crate::Result<()>
 where
     S: Pstr,
     for<'a> StrRef<'a>: From<&'a S>,
@@ -51,25 +52,21 @@ where
                 //     *s.get_name_span(),
                 //     f!("the sort name {} is already in use", name),
                 // ))
-                Err(err_at!(
-                    s.name_span(),
-                    "the sort name {} is already in use",
-                    name
-                ))
+                err_at!(s.name_span(), "the sort name {} is already in use", name)
             } else {
                 let sort =
                     Sort::new_index(env.container, String::from(name.borrow()).into_boxed_str());
                 let out = env.sort_hash.insert(sort.name().to_string(), sort);
 
                 match out {
-                    Some(_) => Err(err_at!(
+                    Some(_) => err_at!(
                         s.name_span(),
                         "!UNREACHABLE!(line {} in {}) \
 The sort name {} somehow reintroduced itself in the hash",
                         line!(),
                         file!(),
                         name
-                    )),
+                    ),
                     _ => Ok(()),
                 }
             }
@@ -83,7 +80,7 @@ pub fn fetch_all<'str, 'bump, S>(
     lemmas: &mut impl Extend<&'str ast::Assertion<'str, S>>,
     orders: &mut impl Extend<&'str ast::Order<'str, S>>, // Vec<&'str ast::Order<'str>>,
     asserts_crypto: &mut impl Extend<&'str ast::AssertCrypto<'str, S>>,
-) -> MResult<&'str ast::Assertion<'str, S>>
+) -> crate::Result<&'str ast::Assertion<'str, S>>
 where
     S: Pstr,
     for<'a> StrRef<'a>: From<&'a S>,
@@ -111,7 +108,8 @@ where
                             Err(_) => unreachable!("should be caught before"),
                             Ok(inner_query) => {
                                 query = match inner_query {
-                                    Some(_) => Err(q.span.err_with(|| "only one query is allowed")),
+                                    Some(_) => ParsingError::OneOff("only one querry is allowed")
+                                        .with_location(|| q),
                                     None => Ok(Some(q)),
                                 }
                             }
@@ -136,12 +134,9 @@ where
                 declare_step(env, step).debug_continue()?;
                 if (*step.name.name()).as_str() == "init" {
                     did_initilise_init = true;
-                    if step.args().len() >= 1 {
-                        // return err(merr(
-                        //     step.args.span,
-                        //     "the init step should have any arguments".to_string(),
-                        // ));
-                        bail_at!(step.args.span, "the init step should have any arguments")
+                    if !step.args().is_empty() {
+                        return ParsingError::OneOff("the init step should have any arguments")
+                            .with_location(|| &step.args);
                     }
                 }
                 Ok(())
@@ -150,7 +145,7 @@ where
         })?;
 
     if !did_initilise_init {
-        declare_step(env, S::ref_init_step_ast())?
+        declare_step(env, S::ref_init_step_ast()).map_err(|err| err.set_location(ast.provide()))?
     }
 
     // query.and_then(|q| {
@@ -165,22 +160,14 @@ where
     //     ))
     // })
     query.and_then(|q| {
-        q.ok_or_else(|| {
-            use pest::error::*;
-            let err = anyhow::anyhow!("no query");
-            if let Some(b) = ast.begining {
-                let pest = Error::new_from_pos(ErrorVariant::CustomError { message: "".into() }, b);
-                InputError::new_with_pest(pest, err)
-            } else {
-                InputError::Other(err)
-            }
-        })
+        q.ok_or_else(|| ParsingError::OneOff("the querry is missing"))
+            .with_location(|| ast)
     })
 }
 
-fn user_bool_to_condtion<'bump>(s: Sort<'bump>) -> Sort<'bump> {
+fn user_bool_to_condtion(s: Sort<'_>) -> Sort<'_> {
     if s == BOOL.as_sort() {
-        CONDITION.clone()
+        *CONDITION
     } else {
         s
     }
@@ -189,21 +176,19 @@ fn user_bool_to_condtion<'bump>(s: Sort<'bump>) -> Sort<'bump> {
 fn declare_function<'str, 'bump, S>(
     env: &mut Environement<'bump, 'str, S>,
     fun: &DeclareFunction<'str, S>,
-) -> MResult<()>
+) -> crate::Unit
 where
     S: Pstr,
     for<'a> StrRef<'a>: From<&'a S>,
 {
-    let Ident {
-        span,
-        content: name,
-    } = fun.name();
+    let Ident { content: name, .. } = fun.name();
     if env.contains_name(name.borrow()) {
-        bail_at!(span, "the function name '{}' is already in use", name)
+        // bail_at!(span, "the function name '{}' is already in use", name)
+        ParsingError::already_defined("function", name.as_str()).with_location(|| fun.name())
     } else {
         let input_sorts: Result<Vec<_>, _> = fun
             .args()
-            .map(|idn| get_sort(env, idn.span, idn.name().borrow()))
+            .map(|idn| get_sort(env, &idn.span, idn.name().borrow()))
             .map(|s| {
                 // user defined bool functions are condition
                 s.map(user_bool_to_condtion)
@@ -211,7 +196,7 @@ where
             .collect();
         let output_sort = {
             let idn = fun.out();
-            get_sort(env, idn.span, idn.name().borrow())
+            get_sort(env, &idn.span, idn.name().borrow())
                 // user defined bool functions are condition
                 .map(user_bool_to_condtion)
         }?;
@@ -226,9 +211,12 @@ where
             Function::new_user_term_algebra(env.container, name.borrow(), input_sorts?, output_sort)
                 .main
         };
-        if let Some(_) = env.functions.insert(fun.name().to_string(), fun.into()) {
-            bail_at!(
-                span,
+        if env
+            .functions
+            .insert(fun.name().to_string(), fun.into())
+            .is_some()
+        {
+            unreachable!(
                 "!UNREACHABLE!(line {} in {}) \
 The function name {} somehow reintroduced itself in the hash",
                 line!(),
@@ -241,24 +229,23 @@ The function name {} somehow reintroduced itself in the hash",
     }
 }
 
-fn declare_step<'a, 'str, 'bump, S>(
+fn declare_step<'str, 'bump, S>(
     env: &mut Environement<'bump, 'str, S>,
     fun: &'str ast::Step<'str, S>,
-) -> MResult<()>
+) -> crate::Unit
 where
     S: Pstr,
     for<'c> StrRef<'c>: From<&'c S>,
 {
-    let SnN { span, name } = (&fun.name).into();
+    let SnN { name, .. } = (&fun.name).into();
     if env.contains_name(&name) {
-        bail_at!(span, "the step name {} is already in use", &name)
-        // return err(merr(*span, f!("the step name {} is already in use", &name)));
+        ParsingError::already_defined("step", name.as_str()).with_location(|| &fun.name)?
     }
 
     let input_sorts: Result<Vec<_>, _> = fun
         .args()
         .into_iter()
-        .map(|idn| get_sort(env, *idn.span, idn.name))
+        .map(|idn| get_sort(env, idn.span(), idn.name()))
         .collect();
     let step = <ScopedContainer<'bump> as ContainerTools<'bump, InnerStep<'bump>>>::alloc_uninit::<
         'bump,
@@ -276,7 +263,7 @@ where
     });
 
     let r = env.functions.insert(name.to_string(), cache);
-    assert_eq!(None, r);
+    assert!(r.is_none());
 
     Ok(())
 }
@@ -284,7 +271,7 @@ where
 fn declare_cell<'str, 'bump, S>(
     env: &mut Environement<'bump, 'str, S>,
     fun: &'str ast::DeclareCell<'str, S>,
-) -> MResult<()>
+) -> crate::Unit
 where
     S: Pstr,
     for<'a> StrRef<'a>: From<&'a S>,
@@ -298,7 +285,7 @@ where
     let input_sorts: Result<Vec<_>, _> = fun
         .args()
         .into_iter()
-        .map(|idn| get_sort(env, *idn.span, idn.name))
+        .map(|idn| get_sort(env, idn.span(), idn.name()))
         .collect();
     let cell =
         <ScopedContainer<'bump> as ContainerTools<'bump, InnerMemoryCell<'bump>>>::alloc_uninit::<
@@ -327,7 +314,7 @@ where
 fn declare_let<'bump, 'a, S>(
     env: &mut Environement<'bump, 'a, S>,
     mlet: &ast::Macro<'a, S>,
-) -> MResult<()>
+) -> crate::Unit
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
@@ -341,7 +328,7 @@ where
         let args: Result<Arc<[_]>, _> = mlet
             .args
             .into_iter()
-            .map(|idn| get_sort(env, idn.span, idn.type_name.name().borrow()))
+            .map(|idn| get_sort(env, &idn.span, idn.type_name.name().borrow()))
             .collect();
         let args_name = mlet.args_names().cloned().collect();
 

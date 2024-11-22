@@ -5,6 +5,7 @@ pub mod name_caster_collection;
 pub mod signature;
 pub mod traits;
 
+#[allow(clippy::module_inception)]
 mod function;
 
 pub use function::{new_static_function, Function};

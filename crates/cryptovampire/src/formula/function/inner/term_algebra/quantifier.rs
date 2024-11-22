@@ -85,7 +85,7 @@ impl<'bump> Display for Quantifier<'bump> {
             InnerQuantifier::Exists { .. } => write!(f, "exists"),
             InnerQuantifier::FindSuchThat { .. } => write!(f, "findst"),
         }?;
-        write!(f, "{}{}", "#", self.id)?;
+        write!(f, "#{}", self.id)?;
         write!(f, "{{{}}}", self.free_variables.iter().join(", "))?;
         write!(f, " ({})", self.bound_variables.iter().join(", "))?;
         write!(f, " {{ {} }}", self.get_content().iter().join(" }{ "))
@@ -111,7 +111,7 @@ impl<'bump> Quantifier<'bump> {
 
     pub fn get_content_iter<'a>(
         &'a self,
-    ) -> impl Iterator<Item = &'a ARichFormula<'bump>> + ExactSizeIterator {
+    ) -> impl ExactSizeIterator<Item = &'a ARichFormula<'bump>> {
         match &self.inner {
             InnerQuantifier::Forall { content } | InnerQuantifier::Exists { content } => {
                 Either::Left([content])
@@ -145,8 +145,8 @@ impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for Quantifier<'bump> {
         &'a self,
     ) -> crate::formula::function::signature::FixedRefSignature<'a, 'bump> {
         let out = match self.inner {
-            InnerQuantifier::FindSuchThat { .. } => MESSAGE.clone(),
-            InnerQuantifier::Exists { .. } | InnerQuantifier::Forall { .. } => CONDITION.clone(),
+            InnerQuantifier::FindSuchThat { .. } => *MESSAGE,
+            InnerQuantifier::Exists { .. } | InnerQuantifier::Forall { .. } => *CONDITION,
         };
 
         FixedRefSignature {

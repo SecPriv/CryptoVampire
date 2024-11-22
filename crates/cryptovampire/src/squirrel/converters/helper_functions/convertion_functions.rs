@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::formula::function::builtin::EMPTY_FUN_NAME;
+use crate::{error_at, formula::function::builtin::EMPTY_FUN_NAME};
 use hashbrown::Equivalent;
 use if_chain::if_chain;
 use itertools::{chain, Either, Itertools};
@@ -35,12 +35,12 @@ use super::{
 
 pub fn convert_application<'a, 'b>(
     f: &json::Term<'a>,
-    args: &Vec<json::Term<'a>>,
+    args: &[json::Term<'a>],
     ctx: Context<'b, 'a>,
 ) -> RAoO<Term<'a, StrRef<'a>>> {
     match f {
         json::Term::Fun { symb } => {
-            convert_function_or_name_application::<NameName, _>(Either::Right(symb), args, ctx)
+            convert_function_or_name_application::<NameName<'a>, _>(Either::Right(symb), args, ctx)
         }
         json::Term::Macro { .. }
         | json::Term::App { .. }
@@ -52,7 +52,7 @@ pub fn convert_application<'a, 'b>(
         | json::Term::Find { .. }
         | json::Term::Name { .. }
         | json::Term::Action { .. }
-        | json::Term::Quant { .. } => Err(err_at!(@ "no high order")),
+        | json::Term::Quant { .. } => err_at!(@ "no high order"),
     }
 }
 
@@ -96,10 +96,10 @@ where
         pure match symb.clone().into() {
             SpecialFunction::Op(operation) => ast::Infix{span: Default::default(), operation, terms: args}.into(),
             SpecialFunction::If => {
-                let [condition, left, right] = args.try_into().map_err(|_| err_at!(@ "wrong number of arguments to if"))?;
+                let [condition, left, right] = args.try_into().map_err(|_| error_at!(@ "wrong number of arguments to if"))?;
                 ast::IfThenElse {span: Default::default(), condition, left, right}.into()
             }
-            SpecialFunction::Other(symb) => ast::Application::new_app(symb, args).into()
+            SpecialFunction::Other(symb) => ast::Application::new_app(Default::default(),symb, args).into()
         }
     }
 }
@@ -107,7 +107,7 @@ where
 enum SpecialFunction<'a> {
     Op(Operation),
     If,
-    Other(StrRef<'a>)
+    Other(StrRef<'a>),
 }
 
 impl<'a> From<StrRef<'a>> for SpecialFunction<'a> {
@@ -150,11 +150,11 @@ impl<'a> From<StrRef<'a>> for SpecialFunction<'a> {
 /// `input(...)` term to replace it by.
 /// Most of the logic to use them is implemented in [json::Action::prepare_term]
 /// and [json::Action::convert]
-pub fn convert_macro_application<'a, 'b>(
+pub fn convert_macro_application<'a>(
     symb: &json::path::ISymb<'a>,
     args: &[json::Term<'a>],
     timestamp: &json::Term<'a>,
-    ctx: Context<'b, 'a>,
+    ctx: Context<'_, 'a>,
 ) -> RAoO<Term<'a, StrRef<'a>>> {
     let symb = MacroNameRef(symb.path());
     match ctx.dump().get_macro(&symb) {
@@ -194,7 +194,7 @@ pub fn convert_macro_application<'a, 'b>(
                 ))
             })
         }
-        None => Err(err_at!(@ "unknown macro")),
+        None => err_at!(@ "unknown macro"),
     }
 }
 
@@ -205,9 +205,9 @@ pub fn convert_macro_application<'a, 'b>(
 /// to all possible branches. The monad makes sure everything merges properly.
 /// [Context::shape] in `ctx` ensure branches that will be discarded are not
 /// computed (e.g., when there is another `diff` after a first `diff`)
-pub fn convert_diff<'a, 'b>(
+pub fn convert_diff<'a>(
     terms: &[json::Diff<'a>],
-    ctx: Context<'b, 'a>,
+    ctx: Context<'_, 'a>,
 ) -> RAoO<ast::Term<'a, StrRef<'a>>> {
     let terms = terms
         .iter()
@@ -229,30 +229,30 @@ pub fn convert_diff<'a, 'b>(
 ///
 /// For simplicity we only support tuple of size 2. This builds the inverse of
 /// [convert_tuple]
-pub fn convert_projection<'a, 'b>(
+pub fn convert_projection<'a>(
     id: u8,
     body: &json::Term<'a>,
-    ctx: Context<'b, 'a>,
+    ctx: Context<'_, 'a>,
 ) -> RAoO<ast::Term<'a, StrRef<'a>>> {
     let body = body.convert(ctx);
     let unfolded = (1..id).fold(body, |acc, _| {
         mdo! {
             let! body = acc;
-            pure ast::Application::new_app(DEFAULT_SND_PROJ_NAME, [body]).into()
+            pure ast::Application::new_app(Default::default(),DEFAULT_SND_PROJ_NAME, [body]).into()
         }
     });
     mdo! {
         let! unfolded = unfolded;
-        pure ast::Application::new_app(DEFAULT_FST_PROJ_NAME, [unfolded]).into()
+        pure ast::Application::new_app(Default::default(),DEFAULT_FST_PROJ_NAME, [unfolded]).into()
     }
 }
 
-pub fn convert_findst<'a, 'b>(
+pub fn convert_findst<'a>(
     vars: &[json::Term<'a>],
     condition: &json::Term<'a>,
     success: &json::Term<'a>,
     faillure: &json::Term<'a>,
-    ctx: Context<'b, 'a>,
+    ctx: Context<'_, 'a>,
 ) -> RAoO<ast::Term<'a, StrRef<'a>>> {
     mdo! {
         let! condition = condition.convert(ctx);
@@ -269,11 +269,11 @@ pub fn convert_findst<'a, 'b>(
     }
 }
 
-pub fn convert_quantifier<'a, 'b>(
+pub fn convert_quantifier<'a>(
     quantificator: &json::Quant,
     vars: &[json::Term<'a>],
     body: &json::Term<'a>,
-    ctx: Context<'b, 'a>,
+    ctx: Context<'_, 'a>,
 ) -> RAoO<ast::Term<'a, StrRef<'a>>> {
     let kind = match quantificator {
         json::Quant::ForAll => ast::QuantifierKind::Forall,
@@ -295,25 +295,26 @@ pub fn convert_quantifier<'a, 'b>(
 ///
 /// For simplicity and to avoid mutliplying axioms regarding tuples,
 /// we only consider $2$-uple. $n$-uples are translated into nested $2$-uples
-pub fn convert_tuple<'a, 'b>(
+pub fn convert_tuple<'a>(
     elements: &[json::Term<'a>],
-    ctx: Context<'b, 'a>,
+    ctx: Context<'_, 'a>,
 ) -> RAoO<ast::Term<'a, StrRef<'a>>> {
-    let empty = mdo! { pure ast::Application::new_app(EMPTY_FUN_NAME.into(), []).into()};
-    elements.into_iter().fold(empty, |acc, t| {
+    let empty =
+        mdo! { pure ast::Application::new_app(Default::default(),EMPTY_FUN_NAME.into(), []).into()};
+    elements.iter().fold(empty, |acc, t| {
         let acc = acc?;
         let t = t.convert(ctx)?;
         mdo! {
             let! [t, acc] = Ok(AoOV::transpose_array([t, acc]));
-            pure ast::Application::new_app(DEFAULT_TUPLE_NAME.clone(), [t, acc]).into()
+            pure ast::Application::new_app(Default::default(),DEFAULT_TUPLE_NAME.clone(), [t, acc]).into()
         }
     })
 }
 
-pub fn convert_action_application<'a, 'b>(
+pub fn convert_action_application<'a>(
     symb: &ActionName<'a>,
     args: &[json::Term<'a>],
-    ctx: Context<'b, 'a>,
+    ctx: Context<'_, 'a>,
 ) -> RAoO<ast::Term<'a, StrRef<'a>>> {
     apply_fun(symb.sanitized(&ctx), args, ctx)
 }
@@ -321,16 +322,16 @@ pub fn convert_action_application<'a, 'b>(
 /// Convert a function term to a [ast::Term] while making sure this is
 /// possible in FOL. This does not always fail as `squirrel` sometime
 /// give constant (e.g., `true`) as unapplied functions with no parameters
-pub fn convert_function<'a, 'b>(
+pub fn convert_function<'a>(
     symb: &OperatorName<'a>,
-    ctx: Context<'b, 'a>,
+    ctx: Context<'_, 'a>,
 ) -> RAoO<ast::Term<'a, StrRef<'a>>> {
     if let Some(true) = ctx
         .dump()
         .get_operator(symb)
         .map(|f| f.sort.args.is_empty())
     {
-        pure!(ast::Application::new_app(symb.sanitized(&ctx), []).into())
+        pure!(ast::Application::new_app(Default::default(), symb.sanitized(&ctx), []).into())
     } else {
         bail_at!(@ "no high order...")
     }
