@@ -24,9 +24,8 @@ where
         // .stdin(Stdio::null())
         // .stderr(Stdio::null())
         ;
-    let child = handler
-        .spawn_child(cmd, runner.kind())?;
-        // .with_context(|| format!("Failed to start {} ($ {cmd:?})", R::name()))?;
+    let child = handler.spawn_child(cmd, runner.kind())?;
+    // .with_context(|| format!("Failed to start {} ($ {cmd:?})", R::name()))?;
 
     trace!("process spawned, reading the output till EOF");
     // take the stdout
@@ -36,10 +35,11 @@ where
             .take_stdout()
             .with_message(|| "couldn't build the stdout handle")?
             // stdout
-            .read_to_string(&mut out).no_location()?;
-            // .map(|mut s| s.read_to_string(&mut out))
-            // .transpose()
-            // .with_context(|| format!("{}'s output isn't in utf-8 ($ {cmd:?})", R::name()))?;
+            .read_to_string(&mut out)
+            .no_location()?;
+        // .map(|mut s| s.read_to_string(&mut out))
+        // .transpose()
+        // .with_context(|| format!("{}'s output isn't in utf-8 ($ {cmd:?})", R::name()))?;
         // drops and close the
         out
     };
@@ -64,12 +64,11 @@ where
 pub mod dyn_traits {
     use std::{any::Any, path::Path};
 
-
     use crate::{
-        environement::environement::Environement, error::BaseContext, problem::{crypto_assumptions::CryptoAssumption, Problem}, runner::{
-            runner::DiscovererError, searcher::InstanceSearcher, Discoverer, Runner, RunnerHandler,
-            RunnerOut,
-        }
+        environement::environement::Environement,
+        error::BaseContext,
+        problem::{crypto_assumptions::CryptoAssumption, Problem},
+        runner::{searcher::InstanceSearcher, Discoverer, Runner, RunnerHandler, RunnerOut},
     };
 
     pub type RunnerOutDyn = RunnerOut<

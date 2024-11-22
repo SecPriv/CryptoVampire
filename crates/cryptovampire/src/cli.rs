@@ -3,7 +3,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use clap::{Parser, Subcommand};
 use crate::{
     container::ScopedContainer,
     environement::{
@@ -14,6 +13,7 @@ use crate::{
         traits::Realm,
     },
 };
+use clap::{Parser, Subcommand};
 use utils::from_with::IntoWith;
 
 /// A computationnally sound automated cryptographic protocol verifier based on the CCSA.

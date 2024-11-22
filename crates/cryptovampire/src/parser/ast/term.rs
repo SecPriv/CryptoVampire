@@ -1,8 +1,7 @@
-use std::ops::{BitAnd, BitOr, Not, Shr};
 use location::ASTLocation;
+use std::ops::{BitAnd, BitOr, Not, Shr};
 
 use crate::formula::utils::Applicable;
-use pest::Span;
 use term_algebra::connective::NOT_NAME;
 
 use super::*;

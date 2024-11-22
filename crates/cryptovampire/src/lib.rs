@@ -3,30 +3,29 @@
 pub mod cli;
 pub mod container;
 pub mod environement;
+pub mod error;
 pub mod formula;
+pub mod location;
 pub mod parser;
 pub mod problem;
+mod return_value;
 pub mod runner;
 pub mod smt;
 pub mod squirrel;
 pub mod subterm;
-mod return_value;
-pub mod error;
-pub mod location;
 
 #[cfg(test)]
 mod tests;
 
 use error::BaseContext;
 // reexports
-pub use problem::step::INIT_STEP_NAME;
-pub use subterm::kind::SubtermKind;
+pub use error::{Error, Result, Unit};
 pub use parser::parse_pbl_from_ast;
+pub use problem::step::INIT_STEP_NAME;
 pub use return_value::Return;
-pub use error::{Result,Error, Unit};
+pub use subterm::kind::SubtermKind;
 
 // other imports
-use std::{fs::File, io::BufWriter, num::NonZeroU32, path::Path};
 use crate::cli::Args;
 use crate::{
     container::ScopedContainer,
@@ -38,6 +37,7 @@ use crate::{
 };
 use log::trace;
 use parser::{ast::ASTList, Pstr};
+use std::{fs::File, io::BufWriter, num::NonZeroU32, path::Path};
 use utils::{from_with::FromWith, string_ref::StrRef, traits::MyWriteTo};
 
 // start of the file
@@ -152,7 +152,8 @@ pub fn run_to_file<'bump>(
     if !path.exists() {
         std::fs::create_dir_all(path.parent().with_context(&(), || "already a root")?)?;
     }
-    ensure!( (), 
+    ensure!(
+        (),
         pbls.assert_one(),
         "More than one problem queued, are you using lemmas?"
     );

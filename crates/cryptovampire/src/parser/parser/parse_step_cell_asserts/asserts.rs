@@ -1,12 +1,12 @@
+use crate::formula::{formula::ARichFormula, sort::builtins::BOOL};
 use crate::parser::{
     ast,
     parser::{
         parsable_trait::{Parsable, VarProxy},
         Environement,
     },
-     Pstr,
+    Pstr,
 };
-use crate::formula::{formula::ARichFormula, sort::builtins::BOOL};
 use utils::{implvec, string_ref::StrRef};
 
 pub fn parse_assert_with_bvars<'a, 'str, 'bump, S>(

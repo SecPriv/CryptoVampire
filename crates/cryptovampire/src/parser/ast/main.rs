@@ -1,20 +1,18 @@
 use cryptovampire_macros::LocationProvider;
 use location::ASTLocation;
-use pest::Span;
 
-
-use crate::error::{CVContext, Location};
+use crate::error::CVContext;
 
 use super::*;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, LocationProvider)]
-pub struct ASTList< 'str, S> {
+pub struct ASTList<'str, S> {
     pub content: Vec<AST<'str, S>>,
     #[provider]
     pub location: ASTLocation<'str>,
 }
 
-impl<'str, S> ASTList< 'str, S> {
+impl<'str, S> ASTList<'str, S> {
     pub fn as_slice(&self) -> &[AST<'str, S>] {
         self.content.as_slice()
     }
@@ -25,7 +23,8 @@ impl<'a> TryFrom<&'a str> for ASTList<'a, &'a str> {
 
     fn try_from(value: &'a str) -> crate::Result<Self> {
         trace!("running pest");
-        let mut pairs = MainParser::parse(Rule::file, value).with_location(|| location::all(value))?;
+        let mut pairs =
+            MainParser::parse(Rule::file, value).with_location(|| location::all(value))?;
         trace!("pest ran successfully");
 
         Ok(ASTList {
@@ -45,7 +44,7 @@ impl<'a> TryFrom<&'a str> for ASTList<'a, &'a str> {
     }
 }
 
-impl<'str, 'b,  S> IntoIterator for &'b ASTList< 'str, S> {
+impl<'str, 'b, S> IntoIterator for &'b ASTList<'str, S> {
     type Item = &'b AST<'str, S>;
 
     type IntoIter = Iter<'b, AST<'str, S>>;
@@ -55,7 +54,7 @@ impl<'str, 'b,  S> IntoIterator for &'b ASTList< 'str, S> {
     }
 }
 
-impl<'str, S: Display> Display for ASTList< 'str, S> {
+impl<'str, S: Display> Display for ASTList<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.as_slice().iter().try_for_each(|ast| ast.fmt(f))
     }

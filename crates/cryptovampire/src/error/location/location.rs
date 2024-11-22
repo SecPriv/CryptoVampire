@@ -2,7 +2,7 @@ use super::{Locate, LocationProvider};
 
 /// This is the main struct to use with [Locate]. We use dynamic dispatch
 #[derive(Debug)]
-pub struct Location(Box<dyn Locate + 'static + Sync + Send >);
+pub struct Location(Box<dyn Locate + 'static + Sync + Send>);
 
 impl Location {
     #[inline]
@@ -12,7 +12,7 @@ impl Location {
     {
         Self::from_boxed_locate(Box::new(l))
     }
-    
+
     #[inline]
     pub fn from_boxed_locate<L>(l: Box<L>) -> Self
     where
@@ -21,7 +21,10 @@ impl Location {
         Self(l)
     }
 
-    pub fn from_display<D>(d: D) -> Self where D: std::fmt::Display {
+    pub fn from_display<D>(d: D) -> Self
+    where
+        D: std::fmt::Display,
+    {
         let str = d.to_string();
         Location::from_locate(str)
     }

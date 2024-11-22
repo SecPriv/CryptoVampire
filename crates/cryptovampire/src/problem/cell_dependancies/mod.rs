@@ -26,5 +26,5 @@ pub struct Ancestors<'bump> {
 #[derive(Debug, thiserror::Error)]
 pub enum GraphError {
     #[error(transparent)]
-    DependancyError(#[from] graph::DependancyError)
+    DependancyError(#[from] graph::DependancyError),
 }

@@ -4,12 +4,6 @@ use itertools::Itertools;
 use log::trace;
 
 use crate::{
-    bail_at, error::{BaseContext, BaseError, CVContext, ExtraOption}, parser::{
-        parser::{parsable_trait::Parsable, CellCache, FunctionCache},
-        Pstr,
-    }
-};
-use crate::{
     container::{allocator::ContainerTools, ScopedContainer},
     environement::traits::Realm,
     formula::{
@@ -17,6 +11,13 @@ use crate::{
         variable::{from_usize, Variable},
     },
     problem::{cell::Assignement, step::InnerStep},
+};
+use crate::{
+    error::{BaseContext, BaseError, CVContext, ExtraOption},
+    parser::{
+        parser::{parsable_trait::Parsable, CellCache, FunctionCache},
+        Pstr,
+    },
 };
 use utils::{implvec, string_ref::StrRef, traits::NicerError};
 
@@ -119,7 +120,8 @@ where
                                 variable.name().borrow(),
                                 bvars.iter().map(|(n, _)| n.borrow()),
                             ) {
-                                return BaseError::duplicate_symbol(&"name", variable).with_location(variable)
+                                return BaseError::duplicate_symbol(&"name", variable)
+                                    .with_location(variable);
                             } else {
                                 bvars.push((variable.name().clone(), var.into()));
                                 Ok(var)

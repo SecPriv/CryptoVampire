@@ -11,9 +11,9 @@ pub enum ParsingError {
     },
     AlreadyInUse {
         iden: Box<str>,
-        kind: Box<str>
+        kind: Box<str>,
     },
-    OneOff(&'static str)
+    OneOff(&'static str),
 }
 
 impl Display for ParsingError {
@@ -29,7 +29,7 @@ impl Display for ParsingError {
             ParsingError::AlreadyInUse { iden, kind } => {
                 write!(f, "the {kind:} name \"{iden:}\" is already in use")
             }
-            ParsingError::OneOff(s) => s.fmt(f)
+            ParsingError::OneOff(s) => s.fmt(f),
         }
     }
 }
@@ -50,7 +50,10 @@ impl ParsingError {
         }
     }
 
-    pub fn already_defined(kind:&str, iden:&str) -> Self {
-        Self::AlreadyInUse { iden: iden.into(), kind: kind.into() }
+    pub fn already_defined(kind: &str, iden: &str) -> Self {
+        Self::AlreadyInUse {
+            iden: iden.into(),
+            kind: kind.into(),
+        }
     }
 }

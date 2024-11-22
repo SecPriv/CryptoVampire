@@ -13,7 +13,10 @@ use std::{
 };
 
 use crate::{
-    container::ScopedContainer, environement::environement::Environement, error::BaseError, formula::{
+    container::ScopedContainer,
+    environement::environement::Environement,
+    error::BaseError,
+    formula::{
         file_descriptior::{
             axioms::Axiom,
             declare::{ConstructorDestructor, DataType, Declaration},
@@ -25,7 +28,7 @@ use crate::{
         },
         sort::{builtins::CONDITION, Sort},
         variable::{uvar, IntoVariableIter},
-    }
+    },
 };
 
 use super::{

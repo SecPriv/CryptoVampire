@@ -8,9 +8,7 @@ use utils::{all_or_one::AoOV, mdo, string_ref::StrRef};
 
 use crate::{
     bail_at,
-    parser::{
-        ast::{self, Application, Order, OrderOperation, QuantifierKind},
-    },
+    parser::ast::{self, Application, Order, OrderOperation, QuantifierKind},
     squirrel::{
         json::{
             self,

@@ -27,8 +27,7 @@ impl<'str, S> DeclareType<'str, S> {
         &self.name.0.span
     }
 
-    pub fn new(name: TypeName<'str, S>) -> Self
-    {
+    pub fn new(name: TypeName<'str, S>) -> Self {
         Self {
             span: Default::default(),
             name,

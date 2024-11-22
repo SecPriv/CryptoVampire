@@ -1,8 +1,7 @@
+use crate::error::LocateHelper;
+use crate::error::Location;
 use cryptovampire_macros::LocationProvider;
 use location::{ASTLocation, AsASTLocation};
-use crate::error::Location;
-use pest::Span;
-use crate::error::LocateHelper;
 
 use crate::formula::utils::Applicable;
 
@@ -92,7 +91,7 @@ impl<'str, S> MacroName<'str, S> {
     }
 }
 
-impl<'str,  S: Display> Display for MacroName<'str, S> {
+impl<'str, S: Display> Display for MacroName<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}!", self.name())
     }
@@ -210,11 +209,12 @@ impl<'str, S> From<S> for StepName<'str, S> {
     }
 }
 
-
 macro_rules! mk_location_provider {
-        ($name:ident) => {
-            impl<'a, 'str, S: std::fmt::Debug> crate::error::LocationProvider for &'a $name<'str, S> where 
-                S: std::fmt::Display,{
+    ($name:ident) => {
+        impl<'a, 'str, S: std::fmt::Debug> crate::error::LocationProvider for &'a $name<'str, S>
+        where
+            S: std::fmt::Display,
+        {
             fn provide(self) -> Location {
                 self.0.span.help_provide(&self)
             }

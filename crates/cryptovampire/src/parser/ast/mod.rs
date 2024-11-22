@@ -16,7 +16,7 @@ use std::{
 use derivative::Derivative;
 use itertools::{chain, Itertools};
 use log::trace;
-use pest::{iterators::Pair, Parser, Position};
+use pest::{iterators::Pair, Parser};
 
 use crate::{
     formula::function::{

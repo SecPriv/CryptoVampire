@@ -1,8 +1,7 @@
 use cryptovampire_macros::LocationProvider;
 use location::ASTLocation;
-use pest::Span;
 
-use crate::{ Result};
+use crate::Result;
 
 use super::*;
 

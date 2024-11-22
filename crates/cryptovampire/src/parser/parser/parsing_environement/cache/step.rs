@@ -30,7 +30,7 @@ pub struct NamedVariable<'bump, S> {
     pub variable: Variable<'bump>,
 }
 
-impl<'str, 'bump,  S> StepCache<'str, 'bump, S>
+impl<'str, 'bump, S> StepCache<'str, 'bump, S>
 where
     S: Clone + FromStaticString,
 {

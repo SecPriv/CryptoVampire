@@ -8,7 +8,11 @@ use log::debug;
 use utils::traits::MyWriteTo;
 
 use crate::{
-    ensure, environement::environement::Flags, error::{BaseContext, CVContext}, runner::{exec_cmd, RunnerOut}, smt::SmtFile
+    ensure,
+    environement::environement::Flags,
+    error::{BaseContext, CVContext},
+    runner::{exec_cmd, RunnerOut},
+    smt::SmtFile,
 };
 
 use super::{runner::ChildKind, Runner};
@@ -44,7 +48,7 @@ impl Runner for Z3Runner {
             .as_diplay(env)
             .write_to_io(&mut file)?;
         Ok(())
-            // .with_context(|| "couldn't write") // write to tmp file
+        // .with_context(|| "couldn't write") // write to tmp file
     }
 
     fn default_args(&self) -> Self::Args<'_> {
@@ -60,7 +64,8 @@ impl Runner for Z3Runner {
     where
         R: super::RunnerHandler + Clone,
     {
-        ensure!((),
+        ensure!(
+            (),
             // check the file exists
             pbl_file.is_file(),
             "{} is not a file",

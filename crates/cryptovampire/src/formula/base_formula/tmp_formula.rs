@@ -1,16 +1,23 @@
 use super::BaseFormula;
 
-use log::{debug, trace, warn};
+use log::{debug, trace};
 use utils::string_ref::StrRef;
 
 use crate::{
-    bail_at, environement::traits::Realm, error::CVContext, error_at, formula::{
+    bail_at,
+    environement::traits::Realm,
+    error::CVContext,
+    error_at,
+    formula::{
         formula::RichFormula,
         function::{signature::Signature, Function},
         quantifier::Quantifier,
-        sort::{builtins::BOOL, sort_proxy::{InferenceError, SortProxy}},
+        sort::{
+            builtins::BOOL,
+            sort_proxy::{InferenceError, SortProxy},
+        },
         variable::{uvar, Variable},
-    }
+    },
 };
 use hashbrown::HashMap;
 use itertools::Itertools;
@@ -64,7 +71,7 @@ impl TmpFormula {
         realm: &Realm,
         head: &'a str,
         args: &'a [TmpFormula],
-) -> crate::Result<RichFormula<'bump>> {
+    ) -> crate::Result<RichFormula<'bump>> {
         if let Some(f) = functions.get(head) {
             if f.is_tmp() {
                 debug!("failed: tmp function\n\t=>{self}");
@@ -190,7 +197,7 @@ impl<'a> TmpOrStr<'a> {
             v //Ok(RichFormula::Var(v))
         } else {
             debug!("failed: infernce error\n\t=>{self}");
-            return InferenceError::cant_infer(&expected_sort).with_pre_location(&(), &self)
+            return InferenceError::cant_infer(&expected_sort).with_pre_location(&(), &self);
         };
         Ok(v)
     }

@@ -1,4 +1,4 @@
-use std::fmt::{format, Display, Write};
+use std::fmt::{Display, Write};
 
 use pest::error::ErrorVariant;
 

@@ -3,14 +3,10 @@ use proc_macro2::Span;
 use quote::{quote, quote_spanned};
 use syn::{
     parse_macro_input, spanned::Spanned, DataEnum, DataStruct, DeriveInput, Field, Fields,
-    GenericParam, Generics, Ident, Lifetime, LifetimeParam, PredicateType, Type,
-    WherePredicate,
+    GenericParam, Generics, Ident, Lifetime, LifetimeParam, PredicateType, Type, WherePredicate,
 };
 
-fn find_field(
-    span: Span,
-    fields: &Fields,
-) -> Result<(usize, &Field), proc_macro2::TokenStream> {
+fn find_field(span: Span, fields: &Fields) -> Result<(usize, &Field), proc_macro2::TokenStream> {
     let mut iter = fields.iter().enumerate().filter(|(_, f)| {
         f.attrs
             .iter()

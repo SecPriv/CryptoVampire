@@ -1,8 +1,13 @@
-
 use crate::{
-    bail_at, err_at, error::{BaseContext, CVContext}, formula::function::signature::CheckError, parser::{
-        ast::{self, Options}, location::ASTLocation, parser::Environement, Pstr
-    }
+    bail_at,
+    error::{BaseContext, CVContext},
+    formula::function::signature::CheckError,
+    parser::{
+        ast::{self, Options},
+        location::ASTLocation,
+        parser::Environement,
+        Pstr,
+    },
 };
 use crate::{
     environement::traits::Realm,
@@ -52,7 +57,7 @@ where
         "uf-cma" | "uf_cma" => parse_uf_cma(env, functions, options, span),
         "int-ctxt" | "int_ctxt" => parse_int_ctxt(env, functions, span),
         "unfolding" => parse_unfolding(env, functions, options, span),
-        _ => bail_at!(name, "unknown crypto assertion")
+        _ => bail_at!(name, "unknown crypto assertion"),
     }
     .debug_continue()
 }
@@ -91,7 +96,7 @@ where
             verify_sign!(env; ast_pk, pk, EUF_CMA_PK_SIGNATURE, 1);
             Ok(CryptoAssumption::EufCmaSign(EufCma { sign, verify, pk }))
         }
-        i => CheckError::wrong_num_args(i, 2..=3).with_location(span)
+        i => CheckError::wrong_num_args(i, 2..=3).with_location(span),
     }
 }
 
@@ -111,7 +116,7 @@ where
         verify_sign!(env; ast_verify, verify, UF_CMA_VERIFY_SIGNATURE, 3);
         builder.mac(mac).verify(verify);
     } else {
-        return CheckError::wrong_num_args(functions.len(), 2..=2).with_location(s)
+        return CheckError::wrong_num_args(functions.len(), 2..=2).with_location(s);
     }
     if options.contains("hmac") {
         builder.hmac(true);
@@ -131,7 +136,7 @@ where
 {
     let functions = match functions.len() {
         3 | 4 => Ok(&functions[..3]),
-        i => CheckError::wrong_num_args(i, 3..=3).with_location(span)
+        i => CheckError::wrong_num_args(i, 3..=3).with_location(span),
     }
     .debug_continue()?;
     destvec!([ast_enc, ast_dec, ast_fail] = functions);

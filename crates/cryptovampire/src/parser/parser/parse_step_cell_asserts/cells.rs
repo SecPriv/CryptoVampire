@@ -1,5 +1,5 @@
 use crate::error::BaseContext;
-use crate::parser::{parser::CellCache,  Pstr};
+use crate::parser::{parser::CellCache, Pstr};
 use crate::{
     container::{allocator::ContainerTools, ScopedContainer},
     problem::cell::InnerMemoryCell,

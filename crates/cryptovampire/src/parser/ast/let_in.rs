@@ -1,6 +1,5 @@
 use cryptovampire_macros::LocationProvider;
 use location::ASTLocation;
-use pest::Span;
 
 use super::*;
 

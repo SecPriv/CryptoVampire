@@ -5,7 +5,9 @@ use std::{hash::Hash, sync::Arc};
 use itertools::Itertools;
 
 use crate::{
-    error::BaseError, formula::formula::ARichFormula, problem::{cell::MemoryCell, step::Step}
+    error::BaseError,
+    formula::formula::ARichFormula,
+    problem::{cell::MemoryCell, step::Step},
 };
 use utils::implvec;
 

@@ -1,48 +1,51 @@
 use std::fmt::Display;
 
-use super::{runner::DiscovererError, runners::{HandlerError, RunnersCreationError}};
+use super::{
+    runner::DiscovererError,
+    runners::{HandlerError, RunnersCreationError},
+};
 
 #[non_exhaustive]
 #[derive(Debug, thiserror::Error)]
 pub enum RunnerError {
-  #[error(transparent)]
-  DiscovererError(#[from] DiscovererError),
-  #[error(transparent)]
-  RunnersCreationError(#[from] RunnersCreationError),
-  #[error(transparent)]
-  HandlerError(#[from] HandlerError),
+    #[error(transparent)]
+    DiscovererError(#[from] DiscovererError),
+    #[error(transparent)]
+    RunnersCreationError(#[from] RunnersCreationError),
+    #[error(transparent)]
+    HandlerError(#[from] HandlerError),
 
-  #[error("error while parsing a solver's ouptut: {0}")]
-  ParsingError(#[from] ParsingError),
+    #[error("error while parsing a solver's ouptut: {0}")]
+    ParsingError(#[from] ParsingError),
 
-  #[error("ran out of tries (tried {0} times)")]
-  RanOutOfTries(u32),
-  #[error("nothing to do: {0}")]
-  NothingToDo(String),
+    #[error("ran out of tries (tried {0} times)")]
+    RanOutOfTries(u32),
+    #[error("nothing to do: {0}")]
+    NothingToDo(String),
 
-  #[error("unexpected behaviour while running {tool}:\nran: \"{cmd:?}\"\nreturn code: {return_code}\nstdout:\n{stdout}")]
-  UnexpectedResult{
-    tool: &'static str,
-    return_code: i32,
-    cmd: std::process::Command,
-    stdout: String
-  },
+    #[error("unexpected behaviour while running {tool}:\nran: \"{cmd:?}\"\nreturn code: {return_code}\nstdout:\n{stdout}")]
+    UnexpectedResult {
+        tool: &'static str,
+        return_code: i32,
+        cmd: std::process::Command,
+        stdout: String,
+    },
 
-  #[error("disproved the query")]
-  Disprove
+    #[error("disproved the query")]
+    Disprove,
 }
 
 #[non_exhaustive]
 #[derive(Debug, thiserror::Error)]
-pub enum ParsingError{
-  #[error(transparent)]
-  Tptp(nom::Err<()>)
+pub enum ParsingError {
+    #[error(transparent)]
+    Tptp(nom::Err<()>),
 }
 
 impl RunnerError {
-  pub fn nothing_to_do(d:impl Display) -> Self {
-    Self::NothingToDo(d.to_string())
-  }
+    pub fn nothing_to_do(d: impl Display) -> Self {
+        Self::NothingToDo(d.to_string())
+    }
 }
 
 impl From<nom::Err<()>> for RunnerError {

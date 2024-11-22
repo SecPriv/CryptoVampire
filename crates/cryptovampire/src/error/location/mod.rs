@@ -1,14 +1,10 @@
-use std::{
-    fmt::{Debug, Display},
-    hash::Hash,
-};
+use std::fmt::{Debug, Display};
 mod location;
-pub use location::{Location, RefLocation};
+pub use location::Location;
 
 mod location_helper;
-pub use location_helper::LocationHelper;
 
-use crate::{err_at, error_at};
+use crate::error_at;
 
 mod empty;
 mod pest;

@@ -4,7 +4,6 @@ members = [
   "crates/utils", 
   "crates/logic_formula",
   "crates/cryptovampire_macros",
-  "crates/test-crate"
 ]
 resolver = "2"
 # authors = ["Simon Jeanteur <7871851+puyral@users.noreply.github.com>"]
@@ -21,7 +20,7 @@ thiserror = "1.0"
 macro-attr = "0.2"
 # anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"]}
-derive_builder = "0.20.0"
+derive_builder = "0.20"
 bitflags = "2.6"
 
 [all.package.lints.rust]

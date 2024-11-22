@@ -31,7 +31,7 @@ impl Locate for String {
         backtrace: Option<&std::backtrace::Backtrace>,
         f: &mut std::fmt::Formatter<'_>,
     ) -> std::fmt::Result {
-        let str : &str = self.as_ref();
+        let str: &str = self.as_ref();
         str.location_fmt(err, backtrace, f)
     }
 
@@ -41,7 +41,7 @@ impl Locate for String {
 }
 
 impl LocateHelper for str {
-    fn help_provide(&self, str:&(dyn std::fmt::Display )) -> Location {
+    fn help_provide(&self, str: &(dyn std::fmt::Display)) -> Location {
         Location::from_locate(format!("{str}\nat: {self}"))
     }
 }

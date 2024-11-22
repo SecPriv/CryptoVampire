@@ -1,16 +1,15 @@
-use location::{ASTLocation, AsASTLocation};
-use pest::Span;
 use cryptovampire_macros::LocationProvider;
+use location::{ASTLocation, AsASTLocation};
 
-use crate::{error::{LocationProvider}, Error};
+use crate::Error;
 
 use super::*;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum Assert<'str, S> {
-    Assertion(Assertion<'str,  S>),
-    Query(Assertion<'str, S>, ),
-    Lemma(Assertion<'str,  S>),
+    Assertion(Assertion<'str, S>),
+    Query(Assertion<'str, S>),
+    Lemma(Assertion<'str, S>),
 }
 
 boiler_plate!(Assert<'a, &'a str>, 'a, assertion | query | lemma ; |p| {
@@ -40,11 +39,11 @@ impl<'str, S: Display> Display for Assert<'str, S> {
 
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Assertion< 'str, S> {
+pub struct Assertion<'str, S> {
     #[provider]
     pub span: ASTLocation<'str>,
-    pub content: Term< 'str, S>,
-    pub options: Options< 'str, S>,
+    pub content: Term<'str, S>,
+    pub options: Options<'str, S>,
 }
 boiler_plate!(Assertion<'a, &'a str>, 'a, assertion_inner ; |p| {
     let span = p.as_span();
@@ -63,12 +62,12 @@ impl<'str, S: Display> Display for Assertion<'str, S> {
 
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct AssertCrypto< 'str, S> {
+pub struct AssertCrypto<'str, S> {
     #[provider]
     pub span: ASTLocation<'str>,
-    pub name: Ident< 'str,S>,
+    pub name: Ident<'str, S>,
     pub functions: Vec<Function<'str, S>>,
-    pub options: Options< 'str,S>,
+    pub options: Options<'str, S>,
 }
 boiler_plate!(AssertCrypto< 'a, &'a str>, 'a, assertion_crypto ; |p| {
     let span = p.as_span();
@@ -92,7 +91,7 @@ boiler_plate!(AssertCrypto< 'a, &'a str>, 'a, assertion_crypto ; |p| {
     Ok(Self {span:span.into(), name, functions, options})
 });
 
-impl< 'str, S: Display> Display for AssertCrypto<'str,  S> {
+impl<'str, S: Display> Display for AssertCrypto<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
             name,

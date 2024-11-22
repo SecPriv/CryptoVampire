@@ -1,12 +1,12 @@
 use std::ffi::OsString;
 
-use clap::Parser;
 use crate::{
     container::ScopedContainer,
     environement::environement::Environement,
     formula::{function::builtin::BUILT_IN_FUNCTIONS, sort::builtins::BUILT_IN_SORTS},
     smt::SmtFile,
 };
+use clap::Parser;
 use log::trace;
 use utils::from_with::FromWith;
 

@@ -66,7 +66,8 @@ where
     }
 }
 
-impl<'a, B, F, V> LocationProvider for &'a BaseFormula<B, F, V> where 
+impl<'a, B, F, V> LocationProvider for &'a BaseFormula<B, F, V>
+where
     B: Display,
     F: Display,
     V: Display,

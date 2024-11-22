@@ -4,9 +4,16 @@ mod cached_builtins;
 use itertools::Itertools;
 use log::{log_enabled, trace, warn};
 
-use crate::{bail_at, error::{CVContext, ExtraOption, LocateHelper, LocationProvider}, parser::{
-    ast::{self, extra::SnN, LetIn, Term}, location::ASTLocation, parser::parsing_environement::get_function_mow, Pstr
-} };
+use crate::{
+    bail_at,
+    error::{CVContext, ExtraOption, LocationProvider},
+    parser::{
+        ast::{self, extra::SnN, LetIn, Term},
+        location::ASTLocation,
+        parser::parsing_environement::get_function_mow,
+        Pstr,
+    },
+};
 use crate::{
     environement::traits::{KnowsRealm, Realm},
     formula::{
@@ -28,7 +35,7 @@ use crate::{
         variable::{from_usize, uvar, Variable},
     },
 };
-use utils::{f, implvec, match_as_trait, string_ref::StrRef, traits::NicerError};
+use utils::{implvec, match_as_trait, string_ref::StrRef, traits::NicerError};
 
 pub(crate) use self::cached_builtins::*;
 
@@ -191,10 +198,9 @@ where
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> crate::Result<Self::R> {
-        expected_sort.into_iter().try_for_each(|s| {
-            s.expects(MESSAGE.as_sort(), &state)
-                .with_location(|| self)
-        })?;
+        expected_sort
+            .into_iter()
+            .try_for_each(|s| s.expects(MESSAGE.as_sort(), &state).with_location(|| self))?;
 
         let ast::FindSuchThat {
             vars,
@@ -268,11 +274,7 @@ where
             if env.allow_shadowing() {
                 warn!("the name {} is already taken, shadowing", variable.name())
             } else {
-                crate::bail_at!(
-                    variable,
-                    "the name {} is already taken",
-                    variable.name()
-                )
+                crate::bail_at!(variable, "the name {} is already taken", variable.name())
             }
         }
         let SnN { span, name } = type_name.into();
@@ -330,9 +332,11 @@ where
             Realm::Evaluated => BOOL.as_sort().into(),
             Realm::Symbolic => CONDITION.as_sort().into(),
         };
-        expected_sort
-            .into_iter()
-            .try_for_each(|s| s.expects(es, &state).with_location(|| span).debug_continue())?;
+        expected_sort.into_iter().try_for_each(|s| {
+            s.expects(es, &state)
+                .with_location(|| span)
+                .debug_continue()
+        })?;
 
         let bn = bvars.len();
 
@@ -437,7 +441,7 @@ where
                             }
                             (_, r) => expected_sort
                                 .as_ref()
-                                .map(|es| es.unify_rev(sort, &r).with_location(||span))
+                                .map(|es| es.unify_rev(sort, &r).with_location(|| span))
                                 .unwrap_or_else(|| {
                                     sort.as_option().ok_or(span.err_with(|| "can't infer sort"))
                                 })
@@ -479,7 +483,7 @@ where
 }
 
 /// parse a function application (when we know it is definitly a function and not a variable)
-fn parse_application<'b, 'a, 'bump, S >(
+fn parse_application<'b, 'a, 'bump, S>(
     env: &'b Environement<'bump, 'a, S>,
     span: &ASTLocation<'a>,
     state: &impl KnowsRealm,
@@ -774,8 +778,7 @@ where
                     &self.terms,
                 )
                 .debug_continue(),
-                Realm::Symbolic => 
-                    Self {
+                Realm::Symbolic => Self {
                     operation: ast::Operation::And,
                     terms: as_pair_of_term(
                         &self.span,
@@ -846,7 +849,7 @@ where
 }
 
 fn as_pair_of_term<'a, 'b: 'a, S>(
-    span: &ASTLocation<'b> ,
+    span: &ASTLocation<'b>,
     operation: ast::Operation,
     iter: impl IntoIterator<Item = (&'a Term<'b, S>, &'a Term<'b, S>)>,
 ) -> Vec<Term<'b, S>>

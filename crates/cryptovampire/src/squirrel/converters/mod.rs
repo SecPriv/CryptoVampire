@@ -1,11 +1,11 @@
 use std::fmt::Display;
 
-use ast_convertion::{ConcreteMacro, ToAst, INDEX_SORT_NAME};
-use base64::Engine;
 use crate::formula::function::builtin::{
     AND, CONDITION_MACRO, EMPTY, EQUALITY, EXEC_MACRO, FALSE_F, GREATER_THAN_STEP, HAPPENS,
     IMPLIES, LESS_THAN_EQ_STEP, LESS_THAN_STEP, MESSAGE_MACRO, NOT, OR, PRED, TRUE_F,
 };
+use ast_convertion::{ConcreteMacro, ToAst, INDEX_SORT_NAME};
+use base64::Engine;
 use derive_builder::Builder;
 use hashbrown::{HashMap, HashSet};
 use itertools::{chain, Itertools};
@@ -21,7 +21,7 @@ use utils::{
 
 use crate::{
     bail_at,
-    parser::{ast},
+    parser::ast,
     squirrel::json::{self, MacroRef},
     // squirrel::Sanitizable
 };
@@ -63,7 +63,7 @@ static REMMAPPED_FUNCTION: HashMap<&'static str, StrRef<'static>> = {
         ("output", MESSAGE_MACRO.name()),
         ("exec", EXEC_MACRO.name()),
         (DEFAULT_FAIL_NAME_NAME, DEFAULT_FAIL_NAME.clone()),
-        ("if", "if".into())
+        ("if", "if".into()),
     ]
     .into_iter()
     .collect()

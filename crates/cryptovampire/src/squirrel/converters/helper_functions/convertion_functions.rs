@@ -107,7 +107,7 @@ where
 enum SpecialFunction<'a> {
     Op(Operation),
     If,
-    Other(StrRef<'a>)
+    Other(StrRef<'a>),
 }
 
 impl<'a> From<StrRef<'a>> for SpecialFunction<'a> {
@@ -299,7 +299,8 @@ pub fn convert_tuple<'a, 'b>(
     elements: &[json::Term<'a>],
     ctx: Context<'b, 'a>,
 ) -> RAoO<ast::Term<'a, StrRef<'a>>> {
-    let empty = mdo! { pure ast::Application::new_app(Default::default(),EMPTY_FUN_NAME.into(), []).into()};
+    let empty =
+        mdo! { pure ast::Application::new_app(Default::default(),EMPTY_FUN_NAME.into(), []).into()};
     elements.into_iter().fold(empty, |acc, t| {
         let acc = acc?;
         let t = t.convert(ctx)?;
@@ -330,7 +331,7 @@ pub fn convert_function<'a, 'b>(
         .get_operator(symb)
         .map(|f| f.sort.args.is_empty())
     {
-        pure!(ast::Application::new_app(Default::default(),symb.sanitized(&ctx), []).into())
+        pure!(ast::Application::new_app(Default::default(), symb.sanitized(&ctx), []).into())
     } else {
         bail_at!(@ "no high order...")
     }

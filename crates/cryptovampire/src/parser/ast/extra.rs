@@ -1,20 +1,23 @@
-use crate::{ error::{LocateHelper, LocationProvider}, formula::sort::builtins::STEP};
-use cryptovampire_macros::LocationProvider;
+use crate::{
+    error::{LocateHelper, LocationProvider},
+    formula::sort::builtins::STEP,
+};
 use derivative::Derivative;
 use utils::string_ref::StrRef;
 
 use super::{
-     location::ASTLocation, DeclareCell, DeclareFunction, Function, Macro, MacroName, Step, StepName, TypeName
+    location::ASTLocation, DeclareCell, DeclareFunction, Function, Macro, MacroName, Step,
+    StepName, TypeName,
 };
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Sub<'str,  S> {
+pub struct Sub<'str, S> {
     pub span: ASTLocation<'str>,
     pub content: S,
 }
 
-impl<'str,  T> Sub<'str,  T> {
+impl<'str, T> Sub<'str, T> {
     /// using [Location::default]
     pub fn from_content(c: T) -> Self {
         Self {
@@ -24,7 +27,7 @@ impl<'str,  T> Sub<'str,  T> {
     }
 }
 
-impl<'str,  T> From<T> for Sub<'str,  T> {
+impl<'str, T> From<T> for Sub<'str, T> {
     fn from(c: T) -> Self {
         Self::from_content(c)
     }
@@ -43,7 +46,7 @@ impl<'str, 'b> SnN<'str, 'b> {
     pub fn span(&self) -> &ASTLocation<'str> {
         self.span
     }
-    
+
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -85,7 +88,7 @@ where
     }
 }
 
-impl<'a, 'b,  S> From<&'b MacroName<'a, S>> for SnN<'a, 'b>
+impl<'a, 'b, S> From<&'b MacroName<'a, S>> for SnN<'a, 'b>
 where
     StrRef<'a>: From<&'b S>,
 {

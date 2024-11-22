@@ -39,10 +39,10 @@ pub struct CellCache<'str, 'bump, S> {
     pub assignements: Mutex<Vec<Assignement<'bump>>>,
 }
 
-impl<'str, 'bump,  S> FunctionCache<'str, 'bump,  S> {
+impl<'str, 'bump, S> FunctionCache<'str, 'bump, S> {
     /// to make sure things are still as variant as they should
     #[allow(dead_code)]
-    fn shorten_life<'a>(self) -> FunctionCache<'a, 'bump,  S>
+    fn shorten_life<'a>(self) -> FunctionCache<'a, 'bump, S>
     where
         'str: 'a,
     {
@@ -127,7 +127,7 @@ impl<'str, 'bump,  S> FunctionCache<'str, 'bump,  S> {
         }
     }
 
-    pub fn as_memory_cell(&self) -> Option<&CellCache<'str, 'bump,  S>> {
+    pub fn as_memory_cell(&self) -> Option<&CellCache<'str, 'bump, S>> {
         if let Self::MemoryCell(v) = self {
             Some(v)
         } else {
@@ -135,7 +135,7 @@ impl<'str, 'bump,  S> FunctionCache<'str, 'bump,  S> {
         }
     }
 
-    pub fn as_step(&self) -> Option<&StepCache<'str, 'bump,  S>> {
+    pub fn as_step(&self) -> Option<&StepCache<'str, 'bump, S>> {
         if let Self::Step(v) = self {
             Some(v)
         } else {
@@ -144,7 +144,7 @@ impl<'str, 'bump,  S> FunctionCache<'str, 'bump,  S> {
     }
 }
 
-impl<'str, 'bump, S> From<Function<'bump>> for FunctionCache<'str, 'bump,  S> {
+impl<'str, 'bump, S> From<Function<'bump>> for FunctionCache<'str, 'bump, S> {
     fn from(value: Function<'bump>) -> Self {
         Self::Function(value)
     }

@@ -1,4 +1,7 @@
-use crate::{error::Location, error_at, formula::sort::builtins::{BOOL, MESSAGE, NAME, STEP}};
+use crate::{
+    error_at,
+    formula::sort::builtins::{BOOL, MESSAGE, NAME, STEP},
+};
 use itertools::{chain, Either, Itertools};
 use utils::{
     all_or_one::AoOV, mdo, monad::Monad, pure, string_ref::StrRef, traits::NicerError,
@@ -6,10 +9,8 @@ use utils::{
 };
 
 use crate::{
-    bail_at, err_at,
-    parser::{
-        ast::{self, Options, Term},
-    },
+    bail_at,
+    parser::ast::{self, Options, Term},
     squirrel::{
         converters::ContextBuilder,
         json::{

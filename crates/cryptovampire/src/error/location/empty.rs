@@ -33,7 +33,7 @@ impl LocationProvider for () {
 }
 
 impl LocateHelper for () {
-    fn help_provide(&self, str:&dyn std::fmt::Display) -> Location {
+    fn help_provide(&self, str: &dyn std::fmt::Display) -> Location {
         Location::from_display(str)
     }
 }

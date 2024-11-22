@@ -4,7 +4,9 @@ use std::sync::Arc;
 use super::*;
 
 use crate::{
-    bail_at, err_at, error::{CVContext, LocationProvider}, parser::{ast::extra::AsFunction, error::ParsingError, Pstr}
+    bail_at, err_at,
+    error::{CVContext, LocationProvider},
+    parser::{ast::extra::AsFunction, error::ParsingError, Pstr},
 };
 
 use crate::{
@@ -50,11 +52,7 @@ where
                 //     *s.get_name_span(),
                 //     f!("the sort name {} is already in use", name),
                 // ))
-                err_at!(
-                    s.name_span(),
-                    "the sort name {} is already in use",
-                    name
-                )
+                err_at!(s.name_span(), "the sort name {} is already in use", name)
             } else {
                 let sort =
                     Sort::new_index(env.container, String::from(name.borrow()).into_boxed_str());
@@ -147,9 +145,7 @@ where
         })?;
 
     if !did_initilise_init {
-        declare_step(env, S::ref_init_step_ast()).map_err(|err| {
-            err.set_location(ast.provide())
-        })?
+        declare_step(env, S::ref_init_step_ast()).map_err(|err| err.set_location(ast.provide()))?
     }
 
     // query.and_then(|q| {
@@ -272,8 +268,8 @@ where
 }
 
 fn declare_cell<'str, 'bump, S>(
-    env: &mut Environement<'bump, 'str,  S>,
-    fun: &'str ast::DeclareCell<'str,  S>,
+    env: &mut Environement<'bump, 'str, S>,
+    fun: &'str ast::DeclareCell<'str, S>,
 ) -> crate::Unit
 where
     S: Pstr,

@@ -3,18 +3,12 @@ use std::{
     fmt::{Debug, Display},
 };
 
-use serde::{Deserialize, Serialize};
-
-use super::{
-    inner_error::InnerError, BaseError, Locate, Location, LocationProvider, Result
-};
-
+use super::{inner_error::InnerError, BaseError, Locate, Location, LocationProvider, Result};
 
 #[derive(Debug)]
 pub struct Error(Box<InnerError>);
 
-impl Display for Error
-{
+impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let location = self.get_location();
         let backtrace = self.get_backtrace();
@@ -50,11 +44,10 @@ impl Error {
         Err(Self::new(location, error))
     }
 
-    pub fn from_err<T, P:LocationProvider>(
+    pub fn from_err<T, P: LocationProvider>(
         location: impl FnOnce() -> P,
         error: impl Into<BaseError>,
-    ) -> Result<T>
-    {
+    ) -> Result<T> {
         Self::err(location().provide(), error.into())
     }
 
@@ -70,19 +63,21 @@ impl Error {
         self.0.backtrace.as_ref()
     }
 
-    pub(crate) fn set_location(mut self, l:Location) -> Self {
+    pub(crate) fn set_location(mut self, l: Location) -> Self {
         self.0.location = l;
         self
     }
 
-    pub fn msg_with_location(location: Location, str:String ) -> Self {
+    pub fn msg_with_location(location: Location, str: String) -> Self {
         let error = BaseError::Message(str);
         Self::new(location, error)
     }
-
 }
 
-impl<U> From<U> for Error where U:Into<BaseError> {
+impl<U> From<U> for Error
+where
+    U: Into<BaseError>,
+{
     fn from(value: U) -> Self {
         crate::Error::new(Default::default(), value.into())
     }

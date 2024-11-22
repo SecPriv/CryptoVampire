@@ -5,14 +5,6 @@ use itertools::Itertools;
 use log::trace;
 
 use crate::{
-     error::{CVContext, LocateHelper, LocationProvider}, parser::{
-        ast::{self, ASTList}, error::ParsingError, location::ASTLocation, parser::{
-            parse_assert_with_bvars, parse_asserts_crypto, parse_asserts_with_bvars, parse_cells,
-            parse_orders_with_bvars, parse_steps,
-        },  Pstr
-    }
-};
-use crate::{
     container::ScopedContainer,
     environement::traits::{KnowsRealm, Realm},
     formula::{
@@ -30,10 +22,20 @@ use crate::{
         step::Step,
     },
 };
-use utils::{
-    implderef, implvec, maybe_owned::MOw, string_ref::StrRef, traits::NicerError,
-    utils::MaybeInvalid,
+use crate::{
+    error::{CVContext, LocateHelper},
+    parser::{
+        ast::{self, ASTList},
+        error::ParsingError,
+        location::ASTLocation,
+        parser::{
+            parse_assert_with_bvars, parse_asserts_crypto, parse_asserts_with_bvars, parse_cells,
+            parse_orders_with_bvars, parse_steps,
+        },
+        Pstr,
+    },
 };
+use utils::{implderef, implvec, maybe_owned::MOw, string_ref::StrRef, utils::MaybeInvalid};
 
 #[derive(Hash, Clone, PartialEq, Eq, Debug, PartialOrd, Ord)]
 pub struct Macro<'bump, 'str, S> {
@@ -82,7 +84,7 @@ pub struct Environement<'bump, 'str, S> {
     pub allow_shadowing: bool,
 }
 
-impl<'bump, 'str, S> MaybeInvalid for Environement<'bump, 'str,  S> {
+impl<'bump, 'str, S> MaybeInvalid for Environement<'bump, 'str, S> {
     fn is_valid(&self) -> bool {
         let Environement {
             name_caster_collection: _,
@@ -107,9 +109,7 @@ impl<'bump, 'str, S> MaybeInvalid for Environement<'bump, 'str,  S> {
     }
 }
 
-impl<'bump, 'str,  S> Environement<'bump, 'str, S>
-{
-
+impl<'bump, 'str, S> Environement<'bump, 'str, S> {
     pub fn new(
         container: &'bump ScopedContainer<'bump>,
         sort_hash: implvec!(Sort<'bump>),
@@ -186,7 +186,11 @@ impl<'bump, 'str,  S> Environement<'bump, 'str, S>
         get_function(self, span, name)
     }
 
-    pub fn find_sort<'b>(&'b self, span: &ASTLocation<'str>, name: &str) -> crate::Result<Sort<'bump>> {
+    pub fn find_sort<'b>(
+        &'b self,
+        span: &ASTLocation<'str>,
+        name: &str,
+    ) -> crate::Result<Sort<'bump>> {
         get_sort(self, span, name)
     }
 
@@ -208,7 +212,7 @@ impl<'bump, 'str,  S> Environement<'bump, 'str, S>
 }
 
 /// Find the [Sort] in already declared in [Environement::sort_hash]
-pub fn get_sort<'str, 'bump, S, L:LocateHelper>(
+pub fn get_sort<'str, 'bump, S, L: LocateHelper>(
     env: &Environement<'bump, 'str, S>,
     span: &L,
     str: implderef!(str),
@@ -221,18 +225,19 @@ pub fn get_sort<'str, 'bump, S, L:LocateHelper>(
 }
 
 /// Find the [Function] in already declared in [Environement::functions]
-pub fn get_function<'b, 'a, 'bump, L:LocateHelper, S>(
+pub fn get_function<'b, 'a, 'bump, L: LocateHelper, S>(
     env: &'b Environement<'bump, 'a, S>,
     span: &L,
     str: implderef!(str),
-) -> crate::Result<&'b FunctionCache<'a, 'bump,S>> {
-    env.functions.get(Deref::deref(&str)).ok_or_else(|| {
-        ParsingError::undefined_function(&str)
-    }).with_pre_location(span, &str.deref())
+) -> crate::Result<&'b FunctionCache<'a, 'bump, S>> {
+    env.functions
+        .get(Deref::deref(&str))
+        .ok_or_else(|| ParsingError::undefined_function(&str))
+        .with_pre_location(span, &str.deref())
     // .map(|s| *s)
 }
 
-pub fn get_function_mow<'b, 'a, 'bump, L:LocateHelper, S>(
+pub fn get_function_mow<'b, 'a, 'bump, L: LocateHelper, S>(
     content: &S,
     state: &impl KnowsRealm,
     env: &'b Environement<'bump, 'a, S>,
@@ -265,7 +270,7 @@ impl<'a, 'bump, S> KnowsRealm for Environement<'bump, 'a, S> {
 }
 
 /// Create a problem from a [ast::ASTList]
-pub fn parse_pbl_from_ast<'bump,'str,  S>(
+pub fn parse_pbl_from_ast<'bump, 'str, S>(
     container: &'bump ScopedContainer<'bump>,
     sort_hash: implvec!(Sort<'bump>),
     function_hash: implvec!(Function<'bump>),
@@ -289,16 +294,10 @@ where
         extra_names,
         allow_shadowing,
     );
-    prbl_from_ast(
-        env,
-        &*&ast,
-        pbl_builder,
-        ignore_lemmas,
-        container,
-    )
+    prbl_from_ast(env, &*&ast, pbl_builder, ignore_lemmas, container)
 }
 
-fn prbl_from_ast<'a, 'bump,  S>(
+fn prbl_from_ast<'a, 'bump, S>(
     mut env: Environement<'bump, 'a, S>,
     ast: &'a ASTList<'a, S>,
     mut pbl_builder: ProblemBuilder<'bump>,
@@ -319,7 +318,7 @@ where
     let mut asserts_crypto = Vec::new();
 
     trace!("[P] \t- fetch all...");
-    let query = fetch_all::< S>(
+    let query = fetch_all::<S>(
         //                 ^^^^^^^^^ same ???
         &mut env,
         &ast,
@@ -327,8 +326,7 @@ where
         &mut lemmas,
         &mut orders,
         &mut asserts_crypto,
-    )
-    ?;
+    )?;
     trace!("[P] \t[DONE]");
 
     trace!("[P] \t- parse steps...");

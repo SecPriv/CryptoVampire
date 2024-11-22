@@ -1,8 +1,5 @@
 use cryptovampire_macros::LocationProvider;
-use location::{ASTLocation, AsASTLocation};
-use pest::Span;
-
-use crate::error::{ LocationProvider};
+use location::ASTLocation;
 
 use super::*;
 #[derive(Derivative, LocationProvider, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone)]
@@ -20,7 +17,7 @@ pub enum Application<'str, S> {
     },
 }
 
-impl<'str, S> Application<'str,  S> {
+impl<'str, S> Application<'str, S> {
     pub fn name(&self) -> &S {
         match self {
             Application::ConstVar { content, .. } => content,
@@ -28,7 +25,7 @@ impl<'str, S> Application<'str,  S> {
         }
     }
 
-    pub fn args(&self) -> VecRef<'_, Term< S>> {
+    pub fn args(&self) -> VecRef<'_, Term<S>> {
         match self {
             Application::ConstVar { .. } => VecRef::Empty,
             Application::Application { args, .. } => args.as_slice().into(),
@@ -49,8 +46,7 @@ impl<'str, S> Application<'str,  S> {
         }
     }
 
-    pub fn new_app(location: ASTLocation<'str>, fun: S, args: implvec!(Term< 'str, S>)) -> Self
-    {
+    pub fn new_app(location: ASTLocation<'str>, fun: S, args: implvec!(Term<'str, S>)) -> Self {
         Self::Application {
             span: location,
             function: Function::from_name(fun),
@@ -71,7 +67,7 @@ boiler_plate!(Application<'a, &'a str>, 'a, application; |p| {
     }
 });
 
-impl<'a,  S: Display> Display for Application<'a,  S> {
+impl<'a, S: Display> Display for Application<'a, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Application::ConstVar { content, .. } => content.fmt(f),

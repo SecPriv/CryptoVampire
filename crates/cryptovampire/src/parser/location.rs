@@ -1,16 +1,11 @@
 use std::{
     borrow::Cow,
-    default,
     fmt::{Display, Write},
 };
 
 use pest::error::ErrorVariant;
-use utils::string_ref::StrRef;
 
-use crate::{
-    error::{Locate, LocateHelper, Location, LocationProvider},
-    squirrel::json::operator::Def,
-};
+use crate::error::{Locate, LocateHelper, Location, LocationProvider};
 
 #[derive(Debug, Default, Hash, PartialEq, Eq, Clone, PartialOrd, Ord)]
 pub struct ASTLocation<'str>(Box<InnerAstLocationHelper<'str>>);

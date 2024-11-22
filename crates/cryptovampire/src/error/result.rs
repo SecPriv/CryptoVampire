@@ -1,4 +1,4 @@
-use super::{inner_error::InnerError, location::LocationProvider, Result};
+use super::{location::LocationProvider, Result};
 
 pub trait CVContext<T> {
     fn with_location<P: LocationProvider>(self, location: P) -> Result<T>;

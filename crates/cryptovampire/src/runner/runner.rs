@@ -6,7 +6,9 @@ use tempfile::Builder;
 use thiserror::Error;
 
 use crate::{
-    environement::environement::Environement, error::BaseError, problem::{crypto_assumptions::CryptoAssumption, Problem}
+    environement::environement::Environement,
+    error::BaseError,
+    problem::{crypto_assumptions::CryptoAssumption, Problem},
 };
 
 use super::{dyn_traits, searcher::InstanceSearcher, RetCodeAndStdout, RunnerError};
@@ -194,13 +196,20 @@ pub trait Runner {
 
     fn kind(&self) -> ChildKind;
 
-    fn unexpected_result(cmd: Command, RetCodeAndStdout{return_code, stdout}: RetCodeAndStdout) -> BaseError {
+    fn unexpected_result(
+        cmd: Command,
+        RetCodeAndStdout {
+            return_code,
+            stdout,
+        }: RetCodeAndStdout,
+    ) -> BaseError {
         RunnerError::UnexpectedResult {
             tool: Self::name(),
             return_code,
             cmd,
             stdout,
-        }.into()
+        }
+        .into()
     }
 }
 

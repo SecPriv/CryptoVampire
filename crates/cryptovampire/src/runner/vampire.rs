@@ -16,7 +16,6 @@ use crate::{
         exec_cmd,
         runner::{ChildKind, RunnerOut},
         searcher::InstanceSearcher,
-        RetCodeAndStdout, RunnerError,
     },
     smt::SmtFile,
 };
@@ -167,9 +166,7 @@ impl Runner for VampireExec {
         match result.return_code {
             SUCCESS_RC => Ok(RunnerOut::Unsat(result.stdout)),
             TIMEOUT_RC => Ok(RunnerOut::Timeout(result.stdout)),
-            _ => {
-                Self::unexpected_result(cmd, result).no_location()
-            }
+            _ => Self::unexpected_result(cmd, result).no_location(),
         }
     }
 
@@ -189,8 +186,9 @@ impl Runner for VampireExec {
 
         SmtFile::from_general_file(env, pbl.into_general_file(env)) // gen smt
             .as_diplay(env)
-            .write_to_io(&mut file).map_err(|e| e.into())
-            // .with_context(|| "couldn't write") // write to tmp file
+            .write_to_io(&mut file)
+            .map_err(|e| e.into())
+        // .with_context(|| "couldn't write") // write to tmp file
     }
 
     fn name() -> &'static str {

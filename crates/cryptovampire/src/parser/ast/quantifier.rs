@@ -5,7 +5,7 @@ use super::*;
 
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct Quantifier<'str,  S> {
+pub struct Quantifier<'str, S> {
     pub kind: QuantifierKind,
     #[derivative(PartialOrd = "ignore", Ord = "ignore", PartialEq = "ignore")]
     #[provider]

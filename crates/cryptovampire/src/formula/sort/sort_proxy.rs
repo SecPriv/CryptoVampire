@@ -14,7 +14,7 @@ pub enum InferenceError {
         recieved: Box<str>,
     },
     #[error(transparent)]
-    UpdateError(#[from] UpdateError)
+    UpdateError(#[from] UpdateError),
 }
 
 impl InferenceError {
@@ -30,7 +30,7 @@ impl InferenceError {
                 expected: recieved,
                 recieved: expected,
             },
-            _ => self
+            _ => self,
         }
     }
 

@@ -18,7 +18,10 @@ use shared_child::SharedChild;
 use thiserror::Error;
 
 use crate::{
-    ensure, environement::environement::{EnabledSolvers, Environement, SolverConfig}, error::{BaseError, CVContext}, problem::Problem, runner::{RunnerError, RunnerOut}
+    environement::environement::{EnabledSolvers, Environement, SolverConfig},
+    error::{BaseError, CVContext},
+    problem::Problem,
+    runner::{RunnerError, RunnerOut},
 };
 
 use super::{
@@ -214,7 +217,7 @@ fn autorun_many<'bump>(
                     trace!("sat, killall");
                     killall(killable_recv, unkillable_recv, hr)?;
                     // bail!("disproved the query");
-                    return RunnerError::Disprove.no_location()
+                    return RunnerError::Disprove.no_location();
                 }
                 (_, Ok(RunnerOut::Unsat(_))) => {
                     trace!("unsat, killall");

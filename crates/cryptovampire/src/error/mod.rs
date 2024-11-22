@@ -1,7 +1,5 @@
 use std::fmt::Display;
 
-use serde::{Deserialize, Serialize};
-
 mod error;
 mod macros;
 
@@ -10,10 +8,10 @@ pub use error::Error;
 mod inner_error;
 
 mod location;
-pub use location::{Location, LocationProvider, LocateHelper, Locate};
+pub use location::{Locate, LocateHelper, Location, LocationProvider};
 
 mod result;
-pub use result::{CVContext, ExtraOption, BaseContext};
+pub use result::{BaseContext, CVContext, ExtraOption};
 
 mod anywhere;
 pub use anywhere::Anywhere;
@@ -50,15 +48,9 @@ pub enum BaseError {
     JsonError(#[from] serde_json::Error),
 
     #[error("unknown {kind} {name}")]
-    UnknownSymbol{
-        kind: String,
-        name: String
-    },
+    UnknownSymbol { kind: String, name: String },
     #[error("duplicate {kind} {name}")]
-    DuplicateSymbol{
-        kind: String,
-        name: String
-    },
+    DuplicateSymbol { kind: String, name: String },
 
     #[error(transparent)]
     ParsingError(#[from] crate::parser::error::ParsingError),
@@ -74,19 +66,20 @@ pub enum BaseError {
 pub struct AssertionError(pub String);
 
 impl BaseError {
-    pub fn strict_with(self, location: Location) -> Error
-    {
+    pub fn strict_with(self, location: Location) -> Error {
         // Error::new(inner_error::InnerError::new(location, self))
         Error::new(location, self)
     }
 
-    pub fn strict_to_err<T>(self, location: Location) -> Result<T>
-    {
+    pub fn strict_to_err<T>(self, location: Location) -> Result<T> {
         Error::err(location, self)
     }
 
     pub fn duplicate_symbol(kind: &impl Display, name: &impl Display) -> Self {
-        Self::DuplicateSymbol { kind: kind.to_string(), name: name.to_string() }
+        Self::DuplicateSymbol {
+            kind: kind.to_string(),
+            name: name.to_string(),
+        }
     }
 }
 
