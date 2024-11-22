@@ -1,4 +1,4 @@
-use crate::formula::sort::builtins::{BOOL, MESSAGE, NAME, STEP};
+use crate::{error::Location, error_at, formula::sort::builtins::{BOOL, MESSAGE, NAME, STEP}};
 use itertools::{chain, Either, Itertools};
 use utils::{
     all_or_one::AoOV, mdo, monad::Monad, pure, string_ref::StrRef, traits::NicerError,
@@ -9,7 +9,6 @@ use crate::{
     bail_at, err_at,
     parser::{
         ast::{self, Options, Term},
-        InputError, Location,
     },
     squirrel::{
         converters::ContextBuilder,
@@ -95,7 +94,7 @@ impl<'a> ToAst<'a> for json::sort::Type<'a> {
             }
             json::Type::Tuple { .. } => pure!(MESSAGE.name().into()),
             json::Type::TVar { .. } | json::Type::TUnivar { .. } | json::Type::Fun { .. } => Err(
-                err_at!(@ "unsupported argument: {}", serde_json::to_string_pretty(self).unwrap()),
+                error_at!(@ "unsupported argument: {}", serde_json::to_string_pretty(self).unwrap()),
             ),
 
             json::Type::Name => pure!(NAME.name().into()),
@@ -201,7 +200,7 @@ impl<'a> json::Action<'a> {
                                 .map(serde_json::to_string_pretty)
                                 .map(Result::unwrap)
                                 .join(";\n");
-                            err_at!(@ "cannot find an action from its shape while \
+                            error_at!(@ "cannot find an action from its shape while \
                             building the output of {:}\n{actions}", self.name().sanitized(&ctx),
                             )
                         })?;
@@ -214,7 +213,7 @@ impl<'a> json::Action<'a> {
                         },
                     ))
                 })
-                .try_fold(AoOV::pure(term), |acc, t: Result<_, InputError>| {
+                .try_fold(AoOV::pure(term), |acc, t: crate::Result<_>| {
                     let (var, input) = t?;
                     mdo! {
                         let! acc = Ok(acc);
@@ -257,7 +256,7 @@ impl<'a, 'b> ToAst<'a> for json::action::UpdateRef<'a, 'b> {
             let! term = body.convert(ctx);
             pure ast::Assignement {
                 span: Default::default(),
-                cell: ast::Application::new_app(symb.sanitized(&ctx), args.clone()),
+                cell: ast::Application::new_app(Default::default(),  symb.sanitized(&ctx), args.clone()),
                 term,
                 fresh_vars: {
                     if fresh_vars.is_empty() {
@@ -342,7 +341,7 @@ impl<'a, 'b> ToAst<'a> for ConcreteMacro<'a, 'b> {
             let! args = Ok(AoOV::transpose_iter(args));
             let! term = body.convert(ctx);
             pure ast::Macro {
-                span: Location::default(),
+                span: Default::default(),
                 name: symb.sanitized(&ctx).into(),
                 args:args.iter().cloned().collect(),
                 term,

@@ -10,7 +10,6 @@ use crate::{
     bail_at,
     parser::{
         ast::{self, Application, Order, OrderOperation, QuantifierKind},
-        InputError,
     },
     squirrel::{
         json::{
@@ -95,7 +94,7 @@ fn mk_depends_lemma<'a, 'b>(
     a: &json::Action<'a>,
     b: &json::Action<'a>,
     ctx: Context<'b, 'a>,
-) -> Result<Option<ast::Order<'a, StrRef<'a>>>, InputError> {
+) -> crate::Result<Option<ast::Order<'a, StrRef<'a>>>> {
     let cmp = depends(&a.action, &b.action);
 
     let (a, b) = match cmp {
@@ -130,8 +129,8 @@ fn mk_depends_lemma<'a, 'b>(
         let! args = AoOV::transpose_iter(args);
         let quantifier = QuantifierKind::Forall;
         let kind = OrderOperation::Lt;
-        let t1 = Application::new_app(a.name.sanitized(&ctx), idx_a.clone()).into();
-        let t2 = Application::new_app(b.name.sanitized(&ctx), idx_b.clone()).into();
+        let t1 = Application::new_app(Default::default(), a.name.sanitized(&ctx), idx_a.clone()).into();
+        let t2 = Application::new_app(Default::default(), b.name.sanitized(&ctx), idx_b.clone()).into();
         let span = Default::default();
         let options = Default::default();
         let guard = None;
@@ -164,7 +163,7 @@ fn mk_mutex_lemma<'a, 'b>(
     a: &json::Action<'a>,
     b: &json::Action<'a>,
     ctx: Context<'b, 'a>,
-) -> Result<Option<ast::Order<'a, StrRef<'a>>>, InputError> {
+) -> crate::Result<Option<ast::Order<'a, StrRef<'a>>>> {
     // if !mutex(a.shape().as_ref(), b.shape().as_ref()) {
     //     return Ok(None);
     // }
@@ -228,8 +227,8 @@ fn mk_mutex_lemma<'a, 'b>(
         let! args = AoOV::transpose_iter(args);
         let quantifier = QuantifierKind::Forall;
         let kind = OrderOperation::Incompatible;
-        let t1 = Application::new_app(a.name.sanitized(&ctx), idx_a.clone()).into();
-        let t2 = Application::new_app(b.name.sanitized(&ctx), idx_b.clone()).into();
+        let t1 = Application::new_app(Default::default(), a.name.sanitized(&ctx), idx_a.clone()).into();
+        let t2 = Application::new_app(Default::default(), b.name.sanitized(&ctx), idx_b.clone()).into();
         let span = Default::default();
         let options = Default::default();
         let guard = None;

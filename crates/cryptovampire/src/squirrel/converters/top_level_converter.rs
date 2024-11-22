@@ -91,7 +91,7 @@ pub fn convert_squirrel_dump<'a>(dump: SquirrelDump<'a>) -> RAoO<ast::ASTList<'a
     .try_collect()?;
     mdo! {
       let! content = Ok(AoOV::transpose_iter(all));
-      pure ast::ASTList {content, location: None}
+      pure ast::ASTList {content, location: Default::default()}
     }
 }
 
@@ -185,7 +185,7 @@ mod assert_crypto {
         } else {
             // declare a dummy verify
             let name: StrRef = format!("verify_{}", hash.sanitized(&ctx)).into();
-            new_fun = Some(ast::DeclareFunction::new(
+            new_fun = Some(ast::DeclareFunction::new(Default::default(),
                 name.clone(),
                 std::iter::repeat(MESSAGE.name()).take(3),
                 BOOL.name(),
@@ -295,7 +295,7 @@ fn mk_cells<'a, 'b>(
                 let! sort = sort.convert(ctx);
                 let args : Vec<_> = vars.iter().map(|v| v.sort().convert(ctx)).try_collect()?;
                 let! args = Ok(AoOV::transpose_iter(args));
-                pure ast::DeclareCell::new(symb.sanitized(&ctx), args, sort.clone())
+                pure ast::DeclareCell::new(Default::default(),symb.sanitized(&ctx), args, sort.clone())
             }
         })
 }
@@ -378,7 +378,7 @@ fn mk_funs_and_names<'a, 'b>(
                 }?;
                 mdo! {
                     let! args = Ok(AoOV::transpose_iter(args));
-                    pure ast::DeclareFunction::new(symb.clone(), args, sort.clone())
+                    pure ast::DeclareFunction::new(Default::default(),symb.clone(), args, sort.clone())
                 }
             })
         })

@@ -82,6 +82,12 @@ pub enum RunnersCreationError {
     NoSolver,
 }
 
+impl Into<BaseError> for RunnersCreationError {
+    fn into(self) -> BaseError {
+        RunnerError::from(self).into()
+    }
+}
+
 impl TryFrom<SolverConfig> for Runners {
     type Error = RunnersCreationError;
 

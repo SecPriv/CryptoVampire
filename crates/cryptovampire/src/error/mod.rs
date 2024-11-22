@@ -46,6 +46,8 @@ pub enum BaseError {
     AssertionError(#[from] AssertionError),
     #[error(transparent)]
     RunnerError(#[from] crate::runner::RunnerError),
+    #[error(transparent)]
+    JsonError(#[from] serde_json::Error),
 
     #[error("unknown {kind} {name}")]
     UnknownSymbol{

@@ -21,7 +21,7 @@ use utils::{
 
 use crate::{
     bail_at,
-    parser::{ast, InputError},
+    parser::{ast},
     squirrel::json::{self, MacroRef},
     // squirrel::Sanitizable
 };
@@ -87,7 +87,7 @@ use super::{
     json::{ProcessedSquirrelDump, SquirrelDump},
     Sanitizer,
 };
-type RAoO<T> = Result<AoOV<T>, InputError>;
+type RAoO<T> = crate::Result<AoOV<T>>;
 
 mod ast_convertion;
 mod helper_functions;

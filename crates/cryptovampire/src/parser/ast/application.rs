@@ -82,11 +82,11 @@ impl<'a,  S: Display> Display for Application<'a,  S> {
     }
 }
 
-// impl<'a, S> From<S> for Application<'a, S> {
-//     fn from(value: S) -> Self {
-//         Application::ConstVar {
-//             span: Default::default(),
-//             content: value.into(),
-//         }
-//     }
-// }
+impl<'a, S> From<S> for Application<'a, S> {
+    fn from(value: S) -> Self {
+        Application::ConstVar {
+            span: Default::default(),
+            content: value.into(),
+        }
+    }
+}

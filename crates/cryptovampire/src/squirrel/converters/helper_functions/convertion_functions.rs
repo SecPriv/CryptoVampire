@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::formula::function::builtin::EMPTY_FUN_NAME;
+use crate::{error_at, formula::function::builtin::EMPTY_FUN_NAME};
 use hashbrown::Equivalent;
 use if_chain::if_chain;
 use itertools::{chain, Either, Itertools};
@@ -52,7 +52,7 @@ pub fn convert_application<'a, 'b>(
         | json::Term::Find { .. }
         | json::Term::Name { .. }
         | json::Term::Action { .. }
-        | json::Term::Quant { .. } => Err(err_at!(@ "no high order")),
+        | json::Term::Quant { .. } => err_at!(@ "no high order"),
     }
 }
 
@@ -96,10 +96,10 @@ where
         pure match symb.clone().into() {
             SpecialFunction::Op(operation) => ast::Infix{span: Default::default(), operation, terms: args}.into(),
             SpecialFunction::If => {
-                let [condition, left, right] = args.try_into().map_err(|_| err_at!(@ "wrong number of arguments to if"))?;
+                let [condition, left, right] = args.try_into().map_err(|_| error_at!(@ "wrong number of arguments to if"))?;
                 ast::IfThenElse {span: Default::default(), condition, left, right}.into()
             }
-            SpecialFunction::Other(symb) => ast::Application::new_app(symb, args).into()
+            SpecialFunction::Other(symb) => ast::Application::new_app(Default::default(),symb, args).into()
         }
     }
 }
@@ -194,7 +194,7 @@ pub fn convert_macro_application<'a, 'b>(
                 ))
             })
         }
-        None => Err(err_at!(@ "unknown macro")),
+        None => err_at!(@ "unknown macro"),
     }
 }
 
@@ -238,12 +238,12 @@ pub fn convert_projection<'a, 'b>(
     let unfolded = (1..id).fold(body, |acc, _| {
         mdo! {
             let! body = acc;
-            pure ast::Application::new_app(DEFAULT_SND_PROJ_NAME, [body]).into()
+            pure ast::Application::new_app(Default::default(),DEFAULT_SND_PROJ_NAME, [body]).into()
         }
     });
     mdo! {
         let! unfolded = unfolded;
-        pure ast::Application::new_app(DEFAULT_FST_PROJ_NAME, [unfolded]).into()
+        pure ast::Application::new_app(Default::default(),DEFAULT_FST_PROJ_NAME, [unfolded]).into()
     }
 }
 
@@ -299,13 +299,13 @@ pub fn convert_tuple<'a, 'b>(
     elements: &[json::Term<'a>],
     ctx: Context<'b, 'a>,
 ) -> RAoO<ast::Term<'a, StrRef<'a>>> {
-    let empty = mdo! { pure ast::Application::new_app(EMPTY_FUN_NAME.into(), []).into()};
+    let empty = mdo! { pure ast::Application::new_app(Default::default(),EMPTY_FUN_NAME.into(), []).into()};
     elements.into_iter().fold(empty, |acc, t| {
         let acc = acc?;
         let t = t.convert(ctx)?;
         mdo! {
             let! [t, acc] = Ok(AoOV::transpose_array([t, acc]));
-            pure ast::Application::new_app(DEFAULT_TUPLE_NAME.clone(), [t, acc]).into()
+            pure ast::Application::new_app(Default::default(),DEFAULT_TUPLE_NAME.clone(), [t, acc]).into()
         }
     })
 }
@@ -330,7 +330,7 @@ pub fn convert_function<'a, 'b>(
         .get_operator(symb)
         .map(|f| f.sort.args.is_empty())
     {
-        pure!(ast::Application::new_app(symb.sanitized(&ctx), []).into())
+        pure!(ast::Application::new_app(Default::default(),symb.sanitized(&ctx), []).into())
     } else {
         bail_at!(@ "no high order...")
     }

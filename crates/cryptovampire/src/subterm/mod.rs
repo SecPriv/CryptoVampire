@@ -539,12 +539,12 @@ where
     }
 
     #[must_use]
-    pub fn assert_sound_in_smt(&self, env: &impl KnowsRealm) -> anyhow::Result<()> {
+    pub fn assert_sound_in_smt(&self, env: &impl KnowsRealm) -> crate::Result<()> {
         if self.is_sound_in_smt(env) {
             Ok(())
         } else {
             // Err(format!("{} => {} is wrong", self.sort(), env.get_realm()))
-            anyhow::bail!("{} => {} is wrong", self.sort(), env.get_realm())
+            crate::bail!("{} => {} is wrong", self.sort(), env.get_realm())
         }
     }
 }

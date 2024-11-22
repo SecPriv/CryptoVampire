@@ -11,7 +11,7 @@ use crate::{cli::Args, run_from_ast, Return};
 mod converters;
 pub(crate) mod json;
 
-pub fn run_from_json(mut args: Args, str: &str) -> anyhow::Result<Vec<Return>> {
+pub fn run_from_json(mut args: Args, str: &str) -> crate::Result<Vec<Return>> {
     debug!("running from json");
     assert!(args.input_format.is_squirrel_json());
 

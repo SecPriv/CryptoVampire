@@ -31,7 +31,7 @@ where
     let args: Vec<_> = args.into_iter().map(|arg| arg.convert(ctx)).try_collect()?;
     mdo! {
         let! args = Ok(AoOV::transpose_iter(args));
-        pure ast::Application::new_app(fun.clone(), args).into()
+        pure ast::Application::new_app(Default::default(), fun.clone(), args).into()
     }
 }
 
@@ -46,7 +46,7 @@ pub fn to_variable_binding<'a, 'b>(
         .iter()
         .map(|t| match t {
             json::Term::Var { var } => Ok(var),
-            _ => Err(err_at!(@ "not a variable")),
+            _ => err_at!(@ "not a variable"),
         })
         .map(|x| {
             x.and_then(|var| {

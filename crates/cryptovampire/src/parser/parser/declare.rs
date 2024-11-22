@@ -248,7 +248,7 @@ where
     let input_sorts: Result<Vec<_>, _> = fun
         .args()
         .into_iter()
-        .map(|idn| get_sort(env, idn.span(), idn.name))
+        .map(|idn| get_sort(env, idn.span(), idn.name()))
         .collect();
     let step = <ScopedContainer<'bump> as ContainerTools<'bump, InnerStep<'bump>>>::alloc_uninit::<
         'bump,
