@@ -53,9 +53,7 @@ impl AllOrOneShape {
 
     pub fn monad_continue<U2>(self, mut f: impl FnMut() -> AoOV<U2>) -> AoOV<U2> {
         match self {
-            AllOrOne::All(l) => {
-                AllOrOne::All((0..l).map(|i| f().owned_get(i)).collect())
-            }
+            AllOrOne::All(l) => AllOrOne::All((0..l).map(|i| f().owned_get(i)).collect()),
             AllOrOne::Any(_) => {
                 let r = f();
                 assert!(matches!(r, AllOrOne::All(_) | AllOrOne::Any(_)));

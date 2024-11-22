@@ -159,9 +159,12 @@ impl<'a> Sort<'a> {
     }
 
     pub fn is_evaluatable(&self) -> bool {
-        matches!(self.as_ref(), InnerSort::Base(TermBase::Condition)
-            | InnerSort::Base(TermBase::Message)
-            | InnerSort::UserEvaluatable(UserEvaluatable::Symbolic { .. }))
+        matches!(
+            self.as_ref(),
+            InnerSort::Base(TermBase::Condition)
+                | InnerSort::Base(TermBase::Message)
+                | InnerSort::UserEvaluatable(UserEvaluatable::Symbolic { .. })
+        )
     }
 
     pub fn is_datatype(&self, realm: &impl KnowsRealm) -> bool {

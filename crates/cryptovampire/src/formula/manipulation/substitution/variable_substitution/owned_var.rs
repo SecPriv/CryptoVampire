@@ -24,7 +24,7 @@ pub struct MultipleVarSubst<T> {
 
 pub type MulitpleVarSubstF<'bump> = MultipleVarSubst<ARichFormula<'bump>>;
 
-impl< T> MultipleVarSubst<T> {
+impl<T> MultipleVarSubst<T> {
     pub fn maybe_get(&self, id: uvar) -> Option<&T> {
         self.subst
             .iter()

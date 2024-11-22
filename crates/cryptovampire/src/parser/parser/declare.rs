@@ -181,10 +181,7 @@ where
     S: Pstr,
     for<'a> StrRef<'a>: From<&'a S>,
 {
-    let Ident {
-        content: name, 
-        ..
-    } = fun.name();
+    let Ident { content: name, .. } = fun.name();
     if env.contains_name(name.borrow()) {
         // bail_at!(span, "the function name '{}' is already in use", name)
         ParsingError::already_defined("function", name.as_str()).with_location(|| fun.name())
@@ -214,7 +211,11 @@ where
             Function::new_user_term_algebra(env.container, name.borrow(), input_sorts?, output_sort)
                 .main
         };
-        if env.functions.insert(fun.name().to_string(), fun.into()).is_some() {
+        if env
+            .functions
+            .insert(fun.name().to_string(), fun.into())
+            .is_some()
+        {
             unreachable!(
                 "!UNREACHABLE!(line {} in {}) \
 The function name {} somehow reintroduced itself in the hash",
@@ -236,7 +237,7 @@ where
     S: Pstr,
     for<'c> StrRef<'c>: From<&'c S>,
 {
-    let SnN {  name,.. } = (&fun.name).into();
+    let SnN { name, .. } = (&fun.name).into();
     if env.contains_name(&name) {
         ParsingError::already_defined("step", name.as_str()).with_location(|| &fun.name)?
     }

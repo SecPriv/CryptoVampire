@@ -62,9 +62,7 @@ impl<'a, T> VecRef<'a, T> {
             VecRef::Vec(v) => v.get_unchecked(i),
             VecRef::Ref(v) => v.get_unchecked(i),
             VecRef::RefRef(v) => v.get_unchecked(i),
-            VecRef::Single(e) => {
-                e
-            }
+            VecRef::Single(e) => e,
             VecRef::Empty => panic!(),
         }
     }

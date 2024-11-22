@@ -1,8 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote_spanned;
-use syn::{
-    parse_macro_input, spanned::Spanned, DeriveInput
-};
+use syn::{parse_macro_input, spanned::Spanned, DeriveInput};
 
 #[proc_macro_derive(LocationProvider, attributes(provider))]
 pub fn with_location_derive(input: TokenStream) -> TokenStream {

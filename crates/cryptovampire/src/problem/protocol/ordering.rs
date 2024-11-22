@@ -48,11 +48,7 @@ impl<'bump> Ordering<'bump> {
                 "{f:} contains variables not it vars [{}]",
                 vars.iter().map(|v| format!("{v:}")).join(", ")
             )?;
-            ensure!(
-                self,
-                f.sort() == Some(*STEP),
-                "{f:} is not of sort step"
-            )?
+            ensure!(self, f.sort() == Some(*STEP), "{f:} is not of sort step")?
         }
         Ok(())
     }

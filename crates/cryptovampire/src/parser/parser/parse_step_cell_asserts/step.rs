@@ -205,7 +205,9 @@ where
             trace!("parsing step {}", ast.name);
             let inner = parse_step(env, step_cache).debug_continue()?;
             let r_err = unsafe {
-                <ScopedContainer<'bump> as ContainerTools<InnerStep<'bump>>>::initialize(step, inner)
+                <ScopedContainer<'bump> as ContainerTools<InnerStep<'bump>>>::initialize(
+                    step, inner,
+                )
             };
 
             r_err.with_context(&ast.name, || "step already defined")

@@ -56,10 +56,10 @@ impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for Equality {
     }
 }
 
-pub const AND_NAME: & str = "ta$and";
+pub const AND_NAME: &str = "ta$and";
 pub const OR_NAME: &str = "ta$or";
-pub const NOT_NAME: & str = "ta$not";
-pub const IMPLIES_NAME: & str = "ta$implies";
+pub const NOT_NAME: &str = "ta$not";
+pub const IMPLIES_NAME: &str = "ta$implies";
 pub const IFF_NAME: &str = "ta$iff";
 pub const TRUE_NAME: &str = "ta$true";
 pub const FALSE_NAME: &str = "ta$false";

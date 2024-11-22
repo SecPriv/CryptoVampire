@@ -2,16 +2,15 @@ use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::{quote, quote_spanned};
 use syn::{
-    spanned::Spanned, DataEnum, DataStruct, DeriveInput, Field, Fields,
-    GenericParam, Lifetime, LifetimeParam,
+    spanned::Spanned, DataEnum, DataStruct, DeriveInput, Field, Fields, GenericParam, Lifetime,
+    LifetimeParam,
 };
 
 fn find_field(span: Span, fields: &Fields) -> Result<(usize, &Field), proc_macro2::TokenStream> {
-    let mut iter = fields.iter().enumerate().filter(|(_, f)| {
-        f.attrs
-            .iter()
-            .any(|attr| attr.path().is_ident("provider"))
-    });
+    let mut iter = fields
+        .iter()
+        .enumerate()
+        .filter(|(_, f)| f.attrs.iter().any(|attr| attr.path().is_ident("provider")));
 
     let field = if let Some(field) = iter.next() {
         field

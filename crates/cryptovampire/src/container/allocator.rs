@@ -66,7 +66,6 @@ pub trait ContainerTools<'bump, I> {
             .collect()
     }
 
-
     /// # Safety: This part is implementation specific and likely to make a heavy use of usafe
     fn alloc_inner<'a>(&'bump self, inner: I) -> Self::R<'a>
     where

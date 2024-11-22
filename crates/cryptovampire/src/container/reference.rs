@@ -192,7 +192,9 @@ impl<'bump, T> PartialEq for FORef<'bump, T> {
 }
 impl<'bump, T> Copy for FORef<'bump, T> {}
 impl<'bump, T> Clone for FORef<'bump, T> {
-    fn clone(&self) -> Self { *self }
+    fn clone(&self) -> Self {
+        *self
+    }
 }
 
 impl<'bump, T: Debug> Debug for FORef<'bump, T> {

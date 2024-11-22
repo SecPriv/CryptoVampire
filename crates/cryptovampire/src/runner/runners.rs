@@ -248,7 +248,7 @@ fn autorun_many<'bump>(
     }
 }
 
-fn killall< T>(
+fn killall<T>(
     killalble: Receiver<Arc<SharedChild>>,
     unkillalble: Receiver<Arc<SharedChild>>,
     threads: Vec<ScopedJoinHandle<'_, T>>,

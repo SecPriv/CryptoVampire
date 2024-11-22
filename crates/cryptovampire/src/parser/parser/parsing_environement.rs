@@ -220,7 +220,8 @@ pub fn get_sort<'str, 'bump, S, L: LocateHelper>(
     env.sort_hash
         .get(Deref::deref(&str))
         .ok_or_else(|| ParsingError::undefined_sort(&str))
-        .with_pre_location(span, &str.deref()).copied()
+        .with_pre_location(span, &str.deref())
+        .copied()
 }
 
 /// Find the [Function] in already declared in [Environement::functions]

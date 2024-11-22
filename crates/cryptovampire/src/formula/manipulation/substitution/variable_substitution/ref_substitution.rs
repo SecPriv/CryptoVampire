@@ -131,11 +131,8 @@ impl<'a, T: Clone> From<FrozenSubst<'a, T>> for FrozenMultipleVarSubst<'a, T> {
     fn from(FrozenSubst { vars, formulas }: FrozenSubst<'a, T>) -> Self {
         // let FrozenSubst { vars, formulas } = value;
         // assert_eq!(vars.len(), formulas.len());
-        let content: Vec<OneVarSubst<_>> = vars
-            .into_iter()
-            .zip_eq(formulas)
-            .map_into()
-            .collect_vec();
+        let content: Vec<OneVarSubst<_>> =
+            vars.into_iter().zip_eq(formulas).map_into().collect_vec();
         Self::new(content)
     }
 }

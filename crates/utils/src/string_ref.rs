@@ -127,7 +127,7 @@ impl<'a, T> Eq for StrRef<'a, T> {}
 impl<'a, T> PartialOrd for StrRef<'a, T> {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-       Some(self.cmp(other))
+        Some(self.cmp(other))
     }
 }
 impl<'a, V> Ord for StrRef<'a, V> {

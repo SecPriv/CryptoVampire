@@ -98,7 +98,7 @@ impl<'bump, S> NamedVariable<'bump, S> {
     }
 }
 
-impl< 'bump, S: Clone> From<NamedVariable<'bump, S>> for (S, VarProxy<'bump>) {
+impl<'bump, S: Clone> From<NamedVariable<'bump, S>> for (S, VarProxy<'bump>) {
     fn from(val: NamedVariable<'bump, S>) -> Self {
         let NamedVariable { name, variable } = val;
         (name.clone(), variable.into())

@@ -82,7 +82,7 @@ pub mod dyn_traits {
     where
         R: RunnerHandler + Clone,
     {
-        fn dyn_run_to_tmp< 'bump>(
+        fn dyn_run_to_tmp<'bump>(
             &self,
             handler: R,
             env: &Environement<'bump>,

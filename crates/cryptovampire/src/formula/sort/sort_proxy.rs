@@ -76,11 +76,7 @@ impl<'bump> SortProxy<'bump> {
     /// Check or set that `self` is `s`.
     ///
     /// The error is set up so that it expects `self` to be `s`
-    pub fn expects(
-        &self,
-        s: Sort<'bump>,
-        realm: &impl KnowsRealm,
-    ) -> Result<(), InferenceError> {
+    pub fn expects(&self, s: Sort<'bump>, realm: &impl KnowsRealm) -> Result<(), InferenceError> {
         match self.as_option() {
             Some(s2) if Sort::eq_realm(&s2, &s, realm) => Ok(()),
             None => {
@@ -96,11 +92,7 @@ impl<'bump> SortProxy<'bump> {
     /// Check or set that `s` is `self`.
     ///
     /// The error is set up so that is expects `s` to be `self`
-    pub fn matches(
-        &self,
-        s: Sort<'bump>,
-        realm: &impl KnowsRealm,
-    ) -> Result<(), InferenceError> {
+    pub fn matches(&self, s: Sort<'bump>, realm: &impl KnowsRealm) -> Result<(), InferenceError> {
         match self.expects(s, realm) {
             Err(InferenceError::SortMismatch {
                 proxy,

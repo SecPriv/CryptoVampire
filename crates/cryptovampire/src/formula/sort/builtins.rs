@@ -19,14 +19,8 @@ pub static MESSAGE: Sort<'static> = new_static_sort(InnerSort::Base(TermBase::Me
 pub static NAME: Sort<'static> = new_static_sort(InnerSort::Other(Other::Name));
 
 #[dynamic]
-pub static BUILT_IN_SORTS: [Sort<'static>; 6] = [
-    *BOOL,
-    *CONDITION,
-    *MESSAGE,
-    *BITSTRING,
-    *STEP,
-    *NAME,
-];
+pub static BUILT_IN_SORTS: [Sort<'static>; 6] =
+    [*BOOL, *CONDITION, *MESSAGE, *BITSTRING, *STEP, *NAME];
 
 // alias
 #[dynamic]

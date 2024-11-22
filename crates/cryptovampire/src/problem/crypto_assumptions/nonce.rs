@@ -71,12 +71,12 @@ impl Nonce {
             [
                 mforall!(n1!0:nonce_sort, n2!1:nonce_sort; {
                     subterm.f_a(env, n1, n2) >> meq(n1, n2)
-                })
-                ,
-            mforall!(n1!0:nonce_sort, n2!1:nonce_sort; {
-                meq(ev.eval(nc.cast(message_sort, n1)), ev.eval(nc.cast(message_sort, n2)))
-                    >> meq(n1, n2)
-            })]
+                }),
+                mforall!(n1!0:nonce_sort, n2!1:nonce_sort; {
+                    meq(ev.eval(nc.cast(message_sort, n1)), ev.eval(nc.cast(message_sort, n2)))
+                        >> meq(n1, n2)
+                }),
+            ]
             .into_iter()
             .map(Axiom::base),
         );

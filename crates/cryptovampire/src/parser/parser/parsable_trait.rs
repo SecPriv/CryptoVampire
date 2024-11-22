@@ -153,10 +153,11 @@ where
         expected_sort: Option<SortProxy<'bump>>,
     ) -> crate::Result<Self::R> {
         // generate the expected sorts
-        let (es_condition, es_branches): (SortProxy<'bump>, Option<SortProxy<'bump>>) = match state.get_realm() {
-            Realm::Evaluated => (BOOL.as_sort().into(), expected_sort),
-            Realm::Symbolic => (CONDITION.as_sort().into(), Some(MESSAGE.as_sort().into())),
-        };
+        let (es_condition, es_branches): (SortProxy<'bump>, Option<SortProxy<'bump>>) =
+            match state.get_realm() {
+                Realm::Evaluated => (BOOL.as_sort().into(), expected_sort),
+                Realm::Symbolic => (CONDITION.as_sort().into(), Some(MESSAGE.as_sort().into())),
+            };
 
         // check sort
         // if let Some(es) = &expected_sort {
@@ -279,7 +280,7 @@ where
         }
         let SnN { span, name } = type_name.into();
         let sort = get_sort(env, span, name)?;
-        
+
         if let Some(e) = expected_sort {
             // check if it is what we expected / unify it
             e.expects(sort, realm).with_location(|| span)?;
@@ -417,7 +418,9 @@ where
                                 let formula = env
                                     .evaluator
                                     .get_eval_function(sort)
-                                    .unwrap_or_else(|| panic!("{sort} is evaluatable but not in the evaluator..."))
+                                    .unwrap_or_else(|| {
+                                        panic!("{sort} is evaluatable but not in the evaluator...")
+                                    })
                                     .f([Variable { id: *id, sort }]);
 
                                 expected_sort
@@ -871,7 +874,8 @@ where
         state: &impl KnowsRealm,
         expected_sort: Option<SortProxy<'bump>>,
     ) -> crate::Result<Self::R> {
-        if cfg!(debug_assertions) && bvars.iter().map(|(_, v)| v.id).unique().count() != bvars.len() {
+        if cfg!(debug_assertions) && bvars.iter().map(|(_, v)| v.id).unique().count() != bvars.len()
+        {
             panic!(
                 "there are duplicates:\n\t[{}]",
                 bvars.iter().map(|(_, v)| v).join(", ")

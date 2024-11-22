@@ -47,7 +47,8 @@ impl<'bump> Unifier<'bump> {
             let id_small = small.iter().map(OneVarSubst::id).collect_vec();
             if let Some(id) = big
                 .iter()
-                .map(OneVarSubst::id).find(|id| id_small.contains(id))
+                .map(OneVarSubst::id)
+                .find(|id| id_small.contains(id))
             {
                 return Err(UnifierAsEqualityErr::NonDisjointVariables { id });
             }

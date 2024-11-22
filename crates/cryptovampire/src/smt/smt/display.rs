@@ -197,9 +197,9 @@ impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a Smt<'bump>> {
             Smt::AssertNot(e) => writeln!(f, "(assert-not {})", e.prop(*self)),
             Smt::DeclareFun(fun) => {
                 write!(f, "(declare-fun {} (", fun.name())?;
-                for s in fun.fast_insort()
-                .unwrap_or_else(|| panic!("all function defined here have known sort: {}",
-                    fun.name())) {
+                for s in fun.fast_insort().unwrap_or_else(|| {
+                    panic!("all function defined here have known sort: {}", fun.name())
+                }) {
                     write!(f, "{} ", s.name())?;
                 }
                 writeln!(f, ") {})", fun.fast_outsort().unwrap())

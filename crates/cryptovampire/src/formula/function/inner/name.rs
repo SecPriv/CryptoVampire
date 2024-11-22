@@ -50,9 +50,6 @@ impl<'a, 'bump: 'a> FixedSignature<'a, 'bump> for Name<'bump> {
         &'a self,
     ) -> crate::formula::function::signature::FixedRefSignature<'a, 'bump> {
         let args = self.args().into();
-        FixedRefSignature {
-            out: *NAME,
-            args,
-        }
+        FixedRefSignature { out: *NAME, args }
     }
 }

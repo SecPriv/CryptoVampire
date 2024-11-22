@@ -1,4 +1,3 @@
-
 /// makes sure traits are implemented
 #[macro_export]
 macro_rules! asssert_trait {

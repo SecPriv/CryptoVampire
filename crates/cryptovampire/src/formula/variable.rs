@@ -109,19 +109,13 @@ where
 impl<'bump, 'a: 'bump> From<(uvar, &'a Sort<'bump>)> for Variable<'bump> {
     fn from(arg: (uvar, &'a Sort<'bump>)) -> Self {
         let (id, sort) = arg;
-        Variable {
-            id,
-            sort: *sort,
-        }
+        Variable { id, sort: *sort }
     }
 }
 impl<'bump, 'a: 'bump> From<(&'a Sort<'bump>, uvar)> for Variable<'bump> {
     fn from(arg: (&'a Sort<'bump>, uvar)) -> Self {
         let (sort, id) = arg;
-        Variable {
-            id,
-            sort: *sort,
-        }
+        Variable { id, sort: *sort }
     }
 }
 

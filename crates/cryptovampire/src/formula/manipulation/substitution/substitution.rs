@@ -13,11 +13,9 @@ pub trait Substitution<'bump> {
     fn apply(&self, f: impl AsRef<RichFormula<'bump>>) -> ARichFormula<'bump> {
         match f.as_ref() {
             RichFormula::Var(v) => self.get(v),
-            RichFormula::Fun(fun, args) => RichFormula::Fun(
-                *fun,
-                args.iter().map(|arg| self.apply(arg)).collect(),
-            )
-            .into_arc(),
+            RichFormula::Fun(fun, args) => {
+                RichFormula::Fun(*fun, args.iter().map(|arg| self.apply(arg)).collect()).into_arc()
+            }
             RichFormula::Quantifier(q, arg) => {
                 RichFormula::Quantifier(q.clone(), self.apply(arg)).into_arc()
             }

@@ -60,7 +60,7 @@ boiler_plate!(@ VariableBinding, 's, variable_binding; |p| {
     Ok(VariableBinding{span: span.into(), variable, type_name})
 });
 
-impl< 'str, S: Display> Display for VariableBinding<'str, S> {
+impl<'str, S: Display> Display for VariableBinding<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}:{}", &self.variable, &self.type_name)
     }
