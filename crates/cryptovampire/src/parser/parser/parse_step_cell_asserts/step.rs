@@ -1,16 +1,13 @@
 use std::sync::Arc;
 
-use anyhow::Context;
 use itertools::Itertools;
 use log::trace;
 
 use crate::{
-    bail_at,
-    parser::{
-        error::WithLocation,
+    bail_at, error::{BaseContext, BaseError, CVContext, ExtraOption}, parser::{
         parser::{parsable_trait::Parsable, CellCache, FunctionCache},
-        InputError, MResult, Pstr,
-    },
+        Pstr,
+    }
 };
 use crate::{
     container::{allocator::ContainerTools, ScopedContainer},
@@ -31,11 +28,11 @@ use logic_formula::Formula;
 /// This should be done farily late. Only takes a [StepCache].
 ///
 /// The function returns a [InnerStep] to *maybe* mutlipthread things on day...
-fn parse_step<'bump, 'str, L,S>(
+fn parse_step<'bump, 'str, S>(
     env: &Environement<'bump, 'str, S>,
-    step_cache: &StepCache<'str, 'bump, L,S>,
+    step_cache: &StepCache<'str, 'bump, S>,
     // name: &str,
-) -> MResult<InnerStep<'bump>>
+) -> crate::Result<InnerStep<'bump>>
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
@@ -100,13 +97,13 @@ where
             let fresh_vars = if let Some(vars) = fresh_vars.as_ref() {
                 bvars.truncate(n);
                 bvars.reserve(vars.bindings.len());
-                let vars: Result<Arc<_>, InputError> = vars
+                let vars: crate::Result<Arc<_>> = vars
                     .bindings
                     .iter()
                     .zip(0..)
                     .map(
                         |(
-                            ast::VariableBinding::<L,_> {
+                            ast::VariableBinding::<_> {
                                 type_name,
                                 variable,
                                 ..
@@ -122,17 +119,7 @@ where
                                 variable.name().borrow(),
                                 bvars.iter().map(|(n, _)| n.borrow()),
                             ) {
-                                // Err(merr(
-                                //     variable.0.span,
-                                //     format!("name {} is already taken", variable.name()),
-                                // ))
-                                return {
-    use crate::error::CVContext;
-    use crate::error::LocationProvider;
-    format!("name {} is already taken",variable.name()).with_location(LocationProvider::provide(||{
-        (&variable)
-    }))
-}
+                                return BaseError::duplicate_symbol(&"name", variable).with_location(variable)
                             } else {
                                 bvars.push((variable.name().clone(), var.into()));
                                 Ok(var)
@@ -156,8 +143,7 @@ where
                 .functions
                 .get(cell_name.borrow())
                 .and_then(FunctionCache::as_memory_cell)
-                .with_context(|| format!("cell {cell_name} doesn't exists"))
-                .with_location(cell_ast.span())?;
+                .unknown_symbol(cell_ast, &"cell", cell_name)?;
 
             // get the arguments and apply substitution
             let cell_args: Result<Arc<[_]>, _> = cell_ast
@@ -206,7 +192,7 @@ where
 pub fn parse_steps<'a, 'bump, 'str, S>(
     env: &'a Environement<'bump, 'str, S>, // mut for safety
     steps: implvec!(&'a StepCache<'str, 'bump, S>),
-) -> MResult<()>
+) -> crate::Result<()>
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
@@ -220,21 +206,6 @@ where
                 <ScopedContainer as ContainerTools<InnerStep<'bump>>>::initialize(step, inner)
             };
 
-            Ok(r_err
-                .map_err(|_| {
-                    ast.name
-                        .0
-                        .span
-                        .err_with(|| format!("step {} has already been defined", ast.name.name()))
-                })
-                .debug_continue()?)
-
-            // match r_err {
-            //     Err(_) => Err(merr(
-            //         ast.name.0.span,
-            //         format!("step {} has already been defined", ast.name.name()),
-            //     )),
-            //     Ok(()) => Ok(()),
-            // }
+            r_err.with_context(&ast.name, || "step already defined")
         })
 }

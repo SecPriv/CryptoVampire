@@ -13,12 +13,12 @@ mod location;
 pub use location::{Location, LocationProvider, LocateHelper, Locate};
 
 mod result;
-pub use result::{CVContext, ExtraOption};
+pub use result::{CVContext, ExtraOption, BaseContext};
 
 mod anywhere;
 pub use anywhere::Anywhere;
 
-use crate::formula::sort::sort_proxy::InferenceError;
+use crate::formula::{function::signature::CheckError, sort::sort_proxy::InferenceError};
 
 // pub type CVResult<T, L> = std::result::Result<T, Error<L>>;
 
@@ -38,9 +38,16 @@ pub enum BaseError {
     IO(#[from] std::io::Error),
     #[error("BuilderError: {0}")]
     BuilderError(#[from] Box<dyn std::error::Error>),
+    #[error(transparent)]
+    CheckError(#[from] CheckError),
 
     #[error("unknown {kind} {name}")]
     UnknownSymbol{
+        kind: String,
+        name: String
+    },
+    #[error("duplicate {kind} {name}")]
+    DuplicateSymbol{
         kind: String,
         name: String
     },
@@ -49,7 +56,9 @@ pub enum BaseError {
     ParsingError(#[from] crate::parser::error::ParsingError),
 
     #[error("reason: {}", .0)]
-    Message(String)
+    Message(String),
+    #[error("reason: {0}\ncomming from: {1}")]
+    MessageAndError(String, #[source] Box<dyn std::error::Error>),
 }
 
 impl BaseError {
@@ -62,6 +71,10 @@ impl BaseError {
     pub fn strict_to_err<T>(self, location: Location) -> Result<T>
     {
         Error::err(location, self)
+    }
+
+    pub fn duplicate_symbol(kind: &impl Display, name: &impl Display) -> Self {
+        Self::DuplicateSymbol { kind: kind.to_string(), name: name.to_string() }
     }
 }
 

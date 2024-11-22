@@ -7,7 +7,7 @@ use crate::parser::{
         parsable_trait::{Parsable, VarProxy},
         Environement,
     },
-    InputError, MResult, Pstr,
+    Pstr,
 };
 use crate::{
     formula::{
@@ -23,7 +23,7 @@ pub fn parse_orders_with_bvars<'a, 'str, 'bump, B, S>(
     env: &'a Environement<'bump, 'str, S>,
     orders: implvec!(&'a ast::Order<'str, S>),
     bvars: &'a mut Vec<(S, VarProxy<'bump>)>,
-) -> MResult<B>
+) -> crate::Result<B>
 where
     B: FromIterator<Ordering<'bump>>,
     S: Pstr,
@@ -39,7 +39,7 @@ fn parse_order_with_bvars<'str, 'bump, S>(
     env: &Environement<'bump, 'str, S>,
     order: &ast::Order<'str, S>,
     bvars: &mut Vec<(S, VarProxy<'bump>)>,
-) -> MResult<Ordering<'bump>>
+) -> crate::Result<Ordering<'bump>>
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
@@ -54,7 +54,7 @@ where
         ..
     } = order;
 
-    let args: Result<Vec<_>, InputError> = args
+    let args: crate::Result<Vec<_>> = args
         .into_iter()
         .zip(0..)
         .map(

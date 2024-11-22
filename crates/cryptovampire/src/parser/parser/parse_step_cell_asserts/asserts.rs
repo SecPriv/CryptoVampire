@@ -4,7 +4,7 @@ use crate::parser::{
         parsable_trait::{Parsable, VarProxy},
         Environement,
     },
-    MResult, Pstr,
+     Pstr,
 };
 use crate::formula::{formula::ARichFormula, sort::builtins::BOOL};
 use utils::{implvec, string_ref::StrRef};
@@ -13,7 +13,7 @@ pub fn parse_assert_with_bvars<'a, 'str, 'bump, S>(
     env: &'a Environement<'bump, 'str, S>,
     assertion: &ast::Assertion<'str, S>,
     bvars: &'a mut Vec<(S, VarProxy<'bump>)>,
-) -> MResult<ARichFormula<'bump>>
+) -> crate::Result<ARichFormula<'bump>>
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
@@ -28,7 +28,7 @@ pub fn parse_asserts_with_bvars<'a, 'str, 'bump, B, S>(
     env: &'a Environement<'bump, 'str, S>,
     assertions: implvec!(&'a ast::Assertion<'str, S>),
     bvars: &'a mut Vec<(S, VarProxy<'bump>)>,
-) -> MResult<B>
+) -> crate::Result<B>
 where
     B: FromIterator<ARichFormula<'bump>>,
     S: Pstr,
