@@ -217,3 +217,9 @@ impl<'bump> logic_formula::Formula for ARichFormula<'bump> {
         }
     }
 }
+
+impl<'a, 'bump> crate::error::LocationProvider for &'a ARichFormula<'bump> {
+    fn provide(self) -> crate::error::Location {
+        crate::error::Location::from_display(self)
+    }
+}

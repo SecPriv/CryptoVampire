@@ -1,4 +1,3 @@
-use anyhow::{bail, ensure, Context};
 use itertools::Itertools;
 use log::debug;
 use std::{
@@ -9,12 +8,15 @@ use std::{
 use utils::traits::MyWriteTo;
 
 use crate::{
+    ensure,
     environement::environement::{Environement, Flags},
+    error::CVContext,
     problem::Problem,
     runner::{
         exec_cmd,
         runner::{ChildKind, RunnerOut},
         searcher::InstanceSearcher,
+        RetCodeAndStdout, RunnerError,
     },
     smt::SmtFile,
 };
@@ -142,12 +144,13 @@ impl Runner for VampireExec {
         handler: R,
         args: Self::Args<'a>,
         pbl_file: &Path,
-    ) -> anyhow::Result<RunnerOutI<Self>> {
+    ) -> crate::Result<RunnerOutI<Self>> {
         ensure!(
+            (),
             // check the file exists
             pbl_file.is_file(),
             "{} is not a file",
-            pbl_file.to_str().unwrap_or("[not unicode]")
+            pbl_file.to_string_lossy()
         );
         let mut cmd = Command::new(&self.location);
         for arg in self.extra_args.iter().chain(args.into_iter()) {
@@ -164,7 +167,9 @@ impl Runner for VampireExec {
         match result.return_code {
             SUCCESS_RC => Ok(RunnerOut::Unsat(result.stdout)),
             TIMEOUT_RC => Ok(RunnerOut::Timeout(result.stdout)),
-            _ => bail!("Unknow Error while running vampire:\n\tcmd:{cmd:?}\n\treturn code: {:}\n\tstdout:\n{}", result.return_code, result.stdout),
+            _ => {
+                Self::unexpected_result(cmd, result).no_location()
+            }
         }
     }
 
@@ -177,15 +182,15 @@ impl Runner for VampireExec {
         env: &Environement<'bump>,
         pbl: &Problem<'bump>,
         mut file: W,
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         let mut env = env.clone();
         env.options_mut().flags |= Flags::ASSERT_NOT | Flags::ASSERT_THEORY;
         let env = &env;
 
         SmtFile::from_general_file(env, pbl.into_general_file(env)) // gen smt
             .as_diplay(env)
-            .write_to_io(&mut file)
-            .with_context(|| "couldn't write") // write to tmp file
+            .write_to_io(&mut file).map_err(|e| e.into())
+            // .with_context(|| "couldn't write") // write to tmp file
     }
 
     fn name() -> &'static str {
@@ -203,7 +208,7 @@ impl Discoverer for VampireExec {
         env: &Environement<'bump>,
         pbl: &mut Problem<'bump>,
         new_instances_str: &<Self as Runner>::TimeoutR,
-    ) -> Result<(), DiscovererError> {
+    ) -> crate::Result<()> {
         // find new instances
         let new_instances = pbl
             .crypto_assertions()
@@ -213,7 +218,7 @@ impl Discoverer for VampireExec {
             .collect_vec();
         if new_instances.is_empty() {
             // no new instances, no need to try again
-            return Err(DiscovererError::NoNewInstances);
+            return DiscovererError::NoNewInstances.no_location();
         }
 
         let max_var_no_instances = pbl.max_var_no_extras();
@@ -229,7 +234,7 @@ impl Discoverer for VampireExec {
 
         if n_new_instances == 0 {
             // if all the instances were found before, we bail
-            return Err(DiscovererError::NoNewInstances);
+            return DiscovererError::NoNewInstances.no_location();
         }
         Ok(())
     }

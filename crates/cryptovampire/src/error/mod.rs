@@ -37,9 +37,15 @@ pub enum BaseError {
     #[error(transparent)]
     IO(#[from] std::io::Error),
     #[error("BuilderError: {0}")]
-    BuilderError(#[from] Box<dyn std::error::Error>),
+    BuilderError(#[from] Box<dyn std::error::Error + Sync + Send>),
     #[error(transparent)]
     CheckError(#[from] CheckError),
+    #[error(transparent)]
+    GraphError(#[from] crate::problem::cell_dependancies::GraphError),
+    #[error(transparent)]
+    AssertionError(#[from] AssertionError),
+    #[error(transparent)]
+    RunnerError(#[from] crate::runner::RunnerError),
 
     #[error("unknown {kind} {name}")]
     UnknownSymbol{
@@ -58,8 +64,12 @@ pub enum BaseError {
     #[error("reason: {}", .0)]
     Message(String),
     #[error("reason: {0}\ncomming from: {1}")]
-    MessageAndError(String, #[source] Box<dyn std::error::Error>),
+    MessageAndError(String, #[source] Box<dyn std::error::Error + Sync + Send>),
 }
+
+#[derive(Debug, thiserror::Error)]
+#[error("asserting error: {0}")]
+pub struct AssertionError(pub String);
 
 impl BaseError {
     pub fn strict_with(self, location: Location) -> Error
@@ -93,5 +103,12 @@ impl From<pest::error::ErrorVariant<crate::parser::Rule>> for BaseError {
 impl<'a> From<&'a str> for BaseError {
     fn from(value: &'a str) -> Self {
         Self::Message(value.into())
+    }
+}
+
+impl From<nom::Err<()>> for BaseError {
+    fn from(value: nom::Err<()>) -> Self {
+        use crate::runner::RunnerError;
+        RunnerError::from(value).into()
     }
 }

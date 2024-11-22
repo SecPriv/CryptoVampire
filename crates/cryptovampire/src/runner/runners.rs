@@ -12,16 +12,13 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{bail, ensure};
 use itertools::{chain, Itertools};
 use log::{debug, trace};
 use shared_child::SharedChild;
 use thiserror::Error;
 
 use crate::{
-    environement::environement::{EnabledSolvers, Environement, SolverConfig},
-    problem::Problem,
-    runner::RunnerOut,
+    ensure, environement::environement::{EnabledSolvers, Environement, SolverConfig}, error::{BaseError, CVContext}, problem::Problem, runner::{RunnerError, RunnerOut}
 };
 
 use super::{
@@ -51,8 +48,11 @@ impl Runners {
         pbl: &mut Problem<'bump>,
         ntimes: Option<NonZeroU32>,
         save_to: Option<&Path>,
-    ) -> anyhow::Result<String> {
-        ensure!(!self.all_empty(), "no solver to run :'(");
+    ) -> crate::Result<String> {
+        // ensure!((), !self.all_empty(), "no solver to run :'(");
+        if self.all_empty() {
+            return RunnerError::nothing_to_do("no solvers to run :'(").no_location();
+        }
         let n: u32 = ntimes.map(NonZeroU32::get).unwrap_or(u32::MAX);
 
         let Runners { vampire, z3, .. } = self;
@@ -72,7 +72,7 @@ impl Runners {
                 _ => unreachable!(),
             }
         }
-        bail!("ran out of tries (at most {n})")
+        RunnerError::RanOutOfTries(n).no_location()
     }
 }
 
@@ -130,6 +130,11 @@ pub enum HandlerError {
     #[error("no more reciever, child killed")]
     NoMoreReciever,
 }
+impl Into<BaseError> for HandlerError {
+    fn into(self) -> BaseError {
+        RunnerError::from(self).into()
+    }
+}
 
 impl RunnerHandler for Handler {
     type Error = HandlerError;
@@ -166,7 +171,7 @@ fn autorun_many<'bump>(
     pbl: &mut Problem<'bump>,
     save_to: Option<&Path>,
     runners: &[dyn_traits::RunnerAndDiscoverer<Handler>],
-) -> anyhow::Result<RunnerOut<Infallible, (), (), Infallible>> {
+) -> crate::Result<RunnerOut<Infallible, (), (), Infallible>> {
     let to_analyse = thread::scope(|s| {
         let (killable_send, killable_recv) = channel();
         let (unkillable_send, unkillable_recv) = channel();
@@ -199,10 +204,11 @@ fn autorun_many<'bump>(
 
         while let Some(r) = finished_iter.next() {
             match r {
-                (_, Ok(RunnerOut::Sat(_))) => {
+                (x, Ok(RunnerOut::Sat(_))) => {
                     trace!("sat, killall");
                     killall(killable_recv, unkillable_recv, hr)?;
-                    bail!("disproved the query");
+                    // bail!("disproved the query");
+                    return RunnerError::Disprove.no_location()
                 }
                 (_, Ok(RunnerOut::Unsat(_))) => {
                     trace!("unsat, killall");
@@ -243,7 +249,7 @@ fn killall<'a, 's, T>(
     killalble: Receiver<Arc<SharedChild>>,
     unkillalble: Receiver<Arc<SharedChild>>,
     threads: Vec<ScopedJoinHandle<'s, T>>,
-) -> anyhow::Result<()> {
+) -> crate::Result<()> {
     debug!("killing all");
     chain!(killalble.into_iter(), unkillalble.into_iter())
         .map(|c| kill_shared_child(&c))

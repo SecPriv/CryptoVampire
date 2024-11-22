@@ -17,6 +17,7 @@ pub mod location;
 #[cfg(test)]
 mod tests;
 
+use error::BaseContext;
 // reexports
 pub use problem::step::INIT_STEP_NAME;
 pub use subterm::kind::SubtermKind;
@@ -41,13 +42,13 @@ use utils::{from_with::FromWith, string_ref::StrRef, traits::MyWriteTo};
 
 // start of the file
 
-pub fn run_from_cv(args: Args, str: &str) -> anyhow::Result<Return> {
+pub fn run_from_cv(args: Args, str: &str) -> crate::Result<Return> {
     trace!("running for cryptovampire file");
     let ast = ASTList::try_from(str)?;
     run_from_ast(&args, ast)
 }
 
-fn run_from_ast<'a, S>(args: &Args, ast: ASTList<'a, S>) -> anyhow::Result<Return>
+fn run_from_ast<'a, S>(args: &Args, ast: ASTList<'a, S>) -> crate::Result<Return>
 where
     S: Pstr,
     for<'b> StrRef<'b>: From<&'b S>,
@@ -107,7 +108,7 @@ pub fn auto_run<'bump>(
     runners: &Runners,
     num_retry: u32,
     smt_debug: Option<&Path>,
-) -> anyhow::Result<Vec<String>> {
+) -> crate::Result<Vec<String>> {
     let ntimes = NonZeroU32::new(num_retry);
     let save_to = smt_debug;
 
@@ -125,7 +126,7 @@ pub fn run_to_dir<'bump>(
     env: &Environement<'bump>,
     mut pbls: PblIterator<'bump>,
     path: &Path,
-) -> anyhow::Result<()> {
+) -> crate::Result<()> {
     std::fs::create_dir_all(path)?;
 
     let mut i = 0;
@@ -147,16 +148,16 @@ pub fn run_to_file<'bump>(
     env: &Environement<'bump>,
     mut pbls: PblIterator<'bump>,
     path: &Path,
-) -> anyhow::Result<()> {
+) -> crate::Result<()> {
     if !path.exists() {
-        std::fs::create_dir_all(path.parent().with_context(|| "already a root")?)?;
+        std::fs::create_dir_all(path.parent().with_context(&(), || "already a root")?)?;
     }
-    ensure!(
+    ensure!( (), 
         pbls.assert_one(),
         "More than one problem queued, are you using lemmas?"
     );
 
-    let mut npbl = pbls.next().with_context(|| "no problems are queued")?;
+    let mut npbl = pbls.next().with_context(&(), || "no problems are queued")?;
     save_to_file(env, &mut npbl, path)?;
     debug_assert!(pbls.next().is_none());
     Ok(())
@@ -167,7 +168,7 @@ fn save_to_file<'bump>(
     env: &Environement<'bump>,
     pbl: &mut Problem<'bump>,
     path: impl AsRef<Path>,
-) -> anyhow::Result<()> {
+) -> crate::Result<()> {
     let file = File::options()
         .write(true) // write mode
         .truncate(true) // overwrite

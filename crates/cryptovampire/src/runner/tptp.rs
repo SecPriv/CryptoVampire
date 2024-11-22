@@ -2,7 +2,6 @@ use crate::formula::{
     function::builtin::{EQUALITY, NOT, NOT_TA},
     TmpFormula,
 };
-use anyhow::{bail, Result};
 
 struct A(TmpFormula);
 
@@ -13,22 +12,18 @@ impl Into<TmpFormula> for A {
 }
 
 pub trait TptpParse {
-    fn parse(str: &str) -> anyhow::Result<Self>
+    fn parse(str: &str) -> crate::Result<Self>
     where
         Self: Sized;
 }
 
 impl TptpParse for TmpFormula {
-    fn parse(str: &str) -> anyhow::Result<Self> {
+    fn parse(str: &str) -> crate::Result<Self> {
         let str = format!("{}.", str.trim());
         let litteral: tptp::Result<Literal, ()> = Literal::parse(str.as_bytes());
-        match litteral {
-            Ok((_, l)) => {
-                let tmp: A = l.try_into()?;
-                Ok(tmp.0)
-            }
-            Err(e) => bail!("from tptp: {}", e),
-        }
+        let (_, l) = litteral?;
+        let tmp: A = l.try_into()?;
+        Ok(tmp.0)
     }
 }
 
@@ -49,9 +44,9 @@ fn trim_quotes(str: String) -> String {
 macro_rules! mtry_from {
     ($l:lifetime, $name:ty; |$value:ident| $b:block) => {
         impl<$l> TryFrom<$name> for A {
-            type Error = anyhow::Error;
+            type Error = crate::Error;
 
-            fn try_from($value: $name) -> Result<Self> {
+            fn try_from($value: $name) -> crate::Result<Self> {
                 $b
             }
         }
@@ -106,7 +101,7 @@ mtry_from!('a, Literal<'a>; |value| {
 });
 
 impl<'a> TryFrom<InfixUnary<'a>> for A {
-    type Error = anyhow::Error;
+    type Error = crate::Error;
     fn try_from(value: InfixUnary<'a>) -> Result<Self, Self::Error> {
         {
             let left: A = (*value.left).try_into()?;

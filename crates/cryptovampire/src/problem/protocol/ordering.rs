@@ -1,8 +1,9 @@
-use anyhow::ensure;
+use std::fmt::{Display, Write};
+
 use itertools::Itertools;
 use logic_formula::Formula;
 
-use crate::formula::{formula::ARichFormula, quantifier::Quantifier, sort::builtins::STEP};
+use crate::{ensure, error::{Location, LocationProvider}, formula::{formula::ARichFormula, quantifier::Quantifier, sort::builtins::STEP}};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Ordering<'bump> {
@@ -34,15 +35,15 @@ impl<'bump> Ordering<'bump> {
         }
     }
 
-    pub fn check(&self) -> anyhow::Result<()> {
+    pub fn check(&self) -> crate::Result<()> {
         let vars = self.quantifier().get_variables().as_ref();
         for f in self.formulas() {
-            ensure!(
+            ensure!(self,
                 f.free_vars_iter().all(|v| vars.contains(&v)),
                 "{f:} contains variables not it vars [{}]",
                 vars.iter().map(|v| format!("{v:}")).join(", ")
-            );
-            ensure!(f.sort() == Some(STEP.clone()), "{f:} is not of sort step")
+            )?;
+            ensure!(self, f.sort() == Some(STEP.clone()), "{f:} is not of sort step")?
         }
         Ok(())
     }
@@ -65,5 +66,27 @@ impl<'bump> Ordering<'bump> {
 
     pub fn guard(&self) -> &ARichFormula<'bump> {
         &self.guard
+    }
+}
+
+impl<'bump> Display for OrderingKind<'bump> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OrderingKind::LT(l, r) => 
+            write!(f, "{l} < {r}"),
+            OrderingKind::Exclusive(l, r) => write!(f, "{l} <> {r}"),
+        }
+    }
+}
+
+impl<'bump> Display for Ordering<'bump> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} ({}) => {}", self.quantifier(), self.guard(), self.kind())
+    }
+}
+
+impl<'a, 'bump> LocationProvider for &'a Ordering<'bump> {
+    fn provide(self) -> crate::error::Location {
+        Location::from_display(self)
     }
 }

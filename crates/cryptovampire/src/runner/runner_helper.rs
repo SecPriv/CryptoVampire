@@ -3,8 +3,9 @@ use std::{
     process::{Command, Stdio},
 };
 
-use anyhow::Context;
 use log::trace;
+
+use crate::error::{BaseContext, CVContext};
 
 use super::{Runner, RunnerHandler};
 
@@ -14,7 +15,7 @@ pub struct RetCodeAndStdout {
     pub return_code: i32,
 }
 
-pub fn exec_cmd<R, H>(runner: &R, handler: H, cmd: &mut Command) -> anyhow::Result<RetCodeAndStdout>
+pub fn exec_cmd<R, H>(runner: &R, handler: H, cmd: &mut Command) -> crate::Result<RetCodeAndStdout>
 where
     H: RunnerHandler,
     R: Runner,
@@ -24,8 +25,8 @@ where
         // .stderr(Stdio::null())
         ;
     let child = handler
-        .spawn_child(cmd, runner.kind())
-        .with_context(|| format!("Failed to start {} ($ {cmd:?})", R::name()))?;
+        .spawn_child(cmd, runner.kind())?;
+        // .with_context(|| format!("Failed to start {} ($ {cmd:?})", R::name()))?;
 
     trace!("process spawned, reading the output till EOF");
     // take the stdout
@@ -33,12 +34,12 @@ where
         let mut out = String::default();
         child
             .take_stdout()
-            .with_context(|| "couldn't build the stdout handle")?
+            .with_message(|| "couldn't build the stdout handle")?
             // stdout
-            .read_to_string(&mut out)
+            .read_to_string(&mut out).no_location()?;
             // .map(|mut s| s.read_to_string(&mut out))
             // .transpose()
-            .with_context(|| format!("{}'s output isn't in utf-8 ($ {cmd:?})", R::name()))?;
+            // .with_context(|| format!("{}'s output isn't in utf-8 ($ {cmd:?})", R::name()))?;
         // drops and close the
         out
     };
@@ -47,7 +48,7 @@ where
     let exit_status = child.wait()?;
     trace!("done waiting for {cmd:?}");
 
-    let return_code = exit_status.code().with_context(|| {
+    let return_code = exit_status.code().with_message(|| {
         format!(
             "{} terminated by signal.\n\t$ {cmd:?}\n\tstoud:\n{stdout}",
             R::name()
@@ -63,15 +64,12 @@ where
 pub mod dyn_traits {
     use std::{any::Any, path::Path};
 
-    use anyhow::Context;
 
     use crate::{
-        environement::environement::Environement,
-        problem::{crypto_assumptions::CryptoAssumption, Problem},
-        runner::{
+        environement::environement::Environement, error::BaseContext, problem::{crypto_assumptions::CryptoAssumption, Problem}, runner::{
             runner::DiscovererError, searcher::InstanceSearcher, Discoverer, Runner, RunnerHandler,
             RunnerOut,
-        },
+        }
     };
 
     pub type RunnerOutDyn = RunnerOut<
@@ -91,7 +89,7 @@ pub mod dyn_traits {
             env: &Environement<'bump>,
             pbl: &Problem<'bump>,
             save_to: Option<&Path>,
-        ) -> anyhow::Result<RunnerOutDyn>;
+        ) -> crate::Result<RunnerOutDyn>;
     }
 
     pub trait DynDiscovered<R>: DynRunner<R>
@@ -103,7 +101,7 @@ pub mod dyn_traits {
             env: &Environement<'bump>,
             pbl: &mut Problem<'bump>,
             out: &dyn Any,
-        ) -> Result<(), DiscovererError>;
+        ) -> crate::Result<()>;
     }
 
     pub enum RunnerAndDiscoverer<R: RunnerHandler + Clone> {
@@ -121,7 +119,7 @@ pub mod dyn_traits {
             env: &Environement<'bump>,
             pbl: &Problem<'bump>,
             save_to: Option<&Path>,
-        ) -> anyhow::Result<RunnerOutDyn> {
+        ) -> crate::Result<RunnerOutDyn> {
             match self {
                 RunnerAndDiscoverer::Runner(r) => r.dyn_run_to_tmp(handler, env, pbl, save_to),
                 RunnerAndDiscoverer::Discoverer(d) => d.dyn_run_to_tmp(handler, env, pbl, save_to),
@@ -144,7 +142,7 @@ pub mod dyn_traits {
             env: &Environement<'bump>,
             pbl: &Problem<'bump>,
             save_to: Option<&Path>,
-        ) -> anyhow::Result<RunnerOutDyn> {
+        ) -> crate::Result<RunnerOutDyn> {
             Ok(self
                 .run_to_tmp(handler, env, pbl, self.default_args(), save_to)?
                 .into_dyn())
@@ -166,9 +164,9 @@ pub mod dyn_traits {
             env: &Environement<'bump>,
             pbl: &mut Problem<'bump>,
             out: &dyn Any,
-        ) -> Result<(), DiscovererError> {
+        ) -> crate::Result<()> {
             let out: &<Self as Runner>::TimeoutR =
-                out.downcast_ref().with_context(|| "not the right type")?;
+                out.downcast_ref().with_message(|| "not the right type")?;
 
             self.discover(env, pbl, out)
         }

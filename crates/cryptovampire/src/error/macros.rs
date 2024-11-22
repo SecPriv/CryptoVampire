@@ -28,3 +28,15 @@ macro_rules! bail {
         $crate::bail_at!((), $($t)*)
     };
 }
+
+#[macro_export]
+macro_rules! ensure {
+    ($location:expr, $f:expr, $($t:tt)*) => {
+        if $f {
+          std::result::Result::Ok(())
+        } else {
+          use $crate::error::CVContext;
+          $crate::error::AssertionError(format!($($t)*)).with_location($location)
+        }
+    };
+}

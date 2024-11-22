@@ -326,6 +326,12 @@ impl<'a, 'bump> logic_formula::Formula for &'a RichFormula<'bump> {
     }
 }
 
+impl<'a, 'bump> crate::error::LocationProvider for &'a RichFormula<'bump> {
+    fn provide(self) -> crate::error::Location {
+        crate::error::Location::from_display(self)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;

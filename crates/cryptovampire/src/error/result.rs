@@ -13,6 +13,13 @@ pub trait CVContext<T> {
     {
         self.with_location(|| location.help_provide(str))
     }
+
+    fn no_location(self) -> Result<T>
+    where
+        Self: Sized,
+    {
+        self.with_location(())
+    }
 }
 
 pub trait BaseContext<T> {
@@ -49,7 +56,7 @@ where
     }
 }
 
-impl<T, E: std::error::Error + 'static> BaseContext<T> for std::result::Result<T, E> {
+impl<T, E: std::error::Error + Send + Sync + 'static> BaseContext<T> for std::result::Result<T, E> {
     fn with_context<D>(self, location: impl LocationProvider, f: impl FnOnce() -> D) -> Result<T>
     where
         D: std::fmt::Display,
