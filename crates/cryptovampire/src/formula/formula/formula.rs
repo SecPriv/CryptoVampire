@@ -100,7 +100,7 @@ impl<'bump> RichFormula<'bump> {
     where
         F: Fn(&Variable<'bump>) -> Option<ARichFormula<'bump>>,
     {
-        self.apply(|v: &Variable| f(v).unwrap_or(v.into()))
+        self.apply(|v| f(v).unwrap_or(v.into()))
     }
 
     pub fn apply_substitution<'a>(

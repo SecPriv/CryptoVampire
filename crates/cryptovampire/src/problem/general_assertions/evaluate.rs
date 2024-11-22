@@ -126,7 +126,7 @@ pub fn generate<'bump>(
 
             // assertions.extend(relevant_functions.iter().map())
             declarations.reserve(relevant_sorts.len());
-            let rewrite_funs: BTreeMap<FOSort, _> = relevant_sorts
+            let rewrite_funs: BTreeMap<FOSort<'bump>, _> = relevant_sorts
                 .into_iter()
                 .map(|(s, s2)| {
                     if s2 == bool {

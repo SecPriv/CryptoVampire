@@ -21,7 +21,7 @@ where
         .try_for_each(|cc @ CellCache { cell, ast, .. }| {
             let inner = parse_cell(env, cc)?;
             let r_err = unsafe {
-                <ScopedContainer as ContainerTools<InnerMemoryCell<'bump>>>::initialize(cell, inner)
+                <ScopedContainer<'bump> as ContainerTools<InnerMemoryCell<'bump>>>::initialize(cell, inner)
             };
 
             r_err.with_context(&ast.name, || "cell already defined")

@@ -40,7 +40,7 @@ pub fn convert_application<'a, 'b>(
 ) -> RAoO<Term<'a, StrRef<'a>>> {
     match f {
         json::Term::Fun { symb } => {
-            convert_function_or_name_application::<NameName, _>(Either::Right(symb), args, ctx)
+            convert_function_or_name_application::<NameName<'a>, _>(Either::Right(symb), args, ctx)
         }
         json::Term::Macro { .. }
         | json::Term::App { .. }

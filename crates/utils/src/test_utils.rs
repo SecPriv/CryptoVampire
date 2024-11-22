@@ -18,6 +18,7 @@ macro_rules! asssert_trait {
     ($name:ident; $to_test:ty; $($trait:ty),*) => {
         ::paste::paste! {
             #[cfg(test)]
+            #[allow(elided_lifetimes_in_paths)]
             fn [<_$name:snake>]() {
                 $(
                 fn [<is_$trait:snake>]<T: $trait>() {}

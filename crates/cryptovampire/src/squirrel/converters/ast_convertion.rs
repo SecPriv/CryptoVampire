@@ -60,7 +60,7 @@ impl<'a> ToAst<'a> for json::Term<'a> {
             json::Term::App { f, args } => convert_application(f, args, ctx),
             json::Term::Name { symb, args } => {
                 let symb = NameNameRef(symb.path());
-                convert_function_or_name_application::<_, OperatorName>(
+                convert_function_or_name_application::<_, OperatorName<'a>>(
                     Either::Left(&symb),
                     args,
                     ctx,

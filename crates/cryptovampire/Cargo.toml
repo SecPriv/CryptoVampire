@@ -6,6 +6,10 @@ authors = ["Simon Jeanteur <simon.jeanteur@tuwien.ac.at>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lints]
+workspace = true
+
+
 [dependencies]
 # cryptovampire-lib = { path = "../cryptovampire-lib"}
 utils = { path = "../utils", features = ["serde"] }

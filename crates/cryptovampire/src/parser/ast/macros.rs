@@ -64,7 +64,7 @@ boiler_plate!(@ AppMacro, 'a, macro_application; |p| {
     let span = p.as_span();
     let mut p = p.into_inner();
     let inner = {
-        let name: MacroName< &str> = p.next().unwrap().try_into()?;
+        let name: MacroName<'a, &str> = p.next().unwrap().try_into()?;
 
         match name.0.content.content {
             "msg" => InnerAppMacro::Msg(from_term_to_application(p.next().unwrap())?),

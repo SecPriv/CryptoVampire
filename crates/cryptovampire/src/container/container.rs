@@ -46,7 +46,7 @@ macro_rules! make_scope_allocator {
             fn allocate_pointee(
                 &'bump self,
                 content: Option<$inner<'bump>>,
-            ) -> NonNull<Option<$inner>> {
+            ) -> NonNull<Option<$inner<'bump>>> {
                 let uninit_ref = NonNull::from(Box::leak(Box::new(content)));
                 self.$fun.lock().expect("poisoned mutex").push(uninit_ref);
                 uninit_ref
@@ -60,7 +60,7 @@ impl<'bump> Container<'bump, InnerSort<'bump>> for ScopedContainer<'bump> {
     fn allocate_pointee(
         &'bump self,
         content: Option<InnerSort<'bump>>,
-    ) -> NonNull<Option<InnerSort>> {
+    ) -> NonNull<Option<InnerSort<'bump>>> {
         let uninit_ref = NonNull::from(Box::leak(Box::new(content)));
         self.sorts.lock().expect("poisoned mutex").push(uninit_ref);
         uninit_ref

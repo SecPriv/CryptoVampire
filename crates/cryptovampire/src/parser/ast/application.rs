@@ -25,7 +25,7 @@ impl<'str, S> Application<'str, S> {
         }
     }
 
-    pub fn args(&self) -> VecRef<'_, Term<S>> {
+    pub fn args(&self) -> VecRef<'_, Term<'_, S>> {
         match self {
             Application::ConstVar { .. } => VecRef::Empty,
             Application::Application { args, .. } => args.as_slice().into(),

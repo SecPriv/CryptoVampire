@@ -110,7 +110,7 @@ pub struct SmtCons<'bump> {
 mod display;
 
 fn fun_list_fmt<I: Iterator<Item = impl fmt::Display>>(
-    f: &mut fmt::Formatter,
+    f: &mut fmt::Formatter<'_>,
     str: &str,
     iter: I,
 ) -> fmt::Result {

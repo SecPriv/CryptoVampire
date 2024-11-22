@@ -20,6 +20,7 @@ pub trait TptpParse {
 impl TptpParse for TmpFormula {
     fn parse(str: &str) -> crate::Result<Self> {
         let str = format!("{}.", str.trim());
+        #[allow(elided_lifetimes_in_paths)]
         let litteral: tptp::Result<Literal, ()> = Literal::parse(str.as_bytes());
         let (_, l) = litteral?;
         let tmp: A = l.try_into()?;

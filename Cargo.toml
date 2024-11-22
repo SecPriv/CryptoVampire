@@ -23,5 +23,5 @@ serde = { version = "1.0", features = ["derive"]}
 derive_builder = "0.20"
 bitflags = "2.6"
 
-[all.package.lints.rust]
-elided_lifetimes_in_paths = "error"
+[workspace.lints.rust]
+elided_lifetimes_in_paths = "deny"

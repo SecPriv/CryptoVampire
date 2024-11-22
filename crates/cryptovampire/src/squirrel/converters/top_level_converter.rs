@@ -184,7 +184,7 @@ mod assert_crypto {
             ast::Function::from_name(verify.sanitized(&ctx))
         } else {
             // declare a dummy verify
-            let name: StrRef = format!("verify_{}", hash.sanitized(&ctx)).into();
+            let name: StrRef<'static> = format!("verify_{}", hash.sanitized(&ctx)).into();
             new_fun = Some(ast::DeclareFunction::new(
                 Default::default(),
                 name.clone(),
@@ -308,7 +308,7 @@ fn mk_macros<'a, 'b>(
     let base = pdump
         .macros_with_symb()
         .map_into()
-        .map(move |m: MacroRef| m.convert(ctx))
+        .map(move |m: MacroRef<'a, 'b>| m.convert(ctx))
         .filter_map(helper_functions::transpose_raov);
     let concrete_functions = pdump
         .operators_with_symb()

@@ -439,7 +439,7 @@ where
             match &self.kind {
                 AbsSubtermKindG::Vampire(fun) => fun.f([x, m]),
                 AbsSubtermKindG::Regular(funs) => {
-                    let [x, m]: [ARichFormula; 2] = [x.into(), m.into()];
+                    let [x, m]: [ARichFormula<'bump>; 2] = [x.into(), m.into()];
                     let sort = m.get_sort().expect_display(|| "term algebra has a sort");
                     trace!(
                         "[{}]\n{:?}",
@@ -510,7 +510,7 @@ where
 
     pub fn declare(
         &self,
-        env: &Environement,
+        env: &Environement<'bump>,
         pbl: &Problem<'bump>,
         declarations: &mut impl Extend<Declaration<'bump>>,
     ) {

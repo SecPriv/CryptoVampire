@@ -17,7 +17,7 @@ pub fn run_from_json(mut args: Args, str: &str) -> crate::Result<Vec<Return>> {
 
     debug!("parsing json");
     let dump = {
-        let tmp: CryptoVampireCall = serde_json::from_str(str)?;
+        let tmp: CryptoVampireCall<'_> = serde_json::from_str(str)?;
         tmp.context
     };
     trace!("parsing successful");

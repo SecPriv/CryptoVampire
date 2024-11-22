@@ -226,6 +226,7 @@ mod tests {
         ($f:ident :  $t:ty) => {
             paste! {
                     #[test]
+                    #[allow(elided_lifetimes_in_paths)]
                     fn [<parse_$f>]() {
                         let file_path = format!("../../tests/squirrel/{}.json", stringify!($f));
                         let content = File::open(file_path).expect("Unable to read file");

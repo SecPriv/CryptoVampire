@@ -9,6 +9,9 @@ authors = ["Simon Jeanteur <7871851+puyral@users.noreply.github.com>"]
 [lib]
 proc-macro = true
 
+[lints]
+workspace = true
+
 [dependencies]
 syn = "2.0"
 quote = "1.0"

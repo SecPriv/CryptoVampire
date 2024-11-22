@@ -153,7 +153,7 @@ where
         expected_sort: Option<SortProxy<'bump>>,
     ) -> crate::Result<Self::R> {
         // generate the expected sorts
-        let (es_condition, es_branches): (SortProxy, Option<SortProxy>) = match state.get_realm() {
+        let (es_condition, es_branches): (SortProxy<'bump>, Option<SortProxy<'bump>>) = match state.get_realm() {
             Realm::Evaluated => (BOOL.as_sort().into(), expected_sort),
             Realm::Symbolic => (CONDITION.as_sort().into(), Some(MESSAGE.as_sort().into())),
         };
