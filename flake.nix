@@ -33,12 +33,9 @@
 
         mrustPlateform = pkgs.rustPlatform;
 
-        cryptovampire = mrustPlateform.buildRustPackage {
-          name = manifest.name;
-          version = manifest.version;
-          cargoLock.lockFile = ./Cargo.lock;
-          src = pkgs.lib.cleanSource ./.;
-          patches = [ ./nix.patch ];
+        cryptovampire = pkgs.callPackage ./default.nix {
+          rustPlatform = mrustPlateform;
+          src = ./.;
         };
 
         defaultDevShell = pkgs.mkShell {
@@ -63,71 +60,43 @@
             ] ++ lib.optional stdenv.isDarwin git;
         };
 
-        dockerShell_old = pkgs.mkShell {
-          buildInputs = [ cryptovampire ]
-            ++ (with custom-pkgs; [ squirrel-prover vampire ])
-            ++ (with pkgs; [ z3 cvc5 emacs vim ]);
-          shellHook = ''
-            export PAHT=PATH:${custom-pkgs.squirrel-prover}
-            export CRYTPOVAMPIRE_LOCATION=${cryptovampire}/bin/cryptovampire
-          '';
-        };
+        test-dir = ./tests/nix;
 
-        dockerImage = with nix2container.packages.${system}.nix2container;
-          buildImage {
-            name = "cryptovampire";
-            tag = "latest";
-            layers = let
-              commonLayer = {
-                deps = with pkgs; [
-                  bashInteractive
-                  emacs
-                  vim
-                  z3
-                  cvc5
-                  custom-pkgs.vampire
-                ];
-              };
-              layerDefs = [
-                {
-                  deps = [ custom-pkgs.squirrel-prover ];
-                  layers = [ (buildLayer commonLayer) ];
-                }
-                {
-                  deps = [ cryptovampire ];
-                  layers = [ (buildLayer commonLayer) ];
-                }
-              ];
-            in builtins.map buildLayer layerDefs;
-            config = {
-              Env = [
-                (let
-                  path = with pkgs;
-                    lib.makeBinPath [
-                      bashInteractive
-                      custom-pkgs.squirrel-prover
-                      cryptovampire
-                      emacs
-                      vim
-                      z3
-                      cvc5
-                    ];
-                in "PATH=${path}:${custom-pkgs.squirrel-prover}")
-                "CRYTPOVAMPIRE_LOCATION=${cryptovampire}/bin/cryptovampire"
-              ];
+        auto-checks = with pkgs.lib;
+          with builtins;
+          let
+            tools = with pkgs; {
+              inherit cryptovampire z3 cvc5;
+              vampire = custom-pkgs.vampire;
             };
-          };
+            files-match = map ({ name, ... }: match "(.*).ptcl" name)
+              (attrsToList (readDir test-dir));
+            files = filter (name: (name != null) && (name != [ ])) files-match;
+            basenames = map head files;
+            check = basename: {
+              name = basename;
+              value = pkgs.callPackage test-dir (tools // {
+                file = "${test-dir}/${basename}.ptcl";
+                name = basename;
+              });
+            };
+          in listToAttrs (map check basenames);
 
       in rec {
-        packages = { inherit cryptovampire dockerImage; };
+        packages = {
+          inherit cryptovampire;
+          default = cryptovampire;
+        };
+        checks = auto-checks;
         formatter = nixpkgs.legacyPackages.${system}.nixfmt;
 
-        devShell = defaultDevShell;
+        devShells.default = defaultDevShell;
 
-        defaultPackage = packages.cryptovampire;
-        apps.cryptovampire =
-          flake-utils.lib.mkApp { drv = packages.cryptovampire; };
-        defaultApp = apps.cryptovampire;
+        apps = rec {
+          default = cryptovampire;
+          cryptovampire =
+            flake-utils.lib.mkApp { drv = packages.cryptovampire; };
+        };
       });
 
 }

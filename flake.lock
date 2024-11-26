@@ -1038,11 +1038,11 @@
     "vampire-master-src_3": {
       "flake": false,
       "locked": {
-        "lastModified": 1730662184,
-        "narHash": "sha256-fwfEQCXtzMIOTRtnJVFc9iPxnC2b6thDTYVn6c2m+Ls=",
+        "lastModified": 1732548227,
+        "narHash": "sha256-8MhBukWJJzeqKO23PIwlK6AJlewdIfoD85XrLplcQQI=",
         "owner": "vprover",
         "repo": "vampire",
-        "rev": "fe3af4ffed36701a6578512daeb68d03000b72bf",
+        "rev": "3b8b57609e9f5e02380bedd2939c32e8f2af22c4",
         "type": "github"
       },
       "original": {

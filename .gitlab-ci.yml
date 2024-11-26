@@ -28,6 +28,14 @@ build-job:       # This job runs in the build stage, which runs first.
     - if: '$CI_COMMIT_BRANCH == "master"'
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
 
+checks:       # This job runs in the build stage, which runs first.
+  stage: test
+  script:
+    - nix flake check .# -L
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
+
 
 # unit-test-job:   # This job runs in the test stage.
 #   stage: test    # It only starts when the job in the build stage completes successfully.
