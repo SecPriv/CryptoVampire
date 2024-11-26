@@ -216,14 +216,15 @@ impl<'a, V> From<StrRef<'a, V>> for Arc<str> {
 impl<'a, V> From<StrRef<'a, V>> for String {
     #[inline]
     fn from(val: StrRef<'a, V>) -> Self {
-        let b: Box<str> = Box::from(val);
-        b.to_string()
+        let r: &str = val.as_ref();
+        r.into()
     }
 }
 
 impl<'a, V> From<StrRef<'a, V>> for Box<str> {
     fn from(val: StrRef<'a, V>) -> Self {
-        <StrRef<'a, V> as Into<String>>::into(val).into_boxed_str()
+        let string: String = val.into();
+        string.into_boxed_str()
     }
 }
 
