@@ -46,6 +46,7 @@
 
           buildInputs = with pkgs;
             cryptovampire.buildInputs ++ [
+              lldb
               cargo
               cargo-expand
               rustc
