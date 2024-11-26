@@ -11,7 +11,7 @@ use crate::{
     ensure,
     environement::environement::Flags,
     error::{BaseContext, CVContext},
-    runner::{exec_cmd, RunnerOut},
+    runner::{exec_cmd, RetCodeAndStdout, RunnerOut},
     smt::SmtFile,
 };
 
@@ -79,22 +79,25 @@ impl Runner for Z3Runner {
 
         let result = exec_cmd(self, handler, &mut cmd)?;
 
-        if result.return_code == 0 {
-            let last_line = result
-                .stdout
-                .lines()
-                .last()
-                .with_message(|| "no output")?
-                .trim();
-            match last_line {
-                "unsat" => return Ok(RunnerOut::Unsat(())),
-                "sat" => return Ok(RunnerOut::Sat(())),
-                "timeout" => return Ok(RunnerOut::Timeout(())),
-                _ => return Ok(RunnerOut::Other(result.stdout)),
+        match result {
+            RetCodeAndStdout::Success {
+                stdout,
+                return_code: 0,
+            } => {
+                let last_line = stdout.lines().last().with_message(|| "no output")?.trim();
+                match last_line {
+                    "unsat" => Ok(RunnerOut::Unsat(())),
+                    "sat" => Ok(RunnerOut::Sat(())),
+                    "timeout" => Ok(RunnerOut::Timeout(())),
+                    _ => Ok(RunnerOut::Other(stdout)),
+                }
             }
+            RetCodeAndStdout::Killed { stdout } => Ok(RunnerOut::Other(stdout)),
+            RetCodeAndStdout::Success {
+                stdout,
+                return_code,
+            } => Self::unexpected_result(cmd, return_code, stdout).no_location(),
         }
-
-        Self::unexpected_result(cmd, result).no_location()
     }
 
     fn name() -> &'static str {

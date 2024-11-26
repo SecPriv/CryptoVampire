@@ -5,6 +5,7 @@ stdenv.mkDerivation {
   doCheck = true;
   checkPhase = ''
     mkdir -p $out
+    export RUST_BACKTRACE=1
     ${cryptovampire}/bin/cryptovampire '${file}' auto \
       --solver-file-debug $out \
       --vampire-location '${vampire}/bin/vampire' \

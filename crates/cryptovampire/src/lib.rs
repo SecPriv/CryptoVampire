@@ -23,6 +23,7 @@ pub use error::{Error, Result, Unit};
 pub use parser::parse_pbl_from_ast;
 pub use problem::step::INIT_STEP_NAME;
 pub use return_value::Return;
+use runner::RunnerResult;
 pub use subterm::kind::SubtermKind;
 
 // other imports
@@ -108,7 +109,7 @@ pub fn auto_run<'bump>(
     runners: &Runners,
     num_retry: u32,
     smt_debug: Option<&Path>,
-) -> crate::Result<Vec<String>> {
+) -> crate::Result<Vec<RunnerResult>> {
     let ntimes = NonZeroU32::new(num_retry);
     let save_to = smt_debug;
 

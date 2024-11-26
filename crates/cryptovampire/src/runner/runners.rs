@@ -1,5 +1,6 @@
 use std::{
     convert::Infallible,
+    fmt::Display,
     io,
     num::NonZeroU32,
     path::Path,
@@ -37,6 +38,24 @@ pub struct Runners {
     pub cvc5: Option<Infallible>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize)]
+pub struct RunnerResult {
+    num_tries: u32,
+}
+
+impl RunnerResult {
+    pub fn num_tries(&self) -> u32 {
+        self.num_tries
+    }
+}
+
+impl Display for RunnerResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use std::fmt::Write;
+        write!(f, "proven in {:} tries.", self.num_tries())
+    }
+}
+
 impl Runners {
     pub fn all_empty(&self) -> bool {
         self.vampire.is_none() && self.z3.is_none() && self.cvc5.is_none()
@@ -51,7 +70,7 @@ impl Runners {
         pbl: &mut Problem<'bump>,
         ntimes: Option<NonZeroU32>,
         save_to: Option<&Path>,
-    ) -> crate::Result<String> {
+    ) -> crate::Result<RunnerResult> {
         // ensure!((), !self.all_empty(), "no solver to run :'(");
         if self.all_empty() {
             return RunnerError::nothing_to_do("no solvers to run :'(").no_location();
@@ -64,13 +83,13 @@ impl Runners {
         let z3 = z3.map(|v| dyn_traits::RunnerAndDiscoverer::Runner(Box::new(v)));
         let runners = [v, z3].into_iter().flatten().collect_vec();
 
-        for i in 0..n {
+        for i in 1..=n {
             debug!("running {i:}/{n:}");
 
             let res = autorun_many(env, pbl, save_to, &runners)?;
 
             match res {
-                RunnerOut::Unsat(_) => return Ok("proven".into()),
+                RunnerOut::Unsat(_) => return Ok(RunnerResult { num_tries: i }),
                 RunnerOut::Timeout(_) => continue,
                 _ => unreachable!(),
             }

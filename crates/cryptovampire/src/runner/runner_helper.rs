@@ -10,9 +10,9 @@ use crate::error::{BaseContext, CVContext};
 use super::{Runner, RunnerHandler};
 
 #[derive(Debug)]
-pub struct RetCodeAndStdout {
-    pub stdout: String,
-    pub return_code: i32,
+pub enum RetCodeAndStdout {
+    Success { stdout: String, return_code: i32 },
+    Killed { stdout: String },
 }
 
 pub fn exec_cmd<R, H>(runner: &R, handler: H, cmd: &mut Command) -> crate::Result<RetCodeAndStdout>
@@ -48,17 +48,41 @@ where
     let exit_status = child.wait()?;
     trace!("done waiting for {cmd:?}");
 
-    let return_code = exit_status.code().with_message(|| {
-        format!(
-            "{} terminated by signal.\n\t$ {cmd:?}\n\tstoud:\n{stdout}",
-            R::name()
-        )
-    })?;
-    trace!("process ended successfully ({cmd:?})\nstdout: {stdout}");
-    Ok(RetCodeAndStdout {
+    let return_code = match exit_status.code() {
+        Some(c) => c,
+        None => return Ok(RetCodeAndStdout::Killed { stdout }),
+    };
+    trace!(
+        "process ended successfully ({cmd:?})\n\tstout:\n{}",
+        save_stdout(&stdout)
+    );
+    Ok(RetCodeAndStdout::Success {
         stdout,
         return_code,
     })
+}
+
+/// tries to save to a temporary file
+fn save_stdout(stdout: &String) -> String {
+    let maybe_file = tempfile::Builder::new()
+        .prefix("solver_output_")
+        .suffix(".txt")
+        .keep(true)
+        .tempfile()
+        .map_err(|_| ())
+        .and_then(|mut file| {
+            use std::io::Write;
+            let test = write!(&mut file, "{stdout}");
+            test.map_err(|_| ()).map(|_| file)
+        });
+    let stdout_msg = match maybe_file.as_ref() {
+        Ok(f) => {
+            let path = f.path().as_os_str();
+            format!("file: {path:?}")
+        }
+        Err(_) => stdout.clone(),
+    };
+    stdout_msg
 }
 
 pub mod dyn_traits {

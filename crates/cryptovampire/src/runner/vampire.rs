@@ -15,6 +15,7 @@ use crate::{
         exec_cmd,
         runner::{ChildKind, RunnerOut},
         searcher::InstanceSearcher,
+        RetCodeAndStdout,
     },
     smt::SmtFile,
 };
@@ -162,10 +163,16 @@ impl Runner for VampireExec {
 
         let result = exec_cmd(self, handler, &mut cmd)?;
 
-        match result.return_code {
-            SUCCESS_RC => Ok(RunnerOut::Unsat(result.stdout)),
-            TIMEOUT_RC => Ok(RunnerOut::Timeout(result.stdout)),
-            _ => Self::unexpected_result(cmd, result).no_location(),
+        match result {
+            RetCodeAndStdout::Success {
+                stdout,
+                return_code,
+            } => match return_code {
+                SUCCESS_RC => Ok(RunnerOut::Unsat(stdout)),
+                TIMEOUT_RC => Ok(RunnerOut::Timeout(stdout)),
+                _ => Self::unexpected_result(cmd, return_code, stdout).no_location(),
+            },
+            RetCodeAndStdout::Killed { stdout } => Ok(RunnerOut::Other(stdout)),
         }
     }
 

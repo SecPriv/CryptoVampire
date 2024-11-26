@@ -2,11 +2,13 @@ use std::{fmt::Display, path::PathBuf};
 
 use serde::Serialize;
 
+use crate::runner::RunnerResult;
+
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize)]
 #[non_exhaustive]
 pub enum Return {
     ToFile(PathBuf),
-    AutoRun(Vec<String>),
+    AutoRun(Vec<RunnerResult>),
     Many(Vec<Self>),
 }
 
@@ -23,7 +25,7 @@ impl Display for Return {
                 r.iter()
                     .enumerate()
                     .map(|(i, s)| (i + 1, s))
-                    .try_for_each(|(i, s)| write!(f, "\n\t- {i:}th run: \"{s}\""))
+                    .try_for_each(|(i, s)| write!(f, "\n\t- protocol {i:}: {s}"))
             }
             Return::Many(m) => {
                 writeln!(f, "ran many times:\n---------")?;

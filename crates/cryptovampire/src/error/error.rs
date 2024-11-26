@@ -34,8 +34,7 @@ impl Error {
         let r = Error(Box::new(inner));
 
         if cfg!(debug_assertions) {
-            #[allow(clippy::unnecessary_literal_unwrap)]
-            Err(r).expect("debug is on, giving up")
+            panic!("encountered error in debug mode: aborting...\n{r}")
         } else {
             r
         }

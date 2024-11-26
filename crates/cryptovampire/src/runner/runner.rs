@@ -1,8 +1,13 @@
-use std::{io::BufWriter, path::Path, process::Command, sync::Arc};
+use std::{
+    io::BufWriter,
+    path::{Path, PathBuf},
+    process::Command,
+    sync::Arc,
+};
 
 use log::{info, trace};
 use shared_child::SharedChild;
-use tempfile::Builder;
+use tempfile::{Builder, NamedTempFile};
 use thiserror::Error;
 
 use crate::{
@@ -148,28 +153,13 @@ pub trait Runner {
         R: RunnerHandler + Clone,
     {
         trace!("start {}", Self::name());
-        if let Some(p) = save_to {
-            std::fs::create_dir_all(p)?
-        }
-
-        let prefix = format!("cryptovampire-{}", Self::get_file_prefix());
-        let mut tmp_builder = Builder::new();
-        tmp_builder.suffix(Self::get_file_suffix());
-        tmp_builder.prefix(&prefix);
-
-        let mut file = tmp_builder.tempfile()?; // gen tmp file
-
+        let mut file = build_file::<Self>(save_to)?;
         self.write(env, pbl, &mut BufWriter::new(&mut file))?; // write to it
+        let file = file; // deactivate mutation
+        let path = file.path();
+        info!("running {} to {:?}.", Self::name(), path);
 
-        // save it if relevant
-        if let Some(p) = save_to {
-            debug_assert_ne!("..", Self::get_file_suffix());
-            let name = p.join(file.path().file_name().unwrap()); // can't end in ".."
-            info!("copying file to {name:?}");
-            std::fs::copy(file.path(), name)?;
-        };
-
-        let r = self.run(handler, args, file.path())?;
+        let r = self.run(handler, args, path)?;
         Ok(r)
     }
 
@@ -196,13 +186,7 @@ pub trait Runner {
 
     fn kind(&self) -> ChildKind;
 
-    fn unexpected_result(
-        cmd: Command,
-        RetCodeAndStdout {
-            return_code,
-            stdout,
-        }: RetCodeAndStdout,
-    ) -> BaseError {
+    fn unexpected_result(cmd: Command, return_code: i32, stdout: String) -> BaseError {
         RunnerError::UnexpectedResult {
             tool: Self::name(),
             return_code,
@@ -211,6 +195,26 @@ pub trait Runner {
         }
         .into()
     }
+}
+
+fn build_file<R: Runner + ?Sized>(save_to: Option<&Path>) -> crate::Result<NamedTempFile> {
+    let base_prefix = PathBuf::from(format!("cryptovampire-{}", R::get_file_prefix()));
+
+    let prefix = match save_to {
+        Some(p) => {
+            std::fs::create_dir_all(p)?;
+            p.join(base_prefix)
+        }
+        None => base_prefix,
+    };
+    let mut tmp_builder = Builder::new();
+    tmp_builder
+        .suffix(R::get_file_suffix())
+        .prefix(&prefix)
+        .keep(save_to.is_some());
+    let file = tmp_builder.tempfile()?; // gen tmp file
+    info!("generated file {}", file.path().to_string_lossy());
+    Ok(file)
 }
 
 #[derive(Debug, Error)]

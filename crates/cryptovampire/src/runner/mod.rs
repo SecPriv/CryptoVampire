@@ -11,5 +11,5 @@ mod z3;
 pub use error::RunnerError;
 pub use runner::{Discoverer, Runner, RunnerBase, RunnerHandler, RunnerOut, RunnerOutI};
 pub(crate) use runner_helper::*;
-pub use runners::Runners;
+pub use runners::{RunnerResult, Runners};
 pub use vampire::{VampireArg, VampireExec};
