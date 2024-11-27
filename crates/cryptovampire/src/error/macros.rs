@@ -54,7 +54,7 @@ macro_rules! bail_at {
 
 /// Copies perfectly `anyhow`'s `bail` macro
 ///
-/// Still here for legacy reasons
+/// Still here for legacy reasons...
 #[macro_export]
 macro_rules! bail {
     ($($t:tt)*) => {
