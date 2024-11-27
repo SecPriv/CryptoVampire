@@ -81,10 +81,11 @@
               });
             };
           in listToAttrs (map check basenames);
+        doc = pkgs.callPackage ./doc.nix {inherit cryptovampire;};
 
       in rec {
         packages = {
-          inherit cryptovampire;
+          inherit cryptovampire ;
           default = cryptovampire;
         };
         checks = auto-checks;

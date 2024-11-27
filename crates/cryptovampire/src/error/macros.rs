@@ -11,6 +11,14 @@ macro_rules! error_at {
   }
 }
 
+/// Simply returns an [Result::Err] with the right location and formatted message
+/// If you also want to exit the function [bail_at] might be the better choice
+///
+/// # Example
+/// ```
+/// # use cryptovampire::{err_at, error::Location};
+/// err_at!(Location::default(), "error message").expect_err("")
+/// ```
 #[macro_export]
 macro_rules! err_at  {
     ($location:expr, $($t:tt)*) => {
@@ -21,6 +29,18 @@ macro_rules! err_at  {
     }
 }
 
+/// Quit the function with an error a location and formatted message
+///
+/// # Example
+/// ```
+/// # use cryptovampire::{bail_at, error::Location};
+/// fn test() -> cryptovampire::Result<()> {
+///   bail_at!(Location::default(), "error message");
+///   unreachable!()
+/// }
+///
+/// test().expect_err("");
+/// ```
 #[macro_export]
 macro_rules! bail_at {
     ($location:expr, $($t:tt)*) => {
@@ -31,6 +51,9 @@ macro_rules! bail_at {
     }
 }
 
+/// Copies perfectly `anyhow`'s `bail` macro
+///
+/// Still here for legacy reasons
 #[macro_export]
 macro_rules! bail {
     ($($t:tt)*) => {
@@ -38,6 +61,15 @@ macro_rules! bail {
     };
 }
 
+/// Simialr to `assert!` but return a [Result]
+///
+///
+///# Example
+/// ```rust
+/// # use cryptovampire::ensure;
+/// #
+/// ensure!((), 1 == 2, "error! {:}", 1).expect_err("");
+/// ```
 #[macro_export]
 macro_rules! ensure {
     ($location:expr, $f:expr, $($t:tt)*) => {

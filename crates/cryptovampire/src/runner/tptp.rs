@@ -1,3 +1,6 @@
+//! tptp parsing
+//!
+//! This is an interface with the [tptp] crate. We need this to read the output of `vampire`.
 use crate::formula::{
     function::builtin::{EQUALITY, NOT, NOT_TA},
     TmpFormula,

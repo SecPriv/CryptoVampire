@@ -1,3 +1,4 @@
+//! The [Runner] for `vampire` and associated surroundings
 use itertools::Itertools;
 use log::debug;
 use std::{
@@ -25,13 +26,16 @@ use super::{
     RunnerHandler,
 };
 
+/// The [Runner] itself
 #[derive(Debug, Clone)]
 pub struct VampireExec {
-    pub location: PathBuf,
+    pub exe_location: PathBuf,
     pub extra_args: Vec<VampireArg>,
 }
+
 macro_rules! option {
       ($($variant:ident($name:literal, $content:ty)),*,) => {
+          #[doc = "arguments to [VampireExec] in type-safeish mode"]
           #[derive(Debug, Clone, PartialEq, PartialOrd)]
           pub enum VampireArg {
             $($variant($content)),*
@@ -102,6 +106,7 @@ pub mod vampire_suboptions {
     suboption!(SatSolver, (Minisat, "minisat"), (Z3, "z3"),);
 }
 
+/// Turn something into an array of [str] for the [Command] object
 trait ToArgs<const N: usize> {
     fn to_args(&self) -> [Box<str>; N];
 }
@@ -124,7 +129,9 @@ impl ToArgs<1> for bool {
     }
 }
 
+/// Success return code
 const SUCCESS_RC: i32 = 0;
+/// Timeout return code
 const TIMEOUT_RC: i32 = 1;
 
 impl Runner for VampireExec {
@@ -151,7 +158,7 @@ impl Runner for VampireExec {
             "{} is not a file",
             pbl_file.to_string_lossy()
         )?;
-        let mut cmd = Command::new(&self.location);
+        let mut cmd = Command::new(&self.exe_location);
         for arg in self.extra_args.iter().chain(args.iter()) {
             // encode the arguments
             let [a, b] = arg.to_args();

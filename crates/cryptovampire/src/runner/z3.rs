@@ -1,3 +1,4 @@
+//! `z3` [Runner]
 use std::{
     path::PathBuf,
     process::{Command, Stdio},

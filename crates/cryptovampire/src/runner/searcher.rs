@@ -1,3 +1,5 @@
+//! Things that look for instance in solvers ouputs
+
 use crate::{
     environement::environement::Environement,
     formula::{
@@ -18,6 +20,11 @@ use super::{tptp::TptpParse, Runner, VampireExec};
 static EXTRACT_FORMULA: Regex = Regex::new(r"\[SA\] new: \d*?\. (.*?) \[.*?\]").unwrap();
 
 pub trait InstanceSearcher<'bump, R: Runner> {
+    /// Build a list of formulas that might be usefull to find instance of [Self] in the output of [R].
+    ///
+    /// ## args
+    /// - **str**: the output of [R]
+    /// - **env**: the environement
     fn search_instances(
         &self,
         str: &R::TimeoutR,

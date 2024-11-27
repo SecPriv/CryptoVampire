@@ -20,7 +20,7 @@ boiler_plate!(Assert<'a, &'a str>, 'a, assertion | query | lemma ; |p| {
         Rule::assertion => { Ok(Assert::Assertion(p.try_into()?)) }
         Rule::query => { Ok(Assert::Query(p.try_into()?)) }
         Rule::lemma => { Ok(Assert::Lemma(p.try_into()?)) }
-        r => Error::from_err(|| span.as_location(),
+        r => Error::from_err(span.as_location(),
             pest::error::ErrorVariant::ParsingError {
                 positives: vec![Rule::assertion, Rule::query, Rule::lemma],
                 negatives: vec![r] })

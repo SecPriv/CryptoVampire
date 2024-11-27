@@ -1,3 +1,20 @@
+//! The [Error] type use thoughout the tool
+//!
+//! This type is an efficient wrapping of [BaseError] to get [Location] information,
+//! gather a backtrace and crash early in debug mode.
+//!
+//! The location information is handeled by [Location] which wraps the [Locate] trait.
+//! This lets us give hints to the user about where in the input file an error might be
+//! comming from. This information is optionnal (in that case use `()` as location)
+//!
+//! In debug mode build an [Error] makes the tool panic as fast as possible, this way
+//! we can more easily take advantage of the debuging tool and figure out where the error
+//! is comming from. Conversally, in `release` mode, the tool is expected to never crash
+//! and only bubble up [Error].
+//!
+//! The [result] module give a access to something quite similar to `anyhow`'s [`Context`](https://docs.rs/anyhow/latest/anyhow/trait.Context.html)
+//! trait.
+
 use std::fmt::Display;
 
 #[allow(clippy::module_inception)]
@@ -21,9 +38,17 @@ use crate::formula::{function::signature::CheckError, sort::sort_proxy::Inferenc
 
 // pub type CVResult<T, L> = std::result::Result<T, Error<L>>;
 
+/// useful shortcut
 pub type Result<T> = std::result::Result<T, Error>;
 pub type Unit = crate::Result<()>;
 
+/// The main error type.
+///
+/// This is expected to mainly gather other error types in a sort of dynamic dispatch.
+///
+/// Implementing [Into<BaseError>] gives the implementation of [Into<Error>]. And thus the
+/// possibility to use `?`. This is the expected way to add new error types (beside expending
+/// the enum)
 #[non_exhaustive]
 #[derive(Debug, thiserror::Error)]
 pub enum BaseError {
@@ -56,6 +81,9 @@ pub enum BaseError {
     #[error(transparent)]
     ParsingError(#[from] crate::parser::error::ParsingError),
 
+    // some joker when we don't want to make a new type
+    // this lets us emulate the [`anyhow`](https://docs.rs/anyhow/latest/anyhow/)
+    // crate in some ways
     #[error("reason: {}", .0)]
     Message(String),
     #[error("reason: {0}\ncomming from: {1}")]
@@ -76,6 +104,7 @@ impl BaseError {
         Error::err(location, self)
     }
 
+    /// a shortcut to crash declare duplicates symbols
     pub fn duplicate_symbol(kind: &impl Display, name: &impl Display) -> Self {
         Self::DuplicateSymbol {
             kind: kind.to_string(),

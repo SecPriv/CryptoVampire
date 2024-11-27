@@ -5,6 +5,7 @@ use super::{
     runners::{HandlerError, RunnersCreationError},
 };
 
+/// Errors related to the interaction with a solver
 #[non_exhaustive]
 #[derive(Debug, thiserror::Error)]
 pub enum RunnerError {

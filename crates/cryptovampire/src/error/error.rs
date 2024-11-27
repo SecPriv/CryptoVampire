@@ -5,6 +5,9 @@ use std::{
 
 use super::{inner_error::InnerError, BaseError, Locate, Location, LocationProvider, Result};
 
+/// The main error type of cryptovampire, designed to have a light footprint
+///
+/// To implement [Into<Error>] prefer going though [super::BaseError]
 #[derive(Debug)]
 pub struct Error(Box<InnerError>);
 
@@ -29,6 +32,9 @@ impl std::error::Error for Error {
 }
 
 impl Error {
+    /// build a new [Error]. Always panics in debug mode.
+    ///
+    /// anything building an [Error] should call this function.
     pub fn new(location: Location, error: BaseError) -> Self {
         let inner = InnerError::new(location, error);
         let r = Error(Box::new(inner));
@@ -40,26 +46,24 @@ impl Error {
         }
     }
 
+    /// Same as [Self::new] but returns a [Result] instead
     pub fn err<T>(location: Location, error: BaseError) -> Result<T> {
         Err(Self::new(location, error))
     }
 
-    pub fn from_err<T, P: LocationProvider>(
-        location: impl FnOnce() -> P,
-        error: impl Into<BaseError>,
-    ) -> Result<T> {
-        Self::err(location().provide(), error.into())
+    pub fn from_err<T, P: LocationProvider>(location: P, error: impl Into<BaseError>) -> Result<T> {
+        Self::err(location.provide(), error.into())
     }
 
-    pub(crate) fn get_location(&self) -> &Location {
+    pub fn get_location(&self) -> &Location {
         &self.0.location
     }
 
-    pub(crate) fn get_error(&self) -> &BaseError {
+    pub fn get_error(&self) -> &BaseError {
         &self.0.error
     }
 
-    pub(crate) fn get_backtrace(&self) -> Option<&Backtrace> {
+    pub fn get_backtrace(&self) -> Option<&Backtrace> {
         self.0.backtrace.as_ref()
     }
 
@@ -68,6 +72,9 @@ impl Error {
         self
     }
 
+    /// shortuct to simply output an error with a message
+    ///
+    /// Using the macros is proably better in this case
     pub fn msg_with_location(location: Location, str: String) -> Self {
         let error = BaseError::Message(str);
         Self::new(location, error)

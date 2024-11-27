@@ -1,3 +1,4 @@
+//! Some functions to help building and using [Runner]
 use std::{
     io::Read,
     process::{Command, Stdio},
@@ -85,6 +86,7 @@ fn save_stdout(stdout: &String) -> String {
     stdout_msg
 }
 
+/// simplified, object safe version of [Runner] and [Discoverer]
 pub mod dyn_traits {
     use std::{any::Any, path::Path};
 
@@ -115,7 +117,7 @@ pub mod dyn_traits {
         ) -> crate::Result<RunnerOutDyn>;
     }
 
-    pub trait DynDiscovered<R>: DynRunner<R>
+    pub trait DynDiscoverer<R>: DynRunner<R>
     where
         R: RunnerHandler + Clone,
     {
@@ -127,9 +129,11 @@ pub mod dyn_traits {
         ) -> crate::Result<()>;
     }
 
+    /// I wanted to have [DynRunner] and [DynDiscoverer] in a single [Vec],
+    /// hence the enum
     pub enum RunnerAndDiscoverer<R: RunnerHandler + Clone> {
         Runner(Box<dyn DynRunner<R> + Sync>),
-        Discoverer(Box<dyn DynDiscovered<R> + Sync>),
+        Discoverer(Box<dyn DynDiscoverer<R> + Sync>),
     }
 
     impl<R> DynRunner<R> for RunnerAndDiscoverer<R>
@@ -172,7 +176,7 @@ pub mod dyn_traits {
         }
     }
 
-    impl<R, T> DynDiscovered<R> for T
+    impl<R, T> DynDiscoverer<R> for T
     where
         T: Discoverer,
         R: RunnerHandler + Clone,

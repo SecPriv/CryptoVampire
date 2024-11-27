@@ -121,7 +121,7 @@ impl TryFrom<SolverConfig> for Runners {
             which::which(&value.locations.vampire).ok()
         };
         let vampire = vampire.map(|location| VampireExec {
-            location,
+            exe_location: location,
             extra_args: vec![VampireArg::TimeLimit(timeout)],
         });
 
@@ -145,6 +145,9 @@ impl TryFrom<SolverConfig> for Runners {
     }
 }
 
+/// A [RunnerHandler] that allow for multithreaded process spawning and killing
+///
+/// This way we can kill all other processes once the first one finishes
 #[derive(Debug, Clone)]
 struct Handler {
     killable: Sender<Arc<SharedChild>>,

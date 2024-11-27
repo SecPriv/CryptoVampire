@@ -15,14 +15,19 @@ use super::{
     traits::{KnowsRealm, Realm},
 };
 
+/// Super struct containing more or less the global state of cryptovampire
 #[derive(Debug, Clone)]
 pub struct Environement<'bump> {
+    /// The container where all the [Function], ... are stored
     pub container: &'bump ScopedContainer<'bump>,
     realm: Realm,
     options: Options,
     solver_configuration: SolverConfig,
 }
 
+/// Gather flags for the configuration of cryptovampire
+///
+/// Since this can get confusing prefer using the functions of [Environement]
 #[derive(Default, Clone, PartialEq, PartialOrd, Debug)]
 pub struct Options {
     pub flags: Flags,
@@ -110,22 +115,27 @@ impl<'bump> Environement<'bump> {
         self.options.subterm_flags.contains(SubtermFlags::DEFINED)
     }
 
+    /// Do not use the `(rewrite ...)` pseudo smt syntax for `vampire`
     pub fn no_rewrite(&self) -> bool {
         self.options.rewrite_flags.is_empty()
     }
 
+    /// Use `assert-theory`
     pub fn use_assert_theory(&self) -> bool {
         self.options.flags.contains(Flags::ASSERT_THEORY)
     }
 
+    /// Use `assert-not` for the query
     pub fn use_assert_not(&self) -> bool {
         self.options.flags.contains(Flags::ASSERT_NOT)
     }
 
+    /// Use `assert-ground`
     pub fn use_assert_ground(&self) -> bool {
         self.options.flags.contains(Flags::ASSERT_GROUND)
     }
 
+    /// Use the `legacy-evaluate`
     pub fn use_legacy_evaluate(&self) -> bool {
         self.options.flags.contains(Flags::LEGACY_EVALUATE) && self.is_symbolic_realm()
     }
@@ -147,23 +157,28 @@ impl<'bump> Environement<'bump> {
         self.get_realm().is_evaluated()
     }
 
+    /// include the general crypto aximos
     pub fn with_general_crypto_axiom(&self) -> bool {
         // !self.not_as_term_algebra()
         self.is_symbolic_realm()
     }
 
+    /// get the container with the right lifetime
     pub fn container_full_life_time(&self) -> &'bump ScopedContainer<'bump> {
         self.container
     }
 
+    /// get a hashmat of the [Function]s currenlty defined
     pub fn get_function_hash(&self) -> HashMap<StrRef<'bump>, Function<'bump>> {
         self.container.get_function_hash_map()
     }
 
+    /// do we fully ignore lemmas?
     pub fn are_lemmas_ignored(&self) -> bool {
         self.options.flags.contains(Flags::IGNORE_LEMMAS)
     }
 
+    /// Are we running with the lemmas
     pub fn use_lemmas(&self) -> bool {
         self.options.flags.contains(Flags::LEMMA) && {
             assert!(!self.are_lemmas_ignored());
@@ -171,6 +186,9 @@ impl<'bump> Environement<'bump> {
         }
     }
 
+    /// allow shadowing in the input files
+    ///
+    /// because `squirrel` loves them...
     pub fn allow_shadowing(&self) -> bool {
         !self.options.flags.contains(Flags::DISALLOW_SHADOWING)
     }
@@ -218,7 +236,7 @@ pub struct Locations {
 impl SolverConfig {
     pub fn to_vampire_exec(&self) -> VampireExec {
         VampireExec {
-            location: self.locations.vampire.to_owned(),
+            exe_location: self.locations.vampire.to_owned(),
             extra_args: vec![VampireArg::TimeLimit(self.timeout)],
         }
     }
