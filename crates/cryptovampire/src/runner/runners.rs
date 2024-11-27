@@ -51,7 +51,6 @@ impl RunnerResult {
 
 impl Display for RunnerResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use std::fmt::Write;
         write!(f, "proven in {:} tries.", self.num_tries())
     }
 }

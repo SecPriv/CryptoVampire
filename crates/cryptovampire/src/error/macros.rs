@@ -16,8 +16,9 @@ macro_rules! error_at {
 ///
 /// # Example
 /// ```
-/// # use cryptovampire::{err_at, error::Location};
-/// err_at!(Location::default(), "error message").expect_err("")
+/// # use cryptovampire::{err_at, error::Location, Result};
+/// let err : Result<()>  = err_at!(Location::default(), "error message");
+/// err.expect_err("");
 /// ```
 #[macro_export]
 macro_rules! err_at  {

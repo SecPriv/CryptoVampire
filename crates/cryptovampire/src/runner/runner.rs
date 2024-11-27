@@ -21,7 +21,7 @@ use crate::{
     problem::{crypto_assumptions::CryptoAssumption, Problem},
 };
 
-use super::{dyn_traits, searcher::InstanceSearcher, RetCodeAndStdout, RunnerError};
+use super::{dyn_traits, searcher::InstanceSearcher,  RunnerError};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum RunnerOut<S, U, T, O> {
