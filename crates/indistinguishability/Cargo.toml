@@ -1,0 +1,16 @@
+[package]
+name = "indistinguishability"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+egg = "0.9.5"
+utils = { path = "../utils"}
+logic_formula = {path = "../logic_formula"}
+itertools.workspace = true
+static_init = { workspace = true }
+paste = { workspace = true }
+rustc-hash = "2.1.0"
+
+[lints]
+workspace = true
