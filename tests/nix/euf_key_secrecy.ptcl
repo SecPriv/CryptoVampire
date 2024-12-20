@@ -1,0 +1,39 @@
+
+type index;
+
+fun hash(Message, Message):Message
+fun verify(Message, Message, Message):Bool
+
+/* the Names */
+fun key:Name
+fun fresh:Name
+
+step t(i:index) 
+    { true }
+    { hash(input(t(i)), key) }
+
+
+/*query forall (s:Step) {(
+    (happens(s)
+        => (input(s) != key))
+    && ((input(s) == key)
+        => verify(hash(fresh, input(s)), fresh, key))
+)}*/
+
+query forall (s:Step) {(
+    happens(s)
+        => (input(s) != key)
+)}
+
+assert-crypto euf-cma hash verify;
+assert-crypto nonce;
+
+assert
+    forall (s:Message, m:Message, k:Message) {
+        (verify(s, m, k) <=> (s == hash(m, k)))
+    }
+
+lemma forall (s:Step) {(
+    (input(s) == key)
+     => verify(hash(fresh, input(s)), fresh, key)
+)}
