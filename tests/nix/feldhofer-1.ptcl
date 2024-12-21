@@ -18,9 +18,8 @@ assert (tagT != tagR);
 
 fun enc(Message, Message, Message):Message;
 fun dec(Message, Message):Message;
-fun verify(Message, Message): Bool;
 fun fail:Message;
-assert-crypto int-ctxt enc dec verify fail;
+assert-crypto int-ctxt enc dec  fail;
 
 assert-crypto nonce;
 
@@ -49,8 +48,8 @@ step Tag(i:index, j:index)
     ) }
 
 let m_cond!(i:index, j:index, k:index, m:Message) = (
-    /*(dec(m, mk!(i,j)) != fail)*/
-    verify(m, mk!(i, j))
+    (dec(m, mk!(i,j)) != fail)
+    /*verify(m, mk!(i, j))*/
     && (fst(dec(m, mk!(i,j))) == tagT )
     && (fst(snd(dec(m, mk!(i,j)))) == nr(k) )
 )
