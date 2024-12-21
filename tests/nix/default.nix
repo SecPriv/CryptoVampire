@@ -4,6 +4,7 @@ stdenv.mkDerivation {
   src = ./.;
   doCheck = true;
   checkPhase = ''
+    echo "testing ${file}..."
     mkdir -p $out
     export RUST_BACKTRACE=1
     ${cryptovampire}/bin/cryptovampire '${file}' auto \

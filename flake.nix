@@ -26,7 +26,16 @@
         custom-pkgs = custom.packages.${system};
         manifest = (pkgs.lib.importTOML "${src}/Cargo.toml").package;
 
-        my-z3 = pkgs.z3_4_12;
+        my-z3 = pkgs.z3.overrideAttrs (finalAttrs: previousAttrs: {
+          src = pkgs.fetchFromGitHub {
+            owner = "Z3Prover";
+            repo = "z3";
+            rev = "z3-4.13.4";
+            sha256 = "sha256-8hWXCr6IuNVKkOegEmWooo5jkdmln9nU7wI8T882BSE=";
+          };
+          version = "4.13.4";
+          doCheck = false;
+        });
 
         my-python = pkgs.python311.withPackages
           (ps: with ps; [ numpy (toPythonModule my-z3).python ]);
@@ -66,8 +75,9 @@
           with builtins;
           let
             tools = with pkgs; {
-              inherit cryptovampire z3 cvc5;
+              inherit cryptovampire cvc5;
               vampire = custom-pkgs.vampire;
+	      z3 = my-z3;
             };
             files-match = map ({ name, ... }: match "(.*).ptcl" name)
               (attrsToList (readDir test-dir));
