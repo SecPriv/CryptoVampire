@@ -97,3 +97,19 @@ impl<V> Default for FreeVariableIterator<V> {
         }
     }
 }
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct AllTermsIterator;
+
+impl<F: Formula + Clone> FormulaIterator<F> for AllTermsIterator {
+    type Passing = ();
+    type U = F;
+    
+    fn next<H>(&mut self, current: F, _passing: &Self::Passing, helper: &mut H)
+    where
+        H: crate::IteratorHelper<F = F, Passing = Self::Passing, U = Self::U> {
+        helper.push_result(current.clone());
+        helper.extend_child_with_default(current.args());
+    }
+}

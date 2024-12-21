@@ -1,10 +1,13 @@
+use std::fmt::Display;
 use std::{hash::Hash, sync::Arc};
 
 use derive_builder::Builder;
 use if_chain::if_chain;
 use itertools::{chain, Itertools};
-use log::trace;
+use log::{debug, trace};
 use static_init::dynamic;
+
+use logic_formula::iterators::AllTermsIterator;
 
 use crate::formula::utils::formula_expander::NO_REC_MACRO;
 use crate::formula::utils::Applicable;
@@ -196,9 +199,14 @@ impl<'bump> UfCma<'bump> {
         // let pile2 = RefCell::new(Vec::new());
         let realm = env.get_realm();
         let cast_messages = pbl.name_caster().cast_function(&MESSAGE.as_sort()).unwrap();
+        trace!("looking for candidates");
+
+        let tlt = pbl.list_top_level_terms().join("\n");
+        trace!("top level terms: {tlt}");
+
         let candidates = pbl
             .list_top_level_terms()
-            // .flat_map(move |f| f.iter()) // sad...
+            .flat_map(|f| f.iter_with(AllTermsIterator, ())) // sad...
             .flat_map(move |formula| match formula.as_ref() {
                 RichFormula::Fun(fun, args) => {
                     trace!("{:}", formula.as_ref());
@@ -320,6 +328,7 @@ impl<'bump> UfCma<'bump> {
                 _ => vec![],
             })
             .unique()
+            .inspect(|candidate| trace!("uf-cma (preprocessing): found candidate:\n{candidate}"))
             .filter_map(
                 move |UfCmaCandidate {
                           message,
@@ -509,6 +518,14 @@ struct UfCmaCandidate<'bump> {
     message: ARichFormula<'bump>,
     signature: ARichFormula<'bump>,
     key: ARichFormula<'bump>,
+}
+
+impl<'bump> Display for UfCmaCandidate<'bump> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let UfCmaCandidate { message, signature, key }= self;
+        use std::fmt::Write;
+        write!(f, "sign({message}, {key}) = {signature}")
+    }
 }
 
 impl<'bump> Generator<'bump> for UfCma<'bump> {

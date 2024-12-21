@@ -2,6 +2,7 @@ use std::{hash::Hash, sync::Arc};
 
 use if_chain::if_chain;
 use itertools::Itertools;
+use logic_formula::iterators::AllTermsIterator;
 
 use crate::formula::utils::formula_expander::NO_REC_MACRO;
 use crate::formula::utils::Applicable;
@@ -164,6 +165,7 @@ impl<'bump> EufCma<'bump> {
         let candidates = pbl
             .list_top_level_terms()
             // .flat_map(|f| f.iter()) // sad...
+            .flat_map(|f| f.iter_with(AllTermsIterator, ())) // sad...
             .filter_map(move |formula| match formula.as_ref() {
                 RichFormula::Fun(fun, args) => {
                     if_chain! {
