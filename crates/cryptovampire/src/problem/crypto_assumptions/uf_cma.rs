@@ -4,7 +4,7 @@ use std::{hash::Hash, sync::Arc};
 use derive_builder::Builder;
 use if_chain::if_chain;
 use itertools::{chain, Itertools};
-use log::{debug, trace};
+use log::trace;
 use static_init::dynamic;
 
 use logic_formula::iterators::AllTermsIterator;
@@ -522,8 +522,11 @@ struct UfCmaCandidate<'bump> {
 
 impl<'bump> Display for UfCmaCandidate<'bump> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let UfCmaCandidate { message, signature, key }= self;
-        use std::fmt::Write;
+        let UfCmaCandidate {
+            message,
+            signature,
+            key,
+        } = self;
         write!(f, "sign({message}, {key}) = {signature}")
     }
 }

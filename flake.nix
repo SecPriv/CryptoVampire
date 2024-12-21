@@ -77,7 +77,7 @@
             tools = with pkgs; {
               inherit cryptovampire cvc5;
               vampire = custom-pkgs.vampire;
-	      z3 = my-z3;
+              z3 = my-z3;
             };
             files-match = map ({ name, ... }: match "(.*).ptcl" name)
               (attrsToList (readDir test-dir));
@@ -91,11 +91,11 @@
               });
             };
           in listToAttrs (map check basenames);
-        doc = pkgs.callPackage ./doc.nix {inherit cryptovampire;};
+        doc = pkgs.callPackage ./doc.nix { inherit cryptovampire; };
 
       in rec {
         packages = {
-          inherit cryptovampire ;
+          inherit cryptovampire;
           default = cryptovampire;
         };
         checks = auto-checks;
