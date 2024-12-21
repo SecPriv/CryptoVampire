@@ -136,9 +136,18 @@ impl Locate for PestLocation {
             pest::error::ErrorVariant::CustomError { message };
         match &self.kind {
             PestKind::Span { start, end } => {
-                let span = pest::Span::new(&self.str, *start, *end)
-                    .expect("can't build span (this shouldn't happen)");
-                pest::error::Error::new_from_span(variant, span)
+                match pest::Span::new(&self.str, *start, *end) {
+                    Some(span ) => pest::error::Error::new_from_span(variant, span),
+                    None => {
+                        writeln!(f, "!!! FAILED TO BUILD SPAN !!!")?;
+                        writeln!(f, "This should not happen, please report")?;
+                        writeln!(f, "around {}:{}:{}", file!(), line!(), column!())?;
+                        writeln!(f, "start={start:}\nend={end:}")?;
+                        writeln!(f, "----error----\n{err}\n----")?;
+                        write!(f, "----original's span's content:\n{}", &self.str)?;
+                        return Ok(());
+                    }
+                }
             }
             PestKind::Position { pos } => {
                 let pos = pest::Position::new(&self.str, *pos)
