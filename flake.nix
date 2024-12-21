@@ -36,6 +36,7 @@
           version = "4.13.4";
           doCheck = false;
         });
+        my-vampire = custom-pkgs.vampire;
 
         my-python = pkgs.python311.withPackages
           (ps: with ps; [ numpy (toPythonModule my-z3).python ]);
@@ -59,8 +60,8 @@
               nixd
               my-z3
               cvc5
-              custom-pkgs.vampire-master
-              custom-pkgs.squirrel-prover
+              my-vampire
+              # custom-pkgs.squirrel-prover
               rustfmt
               clippy
               rust-analyzer
@@ -76,7 +77,7 @@
           let
             tools = with pkgs; {
               inherit cryptovampire cvc5;
-              vampire = custom-pkgs.vampire;
+              vampire = my-vampire;
               z3 = my-z3;
             };
             files-match = map ({ name, ... }: match "(.*).ptcl" name)
