@@ -558,6 +558,7 @@ dependencies = [
  "logic_formula",
  "paste",
  "rustc-hash",
+ "smallvec",
  "static_init",
  "utils",
 ]

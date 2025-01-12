@@ -1,10 +1,15 @@
-use std::{default, env::vars, fmt::Display};
+use std::{borrow::Cow, default, env::vars, fmt::Display};
 
 use egg::*;
 use itertools::{chain, izip, Itertools};
 use rustc_hash::{FxHashMap, FxHashSet};
 use static_init::dynamic;
 use utils::implvec;
+
+mod ind_cca;
+mod enc_kp;
+mod mutils;
+// mod grammar;
 
 define_language! {
     enum CCSA {
@@ -18,12 +23,13 @@ define_language! {
         "p1" = Proj1(Id),
         "p2" = Proj2(Id),
         "eq" = Eq([Id; 2]),
-        "length" = Length([Id; 1]),
-        "zeroes" = Zeroes([Id; 1]),
+        "length" = Length(Id),
+        "zeroes" = Zeroes(Id),
         "mtrue" = True,
         "mfalse" = False,
         "eta" = Eta,
         "input" = Input(Id),
+        "equiv" = Equiv(Id),
     }
 }
 
@@ -147,6 +153,51 @@ fn enc_kp_once(egraph: &EGraph<CCSA, ()>, eclass: &EClass<CCSA, ()>, subst: Subs
         .expect("pk(k) is not in the graph");
 }
 
+fn is_nonce(egraph: &EGraph<CCSA, ()>, id: Id) -> bool {
+    egraph[id].iter().any(|l| match l {
+        CCSA::Nonce(_) => true,
+        _ => false,
+    })
+}
+
+impl CCSA {
+    pub fn is_equiv(&self) -> bool {
+        match self {
+            CCSA::Equiv(_) => true,
+            _ => false,
+        }
+    }
+}
+
+pub trait TermRepr<L, N>
+where
+    L: Language,
+    N: Analysis<L>,
+{
+    fn add_to_graph(self, egraph: &mut EGraph<L, N>) -> Id;
+}
+
+impl<L, N> TermRepr<L, N> for  RecExpr<L>
+where
+    L: Language,
+    N: Analysis<L>,
+{
+    fn add_to_graph(self, egraph: &mut EGraph<L, N>) -> Id {
+        egraph.add_expr(&self)
+    }
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub struct Union<U> {
+    old: Id, new: U, reason: Cow<'static, str>
+}
+
+pub trait Rule<L, N> where L:Language, N: Analysis<L> {
+    type T: TermRepr<L, N>;
+
+    fn find(&self, egraph: &EGraph<L, N>) -> impl Iterator<Item = Union<Self::T>>;
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Default)]
 enum SearchEnum {
     #[default]
@@ -165,112 +216,112 @@ impl From<bool> for SearchEnum {
     }
 }
 
-#[derive(Debug, Clone, Default)]
-struct SearchState(FxHashMap<Id, IdSearchState>);
+// #[derive(Debug, Clone, Default)]
+// struct SearchState(FxHashMap<Id, IdSearchState>);
 
-#[derive(Debug, Clone)]
-struct IdSearchState(FxHashSet<Id>);
+// #[derive(Debug, Clone)]
+// struct IdSearchState(FxHashSet<Id>);
 
-impl Default for IdSearchState {
-    fn default() -> Self {
-        todo!()
-    }
-}
+// impl Default for IdSearchState {
+//     fn default() -> Self {
+//         todo!()
+//     }
+// }
 
-impl<'a> IntoIterator for &'a IdSearchState {
-    type Item = &'a Id;
+// impl<'a> IntoIterator for &'a IdSearchState {
+//     type Item = &'a Id;
 
-    type IntoIter = <&'a FxHashSet<Id> as IntoIterator>::IntoIter ;
+//     type IntoIter = <&'a FxHashSet<Id> as IntoIterator>::IntoIter ;
 
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.iter()
-    }
-}
+//     fn into_iter(self) -> Self::IntoIter {
+//         self.0.iter()
+//     }
+// }
 
-impl IdSearchState {
-    pub fn set_depends_on(&mut self, nonces: &FxHashSet<Id>) {
-        FxHashSet::
-        self.0.intersection()
-    }
-}
+// impl IdSearchState {
+//     pub fn set_depends_on(&mut self, nonces: &FxHashSet<Id>) {
+//         FxHashSet::
+//         self.0.intersection()
+//     }
+// }
 
-impl SearchState {
-    pub fn push(&mut self, id: Id) -> &mut IdSearchState {
-        self.0.entry(id).or_default()
-    }
-}
+// impl SearchState {
+//     pub fn push(&mut self, id: Id) -> &mut IdSearchState {
+//         self.0.entry(id).or_default()
+//     }
+// }
 
-fn find_next_key(k: Id, t: &CCSA) -> impl Iterator<Item = &Id> {
-    match t {
-        CCSA::Dec(args) if args[1] == k => args[..1].iter(),
-        CCSA::Input(_) => [].iter(), // TODO
-        _ => t.children().iter(),
-    }
-}
+// fn find_next_key(k: Id, t: &CCSA) -> impl Iterator<Item = &Id> {
+//     match t {
+//         CCSA::Dec(args) if args[1] == k => args[..1].iter(),
+//         CCSA::Input(_) => [].iter(), // TODO
+//         _ => t.children().iter(),
+//     }
+// }
 
-fn not_subterm_down<'a, F, I>(
-    egraph: &'a EGraph<CCSA, ()>,
-    search_state: &mut SearchState,
-    find_next: &F,
-    ignore: &'a [Id],
-    m: Id,
-    current: Id,
-) -> bool
-where
-    F: Fn(Id, &'a CCSA) -> I,
-    I: Iterator<Item = &'a Id>,
-{
-    if current == m {
-        false
-    } else if let Some(b) = search_state.get_bool(&current) {
-        b
-    } else {
-        search_state.push_current(current);
-        let res = ignore.contains(&current) || {
-            let eclass = &egraph[current];
-            let mut iter = eclass.iter().flat_map(|t| find_next(m, t)).peekable();
-            iter.peek().is_none()
-                || iter.any(|&id| not_subterm_down(egraph, search_state, find_next, ignore, m, id))
-        };
-        search_state.set_bool(current, res)
-    }
-}
+// fn not_subterm_down<'a, F, I>(
+//     egraph: &'a EGraph<CCSA, ()>,
+//     search_state: &mut SearchState,
+//     find_next: &F,
+//     ignore: &'a [Id],
+//     m: Id,
+//     current: Id,
+// ) -> bool
+// where
+//     F: Fn(Id, &'a CCSA) -> I,
+//     I: Iterator<Item = &'a Id>,
+// {
+//     if current == m {
+//         false
+//     } else if let Some(b) = search_state.get_bool(&current) {
+//         b
+//     } else {
+//         search_state.push_current(current);
+//         let res = ignore.contains(&current) || {
+//             let eclass = &egraph[current];
+//             let mut iter = eclass.iter().flat_map(|t| find_next(m, t)).peekable();
+//             iter.peek().is_none()
+//                 || iter.any(|&id| not_subterm_down(egraph, search_state, find_next, ignore, m, id))
+//         };
+//         search_state.set_bool(current, res)
+//     }
+// }
 
-fn not_subterm_up<'a, F, I>(
-    egraph: &'a EGraph<CCSA, ()>,
-    search_state: &mut SearchState,
-    find_next: &F,
-    ignore: &'a [Id],
-    m: Id,
-    goal: Id,
-    current: Id,
-) -> bool
-where
-    F: Fn(Id, &'a CCSA) -> I,
-    I: Iterator<Item = &'a Id>,
-{
-    if current == m {
-        false
-    } else if let Some(b) = search_state.get_bool(&current) {
-        b
-    } else {
-        search_state.push_current(current);
-        let res = ignore.contains(&current) || {
-            egraph[current].parents().any(|(ast, parent_id)| {
-                (parent_id == goal
-                    || not_subterm_up(egraph, search_state, find_next, ignore, m, goal, parent_id))
-                    && (ast
-                        .children()
-                        .iter()
-                        .filter(|&&id| id != current)
-                        .all(|&sibling| {
-                            not_subterm_down(egraph, search_state, find_next, ignore, m, sibling)
-                        }))
-            })
-        };
-        search_state.set_bool(current, res)
-    }
-}
+// fn not_subterm_up<'a, F, I>(
+//     egraph: &'a EGraph<CCSA, ()>,
+//     search_state: &mut SearchState,
+//     find_next: &F,
+//     ignore: &'a [Id],
+//     m: Id,
+//     goal: Id,
+//     current: Id,
+// ) -> bool
+// where
+//     F: Fn(Id, &'a CCSA) -> I,
+//     I: Iterator<Item = &'a Id>,
+// {
+//     if current == m {
+//         false
+//     } else if let Some(b) = search_state.get_bool(&current) {
+//         b
+//     } else {
+//         search_state.push_current(current);
+//         let res = ignore.contains(&current) || {
+//             egraph[current].parents().any(|(ast, parent_id)| {
+//                 (parent_id == goal
+//                     || not_subterm_up(egraph, search_state, find_next, ignore, m, goal, parent_id))
+//                     && (ast
+//                         .children()
+//                         .iter()
+//                         .filter(|&&id| id != current)
+//                         .all(|&sibling| {
+//                             not_subterm_down(egraph, search_state, find_next, ignore, m, sibling)
+//                         }))
+//             })
+//         };
+//         search_state.set_bool(current, res)
+//     }
+// }
 
 fn main() {
     let mut runner: Runner<CCSA, ()> = Runner::new(Default::default());

@@ -27,6 +27,7 @@
         manifest = (pkgs.lib.importTOML "${src}/Cargo.toml").package;
 
         my-z3 = pkgs.z3_4_12;
+		mvampire = custom-pkgs.vampire.override {z3=my-z3;};
 
         my-python = pkgs.python311.withPackages
           (ps: with ps; [ numpy (toPythonModule my-z3).python ]);
@@ -48,14 +49,14 @@
               cargo-expand
               rustc
               nixd
-              my-z3
+              #my-z3
               cvc5
-              custom-pkgs.vampire-master
-              custom-pkgs.squirrel-prover
+              #mvampire
+              # custom-pkgs.squirrel-prover
               rustfmt
               clippy
               rust-analyzer
-              my-python
+              # my-python
               graphviz
             ] ++ lib.optional stdenv.isDarwin git;
         };
@@ -67,7 +68,7 @@
           let
             tools = with pkgs; {
               inherit cryptovampire z3 cvc5;
-              vampire = custom-pkgs.vampire;
+              vampire = mvampire;
             };
             files-match = map ({ name, ... }: match "(.*).ptcl" name)
               (attrsToList (readDir test-dir));
