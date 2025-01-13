@@ -92,8 +92,8 @@ macro_rules! ereturn_if {
     };
 }
 
-fn not_subterm_down<'a>(
-    egraph: &'a EGraph<CCSA, ()>,
+fn not_subterm_down(
+    egraph: &EGraph<CCSA, ()>,
     memoize: &mut SubtermDownMemoize,
     kind: SearchKind,
     ignore: &[Id],
@@ -162,27 +162,27 @@ struct Searcher<'a> {
     instance: Instance,
 }
 
-impl<'a> PartialEq for Searcher<'a> {
+impl PartialEq for Searcher<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.instance == other.instance
     }
 }
 
-impl<'a> Eq for Searcher<'a> {}
+impl Eq for Searcher<'_> {}
 
-impl<'a> Hash for Searcher<'a> {
+impl Hash for Searcher<'_> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.instance.hash(state);
     }
 }
 
 impl<'a> Searcher<'a> {
-    fn search_up_once(&mut self, l: &'a CCSA, id: Id, rec_expr: &RecExpr<CCSA>) {
+    fn search_up_once(&mut self, l: &'a CCSA, parent:Id, id: Id, rec_expr: &RecExpr<CCSA>) {
         let Self {
             egraph,
             memoize_key,
             memoize_rand,
-            instance: Instance { k, r, c, .. },
+            instance: Instance { k, r, c, m: _ },
             ..
         } = self;
         let ignore = &[*c];
@@ -192,14 +192,17 @@ impl<'a> Searcher<'a> {
                 && not_subterm_down(egraph, memoize_rand, Randomness, ignore, *r, sibling)
         };
         if l.all(|sibling| sibling == id || is_sibling_valid(sibling)) {
+            let mut canary = false;
             let rec_expr = l.join_recexprs(|s_id| {
                 if s_id == id {
+                    canary = true;
                     rec_expr.clone()
                 } else {
                     egraph.id_to_expr(s_id)
                 }
             });
-            self.push(id, rec_expr);
+            assert!(canary);
+            self.push(parent, rec_expr);
         }
     }
 
@@ -217,7 +220,7 @@ impl<'a> Searcher<'a> {
     }
 }
 
-impl<'a> Iterator for Searcher<'a> {
+impl Iterator for Searcher<'_> {
     type Item = (Id, RecExpr<CCSA>);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -231,12 +234,15 @@ impl<'a> Iterator for Searcher<'a> {
 
         eclass
             .parents()
-            .for_each(|(l, id)| self.search_up_once(l, id, &rec_expr));
+            .flat_map(|(_, p)| self.egraph[p].iter().map(move |l| (l, p)))
+            .filter(|(l, _)| l.children().contains(&current))
+            .unique()
+            .for_each(|(l, id)| self.search_up_once(l, id, current, &rec_expr));
         self.next()
     }
 }
 
-impl<'a> FusedIterator for Searcher<'a> {}
+impl FusedIterator for Searcher<'_> {}
 
 impl Instance {
     pub fn into_search(self, egraph: &EGraph<CCSA, ()>) -> Option<Searcher<'_>> {
@@ -244,11 +250,10 @@ impl Instance {
         use SearchKind::*;
         let mut memoize_key = Default::default();
         let mut memoize_rand = Default::default();
+        ereturn_if!(k == r, None);
+        ereturn_if!(!(is_nonce(egraph, *k) && is_nonce(egraph, *r)), None);
 
-        if k != r
-            && is_nonce(egraph, *k)
-            && is_nonce(egraph, *r)
-            && not_subterm_down(egraph, &mut memoize_key, KeyBeforeEnc, &[], *k, *m)
+        if not_subterm_down(egraph, &mut memoize_key, KeyBeforeEnc, &[], *k, *m)
             && not_subterm_down(egraph, &mut memoize_rand, Randomness, &[], *r, *m)
         {
             let rec_expr = {
@@ -267,6 +272,7 @@ impl Instance {
                     }
                 })
             };
+            println!("heres: {}", rec_expr.pretty(120));
             Some(Searcher {
                 egraph,
                 todos: [(*c, rec_expr)].into_iter().collect(),

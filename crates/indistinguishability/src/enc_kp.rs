@@ -94,8 +94,8 @@ macro_rules! ereturn_if {
     };
 }
 
-fn not_subterm_down_nonce<'a>(
-    egraph: &'a EGraph<CCSA, ()>,
+fn not_subterm_down_nonce(
+    egraph: &EGraph<CCSA, ()>,
     memoize: &mut SubtermNonceDownMemoize,
     ignore: &[Id],
     nonce: Id,
@@ -136,8 +136,8 @@ fn not_subterm_down_nonce<'a>(
         }
     }
 }
-fn not_subterm_down_key<'a>(
-    egraph: &'a EGraph<CCSA, ()>,
+fn not_subterm_down_key(
+    egraph: &EGraph<CCSA, ()>,
     memoize: &mut SubtermNonceDownMemoize,
     ignore: &[Id],
     nonce: Id,
@@ -199,38 +199,40 @@ struct Searcher<'a> {
     todos: FxHashMap<Id, RecExpr<CCSA>>,
     done: FxHashSet<Id>,
     memoize_key: SubtermNonceDownMemoize,
+    memoize_nkey: SubtermNonceDownMemoize,
     memoize_rand: SubtermNonceDownMemoize,
     instance: Instance,
 }
 
-impl<'a> PartialEq for Searcher<'a> {
+impl PartialEq for Searcher<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.instance == other.instance
     }
 }
 
-impl<'a> Eq for Searcher<'a> {}
+impl Eq for Searcher<'_> {}
 
-impl<'a> Hash for Searcher<'a> {
+impl Hash for Searcher<'_> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.instance.hash(state);
     }
 }
 
 impl<'a> Searcher<'a> {
-    fn search_up_once(&mut self, l: &'a CCSA, id: Id, rec_expr: &RecExpr<CCSA>) {
+    fn search_up_once(&mut self, l: &'a CCSA, parent: Id, id: Id, rec_expr: &RecExpr<CCSA>) {
         let Self {
             egraph,
             memoize_key,
+            memoize_nkey,
             memoize_rand,
             instance: Instance { k, r, c, nk, .. },
             ..
         } = self;
         let ignore = &[*c];
         let mut is_sibling_valid = |sibling: Id| {
-            not_subterm_down_nonce(egraph, memoize_key, ignore, *r, sibling)
-                && not_subterm_down_key(egraph, memoize_rand, ignore, *k, sibling)
-                && not_subterm_down_key(egraph, memoize_rand, ignore, *nk, sibling)
+            not_subterm_down_nonce(egraph, memoize_rand, ignore, *r, sibling)
+                && not_subterm_down_key(egraph, memoize_key, ignore, *k, sibling)
+                && not_subterm_down_key(egraph, memoize_nkey, ignore, *nk, sibling)
         };
         if l.all(|sibling| sibling == id || is_sibling_valid(sibling)) {
             let rec_expr = l.join_recexprs(|s_id| {
@@ -240,7 +242,7 @@ impl<'a> Searcher<'a> {
                     egraph.id_to_expr(s_id)
                 }
             });
-            self.push(id, rec_expr);
+            self.push(parent, rec_expr);
         }
     }
 
@@ -258,7 +260,7 @@ impl<'a> Searcher<'a> {
     }
 }
 
-impl<'a> Iterator for Searcher<'a> {
+impl Iterator for Searcher<'_> {
     type Item = (Id, RecExpr<CCSA>);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -272,27 +274,30 @@ impl<'a> Iterator for Searcher<'a> {
 
         eclass
             .parents()
-            .for_each(|(l, id)| self.search_up_once(l, id, &rec_expr));
+            .flat_map(|(_, p)| self.egraph[p].iter().map(move |l| (l, p)))
+            .filter(|(l, _)| l.children().contains(&current))
+            .unique()
+            .for_each(|(l, id)| self.search_up_once(l, id, current, &rec_expr));
         self.next()
     }
 }
 
-impl<'a> FusedIterator for Searcher<'a> {}
+impl FusedIterator for Searcher<'_> {}
 
 impl Instance {
     pub fn into_search(self, egraph: &EGraph<CCSA, ()>) -> Option<Searcher<'_>> {
         let Instance { m, k, r, c, nk } = &self;
         ereturn_if!(k == nk, None);
 
-        use SearchKind::*;
         let mut memoize_key = Default::default();
+        let mut memoize_nkey = Default::default();
         let mut memoize_rand = Default::default();
 
         if k != r
             && is_nonce(egraph, *k)
             && is_nonce(egraph, *r)
             && not_subterm_down_key(egraph, &mut memoize_key, &[], *k, *m)
-            && not_subterm_down_key(egraph, &mut memoize_key, &[], *nk, *m)
+            && not_subterm_down_key(egraph, &mut memoize_nkey, &[], *nk, *m)
             && not_subterm_down_nonce(egraph, &mut memoize_rand, &[], *r, *m)
         {
             let rec_expr = {
@@ -314,6 +319,7 @@ impl Instance {
                 done: Default::default(),
                 memoize_key,
                 memoize_rand,
+                memoize_nkey,
                 instance: self,
             })
         } else {
@@ -355,7 +361,7 @@ fn find_searchs<'a>(
 
 #[derive(Debug, Clone)]
 pub struct EnkKp {
-    nonces: Vec<Id>,
+    pub nonces: Vec<Id>,
 }
 impl Rule<CCSA, ()> for EnkKp {
     type T = RecExpr<CCSA>;
@@ -366,7 +372,7 @@ impl Rule<CCSA, ()> for EnkKp {
             .map(|(id, t)| crate::Union {
                 old: id,
                 new: t,
-                reason: "ind-cca2".into(),
+                reason: "enc-kp".into(),
             })
     }
 }

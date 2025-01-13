@@ -1,13 +1,15 @@
-use std::{borrow::Cow, default, env::vars, fmt::Display};
+use std::{borrow::Cow, default, env::vars, fmt::Display, process::exit};
 
 use egg::*;
+use enc_kp::EnkKp;
+use ind_cca::IndCCA2;
 use itertools::{chain, izip, Itertools};
 use rustc_hash::{FxHashMap, FxHashSet};
 use static_init::dynamic;
 use utils::implvec;
 
-mod ind_cca;
 mod enc_kp;
+mod ind_cca;
 mod mutils;
 // mod grammar;
 
@@ -47,13 +49,13 @@ mk_consts!(nonce enc dec pl ite tuple p1 p2 eq length zeroes mtrue mfalse etq in
 fn make_general_rules() -> Vec<Rewrite<CCSA, ()>> {
     vec![
         rewrite!("simpl-tuple-1"; "(p1 (tuple ?a ?b))" => "?a"),
-        rewrite!("simpl-tuple-1"; "(p2 (tuple ?a ?b))" => "?a"),
-        rewrite!("simpl-dec"; "(dec (enc ?m ?r (pk ?k)), ?k)" => "?m"),
+        rewrite!("simpl-tuple-2"; "(p2 (tuple ?a ?b))" => "?a"),
+        rewrite!("simpl-dec"; "(dec (enc ?m ?r (pk ?k)) ?k)" => "?m"),
         rewrite!("ite-base-1"; "(ite mtrue ?a ?b)" => "?a"),
         rewrite!("ite-base-2"; "(ite mfalse ?a ?b)" => "?b"),
         rewrite!("ite-same"; "(ite ?c ?a ?a)" => "?a"),
         rewrite!("ite-eq-1"; "(ite (eq ?a ?b) ?a ?b)" => "?a"),
-        rewrite!("ite-eq-1"; "(ite (eq ?a ?b) ?a ?b)" => "?b"),
+        rewrite!("ite-eq-2"; "(ite (eq ?a ?b) ?a ?b)" => "?b"),
         rewrite!("eq-refl"; "(eq ?a ?a)" => "mtrue"),
         rewrite!("eq-sym"; "(eq ?a ?b)" => "(eq ?b ?a)"),
         rewrite!("length-nonce"; "(length (nonce ?x))"  => "eta"),
@@ -62,14 +64,21 @@ fn make_general_rules() -> Vec<Rewrite<CCSA, ()>> {
 }
 
 fn mk_term(k: &str, pgr: &str) -> RecExpr<CCSA> {
-    format!("(ite
+    format!("(equiv (ite
         (eq (p1 (input {pgr})) (pk (nonce kb)))
         (ite
             (eq (length (tuple (nonce nb) (nonce nb))) (length (tuple (p2 (input {pgr})) (nonce nb))))
             (enc (tuple (p2 (input {pgr})) (nonce nb)) (nonce r) (pk (nonce {k})))
+            (enc (tuple (nonce nb) (nonce nb)) (nonce r) (pk (nonce {k})))
         )
         (enc (tuple (p2 (input {pgr})) (nonce nb)) (nonce r) (pk (nonce {k})))
-    )").parse().unwrap()
+))").parse().unwrap()
+}
+
+fn nonces(n: &[&str]) -> Vec<RecExpr<CCSA>> {
+    n.iter()
+        .map(|n| format!("(nonce {n})").parse().unwrap())
+        .collect()
 }
 
 fn mk_bubble_rules<'a>(funs: implvec!((&'a str, u32))) -> Vec<Rewrite<CCSA, ()>> {
@@ -87,13 +96,13 @@ fn mk_bubble_rules<'a>(funs: implvec!((&'a str, u32))) -> Vec<Rewrite<CCSA, ()>>
     let vec = funs.into_iter().collect_vec();
     let iter1 = vec.iter().map(|(f, arity)| {
         let premise: Pattern<CCSA> = format!(
-            "(ite ?c ({f} {}) ({f} {})",
+            "(ite ?c ({f} {}) ({f} {}))",
             vars(0, *arity).join(" "),
             vars(*arity, *arity).join(" ")
         )
         .parse()
         .unwrap();
-        let args_conclusion = izip!(vars(0, *arity), vars(*arity, 0))
+        let args_conclusion = izip!(vars(0, *arity), vars(*arity, *arity))
             .map(|(v1, v2)| format!("(ite ?c {v1} {v2})"))
             .join(" ");
         let conclusion: Pattern<CCSA> = format!("({f} {args_conclusion})").parse().unwrap();
@@ -101,16 +110,18 @@ fn mk_bubble_rules<'a>(funs: implvec!((&'a str, u32))) -> Vec<Rewrite<CCSA, ()>>
     });
     let iter2 = vec.iter().map(|(f, arity)| {
         let premise: Pattern<CCSA> = format!(
-            "(ite ?c ({f} {}) ({f} {})",
+            "(ite ?c ({f} {}) ({f} {}))",
             vars(0, *arity).join(" "),
             vars(*arity, *arity).join(" ")
         )
         .parse()
         .unwrap();
-        let args_conclusion = izip!(vars(0, *arity), vars(*arity, 0))
+        let args_conclusion = izip!(vars(0, *arity), vars(*arity, *arity))
             .map(|(v1, v2)| format!("(ite ?c {v1} {v2})"))
             .join(" ");
         let conclusion: Pattern<CCSA> = format!("({f} {args_conclusion})").parse().unwrap();
+        println!("{premise}");
+        println!("{conclusion}");
         Rewrite::new(format!("ite-bubble-up-{f}"), conclusion, premise).unwrap()
     });
     chain!(iter1, iter2).collect()
@@ -154,18 +165,12 @@ fn enc_kp_once(egraph: &EGraph<CCSA, ()>, eclass: &EClass<CCSA, ()>, subst: Subs
 }
 
 fn is_nonce(egraph: &EGraph<CCSA, ()>, id: Id) -> bool {
-    egraph[id].iter().any(|l| match l {
-        CCSA::Nonce(_) => true,
-        _ => false,
-    })
+    egraph[id].iter().any(|l| matches!(l, CCSA::Nonce(_)))
 }
 
 impl CCSA {
     pub fn is_equiv(&self) -> bool {
-        match self {
-            CCSA::Equiv(_) => true,
-            _ => false,
-        }
+        matches!(self, CCSA::Equiv(_))
     }
 }
 
@@ -177,7 +182,7 @@ where
     fn add_to_graph(self, egraph: &mut EGraph<L, N>) -> Id;
 }
 
-impl<L, N> TermRepr<L, N> for  RecExpr<L>
+impl<L, N> TermRepr<L, N> for RecExpr<L>
 where
     L: Language,
     N: Analysis<L>,
@@ -189,10 +194,16 @@ where
 
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct Union<U> {
-    old: Id, new: U, reason: Cow<'static, str>
+    old: Id,
+    new: U,
+    reason: Cow<'static, str>,
 }
 
-pub trait Rule<L, N> where L:Language, N: Analysis<L> {
+pub trait Rule<L, N>
+where
+    L: Language,
+    N: Analysis<L>,
+{
     type T: TermRepr<L, N>;
 
     fn find(&self, egraph: &EGraph<L, N>) -> impl Iterator<Item = Union<Self::T>>;
@@ -216,117 +227,92 @@ impl From<bool> for SearchEnum {
     }
 }
 
-// #[derive(Debug, Clone, Default)]
-// struct SearchState(FxHashMap<Id, IdSearchState>);
-
-// #[derive(Debug, Clone)]
-// struct IdSearchState(FxHashSet<Id>);
-
-// impl Default for IdSearchState {
-//     fn default() -> Self {
-//         todo!()
-//     }
-// }
-
-// impl<'a> IntoIterator for &'a IdSearchState {
-//     type Item = &'a Id;
-
-//     type IntoIter = <&'a FxHashSet<Id> as IntoIterator>::IntoIter ;
-
-//     fn into_iter(self) -> Self::IntoIter {
-//         self.0.iter()
-//     }
-// }
-
-// impl IdSearchState {
-//     pub fn set_depends_on(&mut self, nonces: &FxHashSet<Id>) {
-//         FxHashSet::
-//         self.0.intersection()
-//     }
-// }
-
-// impl SearchState {
-//     pub fn push(&mut self, id: Id) -> &mut IdSearchState {
-//         self.0.entry(id).or_default()
-//     }
-// }
-
-// fn find_next_key(k: Id, t: &CCSA) -> impl Iterator<Item = &Id> {
-//     match t {
-//         CCSA::Dec(args) if args[1] == k => args[..1].iter(),
-//         CCSA::Input(_) => [].iter(), // TODO
-//         _ => t.children().iter(),
-//     }
-// }
-
-// fn not_subterm_down<'a, F, I>(
-//     egraph: &'a EGraph<CCSA, ()>,
-//     search_state: &mut SearchState,
-//     find_next: &F,
-//     ignore: &'a [Id],
-//     m: Id,
-//     current: Id,
-// ) -> bool
-// where
-//     F: Fn(Id, &'a CCSA) -> I,
-//     I: Iterator<Item = &'a Id>,
-// {
-//     if current == m {
-//         false
-//     } else if let Some(b) = search_state.get_bool(&current) {
-//         b
-//     } else {
-//         search_state.push_current(current);
-//         let res = ignore.contains(&current) || {
-//             let eclass = &egraph[current];
-//             let mut iter = eclass.iter().flat_map(|t| find_next(m, t)).peekable();
-//             iter.peek().is_none()
-//                 || iter.any(|&id| not_subterm_down(egraph, search_state, find_next, ignore, m, id))
-//         };
-//         search_state.set_bool(current, res)
-//     }
-// }
-
-// fn not_subterm_up<'a, F, I>(
-//     egraph: &'a EGraph<CCSA, ()>,
-//     search_state: &mut SearchState,
-//     find_next: &F,
-//     ignore: &'a [Id],
-//     m: Id,
-//     goal: Id,
-//     current: Id,
-// ) -> bool
-// where
-//     F: Fn(Id, &'a CCSA) -> I,
-//     I: Iterator<Item = &'a Id>,
-// {
-//     if current == m {
-//         false
-//     } else if let Some(b) = search_state.get_bool(&current) {
-//         b
-//     } else {
-//         search_state.push_current(current);
-//         let res = ignore.contains(&current) || {
-//             egraph[current].parents().any(|(ast, parent_id)| {
-//                 (parent_id == goal
-//                     || not_subterm_up(egraph, search_state, find_next, ignore, m, goal, parent_id))
-//                     && (ast
-//                         .children()
-//                         .iter()
-//                         .filter(|&&id| id != current)
-//                         .all(|&sibling| {
-//                             not_subterm_down(egraph, search_state, find_next, ignore, m, sibling)
-//                         }))
-//             })
-//         };
-//         search_state.set_bool(current, res)
-//     }
-// }
-
 fn main() {
-    let mut runner: Runner<CCSA, ()> = Runner::new(Default::default());
+    let runner: Runner<CCSA, ()> = Runner::new(Default::default());
 
     let start = mk_term("ka", "pgrm1");
     let end = mk_term("ka2", "pgrm2");
+
+    let funs = [
+        ("enc", 3),
+        ("dec", 2),
+        ("tuple", 2),
+        ("p1", 1),
+        ("p2", 1),
+        ("eq", 2),
+        ("length", 1),
+        ("zeroes", 1),
+    ]
+    .into_iter();
+
+    let rules = chain!(make_general_rules(), mk_bubble_rules(funs)).collect_vec();
+
+    let mut egraph = EGraph::default().with_explanations_enabled();
+    let nonces = nonces(&["ka", "ka2", "kextra", "n"])
+        .into_iter()
+        .map(|k| egraph.add_expr(&k))
+        .collect_vec();
+    let enc_kp_s = EnkKp { nonces };
+
+    egraph.add_expr(&start);
+    egraph.add_expr(&end);
+
+    egraph.rebuild();
+    let mut runner = runner.with_egraph(egraph);
+    println!("initialization done, starting");
+
+    let mut i = 0;
+    loop {
+        println!("---------\niteration no{i:}");
+        {
+            let dump = runner.egraph.dump();
+            // println!("{dump:?}");
+            // runner
+            //     .egraph
+            //     .dot()
+            //     .to_pdf(format!("/tmp/{i:}.pdf"))
+            //     .unwrap();
+        }
+        println!("checking for result...");
+
+        if !runner.egraph.equivs(&start, &end).is_empty() {
+            println!("success!");
+            let explanation = runner.egraph.explain_equivalence(&start, &end);
+            println!("because: {explanation}");
+            exit(0)
+        }
+        println!("goal no reached. improving egraph...");
+        runner = runner.run(&rules);
+        let egraph = &runner.egraph;
+
+        println!("\tbasic rule applied");
+        let ind_cca = IndCCA2.find(egraph).collect_vec();
+        println!("\tind cca found {:} instances", ind_cca.len());
+        let enc_kp = enc_kp_s.find(egraph).collect_vec();
+        println!("\tenc kp found {:} instances", enc_kp.len());
+
+        println!("\tAdding new instances to the egraph");
+
+        for Union { old, new, reason } in chain!(ind_cca, enc_kp) {
+            println!(
+                "kind:{reason},\nold:{},\nnew:{}\n",
+                runner.egraph.id_to_expr(old).pretty(80),
+                new.pretty(80)
+            );
+            let new = runner.egraph.add_expr(&new);
+            runner.egraph.union_trusted(old, new, reason.as_ref());
+        }
+        println!("\trebuilding egraph");
+        runner.egraph.rebuild();
+
+        println!("\tend of loop!");
+        runner.stop_reason = None;
+
+        i += 1;
+        if i > 3 {
+            println!("giving up !");
+            exit(2)
+        }
+    }
     // runner.egraph.union(id1, id2)
 }
