@@ -1056,11 +1056,11 @@
     "vampire-master-src_3": {
       "flake": false,
       "locked": {
-        "lastModified": 1734598056,
-        "narHash": "sha256-LpLBFIQt04nIAxvoMU+/YVTLdPgFeoUTkRjFOa5T6KI=",
+        "lastModified": 1737364665,
+        "narHash": "sha256-WG6oHRmxAPxm80ucakHpd+D15t7U4tqAbIADxS4UQLk=",
         "owner": "vprover",
         "repo": "vampire",
-        "rev": "ab69e491f796a0549b1b6e5dba7411aa5dbb930b",
+        "rev": "f55788fa7505c4157f92aec1c77bcf693e8cd25a",
         "type": "github"
       },
       "original": {
