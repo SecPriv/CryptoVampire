@@ -880,7 +880,8 @@
         "type": "github"
       },
       "original": {
-        "owner": "squirrel-prover",
+        "owner": "puyral",
+        "ref": "cryptovampire",
         "repo": "squirrel-prover",
         "type": "github"
       }
