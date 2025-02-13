@@ -1,4 +1,3 @@
-import subprocess
 import z3
 
 # Load SMT file

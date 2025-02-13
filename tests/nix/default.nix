@@ -1,4 +1,12 @@
-{ stdenv, vampire, z3, cvc5, cryptovampire, file, name }:
+{
+  stdenv,
+  vampire,
+  z3,
+  cvc5,
+  cryptovampire,
+  file,
+  name,
+}:
 stdenv.mkDerivation {
   inherit name;
   src = ./.;

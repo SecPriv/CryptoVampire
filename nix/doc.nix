@@ -1,4 +1,5 @@
-{stdenv, cryptovampire}: stdenv.mkDerivation rec {
+{ stdenv, cryptovampire }:
+stdenv.mkDerivation rec {
   name = "cryptovampire's documentation";
   src = cryptovampire.src;
   patches = [ "${src}/nix.patch" ];

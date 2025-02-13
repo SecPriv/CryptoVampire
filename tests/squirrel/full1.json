@@ -201,13 +201,14 @@
         "action": [
           {
             "par_choice": [
-              0, [ { "id": { "name": "i", "tag": 229 }, "ty": "Index" } ]
+              0,
+              [{ "id": { "name": "i", "tag": 229 }, "ty": "Index" }]
             ],
-            "sum_choice": [ 0, [] ]
+            "sum_choice": [0, []]
           }
         ],
         "input": { "npath": { "npath": [], "id": 0 }, "symb": "c", "id": 61 },
-        "indices": [ { "id": { "name": "i", "tag": 229 }, "ty": "Index" } ],
+        "indices": [{ "id": { "name": "i", "tag": 229 }, "ty": "Index" }],
         "condition": {
           "vars": [],
           "term": {
@@ -248,18 +249,19 @@
         "action": [
           {
             "par_choice": [
-              0, [ { "id": { "name": "i", "tag": 231 }, "ty": "Index" } ]
+              0,
+              [{ "id": { "name": "i", "tag": 231 }, "ty": "Index" }]
             ],
-            "sum_choice": [ 0, [] ]
+            "sum_choice": [0, []]
           },
-          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] }
+          { "par_choice": [0, []], "sum_choice": [0, []] }
         ],
         "input": {
           "npath": { "npath": [], "id": 0 },
           "symb": "ø",
           "id": 13
         },
-        "indices": [ { "id": { "name": "i", "tag": 231 }, "ty": "Index" } ],
+        "indices": [{ "id": { "name": "i", "tag": 231 }, "ty": "Index" }],
         "condition": {
           "vars": [],
           "term": {
@@ -300,19 +302,20 @@
         "action": [
           {
             "par_choice": [
-              0, [ { "id": { "name": "i", "tag": 233 }, "ty": "Index" } ]
+              0,
+              [{ "id": { "name": "i", "tag": 233 }, "ty": "Index" }]
             ],
-            "sum_choice": [ 0, [] ]
+            "sum_choice": [0, []]
           },
-          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] },
-          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] }
+          { "par_choice": [0, []], "sum_choice": [0, []] },
+          { "par_choice": [0, []], "sum_choice": [0, []] }
         ],
         "input": {
           "npath": { "npath": [], "id": 0 },
           "symb": "ø",
           "id": 13
         },
-        "indices": [ { "id": { "name": "i", "tag": 233 }, "ty": "Index" } ],
+        "indices": [{ "id": { "name": "i", "tag": 233 }, "ty": "Index" }],
         "condition": {
           "vars": [],
           "term": {
@@ -353,16 +356,17 @@
         "action": [
           {
             "par_choice": [
-              0, [ { "id": { "name": "i", "tag": 235 }, "ty": "Index" } ]
+              0,
+              [{ "id": { "name": "i", "tag": 235 }, "ty": "Index" }]
             ],
-            "sum_choice": [ 0, [] ]
+            "sum_choice": [0, []]
           },
-          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] },
-          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] },
-          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] }
+          { "par_choice": [0, []], "sum_choice": [0, []] },
+          { "par_choice": [0, []], "sum_choice": [0, []] },
+          { "par_choice": [0, []], "sum_choice": [0, []] }
         ],
         "input": { "npath": { "npath": [], "id": 0 }, "symb": "c", "id": 61 },
-        "indices": [ { "id": { "name": "i", "tag": 235 }, "ty": "Index" } ],
+        "indices": [{ "id": { "name": "i", "tag": 235 }, "ty": "Index" }],
         "condition": {
           "vars": [],
           "term": {
@@ -486,16 +490,17 @@
         "action": [
           {
             "par_choice": [
-              0, [ { "id": { "name": "i", "tag": 237 }, "ty": "Index" } ]
+              0,
+              [{ "id": { "name": "i", "tag": 237 }, "ty": "Index" }]
             ],
-            "sum_choice": [ 0, [] ]
+            "sum_choice": [0, []]
           },
-          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] },
-          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] },
-          { "par_choice": [ 0, [] ], "sum_choice": [ 1, [] ] }
+          { "par_choice": [0, []], "sum_choice": [0, []] },
+          { "par_choice": [0, []], "sum_choice": [0, []] },
+          { "par_choice": [0, []], "sum_choice": [1, []] }
         ],
         "input": { "npath": { "npath": [], "id": 0 }, "symb": "c", "id": 61 },
-        "indices": [ { "id": { "name": "i", "tag": 237 }, "ty": "Index" } ],
+        "indices": [{ "id": { "name": "i", "tag": 237 }, "ty": "Index" }],
         "condition": {
           "vars": [],
           "term": {
@@ -631,7 +636,7 @@
           "symb": "Senc",
           "id": 102
         },
-        "action": [ { "par_choice": [ 1, [] ], "sum_choice": [ 0, [] ] } ],
+        "action": [{ "par_choice": [1, []], "sum_choice": [0, []] }],
         "input": { "npath": { "npath": [], "id": 0 }, "symb": "c", "id": 61 },
         "indices": [],
         "condition": {
@@ -674,13 +679,14 @@
         "action": [
           {
             "par_choice": [
-              2, [ { "id": { "name": "i", "tag": 239 }, "ty": "Index" } ]
+              2,
+              [{ "id": { "name": "i", "tag": 239 }, "ty": "Index" }]
             ],
-            "sum_choice": [ 0, [] ]
+            "sum_choice": [0, []]
           }
         ],
         "input": { "npath": { "npath": [], "id": 0 }, "symb": "c", "id": 61 },
-        "indices": [ { "id": { "name": "i", "tag": 239 }, "ty": "Index" } ],
+        "indices": [{ "id": { "name": "i", "tag": 239 }, "ty": "Index" }],
         "condition": {
           "vars": [],
           "term": {
@@ -721,14 +727,15 @@
         "action": [
           {
             "par_choice": [
-              2, [ { "id": { "name": "i", "tag": 241 }, "ty": "Index" } ]
+              2,
+              [{ "id": { "name": "i", "tag": 241 }, "ty": "Index" }]
             ],
-            "sum_choice": [ 0, [] ]
+            "sum_choice": [0, []]
           },
-          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] }
+          { "par_choice": [0, []], "sum_choice": [0, []] }
         ],
         "input": { "npath": { "npath": [], "id": 0 }, "symb": "c", "id": 61 },
-        "indices": [ { "id": { "name": "i", "tag": 241 }, "ty": "Index" } ],
+        "indices": [{ "id": { "name": "i", "tag": 241 }, "ty": "Index" }],
         "condition": {
           "vars": [],
           "term": {
@@ -769,19 +776,20 @@
         "action": [
           {
             "par_choice": [
-              2, [ { "id": { "name": "i", "tag": 243 }, "ty": "Index" } ]
+              2,
+              [{ "id": { "name": "i", "tag": 243 }, "ty": "Index" }]
             ],
-            "sum_choice": [ 0, [] ]
+            "sum_choice": [0, []]
           },
-          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] },
-          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] }
+          { "par_choice": [0, []], "sum_choice": [0, []] },
+          { "par_choice": [0, []], "sum_choice": [0, []] }
         ],
         "input": {
           "npath": { "npath": [], "id": 0 },
           "symb": "ø",
           "id": 13
         },
-        "indices": [ { "id": { "name": "i", "tag": 243 }, "ty": "Index" } ],
+        "indices": [{ "id": { "name": "i", "tag": 243 }, "ty": "Index" }],
         "condition": {
           "vars": [],
           "term": {
@@ -888,19 +896,20 @@
         "action": [
           {
             "par_choice": [
-              2, [ { "id": { "name": "i", "tag": 245 }, "ty": "Index" } ]
+              2,
+              [{ "id": { "name": "i", "tag": 245 }, "ty": "Index" }]
             ],
-            "sum_choice": [ 0, [] ]
+            "sum_choice": [0, []]
           },
-          { "par_choice": [ 0, [] ], "sum_choice": [ 0, [] ] },
-          { "par_choice": [ 1, [] ], "sum_choice": [ 0, [] ] }
+          { "par_choice": [0, []], "sum_choice": [0, []] },
+          { "par_choice": [1, []], "sum_choice": [0, []] }
         ],
         "input": {
           "npath": { "npath": [], "id": 0 },
           "symb": "ø",
           "id": 13
         },
-        "indices": [ { "id": { "name": "i", "tag": 245 }, "ty": "Index" } ],
+        "indices": [{ "id": { "name": "i", "tag": 245 }, "ty": "Index" }],
         "condition": {
           "vars": [],
           "term": {
@@ -1004,7 +1013,7 @@
         "symb": { "npath": { "npath": [], "id": 0 }, "symb": "sk", "id": 91 },
         "data": {
           "vars": [],
-          "args": [ "Index" ],
+          "args": ["Index"],
           "out": { "TBase": { "npath": { "npath": [] }, "symb": "L" } }
         }
       },
@@ -1031,7 +1040,7 @@
         "data": {
           "type": {
             "vars": [],
-            "args": [ "Boolean", "Boolean" ],
+            "args": ["Boolean", "Boolean"],
             "out": "Boolean"
           },
           "def": {
@@ -1047,7 +1056,7 @@
           "id": 44
         },
         "data": {
-          "type": { "vars": [], "args": [ "Message" ], "out": "Message" },
+          "type": { "vars": [], "args": ["Message"], "out": "Message" },
           "def": {
             "abstract_def": { "Abstract": "Prefix" },
             "associated_fun": []
@@ -1077,7 +1086,7 @@
         "data": {
           "type": {
             "vars": [],
-            "args": [ "Message", "Message" ],
+            "args": ["Message", "Message"],
             "out": "Message"
           },
           "def": {
@@ -1094,7 +1103,7 @@
         },
         "data": {
           "type": {
-            "vars": [ { "name": "a", "tag": 11 } ],
+            "vars": [{ "name": "a", "tag": 11 }],
             "args": [],
             "out": { "TVar": { "name": "a", "tag": 11 } }
           },
@@ -1154,7 +1163,7 @@
         "data": {
           "type": {
             "vars": [],
-            "args": [ "Message" ],
+            "args": ["Message"],
             "out": { "TBase": { "npath": { "npath": [] }, "symb": "T" } }
           },
           "def": {
@@ -1170,7 +1179,7 @@
           "id": 34
         },
         "data": {
-          "type": { "vars": [], "args": [ "Message" ], "out": "Message" },
+          "type": { "vars": [], "args": ["Message"], "out": "Message" },
           "def": {
             "abstract_def": { "Abstract": "Prefix" },
             "associated_fun": []
@@ -1186,9 +1195,7 @@
         "data": {
           "type": {
             "vars": [],
-            "args": [
-              { "TBase": { "npath": { "npath": [] }, "symb": "L" } }
-            ],
+            "args": [{ "TBase": { "npath": { "npath": [] }, "symb": "L" } }],
             "out": { "TBase": { "npath": { "npath": [] }, "symb": "LP" } }
           },
           "def": { "abstract_def": "PublicKey", "associated_fun": [] }
@@ -1201,7 +1208,7 @@
           "id": 39
         },
         "data": {
-          "type": { "vars": [], "args": [ "Message" ], "out": "Message" },
+          "type": { "vars": [], "args": ["Message"], "out": "Message" },
           "def": {
             "abstract_def": { "Abstract": "Prefix" },
             "associated_fun": []
@@ -1351,7 +1358,7 @@
           "id": 16
         },
         "data": {
-          "type": { "vars": [], "args": [ "Timestamp" ], "out": "Timestamp" },
+          "type": { "vars": [], "args": ["Timestamp"], "out": "Timestamp" },
           "def": {
             "abstract_def": { "Abstract": "Prefix" },
             "associated_fun": []
@@ -1367,9 +1374,7 @@
         "data": {
           "type": {
             "vars": [],
-            "args": [
-              { "TBase": { "npath": { "npath": [] }, "symb": "L" } }
-            ],
+            "args": [{ "TBase": { "npath": { "npath": [] }, "symb": "L" } }],
             "out": { "TBase": { "npath": { "npath": [] }, "symb": "LP" } }
           },
           "def": { "abstract_def": "PublicKey", "associated_fun": [] }
@@ -1384,7 +1389,7 @@
         "data": {
           "type": {
             "vars": [],
-            "args": [ "Message", "Message" ],
+            "args": ["Message", "Message"],
             "out": "Message"
           },
           "def": {
@@ -1400,7 +1405,7 @@
           "id": 40
         },
         "data": {
-          "type": { "vars": [], "args": [ "Boolean" ], "out": "Message" },
+          "type": { "vars": [], "args": ["Boolean"], "out": "Message" },
           "def": {
             "abstract_def": { "Abstract": "Prefix" },
             "associated_fun": []
@@ -1414,7 +1419,7 @@
           "id": 23
         },
         "data": {
-          "type": { "vars": [], "args": [ "Boolean" ], "out": "Boolean" },
+          "type": { "vars": [], "args": ["Boolean"], "out": "Boolean" },
           "def": {
             "abstract_def": { "Abstract": "Prefix" },
             "associated_fun": []
@@ -1453,8 +1458,8 @@
         },
         "data": {
           "type": {
-            "vars": [ { "name": "t", "tag": 2 } ],
-            "args": [ { "TVar": { "name": "t", "tag": 2 } } ],
+            "vars": [{ "name": "t", "tag": 2 }],
+            "args": [{ "TVar": { "name": "t", "tag": 2 } }],
             "out": "Message"
           },
           "def": {
@@ -1467,7 +1472,7 @@
         "symb": { "npath": { "npath": [], "id": 0 }, "symb": "if", "id": 24 },
         "data": {
           "type": {
-            "vars": [ { "name": "t", "tag": 1 } ],
+            "vars": [{ "name": "t", "tag": 1 }],
             "args": [
               "Boolean",
               { "TVar": { "name": "t", "tag": 1 } },
@@ -1488,7 +1493,7 @@
           "id": 15
         },
         "data": {
-          "type": { "vars": [], "args": [ "Timestamp" ], "out": "Boolean" },
+          "type": { "vars": [], "args": ["Timestamp"], "out": "Boolean" },
           "def": {
             "abstract_def": { "Abstract": "Prefix" },
             "associated_fun": []
@@ -1502,7 +1507,7 @@
           "id": 38
         },
         "data": {
-          "type": { "vars": [], "args": [ "Message" ], "out": "Message" },
+          "type": { "vars": [], "args": ["Message"], "out": "Message" },
           "def": {
             "abstract_def": { "Abstract": "Prefix" },
             "associated_fun": []
@@ -1518,9 +1523,7 @@
         "data": {
           "type": {
             "vars": [],
-            "args": [
-              { "TBase": { "npath": { "npath": [] }, "symb": "T" } }
-            ],
+            "args": [{ "TBase": { "npath": { "npath": [] }, "symb": "T" } }],
             "out": "Message"
           },
           "def": {
@@ -1560,7 +1563,7 @@
       {
         "symb": { "npath": { "npath": [], "id": 0 }, "symb": "f", "id": 67 },
         "data": {
-          "type": { "vars": [], "args": [ "Index" ], "out": "Message" },
+          "type": { "vars": [], "args": ["Index"], "out": "Message" },
           "def": {
             "abstract_def": { "Abstract": "Prefix" },
             "associated_fun": []
@@ -1625,7 +1628,7 @@
         "data": {
           "type": {
             "vars": [],
-            "args": [ "Message", "Message" ],
+            "args": ["Message", "Message"],
             "out": "Message"
           },
           "def": {
@@ -1706,7 +1709,7 @@
           "id": 35
         },
         "data": {
-          "type": { "vars": [], "args": [ "Message" ], "out": "Message" },
+          "type": { "vars": [], "args": ["Message"], "out": "Message" },
           "def": {
             "abstract_def": { "Abstract": "Prefix" },
             "associated_fun": []
@@ -1717,7 +1720,7 @@
         "symb": { "npath": { "npath": [], "id": 0 }, "symb": ">=", "id": 29 },
         "data": {
           "type": {
-            "vars": [ { "name": "a", "tag": 9 } ],
+            "vars": [{ "name": "a", "tag": 9 }],
             "args": [
               { "TVar": { "name": "a", "tag": 9 } },
               { "TVar": { "name": "a", "tag": 9 } }
@@ -1734,7 +1737,7 @@
         "symb": { "npath": { "npath": [], "id": 0 }, "symb": ">", "id": 30 },
         "data": {
           "type": {
-            "vars": [ { "name": "a", "tag": 10 } ],
+            "vars": [{ "name": "a", "tag": 10 }],
             "args": [
               { "TVar": { "name": "a", "tag": 10 } },
               { "TVar": { "name": "a", "tag": 10 } }
@@ -1752,7 +1755,7 @@
         "data": {
           "type": {
             "vars": [],
-            "args": [ "Boolean", "Boolean" ],
+            "args": ["Boolean", "Boolean"],
             "out": "Boolean"
           },
           "def": {
@@ -1765,7 +1768,7 @@
         "symb": { "npath": { "npath": [], "id": 0 }, "symb": "=", "id": 25 },
         "data": {
           "type": {
-            "vars": [ { "name": "a", "tag": 5 } ],
+            "vars": [{ "name": "a", "tag": 5 }],
             "args": [
               { "TVar": { "name": "a", "tag": 5 } },
               { "TVar": { "name": "a", "tag": 5 } }
@@ -1782,7 +1785,7 @@
         "symb": { "npath": { "npath": [], "id": 0 }, "symb": "<>", "id": 26 },
         "data": {
           "type": {
-            "vars": [ { "name": "a", "tag": 6 } ],
+            "vars": [{ "name": "a", "tag": 6 }],
             "args": [
               { "TVar": { "name": "a", "tag": 6 } },
               { "TVar": { "name": "a", "tag": 6 } }
@@ -1804,7 +1807,7 @@
         "data": {
           "type": {
             "vars": [],
-            "args": [ "Boolean", "Boolean" ],
+            "args": ["Boolean", "Boolean"],
             "out": "Boolean"
           },
           "def": {
@@ -1817,7 +1820,7 @@
         "symb": { "npath": { "npath": [], "id": 0 }, "symb": "<=", "id": 27 },
         "data": {
           "type": {
-            "vars": [ { "name": "a", "tag": 7 } ],
+            "vars": [{ "name": "a", "tag": 7 }],
             "args": [
               { "TVar": { "name": "a", "tag": 7 } },
               { "TVar": { "name": "a", "tag": 7 } }
@@ -1834,7 +1837,7 @@
         "symb": { "npath": { "npath": [], "id": 0 }, "symb": "<", "id": 28 },
         "data": {
           "type": {
-            "vars": [ { "name": "a", "tag": 8 } ],
+            "vars": [{ "name": "a", "tag": 8 }],
             "args": [
               { "TVar": { "name": "a", "tag": 8 } },
               { "TVar": { "name": "a", "tag": 8 } }
@@ -1852,7 +1855,7 @@
         "data": {
           "type": {
             "vars": [],
-            "args": [ "Boolean", "Boolean" ],
+            "args": ["Boolean", "Boolean"],
             "out": "Boolean"
           },
           "def": {
@@ -1865,14 +1868,14 @@
     "macros": [
       {
         "symb": {
-          "npath": { "npath": [ "Q" ], "id": 1 },
+          "npath": { "npath": ["Q"], "id": 1 },
           "symb": "qstate",
           "id": 9
         },
         "data": {
           "General": {
             "name": {
-              "npath": { "npath": [ "Q" ], "id": 1 },
+              "npath": { "npath": ["Q"], "id": 1 },
               "symb": "qinput",
               "id": 7
             },
@@ -1924,7 +1927,7 @@
                                 "Macro": {
                                   "symb": {
                                     "s_symb": {
-                                      "npath": { "npath": [ "Q" ], "id": 1 },
+                                      "npath": { "npath": ["Q"], "id": 1 },
                                       "symb": "qframe",
                                       "id": 12
                                     },
@@ -1958,7 +1961,7 @@
                                 "Macro": {
                                   "symb": {
                                     "s_symb": {
-                                      "npath": { "npath": [ "Q" ], "id": 1 },
+                                      "npath": { "npath": ["Q"], "id": 1 },
                                       "symb": "qstate",
                                       "id": 9
                                     },
@@ -2014,7 +2017,7 @@
       },
       {
         "symb": {
-          "npath": { "npath": [ "Q" ], "id": 1 },
+          "npath": { "npath": ["Q"], "id": 1 },
           "symb": "qoutput",
           "id": 8
         },
@@ -2022,14 +2025,14 @@
       },
       {
         "symb": {
-          "npath": { "npath": [ "Q" ], "id": 1 },
+          "npath": { "npath": ["Q"], "id": 1 },
           "symb": "qinput",
           "id": 7
         },
         "data": {
           "General": {
             "name": {
-              "npath": { "npath": [ "Q" ], "id": 1 },
+              "npath": { "npath": ["Q"], "id": 1 },
               "symb": "qinput",
               "id": 7
             },
@@ -2081,7 +2084,7 @@
                                 "Macro": {
                                   "symb": {
                                     "s_symb": {
-                                      "npath": { "npath": [ "Q" ], "id": 1 },
+                                      "npath": { "npath": ["Q"], "id": 1 },
                                       "symb": "qframe",
                                       "id": 12
                                     },
@@ -2115,7 +2118,7 @@
                                 "Macro": {
                                   "symb": {
                                     "s_symb": {
-                                      "npath": { "npath": [ "Q" ], "id": 1 },
+                                      "npath": { "npath": ["Q"], "id": 1 },
                                       "symb": "qstate",
                                       "id": 9
                                     },
@@ -2166,14 +2169,14 @@
       },
       {
         "symb": {
-          "npath": { "npath": [ "Q" ], "id": 1 },
+          "npath": { "npath": ["Q"], "id": 1 },
           "symb": "qframe",
           "id": 12
         },
         "data": {
           "General": {
             "name": {
-              "npath": { "npath": [ "Q" ], "id": 1 },
+              "npath": { "npath": ["Q"], "id": 1 },
               "symb": "qframe",
               "id": 12
             },
@@ -2213,7 +2216,7 @@
                       "Macro": {
                         "symb": {
                           "s_symb": {
-                            "npath": { "npath": [ "Q" ], "id": 1 },
+                            "npath": { "npath": ["Q"], "id": 1 },
                             "symb": "qframe",
                             "id": 12
                           },
@@ -2272,7 +2275,7 @@
                                     "symb": {
                                       "s_symb": {
                                         "npath": {
-                                          "npath": [ "Q" ],
+                                          "npath": ["Q"],
                                           "id": 1
                                         },
                                         "symb": "qexec",
@@ -2309,7 +2312,7 @@
                                     "symb": {
                                       "s_symb": {
                                         "npath": {
-                                          "npath": [ "Q" ],
+                                          "npath": ["Q"],
                                           "id": 1
                                         },
                                         "symb": "qexec",
@@ -2331,7 +2334,7 @@
                                     "symb": {
                                       "s_symb": {
                                         "npath": {
-                                          "npath": [ "Q" ],
+                                          "npath": ["Q"],
                                           "id": 1
                                         },
                                         "symb": "qoutput",
@@ -2374,14 +2377,14 @@
       },
       {
         "symb": {
-          "npath": { "npath": [ "Q" ], "id": 1 },
+          "npath": { "npath": ["Q"], "id": 1 },
           "symb": "qexec",
           "id": 11
         },
         "data": {
           "General": {
             "name": {
-              "npath": { "npath": [ "Q" ], "id": 1 },
+              "npath": { "npath": ["Q"], "id": 1 },
               "symb": "qexec",
               "id": 11
             },
@@ -2421,7 +2424,7 @@
                       "Macro": {
                         "symb": {
                           "s_symb": {
-                            "npath": { "npath": [ "Q" ], "id": 1 },
+                            "npath": { "npath": ["Q"], "id": 1 },
                             "symb": "qexec",
                             "id": 11
                           },
@@ -2455,7 +2458,7 @@
                       "Macro": {
                         "symb": {
                           "s_symb": {
-                            "npath": { "npath": [ "Q" ], "id": 1 },
+                            "npath": { "npath": ["Q"], "id": 1 },
                             "symb": "qcond",
                             "id": 10
                           },
@@ -2481,7 +2484,7 @@
       },
       {
         "symb": {
-          "npath": { "npath": [ "Q" ], "id": 1 },
+          "npath": { "npath": ["Q"], "id": 1 },
           "symb": "qcond",
           "id": 10
         },
@@ -2497,9 +2500,9 @@
               "action": {
                 "kind": "Strict",
                 "shape": [
-                  { "par_choice": [ 0, 1 ], "sum_choice": [ 0, 0 ] },
-                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] },
-                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] }
+                  { "par_choice": [0, 1], "sum_choice": [0, 0] },
+                  { "par_choice": [0, 0], "sum_choice": [0, 0] },
+                  { "par_choice": [0, 0], "sum_choice": [0, 0] }
                 ]
               },
               "inputs": [
@@ -2508,9 +2511,7 @@
                 { "id": { "name": "$dummy", "tag": 136 }, "ty": "Message" },
                 { "id": { "name": "m'", "tag": 83 }, "ty": "Message" }
               ],
-              "indices": [
-                { "id": { "name": "i", "tag": 131 }, "ty": "Index" }
-              ],
+              "indices": [{ "id": { "name": "i", "tag": 131 }, "ty": "Index" }],
               "ts": { "id": { "name": "τ", "tag": 123 }, "ty": "Timestamp" },
               "ty": { "TBase": { "npath": { "npath": [] }, "symb": "C" } },
               "body": {
@@ -2616,9 +2617,9 @@
               "action": {
                 "kind": "Strict",
                 "shape": [
-                  { "par_choice": [ 0, 1 ], "sum_choice": [ 0, 0 ] },
-                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] },
-                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] }
+                  { "par_choice": [0, 1], "sum_choice": [0, 0] },
+                  { "par_choice": [0, 0], "sum_choice": [0, 0] },
+                  { "par_choice": [0, 0], "sum_choice": [0, 0] }
                 ]
               },
               "inputs": [
@@ -2627,9 +2628,7 @@
                 { "id": { "name": "$dummy", "tag": 136 }, "ty": "Message" },
                 { "id": { "name": "m'", "tag": 83 }, "ty": "Message" }
               ],
-              "indices": [
-                { "id": { "name": "i", "tag": 131 }, "ty": "Index" }
-              ],
+              "indices": [{ "id": { "name": "i", "tag": 131 }, "ty": "Index" }],
               "ts": { "id": { "name": "τ", "tag": 123 }, "ty": "Timestamp" },
               "ty": { "TBase": { "npath": { "npath": [] }, "symb": "LP" } },
               "body": {
@@ -2690,9 +2689,9 @@
               "action": {
                 "kind": "Strict",
                 "shape": [
-                  { "par_choice": [ 0, 1 ], "sum_choice": [ 0, 0 ] },
-                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] },
-                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] }
+                  { "par_choice": [0, 1], "sum_choice": [0, 0] },
+                  { "par_choice": [0, 0], "sum_choice": [0, 0] },
+                  { "par_choice": [0, 0], "sum_choice": [0, 0] }
                 ]
               },
               "inputs": [
@@ -2701,9 +2700,7 @@
                 { "id": { "name": "$dummy", "tag": 136 }, "ty": "Message" },
                 { "id": { "name": "m'", "tag": 83 }, "ty": "Message" }
               ],
-              "indices": [
-                { "id": { "name": "i", "tag": 131 }, "ty": "Index" }
-              ],
+              "indices": [{ "id": { "name": "i", "tag": 131 }, "ty": "Index" }],
               "ts": { "id": { "name": "τ", "tag": 123 }, "ty": "Timestamp" },
               "ty": { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
               "body": {
@@ -2769,9 +2766,9 @@
               "action": {
                 "kind": "Strict",
                 "shape": [
-                  { "par_choice": [ 0, 1 ], "sum_choice": [ 0, 0 ] },
-                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] },
-                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] }
+                  { "par_choice": [0, 1], "sum_choice": [0, 0] },
+                  { "par_choice": [0, 0], "sum_choice": [0, 0] },
+                  { "par_choice": [0, 0], "sum_choice": [0, 0] }
                 ]
               },
               "inputs": [
@@ -2780,9 +2777,7 @@
                 { "id": { "name": "$dummy", "tag": 136 }, "ty": "Message" },
                 { "id": { "name": "m'", "tag": 83 }, "ty": "Message" }
               ],
-              "indices": [
-                { "id": { "name": "i", "tag": 131 }, "ty": "Index" }
-              ],
+              "indices": [{ "id": { "name": "i", "tag": 131 }, "ty": "Index" }],
               "ts": { "id": { "name": "τ", "tag": 123 }, "ty": "Timestamp" },
               "ty": { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
               "body": {
@@ -2822,9 +2817,7 @@
             "type": { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
             "data": {
               "action": { "kind": "Strict", "shape": [] },
-              "inputs": [
-                { "id": { "name": "m", "tag": 60 }, "ty": "Message" }
-              ],
+              "inputs": [{ "id": { "name": "m", "tag": 60 }, "ty": "Message" }],
               "indices": [],
               "ts": { "id": { "name": "τ", "tag": 123 }, "ty": "Timestamp" },
               "ty": { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
@@ -2863,9 +2856,9 @@
               "action": {
                 "kind": "Strict",
                 "shape": [
-                  { "par_choice": [ 0, 1 ], "sum_choice": [ 0, 0 ] },
-                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] },
-                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] }
+                  { "par_choice": [0, 1], "sum_choice": [0, 0] },
+                  { "par_choice": [0, 0], "sum_choice": [0, 0] },
+                  { "par_choice": [0, 0], "sum_choice": [0, 0] }
                 ]
               },
               "inputs": [
@@ -2874,9 +2867,7 @@
                 { "id": { "name": "$dummy", "tag": 136 }, "ty": "Message" },
                 { "id": { "name": "m'", "tag": 83 }, "ty": "Message" }
               ],
-              "indices": [
-                { "id": { "name": "i", "tag": 131 }, "ty": "Index" }
-              ],
+              "indices": [{ "id": { "name": "i", "tag": 131 }, "ty": "Index" }],
               "ts": { "id": { "name": "τ", "tag": 123 }, "ty": "Timestamp" },
               "ty": { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
               "body": {
@@ -3375,9 +3366,7 @@
             "type": { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
             "data": {
               "action": { "kind": "Strict", "shape": [] },
-              "inputs": [
-                { "id": { "name": "m", "tag": 60 }, "ty": "Message" }
-              ],
+              "inputs": [{ "id": { "name": "m", "tag": 60 }, "ty": "Message" }],
               "indices": [],
               "ts": { "id": { "name": "τ", "tag": 123 }, "ty": "Timestamp" },
               "ty": { "TBase": { "npath": { "npath": [] }, "symb": "T" } },
@@ -3466,9 +3455,9 @@
               "action": {
                 "kind": "Strict",
                 "shape": [
-                  { "par_choice": [ 0, 1 ], "sum_choice": [ 0, 0 ] },
-                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] },
-                  { "par_choice": [ 0, 0 ], "sum_choice": [ 0, 0 ] }
+                  { "par_choice": [0, 1], "sum_choice": [0, 0] },
+                  { "par_choice": [0, 0], "sum_choice": [0, 0] },
+                  { "par_choice": [0, 0], "sum_choice": [0, 0] }
                 ]
               },
               "inputs": [
@@ -3477,9 +3466,7 @@
                 { "id": { "name": "$dummy", "tag": 136 }, "ty": "Message" },
                 { "id": { "name": "m'", "tag": 83 }, "ty": "Message" }
               ],
-              "indices": [
-                { "id": { "name": "i", "tag": 131 }, "ty": "Index" }
-              ],
+              "indices": [{ "id": { "name": "i", "tag": 131 }, "ty": "Index" }],
               "ts": { "id": { "name": "τ", "tag": 123 }, "ty": "Timestamp" },
               "ty": "Boolean",
               "body": {
@@ -3612,9 +3599,7 @@
             "type": { "TBase": { "npath": { "npath": [] }, "symb": "C" } },
             "data": {
               "action": { "kind": "Strict", "shape": [] },
-              "inputs": [
-                { "id": { "name": "m", "tag": 60 }, "ty": "Message" }
-              ],
+              "inputs": [{ "id": { "name": "m", "tag": 60 }, "ty": "Message" }],
               "indices": [],
               "ts": { "id": { "name": "τ", "tag": 123 }, "ty": "Timestamp" },
               "ty": { "TBase": { "npath": { "npath": [] }, "symb": "C" } },
@@ -3715,23 +3700,23 @@
       },
       {
         "symb": { "npath": { "npath": [], "id": 0 }, "symb": "T", "id": 62 },
-        "data": [ "Large" ]
+        "data": ["Large"]
       },
       {
         "symb": { "npath": { "npath": [], "id": 0 }, "symb": "R", "id": 65 },
-        "data": [ "Large" ]
+        "data": ["Large"]
       },
       {
         "symb": { "npath": { "npath": [], "id": 0 }, "symb": "LP", "id": 66 },
-        "data": [ "Large" ]
+        "data": ["Large"]
       },
       {
         "symb": { "npath": { "npath": [], "id": 0 }, "symb": "L", "id": 64 },
-        "data": [ "Large" ]
+        "data": ["Large"]
       },
       {
         "symb": { "npath": { "npath": [], "id": 0 }, "symb": "C", "id": 63 },
-        "data": [ "Large" ]
+        "data": ["Large"]
       }
     ]
   }
