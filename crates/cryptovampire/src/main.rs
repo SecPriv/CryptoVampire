@@ -46,7 +46,7 @@ fn main() {
         cryptovampire::cli::Output::Quiet => (),
         cryptovampire::cli::Output::Stdout => {
             let res = res.unwrap();
-            println!("{res}")
+            eprintln!("{res}")
         }
         cryptovampire::cli::Output::JSON => {
             let res = res.map_err(|e| format!("{e:}"));

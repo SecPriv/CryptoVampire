@@ -121,7 +121,7 @@ You will then get access to the `cryptovampire` tactic. You can also add the opt
 Please report any error that isn't `"ran out of tries"`.
 
 ### Files
-You can see example files in the [test](./test/) directory.
+You can see example files in the [tests](./tests/) directory (all those ending in `.ptcl`). In particular the files in [test/nix](./tests/nix/), are tested by the CI/CD, so they should :tm: be fully working.
 
 Infix functions don't really exist (yet); therefore, the parser uses parentheses to fake them (e.g., you need to use `(a = b)` instead of just `a = b`).
 
@@ -130,10 +130,10 @@ The tool will try to point out any mistakes while reporting where they come from
 **NB**:
 - Parsing relies on [`pest`](https://pest.rs/) (for better or worse). You can find the grammar in [grammar.pest](./cryptovampire/grammar.pest).
 
-# Structure of the Tool
+<!-- # Structure of the Tool
 
 The tool is split into 3 crates:
 - **[`cryptovampire-lib`](./cryptovampire-lib/)**: This is the core of the tool.
 - **[`cryptovampire`](./cryptovampire/)**: This handles command-line arguments and parsing. This can be compiled into a binary and is the user-facing part of CryptoVampire.
-- **[`utils`](./utils/)**: Various utility functions that are not specific to `cryptovampire` but were made during its development.
+- **[`utils`](./utils/)**: Various utility functions that are not specific to `cryptovampire` but were made during its development. -->
 ```

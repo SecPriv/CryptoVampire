@@ -3,6 +3,7 @@ use std::{collections::BTreeSet, hash::Hash, sync::Arc};
 use if_chain::if_chain;
 use itertools::Itertools;
 use log::trace;
+use logic_formula::iterators::AllTermsIterator;
 
 use crate::formula::utils::formula_expander::NO_REC_MACRO;
 use crate::formula::utils::Applicable;
@@ -196,6 +197,7 @@ impl<'bump> IntCtxt<'bump> {
         let candidates_verif = pbl
             .list_top_level_terms()
             // .flat_map(move |f: &ARichFormula<'bump>| f.iter()) // sad...
+            .flat_map(|f| f.iter_with(AllTermsIterator, ())) // sad...
             .filter_map(|formula| match formula.as_ref() {
                 RichFormula::Fun(fun, args) => {
                     // if_chain! {

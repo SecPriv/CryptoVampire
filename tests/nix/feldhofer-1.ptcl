@@ -1,0 +1,89 @@
+type index;
+
+fun key(index):Name;
+let mk!(i:index, j:index) = key(i)
+
+fun nr(index):Name;
+fun nt(index,index):Name;
+
+fun rt(index, index):Name;
+fun rr(index):Name;
+
+fun ok:Message;
+fun ko:Message;
+
+fun tagR:Message;
+fun tagT:Message;
+assert (tagT != tagR);
+
+fun enc(Message, Message, Message):Message;
+fun dec(Message, Message):Message;
+fun fail:Message;
+assert-crypto int-ctxt enc dec  fail;
+
+assert-crypto nonce;
+
+fun tpl(Message, Message):Message;
+fun fst(Message):Message;
+fun snd(Message):Message;
+
+assert forall (m1:Message, m2:Message) {(
+    (m1 == fst(tpl(m1, m2)))
+    && (m2 == snd(tpl(m1, m2)))
+)}
+
+assert forall (m1:Message, m2:Message) {(
+    fail != tpl(m1, m2)
+)}
+
+assert (fst(fail) == fail)
+assert (snd(fail) == fail)
+
+step Tag(i:index, j:index)
+    { true }
+    { enc(
+        tpl(tagT, tpl(input(Tag(i, j)), nt(i, j))),
+        rt(i,j),
+        mk!(i,j)
+    ) }
+
+let m_cond!(i:index, j:index, k:index, m:Message) = (
+    (dec(m, mk!(i,j)) != fail)
+    /*verify(m, mk!(i, j))*/
+    && (fst(dec(m, mk!(i,j))) == tagT )
+    && (fst(snd(dec(m, mk!(i,j)))) == nr(k) )
+)
+
+step Reader0(k:index)
+    { true }
+    { nr(k) }
+
+step Reader(k:index) 
+    { true }
+    { 
+        try find (i:index, j:index)
+            such that { m_cond!(i, j, k, input(Reader(k))) }
+            then { enc(
+                tpl(tagR,tpl(snd(snd(dec(input(Reader(k)), mk!(i,j)))), nr(k))),
+                rr(k),
+                mk!(i,j)
+            ) }
+            else { ko }
+    }
+
+order forall (k:index) Reader0(k) < Reader(k);
+
+let condition!(i:index, j:index, k:index) = m_cond!(i,j,k, input(Reader(k)))
+
+let premise!(k:index) = exists (i:index, j:index) { condition!(i,j,k) }
+let conclusion!(k:index) = exists (i:index, j:index) {(
+    lt(Tag(i,j), Reader(k))
+    && lt(Reader0(k), Reader(k))
+    && (msg!(Tag(i,j)) == input(Reader(k)))
+    && (input(Tag(i,j)) == msg!(Reader0(k)))
+)}
+
+query forall(k:index) {(
+    happens(Reader(k))
+        => (premise!(k) <=> conclusion!(k))
+)}
