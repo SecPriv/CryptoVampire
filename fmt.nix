@@ -16,7 +16,6 @@
     "LICENSE"
     "*.md"
     "*.py"
-    "*.rs"
   ];
   programs.nixfmt.enable = true;
   programs.rustfmt.enable = true;

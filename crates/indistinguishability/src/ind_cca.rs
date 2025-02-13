@@ -177,7 +177,7 @@ impl Hash for Searcher<'_> {
 }
 
 impl<'a> Searcher<'a> {
-    fn search_up_once(&mut self, l: &'a CCSA, parent:Id, id: Id, rec_expr: &RecExpr<CCSA>) {
+    fn search_up_once(&mut self, l: &'a CCSA, parent: Id, id: Id, rec_expr: &RecExpr<CCSA>) {
         let Self {
             egraph,
             memoize_key,
