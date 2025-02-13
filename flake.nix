@@ -16,15 +16,18 @@
       url = "github:nlewo/nix2container?ref=update-patch-hash";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+        treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = inputs@{ self, nixpkgs, flake-utils, custom, nix2container, ... }:
+  outputs = inputs@{ self, nixpkgs, flake-utils, custom, nix2container, treefmt-nix, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        src = ./crates/cryptovampire;
         custom-pkgs = custom.packages.${system};
-        manifest = (pkgs.lib.importTOML "${src}/Cargo.toml").package;
+        treefmtEval = treefmt-nix.lib.evalModule pkgs ./fmt.nix;
 
         my-z3 = pkgs.z3_4_12;
 		mvampire = custom-pkgs.vampire.override {z3=my-z3;};
@@ -34,10 +37,13 @@
 
         mrustPlateform = pkgs.rustPlatform;
 
-        cryptovampire = pkgs.callPackage ./default.nix {
+        pkgConfig = {
           rustPlatform = mrustPlateform;
           src = ./.;
         };
+
+        cryptovampire = pkgs.callPackage ./crates/cryptovampire/default.nix pkgConfig;
+        egg = pkgs.callPackage ./crates/indistinguishability/default.nix pkgConfig;
 
         defaultDevShell = pkgs.mkShell {
           RUST_SRC_PATH = "${mrustPlateform.rustLibSrc}";
@@ -82,15 +88,17 @@
               });
             };
           in listToAttrs (map check basenames);
-        doc = pkgs.callPackage ./doc.nix {inherit cryptovampire;};
+        doc = pkgs.callPackage ./nix/doc.nix {inherit cryptovampire;};
 
       in rec {
         packages = {
-          inherit cryptovampire ;
+          inherit cryptovampire egg ;
           default = cryptovampire;
         };
-        checks = auto-checks;
-        formatter = nixpkgs.legacyPackages.${system}.nixfmt;
+        checks = {
+          formatting = treefmtEval.config.build.check self;
+        } // auto-checks;
+        formatter = treefmtEval.config.build.wrapper;
 
         devShells.default = defaultDevShell;
 
