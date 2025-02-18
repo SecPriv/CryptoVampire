@@ -1,17 +1,22 @@
 [package]
 name = "indistinguishability"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
-egg = "0.9.5"
+egg = "0.10"
+rustc-hash = "2.1.0" # for hash on integers
+smallvec = { version = "1.13.2", features = ["const_generics", "const_new", "union"] }
+
+# own crates
 utils = { path = "../utils"}
 logic_formula = {path = "../logic_formula"}
+
+# workspace
 itertools.workspace = true
-static_init = { workspace = true }
-paste = { workspace = true }
-rustc-hash = "2.1.0"
-smallvec = { version = "1.13.2", features = ["const_generics", "const_new", "union"] }
+static_init.workspace = true
+paste.workspace = true
+anyhow.workspace = true
 
 [lints]
 workspace = true

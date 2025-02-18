@@ -11,6 +11,7 @@ use utils::implvec;
 mod enc_kp;
 mod ind_cca;
 mod mutils;
+mod formula;
 // mod grammar;
 
 define_language! {
