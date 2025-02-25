@@ -79,21 +79,23 @@
             cryptovampire.buildInputs
             ++ [
               lldb
-              cargo
-              cargo-expand
-              rustc
               nixd
               #my-z3
               cvc5
               # custom-pkgs.vampire-master
               # custom-pkgs.squirrel-prover
               my-vampire
-              rustfmt
-              clippy
-              rust-analyzer
               # my-python
               graphviz
             ]
+            ++ (map (p: p.override { rustPlatform = mrustPlateform; }) [
+              rust-analyzer
+              clippy
+              rustfmt
+              cargo
+              cargo-expand
+              # rustc
+            ])
             ++ lib.optional stdenv.isDarwin git;
         };
 

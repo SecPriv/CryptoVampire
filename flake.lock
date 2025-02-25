@@ -53,14 +53,15 @@
         "opam-nix": "opam-nix_3",
         "rnote-src": "rnote-src",
         "squirrel-prover-src": "squirrel-prover-src_2",
-        "vampire-master-src": "vampire-master-src_3"
+        "vampire-master-src": "vampire-master-src_3",
+        "zfs-inplace-rebalance-src": "zfs-inplace-rebalance-src"
       },
       "locked": {
-        "lastModified": 1734776065,
-        "narHash": "sha256-Gqq8pu0Km8J4ZJhnURKC1pBcryFU0Q/0UiICqYrxXV0=",
+        "lastModified": 1739359225,
+        "narHash": "sha256-geKmKgx1HNyvrkcmV5KcANa7VqsaUGPRHzJy92apo2w=",
         "owner": "puyral",
         "repo": "custom-nix",
-        "rev": "9f2b822c0b58260e0a0b9c060ee5c20a8a7c0b4d",
+        "rev": "bb41ec07b33eaff8370c5a7c8de57af572501c1d",
         "type": "github"
       },
       "original": {
@@ -573,11 +574,11 @@
     },
     "nixpkgs_5": {
       "locked": {
-        "lastModified": 1734424634,
-        "narHash": "sha256-cHar1vqHOOyC7f1+tVycPoWTfKIaqkoe1Q6TnKzuti4=",
+        "lastModified": 1739866667,
+        "narHash": "sha256-EO1ygNKZlsAC9avfcwHkKGMsmipUk1Uc0TbrEZpkn64=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "d3c42f187194c26d9f0309a8ecc469d6c878ce33",
+        "rev": "73cf49b8ad837ade2de76f87eb53fc85ed5d4680",
         "type": "github"
       },
       "original": {
@@ -881,8 +882,7 @@
         "type": "github"
       },
       "original": {
-        "owner": "puyral",
-        "ref": "cryptovampire",
+        "owner": "squirrel-prover",
         "repo": "squirrel-prover",
         "type": "github"
       }
@@ -1029,11 +1029,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1738953846,
-        "narHash": "sha256-yrK3Hjcr8F7qS/j2F+r7C7o010eVWWlm4T1PrbKBOxQ=",
+        "lastModified": 1739829690,
+        "narHash": "sha256-mL1szCeIsjh6Khn3nH2cYtwO5YXG6gBiTw1A30iGeDU=",
         "owner": "numtide",
         "repo": "treefmt-nix",
-        "rev": "4f09b473c936d41582dd744e19f34ec27592c5fd",
+        "rev": "3d0579f5cc93436052d94b73925b48973a104204",
         "type": "github"
       },
       "original": {
@@ -1077,16 +1077,32 @@
     "vampire-master-src_3": {
       "flake": false,
       "locked": {
-        "lastModified": 1737364665,
-        "narHash": "sha256-WG6oHRmxAPxm80ucakHpd+D15t7U4tqAbIADxS4UQLk=",
+        "lastModified": 1739310029,
+        "narHash": "sha256-D2xQmMsnNzvl1Jd3GskGxXzAFdOzTvmOMlXu+ejzrdA=",
         "owner": "vprover",
         "repo": "vampire",
-        "rev": "f55788fa7505c4157f92aec1c77bcf693e8cd25a",
+        "rev": "e0a91a05f5e6764552b9b6c8f615da447262c710",
         "type": "github"
       },
       "original": {
         "owner": "vprover",
         "repo": "vampire",
+        "type": "github"
+      }
+    },
+    "zfs-inplace-rebalance-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1737197292,
+        "narHash": "sha256-n8kPWuANKb17B7TxQRCduCnKRALB4VPb2Z3tFu70k54=",
+        "owner": "markusressel",
+        "repo": "zfs-inplace-rebalancing",
+        "rev": "97d11fdb0b3f1e6bad22f84094e926390fb32db0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "markusressel",
+        "repo": "zfs-inplace-rebalancing",
         "type": "github"
       }
     }

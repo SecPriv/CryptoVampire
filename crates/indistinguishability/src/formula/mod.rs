@@ -1,3 +1,6 @@
+pub mod analysis;
+mod fa;
+
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Copy, Clone, Hash)]
 pub struct Variable(pub u32);
 
@@ -8,8 +11,12 @@ impl core::fmt::Display for Variable {
 }
 
 pub mod grammar {
+    use std::fmt::write;
+
     use anyhow::anyhow;
     use egg::{FromOp, Id, Language, Var};
+    use itertools::Itertools;
+    use utils::implvec;
 
     use super::Variable;
 
@@ -60,32 +67,63 @@ pub mod grammar {
         Length,
 
         Zeroes,
+
+        Input,
+        Equiv,
     }
 
     impl Op {
         pub fn arity(&self) -> usize {
+            use Op::*;
             match self {
-                Op::Var(_) => 0,
-                Op::Nonce => 1,
-                Op::Index(_) => 0,
-                Op::Enc => 3,
-                Op::Dec => 2,
-                Op::Hash => 1,
-                Op::Eq => 2,
-                Op::IfThenElse => 3,
-                Op::Tuple => 2,
-                Op::P1 => 1,
-                Op::P2 => 1,
-                Op::And => 2,
-                Op::Or => 2,
-                Op::Not => 1,
-                Op::Length => 1,
-                Op::Zeroes => 1,
+                Var(_) => 0,
+                Nonce => 1,
+                Index(_) => 0,
+                Enc => 3,
+                Dec => 2,
+                Hash => 1,
+                Eq => 2,
+                IfThenElse => 3,
+                Tuple => 2,
+                P1 => 1,
+                P2 => 1,
+                And => 2,
+                Or => 2,
+                Not => 1,
+                Length => 1,
+                Zeroes => 1,
+                Input => 1,
+                Equiv => 1,
 
-                Op::Name(name) => todo!(),
+                Name(name) => todo!(),
             }
         }
+
+        /// Returns `true` if the op is [`Input`].
+        ///
+        /// [`Input`]: Op::Input
+        #[must_use]
+        pub fn is_input(&self) -> bool {
+            matches!(self, Self::Input)
+        }
+
+        pub fn app<'a>(self, args: implvec!(&'a Id)) -> TA {
+            let args = args.into_iter().copied().collect_vec();
+            assert!(args.len() == self.arity());
+            TA{
+                op: self,
+                args
+            }
+        }
+    
+    /// Returns `true` if the op is [`Equiv`].
+    ///
+    /// [`Equiv`]: Op::Equiv
+    #[must_use]
+    pub fn is_equiv(&self) -> bool {
+        matches!(self, Self::Equiv)
     }
+}
 
     impl std::str::FromStr for Op {
         type Err = anyhow::Error;
@@ -106,6 +144,8 @@ pub mod grammar {
                 "neg" | "not" | "¬" => Ok(Self::Not),
                 "length" | "len" => Ok(Self::Length),
                 "zeroes" => Ok(Self::Zeroes),
+                "input" => Ok(Self::Input),
+                "equiv" => Ok(Self::Equiv),
                 "" => Err(anyhow!("empty op")),
                 x => {
                     let mut chars = x.chars();
@@ -123,24 +163,27 @@ pub mod grammar {
 
     impl core::fmt::Display for Op {
         fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            use Op::*;
             match self {
-                Op::Var(variable) => variable.fmt(f),
-                Op::Nonce => write!(f, "nonce"),
-                Op::Name(name) => name.fmt(f),
-                Op::Index(index) => index.fmt(f),
-                Op::Enc => write!(f, "enc"),
-                Op::Dec => write!(f, "dec"),
-                Op::Hash => write!(f, "hash"),
-                Op::Eq => write!(f, "==="),
-                Op::IfThenElse => write!(f, "if_then_else"),
-                Op::Tuple => write!(f, "tuple"),
-                Op::P1 => write!(f, "π₁"),
-                Op::P2 => write!(f, "π₂"),
-                Op::And => write!(f, "∧"),
-                Op::Or => write!(f, "∨"),
-                Op::Not => write!(f, "¬"),
-                Op::Length => write!(f, "length"),
-                Op::Zeroes => write!(f, "zeroes"),
+                Var(variable) => variable.fmt(f),
+                Nonce => write!(f, "nonce"),
+                Name(name) => name.fmt(f),
+                Index(index) => index.fmt(f),
+                Enc => write!(f, "enc"),
+                Dec => write!(f, "dec"),
+                Hash => write!(f, "hash"),
+                Eq => write!(f, "==="),
+                IfThenElse => write!(f, "if_then_else"),
+                Tuple => write!(f, "tuple"),
+                P1 => write!(f, "π₁"),
+                P2 => write!(f, "π₂"),
+                And => write!(f, "∧"),
+                Or => write!(f, "∨"),
+                Not => write!(f, "¬"),
+                Length => write!(f, "length"),
+                Zeroes => write!(f, "zeroes"),
+                Input => write!(f, "input"),
+                Equiv => write!(f, "equiv"),
             }
         }
     }
@@ -158,6 +201,14 @@ pub mod grammar {
 
         pub fn arity(&self) -> usize {
             self.children().len()
+        }
+
+        pub fn is_input(&self) -> bool {
+            self.op().is_input()
+        }
+
+        pub fn is_equiv(&self) -> bool {
+            self.op().is_equiv()
         }
     }
 
