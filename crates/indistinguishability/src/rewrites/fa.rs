@@ -1,14 +1,13 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
-use egg::{Applier, Id, Language, RecExpr};
+use egg::{Applier, Id, Language, RecExpr, Rewrite};
 use itertools::{izip, Itertools};
 use rustc_hash::FxHashMap;
 use utils::implvec;
 
-use crate::formula::analysis::{Data, Unionable};
+use crate::formula::{analysis::{Data, DependancyAnalysis, Unionable}, grammar::{self, Op, TA}};
 
-use super::analysis::DependancyAnalysis;
-use super::grammar::{self, Op, TA};
 
 /**
 Implements the rule
@@ -17,7 +16,6 @@ a ~ a' b ~ b' Dep(a)∩Dep(a')=Dep(b)∩Dep(b')=∅
 ---------------------------------------------
           f(a, a') ~ f(b, b')
 ```
-
 */
 #[derive(Debug, Clone, Copy, Default)]
 pub struct FaApplier;
@@ -135,4 +133,13 @@ impl Applier<TA, DependancyAnalysis> for FaApplier {
             })
             .collect()
     }
+}
+
+pub fn fa_rewrite() -> Rewrite<TA, DependancyAnalysis> {
+    Rewrite::new(
+        "fa",
+        "(equiv ?a)".parse::<egg::Pattern<TA>>().unwrap(),
+        FaApplier,
+    )
+    .unwrap()
 }

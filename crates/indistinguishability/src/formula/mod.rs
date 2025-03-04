@@ -1,5 +1,5 @@
 pub mod analysis;
-mod fa;
+pub mod protocol;
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Copy, Clone, Hash)]
 pub struct Variable(pub u32);
@@ -14,9 +14,9 @@ pub mod grammar {
     use std::fmt::write;
 
     use anyhow::anyhow;
-    use egg::{FromOp, Id, Language, Var};
+    use egg::{Analysis, EGraph, FromOp, Id, Language, Var};
     use itertools::Itertools;
-    use utils::implvec;
+    use utils::{ereturn_if, implvec, iter_array::IntoArray};
 
     use super::Variable;
 
@@ -70,6 +70,8 @@ pub mod grammar {
 
         Input,
         Equiv,
+
+        Err,
     }
 
     impl Op {
@@ -94,6 +96,7 @@ pub mod grammar {
                 Zeroes => 1,
                 Input => 1,
                 Equiv => 1,
+                Err => 0,
 
                 Name(name) => todo!(),
             }
@@ -110,18 +113,31 @@ pub mod grammar {
         pub fn app<'a>(self, args: implvec!(&'a Id)) -> TA {
             let args = args.into_iter().copied().collect_vec();
             assert!(args.len() == self.arity());
-            TA{
-                op: self,
-                args
-            }
+            TA { op: self, args }
+        }
+
+        /// Returns `true` if the op is [`Equiv`].
+        ///
+        /// [`Equiv`]: Op::Equiv
+        #[must_use]
+        pub fn is_equiv(&self) -> bool {
+            matches!(self, Self::Equiv)
         }
     
-    /// Returns `true` if the op is [`Equiv`].
+    /// Returns `true` if the op is [`Nonce`].
     ///
-    /// [`Equiv`]: Op::Equiv
+    /// [`Nonce`]: Op::Nonce
     #[must_use]
-    pub fn is_equiv(&self) -> bool {
-        matches!(self, Self::Equiv)
+    pub fn is_nonce(&self) -> bool {
+        matches!(self, Self::Nonce)
+    }
+
+    /// Returns `true` if the op is [`Name`].
+    ///
+    /// [`Name`]: Op::Name
+    #[must_use]
+    pub fn is_name(&self) -> bool {
+        matches!(self, Self::Name(..))
     }
 }
 
@@ -146,17 +162,17 @@ pub mod grammar {
                 "zeroes" => Ok(Self::Zeroes),
                 "input" => Ok(Self::Input),
                 "equiv" => Ok(Self::Equiv),
+                "err" => Ok(Self::Err),
                 "" => Err(anyhow!("empty op")),
-                x => {
-                    let mut chars = x.chars();
-                    let det = chars.next().unwrap();
-                    let i = chars.as_str();
-                    match det {
-                        '?' => Ok(Self::Var(Variable(i.parse()?))),
-                        '#' => Ok(Self::Index(Index(i.parse()?))),
-                        _ => Ok(Self::Name(Name::Str(x.into()))),
-                    }
-                }
+                x => x
+                    .split_at_checked(2)
+                    .and_then(|(det, x)| match det {
+                        "_?" => Some(x.parse().map(Variable).map(Self::Var)),
+                        "_#" => Some(x.parse().map(Index).map(Self::Index)),
+                        _ => None,
+                    })
+                    .unwrap_or_else(|| Ok(Self::Name(Name::Str(x.into()))))
+                    .map_err(|e| e.into()),
             }
         }
     }
@@ -184,6 +200,7 @@ pub mod grammar {
                 Zeroes => write!(f, "zeroes"),
                 Input => write!(f, "input"),
                 Equiv => write!(f, "equiv"),
+                Err => write!(f, "err"),
             }
         }
     }
@@ -194,21 +211,28 @@ pub mod grammar {
         args: Vec<Id>,
     }
 
+impl std::ops::Deref for TA {
+    type Target = Op;
+
+    fn deref(&self) -> &Self::Target {
+        &self.op
+    }
+}
+
     impl TA {
         pub fn op(&self) -> &Op {
             &self.op
         }
 
-        pub fn arity(&self) -> usize {
-            self.children().len()
+        pub fn args_arr<const N: usize>(&self) -> Option<[Id; N]> {
+            ereturn_if!(self.arity() != N, None);
+            let (arr, mut x) = self.children().iter().copied().collect_array().unwrap();
+            debug_assert!(x.next().is_none());
+            Some(arr)
         }
 
-        pub fn is_input(&self) -> bool {
-            self.op().is_input()
-        }
-
-        pub fn is_equiv(&self) -> bool {
-            self.op().is_equiv()
+        pub fn get_name<N:Analysis<TA>>(egraph: &EGraph<TA, N>, id:Id) -> Option<Id> {
+            egraph[id].iter().filter_map(|l| l.is_nonce().then(|| l.children()[0])).next()
         }
     }
 

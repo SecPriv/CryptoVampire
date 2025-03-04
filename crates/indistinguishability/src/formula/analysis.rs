@@ -1,20 +1,20 @@
 use std::{collections::HashSet, ptr::NonNull, sync::Arc, usize};
 
-use egg::{Analysis, DidMerge, EGraph, Id, Language, Pattern};
+use egg::{Analysis, DidMerge, EGraph, ENodeOrVar, Id, Language, Pattern};
 use itertools::Itertools;
 use rustc_hash::FxHashSet;
 use utilities::IdOrInput;
 pub use utilities::{Data, Mergeable, Unionable};
 use utils::implvec;
 
-use super::grammar::{Op, TA};
+use super::{grammar::{Op, TA}, protocol::Protocol};
 
 /**
 Decide which nonces a term depends on
  */
-#[derive(Debug, Eq, PartialEq, Clone, Default)]
+#[derive(Debug,  Clone, )]
 pub struct DependancyAnalysis {
-    ptcl: (),
+    nonces: Vec<Pattern<TA>>,
 }
 
 mod utilities {
@@ -165,18 +165,19 @@ pub struct DependancyAnalysisData {
     nonces: Data,
     /** nonce that are not in key position for PRF */
     nonces_prf: Data,
+    input: bool
 }
 
 impl DependancyAnalysisData {
-    #[inline]
-    pub fn map_ref_N<'a, const N: usize, F: FnMut([&'a Data; N]) -> Data>(
-        selves: [&'a Self; N],
-        f: &mut F,
-    ) -> Self {
-        let nonces = f(selves.map(|Self { nonces, .. }| nonces));
-        let nonces_prf = f(selves.map(|Self { nonces_prf, .. }| nonces_prf));
-        Self { nonces, nonces_prf }
-    }
+    // #[inline]
+    // pub fn map_ref_N<'a, const N: usize, F: FnMut([&'a Data; N]) -> Data>(
+    //     selves: [&'a Self; N],
+    //     f: &mut F,
+    // ) -> Self {
+    //     let nonces = f(selves.map(|Self { nonces, .. }| nonces));
+    //     let nonces_prf = f(selves.map(|Self { nonces_prf, .. }| nonces_prf));
+    //     Self { nonces, nonces_prf }
+    // }
 
     pub fn nonces(&self) -> &Data {
         &self.nonces
@@ -206,12 +207,14 @@ impl Mergeable for DependancyAnalysisData {
         let Self {
             nonces: ns,
             nonces_prf: nprfs,
+            input: si
         } = self;
         let Self {
             nonces: no,
             nonces_prf: nprfo,
+            input: so
         } = old_self;
-        ns.has_changed(no) || nprfs.has_changed(nprfo)
+        ns.has_changed(no) || nprfs.has_changed(nprfo) || si != so
     }
 }
 
@@ -225,6 +228,52 @@ impl Analysis<TA> for DependancyAnalysis {
     type Data = DependancyAnalysisData;
 
     fn make(egraph: &mut egg::EGraph<TA, Self>, enode: &TA) -> Self::Data {
+        match enode.op() {
+            Op::Nonce => [enode.children()[0]]
+                .into_iter()
+                .map(IdOrInput::from_id)
+                .collect(),
+            Op::Input => [enode.children()[0]]
+                .into_iter()
+                .map(IdOrInput::from_input_arg)
+                .collect(),
+            Op::Equiv => Default::default(),
+            Op::Hash => Self::Data {
+                nonces: Unionable::from_union(
+                    enode
+                        .children()
+                        .iter()
+                        .map(|i| egraph[*i].data.nonces())
+                        .collect(),
+                ),
+                nonces_prf: Default::default(),
+            },
+            _ => {
+                Self::Data::from_union(enode.children().iter().map(|i| &egraph[*i].data).collect())
+            }
+        }
+    }
+
+    fn merge(&mut self, a: &mut Self::Data, b: Self::Data) -> egg::DidMerge {
+        let na = a.merge(&b);
+        let didm = egg::DidMerge(na.has_changed(a), na.has_changed(&b));
+        *a = na;
+        didm
+    }
+}
+
+/*
+   Here we expect variables to *only* point to indices.
+   If this assumption doesn't hold, then the rest is unsound
+*/
+impl Analysis<ENodeOrVar<TA>> for DependancyAnalysis {
+    type Data = DependancyAnalysisData;
+
+    fn make(egraph: &mut egg::EGraph<ENodeOrVar<TA>, Self>, enode: &ENodeOrVar<TA>) -> Self::Data {
+        let ENodeOrVar::ENode(enode) = enode else {
+            // I love rust
+            return Default::default();
+        };
         match enode.op() {
             Op::Nonce => [enode.children()[0]]
                 .into_iter()

@@ -11,8 +11,8 @@ use std::{borrow::Cow, default, env::vars, fmt::Display, process::exit};
 // mod enc_kp;
 mod formula;
 // mod ind_cca;
-// mod mutils;
-// mod rewrites;
+mod mutils;
+mod rewrites;
 // mod grammar;
 
 fn main() {}

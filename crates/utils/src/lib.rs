@@ -18,3 +18,5 @@ pub mod utils;
 pub mod vecref;
 
 pub mod monad;
+
+pub mod ereturn;
