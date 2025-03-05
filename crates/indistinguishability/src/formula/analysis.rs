@@ -1,34 +1,47 @@
-use std::{collections::HashSet, ptr::NonNull, sync::Arc, usize};
+use std::{
+    collections::HashSet,
+    ptr::{self, NonNull},
+    sync::Arc,
+    usize,
+};
 
-use egg::{Analysis, DidMerge, EGraph, ENodeOrVar, Id, Language, Pattern};
+use egg::{Analysis, DidMerge, EGraph, ENodeOrVar, Id, Language, Pattern, Searcher};
 use itertools::Itertools;
 use rustc_hash::FxHashSet;
-use utilities::IdOrInput;
+use utilities::UnionableIter;
 pub use utilities::{Data, Mergeable, Unionable};
 use utils::implvec;
 
-use super::{grammar::{Op, TA}, protocol::Protocol};
+use super::{
+    grammar::{Op, TA},
+    protocol::Protocol,
+};
 
 /**
 Decide which nonces a term depends on
  */
-#[derive(Debug,  Clone, )]
+#[derive(Debug, Clone)]
 pub struct DependancyAnalysis {
     nonces: Vec<Pattern<TA>>,
+    id_of_nonces: FxHashSet<Id>,
 }
+
+pub type TAGraph = EGraph<TA, DependancyAnalysis>;
 
 mod utilities {
     use std::sync::Arc;
 
-    use egg::{Analysis, EGraph, Id};
-    use itertools::Itertools;
+    use egg::{Analysis, EGraph, Id, Pattern, Searcher};
+    use itertools::{chain, Itertools};
     use rustc_hash::FxHashSet;
-    use utils::ord_util::sort_by_key;
+    use utils::{ereturn_if, ord_util::sort_by_key};
 
     use crate::formula::grammar::TA;
 
-    pub trait Mergeable: Sized {
-        fn merge(&self, other: &Self) -> Self;
+    use super::TAGraph;
+
+    pub trait Mergeable<W>: Sized {
+        fn merge(&self, other: &Self, with: W) -> Self;
 
         /**
         checks if the result of [Mergeable::merge] changed to value.
@@ -36,83 +49,56 @@ mod utilities {
         To be caled after [Mergeable::merge].
          */
         fn has_changed(&self, old_self: &Self) -> bool;
-
-        fn from_merge(x: Merge<Self>) -> Self {
-            x.0
-        }
     }
 
-    #[derive(Debug, Default)]
-    pub struct Merge<U>(pub U);
+    pub trait MergeableIter<W> {
+        type Item;
 
-    impl<'a, U> FromIterator<&'a U> for Merge<U>
+        fn merge(&mut self, with: W) -> Option<Self::Item>;
+    }
+
+    impl<W: Copy, I> MergeableIter<W> for I
     where
-        U: Mergeable + Default + Sized + Clone,
+        I: Iterator,
+        I::Item: Mergeable<W>,
     {
-        fn from_iter<T: IntoIterator<Item = &'a U>>(iter: T) -> Self {
-            let mut iter = iter.into_iter();
-            let fst = iter.next().cloned().unwrap_or_default();
-            Merge(iter.into_iter().fold(fst, |a, b| a.merge(b)))
+        type Item = I::Item;
+
+        fn merge(&mut self, with: W) -> Option<Self::Item> {
+            let init = self.next()?;
+            Some(self.fold(init, |acc, e| acc.merge(&e, with)))
         }
     }
 
     pub trait Unionable: Sized {
         fn union(&self, other: &Self) -> Self;
-
-        fn from_union(x: Union<Self>) -> Self {
-            x.0
-        }
     }
 
-    #[derive(Debug, Default)]
-    pub struct Union<U>(pub U);
-
-    impl<'a, U> FromIterator<&'a U> for Union<U>
+    pub trait UnionableIter {
+        type Item;
+        fn union(&mut self) -> Option<Self::Item>;
+    }
+    impl<'a, I, U> UnionableIter for I
     where
-        U: Unionable + Default + Sized + Clone,
+        I: Iterator<Item = &'a U>,
+        U: Unionable + 'a,
     {
-        fn from_iter<T: IntoIterator<Item = &'a U>>(iter: T) -> Self {
-            let mut iter = iter.into_iter();
-            let fst = iter.next().cloned().unwrap_or_default();
-            Union(iter.into_iter().fold(fst, |a, b| a.union(b)))
-        }
-    }
+        type Item = U;
 
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
-    pub enum IdOrInput {
-        Id(Id),
-        Input(Id),
-    }
-
-    impl IdOrInput {
-        pub fn id(&self) -> Id {
-            match self {
-                IdOrInput::Id(id) | IdOrInput::Input(id) => *id,
-            }
-        }
-
-        /// Returns `true` if the id or input is [`Input`].
-        ///
-        /// [`Input`]: IdOrInput::Input
-        #[must_use]
-        pub fn is_input(&self) -> bool {
-            matches!(self, Self::Input(..))
-        }
-
-        pub fn from_input_arg(id: Id) -> Self {
-            Self::Input(id)
-        }
-
-        pub fn from_id(id: Id) -> Self {
-            Self::Id(id)
+        fn union(&mut self) -> Option<Self::Item> {
+            let init = self.next()?;
+            let Some(init2) = self.next() else {
+                return Some(init.union(init));
+            };
+            Some(self.fold(init.union(init2), |acc, e| U::union(&acc, e)))
         }
     }
 
     #[derive(Debug, PartialEq, Eq, Clone, Default)]
-    pub struct Data(Arc<FxHashSet<IdOrInput>>);
+    pub struct Data(Arc<FxHashSet<Id>>);
 
     impl Data {
-        pub fn iter<'a>(&'a self) -> impl Iterator<Item = IdOrInput> + 'a {
+        pub fn iter<'a>(&'a self) -> impl Iterator<Item = Id> + 'a {
             self.0.iter().copied()
         }
 
@@ -125,14 +111,31 @@ mod utilities {
         }
     }
 
-    impl Mergeable for Data {
-        fn merge(&self, other: &Self) -> Self {
+    impl<'a> Mergeable<(&'a TAGraph, Option<&'a [Pattern<TA>]>)> for Data {
+        fn merge(
+            &self,
+            other: &Self,
+            (egraph, steps): (&'a TAGraph, Option<&'a [Pattern<TA>]>),
+        ) -> Self {
             let (a, b) = sort_by_key(&mut |x: &&Data| x.len(), self, other);
             debug_assert!(a.0.len() <= b.0.len());
-            if a.0.is_subset(&b.0) {
+            let input_iter = steps.map(|pats| {
+                chain!{
+                    a.0.iter().filter(|&&id| pats.iter().any(|pat| pat.search_eclass(egraph, id).is_some())),
+                    b.0.iter().filter(|&&id| pats.iter().any(|pat| pat.search_eclass(egraph, id).is_some())),
+                }
+            });
+            let set: FxHashSet<_> = chain! {
+                a.0.intersection(&b.0),
+                input_iter.into_iter().flatten()
+            }
+            .copied()
+            .collect();
+
+            if set.len() == a.0.len() {
                 a.clone()
             } else {
-                Data(Arc::new(a.0.intersection(&b.0).cloned().collect()))
+                Data(Arc::new(set))
             }
         }
 
@@ -143,6 +146,7 @@ mod utilities {
 
     impl Unionable for Data {
         fn union(&self, other: &Self) -> Self {
+            ereturn_if!(Arc::ptr_eq(&self.0, &other.0), self.clone());
             let (a, b) = sort_by_key(&mut |x: &&Data| x.len(), self, other);
             debug_assert!(a.0.len() <= b.0.len());
             if a.0.is_subset(&b.0) {
@@ -153,31 +157,51 @@ mod utilities {
         }
     }
 
-    impl FromIterator<IdOrInput> for Data {
-        fn from_iter<T: IntoIterator<Item = IdOrInput>>(iter: T) -> Self {
-            Self(Arc::new(iter.into_iter().collect()))
+    impl FromIterator<Id> for Data {
+        fn from_iter<T: IntoIterator<Item = Id>>(iter: T) -> Self {
+            Data(Arc::new(iter.into_iter().collect()))
         }
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct DependancyAnalysisData {
     nonces: Data,
     /** nonce that are not in key position for PRF */
     nonces_prf: Data,
-    input: bool
+    input: bool,
+}
+
+impl Default for DependancyAnalysisData {
+    fn default() -> Self {
+        Self {
+            nonces: Default::default(),
+            nonces_prf: Default::default(),
+            input: false,
+        }
+    }
 }
 
 impl DependancyAnalysisData {
-    // #[inline]
-    // pub fn map_ref_N<'a, const N: usize, F: FnMut([&'a Data; N]) -> Data>(
-    //     selves: [&'a Self; N],
-    //     f: &mut F,
-    // ) -> Self {
-    //     let nonces = f(selves.map(|Self { nonces, .. }| nonces));
-    //     let nonces_prf = f(selves.map(|Self { nonces_prf, .. }| nonces_prf));
-    //     Self { nonces, nonces_prf }
-    // }
+    #[inline]
+    pub fn map_ref_N<'a, const N: usize, F1, F2>(
+        selves: [&'a Self; N],
+        mut f: F1,
+        input_f: F2,
+    ) -> Self
+    where
+        F1: FnMut([&'a Data; N]) -> Data,
+        F2: FnOnce([bool; N]) -> bool,
+    {
+        let nonces = f(selves.map(Self::nonces));
+        let nonces_prf = f(selves.map(Self::nonces_prf));
+        let input = input_f(selves.map(Self::input));
+        Self {
+            nonces,
+            nonces_prf,
+            input,
+        }
+    }
 
     pub fn nonces(&self) -> &Data {
         &self.nonces
@@ -186,33 +210,43 @@ impl DependancyAnalysisData {
     pub fn nonces_prf(&self) -> &Data {
         &self.nonces_prf
     }
+
+    pub fn input(&self) -> bool {
+        self.input
+    }
 }
 
-impl FromIterator<IdOrInput> for DependancyAnalysisData {
-    fn from_iter<T: IntoIterator<Item = IdOrInput>>(iter: T) -> Self {
+impl FromIterator<Id> for DependancyAnalysisData {
+    fn from_iter<T: IntoIterator<Item = Id>>(iter: T) -> Self {
         let data: Data = iter.into_iter().collect();
         Self {
             nonces: data.clone(),
             nonces_prf: data,
+            input: false,
         }
     }
 }
 
-impl Mergeable for DependancyAnalysisData {
-    fn merge(&self, other: &Self) -> Self {
-        Self::map_ref_N([self, other], &mut |[d1, d2]| d1.merge(d2))
+impl<'a> Mergeable<(&'a TAGraph, &'a [Pattern<TA>])> for DependancyAnalysisData {
+    fn merge(&self, other: &Self, (egraph, pats): (&'a TAGraph, &'a [Pattern<TA>])) -> Self {
+        let pats = (self.input() || other.input()).then_some(pats);
+        Self::map_ref_N(
+            [self, other],
+            |[d1, d2]| d1.merge(d2, (egraph, pats)),
+            |_| pats.is_some(),
+        )
     }
 
     fn has_changed(&self, old_self: &Self) -> bool {
         let Self {
             nonces: ns,
             nonces_prf: nprfs,
-            input: si
+            input: si,
         } = self;
         let Self {
             nonces: no,
             nonces_prf: nprfo,
-            input: so
+            input: so,
         } = old_self;
         ns.has_changed(no) || nprfs.has_changed(nprfo) || si != so
     }
@@ -220,7 +254,11 @@ impl Mergeable for DependancyAnalysisData {
 
 impl Unionable for DependancyAnalysisData {
     fn union(&self, other: &Self) -> Self {
-        Self::map_ref_N([self, other], &mut |[d1, d2]| d1.union(d2))
+        Self::map_ref_N(
+            [self, other],
+            |[d1, d2]| d1.union(d2),
+            |_| self.input() || other.input(),
+        )
     }
 }
 
@@ -229,28 +267,43 @@ impl Analysis<TA> for DependancyAnalysis {
 
     fn make(egraph: &mut egg::EGraph<TA, Self>, enode: &TA) -> Self::Data {
         match enode.op() {
-            Op::Nonce => [enode.children()[0]]
-                .into_iter()
-                .map(IdOrInput::from_id)
-                .collect(),
-            Op::Input => [enode.children()[0]]
-                .into_iter()
-                .map(IdOrInput::from_input_arg)
-                .collect(),
+            Op::Nonce => {
+                let id = enode.children()[0];
+                if !egraph.analysis.id_of_nonces.contains(&id)
+                    && egraph
+                        .analysis
+                        .nonces
+                        .iter()
+                        .any(|pat| pat.search_eclass(egraph, id).is_some())
+                {
+                    egraph.analysis.id_of_nonces.insert(id);
+                }
+
+                [id].into_iter()
+                    // .map(IdOrInput::from_id)
+                    .collect()
+            }
+            Op::Input => DependancyAnalysisData {
+                input: true,
+                ..Default::default()
+            },
             Op::Equiv => Default::default(),
             Op::Hash => Self::Data {
-                nonces: Unionable::from_union(
+                nonces: // Unionable::from_union(
                     enode
                         .children()
                         .iter()
                         .map(|i| egraph[*i].data.nonces())
-                        .collect(),
-                ),
+                        .union().unwrap(),
                 nonces_prf: Default::default(),
+                input: false,
             },
-            _ => {
-                Self::Data::from_union(enode.children().iter().map(|i| &egraph[*i].data).collect())
-            }
+            _ => enode
+                .children()
+                .iter()
+                .map(|i| &egraph[*i].data)
+                .union()
+                .unwrap(),
         }
     }
 
