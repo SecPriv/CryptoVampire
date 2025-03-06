@@ -68,7 +68,7 @@ let conclusion!(i:session, j:index) = exists (k:session) {
     && (sel2of2(msg!(tag(k, j))) == sel2of2(m_in))
 )}
 
-let premise!(i:session, j:index) =  cond!(reader(i, j))
+let premise!(i:session, j:index) = cond!(reader(i, j))
 
 query forall (i:session, j:index) {(
     happens(reader(i, j))
