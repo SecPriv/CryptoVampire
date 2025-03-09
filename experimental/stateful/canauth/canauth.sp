@@ -112,7 +112,8 @@ Proof.
     + use orderTrans with n1, n2, n1 => //. 
       by apply orderStrict in H0. *)
   use orderEqSucc. use orderStrict. use orderTrans.
-  cryptovampire.
+  (* cryptovampire. *)
+  admit. (* worked *)
 Qed.
 
 
@@ -127,7 +128,8 @@ Proof.
   (* intro Hap Hcond @/cellA.
   by apply orderSucc.*)
   use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
-  cryptovampire.
+  (* cryptovampire. *)
+  admit. (* worked *)
 Qed.
 
 lemma counterIncreaseUpdateRA(i,j:index):
@@ -138,7 +140,8 @@ Proof.
   (* intro Hap Hcond @/cellA.
   by apply orderSucc. *)
   use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
-  cryptovampire.
+  (* cryptovampire. *)
+  admit. (* workd *)
 Qed.
 
 
@@ -153,7 +156,8 @@ Proof.
   (* intro Hap Hcond @/cellB.
   by apply orderSucc. *)
   use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
-  cryptovampire.
+  (* cryptovampire. *) (* worked *)
+  admit.
 Qed.
 
 lemma counterIncreaseUpdateRB(i,j:index):
@@ -164,7 +168,8 @@ Proof.
   (*intro Hap Hcond @/cellB.
   by apply orderSucc. *)
   use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
-  cryptovampire.
+  (* cryptovampire. *) (* worked *)
+  admit.
 Qed.
 
 
@@ -192,7 +197,8 @@ Proof.
       - right. 
         by rewrite /cellB if_false. *)
   use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
-  cryptovampire.
+  admit.
+  (* cryptovampire. *) (* failed *)
 Qed.
 
 
@@ -217,7 +223,8 @@ Proof.
       - right. 
         by rewrite /cellA if_false. *)
   use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
-  cryptovampire.
+  (* cryptovampire. *) (* failed *)
+  admit.
 Qed.
 
 
@@ -234,7 +241,8 @@ Proof.
     + by left; rewrite H; apply orderSucc.
     + by right.*)
   use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
-  cryptovampire.
+  (* cryptovampire. *)
+  admit.
 Qed.
 
 
@@ -249,7 +257,8 @@ Proof.
        + by left; rewrite H; apply orderSucc.
        + by right. *)
   use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
-  cryptovampire.
+  (* cryptovampire. *)
+  admit.
 Qed.
 
 (* The counter increases (not strictly) between t' and t when t' < t. *)
@@ -263,7 +272,8 @@ lemma counterIncreaseA (t, t':timestamp, i:index):
 Proof.
   induction t => t IH0 Hap Hexec Ht'.
    use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
-cryptovampire.
+(* cryptovampire. *)
+admit.
 (*  assert (t' = pred(t) || t' < pred(t)) as H0;
   1: case t; constraints.
   case H0.
@@ -296,7 +306,8 @@ lemma counterIncreaseB (t, t':timestamp, i:index):
 Proof.
   induction t => t IH0 Hap Hexec Ht'.
    use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
-cryptovampire.
+(* cryptovampire. *)
+admit.
   (*assert (t' = pred(t) || t' < pred(t)) as H0;
   1: case t; constraints.
   case H0.
@@ -336,7 +347,8 @@ Proof.
  by apply orderTrans _ (cellA(i)@pred(SenderA(i,j1))). *)
   use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
   use counterIncreaseA.
-  cryptovampire.
+  (* cryptovampire. *)
+  admit.
 Qed.
 
 lemma counterIncreaseStrictRA (i,j1:index, t:timestamp):
@@ -356,7 +368,8 @@ Proof.
   by apply orderTrans _ (cellA(i)@pred(ReceiverA(i,j1))).*)
   use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
   use counterIncreaseA.
-  cryptovampire.
+  (* cryptovampire. *)
+  admit.
 Qed.
 
 (* The counter cellB(i) strictly increases between t and t'
@@ -379,7 +392,8 @@ Proof.
  by apply orderTrans _ (cellB(i)@pred(SenderB(i,j1))).*)
   use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
   use counterIncreaseB.
-  cryptovampire.
+  (* cryptovampire. *)
+  admit.
 Qed.
 
 lemma counterIncreaseStrictRB (i,j1:index, t:timestamp):
@@ -399,7 +413,8 @@ Proof.
  by apply orderTrans _ (cellB(i)@pred(ReceiverB(i,j1))).*)
   use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
   use counterIncreaseB.
-  cryptovampire.
+  (* cryptovampire. *)
+  admit.
 Qed.
 
 
@@ -440,7 +455,8 @@ Proof.
   use counterIncreaseStrictRA.
   (* use orderBetween. *) (* <-- it works with this lemma as well, but using the other ones is faster *)
   use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
-  cryptovampire.
+  (* cryptovampire. *) (* worked *)
+  admit.
 Qed.
 
 
@@ -468,7 +484,7 @@ Proof.
     by apply orderBetween in H2. *)
   use counterIncreaseStrictRB.
   use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
-  cryptovampire.
+  (* cryptovampire. *) admit. (* worked *)
 Qed.
 
 
@@ -514,7 +530,7 @@ Proof.
            * executable ReceiverA(i,j) => // HexecPred. by apply HexecPred. *)
     use counterIncreaseStrictRB.
   use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
-  cryptovampire.
+  (* cryptovampire. *) admit. (* failed *)
 Qed.
 
 
@@ -581,7 +597,7 @@ Proof.
       use counterIncreaseStrictRB.
       use counterIncreaseStrictRA.
   use orderEqSucc. use orderStrict. use orderTrans. use orderSucc.
-  cryptovampire.
+  (* cryptovampire. *) admit. (*failed*)
 Qed.
 
 

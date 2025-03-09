@@ -221,6 +221,7 @@ mod tests {
     use std::{fs::File, io::BufReader};
 
     use super::CryptoVampireCall;
+    const ROOT: &'static str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 
     macro_rules! test_json_parser {
         ($f:ident :  $t:ty) => {
@@ -228,7 +229,8 @@ mod tests {
                     #[test]
                     #[allow(elided_lifetimes_in_paths)]
                     fn [<parse_$f>]() {
-                        let file_path = format!("../../tests/squirrel/{}.json", stringify!($f));
+                        let file_path = format!("{ROOT}/tests/rust/squirrel-json-parsing/{}.json", stringify!($f));
+                        println!("trying to parse {file_path}...");
                         let content = File::open(file_path).expect("Unable to read file");
                         let deserializer = &mut serde_json::Deserializer::from_reader(BufReader::new(content));
                         let result: Result<$t, _> = serde_path_to_error::deserialize(deserializer);

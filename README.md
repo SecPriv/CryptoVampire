@@ -36,11 +36,14 @@ Then, as with all `rust` projects, you can compile or run it using cargo:
 cargo build --release
 
 # run
-cargo run -- <args>
+cargo run --release -- <args>
 ```
 
 **NB: Windows and `squirrel` users:**
 For this project, cargo will write to `/tmp/ccsa/build/dir`, thus the executable will be built in `/tmp/ccsa/build/dir/release/cryptovampire` (resp. `/tmp/ccsa/build/dir/debug/cryptovampire`) when the `--release` flag was given (resp. was *not* given) to `cargo`. You can override the location of the build directory using the `--target-dir <dir>` flag to cargo.
+
+**NB: `release` vs `debug`**
+Compiling with `debug` makes the program very eager to crash instead of trying to recover. Especially when reading `vampire`'s output this can lead to crashes that are recovered from in `--release` mode.
 
 #### `nix`
 
@@ -60,7 +63,7 @@ Works as expected.
 
 To use `cryptovampire` effectively, you will need SMT solvers like (in order of preference) [`vampire`](https://github.com/vprover/vampire), [`z3`](https://github.com/Z3Prover/z3), `cvc5`, or any other [`smtlib 2.6`](https://smt-lib.org/papers/smt-lib-reference-v2.6-r2021-05-12.pdf) compliant first-order theorem prover.
 
-`cryptovampire` can run on its own with `vampire`, `z3`, and `cvc5`, and it can learn some information about the runs done with `vampire` (see [`auto`](#auto)).
+`cryptovampire` can run on its own with `vampire`, `z3` and it can learn some information about the runs done with `vampire` (see [`auto`](#auto)).
 
 ### Command line
 To get the specifics of the command line interface, run:
@@ -101,9 +104,11 @@ Renders one (or many when activating the lemmas) `smt` file. Without the `-o` fl
 - To get a fully `smtlib`-compliant file, use the `--cvc5` option. Otherwise, the tool will aim for files readable by the latest released `vampire` and `z3`. Other options make the tool aim for specific versions of `vampire`.
 
 ### `squirrel`
+**NB**: mostly broken currently. (`squirrel` considers a `cryptovampire` success as a failure)
+
 It is possible to run `cryptovampire` from the [`squirrel`](https://squirrel-prover.github.io/) proof assistant. It will then use the [`auto`](#auto) mode with default parameters.
 
-To use it, you need to compile `squirrel` using the `cryptovampire` branch and have the `cryptovampire` executable either available on your `PATH` or pointed to by the environment variable `CRYPTOVAMPIRE_EXECUTABLE`.
+To use it, you need to compile `squirrel` using the `cryptovampire` branch (available [here](https://github.com/puyral/squirrel-prover)) and have the `cryptovampire` executable either available on your `PATH` or pointed to by the environment variable `CRYPTOVAMPIRE_EXECUTABLE`.
 
 You will then get access to the `cryptovampire` tactic. You can also add the optional parameters `nt` and `t` to control `--num-of-retry` and `--timeout`, respectively.
 
