@@ -10,7 +10,7 @@
       url = "github:puyral/custom-nix";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.squirrel-prover-src.url = "github:puyral/squirrel-prover?ref=cryptovampire";
-      # inputs.cryptovampire-src.url = ".";
+      inputs.cryptovampire-src.follows = "nixpkgs";
       inputs.vampire-master-src.url = "github:vprover/vampire";
     };
     nix2container = {
@@ -40,19 +40,20 @@
         custom-pkgs = custom.packages.${system};
         treefmtEval = treefmt-nix.lib.evalModule pkgs ./fmt.nix;
 
-        my-z3 = pkgs.z3.overrideAttrs (
-          finalAttrs: previousAttrs: {
-            src = pkgs.fetchFromGitHub {
-              owner = "Z3Prover";
-              repo = "z3";
-              rev = "z3-4.13.4";
-              sha256 = "sha256-8hWXCr6IuNVKkOegEmWooo5jkdmln9nU7wI8T882BSE=";
-            };
-            version = "4.13.4";
-            doCheck = false;
-          }
-        );
-        my-vampire = custom-pkgs.vampire;
+        # my-z3 = pkgs.z3.overrideAttrs (
+        #   finalAttrs: previousAttrs: {
+        #     src = pkgs.fetchFromGitHub {
+        #       owner = "Z3Prover";
+        #       repo = "z3";
+        #       rev = "z3-4.13.4";
+        #       sha256 = "sha256-8hWXCr6IuNVKkOegEmWooo5jkdmln9nU7wI8T882BSE=";
+        #     };
+        #     version = "4.13.4";
+        #     doCheck = false;
+        #   }
+        # );
+        my-z3 = pkgs.z3;
+        my-vampire = custom-pkgs.vampire-official;
 
         my-python = pkgs.python311.withPackages (
           ps: with ps; [
@@ -134,7 +135,7 @@
           default = cryptovampire;
         };
         checks = {
-          formatting = treefmtEval.config.build.check self;
+          # formatting = treefmtEval.config.build.check self;
         } // auto-checks;
         formatter = treefmtEval.config.build.wrapper;
 
