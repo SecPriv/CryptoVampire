@@ -124,24 +124,6 @@
         "type": "github"
       }
     },
-    "flake-utils_4": {
-      "inputs": {
-        "systems": "systems_4"
-      },
-      "locked": {
-        "lastModified": 1710146030,
-        "narHash": "sha256-SZ5L6eA7HJ/nmkzGG7/ISclqe6oZdOZTNoesiInkXPQ=",
-        "owner": "numtide",
-        "repo": "flake-utils",
-        "rev": "b1d9ab70662946ef0850d488da1c9019f3a9752a",
-        "type": "github"
-      },
-      "original": {
-        "owner": "numtide",
-        "repo": "flake-utils",
-        "type": "github"
-      }
-    },
     "isw-src": {
       "flake": false,
       "locked": {
@@ -171,28 +153,6 @@
       "original": {
         "owner": "dune-universe",
         "repo": "mirage-opam-overlays",
-        "type": "github"
-      }
-    },
-    "nix2container": {
-      "inputs": {
-        "flake-utils": "flake-utils_4",
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1724912665,
-        "narHash": "sha256-29cabSYFmIIfIR29ReoJsrvC95gtxmzQeEnFRlcLdH0=",
-        "owner": "nlewo",
-        "repo": "nix2container",
-        "rev": "80e34774e5904aae7a3542bc3b70dab1fe048587",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nlewo",
-        "ref": "update-patch-hash",
-        "repo": "nix2container",
         "type": "github"
       }
     },
@@ -314,7 +274,6 @@
       "inputs": {
         "custom": "custom",
         "flake-utils": "flake-utils_3",
-        "nix2container": "nix2container",
         "nixpkgs": "nixpkgs",
         "treefmt-nix": "treefmt-nix"
       }
@@ -414,21 +373,6 @@
         "type": "github"
       }
     },
-    "systems_4": {
-      "locked": {
-        "lastModified": 1681028828,
-        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
-        "owner": "nix-systems",
-        "repo": "default",
-        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nix-systems",
-        "repo": "default",
-        "type": "github"
-      }
-    },
     "treefmt-nix": {
       "inputs": {
         "nixpkgs": [
@@ -452,11 +396,11 @@
     "vampire-master-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1739310029,
-        "narHash": "sha256-D2xQmMsnNzvl1Jd3GskGxXzAFdOzTvmOMlXu+ejzrdA=",
+        "lastModified": 1741724690,
+        "narHash": "sha256-e251bK2n+rXCK+ZBC2Fn3DrSJ75DZedIw03tdUy0bLE=",
         "owner": "vprover",
         "repo": "vampire",
-        "rev": "e0a91a05f5e6764552b9b6c8f615da447262c710",
+        "rev": "c34da873c7380da1daf85de2654fcffe8df7e86b",
         "type": "github"
       },
       "original": {

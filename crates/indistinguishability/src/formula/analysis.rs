@@ -13,7 +13,7 @@ pub struct Region {
     /// The nonces
     nonces: FxHashSet<Id>,
     /// Whether this region covers the region of the previous frame
-    frame: bool,
+    frame: Vec<Id>,
 }
 
 impl Region {
@@ -21,14 +21,38 @@ impl Region {
         &self.nonces
     }
 
-    pub fn frame(&self) -> bool {
-        self.frame
+    pub fn frame(&self) -> &[Id] {
+        self.frame.as_ref()
     }
 
+    pub fn has_frame(&self) -> bool {
+        !self.frame().is_empty()
+    }
+
+    /// Builds the intersection of the two honnest random tape region
+    ///
+    /// If to build a term one *may* need to region `self` **and** one may need
+    /// to region `other`. Then we know that we only need the intersection of
+    /// those two regions. The difficulty appears when merging inputs and regular
+    /// nonces.
+    ///
+    /// For instance, let's say step `A` uses nonces `n` and so does `B`. Then
+    /// what should the intersection of `n` and `input(A)` be? It is `n` if `B`
+    /// is before `A` and `empty` otherwise...
+    ///
+    /// For the current implementation we overapproximate and assumme the intesection
+    /// is `n` in all cases.
+    ///
+    /// The `IntesectionHelper` is used to get access to the egraph to decide if a nonce
+    /// exists the protocol; therefore if it colides with an input
     pub fn intersection(&self, other: &Self, helper: &impl IntersectionHelper) -> Self {
-        ereturn_if!(self == other, self.clone());
+        ereturn_if!(self == other, self.clone()); // short path for equlality
         let iter = self.nonces().intersection(other.nonces()).copied();
-        if self.frame() || other.frame() {
+        let frame = chain!(self.frame(), other.frame())
+            .copied()
+            .unique()
+            .collect();
+        if self.has_frame() || other.has_frame() {
             let nonces = chain!(
                 iter,
                 self.nonces()
@@ -37,16 +61,10 @@ impl Region {
                     .copied()
             )
             .collect();
-            Self {
-                nonces,
-                frame: false,
-            }
+            Self { nonces, frame }
         } else {
             let nonces = iter.collect();
-            Self {
-                nonces,
-                frame: self.frame() && other.frame(),
-            }
+            Self { nonces, frame }
         }
     }
 
@@ -54,7 +72,10 @@ impl Region {
         ereturn_if!(self == other, self.clone());
         Self {
             nonces: self.nonces().union(other.nonces()).copied().collect(),
-            frame: self.frame() || other.frame(),
+            frame: chain!(self.frame(), other.frame())
+                .copied()
+                .unique()
+                .collect(),
         }
     }
 }
@@ -88,16 +109,16 @@ mod iterator {
 
     impl<'b, I> Unionable<()> for I
     where
-        I: Iterator<Item = &'b Region>, {
-            type Item = Region;
-        
-            fn union(&mut self, with: ()) -> Option<Self::Item> {
+        I: Iterator<Item = &'b Region>,
+    {
+        type Item = Region;
+
+        fn union(&mut self, with: ()) -> Option<Self::Item> {
             let init = self.next()?;
-            let init = init.intersection(self.next().unwrap_or(init), helper);
-            Some(self.fold(init, |acc, e| acc.intersection(e, helper)))
+            let init = init.union(self.next().unwrap_or(init));
+            Some(self.fold(init, |acc, e| acc.union(e)))
         }
-        }
-        
+    }
 }
 pub use iterator::{Intersectable, Unionable};
 
