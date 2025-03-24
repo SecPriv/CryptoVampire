@@ -10,7 +10,7 @@
       url = "github:puyral/custom-nix";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.squirrel-prover-src.url = "github:puyral/squirrel-prover?ref=cryptovampire";
-      # inputs.cryptovampire-src.url = ".";
+      inputs.cryptovampire-src.follows = "nixpkgs"; # to prevent useless loops
       inputs.vampire-master-src.url = "github:vprover/vampire";
     };
     nix2container = {
