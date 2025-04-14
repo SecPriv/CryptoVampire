@@ -10,13 +10,9 @@
       url = "github:puyral/custom-nix";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.squirrel-prover-src.url = "github:puyral/squirrel-prover?ref=cryptovampire";
-      inputs.cryptovampire-src.follows = "nixpkgs"; # to avoid loops
+      inputs.cryptovampire-src.url = "github:puyral/empty-flake"; 
       inputs.vampire-master-src.url = "github:vprover/vampire";
     };
-    # nix2container = {
-    #   url = "github:nlewo/nix2container?ref=update-patch-hash";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -29,7 +25,6 @@
       nixpkgs,
       flake-utils,
       custom,
-      # nix2container,
       treefmt-nix,
       ...
     }:
@@ -40,10 +35,21 @@
         custom-pkgs = custom.packages.${system};
         treefmtEval = treefmt-nix.lib.evalModule pkgs ./fmt.nix;
 
-        z3 = pkgs.z3;
-        vampire = custom-pkgs.vampire-official;
+        my-z3 = pkgs.z3.overrideAttrs (
+          finalAttrs: previousAttrs: {
+            src = pkgs.fetchFromGitHub {
+              owner = "Z3Prover";
+              repo = "z3";
+              rev = "z3-4.13.4";
+              sha256 = "sha256-8hWXCr6IuNVKkOegEmWooo5jkdmln9nU7wI8T882BSE=";
+            };
+            version = "4.13.4";
+            doCheck = false;
+          }
+        );
+        my-vampire = custom-pkgs.vampire;
 
-        python = pkgs.python312.withPackages (
+        mpython = pkgs.python311.withPackages (
           ps: with ps; [
             numpy
             (toPythonModule z3).python
@@ -67,24 +73,25 @@
             with pkgs;
             cryptovampire.buildInputs
             ++ [
-              lldb
               nixd
-              z3
-              cvc5
-              # custom-pkgs.vampire-master
-              # custom-pkgs.squirrel-prover
-              vampire
-              python
               graphviz
-            ]
-            ++ (map (p: p.override { rustPlatform = mrustPlateform; }) [
-              rust-analyzer
-              clippy
-              rustfmt
+
+              cvc5
+              z3
+              mpython
+              vampire
+
               cargo
               cargo-expand
-              # rustc
-            ])
+              lldb
+              rustc
+              rustfmt
+              clippy
+              rust-analyzer
+              rustPlatform.bindgenHook
+              rustPlatform.cargoCheckHook
+              rustPlatform.cargoBuildHook
+            ]
             ++ lib.optional stdenv.isDarwin git;
         };
 
@@ -95,7 +102,9 @@
           with builtins;
           let
             tools = with pkgs; {
-              inherit cryptovampire cvc5 vampire z3;
+              inherit cryptovampire cvc5;
+              vampire = my-vampire;
+              z3 = my-z3;
             };
             files-match = map ({ name, ... }: match "(.*).ptcl" name) (attrsToList (readDir test-dir));
             files = filter (name: (name != null) && (name != [ ])) files-match;
@@ -121,7 +130,7 @@
           default = cryptovampire;
         };
         checks = {
-          # formatting = treefmtEval.config.build.check self;
+          formatting = treefmtEval.config.build.check self;
         } // auto-checks;
         formatter = treefmtEval.config.build.wrapper;
 
