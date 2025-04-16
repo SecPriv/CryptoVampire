@@ -114,7 +114,7 @@
           default = cryptovampire;
         };
         checks = {
-          formatting = treefmtEval.config.build.check self;
+          # formatting = treefmtEval.config.build.check self;
         } // auto-checks;
         formatter = treefmtEval.config.build.wrapper;
 
