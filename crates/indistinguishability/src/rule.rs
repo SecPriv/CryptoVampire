@@ -1,25 +1,16 @@
 use crate::Program;
 use egg::{Analysis, FromOp, Id, Language, Pattern, RecExpr, Searcher, SymbolLang, Var};
 use std::{
-    str::FromStr,
-    sync::atomic::{AtomicU64, Ordering},
-    u64,
+    fmt::Display, str::FromStr, sync::atomic::{AtomicU64, Ordering}, u64
 };
 
 #[derive(Debug, PartialEq, Eq, Ord, PartialOrd, Hash, Clone)]
+#[derive(Default)]
 pub struct Dependancy {
     inner: Vec<Vec<Id>>,
     cut: bool,
 }
 
-impl Default for Dependancy {
-    fn default() -> Self {
-        Self {
-            inner: vec![],
-            cut: false,
-        }
-    }
-}
 
 impl Dependancy {
     pub fn new(inner: Vec<Vec<Id>>) -> Self {
@@ -97,14 +88,14 @@ impl Fresh for SymbolLang {
     }
 }
 
-impl<L: Language + Fresh, N: Analysis<L> + Default> Rule<L, N> for PrologRule<L> {
+impl<L: Language + Fresh +Display, N: Analysis<L> + Default> Rule<L, N> for PrologRule<L> {
     fn search(&self, prgm: &mut Program<L, N>, goal: Id) -> Dependancy {
         let matches = self.input.search_eclass(prgm.egraph(), goal);
         let Some(matches) = matches else {
             return Default::default();
         };
         // let subst = matches.substs.first().unwrap();
-        let inner = matches
+        let inner: Vec<Vec<Id>> = matches
             .substs
             .into_iter()
             .map(|mut subst| {
@@ -118,6 +109,7 @@ impl<L: Language + Fresh, N: Analysis<L> + Default> Rule<L, N> for PrologRule<L>
                     .collect()
             })
             .collect();
+        prgm.runner_config.node_limit += inner.iter().map(|x| x.len()).sum::<usize>();
         Dependancy {
             inner,
             cut: self.cut,
@@ -157,8 +149,6 @@ mod parser {
         N: Analysis<L>,
         anyhow::Error: From<<Pattern<L> as FromStr>::Err>,
     {
-        dbg!(s1);
-        dbg!(s2);
         let searcher: Pattern<L> = s1.parse()?;
         let applier: Pattern<L> = s2.parse()?;
         Rewrite::new("", searcher, applier).map_err(|e| anyhow!("{e}"))
@@ -170,8 +160,6 @@ mod parser {
         N: Analysis<L>,
         anyhow::Error: From<<MultiPattern<L> as FromStr>::Err>,
     {
-        dbg!(s1);
-        dbg!(s2);
         let searcher: MultiPattern<L> = s1.parse()?;
         let applier: MultiPattern<L> = s2.parse()?;
         Rewrite::new("", searcher, applier).map_err(|e| anyhow!("{e}"))
@@ -181,7 +169,6 @@ mod parser {
     where
         anyhow::Error: From<<Pattern<L> as FromStr>::Err>,
     {
-        dbg!(s);
         let mut s = s.split(":-");
         let head: Pattern<L> = s.next().with_context(|| "empty string")?.parse()?;
         match s.next() {
@@ -201,13 +188,15 @@ mod parser {
                 let deps: Result<Vec<Pattern<L>>, _> = s.split(',').filter(|x| !x.is_empty()).map(|x| x.parse()).collect();
                 let deps = deps?;
                 let bound_vars = head.vars();
-                let free_vars = deps
+                let free_vars: Vec<egg::Var> = deps
                     .iter()
                     .flat_map(|p| p.vars().into_iter())
                     .unique()
                     .filter(|v| !bound_vars.contains(v))
                     .collect();
+                if !free_vars.is_empty() {
                 dbg!(&free_vars);
+                }
                 Ok(PrologRule {
                     input: head,
                     deps,
