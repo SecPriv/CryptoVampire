@@ -1,6 +1,10 @@
 use crate::Program;
-use egg::{Analysis, FromOp, Id, Language, Pattern, Searcher};
-use std::str::FromStr;
+use egg::{Analysis, FromOp, Id, Language, Pattern, RecExpr, Searcher, SymbolLang, Var};
+use std::{
+    str::FromStr,
+    sync::atomic::{AtomicU64, Ordering},
+    u64,
+};
 
 #[derive(Debug, PartialEq, Eq, Ord, PartialOrd, Hash, Clone)]
 pub struct Dependancy {
@@ -47,6 +51,10 @@ pub trait Rule<L: Language, N: Analysis<L>> {
     fn search(&self, prgm: &mut Program<L, N>, goal: Id) -> Dependancy;
 }
 
+pub trait Fresh : Sized {
+    fn mk_fresh() -> RecExpr<Self>;
+}
+
 impl<L: Language, N: Analysis<L> + Default, F> Rule<L, N> for F
 where
     F: Fn(&mut Program<L, N>, Id) -> Dependancy,
@@ -59,8 +67,9 @@ where
 #[derive(Debug)]
 pub struct PrologRule<L> {
     pub input: Pattern<L>,
-    pub dep: Vec<Pattern<L>>,
+    pub deps: Vec<Pattern<L>>,
     pub cut: bool,
+    pub free_vars: Vec<Var>,
 }
 
 impl<L> FromStr for PrologRule<L>
@@ -75,7 +84,20 @@ where
     }
 }
 
-impl<L: Language, N: Analysis<L> + Default> Rule<L, N> for PrologRule<L> {
+static NUM_VARS: AtomicU64 = AtomicU64::new(u64::MAX / 8);
+
+impl Fresh for SymbolLang {
+    fn mk_fresh() -> RecExpr<Self> {
+        let s= format!(
+            "_fresh#{:}",
+            NUM_VARS.fetch_add(1, Ordering::AcqRel)
+        );
+        dbg!(&s);
+        SymbolLang::leaf(s).build_recexpr(|_| unreachable!())
+    }
+}
+
+impl<L: Language + Fresh, N: Analysis<L> + Default> Rule<L, N> for PrologRule<L> {
     fn search(&self, prgm: &mut Program<L, N>, goal: Id) -> Dependancy {
         let matches = self.input.search_eclass(prgm.egraph(), goal);
         let Some(matches) = matches else {
@@ -84,11 +106,15 @@ impl<L: Language, N: Analysis<L> + Default> Rule<L, N> for PrologRule<L> {
         // let subst = matches.substs.first().unwrap();
         let inner = matches
             .substs
-            .iter()
-            .map(|subst| {
-                self.dep
+            .into_iter()
+            .map(|mut subst| {
+                for v in &self.free_vars {
+                    let id = prgm.egraph_mut().add_expr(&Fresh::mk_fresh());
+                    subst.insert(*v, id);
+                }
+                self.deps
                     .iter()
-                    .map(|ret| ret.apply_susbt(prgm.egraph_mut(), subst))
+                    .map(|ret| ret.apply_susbt(prgm.egraph_mut(), &subst))
                     .collect()
             })
             .collect();
@@ -122,6 +148,7 @@ mod parser {
     use super::PrologRule;
     use anyhow::{anyhow, bail, Context};
     use egg::{Analysis, FromOp, Language, MultiPattern, Pattern, Rewrite, SymbolLang};
+    use itertools::Itertools;
     use std::{fmt::Debug, str::FromStr};
 
     fn parse_rw<L, N>(s1: &str, s2: &str) -> anyhow::Result<Rewrite<L, N>>
@@ -160,8 +187,9 @@ mod parser {
         match s.next() {
             None => Ok(PrologRule {
                 input: head,
-                dep: vec![],
+                deps: vec![],
                 cut: false,
+                free_vars: vec![],
             }),
             Some(ns) => {
                 let ns = ns.trim_start();
@@ -170,11 +198,21 @@ mod parser {
                 };
                 let cut = ns.starts_with('!');
                 let s = if cut { &ns[1..] } else { ns };
-                let deps: Result<Vec<_>, _> = s.split(',').map(|x| x.parse()).collect();
+                let deps: Result<Vec<Pattern<L>>, _> = s.split(',').map(|x| x.parse()).collect();
+                let deps = deps?;
+                let bound_vars = head.vars();
+                let free_vars = deps
+                    .iter()
+                    .flat_map(|p| p.vars().into_iter())
+                    .unique()
+                    .filter(|v| !bound_vars.contains(v))
+                    .collect();
+                dbg!(&free_vars);
                 Ok(PrologRule {
                     input: head,
-                    dep: deps?,
+                    deps,
                     cut,
+                    free_vars,
                 })
             }
         }
@@ -224,7 +262,7 @@ mod parser {
             if iter.next().is_some() {
                 bail!("too many =>")
             }
-            if s1.contains(',') {
+            if s1.contains('=') {
                 Ok(parse_multirw(s1, s2)?.into())
             } else {
                 Ok(parse_rw(s1, s2)?.into())

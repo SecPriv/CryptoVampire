@@ -1,22 +1,53 @@
 (mite mtrue ?a ?b) => ?a.
 (mite mfalse ?a ?b) => ?b.
 (mand ?a ?b) => (mite ?a ?b mfalse).
-(mite ?a ?b mfalse) => (mand ?a ?b).
 (implies ?a ?b) => (mite ?a ?b mtrue).
 (mite ?x ?a ?a) => ?a.
-(mand ?a ?b) => (mand ?b ?a).
+(mite ?a ?b mfalse) => (mite ?b ?a mfalse).
+(mite ?a ?a ?b) => ?a.
+(mite ?a (mite ?a ?b ?c) ?d) => (mite ?a ?b ?d).
+(mite (mite ?a ?b mfalse) ?a mtrue) => mtrue.
+
 (mnot ?a) => (mite ?a mfalse mtrue).
 ?v1 = (meq ?a ?b), ?v1 = mtrue => ?a = ?b.
-?v1 = (mand ?a ?b), ?v1 = mtrue => ?a = mtrue, ?b = mtrue.
-(mimplies ?a ?a) => mtrue.
-(mimplies (mand ?a ?b) ?a) => mtrue.
-?v1 = mtrue, ?v1 = (mimplies ?a ?b), ?v1 = (mimplies ?b ?c) => ?v1 = (mimplies ?a ?c).
+?v1 = (mite ?a ?b mfalse), ?v1 = mtrue => ?a = mtrue, ?b = mtrue.
+?v1 = mtrue, ?v1 = (mite ?a ?b mtrue), ?v1 = (mite ?b ?c mtrue) => ?v1 = (mimplies ?a ?c).
 (p1 (tuple ?a ?b)) => ?a.
 (p2 (tuple ?a ?b)) => ?b.
-(meq ?a ?a) => true.
+(meq ?a ?a) => mtrue.
 (meq ?a ?b) => (meq ?b ?a).
 
+(mk ?i ?j P1) => (k1 ?i).
+(mk ?i ?j P2) => (k2 ?i ?j).
 
+?v1 = (happens ?t), ?v1 = mtrue, ?v2 = (macro ?m ?t ?p) =>
+  ?v2 = (unfold ?m ?t ?p).
+
+
+(unfold exec ?t ?p) => (mand (macro cond ?t ?p) (macro exec (pred ?t) ?p)).
+(unfold frame ?t ?p) => (tuple
+  (tuple (macro exec ?t ?p) (mite (macro exec ?t ?p) (macro msg ?t ?p) empty))
+  (macro frame (pred ?t) ?p)
+).
+(unfold input ?t ?p) => (att (macro frame ?t ?p)).
+
+(unfold msg init ?p) => empty.
+(unfold msg (T ?i ?j) ?p) => (tuple (nonce (n ?i ?j)) (hash (n ?i ?j) (nonce (mk ?i ?j ?p)))).
+(unfold msg (Rs ?i ?j) ?p) => ok.
+(unfold msg (Rf ?j) ?p) => ko.
+(unfold cond init ?p) => mtrue.
+(unfold cond (T ?i ?j) ?p) => mtrue.
+(unfold cond (Rs ?i ?j) ?p) => (meq (p2 (macro input (Rs ?i ?j) ?p)) (hash (p1 (macro input (Rs ?i ?j) ?p)) (nonce (mk ?i ?j ?p)))).
+(unfold cond (Rf ?j) ?p) => (mnot (exists$1 ?j ?p (sk$1 ?j ?p))).
+
+
+?v1 = (unfold ?m (pred init) ?p1), ?v2 = (unfold ?m (pred init) ?p2) => ?v1 = ?v2.
+
+(exists$1 ?j ?p ?i) => (meq (p2 (macro input (Rf ?j) ?p)) (hash (p1 (macro input (Rf ?j) ?p)) (nonce (mk ?i ?j ?p)))).
+?v1 = (exists$1 ?j ?p ?i), ?v1 = mtrue, ?v2 = (exists$1 ?j ?p (sk$1 ?j ?p)) => ?v2 = mtrue.
+
+(equiv ?u ?v ?x ?x).
+(equiv ?u ?v ?u ?v).
 (equiv ?u ?v ?a ?b) :-
   (deduce ?u ?v ?a ?b mtrue mtrue).
 
@@ -38,12 +69,25 @@
   (deduce ?u ?v ?c1 ?c2 (mand (mnot ?a1) ?h1) (mand (mnot ?a2) ?h2)),
   (deduce ?u ?v ?a1 ?a2 ?h1 ?h2).
 (deduce ?u ?v (tuple ?a1 ?b1) (tuple ?a2 ?b2) ?h1 ?h2) :-
-  (deduce ?u ?v ?a1 ?b1 ?h1 ?h2),
-  (deduce ?u ?v ?a1 ?b1 ?h1 ?h2).
+  (deduce ?u ?v ?a1 ?a2 ?h1 ?h2),
+  (deduce ?u ?v ?b1 ?b2 ?h1 ?h2).
+(deduce ?u ?v (att ?a) (att ?b)) :-
+  (deduce ?u ?v ?a ?b).
+(deduce ?u ?v (p1 ?a) (p1 ?b)) :-
+  (deduce ?u ?v ?a ?b).
+(deduce ?u ?v (p2 ?a) (p2 ?b)) :-
+  (deduce ?u ?v ?a ?b).
+(deduce ?u ?v (exists$1 ?j ?p1 (sk$1 ?j ?p1)) (exists$1 ?j ?p2 (sk$1 ?j ?p2))) :-
+  (deduce ?u ?v (exists$1 ?j ?p1 ?i) (exists$1 ?j ?p2 ?i)).
+
+(assert ?a ?b).
+?v1 = (assert ?a ?b) => ?a = ?b.
 
 goal :-
+  (assert (happens (Rf j)) mtrue),
   (equiv
-    x y
-    (mite x (meq x ok) ko)
-    (mite y (meq y ok) ko)
-  )
+    (macro frame (pred (Rf j)) P1)
+      (macro frame (pred (Rf j)) P2)
+    (macro frame (Rf j) P1)
+      (macro frame (Rf j) P2)
+  ).

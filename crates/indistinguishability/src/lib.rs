@@ -12,7 +12,7 @@ use std::{
 use utils::implvec;
 
 mod rule;
-pub use rule::{Dependancy, PrologRule, Rule};
+pub use rule::{Dependancy, PrologRule, Rule, Fresh};
 // mod language;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -137,7 +137,7 @@ impl From<bool> for Status {
 
 impl<L, N> FromStr for Program<L, N>
 where
-    L: Language + Sync + Send + FromOp + 'static,
+    L: Language + Sync + Send + FromOp + Fresh + 'static,
     N: Analysis<L> + Default,
     anyhow::Error: From<<Pattern<L> as FromStr>::Err>,
     anyhow::Error: From<<MultiPattern<L> as FromStr>::Err>,

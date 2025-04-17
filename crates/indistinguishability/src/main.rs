@@ -8,5 +8,6 @@ pub fn main() {
     println!("hello world");
     let mut pbl: Program<SymbolLang, ()> = include_str!("../tests/test.pl").parse().unwrap();
     let r = pbl.run_expr("goal".parse().unwrap());
+    pbl.egraph().dot().to_pdf("/tmp/egraph.pdf");
     print!("{r}")
 }
