@@ -4,10 +4,7 @@ use egg::{
 use itertools::{Either, Itertools};
 use rule::PlOrRw;
 use std::{
-    cell::RefCell,
-    collections::{hash_map::Entry, HashMap},
-    rc::Rc,
-    str::FromStr,
+    cell::RefCell, collections::{hash_map::Entry, HashMap}, fmt::Display, rc::Rc, str::FromStr
 };
 use utils::implvec;
 
@@ -45,16 +42,16 @@ impl<L: Language, N: Analysis<L> + Default> Program<L, N> {
         }
     }
 
-    pub fn run_expr(&mut self, goal: RecExpr<L>) -> bool {
+    pub fn run_expr(&mut self, goal: RecExpr<L>) -> bool where L:Display {
         let goal = self.egraph.as_mut().unwrap().add_expr(&goal);
         self.run_egraph();
         self.run(goal)
     }
 
-    pub fn run(&mut self, goal: egg::Id) -> bool {
+    pub fn run(&mut self, goal: egg::Id) -> bool where L:Display {
         if cfg!(debug_assertions) {
             let g = self.egraph().id_to_expr(goal);
-            dbg!(g);
+            println!("{}", g.pretty(80))
         }
         match self.memo.entry(goal) {
             Entry::Occupied(occupied_entry) => return occupied_entry.get().as_bool(),

@@ -192,13 +192,13 @@ mod parser {
                 free_vars: vec![],
             }),
             Some(ns) => {
-                let ns = ns.trim_start();
+                let ns = ns.trim();
                 if s.next().is_some() {
                     bail!("two ':-; ??")
                 };
                 let cut = ns.starts_with('!');
                 let s = if cut { &ns[1..] } else { ns };
-                let deps: Result<Vec<Pattern<L>>, _> = s.split(',').map(|x| x.parse()).collect();
+                let deps: Result<Vec<Pattern<L>>, _> = s.split(',').filter(|x| !x.is_empty()).map(|x| x.parse()).collect();
                 let deps = deps?;
                 let bound_vars = head.vars();
                 let free_vars = deps
