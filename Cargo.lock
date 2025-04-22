@@ -394,6 +394,7 @@ dependencies = [
  "env_logger 0.9.3",
  "hashbrown",
  "indexmap",
+ "itertools",
  "log",
  "num-bigint",
  "num-traits",

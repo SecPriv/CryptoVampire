@@ -12,20 +12,65 @@
 /// assert_eq(test, 2)
 /// ```
 macro_rules! ereturn_if {
+    ($value:expr, $ret:expr) => {
+        if $value {
+            return $ret;
+        }
+    };
+    ($value:expr) => {
+        ereturn_if!($value, ())
+    };
+}
+
+#[macro_export]
+macro_rules! ebreak_if {
   ($label:lifetime, $value:expr, $ret:expr) => {
-  if $value {
-    break $label $ret
-  }
-  };
-  ($value:expr, $ret:expr) => {
-  if $value {
-    return $ret
-  }
+    if $value {
+      break $label $ret
+    }
   };
   ($label:lifetime, $value:expr) => {
-  ereturn_if!($label, $value, ())
+    ebreak_if!($label, $value, ());
+  };
+
+  ($value:expr, $ret:expr) => {
+    if $value {
+      break $ret
+    }
   };
   ($value:expr) => {
-  ereturn_if!($value, ())
+    ebreak_if!($value, ())
+  };
+}
+
+#[macro_export]
+macro_rules! ereturn_let {
+  (let $pat:pat = $value:expr, $ret:expr) => {
+    let $pat = $value else {
+      return $ret
+    }
+  };
+  (let $pat:pat = $value:expr) => {
+    ereturn_if!(let $pat = $value, ())
+  };
+}
+
+#[macro_export]
+macro_rules! ebreak_let {
+  ($label:lifetime, let $pat:pat = $value:expr, $ret:expr) => {
+    let $pat = $value else {
+      break $label $ret
+    }
+  };
+  ($label:lifetime, let $pat:pat = $value:expr) => {
+    ebreak_let!($label, let $pat = $value, ())
+  };
+  (let $pat:pat = $value:expr, $ret:expr) => {
+    let $pat = $value else {
+      break $ret
+    };
+  };
+  (let $pat:pat = $value:expr) => {
+    ebreak_let!(let $pat = $value, ())
   };
 }
