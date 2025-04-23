@@ -36,7 +36,7 @@ mod weight;
 pub use weight::MWeight;
 
 mod analysis;
-pub use analysis::{WeightedAnalysis, MAnalysis};
+pub use analysis::{MAnalysis, WeightedAnalysis};
 
 pub struct Program<L: Language, N: Analysis<L>> {
     egraph: Option<EGraph<L, N>>,
@@ -45,18 +45,19 @@ pub struct Program<L: Language, N: Analysis<L>> {
     // memo: ECallMap<Rc<RefCell<Status>>>,
     memo: HashMap<Id, Rc<RefCell<Status>>>,
     clean: bool,
-    pub runner_config: RunnerConfig,
+    pub config: Config,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[non_exhaustive]
-pub struct RunnerConfig {
+pub struct Config {
     pub iter_limit: usize,
     pub node_limit: usize,
     pub time_limit: std::time::Duration,
+    pub trace_prolog: bool,
 }
 
-impl RunnerConfig {
+impl Config {
     pub fn apply<L: Language, N: Analysis<L>>(&self, runner: Runner<L, N>) -> Runner<L, N> {
         runner
             .with_iter_limit(self.iter_limit)
@@ -65,12 +66,13 @@ impl RunnerConfig {
     }
 }
 
-impl Default for RunnerConfig {
+impl Default for Config {
     fn default() -> Self {
         Self {
             iter_limit: 150,
             node_limit: 1000,
             time_limit: std::time::Duration::from_secs(5),
+            trace_prolog: cfg!(debug_assertions),
         }
     }
 }
@@ -87,7 +89,7 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
             rules: rules.into_iter().map_into().collect(),
             memo: Default::default(),
             clean: true,
-            runner_config: Default::default(),
+            config: Default::default(),
         }
     }
 
@@ -98,16 +100,16 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
     }
 
     pub fn run(&mut self, goal: egg::Id) -> bool {
-        if true || cfg!(debug_assertions) {
+        if self.config.trace_prolog {
             let g = self.egraph().id_to_expr(goal);
-            println!("{}", g.pretty(80))
+            eprintln!("{}", g.pretty(80))
         }
         use std::collections::hash_map::Entry;
         let memo = match self.memo.entry(goal) {
             Entry::Occupied(occupied_entry) => {
                 let res = occupied_entry.get().borrow().as_bool();
-                if true || cfg!(debug_assertions) {
-                    println!("skipping: {:}", res)
+                if self.config.trace_prolog {
+                    eprintln!("⏩ skipping: {:}", res)
                 }
                 return res;
             }
@@ -147,13 +149,14 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
     pub fn run_egraph(&mut self) {
         let mut egraph = self.egraph.take().expect("invalid program");
         if !egraph.clean {
-            eprintln!("--------------run egraph-------------");
+            if self.config.trace_prolog {
+                eprintln!("🚧 rebuilding egraph...");
+            }
             let runner = self
-                .runner_config
+                .config
                 .apply(Runner::<L, N>::new(Default::default()))
                 .with_egraph(egraph)
                 .run(&self.eq_rules);
-            dbg!(&runner.stop_reason);
 
             if !matches!(
                 &runner.stop_reason,
@@ -165,12 +168,18 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
 
             egraph = runner.egraph;
             // self.memo.canonicalise(&egraph);
+            if self.config.trace_prolog {
+                eprintln!("🚧 canonicalising table...");
+            }
             {
                 let memo = std::mem::take(&mut self.memo);
                 self.memo = memo
                     .into_iter()
                     .map(|(id, s)| (egraph.find(id), s))
                     .collect();
+            }
+            if self.config.trace_prolog {
+                eprintln!("✅ rebuilding done !");
             }
         }
         self.egraph = Some(egraph);
@@ -266,7 +275,7 @@ where
             rules,
             memo: Default::default(),
             clean: true,
-            runner_config: Default::default(),
+            config: Default::default(),
         })
     }
 }

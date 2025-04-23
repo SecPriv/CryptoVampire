@@ -85,8 +85,9 @@ pub enum Entry<'a, V> {
 impl<'a, V> Entry<'a, V> {
     pub fn id(&self) -> Id {
         match self {
-            Entry::Vacant(VacantEntry { id, .. })
-            | Entry::Occupied(OccupiedEntry { id, .. }) => *id,
+            Entry::Vacant(VacantEntry { id, .. }) | Entry::Occupied(OccupiedEntry { id, .. }) => {
+                *id
+            }
         }
     }
 

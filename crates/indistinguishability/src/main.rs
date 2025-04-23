@@ -6,13 +6,14 @@ use utils::impossible::Impossible;
 
 pub fn main() {
     init_logger();
-    let mut pbl: Program<SymbolLang, ()/* MAnalysis<_> */> =
+    let mut pbl: Program<SymbolLang, () /* MAnalysis<_> */> =
         include_str!("../tests/test").parse().unwrap();
     pbl.set_explainations(true);
     // pbl.add_eq_rule(and_simpl_rewrite());
-    pbl.runner_config.time_limit = Duration::from_secs_f32(30.0);
-    pbl.runner_config.node_limit = 100000;
-    pbl.runner_config.iter_limit = 300;
+    pbl.config.time_limit = Duration::from_secs_f32(30.0);
+    pbl.config.node_limit = 100000;
+    pbl.config.iter_limit = 300;
+    pbl.config.trace_prolog = true;
 
     // pbl.egraph_mut().analysis.weight_map = ["unfold", "exists$1", "exists$2"]
     //     .into_iter()

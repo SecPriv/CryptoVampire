@@ -139,10 +139,10 @@ fn compute_conected_component2<L: Language + WithAnd + WithFalse + Display, N: A
         trace!("inspecting ({id}) {}", egraph.id_to_expr(id));
         let current_eclass = &egraph[id];
 
-        if (current_eclass.iter().any(L::is_true)){
-          trace!("skipped true");
-    continue
-}; // skip true
+        if (current_eclass.iter().any(L::is_true)) {
+            trace!("skipped true");
+            continue;
+        }; // skip true
         ereturn_if!(current_eclass.iter().any(L::is_false), None); // exit if false
 
         let rec = get_rec_and(current_eclass);
@@ -158,10 +158,10 @@ fn compute_conected_component2<L: Language + WithAnd + WithFalse + Display, N: A
         let mut i = 0;
         todos.reserve(rec.len());
         for x in rec.iter() {
-           if chain!(&leafs, &todos).contains(x) {
-            trace!("{} is already in todo or leaf", egraph.id_to_expr(*x));
-            continue;
-           }
+            if chain!(&leafs, &todos).contains(x) {
+                trace!("{} is already in todo or leaf", egraph.id_to_expr(*x));
+                continue;
+            }
             todos.push_back(*x);
             i += 1;
         }
@@ -223,9 +223,7 @@ impl<L: Language + WithAnd + WithFalse + Display, N: Analysis<L>> Searcher<L, N>
 }
 
 // impl<L: Language + WithAnd + WithFalse + Display + FromOp, N: Analysis<L>> Applier<L, N>
-impl<N:Analysis<SymbolLang>> Applier<SymbolLang, N>
-    for AndSimplifier
-{
+impl<N: Analysis<SymbolLang>> Applier<SymbolLang, N> for AndSimplifier {
     fn apply_one(
         &self,
         egraph: &mut egg::EGraph<SymbolLang, N>,
@@ -257,8 +255,7 @@ impl<N:Analysis<SymbolLang>> Applier<SymbolLang, N>
 }
 
 // pub fn and_simpl_rewrite<L: Language + WithAnd + WithFalse + Display + FromOp, N: Analysis<L>>(
-pub fn and_simpl_rewrite<N: Analysis<SymbolLang>>(
-) -> Rewrite<SymbolLang, N> {
+pub fn and_simpl_rewrite<N: Analysis<SymbolLang>>() -> Rewrite<SymbolLang, N> {
     Rewrite::new("and_simpl", AndSimplifier, AndSimplifier).unwrap()
 }
 

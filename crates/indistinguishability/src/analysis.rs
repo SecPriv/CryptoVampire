@@ -2,7 +2,10 @@ use std::{collections::HashMap, hash::Hash};
 
 use egg::{Language, RecExpr};
 
-use crate::{weight::{self, Weight}, MWeight};
+use crate::{
+    weight::{self, Weight},
+    MWeight,
+};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Data<L> {
@@ -17,7 +20,6 @@ where
 {
     pub weight_map: HashMap<L::Discriminant, MWeight>,
 }
-
 
 impl<L: Language> Default for MAnalysis<L> {
     fn default() -> Self {

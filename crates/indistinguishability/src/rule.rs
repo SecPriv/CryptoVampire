@@ -125,7 +125,7 @@ impl<L: Language + Fresh + Display, N: Default + WeightedAnalysis<L>> Rule<L, N>
                 }
             })
             .collect();
-        prgm.runner_config.node_limit += inner.iter().map(|x| x.len()).sum::<usize>();
+        prgm.config.node_limit += inner.iter().map(|x| x.len()).sum::<usize>();
         Dependancy {
             inner,
             cut: self.cut,
