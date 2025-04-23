@@ -4,6 +4,7 @@ use egg::{
     StopReason,
 };
 use itertools::{Either, Itertools};
+use log::info;
 use rule::PlOrRw;
 use std::{cell::RefCell, fmt::Display, rc::Rc, str::FromStr, usize};
 use utils::implvec;
@@ -82,14 +83,14 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
     }
 
     pub fn run(&mut self, goal: egg::Id) -> bool {
-        if cfg!(debug_assertions) {
+        if true ||cfg!(debug_assertions) {
             let g = self.egraph().id_to_expr(goal);
             println!("{}", g.pretty(80))
         }
         let memo = match self.memo.entry(goal) {
             Entry::Occupied(occupied_entry) => {
                 let res = occupied_entry.get().borrow().as_bool();
-                if cfg!(debug_assertions) {
+                if true || cfg!(debug_assertions) {
                     println!("skipping: {:}", res)
                 }
                 return res;
@@ -130,6 +131,7 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
     pub fn run_egraph(&mut self) {
         let mut egraph = self.egraph.take().expect("invalid program");
         if !egraph.clean {
+            info!("--------------run egraph-------------");
             let runner = self
                 .runner_config
                 .apply(Runner::<L, N>::new(Default::default()))

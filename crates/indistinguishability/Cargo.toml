@@ -18,6 +18,8 @@ static_init.workspace = true
 paste.workspace = true
 anyhow.workspace = true
 smallvec.workspace = true
+log.workspace = true
+env_logger.workspace = true
 
 [lints]
 workspace = true

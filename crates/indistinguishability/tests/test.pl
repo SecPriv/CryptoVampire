@@ -1,65 +1,69 @@
-(mite mtrue ?a ?b) => ?a.
-(mite mfalse ?a ?b) => ?b.
-(mand ?a ?b) => (mite ?a ?b mfalse).
-(implies ?a ?b) => (mite ?a ?b mtrue).
-(mite ?x ?a ?a) => ?a.
-(mite ?a ?a mfalse) => ?a.
-(mite ?a (mite ?a ?b ?c) ?d) => (mite ?a ?b ?d).
-(mite (mite ?a ?b mfalse) ?a mtrue) => mtrue.
-(mnot (mnot ?a)) => ?a.
+[if true] (mite mtrue ?a ?b) => ?a.
+[if false] (mite mfalse ?a ?b) => ?b.
+[and def] (mand ?a ?b) => (mite ?a ?b mfalse).
+[implies def] (implies ?a ?b) => (mite ?a ?b mtrue).
+[if simp1] (mite ?x ?a ?a) => ?a.
+[if simp2] (mite ?a ?a mfalse) => ?a.
+[if simp3] (mite ?a (mite ?a ?b ?c) ?d) => (mite ?a ?b ?d).
+[implies simp] (mite (mite ?a ?b mfalse) ?a mtrue) => mtrue.
+[classical not] (mnot (mnot ?a)) => ?a.
 
-(mnot ?a) => (mite ?a mfalse mtrue).
-?v1 = (meq ?a ?b), ?v1 = mtrue => ?a = ?b.
-?v1 = (mite ?a ?b mfalse), ?v1 = mtrue => ?a = mtrue, ?b = mtrue.
-?v1 = mtrue, ?v1 = (mite ?a ?b mtrue), ?v1 = (mite ?b ?c mtrue) => ?v1 = (mimplies ?a ?c).
-(p1 (tuple ?a ?b)) => ?a.
-(p2 (tuple ?a ?b)) => ?b.
-(meq ?a ?a) => mtrue.
-(meq ?a ?b) => (meq ?b ?a).
+[not def] (mnot ?a) => (mite ?a mfalse mtrue).
+[meq true] ?v1 = (meq ?a ?b), ?v1 = mtrue => ?a = ?b.
+[reverse and] ?v1 = (mite ?a ?b mfalse), ?v1 = mtrue => ?a = mtrue, ?b = mtrue.
+[implies trans] ?v1 = mtrue, ?v1 = (mite ?a ?b mtrue), ?v1 = (mite ?b ?c mtrue) => ?v1 = (mimplies ?a ?c).
+[p1] (p1 (tuple ?a ?b)) => ?a.
+[p2] (p2 (tuple ?a ?b)) => ?b.
+[meq refl] (meq ?a ?a) => mtrue.
+[meq symm] (meq ?a ?b) => (meq ?b ?a).
 
-(mk ?i ?j P1) => (k1 ?i).
-(mk ?i ?j P2) => (k2 ?i ?j).
+[mk def1] (mk ?i ?j P1) => (k1 ?i).
+[mk def2] (mk ?i ?j P2) => (k2 ?i ?j).
 
-?v1 = (happens ?t), ?v1 = mtrue, ?v2 = (macro ?m ?t ?p) =>
+[unfold] ?v1 = (happens ?t), ?v1 = mtrue, ?v2 = (macro ?m ?t ?p) =>
   ?v2 = (unfold ?m ?t ?p).
 
 
-(unfold exec ?t ?p) => (mand (macro cond ?t ?p) (macro exec (pred ?t) ?p)).
-(unfold frame ?t ?p) => (tuple
+[unfold exec]  (unfold exec ?t ?p) 
+  => (mand (macro cond ?t ?p) (macro exec (pred ?t) ?p)).
+[unfold frame] (unfold frame ?t ?p) => (tuple
   (tuple (macro exec ?t ?p) (mite (macro exec ?t ?p) (macro msg ?t ?p) empty))
   (macro frame (pred ?t) ?p)
 ).
-(unfold input ?t ?p) => (att (macro frame ?t ?p)).
+[unfold input] (unfold input ?t ?p) => (att (macro frame ?t ?p)).
 
-(unfold msg init ?p) => empty.
-(unfold msg (T ?i ?j) ?p) => (tuple (nonce (n ?i ?j)) (hash (n ?i ?j) (nonce (mk ?i ?j ?p)))).
-(unfold msg (Rs ?i ?j) ?p) => ok.
-(unfold msg (Rf ?j) ?p) => ko.
-(unfold cond init ?p) => mtrue.
-(unfold cond (T ?i ?j) ?p) => mtrue.
-(unfold cond (Rs ?i ?j) ?p) => (meq (p2 (macro input (Rs ?i ?j) ?p)) (hash (p1 (macro input (Rs ?i ?j) ?p)) (nonce (mk ?i ?j ?p)))).
-(unfold cond (Rf ?j) ?p) => (mnot (exists$1 ?j ?p (sk$1 ?j ?p))).
+[unfold msg init] (unfold msg init ?p) => empty.
+[unfold msg T] (unfold msg (T ?i ?j) ?p) => (tuple (nonce (n ?i ?j)) (hash (n ?i ?j) (nonce (mk ?i ?j ?p)))).
+[unfodl msg R] (unfold msg (Rs ?i ?j) ?p) => ok.
+[unfold msg Rf] (unfold msg (Rf ?j) ?p) => ko.
+[unfold cond init] (unfold cond init ?p) => mtrue.
+[unfold cond T] (unfold cond (T ?i ?j) ?p) => mtrue.
+[unfold cond Rs] (unfold cond (Rs ?i ?j) ?p) 
+  => (meq (p2 (macro input (Rs ?i ?j) ?p)) (hash (p1 (macro input (Rs ?i ?j) ?p)) (nonce (mk ?i ?j ?p)))).
+[unfold cond Rf] (unfold cond (Rf ?j) ?p) 
+  => (mnot (exists$1 ?j ?p (sk$1 ?j ?p))).
 
 
-?v1 = (unfold ?m (pred init) ?p1), ?v2 = (unfold ?m (pred init) ?p2) => ?v1 = ?v2.
+[unfold pred] ?v1 = (unfold ?m (pred init) ?p1), ?v2 = (unfold ?m (pred init) ?p2) => ?v1 = ?v2.
 
-(exists$1 ?j ?p ?i) => (meq (p2 (macro input (Rf ?j) ?p)) (hash (p1 (macro input (Rf ?j) ?p)) (nonce (mk ?i ?j ?p)))).
-?v1 = (exists$1 ?j ?p ?i), ?v1 = mtrue, ?v2 = (exists$1 ?j ?p (sk$1 ?j ?p)) => ?v2 = mtrue.
+[exists1 def] (exists$1 ?j ?p ?i) 
+  => (meq (p2 (macro input (Rf ?j) ?p)) (hash (p1 (macro input (Rf ?j) ?p)) (nonce (mk ?i ?j ?p)))).
+[exists1 sound] ?v1 = (exists$1 ?j ?p ?i), ?v1 = mtrue, ?v2 = (exists$1 ?j ?p (sk$1 ?j ?p)) => ?v2 = mtrue.
 
-(exists$2 ?j ?t ?p ?i) => 
+[exists2 def] (exists$2 ?j ?t ?p ?i) => 
   (mand 
     (lt (T ?i ?j) ?t) 
     (mand  
       (meq (p1 (macro input ?t ?p)) (p1 (macro msg (T ?i ?j) ?p)))
       (meq (p2 (macro input ?t ?p)) (p2 (macro msg (T ?i ?j) ?p))))).
-?v1 = (exists$2 ?j ?t ?p ?i), ?v1 = mtrue, ?v2 = (exists$2 ?j ?t ?p (sk$2 ?j ?t ?p)) => ?v2 = mtrue.
+[exists2 sound] ?v1 = (exists$2 ?j ?t ?p ?i), ?v1 = mtrue, ?v2 = (exists$2 ?j ?t ?p (sk$2 ?j ?t ?p)) => ?v2 = mtrue.
 
-(meq 
+[lemma 2] (meq 
   (p2 (macro input ?t ?p)) 
   (hash (p1 (macro input ?t ?p)) (nonce (mk ?i ?j ?p)))) =>
     (exists$2 ?j ?t ?p (sk$2 ?j ?t ?p)).
 
-(leq ?t ?t) => mtrue.
+[leq refl] (leq ?t ?t) => mtrue.
 
 
 mtrue.

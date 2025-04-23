@@ -8,6 +8,7 @@ use egg::{
     RecExpr, Rewrite, SearchMatches, Searcher, SymbolLang, Var,
 };
 use itertools::{chain, Itertools};
+use log::{log_enabled, trace};
 use smallvec::SmallVec;
 use utils::{ebreak_if, ebreak_let, econtinue_if, ereturn_if};
 
@@ -110,6 +111,7 @@ fn get_rec_and<L: Language + WithAnd, D>(eclass: &EClass<L, D>) -> MaybeRecAnd {
     let iter = eclass
         .iter()
         .filter(|x| x.is_and())
+        .filter(|x| x.children().iter().all(|c| c != &eclass.id)) // skip self recursive calls
         .flat_map(|x| x.children().iter());
     // .filter(|&&x| !(x == eclass || Some(x) == mtrue));
     for &x in iter {
@@ -134,9 +136,13 @@ fn compute_conected_component2<L: Language + WithAnd + WithFalse + Display, N: A
         ebreak_let!(let Some(id) = todos.pop_front());
         fuel -= 1;
 
+        trace!("inspecting ({id}) {}", egraph.id_to_expr(id));
         let current_eclass = &egraph[id];
 
-        econtinue_if!(current_eclass.iter().any(L::is_true)); // skip true
+        if (current_eclass.iter().any(L::is_true)){
+          trace!("skipped true");
+    continue
+}; // skip true
         ereturn_if!(current_eclass.iter().any(L::is_false), None); // exit if false
 
         let rec = get_rec_and(current_eclass);
@@ -144,15 +150,22 @@ fn compute_conected_component2<L: Language + WithAnd + WithFalse + Display, N: A
         // if it's a leaf, add it to the list and continue
         if rec.is_leaf() {
             leafs.push(id);
+            trace!("added leaf");
             continue;
         }
 
         // add the new nodes that are not already pending
+        let mut i = 0;
         todos.reserve(rec.len());
         for x in rec.iter() {
-            econtinue_if!(chain!(&leafs, &todos).contains(x));
+           if chain!(&leafs, &todos).contains(x) {
+            trace!("{} is already in todo or leaf", egraph.id_to_expr(*x));
+            continue;
+           }
             todos.push_back(*x);
+            i += 1;
         }
+        trace!("added {i:} to todos")
     }
     ereturn_if!(
         todos.is_empty() && (leafs == [eclass] || leafs.is_empty()),
@@ -160,7 +173,7 @@ fn compute_conected_component2<L: Language + WithAnd + WithFalse + Display, N: A
     );
 
     if cfg!(debug_assertions) && fuel == 0 {
-        println!("ran out of fuel")
+        trace!("ran out of fuel")
     }
 
     // collect and sort the result
@@ -169,9 +182,9 @@ fn compute_conected_component2<L: Language + WithAnd + WithFalse + Display, N: A
     res.sort();
     if cfg!(debug_assertions) && res.len() != 2 {
         let expr = egraph.id_to_expr(eclass);
-        println!("({:}) : {}", res.len(), expr.pretty(80));
+        trace!("({:}) : {}", res.len(), expr.pretty(80));
         for id in &res {
-            println!("-> {}", egraph.id_to_expr(*id).pretty(80))
+            trace!("-> {}", egraph.id_to_expr(*id).pretty(80))
         }
     }
     Some(res)
@@ -209,40 +222,43 @@ impl<L: Language + WithAnd + WithFalse + Display, N: Analysis<L>> Searcher<L, N>
     }
 }
 
-impl<L: Language + WithAnd + WithFalse + Display + FromOp, N: Analysis<L>> Applier<L, N>
+// impl<L: Language + WithAnd + WithFalse + Display + FromOp, N: Analysis<L>> Applier<L, N>
+impl<N:Analysis<SymbolLang>> Applier<SymbolLang, N>
     for AndSimplifier
 {
     fn apply_one(
         &self,
-        egraph: &mut egg::EGraph<L, N>,
+        egraph: &mut egg::EGraph<SymbolLang, N>,
         eclass: Id,
         subst: &egg::Subst,
-        _: Option<&PatternAst<L>>,
+        _: Option<&PatternAst<SymbolLang>>,
         name: egg::Symbol,
     ) -> Vec<Id> {
         // build the pattern of nested ands
-        let id = L::mk_and_pattern(0, subst.len()).apply_susbt(egraph, subst);
-        if cfg!(debug_assertions) {
-            println!(
-                "rewrote (a -> b):\na. {}\nb. {:?}",
+        let id = SymbolLang::mk_and_pattern(0, subst.len()).apply_susbt(egraph, subst);
+        if log_enabled!(log::Level::Trace) {
+            trace!(
+                "rewrote (a -> b):\na. {}\nb. {:}",
                 egraph.id_to_expr(eclass).pretty(80),
                 egraph.id_to_expr(id).pretty(80)
             );
-            if egraph[id].iter().any(|x| x.is_false()) {
-                let explaination = egraph.explain_equivalence(
-                    &"mfalse".parse().unwrap(),
-                    &"(exists$1 j P1 (sk$1 j P1))".parse().unwrap(),
-                );
-                println!("{}", explaination)
-            }
+            // if egraph[id].iter().any(|x| x.is_false()) {
+            //     let mut explaination = egraph.explain_equivalence(
+            //         &"mfalse".parse().unwrap(),
+            //         &egraph.id_to_expr(id),
+            //     );
+            //     trace!("{}", explaination.get_flat_string());
+            //     panic!()
+            // }
         }
         egraph.union_trusted(eclass, id, name);
         vec![id]
     }
 }
 
-pub fn and_simpl_rewrite<L: Language + WithAnd + WithFalse + Display + FromOp, N: Analysis<L>>(
-) -> Rewrite<L, N> {
+// pub fn and_simpl_rewrite<L: Language + WithAnd + WithFalse + Display + FromOp, N: Analysis<L>>(
+pub fn and_simpl_rewrite<N: Analysis<SymbolLang>>(
+) -> Rewrite<SymbolLang, N> {
     Rewrite::new("and_simpl", AndSimplifier, AndSimplifier).unwrap()
 }
 
@@ -256,7 +272,7 @@ mod tests {
     fn mk_ands() {
         for n in 0..10 {
             let p: PatternAst<SymbolLang> = SymbolLang::mk_and_pattern(0, n);
-            println!("({n:}) {}", p.pretty(80))
+            eprintln!("({n:}) {}", p.pretty(80))
         }
     }
 }

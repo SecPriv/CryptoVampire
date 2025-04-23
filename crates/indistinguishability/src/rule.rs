@@ -61,6 +61,7 @@ pub struct PrologRule<L> {
     pub deps: Vec<Pattern<L>>,
     pub cut: bool,
     pub free_vars: Vec<Var>,
+    pub name: Option<String>
 }
 
 impl<L> FromStr for PrologRule<L>
@@ -71,7 +72,8 @@ where
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        parser::parse_pl(s)
+        let (name, s) = parser::extract_name(s)?;
+        parser::parse_pl(name, s)
     }
 }
 
@@ -143,7 +145,7 @@ mod parser {
     use itertools::Itertools;
     use std::{fmt::Debug, str::FromStr};
 
-    fn parse_rw<L, N>(s1: &str, s2: &str) -> anyhow::Result<Rewrite<L, N>>
+    fn parse_rw<L, N>(name: Option<&str>, s1: &str, s2: &str) -> anyhow::Result<Rewrite<L, N>>
     where
         L: Language + Sync + Send + FromOp + 'static,
         N: Analysis<L>,
@@ -151,10 +153,11 @@ mod parser {
     {
         let searcher: Pattern<L> = s1.parse()?;
         let applier: Pattern<L> = s2.parse()?;
-        Rewrite::new("", searcher, applier).map_err(|e| anyhow!("{e}"))
+        let name = name.unwrap_or("");
+        Rewrite::new(name, searcher, applier).map_err(|e| anyhow!("{e}"))
     }
 
-    fn parse_multirw<L, N>(s1: &str, s2: &str) -> anyhow::Result<Rewrite<L, N>>
+    fn parse_multirw<L, N>(name: Option<&str>, s1: &str, s2: &str) -> anyhow::Result<Rewrite<L, N>>
     where
         L: Language + Sync + Send + FromOp + 'static,
         N: Analysis<L>,
@@ -162,21 +165,25 @@ mod parser {
     {
         let searcher: MultiPattern<L> = s1.parse()?;
         let applier: MultiPattern<L> = s2.parse()?;
-        Rewrite::new("", searcher, applier).map_err(|e| anyhow!("{e}"))
+        let name = name.unwrap_or("");
+        Rewrite::new(name, searcher, applier).map_err(|e| anyhow!("{e}"))
     }
 
-    pub fn parse_pl<L: FromOp>(s: &str) -> anyhow::Result<PrologRule<L>>
+    pub fn parse_pl<L: FromOp>(name: Option<&str>, s: &str) -> anyhow::Result<PrologRule<L>>
     where
         anyhow::Error: From<<Pattern<L> as FromStr>::Err>,
     {
         let mut s = s.split(":-");
         let head: Pattern<L> = s.next().with_context(|| "empty string")?.parse()?;
+        let name = name.map(|s| s.to_owned());
+
         match s.next() {
             None => Ok(PrologRule {
                 input: head,
                 deps: vec![],
                 cut: false,
                 free_vars: vec![],
+                name
             }),
             Some(ns) => {
                 let ns = ns.trim();
@@ -202,6 +209,7 @@ mod parser {
                     deps,
                     cut,
                     free_vars,
+                    name
                 })
             }
         }
@@ -244,6 +252,8 @@ mod parser {
         anyhow::Error: From<<Pattern<L> as FromStr>::Err>,
         anyhow::Error: From<<MultiPattern<L> as FromStr>::Err>,
     {
+        let (name, s) = extract_name(s)?;
+
         if s.contains("=>") {
             let mut iter = s.split("=>");
             let s1 = iter.next().context("x")?;
@@ -252,15 +262,32 @@ mod parser {
                 bail!("too many =>")
             }
             if s1.contains('=') {
-                Ok(parse_multirw(s1, s2)?.into())
+                Ok(parse_multirw(name, s1, s2)?.into())
             } else {
-                Ok(parse_rw(s1, s2)?.into())
+                Ok(parse_rw(name, s1, s2)?.into())
             }
         } else {
-            Ok(parse_pl(s)?.into())
+            Ok(parse_pl(name, s)?.into())
         }
     }
 
+    pub(crate) fn extract_name(s: &str) -> anyhow::Result<(Option<&str>, &str)> {
+        let s = s.trim();
+    
+        let (name, s) = if let Some(rest) = s.strip_prefix('[') {
+            if let Some(end_bracket) = rest.find(']') {
+                let name = &rest[..end_bracket];
+                let after = &rest[end_bracket+1..];
+                (Some(name), after)
+            } else {
+                bail!("Unclosed braket")
+            }
+        } else {
+            (None, s)
+        };
+        Ok((name, s))
+    }
+    
     fn parse<L, N>(s: &str) -> anyhow::Result<Vec<PlOrRw<L, N>>>
     where
         L: Language + Sync + Send + FromOp + 'static,
