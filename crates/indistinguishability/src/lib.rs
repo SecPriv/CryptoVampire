@@ -1,4 +1,4 @@
-use eclassmap::{ECallMap, Entry};
+// use eclassmap::{ECallMap, Entry};
 use egg::{
     Analysis, EGraph, FromOp, Id, Language, MultiPattern, Pattern, RecExpr, Rewrite, Runner,
     StopReason,
@@ -6,7 +6,15 @@ use egg::{
 use itertools::{Either, Itertools};
 use log::info;
 use rule::PlOrRw;
-use std::{cell::RefCell, fmt::Display, rc::Rc, str::FromStr, usize};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    fmt::Display,
+    mem,
+    rc::Rc,
+    str::FromStr,
+    usize,
+};
 use utils::implvec;
 
 mod eclassmap;
@@ -24,11 +32,18 @@ enum Status {
 mod simplify_and;
 pub use simplify_and::{and_simpl_rewrite, WithAnd, WithTrue};
 
+mod weight;
+pub use weight::MWeight;
+
+mod analysis;
+pub use analysis::{WeightedAnalysis, MAnalysis};
+
 pub struct Program<L: Language, N: Analysis<L>> {
     egraph: Option<EGraph<L, N>>,
     eq_rules: Vec<Rewrite<L, N>>,
     rules: Vec<Rc<dyn Rule<L, N>>>,
-    memo: ECallMap<Rc<RefCell<Status>>>,
+    // memo: ECallMap<Rc<RefCell<Status>>>,
+    memo: HashMap<Id, Rc<RefCell<Status>>>,
     clean: bool,
     pub runner_config: RunnerConfig,
 }
@@ -83,10 +98,11 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
     }
 
     pub fn run(&mut self, goal: egg::Id) -> bool {
-        if true ||cfg!(debug_assertions) {
+        if true || cfg!(debug_assertions) {
             let g = self.egraph().id_to_expr(goal);
             println!("{}", g.pretty(80))
         }
+        use std::collections::hash_map::Entry;
         let memo = match self.memo.entry(goal) {
             Entry::Occupied(occupied_entry) => {
                 let res = occupied_entry.get().borrow().as_bool();
@@ -131,7 +147,7 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
     pub fn run_egraph(&mut self) {
         let mut egraph = self.egraph.take().expect("invalid program");
         if !egraph.clean {
-            info!("--------------run egraph-------------");
+            eprintln!("--------------run egraph-------------");
             let runner = self
                 .runner_config
                 .apply(Runner::<L, N>::new(Default::default()))
@@ -148,7 +164,14 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
             }
 
             egraph = runner.egraph;
-            self.memo.canonicalise(&egraph);
+            // self.memo.canonicalise(&egraph);
+            {
+                let memo = std::mem::take(&mut self.memo);
+                self.memo = memo
+                    .into_iter()
+                    .map(|(id, s)| (egraph.find(id), s))
+                    .collect();
+            }
         }
         self.egraph = Some(egraph);
         assert!(self.clean());
@@ -221,7 +244,7 @@ impl From<bool> for Status {
 impl<L, N> FromStr for Program<L, N>
 where
     L: Language + Sync + Send + FromOp + Fresh + Display + 'static,
-    N: Analysis<L> + Default,
+    N: WeightedAnalysis<L> + Default,
     anyhow::Error: From<<Pattern<L> as FromStr>::Err>,
     anyhow::Error: From<<MultiPattern<L> as FromStr>::Err>,
 {

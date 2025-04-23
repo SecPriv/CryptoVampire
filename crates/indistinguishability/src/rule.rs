@@ -1,16 +1,21 @@
-use crate::Program;
+use crate::{
+    analysis::WeightedAnalysis,
+    weight::{self, Weight},
+    Program,
+};
 use egg::{Analysis, FromOp, Id, Language, Pattern, RecExpr, Searcher, SymbolLang, Var};
 use std::{
-    fmt::Display, str::FromStr, sync::atomic::{AtomicU64, Ordering}, u64
+    fmt::Display,
+    str::FromStr,
+    sync::atomic::{AtomicU64, Ordering},
+    u64,
 };
 
-#[derive(Debug, PartialEq, Eq, Ord, PartialOrd, Hash, Clone)]
-#[derive(Default)]
+#[derive(Debug, PartialEq, Eq, Ord, PartialOrd, Hash, Clone, Default)]
 pub struct Dependancy {
     inner: Vec<Vec<Id>>,
     cut: bool,
 }
-
 
 impl Dependancy {
     pub fn new(inner: Vec<Vec<Id>>) -> Self {
@@ -42,7 +47,7 @@ pub trait Rule<L: Language, N: Analysis<L>> {
     fn search(&self, prgm: &mut Program<L, N>, goal: Id) -> Dependancy;
 }
 
-pub trait Fresh : Sized {
+pub trait Fresh: Sized {
     fn mk_fresh() -> RecExpr<Self>;
 }
 
@@ -60,8 +65,9 @@ pub struct PrologRule<L> {
     pub input: Pattern<L>,
     pub deps: Vec<Pattern<L>>,
     pub cut: bool,
+    pub decrease: bool,
     pub free_vars: Vec<Var>,
-    pub name: Option<String>
+    pub name: Option<String>,
 }
 
 impl<L> FromStr for PrologRule<L>
@@ -81,34 +87,42 @@ static NUM_VARS: AtomicU64 = AtomicU64::new(u64::MAX / 8);
 
 impl Fresh for SymbolLang {
     fn mk_fresh() -> RecExpr<Self> {
-        let s= format!(
-            "_fresh#{:}",
-            NUM_VARS.fetch_add(1, Ordering::AcqRel)
-        );
+        let s = format!("_fresh#{:}", NUM_VARS.fetch_add(1, Ordering::AcqRel));
         dbg!(&s);
         SymbolLang::leaf(s).build_recexpr(|_| unreachable!())
     }
 }
 
-impl<L: Language + Fresh +Display, N: Analysis<L> + Default> Rule<L, N> for PrologRule<L> {
+impl<L: Language + Fresh + Display, N: Default + WeightedAnalysis<L>> Rule<L, N> for PrologRule<L> {
     fn search(&self, prgm: &mut Program<L, N>, goal: Id) -> Dependancy {
         let matches = self.input.search_eclass(prgm.egraph(), goal);
         let Some(matches) = matches else {
             return Default::default();
         };
+        let weight = N::get_weight(&prgm.egraph()[goal].data);
         // let subst = matches.substs.first().unwrap();
         let inner: Vec<Vec<Id>> = matches
             .substs
             .into_iter()
-            .map(|mut subst| {
+            .filter_map(|mut subst| {
                 for v in &self.free_vars {
                     let id = prgm.egraph_mut().add_expr(&Fresh::mk_fresh());
                     subst.insert(*v, id);
                 }
-                self.deps
+                let deps: Vec<Id> = self
+                    .deps
                     .iter()
                     .map(|ret| ret.apply_susbt(prgm.egraph_mut(), &subst))
-                    .collect()
+                    .collect();
+                if self.decrease
+                    && deps
+                        .iter()
+                        .any(|id| !N::get_weight(&prgm.egraph()[*id].data).decreases(&weight))
+                {
+                    None
+                } else {
+                    Some(deps)
+                }
             })
             .collect();
         prgm.runner_config.node_limit += inner.iter().map(|x| x.len()).sum::<usize>();
@@ -182,17 +196,28 @@ mod parser {
                 input: head,
                 deps: vec![],
                 cut: false,
+                decrease: false,
                 free_vars: vec![],
-                name
+                name,
             }),
             Some(ns) => {
                 let ns = ns.trim();
                 if s.next().is_some() {
                     bail!("two ':-; ??")
                 };
-                let cut = ns.starts_with('!');
-                let s = if cut { &ns[1..] } else { ns };
-                let deps: Result<Vec<Pattern<L>>, _> = s.split(',').filter(|x| !x.is_empty()).map(|x| x.parse()).collect();
+                let s = ns;
+
+                let cut = s.starts_with('!');
+                let s = if cut { s[1..].trim() } else { s };
+
+                let decrease = s.starts_with('@');
+                let s = if decrease { s[1..].trim() } else { s };
+
+                let deps: Result<Vec<Pattern<L>>, _> = s
+                    .split(',')
+                    .filter(|x| !x.is_empty())
+                    .map(|x| x.parse())
+                    .collect();
                 let deps = deps?;
                 let bound_vars = head.vars();
                 let free_vars: Vec<egg::Var> = deps
@@ -202,14 +227,15 @@ mod parser {
                     .filter(|v| !bound_vars.contains(v))
                     .collect();
                 if !free_vars.is_empty() {
-                dbg!(&free_vars);
+                    dbg!(&free_vars);
                 }
                 Ok(PrologRule {
                     input: head,
                     deps,
                     cut,
                     free_vars,
-                    name
+                    decrease,
+                    name,
                 })
             }
         }
@@ -273,11 +299,11 @@ mod parser {
 
     pub(crate) fn extract_name(s: &str) -> anyhow::Result<(Option<&str>, &str)> {
         let s = s.trim();
-    
+
         let (name, s) = if let Some(rest) = s.strip_prefix('[') {
             if let Some(end_bracket) = rest.find(']') {
                 let name = &rest[..end_bracket];
-                let after = &rest[end_bracket+1..];
+                let after = &rest[end_bracket + 1..];
                 (Some(name), after)
             } else {
                 bail!("Unclosed braket")
@@ -287,7 +313,7 @@ mod parser {
         };
         Ok((name, s))
     }
-    
+
     fn parse<L, N>(s: &str) -> anyhow::Result<Vec<PlOrRw<L, N>>>
     where
         L: Language + Sync + Send + FromOp + 'static,
@@ -304,7 +330,7 @@ mod parser {
 
     #[test]
     fn test() {
-        let s = include_str!("../tests/test.pl");
+        let s = include_str!("../tests/test");
         let r: Vec<PlOrRw<SymbolLang, ()>> = parse(s).unwrap();
         println!("{r:?}")
     }
