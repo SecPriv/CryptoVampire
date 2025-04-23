@@ -93,28 +93,38 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
         }
     }
 
-    pub fn run_expr(&mut self, goal: RecExpr<L>) -> bool {
+    pub fn run_expr(&mut self, goal: RecExpr<L>, depth: u128) -> bool {
         let goal = self.egraph.as_mut().unwrap().add_expr(&goal);
         self.run_egraph();
-        self.run(goal)
+        self.run(goal, depth)
     }
 
-    pub fn run(&mut self, goal: egg::Id) -> bool {
+    pub fn run(&mut self, goal: egg::Id, depth: u128) -> bool {
         if self.config.trace_prolog {
             let g = self.egraph().id_to_expr(goal);
-            eprintln!("{}", g.pretty(80))
+            eprintln!("({depth:}) {}", g.pretty(80))
         }
-        use std::collections::hash_map::Entry;
-        let memo = match self.memo.entry(goal) {
-            Entry::Occupied(occupied_entry) => {
-                let res = occupied_entry.get().borrow().as_bool();
-                if self.config.trace_prolog {
-                    eprintln!("⏩ skipping: {:}", res)
-                }
-                return res;
+
+        if depth == 0 {
+            if self.config.trace_prolog {
+                eprintln!("❌ ran out of fuel")
             }
-            Entry::Vacant(vacant_entry) => {
-                vacant_entry.insert(Rc::new(RefCell::new(Status::InProgress)))
+            return false;
+        }
+
+        let memo = {
+            use std::collections::hash_map::Entry;
+            match self.memo.entry(goal) {
+                Entry::Occupied(occupied_entry) => {
+                    let res = occupied_entry.get().borrow().as_bool();
+                    if self.config.trace_prolog {
+                        eprintln!("⏩ skipping: {:}", res)
+                    }
+                    return res;
+                }
+                Entry::Vacant(vacant_entry) => {
+                    vacant_entry.insert(Rc::new(RefCell::new(Status::InProgress)))
+                }
             }
         }
         .clone();
@@ -130,7 +140,7 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
             let ret = search
                 .inner()
                 .iter()
-                .any(|goals| goals.iter().all(|g| self.run(*g)));
+                .any(|goals| goals.iter().all(|g| self.run(*g, depth - 1)));
             if ret || search.cut() {
                 break ret; // found a proof or cut
             }
@@ -158,6 +168,8 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
                 .with_egraph(egraph)
                 .run(&self.eq_rules);
 
+            let total_time = runner.report().total_time;
+
             if !matches!(
                 &runner.stop_reason,
                 Some(StopReason::Saturated) | Some(StopReason::IterationLimit(_))
@@ -179,7 +191,7 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
                     .collect();
             }
             if self.config.trace_prolog {
-                eprintln!("✅ rebuilding done !");
+                eprintln!("✅ rebuilding done ! ({total_time:})");
             }
         }
         self.egraph = Some(egraph);

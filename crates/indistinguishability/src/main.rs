@@ -20,10 +20,11 @@ pub fn main() {
     //     .map(|s| (s.into(), (1, 0).into()))
     //     .collect();
 
-    let r = pbl.run_expr("goal".parse().unwrap());
-    pbl.egraph().dot().to_pdf("/tmp/egraph.pdf");
+    let r = pbl.run_expr("goal".parse().unwrap(), 7);
+    pbl.egraph().dot().run_dot(&["-Kfdp", "-Tpdf", "-o", "/tmp/graph.pdf"]);
+    // pbl.egraph().dot().to_dot("/tmp/dot.dot").unwrap();
 
-    print!("{r}")
+    println!("{r}")
 }
 
 use std::io::Write;
