@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 # egg = "0.10"
 rustc-hash = "2.1.0" # for hash on integers
-smallvec = { version = "1.13.2", features = ["const_generics", "const_new", "union"] }
 
 # own crates
 utils = { path = "../utils"}
@@ -18,6 +17,7 @@ itertools.workspace = true
 static_init.workspace = true
 paste.workspace = true
 anyhow.workspace = true
+smallvec.workspace = true
 
 [lints]
 workspace = true

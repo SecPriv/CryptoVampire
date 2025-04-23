@@ -189,6 +189,16 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
     pub fn add_rule<R: Rule<L, N> + 'static>(&mut self, rule: R) {
         self.add_boxed_rule(Box::new(rule))
     }
+
+    pub fn set_explainations(&mut self, explaination: bool) {
+        let egraph = self.egraph.take().expect("invalid");
+        let egraph = if explaination {
+            egraph.with_explanations_enabled()
+        } else {
+            egraph.with_explanations_disabled()
+        };
+        self.egraph = Some(egraph)
+    }
 }
 
 impl Status {

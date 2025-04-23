@@ -44,6 +44,21 @@ macro_rules! ebreak_if {
 }
 
 #[macro_export]
+macro_rules! econtinue_if {
+  ($label:lifetime, $value:expr) => {
+    if $value {
+      continue $label
+    }
+  };
+
+  ($value:expr) => {
+    if $value {
+      continue
+    }
+  };
+}
+
+#[macro_export]
 macro_rules! ereturn_let {
   (let $pat:pat = $value:expr, $ret:expr) => {
     let $pat = $value else {
@@ -72,5 +87,19 @@ macro_rules! ebreak_let {
   };
   (let $pat:pat = $value:expr) => {
     ebreak_let!(let $pat = $value, ())
+  };
+}
+
+#[macro_export]
+macro_rules! econtinue_let {
+  ($label:lifetime, let $pat:pat = $value:expr) => {
+    let $pat = $value else {
+      continue $label
+    }
+  };
+  (let $pat:pat = $value:expr) => {
+    let $pat = $value else {
+      continue
+    };
   };
 }
