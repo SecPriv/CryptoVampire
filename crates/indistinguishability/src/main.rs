@@ -6,11 +6,12 @@ use utils::impossible::Impossible;
 
 pub fn main() {
     init_logger();
+    for i in 0..30{
     let mut pbl: Program<SymbolLang, () /* MAnalysis<_> */> =
         include_str!("../tests/test").parse().unwrap();
-    pbl.set_explainations(true);
+    pbl.set_explainations(false);
     // pbl.add_eq_rule(and_simpl_rewrite());
-    pbl.config.time_limit = Duration::from_secs_f32(30.0);
+    pbl.config.time_limit = Duration::from_secs_f32(60.0);
     pbl.config.node_limit = 100000;
     pbl.config.iter_limit = 300;
     pbl.config.trace_prolog = true;
@@ -20,11 +21,13 @@ pub fn main() {
     //     .map(|s| (s.into(), (1, 0).into()))
     //     .collect();
 
-    let r = pbl.run_expr("goal".parse().unwrap(), 7);
-    pbl.egraph().dot().run_dot(&["-Kfdp", "-Tpdf", "-o", "/tmp/graph.pdf"]);
+        let r = pbl.run_expr("goal".parse().unwrap(), i);
+        println!("final result: ({i:}) {r}");
+        if r {break}
+    }
+    //pbl.egraph().dot().run_dot(&["-Ksfdp", "-Tpdf", "-o", "/tmp/graph.pdf"]);
     // pbl.egraph().dot().to_dot("/tmp/dot.dot").unwrap();
 
-    println!("{r}")
 }
 
 use std::io::Write;

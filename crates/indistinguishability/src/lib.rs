@@ -43,7 +43,7 @@ pub struct Program<L: Language, N: Analysis<L>> {
     eq_rules: Vec<Rewrite<L, N>>,
     rules: Vec<Rc<dyn Rule<L, N>>>,
     // memo: ECallMap<Rc<RefCell<Status>>>,
-    memo: HashMap<Id, Rc<RefCell<Status>>>,
+    memo: Option<HashMap<Id, Rc<RefCell<Status>>>>,
     clean: bool,
     pub config: Config,
 }
@@ -82,15 +82,28 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
         egraph: EGraph<L, N>,
         eq_rules: implvec!(Rewrite<L, N>),
         rules: implvec!(Box<dyn Rule<L, N>>),
+        with_memo: bool,
     ) -> Self {
         Self {
             egraph: Some(egraph),
             eq_rules: eq_rules.into_iter().collect(),
             rules: rules.into_iter().map_into().collect(),
-            memo: Default::default(),
+            memo: with_memo.then(Default::default),
             clean: true,
             config: Default::default(),
         }
+    }
+
+    pub fn set_memo(&mut self, activated:bool) -> bool {
+        let set = self.memo.is_some() == activated;
+        if !set {
+            self.memo = activated.then(Default::default)
+        }
+        set
+    }
+
+    pub fn reset_memo(&mut self) {
+        self.memo = self.memo.is_some().then(Default::default)
     }
 
     pub fn run_expr(&mut self, goal: RecExpr<L>, depth: u128) -> bool {
@@ -112,9 +125,9 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
             return false;
         }
 
-        let memo = {
+        let memo = if let Some(memo) = self.memo_mut() {
             use std::collections::hash_map::Entry;
-            match self.memo.entry(goal) {
+            match memo.entry(goal) {
                 Entry::Occupied(occupied_entry) => {
                     let res = occupied_entry.get().borrow().as_bool();
                     if self.config.trace_prolog {
@@ -123,11 +136,13 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
                     return res;
                 }
                 Entry::Vacant(vacant_entry) => {
-                    vacant_entry.insert(Rc::new(RefCell::new(Status::InProgress)))
+                    Some(vacant_entry.insert(Rc::new(RefCell::new(Status::InProgress))))
                 }
             }
+        } else {
+            None
         }
-        .clone();
+        .cloned();
         let mut i = 0;
         let ret = loop {
             // self.rules may change during the search, hence why we can't use iterators
@@ -145,7 +160,9 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
                 break ret; // found a proof or cut
             }
         };
-        *memo.borrow_mut() = ret.into();
+        if let Some(memo) = memo {
+            *memo.borrow_mut() = ret.into();
+        }
         ret
     }
 
@@ -175,20 +192,18 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
                 Some(StopReason::Saturated) | Some(StopReason::IterationLimit(_))
             ) {
                 // runner.egraph.dot().to_pdf("/tmp/out.pdf");
-                panic!("unclean graph: {:?}", runner.stop_reason)
+                eprintln!("!!!! unclean graph: {:?}", runner.stop_reason)
             }
 
             egraph = runner.egraph;
             // self.memo.canonicalise(&egraph);
-            if self.config.trace_prolog {
+            if self.config.trace_prolog && self.memo.is_some() {
                 eprintln!("🚧 canonicalising table...");
             }
             {
                 let memo = std::mem::take(&mut self.memo);
-                self.memo = memo
-                    .into_iter()
-                    .map(|(id, s)| (egraph.find(id), s))
-                    .collect();
+                self.memo =
+                    memo.map(|x| x.into_iter().map(|(id, s)| (egraph.find(id), s)).collect());
             }
             if self.config.trace_prolog {
                 eprintln!("✅ rebuilding done ! ({total_time:})");
@@ -244,6 +259,10 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
             egraph.with_explanations_disabled()
         };
         self.egraph = Some(egraph)
+    }
+
+    fn memo_mut(&mut self) -> Option<&mut HashMap<Id, Rc<RefCell<Status>>>> {
+        self.memo.as_mut()
     }
 }
 
