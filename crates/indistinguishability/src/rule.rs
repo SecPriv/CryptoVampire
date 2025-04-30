@@ -5,8 +5,8 @@ use crate::{
     Program,
 };
 use egg::{Analysis, FromOp, Id, Language, Pattern, RecExpr, Searcher, SymbolLang, Var};
+use log::trace;
 use serde::Serialize;
-use utils::ereturn_if;
 use std::{
     cell::RefCell,
     collections::HashMap,
@@ -16,6 +16,7 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
     u64,
 };
+use utils::ereturn_if;
 
 #[derive(Debug, PartialEq, Eq, Ord, PartialOrd, Hash, Clone, Default)]
 pub struct Dependancy {
@@ -58,7 +59,6 @@ pub trait Rule<L: Language, N: Analysis<L>> {
 pub trait Fresh: Sized {
     fn mk_fresh() -> RecExpr<Self>;
 }
-
 
 #[derive(Debug)]
 pub struct PrologRule<L> {
@@ -108,6 +108,12 @@ where
 
         if let Some(memo) = self.memo.borrow().get(&goal) {
             return memo.clone();
+        }
+
+        if prgm.config.trace_prolog {
+            if let Some(n) = &self.name {
+                eprintln!("searched {n}")
+            }
         }
 
         let weight = N::get_weight(&prgm.egraph()[goal].data);
