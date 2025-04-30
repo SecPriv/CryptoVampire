@@ -21,3 +21,4 @@ pub mod monad;
 
 pub mod ereturn;
 pub mod impossible;
+pub mod cowvec;

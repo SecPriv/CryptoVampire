@@ -4,13 +4,17 @@ use egg::{
     StopReason,
 };
 use itertools::{Either, Itertools};
-use log::info;
+use log::{info, log_enabled};
 use rule::PlOrRw;
+use serde::Serialize;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     fmt::Display,
+    fs::File,
+    io::Write,
     mem,
+    path::PathBuf,
     rc::Rc,
     str::FromStr,
     usize,
@@ -77,7 +81,12 @@ impl Default for Config {
     }
 }
 
-impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
+impl<L, N> Program<L, N>
+where
+    L: Language + Display + Serialize,
+    N: Analysis<L> + Default + Serialize,
+    N::Data: Serialize,
+{
     pub fn new(
         egraph: EGraph<L, N>,
         eq_rules: implvec!(Rewrite<L, N>),
@@ -94,7 +103,7 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
         }
     }
 
-    pub fn set_memo(&mut self, activated:bool) -> bool {
+    pub fn set_memo(&mut self, activated: bool) -> bool {
         let set = self.memo.is_some() == activated;
         if !set {
             self.memo = activated.then(Default::default)
@@ -106,111 +115,12 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
         self.memo = self.memo.is_some().then(Default::default)
     }
 
-    pub fn run_expr(&mut self, goal: RecExpr<L>, depth: u128) -> bool {
-        let goal = self.egraph.as_mut().unwrap().add_expr(&goal);
-        self.run_egraph();
-        self.run(goal, depth)
-    }
-
-    pub fn run(&mut self, goal: egg::Id, depth: u128) -> bool {
-        if self.config.trace_prolog {
-            let g = self.egraph().id_to_expr(goal);
-            eprintln!("({depth:}) {}", g.pretty(80))
-        }
-
-        if depth == 0 {
-            if self.config.trace_prolog {
-                eprintln!("❌ ran out of fuel")
-            }
-            return false;
-        }
-
-        let memo = if let Some(memo) = self.memo_mut() {
-            use std::collections::hash_map::Entry;
-            match memo.entry(goal) {
-                Entry::Occupied(occupied_entry) => {
-                    let res = occupied_entry.get().borrow().as_bool();
-                    if self.config.trace_prolog {
-                        eprintln!("⏩ skipping: {:}", res)
-                    }
-                    return res;
-                }
-                Entry::Vacant(vacant_entry) => {
-                    Some(vacant_entry.insert(Rc::new(RefCell::new(Status::InProgress))))
-                }
-            }
-        } else {
-            None
-        }
-        .cloned();
-        let mut i = 0;
-        let ret = loop {
-            // self.rules may change during the search, hence why we can't use iterators
-            let Some(r) = self.rules.get(i).cloned() else {
-                break false; // no more path to a proof
-            };
-            i += 1;
-            let search = r.search(self, goal);
-            self.run_egraph();
-            let ret = search
-                .inner()
-                .iter()
-                .any(|goals| goals.iter().all(|g| self.run(*g, depth - 1)));
-            if ret || search.cut() {
-                break ret; // found a proof or cut
-            }
-        };
-        if let Some(memo) = memo {
-            *memo.borrow_mut() = ret.into();
-        }
-        ret
-    }
 
     pub fn add_expr(&mut self, e: &RecExpr<L>) -> Id {
         match &mut self.egraph {
             Some(egraph) => egraph.add_expr(e),
             None => panic!("invalid program"),
         }
-    }
-
-    pub fn run_egraph(&mut self) {
-        let mut egraph = self.egraph.take().expect("invalid program");
-        if !egraph.clean {
-            if self.config.trace_prolog {
-                eprintln!("🚧 rebuilding egraph...");
-            }
-            let runner = self
-                .config
-                .apply(Runner::<L, N>::new(Default::default()))
-                .with_egraph(egraph)
-                .run(&self.eq_rules);
-
-            let total_time = runner.report().total_time;
-
-            if !matches!(
-                &runner.stop_reason,
-                Some(StopReason::Saturated) | Some(StopReason::IterationLimit(_))
-            ) {
-                // runner.egraph.dot().to_pdf("/tmp/out.pdf");
-                eprintln!("!!!! unclean graph: {:?}", runner.stop_reason)
-            }
-
-            egraph = runner.egraph;
-            // self.memo.canonicalise(&egraph);
-            if self.config.trace_prolog && self.memo.is_some() {
-                eprintln!("🚧 canonicalising table...");
-            }
-            {
-                let memo = std::mem::take(&mut self.memo);
-                self.memo =
-                    memo.map(|x| x.into_iter().map(|(id, s)| (egraph.find(id), s)).collect());
-            }
-            if self.config.trace_prolog {
-                eprintln!("✅ rebuilding done ! ({total_time:})");
-            }
-        }
-        self.egraph = Some(egraph);
-        assert!(self.clean());
     }
 
     pub fn egraph(&self) -> &EGraph<L, N> {
@@ -264,6 +174,158 @@ impl<L: Language + Display, N: Analysis<L> + Default> Program<L, N> {
     fn memo_mut(&mut self) -> Option<&mut HashMap<Id, Rc<RefCell<Status>>>> {
         self.memo.as_mut()
     }
+
+    pub fn eq_rules(&self) -> &[Rewrite<L, N>] {
+        &self.eq_rules
+    }
+
+    pub fn rules(&self) -> &[Rc<dyn Rule<L, N>>] {
+        &self.rules
+    }
+// }
+
+
+// impl<L, N> Program<L, N>
+// where
+//     L: Language + Display + Serialize,
+//     N: Analysis<L> + Default + Serialize,
+//     N::Data: Serialize,
+// {
+    pub fn run_expr(&mut self, goal: RecExpr<L>, depth: u128) -> bool {
+        let goal = self.egraph.as_mut().unwrap().add_expr(&goal);
+        self.rebuild();
+        self.run(goal, depth)
+    }
+
+    pub fn run(&mut self, goal: egg::Id, depth: u128) -> bool {
+        let gtmp = if self.config.trace_prolog {
+            let g = self.egraph().id_to_expr(goal);
+            eprintln!("({depth:}) {}", g.pretty(80));
+            Some(g)
+        } else {
+            None
+        };
+
+        if depth == 0 {
+            if self.config.trace_prolog {
+                eprintln!("❌ ran out of fuel")
+            }
+            return false;
+        }
+
+        // check memoization
+        let memo = if let Some(memo) = self.memo_mut() {
+            use std::collections::hash_map::Entry;
+            match memo.entry(goal) {
+                Entry::Occupied(occupied_entry) => {
+                    let res = occupied_entry.get().borrow().as_bool();
+                    if self.config.trace_prolog {
+                        eprintln!("⏩ skipping: {:}", res)
+                    }
+                    return res;
+                }
+                Entry::Vacant(vacant_entry) => {
+                    Some(vacant_entry.insert(Rc::new(RefCell::new(Status::InProgress))))
+                }
+            }
+        } else {
+            None
+        }
+        .cloned();
+
+        let mut i = 0;
+        let ret = loop {
+            // this is a `for` loop but
+            // self.rules may change during the search, hence why we can't use iterators
+            let Some(r) = self.rules.get(i).cloned() else {
+                break false; // no more path to a proof
+            };
+            i += 1;
+            let search = r.search(self, goal);
+            self.rebuild();
+            let ret = search
+                .inner()
+                .iter()
+                .any(|goals| goals.iter().all(|g| self.run(*g, depth - 1)));
+            if ret || search.cut() {
+                break ret; // found a proof or cut
+            }
+        };
+
+        // save memoisation
+        if let Some(memo) = memo {
+            *memo.borrow_mut() = ret.into();
+        }
+
+        if let Some(g) = gtmp {
+            eprintln!("({depth:}) {} -> {ret}", g.pretty(80))
+        }
+        ret
+    }
+
+    pub fn rebuild(&mut self) {
+        let mut egraph = self.egraph.take().expect("invalid program");
+        if !egraph.clean {
+            if self.config.trace_prolog {
+                eprintln!("🚧 rebuilding egraph...");
+            }
+            let runner = self
+                .config
+                .apply(Runner::<L, N>::new(Default::default()))
+                .with_egraph(egraph)
+                .run(&self.eq_rules);
+
+            let report = runner.report();
+
+            if self.config.trace_prolog {
+                eprintln!("✅ done !\n{report}");
+                if log_enabled!(log::Level::Trace) {
+                    let (dot, json) = save_egraph(&runner.egraph).unwrap();
+                    eprintln!("saved to {dot:?} and {json:?}")
+                }
+            }
+
+            let stop_reason = runner.stop_reason.clone();
+
+            egraph = runner.egraph;
+
+            if !matches!(stop_reason, Some(StopReason::Saturated)) {
+                let (dot, json) = save_egraph(&egraph).unwrap();
+                panic!("unclean graph. See {dot:?} and {json:?}")
+            }
+
+            // self.memo.canonicalise(&egraph);
+            if self.memo.is_some() {
+                if self.config.trace_prolog {
+                    eprintln!("🚧 canonicalising table...");
+                }
+
+                let memo = std::mem::take(&mut self.memo);
+                self.memo =
+                    memo.map(|x| x.into_iter().map(|(id, s)| (egraph.find(id), s)).collect());
+
+                if self.config.trace_prolog {
+                    eprintln!("✅ done!)");
+                }
+            }
+
+            self.egraph = Some(egraph);
+
+            {
+                if self.config.trace_prolog {
+                    eprintln!("🚧 canonicalising table... rules");
+                }
+                self.rules.iter().for_each(|r| r.rebuild(&self));
+                if self.config.trace_prolog {
+                    eprintln!("✅ done!)");
+                }
+            }
+
+        } else {
+            self.egraph = Some(egraph)
+        }
+        assert!(self.clean());
+    }
 }
 
 impl Status {
@@ -283,10 +345,11 @@ impl From<bool> for Status {
 
 impl<L, N> FromStr for Program<L, N>
 where
-    L: Language + Sync + Send + FromOp + Fresh + Display + 'static,
-    N: WeightedAnalysis<L> + Default,
+    L: Language + Sync + Send + FromOp + Fresh + Display + 'static + Serialize,
+    N: WeightedAnalysis<L> + Default + Serialize,
     anyhow::Error: From<<Pattern<L> as FromStr>::Err>,
     anyhow::Error: From<<MultiPattern<L> as FromStr>::Err>,
+    N::Data: Serialize,
 {
     type Err = anyhow::Error;
 
@@ -309,4 +372,29 @@ where
             config: Default::default(),
         })
     }
+}
+
+fn save_egraph<L, N>(egraph: &EGraph<L, N>) -> std::io::Result<(PathBuf, PathBuf)>
+where
+    L: Language + Display + Serialize,
+    N: Analysis<L> + Default + Serialize,
+    N::Data: Serialize,
+{
+    let dot = tempfile::Builder::new()
+        .prefix("egraph_")
+        .suffix(".dot")
+        .keep(true)
+        .tempfile()?;
+    let json = tempfile::Builder::new()
+        .prefix("egraph_")
+        .suffix(".json")
+        .keep(true)
+        .tempfile()?;
+
+    egraph.dot().to_dot(&dot)?;
+
+    egraph
+        .serialize(&mut serde_json::Serializer::new(&json))
+        .unwrap();
+    Ok((dot.path().to_path_buf(), json.path().to_path_buf()))
 }

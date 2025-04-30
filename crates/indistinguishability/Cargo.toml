@@ -6,11 +6,13 @@ edition = "2021"
 [dependencies]
 # egg = "0.10"
 rustc-hash = "2.1.0" # for hash on integers
+serde_json = "1.0.120"
+tempfile = "3.10"
 
 # own crates
 utils = { path = "../utils"}
 logic_formula = {path = "../logic_formula"}
-egg = {path = "../egg"}
+egg = {path = "../egg", features = ["serde-1"]}
 
 # workspace
 itertools.workspace = true
@@ -20,6 +22,7 @@ anyhow.workspace = true
 smallvec.workspace = true
 log.workspace = true
 env_logger.workspace = true
+serde.workspace = true
 
 [lints]
 workspace = true

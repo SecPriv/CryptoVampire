@@ -561,8 +561,11 @@ dependencies = [
  "logic_formula",
  "paste",
  "rustc-hash",
+ "serde",
+ "serde_json",
  "smallvec",
  "static_init",
+ "tempfile",
  "utils",
 ]
 

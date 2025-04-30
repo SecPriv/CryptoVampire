@@ -249,8 +249,9 @@ impl<N: Analysis<SymbolLang>> Applier<SymbolLang, N> for AndSimplifier {
             //     panic!()
             // }
         }
-        egraph.union_trusted(eclass, id, name);
-        vec![id]
+        let did_something = egraph.union_trusted(eclass, id, name);
+        if did_something {
+        vec![id] } else {vec![]}
     }
 }
 

@@ -1,11 +1,17 @@
 use crate::{
     analysis::WeightedAnalysis,
+    eclassmap::ECallMap,
     weight::{self, Weight},
     Program,
 };
 use egg::{Analysis, FromOp, Id, Language, Pattern, RecExpr, Searcher, SymbolLang, Var};
+use serde::Serialize;
+use utils::ereturn_if;
 use std::{
+    cell::RefCell,
+    collections::HashMap,
     fmt::Display,
+    ops::DerefMut,
     str::FromStr,
     sync::atomic::{AtomicU64, Ordering},
     u64,
@@ -45,29 +51,24 @@ impl Dependancy {
 
 pub trait Rule<L: Language, N: Analysis<L>> {
     fn search(&self, prgm: &mut Program<L, N>, goal: Id) -> Dependancy;
+
+    fn rebuild(&self, _prgm: &Program<L, N>) {}
 }
 
 pub trait Fresh: Sized {
     fn mk_fresh() -> RecExpr<Self>;
 }
 
-impl<L: Language, N: Analysis<L> + Default, F> Rule<L, N> for F
-where
-    F: Fn(&mut Program<L, N>, Id) -> Dependancy,
-{
-    fn search(&self, prgm: &mut Program<L, N>, goal: Id) -> Dependancy {
-        self(prgm, goal)
-    }
-}
 
 #[derive(Debug)]
 pub struct PrologRule<L> {
     pub input: Pattern<L>,
     pub deps: Vec<Pattern<L>>,
     pub cut: bool,
-    pub decrease: bool,
+    pub require_decrease: bool,
     pub free_vars: Vec<Var>,
     pub name: Option<String>,
+    pub memo: RefCell<HashMap<Id, Dependancy>>,
 }
 
 impl<L> FromStr for PrologRule<L>
@@ -93,28 +94,40 @@ impl Fresh for SymbolLang {
     }
 }
 
-impl<L: Language + Fresh + Display, N: Default + WeightedAnalysis<L>> Rule<L, N> for PrologRule<L> {
+impl<L, N> Rule<L, N> for PrologRule<L>
+where
+    L: Language + Fresh + Display + Serialize,
+    N: Default + WeightedAnalysis<L> + Serialize,
+    N::Data: Serialize,
+{
     fn search(&self, prgm: &mut Program<L, N>, goal: Id) -> Dependancy {
         let matches = self.input.search_eclass(prgm.egraph(), goal);
         let Some(matches) = matches else {
             return Default::default();
         };
+
+        if let Some(memo) = self.memo.borrow().get(&goal) {
+            return memo.clone();
+        }
+
         let weight = N::get_weight(&prgm.egraph()[goal].data);
         // let subst = matches.substs.first().unwrap();
         let inner: Vec<Vec<Id>> = matches
             .substs
             .into_iter()
             .filter_map(|mut subst| {
+                // generate free vars
                 for v in &self.free_vars {
                     let id = prgm.egraph_mut().add_expr(&Fresh::mk_fresh());
                     subst.insert(*v, id);
                 }
+
                 let deps: Vec<Id> = self
                     .deps
                     .iter()
                     .map(|ret| ret.apply_susbt(prgm.egraph_mut(), &subst))
                     .collect();
-                if self.decrease
+                if self.require_decrease
                     && deps
                         .iter()
                         .any(|id| !N::get_weight(&prgm.egraph()[*id].data).decreases(&weight))
@@ -123,13 +136,27 @@ impl<L: Language + Fresh + Display, N: Default + WeightedAnalysis<L>> Rule<L, N>
                 } else {
                     Some(deps)
                 }
+                // .then_some(deps)
             })
             .collect();
         prgm.config.node_limit += inner.iter().map(|x| x.len()).sum::<usize>();
-        Dependancy {
+        let res = Dependancy {
             inner,
             cut: self.cut,
-        }
+        };
+        self.memo.borrow_mut().insert(goal, res.clone());
+        res
+    }
+
+    fn rebuild(&self, prgm: &Program<L, N>) {
+        let mut memo = self.memo.borrow_mut();
+        ereturn_if!(memo.is_empty());
+        let nmemo = std::mem::take(memo.deref_mut());
+        let egraph = prgm.egraph();
+        *memo = nmemo
+            .into_iter()
+            .map(|(id, s)| (egraph.find(id), s))
+            .collect();
     }
 }
 
@@ -157,7 +184,8 @@ mod parser {
     use anyhow::{anyhow, bail, Context};
     use egg::{Analysis, FromOp, Language, MultiPattern, Pattern, Rewrite, SymbolLang};
     use itertools::Itertools;
-    use std::{fmt::Debug, str::FromStr};
+    use log::trace;
+    use std::{cell::RefCell, fmt::Debug, str::FromStr};
 
     fn parse_rw<L, N>(name: Option<&str>, s1: &str, s2: &str) -> anyhow::Result<Rewrite<L, N>>
     where
@@ -196,9 +224,10 @@ mod parser {
                 input: head,
                 deps: vec![],
                 cut: false,
-                decrease: false,
+                require_decrease: false,
                 free_vars: vec![],
                 name,
+                memo: RefCell::new(Default::default()),
             }),
             Some(ns) => {
                 let ns = ns.trim();
@@ -226,17 +255,20 @@ mod parser {
                     .unique()
                     .filter(|v| !bound_vars.contains(v))
                     .collect();
-                if !free_vars.is_empty() {
-                    dbg!(&free_vars);
-                }
-                Ok(PrologRule {
+
+                let result = PrologRule {
                     input: head,
                     deps,
                     cut,
                     free_vars,
-                    decrease,
+                    require_decrease: decrease,
                     name,
-                })
+                    memo: RefCell::new(Default::default()),
+                };
+
+                trace!("parsed {result:?}");
+
+                Ok(result)
             }
         }
     }
@@ -321,9 +353,25 @@ mod parser {
         anyhow::Error: From<<Pattern<L> as FromStr>::Err>,
         anyhow::Error: From<<MultiPattern<L> as FromStr>::Err>,
     {
-        s.trim_end()
+        let cleaned = s
+            .lines()
+            .map(|line| {
+                let line = line.trim();
+                // Remove anything after a '%'
+                match line.find('%') {
+                    Some(idx) => &line[..idx],
+                    None => line,
+                }
+                .trim()
+            })
+            .filter(|line| !line.is_empty())
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        cleaned
+            .trim_end()
             .split('.')
-            .filter(|part| !part.is_empty())
+            .filter(|part| !part.trim().is_empty())
             .map(parse_one)
             .collect()
     }
