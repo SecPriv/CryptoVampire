@@ -90,6 +90,11 @@ true.
   (vampire (implies ?h2 (leq ?t2 ?t))),
   (vampire (happens ?t)).
 
+[deduce lt]
+(deduce ?a ?b (lt ?x ?y) (lt ?x1 ?y1) ?c ?d).
+[deduce leq]
+(deduce ?a ?b (leq ?x ?y) (leq ?x1 ?y1) ?c ?d).
+
 [deduce axiom]
 (deduce ?u ?v ?u ?v ?h1 ?h2).
 [deduce true]

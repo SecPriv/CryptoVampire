@@ -16,7 +16,7 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
     u64,
 };
-use utils::ereturn_if;  
+use utils::ereturn_if;
 
 pub use prolog::{parser::PlOrRw, PrologRule};
 mod prolog;

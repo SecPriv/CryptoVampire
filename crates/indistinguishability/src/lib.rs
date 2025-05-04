@@ -115,7 +115,6 @@ where
         self.memo = self.memo.is_some().then(Default::default)
     }
 
-
     pub fn add_expr(&mut self, e: &RecExpr<L>) -> Id {
         match &mut self.egraph {
             Some(egraph) => egraph.add_expr(e),
@@ -182,15 +181,14 @@ where
     pub fn rules(&self) -> &[Rc<dyn Rule<L, N>>] {
         &self.rules
     }
-// }
+    // }
 
-
-// impl<L, N> Program<L, N>
-// where
-//     L: Language + Display + Serialize,
-//     N: Analysis<L> + Default + Serialize,
-//     N::Data: Serialize,
-// {
+    // impl<L, N> Program<L, N>
+    // where
+    //     L: Language + Display + Serialize,
+    //     N: Analysis<L> + Default + Serialize,
+    //     N::Data: Serialize,
+    // {
     pub fn run_expr(&mut self, goal: RecExpr<L>, depth: u128) -> bool {
         let goal = self.egraph.as_mut().unwrap().add_expr(&goal);
         self.rebuild();
@@ -305,7 +303,7 @@ where
                     memo.map(|x| x.into_iter().map(|(id, s)| (egraph.find(id), s)).collect());
 
                 if self.config.trace_prolog {
-                    eprintln!("✅ done!)");
+                    eprintln!("✅ done!");
                 }
             }
 
@@ -313,14 +311,13 @@ where
 
             {
                 if self.config.trace_prolog {
-                    eprintln!("🚧 canonicalising table... rules");
+                    eprintln!("🚧 canonicalising rules...");
                 }
                 self.rules.iter().for_each(|r| r.rebuild(&self));
                 if self.config.trace_prolog {
-                    eprintln!("✅ done!)");
+                    eprintln!("✅ done!");
                 }
             }
-
         } else {
             self.egraph = Some(egraph)
         }

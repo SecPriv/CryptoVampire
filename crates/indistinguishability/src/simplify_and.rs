@@ -251,7 +251,10 @@ impl<N: Analysis<SymbolLang>> Applier<SymbolLang, N> for AndSimplifier {
         }
         let did_something = egraph.union_trusted(eclass, id, name);
         if did_something {
-        vec![id] } else {vec![]}
+            vec![id]
+        } else {
+            vec![]
+        }
     }
 }
 

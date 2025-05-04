@@ -1,6 +1,8 @@
-use std::io::Write;
+use std::{borrow::Cow, io::Write};
 
+use anyhow::Context;
 use egg::{Analysis, Language, Pattern, Searcher, SymbolLang, Var};
+use itertools::Itertools;
 use runner::VampireExec;
 use serde::Serialize;
 use static_init::dynamic;
@@ -38,20 +40,23 @@ where
         ereturn_let!(let Some(m) = PATTERN.search_eclass(prgm.egraph(), goal), Default::default());
         ereturn_let!(let Some(s) = m.substs.first(), Default::default());
 
-        let to_prove_id = s.get(VAR.clone()).unwrap();
+        let to_prove_id = s.get(*VAR).unwrap();
         let to_prove = prgm.egraph().id_to_expr(*to_prove_id);
+        let mut to_prove = AsFun::try_from(to_prove.as_ref()).unwrap();
+        to_prove.simplify();
 
         let mut tptp_file = tempfile::Builder::new()
             .prefix("vampire_rule_")
-            .suffix(".tptp")
+            .suffix(".smt")
             .keep(true)
             .tempfile()
             .unwrap();
 
         writeln!(&mut tptp_file, "{}", self.prelude).unwrap();
-        write!(&mut tptp_file, "fof(query, conjecture, ").unwrap();
-        to_tptp(&mut tptp_file, &to_prove).unwrap();
-        write!(&mut tptp_file, ").").unwrap();
+        write!(&mut tptp_file, "(assert-not ").unwrap();
+        to_prove.to_smt(&mut tptp_file).unwrap();
+        write!(&mut tptp_file, " )").unwrap();
+        // to_tptp(&mut tptp_file, &to_prove).unwrap();
 
         eprintln!("running vampire from {:?}", tptp_file.path());
 
@@ -74,6 +79,69 @@ where
         } else {
             Default::default()
         }
+    }
+}
+
+struct AsFun<'a> {
+    fun: Cow<'a, str>,
+    args: Vec<AsFun<'a>>,
+}
+
+impl<'a> AsFun<'a> {
+    pub fn to_smt(&self, f: &mut impl std::io::Write) -> anyhow::Result<()> {
+        write!(f, "(")?;
+        write!(f, "{}", self.fun)?;
+        if !self.args.is_empty() {
+            for arg in &self.args {
+                arg.to_smt(f)?;
+                write!(f, " ")?;
+            }
+        }
+        write!(f, ")")?;
+        Ok(())
+    }
+
+    pub fn simplify(&mut self) {
+        let Self { fun, args } = self;
+
+        args.iter_mut().for_each(Self::simplify);
+
+        match fun.as_ref() {
+            "macro" | "unfold" => {
+                let kind = args.remove(0).fun;
+                *fun = format!("{fun}_{kind}").into()
+            }
+            _ => (),
+        }
+    }
+
+    pub fn used_funs(&self) -> Vec<&str> {
+        let mut tmp = Vec::new();
+        self.used_fun_innner(&mut tmp);
+        tmp
+    }
+
+    fn used_fun_innner(&'a self, acc: &mut Vec<&'a str>) {
+        acc.push(self.fun.as_ref());
+        for arg in &self.args {
+            arg.used_fun_innner(acc);
+        }
+    }
+}
+
+impl TryFrom<&[SymbolLang]> for AsFun<'_> {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &[SymbolLang]) -> Result<Self, Self::Error> {
+        let head = value.last().with_context(|| "impossible")?;
+        let fun = head.op.as_str().into();
+        let args: Vec<AsFun<'_>> = head
+            .children()
+            .iter()
+            .map(|&i| usize::from(i))
+            .map(|child| AsFun::try_from(&value[0..=child]))
+            .try_collect()?;
+        Ok(AsFun { fun, args })
     }
 }
 
@@ -220,13 +288,23 @@ mod runner {
             cmd.args(self.extra_args.iter().flat_map(|x| x.to_args().into_iter()));
             cmd.arg(file);
             let o = cmd.output()?;
-            if o.status.code() != Some(SUCCESS_RC) || o.status.code() != Some(TIMEOUT_RC) {
+            if o.status.code() != Some(SUCCESS_RC) && o.status.code() != Some(TIMEOUT_RC) {
                 println!("{}", std::str::from_utf8(&o.stdout).unwrap());
                 println!("{:}", o.status.code().unwrap());
                 panic!()
             }
 
-            Ok(o.status.success())
+            println!(
+                "{}",
+                std::str::from_utf8(&o.stdout)
+                    .unwrap()
+                    .contains("Termination reason: Refutation\n")
+            );
+
+            Ok(o.status.success()
+                && std::str::from_utf8(&o.stdout)
+                    .unwrap()
+                    .contains("Termination reason: Refutation\n"))
         }
     }
 }

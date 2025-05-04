@@ -1,6 +1,5 @@
 (declare-sort S 0)
 
-(declare-fun ite (S S S) S)
 (declare-fun tuple (S S) S)
 (declare-fun p1 (S) S)
 (declare-fun p2 (S) S)
@@ -18,16 +17,23 @@
 (declare-fun empty () S)
 (declare-fun ko () S)
 (declare-fun ok () S)
-(declare-fun macro (S S S) S)
-(declare-fun unfold (S S S ) S)
 (declare-fun happens (S) Bool)
-(declare-fun frame () S)
-(declare-fun exec () S)
-(declare-fun msg () S)
-(declare-fun cond () S)
-(declare-fun input () S)
+(declare-fun macro_frame (S S) S)
+(declare-fun macro_exec (S S) Bool)
+(declare-fun macro_msg (S S) S)
+(declare-fun macro_cond (S S) Bool)
+(declare-fun macro_input (S S) S)
+(declare-fun unfold_frame (S S) S)
+(declare-fun unfold_exec (S S) Bool)
+(declare-fun unfold_msg (S S) S)
+(declare-fun unfold_cond (S S) Bool)
+(declare-fun unfold_input (S S) S)
 (declare-fun att (S) S)
 (declare-fun j () S)
+(declare-fun i$2 () S)
+(declare-fun i$1 () S)
+(declare-fun sk$2 (S S S) S)
+(declare-fun sk$1 (S S S) S)
 (declare-fun P1 () S)
 (declare-fun P2 () S)
 (declare-fun nonce (S) S)
@@ -35,6 +41,7 @@
 (declare-fun k1 (S) S)
 (declare-fun k2 (S S) S)
 (declare-fun n (S S) S)
+(define-fun implies ((X Bool) (Y Bool)) Bool (=> X Y))
 
 (assert (forall ((X S) (Y S)) (=  (meq X Y) (= X Y))))
 
@@ -59,7 +66,7 @@
           (leq init X)))
 
 (assert (forall ((X S) (Y S))
-          (= (lt X Y) (and (leq X Y) (not (= X Y))))))
+          (= (lt X Y) (leq X (pred Y)))))
 
 (assert (forall ((I1 S) (J1 S) (I2 S) (J2 S))
           (=> (= (T I1 J1) (T I2 J2)) (and (= I1 I2) (= J1 J2)))))
@@ -74,4 +81,7 @@
           (=> (= (Rf I1) (Rf I2)) (= I1 I2))))
 
 (assert (forall ((I1 S) (J1 S) (I2 S) (J2 S) (J3 S))
-          (distinct (T I1 J1) (Rs I2 J2)  (Rf J3) int)))
+          (distinct (T I1 J1) (Rs I2 J2)  (Rf J3) init)))
+
+(assert (happens  (Rf j)))
+(assert (forall ((T S) (U S)) (=> (and (leq T U) (happens U)) (happens T))))
