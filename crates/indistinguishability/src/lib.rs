@@ -23,7 +23,7 @@ use utils::implvec;
 
 mod eclassmap;
 mod rule;
-pub use rule::{Dependancy, Fresh, PrologRule, Rule};
+pub use rule::{Dependancy, Fresh, PrologRule, Rule, VampireRule};
 // mod language;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

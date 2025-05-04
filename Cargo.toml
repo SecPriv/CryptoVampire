@@ -4,7 +4,7 @@ members = [
   "crates/utils",
   "crates/logic_formula",
   "crates/cryptovampire_macros",
-  "crates/indistinguishability", "crates/smt",
+  "crates/indistinguishability",
   # "crates/indistinguishability2",
 ]
 resolver = "2"

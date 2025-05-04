@@ -1,106 +1,107 @@
-[if true] (mite mtrue ?a ?b) => ?a.
-[if false] (mite mfalse ?a ?b) => ?b.
-[implies def] (implies ?a ?b) => (mite ?a ?b mtrue).
-[if simp1] (mite ?x ?a ?a) => ?a.
-[if simp2] (mite ?a ?a mfalse) => ?a.
-[if simp3] (mite ?a (mite ?a ?b ?c) ?d) => (mite ?a ?b ?d).
-[if simp4] (mite ?a mtrue mfalse) => ?a.
-[implies simp] (mite (mand ?a ?b) ?a mtrue) => mtrue.
-[implies simp2] (mite ?a ?a mtrue) => mtrue.
-[classical not] (mnot (mnot ?a)) => ?a.
-%[and symm] (mand ?a ?b) => (mand ?b ?a).
-%[and simpl] (mand ?a ?a) => ?a.
-%[and assoc] (mand ?a (mand ?b ?c)) => (mand (mand ?a ?b) ?c).
-[and def] (mand ?a ?b) => (mite ?a ?b mfalse). 
+[if true] (ite true ?a ?b) => ?a.
+[if false] (ite false ?a ?b) => ?b.
+[implies def] (implies ?a ?b) => (ite ?a ?b true).
+[if simp1] (ite ?x ?a ?a) => ?a.
+[if simp2] (ite ?a ?a false) => ?a.
+[if simp3] (ite ?a (ite ?a ?b ?c) ?d) => (ite ?a ?b ?d).
+[if simp4] (ite ?a true false) => ?a.
+[implies simp] (ite (and ?a ?b) ?a true) => true.
+[implies simp2] (ite ?a ?a true) => true.
+[classical not] (not (not ?a)) => ?a.
+%[and symm] (and ?a ?b) => (and ?b ?a).
+%[and simpl] (and ?a ?a) => ?a.
+%[and assoc] (and ?a (and ?b ?c)) => (and (and ?a ?b) ?c).
+[and def] (and ?a ?b) => (ite ?a ?b false). 
 
-[not def] (mnot ?a) => (mite ?a mfalse mtrue).
-[meq true] ?v1 = (meq ?a ?b), ?v1 = mtrue => ?a = ?b.
-[reverse and] ?v1 = (mite ?a ?b mfalse), ?v1 = mtrue => ?a = mtrue, ?b = mtrue.
-[implies trans] ?v1 = mtrue, ?v1 = (mite ?a ?b mtrue), ?v1 = (mite ?b ?c mtrue) => ?v1 = (mimplies ?a ?c).
+[not def] (not ?a) => (ite ?a false true).
+[meq true] ?v1 = (meq ?a ?b), ?v1 = true => ?a = ?b.
+[reverse and] ?v1 = (ite ?a ?b false), ?v1 = true => ?a = true, ?b = true.
+[implies trans] ?v1 = true, ?v1 = (ite ?a ?b true), ?v1 = (ite ?b ?c true) => ?v1 = (mimplies ?a ?c).
 [p1] (p1 (tuple ?a ?b)) => ?a.
 [p2] (p2 (tuple ?a ?b)) => ?b.
-[meq refl] (meq ?a ?a) => mtrue.
+[meq refl] (meq ?a ?a) => true.
 [meq symm] (meq ?a ?b) => (meq ?b ?a).
 
 [mk def1] (mk ?i ?j P1) => (k1 ?i).
 [mk def2] (mk ?i ?j P2) => (k2 ?i ?j).
 
-[unfold] ?v1 = (happens ?t), ?v1 = mtrue, ?v2 = (macro ?m ?t ?p) =>
+[unfold] ?v1 = (happens ?t), ?v1 = true, ?v2 = (macro ?m ?t ?p) =>
   ?v2 = (unfold ?m ?t ?p).
 
 
 [unfold exec]  (unfold exec ?t ?p) 
-  => (mand (macro cond ?t ?p) (macro exec (pred ?t) ?p)).
+  => (and (macro cond ?t ?p) (macro exec (pred ?t) ?p)).
 [unfold frame] (unfold frame ?t ?p) => (tuple
-  (tuple (macro exec ?t ?p) (mite (macro exec ?t ?p) (macro msg ?t ?p) empty))
+  (tuple (macro exec ?t ?p) (ite (macro exec ?t ?p) (macro msg ?t ?p) empty))
   (macro frame (pred ?t) ?p)
 ).
 [unfold input] (unfold input ?t ?p) => (att (macro frame (pred ?t) ?p)).
+(declare-fun k2 (S S) S)
 
 [unfold msg init] (unfold msg init ?p) => empty.
 [unfold msg T] (unfold msg (T ?i ?j) ?p) => (tuple (nonce (n ?i ?j)) (hash (n ?i ?j) (nonce (mk ?i ?j ?p)))).
 [unfodl msg R] (unfold msg (Rs ?i ?j) ?p) => ok.
 [unfold msg Rf] (unfold msg (Rf ?j) ?p) => ko.
-[unfold cond init] (unfold cond init ?p) => mtrue.
-[unfold cond T] (unfold cond (T ?i ?j) ?p) => mtrue.
+[unfold cond init] (unfold cond init ?p) => true.
+[unfold cond T] (unfold cond (T ?i ?j) ?p) => true.
 [unfold cond Rs] (unfold cond (Rs ?i ?j) ?p) 
   => (meq (p2 (macro input (Rs ?i ?j) ?p)) (hash (p1 (macro input (Rs ?i ?j) ?p)) (nonce (mk ?i ?j ?p)))).
 [unfold cond Rf] (unfold cond (Rf ?j) ?p) 
-  => (mnot (exists$1 ?j ?p (sk$1 ?j ?p))).
+  => (not (exists$1 ?j ?p (sk$1 ?j ?p))).
 
 
 [unfold pred] ?v1 = (unfold ?m (pred init) ?p1), ?v2 = (unfold ?m (pred init) ?p2) => ?v1 = ?v2.
 
 [exists1 def] (exists$1 ?j ?p ?i) 
   => (meq (p2 (macro input (Rf ?j) ?p)) (hash (p1 (macro input (Rf ?j) ?p)) (nonce (mk ?i ?j ?p)))).
-[exists1 sound] ?v1 = (exists$1 ?j ?p ?i), ?v1 = mtrue, ?v2 = (exists$1 ?j ?p (sk$1 ?j ?p)) => ?v2 = mtrue.
+[exists1 sound] ?v1 = (exists$1 ?j ?p ?i), ?v1 = true, ?v2 = (exists$1 ?j ?p (sk$1 ?j ?p)) => ?v2 = true.
 
 [exists2 def] (exists$2 ?j ?t ?p ?i) => 
-  (mand 
+  (and 
     (lt (T ?i ?j) ?t) 
-    (mand  
+    (and  
       (meq (p1 (macro input ?t ?p)) (p1 (macro msg (T ?i ?j) ?p)))
       (meq (p2 (macro input ?t ?p)) (p2 (macro msg (T ?i ?j) ?p))))).
-[exists2 sound] ?v1 = (exists$2 ?j ?t ?p ?i), ?v1 = mtrue, ?v2 = (exists$2 ?j ?t ?p (sk$2 ?j ?t ?p)) => ?v2 = mtrue.
+[exists2 sound] ?v1 = (exists$2 ?j ?t ?p ?i), ?v1 = true, ?v2 = (exists$2 ?j ?t ?p (sk$2 ?j ?t ?p)) => ?v2 = true.
 
 [lemma 2] (meq (p2 (macro input ?t ?p)) 
   (hash (p1 (macro input ?t ?p)) (nonce (mk ?i ?j ?p)))) =>
     (exists$2 ?j ?t ?p (sk$2 ?j ?t ?p)).
 
-[leq refl] (leq ?t ?t) => mtrue.
-[leq pred] (leq (pred ?t) ?t) => mtrue.
+[leq refl] (leq ?t ?t) => true.
+[leq pred] (leq (pred ?t) ?t) => true.
 
 [happens leq]
-?v1 = (happens ?t), ?v1 = (leq ?t2 ?t1), ?v1 = mtrue => ?v1 = (happens ?t2).
+?v1 = (happens ?t), ?v1 = (leq ?t2 ?t1), ?v1 = true => ?v1 = (happens ?t2).
 
 
 [top axiom]
-mtrue.
+true.
 
 [equiv axiom]
 (equiv ?u ?v ?x ?x).
 [equiv deduce]
 (equiv ?u ?v ?a ?b) :-
-  (deduce ?u ?v ?a ?b mtrue mtrue).
+  (deduce ?u ?v ?a ?b true true).
 
 [deduce macro]
 (deduce (macro frame ?t ?p1) (macro frame ?t ?p2) (macro ?m ?t2 ?p1) (macro ?m ?t2 ?p2) ?h1 ?h2) :-
-  (implies ?h1 (leq ?t2 ?t)),
-  (implies ?h2 (leq ?t2 ?t)),
-  (happens ?t).
+  (vampire (implies ?h1 (leq ?t2 ?t))),
+  (vampire (implies ?h2 (leq ?t2 ?t))),
+  (vampire (happens ?t)).
 
 [deduce axiom]
 (deduce ?u ?v ?u ?v ?h1 ?h2).
 [deduce true]
-(deduce ?u ?v mtrue mtrue ?h1 ?h2).
+(deduce ?u ?v true true ?h1 ?h2).
 [deduce ok]
 (deduce ?u ?v ok ok ?h1 ?h2).
 [deduce ko]
 (deduce ?u ?v ko ko ?h1 ?h2).
 [deduce empty]
 (deduce ?u ?v empty empty ?h1 ?h2).
-[deduce mfalse]
-(deduce ?u ?v mfalse mfalse ?h1 ?h2).
+[deduce false]
+(deduce ?u ?v false false ?h1 ?h2).
 
 [deduce exists$1]
 (deduce ?u ?v (exists$1 ?j ?p1 (sk$1 ?j ?p1)) (exists$1 ?j ?p2 (sk$1 ?j ?p2)) ?h1 ?h2) :-,
@@ -117,10 +118,10 @@ mtrue.
 (deduce ?u ?v (meq ?a1 ?b1) (meq ?a2 ?b2) ?h1 ?h2) :-,
   (deduce ?u ?v ?a1 ?a2 ?h1 ?h2),
   (deduce ?u ?v ?b1 ?b2 ?h1 ?h2).
-[deduce mite]
-(deduce ?u ?v (mite ?a1 ?b1 ?c1) (mite ?a2 ?b2 ?c2) ?h1 ?h2) :-,
-  (deduce ?u ?v ?b1 ?b2 (mand ?a1 ?h1) (mand ?a2 ?h2)),
-  (deduce ?u ?v ?c1 ?c2 (mand (mnot ?a1) ?h1) (mand (mnot ?a2) ?h2)),
+[deduce ite]
+(deduce ?u ?v (ite ?a1 ?b1 ?c1) (ite ?a2 ?b2 ?c2) ?h1 ?h2) :-,
+  (deduce ?u ?v ?b1 ?b2 (and ?a1 ?h1) (and ?a2 ?h2)),
+  (deduce ?u ?v ?c1 ?c2 (and (not ?a1) ?h1) (and (not ?a2) ?h2)),
   (deduce ?u ?v ?a1 ?a2 ?h1 ?h2).
 
 [deduce tuple]
@@ -137,16 +138,16 @@ mtrue.
 (deduce ?u ?v (p2 ?a) (p2 ?b) ?h1 ?h2) :-,
   (deduce ?u ?v ?a ?b ?h1 ?h2).
 [deduce not]
-(deduce ?u ?v (mnot ?a) (mnot ?b) ?h1 ?h2) :-
+(deduce ?u ?v (not ?a) (not ?b) ?h1 ?h2) :-
   (deduce ?u ?v ?a ?b ?h1 ?h2).
 
-(assert ?a ?b).
-?v1 = (assert ?a ?b) => ?a = ?b.
+(massert ?a ?b).
+?v1 = (massert ?a ?b) => ?a = ?b.
 
 
 
 goal :-
-  (assert (happens (Rf j)) mtrue),
+  (massert (happens (Rf j)) true),
   (equiv
     (macro frame (pred (Rf j)) P1)
       (macro frame (pred (Rf j)) P2)

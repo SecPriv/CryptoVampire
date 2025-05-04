@@ -63,7 +63,7 @@ macro_rules! ereturn_let {
   (let $pat:pat = $value:expr, $ret:expr) => {
     let $pat = $value else {
       return $ret
-    }
+    };
   };
   (let $pat:pat = $value:expr) => {
     ereturn_if!(let $pat = $value, ())

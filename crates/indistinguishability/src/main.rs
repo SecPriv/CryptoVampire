@@ -1,7 +1,7 @@
 use std::{fmt::Display, time::Duration, u128};
 
 use egg::{EGraph, FromOp, Id, Language, Runner, Symbol, SymbolLang};
-use indistinguishability::{and_simpl_rewrite, MAnalysis, Program};
+use indistinguishability::{and_simpl_rewrite, MAnalysis, Program, VampireRule};
 use std::{env};
 use utils::impossible::Impossible;
 
@@ -19,6 +19,7 @@ pub fn main() {
         include_str!("../tests/test").parse().unwrap();
     pbl.set_explainations(false);
     pbl.set_memo(itern == u128::MAX);
+    pbl.add_rule(VampireRule::new(include_str!("../tests/prelude.tptp"), 0));
     // pbl.add_eq_rule(and_simpl_rewrite());
     // pbl.config.time_limit = Duration::from_secs_f32(60.0);
     pbl.config.node_limit = 100000;
