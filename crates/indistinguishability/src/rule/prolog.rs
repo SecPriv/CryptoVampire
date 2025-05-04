@@ -1,11 +1,5 @@
-use crate::{
-    analysis::WeightedAnalysis,
-    eclassmap::ECallMap,
-    weight::{self, Weight},
-    Program,
-};
-use egg::{Analysis, FromOp, Id, Language, Pattern, RecExpr, Searcher, SymbolLang, Var};
-use log::trace;
+use crate::{analysis::WeightedAnalysis, weight::Weight, Program};
+use egg::{FromOp, Id, Language, Pattern, RecExpr, Searcher, SymbolLang, Var};
 use serde::Serialize;
 use std::{
     cell::RefCell,
@@ -148,7 +142,7 @@ macro_rules! pl {
 pub mod parser {
     use super::PrologRule;
     use anyhow::{anyhow, bail, Context};
-    use egg::{Analysis, FromOp, Language, MultiPattern, Pattern, Rewrite, SymbolLang};
+    use egg::{Analysis, FromOp, Language, MultiPattern, Pattern, Rewrite};
     use itertools::Itertools;
     use log::trace;
     use std::{cell::RefCell, fmt::Debug, str::FromStr};
@@ -344,6 +338,7 @@ pub mod parser {
 
     #[test]
     fn test() {
+        use egg::SymbolLang;
         let s = include_str!("../../tests/test");
         let r: Vec<PlOrRw<SymbolLang, ()>> = parse(s).unwrap();
         println!("{r:?}")

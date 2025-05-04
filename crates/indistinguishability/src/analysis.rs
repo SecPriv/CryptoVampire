@@ -1,9 +1,9 @@
 use std::{collections::HashMap, hash::Hash};
 
-use egg::{Language, RecExpr};
+use egg::Language;
 
 use crate::{
-    weight::{self, Weight},
+    weight::{Weight},
     MWeight,
 };
 

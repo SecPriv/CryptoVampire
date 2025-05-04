@@ -1,22 +1,5 @@
-use crate::{
-    analysis::WeightedAnalysis,
-    eclassmap::ECallMap,
-    weight::{self, Weight},
-    Program,
-};
-use egg::{Analysis, FromOp, Id, Language, Pattern, RecExpr, Searcher, SymbolLang, Var};
-use log::trace;
-use serde::Serialize;
-use std::{
-    cell::RefCell,
-    collections::HashMap,
-    fmt::Display,
-    ops::DerefMut,
-    str::FromStr,
-    sync::atomic::{AtomicU64, Ordering},
-    u64,
-};
-use utils::ereturn_if;
+use crate::Program;
+use egg::{Analysis, Id, Language, RecExpr};
 
 pub use prolog::{parser::PlOrRw, PrologRule};
 mod prolog;

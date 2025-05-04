@@ -151,11 +151,16 @@ true.
 
 
 
-goal :-
-  (massert (happens (Rf j)) true),
+(goal_t ?t) :-
+  (massert (happens ?t) true),
   (equiv
-    (macro frame (pred (Rf j)) P1)
-      (macro frame (pred (Rf j)) P2)
-    (macro frame (Rf j) P1)
-      (macro frame (Rf j) P2)
+    (macro frame (pred ?t) P1)
+      (macro frame (pred ?t) P2)
+    (macro frame ?t P1)
+      (macro frame ?t P2)
   ).
+
+goal :-
+  (goal_t init),
+  (goal_t (Rf j)),
+  (goal_t (Rs i j)).

@@ -183,6 +183,7 @@ mod runner {
 
     macro_rules! option {
       ($($variant:ident($name:literal, $content:ty)),*,) => {
+          #[allow(dead_code)]
           #[doc = "arguments to [VampireExec] in type-safeish mode"]
           #[derive(Debug, Clone, PartialEq, PartialOrd)]
           pub enum VampireArg {
@@ -221,6 +222,7 @@ mod runner {
         use super::ToArgs;
         macro_rules! suboption {
           ($name:ident, $(($variant:ident, $content:literal)),*,) => {
+              #[allow(dead_code)]
               #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, Hash, Copy)]
               pub enum $name {
                 $($variant),*

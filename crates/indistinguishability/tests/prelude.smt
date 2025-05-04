@@ -30,6 +30,7 @@
 (declare-fun unfold_input (S S) S)
 (declare-fun att (S) S)
 (declare-fun j () S)
+(declare-fun i () S)
 (declare-fun i$2 () S)
 (declare-fun i$1 () S)
 (declare-fun sk$2 (S S S) S)

@@ -4,16 +4,13 @@ use egg::{
     StopReason,
 };
 use itertools::{Either, Itertools};
-use log::{info, log_enabled};
+use log::log_enabled;
 use rule::PlOrRw;
 use serde::Serialize;
 use std::{
     cell::RefCell,
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     fmt::Display,
-    fs::File,
-    io::Write,
-    mem,
     path::PathBuf,
     rc::Rc,
     str::FromStr,

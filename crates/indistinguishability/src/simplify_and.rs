@@ -1,11 +1,10 @@
 use std::{
-    collections::{HashSet, VecDeque},
+    collections::VecDeque,
     fmt::Display,
 };
 
 use egg::{
-    Analysis, Applier, EClass, EGraph, ENodeOrVar, FromOp, Id, Language, Pattern, PatternAst,
-    RecExpr, Rewrite, SearchMatches, Searcher, SymbolLang, Var,
+    Analysis, Applier, EClass, EGraph, ENodeOrVar, Id, Language, PatternAst, Rewrite, Searcher, SymbolLang, Var,
 };
 use itertools::{chain, Itertools};
 use log::{log_enabled, trace};
@@ -139,7 +138,7 @@ fn compute_conected_component2<L: Language + WithAnd + WithFalse + Display, N: A
         trace!("inspecting ({id}) {}", egraph.id_to_expr(id));
         let current_eclass = &egraph[id];
 
-        if (current_eclass.iter().any(L::is_true)) {
+        if current_eclass.iter().any(L::is_true) {
             trace!("skipped true");
             continue;
         }; // skip true

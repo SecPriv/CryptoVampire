@@ -1,9 +1,8 @@
-use std::{fmt::Display, time::Duration, u128};
+use std::u128;
 
-use egg::{EGraph, FromOp, Id, Language, Runner, Symbol, SymbolLang};
-use indistinguishability::{and_simpl_rewrite, MAnalysis, Program, VampireRule};
+use egg::SymbolLang;
+use indistinguishability::{Program, VampireRule};
 use std::env;
-use utils::impossible::Impossible;
 
 pub fn main() {
     let itern: u128 = {
@@ -63,7 +62,7 @@ mod test {
 
     #[test]
     fn test() {
-        let mut pbl: Program<SymbolLang, () /* MAnalysis<_> */> =
+        let pbl: Program<SymbolLang, () /* MAnalysis<_> */> =
             include_str!("../tests/test").parse().unwrap();
         let rules = pbl.eq_rules();
 
