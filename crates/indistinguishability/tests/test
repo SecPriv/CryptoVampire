@@ -163,4 +163,6 @@ true.
 goal :-
   (goal_t init),
   (goal_t (Rf j)),
-  (goal_t (Rs i j)).
+  (goal_t (Rs i j)),
+  %(goal_t (T i j)),
+.
