@@ -1,13 +1,13 @@
 use crate::Program;
 use egg::{Analysis, Id, Language, RecExpr};
 
-pub use prolog::{parser::PlOrRw, PrologRule};
+/// Basic prolog-like rules
 mod prolog;
+pub use prolog::{parser::PlOrRw, PrologRule};
 
+/// Calls vampire on a goal
 mod vampire;
 pub use vampire::VampireRule;
-
-mod euf_cma;
 
 #[derive(Debug, PartialEq, Eq, Ord, PartialOrd, Hash, Clone, Default)]
 pub struct Dependancy {

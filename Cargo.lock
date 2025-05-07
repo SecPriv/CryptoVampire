@@ -494,6 +494,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "golgge"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "egg",
+ "env_logger 0.11.6",
+ "itertools",
+ "log",
+ "logic_formula",
+ "paste",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+ "smallvec",
+ "static_init",
+ "tempfile",
+ "utils",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -556,6 +576,7 @@ dependencies = [
  "anyhow",
  "egg",
  "env_logger 0.11.6",
+ "golgge",
  "itertools",
  "log",
  "logic_formula",

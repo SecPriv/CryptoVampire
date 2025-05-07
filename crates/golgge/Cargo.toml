@@ -1,10 +1,9 @@
 [package]
-name = "indistinguishability"
-version = "0.2.0"
-edition = "2021"
+name = "golgge"
+version = "0.1.0"
+edition = "2024"
 
 [dependencies]
-# egg = "0.10"
 rustc-hash = "2.1.0" # for hash on integers
 serde_json = "1.0.120"
 tempfile = "3.10"
@@ -13,7 +12,6 @@ tempfile = "3.10"
 utils = { path = "../utils"}
 logic_formula = {path = "../logic_formula"}
 egg = {path = "../egg", features = ["serde-1"]}
-golgge = {path = "../golgge"}
 
 # workspace
 itertools.workspace = true
