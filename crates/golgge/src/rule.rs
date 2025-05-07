@@ -5,9 +5,9 @@ use egg::{Analysis, Id, Language, RecExpr};
 mod prolog;
 pub use prolog::{parser::PlOrRw, PrologRule};
 
-/// Calls vampire on a goal
-mod vampire;
-pub use vampire::VampireRule;
+// /// Calls vampire on a goal
+// mod vampire;
+// pub use vampire::VampireRule;
 
 #[derive(Debug, PartialEq, Eq, Ord, PartialOrd, Hash, Clone, Default)]
 pub struct Dependancy {

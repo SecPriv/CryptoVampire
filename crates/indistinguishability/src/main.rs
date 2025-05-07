@@ -1,7 +1,8 @@
 use std::u128;
 
 use egg::SymbolLang;
-use indistinguishability::{Program, VampireRule};
+use golgge::{Program};
+use indistinguishability::rule::VampireRule;
 use std::env;
 
 pub fn main() {
@@ -58,7 +59,7 @@ mod test {
     use std::fs::File;
 
     use egg::{EGraph, Runner, SymbolLang};
-    use indistinguishability::Program;
+    use golgge::Program;
 
     #[test]
     fn test() {

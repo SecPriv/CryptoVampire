@@ -8,9 +8,9 @@ use serde::Serialize;
 use static_init::dynamic;
 use utils::{ereturn_if, ereturn_let};
 
-use crate::Dependancy;
+use golgge::Dependancy;
 
-use super::Rule;
+use golgge::Rule;
 
 #[dynamic]
 static PATTERN: Pattern<SymbolLang> = "(vampire ?x)".parse().unwrap();
@@ -36,7 +36,7 @@ where
     N: Default + Analysis<SymbolLang> + Serialize,
     N::Data: Serialize,
 {
-    fn search(&self, prgm: &mut crate::Program<SymbolLang, N>, goal: egg::Id) -> super::Dependancy {
+    fn search(&self, prgm: &mut golgge::Program<SymbolLang, N>, goal: egg::Id) -> golgge::Dependancy {
         ereturn_let!(let Some(m) = PATTERN.search_eclass(prgm.egraph(), goal), Default::default());
         ereturn_let!(let Some(s) = m.substs.first(), Default::default());
 
