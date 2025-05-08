@@ -2,7 +2,7 @@ use std::u128;
 
 use egg::SymbolLang;
 use golgge::{Program};
-use indistinguishability::rule::VampireRule;
+use indistinguishability::rules::VampireRule;
 use std::env;
 
 pub fn main() {
