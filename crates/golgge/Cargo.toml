@@ -2,6 +2,7 @@
 name = "golgge"
 version = "0.1.0"
 edition = "2024"
+authors = ["Simon Jeanteur <simon.jeanteur@tuwien.ac.at>"]
 
 [dependencies]
 rustc-hash = "2.1.0" # for hash on integers

@@ -14,7 +14,6 @@ use std::{
     path::PathBuf,
     rc::Rc,
     str::FromStr,
-    usize,
 };
 use utils::implvec;
 

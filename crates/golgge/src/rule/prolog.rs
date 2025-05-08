@@ -20,9 +20,9 @@ pub struct PrologRule<L> {
     pub deps: Vec<Pattern<L>>,
     pub cut: bool,
     pub require_decrease: bool,
-    pub free_vars: Vec<Var>,
+    // pub free_vars: Vec<Var>,
     pub name: Option<String>,
-    pub memo: RefCell<HashMap<Id, Dependancy>>,
+    // pub memo: RefCell<HashMap<Id, Dependancy>>,
 }
 
 impl<L> FromStr for PrologRule<L>
@@ -60,9 +60,9 @@ where
             return Default::default();
         };
 
-        if let Some(memo) = self.memo.borrow().get(&goal) {
-            return memo.clone();
-        }
+        // if let Some(memo) = self.memo.borrow().get(&goal) {
+        //     return memo.clone();
+        // }
 
         if prgm.config.trace_prolog {
             if let Some(n) = &self.name {
@@ -75,12 +75,12 @@ where
         let inner: Vec<Vec<Id>> = matches
             .substs
             .into_iter()
-            .filter_map(|mut subst| {
+            .filter_map(|subst| {
                 // generate free vars
-                for v in &self.free_vars {
-                    let id = prgm.egraph_mut().add_expr(&Fresh::mk_fresh());
-                    subst.insert(*v, id);
-                }
+                // for v in &self.free_vars {
+                //     let id = prgm.egraph_mut().add_expr(&Fresh::mk_fresh());
+                //     subst.insert(*v, id);
+                // }
 
                 let deps: Vec<Id> = self
                     .deps
@@ -104,20 +104,20 @@ where
             inner,
             cut: self.cut,
         };
-        self.memo.borrow_mut().insert(goal, res.clone());
+        // self.memo.borrow_mut().insert(goal, res.clone());
         res
     }
 
-    fn rebuild(&self, prgm: &Program<L, N>) {
-        let mut memo = self.memo.borrow_mut();
-        ereturn_if!(memo.is_empty());
-        let nmemo = std::mem::take(memo.deref_mut());
-        let egraph = prgm.egraph();
-        *memo = nmemo
-            .into_iter()
-            .map(|(id, s)| (egraph.find(id), s))
-            .collect();
-    }
+    // fn rebuild(&self, prgm: &Program<L, N>) {
+    //     // let mut memo = self.memo.borrow_mut();
+    //     // ereturn_if!(memo.is_empty());
+    //     // let nmemo = std::mem::take(memo.deref_mut());
+    //     // let egraph = prgm.egraph();
+    //     // *memo = nmemo
+    //     //     .into_iter()
+    //     //     .map(|(id, s)| (egraph.find(id), s))
+    //     //     .collect();
+    // }
 }
 
 #[macro_export]
@@ -185,9 +185,9 @@ pub mod parser {
                 deps: vec![],
                 cut: false,
                 require_decrease: false,
-                free_vars: vec![],
+                // free_vars: vec![],
                 name,
-                memo: RefCell::new(Default::default()),
+                // memo: RefCell::new(Default::default()),
             }),
             Some(ns) => {
                 let ns = ns.trim();
@@ -209,21 +209,20 @@ pub mod parser {
                     .collect();
                 let deps = deps?;
                 let bound_vars = head.vars();
-                let free_vars: Vec<egg::Var> = deps
+                let no_free_vars = deps
                     .iter()
                     .flat_map(|p| p.vars().into_iter())
-                    .unique()
-                    .filter(|v| !bound_vars.contains(v))
-                    .collect();
+                    .any(|v| bound_vars.contains(&v));
+                anyhow::ensure!(no_free_vars, "there are free variables!");
 
                 let result = PrologRule {
                     input: head,
                     deps,
                     cut,
-                    free_vars,
+                    // free_vars,
                     require_decrease: decrease,
                     name,
-                    memo: RefCell::new(Default::default()),
+                    // memo: RefCell::new(Default::default()),
                 };
 
                 trace!("parsed {result:?}");
