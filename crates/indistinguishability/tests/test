@@ -78,6 +78,15 @@
 [top axiom]
 true.
 
+[fail]
+fail:-!, fail.
+
+[top vampire]
+(vampire true).
+
+[bot vampire]
+(vampire false) :-!, fail.
+
 [equiv axiom]
 (equiv ?u ?v ?x ?x).
 [equiv deduce]
@@ -146,13 +155,43 @@ true.
 (deduce ?u ?v (not ?a) (not ?b) ?h1 ?h2) :-
   (deduce ?u ?v ?a ?b ?h1 ?h2).
 
-(massert ?a ?b).
-?v1 = (massert ?a ?b) => ?a = ?b.
+[deduce fresh] % is this true?
+(deduce ?u ?v (nonce ?a) (nonce ?a) ?h1 ?h2)..
+
+[deduce fresh]
+(deduce ?u ?v (nonce ?a) (nonce ?b) ?h1 ?h2) :-
+  (fresh ?a ?u),
+  (fresh ?b ?v).
+
+[euf-cma]
+(equiv
+    ?h1 ?h2
+    (macro frame (T ?i ?j) P1)
+      (macro frame (T ?i ?j) P2)) :-
+  % (tuple (nonce (n ?i ?j)) (hash (n ?i ?j) (nonce (mk ?i ?j ?p))))
+  (assert (fresh (n0 ?i ?j P1) ?h1) true),
+  (assert (fresh (n0 ?i ?j P2) ?h2) true),
+  (equiv ?h1 ?h2
+    (tuple
+  (tuple (macro exec (T ?i ?j) P1) (ite (macro exec (T ?i ?j) P1) (tuple (nonce (n ?i ?j)) (nonce (n0 ?i ?j P1))) empty))
+  (macro frame (pred (T ?i ?j)) P1)
+)(tuple
+  (tuple (macro exec (T ?i ?j) P2) (ite (macro exec (T ?i ?j) P2) (tuple (nonce (n ?i ?j)) (nonce (n0 ?i ?j P2))) empty))
+  (macro frame (pred (T ?i ?j)) P2)
+)
+  ).
+
+[assert1]
+(assert ?a ?b).
+[assert2]
+?v1 = (assert ?a ?b) => ?a = ?b.
 
 
 
+[g2]
 (goal_t ?t) :-
-  (massert (happens ?t) true),
+  % hmm....
+  (assert (happens ?t) true),
   (equiv
     (macro frame (pred ?t) P1)
       (macro frame (pred ?t) P2)
@@ -160,9 +199,13 @@ true.
       (macro frame ?t P2)
   ).
 
+
+  
+
+[main goal]
 goal :-
   (goal_t init),
   (goal_t (Rf j)),
   (goal_t (Rs i j)),
-  %(goal_t (T i j)),
+  (goal_t (T i j)),
 .

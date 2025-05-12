@@ -30,7 +30,7 @@ impl<L> Step<L> {
         &self.msg
     }
 
-    fn vars<'a>(&'a self) -> impl Iterator<Item = egg::Var> + use<'a, L> {
+    fn vars(&self) -> impl Iterator<Item = egg::Var> + use<'_, L> {
         chain![self.id(), self.cond(), self.msg()].filter_map(|f| match f {
             ENodeOrVar::Var(v) => Some(*v),
             _ => None,

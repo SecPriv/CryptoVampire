@@ -1,4 +1,4 @@
-use crate::{analysis::WeightedAnalysis, weight::Weight, Program};
+use crate::{Program, analysis::WeightedAnalysis, weight::Weight};
 use egg::{FromOp, Id, Language, Pattern, RecExpr, Searcher, SymbolLang, Var};
 use serde::Serialize;
 use std::{
@@ -141,7 +141,7 @@ macro_rules! pl {
 
 pub mod parser {
     use super::PrologRule;
-    use anyhow::{anyhow, bail, Context};
+    use anyhow::{Context, anyhow, bail};
     use egg::{Analysis, FromOp, Language, MultiPattern, Pattern, Rewrite};
     use itertools::Itertools;
     use log::trace;
@@ -212,8 +212,8 @@ pub mod parser {
                 let no_free_vars = deps
                     .iter()
                     .flat_map(|p| p.vars().into_iter())
-                    .any(|v| bound_vars.contains(&v));
-                anyhow::ensure!(no_free_vars, "there are free variables!");
+                    .all(|v| bound_vars.contains(&v));
+                anyhow::ensure!(no_free_vars, "there are free variables! ({:?})", name);
 
                 let result = PrologRule {
                     input: head,

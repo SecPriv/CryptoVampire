@@ -1,3 +1,6 @@
+use egg::Language;
+use utils::impossible::Impossible;
+
 use crate::{
     iterators::{FreeVariableIterator, UsedVariableIterator},
     outers::{Content, OwnedIter, OwnedPile},
@@ -96,6 +99,13 @@ pub trait Bounder<Var> {
     fn bounds(&self) -> impl Iterator<Item = Var>;
 }
 
+impl<V> Bounder<V> for Impossible {
+    fn bounds(&self) -> impl Iterator<Item = V> {
+        unreachable!();
+        [].into_iter()
+    }
+}
+
 pub trait IteratorContainer<F, I>
 where
     F: Formula,
@@ -117,5 +127,44 @@ where
         let mut pile = OwnedPile::new(self, iterator);
         pile.as_mut().push_child(formula, init);
         pile
+    }
+}
+
+#[cfg(feature = "egg")]
+pub trait FromOpGeneral<O>: egg::Language + Sized {
+    type Error: std::fmt::Debug;
+
+    fn from_op(op: O, children: Vec<egg::Id>) -> Result<Self, Self::Error>;
+}
+
+#[cfg(feature = "egg")]
+impl<L: egg::FromOp> FromOpGeneral<&str> for L {
+    type Error = <L as egg::FromOp>::Error;
+
+    fn from_op(op: &str, children: Vec<egg::Id>) -> Result<Self, Self::Error> {
+        <L as egg::FromOp>::from_op(op, children)
+    }
+}
+
+#[cfg(feature = "egg")]
+impl<F: egg::Language> Formula for &[egg::ENodeOrVar<F>] {
+    type Var = egg::Var;
+
+    type Fun = F::Discriminant;
+
+    type Quant = Impossible;
+
+    fn destruct(self) -> Destructed<Self, impl Iterator<Item = Self>> {
+        let n = self.len();
+        let head = self.first().expect("empty formula");
+        let args = head
+            .children()
+            .iter()
+            .map(move |i| &self[usize::from(*i)..n]);
+        let head = match head {
+            egg::ENodeOrVar::ENode(h) => Head::<Self>::Fun(h.discriminant()),
+            egg::ENodeOrVar::Var(v) => Head::<Self>::Var(*v),
+        };
+        Destructed { head, args }
     }
 }

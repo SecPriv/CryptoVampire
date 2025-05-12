@@ -11,5 +11,8 @@ workspace = true
 
 
 [dependencies]
+utils = { path = "../utils", features = ["serde"] }
+egg = { path = "../egg", features = ["serde-1"], optional = true }
 
-serde = {workspace = true, optional = true}
+serde = { workspace = true, optional = true }
+itertools.workspace = true

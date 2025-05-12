@@ -11,7 +11,7 @@ tempfile = "3.10"
 
 # own crates
 utils = { path = "../utils"}
-logic_formula = {path = "../logic_formula"}
+logic_formula = {path = "../logic_formula", features = ["egg"]}
 egg = {path = "../egg", features = ["serde-1"]}
 golgge = {path = "../golgge"}
 
