@@ -50,7 +50,7 @@ impl Fresh for SymbolLang {
 
 impl<L, N> Rule<L, N> for PrologRule<L>
 where
-    L: Language + Fresh + Display + Serialize,
+    L: Language + Display + Serialize,
     N: Default + WeightedAnalysis<L> + Serialize,
     N::Data: Serialize,
 {

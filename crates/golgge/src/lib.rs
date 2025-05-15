@@ -38,6 +38,7 @@ pub use weight::MWeight;
 mod analysis;
 pub use analysis::{MAnalysis, WeightedAnalysis};
 
+
 pub struct Program<L: Language, N: Analysis<L>> {
     egraph: Option<EGraph<L, N>>,
     eq_rules: Vec<Rewrite<L, N>>,

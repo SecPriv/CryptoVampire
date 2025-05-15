@@ -11,8 +11,14 @@ workspace = true
 
 
 [dependencies]
-utils = { path = "../utils", features = ["serde"] }
-egg = { path = "../egg", features = ["serde-1"], optional = true }
+utils = { path = "../utils" }
+egg = { path = "../egg", optional = true }
 
 serde = { workspace = true, optional = true }
+smallvec = {workspace = true, optional = true}
 itertools.workspace = true
+thiserror.workspace = true
+
+[features]
+egg = ["dep:egg", "smallvec"]
+serde = ["dep:serde", "smallvec?/serde", "egg?/serde-1", "utils/serde"]
