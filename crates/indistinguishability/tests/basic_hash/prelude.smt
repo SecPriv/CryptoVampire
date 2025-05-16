@@ -85,11 +85,7 @@
           (distinct (T I1 J1) (Rs I2 J2)  (Rf J3) init)))
 
 (assert (happens  (Rf j)))
-(assert (happens  (Rs j)))
+(assert (happens  (Rs i j)))
 (assert (happens  (T i j)))
 (assert (forall ((T S) (U S)) (=> (and (leq T U) (happens U)) (happens T))))
 
-(assert (forall ((i S) (j S))
-  (= (unfold_msg (T i j))
-    )
-))

@@ -19,14 +19,14 @@ static PATTERN: Pattern<SymbolLang> = "(vampire ?x)".parse().unwrap();
 static VAR: Var = "?x".parse().unwrap();
 
 /// A rule that calls vampire to get its answer
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct VampireRule {
-    prelude: &'static str,
+    prelude: Cow<'static, str>,
     itimeout: u64,
 }
 
 impl VampireRule {
-    pub fn new(prelude: &'static str, itimeout: u64) -> Self {
+    pub fn new(prelude: Cow<'static, str>, itimeout: u64) -> Self {
         Self { prelude, itimeout }
     }
 }
