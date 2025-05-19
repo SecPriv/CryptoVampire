@@ -23,6 +23,13 @@ pub fn with_location_derive(input: TokenStream) -> TokenStream {
 
 mod with_location;
 
+#[proc_macro]
+pub fn mk_builtin_funs(input: TokenStream) -> TokenStream {
+    indistinguishability::mk_builtin_funs(input)
+}
+
+mod indistinguishability;
+
 // #[derive(Debug)]
 // struct SExpr(String);
 
@@ -35,7 +42,7 @@ mod with_location;
 // impl Parse for SExpr {
 //     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
 //         let content;
-        
+
 //         let tokens = parenthesized!(content in input);
 //         Ok(SExpr(format!("({})", tokens.to_string())))
 //     }

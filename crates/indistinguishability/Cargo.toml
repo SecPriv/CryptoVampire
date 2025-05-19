@@ -14,6 +14,7 @@ utils = { path = "../utils"}
 logic_formula = {path = "../logic_formula", features = ["egg"]}
 egg = {path = "../egg", features = ["serde-1"]}
 golgge = {path = "../golgge"}
+cryptovampire_macros = {path = "../cryptovampire_macros"}
 
 # workspace
 itertools.workspace = true
@@ -24,6 +25,7 @@ smallvec.workspace = true
 log.workspace = true
 env_logger.workspace = true
 serde.workspace = true
+bitflags= {workspace = true, features = ["serde"]}
 
 [lints]
 workspace = true

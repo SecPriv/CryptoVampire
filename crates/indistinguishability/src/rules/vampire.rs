@@ -36,7 +36,11 @@ where
     N: Default + Analysis<SymbolLang> + Serialize,
     N::Data: Serialize,
 {
-    fn search(&self, prgm: &mut golgge::Program<SymbolLang, N>, goal: egg::Id) -> golgge::Dependancy {
+    fn search(
+        &self,
+        prgm: &mut golgge::Program<SymbolLang, N>,
+        goal: egg::Id,
+    ) -> golgge::Dependancy {
         ereturn_let!(let Some(m) = PATTERN.search_eclass(prgm.egraph(), goal), Default::default());
         ereturn_let!(let Some(s) = m.substs.first(), Default::default());
 

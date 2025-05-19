@@ -66,7 +66,9 @@ mod test {
     }
 
     #[test]
-    fn test_basic_hash() {basic_hash();}
+    fn test_basic_hash() {
+        basic_hash();
+    }
 
     /// Runs the `basic_hash` example
     pub fn basic_hash() {
