@@ -27,6 +27,10 @@ macro_rules! n {
     };
 }
 use cryptovampire_macros::mk_builtin_funs;
+use egg::{Analysis, Rewrite};
+use logic_formula::egg::SimplLang;
+
+use crate::Configuration;
 
 use super::{Function, FunctionFlags, InnerFunction, Signature, Sort::*};
 use std::borrow::Cow;
@@ -34,132 +38,159 @@ use std::borrow::Cow;
 static M_ALIAS: FunctionFlags = FunctionFlags::BUILTIN.union(FunctionFlags::ALIAS);
 
 mk_builtin_funs!(
-  {
-    flags: FunctionFlags::BUILTIN
-  };
+    // The "default" value.
+    //
+    // The field declared here will be copied in every struct, unless it is overwitten
+    {
+        flags: FunctionFlags::BUILTIN
+    };
 
-  // bool
+    // =========================================================
+    // ===================== the structs =======================
+    // =========================================================
 
-  BITE {
-    signature: b!(Bool, 3),
-    name: n!("bool_if_then_else")
-  };
+    // bool
 
-  IMPLIES {
-      signature: b!(Bool, 2),
-      name: n!("bit_implies"),
-      flags: M_ALIAS
-  };
+    BITE {
+        signature: b!(Bool, 3),
+        name: n!("bool_if_then_else")
+    };
 
-  AND {
-      signature: b!(Bool, 2),
-      name: n!("bit_and"),
-      flags: M_ALIAS
-  };
+    IMPLIES {
+        signature: b!(Bool, 2),
+        name: n!("bit_implies"),
+        flags: M_ALIAS // e.g., this will be `M_ALIAS` instead of `FunctionFlags::BUILTIN`
+    };
 
-  OR {
-      signature: b!(Bool, 2),
-      name: n!("bit_or"),
-      flags: M_ALIAS
-  };
+    AND {
+        signature: b!(Bool, 2),
+        name: n!("bit_and"),
+        flags: M_ALIAS
+    };
 
-  NOT {
-      signature: b!(Bool, 1),
-      name: n!("bit_not"),
-      flags: M_ALIAS
-  };
+    OR {
+        signature: b!(Bool, 2),
+        name: n!("bit_or"),
+        flags: M_ALIAS
+    };
 
-  EQ {
-      signature: s!(Bitstring, Bitstring -> Bool),
-      name: n!("meq"),
-  };
+    NOT {
+        signature: b!(Bool, 1),
+        name: n!("bit_not"),
+        flags: M_ALIAS
+    };
 
-  MITE {
-      signature: s!(Bool, Bitstring, Bitstring -> Bitstring),
-      name: n!("bitstring_if_then_else"),
-  };
+    EQ {
+        signature: s!(Bitstring, Bitstring -> Bool),
+        name: n!("meq"),
+    };
 
-  TRUE {
-    signature: s!(() -> Bool),
-    name: n!("m_true")
-  };
+    MITE {
+        signature: s!(Bool, Bitstring, Bitstring -> Bitstring),
+        name: n!("bitstring_if_then_else"),
+    };
 
-  // ptcl
+    TRUE {
+        signature: s!(() -> Bool),
+        name: n!("m_true")
+    };
 
-  HAPPENS {
-      signature: s!(Time -> Bool),
-      name: n!("happens"),
-  };
+    // ptcl
 
-  LT {
-      signature: s!(Time, Time -> Bool),
-      name: n!("lt"),
-  };
+    HAPPENS {
+        signature: s!(Time -> Bool),
+        name: n!("happens"),
+    };
 
-  LEQ {
-      signature: s!(Time, Time -> Bool),
-      name: n!("leq"),
-  };
+    LT {
+        signature: s!(Time, Time -> Bool),
+        name: n!("lt"),
+    };
 
-  PRED {
-      signature: b!(Time, 1),
-      name: n!("pred"),
-  };
+    LEQ {
+        signature: s!(Time, Time -> Bool),
+        name: n!("leq"),
+    };
 
-  // macro
+    PRED {
+        signature: b!(Time, 1),
+        name: n!("pred"),
+    };
 
-  ATT {
-      signature: s!(Time -> Bitstring),
-      name: n!("att"),
-  };
+    // macro
 
-  MACRO_INPUT {
-      signature: s!(Time, Protocol -> Bitstring),
-      name: n!("macro_input"),
-  };
+    ATT {
+        signature: s!(Time -> Bitstring),
+        name: n!("att"),
+    };
 
-  MACRO_FRAME {
-      signature: s!(Time, Protocol -> Bitstring),
-      name: n!("macro_frame"),
-  };
+    MACRO_INPUT {
+        signature: s!(Time, Protocol -> Bitstring),
+        name: n!("macro_input"),
+    };
 
-  MACRO_MSG {
-      signature: s!(Time, Protocol -> Bitstring),
-      name: n!("macro_msg"),
-  };
+    MACRO_FRAME {
+        signature: s!(Time, Protocol -> Bitstring),
+        name: n!("macro_frame"),
+    };
 
-  MACRO_COND {
-      signature: s!(Time, Protocol -> Bool),
-      name: n!("macro_cond"),
-  };
+    MACRO_MSG {
+        signature: s!(Time, Protocol -> Bitstring),
+        name: n!("macro_msg"),
+    };
 
-  MACRO_EXEC {
-      signature: s!(Time, Protocol -> Bool),
-      name: n!("macro_exec"),
-  };
+    MACRO_COND {
+        signature: s!(Time, Protocol -> Bool),
+        name: n!("macro_cond"),
+    };
 
-  UNFOLD_INPUT {
-      signature: s!(Time, Protocol -> Bitstring),
-      name: n!("unfold_input"),
-  };
+    MACRO_EXEC {
+        signature: s!(Time, Protocol -> Bool),
+        name: n!("macro_exec"),
+    };
 
-  UNFOLD_FRAME {
-      signature: s!(Time, Protocol -> Bitstring),
-      name: n!("unfold_frame"),
-  };
+    UNFOLD_INPUT {
+        signature: s!(Time, Protocol -> Bitstring),
+        name: n!("unfold_input"),
+    };
 
-  UNFOLD_MSG {
-      signature: s!(Time, Protocol -> Bitstring),
-      name: n!("unfold_msg"),
-  };
+    UNFOLD_FRAME {
+        signature: s!(Time, Protocol -> Bitstring),
+        name: n!("unfold_frame"),
+    };
 
-  UNFOLD_COND {
-      signature: s!(Time, Protocol -> Bool),
-      name: n!("unfold_cond"),
-  };
+    UNFOLD_MSG {
+        signature: s!(Time, Protocol -> Bitstring),
+        name: n!("unfold_msg"),
+    };
 
-  UNFOLD_EXEC {
-      signature: s!(Time, Protocol -> Bool),
-      name: n!("unfold_exec"),
-  };
+    UNFOLD_COND {
+        signature: s!(Time, Protocol -> Bool),
+        name: n!("unfold_cond"),
+    };
+
+    UNFOLD_EXEC {
+        signature: s!(Time, Protocol -> Bool),
+        name: n!("unfold_exec"),
+    };
+
+
+    // polog only
+
+    GOAL {
+        signature: s!(() -> Bitstring), // kinda irrelevant here
+        name: n!("goal"),
+        flags: FunctionFlags::BUILTIN.union(FunctionFlags::PROLOG_ONLY)
+    }
 );
+
+pub fn mk_golgge_rewrites<const N: usize, A>(
+    _config: &Configuration,
+) -> impl Iterator<Item = Rewrite<SimplLang<Function, N>, A>>
+where
+    A: Analysis<SimplLang<Function, N>>,
+{
+    
+
+    [].into_iter()
+}

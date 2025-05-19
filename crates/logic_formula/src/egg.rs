@@ -1,5 +1,5 @@
 use core::hash::Hash;
-use egg::{FromOp, Id, Language, RecExpr};
+use egg::{FromOp, Id, Language, RecExpr, SymbolLang};
 use itertools::Itertools;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -56,6 +56,14 @@ pub struct SimplLang<D, const N: usize = 3> {
 }
 pub type SimplLangVar<D, const N: usize = 3> = egg::ENodeOrVar<SimplLang<D, N>>;
 
+#[derive(Debug, Clone, Copy, Error)]
+pub enum SimpleLangParseError<E: Error + Debug> {
+    #[error("invalid arguments")]
+    InValid,
+    #[error(transparent)]
+    ParseError(#[from] E),
+}
+
 impl<D: Display, const N: usize> Display for SimplLang<D, N> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.head.fmt(f)
@@ -94,6 +102,48 @@ impl<D: SimpleDiscriminant, const N: usize> SimplLang<D, N> {
         let Self { head, args } = self;
         head.valid(args)
     }
+
+    pub fn from_symbollang<E: Error>(
+        expr: &[SymbolLang],
+        mut convert: impl FnMut(&str) -> Result<D, E>,
+    ) -> Result<RecExpr<SimplLang<D, N>>, SimpleLangParseError<E>> {
+        let inner: Result<Vec<_>, SimpleLangParseError<_>> = expr
+            .iter()
+            .map(|f| {
+                let op = convert(f.op.as_str())?;
+                FromOpGeneral::from_op(op, f.children.clone())
+                    .map_err(|_: ()| SimpleLangParseError::InValid)
+            })
+            .collect();
+        Ok(RecExpr::from(inner?))
+    }
+
+    pub fn from_var_symbollang<E: Error>(
+        expr: &[egg::ENodeOrVar<SymbolLang>],
+        mut convert: impl FnMut(&str) -> Result<D, E>,
+    ) -> Result<RecExpr<SimplLangVar<D, N>>, SimpleLangParseError<E>> {
+        let inner: Result<Vec<_>, SimpleLangParseError<_>> = expr
+            .iter()
+            .map(|f| match f {
+                egg::ENodeOrVar::ENode(f) => {
+                    let op = convert(f.op.as_str())?;
+                    Ok(egg::ENodeOrVar::ENode(FromOpGeneral::from_op(op, f.children.clone())
+                        .map_err(|_: ()| SimpleLangParseError::InValid)?))
+                }
+                egg::ENodeOrVar::Var(var) => Ok(egg::ENodeOrVar::Var(*var)),
+            })
+            .collect();
+        Ok(RecExpr::from(inner?))
+    }
+}
+
+impl<E: Error + Debug> SimpleLangParseError<E> {
+    pub fn map<E2: Error + Debug>(self, f: impl FnOnce(E) -> E2) -> SimpleLangParseError<E2> {
+        match self {
+            SimpleLangParseError::InValid => SimpleLangParseError::InValid,
+            SimpleLangParseError::ParseError(e) => SimpleLangParseError::ParseError(f(e)),
+        }
+    }
 }
 
 impl<D: SimpleDiscriminant, const N: usize> FromOpGeneral<D> for SimplLang<D, N> {
@@ -110,14 +160,6 @@ impl<D: SimpleDiscriminant, const N: usize> FromOpGeneral<D> for SimplLang<D, N>
             Err(())
         }
     }
-}
-
-#[derive(Debug, Clone, Copy, Error)]
-pub enum SimpleLangParseError<E: Error + Debug> {
-    #[error("invalid arguments")]
-    InValid,
-    #[error(transparent)]
-    ParseError(#[from] E),
 }
 
 impl<D: SimpleDiscriminant + FromStr, const N: usize> FromOp for SimplLang<D, N>

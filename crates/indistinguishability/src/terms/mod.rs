@@ -4,12 +4,15 @@ use bitflags::bitflags;
 use egg::SymbolLang;
 use logic_formula::egg::{SimplLang, SimpleDiscriminant};
 use serde::{Deserialize, Serialize};
+use utils::quack::CowArc;
+use crate::protocol::{MacroKind, ProtocolLanguage};
 
 bitflags! {
     #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Serialize, Deserialize)]
     pub struct FunctionFlags: u8 {
         const BUILTIN = 1 << 0;
         const ALIAS = 1 << 1;
+        const PROLOG_ONLY = 1 << 2;
     }
 }
 
@@ -103,12 +106,6 @@ impl SimpleDiscriminant for Function {
     }
 }
 
-pub use builtin::*;
-use utils::quack::CowArc;
-
-mod builtin;
-use crate::protocol::{MacroKind, ProtocolLanguage};
-
 impl<const N: usize> ProtocolLanguage for SimplLang<Function, N> {
     fn mk_happens(step: egg::Id) -> Self {
         HAPPENS.app_id([step])
@@ -126,3 +123,6 @@ impl<const N: usize> ProtocolLanguage for SimplLang<Function, N> {
         Function::unfold_from_kind(kind).app_id([step, ptcl])
     }
 }
+
+pub use builtin::*;
+mod builtin;
