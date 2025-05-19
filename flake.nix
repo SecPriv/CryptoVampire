@@ -91,6 +91,7 @@
               rustPlatform.bindgenHook
               rustPlatform.cargoCheckHook
               rustPlatform.cargoBuildHook
+              pest-ide-tools
             ]
             ++ lib.optional stdenv.isDarwin git;
         };
