@@ -1,20 +1,29 @@
 use std::{borrow::Cow, fmt::Display, ops::Deref, rc::Rc};
 
-use crate::protocol::{MacroKind, ProtocolLanguage};
-use bitflags::bitflags;
-use egg::SymbolLang;
+use crate::{protocol::{MacroKind, ProtocolLanguage}, Lang};
+use bitflags::{bitflags, bitflags_match};
+use egg::{PatternAst, SymbolLang, Var};
 use logic_formula::egg::{SimplLang, SimpleDiscriminant};
 use serde::{Deserialize, Serialize};
 use utils::quack::CowArc;
 
+mod functions_holder;
+pub use functions_holder::*;
+
 bitflags! {
     #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Serialize, Deserialize)]
-    pub struct FunctionFlags: u8 {
+    pub struct FunctionFlags: u16 {
         const BUILTIN = 1 << 0;
         const ALIAS = 1 << 1;
         const PROLOG_ONLY = 1 << 2;
+
         const MACRO = 1 << 3;
         const UNFOLD = 1 << 4;
+
+        const CUSTOM_DEDUCE = 1 << 5;
+
+        const EXISTS = 1 << 6;
+        const SKOLEM = 1 << 7;
     }
 }
 
@@ -24,6 +33,7 @@ pub struct InnerFunction {
     pub name: Cow<'static, str>,
     pub signature: Signature,
     pub flags: FunctionFlags,
+    exists_idx: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -42,11 +52,19 @@ pub enum Sort {
     Bitstring,
     Time,
     Protocol,
+    Nonce
 }
+
+pub use quantifier::*;
+mod quantifier;
 
 impl Signature {
     pub fn arity(&self) -> usize {
         self.inputs.len()
+    }
+
+    pub fn inputs_iter(&self) -> impl Iterator<Item = Sort> + use<'_> {
+        self.inputs.iter().copied()
     }
 }
 
@@ -92,6 +110,13 @@ impl Function {
             CowArc::Owned(_) => None,
             CowArc::Borrowed(x) => Some(Self::from_ref(x)),
         }
+    }
+
+    pub fn get_exist_index(&self) -> Option<usize> {
+        bitflags_match!(self.flags,{
+            FunctionFlags::EXISTS | FunctionFlags::SKOLEM => Some(self.exists_idx),
+            _ => None
+        })
     }
 }
 

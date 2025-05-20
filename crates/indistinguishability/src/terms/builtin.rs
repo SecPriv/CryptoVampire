@@ -37,7 +37,8 @@ mk_builtin_funs!(
     //
     // The field declared here will be copied in every struct, unless it is overwitten
     {
-        flags: FunctionFlags::BUILTIN
+        flags: FunctionFlags::BUILTIN,
+        exists_idx: 0
     };
 
     // =========================================================
@@ -48,6 +49,7 @@ mk_builtin_funs!(
 
     BITE "bool_if_then_else" "b_ite" {
         signature: s!(Bool, 3),
+        flags: f!(CUSTOM_DEDUCE)
     };
 
     IMPLIES "bit_implies" "implies" "=>" "mimplies" {
@@ -76,6 +78,7 @@ mk_builtin_funs!(
 
     MITE "bitstring_if_then_else" "mite" "ite" {
         signature: s!(Bool, Bitstring, Bitstring -> Bitstring),
+        flags: f!(CUSTOM_DEDUCE)
     };
 
     TRUE "mtrue" "true" {
@@ -182,7 +185,41 @@ mk_builtin_funs!(
     // prolog only
 
     GOAL "goal" {
-        signature: s!(() -> Bitstring), // kinda irrelevant here
-        flags: FunctionFlags::BUILTIN.union(FunctionFlags::PROLOG_ONLY)
-    }
+        signature: s!(() -> Bool), // kinda irrelevant here
+        flags: f!(PROLOG_ONLY)
+    };
+
+    BOOL_DEDUCE "deduce_bool" "deduce_b" {
+        signature: s!(
+                /* hypothesis */
+                Bitstring, Bitstring, 
+                /* to prove */
+                Bool, Bool,
+                /* constrains */
+                Bool, Bool
+            -> Bool),
+        flags: f!(PROLOG_ONLY)
+    };
+    
+    BIT_DEDUCE "deduce_bitstring" "deduce_m" {
+        signature: s!(
+            /* hypothesis */
+            Bitstring, Bitstring, 
+            /* to prove */
+            Bitstring, Bitstring,
+            /* constrains */
+            Bool, Bool
+            -> Bool),
+        flags: f!(PROLOG_ONLY)
+    };
+
+    EQUIV "equiv" {
+        signature: s!(
+            /* hypothesis */
+            Bitstring, Bitstring, 
+            /* to prove */
+            Bitstring, Bitstring 
+            -> Bool),
+        flags: f!(PROLOG_ONLY)
+    };
 );

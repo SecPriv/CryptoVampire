@@ -6,9 +6,9 @@ use utils::impossible::Impossible;
 
 use crate::{
     terms::{Function, PARSING_PAIRS},
-    Configuration,
+    Configuration, Problem,
 };
-use parse::Patterns;
+use parse::{clean_input, convert_fun, PatternsAst};
 
 mod parse;
 #[cfg(test)]
@@ -16,28 +16,13 @@ mod test;
 
 /// build the default rewrite rules
 pub fn mk_golgge_rewrites<const N: usize, A>(
-    _config: &Configuration,
-) -> impl Iterator<Item = Rewrite<SimplLang<Function, N>, A>>
+    pbl: &Problem,
+) -> impl Iterator<Item = Rewrite<SimplLang<Function, N>, A>> + use<'_, A, N>
 where
     A: Analysis<SimplLang<Function, N>>,
 {
-    let hash_map: HashMap<_, _> = PARSING_PAIRS.iter().cloned().collect();
-    let convert = move |s: &str| Ok::<_, Impossible>(hash_map.get(s).unwrap().clone());
-
-    let cleaned = include_str!("builtin_rewrites")
-        .lines()
-        .map(|line| {
-            let line = line.trim();
-            // Remove anything after a '%'
-            match line.find('%') {
-                Some(idx) => &line[..idx],
-                None => line,
-            }
-            .trim()
-        })
-        .filter(|line| !line.is_empty())
-        .collect::<Vec<_>>()
-        .join(" ") // rebuild a string without comments
+    let cleaned = clean_input(include_str!("builtin_rewrites"))
+        // rebuild a string without comments
         .split('.')
         .map(|x| x.trim().to_owned())
         .collect_vec(); // we need to collect here to force the iterator to take ownership
@@ -49,7 +34,10 @@ where
             dbg!(s);
         }) // uncomment to debug
         .map(|s| s.parse().unwrap())
-        .map(move |patt: Patterns<SymbolLang>| {
-            patt.convert(&convert).unwrap().to_rewrite().unwrap()
+        .map(move |patt: PatternsAst<SymbolLang>| {
+            patt.convert(|s| convert_fun(pbl, s)).unwrap().into_rewrite().unwrap()
         })
 }
+
+pub use deduce::mk_deduce_rules;
+mod deduce;
