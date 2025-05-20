@@ -69,29 +69,29 @@ where
         )
         .unwrap();
 
-        let macro_to_unfold = {
-            let max_var = self.max_vars();
-            let var1 = egg::Var::from_u32(max_var + 1);
-            let var2 = egg::Var::from_u32(max_var + 2);
-            let happens: PatternAst<L> = ProtocolLanguage::app_happens(self.id());
-            let mtrue: PatternAst<L> = ProtocolLanguage::app_true();
+        // let macro_to_unfold = {
+        //     let max_var = self.max_vars();
+        //     let var1 = egg::Var::from_u32(max_var + 1);
+        //     let var2 = egg::Var::from_u32(max_var + 2);
+        //     let happens: PatternAst<L> = ProtocolLanguage::app_happens(self.id());
+        //     let mtrue: PatternAst<L> = ProtocolLanguage::app_true();
 
-            [MacroKind::Msg, MacroKind::Cond].map(|m| {
-                let pre = vec![
-                    (var1, happens.clone()),
-                    (var1, mtrue.clone()),
-                    (var2, ProtocolLanguage::app_macro(m, name, ptcl)),
-                ];
-                let post = vec![(var2, ProtocolLanguage::app_unfold(m, name, ptcl))];
-                Rewrite::new(
-                    format!("macro {m} {name}"),
-                    MultiPattern::new(pre),
-                    MultiPattern::new(post),
-                )
-                .unwrap()
-            })
-        };
+        //     [MacroKind::Msg, MacroKind::Cond].map(|m| {
+        //         let pre = vec![
+        //             (var1, happens.clone()),
+        //             (var1, mtrue.clone()),
+        //             (var2, ProtocolLanguage::app_macro(m, name, ptcl)),
+        //         ];
+        //         let post = vec![(var2, ProtocolLanguage::app_unfold(m, name, ptcl))];
+        //         Rewrite::new(
+        //             format!("macro {m} {name}"),
+        //             MultiPattern::new(pre),
+        //             MultiPattern::new(post),
+        //         )
+        //         .unwrap()
+        //     })
+        // };
 
-        buf.extend(chain![[unfold_cond, unfold_msg], macro_to_unfold]);
+        buf.extend([unfold_cond, unfold_msg]);
     }
 }

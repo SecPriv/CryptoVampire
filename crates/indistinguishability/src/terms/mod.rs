@@ -1,11 +1,11 @@
 use std::{borrow::Cow, fmt::Display, ops::Deref, rc::Rc};
 
+use crate::protocol::{MacroKind, ProtocolLanguage};
 use bitflags::bitflags;
 use egg::SymbolLang;
 use logic_formula::egg::{SimplLang, SimpleDiscriminant};
 use serde::{Deserialize, Serialize};
 use utils::quack::CowArc;
-use crate::protocol::{MacroKind, ProtocolLanguage};
 
 bitflags! {
     #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Serialize, Deserialize)]
@@ -13,6 +13,8 @@ bitflags! {
         const BUILTIN = 1 << 0;
         const ALIAS = 1 << 1;
         const PROLOG_ONLY = 1 << 2;
+        const MACRO = 1 << 3;
+        const UNFOLD = 1 << 4;
     }
 }
 
@@ -82,6 +84,13 @@ impl Function {
             MacroKind::Cond => &UNFOLD_COND,
             MacroKind::Msg => &UNFOLD_MSG,
             MacroKind::Exec => &UNFOLD_EXEC,
+        }
+    }
+
+    pub const fn const_clone(&self) -> Option<Self> {
+        match self.0 {
+            CowArc::Owned(_) => None,
+            CowArc::Borrowed(x) => Some(Self::from_ref(x)),
         }
     }
 }

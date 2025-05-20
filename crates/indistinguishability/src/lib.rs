@@ -1,10 +1,6 @@
+pub mod protocol;
 pub mod rules;
+pub mod terms;
 
-mod protocol;
-
-mod terms;
-
-#[derive(Debug)]
-pub struct Configuration {
-
-}
+#[derive(Debug, Default)]
+pub struct Configuration {}

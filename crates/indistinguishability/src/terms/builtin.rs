@@ -1,4 +1,15 @@
+use super::{Function, FunctionFlags, InnerFunction, Signature, Sort::*};
+use cryptovampire_macros::mk_builtin_funs;
+use std::borrow::Cow;
+
+/// helper to write signatures
 macro_rules! s {
+    ($t:ident, $n:literal) => {
+        Signature {
+            inputs: Cow::Borrowed(&[$t; $n]),
+            output: $t,
+        }
+    };
   ($($ins:ident),* -> $out:ident) => {
       Signature {
         inputs: Cow::Borrowed(&[$($ins),*]),
@@ -11,31 +22,15 @@ macro_rules! s {
         output: $out
       }
   };
-  }
+}
 
-macro_rules! b {
-    ($t:ident, $n:literal) => {
-        Signature {
-            inputs: Cow::Borrowed(&[$t; $n]),
-            output: $t,
-        }
+/// helper to write flags
+macro_rules! f {
+    ($($id:ident)|*) => {
+        FunctionFlags::BUILTIN
+            $(.union(FunctionFlags::$id))*
     };
 }
-macro_rules! n {
-    ($n:literal) => {
-        Cow::Borrowed($n)
-    };
-}
-use cryptovampire_macros::mk_builtin_funs;
-use egg::{Analysis, Rewrite};
-use logic_formula::egg::SimplLang;
-
-use crate::Configuration;
-
-use super::{Function, FunctionFlags, InnerFunction, Signature, Sort::*};
-use std::borrow::Cow;
-
-static M_ALIAS: FunctionFlags = FunctionFlags::BUILTIN.union(FunctionFlags::ALIAS);
 
 mk_builtin_funs!(
     // The "default" value.
@@ -51,146 +46,143 @@ mk_builtin_funs!(
 
     // bool
 
-    BITE {
-        signature: b!(Bool, 3),
-        name: n!("bool_if_then_else")
+    BITE "bool_if_then_else" "b_ite" {
+        signature: s!(Bool, 3),
     };
 
-    IMPLIES {
-        signature: b!(Bool, 2),
-        name: n!("bit_implies"),
-        flags: M_ALIAS // e.g., this will be `M_ALIAS` instead of `FunctionFlags::BUILTIN`
+    IMPLIES "bit_implies" "implies" "=>" "mimplies" {
+        signature: s!(Bool, 2),
+        flags: f!(ALIAS) // e.g., this will be `M_ALIAS` instead of `FunctionFlags::BUILTIN`
     };
 
-    AND {
-        signature: b!(Bool, 2),
-        name: n!("bit_and"),
-        flags: M_ALIAS
+    AND "bit_and" "and" "mand" {
+        signature: s!(Bool, 2),
+        flags: f!(ALIAS)
     };
 
-    OR {
-        signature: b!(Bool, 2),
-        name: n!("bit_or"),
-        flags: M_ALIAS
+    OR "bit_or" "or" "mor" {
+        signature: s!(Bool, 2),
+        flags: f!(ALIAS)
     };
 
-    NOT {
-        signature: b!(Bool, 1),
-        name: n!("bit_not"),
-        flags: M_ALIAS
+    NOT "bit_not" "not" "mnot" {
+        signature: s!(Bool, 1),
+        flags: f!(ALIAS)
     };
 
-    EQ {
+    EQ "meq" "eq" "==" {
         signature: s!(Bitstring, Bitstring -> Bool),
-        name: n!("meq"),
     };
 
-    MITE {
+    MITE "bitstring_if_then_else" "mite" "ite" {
         signature: s!(Bool, Bitstring, Bitstring -> Bitstring),
-        name: n!("bitstring_if_then_else"),
     };
 
-    TRUE {
+    TRUE "mtrue" "true" {
         signature: s!(() -> Bool),
-        name: n!("m_true")
+    };
+
+    FALSE "mfalse" "false" {
+        signature: s!(() -> Bool),
+    };
+
+    // base bitstrings
+
+    TUPLE "mtuple" "tuple" "pair" {
+        signature: s!(Bitstring, 2)
+    };
+
+    PROJ_1 "sel1of2" "p1" "fst" {
+        signature: s!(Bitstring, 1)
+    };
+
+    PROJ_2 "sel2of2" "p2" "snd" {
+        signature: s!(Bitstring, 1)
+    };
+
+    EMPTY "mempty" "empty" "none" {
+        signature: s!(Bitstring, 0)
     };
 
     // ptcl
 
-    HAPPENS {
+    HAPPENS "happens" {
         signature: s!(Time -> Bool),
-        name: n!("happens"),
     };
 
-    LT {
+    LT "lt" "<" {
         signature: s!(Time, Time -> Bool),
-        name: n!("lt"),
     };
 
-    LEQ {
+    LEQ "leq" "<=" {
         signature: s!(Time, Time -> Bool),
-        name: n!("leq"),
     };
 
-    PRED {
-        signature: b!(Time, 1),
-        name: n!("pred"),
+    PRED "pred" {
+        signature: s!(Time, 1),
     };
 
     // macro
 
-    ATT {
+    ATT "att" {
         signature: s!(Time -> Bitstring),
-        name: n!("att"),
     };
 
-    MACRO_INPUT {
+    MACRO_INPUT "macro_input" {
         signature: s!(Time, Protocol -> Bitstring),
-        name: n!("macro_input"),
+        flags: f!(MACRO)
     };
 
-    MACRO_FRAME {
+    MACRO_FRAME "macro_frame" {
         signature: s!(Time, Protocol -> Bitstring),
-        name: n!("macro_frame"),
+        flags: f!(MACRO)
     };
 
-    MACRO_MSG {
+    MACRO_MSG "macro_msg" {
         signature: s!(Time, Protocol -> Bitstring),
-        name: n!("macro_msg"),
+        flags: f!(MACRO)
     };
 
-    MACRO_COND {
+    MACRO_COND "macro_cond" {
         signature: s!(Time, Protocol -> Bool),
-        name: n!("macro_cond"),
+        flags: f!(MACRO)
     };
 
-    MACRO_EXEC {
+    MACRO_EXEC "macro_exec" {
         signature: s!(Time, Protocol -> Bool),
-        name: n!("macro_exec"),
+        flags: f!(MACRO)
     };
 
-    UNFOLD_INPUT {
+    UNFOLD_INPUT "unfold_input" {
         signature: s!(Time, Protocol -> Bitstring),
-        name: n!("unfold_input"),
+        flags: f!(UNFOLD)
     };
 
-    UNFOLD_FRAME {
+    UNFOLD_FRAME "unfold_frame" {
         signature: s!(Time, Protocol -> Bitstring),
-        name: n!("unfold_frame"),
+        flags: f!(UNFOLD)
     };
 
-    UNFOLD_MSG {
+    UNFOLD_MSG "unfold_msg" {
         signature: s!(Time, Protocol -> Bitstring),
-        name: n!("unfold_msg"),
+        flags: f!(UNFOLD)
     };
 
-    UNFOLD_COND {
+    UNFOLD_COND "unfold_cond" {
         signature: s!(Time, Protocol -> Bool),
-        name: n!("unfold_cond"),
+        flags: f!(UNFOLD)
     };
 
-    UNFOLD_EXEC {
+    UNFOLD_EXEC "unfold_exec" {
         signature: s!(Time, Protocol -> Bool),
-        name: n!("unfold_exec"),
+        flags: f!(UNFOLD)
     };
 
 
-    // polog only
+    // prolog only
 
-    GOAL {
+    GOAL "goal" {
         signature: s!(() -> Bitstring), // kinda irrelevant here
-        name: n!("goal"),
         flags: FunctionFlags::BUILTIN.union(FunctionFlags::PROLOG_ONLY)
     }
 );
-
-pub fn mk_golgge_rewrites<const N: usize, A>(
-    _config: &Configuration,
-) -> impl Iterator<Item = Rewrite<SimplLang<Function, N>, A>>
-where
-    A: Analysis<SimplLang<Function, N>>,
-{
-    
-
-    [].into_iter()
-}
