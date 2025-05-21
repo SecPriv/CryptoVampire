@@ -1,4 +1,3 @@
-use egg::Language;
 use utils::impossible::Impossible;
 
 use crate::{

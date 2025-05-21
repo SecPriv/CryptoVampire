@@ -1,12 +1,15 @@
 use std::{
-    fmt::{self, Display}, rc::Rc, sync::Arc
+    fmt::{self, Display},
+    rc::Rc,
+    sync::Arc,
 };
 
 use crate::{
     environement::{
         environement::Environement,
         traits::{KnowsRealm, Realm},
-    }, formula::{
+    },
+    formula::{
         file_descriptior::{
             axioms::{Axiom, Rewrite, RewriteKind},
             declare::Declaration,
@@ -20,10 +23,12 @@ use crate::{
         quantifier::Quantifier,
         sort::Sort,
         variable::Variable,
-    }, FromEnv, SubtermKind
+    },
+    FromEnv, SubtermKind,
 };
 
 use cryptovampire_smt::SortedVar;
+use if_chain::if_chain;
 use utils::{from_with::FromWith, implvec};
 
 use self::display::{SmtDisplayer, SmtEnv};
@@ -63,7 +68,9 @@ macro_rules! unpack_args {
 }
 
 fn vars_to_sorted_vars<'bump>(vars: &[Variable<'bump>]) -> Vec<SortedVar<Sort<'bump>>> {
-    vars.iter().map(|&Variable { id, sort }| SortedVar {var:id, sort}).collect()
+    vars.iter()
+        .map(|&Variable { id, sort }| SortedVar { var: id, sort })
+        .collect()
 }
 
 impl<'a, 'bump> From<&'a RichFormula<'bump>> for SmtFormula<'bump> {
@@ -73,18 +80,15 @@ impl<'a, 'bump> From<&'a RichFormula<'bump>> for SmtFormula<'bump> {
             RichFormula::Quantifier(q, arg) => match q {
                 Quantifier::Exists { variables } => SmtFormula::Exists(
                     vars_to_sorted_vars(&variables),
-                    Box::new(arg.as_ref().into())
+                    Box::new(arg.as_ref().into()),
                 ),
                 Quantifier::Forall { variables } => SmtFormula::Forall(
                     vars_to_sorted_vars(&variables),
-                    Box::new(arg.as_ref().into())
+                    Box::new(arg.as_ref().into()),
                 ),
             },
             RichFormula::Fun(f, args) => {
-                let mut args = args
-                    .iter()
-                    .map(|f|  f.as_ref().into())
-                    .collect();
+                let mut args = args.iter().map(|f| f.as_ref().into()).collect();
 
                 match f.as_inner() {
                     InnerFunction::TermAlgebra(_)
@@ -136,13 +140,12 @@ impl<'a, 'bump> From<&'a RichFormula<'bump>> for SmtFormula<'bump> {
     }
 }
 
-
-pub(crate) trait SmtDisplay<'bump> : Sized  {
+pub(crate) trait SmtDisplay<'bump>: Sized {
     // fn as_display(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_;
 
-    fn into_display(self, env: &impl KnowsRealm) -> impl fmt::Display + 'bump ;
+    fn into_display(self, env: &impl KnowsRealm) -> impl fmt::Display + 'bump;
 
-    fn as_display(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_ ;
+    fn as_display(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_;
 
     fn prop<D, T>(&self, disp: SmtDisplayer<D, T>) -> SmtDisplayer<D, &Self> {
         disp.propagate(self)
@@ -210,11 +213,7 @@ impl<'bump> FromEnv<'bump, Axiom<'bump>> for Smt<'bump> {
     fn with_env(env: &Environement<'bump>, ax: Axiom<'bump>) -> Self {
         match ax {
             Axiom::Comment(str) => Smt::Comment(str.into()),
-            Axiom::Base { formula } => {
-                Smt::Assert(
-                    formula.as_ref().into(),
-                )
-            }
+            Axiom::Base { formula } => Smt::Assert(formula.as_ref().into()),
             Axiom::Theory { formula } => {
                 let f = formula.as_ref().into();
                 if env.use_assert_theory() {
@@ -277,7 +276,19 @@ impl<'bump> FromEnv<'bump, Declaration<'bump>> for Smt<'bump> {
     fn with_env(env: &Environement<'bump>, dec: Declaration<'bump>) -> Self {
         match dec {
             Declaration::Sort(s) => Self::DeclareSort(s),
-            Declaration::FreeFunction(fun) => Self::DeclareFun(fun),
+            Declaration::FreeFunction(fun) => {
+                let (args, out) = if_chain! {
+                    if let Some(args) = fun.fast_insort();
+                    if let Some(out) = fun.fast_outsort();
+                    then {
+                        (args, out)
+                    } else {
+                        panic!("all function defined here have known sort: {}", fun.name())
+                    }
+                };
+
+                Self::DeclareFun { fun, args, out }
+            }
             Declaration::DataTypes(dt) => {
                 let (sorts, cons) = dt
                     .into_iter()
@@ -305,7 +316,7 @@ impl<'bump> FromEnv<'bump, Declaration<'bump>> for Smt<'bump> {
 }
 
 impl<'bump> SmtDisplay<'bump> for Smt<'bump> {
-        fn into_display(self, env: &impl KnowsRealm) -> impl fmt::Display + 'bump {
+    fn into_display(self, env: &impl KnowsRealm) -> impl fmt::Display + 'bump {
         SmtDisplayer {
             env: SmtEnv {
                 realm: env.get_realm(),
@@ -325,13 +336,14 @@ impl<'bump> SmtDisplay<'bump> for Smt<'bump> {
 }
 
 impl<'bump> FromEnv<'bump, GeneralFile<'bump>> for SmtFile<'bump> {
-    fn with_env(env: &Environement<'bump>, GeneralFile {
+    fn with_env(
+        env: &Environement<'bump>,
+        GeneralFile {
             assertions,
             declarations,
-        }: GeneralFile<'bump>) -> Self {
-        let declarations = declarations
-            .into_iter()
-            .map(|d| Smt::with_env(env, d));
+        }: GeneralFile<'bump>,
+    ) -> Self {
+        let declarations = declarations.into_iter().map(|d| Smt::with_env(env, d));
         let assertions = assertions.into_iter().map(|ax| Smt::with_env(env, ax));
         let other = [Smt::CheckSat];
 
@@ -341,11 +353,11 @@ impl<'bump> FromEnv<'bump, GeneralFile<'bump>> for SmtFile<'bump> {
 }
 
 impl<'bump> SmtDisplay<'bump> for SmtFile<'bump> {
-    fn into_display(self, _: &impl KnowsRealm) -> impl fmt::Display + 'bump  {
+    fn into_display(self, _: &impl KnowsRealm) -> impl fmt::Display + 'bump {
         ""
     }
 
-    fn as_display(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_  {
+    fn as_display(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_ {
         SmtDisplayer {
             env: SmtEnv {
                 realm: env.get_realm(),
