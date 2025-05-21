@@ -2,14 +2,14 @@ use std::{borrow::Cow, collections::HashMap, ops::Deref};
 
 use itertools::Itertools;
 
-use super::{Function, Quantifier, BUILTINS, PARSING_PAIRS};
+use super::{Function, Exists, BUILTINS, PARSING_PAIRS};
 
 /// see [Self::valid] for the invariants
 #[derive(Debug, Default)]
 pub struct FunctionCollection {
     functions: Vec<Function>,
     map_function: HashMap<Cow<'static, str>, Function>,
-    quantifiers: Vec<Quantifier>,
+    quantifiers: Vec<Exists>,
 }
 
 impl FunctionCollection {
@@ -62,7 +62,7 @@ impl FunctionCollection {
         self.map_function.get(name).cloned()
     }
 
-    pub fn quantifiers(&self) -> &[Quantifier] {
+    pub fn quantifiers(&self) -> &[Exists] {
         &self.quantifiers
     }
 }

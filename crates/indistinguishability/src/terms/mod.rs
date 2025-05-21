@@ -55,8 +55,8 @@ pub enum Sort {
     Nonce
 }
 
-pub use quantifier::*;
-mod quantifier;
+pub use existential_quantifier::*;
+mod existential_quantifier;
 
 impl Signature {
     pub fn arity(&self) -> usize {

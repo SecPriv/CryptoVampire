@@ -45,7 +45,7 @@ mk_builtin_funs!(
     // ===================== the structs =======================
     // =========================================================
 
-    // bool
+    // ~~~~~~~~~~~~~~~~~ bool ~~~~~~~~~~~~~~~~~~~
 
     BITE "bool_if_then_else" "b_ite" {
         signature: s!(Bool, 3),
@@ -89,7 +89,12 @@ mk_builtin_funs!(
         signature: s!(() -> Bool),
     };
 
-    // base bitstrings
+    // ~~~~~~~~~~~ base bitstrings ~~~~~~~~~~~~~~
+
+    NONCE "mnonce" "nonce" {
+        signature: s!(Nonce -> Bitstring),
+        flags: f!(CUSTOM_DEDUCE)
+    };
 
     TUPLE "mtuple" "tuple" "pair" {
         signature: s!(Bitstring, 2)
@@ -107,7 +112,7 @@ mk_builtin_funs!(
         signature: s!(Bitstring, 0)
     };
 
-    // ptcl
+    // ~~~~~~~~~~~~~~~~~ ptcl ~~~~~~~~~~~~~~~~~~~
 
     HAPPENS "happens" {
         signature: s!(Time -> Bool),
@@ -125,7 +130,7 @@ mk_builtin_funs!(
         signature: s!(Time, 1),
     };
 
-    // macro
+    // ~~~~~~~~~~~~~~~~ macro ~~~~~~~~~~~~~~~~~~~
 
     ATT "att" {
         signature: s!(Time -> Bitstring),
@@ -182,7 +187,7 @@ mk_builtin_funs!(
     };
 
 
-    // prolog only
+    // ~~~~~~~~~~~~~ prolog only ~~~~~~~~~~~~~~~~
 
     GOAL "goal" {
         signature: s!(() -> Bool), // kinda irrelevant here
@@ -221,5 +226,15 @@ mk_builtin_funs!(
             Bitstring, Bitstring 
             -> Bool),
         flags: f!(PROLOG_ONLY)
+    };
+
+    FRESH "mfresh" "fresh" {
+        signature: s!(Nonce, Bitstring -> Bool),
+        flags: f!(PROLOG_ONLY)
+    };
+
+    VAMPIRE "mvampire" "vampire" "smt" {
+     signature: s!(Bool -> Bool),
+     flags: f!(PROLOG_ONLY)   
     };
 );

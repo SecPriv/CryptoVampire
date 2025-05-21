@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use egg::{ENodeOrVar, Pattern, PatternAst, RecExpr, SymbolLang, Var};
 use golgge::PrologRule;
 use itertools::{chain, izip, Itertools};
@@ -5,19 +7,28 @@ use logic_formula::egg::SimpleDiscriminant;
 use utils::implvec;
 
 use crate::{
-    terms::{Function, FunctionFlags, Sort, BIT_DEDUCE, BOOL_DEDUCE},
+    terms::{Exists, Function, FunctionFlags, Sort, BIT_DEDUCE, BOOL_DEDUCE},
     Lang, LangVar, Problem,
 };
 
-use super::parse::{clean_input, convert_fun, PrologAst};
+use super::{
+    parse::{clean_input, convert_fun, PrologAst},
+    var_as_recexpr,
+};
 
 pub fn mk_deduce_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'_> {
     chain! {
       mk_special_deduce_rules(pbl),
       mk_regular_deduce_rules(pbl),
+      mk_exists_deduce_rules(pbl),
     }
 }
 
+// =========================================================
+// ==================== special rules ======================
+// =========================================================
+
+/// Generate hard coded rules described
 fn mk_special_deduce_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'_> {
     let cleaned = clean_input(include_str!("base_deduce"))
         // rebuild a string without comments
@@ -37,6 +48,26 @@ fn mk_special_deduce_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lan
         })
 }
 
+// =========================================================
+// ===================== base rules ========================
+// =========================================================
+
+/// Generate the base deduce rule:
+///
+/// ```text
+/// u, v |> x0, y0 # h, h'  ...  u, v |> xn, yn # h, h'
+/// ---------------------------------------------------
+///     u, v |> f(x0,...,xn), f(y0,...,yn) # h, h'
+/// ```
+///
+/// for all "regular" `f`s
+fn mk_regular_deduce_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'_> {
+    pbl.function
+        .iter()
+        .filter(|x| should_process_normaly(x))
+        .map(mk_deduce_rule)
+}
+
 /// helper to write flags
 macro_rules! f {
     ($id:ident) => {FunctionFlags::$id};
@@ -47,16 +78,7 @@ macro_rules! f {
 }
 
 static HAS_SPECIAL_TREATMENT: FunctionFlags =
-    f!(ALIAS | PROLOG_ONLY | MACRO | UNFOLD | CUSTOM_DEDUCE);
-
-fn mk_regular_deduce_rules(
-    pbl: &Problem,
-) -> impl Iterator<Item = PrologRule<Lang>> + use<'_> {
-    pbl.function
-        .iter()
-        .filter(|x| should_process_normaly(x))
-        .map(mk_deduce_rule)
-}
+    f!(ALIAS | PROLOG_ONLY | MACRO | UNFOLD | CUSTOM_DEDUCE | EXISTS | SKOLEM);
 
 fn should_process_normaly(f: &Function) -> bool {
     f.flags.intersects(HAS_SPECIAL_TREATMENT)
@@ -105,20 +127,12 @@ fn mk_input(
     Pattern::new(ast)
 }
 
-fn get_deduce(s: Sort) -> Option<&'static Function> {
+const fn get_deduce(s: Sort) -> Option<&'static Function> {
     match s {
         Sort::Bool => Some(&BOOL_DEDUCE),
         Sort::Bitstring => Some(&BIT_DEDUCE),
         _ => return None,
     }
-}
-
-fn var_as_recexpr<'a, L>(vars: implvec!(&'a Var)) -> Vec<[ENodeOrVar<L>; 1]> {
-    vars.into_iter()
-        .copied()
-        .map(ENodeOrVar::Var)
-        .map(|x| [x])
-        .collect()
 }
 
 /// this generate `u,v|>a, b#h1, h2` using the right sort
@@ -128,4 +142,89 @@ fn mk_dep(vars: [Var; 6], s: Sort) -> Option<Pattern<Lang>> {
     let vars = var_as_recexpr(&vars);
     let ast = get_deduce(s)?.app_var(&vars);
     Some(Pattern::new(ast))
+}
+
+// =========================================================
+// ==================== exists rules =======================
+// =========================================================
+// QUESTION: Should we cross reference existential quantifiers?
+
+fn mk_exists_deduce_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'_> {
+    debug_assert!(pbl.function.valid());
+    pbl.function
+        .quantifiers()
+        .iter()
+        .map(|q| mk_exists_deduce_rules_one(pbl, q))
+}
+
+/// Generate the rule for a single quantifier
+fn mk_exists_deduce_rules_one(
+    pbl: &Problem,
+    Exists {
+        tlf,
+        skolem,
+        fresh,
+        ..
+    }: &Exists,
+) -> PrologRule<Lang> {
+    let [tlf, skolem, fresh] = [tlf, skolem, fresh].map(|i| &pbl.function[*i]);
+    let deduce = get_deduce(Sort::Bitstring).unwrap();
+    let n: u32 = skolem.arity().try_into().unwrap();
+
+    // initiate the variables
+    let left_vars;
+    let right_vars;
+    let [u, v, h1, h2, il, ir] = {
+        let f = |i| [ENodeOrVar::Var::<Lang>(Var::from_u32(i))];
+        let vars = core::array::from_fn(|i| f(i as u32));
+        let k = vars.len() as u32;
+        left_vars = (k..(k + n)).map(&f).collect_vec();
+        right_vars = ((k + n)..(k + 2 * n)).map(&f).collect_vec();
+        vars
+    };
+
+    // u, v |> exits(vecx, il), exists(vecy, ir) # h1, h2
+    let input = {
+        let left = tlf.app_var(
+            &chain!(left_vars.iter().map(|x| x.as_slice()), [il.as_slice()]).collect_vec(),
+        );
+        let right = tlf.app_var(
+            &chain!(right_vars.iter().map(|x| x.as_slice()), [ir.as_slice()]).collect_vec(),
+        );
+        deduce.app_var(
+            &chain![
+                [u.as_slice(), v.as_slice()],
+                [left.deref(), right.deref()],
+                [h1.as_slice(), h2.as_slice()]
+            ]
+            .collect_vec(),
+        )
+    };
+
+    // u, v |> exits(vecx, fresh), exists(vecy, fresh) # h1, h2
+    let dep = {
+        let fresh: PatternAst<Lang> = fresh.app_var::<3, [LangVar; 0]>(&[]);
+        let left = tlf.app_var(
+            &chain!(left_vars.iter().map(|x| x.as_slice()), [fresh.deref()]).collect_vec(),
+        );
+        let right = tlf.app_var(
+            &chain!(right_vars.iter().map(|x| x.as_slice()), [fresh.deref()]).collect_vec(),
+        );
+        deduce.app_var(
+            &chain![
+                [u.as_slice(), v.as_slice()],
+                [left.deref(), right.deref()],
+                [h1.as_slice(), h2.as_slice()]
+            ]
+            .collect_vec(),
+        )
+    };
+
+    PrologRule {
+        input: Pattern::from(input),
+        deps: vec![Pattern::from(dep)],
+        cut: false,
+        require_decrease: false,
+        name: Some(format!("deduce {}", tlf.name)),
+    }
 }

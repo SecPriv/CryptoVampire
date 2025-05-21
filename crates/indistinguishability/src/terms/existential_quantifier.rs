@@ -8,11 +8,7 @@ use crate::Lang;
 use super::FunctionCollection;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Quantifier {
-    /// The kind of quantifier
-    ///
-    /// `find_such_that` are not handeled currently
-    pub kind: QuantifierKind,
+pub struct Exists {
     /// The free variables captured by the quantifier
     pub vars: Vec<Var>,
     /// The variable bound by the quantifier
@@ -29,16 +25,9 @@ pub struct Quantifier {
     pub fresh: usize,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub enum QuantifierKind {
-    Exists,
-    Forall,
-}
-
-impl Quantifier {
+impl Exists {
     pub fn valid(&self, idx: usize, funs: &FunctionCollection) -> bool {
         let Self {
-            kind: _,
             vars,
             bound_var,
             patt,
