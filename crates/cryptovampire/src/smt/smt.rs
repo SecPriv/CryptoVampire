@@ -1,14 +1,12 @@
 use std::{
-    fmt::{self},
-    sync::Arc,
+    fmt::{self, Display}, rc::Rc, sync::Arc
 };
 
 use crate::{
     environement::{
         environement::Environement,
         traits::{KnowsRealm, Realm},
-    },
-    formula::{
+    }, formula::{
         file_descriptior::{
             axioms::{Axiom, Rewrite, RewriteKind},
             declare::Declaration,
@@ -22,90 +20,18 @@ use crate::{
         quantifier::Quantifier,
         sort::Sort,
         variable::Variable,
-    },
-    SubtermKind,
+    }, FromEnv, SubtermKind
 };
 
-use utils::implvec;
+use cryptovampire_smt::SortedVar;
+use utils::{from_with::FromWith, implvec};
 
 use self::display::{SmtDisplayer, SmtEnv};
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct SmtFile<'bump> {
-    content: Vec<Smt<'bump>>,
-}
-
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum SmtFormula<'bump> {
-    Var(Variable<'bump>),
-    Fun(Function<'bump>, Vec<SmtFormula<'bump>>),
-    Forall(Arc<[Variable<'bump>]>, Box<SmtFormula<'bump>>),
-    Exists(Arc<[Variable<'bump>]>, Box<SmtFormula<'bump>>),
-
-    True,
-    False,
-    And(Vec<SmtFormula<'bump>>),
-    Or(Vec<SmtFormula<'bump>>),
-    Eq(Vec<SmtFormula<'bump>>),
-    Neq(Vec<SmtFormula<'bump>>),
-    Not(Box<SmtFormula<'bump>>),
-    Implies(Box<SmtFormula<'bump>>, Box<SmtFormula<'bump>>),
-
-    Subterm(
-        Function<'bump>,
-        Box<SmtFormula<'bump>>,
-        Box<SmtFormula<'bump>>,
-    ),
-
-    Ite(
-        Box<SmtFormula<'bump>>,
-        Box<SmtFormula<'bump>>,
-        Box<SmtFormula<'bump>>,
-    ),
-}
-
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum Smt<'bump> {
-    Assert(SmtFormula<'bump>),
-    AssertTh(SmtFormula<'bump>),
-    AssertGround {
-        sort: Sort<'bump>,
-        formula: SmtFormula<'bump>,
-    },
-    AssertNot(SmtFormula<'bump>),
-    DeclareFun(Function<'bump>),
-    DeclareSort(Sort<'bump>),
-    DeclareSortAlias {
-        from: Sort<'bump>,
-        to: Sort<'bump>,
-    },
-
-    DeclareSubtermRelation(Function<'bump>, Vec<Function<'bump>>),
-
-    DeclareRewrite {
-        rewrite_fun: RewriteKind<'bump>,
-        vars: Arc<[Variable<'bump>]>,
-        lhs: Box<SmtFormula<'bump>>,
-        rhs: Box<SmtFormula<'bump>>,
-    },
-
-    DeclareDatatypes {
-        sorts: Vec<Sort<'bump>>,
-        cons: Vec<Vec<SmtCons<'bump>>>,
-    },
-    Comment(String),
-
-    CheckSat,
-    GetProof,
-    SetOption(String, String),
-    SetLogic(String),
-}
-
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct SmtCons<'bump> {
-    pub fun: Function<'bump>,
-    pub dest: Vec<Function<'bump>>,
-}
+pub type SmtFile<'bump> = cryptovampire_smt::SmtFile<Sort<'bump>, Function<'bump>>;
+pub type Smt<'bump> = cryptovampire_smt::Smt<Sort<'bump>, Function<'bump>>;
+pub type SmtFormula<'bump> = cryptovampire_smt::SmtFormula<Sort<'bump>, Function<'bump>>;
+pub type SmtCons<'bump> = cryptovampire_smt::SmtCons<Function<'bump>>;
 
 mod display;
 
@@ -136,26 +62,28 @@ macro_rules! unpack_args {
     }};
 }
 
-impl<'bump> SmtFormula<'bump> {
-    pub fn from_arichformula(
-        /* env: &Environement<'bump>,*/ formula: &RichFormula<'bump>,
-    ) -> Self {
+fn vars_to_sorted_vars<'bump>(vars: &[Variable<'bump>]) -> Vec<SortedVar<Sort<'bump>>> {
+    vars.iter().map(|&Variable { id, sort }| SortedVar {var:id, sort}).collect()
+}
+
+impl<'a, 'bump> From<&'a RichFormula<'bump>> for SmtFormula<'bump> {
+    fn from(formula: &'a RichFormula<'bump>) -> Self {
         match formula {
-            RichFormula::Var(v) => SmtFormula::Var(*v),
+            RichFormula::Var(v) => SmtFormula::Var(v.id),
             RichFormula::Quantifier(q, arg) => match q {
                 Quantifier::Exists { variables } => SmtFormula::Exists(
-                    variables.clone(),
-                    Box::new(Self::from_arichformula(/* env, */ arg.as_ref())),
+                    vars_to_sorted_vars(&variables),
+                    Box::new(arg.as_ref().into())
                 ),
                 Quantifier::Forall { variables } => SmtFormula::Forall(
-                    variables.clone(),
-                    Box::new(Self::from_arichformula(/* env, */ arg.as_ref())),
+                    vars_to_sorted_vars(&variables),
+                    Box::new(arg.as_ref().into())
                 ),
             },
             RichFormula::Fun(f, args) => {
                 let mut args = args
                     .iter()
-                    .map(|f| Self::from_arichformula(/* env, */ f.as_ref()))
+                    .map(|f|  f.as_ref().into())
                     .collect();
 
                 match f.as_inner() {
@@ -206,50 +134,89 @@ impl<'bump> SmtFormula<'bump> {
             }
         }
     }
+}
 
-    pub fn default_display(&self) -> impl fmt::Display + '_ {
-        SmtDisplayer {
-            env: SmtEnv {
-                realm: Realm::Symbolic,
-            },
-            content: self,
-        }
-    }
 
-    pub fn as_display(self, env: &impl KnowsRealm) -> impl fmt::Display + 'bump {
-        SmtDisplayer {
-            env: SmtEnv {
-                realm: env.get_realm(),
-            },
-            content: self,
-        }
-    }
+pub(crate) trait SmtDisplay<'bump> : Sized  {
+    // fn as_display(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_;
 
-    pub fn as_display_ref(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_ {
-        SmtDisplayer {
-            env: SmtEnv {
-                realm: env.get_realm(),
-            },
-            content: self,
-        }
-    }
+    fn into_display(self, env: &impl KnowsRealm) -> impl fmt::Display + 'bump ;
+
+    fn as_display(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_ ;
 
     fn prop<D, T>(&self, disp: SmtDisplayer<D, T>) -> SmtDisplayer<D, &Self> {
         disp.propagate(self)
     }
+
+    fn default_display(&self) -> impl fmt::Display + '_ {
+        self.as_display(&Realm::Symbolic)
+    }
 }
 
-impl<'bump> Smt<'bump> {
-    pub fn from_axiom(env: &Environement<'bump>, ax: Axiom<'bump>) -> Self {
+impl<'bump> SmtDisplay<'bump> for SmtFormula<'bump> {
+    fn into_display(self, env: &impl KnowsRealm) -> impl fmt::Display + 'bump {
+        SmtDisplayer {
+            env: SmtEnv {
+                realm: env.get_realm(),
+            },
+            content: self,
+        }
+    }
+
+    fn as_display(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_ {
+        SmtDisplayer {
+            env: SmtEnv {
+                realm: env.get_realm(),
+            },
+            content: self,
+        }
+    }
+}
+
+// impl<'bump> SmtFormula<'bump> {
+//     pub fn default_display(&self) -> impl fmt::Display + '_ {
+//         SmtDisplayer {
+//             env: SmtEnv {
+//                 realm: Realm::Symbolic,
+//             },
+//             content: self,
+//         }
+//     }
+
+//     pub fn as_display(self, env: &impl KnowsRealm) -> impl fmt::Display + 'bump {
+//         SmtDisplayer {
+//             env: SmtEnv {
+//                 realm: env.get_realm(),
+//             },
+//             content: self,
+//         }
+//     }
+
+//     pub fn as_display_ref(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_ {
+//         SmtDisplayer {
+//             env: SmtEnv {
+//                 realm: env.get_realm(),
+//             },
+//             content: self,
+//         }
+//     }
+
+//     fn prop<D, T>(&self, disp: SmtDisplayer<D, T>) -> SmtDisplayer<D, &Self> {
+//         disp.propagate(self)
+//     }
+// }
+
+impl<'bump> FromEnv<'bump, Axiom<'bump>> for Smt<'bump> {
+    fn with_env(env: &Environement<'bump>, ax: Axiom<'bump>) -> Self {
         match ax {
             Axiom::Comment(str) => Smt::Comment(str.into()),
             Axiom::Base { formula } => {
-                Smt::Assert(SmtFormula::from_arichformula(
-                    /* env, */ formula.as_ref(),
-                ))
+                Smt::Assert(
+                    formula.as_ref().into(),
+                )
             }
             Axiom::Theory { formula } => {
-                let f = SmtFormula::from_arichformula(/* env, */ formula.as_ref());
+                let f = formula.as_ref().into();
                 if env.use_assert_theory() {
                     Smt::AssertTh(f)
                 } else {
@@ -257,7 +224,7 @@ impl<'bump> Smt<'bump> {
                 }
             }
             Axiom::Query { formula } => {
-                let f = SmtFormula::from_arichformula(/* env, */ formula.as_ref());
+                let f = formula.as_ref().into();
                 if env.use_assert_not() {
                     Smt::AssertNot(f)
                 } else {
@@ -271,11 +238,11 @@ impl<'bump> Smt<'bump> {
                     pre,
                     post,
                 } = *rewrite;
-                let pre = SmtFormula::from_arichformula(/* env, */ pre.as_ref());
-                let post = SmtFormula::from_arichformula(/* env, */ post.as_ref());
+                let pre = pre.as_ref().into();
+                let post = post.as_ref().into();
                 if env.no_rewrite() {
                     Smt::Assert(SmtFormula::Forall(
-                        vars,
+                        vars_to_sorted_vars(&vars),
                         Box::new(if kind == RewriteKind::Bool {
                             // SmtFormula::Implies(Box::new(pre), Box::new(post))
                             SmtFormula::Eq(vec![pre, post])
@@ -286,7 +253,7 @@ impl<'bump> Smt<'bump> {
                 } else {
                     Smt::DeclareRewrite {
                         rewrite_fun: kind,
-                        vars,
+                        vars: vars_to_sorted_vars(&vars),
                         lhs: Box::new(pre),
                         rhs: Box::new(post),
                     }
@@ -296,16 +263,18 @@ impl<'bump> Smt<'bump> {
                 if env.use_assert_ground() {
                     Smt::AssertGround {
                         sort,
-                        formula: SmtFormula::from_arichformula(&formula),
+                        formula: formula.as_ref().into(),
                     }
                 } else {
-                    Smt::Assert(SmtFormula::from_arichformula(formula.as_ref()))
+                    Smt::Assert(formula.as_ref().into())
                 }
             }
         }
     }
+}
 
-    pub fn from_declaration(_env: &Environement<'bump>, dec: Declaration<'bump>) -> Self {
+impl<'bump> FromEnv<'bump, Declaration<'bump>> for Smt<'bump> {
+    fn with_env(env: &Environement<'bump>, dec: Declaration<'bump>) -> Self {
         match dec {
             Declaration::Sort(s) => Self::DeclareSort(s),
             Declaration::FreeFunction(fun) => Self::DeclareFun(fun),
@@ -333,8 +302,10 @@ impl<'bump> Smt<'bump> {
             Declaration::SortAlias { from, to } => Self::DeclareSortAlias { from, to },
         }
     }
+}
 
-    pub fn as_display(self, env: &impl KnowsRealm) -> impl fmt::Display + 'bump {
+impl<'bump> SmtDisplay<'bump> for Smt<'bump> {
+        fn into_display(self, env: &impl KnowsRealm) -> impl fmt::Display + 'bump {
         SmtDisplayer {
             env: SmtEnv {
                 realm: env.get_realm(),
@@ -343,64 +314,38 @@ impl<'bump> Smt<'bump> {
         }
     }
 
-    pub fn as_display_ref(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_ {
+    fn as_display(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_ {
         SmtDisplayer {
             env: SmtEnv {
                 realm: env.get_realm(),
             },
             content: self,
         }
-    }
-
-    fn prop<D, T>(&self, disp: SmtDisplayer<D, T>) -> SmtDisplayer<D, &Self> {
-        disp.propagate(self)
-    }
-
-    /// Returns `true` if the smt is [`Assert`].
-    ///
-    /// [`Assert`]: Smt::Assert
-    #[must_use]
-    pub fn is_any_assert(&self) -> bool {
-        matches!(
-            self,
-            Self::Assert(..) | Self::AssertNot(..) | Self::AssertTh(..)
-        )
     }
 }
 
-impl<'bump> SmtFile<'bump> {
-    pub fn new(content: implvec!(Smt<'bump>)) -> Self {
-        Self {
-            content: content.into_iter().collect(),
-        }
-    }
-
-    pub fn content(&self) -> &[Smt<'bump>] {
-        self.content.as_ref()
-    }
-
-    pub fn content_mut(&mut self) -> &mut Vec<Smt<'bump>> {
-        &mut self.content
-    }
-
-    pub fn from_general_file(
-        env: &Environement<'bump>,
-        GeneralFile {
+impl<'bump> FromEnv<'bump, GeneralFile<'bump>> for SmtFile<'bump> {
+    fn with_env(env: &Environement<'bump>, GeneralFile {
             assertions,
             declarations,
-        }: GeneralFile<'bump>,
-    ) -> Self {
+        }: GeneralFile<'bump>) -> Self {
         let declarations = declarations
             .into_iter()
-            .map(|d| Smt::from_declaration(env, d));
-        let assertions = assertions.into_iter().map(|ax| Smt::from_axiom(env, ax));
+            .map(|d| Smt::with_env(env, d));
+        let assertions = assertions.into_iter().map(|ax| Smt::with_env(env, ax));
         let other = [Smt::CheckSat];
 
         let content = itertools::chain!(declarations, assertions, other).collect();
         Self { content }
     }
+}
 
-    pub fn as_diplay(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_ {
+impl<'bump> SmtDisplay<'bump> for SmtFile<'bump> {
+    fn into_display(self, _: &impl KnowsRealm) -> impl fmt::Display + 'bump  {
+        ""
+    }
+
+    fn as_display(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_  {
         SmtDisplayer {
             env: SmtEnv {
                 realm: env.get_realm(),

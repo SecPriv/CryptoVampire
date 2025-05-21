@@ -13,7 +13,7 @@ use crate::{
     environement::environement::Flags,
     error::{BaseContext, CVContext},
     runner::{exec_cmd, RetCodeAndStdout, RunnerOut},
-    smt::SmtFile,
+    smt::SmtFile, FromEnv, SmtDisplay,
 };
 
 use super::{runner::ChildKind, Runner};
@@ -45,8 +45,8 @@ impl Runner for Z3Runner {
         env.options_mut().flags -= Flags::NON_SMT_STANDARD;
         let env = &env;
 
-        SmtFile::from_general_file(env, pbl.into_general_file(env)) // gen smt
-            .as_diplay(env)
+        SmtFile::with_env(env, pbl.into_general_file(env)) // gen smt
+            .as_display(env)
             .write_to_io(&mut file)?;
         Ok(())
         // .with_context(|| "couldn't write") // write to tmp file

@@ -18,7 +18,7 @@ use crate::{
         searcher::InstanceSearcher,
         RetCodeAndStdout,
     },
-    smt::SmtFile,
+    smt::SmtFile, FromEnv, SmtDisplay,
 };
 
 use super::{
@@ -197,8 +197,8 @@ impl Runner for VampireExec {
         env.options_mut().flags |= Flags::ASSERT_NOT | Flags::ASSERT_THEORY;
         let env = &env;
 
-        SmtFile::from_general_file(env, pbl.into_general_file(env)) // gen smt
-            .as_diplay(env)
+        SmtFile::with_env(env, pbl.into_general_file(env)) // gen smt
+            .as_display(env)
             .write_to_io(&mut file)
             .map_err(|e| e.into())
         // .with_context(|| "couldn't write") // write to tmp file

@@ -47,8 +47,4 @@ pub struct Rewrite<'bump> {
     pub post: ARichFormula<'bump>,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum RewriteKind<'bump> {
-    Bool,
-    Other(Function<'bump>),
-}
+pub type RewriteKind<'bump> = cryptovampire_smt::RewriteKind<Function<'bump>>;

@@ -5,7 +5,7 @@ use log::{log_enabled, trace};
 
 use crate::{
     environement::traits::{KnowsRealm, Realm},
-    formula::file_descriptior::axioms::RewriteKind,
+    formula::file_descriptior::axioms::RewriteKind, smt::smt::SmtDisplay,
 };
 
 use super::{fun_list_fmt, Smt, SmtFile, SmtFormula};

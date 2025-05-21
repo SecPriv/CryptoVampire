@@ -255,6 +255,7 @@ dependencies = [
  "clap_complete",
  "const_format",
  "cryptovampire_macros",
+ "cryptovampire_smt",
  "derivative",
  "derive_builder",
  "env_logger 0.11.6",
@@ -290,6 +291,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.89",
+]
+
+[[package]]
+name = "cryptovampire_smt"
+version = "0.1.0"
+dependencies = [
+ "env_logger 0.11.6",
+ "itertools",
+ "log",
+ "logic_formula",
+ "serde",
+ "utils",
 ]
 
 [[package]]
