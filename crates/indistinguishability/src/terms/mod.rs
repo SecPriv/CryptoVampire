@@ -2,10 +2,11 @@ use std::{borrow::Cow, fmt::Display, ops::Deref, rc::Rc};
 
 use crate::{protocol::{MacroKind, ProtocolLanguage}, Lang};
 use bitflags::{bitflags, bitflags_match};
+use cryptovampire_smt::SmtHead;
 use egg::{PatternAst, SymbolLang, Var};
 use logic_formula::egg::{SimplLang, SimpleDiscriminant};
 use serde::{Deserialize, Serialize};
-use utils::quack::CowArc;
+use utils::{match_eq, quack::CowArc};
 
 mod functions_holder;
 pub use functions_holder::*;
@@ -24,7 +25,20 @@ bitflags! {
 
         const EXISTS = 1 << 6;
         const SKOLEM = 1 << 7;
+
+        const BUILTIN_SMT = 1 << 8;
     }
+}
+
+
+/// helper to write flags
+#[macro_export]
+macro_rules! const_fun_flags {
+    ($id:ident) => {$crate::terms::FunctionFlags::$id};
+    ($id0:ident | $($id:ident)|*) => {
+        $crate::terms::FunctionFlags::$id0
+            $(.union($crate::terms::FunctionFlags::$id))*
+    };
 }
 
 #[non_exhaustive]
@@ -52,7 +66,21 @@ pub enum Sort {
     Bitstring,
     Time,
     Protocol,
-    Nonce
+    Nonce,
+    Index
+}
+
+impl Display for Sort {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Sort::Bool => write!(f, "Bool"),
+            Sort::Bitstring => write!(f, "Bitstring"),
+            Sort::Time => write!(f, "Time"),
+            Sort::Protocol => write!(f, "Procotol"),
+            Sort::Nonce => write!(f, "Nonce"),
+            Sort::Index => write!(f, "Index"),
+        }
+    }
 }
 
 pub use existential_quantifier::*;
@@ -118,6 +146,22 @@ impl Function {
             _ => None
         })
     }
+
+    pub fn as_smt_head(&self) -> Option<SmtHead> {
+        use builtin::*;
+        use SmtHead::*;
+        match_eq!{ self => {
+            AND => { Some(And) },
+            NOT => { Some(Not) },
+            OR => { Some(Or) },
+            IMPLIES => { Some(Implies) },
+            EQ => { Some(Eq) },
+            BITE | MITE => {Some(If)},
+            TRUE => { Some(True) },
+            FALSE => { Some(False) },
+            _ => { None }
+        }}
+    }
 }
 
 impl Display for Function {
@@ -133,6 +177,8 @@ impl Deref for Function {
         &self.0
     }
 }
+
+// ~~~~~~~~~~~~ egg::language ~~~~~~~~~~~~~~~
 
 impl SimpleDiscriminant for Function {
     fn valid(&self, ids: &[egg::Id]) -> bool {
@@ -157,6 +203,8 @@ impl<const N: usize> ProtocolLanguage for SimplLang<Function, N> {
         Function::unfold_from_kind(kind).app_id([step, ptcl])
     }
 }
+
+// ~~~~~~~~~~~~~~~~ magic ~~~~~~~~~~~~~~~~~~~
 
 pub use builtin::*;
 mod builtin;

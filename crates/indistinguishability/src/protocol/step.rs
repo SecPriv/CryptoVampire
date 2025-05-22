@@ -1,97 +1,94 @@
-use std::fmt::Display;
+use std::{fmt::Display, ops::Deref};
 
-use egg::{Analysis, ENodeOrVar, MultiPattern, Pattern, PatternAst, Rewrite, Var};
+use cryptovampire_macros::smt_formula;
+use cryptovampire_smt::{Smt, SmtFormula, SortedVar};
+use egg::{Analysis, ENodeOrVar, MultiPattern, Pattern, PatternAst, RecExpr, Rewrite, Var};
 use golgge::PrologRule;
-use itertools::{chain, Itertools};
+use itertools::{chain, izip, Itertools};
+use logic_formula::egg::SimpleDiscriminant;
+
+use crate::{
+    rules::vampire::{convert::formula_to_smt, convert::var_to_smt, MSmt, MSmtFormula},
+    terms::{Function, UNFOLD_COND, UNFOLD_MSG},
+    Lang, LangVar,
+};
 
 use super::{MacroKind, ProtocolLanguage};
 
+/// A step in protocol
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Step<L> {
-    id: PatternAst<L>,
-    cond: PatternAst<L>,
-    msg: PatternAst<L>,
+pub struct Step {
+    pub id: Function,
+    pub vars: Vec<Var>,
+    pub cond: PatternAst<Lang>,
+    pub msg: PatternAst<Lang>,
 }
 
-impl<L> Step<L> {
-    pub fn new(id: PatternAst<L>, cond: PatternAst<L>, msg: PatternAst<L>) -> Self {
-        Self { id, cond, msg }
-    }
-
-    pub fn id(&self) -> &PatternAst<L> {
-        &self.id
-    }
-
-    pub fn cond(&self) -> &PatternAst<L> {
-        &self.cond
-    }
-
-    pub fn msg(&self) -> &PatternAst<L> {
-        &self.msg
-    }
-
-    fn vars(&self) -> impl Iterator<Item = egg::Var> + use<'_, L> {
-        chain![self.id(), self.cond(), self.msg()].filter_map(|f| match f {
-            ENodeOrVar::Var(v) => Some(*v),
-            _ => None,
-        })
-    }
-
-    fn max_vars(&self) -> u32 {
-        self.vars()
-            .filter_map(|v| Var::as_u32(&v))
+impl Step {
+    pub(crate) fn max_vars(&self) -> u32 {
+        self.vars
+            .iter()
+            .filter_map(Var::as_u32)
             .max()
             .unwrap_or_default()
     }
+
+    pub fn id_expr(&self) -> RecExpr<LangVar> {
+        self.id.app_var(
+            &self
+                .vars
+                .iter()
+                .map(|x| [ENodeOrVar::Var(*x)])
+                .collect::<Vec<_>>(),
+        )
+    }
 }
 
-impl<L> Step<L>
-where
-    L: ProtocolLanguage,
-{
-    pub(crate) fn mk_unfold_rewrites<N: Analysis<L>>(
+impl Step {
+    pub(crate) fn mk_unfold_rewrites<N: Analysis<Lang>>(
         &self,
-        buf: &mut Vec<Rewrite<L, N>>,
-        ptcl: &PatternAst<L>,
-    ) {
-        let name = self.id();
+        ptcl: &PatternAst<Lang>,
+    ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
+        let name = self.id_expr();
 
         let unfold_cond = Rewrite::new(
             format!("unfold cond {name}"),
-            Pattern::<L>::from(ProtocolLanguage::app_unfold(MacroKind::Cond, name, ptcl)),
-            Pattern::<L>::from(self.cond().clone()),
+            Pattern::<Lang>::from(ProtocolLanguage::app_unfold(MacroKind::Cond, &name, ptcl)),
+            Pattern::<Lang>::from(self.cond.clone()),
         )
         .unwrap();
         let unfold_msg = Rewrite::new(
             format!("unfold msg {name}"),
-            Pattern::<L>::from(ProtocolLanguage::app_unfold(MacroKind::Msg, name, ptcl)),
-            Pattern::<L>::from(self.msg().clone()),
+            Pattern::<Lang>::from(ProtocolLanguage::app_unfold(MacroKind::Msg, &name, ptcl)),
+            Pattern::<Lang>::from(self.msg.clone()),
         )
         .unwrap();
 
-        // let macro_to_unfold = {
-        //     let max_var = self.max_vars();
-        //     let var1 = egg::Var::from_u32(max_var + 1);
-        //     let var2 = egg::Var::from_u32(max_var + 2);
-        //     let happens: PatternAst<L> = ProtocolLanguage::app_happens(self.id());
-        //     let mtrue: PatternAst<L> = ProtocolLanguage::app_true();
+        [unfold_cond, unfold_msg].into_iter()
+    }
 
-        //     [MacroKind::Msg, MacroKind::Cond].map(|m| {
-        //         let pre = vec![
-        //             (var1, happens.clone()),
-        //             (var1, mtrue.clone()),
-        //             (var2, ProtocolLanguage::app_macro(m, name, ptcl)),
-        //         ];
-        //         let post = vec![(var2, ProtocolLanguage::app_unfold(m, name, ptcl))];
-        //         Rewrite::new(
-        //             format!("macro {m} {name}"),
-        //             MultiPattern::new(pre),
-        //             MultiPattern::new(post),
-        //         )
-        //         .unwrap()
-        //     })
-        // };
+    pub(crate) fn mk_unfold_vampire_rewrites(
+        self,
+        ptcl: &MSmtFormula,
+    ) -> impl Iterator<Item = MSmt> {
+        use Smt::*;
+        let [unfold_cond_f, unfold_msg_f] = [UNFOLD_COND.clone(), UNFOLD_MSG.clone()];
+        let [cond, msg, name] =
+            [self.cond.as_ref(), &self.msg, &self.id_expr()].map(formula_to_smt);
 
-        buf.extend([unfold_cond, unfold_msg]);
+        let sorted_vars: Vec<_> = izip!(self.id.signature.inputs.iter(), self.vars.iter())
+            .map(|(a, b)| (*a, var_to_smt(b)))
+            .map(|(sort, var)| SortedVar { var, sort })
+            .collect();
+
+        let comment = Comment(format!("unfolding of {name}"));
+        let unfold_cond = smt_formula! {
+            (forall #(sorted_vars.clone()) (= (unfold_cond_f #(name.clone()) #(ptcl.clone())) #cond))
+        };
+        let unfold_msg = smt_formula! {
+            (forall #(sorted_vars.clone()) (= (unfold_msg_f #(name.clone()) #(ptcl.clone())) #msg))
+        };
+
+        [comment, Assert(unfold_cond), Assert(unfold_msg)].into_iter()
     }
 }

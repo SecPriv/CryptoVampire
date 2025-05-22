@@ -1,4 +1,7 @@
-use super::{Function, FunctionFlags, InnerFunction, Signature, Sort::*};
+use super::{
+    Function, FunctionFlags, InnerFunction, Signature,
+    Sort::{self, *},
+};
 use cryptovampire_macros::mk_builtin_funs;
 use std::borrow::Cow;
 
@@ -32,6 +35,19 @@ macro_rules! f {
     };
 }
 
+// -----------------------------------------------------------------------------
+// ---------------------------------- sorts ------------------------------------
+// -----------------------------------------------------------------------------
+
+pub static SORT_LIST: [Sort; 6] = {
+    use Sort::*;
+    [Bool, Bitstring, Time, Protocol, Nonce, Index]
+};
+
+// -----------------------------------------------------------------------------
+// -------------------------------- functions ----------------------------------
+// -----------------------------------------------------------------------------
+
 mk_builtin_funs!(
     // The "default" value.
     //
@@ -49,44 +65,47 @@ mk_builtin_funs!(
 
     BITE "bool_if_then_else" "b_ite" {
         signature: s!(Bool, 3),
-        flags: f!(CUSTOM_DEDUCE)
+        flags: f!(CUSTOM_DEDUCE | BUILTIN_SMT)
     };
 
     IMPLIES "bit_implies" "implies" "=>" "mimplies" {
         signature: s!(Bool, 2),
-        flags: f!(ALIAS) // e.g., this will be `M_ALIAS` instead of `FunctionFlags::BUILTIN`
+        flags: f!(ALIAS | BUILTIN_SMT) // e.g., this will be `M_ALIAS` instead of `FunctionFlags::BUILTIN`
     };
 
     AND "bit_and" "and" "mand" {
         signature: s!(Bool, 2),
-        flags: f!(ALIAS)
+        flags: f!(ALIAS | BUILTIN_SMT)
     };
 
     OR "bit_or" "or" "mor" {
         signature: s!(Bool, 2),
-        flags: f!(ALIAS)
+        flags: f!(ALIAS | BUILTIN_SMT)
     };
 
     NOT "bit_not" "not" "mnot" {
         signature: s!(Bool, 1),
-        flags: f!(ALIAS)
+        flags: f!(ALIAS | BUILTIN_SMT)
     };
 
     EQ "meq" "eq" "==" {
         signature: s!(Bitstring, Bitstring -> Bool),
+        flags: f!(BUILTIN_SMT)
     };
 
     MITE "bitstring_if_then_else" "mite" "ite" {
         signature: s!(Bool, Bitstring, Bitstring -> Bitstring),
-        flags: f!(CUSTOM_DEDUCE)
+        flags: f!(CUSTOM_DEDUCE | BUILTIN_SMT)
     };
 
     TRUE "mtrue" "true" {
         signature: s!(() -> Bool),
+        flags: f!(BUILTIN_SMT)
     };
 
     FALSE "mfalse" "false" {
         signature: s!(() -> Bool),
+        flags: f!(BUILTIN_SMT)
     };
 
     // ~~~~~~~~~~~ base bitstrings ~~~~~~~~~~~~~~
@@ -197,7 +216,7 @@ mk_builtin_funs!(
     BOOL_DEDUCE "deduce_bool" "deduce_b" {
         signature: s!(
                 /* hypothesis */
-                Bitstring, Bitstring, 
+                Bitstring, Bitstring,
                 /* to prove */
                 Bool, Bool,
                 /* constrains */
@@ -205,11 +224,11 @@ mk_builtin_funs!(
             -> Bool),
         flags: f!(PROLOG_ONLY)
     };
-    
+
     BIT_DEDUCE "deduce_bitstring" "deduce_m" {
         signature: s!(
             /* hypothesis */
-            Bitstring, Bitstring, 
+            Bitstring, Bitstring,
             /* to prove */
             Bitstring, Bitstring,
             /* constrains */
@@ -221,20 +240,20 @@ mk_builtin_funs!(
     EQUIV "equiv" {
         signature: s!(
             /* hypothesis */
-            Bitstring, Bitstring, 
+            Bitstring, Bitstring,
             /* to prove */
-            Bitstring, Bitstring 
+            Bitstring, Bitstring
             -> Bool),
         flags: f!(PROLOG_ONLY)
     };
 
     FRESH "mfresh" "fresh" {
         signature: s!(Nonce, Bitstring -> Bool),
-        flags: f!(PROLOG_ONLY)
+        // flags: f!(PROLOG_ONLY)
     };
 
     VAMPIRE "mvampire" "vampire" "smt" {
-     signature: s!(Bool -> Bool),
-     flags: f!(PROLOG_ONLY)   
+        signature: s!(Bool -> Bool),
+        flags: f!(PROLOG_ONLY)
     };
 );

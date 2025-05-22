@@ -10,6 +10,7 @@ workspace = true
 [dependencies]
 utils = { path = "../utils"}
 logic_formula = {path = "../logic_formula"}
+cryptovampire_macros = {path = "../cryptovampire_macros", optional = true}
 
 log.workspace = true
 env_logger.workspace = true
@@ -20,3 +21,4 @@ serde = { workspace = true, optional = true}
 serde = ["utils/serde", "dep:serde"]
 cryptovampire = ["vampire"]
 vampire = []
+macro = ["dep:cryptovampire_macros"]

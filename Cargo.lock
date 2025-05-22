@@ -291,12 +291,14 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.89",
+ "utils",
 ]
 
 [[package]]
 name = "cryptovampire_smt"
 version = "0.1.0"
 dependencies = [
+ "cryptovampire_macros",
  "env_logger 0.11.6",
  "itertools",
  "log",
@@ -593,6 +595,7 @@ dependencies = [
  "anyhow",
  "bitflags 2.9.1",
  "cryptovampire_macros",
+ "cryptovampire_smt",
  "egg",
  "env_logger 0.11.6",
  "golgge",

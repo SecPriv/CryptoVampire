@@ -27,7 +27,7 @@ use crate::{
     FromEnv, SubtermKind,
 };
 
-use cryptovampire_smt::SortedVar;
+use cryptovampire_smt::{SortedVar, VarInner};
 use if_chain::if_chain;
 use utils::{from_with::FromWith, implvec};
 
@@ -69,21 +69,21 @@ macro_rules! unpack_args {
 
 fn vars_to_sorted_vars<'bump>(vars: &[Variable<'bump>]) -> Vec<SortedVar<Sort<'bump>>> {
     vars.iter()
-        .map(|&Variable { id, sort }| SortedVar { var: id, sort })
+        .map(|&Variable { id, sort }| SortedVar { var: VarInner::Int(id), sort })
         .collect()
 }
 
 impl<'a, 'bump> From<&'a RichFormula<'bump>> for SmtFormula<'bump> {
     fn from(formula: &'a RichFormula<'bump>) -> Self {
         match formula {
-            RichFormula::Var(v) => SmtFormula::Var(v.id),
+            RichFormula::Var(v) => SmtFormula::Var(VarInner::Int(v.id)),
             RichFormula::Quantifier(q, arg) => match q {
                 Quantifier::Exists { variables } => SmtFormula::Exists(
-                    vars_to_sorted_vars(&variables),
+                    vars_to_sorted_vars(variables),
                     Box::new(arg.as_ref().into()),
                 ),
                 Quantifier::Forall { variables } => SmtFormula::Forall(
-                    vars_to_sorted_vars(&variables),
+                    vars_to_sorted_vars(variables),
                     Box::new(arg.as_ref().into()),
                 ),
             },

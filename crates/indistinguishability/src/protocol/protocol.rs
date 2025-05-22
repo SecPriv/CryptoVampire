@@ -1,10 +1,11 @@
 use egg::RecExpr;
 
+use crate::Lang;
+
 use super::Step;
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Protocol<L> {
-    pub name: RecExpr<L>,
-    pub steps: Vec<Step<L>>,
+pub struct Protocol {
+    pub name: RecExpr<Lang>,
+    pub steps: Vec<Step>,
 }
 
-impl<L> Protocol<L> {}

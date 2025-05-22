@@ -1,6 +1,6 @@
 pub const SMT_FILE_EXTENSION: &str = ".smt";
 
-use std::fmt::{self, Display};
+use std::{borrow::Cow, fmt::{self, Display}};
 
 pub use formula::*;
 mod formula;
@@ -15,16 +15,31 @@ pub struct SmtFile<S, F> {
     pub content: Vec<smt::Smt<S, F>>,
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub enum VarInner {
+    Int(uvar),
+    Str(Cow<'static, str>)
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct SortedVar<S> {
-    pub var: uvar,
+    pub var: VarInner,
     pub sort: S,
+}
+
+impl Display for VarInner {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            VarInner::Int(u) => write!(f, "x_{u:}"),
+            VarInner::Str(str) => write!(f, "{str}"),
+        }
+    }
 }
 
 impl<S: Display> Display for SortedVar<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let Self { var, sort } = self;
-        write!(f, "(x_{var:} {sort})")
+        write!(f, "({var} {sort})")
     }
 }
 
@@ -57,4 +72,11 @@ where
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         Arr("", self.1).fmt(f)
     }
+}
+
+#[cfg(feature="macro")]
+macro_rules! smt_formulas {
+    ($($t:tt)*) => {
+        cryptovampire_smt::smt_formulas!($($t)*)
+    };
 }

@@ -14,7 +14,7 @@ pub struct Problem {
     /// The protocol we want to prove indistiguishability on
     ///
     /// The vector must be at least 2 long
-    pub protocols: Vec<Protocol<Lang>>,
+    pub protocols: Vec<Protocol>,
     /// The functions
     pub function: FunctionCollection,
 }

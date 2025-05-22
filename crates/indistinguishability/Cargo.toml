@@ -15,6 +15,7 @@ logic_formula = {path = "../logic_formula", features = ["egg"]}
 egg = {path = "../egg", features = ["serde-1"]}
 golgge = {path = "../golgge"}
 cryptovampire_macros = {path = "../cryptovampire_macros"}
+cryptovampire_smt = {path = "../cryptovampire_smt", features = ["vampire", "macro"]}
 
 # workspace
 itertools.workspace = true

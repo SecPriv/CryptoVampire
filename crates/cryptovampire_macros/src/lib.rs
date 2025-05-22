@@ -30,6 +30,12 @@ pub fn mk_builtin_funs(input: TokenStream) -> TokenStream {
 
 mod indistinguishability;
 
+mod smt;
+#[proc_macro]
+pub fn smt_formula(input: TokenStream) -> TokenStream {
+    smt::smt_formulas(input)
+}
+
 // #[derive(Debug)]
 // struct SExpr(String);
 

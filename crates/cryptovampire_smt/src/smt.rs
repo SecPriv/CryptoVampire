@@ -117,6 +117,7 @@ where
                 }
                 writeln!(f, ")")
             }
+            #[cfg(feature = "cryptovampire")]
             Smt::DeclareRewrite {
                 rewrite_fun,
                 vars,
