@@ -1,5 +1,7 @@
 use std::{borrow::Cow, collections::HashMap};
 
+use itertools::Itertools;
+
 use crate::{
     protocol::Protocol,
     terms::{Function, FunctionCollection},
@@ -26,5 +28,12 @@ impl Problem {
             protocols: Default::default(),
             function: FunctionCollection::init(),
         }
+    }
+
+    pub fn valid(&self) -> bool {
+        self.protocols
+            .iter()
+            .tuple_windows()
+            .all(|(a, b)| Protocol::are_compatible(a, b))
     }
 }

@@ -1,9 +1,13 @@
-use std::{borrow::Cow, fmt::Display, ops::Deref, rc::Rc};
+use std::{borrow::Cow, cmp::Ordering, fmt::Display, hash::Hash, ops::Deref, rc::Rc, sync::Arc};
 
-use crate::{protocol::{MacroKind, ProtocolLanguage}, Lang};
+use crate::{
+    protocol::{MacroKind, ProtocolLanguage},
+    Lang,
+};
 use bitflags::{bitflags, bitflags_match};
-use cryptovampire_smt::SmtHead;
+use cryptovampire_smt::{SmtHead, SortedVar, VarInner};
 use egg::{PatternAst, SymbolLang, Var};
+use itertools::izip;
 use logic_formula::egg::{SimplLang, SimpleDiscriminant};
 use serde::{Deserialize, Serialize};
 use utils::{match_eq, quack::CowArc};
@@ -14,22 +18,34 @@ pub use functions_holder::*;
 bitflags! {
     #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Serialize, Deserialize)]
     pub struct FunctionFlags: u16 {
+        /// The function is builtin
         const BUILTIN = 1 << 0;
+        /// It's an alias for something else
         const ALIAS = 1 << 1;
+        /// Appears only in prolog
         const PROLOG_ONLY = 1 << 2;
 
+        /// Is a macro
         const MACRO = 1 << 3;
+        /// Is an unfolding function
         const UNFOLD = 1 << 4;
 
+        /// Necesitate a customize deduce that does
+        /// not fit in any category
         const CUSTOM_DEDUCE = 1 << 5;
 
+        /// Represents an existential quantifier
         const EXISTS = 1 << 6;
+        /// Represents a skolem function
         const SKOLEM = 1 << 7;
 
+        /// Has an equivalent built into smt
         const BUILTIN_SMT = 1 << 8;
+
+        /// This is a nonce constructor
+        const NONCE = 1 << 9;
     }
 }
-
 
 /// helper to write flags
 #[macro_export]
@@ -50,7 +66,10 @@ pub struct InnerFunction {
     exists_idx: usize,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+/// Main type for function in this crate
+///
+/// This is basicaly a somewhat smart pointer to an [InnerFunction].
+#[derive(Debug, Clone, Serialize)]
 pub struct Function(CowArc<'static, InnerFunction>);
 
 #[non_exhaustive]
@@ -67,7 +86,7 @@ pub enum Sort {
     Time,
     Protocol,
     Nonce,
-    Index
+    Index,
 }
 
 impl Display for Sort {
@@ -93,6 +112,13 @@ impl Signature {
 
     pub fn inputs_iter(&self) -> impl Iterator<Item = Sort> + use<'_> {
         self.inputs.iter().copied()
+    }
+
+    pub fn mk_sorted_vars(&self, from: u32) -> impl Iterator<Item = SortedVar<Sort>> + use<'_> {
+        izip!(from.., self.inputs.iter()).map(|(i, s)| SortedVar {
+            var: VarInner::Int(i),
+            sort: *s,
+        })
     }
 }
 
@@ -150,7 +176,7 @@ impl Function {
     pub fn as_smt_head(&self) -> Option<SmtHead> {
         use builtin::*;
         use SmtHead::*;
-        match_eq!{ self => {
+        match_eq! { self => {
             AND => { Some(And) },
             NOT => { Some(Not) },
             OR => { Some(Or) },
@@ -175,6 +201,53 @@ impl Deref for Function {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl Eq for Function {}
+
+impl PartialEq for Function {
+    fn eq(&self, other: &Self) -> bool {
+        match (&self.0, &other.0) {
+            (CowArc::Owned(a), CowArc::Owned(b)) => Arc::ptr_eq(a, b),
+            (CowArc::Borrowed(a), CowArc::Borrowed(b)) => ::core::ptr::eq(a, b),
+            _ => false,
+        }
+    }
+}
+
+impl PartialOrd for Function {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(Function::cmp(self, other))
+    }
+}
+
+impl Ord for Function {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self == other {
+            // equality if defined by pointer
+            Ordering::Equal
+        } else {
+            // order by the content
+            match InnerFunction::cmp(self, other) {
+                Ordering::Equal => panic!(
+                    "duplicate function at two different location in memory! (The \
+                    comparison algorithm is unsound in those cases, please avoid \
+                    declaring function twice)"
+                ),
+                x => x,
+            }
+        }
+    }
+}
+
+impl Hash for Function {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match &self.0 {
+            CowArc::Owned(x) => Arc::as_ptr(x),
+            CowArc::Borrowed(x) => *x as *const _,
+        }
+        .hash(state);
     }
 }
 

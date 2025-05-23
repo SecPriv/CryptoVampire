@@ -1,3 +1,4 @@
+use cryptovampire_macros::smt;
 use logic_formula::{Destructed, Formula};
 
 use super::MSmtFormula;
@@ -10,7 +11,6 @@ use egg::VarExposed;
 
 use cryptovampire_smt::{SmtFormula, VarInner};
 
-
 pub fn var_to_smt(var: &egg::Var) -> VarInner {
     match var.expose() {
         VarExposed::Num(n) => VarInner::Int(n),
@@ -19,7 +19,7 @@ pub fn var_to_smt(var: &egg::Var) -> VarInner {
 }
 
 pub fn formula_to_smt(formula: &[LangVar]) -> MSmtFormula {
-    use SmtFormula::*;
+    use SmtFormula::Var;
     let Destructed { head, args } = formula.destruct();
     match head {
         logic_formula::HeadSk::Var(v) => Var(var_to_smt(&v)),
@@ -27,7 +27,7 @@ pub fn formula_to_smt(formula: &[LangVar]) -> MSmtFormula {
             let args = args.map(formula_to_smt);
             match fun.as_smt_head() {
                 Some(head) => SmtFormula::builtin(head, args).expect("wrong number of arguments"),
-                None => SmtFormula::Fun(fun, args.collect()),
+                None => smt!((fun #args*)),
             }
         }
         logic_formula::HeadSk::Quant(_) => unreachable!(),

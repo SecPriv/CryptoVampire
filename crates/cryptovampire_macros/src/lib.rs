@@ -32,7 +32,7 @@ mod indistinguishability;
 
 mod smt;
 #[proc_macro]
-pub fn smt_formula(input: TokenStream) -> TokenStream {
+pub fn smt(input: TokenStream) -> TokenStream {
     smt::smt_formulas(input)
 }
 

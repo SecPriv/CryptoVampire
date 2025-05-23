@@ -1,7 +1,7 @@
 use std::{borrow::Cow, io::Write};
 
 use anyhow::Context;
-use cryptovampire_macros::smt_formula;
+use cryptovampire_macros::smt;
 use cryptovampire_smt::{Smt, SmtFormula};
 use egg::{Analysis, Language, Pattern, Searcher, SymbolLang, Var};
 use itertools::Itertools;
@@ -190,7 +190,7 @@ fn to_tptp(f: &mut impl std::io::Write, expr: &[SymbolLang]) -> anyhow::Result<(
 fn test_smt_macro() {
     let x = 2;
     let f = "t";
-    let t: SmtFormula<&'static str, &'static str> = smt_formula! {
+    let t: SmtFormula<&'static str, &'static str> = smt! {
         (forall ((#a!x "my_sort")) (f #a #a))
     };
     println!("{t}")

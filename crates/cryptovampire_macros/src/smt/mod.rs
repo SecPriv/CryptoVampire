@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use proc_macro::TokenStream;
 use quote::{format_ident, quote}; // format_ident is key here
 use syn::parenthesized;
+use syn::token::Paren;
 use syn::{
     parse::{Parse, ParseStream, Result},
     parse_macro_input,
@@ -34,16 +35,17 @@ enum ParsedSmt {
     },
     True,
     False,
-    And(Vec<ParsedSmt>),
-    Or(Vec<ParsedSmt>),
-    Eq(Vec<ParsedSmt>),
-    Neq(Vec<ParsedSmt>),
+    And(ArgsVec),
+    Or(ArgsVec),
+    Eq(ArgsVec),
+    Neq(ArgsVec),
     Not(Box<ParsedSmt>),
+    Implies(Box<ParsedSmt>, Box<ParsedSmt>),
     FunApp {
         func: Ident,
-        args: Vec<ParsedSmt>,
+        args: ArgsVec,
     },
-    Banged(BangedContent), // Renamed for clarity from your Banged
+    Banged(BangedContent),
 }
 
 enum VarBindings {
@@ -71,6 +73,16 @@ enum VarIndex {
     Expr(Expr),
     Ident(Ident),
 }
+
+enum ArgItem {
+    Regular(ParsedSmt),  // A standard SMT expression
+    SplatExpr(Expr),     // Represents #(expr)*
+    SplatIdent(Ident),   // Represents #ident*
+}
+
+// Args is now a list of ArgItems
+type ArgsVec = Vec<ArgItem>;
+
 
 impl Parse for BangedContent {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
@@ -120,13 +132,66 @@ impl Parse for VarIndex {
     }
 }
 
-fn parse_smt_list_content(input: ParseStream<'_>) -> Result<Vec<ParsedSmt>> {
-    let mut args = Vec::new();
-    while !input.is_empty() {
-        args.push(input.parse()?);
+impl Parse for ArgItem {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        if input.peek(Token![#]) {
+            // Tentatively parse '#', but fork to give it back if not a splat or specific #term
+            let marker_span = input.cursor().span(); // For error messages
+            input.parse::<Token![#]>()?; // Consume '#'
+
+            if input.peek(token::Paren) { // Potential #(expr) or #(expr)*
+                let expr_content;
+                parenthesized!(expr_content in input);
+                let expr: Expr = expr_content.parse()?;
+                if !expr_content.is_empty() {
+                    return Err(expr_content.error("Trailing tokens in #(...) part of argument"));
+                }
+
+                if input.peek(Token![*]) {
+                    input.parse::<Token![*]>()?; // Consume '*'
+                    Ok(ArgItem::SplatExpr(expr))
+                } else {
+                    // Regular #(expr) term
+                    Ok(ArgItem::Regular(ParsedSmt::Banged(BangedContent::Expr(expr))))
+                }
+            } else if input.peek(Ident) { // Potential #ident or #ident*
+                let ident: Ident = input.parse()?;
+                if input.peek(Token![*]) {
+                    input.parse::<Token![*]>()?; // Consume '*'
+                    Ok(ArgItem::SplatIdent(ident))
+                } else {
+                    // Regular #ident term
+                    Ok(ArgItem::Regular(ParsedSmt::Banged(BangedContent::Ident(ident))))
+                }
+            } else if input.peek(Lit) { // Regular #lit term
+                let lit: Lit = input.parse()?;
+                Ok(ArgItem::Regular(ParsedSmt::Banged(BangedContent::Lit(lit))))
+            } else {
+                Err(syn::Error::new(marker_span, "Expected '(', identifier, or literal after # in argument list"))
+            }
+        } else {
+            // Not starting with #, so it's a regular ParsedSmt (e.g., sub-expression like (foo), true, false, or plain_ident)
+            Ok(ArgItem::Regular(input.parse::<ParsedSmt>()?))
+        }
     }
-    Ok(args)
 }
+
+// This function will parse a list of ArgItems for functions/operators
+fn parse_argument_list(input: ParseStream<'_>) -> Result<ArgsVec> {
+    let mut items = Vec::new();
+    while !input.is_empty() {
+        items.push(input.parse::<ArgItem>()?);
+    }
+    Ok(items)
+}
+
+// fn parse_smt_list_content(input: ParseStream<'_>) -> Result<Vec<ParsedSmt>> {
+//     let mut args = Vec::new();
+//     while !input.is_empty() {
+//         args.push(input.parse()?);
+//     }
+//     Ok(args)
+// }
 
 fn parse_bindings(input: ParseStream<'_>) -> Result<Vec<VarBinding>> {
     let content;
@@ -195,10 +260,19 @@ impl Parse for ParsedSmt {
                 Err(input.error("Empty parentheses are not valid SMT formula"))
             );
 
-            if content.peek(Token![=]) {
+            if content.peek(Token![=>]) {
+                content.parse::<Token![=>]>()?;
+                // let [a, b] = parse_smt_list_content(&content)?
+                //     .try_into()
+                //     .map_err(|_| content.error("wrong number of argument for implies"))?;
+                let a = content.parse()?;
+                let b = content.parse()?;
+                Ok(ParsedSmt::Implies(Box::new(a), Box::new(b)))
+            } else if content.peek(Token![=]) {
                 // equality is not an ident
                 content.parse::<Token![=]>()?;
-                Ok(ParsedSmt::Eq(parse_smt_list_content(&content)?))
+                Ok(ParsedSmt::Eq(parse_argument_list(&content)?))
+                // Ok(ParsedSmt::Eq(content.parse()?))
             } else if content.peek(Ident) {
                 // the rest
                 let keyword: Ident = content.parse()?;
@@ -220,9 +294,9 @@ impl Parse for ParsedSmt {
                             body: Box::new(body),
                         })
                     }
-                    "and" => Ok(ParsedSmt::And(parse_smt_list_content(&content)?)),
-                    "or" => Ok(ParsedSmt::Or(parse_smt_list_content(&content)?)),
-                    "distinct" => Ok(ParsedSmt::Neq(parse_smt_list_content(&content)?)),
+                    "and" => Ok(ParsedSmt::And(parse_argument_list(&content)?)),
+                    "or" => Ok(ParsedSmt::Or(parse_argument_list(&content)?)),
+                    "distinct" => Ok(ParsedSmt::Neq(parse_argument_list(&content)?)),
                     "not" => {
                         let arg = content.parse()?;
                         if !content.is_empty() {
@@ -232,7 +306,7 @@ impl Parse for ParsedSmt {
                     }
                     _ => {
                         let func_ident = keyword;
-                        let args = parse_smt_list_content(&content)?;
+                        let args = parse_argument_list(&content)?;
                         Ok(ParsedSmt::FunApp {
                             func: func_ident,
                             args,
@@ -274,6 +348,55 @@ fn generate_var_index_expr_tokens(v_idx: &VarIndex) -> proc_macro2::TokenStream 
     }
 }
 
+// fn generate_args(parsed: Args) -> proc_macro2::TokenStream {
+//     match parsed {
+//         Args::Expr(expr) => quote! { (#expr).into_iter().collect() },
+//         Args::Ident(ident) => quote! { #ident.into_iter().collect() },
+//         Args::Other(args) => {
+//             let args = args.into_iter().map(generate_code);
+//             quote! {vec![#(#args),*]}
+//         },
+//     }
+// }
+
+fn generate_args(items: ArgsVec) -> proc_macro2::TokenStream {
+    // let vec_builder_ident = format_ident!(
+    //     "__smt_args_vec_{}",
+    //     VAR_COUNTER.fetch_add(1, Ordering::Relaxed),
+    //     span = proc_macro2::Span::call_site()
+    // );
+
+    let mut construction_statements = Vec::new();
+    // construction_statements.push(quote! { let mut #vec_builder_ident = Vec::new(); });
+
+    for item in items {
+        match item {
+            ArgItem::Regular(smt) => {
+                let smt_code = generate_code(smt); // generate_code returns code for one SmtFormula
+                construction_statements.push(quote! { [#smt_code] });
+            }
+            ArgItem::SplatExpr(expr_to_splat) => {
+                // Assume expr_to_splat evaluates to an iterable of items convertible to SmtFormula
+                construction_statements.push(
+                    quote! { (#expr_to_splat).into_iter().map(|item| item.into()) },
+                );
+            }
+            ArgItem::SplatIdent(ident_to_splat) => {
+                // Assume ident_to_splat is an iterable of items convertible to SmtFormula
+                construction_statements.push(
+                    quote! { (#ident_to_splat).into_iter().map(|item| item.into()) },
+                );
+            }
+        }
+    }
+
+    quote! {
+        {
+            ::itertools::chain![#(#construction_statements),*].collect()
+        }
+    }
+}
+
 fn generate_code(parsed: ParsedSmt) -> proc_macro2::TokenStream {
     let crate_path = quote! { ::cryptovampire_smt };
 
@@ -285,31 +408,35 @@ fn generate_code(parsed: ParsedSmt) -> proc_macro2::TokenStream {
             quote! { (#tokens).into() }
         }
         ParsedSmt::And(args) => {
-            let processed_args = args.into_iter().map(generate_code);
-            quote! { #crate_path::SmtFormula::And(vec![#(#processed_args),*]) }
+            let processed_args = generate_args(args); //args.into_iter().map(generate_code);
+            quote! { #crate_path::SmtFormula::And(#processed_args) }
         }
         ParsedSmt::Or(args) => {
-            let processed_args = args.into_iter().map(generate_code);
-            quote! { #crate_path::SmtFormula::Or(vec![#(#processed_args),*]) }
+            let processed_args = generate_args(args); //args.into_iter().map(generate_code);
+            quote! { #crate_path::SmtFormula::Or(#processed_args) }
         }
         ParsedSmt::Eq(args) => {
-            let processed_args = args.into_iter().map(generate_code);
-            quote! { #crate_path::SmtFormula::Eq(vec![#(#processed_args),*]) }
+            let processed_args = generate_args(args); //args.into_iter().map(generate_code);
+            quote! { #crate_path::SmtFormula::Eq(#processed_args) }
         }
         ParsedSmt::Neq(args) => {
-            let processed_args = args.into_iter().map(generate_code);
-            quote! { #crate_path::SmtFormula::Neq(vec![#(#processed_args),*]) }
+            let processed_args = generate_args(args); //args.into_iter().map(generate_code);
+            quote! { #crate_path::SmtFormula::Neq(#processed_args) }
         }
         ParsedSmt::Not(arg) => {
             let processed_arg = generate_code(*arg);
             quote! { #crate_path::SmtFormula::Not(Box::new(#processed_arg)) }
         }
+        ParsedSmt::Implies(a, b) => {
+            let [a, b] = [*a, *b].map(generate_code);
+            quote! {#crate_path::SmtFormula::Implies(Box::new(#a), Box::new(#b))}
+        }
         ParsedSmt::FunApp { func, args } => {
-            let processed_args = args.into_iter().map(generate_code);
+            let processed_args = generate_args(args); //args.into_iter().map(generate_code);
             // As per your change, #func (the Ident) is passed directly.
             // This implies SmtFormula::Fun can handle an Ident or its type N in
             // SmtFormula<N,S> can be From<Ident> or similar.
-            quote! { #crate_path::SmtFormula::Fun(#func, vec![#(#processed_args),*]) }
+            quote! { #crate_path::SmtFormula::Fun(#func.clone(), #processed_args) }
         }
         ParsedSmt::Quantifier {
             kind,

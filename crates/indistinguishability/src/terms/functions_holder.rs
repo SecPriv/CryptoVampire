@@ -2,7 +2,7 @@ use std::{borrow::Cow, collections::HashMap, ops::Deref};
 
 use itertools::Itertools;
 
-use super::{Function, Exists, BUILTINS, PARSING_PAIRS};
+use super::{Exists, Function, FunctionFlags, BUILTINS, PARSING_PAIRS};
 
 /// see [Self::valid] for the invariants
 #[derive(Debug, Default)]
@@ -39,7 +39,7 @@ impl FunctionCollection {
         } = self;
 
         // uniqueness
-        let unique = functions.iter().all_unique();
+        let unique = functions.iter().map(|f| &f.name).all_unique();
 
         // relation between `functions` and `map_function`
         let mapping = crate::utils::same_slice(functions, map_function.values());
@@ -64,6 +64,13 @@ impl FunctionCollection {
 
     pub fn quantifiers(&self) -> &[Exists] {
         &self.quantifiers
+    }
+
+    /// Lists all the registered nonces
+    pub fn nonces(&self) -> impl Iterator<Item = &Function> {
+        self.functions
+            .iter()
+            .filter(|f| f.flags.contains(FunctionFlags::NONCE))
     }
 }
 

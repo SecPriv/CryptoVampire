@@ -2,7 +2,7 @@ use std::{borrow::Cow, fmt::Display};
 
 use utils::{ereturn_if, implvec};
 
-use crate::{Arr, VarInner};
+use crate::{uvar, Arr, VarInner};
 
 use super::SortedVar;
 
@@ -116,5 +116,17 @@ impl<S, F> SmtFormula<S, F> {
                 Ok(Ite(Box::new(c), Box::new(l), Box::new(r)))
             }
         }
+    }
+}
+
+impl<S, F> From<SortedVar<S>> for SmtFormula<S, F> {
+    fn from(SortedVar { var,.. }: SortedVar<S>) -> Self {
+        SmtFormula::Var(var)
+    }
+}
+
+impl<S, F> From<uvar> for SmtFormula<S, F> {
+    fn from(value: uvar) -> Self {
+        SmtFormula::Var(VarInner::Int(value))
     }
 }

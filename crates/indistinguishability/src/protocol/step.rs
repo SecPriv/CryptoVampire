@@ -1,6 +1,6 @@
 use std::{fmt::Display, ops::Deref};
 
-use cryptovampire_macros::smt_formula;
+use cryptovampire_macros::smt;
 use cryptovampire_smt::{Smt, SmtFormula, SortedVar};
 use egg::{Analysis, ENodeOrVar, MultiPattern, Pattern, PatternAst, RecExpr, Rewrite, Var};
 use golgge::PrologRule;
@@ -72,7 +72,6 @@ impl Step {
         ptcl: &MSmtFormula,
     ) -> impl Iterator<Item = MSmt> {
         use Smt::*;
-        let [unfold_cond_f, unfold_msg_f] = [UNFOLD_COND.clone(), UNFOLD_MSG.clone()];
         let [cond, msg, name] =
             [self.cond.as_ref(), &self.msg, &self.id_expr()].map(formula_to_smt);
 
@@ -82,11 +81,11 @@ impl Step {
             .collect();
 
         let comment = Comment(format!("unfolding of {name}"));
-        let unfold_cond = smt_formula! {
-            (forall #(sorted_vars.clone()) (= (unfold_cond_f #(name.clone()) #(ptcl.clone())) #cond))
+        let unfold_cond = smt! {
+            (forall #(sorted_vars.clone()) (= (UNFOLD_COND #name #ptcl) #cond))
         };
-        let unfold_msg = smt_formula! {
-            (forall #(sorted_vars.clone()) (= (unfold_msg_f #(name.clone()) #(ptcl.clone())) #msg))
+        let unfold_msg = smt! {
+            (forall #(sorted_vars.clone()) (= (UNFOLD_MSG #name #ptcl) #msg))
         };
 
         [comment, Assert(unfold_cond), Assert(unfold_msg)].into_iter()
