@@ -17,6 +17,10 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -26,6 +30,7 @@
       flake-utils,
       custom,
       treefmt-nix,
+      fenix,
       ...
     }:
     flake-utils.lib.eachDefaultSystem (
@@ -34,6 +39,8 @@
         pkgs = nixpkgs.legacyPackages.${system};
         custom-pkgs = custom.packages.${system};
         treefmtEval = treefmt-nix.lib.evalModule pkgs ./fmt.nix;
+
+        toolchain = fenix.packages.${system}.latest.toolchain;
 
         my-z3 = pkgs.z3.overrideAttrs (
           finalAttrs: previousAttrs: {
@@ -56,10 +63,12 @@
           ]
         );
 
-        mrustPlateform = pkgs.rustPlatform;
+        nightly = false;
+        mrustPlatform = if nightly then (pkgs.makeRustPlatform {cargo = toolchain; rustc
+        = toolchain; }) else pkgs.rustPlatform;
 
         pkgConfig = {
-          rustPlatform = mrustPlateform;
+          rustPlatform = mrustPlatform;
           src = ./.;
         };
 
@@ -67,7 +76,7 @@
         egg = pkgs.callPackage ./crates/indistinguishability/default.nix pkgConfig;
 
         defaultDevShell = pkgs.mkShell {
-          RUST_SRC_PATH = "${mrustPlateform.rustLibSrc}";
+          RUST_SRC_PATH = "${mrustPlatform.rustLibSrc}";
 
           buildInputs =
             with pkgs;
@@ -75,6 +84,7 @@
             ++ [
               nixd
               graphviz
+              pest-ide-tools
 
               cvc5
               z3
@@ -88,9 +98,9 @@
               rustfmt
               clippy
               rust-analyzer
-              rustPlatform.bindgenHook
-              rustPlatform.cargoCheckHook
-              rustPlatform.cargoBuildHook
+              mrustPlatform.bindgenHook
+              mrustPlatform.cargoCheckHook
+              mrustPlatform.cargoBuildHook
             ]
             ++ lib.optional stdenv.isDarwin git;
         };
