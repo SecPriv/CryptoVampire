@@ -112,7 +112,7 @@ mk_builtin_funs!(
 
     NONCE "mnonce" "nonce" {
         signature: s!(Nonce -> Bitstring),
-        flags: f!(CUSTOM_DEDUCE)
+        flags: f!(CUSTOM_DEDUCE | CUSTOM_SUBTERM)
     };
 
     TUPLE "mtuple" "tuple" "pair" {
@@ -249,11 +249,12 @@ mk_builtin_funs!(
 
     FRESH "mfresh" "fresh" {
         signature: s!(Nonce, Bitstring -> Bool),
-        // flags: f!(PROLOG_ONLY)
+        flags: f!(CUSTOM_DEDUCE)
     };
 
     VAMPIRE "mvampire" "vampire" "smt" {
         signature: s!(Bool -> Bool),
         flags: f!(PROLOG_ONLY)
     };
+
 );

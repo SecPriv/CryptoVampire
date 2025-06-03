@@ -3,15 +3,13 @@ use cryptovampire_smt::{Smt, SmtFormula, SortedVar, VarInner};
 use itertools::{chain, izip, Itertools};
 
 use crate::{
-    const_fun_flags,
     rules::vampire::MSmtFormula,
-    terms::{Function, FunctionFlags, Signature, Sort, SORT_LIST},
+    terms::{flags::SHOULD_NOT_DECLARE_IN_SMT, Function, FunctionFlags, Signature, Sort, SORT_LIST},
     Problem,
 };
 
 use super::MSmt;
 
-static SHOULD_NOT_DECLARE_IN_SMT: FunctionFlags = const_fun_flags!(ALIAS | PROLOG_ONLY | BUILTIN_SMT);
 
 #[inline]
 fn should_declare_in_smt(fun: &Function) -> bool {

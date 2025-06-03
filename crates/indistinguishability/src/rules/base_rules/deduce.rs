@@ -7,7 +7,7 @@ use logic_formula::egg::SimpleDiscriminant;
 use utils::implvec;
 
 use crate::{
-    const_fun_flags, terms::{Exists, Function, FunctionFlags, Sort, BIT_DEDUCE, BOOL_DEDUCE}, Lang, LangVar, Problem
+     terms::{flags::SPECIAL_DEDUCE, Exists, Function, FunctionFlags, Sort, BIT_DEDUCE, BOOL_DEDUCE}, Lang, LangVar, Problem
 };
 
 use super::{
@@ -67,11 +67,8 @@ fn mk_regular_deduce_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lan
         .map(mk_deduce_rule)
 }
 
-static HAS_SPECIAL_TREATMENT: FunctionFlags =
-    const_fun_flags!(ALIAS | PROLOG_ONLY | MACRO | UNFOLD | CUSTOM_DEDUCE | EXISTS | SKOLEM);
-
 fn should_process_normaly(f: &Function) -> bool {
-    f.flags.intersects(HAS_SPECIAL_TREATMENT)
+    f.flags.intersects(SPECIAL_DEDUCE)
 }
 
 fn mk_deduce_rule(f: &Function) -> PrologRule<Lang> {

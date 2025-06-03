@@ -4,7 +4,7 @@ use crate::{
     protocol::{MacroKind, ProtocolLanguage},
     Lang,
 };
-use bitflags::{bitflags, bitflags_match};
+use bitflags::{bitflags_match};
 use cryptovampire_smt::{SmtHead, SortedVar, VarInner};
 use egg::{PatternAst, SymbolLang, Var};
 use itertools::izip;
@@ -15,47 +15,8 @@ use utils::{match_eq, quack::CowArc};
 mod functions_holder;
 pub use functions_holder::*;
 
-bitflags! {
-    #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Serialize, Deserialize)]
-    pub struct FunctionFlags: u16 {
-        /// The function is builtin
-        const BUILTIN = 1 << 0;
-        /// It's an alias for something else
-        const ALIAS = 1 << 1;
-        /// Appears only in prolog
-        const PROLOG_ONLY = 1 << 2;
-
-        /// Is a macro
-        const MACRO = 1 << 3;
-        /// Is an unfolding function
-        const UNFOLD = 1 << 4;
-
-        /// Necesitate a customize deduce that does
-        /// not fit in any category
-        const CUSTOM_DEDUCE = 1 << 5;
-
-        /// Represents an existential quantifier
-        const EXISTS = 1 << 6;
-        /// Represents a skolem function
-        const SKOLEM = 1 << 7;
-
-        /// Has an equivalent built into smt
-        const BUILTIN_SMT = 1 << 8;
-
-        /// This is a nonce constructor
-        const NONCE = 1 << 9;
-    }
-}
-
-/// helper to write flags
-#[macro_export]
-macro_rules! const_fun_flags {
-    ($id:ident) => {$crate::terms::FunctionFlags::$id};
-    ($id0:ident | $($id:ident)|*) => {
-        $crate::terms::FunctionFlags::$id0
-            $(.union($crate::terms::FunctionFlags::$id))*
-    };
-}
+pub(crate) mod flags;
+pub use flags::FunctionFlags;
 
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -79,6 +40,7 @@ pub struct Signature {
     pub output: Sort,
 }
 
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum Sort {
     Bool,
@@ -87,6 +49,9 @@ pub enum Sort {
     Protocol,
     Nonce,
     Index,
+
+    // special
+    SubtermStatus
 }
 
 impl Display for Sort {
@@ -98,6 +63,7 @@ impl Display for Sort {
             Sort::Protocol => write!(f, "Procotol"),
             Sort::Nonce => write!(f, "Nonce"),
             Sort::Index => write!(f, "Index"),
+            Sort::SubtermStatus => write!(f, "SubtermStatus"),
         }
     }
 }
@@ -159,6 +125,8 @@ impl Function {
         }
     }
 
+    /// static [Function] can be statically cloned. This function lets you do
+    /// that. It returns [None] when the [Function] is not static
     pub const fn const_clone(&self) -> Option<Self> {
         match self.0 {
             CowArc::Owned(_) => None,
@@ -251,7 +219,7 @@ impl Hash for Function {
     }
 }
 
-// ~~~~~~~~~~~~ egg::language ~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~ egg::Language ~~~~~~~~~~~~~~~
 
 impl SimpleDiscriminant for Function {
     fn valid(&self, ids: &[egg::Id]) -> bool {
