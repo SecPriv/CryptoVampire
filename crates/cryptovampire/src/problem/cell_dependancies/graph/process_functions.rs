@@ -107,7 +107,7 @@ impl<'a, 'bump> FormulaIterator<ARichFormula<'bump>> for ToNodeIterator<'a, 'bum
 
     type U = ToNode<'bump>;
 
-    fn next<H>(&mut self, current: ARichFormula<'bump>, _: &Self::Passing, helper: &mut H)
+    fn next<H>(&mut self, current: ARichFormula<'bump>, _: Self::Passing, helper: &mut H)
     where
         H: logic_formula::IteratorHelper<
             F = ARichFormula<'bump>,

@@ -789,7 +789,7 @@ where
 
     type U = (Rc<[Variable<'bump>]>, ARichFormula<'bump>);
 
-    fn next<H>(&mut self, f: ARichFormula<'bump>, state: &Self::Passing, helper: &mut H)
+    fn next<H>(&mut self, f: ARichFormula<'bump>, state: Self::Passing, helper: &mut H)
     where
         H: logic_formula::IteratorHelper<
             F = ARichFormula<'bump>,
@@ -835,6 +835,6 @@ where
                 helper.push_result(r);
             });
 
-        helper.extend_child_same_passing(nexts, state);
+        helper.extend_child_same_passing(nexts, &state);
     }
 }

@@ -89,7 +89,7 @@ pub trait FormulaIterator<F: Formula> {
 
     type U;
 
-    fn next<H>(&mut self, current: F, passing: &Self::Passing, helper: &mut H)
+    fn next<H>(&mut self, current: F, passing: Self::Passing, helper: &mut H)
     where
         H: IteratorHelper<F = F, Passing = Self::Passing, U = Self::U>;
 }
