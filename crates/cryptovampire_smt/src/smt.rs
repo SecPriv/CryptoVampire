@@ -1,5 +1,8 @@
 use std::fmt::Display;
 
+use itertools::izip;
+use utils::implvec;
+
 use crate::Arr;
 
 use super::SmtFile;
@@ -44,7 +47,7 @@ pub enum Smt<S, F> {
 
     DeclareDatatypes {
         sorts: Vec<S>,
-        cons: Vec<Vec<SmtCons<F>>>,
+        cons: Vec<Vec<SmtCons<S, F>>>,
     },
     Comment(String),
 
@@ -55,8 +58,9 @@ pub enum Smt<S, F> {
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct SmtCons<F> {
+pub struct SmtCons<S, F> {
     pub fun: F,
+    pub sorts: Vec<S>,
     pub dest: Vec<F>,
 }
 
@@ -86,6 +90,31 @@ impl<S, F> Smt<S, F> {
             Self::Assert(..) | Self::AssertNot(..) | Self::AssertTh(..)
         )
     }
+}
+
+impl<S, F> Smt<S, F> where SmtFormula<S, F>:Eq {
+    pub fn mk_assert(f:SmtFormula<S, F>) -> Self {
+        Self::Assert(f.optimise())
+    }
+}
+
+#[inline]
+fn write_par(
+    fmt: &mut std::fmt::Formatter<'_>,
+    f: impl FnOnce(&mut std::fmt::Formatter<'_>) -> std::fmt::Result,
+) -> std::fmt::Result {
+    write!(fmt, "(")?;
+    f(fmt)?;
+    write!(fmt, ") ")
+}
+
+#[inline]
+fn write_list<A>(
+    iter: implvec!(A),
+    f: &mut std::fmt::Formatter<'_>,
+    mut arg: impl FnMut(&mut std::fmt::Formatter<'_>, A) -> std::fmt::Result,
+) -> std::fmt::Result {
+    write_par(f, |f| iter.into_iter().try_for_each(|x| arg(f, x)))
 }
 
 impl<S, F> Display for Smt<S, F>
@@ -135,9 +164,20 @@ where
                 }
                 writeln!(f, ")")
             }
-            Smt::DeclareDatatypes { sorts, cons } => {
-                unimplemented!()
-            }
+            Smt::DeclareDatatypes { sorts, cons } => write_par(f, |f| {
+                write!(f, "declare-datatypes")?;
+
+                write_list(sorts, f, |f, s| write!(f, "({s} 0)"))?;
+
+                write_list(cons, f, |f, cons| {
+                    write_list(cons, f, |f, SmtCons { fun, sorts, dest }| {
+                        write!(f, "{fun} ")?;
+                        write_list(izip!(sorts, dest), f, |f, (s, dest)| {
+                            write!(f, "({dest} {s}) ")
+                        })
+                    })
+                })
+            }),
             Smt::Comment(c) => writeln!(f, "; {c}"),
             Smt::CheckSat => writeln!(f, "(check-sat)"),
             Smt::GetProof => writeln!(f, "(get-proof)"),

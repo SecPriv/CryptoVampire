@@ -142,7 +142,9 @@ impl Parse for ArgItem {
             if input.peek(token::Paren) { // Potential #(expr) or #(expr)*
                 let expr_content;
                 parenthesized!(expr_content in input);
-                let expr: Expr = expr_content.parse()?;
+                let expr: Expr = expr_content.parse().inspect_err(|_| {
+                    eprintln!("{input}");
+                })?;
                 if !expr_content.is_empty() {
                     return Err(expr_content.error("Trailing tokens in #(...) part of argument"));
                 }
@@ -281,7 +283,7 @@ impl Parse for ParsedSmt {
                         let kind = match s {
                             "forall" => QuantifierKind::Forall,
                             "exists" => QuantifierKind::Exists,
-                            _ => unreachable!(),
+                            _ => unreachable!("the string changed??? {s}"),
                         };
                         let bindings = content.parse()?;
                         let body = content.parse()?;

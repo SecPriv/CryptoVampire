@@ -17,8 +17,7 @@ use crate::{
         },
         formula::RichFormula,
         function::{
-            inner::booleans::{Booleans, Connective},
-            Function, InnerFunction,
+            inner::booleans::{Booleans, Connective}, signature::Signature, Function, InnerFunction
         },
         quantifier::Quantifier,
         sort::Sort,
@@ -36,7 +35,7 @@ use self::display::{SmtDisplayer, SmtEnv};
 pub type SmtFile<'bump> = cryptovampire_smt::SmtFile<Sort<'bump>, Function<'bump>>;
 pub type Smt<'bump> = cryptovampire_smt::Smt<Sort<'bump>, Function<'bump>>;
 pub type SmtFormula<'bump> = cryptovampire_smt::SmtFormula<Sort<'bump>, Function<'bump>>;
-pub type SmtCons<'bump> = cryptovampire_smt::SmtCons<Function<'bump>>;
+pub type SmtCons<'bump> = cryptovampire_smt::SmtCons<Sort<'bump>, Function<'bump>>;
 
 mod display;
 
@@ -300,6 +299,7 @@ impl<'bump> FromEnv<'bump, Declaration<'bump>> for Smt<'bump> {
                                 .map(|cd| SmtCons {
                                     fun: cd.constructor,
                                     dest: cd.destructor,
+                                    sorts: cd.constructor.fast_insort().unwrap()
                                 })
                                 .collect(),
                         )

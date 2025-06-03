@@ -1,8 +1,9 @@
 use std::{borrow::Cow, fmt::Display};
 
+use itertools::Itertools;
 use utils::{ereturn_if, implvec};
 
-use crate::{uvar, Arr, VarInner};
+use crate::{Arr, VarInner, uvar};
 
 use super::SortedVar;
 
@@ -117,10 +118,67 @@ impl<S, F> SmtFormula<S, F> {
             }
         }
     }
+
+    fn optimise_mut(&mut self)
+    where
+        Self: Eq,
+    {
+        match self {
+            SmtFormula::Fun(_, args) | SmtFormula::Eq(args) | SmtFormula::Neq(args) => {
+                args.iter_mut().for_each(Self::optimise_mut);
+            }
+            SmtFormula::Forall(_, f) | SmtFormula::Exists(_, f) => {
+                f.optimise_mut();
+            }
+            SmtFormula::And(args) => {
+                args.iter_mut().for_each(Self::optimise_mut);
+                if args.is_empty() {
+                    *self = Self::True
+                } else if args.len() == 1 {
+                    *self = args.pop().unwrap()
+                } else if args.contains(&Self::False) {
+                    *self = Self::False
+                }
+            }
+            SmtFormula::Or(args) => {
+                args.iter_mut().for_each(Self::optimise_mut);
+                if args.is_empty() {
+                    *self = Self::False
+                } else if args.len() == 1 {
+                    *self = args.pop().unwrap()
+                } else if args.contains(&Self::False) {
+                    *self = Self::True
+                }
+            }
+            SmtFormula::Implies(a, b) => {
+                a.optimise_mut();
+                if a.as_ref() == &Self::False {
+                    *self = Self::True
+                } else {
+                    b.optimise_mut();
+                }
+            }
+            SmtFormula::Ite(c, l, r) => {
+                [c, l, r]
+                    .iter_mut()
+                    .map(|x| x.as_mut())
+                    .for_each(Self::optimise_mut);
+            }
+            _ => (),
+        }
+    }
+
+    pub fn optimise(mut self) -> Self
+    where
+        Self: Eq,
+    {
+        self.optimise_mut();
+        self
+    }
 }
 
 impl<S, F> From<SortedVar<S>> for SmtFormula<S, F> {
-    fn from(SortedVar { var,.. }: SortedVar<S>) -> Self {
+    fn from(SortedVar { var, .. }: SortedVar<S>) -> Self {
         SmtFormula::Var(var)
     }
 }
