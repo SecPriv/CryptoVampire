@@ -206,6 +206,12 @@ impl Deref for Function {
     }
 }
 
+impl AsRef<Self> for Function {
+    fn as_ref(&self) -> &Self {
+        self
+    }
+}
+
 // impl Eq for Function {}
 
 // impl PartialEq for Function {
