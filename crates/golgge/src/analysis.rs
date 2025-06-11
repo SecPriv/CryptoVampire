@@ -2,10 +2,7 @@ use std::{collections::HashMap, hash::Hash};
 
 use egg::Language;
 
-use crate::{
-    weight::{Weight},
-    MWeight,
-};
+use crate::{MWeight, weight::Weight};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Data<L> {

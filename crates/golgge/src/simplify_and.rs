@@ -1,12 +1,10 @@
-use std::{
-    collections::VecDeque,
-    fmt::Display,
-};
+use std::{collections::VecDeque, fmt::Display};
 
 use egg::{
-    Analysis, Applier, EClass, EGraph, ENodeOrVar, Id, Language, PatternAst, Rewrite, Searcher, SymbolLang, Var,
+    Analysis, Applier, EClass, EGraph, ENodeOrVar, Id, Language, PatternAst, Rewrite, Searcher,
+    SymbolLang, Var,
 };
-use itertools::{chain, Itertools};
+use itertools::{Itertools, chain};
 use log::{log_enabled, trace};
 use smallvec::SmallVec;
 use utils::{ebreak_if, ebreak_let, econtinue_if, ereturn_if};
@@ -249,11 +247,7 @@ impl<N: Analysis<SymbolLang>> Applier<SymbolLang, N> for AndSimplifier {
             // }
         }
         let did_something = egraph.union_trusted(eclass, id, name);
-        if did_something {
-            vec![id]
-        } else {
-            vec![]
-        }
+        if did_something { vec![id] } else { vec![] }
     }
 }
 

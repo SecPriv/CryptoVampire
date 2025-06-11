@@ -3,7 +3,7 @@ use egg::{Analysis, Id, Language, RecExpr};
 
 /// Basic prolog-like rules
 mod prolog;
-pub use prolog::{parser::PlOrRw, PrologRule};
+pub use prolog::{PrologRule, parser::PlOrRw};
 
 // /// Calls vampire on a goal
 // mod vampire;

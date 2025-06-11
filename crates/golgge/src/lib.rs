@@ -7,14 +7,7 @@ use itertools::{Either, Itertools};
 use log::log_enabled;
 use rule::PlOrRw;
 use serde::Serialize;
-use std::{
-    cell::RefCell,
-    collections::HashMap,
-    fmt::Display,
-    path::PathBuf,
-    rc::Rc,
-    str::FromStr,
-};
+use std::{cell::RefCell, collections::HashMap, fmt::Display, path::PathBuf, rc::Rc, str::FromStr};
 use utils::implvec;
 
 // mod eclassmap;
@@ -30,14 +23,13 @@ enum Status {
 }
 
 mod simplify_and;
-pub use simplify_and::{and_simpl_rewrite, WithAnd, WithTrue};
+pub use simplify_and::{WithAnd, WithTrue, and_simpl_rewrite};
 
 mod weight;
 pub use weight::MWeight;
 
 mod analysis;
 pub use analysis::{MAnalysis, WeightedAnalysis};
-
 
 pub struct Program<L: Language, N: Analysis<L>> {
     egraph: Option<EGraph<L, N>>,
