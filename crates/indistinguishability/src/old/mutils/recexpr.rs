@@ -42,8 +42,8 @@ impl<'a, L: Language> RefRecExpr<'a, L> {
     }
 
     pub fn children<'b>(&'b self) -> impl Iterator<Item = Self> {
-      let tmp = *self;
-      tmp.ids().map(move |id| tmp.get(id))
+        let tmp = *self;
+        tmp.ids().map(move |id| tmp.get(id))
     }
 
     pub fn search(&self, f: impl FnMut(Self) -> bool) -> bool {

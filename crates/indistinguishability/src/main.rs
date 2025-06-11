@@ -3,41 +3,17 @@ pub fn main() {
     basic_hash();
 }
 
-use std::io::Write;
-fn init_logger() {
-    env_logger::Builder::new()
-        .format(|buf, record| {
-            if record.file().map(|s| s.contains("egg")) != Some(true) {
-                let str = record.args().to_string().replace("\n", "\n\t");
-                writeln!(
-                    buf,
-                    "[{}] in {}:{}\n\t{}",
-                    record.level(),
-                    record.file().unwrap_or("unknown"),
-                    record.line().unwrap_or(0),
-                    str
-                )
-            } else {
-                Ok(())
-            }
-        })
-        .parse_default_env()
-        .init();
-}
-
 mod test {
     use std::{
-        fs::{read_to_string, File},
+        fs::{File, read_to_string},
         u128,
     };
 
     use egg::{EGraph, Runner, SymbolLang};
     use golgge::Program;
 
-    use indistinguishability::rules::VampireRule;
+    use indistinguishability::{init_logger, rules::VampireRule};
     use std::env;
-
-    use crate::init_logger;
 
     static TEST_DIR: &str = "tests";
 

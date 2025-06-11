@@ -2,12 +2,14 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use egg::{Applier, Id, Language, RecExpr, Rewrite};
-use itertools::{izip, Itertools};
+use itertools::{Itertools, izip};
 use rustc_hash::FxHashMap;
 use utils::implvec;
 
-use crate::formula::{analysis::{Data, DependancyAnalysis, Unionable}, grammar::{self, Op, TA}};
-
+use crate::formula::{
+    analysis::{Data, DependancyAnalysis, Unionable},
+    grammar::{self, Op, TA},
+};
 
 /**
 Implements the rule

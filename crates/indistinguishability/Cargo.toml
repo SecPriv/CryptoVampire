@@ -1,7 +1,7 @@
 [package]
 name = "indistinguishability"
 version = "0.2.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 # egg = "0.10"
@@ -11,7 +11,7 @@ tempfile = "3.10"
 
 # own crates
 utils = { path = "../utils", features = ["serde"]}
-logic_formula = {path = "../logic_formula", features = ["egg"]}
+logic_formula = {path = "../logic_formula", features = ["egg", "serde"]}
 egg = {path = "../egg", features = ["serde-1"]}
 golgge = {path = "../golgge"}
 cryptovampire_macros = {path = "../cryptovampire_macros"}
@@ -27,6 +27,7 @@ log.workspace = true
 env_logger.workspace = true
 serde.workspace = true
 bitflags= {workspace = true, features = ["serde"]}
+im-rc = "15"
 
 [lints]
 workspace = true

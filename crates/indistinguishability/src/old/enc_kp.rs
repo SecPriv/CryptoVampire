@@ -7,7 +7,7 @@ use itertools::Itertools;
 use rustc_hash::{FxHashMap, FxHashSet};
 use utils::implvec;
 
-use crate::{is_nonce, mutils::Bag, Rule, CCSA};
+use crate::{CCSA, Rule, is_nonce, mutils::Bag};
 
 #[derive(Debug, Clone, Default)]
 struct SearchState(FxHashMap<Id, IdSearchState>);

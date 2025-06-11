@@ -111,21 +111,21 @@ impl Op {
         matches!(self, Self::Equiv)
     }
 
-/// Returns `true` if the op is [`Nonce`].
-///
-/// [`Nonce`]: Op::Nonce
-#[must_use]
-pub fn is_nonce(&self) -> bool {
-    matches!(self, Self::Nonce)
-}
+    /// Returns `true` if the op is [`Nonce`].
+    ///
+    /// [`Nonce`]: Op::Nonce
+    #[must_use]
+    pub fn is_nonce(&self) -> bool {
+        matches!(self, Self::Nonce)
+    }
 
-/// Returns `true` if the op is [`Name`].
-///
-/// [`Name`]: Op::Name
-#[must_use]
-pub fn is_name(&self) -> bool {
-    matches!(self, Self::Name(..))
-}
+    /// Returns `true` if the op is [`Name`].
+    ///
+    /// [`Name`]: Op::Name
+    #[must_use]
+    pub fn is_name(&self) -> bool {
+        matches!(self, Self::Name(..))
+    }
 }
 
 impl std::str::FromStr for Op {
@@ -199,11 +199,11 @@ pub struct TA {
 }
 
 impl std::ops::Deref for TA {
-type Target = Op;
+    type Target = Op;
 
-fn deref(&self) -> &Self::Target {
-    &self.op
-}
+    fn deref(&self) -> &Self::Target {
+        &self.op
+    }
 }
 
 impl TA {
@@ -218,8 +218,11 @@ impl TA {
         Some(arr)
     }
 
-    pub fn get_name<N:Analysis<TA>>(egraph: &EGraph<TA, N>, id:Id) -> Option<Id> {
-        egraph[id].iter().filter_map(|l| l.is_nonce().then(|| l.children()[0])).next()
+    pub fn get_name<N: Analysis<TA>>(egraph: &EGraph<TA, N>, id: Id) -> Option<Id> {
+        egraph[id]
+            .iter()
+            .filter_map(|l| l.is_nonce().then(|| l.children()[0]))
+            .next()
     }
 }
 

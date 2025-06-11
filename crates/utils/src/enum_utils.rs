@@ -134,3 +134,62 @@ macro_rules! variants_ref_try_into {
         variants_ref_try_into!($path:$from => {$($variants:$tos)|+}; $($other_lt),*);
     }
 }
+
+/// Static dispatch of iterators
+#[macro_export]
+macro_rules! dynamic_iter {
+    ($name:ident; $($variant:ident:$t:ident),*) => {
+        enum $name<$($t),*> {
+            $(
+                $variant($t)
+            ),*
+        }
+
+        impl<T, $($t),*> ::std::iter::Iterator for $name<$($t),*>
+        where $( $t: ::std::iter::Iterator<Item = T> ),* {
+            type Item = T;
+
+            fn next(&mut self) -> Option<T> {
+                match self {
+                    $(
+                        Self::$variant(iter) => iter.next()
+                    ),*
+                }
+            }
+
+            fn size_hint(&self) -> (usize, Option<usize>) {
+                match self {
+                    $(
+                        Self::$variant(iter) => iter.size_hint()
+                    ),*
+                }
+            }
+        }
+
+        impl<$($t),*> ::std::iter::FusedIterator for $name<$($t),*>
+        where
+            Self: ::std::iter::Iterator,
+            $( $t: ::std::iter::FusedIterator ),*
+        {}
+
+        impl<$($t),*> ::std::iter::ExactSizeIterator for $name<$($t),*>
+        where
+            Self: ::std::iter::Iterator,
+            $( $t: ::std::iter::ExactSizeIterator ),*
+        {}
+
+        // impl<$($t),*> ::std::iter::DoubleEndedIterator for $name<$($t),*>
+        // where
+        //     Self: ::std::iter::Iterator,
+        //     $( $t: ::std::iter::DoubleEndedIterator ),*
+        // {
+        //     fn next_back(&mut self) -> Option<Self::Item> {
+        //         match self {
+        //             $(
+        //                 Self::$variant(iter) => iter.next_back()
+        //             ),*
+        //         }
+        //     }
+        // }
+    };
+}

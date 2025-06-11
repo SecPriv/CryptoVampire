@@ -5,7 +5,7 @@ use cryptovampire_macros::smt;
 use cryptovampire_smt::{Smt, SmtFormula};
 use egg::{Analysis, Language, Pattern, Searcher, SymbolLang, Var};
 use itertools::Itertools;
-use logic_formula::{Formula};
+use logic_formula::Formula;
 use runner::VampireExec;
 use serde::Serialize;
 use static_init::dynamic;
@@ -13,10 +13,7 @@ use utils::{ereturn_if, ereturn_let};
 
 use golgge::{Dependancy, Rule};
 
-use crate::{
-    terms::{Function, Sort},
-    
-};
+use crate::terms::{Function, Sort};
 
 mod base_axioms;
 mod runner;
@@ -25,7 +22,6 @@ pub mod convert;
 
 pub type MSmtFormula = SmtFormula<Sort, Function>;
 pub type MSmt = Smt<Sort, Function>;
-
 
 #[dynamic]
 static PATTERN: Pattern<SymbolLang> = "(vampire ?x)".parse().unwrap();

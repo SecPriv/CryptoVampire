@@ -2,16 +2,17 @@ use std::ops::Deref;
 
 use egg::{ENodeOrVar, Pattern, PatternAst, RecExpr, SymbolLang, Var};
 use golgge::PrologRule;
-use itertools::{chain, izip, Itertools};
+use itertools::{Itertools, chain, izip};
 use logic_formula::egg::SimpleDiscriminant;
 use utils::implvec;
 
 use crate::{
-     terms::{flags::SPECIAL_DEDUCE, Exists, Function, FunctionFlags, Sort, BIT_DEDUCE, BOOL_DEDUCE}, Lang, LangVar, Problem
+    Lang, LangVar, Problem,
+    terms::{BIT_DEDUCE, BOOL_DEDUCE, Exists, Function, FunctionFlags, Sort},
 };
 
 use super::{
-    parse::{clean_input, convert_fun, PrologAst},
+    parse::{PrologAst, clean_input, convert_fun},
     var_as_recexpr,
 };
 
@@ -68,7 +69,7 @@ fn mk_regular_deduce_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lan
 }
 
 fn should_process_normaly(f: &Function) -> bool {
-    f.flags.intersects(SPECIAL_DEDUCE)
+    f.is_special_deduce()
 }
 
 fn mk_deduce_rule(f: &Function) -> PrologRule<Lang> {
@@ -118,7 +119,7 @@ const fn get_deduce(s: Sort) -> Option<&'static Function> {
     match s {
         Sort::Bool => Some(&BOOL_DEDUCE),
         Sort::Bitstring => Some(&BIT_DEDUCE),
-        _ => return None,
+        _ => None,
     }
 }
 
@@ -148,13 +149,9 @@ fn mk_exists_deduce_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang
 fn mk_exists_deduce_rules_one(
     pbl: &Problem,
     Exists {
-        tlf,
-        skolem,
-        fresh,
-        ..
+        tlf, skolem, fresh, ..
     }: &Exists,
 ) -> PrologRule<Lang> {
-    let [tlf, skolem, fresh] = [tlf, skolem, fresh].map(|i| &pbl.function[*i]);
     let deduce = get_deduce(Sort::Bitstring).unwrap();
     let n: u32 = skolem.arity().try_into().unwrap();
 

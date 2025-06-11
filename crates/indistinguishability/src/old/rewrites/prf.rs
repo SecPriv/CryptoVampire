@@ -29,9 +29,8 @@ struct Candidate {
 struct Instance<'a> {
     term: Id,
     candidates: &'a [Candidate],
-    i: usize
+    i: usize,
 }
-
 
 impl<'p> PRF<'p> {
     fn run(&self, egraph: &EGraph<TA, DependancyAnalysis>) {
@@ -40,16 +39,19 @@ impl<'p> PRF<'p> {
             .into_iter()
             .flatten()
             .filter_map(|id| {
-                let hash_substerms= SubtermIterator::new(egraph, id).flat_map(|e| {
-                    e.iter().filter_map(|l| match l.op() {
-                        Op::Hash => {
-                            let [m, k] = l.args_arr().unwrap(); // shouldn't be possible to crash here
-                            let k = TA::get_name(egraph, k)?;
-                            Some(Candidate { id: e.id, m, k })
-                        }
-                        _ => None,
+                let hash_substerms = SubtermIterator::new(egraph, id)
+                    .flat_map(|e| {
+                        e.iter().filter_map(|l| match l.op() {
+                            Op::Hash => {
+                                let [m, k] = l.args_arr().unwrap(); // shouldn't be possible to crash here
+                                let k = TA::get_name(egraph, k)?;
+                                Some(Candidate { id: e.id, m, k })
+                            }
+                            _ => None,
+                        })
                     })
-                }).unique().collect_vec();
+                    .unique()
+                    .collect_vec();
                 (!hash_substerms.is_empty()).then(|| (id, hash_substerms))
             });
         todo!()
@@ -58,11 +60,19 @@ impl<'p> PRF<'p> {
 
 impl<'a> Instance<'a> {
     // TODO: prove this
-    fn run(&self, egraph: &EGraph<TA, DependancyAnalysis>, ptcl: &Protocol<TA>) -> Option<RecExpr<TA>>{
-        let Self { term, candidates, i } = *self;
-        let Candidate { m, k,.. } = candidates[i];
-        let n:Id = todo!();
-        egraph[term].data
+    fn run(
+        &self,
+        egraph: &EGraph<TA, DependancyAnalysis>,
+        ptcl: &Protocol<TA>,
+    ) -> Option<RecExpr<TA>> {
+        let Self {
+            term,
+            candidates,
+            i,
+        } = *self;
+        let Candidate { m, k, .. } = candidates[i];
+        let n: Id = todo!();
+        // egraph[term].data
 
         todo!()
     }

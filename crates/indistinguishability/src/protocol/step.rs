@@ -4,13 +4,17 @@ use cryptovampire_macros::smt;
 use cryptovampire_smt::{Smt, SmtFormula, SortedVar};
 use egg::{Analysis, ENodeOrVar, MultiPattern, Pattern, PatternAst, RecExpr, Rewrite, Var};
 use golgge::PrologRule;
-use itertools::{chain, izip, Itertools};
-use logic_formula::egg::SimpleDiscriminant;
+use itertools::{Itertools, chain, izip};
+use log::trace;
+use logic_formula::{Formula, egg::SimpleDiscriminant};
 
 use crate::{
-    rules::vampire::{convert::formula_to_smt, convert::var_to_smt, MSmt, MSmtFormula},
+    Lang, LangVar, rexp,
+    rules::vampire::{
+        MSmt, MSmtFormula,
+        convert::{formula_to_smt, var_to_smt},
+    },
     terms::{Function, UNFOLD_COND, UNFOLD_MSG},
-    Lang, LangVar,
 };
 
 use super::{MacroKind, ProtocolLanguage};
@@ -42,23 +46,45 @@ impl Step {
                 .collect::<Vec<_>>(),
         )
     }
+    pub fn valid(&self) -> bool {
+        self.cond.free_vars_iter().all(|v| self.vars.contains(&v))
+            && self.msg.free_vars_iter().all(|v| self.vars.contains(&v))
+    }
+}
+
+impl Display for Step {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self {
+            id,
+            vars,
+            cond,
+            msg,
+        } = self;
+        write!(
+            f,
+            "step {id}({}):\n\tcond: {cond}\n\tmsg: {msg}",
+            vars.iter().join(", ")
+        )
+    }
 }
 
 impl Step {
     pub(crate) fn mk_unfold_rewrites<N: Analysis<Lang>>(
         &self,
-        ptcl: &PatternAst<Lang>,
+        ptcl: &Function,
     ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
+        trace!("mk unfold rw for {self}");
         let name = self.id_expr();
+        let ptcl = &rexp!(ptcl).to_vec().into();
 
         let unfold_cond = Rewrite::new(
-            format!("unfold cond {name}"),
+            format!("unfold cond {name} in {ptcl}"),
             Pattern::<Lang>::from(ProtocolLanguage::app_unfold(MacroKind::Cond, &name, ptcl)),
             Pattern::<Lang>::from(self.cond.clone()),
         )
         .unwrap();
         let unfold_msg = Rewrite::new(
-            format!("unfold msg {name}"),
+            format!("unfold msg {name} in {ptcl}"),
             Pattern::<Lang>::from(ProtocolLanguage::app_unfold(MacroKind::Msg, &name, ptcl)),
             Pattern::<Lang>::from(self.msg.clone()),
         )
@@ -91,3 +117,6 @@ impl Step {
         [comment, Assert(unfold_cond), Assert(unfold_msg)].into_iter()
     }
 }
+
+#[cfg(test)]
+pub mod test {}

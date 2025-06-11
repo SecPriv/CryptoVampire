@@ -3,7 +3,7 @@ use std::{borrow::Cow, default, env::vars, fmt::Display, process::exit};
 use egg::*;
 use enc_kp::EnkKp;
 use ind_cca::IndCCA2;
-use itertools::{chain, izip, Itertools};
+use itertools::{Itertools, chain, izip};
 use rustc_hash::{FxHashMap, FxHashSet};
 use static_init::dynamic;
 use utils::implvec;

@@ -2,6 +2,7 @@ mod step;
 use std::fmt::Display;
 
 use egg::{Id, RecExpr};
+use log::trace;
 pub use step::Step;
 
 #[allow(clippy::module_inception)]
@@ -35,14 +36,14 @@ pub trait ProtocolLanguage: egg::Language + Display + Send + Sync + 'static {
 
     fn app_macro<Expr: AsRef<[Self]>>(kind: MacroKind, step: Expr, pctl: Expr) -> RecExpr<Self> {
         apply_rec_exprs(
-            &Self::mk_macro(kind, 1.into(), 2.into()),
+            &Self::mk_macro(kind, 0.into(), 1.into()),
             &[step.as_ref(), pctl.as_ref()],
         )
     }
 
     fn app_unfold<Expr: AsRef<[Self]>>(kind: MacroKind, step: Expr, pctl: Expr) -> RecExpr<Self> {
         apply_rec_exprs(
-            &Self::mk_unfold(kind, 1.into(), 2.into()),
+            &Self::mk_unfold(kind, 0.into(), 1.into()),
             &[step.as_ref(), pctl.as_ref()],
         )
     }
@@ -59,7 +60,7 @@ pub trait ProtocolLanguage: egg::Language + Display + Send + Sync + 'static {
 #[inline]
 fn apply_rec_exprs<L, Expr>(fun: &L, args: &[Expr]) -> RecExpr<L>
 where
-    L: egg::Language,
+    L: egg::Language + Display,
     Expr: AsRef<[L]>,
 {
     fun.join_recexprs(|i| &args[usize::from(i)])
@@ -82,3 +83,6 @@ impl<L: ProtocolLanguage> ProtocolLanguage for egg::ENodeOrVar<L> {
         Self::ENode(L::mk_true())
     }
 }
+
+#[cfg(test)]
+pub mod test;

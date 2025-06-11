@@ -4,22 +4,30 @@
 
 [if true] (ite true ?a ?b) => ?a.
 [if false] (ite false ?a ?b) => ?b.
-[implies def] (implies ?a ?b) => (ite ?a ?b true).
+[implies def] (implies ?a ?b) => (b_ite ?a ?b true).
 [if simp1] (ite ?x ?a ?a) => ?a.
 [if simp2] (ite ?a ?a false) => ?a.
 [if simp3] (ite ?a (ite ?a ?b ?c) ?d) => (ite ?a ?b ?d).
 [if simp4] (ite ?a true false) => ?a.
-[implies simp] (ite (and ?a ?b) ?a true) => true.
-[implies simp2] (ite ?a ?a true) => true.
+
+[b_if true] (b_ite true ?a ?b) => ?a.
+[b_if false] (b_ite false ?a ?b) => ?b.
+[b_if simp1] (b_ite ?x ?a ?a) => ?a.
+[b_if simp2] (b_ite ?a ?a false) => ?a.
+[b_if simp4] (b_ite ?a true false) => ?a.
+[b_if simp3] (b_ite ?a (b_ite ?a ?b ?c) ?d) => (b_ite ?a ?b ?d).
+
+[implies simp] (b_ite (and ?a ?b) ?a true) => true.
+[implies simp2] (b_ite ?a ?a true) => true.
 [classical not] (not (not ?a)) => ?a.
 %[and symm] (and ?a ?b) => (and ?b ?a).
 %[and simpl] (and ?a ?a) => ?a.
 %[and assoc] (and ?a (and ?b ?c)) => (and (and ?a ?b) ?c).
-[and def] (and ?a ?b) => (ite ?a ?b false). 
+[and def] (and ?a ?b) => (b_ite ?a ?b false). 
 
-[not def] (not ?a) => (ite ?a false true).
+[not def] (not ?a) => (b_ite ?a false true).
 [meq true] ?v1 = (meq ?a ?b), ?v1 = true => ?a = ?b.
-[reverse and] ?v1 = (ite ?a ?b false), ?v1 = true => ?a = true, ?b = true.
+[reverse and] ?v1 = (b_ite ?a ?b false), ?v1 = true => ?a = true, ?b = true.
 [implies trans] ?v1 = true, ?v1 = (ite ?a ?b true), ?v1 = (ite ?b ?c true) => ?v1 = (mimplies ?a ?c).
 [p1] (p1 (tuple ?a ?b)) => ?a.
 [p2] (p2 (tuple ?a ?b)) => ?b.

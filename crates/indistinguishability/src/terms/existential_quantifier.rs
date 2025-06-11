@@ -1,9 +1,12 @@
 use egg::{PatternAst, Var};
-use itertools::{chain, Itertools};
+use itertools::{Itertools, chain};
 use logic_formula::Formula;
 use serde::{Deserialize, Serialize};
 
-use crate::Lang;
+use crate::{
+    Lang,
+    terms::{Function, Sort},
+};
 
 use super::FunctionCollection;
 
@@ -15,17 +18,21 @@ pub struct Exists {
     pub bound_var: Var,
     /// The "content" of the quantifier
     pub patt: PatternAst<Lang>,
-    /// index in the [FunctionCollection] for the main alias (e.g., `exists$1`)
+    /// the main alias (e.g., `exists$1`)
     ///
     /// stands for "top level function"
-    pub tlf: usize,
-    /// index in the [FunctionCollection] for the skolem function
-    pub skolem: usize,
-    /// index in the [FunctionCollection] for the fresh constant replacing the index
-    pub fresh: usize,
+    pub tlf: Function,
+    /// the skolem function
+    pub skolem: Function,
+    /// the fresh constant replacing the index
+    pub fresh: Function,
 }
 
 impl Exists {
+    pub fn is_uninit(&self) -> bool {
+        self.patt.is_empty()
+    }
+
     pub fn valid(&self, idx: usize, funs: &FunctionCollection) -> bool {
         let Self {
             vars,
@@ -45,22 +52,41 @@ impl Exists {
             let vars: Vec<_> = patt.free_vars_iter().collect();
             crate::utils::same_slice(&all_vars, &vars)
         }) && (
-            // indices in range
-            *tlf < funs.len() && *skolem < funs.len() && *fresh < funs.len()
-        ) && (
             // reciprocal
-            funs[*tlf].get_exist_index() == Some(idx)
-                && funs[*skolem].get_exist_index() == Some(idx)
-                && funs[*fresh].get_exist_index() == Some(idx)
+            tlf.get_exist_index() == Some(idx)
+                && skolem.get_exist_index() == Some(idx)
+                && fresh.get_exist_index() == Some(idx)
         ) && (
             // arities
-            funs[*tlf].arity() == all_vars.len()
-                && funs[*skolem].arity() == vars.len()
-                && funs[*fresh].arity() == 0
+            tlf.arity() == all_vars.len() && skolem.arity() == vars.len() && fresh.arity() == 0
         )
     }
 
-    pub(crate) fn points_to(&self) -> [usize; 3] {
-      [self.tlf, self.skolem, self.fresh]
+    pub fn get_var_sort(&self) -> Sort {
+        self.fresh.signature.output
     }
+
+    pub fn get_functions(&self) -> [&Function; 3] {
+        let Self {
+            tlf, skolem, fresh, ..
+        } = self;
+        [tlf, skolem, fresh]
+    }
+}
+
+#[derive(Debug)]
+pub struct ExistsFuns {
+    pub tlf: Function,
+    pub skolem: Function,
+    pub fresh: Function,
+}
+
+#[derive(Debug)]
+pub struct ExistsBuilder {
+    /// The free variables captured by the quantifier
+    pub vars: Vec<Var>,
+    /// The variable bound by the quantifier
+    pub bound_var: Var,
+    /// The "content" of the quantifier
+    pub patt: PatternAst<Lang>,
 }

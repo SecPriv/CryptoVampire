@@ -1,23 +1,14 @@
 use bitflags::bitflags;
 use serde::{Deserialize, Serialize};
 
-/// helper to write flags
-macro_rules! const_fun_flags {
-    ($id:ident) => {$crate::terms::FunctionFlags::$id};
-    ($id0:ident | $($id:ident)|*) => {
-        $crate::terms::FunctionFlags::$id0
-            $(.union($crate::terms::FunctionFlags::$id))*
-    };
-}
-
 bitflags! {
-  #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, 
+  #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord,
            Hash, Debug, Serialize, Deserialize)]
   pub struct FunctionFlags: u32 {
       /// The function is builtin
       const BUILTIN = 1 << 0;
       /// It's an alias for something else
-      const ALIAS = 1 << 1;
+      // const ALIAS = 1 << 1;
       /// Appears only in prolog
       const PROLOG_ONLY = 1 << 2;
 
@@ -34,28 +25,21 @@ bitflags! {
       const EXISTS = 1 << 6;
       /// Represents a skolem function
       const SKOLEM = 1 << 7;
+      const EXISTS_FRESH = 1<< 8;
 
       /// Has an equivalent built into smt
-      const BUILTIN_SMT = 1 << 8;
+      const BUILTIN_SMT = 1 << 9;
 
       /// This is a nonce constructor
-      const NONCE = 1 << 9;
+      const NONCE = 1 << 10;
 
-      const CUSTOM_SUBTERM = 1 << 10;
+      const CUSTOM_SUBTERM = 1 << 11;
 
-      const SMT_ONLY = 1 << 11;
+      const SMT_ONLY = 1 << 12;
+
+      /// Is a protocol
+      const PROTOCOL = 1 << 13;
+      /// Is a step
+      const STEP = 1 << 14;
   }
 }
-
-pub static SHOULD_NOT_DECLARE_IN_SMT: FunctionFlags =
-    const_fun_flags!(ALIAS | PROLOG_ONLY | BUILTIN_SMT);
-
-pub static SPECIAL_SUBTERM: FunctionFlags = const_fun_flags!(
-    ALIAS | PROLOG_ONLY | MACRO | UNFOLD | CUSTOM_SUBTERM
-    | EXISTS | SKOLEM | NONCE | BUILTIN_SMT
-);
-
-pub static SPECIAL_DEDUCE: FunctionFlags = const_fun_flags!(
-    ALIAS | PROLOG_ONLY | MACRO | UNFOLD | CUSTOM_DEDUCE
-    | EXISTS | SKOLEM | NONCE | SMT_ONLY
-);

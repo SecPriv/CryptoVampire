@@ -1,19 +1,18 @@
 use cryptovampire_macros::smt;
 use cryptovampire_smt::{Smt, SmtFormula, SortedVar, VarInner};
-use itertools::{chain, izip, Itertools};
+use itertools::{Itertools, chain, izip};
 
 use crate::{
-    rules::vampire::MSmtFormula,
-    terms::{flags::SHOULD_NOT_DECLARE_IN_SMT, Function, FunctionFlags, Signature, Sort, SORT_LIST},
     Problem,
+    rules::vampire::MSmtFormula,
+    terms::{Function, FunctionFlags, SORT_LIST, Signature, Sort},
 };
 
 use super::MSmt;
 
-
 #[inline]
 fn should_declare_in_smt(fun: &Function) -> bool {
-    !fun.flags.intersects(SHOULD_NOT_DECLARE_IN_SMT)
+    !fun.is_should_not_declare_in_smt()
 }
 
 fn mk_header(pbl: &Problem) -> impl Iterator<Item = Smt<Sort, Function>> + use<'_> {

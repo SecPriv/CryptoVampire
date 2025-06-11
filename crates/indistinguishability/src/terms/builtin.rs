@@ -1,11 +1,11 @@
 use super::{
-    Function, FunctionFlags, InnerFunction, Signature,
+    Alias, AliasRewrite, CowPattern, Function, FunctionFlags, InnerFunction, Signature,
     Sort::{self, *},
 };
-use cryptovampire_macros::mk_builtin_funs;
+use cryptovampire_macros::{declare_recexpr, mk_builtin_funs, recexpr};
 use std::borrow::Cow;
 
-/// helper to write signatures
+/// helper to write const signatures
 macro_rules! s {
     ($t:ident, $n:literal) => {
         Signature {
@@ -35,6 +35,92 @@ macro_rules! f {
     };
 }
 
+macro_rules! count {
+    () => {
+        0
+    };
+    ($x: expr) => { 1};
+    ($x:expr, $($other:expr),*) => {
+        1 + count!($($other),*)
+    };
+}
+
+macro_rules! mk_static_slice {
+    ($ty:ty; [$($e:expr),*]) => {
+        {
+            static TMP : [$ty; count!($($e),*)] = [$($e),*];
+            &TMP
+        }
+    };
+}
+
+macro_rules! alias {
+    ($( $($var:literal:$sort:ident),* in $($args:expr),* => $to:expr),*) => {
+        {
+            Alias(Cow::Borrowed(mk_static_slice!(AliasRewrite;
+            [$(AliasRewrite {
+                    from: Cow::Borrowed(mk_static_slice!(CowPattern; [$($args),*])),
+                    to: $to,
+                    variables: Cow::Borrowed(mk_static_slice!(egg::Var; [$(egg::Var::from_u32($var)),*])),
+                    sorts: Cow::Borrowed(mk_static_slice!(crate::terms::Sort; [$(crate::terms::Sort::$sort),*])),
+                }
+            ),*]
+            )))
+        }
+    };
+}
+
+macro_rules! rexp {
+    ($($t:tt)*) => {
+        {
+            declare_recexpr!(inner_recexpr in TMP = $($t)*);
+            Cow::Borrowed(&TMP)
+        }
+    };
+}
+
+mod inner_recexpr {
+    use egg::{Id, Var};
+    use logic_formula::egg::SimplLang;
+
+    use crate::{LangVar, terms::Function};
+
+    pub static TRUE: Function = super::TRUE.const_clone().unwrap();
+    pub static FALSE: Function = super::TRUE.const_clone().unwrap();
+    pub static AND: Function = super::AND.const_clone().unwrap();
+    pub static OR: Function = super::OR.const_clone().unwrap();
+    pub static NOT: Function = super::NOT.const_clone().unwrap();
+    pub static EQ: Function = super::EQ.const_clone().unwrap();
+    pub static IMPLIES: Function = super::IMPLIES.const_clone().unwrap();
+
+    pub const fn mk_var(i: u32) -> LangVar {
+        egg::ENodeOrVar::Var(Var::from_u32(i))
+    }
+
+    pub const fn mk_app<const N: usize>(head: &Function, args: [u32; N]) -> LangVar {
+        let head = head.const_clone().unwrap();
+        match N {
+            0 => mk_app_inner(head, [0; 3], 0),
+            1 => mk_app_inner(head, [args[0], 0, 0], 1),
+            2 => mk_app_inner(head, [args[0], args[1], 0], 2),
+            3 => mk_app_inner(head, [args[0], args[1], args[2]], 3),
+            _ => panic!("N too large!"),
+        }
+    }
+
+    macro_rules! mkargs {
+        ($($i:expr),*) => {
+            [$(Id::new_const($i)),*]
+        };
+    }
+
+    const fn mk_app_inner(head: Function, [arg1, arg2, arg3]: [u32; 3], len: usize) -> LangVar {
+        egg::ENodeOrVar::ENode(SimplLang::new_const(head, mkargs![arg1, arg2, arg3], len))
+    }
+
+    pub type Lang = LangVar;
+}
+
 // -----------------------------------------------------------------------------
 // ---------------------------------- sorts ------------------------------------
 // -----------------------------------------------------------------------------
@@ -54,7 +140,10 @@ mk_builtin_funs!(
     // The field declared here will be copied in every struct, unless it is overwitten
     {
         flags: FunctionFlags::BUILTIN,
-        exists_idx: 0
+        exists_idx: 0,
+        protocol_idx: 0,
+        alias: None,
+        step_idx: 0,
     };
 
     // =========================================================
@@ -70,22 +159,34 @@ mk_builtin_funs!(
 
     IMPLIES "bit_implies" "implies" "=>" "mimplies" {
         signature: s!(Bool, 2),
-        flags: f!(ALIAS | BUILTIN_SMT) // e.g., this will be `M_ALIAS` instead of `FunctionFlags::BUILTIN`
+        flags: f!(BUILTIN_SMT), // e.g., this will be `BUILTIN | BUILTIN_SMT` instead of `FunctionFlags::BUILTIN`
+        alias: Some(alias!{ // <- magic
+            0:Bool, 1:Bool in rexp!(#0), rexp!(#1) => rexp!((BITE #0 #1 TRUE))
+        }),
     };
 
     AND "bit_and" "and" "mand" {
         signature: s!(Bool, 2),
-        flags: f!(ALIAS | BUILTIN_SMT)
+        flags: f!(/* ALIAS | */ BUILTIN_SMT),
+        alias: Some(alias!{
+            0:Bool, 1:Bool in rexp!(#0), rexp!(#1) => rexp!((BITE #0 #1 FALSE))
+        }),
     };
 
     OR "bit_or" "or" "mor" {
         signature: s!(Bool, 2),
-        flags: f!(ALIAS | BUILTIN_SMT)
+        flags: f!(/* ALIAS | */ BUILTIN_SMT),
+        alias: Some(alias!{
+            0:Bool, 1:Bool in rexp!(#0), rexp!(#1) => rexp!((BITE #0 TRUE #1))
+        }),
     };
 
     NOT "bit_not" "not" "mnot" {
         signature: s!(Bool, 1),
-        flags: f!(ALIAS | BUILTIN_SMT)
+        flags: f!(/* ALIAS | */ BUILTIN_SMT),
+        alias: Some(alias!{
+            0:Bool in rexp!(#0) => rexp!((BITE #0 FALSE TRUE))
+        }),
     };
 
     EQ "meq" "eq" "==" {
@@ -95,7 +196,7 @@ mk_builtin_funs!(
 
     MITE "bitstring_if_then_else" "mite" "ite" {
         signature: s!(Bool, Bitstring, Bitstring -> Bitstring),
-        flags: f!(CUSTOM_DEDUCE | BUILTIN_SMT)
+        flags: f!(CUSTOM_DEDUCE | BUILTIN_SMT | CUSTOM_SUBTERM)
     };
 
     TRUE "mtrue" "true" {
@@ -112,7 +213,7 @@ mk_builtin_funs!(
 
     NONCE "mnonce" "nonce" {
         signature: s!(Nonce -> Bitstring),
-        flags: f!(CUSTOM_DEDUCE | CUSTOM_SUBTERM)
+        flags: f!(CUSTOM_DEDUCE /* | CUSTOM_SUBTERM */)
     };
 
     TUPLE "mtuple" "tuple" "pair" {

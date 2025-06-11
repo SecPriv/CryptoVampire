@@ -1,24 +1,23 @@
 use cryptovampire_macros::smt;
-use cryptovampire_smt::{uvar, Smt, SortedVar, VarInner};
-use itertools::{chain, izip, Itertools};
+use cryptovampire_smt::{Smt, SortedVar, VarInner, uvar};
+use itertools::{Itertools, chain, izip};
 
 use crate::{
-    terms::{flags::SPECIAL_SUBTERM, Function, FunctionFlags, Sort, INDEP},
     Problem,
+    terms::{Function, FunctionFlags, INDEP, Sort, flags::SPECIAL_SUBTERM},
 };
 
 use super::MSmt;
 
 fn default_fresh(f: &&Function) -> bool {
-    !f.flags.intersects(SPECIAL_SUBTERM)
-        && f.signature.output ==Sort::Bitstring
+    !f.flags.intersects(SPECIAL_SUBTERM) && f.signature.output == Sort::Bitstring
 }
 
 fn mk_base_fresh(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
-    let sort = Smt::DeclareDatatypes { sorts: vec![Sort::SubtermStatus], cons: vec![
-        vec![]
-    ] };
-
+    let sort = Smt::DeclareDatatypes {
+        sorts: vec![Sort::SubtermStatus],
+        cons: vec![vec![]],
+    };
 
     let funs = pbl.function.iter().filter(default_fresh);
     let status = SortedVar {
@@ -30,24 +29,25 @@ fn mk_base_fresh(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
         sort: Sort::Nonce,
     };
 
-    let funs = funs.map(move |f| {
-        let args = izip!(2.., f.signature.inputs_iter())
-            .map(|(var, sort)| SortedVar {
-                var: VarInner::Int(var),
-                sort,
-            })
-            .collect_vec();
+    let funs = funs
+        .map(move |f| {
+            let args = izip!(2.., f.signature.inputs_iter())
+                .map(|(var, sort)| SortedVar {
+                    var: VarInner::Int(var),
+                    sort,
+                })
+                .collect_vec();
 
-        let premise = args
-            .iter()
-            .filter(|s| matches!(s.sort, Sort::Bitstring | Sort::Bool))
-            .map(|v| smt!((INDEP #status #nonce #v)));
+            let premise = args
+                .iter()
+                .filter(|s| matches!(s.sort, Sort::Bitstring | Sort::Bool))
+                .map(|v| smt!((INDEP #status #nonce #v)));
 
-        let vars = chain!([&status, &nonce], &args).cloned().collect_vec();
+            let vars = chain!([&status, &nonce], &args).cloned().collect_vec();
 
-        smt!((forall #vars (=> (and #premise*) (INDEP #status #nonce (f #args*)))))
-    })
-    .map(Smt::mk_assert);
+            smt!((forall #vars (=> (and #premise*) (INDEP #status #nonce (f #args*)))))
+        })
+        .map(Smt::mk_assert);
 
     chain!(funs)
 }
@@ -56,7 +56,7 @@ fn mk_base_fresh(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
 mod test {
     use itertools::Itertools;
 
-    use crate::{rules::vampire::fresh::mk_base_fresh, terms::BUILTINS, Problem};
+    use crate::{Problem, rules::vampire::fresh::mk_base_fresh, terms::BUILTINS};
 
     use super::default_fresh;
 

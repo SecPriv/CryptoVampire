@@ -1,11 +1,12 @@
 use std::{borrow::Cow, collections::HashMap};
 
+use egg::{Analysis, EGraph};
 use itertools::Itertools;
 
 use crate::{
+    Configuration, Lang, mk_signature,
     protocol::Protocol,
-    terms::{Function, FunctionCollection},
-    Configuration, Lang,
+    terms::{Function, FunctionCollection, FunctionFlags, InnerFunction},
 };
 
 /// A problem for the solver to solve
@@ -36,4 +37,36 @@ impl Problem {
             .tuple_windows()
             .all(|(a, b)| Protocol::are_compatible(a, b))
     }
+
+    /// Simply declare a protocol, this one remains quite undefined
+    pub fn declare_new_protocol(&mut self) -> &mut Protocol {
+        let n = self.protocols.len();
+
+        let inner = InnerFunction {
+            flags: FunctionFlags::PROTOCOL,
+            protocol_idx: n,
+            ..InnerFunction::new(format!("_p${n:}").into(), mk_signature!(() -> Protocol))
+        };
+        let fun = Function::new(inner);
+        self.function.add(fun.clone());
+
+        let ptcl = Protocol::new(fun);
+        self.protocols.push(ptcl);
+        &mut self.protocols[n]
+    }
 }
+
+impl AsRef<FunctionCollection> for Problem {
+    fn as_ref(&self) -> &FunctionCollection {
+        &self.function
+    }
+}
+
+impl AsMut<FunctionCollection> for Problem {
+    fn as_mut(&mut self) -> &mut FunctionCollection {
+        &mut self.function
+    }
+}
+
+#[cfg(test)]
+pub mod test;

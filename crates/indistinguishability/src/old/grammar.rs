@@ -97,7 +97,7 @@ mod consts {
     }
 }
 pub use consts::*;
-use smallvec::{smallvec_inline, SmallVec};
+use smallvec::{SmallVec, smallvec_inline};
 
 pub struct AsApp<U, S = egg::Symbol> {
     head: Grammar<(), S>,

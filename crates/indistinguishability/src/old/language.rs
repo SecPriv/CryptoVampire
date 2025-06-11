@@ -209,7 +209,7 @@ macro_rules! declare_lang {
 
 #[cfg(test)]
 mod test {
-  declare_lang!(Test; {
-    A/1, B/2, C/3
-  });
+    declare_lang!(Test; {
+      A/1, B/2, C/3
+    });
 }

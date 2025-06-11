@@ -98,6 +98,21 @@ impl<D: SimpleDiscriminant, const N: usize> SimplLang<D, N> {
         }
     }
 
+    /// Build a new [Self] but is `const`
+    ///
+    /// If `len < N` then the content of `args[len..]` is irrelevant
+    ///
+    /// ### panics
+    /// if `len > N`.
+    pub const fn new_const(head: D, args: [Id; N], len: usize) -> Self {
+        assert!(len <= N);
+        Self {
+            head,
+            // the assert ensure len <= N
+            args: unsafe { SmallVec::from_const_with_len_unchecked(args, len) },
+        }
+    }
+
     pub fn valid(&self) -> bool {
         let Self { head, args } = self;
         head.valid(args)
@@ -204,6 +219,24 @@ impl<F: egg::Language> Formula for &[egg::ENodeOrVar<F>] {
             egg::ENodeOrVar::Var(v) => Head::<Self>::Var(*v),
         };
         Destructed { head, args }
+    }
+
+    fn used_vars_iter(self) -> impl Iterator<Item = Self::Var>
+    where
+        Self::Var: Eq + Clone,
+    {
+        self.iter().filter_map(|f| match f {
+            ENodeOrVar::ENode(_) => None,
+            ENodeOrVar::Var(v) => Some(*v),
+        })
+    }
+
+    fn free_vars_iter(self) -> impl Iterator<Item = Self::Var>
+    where
+        Self::Quant: crate::Bounder<Self::Var>,
+        Self::Var: Eq + Clone,
+    {
+        self.used_vars_iter()
     }
 }
 

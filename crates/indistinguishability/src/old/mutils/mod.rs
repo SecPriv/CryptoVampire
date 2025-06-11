@@ -31,7 +31,7 @@ mod term_helpers {
 
     use crate::formula::grammar::TA;
 
-    pub fn is_nonce<N:Analysis<TA>>(egraph: &EGraph<TA, N>, id: Id) -> bool {
+    pub fn is_nonce<N: Analysis<TA>>(egraph: &EGraph<TA, N>, id: Id) -> bool {
         egraph[id].iter().any(|l| l.is_equiv())
     }
 }

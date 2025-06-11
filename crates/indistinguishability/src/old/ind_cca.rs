@@ -8,7 +8,7 @@ use egg::{EGraph, Id, Language, RecExpr};
 use itertools::Itertools;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::{is_nonce, Rule, CCSA};
+use crate::{CCSA, Rule, is_nonce};
 
 #[derive(Debug, Clone, Default)]
 struct SearchState(FxHashMap<Id, IdSearchState>);

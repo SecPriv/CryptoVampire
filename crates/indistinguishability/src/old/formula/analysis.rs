@@ -1,5 +1,5 @@
 use egg::{Analysis, DidMerge, EGraph, Id, Language, Pattern};
-use itertools::{chain, Itertools};
+use itertools::{Itertools, chain};
 use rustc_hash::FxHashSet;
 use utils::ereturn_if;
 
