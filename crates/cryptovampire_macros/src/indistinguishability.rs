@@ -1,15 +1,14 @@
 use std::collections::HashMap;
 
-use itertools::{chain, Itertools};
+use itertools::{Itertools, chain};
 use proc_macro::{Span, TokenStream};
 use quote::{quote, quote_spanned};
 use syn::{
-    braced,
+    Expr, FieldValue, Ident, LitStr, Member, Token, braced,
     parse::{Parse, ParseStream},
     parse_macro_input, parse_quote,
     punctuated::Punctuated,
     token::{Brace, Impl},
-    Expr, FieldValue, Ident, LitStr, Member, Token,
 };
 
 #[derive(Clone)]
@@ -38,7 +37,10 @@ impl Parse for MFunction {
 
         let content;
         let _ = braced!(content in input);
-        let mut fields :Vec<_> = content.parse_terminated(FieldValue::parse, Token![,])?.into_iter().collect();
+        let mut fields: Vec<_> = content
+            .parse_terminated(FieldValue::parse, Token![,])?
+            .into_iter()
+            .collect();
         fields.push(parse_quote!(name: Cow::Borrowed(#str_name)));
         Ok(MFunction {
             name,
