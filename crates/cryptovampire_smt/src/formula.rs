@@ -1,6 +1,7 @@
 use std::{borrow::Cow, fmt::Display};
 
 use itertools::Itertools;
+use logic_formula::{Destructed, Formula, HeadSk};
 use utils::{ereturn_if, implvec};
 
 use crate::{Arr, VarInner, uvar};
@@ -44,6 +45,12 @@ pub enum SmtHead {
     Not,
     Implies,
     If,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum SmtQuantifier<S> {
+    Forall(Vec<SortedVar<S>>),
+    Exists(Vec<SortedVar<S>>),
 }
 
 impl<S, F> Display for SmtFormula<S, F>
@@ -175,6 +182,51 @@ impl<S, F> SmtFormula<S, F> {
         self.optimise_mut();
         self
     }
+
+    pub fn from_formula<U>(f: U) -> Self
+    where
+        U: IntoSmt<S, Fun = F>,
+    {
+        let Destructed { head, args } = f.destruct();
+        let args = args.map(Self::from_formula);
+        match head {
+            HeadSk::Var(v) => Self::Var(U::convert_var(v)),
+            HeadSk::Fun(fun) => match U::as_head(&fun) {
+                Some(head) => match head {
+                    SmtHead::True => Self::True,
+                    SmtHead::False => Self::False,
+                    SmtHead::And => Self::And(args.collect()),
+                    SmtHead::Or => Self::Or(args.collect()),
+                    SmtHead::Eq => Self::Eq(args.collect()),
+                    SmtHead::Neq => Self::Neq(args.collect()),
+                    SmtHead::Not => {
+                        let mut args = args;
+                        let a = args.next().unwrap();
+                        debug_assert!(args.next().is_none());
+                        Self::Not(Box::new(a))
+                    }
+                    SmtHead::Implies => {
+                        let (a, b) = args.collect_tuple().unwrap();
+                        Self::Implies(Box::new(a), Box::new(b))
+                    }
+                    SmtHead::If => {
+                        let (a, b, c) = args.collect_tuple().unwrap();
+                        Self::Ite(Box::new(a), Box::new(b), Box::new(c))
+                    }
+                },
+                None => Self::Fun(fun, args.collect()),
+            },
+            HeadSk::Quant(binder) => {
+                let mut args = args;
+                let inner = args.next().unwrap();
+                debug_assert!(args.next().is_none());
+                match U::convert_quant(binder) {
+                    SmtQuantifier::Exists(vars) => Self::Exists(vars, Box::new(inner)),
+                    SmtQuantifier::Forall(vars) => Self::Forall(vars, Box::new(inner)),
+                }
+            }
+        }
+    }
 }
 
 impl<S, F> From<SortedVar<S>> for SmtFormula<S, F> {
@@ -187,4 +239,10 @@ impl<S, F> From<uvar> for SmtFormula<S, F> {
     fn from(value: uvar) -> Self {
         SmtFormula::Var(VarInner::Int(value))
     }
+}
+
+pub trait IntoSmt<S>: Formula {
+    fn convert_var(var: Self::Var) -> VarInner;
+    fn convert_quant(quant: Self::Quant) -> SmtQuantifier<S>;
+    fn as_head(fun: &Self::Fun) -> Option<SmtHead>;
 }

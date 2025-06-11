@@ -70,7 +70,10 @@ macro_rules! unpack_args {
 
 fn vars_to_sorted_vars<'bump>(vars: &[Variable<'bump>]) -> Vec<SortedVar<Sort<'bump>>> {
     vars.iter()
-        .map(|&Variable { id, sort }| SortedVar { var: VarInner::Int(id), sort })
+        .map(|&Variable { id, sort }| SortedVar {
+            var: VarInner::Int(id),
+            sort,
+        })
         .collect()
 }
 

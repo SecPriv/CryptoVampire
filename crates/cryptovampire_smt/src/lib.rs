@@ -1,6 +1,9 @@
 pub const SMT_FILE_EXTENSION: &str = ".smt";
 
-use std::{borrow::Cow, fmt::{self, Display}};
+use std::{
+    borrow::Cow,
+    fmt::{self, Display},
+};
 
 pub use formula::*;
 mod formula;
@@ -8,6 +11,7 @@ mod formula;
 pub use smt::*;
 mod smt;
 
+#[allow(non_camel_case_types)]
 pub type uvar = u32;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -18,7 +22,7 @@ pub struct SmtFile<S, F> {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum VarInner {
     Int(uvar),
-    Str(Cow<'static, str>)
+    Str(Cow<'static, str>),
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -74,7 +78,7 @@ where
     }
 }
 
-#[cfg(feature="macro")]
+#[cfg(feature = "macro")]
 macro_rules! smt_formulas {
     ($($t:tt)*) => {
         cryptovampire_smt::smt_formulas!($($t)*)

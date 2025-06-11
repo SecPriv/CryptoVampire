@@ -92,8 +92,11 @@ impl<S, F> Smt<S, F> {
     }
 }
 
-impl<S, F> Smt<S, F> where SmtFormula<S, F>:Eq {
-    pub fn mk_assert(f:SmtFormula<S, F>) -> Self {
+impl<S, F> Smt<S, F>
+where
+    SmtFormula<S, F>: Eq,
+{
+    pub fn mk_assert(f: SmtFormula<S, F>) -> Self {
         Self::Assert(f.optimise())
     }
 }
