@@ -1,6 +1,15 @@
 {
   description = "cryptovampire";
 
+  nixConfig = {
+    extra-substituters = [
+      "https://nix-community.cachix.org"
+    ];
+    extra-trusted-public-keys = [
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+    ];
+  };
+
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils = {
@@ -10,7 +19,7 @@
       url = "github:puyral/custom-nix";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.squirrel-prover-src.url = "github:puyral/squirrel-prover?ref=cryptovampire";
-      inputs.cryptovampire-src.url = "github:puyral/empty-flake"; 
+      inputs.cryptovampire-src.url = "github:puyral/empty-flake";
       inputs.vampire-master-src.url = "github:vprover/vampire";
     };
     treefmt-nix = {
@@ -18,7 +27,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     fenix = {
-      url = "github:nix-community/fenix";
+      url = "github:nix-community/fenix/monthly";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -38,34 +47,15 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         custom-pkgs = custom.packages.${system};
-        treefmtEval = treefmt-nix.lib.evalModule pkgs ./fmt.nix;
+        treefmtEval = treefmt-nix.lib.evalModule pkgs ./nix/fmt.nix;
 
-        toolchain = fenix.packages.${system}.latest.toolchain;
+        rust = fenix.packages.${system}.complete;
+        toolchain = rust.toolchain;
 
-        my-z3 = pkgs.z3.overrideAttrs (
-          finalAttrs: previousAttrs: {
-            src = pkgs.fetchFromGitHub {
-              owner = "Z3Prover";
-              repo = "z3";
-              rev = "z3-4.13.4";
-              sha256 = "sha256-8hWXCr6IuNVKkOegEmWooo5jkdmln9nU7wI8T882BSE=";
-            };
-            version = "4.13.4";
-            doCheck = false;
-          }
-        );
-        my-vampire = custom-pkgs.vampire;
-
-        mpython = pkgs.python311.withPackages (
-          ps: with ps; [
-            numpy
-            (toPythonModule z3).python
-          ]
-        );
-
-        nightly = false;
-        mrustPlatform = if nightly then (pkgs.makeRustPlatform {cargo = toolchain; rustc
-        = toolchain; }) else pkgs.rustPlatform;
+        mrustPlatform = pkgs.makeRustPlatform {
+          cargo = toolchain;
+          rustc = toolchain;
+        };
 
         pkgConfig = {
           rustPlatform = mrustPlatform;
@@ -74,63 +64,6 @@
 
         cryptovampire = pkgs.callPackage ./crates/cryptovampire/default.nix pkgConfig;
         egg = pkgs.callPackage ./crates/indistinguishability/default.nix pkgConfig;
-
-        defaultDevShell = pkgs.mkShell {
-          RUST_SRC_PATH = "${mrustPlatform.rustLibSrc}";
-
-          buildInputs =
-            with pkgs;
-            cryptovampire.buildInputs
-            ++ [
-              nixd
-              graphviz
-              pest-ide-tools
-
-              cvc5
-              z3
-              mpython
-              vampire
-
-              cargo
-              cargo-expand
-              lldb
-              rustc
-              rustfmt
-              clippy
-              rust-analyzer
-              mrustPlatform.bindgenHook
-              mrustPlatform.cargoCheckHook
-              mrustPlatform.cargoBuildHook
-            ]
-            ++ lib.optional stdenv.isDarwin git;
-        };
-
-        test-dir = ./tests/nix;
-
-        auto-checks =
-          with pkgs.lib;
-          with builtins;
-          let
-            tools = with pkgs; {
-              inherit cryptovampire cvc5;
-              vampire = my-vampire;
-              z3 = my-z3;
-            };
-            files-match = map ({ name, ... }: match "(.*).ptcl" name) (attrsToList (readDir test-dir));
-            files = filter (name: (name != null) && (name != [ ])) files-match;
-            basenames = map head files;
-            check = basename: {
-              name = basename;
-              value = pkgs.callPackage test-dir (
-                tools
-                // {
-                  file = "${test-dir}/${basename}.ptcl";
-                  name = basename;
-                }
-              );
-            };
-          in
-          listToAttrs (map check basenames);
         doc = pkgs.callPackage ./nix/doc.nix { inherit cryptovampire; };
 
       in
@@ -139,12 +72,24 @@
           inherit cryptovampire egg;
           default = cryptovampire;
         };
-        checks = {
-          formatting = treefmtEval.config.build.check self;
-        } // auto-checks;
+        checks =
+          let
+            checks = pkgs.callPackage ./nix/check.nix {
+              inherit cryptovampire treefmtEval;
+              flake = self;
+            };
+            cleanUp =
+              checks:
+              builtins.removeAttrs checks [
+                "override"
+                "overrideDerivation"
+              ];
+          in
+          cleanUp checks;
+
         formatter = treefmtEval.config.build.wrapper;
 
-        devShells.default = defaultDevShell;
+        devShells.default = pkgs.callPackage ./nix/shell.nix { inherit cryptovampire rust; };
 
         apps = rec {
           default = cryptovampire;
