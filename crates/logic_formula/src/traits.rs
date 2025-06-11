@@ -1,9 +1,9 @@
 use utils::impossible::Impossible;
 
 use crate::{
+    Destructed, Head,
     iterators::{FreeVariableIterator, UsedVariableIterator},
     outers::{Content, OwnedIter, OwnedPile},
-    Destructed, Head,
 };
 
 pub trait Formula: Sized {

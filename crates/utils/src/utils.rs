@@ -7,11 +7,7 @@ use thiserror::Error;
 
 #[inline(always)]
 pub fn replace_if_eq<T: Eq>(a: T, b: T, c: T) -> T {
-    if a == b {
-        c
-    } else {
-        a
-    }
+    if a == b { c } else { a }
 }
 
 /// A box that points to the stack,

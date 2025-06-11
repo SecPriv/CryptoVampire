@@ -14,19 +14,20 @@ pub fn sort_by<F, A>(f: F, a: A, b: A) -> (A, A)
 where
     F: FnOnce(&A, &A) -> bool,
 {
-    if f(&a, &b) {
-        (a, b)
-    } else {
-        (b, a)
-    }
+    if f(&a, &b) { (a, b) } else { (b, a) }
 }
 
 #[inline]
-pub fn sort_by_key<F, U, K>(f: &mut F, a: U, b:U) -> (U, U) where 
+pub fn sort_by_key<F, U, K>(f: &mut F, a: U, b: U) -> (U, U)
+where
     F: FnMut(&U) -> K,
-    K:PartialOrd
+    K: PartialOrd,
 {
-    sort_by(|a, b| PartialOrd::partial_cmp(&f(a), &f(b)) == Some(Ordering::Less), a, b)
+    sort_by(
+        |a, b| PartialOrd::partial_cmp(&f(a), &f(b)) == Some(Ordering::Less),
+        a,
+        b,
+    )
 }
 
 #[cfg(test)]

@@ -9,7 +9,7 @@ use std::{
 };
 
 #[cfg(feature = "serde")]
-use serde::{de::Visitor, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::Visitor};
 
 pub use validator::{TrivialValidator, ValidationError, Validator};
 

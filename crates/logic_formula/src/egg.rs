@@ -1,5 +1,5 @@
 use core::hash::Hash;
-use egg::{FromOp, Id, Language, RecExpr, SymbolLang};
+use egg::{ENodeOrVar, FromOp, Id, Language, RecExpr, SymbolLang};
 use itertools::Itertools;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -12,7 +12,7 @@ use std::{
 use thiserror::Error;
 use utils::{implvec, impossible::Impossible};
 
-use crate::{head, Destructed, Formula, Head};
+use crate::{Destructed, Formula, Head, head};
 pub trait SimpleDiscriminant: Debug + Clone + Eq + Ord + Hash {
     fn valid(&self, _ids: &[Id]) -> bool {
         true
@@ -51,8 +51,8 @@ pub trait FromOpGeneral<O>: egg::Language + Sized {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SimplLang<D, const N: usize = 3> {
-    head: D,
-    args: SmallVec<[Id; N]>,
+    pub head: D,
+    pub args: SmallVec<[Id; N]>,
 }
 pub type SimplLangVar<D, const N: usize = 3> = egg::ENodeOrVar<SimplLang<D, N>>;
 
@@ -142,8 +142,10 @@ impl<D: SimpleDiscriminant, const N: usize> SimplLang<D, N> {
             .map(|f| match f {
                 egg::ENodeOrVar::ENode(f) => {
                     let op = convert(f.op.as_str())?;
-                    Ok(egg::ENodeOrVar::ENode(FromOpGeneral::from_op(op, f.children.clone())
-                        .map_err(|_: ()| SimpleLangParseError::InValid)?))
+                    Ok(egg::ENodeOrVar::ENode(
+                        FromOpGeneral::from_op(op, f.children.clone())
+                            .map_err(|_: ()| SimpleLangParseError::InValid)?,
+                    ))
                 }
                 egg::ENodeOrVar::Var(var) => Ok(egg::ENodeOrVar::Var(*var)),
             })
@@ -169,11 +171,7 @@ impl<D: SimpleDiscriminant, const N: usize> FromOpGeneral<D> for SimplLang<D, N>
             head,
             args: children.into(),
         };
-        if res.valid() {
-            Ok(res)
-        } else {
-            Err(())
-        }
+        if res.valid() { Ok(res) } else { Err(()) }
     }
 }
 
@@ -209,11 +207,11 @@ impl<F: egg::Language> Formula for &[egg::ENodeOrVar<F>] {
 
     fn destruct(self) -> Destructed<Self, impl Iterator<Item = Self>> {
         let n = self.len();
-        let head = self.first().expect("empty formula");
+        let head = self.last().expect("empty formula");
         let args = head
             .children()
             .iter()
-            .map(move |i| &self[usize::from(*i)..n]);
+            .map(move |i| &self[..=usize::from(*i)]);
         let head = match head {
             egg::ENodeOrVar::ENode(h) => Head::<Self>::Fun(h.discriminant()),
             egg::ENodeOrVar::Var(v) => Head::<Self>::Var(*v),

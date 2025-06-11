@@ -15,7 +15,7 @@ utils = { path = "../utils" }
 egg = { path = "../egg", optional = true }
 
 serde = { workspace = true, optional = true }
-smallvec = {workspace = true, optional = true}
+smallvec = {workspace = true, optional = true, features = ["const_new"]}
 itertools.workspace = true
 thiserror.workspace = true
 

@@ -1,4 +1,4 @@
-use crate::{outers::OwnedIter, Bounder, Destructed, Formula, FormulaIterator};
+use crate::{Bounder, Destructed, Formula, FormulaIterator, outers::OwnedIter};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
