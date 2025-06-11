@@ -1,13 +1,11 @@
 use std::sync::Arc;
 
 use crate::parser::{
-    ast,
+    Pstr, ast,
     parser::{
-        get_sort,
+        Environement, get_sort,
         parsable_trait::{Parsable, VarProxy},
-        Environement,
     },
-    Pstr,
 };
 use crate::{
     formula::{

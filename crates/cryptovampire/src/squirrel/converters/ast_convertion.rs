@@ -2,7 +2,7 @@ use crate::{
     error_at,
     formula::sort::builtins::{BOOL, MESSAGE, NAME, STEP},
 };
-use itertools::{chain, Either, Itertools};
+use itertools::{Either, Itertools, chain};
 use utils::{
     all_or_one::AoOV, mdo, monad::Monad, pure, string_ref::StrRef, traits::NicerError,
     vecref::VecRef,
@@ -12,17 +12,16 @@ use crate::{
     bail_at,
     parser::ast::{self, Options, Term},
     squirrel::{
+        Sanitizable,
         converters::ContextBuilder,
         json::{
-            self, mmacro,
+            self, NameNameRef, mmacro,
             operator::{OperatorName, OperatorNameRef},
-            NameNameRef,
         },
-        Sanitizable,
     },
 };
 
-use super::{helper_functions::*, RAoO};
+use super::{RAoO, helper_functions::*};
 
 use super::Context;
 

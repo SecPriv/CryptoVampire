@@ -6,11 +6,11 @@ use itertools::Itertools;
 use log::{debug, log_enabled, trace};
 use logic_formula::Formula;
 
+use crate::container::StaticContainer;
 use crate::container::allocator::{ContainerTools, Residual};
 use crate::container::contained::Containable;
 use crate::container::reference::Reference;
 use crate::container::utils::NameFinder;
-use crate::container::StaticContainer;
 use crate::environement::traits::{KnowsRealm, Realm};
 use crate::formula::utils::Applicable;
 use utils::force_lifetime;
@@ -23,9 +23,9 @@ use crate::formula::{
     function::inner::term_algebra::base_function::BaseFunction,
     quantifier,
     sort::{
+        Sort,
         sort_proxy::SortProxy,
         sorted::{Sorted, SortedError},
-        Sort,
     },
     variable::Variable,
 };
@@ -42,6 +42,7 @@ use super::inner::term_algebra;
 use super::signature::{AsFixedSignature, OnlyArgsSignature, OnlyArgsSignatureProxy};
 use super::traits::FixedSignature;
 use super::{
+    InnerFunction,
     inner::{
         self,
         booleans::Booleans,
@@ -52,14 +53,13 @@ use super::{
         step::StepFunction,
         subterm::Subterm,
         term_algebra::{
-            base_function::BaseFunctionTuple,
-            quantifier::{get_next_quantifer_id, InnerQuantifier, Quantifier},
             TermAlgebra,
+            base_function::BaseFunctionTuple,
+            quantifier::{InnerQuantifier, Quantifier, get_next_quantifer_id},
         },
         unused::Tmp,
     },
     signature::Signature,
-    InnerFunction,
 };
 
 /// A function is just a pointer to some content in memory.

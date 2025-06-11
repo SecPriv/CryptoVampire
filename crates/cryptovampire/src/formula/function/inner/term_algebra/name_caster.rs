@@ -2,11 +2,11 @@ use std::ops::Deref;
 
 use crate::formula::{
     function::{
+        Function,
         signature::FixedRefSignature,
         traits::{FixedSignature, MaybeEvaluatable},
-        Function,
     },
-    sort::{builtins::NAME, Sort},
+    sort::{Sort, builtins::NAME},
 };
 use utils::{
     string_ref::StrRef,

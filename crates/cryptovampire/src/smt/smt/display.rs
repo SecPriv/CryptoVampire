@@ -5,10 +5,11 @@ use log::{log_enabled, trace};
 
 use crate::{
     environement::traits::{KnowsRealm, Realm},
-    formula::file_descriptior::axioms::RewriteKind, smt::smt::SmtDisplay,
+    formula::file_descriptior::axioms::RewriteKind,
+    smt::smt::SmtDisplay,
 };
 
-use super::{fun_list_fmt, Smt, SmtFile, SmtFormula};
+use super::{Smt, SmtFile, SmtFormula, fun_list_fmt};
 
 #[derive(Debug, Copy, Clone)]
 pub struct SmtDisplayer<D, T> {
@@ -283,7 +284,7 @@ impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a SmtFile<'bump>> {
                 .content
                 .iter()
                 .filter_map(|smt| match smt {
-                    Smt::DeclareFun{fun, ..} => Some(fun),
+                    Smt::DeclareFun { fun, .. } => Some(fun),
                     _ => None,
                 })
                 .map(|f| f.name())

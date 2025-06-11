@@ -14,16 +14,16 @@ use std::{
 };
 
 use derivative::Derivative;
-use itertools::{chain, Itertools};
+use itertools::{Itertools, chain};
 use log::trace;
-use pest::{iterators::Pair, Parser};
+use pest::{Parser, iterators::Pair};
 
 use crate::{
+    INIT_STEP_NAME,
     formula::function::{
         builtin,
         inner::term_algebra::{self},
     },
-    INIT_STEP_NAME,
 };
 use utils::{destvec, implvec, match_as_trait, vecref::VecRef};
 

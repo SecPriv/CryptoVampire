@@ -4,11 +4,11 @@ use crate::formula::function::builtin::{
     AND, CONDITION_MACRO, EMPTY, EQUALITY, EXEC_MACRO, FALSE_F, GREATER_THAN_STEP, HAPPENS,
     IMPLIES, LESS_THAN_EQ_STEP, LESS_THAN_STEP, MESSAGE_MACRO, NOT, OR, PRED, TRUE_F,
 };
-use ast_convertion::{ConcreteMacro, ToAst, INDEX_SORT_NAME};
+use ast_convertion::{ConcreteMacro, INDEX_SORT_NAME, ToAst};
 use base64::Engine;
 use derive_builder::Builder;
 use hashbrown::{HashMap, HashSet};
-use itertools::{chain, Itertools};
+use itertools::{Itertools, chain};
 use log::trace;
 use serde::Serialize;
 use static_init::dynamic;
@@ -84,8 +84,8 @@ static BUILTIN_FUNCTION: HashSet<&'static str> = [
 .collect();
 
 use super::{
-    json::{ProcessedSquirrelDump, SquirrelDump},
     Sanitizer,
+    json::{ProcessedSquirrelDump, SquirrelDump},
 };
 type RAoO<T> = crate::Result<AoOV<T>>;
 

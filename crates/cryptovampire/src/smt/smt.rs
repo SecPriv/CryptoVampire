@@ -5,25 +5,27 @@ use std::{
 };
 
 use crate::{
+    FromEnv, SubtermKind,
     environement::{
         environement::Environement,
         traits::{KnowsRealm, Realm},
     },
     formula::{
         file_descriptior::{
+            GeneralFile,
             axioms::{Axiom, Rewrite, RewriteKind},
             declare::Declaration,
-            GeneralFile,
         },
         formula::RichFormula,
         function::{
-            inner::booleans::{Booleans, Connective}, signature::Signature, Function, InnerFunction
+            Function, InnerFunction,
+            inner::booleans::{Booleans, Connective},
+            signature::Signature,
         },
         quantifier::Quantifier,
         sort::Sort,
         variable::Variable,
     },
-    FromEnv, SubtermKind,
 };
 
 use cryptovampire_smt::{SortedVar, VarInner};
@@ -299,7 +301,7 @@ impl<'bump> FromEnv<'bump, Declaration<'bump>> for Smt<'bump> {
                                 .map(|cd| SmtCons {
                                     fun: cd.constructor,
                                     dest: cd.destructor,
-                                    sorts: cd.constructor.fast_insort().unwrap()
+                                    sorts: cd.constructor.fast_insort().unwrap(),
                                 })
                                 .collect(),
                         )

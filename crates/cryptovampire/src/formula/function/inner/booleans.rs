@@ -1,13 +1,14 @@
 use crate::{
+    CustomDerive,
     formula::{
         function::signature::{Lazy, Signature},
         sort::{
+            Sort,
             builtins::BOOL,
             sorted::{Sorted, SortedError},
-            Sort,
         },
     },
-    static_signature, CustomDerive,
+    static_signature,
 };
 
 use super::super::traits::{MaybeEvaluatable, MaybeFixedSignature};
@@ -219,10 +220,11 @@ mod signatures {
     }
 
     impl<'bump> Signature<'bump> for EqualitySignature<'bump> {
-        type Args<'a> = [SortProxy<'bump>; 2]
-    where
-        Self: 'a,
-        'bump: 'a;
+        type Args<'a>
+            = [SortProxy<'bump>; 2]
+        where
+            Self: 'a,
+            'bump: 'a;
 
         type FxSign = Impossible;
 
@@ -251,7 +253,8 @@ mod signatures {
 
     static_signature!(BINARY_SIGNATURE: (BOOL, BOOL) -> BOOL);
     impl<'bump> Signature<'bump> for InfiniteBoolSignature {
-        type Args<'a> = Repeat<SortProxy<'bump>>
+        type Args<'a>
+            = Repeat<SortProxy<'bump>>
         where
             Self: 'a,
             'bump: 'a;

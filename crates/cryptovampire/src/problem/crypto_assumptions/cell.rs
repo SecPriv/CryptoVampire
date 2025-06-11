@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use itertools::{chain, Itertools};
+use itertools::{Itertools, chain};
 
 use crate::formula::utils::Applicable;
 use crate::{
@@ -10,9 +10,9 @@ use crate::{
         formula,
         function::builtin::PRED,
         sort::builtins::STEP,
-        variable::{from_usize, Variable},
+        variable::{Variable, from_usize},
     },
-    problem::{cell::Assignement, Problem},
+    problem::{Problem, cell::Assignement},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]

@@ -8,7 +8,7 @@ pub mod traits;
 #[allow(clippy::module_inception)]
 mod function;
 
-pub use function::{new_static_function, Function};
+pub use function::{Function, new_static_function};
 
 // pub mod equality;
 use std::hash::Hash;

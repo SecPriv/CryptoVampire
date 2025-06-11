@@ -1,7 +1,7 @@
 use crate::error::BaseContext;
-use crate::parser::{parser::CellCache, Pstr};
+use crate::parser::{Pstr, parser::CellCache};
 use crate::{
-    container::{allocator::ContainerTools, ScopedContainer},
+    container::{ScopedContainer, allocator::ContainerTools},
     problem::cell::InnerMemoryCell,
 };
 use utils::{implvec, string_ref::StrRef};

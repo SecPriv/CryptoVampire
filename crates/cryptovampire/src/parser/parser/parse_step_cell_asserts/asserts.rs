@@ -1,11 +1,10 @@
 use crate::formula::{formula::ARichFormula, sort::builtins::BOOL};
 use crate::parser::{
-    ast,
+    Pstr, ast,
     parser::{
-        parsable_trait::{Parsable, VarProxy},
         Environement,
+        parsable_trait::{Parsable, VarProxy},
     },
-    Pstr,
 };
 use utils::{implvec, string_ref::StrRef};
 

@@ -5,26 +5,25 @@ use itertools::Itertools;
 use log::trace;
 use logic_formula::iterators::AllTermsIterator;
 
-use crate::formula::utils::formula_expander::NO_REC_MACRO;
 use crate::formula::utils::Applicable;
+use crate::formula::utils::formula_expander::NO_REC_MACRO;
 use crate::formula::variable::IntoVariableIter;
 use crate::subterm::{
-    into_exist_formula,
+    Subterm, into_exist_formula,
     kind::SubtermKindConstr,
     traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
-    Subterm,
 };
 use crate::{
     environement::{environement::Environement, traits::KnowsRealm},
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
-        formula::{ands, forall, meq, ARichFormula, RichFormula},
-        function::{builtin::TRUE, Function},
+        formula::{ARichFormula, RichFormula, ands, forall, meq},
+        function::{Function, builtin::TRUE},
         function::{inner::subterm::Subsubterm, name_caster_collection::NameCasterCollection},
         manipulation::Unifier,
         sort::{
-            builtins::{CONDITION, MESSAGE, NAME},
             Sort,
+            builtins::{CONDITION, MESSAGE, NAME},
         },
         utils::formula_expander::UnfoldFlags,
         variable::Variable,

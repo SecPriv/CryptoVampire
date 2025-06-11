@@ -24,7 +24,9 @@ pub enum RunnerError {
     #[error("nothing to do: {0}")]
     NothingToDo(String),
 
-    #[error("unexpected behaviour while running {tool}:\nran: \"{cmd:?}\"\nreturn code: {return_code}\nstdout:\n{stdout}")]
+    #[error(
+        "unexpected behaviour while running {tool}:\nran: \"{cmd:?}\"\nreturn code: {return_code}\nstdout:\n{stdout}"
+    )]
     UnexpectedResult {
         tool: &'static str,
         return_code: i32,

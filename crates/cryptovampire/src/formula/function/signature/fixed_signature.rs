@@ -32,8 +32,11 @@ where
 }
 
 impl<'a, 'bump: 'a> AsFixedSignature<'bump> for FixedRefSignature<'a, 'bump> {
-    type Args<'b> = Cloned<<&'b VecRefClone<'a, Sort<'bump>> as IntoIterator>::IntoIter>
-    where Self:'b, 'bump:'a;
+    type Args<'b>
+        = Cloned<<&'b VecRefClone<'a, Sort<'bump>> as IntoIterator>::IntoIter>
+    where
+        Self: 'b,
+        'bump: 'a;
 
     fn fixed_out(&self) -> Sort<'bump> {
         self.out
@@ -78,7 +81,8 @@ impl<'bump, const N: usize> StaticSignature<'bump, N> {
 }
 
 impl<'bump, const N: usize> AsFixedSignature<'bump> for StaticSignature<'bump, N> {
-    type Args<'a> = Cloned<Iter<'a, Sort<'bump>>>
+    type Args<'a>
+        = Cloned<Iter<'a, Sort<'bump>>>
     where
         Self: 'a,
         'bump: 'a;

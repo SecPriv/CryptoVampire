@@ -1,15 +1,15 @@
 use crate::formula::formula::ARichFormula;
 use crate::formula::formula::RichFormula;
 use crate::formula::function::inner::step::StepFunction;
-use crate::formula::function::inner::term_algebra::step_macro;
 use crate::formula::function::inner::term_algebra::TermAlgebra;
+use crate::formula::function::inner::term_algebra::step_macro;
 use crate::problem::cell::Assignement;
 
 use if_chain::if_chain;
-use logic_formula::outers::RefPile;
 use logic_formula::Content;
 use logic_formula::FormulaIterator;
 use logic_formula::IteratorHelper;
+use logic_formula::outers::RefPile;
 
 use super::super::call::InputCall;
 
@@ -110,10 +110,10 @@ impl<'a, 'bump> FormulaIterator<ARichFormula<'bump>> for ToNodeIterator<'a, 'bum
     fn next<H>(&mut self, current: ARichFormula<'bump>, _: Self::Passing, helper: &mut H)
     where
         H: logic_formula::IteratorHelper<
-            F = ARichFormula<'bump>,
-            Passing = Self::Passing,
-            U = Self::U,
-        >,
+                F = ARichFormula<'bump>,
+                Passing = Self::Passing,
+                U = Self::U,
+            >,
     {
         match current.as_ref() {
             RichFormula::Var(Variable { sort, .. }) if sort == &STEP.as_sort() => {

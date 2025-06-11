@@ -42,7 +42,8 @@ mod signature {
     }
 
     impl<'bump> Signature<'bump> for ITESignature<'bump> {
-        type Args<'a> = [SortProxy<'bump> ; 3]
+        type Args<'a>
+            = [SortProxy<'bump>; 3]
         where
             Self: 'a,
             'bump: 'a;

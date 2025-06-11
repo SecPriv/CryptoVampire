@@ -6,8 +6,8 @@ use derivative::Derivative;
 use utils::string_ref::StrRef;
 
 use super::{
-    location::ASTLocation, DeclareCell, DeclareFunction, Function, Macro, MacroName, Step,
-    StepName, TypeName,
+    DeclareCell, DeclareFunction, Function, Macro, MacroName, Step, StepName, TypeName,
+    location::ASTLocation,
 };
 
 #[derive(Derivative)]

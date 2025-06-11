@@ -1,7 +1,7 @@
 use crate::formula::function::{
+    Function,
     signature::FixedRefSignature,
     traits::{FixedSignature, MaybeEvaluatable},
-    Function,
 };
 use utils::string_ref::StrRef;
 

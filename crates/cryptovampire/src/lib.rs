@@ -35,15 +35,15 @@ use crate::{
     formula::{function::builtin::BUILT_IN_FUNCTIONS, sort::builtins::BUILT_IN_SORTS},
     problem::{PblIterator, Problem},
     runner::Runners,
-    smt::{SmtFile, SMT_FILE_EXTENSION},
+    smt::{SMT_FILE_EXTENSION, SmtFile},
 };
 use log::trace;
-use parser::{ast::ASTList, Pstr};
+use parser::{Pstr, ast::ASTList};
 use std::{fs::File, io::BufWriter, num::NonZeroU32, path::Path};
 use utils::{from_with::FromWith, string_ref::StrRef, traits::MyWriteTo};
 
 mod cv_utils;
-pub use cv_utils::{FromEnv};
+pub use cv_utils::FromEnv;
 
 // start of the file
 

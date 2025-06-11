@@ -3,9 +3,9 @@
 use crate::{
     environement::environement::Environement,
     formula::{
+        TmpFormula,
         formula::ARichFormula,
         sort::{builtins::BOOL, sort_proxy::SortProxy},
-        TmpFormula,
     },
     problem::crypto_assumptions::{CryptoAssumption, EufCma, IntCtxt, UfCma},
 };
@@ -14,7 +14,7 @@ use log::{debug, trace};
 use regex::Regex;
 use static_init::dynamic;
 
-use super::{tptp::TptpParse, Runner, VampireExec};
+use super::{Runner, VampireExec, tptp::TptpParse};
 
 #[dynamic]
 static EXTRACT_FORMULA: Regex = Regex::new(r"\[SA\] new: \d*?\. (.*?) \[.*?\]").unwrap();

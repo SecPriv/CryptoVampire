@@ -3,7 +3,7 @@ use std::{
     fmt::{Debug, Display},
 };
 
-use super::{inner_error::InnerError, BaseError, Locate, Location, LocationProvider, Result};
+use super::{BaseError, Locate, Location, LocationProvider, Result, inner_error::InnerError};
 
 /// The main error type of cryptovampire, designed to have a light footprint
 ///

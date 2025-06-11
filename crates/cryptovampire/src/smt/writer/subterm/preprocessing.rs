@@ -6,15 +6,15 @@ use crate::{
             functions::{INPUT, LT_NAME},
             types::{BOOL, MSG, STEP},
         },
-        formula::{sorts_to_variables, RichFormula, Variable},
-        formula_iterator::{new_formula_iter_vec, IteratorFlags},
+        formula::{RichFormula, Variable, sorts_to_variables},
+        formula_iterator::{IteratorFlags, new_formula_iter_vec},
         formula_user::FormulaUser,
         function::{FFlags, Function},
         sort::Sort,
     },
     problem::{
         cell::Assignement,
-        cell_dependancies::{graph::DependancyGraph, CellCall, DependancyFromStep, OutGoingCall},
+        cell_dependancies::{CellCall, DependancyFromStep, OutGoingCall, graph::DependancyGraph},
         problem::Problem,
         step::Step,
     },
@@ -23,10 +23,10 @@ use crate::{
         smt::{Smt, SmtFormula},
         writer::Ctx,
     },
-    utils::utils::{reset_vec, transpose, StackBox},
+    utils::utils::{StackBox, reset_vec, transpose},
 };
 
-use super::{builder::Builder, Subterm};
+use super::{Subterm, builder::Builder};
 
 use itertools::Itertools;
 

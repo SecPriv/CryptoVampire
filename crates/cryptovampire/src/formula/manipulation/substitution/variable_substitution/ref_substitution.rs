@@ -3,7 +3,7 @@ use itertools::Itertools;
 use crate::formula::{
     formula::{ARichFormula, RichFormula},
     manipulation::Substitution,
-    variable::{uvar, Variable},
+    variable::{Variable, uvar},
 };
 use utils::vecref::VecRefClone;
 

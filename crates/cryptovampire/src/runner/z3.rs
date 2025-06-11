@@ -9,14 +9,14 @@ use log::debug;
 use utils::traits::MyWriteTo;
 
 use crate::{
-    ensure,
+    FromEnv, SmtDisplay, ensure,
     environement::environement::Flags,
     error::{BaseContext, CVContext},
-    runner::{exec_cmd, RetCodeAndStdout, RunnerOut},
-    smt::SmtFile, FromEnv, SmtDisplay,
+    runner::{RetCodeAndStdout, RunnerOut, exec_cmd},
+    smt::SmtFile,
 };
 
-use super::{runner::ChildKind, Runner};
+use super::{Runner, runner::ChildKind};
 
 #[derive(Debug, Clone)]
 pub struct Z3Runner {

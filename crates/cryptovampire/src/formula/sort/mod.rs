@@ -9,10 +9,10 @@ pub mod inner;
 
 use crate::{
     container::{
+        StaticContainer,
         allocator::ContainerTools,
         contained::Containable,
         reference::{FORef, Reference},
-        StaticContainer,
     },
     environement::traits::{KnowsRealm, Realm},
 };

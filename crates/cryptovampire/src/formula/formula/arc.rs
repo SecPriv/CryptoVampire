@@ -4,11 +4,11 @@ use std::{
     ops::{BitAnd, BitOr, Deref, Not, Shr},
 };
 
+use crate::formula::{function::Function, quantifier::Quantifier, utils::Applicable};
 use crate::formula::{
     function::builtin::{AND, IMPLIES, NOT, OR, TRUE_ARC},
     variable::{IntoVariableIter, Variable},
 };
-use crate::formula::{function::Function, quantifier::Quantifier, utils::Applicable};
 
 use super::{Expander, RichFormula};
 use itertools::Either;
@@ -145,7 +145,9 @@ impl<'bump> Display for ARichFormula<'bump> {
         } else if cfg!(debug_assertions) {
             write!(f, "(unintialized formula) {:?}", self.as_inner())
         } else {
-            panic!("The formula contains some uninitialized bit. This should not happen please report it")
+            panic!(
+                "The formula contains some uninitialized bit. This should not happen please report it"
+            )
         }
     }
 }

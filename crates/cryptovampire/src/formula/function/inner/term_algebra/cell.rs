@@ -1,9 +1,9 @@
 use crate::{
     formula::{
         function::{
+            Function,
             signature::FixedRefSignature,
             traits::{FixedSignature, MaybeEvaluatable},
-            Function,
         },
         sort::builtins::{MESSAGE, STEP},
     },

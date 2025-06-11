@@ -14,10 +14,10 @@ use log::{error, log_enabled, trace, warn};
 use logic_formula::outers::OwnedPile;
 use logic_formula::{Formula, FormulaIterator};
 
-use crate::formula::utils::formula_expander::{
-    UnfolderBuilder, UnfoldingStateBuilder, NO_REC_MACRO,
-};
 use crate::formula::utils::Applicable;
+use crate::formula::utils::formula_expander::{
+    NO_REC_MACRO, UnfolderBuilder, UnfoldingStateBuilder,
+};
 use crate::formula::variable::IntoVariableIter;
 use crate::{
     container::allocator::{ContainerTools, Residual},
@@ -27,12 +27,12 @@ use crate::{
     },
     formula::{
         file_descriptior::declare::{self, Declaration},
-        formula::{self, exists, forall, meq, ARichFormula},
-        function::{self, builtin::TRUE, Function, InnerFunction},
+        formula::{self, ARichFormula, exists, forall, meq},
+        function::{self, Function, InnerFunction, builtin::TRUE},
         manipulation::Unifier,
         sort::Sort,
         utils::formula_expander::{UnfoldFlags, UnfoldingState},
-        variable::{sorts_to_variables, Variable},
+        variable::{Variable, sorts_to_variables},
     },
     mforall,
 };
@@ -46,7 +46,7 @@ use self::{
     traits::{SubtermAux, SubtermResult},
 };
 
-use crate::problem::{protocol::Protocol, Problem};
+use crate::problem::{Problem, protocol::Protocol};
 
 #[derive(Debug, Clone)]
 pub struct Subterm<'bump, Aux>
@@ -792,10 +792,10 @@ where
     fn next<H>(&mut self, f: ARichFormula<'bump>, state: Self::Passing, helper: &mut H)
     where
         H: logic_formula::IteratorHelper<
-            F = ARichFormula<'bump>,
-            Passing = Self::Passing,
-            U = Self::U,
-        >,
+                F = ARichFormula<'bump>,
+                Passing = Self::Passing,
+                U = Self::U,
+            >,
     {
         trace!("{} ⊑ {}", self.x, &f);
 

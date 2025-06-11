@@ -1,4 +1,4 @@
-use super::{location::LocationProvider, Result};
+use super::{Result, location::LocationProvider};
 
 pub trait CVContext<T> {
     fn with_location<P: LocationProvider>(self, location: P) -> Result<T>;

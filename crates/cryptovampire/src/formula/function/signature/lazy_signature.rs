@@ -1,6 +1,6 @@
 use std::ops::RangeInclusive;
 
-use crate::formula::sort::{sort_proxy::SortProxy, Sort};
+use crate::formula::sort::{Sort, sort_proxy::SortProxy};
 use utils::{infinity::Infinity, match_as_trait};
 
 use super::{AsFixedSignature, Signature};
@@ -15,7 +15,8 @@ where
     A: Signature<'bump>,
     B: Signature<'bump>,
 {
-    type Args<'a> = Lazy<<A as Signature<'bump>>::Args<'a>, <B as Signature<'bump>>::Args<'a>>
+    type Args<'a>
+        = Lazy<<A as Signature<'bump>>::Args<'a>, <B as Signature<'bump>>::Args<'a>>
     where
         Self: 'a,
         'bump: 'a;
@@ -59,7 +60,8 @@ where
     A: AsFixedSignature<'bump>,
     B: AsFixedSignature<'bump>,
 {
-    type Args<'a> = Lazy<<A as AsFixedSignature<'bump>>::Args<'a>, <B as AsFixedSignature<'bump>>::Args<'a>>
+    type Args<'a>
+        = Lazy<<A as AsFixedSignature<'bump>>::Args<'a>, <B as AsFixedSignature<'bump>>::Args<'a>>
     where
         Self: 'a,
         'bump: 'a;

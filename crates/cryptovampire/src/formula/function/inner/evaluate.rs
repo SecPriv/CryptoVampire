@@ -4,15 +4,15 @@ use crate::formula::utils::Applicable;
 use crate::formula::{
     formula::ARichFormula,
     function::{
+        Function,
         builtin::{CONDITION_TO_BOOL, MESSAGE_TO_BITSTRING},
         signature::FixedRefSignature,
         traits::{FixedSignature, MaybeEvaluatable},
-        Function,
     },
     sort::{
+        FOSort, Sort,
         builtins::{CONDITION, MESSAGE},
         sorted::SortedError,
-        FOSort, Sort,
     },
 };
 use utils::traits::NicerError;

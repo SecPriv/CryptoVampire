@@ -8,22 +8,21 @@ use std::{
 use utils::traits::MyWriteTo;
 
 use crate::{
-    ensure,
+    FromEnv, SmtDisplay, ensure,
     environement::environement::{Environement, Flags},
     error::CVContext,
     problem::Problem,
     runner::{
-        exec_cmd,
+        RetCodeAndStdout, exec_cmd,
         runner::{ChildKind, RunnerOut},
         searcher::InstanceSearcher,
-        RetCodeAndStdout,
     },
-    smt::SmtFile, FromEnv, SmtDisplay,
+    smt::SmtFile,
 };
 
 use super::{
-    runner::{Discoverer, DiscovererError, Runner, RunnerOutI},
     RunnerHandler,
+    runner::{Discoverer, DiscovererError, Runner, RunnerOutI},
 };
 
 /// The [Runner] itself

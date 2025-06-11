@@ -3,7 +3,7 @@ use log::{error, log_enabled};
 use crate::formula::{
     formula::{ARichFormula, RichFormula},
     manipulation::Substitution,
-    variable::{uvar, Variable},
+    variable::{Variable, uvar},
 };
 
 use super::MultipleVarSubst;

@@ -2,21 +2,21 @@ use core::fmt::Debug;
 use std::{ops::Range, sync::Arc};
 
 use itertools::Itertools;
-use logic_formula::iterators::UsedVariableIterator;
 use logic_formula::Formula;
+use logic_formula::iterators::UsedVariableIterator;
 
 use crate::formula::utils::Applicable;
 use crate::{
     container::{allocator::ContainerTools, contained::Containable, reference::Reference},
     formula::{
-        formula::{meq, ARichFormula, RichFormula},
+        formula::{ARichFormula, RichFormula, meq},
         function::{
+            Function, InnerFunction,
             builtin::LESS_THAN_STEP,
             inner::step::{InnerStepFuction, StepFunction},
-            Function, InnerFunction,
         },
         sort::Sort,
-        variable::{uvar, Variable},
+        variable::{Variable, uvar},
     },
 };
 use utils::{
@@ -115,12 +115,16 @@ impl<'bump> Step<'bump> {
             + ContainerTools<'bump, InnerFunction<'bump>, R<'bump> = Function<'bump>>,
     {
         let free_variables: Arc<[_]> = args.into_iter().collect();
-        assert!((&message)
-            .free_vars_iter()
-            .all(|v| free_variables.contains(&v)));
-        assert!((&condition)
-            .free_vars_iter()
-            .all(|v| free_variables.contains(&v)));
+        assert!(
+            (&message)
+                .free_vars_iter()
+                .all(|v| free_variables.contains(&v))
+        );
+        assert!(
+            (&condition)
+                .free_vars_iter()
+                .all(|v| free_variables.contains(&v))
+        );
 
         let used_variables = UsedVariableIterator::with([&message, &condition])
             .unique()
@@ -172,12 +176,16 @@ impl<'bump> Step<'bump> {
             + ContainerTools<'bump, InnerFunction<'bump>, R<'bump> = Function<'bump>>,
     {
         let free_variables: Arc<[_]> = args.into_iter().collect();
-        assert!((&message)
-            .free_vars_iter()
-            .all(|v| free_variables.contains(&v)));
-        assert!((&condition)
-            .free_vars_iter()
-            .all(|v| free_variables.contains(&v)));
+        assert!(
+            (&message)
+                .free_vars_iter()
+                .all(|v| free_variables.contains(&v))
+        );
+        assert!(
+            (&condition)
+                .free_vars_iter()
+                .all(|v| free_variables.contains(&v))
+        );
         let used_variables = UsedVariableIterator::with([&message, &condition])
             .unique()
             .collect();

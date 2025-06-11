@@ -1,8 +1,8 @@
 use crate::formula::{
     function::{
+        Function,
         signature::FixedRefSignature,
         traits::{Evaluatable, FixedSignature},
-        Function,
     },
     sort::Sort,
 };

@@ -1,4 +1,4 @@
-use crate::formula::sort::{builtins::BOOL, Sort};
+use crate::formula::sort::{Sort, builtins::BOOL};
 
 use super::super::{
     signature::FixedRefSignature,

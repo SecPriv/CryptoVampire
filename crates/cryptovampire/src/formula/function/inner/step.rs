@@ -1,4 +1,4 @@
-use crate::{formula::sort::builtins::STEP, problem::step::Step, static_signature, CustomDerive};
+use crate::{CustomDerive, formula::sort::builtins::STEP, problem::step::Step, static_signature};
 use utils::assert_variance;
 
 use super::super::{

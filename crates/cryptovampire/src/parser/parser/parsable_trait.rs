@@ -8,10 +8,10 @@ use crate::{
     bail_at,
     error::{CVContext, ExtraOption, LocationProvider},
     parser::{
-        ast::{self, extra::SnN, LetIn, Term},
+        Pstr,
+        ast::{self, LetIn, Term, extra::SnN},
         location::ASTLocation,
         parser::parsing_environement::get_function_mow,
-        Pstr,
     },
 };
 use crate::{
@@ -20,11 +20,10 @@ use crate::{
         self,
         formula::{ARichFormula, RichFormula},
         function::{
-            self,
+            self, Function,
             builtin::{IF_THEN_ELSE, IF_THEN_ELSE_TA},
             inner::term_algebra::TermAlgebra,
             signature::Signature,
-            Function,
         },
         manipulation::OneVarSubstF,
         sort::{
@@ -32,7 +31,7 @@ use crate::{
             sort_proxy::SortProxy,
         },
         utils::Applicable,
-        variable::{from_usize, uvar, Variable},
+        variable::{Variable, from_usize, uvar},
     },
 };
 use utils::{implvec, match_as_trait, string_ref::StrRef, traits::NicerError};
@@ -40,8 +39,8 @@ use utils::{implvec, match_as_trait, string_ref::StrRef, traits::NicerError};
 pub(crate) use self::cached_builtins::*;
 
 use super::{
-    parsing_environement::{get_sort, FunctionCache},
     Environement,
+    parsing_environement::{FunctionCache, get_sort},
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -588,7 +587,11 @@ where
                 let args = if let RichFormula::Fun(_, args) = step_as_term.as_ref() {
                     args
                 } else {
-                    bail_at!(app.span(), "this can only be a plain reference to a step (not just a term of sort {}))", STEP.name())
+                    bail_at!(
+                        app.span(),
+                        "this can only be a plain reference to a step (not just a term of sort {}))",
+                        STEP.name()
+                    )
                 };
 
                 let step_cache = env

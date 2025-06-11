@@ -1,4 +1,4 @@
-use crate::subterm::{kind::SubtermKindConstr, traits::DefaultAuxSubterm, Subterm};
+use crate::subterm::{Subterm, kind::SubtermKindConstr, traits::DefaultAuxSubterm};
 use crate::{
     environement::environement::Environement,
     formula::{

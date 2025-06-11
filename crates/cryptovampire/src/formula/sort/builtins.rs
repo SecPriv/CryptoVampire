@@ -1,8 +1,9 @@
 use static_init::dynamic;
 
 use super::{
+    InnerSort, Sort,
     inner::{Other, TermBase},
-    new_static_sort, InnerSort, Sort,
+    new_static_sort,
 };
 
 #[dynamic]

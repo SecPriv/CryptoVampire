@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
-use crate::parser::{ast, parser::parsable_trait::VarProxy, FromStaticString};
+use crate::parser::{FromStaticString, ast, parser::parsable_trait::VarProxy};
 use crate::{
     formula::{
         formula::ARichFormula,
-        function::{builtin::INPUT, Function},
+        function::{Function, builtin::INPUT},
         manipulation::{FrozenSubst, FrozenSubstF, OneVarSubst, OneVarSubstF},
-        sort::{builtins::MESSAGE, Sort},
+        sort::{Sort, builtins::MESSAGE},
         utils::Applicable,
-        variable::{uvar, Variable},
+        variable::{Variable, uvar},
     },
     problem::step::Step,
 };

@@ -9,12 +9,12 @@ use crate::parser::ast;
 use crate::{
     formula::{
         function::{
-            signature::{FixedRefSignature, Lazy, Signature},
             Function,
+            signature::{FixedRefSignature, Lazy, Signature},
         },
         sort::{
-            builtins::{MESSAGE, STEP},
             Sort,
+            builtins::{MESSAGE, STEP},
         },
     },
     problem::cell::{Assignement, MemoryCell},
