@@ -1,15 +1,12 @@
-use std::{borrow::Cow, collections::HashMap, ops::Deref, sync::atomic::AtomicUsize};
-
-use egg::Var;
-use itertools::{Itertools, chain, izip};
-use utils::implvec;
-
+use super::{BUILTINS, Exists, Function, FunctionFlags, PARSING_PAIRS};
 use crate::{
     mk_signature,
     terms::{InnerFunction, Signature, Sort},
 };
-
-use super::{BUILTINS, Exists, Function, FunctionFlags, PARSING_PAIRS};
+use egg::Var;
+use itertools::{Itertools, chain, izip};
+use std::{borrow::Cow, collections::HashMap, ops::Deref, sync::atomic::AtomicUsize};
+use utils::implvec;
 
 /// The numbe of declared existential quantifiers
 ///

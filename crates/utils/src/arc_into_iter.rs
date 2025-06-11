@@ -96,7 +96,7 @@ impl<T> From<Arc<[T]>> for ArcIntoIter<T> {
 
 impl<'a, T> From<&'a Arc<[T]>> for ArcIntoIter<T> {
     fn from(value: &'a Arc<[T]>) -> Self {
-        if value.len() == 0 {
+        if value.is_empty() {
             Self::Empty
         } else {
             ArcIntoIter::Iter {

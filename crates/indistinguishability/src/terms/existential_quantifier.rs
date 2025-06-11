@@ -1,14 +1,12 @@
-use egg::{PatternAst, Var};
-use itertools::{Itertools, chain};
-use logic_formula::Formula;
-use serde::{Deserialize, Serialize};
-
+use super::FunctionCollection;
 use crate::{
     Lang,
     terms::{Function, Sort},
 };
-
-use super::FunctionCollection;
+use egg::{PatternAst, Var};
+use itertools::{Itertools, chain};
+use logic_formula::Formula;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Exists {

@@ -1,8 +1,4 @@
-use std::{
-    fmt::{self, Display},
-    rc::Rc,
-    sync::Arc,
-};
+use std::fmt::{self};
 
 use crate::{
     FromEnv, SubtermKind,
@@ -30,7 +26,6 @@ use crate::{
 
 use cryptovampire_smt::{SortedVar, VarInner};
 use if_chain::if_chain;
-use utils::{from_with::FromWith, implvec};
 
 use self::display::{SmtDisplayer, SmtEnv};
 
