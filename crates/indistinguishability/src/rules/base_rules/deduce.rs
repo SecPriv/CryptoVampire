@@ -18,7 +18,7 @@ use super::{
 
 pub fn mk_deduce_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'_> {
     chain! {
-      mk_special_deduce_rules(pbl),
+      mk_special_static_deduce_rules(pbl),
       mk_regular_deduce_rules(pbl),
       mk_exists_deduce_rules(pbl),
     }
@@ -29,7 +29,10 @@ pub fn mk_deduce_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> 
 // =========================================================
 
 /// Generate hard coded rules described
-fn mk_special_deduce_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'_> {
+fn mk_special_static_deduce_rules(
+    pbl: &Problem,
+) -> impl Iterator<Item = PrologRule<Lang>> + use<'_> {
+    /// clean rules to be parsed
     let cleaned = clean_input(include_str!("base_deduce"))
         // rebuild a string without comments
         .split('.')

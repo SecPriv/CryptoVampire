@@ -157,6 +157,11 @@ mk_builtin_funs!(
         flags: f!(CUSTOM_DEDUCE | BUILTIN_SMT)
     };
 
+    MITE "bitstring_if_then_else" "mite" "ite" {
+        signature: s!(Bool, Bitstring, Bitstring -> Bitstring),
+        flags: f!(CUSTOM_DEDUCE | BUILTIN_SMT | CUSTOM_SUBTERM)
+    };
+
     IMPLIES "bit_implies" "implies" "=>" "mimplies" {
         signature: s!(Bool, 2),
         flags: f!(BUILTIN_SMT), // e.g., this will be `BUILTIN | BUILTIN_SMT` instead of `FunctionFlags::BUILTIN`
@@ -192,11 +197,6 @@ mk_builtin_funs!(
     EQ "meq" "eq" "==" {
         signature: s!(Bitstring, Bitstring -> Bool),
         flags: f!(BUILTIN_SMT)
-    };
-
-    MITE "bitstring_if_then_else" "mite" "ite" {
-        signature: s!(Bool, Bitstring, Bitstring -> Bitstring),
-        flags: f!(CUSTOM_DEDUCE | BUILTIN_SMT | CUSTOM_SUBTERM)
     };
 
     TRUE "mtrue" "true" {
@@ -310,7 +310,7 @@ mk_builtin_funs!(
     // ~~~~~~~~~~~~~ prolog only ~~~~~~~~~~~~~~~~
 
     GOAL "goal" {
-        signature: s!(() -> Bool), // kinda irrelevant here
+        signature: s!(Bool -> Bool), // kinda irrelevant here
         flags: f!(PROLOG_ONLY)
     };
 
@@ -348,8 +348,9 @@ mk_builtin_funs!(
         flags: f!(PROLOG_ONLY)
     };
 
-    FRESH "mfresh" "fresh" {
-        signature: s!(Nonce, Bitstring -> Bool),
+    FRESH_NONCE "mfresh_nonce" "fresh_nonce" {
+                /* nonce -> look into -> constrains -> Bool */
+        signature: s!(Nonce, Bitstring, Bool -> Bool),
         flags: f!(CUSTOM_DEDUCE)
     };
 
