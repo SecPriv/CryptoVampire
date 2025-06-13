@@ -25,7 +25,7 @@ let
 
 in
 mkShell {
-  RUST_SRC_PATH = "${rust.rust-src}"; # "${mrustPlatform.rustLibSrc}";
+  RUST_SRC_PATH = "${rust.rust-src}/lib/rustlib/src/rust/library/";
 
   buildInputs =
     with pkgs;
