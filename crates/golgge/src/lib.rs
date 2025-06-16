@@ -1,3 +1,4 @@
+use bon::{bon, builder};
 // use eclassmap::{ECallMap, Entry};
 use egg::{
     Analysis, EGraph, FromOp, Id, Language, MultiPattern, Pattern, RecExpr, Rewrite, Runner,
@@ -7,12 +8,14 @@ use itertools::{Either, Itertools};
 use log::log_enabled;
 use rule::PlOrRw;
 use serde::Serialize;
-use std::{cell::RefCell, collections::HashMap, fmt::Display, path::PathBuf, rc::Rc, str::FromStr};
+use std::{
+    cell::RefCell, collections::HashMap, default, fmt::Display, path::PathBuf, rc::Rc, str::FromStr,
+};
 use utils::implvec;
 
 // mod eclassmap;
 mod rule;
-pub use rule::{Dependancy, Fresh, PrologRule, Rule};
+pub use rule::{DebugRule, Dependancy, Fresh, PrologRule, Rule};
 // mod language;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -70,11 +73,43 @@ impl Default for Config {
     }
 }
 
+#[bon]
 impl<L, N> Program<L, N>
 where
-    L: Language + Display + Serialize,
-    N: Analysis<L> + Default + Serialize,
-    N::Data: Serialize,
+    L: Language,
+    N: Analysis<L>,
+{
+    #[builder]
+    pub fn build<I: Into<Rc<dyn Rule<L, N>>>>(
+        egraph: EGraph<L, N>,
+        #[builder(with = <_>::from_iter, default = vec![])] eq_rules: Vec<Rewrite<L, N>>,
+        #[builder(with = |rules: impl IntoIterator<Item = I>| rules.into_iter().map_into().collect(), default = vec![])]
+        rules: Vec<Rc<dyn Rule<L, N>>>,
+        #[builder(default = true)] with_memo: bool,
+        #[builder(default)] config: Config,
+    ) -> Self {
+        Self {
+            egraph: Some(egraph),
+            eq_rules,
+            rules,
+            memo: with_memo.then(Default::default),
+            clean: true,
+            config,
+        }
+    }
+
+    pub fn egraph(&self) -> &EGraph<L, N> {
+        self.egraph.as_ref().expect("invalid program")
+    }
+    pub fn egraph_mut(&mut self) -> &mut EGraph<L, N> {
+        self.egraph.as_mut().expect("invalid program")
+    }
+}
+
+impl<L, N> Program<L, N>
+where
+    L: Language + Display,
+    N: Analysis<L>,
 {
     pub fn new(
         egraph: EGraph<L, N>,
@@ -109,13 +144,6 @@ where
             Some(egraph) => egraph.add_expr(e),
             None => panic!("invalid program"),
         }
-    }
-
-    pub fn egraph(&self) -> &EGraph<L, N> {
-        self.egraph.as_ref().expect("invalid program")
-    }
-    pub fn egraph_mut(&mut self) -> &mut EGraph<L, N> {
-        self.egraph.as_mut().expect("invalid program")
     }
 
     pub fn clean(&self) -> bool {
@@ -207,7 +235,7 @@ where
                 Entry::Occupied(occupied_entry) => {
                     let res = occupied_entry.get().borrow().as_bool();
                     if self.config.trace_prolog {
-                        eprintln!("⏩ skipping: {:}", res)
+                        eprintln!("⏩ skipping: {res:}")
                     }
                     return res;
                 }
@@ -258,18 +286,14 @@ where
             }
             let runner = self
                 .config
-                .apply(Runner::<L, N>::new(Default::default()))
-                .with_egraph(egraph)
+                .apply(Runner::<L, N>::new_with_egraph(egraph))
+                // .with_egraph(egraph)
                 .run(&self.eq_rules);
 
             let report = runner.report();
 
             if self.config.trace_prolog {
                 eprintln!("✅ done !\n{report}");
-                if log_enabled!(log::Level::Trace) {
-                    let (dot, json) = save_egraph(&runner.egraph).unwrap();
-                    eprintln!("saved to {dot:?} and {json:?}")
-                }
             }
 
             let stop_reason = runner.stop_reason.clone();
@@ -277,8 +301,8 @@ where
             egraph = runner.egraph;
 
             if !matches!(stop_reason, Some(StopReason::Saturated)) {
-                let (dot, json) = save_egraph(&egraph).unwrap();
-                panic!("unclean graph. See {dot:?} and {json:?}")
+                let dot = save_egraph(&egraph).unwrap();
+                panic!("unclean graph. See {dot:?}")
             }
 
             // self.memo.canonicalise(&egraph);
@@ -302,7 +326,7 @@ where
                 if self.config.trace_prolog {
                     eprintln!("🚧 canonicalising rules...");
                 }
-                self.rules.iter().for_each(|r| r.rebuild(&self));
+                self.rules.iter().for_each(|r| r.rebuild(self));
                 if self.config.trace_prolog {
                     eprintln!("✅ done!");
                 }
@@ -360,27 +384,18 @@ where
     }
 }
 
-fn save_egraph<L, N>(egraph: &EGraph<L, N>) -> std::io::Result<(PathBuf, PathBuf)>
+fn save_egraph<L, N>(egraph: &EGraph<L, N>) -> std::io::Result<PathBuf>
 where
-    L: Language + Display + Serialize,
-    N: Analysis<L> + Default + Serialize,
-    N::Data: Serialize,
+    L: Language + Display,
+    N: Analysis<L>,
 {
     let dot = tempfile::Builder::new()
         .prefix("egraph_")
         .suffix(".dot")
         .keep(true)
         .tempfile()?;
-    let json = tempfile::Builder::new()
-        .prefix("egraph_")
-        .suffix(".json")
-        .keep(true)
-        .tempfile()?;
 
     egraph.dot().to_dot(&dot)?;
 
-    egraph
-        .serialize(&mut serde_json::Serializer::new(&json))
-        .unwrap();
-    Ok((dot.path().to_path_buf(), json.path().to_path_buf()))
+    Ok(dot.path().to_path_buf())
 }

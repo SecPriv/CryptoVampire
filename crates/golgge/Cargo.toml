@@ -23,6 +23,7 @@ smallvec.workspace = true
 log.workspace = true
 env_logger.workspace = true
 serde.workspace = true
+bon.workspace = true
 
 [lints]
 workspace = true

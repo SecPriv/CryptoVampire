@@ -1,11 +1,13 @@
 use crate::{Program, analysis::WeightedAnalysis, weight::Weight};
-use egg::{FromOp, Id, Language, Pattern, RecExpr, Searcher, SymbolLang, Var};
+use bon::Builder;
+use egg::{Analysis, FromOp, Id, Language, Pattern, RecExpr, Searcher, SymbolLang, Var};
 use serde::Serialize;
 use std::{
     cell::RefCell,
     collections::HashMap,
     fmt::Display,
     ops::DerefMut,
+    rc::Rc,
     str::FromStr,
     sync::atomic::{AtomicU64, Ordering},
     u64,
@@ -14,13 +16,17 @@ use utils::ereturn_if;
 
 use super::{Dependancy, Fresh, Rule};
 
-#[derive(Debug)]
+#[derive(Debug, Builder)]
 pub struct PrologRule<L> {
     pub input: Pattern<L>,
+    #[builder(with = <_>::from_iter, default = vec![])]
     pub deps: Vec<Pattern<L>>,
+    #[builder(default = false)]
     pub cut: bool,
+    #[builder(default = false)]
     pub require_decrease: bool,
     // pub free_vars: Vec<Var>,
+    #[builder(into)]
     pub name: Option<String>,
     // pub memo: RefCell<HashMap<Id, Dependancy>>,
 }
@@ -118,6 +124,43 @@ where
     //     //     .map(|(id, s)| (egraph.find(id), s))
     //     //     .collect();
     // }
+
+    fn debug(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        write!(f, "<prolog> ")?;
+        if let Some(name) = &self.name {
+            write!(f, "[{name}] ")?;
+        }
+
+        write!(f, "{}", self.input)?;
+
+        if self.deps.is_empty() && !self.cut && !self.require_decrease {
+            return write!(f, ".");
+        }
+
+        write!(f, " :- ")?;
+        if self.cut {
+            write!(f, "!, ")?;
+        }
+        if self.require_decrease {
+            write!(f, "@, ")?;
+        }
+        for dep in &self.deps {
+            write!(f, "{dep}, ")?;
+        }
+
+        write!(f, "true.")
+    }
+}
+
+impl<L, N> From<PrologRule<L>> for Rc<dyn Rule<L, N>>
+where
+    L: Language + Display + Serialize + 'static,
+    N: Default + WeightedAnalysis<L> + Serialize,
+    N::Data: Serialize,
+{
+    fn from(val: PrologRule<L>) -> Self {
+        Box::<dyn Rule<_, _>>::from(Box::new(val)).into()
+    }
 }
 
 #[macro_export]
