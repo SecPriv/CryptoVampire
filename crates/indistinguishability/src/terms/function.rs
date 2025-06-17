@@ -1,4 +1,3 @@
-use bitflags::bitflags_match;
 use cryptovampire_smt::SmtHead;
 use logic_formula::egg::{SimplLang, SimpleDiscriminant};
 use serde::Serialize;

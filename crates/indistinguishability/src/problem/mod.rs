@@ -1,29 +1,10 @@
-use std::{
-    borrow::{Borrow, Cow},
-    cell::{Ref, RefCell},
-    collections::HashMap,
-    fmt::{Debug, Write},
-    ops::{Deref, DerefMut},
-    rc::Rc,
-};
-
-use bon::Builder;
-use cryptovampire_macros::smt;
-use cryptovampire_smt::{Smt, SortedVar};
-use egg::{Analysis, EGraph, RecExpr};
-use golgge::{Program, PrologRule, Rule, WeightedAnalysis};
-use itertools::{Itertools, chain};
-use logic_formula::egg::SimpleDiscriminant;
-use serde::Serialize;
-use utils::ereturn_let;
-
 use crate::{
-    Configuration, Lang, LangVar, MSmt, mk_signature,
+    Configuration, Lang, MSmt, mk_signature,
     protocol::Protocol,
     rexp,
     rules::{
         FreshNonce, VampireRule,
-        base_rules::{mk_equiv_rules, mk_rewrites_rules},
+        base_rules::{mk_equiv_rules, mk_prolog_rules, mk_rewrites_rules},
     },
     terms::{
         EMPTY, EQUIV, Function, FunctionCollection, FunctionFlags, HAPPENS, InnerFunction,
@@ -31,6 +12,14 @@ use crate::{
     },
     vampire::{mk_prelude, runner::VampireExec},
 };
+use bon::Builder;
+use cryptovampire_macros::smt;
+use cryptovampire_smt::Smt;
+use egg::{EGraph, RecExpr};
+use golgge::{Program, Rule};
+use itertools::{Itertools, chain};
+use logic_formula::egg::SimpleDiscriminant;
+use std::{fmt::Debug, rc::Rc};
 
 mod analysis;
 pub use analysis::{PAnalysis, PRule, RcRule};
@@ -122,13 +111,12 @@ impl Problem {
         let fresh_rule = FreshNonce::builder().exec(exec.clone()).build();
 
         let eq_rules = mk_rewrites_rules(self);
-        let rules = mk_equiv_rules(self).map(Rule::into_rc);
+        let rules = mk_prolog_rules(self);
+        let rules : Vec<Rc<dyn Rule<_, _>>> = chain![rules, [vampire_rule.into_mrc(), fresh_rule.into_mrc()]].collect_vec();
+
         golgge::Program::build()
             .eq_rules(eq_rules)
-            .rules(chain![
-                rules,
-                [vampire_rule.into_rc(), fresh_rule.into_rc()]
-            ])
+            .rules(rules)
             .egraph(EGraph::new(PAnalysis::builder().pbl(self).build()))
             .call()
     }
@@ -342,5 +330,5 @@ impl AsMut<FunctionCollection> for Problem {
     }
 }
 
-#[cfg(test)]
+// #[cfg(test)]
 pub mod test;

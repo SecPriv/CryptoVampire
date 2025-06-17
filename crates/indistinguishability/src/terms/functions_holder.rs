@@ -1,11 +1,8 @@
 use super::{BUILTINS, Exists, Function, FunctionFlags, PARSING_PAIRS};
-use crate::{
-    mk_signature,
-    terms::{Alias, InnerFunction, Signature, Sort, flags, signature},
-};
-use bon::{bon, builder};
+use crate::terms::{Alias, InnerFunction, Signature, Sort};
+use bon::bon;
 use egg::Var;
-use itertools::{Itertools, chain, izip};
+use itertools::{Itertools, chain};
 use std::{borrow::Cow, collections::HashMap, ops::Deref, sync::atomic::AtomicUsize};
 use utils::implvec;
 

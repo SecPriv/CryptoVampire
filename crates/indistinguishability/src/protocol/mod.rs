@@ -2,7 +2,6 @@ mod step;
 use std::fmt::Display;
 
 use egg::{Id, RecExpr};
-use log::trace;
 pub use step::Step;
 
 #[allow(clippy::module_inception)]
@@ -84,5 +83,5 @@ impl<L: ProtocolLanguage> ProtocolLanguage for egg::ENodeOrVar<L> {
     }
 }
 
-#[cfg(test)]
+// #[cfg(test)]
 pub mod test;

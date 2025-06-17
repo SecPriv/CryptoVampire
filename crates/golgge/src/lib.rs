@@ -86,10 +86,11 @@ where
     N: Analysis<L>,
 {
     #[builder]
-    pub fn build<I: Into<Rc<dyn Rule<L, N>>>>(
+    pub fn build(
         egraph: EGraph<L, N>,
         #[builder(with = <_>::from_iter, default = vec![])] eq_rules: Vec<Rewrite<L, N>>,
-        #[builder(with = |rules: impl IntoIterator<Item = I>| rules.into_iter().map_into().collect(), default = vec![])]
+        // #[builder(with = |rules: impl IntoIterator<Item = I>| rules.into_iter().map_into().collect(), default = vec![])]
+        #[builder(with = <_>::from_iter, default = vec![])]
         rules: Vec<Rc<dyn Rule<L, N>>>,
         #[builder(default = true)] with_memo: bool,
         #[builder(default)] config: Config,
@@ -97,7 +98,7 @@ where
         Self {
             egraph: Some(egraph),
             eq_rules,
-            rules,
+            rules: rules.into_iter().map_into().collect(),
             memo: with_memo.then(Default::default),
             clean: true,
             config,

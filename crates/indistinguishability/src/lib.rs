@@ -29,7 +29,7 @@ macro_rules! declare_trace {
 
 // ~~~~~~~~~~~~~~~ modules ~~~~~~~~~~~~~~~~~~
 
-mod problem;
+pub mod problem;
 pub mod protocol;
 pub mod rules;
 pub mod terms; // <- first for macros

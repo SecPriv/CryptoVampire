@@ -1,12 +1,4 @@
-use egg::{EGraph, RecExpr, Runner};
-use itertools::Itertools;
-use utils::implvec;
-
-use crate::{Lang, Problem, rules::base_rules::mk_rewrites_rules};
-
 pub mod basic_hash {
-    use egg::{EGraph, Runner};
-    use itertools::Itertools;
 
     use crate::{
         Lang, Problem, decl_fun,
@@ -17,6 +9,8 @@ pub mod basic_hash {
         rules::base_rules::mk_rewrites_rules,
         terms::{HAPPENS, MACRO_INPUT, MACRO_MSG, formula_utils::convert_to_ground_rexp},
     };
+    use egg::{EGraph, Runner};
+    use itertools::Itertools;
 
     pub fn mk_pblm() -> (Problem, MFunction) {
         let mut pbl = Problem::base_empty();

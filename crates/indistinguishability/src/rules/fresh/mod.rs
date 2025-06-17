@@ -13,7 +13,7 @@ use utils::{ereturn_if, ereturn_let};
 mod nonce;
 pub use nonce::FreshNonce;
 
-use crate::terms::{AND, FALSE, FOBinder, OR, RecFOFormula, Sort, TRUE};
+use crate::terms::{FOBinder, RecFOFormula, Sort};
 
 #[derive(Debug, Clone)]
 struct RefFormulaBuilder(Rc<RefCell<FormulaBuilder>>);
@@ -235,7 +235,7 @@ impl FormulaBuilder {
     /// propagated to the parent
     fn staturate(&mut self, value: bool) {
         assert!(self.staturated);
-        trace!("staturating to {value}:\n{self:#?}");
+        trace!("staturating to {value}");
         self.precomputed = value;
         self.condition = None;
 

@@ -1,18 +1,15 @@
-use egg::{Analysis, ENodeOrVar, Pattern, RecExpr, Rewrite, SymbolLang};
+use egg::{Analysis, Pattern, Rewrite, SymbolLang};
 use itertools::{Itertools, chain};
 use log::trace;
-use logic_formula::egg::{SimplLang, SimpleDiscriminant};
-use std::collections::HashMap;
-use utils::impossible::Impossible;
+use logic_formula::egg::SimpleDiscriminant;
 
 use super::{
     parse::{PatternsAst, clean_input, convert_fun},
     var_as_recexpr,
 };
 use crate::{
-    Configuration, Lang, LangVar, Problem,
-    protocol::Protocol,
-    terms::{AliasRewrite, Exists, Function, PARSING_PAIRS},
+    Lang, Problem,
+    terms::{AliasRewrite, Exists, Function},
 };
 /// build the default rewrite rules
 pub fn mk_rewrites_rules<N: Analysis<Lang>>(
@@ -70,7 +67,7 @@ fn exists_rules<N: Analysis<Lang>>(
 }
 
 fn mk_exists_rules_one<'a, N: Analysis<Lang>>(
-    Problem { function, .. }: &'a Problem,
+    Problem {  .. }: &'a Problem,
     Exists {
         vars,
         bound_var,

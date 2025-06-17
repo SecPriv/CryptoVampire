@@ -7,7 +7,7 @@ use itertools::Itertools;
 use logic_formula::egg::{SimplLang, SimpleDiscriminant, SimpleLangParseError};
 use utils::impossible::Impossible;
 
-use crate::{Lang, Problem, terms::Function};
+use crate::{Problem, terms::Function};
 
 /// remove comments from input
 pub fn clean_input(s: &str) -> String {

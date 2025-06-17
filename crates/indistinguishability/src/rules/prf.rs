@@ -1,4 +1,4 @@
-#[cfg(test)]
+// #[cfg(test)]
 pub mod test {
     pub mod basic_hash {
 

@@ -1,4 +1,4 @@
-use super::{CowExpr, CowPattern};
+use super::CowPattern;
 use crate::terms::Sort;
 use serde::Serialize;
 

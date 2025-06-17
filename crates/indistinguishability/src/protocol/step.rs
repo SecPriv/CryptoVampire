@@ -1,10 +1,9 @@
-use std::{fmt::Display, ops::Deref};
+use std::fmt::Display;
 
 use cryptovampire_macros::smt;
-use cryptovampire_smt::{Smt, SmtFormula, SortedVar};
-use egg::{Analysis, ENodeOrVar, MultiPattern, Pattern, PatternAst, RecExpr, Rewrite, Var};
-use golgge::PrologRule;
-use itertools::{Itertools, chain, izip};
+use cryptovampire_smt::{Smt, SortedVar};
+use egg::{Analysis, ENodeOrVar, Pattern, PatternAst, RecExpr, Rewrite, Var};
+use itertools::{Itertools, izip};
 use log::trace;
 use logic_formula::{Formula, egg::SimpleDiscriminant};
 
@@ -26,6 +25,7 @@ pub struct Step {
 }
 
 impl Step {
+    #[allow(dead_code)]
     pub(crate) fn max_vars(&self) -> u32 {
         self.vars
             .iter()

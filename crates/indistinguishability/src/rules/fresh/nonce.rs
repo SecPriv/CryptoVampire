@@ -1,22 +1,19 @@
 //! Nonce freshness
 
-use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::{Arc, RwLock};
 
 use crate::problem::PAnalysis;
 use crate::protocol::Step;
 use crate::rules::fresh::{Condition, Mode};
 use crate::terms::{
-    Alias, AliasRewrite, BITE, EQ, Exists, FOBinder, FRESH_NONCE, HAPPENS, LEQ, LT, MACRO_COND,
-    MACRO_FRAME, MACRO_MSG, MITE, NOT, PRED, Rewrite, UNFOLD_FRAME, flags,
+    Alias, AliasRewrite, BITE, EQ, Exists, FOBinder, FRESH_NONCE, HAPPENS, LT, MACRO_COND,
+    MACRO_FRAME, MACRO_MSG, MITE, PRED,
 };
-use crate::vampire::mk_prelude;
 use crate::vampire::runner::VampireExec;
 use crate::{
     Lang,
     rules::fresh::RefFormulaBuilder,
-    terms::{Function, MACRO_INPUT, RecFOFormula},
+    terms::{Function, RecFOFormula},
 };
 use crate::{LangVar, Problem, rexp};
 use bon::Builder;
@@ -27,10 +24,9 @@ use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain, izip};
 use logic_formula::egg::SimplLang;
 use logic_formula::{Destructed, Formula, HeadSk};
-use serde::Serialize;
 use static_init::dynamic;
 use utils::traits::Named;
-use utils::{econtinue_if, ereturn_if, ereturn_let, implvec, match_eq};
+use utils::{ereturn_if, ereturn_let, implvec};
 
 declare_trace!($"nonce_fresh");
 
@@ -418,8 +414,11 @@ impl Nonce {
 
 #[cfg(test)]
 mod test {
+    #[allow(unused_imports)]
     use cryptovampire_smt::{Smt, SmtFormula};
+    #[allow(unused_imports)]
     use egg::{Analysis, EGraph, Id, Runner};
+    #[allow(unused_imports)]
     use itertools::Itertools;
 
     use crate::{

@@ -1,8 +1,7 @@
 use cryptovampire_macros::smt;
-use egg::RecExpr;
 use itertools::Itertools;
 
-use crate::{Lang, MSmtFormula, mk_alias, rexp, terms::Function};
+use crate::{MSmtFormula, terms::Function};
 
 use super::Step;
 #[derive(Debug, PartialEq, Eq, Clone)]

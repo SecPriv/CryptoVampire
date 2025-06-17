@@ -6,7 +6,6 @@ use crate::{
 use egg::{PatternAst, Var};
 use itertools::{Itertools, chain};
 use logic_formula::Formula;
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Exists {
@@ -58,19 +57,9 @@ impl Exists {
                 && fresh.get_exist_index() == Some(idx)
         };
         let arities = {
-            dbg!(vars.len());
-            dbg!(tlf.arity());
-            dbg!(skolem.arity());
-            dbg!(fresh.arity());
             // arities
             tlf.arity() == all_vars.len() && skolem.arity() == vars.len() && fresh.arity() == 0
         };
-
-        dbg!(idx);
-        dbg!(is_at_idx);
-        dbg!(map_vars);
-        dbg!(reciprocal);
-        dbg!(arities);
         is_at_idx && map_vars && reciprocal && arities
     }
 

@@ -1,16 +1,12 @@
-use std::{borrow::Cow, cell::RefCell, io::Write, rc::Rc};
+use std::{io::Write, rc::Rc};
 
 use super::runner::VampireExec;
-use anyhow::Context;
 use bon::Builder;
-use cryptovampire_macros::smt;
-use cryptovampire_smt::{IntoSmt, Smt, SmtFormula};
-use egg::{Analysis, ENodeOrVar, Language, Pattern, RecExpr, Searcher, SymbolLang, Var};
+use cryptovampire_smt::{IntoSmt, Smt};
+use egg::{ENodeOrVar, Pattern, RecExpr, Searcher, Var};
 use itertools::{Itertools, chain};
-use logic_formula::Formula;
-use serde::Serialize;
 use static_init::dynamic;
-use utils::{ereturn_if, ereturn_let};
+use utils::ereturn_let;
 
 use golgge::{Dependancy, Rule};
 
@@ -18,8 +14,7 @@ use crate::{
     Lang, Problem,
     problem::PAnalysis,
     rexp,
-    terms::{Function, RecFOFormula, Sort, VAMPIRE},
-    vampire::mk_prelude,
+    terms::{RecFOFormula, VAMPIRE},
 };
 
 declare_trace!($"vampire_rule");

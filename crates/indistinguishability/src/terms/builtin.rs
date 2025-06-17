@@ -2,7 +2,7 @@ use super::{
     Alias, AliasRewrite, CowPattern, Function, FunctionFlags, InnerFunction, Signature,
     Sort::{self, *},
 };
-use cryptovampire_macros::{declare_recexpr, mk_builtin_funs, recexpr};
+use cryptovampire_macros::{declare_recexpr, mk_builtin_funs};
 use std::borrow::Cow;
 
 /// helper to write const signatures
@@ -85,12 +85,19 @@ mod inner_recexpr {
 
     use crate::{LangVar, terms::Function};
 
+    #[allow(dead_code)]
     pub static TRUE: Function = super::TRUE.const_clone().unwrap();
+    #[allow(dead_code)]
     pub static FALSE: Function = super::TRUE.const_clone().unwrap();
+    #[allow(dead_code)]
     pub static AND: Function = super::AND.const_clone().unwrap();
+    #[allow(dead_code)]
     pub static OR: Function = super::OR.const_clone().unwrap();
+    #[allow(dead_code)]
     pub static NOT: Function = super::NOT.const_clone().unwrap();
+    #[allow(dead_code)]
     pub static EQ: Function = super::EQ.const_clone().unwrap();
+    #[allow(dead_code)]
     pub static IMPLIES: Function = super::IMPLIES.const_clone().unwrap();
 
     pub const fn mk_var(i: u32) -> LangVar {

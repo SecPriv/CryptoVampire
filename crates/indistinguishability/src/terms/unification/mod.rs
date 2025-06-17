@@ -1,6 +1,5 @@
-use std::borrow::Cow;
 
-use egg::{Language, PatternAst, RecExpr};
+use egg::{Language, PatternAst};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Subst<V, F>(Vec<(V, F)>);

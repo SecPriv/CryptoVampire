@@ -1,10 +1,11 @@
 mod parse;
 
+
 use std::rc::Rc;
 
-use egg::{Analysis, ENodeOrVar, Var};
+use egg::{ENodeOrVar, Var};
 use golgge::{PrologRule, Rule};
-use itertools::{Itertools, chain};
+use itertools::chain;
 pub use rewrites::mk_rewrites_rules;
 mod rewrites;
 
@@ -12,13 +13,11 @@ pub use equiv::mk_equiv_rules;
 use utils::implvec;
 
 use crate::{
-    Lang, Problem,
-    problem::{PRule, RcRule},
+    problem::{PRule, RcRule}, Lang, Problem
 };
 mod equiv;
 
-pub fn mk_prolog_rules<N>(pbl: &Problem) -> impl Iterator<Item = RcRule>
-where
+pub fn mk_prolog_rules(pbl: &Problem) -> impl Iterator<Item = RcRule>
 {
     chain![
         pbl.extra_rules().iter().cloned(),

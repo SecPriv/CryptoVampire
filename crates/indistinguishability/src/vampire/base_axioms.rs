@@ -1,15 +1,13 @@
 use cryptovampire_macros::{smt, vec_smt};
-use cryptovampire_smt::{Smt, SmtFormula, SortedVar, VarInner};
-use egg::Analysis;
+use cryptovampire_smt::{Smt, SmtFormula, SortedVar};
 use itertools::{Itertools, chain, izip};
 
-use crate::terms::formula_utils::convert_to_cow;
-use crate::terms::{Alias, AliasRewrite, Exists, HAPPENS, LEQ, LT, PRED, Rewrite, SMT_SORT_LIST};
+use crate::terms::{AliasRewrite, Exists, HAPPENS, LEQ, LT, PRED, Rewrite, SMT_SORT_LIST};
 use crate::vampire::convert::{formula_to_smt, var_to_smt};
-use crate::{Lang, MSmt, MSmtFormula};
+use crate::{MSmt, MSmtFormula};
 use crate::{
     Problem,
-    terms::{Function, FunctionFlags, Signature, Sort},
+    terms::{Function, Signature, Sort},
 };
 
 pub fn mk_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
@@ -54,7 +52,7 @@ fn mk_header(pbl: &Problem) -> impl Iterator<Item = Smt<Sort, Function>> + use<'
 }
 
 fn mk_pseudo_datatype_diff(funs: Vec<Function>) -> impl Iterator<Item = MSmt> {
-    use Smt::*;
+    
     use SmtFormula::*;
 
     // funs are pairwise distincts

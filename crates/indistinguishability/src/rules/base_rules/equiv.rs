@@ -1,15 +1,14 @@
 use std::ops::Deref;
 
-use egg::{Analysis, ENodeOrVar, Pattern, PatternAst, RecExpr, SymbolLang, Var};
-use golgge::{DebugRule, PrologRule};
+use egg::{ENodeOrVar, Pattern, PatternAst, RecExpr, SymbolLang, Var};
+use golgge::PrologRule;
 use itertools::{Itertools, chain, izip};
 use logic_formula::egg::SimpleDiscriminant;
-use utils::implvec;
 
 use crate::{
     Lang, LangVar, Problem,
     terms::{
-        BIT_DEDUCE, BOOL_DEDUCE, Exists, Function, FunctionFlags, Sort, formula_utils::type_check,
+        BIT_DEDUCE, BOOL_DEDUCE, Exists, Function, Sort,
     },
 };
 

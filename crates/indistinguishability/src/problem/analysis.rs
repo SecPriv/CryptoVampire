@@ -28,9 +28,9 @@ impl<'a> PAnalysis<'a> {
 impl<'a> Analysis<Lang> for PAnalysis<'a> {
     type Data = ();
 
-    fn make(egraph: &mut egg::EGraph<Lang, Self>, enode: &Lang) -> Self::Data {}
+    fn make(_egraph: &mut egg::EGraph<Lang, Self>, _enode: &Lang) -> Self::Data {}
 
-    fn merge(&mut self, a: &mut Self::Data, b: Self::Data) -> egg::DidMerge {
+    fn merge(&mut self, _a: &mut Self::Data, _b: Self::Data) -> egg::DidMerge {
         egg::DidMerge(false, false)
     }
 }
@@ -38,7 +38,7 @@ impl<'a> Analysis<Lang> for PAnalysis<'a> {
 impl<'a> WeightedAnalysis<Lang> for PAnalysis<'a> {
     type Weight = ();
 
-    fn get_weight(data: &Self::Data) -> Self::Weight {}
+    fn get_weight(_data: &Self::Data) -> Self::Weight {}
 }
 
 pub trait PRule: for<'a> Rule<Lang, PAnalysis<'a>> {

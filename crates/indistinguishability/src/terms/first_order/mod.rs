@@ -1,22 +1,18 @@
 use std::{
-    borrow::Cow,
     fmt::Display,
     ops::{BitAnd, BitOr, Not, Shr},
-    rc::Rc,
 };
 
 use cryptovampire_smt::{IntoSmt, SmtFormula, SmtQuantifier, SortedVar, VarInner};
-use egg::{ENodeOrVar, PatternAst, RecExpr, Var};
+use egg::{RecExpr, Var};
 use itertools::{Itertools, izip};
-use logic_formula::{Destructed, Formula, Head, HeadSk};
+use logic_formula::{Destructed, Formula, HeadSk};
 use utils::{
-    dynamic_iter, ereturn_let, implvec, match_eq,
-    quack::{CowArc, CowRc},
-    vecref::VecRef,
+    dynamic_iter, implvec, match_eq,
 };
 
 use crate::{
-    Lang, LangVar,
+    LangVar,
     terms::{
         AND, BITE, EQ, FALSE, Function, IMPLIES, NOT, OR, Sort, TRUE, convert_smt_var,
         unification::Subst,
@@ -119,7 +115,7 @@ impl RecFOFormula {
                     _ => {None}
                 }}
             }
-            RecFOFormula::Binder { head, arg, .. } => arg.try_evaluate(),
+            RecFOFormula::Binder {  arg, .. } => arg.try_evaluate(),
             _ => None,
         }
     }
@@ -258,6 +254,7 @@ impl<'b> Formula for &'b RecFOFormula {
 
 impl From<SmtFormula<Sort, Function>> for RecFOFormula {
     fn from(value: SmtFormula<Sort, Function>) -> Self {
+        #[allow(unreachable_patterns)]
         match value {
             SmtFormula::Var(var) => Self::Var(convert_smt_var(var)),
             SmtFormula::Fun(fun, args) => RecFOFormula::App {
