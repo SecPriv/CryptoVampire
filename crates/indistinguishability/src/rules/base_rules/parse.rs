@@ -7,7 +7,7 @@ use itertools::Itertools;
 use logic_formula::egg::{SimplLang, SimpleDiscriminant, SimpleLangParseError};
 use utils::impossible::Impossible;
 
-use crate::{Problem, terms::Function};
+use crate::{Lang, Problem, terms::Function};
 
 /// remove comments from input
 pub fn clean_input(s: &str) -> String {
@@ -247,5 +247,9 @@ fn parse_patt(s: &str) -> PatternAst<SymbolLang> {
 }
 
 pub(crate) fn convert_fun(pbl: &Problem, s: &str) -> Result<Function, Impossible> {
-    Ok(pbl.function.get(s).expect("unknown function"))
+    // Ok(pbl.function.get(s).expect()
+    match pbl.function.get(s) {
+        Some(s) => Ok(s),
+        _ => panic!("unknown function {s}"),
+    }
 }

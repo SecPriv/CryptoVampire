@@ -5,6 +5,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use proc_macro::TokenStream;
 use quote::{format_ident, quote}; // format_ident is key here
 use syn::parenthesized;
+use syn::parse::Parser;
+use syn::punctuated::Punctuated;
 use syn::token::Paren;
 use syn::{
     Expr,
@@ -189,4 +191,14 @@ fn generate_quant_with_binders(
 pub fn smt_formulas(input: TokenStream) -> TokenStream {
     let parsed_smt = parse_macro_input!(input as Ast);
     generate_code(parsed_smt).into()
+}
+
+pub fn smt_many_smt_formulas(input: TokenStream) -> TokenStream {
+    let parser = Punctuated::<Ast, Token![,]>::parse_terminated;
+    let codes = parser.parse(input).unwrap().into_iter().map(generate_code);
+
+    quote! {
+        vec![#(#codes),*]
+    }
+    .into()
 }

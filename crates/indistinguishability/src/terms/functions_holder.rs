@@ -1,8 +1,9 @@
 use super::{BUILTINS, Exists, Function, FunctionFlags, PARSING_PAIRS};
 use crate::{
     mk_signature,
-    terms::{InnerFunction, Signature, Sort},
+    terms::{Alias, InnerFunction, Signature, Sort, flags, signature},
 };
+use bon::{bon, builder};
 use egg::Var;
 use itertools::{Itertools, chain, izip};
 use std::{borrow::Cow, collections::HashMap, ops::Deref, sync::atomic::AtomicUsize};
@@ -62,6 +63,11 @@ impl FunctionCollection {
             .iter()
             .filter_map(|f| f.get_exist_index().map(|idx| (f, idx)))
             .all(|(f, idx)| quantifiers[idx].get_functions().contains(&f));
+
+        dbg!(unique);
+        dbg!(mapping);
+        dbg!(quantifiers_valid);
+        dbg!(two_way_mapping);
 
         unique && mapping && quantifiers_valid && two_way_mapping
     }
@@ -190,14 +196,33 @@ impl FunctionCollection {
         let r = self.map_function.insert(name, fun);
         assert!(r.is_none(), "the function was already in the database");
     }
+}
 
-    pub fn add_simple_function(
+#[bon]
+impl FunctionCollection {
+    #[builder]
+    pub fn add_function(
         &mut self,
-        name: impl Into<Cow<'static, str>>,
-        from: implvec!(Sort),
-        to: Sort,
+        #[builder(into)] name: Cow<'static, str>,
+        #[builder(with = FromIterator::from_iter, default = vec![])] inputs: Vec<Sort>,
+        output: Sort,
+        alias: Option<Alias>,
+        #[builder(default = FunctionFlags::empty())] flags: FunctionFlags,
+        #[builder(default = 0)] exists_idx: usize,
+        #[builder(default = 0)] protocol_idx: usize,
+        #[builder(default = 0)] step_idx: usize,
     ) -> Function {
-        let fun = Function::new(InnerFunction::new(name.into(), Signature::new(from, to)));
+        let signature = Signature::new(inputs, output);
+        let inner = InnerFunction {
+            name,
+            signature,
+            alias,
+            flags,
+            exists_idx,
+            protocol_idx,
+            step_idx,
+        };
+        let fun = Function::new(inner);
         self.add(fun.clone());
         fun
     }
@@ -205,15 +230,27 @@ impl FunctionCollection {
 
 #[macro_export]
 macro_rules! decl_fun{
+    ($pbl:expr; $name:literal : ($($s:expr),*) -> Nonce ) => {
+        {
+            use $crate::terms::Sort::*;
+            let collection = ::std::convert::AsMut::<$crate::terms::FunctionCollection>::as_mut($pbl);
+            collection.add_function()
+                .name($name)
+                .inputs([$($s),*])
+                .output(Nonce)
+                .flags($crate::terms::flags::FunctionFlags::NONCE)
+                .call()
+        }
+    };
     ($pbl:expr; $name:literal : ($($s:expr),*) -> $o:expr ) => {
         {
             use $crate::terms::Sort::*;
             let collection = ::std::convert::AsMut::<$crate::terms::FunctionCollection>::as_mut($pbl);
-            collection.add_simple_function(
-                $name,
-                vec![$($s),*],
-                $o
-            )
+            collection.add_function()
+                .name($name)
+                .inputs([$($s),*])
+                .output($o)
+                .call()
         }
     }
 }

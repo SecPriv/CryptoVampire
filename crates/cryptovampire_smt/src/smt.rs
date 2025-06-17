@@ -90,6 +90,17 @@ impl<S, F> Smt<S, F> {
             Self::Assert(..) | Self::AssertNot(..) | Self::AssertTh(..)
         )
     }
+
+    pub fn mk_query(query: SmtFormula<S, F>) -> Self
+    where
+        SmtFormula<S, F>: Eq,
+    {
+        if cfg!(feature = "vampire") {
+            Self::AssertNot(query.optimise())
+        } else {
+            Self::Assert((!query).optimise())
+        }
+    }
 }
 
 impl<S, F> Smt<S, F>
@@ -129,20 +140,42 @@ where
         match self {
             Smt::Assert(formula) => writeln!(f, "(assert {formula})"),
             #[cfg(feature = "vampire")]
-            Smt::AssertTh(formula) => writeln!(f, "(assert-theory {formula})"),
+            Smt::AssertTh(formula) => {
+                writeln!(
+                    f,
+                    "; not smt-compliant. Change to `(assert ...)` to be compliant while retaining the semantics"
+                )?;
+                writeln!(f, "(assert-theory {formula})")
+            }
             #[cfg(feature = "cryptovampire")]
-            Smt::AssertGround { sort, formula } => writeln!(f, "(assert-ground {sort} {formula})"),
+            Smt::AssertGround { sort, formula } => {
+                writeln!(
+                    f,
+                    "; cryptovampire specific. Needs a modified version of vampire"
+                )?;
+                writeln!(f, "(assert-ground {sort} {formula})")
+            }
             #[cfg(feature = "vampire")]
-            Smt::AssertNot(formula) => writeln!(f, "(assert-not {formula})"),
+            Smt::AssertNot(formula) => {
+                writeln!(
+                    f,
+                    "; not smt-compliant. Change to `(assert (not ...))` to be compliant while retaining the semantics"
+                )?;
+                writeln!(f, "(assert-not {formula})")
+            }
             Smt::DeclareFun { fun, args, out } => writeln!(
                 f,
-                "(declare-fun {fun} ({}) {out})",
+                "(declare-fun {fun} {} {out})",
                 Arr::simple(args.as_slice())
             ),
-            Smt::DeclareSort(s) => writeln!(f, "(declare-sort {s})"),
+            Smt::DeclareSort(s) => writeln!(f, "(declare-sort {s} 0)"),
             Smt::DeclareSortAlias { from, to } => writeln!(f, "(define-sort {from} () {to})"),
             #[cfg(feature = "cryptovampire")]
             Smt::DeclareSubtermRelation(fun, funs) => {
+                writeln!(
+                    f,
+                    "; cryptovampire specific. Needs a modified version of vampire"
+                )?;
                 write!(f, "(declare-subterm-relation {fun} ")?;
                 for fun in funs {
                     write!(f, " {fun}")?;
@@ -156,6 +189,10 @@ where
                 lhs,
                 rhs,
             } => {
+                writeln!(
+                    f,
+                    "; cryptovampire specific. Needs a modified version of vampire"
+                )?;
                 write!(f, "(declare-rewrite ")?;
                 {
                     write!(f, "(forall {} (", Arr::simple(vars.as_slice()))?;
@@ -184,7 +221,7 @@ where
             Smt::Comment(c) => writeln!(f, "; {c}"),
             Smt::CheckSat => writeln!(f, "(check-sat)"),
             Smt::GetProof => writeln!(f, "(get-proof)"),
-            Smt::SetOption(option, arg) => writeln!(f, "(set-option :{} {})", option, arg),
+            Smt::SetOption(option, arg) => writeln!(f, "(set-option :{option} {arg})"),
             Smt::SetLogic(logic) => writeln!(f, "(set-logic {logic})"),
         }
     }

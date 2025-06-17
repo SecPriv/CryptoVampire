@@ -98,10 +98,9 @@ impl Function {
     }
 
     pub fn get_exist_index(&self) -> Option<usize> {
-        bitflags_match!(self.flags,{
-            FunctionFlags::EXISTS | FunctionFlags::SKOLEM | FunctionFlags::EXISTS_FRESH => Some(self.exists_idx),
-            _ => None
-        })
+        self.flags
+            .intersects(const_fun_flags!(EXISTS | SKOLEM | EXISTS_FRESH))
+            .then_some(self.exists_idx)
     }
 
     pub fn get_exists<'a>(&self, function: &'a FunctionCollection) -> Option<&'a Exists> {

@@ -1,26 +1,76 @@
-use std::{borrow::Cow, collections::HashMap};
-
+use cryptovampire_smt::{Smt, SmtFormula};
 use logic_formula::egg::{SimplLang, SimplLangVar};
-use protocol::Protocol;
-use terms::Function;
+use std::{io::Write, u128};
+use terms::{Function, Sort};
 
+// ~~~~~~~~~~~~~~~~ macros ~~~~~~~~~~~~~~~~~~
+
+/// Declares a `tr` macro scopped to `name`
+///
+/// `declare_trace($"test")` expands to
+///
+/// ```
+/// macro_rules! tr {
+///     ($($arg:tt)+) => {
+///         ::log::trace!(target:"test", $($arg)+)
+///     };
+/// }
+/// ```
+/// **NB**: the extra `$` is needed
+macro_rules! declare_trace {
+    ($dolar:tt$name:literal) => {
+        macro_rules! tr {
+                                            ($dolar($arg:tt )+) => {
+                                                ::log::trace!(target: $name, $dolar($arg)+)
+                                            };
+                                        }
+    };
+}
+
+// ~~~~~~~~~~~~~~~ modules ~~~~~~~~~~~~~~~~~~
+
+mod problem;
 pub mod protocol;
 pub mod rules;
-pub mod terms;
+pub mod terms; // <- first for macros
+#[cfg(test)]
+mod test;
+pub(crate) mod utils;
+pub(crate) mod vampire;
+
+pub use problem::Problem;
+
+// ~~~~~~ type aliases and constants ~~~~~~~~
+
+/// Our global analysis type
+pub type N = ();
 
 pub static SIZE: usize = 3;
 pub type Lang = SimplLang<Function, SIZE>;
 pub type LangVar = SimplLangVar<Function, SIZE>;
 
-#[derive(Debug, Default)]
-pub struct Configuration {}
+pub type MSmtFormula = SmtFormula<Sort, Function>;
+pub type MSmt = Smt<Sort, Function>;
 
-mod problem;
-pub use problem::Problem;
+// ~~~~~~~~~~~~~~~~ other ~~~~~~~~~~~~~~~~~~~
 
-pub(crate) mod utils;
+#[derive(Debug)]
+pub struct Configuration {
+    /// Wether to keep the smt files around (or let the os get rid of them once
+    /// we're done using them)
+    pub keep_smt_files: bool,
 
-use std::io::Write;
+    pub depth: u128,
+}
+
+impl Default for Configuration {
+    fn default() -> Self {
+        Self {
+            keep_smt_files: false,
+            depth: u128::MAX,
+        }
+    }
+}
 
 pub fn init_logger() {
     env_logger::Builder::new()

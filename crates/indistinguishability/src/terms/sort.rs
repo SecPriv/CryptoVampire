@@ -15,6 +15,12 @@ pub enum Sort {
     SubtermStatus,
 }
 
+impl Sort {
+    pub const fn support_deduce(&self) -> bool {
+        matches!(self, Self::Bool | Self::Bitstring)
+    }
+}
+
 impl Display for Sort {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

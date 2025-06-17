@@ -1,7 +1,9 @@
-pub(crate) mod vampire;
-pub use vampire::VampireRule;
+// pub(crate) mod vampire;
+pub(crate) use crate::vampire::rule;
+pub use rule::VampireRule;
 
 pub(crate) mod base_rules;
-mod euf_cma;
+pub(crate) mod prf;
 
 mod fresh;
+pub use fresh::FreshNonce;

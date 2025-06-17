@@ -1,0 +1,267 @@
+use cryptovampire_macros::{smt, vec_smt};
+use cryptovampire_smt::{Smt, SmtFormula, SortedVar, VarInner};
+use egg::Analysis;
+use itertools::{Itertools, chain, izip};
+
+use crate::terms::formula_utils::convert_to_cow;
+use crate::terms::{Alias, AliasRewrite, Exists, HAPPENS, LEQ, LT, PRED, Rewrite, SMT_SORT_LIST};
+use crate::vampire::convert::{formula_to_smt, var_to_smt};
+use crate::{Lang, MSmt, MSmtFormula};
+use crate::{
+    Problem,
+    terms::{Function, FunctionFlags, Signature, Sort},
+};
+
+pub fn mk_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
+    chain![
+        mk_header(pbl),
+        mk_nonces_diff(pbl),
+        mk_base_order(pbl),
+        mk_step_diff(pbl),
+        mk_steps_macros(pbl),
+        mk_exists(pbl),
+        mk_alias(pbl),
+        mk_extra_rw(pbl),
+        pbl.extra_smt().iter().cloned()
+    ]
+}
+
+#[inline]
+fn should_declare_in_smt(fun: &Function) -> bool {
+    !fun.is_should_not_declare_in_smt()
+}
+
+fn mk_header(pbl: &Problem) -> impl Iterator<Item = Smt<Sort, Function>> + use<'_> {
+    let sorts = SMT_SORT_LIST.iter().copied().map(Smt::DeclareSort);
+    let functions = pbl
+        .function
+        .iter()
+        .filter(|&x| should_declare_in_smt(x))
+        .cloned()
+        .map(|fun| {
+            let Signature { inputs, output } = &fun.signature;
+            Smt::DeclareFun {
+                args: inputs.to_vec(),
+                out: *output,
+                fun,
+            }
+        });
+
+    chain! {
+      sorts,
+      functions
+    }
+}
+
+fn mk_pseudo_datatype_diff(funs: Vec<Function>) -> impl Iterator<Item = MSmt> {
+    use Smt::*;
+    use SmtFormula::*;
+
+    // funs are pairwise distincts
+    let pairs = {
+        let mut vars = Vec::with_capacity(funs.iter().map(Function::arity).sum());
+
+        let app_nonces = funs
+            .iter()
+            .map(|f| {
+                let n = vars.len();
+                vars.extend(f.signature.mk_sorted_vars(n as u32));
+                smt!((f #(vars[n..].iter().cloned())*))
+            })
+            .collect_vec();
+
+        smt!((forall #vars (distinct #app_nonces*)))
+    };
+
+    // a[veci] = a[vecj] => veci = vecj forall each fun
+    let singles = funs.into_iter().map(|f| {
+        let n = f.arity();
+        let svars: Vec<SortedVar<_>> = chain![
+            f.signature.mk_sorted_vars(0),
+            f.signature.mk_sorted_vars(n as u32)
+        ]
+        .collect();
+        let n1 = smt!((f #(svars[0..n].iter().cloned())*));
+        let n2 = smt!((f #(svars[n..2*n].iter().cloned())*));
+        let svars_eq = (0..n)
+            .map(|i| smt!((= #(Var(svars[i].var.clone())) #(Var(svars[n+i].var.clone())))))
+            .collect_vec();
+        smt!((forall #svars (=> (= #n1 #n2) (and #svars_eq*))))
+    });
+
+    chain! {
+        [pairs], singles
+    }
+    .map(MSmt::mk_assert)
+}
+
+fn mk_nonces_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
+    use Smt::*;
+    let nonces = pbl.function.nonces().cloned().collect_vec();
+
+    chain! {
+        [Comment("nonce distinctness".into())],
+        mk_pseudo_datatype_diff(nonces)
+    }
+}
+
+fn mk_steps_macros(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
+    pbl.protocols
+        .iter()
+        .flat_map(|p| p.steps().iter().map(move |s| (p.as_smt(), s)))
+        .flat_map(|(ptcl, s)| s.mk_unfold_vampire_rewrites(&ptcl))
+}
+
+fn mk_step_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
+    let steps = pbl.protocols[0]
+        .steps()
+        .iter()
+        .map(|s| s.id.clone())
+        .collect_vec();
+    assert!(steps.iter().any(|s| s.name == "init"), "need an init step");
+
+    chain! {
+        [Smt::Comment("step distinctness".into())],
+        mk_pseudo_datatype_diff(steps)
+    }
+}
+
+fn mk_base_order(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
+    use crate::terms::Sort::*;
+    let init = pbl.get_init_fun();
+    let iter = vec_smt! {
+        (forall ((#a!0 Time)) (LEQ (PRED #a) #a)),
+        (forall ((#a!0 Time)) (LEQ #a #a)),
+        (forall ((#a!0 Time)) (LEQ init #a)),
+        (forall ((#a!0 Time) (#b!1 Time)) (=> (and (HAPPENS #a) (LEQ #b #a)) (HAPPENS #b))),
+        (forall ((#a!0 Time)) (=> (= (PRED #a) #a) (= #a init))),
+        (forall ((#a!0 Time) (#b!1 Time)) (= (LT #a #b) (LEQ #a (PRED #b)))),
+        (forall ((#a!0 Time) (#b!1 Time)) (=> (and (HAPPENS #a) (HAPPENS #b)) (or (LEQ #a #b) (LEQ #b #a)))),
+        (forall ((#a!0 Time) (#b!1 Time)) (=> (and (LEQ #a #b) (LEQ #b #a)) (= #a #b))),
+        (forall ((#a!0 Time) (#b!1 Time) (#c!2 Time)) (=> (and (LEQ #a #b) (LEQ #b #c)) (LEQ #a #c))),
+    }
+    .into_iter()
+    .map(Smt::mk_assert);
+    chain![[Smt::Comment("order base".into())], iter]
+}
+
+fn mk_exists_1(
+    Exists {
+        vars,
+        bound_var,
+        patt,
+        tlf,
+        skolem,
+        ..
+    }: &Exists,
+) -> impl Iterator<Item = MSmtFormula> {
+    let all_vars = izip!(tlf.signature.inputs_iter(), chain![vars, [bound_var]])
+        .map(|(s, v)| SortedVar {
+            var: var_to_smt(v),
+            sort: s,
+        })
+        .collect_vec();
+    let all_but_last_vars = izip!(skolem.signature.inputs_iter(), vars)
+        .map(|(s, v)| SortedVar {
+            var: var_to_smt(v),
+            sort: s,
+        })
+        .collect_vec();
+
+    vec_smt! {
+        (forall #(all_vars.clone()) (= (tlf #(all_vars.clone())*) #(formula_to_smt(&patt)))),
+        (forall #(all_vars.clone()) (=>
+            (tlf #all_vars*) (tlf #(all_but_last_vars.clone())* (skolem #all_but_last_vars*))))
+    }
+    .into_iter()
+}
+
+fn mk_exists(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
+    let ax = pbl
+        .function
+        .quantifiers()
+        .iter()
+        .flat_map(mk_exists_1)
+        .map(MSmt::mk_assert);
+
+    chain![[MSmt::Comment("exists".into())], ax]
+}
+
+fn mk_alias_1(
+    fun: &Function,
+    AliasRewrite {
+        from,
+        to,
+        variables,
+        sorts,
+    }: &AliasRewrite,
+) -> impl Iterator<Item = MSmtFormula> {
+    let args = from.iter().map(|x| formula_to_smt(x));
+    let content = formula_to_smt(to);
+    let vars = izip!(sorts.iter(), variables.iter())
+        .map(|(&sort, v)| SortedVar {
+            sort,
+            var: var_to_smt(v),
+        })
+        .collect_vec();
+
+    [smt!((forall #vars (= (fun #args*) #content)))].into_iter()
+}
+
+fn mk_alias(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
+    let aliases = pbl
+        .function
+        .iter()
+        .filter(|x| should_declare_in_smt(x))
+        .filter_map(|f| f.alias.as_ref().map(|a| (f, a)))
+        .flat_map(|(f, a)| a.0.iter().flat_map(|arw| mk_alias_1(f, arw)))
+        .map(MSmt::mk_assert);
+
+    chain![[MSmt::Comment("aliases".into())], aliases]
+}
+
+fn mk_extra_rw(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
+    let ax = pbl
+        .extra_rewrite()
+        .iter()
+        .map(
+            |Rewrite {
+                 from,
+                 to,
+                 variables,
+                 sorts,
+             }| {
+                let [from, to] = [from, to].map(|x| formula_to_smt(&x));
+                let vars = izip!(sorts.iter(), variables.iter())
+                    .map(|(&sort, v)| SortedVar {
+                        sort,
+                        var: var_to_smt(v),
+                    })
+                    .collect_vec();
+                smt!((forall #vars (= #from #to)))
+            },
+        )
+        .map(MSmt::mk_assert);
+
+    chain![[MSmt::Comment("extra rewrites".into())], ax]
+}
+
+#[cfg(test)]
+mod test {
+    mod basic_hash {
+        use itertools::Itertools;
+
+        use crate::vampire::mk_prelude;
+
+        #[test]
+        fn prelude() {
+            let pbl = crate::problem::test::basic_hash::mk_pblm().0;
+
+            let prelude = mk_prelude(&pbl).collect_vec();
+
+            for x in prelude {
+                println!("{x}")
+            }
+        }
+    }
+}

@@ -1,7 +1,8 @@
+use cryptovampire_macros::smt;
 use egg::RecExpr;
 use itertools::Itertools;
 
-use crate::{Lang, mk_alias, rexp, terms::Function};
+use crate::{Lang, MSmtFormula, mk_alias, rexp, terms::Function};
 
 use super::Step;
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -35,11 +36,18 @@ impl Protocol {
         self.steps.push(step)
     }
 
+    #[inline]
     pub fn steps(&self) -> &[Step] {
         &self.steps
     }
 
+    #[inline]
     pub fn name(&self) -> &Function {
         &self.name
+    }
+
+    pub(crate) fn as_smt(&self) -> MSmtFormula {
+        let name = self.name();
+        smt!(name)
     }
 }

@@ -1,5 +1,6 @@
 use std::{
     borrow::Cow,
+    fmt::Display,
     ops::{BitAnd, BitOr, Not, Shr},
     rc::Rc,
 };
@@ -157,6 +158,19 @@ impl From<&[LangVar]> for RecFOFormula {
             },
             HeadSk::Quant(_) => unreachable!(),
         }
+    }
+}
+
+impl From<&RecExpr<LangVar>> for RecFOFormula {
+    fn from(value: &RecExpr<LangVar>) -> Self {
+        let x: &[_] = value;
+        x.into()
+    }
+}
+
+impl From<RecExpr<LangVar>> for RecFOFormula {
+    fn from(value: RecExpr<LangVar>) -> Self {
+        Self::from(&value)
     }
 }
 
@@ -347,6 +361,13 @@ impl IntoSmt<Sort> for RecFOFormula {
 
     fn as_head(fun: &Self::Fun) -> Option<cryptovampire_smt::SmtHead> {
         fun.as_smt_head()
+    }
+}
+
+impl Display for RecFOFormula {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let smt = self.clone().into_smt();
+        write!(f, "{smt}")
     }
 }
 

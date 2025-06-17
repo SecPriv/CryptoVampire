@@ -42,7 +42,7 @@
 [unfold_exec]  (unfold_exec ?t ?p) 
   => (and (macro_cond ?t ?p) (macro_exec (pred ?t) ?p)).
 [unfold_frame] (unfold_frame ?t ?p) => (tuple
-  (tuple (macro_exec ?t ?p) (b_ite (macro_exec ?t ?p) (macro_msg ?t ?p) empty))
+  (tuple (mfrom_bool (macro_exec ?t ?p)) (ite (macro_exec ?t ?p) (macro_msg ?t ?p) empty))
   (macro_frame (pred ?t) ?p)
 ).
 [unfold_input] (unfold_input ?t ?p) => (att (macro_frame (pred ?t) ?p)).

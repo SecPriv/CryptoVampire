@@ -10,19 +10,24 @@ pub mod basic_hash {
 
     use crate::{
         Lang, Problem, decl_fun,
-        protocol::test::basic_hash::{insert_rf, insert_rs, insert_tag, populate_functions},
+        protocol::test::basic_hash::{
+            MFunction, insert_init, insert_rf, insert_rs, insert_rw, insert_tag, populate_functions,
+        },
         rexp,
         rules::base_rules::mk_rewrites_rules,
         terms::{HAPPENS, MACRO_INPUT, MACRO_MSG, formula_utils::convert_to_ground_rexp},
     };
 
-    pub fn mk_pblm() -> Problem {
+    pub fn mk_pblm() -> (Problem, MFunction) {
         let mut pbl = Problem::base_empty();
+        pbl.config.keep_smt_files = true;
         let funs = populate_functions(&mut pbl);
+        insert_init(&mut pbl, &funs);
         insert_tag(&mut pbl, &funs);
         insert_rs(&mut pbl, &funs);
         insert_rf(&mut pbl, &funs);
-        pbl
+        insert_rw(&mut pbl, &funs);
+        (pbl, funs)
     }
 
     #[test]
@@ -32,7 +37,7 @@ pub mod basic_hash {
 
     #[test]
     fn test_mk_egraph() {
-        let mut pbl = mk_pblm();
+        let mut pbl = mk_pblm().0;
         let i = decl_fun!(&mut pbl; "i": () -> Index);
         let j = decl_fun!(&mut pbl; "j": () -> Index);
         let p1 = pbl.protocols[0].name();

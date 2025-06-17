@@ -1,6 +1,7 @@
 use std::{
     borrow::{Borrow, BorrowMut},
     cell::{Ref, RefCell, RefMut},
+    fmt::Display,
     mem::ManuallyDrop,
     rc::{Rc, Weak},
 };
@@ -10,6 +11,7 @@ use log::trace;
 use utils::{ereturn_if, ereturn_let};
 
 mod nonce;
+pub use nonce::FreshNonce;
 
 use crate::terms::{AND, FALSE, FOBinder, OR, RecFOFormula, Sort, TRUE};
 
@@ -48,6 +50,15 @@ struct Condition {
 pub enum Mode {
     And,
     Or,
+}
+
+impl Display for Mode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Mode::And => write!(f, "and"),
+            Mode::Or => write!(f, "or"),
+        }
+    }
 }
 
 impl RefFormulaBuilder {

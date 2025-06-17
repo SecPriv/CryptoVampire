@@ -1,10 +1,14 @@
-use std::{borrow::Cow, fmt::Display};
+use std::{
+    borrow::Cow,
+    fmt::Display,
+    ops::{BitAnd, BitOr, Not, Shr},
+};
 
 use itertools::Itertools;
-use logic_formula::{Destructed, Formula, HeadSk};
-use utils::{ereturn_if, implvec};
+use logic_formula::{Bounder, Destructed, Formula, HeadSk};
+use utils::{dynamic_iter, ereturn_if, implvec};
 
-use crate::{Arr, VarInner, uvar};
+use crate::{Arr, EvalParam, VarInner, uvar};
 
 use super::SortedVar;
 
@@ -53,6 +57,18 @@ pub enum SmtQuantifier<S> {
     Exists(Vec<SortedVar<S>>),
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum SmtQuantifierRef<'a, S> {
+    Forall(&'a [SortedVar<S>]),
+    Exists(&'a [SortedVar<S>]),
+}
+
+impl<S, F> Default for SmtFormula<S, F> {
+    fn default() -> Self {
+        Self::True
+    }
+}
+
 impl<S, F> Display for SmtFormula<S, F>
 where
     S: Display,
@@ -89,7 +105,13 @@ where
             SmtFormula::Ite(c, l, r) => write!(f, "(ite {c} {l} {r})"),
 
             #[cfg(feature = "cryptovampire")]
-            SmtFormula::Subterm(fun, a, b) => write!(f, "(subterm {fun} {a} {b})"),
+            SmtFormula::Subterm(fun, a, b) => {
+                writeln!(
+                    f,
+                    "\n; cryptovampire specific. Needs a modified version of vampire"
+                )?;
+                write!(f, "(subterm {fun} {a} {b})")
+            }
         }
     }
 }
@@ -134,8 +156,18 @@ impl<S, F> SmtFormula<S, F> {
             SmtFormula::Fun(_, args) | SmtFormula::Eq(args) | SmtFormula::Neq(args) => {
                 args.iter_mut().for_each(Self::optimise_mut);
             }
-            SmtFormula::Forall(_, f) | SmtFormula::Exists(_, f) => {
+            // smt-lib assumes non-empty sorts (sec 5.3 def 6)
+            // This remove
+            SmtFormula::Forall(vars, f) | SmtFormula::Exists(vars, f) => {
                 f.optimise_mut();
+                if vars.is_empty()
+                    || f.as_ref()
+                        .free_vars_iter()
+                        .all(|v| !vars.iter().map(|s| &s.var).contains(&v))
+                {
+                    // gymnastic to set `self` to `f`
+                    *self = ::std::mem::take(f.as_mut())
+                }
             }
             SmtFormula::And(args) => {
                 args.iter_mut().for_each(Self::optimise_mut);
@@ -245,4 +277,206 @@ pub trait IntoSmt<S>: Formula {
     fn convert_var(var: Self::Var) -> VarInner;
     fn convert_quant(quant: Self::Quant) -> SmtQuantifier<S>;
     fn as_head(fun: &Self::Fun) -> Option<SmtHead>;
+
+    fn into_smt(self) -> SmtFormula<S, Self::Fun> {
+        SmtFormula::from_formula(self)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SmtFunctions<F> {
+    Smt(SmtHead),
+    Fun(F),
+}
+
+impl<F> From<F> for SmtFunctions<F> {
+    fn from(v: F) -> Self {
+        Self::Fun(v)
+    }
+}
+
+impl<S, F> Formula for SmtFormula<S, F> {
+    type Var = VarInner;
+
+    type Fun = SmtFunctions<F>;
+
+    type Quant = SmtQuantifier<S>;
+
+    fn destruct(self) -> Destructed<Self, impl Iterator<Item = Self>> {
+        dynamic_iter!(MIter; None:A, One:B, Map:D);
+
+        let mk = |h| HeadSk::Fun(SmtFunctions::Smt(h));
+
+        use SmtHead::*;
+        match self {
+            SmtFormula::Var(v) => Destructed {
+                head: HeadSk::Var(v),
+                args: MIter::None(::std::iter::empty()),
+            },
+            SmtFormula::Fun(f, args) => Destructed {
+                head: HeadSk::Fun(f.into()),
+                args: MIter::Map(args.into_iter()),
+            },
+            SmtFormula::Forall(vars, f) => Destructed {
+                head: HeadSk::Quant(SmtQuantifier::Forall(vars)),
+                args: MIter::One([*f].into_iter()),
+            },
+            SmtFormula::Exists(vars, f) => Destructed {
+                head: HeadSk::Quant(SmtQuantifier::Exists(vars)),
+                args: MIter::One([*f].into_iter()),
+            },
+            SmtFormula::True => Destructed {
+                head: mk(True),
+                args: MIter::None(Default::default()),
+            },
+            SmtFormula::False => Destructed {
+                head: mk(False),
+                args: MIter::None(Default::default()),
+            },
+            SmtFormula::And(args) => Destructed {
+                head: mk(And),
+                args: MIter::Map(args.into_iter()),
+            },
+            SmtFormula::Or(args) => Destructed {
+                head: mk(Or),
+                args: MIter::Map(args.into_iter()),
+            },
+            SmtFormula::Eq(args) => Destructed {
+                head: mk(Eq),
+                args: MIter::Map(args.into_iter()),
+            },
+            SmtFormula::Neq(args) => Destructed {
+                head: mk(Neq),
+                args: MIter::Map(args.into_iter()),
+            },
+            SmtFormula::Not(arg) => Destructed {
+                head: mk(Not),
+                args: MIter::One([*arg].into_iter()),
+            },
+            SmtFormula::Implies(a, b) => Destructed {
+                head: mk(Implies),
+                args: MIter::Map(vec![*a, *b].into_iter()),
+            },
+            SmtFormula::Ite(c, l, r) => Destructed {
+                head: mk(If),
+                args: MIter::Map(vec![*c, *l, *r].into_iter()),
+            },
+            #[cfg(feature = "cryptovampire")]
+            SmtFormula::Subterm(_, smt_formula, smt_formula1) => unimplemented!(),
+        }
+    }
+}
+
+impl<'a, S, F> Formula for &'a SmtFormula<S, F> {
+    type Var = &'a VarInner;
+
+    type Fun = SmtFunctions<&'a F>;
+
+    type Quant = SmtQuantifierRef<'a, S>;
+
+    fn destruct(self) -> Destructed<Self, impl Iterator<Item = Self>> {
+        dynamic_iter!(MIter; None:A, One:B, Ref:D,Owned:C);
+
+        let mk = |h| HeadSk::Fun(SmtFunctions::Smt(h));
+
+        use SmtHead::*;
+        match self {
+            SmtFormula::Var(v) => Destructed {
+                head: HeadSk::Var(v),
+                args: MIter::None(::std::iter::empty()),
+            },
+            SmtFormula::Fun(f, args) => Destructed {
+                head: HeadSk::Fun(f.into()),
+                args: MIter::Ref(args.iter()),
+            },
+            SmtFormula::Forall(vars, f) => Destructed {
+                head: HeadSk::Quant(SmtQuantifierRef::Forall(&vars)),
+                args: MIter::One([f.as_ref()].into_iter()),
+            },
+            SmtFormula::Exists(vars, f) => Destructed {
+                head: HeadSk::Quant(SmtQuantifierRef::Exists(&vars)),
+                args: MIter::One([f.as_ref()].into_iter()),
+            },
+            SmtFormula::True => Destructed {
+                head: mk(True),
+                args: MIter::None(Default::default()),
+            },
+            SmtFormula::False => Destructed {
+                head: mk(False),
+                args: MIter::None(Default::default()),
+            },
+            SmtFormula::And(args) => Destructed {
+                head: mk(And),
+                args: MIter::Ref(args.iter()),
+            },
+            SmtFormula::Or(args) => Destructed {
+                head: mk(Or),
+                args: MIter::Ref(args.iter()),
+            },
+            SmtFormula::Eq(args) => Destructed {
+                head: mk(Eq),
+                args: MIter::Ref(args.iter()),
+            },
+            SmtFormula::Neq(args) => Destructed {
+                head: mk(Neq),
+                args: MIter::Ref(args.iter()),
+            },
+            SmtFormula::Not(arg) => Destructed {
+                head: mk(Not),
+                args: MIter::One([arg.as_ref()].into_iter()),
+            },
+            SmtFormula::Implies(a, b) => Destructed {
+                head: mk(Implies),
+                args: MIter::Owned(vec![a.as_ref(), b.as_ref()].into_iter()),
+            },
+            SmtFormula::Ite(c, l, r) => Destructed {
+                head: mk(If),
+                args: MIter::Owned(vec![c.as_ref(), l.as_ref(), r.as_ref()].into_iter()),
+            },
+            #[cfg(feature = "cryptovampire")]
+            SmtFormula::Subterm(_, smt_formula, smt_formula1) => unimplemented!(),
+        }
+    }
+}
+
+impl<S, F> Not for SmtFormula<S, F> {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        Self::Not(Box::new(self))
+    }
+}
+
+impl<S, F> BitAnd for SmtFormula<S, F> {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Self::And(vec![self, rhs])
+    }
+}
+
+impl<S, F> BitOr for SmtFormula<S, F> {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self::Or(vec![self, rhs])
+    }
+}
+
+impl<S, F> Shr for SmtFormula<S, F> {
+    type Output = Self;
+
+    fn shr(self, rhs: Self) -> Self::Output {
+        Self::Implies(Box::new(self), Box::new(rhs))
+    }
+}
+
+impl<'a, S> Bounder<&'a VarInner> for SmtQuantifierRef<'a, S> {
+    fn bounds(&self) -> impl Iterator<Item = &'a VarInner> {
+        match self {
+            SmtQuantifierRef::Forall(vars) | SmtQuantifierRef::Exists(vars) => {
+                vars.iter().map(|v| &v.var)
+            }
+        }
+    }
 }

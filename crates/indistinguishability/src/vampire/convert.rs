@@ -1,15 +1,9 @@
+use crate::{LangVar, MSmtFormula};
 use cryptovampire_macros::smt;
-use logic_formula::{Destructed, Formula};
-
-use super::MSmtFormula;
-
-use crate::LangVar;
-
-use std::borrow::Cow;
-
-use egg::VarExposed;
-
 use cryptovampire_smt::{SmtFormula, VarInner};
+use egg::VarExposed;
+use logic_formula::{Destructed, Formula};
+use std::borrow::Cow;
 
 pub fn var_to_smt(var: &egg::Var) -> VarInner {
     match var.expose() {

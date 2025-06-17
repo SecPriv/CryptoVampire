@@ -33,12 +33,20 @@ pub trait SimpleDiscriminant: Debug + Clone + Eq + Ord + Hash {
         head.join_recexprs(|i| &ids[usize::from(i)])
     }
 
+    fn app_empty<const N: usize>(&self) -> RecExpr<SimplLang<Self, N>> {
+        self.app::<N, [_; 0]>(&[])
+    }
+
     fn app_var<const N: usize, E: AsRef<[SimplLangVar<Self, N>]>>(
         &self,
         ids: &[E],
     ) -> RecExpr<SimplLangVar<Self, N>> {
         let head = egg::ENodeOrVar::ENode(self.app_id((0..ids.len()).map(Id::from)));
         head.join_recexprs(|i| &ids[usize::from(i)])
+    }
+
+    fn app_empty_var<const N: usize>(&self) -> RecExpr<SimplLangVar<Self, N>> {
+        self.app_var::<N, [_; 0]>(&[])
     }
 }
 

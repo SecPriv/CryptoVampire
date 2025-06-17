@@ -1,14 +1,16 @@
 use std::ops::Deref;
 
-use egg::{ENodeOrVar, Pattern, PatternAst, RecExpr, SymbolLang, Var};
-use golgge::PrologRule;
+use egg::{Analysis, ENodeOrVar, Pattern, PatternAst, RecExpr, SymbolLang, Var};
+use golgge::{DebugRule, PrologRule};
 use itertools::{Itertools, chain, izip};
 use logic_formula::egg::SimpleDiscriminant;
 use utils::implvec;
 
 use crate::{
     Lang, LangVar, Problem,
-    terms::{BIT_DEDUCE, BOOL_DEDUCE, Exists, Function, FunctionFlags, Sort},
+    terms::{
+        BIT_DEDUCE, BOOL_DEDUCE, Exists, Function, FunctionFlags, Sort, formula_utils::type_check,
+    },
 };
 
 use super::{
@@ -16,11 +18,11 @@ use super::{
     var_as_recexpr,
 };
 
-pub fn mk_deduce_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'_> {
+pub fn mk_equiv_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'_> {
     chain! {
-      mk_special_static_deduce_rules(pbl),
       mk_regular_deduce_rules(pbl),
       mk_exists_deduce_rules(pbl),
+      mk_special_static_deduce_rules(pbl),
     }
 }
 
@@ -32,7 +34,7 @@ pub fn mk_deduce_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> 
 fn mk_special_static_deduce_rules(
     pbl: &Problem,
 ) -> impl Iterator<Item = PrologRule<Lang>> + use<'_> {
-    /// clean rules to be parsed
+    // clean rules to be parsed
     let cleaned = clean_input(include_str!("base_deduce"))
         // rebuild a string without comments
         .split('.')
@@ -68,15 +70,18 @@ fn mk_regular_deduce_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lan
     pbl.function
         .iter()
         .filter(|x| should_process_normaly(x))
+        .filter(|x| x.signature.output.support_deduce())
         .map(mk_deduce_rule)
 }
 
 fn should_process_normaly(f: &Function) -> bool {
-    f.is_special_deduce()
+    !f.is_special_deduce()
 }
 
 fn mk_deduce_rule(f: &Function) -> PrologRule<Lang> {
     assert!(should_process_normaly(f));
+    assert!(f.signature.output.support_deduce());
+    dbg!(&f.name);
     let n: u32 = f.arity().try_into().unwrap();
     let s = f.signature.output;
 
@@ -84,7 +89,7 @@ fn mk_deduce_rule(f: &Function) -> PrologRule<Lang> {
     let left_vars = (4..(4 + n)).map(Var::from_u32).collect_vec();
     let right_vars = ((4 + n)..(4 + 2 * n)).map(Var::from_u32).collect_vec();
 
-    let input = mk_input(f, s, vars, &left_vars);
+    let input = mk_input(f, s, vars, &left_vars, &right_vars);
     let deps = izip!(f.signature.inputs_iter(), left_vars, right_vars)
         .filter_map(|(s, a, b)| mk_dep([u, v, a, b, h1, h2], s))
         .collect();
@@ -102,12 +107,13 @@ fn mk_input(
     f: &Function,
     s: Sort,
     vars: [Var; 4],
-    fun_vars: &[Var],
+    left: &[Var],
+    right: &[Var],
 ) -> Pattern<logic_formula::egg::SimplLang<Function>> {
-    let left = f.app_var(&var_as_recexpr(fun_vars));
-    let right = f.app_var(&var_as_recexpr(fun_vars));
+    let left = f.app_var(&var_as_recexpr(left));
+    let right = f.app_var(&var_as_recexpr(right));
     let vars = var_as_recexpr(&vars);
-    let ast: RecExpr<LangVar> = get_deduce(s).expect("unsupported sort").app_var(&[
+    let ast: RecExpr<LangVar> = get_deduce(s).app_var(&[
         vars[0].as_slice(),
         &vars[1],
         &left,
@@ -118,11 +124,20 @@ fn mk_input(
     Pattern::new(ast)
 }
 
-const fn get_deduce(s: Sort) -> Option<&'static Function> {
+/// get the `deduce` function corresponding to the the sort `s`, [None] otherwise
+const fn try_get_deduce(s: Sort) -> Option<&'static Function> {
     match s {
         Sort::Bool => Some(&BOOL_DEDUCE),
         Sort::Bitstring => Some(&BIT_DEDUCE),
         _ => None,
+    }
+}
+
+/// [try_get_deduce] that crashes
+fn get_deduce(s: Sort) -> &'static Function {
+    match try_get_deduce(s) {
+        Some(fun) => fun,
+        _ => panic!("{s} is not a supported sort for deduce (should be Bitstring or Bool)"),
     }
 }
 
@@ -131,7 +146,7 @@ const fn get_deduce(s: Sort) -> Option<&'static Function> {
 /// `vars` is [u, v, a, b, h1, h2]
 fn mk_dep(vars: [Var; 6], s: Sort) -> Option<Pattern<Lang>> {
     let vars = var_as_recexpr(&vars);
-    let ast = get_deduce(s)?.app_var(&vars);
+    let ast = try_get_deduce(s)?.app_var(&vars);
     Some(Pattern::new(ast))
 }
 
@@ -155,7 +170,7 @@ fn mk_exists_deduce_rules_one(
         tlf, skolem, fresh, ..
     }: &Exists,
 ) -> PrologRule<Lang> {
-    let deduce = get_deduce(Sort::Bitstring).unwrap();
+    let deduce = get_deduce(Sort::Bool);
     let n: u32 = skolem.arity().try_into().unwrap();
 
     // initiate the variables

@@ -12,22 +12,19 @@ use super::{
 use crate::{
     Configuration, Lang, LangVar, Problem,
     protocol::Protocol,
-    terms::{Exists, Function, PARSING_PAIRS},
+    terms::{AliasRewrite, Exists, Function, PARSING_PAIRS},
 };
 /// build the default rewrite rules
-pub fn mk_rewrites_rules<N: Analysis<Lang> + 'static>(
+pub fn mk_rewrites_rules<N: Analysis<Lang>>(
     pbl: &Problem,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
     chain! {
       manual_rules(pbl),
       exists_rules(pbl),
-      unfold_rules(pbl)
+      unfold_rules(pbl),
+      mk_alias_rule(pbl),
+      mk_extra_rw_rules(pbl)
     }
-    .inspect(|rw| {
-        if log::log_enabled!(log::Level::Trace) {
-            trace!("rw: {rw:#?}")
-        }
-    })
 }
 
 fn unfold_rules<N: Analysis<Lang>>(
@@ -79,7 +76,6 @@ fn mk_exists_rules_one<'a, N: Analysis<Lang>>(
         bound_var,
         patt,
         tlf,
-        skolem,
         ..
     }: &'a Exists,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'a, N> {
@@ -110,4 +106,43 @@ fn mk_exists_rules_one<'a, N: Analysis<Lang>>(
 
     // chain![[def, sound]]
     chain![[def]]
+}
+
+fn mk_extra_rw_rules<N: Analysis<Lang>>(
+    pbl: &Problem,
+) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
+    pbl.extra_rewrite()
+        .iter()
+        .enumerate()
+        .map(|(i, crate::terms::Rewrite { from, to, .. })| {
+            Rewrite::new(
+                format!("extra rewrite #{i:}"),
+                Pattern::new(from.clone().into_owned().into()),
+                Pattern::new(to.clone().into_owned().into()),
+            )
+            .unwrap()
+        })
+}
+
+fn mk_alias_rule<N: Analysis<Lang>>(
+    Problem { function, .. }: &Problem,
+) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
+    function
+        .iter()
+        .filter_map(|f| f.alias.as_ref().map(|a| (f, a)))
+        .flat_map(|(f, a)| a.iter().enumerate().map(move |(i, rw)| (i, f, rw)))
+        .map(|(i, f, rw)| mk_alias_rule_1(i, f, rw))
+}
+
+fn mk_alias_rule_1<N: Analysis<Lang>>(
+    i: usize,
+    f: &Function,
+    AliasRewrite { from, to, .. }: &AliasRewrite,
+) -> Rewrite<Lang, N> {
+    Rewrite::new(
+        format!("{} definition #{i:}", &f.name),
+        Pattern::new(f.app_var(&from)),
+        Pattern::new(to.clone().into_owned().into()),
+    )
+    .unwrap()
 }

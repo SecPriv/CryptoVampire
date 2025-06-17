@@ -70,6 +70,9 @@ pub use first_order::{FOBinder, RecFOFormula};
 
 pub mod formula_utils;
 
+mod rewrite;
+pub use rewrite::Rewrite;
+
 mod alias;
 pub use alias::{Alias, AliasRewrite};
 

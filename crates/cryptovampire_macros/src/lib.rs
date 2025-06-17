@@ -36,6 +36,11 @@ pub fn smt(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro]
+pub fn vec_smt(input: TokenStream) -> TokenStream {
+    formulas::smt_many_smt_formulas(input)
+}
+
+#[proc_macro]
 pub fn recexpr(input: TokenStream) -> TokenStream {
     formulas::mk_const_recexpr(input)
 }

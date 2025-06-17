@@ -9,12 +9,9 @@ use log::trace;
 use logic_formula::{Formula, egg::SimpleDiscriminant};
 
 use crate::{
-    Lang, LangVar, rexp,
-    rules::vampire::{
-        MSmt, MSmtFormula,
-        convert::{formula_to_smt, var_to_smt},
-    },
+    Lang, LangVar, MSmt, MSmtFormula, rexp,
     terms::{Function, UNFOLD_COND, UNFOLD_MSG},
+    vampire::convert::{formula_to_smt, var_to_smt},
 };
 
 use super::{MacroKind, ProtocolLanguage};
@@ -94,9 +91,9 @@ impl Step {
     }
 
     pub(crate) fn mk_unfold_vampire_rewrites(
-        self,
+        &self,
         ptcl: &MSmtFormula,
-    ) -> impl Iterator<Item = MSmt> {
+    ) -> impl Iterator<Item = MSmt> + use<'_> {
         use Smt::*;
         let [cond, msg, name] =
             [self.cond.as_ref(), &self.msg, &self.id_expr()].map(formula_to_smt);
@@ -114,7 +111,12 @@ impl Step {
             (forall #(sorted_vars.clone()) (= (UNFOLD_MSG #name #ptcl) #msg))
         };
 
-        [comment, Assert(unfold_cond), Assert(unfold_msg)].into_iter()
+        [
+            comment,
+            MSmt::mk_assert(unfold_cond),
+            MSmt::mk_assert(unfold_msg),
+        ]
+        .into_iter()
     }
 }
 

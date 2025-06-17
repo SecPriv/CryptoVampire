@@ -1,26 +1,103 @@
 //! Nonce freshness
 
-use egg::{Analysis, EGraph, Id};
-use egg::{ENodeOrVar, Language, RecExpr, Var};
-use itertools::{Itertools, izip};
-use log::trace;
-use logic_formula::egg::SimplLang;
-use logic_formula::{Destructed, Formula, HeadSk};
-use utils::traits::Named;
-use utils::{econtinue_if, ereturn_if, ereturn_let, implvec, match_eq};
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::sync::{Arc, RwLock};
 
+use crate::problem::PAnalysis;
 use crate::protocol::Step;
 use crate::rules::fresh::{Condition, Mode};
 use crate::terms::{
-    Alias, AliasRewrite, BITE, EQ, Exists, FOBinder, HAPPENS, LEQ, LT, MACRO_COND, MACRO_FRAME,
-    MACRO_MSG, MITE, NOT, PRED, UNFOLD_FRAME, flags,
+    Alias, AliasRewrite, BITE, EQ, Exists, FOBinder, FRESH_NONCE, HAPPENS, LEQ, LT, MACRO_COND,
+    MACRO_FRAME, MACRO_MSG, MITE, NOT, PRED, Rewrite, UNFOLD_FRAME, flags,
 };
+use crate::vampire::mk_prelude;
+use crate::vampire::runner::VampireExec;
 use crate::{
     Lang,
     rules::fresh::RefFormulaBuilder,
     terms::{Function, MACRO_INPUT, RecFOFormula},
 };
-use crate::{LangVar, Problem};
+use crate::{LangVar, Problem, rexp};
+use bon::Builder;
+use cryptovampire_smt::{IntoSmt, Smt, SmtFormula};
+use egg::{Analysis, EGraph, Id, Pattern, Searcher};
+use egg::{ENodeOrVar, Language, RecExpr, Var};
+use golgge::{Dependancy, Rule};
+use itertools::{Itertools, chain, izip};
+use logic_formula::egg::SimplLang;
+use logic_formula::{Destructed, Formula, HeadSk};
+use serde::Serialize;
+use static_init::dynamic;
+use utils::traits::Named;
+use utils::{econtinue_if, ereturn_if, ereturn_let, implvec, match_eq};
+
+declare_trace!($"nonce_fresh");
+
+#[dynamic]
+static FRESH_NONCE_PATTERN: Pattern<Lang> = {
+    let ast = rexp!((FRESH_NONCE #0 #1 #2)).to_vec();
+    RecExpr::from(ast).into()
+};
+
+#[derive(Clone, Builder)]
+pub struct FreshNonce {
+    #[builder(into)]
+    exec: Rc<VampireExec>,
+}
+
+impl<'a> Rule<Lang, PAnalysis<'a>> for FreshNonce {
+    fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: Id) -> Dependancy {
+        let egraph = prgm.egraph_mut();
+        ereturn_let!(let Some(substs) =  FRESH_NONCE_PATTERN.search_eclass(egraph, goal),Dependancy::impossible());
+
+        let mut conditions = Vec::with_capacity(substs.substs.len());
+        for subst in substs.substs {
+            let [nonce, content, hypothesis] =
+                [0, 1, 2].map(|i| *subst.get(Var::from_u32(i)).unwrap());
+            let hypothesis = convert_id(egraph, hypothesis);
+            let nonce = {
+                let SimplLang { head, args } = &egraph[nonce].nodes[0];
+                Nonce {
+                    name: head.clone(),
+                    args: args.iter().map(|&id| convert_id(egraph, id)).collect(),
+                }
+            };
+
+            let builder = RefFormulaBuilder::new(Mode::And, None);
+            nonce.search_egraph(egraph, builder.clone(), content, Default::default());
+            let search = builder.into_inner().unwrap().into_formula();
+
+            conditions.push((hypothesis >> search).into_smt())
+        }
+        let condition = SmtFormula::Or(conditions);
+
+        tr!("checking {condition}");
+        let pbl: &mut Problem = egraph.analysis.pbl_mut();
+
+        {
+            let prelude = pbl.get_smt_prelude();
+            // let pbl: &Problem<_> = &self.pbl.borrow();
+            let res = self
+                .exec
+                .run_smt(chain![
+                    prelude.iter().cloned(),
+                    [Smt::mk_query(condition), Smt::CheckSat]
+                ])
+                .expect("something went wrong with vampire");
+
+            if res {
+                Dependancy::axiom()
+            } else {
+                Dependancy::impossible()
+            }
+        }
+    }
+
+    fn debug(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        write!(f, "<fresh nonce>.")
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Nonce {
@@ -43,21 +120,20 @@ impl Nonce {
         RecFOFormula::app(name, args)
     }
 
-    pub fn search_egraph<N: Analysis<Lang>>(
+    pub fn search_egraph<'a>(
         &self,
-        pbl: &Problem,
-        egraph: &EGraph<Lang, N>,
+        egraph: &EGraph<Lang, PAnalysis<'a>>,
         builder: RefFormulaBuilder,
         current: Id,
         visited: im_rc::HashSet<Id>,
     ) {
-        trace!("looking at {current:}");
+        tr!("looking at {current:}");
         ereturn_if!(builder.is_saturated());
         ereturn_if!(visited.contains(&current));
-        trace!("unskipped");
+        tr!("unskipped");
 
         let eclass = &egraph[current];
-        trace!(
+        tr!(
             "current enode has {:} nodes\n({})",
             eclass.nodes.len(),
             egraph.id_to_expr(current)
@@ -66,7 +142,7 @@ impl Nonce {
         // first loop for early exit if necessary
         // This takes care of the cases that replace the whole builder
         for SimplLang { head, args } in eclass.iter() {
-            trace!(
+            tr!(
                 "early looking through {head}:{current:}({})",
                 args.iter().join(", ")
             );
@@ -75,14 +151,15 @@ impl Nonce {
                 && let Some((&time, &ptcl)) = args.iter().collect_tuple()
                 && egraph[time].iter().any(|f| f.head == PRED)
             {
-                trace!("looking through frame");
-                self.search_frame(pbl, egraph, &builder, time, ptcl);
+                tr!("looking through frame");
+                tr!("builder mode {}", builder.borrow().mode);
+                self.search_frame(egraph, &builder, time, ptcl);
                 return;
             }
 
             // check is the nonce is there
             if head == &self.name {
-                trace!("found self ({})", self.name);
+                tr!("found self ({})", self.name);
                 let other = convert_id(egraph, current);
                 builder.add_leaf(!EQ.rapp([other, self.clone().into_recformula()]));
                 return; // <- no need to look further
@@ -96,24 +173,24 @@ impl Nonce {
         let visited = visited.update(current);
 
         for SimplLang { head, args } in eclass.iter() {
-            trace!(
+            tr!(
                 "looking through {head}:{current:}({})",
                 args.iter().join(", ")
             );
             // fresh if indep of all the *arguements*
             if head.is_special_subterm() {
-                trace!("is special subterm (flags: {:?})", head.flags);
+                tr!("is special subterm (flags: {:?})", head.flags);
                 // the special cases
 
                 if head == &MITE || head == &BITE {
-                    self.ite_egraph(pbl, egraph, &builder, args, visited.clone());
+                    self.ite_egraph(egraph, &builder, args, visited.clone());
                 }
 
                 // The rest is taken care of by equality
             } else {
                 for arg in args {
                     let builder = builder.add_node(Mode::And, Default::default());
-                    self.search_egraph(pbl, egraph, builder.clone(), *arg, visited.clone());
+                    self.search_egraph(egraph, builder.clone(), *arg, visited.clone());
                 }
             }
         }
@@ -122,19 +199,18 @@ impl Nonce {
     /// Builds the subterm of an if in the case of an eclass
     ///
     /// `visisted` must already be updated
-    fn ite_egraph<N: Analysis<Lang>>(
+    fn ite_egraph<'a>(
         &self,
-        pbl: &Problem,
-        egraph: &EGraph<Lang, N>,
+        egraph: &EGraph<Lang, PAnalysis<'a>>,
         builder: &RefFormulaBuilder,
         args: &[Id],
         visited: im_rc::HashSet<Id>,
     ) {
-        trace!("in ite");
+        tr!("in ite");
         let builder = builder.add_node(Mode::And, Default::default());
         let (c, l, r) = args.iter().copied().collect_tuple().unwrap();
 
-        self.search_egraph(pbl, egraph, builder.clone(), c, visited.clone());
+        self.search_egraph(egraph, builder.clone(), c, visited.clone());
 
         let c = convert_id(egraph, c);
 
@@ -147,7 +223,7 @@ impl Nonce {
                 quantifier: FOBinder::Forall,
             };
             let builder = builder.add_node(Mode::Or, Some(cond));
-            self.search_egraph(pbl, egraph, builder, l, visited.clone());
+            self.search_egraph(egraph, builder, l, visited.clone());
         }
         {
             // neg
@@ -158,21 +234,22 @@ impl Nonce {
                 quantifier: FOBinder::Forall,
             };
             let builder = builder.add_node(Mode::Or, Some(cond));
-            self.search_egraph(pbl, egraph, builder, r, visited);
+            self.search_egraph(egraph, builder, r, visited);
         }
     }
 
-    fn search_frame<N: Analysis<Lang>>(
+    fn search_frame<'a>(
         &self,
-        pbl: &Problem,
-        egraph: &EGraph<Lang, N>,
+        egraph: &EGraph<Lang, PAnalysis<'a>>,
         builder: &RefFormulaBuilder,
         time: Id,
         ptcl: Id,
     ) {
-        trace!("in frame");
+        tr!("in frame");
         assert!(builder.current_mode().is_and());
         let time = convert_id(egraph, time);
+
+        let pbl = egraph.analysis.pbl();
 
         // get the protocol from the function
         let ptcl = {
@@ -216,7 +293,7 @@ impl Nonce {
         assert!(builder.current_mode().is_and());
         ereturn_if!(builder.is_saturated());
         ereturn_let!(let Destructed { head: HeadSk::Fun(fun), args} = term.destruct());
-        trace!(
+        tr!(
             "searching thourgh {}",
             egg::RecExpr::from(term.iter().cloned().collect_vec())
         );
@@ -243,7 +320,7 @@ impl Nonce {
     ) {
         assert!(builder.current_mode().is_and());
         assert!(fun.is_special_subterm());
-        trace!("in search_special_recexpr");
+        tr!("in search_special_recexpr");
 
         if fun == MACRO_COND || fun == MACRO_MSG {
             todo!()
@@ -262,7 +339,7 @@ impl Nonce {
         args: implvec!(&'a [LangVar]),
     ) {
         assert!(builder.current_mode().is_and());
-        trace!("in search_alias");
+        tr!("in search_alias");
         let args = args.into_iter().collect_vec();
 
         let builder = builder.add_node(Mode::Or, None);
@@ -302,7 +379,7 @@ impl Nonce {
         }: &Exists,
         args: implvec!(&'a [LangVar]),
     ) {
-        trace!("in search_exists");
+        tr!("in search_exists");
         let sort = e.get_var_sort();
 
         // capture avoiding substitution. We need to rename the bound variable of the exists in case it clashes
@@ -342,13 +419,12 @@ impl Nonce {
 #[cfg(test)]
 mod test {
     use cryptovampire_smt::{Smt, SmtFormula};
-    use egg::{EGraph, Id, Runner};
+    use egg::{Analysis, EGraph, Id, Runner};
     use itertools::Itertools;
-    use log::trace;
 
     use crate::{
         Lang, Problem, decl_fun, init_logger,
-        problem::test::basic_hash::mk_pblm,
+        problem::{PAnalysis, test::basic_hash::mk_pblm},
         rexp,
         rules::{
             base_rules::mk_rewrites_rules,
@@ -360,15 +436,16 @@ mod test {
         },
     };
 
-    fn mk_egraph() -> (Problem, EGraph<Lang, ()>, Id, Id, Id) {
-        let mut pbl = mk_pblm();
-        let i = decl_fun!(&mut pbl; "i": () -> Index);
-        let j = decl_fun!(&mut pbl; "j": () -> Index);
-        let p1 = pbl.protocols[0].name();
+    fn mk_egraph<'a>(pbl: &'a mut Problem) -> (EGraph<Lang, PAnalysis<'a>>, Id, Id, Id) {
+        let rw = mk_rewrites_rules(&pbl).collect_vec();
+
+        let i = decl_fun!(pbl; "i": () -> Index);
+        let j = decl_fun!(pbl; "j": () -> Index);
+        let p1 = pbl.protocols[0].name().clone();
         let tag = pbl.function.get("tag").unwrap();
         let rf = pbl.function.get("Rf").unwrap();
 
-        let mut egraph = EGraph::new(());
+        let mut egraph = EGraph::new(PAnalysis::builder().pbl(pbl).build());
         let input_tag =
             egraph.add_expr(&convert_to_ground_rexp(rexp!((MACRO_INPUT (tag i j) p1))).unwrap());
         let cond_rf =
@@ -383,21 +460,20 @@ mod test {
 
         // egraph.rebuild();
 
-        let rw = mk_rewrites_rules(&pbl).collect_vec();
-        let runner: Runner<Lang, ()> = Runner::new(());
-        let runner = runner.with_egraph(egraph).run(&rw);
+        let runner: Runner<Lang, _> = Runner::new_with_egraph(egraph);
+        let runner = runner.run(&rw);
 
-        trace!("report: {}", runner.report());
+        tr!("report: {}", runner.report());
 
-        (pbl, runner.egraph, cond_rf, msg_tag, input_tag)
+        (runner.egraph, cond_rf, msg_tag, input_tag)
     }
 
     #[test]
     fn subterm_cond_rf() {
         init_logger();
-        let (mut pbl, egraph, cond_rf, _, _) = mk_egraph();
-        let n = pbl.function.get("n").unwrap();
-        let i = decl_fun!(&mut pbl; "i2": () -> Index);
+        let mut pbl = mk_pblm().0;
+        let (egraph, cond_rf, _, _) = mk_egraph(&mut pbl);
+        let n = egraph.analysis.pbl().function.get("n").unwrap();
         let n = Nonce {
             name: n,
             args: vec![
@@ -407,7 +483,7 @@ mod test {
         };
 
         let builder = RefFormulaBuilder::new(Mode::And, None);
-        n.search_egraph(&pbl, &egraph, builder.clone(), cond_rf, Default::default());
+        n.search_egraph(&egraph, builder.clone(), cond_rf, Default::default());
 
         let f = builder.into_inner().unwrap().into_formula();
         let smt: SmtFormula<Sort, Function> = SmtFormula::from_formula(f);
@@ -419,10 +495,13 @@ mod test {
     #[test]
     fn subterm_msg_tag() {
         init_logger();
-        let (mut pbl, egraph, _, _, msg_tag) = mk_egraph();
+        let mut pbl = mk_pblm().0;
+        let (egraph, _, _, msg_tag) = mk_egraph(&mut pbl);
+        let pbl = egraph.analysis.pbl();
         let n = pbl.function.get("n").unwrap();
         let i = pbl.function.get("i").unwrap();
         let j = pbl.function.get("j").unwrap();
+        let _ = pbl;
         let n = Nonce {
             name: n,
             args: vec![
@@ -438,7 +517,7 @@ mod test {
         };
 
         let builder = RefFormulaBuilder::new(Mode::And, None);
-        n.search_egraph(&pbl, &egraph, builder.clone(), msg_tag, Default::default());
+        n.search_egraph(&egraph, builder.clone(), msg_tag, Default::default());
 
         let f = builder.into_inner().unwrap().into_formula();
         let smt: SmtFormula<Sort, Function> = SmtFormula::from_formula(f);

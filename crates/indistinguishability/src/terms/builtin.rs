@@ -130,6 +130,12 @@ pub static SORT_LIST: [Sort; 6] = {
     [Bool, Bitstring, Time, Protocol, Nonce, Index]
 };
 
+/// [Sort]s to be declared in smt
+pub static SMT_SORT_LIST: [Sort; 5] = {
+    use Sort::*;
+    [Bitstring, Time, Protocol, Nonce, Index]
+};
+
 // -----------------------------------------------------------------------------
 // -------------------------------- functions ----------------------------------
 // -----------------------------------------------------------------------------
@@ -230,6 +236,10 @@ mk_builtin_funs!(
 
     EMPTY "mempty" "empty" "none" {
         signature: s!(Bitstring, 0)
+    };
+
+    FROM_BOOL "mfrom_bool" {
+        signature: s!(Bool -> Bitstring)
     };
 
     // ~~~~~~~~~~~~~~~~~ ptcl ~~~~~~~~~~~~~~~~~~~

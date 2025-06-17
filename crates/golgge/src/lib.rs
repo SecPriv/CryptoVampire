@@ -9,7 +9,13 @@ use log::log_enabled;
 use rule::PlOrRw;
 use serde::Serialize;
 use std::{
-    cell::RefCell, collections::HashMap, default, fmt::Display, path::PathBuf, rc::Rc, str::FromStr,
+    cell::RefCell,
+    collections::HashMap,
+    default,
+    fmt::{Debug, Display},
+    path::PathBuf,
+    rc::Rc,
+    str::FromStr,
 };
 use utils::implvec;
 
@@ -103,6 +109,14 @@ where
     }
     pub fn egraph_mut(&mut self) -> &mut EGraph<L, N> {
         self.egraph.as_mut().expect("invalid program")
+    }
+
+    pub fn debug_rules(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        for r in &self.rules {
+            r.debug(f)?;
+            writeln!(f)?;
+        }
+        Ok(())
     }
 }
 
@@ -207,6 +221,16 @@ where
     //     N::Data: Serialize,
     // {
     pub fn run_expr(&mut self, goal: RecExpr<L>, depth: u128) -> bool {
+        if cfg!(debug_assertions) {
+            struct DP<'a, L: Language, N: Analysis<L>>(&'a Program<L, N>);
+            impl<'a, L: Language, N: Analysis<L>> Debug for DP<'a, L, N> {
+                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                    self.0.debug_rules(f)
+                }
+            }
+            eprintln!("{:?}", DP(self))
+        }
+
         let goal = self.egraph.as_mut().unwrap().add_expr(&goal);
         self.rebuild();
         self.run(goal, depth)

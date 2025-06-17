@@ -42,22 +42,36 @@ impl Exists {
         } = self;
         let all_vars = chain!(vars, [bound_var]).copied().collect_vec();
 
-        (
+        let is_at_idx = {
             // is at idx
             funs.quantifiers().get(idx) == Some(self)
-        ) && ({
+        };
+        let map_vars = {
             // mapping between variables
             let vars: Vec<_> = patt.free_vars_iter().collect();
             crate::utils::same_slice(&all_vars, &vars)
-        }) && (
+        };
+        let reciprocal = {
             // reciprocal
             tlf.get_exist_index() == Some(idx)
                 && skolem.get_exist_index() == Some(idx)
                 && fresh.get_exist_index() == Some(idx)
-        ) && (
+        };
+        let arities = {
+            dbg!(vars.len());
+            dbg!(tlf.arity());
+            dbg!(skolem.arity());
+            dbg!(fresh.arity());
             // arities
             tlf.arity() == all_vars.len() && skolem.arity() == vars.len() && fresh.arity() == 0
-        )
+        };
+
+        dbg!(idx);
+        dbg!(is_at_idx);
+        dbg!(map_vars);
+        dbg!(reciprocal);
+        dbg!(arities);
+        is_at_idx && map_vars && reciprocal && arities
     }
 
     pub fn get_var_sort(&self) -> Sort {

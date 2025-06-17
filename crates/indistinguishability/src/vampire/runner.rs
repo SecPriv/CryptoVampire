@@ -1,16 +1,32 @@
+use bon::Builder;
+use cryptovampire_smt::Smt;
 use std::{
+    borrow::Borrow,
+    fmt::Display,
     path::{Path, PathBuf},
     process::Command,
 };
+use utils::implvec;
+
+declare_trace!($"vampire_exec");
 
 /// The [Runner] itself
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Builder)]
 pub struct VampireExec {
-    pub exe_location: PathBuf,
-    pub extra_args: Vec<VampireArg>,
+    /// The location of the vampire executable
+    ///
+    /// By default it looks into the `$PATH`
+    #[builder(default = which::which("vampire").unwrap(), into)]
+    exe_location: PathBuf,
+    /// Arguments to vampire
+    #[builder(default = VampireExec::default_args(), with = <_>::from_iter)]
+    args: Vec<VampireArg>,
+    /// Should the smt file be kept once we don't need it anymore?
+    #[builder(default = false)]
+    keep_file: bool,
 }
 
-macro_rules! option {
+macro_rules! options {
   ($($variant:ident($name:literal, $content:ty)),*,) => {
       #[allow(dead_code)]
       #[doc = "arguments to [VampireExec] in type-safeish mode"]
@@ -29,7 +45,7 @@ macro_rules! option {
   };
 }
 
-option!(
+options!(
     Cores("cores", u64),
     MemoryLimit("memory_limit", u64),
     Mode("mode", vampire_suboptions::Mode),
@@ -49,7 +65,7 @@ option!(
 
 pub mod vampire_suboptions {
     use super::ToArgs;
-    macro_rules! suboption {
+    macro_rules! suboptions {
       ($name:ident, $(($variant:ident, $content:literal)),*,) => {
           #[allow(dead_code)]
           #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, Hash, Copy)]
@@ -67,14 +83,14 @@ pub mod vampire_suboptions {
       };
   }
 
-    suboption!(Mode, (Portfolio, "portfolio"),);
-    suboption!(
+    suboptions!(Mode, (Portfolio, "portfolio"),);
+    suboptions!(
         InputSyntax,
         (SmtLib2, "smtlib2"),
         (Tptp, "tptp"),
         (Auto, "auto"),
     );
-    suboption!(
+    suboptions!(
         SaturationAlgorithm,
         (Discount, "discount"),
         (Otter, "otter"),
@@ -82,7 +98,7 @@ pub mod vampire_suboptions {
         (FiniteModel, "fmb"),
         (Z3, "z3"),
     );
-    suboption!(SatSolver, (Minisat, "minisat"), (Z3, "z3"),);
+    suboptions!(SatSolver, (Minisat, "minisat"), (Z3, "z3"),);
 }
 
 /// Turn something into an array of [str] for the [Command] object
@@ -116,25 +132,71 @@ const TIMEOUT_RC: i32 = 1;
 impl VampireExec {
     pub fn run(&self, file: &Path) -> anyhow::Result<bool> {
         let mut cmd = Command::new(&self.exe_location);
-        cmd.args(self.extra_args.iter().flat_map(|x| x.to_args().into_iter()));
+        cmd.args(self.args.iter().flat_map(|x| x.to_args().into_iter()));
         cmd.arg(file);
+
+        tr!("running '{:?}'...", cmd);
+
         let o = cmd.output()?;
+
+        tr!("status code: {:?}", o.status.code());
+        let refutation = std::str::from_utf8(&o.stdout)
+            .unwrap()
+            .contains("Termination reason: Refutation\n");
+        tr!("refutation: {refutation}");
+
         if o.status.code() != Some(SUCCESS_RC) && o.status.code() != Some(TIMEOUT_RC) {
-            println!("{}", std::str::from_utf8(&o.stdout).unwrap());
-            println!("{:}", o.status.code().unwrap());
+            eprintln!("failed with error code {:}", o.status.code().unwrap());
+            eprintln!("stdout:\n{}", std::str::from_utf8(&o.stdout).unwrap());
+            eprintln!("sterr:\n{}", std::str::from_utf8(&o.stderr).unwrap());
             panic!()
         }
 
-        println!(
-            "{}",
-            std::str::from_utf8(&o.stdout)
-                .unwrap()
-                .contains("Termination reason: Refutation\n")
-        );
+        Ok(o.status.success() && refutation)
+    }
 
-        Ok(o.status.success()
-            && std::str::from_utf8(&o.stdout)
-                .unwrap()
-                .contains("Termination reason: Refutation\n"))
+    pub fn run_smt<S, F, RefS>(&self, smt: implvec!(RefS)) -> anyhow::Result<bool>
+    where
+        Smt<S, F>: Display,
+        RefS: Borrow<Smt<S, F>>,
+    {
+        let mut tmpfile = tempfile::Builder::new()
+            .prefix("cryptovampire")
+            .suffix(".smt")
+            .keep(self.keep_file)
+            .tempfile()?;
+
+        if self.keep_file {
+            tr!("writting smt file to '{:?}' ...", tmpfile.path())
+        }
+
+        {
+            use std::io::Write as _;
+            let buffer = tmpfile.as_file_mut();
+            let mut i = 1;
+            for statement in smt {
+                let statement = statement.borrow();
+                if statement.is_any_assert() {
+                    writeln!(buffer, "; {i:}")?;
+                    i += 1;
+                }
+                writeln!(buffer, "{statement}")?;
+            }
+        }
+
+        if self.keep_file {
+            tr!("file written")
+        }
+
+        self.run(tmpfile.path())
+    }
+
+    pub fn default_args() -> Vec<VampireArg> {
+        vec![
+            VampireArg::Cores(num_cpus::get().checked_sub(1).unwrap_or(1) as u64),
+            VampireArg::Mode(vampire_suboptions::Mode::Portfolio),
+            VampireArg::InputSyntax(vampire_suboptions::InputSyntax::SmtLib2),
+            VampireArg::TimeLimit(1.0),
+        ]
     }
 }
