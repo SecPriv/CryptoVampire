@@ -85,6 +85,7 @@ impl RefFormulaBuilder {
 
     /// adds to the formula (in a disjonction or a conjunction depending on the mode)
     pub fn add_leaf(&self, content: RecFOFormula) {
+        trace!("adding {content}");
         self.borrow_mut().add_leaf(content);
     }
 

@@ -5,9 +5,10 @@ use std::rc::Rc;
 use crate::problem::PAnalysis;
 use crate::protocol::Step;
 use crate::rules::fresh::{Condition, Mode};
+use crate::terms::formula_utils::offsets_owned;
 use crate::terms::{
     Alias, AliasRewrite, BITE, EQ, Exists, FOBinder, FRESH_NONCE, HAPPENS, LT, MACRO_COND,
-    MACRO_FRAME, MACRO_MSG, MITE, PRED,
+    MACRO_FRAME, MACRO_MSG, MITE, NONCE, PRED,
 };
 use crate::vampire::runner::VampireExec;
 use crate::{
@@ -18,7 +19,7 @@ use crate::{
 use crate::{LangVar, Problem, rexp};
 use bon::Builder;
 use cryptovampire_smt::{IntoSmt, Smt, SmtFormula};
-use egg::{Analysis, EGraph, Id, Pattern, Searcher};
+use egg::{Analysis, EGraph, Id, Pattern, PatternAst, Searcher, VarExposed};
 use egg::{ENodeOrVar, Language, RecExpr, Var};
 use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain, izip};
@@ -154,10 +155,10 @@ impl Nonce {
             }
 
             // check is the nonce is there
-            if head == &self.name {
+            if head == &NONCE {
                 tr!("found self ({})", self.name);
                 let other = convert_id(egraph, current);
-                builder.add_leaf(!EQ.rapp([other, self.clone().into_recformula()]));
+                builder.add_leaf(!EQ.rapp([other, NONCE.rapp([self.clone().into_recformula()])]));
                 return; // <- no need to look further
             }
         }
@@ -288,14 +289,16 @@ impl Nonce {
     pub fn search_recexpr(&self, pbl: &Problem, builder: &RefFormulaBuilder, term: &[LangVar]) {
         assert!(builder.current_mode().is_and());
         ereturn_if!(builder.is_saturated());
-        ereturn_let!(let Destructed { head: HeadSk::Fun(fun), args} = term.destruct());
+        ereturn_let!(let Destructed { head: HeadSk::Fun(fun), mut args} = term.destruct());
         tr!(
             "searching thourgh {}",
             egg::RecExpr::from(term.iter().cloned().collect_vec())
         );
 
-        if fun == self.name {
-            let content = !EQ.rapp([term.into(), self.clone().into_recformula()]);
+        if fun == NONCE {
+            tr!("found nonce!");
+            let arg = args.next().expect("NONCE need a parameter");
+            let content = !EQ.rapp([arg.into(), self.clone().into_recformula()]);
             builder.add_leaf(content);
         } else if fun.is_special_subterm() {
             self.search_special_recexpr(pbl, builder, fun, args);
@@ -337,6 +340,14 @@ impl Nonce {
         assert!(builder.current_mode().is_and());
         tr!("in search_alias");
         let args = args.into_iter().collect_vec();
+        let max_var = args
+            .iter()
+            .flat_map(|arg| arg.used_vars_iter())
+            .filter_map(|v| v.expose().try_into_num().ok())
+            .max()
+            .unwrap_or(0)
+            + 1;
+        tr!("max_var = {max_var}");
 
         let builder = builder.add_node(Mode::Or, None);
 
@@ -347,6 +358,25 @@ impl Nonce {
             sorts,
         } in rws.iter()
         {
+            assert!(
+                variables
+                    .iter()
+                    .all(|v| matches!(v.expose(), VarExposed::Num(_)))
+            );
+
+            let variables = variables
+                .iter()
+                .map(|v| match v.expose() {
+                    VarExposed::Num(i) => (i + max_var).into(),
+                    VarExposed::Sym(_) => *v,
+                })
+                .collect_vec();
+            let from = from
+                .iter()
+                .map(|f| offsets_owned(max_var, f.iter().cloned()))
+                .collect_vec();
+            let to = offsets_owned(max_var, to.iter().cloned());
+
             let condition = RecFOFormula::and(
                 izip!(args.iter(), from.iter())
                     .map(|(arg, f)| EQ.rapp(vec![RecFOFormula::from(*arg), f.as_ref().into()])),
@@ -359,7 +389,10 @@ impl Nonce {
                 quantifier: FOBinder::Forall,
             };
             let builder = builder.add_node(Mode::And, Some(condition));
-            self.search_recexpr(pbl, &builder, to);
+            self.search_recexpr(pbl, &builder, &to);
+            for arg in &args {
+                self.search_recexpr(pbl, &builder, arg);
+            }
         }
     }
 
@@ -375,7 +408,7 @@ impl Nonce {
         }: &Exists,
         args: implvec!(&'a [LangVar]),
     ) {
-        tr!("in search_exists");
+        tr!("in search_exists {e}");
         let sort = e.get_var_sort();
 
         // capture avoiding substitution. We need to rename the bound variable of the exists in case it clashes

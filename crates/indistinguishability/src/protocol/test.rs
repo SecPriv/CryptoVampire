@@ -140,9 +140,9 @@ pub mod basic_hash {
             *vars = [0, 1, 2].map(Var::from_u32).to_vec();
             *bound_var = Var::from_u32(3);
             *patt = rexp!((and
-                (LT (tag #3 #0) #1)
                 (= (PROJ_1 (MACRO_INPUT #1 #2)) (PROJ_1 (MACRO_INPUT (tag #3 #0) #2)))
                 (= (PROJ_2 (MACRO_INPUT #1 #2)) (PROJ_2 (MACRO_INPUT (tag #3 #0) #2)))
+                (LT (tag #3 #0) #1) // <- the order matters ^^'
             ))
             .to_vec()
             .into();

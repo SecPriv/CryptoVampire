@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use super::FunctionCollection;
 use crate::{
     Lang,
@@ -90,4 +92,23 @@ pub struct ExistsBuilder {
     pub bound_var: Var,
     /// The "content" of the quantifier
     pub patt: PatternAst<Lang>,
+}
+
+impl Display for Exists {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Exists {
+            vars,
+            bound_var,
+            patt,
+            tlf,
+            skolem,
+            fresh,
+        } = self;
+
+        write!(f, "∃{tlf}(")?;
+        for v in vars {
+            write!(f, "{v}, ")?;
+        }
+        write!(f, ") {bound_var}@({fresh}, {skolem}). {patt}")
+    }
 }

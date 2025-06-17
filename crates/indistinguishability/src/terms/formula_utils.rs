@@ -5,11 +5,19 @@ use crate::{
     LangVar,
     terms::{Function, Sort},
 };
-use egg::{Id, PatternAst, RecExpr, Var};
+use egg::{ENodeOrVar, Id, PatternAst, RecExpr, Var, VarExposed};
 use itertools::{EitherOrBoth, Itertools, izip};
 use logic_formula::{Destructed, Formula, HeadSk, egg::SimplLang};
 use std::borrow::Cow;
 use utils::implvec;
+
+/// magic ✨
+#[macro_export]
+macro_rules! rexp {
+    ($($t:tt)*) => {
+        ::cryptovampire_macros::recexpr!($crate::terms::formula_utils; $($t)*)
+    };
+}
 
 /// for [rexp]
 pub static TRUE: Function = super::TRUE.const_clone().unwrap();
@@ -51,16 +59,10 @@ pub fn convert_to_ground_rexp(c: implvec!(LangVar)) -> Result<RecExpr<crate::Lan
     tmp.try_into()
 }
 
+/// **!!! DON'T USE DIRECTLY !!!**
+///
 /// alias for [rexp]
 pub type Lang = LangVar;
-
-/// magic ✨
-#[macro_export]
-macro_rules! rexp {
-    ($($t:tt)*) => {
-        ::cryptovampire_macros::recexpr!($crate::terms::formula_utils; $($t)*)
-    };
-}
 
 pub fn get_sort<'a, F>(f: &'a F) -> Option<Sort>
 where
@@ -96,6 +98,21 @@ where
             type_check(arg) && get_sort(arg).map(|x| x == asort).unwrap_or(true)
         }),
     }
+}
+
+pub fn offsets_vars<L>(amount: u32, f: &mut [ENodeOrVar<L>]) {
+    for e in f {
+        if let ENodeOrVar::Var(v) = e
+            && let VarExposed::Num(i) = v.expose()
+        {
+            *v = (i + amount).into()
+        }
+    }
+}
+pub fn offsets_owned<L>(amount: u32, f: implvec!(ENodeOrVar<L>)) -> PatternAst<L> {
+    let mut f : PatternAst<L> = f.into_iter().collect();
+    offsets_vars(amount, &mut f);
+    f
 }
 
 #[cfg(test)]
