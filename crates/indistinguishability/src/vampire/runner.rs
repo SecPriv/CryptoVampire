@@ -196,7 +196,7 @@ impl VampireExec {
             VampireArg::Cores(num_cpus::get().checked_sub(1).unwrap_or(1) as u64),
             VampireArg::Mode(vampire_suboptions::Mode::Portfolio),
             VampireArg::InputSyntax(vampire_suboptions::InputSyntax::SmtLib2),
-            VampireArg::TimeLimit(1.0),
+            VampireArg::TimeLimit(0.5),
         ]
     }
 }

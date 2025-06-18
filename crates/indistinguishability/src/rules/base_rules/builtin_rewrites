@@ -2,13 +2,13 @@
 %------------------ default, protocol agnostic, rewrite rules -----------------%
 %------------------------------------------------------------------------------%
 
-[if true] (ite true ?a ?b) => ?a.
-[if false] (ite false ?a ?b) => ?b.
+[if true] (m_ite true ?a ?b) => ?a.
+[if false] (m_ite false ?a ?b) => ?b.
 [implies def] (implies ?a ?b) => (b_ite ?a ?b true).
-[if simp1] (ite ?x ?a ?a) => ?a.
-[if simp2] (ite ?a ?a false) => ?a.
-[if simp3] (ite ?a (ite ?a ?b ?c) ?d) => (ite ?a ?b ?d).
-[if simp4] (ite ?a true false) => ?a.
+[if simp1] (m_ite ?x ?a ?a) => ?a.
+[if simp2] (m_ite ?a ?a false) => ?a.
+[if simp3] (m_ite ?a (m_ite ?a ?b ?c) ?d) => (m_ite ?a ?b ?d).
+[if simp4] (m_ite ?a true false) => ?a.
 
 [b_if true] (b_ite true ?a ?b) => ?a.
 [b_if false] (b_ite false ?a ?b) => ?b.
@@ -28,7 +28,7 @@
 [not def] (not ?a) => (b_ite ?a false true).
 [meq true] ?v1 = (meq ?a ?b), ?v1 = true => ?a = ?b.
 [reverse and] ?v1 = (b_ite ?a ?b false), ?v1 = true => ?a = true, ?b = true.
-[implies trans] ?v1 = true, ?v1 = (ite ?a ?b true), ?v1 = (ite ?b ?c true) => ?v1 = (mimplies ?a ?c).
+[implies trans] ?v1 = true, ?v1 = (m_ite ?a ?b true), ?v1 = (m_ite ?b ?c true) => ?v1 = (mimplies ?a ?c).
 [p1] (p1 (tuple ?a ?b)) => ?a.
 [p2] (p2 (tuple ?a ?b)) => ?b.
 [meq refl] (meq ?a ?a) => true.
@@ -37,12 +37,12 @@
 [bif true] (b_ite true ?a ?b) => ?a.
 [bif false] (b_ite false ?a ?b) => ?b.
 [bif simp1] (b_ite ?x ?a ?a) => ?a.
-[bif simp3] (b_ite ?a (b_ite ?a ?b ?c) ?d) => (ite ?a ?b ?d).
+[bif simp3] (b_ite ?a (b_ite ?a ?b ?c) ?d) => (b_ite ?a ?b ?d).
 
 [unfold_exec]  (unfold_exec ?t ?p) 
   => (and (macro_cond ?t ?p) (macro_exec (pred ?t) ?p)).
 [unfold_frame] (unfold_frame ?t ?p) => (tuple
-  (tuple (mfrom_bool (macro_exec ?t ?p)) (ite (macro_exec ?t ?p) (macro_msg ?t ?p) empty))
+  (tuple (mfrom_bool (macro_exec ?t ?p)) (m_ite (macro_exec ?t ?p) (macro_msg ?t ?p) empty))
   (macro_frame (pred ?t) ?p)
 ).
 [unfold_input] (unfold_input ?t ?p) => (att (macro_frame (pred ?t) ?p)).
@@ -71,4 +71,4 @@
 [leq pred] (leq (pred ?t) ?t) => true.
 
 [happens leq]
-?v1 = (happens ?t), ?v1 = (leq ?t2 ?t1), ?v1 = true => ?v1 = (happens ?t2).
+?v1 = (happens ?t1), ?v1 = (leq ?t2 ?t1), ?v1 = true => ?v1 = (happens ?t2).

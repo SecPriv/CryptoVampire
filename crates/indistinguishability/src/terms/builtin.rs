@@ -170,7 +170,7 @@ mk_builtin_funs!(
         flags: f!(CUSTOM_DEDUCE | BUILTIN_SMT)
     };
 
-    MITE "bitstring_if_then_else" "mite" "ite" {
+    MITE "bitstring_if_then_else" "m_ite" {
         signature: s!(Bool, Bitstring, Bitstring -> Bitstring),
         flags: f!(CUSTOM_DEDUCE | BUILTIN_SMT | CUSTOM_SUBTERM)
     };
@@ -270,7 +270,7 @@ mk_builtin_funs!(
     // ~~~~~~~~~~~~~~~~ macro ~~~~~~~~~~~~~~~~~~~
 
     ATT "att" {
-        signature: s!(Time -> Bitstring),
+        signature: s!(Bitstring -> Bitstring),
     };
 
     MACRO_INPUT "macro_input" {
@@ -375,5 +375,12 @@ mk_builtin_funs!(
         signature: s!(Bool -> Bool),
         flags: f!(PROLOG_ONLY)
     };
+
+    // ~~~~~~~~~~~~~~~ smt only ~~~~~~~~~~~~~~~~~
+
+    SMT_ITE "ite" {
+        signature: s!(Bool, Bitstring, Bitstring -> Bitstring),
+        flags: f!(SMT_ONLY | BUILTIN_SMT | CUSTOM_DEDUCE | CUSTOM_SUBTERM)
+    }
 
 );

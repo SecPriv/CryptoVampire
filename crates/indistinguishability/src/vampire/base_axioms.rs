@@ -2,7 +2,7 @@ use cryptovampire_macros::{smt, vec_smt};
 use cryptovampire_smt::{Smt, SmtFormula, SortedVar};
 use itertools::{Itertools, chain, izip};
 
-use crate::terms::{AliasRewrite, Exists, HAPPENS, LEQ, LT, PRED, Rewrite, SMT_SORT_LIST};
+use crate::terms::{AliasRewrite, Exists, Rewrite, ATT, EMPTY, FROM_BOOL, HAPPENS, LEQ, LT, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, PRED, SMT_ITE, SMT_SORT_LIST, TUPLE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG};
 use crate::vampire::convert::{formula_to_smt, var_to_smt};
 use crate::{MSmt, MSmtFormula};
 use crate::{
@@ -14,6 +14,7 @@ pub fn mk_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     chain![
         mk_header(pbl),
         mk_nonces_diff(pbl),
+        mk_base_macro(pbl),
         mk_base_order(pbl),
         mk_step_diff(pbl),
         mk_steps_macros(pbl),
@@ -141,6 +142,30 @@ fn mk_base_order(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     .into_iter()
     .map(Smt::mk_assert);
     chain![[Smt::Comment("order base".into())], iter]
+}
+
+fn mk_base_macro(_: &Problem) -> impl Iterator<Item = MSmt>  {
+    use crate::terms::Sort::*;
+    let iter = vec_smt! {
+        (forall ((#t!0 Time) (#p!1 Protocol)) (=> (HAPPENS #t) (= (MACRO_COND #t #p) (UNFOLD_COND #t #p)))),
+        (forall ((#t!0 Time) (#p!1 Protocol)) (=> (HAPPENS #t) (= (MACRO_MSG #t #p) (UNFOLD_MSG #t #p)))),
+        (forall ((#t!0 Time) (#p!1 Protocol)) (=> (HAPPENS #t) (= (MACRO_EXEC #t #p) (UNFOLD_EXEC #t #p)))),
+        (forall ((#t!0 Time) (#p!1 Protocol)) (=> (HAPPENS #t) (= (MACRO_FRAME #t #p) (UNFOLD_FRAME #t #p)))),
+        (forall ((#t!0 Time) (#p!1 Protocol)) (=> (HAPPENS #t) (= (MACRO_INPUT #t #p) (UNFOLD_INPUT #t #p)))),
+        (forall ((#t!0 Time) (#p!1 Protocol)) (= (UNFOLD_INPUT #t #p) (ATT (MACRO_FRAME (PRED #t) #p)))),
+        (forall ((#t!0 Time) (#p!1 Protocol)) 
+          (= (UNFOLD_FRAME #t #p) 
+            (TUPLE
+                (TUPLE 
+                    (FROM_BOOL (MACRO_EXEC #t #p)) 
+                    (SMT_ITE (MACRO_EXEC #t #p) 
+                        (MACRO_MSG #t #p) EMPTY))
+                        (MACRO_FRAME (PRED #t) #p)))),
+        (forall ((#t!0 Time) (#p!1 Protocol)) (= (UNFOLD_EXEC #t #p) (and (MACRO_COND #t #p) (MACRO_EXEC (PRED #t) #p))))
+    }
+    .into_iter()
+    .map(Smt::mk_assert);
+    chain![[Smt::Comment("unfold base".into())], iter]
 }
 
 fn mk_exists_1(
