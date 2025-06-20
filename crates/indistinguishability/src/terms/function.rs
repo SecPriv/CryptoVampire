@@ -1,16 +1,15 @@
 use cryptovampire_smt::SmtHead;
 use logic_formula::egg::{SimplLang, SimpleDiscriminant};
 use serde::Serialize;
-use std::{borrow::Cow, fmt::Display, ops::Deref};
+use steel::rvals::CustomType;
+use steel_derive::Steel;
+use std::{any::TypeId, borrow::Cow, fmt::Display, ops::Deref};
 use utils::{ereturn_if, implvec, match_eq, quack::CowArc};
 
 use crate::{
-    protocol::{MacroKind, ProtocolLanguage},
-    terms::{
-        Alias, Exists, FunctionCollection, FunctionFlags, HAPPENS, MACRO_COND, MACRO_EXEC,
-        MACRO_FRAME, MACRO_INPUT, MACRO_MSG, RecFOFormula, Signature, Sort, TRUE, UNFOLD_COND,
-        UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin,
-    },
+    input::Registerable, protocol::{MacroKind, ProtocolLanguage}, terms::{
+        builtin, Alias, Exists, FunctionCollection, FunctionFlags, RecFOFormula, Signature, Sort, HAPPENS, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, TRUE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG
+    }
 };
 
 #[non_exhaustive]
@@ -43,7 +42,7 @@ impl InnerFunction {
 /// Main type for function in this crate
 ///
 /// This is basicaly a somewhat smart pointer to an [InnerFunction].
-#[derive(Debug, Clone, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash, Steel)]
 pub struct Function(CowArc<'static, InnerFunction>);
 
 impl Function {
@@ -209,6 +208,14 @@ impl AsRef<Self> for Function {
         self
     }
 }
+
+
+impl Registerable for Function {
+    fn register(module: &mut steel::steel_vm::builtin::BuiltInModule) -> &mut steel::steel_vm::builtin::BuiltInModule {
+        Self::register_type(module)
+    }
+}
+
 
 // impl Eq for Function {}
 

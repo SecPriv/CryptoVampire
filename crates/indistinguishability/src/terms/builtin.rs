@@ -267,6 +267,12 @@ mk_builtin_funs!(
         signature: s!(Time, 1),
     };
 
+    INIT "init" {
+        signature: s!(Time, 0),
+        flags: f!(STEP),
+        step_idx: 0,
+    };
+
     // ~~~~~~~~~~~~~~~~ macro ~~~~~~~~~~~~~~~~~~~
 
     ATT "att" {

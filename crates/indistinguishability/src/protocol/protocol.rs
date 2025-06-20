@@ -1,21 +1,20 @@
+use bon::Builder;
 use cryptovampire_macros::smt;
 use itertools::Itertools;
 
 use crate::{MSmtFormula, terms::Function};
 
 use super::Step;
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Builder)]
 pub struct Protocol {
     name: Function,
+    #[builder(with = <_>::from_iter, default = vec![Step::builder().build().unwrap()])]
     steps: Vec<Step>,
 }
 
 impl Protocol {
     pub fn new(name: Function) -> Self {
-        Self {
-            name,
-            steps: vec![],
-        }
+        Self::builder().name(name).build()
     }
 
     /// Two protocols are compatible if they have the same step names
@@ -28,11 +27,6 @@ impl Protocol {
         steps_a.sort_unstable();
         steps_b.sort_unstable();
         steps_a == steps_b
-    }
-
-    pub fn add_step(&mut self, step: Step) {
-        assert!(step.valid());
-        self.steps.push(step)
     }
 
     #[inline]
@@ -48,5 +42,11 @@ impl Protocol {
     pub(crate) fn as_smt(&self) -> MSmtFormula {
         let name = self.name();
         smt!(name)
+    }
+
+    pub(crate) fn add_step(&mut self, step: Step) -> &mut Step{
+        assert!(step.valid());
+        self.steps.push(step);
+        self.steps.last_mut().unwrap()
     }
 }

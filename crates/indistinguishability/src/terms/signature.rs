@@ -1,7 +1,8 @@
-use crate::terms::Sort;
+use crate::{input::Registerable, terms::Sort};
 use cryptovampire_smt::{SortedVar, VarInner};
 use itertools::izip;
 use serde::{Deserialize, Serialize};
+use steel::rvals::{FromSteelVal, IntoSteelVal};
 use utils::implvec;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -31,5 +32,22 @@ impl Signature {
             var: VarInner::Int(i),
             sort: *s,
         })
+    }
+}
+
+impl FromSteelVal for Signature {
+    fn from_steelval(val: &steel::SteelVal) -> steel::rvals::Result<Self> {
+        let (args, out): (Vec<Sort>, Sort) = FromSteelVal::from_steelval(val)?;
+        Ok(Self {
+            inputs: args.into(),
+            output: out,
+        })
+    }
+}
+
+impl IntoSteelVal for Signature {
+    fn into_steelval(self) -> steel::rvals::Result<steel::SteelVal> {
+        let Self { inputs, output } = self;
+        (inputs.into_owned(), output).into_steelval()
     }
 }

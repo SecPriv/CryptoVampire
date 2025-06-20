@@ -1,6 +1,7 @@
 use cryptovampire_macros::{smt, vec_smt};
 use cryptovampire_smt::{Smt, SmtFormula, SortedVar};
 use itertools::{Itertools, chain, izip};
+use utils::dynamic_iter;
 
 use crate::terms::{AliasRewrite, Exists, Rewrite, ATT, EMPTY, FROM_BOOL, HAPPENS, LEQ, LT, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, PRED, SMT_ITE, SMT_SORT_LIST, TUPLE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG};
 use crate::vampire::convert::{formula_to_smt, var_to_smt};
@@ -105,24 +106,29 @@ fn mk_nonces_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
 }
 
 fn mk_steps_macros(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
-    pbl.protocols
+    pbl.protocols()
         .iter()
         .flat_map(|p| p.steps().iter().map(move |s| (p.as_smt(), s)))
         .flat_map(|(ptcl, s)| s.mk_unfold_vampire_rewrites(&ptcl))
 }
 
 fn mk_step_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
-    let steps = pbl.protocols[0]
-        .steps()
-        .iter()
-        .map(|s| s.id.clone())
-        .collect_vec();
+    dynamic_iter!(Ret; Empty:A, A:B);
+
+    let steps;
+    if let Some(iter) = pbl.steps() {
+        steps = iter.collect_vec()
+    } else {
+        // There are no steps in this protocol
+        return  Ret::Empty(::std::iter::empty());
+    }
+
     assert!(steps.iter().any(|s| s.name == "init"), "need an init step");
 
-    chain! {
+    Ret::A(chain! {
         [Smt::Comment("step distinctness".into())],
         mk_pseudo_datatype_diff(steps)
-    }
+    })
 }
 
 fn mk_base_order(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {

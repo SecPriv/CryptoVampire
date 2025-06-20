@@ -3,7 +3,7 @@ pub mod basic_hash {
     use crate::{
         Lang, Problem, decl_fun,
         protocol::test::basic_hash::{
-            MFunction, insert_init, insert_rf, insert_rs, insert_rw, insert_tag, populate_functions,
+            MFunction,  insert_rf, insert_rs, insert_rw, insert_tag, populate_functions,
         },
         rexp,
         rules::base_rules::mk_rewrites_rules,
@@ -16,7 +16,7 @@ pub mod basic_hash {
         let mut pbl = Problem::base_empty();
         pbl.config.keep_smt_files = true;
         let funs = populate_functions(&mut pbl);
-        insert_init(&mut pbl, &funs);
+        // insert_init(&mut pbl, &funs);
         insert_tag(&mut pbl, &funs);
         insert_rs(&mut pbl, &funs);
         insert_rf(&mut pbl, &funs);

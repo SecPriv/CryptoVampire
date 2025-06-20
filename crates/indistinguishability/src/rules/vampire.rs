@@ -1,21 +1,18 @@
-use std::{io::Write, rc::Rc};
-
-use super::runner::VampireExec;
-use bon::Builder;
-use cryptovampire_smt::{IntoSmt, Smt};
-use egg::{ENodeOrVar, Pattern, RecExpr, Searcher, Var};
-use itertools::{Itertools, chain};
-use static_init::dynamic;
-use utils::ereturn_let;
-
-use golgge::{Dependancy, Rule};
-
 use crate::{
     Lang, Problem,
     problem::PAnalysis,
     rexp,
     terms::{RecFOFormula, VAMPIRE},
+    vampire::runner::VampireExec,
 };
+use bon::Builder;
+use cryptovampire_smt::{IntoSmt, Smt};
+use egg::{ENodeOrVar, Pattern, RecExpr, Searcher, Var};
+use golgge::{Dependancy, Rule};
+use itertools::{Itertools, chain};
+use static_init::dynamic;
+use std::{io::Write, rc::Rc};
+use utils::ereturn_let;
 
 declare_trace!($"vampire_rule");
 

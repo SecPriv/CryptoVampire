@@ -1,13 +1,13 @@
 use crate::{
     Configuration, Lang, MSmt, mk_signature,
-    protocol::Protocol,
+    protocol::{Protocol, Step},
     rexp,
     rules::{
         FreshNonce, VampireRule,
         base_rules::{mk_equiv_rules, mk_prolog_rules, mk_rewrites_rules},
     },
     terms::{
-        EMPTY, EQUIV, Function, FunctionCollection, FunctionFlags, HAPPENS, InnerFunction,
+        EMPTY, EQUIV, Function, FunctionCollection, FunctionFlags, HAPPENS, INIT, InnerFunction,
         MACRO_FRAME, PRED, Rewrite, TRUE, UNFOLD_MSG, formula_utils::convert_to_ground_rexp,
     },
     vampire::{mk_prelude, runner::VampireExec},
@@ -20,6 +20,7 @@ use golgge::{Program, Rule};
 use itertools::{Itertools, chain};
 use logic_formula::egg::SimpleDiscriminant;
 use std::{fmt::Debug, rc::Rc};
+use utils::implvec;
 
 mod analysis;
 pub use analysis::{PAnalysis, PRule, RcRule};
@@ -36,7 +37,7 @@ pub struct Problem {
     ///
     /// The vector must be at least 2 long
     #[builder(with = <_>::from_iter, default = vec![])]
-    pub protocols: Vec<Protocol>,
+    protocols: Vec<Protocol>,
     /// The functions
     #[builder(default = FunctionCollection::init())]
     pub function: FunctionCollection,
@@ -78,26 +79,8 @@ impl Problem {
             .all(|(a, b)| Protocol::are_compatible(a, b))
     }
 
-    /// Simply declare a protocol, this one remains quite undefined
-    pub fn declare_new_protocol(&mut self) -> &mut Protocol {
-        self.clear_smt_prelude();
-        let n = self.protocols.len();
-
-        let inner = InnerFunction {
-            flags: FunctionFlags::PROTOCOL,
-            protocol_idx: n,
-            ..InnerFunction::new(format!("_p${n:}").into(), mk_signature!(() -> Protocol))
-        };
-        let fun = Function::new(inner);
-        self.function.add(fun.clone());
-
-        let ptcl = Protocol::new(fun);
-        self.protocols.push(ptcl);
-        &mut self.protocols[n]
-    }
-
     pub fn get_init_fun(&self) -> &Function {
-        &self.protocols[0].steps()[0].id
+        &INIT
     }
 
     /// Build a [Program] to use
@@ -112,7 +95,8 @@ impl Problem {
 
         let eq_rules = mk_rewrites_rules(self);
         let rules = mk_prolog_rules(self);
-        let rules : Vec<Rc<dyn Rule<_, _>>> = chain![rules, [vampire_rule.into_mrc(), fresh_rule.into_mrc()]].collect_vec();
+        let rules: Vec<Rc<dyn Rule<_, _>>> =
+            chain![rules, [vampire_rule.into_mrc(), fresh_rule.into_mrc()]].collect_vec();
 
         golgge::Program::build()
             .eq_rules(eq_rules)
@@ -295,6 +279,67 @@ impl Problem {
 
     pub fn extra_rules_mut(&mut self) -> &mut Vec<RcRule> {
         &mut self.extra_rules
+    }
+
+    pub fn protocols(&self) -> &[Protocol] {
+        &self.protocols
+    }
+
+    pub fn protocol_mut(&mut self, index: usize) -> Option<&mut Protocol> {
+        self.protocols.get_mut(index)
+    }
+
+    /// Simply declare a protocol, this one remains quite undefined
+    pub fn declare_new_protocol(&mut self) -> &mut Protocol {
+        self.clear_smt_prelude();
+        let n = self.protocols.len();
+
+        let inner = InnerFunction {
+            flags: FunctionFlags::PROTOCOL,
+            protocol_idx: n,
+            ..InnerFunction::new(format!("_p${n:}").into(), mk_signature!(() -> Protocol))
+        };
+        let fun = Function::new(inner);
+        self.function.add(fun.clone());
+
+        let ptcl = {
+            let builder = Protocol::builder().name(fun);
+            if let Some(p0) = self.protocols().first() {
+                builder
+                    .steps(p0.steps().iter().map(|Step { id, vars, .. }| {
+                        Step::builder()
+                            .id(id.clone())
+                            .vars(vars.clone())
+                            .build()
+                            .unwrap()
+                    }))
+                    .build()
+            } else {
+                builder.build()
+            }
+        };
+        self.protocols.push(ptcl);
+        &mut self.protocols[n]
+    }
+
+    /// Push steps to all protocols, returns a mutable pointer to those steps
+    /// 
+    /// The ith steps is pushed to the ith protocol
+    /// 
+    /// ### panic
+    /// If the number if steps is different from the number of protocol or they use different [Function]
+    pub fn push_steps(&mut self, steps: implvec!(Step)) -> Vec<&mut Step> {
+        let steps = steps
+            .into_iter()
+            .zip_eq(&mut self.protocols)
+            .map(|(s, p)| p.add_step(s))
+            .collect_vec();
+        assert!(steps.iter().map(|s| &s.id).all_equal(), "The steps should all have the same name");
+        steps
+    }
+
+    pub fn steps(&self) -> Option<impl Iterator<Item = Function> + use<'_>>{
+        Some(self.protocols().first()?.steps().iter().map(|Step { id,..}| id.clone()))
     }
 }
 

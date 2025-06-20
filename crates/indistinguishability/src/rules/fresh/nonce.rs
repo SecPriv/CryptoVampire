@@ -254,7 +254,7 @@ impl Nonce {
                 .iter()
                 .find_map(|f| f.head.get_protocol_index())
                 .unwrap(); // there has to be one
-            &pbl.protocols[idx]
+            &pbl.protocols()[idx]
         };
 
         // for each step we switch to `search_recexpr` on its message
@@ -473,7 +473,7 @@ mod test {
 
         let i = decl_fun!(pbl; "i": () -> Index);
         let j = decl_fun!(pbl; "j": () -> Index);
-        let p1 = pbl.protocols[0].name().clone();
+        let p1 = pbl.protocols()[0].name().clone();
         let tag = pbl.function.get("tag").unwrap();
         let rf = pbl.function.get("Rf").unwrap();
 

@@ -1,15 +1,17 @@
 use std::fmt::Display;
 
+use bon::{Builder, bon, builder};
 use cryptovampire_macros::smt;
 use cryptovampire_smt::{Smt, SortedVar};
 use egg::{Analysis, ENodeOrVar, Pattern, PatternAst, RecExpr, Rewrite, Var};
 use itertools::{Itertools, izip};
 use log::trace;
 use logic_formula::{Formula, egg::SimpleDiscriminant};
+use utils::implvec;
 
 use crate::{
     Lang, LangVar, MSmt, MSmtFormula, rexp,
-    terms::{Function, UNFOLD_COND, UNFOLD_MSG},
+    terms::{EMPTY, Function, INIT, TRUE, UNFOLD_COND, UNFOLD_MSG},
     vampire::convert::{formula_to_smt, var_to_smt},
 };
 
@@ -22,6 +24,24 @@ pub struct Step {
     pub vars: Vec<Var>,
     pub cond: PatternAst<Lang>,
     pub msg: PatternAst<Lang>,
+}
+
+#[bon]
+impl Step {
+    #[builder]
+    pub fn new(
+        #[builder(default = INIT.clone())] id: Function,
+        #[builder(with = <_>::from_iter, default = vec![])] vars: Vec<Var>,
+        #[builder(default = TRUE.app_empty_var())] cond: PatternAst<Lang>,
+        #[builder(default = EMPTY.app_empty_var())] msg: PatternAst<Lang>,
+    ) -> Option<Step> {
+        (vars.len() == id.signature.arity()).then_some(Self {
+            id,
+            vars,
+            cond,
+            msg,
+        })
+    }
 }
 
 impl Step {
@@ -43,6 +63,7 @@ impl Step {
                 .collect::<Vec<_>>(),
         )
     }
+
     pub fn valid(&self) -> bool {
         self.cond.free_vars_iter().all(|v| self.vars.contains(&v))
             && self.msg.free_vars_iter().all(|v| self.vars.contains(&v))

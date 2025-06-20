@@ -1,8 +1,11 @@
 use serde::{Deserialize, Serialize};
+use steel_derive::Steel;
 use std::fmt::Display;
 
+use crate::input::Registerable;
+
 #[non_exhaustive]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Steel)]
 pub enum Sort {
     Bool,
     Bitstring,
@@ -32,5 +35,12 @@ impl Display for Sort {
             Sort::Index => write!(f, "Index"),
             Sort::SubtermStatus => write!(f, "SubtermStatus"),
         }
+    }
+}
+
+
+impl Registerable for Sort {
+    fn register(module: &mut steel::steel_vm::builtin::BuiltInModule) -> &mut steel::steel_vm::builtin::BuiltInModule {
+        Self::register_enum_variants(module)
     }
 }

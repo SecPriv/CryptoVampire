@@ -30,6 +30,7 @@ macro_rules! declare_trace {
 // ~~~~~~~~~~~~~~~ modules ~~~~~~~~~~~~~~~~~~
 
 pub mod problem;
+pub use problem::Problem;
 pub mod protocol;
 pub mod rules;
 pub mod terms; // <- first for macros
@@ -37,8 +38,9 @@ pub mod terms; // <- first for macros
 mod test;
 pub(crate) mod utils;
 pub(crate) mod vampire;
+mod configuration;
+pub use configuration::Configuration;
 
-pub use problem::Problem;
 
 // ~~~~~~ type aliases and constants ~~~~~~~~
 
@@ -53,24 +55,6 @@ pub type MSmtFormula = SmtFormula<Sort, Function>;
 pub type MSmt = Smt<Sort, Function>;
 
 // ~~~~~~~~~~~~~~~~ other ~~~~~~~~~~~~~~~~~~~
-
-#[derive(Debug)]
-pub struct Configuration {
-    /// Wether to keep the smt files around (or let the os get rid of them once
-    /// we're done using them)
-    pub keep_smt_files: bool,
-
-    pub depth: u128,
-}
-
-impl Default for Configuration {
-    fn default() -> Self {
-        Self {
-            keep_smt_files: false,
-            depth: u128::MAX,
-        }
-    }
-}
 
 pub fn init_logger() {
     env_logger::Builder::new()

@@ -1,7 +1,6 @@
 mod base_axioms;
 pub use base_axioms::mk_prelude;
 pub mod convert;
-pub mod rule;
 pub mod runner;
 
 #[cfg(test)]

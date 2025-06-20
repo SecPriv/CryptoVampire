@@ -3,6 +3,7 @@ use std::ops::Deref;
 use egg::{ENodeOrVar, Pattern, PatternAst, RecExpr, SymbolLang, Var};
 use golgge::PrologRule;
 use itertools::{Itertools, chain, izip};
+use log::trace;
 use logic_formula::egg::SimpleDiscriminant;
 
 use crate::{
@@ -44,7 +45,7 @@ fn mk_special_static_deduce_rules(
         .into_iter()
         .filter(|s| !s.is_empty())
         .inspect(|s| {
-            dbg!(s);
+            trace!("to parse: {s}");
         }) // uncomment to debug
         .map(|s| s.parse().unwrap())
         .map(move |patt: PrologAst<SymbolLang>| {

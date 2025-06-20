@@ -27,7 +27,7 @@ pub fn mk_rewrites_rules<N: Analysis<Lang>>(
 fn unfold_rules<N: Analysis<Lang>>(
     pbl: &Problem,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
-    pbl.protocols.iter().flat_map(|ptcl| {
+    pbl.protocols().iter().flat_map(|ptcl| {
         let steps = ptcl.steps();
         let ptcl = ptcl.name();
         steps.iter().flat_map(|s| s.mk_unfold_rewrites(ptcl))

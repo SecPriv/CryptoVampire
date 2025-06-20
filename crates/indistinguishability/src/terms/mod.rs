@@ -76,8 +76,8 @@ pub use rewrite::Rewrite;
 mod alias;
 pub use alias::{Alias, AliasRewrite};
 
-pub use existential_quantifier::*;
-mod existential_quantifier;
+pub use quantifier::*;
+mod quantifier;
 
 mod sort;
 pub use sort::*;

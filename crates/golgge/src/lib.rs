@@ -221,7 +221,7 @@ where
     //     N: Analysis<L> + Default + Serialize,
     //     N::Data: Serialize,
     // {
-    pub fn run_expr(&mut self, goal: RecExpr<L>, depth: u128) -> bool {
+    pub fn run_expr(&mut self, goal: RecExpr<L>, depth: u64) -> bool {
         if cfg!(debug_assertions) {
             struct DP<'a, L: Language, N: Analysis<L>>(&'a Program<L, N>);
             impl<'a, L: Language, N: Analysis<L>> Debug for DP<'a, L, N> {
@@ -237,7 +237,7 @@ where
         self.run(goal, depth)
     }
 
-    pub fn run(&mut self, goal: egg::Id, depth: u128) -> bool {
+    pub fn run(&mut self, goal: egg::Id, depth: u64) -> bool {
         let gtmp = if self.config.trace_prolog {
             let g = self.egraph().id_to_expr(goal);
             eprintln!("({depth:}) {}", g.pretty(80));

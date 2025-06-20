@@ -4,15 +4,22 @@ use std::{
 };
 
 use cryptovampire_smt::{IntoSmt, SmtFormula, SmtQuantifier, SortedVar, VarInner};
-use egg::{RecExpr, Var};
+use egg::{PatternAst, RecExpr, Var};
 use itertools::{Itertools, izip};
-use logic_formula::{Destructed, Formula, HeadSk};
-use utils::{
-    dynamic_iter, implvec, match_eq,
+use logic_formula::{Destructed, Formula, HeadSk, egg::SimplLang};
+use smallvec::SmallVec;
+use steel::{
+    SteelErr,
+    rerrs::ErrorKind,
+    rvals::{FromSteelVal, IntoSteelVal},
+    steel_vm::register_fn::RegisterFn,
 };
+use steel_derive::Steel;
+use utils::{dynamic_iter, implvec, match_eq};
 
 use crate::{
-    LangVar,
+    Lang, LangVar,
+    input::var::SVar,
     terms::{
         AND, BITE, EQ, FALSE, Function, IMPLIES, NOT, OR, Sort, TRUE, convert_smt_var,
         unification::Subst,
@@ -34,7 +41,7 @@ pub enum RecFOFormula {
     Var(Var),
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Steel)]
 pub enum FOBinder {
     Forall,
     Exists,
@@ -115,8 +122,46 @@ impl RecFOFormula {
                     _ => {None}
                 }}
             }
-            RecFOFormula::Binder {  arg, .. } => arg.try_evaluate(),
+            RecFOFormula::Binder { arg, .. } => arg.try_evaluate(),
             _ => None,
+        }
+    }
+
+    fn as_recexp_inner(&self, res: &mut Vec<LangVar>) -> Option<usize> {
+        match self {
+            RecFOFormula::Binder { .. } => None,
+            RecFOFormula::Var(var) => {
+                res.push(egg::ENodeOrVar::Var(*var));
+                Some(res.len() - 1)
+            }
+            RecFOFormula::App { head, args } => {
+                let args: Option<SmallVec<_>> = args
+                    .iter()
+                    .map(|arg| arg.as_recexp_inner(res).map(egg::Id::from))
+                    .collect();
+                let head = SimplLang {
+                    head: head.clone(),
+                    args: args?,
+                };
+                res.push(egg::ENodeOrVar::ENode(head));
+                Some(res.len() - 1)
+            }
+        }
+    }
+
+    pub fn as_recexp(&self) -> Option<PatternAst<Lang>> {
+        let mut ret = Vec::new();
+        self.as_recexp_inner(&mut ret)?;
+        Some(ret.into())
+    }
+
+    pub fn as_steel_recexp(&self) -> ::steel::rvals::Result<PatternAst<Lang>> {
+        match self.as_recexp() {
+            Some(patt) => Ok(patt),
+            None => Err(::steel::SteelErr::new(
+                ::steel::rerrs::ErrorKind::ConversionError,
+                "could convert into RecExpr. Did you use quantifiers?".to_string(),
+            )),
         }
     }
 
@@ -175,6 +220,17 @@ impl From<bool> for RecFOFormula {
         match value {
             true => Self::True(),
             false => Self::False(),
+        }
+    }
+}
+
+impl TryFrom<RecFOFormula> for RecExpr<LangVar> {
+    type Error = ();
+
+    fn try_from(value: RecFOFormula) -> Result<Self, Self::Error> {
+        match value.as_recexp() {
+            Some(x) => Ok(x),
+            None => Err(()),
         }
     }
 }
@@ -374,6 +430,66 @@ impl FOBinder {
         match self {
             FOBinder::Forall => true,
             FOBinder::Exists => false,
+        }
+    }
+}
+
+impl IntoSteelVal for RecFOFormula {
+    fn into_steelval(self) -> steel::rvals::Result<steel::SteelVal> {
+        match self {
+            RecFOFormula::Binder {
+                head,
+                vars,
+                sorts,
+                arg,
+            } => vec![
+                head.into_steelval()?,
+                izip!(vars, sorts)
+                    .map(|(v, s)| (SVar::from(v), s))
+                    .collect_vec()
+                    .into_steelval()?,
+                arg.into_steelval()?,
+            ]
+            .into_steelval(),
+            RecFOFormula::App { head, args } => (head, args).into_steelval(),
+            RecFOFormula::Var(var) => SVar::from(var).into_steelval(),
+        }
+    }
+}
+
+impl FromSteelVal for RecFOFormula {
+    fn from_steelval(val: &steel::SteelVal) -> steel::rvals::Result<Self> {
+        if let Ok((head, args)) = FromSteelVal::from_steelval(val) {
+            Ok(Self::App { head, args })
+        } else if let Ok(var) = SVar::from_steelval(val) {
+            Ok(Self::Var(var.into()))
+        } else {
+            let args = <Vec<steel::SteelVal> as FromSteelVal>::from_steelval(val)?;
+            let [head, vars, arg] = args.try_into().map_err(|l: Vec<steel::SteelVal>| {
+                SteelErr::new(
+                    ErrorKind::ConversionError,
+                    format!(
+                        "Could not convert steelval to RecFormula: {:?} \
+                         - all other cases where discarded, it now expected a list \
+                         of length 3 but it had length {} instead",
+                        val,
+                        l.len()
+                    ),
+                )
+            })?;
+            let head: FOBinder = FromSteelVal::from_steelval(&head)?;
+            let vars: Vec<(SVar, Sort)> = FromSteelVal::from_steelval(&vars)?;
+            let arg: Self = FromSteelVal::from_steelval(&arg)?;
+            let (vars, sorts) = vars
+                .into_iter()
+                .map(|(v, s)| (<_ as Into<egg::Var>>::into(v), s))
+                .unzip();
+            Ok(Self::Binder {
+                head,
+                vars,
+                sorts,
+                arg: Box::new(arg),
+            })
         }
     }
 }

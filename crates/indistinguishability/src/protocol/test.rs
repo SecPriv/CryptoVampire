@@ -27,7 +27,6 @@ pub mod basic_hash {
         pub msk2: Function,
         pub ok: Function,
         pub ko: Function,
-        pub init: Function,
     }
 
     pub fn populate_functions(pbl: &mut Problem) -> MFunction {
@@ -59,16 +58,16 @@ pub mod basic_hash {
             mk
         };
 
-        let init = {
-            let signature = mk_signature!(() -> Sort::Time);
-            let id = Function::new(InnerFunction {
-                flags: FunctionFlags::STEP,
-                step_idx: 0,
-                ..InnerFunction::new("init".into(), signature)
-            });
-            pbl.function.add(id.clone());
-            id
-        };
+        // let init = {
+        //     let signature = mk_signature!(() -> Sort::Time);
+        //     let id = Function::new(InnerFunction {
+        //         flags: FunctionFlags::STEP,
+        //         step_idx: 0,
+        //         ..InnerFunction::new("init".into(), signature)
+        //     });
+        //     pbl.function.add(id.clone());
+        //     id
+        // };
 
         let tag = {
             let signature = mk_signature!((Sort::Index, Sort::Index) -> Sort::Time);
@@ -167,22 +166,21 @@ pub mod basic_hash {
             msk2,
             ok,
             ko,
-            init,
         }
     }
 
-    pub fn insert_init(pbl: &mut Problem, funs: &MFunction) {
-        let MFunction { init, .. } = funs;
+    // pub fn insert_init(pbl: &mut Problem, funs: &MFunction) {
+    //     let MFunction { init, .. } = funs;
 
-        let s1 = Step {
-            id: init.clone(),
-            vars: vec![],
-            cond: rexp!(true).to_vec().into(),
-            msg: rexp!(EMPTY).to_vec().into(),
-        };
-        pbl.protocols[0].add_step(s1.clone());
-        pbl.protocols[1].add_step(s1);
-    }
+    //     let s1 = Step {
+    //         id: init.clone(),
+    //         vars: vec![],
+    //         cond: rexp!(true).to_vec().into(),
+    //         msg: rexp!(EMPTY).to_vec().into(),
+    //     };
+    //     pbl.protocols[0].add_step(s1.clone());
+    //     pbl.protocols[1].add_step(s1);
+    // }
 
     pub fn insert_tag(pbl: &mut Problem, funs: &MFunction) {
         let MFunction {
@@ -209,8 +207,7 @@ pub mod basic_hash {
                 .into(),
             ..s1.clone()
         };
-        pbl.protocols[0].add_step(s1);
-        pbl.protocols[1].add_step(s2);
+        pbl.push_steps([s1, s2]);
     }
 
     pub fn insert_rs(pbl: &mut Problem, funs: &MFunction) {
@@ -238,8 +235,7 @@ pub mod basic_hash {
                 .into(),
                 ..s1.clone()
         };
-        pbl.protocols[0].add_step(s1);
-        pbl.protocols[1].add_step(s2);
+        pbl.push_steps([s1, s2]);
     }
 
     pub fn insert_rf(pbl: &mut Problem, funs: &MFunction) {
@@ -263,8 +259,7 @@ pub mod basic_hash {
             cond: rexp!((not (mexists #0 p2 (msk #0 p2)))).to_vec().into(),
             ..s1.clone()
         };
-        pbl.protocols[0].add_step(s1);
-        pbl.protocols[1].add_step(s2);
+        pbl.push_steps([s1, s2]);
     }
 
     pub fn insert_rw(pbl: &mut Problem, funs: &MFunction) {
