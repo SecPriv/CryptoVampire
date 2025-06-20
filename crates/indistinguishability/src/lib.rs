@@ -38,6 +38,7 @@ pub mod terms; // <- first for macros
 mod test;
 pub(crate) mod utils;
 pub(crate) mod vampire;
+pub(crate) mod input;
 mod configuration;
 pub use configuration::Configuration;
 
