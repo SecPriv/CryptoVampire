@@ -1,5 +1,10 @@
 use super::{BUILTINS, Exists, Function, FunctionFlags, PARSING_PAIRS};
-use crate::terms::{Alias, InnerFunction, Signature, Sort};
+use crate::terms::{
+    Alias, InnerFunction, Signature, Sort,
+    functions_holder::function_builder::{
+        IsComplete, SetAlias, SetExistsIdx, SetFlags, SetOutput, SetProtocolIdx,
+    },
+};
 use bon::bon;
 use egg::Var;
 use itertools::{Itertools, chain};
@@ -197,7 +202,7 @@ impl FunctionCollection {
 
 #[bon]
 impl FunctionCollection {
-    #[builder]
+    #[builder(builder_type = FunctionBuilder)]
     pub fn add_function(
         &mut self,
         #[builder(into)] name: Cow<'static, str>,
@@ -222,6 +227,28 @@ impl FunctionCollection {
         let fun = Function::new(inner);
         self.add(fun.clone());
         fun
+    }
+}
+
+use crate::terms::functions_holder::function_builder::IsUnset as FunctionBuilderIsUnset;
+impl<'a, S> FunctionBuilder<'a, S>
+where
+    S: function_builder::State,
+{
+    pub fn step(
+        self,
+        idx: usize,
+    ) -> FunctionBuilder<'a, SetOutput<SetFlags<SetExistsIdx<SetAlias<S>>>>>
+    where
+        S::ExistsIdx: FunctionBuilderIsUnset,
+        S::Flags: FunctionBuilderIsUnset,
+        S::Alias: FunctionBuilderIsUnset,
+        S::Output: FunctionBuilderIsUnset,
+    {
+        self.maybe_alias(None)
+            .exists_idx(idx)
+            .flags(FunctionFlags::STEP)
+            .output(Sort::Time)
     }
 }
 

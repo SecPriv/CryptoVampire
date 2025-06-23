@@ -1,6 +1,7 @@
 use cryptovampire_smt::{Smt, SmtFormula};
 use logic_formula::egg::{SimplLang, SimplLangVar};
 use std::{io::Write, u128};
+use steel::steel_vm::{builtin::BuiltInModule, engine::Engine};
 use terms::{Function, Sort};
 
 // ~~~~~~~~~~~~~~~~ macros ~~~~~~~~~~~~~~~~~~
@@ -20,10 +21,10 @@ use terms::{Function, Sort};
 macro_rules! declare_trace {
     ($dolar:tt$name:literal) => {
         macro_rules! tr {
-                                            ($dolar($arg:tt )+) => {
-                                                ::log::trace!(target: $name, $dolar($arg)+)
-                                            };
-                                        }
+                                                    ($dolar($arg:tt )+) => {
+                                                        ::log::trace!(target: $name, $dolar($arg)+)
+                                                    };
+                                                }
     };
 }
 
@@ -31,6 +32,7 @@ macro_rules! declare_trace {
 
 pub mod problem;
 pub use problem::Problem;
+pub(crate) mod input;
 pub mod protocol;
 pub mod rules;
 pub mod terms; // <- first for macros
@@ -38,10 +40,9 @@ pub mod terms; // <- first for macros
 mod test;
 pub(crate) mod utils;
 pub(crate) mod vampire;
-pub(crate) mod input;
+pub use input::register;
 mod configuration;
 pub use configuration::Configuration;
-
 
 // ~~~~~~ type aliases and constants ~~~~~~~~
 
@@ -76,4 +77,13 @@ pub fn init_logger() {
         })
         .parse_default_env()
         .init();
+}
+
+pub fn init_engine() -> Engine {
+    let mut engine = Engine::new_base();
+    let mut module = BuiltInModule::new("cryptovampire");
+
+    crate::register(&mut module);
+    engine.register_module(module);
+    engine
 }

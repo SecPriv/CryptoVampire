@@ -1,13 +1,23 @@
+use std::io::{self, Read};
+
 use indistinguishability::{
-    init_logger,
+    init_engine, init_logger,
     problem::{self, test::basic_hash::mk_pblm},
     rules::prf::test::basic_hash::mk_prf_rule,
 };
+use steel::steel_vm::{builtin::BuiltInModule, engine::Engine};
 
 pub fn main() {
     init_logger();
-    let (mut pbl, funs) = mk_pblm();
-    mk_prf_rule(&mut pbl, &funs);
 
-    assert!(pbl.run(0, 1))
+    let mut pgrm = String::new();
+    io::stdin()
+        .read_to_string(&mut pgrm)
+        .expect("Failed to read from stdin");
+
+    let res = init_engine().run(pgrm).unwrap();
+
+    for r in res {
+        println!("{r}")
+    }
 }

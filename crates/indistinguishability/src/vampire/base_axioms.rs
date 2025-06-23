@@ -3,7 +3,11 @@ use cryptovampire_smt::{Smt, SmtFormula, SortedVar};
 use itertools::{Itertools, chain, izip};
 use utils::dynamic_iter;
 
-use crate::terms::{AliasRewrite, Exists, Rewrite, ATT, EMPTY, FROM_BOOL, HAPPENS, LEQ, LT, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, PRED, SMT_ITE, SMT_SORT_LIST, TUPLE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG};
+use crate::terms::{
+    ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, HAPPENS, LEQ, LT, MACRO_COND, MACRO_EXEC,
+    MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, PRED, Rewrite, SMT_ITE, SMT_SORT_LIST, TUPLE,
+    UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
+};
 use crate::vampire::convert::{formula_to_smt, var_to_smt};
 use crate::{MSmt, MSmtFormula};
 use crate::{
@@ -54,7 +58,6 @@ fn mk_header(pbl: &Problem) -> impl Iterator<Item = Smt<Sort, Function>> + use<'
 }
 
 fn mk_pseudo_datatype_diff(funs: Vec<Function>) -> impl Iterator<Item = MSmt> {
-    
     use SmtFormula::*;
 
     // funs are pairwise distincts
@@ -120,7 +123,7 @@ fn mk_step_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
         steps = iter.collect_vec()
     } else {
         // There are no steps in this protocol
-        return  Ret::Empty(::std::iter::empty());
+        return Ret::Empty(::std::iter::empty());
     }
 
     assert!(steps.iter().any(|s| s.name == "init"), "need an init step");
@@ -150,7 +153,7 @@ fn mk_base_order(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     chain![[Smt::Comment("order base".into())], iter]
 }
 
-fn mk_base_macro(_: &Problem) -> impl Iterator<Item = MSmt>  {
+fn mk_base_macro(_: &Problem) -> impl Iterator<Item = MSmt> {
     use crate::terms::Sort::*;
     let iter = vec_smt! {
         (forall ((#t!0 Time) (#p!1 Protocol)) (=> (HAPPENS #t) (= (MACRO_COND #t #p) (UNFOLD_COND #t #p)))),
@@ -159,12 +162,12 @@ fn mk_base_macro(_: &Problem) -> impl Iterator<Item = MSmt>  {
         (forall ((#t!0 Time) (#p!1 Protocol)) (=> (HAPPENS #t) (= (MACRO_FRAME #t #p) (UNFOLD_FRAME #t #p)))),
         (forall ((#t!0 Time) (#p!1 Protocol)) (=> (HAPPENS #t) (= (MACRO_INPUT #t #p) (UNFOLD_INPUT #t #p)))),
         (forall ((#t!0 Time) (#p!1 Protocol)) (= (UNFOLD_INPUT #t #p) (ATT (MACRO_FRAME (PRED #t) #p)))),
-        (forall ((#t!0 Time) (#p!1 Protocol)) 
-          (= (UNFOLD_FRAME #t #p) 
+        (forall ((#t!0 Time) (#p!1 Protocol))
+          (= (UNFOLD_FRAME #t #p)
             (TUPLE
-                (TUPLE 
-                    (FROM_BOOL (MACRO_EXEC #t #p)) 
-                    (SMT_ITE (MACRO_EXEC #t #p) 
+                (TUPLE
+                    (FROM_BOOL (MACRO_EXEC #t #p))
+                    (SMT_ITE (MACRO_EXEC #t #p)
                         (MACRO_MSG #t #p) EMPTY))
                         (MACRO_FRAME (PRED #t) #p)))),
         (forall ((#t!0 Time) (#p!1 Protocol)) (= (UNFOLD_EXEC #t #p) (and (MACRO_COND #t #p) (MACRO_EXEC (PRED #t) #p))))

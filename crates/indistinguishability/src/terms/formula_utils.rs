@@ -110,7 +110,7 @@ pub fn offsets_vars<L>(amount: u32, f: &mut [ENodeOrVar<L>]) {
     }
 }
 pub fn offsets_owned<L>(amount: u32, f: implvec!(ENodeOrVar<L>)) -> PatternAst<L> {
-    let mut f : PatternAst<L> = f.into_iter().collect();
+    let mut f: PatternAst<L> = f.into_iter().collect();
     offsets_vars(amount, &mut f);
     f
 }

@@ -14,8 +14,8 @@ use crate::{
 
 #[derive(Debug, Clone, Steel)]
 pub struct ShrExists {
-    pbl: ShrProblem,
-    index: usize,
+    pub(crate) pbl: ShrProblem,
+    pub(crate) index: usize,
 }
 
 impl ShrExists {
@@ -50,7 +50,7 @@ impl ShrExists {
     }
 
     fn set_patt(&self, patt: RecFOFormula) -> ::steel::rvals::Result<()> {
-        self.exists_mut().patt = patt.as_steel_recexp()?;
+        self.exists_mut().patt = patt.steel_maybe_as_recexp()?;
         Ok(())
     }
 }
@@ -59,7 +59,7 @@ impl Registerable for ShrExists {
     fn register(
         module: &mut steel::steel_vm::builtin::BuiltInModule,
     ) -> &mut steel::steel_vm::builtin::BuiltInModule {
-        module
+        Self::register_type(module)
             .register_fn("exists_vars", Self::get_vars)
             .register_fn("exists_bound_var", Self::get_bound_var)
             .register_fn("get_exists_tlf", Self::get_tlf)

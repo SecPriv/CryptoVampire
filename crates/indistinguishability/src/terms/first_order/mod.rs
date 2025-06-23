@@ -20,9 +20,7 @@ use utils::{dynamic_iter, implvec, match_eq};
 use crate::{
     Lang, LangVar,
     input::var::SVar,
-    terms::{
-        AND, BITE, EQ, FALSE, Function, IMPLIES, NOT, OR, Sort, TRUE, convert_smt_var,
-    },
+    terms::{AND, BITE, EQ, FALSE, Function, IMPLIES, NOT, OR, Sort, TRUE, convert_smt_var},
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -152,7 +150,8 @@ impl RecFOFormula {
         Some(ret.into())
     }
 
-    pub fn as_steel_recexp(&self) -> ::steel::rvals::Result<PatternAst<Lang>> {
+    /// Turns self into a [PatternAst] but errors out with [steel]'s error instead of [Option]
+    pub fn steel_maybe_as_recexp(&self) -> ::steel::rvals::Result<PatternAst<Lang>> {
         match self.as_recexp() {
             Some(patt) => Ok(patt),
             None => Err(::steel::SteelErr::new(

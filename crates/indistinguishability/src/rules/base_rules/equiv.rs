@@ -8,9 +8,7 @@ use logic_formula::egg::SimpleDiscriminant;
 
 use crate::{
     Lang, LangVar, Problem,
-    terms::{
-        BIT_DEDUCE, BOOL_DEDUCE, Exists, Function, Sort,
-    },
+    terms::{BIT_DEDUCE, BOOL_DEDUCE, Exists, Function, Sort},
 };
 
 use super::{

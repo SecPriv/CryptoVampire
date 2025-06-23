@@ -1,15 +1,22 @@
 use cryptovampire_smt::SmtHead;
 use logic_formula::egg::{SimplLang, SimpleDiscriminant};
 use serde::Serialize;
-use steel::rvals::CustomType;
-use steel_derive::Steel;
 use std::{any::TypeId, borrow::Cow, fmt::Display, ops::Deref};
+use steel::{
+    rvals::{CustomType, IntoSteelVal},
+    steel_vm::register_fn::RegisterFn,
+};
+use steel_derive::Steel;
 use utils::{ereturn_if, implvec, match_eq, quack::CowArc};
 
 use crate::{
-    input::Registerable, protocol::{MacroKind, ProtocolLanguage}, terms::{
-        builtin, Alias, Exists, FunctionCollection, FunctionFlags, RecFOFormula, Signature, Sort, HAPPENS, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, TRUE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG
-    }
+    input::Registerable,
+    protocol::{MacroKind, ProtocolLanguage},
+    terms::{
+        Alias, BUILTINS, Exists, FunctionCollection, FunctionFlags, HAPPENS, MACRO_COND,
+        MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, RecFOFormula, Signature, Sort, TRUE,
+        UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin,
+    },
 };
 
 #[non_exhaustive]
@@ -187,6 +194,38 @@ impl Function {
         assert_eq!(self.signature.output, Sort::Time);
         true
     }
+
+    // =========================================================
+    // ====================== Steel API ========================
+    // =========================================================
+
+    pub fn steel_new(name: String, signature: Signature) -> Self {
+        Self::new(InnerFunction::new(name.into(), signature))
+    }
+
+    pub fn steel_new_alias(name: String, signature: Signature, alias: Alias) -> Self {
+        Self::new(InnerFunction {
+            alias: Some(alias),
+            ..InnerFunction::new(name.into(), signature)
+        })
+    }
+}
+
+impl Registerable for Function {
+    fn register(
+        module: &mut steel::steel_vm::builtin::BuiltInModule,
+    ) -> &mut steel::steel_vm::builtin::BuiltInModule {
+        Self::register_type(module);
+        module
+            .register_fn("fun", Self::steel_new)
+            .register_fn("alias", Self::steel_new_alias);
+
+        for fun in BUILTINS {
+            module.register_value(&fun.name, fun.clone().into_steelval().unwrap());
+        }
+
+        module
+    }
 }
 
 impl Display for Function {
@@ -208,14 +247,6 @@ impl AsRef<Self> for Function {
         self
     }
 }
-
-
-impl Registerable for Function {
-    fn register(module: &mut steel::steel_vm::builtin::BuiltInModule) -> &mut steel::steel_vm::builtin::BuiltInModule {
-        Self::register_type(module)
-    }
-}
-
 
 // impl Eq for Function {}
 

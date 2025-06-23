@@ -19,7 +19,7 @@ use egg::{EGraph, RecExpr};
 use golgge::{Program, Rule};
 use itertools::{Itertools, chain};
 use logic_formula::egg::SimpleDiscriminant;
-use std::{fmt::Debug, rc::Rc};
+use std::{fmt::Debug, num::NonZeroUsize, rc::Rc};
 use utils::implvec;
 
 mod analysis;
@@ -323,9 +323,9 @@ impl Problem {
     }
 
     /// Push steps to all protocols, returns a mutable pointer to those steps
-    /// 
+    ///
     /// The ith steps is pushed to the ith protocol
-    /// 
+    ///
     /// ### panic
     /// If the number if steps is different from the number of protocol or they use different [Function]
     pub fn push_steps(&mut self, steps: implvec!(Step)) -> Vec<&mut Step> {
@@ -334,12 +334,32 @@ impl Problem {
             .zip_eq(&mut self.protocols)
             .map(|(s, p)| p.add_step(s))
             .collect_vec();
-        assert!(steps.iter().map(|s| &s.id).all_equal(), "The steps should all have the same name");
+        assert!(
+            steps.iter().map(|s| &s.id).all_equal(),
+            "The steps should all have the same name"
+        );
         steps
     }
 
-    pub fn steps(&self) -> Option<impl Iterator<Item = Function> + use<'_>>{
-        Some(self.protocols().first()?.steps().iter().map(|Step { id,..}| id.clone()))
+    pub fn steps(&self) -> Option<impl Iterator<Item = Function> + use<'_>> {
+        Some(
+            self.protocols()
+                .first()?
+                .steps()
+                .iter()
+                .map(|Step { id, .. }| id.clone()),
+        )
+    }
+
+    pub fn num_steps(&self) -> Option<NonZeroUsize> {
+        let n = self.protocols().first()?.steps().len();
+        let n = NonZeroUsize::new(n)
+            .expect("a protocol has no steps, a protocol should always at least have an INIT step");
+        Some(n)
+    }
+
+    pub fn num_protocols(&self) -> usize {
+        self.protocols().len()
     }
 }
 

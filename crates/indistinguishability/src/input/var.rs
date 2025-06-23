@@ -19,13 +19,15 @@ impl IntoSteelVal for SVar {
 
 impl From<egg::Var> for SVar {
     fn from(value: egg::Var) -> Self {
-        let VarExposed::Num(i) = value.expose() else {unimplemented!()};
+        let VarExposed::Num(i) = value.expose() else {
+            unimplemented!()
+        };
         Self(i)
     }
 }
 
-impl Into<egg::Var> for SVar {
-    fn into(self) -> egg::Var {
-        egg::Var::from_u32(self.0)
+impl From<SVar> for egg::Var {
+    fn from(val: SVar) -> Self {
+        egg::Var::from_u32(val.0)
     }
 }

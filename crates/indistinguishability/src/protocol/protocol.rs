@@ -44,9 +44,13 @@ impl Protocol {
         smt!(name)
     }
 
-    pub(crate) fn add_step(&mut self, step: Step) -> &mut Step{
+    pub(crate) fn add_step(&mut self, step: Step) -> &mut Step {
         assert!(step.valid());
         self.steps.push(step);
         self.steps.last_mut().unwrap()
+    }
+
+    pub fn step_mut(&mut self, idx: usize) -> Option<&mut Step> {
+        self.steps.get_mut(idx)
     }
 }

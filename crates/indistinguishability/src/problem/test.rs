@@ -3,7 +3,7 @@ pub mod basic_hash {
     use crate::{
         Lang, Problem, decl_fun,
         protocol::test::basic_hash::{
-            MFunction,  insert_rf, insert_rs, insert_rw, insert_tag, populate_functions,
+            MFunction, insert_rf, insert_rs, insert_rw, insert_tag, populate_functions,
         },
         rexp,
         rules::base_rules::mk_rewrites_rules,

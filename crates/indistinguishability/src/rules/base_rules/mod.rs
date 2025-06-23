@@ -1,6 +1,5 @@
 mod parse;
 
-
 use std::rc::Rc;
 
 use egg::{ENodeOrVar, Var};
@@ -13,12 +12,12 @@ pub use equiv::mk_equiv_rules;
 use utils::implvec;
 
 use crate::{
-    problem::{PRule, RcRule}, Lang, Problem
+    Lang, Problem,
+    problem::{PRule, RcRule},
 };
 mod equiv;
 
-pub fn mk_prolog_rules(pbl: &Problem) -> impl Iterator<Item = RcRule>
-{
+pub fn mk_prolog_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
     chain![
         pbl.extra_rules().iter().cloned(),
         mk_equiv_rules(pbl).map(|x| x.into_mrc())

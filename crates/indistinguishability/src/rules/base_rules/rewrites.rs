@@ -67,7 +67,7 @@ fn exists_rules<N: Analysis<Lang>>(
 }
 
 fn mk_exists_rules_one<'a, N: Analysis<Lang>>(
-    Problem {  .. }: &'a Problem,
+    Problem { .. }: &'a Problem,
     Exists {
         vars,
         bound_var,
