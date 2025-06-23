@@ -22,7 +22,6 @@ use crate::{
     input::var::SVar,
     terms::{
         AND, BITE, EQ, FALSE, Function, IMPLIES, NOT, OR, Sort, TRUE, convert_smt_var,
-        unification::Subst,
     },
 };
 
@@ -46,8 +45,6 @@ pub enum FOBinder {
     Forall,
     Exists,
 }
-
-pub type FOSubst = Subst<Var, RecFOFormula>;
 
 impl RecFOFormula {
     pub fn bind(kind: FOBinder, vars: Vec<Var>, sorts: Vec<Sort>, arg: RecFOFormula) -> Self {
