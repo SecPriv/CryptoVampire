@@ -361,7 +361,8 @@ impl Nonce {
             assert!(
                 variables
                     .iter()
-                    .all(|v| matches!(v.expose(), VarExposed::Num(_)))
+                    .all(|v| matches!(v.expose(), VarExposed::Num(_))),
+                "only numeric variables are allowed in aliases"
             );
 
             let variables = variables
@@ -385,8 +386,7 @@ impl Nonce {
                 condition,
                 variables: variables.to_vec(),
                 sorts: sorts.to_vec(),
-                // unless the alias is malformed, this should just be unification. Hence the forall
-                quantifier: FOBinder::Forall,
+                quantifier: FOBinder::Exists,
             };
             let builder = builder.add_node(Mode::And, Some(condition));
             self.search_recexpr(pbl, &builder, &to);
