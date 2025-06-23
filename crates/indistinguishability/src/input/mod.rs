@@ -1,8 +1,8 @@
-use steel::steel_vm::builtin::BuiltInModule;
+use steel::{steel_vm::{builtin::BuiltInModule, register_fn::RegisterFn}, SteelVal};
 
 use crate::{
     input::{golgge_rules::Rule, shared_exists::ShrExists, shared_problem::ShrProblem},
-    terms::{AliasRewrite, Function, Rewrite, Sort},
+    terms::{AliasRewrite, Function, RecFOFormula, Rewrite, Signature, Sort},
 };
 
 pub(crate) mod golgge_rules;
@@ -22,6 +22,10 @@ pub fn register(module: &mut BuiltInModule) -> &mut BuiltInModule {
     Rewrite::register(module);
     Rule::register(module);
     ShrProblem::register(module);
+    Signature::register(module);
+    RecFOFormula::register(module);
+
+    module.register_fn("println!", |x:SteelVal| println!("dbg: {x:?}"));
 
     module
 }

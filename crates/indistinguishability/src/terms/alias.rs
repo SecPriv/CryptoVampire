@@ -79,7 +79,7 @@ impl Registerable for AliasRewrite {
     fn register(
         module: &mut steel::steel_vm::builtin::BuiltInModule,
     ) -> &mut steel::steel_vm::builtin::BuiltInModule {
-        Self::register_type(module).register_fn("alias_rw", Self::new_steel)
+        Self::register_type(module).register_fn("alias-rw", Self::new_steel)
     }
 }
 

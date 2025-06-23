@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
+use steel::{rvals::IntoSteelVal, steel_vm::register_fn::RegisterFn};
 use steel_derive::Steel;
 
 use crate::input::Registerable;
@@ -44,6 +45,14 @@ impl Registerable for Sort {
     fn register(
         module: &mut steel::steel_vm::builtin::BuiltInModule,
     ) -> &mut steel::steel_vm::builtin::BuiltInModule {
-        Self::register_enum_variants(module)
+        Self::register_enum_variants(module);
+        module.register_type::<Self>("Sort?");
+        use Sort::*;
+        for v in [Bool, Bitstring, Time, Nonce, Index, Protocol] {
+            let tmp = format!("{v}").leak();
+            // module.register_fn(tmp, move || v);
+            module.register_value(tmp, v.into_steelval().unwrap());
+        }
+        module
     }
 }

@@ -15,9 +15,13 @@ pub fn main() {
         .read_to_string(&mut pgrm)
         .expect("Failed to read from stdin");
 
-    let res = init_engine().run(pgrm).unwrap();
-
-    for r in res {
-        println!("{r}")
+    // let res = init_engine().run(pgrm).unwrap();
+    match init_engine().run(pgrm.clone()) {
+        Err(e) =>  eprintln!("{}", e.emit_result_to_string("stdin", pgrm.as_str())),
+        Ok(res) => {
+            for r in res {
+                println!("{r}")
+            }
+        }
     }
 }

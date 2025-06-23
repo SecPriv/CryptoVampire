@@ -184,9 +184,9 @@ impl Registerable for ShrProblem {
             .register_fn("declare_protocol", Self::declare_protocol)
             .register_fn("declare_quantifier", Self::declare_quantifier)
             .register_fn("declare_step", Self::declare_step)
-            .register_fn("set_step_message", Self::set_step_msg)
-            .register_fn("set_step_condition", Self::set_step_cond)
-            .register_fn("set_step_vars", Self::set_step_vars)
+            .register_fn("set-step-message", Self::set_step_msg)
+            .register_fn("set-step-condition", Self::set_step_cond)
+            .register_fn("set-step-vars", Self::set_step_vars)
             .register_fn("run", Self::run);
 
         module

@@ -1,11 +1,13 @@
 use crate::{input::Registerable, terms::Sort};
 use cryptovampire_smt::{SortedVar, VarInner};
 use itertools::izip;
+use log::trace;
 use serde::{Deserialize, Serialize};
-use steel::rvals::{FromSteelVal, IntoSteelVal};
+use steel::{rvals::{FromSteelVal, IntoSteelVal}, steel_vm::register_fn::RegisterFn};
+use steel_derive::Steel;
 use utils::implvec;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Steel)]
 pub struct Signature {
     pub inputs: cow![Sort],
     pub output: Sort,
@@ -33,21 +35,14 @@ impl Signature {
             sort: *s,
         })
     }
-}
 
-impl FromSteelVal for Signature {
-    fn from_steelval(val: &steel::SteelVal) -> steel::rvals::Result<Self> {
-        let (args, out): (Vec<Sort>, Sort) = FromSteelVal::from_steelval(val)?;
-        Ok(Self {
-            inputs: args.into(),
-            output: out,
-        })
+    fn steel_constructor(input: Vec<Sort>, output: Sort) -> Self {
+        Self { inputs: input.into(), output }
     }
 }
 
-impl IntoSteelVal for Signature {
-    fn into_steelval(self) -> steel::rvals::Result<steel::SteelVal> {
-        let Self { inputs, output } = self;
-        (inputs.into_owned(), output).into_steelval()
+impl Registerable for Signature {
+    fn register(module: &mut steel::steel_vm::builtin::BuiltInModule) -> &mut steel::steel_vm::builtin::BuiltInModule {
+        Self::register_type(module).register_fn("signature", Self::steel_constructor)
     }
 }

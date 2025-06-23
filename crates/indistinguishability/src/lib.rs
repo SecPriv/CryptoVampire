@@ -80,7 +80,8 @@ pub fn init_logger() {
 }
 
 pub fn init_engine() -> Engine {
-    let mut engine = Engine::new_base();
+    let mut engine = Engine::new();
+    engine.compile_and_run_raw_program(steel::PRELUDE).unwrap();
     let mut module = BuiltInModule::new("cryptovampire");
 
     crate::register(&mut module);

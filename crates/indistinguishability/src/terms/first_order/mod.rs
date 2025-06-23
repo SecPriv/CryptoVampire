@@ -19,11 +19,11 @@ use utils::{dynamic_iter, implvec, match_eq};
 
 use crate::{
     Lang, LangVar,
-    input::var::SVar,
+    input::{Registerable, var::SVar},
     terms::{AND, BITE, EQ, FALSE, Function, IMPLIES, NOT, OR, Sort, TRUE, convert_smt_var},
 };
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Steel)]
 pub enum RecFOFormula {
     Binder {
         head: FOBinder,
@@ -430,62 +430,100 @@ impl FOBinder {
     }
 }
 
-impl IntoSteelVal for RecFOFormula {
-    fn into_steelval(self) -> steel::rvals::Result<steel::SteelVal> {
-        match self {
-            RecFOFormula::Binder {
-                head,
-                vars,
-                sorts,
-                arg,
-            } => vec![
-                head.into_steelval()?,
-                izip!(vars, sorts)
-                    .map(|(v, s)| (SVar::from(v), s))
-                    .collect_vec()
-                    .into_steelval()?,
-                arg.into_steelval()?,
-            ]
-            .into_steelval(),
-            RecFOFormula::App { head, args } => (head, args).into_steelval(),
-            RecFOFormula::Var(var) => SVar::from(var).into_steelval(),
+// =========================================================
+// ====================== Steel API ========================
+// =========================================================
+
+impl RecFOFormula {
+    fn steel_binder(head: FOBinder, vars: Vec<(SVar, Sort)>, arg: RecFOFormula) -> Self {
+        let (vars, sorts): (Vec<_>, Vec<_>) =
+            vars.into_iter().map(|(v, s)| (Var::from(v), s)).unzip();
+        Self::Binder {
+            head,
+            vars,
+            sorts,
+            arg: Box::new(arg),
         }
+    }
+
+    fn steel_app(head: Function, args: Vec<RecFOFormula>) -> Self {
+        Self::App { head, args }
+    }
+
+    fn steel_var(var: SVar) -> Self {
+        Self::Var(var.into())
     }
 }
 
-impl FromSteelVal for RecFOFormula {
-    fn from_steelval(val: &steel::SteelVal) -> steel::rvals::Result<Self> {
-        if let Ok((head, args)) = FromSteelVal::from_steelval(val) {
-            Ok(Self::App { head, args })
-        } else if let Ok(var) = SVar::from_steelval(val) {
-            Ok(Self::Var(var.into()))
-        } else {
-            let args = <Vec<steel::SteelVal> as FromSteelVal>::from_steelval(val)?;
-            let [head, vars, arg] = args.try_into().map_err(|l: Vec<steel::SteelVal>| {
-                SteelErr::new(
-                    ErrorKind::ConversionError,
-                    format!(
-                        "Could not convert steelval to RecFormula: {:?} \
-                         - all other cases where discarded, it now expected a list \
-                         of length 3 but it had length {} instead",
-                        val,
-                        l.len()
-                    ),
-                )
-            })?;
-            let head: FOBinder = FromSteelVal::from_steelval(&head)?;
-            let vars: Vec<(SVar, Sort)> = FromSteelVal::from_steelval(&vars)?;
-            let arg: Self = FromSteelVal::from_steelval(&arg)?;
-            let (vars, sorts) = vars
-                .into_iter()
-                .map(|(v, s)| (<_ as Into<egg::Var>>::into(v), s))
-                .unzip();
-            Ok(Self::Binder {
-                head,
-                vars,
-                sorts,
-                arg: Box::new(arg),
-            })
-        }
+impl Registerable for RecFOFormula {
+    fn register(
+        module: &mut steel::steel_vm::builtin::BuiltInModule,
+    ) -> &mut steel::steel_vm::builtin::BuiltInModule {
+        module
+            .register_fn("mk-binderf", Self::steel_binder)
+            .register_fn("mk-appf", Self::steel_app)
+            .register_fn("mk-varf", Self::steel_var)
+            .register_value("existsf", FOBinder::Exists.into_steelval().unwrap())
+            .register_value("forallf", FOBinder::Forall.into_steelval().unwrap())
     }
 }
+
+// impl IntoSteelVal for RecFOFormula {
+//     fn into_steelval(self) -> steel::rvals::Result<steel::SteelVal> {
+//         match self {
+//             RecFOFormula::Binder {
+//                 head,
+//                 vars,
+//                 sorts,
+//                 arg,
+//             } => vec![
+//                 head.into_steelval()?,
+//                 izip!(vars, sorts)
+//                     .map(|(v, s)| (SVar::from(v), s))
+//                     .collect_vec()
+//                     .into_steelval()?,
+//                 arg.into_steelval()?,
+//             ]
+//             .into_steelval(),
+//             RecFOFormula::App { head, args } => (head, args).into_steelval(),
+//             RecFOFormula::Var(var) => SVar::from(var).into_steelval(),
+//         }
+//     }
+// }
+
+// impl FromSteelVal for RecFOFormula {
+//     fn from_steelval(val: &steel::SteelVal) -> steel::rvals::Result<Self> {
+//         if let Ok((head, args)) = FromSteelVal::from_steelval(val) {
+//             Ok(Self::App { head, args })
+//         } else if let Ok(var) = SVar::from_steelval(val) {
+//             Ok(Self::Var(var.into()))
+//         } else {
+//             let args = <Vec<steel::SteelVal> as FromSteelVal>::from_steelval(val)?;
+//             let [head, vars, arg] = args.try_into().map_err(|l: Vec<steel::SteelVal>| {
+//                 SteelErr::new(
+//                     ErrorKind::ConversionError,
+//                     format!(
+//                         "Could not convert steelval to RecFormula: {:?} \
+//                          - all other cases where discarded, it now expected a list \
+//                          of length 3 but it had length {} instead",
+//                         val,
+//                         l.len()
+//                     ),
+//                 )
+//             })?;
+//             let head: FOBinder = FromSteelVal::from_steelval(&head)?;
+//             let vars: Vec<(SVar, Sort)> = FromSteelVal::from_steelval(&vars)?;
+//             let arg: Self = FromSteelVal::from_steelval(&arg)?;
+//             let (vars, sorts) = vars
+//                 .into_iter()
+//                 .map(|(v, s)| (<_ as Into<egg::Var>>::into(v), s))
+//                 .unzip();
+//             Ok(Self::Binder {
+//                 head,
+//                 vars,
+//                 sorts,
+//                 arg: Box::new(arg),
+//             })
+//         }
+//     }
+// }
