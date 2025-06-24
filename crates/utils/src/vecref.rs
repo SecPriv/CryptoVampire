@@ -1,7 +1,7 @@
 //! Slice-like object for references
 //!
 //! See [VecRef]
-use std::{iter::FusedIterator, ops::Index, slice::Iter, sync::Arc};
+use std::{borrow::Cow, iter::FusedIterator, ops::Index, slice::Iter, sync::Arc};
 
 use crate::match_as_trait;
 
@@ -239,6 +239,18 @@ impl<'a, U> Extend<&'a U> for VecRef<'a, U> {
     fn extend<T: IntoIterator<Item = &'a U>>(&mut self, iter: T) {
         let new = Self::Vec(self.iter().chain(iter).collect());
         *self = new;
+    }
+}
+
+impl<'a, U> From<Cow<'a, [U]>> for VecRef<'a, U>
+where
+    [U]: ToOwned,
+{
+    fn from(value: Cow<'a, [U]>) -> Self {
+        match value {
+            Cow::Borrowed(_) => todo!(),
+            Cow::Owned(_) => todo!(),
+        }
     }
 }
 

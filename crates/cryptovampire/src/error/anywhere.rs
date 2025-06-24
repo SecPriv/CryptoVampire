@@ -1,4 +1,4 @@
-use super::{location::RefLocationProvider, LocationProvider};
+use super::{LocationProvider, location::RefLocationProvider};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Anywhere<'a>(&'a (dyn RefLocationProvider + Sync + Send));

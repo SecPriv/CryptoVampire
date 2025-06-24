@@ -1,14 +1,14 @@
 use std::{
     ptr::NonNull,
     sync::{
-        atomic::{self, AtomicU16},
         Mutex,
+        atomic::{self, AtomicU16},
     },
 };
 
 use crate::{
     formula::{
-        function::{builtin::BUILT_IN_FUNCTIONS, Function, InnerFunction},
+        function::{Function, InnerFunction, builtin::BUILT_IN_FUNCTIONS},
         sort::InnerSort,
     },
     problem::{cell::InnerMemoryCell, step::InnerStep},

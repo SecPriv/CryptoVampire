@@ -10,13 +10,13 @@ use crate::{
     error_at,
     formula::{
         formula::RichFormula,
-        function::{signature::Signature, Function},
+        function::{Function, signature::Signature},
         quantifier::Quantifier,
         sort::{
             builtins::BOOL,
             sort_proxy::{InferenceError, SortProxy},
         },
-        variable::{uvar, Variable},
+        variable::{Variable, uvar},
     },
 };
 use hashbrown::HashMap;

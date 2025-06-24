@@ -1,17 +1,18 @@
 use crate::{
+    CustomDerive,
     formula::{
         function::{
+            Function,
             builtin::*,
             signature::{FixedRefSignature, Impossible, Signature},
             traits::{Evaluatable, FixedSignature},
-            Function,
         },
         sort::{
             builtins::{CONDITION, MESSAGE},
             sort_proxy::SortProxy,
         },
     },
-    static_signature, CustomDerive,
+    static_signature,
 };
 
 use macro_attr::*;
@@ -150,7 +151,8 @@ pub struct EqualitySignature<'bump> {
 }
 
 impl<'bump> Signature<'bump> for EqualitySignature<'bump> {
-    type Args<'a> = [SortProxy<'bump>; 2]
+    type Args<'a>
+        = [SortProxy<'bump>; 2]
     where
         Self: 'a,
         'bump: 'a;

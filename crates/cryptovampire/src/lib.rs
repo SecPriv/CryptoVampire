@@ -24,6 +24,7 @@ pub use parser::parse_pbl_from_ast;
 pub use problem::step::INIT_STEP_NAME;
 pub use return_value::Return;
 use runner::RunnerResult;
+use smt::SmtDisplay;
 pub use subterm::kind::SubtermKind;
 
 // other imports
@@ -34,12 +35,15 @@ use crate::{
     formula::{function::builtin::BUILT_IN_FUNCTIONS, sort::builtins::BUILT_IN_SORTS},
     problem::{PblIterator, Problem},
     runner::Runners,
-    smt::{SmtFile, SMT_FILE_EXTENSION},
+    smt::{SMT_FILE_EXTENSION, SmtFile},
 };
 use log::trace;
-use parser::{ast::ASTList, Pstr};
+use parser::{Pstr, ast::ASTList};
 use std::{fs::File, io::BufWriter, num::NonZeroU32, path::Path};
 use utils::{from_with::FromWith, string_ref::StrRef, traits::MyWriteTo};
+
+mod cv_utils;
+pub use cv_utils::FromEnv;
 
 // start of the file
 
@@ -178,8 +182,8 @@ fn save_to_file<'bump>(
         .truncate(true) // overwrite
         .create(true) // create if necessary
         .open(path)?;
-    SmtFile::from_general_file(env, pbl.into_general_file(env)) // gen smt
-        .as_diplay(env)
+    SmtFile::with_env(env, pbl.into_general_file(env)) // gen smt
+        .as_display(env)
         .write_to_io(&mut BufWriter::new(file))?;
     Ok(())
 }

@@ -1,8 +1,8 @@
 use std::{
     fmt::Display,
     sync::{
-        atomic::{self, AtomicUsize},
         Arc,
+        atomic::{self, AtomicUsize},
     },
 };
 

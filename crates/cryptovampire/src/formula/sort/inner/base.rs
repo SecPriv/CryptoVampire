@@ -1,8 +1,8 @@
 use crate::{
     environement::traits::{KnowsRealm, Realm},
     formula::sort::{
-        builtins::{BITSTRING, BOOL},
         Sort,
+        builtins::{BITSTRING, BOOL},
     },
 };
 use utils::string_ref::StrRef;

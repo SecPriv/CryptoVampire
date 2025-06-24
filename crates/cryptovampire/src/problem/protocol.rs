@@ -1,7 +1,7 @@
 use once_cell::sync::OnceCell;
 use std::rc::Rc;
 
-use itertools::{chain, Itertools};
+use itertools::{Itertools, chain};
 
 use crate::formula::{formula::ARichFormula, variable::uvar};
 use utils::implvec;

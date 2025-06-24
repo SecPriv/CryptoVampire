@@ -9,9 +9,9 @@ use crate::{
     environement::traits::{KnowsRealm, Realm},
     formula::{
         function::{
-            inner::evaluate::Evaluator,
-            name_caster_collection::{NameCasterCollection, DEFAULT_NAME_CASTER},
             Function,
+            inner::evaluate::Evaluator,
+            name_caster_collection::{DEFAULT_NAME_CASTER, NameCasterCollection},
         },
         sort::Sort,
     },
@@ -25,6 +25,7 @@ use crate::{
 use crate::{
     error::{CVContext, LocateHelper},
     parser::{
+        Pstr,
         ast::{self, ASTList},
         error::ParsingError,
         location::ASTLocation,
@@ -32,7 +33,6 @@ use crate::{
             parse_assert_with_bvars, parse_asserts_crypto, parse_asserts_with_bvars, parse_cells,
             parse_orders_with_bvars, parse_steps,
         },
-        Pstr,
     },
 };
 use utils::{implderef, implvec, maybe_owned::MOw, string_ref::StrRef, utils::MaybeInvalid};

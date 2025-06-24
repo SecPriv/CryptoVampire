@@ -18,16 +18,16 @@ use crate::{
     error::BaseError,
     formula::{
         file_descriptior::{
+            GeneralFile,
             axioms::Axiom,
             declare::{ConstructorDestructor, DataType, Declaration},
-            GeneralFile,
         },
         formula::ARichFormula,
         function::{
-            inner::evaluate::Evaluator, name_caster_collection::NameCasterCollection, Function,
+            Function, inner::evaluate::Evaluator, name_caster_collection::NameCasterCollection,
         },
-        sort::{builtins::CONDITION, Sort},
-        variable::{uvar, IntoVariableIter},
+        sort::{Sort, builtins::CONDITION},
+        variable::{IntoVariableIter, uvar},
     },
 };
 

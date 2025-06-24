@@ -5,10 +5,10 @@ use static_init::dynamic;
 use crate::formula::utils::Applicable;
 use crate::formula::{
     formula::ARichFormula,
-    sort::{builtins::MESSAGE, FOSort, Sort},
+    sort::{FOSort, Sort, builtins::MESSAGE},
 };
 
-use super::{builtin::NAME_TO_MESSAGE, Function};
+use super::{Function, builtin::NAME_TO_MESSAGE};
 
 #[dynamic]
 pub static DEFAULT_NAME_CASTER: NameCasterCollection<'static> = NameCasterCollection {

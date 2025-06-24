@@ -8,7 +8,7 @@ use logic_formula::Bounder;
 use utils::implvec;
 
 use super::{
-    sort::{builtins::BOOL, Sort},
+    sort::{Sort, builtins::BOOL},
     variable::Variable,
 };
 

@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use crate::formula::{
     formula::ARichFormula,
-    variable::{uvar, Variable},
+    variable::{Variable, uvar},
 };
 
 use super::super::substitution::Substitution;

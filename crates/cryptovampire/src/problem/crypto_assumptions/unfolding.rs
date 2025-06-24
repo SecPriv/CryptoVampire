@@ -8,10 +8,10 @@ use crate::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
         formula::meq,
         function::{
+            Function,
             builtin::{
                 CONDITION_MACRO, EXEC_MACRO, HAPPENS, LESS_THAN_EQ_STEP, MESSAGE_MACRO, PRED,
             },
-            Function,
         },
         sort::builtins::{CONDITION, MESSAGE, STEP},
         utils::Applicable,

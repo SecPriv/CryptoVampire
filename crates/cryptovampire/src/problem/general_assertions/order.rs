@@ -1,4 +1,4 @@
-use itertools::{izip, Itertools};
+use itertools::{Itertools, izip};
 
 use crate::formula::function::builtin::GREATER_THAN_STEP;
 use crate::formula::utils::Applicable;
@@ -6,7 +6,7 @@ use crate::{
     environement::environement::Environement,
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
-        formula::{ands, meq, ors, RichFormula},
+        formula::{RichFormula, ands, meq, ors},
         function::builtin::{HAPPENS, LESS_THAN_EQ_STEP, LESS_THAN_STEP, PRED},
         sort::builtins::STEP,
         variable::{IntoVariableIter, Variable},

@@ -1,6 +1,14 @@
 use proc_macro::TokenStream;
+use quote::quote;
 use quote::quote_spanned;
-use syn::{parse_macro_input, spanned::Spanned, DeriveInput};
+use syn::parenthesized;
+use syn::{
+    DeriveInput, Expr, Token,
+    parse::{Parse, ParseStream},
+    parse_macro_input,
+    punctuated::Punctuated,
+    spanned::Spanned,
+};
 
 #[proc_macro_derive(LocationProvider, attributes(provider))]
 pub fn with_location_derive(input: TokenStream) -> TokenStream {
@@ -14,3 +22,29 @@ pub fn with_location_derive(input: TokenStream) -> TokenStream {
 }
 
 mod with_location;
+
+mod indistinguishability;
+#[proc_macro]
+pub fn mk_builtin_funs(input: TokenStream) -> TokenStream {
+    indistinguishability::mk_builtin_funs(input)
+}
+
+mod formulas;
+#[proc_macro]
+pub fn smt(input: TokenStream) -> TokenStream {
+    formulas::smt_formulas(input)
+}
+
+#[proc_macro]
+pub fn vec_smt(input: TokenStream) -> TokenStream {
+    formulas::smt_many_smt_formulas(input)
+}
+
+#[proc_macro]
+pub fn recexpr(input: TokenStream) -> TokenStream {
+    formulas::mk_const_recexpr(input)
+}
+#[proc_macro]
+pub fn declare_recexpr(input: TokenStream) -> TokenStream {
+    formulas::declare_static_recexpr(input)
+}

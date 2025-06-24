@@ -7,13 +7,13 @@ use crate::{
             types::{BITSTRING, BOOL, CONDITION, MSG},
         },
         env::Environement,
-        formula::{sorts_to_variables, RichFormula, Variable},
+        formula::{RichFormula, Variable, sorts_to_variables},
         function::{FFlags, Function},
         sort::Sort,
         utils::Evaluator,
     },
     problem::problem::{
-        QuantifierPContent, CAND_NAME, CEQ_NAME, CFALSE_NAME, CNOT_NAME, COR_NAME, CTRUE_NAME,
+        CAND_NAME, CEQ_NAME, CFALSE_NAME, CNOT_NAME, COR_NAME, CTRUE_NAME, QuantifierPContent,
     },
     smt::{
         macros::*,

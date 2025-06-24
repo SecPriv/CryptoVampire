@@ -6,14 +6,14 @@ use crate::formula::{formula::ARichFormula, variable::uvar};
 
 use super::{
     super::{
-        formula::{meq, RichFormula},
+        formula::{RichFormula, meq},
         sort::sorted::SortedError,
         variable::Variable,
     },
+    Substitution,
     substitution::variable_substitution::{
         MulitpleVarSubstF, MultipleVarSubst, OneVarSubst, OneVarSubstF,
     },
-    Substitution,
 };
 
 #[derive(Debug, Clone)]
@@ -225,15 +225,15 @@ mod tests {
         formula::{
             formula,
             function::{
-                builtin::INPUT,
-                name_caster_collection::{NameCasterCollection, DEFAULT_NAME_CASTER},
                 Function,
+                builtin::INPUT,
+                name_caster_collection::{DEFAULT_NAME_CASTER, NameCasterCollection},
             },
             sort::{
-                builtins::{MESSAGE, NAME, STEP},
                 Sort,
+                builtins::{MESSAGE, NAME, STEP},
             },
-            variable::{uvar, Variable},
+            variable::{Variable, uvar},
         },
     };
 

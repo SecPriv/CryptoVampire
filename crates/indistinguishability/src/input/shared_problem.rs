@@ -1,0 +1,196 @@
+use std::{
+    any::TypeId,
+    cell::{Ref, RefCell, RefMut},
+    ops::{Deref, DerefMut},
+    rc::Rc,
+};
+
+use steel::rvals::Result as SResult;
+use steel::{SteelErr, rerrs::ErrorKind, rvals::CustomType, steel_vm::register_fn::RegisterFn};
+use steel_derive::Steel;
+
+use crate::{
+    Problem,
+    input::{Registerable, golgge_rules::Rule, register, shared_exists::ShrExists, var::SVar},
+    protocol::Step,
+    terms::{Function, RecFOFormula, Rewrite, Sort},
+};
+
+declare_trace!($"shrpblm");
+
+#[derive(Debug, Clone, Steel)]
+pub struct ShrProblem(Rc<RefCell<Problem>>);
+
+impl ShrProblem {
+    pub fn borrow(&self) -> Ref<'_, Problem> {
+        self.0.borrow()
+    }
+
+    pub fn borrow_mut(&self) -> RefMut<'_, Problem> {
+        self.0.borrow_mut()
+    }
+
+    /// returns [None] is the shared pointer is still shared
+    pub fn try_into_inner(self) -> Option<Problem> {
+        Rc::into_inner(self.0).map(RefCell::into_inner)
+    }
+
+    fn get_step_mut(&self, step: Function, ptcl: Function) -> SResult<RefMut<'_, Step>> {
+        if !step.is_step() {
+            return Err(SteelErr::new(
+                ErrorKind::ConversionError,
+                format!("'step' ({step}) should be a step"),
+            ));
+        }
+
+        if !ptcl.is_protocol() {
+            return Err(SteelErr::new(
+                ErrorKind::ConversionError,
+                format!("'ptcl' ({ptcl}) should be a protocol"),
+            ));
+        }
+
+        let step = RefMut::map(self.borrow_mut(), |x| {
+            x.protocol_mut(ptcl.protocol_idx)
+                .unwrap()
+                .step_mut(step.step_idx)
+                .unwrap()
+        });
+        Ok(step)
+    }
+
+    // =========================================================
+    // ========================= API ===========================
+    // =========================================================
+    fn mk_empty() -> Self {
+        let pbl = Problem::base_empty();
+        Self(Rc::new(RefCell::new(pbl)))
+    }
+
+    fn declare_function(self, fun: Function) -> Function {
+        self.borrow_mut().function.add(fun.clone());
+        fun
+    }
+
+    fn declare_step(&self, name: String, sorts: Vec<Sort>) -> SResult<Function> {
+        let mut pbl = self.borrow_mut();
+
+        let Some(steps) = pbl.steps() else {
+            return Err(SteelErr::new(
+                ErrorKind::Generic,
+                "can't declare step function, you need to declare at least one protocol first"
+                    .into(),
+            ));
+        };
+        let n = steps.count();
+        let step = pbl
+            .function
+            .add_function()
+            .inputs(sorts.iter().cloned())
+            .step(n)
+            .name(name)
+            .call();
+        let nptcl = pbl.num_protocols();
+        pbl.push_steps((0..nptcl).map(|_| {
+            Step::builder()
+                .id(step.clone())
+                .vars(
+                    sorts
+                        .iter()
+                        .enumerate()
+                        .map(|(i, _)| egg::Var::from_u32(i as u32)),
+                )
+                .build()
+                .unwrap()
+        }));
+        Ok(step)
+    }
+
+    fn declare_protocol(&self) -> Function {
+        self.borrow_mut().declare_new_protocol().name().clone()
+    }
+
+    fn declare_quantifier(&self, captured: Vec<Sort>, bound: Sort) -> ShrExists {
+        let mut pbl = self.borrow_mut();
+        let index = pbl.function.quantifiers().len();
+        pbl.function.add_exists_function(captured, bound);
+        ShrExists {
+            pbl: self.clone(),
+            index,
+        }
+    }
+
+    fn set_step_vars(&self, step: Function, ptcl: Function, vars: Vec<SVar>) -> SResult<()> {
+        let mut step = self.get_step_mut(step, ptcl)?;
+
+        if step.id.arity() != vars.len() {
+            return Err(SteelErr::new(
+                ErrorKind::Generic,
+                format!(
+                    "wrong number of step variables ({} instead of {})",
+                    vars.len(),
+                    step.id.arity()
+                ),
+            ));
+        }
+
+        step.vars = vars.into_iter().map(egg::Var::from).collect();
+        Ok(())
+    }
+
+    fn set_step_msg(&self, step: Function, ptcl: Function, msg: RecFOFormula) -> SResult<()> {
+        let msg = msg.steel_maybe_as_recexp()?;
+        self.get_step_mut(step, ptcl)?.msg = msg;
+        Ok(())
+    }
+
+    fn set_step_cond(&self, step: Function, ptcl: Function, cond: RecFOFormula) -> SResult<()> {
+        let cond = cond.steel_maybe_as_recexp()?;
+        self.get_step_mut(step, ptcl)?.cond = cond;
+        Ok(())
+    }
+
+    fn add_rule(&self, Rule(r): Rule) {
+        self.borrow_mut().extra_rules_mut().push(r);
+    }
+
+    fn add_rewrite(&self, rw: Rewrite) {
+        self.borrow_mut().extra_rewrite_mut().push(rw);
+    }
+
+    fn run(&self, p1: Function, p2: Function) -> SResult<bool> {
+        if !p1.is_protocol() {
+            return Err(SteelErr::new(
+                ErrorKind::ConversionError,
+                format!("{p1} is not a protocol"),
+            ));
+        }
+        if !p2.is_protocol() {
+            return Err(SteelErr::new(
+                ErrorKind::ConversionError,
+                format!("{p2} is not a protocol"),
+            ));
+        }
+        Ok(self.borrow_mut().run(p1.protocol_idx, p2.protocol_idx))
+    }
+}
+
+impl Registerable for ShrProblem {
+    fn register(
+        module: &mut steel::steel_vm::builtin::BuiltInModule,
+    ) -> &mut steel::steel_vm::builtin::BuiltInModule {
+        Self::register_type(module);
+        module
+            .register_fn("empty_problem", Self::mk_empty)
+            .register_fn("declare_function", Self::declare_function)
+            .register_fn("declare_protocol", Self::declare_protocol)
+            .register_fn("declare_quantifier", Self::declare_quantifier)
+            .register_fn("declare_step", Self::declare_step)
+            .register_fn("set-step-message", Self::set_step_msg)
+            .register_fn("set-step-condition", Self::set_step_cond)
+            .register_fn("set-step-vars", Self::set_step_vars)
+            .register_fn("run", Self::run);
+
+        module
+    }
+}

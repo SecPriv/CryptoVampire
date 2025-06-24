@@ -1,20 +1,20 @@
-use super::{ast_convertion::ToAst, Context, RAoO};
+use super::{Context, RAoO, ast_convertion::ToAst};
 use hashbrown::HashSet;
 use std::{cmp::Ordering, fmt::Debug};
 use utils::monad::Monad;
 
-use itertools::{chain, izip, Itertools};
+use itertools::{Itertools, chain, izip};
 use utils::{all_or_one::AoOV, mdo, string_ref::StrRef};
 
 use crate::{
     bail_at,
     parser::ast::{self, Application, Order, OrderOperation, QuantifierKind},
     squirrel::{
+        Sanitizable,
         json::{
             self,
-            action::{Item, Shape, AT},
+            action::{AT, Item, Shape},
         },
-        Sanitizable,
     },
 };
 

@@ -6,9 +6,10 @@ use log::{log_enabled, trace};
 use crate::{
     environement::traits::{KnowsRealm, Realm},
     formula::file_descriptior::axioms::RewriteKind,
+    smt::smt::SmtDisplay,
 };
 
-use super::{fun_list_fmt, Smt, SmtFile, SmtFormula};
+use super::{Smt, SmtFile, SmtFormula, fun_list_fmt};
 
 #[derive(Debug, Copy, Clone)]
 pub struct SmtDisplayer<D, T> {
@@ -195,14 +196,21 @@ impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a Smt<'bump>> {
                 writeln!(f, "(assert-ground {sort} {})", formula.prop(*self))
             }
             Smt::AssertNot(e) => writeln!(f, "(assert-not {})", e.prop(*self)),
-            Smt::DeclareFun(fun) => {
+            // Smt::DeclareFun(fun) => {
+            //     write!(f, "(declare-fun {} (", fun.name())?;
+            //     for s in fun.fast_insort().unwrap_or_else(|| {
+            //         panic!("all function defined here have known sort: {}", fun.name())
+            //     }) {
+            //         write!(f, "{} ", s.name())?;
+            //     }
+            //     writeln!(f, ") {})", fun.fast_outsort().unwrap())
+            // }
+            Smt::DeclareFun { fun, args, out } => {
                 write!(f, "(declare-fun {} (", fun.name())?;
-                for s in fun.fast_insort().unwrap_or_else(|| {
-                    panic!("all function defined here have known sort: {}", fun.name())
-                }) {
-                    write!(f, "{} ", s.name())?;
+                for arg in args {
+                    write!(f, "{} ", arg.name())?;
                 }
-                writeln!(f, ") {})", fun.fast_outsort().unwrap())
+                write!(f, ") {})", out.name())
             }
             Smt::DeclareSort(sort) => writeln!(f, "(declare-sort {} 0)", sort),
             Smt::DeclareSortAlias { from, to } => {
@@ -276,7 +284,7 @@ impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a SmtFile<'bump>> {
                 .content
                 .iter()
                 .filter_map(|smt| match smt {
-                    Smt::DeclareFun(f) => Some(f),
+                    Smt::DeclareFun { fun, .. } => Some(fun),
                     _ => None,
                 })
                 .map(|f| f.name())

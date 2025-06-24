@@ -5,9 +5,9 @@ use crate::{
     err_at,
     parser::ast::{self, TypedArgument},
     squirrel::{
+        Sanitizable,
         converters::ast_convertion::ToAst,
         json::{self},
-        Sanitizable,
     },
 };
 

@@ -2,8 +2,8 @@ use crate::{
     container::{allocator::ContainerTools, reference::Reference},
     formula::{
         function::{
-            inner::term_algebra::{cell::Cell, TermAlgebra},
             Function, InnerFunction,
+            inner::term_algebra::{TermAlgebra, cell::Cell},
         },
         sort::Sort,
     },

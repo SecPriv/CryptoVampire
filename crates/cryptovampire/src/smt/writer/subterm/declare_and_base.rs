@@ -15,7 +15,7 @@ use crate::{
     },
 };
 
-use super::{builder::Builder, preprocessing, InnerSubterm, Subterm};
+use super::{InnerSubterm, Subterm, builder::Builder, preprocessing};
 
 pub fn declare_and_base<'a, B>(
     assertions: &mut Vec<Smt>,

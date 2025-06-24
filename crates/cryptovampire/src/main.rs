@@ -4,7 +4,7 @@ use std::{
 };
 
 use clap::Parser;
-use cryptovampire::{cli::Args, init_logger, run_from_cv, squirrel::run_from_json, Return};
+use cryptovampire::{Return, cli::Args, init_logger, run_from_cv, squirrel::run_from_json};
 
 use log::trace;
 

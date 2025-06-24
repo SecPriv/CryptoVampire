@@ -1,4 +1,4 @@
-use crate::{outers::OwnedIter, Bounder, Destructed, Formula, FormulaIterator};
+use crate::{Bounder, Destructed, Formula, FormulaIterator, outers::OwnedIter};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -21,7 +21,7 @@ impl<F: Formula> FormulaIterator<F> for UsedVariableIterator {
     type Passing = ();
     type U = F::Var;
 
-    fn next<H>(&mut self, current: F, _: &(), helper: &mut H)
+    fn next<H>(&mut self, current: F, _: (), helper: &mut H)
     where
         H: crate::IteratorHelper<F = F, Passing = (), U = Self::U>,
     {
@@ -41,12 +41,12 @@ impl<F: Formula> FormulaIterator<F> for DepthIterator {
     type Passing = u32;
     type U = u32;
 
-    fn next<H>(&mut self, current: F, passing: &u32, helper: &mut H)
+    fn next<H>(&mut self, current: F, passing: u32, helper: &mut H)
     where
         H: crate::IteratorHelper<F = F, Passing = u32, U = Self::U>,
     {
-        helper.push_result(*passing);
-        helper.extend_child(current.args().map(|f| (f, *passing + 1)));
+        helper.push_result(passing);
+        helper.extend_child(current.args().map(|f| (f, passing + 1)));
     }
 }
 
@@ -66,11 +66,11 @@ where
 
     type U = F::Var;
 
-    fn next<H>(&mut self, current: F, passing: &Self::Passing, helper: &mut H)
+    fn next<H>(&mut self, current: F, passing: Self::Passing, helper: &mut H)
     where
         H: crate::IteratorHelper<F = F, Passing = Self::Passing, U = Self::U>,
     {
-        self.bvars.truncate(*passing);
+        self.bvars.truncate(passing);
         let Destructed { head, args } = current.destruct();
         match head {
             crate::HeadSk::Var(v) => {
@@ -79,7 +79,7 @@ where
                 }
             }
             crate::HeadSk::Fun(_) => {
-                helper.extend_child_same_passing(args, passing);
+                helper.extend_child_same_passing(args, &passing);
             }
             crate::HeadSk::Quant(q) => {
                 self.bvars.extend(q.bounds());
@@ -106,7 +106,7 @@ impl<F: Formula + Clone> FormulaIterator<F> for AllTermsIterator {
     type Passing = ();
     type U = F;
 
-    fn next<H>(&mut self, current: F, _passing: &Self::Passing, helper: &mut H)
+    fn next<H>(&mut self, current: F, _passing: Self::Passing, helper: &mut H)
     where
         H: crate::IteratorHelper<F = F, Passing = Self::Passing, U = Self::U>,
     {

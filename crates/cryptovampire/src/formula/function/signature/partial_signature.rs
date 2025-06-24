@@ -2,7 +2,7 @@ use std::iter::Cloned;
 
 use itertools::{Itertools, MapInto};
 
-use crate::formula::sort::{sort_proxy::SortProxy, Sort};
+use crate::formula::sort::{Sort, sort_proxy::SortProxy};
 use utils::vecref::{IterVecRef, VecRef};
 
 use super::{Impossible, Signature};
@@ -38,7 +38,8 @@ impl<'a, 'bump: 'a> OnlyArgsSignatureProxy<'a, 'bump> {
 }
 
 impl<'a, 'bump: 'a> Signature<'bump> for OnlyArgsSignature<'a, 'bump> {
-    type Args<'b> = MapInto<IterVecRef<'a, 'b, Sort<'bump>>, SortProxy<'bump> >
+    type Args<'b>
+        = MapInto<IterVecRef<'a, 'b, Sort<'bump>>, SortProxy<'bump>>
     where
         Self: 'b,
         'bump: 'b;
@@ -66,7 +67,8 @@ impl<'a, 'bump: 'a> Signature<'bump> for OnlyArgsSignature<'a, 'bump> {
 }
 
 impl<'a, 'bump: 'a> Signature<'bump> for OnlyArgsSignatureProxy<'a, 'bump> {
-    type Args<'b> = Cloned<IterVecRef<'a, 'b, SortProxy<'bump>>>
+    type Args<'b>
+        = Cloned<IterVecRef<'a, 'b, SortProxy<'bump>>>
     where
         Self: 'b,
         'bump: 'b;

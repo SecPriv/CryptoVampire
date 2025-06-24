@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use itertools::{chain, izip, Either};
+use itertools::{Either, chain, izip};
 use logic_formula::{Bounder, Destructed, Formula, HeadSk};
 
 use crate::formula::{
-    function::{inner::term_algebra, Function},
+    function::{Function, inner::term_algebra},
     quantifier::Quantifier,
     variable::Variable,
 };

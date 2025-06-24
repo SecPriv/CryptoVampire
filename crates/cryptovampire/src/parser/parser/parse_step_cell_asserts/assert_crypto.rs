@@ -3,20 +3,20 @@ use crate::{
     error::{BaseContext, CVContext},
     formula::function::signature::CheckError,
     parser::{
+        Pstr,
         ast::{self, Options},
         location::ASTLocation,
         parser::Environement,
-        Pstr,
     },
 };
 use crate::{
     environement::traits::Realm,
     formula::function::signature::Signature,
     problem::crypto_assumptions::{
-        CryptoAssumption, CryptoFlag, EufCma, IntCtxt, Nonce, UfCmaBuilder, Unfolding,
-        EUF_CMA_PK_SIGNATURE, EUF_CMA_SIGN_SIGNATURE, EUF_CMA_VERIFY_SIGNATURE,
-        INT_CTXT_DEC_SIGNATURE, INT_CTXT_ENC_SIGNATURE, INT_CTXT_FAIL_SIGNATURE,
-        UF_CMA_MAC_SIGNATURE, UF_CMA_VERIFY_SIGNATURE,
+        CryptoAssumption, CryptoFlag, EUF_CMA_PK_SIGNATURE, EUF_CMA_SIGN_SIGNATURE,
+        EUF_CMA_VERIFY_SIGNATURE, EufCma, INT_CTXT_DEC_SIGNATURE, INT_CTXT_ENC_SIGNATURE,
+        INT_CTXT_FAIL_SIGNATURE, IntCtxt, Nonce, UF_CMA_MAC_SIGNATURE, UF_CMA_VERIFY_SIGNATURE,
+        UfCmaBuilder, Unfolding,
     },
 };
 use utils::{destvec, implvec, string_ref::StrRef, traits::NicerError};

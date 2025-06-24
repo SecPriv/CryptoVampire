@@ -2,8 +2,8 @@ use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::{quote, quote_spanned};
 use syn::{
-    spanned::Spanned, DataEnum, DataStruct, DeriveInput, Field, Fields, GenericParam, Lifetime,
-    LifetimeParam,
+    DataEnum, DataStruct, DeriveInput, Field, Fields, GenericParam, Lifetime, LifetimeParam,
+    spanned::Spanned,
 };
 
 fn find_field(span: Span, fields: &Fields) -> Result<(usize, &Field), proc_macro2::TokenStream> {

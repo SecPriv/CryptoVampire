@@ -14,7 +14,7 @@ use super::inner::term_algebra::base_function::BaseFunctionTuple;
 use super::inner::term_algebra::name_caster::NameCaster;
 use super::inner::term_algebra::step_macro::Macro;
 use super::inner::term_algebra::{self, TermAlgebra};
-use super::{new_static_function, Function, InnerFunction};
+use super::{Function, InnerFunction, new_static_function};
 
 use super::inner::{
     booleans::{self, Booleans},

@@ -6,14 +6,14 @@ use std::{
     path::Path,
     process::Command,
     sync::{
-        mpsc::{channel, Receiver, Sender},
         Arc,
+        mpsc::{Receiver, Sender, channel},
     },
     thread::{self, ScopedJoinHandle},
     time::Duration,
 };
 
-use itertools::{chain, Itertools};
+use itertools::{Itertools, chain};
 use log::{debug, trace};
 use shared_child::SharedChild;
 use thiserror::Error;
@@ -26,9 +26,9 @@ use crate::{
 };
 
 use super::{
+    RunnerHandler, VampireArg, VampireExec,
     dyn_traits::{self, DynRunner},
     z3::Z3Runner,
-    RunnerHandler, VampireArg, VampireExec,
 };
 
 #[derive(Debug, Clone)]

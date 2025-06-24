@@ -13,6 +13,10 @@ proc-macro = true
 workspace = true
 
 [dependencies]
-syn = "2.0"
+utils = {path = "../utils"}
+
+itertools.workspace = true
+
+syn = {version = "2.0", features = ["full", "extra-traits"]}
 quote = "1.0"
 proc-macro2 = "1.0"

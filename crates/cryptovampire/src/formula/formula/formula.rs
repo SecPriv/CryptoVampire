@@ -11,18 +11,18 @@ use crate::formula::utils::Applicable;
 use crate::formula::{
     formula::ARichFormula,
     function::{
+        Function,
         builtin::{AND, EQUALITY, IMPLIES, NOT, OR},
         signature::Signature,
-        Function,
     },
     manipulation::{Substitution, Translate},
     quantifier::Quantifier,
     sort::{
+        Sort,
         builtins::BOOL,
         sorted::{Sorted, SortedError},
-        Sort,
     },
-    variable::{uvar, Variable},
+    variable::{Variable, uvar},
 };
 use utils::{implvec, utils::MaybeInvalid};
 

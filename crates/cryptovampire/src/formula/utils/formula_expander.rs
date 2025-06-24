@@ -4,10 +4,10 @@ use crate::formula::function::inner::term_algebra::step_macro::InputOrExec;
 use crate::formula::utils::Applicable;
 use crate::{
     formula::{
-        formula::{meq, ARichFormula, RichFormula},
+        formula::{ARichFormula, RichFormula, meq},
         function::{
-            inner::term_algebra::{quantifier::Quantifier, step_macro, TermAlgebra},
             InnerFunction,
+            inner::term_algebra::{TermAlgebra, quantifier::Quantifier, step_macro},
         },
         manipulation::{FrozenMultipleVarSubst, FrozenSubst, OneVarSubst, Substitution},
         variable::{IntoVariableIter, Variable},
@@ -22,7 +22,7 @@ use derive_builder::Builder;
 use utils::{destvec, implvec};
 
 use bitflags::bitflags;
-use itertools::{chain, Itertools};
+use itertools::{Itertools, chain};
 use log::trace;
 bitflags! {
     /// Some flags to control the search.

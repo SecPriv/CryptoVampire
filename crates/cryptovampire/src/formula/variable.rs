@@ -46,7 +46,7 @@ impl<'bump> PartialEq for Variable<'bump> {
     }
 }
 
-impl<'bump> Eq for Variable<'bump> {}
+impl Eq for Variable<'_> {}
 
 impl<'bump> Variable<'bump> {
     pub fn new(id: uvar, sort: Sort<'bump>) -> Self {

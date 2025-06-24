@@ -2,8 +2,8 @@
 //!
 //! This is an interface with the [tptp] crate. We need this to read the output of `vampire`.
 use crate::formula::{
-    function::builtin::{EQUALITY, NOT, NOT_TA},
     TmpFormula,
+    function::builtin::{EQUALITY, NOT, NOT_TA},
 };
 
 struct A(TmpFormula);
@@ -32,7 +32,7 @@ impl TptpParse for TmpFormula {
 }
 
 use itertools::Itertools;
-use tptp::{cnf::Literal, fof::*, Parse};
+use tptp::{Parse, cnf::Literal, fof::*};
 use utils::{implvec, match_as_trait};
 
 // I need to remove the `'` from some function names

@@ -12,8 +12,8 @@ use crate::{
 use utils::implvec;
 
 use super::{
-    call::{InputCall, StepCall},
     Ancestors, MacroRef, PreprocessedDependancyGraph,
+    call::{InputCall, StepCall},
 };
 use thiserror::Error;
 mod process_functions;

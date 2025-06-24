@@ -1,7 +1,9 @@
+use utils::impossible::Impossible;
+
 use crate::{
+    Destructed, Head,
     iterators::{FreeVariableIterator, UsedVariableIterator},
     outers::{Content, OwnedIter, OwnedPile},
-    Destructed, Head,
 };
 
 pub trait Formula: Sized {
@@ -87,13 +89,20 @@ pub trait FormulaIterator<F: Formula> {
 
     type U;
 
-    fn next<H>(&mut self, current: F, passing: &Self::Passing, helper: &mut H)
+    fn next<H>(&mut self, current: F, passing: Self::Passing, helper: &mut H)
     where
         H: IteratorHelper<F = F, Passing = Self::Passing, U = Self::U>;
 }
 
 pub trait Bounder<Var> {
     fn bounds(&self) -> impl Iterator<Item = Var>;
+}
+
+impl<V> Bounder<V> for Impossible {
+    fn bounds(&self) -> impl Iterator<Item = V> {
+        unreachable!();
+        [].into_iter()
+    }
 }
 
 pub trait IteratorContainer<F, I>

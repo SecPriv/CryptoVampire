@@ -1,0 +1,29 @@
+[package]
+name = "golgge"
+version = "0.1.0"
+edition = "2024"
+authors = ["Simon Jeanteur <simon.jeanteur@tuwien.ac.at>"]
+
+[dependencies]
+rustc-hash = "2.1.0" # for hash on integers
+serde_json = "1.0.120"
+tempfile = "3.10"
+
+# own crates
+utils = { path = "../utils"}
+logic_formula = {path = "../logic_formula"}
+egg = {path = "../egg", features = ["serde-1"]}
+
+# workspace
+itertools.workspace = true
+static_init.workspace = true
+paste.workspace = true
+anyhow.workspace = true
+smallvec.workspace = true
+log.workspace = true
+env_logger.workspace = true
+serde.workspace = true
+bon.workspace = true
+
+[lints]
+workspace = true

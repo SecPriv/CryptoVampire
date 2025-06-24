@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use crate::{error_at, formula::function::builtin::EMPTY_FUN_NAME};
 use hashbrown::Equivalent;
 use if_chain::if_chain;
-use itertools::{chain, Either, Itertools};
+use itertools::{Either, Itertools, chain};
 use log::trace;
 use utils::{all_or_one::AoOV, match_as_trait, mdo, pure, string_ref::StrRef};
 
@@ -11,18 +11,17 @@ use crate::{
     bail_at, err_at,
     parser::ast::{self, FindSuchThat, Operation, Term},
     squirrel::{
+        Sanitizable,
         converters::{
-            ast_convertion::ToAst, helper_functions::to_variable_binding, DEFAULT_FST_PROJ_NAME,
-            DEFAULT_SND_PROJ_NAME, DEFAULT_TUPLE_NAME,
+            DEFAULT_FST_PROJ_NAME, DEFAULT_SND_PROJ_NAME, DEFAULT_TUPLE_NAME,
+            ast_convertion::ToAst, helper_functions::to_variable_binding,
         },
         json::{
-            self,
+            self, NameName,
             action::ActionName,
             mmacro::{self, MacroNameRef},
             operator::OperatorName,
-            NameName,
         },
-        Sanitizable,
     },
 };
 

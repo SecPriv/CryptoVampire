@@ -93,8 +93,8 @@ pub mod dyn_traits {
     use crate::{
         environement::environement::Environement,
         error::BaseContext,
-        problem::{crypto_assumptions::CryptoAssumption, Problem},
-        runner::{searcher::InstanceSearcher, Discoverer, Runner, RunnerHandler, RunnerOut},
+        problem::{Problem, crypto_assumptions::CryptoAssumption},
+        runner::{Discoverer, Runner, RunnerHandler, RunnerOut, searcher::InstanceSearcher},
     };
 
     pub type RunnerOutDyn = RunnerOut<

@@ -4,20 +4,20 @@ use if_chain::if_chain;
 use itertools::Itertools;
 use logic_formula::iterators::AllTermsIterator;
 
-use crate::formula::utils::formula_expander::NO_REC_MACRO;
 use crate::formula::utils::Applicable;
+use crate::formula::utils::formula_expander::NO_REC_MACRO;
 use crate::formula::variable::IntoVariableIter;
 use crate::{
     environement::{environement::Environement, traits::KnowsRealm},
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
-        formula::{forall, meq, ARichFormula, RichFormula},
+        formula::{ARichFormula, RichFormula, forall, meq},
         function::Function,
         function::{inner::subterm::Subsubterm, name_caster_collection::NameCasterCollection},
         manipulation::OneVarSubst,
         sort::{
-            builtins::{MESSAGE, NAME},
             Sort,
+            builtins::{MESSAGE, NAME},
         },
         utils::formula_expander::UnfoldFlags,
         variable::Variable,
@@ -29,10 +29,9 @@ use crate::{
 use crate::{
     formula::sort::builtins::CONDITION,
     subterm::{
-        into_exist_formula,
+        Subterm, into_exist_formula,
         kind::SubtermKindConstr,
         traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
-        Subterm,
     },
 };
 use logic_formula::Formula;

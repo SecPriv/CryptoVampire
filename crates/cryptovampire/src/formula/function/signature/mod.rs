@@ -15,7 +15,7 @@ use itertools::{Itertools, MapInto};
 
 use crate::{
     environement::traits::{KnowsRealm, Realm},
-    formula::sort::{sort_proxy::SortProxy, Sort},
+    formula::sort::{Sort, sort_proxy::SortProxy},
 };
 use utils::infinity::Infinity;
 
@@ -125,9 +125,11 @@ where
     T: Sized + AsFixedSignature<'bump>,
 {
     // type Args<'a> = MapInto<<<Self as FixedSignature<'bump>>::Args<'a>  as IntoIterator>::IntoIter ,SortProxy<'bump>>
-    type Args<'a> = MapInto<FixedSignatureArgs<'a, 'bump, Self> ,SortProxy<'bump>>
+    type Args<'a>
+        = MapInto<FixedSignatureArgs<'a, 'bump, Self>, SortProxy<'bump>>
     where
-        Self: 'a, 'bump:'a;
+        Self: 'a,
+        'bump: 'a;
 
     type FxSign = Self;
 
@@ -157,8 +159,11 @@ where
 pub enum Impossible {}
 
 impl<'bump> AsFixedSignature<'bump> for Impossible {
-    type Args<'a> = std::iter::Empty<Sort<'bump>>
-    where Self:'a, 'bump:'a;
+    type Args<'a>
+        = std::iter::Empty<Sort<'bump>>
+    where
+        Self: 'a,
+        'bump: 'a;
 
     fn fixed_out(&self) -> Sort<'bump> {
         unreachable!()

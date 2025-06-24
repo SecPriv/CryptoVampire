@@ -83,7 +83,10 @@ impl<'bump, T> Contained<'bump> for T
 where
     T: Containable<'bump> + Sized + 'bump + std::fmt::Debug,
 {
-    type Pointer<'a> = Reference<'a, Self> where 'bump: 'a;
+    type Pointer<'a>
+        = Reference<'a, Self>
+    where
+        'bump: 'a;
 
     fn ptr_to_ref<'a>(ptr: &Self::Pointer<'bump>) -> &'a Option<Self>
     where

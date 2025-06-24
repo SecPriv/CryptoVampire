@@ -45,7 +45,7 @@ where
             Content::Next { formula, passing } => {
                 let Self { pile, iterator } = self;
                 let mut helper = RefPile::new_no_iter(pile);
-                iterator.next(formula, &passing, &mut helper);
+                iterator.next(formula, passing, &mut helper);
                 self.next()
             }
         }

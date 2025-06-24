@@ -150,7 +150,10 @@ where
     C: Container<'bump, I>,
     I: Contained<'bump> + Containable<'bump> + Debug,
 {
-    type R<'a> = I::Pointer<'a> where 'bump:'a;
+    type R<'a>
+        = I::Pointer<'a>
+    where
+        'bump: 'a;
 
     fn alloc_uninit<'a>(&'bump self) -> Self::R<'a>
     where
@@ -196,8 +199,13 @@ impl<'bump, C, A, B> ContainerTools<'bump, (A, B)> for C
 where
     C: ContainerTools<'bump, A> + ContainerTools<'bump, B>,
 {
-    type R<'a> = (<C as ContainerTools<'bump, A>>::R<'a>
-        , <C as ContainerTools<'bump, B>>::R<'a>) where 'bump:'a;
+    type R<'a>
+        = (
+        <C as ContainerTools<'bump, A>>::R<'a>,
+        <C as ContainerTools<'bump, B>>::R<'a>,
+    )
+    where
+        'bump: 'a;
 
     fn alloc_uninit<'a>(&'bump self) -> Self::R<'a>
     where
@@ -239,7 +247,10 @@ impl<'bump, C, I, const N: usize> ContainerTools<'bump, [I; N]> for C
 where
     C: ContainerTools<'bump, I>,
 {
-    type R<'a> = [<C as ContainerTools<'bump, I>>::R<'a>; N] where 'bump:'a;
+    type R<'a>
+        = [<C as ContainerTools<'bump, I>>::R<'a>; N]
+    where
+        'bump: 'a;
 
     fn alloc_uninit<'a>(&'bump self) -> Self::R<'a>
     where

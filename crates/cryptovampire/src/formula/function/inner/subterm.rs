@@ -4,7 +4,7 @@ use crate::subterm::kind::{AbsSubtermKindG, SubtermKind, SubtermKindWSort};
 use crate::{
     formula::{
         function::signature::{Lazy, Signature},
-        sort::{builtins::BOOL, Sort},
+        sort::{Sort, builtins::BOOL},
     },
     problem::crypto_assumptions::{
         SubtermEufCmaSignKey, SubtermEufCmaSignMain, SubtermIntCtxtKey, SubtermIntCtxtMain,
@@ -15,8 +15,8 @@ use crate::{
 use utils::string_ref::StrRef;
 
 use super::super::{
-    traits::{MaybeEvaluatable, MaybeFixedSignature},
     InnerFunction,
+    traits::{MaybeEvaluatable, MaybeFixedSignature},
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -152,7 +152,7 @@ impl<'bump> MaybeEvaluatable<'bump> for Subterm<'bump> {
 mod signature {
     use crate::formula::{
         function::signature::{Impossible, Signature},
-        sort::{builtins::BOOL, sort_proxy::SortProxy, Sort},
+        sort::{Sort, builtins::BOOL, sort_proxy::SortProxy},
     };
 
     #[derive(Debug)]
@@ -171,7 +171,8 @@ mod signature {
     }
 
     impl<'bump> Signature<'bump> for SubtermSignature<'bump> {
-        type Args<'a> = [SortProxy<'bump> ; 2]
+        type Args<'a>
+            = [SortProxy<'bump>; 2]
         where
             Self: 'a,
             'bump: 'a;

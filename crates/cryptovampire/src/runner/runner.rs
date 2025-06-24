@@ -14,10 +14,10 @@ use crate::{
     ensure,
     environement::environement::Environement,
     error::BaseError,
-    problem::{crypto_assumptions::CryptoAssumption, Problem},
+    problem::{Problem, crypto_assumptions::CryptoAssumption},
 };
 
-use super::{dyn_traits, searcher::InstanceSearcher, RunnerError};
+use super::{RunnerError, dyn_traits, searcher::InstanceSearcher};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum RunnerOut<S, U, T, O> {

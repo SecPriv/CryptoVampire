@@ -8,7 +8,7 @@ use log::trace;
 
 use crate::formula::{
     formula::{ARichFormula, RichFormula},
-    function::{inner::term_algebra::TermAlgebra, InnerFunction},
+    function::{InnerFunction, inner::term_algebra::TermAlgebra},
     manipulation::FrozenSubst,
 };
 use utils::utils::repeat_n_zip;
@@ -80,11 +80,7 @@ where
                 let (ret, add) =
                     (self.f)(self.passed_along.as_ref().unwrap_or(&p).clone(), formula);
                 self.pile.extend(add.into_iter());
-                if let Some(_) = ret {
-                    ret
-                } else {
-                    self.next()
-                }
+                if let Some(_) = ret { ret } else { self.next() }
             }
         }
     }

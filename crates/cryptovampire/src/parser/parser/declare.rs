@@ -6,27 +6,27 @@ use super::*;
 use crate::{
     bail_at, err_at,
     error::{CVContext, LocationProvider},
-    parser::{ast::extra::AsFunction, error::ParsingError, Pstr},
+    parser::{Pstr, ast::extra::AsFunction, error::ParsingError},
 };
 
 use crate::{
-    container::{allocator::ContainerTools, ScopedContainer},
+    container::{ScopedContainer, allocator::ContainerTools},
     formula::function::{
+        Function, InnerFunction,
         inner::{
             name::Name,
             step::StepFunction,
-            term_algebra::{cell::Cell, TermAlgebra},
+            term_algebra::{TermAlgebra, cell::Cell},
         },
-        Function, InnerFunction,
     },
-    formula::sort::builtins::*,
     formula::sort::Sort,
+    formula::sort::builtins::*,
     problem::cell::InnerMemoryCell,
     problem::step::InnerStep,
 };
 use utils::{string_ref::StrRef, traits::NicerError};
 
-use super::super::ast::{self, extra::SnN, ASTList, Declaration, DeclareFunction, Ident, AST};
+use super::super::ast::{self, AST, ASTList, Declaration, DeclareFunction, Ident, extra::SnN};
 
 /// Declare the sort
 pub fn declare_sorts<'str, 'bump, S>(
@@ -166,11 +166,7 @@ where
 }
 
 fn user_bool_to_condtion(s: Sort<'_>) -> Sort<'_> {
-    if s == BOOL.as_sort() {
-        *CONDITION
-    } else {
-        s
-    }
+    if s == BOOL.as_sort() { *CONDITION } else { s }
 }
 
 fn declare_function<'str, 'bump, S>(

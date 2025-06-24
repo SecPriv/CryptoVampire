@@ -3,30 +3,30 @@ use std::{hash::Hash, sync::Arc};
 
 use derive_builder::Builder;
 use if_chain::if_chain;
-use itertools::{chain, Itertools};
+use itertools::{Itertools, chain};
 use log::trace;
 use static_init::dynamic;
 
 use logic_formula::iterators::AllTermsIterator;
 
-use crate::formula::utils::formula_expander::NO_REC_MACRO;
 use crate::formula::utils::Applicable;
+use crate::formula::utils::formula_expander::NO_REC_MACRO;
 use crate::formula::variable::IntoVariableIter;
 use crate::{
     environement::{environement::Environement, traits::KnowsRealm},
     formula::{
         file_descriptior::{axioms::Axiom, declare::Declaration},
-        formula::{forall, meq, ARichFormula, RichFormula},
+        formula::{ARichFormula, RichFormula, forall, meq},
         function::{
+            Function,
             builtin::{EQUALITY_TA, MESSAGE_TO_BITSTRING},
             inner::subterm::Subsubterm,
             signature::StaticSignature,
-            Function,
         },
         manipulation::OneVarSubst,
         sort::builtins::{MESSAGE, NAME},
         utils::formula_expander::UnfoldFlags,
-        variable::{uvar, Variable},
+        variable::{Variable, uvar},
     },
     mexists, mforall,
     problem::{generator::Generator, problem::Problem},
@@ -34,7 +34,7 @@ use crate::{
 };
 use crate::{
     formula::function::builtin::EQUALITY,
-    subterm::{into_exist_formula, kind::SubtermKindConstr, traits::SubtermAux, Subterm},
+    subterm::{Subterm, into_exist_formula, kind::SubtermKindConstr, traits::SubtermAux},
 };
 use logic_formula::Formula;
 use utils::utils::print_type;
@@ -551,17 +551,13 @@ fn prepare_candidate<'bump>(
 ) -> UfCmaCandidate<'bump> {
     trace!(
         "candidate found as m={:}, s={:}, k={:}",
-        message,
-        signature,
-        key
+        message, signature, key
     );
     let [message, signature, key] =
         [message, signature, key].map(|f| f.translate_vars(max_var).into_arc());
     trace!(
         "after var remmap m={:}, s={:}, k={:}",
-        &message,
-        &signature,
-        &key
+        &message, &signature, &key
     );
     UfCmaCandidate {
         message,

@@ -9,13 +9,13 @@ use crate::{
     formula::{
         formula::{ARichFormula, RichFormula},
         function::{
+            Function,
             builtin::{EQUALITY, EQUALITY_TA},
             name_caster_collection::NameCasterCollection,
-            Function,
         },
         sort::{
-            builtins::{MESSAGE, NAME},
             Sort,
+            builtins::{MESSAGE, NAME},
         },
     },
     subterm::traits::{SubtermAux, VarSubtermResult},

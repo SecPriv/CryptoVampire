@@ -6,7 +6,7 @@ use json::CryptoVampireCall;
 use log::{debug, trace};
 use utils::string_ref::StrRef;
 
-use crate::{cli::Args, run_from_ast, Return};
+use crate::{Return, cli::Args, run_from_ast};
 
 mod converters;
 pub(crate) mod json;
