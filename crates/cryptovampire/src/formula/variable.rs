@@ -13,7 +13,7 @@ use super::{
 
 /// Alias for the name of varibles
 #[allow(non_camel_case_types)]
-pub type uvar = u32;
+pub type uvar = u16;
 
 #[allow(clippy::derived_hash_with_manual_eq)] // <- for debug reasons
 #[derive(Debug, PartialOrd, Ord, Hash, Clone, Copy)]
@@ -67,6 +67,14 @@ impl<'bump> Variable<'bump> {
 
     pub fn id(&self) -> uvar {
         self.id
+    }
+
+    /// see [Sort::get_id_number]
+    ///
+    /// Because I'm stupid
+    #[inline]
+    pub(crate) fn get_unique_id(&self) -> cryptovampire_smt::uvar {
+        (self.id as u32) << 16 | (self.sort.get_id_number() as u32)
     }
 }
 

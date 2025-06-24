@@ -221,7 +221,7 @@ impl<'bump> EufCma<'bump> {
                         .next()
                         .is_none();
                     if k_sc {
-                        let mformula = {
+                        let subterm_search = {
                             let disjunction = subterm_main.preprocess_terms(
                                 &realm,
                                 pbl.protocol(),
@@ -242,7 +242,7 @@ impl<'bump> EufCma<'bump> {
                                     ]),
                                 ])) >> mexists!([u_var], {
                                     meq(pbl.evaluator().eval(u_var), pbl.evaluator().eval(&message))
-                                        & mformula
+                                        & subterm_search
                                 })
                             }))
                         } else {
@@ -253,7 +253,7 @@ impl<'bump> EufCma<'bump> {
                                     self.pk.f([
                                         pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),
                                     ]),
-                                ])) >> mformula.apply_substitution2(&OneVarSubst {
+                                ])) >> subterm_search.apply_substitution2(&OneVarSubst {
                                     id: u_var.id,
                                     f: message.clone(),
                                 })

@@ -1,18 +1,25 @@
 use crate::{
     environement::traits::{KnowsRealm, Realm},
-    formula::sort::Sort,
+    formula::sort::{Sort, new_idx},
 };
 use utils::string_ref::StrRef;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum UserEvaluatable<'bump> {
-    Symbolic { name: Box<str>, eval: Sort<'bump> },
-    Evaluated { symbolic: Sort<'bump> },
+    Symbolic {
+        name: Box<str>,
+        eval: Sort<'bump>,
+        id: u8,
+    },
+    Evaluated {
+        symbolic: Sort<'bump>,
+    },
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Index {
     name: Box<str>,
+    pub(crate) id: u8,
 }
 
 impl<'bump> UserEvaluatable<'bump> {
@@ -49,7 +56,10 @@ impl<'bump> UserEvaluatable<'bump> {
 
 impl Index {
     pub fn new(name: Box<str>) -> Self {
-        Self { name }
+        Self {
+            name,
+            id: new_idx(),
+        }
     }
 
     pub fn name(&self) -> StrRef<'_> {

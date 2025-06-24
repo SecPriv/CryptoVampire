@@ -3,7 +3,7 @@ pub mod builtins;
 pub mod sort_proxy;
 pub mod sorted;
 use core::fmt::Debug;
-use std::{fmt::Display, hash::Hash};
+use std::{fmt::Display, hash::Hash, sync::atomic::AtomicU8};
 
 pub mod inner;
 
@@ -19,6 +19,7 @@ use crate::{
 use utils::{force_lifetime, precise_as_ref::PreciseAsRef, string_ref::StrRef, traits::RefNamed};
 
 use self::inner::{Index, Other, TermBase, UserEvaluatable};
+
 
 pub type Sort<'bump> = Reference<'bump, InnerSort<'bump>>;
 pub type FOSort<'bump> = FORef<'bump, InnerSort<'bump>>;
@@ -192,7 +193,7 @@ impl<'a> Sort<'a> {
             container,
             |(symbolic, eval)| {
                 let inner_symbolic =
-                    InnerSort::UserEvaluatable(UserEvaluatable::Symbolic { name, eval: *eval });
+                    InnerSort::UserEvaluatable(UserEvaluatable::Symbolic { name, eval: *eval, id: new_idx() });
                 let inner_eval = InnerSort::UserEvaluatable(UserEvaluatable::Evaluated {
                     symbolic: *symbolic,
                 });
@@ -264,6 +265,23 @@ impl<'a> Sort<'a> {
         self.name().chars().next().unwrap()
     }
 
+    /// gets a "unique" number for each sort
+    /// 
+    /// This is because I am stupid and now I need it for variables...
+    pub(crate) fn get_id_number(&self) -> u16 {
+        match self.inner() {
+            InnerSort::Base(TermBase::Bitstring) => 0x00,
+            InnerSort::Base(TermBase::Bool) => 0x01,
+            InnerSort::Base(TermBase::Message) => 0x02,
+            InnerSort::Base(TermBase::Condition) => 0x03,
+            InnerSort::Other(Other::Name) => 0x04,
+            InnerSort::Other(Other::Step) => 0x05,
+            InnerSort::UserEvaluatable(UserEvaluatable::Evaluated { symbolic }) => (symbolic.get_id_number()) | 0o0040,
+            InnerSort::Index(Index {id,..}) => (*id as u16) << 8 | 0o0010,
+            InnerSort::UserEvaluatable(UserEvaluatable::Symbolic {  id,.. }) => (*id as u16) << 8 | 0o0020,
+        }
+    }
+
     force_lifetime!(Sort, 'a);
 }
 
@@ -280,6 +298,19 @@ impl<'a, 'bump: 'a> RefNamed<'a> for &'a InnerSort<'bump> {
             InnerSort::Other(o) => o.name(),
         }
     }
+}
+
+/// Counter for [new_idx]
+static SORT_INDEX : AtomicU8 = AtomicU8::new(0);
+/// Generate a fresh new [u8] to be used as an index for sorts
+/// 
+/// see [Sort::get_id_number]
+fn new_idx() -> u8 {
+    let ret = SORT_INDEX.fetch_add(1, ::std::sync::atomic::Ordering::AcqRel);
+    if ret == u8::MAX {
+        panic!("ran out of available sorts! (max {:})", u8::MAX)
+    }
+    ret
 }
 
 #[cfg(test)]

@@ -391,7 +391,7 @@ impl IntoSmt<Sort> for RecFOFormula {
     fn convert_var(var: egg::Var) -> VarInner {
         match var.expose() {
             egg::VarExposed::Sym(s) => VarInner::Str(s.into()),
-            egg::VarExposed::Num(n) => VarInner::Int(n),
+            egg::VarExposed::Num(n) => VarInner::Int(n as cryptovampire_smt::uvar),
         }
     }
 

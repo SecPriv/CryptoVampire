@@ -7,7 +7,7 @@ use std::borrow::Cow;
 
 pub fn var_to_smt(var: &egg::Var) -> VarInner {
     match var.expose() {
-        VarExposed::Num(n) => VarInner::Int(n),
+        VarExposed::Num(n) => VarInner::Int(n as cryptovampire_smt::uvar),
         VarExposed::Sym(v) => VarInner::Str(Cow::Borrowed(v)),
     }
 }

@@ -98,7 +98,7 @@ pub type CowPattern = cow![LangVar];
 
 pub fn convert_smt_var(var: cryptovampire_smt::VarInner) -> Var {
     match var {
-        VarInner::Int(x) => Var::from_u32(x),
+        VarInner::Int(x) => Var::from_u32(x.try_into().unwrap()),
         VarInner::Str(cow) => Var::from_symbol(Symbol::from(cow.as_ref())),
     }
 }

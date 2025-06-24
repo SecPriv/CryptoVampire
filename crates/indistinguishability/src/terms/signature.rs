@@ -31,7 +31,7 @@ impl Signature {
 
     pub fn mk_sorted_vars(&self, from: u32) -> impl Iterator<Item = SortedVar<Sort>> + use<'_> {
         izip!(from.., self.inputs.iter()).map(|(i, s)| SortedVar {
-            var: VarInner::Int(i),
+            var: VarInner::Int(i as cryptovampire_smt::uvar),
             sort: *s,
         })
     }

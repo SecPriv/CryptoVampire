@@ -65,9 +65,9 @@ macro_rules! unpack_args {
 
 fn vars_to_sorted_vars<'bump>(vars: &[Variable<'bump>]) -> Vec<SortedVar<Sort<'bump>>> {
     vars.iter()
-        .map(|&Variable { id, sort }| SortedVar {
-            var: VarInner::Int(id),
-            sort,
+        .map(|v | SortedVar {
+            var: VarInner::Int(v.get_unique_id()),
+            sort: v.sort,
         })
         .collect()
 }
@@ -75,7 +75,7 @@ fn vars_to_sorted_vars<'bump>(vars: &[Variable<'bump>]) -> Vec<SortedVar<Sort<'b
 impl<'a, 'bump> From<&'a RichFormula<'bump>> for SmtFormula<'bump> {
     fn from(formula: &'a RichFormula<'bump>) -> Self {
         match formula {
-            RichFormula::Var(v) => SmtFormula::Var(VarInner::Int(v.id)),
+            RichFormula::Var(v) => SmtFormula::Var(VarInner::Int(v.get_unique_id())),
             RichFormula::Quantifier(q, arg) => match q {
                 Quantifier::Exists { variables } => SmtFormula::Exists(
                     vars_to_sorted_vars(variables),

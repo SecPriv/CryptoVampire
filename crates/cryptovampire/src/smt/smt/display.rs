@@ -139,14 +139,14 @@ impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a SmtFormula<'bump>>
             SmtFormula::Forall(vars, formula) => {
                 write!(f, "(forall (")?;
                 for v in vars.iter() {
-                    write!(f, "({} {}) ", v, v.sort)?;
+                    write!(f, "{v} ")?;
                 }
                 write!(f, ") {})", formula.prop(*self))
             }
             SmtFormula::Exists(vars, formula) => {
                 write!(f, "(exists (")?;
                 for v in vars.iter() {
-                    write!(f, "({} {}) ", v, v.sort)?;
+                    write!(f, "{v} ")?;
                 }
                 write!(f, ") {})", formula.prop(*self))
             }
