@@ -69,7 +69,7 @@
       in
       rec {
         packages = {
-          inherit cryptovampire egg;
+          inherit cryptovampire ;
           default = cryptovampire;
         };
         checks =

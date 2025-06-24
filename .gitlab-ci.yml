@@ -23,7 +23,7 @@ stages: # List of stages for jobs, and their order of execution
 build-job: # This job runs in the build stage, which runs first.
   stage: build
   script:
-    - nix build .# -L
+    - nix build .?submodule=1# -L
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
@@ -31,7 +31,7 @@ build-job: # This job runs in the build stage, which runs first.
 checks: # This job runs in the build stage, which runs first.
   stage: test
   script:
-    - nix flake check .# -L
+    - nix flake check .?submodule=1# -L
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
