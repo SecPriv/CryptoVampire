@@ -435,9 +435,10 @@ impl FOBinder {
 // =========================================================
 
 impl RecFOFormula {
-    fn steel_binder(head: FOBinder, vars: Vec<(SVar, Sort)>, arg: RecFOFormula) -> Self {
-        let (vars, sorts): (Vec<_>, Vec<_>) =
-            vars.into_iter().map(|(v, s)| (Var::from(v), s)).unzip();
+    fn steel_binder(head: FOBinder, vars: Vec<SVar>, sorts: Vec<Sort>, arg: RecFOFormula) -> Self {
+        // let (vars, sorts): (Vec<_>, Vec<_>) =
+        //     vars.into_iter().map(|(v, s)| (Var::from(v), s)).unzip();
+        let vars = vars.into_iter().map_into().collect();
         Self::Binder {
             head,
             vars,
@@ -453,6 +454,10 @@ impl RecFOFormula {
     fn steel_var(var: SVar) -> Self {
         Self::Var(var.into())
     }
+
+    fn steel_is_var(f: RecFOFormula) -> bool {
+        matches!(f, Self::Var(_))
+    }
 }
 
 impl Registerable for RecFOFormula {
@@ -465,6 +470,9 @@ impl Registerable for RecFOFormula {
             .register_fn("mk-varf", Self::steel_var)
             .register_value("existsf", FOBinder::Exists.into_steelval().unwrap())
             .register_value("forallf", FOBinder::Forall.into_steelval().unwrap())
+            .register_fn("is-varf", Self::steel_is_var)
+            .register_type::<Self>("Formula?")
+            .register_fn("print_formula", |f:RecFOFormula| println!("this: {f}"))
     }
 }
 

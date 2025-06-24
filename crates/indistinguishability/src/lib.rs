@@ -40,7 +40,7 @@ pub mod terms; // <- first for macros
 mod test;
 pub(crate) mod utils;
 pub(crate) mod vampire;
-pub use input::register;
+pub use input::{register, init_engine};
 mod configuration;
 pub use configuration::Configuration;
 
@@ -79,12 +79,3 @@ pub fn init_logger() {
         .init();
 }
 
-pub fn init_engine() -> Engine {
-    let mut engine = Engine::new();
-    engine.compile_and_run_raw_program(steel::PRELUDE).unwrap();
-    let mut module = BuiltInModule::new("cryptovampire");
-
-    crate::register(&mut module);
-    engine.register_module(module);
-    engine
-}

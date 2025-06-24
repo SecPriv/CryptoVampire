@@ -1,13 +1,13 @@
 use super::{BUILTINS, Exists, Function, FunctionFlags, PARSING_PAIRS};
 use crate::terms::{
-    Alias, InnerFunction, Signature, Sort,
     functions_holder::function_builder::{
-        IsComplete, SetAlias, SetExistsIdx, SetFlags, SetOutput, SetProtocolIdx,
-    },
+        IsComplete, SetAlias, SetExistsIdx, SetFlags, SetOutput, SetProtocolIdx, SetStepIdx,
+    }, Alias, InnerFunction, Signature, Sort
 };
 use bon::bon;
 use egg::Var;
 use itertools::{Itertools, chain};
+use log::trace;
 use std::{borrow::Cow, collections::HashMap, ops::Deref, sync::atomic::AtomicUsize};
 use utils::implvec;
 
@@ -65,12 +65,6 @@ impl FunctionCollection {
             .iter()
             .filter_map(|f| f.get_exist_index().map(|idx| (f, idx)))
             .all(|(f, idx)| quantifiers[idx].get_functions().contains(&f));
-
-        dbg!(unique);
-        dbg!(mapping);
-        dbg!(quantifiers_valid);
-        dbg!(two_way_mapping);
-
         unique && mapping && quantifiers_valid && two_way_mapping
     }
 
@@ -94,6 +88,7 @@ impl FunctionCollection {
     /// ### panics
     /// If a [Function] with the same name is already registered
     pub fn add(&mut self, fun: Function) {
+        trace!("adding {fun:?}");
         let r = self.map_function.insert(fun.name.clone(), fun.clone());
         assert!(
             r.is_none(),
@@ -238,15 +233,15 @@ where
     pub fn step(
         self,
         idx: usize,
-    ) -> FunctionBuilder<'a, SetOutput<SetFlags<SetExistsIdx<SetAlias<S>>>>>
+    ) -> FunctionBuilder<'a, SetOutput<SetFlags<SetStepIdx<SetAlias<S>>>>>
     where
-        S::ExistsIdx: FunctionBuilderIsUnset,
+        S::StepIdx: FunctionBuilderIsUnset,
         S::Flags: FunctionBuilderIsUnset,
         S::Alias: FunctionBuilderIsUnset,
         S::Output: FunctionBuilderIsUnset,
     {
         self.maybe_alias(None)
-            .exists_idx(idx)
+            .step_idx(idx)
             .flags(FunctionFlags::STEP)
             .output(Sort::Time)
     }

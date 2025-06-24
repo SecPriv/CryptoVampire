@@ -33,7 +33,7 @@ impl Display for Sort {
             Sort::Bool => write!(f, "Bool"),
             Sort::Bitstring => write!(f, "Bitstring"),
             Sort::Time => write!(f, "Time"),
-            Sort::Protocol => write!(f, "Procotol"),
+            Sort::Protocol => write!(f, "Protocol"),
             Sort::Nonce => write!(f, "Nonce"),
             Sort::Index => write!(f, "Index"),
             Sort::SubtermStatus => write!(f, "SubtermStatus"),

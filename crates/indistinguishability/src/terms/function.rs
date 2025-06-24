@@ -217,8 +217,9 @@ impl Registerable for Function {
     ) -> &mut steel::steel_vm::builtin::BuiltInModule {
         Self::register_type(module);
         module
+            .register_type::<Function>("Function?")
             .register_fn("fun", Self::steel_new)
-            .register_fn("alias", Self::steel_new_alias);
+            .register_fn("mk-alias", Self::steel_new_alias);
 
         for fun in BUILTINS {
             module.register_value(&fun.name, fun.clone().into_steelval().unwrap());

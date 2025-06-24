@@ -48,7 +48,8 @@ impl IntoSteelVal for Alias {
 
 impl AliasRewrite {
     fn new_steel(
-        vars: Vec<(SVar, Sort)>,
+        variables: Vec<SVar>,
+        sorts: Vec<Sort>,
         from: Vec<RecFOFormula>,
         to: RecFOFormula,
     ) -> SResult<Self> {
@@ -60,11 +61,12 @@ impl AliasRewrite {
         let from: SResult<Vec<_>> = from.iter().map(convert).collect();
         let from: cow![CowPattern] = from?.into();
         let to = convert(&to)?;
-        let (variables, sorts): (Vec<_>, Vec<_>) = vars
-            .into_iter()
-            .map(|(a, b)| (egg::Var::from(a), b))
-            .unzip();
-        let variables = variables.into();
+        let variables = variables.into_iter().map_into().collect();
+        // let (variables, sorts): (Vec<_>, Vec<_>) = vars
+        //     .into_iter()
+        //     .map(|(a, b)| (egg::Var::from(a), b))
+        //     .unzip();
+        // let variables = variables.into();
         let sorts = sorts.into();
         Ok(AliasRewrite {
             from,
@@ -79,7 +81,7 @@ impl Registerable for AliasRewrite {
     fn register(
         module: &mut steel::steel_vm::builtin::BuiltInModule,
     ) -> &mut steel::steel_vm::builtin::BuiltInModule {
-        Self::register_type(module).register_fn("alias-rw", Self::new_steel)
+        Self::register_type(module).register_fn("mk-alias-rwf", Self::new_steel)
     }
 }
 

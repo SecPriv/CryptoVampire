@@ -16,6 +16,8 @@ use crate::{
     terms::{Function, RecFOFormula, Rewrite, Sort},
 };
 
+declare_trace!($"shrpblm");
+
 #[derive(Debug, Clone, Steel)]
 pub struct ShrProblem(Rc<RefCell<Problem>>);
 

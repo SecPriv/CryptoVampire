@@ -43,6 +43,6 @@ impl Signature {
 
 impl Registerable for Signature {
     fn register(module: &mut steel::steel_vm::builtin::BuiltInModule) -> &mut steel::steel_vm::builtin::BuiltInModule {
-        Self::register_type(module).register_fn("signature", Self::steel_constructor)
+        Self::register_type(module).register_fn("mk-signature", Self::steel_constructor)
     }
 }
