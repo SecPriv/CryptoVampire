@@ -62,6 +62,10 @@ impl Exists {
             // arities
             tlf.arity() == all_vars.len() && skolem.arity() == vars.len() && fresh.arity() == 0
         };
+        debug_assert!(is_at_idx);
+        debug_assert!(map_vars);
+        debug_assert!(reciprocal);
+        debug_assert!(arities);
         is_at_idx && map_vars && reciprocal && arities
     }
 

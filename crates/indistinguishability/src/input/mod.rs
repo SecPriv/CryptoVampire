@@ -43,9 +43,13 @@ pub fn init_engine() -> Engine {
     let mut engine = Engine::new();
     let mut module = BuiltInModule::new("cryptovampire");
     engine.compile_and_run_raw_program(steel::PRELUDE).unwrap();
-    engine.compile_and_run_raw_program(CV_PRELUDE).unwrap();
 
     crate::register(&mut module);
     engine.register_module(module);
+    match engine.compile_and_run_raw_program(CV_PRELUDE) {
+        Ok(_) => (),
+        Err(e) => panic!("{}", e.emit_result_to_string("CV_PRELUDE", CV_PRELUDE))
+    };
+
     engine
 }

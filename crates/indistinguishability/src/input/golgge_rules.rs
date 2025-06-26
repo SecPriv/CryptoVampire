@@ -34,6 +34,6 @@ impl Registerable for Rule {
         module: &mut steel::steel_vm::builtin::BuiltInModule,
     ) -> &mut steel::steel_vm::builtin::BuiltInModule {
         Self::register_type(module);
-        module.register_fn("prolog", Self::new_prolog)
+        module.register_fn("mk-prolog", Self::new_prolog)
     }
 }

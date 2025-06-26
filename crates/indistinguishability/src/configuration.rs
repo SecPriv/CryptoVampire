@@ -14,7 +14,7 @@ pub struct Configuration {
 impl Default for Configuration {
     fn default() -> Self {
         Self {
-            keep_smt_files: true,
+            keep_smt_files: cfg!(debug_assertions),
             depth: u64::MAX,
         }
     }

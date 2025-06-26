@@ -25,7 +25,12 @@ pub struct Rewrite {
 }
 
 impl Rewrite {
-    fn steel_new(vars: Vec<(SVar, Sort)>, from: RecFOFormula, to: RecFOFormula) -> SResult<Self> {
+    fn steel_new(
+        variables: Vec<SVar>,
+        sorts: Vec<Sort>,
+        from: RecFOFormula,
+        to: RecFOFormula,
+    ) -> SResult<Self> {
         fn convert(rec: &RecFOFormula) -> SResult<CowPattern> {
             let patt = rec.steel_maybe_as_recexp()?;
             let cow: CowPattern = patt.into_iter().collect_vec().into();
@@ -33,11 +38,11 @@ impl Rewrite {
         }
         let from = convert(&from)?;
         let to = convert(&to)?;
-        let (variables, sorts): (Vec<_>, Vec<_>) = vars
+        let variables = variables
             .into_iter()
-            .map(|(a, b)| (egg::Var::from(a), b))
-            .unzip();
-        let variables = variables.into();
+            .map(egg::Var::from)
+            .collect_vec()
+            .into();
         let sorts = sorts.into();
 
         Ok(Self {
@@ -53,7 +58,7 @@ impl Registerable for Rewrite {
     fn register(
         module: &mut steel::steel_vm::builtin::BuiltInModule,
     ) -> &mut steel::steel_vm::builtin::BuiltInModule {
-        Self::register_type(module).register_fn("rewrite", Self::steel_new)
+        Self::register_type(module).register_fn("mk-rewrite", Self::steel_new)
     }
 }
 

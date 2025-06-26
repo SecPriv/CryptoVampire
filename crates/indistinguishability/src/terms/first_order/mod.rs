@@ -161,6 +161,18 @@ impl RecFOFormula {
         }
     }
 
+    /// Returns the [Sort] of `self`, [None] if it is a variable
+    /// 
+    /// **NB**:
+    /// - doesn't typechecks
+    pub fn try_get_sort(&self) -> Option<Sort> {
+        match self {
+            RecFOFormula::Binder { .. } => Some(Sort::Bool),
+            RecFOFormula::App { head, .. } => Some(head.signature.output),
+            RecFOFormula::Var(var) => None,
+        }
+    }
+
     // =========================================================
     // ================== specific builders ====================
     // =========================================================
@@ -458,6 +470,10 @@ impl RecFOFormula {
     fn steel_is_var(f: RecFOFormula) -> bool {
         matches!(f, Self::Var(_))
     }
+
+    fn steel_get_sort(&self) -> Option<Sort> {
+        self.try_get_sort()
+    }
 }
 
 impl Registerable for RecFOFormula {
@@ -471,6 +487,7 @@ impl Registerable for RecFOFormula {
             .register_value("existsf", FOBinder::Exists.into_steelval().unwrap())
             .register_value("forallf", FOBinder::Forall.into_steelval().unwrap())
             .register_fn("is-varf", Self::steel_is_var)
+            .register_fn("get-sort", Self::steel_get_sort)
             .register_type::<Self>("Formula?")
             .register_fn("print_formula", |f:RecFOFormula| println!("this: {f}"))
     }

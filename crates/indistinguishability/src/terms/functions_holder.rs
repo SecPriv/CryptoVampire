@@ -65,6 +65,10 @@ impl FunctionCollection {
             .iter()
             .filter_map(|f| f.get_exist_index().map(|idx| (f, idx)))
             .all(|(f, idx)| quantifiers[idx].get_functions().contains(&f));
+        debug_assert!(unique);
+        debug_assert!(mapping);
+        debug_assert!(quantifiers_valid);
+        debug_assert!(two_way_mapping);
         unique && mapping && quantifiers_valid && two_way_mapping
     }
 
@@ -107,6 +111,7 @@ impl FunctionCollection {
     ) -> &mut Exists {
         // set up
         let vsorts = vars_sorts.into_iter().collect_vec();
+        let vars = vsorts.iter().enumerate().map(|(i, _)|  egg::Var::from_u32(i as u32 +1)).collect();
         let bsort = bound_var_sort;
 
         let exists_idx = self.quantifiers.len();
@@ -167,7 +172,7 @@ impl FunctionCollection {
 
         // declare the quantifier
         self.quantifiers.push(Exists {
-            vars: vec![],
+            vars,
             bound_var: Var::from_u32(0),
             patt: std::iter::empty().collect(),
             tlf,

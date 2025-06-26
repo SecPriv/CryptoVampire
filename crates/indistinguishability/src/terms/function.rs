@@ -203,6 +203,11 @@ impl Function {
         Self::new(InnerFunction::new(name.into(), signature))
     }
 
+    pub fn steel_new_nonce(name: String, signature: Signature) -> Self {
+        assert_eq!(signature.output, Sort::Nonce);
+        Self::new(InnerFunction {flags: FunctionFlags::NONCE, ..InnerFunction::new(name.into(), signature)})
+    }
+
     pub fn steel_new_alias(name: String, signature: Signature, alias: Alias) -> Self {
         Self::new(InnerFunction {
             alias: Some(alias),
@@ -219,6 +224,7 @@ impl Registerable for Function {
         module
             .register_type::<Function>("Function?")
             .register_fn("fun", Self::steel_new)
+            .register_fn("mk-nonce", Self::steel_new_nonce)
             .register_fn("mk-alias", Self::steel_new_alias);
 
         for fun in BUILTINS {

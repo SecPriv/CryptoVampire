@@ -9,6 +9,7 @@ use crate::input::Registerable;
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Steel,
 )]
+#[steel(equality)]
 pub enum Sort {
     Bool,
     Bitstring,

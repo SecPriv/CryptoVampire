@@ -5,12 +5,13 @@ use std::{
     rc::Rc,
 };
 
+use cryptovampire_smt::IntoSmt;
 use steel::rvals::Result as SResult;
 use steel::{SteelErr, rerrs::ErrorKind, rvals::CustomType, steel_vm::register_fn::RegisterFn};
 use steel_derive::Steel;
 
 use crate::{
-    Problem,
+    MSmt, Problem,
     input::{Registerable, golgge_rules::Rule, register, shared_exists::ShrExists, var::SVar},
     protocol::Step,
     terms::{Function, RecFOFormula, Rewrite, Sort},
@@ -62,6 +63,22 @@ impl ShrProblem {
     // =========================================================
     // ========================= API ===========================
     // =========================================================
+    fn run(&self, p1: Function, p2: Function) -> SResult<bool> {
+        if !p1.is_protocol() {
+            return Err(SteelErr::new(
+                ErrorKind::ConversionError,
+                format!("{p1} is not a protocol"),
+            ));
+        }
+        if !p2.is_protocol() {
+            return Err(SteelErr::new(
+                ErrorKind::ConversionError,
+                format!("{p2} is not a protocol"),
+            ));
+        }
+        Ok(self.borrow_mut().run(p1.protocol_idx, p2.protocol_idx))
+    }
+
     fn mk_empty() -> Self {
         let pbl = Problem::base_empty();
         Self(Rc::new(RefCell::new(pbl)))
@@ -158,20 +175,33 @@ impl ShrProblem {
         self.borrow_mut().extra_rewrite_mut().push(rw);
     }
 
-    fn run(&self, p1: Function, p2: Function) -> SResult<bool> {
-        if !p1.is_protocol() {
+    fn add_smt_axiom(&self, f: RecFOFormula) {
+        self.borrow_mut()
+            .extra_smt_mut()
+            .push(MSmt::mk_assert(f.into_smt()));
+    }
+
+    // =========================================================
+    // ====================== printing =========================
+    // =========================================================
+
+    fn to_string_step(&self, ptcl: Function, step: Function) -> SResult<String> {
+        let Some(pidx) = ptcl.get_protocol_index() else {
             return Err(SteelErr::new(
                 ErrorKind::ConversionError,
-                format!("{p1} is not a protocol"),
+                format!("{ptcl} (ptcl) isn't a protocol"),
             ));
-        }
-        if !p2.is_protocol() {
+        };
+        let Some(sidx) = step.get_step_index() else {
             return Err(SteelErr::new(
                 ErrorKind::ConversionError,
-                format!("{p2} is not a protocol"),
+                format!("{step} (step) isn't a step"),
             ));
-        }
-        Ok(self.borrow_mut().run(p1.protocol_idx, p2.protocol_idx))
+        };
+
+        let pbl = self.borrow();
+        let step = &pbl.protocols()[pidx].steps()[sidx];
+        Ok(format!("{step}"))
     }
 }
 
@@ -181,6 +211,7 @@ impl Registerable for ShrProblem {
     ) -> &mut steel::steel_vm::builtin::BuiltInModule {
         Self::register_type(module);
         module
+            .register_fn("to-string-step", Self::to_string_step)
             .register_fn("empty_problem", Self::mk_empty)
             .register_fn("declare_function", Self::declare_function)
             .register_fn("declare_protocol", Self::declare_protocol)
@@ -189,6 +220,9 @@ impl Registerable for ShrProblem {
             .register_fn("set-step-message", Self::set_step_msg)
             .register_fn("set-step-condition", Self::set_step_cond)
             .register_fn("set-step-vars", Self::set_step_vars)
+            .register_fn("add-rule", Self::add_rule)
+            .register_fn("add-rewrite", Self::add_rewrite)
+            .register_fn("add-smt-axiom", Self::add_smt_axiom)
             .register_fn("run", Self::run);
 
         module

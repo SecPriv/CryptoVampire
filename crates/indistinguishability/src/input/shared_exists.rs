@@ -30,6 +30,7 @@ impl ShrExists {
     }
 
     fn get_vars(&self) -> Vec<SVar> {
+        println!("{:?}", &self.exists().vars);
         self.exists().vars.iter().copied().map_into().collect()
     }
 
@@ -60,11 +61,11 @@ impl Registerable for ShrExists {
         module: &mut steel::steel_vm::builtin::BuiltInModule,
     ) -> &mut steel::steel_vm::builtin::BuiltInModule {
         Self::register_type(module)
-            .register_fn("exists_vars", Self::get_vars)
-            .register_fn("exists_bound_var", Self::get_bound_var)
-            .register_fn("get_exists_tlf", Self::get_tlf)
-            .register_fn("get_exists_skolem", Self::get_skolem)
-            .register_fn("get_exists_pattern", Self::get_patt)
-            .register_fn("set_exists_pattern", Self::set_patt)
+            .register_fn("exists-vars", Self::get_vars)
+            .register_fn("exists-bound-var", Self::get_bound_var)
+            .register_fn("get-exists-tlf", Self::get_tlf)
+            .register_fn("get-exists-skolem", Self::get_skolem)
+            .register_fn("get-exists-pattern", Self::get_patt)
+            .register_fn("set-exists-pattern", Self::set_patt)
     }
 }
