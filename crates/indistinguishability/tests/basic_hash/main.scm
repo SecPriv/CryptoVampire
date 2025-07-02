@@ -30,12 +30,12 @@
 
 (set-step-message pbl tag p1 
   (let ((i (mk-varf 0)) (j (mk-varf 1)))
-  (formula < (n i j) (hash (n i j) (mk i j p1))>)
+  (formula (tpl (n i j) (hash (n i j) (mk i j p1))))
 ))
 
 (set-step-message pbl tag p2 
   (let ((i (mk-varf 0)) (j (mk-varf 1)))
-  (formula <(n i j) (hash  (n i j) (mk i j p2))>)
+  (formula (tpl (n i j) (hash  (n i j) (mk i j p2))))
 ))
 
 (define exists1 (declare_quantifier pbl (list Index Protocol) Index))
@@ -69,11 +69,9 @@
 )
 (define (cexists1 i p) (
   let ([e (get-exists-tlf exists1)] [sk (get-exists-skolem exists1)])
-  ; (formula (e i p (sk i p)))))
   (mk-appf e (list i p (mk-appf sk (list i p))))))
 (define (cexists2 j t p) (
   let ([e (get-exists-tlf exists2)] [sk (get-exists-skolem exists2)])
-  ; (formula (e j t p (sk j t p)))))
   (mk-appf e (list j t p (mk-appf sk (list j t p))))))
 
 
