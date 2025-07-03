@@ -5,7 +5,7 @@ use std::rc::Rc;
 use crate::problem::PAnalysis;
 use crate::protocol::Step;
 use crate::rules::fresh::{Condition, Mode};
-use crate::terms::formula_utils::offsets_owned;
+use crate::terms::formula_utils::{offsets_owned, pull_from_egraph};
 use crate::terms::{
     Alias, AliasRewrite, BITE, EQ, Exists, FOBinder, FRESH_NONCE, HAPPENS, LT, MACRO_COND,
     MACRO_FRAME, MACRO_MSG, MITE, NONCE, PRED,
@@ -103,12 +103,7 @@ pub struct Nonce {
 }
 
 fn convert_id<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, id: Id) -> RecFOFormula {
-    let other = egraph
-        .id_to_expr(id)
-        .into_iter()
-        .map(egg::ENodeOrVar::ENode)
-        .collect_vec();
-    RecFOFormula::from(other.as_slice())
+    RecFOFormula::try_from_id(egraph, id).unwrap()
 }
 
 impl Nonce {
@@ -133,7 +128,7 @@ impl Nonce {
         tr!(
             "current enode has {:} nodes\n({})",
             eclass.nodes.len(),
-            egraph.id_to_expr(current)
+            pull_from_egraph(egraph, current).unwrap()
         );
 
         // first loop for early exit if necessary

@@ -39,14 +39,12 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for VampireRule {
 
         let egraph = prgm.egraph_mut();
 
-        dbg!(s);
-
         let to_prove_id = s.get(VAR).unwrap();
-        let to_prove = egraph.id_to_expr(*to_prove_id);
-        let to_prove = RecFOFormula::from(RecExpr::from_iter(
-            to_prove.into_iter().map(ENodeOrVar::ENode),
-        ))
-        .into_smt();
+        let Some(to_prove) = RecFOFormula::try_from_id(egraph, *to_prove_id) else {
+            panic!("aaaaa");
+            return golgge::Dependancy::impossible();
+        };
+        let to_prove = to_prove.into_smt();
 
         let pbl: &mut Problem = egraph.analysis.pbl_mut();
         let prelude = pbl.get_smt_prelude();

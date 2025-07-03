@@ -75,7 +75,7 @@ macro_rules! ebreak_let {
   ($label:lifetime, let $pat:pat = $value:expr, $ret:expr) => {
     let $pat = $value else {
       break $label $ret
-    }
+    };
   };
   ($label:lifetime, let $pat:pat = $value:expr) => {
     ebreak_let!($label, let $pat = $value, ())
@@ -95,7 +95,7 @@ macro_rules! econtinue_let {
   ($label:lifetime, let $pat:pat = $value:expr) => {
     let $pat = $value else {
       continue $label
-    }
+    };
   };
   (let $pat:pat = $value:expr) => {
     let $pat = $value else {

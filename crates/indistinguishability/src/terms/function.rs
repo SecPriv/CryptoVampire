@@ -195,6 +195,12 @@ impl Function {
         true
     }
 
+    /// This function should appear outside of prolog (e.g., doesn't make sense in smt)
+    #[inline]
+    pub fn is_prolog_only(&self) -> bool {
+        self.flags.intersects(FunctionFlags::PROLOG_ONLY)
+    }
+
     // =========================================================
     // ====================== Steel API ========================
     // =========================================================
