@@ -1,14 +1,16 @@
 use super::{BUILTINS, Exists, Function, FunctionFlags, PARSING_PAIRS};
-use crate::terms::{
-    functions_holder::function_builder::{
-        IsComplete, SetAlias, SetExistsIdx, SetFlags, SetOutput, SetProtocolIdx, SetStepIdx,
-    }, Alias, InnerFunction, Signature, Sort
+use crate::{
+    terms::{
+         Alias, InnerFunction, Signature, Sort
+    },
+    utils::fresh_name,
 };
 use bon::bon;
 use egg::Var;
 use itertools::{Itertools, chain};
 use log::trace;
 use std::{borrow::Cow, collections::HashMap, ops::Deref, sync::atomic::AtomicUsize};
+use steel::rvals::CustomType;
 use utils::implvec;
 
 /// The numbe of declared existential quantifiers
@@ -111,7 +113,11 @@ impl FunctionCollection {
     ) -> &mut Exists {
         // set up
         let vsorts = vars_sorts.into_iter().collect_vec();
-        let vars = vsorts.iter().enumerate().map(|(i, _)|  egg::Var::from_u32(i as u32 +1)).collect();
+        let vars = vsorts
+            .iter()
+            .enumerate()
+            .map(|(i, _)| egg::Var::from_u32(i as u32 + 1))
+            .collect();
         let bsort = bound_var_sort;
 
         let exists_idx = self.quantifiers.len();
@@ -198,59 +204,9 @@ impl FunctionCollection {
         let r = self.map_function.insert(name, fun);
         assert!(r.is_none(), "the function was already in the database");
     }
-}
 
-#[bon]
-impl FunctionCollection {
-    #[builder(builder_type = FunctionBuilder)]
-    pub fn add_function(
-        &mut self,
-        #[builder(into)] name: Cow<'static, str>,
-        #[builder(with = FromIterator::from_iter, default = vec![])] inputs: Vec<Sort>,
-        output: Sort,
-        alias: Option<Alias>,
-        #[builder(default = FunctionFlags::empty())] flags: FunctionFlags,
-        #[builder(default = 0)] exists_idx: usize,
-        #[builder(default = 0)] protocol_idx: usize,
-        #[builder(default = 0)] step_idx: usize,
-        #[builder(with = FromIterator::from_iter, default = vec![])] cryptography: Vec<usize>,
-    ) -> Function {
-        let signature = Signature::new(inputs, output);
-        let inner = InnerFunction {
-            name,
-            signature,
-            alias,
-            flags,
-            exists_idx,
-            protocol_idx,
-            step_idx,
-            cryptography: cryptography.into()
-        };
-        let fun = Function::new(inner);
-        self.add(fun.clone());
-        fun
-    }
-}
-
-use crate::terms::functions_holder::function_builder::IsUnset as FunctionBuilderIsUnset;
-impl<'a, S> FunctionBuilder<'a, S>
-where
-    S: function_builder::State,
-{
-    pub fn step(
-        self,
-        idx: usize,
-    ) -> FunctionBuilder<'a, SetOutput<SetFlags<SetStepIdx<SetAlias<S>>>>>
-    where
-        S::StepIdx: FunctionBuilderIsUnset,
-        S::Flags: FunctionBuilderIsUnset,
-        S::Alias: FunctionBuilderIsUnset,
-        S::Output: FunctionBuilderIsUnset,
-    {
-        self.maybe_alias(None)
-            .step_idx(idx)
-            .flags(FunctionFlags::STEP)
-            .output(Sort::Time)
+    pub fn registered_names(&self) -> impl Iterator<Item = &str> {
+        self.functions.iter().map(|f| f.name())
     }
 }
 
@@ -259,8 +215,8 @@ macro_rules! decl_fun{
     ($pbl:expr; $name:literal : ($($s:expr),*) -> Nonce ) => {
         {
             use $crate::terms::Sort::*;
-            let collection = ::std::convert::AsMut::<$crate::terms::FunctionCollection>::as_mut($pbl);
-            collection.add_function()
+            // let collection = ::std::convert::AsMut::<$crate::terms::FunctionCollection>::as_mut($pbl);
+            $pbl.declare_function()
                 .name($name)
                 .inputs([$($s),*])
                 .output(Nonce)
@@ -271,8 +227,8 @@ macro_rules! decl_fun{
     ($pbl:expr; $name:literal : ($($s:expr),*) -> $o:expr ) => {
         {
             use $crate::terms::Sort::*;
-            let collection = ::std::convert::AsMut::<$crate::terms::FunctionCollection>::as_mut($pbl);
-            collection.add_function()
+            // let collection = ::std::convert::AsMut::<$crate::terms::FunctionCollection>::as_mut($pbl);
+            $pbl.declare_function()
                 .name($name)
                 .inputs([$($s),*])
                 .output($o)

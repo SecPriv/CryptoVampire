@@ -101,8 +101,7 @@ impl ShrProblem {
         };
         let n = steps.count();
         let step = pbl
-            .function
-            .add_function()
+            .declare_function()
             .inputs(sorts.iter().cloned())
             .step(n)
             .name(name)

@@ -1,5 +1,6 @@
 pub(crate) mod base_rules;
-pub mod prf;
+mod prf;
+pub use prf::PRF;
 
 pub mod utils;
 
@@ -9,3 +10,7 @@ pub use nonce::FreshNonce;
 
 mod vampire;
 pub use vampire::VampireRule;
+
+
+#[cfg(test)]
+pub use prf::test as prf_test;

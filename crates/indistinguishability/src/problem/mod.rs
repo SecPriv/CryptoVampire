@@ -1,18 +1,30 @@
 use crate::{
-    mk_signature, protocol::{Protocol, Step}, rexp, rules::{
-        base_rules::{mk_equiv_rules, mk_prolog_rules, mk_rewrites_rules}, FreshNonce, VampireRule
-    }, terms::{
-        formula_utils::convert_to_ground_rexp, CryptographicAssumption, Function, FunctionCollection, FunctionFlags, InnerFunction, Rewrite, EMPTY, EQUIV, HAPPENS, INIT, MACRO_FRAME, PRED, TRUE, UNFOLD_MSG
-    }, vampire::{mk_prelude, runner::VampireExec}, Configuration, Lang, MSmt
+    Configuration, Lang, MSmt, mk_signature,
+    problem::function_builder::{
+        SetAlias, SetCryptography, SetFlags, SetName, SetOutput, SetStepIdx,
+    },
+    protocol::{Protocol, Step},
+    rexp,
+    rules::{
+        FreshNonce, VampireRule,
+        base_rules::{mk_equiv_rules, mk_prolog_rules, mk_rewrites_rules},
+    },
+    terms::{
+        Alias, CryptographicAssumption, EMPTY, EQUIV, Function, FunctionCollection, FunctionFlags,
+        HAPPENS, INIT, InnerFunction, MACRO_FRAME, PRED, Rewrite, Signature, Sort, TRUE,
+        UNFOLD_MSG, formula_utils::convert_to_ground_rexp,
+    },
+    utils::fresh_name,
+    vampire::{mk_prelude, runner::VampireExec},
 };
-use bon::Builder;
+use bon::{Builder, bon, builder};
 use cryptovampire_macros::smt;
 use cryptovampire_smt::Smt;
 use egg::{EGraph, RecExpr};
 use golgge::{Program, Rule};
 use itertools::{Itertools, chain};
 use logic_formula::egg::SimpleDiscriminant;
-use std::{fmt::Debug, num::NonZeroUsize, rc::Rc};
+use std::{borrow::Cow, fmt::Debug, num::NonZeroUsize, ops::Range, rc::Rc};
 use utils::implvec;
 
 mod analysis;
@@ -21,6 +33,7 @@ pub use analysis::{PAnalysis, PRule, RcRule};
 declare_trace!($"problem");
 
 /// A problem for the solver to solve
+#[non_exhaustive]
 #[derive(Builder)]
 pub struct Problem {
     /// The configuration (e.g., cli arguments and such)
@@ -56,7 +69,6 @@ impl Default for Problem {
 }
 
 impl Problem {
-
     pub fn valid(&self) -> bool {
         self.protocols
             .iter()
@@ -178,8 +190,7 @@ impl Problem {
                 .iter()
                 .enumerate()
                 .map(|(i, &sort)| {
-                    self.function
-                        .add_function()
+                    self.declare_function()
                         .output(sort)
                         .name(format!("{}_{i:}", s.name))
                         .call()
@@ -346,6 +357,14 @@ impl Problem {
     pub fn num_protocols(&self) -> usize {
         self.protocols().len()
     }
+
+    pub fn cryptography(&self) -> &[CryptographicAssumption] {
+        &self.cryptography
+    }
+
+    pub fn cryptography_mut(&mut self, index: usize) -> Option<&mut CryptographicAssumption> {
+        self.cryptography.get_mut(index)
+    }
 }
 
 impl Debug for Problem {
@@ -377,6 +396,88 @@ impl AsRef<FunctionCollection> for Problem {
 impl AsMut<FunctionCollection> for Problem {
     fn as_mut(&mut self) -> &mut FunctionCollection {
         &mut self.function
+    }
+}
+
+#[bon]
+impl Problem {
+    #[builder(builder_type = FunctionBuilder)]
+    pub fn declare_function(
+        &mut self,
+        #[builder(into)] name: Cow<'static, str>,
+        #[builder(with = FromIterator::from_iter, default = vec![])] inputs: Vec<Sort>,
+        output: Sort,
+        alias: Option<Alias>,
+        #[builder(default = FunctionFlags::empty())] flags: FunctionFlags,
+        #[builder(default = 0)] exists_idx: usize,
+        #[builder(default = 0)] protocol_idx: usize,
+        #[builder(default = 0)] step_idx: usize,
+        #[builder(with = FromIterator::from_iter, default = vec![])] cryptography: Vec<usize>,
+    ) -> Function {
+        let signature = Signature::new(inputs, output);
+        let inner = InnerFunction {
+            name,
+            signature,
+            alias,
+            flags,
+            exists_idx,
+            protocol_idx,
+            step_idx,
+            cryptography: cryptography.into(),
+        };
+        let fun = Function::new(inner);
+        self.function.add(fun.clone());
+        fun
+    }
+}
+
+use crate::problem::function_builder::IsUnset as FunctionBuilderIsUnset;
+impl<'a, S> FunctionBuilder<'a, S>
+where
+    S: function_builder::State,
+{
+    pub fn step(
+        self,
+        idx: usize,
+    ) -> FunctionBuilder<'a, SetOutput<SetFlags<SetStepIdx<SetAlias<S>>>>>
+    where
+        S::StepIdx: FunctionBuilderIsUnset,
+        S::Flags: FunctionBuilderIsUnset,
+        S::Alias: FunctionBuilderIsUnset,
+        S::Output: FunctionBuilderIsUnset,
+    {
+        self.maybe_alias(None)
+            .step_idx(idx)
+            .flags(FunctionFlags::STEP)
+            .output(Sort::Time)
+    }
+
+    /// Try to assign `name` to [Self::name], but generate a fresh name if it's
+    /// already taken
+    pub fn fresh_name(self, name: &str) -> FunctionBuilder<'a, SetName<S>>
+    where
+        S::Name: FunctionBuilderIsUnset,
+    {
+        let name = fresh_name(name, self.self_receiver.function.registered_names());
+        self.name(name)
+    }
+
+    pub fn and_allocate_cyptographic_assumption(
+        self,
+        num: usize,
+        start: Option<&mut usize>
+    ) -> FunctionBuilder<'a, SetCryptography<S>>
+    where
+        S::Cryptography: FunctionBuilderIsUnset,
+    {
+        let len = self.self_receiver.cryptography.len();
+        self.self_receiver
+            .cryptography
+            .extend((0..num).map(|_| Default::default()));
+        if let Some(start) = start {
+            *start = len
+        };
+        self.cryptography(len..(len + num))
     }
 }
 

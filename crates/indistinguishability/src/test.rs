@@ -2,7 +2,7 @@ pub mod basic_hash {
     use crate::{
         init_logger,
         problem::{PRule, test::basic_hash::mk_pblm},
-        rules::prf::test::basic_hash::mk_prf_rule,
+        rules::prf_test::basic_hash::mk_prf_rule,
     };
 
     #[test]
