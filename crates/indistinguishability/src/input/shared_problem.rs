@@ -80,7 +80,7 @@ impl ShrProblem {
     }
 
     fn mk_empty() -> Self {
-        let pbl = Problem::base_empty();
+        let pbl = Problem::builder().build();
         Self(Rc::new(RefCell::new(pbl)))
     }
 

@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use crate::problem::PAnalysis;
 use crate::protocol::Step;
-use crate::rules::fresh::{Condition, Mode};
+use crate::rules::utils::fresh::{Condition, Mode};
 use crate::terms::formula_utils::{offsets_owned, pull_from_egraph};
 use crate::terms::{
     Alias, AliasRewrite, BITE, EQ, Exists, FOBinder, FRESH_NONCE, HAPPENS, LT, MACRO_COND,
@@ -13,7 +13,7 @@ use crate::terms::{
 use crate::vampire::runner::VampireExec;
 use crate::{
     Lang,
-    rules::fresh::RefFormulaBuilder,
+    rules::utils::fresh::RefFormulaBuilder,
     terms::{Function, RecFOFormula},
 };
 use crate::{LangVar, Problem, rexp};
@@ -144,7 +144,7 @@ impl Nonce {
                 && egraph[time].iter().any(|f| f.head == PRED)
             {
                 tr!("looking through frame");
-                tr!("builder mode {}", builder.borrow().mode);
+                tr!("builder mode {}", builder.borrow().mode());
                 self.search_frame(egraph, &builder, time, ptcl);
                 return;
             }
@@ -450,17 +450,11 @@ mod test {
     use itertools::Itertools;
 
     use crate::{
-        Lang, Problem, decl_fun, init_logger,
-        problem::{PAnalysis, test::basic_hash::mk_pblm},
-        rexp,
-        rules::{
-            base_rules::mk_rewrites_rules,
-            fresh::{Mode, RefFormulaBuilder, nonce::Nonce},
-        },
-        terms::{
-            Function, HAPPENS, MACRO_COND, MACRO_INPUT, MACRO_MSG, RecFOFormula, Sort,
-            formula_utils::convert_to_ground_rexp,
-        },
+        decl_fun, init_logger, problem::{test::basic_hash::mk_pblm, PAnalysis}, rexp, rules::{
+            base_rules::mk_rewrites_rules, nonce::Nonce, utils::fresh::{Mode, RefFormulaBuilder}
+        }, terms::{
+            formula_utils::convert_to_ground_rexp, Function, RecFOFormula, Sort, HAPPENS, MACRO_COND, MACRO_INPUT, MACRO_MSG
+        }, Lang, Problem
     };
 
     fn mk_egraph<'a>(pbl: &'a mut Problem) -> (EGraph<Lang, PAnalysis<'a>>, Id, Id, Id) {

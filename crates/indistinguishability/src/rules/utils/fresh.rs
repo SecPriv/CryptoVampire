@@ -10,16 +10,13 @@ use egg::Var;
 use log::trace;
 use utils::{ereturn_if, ereturn_let};
 
-mod nonce;
-pub use nonce::FreshNonce;
-
 use crate::terms::{FOBinder, RecFOFormula, Sort};
 
 #[derive(Debug, Clone)]
-struct RefFormulaBuilder(Rc<RefCell<FormulaBuilder>>);
+pub struct RefFormulaBuilder(Rc<RefCell<FormulaBuilder>>);
 
 #[derive(Debug)]
-struct FormulaBuilder {
+pub struct FormulaBuilder {
     parent: Option<RefFormulaBuilder>,
     mode: Mode,
     content: Vec<RecFOFormula>,
@@ -35,7 +32,7 @@ struct FormulaBuilder {
 /// \exists variables:sorts, condition \and ...
 /// ```
 #[derive(Debug)]
-struct Condition {
+pub struct Condition {
     /// the actual formula
     pub condition: RecFOFormula,
     /// NB: empty set of variable removes the quantifier instead of simplifying it
@@ -242,6 +239,10 @@ impl FormulaBuilder {
 
         ereturn_let!(let Some(parent) = self.parent.as_mut());
         parent.add_leaf(value.into());
+    }
+    
+    pub fn mode(&self) -> Mode {
+        self.mode
     }
 }
 

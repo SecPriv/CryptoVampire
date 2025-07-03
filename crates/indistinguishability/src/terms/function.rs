@@ -13,9 +13,7 @@ use crate::{
     input::Registerable,
     protocol::{MacroKind, ProtocolLanguage},
     terms::{
-        Alias, BUILTINS, Exists, FunctionCollection, FunctionFlags, HAPPENS, MACRO_COND,
-        MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, RecFOFormula, Signature, Sort, TRUE,
-        UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin,
+        builtin, Alias, CryptographicAssumption, Exists, FunctionCollection, FunctionFlags, RecFOFormula, Signature, Sort, BUILTINS, HAPPENS, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, TRUE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG
     },
 };
 
@@ -29,6 +27,7 @@ pub struct InnerFunction {
     pub exists_idx: usize,
     pub protocol_idx: usize,
     pub step_idx: usize,
+    pub cryptography: cow![usize]
 }
 
 impl InnerFunction {
@@ -41,6 +40,7 @@ impl InnerFunction {
             exists_idx: 0,
             protocol_idx: 0,
             step_idx: 0,
+            cryptography: Cow::Borrowed(&[])
         }
     }
 }

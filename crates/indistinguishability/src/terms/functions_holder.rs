@@ -213,6 +213,7 @@ impl FunctionCollection {
         #[builder(default = 0)] exists_idx: usize,
         #[builder(default = 0)] protocol_idx: usize,
         #[builder(default = 0)] step_idx: usize,
+        #[builder(with = FromIterator::from_iter, default = vec![])] cryptography: Vec<usize>,
     ) -> Function {
         let signature = Signature::new(inputs, output);
         let inner = InnerFunction {
@@ -223,6 +224,7 @@ impl FunctionCollection {
             exists_idx,
             protocol_idx,
             step_idx,
+            cryptography: cryptography.into()
         };
         let fun = Function::new(inner);
         self.add(fun.clone());

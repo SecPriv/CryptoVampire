@@ -13,7 +13,7 @@ pub mod basic_hash {
     use itertools::Itertools;
 
     pub fn mk_pblm() -> (Problem, MFunction) {
-        let mut pbl = Problem::base_empty();
+        let mut pbl = Problem::builder().build();
         pbl.config.keep_smt_files = true;
         let funs = populate_functions(&mut pbl);
         // insert_init(&mut pbl, &funs);

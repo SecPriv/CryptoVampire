@@ -3,7 +3,6 @@ use std::io::{self, Read};
 use indistinguishability::{
     init_engine, init_logger,
     problem::{self, test::basic_hash::mk_pblm},
-    rules::prf::test::basic_hash::mk_prf_rule,
 };
 use steel::steel_vm::{builtin::BuiltInModule, engine::Engine};
 

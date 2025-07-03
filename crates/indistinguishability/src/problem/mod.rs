@@ -1,16 +1,9 @@
 use crate::{
-    Configuration, Lang, MSmt, mk_signature,
-    protocol::{Protocol, Step},
-    rexp,
-    rules::{
-        FreshNonce, VampireRule,
-        base_rules::{mk_equiv_rules, mk_prolog_rules, mk_rewrites_rules},
-    },
-    terms::{
-        EMPTY, EQUIV, Function, FunctionCollection, FunctionFlags, HAPPENS, INIT, InnerFunction,
-        MACRO_FRAME, PRED, Rewrite, TRUE, UNFOLD_MSG, formula_utils::convert_to_ground_rexp,
-    },
-    vampire::{mk_prelude, runner::VampireExec},
+    mk_signature, protocol::{Protocol, Step}, rexp, rules::{
+        base_rules::{mk_equiv_rules, mk_prolog_rules, mk_rewrites_rules}, FreshNonce, VampireRule
+    }, terms::{
+        formula_utils::convert_to_ground_rexp, CryptographicAssumption, Function, FunctionCollection, FunctionFlags, InnerFunction, Rewrite, EMPTY, EQUIV, HAPPENS, INIT, MACRO_FRAME, PRED, TRUE, UNFOLD_MSG
+    }, vampire::{mk_prelude, runner::VampireExec}, Configuration, Lang, MSmt
 };
 use bon::Builder;
 use cryptovampire_macros::smt;
@@ -43,6 +36,9 @@ pub struct Problem {
     pub function: FunctionCollection,
 
     #[builder(with = <_>::from_iter, default = vec![])]
+    cryptography: Vec<CryptographicAssumption>,
+
+    #[builder(with = <_>::from_iter, default = vec![])]
     extra_rules: Vec<RcRule>,
     #[builder(with = <_>::from_iter, default = vec![])]
     extra_rewrite: Vec<Rewrite>,
@@ -55,22 +51,11 @@ pub struct Problem {
 
 impl Default for Problem {
     fn default() -> Self {
-        Self {
-            config: Default::default(),
-            protocols: vec![],
-            function: FunctionCollection::init(),
-            extra_rules: vec![],
-            extra_rewrite: vec![],
-            extra_smt: vec![],
-            smt_prelude: None,
-        }
+        Self::builder().build()
     }
 }
 
 impl Problem {
-    pub fn base_empty() -> Self {
-        Self::default()
-    }
 
     pub fn valid(&self) -> bool {
         self.protocols

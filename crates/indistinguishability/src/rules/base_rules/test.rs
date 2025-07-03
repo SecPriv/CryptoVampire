@@ -7,5 +7,5 @@ use super::mk_rewrites_rules;
 
 #[test]
 fn mk_rewrite_works() {
-    let _: Vec<_> = mk_rewrites_rules::<()>(&Problem::base_empty()).collect();
+    let _: Vec<_> = mk_rewrites_rules::<()>(&Problem::builder().build()).collect();
 }

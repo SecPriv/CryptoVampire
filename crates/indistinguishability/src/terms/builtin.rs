@@ -157,6 +157,7 @@ mk_builtin_funs!(
         protocol_idx: 0,
         alias: None,
         step_idx: 0,
+        cryptography: Cow::Borrowed(&[])
     };
 
     // =========================================================
