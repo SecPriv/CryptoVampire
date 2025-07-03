@@ -125,7 +125,7 @@ mod inner_recexpr {
         egg::ENodeOrVar::ENode(SimplLang::new_const(head, mkargs![arg1, arg2, arg3], len))
     }
 
-    pub type Lang = LangVar;
+    pub type RexpLang = LangVar;
 }
 
 // -----------------------------------------------------------------------------

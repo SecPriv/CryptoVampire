@@ -213,5 +213,5 @@ pub fn declare_static_recexpr(input: proc_macro::TokenStream) -> proc_macro::Tok
     let mut seen = HashMap::with_capacity(n);
     tree.extend_rec_expr(&path, &mut expr, &mut seen);
     let n = expr.len();
-    quote! {static #name : [#path::Lang; #n] = [#(#expr),*]; }.into()
+    quote! {static #name : [#path::RexpLang; #n] = [#(#expr),*]; }.into()
 }

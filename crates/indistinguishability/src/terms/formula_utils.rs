@@ -62,7 +62,7 @@ pub fn convert_to_ground_rexp(c: implvec!(LangVar)) -> Result<RecExpr<crate::Lan
 /// **!!! DON'T USE DIRECTLY !!!**
 ///
 /// alias for [rexp]
-pub type Lang = LangVar;
+pub type RexpLang = LangVar;
 
 pub fn get_sort<'a, F>(f: &'a F) -> Option<Sort>
 where
