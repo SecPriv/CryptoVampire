@@ -118,8 +118,22 @@ pub fn offsets_owned<L>(amount: u32, f: implvec!(ENodeOrVar<L>)) -> PatternAst<L
     f
 }
 
-pub(crate) fn pull_from_egraph_inner<'a, N: Analysis<Lang>>(
+/// partial result for [pull_from_egraph]
+///
+/// This performs the extraction from the egraph. By the end this will insert a
+/// whole closure reachable by `id` into `id_buffer` and `recexpr_buffer` that
+/// doesn't use [Function] forbidden by `filter` (i.e., `filter` must return
+/// `true` on all functions) or it returns [None]. At all time, if
+/// `recexpr_buffer[i]` is `Some(e)` (and is defined) then `e` is an enode of
+/// `egraph[id_buffer[i]]`
+///
+/// ### Other notable points:
+/// - the element are not sorted in anyway
+/// - all element that are not [None] have their whole closure in
+/// - there can be elments
+pub(crate) fn pull_from_egraph_inner_generic<'a, N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
     egraph: &'a EGraph<Lang, N>,
+    mut filter: F,
     id: Id,
     id_buffer: &mut Vec<Id>,
     recexpr_buffer: &mut Vec<Option<&'a Lang>>,
@@ -131,7 +145,7 @@ pub(crate) fn pull_from_egraph_inner<'a, N: Analysis<Lang>>(
     id_buffer.push(id);
     recexpr_buffer.push(None);
 
-    'enodes: for e in eclass.iter().filter(|x| !x.head.is_prolog_only()) {
+    'enodes: for e in eclass.iter().filter(|x| filter(x)) {
         'children: for cid in Language::children(e) {
             if let Some(i) = id_buffer.iter().position(|id| id == cid) {
                 if recexpr_buffer[i].is_some() {
@@ -163,6 +177,22 @@ pub(crate) fn pull_from_egraph_inner<'a, N: Analysis<Lang>>(
         )
     }
     None
+}
+
+/// [pull_from_egraph_inner_generic] which blocks prolog functions
+pub(crate) fn pull_from_egraph_inner<'a, N: Analysis<Lang>>(
+    egraph: &'a EGraph<Lang, N>,
+    id: Id,
+    id_buffer: &mut Vec<Id>,
+    recexpr_buffer: &mut Vec<Option<&'a Lang>>,
+) -> Option<()> {
+    pull_from_egraph_inner_generic(
+        egraph,
+        |f| !f.head.is_prolog_only(),
+        id,
+        id_buffer,
+        recexpr_buffer,
+    )
 }
 
 fn topo_sort<'a>(ids: &[Id], langs: &[Option<&'a Lang>]) -> (Vec<Id>, Vec<&'a Lang>) {
@@ -197,31 +227,24 @@ fn rebuild_recexpr(ids: &[Id], lang: &[&Lang]) -> RecExpr<Lang> {
         .rev()
         .map(|l| {
             let head = l.head.clone();
-            let args = l
-                .args
-                .iter()
-                .map(|cid| {
-                    let i = ids.iter().rev().position(|x| cid == x).unwrap();
-                    Id::new_const(i.try_into().unwrap())
-                });
+            let args = l.args.iter().map(|cid| {
+                let i = ids.iter().rev().position(|x| cid == x).unwrap();
+                Id::new_const(i.try_into().unwrap())
+            });
             Lang::new(head, args)
         })
         .collect()
 }
 
-/// Does the same thing as [EGraph::id_to_expr] but make sure all function used
-/// are not restricted to only prolog
-///
-/// ## panic
-///  If it's not possible
-pub fn pull_from_egraph<N: Analysis<Lang>>(
+pub fn pull_from_egraph_generic<N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
     egraph: &EGraph<Lang, N>,
+    filter: F,
     id: Id,
 ) -> Option<RecExpr<Lang>> {
     let mut id_buffer = Vec::new();
     let mut recexpr_buffer = Vec::new();
 
-    pull_from_egraph_inner(egraph, id, &mut id_buffer, &mut recexpr_buffer)?;
+    pull_from_egraph_inner_generic(egraph, filter, id, &mut id_buffer, &mut recexpr_buffer)?;
 
     // all the ids referenced in `recexpr_buffer` are in `id_buffer`
     debug_assert!(
@@ -238,6 +261,18 @@ pub fn pull_from_egraph<N: Analysis<Lang>>(
     let recexpr = rebuild_recexpr(&ids, &langs);
     debug_assert!(recexpr.is_dag());
     Some(recexpr)
+}
+
+/// Does the same thing as [EGraph::id_to_expr] but make sure all function used
+/// are not restricted to only prolog
+///
+/// ## panic
+///  If it's not possible
+pub fn pull_from_egraph<N: Analysis<Lang>>(
+    egraph: &EGraph<Lang, N>,
+    id: Id,
+) -> Option<RecExpr<Lang>> {
+    pull_from_egraph_generic(egraph, |f| !f.head.is_prolog_only(), id)
 }
 
 #[cfg(test)]
