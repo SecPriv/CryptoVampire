@@ -338,6 +338,11 @@ mk_builtin_funs!(
         flags: f!(PROLOG_ONLY)
     };
 
+    FAIL "fail" {
+        signature: s!(() -> Bool),
+        flags: f!(PROLOG_ONLY)
+    };
+
     BOOL_DEDUCE "deduce_bool" "deduce_b" {
         signature: s!(
                 /* hypothesis */

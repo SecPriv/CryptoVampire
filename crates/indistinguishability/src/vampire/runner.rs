@@ -1,5 +1,8 @@
 use bon::Builder;
 use cryptovampire_smt::Smt;
+use golgge::Dependancy;
+use itertools::chain;
+use log::trace;
 use std::{
     borrow::Borrow,
     fmt::Display,
@@ -7,6 +10,8 @@ use std::{
     process::Command,
 };
 use utils::implvec;
+
+use crate::{MSmtFormula, Problem};
 
 declare_trace!($"vampire_exec");
 
@@ -198,5 +203,23 @@ impl VampireExec {
             VampireArg::InputSyntax(vampire_suboptions::InputSyntax::SmtLib2),
             VampireArg::TimeLimit(0.5),
         ]
+    }
+
+    pub fn run_to_dependancy(&self, pbl: &mut Problem, query: MSmtFormula) -> Dependancy {
+        trace!("checking {query}");
+        let prelude = pbl.get_smt_prelude();
+        // let pbl: &Problem<_> = &self.pbl.borrow();
+        let res = self
+            .run_smt(chain![
+                prelude.iter().cloned(),
+                [Smt::mk_query(query), Smt::CheckSat]
+            ])
+            .expect("something went wrong with vampire");
+
+        if res {
+            Dependancy::axiom()
+        } else {
+            Dependancy::impossible()
+        }
     }
 }
