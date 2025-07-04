@@ -19,6 +19,22 @@ pub struct PRF {
     search_trigger: Function,
 }
 
+macro_rules! declare {
+    ($pbl:ident @ $pos:ident: $name:literal; $($s:expr),*) => {
+        $pbl
+            .declare_function()
+            .fresh_name($name)
+            .inputs({
+                use Sort::*;
+                [$($s),*]
+            })
+            .output(Sort::Bool)
+            .flags(FunctionFlags::PROLOG_ONLY)
+            .cryptography([$pos])
+            .call()
+    };
+}
+
 impl PRF {
     pub fn new_and_add(pbl: &mut Problem, pos: usize, hash: Function) -> &Self {
         assert_eq!(
@@ -27,53 +43,19 @@ impl PRF {
         );
         assert!(hash.cryptography.contains(&pos));
 
-        let candidate_bitstring = pbl
-            .declare_function()
-            .fresh_name("candidate_bitstring_prf")
-            // h(m, k), m, k
-            .inputs([Sort::Bitstring, Sort::Bitstring, Sort::Nonce])
-            .output(Sort::Bool)
-            .flags(FunctionFlags::PROLOG_ONLY)
-            .cryptography([pos])
-            .call();
-        let candidate_bool = pbl
-            .declare_function()
-            .fresh_name("candidate_bool_prf")
-            // h(m, k), m, k
-            .inputs([Sort::Bool, Sort::Bitstring, Sort::Nonce])
-            .output(Sort::Bool)
-            .flags(FunctionFlags::PROLOG_ONLY)
-            .cryptography([pos])
-            .call();
+        // h(m, k), m, k
+        let candidate_bitstring =
+            declare!(pbl@pos: "prf_candidate_bitstring"; Bitstring, Bitstring, Nonce);
+        let candidate_bool = declare!(pbl@pos: "prf_candidate_bool"; Bool, Bitstring, Nonce);
 
-        let search_bitstring = pbl
-            .declare_function()
-            .fresh_name("search_bitsring_prf")
-            // m, k, x
-            .inputs([Sort::Bitstring, Sort::Nonce, Sort::Bitstring])
-            .output(Sort::Bool)
-            .flags(FunctionFlags::PROLOG_ONLY)
-            .cryptography([pos])
-            .call();
-        let search_bool = pbl
-            .declare_function()
-            .fresh_name("search_bool_prf")
-            // m, k, x
-            .inputs([Sort::Bitstring, Sort::Nonce, Sort::Bool])
-            .output(Sort::Bool)
-            .flags(FunctionFlags::PROLOG_ONLY)
-            .cryptography([pos])
-            .call();
+        //  m, k ||> x
+        let search_bitstring =
+            declare!(pbl@pos: "prf_search_bitstring"; Bitstring, Nonce, Bitstring);
+        let search_bool = declare!(pbl@pos: "prf_search_bool"; Bitstring, Nonce, Bool);
 
-        let search_trigger = pbl
-            .declare_function()
-            .fresh_name("prf_search_trigger")
-            // m, k, ptcl, t
-            .inputs([Sort::Bitstring, Sort::Nonce, Sort::Protocol, Sort::Time])
-            .output(Sort::Bool)
-            .flags(FunctionFlags::PROLOG_ONLY)
-            .cryptography([pos])
-            .call();
+        // m, k, ptcl, t
+        let search_trigger =
+            declare!(pbl@pos: "prf_search_trigger"; Bitstring, Nonce, Protocol, Time);
 
         let prf = Self {
             hash,
