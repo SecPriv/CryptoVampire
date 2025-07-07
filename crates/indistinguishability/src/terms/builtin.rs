@@ -388,6 +388,11 @@ mk_builtin_funs!(
         flags: f!(PROLOG_ONLY)
     };
 
+    SUBSTITUTION "msubst" {
+        signature: s!(Any, Bitstring, Bitstring -> Any),
+        flags: f!(PROLOG_ONLY)
+    };
+
     // ~~~~~~~~~~~~~~~ smt only ~~~~~~~~~~~~~~~~~
 
     SMT_ITE "ite" {

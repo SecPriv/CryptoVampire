@@ -40,6 +40,7 @@ impl Sort {
         matches!(self, Self::Any)
     }
 
+    /// Are the two sort equal modulo [Sort::Any] ?
     #[inline]
     pub fn unify(self, other:Self) -> bool {
         self.is_any() || other.is_any() || self == other

@@ -465,7 +465,7 @@ where
     pub fn and_allocate_cyptographic_assumption(
         self,
         num: usize,
-        start: Option<&mut usize>
+        start: Option<&mut usize>,
     ) -> FunctionBuilder<'a, SetCryptography<S>>
     where
         S::Cryptography: FunctionBuilderIsUnset,
