@@ -160,7 +160,7 @@ impl Function {
     #[inline]
     pub fn is_special_subterm(&self) -> bool {
         static SPECIAL_SUBTERM: FunctionFlags = const_fun_flags!(
-            PROLOG_ONLY | MACRO | UNFOLD | CUSTOM_SUBTERM | EXISTS | SKOLEM | SMT_ONLY
+            PROLOG_ONLY | MACRO | UNFOLD | CUSTOM_SUBTERM | EXISTS | SKOLEM | SMT_ONLY | IF_THEN_ELSE
         );
 
         self.flags.intersects(SPECIAL_SUBTERM) || self.is_protocol() || self.is_alias()
@@ -169,7 +169,7 @@ impl Function {
     #[inline]
     pub fn is_special_deduce(&self) -> bool {
         static SPECIAL_DEDUCE: FunctionFlags = const_fun_flags!(
-            PROLOG_ONLY | MACRO | UNFOLD | CUSTOM_DEDUCE | EXISTS | SKOLEM | NONCE | SMT_ONLY
+            PROLOG_ONLY | MACRO | UNFOLD | CUSTOM_DEDUCE | EXISTS | SKOLEM | NONCE | SMT_ONLY | IF_THEN_ELSE
         );
         self.flags.intersects(SPECIAL_DEDUCE) || self.is_alias()
     }
@@ -199,6 +199,16 @@ impl Function {
     #[inline]
     pub fn is_prolog_only(&self) -> bool {
         self.flags.intersects(FunctionFlags::PROLOG_ONLY)
+    }
+
+    #[inline]
+    pub fn is_if_then_else(&self) -> bool {
+        self.flags.intersects(FunctionFlags::IF_THEN_ELSE)
+    }
+
+    #[inline]
+    pub fn is_out_of_term_algebra(&self) -> bool {
+        self.flags.intersects(FunctionFlags::SMT_ONLY | FunctionFlags::PROLOG_ONLY)
     }
 
     // =========================================================

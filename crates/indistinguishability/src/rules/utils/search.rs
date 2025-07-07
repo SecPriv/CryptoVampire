@@ -22,6 +22,14 @@ use crate::{
 
 declare_trace!($"search");
 
+
+
+/// default implementation of [SyntaxSearcher::is_special]
+#[inline]
+pub fn default_is_special<U: SyntaxSearcher + ?Sized>(_self: &U, _pbl: &Problem, fun: &Function) -> bool {
+    fun.is_special_subterm()
+}
+
 /// When implementing [SyntaxSearcher] **make sure** each function's
 /// pre-implementation does what you what. Think of this more as a macro than a
 /// trait.
@@ -52,7 +60,7 @@ pub trait SyntaxSearcher {
     /// This is taylored for selecting how to go through things like quantifiers,
     /// macros, etc... See [SyntaxSearcher::is_instance] for actual searching
     fn is_special(&self, pbl: &Problem, fun: &Function) -> bool {
-        fun.is_special_subterm()
+        default_is_special(self, pbl, fun)
     }
 
     fn inner_search_recexpr(&self, pbl: &Problem, builder: &RefFormulaBuilder, term: &[LangVar]) {

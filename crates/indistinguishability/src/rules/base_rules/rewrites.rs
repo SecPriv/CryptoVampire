@@ -138,7 +138,7 @@ fn mk_alias_rule_1<N: Analysis<Lang>>(
 ) -> Rewrite<Lang, N> {
     Rewrite::new(
         format!("{} definition #{i:}", &f.name),
-        Pattern::new(f.app_var(&from)),
+        Pattern::new(f.app_var(from)),
         Pattern::new(to.clone().into_owned().into()),
     )
     .unwrap()

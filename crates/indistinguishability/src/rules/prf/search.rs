@@ -28,8 +28,9 @@ pub fn mk_rules<'a>(pbl: &'a Problem, prf: &'a PRF) -> impl Iterator<Item = RcRu
         .function
         .iter()
         .filter(|f| f != &&NONCE)
+        .filter(|f| !f.is_out_of_term_algebra())
         .filter(|f| matches!(f.signature.output, Sort::Bitstring | Sort::Bool))
-        .filter(|f| !f.is_special_subterm())
+        .filter(|f| !f.is_special_subterm() || f.is_if_then_else())
         .cloned();
 
     let prolog_rules = chain![

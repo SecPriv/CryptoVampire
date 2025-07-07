@@ -46,8 +46,9 @@ fn mk_rewrite_regular<'a, N: Analysis<Lang>>(
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'a, N> {
     pbl.function
         .iter()
+        .filter(|f| !f.is_out_of_term_algebra())
         .filter(|f| matches!(f.signature.output, Sort::Bitstring | Sort::Bool))
-        .filter(|f| !f.is_special_subterm())
+        .filter(|f| !f.is_special_subterm() || f.is_if_then_else())
         .flat_map(|f| mk_rewrite_one(pbl, prf, f))
 }
 

@@ -41,5 +41,8 @@ bitflags! {
       const PROTOCOL = 1 << 13;
       /// Is a step
       const STEP = 1 << 14;
+
+      /// Is an `if .. then .. else` function
+      const IF_THEN_ELSE = 1 << 15;
   }
 }

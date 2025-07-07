@@ -168,12 +168,12 @@ mk_builtin_funs!(
 
     BITE "bool_if_then_else" "b_ite" {
         signature: s!(Bool, 3),
-        flags: f!(CUSTOM_DEDUCE | BUILTIN_SMT)
+        flags: f!(CUSTOM_DEDUCE | BUILTIN_SMT | IF_THEN_ELSE)
     };
 
     MITE "bitstring_if_then_else" "m_ite" {
         signature: s!(Bool, Bitstring, Bitstring -> Bitstring),
-        flags: f!(CUSTOM_DEDUCE | BUILTIN_SMT | CUSTOM_SUBTERM)
+        flags: f!(CUSTOM_DEDUCE | BUILTIN_SMT | IF_THEN_ELSE)
     };
 
     IMPLIES "bit_implies" "implies" "=>" "mimplies" {
@@ -392,7 +392,7 @@ mk_builtin_funs!(
 
     SMT_ITE "ite" {
         signature: s!(Bool, Bitstring, Bitstring -> Bitstring),
-        flags: f!(SMT_ONLY | BUILTIN_SMT | CUSTOM_DEDUCE | CUSTOM_SUBTERM)
+        flags: f!(SMT_ONLY | BUILTIN_SMT | CUSTOM_DEDUCE | IF_THEN_ELSE)
     }
 
 );
