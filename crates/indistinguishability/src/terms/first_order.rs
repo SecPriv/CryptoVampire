@@ -436,6 +436,7 @@ impl IntoSmt<Sort> for RecFOFormula {
     }
 
     fn convert_quant((bind, vars, sorts): Self::Quant) -> SmtQuantifier<Sort> {
+        assert!(!sorts.iter().any(Sort::is_any), "`Any` is not allowed in smt");
         let vars = izip!(vars, sorts)
             .map(|(var, sort)| SortedVar {
                 var: Self::convert_var(var),

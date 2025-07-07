@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
+use std::{default, fmt::{write, Display}};
 use steel::{rvals::IntoSteelVal, steel_vm::register_fn::RegisterFn};
 use steel_derive::Steel;
 
@@ -7,10 +7,14 @@ use crate::input::Registerable;
 
 #[non_exhaustive]
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Steel,
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Steel, Default
 )]
 #[steel(equality)]
 pub enum Sort {
+    /// for prolog
+    #[default]
+    Any,
+
     Bool,
     Bitstring,
     Time,
@@ -26,6 +30,20 @@ impl Sort {
     pub const fn support_deduce(&self) -> bool {
         matches!(self, Self::Bool | Self::Bitstring)
     }
+
+    /// Returns `true` if the sort is [`Any`].
+    ///
+    /// [`Any`]: Sort::Any
+    #[must_use]
+    #[inline]
+    pub const fn is_any(&self) -> bool {
+        matches!(self, Self::Any)
+    }
+
+    #[inline]
+    pub fn unify(self, other:Self) -> bool {
+        self.is_any() || other.is_any() || self == other
+    }
 }
 
 impl Display for Sort {
@@ -38,6 +56,7 @@ impl Display for Sort {
             Sort::Nonce => write!(f, "Nonce"),
             Sort::Index => write!(f, "Index"),
             Sort::SubtermStatus => write!(f, "SubtermStatus"),
+            Sort::Any => write!(f, "Any")
         }
     }
 }

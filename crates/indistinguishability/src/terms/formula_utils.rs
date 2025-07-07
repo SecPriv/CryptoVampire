@@ -67,16 +67,16 @@ pub fn convert_to_ground_rexp(c: implvec!(LangVar)) -> Result<RecExpr<crate::Lan
 /// alias for [rexp]
 pub type RexpLang = LangVar;
 
-pub fn get_sort<'a, F>(f: &'a F) -> Option<Sort>
+pub fn get_sort<'a, F>(f: &'a F) -> Sort
 where
     &'a F: Formula,
     F: ?Sized,
     <&'a F as Formula>::Fun: AsRef<Function>,
 {
     match f.head() {
-        HeadSk::Var(_) => None,
-        HeadSk::Fun(f) => Some(f.as_ref().signature.output),
-        HeadSk::Quant(_) => Some(Sort::Bool),
+        HeadSk::Var(_) => Sort::Any,
+        HeadSk::Fun(f) => f.as_ref().signature.output,
+        HeadSk::Quant(_) => Sort::Bool,
     }
 }
 
@@ -91,15 +91,12 @@ where
         HeadSk::Var(_) => true,
         HeadSk::Fun(fun) => {
             Itertools::zip_longest(fun.as_ref().signature.inputs_iter(), args).all(|x| match x {
-                EitherOrBoth::Both(asort, arg) => {
-                    type_check(arg) && get_sort(arg).map(|x| x == asort).unwrap_or(true)
-                }
+                EitherOrBoth::Both(asort, arg) => get_sort(arg).unify(asort) && type_check(arg),
                 _ => false,
             })
         }
-        HeadSk::Quant(_) => izip!(::std::iter::repeat(Sort::Bool), args).all(|(asort, arg)| {
-            type_check(arg) && get_sort(arg).map(|x| x == asort).unwrap_or(true)
-        }),
+        HeadSk::Quant(_) => izip!(::std::iter::repeat(Sort::Bool), args)
+            .all(|(asort, arg)| get_sort(arg).unify(asort) && type_check(arg)),
     }
 }
 
