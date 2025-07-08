@@ -1,20 +1,36 @@
-use std::rc::Rc;
+use std::{marker::PhantomData, rc::Rc};
 
 use cryptovampire_smt::{IntoSmt, Smt, SmtFormula};
-use egg::{Analysis, EGraph, ENodeOrVar, Pattern, PatternAst, RecExpr, Searcher, Var, VarExposed};
+use egg::{
+    Analysis, EGraph, ENodeOrVar, Id, Pattern, PatternAst, RecExpr, Searcher, Var, VarExposed,
+};
 use golgge::{Dependancy, PrologRule, Rule};
 use itertools::{Itertools, chain, izip};
-use logic_formula::{Destructed, Formula, HeadSk, egg::SimpleDiscriminant};
-use utils::{ereturn_if, ereturn_let, implvec};
+use logic_formula::{
+    Destructed, Formula, Head, HeadSk,
+    egg::{SimplLang, SimpleDiscriminant},
+};
+use utils::{dynamic_iter, ereturn_if, ereturn_let, implvec};
 
 use crate::{
-    problem::{PAnalysis, PRule, RcRule}, protocol::{Protocol, Step}, rexp, rules::{
-        prf::search, utils::{
-            fresh::{Condition, Mode, RefFormulaBuilder}, SyntaxSearcher
-        }, PRF
-    }, terms::{
-        formula_utils::offsets_owned, Alias, AliasRewrite, Exists, FOBinder, Function, RecFOFormula, Sort, EQ, FAIL, HAPPENS, LT, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_MSG, NONCE, VAMPIRE
-    }, vampire::runner::VampireExec, Lang, LangVar, Problem
+    Lang, LangVar, Problem,
+    problem::{PAnalysis, PRule, RcRule},
+    protocol::{Protocol, Step},
+    rexp,
+    rules::{
+        PRF,
+        prf::search,
+        utils::{
+            SyntaxSearcher,
+            fresh::{Condition, Mode, RefFormulaBuilder},
+        },
+    },
+    terms::{
+        Alias, AliasRewrite, EQ, Exists, FAIL, FOBinder, Function, HAPPENS, LT, MACRO_COND,
+        MACRO_EXEC, MACRO_FRAME, MACRO_MSG, NONCE, RecFOFormula, Sort, VAMPIRE,
+        formula_utils::offsets_owned,
+    },
+    vampire::runner::VampireExec,
 };
 
 declare_trace!($"search_prf");
@@ -40,7 +56,12 @@ pub fn mk_rules<'a>(pbl: &'a Problem, prf: &'a PRF) -> impl Iterator<Item = RcRu
             mk_rule_nonce(prf),
         ],
         functions.map(|f| mk_rule_one(prf, f)),
-        [mk_rule_neq_m(prf), mk_rule_neq_k(prf), mk_rule_exec(prf), mk_rule_frame(prf)],
+        [
+            mk_rule_neq_m(prf),
+            mk_rule_neq_k(prf),
+            mk_rule_exec(prf),
+            mk_rule_frame(prf)
+        ],
     ];
 
     chain![prolog_rules.map(|p| p.into_mrc())]
@@ -229,7 +250,6 @@ fn mk_rule_neq_k(
 /// --------------------
 ///  m, k ||> exec(p)@t
 /// ```
-/// 
 /// **NB**: there is no distinction between `exec` and `frame`, they both search
 /// everywhere
 fn mk_rule_exec(

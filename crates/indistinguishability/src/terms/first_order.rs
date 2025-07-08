@@ -1,10 +1,11 @@
 use std::{
+    borrow::Cow,
     fmt::Display,
     ops::{BitAnd, BitOr, Not, Shr},
 };
 
 use cryptovampire_smt::{IntoSmt, SmtFormula, SmtQuantifier, SortedVar, VarInner};
-use egg::{Analysis, EGraph, Id, PatternAst, RecExpr, Var, Language};
+use egg::{Analysis, EGraph, Id, Language, PatternAst, RecExpr, Var};
 use itertools::{Itertools, izip};
 use logic_formula::{Destructed, Formula, HeadSk, egg::SimplLang};
 use smallvec::SmallVec;
@@ -15,7 +16,7 @@ use steel::{
     steel_vm::register_fn::RegisterFn,
 };
 use steel_derive::Steel;
-use utils::{dynamic_iter, implvec, match_eq};
+use utils::{dynamic_iter, econtinue_if, ereturn_if, ereturn_let, implvec, match_eq};
 
 use crate::{
     Lang, LangVar,
@@ -46,6 +47,7 @@ pub enum FOBinder {
 
 impl RecFOFormula {
     pub fn bind(kind: FOBinder, vars: Vec<Var>, sorts: Vec<Sort>, arg: RecFOFormula) -> Self {
+        assert_eq!(vars.len(), sorts.len());
         Self::Binder {
             head: kind,
             vars,
@@ -201,6 +203,20 @@ impl RecFOFormula {
         }
     }
 
+    pub fn is_true(&self) -> bool {
+        match self {
+            Self::App { head, .. } if head == &TRUE => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_false(&self) -> bool {
+        match self {
+            Self::App { head, .. } if head == &FALSE => true,
+            _ => false,
+        }
+    }
+
     // =========================================================
     // ================== specific builders ====================
     // =========================================================
@@ -216,11 +232,38 @@ impl RecFOFormula {
     }
 
     pub fn and(args: implvec!(Self)) -> Self {
-        Self::fold(&AND, args, Some(Self::True()), false)
+        let mut ret = Self::True();
+        for c in args.into_iter().filter(|x| !x.is_true()).unique() {
+            ereturn_if!(c.is_false(), Self::False());
+            ret = Self::app(AND.clone(), vec![c, ret]);
+        }
+        ret
     }
 
     pub fn or(args: implvec!(Self)) -> Self {
-        Self::fold(&OR, args, Some(Self::False()), false)
+        let mut ret = Self::False();
+        for c in args.into_iter().filter(|x| !x.is_false()).unique() {
+            ereturn_if!(c.is_true(), Self::True());
+            ret = Self::app(OR.clone(), vec![c, ret]);
+        }
+        ret
+    }
+
+    pub fn optimised_binder(
+        kind: FOBinder,
+        vars: implvec!(Var),
+        sorts: implvec!(Sort),
+        arg: RecFOFormula,
+    ) -> Self {
+        ereturn_if!(arg.is_true() || arg.is_false(), arg);
+        let free_vars: Vec<Var> = (&arg).free_vars_iter().unique().collect();
+
+        let (vars, sorts): (Vec<_>, Vec<_>) = izip!(vars.into_iter(), sorts.into_iter())
+            .filter(|(v, _)| free_vars.as_slice().contains(v))
+            .unzip();
+
+        ereturn_if!(vars.is_empty(), arg);
+        Self::bind(kind, vars, sorts, arg)
     }
 }
 
@@ -280,12 +323,28 @@ impl Default for RecFOFormula {
     }
 }
 
+pub struct RecFOFormulaQuant<'a> {
+    pub quantifier: FOBinder,
+    pub vars: Cow<'a, [Var]>,
+    pub sorts: Cow<'a, [Sort]>,
+}
+
+impl<'a> RecFOFormulaQuant<'a> {
+    pub fn new(quantifier: FOBinder, vars: Cow<'a, [Var]>, sorts: Cow<'a, [Sort]>) -> Self {
+        Self {
+            quantifier,
+            vars,
+            sorts,
+        }
+    }
+}
+
 impl Formula for RecFOFormula {
     type Var = egg::Var;
 
     type Fun = Function;
 
-    type Quant = (FOBinder, Vec<Var>, Vec<Sort>);
+    type Quant = RecFOFormulaQuant<'static>;
 
     fn destruct(self) -> Destructed<Self, impl Iterator<Item = Self>> {
         dynamic_iter!(MIter; One:A, Many:B, None:C);
@@ -297,7 +356,7 @@ impl Formula for RecFOFormula {
                 sorts,
                 arg,
             } => Destructed {
-                head: HeadSk::Quant((head, vars, sorts)),
+                head: HeadSk::Quant(RecFOFormulaQuant::new(head, vars.into(), sorts.into())),
                 args: MIter::One([*arg].into_iter()),
             },
             RecFOFormula::App { head, args } => Destructed {
@@ -317,7 +376,7 @@ impl<'b> Formula for &'b RecFOFormula {
 
     type Fun = &'b Function;
 
-    type Quant = (FOBinder, &'b [Var], &'b [Sort]);
+    type Quant = RecFOFormulaQuant<'b>;
 
     fn destruct(self) -> Destructed<Self, impl Iterator<Item = Self>> {
         dynamic_iter!(MIter; One:A, Many:B, None:C);
@@ -329,7 +388,11 @@ impl<'b> Formula for &'b RecFOFormula {
                 sorts,
                 arg,
             } => Destructed {
-                head: HeadSk::Quant((*head, vars, sorts)),
+                head: HeadSk::Quant(RecFOFormulaQuant::new(
+                    *head,
+                    vars.as_slice().into(),
+                    sorts.as_slice().into(),
+                )),
                 args: MIter::One([arg.as_ref()].into_iter()),
             },
             RecFOFormula::App { head, args } => Destructed {
@@ -341,6 +404,12 @@ impl<'b> Formula for &'b RecFOFormula {
                 args: MIter::None([].into_iter()),
             },
         }
+    }
+}
+
+impl<'a> logic_formula::Bounder<Var> for RecFOFormulaQuant<'a> {
+    fn bounds(&self) -> impl Iterator<Item = Var> {
+        self.vars.iter().copied()
     }
 }
 
@@ -435,15 +504,24 @@ impl IntoSmt<Sort> for RecFOFormula {
         }
     }
 
-    fn convert_quant((bind, vars, sorts): Self::Quant) -> SmtQuantifier<Sort> {
-        assert!(!sorts.iter().any(Sort::is_any), "`Any` is not allowed in smt");
-        let vars = izip!(vars, sorts)
-            .map(|(var, sort)| SortedVar {
+    fn convert_quant(
+        RecFOFormulaQuant {
+            quantifier,
+            vars,
+            sorts,
+        }: Self::Quant,
+    ) -> SmtQuantifier<Sort> {
+        assert!(
+            !sorts.iter().any(Sort::is_any),
+            "`Any` is not allowed in smt"
+        );
+        let vars = izip!(vars.iter(), sorts.iter())
+            .map(|(&var, &sort)| SortedVar {
                 var: Self::convert_var(var),
                 sort,
             })
             .collect_vec();
-        match bind {
+        match quantifier {
             FOBinder::Forall => SmtQuantifier::Forall(vars),
             FOBinder::Exists => SmtQuantifier::Exists(vars),
         }

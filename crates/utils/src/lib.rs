@@ -24,3 +24,5 @@ pub mod ereturn;
 pub mod impossible;
 
 pub mod quack;
+
+pub mod transposer;

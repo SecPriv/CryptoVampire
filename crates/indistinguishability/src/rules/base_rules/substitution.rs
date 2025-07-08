@@ -56,14 +56,14 @@ fn mk_rw_one<N: Analysis<Lang>>(pbl: &Problem, f: &Function) -> Rewrite<Lang, N>
     .unwrap()
 }
 
-fn mk_rw_base<N: Analysis<Lang>>() -> Rewrite<Lang, N> {
-    let premise: PatternAst<Lang> = rexp!((SUBSTITUTION #1 #1 #2)).into_iter().collect();
-    let conclusion: PatternAst<Lang> = rexp!(#2).into_iter().collect();
+// fn mk_rw_base<N: Analysis<Lang>>() -> Rewrite<Lang, N> {
+//     let premise: PatternAst<Lang> = rexp!((SUBSTITUTION #1 #1 #2)).into_iter().collect();
+//     let conclusion: PatternAst<Lang> = rexp!(#2).into_iter().collect();
 
-    Rewrite::new(
-        "subst_base",
-        Pattern::from(premise),
-        Pattern::from(conclusion),
-    )
-    .unwrap()
-}
+//     Rewrite::new(
+//         "subst_base",
+//         Pattern::from(premise),
+//         Pattern::from(conclusion),
+//     )
+//     .unwrap()
+// }
