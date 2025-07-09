@@ -13,24 +13,13 @@ use logic_formula::{
 use utils::{dynamic_iter, ereturn_if, ereturn_let, implvec};
 
 use crate::{
-    Lang, LangVar, Problem,
-    problem::{PAnalysis, PRule, RcRule},
-    protocol::{Protocol, Step},
-    rexp,
-    rules::{
-        PRF,
-        prf::search,
-        utils::{
-            SyntaxSearcher,
-            fresh::{Condition, Mode, RefFormulaBuilder},
-        },
-    },
-    terms::{
-        Alias, AliasRewrite, EQ, Exists, FAIL, FOBinder, Function, HAPPENS, LT, MACRO_COND,
-        MACRO_EXEC, MACRO_FRAME, MACRO_MSG, NONCE, RecFOFormula, Sort, VAMPIRE,
-        formula_utils::offsets_owned,
-    },
-    vampire::runner::VampireExec,
+    problem::{PAnalysis, PRule, RcRule}, protocol::{Protocol, Step}, rexp, rules::{
+        prf::search, utils::{
+            fresh::{Condition, Mode, RefFormulaBuilder}, generate_rule_vars_arr, SyntaxSearcher
+        }, PRF
+    }, terms::{
+        formula_utils::offsets_owned, Alias, AliasRewrite, Exists, FOBinder, Function, RecFOFormula, Sort, EQ, FAIL, HAPPENS, LT, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_MSG, NONCE, VAMPIRE
+    }, vampire::runner::VampireExec, Lang, LangVar, Problem
 };
 
 declare_trace!($"search_prf");
@@ -79,21 +68,7 @@ fn mk_rule_one(prf: &PRF, fun: Function) -> PrologRule<Lang> {
     debug_assert_ne!(fun, NONCE);
     let search = prf.get_search(fun.signature.output).unwrap();
 
-    // the xs
-    let vars: Vec<[LangVar; 1]> = fun
-        .signature
-        .inputs
-        .iter()
-        .enumerate()
-        .map(|(i, _)| Var::from_u32(i as u32))
-        .map(ENodeOrVar::Var)
-        .map(|x| [x])
-        .collect();
-    let [m, k] = [1, 2]
-        .map(|x| x + vars.len() as u32)
-        .map(Var::from_u32)
-        .map(ENodeOrVar::Var)
-        .map(|x| [x]);
+    let (vars, [m, k]) = generate_rule_vars_arr(&fun);
 
     let input: PatternAst<_> = search.app_var([&m, &k, fun.app_var(&vars).as_ref()].as_ref());
 

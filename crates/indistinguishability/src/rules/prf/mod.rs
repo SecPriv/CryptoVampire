@@ -8,6 +8,7 @@ pub mod test;
 
 mod candidate;
 mod search;
+mod trigger;
 
 #[derive(Debug)]
 pub struct PRF {
@@ -17,6 +18,9 @@ pub struct PRF {
     search_bitstring: Function,
     search_bool: Function,
     search_trigger: Function,
+    subst_triggerl: Function,
+    subst_triggerr: Function,
+    subst_triggerlr: Function,
 }
 
 macro_rules! declare {
@@ -56,6 +60,16 @@ impl PRF {
         // m, k, ptcl, t
         let search_trigger =
             declare!(pbl@pos: "prf_search_trigger"; Bitstring, Nonce, Protocol, Time);
+        
+        // m, k, x ~ y
+        let subst_triggerl =
+            declare!(pbl@pos: "prf_subst_triggerl"; Bitstring, Nonce, Bitstring, Bitstring);
+        // reversed
+        let subst_triggerr =
+            declare!(pbl@pos: "prf_subst_triggerr"; Bitstring, Nonce, Bitstring, Bitstring);
+        // m, k, x ~ m', k', x'
+        let subst_triggerlr =
+            declare!(pbl@pos: "prf_subst_triggerlr"; Bitstring, Nonce, Bitstring, Bitstring, Nonce, Bitstring);
 
         let prf = Self {
             hash,
@@ -64,6 +78,9 @@ impl PRF {
             search_bitstring,
             search_bool,
             search_trigger,
+            subst_triggerl,
+            subst_triggerr,
+            subst_triggerlr
         };
 
         let crypt_assumpt = pbl.cryptography_mut(pos).unwrap();
