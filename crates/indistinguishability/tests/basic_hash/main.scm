@@ -7,9 +7,10 @@
 (define p1 (declare_protocol pbl))
 (define p2 (declare_protocol pbl))
 
-(define hash (declare_function pbl (fun "hash" (signature (Bitstring Bitstring) -> Bitstring))))
-(define ok (declare_function pbl (fun "ok" (signature () -> Bitstring))))
-(define ko (declare_function pbl (fun "ko" (signature () -> Bitstring))))
+(define prf (declare-cryptography pbl))
+(define hash (declare_function pbl (fun "hash" (signature (Bitstring Bitstring) -> Bitstring) (list prf))))
+(define ok (declare_function pbl (fun "ok" (signature () -> Bitstring) '())))
+(define ko (declare_function pbl (fun "ko" (signature () -> Bitstring) '())))
 (define k1 (declare_function pbl (mk-nonce "key1" (signature (Index) -> Nonce))))
 (define k2 (declare_function pbl (mk-nonce "key2" (signature (Index Index) -> Nonce))))
 (define n (declare_function pbl (mk-nonce "n" (signature (Index Index) -> Nonce))))
@@ -27,6 +28,8 @@
     (alias-rule
       ((i 0 Index) (j 1 Index)) @
         i j p2 => (k2 i j))))))
+
+(initialize-as-prf prf hash)
 
 (set-step-message pbl tag p1 
   (let ((i (mk-varf 0)) (j (mk-varf 1)))
@@ -113,25 +116,25 @@
 
 (define n0 (declare_function pbl (mk-nonce "n0" (signature (Index Index Protocol) -> Nonce))))
 
-(add-rule pbl (let (
-  [i (mk-varf 0)]
-  [j (mk-varf 1)]
-  [h1 (mk-varf 2)]
-  [h2 (mk-varf 3)]
-) 
-  (prolog "euf-cma"
-    (equiv h1 h2 (macro_frame (tag i j) p1) (macro_frame (tag i j) p2)) :-
-    (equiv h1 h2
-      (mtuple (mtuple (mfrom_bool (macro_exec (tag i j) p1)) 
-          (bitstring_if_then_else (macro_exec (tag i j) p1) 
-            (mtuple (n i j)  (n0 i j p1))
-            mempty)) (macro_frame (pred (tag i j)) p1))
-      (mtuple (mtuple (mfrom_bool (macro_exec (tag i j) p2)) 
-          (bitstring_if_then_else (macro_exec (tag i j) p2) 
-            (mtuple (n i j)  (n0 i j p2))
-            mempty)) (macro_frame (pred (tag i j)) p2))
-    )
-)))
+; (add-rule pbl (let (
+;   [i (mk-varf 0)]
+;   [j (mk-varf 1)]
+;   [h1 (mk-varf 2)]
+;   [h2 (mk-varf 3)]
+; ) 
+;   (prolog "euf-cma"
+;     (equiv h1 h2 (macro_frame (tag i j) p1) (macro_frame (tag i j) p2)) :-
+;     (equiv h1 h2
+;       (mtuple (mtuple (mfrom_bool (macro_exec (tag i j) p1)) 
+;           (bitstring_if_then_else (macro_exec (tag i j) p1) 
+;             (mtuple (n i j)  (n0 i j p1))
+;             mempty)) (macro_frame (pred (tag i j)) p1))
+;       (mtuple (mtuple (mfrom_bool (macro_exec (tag i j) p2)) 
+;           (bitstring_if_then_else (macro_exec (tag i j) p2) 
+;             (mtuple (n i j)  (n0 i j p2))
+;             mempty)) (macro_frame (pred (tag i j)) p2))
+;     )
+; )))
 
 (add-rewrite pbl (let* (
   [t (mk-varf 0)]

@@ -1,8 +1,7 @@
 use bon::{bon, builder};
 // use eclassmap::{ECallMap, Entry};
 use egg::{
-    Analysis, EGraph, FromOp, Id, Language, MultiPattern, Pattern, RecExpr, Rewrite, Runner,
-    StopReason,
+    Analysis, EGraph, FromOp, Id, Language, MultiPattern, Pattern, RecExpr, Report, Rewrite, Runner, StopReason
 };
 use itertools::{Either, Itertools};
 use log::log_enabled;
@@ -212,14 +211,7 @@ where
     pub fn rules(&self) -> &[Rc<dyn Rule<L, N>>] {
         &self.rules
     }
-    // }
 
-    // impl<L, N> Program<L, N>
-    // where
-    //     L: Language + Display + Serialize,
-    //     N: Analysis<L> + Default + Serialize,
-    //     N::Data: Serialize,
-    // {
     pub fn run_expr(&mut self, goal: RecExpr<L>, depth: u64) -> bool {
         if cfg!(debug_assertions) {
             struct DP<'a, L: Language, N: Analysis<L>>(&'a Program<L, N>);
@@ -302,17 +294,15 @@ where
         ret
     }
 
-    pub fn rebuild(&mut self) {
+    pub fn run_rw_rules(&mut self, rules: Option<&[Rewrite<L, N>]>) -> Report {
         let mut egraph = self.egraph.take().expect("invalid program");
-        if !egraph.clean {
             if self.config.trace_prolog {
                 eprintln!("🚧 rebuilding egraph...");
             }
             let runner = self
                 .config
                 .apply(Runner::<L, N>::new_with_egraph(egraph))
-                // .with_egraph(egraph)
-                .run(&self.eq_rules);
+                .run(rules.unwrap_or(self.eq_rules()));
 
             let report = runner.report();
 
@@ -320,14 +310,7 @@ where
                 eprintln!("✅ done !\n{report}");
             }
 
-            let stop_reason = runner.stop_reason.clone();
-
             egraph = runner.egraph;
-
-            if !matches!(stop_reason, Some(StopReason::Saturated)) {
-                let dot = save_egraph(&egraph).unwrap();
-                panic!("unclean graph. See {dot:?}")
-            }
 
             // self.memo.canonicalise(&egraph);
             if self.memo.is_some() {
@@ -355,9 +338,76 @@ where
                     eprintln!("✅ done!");
                 }
             }
-        } else {
-            self.egraph = Some(egraph)
+        assert!(self.clean());
+        report
+    }
+
+
+    pub fn rebuild(&mut self) {
+        if !self.egraph().clean {
+            let report = self.run_rw_rules(None);
+            let stop_reason = report.stop_reason.clone();
+            if !matches!(stop_reason, StopReason::Saturated) {
+                let dot = save_egraph(self.egraph()).unwrap();
+                panic!("unclean graph. See {dot:?}")
+            }
         }
+
+        // let mut egraph = self.egraph.take().expect("invalid program");
+        // if !egraph.clean {
+        //     if self.config.trace_prolog {
+        //         eprintln!("🚧 rebuilding egraph...");
+        //     }
+        //     let runner = self
+        //         .config
+        //         .apply(Runner::<L, N>::new_with_egraph(egraph))
+        //         // .with_egraph(egraph)
+        //         .run(&self.eq_rules);
+
+        //     let report = runner.report();
+
+        //     if self.config.trace_prolog {
+        //         eprintln!("✅ done !\n{report}");
+        //     }
+
+        //     let stop_reason = runner.stop_reason.clone();
+
+        //     egraph = runner.egraph;
+
+        //     if !matches!(stop_reason, Some(StopReason::Saturated)) {
+        //         let dot = save_egraph(&egraph).unwrap();
+        //         panic!("unclean graph. See {dot:?}")
+        //     }
+
+        //     // self.memo.canonicalise(&egraph);
+        //     if self.memo.is_some() {
+        //         if self.config.trace_prolog {
+        //             eprintln!("🚧 canonicalising table...");
+        //         }
+
+        //         let memo = std::mem::take(&mut self.memo);
+        //         self.memo =
+        //             memo.map(|x| x.into_iter().map(|(id, s)| (egraph.find(id), s)).collect());
+
+        //         if self.config.trace_prolog {
+        //             eprintln!("✅ done!");
+        //         }
+        //     }
+
+        //     self.egraph = Some(egraph);
+
+        //     {
+        //         if self.config.trace_prolog {
+        //             eprintln!("🚧 canonicalising rules...");
+        //         }
+        //         self.rules.iter().for_each(|r| r.rebuild(self));
+        //         if self.config.trace_prolog {
+        //             eprintln!("✅ done!");
+        //         }
+        //     }
+        // } else {
+        //     self.egraph = Some(egraph)
+        // }
         assert!(self.clean());
     }
 }

@@ -1,7 +1,7 @@
 use steel::{steel_vm::{builtin::BuiltInModule, engine::Engine, register_fn::RegisterFn}, SteelVal};
 
 use crate::{
-    input::{golgge_rules::Rule, shared_exists::ShrExists, shared_problem::ShrProblem},
+    input::{golgge_rules::Rule, shared_cryptography::ShrCrypto, shared_exists::ShrExists, shared_problem::ShrProblem},
     terms::{AliasRewrite, Function, RecFOFormula, Rewrite, Signature, Sort},
 };
 
@@ -9,6 +9,7 @@ pub(crate) mod golgge_rules;
 pub(crate) mod shared_exists;
 pub(crate) mod shared_problem;
 pub(crate) mod var;
+pub(crate) mod shared_cryptography;
 
 pub(crate) trait Registerable {
     fn register(module: &mut BuiltInModule) -> &mut BuiltInModule;
@@ -24,6 +25,7 @@ pub fn register(module: &mut BuiltInModule) -> &mut BuiltInModule {
     ShrProblem::register(module);
     Signature::register(module);
     RecFOFormula::register(module);
+    ShrCrypto::register(module);
 
     module.register_fn("println!", |x:SteelVal| println!("dbg: {x:?}"));
 

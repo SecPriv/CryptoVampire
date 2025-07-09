@@ -10,10 +10,13 @@ use steel_derive::Steel;
 use utils::{ereturn_if, implvec, match_eq, quack::CowArc};
 
 use crate::{
-    input::Registerable,
+    input::{Registerable, shared_cryptography::ShrCrypto},
     protocol::{MacroKind, ProtocolLanguage},
     terms::{
-        builtin, Alias, CryptographicAssumption, Exists, FunctionCollection, FunctionFlags, RecFOFormula, Signature, Sort, BUILTINS, HAPPENS, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, TRUE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG
+        Alias, BUILTINS, CryptographicAssumption, Exists, FunctionCollection, FunctionFlags,
+        HAPPENS, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, RecFOFormula,
+        Signature, Sort, TRUE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
+        builtin,
     },
 };
 
@@ -27,7 +30,7 @@ pub struct InnerFunction {
     pub exists_idx: usize,
     pub protocol_idx: usize,
     pub step_idx: usize,
-    pub cryptography: cow![usize]
+    pub cryptography: cow![usize],
 }
 
 impl InnerFunction {
@@ -40,7 +43,7 @@ impl InnerFunction {
             exists_idx: 0,
             protocol_idx: 0,
             step_idx: 0,
-            cryptography: Cow::Borrowed(&[])
+            cryptography: Cow::Borrowed(&[]),
         }
     }
 }
@@ -160,7 +163,14 @@ impl Function {
     #[inline]
     pub fn is_special_subterm(&self) -> bool {
         static SPECIAL_SUBTERM: FunctionFlags = const_fun_flags!(
-            PROLOG_ONLY | MACRO | UNFOLD | CUSTOM_SUBTERM | EXISTS | SKOLEM | SMT_ONLY | IF_THEN_ELSE
+            PROLOG_ONLY
+                | MACRO
+                | UNFOLD
+                | CUSTOM_SUBTERM
+                | EXISTS
+                | SKOLEM
+                | SMT_ONLY
+                | IF_THEN_ELSE
         );
 
         self.flags.intersects(SPECIAL_SUBTERM) || self.is_protocol() || self.is_alias()
@@ -169,7 +179,15 @@ impl Function {
     #[inline]
     pub fn is_special_deduce(&self) -> bool {
         static SPECIAL_DEDUCE: FunctionFlags = const_fun_flags!(
-            PROLOG_ONLY | MACRO | UNFOLD | CUSTOM_DEDUCE | EXISTS | SKOLEM | NONCE | SMT_ONLY | IF_THEN_ELSE
+            PROLOG_ONLY
+                | MACRO
+                | UNFOLD
+                | CUSTOM_DEDUCE
+                | EXISTS
+                | SKOLEM
+                | NONCE
+                | SMT_ONLY
+                | IF_THEN_ELSE
         );
         self.flags.intersects(SPECIAL_DEDUCE) || self.is_alias()
     }
@@ -208,20 +226,31 @@ impl Function {
 
     #[inline]
     pub fn is_out_of_term_algebra(&self) -> bool {
-        self.flags.intersects(FunctionFlags::SMT_ONLY | FunctionFlags::PROLOG_ONLY)
+        self.flags
+            .intersects(FunctionFlags::SMT_ONLY | FunctionFlags::PROLOG_ONLY)
     }
 
     // =========================================================
     // ====================== Steel API ========================
     // =========================================================
 
-    pub fn steel_new(name: String, signature: Signature) -> Self {
-        Self::new(InnerFunction::new(name.into(), signature))
+    pub fn steel_new(name: String, signature: Signature, crypto: Vec<ShrCrypto>) -> Self {
+        let cryptography = crypto
+            .iter()
+            .map(|ShrCrypto { index, .. }| *index)
+            .collect();
+        Self::new(InnerFunction {
+            cryptography,
+            ..InnerFunction::new(name.into(), signature)
+        })
     }
 
     pub fn steel_new_nonce(name: String, signature: Signature) -> Self {
         assert_eq!(signature.output, Sort::Nonce);
-        Self::new(InnerFunction {flags: FunctionFlags::NONCE, ..InnerFunction::new(name.into(), signature)})
+        Self::new(InnerFunction {
+            flags: FunctionFlags::NONCE,
+            ..InnerFunction::new(name.into(), signature)
+        })
     }
 
     pub fn steel_new_alias(name: String, signature: Signature, alias: Alias) -> Self {

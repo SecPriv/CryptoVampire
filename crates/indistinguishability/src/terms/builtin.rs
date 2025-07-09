@@ -393,6 +393,11 @@ mk_builtin_funs!(
         flags: f!(PROLOG_ONLY)
     };
 
+    SUBSTITUTION_RULE "msubst_rule" {
+        signature: s!(Bool -> Bool),
+        flags: f!(PROLOG_ONLY)
+    };
+
     // ~~~~~~~~~~~~~~~ smt only ~~~~~~~~~~~~~~~~~
 
     SMT_ITE "ite" {

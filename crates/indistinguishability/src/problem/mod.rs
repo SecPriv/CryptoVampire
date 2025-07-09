@@ -365,6 +365,13 @@ impl Problem {
     pub fn cryptography_mut(&mut self, index: usize) -> Option<&mut CryptographicAssumption> {
         self.cryptography.get_mut(index)
     }
+
+    pub fn extend_cryptography<const N: usize>(&mut self) -> [usize; N] {
+        let ret = std::array::from_fn(|i| i + self.cryptography.len());
+        self.cryptography
+            .extend(ret.map(|_| Default::default()));
+        ret
+    }
 }
 
 impl Debug for Problem {
@@ -427,6 +434,7 @@ impl Problem {
         };
         let fun = Function::new(inner);
         self.function.add(fun.clone());
+        self.clear_smt_prelude();
         fun
     }
 }

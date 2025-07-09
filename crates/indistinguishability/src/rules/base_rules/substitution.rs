@@ -4,66 +4,58 @@
 //! subst(m, x, y) -> m[x -> y]
 //! ```
 
-use egg::{Analysis, ENodeOrVar, Pattern, PatternAst, Rewrite};
+use egg::{Analysis, ENodeOrVar, Pattern, PatternAst, RecExpr, Rewrite, Runner, Searcher, Var};
+use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain};
 use logic_formula::egg::SimpleDiscriminant;
+use static_init::dynamic;
+use utils::{ereturn_if, ereturn_let};
 
 use crate::{
-    Lang, Problem, rexp,
-    terms::{Function, SUBSTITUTION},
+    Lang, Problem,
+    problem::PAnalysis,
+    rexp,
+    rules::utils::mk_subst_rw,
+    terms::{Function, SUBSTITUTION, SUBSTITUTION_RULE},
 };
 
-fn mk_rw_one<N: Analysis<Lang>>(pbl: &Problem, f: &Function) -> Rewrite<Lang, N> {
-    let vars = f
-        .signature
-        .inputs
-        .iter()
-        .enumerate()
-        .map(|(i, _)| egg::Var::from_u32(i as u32))
-        .map(ENodeOrVar::Var)
-        .collect_vec();
-    let n = vars.len();
-    let [x, y] = [1, 2]
-        .map(|x| x + n as u32)
-        .map(egg::Var::from_u32)
-        .map(ENodeOrVar::Var);
+#[dynamic]
+static SUBSTITUTION_RULE_PATTERN: Pattern<Lang> = {
+    let ast = rexp!((SUBSTITUTION_RULE #1)).to_vec();
+    RecExpr::from(ast).into()
+};
 
-    let premise: PatternAst<Lang> = chain![
-        vars.iter().cloned(),
-        [x.clone(), y.clone()],
-        [
-            f.app_id((0..n).map_into()),
-            SUBSTITUTION.app_id([n + 2, n, n + 1].into_iter().map_into())
-        ]
-        .map(ENodeOrVar::ENode)
-    ]
-    .collect();
-    let conclusion: PatternAst<_> = chain![
-        vars,
-        [x, y],
-        (0..n)
-            .map(|i| SUBSTITUTION.app_id([i, n, n + 1].into_iter().map_into()))
-            .map(ENodeOrVar::ENode),
-        [f.app_id((0..n).map(|i| n + 2 + i).map_into())].map(ENodeOrVar::ENode)
-    ]
-    .collect();
+/// This rule is a no op logic wise.
+/// 
+/// It boxes a goal that will release to [`golgge`] after rebuilding the egraph
+/// with the substitution rules.
+/// ```text
+///      goal
+/// -------------
+///  subst(goal)
+/// ```
+#[derive(Clone)]
+pub struct SubstRule;
 
-    Rewrite::new(
-        format!("subst_{f}"),
-        Pattern::from(premise),
-        Pattern::from(conclusion),
-    )
-    .unwrap()
+impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
+    fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: egg::Id) -> Dependancy {
+        let rw_rules;
+        let subst = {
+            let egraph = prgm.egraph_mut();
+            ereturn_let!(let Some(substs) = 
+                SUBSTITUTION_RULE_PATTERN
+                    .search_eclass(egraph, goal),
+                Dependancy::impossible()
+            );
+
+            // we need to rebuild the rw rules each times because of type reasons
+            rw_rules = mk_subst_rw(egraph.analysis.pbl()).collect_vec();
+            substs
+        };
+
+        prgm.run_rw_rules(Some(&rw_rules));
+
+        prgm.egraph_mut().clean = false; // <- to force a true rebuild afterward
+        subst.substs.iter().map(|s| [*s.get(Var::from_u32(1)).unwrap()]).collect()
+    }
 }
-
-// fn mk_rw_base<N: Analysis<Lang>>() -> Rewrite<Lang, N> {
-//     let premise: PatternAst<Lang> = rexp!((SUBSTITUTION #1 #1 #2)).into_iter().collect();
-//     let conclusion: PatternAst<Lang> = rexp!(#2).into_iter().collect();
-
-//     Rewrite::new(
-//         "subst_base",
-//         Pattern::from(premise),
-//         Pattern::from(conclusion),
-//     )
-//     .unwrap()
-// }

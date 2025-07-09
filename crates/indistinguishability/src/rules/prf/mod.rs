@@ -1,6 +1,13 @@
+use egg::{Id, Pattern, Searcher, Var};
+use golgge::{Dependancy, PrologRule, Rule};
+use logic_formula::egg::SimpleDiscriminant;
+use utils::ereturn_let;
+
 use crate::{
-    Problem, mk_signature,
-    terms::{Function, FunctionFlags, Sort},
+    Lang, LangVar, Problem, mk_signature,
+    problem::{PAnalysis, PRule},
+    rexp,
+    terms::{EQUIV, Function, FunctionFlags, NONCE, SUBSTITUTION, SUBSTITUTION_RULE, Sort},
 };
 
 #[cfg(test)]
@@ -8,7 +15,6 @@ pub mod test;
 
 mod candidate;
 mod search;
-mod trigger;
 
 #[derive(Debug)]
 pub struct PRF {
@@ -18,9 +24,6 @@ pub struct PRF {
     search_bitstring: Function,
     search_bool: Function,
     search_trigger: Function,
-    subst_triggerl: Function,
-    subst_triggerr: Function,
-    subst_triggerlr: Function,
 }
 
 macro_rules! declare {
@@ -60,16 +63,6 @@ impl PRF {
         // m, k, ptcl, t
         let search_trigger =
             declare!(pbl@pos: "prf_search_trigger"; Bitstring, Nonce, Protocol, Time);
-        
-        // m, k, x ~ y
-        let subst_triggerl =
-            declare!(pbl@pos: "prf_subst_triggerl"; Bitstring, Nonce, Bitstring, Bitstring);
-        // reversed
-        let subst_triggerr =
-            declare!(pbl@pos: "prf_subst_triggerr"; Bitstring, Nonce, Bitstring, Bitstring);
-        // m, k, x ~ m', k', x'
-        let subst_triggerlr =
-            declare!(pbl@pos: "prf_subst_triggerlr"; Bitstring, Nonce, Bitstring, Bitstring, Nonce, Bitstring);
 
         let prf = Self {
             hash,
@@ -78,10 +71,10 @@ impl PRF {
             search_bitstring,
             search_bool,
             search_trigger,
-            subst_triggerl,
-            subst_triggerr,
-            subst_triggerlr
         };
+
+        pbl.extra_rules_mut()
+            .extend(prf.mk_prf_rule().map(|x| x.into_mrc()));
 
         let crypt_assumpt = pbl.cryptography_mut(pos).unwrap();
         assert!(crypt_assumpt.is_undefined());
@@ -103,5 +96,86 @@ impl PRF {
             Sort::Bool => Some(&self.search_bool),
             _ => None,
         }
+    }
+
+    fn mk_prf_rule(&self) -> [PrfRule; 2] {
+        let Self {
+            hash,
+            candidate_bitstring,
+            search_bitstring,
+            ..
+        } = self;
+
+        let conclusionl = rexp!((EQUIV #1 #2 (candidate_bitstring #3 #4 #5) #6));
+        let conclusionr = rexp!((EQUIV #1 #2 #6 (candidate_bitstring #3 #4 #5)));
+        let subterm_search1 = rexp!((search_bitstring #4 #5 #3));
+        let subterm_search2 = rexp!((search_bitstring #4 #5 #4));
+        let new_goall =
+            rexp!((SUBSTITUTION_RULE (EQUIV #1 #2 (SUBSTITUTION #3 (hash #4 (NONCE #5)) #7) #6)));
+        let new_goalr =
+            rexp!((SUBSTITUTION_RULE (EQUIV #1 #2 #6 (SUBSTITUTION #3 (hash #4 (NONCE #5)) #7))));
+
+        [
+            PrfRule::new(&conclusionr, &subterm_search1, &subterm_search2, &new_goalr),
+            PrfRule::new(&conclusionl, &subterm_search1, &subterm_search2, &new_goall),
+        ]
+    }
+}
+
+#[derive(Debug, Clone)]
+struct PrfRule {
+    conclusion: Pattern<Lang>,
+    subterm_search1: Pattern<Lang>,
+    subterm_search2: Pattern<Lang>,
+    new_goal: Pattern<Lang>,
+}
+
+impl PrfRule {
+    fn new(
+        conclusion: &[LangVar],
+        subterm_search1: &[LangVar],
+        subterm_search2: &[LangVar],
+        new_goal: &[LangVar],
+    ) -> Self {
+        Self {
+            conclusion: conclusion.into(),
+            subterm_search1: subterm_search1.into(),
+            subterm_search2: subterm_search2.into(),
+            new_goal: new_goal.into(),
+        }
+    }
+}
+
+impl<'a> Rule<Lang, PAnalysis<'a>> for PrfRule {
+    fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: Id) -> Dependancy {
+        let egraph = prgm.egraph_mut();
+        ereturn_let!(let Some(substs)= self.conclusion.search_eclass(egraph, goal), Dependancy::impossible());
+
+        let n = {
+            let pblm = egraph.analysis.pbl_mut();
+
+            let fun = pblm
+                .declare_function()
+                .fresh_name("n_prf")
+                .flags(FunctionFlags::NONCE)
+                .output(Sort::Nonce)
+                .call();
+
+            egraph.add(fun.app_id([]))
+        };
+
+        substs
+            .substs
+            .into_iter()
+            .map(|mut subst| {
+                subst.insert(Var::from_u32(7), n);
+
+                [
+                    self.subterm_search1.apply_susbt(egraph, &subst),
+                    self.subterm_search2.apply_susbt(egraph, &subst),
+                    self.new_goal.apply_susbt(egraph, &subst),
+                ]
+            })
+            .collect()
     }
 }

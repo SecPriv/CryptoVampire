@@ -91,3 +91,12 @@ impl<'a, L: Language, N: Analysis<L>> Debug for DebugRule<'a, L, N> {
         self.0.debug(f)
     }
 }
+
+impl<I> FromIterator<I> for Dependancy
+where
+    I: IntoIterator<Item = Id>,
+{
+    fn from_iter<T: IntoIterator<Item = I>>(iter: T) -> Self {
+        Dependancy::new(iter.into_iter().map(|i| i.into_iter().collect()).collect())
+    }
+}

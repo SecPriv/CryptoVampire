@@ -3,17 +3,12 @@
 use crate::{problem::RcRule, rules, terms::Function};
 
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 #[non_exhaustive]
 pub enum CryptographicAssumption {
-    Undefined(Vec<Function>),
+    #[default]
+    Undefined,
     PRF(rules::PRF),
-}
-
-impl Default for CryptographicAssumption {
-    fn default() -> Self {
-        Self::Undefined(vec![])
-    }
 }
 
 impl CryptographicAssumption {
@@ -35,7 +30,7 @@ impl CryptographicAssumption {
     /// [`Undefined`]: CryptographicAssumption::Undefined
     #[must_use]
     pub fn is_undefined(&self) -> bool {
-        matches!(self, Self::Undefined(..))
+        matches!(self, Self::Undefined)
     }
 
     /// Returns `true` if the cryptographic assumption is [`PRF`].
