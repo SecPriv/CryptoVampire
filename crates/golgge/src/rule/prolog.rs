@@ -109,6 +109,7 @@ where
         let res = Dependancy {
             inner,
             cut: self.cut,
+            proof: None
         };
         // self.memo.borrow_mut().insert(goal, res.clone());
         res

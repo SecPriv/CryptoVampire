@@ -1,4 +1,4 @@
-use std::{fmt::Debug, rc::Rc};
+use std::{borrow::Cow, fmt::{Debug, Display}, rc::Rc};
 
 use crate::Program;
 use egg::{Analysis, Id, Language, RecExpr};
@@ -11,15 +11,17 @@ pub use prolog::{PrologRule, parser::PlOrRw};
 // mod vampire;
 // pub use vampire::VampireRule;
 
-#[derive(Debug, PartialEq, Eq, Ord, PartialOrd, Hash, Clone, Default)]
+#[derive( Default)]
+#[non_exhaustive]
 pub struct Dependancy {
-    inner: Vec<Vec<Id>>,
-    cut: bool,
+    pub inner: Vec<Vec<Id>>,
+    pub cut: bool,
+    pub proof: Option<Rc<dyn Display>>
 }
 
 impl Dependancy {
     pub fn new(inner: Vec<Vec<Id>>) -> Self {
-        Self { inner, cut: false }
+        Self { inner, cut: false, proof: None }
     }
 
     pub fn inner(&self) -> &Vec<Vec<Id>> {
@@ -46,6 +48,7 @@ impl Dependancy {
         Dependancy {
             inner: vec![],
             cut: false,
+            proof: None
         }
     }
 
@@ -53,6 +56,7 @@ impl Dependancy {
         Dependancy {
             inner: vec![vec![]],
             cut: false,
+            proof: None
         }
     }
 }
@@ -64,6 +68,10 @@ pub trait Rule<L: Language, N: Analysis<L>> {
 
     fn debug(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         Ok(())
+    }
+
+    fn name(&self) -> Cow<'_, str> {
+        Cow::Borrowed("")
     }
 
     fn into_rc(self) -> Rc<dyn Rule<L, N>>

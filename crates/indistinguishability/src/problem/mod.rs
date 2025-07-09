@@ -156,7 +156,7 @@ impl Problem {
                 )
                 .unwrap(),
                 depth,
-            );
+            ).as_bool();
         }
 
         // just to make things cleaner
@@ -227,7 +227,7 @@ impl Problem {
                 egraph.union(id_true, id_h);
             }
 
-            res &= pgrm.run_expr(goal, depth);
+            res &= pgrm.run_expr(goal, depth).as_bool();
         }
 
         self.extra_smt_mut().truncate(base_smt_n);
