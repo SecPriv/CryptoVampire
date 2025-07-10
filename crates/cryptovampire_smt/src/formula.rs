@@ -170,38 +170,65 @@ impl<S, F> SmtFormula<S, F> {
                 }
             }
             SmtFormula::And(args) => {
-                args.iter_mut().for_each(Self::optimise_mut);
+                let args_c = ::std::mem::replace(args, Vec::with_capacity(args.len()));
+
+                for mut arg in args_c {
+                    arg.optimise_mut();
+                    if arg.is_false() {
+                        *self = Self::False;
+                        return;
+                    } else if arg.is_true() {
+                        continue;
+                    }
+                    args.push(arg);
+                }
+
                 if args.is_empty() {
-                    *self = Self::True
+                    *self = Self::True;
                 } else if args.len() == 1 {
                     *self = args.pop().unwrap()
-                } else if args.contains(&Self::False) {
-                    *self = Self::False
                 }
             }
             SmtFormula::Or(args) => {
-                args.iter_mut().for_each(Self::optimise_mut);
+                let args_c = ::std::mem::replace(args, Vec::with_capacity(args.len()));
+
+                for mut arg in args_c {
+                    arg.optimise_mut();
+                    if arg.is_false() {
+                        *self = Self::True;
+                        return;
+                    } else if arg.is_true() {
+                        continue;
+                    }
+                    args.push(arg);
+                }
+
                 if args.is_empty() {
-                    *self = Self::False
+                    *self = Self::False;
                 } else if args.len() == 1 {
                     *self = args.pop().unwrap()
-                } else if args.contains(&Self::False) {
-                    *self = Self::True
                 }
             }
             SmtFormula::Implies(a, b) => {
                 a.optimise_mut();
-                if a.as_ref() == &Self::False {
-                    *self = Self::True
-                } else {
-                    b.optimise_mut();
+                if a.is_false() {
+                    *self = Self::True;
+                    return;
+                }
+                b.optimise_mut();
+                if a.is_true() || b.is_true() {
+                    *self = ::std::mem::take(b.as_mut());
                 }
             }
             SmtFormula::Ite(c, l, r) => {
-                [c, l, r]
-                    .iter_mut()
-                    .map(|x| x.as_mut())
-                    .for_each(Self::optimise_mut);
+                c.optimise_mut();
+                l.optimise_mut();
+                r.optimise_mut();
+                if c.is_true() {
+                    *self = ::std::mem::take(l.as_mut());
+                } else if c.is_false() {
+                    *self = ::std::mem::take(r.as_mut());
+                }
             }
             _ => (),
         }
@@ -211,7 +238,7 @@ impl<S, F> SmtFormula<S, F> {
     where
         Self: Eq,
     {
-        // self.optimise_mut();
+        self.optimise_mut();
         self
     }
 
@@ -258,6 +285,22 @@ impl<S, F> SmtFormula<S, F> {
                 }
             }
         }
+    }
+
+    /// Returns `true` if the smt formula is [`True`].
+    ///
+    /// [`True`]: SmtFormula::True
+    #[must_use]
+    pub const fn is_true(&self) -> bool {
+        matches!(self, Self::True)
+    }
+
+    /// Returns `true` if the smt formula is [`False`].
+    ///
+    /// [`False`]: SmtFormula::False
+    #[must_use]
+    pub const fn is_false(&self) -> bool {
+        matches!(self, Self::False)
     }
 }
 

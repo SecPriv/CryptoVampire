@@ -22,3 +22,6 @@ serde = ["utils/serde", "dep:serde"]
 cryptovampire = ["vampire"]
 vampire = []
 macro = ["dep:cryptovampire_macros"]
+
+[dev-dependencies]
+cryptovampire_macros = {path = "../cryptovampire_macros"}
