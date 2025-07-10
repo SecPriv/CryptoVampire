@@ -52,5 +52,6 @@ pub mod basic_hash {
             .deps([dep])
             .name("euf-cma")
             .build()
+            .unwrap()
     }
 }

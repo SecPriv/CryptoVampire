@@ -23,7 +23,7 @@ impl Rule {
             .input(from)
             .name(name)
             .deps(to?)
-            .build();
+            .build().unwrap();
 
         Ok(Self(prolog.into_mrc()))
     }

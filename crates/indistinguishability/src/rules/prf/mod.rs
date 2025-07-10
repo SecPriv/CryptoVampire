@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use egg::{Id, Pattern, Searcher, Var};
 use golgge::{Dependancy, PrologRule, Rule};
-use itertools::Itertools;
+use itertools::{Itertools, chain};
 use logic_formula::egg::SimpleDiscriminant;
 use utils::ereturn_let;
 
@@ -27,6 +27,7 @@ pub struct PRF {
     search_bitstring: Function,
     search_bool: Function,
     search_trigger: Function,
+    index: usize
 }
 
 macro_rules! declare {
@@ -74,12 +75,24 @@ impl PRF {
             search_bitstring,
             search_bool,
             search_trigger,
+            index: pos
         };
 
-        pbl.extra_rules_mut()
-            .extend(prf.mk_prf_rule().map(|x| x.into_mrc()));
-        let tmp = candidate::mk_rewrites(pbl, &prf).collect_vec();
-        pbl.extra_rewrite_mut().extend(tmp);
+        {
+            // rules
+            let rules = chain![
+                prf.mk_prf_rule().map(|x| x.into_mrc()),
+                search::mk_rules(pbl, &prf)
+            ]
+            .collect_vec();
+            pbl.extra_rules_mut().extend(rules);
+        }
+
+        {
+            // rewrites
+            let rewrites = chain![candidate::mk_rewrites(pbl, &prf),].collect_vec();
+            pbl.extra_rewrite_mut().extend(rewrites);
+        }
 
         let crypt_assumpt = pbl.cryptography_mut(pos).unwrap();
         assert!(crypt_assumpt.is_undefined());
@@ -121,12 +134,39 @@ impl PRF {
             rexp!((SUBSTITUTION_RULE (EQUIV #1 #2 #6 (SUBSTITUTION #3 (hash #4 (NONCE #5)) #7))));
 
         [
-            PrfRule::new(&conclusionr, &subterm_search1, &subterm_search2, &new_goalr, PrfKind::Right),
-            PrfRule::new(&conclusionl, &subterm_search1, &subterm_search2, &new_goall, PrfKind::Left),
+            PrfRule::new(
+                &conclusionr,
+                &subterm_search1,
+                &subterm_search2,
+                &new_goalr,
+                PrfKind::Right,
+            ),
+            PrfRule::new(
+                &conclusionl,
+                &subterm_search1,
+                &subterm_search2,
+                &new_goall,
+                PrfKind::Left,
+            ),
         ]
+    }
+
+    /// Generate the pattern to do the deep search
+    /// 
+    /// use variables 0..=3
+    fn search_trigger_pattern(&self) -> impl Iterator<Item = LangVar> {
+        let Self { search_trigger, .. } = self;
+        rexp!((search_trigger #0 #1 #2 #3)).into_iter()
+    }
+    
+    pub fn index(&self) -> usize {
+        self.index
     }
 }
 
+/// Ochestrating [Rule] for PRF
+///
+/// This triggers the procedure and will in turn call many other rules
 #[derive(Debug, Clone)]
 struct PrfRule {
     conclusion: Pattern<Lang>,
@@ -135,12 +175,13 @@ struct PrfRule {
     new_goal: Pattern<Lang>,
 
     // for debuging
-    kind: PrfKind
+    kind: PrfKind,
 }
 
 #[derive(Debug, Clone, Copy)]
 enum PrfKind {
-    Left, Right
+    Left,
+    Right,
 }
 
 impl PrfRule {
@@ -149,14 +190,14 @@ impl PrfRule {
         subterm_search1: &[LangVar],
         subterm_search2: &[LangVar],
         new_goal: &[LangVar],
-        kind: PrfKind
+        kind: PrfKind,
     ) -> Self {
         Self {
             conclusion: conclusion.into(),
             subterm_search1: subterm_search1.into(),
             subterm_search2: subterm_search2.into(),
             new_goal: new_goal.into(),
-            kind
+            kind,
         }
     }
 }
@@ -199,6 +240,5 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfRule {
             PrfKind::Left => Cow::Borrowed("prf left"),
             PrfKind::Right => Cow::Borrowed("prf right"),
         }
-        
     }
 }

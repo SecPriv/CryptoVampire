@@ -1,5 +1,6 @@
 use std::{marker::PhantomData, rc::Rc};
 
+use bon::Builder;
 use cryptovampire_smt::{IntoSmt, Smt, SmtFormula};
 use egg::{
     Analysis, EGraph, ENodeOrVar, Id, Pattern, PatternAst, RecExpr, Searcher, Var, VarExposed,
@@ -13,13 +14,25 @@ use logic_formula::{
 use utils::{dynamic_iter, ereturn_if, ereturn_let, implvec};
 
 use crate::{
-    problem::{PAnalysis, PRule, RcRule}, protocol::{Protocol, Step}, rexp, rules::{
-        prf::search, utils::{
-            fresh::{Condition, Mode, RefFormulaBuilder}, generate_rule_vars_arr, SyntaxSearcher
-        }, PRF
-    }, terms::{
-        formula_utils::offsets_owned, Alias, AliasRewrite, Exists, FOBinder, Function, RecFOFormula, Sort, EQ, FAIL, HAPPENS, LT, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_MSG, NONCE, VAMPIRE
-    }, vampire::runner::VampireExec, Lang, LangVar, Problem
+    Lang, LangVar, Problem,
+    problem::{PAnalysis, PRule, RcRule},
+    protocol::{Protocol, Step},
+    rexp,
+    rules::{
+        PRF,
+        prf::search,
+        utils::{
+            SyntaxSearcher,
+            fresh::{Condition, Mode, RefFormulaBuilder},
+            generate_rule_vars_arr,
+        },
+    },
+    terms::{
+        Alias, AliasRewrite, EQ, Exists, FAIL, FOBinder, Function, HAPPENS, LT, MACRO_COND,
+        MACRO_EXEC, MACRO_FRAME, MACRO_MSG, NONCE, RecFOFormula, Sort, VAMPIRE,
+        formula_utils::offsets_owned,
+    },
+    vampire::runner::VampireExec,
 };
 
 declare_trace!($"search_prf");
@@ -32,7 +45,7 @@ pub fn mk_rules<'a>(pbl: &'a Problem, prf: &'a PRF) -> impl Iterator<Item = RcRu
     let functions = pbl
         .function
         .iter()
-        .filter(|f| f != &&NONCE)
+        .filter(|f| f != &&NONCE && f != &&prf.hash)
         .filter(|f| !f.is_out_of_term_algebra())
         .filter(|f| matches!(f.signature.output, Sort::Bitstring | Sort::Bool))
         .filter(|f| !f.is_special_subterm() || f.is_if_then_else())
@@ -53,7 +66,12 @@ pub fn mk_rules<'a>(pbl: &'a Problem, prf: &'a PRF) -> impl Iterator<Item = RcRu
         ],
     ];
 
-    chain![prolog_rules.map(|p| p.into_mrc())]
+    let search_rules = [PrfRule::new(pbl, prf)];
+
+    chain![
+        prolog_rules.map(|p| p.into_mrc()),
+        search_rules.map(|p| p.into_mrc())
+    ]
 }
 
 /// basic search rule
@@ -82,6 +100,7 @@ fn mk_rule_one(prf: &PRF, fun: Function) -> PrologRule<Lang> {
         .deps(deps)
         .name(format!("search_prf_{fun}"))
         .build()
+        .unwrap()
 }
 
 /// search rule for nonces
@@ -106,6 +125,7 @@ fn mk_rule_nonce(
         )
         .name("search_prf_nonce")
         .build()
+        .unwrap()
 }
 
 /// search axiom
@@ -127,6 +147,7 @@ fn mk_rule_found_instance(
         .input(PatternAst::from_iter(rexp!((search #1 #2 (hash #1 (NONCE #2))))).into())
         .name("search_prf_found_instance")
         .build()
+        .unwrap()
 }
 
 /// search axiom
@@ -156,6 +177,7 @@ fn mk_rule_found_key(
         .deps([PatternAst::from_iter(rexp!(FAIL)).into()])
         .name("search_prf_found_key")
         .build()
+        .unwrap()
 }
 
 /// If [egg] can't prove that `m = m'` (e.g., we didn't trigger
@@ -186,6 +208,7 @@ fn mk_rule_neq_m(
         )
         .name("search_prf_neq_m")
         .build()
+        .unwrap()
 }
 
 /// If [egg] can't prove that `k = k'`. Then we need to prove that `k` and
@@ -216,6 +239,7 @@ fn mk_rule_neq_k(
         )
         .name("search_prf_neq_k")
         .build()
+        .unwrap()
 }
 
 /// deep search on `exec`
@@ -228,17 +252,21 @@ fn mk_rule_neq_k(
 /// **NB**: there is no distinction between `exec` and `frame`, they both search
 /// everywhere
 fn mk_rule_exec(
-    PRF {
+    prf @ PRF {
         search_bool: search,
-        search_trigger,
         ..
     }: &PRF,
 ) -> PrologRule<Lang> {
     PrologRule::builder()
-        .input(PatternAst::from_iter(rexp!((search #1 #2 (MACRO_EXEC #4 #3)))).into())
-        .deps([PatternAst::from(rexp!((search_trigger #1 #2 #3 #4)).to_vec()).into()])
+        .input(
+            rexp!((search #0 #1 (MACRO_EXEC #3 #2)))
+                .into_iter()
+                .collect(),
+        )
+        .deps([prf.search_trigger_pattern().collect()])
         .name("search_prf_exec")
         .build()
+        .unwrap()
 }
 
 /// deep search on `frame`
@@ -249,17 +277,21 @@ fn mk_rule_exec(
 ///  m, k ||> frame(p)@t
 /// ```
 fn mk_rule_frame(
-    PRF {
+    prf @ PRF {
         search_bitstring: search,
-        search_trigger,
         ..
     }: &PRF,
 ) -> PrologRule<Lang> {
     PrologRule::builder()
-        .input(PatternAst::from_iter(rexp!((search #1 #2 (MACRO_FRAME #4 #3)))).into())
-        .deps([PatternAst::from(rexp!((search_trigger #1 #2 #3 #4)).to_vec()).into()])
+        .input(
+            rexp!((search #0 #1 (MACRO_FRAME #3 #2)))
+                .into_iter()
+                .collect(),
+        )
+        .deps([prf.search_trigger_pattern().collect()])
         .name("search_prf_exec")
         .build()
+        .unwrap()
 }
 
 // =========================================================
@@ -376,6 +408,20 @@ struct PrfRule {
     exec: Rc<VampireExec>,
 }
 
+impl PrfRule {
+    fn new(pbl: &Problem, prf: &PRF) -> Self {
+        Self {
+            prf: prf.index(),
+            pattern: prf.search_trigger_pattern().collect(),
+            exec: Rc::new(
+                VampireExec::builder()
+                    .keep_file(pbl.config.keep_smt_files)
+                    .build(),
+            ),
+        }
+    }
+}
+
 impl<'a> Rule<Lang, PAnalysis<'a>> for PrfRule {
     fn search(
         &self,
@@ -393,7 +439,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfRule {
                 .into_iter()
                 .map(|subst| {
                     let [m, k, ptcl, time] =
-                        [0, 1, 2, 3].map(|i| *subst.get(Var::from_u32(i)).unwrap());
+                        ::std::array::from_fn(|i| *subst.get(Var::from_u32(i as u32)).unwrap());
                     let [m, k, time] =
                         [m, k, time].map(|x| RecFOFormula::try_from_id(egraph, x).unwrap());
 

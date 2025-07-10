@@ -816,6 +816,7 @@ dependencies = [
  "smallvec",
  "static_init",
  "tempfile",
+ "thiserror 2.0.3",
  "utils",
 ]
 
