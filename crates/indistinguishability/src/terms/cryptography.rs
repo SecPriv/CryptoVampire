@@ -1,6 +1,6 @@
 //! Dumb module to define some of the data regarding cryptopgrahy
 
-use crate::{problem::RcRule, rules, terms::Function};
+use crate::{problem::RcRule, rules, terms::Function, MSmt, Problem};
 
 
 #[derive(Debug, Default)]
@@ -12,9 +12,10 @@ pub enum CryptographicAssumption {
 }
 
 impl CryptographicAssumption {
-  pub fn get_rules(&self) -> impl Iterator<Item = RcRule> {
-    [].into_iter()
-  }
+
+    pub fn mk_prelude(&self, pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
+        [].into_iter()
+    }
 
     #[must_use]
     pub fn as_prf(&self) -> Option<&rules::PRF> {

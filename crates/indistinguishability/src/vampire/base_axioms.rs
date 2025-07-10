@@ -26,7 +26,8 @@ pub fn mk_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
         mk_exists(pbl),
         mk_alias(pbl),
         mk_extra_rw(pbl),
-        pbl.extra_smt().iter().cloned()
+        pbl.extra_smt().iter().cloned(),
+        pbl.cryptography().iter().flat_map(|c| c.mk_prelude(pbl))
     ]
 }
 
