@@ -59,6 +59,10 @@ impl Dependancy {
             proof: None
         }
     }
+
+    pub const fn is_impossible(&self) -> bool {
+        self.inner.is_empty()
+    }
 }
 
 pub trait Rule<L: Language, N: Analysis<L>> {
@@ -67,11 +71,11 @@ pub trait Rule<L: Language, N: Analysis<L>> {
     fn rebuild(&self, _prgm: &Program<L, N>) {}
 
     fn debug(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        Ok(())
+        write!(f, "<{}>.", self.name())
     }
 
     fn name(&self) -> Cow<'_, str> {
-        Cow::Borrowed("")
+        Cow::Borrowed("unamed rule")
     }
 
     fn into_rc(self) -> Rc<dyn Rule<L, N>>

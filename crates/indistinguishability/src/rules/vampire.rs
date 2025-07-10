@@ -11,7 +11,7 @@ use egg::{ENodeOrVar, Pattern, RecExpr, Searcher, Var};
 use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain};
 use static_init::dynamic;
-use std::{io::Write, rc::Rc};
+use std::{borrow::Cow, io::Write, rc::Rc};
 use utils::ereturn_let;
 
 declare_trace!($"vampire_rule");
@@ -66,7 +66,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for VampireRule {
         }
     }
 
-    fn debug(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        write!(f, "<vampire>.")
+    fn name(&self) -> std::borrow::Cow<'_, str> {
+        Cow::Borrowed("vampire")
     }
 }

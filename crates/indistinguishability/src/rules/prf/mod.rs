@@ -1,5 +1,8 @@
+use std::borrow::Cow;
+
 use egg::{Id, Pattern, Searcher, Var};
 use golgge::{Dependancy, PrologRule, Rule};
+use itertools::Itertools;
 use logic_formula::egg::SimpleDiscriminant;
 use utils::ereturn_let;
 
@@ -75,6 +78,8 @@ impl PRF {
 
         pbl.extra_rules_mut()
             .extend(prf.mk_prf_rule().map(|x| x.into_mrc()));
+        let tmp = candidate::mk_rewrites(pbl, &prf).collect_vec();
+        pbl.extra_rewrite_mut().extend(tmp);
 
         let crypt_assumpt = pbl.cryptography_mut(pos).unwrap();
         assert!(crypt_assumpt.is_undefined());
@@ -116,8 +121,8 @@ impl PRF {
             rexp!((SUBSTITUTION_RULE (EQUIV #1 #2 #6 (SUBSTITUTION #3 (hash #4 (NONCE #5)) #7))));
 
         [
-            PrfRule::new(&conclusionr, &subterm_search1, &subterm_search2, &new_goalr),
-            PrfRule::new(&conclusionl, &subterm_search1, &subterm_search2, &new_goall),
+            PrfRule::new(&conclusionr, &subterm_search1, &subterm_search2, &new_goalr, PrfKind::Right),
+            PrfRule::new(&conclusionl, &subterm_search1, &subterm_search2, &new_goall, PrfKind::Left),
         ]
     }
 }
@@ -128,6 +133,14 @@ struct PrfRule {
     subterm_search1: Pattern<Lang>,
     subterm_search2: Pattern<Lang>,
     new_goal: Pattern<Lang>,
+
+    // for debuging
+    kind: PrfKind
+}
+
+#[derive(Debug, Clone, Copy)]
+enum PrfKind {
+    Left, Right
 }
 
 impl PrfRule {
@@ -136,12 +149,14 @@ impl PrfRule {
         subterm_search1: &[LangVar],
         subterm_search2: &[LangVar],
         new_goal: &[LangVar],
+        kind: PrfKind
     ) -> Self {
         Self {
             conclusion: conclusion.into(),
             subterm_search1: subterm_search1.into(),
             subterm_search2: subterm_search2.into(),
             new_goal: new_goal.into(),
+            kind
         }
     }
 }
@@ -177,5 +192,13 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfRule {
                 ]
             })
             .collect()
+    }
+
+    fn name(&self) -> std::borrow::Cow<'_, str> {
+        match self.kind {
+            PrfKind::Left => Cow::Borrowed("prf left"),
+            PrfKind::Right => Cow::Borrowed("prf right"),
+        }
+        
     }
 }

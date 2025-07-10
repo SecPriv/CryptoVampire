@@ -541,6 +541,11 @@ impl Display for RecFOFormula {
 
 impl FOBinder {
     /// The value taken by the quantifier on an empty set
+    /// 
+    /// ```text
+    /// \exists => false
+    /// \forall => true
+    /// ```
     pub fn on_empty(&self) -> bool {
         match self {
             FOBinder::Forall => true,

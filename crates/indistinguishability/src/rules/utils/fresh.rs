@@ -82,7 +82,6 @@ impl RefFormulaBuilder {
 
     /// adds to the formula (in a disjonction or a conjunction depending on the mode)
     pub fn add_leaf(&self, content: RecFOFormula) {
-        trace!("adding {content}");
         self.borrow_mut().add_leaf(content);
     }
 
@@ -198,6 +197,7 @@ impl FormulaBuilder {
 
     /// adds to the formula (in a disjonction or a conjunction depending on the mode)
     pub fn add_leaf(&mut self, content: RecFOFormula) {
+        trace!("add_leaf {content}\n(staturated: {}, try_evaluate: {:?})", self.is_saturated(), content.try_evaluate());
         ereturn_if!(self.is_saturated());
 
         // checks if we are now saturated
@@ -211,19 +211,26 @@ impl FormulaBuilder {
 
     /// sets the builder as saturated
     fn try_saturate(&mut self, value: bool) {
-        self.staturated = true;
         match &mut self.condition {
+            None => self.staturate(value),
             Some(Condition { quantifier, .. }) if quantifier.on_empty() == value => {
                 self.staturate(value);
             }
-            None => self.staturate(value),
             Some(Condition { condition, .. }) => {
-                if let Some(value2) = condition.try_evaluate() {
-                    // here quantifier.on_empty() = !value
-                    // saturate to `if !value2 { quantifier.on_empty()} else {value}`
-                    self.staturate(!(value2 ^ value));
+                if let Some(condition_value) = condition.try_evaluate() {
+                    // we saturate to (if condition_value { value } else { quantifier.on_empty() })
+                    // but quantifier.on_empty() = !value in this branch
+                    // condition_value | value | staturated    | !(condition_value ^ value)
+                    // 1               | 0     | 0             | 0
+                    // 1               | 1     | 1             | 1
+                    // 0               | 0     | 1 (empty)     | 1
+                    // 0               | 1     | 0 (empty)     | 0
+                    let saturate_to = !(condition_value ^ value);
+                    self.staturate(saturate_to);
                 } else {
-                    self.content = vec![value.into()]
+                    let mut old_condition = RecFOFormula::True();
+                    ::std::mem::swap(condition, &mut old_condition);
+                    self.content = vec![old_condition]
                 }
             }
         }
@@ -232,7 +239,8 @@ impl FormulaBuilder {
     /// erase the condition and set the value of `self` to `value`. This is then
     /// propagated to the parent
     fn staturate(&mut self, value: bool) {
-        assert!(self.staturated);
+        assert!(!self.staturated, "the builder was already saturated. Something probably went wrong somewhere");
+        self.staturated = true;
         trace!("staturating to {value}");
         self.precomputed = value;
         self.condition = None;

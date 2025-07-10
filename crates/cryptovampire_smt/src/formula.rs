@@ -211,7 +211,7 @@ impl<S, F> SmtFormula<S, F> {
     where
         Self: Eq,
     {
-        self.optimise_mut();
+        // self.optimise_mut();
         self
     }
 

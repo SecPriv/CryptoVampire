@@ -257,7 +257,13 @@ where
             };
             i += 1;
 
+
             let search = r.search(self, goal);
+            
+            if !search.is_impossible() {
+                mtrace!(self, "matched rule '{}'", r.name());
+            }
+
             let cut = search.cut();
             self.rebuild();
             let ret = search

@@ -1,4 +1,6 @@
-use bon::Builder;
+use std::borrow::Cow;
+
+use bon::{Builder, builder};
 use itertools::Itertools;
 use serde::Serialize;
 use steel::{rvals::Result as SResult, steel_vm::register_fn::RegisterFn};
@@ -22,10 +24,22 @@ pub struct Rewrite {
     pub variables: cow![egg::Var],
     #[builder(with = |x: impl std::iter::IntoIterator<Item = Sort>| x.into_iter().collect())]
     pub sorts: cow![Sort],
+
+    /// Can the rewrite be translated outside of [`golgee`] ?
+    ///
+    /// This mostly concern rewrites over functions that make use of [`PROLOG_ONLY`].
+    ///
+    /// [PROLOG_ONLY]: crate::::terms::flags::FunctionFlags::PROLOG_ONLY
+    #[builder(default = false)]
+    pub prolog_only: bool,
+
+    #[builder(into)]
+    pub name: Option<Cow<'static, str>>
 }
 
 impl Rewrite {
     fn steel_new(
+        name: String,
         variables: Vec<SVar>,
         sorts: Vec<Sort>,
         from: RecFOFormula,
@@ -50,7 +64,13 @@ impl Rewrite {
             to,
             variables,
             sorts,
+            prolog_only: false,
+            name: Some(name.into())
         })
+    }
+    
+    pub fn prolog_only(&self) -> bool {
+        self.prolog_only
     }
 }
 

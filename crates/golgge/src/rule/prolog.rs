@@ -3,14 +3,7 @@ use bon::Builder;
 use egg::{Analysis, FromOp, Id, Language, Pattern, RecExpr, Searcher, SymbolLang, Var};
 use serde::Serialize;
 use std::{
-    cell::RefCell,
-    collections::HashMap,
-    fmt::Display,
-    ops::DerefMut,
-    rc::Rc,
-    str::FromStr,
-    sync::atomic::{AtomicU64, Ordering},
-    u64,
+    borrow::Cow, cell::RefCell, collections::HashMap, fmt::Display, ops::DerefMut, rc::Rc, str::FromStr, sync::atomic::{AtomicU64, Ordering}, u64
 };
 use utils::ereturn_if;
 
@@ -69,12 +62,6 @@ where
         // if let Some(memo) = self.memo.borrow().get(&goal) {
         //     return memo.clone();
         // }
-
-        if prgm.config.trace_prolog {
-            if let Some(n) = &self.name {
-                eprintln!("searched {n}")
-            }
-        }
 
         let weight = N::get_weight(&prgm.egraph()[goal].data);
         // let subst = matches.substs.first().unwrap();
@@ -150,6 +137,14 @@ where
         }
 
         write!(f, "true.")
+    }
+
+    fn name(&self) -> Cow<'_, str> {
+        if let Some(name) = &self.name {
+            format!("prolog({name})").into()
+        } else {
+            Cow::Borrowed("prolog")
+        }
     }
 }
 

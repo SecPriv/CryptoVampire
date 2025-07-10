@@ -79,7 +79,6 @@ fn should_process_normaly(f: &Function) -> bool {
 fn mk_deduce_rule(f: &Function) -> PrologRule<Lang> {
     assert!(should_process_normaly(f));
     assert!(f.signature.output.support_deduce());
-    dbg!(&f.name);
     let n: u32 = f.arity().try_into().unwrap();
     let s = f.signature.output;
 

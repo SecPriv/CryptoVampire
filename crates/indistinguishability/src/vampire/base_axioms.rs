@@ -64,7 +64,7 @@ fn mk_pseudo_datatype_diff(funs: Vec<Function>) -> impl Iterator<Item = MSmt> {
     let pairs = {
         let mut vars = Vec::with_capacity(funs.iter().map(Function::arity).sum());
 
-        let app_nonces = funs
+        let apps = funs
             .iter()
             .map(|f| {
                 let n = vars.len();
@@ -73,11 +73,11 @@ fn mk_pseudo_datatype_diff(funs: Vec<Function>) -> impl Iterator<Item = MSmt> {
             })
             .collect_vec();
 
-        smt!((forall #vars (distinct #app_nonces*)))
+        smt!((forall #vars (distinct #apps*)))
     };
 
     // a[veci] = a[vecj] => veci = vecj forall each fun
-    let singles = funs.into_iter().map(|f| {
+    let singles = funs.into_iter().filter(|f| f.arity() != 0).map(|f| {
         let n = f.arity();
         let svars: Vec<SortedVar<_>> = chain![
             f.signature.mk_sorted_vars(0),
@@ -122,11 +122,9 @@ fn mk_step_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     if let Some(iter) = pbl.steps() {
         steps = iter.collect_vec()
     } else {
-        // There are no steps in this protocol
+        // There are no protocols in this problem
         return Ret::Empty(::std::iter::empty());
     }
-
-    assert!(steps.iter().any(|s| s.name == "init"), "need an init step");
 
     Ret::A(chain! {
         [Smt::Comment("step distinctness".into())],
@@ -256,12 +254,14 @@ fn mk_extra_rw(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     let ax = pbl
         .extra_rewrite()
         .iter()
+        .filter(|r| !r.prolog_only())
         .map(
             |Rewrite {
                  from,
                  to,
                  variables,
                  sorts,
+                 ..
              }| {
                 let [from, to] = [from, to].map(|x| formula_to_smt(&x));
                 let vars = izip!(sorts.iter(), variables.iter())

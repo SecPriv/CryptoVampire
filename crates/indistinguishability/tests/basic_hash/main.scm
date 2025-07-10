@@ -9,6 +9,7 @@
 
 (define prf (declare-cryptography pbl))
 (define hash (declare_function pbl (fun "hash" (signature (Bitstring Bitstring) -> Bitstring) (list prf))))
+; (define hash (declare_function pbl (fun "hash" (signature (Bitstring Bitstring) -> Bitstring) '())))
 (define ok (declare_function pbl (fun "ok" (signature () -> Bitstring) '())))
 (define ko (declare_function pbl (fun "ko" (signature () -> Bitstring) '())))
 (define k1 (declare_function pbl (mk-nonce "key1" (signature (Index) -> Nonce))))
@@ -145,7 +146,7 @@
   [sorts (list Time Index Index Protocol)]
   [in (formula (macro_input t p))]
 )
-  (mk-rewrite vars sorts
+  (mk-rewrite "lemma-2" vars sorts
     (formula (= (sel2of2 in) (hash (sel1of2 in) (mk i j p))))
     (formula (@ cexists2 j t p))
   )

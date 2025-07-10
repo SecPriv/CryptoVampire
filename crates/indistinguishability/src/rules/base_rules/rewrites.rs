@@ -108,17 +108,23 @@ fn mk_exists_rules_one<'a, N: Analysis<Lang>>(
 fn mk_extra_rw_rules<N: Analysis<Lang>>(
     pbl: &Problem,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
-    pbl.extra_rewrite()
-        .iter()
-        .enumerate()
-        .map(|(i, crate::terms::Rewrite { from, to, .. })| {
+    pbl.extra_rewrite().iter().enumerate().map(
+        |(i, crate::terms::Rewrite { from, to, name, .. })| {
+            let name = name
+                .as_ref()
+                .cloned()
+                .unwrap_or_else(|| format!("extra rewrite #{i:}").into())
+                .into_owned();
+            trace!("registering rw rule {name} to egg...");
+
             Rewrite::new(
-                format!("extra rewrite #{i:}"),
+                name,
                 Pattern::new(from.clone().into_owned().into()),
                 Pattern::new(to.clone().into_owned().into()),
             )
             .unwrap()
-        })
+        },
+    )
 }
 
 fn mk_alias_rule<N: Analysis<Lang>>(

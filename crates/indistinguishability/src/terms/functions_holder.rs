@@ -206,7 +206,7 @@ impl FunctionCollection {
     }
 
     pub fn registered_names(&self) -> impl Iterator<Item = &str> {
-        self.functions.iter().map(|f| f.name())
+        self.map_function.keys().map(|f| f.as_ref())
     }
 }
 

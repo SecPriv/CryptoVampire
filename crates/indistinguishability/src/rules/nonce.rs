@@ -77,8 +77,8 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FreshNonce {
         self.exec.run_to_dependancy(pbl, condition)
     }
 
-    fn debug(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        write!(f, "<fresh nonce>.")
+    fn name(&self) -> Cow<'_, str> {
+        Cow::Borrowed("fresh nonce")
     }
 }
 
