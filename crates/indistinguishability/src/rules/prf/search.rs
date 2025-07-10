@@ -289,7 +289,7 @@ fn mk_rule_frame(
                 .collect(),
         )
         .deps([prf.search_trigger_pattern().collect()])
-        .name("search_prf_exec")
+        .name("search_prf_frame")
         .build()
         .unwrap()
 }
@@ -385,7 +385,7 @@ impl crate::rules::utils::SyntaxSearcher for Search {
             let (m2, k2) = args
                 .collect_tuple()
                 .expect("wrong parameters given to a hash");
-            let content = (!EQ.rapp([NONCE.rapp([k2.into()]), self.clone_k()]))
+            let content = (!EQ.rapp([k2.into(), NONCE.rapp([self.clone_k()])]))
                 & (!EQ.rapp([m2.into(), self.clone_m()]));
             builder.add_leaf(content);
             self.inner_search_recexpr(pbl, builder, m2);
@@ -423,6 +423,10 @@ impl PrfRule {
 }
 
 impl<'a> Rule<Lang, PAnalysis<'a>> for PrfRule {
+    fn name(&self) -> std::borrow::Cow<'_, str> {
+        format!("prf vampire #{:}", self.prf).into()
+    }
+
     fn search(
         &self,
         prgm: &mut golgge::Program<Lang, PAnalysis<'a>>,

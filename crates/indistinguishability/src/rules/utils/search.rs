@@ -68,7 +68,7 @@ pub trait SyntaxSearcher {
         ereturn_if!(builder.is_saturated());
         ereturn_let!(let Destructed { head: HeadSk::Fun(fun), args} = term.destruct());
         tr!(
-            "searching thourgh {}",
+            "searching through {}",
             egg::RecExpr::from(term.iter().cloned().collect_vec())
         );
         if self.is_instance(pbl, &fun) {
