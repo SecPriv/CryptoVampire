@@ -2,10 +2,13 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use proc_macro::TokenStream;
 use proc_macro2::Span;
-use quote::{ToTokens, format_ident, quote}; // format_ident is key here
+use quote::{format_ident, quote, ToTokens}; // format_ident is key here
 use syn::token::Paren;
-use syn::{Error, parenthesized};
+use syn::{parenthesized, Error};
 use syn::{
+    parse::{Parse, ParseStream, Result},
+    parse_macro_input,
+    token,
     Expr,
     Ident,
     Lit,
@@ -14,9 +17,6 @@ use syn::{
     LitStr, // LitStr might not be needed if FunApp changed
     Path,
     Token,
-    parse::{Parse, ParseStream, Result},
-    parse_macro_input,
-    token,
 };
 use utils::ereturn_if;
 
@@ -64,9 +64,14 @@ pub enum VarBindings {
 }
 
 pub struct VarBinding {
-    pub name: Ident,
+    pub name: VarName,
     pub index: VarIndex, // Can now be an expression
     pub sort: Expr,
+}
+
+pub enum VarName {
+    Underscore(Token![_]),
+    Ident(Ident),
 }
 
 pub enum BangedContent {
@@ -271,13 +276,23 @@ fn parse_bindings(input: ParseStream<'_>) -> Result<Vec<VarBinding>> {
     Ok(bindings)
 }
 
+impl Parse for VarName {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        if input.peek(Token![_]) {
+            Ok(Self::Underscore(input.parse()?))
+        } else {
+            Ok(Self::Ident(input.parse()?))
+        }
+    }
+}
+
 impl Parse for VarBinding {
     fn parse(content: ParseStream<'_>) -> Result<Self> {
         let binding_content;
         parenthesized!(binding_content in content);
 
         binding_content.parse::<Token![#]>()?;
-        let name: Ident = binding_content.parse()?;
+        let name: VarName = binding_content.parse()?;
         binding_content.parse::<Token![!]>()?;
         let index: VarIndex = binding_content.parse()?; // Use VarIndex parser
         let sort: Expr = binding_content.parse()?;

@@ -1,7 +1,13 @@
 //! Dumb module to define some of the data regarding cryptopgrahy
 
-use crate::{problem::RcRule, rules, terms::Function, MSmt, Problem};
+use utils::dynamic_iter;
 
+use crate::{
+    MSmt, Problem,
+    problem::RcRule,
+    rules::{self, mk_no_guessing_smt},
+    terms::Function,
+};
 
 #[derive(Debug, Default)]
 #[non_exhaustive]
@@ -9,12 +15,18 @@ pub enum CryptographicAssumption {
     #[default]
     Undefined,
     PRF(rules::PRF),
+    NoGuessingTh,
 }
 
 impl CryptographicAssumption {
+    /// update the prelude when needed
+    pub fn mk_prelude<'a>(&'a self, pbl: &'a Problem) -> impl Iterator<Item = MSmt> + use<'a> {
+        dynamic_iter!(Ret; NGTH:A, Empty:B);
 
-    pub fn mk_prelude(&self, pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
-        [].into_iter()
+        match self {
+            Self::NoGuessingTh => Ret::NGTH(mk_no_guessing_smt(pbl)),
+            _ => Ret::Empty(::std::iter::empty()),
+        }
     }
 
     #[must_use]

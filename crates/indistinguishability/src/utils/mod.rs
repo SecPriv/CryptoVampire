@@ -40,7 +40,7 @@ pub fn same_slice<'a, U: Eq>(a: &'a [U], b: implvec!(&'a U)) -> bool {
 /// assert_eq!(&c, "x");
 /// ```
 pub fn fresh_name<'a, 'b>(name: &str, avoid: implvec!(&'b str)) -> String {
-    if name == "" {
+    if name.is_empty() {
         return fresh_name("x", avoid);
     }
 
@@ -52,7 +52,7 @@ pub fn fresh_name<'a, 'b>(name: &str, avoid: implvec!(&'b str)) -> String {
     let mut i = 0u32;
     let mut nname = name.to_owned();
     while avoid.contains(&nname.as_str()) {
-        nname = format!("{name}#{i:}");
+        nname = format!("{name}${i:}");
         i += 1;
     }
     nname

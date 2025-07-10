@@ -15,5 +15,8 @@ fn convert_id<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, id: Id) -> RecFOFormu
     RecFOFormula::try_from_id(egraph, id).unwrap()
 }
 
+pub use smt_no_guessing::mk_no_guessing_smt;
+mod smt_no_guessing;
+
 #[cfg(test)]
 mod test;

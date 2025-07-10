@@ -32,8 +32,7 @@ use utils::{ereturn_if, ereturn_let, implvec};
 
 #[dynamic]
 static FRESH_NONCE_PATTERN: Pattern<Lang> = {
-    let ast = rexp!((FRESH_NONCE #0 #1 #2)).to_vec();
-    RecExpr::from(ast).into()
+    rexp!((FRESH_NONCE #0 #1 #2)).into_iter().collect()
 };
 
 #[derive(Clone, Builder)]

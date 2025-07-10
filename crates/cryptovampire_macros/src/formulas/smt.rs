@@ -9,15 +9,15 @@ use syn::parse::Parser;
 use syn::punctuated::Punctuated;
 use syn::token::Paren;
 use syn::{
+    parse::{Parse, ParseStream, Result},
+    parse_macro_input,
+    token,
     Expr,
     Ident,
     Lit,
     LitInt,
     LitStr, // LitStr might not be needed if FunApp changed
     Token,
-    parse::{Parse, ParseStream, Result},
-    parse_macro_input,
-    token,
 };
 use utils::ereturn_if;
 
@@ -108,9 +108,9 @@ fn generate_code(Ast { inner: parsed, .. }: Ast) -> proc_macro2::TokenStream {
         }
         InnerAst::FunApp { func, args } => {
             let processed_args = generate_args(args); //args.into_iter().map(generate_code);
-            // As per your change, #func (the Ident) is passed directly.
-            // This implies SmtFormula::Fun can handle an Ident or its type N in
-            // SmtFormula<N,S> can be From<Ident> or similar.
+                                                      // As per your change, #func (the Ident) is passed directly.
+                                                      // This implies SmtFormula::Fun can handle an Ident or its type N in
+                                                      // SmtFormula<N,S> can be From<Ident> or similar.
             quote! { #crate_path::SmtFormula::Fun(#func.clone(), #processed_args) }
         }
         InnerAst::Quantifier {
@@ -161,10 +161,16 @@ fn generate_quant_with_binders(
             span = proc_macro2::Span::call_site()
         );
 
-        let_bindings.push(quote! {
-            let #temp_index_var_ident = #crate_path::VarInner::Int(#index_eval_expr);
-            let #user_var_name = #crate_path::SmtFormula::Var(#temp_index_var_ident.clone());
-        });
+        match user_var_name {
+            VarName::Underscore(_) => let_bindings.push(quote! {
+                let #temp_index_var_ident = #crate_path::VarInner::Int(#index_eval_expr);
+            }),
+            VarName::Ident(user_var_name) => let_bindings.push(quote! {
+                let #temp_index_var_ident = #crate_path::VarInner::Int(#index_eval_expr);
+                let #user_var_name = #crate_path::SmtFormula::Var(#temp_index_var_ident.clone());
+            }),
+        }
+
         temp_var_idents_for_sorted_var.push(temp_index_var_ident);
     }
 

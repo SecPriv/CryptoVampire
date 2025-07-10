@@ -198,10 +198,10 @@ impl VampireExec {
 
     pub fn default_args() -> Vec<VampireArg> {
         vec![
-            VampireArg::Cores(num_cpus::get().checked_sub(1).unwrap_or(1) as u64),
+            VampireArg::Cores(0),
             VampireArg::Mode(vampire_suboptions::Mode::Portfolio),
             VampireArg::InputSyntax(vampire_suboptions::InputSyntax::SmtLib2),
-            VampireArg::TimeLimit(0.5),
+            VampireArg::TimeLimit(5.0),
         ]
     }
 

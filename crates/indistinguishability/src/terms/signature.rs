@@ -29,7 +29,7 @@ impl Signature {
         self.inputs.iter().copied()
     }
 
-    pub fn mk_sorted_vars(&self, from: u32) -> impl Iterator<Item = SortedVar<Sort>> + use<'_> {
+    pub fn mk_sorted_vars(&self, from: u32) -> impl Iterator<Item = SortedVar<Sort>> + Clone + use<'_> {
         izip!(from.., self.inputs.iter()).map(|(i, s)| SortedVar {
             var: VarInner::Int(i as cryptovampire_smt::uvar),
             sort: *s,

@@ -194,10 +194,10 @@ impl<S, F> SmtFormula<S, F> {
 
                 for mut arg in args_c {
                     arg.optimise_mut();
-                    if arg.is_false() {
+                    if arg.is_true() {
                         *self = Self::True;
                         return;
-                    } else if arg.is_true() {
+                    } else if arg.is_false() {
                         continue;
                     }
                     args.push(arg);

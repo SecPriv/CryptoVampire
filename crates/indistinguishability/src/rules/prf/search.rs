@@ -386,10 +386,22 @@ impl crate::rules::utils::SyntaxSearcher for Search {
                 .collect_tuple()
                 .expect("wrong parameters given to a hash");
             let content = (!EQ.rapp([k2.into(), NONCE.rapp([self.clone_k()])]))
-                & (!EQ.rapp([m2.into(), self.clone_m()]));
+                | (!EQ.rapp([m2.into(), self.clone_m()]));
             builder.add_leaf(content);
             self.inner_search_recexpr(pbl, builder, m2);
-            self.inner_search_recexpr(pbl, builder, k2);
+            {
+                let builder = builder.add_node(
+                    Mode::And,
+                    Some(Condition {
+                        condition: (!EQ.rapp([k2.into(), NONCE.rapp([self.clone_k()])])),
+                        quantifier: FOBinder::Forall,
+                        variables: vec![],
+                        sorts: vec![],
+                    }),
+                );
+
+                self.inner_search_recexpr(pbl, &builder, k2);
+            }
         } else {
             assert!(!self.is_instance(pbl, &fun));
             unreachable!()

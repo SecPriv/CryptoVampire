@@ -6,7 +6,7 @@ pub mod utils;
 
 
 mod nonce;
-pub use nonce::FreshNonce;
+pub use nonce::{FreshNonce, mk_no_guessing_smt};
 
 mod vampire;
 pub use vampire::VampireRule;

@@ -3,35 +3,37 @@ use crate::{
     Lang, LangVar, Problem,
     problem::PAnalysis,
     protocol::Step,
-    rules::nonce::searcher::nonce_builder::SetContent,
-    rules::utils::SyntaxSearcher,
-    rules::utils::fresh::{Condition, Mode, RefFormulaBuilder},
-    terms::formula_utils::pull_from_egraph,
-    terms::{BITE, EQ, FOBinder, HAPPENS, LT, MACRO_FRAME, MITE, NONCE, PRED},
-    terms::{Function, RecFOFormula},
+    rules::{
+        nonce::searcher::nonce_builder::SetContent,
+        utils::{
+            SyntaxSearcher,
+            fresh::{Condition, Mode, RefFormulaBuilder},
+        },
+    },
+    terms::{
+        BITE, EQ, FOBinder, Function, HAPPENS, LT, MACRO_FRAME, MITE, NONCE, PRED, RecFOFormula,
+        formula_utils::{offsets_owned, pull_from_egraph},
+    },
 };
-use bon::Builder;
-use egg::{Analysis, EGraph, Id};
+use bon::{Builder, bon};
+use egg::{Analysis, EGraph, Id, Var};
 use itertools::Itertools;
-use logic_formula::egg::SimplLang;
+use logic_formula::{Formula, egg::SimplLang};
 use std::borrow::Cow;
 use utils::{ereturn_if, implvec};
 
-#[derive(Debug, Clone, Builder)]
-#[builder(builder_type = NonceBuilder)]
+#[derive(Debug, Clone)]
 pub struct Nonce {
     content: RecFOFormula,
-    #[builder(into, default = format!("{content}"))]
     name: Cow<'static, str>,
 }
 
 impl Nonce {
     pub fn new_from_args(head: Function, args: implvec!(RecFOFormula)) -> Self {
-        let name = head.name.clone();
-        Self {
-            content: RecFOFormula::app(head, args.into_iter().collect()),
-            name,
-        }
+        Self::builder()
+            .name(head.name.clone())
+            .content(RecFOFormula::app(head, args.into_iter().collect()))
+            .build()
     }
 
     pub fn as_recformula(&self) -> RecFOFormula {
@@ -206,6 +208,7 @@ impl Nonce {
             self.inner_search_recexpr(pbl, &builder, msg);
         }
     }
+
 }
 
 impl SyntaxSearcher for Nonce {
@@ -229,6 +232,21 @@ impl SyntaxSearcher for Nonce {
         let arg = args.into_iter().next().expect("NONCE need a parameter");
         let content = !EQ.rapp([arg.into(), self.clone().as_recformula()]);
         builder.add_leaf(content);
+    }
+}
+
+#[bon]
+impl Nonce {
+    #[builder(builder_type = NonceBuilder)]
+    pub fn new(
+        content: RecFOFormula,
+        #[builder(into, default = format!("{content}"))] name: Cow<'static, str>,
+
+    ) -> Self {
+        Self {
+            content,
+            name,
+        }
     }
 }
 

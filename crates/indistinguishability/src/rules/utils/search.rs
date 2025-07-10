@@ -151,6 +151,7 @@ pub trait SyntaxSearcher {
                 .collect_vec();
             let to = offsets_owned(max_var, to.iter().cloned());
 
+            assert_eq!(from.len(), args.len());
             let condition = RecFOFormula::and(
                 izip!(args.iter(), from.iter())
                     .map(|(arg, f)| EQ.rapp(vec![RecFOFormula::from(*arg), f.as_ref().into()])),

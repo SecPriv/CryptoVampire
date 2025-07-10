@@ -106,7 +106,8 @@ impl RefFormulaBuilder {
     }
 
     pub fn try_evaluate(&self) -> Option<bool> {
-        self.borrow().try_evaluate()
+        // self.borrow().try_evaluate()
+        None
     }
 
     pub fn borrow(&self) -> Ref<'_, FormulaBuilder> {

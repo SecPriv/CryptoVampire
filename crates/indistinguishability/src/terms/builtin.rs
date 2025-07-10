@@ -3,7 +3,7 @@ use super::{
     Sort::{self, *},
 };
 use cryptovampire_macros::{declare_recexpr, mk_builtin_funs};
-use std::borrow::Cow;
+use std::{borrow::Cow, ops::BitOr};
 
 /// helper to write const signatures
 macro_rules! s {
@@ -380,7 +380,7 @@ mk_builtin_funs!(
     FRESH_NONCE "mfresh_nonce" "fresh_nonce" {
                 /* nonce -> look into -> constrains -> Bool */
         signature: s!(Nonce, Bitstring, Bool -> Bool),
-        flags: f!(CUSTOM_DEDUCE)
+        flags: f!(PROLOG_ONLY)
     };
 
     VAMPIRE "mvampire" "vampire" "smt" {
@@ -403,6 +403,16 @@ mk_builtin_funs!(
     SMT_ITE "ite" {
         signature: s!(Bool, Bitstring, Bitstring -> Bitstring),
         flags: f!(SMT_ONLY | BUILTIN_SMT | CUSTOM_DEDUCE | IF_THEN_ELSE)
-    }
+    };
+
+    IS_INDEPENDANT_BITSTRING "m_is_independant_bitstring" {
+        signature: s!(Nonce, Bitstring -> Bool),
+        flags: f!(SMT_ONLY)
+    };
+
+    IS_INDEPENDANT_BOOL "m_is_independant_bool" {
+        signature: s!(Nonce, Bool -> Bool),
+        flags: f!(SMT_ONLY)
+    };
 
 );

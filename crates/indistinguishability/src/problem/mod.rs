@@ -34,31 +34,22 @@ declare_trace!($"problem");
 
 /// A problem for the solver to solve
 #[non_exhaustive]
-#[derive(Builder)]
 pub struct Problem {
     /// The configuration (e.g., cli arguments and such)
-    #[builder(default)]
     pub config: Configuration,
     /// The protocol we want to prove indistiguishability on
     ///
     /// The vector must be at least 2 long
-    #[builder(with = <_>::from_iter, default = vec![])]
     protocols: Vec<Protocol>,
     /// The functions
-    #[builder(default = FunctionCollection::init())]
     pub function: FunctionCollection,
 
-    #[builder(with = <_>::from_iter, default = vec![])]
     cryptography: Vec<CryptographicAssumption>,
 
-    #[builder(with = <_>::from_iter, default = vec![])]
     extra_rules: Vec<RcRule>,
-    #[builder(with = <_>::from_iter, default = vec![])]
     extra_rewrite: Vec<Rewrite>,
-    #[builder(with = <_>::from_iter, default = vec![])]
     extra_smt: Vec<MSmt>,
 
-    #[builder(skip)]
     smt_prelude: Option<Vec<MSmt>>,
 }
 
@@ -150,13 +141,15 @@ impl Problem {
                 egraph.union(id_true, id_h);
             }
 
-            res &= pgrm.run_expr(
-                convert_to_ground_rexp(
-                    rexp!((EQUIV EMPTY EMPTY (UNFOLD_MSG init p1f) (UNFOLD_MSG init p2f))),
+            res &= pgrm
+                .run_expr(
+                    convert_to_ground_rexp(
+                        rexp!((EQUIV EMPTY EMPTY (UNFOLD_MSG init p1f) (UNFOLD_MSG init p2f))),
+                    )
+                    .unwrap(),
+                    depth,
                 )
-                .unwrap(),
-                depth,
-            ).as_bool();
+                .as_bool();
         }
 
         // just to make things cleaner
@@ -368,8 +361,7 @@ impl Problem {
 
     pub fn extend_cryptography<const N: usize>(&mut self) -> [usize; N] {
         let ret = std::array::from_fn(|i| i + self.cryptography.len());
-        self.cryptography
-            .extend(ret.map(|_| Default::default()));
+        self.cryptography.extend(ret.map(|_| Default::default()));
         ret
     }
 }
@@ -408,6 +400,42 @@ impl AsMut<FunctionCollection> for Problem {
 
 #[bon]
 impl Problem {
+    fn default_cryptography() -> Vec<CryptographicAssumption> {
+        vec![CryptographicAssumption::NoGuessingTh]
+    }
+
+    #[builder(builder_type = ProblemBuilder)]
+    pub fn new(
+        #[builder(field = Self::default_cryptography())] cryptography: Vec<CryptographicAssumption>,
+        #[builder(field = None)] smt_prelude: Option<Vec<MSmt>>,
+        /// The configuration (e.g., cli arguments and such)
+        #[builder(default)]
+        config: Configuration,
+        /// The protocol we want to prove indistiguishability on
+        ///
+        /// The vector must be at least 2 long
+        #[builder(with = <_>::from_iter, default = vec![])]
+        protocols: Vec<Protocol>,
+        /// The functions
+        #[builder(default = FunctionCollection::init())]
+        function: FunctionCollection,
+
+        #[builder(with = <_>::from_iter, default = vec![])] extra_rules: Vec<RcRule>,
+        #[builder(with = <_>::from_iter, default = vec![])] extra_rewrite: Vec<Rewrite>,
+        #[builder(with = <_>::from_iter, default = vec![])] extra_smt: Vec<MSmt>,
+    ) -> Self {
+        Self {
+            config,
+            protocols,
+            function,
+            cryptography,
+            extra_rules,
+            extra_rewrite,
+            extra_smt,
+            smt_prelude,
+        }
+    }
+
     #[builder(builder_type = FunctionBuilder)]
     pub fn declare_function(
         &mut self,
@@ -486,6 +514,23 @@ where
             *start = len
         };
         self.cryptography(len..(len + num))
+    }
+}
+
+use crate::problem::problem_builder::IsUnset as ProblemBuilderIsUnset;
+impl<S> ProblemBuilder<S>
+where
+    S: problem_builder::State,
+{
+    /// removes the default cryptography
+    pub fn reset_cryptograhy(mut self) -> Self {
+        self.cryptography = vec![];
+        self
+    }
+
+    pub fn extend_cryptography(mut self, crypto: implvec!(CryptographicAssumption)) -> Self {
+        self.cryptography.extend(crypto);
+        self
     }
 }
 

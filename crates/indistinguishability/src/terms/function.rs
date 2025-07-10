@@ -152,12 +152,21 @@ impl Function {
     // ==================== is functions =======================
     // =========================================================
 
+    /// Should not appear in an smt file
+    /// 
+    /// Because smt has a syntax for it, or it's a prolog trick, or ...
     #[inline]
     pub fn is_should_not_declare_in_smt(&self) -> bool {
         static SHOULD_NOT_DECLARE_IN_SMT: FunctionFlags =
             const_fun_flags!(PROLOG_ONLY | BUILTIN_SMT);
 
         self.flags.intersects(SHOULD_NOT_DECLARE_IN_SMT)
+    }
+
+    /// The function already has an equivalent in smt
+    #[inline]
+    pub fn is_builtin_smt(&self) -> bool {
+        self.flags.intersects(FunctionFlags::BUILTIN_SMT)
     }
 
     #[inline]
