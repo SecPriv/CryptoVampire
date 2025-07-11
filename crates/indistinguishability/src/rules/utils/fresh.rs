@@ -6,11 +6,12 @@ use std::rc::{Rc, Weak};
 use bon::{Builder, bon, builder};
 use egg::Var;
 use itertools::chain;
-use log::trace;
 use logic_formula::Formula;
 use utils::{ereturn_if, ereturn_let};
 
 use crate::terms::{FOBinder, RecFOFormula, Sort};
+
+declare_trace!($"search");
 
 #[derive(Debug, Clone)]
 pub struct RefFormulaBuilder(Rc<RefCell<FormulaBuilder>>);
@@ -306,7 +307,7 @@ impl FormulaBuilder {
 
     /// adds to the formula (in a disjonction or a conjunction depending on the mode)
     pub fn add_leaf(&mut self, content: RecFOFormula) {
-        trace!(
+        tr!(
             "add_leaf {content}\n(staturated: {}, try_evaluate: {:?})",
             self.is_saturated(),
             content.try_evaluate()
@@ -357,7 +358,7 @@ impl FormulaBuilder {
             "the builder was already saturated. Something probably went wrong somewhere"
         );
         self.staturated = true;
-        trace!("staturating to {value}");
+        tr!("staturating to {value}");
         self.precomputed = value;
         self.condition = None;
 

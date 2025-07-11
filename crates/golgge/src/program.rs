@@ -236,6 +236,10 @@ where
         let memo = if let Some(memo) = self.memo_mut() {
             use std::collections::hash_map::Entry;
             match memo.entry(goal) {
+                Entry::Occupied(occupied_entry) if occupied_entry.get().is_in_progress() => {
+                    mtrace!(self, "⏩ skipping (loop)");
+                    return false;
+                }
                 Entry::Occupied(occupied_entry) => {
                     let res = occupied_entry.get().as_bool();
                     mtrace!(self, "⏩ skipping: {res:}");
@@ -406,6 +410,14 @@ impl<L: Language, N: Analysis<L>> Status<L, N> {
     pub fn as_bool(&self) -> bool {
         matches!(self, Status::True { .. })
     }
+
+    /// Returns `true` if the status is [`InProgress`].
+    ///
+    /// [`InProgress`]: Status::InProgress
+    #[must_use]
+    pub(crate) fn is_in_progress(&self) -> bool {
+        matches!(self, Self::InProgress)
+    }
 }
 
 impl<L: Language, N: Analysis<L>> MemoStatus<L, N> {
@@ -415,6 +427,14 @@ impl<L: Language, N: Analysis<L>> MemoStatus<L, N> {
 
     pub fn set(&self, status: Status<L, N>) {
         *self.0.borrow_mut() = status
+    }
+
+    /// Returns `true` if the status is [`InProgress`].
+    ///
+    /// [`InProgress`]: Status::InProgress
+    #[must_use]
+    pub(crate) fn is_in_progress(&self) -> bool {
+        self.0.borrow().is_in_progress()
     }
 }
 
