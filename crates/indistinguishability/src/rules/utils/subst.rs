@@ -115,7 +115,7 @@ fn mk_rw_base<'a, N: Analysis<Lang>>(
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'a, N> {
     pbl.function
         .iter()
-        .filter(|f| !f.is_special_subterm())
+        .filter(|f| !f.is_special_subterm() || f.is_if_then_else())
         .cloned()
         .map(mk_rw_one)
 }

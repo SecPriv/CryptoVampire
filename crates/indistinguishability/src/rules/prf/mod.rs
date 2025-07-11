@@ -126,9 +126,9 @@ impl PRF {
         let subterm_search1 = rexp!((search_bitstring #4 #5 #3));
         let subterm_search2 = rexp!((search_bitstring #4 #5 #4));
         let new_goall =
-            rexp!((SUBSTITUTION_RULE (EQUIV #1 #2 (SUBSTITUTION #3 (hash #4 (NONCE #5)) #7) #6)));
+            rexp!((SUBSTITUTION_RULE (EQUIV #1 #2 (SUBSTITUTION #3 (hash #4 (NONCE #5)) (NONCE #7)) #6)));
         let new_goalr =
-            rexp!((SUBSTITUTION_RULE (EQUIV #1 #2 #6 (SUBSTITUTION #3 (hash #4 (NONCE #5)) #7))));
+            rexp!((SUBSTITUTION_RULE (EQUIV #1 #2 #6 (SUBSTITUTION #3 (hash #4 (NONCE #5)) (NONCE #7)))));
 
         [
             PrfRule::new(
