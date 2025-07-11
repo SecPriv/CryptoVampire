@@ -1,7 +1,7 @@
 use cryptovampire_macros::{smt, vec_smt};
 use cryptovampire_smt::{Smt, SmtFormula, SortedVar};
 use itertools::{Itertools, chain, izip};
-use utils::dynamic_iter;
+use utils::{dynamic_iter, ereturn_if};
 
 use crate::terms::{
     ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, Function, HAPPENS, LEQ, LT, MACRO_COND,
@@ -20,6 +20,7 @@ pub fn mk_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
         [MSmt::comment_block("term algebra")],
         mk_nonces_diff(pbl),
         mk_step_diff(pbl),
+        mk_ptcl_diff(pbl),
         [MSmt::comment_block("Protocol definition")],
         mk_steps_macros(pbl),
         mk_exists(pbl),
@@ -131,6 +132,18 @@ fn mk_step_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     Ret::A(chain! {
         [Smt::Comment("step distinctness".into())],
         mk_pseudo_datatype_diff(steps)
+    })
+}
+
+fn mk_ptcl_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
+    dynamic_iter!(Ret; Empty:A, A:B);
+    let ptcl = pbl.protocols();
+    ereturn_if!(ptcl.is_empty(), Ret::Empty(::std::iter::empty()));
+    let ptcl = ptcl.iter().map(|p| p.name().clone()).collect();
+
+    Ret::A(chain! {
+        [Smt::Comment("protocol distinctiveness".into())],
+        mk_pseudo_datatype_diff(ptcl)
     })
 }
 
