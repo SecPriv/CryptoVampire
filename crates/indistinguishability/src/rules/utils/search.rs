@@ -10,8 +10,7 @@ use crate::{
     problem::PRule,
     rules::utils::fresh::{Mode, RefFormulaBuilder},
     terms::{
-        Alias, AliasRewrite, EQ, Exists, FOBinder, Function, MACRO_COND, MACRO_MSG,
-        RecFOFormula,
+        Alias, AliasRewrite, EQ, Exists, FOBinder, Function, MACRO_COND, MACRO_MSG, RecFOFormula,
         formula_utils::{offset_rexpr_owned, offset_var},
     },
 };
@@ -111,7 +110,7 @@ pub trait SyntaxSearcher {
         assert!(builder.current_mode().is_and());
         tr!("in search_alias");
         let args = args.into_iter().collect_vec();
-        let max_var = builder.min_var()+1;
+        let max_var = builder.min_var() + 1;
         tr!("max_var = {max_var}");
 
         let builder = builder.add_node().mode(Mode::Or).build();
@@ -202,8 +201,10 @@ pub trait SyntaxSearcher {
             patt.clone().apply_pattern_subst(subst)
         };
 
-        let builder = 
-        builder.add_node().and().forall()
+        let builder = builder
+            .add_node()
+            .and()
+            .forall()
             .variables([bound_var])
             .sorts([sort])
             .min_var(n)

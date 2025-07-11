@@ -115,8 +115,7 @@ pub fn offset_var_mut(amount: u32, var: &mut Var) {
 
 pub fn offset_rexpr_mut<L>(amount: u32, f: &mut [ENodeOrVar<L>]) {
     for e in f {
-        if let ENodeOrVar::Var(v) = e
-        {
+        if let ENodeOrVar::Var(v) = e {
             offset_var_mut(amount, v);
         }
     }

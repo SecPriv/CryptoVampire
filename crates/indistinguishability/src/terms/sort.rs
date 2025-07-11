@@ -7,7 +7,7 @@ use crate::input::Registerable;
 
 #[non_exhaustive]
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Steel, Default
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Steel, Default,
 )]
 #[steel(equality)]
 pub enum Sort {
@@ -42,7 +42,7 @@ impl Sort {
 
     /// Are the two sort equal modulo [Sort::Any] ?
     #[inline]
-    pub fn unify(self, other:Self) -> bool {
+    pub fn unify(self, other: Self) -> bool {
         self.is_any() || other.is_any() || self == other
     }
 }
@@ -57,7 +57,7 @@ impl Display for Sort {
             Sort::Nonce => write!(f, "Nonce"),
             Sort::Index => write!(f, "Index"),
             Sort::SubtermStatus => write!(f, "SubtermStatus"),
-            Sort::Any => write!(f, "Any")
+            Sort::Any => write!(f, "Any"),
         }
     }
 }

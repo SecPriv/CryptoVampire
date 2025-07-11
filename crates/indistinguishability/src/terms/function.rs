@@ -13,10 +13,9 @@ use crate::{
     input::{Registerable, shared_cryptography::ShrCrypto},
     protocol::{MacroKind, ProtocolLanguage},
     terms::{
-        Alias, BUILTINS, Exists, FunctionCollection, FunctionFlags,
-        HAPPENS, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, RecFOFormula,
-        Signature, Sort, TRUE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
-        builtin,
+        Alias, BUILTINS, Exists, FunctionCollection, FunctionFlags, HAPPENS, MACRO_COND,
+        MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, RecFOFormula, Signature, Sort, TRUE,
+        UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin,
     },
 };
 
@@ -153,7 +152,7 @@ impl Function {
     // =========================================================
 
     /// Should not appear in an smt file
-    /// 
+    ///
     /// Because smt has a syntax for it, or it's a prolog trick, or ...
     #[inline]
     pub fn is_should_not_declare_in_smt(&self) -> bool {

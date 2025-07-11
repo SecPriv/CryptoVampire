@@ -5,10 +5,7 @@ use steel::rvals::CustomType;
 
 use crate::{
     Problem, rexp,
-    rules::{
-        PRF,
-        utils::generate_rule_vars0,
-    },
+    rules::{PRF, utils::generate_rule_vars0},
     terms::{Function, NONCE, Rewrite, Sort},
 };
 
@@ -35,7 +32,7 @@ fn mk_rewrite_init<'a>(
         .to(rexp!((candidate (hash #1 (NONCE #2)) #1 #2)))
         .variables([1, 2].map(egg::Var::from_u32))
         .sorts([Sort::Bitstring, Sort::Nonce])
-                    .name(format!("candidate prf success ({hash})"))
+        .name(format!("candidate prf success ({hash})"))
         .build()
 }
 

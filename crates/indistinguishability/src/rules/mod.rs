@@ -4,13 +4,11 @@ pub use prf::PRF;
 
 pub mod utils;
 
-
 mod nonce;
 pub use nonce::{FreshNonce, mk_no_guessing_smt};
 
 mod vampire;
 pub use vampire::VampireRule;
-
 
 #[cfg(test)]
 pub use prf::test as prf_test;

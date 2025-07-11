@@ -1,7 +1,5 @@
 use super::{BUILTINS, Exists, Function, FunctionFlags, PARSING_PAIRS};
-use crate::terms::{
-         InnerFunction, Signature, Sort
-    };
+use crate::terms::{InnerFunction, Signature, Sort};
 use egg::Var;
 use itertools::{Itertools, chain};
 use log::trace;

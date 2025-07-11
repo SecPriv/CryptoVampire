@@ -84,7 +84,7 @@ impl RefFormulaBuilder {
 
         /// highest variable that we are free to use (i.e., we can fearlessly
         /// bind variables above there)
-        /// 
+        ///
         /// **NB**: this value will automatically be corrected to be above any
         /// other referenced variable (by looking a the condition and the
         /// parent)

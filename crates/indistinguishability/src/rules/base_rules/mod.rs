@@ -1,6 +1,5 @@
 mod parse;
 
-
 use egg::{ENodeOrVar, Var};
 use itertools::chain;
 pub use rewrites::mk_rewrites_rules;

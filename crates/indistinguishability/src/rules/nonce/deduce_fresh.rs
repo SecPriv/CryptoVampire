@@ -5,10 +5,7 @@ use super::*;
 use crate::problem::PAnalysis;
 use crate::terms::FRESH_NONCE;
 use crate::vampire::runner::VampireExec;
-use crate::{
-    Lang,
-    rules::utils::fresh::RefFormulaBuilder,
-};
+use crate::{Lang, rules::utils::fresh::RefFormulaBuilder};
 use crate::{Problem, rexp};
 use bon::Builder;
 use cryptovampire_smt::{IntoSmt, SmtFormula};
@@ -20,9 +17,7 @@ use static_init::dynamic;
 use utils::ereturn_let;
 
 #[dynamic]
-static FRESH_NONCE_PATTERN: Pattern<Lang> = {
-    rexp!((FRESH_NONCE #0 #1 #2)).into_iter().collect()
-};
+static FRESH_NONCE_PATTERN: Pattern<Lang> = { rexp!((FRESH_NONCE #0 #1 #2)).into_iter().collect() };
 
 #[derive(Clone, Builder)]
 pub struct FreshNonce {

@@ -28,7 +28,10 @@ impl Signature {
         self.inputs.iter().copied()
     }
 
-    pub fn mk_sorted_vars(&self, from: u32) -> impl Iterator<Item = SortedVar<Sort>> + Clone + use<'_> {
+    pub fn mk_sorted_vars(
+        &self,
+        from: u32,
+    ) -> impl Iterator<Item = SortedVar<Sort>> + Clone + use<'_> {
         izip!(from.., self.inputs.iter()).map(|(i, s)| SortedVar {
             var: VarInner::Int(i as cryptovampire_smt::uvar),
             sort: *s,
@@ -36,12 +39,17 @@ impl Signature {
     }
 
     fn steel_constructor(input: Vec<Sort>, output: Sort) -> Self {
-        Self { inputs: input.into(), output }
+        Self {
+            inputs: input.into(),
+            output,
+        }
     }
 }
 
 impl Registerable for Signature {
-    fn register(module: &mut steel::steel_vm::builtin::BuiltInModule) -> &mut steel::steel_vm::builtin::BuiltInModule {
+    fn register(
+        module: &mut steel::steel_vm::builtin::BuiltInModule,
+    ) -> &mut steel::steel_vm::builtin::BuiltInModule {
         Self::register_type(module).register_fn("mk-signature", Self::steel_constructor)
     }
 }

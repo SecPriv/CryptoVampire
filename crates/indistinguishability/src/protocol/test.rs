@@ -4,8 +4,8 @@ pub mod basic_hash {
         protocol::Step,
         rexp,
         terms::{
-            Exists, Function, FunctionFlags, InnerFunction, LT, MACRO_INPUT, NONCE, PROJ_1,
-            PROJ_2, Sort, TUPLE,
+            Exists, Function, FunctionFlags, InnerFunction, LT, MACRO_INPUT, NONCE, PROJ_1, PROJ_2,
+            Sort, TUPLE,
         },
     };
     use egg::Var;

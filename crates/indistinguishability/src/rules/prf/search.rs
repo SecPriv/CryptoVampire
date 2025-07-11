@@ -1,15 +1,10 @@
 use std::rc::Rc;
 
 use cryptovampire_smt::{IntoSmt, SmtFormula};
-use egg::{
-    Pattern, PatternAst, Searcher, Var,
-};
+use egg::{Pattern, PatternAst, Searcher, Var};
 use golgge::{Dependancy, PrologRule, Rule};
 use itertools::{Itertools, chain, izip};
-use logic_formula::{
-    Formula,
-    egg::SimpleDiscriminant,
-};
+use logic_formula::{Formula, egg::SimpleDiscriminant};
 use utils::{ereturn_let, implvec};
 
 use crate::{
@@ -21,13 +16,13 @@ use crate::{
         PRF,
         utils::{
             SyntaxSearcher,
-            fresh::{ Mode, RefFormulaBuilder},
+            fresh::{Mode, RefFormulaBuilder},
             generate_rule_vars_arr,
         },
     },
     terms::{
-        EQ, FAIL, FOBinder, Function, HAPPENS, LT,
-        MACRO_EXEC, MACRO_FRAME, NONCE, RecFOFormula, Sort, VAMPIRE,
+        EQ, FAIL, FOBinder, Function, HAPPENS, LT, MACRO_EXEC, MACRO_FRAME, NONCE, RecFOFormula,
+        Sort, VAMPIRE,
     },
     vampire::runner::VampireExec,
 };
@@ -340,12 +335,14 @@ impl Search {
                 happend_cond & lt_cond
             };
 
-            let builder = 
-                builder.add_node().mode(Mode::And)
-                    .condition(condition)
-                    .variables(vars.clone())
-                    .sorts(id.signature.inputs_iter())
-                    .quantifier(FOBinder::Forall).build();
+            let builder = builder
+                .add_node()
+                .mode(Mode::And)
+                .condition(condition)
+                .variables(vars.clone())
+                .sorts(id.signature.inputs_iter())
+                .quantifier(FOBinder::Forall)
+                .build();
             self.inner_search_recexpr(pbl, &builder, cond);
             self.inner_search_recexpr(pbl, &builder, msg);
         }
@@ -386,7 +383,9 @@ impl crate::rules::utils::SyntaxSearcher for Search {
             builder.add_leaf(content);
             self.inner_search_recexpr(pbl, builder, m2);
             {
-                let builder = builder.add_node().mode(Mode::And)
+                let builder = builder
+                    .add_node()
+                    .mode(Mode::And)
                     .condition(!EQ.rapp([k2.into(), NONCE.rapp([self.clone_k()])]))
                     .quantifier(FOBinder::Forall)
                     .build();

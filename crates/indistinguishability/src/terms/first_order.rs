@@ -9,10 +9,7 @@ use egg::{Analysis, EGraph, Id, Language, PatternAst, RecExpr, Var};
 use itertools::{Itertools, izip};
 use logic_formula::{Destructed, Formula, HeadSk, egg::SimplLang};
 use smallvec::SmallVec;
-use steel::{
-    rvals::IntoSteelVal,
-    steel_vm::register_fn::RegisterFn,
-};
+use steel::{rvals::IntoSteelVal, steel_vm::register_fn::RegisterFn};
 use steel_derive::Steel;
 use utils::{dynamic_iter, ereturn_if, implvec, match_eq};
 
@@ -539,7 +536,7 @@ impl Display for RecFOFormula {
 
 impl FOBinder {
     /// The value taken by the quantifier on an empty set
-    /// 
+    ///
     /// ```text
     /// \exists => false
     /// \forall => true

@@ -39,7 +39,7 @@ pub mod terms; // <- first for macros
 mod test;
 pub(crate) mod utils;
 pub(crate) mod vampire;
-pub use input::{register, init_engine};
+pub use input::{init_engine, register};
 mod configuration;
 pub use configuration::Configuration;
 
@@ -77,4 +77,3 @@ pub fn init_logger() {
         .parse_default_env()
         .init();
 }
-

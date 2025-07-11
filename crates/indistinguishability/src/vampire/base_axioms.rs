@@ -5,8 +5,8 @@ use utils::dynamic_iter;
 
 use crate::terms::{
     ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, HAPPENS, LEQ, LT, MACRO_COND, MACRO_EXEC,
-    MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, Rewrite, SMT_ITE, SMT_SORT_LIST, TUPLE,
-    UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
+    MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, Rewrite, SMT_ITE, SMT_SORT_LIST, TUPLE, UNFOLD_COND,
+    UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
 };
 use crate::vampire::convert::{formula_to_smt, var_to_smt};
 use crate::{MSmt, MSmtFormula};

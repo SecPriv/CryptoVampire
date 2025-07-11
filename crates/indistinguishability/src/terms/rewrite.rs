@@ -34,7 +34,7 @@ pub struct Rewrite {
     pub prolog_only: bool,
 
     #[builder(into)]
-    pub name: Option<Cow<'static, str>>
+    pub name: Option<Cow<'static, str>>,
 }
 
 impl Rewrite {
@@ -65,10 +65,10 @@ impl Rewrite {
             variables,
             sorts,
             prolog_only: false,
-            name: Some(name.into())
+            name: Some(name.into()),
         })
     }
-    
+
     pub fn prolog_only(&self) -> bool {
         self.prolog_only
     }

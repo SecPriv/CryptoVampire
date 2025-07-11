@@ -1,6 +1,7 @@
 pub mod basic_hash {
     use crate::{
-        Problem, protocol::test::basic_hash::{
+        Problem,
+        protocol::test::basic_hash::{
             MFunction, insert_rf, insert_rs, insert_rw, insert_tag, populate_functions,
         },
     };

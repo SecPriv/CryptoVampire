@@ -6,7 +6,7 @@ use indistinguishability::{
 };
 use steel::steel_vm::{builtin::BuiltInModule, engine::Engine};
 
-static CV_PRELUDE : &str = include_str!("./input/prelude.scm");
+static CV_PRELUDE: &str = include_str!("./input/prelude.scm");
 pub fn main() {
     init_logger();
 
@@ -17,7 +17,7 @@ pub fn main() {
 
     // let res = init_engine().run(pgrm).unwrap();
     match init_engine().run(pgrm.clone()) {
-        Err(e) =>  eprintln!("{}", e.emit_result_to_string("stdin", CV_PRELUDE)),
+        Err(e) => eprintln!("{}", e.emit_result_to_string("stdin", CV_PRELUDE)),
         Ok(res) => {
             for r in res {
                 println!("{r}")

@@ -190,12 +190,14 @@ impl Nonce {
                 happend_cond & lt_cond
             };
 
-            let builder =
-                builder.add_node().mode(Mode::And)
-                    .condition(condition)
-                    .variables(vars.clone())
-                    .sorts(id.signature.inputs_iter())
-                    .quantifier(FOBinder::Forall).build();
+            let builder = builder
+                .add_node()
+                .mode(Mode::And)
+                .condition(condition)
+                .variables(vars.clone())
+                .sorts(id.signature.inputs_iter())
+                .quantifier(FOBinder::Forall)
+                .build();
             self.inner_search_recexpr(pbl, &builder, cond);
             self.inner_search_recexpr(pbl, &builder, msg);
         }

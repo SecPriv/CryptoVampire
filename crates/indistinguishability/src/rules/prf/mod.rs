@@ -27,7 +27,7 @@ pub struct PRF {
     search_bitstring: Function,
     search_bool: Function,
     search_trigger: Function,
-    index: usize
+    index: usize,
 }
 
 macro_rules! declare {
@@ -75,7 +75,7 @@ impl PRF {
             search_bitstring,
             search_bool,
             search_trigger,
-            index: pos
+            index: pos,
         };
 
         {
@@ -152,13 +152,13 @@ impl PRF {
     }
 
     /// Generate the pattern to do the deep search
-    /// 
+    ///
     /// use variables 0..=3
     fn search_trigger_pattern(&self) -> impl Iterator<Item = LangVar> {
         let Self { search_trigger, .. } = self;
         rexp!((search_trigger #0 #1 #2 #3)).into_iter()
     }
-    
+
     pub fn index(&self) -> usize {
         self.index
     }
