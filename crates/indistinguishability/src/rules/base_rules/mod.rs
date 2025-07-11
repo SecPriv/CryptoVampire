@@ -11,12 +11,13 @@ use utils::implvec;
 use crate::Problem;
 use crate::problem::{PRule, RcRule};
 mod equiv;
-// mod substitution;
+mod substitution;
 
 pub fn mk_prolog_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
     chain![
         pbl.extra_rules().iter().cloned(),
-        mk_equiv_rules(pbl).map(|x| x.into_mrc())
+        mk_equiv_rules(pbl).map(|x| x.into_mrc()),
+        [substitution::SubstRule.into_mrc()]
     ]
 }
 
