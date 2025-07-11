@@ -9,6 +9,7 @@ use cryptovampire_smt::Smt;
 use egg::{EGraph, RecExpr};
 use golgge::{Program, Rule};
 use itertools::{Itertools, chain};
+use log::trace;
 use logic_formula::egg::SimpleDiscriminant;
 use utils::implvec;
 
@@ -51,7 +52,11 @@ pub struct Problem {
     extra_rewrite: Vec<Rewrite>,
     extra_smt: Vec<MSmt>,
 
+    /// cache for the smt prelude
     smt_prelude: Option<Vec<MSmt>>,
+
+    /// the current step in the run (if any)
+    current_step: Option<CurrentStep>,
 }
 
 impl Default for Problem {
@@ -107,22 +112,34 @@ impl Problem {
         let p1f = self.protocols[p1].name().clone();
         let p2f = self.protocols[p2].name().clone();
 
+        // the result of the computation
         let mut res = true;
 
-        {
-            tr!("running input step");
-            assert_eq!(
-                self.protocols[p1].steps()[0].id.name,
-                "init",
-                "the first step isn't an `init` (in p1)"
-            );
-            assert_eq!(
-                self.protocols[p2].steps()[0].id.name,
-                "init",
-                "the first step isn't an `init` (in p2)"
-            );
+        // the steps in the problem
+        let mut steps = {
+            // just to make things cleaner
+            let get_steps = |i: usize| {
+                self.protocols[i]
+                    .steps()
+                    .iter()
+                    .map(|s| s.id.clone())
+                    .collect_vec()
+            };
 
-            let init = self.get_init_fun().clone();
+            let steps = get_steps(p1);
+            assert!(
+                steps == get_steps(p2),
+                "not the same steps in both protocols!"
+            );
+            steps.into_iter().enumerate()
+        };
+
+        if let Some((idx, init)) = steps.next() {
+            debug_assert_eq!(idx, 0);
+            self.current_step = Some(CurrentStep { idx, args: vec![] });
+
+            tr!("running input step");
+            assert_eq!(init.name, "init");
 
             // we add to `extra_smt` things specific to this run that need to be reflected in smt
             self.extra_smt_mut()
@@ -147,23 +164,16 @@ impl Problem {
                     depth,
                 )
                 .as_bool();
+        } else {
+            trace!("empty problem");
+            return true;
         }
 
-        // just to make things cleaner
-        let get_steps = |i: usize| {
-            self.protocols[i]
-                .steps()
-                .iter()
-                .map(|s| s.id.clone())
-                .collect_vec()
-        };
+        for (idx, s) in steps {
+            self.current_step = None;
 
-        let steps = get_steps(p1);
-        assert!(steps == get_steps(p2));
-
-        for s in &steps[1..] {
             if !res {
-                // early exists if we failed to prive one result
+                // early exists if we failed to prove one result
                 tr!("false!");
                 return res;
             }
@@ -186,6 +196,11 @@ impl Problem {
                         .call()
                 })
                 .collect_vec();
+
+            self.current_step = Some(CurrentStep {
+                idx,
+                args: args.clone(),
+            });
 
             self.extra_smt.push(Smt::mk_assert({
                 let args = args.iter().map(|f| smt!(f));
@@ -344,6 +359,11 @@ impl Problem {
         Some(n)
     }
 
+    /// returns the [Function] associated to the `index`th [Step] if it exists
+    pub fn get_step_name(&self, index: usize) -> Option<&Function> {
+        self.protocols().first()?.steps().get(index).map(|s| &s.id)
+    }
+
     pub fn num_protocols(&self) -> usize {
         self.protocols().len()
     }
@@ -360,6 +380,10 @@ impl Problem {
         let ret = std::array::from_fn(|i| i + self.cryptography.len());
         self.cryptography.extend(ret.map(|_| Default::default()));
         ret
+    }
+
+    pub(crate) fn current_step(&self) -> Option<&CurrentStep> {
+        self.current_step.as_ref()
     }
 }
 
@@ -430,6 +454,7 @@ impl Problem {
             extra_rewrite,
             extra_smt,
             smt_prelude,
+            current_step: None,
         }
     }
 
@@ -528,6 +553,16 @@ where
         self.cryptography.extend(crypto);
         self
     }
+}
+
+#[derive(Clone)]
+pub(crate) struct CurrentStep {
+    /// index in the [Problem]
+    pub idx: usize,
+    /// specific arguments given for this run
+    ///
+    /// All the [Function]s are constants
+    pub args: Vec<Function>,
 }
 
 // #[cfg(test)]

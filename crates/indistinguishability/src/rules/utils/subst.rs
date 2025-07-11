@@ -4,16 +4,18 @@ use egg::{
 };
 use itertools::{Itertools, chain};
 use logic_formula::egg::SimpleDiscriminant;
+use utils::dynamic_iter;
 
+use crate::problem::CurrentStep;
 use crate::rules::utils::generate_rule_vars;
-use crate::terms::{Function, SUBSTITUTION};
+use crate::terms::{Function, MACRO_EXEC, MACRO_FRAME, PRED, SUBSTITUTION};
 use crate::{Lang, Problem, rexp};
 
 /// you should **not** use these rule with the other ones
 pub fn mk_subst_rw<'a, N: Analysis<Lang>>(
     pbl: &'a Problem,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'a, N> {
-    chain![[mk_rw_self()], mk_rw_base(pbl)]
+    chain![[mk_rw_self()], mk_rw_base(pbl), mk_rec_shortcut(pbl)]
 }
 
 fn mk_rw_self<N: Analysis<Lang>>() -> Rewrite<Lang, N> {
@@ -26,6 +28,41 @@ fn mk_rw_self<N: Analysis<Lang>>() -> Rewrite<Lang, N> {
         Pattern::from(conclusion),
     )
     .unwrap()
+}
+
+fn mk_rec_shortcut<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = Rewrite<Lang, N>> {
+    dynamic_iter!(Ret; Empty:A, Full:B);
+
+    if let Some(CurrentStep { idx, args }) = pbl.current_step()
+        && *idx != 0
+        && let Some(s) = pbl.get_step_name(*idx)
+    {
+        let n = args.len();
+        let [x, y, p] = ::std::array::from_fn(|i| [ENodeOrVar::Var((i as u32).into())]);
+
+        let fun: PatternAst<Lang> = chain![
+            args.iter().map(|f: &Function| f.app_id([])),
+            [s.app_id((0..n).map(Id::from)), PRED.app_id([n.into()])]
+        ]
+        .map(ENodeOrVar::ENode)
+        .collect();
+        Ret::Full(
+            [&MACRO_EXEC, &MACRO_FRAME]
+                .map(|mf| {
+                    let m = mf.app_var(&[fun.as_ref(), &p]);
+                    let premise = SUBSTITUTION.app_var(&[m.as_ref(), &x, &y]);
+                    Rewrite::new(
+                        format!("subst_macro {mf}"),
+                        Pattern::new(premise),
+                        Pattern::new(m),
+                    )
+                    .unwrap()
+                })
+                .into_iter(),
+        )
+    } else {
+        Ret::Empty(::std::iter::empty())
+    }
 }
 
 /// substitution for regular functions
