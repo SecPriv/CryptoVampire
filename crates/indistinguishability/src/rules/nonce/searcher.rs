@@ -136,13 +136,6 @@ impl Nonce {
 
         {
             // pos
-            // let cond = Condition {
-            //     condition: c.clone(),
-            //     variables: vec![],
-            //     sorts: vec![],
-            //     quantifier: FOBinder::Forall,
-            // };
-            // let builder = builder.add_node(Mode::Or, Some(cond));
             let builder = builder
                 .add_node()
                 .or()
@@ -153,13 +146,6 @@ impl Nonce {
         }
         {
             // neg
-            // let cond = Condition {
-            //     condition: !c,
-            //     variables: vec![],
-            //     sorts: vec![],
-            //     quantifier: FOBinder::Forall,
-            // };
-            // let builder = builder.add_node(Mode::Or, Some(cond));
             let builder = builder.add_node().or().forall().condition(!c).build();
             self.search_egraph(egraph, builder, r, visited);
         }
@@ -201,17 +187,10 @@ impl Nonce {
                 let happend_cond = HAPPENS.rapp([named.clone()]);
                 let lt_cond = LT.rapp([named.clone(), time.clone()]);
 
-                // let condition = happend_cond & lt_cond;
-                // Condition {
-                //     condition,
-                //     variables: vars.clone(),
-                //     sorts: id.signature.inputs_iter().collect(),
-                //     quantifier: FOBinder::Forall,
-                // }
                 happend_cond & lt_cond
             };
 
-            let builder = //builder.add_node(Mode::And, Some(condition));
+            let builder =
                 builder.add_node().mode(Mode::And)
                     .condition(condition)
                     .variables(vars.clone())

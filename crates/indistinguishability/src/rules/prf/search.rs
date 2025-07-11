@@ -340,17 +340,10 @@ impl Search {
                 let happend_cond = HAPPENS.rapp([named.clone()]);
                 let lt_cond = LT.rapp([named.clone(), time.clone()]);
 
-                // let condition = happend_cond & lt_cond;
-                // Condition {
-                //     condition,
-                //     variables: vars.clone(),
-                //     sorts: id.signature.inputs_iter().collect(),
-                //     quantifier: FOBinder::Forall,
-                // }
                 happend_cond & lt_cond
             };
 
-            let builder = //builder.add_node(Mode::And, Some(condition));
+            let builder = 
                 builder.add_node().mode(Mode::And)
                     .condition(condition)
                     .variables(vars.clone())
@@ -396,15 +389,6 @@ impl crate::rules::utils::SyntaxSearcher for Search {
             builder.add_leaf(content);
             self.inner_search_recexpr(pbl, builder, m2);
             {
-                // let builder = builder.add_node(
-                //     Mode::And,
-                //     Some(Condition {
-                //         condition: (!EQ.rapp([k2.into(), NONCE.rapp([self.clone_k()])])),
-                //         quantifier: FOBinder::Forall,
-                //         variables: vec![],
-                //         sorts: vec![],
-                //     }),
-                // );
                 let builder = builder.add_node().mode(Mode::And)
                     .condition(!EQ.rapp([k2.into(), NONCE.rapp([self.clone_k()])]))
                     .quantifier(FOBinder::Forall)

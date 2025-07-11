@@ -105,17 +105,10 @@ fn mk_smt_step<'a>(pbl:&'a Problem, ptcl: &'a Protocol) -> MSmtFormula {
                 let happend_cond = HAPPENS.rapp([named.clone()]);
                 let lt_cond = LT.rapp([named.clone(), RecFOFormula::Var(t)]);
 
-                // let condition = happend_cond & lt_cond;
-                // Condition {
-                //     condition,
-                //     variables: vars.clone(),
-                //     sorts: id.signature.inputs_iter().collect(),
-                //     quantifier: FOBinder::Forall,
-                // }
                 happend_cond & lt_cond
             };
 
-            let builder = //builder.add_node(Mode::And, Some(condition));
+            let builder =
                 builder.add_node().and().forall()
                     .condition(condition)
                     .variables(vars)

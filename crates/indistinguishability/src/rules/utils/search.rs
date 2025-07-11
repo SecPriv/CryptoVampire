@@ -116,13 +116,6 @@ pub trait SyntaxSearcher {
         assert!(builder.current_mode().is_and());
         tr!("in search_alias");
         let args = args.into_iter().collect_vec();
-        // let max_var = args
-        //     .iter()
-        //     .flat_map(|arg| arg.used_vars_iter())
-        //     .filter_map(|v| v.expose().try_into_num().ok())
-        //     .max()
-        //     .unwrap_or(0)
-        //     + 1;
         let max_var = builder.min_var()+1;
         tr!("max_var = {max_var}");
 
@@ -157,13 +150,6 @@ pub trait SyntaxSearcher {
                 izip!(args.iter(), from.iter())
                     .map(|(arg, f)| EQ.rapp(vec![RecFOFormula::from(*arg), f.as_ref().into()])),
             );
-            // let condition = Condition {
-            //     condition,
-            //     variables: variables.to_vec(),
-            //     sorts: sorts.to_vec(),
-            //     quantifier: FOBinder::Exists,
-            // };
-            // let builder = builder.add_node(Mode::And, Some(condition));
             let builder = builder
                 .add_node()
                 .mode(Mode::And)
@@ -216,32 +202,12 @@ pub trait SyntaxSearcher {
         let bound_var = offset_var(n, *bound_var);
         let patt = offset_rexpr_owned(n, patt.iter().cloned());
 
-        // capture avoiding substitution. We need to rename the bound variable of the exists in case it clashes
-        // let nvar;
         let content = {
             let subst = izip!(vars.iter().cloned(), args).collect_vec();
-            // let max_var = subst
-            //     .iter()
-            //     .flat_map(|(_, x)| x.free_vars_iter())
-            //     .filter_map(|v| match v.expose() {
-            //         egg::VarExposed::Num(n) => Some(n),
-            //         _ => None,
-            //     })
-            //     .max()
-            //     .unwrap_or(0);
-            // nvar = Var::from_u32(max_var);
-            // subst.push((*bound_var, vec![ENodeOrVar::Var(nvar)].into()));
-
             patt.clone().apply_pattern_subst(subst)
         };
 
-        // let condition = Condition {
-        //     condition: RecFOFormula::True(),
-        //     variables: vec![nvar],
-        //     sorts: vec![sort],
-        //     quantifier: FOBinder::Forall,
-        // };
-        let builder = //builder.add_node(Mode::And, Some(condition));
+        let builder = 
         builder.add_node().and().forall()
             .variables([bound_var])
             .sorts([sort])
