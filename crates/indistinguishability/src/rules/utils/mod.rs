@@ -2,7 +2,6 @@ pub mod fresh;
 
 mod search;
 use egg::Var;
-use itertools::chain;
 pub use search::{SyntaxSearcher, default_is_special};
 
 use crate::{LangVar, terms::Function};

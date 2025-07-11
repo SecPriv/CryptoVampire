@@ -12,11 +12,11 @@ use crate::{
     },
     terms::{
         BITE, EQ, FOBinder, Function, HAPPENS, LT, MACRO_FRAME, MITE, NONCE, PRED, RecFOFormula,
-        formula_utils::{offset_rexpr_owned, pull_from_egraph},
+        formula_utils::pull_from_egraph,
     },
 };
-use bon::{Builder, bon};
-use egg::{Analysis, EGraph, Id, Var};
+use bon::bon;
+use egg::{Analysis, EGraph, Id};
 use itertools::Itertools;
 use logic_formula::{Formula, egg::SimplLang};
 use std::borrow::Cow;

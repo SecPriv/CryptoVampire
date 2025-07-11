@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use egg::{Id, Pattern, Searcher, Var};
-use golgge::{Dependancy, PrologRule, Rule};
+use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain};
 use logic_formula::egg::SimpleDiscriminant;
 use utils::ereturn_let;

@@ -1,13 +1,12 @@
 use std::fmt::Display;
 
-use bon::{Builder, bon, builder};
+use bon::bon;
 use cryptovampire_macros::smt;
 use cryptovampire_smt::{Smt, SortedVar};
 use egg::{Analysis, ENodeOrVar, Pattern, PatternAst, RecExpr, Rewrite, Var};
 use itertools::{Itertools, izip};
 use log::trace;
 use logic_formula::{Formula, egg::SimpleDiscriminant};
-use utils::implvec;
 
 use crate::{
     Lang, LangVar, MSmt, MSmtFormula, rexp,

@@ -1,6 +1,5 @@
 use egg::VarExposed;
 use steel::rvals::{FromSteelVal, IntoSteelVal};
-use steel_derive::Steel;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SVar(u32);

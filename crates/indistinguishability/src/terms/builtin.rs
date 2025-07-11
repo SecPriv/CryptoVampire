@@ -3,7 +3,7 @@ use super::{
     Sort::{self, *},
 };
 use cryptovampire_macros::{declare_recexpr, mk_builtin_funs};
-use std::{borrow::Cow, ops::BitOr};
+use std::borrow::Cow;
 
 /// helper to write const signatures
 macro_rules! s {

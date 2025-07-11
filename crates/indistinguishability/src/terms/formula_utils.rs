@@ -10,7 +10,7 @@ use itertools::{EitherOrBoth, Itertools, izip};
 use log::error;
 use logic_formula::{Destructed, Formula, HeadSk, egg::SimplLang};
 use std::{borrow::Cow, collections::VecDeque};
-use utils::{ebreak_if, econtinue_if, econtinue_let, ereturn_if, implvec};
+use utils::{econtinue_if, ereturn_if, implvec};
 
 declare_trace!($"formula_utils");
 

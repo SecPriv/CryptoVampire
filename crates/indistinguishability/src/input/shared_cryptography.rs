@@ -4,7 +4,7 @@ use steel_derive::Steel;
 use crate::{
     input::{Registerable, shared_problem::ShrProblem},
     rules::PRF,
-    terms::{CryptographicAssumption, Function},
+    terms::Function,
 };
 
 #[derive(Debug, Clone, Steel)]

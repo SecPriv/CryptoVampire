@@ -1,22 +1,17 @@
 use std::borrow::Cow;
 
-use egg::{ENodeOrVar, Pattern, PatternAst, RecExpr, Var, VarExposed};
-use golgge::PrologRule;
-use itertools::{Itertools, chain, izip, max};
+use egg::{RecExpr, Var, VarExposed};
+use itertools::{Itertools, izip};
 use logic_formula::{Destructed, Formula, HeadSk, egg::SimpleDiscriminant};
 use utils::{ereturn_if, ereturn_let, implvec};
 
 use crate::{
-    Lang, LangVar, Problem,
-    problem::{PRule, RcRule},
-    rexp,
-    rules::{
-        PRF,
-        utils::fresh::{Mode, RefFormulaBuilder},
-    },
+    LangVar, Problem,
+    problem::PRule,
+    rules::utils::fresh::{Mode, RefFormulaBuilder},
     terms::{
-        Alias, AliasRewrite, EQ, Exists, FAIL, FOBinder, Function, MACRO_COND, MACRO_MSG, NONCE,
-        RecFOFormula, Sort, VAMPIRE,
+        Alias, AliasRewrite, EQ, Exists, FOBinder, Function, MACRO_COND, MACRO_MSG,
+        RecFOFormula,
         formula_utils::{offset_rexpr_owned, offset_var},
     },
 };

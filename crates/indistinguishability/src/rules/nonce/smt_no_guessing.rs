@@ -1,14 +1,13 @@
 use std::u32;
 
-use cryptovampire_macros::{smt, vec_smt};
+use cryptovampire_macros::smt;
 use cryptovampire_smt::{IntoSmt, SortedVar};
 use egg::Var;
 use itertools::{chain, Itertools};
 use log::trace;
-use utils::ereturn_if;
 
 use crate::{
-    protocol::{Protocol, Step}, rules::{nonce::Nonce, utils::{fresh::{ Mode, RefFormulaBuilder}, SyntaxSearcher}}, terms::{formula_utils::{offset_rexpr_owned, offset_var}, FOBinder, Function, RecFOFormula, Sort, HAPPENS, IS_INDEPENDANT_BITSTRING, IS_INDEPENDANT_BOOL, LT, MACRO_EXEC, MACRO_FRAME, NONCE}, MSmt, MSmtFormula, Problem
+    protocol::{Protocol, Step}, rules::{nonce::Nonce, utils::{fresh::RefFormulaBuilder, SyntaxSearcher}}, terms::{formula_utils::{offset_rexpr_owned, offset_var}, Function, RecFOFormula, Sort, HAPPENS, IS_INDEPENDANT_BITSTRING, LT, MACRO_FRAME, NONCE}, MSmt, MSmtFormula, Problem
 };
 
 

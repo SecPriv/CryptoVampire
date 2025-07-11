@@ -3,32 +3,21 @@ use std::rc::Rc;
 
 use super::*;
 use crate::problem::PAnalysis;
-use crate::protocol::Step;
-use crate::rules::utils::SyntaxSearcher;
-use crate::rules::utils::fresh::{ Mode};
-use crate::terms::formula_utils::{offset_rexpr_owned, pull_from_egraph};
-use crate::terms::{
-    BITE, EQ, FOBinder, FRESH_NONCE, HAPPENS, LT, MACRO_COND, MACRO_FRAME, MACRO_MSG, MITE, NONCE,
-    PRED,
-};
+use crate::terms::FRESH_NONCE;
 use crate::vampire::runner::VampireExec;
 use crate::{
     Lang,
     rules::utils::fresh::RefFormulaBuilder,
-    terms::{Function, RecFOFormula},
 };
-use crate::{LangVar, Problem, rexp};
+use crate::{Problem, rexp};
 use bon::Builder;
-use cryptovampire_smt::{IntoSmt, Smt, SmtFormula};
-use egg::{Analysis, EGraph, Id, Pattern, PatternAst, Searcher, VarExposed};
-use egg::{ENodeOrVar, Language, RecExpr, Var};
+use cryptovampire_smt::{IntoSmt, SmtFormula};
+use egg::{Id, Pattern, Searcher};
+use egg::{Language, Var};
 use golgge::{Dependancy, Rule};
-use itertools::{Itertools, chain, izip};
-use logic_formula::egg::SimplLang;
-use logic_formula::{Destructed, Formula, HeadSk};
+use itertools::Itertools;
 use static_init::dynamic;
-use utils::traits::Named;
-use utils::{ereturn_if, ereturn_let, implvec};
+use utils::ereturn_let;
 
 #[dynamic]
 static FRESH_NONCE_PATTERN: Pattern<Lang> = {

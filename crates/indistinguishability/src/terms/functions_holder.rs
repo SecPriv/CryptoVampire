@@ -1,11 +1,7 @@
 use super::{BUILTINS, Exists, Function, FunctionFlags, PARSING_PAIRS};
-use crate::{
-    terms::{
-         Alias, InnerFunction, Signature, Sort
-    },
-    utils::fresh_name,
-};
-use bon::bon;
+use crate::terms::{
+         InnerFunction, Signature, Sort
+    };
 use egg::Var;
 use itertools::{Itertools, chain};
 use log::trace;

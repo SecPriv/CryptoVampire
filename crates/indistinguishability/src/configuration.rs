@@ -1,4 +1,3 @@
-use steel::rvals::FromSteelVal;
 use steel_derive::Steel;
 
 #[derive(Debug, Steel)]

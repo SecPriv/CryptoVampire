@@ -7,11 +7,11 @@ use crate::{
 };
 use bon::Builder;
 use cryptovampire_smt::{IntoSmt, Smt};
-use egg::{ENodeOrVar, Pattern, RecExpr, Searcher, Var};
+use egg::{Pattern, RecExpr, Searcher, Var};
 use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain};
 use static_init::dynamic;
-use std::{borrow::Cow, io::Write, rc::Rc};
+use std::{borrow::Cow, rc::Rc};
 use utils::ereturn_let;
 
 declare_trace!($"vampire_rule");

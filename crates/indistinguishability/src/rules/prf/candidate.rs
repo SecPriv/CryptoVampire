@@ -1,14 +1,13 @@
-use egg::{Analysis, ENodeOrVar, Id, Language, Pattern, PatternAst};
+use egg::{ENodeOrVar, Id};
 use itertools::{Itertools, chain};
 use logic_formula::egg::SimpleDiscriminant;
 use steel::rvals::CustomType;
 
 use crate::{
-    Lang, Problem, rexp,
+    Problem, rexp,
     rules::{
         PRF,
-        prf::candidate,
-        utils::{generate_rule_vars, generate_rule_vars_arr, generate_rule_vars0},
+        utils::generate_rule_vars0,
     },
     terms::{Function, NONCE, Rewrite, Sort},
 };

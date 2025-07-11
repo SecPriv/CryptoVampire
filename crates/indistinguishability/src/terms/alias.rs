@@ -3,7 +3,6 @@ use crate::{
     input::{Registerable, var::SVar},
     terms::{RecFOFormula, Sort},
 };
-use egg::PatternAst;
 use itertools::Itertools;
 use serde::Serialize;
 use steel::rvals::{FromSteelVal, IntoSteelVal};

@@ -1,17 +1,16 @@
-use std::{marker::PhantomData, rc::Rc};
+use std::rc::Rc;
 
-use bon::Builder;
-use cryptovampire_smt::{IntoSmt, Smt, SmtFormula};
+use cryptovampire_smt::{IntoSmt, SmtFormula};
 use egg::{
-    Analysis, EGraph, ENodeOrVar, Id, Pattern, PatternAst, RecExpr, Searcher, Var, VarExposed,
+    Pattern, PatternAst, Searcher, Var,
 };
 use golgge::{Dependancy, PrologRule, Rule};
 use itertools::{Itertools, chain, izip};
 use logic_formula::{
-    Destructed, Formula, Head, HeadSk,
-    egg::{SimplLang, SimpleDiscriminant},
+    Formula,
+    egg::SimpleDiscriminant,
 };
-use utils::{dynamic_iter, ereturn_if, ereturn_let, implvec};
+use utils::{ereturn_let, implvec};
 
 use crate::{
     Lang, LangVar, Problem,
@@ -20,7 +19,6 @@ use crate::{
     rexp,
     rules::{
         PRF,
-        prf::search,
         utils::{
             SyntaxSearcher,
             fresh::{ Mode, RefFormulaBuilder},
@@ -28,9 +26,8 @@ use crate::{
         },
     },
     terms::{
-        Alias, AliasRewrite, EQ, Exists, FAIL, FOBinder, Function, HAPPENS, LT, MACRO_COND,
-        MACRO_EXEC, MACRO_FRAME, MACRO_MSG, NONCE, RecFOFormula, Sort, VAMPIRE,
-        formula_utils::offset_rexpr_owned,
+        EQ, FAIL, FOBinder, Function, HAPPENS, LT,
+        MACRO_EXEC, MACRO_FRAME, NONCE, RecFOFormula, Sort, VAMPIRE,
     },
     vampire::runner::VampireExec,
 };

@@ -2,7 +2,6 @@ use std::{
     borrow::{Borrow, BorrowMut},
     cell::{Ref, RefCell, RefMut},
     fmt::Display,
-    marker::PhantomData,
     mem::ManuallyDrop,
     rc::{Rc, Weak},
 };

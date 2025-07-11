@@ -10,13 +10,11 @@ use itertools::{Itertools, izip};
 use logic_formula::{Destructed, Formula, HeadSk, egg::SimplLang};
 use smallvec::SmallVec;
 use steel::{
-    SteelErr,
-    rerrs::ErrorKind,
-    rvals::{FromSteelVal, IntoSteelVal},
+    rvals::IntoSteelVal,
     steel_vm::register_fn::RegisterFn,
 };
 use steel_derive::Steel;
-use utils::{dynamic_iter, econtinue_if, ereturn_if, ereturn_let, implvec, match_eq};
+use utils::{dynamic_iter, ereturn_if, implvec, match_eq};
 
 use crate::{
     Lang, LangVar,

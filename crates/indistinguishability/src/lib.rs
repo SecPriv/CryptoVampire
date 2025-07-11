@@ -1,7 +1,6 @@
 use cryptovampire_smt::{Smt, SmtFormula};
 use logic_formula::egg::{SimplLang, SimplLangVar};
-use std::{io::Write, u128};
-use steel::steel_vm::{builtin::BuiltInModule, engine::Engine};
+use std::io::Write;
 use terms::{Function, Sort};
 
 // ~~~~~~~~~~~~~~~~ macros ~~~~~~~~~~~~~~~~~~

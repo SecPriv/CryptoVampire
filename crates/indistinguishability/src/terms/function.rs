@@ -1,7 +1,7 @@
 use cryptovampire_smt::SmtHead;
 use logic_formula::egg::{SimplLang, SimpleDiscriminant};
 use serde::Serialize;
-use std::{any::TypeId, borrow::Cow, fmt::Display, ops::Deref};
+use std::{borrow::Cow, fmt::Display, ops::Deref};
 use steel::{
     rvals::{CustomType, IntoSteelVal},
     steel_vm::register_fn::RegisterFn,
@@ -13,7 +13,7 @@ use crate::{
     input::{Registerable, shared_cryptography::ShrCrypto},
     protocol::{MacroKind, ProtocolLanguage},
     terms::{
-        Alias, BUILTINS, CryptographicAssumption, Exists, FunctionCollection, FunctionFlags,
+        Alias, BUILTINS, Exists, FunctionCollection, FunctionFlags,
         HAPPENS, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, RecFOFormula,
         Signature, Sort, TRUE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
         builtin,

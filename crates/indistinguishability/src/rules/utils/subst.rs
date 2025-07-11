@@ -1,12 +1,12 @@
 use egg::{
     Analysis, ConditionEqual, ConditionNot, ConditionalApplier, ENodeOrVar, Id, Pattern,
-    PatternAst, Rewrite, Var,
+    PatternAst, Rewrite,
 };
 use itertools::{Itertools, chain};
 use logic_formula::egg::SimpleDiscriminant;
 
 use crate::{
-    Lang, LangVar, Problem, rexp,
+    Lang, Problem, rexp,
     rules::utils::generate_rule_vars,
     terms::{Function, SUBSTITUTION},
 };

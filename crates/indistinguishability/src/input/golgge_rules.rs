@@ -1,4 +1,3 @@
-use egg::PatternAst;
 use golgge::PrologRule;
 use steel_derive::Steel;
 

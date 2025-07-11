@@ -1,9 +1,7 @@
 mod parse;
 
-use std::rc::Rc;
 
 use egg::{ENodeOrVar, Var};
-use golgge::{PrologRule, Rule};
 use itertools::chain;
 pub use rewrites::mk_rewrites_rules;
 mod rewrites;
@@ -12,7 +10,7 @@ pub use equiv::mk_equiv_rules;
 use utils::implvec;
 
 use crate::{
-    Lang, Problem,
+    Problem,
     problem::{PRule, RcRule},
 };
 mod equiv;

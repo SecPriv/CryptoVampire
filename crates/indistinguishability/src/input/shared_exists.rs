@@ -4,11 +4,11 @@ use std::{
 };
 
 use itertools::Itertools;
-use steel::{SteelErr, rerrs::ErrorKind, steel_vm::register_fn::RegisterFn};
+use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
 use crate::{
-    input::{Registerable, convert_var, shared_problem::ShrProblem, var::SVar},
+    input::{Registerable, shared_problem::ShrProblem, var::SVar},
     terms::{Exists, Function, RecFOFormula},
 };
 

@@ -1,7 +1,5 @@
 use std::{
-    any::TypeId,
     cell::{Ref, RefCell, RefMut},
-    ops::{Deref, DerefMut},
     rc::Rc,
 };
 
@@ -12,7 +10,7 @@ use steel_derive::Steel;
 
 use crate::{
     MSmt, Problem,
-    input::{Registerable, golgge_rules::Rule, register, shared_exists::ShrExists, var::SVar},
+    input::{Registerable, golgge_rules::Rule, shared_exists::ShrExists, var::SVar},
     protocol::Step,
     terms::{Function, RecFOFormula, Rewrite, Sort},
 };

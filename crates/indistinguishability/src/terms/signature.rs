@@ -1,9 +1,8 @@
 use crate::{input::Registerable, terms::Sort};
 use cryptovampire_smt::{SortedVar, VarInner};
 use itertools::izip;
-use log::trace;
 use serde::{Deserialize, Serialize};
-use steel::{rvals::{FromSteelVal, IntoSteelVal}, steel_vm::register_fn::RegisterFn};
+use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 use utils::implvec;
 

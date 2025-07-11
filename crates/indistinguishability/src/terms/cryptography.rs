@@ -4,9 +4,7 @@ use utils::dynamic_iter;
 
 use crate::{
     MSmt, Problem,
-    problem::RcRule,
     rules::{self, mk_no_guessing_smt},
-    terms::Function,
 };
 
 #[derive(Debug, Default)]

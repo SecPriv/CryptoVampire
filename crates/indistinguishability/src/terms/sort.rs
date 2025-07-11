@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{default, fmt::{write, Display}};
+use std::fmt::Display;
 use steel::{rvals::IntoSteelVal, steel_vm::register_fn::RegisterFn};
 use steel_derive::Steel;
 

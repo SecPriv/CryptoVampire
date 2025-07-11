@@ -4,19 +4,18 @@
 //! subst(m, x, y) -> m[x -> y]
 //! ```
 
-use egg::{Analysis, ENodeOrVar, Pattern, PatternAst, RecExpr, Rewrite, Runner, Searcher, Var};
+use egg::{Pattern, RecExpr, Searcher, Var};
 use golgge::{Dependancy, Rule};
-use itertools::{Itertools, chain};
-use logic_formula::egg::SimpleDiscriminant;
+use itertools::Itertools;
 use static_init::dynamic;
-use utils::{ereturn_if, ereturn_let};
+use utils::ereturn_let;
 
 use crate::{
-    Lang, Problem,
+    Lang,
     problem::PAnalysis,
     rexp,
     rules::utils::mk_subst_rw,
-    terms::{Function, SUBSTITUTION, SUBSTITUTION_RULE},
+    terms::SUBSTITUTION_RULE,
 };
 
 #[dynamic]

@@ -7,7 +7,7 @@ use crate::{
     rexp,
     rules::{
         FreshNonce, VampireRule,
-        base_rules::{mk_equiv_rules, mk_prolog_rules, mk_rewrites_rules},
+        base_rules::{mk_prolog_rules, mk_rewrites_rules},
     },
     terms::{
         Alias, CryptographicAssumption, EMPTY, EQUIV, Function, FunctionCollection, FunctionFlags,
@@ -17,14 +17,14 @@ use crate::{
     utils::fresh_name,
     vampire::{mk_prelude, runner::VampireExec},
 };
-use bon::{Builder, bon, builder};
+use bon::bon;
 use cryptovampire_macros::smt;
 use cryptovampire_smt::Smt;
 use egg::{EGraph, RecExpr};
 use golgge::{Program, Rule};
 use itertools::{Itertools, chain};
 use logic_formula::egg::SimpleDiscriminant;
-use std::{borrow::Cow, fmt::Debug, num::NonZeroUsize, ops::Range, rc::Rc};
+use std::{borrow::Cow, fmt::Debug, num::NonZeroUsize, rc::Rc};
 use utils::implvec;
 
 mod analysis;
