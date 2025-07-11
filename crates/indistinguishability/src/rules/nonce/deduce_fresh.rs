@@ -5,8 +5,8 @@ use super::*;
 use crate::problem::PAnalysis;
 use crate::protocol::Step;
 use crate::rules::utils::SyntaxSearcher;
-use crate::rules::utils::fresh::{Condition, Mode};
-use crate::terms::formula_utils::{offsets_owned, pull_from_egraph};
+use crate::rules::utils::fresh::{ Mode};
+use crate::terms::formula_utils::{offset_rexpr_owned, pull_from_egraph};
 use crate::terms::{
     BITE, EQ, FOBinder, FRESH_NONCE, HAPPENS, LT, MACRO_COND, MACRO_FRAME, MACRO_MSG, MITE, NONCE,
     PRED,
@@ -53,7 +53,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FreshNonce {
             let hypothesis = convert_id(egraph, hypothesis);
             let nonce = Nonce::builder().content_id(egraph, nonce).build();
 
-            let builder = RefFormulaBuilder::new(Mode::And, None);
+            let builder = RefFormulaBuilder::builder().and().build();
             nonce.search_egraph(egraph, builder.clone(), content, Default::default());
             let search = builder.into_inner().unwrap().into_formula();
 

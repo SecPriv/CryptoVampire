@@ -100,18 +100,31 @@ where
     }
 }
 
-pub fn offsets_vars<L>(amount: u32, f: &mut [ENodeOrVar<L>]) {
+#[inline]
+pub fn offset_var(amount: u32, mut var: Var) -> Var {
+    offset_var_mut(amount, &mut var);
+    var
+}
+
+#[inline]
+pub fn offset_var_mut(amount: u32, var: &mut Var) {
+    if let VarExposed::Num(i) = var.expose() {
+        *var = (i + amount).into()
+    }
+}
+
+pub fn offset_rexpr_mut<L>(amount: u32, f: &mut [ENodeOrVar<L>]) {
     for e in f {
         if let ENodeOrVar::Var(v) = e
-            && let VarExposed::Num(i) = v.expose()
         {
-            *v = (i + amount).into()
+            offset_var_mut(amount, v);
         }
     }
 }
-pub fn offsets_owned<L>(amount: u32, f: implvec!(ENodeOrVar<L>)) -> PatternAst<L> {
+
+pub fn offset_rexpr_owned<L>(amount: u32, f: implvec!(ENodeOrVar<L>)) -> PatternAst<L> {
     let mut f: PatternAst<L> = f.into_iter().collect();
-    offsets_vars(amount, &mut f);
+    offset_rexpr_mut(amount, &mut f);
     f
 }
 

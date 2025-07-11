@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use egg::{ENodeOrVar, Pattern, PatternAst, RecExpr, Var, VarExposed};
 use golgge::PrologRule;
-use itertools::{Itertools, chain, izip};
+use itertools::{Itertools, chain, izip, max};
 use logic_formula::{Destructed, Formula, HeadSk, egg::SimpleDiscriminant};
 use utils::{ereturn_if, ereturn_let, implvec};
 
@@ -12,28 +12,31 @@ use crate::{
     rexp,
     rules::{
         PRF,
-        utils::fresh::{Condition, Mode, RefFormulaBuilder},
+        utils::fresh::{Mode, RefFormulaBuilder},
     },
     terms::{
         Alias, AliasRewrite, EQ, Exists, FAIL, FOBinder, Function, MACRO_COND, MACRO_MSG, NONCE,
-        RecFOFormula, Sort, VAMPIRE, formula_utils::offsets_owned,
+        RecFOFormula, Sort, VAMPIRE,
+        formula_utils::{offset_rexpr_owned, offset_var},
     },
 };
 
 declare_trace!($"search");
 
-
-
 /// default implementation of [SyntaxSearcher::is_special]
 #[inline]
-pub fn default_is_special<U: SyntaxSearcher + ?Sized>(_self: &U, _pbl: &Problem, fun: &Function) -> bool {
+pub fn default_is_special<U: SyntaxSearcher + ?Sized>(
+    _self: &U,
+    _pbl: &Problem,
+    fun: &Function,
+) -> bool {
     fun.is_special_subterm()
 }
 
 /// When implementing [SyntaxSearcher] **make sure** each function's
 /// pre-implementation does what you what. Think of this more as a macro than a
 /// trait.
-/// 
+///
 /// It should be easy enough to bail out and nothing should be generic over [SyntaxSearcher]s.
 pub trait SyntaxSearcher {
     /// an name for debugging
@@ -113,16 +116,17 @@ pub trait SyntaxSearcher {
         assert!(builder.current_mode().is_and());
         tr!("in search_alias");
         let args = args.into_iter().collect_vec();
-        let max_var = args
-            .iter()
-            .flat_map(|arg| arg.used_vars_iter())
-            .filter_map(|v| v.expose().try_into_num().ok())
-            .max()
-            .unwrap_or(0)
-            + 1;
+        // let max_var = args
+        //     .iter()
+        //     .flat_map(|arg| arg.used_vars_iter())
+        //     .filter_map(|v| v.expose().try_into_num().ok())
+        //     .max()
+        //     .unwrap_or(0)
+        //     + 1;
+        let max_var = builder.min_var()+1;
         tr!("max_var = {max_var}");
 
-        let builder = builder.add_node(Mode::Or, None);
+        let builder = builder.add_node().mode(Mode::Or).build();
 
         for AliasRewrite {
             from,
@@ -140,29 +144,35 @@ pub trait SyntaxSearcher {
 
             let variables = variables
                 .iter()
-                .map(|v| match v.expose() {
-                    VarExposed::Num(i) => (i + max_var).into(),
-                    VarExposed::Sym(_) => *v,
-                })
+                .map(|v| offset_var(max_var, *v))
                 .collect_vec();
             let from = from
                 .iter()
-                .map(|f| offsets_owned(max_var, f.iter().cloned()))
+                .map(|f| offset_rexpr_owned(max_var, f.iter().cloned()))
                 .collect_vec();
-            let to = offsets_owned(max_var, to.iter().cloned());
+            let to = offset_rexpr_owned(max_var, to.iter().cloned());
 
             assert_eq!(from.len(), args.len());
             let condition = RecFOFormula::and(
                 izip!(args.iter(), from.iter())
                     .map(|(arg, f)| EQ.rapp(vec![RecFOFormula::from(*arg), f.as_ref().into()])),
             );
-            let condition = Condition {
-                condition,
-                variables: variables.to_vec(),
-                sorts: sorts.to_vec(),
-                quantifier: FOBinder::Exists,
-            };
-            let builder = builder.add_node(Mode::And, Some(condition));
+            // let condition = Condition {
+            //     condition,
+            //     variables: variables.to_vec(),
+            //     sorts: sorts.to_vec(),
+            //     quantifier: FOBinder::Exists,
+            // };
+            // let builder = builder.add_node(Mode::And, Some(condition));
+            let builder = builder
+                .add_node()
+                .mode(Mode::And)
+                .condition(condition)
+                .variables(variables)
+                .sorts(sorts.iter().cloned())
+                .quantifier(FOBinder::Exists)
+                .min_var(max_var)
+                .build();
             self.inner_search_recexpr(pbl, &builder, &to);
             for arg in &args {
                 self.inner_search_recexpr(pbl, &builder, arg);
@@ -184,37 +194,60 @@ pub trait SyntaxSearcher {
     ) {
         tr!("in search_exists {e}");
         let sort = e.get_var_sort();
+        let args = args
+            .into_iter()
+            .map(Vec::from)
+            .map(RecExpr::from)
+            .collect_vec();
+        let max_var_args = args
+            .iter()
+            .flat_map(|x| x.free_vars_iter())
+            .filter_map(|v| Var::as_u32(&v))
+            .max()
+            .unwrap_or(0);
+
+        // offsets everything
+        let n = u32::max(builder.min_var(), max_var_args) + 1;
+        let vars = vars
+            .iter()
+            .cloned()
+            .map(|var| offset_var(n, var))
+            .collect_vec();
+        let bound_var = offset_var(n, *bound_var);
+        let patt = offset_rexpr_owned(n, patt.iter().cloned());
 
         // capture avoiding substitution. We need to rename the bound variable of the exists in case it clashes
-        let nvar;
+        // let nvar;
         let content = {
-            let mut subst = izip!(
-                vars.iter().cloned(),
-                args.into_iter().map(Vec::from).map(RecExpr::from)
-            )
-            .collect_vec();
-            let max_var = subst
-                .iter()
-                .flat_map(|(_, x)| x.free_vars_iter())
-                .filter_map(|v| match v.expose() {
-                    egg::VarExposed::Num(n) => Some(n),
-                    _ => None,
-                })
-                .max()
-                .unwrap_or(0);
-            nvar = Var::from_u32(max_var);
-            subst.push((*bound_var, vec![ENodeOrVar::Var(nvar)].into()));
+            let subst = izip!(vars.iter().cloned(), args).collect_vec();
+            // let max_var = subst
+            //     .iter()
+            //     .flat_map(|(_, x)| x.free_vars_iter())
+            //     .filter_map(|v| match v.expose() {
+            //         egg::VarExposed::Num(n) => Some(n),
+            //         _ => None,
+            //     })
+            //     .max()
+            //     .unwrap_or(0);
+            // nvar = Var::from_u32(max_var);
+            // subst.push((*bound_var, vec![ENodeOrVar::Var(nvar)].into()));
 
             patt.clone().apply_pattern_subst(subst)
         };
 
-        let condition = Condition {
-            condition: RecFOFormula::True(),
-            variables: vec![nvar],
-            sorts: vec![sort],
-            quantifier: FOBinder::Forall,
-        };
-        let builder = builder.add_node(Mode::And, Some(condition));
+        // let condition = Condition {
+        //     condition: RecFOFormula::True(),
+        //     variables: vec![nvar],
+        //     sorts: vec![sort],
+        //     quantifier: FOBinder::Forall,
+        // };
+        let builder = //builder.add_node(Mode::And, Some(condition));
+        builder.add_node().and().forall()
+            .variables([bound_var])
+            .sorts([sort])
+            .min_var(n)
+            .build();
+
         self.inner_search_recexpr(pbl, &builder, &content);
     }
 }

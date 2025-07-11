@@ -7,12 +7,12 @@ use crate::{
         nonce::searcher::nonce_builder::SetContent,
         utils::{
             SyntaxSearcher,
-            fresh::{Condition, Mode, RefFormulaBuilder},
+            fresh::{Mode, RefFormulaBuilder},
         },
     },
     terms::{
         BITE, EQ, FOBinder, Function, HAPPENS, LT, MACRO_FRAME, MITE, NONCE, PRED, RecFOFormula,
-        formula_utils::{offsets_owned, pull_from_egraph},
+        formula_utils::{offset_rexpr_owned, pull_from_egraph},
     },
 };
 use bon::{Builder, bon};
@@ -89,7 +89,7 @@ impl Nonce {
         // main loop
 
         // fresh if indep of *one* of the e-class
-        let builder = builder.add_node(Mode::Or, None);
+        let builder = builder.add_node().or().build();
         let visited = visited.update(current);
 
         for SimplLang { head, args } in eclass.iter() {
@@ -109,7 +109,7 @@ impl Nonce {
                 // The rest is taken care of by equality
             } else {
                 for arg in args {
-                    let builder = builder.add_node(Mode::And, Default::default());
+                    let builder = builder.add_node().and().build();
                     self.search_egraph(egraph, builder.clone(), *arg, visited.clone());
                 }
             }
@@ -127,7 +127,7 @@ impl Nonce {
         visited: im_rc::HashSet<Id>,
     ) {
         tr!("in ite");
-        let builder = builder.add_node(Mode::And, Default::default());
+        let builder = builder.add_node().and().build();
         let (c, l, r) = args.iter().copied().collect_tuple().unwrap();
 
         self.search_egraph(egraph, builder.clone(), c, visited.clone());
@@ -136,24 +136,31 @@ impl Nonce {
 
         {
             // pos
-            let cond = Condition {
-                condition: c.clone(),
-                variables: vec![],
-                sorts: vec![],
-                quantifier: FOBinder::Forall,
-            };
-            let builder = builder.add_node(Mode::Or, Some(cond));
+            // let cond = Condition {
+            //     condition: c.clone(),
+            //     variables: vec![],
+            //     sorts: vec![],
+            //     quantifier: FOBinder::Forall,
+            // };
+            // let builder = builder.add_node(Mode::Or, Some(cond));
+            let builder = builder
+                .add_node()
+                .or()
+                .forall()
+                .condition(c.clone())
+                .build();
             self.search_egraph(egraph, builder, l, visited.clone());
         }
         {
             // neg
-            let cond = Condition {
-                condition: !c,
-                variables: vec![],
-                sorts: vec![],
-                quantifier: FOBinder::Forall,
-            };
-            let builder = builder.add_node(Mode::Or, Some(cond));
+            // let cond = Condition {
+            //     condition: !c,
+            //     variables: vec![],
+            //     sorts: vec![],
+            //     quantifier: FOBinder::Forall,
+            // };
+            // let builder = builder.add_node(Mode::Or, Some(cond));
+            let builder = builder.add_node().or().forall().condition(!c).build();
             self.search_egraph(egraph, builder, r, visited);
         }
     }
@@ -194,21 +201,26 @@ impl Nonce {
                 let happend_cond = HAPPENS.rapp([named.clone()]);
                 let lt_cond = LT.rapp([named.clone(), time.clone()]);
 
-                let condition = happend_cond & lt_cond;
-                Condition {
-                    condition,
-                    variables: vars.clone(),
-                    sorts: id.signature.inputs_iter().collect(),
-                    quantifier: FOBinder::Forall,
-                }
+                // let condition = happend_cond & lt_cond;
+                // Condition {
+                //     condition,
+                //     variables: vars.clone(),
+                //     sorts: id.signature.inputs_iter().collect(),
+                //     quantifier: FOBinder::Forall,
+                // }
+                happend_cond & lt_cond
             };
 
-            let builder = builder.add_node(Mode::And, Some(condition));
+            let builder = //builder.add_node(Mode::And, Some(condition));
+                builder.add_node().mode(Mode::And)
+                    .condition(condition)
+                    .variables(vars.clone())
+                    .sorts(id.signature.inputs_iter())
+                    .quantifier(FOBinder::Forall).build();
             self.inner_search_recexpr(pbl, &builder, cond);
             self.inner_search_recexpr(pbl, &builder, msg);
         }
     }
-
 }
 
 impl SyntaxSearcher for Nonce {
@@ -241,12 +253,8 @@ impl Nonce {
     pub fn new(
         content: RecFOFormula,
         #[builder(into, default = format!("{content}"))] name: Cow<'static, str>,
-
     ) -> Self {
-        Self {
-            content,
-            name,
-        }
+        Self { content, name }
     }
 }
 

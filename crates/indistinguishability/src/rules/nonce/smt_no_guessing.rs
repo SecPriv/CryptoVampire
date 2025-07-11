@@ -3,12 +3,12 @@ use std::u32;
 use cryptovampire_macros::{smt, vec_smt};
 use cryptovampire_smt::{IntoSmt, SortedVar};
 use egg::Var;
-use itertools::chain;
+use itertools::{chain, Itertools};
 use log::trace;
 use utils::ereturn_if;
 
 use crate::{
-    protocol::{Protocol, Step}, rules::{nonce::Nonce, utils::{fresh::{Condition, Mode, RefFormulaBuilder}, SyntaxSearcher}}, terms::{FOBinder, Function, RecFOFormula, Sort, HAPPENS, IS_INDEPENDANT_BITSTRING, IS_INDEPENDANT_BOOL, LT, MACRO_EXEC, MACRO_FRAME, NONCE}, MSmt, MSmtFormula, Problem
+    protocol::{Protocol, Step}, rules::{nonce::Nonce, utils::{fresh::{ Mode, RefFormulaBuilder}, SyntaxSearcher}}, terms::{formula_utils::{offset_rexpr_owned, offset_var}, FOBinder, Function, RecFOFormula, Sort, HAPPENS, IS_INDEPENDANT_BITSTRING, IS_INDEPENDANT_BOOL, LT, MACRO_EXEC, MACRO_FRAME, NONCE}, MSmt, MSmtFormula, Problem
 };
 
 
@@ -79,13 +79,14 @@ fn mk_regular(fun: &Function) -> Option<MSmtFormula> {
 
 fn mk_smt_step<'a>(pbl:&'a Problem, ptcl: &'a Protocol) -> MSmtFormula {
     let indep_m = get_is_independant(Sort::Bitstring).unwrap();
-    // let indep_b = get_is_independant(Sort::Bitstring).unwrap();
     let p =ptcl.name();
-    let [x, t] = ::std::array::from_fn(|i| Var::from_u32(u32::MAX - (i as u32)));
+    let indices@[xi, ti] = ::std::array::from_fn(|i| i as u32);
+    let [x, t] = indices.map(Var::from_u32);
     let nonce = Nonce::builder().content(RecFOFormula::Var(x)).build();
+    let n = 2;
 
 
-        let builder = RefFormulaBuilder::new(Mode::And, None);
+        let builder = RefFormulaBuilder::builder().and().min_var(n).build();
 
         for Step {
             id,
@@ -94,31 +95,40 @@ fn mk_smt_step<'a>(pbl:&'a Problem, ptcl: &'a Protocol) -> MSmtFormula {
             msg,
         } in ptcl.steps()
         {
+            let vars = vars.iter().map(|v| offset_var(n, *v)).collect_vec();
+            let cond = offset_rexpr_owned(n, cond.iter().cloned());
+            let msg = offset_rexpr_owned(n, msg.iter().cloned());
+
             // build the condition object
             let condition = {
-                let named = id.rapp(vars.iter().map(|v| RecFOFormula::Var(*v)));
+                let named = id.rapp(vars.iter().cloned().map(RecFOFormula::Var));
                 let happend_cond = HAPPENS.rapp([named.clone()]);
                 let lt_cond = LT.rapp([named.clone(), RecFOFormula::Var(t)]);
 
-                let condition = happend_cond & lt_cond;
-                Condition {
-                    condition,
-                    variables: vars.clone(),
-                    sorts: id.signature.inputs_iter().collect(),
-                    quantifier: FOBinder::Forall,
-                }
+                // let condition = happend_cond & lt_cond;
+                // Condition {
+                //     condition,
+                //     variables: vars.clone(),
+                //     sorts: id.signature.inputs_iter().collect(),
+                //     quantifier: FOBinder::Forall,
+                // }
+                happend_cond & lt_cond
             };
 
-            let builder = builder.add_node(Mode::And, Some(condition));
-            nonce.inner_search_recexpr(pbl, &builder, cond);
-            nonce.inner_search_recexpr(pbl, &builder, msg);
+            let builder = //builder.add_node(Mode::And, Some(condition));
+                builder.add_node().and().forall()
+                    .condition(condition)
+                    .variables(vars)
+                    .sorts(id.signature.inputs_iter())
+                    .build();
+            nonce.inner_search_recexpr(pbl, &builder, &cond);
+            nonce.inner_search_recexpr(pbl, &builder, &msg);
         }
         let formula = builder.into_inner().unwrap().into_formula().into_smt();
 
+        let [x, t] = [SortedVar::new(xi, Sort::Nonce), SortedVar::new(ti, Sort::Time)];
+        let vars = vec![x.clone(), t.clone()];
 
-        let vars = vec![SortedVar::new(u32::MAX, Sort::Nonce), SortedVar::new(u32::MAX-1, Sort::Time)];
-        let x = vars[0].clone();
-        let t = vars[1].clone();
         let ret = smt!((forall #vars 
                 (=> #formula (and 
                     (indep_m #x (MACRO_FRAME #t p)) 

@@ -59,7 +59,7 @@ fn subterm_cond_rf() {
     let n = egraph.analysis.pbl().function.get("n").unwrap();
     let n = Nonce::new_from_args(n, ["i", "j"].map(|s| RecFOFormula::Var(s.parse().unwrap())));
 
-    let builder = RefFormulaBuilder::new(Mode::And, None);
+    let builder = RefFormulaBuilder::builder().mode(Mode::And).build();
     n.search_egraph(&egraph, builder.clone(), cond_rf, Default::default());
 
     let f = builder.into_inner().unwrap().into_formula();
@@ -87,7 +87,7 @@ fn subterm_msg_tag() {
         }),
     );
 
-    let builder = RefFormulaBuilder::new(Mode::And, None);
+    let builder = RefFormulaBuilder::builder().mode(Mode::And).build();
     n.search_egraph(&egraph, builder.clone(), msg_tag, Default::default());
 
     let f = builder.into_inner().unwrap().into_formula();

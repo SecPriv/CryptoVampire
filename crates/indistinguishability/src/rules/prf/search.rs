@@ -23,14 +23,14 @@ use crate::{
         prf::search,
         utils::{
             SyntaxSearcher,
-            fresh::{Condition, Mode, RefFormulaBuilder},
+            fresh::{ Mode, RefFormulaBuilder},
             generate_rule_vars_arr,
         },
     },
     terms::{
         Alias, AliasRewrite, EQ, Exists, FAIL, FOBinder, Function, HAPPENS, LT, MACRO_COND,
         MACRO_EXEC, MACRO_FRAME, MACRO_MSG, NONCE, RecFOFormula, Sort, VAMPIRE,
-        formula_utils::offsets_owned,
+        formula_utils::offset_rexpr_owned,
     },
     vampire::runner::VampireExec,
 };
@@ -325,7 +325,7 @@ impl Search {
         ptcl: &Protocol,
         time: RecFOFormula,
     ) -> RecFOFormula {
-        let builder = RefFormulaBuilder::new(Mode::And, None);
+        let builder = RefFormulaBuilder::builder().mode(Mode::And).build();
 
         for Step {
             id,
@@ -340,16 +340,22 @@ impl Search {
                 let happend_cond = HAPPENS.rapp([named.clone()]);
                 let lt_cond = LT.rapp([named.clone(), time.clone()]);
 
-                let condition = happend_cond & lt_cond;
-                Condition {
-                    condition,
-                    variables: vars.clone(),
-                    sorts: id.signature.inputs_iter().collect(),
-                    quantifier: FOBinder::Forall,
-                }
+                // let condition = happend_cond & lt_cond;
+                // Condition {
+                //     condition,
+                //     variables: vars.clone(),
+                //     sorts: id.signature.inputs_iter().collect(),
+                //     quantifier: FOBinder::Forall,
+                // }
+                happend_cond & lt_cond
             };
 
-            let builder = builder.add_node(Mode::And, Some(condition));
+            let builder = //builder.add_node(Mode::And, Some(condition));
+                builder.add_node().mode(Mode::And)
+                    .condition(condition)
+                    .variables(vars.clone())
+                    .sorts(id.signature.inputs_iter())
+                    .quantifier(FOBinder::Forall).build();
             self.inner_search_recexpr(pbl, &builder, cond);
             self.inner_search_recexpr(pbl, &builder, msg);
         }
@@ -390,15 +396,19 @@ impl crate::rules::utils::SyntaxSearcher for Search {
             builder.add_leaf(content);
             self.inner_search_recexpr(pbl, builder, m2);
             {
-                let builder = builder.add_node(
-                    Mode::And,
-                    Some(Condition {
-                        condition: (!EQ.rapp([k2.into(), NONCE.rapp([self.clone_k()])])),
-                        quantifier: FOBinder::Forall,
-                        variables: vec![],
-                        sorts: vec![],
-                    }),
-                );
+                // let builder = builder.add_node(
+                //     Mode::And,
+                //     Some(Condition {
+                //         condition: (!EQ.rapp([k2.into(), NONCE.rapp([self.clone_k()])])),
+                //         quantifier: FOBinder::Forall,
+                //         variables: vec![],
+                //         sorts: vec![],
+                //     }),
+                // );
+                let builder = builder.add_node().mode(Mode::And)
+                    .condition(!EQ.rapp([k2.into(), NONCE.rapp([self.clone_k()])]))
+                    .quantifier(FOBinder::Forall)
+                    .build();
 
                 self.inner_search_recexpr(pbl, &builder, k2);
             }
