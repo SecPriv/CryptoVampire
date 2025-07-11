@@ -16,7 +16,7 @@ use crate::input::shared_cryptography::ShrCrypto;
 use crate::protocol::{MacroKind, ProtocolLanguage};
 use crate::terms::{
     Alias, BUILTINS, Exists, FunctionCollection, FunctionFlags, HAPPENS, MACRO_COND, MACRO_EXEC,
-    MACRO_FRAME, MACRO_INPUT, MACRO_MSG, RecFOFormula, Signature, Sort, TRUE, UNFOLD_COND,
+    MACRO_FRAME, MACRO_INPUT, MACRO_MSG, NOT, RecFOFormula, Signature, Sort, TRUE, UNFOLD_COND,
     UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin,
 };
 
@@ -182,7 +182,8 @@ impl Function {
                 | IF_THEN_ELSE
         );
 
-        self.flags.intersects(SPECIAL_SUBTERM) || self.is_protocol() || self.is_alias()
+        self != &NOT
+            && (self.flags.intersects(SPECIAL_SUBTERM) || self.is_protocol() || self.is_alias())
     }
 
     #[inline]

@@ -3,13 +3,9 @@ use std::fmt::Display;
 use itertools::izip;
 use utils::implvec;
 
-use crate::Arr;
-
-use super::SmtFile;
-
-use super::SortedVar;
-
 use super::formula::SmtFormula;
+use super::{SmtFile, SortedVar};
+use crate::Arr;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum Smt<S, F> {
@@ -101,6 +97,10 @@ impl<S, F> Smt<S, F> {
             Self::Assert((!query).optimise())
         }
     }
+
+    pub fn comment_block(str: impl Display) -> Self {
+        Self::Comment(make_comment_block(str))
+    }
 }
 
 impl<S, F> Smt<S, F>
@@ -143,7 +143,8 @@ where
             Smt::AssertTh(formula) => {
                 writeln!(
                     f,
-                    "; not smt-compliant. Change to `(assert ...)` to be compliant while retaining the semantics"
+                    "; not smt-compliant. Change to `(assert ...)` to be compliant while \
+                     retaining the semantics"
                 )?;
                 writeln!(f, "(assert-theory {formula})")
             }
@@ -159,7 +160,8 @@ where
             Smt::AssertNot(formula) => {
                 writeln!(
                     f,
-                    "; not smt-compliant. Change to `(assert (not ...))` to be compliant while retaining the semantics"
+                    "; not smt-compliant. Change to `(assert (not ...))` to be compliant while \
+                     retaining the semantics"
                 )?;
                 writeln!(f, "(assert-not {formula})")
             }
@@ -218,11 +220,71 @@ where
                     })
                 })
             }),
-            Smt::Comment(c) => writeln!(f, "; {c}"),
+            Smt::Comment(c) => {
+                for c in c.split('\n') {
+                    writeln!(f, "; {c}")?
+                }
+                Ok(())
+            }
             Smt::CheckSat => writeln!(f, "(check-sat)"),
             Smt::GetProof => writeln!(f, "(get-proof)"),
             Smt::SetOption(option, arg) => writeln!(f, "(set-option :{option} {arg})"),
             Smt::SetLogic(logic) => writeln!(f, "(set-logic {logic})"),
         }
     }
+}
+
+// =========================================================
+// ============ text wrapping (from chat gpt) ==============
+// =========================================================
+fn make_comment_block<T: Display>(input: T) -> String {
+    const WIDTH: usize = 80 - 2;
+    const BORDER_CHAR: char = '=';
+
+    let text = input.to_string();
+    let max_line_length = WIDTH - 2; // at least one '=' on each side
+
+    let wrapped_lines = wrap_text(&text, max_line_length);
+
+    // Format the wrapped lines centered within '=' borders
+    let mut result = String::new();
+    result.push_str(&BORDER_CHAR.to_string().repeat(WIDTH));
+    result.push('\n');
+    for line in wrapped_lines {
+        let line_length = line.len();
+        let total_padding = WIDTH - 2 - line_length;
+        let left_padding = total_padding / 2;
+        let right_padding = total_padding - left_padding;
+        result.push_str(&BORDER_CHAR.to_string().repeat(left_padding));
+        result.push(' ');
+        result.push_str(&line);
+        result.push(' ');
+        result.push_str(&BORDER_CHAR.to_string().repeat(right_padding));
+        result.push('\n');
+    }
+    result.push_str(&BORDER_CHAR.to_string().repeat(WIDTH));
+    result
+}
+
+// Naive word-wrapping: breaks lines at whitespace without splitting words
+fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut current_line = String::new();
+
+    for word in text.split_whitespace() {
+        if current_line.len() + word.len() + 1 > max_width && !current_line.is_empty() {
+            lines.push(current_line.clone());
+            current_line.clear();
+        }
+        if !current_line.is_empty() {
+            current_line.push(' ');
+        }
+        current_line.push_str(word);
+    }
+
+    if !current_line.is_empty() {
+        lines.push(current_line);
+    }
+
+    lines
 }

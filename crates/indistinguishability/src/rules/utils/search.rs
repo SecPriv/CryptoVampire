@@ -110,7 +110,7 @@ pub trait SyntaxSearcher {
         let max_var = builder.min_var() + 1;
         tr!("max_var = {max_var}");
 
-        let builder = builder.add_node().mode(Mode::Or).build();
+        let builder = builder.add_node().and().build();
 
         for AliasRewrite {
             from,
@@ -143,11 +143,12 @@ pub trait SyntaxSearcher {
             );
             let builder = builder
                 .add_node()
-                .mode(Mode::And)
+                .and()
+                // .quantifier(FOBinder::Exists)
+                .forall()
                 .condition(condition)
                 .variables(variables)
                 .sorts(sorts.iter().cloned())
-                .quantifier(FOBinder::Exists)
                 .min_var(max_var)
                 .build();
             self.inner_search_recexpr(pbl, &builder, &to);

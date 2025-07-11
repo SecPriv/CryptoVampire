@@ -14,15 +14,20 @@ use crate::{MSmt, MSmtFormula, Problem};
 pub fn mk_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     chain![
         mk_header(pbl),
-        mk_nonces_diff(pbl),
-        mk_base_macro(pbl),
+        [MSmt::comment_block("static")],
         mk_base_order(pbl),
+        mk_base_macro(pbl),
+        [MSmt::comment_block("term algebra")],
+        mk_nonces_diff(pbl),
         mk_step_diff(pbl),
+        [MSmt::comment_block("Protocol definition")],
         mk_steps_macros(pbl),
         mk_exists(pbl),
         mk_alias(pbl),
         mk_extra_rw(pbl),
+        [MSmt::comment_block("Custom")],
         pbl.extra_smt().iter().cloned(),
+        [MSmt::comment_block("Cryptography")],
         pbl.cryptography().iter().flat_map(|c| c.mk_prelude(pbl))
     ]
 }
