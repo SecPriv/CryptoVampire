@@ -39,30 +39,30 @@
 ; ------------- quantifier -------------
 (define exists11 (declare_quantifier pbl (list Index Index Protocol Time) Index))
 (let* 
-  ([vars (exists-vars exists1)] 
-    [k (mk-varf (exists-bound-var exists1))]
+  ([vars (exists-vars exists11)] 
+    [k (mk-varf (exists-bound-var exists11))]
     [i (mk-varf (list-ref vars 0))] 
     [j (mk-varf (list-ref vars 1))] 
     [p (mk-varf (list-ref vars 2))] 
     [t (mk-varf (list-ref vars 3))] 
     [in (formula (macro_input t p))])
     (set-exists-pattern exists11 (formula 
-      @ m_condition_fst i j k p in)))
+      (@ m_condition_fst i j k p in))))
 (define (cexists11 i j p t) (
-  let ([e (get-exists-tlf exists1)] [sk (get-exists-skolem exists1)])
+  let ([e (get-exists-tlf exists11)] [sk (get-exists-skolem exists11)])
   (mk-appf e (list i j p t (mk-appf sk (list i j p t))))))
 
 (define exists12 (declare_quantifier pbl (list Index Protocol Time) Index))
 (let* 
-  ([vars (exists-vars exists1)] 
+  ([vars (exists-vars exists12)] 
     [i (mk-varf (exists-bound-var exists12))]
     [j (mk-varf (list-ref vars 0))] 
     [p (mk-varf (list-ref vars 1))] 
     [t (mk-varf (list-ref vars 2))] 
     [in (formula (macro_input t p))])
-    (set-exists-pattern exists12 (formula @ cexists11 i j p t)))
+    (set-exists-pattern exists12 (formula (@ cexists11 i j p t))))
 (define (cexists12 j p t) (
-  let ([e (get-exists-tlf exists1)] [sk (get-exists-skolem exists1)])
+  let ([e (get-exists-tlf exists12)] [sk (get-exists-skolem exists12)])
   (mk-appf e (list j p t (mk-appf sk (list j p t))))))
 
 
@@ -105,7 +105,7 @@
     [j (mk-varf 1)] 
     [k (mk-varf 2)])
   (formula
-    @ m_condition_fst i j k p1 (macro_input (rs i j k) p1))))
+    (@ m_condition_fst i j k p1 (macro_input (rs i j k) p1)))))
 (set-step-message pbl rs p1 (let*
     ([i (mk-varf 0)] 
     [j (mk-varf 1)] 
@@ -119,7 +119,7 @@
     [j (mk-varf 1)] 
     [k (mk-varf 2)])
   (formula
-    @ m_condition_fst i j k p2 (macro_input (rs i j k) p2))))
+    (@ m_condition_fst i j k p2 (macro_input (rs i j k) p2)))))
 (set-step-message pbl rs p2 (let*
     ([i (mk-varf 0)] 
     [j (mk-varf 1)] 

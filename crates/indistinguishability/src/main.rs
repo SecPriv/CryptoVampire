@@ -13,7 +13,10 @@ pub fn main() {
 
     // let res = init_engine().run(pgrm).unwrap();
     match init_engine().run(pgrm.clone()) {
-        Err(e) => eprintln!("{}", e.emit_result_to_string("stdin", CV_PRELUDE)),
+        Err(e) => {
+            eprintln!("{}", e.emit_result_to_string("prelude", CV_PRELUDE));
+            eprintln!("{}", e.emit_result_to_string("stdin", &pgrm));
+        }
         Ok(res) => {
             for r in res {
                 println!("{r}")
