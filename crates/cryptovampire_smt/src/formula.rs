@@ -38,6 +38,7 @@ pub enum SmtFormula<S, F> {
     Subterm(F, Box<SmtFormula<S, F>>, Box<SmtFormula<S, F>>),
 }
 
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum SmtHead {
     True,

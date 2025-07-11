@@ -16,12 +16,14 @@ log.workspace = true
 env_logger.workspace = true
 itertools.workspace = true
 serde = { workspace = true, optional = true}
+regex = {version = "1.11.1", optional = true}
 
 [features]
 serde = ["utils/serde", "dep:serde"]
 cryptovampire = ["vampire"]
 vampire = []
 macro = ["dep:cryptovampire_macros"]
+smt-parsing = ["dep:regex"]
 
 [dev-dependencies]
 cryptovampire_macros = {path = "../cryptovampire_macros"}

@@ -161,7 +161,8 @@ impl VampireExec {
 
     pub fn run_smt<S, F, RefS>(&self, smt: implvec!(RefS)) -> anyhow::Result<bool>
     where
-        Smt<S, F>: Display,
+        S: Display,
+        F: Display,
         RefS: Borrow<Smt<S, F>>,
     {
         let mut tmpfile = tempfile::Builder::new()
@@ -184,7 +185,12 @@ impl VampireExec {
                     writeln!(buffer, "; {i:}")?;
                     i += 1;
                 }
-                writeln!(buffer, "{statement}")?;
+                if self.keep_file {
+                    let pretty = statement.as_pretty();
+                    writeln!(buffer, "{pretty}")?;
+                } else {
+                    writeln!(buffer, "{statement}")?;
+                }
             }
         }
 

@@ -18,6 +18,10 @@ mod formula;
 pub use smt::*;
 mod smt;
 
+mod formatter;
+pub use formatter::Term as SmtPrettyPrinter;
+pub(crate) use formatter::translate_smt_to_term;
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct SmtFile<S, F> {
     pub content: Vec<smt::Smt<S, F>>,

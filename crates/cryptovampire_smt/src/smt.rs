@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::fmt::Display;
 
 use itertools::izip;
@@ -5,7 +6,7 @@ use utils::implvec;
 
 use super::formula::SmtFormula;
 use super::{SmtFile, SortedVar};
-use crate::Arr;
+use crate::{Arr, SmtPrettyPrinter, translate_smt_to_term};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum Smt<S, F> {
@@ -53,6 +54,12 @@ pub enum Smt<S, F> {
     SetLogic(String),
 }
 
+impl<S: Display, F: Display> Smt<S, F> {
+    pub fn as_pretty(&self) -> SmtPrettyPrinter {
+        translate_smt_to_term(self)
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct SmtCons<S, F> {
     pub fun: F,
@@ -81,19 +88,25 @@ impl<S, F> Smt<S, F> {
     /// [`Assert`]: Smt::Assert
     #[must_use]
     pub fn is_any_assert(&self) -> bool {
-        matches!(
-            self,
-            Self::Assert(..) | Self::AssertNot(..) | Self::AssertTh(..)
-        )
+        match self {
+            Self::Assert(..) => true,
+            #[cfg(feature = "vampire")]
+            Self::AssertNot(..) | Self::AssertTh(..) => true,
+            _ => false,
+        }
     }
 
     pub fn mk_query(query: SmtFormula<S, F>) -> Self
     where
         SmtFormula<S, F>: Eq,
     {
-        if cfg!(feature = "vampire") {
+        #[cfg(feature = "vampire")]
+        {
             Self::AssertNot(query.optimise())
-        } else {
+        }
+
+        #[cfg(not(feature = "vampire"))]
+        {
             Self::Assert((!query).optimise())
         }
     }
@@ -288,3 +301,7 @@ fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
 
     lines
 }
+
+// =========================================================
+// =================== pretty printing =====================
+// =========================================================
