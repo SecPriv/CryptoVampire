@@ -1,14 +1,12 @@
 pub mod basic_hash {
-    use crate::{
-        Problem, decl_fun, mk_alias, mk_rewrite, mk_signature,
-        protocol::Step,
-        rexp,
-        terms::{
-            Exists, Function, FunctionFlags, InnerFunction, LT, MACRO_INPUT, NONCE, PROJ_1, PROJ_2,
-            Sort, TUPLE,
-        },
-    };
     use egg::Var;
+
+    use crate::protocol::Step;
+    use crate::terms::{
+        Exists, Function, FunctionFlags, InnerFunction, LT, MACRO_INPUT, NONCE, PROJ_1, PROJ_2,
+        Sort, TUPLE,
+    };
+    use crate::{Problem, decl_fun, mk_alias, mk_rewrite, mk_signature, rexp};
 
     pub struct MFunction {
         pub hash: Function,
@@ -30,7 +28,6 @@ pub mod basic_hash {
     }
 
     pub fn populate_functions(pbl: &mut Problem) -> MFunction {
-        use Sort::*;
         let hash = decl_fun!(pbl; "hash": (Bitstring, Bitstring) -> Bitstring);
         let p1 = pbl.declare_new_protocol().name().clone();
         let p2 = pbl.declare_new_protocol().name().clone();

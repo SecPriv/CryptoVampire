@@ -4,16 +4,12 @@ use itertools::{Itertools, chain, izip};
 use utils::dynamic_iter;
 
 use crate::terms::{
-    ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, HAPPENS, LEQ, LT, MACRO_COND, MACRO_EXEC,
-    MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, Rewrite, SMT_ITE, SMT_SORT_LIST, TUPLE, UNFOLD_COND,
-    UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
+    ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, Function, HAPPENS, LEQ, LT, MACRO_COND,
+    MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, Rewrite, SMT_ITE, SMT_SORT_LIST,
+    Signature, Sort, TUPLE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
 };
 use crate::vampire::convert::{formula_to_smt, var_to_smt};
-use crate::{MSmt, MSmtFormula};
-use crate::{
-    Problem,
-    terms::{Function, Signature, Sort},
-};
+use crate::{MSmt, MSmtFormula, Problem};
 
 pub fn mk_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     chain![
@@ -264,7 +260,7 @@ fn mk_extra_rw(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
                  sorts,
                  ..
              }| {
-                let [from, to] = [from, to].map(|x| formula_to_smt(&x));
+                let [from, to] = [from, to].map(|x| formula_to_smt(x));
                 let vars = izip!(sorts.iter(), variables.iter())
                     .map(|(&sort, v)| SortedVar {
                         sort,

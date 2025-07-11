@@ -5,23 +5,17 @@ use egg::{Analysis, EGraph, Id, Runner};
 #[allow(unused_imports)]
 use itertools::Itertools;
 
-use crate::{
-    Lang, Problem, decl_fun, init_logger,
-    problem::{PAnalysis, test::basic_hash::mk_pblm},
-    rexp,
-    rules::{
-        base_rules::mk_rewrites_rules,
-        nonce::Nonce,
-        utils::fresh::{Mode, RefFormulaBuilder},
-    },
-    terms::{
-        Function, HAPPENS, MACRO_COND, MACRO_INPUT, MACRO_MSG, RecFOFormula, Sort,
-        formula_utils::convert_to_ground_rexp,
-    },
-};
+use crate::problem::PAnalysis;
+use crate::problem::test::basic_hash::mk_pblm;
+use crate::rules::base_rules::mk_rewrites_rules;
+use crate::rules::nonce::Nonce;
+use crate::rules::utils::fresh::{Mode, RefFormulaBuilder};
+use crate::terms::formula_utils::convert_to_ground_rexp;
+use crate::terms::{Function, HAPPENS, MACRO_COND, MACRO_INPUT, MACRO_MSG, RecFOFormula, Sort};
+use crate::{Lang, Problem, decl_fun, init_logger, rexp};
 
 fn mk_egraph<'a>(pbl: &'a mut Problem) -> (EGraph<Lang, PAnalysis<'a>>, Id, Id, Id) {
-    let rw = mk_rewrites_rules(&pbl).collect_vec();
+    let rw = mk_rewrites_rules(pbl).collect_vec();
 
     let i = decl_fun!(pbl; "i": () -> Index);
     let j = decl_fun!(pbl; "j": () -> Index);

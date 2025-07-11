@@ -4,15 +4,12 @@ pub mod basic_hash {
     use egg::Pattern;
     use golgge::PrologRule;
 
-    use crate::{
-        Lang, Problem, decl_fun,
-        protocol::test::basic_hash::MFunction,
-        rexp,
-        terms::{
-            EMPTY, EQUIV, FROM_BOOL, MACRO_EXEC, MACRO_FRAME, MITE, NONCE, PRED, TUPLE,
-            UNFOLD_FRAME, formula_utils::type_check,
-        },
+    use crate::protocol::test::basic_hash::MFunction;
+    use crate::terms::formula_utils::type_check;
+    use crate::terms::{
+        EMPTY, EQUIV, FROM_BOOL, MACRO_EXEC, MACRO_FRAME, MITE, NONCE, PRED, TUPLE, UNFOLD_FRAME,
     };
+    use crate::{Lang, Problem, decl_fun, rexp};
 
     pub fn mk_prf_rule(pbl: &mut Problem, funs: &MFunction) -> PrologRule<Lang> {
         let n0 = decl_fun!(pbl; "n0": (Index, Index, Protocol) -> Nonce);

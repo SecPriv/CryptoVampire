@@ -1,26 +1,22 @@
-use super::*;
-use crate::{
-    Lang, LangVar, Problem,
-    problem::PAnalysis,
-    protocol::Step,
-    rules::{
-        nonce::searcher::nonce_builder::SetContent,
-        utils::{
-            SyntaxSearcher,
-            fresh::{Mode, RefFormulaBuilder},
-        },
-    },
-    terms::{
-        BITE, EQ, FOBinder, Function, HAPPENS, LT, MACRO_FRAME, MITE, NONCE, PRED, RecFOFormula,
-        formula_utils::pull_from_egraph,
-    },
-};
+use std::borrow::Cow;
+
 use bon::bon;
 use egg::{Analysis, EGraph, Id};
 use itertools::Itertools;
-use logic_formula::{Formula, egg::SimplLang};
-use std::borrow::Cow;
+use logic_formula::egg::SimplLang;
 use utils::{ereturn_if, implvec};
+
+use super::*;
+use crate::problem::PAnalysis;
+use crate::protocol::Step;
+use crate::rules::nonce::searcher::nonce_builder::SetContent;
+use crate::rules::utils::SyntaxSearcher;
+use crate::rules::utils::fresh::{Mode, RefFormulaBuilder};
+use crate::terms::formula_utils::pull_from_egraph;
+use crate::terms::{
+    BITE, EQ, FOBinder, Function, HAPPENS, LT, MACRO_FRAME, MITE, NONCE, PRED, RecFOFormula,
+};
+use crate::{Lang, LangVar, Problem};
 
 #[derive(Debug, Clone)]
 pub struct Nonce {
@@ -29,6 +25,7 @@ pub struct Nonce {
 }
 
 impl Nonce {
+    #[allow(dead_code)]
     pub fn new_from_args(head: Function, args: implvec!(RecFOFormula)) -> Self {
         Self::builder()
             .name(head.name.clone())

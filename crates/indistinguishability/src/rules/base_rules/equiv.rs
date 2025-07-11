@@ -6,15 +6,10 @@ use itertools::{Itertools, chain, izip};
 use log::trace;
 use logic_formula::egg::SimpleDiscriminant;
 
-use crate::{
-    Lang, LangVar, Problem,
-    terms::{BIT_DEDUCE, BOOL_DEDUCE, Exists, Function, Sort},
-};
-
-use super::{
-    parse::{PrologAst, clean_input, convert_fun},
-    var_as_recexpr,
-};
+use super::parse::{PrologAst, clean_input, convert_fun};
+use super::var_as_recexpr;
+use crate::terms::{BIT_DEDUCE, BOOL_DEDUCE, Exists, Function, Sort};
+use crate::{Lang, LangVar, Problem};
 
 pub fn mk_equiv_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'_> {
     chain! {
@@ -162,7 +157,7 @@ fn mk_exists_deduce_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang
 
 /// Generate the rule for a single quantifier
 fn mk_exists_deduce_rules_one(
-    pbl: &Problem,
+    _pbl: &Problem,
     Exists {
         tlf, skolem, fresh, ..
     }: &Exists,

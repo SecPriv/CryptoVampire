@@ -1,15 +1,13 @@
-use steel::{
-    SteelVal,
-    steel_vm::{builtin::BuiltInModule, engine::Engine, register_fn::RegisterFn},
-};
+use steel::SteelVal;
+use steel::steel_vm::builtin::BuiltInModule;
+use steel::steel_vm::engine::Engine;
+use steel::steel_vm::register_fn::RegisterFn;
 
-use crate::{
-    input::{
-        golgge_rules::Rule, shared_cryptography::ShrCrypto, shared_exists::ShrExists,
-        shared_problem::ShrProblem,
-    },
-    terms::{AliasRewrite, Function, RecFOFormula, Rewrite, Signature, Sort},
-};
+use crate::input::golgge_rules::Rule;
+use crate::input::shared_cryptography::ShrCrypto;
+use crate::input::shared_exists::ShrExists;
+use crate::input::shared_problem::ShrProblem;
+use crate::terms::{AliasRewrite, Function, RecFOFormula, Rewrite, Signature, Sort};
 
 pub(crate) mod golgge_rules;
 pub(crate) mod shared_cryptography;
@@ -36,13 +34,6 @@ pub fn register(module: &mut BuiltInModule) -> &mut BuiltInModule {
     module.register_fn("println!", |x: SteelVal| println!("dbg: {x:?}"));
 
     module
-}
-
-fn convert_var(var: egg::Var) -> u32 {
-    match var.expose() {
-        egg::VarExposed::Sym(_) => unimplemented!(),
-        egg::VarExposed::Num(i) => i,
-    }
 }
 
 static CV_PRELUDE: &str = include_str!("./prelude.scm");

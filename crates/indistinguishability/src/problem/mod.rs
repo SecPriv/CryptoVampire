@@ -1,22 +1,8 @@
-use crate::{
-    Configuration, Lang, MSmt, mk_signature,
-    problem::function_builder::{
-        SetAlias, SetCryptography, SetFlags, SetName, SetOutput, SetStepIdx,
-    },
-    protocol::{Protocol, Step},
-    rexp,
-    rules::{
-        FreshNonce, VampireRule,
-        base_rules::{mk_prolog_rules, mk_rewrites_rules},
-    },
-    terms::{
-        Alias, CryptographicAssumption, EMPTY, EQUIV, Function, FunctionCollection, FunctionFlags,
-        HAPPENS, INIT, InnerFunction, MACRO_FRAME, PRED, Rewrite, Signature, Sort, TRUE,
-        UNFOLD_MSG, formula_utils::convert_to_ground_rexp,
-    },
-    utils::fresh_name,
-    vampire::{mk_prelude, runner::VampireExec},
-};
+use std::borrow::Cow;
+use std::fmt::Debug;
+use std::num::NonZeroUsize;
+use std::rc::Rc;
+
 use bon::bon;
 use cryptovampire_macros::smt;
 use cryptovampire_smt::Smt;
@@ -24,8 +10,23 @@ use egg::{EGraph, RecExpr};
 use golgge::{Program, Rule};
 use itertools::{Itertools, chain};
 use logic_formula::egg::SimpleDiscriminant;
-use std::{borrow::Cow, fmt::Debug, num::NonZeroUsize, rc::Rc};
 use utils::implvec;
+
+use crate::problem::function_builder::{
+    SetAlias, SetCryptography, SetFlags, SetName, SetOutput, SetStepIdx,
+};
+use crate::protocol::{Protocol, Step};
+use crate::rules::base_rules::{mk_prolog_rules, mk_rewrites_rules};
+use crate::rules::{FreshNonce, VampireRule};
+use crate::terms::formula_utils::convert_to_ground_rexp;
+use crate::terms::{
+    Alias, CryptographicAssumption, EMPTY, EQUIV, Function, FunctionCollection, FunctionFlags,
+    HAPPENS, INIT, InnerFunction, MACRO_FRAME, PRED, Rewrite, Signature, Sort, TRUE, UNFOLD_MSG,
+};
+use crate::utils::fresh_name;
+use crate::vampire::mk_prelude;
+use crate::vampire::runner::VampireExec;
+use crate::{Configuration, Lang, MSmt, mk_signature, rexp};
 
 mod analysis;
 pub use analysis::{PAnalysis, PRule, RcRule};
@@ -517,7 +518,6 @@ where
     }
 }
 
-use crate::problem::problem_builder::IsUnset as ProblemBuilderIsUnset;
 impl<S> ProblemBuilder<S>
 where
     S: problem_builder::State,

@@ -1,7 +1,9 @@
 //! Nonce freshness
 
-use crate::{Lang, terms::RecFOFormula};
 use egg::{Analysis, EGraph, Id};
+
+use crate::Lang;
+use crate::terms::RecFOFormula;
 
 declare_trace!($"nonce_fresh");
 

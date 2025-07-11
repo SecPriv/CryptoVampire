@@ -1,16 +1,18 @@
 //! This module mostly exists for the macro [rexp] to pull it's functions from.
 //! It also contains other miscelenious functions
 
-use crate::{
-    Lang, LangVar,
-    terms::{Function, Sort},
-};
+use std::borrow::Cow;
+use std::collections::VecDeque;
+
 use egg::{Analysis, EGraph, ENodeOrVar, Id, Language, PatternAst, RecExpr, Var, VarExposed};
 use itertools::{EitherOrBoth, Itertools, izip};
 use log::error;
-use logic_formula::{Destructed, Formula, HeadSk, egg::SimplLang};
-use std::{borrow::Cow, collections::VecDeque};
+use logic_formula::egg::SimplLang;
+use logic_formula::{Destructed, Formula, HeadSk};
 use utils::{econtinue_if, ereturn_if, implvec};
+
+use crate::terms::{Function, Sort};
+use crate::{Lang, LangVar};
 
 declare_trace!($"formula_utils");
 
@@ -182,7 +184,8 @@ pub(crate) fn pull_from_egraph_inner_generic<'a, N: Analysis<Lang>, F: FnMut(&La
     if cfg!(debug_assertions) {
         let e = egraph.id_to_expr(id);
         error!(
-            "{e:} cannot be turned into a non recursive formula without using \"prolog\"-specific functions"
+            "{e:} cannot be turned into a non recursive formula without using \"prolog\"-specific \
+             functions"
         )
     }
     None
@@ -286,7 +289,8 @@ pub fn pull_from_egraph<N: Analysis<Lang>>(
 
 #[cfg(test)]
 mod test {
-    use crate::terms::{MITE, NONCE, PROJ_1, TUPLE, formula_utils::type_check};
+    use crate::terms::formula_utils::type_check;
+    use crate::terms::{MITE, NONCE, PROJ_1, TUPLE};
 
     #[test]
     fn type_check_true() {

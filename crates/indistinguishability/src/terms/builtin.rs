@@ -1,9 +1,9 @@
-use super::{
-    Alias, AliasRewrite, CowPattern, Function, FunctionFlags, InnerFunction, Signature,
-    Sort::{self, *},
-};
-use cryptovampire_macros::{declare_recexpr, mk_builtin_funs};
 use std::borrow::Cow;
+
+use cryptovampire_macros::{declare_recexpr, mk_builtin_funs};
+
+use super::Sort::{self, *};
+use super::{Alias, AliasRewrite, CowPattern, Function, FunctionFlags, InnerFunction, Signature};
 
 /// helper to write const signatures
 macro_rules! s {
@@ -83,7 +83,8 @@ mod inner_recexpr {
     use egg::{Id, Var};
     use logic_formula::egg::SimplLang;
 
-    use crate::{LangVar, terms::Function};
+    use crate::LangVar;
+    use crate::terms::Function;
 
     #[allow(dead_code)]
     pub static TRUE: Function = super::TRUE.const_clone().unwrap();

@@ -1,23 +1,22 @@
-use std::{
-    borrow::Cow,
-    fmt::Display,
-    ops::{BitAnd, BitOr, Not, Shr},
-};
+use std::borrow::Cow;
+use std::fmt::Display;
+use std::ops::{BitAnd, BitOr, Not, Shr};
 
 use cryptovampire_smt::{IntoSmt, SmtFormula, SmtQuantifier, SortedVar, VarInner};
 use egg::{Analysis, EGraph, Id, Language, PatternAst, RecExpr, Var};
 use itertools::{Itertools, izip};
-use logic_formula::{Destructed, Formula, HeadSk, egg::SimplLang};
+use logic_formula::egg::SimplLang;
+use logic_formula::{Destructed, Formula, HeadSk};
 use smallvec::SmallVec;
-use steel::{rvals::IntoSteelVal, steel_vm::register_fn::RegisterFn};
+use steel::rvals::IntoSteelVal;
+use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 use utils::{dynamic_iter, ereturn_if, implvec, match_eq};
 
-use crate::{
-    Lang, LangVar,
-    input::{Registerable, var::SVar},
-    terms::{AND, BITE, EQ, FALSE, Function, IMPLIES, NOT, OR, Sort, TRUE, convert_smt_var},
-};
+use crate::input::Registerable;
+use crate::input::var::SVar;
+use crate::terms::{AND, BITE, EQ, FALSE, Function, IMPLIES, NOT, OR, Sort, TRUE, convert_smt_var};
+use crate::{Lang, LangVar};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Steel)]
 pub enum RecFOFormula {
@@ -194,22 +193,16 @@ impl RecFOFormula {
         match self {
             RecFOFormula::Binder { .. } => Some(Sort::Bool),
             RecFOFormula::App { head, .. } => Some(head.signature.output),
-            RecFOFormula::Var(var) => None,
+            RecFOFormula::Var(_) => None,
         }
     }
 
     pub fn is_true(&self) -> bool {
-        match self {
-            Self::App { head, .. } if head == &TRUE => true,
-            _ => false,
-        }
+        matches!(self, Self::App { head, .. } if head == &TRUE)
     }
 
     pub fn is_false(&self) -> bool {
-        match self {
-            Self::App { head, .. } if head == &FALSE => true,
-            _ => false,
-        }
+        matches!(self, Self::App { head, .. } if head == &FALSE)
     }
 
     // =========================================================

@@ -1,25 +1,23 @@
 use egg::{ENodeOrVar, Id};
 use itertools::{Itertools, chain};
 use logic_formula::egg::SimpleDiscriminant;
-use steel::rvals::CustomType;
 
-use crate::{
-    Problem, rexp,
-    rules::{PRF, utils::generate_rule_vars0},
-    terms::{Function, NONCE, Rewrite, Sort},
-};
+use crate::rules::PRF;
+use crate::rules::utils::generate_rule_vars0;
+use crate::terms::{Function, NONCE, Rewrite, Sort};
+use crate::{Problem, rexp};
 
 pub fn mk_rewrites<'a>(pbl: &'a Problem, prf: &'a PRF) -> impl Iterator<Item = Rewrite> + use<'a> {
     chain![[mk_rewrite_init(pbl, prf)], mk_rewrite_regular(pbl, prf)]
 }
 
 /// for `f != hash` this builds for all `n`
-///```text
+/// ```text
 /// h(m, nonce(k))
 ///     -> candidate(h(m, nonce(k)), m, k)
 /// ```
 fn mk_rewrite_init<'a>(
-    pbl: &'a Problem,
+    _pbl: &'a Problem,
     PRF {
         hash,
         candidate_bitstring: candidate,
@@ -46,12 +44,12 @@ fn mk_rewrite_regular<'a>(pbl: &'a Problem, prf: &'a PRF) -> impl Iterator<Item 
 }
 
 /// for `f != hash` this builds for all `n`
-///```text
+/// ```text
 /// f(x1,..., xn, candidate(x(n+1), m, k), ...,xm)
 ///     -> candidate(f(x1,...,xm), m, k)
 /// ```
 fn mk_rewrite_one<'a>(
-    pbl: &'a Problem,
+    _pbl: &'a Problem,
     prf: &'a PRF,
     f: &'a Function,
 ) -> impl Iterator<Item = Rewrite> + use<'a> {

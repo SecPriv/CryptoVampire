@@ -1,10 +1,7 @@
-use std::{
-    borrow::{Borrow, BorrowMut},
-    cell::{Ref, RefCell, RefMut},
-    fmt::Display,
-    mem::ManuallyDrop,
-    rc::{Rc, Weak},
-};
+use std::cell::{Ref, RefCell, RefMut};
+use std::fmt::Display;
+use std::mem::ManuallyDrop;
+use std::rc::{Rc, Weak};
 
 use bon::{Builder, bon, builder};
 use egg::Var;
@@ -392,18 +389,22 @@ impl Mode {
 }
 
 impl Condition {
+    #[allow(dead_code)]
     pub fn condition(&self) -> &RecFOFormula {
         &self.condition
     }
 
+    #[allow(dead_code)]
     pub fn variables(&self) -> &[Var] {
         &self.variables
     }
 
+    #[allow(dead_code)]
     pub fn sorts(&self) -> &[Sort] {
         &self.sorts
     }
 
+    #[allow(dead_code)]
     pub fn quantifier(&self) -> FOBinder {
         self.quantifier
     }

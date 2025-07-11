@@ -1,23 +1,18 @@
-use std::u32;
-
 use cryptovampire_macros::smt;
 use cryptovampire_smt::{IntoSmt, SortedVar};
 use egg::Var;
 use itertools::{Itertools, chain};
 use log::trace;
 
-use crate::{
-    MSmt, MSmtFormula, Problem,
-    protocol::{Protocol, Step},
-    rules::{
-        nonce::Nonce,
-        utils::{SyntaxSearcher, fresh::RefFormulaBuilder},
-    },
-    terms::{
-        Function, HAPPENS, IS_INDEPENDANT_BITSTRING, LT, MACRO_FRAME, NONCE, RecFOFormula, Sort,
-        formula_utils::{offset_rexpr_owned, offset_var},
-    },
+use crate::protocol::{Protocol, Step};
+use crate::rules::nonce::Nonce;
+use crate::rules::utils::SyntaxSearcher;
+use crate::rules::utils::fresh::RefFormulaBuilder;
+use crate::terms::formula_utils::{offset_rexpr_owned, offset_var};
+use crate::terms::{
+    Function, HAPPENS, IS_INDEPENDANT_BITSTRING, LT, MACRO_FRAME, NONCE, RecFOFormula, Sort,
 };
+use crate::{MSmt, MSmtFormula, Problem};
 
 pub fn mk_no_guessing_smt<'a>(pbl: &'a Problem) -> impl Iterator<Item = MSmt> + use<'a> {
     chain![

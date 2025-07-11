@@ -10,7 +10,10 @@ use itertools::Itertools;
 use static_init::dynamic;
 use utils::ereturn_let;
 
-use crate::{Lang, problem::PAnalysis, rexp, rules::utils::mk_subst_rw, terms::SUBSTITUTION_RULE};
+use crate::problem::PAnalysis;
+use crate::rules::utils::mk_subst_rw;
+use crate::terms::SUBSTITUTION_RULE;
+use crate::{Lang, rexp};
 
 #[dynamic]
 static SUBSTITUTION_RULE_PATTERN: Pattern<Lang> = {

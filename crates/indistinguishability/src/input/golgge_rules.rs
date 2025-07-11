@@ -1,12 +1,11 @@
 use golgge::PrologRule;
+use steel::rvals::Result as SResult;
+use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
-use crate::{
-    input::Registerable,
-    problem::{PRule, RcRule},
-    terms::RecFOFormula,
-};
-use steel::{rvals::Result as SResult, steel_vm::register_fn::RegisterFn};
+use crate::input::Registerable;
+use crate::problem::{PRule, RcRule};
+use crate::terms::RecFOFormula;
 
 #[derive(Clone, Steel)]
 pub struct Rule(pub RcRule);

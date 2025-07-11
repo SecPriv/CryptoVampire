@@ -1,14 +1,13 @@
+use std::borrow::Borrow;
+use std::fmt::Display;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
 use bon::Builder;
 use cryptovampire_smt::Smt;
 use golgge::Dependancy;
 use itertools::chain;
 use log::trace;
-use std::{
-    borrow::Borrow,
-    fmt::Display,
-    path::{Path, PathBuf},
-    process::Command,
-};
 use utils::implvec;
 
 use crate::{MSmtFormula, Problem};

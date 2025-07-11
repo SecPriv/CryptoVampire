@@ -1,13 +1,13 @@
-use super::CowPattern;
-use crate::{
-    input::{Registerable, var::SVar},
-    terms::{RecFOFormula, Sort},
-};
 use itertools::Itertools;
 use serde::Serialize;
-use steel::rvals::{FromSteelVal, IntoSteelVal};
-use steel::{rvals::Result as SResult, steel_vm::register_fn::RegisterFn};
+use steel::rvals::{FromSteelVal, IntoSteelVal, Result as SResult};
+use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
+
+use super::CowPattern;
+use crate::input::Registerable;
+use crate::input::var::SVar;
+use crate::terms::{RecFOFormula, Sort};
 
 /// When the fonction is an alias
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]

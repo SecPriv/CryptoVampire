@@ -2,18 +2,15 @@ use std::borrow::Cow;
 
 use egg::{RecExpr, Var, VarExposed};
 use itertools::{Itertools, izip};
-use logic_formula::{Destructed, Formula, HeadSk, egg::SimpleDiscriminant};
+use logic_formula::{Destructed, Formula, HeadSk};
 use utils::{ereturn_if, ereturn_let, implvec};
 
-use crate::{
-    LangVar, Problem,
-    problem::PRule,
-    rules::utils::fresh::{Mode, RefFormulaBuilder},
-    terms::{
-        Alias, AliasRewrite, EQ, Exists, FOBinder, Function, MACRO_COND, MACRO_MSG, RecFOFormula,
-        formula_utils::{offset_rexpr_owned, offset_var},
-    },
+use crate::rules::utils::fresh::{Mode, RefFormulaBuilder};
+use crate::terms::formula_utils::{offset_rexpr_owned, offset_var};
+use crate::terms::{
+    Alias, AliasRewrite, EQ, Exists, FOBinder, Function, MACRO_COND, MACRO_MSG, RecFOFormula,
 };
+use crate::{LangVar, Problem};
 
 declare_trace!($"search");
 

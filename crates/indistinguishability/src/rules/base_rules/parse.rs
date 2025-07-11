@@ -1,5 +1,6 @@
 //! quick parser for [PatternAst] and [egg::MutlipatternAst]
-use std::{error::Error, str::FromStr};
+use std::error::Error;
+use std::str::FromStr;
 
 use egg::{Analysis, Language, MultiPattern, Pattern, PatternAst, Rewrite, SymbolLang, Var};
 use golgge::PrologRule;
@@ -7,7 +8,8 @@ use itertools::Itertools;
 use logic_formula::egg::{SimplLang, SimpleDiscriminant, SimpleLangParseError};
 use utils::impossible::Impossible;
 
-use crate::{Problem, terms::Function};
+use crate::Problem;
+use crate::terms::Function;
 
 /// remove comments from input
 pub fn clean_input(s: &str) -> String {

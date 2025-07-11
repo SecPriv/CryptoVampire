@@ -1,6 +1,7 @@
+use std::io::Write;
+
 use cryptovampire_smt::{Smt, SmtFormula};
 use logic_formula::egg::{SimplLang, SimplLangVar};
-use std::io::Write;
 use terms::{Function, Sort};
 
 // ~~~~~~~~~~~~~~~~ macros ~~~~~~~~~~~~~~~~~~
@@ -17,13 +18,15 @@ use terms::{Function, Sort};
 /// }
 /// ```
 /// **NB**: the extra `$` is needed
+#[rustfmt::skip]
 macro_rules! declare_trace {
-    ($dolar:tt$name:literal) => {
+    ($dolar:tt $name:literal) => {
+        #[allow(unused_macros)]
         macro_rules! tr {
-                                                    ($dolar($arg:tt )+) => {
-                                                        ::log::trace!(target: $name, $dolar($arg)+)
-                                                    };
-                                                }
+            ($dolar($arg:tt )+) => {
+                ::log::trace!(target: $name, $dolar($arg)+)
+            };
+        }
     };
 }
 

@@ -1,9 +1,8 @@
 pub mod basic_hash {
-    use crate::{
-        init_logger,
-        problem::{PRule, test::basic_hash::mk_pblm},
-        rules::prf_test::basic_hash::mk_prf_rule,
-    };
+    use crate::init_logger;
+    use crate::problem::PRule;
+    use crate::problem::test::basic_hash::mk_pblm;
+    use crate::rules::prf_test::basic_hash::mk_prf_rule;
 
     #[test]
     fn run() {

@@ -1,11 +1,10 @@
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
-use crate::{
-    input::{Registerable, shared_problem::ShrProblem},
-    rules::PRF,
-    terms::Function,
-};
+use crate::input::Registerable;
+use crate::input::shared_problem::ShrProblem;
+use crate::rules::PRF;
+use crate::terms::Function;
 
 #[derive(Debug, Clone, Steel)]
 pub struct ShrCrypto {

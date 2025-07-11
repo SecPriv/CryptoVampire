@@ -1,13 +1,12 @@
 use std::fmt::Display;
 
-use super::FunctionCollection;
-use crate::{
-    Lang,
-    terms::{Function, Sort},
-};
 use egg::{PatternAst, Var};
 use itertools::{Itertools, chain};
 use logic_formula::Formula;
+
+use super::FunctionCollection;
+use crate::Lang;
+use crate::terms::{Function, Sort};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Exists {

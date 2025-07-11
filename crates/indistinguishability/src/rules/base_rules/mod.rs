@@ -8,10 +8,8 @@ mod rewrites;
 pub use equiv::mk_equiv_rules;
 use utils::implvec;
 
-use crate::{
-    Problem,
-    problem::{PRule, RcRule},
-};
+use crate::Problem;
+use crate::problem::{PRule, RcRule};
 mod equiv;
 mod substitution;
 

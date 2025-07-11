@@ -1,6 +1,7 @@
-use crate::{Lang, LangVar};
 use cryptovampire_smt::VarInner;
 use egg::{Symbol, Var};
+
+use crate::{Lang, LangVar};
 
 // =========================================================
 // ======================= macros ==========================
@@ -26,6 +27,7 @@ macro_rules! cow {
 macro_rules! mk_signature {
     (() -> $out:expr) => {
         {
+            #[allow(unused_imports)]
             use $crate::terms::Sort::*;
             $crate::terms::Signature {
                 inputs: std::borrow::Cow::Owned(vec![]),
@@ -35,6 +37,7 @@ macro_rules! mk_signature {
     };
     ($t:expr, $n:literal) => {
         {
+            #[allow(unused_imports)]
             use $crate::terms::Sort::*;
             $crate::terms::Signature {
                 inputs: std::borrow::Cow::Owned(vec![$t; $n]),
@@ -44,6 +47,7 @@ macro_rules! mk_signature {
     };
     (($($ins:expr),*) -> $out:expr) => {
         {
+            #[allow(unused_imports)]
             use $crate::terms::Sort::*;
             $crate::terms::Signature {
                 inputs: std::borrow::Cow::Owned(vec![$($ins),*]),
@@ -73,7 +77,6 @@ pub use rewrite::Rewrite;
 
 mod alias;
 pub use alias::{Alias, AliasRewrite};
-
 pub use quantifier::*;
 mod quantifier;
 
@@ -84,9 +87,8 @@ mod signature;
 pub use signature::*;
 
 mod function;
-pub use function::*;
-
 pub use builtin::*;
+pub use function::*;
 mod builtin;
 
 pub use cryptography::*;
@@ -101,7 +103,7 @@ pub type CowPattern = cow![LangVar];
 
 pub fn convert_smt_var(var: cryptovampire_smt::VarInner) -> Var {
     match var {
-        VarInner::Int(x) => Var::from_u32(x.try_into().unwrap()),
+        VarInner::Int(x) => Var::from_u32(x),
         VarInner::Str(cow) => Var::from_symbol(Symbol::from(cow.as_ref())),
     }
 }

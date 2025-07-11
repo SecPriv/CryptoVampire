@@ -1,10 +1,6 @@
 use std::io::{self, Read};
 
-use indistinguishability::{
-    init_engine, init_logger,
-    problem::{self, test::basic_hash::mk_pblm},
-};
-use steel::steel_vm::{builtin::BuiltInModule, engine::Engine};
+use indistinguishability::{init_engine, init_logger};
 
 static CV_PRELUDE: &str = include_str!("./input/prelude.scm");
 pub fn main() {

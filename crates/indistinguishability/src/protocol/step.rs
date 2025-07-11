@@ -6,15 +6,13 @@ use cryptovampire_smt::{Smt, SortedVar};
 use egg::{Analysis, ENodeOrVar, Pattern, PatternAst, RecExpr, Rewrite, Var};
 use itertools::{Itertools, izip};
 use log::trace;
-use logic_formula::{Formula, egg::SimpleDiscriminant};
-
-use crate::{
-    Lang, LangVar, MSmt, MSmtFormula, rexp,
-    terms::{EMPTY, Function, INIT, TRUE, UNFOLD_COND, UNFOLD_MSG},
-    vampire::convert::{formula_to_smt, var_to_smt},
-};
+use logic_formula::Formula;
+use logic_formula::egg::SimpleDiscriminant;
 
 use super::{MacroKind, ProtocolLanguage};
+use crate::terms::{EMPTY, Function, INIT, TRUE, UNFOLD_COND, UNFOLD_MSG};
+use crate::vampire::convert::{formula_to_smt, var_to_smt};
+use crate::{Lang, LangVar, MSmt, MSmtFormula, rexp};
 
 /// A step in protocol
 #[derive(Debug, PartialEq, Eq, Clone)]

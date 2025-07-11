@@ -4,28 +4,20 @@ use cryptovampire_smt::{IntoSmt, SmtFormula};
 use egg::{Pattern, PatternAst, Searcher, Var};
 use golgge::{Dependancy, PrologRule, Rule};
 use itertools::{Itertools, chain, izip};
-use logic_formula::{Formula, egg::SimpleDiscriminant};
+use logic_formula::egg::SimpleDiscriminant;
 use utils::{ereturn_let, implvec};
 
-use crate::{
-    Lang, LangVar, Problem,
-    problem::{PAnalysis, PRule, RcRule},
-    protocol::{Protocol, Step},
-    rexp,
-    rules::{
-        PRF,
-        utils::{
-            SyntaxSearcher,
-            fresh::{Mode, RefFormulaBuilder},
-            generate_rule_vars_arr,
-        },
-    },
-    terms::{
-        EQ, FAIL, FOBinder, Function, HAPPENS, LT, MACRO_EXEC, MACRO_FRAME, NONCE, RecFOFormula,
-        Sort, VAMPIRE,
-    },
-    vampire::runner::VampireExec,
+use crate::problem::{PAnalysis, PRule, RcRule};
+use crate::protocol::{Protocol, Step};
+use crate::rules::PRF;
+use crate::rules::utils::fresh::{Mode, RefFormulaBuilder};
+use crate::rules::utils::{SyntaxSearcher, generate_rule_vars_arr};
+use crate::terms::{
+    EQ, FAIL, FOBinder, Function, HAPPENS, LT, MACRO_EXEC, MACRO_FRAME, NONCE, RecFOFormula, Sort,
+    VAMPIRE,
 };
+use crate::vampire::runner::VampireExec;
+use crate::{Lang, LangVar, Problem, rexp};
 
 declare_trace!($"search_prf");
 

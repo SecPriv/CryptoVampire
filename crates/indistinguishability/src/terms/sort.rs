@@ -1,6 +1,7 @@
-use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use steel::{rvals::IntoSteelVal, steel_vm::register_fn::RegisterFn};
+
+use serde::{Deserialize, Serialize};
+use steel::rvals::IntoSteelVal;
 use steel_derive::Steel;
 
 use crate::input::Registerable;

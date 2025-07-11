@@ -1,22 +1,19 @@
-use crate::{Program, analysis::WeightedAnalysis, weight::Weight};
-use bon::{Builder, bon, builder};
-use egg::{Analysis, FromOp, Id, Language, Pattern, RecExpr, Searcher, SymbolLang, Var};
+use std::borrow::Cow;
+use std::fmt::Display;
+use std::rc::Rc;
+use std::str::FromStr;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+use bon::bon;
+use egg::{FromOp, Id, Language, Pattern, RecExpr, Searcher, SymbolLang};
 use serde::Serialize;
-use std::{
-    borrow::Cow,
-    cell::RefCell,
-    collections::HashMap,
-    fmt::Display,
-    ops::DerefMut,
-    rc::Rc,
-    str::FromStr,
-    sync::atomic::{AtomicU64, Ordering},
-    u64,
-};
 use thiserror::Error;
 use utils::ereturn_if;
 
 use super::{Dependancy, Fresh, Rule};
+use crate::Program;
+use crate::analysis::WeightedAnalysis;
+use crate::weight::Weight;
 
 #[derive(Debug)]
 pub struct PrologRule<L> {
@@ -219,12 +216,16 @@ macro_rules! pl {
 }
 
 pub mod parser {
-    use super::PrologRule;
+    use std::cell::RefCell;
+    use std::fmt::Debug;
+    use std::str::FromStr;
+
     use anyhow::{Context, anyhow, bail};
     use egg::{Analysis, FromOp, Language, MultiPattern, Pattern, Rewrite};
     use itertools::Itertools;
     use log::trace;
-    use std::{cell::RefCell, fmt::Debug, str::FromStr};
+
+    use super::PrologRule;
 
     fn parse_rw<L, N>(name: Option<&str>, s1: &str, s2: &str) -> anyhow::Result<Rewrite<L, N>>
     where

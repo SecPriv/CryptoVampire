@@ -1,19 +1,20 @@
-use std::{
-    cell::{Ref, RefCell, RefMut},
-    rc::Rc,
-};
+use std::cell::{Ref, RefCell, RefMut};
+use std::rc::Rc;
 
 use cryptovampire_smt::IntoSmt;
+use steel::SteelErr;
+use steel::rerrs::ErrorKind;
 use steel::rvals::Result as SResult;
-use steel::{SteelErr, rerrs::ErrorKind, rvals::CustomType, steel_vm::register_fn::RegisterFn};
+use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
-use crate::{
-    MSmt, Problem,
-    input::{Registerable, golgge_rules::Rule, shared_exists::ShrExists, var::SVar},
-    protocol::Step,
-    terms::{Function, RecFOFormula, Rewrite, Sort},
-};
+use crate::input::Registerable;
+use crate::input::golgge_rules::Rule;
+use crate::input::shared_exists::ShrExists;
+use crate::input::var::SVar;
+use crate::protocol::Step;
+use crate::terms::{Function, RecFOFormula, Rewrite, Sort};
+use crate::{MSmt, Problem};
 
 declare_trace!($"shrpblm");
 
@@ -30,6 +31,7 @@ impl ShrProblem {
     }
 
     /// returns [None] is the shared pointer is still shared
+    #[allow(dead_code)]
     pub fn try_into_inner(self) -> Option<Problem> {
         Rc::into_inner(self.0).map(RefCell::into_inner)
     }

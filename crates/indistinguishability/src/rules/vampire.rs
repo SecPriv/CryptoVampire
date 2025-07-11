@@ -1,18 +1,18 @@
-use crate::{
-    Lang, Problem,
-    problem::PAnalysis,
-    rexp,
-    terms::{RecFOFormula, VAMPIRE},
-    vampire::runner::VampireExec,
-};
+use std::borrow::Cow;
+use std::rc::Rc;
+
 use bon::Builder;
 use cryptovampire_smt::{IntoSmt, Smt};
 use egg::{Pattern, RecExpr, Searcher, Var};
 use golgge::{Dependancy, Rule};
-use itertools::{Itertools, chain};
+use itertools::chain;
 use static_init::dynamic;
-use std::{borrow::Cow, rc::Rc};
 use utils::ereturn_let;
+
+use crate::problem::PAnalysis;
+use crate::terms::{RecFOFormula, VAMPIRE};
+use crate::vampire::runner::VampireExec;
+use crate::{Lang, Problem, rexp};
 
 declare_trace!($"vampire_rule");
 
@@ -42,6 +42,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for VampireRule {
         let to_prove_id = s.get(VAR).unwrap();
         let Some(to_prove) = RecFOFormula::try_from_id(egraph, *to_prove_id) else {
             panic!("aaaaa");
+            #[allow(unreachable_code)]
             return golgge::Dependancy::impossible();
         };
         let to_prove = to_prove.into_smt();

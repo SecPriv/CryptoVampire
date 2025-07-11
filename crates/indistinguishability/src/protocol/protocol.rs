@@ -2,9 +2,9 @@ use bon::Builder;
 use cryptovampire_macros::smt;
 use itertools::Itertools;
 
-use crate::{MSmtFormula, terms::Function};
-
 use super::Step;
+use crate::MSmtFormula;
+use crate::terms::Function;
 #[derive(Debug, PartialEq, Eq, Clone, Builder)]
 pub struct Protocol {
     name: Function,

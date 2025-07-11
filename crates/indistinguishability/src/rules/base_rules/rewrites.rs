@@ -3,14 +3,10 @@ use itertools::{Itertools, chain};
 use log::trace;
 use logic_formula::egg::SimpleDiscriminant;
 
-use super::{
-    parse::{PatternsAst, clean_input, convert_fun},
-    var_as_recexpr,
-};
-use crate::{
-    Lang, Problem,
-    terms::{AliasRewrite, Exists, Function},
-};
+use super::parse::{PatternsAst, clean_input, convert_fun};
+use super::var_as_recexpr;
+use crate::terms::{AliasRewrite, Exists, Function};
+use crate::{Lang, Problem};
 /// build the default rewrite rules
 pub fn mk_rewrites_rules<N: Analysis<Lang>>(
     pbl: &Problem,

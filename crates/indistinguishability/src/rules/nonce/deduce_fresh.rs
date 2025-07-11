@@ -1,23 +1,22 @@
 use std::borrow::Cow;
 use std::rc::Rc;
 
-use super::*;
-use crate::problem::PAnalysis;
-use crate::terms::FRESH_NONCE;
-use crate::vampire::runner::VampireExec;
-use crate::{Lang, rules::utils::fresh::RefFormulaBuilder};
-use crate::{Problem, rexp};
 use bon::Builder;
 use cryptovampire_smt::{IntoSmt, SmtFormula};
-use egg::{Id, Pattern, Searcher};
-use egg::{Language, Var};
+use egg::{Id, Pattern, Searcher, Var};
 use golgge::{Dependancy, Rule};
-use itertools::Itertools;
 use static_init::dynamic;
 use utils::ereturn_let;
 
+use super::*;
+use crate::problem::PAnalysis;
+use crate::rules::utils::fresh::RefFormulaBuilder;
+use crate::terms::FRESH_NONCE;
+use crate::vampire::runner::VampireExec;
+use crate::{Lang, Problem, rexp};
+
 #[dynamic]
-static FRESH_NONCE_PATTERN: Pattern<Lang> = { rexp!((FRESH_NONCE #0 #1 #2)).into_iter().collect() };
+static FRESH_NONCE_PATTERN: Pattern<Lang> = rexp!((FRESH_NONCE #0 #1 #2)).into_iter().collect();
 
 #[derive(Clone, Builder)]
 pub struct FreshNonce {

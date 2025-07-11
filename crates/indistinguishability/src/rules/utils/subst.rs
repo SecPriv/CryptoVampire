@@ -5,11 +5,9 @@ use egg::{
 use itertools::{Itertools, chain};
 use logic_formula::egg::SimpleDiscriminant;
 
-use crate::{
-    Lang, Problem, rexp,
-    rules::utils::generate_rule_vars,
-    terms::{Function, SUBSTITUTION},
-};
+use crate::rules::utils::generate_rule_vars;
+use crate::terms::{Function, SUBSTITUTION};
+use crate::{Lang, Problem, rexp};
 
 /// you should **not** use these rule with the other ones
 pub fn mk_subst_rw<'a, N: Analysis<Lang>>(

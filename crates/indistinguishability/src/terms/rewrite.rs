@@ -3,14 +3,15 @@ use std::borrow::Cow;
 use bon::{Builder, builder};
 use itertools::Itertools;
 use serde::Serialize;
-use steel::{rvals::Result as SResult, steel_vm::register_fn::RegisterFn};
+use steel::rvals::Result as SResult;
+use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
-use crate::{
-    LangVar,
-    input::{Registerable, var::SVar},
-    terms::{CowPattern, RecFOFormula, Sort, formula_utils::convert_to_cow},
-};
+use crate::LangVar;
+use crate::input::Registerable;
+use crate::input::var::SVar;
+use crate::terms::formula_utils::convert_to_cow;
+use crate::terms::{CowPattern, RecFOFormula, Sort};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Builder, Steel)]
 pub struct Rewrite {

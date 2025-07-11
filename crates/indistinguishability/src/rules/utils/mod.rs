@@ -4,7 +4,8 @@ mod search;
 use egg::Var;
 pub use search::{SyntaxSearcher, default_is_special};
 
-use crate::{LangVar, terms::Function};
+use crate::LangVar;
+use crate::terms::Function;
 
 mod subst;
 pub use subst::mk_subst_rw;

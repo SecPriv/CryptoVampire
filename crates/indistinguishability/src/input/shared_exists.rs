@@ -1,16 +1,14 @@
-use std::{
-    cell::{Ref, RefMut},
-    ops::Deref,
-};
+use std::cell::{Ref, RefMut};
+use std::ops::Deref;
 
 use itertools::Itertools;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
-use crate::{
-    input::{Registerable, shared_problem::ShrProblem, var::SVar},
-    terms::{Exists, Function, RecFOFormula},
-};
+use crate::input::Registerable;
+use crate::input::shared_problem::ShrProblem;
+use crate::input::var::SVar;
+use crate::terms::{Exists, Function, RecFOFormula};
 
 #[derive(Debug, Clone, Steel)]
 pub struct ShrExists {

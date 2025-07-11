@@ -6,12 +6,9 @@ use itertools::{Itertools, chain};
 use logic_formula::egg::SimpleDiscriminant;
 use utils::ereturn_let;
 
-use crate::{
-    Lang, LangVar, Problem, mk_signature,
-    problem::{PAnalysis, PRule},
-    rexp,
-    terms::{EQUIV, Function, FunctionFlags, NONCE, SUBSTITUTION, SUBSTITUTION_RULE, Sort},
-};
+use crate::problem::{PAnalysis, PRule};
+use crate::terms::{EQUIV, Function, FunctionFlags, NONCE, SUBSTITUTION, SUBSTITUTION_RULE, Sort};
+use crate::{Lang, LangVar, Problem, mk_signature, rexp};
 
 #[cfg(test)]
 pub mod test;

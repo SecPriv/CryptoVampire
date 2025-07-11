@@ -2,10 +2,8 @@
 
 use utils::dynamic_iter;
 
-use crate::{
-    MSmt, Problem,
-    rules::{self, mk_no_guessing_smt},
-};
+use crate::rules::{self, mk_no_guessing_smt};
+use crate::{MSmt, Problem};
 
 #[derive(Debug, Default)]
 #[non_exhaustive]

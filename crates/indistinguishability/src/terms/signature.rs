@@ -1,10 +1,12 @@
-use crate::{input::Registerable, terms::Sort};
 use cryptovampire_smt::{SortedVar, VarInner};
 use itertools::izip;
 use serde::{Deserialize, Serialize};
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 use utils::implvec;
+
+use crate::input::Registerable;
+use crate::terms::Sort;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Steel)]
 pub struct Signature {
