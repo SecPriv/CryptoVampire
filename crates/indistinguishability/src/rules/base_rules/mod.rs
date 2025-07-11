@@ -11,7 +11,7 @@ use utils::implvec;
 use crate::Problem;
 use crate::problem::{PRule, RcRule};
 mod equiv;
-mod substitution;
+// mod substitution;
 
 pub fn mk_prolog_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
     chain![

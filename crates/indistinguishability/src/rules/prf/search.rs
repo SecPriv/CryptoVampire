@@ -407,11 +407,7 @@ impl PrfRule {
         Self {
             prf: prf.index(),
             pattern: prf.search_trigger_pattern().collect(),
-            exec: Rc::new(
-                VampireExec::builder()
-                    .keep_file(pbl.config.keep_smt_files)
-                    .build(),
-            ),
+            exec: Rc::new(VampireExec::builder().with_pbl(pbl).build()),
         }
     }
 }

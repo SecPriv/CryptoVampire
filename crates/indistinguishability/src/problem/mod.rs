@@ -74,11 +74,7 @@ impl Problem {
 
     /// Build a [Program] to use
     pub fn mk_program<'a>(&'a mut self) -> Program<Lang, PAnalysis<'a>> {
-        let exec = Rc::new(
-            VampireExec::builder()
-                .keep_file(self.config.keep_smt_files)
-                .build(),
-        );
+        let exec = Rc::new(VampireExec::builder().with_pbl(self).build());
         let vampire_rule = VampireRule::builder().exec(exec.clone()).build();
         let fresh_rule = FreshNonce::builder().exec(exec.clone()).build();
 

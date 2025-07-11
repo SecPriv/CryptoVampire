@@ -17,7 +17,7 @@ impl Default for Configuration {
         Self {
             keep_smt_files: cfg!(debug_assertions),
             depth: u64::MAX,
-            vampire_timeout: 10f,
+            vampire_timeout: 10f64,
         }
     }
 }

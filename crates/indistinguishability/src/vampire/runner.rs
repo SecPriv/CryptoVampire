@@ -16,25 +16,60 @@ declare_trace!($"vampire_exec");
 
 /// The [Runner] itself
 #[derive(Debug, Clone, Builder)]
+#[builder(builder_type = VampireExecBuilder)]
 pub struct VampireExec {
+    /// Arguments to vampire
+    #[builder(field = VampireExec::default_args())]
+    args: Vec<VampireArg>,
     /// The location of the vampire executable
     ///
     /// By default it looks into the `$PATH`
-    #[builder(default = which::which("vampire").unwrap(), into)]
+    #[builder(default = get_vampire_location(), into)]
     exe_location: PathBuf,
-    /// Arguments to vampire
-    #[builder(default = VampireExec::default_args(), with = <_>::from_iter)]
-    args: Vec<VampireArg>,
     /// Should the smt file be kept once we don't need it anymore?
-    #[builder(default = false)]
+    #[builder(default = cfg!(debug_assertions))]
     keep_file: bool,
+}
+
+impl<S> VampireExecBuilder<S>
+where
+    S: vampire_exec_builder::State,
+{
+    pub fn with_pbl(self, pbl: &Problem) -> VampireExecBuilder<vampire_exec_builder::SetKeepFile<S>>
+    where
+        S::KeepFile: vampire_exec_builder::IsUnset,
+    {
+        self.keep_file(pbl.config.keep_smt_files)
+            .timeout(pbl.config.vampire_timeout)
+    }
+
+    pub fn empty_args(mut self) -> Self {
+        self.args = vec![];
+        self
+    }
+
+    pub fn extend_args(mut self, args: implvec!(VampireArg)) -> Self {
+        self.args.extend(args);
+        self
+    }
+
+    /// sets the timeout in seconds
+    pub fn timeout(mut self, timeout: f64) -> Self {
+        let narg = VampireArg::TimeLimit(timeout);
+        if let Some(arg) = self.args.iter_mut().find(|x| x.same(&narg)) {
+            *arg = narg;
+        } else {
+            self.args.push(narg);
+        }
+        self
+    }
 }
 
 macro_rules! options {
   ($($variant:ident($name:literal, $content:ty)),*,) => {
       #[allow(dead_code)]
       #[doc = "arguments to [VampireExec] in type-safeish mode"]
-      #[derive(Debug, Clone, PartialEq, PartialOrd)]
+      #[derive(Debug, Clone)]
       pub enum VampireArg {
         $($variant($content)),*
       }
@@ -46,6 +81,16 @@ macro_rules! options {
           }
         }
       }
+
+    impl VampireArg {
+        #[doc = "tells if two [VampireArg] are setting the same parameter"]
+        pub const fn same(&self, other: &Self) -> bool {
+            matches!(
+                (self, other),
+                    $((Self::$variant(..), Self::$variant(..)) )|*
+            )
+        }
+    }
   };
 }
 
@@ -206,7 +251,6 @@ impl VampireExec {
             VampireArg::Cores(0),
             VampireArg::Mode(vampire_suboptions::Mode::Portfolio),
             VampireArg::InputSyntax(vampire_suboptions::InputSyntax::SmtLib2),
-            VampireArg::TimeLimit(5.0),
         ]
     }
 
@@ -227,4 +271,8 @@ impl VampireExec {
             Dependancy::impossible()
         }
     }
+}
+
+fn get_vampire_location() -> PathBuf {
+    which::which("vampire").expect("can't find vampire in the $PATH")
 }

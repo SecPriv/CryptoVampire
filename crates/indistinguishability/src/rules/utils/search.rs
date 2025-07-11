@@ -5,10 +5,10 @@ use itertools::{Itertools, izip};
 use logic_formula::{Destructed, Formula, HeadSk};
 use utils::{ereturn_if, ereturn_let, implvec};
 
-use crate::rules::utils::fresh::{Mode, RefFormulaBuilder};
+use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::terms::formula_utils::{offset_rexpr_owned, offset_var};
 use crate::terms::{
-    Alias, AliasRewrite, EQ, Exists, FOBinder, Function, MACRO_COND, MACRO_MSG, RecFOFormula,
+    Alias, AliasRewrite, EQ, Exists, Function, MACRO_COND, MACRO_MSG, RecFOFormula,
 };
 use crate::{LangVar, Problem};
 
