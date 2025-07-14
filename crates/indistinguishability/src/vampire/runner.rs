@@ -195,7 +195,8 @@ impl VampireExec {
         tr!("refutation: {refutation}");
 
         if o.status.code() != Some(SUCCESS_RC) && o.status.code() != Some(TIMEOUT_RC) {
-            eprintln!("failed with error code {:}", o.status.code().unwrap());
+            eprintln!("vampire failed with error code {:}", o.status.code().unwrap());
+            eprintln!("file: {file:?}");
             eprintln!("stdout:\n{}", std::str::from_utf8(&o.stdout).unwrap());
             eprintln!("sterr:\n{}", std::str::from_utf8(&o.stderr).unwrap());
             panic!()

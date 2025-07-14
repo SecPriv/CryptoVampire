@@ -30,7 +30,7 @@
             (list sorts ...) 
             (formula c)))]
       [(_ (tpl a b )) (formula (mtuple a b))]
-      [(_ (tpl a b ... )) (formula (mtuple a < b ...>))]
+      [(_ (tpl a b ... )) (formula (mtuple a (tpl b ...)))]
       [(_ (and a b)) (formula (bit_and a b))]
       [(_ (and a b ...)) (formula (bit_and a (and b ...)))] 
       [(_ (or a b)) (formula (bit_or a b))]
@@ -64,3 +64,12 @@
   [(_ (sorts ...) -> sort) (mk-signature (list sorts ...) sort)]
   [(_ sort) (mk-signature '() sort)]
   ))
+
+(define-syntax prolog
+  (syntax-rules (:-)
+  [(_ name from) 
+    (mk-prolog name (formula from) '())]
+  [(_ name from :- to ...) 
+    (mk-prolog name 
+      (formula from) (list (formula to) ...  ))]
+))

@@ -10,10 +10,6 @@ use crate::{Smt, SmtCons, SmtFormula, SortedVar};
 macro_rules! sexpr {
 ( $( $x:expr ),* ) => {
     {
-        // let mut temp_vec = Vec::new();
-        // $(
-        //     temp_vec.push(Term::Atom($x.to_string(), None));
-        // )*
         Term::sexpr([$( Term::atom($x) ),* ])
     }
 };
@@ -25,38 +21,27 @@ where
     F: Display,
 {
     match formula {
-        SmtFormula::Var(v) => Term::Atom(v.to_string(), None),
-        SmtFormula::True => Term::Atom("true".to_string(), None),
-        SmtFormula::False => Term::Atom("false".to_string(), None),
+        SmtFormula::Var(v) => Term::atom(v),
+        SmtFormula::True => Term::atom("true"),
+        SmtFormula::False => Term::atom("false"),
+        SmtFormula::Fun(fun, args) if args.is_empty() => Term::atom(fun),
         SmtFormula::Fun(fun, args) => {
-            let mut terms = vec![Term::Atom(fun.to_string(), None)];
+            let mut terms = vec![Term::atom(fun)];
             terms.extend(args.iter().map(translate_formula_to_term));
             Term::SExpr(terms, None)
         }
-        SmtFormula::Not(f) => Term::SExpr(
-            vec![
-                Term::Atom("not".to_string(), None),
-                translate_formula_to_term(f),
-            ],
-            None,
-        ),
-        SmtFormula::Implies(f1, f2) => Term::SExpr(
-            vec![
-                Term::Atom("=>".to_string(), None),
-                translate_formula_to_term(f1),
-                translate_formula_to_term(f2),
-            ],
-            None,
-        ),
-        SmtFormula::Ite(i, t, e) => Term::SExpr(
-            vec![
-                Term::Atom("ite".to_string(), None),
-                translate_formula_to_term(i),
-                translate_formula_to_term(t),
-                translate_formula_to_term(e),
-            ],
-            None,
-        ),
+        SmtFormula::Not(f) => Term::sexpr([Term::atom("not"), translate_formula_to_term(f)]),
+        SmtFormula::Implies(f1, f2) => Term::sexpr([
+            Term::atom("=>"),
+            translate_formula_to_term(f1),
+            translate_formula_to_term(f2),
+        ]),
+        SmtFormula::Ite(i, t, e) => Term::sexpr([
+            Term::atom("ite"),
+            translate_formula_to_term(i),
+            translate_formula_to_term(t),
+            translate_formula_to_term(e),
+        ]),
         // N-ary operators
         SmtFormula::And(fs) => n_ary_op_to_term("and", fs),
         SmtFormula::Or(fs) => n_ary_op_to_term("or", fs),

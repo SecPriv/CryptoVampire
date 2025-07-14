@@ -106,15 +106,6 @@
     [in (formula (macro_input (rf i) p2))])
   (formula (bit_not (@ cexists1 i p2)))))
 
-(define-syntax prolog
-  (syntax-rules (:-)
-  [(_ name from) 
-    (mk-prolog name (formula from) '())]
-  [(_ name from :- to ...) 
-    (mk-prolog name 
-      (formula from) (list (formula to) ...  ))]
-))
-
 (define n0 (declare_function pbl (mk-nonce "n0" (signature (Index Index Protocol) -> Nonce))))
 
 ; (add-rule pbl (let (

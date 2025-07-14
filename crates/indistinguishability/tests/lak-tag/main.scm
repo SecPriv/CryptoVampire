@@ -4,11 +4,18 @@
 (define p1 (declare_protocol pbl))
 (define p2 (declare_protocol pbl))
 
-(define hash (declare_function pbl (fun "hash" (signature (Bitstring Bitstring) -> Bitstring))))
-(define ok (declare_function pbl (fun "ok" (signature () -> Bitstring))))
-(define ko (declare_function pbl (fun "ko" (signature () -> Bitstring))))
-(define tag1 (declare_function pbl (fun "tag1" (signature () -> Bitstring))))
-(define tag2 (declare_function pbl (fun "tag2" (signature () -> Bitstring))))
+(define prf (declare-cryptography pbl))
+
+(define hash (declare_function pbl 
+  (fun "hash" (signature (Bitstring Bitstring) -> Bitstring) (list prf))))
+(define ok (declare_function pbl 
+  (fun "ok" (signature () -> Bitstring) '())))
+(define ko (declare_function pbl 
+  (fun "ko" (signature () -> Bitstring) '())))
+(define tag1 (declare_function pbl 
+  (fun "tag1" (signature () -> Bitstring) '())))
+(define tag2 (declare_function pbl 
+  (fun "tag2" (signature () -> Bitstring) '())))
 
 (define k1 (declare_function pbl (mk-nonce "key1" (signature (Index) -> Nonce))))
 (define k2 (declare_function pbl (mk-nonce "key2" (signature (Index Index) -> Nonce))))
@@ -93,11 +100,11 @@
 (set-step-message pbl r p2 (formula (nr 0)))
 
 (set-step-message pbl tag p1 
-  (let* ([i (mk-varf 0)] [ j (mk-varf 1) ] [in (macro_input (tag i j) p1)])
+  (let* ([i (mk-varf 0)] [ j (mk-varf 1) ] [in (formula (macro_input (tag i j) p1))])
   (formula (tpl (nt i j) (hash (tpl in (nt i j) tag1) (mk i j p1))))))
 
 (set-step-message pbl tag p2 
-  (let* ([i (mk-varf 0)] [ j (mk-varf 1) ] [in (macro_input (tag i j) p2)])
+  (let* ([i (mk-varf 0)] [ j (mk-varf 1) ] [in (formula (macro_input (tag i j) p2))])
   (formula (tpl (nt i j) (hash (tpl in (nt i j) tag1) (mk i j p2))))))
 
 (set-step-condition pbl rs p1 (let
@@ -130,10 +137,10 @@
     
 (set-step-condition pbl rs p1 (let
     ([j (mk-varf 0)] )
-  (formula (bit_not (@ cexists12 j (rf j) p1)))))
+  (formula (bit_not (@ cexists12 j p1 (rf j))))))
 (set-step-condition pbl rs p2 (let
     ([j (mk-varf 0)] )
-  (formula (bit_not (@ cexists12 j (rf j) p2)))))
+  (formula (bit_not (@ cexists12 j p2 (rf j))))))
 
 (set-step-message pbl rf p2 (formula ko))
 (set-step-message pbl rf p1 (formula ko))
