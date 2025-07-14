@@ -63,6 +63,10 @@ impl Dependancy {
     pub const fn is_impossible(&self) -> bool {
         self.inner.is_empty()
     }
+
+    pub fn is_axioms(&self) -> bool {
+        self.inner.first().is_some_and(|dep| dep.is_empty())
+    }
 }
 
 pub trait Rule<L: Language, N: Analysis<L>> {

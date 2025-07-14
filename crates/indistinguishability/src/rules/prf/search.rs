@@ -5,7 +5,7 @@ use egg::{Pattern, PatternAst, Searcher, Var};
 use golgge::{Dependancy, PrologRule, Rule};
 use itertools::{Itertools, chain, izip};
 use logic_formula::egg::SimpleDiscriminant;
-use utils::{ereturn_let, implvec};
+use utils::{ereturn_if, ereturn_let, implvec};
 
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::protocol::{Protocol, Step};
@@ -303,43 +303,45 @@ impl Search {
         pbl.cryptography()[self.prf_idx].as_prf().unwrap()
     }
 
-    pub fn search_timepoint(
-        &self,
-        pbl: &Problem,
-        ptcl: &Protocol,
+    /// Returns an iterator of formula instead of a large conjunctrion
+    pub fn search_timepoint<'a>(
+        &'a self,
+        pbl: &'a Problem,
+        ptcl: &'a Protocol,
         time: RecFOFormula,
-    ) -> RecFOFormula {
-        let builder = RefFormulaBuilder::builder().mode(Mode::And).build();
+    ) -> impl Iterator<Item = RecFOFormula> + use<'a> {
+        ptcl.steps()
+            .iter()
+            .flat_map(
+                move |step @ Step {
+                          id,
+                          vars,
+                          cond,
+                          msg,
+                      }| {
+                    let named = id.rapp(vars.iter().map(|v| RecFOFormula::Var(*v)));
+                    let happend_cond = HAPPENS.rapp([named.clone()]);
+                    let lt_cond = LT.rapp([named.clone(), time.clone()]);
 
-        for Step {
-            id,
-            vars,
-            cond,
-            msg,
-        } in ptcl.steps()
-        {
-            // build the condition object
-            let condition = {
-                let named = id.rapp(vars.iter().map(|v| RecFOFormula::Var(*v)));
-                let happend_cond = HAPPENS.rapp([named.clone()]);
-                let lt_cond = LT.rapp([named.clone(), time.clone()]);
-
-                happend_cond & lt_cond
-            };
-
-            let builder = builder
-                .add_node()
-                .mode(Mode::And)
-                .condition(condition)
-                .variables(vars.clone())
-                .sorts(id.signature.inputs_iter())
-                .quantifier(FOBinder::Forall)
-                .build();
-            self.inner_search_recexpr(pbl, &builder, cond);
-            self.inner_search_recexpr(pbl, &builder, msg);
-        }
-
-        builder.into_inner().unwrap().into_formula()
+                    let condition = happend_cond & lt_cond;
+                    [
+                        (condition.clone(), cond, step),
+                        (condition.clone(), msg, step),
+                    ]
+                    .into_iter()
+                },
+            )
+            .map(|(condition, to_search, Step { id, vars, .. })| {
+                let builder = RefFormulaBuilder::builder()
+                    .mode(Mode::And)
+                    .condition(condition)
+                    .variables(vars.clone())
+                    .sorts(id.signature.inputs_iter())
+                    .quantifier(FOBinder::Forall)
+                    .build();
+                self.inner_search_recexpr(pbl, &builder, &to_search);
+                builder.into_inner().unwrap().into_formula()
+            })
     }
 }
 
@@ -417,48 +419,41 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfRule {
         format!("prf vampire #{:}", self.prf).into()
     }
 
-    fn search(
-        &self,
-        prgm: &mut golgge::Program<Lang, PAnalysis<'a>>,
-        goal: egg::Id,
-    ) -> golgge::Dependancy {
+    fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: egg::Id) -> Dependancy {
         let egraph = prgm.egraph_mut();
         ereturn_let!(let Some(substs) = self.pattern
                 .search_eclass(egraph, goal), Dependancy::impossible());
-        let conditions;
-        {
+
+        for subst in substs.substs {
+            let [m, k, ptcl, time] =
+                ::std::array::from_fn(|i| *subst.get(Var::from_u32(i as u32)).unwrap());
+            let [m, k, time] = [m, k, time].map(|x| RecFOFormula::try_from_id(egraph, x).unwrap());
             let pbl = egraph.analysis.pbl();
-            let c_iter = substs
-                .substs
-                .into_iter()
-                .map(|subst| {
-                    let [m, k, ptcl, time] =
-                        ::std::array::from_fn(|i| *subst.get(Var::from_u32(i as u32)).unwrap());
-                    let [m, k, time] =
-                        [m, k, time].map(|x| RecFOFormula::try_from_id(egraph, x).unwrap());
+            let search = Search {
+                prf_idx: self.prf,
+                m,
+                k,
+            };
+            // get the protocol from the function
+            let ptcl = {
+                let idx = egraph[ptcl]
+                    .iter()
+                    .find_map(|f| f.head.get_protocol_index())
+                    .unwrap(); // there has to be one
+                &pbl.protocols()[idx]
+            };
 
-                    let search = Search {
-                        prf_idx: self.prf,
-                        m,
-                        k,
-                    };
-                    // get the protocol from the function
-                    let ptcl = {
-                        let idx = egraph[ptcl]
-                            .iter()
-                            .find_map(|f| f.head.get_protocol_index())
-                            .unwrap(); // there has to be one
-                        &pbl.protocols()[idx]
-                    };
-
-                    search.search_timepoint(pbl, ptcl, time)
-                })
-                .map(|x| x.into_smt());
-            conditions = SmtFormula::Or(c_iter.collect())
+            let search = search.search_timepoint(pbl, ptcl, time).collect_vec();
+            let _ = pbl;
+            let pbl = egraph.analysis.pbl_mut();
+            let result = search.into_iter().all(|query| {
+                self.exec
+                    .run_to_dependancy(pbl, query.into_smt())
+                    .is_axioms()
+            });
+            ereturn_if!(result, Dependancy::axiom());
         }
 
-        let pbl: &mut Problem = egraph.analysis.pbl_mut();
-
-        self.exec.run_to_dependancy(pbl, conditions)
+        Dependancy::impossible()
     }
 }
