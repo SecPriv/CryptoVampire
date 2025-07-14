@@ -116,8 +116,11 @@ where
                 Term::sexpr(con_group.iter().map(|SmtCons { fun, sorts, dest }| {
                     let mut c_terms = vec![Term::atom(fun)];
                     c_terms.extend(
-                        izip!(dest.iter(), sorts.iter())
-                            .map(|(sel_name, sel_sort)| sexpr![sel_name, sel_sort]),
+                        izip!(dest.iter(), sorts.iter()).enumerate()
+                            .map(|(i, (sel_name, sel_sort))| match sel_name {
+                                Some(sel_name) => sexpr![sel_name, sel_sort],
+                                None => sexpr![format!("{fun}$_dest_{i:}"), sel_sort],
+                            } ),
                     );
 
                     Term::sexpr(c_terms)

@@ -139,9 +139,9 @@ pub static SORT_LIST: [Sort; 6] = {
 };
 
 /// [Sort]s to be declared in smt
-pub static SMT_SORT_LIST: [Sort; 5] = {
+pub static SMT_SORT_LIST: [Sort; 3] = {
     use Sort::*;
-    [Bitstring, Time, Protocol, Nonce, Index]
+    [Bitstring, Time, /* Protocol, Nonce, */ Index]
 };
 
 // -----------------------------------------------------------------------------

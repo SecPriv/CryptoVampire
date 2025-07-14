@@ -64,7 +64,7 @@ impl<S: Display, F: Display> Smt<S, F> {
 pub struct SmtCons<S, F> {
     pub fun: F,
     pub sorts: Vec<S>,
-    pub dest: Vec<F>,
+    pub dest: Vec<Option<F>>,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -219,20 +219,25 @@ where
                 }
                 writeln!(f, ")")
             }
-            Smt::DeclareDatatypes { sorts, cons } => write_par(f, |f| {
-                write!(f, "declare-datatypes")?;
+            Smt::DeclareDatatypes { sorts, cons } => {
+                write_par(f, |f| {
+                    write!(f, "declare-datatypes")?;
 
-                write_list(sorts, f, |f, s| write!(f, "({s} 0)"))?;
+                    write_list(sorts, f, |f, s| write!(f, "({s} 0)"))?;
 
-                write_list(cons, f, |f, cons| {
-                    write_list(cons, f, |f, SmtCons { fun, sorts, dest }| {
-                        write!(f, "{fun} ")?;
-                        write_list(izip!(sorts, dest), f, |f, (s, dest)| {
-                            write!(f, "({dest} {s}) ")
+                    write_list(cons, f, |f, cons| {
+                        write_list(cons, f, |f, SmtCons { fun, sorts, dest }| {
+                            write!(f, "{fun} ")?;
+                            write_list(izip!(sorts, dest).enumerate(), f, |f, (i, (s, dest))| {
+                                match dest {
+                                    Some(dest) => write!(f, "({dest} {s}) "),
+                                    None => write!(f, "({fun}$_dest_{i:} {s})"),
+                                }
+                            })
                         })
                     })
                 })
-            }),
+            }
             Smt::Comment(c) => {
                 for c in c.split('\n') {
                     writeln!(f, "; {c}")?

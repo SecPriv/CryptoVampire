@@ -240,6 +240,14 @@ impl Function {
             .intersects(FunctionFlags::SMT_ONLY | FunctionFlags::PROLOG_ONLY)
     }
 
+    pub fn is_nonce(&self) -> bool {
+        self.flags.contains(FunctionFlags::NONCE)
+    }
+
+    pub fn is_datatype(&self) -> bool {
+        self.is_nonce() || self.is_protocol()
+    }
+
     // =========================================================
     // ====================== Steel API ========================
     // =========================================================

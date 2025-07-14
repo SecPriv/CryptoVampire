@@ -1,5 +1,5 @@
 use cryptovampire_macros::{smt, vec_smt};
-use cryptovampire_smt::{Smt, SmtFormula, SortedVar};
+use cryptovampire_smt::{Smt, SmtCons, SmtFormula, SortedVar};
 use itertools::{Itertools, chain, izip};
 use utils::{dynamic_iter, ereturn_if};
 
@@ -18,9 +18,9 @@ pub fn mk_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
         mk_base_order(pbl),
         mk_base_macro(pbl),
         [MSmt::comment_block("term algebra")],
-        mk_nonces_diff(pbl),
+        // mk_nonces_diff(pbl),
         mk_step_diff(pbl),
-        mk_ptcl_diff(pbl),
+        // mk_ptcl_diff(pbl),
         [MSmt::comment_block("Protocol definition")],
         mk_steps_macros(pbl),
         mk_exists(pbl),
@@ -40,10 +40,36 @@ fn should_declare_in_smt(fun: &Function) -> bool {
 
 fn mk_header(pbl: &Problem) -> impl Iterator<Item = Smt<Sort, Function>> + use<'_> {
     let sorts = SMT_SORT_LIST.iter().copied().map(Smt::DeclareSort);
+
+    let datatypes = Smt::DeclareDatatypes {
+        sorts: vec![Sort::Nonce, Sort::Protocol],
+        cons: vec![
+            // nonces
+            pbl.function
+                .nonces()
+                .map(|f| SmtCons {
+                    fun: f.clone(),
+                    sorts: f.signature.inputs.clone().into_owned(),
+                    dest: vec![None; f.arity()],
+                })
+                .collect(),
+            // protocols
+            pbl.function
+                .protocols()
+                .map(|f| SmtCons {
+                    fun: f.clone(),
+                    sorts: f.signature.inputs.clone().into_owned(),
+                    dest: vec![None; f.arity()],
+                })
+                .collect(),
+        ],
+    };
+
     let functions = pbl
         .function
         .iter()
         .filter(|&x| should_declare_in_smt(x))
+        .filter(|x| !x.is_datatype())
         .cloned()
         .map(|fun| {
             let Signature { inputs, output } = &fun.signature;
@@ -56,6 +82,7 @@ fn mk_header(pbl: &Problem) -> impl Iterator<Item = Smt<Sort, Function>> + use<'
 
     chain! {
       sorts,
+      [datatypes],
       functions
     }
 }

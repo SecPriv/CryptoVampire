@@ -82,9 +82,12 @@ impl FunctionCollection {
 
     /// Lists all the registered nonces
     pub fn nonces(&self) -> impl Iterator<Item = &Function> {
-        self.functions
-            .iter()
-            .filter(|f| f.flags.contains(FunctionFlags::NONCE))
+        self.functions.iter().filter(|f| f.is_nonce())
+    }
+
+    /// Lists all the registered protocols
+    pub fn protocols(&self) -> impl Iterator<Item = &Function> {
+        self.functions.iter().filter(|f| f.is_protocol())
     }
 
     /// add a [Function] to the collection
