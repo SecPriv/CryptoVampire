@@ -8,13 +8,21 @@ use utils::ereturn_if;
 use crate::Problem;
 use crate::terms::{Function, Sort};
 mod exists;
+mod find;
+pub use find::*;
 
 declare_trace!($"quantifier");
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Quantifier {
     Exists(Exists),
-    FindSuchThat(),
+    FindSuchThat(FindSuchThat),
+}
+
+impl From<FindSuchThat> for Quantifier {
+    fn from(v: FindSuchThat) -> Self {
+        Self::FindSuchThat(v)
+    }
 }
 
 impl From<Exists> for Quantifier {

@@ -1,13 +1,15 @@
 use cryptovampire_macros::{smt, vec_smt};
 use cryptovampire_smt::{Smt, SmtCons, SmtFormula, SortedVar};
+use egg::RecExpr;
 use itertools::{Itertools, chain, izip};
+use logic_formula::egg::SimpleDiscriminant;
 use utils::{dynamic_iter, ereturn_if};
 
 use crate::terms::{
-    ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, Function, HAPPENS, LEQ, LT, MACRO_COND,
-    MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, QuantifierT, Rewrite, SMT_ITE,
-    SMT_SORT_LIST, Signature, Sort, TUPLE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT,
-    UNFOLD_MSG,
+    ATT, AliasRewrite, BITE, EMPTY, Exists, FROM_BOOL, FindSuchThat, Function, HAPPENS, LEQ, LT,
+    MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, Quantifier, QuantifierT,
+    Rewrite, SMT_ITE, SMT_SORT_LIST, Signature, Sort, TUPLE, UNFOLD_COND, UNFOLD_EXEC,
+    UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
 };
 use crate::vampire::convert::{formula_to_smt, var_to_smt};
 use crate::{MSmt, MSmtFormula, Problem};
@@ -24,7 +26,7 @@ pub fn mk_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
         // mk_ptcl_diff(pbl),
         [MSmt::comment_block("Protocol definition")],
         mk_steps_macros(pbl),
-        mk_exists(pbl),
+        mk_quantifiers(pbl),
         mk_alias(pbl),
         mk_extra_rw(pbl),
         [MSmt::comment_block("Custom")],
@@ -218,6 +220,21 @@ fn mk_base_macro(_: &Problem) -> impl Iterator<Item = MSmt> {
     chain![[Smt::Comment("unfold base".into())], iter]
 }
 
+fn mk_quantifiers(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
+    dynamic_iter!(Tmp; A:A, B:B);
+    let ax = pbl
+        .function
+        .quantifiers()
+        .iter()
+        .flat_map(|q| match q {
+            Quantifier::Exists(e) => Tmp::A(mk_exists_1(e)),
+            Quantifier::FindSuchThat(e) => Tmp::B(mk_fdst_1(e)),
+        })
+        .map(MSmt::mk_assert);
+
+    chain![[MSmt::Comment("quantifiers".into())], ax]
+}
+
 fn mk_exists_1(e: &Exists) -> impl Iterator<Item = MSmtFormula> {
     let all_vars = chain![e.cvars_and_sorts(), e.bvars_and_sorts()]
         .map(|(v, s)| SortedVar {
@@ -243,16 +260,41 @@ fn mk_exists_1(e: &Exists) -> impl Iterator<Item = MSmtFormula> {
     .into_iter()
 }
 
-fn mk_exists(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
-    let ax = pbl
-        .function
-        .quantifiers()
-        .iter()
-        .filter_map(Exists::try_from_ref)
-        .flat_map(mk_exists_1)
-        .map(MSmt::mk_assert);
+fn mk_fdst_1(e: &FindSuchThat) -> impl Iterator<Item = MSmtFormula> {
+    let all_vars = chain![e.cvars_and_sorts(), e.bvars_and_sorts()]
+        .map(|(v, s)| SortedVar {
+            var: var_to_smt(&v),
+            sort: s,
+        })
+        .collect_vec();
 
-    chain![[MSmt::Comment("exists".into())], ax]
+    let tlf = e.top_level_function();
+    // let patt = formula_to_smt(e.patt());
+    let [condition, then_branch, else_branch] =
+        [e.condition(), e.then_branch(), e.else_branch()].map(formula_to_smt);
+
+    let applied_condition = {
+        let applied_skolems = e
+            .skolems()
+            .iter()
+            .map(|sk| sk.app_var(&e.cvars_as_lang().map(|x| [x]).collect_vec()));
+        let subst = izip!(e.cvars().iter().copied(), applied_skolems).collect_vec();
+
+        let applied_skolems = e
+            .condition()
+            .iter()
+            .cloned()
+            .collect::<RecExpr<_>>()
+            .apply_pattern_subst(subst);
+
+        formula_to_smt(&applied_skolems)
+    };
+
+    vec_smt! {
+        (forall #(all_vars.clone()) (= (tlf #(all_vars.clone())*) (SMT_ITE #condition #then_branch #else_branch))),
+        (forall #(all_vars.clone()) (=> #condition #applied_condition))
+    }
+    .into_iter()
 }
 
 fn mk_alias_1(

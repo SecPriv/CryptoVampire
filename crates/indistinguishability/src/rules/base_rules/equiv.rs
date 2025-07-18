@@ -5,17 +5,21 @@ use golgge::PrologRule;
 use itertools::{Itertools, chain, izip};
 use log::trace;
 use logic_formula::egg::SimpleDiscriminant;
+use utils::match_as_trait;
 
 use super::parse::{PrologAst, clean_input, convert_fun};
 use super::var_as_recexpr;
 use crate::terms::formula_utils::offset_var;
-use crate::terms::{BIT_DEDUCE, BOOL_DEDUCE, Exists, Function, QuantifierT, Sort};
+use crate::terms::{
+    BIT_DEDUCE, BOOL_DEDUCE, Exists, FindSuchThat, FindSuchThatFuns, Function, Quantifier,
+    QuantifierT, Sort,
+};
 use crate::{Lang, LangVar, Problem};
 
 pub fn mk_equiv_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'_> {
     chain! {
       mk_regular_deduce_rules(pbl),
-      mk_exists_deduce_rules(pbl),
+      mk_quantifier_deduce_rules(pbl),
       mk_special_static_deduce_rules(pbl),
     }
 }
@@ -148,19 +152,18 @@ fn mk_dep(vars: [Var; 6], s: Sort) -> Option<Pattern<Lang>> {
 // =========================================================
 // QUESTION: Should we cross reference existential quantifiers?
 
-fn mk_exists_deduce_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'_> {
+fn mk_quantifier_deduce_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'_> {
     debug_assert!(pbl.function.valid());
-    pbl.function
-        .quantifiers()
-        .iter()
-        .filter_map(Exists::try_from_ref)
-        .map(|q| mk_exists_deduce_rules_one(pbl, q))
+    pbl.function.quantifiers().iter().map(|q| match q {
+        Quantifier::Exists(q) => mk_quantifier_deduce_rules_one(pbl, q),
+        Quantifier::FindSuchThat(q) => mk_quantifier_deduce_rules_one(pbl, q),
+    })
 }
 
 /// Generate the rule for a single quantifier
-fn mk_exists_deduce_rules_one(_pbl: &Problem, e: &Exists) -> PrologRule<Lang> {
-    let deduce = get_deduce(Sort::Bool);
-    // let n: u32 = skolem.arity().try_into().unwrap();
+/// Funilly enough it's the same thing for exists and fdst
+fn mk_quantifier_deduce_rules_one<Q: QuantifierT>(_pbl: &Problem, e: &Q) -> PrologRule<Lang> {
+    let deduce = get_deduce(e.top_level_function().signature.output);
     let max_var: u32 = chain![e.cvars(), e.bvars()]
         .flat_map(|v| v.as_u32())
         .max()

@@ -3,13 +3,14 @@ use std::borrow::Cow;
 use egg::{RecExpr, Var, VarExposed};
 use itertools::{Itertools, izip};
 use logic_formula::{Destructed, Formula, HeadSk};
+use steel::parser::builder;
 use utils::{ereturn_if, ereturn_let, implvec};
 
 use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::terms::formula_utils::{offset_rexpr_owned, offset_var};
 use crate::terms::{
-    Alias, AliasRewrite, EQ, Exists, Function, MACRO_COND, MACRO_MSG, Quantifier, QuantifierT,
-    RecFOFormula,
+    Alias, AliasRewrite, EQ, Exists, FindSuchThat, Function, MACRO_COND, MACRO_MSG, Quantifier,
+    QuantifierT, RecFOFormula,
 };
 use crate::{LangVar, Problem};
 
@@ -96,7 +97,7 @@ pub trait SyntaxSearcher {
         } else if fun.is_quantifier() {
             match fun.get_quantifier(&pbl.function) {
                 Some(Quantifier::Exists(exists)) => self.search_exists(pbl, builder, exists, args),
-                Some(Quantifier::FindSuchThat()) => todo!(),
+                Some(Quantifier::FindSuchThat(fdst)) => self.search_fdst(pbl, builder, fdst, args),
                 _ => unreachable!(),
             };
         }
@@ -214,5 +215,77 @@ pub trait SyntaxSearcher {
             .build();
 
         self.inner_search_recexpr(pbl, &builder, &content);
+    }
+
+    fn search_fdst<'b>(
+        &self,
+        pbl: &Problem,
+        builder: &RefFormulaBuilder,
+        fdst: &FindSuchThat,
+        args: implvec!(&'b [LangVar]),
+    ) {
+        tr!("in search_find_such_that {fdst}");
+        let args = args
+            .into_iter()
+            .map(Vec::from)
+            .map(RecExpr::from)
+            .collect_vec();
+        let max_var_args = args
+            .iter()
+            .flat_map(|x| x.free_vars_iter())
+            .filter_map(|v| Var::as_u32(&v))
+            .max()
+            .unwrap_or(0);
+
+        // offsets everything
+        let n = u32::max(builder.min_var(), max_var_args) + 1;
+        let cvars = fdst
+            .cvars()
+            .iter()
+            .cloned()
+            .map(|var| offset_var(n, var))
+            .collect_vec();
+        let bvars = fdst
+            .bvars()
+            .iter()
+            .cloned()
+            .map(|var| offset_var(n, var))
+            .collect_vec();
+
+        let subst = izip!(cvars.iter().cloned(), args).collect_vec();
+        let [condition, then_branch, else_branch] =
+            [fdst.condition(), fdst.then_branch(), fdst.else_branch()]
+                .map(|p| offset_rexpr_owned(n, p.iter().cloned()))
+                .map(|p| p.apply_pattern_subst(subst.clone()));
+
+        let builder = builder
+            .add_node()
+            .and()
+            .forall()
+            .min_var(n + (bvars.len() as u32))
+            .variables(bvars)
+            .sorts(fdst.bvars_sorts())
+            .build();
+
+        self.inner_search_recexpr(pbl, &builder, &condition);
+        let condition = RecFOFormula::from(condition);
+        {
+            let builder = builder
+                .add_node()
+                .and()
+                .forall()
+                .condition(condition.clone())
+                .build();
+            self.inner_search_recexpr(pbl, &builder, &then_branch);
+        }
+        {
+            let builder = builder
+                .add_node()
+                .and()
+                .forall()
+                .condition(!condition)
+                .build();
+            self.inner_search_recexpr(pbl, &builder, &else_branch);
+        }
     }
 }

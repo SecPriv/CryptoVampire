@@ -4,6 +4,7 @@ use std::ops::{BitAnd, BitOr, Not, Shr};
 
 use cryptovampire_smt::{IntoSmt, SmtFormula, SmtQuantifier, SortedVar, VarInner};
 use egg::{Analysis, EGraph, Id, Language, PatternAst, RecExpr, Var};
+use im_rc::HashSet;
 use itertools::{Itertools, izip};
 use logic_formula::egg::SimplLang;
 use logic_formula::{Destructed, Formula, HeadSk};
@@ -203,6 +204,44 @@ impl RecFOFormula {
 
     pub fn is_false(&self) -> bool {
         matches!(self, Self::App { head, .. } if head == &FALSE)
+    }
+
+    /// capture avoiding substitution
+    pub fn subst(&self, subst: &[(Var, Self)]) -> Self {
+        self.inner_subst(subst, &Default::default())
+    }
+
+    /// helper function for [Self::subst]
+    fn inner_subst(&self, subst: &[(Var, Self)], bvars: &HashSet<Var>) -> Self {
+        match self {
+            Self::Binder {
+                head,
+                vars,
+                sorts,
+                arg,
+            } => {
+                let mut bvars = bvars.clone();
+                bvars.extend(vars.iter().cloned());
+                Self::Binder {
+                    head: *head,
+                    vars: vars.clone(),
+                    sorts: sorts.clone(),
+                    arg: Box::new(arg.inner_subst(subst, &bvars)),
+                }
+            }
+            Self::App { head, args } => Self::App {
+                head: head.clone(),
+                args: args.iter().map(|x| x.inner_subst(subst, bvars)).collect(),
+            },
+            Self::Var(var) => if !bvars.contains(var)
+                && let Some((_, expr)) = subst.iter().find(|(v, _)| v == var)
+            {
+                expr
+            } else {
+                self
+            }
+            .clone(),
+        }
     }
 
     // =========================================================
