@@ -16,8 +16,8 @@ use crate::input::shared_cryptography::ShrCrypto;
 use crate::protocol::{MacroKind, ProtocolLanguage};
 use crate::terms::{
     Alias, BUILTINS, Exists, FunctionCollection, FunctionFlags, HAPPENS, MACRO_COND, MACRO_EXEC,
-    MACRO_FRAME, MACRO_INPUT, MACRO_MSG, NOT, RecFOFormula, Signature, Sort, TRUE, UNFOLD_COND,
-    UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin,
+    MACRO_FRAME, MACRO_INPUT, MACRO_MSG, NOT, Quantifier, QuantifierT, RecFOFormula, Signature,
+    Sort, TRUE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin,
 };
 
 #[non_exhaustive]
@@ -27,7 +27,7 @@ pub struct InnerFunction {
     pub signature: Signature,
     pub alias: Option<Alias>,
     pub flags: FunctionFlags,
-    pub exists_idx: usize,
+    pub quantifier_idx: usize,
     pub protocol_idx: usize,
     pub step_idx: usize,
     pub cryptography: cow![usize],
@@ -40,7 +40,7 @@ impl InnerFunction {
             signature,
             alias: None,
             flags: FunctionFlags::empty(),
-            exists_idx: 0,
+            quantifier_idx: 0,
             protocol_idx: 0,
             step_idx: 0,
             cryptography: Cow::Borrowed(&[]),
@@ -105,15 +105,21 @@ impl Function {
         }
     }
 
-    pub fn get_exist_index(&self) -> Option<usize> {
+    pub fn get_quantifier_index(&self) -> Option<usize> {
         self.flags
-            .intersects(const_fun_flags!(EXISTS | SKOLEM | EXISTS_FRESH))
-            .then_some(self.exists_idx)
+            .intersects(const_fun_flags!(
+                EXISTS | FIND_SUCH_THAT | SKOLEM | QUANTIFIER_FRESH
+            ))
+            .then_some(self.quantifier_idx)
     }
 
-    pub fn get_exists<'a>(&self, function: &'a FunctionCollection) -> Option<&'a Exists> {
-        let idx = self.get_exist_index()?;
-        function.quantifiers().get(idx)
+    pub fn get_quantifier<'a>(&self, functions: &'a FunctionCollection) -> Option<&'a Quantifier> {
+        let idx = self.get_quantifier_index()?;
+        functions.quantifiers().get(idx)
+    }
+
+    pub fn get_exists<'a>(&self, functions: &'a FunctionCollection) -> Option<&'a Exists> {
+        Exists::try_from_ref(self.get_quantifier(functions)?)
     }
 
     pub fn get_protocol_index(&self) -> Option<usize> {
@@ -177,6 +183,7 @@ impl Function {
                 | UNFOLD
                 | CUSTOM_SUBTERM
                 | EXISTS
+                | FIND_SUCH_THAT
                 | SKOLEM
                 | SMT_ONLY
                 | IF_THEN_ELSE
@@ -194,6 +201,7 @@ impl Function {
                 | UNFOLD
                 | CUSTOM_DEDUCE
                 | EXISTS
+                | FIND_SUCH_THAT
                 | SKOLEM
                 | NONCE
                 | SMT_ONLY
@@ -246,6 +254,11 @@ impl Function {
 
     pub fn is_datatype(&self) -> bool {
         self.is_nonce() || self.is_protocol()
+    }
+
+    pub fn is_quantifier(&self) -> bool {
+        self.flags
+            .intersects(FunctionFlags::FIND_SUCH_THAT | FunctionFlags::EXISTS)
     }
 
     // =========================================================

@@ -154,7 +154,7 @@ mk_builtin_funs!(
     // The field declared here will be copied in every struct, unless it is overwitten
     {
         flags: FunctionFlags::BUILTIN,
-        exists_idx: 0,
+        quantifier_idx: 0,
         protocol_idx: 0,
         alias: None,
         step_idx: 0,

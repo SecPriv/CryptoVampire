@@ -1,117 +1,101 @@
-use std::fmt::Display;
+use std::collections::HashSet;
 
-use egg::{PatternAst, Var};
-use itertools::{Itertools, chain};
-use logic_formula::Formula;
+use egg::Var;
+pub use exists::*;
+use itertools::{chain, izip};
+use utils::ereturn_if;
 
-use super::FunctionCollection;
-use crate::Lang;
+use crate::Problem;
 use crate::terms::{Function, Sort};
+mod exists;
+
+declare_trace!($"quantifier");
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Exists {
-    /// The free variables captured by the quantifier
-    pub vars: Vec<Var>,
-    /// The variable bound by the quantifier
-    pub bound_var: Var,
-    /// The "content" of the quantifier
-    pub patt: PatternAst<Lang>,
-    /// the main alias (e.g., `exists$1`)
-    ///
-    /// stands for "top level function"
-    pub tlf: Function,
-    /// the skolem function
-    pub skolem: Function,
-    /// the fresh constant replacing the index
-    pub fresh: Function,
+pub enum Quantifier {
+    Exists(Exists),
+    FindSuchThat(),
 }
 
-impl Exists {
-    pub fn is_uninit(&self) -> bool {
-        self.patt.is_empty()
-    }
-
-    pub fn valid(&self, idx: usize, funs: &FunctionCollection) -> bool {
-        let Self {
-            vars,
-            bound_var,
-            patt,
-            tlf,
-            skolem,
-            fresh,
-        } = self;
-        let all_vars = chain!(vars, [bound_var]).copied().collect_vec();
-
-        let is_at_idx = {
-            // is at idx
-            funs.quantifiers().get(idx) == Some(self)
-        };
-        let map_vars = {
-            // mapping between variables
-            let vars: Vec<_> = patt.free_vars_iter().collect();
-            crate::utils::same_slice(&all_vars, &vars)
-        };
-        let reciprocal = {
-            // reciprocal
-            tlf.get_exist_index() == Some(idx)
-                && skolem.get_exist_index() == Some(idx)
-                && fresh.get_exist_index() == Some(idx)
-        };
-        let arities = {
-            // arities
-            tlf.arity() == all_vars.len() && skolem.arity() == vars.len() && fresh.arity() == 0
-        };
-        debug_assert!(is_at_idx);
-        debug_assert!(map_vars);
-        debug_assert!(reciprocal);
-        debug_assert!(arities);
-        is_at_idx && map_vars && reciprocal && arities
-    }
-
-    pub fn get_var_sort(&self) -> Sort {
-        self.fresh.signature.output
-    }
-
-    pub fn get_functions(&self) -> [&Function; 3] {
-        let Self {
-            tlf, skolem, fresh, ..
-        } = self;
-        [tlf, skolem, fresh]
+impl From<Exists> for Quantifier {
+    fn from(v: Exists) -> Self {
+        Self::Exists(v)
     }
 }
 
-#[derive(Debug)]
-pub struct ExistsFuns {
-    pub tlf: Function,
-    pub skolem: Function,
-    pub fresh: Function,
-}
+pub trait QuantifierT: Eq + Sized {
+    fn bvars(&self) -> &[Var];
+    fn cvars(&self) -> &[Var];
 
-#[derive(Debug)]
-pub struct ExistsBuilder {
-    /// The free variables captured by the quantifier
-    pub vars: Vec<Var>,
-    /// The variable bound by the quantifier
-    pub bound_var: Var,
-    /// The "content" of the quantifier
-    pub patt: PatternAst<Lang>,
-}
+    fn top_level_function(&self) -> &Function;
+    fn skolems(&self) -> &[Function];
+    fn fresh_indices(&self) -> &[Function];
 
-impl Display for Exists {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Exists {
-            vars,
-            bound_var,
-            patt,
-            tlf,
-            skolem,
-            fresh,
-        } = self;
-
-        write!(f, "∃{tlf}(")?;
-        for v in vars {
-            write!(f, "{v}, ")?;
-        }
-        write!(f, ") {bound_var}@({fresh}, {skolem}). {patt}")
+    fn valid(&self, idx: usize, pbl: &Problem) -> bool {
+        default_valid(self, idx, pbl)
     }
+
+    fn bvars_sorts(&self) -> impl Iterator<Item = Sort> + Clone {
+        self.fresh_indices().iter().map(|f| f.signature.output)
+    }
+
+    fn cvars_sorts(&self) -> impl Iterator<Item = Sort> + Clone {
+        self.skolems()[0].signature.inputs.iter().copied()
+    }
+
+    fn try_from_ref(q: &Quantifier) -> Option<&Self>;
+    fn try_from_mut(q: &mut Quantifier) -> Option<&mut Self>;
+
+    fn all_functions(&self) -> impl Iterator<Item = &Function> + Clone {
+        chain![
+            [self.top_level_function()],
+            self.skolems(),
+            self.fresh_indices()
+        ]
+    }
+
+    fn bvars_and_sorts(&self) -> impl Iterator<Item = (Var, Sort)> + Clone {
+        izip!(self.bvars(), self.bvars_sorts()).map(|(v, s)| (*v, s))
+    }
+
+    fn cvars_and_sorts(&self) -> impl Iterator<Item = (Var, Sort)> + Clone {
+        izip!(self.cvars(), self.cvars_sorts()).map(|(v, s)| (*v, s))
+    }
+
+    fn cvars_as_lang(&self) -> impl Iterator<Item = crate::LangVar> + use<'_, Self> {
+        self.cvars().iter().copied().map(egg::ENodeOrVar::Var)
+    }
+
+    fn bvars_as_lang(&self) -> impl Iterator<Item = crate::LangVar> + use<'_, Self> {
+        self.bvars().iter().copied().map(egg::ENodeOrVar::Var)
+    }
+}
+
+fn default_valid<Q: QuantifierT>(q: &Q, idx: usize, pbl: &Problem) -> bool {
+    // it's at the right index location
+    ereturn_if!(
+        pbl.function
+            .quantifiers()
+            .get(idx)
+            .and_then(|q| Q::try_from_ref(q))
+            != Some(q),
+        false
+    );
+
+    ereturn_if!(
+        q.all_functions()
+            .any(|f| f.get_quantifier_index() != Some(idx)),
+        false
+    );
+
+    ereturn_if!(
+        q.top_level_function().arity() != q.bvars().len() + q.cvars().len(),
+        false
+    );
+    ereturn_if!(
+        q.skolems().iter().any(|f| f.arity() != q.cvars().len()),
+        false
+    );
+    ereturn_if!(q.fresh_indices().iter().any(|f| f.arity() != 0), false);
+    true
 }

@@ -42,10 +42,10 @@
   (formula (tpl (n i j) (hash  (n i j) (mk i j p2))))
 ))
 
-(define exists1 (declare_quantifier pbl (list Index Protocol) Index))
+(define exists1 (declare_quantifier pbl (list Index Protocol) (list Index)))
 (let* 
-  ([vars (exists-vars exists1)] 
-    [j (mk-varf (exists-bound-var exists1))]
+  ([vars (exists-cvars exists1)] 
+    [j (mk-varf (list-ref (exists-bvars exists1) 0))]
     [i (mk-varf (list-ref vars 0))] 
     [p (mk-varf (list-ref vars 1))]
     [in (formula (macro_input (rf i) p))])
@@ -54,10 +54,10 @@
 )
 
 
-(define exists2 (declare_quantifier pbl (list Index Time Protocol) Index))
+(define exists2 (declare_quantifier pbl (list Index Time Protocol) (list Index)))
 (let* 
-  ([vars (exists-vars exists2)] 
-    [i (mk-varf (exists-bound-var exists2))]
+  ([vars (exists-cvars exists2)] 
+    [i (mk-varf (list-ref (exists-bvars exists2) 0))]
     [j (mk-varf (list-ref vars 0))] 
     [t (mk-varf (list-ref vars 1))] 
     [p (mk-varf (list-ref vars 2))]
@@ -72,10 +72,10 @@
     ))
 )
 (define (cexists1 i p) (
-  let ([e (get-exists-tlf exists1)] [sk (get-exists-skolem exists1)])
+  let ([e (get-exists-tlf exists1)] [sk (list-ref (get-exists-skolems exists1) 0)])
   (mk-appf e (list i p (mk-appf sk (list i p))))))
 (define (cexists2 j t p) (
-  let ([e (get-exists-tlf exists2)] [sk (get-exists-skolem exists2)])
+  let ([e (get-exists-tlf exists2)] [sk (list-ref (get-exists-skolems exists2) 0)])
   (mk-appf e (list j t p (mk-appf sk (list j t p))))))
 
 

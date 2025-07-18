@@ -1,15 +1,15 @@
-use std::{
-    collections::{HashMap, HashSet, hash_map::Entry},
-    default,
-};
+use std::collections::hash_map::Entry;
+use std::collections::{HashMap, HashSet};
+use std::default;
 
+use itertools::Itertools;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use syn::{Error, Ident, LitInt, PathSegment, Token, parse::Parse, parse_macro_input, parse_quote};
+use syn::parse::Parse;
+use syn::{Error, Ident, LitInt, PathSegment, Token, parse_macro_input, parse_quote};
 use utils::implvec;
 
 use crate::formulas::parser::{ArgItem, Ast, BangedContent, FunIdent, InnerAst};
-use itertools::Itertools;
 
 fn fold(
     path: &syn::Path,
@@ -53,7 +53,7 @@ fn transform_arg_item(path: &syn::Path, arg: ArgItem) -> syn::Result<PseudoTree>
 #[derive(Clone, PartialEq, Eq, Hash)]
 enum PseudoTree {
     App(FunIdent, Vec<PseudoTree>),
-    Var(LitInt),
+    Var(BangedContent),
 }
 
 fn mk_app(path: &syn::Path, ident: &FunIdent, args: implvec!(usize)) -> TokenStream {
@@ -63,9 +63,14 @@ fn mk_app(path: &syn::Path, ident: &FunIdent, args: implvec!(usize)) -> TokenStr
     }
 }
 
-fn mk_var(path: &syn::Path, lit: &LitInt) -> TokenStream {
-    quote! {
-      #path::mk_var(#lit)
+fn mk_var(path: &syn::Path, lit: &BangedContent) -> TokenStream {
+    match lit {
+        BangedContent::Lit(syn::Lit::Int(lit)) => quote! {
+          #path::mk_var(#lit)
+        },
+        BangedContent::Ident(ident) => quote! {#ident },
+        BangedContent::Expr(expr) => quote! { #expr },
+        _ => panic!("litteral need to be number for variables"),
     }
 }
 
@@ -123,12 +128,8 @@ impl PseudoTree {
             )),
             True => Ok(Self::mk_true(path)),
             False => Ok(Self::mk_false(path)),
-            Banged(BangedContent::Lit(syn::Lit::Int(l))) => Ok(Self::Var(l)),
             Quantifier { .. } => Err(syn::Error::new(span, "no quantifier allowed")),
-            Banged(_) => Err(syn::Error::new(
-                span,
-                "only int litteral are allowed in banged terms",
-            )),
+            Banged(b) => Ok(Self::Var(b)),
         }
     }
 

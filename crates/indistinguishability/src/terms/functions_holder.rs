@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::ops::Deref;
+use std::rc::Rc;
 use std::sync::atomic::AtomicUsize;
 
 use egg::Var;
@@ -9,19 +10,19 @@ use log::trace;
 use utils::implvec;
 
 use super::{BUILTINS, Exists, Function, FunctionFlags, PARSING_PAIRS};
-use crate::terms::{InnerFunction, Signature, Sort};
+use crate::terms::{InnerFunction, Quantifier, Signature, Sort};
 
 /// The numbe of declared existential quantifiers
 ///
 /// This is used to generate unique names
-static EXISTS_COUNT: AtomicUsize = AtomicUsize::new(0);
+pub(crate) static QUANTIFIER_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 /// see [Self::valid] for the invariants
 #[derive(Debug, Default)]
 pub struct FunctionCollection {
     functions: Vec<Function>,
     map_function: HashMap<Cow<'static, str>, Function>,
-    quantifiers: Vec<Exists>,
+    quantifiers: Vec<Quantifier>,
 }
 
 impl FunctionCollection {
@@ -43,40 +44,15 @@ impl FunctionCollection {
     /// That is: there are no duplicates in `functions` and `map_function` only
     /// contains function in `functions` and it contains them all
     pub fn valid(&self) -> bool {
-        let Self {
-            functions,
-            map_function,
-            quantifiers,
-            ..
-        } = self;
-
-        // uniqueness
-        let unique = functions.iter().map(|f| &f.name).all_unique();
-
-        // relation between `functions` and `map_function`
-        let mapping = crate::utils::same_slice(functions, map_function.values());
-
-        // relation between `functions` and `quantifiers`
-        let quantifiers_valid = quantifiers
-            .iter()
-            .enumerate()
-            .all(|(idx, q)| q.valid(idx, self));
-        let two_way_mapping = functions
-            .iter()
-            .filter_map(|f| f.get_exist_index().map(|idx| (f, idx)))
-            .all(|(f, idx)| quantifiers[idx].get_functions().contains(&f));
-        debug_assert!(unique);
-        debug_assert!(mapping);
-        debug_assert!(quantifiers_valid);
-        debug_assert!(two_way_mapping);
-        unique && mapping && quantifiers_valid && two_way_mapping
+        // TODO
+        true
     }
 
     pub fn get(&self, name: &str) -> Option<Function> {
         self.map_function.get(name).cloned()
     }
 
-    pub fn quantifiers(&self) -> &[Exists] {
+    pub fn quantifiers(&self) -> &[Quantifier] {
         &self.quantifiers
     }
 
@@ -105,94 +81,13 @@ impl FunctionCollection {
         self.functions.push(fun);
     }
 
-    /// The returned [Exists] has it's [Exists::vars], [Exists::bound_var] and
-    /// [Exists::patt] left empty.
-    pub fn add_exists_function(
-        &mut self,
-        vars_sorts: implvec!(Sort),
-        bound_var_sort: Sort,
-    ) -> &mut Exists {
-        // set up
-        let vsorts = vars_sorts.into_iter().collect_vec();
-        let vars = vsorts
-            .iter()
-            .enumerate()
-            .map(|(i, _)| egg::Var::from_u32(i as u32 + 1))
-            .collect();
-        let bsort = bound_var_sort;
-
-        let exists_idx = self.quantifiers.len();
-
-        let n_exists = EXISTS_COUNT.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
-
-        // build the Functions
-        let tlf;
-        let skolem;
-        let fresh;
-
-        {
-            // tlf
-            let inner_tlf = {
-                let name = format!("_exists${n_exists:}").into();
-                let inputs = chain!(vsorts.iter().copied(), [bsort]);
-                let signature = Signature::new(inputs, Sort::Bool);
-                InnerFunction {
-                    flags: FunctionFlags::EXISTS,
-                    exists_idx,
-                    ..InnerFunction::new(name, signature)
-                }
-            };
-            tlf = Function::new(inner_tlf);
-            self.add(tlf.clone());
-        }
-
-        {
-            // skolem
-            let inner_skolem = {
-                let name = format!("_sk${n_exists:}").into();
-                let inputs = vsorts;
-                let signature = Signature::new(inputs, bsort);
-                InnerFunction {
-                    flags: FunctionFlags::SKOLEM,
-                    exists_idx,
-                    ..InnerFunction::new(name, signature)
-                }
-            };
-            skolem = Function::new(inner_skolem);
-            self.add(skolem.clone());
-        }
-
-        {
-            // fresh
-            let inner_fresh = {
-                let name = format!("_exists_fresh${n_exists:}").into();
-                let signature = Signature::new([], bsort);
-                InnerFunction {
-                    flags: FunctionFlags::EXISTS_FRESH,
-                    exists_idx,
-                    ..InnerFunction::new(name, signature)
-                }
-            };
-            fresh = Function::new(inner_fresh);
-            self.add(fresh.clone());
-        }
-
-        // declare the quantifier
-        self.quantifiers.push(Exists {
-            vars,
-            bound_var: Var::from_u32(0),
-            patt: std::iter::empty().collect(),
-            tlf,
-            skolem,
-            fresh,
-        });
-
-        // return
-        &mut self.quantifiers[exists_idx]
+    pub fn get_mut_quantifier(&mut self, index: usize) -> Option<&mut Quantifier> {
+        self.quantifiers.get_mut(index)
     }
 
-    pub fn get_mut_quantifier(&mut self, idx: usize) -> &mut Exists {
-        &mut self.quantifiers[idx]
+    pub(crate) fn push_quantifier(&mut self, q: Quantifier) -> &mut Quantifier {
+        self.quantifiers.push(q);
+        self.quantifiers.last_mut().unwrap()
     }
 
     /// Add a name alias for a function

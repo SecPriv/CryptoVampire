@@ -8,7 +8,8 @@ use logic_formula::egg::SimpleDiscriminant;
 
 use super::parse::{PrologAst, clean_input, convert_fun};
 use super::var_as_recexpr;
-use crate::terms::{BIT_DEDUCE, BOOL_DEDUCE, Exists, Function, Sort};
+use crate::terms::formula_utils::offset_var;
+use crate::terms::{BIT_DEDUCE, BOOL_DEDUCE, Exists, Function, QuantifierT, Sort};
 use crate::{Lang, LangVar, Problem};
 
 pub fn mk_equiv_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'_> {
@@ -152,39 +153,40 @@ fn mk_exists_deduce_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang
     pbl.function
         .quantifiers()
         .iter()
+        .filter_map(Exists::try_from_ref)
         .map(|q| mk_exists_deduce_rules_one(pbl, q))
 }
 
 /// Generate the rule for a single quantifier
-fn mk_exists_deduce_rules_one(
-    _pbl: &Problem,
-    Exists {
-        tlf, skolem, fresh, ..
-    }: &Exists,
-) -> PrologRule<Lang> {
+fn mk_exists_deduce_rules_one(_pbl: &Problem, e: &Exists) -> PrologRule<Lang> {
     let deduce = get_deduce(Sort::Bool);
-    let n: u32 = skolem.arity().try_into().unwrap();
+    // let n: u32 = skolem.arity().try_into().unwrap();
+    let max_var: u32 = chain![e.cvars(), e.bvars()]
+        .flat_map(|v| v.as_u32())
+        .max()
+        .unwrap_or(0)
+        + 1;
 
     // initiate the variables
-    let left_vars;
-    let right_vars;
-    let [u, v, h1, h2, il, ir] = {
-        let f = |i| [ENodeOrVar::Var::<Lang>(Var::from_u32(i))];
-        let vars = core::array::from_fn(|i| f(i as u32));
-        let k = vars.len() as u32;
-        left_vars = (k..(k + n)).map(&f).collect_vec();
-        right_vars = ((k + n)..(k + 2 * n)).map(&f).collect_vec();
-        vars
-    };
+    let [u, v, h1, h2] = ::std::array::from_fn(|i| [ENodeOrVar::Var(Var::from_u32(i as u32))]);
+    let base_vars_n = 4;
 
-    // u, v |> exits(vecx, il), exists(vecy, ir) # h1, h2
+    // u, v |> exits(vecx, vecsk(vecx)), exists(vecy, vecsk(vecy)) # h1, h2
     let input = {
-        let left = tlf.app_var(
-            &chain!(left_vars.iter().map(|x| x.as_slice()), [il.as_slice()]).collect_vec(),
-        );
-        let right = tlf.app_var(
-            &chain!(right_vars.iter().map(|x| x.as_slice()), [ir.as_slice()]).collect_vec(),
-        );
+        let mk_applied = |start: u32| {
+            let cvars = e
+                .cvars()
+                .iter()
+                .map(|&v| offset_var(start, v))
+                .map(|v| vec![ENodeOrVar::Var(v)].into())
+                .collect_vec();
+            let bvars = e.skolems().iter().map(|f| f.app_var(&cvars)).collect_vec();
+            let args = chain![cvars, bvars].collect_vec();
+            e.top_level_function().app_var(&args)
+        };
+
+        let left = mk_applied(base_vars_n);
+        let right = mk_applied(base_vars_n + max_var);
         deduce.app_var(
             &chain![
                 [u.as_slice(), v.as_slice()],
@@ -195,15 +197,26 @@ fn mk_exists_deduce_rules_one(
         )
     };
 
-    // u, v |> exits(vecx, fresh), exists(vecy, fresh) # h1, h2
+    // u, v |> exits(vecx, vecfresh), exists(vecy, vecfresh) # h1, h2
     let dep = {
-        let fresh: PatternAst<Lang> = fresh.app_var::<3, [LangVar; 0]>(&[]);
-        let left = tlf.app_var(
-            &chain!(left_vars.iter().map(|x| x.as_slice()), [fresh.deref()]).collect_vec(),
-        );
-        let right = tlf.app_var(
-            &chain!(right_vars.iter().map(|x| x.as_slice()), [fresh.deref()]).collect_vec(),
-        );
+        let mk_fresh = |start: u32| {
+            let cvars = e
+                .cvars()
+                .iter()
+                .map(|&v| offset_var(start, v))
+                .map(|v| vec![ENodeOrVar::Var(v)].into())
+                .collect_vec();
+            let bvars = e
+                .fresh_indices()
+                .iter()
+                .map(|f| f.app_empty_var())
+                .collect_vec();
+            let args = chain![cvars, bvars].collect_vec();
+            e.top_level_function().app_var(&args)
+        };
+
+        let left = mk_fresh(base_vars_n);
+        let right = mk_fresh(base_vars_n + max_var);
         deduce.app_var(
             &chain![
                 [u.as_slice(), v.as_slice()],
@@ -219,6 +232,6 @@ fn mk_exists_deduce_rules_one(
         deps: vec![Pattern::from(dep)],
         cut: false,
         require_decrease: false,
-        name: Some(format!("deduce {}", tlf.name)),
+        name: Some(format!("deduce {}", e.top_level_function().name)),
     }
 }

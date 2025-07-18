@@ -5,7 +5,7 @@ use logic_formula::egg::SimpleDiscriminant;
 
 use super::parse::{PatternsAst, clean_input, convert_fun};
 use super::var_as_recexpr;
-use crate::terms::{AliasRewrite, Exists, Function};
+use crate::terms::{AliasRewrite, Exists, Function, QuantifierT};
 use crate::{Lang, Problem};
 /// build the default rewrite rules
 pub fn mk_rewrites_rules<N: Analysis<Lang>>(
@@ -59,25 +59,20 @@ fn exists_rules<N: Analysis<Lang>>(
     pbl.function
         .quantifiers()
         .iter()
+        .filter_map(Exists::try_from_ref)
         .flat_map(|e| mk_exists_rules_one(pbl, e))
 }
 
 fn mk_exists_rules_one<'a, N: Analysis<Lang>>(
     Problem { .. }: &'a Problem,
-    Exists {
-        vars,
-        bound_var,
-        patt,
-        tlf,
-        ..
-    }: &'a Exists,
+    e: &'a Exists,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'a, N> {
     let def = {
-        let vars = var_as_recexpr(chain!(vars, [bound_var]));
+        let vars = var_as_recexpr(chain![e.cvars(), e.bvars()]);
         Rewrite::new(
-            format!("{} def", &tlf.name),
-            Pattern::new(tlf.app_var(&vars)),
-            Pattern::new(patt.clone()),
+            format!("{} def", e.top_level_function().name),
+            Pattern::new(e.top_level_function().app_var(&vars)),
+            e.patt().iter().cloned().collect::<Pattern<_>>(),
         )
         .unwrap()
     };

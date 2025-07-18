@@ -1,10 +1,11 @@
 pub mod basic_hash {
-    use egg::Var;
+    use egg::{ENodeOrVar, Var};
+    use itertools::Itertools;
 
     use crate::protocol::Step;
     use crate::terms::{
         Exists, Function, FunctionFlags, InnerFunction, LT, MACRO_INPUT, NONCE, PROJ_1, PROJ_2,
-        Sort, TUPLE,
+        QuantifierT, Sort, TUPLE,
     };
     use crate::{Problem, decl_fun, mk_alias, mk_rewrite, mk_signature, rexp};
 
@@ -103,48 +104,37 @@ pub mod basic_hash {
         let mexists1;
         let msk1;
         {
-            let Exists {
-                vars,
-                bound_var,
-                patt,
-                tlf,
-                skolem,
-                ..
-            } = pbl
-                .function
-                .add_exists_function([Sort::Index, Sort::Protocol], Sort::Index);
-            *vars = [0, 1].map(Var::from_u32).to_vec();
-            *bound_var = Var::from_u32(2);
-            *patt = rexp!((= (PROJ_2 (MACRO_INPUT (rf #0) #1)) (hash (PROJ_1 (MACRO_INPUT (rf #0) #1)) (NONCE (mk #0 #2 #1)))))
-                .to_vec().into();
-            mexists1 = tlf.clone();
-            msk1 = skolem.clone();
+            use Sort::{Index, Protocol};
+            let e = Exists::insert()
+                .pbl(pbl)
+                .cvars_sort([Index, Protocol])
+                .bvars_sorts([Index])
+                .call();
+            let (j, p) = e.cvars_as_lang().collect_tuple().unwrap();
+            let i = e.bvars_as_lang().next().unwrap();
+            e.set_patt(rexp!((= (PROJ_2 (MACRO_INPUT (rf #j) #p)) (hash (PROJ_1 (MACRO_INPUT (rf #j) #p)) (NONCE (mk #i #j #p))))));
+            mexists1 = e.top_level_function().clone();
+            msk1 = e.skolems()[0].clone();
         };
 
         let mexists2;
         let msk2;
         {
-            let Exists {
-                vars,
-                bound_var,
-                patt,
-                tlf,
-                skolem,
-                ..
-            } = pbl
-                .function
-                .add_exists_function([Sort::Index, Sort::Time, Sort::Protocol], Sort::Index);
-            *vars = [0, 1, 2].map(Var::from_u32).to_vec();
-            *bound_var = Var::from_u32(3);
-            *patt = rexp!((and
-                (= (PROJ_1 (MACRO_INPUT #1 #2)) (PROJ_1 (MACRO_INPUT (tag #3 #0) #2)))
-                (= (PROJ_2 (MACRO_INPUT #1 #2)) (PROJ_2 (MACRO_INPUT (tag #3 #0) #2)))
+            use Sort::{Index, Protocol, Time};
+            let e = Exists::insert()
+                .pbl(pbl)
+                .cvars_sort([Index, Time, Protocol])
+                .bvars_sorts([Index])
+                .call();
+            let (j, t, p) = e.cvars_as_lang().collect_tuple().unwrap();
+            let i = e.bvars_as_lang().next().unwrap();
+            e.set_patt(rexp!((and
+                (= (PROJ_1 (MACRO_INPUT #t #p)) (PROJ_1 (MACRO_INPUT (tag #i #j) #p)))
+                (= (PROJ_2 (MACRO_INPUT #t #p)) (PROJ_2 (MACRO_INPUT (tag #t #j) #p)))
                 (LT (tag #3 #0) #1) // <- the order matters ^^'
-            ))
-            .to_vec()
-            .into();
-            mexists2 = tlf.clone();
-            msk2 = skolem.clone();
+            )));
+            mexists2 = e.top_level_function().clone();
+            msk2 = e.skolems()[0].clone();
         };
 
         MFunction {

@@ -13,7 +13,7 @@ use crate::input::golgge_rules::Rule;
 use crate::input::shared_exists::ShrExists;
 use crate::input::var::SVar;
 use crate::protocol::Step;
-use crate::terms::{Function, RecFOFormula, Rewrite, Sort};
+use crate::terms::{Exists, Function, RecFOFormula, Rewrite, Sort};
 use crate::{MSmt, Problem};
 
 declare_trace!($"shrpblm");
@@ -126,10 +126,14 @@ impl ShrProblem {
         self.borrow_mut().declare_new_protocol().name().clone()
     }
 
-    fn declare_quantifier(&self, captured: Vec<Sort>, bound: Sort) -> ShrExists {
+    fn declare_quantifier(&self, captured: Vec<Sort>, bound: Vec<Sort>) -> ShrExists {
         let mut pbl = self.borrow_mut();
         let index = pbl.function.quantifiers().len();
-        pbl.function.add_exists_function(captured, bound);
+        Exists::insert()
+            .bvars_sorts(bound)
+            .cvars_sort(captured)
+            .pbl(&mut pbl)
+            .call();
         ShrExists {
             pbl: self.clone(),
             index,

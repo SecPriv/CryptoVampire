@@ -5,8 +5,9 @@ use utils::{dynamic_iter, ereturn_if};
 
 use crate::terms::{
     ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, Function, HAPPENS, LEQ, LT, MACRO_COND,
-    MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, Rewrite, SMT_ITE, SMT_SORT_LIST,
-    Signature, Sort, TUPLE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
+    MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, QuantifierT, Rewrite, SMT_ITE,
+    SMT_SORT_LIST, Signature, Sort, TUPLE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT,
+    UNFOLD_MSG,
 };
 use crate::vampire::convert::{formula_to_smt, var_to_smt};
 use crate::{MSmt, MSmtFormula, Problem};
@@ -217,33 +218,27 @@ fn mk_base_macro(_: &Problem) -> impl Iterator<Item = MSmt> {
     chain![[Smt::Comment("unfold base".into())], iter]
 }
 
-fn mk_exists_1(
-    Exists {
-        vars,
-        bound_var,
-        patt,
-        tlf,
-        skolem,
-        ..
-    }: &Exists,
-) -> impl Iterator<Item = MSmtFormula> {
-    let all_vars = izip!(tlf.signature.inputs_iter(), chain![vars, [bound_var]])
-        .map(|(s, v)| SortedVar {
-            var: var_to_smt(v),
+fn mk_exists_1(e: &Exists) -> impl Iterator<Item = MSmtFormula> {
+    let all_vars = chain![e.cvars_and_sorts(), e.bvars_and_sorts()]
+        .map(|(v, s)| SortedVar {
+            var: var_to_smt(&v),
             sort: s,
         })
         .collect_vec();
-    let all_but_last_vars = izip!(skolem.signature.inputs_iter(), vars)
-        .map(|(s, v)| SortedVar {
-            var: var_to_smt(v),
-            sort: s,
-        })
-        .collect_vec();
+    let cvars = e.cvars_and_sorts().map(|(v, s)| SortedVar {
+        var: var_to_smt(&v),
+        sort: s,
+    });
+
+    let tlf = e.top_level_function();
+    let patt = formula_to_smt(e.patt());
+
+    let applied_skolems = e.skolems().iter().map(|sk| smt!((sk #(cvars.clone())*)));
 
     vec_smt! {
-        (forall #(all_vars.clone()) (= (tlf #(all_vars.clone())*) #(formula_to_smt(&patt)))),
+        (forall #(all_vars.clone()) (= (tlf #(all_vars.clone())*) #(patt))),
         (forall #(all_vars.clone()) (=>
-            (tlf #all_vars*) (tlf #(all_but_last_vars.clone())* (skolem #all_but_last_vars*))))
+            (tlf #all_vars*) (tlf #(cvars.clone())* #(applied_skolems)*)))
     }
     .into_iter()
 }
@@ -253,6 +248,7 @@ fn mk_exists(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
         .function
         .quantifiers()
         .iter()
+        .filter_map(Exists::try_from_ref)
         .flat_map(mk_exists_1)
         .map(MSmt::mk_assert);
 

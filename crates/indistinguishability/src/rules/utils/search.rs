@@ -8,7 +8,8 @@ use utils::{ereturn_if, ereturn_let, implvec};
 use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::terms::formula_utils::{offset_rexpr_owned, offset_var};
 use crate::terms::{
-    Alias, AliasRewrite, EQ, Exists, Function, MACRO_COND, MACRO_MSG, RecFOFormula,
+    Alias, AliasRewrite, EQ, Exists, Function, MACRO_COND, MACRO_MSG, Quantifier, QuantifierT,
+    RecFOFormula,
 };
 use crate::{LangVar, Problem};
 
@@ -92,8 +93,12 @@ pub trait SyntaxSearcher {
             todo!()
         } else if let Some(alias) = fun.get_alias() {
             self.search_alias(pbl, builder, alias, args);
-        } else if let Some(exists) = fun.get_exists(&pbl.function) {
-            self.search_exists(pbl, builder, exists, args);
+        } else if fun.is_quantifier() {
+            match fun.get_quantifier(&pbl.function) {
+                Some(Quantifier::Exists(exists)) => self.search_exists(pbl, builder, exists, args),
+                Some(Quantifier::FindSuchThat()) => todo!(),
+                _ => unreachable!(),
+            };
         }
     }
 
@@ -162,16 +167,10 @@ pub trait SyntaxSearcher {
         &self,
         pbl: &Problem,
         builder: &RefFormulaBuilder,
-        e @ Exists {
-            vars,
-            bound_var,
-            patt,
-            ..
-        }: &Exists,
+        e: &Exists,
         args: implvec!(&'b [LangVar]),
     ) {
         tr!("in search_exists {e}");
-        let sort = e.get_var_sort();
         let args = args
             .into_iter()
             .map(Vec::from)
@@ -186,16 +185,22 @@ pub trait SyntaxSearcher {
 
         // offsets everything
         let n = u32::max(builder.min_var(), max_var_args) + 1;
-        let vars = vars
+        let cvars = e
+            .cvars()
             .iter()
             .cloned()
             .map(|var| offset_var(n, var))
             .collect_vec();
-        let bound_var = offset_var(n, *bound_var);
-        let patt = offset_rexpr_owned(n, patt.iter().cloned());
+        let bvars = e
+            .bvars()
+            .iter()
+            .cloned()
+            .map(|var| offset_var(n, var))
+            .collect_vec();
+        let patt = offset_rexpr_owned(n, e.patt().iter().cloned());
 
         let content = {
-            let subst = izip!(vars.iter().cloned(), args).collect_vec();
+            let subst = izip!(cvars.iter().cloned(), args).collect_vec();
             patt.clone().apply_pattern_subst(subst)
         };
 
@@ -203,9 +208,9 @@ pub trait SyntaxSearcher {
             .add_node()
             .and()
             .forall()
-            .variables([bound_var])
-            .sorts([sort])
-            .min_var(n)
+            .min_var(n + (bvars.len() as u32))
+            .variables(bvars)
+            .sorts(e.bvars_sorts())
             .build();
 
         self.inner_search_recexpr(pbl, &builder, &content);

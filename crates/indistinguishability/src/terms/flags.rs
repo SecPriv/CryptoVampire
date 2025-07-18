@@ -23,26 +23,27 @@ bitflags! {
 
       /// Represents an existential quantifier
       const EXISTS = 1 << 6;
+      const FIND_SUCH_THAT = 1 << 7;
       /// Represents a skolem function
-      const SKOLEM = 1 << 7;
-      const EXISTS_FRESH = 1<< 8;
+      const SKOLEM = 1 << 8;
+      const QUANTIFIER_FRESH = 1<< 9;
 
       /// Has an equivalent built into smt
-      const BUILTIN_SMT = 1 << 9;
+      const BUILTIN_SMT = 1 << 10;
 
       /// This is a nonce constructor
-      const NONCE = 1 << 10;
+      const NONCE = 1 << 11;
 
-      const CUSTOM_SUBTERM = 1 << 11;
+      const CUSTOM_SUBTERM = 1 << 12;
 
-      const SMT_ONLY = 1 << 12;
+      const SMT_ONLY = 1 << 13;
 
       /// Is a protocol
-      const PROTOCOL = 1 << 13;
+      const PROTOCOL = 1 << 14;
       /// Is a step
-      const STEP = 1 << 14;
+      const STEP = 1 << 15;
 
       /// Is an `if .. then .. else` function
-      const IF_THEN_ELSE = 1 << 15;
+      const IF_THEN_ELSE = 1 << 16;
   }
 }

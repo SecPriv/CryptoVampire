@@ -74,6 +74,7 @@ pub enum VarName {
     Ident(Ident),
 }
 
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum BangedContent {
     // Represents content after a '#'
     Lit(Lit),
