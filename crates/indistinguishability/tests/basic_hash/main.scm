@@ -2,25 +2,25 @@
 
 
 
-(define pbl (empty_problem))
+(define pbl (empty-problem))
 
-(define p1 (declare_protocol pbl))
-(define p2 (declare_protocol pbl))
+(define p1 (declare-protocol pbl))
+(define p2 (declare-protocol pbl))
 
 (define prf (declare-cryptography pbl))
-(define hash (declare_function pbl (fun "hash" (signature (Bitstring Bitstring) -> Bitstring) (list prf))))
-; (define hash (declare_function pbl (fun "hash" (signature (Bitstring Bitstring) -> Bitstring) '())))
-(define ok (declare_function pbl (fun "ok" (signature () -> Bitstring) '())))
-(define ko (declare_function pbl (fun "ko" (signature () -> Bitstring) '())))
-(define k1 (declare_function pbl (mk-nonce "key1" (signature (Index) -> Nonce))))
-(define k2 (declare_function pbl (mk-nonce "key2" (signature (Index Index) -> Nonce))))
-(define n (declare_function pbl (mk-nonce "n" (signature (Index Index) -> Nonce))))
+(define hash (declare-function pbl (fun "hash" (signature (Bitstring Bitstring) -> Bitstring) (list prf))))
+; (define hash (declare-function pbl (fun "hash" (signature (Bitstring Bitstring) -> Bitstring) '())))
+(define ok (declare-function pbl (fun "ok" (signature () -> Bitstring) '())))
+(define ko (declare-function pbl (fun "ko" (signature () -> Bitstring) '())))
+(define k1 (declare-function pbl (mk-nonce "key1" (signature (Index) -> Nonce))))
+(define k2 (declare-function pbl (mk-nonce "key2" (signature (Index Index) -> Nonce))))
+(define n (declare-function pbl (mk-nonce "n" (signature (Index Index) -> Nonce))))
 
-(define tag (declare_step pbl "tag" (list Index Index)))
-(define rs (declare_step pbl "rs" (list Index Index)))
-(define rf (declare_step pbl "rf" (list Index)))
+(define tag (declare-step pbl "tag" (list Index Index)))
+(define rs (declare-step pbl "rs" (list Index Index)))
+(define rf (declare-step pbl "rf" (list Index)))
 
-(define mk (declare_function pbl (mk-alias "mkey"
+(define mk (declare-function pbl (mk-alias "mkey"
   (signature (Index Index Protocol) -> Bitstring) 
   (list
     (alias-rule
@@ -42,7 +42,7 @@
   (formula (tpl (n i j) (hash  (n i j) (mk i j p2))))
 ))
 
-(define exists1 (declare_quantifier pbl (list Index Protocol) (list Index)))
+(define exists1 (declare-exists pbl (list Index Protocol) (list Index)))
 (let* 
   ([vars (exists-cvars exists1)] 
     [j (mk-varf (list-ref (exists-bvars exists1) 0))]
@@ -54,7 +54,7 @@
 )
 
 
-(define exists2 (declare_quantifier pbl (list Index Time Protocol) (list Index)))
+(define exists2 (declare-exists pbl (list Index Time Protocol) (list Index)))
 (let* 
   ([vars (exists-cvars exists2)] 
     [i (mk-varf (list-ref (exists-bvars exists2) 0))]
@@ -106,7 +106,7 @@
     [in (formula (macro_input (rf i) p2))])
   (formula (bit_not (@ cexists1 i p2)))))
 
-(define n0 (declare_function pbl (mk-nonce "n0" (signature (Index Index Protocol) -> Nonce))))
+(define n0 (declare-function pbl (mk-nonce "n0" (signature (Index Index Protocol) -> Nonce))))
 
 ; (add-rule pbl (let (
 ;   [i (mk-varf 0)]

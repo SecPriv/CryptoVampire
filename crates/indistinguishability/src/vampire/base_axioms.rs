@@ -278,7 +278,7 @@ fn mk_fdst_1(e: &FindSuchThat) -> impl Iterator<Item = MSmtFormula> {
             .skolems()
             .iter()
             .map(|sk| sk.app_var(&e.cvars_as_lang().map(|x| [x]).collect_vec()));
-        let subst = izip!(e.cvars().iter().copied(), applied_skolems).collect_vec();
+        let subst = izip!(e.bvars().iter().copied(), applied_skolems).collect_vec();
 
         let applied_skolems = e
             .condition()

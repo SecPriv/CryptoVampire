@@ -12,10 +12,17 @@ pub fn main() {
         .expect("Failed to read from stdin");
 
     // let res = init_engine().run(pgrm).unwrap();
-    match init_engine().run(pgrm.clone()) {
+    let mut engine = init_engine();
+    match engine.run(pgrm.clone()) {
         Err(e) => {
             eprintln!("{}", e.emit_result_to_string("prelude", CV_PRELUDE));
             eprintln!("{}", e.emit_result_to_string("stdin", &pgrm));
+            if let Some(err) = engine.raise_error_to_string(e) {
+                panic!("{err}")
+            } else {
+                eprintln!("couldn't get a nice error");
+                panic!()
+            }
         }
         Ok(res) => {
             for r in res {

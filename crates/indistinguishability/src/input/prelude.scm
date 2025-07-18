@@ -36,6 +36,7 @@
       [(_ (or a b)) (formula (bit_or a b))]
       [(_ (or a b ...)) (formula (bit_or a (or b ...)))] 
       [(_ (= a b)) (formula (meq a b))]
+      ; [(_ (not a)) (formula (bit_not a))]
       ; [(_ (if c l r)) (mk-if (formula c) (formula l) (formula r))]
       [(_ (f args ...))
         (mk-appf2 f (list (formula args) ...))]

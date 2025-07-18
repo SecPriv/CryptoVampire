@@ -8,12 +8,13 @@ use steel::rvals::Result as SResult;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
+use crate::input::shared_fdst::ShrFindSuchThat;
 use crate::input::Registerable;
 use crate::input::golgge_rules::Rule;
 use crate::input::shared_exists::ShrExists;
 use crate::input::var::SVar;
 use crate::protocol::Step;
-use crate::terms::{Exists, Function, RecFOFormula, Rewrite, Sort};
+use crate::terms::{Exists, FindSuchThat, Function, RecFOFormula, Rewrite, Sort};
 use crate::{MSmt, Problem};
 
 declare_trace!($"shrpblm");
@@ -126,7 +127,7 @@ impl ShrProblem {
         self.borrow_mut().declare_new_protocol().name().clone()
     }
 
-    fn declare_quantifier(&self, captured: Vec<Sort>, bound: Vec<Sort>) -> ShrExists {
+    fn declare_exists(&self, captured: Vec<Sort>, bound: Vec<Sort>) -> ShrExists {
         let mut pbl = self.borrow_mut();
         let index = pbl.function.quantifiers().len();
         Exists::insert()
@@ -135,6 +136,20 @@ impl ShrProblem {
             .pbl(&mut pbl)
             .call();
         ShrExists {
+            pbl: self.clone(),
+            index,
+        }
+    }
+
+    fn declare_fdst(&self, captured: Vec<Sort>, bound: Vec<Sort>) -> ShrFindSuchThat {
+        let mut pbl = self.borrow_mut();
+        let index = pbl.function.quantifiers().len();
+        FindSuchThat::insert()
+            .bvars_sorts(bound)
+            .cvars_sort(captured)
+            .pbl(&mut pbl)
+            .call();
+        ShrFindSuchThat {
             pbl: self.clone(),
             index,
         }
@@ -215,11 +230,12 @@ impl Registerable for ShrProblem {
         Self::register_type(module);
         module
             .register_fn("to-string-step", Self::to_string_step)
-            .register_fn("empty_problem", Self::mk_empty)
-            .register_fn("declare_function", Self::declare_function)
-            .register_fn("declare_protocol", Self::declare_protocol)
-            .register_fn("declare_quantifier", Self::declare_quantifier)
-            .register_fn("declare_step", Self::declare_step)
+            .register_fn("empty-problem", Self::mk_empty)
+            .register_fn("declare-function", Self::declare_function)
+            .register_fn("declare-protocol", Self::declare_protocol)
+            .register_fn("declare-exists", Self::declare_exists)
+            .register_fn("declare-find-such-that", Self::declare_fdst)
+            .register_fn("declare-step", Self::declare_step)
             .register_fn("set-step-message", Self::set_step_msg)
             .register_fn("set-step-condition", Self::set_step_cond)
             .register_fn("set-step-vars", Self::set_step_vars)

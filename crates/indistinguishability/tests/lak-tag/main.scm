@@ -1,33 +1,33 @@
 (require-builtin steel/base)
-(define pbl (empty_problem))
+(define pbl (empty-problem))
 
-(define p1 (declare_protocol pbl))
-(define p2 (declare_protocol pbl))
+(define p1 (declare-protocol pbl))
+(define p2 (declare-protocol pbl))
 
 (define prf (declare-cryptography pbl))
 
-(define hash (declare_function pbl 
+(define hash (declare-function pbl 
   (fun "hash" (signature (Bitstring Bitstring) -> Bitstring) (list prf))))
-(define ok (declare_function pbl 
+(define ok (declare-function pbl 
   (fun "ok" (signature () -> Bitstring) '())))
-(define ko (declare_function pbl 
+(define ko (declare-function pbl 
   (fun "ko" (signature () -> Bitstring) '())))
-(define tag1 (declare_function pbl 
+(define tag1 (declare-function pbl 
   (fun "tag1" (signature () -> Bitstring) '())))
-(define tag2 (declare_function pbl 
+(define tag2 (declare-function pbl 
   (fun "tag2" (signature () -> Bitstring) '())))
 
-(define k1 (declare_function pbl (mk-nonce "key1" (signature (Index) -> Nonce))))
-(define k2 (declare_function pbl (mk-nonce "key2" (signature (Index Index) -> Nonce))))
-(define nt (declare_function pbl (mk-nonce "nt" (signature (Index Index) -> Nonce))))
-(define nr (declare_function pbl (mk-nonce "nr" (signature (Index) -> Nonce))))
+(define k1 (declare-function pbl (mk-nonce "key1" (signature (Index) -> Nonce))))
+(define k2 (declare-function pbl (mk-nonce "key2" (signature (Index Index) -> Nonce))))
+(define nt (declare-function pbl (mk-nonce "nt" (signature (Index Index) -> Nonce))))
+(define nr (declare-function pbl (mk-nonce "nr" (signature (Index) -> Nonce))))
 
-(define tag (declare_step pbl "tag" (list Index Index)))
-(define r (declare_step pbl "r" (list Index)))
-(define rs (declare_step pbl "rs" (list Index Index Index)))
-(define rf (declare_step pbl "rf" (list Index)))
+(define tag (declare-step pbl "tag" (list Index Index)))
+(define r (declare-step pbl "r" (list Index)))
+(define r2 (declare-step pbl "r2" (list Index)))
+(initialize-as-prf prf hash)
 
-(define mk (declare_function pbl (mk-alias "mkey"
+(define mk (declare-function pbl (mk-alias "mkey"
   (signature (Index Index Protocol) -> Bitstring) 
   (list
     (alias-rule
@@ -44,55 +44,53 @@
 ))
 
 ; ------------- quantifier -------------
-(define exists11 (declare_quantifier pbl (list Index Index Protocol Time) Index))
+(define fdst1 (declare-find-such-that pbl (list Index Protocol Time) (list Index Index)))
 (let* 
-  ([vars (exists-vars exists11)] 
-    [k (mk-varf (exists-bound-var exists11))]
-    [i (mk-varf (list-ref vars 0))] 
-    [j (mk-varf (list-ref vars 1))] 
-    [p (mk-varf (list-ref vars 2))] 
-    [t (mk-varf (list-ref vars 3))] 
-    [in (formula (macro_input t p))])
-    (set-exists-pattern exists11 (formula 
-      (@ m_condition_fst i j k p in))))
-(define (cexists11 i j p t) (
-  let ([e (get-exists-tlf exists11)] [sk (get-exists-skolem exists11)])
-  (mk-appf e (list i j p t (mk-appf sk (list i j p t))))))
-
-(define exists12 (declare_quantifier pbl (list Index Protocol Time) Index))
-(let* 
-  ([vars (exists-vars exists12)] 
-    [i (mk-varf (exists-bound-var exists12))]
+  ([vars (find-such-that-cvars fdst1)] 
+    [i (mk-varf (list-ref (find-such-that-bvars fdst1) 0))] 
     [j (mk-varf (list-ref vars 0))] 
+    [k (mk-varf (list-ref (find-such-that-bvars fdst1) 1))]
     [p (mk-varf (list-ref vars 1))] 
     [t (mk-varf (list-ref vars 2))] 
     [in (formula (macro_input t p))])
-    (set-exists-pattern exists12 (formula (@ cexists11 i j p t))))
-(define (cexists12 j p t) (
-  let ([e (get-exists-tlf exists12)] [sk (get-exists-skolem exists12)])
-  (mk-appf e (list j p t (mk-appf sk (list j p t))))))
-
-
-(define exists2 (declare_quantifier pbl (list Index Time Protocol) Index))
-(let* 
-  ([vars (exists-vars exists2)] 
-    [i (mk-varf (exists-bound-var exists2))]
-    [j (mk-varf (list-ref vars 0))] 
-    [t (mk-varf (list-ref vars 1))] 
-    [p (mk-varf (list-ref vars 2))]
-    [int (formula (macro_input t p))]
-    [intag (formula (macro_input (tag i j) p))])
-    (set-exists-pattern exists2 (formula 
-      (and
-        (lt (tag i j) t) ; <- very important
-        (= (sel1of2 int) (sel1of2 intag))
-        (= (sel2of2 int) (sel2of2 intag))
-      )
+    (begin
+      (set-find-such-that-condition fdst1 (formula 
+        (= (sel2of2 in) (hash (tpl (tpl (nr j) (sel1of2 in)) tag1) (mk i k p)))))
+      (set-find-such-that-then-branch fdst1 (formula
+        (hash (tpl (tpl (nr j) (sel1of2 in)) tag2) (mk i k p1))))
+      (set-find-such-that-else-branch fdst1 (formula ko))
     ))
-)
-(define (cexists2 j t p) (
-  let ([e (get-exists-tlf exists2)] [sk (get-exists-skolem exists2)])
-  (mk-appf e (list j t p (mk-appf sk (list j t p))))))
+(define (cfdst1 j p t) (
+  let* ([e (get-find-such-that-tlf fdst1)] [skk (get-find-such-that-skolems fdst1)] 
+        [sk_i (list-ref skk 0)] [sk_k (list-ref skk 1)])
+  (mk-appf e (list j p t (mk-appf sk_i (list j p t)) (mk-appf sk_k (list j p t))))))
+
+(define fdst2 (declare-find-such-that pbl (list Index Protocol Time) (list Index Index)))
+(let* 
+  ([vars (find-such-that-cvars fdst2)] 
+    [i (mk-varf (list-ref (find-such-that-bvars fdst2) 0))] 
+    [j (mk-varf (list-ref vars 0))] 
+    [k (mk-varf (list-ref (find-such-that-bvars fdst2) 1))]
+    [p (mk-varf (list-ref vars 1))] 
+    [t (mk-varf (list-ref vars 2))] 
+    [in (formula (macro_input t p))]
+    [intag (formula (macro_input (tag i j) p))])
+    (begin
+      (set-find-such-that-condition fdst2 (formula 
+        (and
+          (lt (tag i j) t) ; <- very important
+          (= (sel1of2 in) (sel1of2 intag))
+          (= (sel2of2 in) (sel2of2 intag))
+        )))
+      (set-find-such-that-then-branch fdst2 (formula
+        (hash (tpl (tpl (nr j) (sel1of2 in)) tag2) (mk i k p1))))
+      (set-find-such-that-else-branch fdst2 (formula ko))
+    ))
+(define (cfdst2 j p t) (
+  let* ([e (get-find-such-that-tlf fdst2)] [skk (get-find-such-that-skolems fdst2)] 
+        [sk_i (list-ref skk 0)] [sk_k (list-ref skk 1)])
+  (mk-appf e (list j p t (mk-appf sk_i (list j p t)) (mk-appf sk_k (list j p t))))))
+
 
 ; ----------------- steps -----------------
 
@@ -107,42 +105,29 @@
   (let* ([i (mk-varf 0)] [ j (mk-varf 1) ] [in (formula (macro_input (tag i j) p2))])
   (formula (tpl (nt i j) (hash (tpl in (nt i j) tag1) (mk i j p2))))))
 
-(set-step-condition pbl rs p1 (let
-    ([i (mk-varf 0)] 
-    [j (mk-varf 1)] 
-    [k (mk-varf 2)])
-  (formula
-    (@ m_condition_fst i j k p1 (macro_input (rs i j k) p1)))))
-(set-step-message pbl rs p1 (let*
-    ([i (mk-varf 0)] 
-    [j (mk-varf 1)] 
-    [k (mk-varf 2)]
-    [in (formula (macro_input (rs i j k) p1))])
-  (formula
-    (hash (tpl (tpl (nr j) (sel1of2 in)) tag2) (mk i k p1)))))
+(set-step-message pbl r2 p1 
+  (let* ([j (mk-varf 0)] [in (formula (macro_input (r2 j) p1))])
+  (formula (@ cfdst1 j p1 (r2 j)))))
 
-(set-step-condition pbl rs p2 (let
-    ([i (mk-varf 0)] 
-    [j (mk-varf 1)] 
-    [k (mk-varf 2)])
-  (formula
-    (@ m_condition_fst i j k p2 (macro_input (rs i j k) p2)))))
-(set-step-message pbl rs p2 (let*
-    ([i (mk-varf 0)] 
-    [j (mk-varf 1)] 
-    [k (mk-varf 2)]
-    [in (formula (macro_input (rs i j k) p2))])
-  (formula
-    (hash (tpl (tpl (nr j) (sel1of2 in)) tag2) (mk i k p2)))))
-    
-(set-step-condition pbl rs p1 (let
-    ([j (mk-varf 0)] )
-  (formula (bit_not (@ cexists12 j p1 (rf j))))))
-(set-step-condition pbl rs p2 (let
-    ([j (mk-varf 0)] )
-  (formula (bit_not (@ cexists12 j p2 (rf j))))))
+(set-step-message pbl r2 p2 
+  (let* ([j (mk-varf 0)] [in (formula (macro_input (r2 j) p2))])
+  (formula (@ cfdst1 j p2 (r2 j)))))
 
-(set-step-message pbl rf p2 (formula ko))
-(set-step-message pbl rf p1 (formula ko))
+
+(add-rewrite pbl (let* (
+  [t (mk-varf 0)]
+  [j (mk-varf 1)]
+  [p (mk-varf 2)]
+  [vars (list 0 1 2)]
+  [sorts (list Time Index Protocol)]
+)
+  (mk-rewrite "lemma" vars sorts
+    (cfdst1 j p t)
+    (cfdst2 j p t)
+  )
+))
+
+(add-smt-axiom pbl (formula (bit_not (= tag1 tag2))))
+(add-smt-axiom pbl (formula (forall [(j 0 Index)] (lt (r j) (r2 j)))))
 
 (run pbl p1 p2)
