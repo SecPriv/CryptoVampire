@@ -3,6 +3,7 @@ use std::borrow::Cow;
 use egg::{Id, Language, Pattern, Searcher, Var};
 use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain};
+use log::{Log, log_enabled};
 use logic_formula::egg::SimpleDiscriminant;
 use utils::ereturn_let;
 
@@ -42,6 +43,8 @@ macro_rules! declare {
             .call()
     };
 }
+
+declare_trace!($"prf");
 
 impl PRF {
     pub fn new_and_add(pbl: &mut Problem, pos: usize, hash: Function) -> &Self {
@@ -125,23 +128,25 @@ impl PRF {
         let conclusionr = rexp!((EQUIV #1 #2 #6 (candidate_bitstring #3 #4 #5)));
         let subterm_search1 = rexp!((search_bitstring #4 #5 #3));
         let subterm_search2 = rexp!((search_bitstring #4 #5 #4));
-        let new_goall = rexp!((SUBSTITUTION_RULE (EQUIV #1 #2 (SUBSTITUTION #3 (hash #4 (NONCE #5)) (NONCE #7)) #6) (hash #4 (NONCE #5)) (NONCE #7)));
-        let new_goalr = rexp!((SUBSTITUTION_RULE (EQUIV #1 #2 #6 (SUBSTITUTION #3 (hash #4 (NONCE #5)) (NONCE #7))) (hash #4 (NONCE #5)) (NONCE #7)));
+        let new_goall = rexp!((SUBSTITUTION_RULE (EQUIV #1 #2 (SUBSTITUTION #3 (hash #4 (NONCE #5)) (NONCE #7)) #6)));
+        let new_goalr = rexp!((SUBSTITUTION_RULE (EQUIV #1 #2 #6 (SUBSTITUTION #3 (hash #4 (NONCE #5)) (NONCE #7)))));
 
         [
-            PrfRule::new(
-                &conclusionr,
-                &subterm_search1,
-                &subterm_search2,
-                &new_goalr,
-                PrfKind::Right,
-            ),
             PrfRule::new(
                 &conclusionl,
                 &subterm_search1,
                 &subterm_search2,
                 &new_goall,
                 PrfKind::Left,
+                candidate_bitstring.clone()
+            ),
+            PrfRule::new(
+                &conclusionr,
+                &subterm_search1,
+                &subterm_search2,
+                &new_goalr,
+                PrfKind::Right,
+                candidate_bitstring.clone()
             ),
         ]
     }
@@ -171,6 +176,7 @@ struct PrfRule {
 
     // for debuging
     kind: PrfKind,
+    candidate_bitstring: Function
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -186,6 +192,7 @@ impl PrfRule {
         subterm_search2: &[LangVar],
         new_goal: &[LangVar],
         kind: PrfKind,
+        candidate_bitstring: Function,
     ) -> Self {
         Self {
             conclusion: conclusion.into(),
@@ -193,6 +200,7 @@ impl PrfRule {
             subterm_search2: subterm_search2.into(),
             new_goal: new_goal.into(),
             kind,
+            candidate_bitstring
         }
     }
 }
@@ -204,6 +212,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfRule {
 
         if cfg!(debug_assertions) {
             check_hash_eq_nonce(egraph);
+
         }
 
         let n = {
@@ -218,11 +227,12 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfRule {
 
             egraph.add(fun.app_id([]))
         };
-
+        let subst_id = substs.eclass;
         substs
             .substs
             .into_iter()
             .map(|mut subst| {
+
                 subst.insert(Var::from_u32(7), n);
 
                 [

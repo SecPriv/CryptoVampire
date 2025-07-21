@@ -5,13 +5,16 @@
 //! ```
 
 use std::borrow::Cow;
+use std::collections::hash_map::Entry;
 use std::collections::{HashSet, VecDeque};
 use std::fmt::format;
+use std::mem;
+use std::rc::Rc;
 
 use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr, Searcher, Var};
 use golgge::{Dependancy, Rule};
 use indexmap::IndexMap;
-use itertools::{izip, Itertools};
+use itertools::{Itertools, izip};
 use logic_formula::egg::SimpleDiscriminant;
 use rustc_hash::{FxHashMap, FxHashSet};
 use static_init::dynamic;
@@ -21,15 +24,29 @@ use utils::{econtinue_let, ereturn_let};
 use crate::problem::PAnalysis;
 use crate::rules::base_rules::substitution;
 use crate::rules::utils::mk_subst_rw;
-use crate::terms::{SUBSTITUTION, SUBSTITUTION_RULE};
+use crate::terms::{MACRO_EXEC, MACRO_FRAME, PRED, SUBSTITUTION, SUBSTITUTION_RULE};
 use crate::{Lang, rexp};
 
 declare_trace!($"substitution");
 
 #[dynamic]
 static SUBSTITUTION_RULE_PATTERN: Pattern<Lang> = {
-    let ast = rexp!((SUBSTITUTION_RULE #0 #1 #2)).to_vec();
+    let ast = rexp!((SUBSTITUTION_RULE #0)).to_vec();
     RecExpr::from(ast).into()
+};
+
+#[dynamic]
+static SUBSTITUTION_PATTERN: Pattern<Lang> = {
+    let ast = rexp!((SUBSTITUTION #0 #1 #2)).to_vec();
+    RecExpr::from(ast).into()
+};
+
+#[dynamic]
+static ACCEPTABLY_EMPTY: Vec<Pattern<Lang>> = {
+    vec![
+        rexp!((MACRO_EXEC (PRED #0) #1)).into_iter().collect(),
+        rexp!((MACRO_FRAME (PRED #0) #1)).into_iter().collect(),
+    ]
 };
 
 /// This rule is a no op logic wise.
@@ -56,12 +73,55 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
                 .search_eclass(egraph, goal),
             Dependancy::impossible()
         );
+        tr!("substitution");
+        let memo: FxHashMap<_, _> = ACCEPTABLY_EMPTY
+            .iter()
+            .flat_map(|patt| patt.search(egraph).into_iter())
+            .map(|s| (s.eclass, [s.eclass].into_iter().collect()))
+            .collect();
+
+        for subst in SUBSTITUTION_PATTERN.search(egraph) {
+            let current_id = subst.eclass;
+            for s in subst.substs {
+                let [m, x, y] = [0, 1, 2].map(|i| *s.get(Var::from_u32(i as u32)).unwrap());
+                let mut memo = memo.clone();
+
+                let ids = mk_substs(egraph, &mut memo, m, x, y);
+                assert!(!ids.is_empty());
+                for id in ids.iter() {
+                    #[cfg(debug_assertions)]
+                    if egraph.find(*id) == egraph.find(m) {
+                        let me = egraph.id_to_expr(m);
+                        let args = egraph[m]
+                            .nodes
+                            .iter()
+                            .map(|l| {
+                                let args = l
+                                    .children()
+                                    .iter()
+                                    .map(|id| egraph.id_to_expr(*id))
+                                    .join(" ");
+                                format!("({} {args})", l.discriminant().name)
+                            })
+                            .join("\n");
+
+                        panic!("should not be equal {me}:\n{args}")
+                    }
+
+                    egraph.union_trusted(current_id, *id, "substitution");
+                }
+            }
+        }
+
         let subst = substs
             .substs
             .into_iter()
             .map(|s| {
-                let [g, x, y] = [0, 1, 2].map(|i| *s.get(Var::from_u32(i as u32)).unwrap());
-                Substitution { egraph, x, y }.apply_subst();
+                // let [g, x, y] = [0, 1, 2].map(|i| *s.get(Var::from_u32(i as u32)).unwrap());
+                // Substitution { egraph, x, y }.apply_subst();
+                // [g]
+
+                let g = *s.get(Var::from_u32(0)).unwrap();
                 [g]
             })
             .collect();
@@ -69,6 +129,84 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
         egraph.clean = false; // <- to force a true rebuild afterward
         subst
     }
+}
+
+fn mk_substs<N: Analysis<Lang>>(
+    egraph: &mut EGraph<Lang, N>,
+    memo: &mut FxHashMap<Id, Rc<[Id]>>,
+    m: Id,
+    x: Id,
+    y: Id,
+) -> Rc<[Id]> {
+    let m = egraph.find(m);
+    let x = egraph.find(x);
+    if m == x {
+        return Rc::new([y]);
+    }
+    match memo.entry(m) {
+        Entry::Occupied(occupied_entry) => return occupied_entry.get().clone(),
+        Entry::Vacant(vacant_entry) => {
+            vacant_entry.insert(Default::default());
+        }
+    }
+
+    let eclass = &egraph[m];
+    let mut nids: Vec<_> = Default::default();
+
+    let fileterd_heads = eclass
+        .nodes
+        .iter()
+        .filter(|l| !l.discriminant().is_special_subterm() || l.discriminant().is_if_then_else())
+        .cloned()
+        .collect_vec();
+
+    if fileterd_heads.is_empty() {
+        tr!("head is empty: {}", egraph.id_to_expr(m));
+        nids = vec![m];
+    }
+
+    for l in fileterd_heads {
+        let n_children = l
+            .children()
+            .iter()
+            .map(|id| mk_substs(egraph, memo, *id, x, y))
+            .collect_vec();
+
+        if n_children.is_empty() {
+            nids.push(m);
+        } else {
+            let tranposer = VecTranspose::new(&n_children);
+            if tranposer.is_empty() {
+                tr!(
+                    "{} is empty (from {})",
+                    l.discriminant().name,
+                    egraph.id_to_expr(m)
+                );
+            }
+            for arg in tranposer {
+                let nid = egraph.add(l.discriminant().app_id(arg.into_iter().cloned()));
+                nids.push(nid);
+            }
+        }
+        assert!(!nids.is_empty());
+    }
+    let rc_ids: Rc<[_]> = nids.into_iter().unique().collect();
+
+    assert!(
+        !rc_ids.is_empty(),
+        "should not be empty {}{{{} -> {}}}",
+        egraph.id_to_expr(m),
+        egraph.id_to_expr(x),
+        egraph.id_to_expr(y)
+    );
+
+    #[cfg(debug_assertions)]
+    if rc_ids.len() ==1 {
+        tr!("only one in subst: \nm = ({m}) {}\nx = ({x}) {}\ny = ({y}) {}", egraph.id_to_expr(m), egraph.id_to_expr(x), egraph.id_to_expr(y))
+    }
+
+    memo.insert(m, rc_ids.clone());
+    rc_ids
 }
 
 struct Substitution<'a, N>
@@ -121,7 +259,10 @@ impl<'a, N: Analysis<Lang>> Substitution<'a, N> {
     /// Extract the closure of [Self::x] in [Self::egraph], while singleing out
     /// the eclass with the right subst using `subst`
     fn extract_closure(&self, susbts: &mut Vec<(Id, Id)>) -> IndexMap<Id, Vec<Lang>> {
-        let mut todo: VecDeque<_> = self.egraph[self.x].parents().map(|id| self.egraph.find(id)).collect();
+        let mut todo: VecDeque<_> = self.egraph[self.x]
+            .parents()
+            .map(|id| self.egraph.find(id))
+            .collect();
         let mut done = IndexMap::new();
 
         while let Some(current) = todo.pop_front() {
@@ -148,7 +289,7 @@ impl<'a, N: Analysis<Lang>> Substitution<'a, N> {
         'outer: while let Some(id) = todo.pop_front() {
             let index = closure.get_index_of(&id);
             dbg!(&index);
-            let (mut parents, mut indices): (VecDeque<_>, VecDeque<_> )= self.egraph[id]
+            let (mut parents, mut indices): (VecDeque<_>, VecDeque<_>) = self.egraph[id]
                 .parents()
                 .filter_map(|pid| {
                     let pidx = closure.get_index_of(&pid)?;
@@ -162,50 +303,59 @@ impl<'a, N: Analysis<Lang>> Substitution<'a, N> {
             while !parents.is_empty() {
                 debug_assert_eq!(index, closure.get_index_of(&id));
                 // find the first index in parents of an eclass that doesn't have up edge within the closure
-                let Some(i) = parents
-                    .iter()
-                    .enumerate()
-                    .find_map(|(i, id)| {
-                        self.egraph[*id]
-                            .nodes
-                            .iter()
-                            .inspect(|l| {println!("{}", &l.discriminant().name);})
-                            .any(|l| {
-                                // self.matches(l) ||
-                                l.children().iter()
+                let Some(i) = parents.iter().enumerate().find_map(|(i, id)| {
+                    self.egraph[*id]
+                        .nodes
+                        .iter()
+                        .inspect(|l| {
+                            println!("{}", &l.discriminant().name);
+                        })
+                        .any(|l| {
+                            // self.matches(l) ||
+                            l.children()
+                                .iter()
                                 .inspect(|id| println!("{}", self.egraph.id_to_expr(**id)))
                                 .all(|cid| {
-                                    closure
-                                        .get_index_of(cid)
-                                        .is_none_or(|i| index.is_some_and(|idx| { dbg!(i);  i <= idx}))
+                                    closure.get_index_of(cid).is_none_or(|i| {
+                                        index.is_some_and(|idx| {
+                                            dbg!(i);
+                                            i <= idx
+                                        })
+                                    })
                                 })
-                            })
-                            .then_some(i)
-                    })
-                    else {
-                        eprintln!("{:} cannot be written without loops: {index:?}\nx = {}\ny = {}",
-                                                    self.egraph.id_to_expr(id),
-                            self.egraph.id_to_expr(self.x),
-                            self.egraph.id_to_expr(self.y));
-                        for (pid, pidx) in izip!(&parents, &indices) {
-                            let expr = self.egraph.id_to_expr(*pid);
-                            eprintln!("{pidx:} {expr}");
-                            for l in &self.egraph[*pid].nodes {
-                                let c = l.children().iter().map(|cid| closure.get_index_of(cid)).map(|i| format!("{i:?}")).join(", ");
-                                let f = l.discriminant();
-                                eprintln!("\t{f}({c})");
-                            }
+                        })
+                        .then_some(i)
+                }) else {
+                    eprintln!(
+                        "{:} cannot be written without loops: {index:?}\nx = {}\ny = {}",
+                        self.egraph.id_to_expr(id),
+                        self.egraph.id_to_expr(self.x),
+                        self.egraph.id_to_expr(self.y)
+                    );
+                    for (pid, pidx) in izip!(&parents, &indices) {
+                        let expr = self.egraph.id_to_expr(*pid);
+                        eprintln!("{pidx:} {expr}");
+                        for l in &self.egraph[*pid].nodes {
+                            let c = l
+                                .children()
+                                .iter()
+                                .map(|cid| closure.get_index_of(cid))
+                                .map(|i| format!("{i:?}"))
+                                .join(", ");
+                            let f = l.discriminant();
+                            eprintln!("\t{f}({c})");
                         }
-                        // let parents = parents
-                        //     .iter()
-                        //     .map(|(id, i)| format!("{i:}: {}", self.egraph.id_to_expr(*id)))
-                        //     .join("\n");
-                        // panic!(
-                        //     "{:} cannot be written without loops: {index:?}\n{parents}\nx = {}\ny = {}",
-                        // )
-                        assert!(did_something);
-                        continue 'outer;
-                    };
+                    }
+                    // let parents = parents
+                    //     .iter()
+                    //     .map(|(id, i)| format!("{i:}: {}", self.egraph.id_to_expr(*id)))
+                    //     .join("\n");
+                    // panic!(
+                    //     "{:} cannot be written without loops: {index:?}\n{parents}\nx = {}\ny = {}",
+                    // )
+                    assert!(did_something);
+                    continue 'outer;
+                };
 
                 closure.swap_indices(indices[0], indices[i]);
                 parents.swap(0, i);
