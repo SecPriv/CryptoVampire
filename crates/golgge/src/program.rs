@@ -1,3 +1,10 @@
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::fmt::{Debug, Display};
+use std::path::PathBuf;
+use std::rc::Rc;
+use std::str::FromStr;
+
 use bon::bon;
 // use eclassmap::{ECallMap, Entry};
 use egg::{
@@ -7,17 +14,11 @@ use egg::{
 use itertools::{Either, Itertools};
 use log::{debug, trace};
 use serde::Serialize;
-use std::{
-    cell::RefCell,
-    collections::HashMap,
-    fmt::{Debug, Display},
-    path::PathBuf,
-    rc::Rc,
-    str::FromStr,
-};
 use utils::implvec;
 
-use crate::{proof::SearchResult, rule::PlOrRw, Config, Dependancy, Fresh, ProofItem, Rule, WeightedAnalysis};
+use crate::proof::SearchResult;
+use crate::rule::PlOrRw;
+use crate::{Config, Dependancy, Fresh, ProofItem, Rule, WeightedAnalysis};
 
 macro_rules! mtrace {
     ($s:ident, $($t:tt)*) => {
@@ -85,27 +86,6 @@ where
     /// see [Self::egraph]
     pub fn egraph_mut(&mut self) -> &mut EGraph<L, N> {
         self.egraph.as_mut().expect("invalid program")
-    }
-
-    /// Debug the available [`Rule`]s by calling [Rule::debug]
-    pub fn debug_rules(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        for r in &self.rules {
-            r.debug(f)?;
-            writeln!(f)?;
-        }
-        Ok(())
-    }
-
-    /// Alternative debug method based on [Self::debug_rules] to leave [Debug]
-    /// clean
-    pub fn as_debug_rules(&self) -> impl Debug {
-        struct DP<'a, L: Language, N: Analysis<L>>(&'a Program<L, N>);
-        impl<'a, L: Language, N: Analysis<L>> Debug for DP<'a, L, N> {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                self.0.debug_rules(f)
-            }
-        }
-        DP(&self)
     }
 
     /// activate/deactivate memoisation/tabling
@@ -205,6 +185,31 @@ where
     L: Language + Display,
     N: Analysis<L>,
 {
+    /// Debug the available [`Rule`]s by calling [Rule::debug]
+    pub fn debug_rules(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        for r in self.eq_rules() {
+            writeln!(f, "{r:?}")?;
+        }
+
+        for r in &self.rules {
+            r.debug(f)?;
+            writeln!(f)?;
+        }
+        Ok(())
+    }
+
+    /// Alternative debug method based on [Self::debug_rules] to leave [Debug]
+    /// clean
+    pub fn as_debug_rules(&self) -> impl Debug {
+        struct DP<'a, L: Language, N: Analysis<L>>(&'a Program<L, N>);
+        impl<'a, L: Language + Display, N: Analysis<L>> Debug for DP<'a, L, N> {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                self.0.debug_rules(f)
+            }
+        }
+        DP(self)
+    }
+
     /// Try to prove `goal` going a most `depth` deep
     pub fn run_expr(&mut self, goal: RecExpr<L>, depth: u64) -> SearchResult {
         mtrace!(self, "{:?}", self.as_debug_rules());
@@ -212,8 +217,8 @@ where
         let goal = self.egraph.as_mut().unwrap().add_expr(&goal);
         self.rebuild();
         match self.run(goal, depth) {
-          true => SearchResult::True(goal),
-          false => SearchResult::False
+            true => SearchResult::True(goal),
+            false => SearchResult::False,
         }
     }
 
@@ -221,6 +226,7 @@ where
     pub fn run(&mut self, goal: egg::Id, depth: u64) -> bool {
         let gtmp = if self.config.trace_prolog {
             let g = self.egraph().id_to_expr(goal);
+            eprintln!("{}:{}:{}", file!(), line!(), column!());
             eprintln!("({depth:}) {}", g.pretty(80));
             Some(g)
         } else {
@@ -261,9 +267,8 @@ where
             };
             i += 1;
 
-
             let search = r.search(self, goal);
-            
+
             if !search.is_impossible() {
                 mtrace!(self, "matched rule '{}'", r.name());
             }
@@ -299,7 +304,7 @@ where
         }
 
         if let Some(g) = gtmp {
-            eprintln!("({depth:}) {} -> {}", g.pretty(80), result)
+            eprintln!("({depth:}) setting {} to {}", g.pretty(80), result)
         }
         result
     }

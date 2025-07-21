@@ -40,7 +40,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             iter_limit: 150,
-            node_limit: 1000,
+            node_limit: 500,
             time_limit: std::time::Duration::from_secs(5),
             trace_prolog: cfg!(debug_assertions),
         }

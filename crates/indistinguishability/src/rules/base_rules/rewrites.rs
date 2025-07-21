@@ -6,7 +6,7 @@ use utils::dynamic_iter;
 
 use super::parse::{PatternsAst, clean_input, convert_fun};
 use super::var_as_recexpr;
-use crate::terms::{AliasRewrite, BITE, Exists, FindSuchThat, Function, Quantifier, QuantifierT};
+use crate::terms::{AliasRewrite, Exists, FindSuchThat, Function, Quantifier, QuantifierT, BITE, MITE};
 use crate::{Lang, Problem};
 /// build the default rewrite rules
 pub fn mk_rewrites_rules<N: Analysis<Lang>>(
@@ -92,7 +92,7 @@ fn mk_fdst_rules_one<'a, N: Analysis<Lang>>(
         Rewrite::new(
             format!("{} def", e.top_level_function().name),
             Pattern::new(e.top_level_function().app_var(&vars)),
-            Pattern::new(BITE.app_var(&[e.condition(), e.then_branch(), e.else_branch()])),
+            Pattern::new(MITE.app_var(&[e.condition(), e.then_branch(), e.else_branch()])),
         )
         .unwrap()
     };

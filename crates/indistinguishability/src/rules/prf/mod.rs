@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use egg::{Id, Pattern, Searcher, Var};
+use egg::{Id, Language, Pattern, Searcher, Var};
 use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain};
 use logic_formula::egg::SimpleDiscriminant;
@@ -202,6 +202,10 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfRule {
         let egraph = prgm.egraph_mut();
         ereturn_let!(let Some(substs)= self.conclusion.search_eclass(egraph, goal), Dependancy::impossible());
 
+        if cfg!(debug_assertions) {
+            check_hash_eq_nonce(egraph);
+        }
+
         let n = {
             let pblm = egraph.analysis.pbl_mut();
 
@@ -235,5 +239,54 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfRule {
             PrfKind::Left => Cow::Borrowed("prf left"),
             PrfKind::Right => Cow::Borrowed("prf right"),
         }
+    }
+}
+
+fn check_hash_eq_nonce<'a>(egraph: &mut egg::EGraph<Lang, PAnalysis<'a>>) {
+    let pblm = egraph.analysis.pbl();
+    let hash_funs = pblm
+        .cryptography()
+        .iter()
+        .filter_map(|c| match c {
+            crate::terms::CryptographicAssumption::PRF(prf) => Some(prf.hash.clone()),
+            _ => None,
+        })
+        .collect_vec();
+
+    let mut to_explain = Vec::new();
+
+    for eclass in egraph.classes() {
+        let hashes = eclass
+            .nodes
+            .iter()
+            .find(|f| hash_funs.contains(&f.discriminant()));
+        let nonces = eclass.nodes.iter().find(|f| f.discriminant() == NONCE);
+
+        if let Some(h) = hashes
+            && let Some(nonce) = nonces
+        {
+            let h = h.discriminant().app(
+                &h.children()
+                    .iter()
+                    .map(|&c| egraph.id_to_expr(c))
+                    .collect_vec(),
+            );
+            let n = nonce.discriminant().app(
+                &nonce
+                    .children()
+                    .iter()
+                    .map(|&c| egraph.id_to_expr(c))
+                    .collect_vec(),
+            );
+            to_explain.push((h, n, eclass.id));
+        }
+    }
+
+    for (h, n, _) in &to_explain {
+        let mut e = egraph.explain_equivalence(h, n);
+        eprintln!("impossible equivalence:\n{}", e.get_flat_string());
+    }
+    if let Some((_, _, id)) = to_explain.pop() {
+        panic!("shared nonce and hash in {:}", egraph.id_to_expr(id))
     }
 }

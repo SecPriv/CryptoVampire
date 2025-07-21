@@ -2,13 +2,13 @@ use egg::{
     Analysis, ConditionEqual, ConditionNot, ConditionalApplier, ENodeOrVar, Id, Pattern,
     PatternAst, Rewrite,
 };
-use itertools::{Itertools, chain};
+use itertools::{Itertools, chain, izip};
 use logic_formula::egg::SimpleDiscriminant;
 use utils::dynamic_iter;
 
 use crate::problem::CurrentStep;
 use crate::rules::utils::generate_rule_vars;
-use crate::terms::{Function, MACRO_EXEC, MACRO_FRAME, PRED, SUBSTITUTION};
+use crate::terms::{Function, MACRO_EXEC, MACRO_FRAME, NONCE, PRED, SUBSTITUTION, Sort};
 use crate::{Lang, Problem, rexp};
 
 /// you should **not** use these rule with the other ones
@@ -70,7 +70,7 @@ fn mk_rec_shortcut<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = Rew
 /// subst(f(x1,...,xn), x, y) -> f(subst(x1, x, y),...,subst(xn,x,y))
 /// ```
 fn mk_rw_one<N: Analysis<Lang>>(fun: Function) -> Rewrite<Lang, N> {
-    let (vars, ref ov @ [ref x, _]) = generate_rule_vars(&fun);
+    let (vars, ref ov @ [ref x, ref y]) = generate_rule_vars(&fun);
     let n = vars.len();
     let premise: PatternAst<Lang> = chain![
         vars.iter().cloned(),
@@ -93,13 +93,17 @@ fn mk_rw_one<N: Analysis<Lang>>(fun: Function) -> Rewrite<Lang, N> {
     ]
     .collect();
     let condition = {
-        let a: PatternAst<Lang> = chain![
-            vars.iter().cloned(),
-            [fun.app_id((0..n).map_into()),].map(ENodeOrVar::ENode)
-        ]
-        .collect();
+        let args = izip!(fun.signature.inputs.iter(), vars)
+            .map(|(s, v)| match s {
+                Sort::Bitstring | Sort::Bool => {
+                    SUBSTITUTION.app_var(&[[v], [x.clone()], [y.clone()]])
+                }
+                Sort::Any | Sort::Index | Sort::Time | Sort::Protocol | Sort::Nonce => vec![v].into(),
+            })
+            .collect_vec();
+        let a = fun.app_var(&args);
         let b: PatternAst<Lang> = [x.clone()].into_iter().collect();
-        ConditionNot(ConditionEqual::new(Pattern::<Lang>::from(a), b.into()))
+        ConditionNot(ConditionEqual::new(Pattern::from(a), b.into()))
     };
 
     let conclusion = ConditionalApplier {
@@ -115,7 +119,7 @@ fn mk_rw_base<'a, N: Analysis<Lang>>(
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'a, N> {
     pbl.function
         .iter()
-        .filter(|f| !f.is_special_subterm() || f.is_if_then_else())
+        .filter(|f| (!f.is_special_subterm()) || f.is_if_then_else())
         .cloned()
         .map(mk_rw_one)
 }

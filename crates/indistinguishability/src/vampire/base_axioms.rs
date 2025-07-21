@@ -6,10 +6,7 @@ use logic_formula::egg::SimpleDiscriminant;
 use utils::{dynamic_iter, ereturn_if};
 
 use crate::terms::{
-    ATT, AliasRewrite, BITE, EMPTY, Exists, FROM_BOOL, FindSuchThat, Function, HAPPENS, LEQ, LT,
-    MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, Quantifier, QuantifierT,
-    Rewrite, SMT_ITE, SMT_SORT_LIST, Signature, Sort, TUPLE, UNFOLD_COND, UNFOLD_EXEC,
-    UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
+    AliasRewrite, Exists, FindSuchThat, Function, Quantifier, QuantifierT, Rewrite, Signature, Sort, ATT, BITE, EMPTY, FROM_BOOL, HAPPENS, LEQ, LT, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, PROJ_1, PROJ_2, SMT_ITE, SMT_SORT_LIST, TUPLE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG
 };
 use crate::vampire::convert::{formula_to_smt, var_to_smt};
 use crate::{MSmt, MSmtFormula, Problem};
@@ -20,6 +17,7 @@ pub fn mk_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
         [MSmt::comment_block("static")],
         mk_base_order(pbl),
         mk_base_macro(pbl),
+        mk_base_rewrite(pbl),
         [MSmt::comment_block("term algebra")],
         // mk_nonces_diff(pbl),
         mk_step_diff(pbl),
@@ -218,6 +216,17 @@ fn mk_base_macro(_: &Problem) -> impl Iterator<Item = MSmt> {
     .into_iter()
     .map(Smt::mk_assert);
     chain![[Smt::Comment("unfold base".into())], iter]
+}
+
+fn mk_base_rewrite(_: &Problem) -> impl Iterator<Item = MSmt> {
+    use crate::terms::Sort::*;
+    let iter = vec_smt! {
+        (forall ((#m1!0 Bitstring) (#m2!1 Bitstring)) (= (PROJ_1 (TUPLE #m1 #m2)) #m1)),
+        (forall ((#m1!0 Bitstring) (#m2!1 Bitstring)) (= (PROJ_2 (TUPLE #m1 #m2)) #m2))
+    }
+    .into_iter()
+    .map(Smt::mk_assert);
+    chain![[Smt::Comment("base rewrite".into())], iter]
 }
 
 fn mk_quantifiers(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {

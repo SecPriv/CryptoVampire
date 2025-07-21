@@ -22,9 +22,6 @@ pub enum Sort {
     Protocol,
     Nonce,
     Index,
-
-    // special
-    SubtermStatus,
 }
 
 impl Sort {
@@ -57,7 +54,6 @@ impl Display for Sort {
             Sort::Protocol => write!(f, "Protocol"),
             Sort::Nonce => write!(f, "Nonce"),
             Sort::Index => write!(f, "Index"),
-            Sort::SubtermStatus => write!(f, "SubtermStatus"),
             Sort::Any => write!(f, "Any"),
         }
     }
