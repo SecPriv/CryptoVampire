@@ -64,9 +64,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 [deduce fresh nonces]
-(deduce_m ?u ?v (nonce ?x) (nonce ?y) ?h1 ?h2):-
+(deduce_m ?u ?v (nonce ?x) (nonce ?x) ?h1 ?h2):-
   (fresh_nonce ?x ?u ?h1),
-  (fresh_nonce ?y ?v ?h2).
+  (fresh_nonce ?x ?v ?h2).
 
 [vampire trivial]
 (mvampire mtrue) :- .
