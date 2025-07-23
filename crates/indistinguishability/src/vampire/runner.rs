@@ -184,7 +184,10 @@ impl VampireExec {
         cmd.args(self.args.iter().flat_map(|x| x.to_args().into_iter()));
         cmd.arg(file);
 
-        tr!("running '{:?}'...", cmd);
+        #[cfg(debug_assertions)]
+        {
+            eprintln!("running '{:?}'...", cmd)
+        }
 
         let o = cmd.output()?;
 
