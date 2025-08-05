@@ -5,21 +5,12 @@ use itertools::chain;
 pub use rewrites::mk_rewrites_rules;
 mod rewrites;
 
-pub use equiv::mk_equiv_rules;
 use utils::implvec;
 
 use crate::Problem;
 use crate::problem::{PRule, RcRule};
-mod equiv;
-mod substitution;
+use crate::terms::NOT;
 
-pub fn mk_prolog_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
-    chain![
-        pbl.extra_rules().iter().cloned(),
-        mk_equiv_rules(pbl).map(|x| x.into_mrc()),
-        [substitution::SubstRule.into_mrc()]
-    ]
-}
 
 #[cfg(test)]
 mod test;

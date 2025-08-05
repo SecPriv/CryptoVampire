@@ -6,7 +6,9 @@ use utils::dynamic_iter;
 
 use super::parse::{PatternsAst, clean_input, convert_fun};
 use super::var_as_recexpr;
-use crate::terms::{AliasRewrite, Exists, FindSuchThat, Function, Quantifier, QuantifierT, BITE, MITE};
+use crate::terms::{
+    AliasRewrite, BITE, Exists, FindSuchThat, Function, MITE, Quantifier, QuantifierT,
+};
 use crate::{Lang, Problem};
 /// build the default rewrite rules
 pub fn mk_rewrites_rules<N: Analysis<Lang>>(

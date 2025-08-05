@@ -98,7 +98,9 @@ fn mk_rw_one<N: Analysis<Lang>>(fun: Function) -> Rewrite<Lang, N> {
                 Sort::Bitstring | Sort::Bool => {
                     SUBSTITUTION.app_var(&[[v], [x.clone()], [y.clone()]])
                 }
-                Sort::Any | Sort::Index | Sort::Time | Sort::Protocol | Sort::Nonce => vec![v].into(),
+                Sort::Any | Sort::Index | Sort::Time | Sort::Protocol | Sort::Nonce => {
+                    vec![v].into()
+                }
             })
             .collect_vec();
         let a = fun.app_var(&args);

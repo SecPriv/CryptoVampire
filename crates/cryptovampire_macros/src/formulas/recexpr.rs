@@ -68,7 +68,7 @@ fn mk_var(path: &syn::Path, lit: &BangedContent) -> TokenStream {
         BangedContent::Lit(syn::Lit::Int(lit)) => quote! {
           #path::mk_var(#lit)
         },
-        BangedContent::Ident(ident) => quote! {#ident },
+        BangedContent::Ident(ident) => quote! {#ident.clone() },
         BangedContent::Expr(expr) => quote! { #expr },
         _ => panic!("litteral need to be number for variables"),
     }

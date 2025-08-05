@@ -22,7 +22,7 @@ use utils::transposer::VecTranspose;
 use utils::{econtinue_let, ereturn_let};
 
 use crate::problem::PAnalysis;
-use crate::rules::base_rules::substitution;
+// use crate::rules::base_rules::substitution;
 use crate::rules::utils::mk_subst_rw;
 use crate::terms::{MACRO_EXEC, MACRO_FRAME, PRED, SUBSTITUTION, SUBSTITUTION_RULE};
 use crate::{Lang, rexp};
@@ -74,11 +74,12 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
             Dependancy::impossible()
         );
         tr!("substitution");
-        let memo: FxHashMap<_, _> = ACCEPTABLY_EMPTY
+
+        let memo: FxHashMap<_, _> = ACCEPTABLY_EMPTY // <- recursive call where we can't substitute, whoever call this should check that ignoring those is sound
             .iter()
             .flat_map(|patt| patt.search(egraph).into_iter())
             .map(|s| (s.eclass, [s.eclass].into_iter().collect()))
-            .collect();
+            .collect(); // <- we map those to themselves
 
         for subst in SUBSTITUTION_PATTERN.search(egraph) {
             let current_id = subst.eclass;
@@ -131,6 +132,9 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
     }
 }
 
+/// computes `m{x |-> y}`
+///
+/// with `memo` for memoisation
 fn mk_substs<N: Analysis<Lang>>(
     egraph: &mut EGraph<Lang, N>,
     memo: &mut FxHashMap<Id, Rc<[Id]>>,
@@ -201,8 +205,13 @@ fn mk_substs<N: Analysis<Lang>>(
     );
 
     #[cfg(debug_assertions)]
-    if rc_ids.len() ==1 {
-        tr!("only one in subst: \nm = ({m}) {}\nx = ({x}) {}\ny = ({y}) {}", egraph.id_to_expr(m), egraph.id_to_expr(x), egraph.id_to_expr(y))
+    if rc_ids.len() == 1 {
+        tr!(
+            "only one in subst: \nm = ({m}) {}\nx = ({x}) {}\ny = ({y}) {}",
+            egraph.id_to_expr(m),
+            egraph.id_to_expr(x),
+            egraph.id_to_expr(y)
+        )
     }
 
     memo.insert(m, rc_ids.clone());

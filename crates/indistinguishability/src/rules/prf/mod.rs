@@ -138,7 +138,7 @@ impl PRF {
                 &subterm_search2,
                 &new_goall,
                 PrfKind::Left,
-                candidate_bitstring.clone()
+                candidate_bitstring.clone(),
             ),
             PrfRule::new(
                 &conclusionr,
@@ -146,7 +146,7 @@ impl PRF {
                 &subterm_search2,
                 &new_goalr,
                 PrfKind::Right,
-                candidate_bitstring.clone()
+                candidate_bitstring.clone(),
             ),
         ]
     }
@@ -176,7 +176,7 @@ struct PrfRule {
 
     // for debuging
     kind: PrfKind,
-    candidate_bitstring: Function
+    candidate_bitstring: Function,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -200,7 +200,7 @@ impl PrfRule {
             subterm_search2: subterm_search2.into(),
             new_goal: new_goal.into(),
             kind,
-            candidate_bitstring
+            candidate_bitstring,
         }
     }
 }
@@ -212,7 +212,6 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfRule {
 
         if cfg!(debug_assertions) {
             check_hash_eq_nonce(egraph);
-
         }
 
         let n = {
@@ -232,7 +231,6 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfRule {
             .substs
             .into_iter()
             .map(|mut subst| {
-
                 subst.insert(Var::from_u32(7), n);
 
                 [
