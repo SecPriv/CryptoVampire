@@ -17,7 +17,7 @@ use crate::problem::function_builder::{
     SetAlias, SetCryptography, SetFlags, SetName, SetOutput, SetStepIdx,
 };
 use crate::protocol::{Protocol, Step};
-use crate::rules::{default_rewrites, mk_default_prolog_rules, FreshNonce, VampireRule};
+use crate::rules::{FreshNonce, VampireRule, default_rewrites, mk_default_prolog_rules};
 use crate::terms::formula_utils::convert_to_ground_rexp;
 use crate::terms::{
     Alias, CryptographicAssumption, EMPTY, EQUIV, Function, FunctionCollection, FunctionFlags,

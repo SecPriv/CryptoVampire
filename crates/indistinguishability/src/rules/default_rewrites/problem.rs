@@ -1,4 +1,3 @@
-
 use egg::{Analysis, Pattern, Rewrite, SymbolLang};
 use itertools::{Itertools, chain};
 use log::trace;
@@ -15,11 +14,11 @@ use crate::{Lang, Problem};
 pub fn mk_rewrites<N: Analysis<Lang>>(
     pbl: &Problem,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
-  chain![
-    unfold_rules(pbl),
-    mk_extra_rw_rules(pbl),
-    mk_alias_rule(pbl)
-  ]
+    chain![
+        unfold_rules(pbl),
+        mk_extra_rw_rules(pbl),
+        mk_alias_rule(pbl)
+    ]
 }
 
 fn unfold_rules<N: Analysis<Lang>>(

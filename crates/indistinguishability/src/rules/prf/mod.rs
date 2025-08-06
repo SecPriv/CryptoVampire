@@ -8,7 +8,9 @@ use logic_formula::egg::SimpleDiscriminant;
 use utils::ereturn_let;
 
 use crate::problem::{PAnalysis, PRule};
-use crate::terms::{Function, FunctionFlags, Sort, EQUIV, FALSE, NONCE, SUBSTITUTION, SUBSTITUTION_RULE, TRUE};
+use crate::terms::{
+    EQUIV, FALSE, Function, FunctionFlags, NONCE, SUBSTITUTION, SUBSTITUTION_RULE, Sort, TRUE,
+};
 use crate::{Lang, LangVar, Problem, mk_signature, rexp};
 
 #[cfg(test)]

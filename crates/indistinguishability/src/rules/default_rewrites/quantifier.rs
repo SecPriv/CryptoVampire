@@ -1,4 +1,3 @@
-
 use egg::{Analysis, Pattern, Rewrite, SymbolLang};
 use itertools::{Itertools, chain};
 use log::trace;

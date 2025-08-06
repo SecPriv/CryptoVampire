@@ -3,7 +3,7 @@ use golgge::PrologRule;
 use itertools::{Itertools, izip};
 use logic_formula::egg::SimpleDiscriminant;
 
-use crate::rules::deduce::{ GetDeduce};
+use crate::rules::deduce::GetDeduce;
 use crate::rules::var_as_recexpr;
 use crate::terms::{Function, Sort};
 use crate::{Lang, LangVar, Problem};
@@ -25,8 +25,7 @@ pub fn mk_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'
 }
 
 fn should_process_normaly(f: &Function) -> bool {
-    !f.is_special_deduce()
-    && f.signature.output.support_deduce()
+    !f.is_special_deduce() && f.signature.output.support_deduce()
 }
 
 fn mk_deduce_rule(f: &Function) -> PrologRule<Lang> {

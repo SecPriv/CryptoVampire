@@ -2,8 +2,8 @@ use egg::{ENodeOrVar, Var};
 use golgge::PrologRule;
 use itertools::chain;
 
-use crate::rules::deduce::GetDeduce;
 use crate::Lang;
+use crate::rules::deduce::GetDeduce;
 use crate::terms::{
     BIT_DEDUCE, BITE, BOOL_DEDUCE, EQUIV, FRESH_NONCE, HAPPENS, LEQ, MACRO_COND, MACRO_EXEC,
     MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, VAMPIRE,
@@ -81,10 +81,10 @@ pub fn mk_rules() -> impl Iterator<Item = PrologRule<Lang>> {
         ["equiv deduce"]
         (equiv #u #v #a #b) :-
           (deduce_m #u #v #a #b true true).
-        
+
         ["deduce m trivial"]
         (deduce_m #u #v #a #b false false).
-        
+
         ["deduce b trivial"]
         (deduce_b #u #v #a #b false false).
 

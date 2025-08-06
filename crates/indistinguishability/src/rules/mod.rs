@@ -1,8 +1,8 @@
+use ::utils::implvec;
 use egg::ENodeOrVar;
 use itertools::chain;
 #[cfg(test)]
 pub use prf::test as prf_test;
-use ::utils::implvec;
 pub use vampire::VampireRule;
 
 use crate::Problem;
@@ -40,7 +40,7 @@ macro_rules! mk_rewrite {
             mk_rewrite!(@@ $to),
         ).unwrap()
     };
-    
+
     (@@ (#$var:tt = #$value:tt)) => {
         ::egg::MultiPattern::new(vec![{
             let [::egg::ENodeOrVar::Var(v)] = $crate::rexp!(#$var) else {
@@ -58,7 +58,7 @@ macro_rules! mk_rewrite {
             (v, $crate::rexp!($value).into_iter().collect())
         }),*])
     };
-    
+
     (@@ (#$($value:tt)+)) => {
         ::egg::Pattern::from_iter(
             $crate::rexp!(#$($value)+)
@@ -76,11 +76,11 @@ macro_rules! mk_rewrite {
 pub mod utils;
 
 mod deduce;
+pub mod default_rewrites;
 mod nonce;
 mod prf;
 mod substitution;
 mod vampire;
-pub mod default_rewrites;
 
 pub use nonce::{FreshNonce, mk_no_guessing_smt};
 pub use prf::PRF;
