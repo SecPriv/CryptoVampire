@@ -23,6 +23,13 @@ impl Display for MacroKind {
     }
 }
 
+impl MacroKind {
+    pub const fn all() -> [Self; 5] {
+        use MacroKind::*;
+        [Frame, Input, Cond, Msg, Exec]
+    }
+}
+
 pub trait ProtocolLanguage: egg::Language + Display + Send + Sync + 'static {
     fn mk_happens(step: Id) -> Self;
     fn mk_macro(kind: MacroKind, step: Id, ptcl: Id) -> Self;

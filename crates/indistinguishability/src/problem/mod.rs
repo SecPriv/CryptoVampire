@@ -17,8 +17,7 @@ use crate::problem::function_builder::{
     SetAlias, SetCryptography, SetFlags, SetName, SetOutput, SetStepIdx,
 };
 use crate::protocol::{Protocol, Step};
-use crate::rules::base_rules::mk_rewrites_rules;
-use crate::rules::{FreshNonce, VampireRule, mk_default_prolog_rules};
+use crate::rules::{default_rewrites, mk_default_prolog_rules, FreshNonce, VampireRule};
 use crate::terms::formula_utils::convert_to_ground_rexp;
 use crate::terms::{
     Alias, CryptographicAssumption, EMPTY, EQUIV, Function, FunctionCollection, FunctionFlags,
@@ -83,7 +82,7 @@ impl Problem {
         let vampire_rule = VampireRule::builder().exec(exec.clone()).build();
         let fresh_rule = FreshNonce::builder().exec(exec.clone()).build();
 
-        let eq_rules = mk_rewrites_rules(self);
+        let eq_rules = default_rewrites::mk_rewrites(self);
         let rules = mk_default_prolog_rules(self);
         let rules: Vec<Rc<dyn Rule<_, _>>> =
             chain![rules, [vampire_rule.into_mrc(), fresh_rule.into_mrc()]].collect_vec();

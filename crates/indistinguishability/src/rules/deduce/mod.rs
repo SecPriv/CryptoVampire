@@ -18,14 +18,6 @@ pub fn mk_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'
     }
 }
 
-fn var_as_recexpr<'a, L>(vars: implvec!(&'a Var)) -> Vec<[ENodeOrVar<L>; 1]> {
-    vars.into_iter()
-        .copied()
-        .map(ENodeOrVar::Var)
-        .map(|x| [x])
-        .collect()
-}
-
 trait GetDeduce {
     fn try_get_deduce(&self) -> Option<&'static Function>;
 

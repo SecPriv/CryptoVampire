@@ -3,7 +3,8 @@ use golgge::PrologRule;
 use itertools::{Itertools, izip};
 use logic_formula::egg::SimpleDiscriminant;
 
-use crate::rules::deduce::{ var_as_recexpr, GetDeduce};
+use crate::rules::deduce::{ GetDeduce};
+use crate::rules::var_as_recexpr;
 use crate::terms::{Function, Sort};
 use crate::{Lang, LangVar, Problem};
 

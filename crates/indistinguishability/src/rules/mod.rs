@@ -1,6 +1,8 @@
+use egg::ENodeOrVar;
 use itertools::chain;
 #[cfg(test)]
 pub use prf::test as prf_test;
+use ::utils::implvec;
 pub use vampire::VampireRule;
 
 use crate::Problem;
@@ -30,19 +32,58 @@ macro_rules! mk_prolog {
     };
 }
 
-pub(crate) mod base_rules;
-mod prf;
-pub use prf::PRF;
+macro_rules! mk_rewrite {
+    ($name:expr; $from:tt => $to:tt) => {
+        ::egg::Rewrite::new(
+            $name,
+            mk_rewrite!(@@ $from),
+            mk_rewrite!(@@ $to),
+        ).unwrap()
+    };
+    
+    (@@ (#$var:tt = #$value:tt)) => {
+        ::egg::MultiPattern::new(vec![{
+            let [::egg::ENodeOrVar::Var(v)] = $crate::rexp!(#$var) else {
+                panic!("left side of `=` should be a variable")
+            };
+            (v, $crate::rexp!(#$value).into_iter().collect())
+        }])
+    };
 
+    (@@ ($(#$var:tt = $value:tt),+)) => {
+        ::egg::MultiPattern::new(vec![$({
+            let [::egg::ENodeOrVar::Var(v)] = $crate::rexp!(#$var) else {
+                panic!("left side of `=` should be a variable")
+            };
+            (v, $crate::rexp!($value).into_iter().collect())
+        }),*])
+    };
+    
+    (@@ (#$($value:tt)+)) => {
+        ::egg::Pattern::from_iter(
+            $crate::rexp!(#$($value)+)
+        )
+    };
+
+    (@@ $value:tt) => {
+        ::egg::Pattern::from_iter(
+            $crate::rexp!($value)
+        )
+    };
+}
+
+// pub(crate) mod base_rules;
 pub mod utils;
 
-mod nonce;
-pub use nonce::{FreshNonce, mk_no_guessing_smt};
-
 mod deduce;
+mod nonce;
+mod prf;
 mod substitution;
-
 mod vampire;
+pub mod default_rewrites;
+
+pub use nonce::{FreshNonce, mk_no_guessing_smt};
+pub use prf::PRF;
 
 #[cfg(debug_assertions)]
 mod sanity_check;
@@ -59,4 +100,12 @@ pub fn mk_default_prolog_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
         deduce::mk_rules(pbl).map(|x| x.into_mrc()),
         [substitution::SubstRule.into_mrc()]
     ]
+}
+
+fn var_as_recexpr<'a, L>(vars: implvec!(&'a egg::Var)) -> Vec<[ENodeOrVar<L>; 1]> {
+    vars.into_iter()
+        .copied()
+        .map(ENodeOrVar::Var)
+        .map(|x| [x])
+        .collect()
 }
