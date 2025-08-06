@@ -3,7 +3,7 @@ use golgge::PrologRule;
 use itertools::{Itertools, izip};
 use logic_formula::egg::SimpleDiscriminant;
 
-use crate::rules::deduce::{get_deduce, try_get_deduce, var_as_recexpr};
+use crate::rules::deduce::{ var_as_recexpr, GetDeduce};
 use crate::terms::{Function, Sort};
 use crate::{Lang, LangVar, Problem};
 
@@ -20,12 +20,12 @@ pub fn mk_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'
     pbl.function
         .iter()
         .filter(|x| should_process_normaly(x))
-        .filter(|x| x.signature.output.support_deduce())
         .map(mk_deduce_rule)
 }
 
 fn should_process_normaly(f: &Function) -> bool {
     !f.is_special_deduce()
+    && f.signature.output.support_deduce()
 }
 
 fn mk_deduce_rule(f: &Function) -> PrologRule<Lang> {
@@ -62,7 +62,7 @@ fn mk_input(
     let left = f.app_var(&var_as_recexpr(left));
     let right = f.app_var(&var_as_recexpr(right));
     let vars = var_as_recexpr(&vars);
-    let ast: RecExpr<LangVar> = get_deduce(s).app_var(&[
+    let ast: RecExpr<LangVar> = s.get_deduce().app_var(&[
         vars[0].as_slice(),
         &vars[1],
         &left,
@@ -78,6 +78,6 @@ fn mk_input(
 /// `vars` is [u, v, a, b, h1, h2]
 fn mk_dep(vars: [Var; 6], s: Sort) -> Option<Pattern<Lang>> {
     let vars = var_as_recexpr(&vars);
-    let ast = try_get_deduce(s)?.app_var(&vars);
+    let ast = s.try_get_deduce()?.app_var(&vars);
     Some(Pattern::new(ast))
 }

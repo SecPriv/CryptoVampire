@@ -6,7 +6,7 @@ use golgge::PrologRule;
 use itertools::{Itertools, chain};
 use logic_formula::egg::SimpleDiscriminant;
 
-use crate::rules::deduce::get_deduce;
+use crate::rules::deduce::{self, GetDeduce};
 use crate::terms::formula_utils::offset_var;
 use crate::terms::{Quantifier, QuantifierT};
 use crate::{Lang, Problem};
@@ -22,7 +22,7 @@ pub fn mk_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'
 /// Generate the rule for a single quantifier
 /// Funilly enough it's the same thing for exists and fdst
 fn mk_quantifier_deduce_rules_one<Q: QuantifierT>(_pbl: &Problem, e: &Q) -> PrologRule<Lang> {
-    let deduce = get_deduce(e.top_level_function().signature.output);
+    let deduce = e.top_level_function().get_deduce();
     let max_var: u32 = chain![e.cvars(), e.bvars()]
         .flat_map(|v| v.as_u32())
         .max()

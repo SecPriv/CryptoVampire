@@ -317,6 +317,7 @@ where
     pub fn run_rw_rules(&mut self, rules: Option<&[Rewrite<L, N>]>) -> Report {
         let mut egraph = self.egraph.take().expect("invalid program");
         mtrace!(self, "🚧 rebuilding egraph...");
+        let size = egraph.number_of_classes();
 
         let runner = self
             .config
@@ -347,6 +348,13 @@ where
             mtrace!(self, "✅ done!");
         }
         assert!(self.clean());
+
+        if self.egraph().number_of_classes() >= size + (size / 8) {
+            eprintln!("\n\t!!! large increase !!!\t\n");
+            println!("Press Enter to continue...");
+            let mut _input = String::new();
+            let _ = ::std::io::stdin().read_line(&mut _input);
+        }
         report
     }
 

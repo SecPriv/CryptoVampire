@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use egg::{Id, Language, Pattern, Searcher, Var};
+use egg::{Id, Language, Pattern, RecExpr, Searcher, Var};
 use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain};
 use log::{Log, log_enabled};
@@ -8,7 +8,7 @@ use logic_formula::egg::SimpleDiscriminant;
 use utils::ereturn_let;
 
 use crate::problem::{PAnalysis, PRule};
-use crate::terms::{EQUIV, Function, FunctionFlags, NONCE, SUBSTITUTION, SUBSTITUTION_RULE, Sort};
+use crate::terms::{Function, FunctionFlags, Sort, EQUIV, FALSE, NONCE, SUBSTITUTION, SUBSTITUTION_RULE, TRUE};
 use crate::{Lang, LangVar, Problem, mk_signature, rexp};
 
 #[cfg(test)]

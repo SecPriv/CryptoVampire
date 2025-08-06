@@ -14,7 +14,7 @@ pub fn mk_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'
     chain! {
       regular::mk_rules(pbl),
       quantifier::mk_rules(pbl),
-      static_rules::mk_rules()
+      static_rules::mk_rules(),
     }
 }
 
@@ -26,19 +26,29 @@ fn var_as_recexpr<'a, L>(vars: implvec!(&'a Var)) -> Vec<[ENodeOrVar<L>; 1]> {
         .collect()
 }
 
-/// get the `deduce` function corresponding to the the sort `s`, [None] otherwise
-const fn try_get_deduce(s: Sort) -> Option<&'static Function> {
-    match s {
-        Sort::Bool => Some(&BOOL_DEDUCE),
-        Sort::Bitstring => Some(&BIT_DEDUCE),
-        _ => None,
+trait GetDeduce {
+    fn try_get_deduce(&self) -> Option<&'static Function>;
+
+    fn get_deduce(&self) -> &'static Function {
+        match self.try_get_deduce() {
+            Some(fun) => fun,
+            _ => panic!("not a supported sort for deduce (should be Bitstring or Bool)"),
+        }
     }
 }
 
-/// [try_get_deduce] that crashes
-fn get_deduce(s: Sort) -> &'static Function {
-    match try_get_deduce(s) {
-        Some(fun) => fun,
-        _ => panic!("{s} is not a supported sort for deduce (should be Bitstring or Bool)"),
+impl GetDeduce for Sort {
+    fn try_get_deduce(&self) -> Option<&'static Function> {
+        match self {
+            Sort::Bool => Some(&BOOL_DEDUCE),
+            Sort::Bitstring => Some(&BIT_DEDUCE),
+            _ => None,
+        }
+    }
+}
+
+impl GetDeduce for Function {
+    fn try_get_deduce(&self) -> Option<&'static Function> {
+        self.signature.output.try_get_deduce()
     }
 }

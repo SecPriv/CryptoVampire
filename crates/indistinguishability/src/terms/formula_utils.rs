@@ -27,7 +27,7 @@ macro_rules! rexp {
 /// for [rexp]
 pub static TRUE: Function = super::TRUE.const_clone().unwrap();
 /// for [rexp]
-pub static FALSE: Function = super::TRUE.const_clone().unwrap();
+pub static FALSE: Function = super::FALSE.const_clone().unwrap();
 /// for [rexp]
 pub static AND: Function = super::AND.const_clone().unwrap();
 /// for [rexp]

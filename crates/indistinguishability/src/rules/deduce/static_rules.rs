@@ -2,6 +2,7 @@ use egg::{ENodeOrVar, Var};
 use golgge::PrologRule;
 use itertools::chain;
 
+use crate::rules::deduce::GetDeduce;
 use crate::Lang;
 use crate::terms::{
     BIT_DEDUCE, BITE, BOOL_DEDUCE, EQUIV, FRESH_NONCE, HAPPENS, LEQ, MACRO_COND, MACRO_EXEC,
@@ -60,9 +61,10 @@ pub fn mk_rules() -> impl Iterator<Item = PrologRule<Lang>> {
         &MACRO_MSG,
     ]
     .map(|mmacro| {
+        let deduce = mmacro.get_deduce();
         mk_prolog!(
           format!("deduce {mmacro}");
-          (deduce_m (MACRO_FRAME #t #p1) (MACRO_FRAME #t #p2) (mmacro #t2 #p1) (mmacro #t2 #p2) #h1 #h2) :-
+          (deduce (MACRO_FRAME #t #p1) (MACRO_FRAME #t #p2) (mmacro #t2 #p1) (mmacro #t2 #p2) #h1 #h2) :-
             (VAMPIRE (=> #h1 (LEQ #t2 #t))),
             (VAMPIRE (=> #h2 (LEQ #t2 #t))),
             (VAMPIRE (HAPPENS #t))
@@ -79,6 +81,12 @@ pub fn mk_rules() -> impl Iterator<Item = PrologRule<Lang>> {
         ["equiv deduce"]
         (equiv #u #v #a #b) :-
           (deduce_m #u #v #a #b true true).
+        
+        ["deduce m trivial"]
+        (deduce_m #u #v #a #b false false).
+        
+        ["deduce b trivial"]
+        (deduce_b #u #v #a #b false false).
 
     // =========================================================
     // ========================= ite ===========================

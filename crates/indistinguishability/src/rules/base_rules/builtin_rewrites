@@ -38,6 +38,9 @@
 [bif false] (b_ite false ?a ?b) => ?b.
 [bif simp1] (b_ite ?x ?a ?a) => ?a.
 [bif simp3] (b_ite ?a (b_ite ?a ?b ?c) ?d) => (b_ite ?a ?b ?d).
+[and simp1] (and ?a (and ?a ?b)) => (and ?a ?b).
+[and simp2] (and (and ?a ?b) ?b) => (and ?a ?b).
+[and simp3] (and (and (and ?a ?b) ?c) ?b) => (and (and ?a ?b) ?c).
 
 [unfold_exec]  (unfold_exec ?t ?p) 
   => (and (macro_cond ?t ?p) (macro_exec (pred ?t) ?p)).
