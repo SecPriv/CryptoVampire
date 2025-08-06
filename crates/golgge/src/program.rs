@@ -304,7 +304,7 @@ where
         }
 
         if let Some(g) = gtmp {
-            eprintln!("({depth:}) setting {} to {}", g.pretty(80), result)
+            eprintln!("({depth:}) 💾 setting {} to {}", g.pretty(80), result)
         }
         result
     }
