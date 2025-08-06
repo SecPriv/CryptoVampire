@@ -1,3 +1,11 @@
+use itertools::chain;
+#[cfg(test)]
+pub use prf::test as prf_test;
+pub use vampire::VampireRule;
+
+use crate::Problem;
+use crate::problem::{PRule, RcRule};
+
 macro_rules! mk_prolog {
     ($pre:tt) => {
         mk_prolog!(@ None; $pre :-)
@@ -24,9 +32,6 @@ macro_rules! mk_prolog {
 
 pub(crate) mod base_rules;
 mod prf;
-use egg::Analysis;
-use golgge::{Dependancy, Rule};
-use itertools::chain;
 pub use prf::PRF;
 
 pub mod utils;
@@ -38,50 +43,20 @@ mod deduce;
 mod substitution;
 
 mod vampire;
-#[cfg(test)]
-pub use prf::test as prf_test;
-pub use vampire::VampireRule;
 
-use crate::problem::{PRule, RcRule};
-use crate::{Lang, Problem};
+#[cfg(debug_assertions)]
+mod sanity_check;
 
 pub fn mk_default_prolog_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
     chain![
         [
             #[cfg(debug_assertions)]
             {
-                SanityCheck.into_mrc()
+                sanity_check::SanityCheck.into_mrc()
             }
         ],
         pbl.extra_rules().iter().cloned(),
         deduce::mk_rules(pbl).map(|x| x.into_mrc()),
         [substitution::SubstRule.into_mrc()]
     ]
-}
-
-struct SanityCheck;
-
-impl<N: Analysis<Lang>> Rule<Lang, N> for SanityCheck {
-    fn search(&self, pblm: &mut golgge::Program<Lang, N>, _: egg::Id) -> golgge::Dependancy {
-        let egraph = pblm.egraph_mut();
-        use logic_formula::egg::SimpleDiscriminant;
-
-        use crate::terms::{FALSE, TRUE};
-
-        let mtrue = TRUE.app_empty();
-        let mfalse = FALSE.app_empty();
-        let x = egraph.equivs(&mtrue, &mfalse);
-        if !x.is_empty() {
-            eprintln!("true = false");
-            eprintln!(
-                "{}",
-                egraph
-                    .explain_equivalence(&mtrue, &mfalse)
-                    .get_flat_string()
-            );
-            panic!("wtf")
-        }
-
-        Dependancy::impossible()
-    }
 }
