@@ -158,13 +158,22 @@ impl<'bump> EufCma<'bump> {
         subterm_key: &'a Subterm<'bump, impl SubtermAux<'bump>>,
     ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
         let max_var = pbl.max_var();
-        // let pile1 = RefCell::new(Vec::new());
-        // let pile2 = RefCell::new(Vec::new());
         let realm = env.get_realm();
+        
+
+        // This list the formulas to add to the smt files
         let candidates = pbl
+            // loops through all terms/formulas that appears in the problem
             .list_top_level_terms()
-            // .flat_map(|f| f.iter()) // sad...
+            // loop through all subterms in the problem
             .flat_map(|f| f.iter_with(AllTermsIterator, ())) // sad...
+            // now the iterator will go though *every* term that exists in the
+            // problem (including extra instances)
+
+            // now we extra all the terms that look like a signature (in the
+            // case of euf-cma)
+            // 
+            // we will consider each of those
             .filter_map(move |formula| match formula.as_ref() {
                 RichFormula::Fun(fun, args) => {
                     if_chain! {
@@ -184,29 +193,59 @@ impl<'bump> EufCma<'bump> {
                 }
                 _ => None,
             })
-            .unique()
+            .unique() // no need for duplicates
+
+            // .inspect(|c| trace!{"{c:?}"})
+            // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uncomment to `trace` print all the
+            // candidates (potentially a lot of them)
+
+            // then we start to apply cryptography and start preprocessing and
+            // defining subterm.
+            //
+            // Sometimes it makes no sense (e.g., we can already solve the
+            // subterm, the subterm is undefined). We filter out those instances
             .filter_map(
-                move |EufCandidate {
+                move |EufCandidate { // our candidate is `verify(message, signature, vk(key))`
                           message,
                           signature,
                           key,
                       }| {
+                    
+                    // some prep-work
                     let array = [&message, &signature, &key];
+                    // re-update max-var
                     let max_var = array.iter().copied().max_var_or_max(max_var);
+                    // the free variable to be forall quantified
                     let free_vars = array
                         .iter()
                         .flat_map(|f| f.free_vars_iter())
-                        // .cloned()
                         .unique();
+                    let _ = array; // we dont need array anymore
+
+                    /*
+                        the axiom is
+                        |verify(message, signature, vk(key))| =>
+                            key ⊑* message, signature \or
+                            ∃ u, sign(u, k) ⊑ message, signature ∧ |u = message|
+                        
+                        we try to preprocess the ⊑ as much as possible
+                    */
+
+                    // the u variable
                     let u_var = Variable {
                         id: max_var,
                         sort: MESSAGE.as_sort(),
                     };
-                    let u_f = u_var.into_aformula();
+                    let u_f = u_var.into_aformula(); // as `ARichFormula`
+
+                    // sign(u, k)
                     let sign_of_u = self
                         .sign
                         .f([u_f, pbl.name_caster().cast(MESSAGE.as_sort(), &key)]);
 
+                    // We fully decide `key ⊑* message, signature` (we some
+                    // overapproximation) thus this part of the formula never
+                    // makes it to the smt solver
                     let k_sc = subterm_key
                         .preprocess_terms(
                             &realm,
@@ -217,10 +256,11 @@ impl<'bump> EufCma<'bump> {
                                 .chain([&message, &signature].map(|t| t.shallow_copy().into())),
                             false,
                             NO_REC_MACRO,
-                        )
+                        ) 
+                        // here we have an iterator of potential locations where `key` appears
                         .next()
-                        .is_none();
-                    if k_sc {
+                        .is_none(); // if it's non empty we bail.
+                    if k_sc { // so here we know `key` is never used wrongly anywhere
                         let subterm_search = {
                             let disjunction = subterm_main.preprocess_terms(
                                 &realm,
@@ -229,9 +269,27 @@ impl<'bump> EufCma<'bump> {
                                 [&message, &signature].map(|x| x.shallow_copy().into()),
                                 true,
                                 UnfoldFlags::all(),
-                            );
+                            ); 
+                            // so now `disjoinction` iterates with the `sign(u,
+                            // k) ⊑ message, signature`
+                            // 
+                            // This is a convoluted iterator that gives us item
+                            // of the form (list of vars, formula) such that
+                            // when `formula` is true, then `sign(u, k)` is a
+                            // subterm of `message` or `signature`. However we
+                            // likely had to introduce free variables along the
+                            // way. Those are in the `list of vars`.
+
+                            // this turns them into a disjoinction that tries to
+                            // factor together some of the existential
+                            // quantifiers (it speeds thing up a lot)
                             into_exist_formula(disjunction)
                         };
+                        // make the final formula
+                        //
+                        // The whole realm thingy is here to put or not the
+                        // `eval` around the right formulas
+
                         if realm.is_symbolic_realm() {
                             Some(mforall!(free_vars, {
                                 pbl.evaluator().eval(self.verify.apply([
@@ -253,22 +311,15 @@ impl<'bump> EufCma<'bump> {
                                     self.pk.f([
                                         pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),
                                     ]),
-                                ])) >> subterm_search.apply_substitution2(&OneVarSubst {
+                                ])) 
+                                // we can get rid of the `|u = message|` because in this mode `|a=b|` iff `a=b` in smt.
+                                // so we inline `u` and spare one quantifier
+                                >> subterm_search.apply_substitution2(&OneVarSubst {
                                     id: u_var.id,
                                     f: message.clone(),
                                 })
                             }))
                         }
-
-                        // Some(mforall!(free_vars, {
-                        //     pbl.evaluator.eval(self.verify.f([
-                        //         signature.clone(),
-                        //         message.clone(),
-                        //         self.pk.f_a([
-                        //             pbl.name_caster.cast(MESSAGE.as_sort(), key.clone()),
-                        //         ]),
-                        //     ])) >> mexists!([u_var], { into_exist_formula(disjunction) })
-                        // }))
                     } else {
                         None
                     }
