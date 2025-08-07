@@ -399,6 +399,23 @@ mk_builtin_funs!(
         flags: f!(PROLOG_ONLY)
     };
 
+    // -------- lambda -----------
+
+    LAMBDA_LET "λlet" {
+        flags: f!(PROLOG_ONLY),
+        signature: s!(Any, Any -> Any)
+    };
+
+    LAMBDA_S "λS" {
+        flags: f!(PROLOG_ONLY),
+        signature: s!(Any -> Any)
+    };
+
+    LAMBDA_O "λO" {
+        flags: f!(PROLOG_ONLY),
+        signature: s!(() -> Any)
+    };
+
     // ~~~~~~~~~~~~~~~ smt only ~~~~~~~~~~~~~~~~~
 
     SMT_ITE "ite" {

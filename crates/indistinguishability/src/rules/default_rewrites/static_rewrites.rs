@@ -8,26 +8,10 @@ use crate::terms::{
     MACRO_MSG, MITE, PRED, PROJ_1, PROJ_2, TUPLE, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT,
 };
 
-macro_rules! mk_many_rewrites {
-    (
-        $(
-            [$name:literal]
-            $from:tt => $to:tt
-        .)*
-    ) => {
-       vec![
-            $(
-                mk_rewrite!($name; $from => $to)
-            ),*
-        ]
-    }
-}
-
 pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>> {
     let b_ite = &BITE;
     let m_ite = &MITE;
-    let [t, t1, t2, a, b, c, d, v1, v2, x, p] =
-        ::std::array::from_fn(|i| Var::from_u32(i as u32)).map(ENodeOrVar::Var);
+    decl_vars![t, t1, t2, a, b, c, d, v1, v2, x, p];
 
     let main = mk_many_rewrites! {
       ["if true"] (m_ite true #a #b) => (#a).

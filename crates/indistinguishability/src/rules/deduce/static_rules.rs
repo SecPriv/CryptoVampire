@@ -9,49 +9,15 @@ use crate::terms::{
     MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, VAMPIRE,
 };
 
-/// build many prolog rules at once
-macro_rules! mk_many_prolog {
-    (
-        $(
-            [$name:literal]
-            $pre:tt
-            $(:- $($post:tt),+)?
-        .)*
-    ) => {
-        vec![
-            $(
-                mk_prolog!($name; $pre $(:- $($post),+)? )
-            ),*
-        ]
-    }
-}
-
 pub fn mk_rules() -> impl Iterator<Item = PrologRule<Lang>> {
     let equiv = &EQUIV;
     let deduce_m = &BIT_DEDUCE;
     let deduce_b = &BOOL_DEDUCE;
     let b_ite = &BITE;
     let m_ite = &MITE;
-    let [
-        t,
-        t2,
-        p1,
-        p2,
-        h1,
-        h2,
-        u,
-        v,
-        a,
-        b,
-        a1,
-        b1,
-        a2,
-        b2,
-        c1,
-        c2,
-        x,
-        y,
-    ] = ::std::array::from_fn(|i| Var::from_u32(i as u32)).map(ENodeOrVar::Var);
+    decl_vars![
+        t, t2, p1, p2, h1, h2, u, v, a, b, a1, b1, a2, b2, c1, c2, x, y
+    ];
 
     let deduce_macro = [
         &MACRO_FRAME,

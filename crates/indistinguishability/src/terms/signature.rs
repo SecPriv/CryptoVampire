@@ -40,6 +40,11 @@ impl Signature {
         })
     }
 
+    pub fn mk_egg_vars(&self, from: u32) -> impl Iterator<Item = egg::Var> {
+        let n = self.arity() as u32 + from;
+        (from..n).map(egg::Var::from_u32)
+    }
+
     fn steel_constructor(input: Vec<Sort>, output: Sort) -> Self {
         Self {
             inputs: input.into(),

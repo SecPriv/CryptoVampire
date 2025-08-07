@@ -8,6 +8,44 @@ pub use vampire::VampireRule;
 use crate::Problem;
 use crate::problem::{PRule, RcRule};
 
+// =========================================================
+// ======================= macros ==========================
+// =========================================================
+
+/// declares variables to be used with [mk_prolog] and [mk_rewrite] and
+/// derivatives.
+///
+/// This is just a fancy `let`.
+macro_rules! decl_vars {
+    ($($var:ident),+) => {
+        let [$($var),+] =
+            ::std::array::from_fn(|i| ::egg::Var::from_u32(i as u32))
+                .map(::egg::ENodeOrVar::Var::<$crate::Lang>);
+    };
+
+    ($N:ident:$t:ty; $($var:ident),+) => {
+        decl_vars![$($var),+];
+        static $N: $t = decl_vars!(@ $($var)+) + 1;
+    };
+
+    ($N:ident; $($var:ident),+) => {
+        decl_vars!($N:u32; $($var),*)
+    };
+
+    (@ $t:tt) => {
+        1
+    };
+
+    (@ $t:tt $($o:tt)+) => {
+        1 + decl_vars!(@ $($o)+)
+    }
+}
+
+/// makes prolog rules
+///
+/// ```text
+/// mk_prolog!("hey"; (and #0 #1) :- (=> #0 #1))
+/// ```
 macro_rules! mk_prolog {
     ($pre:tt) => {
         mk_prolog!(@ None; $pre :-)
@@ -30,6 +68,23 @@ macro_rules! mk_prolog {
             .build()
             .unwrap()
     };
+}
+
+/// build many prolog rules at once
+macro_rules! mk_many_prolog {
+    (
+        $(
+            [$name:literal]
+            $pre:tt
+            $(:- $($post:tt),+)?
+        .)*
+    ) => {
+        vec![
+            $(
+                mk_prolog!($name; $pre $(:- $($post),+)? )
+            ),*
+        ]
+    }
 }
 
 macro_rules! mk_rewrite {
@@ -72,11 +127,31 @@ macro_rules! mk_rewrite {
     };
 }
 
+macro_rules! mk_many_rewrites {
+    (
+        $(
+            [$name:literal]
+            $from:tt => $to:tt
+        .)*
+    ) => {
+       vec![
+            $(
+                mk_rewrite!($name; $from => $to)
+            ),*
+        ]
+    }
+}
+
+// =========================================================
+// ================ modules declarations ===================
+// =========================================================
+
 // pub(crate) mod base_rules;
 pub mod utils;
 
 mod deduce;
 pub mod default_rewrites;
+mod lambda;
 mod nonce;
 mod prf;
 mod substitution;
@@ -87,6 +162,20 @@ pub use prf::PRF;
 
 #[cfg(debug_assertions)]
 mod sanity_check;
+
+// ~~~~~~~~~~~~~~~ helpers ~~~~~~~~~~~~~~~~~~
+
+fn var_as_recexpr<'a, L>(vars: implvec!(&'a egg::Var)) -> Vec<[ENodeOrVar<L>; 1]> {
+    vars.into_iter()
+        .copied()
+        .map(ENodeOrVar::Var)
+        .map(|x| [x])
+        .collect()
+}
+
+// =========================================================
+// ====================== exported =========================
+// =========================================================
 
 pub fn mk_default_prolog_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
     chain![
@@ -100,12 +189,4 @@ pub fn mk_default_prolog_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
         deduce::mk_rules(pbl).map(|x| x.into_mrc()),
         [substitution::SubstRule.into_mrc()]
     ]
-}
-
-fn var_as_recexpr<'a, L>(vars: implvec!(&'a egg::Var)) -> Vec<[ENodeOrVar<L>; 1]> {
-    vars.into_iter()
-        .copied()
-        .map(ENodeOrVar::Var)
-        .map(|x| [x])
-        .collect()
 }
