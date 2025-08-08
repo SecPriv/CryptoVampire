@@ -157,18 +157,6 @@ pub mod basic_hash {
         }
     }
 
-    // pub fn insert_init(pbl: &mut Problem, funs: &MFunction) {
-    //     let MFunction { init, .. } = funs;
-
-    //     let s1 = Step {
-    //         id: init.clone(),
-    //         vars: vec![],
-    //         cond: rexp!(true).to_vec().into(),
-    //         msg: rexp!(EMPTY).to_vec().into(),
-    //     };
-    //     pbl.protocols[0].add_step(s1.clone());
-    //     pbl.protocols[1].add_step(s1);
-    // }
 
     pub fn insert_tag(pbl: &mut Problem, funs: &MFunction) {
         let MFunction {

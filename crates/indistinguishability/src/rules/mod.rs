@@ -1,12 +1,12 @@
 use ::utils::implvec;
-use egg::ENodeOrVar;
+use egg::{Analysis, ENodeOrVar, Rewrite};
 use itertools::chain;
 #[cfg(test)]
 pub use prf::test as prf_test;
 pub use vampire::VampireRule;
 
-use crate::Problem;
 use crate::problem::{PRule, RcRule};
+use crate::{Lang, Problem};
 
 // =========================================================
 // ======================= macros ==========================
@@ -150,7 +150,7 @@ macro_rules! mk_many_rewrites {
 pub mod utils;
 
 mod deduce;
-pub mod default_rewrites;
+mod default_rewrites;
 mod lambda;
 mod nonce;
 mod prf;
@@ -189,4 +189,10 @@ pub fn mk_default_prolog_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
         deduce::mk_rules(pbl).map(|x| x.into_mrc()),
         [substitution::SubstRule.into_mrc()]
     ]
+}
+
+pub fn mk_default_rewrites<N: Analysis<Lang>>(
+    pbl: &Problem,
+) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
+    chain![default_rewrites::mk_rewrites(pbl), lambda::mk_rewrites(pbl)]
 }

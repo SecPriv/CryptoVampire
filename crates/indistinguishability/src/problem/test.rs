@@ -23,7 +23,7 @@ pub mod basic_hash {
         use itertools::Itertools;
 
         use crate::problem::test::basic_hash::mk_pblm;
-        use crate::rules::default_rewrites;
+        use crate::rules::mk_default_rewrites;
         use crate::terms::formula_utils::convert_to_ground_rexp;
         use crate::terms::{HAPPENS, MACRO_INPUT, MACRO_MSG};
         use crate::{Lang, decl_fun, rexp};
@@ -47,7 +47,7 @@ pub mod basic_hash {
             egraph.add_expr(&convert_to_ground_rexp(rexp!((HAPPENS (tag i j)))).unwrap());
             egraph.rebuild();
 
-            let rw = default_rewrites::mk_rewrites(&pbl).collect_vec();
+            let rw = mk_default_rewrites(&pbl).collect_vec();
             let runner: Runner<Lang, ()> = Runner::new(());
             runner.with_egraph(egraph).run(&rw);
         }

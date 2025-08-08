@@ -3,7 +3,7 @@
 //! for more info
 
 use egg::{Analysis, ENodeOrVar, Pattern, Rewrite, Var};
-use itertools::Itertools;
+use itertools::{Itertools, chain};
 use logic_formula::egg::SimpleDiscriminant;
 
 use crate::terms::{Function, LAMBDA_LET, LAMBDA_O, LAMBDA_S};
@@ -12,6 +12,10 @@ use crate::{Lang, Problem, rexp};
 static LET: Function = LAMBDA_LET.const_clone().unwrap();
 static S: Function = LAMBDA_S.const_clone().unwrap();
 static O: Function = LAMBDA_O.const_clone().unwrap();
+
+pub fn mk_rewrites<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = Rewrite<Lang, N>> {
+    chain![mk_base_rw::<N>(), mk_s_rw::<N>(pbl),]
+}
 
 fn mk_base_rw<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>> {
     decl_vars![x, m];
