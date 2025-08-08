@@ -7,8 +7,6 @@ bitflags! {
   pub struct FunctionFlags: u32 {
       /// The function is builtin
       const BUILTIN = 1 << 0;
-      /// It's an alias for something else
-      // const ALIAS = 1 << 1;
       /// Appears only in prolog
       const PROLOG_ONLY = 1 << 2;
 

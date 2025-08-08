@@ -22,19 +22,41 @@ where
         }
     }
 
+    /// Advances the internal state to the next combination and returns a slice of indices
+    /// pointing to the current elements in each input slice.
+    ///
+    /// This function implements a multi-dimensional counter that iterates through all possible
+    /// combinations of indices across the input slices. It uses a carry-based approach where
+    /// each position in the state array represents an index into one of the input slices.
+    /// When a position reaches its maximum valid index, it resets to 0 and carries to the next
+    /// position (similar to how numbers increment with carries).
+    ///
+    /// The function returns `None` if the input is empty or if no more combinations exist.
+    ///
+    /// # Returns
+    /// - `Some(&[usize])` containing the current indices for each input slice
+    /// - `None` when there are no more combinations to iterate over
+    ///
+    /// # Example
+    /// With input slices of lengths [2, 3], this would iterate through:
+    /// [0,0], [1,0], [0,1], [1,1], [0,2], [1,2] and then return None.
     fn idx_next(&mut self) -> Option<&[usize]> {
         ereturn_if!(self.is_empty(), None);
         let Self { content, state, .. } = self;
 
+        // Initialize the state to all zeros if this is the first call
         if state.is_empty() {
             *state = vec![0; content.len()].into_boxed_slice();
             Some(&self.state)
         } else {
+            // Iterate through each position in the state array (corresponding to input slices)
             for i in 0..state.len() {
+                // If we can increment this position without going out of bounds
                 if state[i] < content[i].as_ref().len() - 1 {
                     state[i] += 1;
                     return Some(&self.state);
                 } else {
+                    // Reset this position to zero and continue to the next (carry)
                     state[i] = 0;
                     continue;
                 }

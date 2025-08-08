@@ -331,53 +331,6 @@ impl AsRef<Self> for Function {
     }
 }
 
-// impl Eq for Function {}
-
-// impl PartialEq for Function {
-//     fn eq(&self, other: &Self) -> bool {
-//         match (&self.0, &other.0) {
-//             (CowArc::Owned(a), CowArc::Owned(b)) => Arc::ptr_eq(a, b),
-//             (CowArc::Borrowed(a), CowArc::Borrowed(b)) => ::core::ptr::eq(a, b),
-//             _ => false,
-//         }
-//     }
-// }
-
-// impl PartialOrd for Function {
-//     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-//         if self == other {
-//             // equality if defined by pointer
-//             Some(Ordering::Equal)
-//         } else {
-//             // order by the content
-//             match InnerFunction::cmp(self, other) {
-//                 Ordering::Equal => None,
-//                 x => Some(x),
-//             }
-//         }
-//     }
-// }
-
-// impl Ord for Function {
-//     fn cmp(&self, other: &Self) -> Ordering {
-//         Self::partial_cmp(self, other).expect(
-//             "duplicate function at two different location in memory! (The \
-//             comparison algorithm is unsound in those cases, please avoid \
-//             declaring function twice)",
-//         )
-//     }
-// }
-
-// impl Hash for Function {
-//     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-//         match &self.0 {
-//             CowArc::Owned(x) => Arc::as_ptr(x),
-//             CowArc::Borrowed(x) => *x as *const _,
-//         }
-//         .hash(state);
-//     }
-// }
-
 // ~~~~~~~~~~~~ egg::Language ~~~~~~~~~~~~~~~
 
 impl SimpleDiscriminant for Function {
