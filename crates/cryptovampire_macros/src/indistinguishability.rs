@@ -4,29 +4,36 @@ use itertools::{Itertools, chain};
 use proc_macro::{Span, TokenStream};
 use quote::{quote, quote_spanned};
 use syn::{
-    Expr, FieldValue, Ident, LitStr, Member, Token, braced,
-    parse::{Parse, ParseStream},
-    parse_macro_input, parse_quote,
-    punctuated::Punctuated,
-    token::{Brace, Impl},
+    braced, parse::{Parse, ParseStream}, parse_macro_input, parse_quote, punctuated::Punctuated, token::{Brace, Impl}, Attribute, Expr, FieldValue, Ident, LitStr, Member, Token
 };
 
+/// represents things like
+/// 
+/// ```text
+/// NOT "bit_not" "not" "mnot" {
+///    signature: s!(Bool, 1),
+///    flags: f!(/* ALIAS | */ BUILTIN_SMT),
+///    alias: Some(alias!{
+///        0:Bool in rexp!(#0) => rexp!((BITE #0 FALSE TRUE))
+///    }),
+///};
+/// ```
+/// 
+/// This will generate a new function with the given name and fields.
+/// The fields are merged with the ones declared at the to of the macro call
 #[derive(Clone)]
 struct MFunction {
     name: Ident,
     span: proc_macro2::Span,
     alt_names: Vec<LitStr>,
     fields: Vec<FieldValue>,
-}
-
-struct Input {
-    default: Vec<FieldValue>,
-    decls: Vec<MFunction>,
+    attrs: Vec<Attribute>
 }
 
 impl Parse for MFunction {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let span = input.span();
+        let attrs = input.call(Attribute::parse_outer)?;
         let name: Ident = input.parse()?;
 
         let mut alt_names = vec![];
@@ -47,8 +54,14 @@ impl Parse for MFunction {
             span,
             alt_names,
             fields,
+            attrs
         })
     }
+}
+
+struct Input {
+    default: Vec<FieldValue>,
+    decls: Vec<MFunction>,
 }
 
 impl Parse for Input {
@@ -88,7 +101,9 @@ impl MFunction {
     pub fn declare(&self) -> proc_macro2::TokenStream {
         let fields: proc_macro2::TokenStream = self.fields.iter().map(|f| quote! {#f ,}).collect();
         let name = &self.name;
+        let attrs = &self.attrs;
         quote_spanned! { self.span =>
+            #(#attrs)*
             pub static #name: Function = Function::from_ref(&InnerFunction {#fields});
         }
     }

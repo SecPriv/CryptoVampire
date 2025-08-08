@@ -167,16 +167,22 @@ mk_builtin_funs!(
 
     // ~~~~~~~~~~~~~~~~~ bool ~~~~~~~~~~~~~~~~~~~
 
+    /// boolean `if-then-else` in the sens that it returns a [Sort::Bool]
     BITE "bool_if_then_else" "b_ite" {
         signature: s!(Bool, 3),
         flags: f!(CUSTOM_DEDUCE | BUILTIN_SMT | IF_THEN_ELSE)
     };
 
+    /// bitstring `if-then-else` in the sens that it returns a [Sort::Bitstring]
     MITE "bitstring_if_then_else" "m_ite" {
         signature: s!(Bool, Bitstring, Bitstring -> Bitstring),
         flags: f!(CUSTOM_DEDUCE | BUILTIN_SMT | IF_THEN_ELSE)
     };
 
+    /// Regular `implies`, i.e., `a => b`.
+    /// This function is used in the [rexp] macro for `=>`
+    ///
+    /// *NB*: this is an alias for [BITE]
     IMPLIES "bit_implies" "implies" "=>" "mimplies" {
         signature: s!(Bool, 2),
         flags: f!(BUILTIN_SMT), // e.g., this will be `BUILTIN | BUILTIN_SMT` instead of `FunctionFlags::BUILTIN`
@@ -185,6 +191,10 @@ mk_builtin_funs!(
         }),
     };
 
+    /// Regular `and`, i.e., `a /\ b`.
+    /// This function is used in the [rexp] macro for `and``
+    ///
+    /// *NB*: this is an alias for [BITE]
     AND "bit_and" "and" "mand" {
         signature: s!(Bool, 2),
         flags: f!(/* ALIAS | */ BUILTIN_SMT),
@@ -193,6 +203,10 @@ mk_builtin_funs!(
         }),
     };
 
+    /// Regular `or`
+    /// This function is used in the [rexp] macro for `or``
+    ///
+    /// *NB*: this is an alias for [BITE]
     OR "bit_or" "or" "mor" {
         signature: s!(Bool, 2),
         flags: f!(/* ALIAS | */ BUILTIN_SMT),
@@ -201,6 +215,10 @@ mk_builtin_funs!(
         }),
     };
 
+    /// Regular not
+    /// This function is used in the [rexp] macro for `not``
+    ///
+    /// *NB*: this is an alias for [BITE]
     NOT "bit_not" "not" "mnot" {
         signature: s!(Bool, 1),
         flags: f!(/* ALIAS | */ BUILTIN_SMT),
@@ -209,6 +227,7 @@ mk_builtin_funs!(
         }),
     };
 
+    /// Bitstring equality. This what is used as `=` in [rexp]
     EQ "meq" "eq" "==" {
         signature: s!(Bitstring, Bitstring -> Bool),
         flags: f!(BUILTIN_SMT)
@@ -247,6 +266,7 @@ mk_builtin_funs!(
         signature: s!(Bitstring, 0)
     };
 
+    /// Converst [Sort::Bool] to [Sort::Bitstring]
     FROM_BOOL "mfrom_bool" {
         signature: s!(Bool -> Bitstring)
     };
@@ -257,10 +277,14 @@ mk_builtin_funs!(
         signature: s!(Time -> Bool),
     };
 
+    /// *NB*: [LT] and [LEQ] are different functions. Neither is defined as the
+    /// alias of the other
     LT "lt" "<" {
         signature: s!(Time, Time -> Bool),
     };
 
+    /// *NB*: [LT] and [LEQ] are different functions. Neither is defined as the
+    /// alias of the other
     LEQ "leq" "<=" {
         signature: s!(Time, Time -> Bool),
     };
@@ -269,6 +293,8 @@ mk_builtin_funs!(
         signature: s!(Time, 1),
     };
 
+    /// The `init` step. It's always part of a protocol (added by default in
+    /// position `0`)
     INIT "init" {
         signature: s!(Time, 0),
         flags: f!(STEP),
