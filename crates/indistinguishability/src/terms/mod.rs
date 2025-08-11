@@ -67,8 +67,8 @@ pub use functions_holder::*;
 pub(crate) mod flags;
 pub use flags::FunctionFlags;
 
-mod first_order;
-pub use first_order::{FOBinder, RecFOFormula};
+mod rec_formula;
+pub use rec_formula::{FOBinder, RecFOFormula};
 
 pub mod utils;
 
