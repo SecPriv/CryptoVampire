@@ -10,7 +10,7 @@ use steel_derive::Steel;
 use crate::LangVar;
 use crate::input::Registerable;
 use crate::input::var::SVar;
-use crate::terms::formula_utils::convert_to_cow;
+use crate::terms::utils::convert_to_cow;
 use crate::terms::{CowPattern, RecFOFormula, Sort};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Builder, Steel)]

@@ -5,7 +5,7 @@ pub mod basic_hash {
     use golgge::PrologRule;
 
     use crate::protocol::test::basic_hash::MFunction;
-    use crate::terms::formula_utils::type_check;
+    use crate::terms::utils::type_check;
     use crate::terms::{
         EMPTY, EQUIV, FROM_BOOL, MACRO_EXEC, MACRO_FRAME, MITE, NONCE, PRED, TUPLE, UNFOLD_FRAME,
     };

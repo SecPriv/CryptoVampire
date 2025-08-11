@@ -281,9 +281,10 @@ impl FormulaBuilder {
                 let mut inner = match quantifier {
                     FOBinder::Forall => condition >> inner,
                     FOBinder::Exists => condition & inner,
+                    _ => todo!()
                 };
                 if !variables.is_empty() {
-                    inner = RecFOFormula::bind(quantifier, variables, sorts, inner)
+                    inner = RecFOFormula::bind(quantifier, variables, sorts, [inner])
                 }
                 inner
             }

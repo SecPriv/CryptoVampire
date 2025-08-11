@@ -21,11 +21,11 @@ use crate::{Lang, LangVar};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Steel)]
 pub enum RecFOFormula {
-    Binder {
+    Quantifier {
         head: FOBinder,
         vars: Vec<Var>,
         sorts: Vec<Sort>,
-        arg: Box<RecFOFormula>,
+        arg: Vec<RecFOFormula>,
     },
     App {
         head: Function,
@@ -38,16 +38,17 @@ pub enum RecFOFormula {
 pub enum FOBinder {
     Forall,
     Exists,
+    FindSuchThat
 }
 
 impl RecFOFormula {
-    pub fn bind(kind: FOBinder, vars: Vec<Var>, sorts: Vec<Sort>, arg: RecFOFormula) -> Self {
+    pub fn bind(kind: FOBinder, vars: Vec<Var>, sorts: Vec<Sort>, args: implvec!(RecFOFormula)) -> Self {
         assert_eq!(vars.len(), sorts.len());
-        Self::Binder {
+        Self::Quantifier {
             head: kind,
             vars,
             sorts,
-            arg: Box::new(arg),
+            arg: args.into_iter().collect(),
         }
     }
 
@@ -114,14 +115,14 @@ impl RecFOFormula {
                     _ => {None}
                 }}
             }
-            RecFOFormula::Binder { arg, .. } => arg.try_evaluate(),
+            RecFOFormula::Quantifier { arg, .. } => todo!(),
             _ => None,
         }
     }
 
     fn as_recexp_inner(&self, res: &mut Vec<LangVar>) -> Option<usize> {
         match self {
-            RecFOFormula::Binder { .. } => None,
+            RecFOFormula::Quantifier { .. } => None,
             RecFOFormula::Var(var) => {
                 res.push(egg::ENodeOrVar::Var(*var));
                 Some(res.len() - 1)
@@ -163,7 +164,7 @@ impl RecFOFormula {
         let mut id_buffer = Vec::new();
         let mut recexpr_buffer = Vec::new();
 
-        super::formula_utils::pull_from_egraph_inner(
+        super::utils::pull_from_egraph::inner(
             egraph,
             id,
             &mut id_buffer,
@@ -192,7 +193,7 @@ impl RecFOFormula {
     /// - doesn't typechecks
     pub fn try_get_sort(&self) -> Option<Sort> {
         match self {
-            RecFOFormula::Binder { .. } => Some(Sort::Bool),
+            RecFOFormula::Quantifier { .. } => Some(Sort::Bool),
             RecFOFormula::App { head, .. } => Some(head.signature.output),
             RecFOFormula::Var(_) => None,
         }
@@ -214,7 +215,7 @@ impl RecFOFormula {
     /// helper function for [Self::subst]
     fn inner_subst(&self, subst: &[(Var, Self)], bvars: &HashSet<Var>) -> Self {
         match self {
-            Self::Binder {
+            Self::Quantifier {
                 head,
                 vars,
                 sorts,
@@ -222,11 +223,11 @@ impl RecFOFormula {
             } => {
                 let mut bvars = bvars.clone();
                 bvars.extend(vars.iter().cloned());
-                Self::Binder {
+                Self::Quantifier {
                     head: *head,
                     vars: vars.clone(),
                     sorts: sorts.clone(),
-                    arg: Box::new(arg.inner_subst(subst, &bvars)),
+                    arg: arg.iter().map(|arg| arg.inner_subst(subst, &bvars)).collect(),
                 }
             }
             Self::App { head, args } => Self::App {
@@ -290,7 +291,8 @@ impl RecFOFormula {
             .unzip();
 
         ereturn_if!(vars.is_empty(), arg);
-        Self::bind(kind, vars, sorts, arg)
+        todo!("fixme");
+        Self::bind(kind, vars, sorts, [arg])
     }
 }
 
@@ -377,14 +379,14 @@ impl Formula for RecFOFormula {
         dynamic_iter!(MIter; One:A, Many:B, None:C);
 
         match self {
-            RecFOFormula::Binder {
+            RecFOFormula::Quantifier {
                 head,
                 vars,
                 sorts,
                 arg,
             } => Destructed {
                 head: HeadSk::Quant(RecFOFormulaQuant::new(head, vars.into(), sorts.into())),
-                args: MIter::One([*arg].into_iter()),
+                args: MIter::One(arg.into_iter()),
             },
             RecFOFormula::App { head, args } => Destructed {
                 head: HeadSk::Fun(head.clone()),
@@ -409,7 +411,7 @@ impl<'b> Formula for &'b RecFOFormula {
         dynamic_iter!(MIter; One:A, Many:B, None:C);
 
         match self {
-            RecFOFormula::Binder {
+            RecFOFormula::Quantifier {
                 head,
                 vars,
                 sorts,
@@ -420,7 +422,7 @@ impl<'b> Formula for &'b RecFOFormula {
                     vars.as_slice().into(),
                     sorts.as_slice().into(),
                 )),
-                args: MIter::One([arg.as_ref()].into_iter()),
+                args: MIter::One(arg.iter()),
             },
             RecFOFormula::App { head, args } => Destructed {
                 head: HeadSk::Fun(head),
@@ -442,6 +444,9 @@ impl<'a> logic_formula::Bounder<Var> for RecFOFormulaQuant<'a> {
 
 impl From<SmtFormula<Sort, Function>> for RecFOFormula {
     fn from(value: SmtFormula<Sort, Function>) -> Self {
+        // TODO: find such that
+
+
         #[allow(unreachable_patterns)]
         match value {
             SmtFormula::Var(var) => Self::Var(convert_smt_var(var)),
@@ -454,8 +459,8 @@ impl From<SmtFormula<Sort, Function>> for RecFOFormula {
                     .into_iter()
                     .map(|SortedVar { var, sort }| (convert_smt_var(var), sort))
                     .unzip();
-                let arg = Box::new(Self::from(*formula));
-                Self::Binder {
+                let arg = vec![Self::from(*formula)];
+                Self::Quantifier {
                     head: FOBinder::Forall,
                     vars,
                     sorts,
@@ -467,8 +472,8 @@ impl From<SmtFormula<Sort, Function>> for RecFOFormula {
                     .into_iter()
                     .map(|SortedVar { var, sort }| (convert_smt_var(var), sort))
                     .unzip();
-                let arg = Box::new(Self::from(*formula));
-                Self::Binder {
+                let arg = vec![Self::from(*formula)];
+                Self::Quantifier {
                     head: FOBinder::Exists,
                     vars,
                     sorts,
@@ -551,6 +556,7 @@ impl IntoSmt<Sort> for RecFOFormula {
         match quantifier {
             FOBinder::Forall => SmtQuantifier::Forall(vars),
             FOBinder::Exists => SmtQuantifier::Exists(vars),
+            _ => todo!()
         }
     }
 
@@ -577,6 +583,7 @@ impl FOBinder {
         match self {
             FOBinder::Forall => true,
             FOBinder::Exists => false,
+            _ => todo!()
         }
     }
 }
@@ -597,15 +604,16 @@ impl RecFOFormula {
         }
     }
 
+    // TODO: find such that
     fn steel_binder(head: FOBinder, vars: Vec<SVar>, sorts: Vec<Sort>, arg: RecFOFormula) -> Self {
         // let (vars, sorts): (Vec<_>, Vec<_>) =
         //     vars.into_iter().map(|(v, s)| (Var::from(v), s)).unzip();
         let vars = vars.into_iter().map_into().collect();
-        Self::Binder {
+        Self::Quantifier {
             head,
             vars,
             sorts,
-            arg: Box::new(arg),
+            arg: vec![arg],
         }
     }
 

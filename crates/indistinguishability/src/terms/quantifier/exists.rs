@@ -96,6 +96,7 @@ impl Exists {
         #[builder(with = FromIterator::from_iter, default = vec![])] cvars_sort: Vec<Sort>,
         #[builder(with = FromIterator::from_iter, default = vec![])] bvars_sorts: Vec<Sort>,
     ) -> &mut Exists {
+        todo!("redo");
         assert!(!bvars_sorts.is_empty());
         // set up
         let bvars: Rc<[_]> = bvars_sorts
@@ -125,7 +126,7 @@ impl Exists {
                 let inputs = chain!(cvars_sort.iter().copied(), bvars_sorts.iter().copied());
                 let signature = Signature::new(inputs, Sort::Bool);
                 InnerFunction {
-                    flags: FunctionFlags::EXISTS,
+                    flags: FunctionFlags::BINDER,
                     quantifier_idx: exists_idx,
                     ..InnerFunction::new(name, signature)
                 }

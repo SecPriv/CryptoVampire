@@ -12,7 +12,7 @@ use crate::protocol::Step;
 use crate::rules::nonce::searcher::nonce_builder::SetContent;
 use crate::rules::utils::SyntaxSearcher;
 use crate::rules::utils::fresh::{Mode, RefFormulaBuilder};
-use crate::terms::formula_utils::pull_from_egraph;
+use crate::terms::utils::pull_from_egraph;
 use crate::terms::{
     BITE, EQ, FOBinder, Function, HAPPENS, LT, MACRO_FRAME, MITE, NONCE, PRED, RecFOFormula,
 };
@@ -53,7 +53,7 @@ impl Nonce {
         tr!(
             "current enode has {:} nodes\n({})",
             eclass.nodes.len(),
-            pull_from_egraph(egraph, current).unwrap()
+            pull_from_egraph::no_prolog(egraph, current).unwrap()
         );
 
         // first loop for early exit if necessary

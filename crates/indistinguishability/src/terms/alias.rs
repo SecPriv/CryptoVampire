@@ -91,8 +91,8 @@ macro_rules! mk_alias {
             use $crate::terms::Sort::*;
             $crate::terms::Alias(::std::borrow::Cow::Owned(vec!
             [$($crate::terms::AliasRewrite {
-                    from: ::std::borrow::Cow::Owned(vec![$($crate::terms::formula_utils::convert_to_cow($args)),*]),
-                    to: $crate::terms::formula_utils::convert_to_cow($to),
+                    from: ::std::borrow::Cow::Owned(vec![$($crate::terms::utils::convert_to_cow($args)),*]),
+                    to: $crate::terms::utils::convert_to_cow($to),
                     variables: ::std::borrow::Cow::Owned(vec![$(::egg::Var::from_u32($var)),*]),
                     sorts: ::std::borrow::Cow::Owned(vec![$($sort),*]),
                 }

@@ -19,8 +19,7 @@ bitflags! {
       /// not fit in any category
       const CUSTOM_DEDUCE = 1 << 5;
 
-      /// Represents an existential quantifier
-      const EXISTS = 1 << 6;
+      const BINDER = 1 << 6;
       const FIND_SUCH_THAT = 1 << 7;
       /// Represents a skolem function
       const SKOLEM = 1 << 8;
@@ -43,5 +42,10 @@ bitflags! {
 
       /// Is an `if .. then .. else` function
       const IF_THEN_ELSE = 1 << 16;
+
+      /// This represents a [Sort]
+      const SORT = 1 << 17;
+
+      const LIST_CONSTR = 1 << 18;
   }
 }

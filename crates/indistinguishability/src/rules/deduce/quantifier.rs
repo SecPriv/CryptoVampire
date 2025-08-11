@@ -7,7 +7,7 @@ use itertools::{Itertools, chain};
 use logic_formula::egg::SimpleDiscriminant;
 
 use crate::rules::deduce::{self, GetDeduce};
-use crate::terms::formula_utils::offset_var;
+use crate::terms::utils::offset;
 use crate::terms::{Quantifier, QuantifierT};
 use crate::{Lang, Problem};
 
@@ -39,7 +39,7 @@ fn mk_quantifier_deduce_rules_one<Q: QuantifierT>(_pbl: &Problem, e: &Q) -> Prol
             let cvars = e
                 .cvars()
                 .iter()
-                .map(|&v| offset_var(start, v))
+                .map(|&v| offset::var(start, v))
                 .map(|v| vec![ENodeOrVar::Var(v)].into())
                 .collect_vec();
             let bvars = e.skolems().iter().map(|f| f.app_var(&cvars)).collect_vec();
@@ -65,7 +65,7 @@ fn mk_quantifier_deduce_rules_one<Q: QuantifierT>(_pbl: &Problem, e: &Q) -> Prol
             let cvars = e
                 .cvars()
                 .iter()
-                .map(|&v| offset_var(start, v))
+                .map(|&v| offset::var(start, v))
                 .map(|v| vec![ENodeOrVar::Var(v)].into())
                 .collect_vec();
             let bvars = e

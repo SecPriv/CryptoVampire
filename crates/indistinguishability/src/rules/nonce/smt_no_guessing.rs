@@ -8,7 +8,7 @@ use crate::protocol::{Protocol, Step};
 use crate::rules::nonce::Nonce;
 use crate::rules::utils::SyntaxSearcher;
 use crate::rules::utils::fresh::RefFormulaBuilder;
-use crate::terms::formula_utils::{offset_rexpr_owned, offset_var};
+use crate::terms::utils::offset;
 use crate::terms::{
     Function, HAPPENS, IS_INDEPENDANT_BITSTRING, LT, MACRO_FRAME, NONCE, RecFOFormula, Sort,
 };
@@ -94,9 +94,9 @@ fn mk_smt_step<'a>(pbl: &'a Problem, ptcl: &'a Protocol) -> MSmtFormula {
         msg,
     } in ptcl.steps()
     {
-        let vars = vars.iter().map(|v| offset_var(n, *v)).collect_vec();
-        let cond = offset_rexpr_owned(n, cond.iter().cloned());
-        let msg = offset_rexpr_owned(n, msg.iter().cloned());
+        let vars = vars.iter().map(|v| offset::var(n, *v)).collect_vec();
+        let cond = offset::rexpr_owned(n, cond.iter().cloned());
+        let msg = offset::rexpr_owned(n, msg.iter().cloned());
 
         // build the condition object
         let condition = {

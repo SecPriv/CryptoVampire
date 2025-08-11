@@ -106,9 +106,10 @@ impl Function {
     }
 
     pub fn get_quantifier_index(&self) -> Option<usize> {
+        todo!("fixme");
         self.flags
             .intersects(const_fun_flags!(
-                EXISTS | FIND_SUCH_THAT | SKOLEM | QUANTIFIER_FRESH
+                BINDER | FIND_SUCH_THAT | SKOLEM | QUANTIFIER_FRESH
             ))
             .then_some(self.quantifier_idx)
     }
@@ -182,7 +183,7 @@ impl Function {
                 | MACRO
                 | UNFOLD
                 | CUSTOM_SUBTERM
-                | EXISTS
+                | BINDER
                 | FIND_SUCH_THAT
                 | SKOLEM
                 | SMT_ONLY
@@ -200,7 +201,7 @@ impl Function {
                 | MACRO
                 | UNFOLD
                 | CUSTOM_DEDUCE
-                | EXISTS
+                | BINDER
                 | FIND_SUCH_THAT
                 | SKOLEM
                 | NONCE
@@ -258,7 +259,7 @@ impl Function {
 
     pub fn is_quantifier(&self) -> bool {
         self.flags
-            .intersects(FunctionFlags::FIND_SUCH_THAT | FunctionFlags::EXISTS)
+            .intersects(FunctionFlags::FIND_SUCH_THAT | FunctionFlags::BINDER)
     }
 
     // =========================================================

@@ -365,11 +365,13 @@ mk_builtin_funs!(
         flags: f!(PROLOG_ONLY)
     };
 
+    /// Shortcuts to failling
     FAIL "fail" {
         signature: s!(() -> Bool),
         flags: f!(PROLOG_ONLY)
     };
 
+    /// `u,v |> a,b | h, h'` in that order, where `a` and `b` are [Bool]s
     BOOL_DEDUCE "deduce_bool" "deduce_b" {
         signature: s!(
                 /* hypothesis */
@@ -382,6 +384,7 @@ mk_builtin_funs!(
         flags: f!(PROLOG_ONLY)
     };
 
+    /// `u,v |> a,b | h, h'` in that order, where `a` and `b` are [Bitstring]s
     BIT_DEDUCE "deduce_bitstring" "deduce_m" {
         signature: s!(
             /* hypothesis */
@@ -394,6 +397,7 @@ mk_builtin_funs!(
         flags: f!(PROLOG_ONLY)
     };
 
+    /// `u ~ v |- a ~ b` in that order
     EQUIV "equiv" {
         signature: s!(
             /* hypothesis */
@@ -404,12 +408,15 @@ mk_builtin_funs!(
         flags: f!(PROLOG_ONLY)
     };
 
+    /// `FRESH_NONCE(n, u, h)` checks (with `vampire`) that the [Nonce] `n`
+    /// doesn't appear in `u` when `h` holds
     FRESH_NONCE "mfresh_nonce" "fresh_nonce" {
                 /* nonce -> look into -> constrains -> Bool */
         signature: s!(Nonce, Bitstring, Bool -> Bool),
         flags: f!(PROLOG_ONLY)
     };
 
+    /// The goal needs to be offloaded to `vampire`
     VAMPIRE "mvampire" "vampire" "smt" {
         signature: s!(Bool -> Bool),
         flags: f!(PROLOG_ONLY)
@@ -442,6 +449,55 @@ mk_builtin_funs!(
         signature: s!(() -> Any)
     };
 
+    // ------ quantifiers --------
+
+    /// The binder for `exists`
+    /// 
+    /// The first argument is a list of sorts
+    EXISTS "mexists" {
+        signature: s!(Any /* list */, Bool -> Bool),
+        flags: f!(BINDER | PROLOG_ONLY)
+    };
+    
+    /// The binder for `find such that`
+    /// 
+    /// The first argument is a list of sorts. Then its `condition`,
+    /// `then_branch` and `else_branch`
+    FIND_SUCH_THAT "find_such_that" {
+        signature: s!(Any /* list */, 
+            Bool, Bitstring, Bitstring -> Bitstring),
+        flags: f!(BINDER | PROLOG_ONLY)
+    };
+
+    // --------- sorts -----------
+
+    BITSTRING_SORT "bitstring_sort" {
+        signature: s!(() -> Any),
+        flags: f!(PROLOG_ONLY | SORT)
+    };
+
+    INDEX_SORT "index_sort" {
+        signature: s!(() -> Any),
+        flags: f!(PROLOG_ONLY | SORT)
+    };
+
+    TIME_SORT "time_sort" "step_sort" {
+        signature: s!(() -> Any),
+        flags: f!(PROLOG_ONLY | SORT)
+    };
+
+    // --------- list ------------
+
+    CONS "list_cons" {
+        signature: s!(Any, Any -> Any),
+        flags : f!(PROLOG_ONLY | LIST_CONSTR)
+    };
+
+    NIL "list_nil" {
+        signature: s!(() -> Any),
+        flags : f!(PROLOG_ONLY | LIST_CONSTR)
+    };
+
     // ~~~~~~~~~~~~~~~ smt only ~~~~~~~~~~~~~~~~~
 
     SMT_ITE "ite" {
@@ -458,5 +514,6 @@ mk_builtin_funs!(
         signature: s!(Nonce, Bool -> Bool),
         flags: f!(SMT_ONLY)
     };
+
 
 );

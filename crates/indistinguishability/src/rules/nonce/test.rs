@@ -10,7 +10,7 @@ use crate::problem::test::basic_hash::mk_pblm;
 use crate::rules::default_rewrites;
 use crate::rules::nonce::Nonce;
 use crate::rules::utils::fresh::{Mode, RefFormulaBuilder};
-use crate::terms::formula_utils::convert_to_ground_rexp;
+use crate::terms::utils::convert_to_ground_rexp;
 use crate::terms::{Function, HAPPENS, MACRO_COND, MACRO_INPUT, MACRO_MSG, RecFOFormula, Sort};
 use crate::{Lang, Problem, decl_fun, init_logger, rexp};
 

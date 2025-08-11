@@ -18,7 +18,7 @@ use crate::problem::function_builder::{
 };
 use crate::protocol::{Protocol, Step};
 use crate::rules::{mk_default_prolog_rules, mk_default_rewrites, FreshNonce, VampireRule};
-use crate::terms::formula_utils::convert_to_ground_rexp;
+use crate::terms::utils::convert_to_ground_rexp;
 use crate::terms::{
     Alias, CryptographicAssumption, EMPTY, EQUIV, Function, FunctionCollection, FunctionFlags,
     HAPPENS, INIT, InnerFunction, MACRO_FRAME, PRED, Rewrite, Signature, Sort, TRUE, UNFOLD_MSG,

@@ -7,7 +7,7 @@ use steel::parser::builder;
 use utils::{ereturn_if, ereturn_let, implvec};
 
 use crate::rules::utils::fresh::RefFormulaBuilder;
-use crate::terms::formula_utils::{offset_rexpr_owned, offset_var};
+use crate::terms::utils::offset;
 use crate::terms::{
     Alias, AliasRewrite, EQ, Exists, FindSuchThat, Function, MACRO_COND, MACRO_MSG, Quantifier,
     QuantifierT, RecFOFormula,
@@ -134,13 +134,13 @@ pub trait SyntaxSearcher {
 
             let variables = variables
                 .iter()
-                .map(|v| offset_var(max_var, *v))
+                .map(|v| offset::var(max_var, *v))
                 .collect_vec();
             let from = from
                 .iter()
-                .map(|f| offset_rexpr_owned(max_var, f.iter().cloned()))
+                .map(|f| offset::rexpr_owned(max_var, f.iter().cloned()))
                 .collect_vec();
-            let to = offset_rexpr_owned(max_var, to.iter().cloned());
+            let to = offset::rexpr_owned(max_var, to.iter().cloned());
 
             assert_eq!(from.len(), args.len());
             let condition = RecFOFormula::and(
@@ -190,15 +190,15 @@ pub trait SyntaxSearcher {
             .cvars()
             .iter()
             .cloned()
-            .map(|var| offset_var(n, var))
+            .map(|var| offset::var(n, var))
             .collect_vec();
         let bvars = e
             .bvars()
             .iter()
             .cloned()
-            .map(|var| offset_var(n, var))
+            .map(|var| offset::var(n, var))
             .collect_vec();
-        let patt = offset_rexpr_owned(n, e.patt().iter().cloned());
+        let patt = offset::rexpr_owned(n, e.patt().iter().cloned());
 
         let content = {
             let subst = izip!(cvars.iter().cloned(), args).collect_vec();
@@ -243,19 +243,19 @@ pub trait SyntaxSearcher {
             .cvars()
             .iter()
             .cloned()
-            .map(|var| offset_var(n, var))
+            .map(|var| offset::var(n, var))
             .collect_vec();
         let bvars = fdst
             .bvars()
             .iter()
             .cloned()
-            .map(|var| offset_var(n, var))
+            .map(|var| offset::var(n, var))
             .collect_vec();
 
         let subst = izip!(cvars.iter().cloned(), args).collect_vec();
         let [condition, then_branch, else_branch] =
             [fdst.condition(), fdst.then_branch(), fdst.else_branch()]
-                .map(|p| offset_rexpr_owned(n, p.iter().cloned()))
+                .map(|p| offset::rexpr_owned(n, p.iter().cloned()))
                 .map(|p| p.apply_pattern_subst(subst.clone()));
 
         let builder = builder

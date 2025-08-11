@@ -70,7 +70,7 @@ pub use flags::FunctionFlags;
 mod first_order;
 pub use first_order::{FOBinder, RecFOFormula};
 
-pub mod formula_utils;
+pub mod utils;
 
 mod rewrite;
 pub use rewrite::Rewrite;
