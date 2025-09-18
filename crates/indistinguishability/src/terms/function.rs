@@ -15,9 +15,7 @@ use crate::input::Registerable;
 use crate::input::shared_cryptography::ShrCrypto;
 use crate::protocol::{MacroKind};
 use crate::terms::{
-    Alias, BUILTINS, Exists, FunctionCollection, FunctionFlags, HAPPENS, MACRO_COND, MACRO_EXEC,
-    MACRO_FRAME, MACRO_INPUT, MACRO_MSG, NOT, Quantifier, QuantifierT, RecFOFormula, Signature,
-    Sort, TRUE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin,
+    builtin, Alias, Exists, FunctionCollection, FunctionFlags, Quantifier, QuantifierIndex, QuantifierT, RecFOFormula, Signature, Sort, BUILTINS, HAPPENS, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, NOT, TRUE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG
 };
 use crate::utils::LightClone;
 use crate::{Lang, LangVar};
@@ -128,18 +126,17 @@ impl Function {
         }
     }
 
-    pub fn get_quantifier_index(&self) -> Option<usize> {
-        todo!("fixme");
-        self.flags
-            .intersects(const_fun_flags!(
-                BINDER | FIND_SUCH_THAT | SKOLEM | QUANTIFIER_FRESH
-            ))
-            .then_some(self.quantifier_idx)
+    pub fn get_quantifier_index(&self) -> Option<QuantifierIndex> {
+        self.has_quantifier_idx().then_some(
+            QuantifierIndex {
+                temporary: self.is_temporary(),
+                index: self.quantifier_idx,
+            }
+        )
     }
 
     pub fn get_quantifier<'a>(&self, functions: &'a FunctionCollection) -> Option<&'a Quantifier> {
-        let idx = self.get_quantifier_index()?;
-        functions.quantifiers().get(idx)
+        self.get_quantifier_index()?.get(functions)
     }
 
     pub fn get_exists<'a>(&self, functions: &'a FunctionCollection) -> Option<&'a Exists> {
@@ -277,6 +274,7 @@ impl Function {
     is_fun!(is_out_of_term_algebra; SMT_ONLY| PROLOG_ONLY);
     is_fun!(is_nonce; NONCE);
     is_fun!(is_quantifier; FIND_SUCH_THAT| BINDER);
+    is_fun!(has_quantifier_idx; BINDER | FIND_SUCH_THAT | SKOLEM | QUANTIFIER_FRESH);
     is_fun!(is_egg_binder; BINDER);
     is_fun!(is_temporary; TEMPORARY);
     is_fun!(is_should_not_declare_in_smt; PROLOG_ONLY | BUILTIN_SMT;

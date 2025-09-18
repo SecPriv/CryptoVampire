@@ -12,11 +12,9 @@ use itertools::{Itertools, chain};
 use log::trace;
 use utils::implvec;
 
-use crate::problem::function_builder::{
-    SetAlias, SetCryptography, SetFlags, SetName, SetOutput, SetStepIdx,
-};
+use crate::problem::function_builder::{SetAlias, SetCryptography, SetName, SetOutput, SetStepIdx};
 use crate::protocol::{Protocol, Step};
-use crate::rules::{mk_default_prolog_rules, mk_default_rewrites, FreshNonce, VampireRule};
+use crate::rules::{FreshNonce, VampireRule, mk_default_prolog_rules, mk_default_rewrites};
 use crate::terms::utils::convert_to_ground_rexp;
 use crate::terms::{
     Alias, CryptographicAssumption, EMPTY, EQUIV, Function, FunctionCollection, FunctionFlags,
@@ -383,11 +381,11 @@ impl Problem {
     pub(crate) fn current_step(&self) -> Option<&CurrentStep> {
         self.current_step.as_ref()
     }
-    
+
     pub fn functions(&self) -> &FunctionCollection {
         &self.function
     }
-    
+
     pub fn functions_mut(&mut self) -> &mut FunctionCollection {
         self.clear_smt_prelude();
         &mut self.function
@@ -468,11 +466,11 @@ impl Problem {
     #[builder(builder_type = FunctionBuilder)]
     pub fn declare_function(
         &mut self,
+        #[builder(field)] flags: FunctionFlags,
         #[builder(into)] name: Cow<'static, str>,
         #[builder(with = FromIterator::from_iter, default = vec![])] inputs: Vec<Sort>,
         output: Sort,
         alias: Option<Alias>,
-        #[builder(default = FunctionFlags::empty())] flags: FunctionFlags,
         #[builder(default = 0)] quantifier_idx: usize,
         #[builder(default = 0)] protocol_idx: usize,
         #[builder(default = 0)] step_idx: usize,
@@ -500,19 +498,24 @@ impl<'a, S> FunctionBuilder<'a, S>
 where
     S: function_builder::State,
 {
-    pub fn step(
-        self,
-        idx: usize,
-    ) -> FunctionBuilder<'a, SetOutput<SetFlags<SetStepIdx<SetAlias<S>>>>>
+    pub fn flag(mut self, flag: FunctionFlags) -> Self {
+        self.flags |= flag;
+        self
+    }
+
+    pub fn flags(self, flags: implvec!(FunctionFlags)) -> Self {
+        flags.into_iter().fold(self, |acc, flag| acc.flag(flag))
+    }
+
+    pub fn step(self, idx: usize) -> FunctionBuilder<'a, SetOutput<SetStepIdx<SetAlias<S>>>>
     where
         S::StepIdx: FunctionBuilderIsUnset,
-        S::Flags: FunctionBuilderIsUnset,
         S::Alias: FunctionBuilderIsUnset,
         S::Output: FunctionBuilderIsUnset,
     {
         self.maybe_alias(None)
             .step_idx(idx)
-            .flags(FunctionFlags::STEP)
+            .flag(FunctionFlags::STEP)
             .output(Sort::Time)
     }
 
@@ -543,6 +546,19 @@ where
         };
         self.cryptography(len..(len + num))
     }
+
+    pub fn temporary(self) -> Self {
+        self.set_temporary(true)
+    }
+
+    pub fn set_temporary(mut self, value: bool) -> Self {
+        if value {
+            self.flags |= FunctionFlags::TEMPORARY
+        } else {
+            self.flags -= FunctionFlags::TEMPORARY
+        }
+        self
+    }
 }
 
 impl<S> ProblemBuilder<S>
@@ -551,7 +567,7 @@ where
 {
     /// removes the default cryptography
     pub fn reset_cryptograhy(mut self) -> Self {
-        self.cryptography = vec![];
+        self.cryptography.clear();
         self
     }
 

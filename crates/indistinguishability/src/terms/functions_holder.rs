@@ -7,10 +7,11 @@ use std::sync::atomic::AtomicUsize;
 use egg::Var;
 use itertools::{Itertools, chain};
 use log::trace;
-use utils::implvec;
+use steel::rvals::CustomType;
+use utils::{ereturn_if, implvec};
 
 use super::{BUILTINS, Exists, Function, FunctionFlags, PARSING_PAIRS};
-use crate::terms::{InnerFunction, Quantifier, Signature, Sort};
+use crate::terms::{InnerFunction, Quantifier, Signature, Sort, function};
 
 /// The numbe of declared existential quantifiers
 ///
@@ -21,9 +22,11 @@ use crate::terms::{InnerFunction, Quantifier, Signature, Sort};
 #[derive(Debug, Default)]
 pub struct FunctionCollection {
     functions: Vec<Function>,
-    temporary_functions: Vec<Function>,
     map_function: HashMap<Cow<'static, str>, Function>,
     quantifiers: Vec<Quantifier>,
+
+    temporary_functions: Vec<Function>,
+    temporary_quantifiers: Vec<Quantifier>,
 }
 
 impl FunctionCollection {
@@ -45,7 +48,6 @@ impl FunctionCollection {
     /// That is: there are no duplicates in `functions` and `map_function` only
     /// contains function in `functions` and it contains them all
     pub fn valid(&self) -> bool {
-        // TODO
         true
     }
 
@@ -53,8 +55,20 @@ impl FunctionCollection {
         self.map_function.get(name).cloned()
     }
 
-    pub fn quantifiers(&self) -> &[Quantifier] {
-        &self.quantifiers
+    pub fn quantifiers(&self, temporary: bool) -> &[Quantifier] {
+        if temporary {
+            &self.temporary_quantifiers
+        } else {
+            &self.quantifiers
+        }
+    }
+
+    fn quantifiers_mut(&mut self, temporary: bool) -> &mut Vec<Quantifier> {
+        if temporary {
+            &mut self.temporary_quantifiers
+        } else {
+            &mut self.quantifiers
+        }
     }
 
     /// Lists all the registered nonces
@@ -79,16 +93,17 @@ impl FunctionCollection {
             "the function '{}' was already in the database",
             fun.name
         );
-        self.functions.push(fun);
-    }
-
-    pub fn get_mut_quantifier(&mut self, index: usize) -> Option<&mut Quantifier> {
-        self.quantifiers.get_mut(index)
+        if fun.is_temporary() {
+            self.temporary_functions.push(fun);
+        } else {
+            self.functions.push(fun);
+        }
     }
 
     pub(crate) fn push_quantifier(&mut self, q: Quantifier) -> &mut Quantifier {
-        self.quantifiers.push(q);
-        self.quantifiers.last_mut().unwrap()
+        let quantifiers = self.quantifiers_mut(q.temporary());
+        quantifiers.push(q);
+        quantifiers.last_mut().unwrap()
     }
 
     /// Add a name alias for a function
@@ -104,6 +119,21 @@ impl FunctionCollection {
 
     pub fn registered_names(&self) -> impl Iterator<Item = &str> {
         self.map_function.keys().map(|f| f.as_ref())
+    }
+
+    pub fn clear_temporary(&mut self) {
+        let Self {
+            map_function,
+            temporary_functions,
+            temporary_quantifiers,
+            ..
+        } = self;
+
+        map_function.retain(|_, f| temporary_functions.contains(f));
+
+        temporary_functions.clear();
+        temporary_quantifiers.clear();
+        assert!(self.valid());
     }
 }
 
@@ -139,6 +169,37 @@ impl Deref for FunctionCollection {
 
     fn deref(&self) -> &Self::Target {
         &self.functions
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct QuantifierIndex {
+    pub temporary: bool,
+    pub index: usize,
+}
+
+pub static TEMPORARY: QuantifierIndex = QuantifierIndex {
+    temporary: true,
+    index: 0,
+};
+pub static CONSTANT: QuantifierIndex = QuantifierIndex {
+    temporary: false,
+    index: 0,
+};
+
+impl QuantifierIndex {
+    pub fn get(self, functions: &FunctionCollection) -> Option<&Quantifier> {
+        functions.quantifiers(self.temporary).get(self.index)
+    }
+
+    pub fn get_mut(self, functions: &mut FunctionCollection) -> Option<&mut Quantifier> {
+        functions
+            .quantifiers_mut(self.temporary)
+            .get_mut(self.index)
+    }
+
+    pub fn get_array(self, functions: &FunctionCollection) -> &[Quantifier] {
+        functions.quantifiers(self.temporary)
     }
 }
 

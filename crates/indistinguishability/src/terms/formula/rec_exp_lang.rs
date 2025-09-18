@@ -108,6 +108,7 @@ impl<'a, L: AsLangVar> Formula for RecExprIter<'a, L> {
 
                 // this is a bound variable
                 if head == &LAMBDA_O {
+                    // crash if the bound variable is not bound
                     let var = *vars.peek().expect("a variable");
                     Destructed {
                         head: HeadSk::Var(Var::from_u32(var)),

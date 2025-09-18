@@ -11,8 +11,8 @@ use utils::{ereturn_if, implvec};
 use crate::rules::utils::fresh;
 use crate::terms::quantifier::default_valid;
 use crate::terms::{
-    Function, FunctionCollection, FunctionFlags, InnerFunction, QUANTIFIER_COUNT, Quantifier,
-    QuantifierT, Signature, Sort,
+    FIND_SUCH_THAT, Function, FunctionCollection, FunctionFlags, InnerFunction, Quantifier,
+    QuantifierT, RecExprIter, Signature, Sort,
 };
 use crate::{Lang, LangVar, Problem};
 
@@ -23,6 +23,8 @@ pub struct FindSuchThat {
     vars: Rc<[Var]>,
     /// The variable bound by the quantifier
     bound_var: Rc<[Var]>,
+    #[builder(default = true)]
+    temporary: bool,
     /// The "content" of the quantifier
     #[builder(default = std::iter::empty().collect())]
     condition: PatternAst<Lang>,
@@ -72,7 +74,7 @@ impl QuantifierT for FindSuchThat {
 
         let patterns_vars: HashSet<_> = [self.condition(), self.then_branch(), self.else_branch()]
             .into_iter()
-            .flat_map(|x| x.free_vars_iter())
+            .flat_map(|x| RecExprIter::new(x).free_vars_iter())
             .collect();
 
         all_vars_set.is_superset(&patterns_vars)
@@ -91,6 +93,10 @@ impl QuantifierT for FindSuchThat {
             _ => None,
         }
     }
+
+    fn temporary(&self) -> bool {
+        self.temporary
+    }
 }
 
 #[bon]
@@ -102,6 +108,7 @@ impl FindSuchThat {
         pbl: &mut Problem,
         #[builder(with = FromIterator::from_iter, default = vec![])] cvars_sort: Vec<Sort>,
         #[builder(with = FromIterator::from_iter, default = vec![])] bvars_sorts: Vec<Sort>,
+        #[builder(default = true)] temporary: bool,
     ) -> &mut FindSuchThat {
         assert!(!bvars_sorts.is_empty());
         // set up
@@ -116,9 +123,9 @@ impl FindSuchThat {
             .map(|(i, _)| egg::Var::from_u32((i + bvars.len()) as u32))
             .collect();
 
-        let quant_idx = pbl.functions().quantifiers().len();
+        let quant_idx = pbl.functions().quantifiers(temporary).len();
 
-        let n_quant = QUANTIFIER_COUNT.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+        // let n_quant = QUANTIFIER_COUNT.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
 
         // build the Functions
         let tlf;
@@ -126,38 +133,35 @@ impl FindSuchThat {
         let freshes: Rc<[_]>;
 
         {
-            // tlf
-            let inner_tlf = {
-                let name = format!("_findst${n_quant:}").into();
-                let inputs = chain!(cvars_sort.iter().copied(), bvars_sorts.iter().copied());
-                let signature = Signature::new(inputs, Sort::Bitstring);
-                InnerFunction {
-                    flags: FunctionFlags::FIND_SUCH_THAT,
-                    quantifier_idx: quant_idx,
-                    ..InnerFunction::new(name, signature)
-                }
-            };
-            tlf = Function::new(inner_tlf);
-            pbl.functions().add(tlf.clone());
+            tlf = pbl
+                .declare_function()
+                .fresh_name("_findst")
+                .inputs(chain!(
+                    cvars_sort.iter().copied(),
+                    bvars_sorts.iter().copied()
+                ))
+                .output(Sort::Bitstring)
+                .quantifier_idx(quant_idx)
+                .flag(FunctionFlags::FIND_SUCH_THAT)
+                .set_temporary(temporary)
+                .call()
         }
 
         {
             // skolem
             let mut skolem_vec = Vec::with_capacity(bvars_sorts.len());
-            for (i, &bs) in bvars_sorts.iter().enumerate() {
-                let inner_skolem = {
-                    let name = format!("_sk_fdst${n_quant:}_{i:}").into();
-                    let inputs = cvars_sort.iter().copied();
-                    let signature = Signature::new(inputs, bs);
-                    InnerFunction {
-                        flags: FunctionFlags::SKOLEM,
-                        quantifier_idx: quant_idx,
-                        ..InnerFunction::new(name, signature)
-                    }
-                };
-                let sk = Function::new(inner_skolem);
-                pbl.functions().add(sk.clone());
-                skolem_vec.push(sk);
+            let name = format!("_sk${}", tlf.name);
+            for &bs in &bvars_sorts {
+                skolem_vec.push(
+                    pbl.declare_function()
+                        .fresh_name(&name)
+                        .inputs(cvars_sort.iter().copied())
+                        .output(bs)
+                        .quantifier_idx(quant_idx)
+                        .flag(FunctionFlags::SKOLEM)
+                        .set_temporary(temporary)
+                        .call(),
+                );
             }
             skolems = skolem_vec.into();
         }
@@ -165,29 +169,28 @@ impl FindSuchThat {
         {
             // fresh
             let mut fresh_vec = Vec::with_capacity(bvars_sorts.len());
-            for (i, &bs) in bvars_sorts.iter().enumerate() {
-                let inner_fresh = {
-                    let name = format!("_fdst_fresh${n_quant:}_{i:}").into();
-                    let signature = Signature::new([], bs);
-                    InnerFunction {
-                        flags: FunctionFlags::QUANTIFIER_FRESH,
-                        quantifier_idx: quant_idx,
-                        ..InnerFunction::new(name, signature)
-                    }
-                };
-                let frsh = Function::new(inner_fresh);
-                pbl.functions().add(frsh.clone());
-                fresh_vec.push(frsh);
+            let name = format!("_fresh${}", tlf.name);
+            for &bs in &bvars_sorts {
+                fresh_vec.push(
+                    pbl.declare_function()
+                        .fresh_name(&name)
+                        .output(bs)
+                        .quantifier_idx(quant_idx)
+                        .flag(FunctionFlags::QUANTIFIER_FRESH)
+                        .set_temporary(temporary)
+                        .call(),
+                );
             }
             freshes = fresh_vec.into();
         }
 
-        let q = pbl.functions().push_quantifier(
+        let q = pbl.functions_mut().push_quantifier(
             FindSuchThat::builder()
                 .vars(cvars)
                 .bound_var(bvars)
                 .skolems(skolems)
                 .freshes(freshes)
+                .temporary(temporary)
                 .tlf(tlf)
                 .build()
                 .into(),
@@ -245,6 +248,7 @@ impl FindSuchThat {
     pub fn set_else_branch(&mut self, else_branch: implvec!(LangVar)) {
         self.else_branch = else_branch.into_iter().collect()
     }
+    
 }
 
 #[derive(Debug)]
@@ -271,6 +275,7 @@ impl Display for FindSuchThat {
         let FindSuchThat {
             vars,
             bound_var,
+            temporary: _,
             condition,
             then_branch,
             else_branch,

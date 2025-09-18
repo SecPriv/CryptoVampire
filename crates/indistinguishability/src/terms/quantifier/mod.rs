@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use egg::Var;
 pub use exists::*;
 use itertools::{chain, izip};
-use utils::ereturn_if;
+use utils::{ereturn_if, match_as_trait};
 
 use crate::Problem;
 use crate::terms::{Function, Sort};
@@ -53,6 +53,7 @@ pub trait QuantifierT: Eq + Sized {
 
     fn try_from_ref(q: &Quantifier) -> Option<&Self>;
     fn try_from_mut(q: &mut Quantifier) -> Option<&mut Self>;
+    fn temporary(&self) -> bool;
 
     fn all_functions(&self) -> impl Iterator<Item = &Function> + Clone {
         chain![
@@ -83,7 +84,7 @@ fn default_valid<Q: QuantifierT>(q: &Q, idx: usize, pbl: &Problem) -> bool {
     // it's at the right index location
     ereturn_if!(
         pbl.functions()
-            .quantifiers()
+            .quantifiers(q.temporary())
             .get(idx)
             .and_then(|q| Q::try_from_ref(q))
             != Some(q),
@@ -106,4 +107,10 @@ fn default_valid<Q: QuantifierT>(q: &Q, idx: usize, pbl: &Problem) -> bool {
     );
     ereturn_if!(q.fresh_indices().iter().any(|f| f.arity() != 0), false);
     true
+}
+
+impl Quantifier {
+    pub fn temporary(&self) -> bool {
+        match_as_trait!(self => {Self::FindSuchThat(x) | Self::Exists(x) => {x.temporary()}})
+    }
 }

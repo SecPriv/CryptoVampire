@@ -31,7 +31,7 @@ fn mk_base_rw<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>> {
 fn mk_s_rw<N: Analysis<Lang>>(
     pbl: &Problem,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
-    pbl.function
+    pbl.function()
         .iter()
         .filter(|f| f.is_out_of_term_algebra())
         .map(|f| {
