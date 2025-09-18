@@ -11,7 +11,7 @@ use utils::{ereturn_if, implvec};
 use crate::rules::utils::fresh;
 use crate::terms::quantifier::default_valid;
 use crate::terms::{
-    Function, FunctionCollection, FunctionFlags, InnerFunction, Quantifier, QuantifierT, RecExprIter, Signature, Sort, 
+    Function, FunctionCollection, FunctionFlags, InnerFunction, Quantifier, QuantifierIndex, QuantifierT, RecExprIter, Signature, Sort 
 };
 use crate::{Lang, LangVar, Problem};
 
@@ -59,7 +59,7 @@ impl QuantifierT for Exists {
         &self.freshes
     }
 
-    fn valid(&self, idx: usize, pbl: &crate::Problem) -> bool {
+    fn valid(&self, idx: QuantifierIndex, pbl: &crate::Problem) -> bool {
         ereturn_if!(!default_valid(self, idx, pbl), false);
 
         let mut all_vars_set = HashSet::with_capacity(self.bvars().len() + self.cvars().len());

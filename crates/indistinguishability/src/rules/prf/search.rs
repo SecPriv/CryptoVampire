@@ -12,8 +12,8 @@ use crate::rules::PRF;
 use crate::rules::utils::fresh::{Mode, RefFormulaBuilder};
 use crate::rules::utils::{SyntaxSearcher, generate_rule_vars_arr};
 use crate::terms::{
-    EQ, FAIL, FOBinder, Function, HAPPENS, LT, MACRO_EXEC, MACRO_FRAME, NONCE, RecFOFormula, Sort,
-    VAMPIRE,
+    EQ, FAIL, FOBinder, Function, HAPPENS, LT, MACRO_EXEC, MACRO_FRAME, NONCE, RecExprIter,
+    RecFOFormula, Sort, VAMPIRE,
 };
 use crate::vampire::runner::VampireExec;
 use crate::{Lang, LangVar, Problem, rexp};
@@ -26,8 +26,8 @@ declare_trace!($"search_prf");
 
 pub fn mk_rules<'a>(pbl: &'a Problem, prf: &'a PRF) -> impl Iterator<Item = RcRule> + use<'a> {
     let functions = pbl
-        .function
-        .iter()
+        .functions()
+        .iter_current()
         .filter(|f| f != &&NONCE && f != &&prf.hash)
         .filter(|f| !f.is_out_of_term_algebra())
         .filter(|f| matches!(f.signature.output, Sort::Bitstring | Sort::Bool))
@@ -338,7 +338,7 @@ impl Search {
                     .sorts(id.signature.inputs_iter())
                     .quantifier(FOBinder::Forall)
                     .build();
-                self.inner_search_recexpr(pbl, &builder, &to_search);
+                self.inner_search_recexpr(pbl, &builder, RecExprIter::new(&to_search));
                 builder.into_inner().unwrap().into_formula()
             })
     }
@@ -358,7 +358,7 @@ impl crate::rules::utils::SyntaxSearcher for Search {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         fun: Function,
-        args: implvec!(&'a [LangVar]),
+        args: implvec!(RecExprIter<'a, LangVar>),
     ) {
         let mut args = args.into_iter();
         if fun == NONCE {
@@ -371,15 +371,15 @@ impl crate::rules::utils::SyntaxSearcher for Search {
             let (m2, k2) = args
                 .collect_tuple()
                 .expect("wrong parameters given to a hash");
-            let content = (!EQ.rapp([k2.into(), NONCE.rapp([self.clone_k()])]))
-                | (!EQ.rapp([m2.into(), self.clone_m()]));
+            let content = (!EQ.rapp([k2.clone().into(), NONCE.rapp([self.clone_k()])]))
+                | (!EQ.rapp([m2.clone().into(), self.clone_m()]));
             builder.add_leaf(content);
             self.inner_search_recexpr(pbl, builder, m2);
             {
                 let builder = builder
                     .add_node()
                     .mode(Mode::And)
-                    .condition(!EQ.rapp([k2.into(), NONCE.rapp([self.clone_k()])]))
+                    .condition(!EQ.rapp([k2.clone().into(), NONCE.rapp([self.clone_k()])]))
                     .quantifier(FOBinder::Forall)
                     .build();
 

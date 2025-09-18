@@ -100,7 +100,7 @@ pub trait SyntaxSearcher {
         } else if let Some(alias) = fun.get_alias() {
             self.search_alias(pbl, builder, alias, args);
         } else if fun.is_quantifier() {
-            match fun.get_quantifier(&pbl.function) {
+            match fun.get_quantifier(pbl.functions()) {
                 Some(Quantifier::Exists(exists)) => self.search_exists(pbl, builder, exists, args),
                 Some(Quantifier::FindSuchThat(fdst)) => self.search_fdst(pbl, builder, fdst, args),
                 _ => unreachable!(),

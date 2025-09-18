@@ -3,7 +3,6 @@ use egg::{
     PatternAst, Rewrite,
 };
 use itertools::{Itertools, chain, izip};
-use logic_formula::egg::SimpleDiscriminant;
 use utils::dynamic_iter;
 
 use crate::problem::CurrentStep;
@@ -119,8 +118,8 @@ fn mk_rw_one<N: Analysis<Lang>>(fun: Function) -> Rewrite<Lang, N> {
 fn mk_rw_base<'a, N: Analysis<Lang>>(
     pbl: &'a Problem,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'a, N> {
-    pbl.function
-        .iter()
+    pbl.functions()
+        .iter_current()
         .filter(|f| (!f.is_special_subterm()) || f.is_if_then_else())
         .cloned()
         .map(mk_rw_one)

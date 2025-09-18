@@ -13,7 +13,7 @@ use crate::rules::utils::SyntaxSearcher;
 use crate::rules::utils::fresh::{Mode, RefFormulaBuilder};
 use crate::terms::utils::pull_from_egraph;
 use crate::terms::{
-    BITE, EQ, FOBinder, Function, HAPPENS, LT, MACRO_FRAME, MITE, NONCE, PRED, RecFOFormula,
+    FOBinder, Function, RecExprIter, RecFOFormula, BITE, EQ, HAPPENS, LT, MACRO_FRAME, MITE, NONCE, PRED
 };
 use crate::{Lang, LangVar, Problem};
 
@@ -194,8 +194,8 @@ impl Nonce {
                 .sorts(id.signature.inputs_iter())
                 .quantifier(FOBinder::Forall)
                 .build();
-            self.inner_search_recexpr(pbl, &builder, cond);
-            self.inner_search_recexpr(pbl, &builder, msg);
+            self.inner_search_recexpr(pbl, &builder, RecExprIter::new(&cond));
+            self.inner_search_recexpr(pbl, &builder, RecExprIter::new(&msg));
         }
     }
 }
@@ -214,7 +214,7 @@ impl SyntaxSearcher for Nonce {
         _: &Problem,
         builder: &RefFormulaBuilder,
         fun: Function,
-        args: implvec!(&'a [LangVar]),
+        args: implvec!(RecExprIter<'a, LangVar>),
     ) {
         assert_eq!(fun, NONCE);
         tr!("found nonce!");

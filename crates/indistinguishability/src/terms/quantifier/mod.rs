@@ -39,7 +39,7 @@ pub trait QuantifierT: Eq + Sized {
     fn skolems(&self) -> &[Function];
     fn fresh_indices(&self) -> &[Function];
 
-    fn valid(&self, idx: usize, pbl: &Problem) -> bool {
+    fn valid(&self, idx: QuantifierIndex, pbl: &Problem) -> bool {
         default_valid(self, idx, pbl)
     }
 
@@ -84,14 +84,13 @@ pub trait QuantifierT: Eq + Sized {
     }
 }
 
-fn default_valid<Q: QuantifierT>(q: &Q, idx: usize, pbl: &Problem) -> bool {
+fn default_valid<Q: QuantifierT>(q: &Q, idx: QuantifierIndex, pbl: &Problem) -> bool {
+    ereturn_if!(q.temporary() != idx.temporary, false);
+    ereturn_if!(q.index() != idx, false);
+
     // it's at the right index location
     ereturn_if!(
-        pbl.functions()
-            .quantifiers(q.temporary())
-            .get(idx)
-            .and_then(|q| Q::try_from_ref(q))
-            != Some(q),
+        idx.get(pbl.functions()).and_then(|q| Q::try_from_ref(q)) != Some(q),
         false
     );
 

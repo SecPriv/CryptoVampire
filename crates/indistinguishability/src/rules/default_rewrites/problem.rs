@@ -53,10 +53,10 @@ fn mk_extra_rw_rules<N: Analysis<Lang>>(
 }
 
 fn mk_alias_rule<N: Analysis<Lang>>(
-    Problem { function, .. }: &Problem,
+    pbl: &Problem,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
-    function
-        .iter()
+    pbl.functions()
+        .iter_current()
         .filter_map(|f| f.alias.as_ref().map(|a| (f, a)))
         .flat_map(|(f, a)| a.iter().enumerate().map(move |(i, rw)| (i, f, rw)))
         .map(|(i, f, rw)| mk_alias_rule_1(i, f, rw))

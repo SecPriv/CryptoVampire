@@ -55,6 +55,16 @@ impl FunctionCollection {
         self.map_function.get(name).cloned()
     }
 
+    /// iterate over temporary and non temporary functions
+    pub fn iter_current<'a>(&'a self) -> impl Iterator<Item = &'a Function> {
+        chain![&self.functions, &self.temporary_functions]
+    }
+
+    /// iterate over the constant quantifiers and the temporary ones
+    pub fn current_quantifiers<'a>(&'a self) -> impl Iterator<Item = &'a Quantifier> {
+        chain![&self.quantifiers, &self.temporary_quantifiers]
+    }
+
     pub fn quantifiers(&self, temporary: bool) -> &[Quantifier] {
         if temporary {
             &self.temporary_quantifiers
@@ -161,14 +171,6 @@ macro_rules! decl_fun{
                 .output($o)
                 .call()
         }
-    }
-}
-
-impl Deref for FunctionCollection {
-    type Target = [Function];
-
-    fn deref(&self) -> &Self::Target {
-        &self.functions
     }
 }
 

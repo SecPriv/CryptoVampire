@@ -70,7 +70,7 @@ fn mk_header(pbl: &Problem) -> impl Iterator<Item = Smt<Sort, Function>> + use<'
 
     let functions = pbl
         .functions()
-        .iter()
+        .iter_current()
         .filter(|&x| should_declare_in_smt(x))
         .filter(|x| !x.is_datatype())
         .cloned()
@@ -235,8 +235,7 @@ fn mk_quantifiers(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     dynamic_iter!(Tmp; A:A, B:B);
     let ax = pbl
         .functions()
-        .quantifiers()
-        .iter()
+        .current_quantifiers()
         .flat_map(|q| match q {
             Quantifier::Exists(e) => Tmp::A(mk_exists_1(e)),
             Quantifier::FindSuchThat(e) => Tmp::B(mk_fdst_1(e)),
@@ -332,7 +331,7 @@ fn mk_alias_1(
 fn mk_alias(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     let aliases = pbl
         .functions()
-        .iter()
+        .iter_current()
         .filter(|x| should_declare_in_smt(x))
         .filter_map(|f| f.alias.as_ref().map(|a| (f, a)))
         .flat_map(|(f, a)| a.0.iter().flat_map(|arw| mk_alias_1(f, arw)))

@@ -10,7 +10,7 @@ use crate::rules::utils::SyntaxSearcher;
 use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::terms::utils::offset;
 use crate::terms::{
-    Function, HAPPENS, IS_INDEPENDANT_BITSTRING, LT, MACRO_FRAME, NONCE, RecFOFormula, Sort,
+    Function, RecExprIter, RecFOFormula, Sort, HAPPENS, IS_INDEPENDANT_BITSTRING, LT, MACRO_FRAME, NONCE
 };
 use crate::{MSmt, MSmtFormula, Problem};
 
@@ -19,7 +19,7 @@ pub fn mk_no_guessing_smt<'a>(pbl: &'a Problem) -> impl Iterator<Item = MSmt> + 
         [MSmt::Comment("no guessing theorem & co".into())],
         chain![
             [mk_no_guessing_theorem(), mk_smt_nonce(),],
-            pbl.function.iter().filter_map(mk_smt_fun_one),
+            pbl.functions().iter_current().filter_map(mk_smt_fun_one),
             pbl.protocols().iter().map(|ptcl| mk_smt_step(pbl, ptcl))
         ]
         .map(MSmt::mk_assert)
@@ -115,8 +115,8 @@ fn mk_smt_step<'a>(pbl: &'a Problem, ptcl: &'a Protocol) -> MSmtFormula {
             .variables(vars)
             .sorts(id.signature.inputs_iter())
             .build();
-        nonce.inner_search_recexpr(pbl, &builder, &cond);
-        nonce.inner_search_recexpr(pbl, &builder, &msg);
+        nonce.inner_search_recexpr(pbl, &builder, RecExprIter::new(&cond));
+        nonce.inner_search_recexpr(pbl, &builder, RecExprIter::new(&msg));
     }
     let formula = builder.into_inner().unwrap().into_formula().into_smt();
 

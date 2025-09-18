@@ -11,8 +11,8 @@ use crate::terms::{Quantifier, QuantifierT};
 use crate::{Lang, Problem};
 
 pub fn mk_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'_> {
-    debug_assert!(pbl.function.valid());
-    pbl.function.quantifiers().iter().map(|q| match q {
+    debug_assert!(pbl.functions().valid());
+    pbl.functions().current_quantifiers().map(|q| match q {
         Quantifier::Exists(q) => mk_quantifier_deduce_rules_one(pbl, q),
         Quantifier::FindSuchThat(q) => mk_quantifier_deduce_rules_one(pbl, q),
     })

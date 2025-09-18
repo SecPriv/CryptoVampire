@@ -17,8 +17,8 @@ use crate::{Lang, LangVar, Problem};
 ///
 /// for all "regular" `f`s
 pub fn mk_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'_> {
-    pbl.function
-        .iter()
+    pbl.functions()
+        .iter_current()
         .filter(|x| should_process_normaly(x))
         .map(mk_deduce_rule)
 }

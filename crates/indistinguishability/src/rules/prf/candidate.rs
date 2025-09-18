@@ -34,8 +34,8 @@ fn mk_rewrite_init<'a>(
 }
 
 fn mk_rewrite_regular<'a>(pbl: &'a Problem, prf: &'a PRF) -> impl Iterator<Item = Rewrite> {
-    pbl.function
-        .iter()
+    pbl.functions()
+        .iter_current()
         .filter(|f| !f.is_out_of_term_algebra())
         .filter(|f| matches!(f.signature.output, Sort::Bitstring | Sort::Bool))
         .filter(|f| (!f.is_special_subterm()) || f.is_if_then_else())

@@ -13,10 +13,12 @@ pub fn mk_rewrites<N: Analysis<Lang>>(
     pbl: &Problem,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
     dynamic_iter!(Tmp; A:A, B:B);
-    pbl.function.quantifiers().iter().flat_map(|e| match e {
-        Quantifier::Exists(e) => Tmp::A(mk_exists_rules_one(pbl, e)),
-        Quantifier::FindSuchThat(e) => Tmp::B(mk_fdst_rules_one(pbl, e)),
-    })
+    pbl.functions()
+        .current_quantifiers()
+        .flat_map(|e| match e {
+            Quantifier::Exists(e) => Tmp::A(mk_exists_rules_one(pbl, e)),
+            Quantifier::FindSuchThat(e) => Tmp::B(mk_fdst_rules_one(pbl, e)),
+        })
 }
 
 fn mk_exists_rules_one<'a, N: Analysis<Lang>>(
