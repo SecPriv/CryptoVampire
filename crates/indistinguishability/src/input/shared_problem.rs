@@ -14,7 +14,7 @@ use crate::input::shared_exists::ShrExists;
 use crate::input::shared_fdst::ShrFindSuchThat;
 use crate::input::var::SVar;
 use crate::protocol::Step;
-use crate::terms::{Exists, FindSuchThat, Function, RecFOFormula, Rewrite, Sort};
+use crate::terms::{Exists, FindSuchThat, Function, QuantifierT, RecFOFormula, Rewrite, Sort};
 use crate::{MSmt, Problem};
 
 declare_trace!($"shrpblm");
@@ -86,7 +86,7 @@ impl ShrProblem {
     }
 
     fn declare_function(self, fun: Function) -> Function {
-        self.borrow_mut().function.add(fun.clone());
+        self.borrow_mut().functions_mut().add(fun.clone());
         fun
     }
 
@@ -129,29 +129,27 @@ impl ShrProblem {
 
     fn declare_exists(&self, captured: Vec<Sort>, bound: Vec<Sort>) -> ShrExists {
         let mut pbl = self.borrow_mut();
-        let index = pbl.function.quantifiers().len();
-        Exists::insert()
+        let exist = Exists::insert()
             .bvars_sorts(bound)
             .cvars_sort(captured)
             .pbl(&mut pbl)
             .call();
         ShrExists {
             pbl: self.clone(),
-            index,
+            index: exist.index().index,
         }
     }
 
     fn declare_fdst(&self, captured: Vec<Sort>, bound: Vec<Sort>) -> ShrFindSuchThat {
         let mut pbl = self.borrow_mut();
-        let index = pbl.function.quantifiers().len();
-        FindSuchThat::insert()
+        let fdst =FindSuchThat::insert()
             .bvars_sorts(bound)
             .cvars_sort(captured)
             .pbl(&mut pbl)
             .call();
         ShrFindSuchThat {
             pbl: self.clone(),
-            index,
+            index: fdst.index().index,
         }
     }
 

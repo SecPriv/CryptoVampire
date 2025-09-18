@@ -6,7 +6,7 @@ use itertools::{chain, izip};
 use utils::{ereturn_if, match_as_trait};
 
 use crate::Problem;
-use crate::terms::{Function, Sort};
+use crate::terms::{Function, QuantifierIndex, Sort};
 mod exists;
 mod find;
 pub use find::*;
@@ -77,6 +77,10 @@ pub trait QuantifierT: Eq + Sized {
 
     fn bvars_as_lang(&self) -> impl Iterator<Item = crate::LangVar> + use<'_, Self> {
         self.bvars().iter().copied().map(egg::ENodeOrVar::Var)
+    }
+
+    fn index(&self) -> QuantifierIndex {
+        self.top_level_function().get_quantifier_index().unwrap()
     }
 }
 

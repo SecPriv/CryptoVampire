@@ -8,7 +8,7 @@ use steel_derive::Steel;
 use crate::input::Registerable;
 use crate::input::shared_problem::ShrProblem;
 use crate::input::var::SVar;
-use crate::terms::{Exists, Function, QuantifierT, RecFOFormula};
+use crate::terms::{Exists, Function, QuantifierIndex, QuantifierT, RecFOFormula};
 
 #[derive(Debug, Clone, Steel)]
 pub struct ShrExists {
@@ -17,15 +17,22 @@ pub struct ShrExists {
 }
 
 impl ShrExists {
+    pub fn index(&self) -> QuantifierIndex {
+        QuantifierIndex {
+            temporary: false,
+            index: self.index,
+        }
+    }
+
     fn exists(&self) -> Ref<'_, Exists> {
-        Ref::map(self.pbl.borrow(), |x| {
-            Exists::try_from_ref(&x.function.quantifiers()[self.index]).unwrap()
+        Ref::map(self.pbl.borrow(), |pbl| {
+            Exists::try_from_ref(self.index().get(pbl.functions()).unwrap()).unwrap()
         })
     }
 
     fn exists_mut(&self) -> RefMut<'_, Exists> {
-        RefMut::map(self.pbl.borrow_mut(), |x| {
-            Exists::try_from_mut(x.function.get_mut_quantifier(self.index).unwrap()).unwrap()
+        RefMut::map(self.pbl.borrow_mut(), |pbl| {
+            Exists::try_from_mut(self.index().get_mut(pbl.functions_mut()).unwrap()).unwrap()
         })
     }
 

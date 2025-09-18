@@ -8,7 +8,7 @@ use steel_derive::Steel;
 use crate::input::Registerable;
 use crate::input::shared_problem::ShrProblem;
 use crate::input::var::SVar;
-use crate::terms::{FindSuchThat, Function, QuantifierT, RecFOFormula};
+use crate::terms::{FindSuchThat, Function, QuantifierIndex, QuantifierT, RecFOFormula};
 
 #[derive(Debug, Clone, Steel)]
 pub struct ShrFindSuchThat {
@@ -17,15 +17,22 @@ pub struct ShrFindSuchThat {
 }
 
 impl ShrFindSuchThat {
+    pub fn index(&self) -> QuantifierIndex {
+        QuantifierIndex {
+            temporary: false,
+            index: self.index,
+        }
+    }
+
     fn fdst(&self) -> Ref<'_, FindSuchThat> {
-        Ref::map(self.pbl.borrow(), |x| {
-            FindSuchThat::try_from_ref(&x.function.quantifiers()[self.index]).unwrap()
+        Ref::map(self.pbl.borrow(), |pbl| {
+            FindSuchThat::try_from_ref(self.index().get(pbl.functions()).unwrap()).unwrap()
         })
     }
 
     fn fdst_mut(&self) -> RefMut<'_, FindSuchThat> {
-        RefMut::map(self.pbl.borrow_mut(), |x| {
-            FindSuchThat::try_from_mut(x.function.get_mut_quantifier(self.index).unwrap()).unwrap()
+        RefMut::map(self.pbl.borrow_mut(), |pbl| {
+            FindSuchThat::try_from_mut(self.index().get_mut(pbl.functions_mut()).unwrap()).unwrap()
         })
     }
 
