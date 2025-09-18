@@ -9,8 +9,8 @@ use utils::{ereturn_if, ereturn_let, implvec};
 use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::terms::utils::offset;
 use crate::terms::{
-    Alias, AliasRewrite, EQ, Exists, FindSuchThat, Function, MACRO_COND, MACRO_MSG, Quantifier,
-    QuantifierT, RecFOFormula,
+    Alias, AliasRewrite, EQ, Exists, FindSuchThat, FormulaLike, Function, MACRO_COND, MACRO_MSG,
+    Quantifier, QuantifierT, RecExprIter, RecFOFormula,
 };
 use crate::{LangVar, Problem};
 
@@ -48,7 +48,7 @@ pub trait SyntaxSearcher {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         fun: Function,
-        args: implvec!(&'a [LangVar]),
+        args: implvec!(RecExprIter<'a, LangVar>),
     );
 
     /// discriminate whether `fun` has a specific subterm
@@ -59,14 +59,19 @@ pub trait SyntaxSearcher {
         default_is_special(self, pbl, fun)
     }
 
-    fn inner_search_recexpr(&self, pbl: &Problem, builder: &RefFormulaBuilder, term: &[LangVar]) {
+    fn inner_search_recexpr(
+        &self,
+        pbl: &Problem,
+        builder: &RefFormulaBuilder,
+        term: RecExprIter<'_, LangVar>,
+    ) {
         assert!(builder.current_mode().is_and());
         ereturn_if!(builder.is_saturated());
-        ereturn_let!(let Destructed { head: HeadSk::Fun(fun), args} = term.destruct());
         tr!(
             "searching through {}",
             egg::RecExpr::from(term.iter().cloned().collect_vec())
         );
+        ereturn_let!(let Destructed { head: HeadSk::Fun(fun), args} = term.destruct());
         if self.is_instance(pbl, &fun) {
             self.process_instance(pbl, builder, fun, args);
         } else if self.is_special(pbl, &fun) {
@@ -84,7 +89,7 @@ pub trait SyntaxSearcher {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         fun: Function,
-        args: implvec!(&'b [LangVar]),
+        args: implvec!(RecExprIter<'b, LangVar>),
     ) {
         assert!(builder.current_mode().is_and());
         assert!(self.is_special(pbl, &fun));
@@ -108,7 +113,7 @@ pub trait SyntaxSearcher {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         Alias(rws): &Alias,
-        args: implvec!(&'b [LangVar]),
+        args: implvec!(RecExprIter<'b, LangVar>),
     ) {
         assert!(builder.current_mode().is_and());
         tr!("in search_alias");
@@ -145,7 +150,7 @@ pub trait SyntaxSearcher {
             assert_eq!(from.len(), args.len());
             let condition = RecFOFormula::and(
                 izip!(args.iter(), from.iter())
-                    .map(|(arg, f)| EQ.rapp(vec![RecFOFormula::from(*arg), f.as_ref().into()])),
+                    .map(|(arg, f)| EQ.rapp(vec![arg.clone().into(), f.as_ref().into()])),
             );
             let builder = builder
                 .add_node()
@@ -157,9 +162,9 @@ pub trait SyntaxSearcher {
                 .sorts(sorts.iter().cloned())
                 .min_var(max_var)
                 .build();
-            self.inner_search_recexpr(pbl, &builder, &to);
+            self.inner_search_recexpr(pbl, &builder, to.as_formula());
             for arg in &args {
-                self.inner_search_recexpr(pbl, &builder, arg);
+                self.inner_search_recexpr(pbl, &builder, arg.clone());
             }
         }
     }
@@ -169,52 +174,53 @@ pub trait SyntaxSearcher {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         e: &Exists,
-        args: implvec!(&'b [LangVar]),
+        args: implvec!(RecExprIter<'b, LangVar>),
     ) {
         tr!("in search_exists {e}");
-        let args = args
-            .into_iter()
-            .map(Vec::from)
-            .map(RecExpr::from)
-            .collect_vec();
-        let max_var_args = args
-            .iter()
-            .flat_map(|x| x.free_vars_iter())
-            .filter_map(|v| Var::as_u32(&v))
-            .max()
-            .unwrap_or(0);
+        todo!()
+        // let args = args
+        //     .into_iter()
+        //     .map(Vec::from)
+        //     .map(RecExpr::from)
+        //     .collect_vec();
+        // let max_var_args = args
+        //     .iter()
+        //     .flat_map(|x| x.free_vars_iter())
+        //     .filter_map(|v| Var::as_u32(&v))
+        //     .max()
+        //     .unwrap_or(0);
 
-        // offsets everything
-        let n = u32::max(builder.min_var(), max_var_args) + 1;
-        let cvars = e
-            .cvars()
-            .iter()
-            .cloned()
-            .map(|var| offset::var(n, var))
-            .collect_vec();
-        let bvars = e
-            .bvars()
-            .iter()
-            .cloned()
-            .map(|var| offset::var(n, var))
-            .collect_vec();
-        let patt = offset::rexpr_owned(n, e.patt().iter().cloned());
+        // // offsets everything
+        // let n = u32::max(builder.min_var(), max_var_args) + 1;
+        // let cvars = e
+        //     .cvars()
+        //     .iter()
+        //     .cloned()
+        //     .map(|var| offset::var(n, var))
+        //     .collect_vec();
+        // let bvars = e
+        //     .bvars()
+        //     .iter()
+        //     .cloned()
+        //     .map(|var| offset::var(n, var))
+        //     .collect_vec();
+        // let patt = offset::rexpr_owned(n, e.patt().iter().cloned());
 
-        let content = {
-            let subst = izip!(cvars.iter().cloned(), args).collect_vec();
-            patt.clone().apply_pattern_subst(subst)
-        };
+        // let content = {
+        //     let subst = izip!(cvars.iter().cloned(), args).collect_vec();
+        //     patt.clone().apply_pattern_subst(subst)
+        // };
 
-        let builder = builder
-            .add_node()
-            .and()
-            .forall()
-            .min_var(n + (bvars.len() as u32))
-            .variables(bvars)
-            .sorts(e.bvars_sorts())
-            .build();
+        // let builder = builder
+        //     .add_node()
+        //     .and()
+        //     .forall()
+        //     .min_var(n + (bvars.len() as u32))
+        //     .variables(bvars)
+        //     .sorts(e.bvars_sorts())
+        //     .build();
 
-        self.inner_search_recexpr(pbl, &builder, &content);
+        // self.inner_search_recexpr(pbl, &builder, &content);
     }
 
     fn search_fdst<'b>(
@@ -222,70 +228,71 @@ pub trait SyntaxSearcher {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         fdst: &FindSuchThat,
-        args: implvec!(&'b [LangVar]),
+        args: implvec!(RecExprIter<'b, LangVar>),
     ) {
-        tr!("in search_find_such_that {fdst}");
-        let args = args
-            .into_iter()
-            .map(Vec::from)
-            .map(RecExpr::from)
-            .collect_vec();
-        let max_var_args = args
-            .iter()
-            .flat_map(|x| x.free_vars_iter())
-            .filter_map(|v| Var::as_u32(&v))
-            .max()
-            .unwrap_or(0);
+        todo!()
+        // tr!("in search_find_such_that {fdst}");
+        // let args = args
+        //     .into_iter()
+        //     .map(Vec::from)
+        //     .map(RecExpr::from)
+        //     .collect_vec();
+        // let max_var_args = args
+        //     .iter()
+        //     .flat_map(|x| x.free_vars_iter())
+        //     .filter_map(|v| Var::as_u32(&v))
+        //     .max()
+        //     .unwrap_or(0);
 
-        // offsets everything
-        let n = u32::max(builder.min_var(), max_var_args) + 1;
-        let cvars = fdst
-            .cvars()
-            .iter()
-            .cloned()
-            .map(|var| offset::var(n, var))
-            .collect_vec();
-        let bvars = fdst
-            .bvars()
-            .iter()
-            .cloned()
-            .map(|var| offset::var(n, var))
-            .collect_vec();
+        // // offsets everything
+        // let n = u32::max(builder.min_var(), max_var_args) + 1;
+        // let cvars = fdst
+        //     .cvars()
+        //     .iter()
+        //     .cloned()
+        //     .map(|var| offset::var(n, var))
+        //     .collect_vec();
+        // let bvars = fdst
+        //     .bvars()
+        //     .iter()
+        //     .cloned()
+        //     .map(|var| offset::var(n, var))
+        //     .collect_vec();
 
-        let subst = izip!(cvars.iter().cloned(), args).collect_vec();
-        let [condition, then_branch, else_branch] =
-            [fdst.condition(), fdst.then_branch(), fdst.else_branch()]
-                .map(|p| offset::rexpr_owned(n, p.iter().cloned()))
-                .map(|p| p.apply_pattern_subst(subst.clone()));
+        // let subst = izip!(cvars.iter().cloned(), args).collect_vec();
+        // let [condition, then_branch, else_branch] =
+        //     [fdst.condition(), fdst.then_branch(), fdst.else_branch()]
+        //         .map(|p| offset::rexpr_owned(n, p.iter().cloned()))
+        //         .map(|p| p.apply_pattern_subst(subst.clone()));
 
-        let builder = builder
-            .add_node()
-            .and()
-            .forall()
-            .min_var(n + (bvars.len() as u32))
-            .variables(bvars)
-            .sorts(fdst.bvars_sorts())
-            .build();
+        // let builder = builder
+        //     .add_node()
+        //     .and()
+        //     .forall()
+        //     .min_var(n + (bvars.len() as u32))
+        //     .variables(bvars)
+        //     .sorts(fdst.bvars_sorts())
+        //     .build();
 
-        self.inner_search_recexpr(pbl, &builder, &condition);
-        let condition = RecFOFormula::from(condition);
-        {
-            let builder = builder
-                .add_node()
-                .and()
-                .forall()
-                .condition(condition.clone())
-                .build();
-            self.inner_search_recexpr(pbl, &builder, &then_branch);
-        }
-        {
-            let builder = builder
-                .add_node()
-                .and()
-                .forall()
-                .condition(!condition)
-                .build();
-            self.inner_search_recexpr(pbl, &builder, &else_branch);
-        }
+        // self.inner_search_recexpr(pbl, &builder, &condition);
+        // let condition = RecFOFormula::from(condition);
+        // {
+        //     let builder = builder
+        //         .add_node()
+        //         .and()
+        //         .forall()
+        //         .condition(condition.clone())
+        //         .build();
+        //     self.inner_search_recexpr(pbl, &builder, &then_branch);
+        // }
+        // {
+        //     let builder = builder
+        //         .add_node()
+        //         .and()
+        //         .forall()
+        //         .condition(!condition)
+        //         .build();
+        //     self.inner_search_recexpr(pbl, &builder, &else_branch);
+        // }
     }
 }

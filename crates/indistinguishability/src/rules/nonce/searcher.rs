@@ -3,7 +3,6 @@ use std::borrow::Cow;
 use bon::bon;
 use egg::{Analysis, EGraph, Id};
 use itertools::Itertools;
-use logic_formula::egg::SimplLang;
 use utils::{ereturn_if, implvec};
 
 use super::*;
@@ -42,7 +41,7 @@ impl Nonce {
         egraph: &EGraph<Lang, PAnalysis<'a>>,
         builder: RefFormulaBuilder,
         current: Id,
-        visited: im_rc::HashSet<Id>,
+        visited: rpds::HashTrieSet<Id>,
     ) {
         tr!("looking at {current:}");
         ereturn_if!(builder.is_saturated());
@@ -58,7 +57,7 @@ impl Nonce {
 
         // first loop for early exit if necessary
         // This takes care of the cases that replace the whole builder
-        for SimplLang { head, args } in eclass.iter() {
+        for crate::Lang { head, args } in eclass.iter() {
             tr!(
                 "early looking through {head}:{current:}({})",
                 args.iter().join(", ")
@@ -87,9 +86,9 @@ impl Nonce {
 
         // fresh if indep of *one* of the e-class
         let builder = builder.add_node().or().build();
-        let visited = visited.update(current);
+        let visited = visited.insert(current);
 
-        for SimplLang { head, args } in eclass.iter() {
+        for crate::Lang { head, args } in eclass.iter() {
             tr!(
                 "looking through {head}:{current:}({})",
                 args.iter().join(", ")
@@ -121,7 +120,7 @@ impl Nonce {
         egraph: &EGraph<Lang, PAnalysis<'a>>,
         builder: &RefFormulaBuilder,
         args: &[Id],
-        visited: im_rc::HashSet<Id>,
+        visited: rpds::HashTrieSet<Id>,
     ) {
         tr!("in ite");
         let builder = builder.add_node().and().build();

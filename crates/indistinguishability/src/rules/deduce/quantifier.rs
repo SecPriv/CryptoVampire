@@ -4,7 +4,6 @@ use std::ops::Deref;
 use egg::{ENodeOrVar, Pattern, Var};
 use golgge::PrologRule;
 use itertools::{Itertools, chain};
-use logic_formula::egg::SimpleDiscriminant;
 
 use crate::rules::deduce::{self, GetDeduce};
 use crate::terms::utils::offset;

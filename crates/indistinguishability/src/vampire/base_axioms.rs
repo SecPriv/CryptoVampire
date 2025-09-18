@@ -2,7 +2,6 @@ use cryptovampire_macros::{smt, vec_smt};
 use cryptovampire_smt::{Smt, SmtCons, SmtFormula, SortedVar};
 use egg::RecExpr;
 use itertools::{Itertools, chain, izip};
-use logic_formula::egg::SimpleDiscriminant;
 use utils::{dynamic_iter, ereturn_if};
 
 use crate::terms::{
@@ -49,7 +48,7 @@ fn mk_header(pbl: &Problem) -> impl Iterator<Item = Smt<Sort, Function>> + use<'
         sorts: vec![Sort::Nonce, Sort::Protocol],
         cons: vec![
             // nonces
-            pbl.function
+            pbl.functions()
                 .nonces()
                 .map(|f| SmtCons {
                     fun: f.clone(),
@@ -58,7 +57,7 @@ fn mk_header(pbl: &Problem) -> impl Iterator<Item = Smt<Sort, Function>> + use<'
                 })
                 .collect(),
             // protocols
-            pbl.function
+            pbl.functions()
                 .protocols()
                 .map(|f| SmtCons {
                     fun: f.clone(),
@@ -70,7 +69,7 @@ fn mk_header(pbl: &Problem) -> impl Iterator<Item = Smt<Sort, Function>> + use<'
     };
 
     let functions = pbl
-        .function
+        .functions()
         .iter()
         .filter(|&x| should_declare_in_smt(x))
         .filter(|x| !x.is_datatype())
@@ -134,7 +133,7 @@ fn mk_pseudo_datatype_diff(funs: Vec<Function>) -> impl Iterator<Item = MSmt> {
 
 fn mk_nonces_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     use Smt::*;
-    let nonces = pbl.function.nonces().cloned().collect_vec();
+    let nonces = pbl.functions().nonces().cloned().collect_vec();
 
     chain! {
         [Comment("nonce distinctness".into())],
@@ -235,7 +234,7 @@ fn mk_base_rewrite(_: &Problem) -> impl Iterator<Item = MSmt> {
 fn mk_quantifiers(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     dynamic_iter!(Tmp; A:A, B:B);
     let ax = pbl
-        .function
+        .functions()
         .quantifiers()
         .iter()
         .flat_map(|q| match q {
@@ -332,7 +331,7 @@ fn mk_alias_1(
 
 fn mk_alias(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     let aliases = pbl
-        .function
+        .functions()
         .iter()
         .filter(|x| should_declare_in_smt(x))
         .filter_map(|f| f.alias.as_ref().map(|a| (f, a)))

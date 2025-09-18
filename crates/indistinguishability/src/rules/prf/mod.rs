@@ -4,7 +4,6 @@ use egg::{Id, Language, Pattern, RecExpr, Searcher, Var};
 use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain};
 use log::{Log, log_enabled};
-use logic_formula::egg::SimpleDiscriminant;
 use utils::ereturn_let;
 
 use crate::problem::{PAnalysis, PRule};

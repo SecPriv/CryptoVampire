@@ -7,10 +7,9 @@ use egg::{Analysis, ENodeOrVar, Pattern, PatternAst, RecExpr, Rewrite, Var};
 use itertools::{Itertools, izip};
 use log::trace;
 use logic_formula::Formula;
-use logic_formula::egg::SimpleDiscriminant;
 
-use super::{MacroKind, ProtocolLanguage};
-use crate::terms::{EMPTY, Function, INIT, TRUE, UNFOLD_COND, UNFOLD_MSG};
+use super::MacroKind;
+use crate::terms::{EMPTY, FormulaLike, Function, INIT, TRUE, UNFOLD_COND, UNFOLD_MSG};
 use crate::vampire::convert::{formula_to_smt, var_to_smt};
 use crate::{Lang, LangVar, MSmt, MSmtFormula, rexp};
 
@@ -62,8 +61,15 @@ impl Step {
     }
 
     pub fn valid(&self) -> bool {
-        self.cond.free_vars_iter().all(|v| self.vars.contains(&v))
-            && self.msg.free_vars_iter().all(|v| self.vars.contains(&v))
+        self.cond
+            .as_formula()
+            .free_vars_iter()
+            .all(|v| self.vars.contains(&v))
+            && self
+                .msg
+                .as_formula()
+                .free_vars_iter()
+                .all(|v| self.vars.contains(&v))
     }
 }
 
@@ -94,14 +100,14 @@ impl Step {
 
         let unfold_cond = Rewrite::new(
             format!("unfold cond {name} in {ptcl}"),
-            Pattern::<Lang>::from(ProtocolLanguage::app_unfold(MacroKind::Cond, &name, ptcl)),
-            Pattern::<Lang>::from(self.cond.clone()),
+            Pattern::from(MacroKind::Cond.get_unfold().app_var(&[&name, &ptcl])),
+            Pattern::from(self.cond.clone()),
         )
         .unwrap();
         let unfold_msg = Rewrite::new(
             format!("unfold msg {name} in {ptcl}"),
-            Pattern::<Lang>::from(ProtocolLanguage::app_unfold(MacroKind::Msg, &name, ptcl)),
-            Pattern::<Lang>::from(self.msg.clone()),
+            Pattern::from(MacroKind::Msg.get_unfold().app_var(&[&name, &ptcl])),
+            Pattern::from(self.msg.clone()),
         )
         .unwrap();
 

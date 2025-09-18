@@ -3,7 +3,7 @@ use std::fmt::Display;
 use std::ops::Deref;
 
 use cryptovampire_smt::SmtHead;
-use logic_formula::egg::{SimplLang, SimpleDiscriminant};
+use egg::{Id, Language, PatternAst, RecExpr};
 use serde::Serialize;
 use steel::rvals::IntoSteelVal;
 use steel::steel_vm::register_fn::RegisterFn;
@@ -13,12 +13,14 @@ use utils::{ereturn_if, implvec, match_eq};
 
 use crate::input::Registerable;
 use crate::input::shared_cryptography::ShrCrypto;
-use crate::protocol::{MacroKind, ProtocolLanguage};
+use crate::protocol::{MacroKind};
 use crate::terms::{
     Alias, BUILTINS, Exists, FunctionCollection, FunctionFlags, HAPPENS, MACRO_COND, MACRO_EXEC,
     MACRO_FRAME, MACRO_INPUT, MACRO_MSG, NOT, Quantifier, QuantifierT, RecFOFormula, Signature,
     Sort, TRUE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin,
 };
+use crate::utils::LightClone;
+use crate::{Lang, LangVar};
 
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
@@ -151,8 +153,38 @@ impl Function {
         }}
     }
 
+    // =========================================================
+    // ========================= app ===========================
+    // =========================================================
+
     pub fn rapp(&self, args: implvec!(RecFOFormula)) -> RecFOFormula {
         RecFOFormula::app(self.clone(), args.into_iter().collect())
+    }
+
+    /// Builds a [SimplLang]. Panics if not valid
+    pub fn app_id(&self, ids: implvec!(Id)) -> Lang {
+        Lang::new(self.clone(), ids)
+    }
+
+    pub fn app<E: AsRef<[Lang]>>(
+        &self,
+        ids: &[E],
+    ) -> RecExpr<Lang> {
+        let head = self.app_id((0..ids.len()).map(Id::from));
+        head.join_recexprs(|i| &ids[usize::from(i)])
+    }
+
+    pub fn app_var<E: AsRef<[LangVar]>>(&self, ids: &[E]) -> PatternAst<Lang> {
+        let head = egg::ENodeOrVar::ENode(self.app_id((0..ids.len()).map(Id::from)));
+        head.join_recexprs(|i| &ids[usize::from(i)])
+    }
+
+    pub fn app_empty(&self) -> RecExpr<Lang> {
+        self.app::<[_; 0]>(&[])
+    }
+
+    pub fn app_empty_var(&self) -> PatternAst<Lang> {
+        self.app_var::<[_; 0]>(&[])
     }
 
     // =========================================================
@@ -262,6 +294,10 @@ impl Function {
             .intersects(FunctionFlags::FIND_SUCH_THAT | FunctionFlags::BINDER)
     }
 
+    pub fn is_egg_binder(&self) -> bool {
+        self.flags.contains(FunctionFlags::BINDER)
+    }
+
     // =========================================================
     // ====================== Steel API ========================
     // =========================================================
@@ -332,28 +368,4 @@ impl AsRef<Self> for Function {
     }
 }
 
-// ~~~~~~~~~~~~ egg::Language ~~~~~~~~~~~~~~~
-
-impl SimpleDiscriminant for Function {
-    fn valid(&self, ids: &[egg::Id]) -> bool {
-        self.arity() == ids.len()
-    }
-}
-
-impl<const N: usize> ProtocolLanguage for SimplLang<Function, N> {
-    fn mk_happens(step: egg::Id) -> Self {
-        HAPPENS.app_id([step])
-    }
-
-    fn mk_true() -> Self {
-        TRUE.app_id([])
-    }
-
-    fn mk_macro(kind: MacroKind, step: egg::Id, ptcl: egg::Id) -> Self {
-        Function::macro_from_kind(kind).app_id([step, ptcl])
-    }
-
-    fn mk_unfold(kind: MacroKind, step: egg::Id, ptcl: egg::Id) -> Self {
-        Function::unfold_from_kind(kind).app_id([step, ptcl])
-    }
-}
+impl LightClone for Function {}

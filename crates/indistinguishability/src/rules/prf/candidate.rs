@@ -1,6 +1,5 @@
 use egg::{ENodeOrVar, Id};
 use itertools::{Itertools, chain};
-use logic_formula::egg::SimpleDiscriminant;
 
 use crate::rules::PRF;
 use crate::rules::utils::generate_rule_vars0;

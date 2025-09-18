@@ -82,7 +82,7 @@ pub trait QuantifierT: Eq + Sized {
 fn default_valid<Q: QuantifierT>(q: &Q, idx: usize, pbl: &Problem) -> bool {
     // it's at the right index location
     ereturn_if!(
-        pbl.function
+        pbl.functions()
             .quantifiers()
             .get(idx)
             .and_then(|q| Q::try_from_ref(q))

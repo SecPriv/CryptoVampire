@@ -15,7 +15,6 @@ use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr, Searcher, Var};
 use golgge::{Dependancy, Rule};
 use indexmap::IndexMap;
 use itertools::{Itertools, izip};
-use logic_formula::egg::SimpleDiscriminant;
 use rustc_hash::{FxHashMap, FxHashSet};
 use static_init::dynamic;
 use utils::transposer::VecTranspose;

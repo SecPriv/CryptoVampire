@@ -4,7 +4,6 @@
 
 use egg::{Analysis, ENodeOrVar, Pattern, Rewrite, Var};
 use itertools::{Itertools, chain};
-use logic_formula::egg::SimpleDiscriminant;
 
 use crate::terms::{Function, LAMBDA_LET, LAMBDA_O, LAMBDA_S};
 use crate::{Lang, Problem, rexp};

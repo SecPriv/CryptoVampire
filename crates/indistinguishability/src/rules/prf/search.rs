@@ -4,7 +4,6 @@ use cryptovampire_smt::{IntoSmt, SmtFormula};
 use egg::{Pattern, PatternAst, Searcher, Var};
 use golgge::{Dependancy, PrologRule, Rule};
 use itertools::{Itertools, chain, izip};
-use logic_formula::egg::SimpleDiscriminant;
 use utils::{ereturn_if, ereturn_let, implvec};
 
 use crate::problem::{PAnalysis, PRule, RcRule};

@@ -10,7 +10,6 @@ use egg::{EGraph, RecExpr};
 use golgge::{Program, Rule};
 use itertools::{Itertools, chain};
 use log::trace;
-use logic_formula::egg::SimpleDiscriminant;
 use utils::implvec;
 
 use crate::problem::function_builder::{
@@ -43,7 +42,7 @@ pub struct Problem {
     /// The vector must be at least 2 long
     protocols: Vec<Protocol>,
     /// The functions
-    pub function: FunctionCollection,
+    function: FunctionCollection,
 
     cryptography: Vec<CryptographicAssumption>,
 
@@ -384,6 +383,15 @@ impl Problem {
     pub(crate) fn current_step(&self) -> Option<&CurrentStep> {
         self.current_step.as_ref()
     }
+    
+    pub fn functions(&self) -> &FunctionCollection {
+        &self.function
+    }
+    
+    pub fn functions_mut(&mut self) -> &mut FunctionCollection {
+        self.clear_smt_prelude();
+        &mut self.function
+    }
 }
 
 impl Debug for Problem {
@@ -482,8 +490,7 @@ impl Problem {
             cryptography: cryptography.into(),
         };
         let fun = Function::new(inner);
-        self.function.add(fun.clone());
-        self.clear_smt_prelude();
+        self.functions_mut().add(fun.clone());
         fun
     }
 }

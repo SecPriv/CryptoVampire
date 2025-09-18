@@ -15,12 +15,13 @@ use crate::terms::{InnerFunction, Quantifier, Signature, Sort};
 /// The numbe of declared existential quantifiers
 ///
 /// This is used to generate unique names
-pub(crate) static QUANTIFIER_COUNT: AtomicUsize = AtomicUsize::new(0);
+// pub(crate) static QUANTIFIER_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 /// see [Self::valid] for the invariants
 #[derive(Debug, Default)]
 pub struct FunctionCollection {
     functions: Vec<Function>,
+    temporary_functions: Vec<Function>,
     map_function: HashMap<Cow<'static, str>, Function>,
     quantifiers: Vec<Quantifier>,
 }

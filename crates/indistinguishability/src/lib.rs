@@ -1,7 +1,6 @@
 use std::io::Write;
 
 use cryptovampire_smt::{Smt, SmtFormula};
-use logic_formula::egg::{SimplLang, SimplLangVar};
 use terms::{Function, Sort};
 
 // ~~~~~~~~~~~~~~~~ macros ~~~~~~~~~~~~~~~~~~
@@ -51,9 +50,8 @@ pub use configuration::Configuration;
 /// Our global analysis type
 pub type N = ();
 
-pub static SIZE: usize = 3;
-pub type Lang = SimplLang<Function, SIZE>;
-pub type LangVar = SimplLangVar<Function, SIZE>;
+pub type Lang = terms::InnerLang;
+pub type LangVar = egg::ENodeOrVar<Lang>;
 
 pub type MSmtFormula = SmtFormula<Sort, Function>;
 pub type MSmt = Smt<Sort, Function>;

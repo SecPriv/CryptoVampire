@@ -4,7 +4,6 @@ use std::collections::VecDeque;
 use egg::{Analysis, EGraph, ENodeOrVar, Id, Language, PatternAst, RecExpr, Var, VarExposed};
 use itertools::{EitherOrBoth, Itertools, izip};
 use log::error;
-use logic_formula::egg::SimplLang;
 use logic_formula::{Destructed, Formula, HeadSk};
 use utils::{econtinue_if, ereturn_if, implvec};
 

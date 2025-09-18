@@ -4,7 +4,6 @@ use std::collections::VecDeque;
 use egg::{Analysis, EGraph, ENodeOrVar, Id, Language, PatternAst, RecExpr, Var, VarExposed};
 use itertools::{EitherOrBoth, Itertools, izip};
 use log::error;
-use logic_formula::egg::SimplLang;
 use logic_formula::{Destructed, Formula, HeadSk};
 use utils::{econtinue_if, ereturn_if, implvec};
 
@@ -41,7 +40,7 @@ pub const fn mk_var(i: u32) -> LangVar {
 
 /// for [rexp]
 pub fn mk_app(head: &Function, args: implvec!(u32)) -> LangVar {
-    egg::ENodeOrVar::ENode(SimplLang::new(
+    egg::ENodeOrVar::ENode(crate::Lang::new(
         head.clone(),
         args.into_iter().map(Id::new_const),
     ))

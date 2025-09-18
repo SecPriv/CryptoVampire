@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use steel::rvals::IntoSteelVal;
 use steel_derive::Steel;
 
-use crate::input::Registerable;
+use crate::{input::Registerable, terms::{Function, BITSTRING_SORT, INDEX_SORT, TIME_SORT}};
 
 #[non_exhaustive]
 #[derive(
@@ -42,6 +42,15 @@ impl Sort {
     #[inline]
     pub fn unify(self, other: Self) -> bool {
         self.is_any() || other.is_any() || self == other
+    }
+
+    pub fn from_function(fun: &Function) -> Option<Self> {
+        match fun {
+            _ if fun == &BITSTRING_SORT => Some(Self::Bitstring),
+            _ if fun == &INDEX_SORT => Some(Self::Index),
+            _ if fun == &TIME_SORT => Some(Self::Time),
+            _ => None
+        }
     }
 }
 

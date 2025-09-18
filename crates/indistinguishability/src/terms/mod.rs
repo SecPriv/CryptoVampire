@@ -67,8 +67,9 @@ pub use functions_holder::*;
 pub(crate) mod flags;
 pub use flags::FunctionFlags;
 
-mod rec_formula;
-pub use rec_formula::{FOBinder, RecFOFormula};
+mod formula;
+pub(crate) use formula::InnerLang;
+pub use formula::{FOBinder, RecFOFormula, RecExprIter, FormulaLike};
 
 pub mod utils;
 

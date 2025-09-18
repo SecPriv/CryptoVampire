@@ -81,7 +81,6 @@ macro_rules! rexp {
 
 mod inner_recexpr {
     use egg::{Id, Var};
-    use logic_formula::egg::SimplLang;
 
     use crate::LangVar;
     use crate::terms::Function;
@@ -123,7 +122,7 @@ mod inner_recexpr {
     }
 
     const fn mk_app_inner(head: Function, [arg1, arg2, arg3]: [u32; 3], len: usize) -> LangVar {
-        egg::ENodeOrVar::ENode(SimplLang::new_const(head, mkargs![arg1, arg2, arg3], len))
+        egg::ENodeOrVar::ENode(crate::Lang::new_const(head, mkargs![arg1, arg2, arg3], len))
     }
 
     pub type RexpLang = LangVar;

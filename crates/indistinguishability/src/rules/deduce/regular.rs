@@ -1,7 +1,6 @@
 use egg::{Pattern, RecExpr, Var};
 use golgge::PrologRule;
 use itertools::{Itertools, izip};
-use logic_formula::egg::SimpleDiscriminant;
 
 use crate::rules::deduce::GetDeduce;
 use crate::rules::var_as_recexpr;
@@ -58,7 +57,7 @@ fn mk_input(
     vars: [Var; 4],
     left: &[Var],
     right: &[Var],
-) -> Pattern<logic_formula::egg::SimplLang<Function>> {
+) -> Pattern<Lang> {
     let left = f.app_var(&var_as_recexpr(left));
     let right = f.app_var(&var_as_recexpr(right));
     let vars = var_as_recexpr(&vars);

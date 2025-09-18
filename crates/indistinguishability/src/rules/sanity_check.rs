@@ -10,7 +10,6 @@ pub struct SanityCheck;
 impl<N: Analysis<Lang>> Rule<Lang, N> for SanityCheck {
     fn search(&self, pblm: &mut golgge::Program<Lang, N>, _: egg::Id) -> golgge::Dependancy {
         let egraph = pblm.egraph_mut();
-        use logic_formula::egg::SimpleDiscriminant;
 
         use crate::terms::{FALSE, TRUE};
 

@@ -4,18 +4,21 @@ use std::ops::{BitAnd, BitOr, Not, Shr};
 
 use cryptovampire_smt::{IntoSmt, SmtFormula, SmtQuantifier, SortedVar, VarInner};
 use egg::{Analysis, EGraph, Id, Language, PatternAst, RecExpr, Var};
-use im_rc::HashSet;
 use itertools::{Itertools, izip};
-use logic_formula::egg::SimplLang;
 use logic_formula::{Destructed, Formula, HeadSk};
+use rpds::HashTrieSet;
 use smallvec::SmallVec;
 use steel::rvals::IntoSteelVal;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 use utils::{dynamic_iter, ereturn_if, implvec, match_eq};
 
+use super::{FOBinder, RecFOFormulaQuant};
 use crate::input::Registerable;
 use crate::input::var::SVar;
+use crate::terms::formula::rec_exp_lang::RecExprIter;
+use crate::terms::formula::FormulaLike;
+use crate::terms::utils::pull_from_egraph;
 use crate::terms::{AND, BITE, EQ, FALSE, Function, IMPLIES, NOT, OR, Sort, TRUE, convert_smt_var};
 use crate::{Lang, LangVar};
 
@@ -33,16 +36,13 @@ pub enum RecFOFormula {
     },
     Var(Var),
 }
-
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Steel)]
-pub enum FOBinder {
-    Forall,
-    Exists,
-    FindSuchThat
-}
-
 impl RecFOFormula {
-    pub fn bind(kind: FOBinder, vars: Vec<Var>, sorts: Vec<Sort>, args: implvec!(RecFOFormula)) -> Self {
+    pub fn bind(
+        kind: FOBinder,
+        vars: Vec<Var>,
+        sorts: Vec<Sort>,
+        args: implvec!(RecFOFormula),
+    ) -> Self {
         assert_eq!(vars.len(), sorts.len());
         Self::Quantifier {
             head: kind,
@@ -132,7 +132,7 @@ impl RecFOFormula {
                     .iter()
                     .map(|arg| arg.as_recexp_inner(res).map(egg::Id::from))
                     .collect();
-                let head = SimplLang {
+                let head = crate::Lang {
                     head: head.clone(),
                     args: args?,
                 };
@@ -164,12 +164,7 @@ impl RecFOFormula {
         let mut id_buffer = Vec::new();
         let mut recexpr_buffer = Vec::new();
 
-        super::utils::pull_from_egraph::inner(
-            egraph,
-            id,
-            &mut id_buffer,
-            &mut recexpr_buffer,
-        )?;
+        pull_from_egraph::inner(egraph, id, &mut id_buffer, &mut recexpr_buffer)?;
 
         // all the ids referenced in `recexpr_buffer` are in `id_buffer`
         debug_assert!(
@@ -213,7 +208,7 @@ impl RecFOFormula {
     }
 
     /// helper function for [Self::subst]
-    fn inner_subst(&self, subst: &[(Var, Self)], bvars: &HashSet<Var>) -> Self {
+    fn inner_subst(&self, subst: &[(Var, Self)], bvars: &HashTrieSet<Var>) -> Self {
         match self {
             Self::Quantifier {
                 head,
@@ -222,12 +217,17 @@ impl RecFOFormula {
                 arg,
             } => {
                 let mut bvars = bvars.clone();
-                bvars.extend(vars.iter().cloned());
+                for &v in vars {
+                    bvars.insert_mut(v);
+                }
                 Self::Quantifier {
                     head: *head,
                     vars: vars.clone(),
                     sorts: sorts.clone(),
-                    arg: arg.iter().map(|arg| arg.inner_subst(subst, &bvars)).collect(),
+                    arg: arg
+                        .iter()
+                        .map(|arg| arg.inner_subst(subst, &bvars))
+                        .collect(),
                 }
             }
             Self::App { head, args } => Self::App {
@@ -296,24 +296,16 @@ impl RecFOFormula {
     }
 }
 
+
 impl From<&[LangVar]> for RecFOFormula {
     fn from(v: &[LangVar]) -> Self {
-        let Destructed { head, args } = v.destruct();
-        match head {
-            HeadSk::Var(v) => Self::Var(v),
-            HeadSk::Fun(head) => Self::App {
-                head,
-                args: args.map_into().collect(),
-            },
-            HeadSk::Quant(_) => unreachable!(),
-        }
+        v.as_formula().into()
     }
 }
 
 impl From<&RecExpr<LangVar>> for RecFOFormula {
     fn from(value: &RecExpr<LangVar>) -> Self {
-        let x: &[_] = value;
-        x.into()
+        value.as_formula().into()
     }
 }
 
@@ -351,23 +343,6 @@ impl Default for RecFOFormula {
         }
     }
 }
-
-pub struct RecFOFormulaQuant<'a> {
-    pub quantifier: FOBinder,
-    pub vars: Cow<'a, [Var]>,
-    pub sorts: Cow<'a, [Sort]>,
-}
-
-impl<'a> RecFOFormulaQuant<'a> {
-    pub fn new(quantifier: FOBinder, vars: Cow<'a, [Var]>, sorts: Cow<'a, [Sort]>) -> Self {
-        Self {
-            quantifier,
-            vars,
-            sorts,
-        }
-    }
-}
-
 impl Formula for RecFOFormula {
     type Var = egg::Var;
 
@@ -435,17 +410,9 @@ impl<'b> Formula for &'b RecFOFormula {
         }
     }
 }
-
-impl<'a> logic_formula::Bounder<Var> for RecFOFormulaQuant<'a> {
-    fn bounds(&self) -> impl Iterator<Item = Var> {
-        self.vars.iter().copied()
-    }
-}
-
 impl From<SmtFormula<Sort, Function>> for RecFOFormula {
     fn from(value: SmtFormula<Sort, Function>) -> Self {
         // TODO: find such that
-
 
         #[allow(unreachable_patterns)]
         match value {
@@ -556,7 +523,7 @@ impl IntoSmt<Sort> for RecFOFormula {
         match quantifier {
             FOBinder::Forall => SmtQuantifier::Forall(vars),
             FOBinder::Exists => SmtQuantifier::Exists(vars),
-            _ => todo!()
+            _ => todo!(),
         }
     }
 
@@ -571,23 +538,6 @@ impl Display for RecFOFormula {
         write!(f, "{smt}")
     }
 }
-
-impl FOBinder {
-    /// The value taken by the quantifier on an empty set
-    ///
-    /// ```text
-    /// \exists => false
-    /// \forall => true
-    /// ```
-    pub fn on_empty(&self) -> bool {
-        match self {
-            FOBinder::Forall => true,
-            FOBinder::Exists => false,
-            _ => todo!()
-        }
-    }
-}
-
 // =========================================================
 // ====================== Steel API ========================
 // =========================================================

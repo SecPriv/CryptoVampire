@@ -110,7 +110,7 @@ impl Exists {
             .map(|(i, _)| egg::Var::from_u32((i + bvars.len()) as u32))
             .collect();
 
-        let exists_idx = pbl.function.quantifiers().len();
+        let exists_idx = pbl.functions().quantifiers().len();
 
         let n_exists = QUANTIFIER_COUNT.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
 
@@ -132,7 +132,7 @@ impl Exists {
                 }
             };
             tlf = Function::new(inner_tlf);
-            pbl.function.add(tlf.clone());
+            pbl.functions().add(tlf.clone());
         }
 
         {
@@ -150,7 +150,7 @@ impl Exists {
                     }
                 };
                 let sk = Function::new(inner_skolem);
-                pbl.function.add(sk.clone());
+                pbl.functions().add(sk.clone());
                 skolem_vec.push(sk);
             }
             skolems = skolem_vec.into();
@@ -170,13 +170,13 @@ impl Exists {
                     }
                 };
                 let frsh = Function::new(inner_fresh);
-                pbl.function.add(frsh.clone());
+                pbl.functions().add(frsh.clone());
                 fresh_vec.push(frsh);
             }
             freshes = fresh_vec.into();
         }
 
-        let q = pbl.function.push_quantifier(
+        let q = pbl.functions().push_quantifier(
             Exists::builder()
                 .vars(cvars)
                 .bound_var(bvars)

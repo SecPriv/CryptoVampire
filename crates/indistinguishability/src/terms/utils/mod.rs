@@ -5,11 +5,11 @@ use std::collections::VecDeque;
 use egg::{};
 use itertools::{EitherOrBoth, Itertools, izip};
 use log::error;
-use logic_formula::egg::SimplLang;
 use logic_formula::{Destructed, Formula, HeadSk};
 use utils::{};
 
 use crate::terms::{Function, Sort};
+use crate::utils::LightClone;
 use crate::{LangVar};
 
 declare_trace!($"formula_utils");
@@ -22,11 +22,10 @@ pub use rexp_helpers::*;
 pub mod offset;
 pub mod pull_from_egraph;
 
-pub fn get_sort<'a, F>(f: &'a F) -> Sort
+pub fn get_sort<F>(f: F) -> Sort
 where
-    &'a F: Formula,
-    F: ?Sized,
-    <&'a F as Formula>::Fun: AsRef<Function>,
+    F: Formula + LightClone,
+    <F as Formula>::Fun: AsRef<Function>,
 {
     match f.head() {
         HeadSk::Var(_) => Sort::Any,
@@ -35,23 +34,22 @@ where
     }
 }
 
-pub fn type_check<'a, F>(f: &'a F) -> bool
+pub fn type_check<F>(f: F) -> bool
 where
-    &'a F: Formula,
-    F: ?Sized,
-    <&'a F as Formula>::Fun: AsRef<Function>,
+    F: Formula + LightClone,
+    <F as Formula>::Fun: AsRef<Function>,
 {
     let Destructed { head, args } = f.destruct();
     match head {
         HeadSk::Var(_) => true,
         HeadSk::Fun(fun) => {
             Itertools::zip_longest(fun.as_ref().signature.inputs_iter(), args).all(|x| match x {
-                EitherOrBoth::Both(asort, arg) => get_sort(arg).unify(asort) && type_check(arg),
+                EitherOrBoth::Both(asort, arg) => get_sort(arg.clone()).unify(asort) && type_check(arg),
                 _ => false,
             })
         }
         HeadSk::Quant(_) => izip!(::std::iter::repeat(Sort::Bool), args)
-            .all(|(asort, arg)| get_sort(arg).unify(asort) && type_check(arg)),
+            .all(|(asort, arg)| get_sort(arg.clone()).unify(asort) && type_check(arg)),
     }
 }
 
@@ -59,24 +57,24 @@ where
 mod test {
     use crate::rexp;
     use crate::terms::utils::type_check;
-    use crate::terms::{MITE, NONCE, PROJ_1, TUPLE};
+    use crate::terms::{FormulaLike, MITE, NONCE, PROJ_1, TUPLE};
 
     #[test]
     fn type_check_true() {
         let x =
             rexp!((MITE (and true true false) (NONCE #0) (PROJ_1 (TUPLE #1 (NONCE #0))))).to_vec();
-        assert!(type_check(x.as_slice()))
+        assert!(type_check(x.as_formula()))
     }
 
     #[test]
     fn type_check_wrong_length() {
         let x = rexp!((MITE (and true true false) (NONCE #0) (PROJ_1 (TUPLE (NONCE #0))))).to_vec();
-        assert!(!type_check(x.as_slice()))
+        assert!(!type_check(x.as_formula()))
     }
 
     #[test]
     fn type_check_wrong_sort() {
         let x = rexp!((MITE (and true true false) (and ) (PROJ_1 (TUPLE (NONCE #0))))).to_vec();
-        assert!(!type_check(x.as_slice()))
+        assert!(!type_check(x.as_formula()))
     }
 }

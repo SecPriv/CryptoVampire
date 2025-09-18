@@ -1,7 +1,6 @@
 use egg::{Analysis, Pattern, Rewrite, SymbolLang};
 use itertools::{Itertools, chain};
 use log::trace;
-use logic_formula::egg::SimpleDiscriminant;
 use utils::dynamic_iter;
 
 use crate::rules::var_as_recexpr;
