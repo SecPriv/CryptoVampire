@@ -22,6 +22,27 @@ use crate::terms::{
 use crate::utils::LightClone;
 use crate::{Lang, LangVar};
 
+macro_rules! is_fun {
+    ($name:ident; $($flag:ident)|+) => {
+        #[inline]
+        pub fn $name(&self) -> bool {
+            static FLAGS: FunctionFlags =
+                const_fun_flags!($($flag)|+);
+
+            self.flags.intersects(FLAGS)
+        }
+    };
+    ($name:ident; $($flag:ident)|+; $t:literal) => {
+        #[inline] #[doc = $t]
+        pub fn $name(&self) -> bool {
+            static FLAGS: FunctionFlags =
+                const_fun_flags!($($flag)|+);
+
+            self.flags.intersects(FLAGS)
+        }
+    };
+}
+
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 pub struct InnerFunction {
@@ -190,24 +211,6 @@ impl Function {
     // =========================================================
     // ==================== is functions =======================
     // =========================================================
-
-    /// Should not appear in an smt file
-    ///
-    /// Because smt has a syntax for it, or it's a prolog trick, or ...
-    #[inline]
-    pub fn is_should_not_declare_in_smt(&self) -> bool {
-        static SHOULD_NOT_DECLARE_IN_SMT: FunctionFlags =
-            const_fun_flags!(PROLOG_ONLY | BUILTIN_SMT);
-
-        self.flags.intersects(SHOULD_NOT_DECLARE_IN_SMT)
-    }
-
-    /// The function already has an equivalent in smt
-    #[inline]
-    pub fn is_builtin_smt(&self) -> bool {
-        self.flags.intersects(FunctionFlags::BUILTIN_SMT)
-    }
-
     #[inline]
     pub fn is_special_subterm(&self) -> bool {
         static SPECIAL_SUBTERM: FunctionFlags = const_fun_flags!(
@@ -264,39 +267,24 @@ impl Function {
         true
     }
 
-    /// This function should appear outside of prolog (e.g., doesn't make sense in smt)
-    #[inline]
-    pub fn is_prolog_only(&self) -> bool {
-        self.flags.intersects(FunctionFlags::PROLOG_ONLY)
-    }
-
-    #[inline]
-    pub fn is_if_then_else(&self) -> bool {
-        self.flags.intersects(FunctionFlags::IF_THEN_ELSE)
-    }
-
-    #[inline]
-    pub fn is_out_of_term_algebra(&self) -> bool {
-        self.flags
-            .intersects(FunctionFlags::SMT_ONLY | FunctionFlags::PROLOG_ONLY)
-    }
-
-    pub fn is_nonce(&self) -> bool {
-        self.flags.contains(FunctionFlags::NONCE)
-    }
-
     pub fn is_datatype(&self) -> bool {
         self.is_nonce() || self.is_protocol()
     }
 
-    pub fn is_quantifier(&self) -> bool {
-        self.flags
-            .intersects(FunctionFlags::FIND_SUCH_THAT | FunctionFlags::BINDER)
-    }
+    is_fun!(is_prolog_only; PROLOG_ONLY; 
+            "This function should appear outside of prolog (e.g., doesn't make sense in smt)");
+    is_fun!(is_if_then_else; IF_THEN_ELSE);
+    is_fun!(is_out_of_term_algebra; SMT_ONLY| PROLOG_ONLY);
+    is_fun!(is_nonce; NONCE);
+    is_fun!(is_quantifier; FIND_SUCH_THAT| BINDER);
+    is_fun!(is_egg_binder; BINDER);
+    is_fun!(is_temporary; TEMPORARY);
+    is_fun!(is_should_not_declare_in_smt; PROLOG_ONLY | BUILTIN_SMT;
+r" Should not appear in an smt file
 
-    pub fn is_egg_binder(&self) -> bool {
-        self.flags.contains(FunctionFlags::BINDER)
-    }
+Because smt has a syntax for it, or it's a prolog trick, or ...");
+
+    is_fun!(is_builtin_smt; BUILTIN_SMT; "The function already has an equivalent in smt");
 
     // =========================================================
     // ====================== Steel API ========================
