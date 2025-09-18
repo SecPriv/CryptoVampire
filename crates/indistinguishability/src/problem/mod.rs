@@ -12,7 +12,9 @@ use itertools::{Itertools, chain};
 use log::trace;
 use utils::implvec;
 
-use crate::problem::function_builder::{SetAlias, SetCryptography, SetName, SetOutput, SetStepIdx};
+use crate::problem::function_builder::{
+    SetAlias, SetCryptography, SetInputs, SetName, SetOutput, SetStepIdx,
+};
 use crate::protocol::{Protocol, Step};
 use crate::rules::{FreshNonce, VampireRule, mk_default_prolog_rules, mk_default_rewrites};
 use crate::terms::utils::convert_to_ground_rexp;
@@ -558,6 +560,17 @@ where
             self.flags -= FunctionFlags::TEMPORARY
         }
         self
+    }
+
+    pub fn signature(
+        self,
+        Signature { inputs, output }: Signature,
+    ) -> FunctionBuilder<'a, SetInputs<SetOutput<S>>>
+    where
+        S::Inputs: FunctionBuilderIsUnset,
+        S::Output: FunctionBuilderIsUnset,
+    {
+        self.output(output).inputs(inputs.iter().copied())
     }
 }
 
