@@ -1,3 +1,5 @@
+use std::default;
+use std::num::{NonZeroU32, NonZeroUsize};
 use std::ops::Deref;
 use std::rc::Rc;
 
@@ -13,6 +15,19 @@ use crate::terms::{FOBinder, Function, LAMBDA_O, LAMBDA_S, RecFOFormula, Sort};
 use crate::utils::LightClone;
 use crate::{Lang, LangVar};
 
+/// invariants: empty [Queue] means free variable `0` otherwise use [Free]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct  DeBruijnQueue {
+    /// A Queue storing the bound de Bruijn variables
+    bound: rpds::Queue<u32>,
+    /// When we are deeper thand the the queue, the variables are free
+    free: i64,
+
+    /// The minimu safe variable to assign a value to, [None] means that it
+    /// hasn't been calculated yet
+    min_free: Option<u32>
+}
+
 /// This is a wrapper around a [RecExpr] that let us iterate over it using
 /// [Formula].
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -22,7 +37,7 @@ pub struct RecExprIter<'a, L> {
     /// than the highest variable in `exp`.
     ///
     /// `vars` is ordered, so the first element is the lowest variable.
-    vars: rpds::Queue<u32>,
+    vars: DeBruijnQueue,
 }
 
 impl<'a, L> Deref for RecExprIter<'a, L> {
@@ -42,22 +57,25 @@ impl<'a, L: AsLangVar> RecExprIter<'a, L> {
         }
     }
 
-    pub fn get_min_var(&self) -> u32 {
-        let Self { exp, vars } = self;
-        Self::get_min_var_ref(exp, vars)
-    }
+    // pub fn get_min_var(&self) -> u32 {
+    //     let Self { exp, vars } = self;
+    //     Self::get_min_var_ref(exp, vars)
+    // }
 
-    pub fn get_min_var_ref(exp: &'a [L], vars: &rpds::Queue<u32>) -> u32 {
-        1 + match vars.peek() {
-            // if there is a last variable, then it's the highest one
-            Some(&v) => v,
-            // otherwise we look in `exp`
-            None => L::free_vars(exp)
-                .filter_map(|v| Var::as_u32(&v))
-                .max()
-                .unwrap_or(0),
-        }
-    }
+    // fn get_min_var_ref(exp: &'a [L], vars: &DeBruijnQueue) -> u32 {
+    //     1 +
+    //     // match
+
+    //     match vars.peek() {
+    //         // if there is a last variable, then it's the highest one
+    //         Some(&v) => v,
+    //         // otherwise we look in `exp`
+    //         None => L::egg_free_vars(exp)
+    //             .filter_map(|v| Var::as_u32(&v))
+    //             .max()
+    //             .unwrap_or(0),
+    //     }
+    // }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -68,7 +86,7 @@ enum LangVarLike<'a> {
 
 trait AsLangVar: Sized {
     fn as_lang_var(&self) -> LangVarLike<'_>;
-    fn free_vars(exp: &[Self]) -> impl Iterator<Item = Var>;
+    fn egg_free_vars(exp: &[Self]) -> impl Iterator<Item = Var>;
 }
 
 impl AsLangVar for Lang {
@@ -77,7 +95,7 @@ impl AsLangVar for Lang {
         LangVarLike::App { head, args }
     }
 
-    fn free_vars(_: &[Self]) -> impl Iterator<Item = Var> {
+    fn egg_free_vars(_: &[Self]) -> impl Iterator<Item = Var> {
         ::std::iter::empty()
     }
 }
@@ -90,7 +108,7 @@ impl AsLangVar for LangVar {
         }
     }
 
-    fn free_vars(exp: &[Self]) -> impl Iterator<Item = Var> {
+    fn egg_free_vars(exp: &[Self]) -> impl Iterator<Item = Var> {
         exp.iter().filter_map(ENodeOrVar::as_var)
     }
 }
@@ -109,7 +127,7 @@ impl<'a, L: AsLangVar> Formula for RecExprIter<'a, L> {
                 // this is a bound variable
                 if head == &LAMBDA_O {
                     // crash if the bound variable is not bound
-                    let var = *vars.peek().expect("a variable");
+                    let var = vars.peek();
                     Destructed {
                         head: HeadSk::Var(Var::from_u32(var)),
                         args: Ret::Empty(::std::iter::empty()),
@@ -123,7 +141,7 @@ impl<'a, L: AsLangVar> Formula for RecExprIter<'a, L> {
                         exp,
                         // if there are no variables, then poping does nothings,
                         // but it should remain sound
-                        vars: vars.dequeue().unwrap_or_default(),
+                        vars: vars.dequeue(),
                     }
                     .destruct()
                 // this is a binder, so we create the variable and add them to
@@ -185,7 +203,7 @@ impl<'a, L: AsLangVar> Formula for RecExprIter<'a, L> {
         Self::Quant: logic_formula::Bounder<Self::Var>,
         Self::Var: Eq + Clone,
     {
-        L::free_vars(self.exp)
+        L::egg_free_vars(self.exp)
     }
 
     type Var = Var;
@@ -195,7 +213,7 @@ impl<'a, L: AsLangVar> Formula for RecExprIter<'a, L> {
     type Quant = RecFOFormulaQuant<'static>;
 }
 
-impl<'a, L:Clone> LightClone for RecExprIter<'a, L> {}
+impl<'a, L: Clone> LightClone for RecExprIter<'a, L> {}
 
 // =========================================================
 // ======================= casting =========================
@@ -255,5 +273,41 @@ impl<'a, L: AsLangVar> From<RecExprIter<'a, L>> for RecFOFormula {
             },
             HeadSk::Quant(_) => unreachable!(),
         }
+    }
+}
+
+impl DeBruijnQueue {
+    fn peek(&self) -> u32 {
+        match self {
+            DeBruijnQueue::Bound(queue) => queue.peek().copied().unwrap_or_default(),
+            DeBruijnQueue::Free { depth } => (*depth).into(),
+        }
+    }
+
+    fn dequeue(&self) -> Self {
+        match self {
+            Self::Bound(queue) => match queue.dequeue() {
+                Some(x) => Self::Bound(x),
+                None => Self::Free {
+                    depth: NonZeroU32::new(1).unwrap(),
+                },
+            },
+            Self::Free { depth } => Self::Free {
+                depth: depth.checked_add(1).unwrap(),
+            },
+        }
+    }
+
+    fn enqueue(&self, i: u32) -> Self {
+        match self {
+            Self::Bound(q) => Self::Bound(q.enqueue(i)),
+            _ => Self::Bound(rpds::Queue::default().enqueue(i)),
+        }
+    }
+}
+
+impl Default for DeBruijnQueue {
+    fn default() -> Self {
+        Self::Bound(Default::default())
     }
 }
