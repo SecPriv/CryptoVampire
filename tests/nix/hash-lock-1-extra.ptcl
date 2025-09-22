@@ -1,0 +1,93 @@
+type index;
+fun tpl(Message, Message):Message
+
+
+fun sel1of2(Message):Message;
+fun sel2of2(Message):Message
+fun hash(Message, Message):Message
+fun verify(Message, Message, Message):Bool
+fun ok:Message
+fun ko:Message
+
+/* the Names */
+fun nt(index, index): Name
+fun nr(index): Name
+fun key(index):Name
+fun idx_eq(index):Name
+
+let m_condition_fst!(i:index, j:index, k:index, m_in: Message) = 
+    /*( hash(tpl(nr(j),sel1of2(m_in)), key(i)) 
+                    == sel2of2(m_in) )*/
+    verify(sel2of2(m_in), tpl(nr(j),sel1of2(m_in)), key(i))
+
+step reader1(i:index) 
+    { true }
+    { nr(i) }
+
+step reader2(j:index)
+    { true }
+    {
+        if exists (i:index, k:index) { m_condition_fst!(i, j, k, input(reader2(j))) }
+            { ok } else { ko }
+    }
+let condition_fst!(i:index, j:index, k:index) = m_condition_fst!(i,j,k,input(reader2(j)))
+
+step tag(i:index, k:index)
+    { true }
+    { tpl(
+        nt(i,k),
+        hash(
+            tpl(input(tag(i,k)),nt(i,k)),
+            key(i)
+        )
+    )}
+
+assert
+    forall (m1:Message, m2:Message) {
+        (
+            (m1 == sel1of2(tpl(m1,m2))) 
+            && (m2 == sel2of2(tpl(m1,m2)))
+        )
+    }
+
+assert
+    forall (s:Message, m:Message, k:Message) {
+        (verify(s, m, k) <=> (s == hash(m, k)))
+    }
+
+assert (ko != ok)
+
+order forall (j:index) 
+    reader1(j) < reader2(j)
+
+let premise!(j:index) = 
+    /* cond(reader(i,j)) */
+    exists (i:index, k:index) { condition_fst!(i, j, k) }
+
+let conclusion2!(i:index, j:index, k:index) = forall (j0:index) {(
+    happens(reader2(j0)) =>
+        (premise!(j0) =>
+            ((
+                (sel1of2(msg!(tag(i, k))) == sel1of2(input(reader2(j0))))
+                && (sel2of2(msg!(tag(i, k))) == sel2of2(input(reader2(j0))))
+            ) => ((input(tag(i, k)) == msg!(reader1(j))) => (idx_eq(j) == idx_eq(j0))))
+        )
+)}
+
+let conclusion!(j:index) = 
+  exists (i:index, k:index) {(
+    lt(tag(i, k), reader2(j))
+    && lt(reader1(j), tag(i, k))
+    && (sel1of2(msg!(tag(i, k))) == sel1of2(input(reader2(j))))
+    && (sel2of2(msg!(tag(i, k))) == sel2of2(input(reader2(j))))
+    && (input(tag(i, k)) == msg!(reader1(j)))
+    && conclusion2!(i, j, k)
+)}
+
+query forall (j:index) {(
+    happens(reader2(j))
+        => (premise!(j) => conclusion!(j)) 
+)}
+
+assert-crypto euf-cma hash verify;
+assert-crypto nonce;
