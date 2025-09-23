@@ -15,29 +15,12 @@ use crate::terms::{FOBinder, Function, LAMBDA_O, LAMBDA_S, RecFOFormula, Sort};
 use crate::utils::LightClone;
 use crate::{Lang, LangVar};
 
-/// invariants: empty [Queue] means free variable `0` otherwise use [Free]
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-struct  DeBruijnQueue {
-    /// A Queue storing the bound de Bruijn variables
-    bound: rpds::Queue<u32>,
-    /// When we are deeper thand the the queue, the variables are free
-    free: i64,
-
-    /// The minimu safe variable to assign a value to, [None] means that it
-    /// hasn't been calculated yet
-    min_free: Option<u32>
-}
-
 /// This is a wrapper around a [RecExpr] that let us iterate over it using
 /// [Formula].
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RecExprIter<'a, L> {
     exp: &'a [L],
-    /// **invariant:** the min index of a variable inside of `var` should be *higher*
-    /// than the highest variable in `exp`.
-    ///
-    /// `vars` is ordered, so the first element is the lowest variable.
-    vars: DeBruijnQueue,
+    vars: VariablesHelper,
 }
 
 impl<'a, L> Deref for RecExprIter<'a, L> {
@@ -50,10 +33,12 @@ impl<'a, L> Deref for RecExprIter<'a, L> {
 
 impl<'a, L: AsLangVar> RecExprIter<'a, L> {
     /// Creates a new `RecExprLang` with an empty variable list.
+    /// 
+    /// *complexity*: `O(n)`
     pub fn new(exp: &'a [L]) -> Self {
         Self {
             exp,
-            vars: Default::default(),
+            vars: VariablesHelper::new(exp),
         }
     }
 
@@ -87,6 +72,12 @@ enum LangVarLike<'a> {
 trait AsLangVar: Sized {
     fn as_lang_var(&self) -> LangVarLike<'_>;
     fn egg_free_vars(exp: &[Self]) -> impl Iterator<Item = Var>;
+
+    /// The highest [egg::Var] appearing in `exp`
+    fn highest_egg_var(exp: &[Self]) -> u32 {
+        Self::egg_free_vars(exp)
+            .filter_map(|v| v.as_u32()).max().unwrap_or(0)
+    }
 }
 
 impl AsLangVar for Lang {
@@ -257,7 +248,7 @@ impl<'a, L: AsLangVar> From<&'a [L]> for RecExprIter<'a, L> {
     fn from(exp: &'a [L]) -> Self {
         Self {
             exp,
-            vars: Default::default(),
+            vars: VariablesHelper::new(exp),
         }
     }
 }
@@ -276,15 +267,49 @@ impl<'a, L: AsLangVar> From<RecExprIter<'a, L>> for RecFOFormula {
     }
 }
 
-impl DeBruijnQueue {
-    fn peek(&self) -> u32 {
-        match self {
-            DeBruijnQueue::Bound(queue) => queue.peek().copied().unwrap_or_default(),
-            DeBruijnQueue::Free { depth } => (*depth).into(),
+// =========================================================
+// =================== Variable Helper =====================
+// =========================================================
+
+/// invariants: empty [Queue] means free variable `0` otherwise use [Free]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct  VariablesHelper {
+    /// A Queue storing the bound de Bruijn variables
+    /// 
+    /// **invariant:** the min index of a variable inside of `var` should be *higher*
+    /// than the highest variable in `exp`.
+    ///
+    /// `vars` is ordered, so the first element is the lowest variable.
+    bound: rpds::Queue<u32>,
+    
+    /// How many `S` are need to get a free variable
+    free: i64,
+
+    /// The minimum safe variable to assign a value to, [None] means that it
+    /// hasn't been calculated yet
+    min_free: NonZeroU32
+}
+
+impl VariablesHelper {
+    fn new<L:AsLangVar>(exp: &[L]) -> Self {
+        let min_free = NonZeroU32::new(L::highest_egg_var(exp)+1).unwrap();
+        Self { bound: Default::default(), free: 0, min_free }
+    }
+    
+    fn peek_last(&self) -> u32 {
+        match (self.bound.peek(), u32::try_from(self.free)) {
+            (Some(x),_) => x,
+            (_, Ok(x)) => x + self.min_free,
+            _ => panic!("the variable pile is empty, but the stacks says otherwise")
         }
+
+        // match self {
+        //     VariablesHelper::Bound(queue) => queue.peek().copied().unwrap_or_default(),
+        //     VariablesHelper::Free { depth } => (*depth).into(),
+        // }
     }
 
-    fn dequeue(&self) -> Self {
+    fn pop(&self) -> Self {
         match self {
             Self::Bound(queue) => match queue.dequeue() {
                 Some(x) => Self::Bound(x),
@@ -298,16 +323,10 @@ impl DeBruijnQueue {
         }
     }
 
-    fn enqueue(&self, i: u32) -> Self {
+    fn bind(&self, i: u32) -> Self {
         match self {
             Self::Bound(q) => Self::Bound(q.enqueue(i)),
             _ => Self::Bound(rpds::Queue::default().enqueue(i)),
         }
-    }
-}
-
-impl Default for DeBruijnQueue {
-    fn default() -> Self {
-        Self::Bound(Default::default())
     }
 }
