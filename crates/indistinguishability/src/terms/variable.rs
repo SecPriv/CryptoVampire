@@ -4,9 +4,10 @@ use std::sync::OnceLock;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
 
+use crate::input::Registerable;
 use crate::terms::Sort;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Steel)]
 pub struct Variable(NonNull<VariableInner>);
 
 unsafe impl Sync for Variable {}
@@ -117,6 +118,14 @@ impl Variable {
             _ => Err(sort),
         }
     }
+
+    fn steel_fresh() -> Self {
+        Self::fresh().call()
+    }
+
+    fn steel_fresh_sort(s: Sort) -> Self {
+        Self::fresh().sort(s).call()
+    }
 }
 
 #[bon]
@@ -141,9 +150,17 @@ impl From<Variable> for egg::Var {
         egg::Var::from_u32(
             value
                 .as_usize()
-                .try_into()
-                .expect("an address that can be cast into a u32"),
         )
+    }
+}
+
+impl Registerable for Variable {
+    fn register(
+        module: &mut steel::steel_vm::builtin::BuiltInModule,
+    ) -> &mut steel::steel_vm::builtin::BuiltInModule {
+        Self::register_type(module)
+            .register_fn("mk-fresh-var", Self::steel_fresh)
+            .register_fn("mk-fresh-var-w-sort", Self::steel_fresh_sort)
     }
 }
 
@@ -157,14 +174,14 @@ macro_rules! mk_fresh_var {
 
     () => {{
         static TMP: $crate::terms::variable::VariableInner =
-            $crate::terms::variable::VariableInner::new_const(None, Some(mk_fresh_var!(@str)));
+        $crate::terms::variable::VariableInner::new_const(None, Some(mk_fresh_var!(@str)));
         $crate::terms::variable::Variable::from_const(&TMP)
-}};
+    }};
     ($s:expr) => {{
         static TMP: $crate::terms::variable::VariableInner =
-            $crate::terms::variable::VariableInner::new_const(Some($s), Some(mk_fresh_var!(@str)));
+        $crate::terms::variable::VariableInner::new_const(Some($s), Some(mk_fresh_var!(@str)));
         $crate::terms::variable::Variable::from_const(&TMP)
-}};
+    }};
 }
 
 #[macro_export]
@@ -179,6 +196,8 @@ macro_rules! fresh {
 
 use bon::{bon, builder};
 pub(crate) use mk_fresh_var as mk_fresh_static_var;
+use steel::steel_vm::register_fn::RegisterFn;
+use steel_derive::Steel;
 
 #[cfg(test)]
 mod test {

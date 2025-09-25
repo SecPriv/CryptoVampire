@@ -8,14 +8,14 @@ use crate::input::shared_cryptography::ShrCrypto;
 use crate::input::shared_exists::ShrExists;
 use crate::input::shared_fdst::ShrFindSuchThat;
 use crate::input::shared_problem::ShrProblem;
-use crate::terms::{AliasRewrite, Function, RecFOFormula, Rewrite, Signature, Sort};
+use crate::terms::{AliasRewrite, Function, RecFOFormula, Rewrite, Signature, Sort, Variable};
 
 pub(crate) mod golgge_rules;
 pub(crate) mod shared_cryptography;
 pub(crate) mod shared_exists;
 pub(crate) mod shared_fdst;
 pub(crate) mod shared_problem;
-pub(crate) mod var;
+// pub(crate) mod var;
 
 pub(crate) trait Registerable {
     fn register(module: &mut BuiltInModule) -> &mut BuiltInModule;
@@ -33,6 +33,7 @@ pub fn register(module: &mut BuiltInModule) -> &mut BuiltInModule {
     RecFOFormula::register(module);
     ShrCrypto::register(module);
     ShrFindSuchThat::register(module);
+    Variable::register(module);
 
     module.register_fn("println!", |x: SteelVal| println!("dbg: {x:?}"));
 
