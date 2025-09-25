@@ -95,6 +95,9 @@ mod builtin;
 pub use cryptography::*;
 mod cryptography;
 
+pub(crate) mod variable;
+pub use variable::Variable;
+
 // =========================================================
 // ======================== other ==========================
 // =========================================================

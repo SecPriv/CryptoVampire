@@ -1,3 +1,4 @@
+use std::collections::linked_list::IntoIter;
 use std::default;
 use std::num::{NonZeroU32, NonZeroUsize};
 use std::ops::Deref;
@@ -105,88 +106,89 @@ impl AsLangVar for LangVar {
 }
 
 impl<'a, L: AsLangVar> Formula for RecExprIter<'a, L> {
-    fn destruct(self) -> Destructed<Self, impl Iterator<Item = Self>> {
-        dynamic_iter!(Ret; Empty:A, App:B, Quant:C);
+    fn destruct(self) -> Destructed<Self, IntoIter<Self>> {
+        todo!()
+        // dynamic_iter!(Ret; Empty:A, App:B, Quant:C);
 
-        let Self { exp, vars } = self;
+        // let Self { exp, vars } = self;
 
-        match exp.last().expect("non-empty formula").as_lang_var() {
-            LangVarLike::App { head, args } => {
-                // commun iterator over the arguments
-                let mut args = args.iter().map(|&i| &exp[..=usize::from(i)]);
+        // match exp.last().expect("non-empty formula").as_lang_var() {
+        //     LangVarLike::App { head, args } => {
+        //         // commun iterator over the arguments
+        //         let mut args = args.iter().map(|&i| &exp[..=usize::from(i)]);
 
-                // this is a bound variable
-                if head == &LAMBDA_O {
-                    // crash if the bound variable is not bound
-                    let var = vars.peek();
-                    Destructed {
-                        head: HeadSk::Var(Var::from_u32(var)),
-                        args: Ret::Empty(::std::iter::empty()),
-                    }
-                // this the `S` operator that increments all bound variabes.
-                // There for we drop the closest variable since it will ne
-                // longer be reachable
-                } else if head == &LAMBDA_S {
-                    let exp = args.next().expect("exactly one arguement to S");
-                    Self {
-                        exp,
-                        // if there are no variables, then poping does nothings,
-                        // but it should remain sound
-                        vars: vars.dequeue(),
-                    }
-                    .destruct()
-                // this is a binder, so we create the variable and add them to
-                // `vars`
-                //
-                // *NB*: in a `find such that` the last argument still has the
-                // variables bound even though using them there is undefined
-                } else if head.is_egg_binder() {
-                    let min_var = Self::get_min_var_ref(exp, &vars);
-                    // fetch the sort list
-                    let sorts = {
-                        let sort_exp = args.next().expect("a list of sorts as first arg");
-                        sort_list::try_get(Self::from(sort_exp))
-                            .expect("a list of sorts as first arg")
-                    };
-                    assert!(!sorts.is_empty(), "should be non-empty binder");
+        //         // this is a bound variable
+        //         if head == &LAMBDA_O {
+        //             // crash if the bound variable is not bound
+        //             let var = vars.peek();
+        //             Destructed {
+        //                 head: HeadSk::Var(Var::from_u32(var)),
+        //                 args: Ret::Empty(::std::iter::empty()),
+        //             }
+        //         // this the `S` operator that increments all bound variabes.
+        //         // There for we drop the closest variable since it will ne
+        //         // longer be reachable
+        //         } else if head == &LAMBDA_S {
+        //             let exp = args.next().expect("exactly one arguement to S");
+        //             Self {
+        //                 exp,
+        //                 // if there are no variables, then poping does nothings,
+        //                 // but it should remain sound
+        //                 vars: vars.dequeue(),
+        //             }
+        //             .destruct()
+        //         // this is a binder, so we create the variable and add them to
+        //         // `vars`
+        //         //
+        //         // *NB*: in a `find such that` the last argument still has the
+        //         // variables bound even though using them there is undefined
+        //         } else if head.is_egg_binder() {
+        //             let min_var = Self::get_min_var_ref(exp, &vars);
+        //             // fetch the sort list
+        //             let sorts = {
+        //                 let sort_exp = args.next().expect("a list of sorts as first arg");
+        //                 sort_list::try_get(Self::from(sort_exp))
+        //                     .expect("a list of sorts as first arg")
+        //             };
+        //             assert!(!sorts.is_empty(), "should be non-empty binder");
 
-                    // populate the variables
-                    let mut nvars = Vec::with_capacity(sorts.len());
-                    for (i, _) in izip!(min_var.., &sorts) {
-                        vars.enqueue(i);
-                        nvars.push(Var::from_u32(i));
-                    }
+        //             // populate the variables
+        //             let mut nvars = Vec::with_capacity(sorts.len());
+        //             for (i, _) in izip!(min_var.., &sorts) {
+        //                 vars.enqueue(i);
+        //                 nvars.push(Var::from_u32(i));
+        //             }
 
-                    // build the binder
-                    let binder = FOBinder::try_from_function(head).expect("a binder");
-                    let binder = RecFOFormulaQuant::new(binder, nvars.into(), sorts.into());
+        //             // build the binder
+        //             let binder = FOBinder::try_from_function(head).expect("a binder");
+        //             let binder = RecFOFormulaQuant::new(binder, nvars.into(), sorts.into());
 
-                    Destructed {
-                        head: HeadSk::Quant(binder),
-                        // we could in theory reuse `Ret::App`, but closures
-                        // have distinct types in rust
-                        args: Ret::Quant(args.map(move |exp| Self {
-                            exp,
-                            vars: vars.clone(),
-                        })),
-                    }
-                // regular function application
-                } else {
-                    Destructed {
-                        head: HeadSk::Fun(head.clone()),
-                        args: Ret::App(args.map(move |exp| Self {
-                            exp,
-                            vars: vars.clone(),
-                        })),
-                    }
-                }
-            }
-            // a free variable
-            LangVarLike::Var(v) => Destructed {
-                head: HeadSk::Var(Var::from_u32(v)),
-                args: Ret::Empty(::std::iter::empty()),
-            },
-        }
+        //             Destructed {
+        //                 head: HeadSk::Quant(binder),
+        //                 // we could in theory reuse `Ret::App`, but closures
+        //                 // have distinct types in rust
+        //                 args: Ret::Quant(args.map(move |exp| Self {
+        //                     exp,
+        //                     vars: vars.clone(),
+        //                 })),
+        //             }
+        //         // regular function application
+        //         } else {
+        //             Destructed {
+        //                 head: HeadSk::Fun(head.clone()),
+        //                 args: Ret::App(args.map(move |exp| Self {
+        //                     exp,
+        //                     vars: vars.clone(),
+        //                 })),
+        //             }
+        //         }
+        //     }
+        //     // a free variable
+        //     LangVarLike::Var(v) => Destructed {
+        //         head: HeadSk::Var(Var::from_u32(v)),
+        //         args: Ret::Empty(::std::iter::empty()),
+        //     },
+        // }
     }
 
     fn free_vars_iter(self) -> impl Iterator<Item = Self::Var>
@@ -297,11 +299,12 @@ impl VariablesHelper {
     }
     
     fn peek_last(&self) -> u32 {
-        match (self.bound.peek(), u32::try_from(self.free)) {
-            (Some(x),_) => x,
-            (_, Ok(x)) => x + self.min_free,
-            _ => panic!("the variable pile is empty, but the stacks says otherwise")
-        }
+        todo!()
+        // match (self.bound.peek(), u32::try_from(self.free)) {
+        //     (Some(x),_) => x,
+        //     (_, Ok(x)) => x + self.min_free,
+        //     _ => panic!("the variable pile is empty, but the stacks says otherwise")
+        // }
 
         // match self {
         //     VariablesHelper::Bound(queue) => queue.peek().copied().unwrap_or_default(),
@@ -310,23 +313,25 @@ impl VariablesHelper {
     }
 
     fn pop(&self) -> Self {
-        match self {
-            Self::Bound(queue) => match queue.dequeue() {
-                Some(x) => Self::Bound(x),
-                None => Self::Free {
-                    depth: NonZeroU32::new(1).unwrap(),
-                },
-            },
-            Self::Free { depth } => Self::Free {
-                depth: depth.checked_add(1).unwrap(),
-            },
-        }
+        todo!()
+        // match self {
+        //     Self::Bound(queue) => match queue.dequeue() {
+        //         Some(x) => Self::Bound(x),
+        //         None => Self::Free {
+        //             depth: NonZeroU32::new(1).unwrap(),
+        //         },
+        //     },
+        //     Self::Free { depth } => Self::Free {
+        //         depth: depth.checked_add(1).unwrap(),
+        //     },
+        // }
     }
 
     fn bind(&self, i: u32) -> Self {
-        match self {
-            Self::Bound(q) => Self::Bound(q.enqueue(i)),
-            _ => Self::Bound(rpds::Queue::default().enqueue(i)),
-        }
+        todo!()
+        // match self {
+        //     Self::Bound(q) => Self::Bound(q.enqueue(i)),
+        //     _ => Self::Bound(rpds::Queue::default().enqueue(i)),
+        // }
     }
 }
