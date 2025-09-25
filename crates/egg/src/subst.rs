@@ -16,8 +16,22 @@ use thiserror::Error;
 #[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub struct Var(VarInner);
 
+#[cfg(feature= "cryptovampire")]
+#[allow(non_camel_case_types)]
+/// Alias for the underlying type for indexed variable.
+/// 
+/// This changes with the `cryptovampire` feature
+pub type uvar = usize;
+
+#[cfg(not(feature="cryptovampire"))]
+#[allow(non_camel_case_types)]
+/// Alias for the underlying type for indexed variable
+/// 
+/// This changes with the `cryptovampire` feature
+pub type uvar = u32;
+
 impl Var {
-    /// Create a new variable from a u32.
+    /// Create a new variable from a [uvar].
     ///
     /// You can also use special syntax `?#3`, `?#42` to denote a numeric variable.
     /// These avoid some symbol interning, and can also be created manually from
@@ -28,7 +42,7 @@ impl Var {
     /// assert_eq!(Var::from(12), "?#12".parse().unwrap());
     /// assert_eq!(Var::from_u32(12), "?#12".parse().unwrap());
     /// ```
-    pub const fn from_u32(num: u32) -> Self {
+    pub const fn from_u32(num: uvar) -> Self {
         Var(VarInner::Num(num))
     }
 
@@ -38,7 +52,7 @@ impl Var {
     }
 
     /// If this variable was created from a u32, get it back out.
-    pub fn as_u32(&self) -> Option<u32> {
+    pub fn as_u32(&self) -> Option<uvar> {
         match self.0 {
             VarInner::Num(num) => Some(num),
             _ => None,
@@ -46,6 +60,7 @@ impl Var {
     }
 
     /// Exposes the content of a variable
+    #[deprecated]
     pub fn expose(&self) -> VarExposed {
         match self.0 {
             VarInner::Sym(global_symbol) => VarExposed::Sym(global_symbol.as_str()),
@@ -56,9 +71,10 @@ impl Var {
 
 /// An enum to expose how a variable was built (with a `str` or a number)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[deprecated]
 pub enum VarExposed {
     Sym(&'static str),
-    Num(u32),
+    Num(uvar),
 }
 
 impl VarExposed {
@@ -72,7 +88,7 @@ impl VarExposed {
     }
 
     #[must_use]
-    pub fn try_into_num(self) -> Result<u32, Self> {
+    pub fn try_into_num(self) -> Result<uvar, Self> {
         if let Self::Num(v) = self {
             Ok(v)
         } else {
@@ -85,7 +101,7 @@ impl VarExposed {
 #[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 enum VarInner {
     Sym(Symbol),
-    Num(u32),
+    Num(uvar),
 }
 
 #[derive(Debug, Error)]
@@ -131,8 +147,8 @@ impl Debug for Var {
     }
 }
 
-impl From<u32> for Var {
-    fn from(num: u32) -> Self {
+impl From<uvar> for Var {
+    fn from(num: uvar) -> Self {
         Var(VarInner::Num(num))
     }
 }

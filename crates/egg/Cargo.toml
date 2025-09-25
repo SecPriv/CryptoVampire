@@ -52,6 +52,7 @@ serde-1 = [
   "vectorize",
 ]
 wasm-bindgen = []
+cryptovampire = []
 
 # private features for testing
 test-explanations = []

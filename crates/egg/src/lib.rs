@@ -110,7 +110,7 @@ pub use {
         ConditionalApplier, Rewrite, Searcher,
     },
     run::*,
-    subst::{Subst, Var, VarExposed},
+    subst::{Subst, Var, VarExposed, uvar},
     util::*,
 };
 
