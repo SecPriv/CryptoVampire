@@ -1,3 +1,10 @@
+> **Note**
+> This code was copy-pasted from the original [egg repository](https://github.com/egraphs-good/egg).
+> It is now maintained here as part of the monorepo.
+> The history of the original project is not included in this repository.
+>
+> I'll will update somewhat regularily the [my fork](https://github.com/puyral/egg) to reflect the changes made here. Note that there are no real plan to merge anything back into [egg](https://github.com/egraphs-good/egg) as most of the changes are to done to expose justifiably hidden interals.
+
 # <img src="doc/egg.svg" alt="egg logo" height="40" align="left"> egg: egraphs good
 
 [![Crates.io](https://img.shields.io/crates/v/egg.svg)](https://crates.io/crates/egg)
@@ -5,8 +12,8 @@
 [![Main branch docs](https://img.shields.io/badge/docs-main-blue)](https://egraphs-good.github.io/egg/egg/)
 [![Zulip](https://img.shields.io/badge/zulip-join%20chat-blue)](https://egraphs.zulipchat.com)
 
-> Also check out the [egglog](https://github.com/egraphs-good/egglog) 
- system that provides an alternative approach to 
+> Also check out the [egglog](https://github.com/egraphs-good/egglog)
+ system that provides an alternative approach to
  equality saturation based on Datalog.
  It features a language-based design, incremental execution, and composable analyses.
  See also the [paper](//mwillsey.com/papers/egglog) and the [egglog web demo](https://egraphs-good.github.io/egglog).
@@ -58,7 +65,7 @@ Typically, you install Rust using [`rustup`](https://www.rust-lang.org/tools/ins
 
 Run `cargo doc --open` to build and open the documentation in a browser.
 
-Before committing/pushing, make sure to run `make`, 
+Before committing/pushing, make sure to run `make`,
  which runs all the tests and lints that CI will (including those under feature flags).
 This requires the [`cbc`](https://projects.coin-or.org/Cbc) solver
  due to the `lp` feature.
