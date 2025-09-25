@@ -19,7 +19,7 @@ declare_trace!($"vampire_rule");
 #[dynamic]
 static PATTERN: Pattern<Lang> = Pattern::new(RecExpr::from(rexp!((VAMPIRE #0)).to_vec()));
 
-static VAR: Var = Var::from_u32(0);
+static VAR: Var = Var::from_usize(0);
 
 /// A rule that calls vampire to get its answer
 #[derive(Clone, Builder)]

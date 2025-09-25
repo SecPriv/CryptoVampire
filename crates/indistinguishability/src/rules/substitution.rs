@@ -83,7 +83,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
         for subst in SUBSTITUTION_PATTERN.search(egraph) {
             let current_id = subst.eclass;
             for s in subst.substs {
-                let [m, x, y] = [0, 1, 2].map(|i| *s.get(Var::from_u32(i as u32)).unwrap());
+                let [m, x, y] = [0, 1, 2].map(|i| *s.get(Var::from_usize(i as u32)).unwrap());
                 let mut memo = memo.clone();
 
                 let ids = mk_substs(egraph, &mut memo, m, x, y);
@@ -121,7 +121,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
                 // Substitution { egraph, x, y }.apply_subst();
                 // [g]
 
-                let g = *s.get(Var::from_u32(0)).unwrap();
+                let g = *s.get(Var::from_usize(0)).unwrap();
                 [g]
             })
             .collect();

@@ -42,7 +42,7 @@ impl Var {
     /// assert_eq!(Var::from(12), "?#12".parse().unwrap());
     /// assert_eq!(Var::from_u32(12), "?#12".parse().unwrap());
     /// ```
-    pub const fn from_u32(num: uvar) -> Self {
+    pub const fn from_usize(num: uvar) -> Self {
         Var(VarInner::Num(num))
     }
 

@@ -39,9 +39,9 @@ pub fn generate_rule_vars0<const N: usize>(
         .inputs
         .iter()
         .enumerate()
-        .map(|(i, _)| Var::from_u32(i as u32));
+        .map(|(i, _)| Var::from_usize(i as u32));
     let others1 = ::std::array::from_fn(|i| i as u32)
         .map(|x| x + n)
-        .map(Var::from_u32);
+        .map(Var::from_usize);
     (vars1, others1)
 }

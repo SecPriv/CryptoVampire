@@ -109,12 +109,12 @@ impl Exists {
         let bvars: Rc<[_]> = bvars_sorts
             .iter()
             .enumerate()
-            .map(|(i, _)| egg::Var::from_u32(i as u32))
+            .map(|(i, _)| egg::Var::from_usize(i as u32))
             .collect();
         let cvars: Rc<[_]> = cvars_sort
             .iter()
             .enumerate()
-            .map(|(i, _)| egg::Var::from_u32((i + bvars.len()) as u32))
+            .map(|(i, _)| egg::Var::from_usize((i + bvars.len()) as u32))
             .collect();
 
         let exists_idx = pbl.functions().quantifiers(EXISTS_TEMPORARY).len();

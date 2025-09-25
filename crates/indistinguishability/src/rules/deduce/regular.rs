@@ -33,9 +33,9 @@ fn mk_deduce_rule(f: &Function) -> PrologRule<Lang> {
     let n: u32 = f.arity().try_into().unwrap();
     let s = f.signature.output;
 
-    let vars @ [u, v, h1, h2] = [0, 1, 2, 3].map(Var::from_u32);
-    let left_vars = (4..(4 + n)).map(Var::from_u32).collect_vec();
-    let right_vars = ((4 + n)..(4 + 2 * n)).map(Var::from_u32).collect_vec();
+    let vars @ [u, v, h1, h2] = [0, 1, 2, 3].map(Var::from_usize);
+    let left_vars = (4..(4 + n)).map(Var::from_usize).collect_vec();
+    let right_vars = ((4 + n)..(4 + 2 * n)).map(Var::from_usize).collect_vec();
 
     let input = mk_input(f, s, vars, &left_vars, &right_vars);
     let deps = izip!(f.signature.inputs_iter(), left_vars, right_vars)

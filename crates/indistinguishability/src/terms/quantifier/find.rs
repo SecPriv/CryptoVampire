@@ -114,12 +114,12 @@ impl FindSuchThat {
         let bvars: Rc<[_]> = bvars_sorts
             .iter()
             .enumerate()
-            .map(|(i, _)| egg::Var::from_u32(i as u32))
+            .map(|(i, _)| egg::Var::from_usize(i as u32))
             .collect();
         let cvars: Rc<[_]> = cvars_sort
             .iter()
             .enumerate()
-            .map(|(i, _)| egg::Var::from_u32((i + bvars.len()) as u32))
+            .map(|(i, _)| egg::Var::from_usize((i + bvars.len()) as u32))
             .collect();
 
         let quant_idx = pbl.functions().quantifiers(temporary).len();

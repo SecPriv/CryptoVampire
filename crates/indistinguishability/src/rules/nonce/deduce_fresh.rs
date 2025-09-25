@@ -32,7 +32,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FreshNonce {
         let mut conditions = Vec::with_capacity(substs.substs.len());
         for subst in substs.substs {
             let [nonce, content, hypothesis] =
-                [0, 1, 2].map(|i| *subst.get(Var::from_u32(i)).unwrap());
+                [0, 1, 2].map(|i| *subst.get(Var::from_usize(i)).unwrap());
             let hypothesis = convert_id(egraph, hypothesis);
             let nonce = Nonce::builder().content_id(egraph, nonce).build();
 

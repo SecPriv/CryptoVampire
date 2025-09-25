@@ -27,7 +27,7 @@ fn mk_rewrite_init<'a>(
         .prolog_only(true)
         .from(rexp!((hash #1 (NONCE #2))))
         .to(rexp!((candidate (hash #1 (NONCE #2)) #1 #2)))
-        .variables([1, 2].map(egg::Var::from_u32))
+        .variables([1, 2].map(egg::Var::from_usize))
         .sorts([Sort::Bitstring, Sort::Nonce])
         .name(format!("candidate prf success ({hash})"))
         .build()

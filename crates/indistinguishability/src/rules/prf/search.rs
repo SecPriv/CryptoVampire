@@ -425,7 +425,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfRule {
 
         for subst in substs.substs {
             let [m, k, ptcl, time] =
-                ::std::array::from_fn(|i| *subst.get(Var::from_u32(i as u32)).unwrap());
+                ::std::array::from_fn(|i| *subst.get(Var::from_usize(i as u32)).unwrap());
             let [m, k, time] = [m, k, time].map(|x| RecFOFormula::try_from_id(egraph, x).unwrap());
             let pbl = egraph.analysis.pbl();
             let search = Search {

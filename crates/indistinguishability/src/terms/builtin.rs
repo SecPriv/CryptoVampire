@@ -101,7 +101,7 @@ mod inner_recexpr {
     pub static IMPLIES: Function = super::IMPLIES.const_clone().unwrap();
 
     pub const fn mk_var(i: u32) -> LangVar {
-        egg::ENodeOrVar::Var(Var::from_u32(i))
+        egg::ENodeOrVar::Var(Var::from_usize(i))
     }
 
     pub const fn mk_app<const N: usize>(head: &Function, args: [u32; N]) -> LangVar {

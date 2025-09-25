@@ -146,7 +146,7 @@ pub mod basic_hash {
 
         let s1 = Step {
             id: tag.clone(),
-            vars: [0, 1].map(Var::from_u32).to_vec(),
+            vars: [0, 1].map(Var::from_usize).to_vec(),
             cond: rexp!(true).to_vec().into(),
             msg: rexp!((TUPLE (NONCE (n #0 #1)) (hash (NONCE (n #0 #1)) (NONCE (mk #0 #1 p1)))))
                 .to_vec()
@@ -174,7 +174,7 @@ pub mod basic_hash {
 
         let s1 = Step {
             id: rs.clone(),
-            vars: [0, 1].map(Var::from_u32).to_vec(),
+            vars: [0, 1].map(Var::from_usize).to_vec(),
             cond: rexp!((= (PROJ_2 (MACRO_INPUT (rs #0 #1) p1)) (hash (PROJ_1 (MACRO_INPUT (rs #0 #1) p1)) (NONCE (mk #0 #1 p1)))))
                 .to_vec()
                 .into(),
@@ -202,7 +202,7 @@ pub mod basic_hash {
 
         let s1 = Step {
             id: rf.clone(),
-            vars: [0].map(Var::from_u32).to_vec(),
+            vars: [0].map(Var::from_usize).to_vec(),
             cond: rexp!((not (mexists #0 p1 (msk #0 p1)))).to_vec().into(),
             msg: rexp!(ko).to_vec().into(),
         };

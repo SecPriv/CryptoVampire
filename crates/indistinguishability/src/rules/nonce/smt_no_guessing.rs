@@ -81,7 +81,7 @@ fn mk_smt_step<'a>(pbl: &'a Problem, ptcl: &'a Protocol) -> MSmtFormula {
     let indep_m = get_is_independant(Sort::Bitstring).unwrap();
     let p = ptcl.name();
     let indices @ [xi, ti] = ::std::array::from_fn(|i| i as u32);
-    let [x, t] = indices.map(Var::from_u32);
+    let [x, t] = indices.map(Var::from_usize);
     let nonce = Nonce::builder().content(RecFOFormula::Var(x)).build();
     let n = 2;
 

@@ -147,7 +147,7 @@ impl Variable {
 
 impl From<Variable> for egg::Var {
     fn from(value: Variable) -> Self {
-        egg::Var::from_u32(
+        egg::Var::from_usize(
             value
                 .as_usize()
         )

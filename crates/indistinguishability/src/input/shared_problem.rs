@@ -115,7 +115,7 @@ impl ShrProblem {
                     sorts
                         .iter()
                         .enumerate()
-                        .map(|(i, _)| egg::Var::from_u32(i as u32)),
+                        .map(|(i, _)| egg::Var::from_usize(i as u32)),
                 )
                 .build()
                 .unwrap()

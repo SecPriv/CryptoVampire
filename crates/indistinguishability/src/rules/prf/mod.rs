@@ -232,7 +232,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfRule {
             .substs
             .into_iter()
             .map(|mut subst| {
-                subst.insert(Var::from_u32(7), n);
+                subst.insert(Var::from_usize(7), n);
 
                 [
                     self.subterm_search1.apply_susbt(egraph, &subst),

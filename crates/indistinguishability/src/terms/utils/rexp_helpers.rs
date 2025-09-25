@@ -35,7 +35,7 @@ pub static IMPLIES: Function = builtin::IMPLIES.const_clone().unwrap();
 
 /// for [rexp]
 pub const fn mk_var(i: u32) -> LangVar {
-    egg::ENodeOrVar::Var(Var::from_u32(i))
+    egg::ENodeOrVar::Var(Var::from_usize(i))
 }
 
 /// for [rexp]

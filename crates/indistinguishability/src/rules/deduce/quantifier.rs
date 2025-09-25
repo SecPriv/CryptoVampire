@@ -29,7 +29,7 @@ fn mk_quantifier_deduce_rules_one<Q: QuantifierT>(_pbl: &Problem, e: &Q) -> Prol
         + 1;
 
     // initiate the variables
-    let [u, v, h1, h2] = ::std::array::from_fn(|i| [ENodeOrVar::Var(Var::from_u32(i as u32))]);
+    let [u, v, h1, h2] = ::std::array::from_fn(|i| [ENodeOrVar::Var(Var::from_usize(i as u32))]);
     let base_vars_n = 4;
 
     // u, v |> exits(vecx, vecsk(vecx)), exists(vecy, vecsk(vecy)) # h1, h2

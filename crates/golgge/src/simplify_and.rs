@@ -29,9 +29,9 @@ pub trait WithAnd: WithTrue {
             return vec![ENodeOrVar::ENode(Self::mk_true())].into();
         }
         let mut ret = Vec::with_capacity(2 * n - 1);
-        ret.push(ENodeOrVar::Var(Var::from_u32(from)));
+        ret.push(ENodeOrVar::Var(Var::from_usize(from)));
         for i in 1..(n as u32) {
-            ret.push(ENodeOrVar::Var(Var::from_u32(from + i)));
+            ret.push(ENodeOrVar::Var(Var::from_usize(from + i)));
             ret.push(ENodeOrVar::ENode(Self::mk_and(
                 ((2 * (i - 1)) as usize).into(),
                 ((2 * (i - 1) + 1) as usize).into(),
@@ -204,7 +204,7 @@ impl<L: Language + WithAnd + WithFalse + Display, N: Analysis<L>> Searcher<L, N>
             .into_iter()
             .filter(|id| id != &eclass)
             .enumerate()
-            .map(|(i, id)| (Var::from_u32(i as u32), id))
+            .map(|(i, id)| (Var::from_usize(i as u32), id))
             .collect();
 
         Some(egg::SearchMatches {
