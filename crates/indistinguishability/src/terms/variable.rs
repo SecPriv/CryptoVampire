@@ -1,11 +1,17 @@
+use std::borrow::Cow;
 use std::fmt::{Debug, Display};
 use std::ptr::NonNull;
 use std::sync::OnceLock;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
 
+use bon::{bon, builder};
+use steel::steel_vm::register_fn::RegisterFn;
+use steel_derive::Steel;
+
 use crate::input::Registerable;
 use crate::terms::Sort;
+use crate::LangVar;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Steel)]
 pub struct Variable(NonNull<VariableInner>);
@@ -29,7 +35,7 @@ enum MaybeOnce<T> {
 
 impl Clone for Variable {
     fn clone(&self) -> Self {
-        let inner = self.as_ptr();
+        let inner = self.as_inner_ref();
         match &inner.count {
             Some(c) => {
                 // same implementation as `Arc` hence why the `Rela`
@@ -61,7 +67,7 @@ impl Drop for Variable {
     fn drop(&mut self) {
         // same implementation as `Arc`
         {
-            let inner = self.as_ptr();
+            let inner = self.as_inner_ref();
             let Some(count) = &inner.count else {
                 return;
             };
@@ -92,7 +98,7 @@ impl Debug for Variable {
 }
 
 impl Variable {
-    fn as_ptr(&self) -> &VariableInner {
+    const fn as_inner_ref(&self) -> &VariableInner {
         unsafe { self.0.as_ref() }
     }
 
@@ -100,23 +106,68 @@ impl Variable {
         self.0.as_ptr() as usize
     }
 
+    pub fn as_egg(&self) -> egg::Var {
+        egg::Var::from_usize(self.as_usize())
+    }
+
+    pub fn as_lang_var(&self) -> LangVar {
+        egg::ENodeOrVar::Var(self.as_egg())
+    }
+
     pub const fn from_const(inner: &'static VariableInner) -> Self {
         assert!(matches!(inner.count, None));
         Self(NonNull::from_ref(inner))
     }
 
+    pub const fn const_clone(&self) -> Option<Self> {
+        match self.is_static() {
+            true => Some(Self(self.0)),
+            _ => None,
+        }
+    }
+
+    #[must_use]
     pub fn get_sort(&self) -> Option<Sort> {
-        match &self.as_ptr().sort {
+        match &self.as_inner_ref().sort {
             MaybeOnce::Const(x) => *x,
             MaybeOnce::Dyn(once_lock) => once_lock.get().copied(),
         }
     }
 
-    pub fn set_sort(&self, sort: Sort) -> Result<(), Sort> {
-        match &self.as_ptr().sort {
-            MaybeOnce::Dyn(l) => l.set(sort),
-            _ => Err(sort),
+    #[must_use]
+    pub fn has_sort(&self) -> bool {
+        self.get_sort().is_some()
+    }
+
+    #[must_use]
+    pub fn has_smt_sort(&self) -> bool {
+        match self.get_sort() {
+            Some(Sort::Any) | None => false,
+            _ => true,
         }
+    }
+
+    #[must_use]
+    pub fn maybe_set_sort(&self, sort: Option<Sort>) -> Result<(), Option<Sort>> {
+        match (sort, &self.as_inner_ref().sort) {
+            (None, _) => Ok(()),
+            (Some(sort), MaybeOnce::Dyn(l)) => match l.set(sort) {
+                Err(orginal_sort) if sort != orginal_sort => Err(Some(orginal_sort)),
+                _ => Ok(()),
+            },
+            (x, MaybeOnce::Const(x_init)) => {
+                if &x == x_init {
+                    Ok(())
+                } else {
+                    Err(*x_init)
+                }
+            }
+        }
+    }
+
+    #[must_use]
+    pub const fn is_static(&self) -> bool {
+        self.as_inner_ref().count.is_none()
     }
 
     fn steel_fresh() -> Self {
@@ -147,10 +198,7 @@ impl Variable {
 
 impl From<Variable> for egg::Var {
     fn from(value: Variable) -> Self {
-        egg::Var::from_usize(
-            value
-                .as_usize()
-        )
+        egg::Var::from_usize(value.as_usize())
     }
 }
 
@@ -161,6 +209,14 @@ impl Registerable for Variable {
         Self::register_type(module)
             .register_fn("mk-fresh-var", Self::steel_fresh)
             .register_fn("mk-fresh-var-w-sort", Self::steel_fresh_sort)
+    }
+}
+
+impl cryptovampire_smt::SortedVar for Variable {
+    type Sort = Sort;
+
+    fn sort_ref(&self) -> Cow<'_, Sort> {
+        Cow::Owned(self.get_sort().expect("known sort"))
     }
 }
 
@@ -194,10 +250,7 @@ macro_rules! fresh {
     };
 }
 
-use bon::{bon, builder};
 pub(crate) use mk_fresh_var as mk_fresh_static_var;
-use steel::steel_vm::register_fn::RegisterFn;
-use steel_derive::Steel;
 
 #[cfg(test)]
 mod test {

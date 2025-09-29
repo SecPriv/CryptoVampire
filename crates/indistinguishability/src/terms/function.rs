@@ -15,7 +15,7 @@ use crate::input::Registerable;
 use crate::input::shared_cryptography::ShrCrypto;
 use crate::protocol::{MacroKind};
 use crate::terms::{
-    builtin, Alias, Exists, FunctionCollection, FunctionFlags, Quantifier, QuantifierIndex, QuantifierT, RecFOFormula, Signature, Sort, BUILTINS, HAPPENS, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, NOT, TRUE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG
+    builtin, Alias, Exists, FOBinder, FunctionCollection, FunctionFlags, Quantifier, QuantifierIndex, QuantifierT, RecFOFormula, Signature, Sort, BUILTINS, EXISTS, HAPPENS, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, NOT, TRUE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,  FIND_SUCH_THAT
 };
 use crate::utils::LightClone;
 use crate::{Lang, LangVar};
@@ -203,6 +203,14 @@ impl Function {
 
     pub fn app_empty_var(&self) -> PatternAst<Lang> {
         self.app_var::<[_; 0]>(&[])
+    }
+
+    pub fn as_fobinder(&self) -> Option<FOBinder> {
+        match_eq!(self => {
+            EXISTS => { Some(FOBinder::Exists) },
+            FIND_SUCH_THAT => {Some(FOBinder::FindSuchThat)},
+            _ => { None }
+        })
     }
 
     // =========================================================

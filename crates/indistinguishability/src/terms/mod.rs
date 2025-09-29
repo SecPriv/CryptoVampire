@@ -1,4 +1,3 @@
-use cryptovampire_smt::VarInner;
 use egg::{Symbol, Var};
 
 use crate::{Lang, LangVar};
@@ -16,10 +15,24 @@ macro_rules! const_fun_flags {
     };
 }
 
+/// Shortcut for `Cow<'smt, [U]>`
 macro_rules! cow {
+    ($l:lifetime; $t:ty) => {
+        ::std::borrow::Cow<$l, [$t]>
+    };
     ($t:ty) => {
         ::std::borrow::Cow<'static, [$t]>
     };
+}
+
+/// equivalent of [vec!] for [cow!] types
+macro_rules! mk_cow {
+    (@ $v:expr) => {
+        ::std::borrow::Cow::Owned($v)
+    };
+    ($($tt:tt)*) => {
+        ::std::borrow::Cow::Owned(::std::vec![$($tt)*])
+    }
 }
 
 /// helper to write owned signatures
@@ -104,10 +117,3 @@ pub use variable::Variable;
 
 pub type CowExpr = cow![Lang];
 pub type CowPattern = cow![LangVar];
-
-pub fn convert_smt_var(var: cryptovampire_smt::VarInner) -> Var {
-    match var {
-        VarInner::Int(x) => Var::from_usize(x),
-        VarInner::Str(cow) => Var::from_symbol(Symbol::from(cow.as_ref())),
-    }
-}

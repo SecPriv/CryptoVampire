@@ -1,12 +1,11 @@
 use std::collections::HashSet;
 
-use egg::Var;
 pub use exists::*;
 use itertools::{chain, izip};
 use utils::{ereturn_if, match_as_trait};
 
 use crate::Problem;
-use crate::terms::{Function, QuantifierIndex, Sort};
+use crate::terms::{Function, QuantifierIndex, Sort, Variable};
 mod exists;
 mod find;
 pub use find::*;
@@ -32,8 +31,8 @@ impl From<Exists> for Quantifier {
 }
 
 pub trait QuantifierT: Eq + Sized {
-    fn bvars(&self) -> &[Var];
-    fn cvars(&self) -> &[Var];
+    fn bvars(&self) -> &[Variable];
+    fn cvars(&self) -> &[Variable];
 
     fn top_level_function(&self) -> &Function;
     fn skolems(&self) -> &[Function];
@@ -63,21 +62,21 @@ pub trait QuantifierT: Eq + Sized {
         ]
     }
 
-    fn bvars_and_sorts(&self) -> impl Iterator<Item = (Var, Sort)> + Clone {
-        izip!(self.bvars(), self.bvars_sorts()).map(|(v, s)| (*v, s))
-    }
+    // fn bvars_and_sorts(&self) -> impl Iterator<Item = (Var, Sort)> + Clone {
+    //     izip!(self.bvars(), self.bvars_sorts()).map(|(v, s)| (*v, s))
+    // }
 
-    fn cvars_and_sorts(&self) -> impl Iterator<Item = (Var, Sort)> + Clone {
-        izip!(self.cvars(), self.cvars_sorts()).map(|(v, s)| (*v, s))
-    }
+    // fn cvars_and_sorts(&self) -> impl Iterator<Item = (Var, Sort)> + Clone {
+    //     izip!(self.cvars(), self.cvars_sorts()).map(|(v, s)| (*v, s))
+    // }
 
-    fn cvars_as_lang(&self) -> impl Iterator<Item = crate::LangVar> + use<'_, Self> {
-        self.cvars().iter().copied().map(egg::ENodeOrVar::Var)
-    }
+    // fn cvars_as_lang(&self) -> impl Iterator<Item = crate::LangVar> + use<'_, Self> {
+    //     self.cvars().iter().copied().map(egg::ENodeOrVar::Var)
+    // }
 
-    fn bvars_as_lang(&self) -> impl Iterator<Item = crate::LangVar> + use<'_, Self> {
-        self.bvars().iter().copied().map(egg::ENodeOrVar::Var)
-    }
+    // fn bvars_as_lang(&self) -> impl Iterator<Item = crate::LangVar> + use<'_, Self> {
+    //     self.bvars().iter().copied().map(egg::ENodeOrVar::Var)
+    // }
 
     fn index(&self) -> QuantifierIndex {
         self.top_level_function().get_quantifier_index().unwrap()

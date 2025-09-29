@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use cryptovampire_smt::{Smt, SmtFormula};
+use cryptovampire_smt::{Smt, SmtFormula, SmtParam};
 use terms::{Function, Sort};
 
 // ~~~~~~~~~~~~~~~~ macros ~~~~~~~~~~~~~~~~~~
@@ -45,6 +45,8 @@ pub use input::{init_engine, register};
 mod configuration;
 pub use configuration::Configuration;
 
+use crate::terms::Variable;
+
 // ~~~~~~ type aliases and constants ~~~~~~~~
 
 /// Our global analysis type
@@ -53,8 +55,10 @@ pub type N = ();
 pub type Lang = terms::InnerLang;
 pub type LangVar = egg::ENodeOrVar<Lang>;
 
-pub type MSmtFormula = SmtFormula<Sort, Function>;
-pub type MSmt = Smt<Sort, Function>;
+pub struct MSmtParam;
+
+pub type MSmtFormula = SmtFormula<MSmtFormula>;
+pub type MSmt = Smt<MSmtFormula>;
 
 // ~~~~~~~~~~~~~~~~ other ~~~~~~~~~~~~~~~~~~~
 
@@ -77,4 +81,12 @@ pub fn init_logger() {
         })
         .parse_default_env()
         .init();
+}
+
+impl SmtParam for MSmtParam {
+    type Function = Function;
+
+    type Sort = Sort;
+
+    type SVar = Variable;
 }

@@ -1,14 +1,15 @@
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 
 use serde::{Deserialize, Serialize};
 use steel::rvals::IntoSteelVal;
 use steel_derive::Steel;
 
-use crate::{input::Registerable, terms::{Function, BITSTRING_SORT, INDEX_SORT, TIME_SORT}};
+use crate::input::Registerable;
+use crate::terms::{BITSTRING_SORT, Function, INDEX_SORT, TIME_SORT};
 
 #[non_exhaustive]
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Steel, Default,
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Steel, Default,
 )]
 #[steel(equality)]
 pub enum Sort {
@@ -49,7 +50,16 @@ impl Sort {
             _ if fun == &BITSTRING_SORT => Some(Self::Bitstring),
             _ if fun == &INDEX_SORT => Some(Self::Index),
             _ if fun == &TIME_SORT => Some(Self::Time),
-            _ => None
+            _ => None,
+        }
+    }
+
+    pub fn as_function(&self) -> Option<&'static Function> {
+        match value {
+            Sort::Bitstring => Some(&BITSTRING_SORT),
+            Sort::Index => Some(&INDEX_SORT),
+            Sort::Time => Some(&TIME_SORT),
+            _ => None,
         }
     }
 }
@@ -65,6 +75,12 @@ impl Display for Sort {
             Sort::Index => write!(f, "Index"),
             Sort::Any => write!(f, "Any"),
         }
+    }
+}
+
+impl Debug for Sort {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self}")
     }
 }
 

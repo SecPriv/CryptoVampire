@@ -1,16 +1,16 @@
 use std::borrow::Cow;
 
-use egg::Var;
 use logic_formula::{Destructed, Formula};
 use steel_derive::Steel;
 
-use crate::terms::{Function, Sort, CONS, EXISTS, FIND_SUCH_THAT};
+use crate::terms::{Function, Sort, Variable, CONS, EXISTS, FIND_SUCH_THAT};
 
-mod egg_like;
+mod egg;
+// mod egg_like;
 mod enum_like;
 mod rec_exp_lang;
 
-pub use egg_like::InnerLang;
+pub use egg::InnerLang;
 pub use enum_like::RecFOFormula;
 pub use rec_exp_lang::RecExprIter;
 
@@ -21,35 +21,53 @@ pub enum FOBinder {
     FindSuchThat,
 }
 
-pub struct RecFOFormulaQuant<'a> {
+pub struct RecFOFormulaQuant {
     pub quantifier: FOBinder,
-    pub vars: Cow<'a, [Var]>,
-    pub sorts: Cow<'a, [Sort]>,
+    pub vars: Vec<Variable> ,
 }
 
-impl<'a> RecFOFormulaQuant<'a> {
-    pub fn new(quantifier: FOBinder, vars: Cow<'a, [Var]>, sorts: Cow<'a, [Sort]>) -> Self {
+pub struct RecFOFormulaQuantRef<'a> {
+    pub quantifier: FOBinder,
+    pub vars: &'a [Variable] ,
+}
+
+impl<'a> RecFOFormulaQuantRef<'a> {
+    pub fn new(quantifier: FOBinder, vars: &'a [Variable]) -> Self {
+        Self { quantifier, vars }
+    }
+}
+
+impl RecFOFormulaQuant {
+    pub fn new(quantifier: FOBinder, vars: Vec<Variable>) -> Self {
         Self {
             quantifier,
             vars,
-            sorts,
         }
     }
 }
 
 impl FOBinder {
     pub fn try_from_function(fun:&Function) -> Option<Self> {
-        match fun {
-            _ if fun == &EXISTS => Some(Self::Exists),
-            _ if fun == &FIND_SUCH_THAT => Some(Self::FindSuchThat),
-            _ => None
+        fun.as_fobinder()
+    }
+
+    pub fn arity(&self) -> usize {
+        match self {
+            Self::FindSuchThat => 3,
+            Self::Exists | Self::Forall => 1
         }
     }
 }
 
-impl<'a> logic_formula::Bounder<Var> for RecFOFormulaQuant<'a> {
-    fn bounds(&self) -> impl Iterator<Item = Var> {
-        self.vars.iter().copied()
+impl logic_formula::Bounder<Variable> for RecFOFormulaQuant {
+    fn bounds(&self) -> impl Iterator<Item = Variable> {
+        self.vars.iter().cloned()
+    }
+}
+
+impl<'a> logic_formula::Bounder<&'a Variable> for RecFOFormulaQuantRef<'a> {
+    fn bounds(&self) -> impl Iterator<Item = &'a Variable> {
+        self.vars.iter()
     }
 }
 
@@ -65,6 +83,14 @@ impl FOBinder {
             FOBinder::Forall => true,
             FOBinder::Exists => false,
             _ => todo!(),
+        }
+    }
+
+    pub fn as_function(&self) -> Option<&'static Function> {
+        match self {
+            FOBinder::Exists => Some(&EXISTS),
+            FOBinder::FindSuchThat => Some(&FIND_SUCH_THAT),
+            FOBinder::Forall => None
         }
     }
 }

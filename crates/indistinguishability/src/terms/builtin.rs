@@ -433,10 +433,10 @@ mk_builtin_funs!(
 
     // -------- lambda -----------
 
-    LAMBDA_LET "λlet" {
-        flags: f!(PROLOG_ONLY),
-        signature: s!(Any, Any -> Any)
-    };
+    // LAMBDA_LET "λlet" {
+    //     flags: f!(PROLOG_ONLY),
+    //     signature: s!(Any, Any -> Any)
+    // };
 
     LAMBDA_S "λS" {
         flags: f!(PROLOG_ONLY),

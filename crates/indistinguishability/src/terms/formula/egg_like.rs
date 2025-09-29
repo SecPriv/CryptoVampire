@@ -1,68 +1,83 @@
-use std::fmt::Display;
-use std::rc::Rc;
+use std::borrow::Cow;
 
-use egg::{ENodeOrVar, Id, Language, RecExpr, Var};
-use itertools::Itertools;
-use logic_formula::{Destructed, Formula, Head, HeadSk};
-use serde::Serialize;
-use smallvec::SmallVec;
+use logic_formula::{Destructed, Formula, HeadSk};
+use utils::dynamic_iter;
 
-use crate::LangVar;
-use crate::terms::formula::RecFOFormulaQuant;
-use crate::terms::{FOBinder, Function, Sort, CONS, NIL};
+use crate::terms::{FOBinder, Function, Variable};
 
-const SIZE: usize = 3;
-
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Serialize)]
-pub struct InnerLang {
-    pub head: Function,
-    pub args: SmallVec<[Id; SIZE]>,
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub enum VExprHead {
+    Var(Variable),
+    Quantifier {
+        head: FOBinder,
+        vars: Vec<Variable>,
+        /// The offset from the current position to the index of the head arguments
+        args: Vec<usize>,
+    },
+    App {
+        head: Function,
+        /// The offset from the current position to the index of the head arguments
+        args: Vec<usize>,
+    },
 }
 
-impl InnerLang {
-    pub const fn new_const(head: Function, args: [Id; SIZE], len: usize) -> Self {
-        assert!(len <= SIZE);
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct VExprQuant<'a> {
+    head: FOBinder,
+    vars: Cow<'a, [Variable]>,
+}
 
-        Self {
-            head,
-            args: unsafe {
-                // we checked the length just above
-                SmallVec::from_const_with_len_unchecked(args, len)
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct VExpr(pub Vec<VExprHead>);
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+pub struct VExprRef<'a>(pub &'a [VExprHead]);
+
+impl<'a> Formula for VExprRef<'a> {
+    type Var = &'a Variable;
+
+    type Fun = &'a Function;
+
+    type Quant = VExprQuant<'a>;
+
+    fn destruct(self) -> Destructed<Self, impl Iterator<Item = Self>> {
+        dynamic_iter!(MIter; Many:B, None:C);
+        let head = self.as_slice().first().expect("destructing empty formula");
+        match head {
+            VExprHead::Var(variable) => Destructed {
+                head: HeadSk::Var(variable),
+                args: MIter::None(std::iter::empty()),
+            },
+            VExprHead::Quantifier { head, vars, args } => Destructed {
+                head: HeadSk::Quant(VExprQuant {
+                    head: *head,
+                    vars: Cow::Borrowed(&vars),
+                }),
+                args: MIter::Many(mk_args_iter(self, &args)),
+            },
+            VExprHead::App { head, args } => Destructed {
+                head: HeadSk::Fun(head),
+                args: MIter::Many(mk_args_iter(self, &args)),
             },
         }
     }
-
-    pub fn new<I: IntoIterator<Item = Id>>(head: Function, args: I) -> Self {
-        Self {
-            head,
-            args: args.into_iter().collect(),
-        }
-    }
-
 }
 
-impl Language for InnerLang {
-    type Discriminant = Function;
+impl VExpr {
+  #[inline]
+  pub fn as_ref(&self) -> VExprRef<'_> {
+    VExprRef(&self.0)
+  }
+}
 
-    fn discriminant(&self) -> Self::Discriminant {
-        self.head.clone()
-    }
-
-    fn matches(&self, other: &Self) -> bool {
-        self.head == other.head && self.args.len() == other.args.len()
-    }
-
-    fn children(&self) -> &[Id] {
-        &self.args
-    }
-
-    fn children_mut(&mut self) -> &mut [Id] {
-        &mut self.args
+impl<'a> VExprRef<'a> {
+    #[inline]
+    pub fn as_slice(&self) -> &'a [VExprHead] {
+        self.0
     }
 }
 
-impl Display for InnerLang {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.head)
-    }
+impl 
+
+fn mk_args_iter<'a>(f: VExprRef<'a>, args: &'a [usize]) -> impl Iterator<Item = VExprRef<'a>> {
+    args.iter().map(move |&i| VExprRef(&f.as_slice()[i..]))
 }

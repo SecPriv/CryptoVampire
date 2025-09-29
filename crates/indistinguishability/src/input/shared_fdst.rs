@@ -7,8 +7,7 @@ use steel_derive::Steel;
 
 use crate::input::Registerable;
 use crate::input::shared_problem::ShrProblem;
-use crate::input::var::SVar;
-use crate::terms::{FindSuchThat, Function, QuantifierIndex, QuantifierT, RecFOFormula};
+use crate::terms::{FindSuchThat, Function, QuantifierIndex, QuantifierT, RecFOFormula, Variable};
 
 #[derive(Debug, Clone, Steel)]
 pub struct ShrFindSuchThat {
@@ -36,11 +35,11 @@ impl ShrFindSuchThat {
         })
     }
 
-    fn get_cvars(&self) -> Vec<SVar> {
+    fn get_cvars(&self) -> Vec<Variable> {
         self.fdst().cvars().iter().copied().map_into().collect()
     }
 
-    fn get_bvars(&self) -> Vec<SVar> {
+    fn get_bvars(&self) -> Vec<Variable> {
         self.fdst().bvars().iter().copied().map_into().collect()
     }
 

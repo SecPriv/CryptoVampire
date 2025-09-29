@@ -6,7 +6,6 @@ use steel_derive::Steel;
 
 use super::CowPattern;
 use crate::input::Registerable;
-use crate::input::var::SVar;
 use crate::terms::{RecFOFormula, Sort};
 
 /// When the fonction is an alias
@@ -18,8 +17,8 @@ pub struct Alias(pub cow![AliasRewrite]);
 pub struct AliasRewrite {
     /// These are the arguments to the function that one must unify with to get
     /// rewritten as [Self::to].
-    pub from: cow![CowPattern],
-    pub to: CowPattern,
+    pub from: cow![RecFOFormula],
+    pub to: RecFOFormula,
     pub variables: cow![egg::Var],
     pub sorts: cow![Sort],
 }

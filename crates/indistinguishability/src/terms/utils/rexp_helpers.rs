@@ -34,7 +34,7 @@ pub static EQ: Function = builtin::EQ.const_clone().unwrap();
 pub static IMPLIES: Function = builtin::IMPLIES.const_clone().unwrap();
 
 /// for [rexp]
-pub const fn mk_var(i: u32) -> LangVar {
+pub const fn mk_var(i: usize) -> LangVar {
     egg::ENodeOrVar::Var(Var::from_usize(i))
 }
 

@@ -12,7 +12,6 @@ use crate::input::Registerable;
 use crate::input::golgge_rules::Rule;
 use crate::input::shared_exists::ShrExists;
 use crate::input::shared_fdst::ShrFindSuchThat;
-use crate::input::var::SVar;
 use crate::protocol::Step;
 use crate::terms::{Exists, FindSuchThat, Function, QuantifierT, RecFOFormula, Rewrite, Sort};
 use crate::{MSmt, Problem};

@@ -10,7 +10,6 @@ use logic_formula::{Destructed, Formula, HeadSk};
 use steel::parser::kernel;
 use utils::dynamic_iter;
 
-use crate::input::var;
 use crate::terms::formula::{FormulaLike, RecFOFormulaQuant, sort_list};
 use crate::terms::{FOBinder, Function, LAMBDA_O, LAMBDA_S, RecFOFormula, Sort};
 use crate::utils::LightClone;
@@ -75,7 +74,7 @@ trait AsLangVar: Sized {
     fn egg_free_vars(exp: &[Self]) -> impl Iterator<Item = Var>;
 
     /// The highest [egg::Var] appearing in `exp`
-    fn highest_egg_var(exp: &[Self]) -> u32 {
+    fn highest_egg_var(exp: &[Self]) -> uv {
         Self::egg_free_vars(exp)
             .filter_map(|v| v.as_u32()).max().unwrap_or(0)
     }
