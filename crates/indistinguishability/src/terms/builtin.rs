@@ -1,9 +1,10 @@
 use std::borrow::Cow;
 
-use cryptovampire_macros::{declare_recexpr, mk_builtin_funs};
+use cryptovampire_macros::mk_builtin_funs;
 
 use super::Sort::{self, *};
 use super::{Alias, AliasRewrite, CowPattern, Function, FunctionFlags, InnerFunction, Signature};
+use crate::rexp;
 
 /// helper to write const signatures
 macro_rules! s {
@@ -35,97 +36,33 @@ macro_rules! f {
     };
 }
 
-macro_rules! count {
-    () => {
-        0
-    };
-    ($x: expr) => { 1};
-    ($x:expr, $($other:expr),*) => {
-        1 + count!($($other),*)
-    };
-}
-
 macro_rules! mk_static_slice {
     ($ty:ty; [$($e:expr),*]) => {
         {
-            static TMP : [$ty; count!($($e),*)] = [$($e),*];
-            &TMP
+            static TMP : &'static [$ty] = &[$($e),*];
+            TMP
         }
     };
 }
 
 macro_rules! alias {
-    ($( $($var:literal:$sort:ident),* in $($args:expr),* => $to:expr),*) => {
+    ($( $($var:ident:$sort:ident),* in $($args:expr),* => $to:expr),*) => {
         {
             Alias(Cow::Borrowed(mk_static_slice!(AliasRewrite;
-            [$(AliasRewrite {
-                    from: Cow::Borrowed(mk_static_slice!(CowPattern; [$($args),*])),
+            [$({
+                $(
+                    #[allow(non_upper_case_globals)]
+                    static $var: $crate::terms::Variable = $crate::fresh!(const $sort);
+                )*
+                AliasRewrite {
+                    from: Cow::Borrowed(mk_static_slice!($crate::terms::RecFOFormula; [$($args),*])),
                     to: $to,
-                    variables: Cow::Borrowed(mk_static_slice!(egg::Var; [$(egg::Var::from_u32($var)),*])),
-                    sorts: Cow::Borrowed(mk_static_slice!(crate::terms::Sort; [$(crate::terms::Sort::$sort),*])),
+                    variables: Cow::Borrowed(mk_static_slice!($crate::terms::Variable; [$($var.const_clone()),*])),
                 }
-            ),*]
+            }),*]
             )))
         }
     };
-}
-
-macro_rules! rexp {
-    ($($t:tt)*) => {
-        {
-            declare_recexpr!(inner_recexpr in TMP = $($t)*);
-            Cow::Borrowed(&TMP)
-        }
-    };
-}
-
-mod inner_recexpr {
-    use egg::{Id, Var};
-
-    use crate::LangVar;
-    use crate::terms::Function;
-
-    #[allow(dead_code)]
-    pub static TRUE: Function = super::TRUE.const_clone().unwrap();
-    #[allow(dead_code)]
-    pub static FALSE: Function = super::TRUE.const_clone().unwrap();
-    #[allow(dead_code)]
-    pub static AND: Function = super::AND.const_clone().unwrap();
-    #[allow(dead_code)]
-    pub static OR: Function = super::OR.const_clone().unwrap();
-    #[allow(dead_code)]
-    pub static NOT: Function = super::NOT.const_clone().unwrap();
-    #[allow(dead_code)]
-    pub static EQ: Function = super::EQ.const_clone().unwrap();
-    #[allow(dead_code)]
-    pub static IMPLIES: Function = super::IMPLIES.const_clone().unwrap();
-
-    pub const fn mk_var(i: u32) -> LangVar {
-        egg::ENodeOrVar::Var(Var::from_usize(i))
-    }
-
-    pub const fn mk_app<const N: usize>(head: &Function, args: [u32; N]) -> LangVar {
-        let head = head.const_clone().unwrap();
-        match N {
-            0 => mk_app_inner(head, [0; 3], 0),
-            1 => mk_app_inner(head, [args[0], 0, 0], 1),
-            2 => mk_app_inner(head, [args[0], args[1], 0], 2),
-            3 => mk_app_inner(head, [args[0], args[1], args[2]], 3),
-            _ => panic!("N too large!"),
-        }
-    }
-
-    macro_rules! mkargs {
-        ($($i:expr),*) => {
-            [$(Id::new_const($i)),*]
-        };
-    }
-
-    const fn mk_app_inner(head: Function, [arg1, arg2, arg3]: [u32; 3], len: usize) -> LangVar {
-        egg::ENodeOrVar::ENode(crate::Lang::new_const(head, mkargs![arg1, arg2, arg3], len))
-    }
-
-    pub type RexpLang = LangVar;
 }
 
 // -----------------------------------------------------------------------------
@@ -186,7 +123,7 @@ mk_builtin_funs!(
         signature: s!(Bool, 2),
         flags: f!(BUILTIN_SMT), // e.g., this will be `BUILTIN | BUILTIN_SMT` instead of `FunctionFlags::BUILTIN`
         alias: Some(alias!{ // <- magic
-            0:Bool, 1:Bool in rexp!(#0), rexp!(#1) => rexp!((BITE #0 #1 TRUE))
+            a:Bool, b:Bool in rexp!(#a), rexp!(#b) => rexp!((BITE #a #b true))
         }),
     };
 
@@ -198,7 +135,7 @@ mk_builtin_funs!(
         signature: s!(Bool, 2),
         flags: f!(/* ALIAS | */ BUILTIN_SMT),
         alias: Some(alias!{
-            0:Bool, 1:Bool in rexp!(#0), rexp!(#1) => rexp!((BITE #0 #1 FALSE))
+            a:Bool, b:Bool in rexp!(const #a), rexp!(const #b) => rexp!(const (BITE #a #b false))
         }),
     };
 
@@ -210,7 +147,7 @@ mk_builtin_funs!(
         signature: s!(Bool, 2),
         flags: f!(/* ALIAS | */ BUILTIN_SMT),
         alias: Some(alias!{
-            0:Bool, 1:Bool in rexp!(#0), rexp!(#1) => rexp!((BITE #0 TRUE #1))
+            a:Bool, b:Bool in rexp!(const #a), rexp!(const #b) => rexp!(const (BITE #a true #b))
         }),
     };
 
@@ -222,7 +159,7 @@ mk_builtin_funs!(
         signature: s!(Bool, 1),
         flags: f!(/* ALIAS | */ BUILTIN_SMT),
         alias: Some(alias!{
-            0:Bool in rexp!(#0) => rexp!((BITE #0 FALSE TRUE))
+            a:Bool in rexp!(const #a) => rexp!(const (BITE #a false true))
         }),
     };
 
@@ -451,19 +388,19 @@ mk_builtin_funs!(
     // ------ quantifiers --------
 
     /// The binder for `exists`
-    /// 
+    ///
     /// The first argument is a list of sorts
     EXISTS "mexists" {
         signature: s!(Any /* list */, Bool -> Bool),
         flags: f!(BINDER | PROLOG_ONLY)
     };
-    
+
     /// The binder for `find such that`
-    /// 
+    ///
     /// The first argument is a list of sorts. Then its `condition`,
     /// `then_branch` and `else_branch`
     FIND_SUCH_THAT "find_such_that" {
-        signature: s!(Any /* list */, 
+        signature: s!(Any /* list */,
             Bool, Bitstring, Bitstring -> Bitstring),
         flags: f!(BINDER | PROLOG_ONLY)
     };

@@ -112,7 +112,7 @@ impl MFunction {
         let name = &self.name;
         // let span = self.span;
 
-        quote_spanned! {self.span => #name.const_clone().unwrap()}
+        quote_spanned! {self.span => #name.const_clone()}
     }
 
     pub fn list_alt_names(&self) -> impl Iterator<Item = proc_macro2::TokenStream> + use<'_> {
