@@ -6,21 +6,20 @@ use steel_derive::Steel;
 
 use super::CowPattern;
 use crate::input::Registerable;
-use crate::terms::{RecFOFormula, Sort};
+use crate::terms::{RecFOFormula, Sort, Variable};
 
 /// When the fonction is an alias
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Alias(pub cow![AliasRewrite]);
 
 /// A rewrite rule for an alias
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Steel)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Steel)]
 pub struct AliasRewrite {
     /// These are the arguments to the function that one must unify with to get
     /// rewritten as [Self::to].
     pub from: cow![RecFOFormula],
     pub to: RecFOFormula,
-    pub variables: cow![egg::Var],
-    pub sorts: cow![Sort],
+    pub variables: cow![Variable],
 }
 
 impl Alias {
@@ -46,31 +45,14 @@ impl IntoSteelVal for Alias {
 
 impl AliasRewrite {
     fn new_steel(
-        variables: Vec<SVar>,
-        sorts: Vec<Sort>,
+        variables: Vec<Variable>,
         from: Vec<RecFOFormula>,
         to: RecFOFormula,
     ) -> SResult<Self> {
-        fn convert(rec: &RecFOFormula) -> SResult<CowPattern> {
-            let patt = rec.steel_maybe_as_recexp()?;
-            let cow: CowPattern = patt.into_iter().collect_vec().into();
-            Ok(cow)
-        }
-        let from: SResult<Vec<_>> = from.iter().map(convert).collect();
-        let from: cow![CowPattern] = from?.into();
-        let to = convert(&to)?;
-        let variables = variables.into_iter().map_into().collect();
-        // let (variables, sorts): (Vec<_>, Vec<_>) = vars
-        //     .into_iter()
-        //     .map(|(a, b)| (egg::Var::from(a), b))
-        //     .unzip();
-        // let variables = variables.into();
-        let sorts = sorts.into();
         Ok(AliasRewrite {
-            from,
+            from: from.into(),
             to,
-            variables,
-            sorts,
+            variables: variables.into(),
         })
     }
 }
@@ -87,13 +69,15 @@ impl Registerable for AliasRewrite {
 macro_rules! mk_alias {
     ($( $($var:literal:$sort:ident),* in $($args:expr),* => $to:expr),*) => {
         {
-            use $crate::terms::Sort::*;
+            $(
+                let $var: $crate::terms::Variable = $crate::fresh!($sort);
+            )*
+
             $crate::terms::Alias(::std::borrow::Cow::Owned(vec!
             [$($crate::terms::AliasRewrite {
-                    from: ::std::borrow::Cow::Owned(vec![$($crate::terms::utils::convert_to_cow($args)),*]),
-                    to: $crate::terms::utils::convert_to_cow($to),
-                    variables: ::std::borrow::Cow::Owned(vec![$(::egg::Var::from_u32($var)),*]),
-                    sorts: ::std::borrow::Cow::Owned(vec![$($sort),*]),
+                    from: ::std::borrow::Cow::Owned(vec![$($args),*]),
+                    to: $to,
+                    variables: ::std::borrow::Cow::Owned(vec![$($var.clone()),*]),
                 }
             ),*]
             ))
