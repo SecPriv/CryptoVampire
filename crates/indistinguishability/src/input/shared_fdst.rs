@@ -36,11 +36,11 @@ impl ShrFindSuchThat {
     }
 
     fn get_cvars(&self) -> Vec<Variable> {
-        self.fdst().cvars().iter().copied().map_into().collect()
+        self.fdst().cvars().to_vec()
     }
 
     fn get_bvars(&self) -> Vec<Variable> {
-        self.fdst().bvars().iter().copied().map_into().collect()
+        self.fdst().bvars().to_vec()
     }
 
     fn get_tlf(&self) -> Function {

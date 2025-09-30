@@ -18,7 +18,6 @@ use utils::{dynamic_iter, ereturn_if, implvec, match_eq};
 use super::{FOBinder, RecFOFormulaQuant};
 use crate::input::Registerable;
 use crate::terms::formula::egg::EggLanguage;
-use crate::terms::formula::rec_exp_lang::RecExprIter;
 use crate::terms::formula::{FormulaLike, RecFOFormulaQuantRef, sort_list};
 use crate::terms::utils::{mk_var, pull_from_egraph};
 use crate::terms::{
@@ -451,13 +450,13 @@ impl RecFOFormula {
     }
 
     #[allow(non_snake_case)]
-    pub fn True() -> Self {
-        Self::app(TRUE.clone(), vec![])
+    pub const fn True() -> Self {
+        Self::constant(TRUE.const_clone().unwrap())
     }
 
     #[allow(non_snake_case)]
     pub fn False() -> Self {
-        Self::app(FALSE.clone(), vec![])
+        Self::constant(FALSE.const_clone().unwrap())
     }
 
     pub fn and(args: implvec!(Self)) -> Self {
@@ -491,17 +490,48 @@ impl RecFOFormula {
         // todo!("fixme");
         // Self::bind(kind, vars, sorts, [arg])
     }
+
+    /// Makes a constant
+    pub const fn constant(head: Function) -> Self {
+        Self::App {
+            head,
+            args: Cow::Borrowed(&[]),
+        }
+    }
+
+    pub const fn mk_const_app(head: Function, args: &'static [Self]) -> Self {
+        Self::App {
+            head,
+            args: Cow::Borrowed(args),
+        }
+    }
+
+    pub const fn mk_var(var: Variable) -> Self {
+        Self::Var(var)
+    }
+
+    pub const fn mk_const_quant(
+        head: FOBinder,
+        vars: &'static [Variable],
+        arg: &'static [Self],
+    ) -> Self {
+        Self::Quantifier {
+            head,
+            vars: Cow::Borrowed(vars),
+            arg: Cow::Borrowed(arg),
+        }
+    }
 }
 
 impl From<&[LangVar]> for RecFOFormula {
     fn from(v: &[LangVar]) -> Self {
-        v.as_formula().into()
+        Self::from_egg(v, None)
     }
 }
 
 impl From<&RecExpr<LangVar>> for RecFOFormula {
     fn from(value: &RecExpr<LangVar>) -> Self {
-        value.as_formula().into()
+        Self::from_egg(value.as_ref(), None)
     }
 }
 

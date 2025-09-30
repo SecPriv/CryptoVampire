@@ -119,9 +119,9 @@ impl Function {
 
     /// static [Function] can be statically cloned. This function lets you do
     /// that. It returns [None] when the [Function] is not static
-    pub const fn const_clone(&self) -> Option<Self> {
+    pub const fn const_clone(&self) -> Self {
         match self.0 {
-            CowArc::Owned(_) => None,
+            CowArc::Owned(_) => panic!("must be a borrowed function"),
             CowArc::Borrowed(x) => Some(Self::from_ref(x)),
         }
     }

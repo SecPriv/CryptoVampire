@@ -36,11 +36,11 @@ impl ShrExists {
     }
 
     fn get_cvars(&self) -> Vec<Variable> {
-        self.exists().cvars().iter().copied().map_into().collect()
+        self.exists().cvars().to_vec()
     }
 
     fn get_bvars(&self) -> Vec<Variable> {
-        self.exists().bvars().iter().copied().map_into().collect()
+        self.exists().bvars().to_vec()
     }
 
     fn get_tlf(&self) -> Function {
@@ -52,11 +52,11 @@ impl ShrExists {
     }
 
     fn get_patt(&self) -> RecFOFormula {
-        self.exists().patt().into()
+        self.exists().patt().unwrap().clone()
     }
 
     fn set_patt(&self, patt: RecFOFormula) -> ::steel::rvals::Result<()> {
-        self.exists_mut().set_patt(patt.steel_maybe_as_recexp()?);
+        self.exists_mut().set_patt(patt);
         Ok(())
     }
 }

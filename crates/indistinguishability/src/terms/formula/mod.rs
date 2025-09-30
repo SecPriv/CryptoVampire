@@ -8,7 +8,7 @@ use crate::terms::{Function, Sort, Variable, CONS, EXISTS, FIND_SUCH_THAT};
 mod egg;
 // mod egg_like;
 mod enum_like;
-mod rec_exp_lang;
+// mod rec_exp_lang;
 
 pub use egg::InnerLang;
 pub use enum_like::RecFOFormula;

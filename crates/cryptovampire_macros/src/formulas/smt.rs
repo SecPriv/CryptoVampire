@@ -3,21 +3,21 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use proc_macro::TokenStream;
-use quote::{format_ident, quote}; // format_ident is key here
+use quote::{format_ident, quote, quote_spanned}; // format_ident is key here
 use syn::parenthesized;
 use syn::parse::Parser;
 use syn::punctuated::Punctuated;
 use syn::token::Paren;
 use syn::{
-    parse::{Parse, ParseStream, Result},
-    parse_macro_input,
-    token,
     Expr,
     Ident,
     Lit,
     LitInt,
     LitStr, // LitStr might not be needed if FunApp changed
     Token,
+    parse::{Parse, ParseStream, Result},
+    parse_macro_input,
+    token,
 };
 use utils::ereturn_if;
 
@@ -106,24 +106,35 @@ fn generate_code(Ast { inner: parsed, .. }: Ast) -> proc_macro2::TokenStream {
             let [a, b] = [*a, *b].map(generate_code);
             quote! {#crate_path::SmtFormula::Implies(Box::new(#a), Box::new(#b))}
         }
-        InnerAst::FunApp { func, args } => {
+        InnerAst::FunApp(FunAppAst { func, args }) => {
             let processed_args = generate_args(args); //args.into_iter().map(generate_code);
-                                                      // As per your change, #func (the Ident) is passed directly.
-                                                      // This implies SmtFormula::Fun can handle an Ident or its type N in
-                                                      // SmtFormula<N,S> can be From<Ident> or similar.
+            // As per your change, #func (the Ident) is passed directly.
+            // This implies SmtFormula::Fun can handle an Ident or its type N in
+            // SmtFormula<N,S> can be From<Ident> or similar.
             quote! { #crate_path::SmtFormula::Fun(#func.clone(), #processed_args) }
         }
-        InnerAst::Quantifier {
+        InnerAst::Quantifier(QuantifierAst {
             kind,
             bindings,
             body,
-        } => {
+        }) => {
             // Determine if it's Forall or Exists for the final constructor
             let constructor = match kind {
-                QuantifierKind::Forall => quote! { #crate_path::SmtFormula::Forall },
-                QuantifierKind::Exists => quote! { #crate_path::SmtFormula::Exists },
+                QuantifierKind::Forall(_) => {
+                    quote_spanned! {kind.span() =>  #crate_path::SmtFormula::Forall }
+                }
+                QuantifierKind::Exists(_) => {
+                    quote_spanned! {kind.span() =>  #crate_path::SmtFormula::Exists }
+                }
+                QuantifierKind::FindSuchThat(_) => {
+                    quote_spanned! {kind.span() => ::std::compile_error!("find such that doesn't exists in smt")}
+                }
             };
-            let processed_body = generate_code(*body);
+            let body = match body.into_iter().next() {
+                Some(ArgItem::Regular(ast)) => ast,
+                _ => return quote! {::std::compile_error!("wrong arguments to quantifier")},
+            };
+            let processed_body = generate_code(body);
 
             match bindings {
                 VarBindings::Binding(bindings) => {
@@ -151,7 +162,7 @@ fn generate_quant_with_binders(
 
     for binding in bindings.iter() {
         let user_var_name = &binding.name;
-        let index_eval_expr = generate_var_index_expr_tokens(&binding.index);
+        let index_eval_expr = generate_var_index_expr_tokens(binding.index.as_ref().unwrap());
 
         let i = VAR_COUNTER.fetch_add(1, Ordering::AcqRel);
         // Create a hygienically distinct temporary variable name for the evaluated index

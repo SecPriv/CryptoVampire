@@ -245,8 +245,26 @@ macro_rules! fresh {
     () => {
         $crate::terms::Variable::fresh().call()
     };
+    
+    (@str) => {
+        std::concat![std::file!(), ":", std::line!(), ":", std::column!()]
+    };
+    (const) => {{
+        static TMP: $crate::terms::variable::VariableInner =
+        $crate::terms::variable::VariableInner::new_const(None, Some(mk_fresh_var!(@str)));
+        $crate::terms::variable::Variable::from_const(&TMP)
+    }};
+    (const $s:expr) => {{
+        static TMP: $crate::terms::variable::VariableInner =
+        $crate::terms::variable::VariableInner::new_const(Some({
+            use$crate::terms::sort::Sort::*;
+            $s}), Some(mk_fresh_var!(@str)));
+        $crate::terms::variable::Variable::from_const(&TMP)
+    }};
     ($sort:expr) => {
-        $crate::terms::Variable::fresh().sort($sort).call()
+        $crate::terms::Variable::fresh().sort({
+            use$crate::terms::sort::Sort::*;
+            $sort}).call()
     };
 }
 

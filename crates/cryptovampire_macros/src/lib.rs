@@ -42,9 +42,9 @@ pub fn vec_smt(input: TokenStream) -> TokenStream {
 
 #[proc_macro]
 pub fn recexpr(input: TokenStream) -> TokenStream {
-    formulas::mk_const_recexpr(input)
+    formulas::mk_recexpr(input)
 }
-#[proc_macro]
-pub fn declare_recexpr(input: TokenStream) -> TokenStream {
-    formulas::declare_static_recexpr(input)
-}
+// #[proc_macro]
+// pub fn declare_recexpr(input: TokenStream) -> TokenStream {
+//     formulas::declare_static_recexpr(input)
+// }

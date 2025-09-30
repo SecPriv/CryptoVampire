@@ -3,13 +3,13 @@ use std::fmt::Display;
 use bon::bon;
 use cryptovampire_macros::smt;
 use cryptovampire_smt::{Smt, SortedVar};
-use egg::{Analysis, ENodeOrVar, Pattern, PatternAst, RecExpr, Rewrite, Var};
+use egg::{Analysis, ENodeOrVar, Pattern,  RecExpr, Rewrite};
 use itertools::{Itertools, izip};
 use log::trace;
 use logic_formula::Formula;
 
 use super::MacroKind;
-use crate::terms::{EMPTY, FormulaLike, Function, INIT, TRUE, UNFOLD_COND, UNFOLD_MSG};
+use crate::terms::{FormulaLike, Function, RecFOFormula, Variable, EMPTY, INIT, TRUE, UNFOLD_COND, UNFOLD_MSG};
 use crate::vampire::convert::{formula_to_smt, var_to_smt};
 use crate::{Lang, LangVar, MSmt, MSmtFormula, rexp};
 
@@ -17,9 +17,9 @@ use crate::{Lang, LangVar, MSmt, MSmtFormula, rexp};
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Step {
     pub id: Function,
-    pub vars: Vec<Var>,
-    pub cond: PatternAst<Lang>,
-    pub msg: PatternAst<Lang>,
+    pub vars: Vec<Variable>,
+    pub cond: RecFOFormula,
+    pub msg: RecFOFormula
 }
 
 #[bon]
@@ -27,9 +27,9 @@ impl Step {
     #[builder]
     pub fn new(
         #[builder(default = INIT.clone())] id: Function,
-        #[builder(with = <_>::from_iter, default = vec![])] vars: Vec<Var>,
-        #[builder(default = TRUE.app_empty_var())] cond: PatternAst<Lang>,
-        #[builder(default = EMPTY.app_empty_var())] msg: PatternAst<Lang>,
+        #[builder(with = <_>::from_iter, default = vec![])] vars: Vec<Variable>,
+        #[builder(default = RecFOFormula::True())] cond: RecFOFormula,
+        #[builder(default = RecFOFormula::constant(EMPTY.clone()))] msg: RecFOFormula,
     ) -> Option<Step> {
         (vars.len() == id.signature.arity()).then_some(Self {
             id,
@@ -41,15 +41,6 @@ impl Step {
 }
 
 impl Step {
-    #[allow(dead_code)]
-    pub(crate) fn max_vars(&self) -> u32 {
-        self.vars
-            .iter()
-            .filter_map(Var::as_u32)
-            .max()
-            .unwrap_or_default()
-    }
-
     pub fn id_expr(&self) -> RecExpr<LangVar> {
         self.id.app_var(
             &self

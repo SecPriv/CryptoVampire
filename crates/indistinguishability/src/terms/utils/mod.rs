@@ -1,23 +1,19 @@
-
 use std::borrow::Cow;
 use std::collections::VecDeque;
 
-use egg::{};
 use itertools::{EitherOrBoth, Itertools, izip};
 use log::error;
 use logic_formula::{Destructed, Formula, HeadSk};
-use utils::{};
 
+use crate::LangVar;
 use crate::terms::{Function, Sort};
 use crate::utils::LightClone;
-use crate::{LangVar};
 
 declare_trace!($"formula_utils");
 
 /// This module mostly exists for the macro [rexp] to pull it's functions from.
 /// It also contains other miscelenious functions
-mod rexp_helpers;
-pub use rexp_helpers::*;
+mod rexp_macro;
 
 pub mod offset;
 pub mod pull_from_egraph;
@@ -44,7 +40,9 @@ where
         HeadSk::Var(_) => true,
         HeadSk::Fun(fun) => {
             Itertools::zip_longest(fun.as_ref().signature.inputs_iter(), args).all(|x| match x {
-                EitherOrBoth::Both(asort, arg) => get_sort(arg.clone()).unify(asort) && type_check(arg),
+                EitherOrBoth::Both(asort, arg) => {
+                    get_sort(arg.clone()).unify(asort) && type_check(arg)
+                }
                 _ => false,
             })
         }
@@ -55,7 +53,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::rexp;
+    use crate::{fresh, rexp};
     use crate::terms::utils::type_check;
     use crate::terms::{FormulaLike, MITE, NONCE, PROJ_1, TUPLE};
 
@@ -74,7 +72,14 @@ mod test {
 
     #[test]
     fn type_check_wrong_sort() {
-        let x = rexp!((MITE (and true true false) (and ) (PROJ_1 (TUPLE (NONCE #0))))).to_vec();
+        let v = fresh!(Bitstring);
+        let x = rexp!((MITE (and true true false) (and ) (PROJ_1 (TUPLE (NONCE #v)))));
         assert!(!type_check(x.as_formula()))
+    }
+
+    fn macro_check1() {
+        ::cryptovampire_macros::recexpr!(crate::terms::utils::rexp_macro; const
+ (MITE true));
+
     }
 }
