@@ -1,4 +1,4 @@
-use cryptovampire_smt::{SortedVar, VarInner};
+use cryptovampire_smt::{SortedVar};
 use itertools::izip;
 use serde::{Deserialize, Serialize};
 use steel::steel_vm::register_fn::RegisterFn;
@@ -30,20 +30,20 @@ impl Signature {
         self.inputs.iter().copied()
     }
 
-    pub fn mk_sorted_vars(
-        &self,
-        from: u32,
-    ) -> impl Iterator<Item = SortedVar<Sort>> + Clone + use<'_> {
-        izip!(from.., self.inputs.iter()).map(|(i, s)| SortedVar {
-            var: VarInner::Int(i as cryptovampire_smt::uvar),
-            sort: *s,
-        })
-    }
+    // pub fn mk_sorted_vars(
+    //     &self,
+    //     from: u32,
+    // ) -> impl Iterator<Item = SortedVar<Sort>> + Clone + use<'_> {
+    //     izip!(from.., self.inputs.iter()).map(|(i, s)| SortedVar {
+    //         var: VarInner::Int(i as cryptovampire_smt::uvar),
+    //         sort: *s,
+    //     })
+    // }
 
-    pub fn mk_egg_vars(&self, from: u32) -> impl Iterator<Item = egg::Var> {
-        let n = self.arity() as u32 + from;
-        (from..n).map(egg::Var::from_usize)
-    }
+    // pub fn mk_egg_vars(&self, from: u32) -> impl Iterator<Item = egg::Var> {
+    //     let n = self.arity() as u32 + from;
+    //     (from..n).map(egg::Var::from_usize)
+    // }
 
     fn steel_constructor(input: Vec<Sort>, output: Sort) -> Self {
         Self {
