@@ -122,7 +122,7 @@ impl Function {
     pub const fn const_clone(&self) -> Self {
         match self.0 {
             CowArc::Owned(_) => panic!("must be a borrowed function"),
-            CowArc::Borrowed(x) => Some(Self::from_ref(x)),
+            CowArc::Borrowed(x) => Self::from_ref(x),
         }
     }
 
@@ -216,6 +216,13 @@ impl Function {
     // =========================================================
     // ==================== is functions =======================
     // =========================================================
+    pub const fn is_static(&self) -> bool {
+        match &self.0 {
+            CowArc::Owned(_) => false,
+            CowArc::Borrowed(_) => true,
+        }
+    }
+
     #[inline]
     pub fn is_special_subterm(&self) -> bool {
         static SPECIAL_SUBTERM: FunctionFlags = const_fun_flags!(

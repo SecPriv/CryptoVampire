@@ -119,10 +119,10 @@ impl Variable {
         Self(NonNull::from_ref(inner))
     }
 
-    pub const fn const_clone(&self) -> Option<Self> {
+    pub const fn const_clone(&self) -> Self {
         match self.is_static() {
-            true => Some(Self(self.0)),
-            _ => None,
+            true => Self(self.0),
+            _ => panic!("not static"),
         }
     }
 

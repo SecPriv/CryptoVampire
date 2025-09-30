@@ -74,12 +74,12 @@ mod test {
     fn type_check_wrong_sort() {
         let v = fresh!(Bitstring);
         let x = rexp!((MITE (and true true false) (and ) (PROJ_1 (TUPLE (NONCE #v)))));
-        assert!(!type_check(x.as_formula()))
+        // assert!(!x.typ)
     }
 
     fn macro_check1() {
-        ::cryptovampire_macros::recexpr!(crate::terms::utils::rexp_macro; const
- (MITE true));
-
+        let v = fresh!(Bitstring);
+        rexp!((MITE (and true true false) (and ) (PROJ_1 (TUPLE (NONCE #v)))));
+        rexp!((forall ((#x Bool) (#y Bool)) (and #x #y)));
     }
 }

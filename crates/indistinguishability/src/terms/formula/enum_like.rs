@@ -451,12 +451,12 @@ impl RecFOFormula {
 
     #[allow(non_snake_case)]
     pub const fn True() -> Self {
-        Self::constant(TRUE.const_clone().unwrap())
+        Self::constant(TRUE.const_clone())
     }
 
     #[allow(non_snake_case)]
     pub fn False() -> Self {
-        Self::constant(FALSE.const_clone().unwrap())
+        Self::constant(FALSE.const_clone())
     }
 
     pub fn and(args: implvec!(Self)) -> Self {
@@ -521,6 +521,29 @@ impl RecFOFormula {
             arg: Cow::Borrowed(arg),
         }
     }
+
+    pub const fn const_clone(&self) -> Self {
+        match self {
+            Self::Quantifier {
+                head,
+                vars: Cow::Borrowed(vars),
+                arg: Cow::Borrowed(arg),
+            } => Self::Quantifier {
+                head: *head,
+                vars: Cow::Borrowed(*vars),
+                arg: Cow::Borrowed(&arg),
+            },
+            Self::App {
+                head,
+                args: Cow::Borrowed(args),
+            } if head.is_static() => Self::App {
+                head: head.const_clone(),
+                args: Cow::Borrowed(*args),
+            },
+            Self::Var(variable) if variable.is_static() => Self::Var(variable.const_clone()),
+            _ => panic!("not const formula"),
+        }
+    }
 }
 
 impl From<&[LangVar]> for RecFOFormula {
@@ -547,6 +570,12 @@ impl From<bool> for RecFOFormula {
             true => Self::True(),
             false => Self::False(),
         }
+    }
+}
+
+impl From<Variable> for RecFOFormula {
+    fn from(value: Variable) -> Self {
+        Self::Var(value)
     }
 }
 

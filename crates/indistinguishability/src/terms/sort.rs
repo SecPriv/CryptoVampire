@@ -55,7 +55,7 @@ impl Sort {
     }
 
     pub fn as_function(&self) -> Option<&'static Function> {
-        match value {
+        match self {
             Sort::Bitstring => Some(&BITSTRING_SORT),
             Sort::Index => Some(&INDEX_SORT),
             Sort::Time => Some(&TIME_SORT),

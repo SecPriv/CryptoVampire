@@ -380,12 +380,12 @@ impl QuantifierAst {
 
                 pre_binding = Some(quote!(#(#names_declarations)*));
                 if ic {
-                    binding_arg = quote!([#(#names),*]);
-                } else {
                     binding_arg = quote! {{
                       static TMP : &'static [#t] = [#(#names.const_clone()),*];
                       TMP
                     }}
+                } else {
+                    binding_arg = quote!([#(#names.clone()),*]);
                 }
             }
         }
@@ -438,7 +438,11 @@ impl ToTokenWithInputs for BangedContent {
                 lit,
                 "litterals don't make sense in this mode",
             )),
-            BangedContent::Ident(ident) => Ok(macro_input.mk_clone(&quote!(#ident))),
+            BangedContent::Ident(ident) => {
+                let cloned = macro_input.mk_clone(&quote!(#ident));
+                Ok(quote!(#cloned.into()))
+            }
+                ,
             BangedContent::Expr(expr) => Ok(quote!({#expr})),
         }
     }

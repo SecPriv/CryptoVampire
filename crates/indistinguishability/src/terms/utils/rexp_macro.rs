@@ -27,19 +27,19 @@ pub type MacroFunction = Function;
 pub type MacroBinder = FOBinder;
 
 /// for [rexp]
-pub static TRUE: Function = builtin::TRUE.const_clone().unwrap();
+pub static TRUE: Function = builtin::TRUE.const_clone();
 /// for [rexp]
-pub static FALSE: Function = builtin::FALSE.const_clone().unwrap();
+pub static FALSE: Function = builtin::FALSE.const_clone();
 /// for [rexp]
-pub static AND: Function = builtin::AND.const_clone().unwrap();
+pub static AND: Function = builtin::AND.const_clone();
 /// for [rexp]
-pub static OR: Function = builtin::OR.const_clone().unwrap();
+pub static OR: Function = builtin::OR.const_clone();
 /// for [rexp]
-pub static NOT: Function = builtin::NOT.const_clone().unwrap();
+pub static NOT: Function = builtin::NOT.const_clone();
 /// for [rexp]
-pub static EQ: Function = builtin::EQ.const_clone().unwrap();
+pub static EQ: Function = builtin::EQ.const_clone();
 /// for [rexp]
-pub static IMPLIES: Function = builtin::IMPLIES.const_clone().unwrap();
+pub static IMPLIES: Function = builtin::IMPLIES.const_clone();
 
 pub use crate::fresh;
 
@@ -91,7 +91,7 @@ pub const fn mk_const_quantifier(
 pub fn mk_quantifier(
     head: FOBinder,
     vars: implvec![Variable],
-    arg: implvec![MacroExpr],
+    args: implvec![MacroExpr],
 ) -> MacroExpr {
     MacroExpr::bind(head, vars.into_iter().collect(), args)
 }

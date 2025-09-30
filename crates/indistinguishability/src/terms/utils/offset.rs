@@ -8,13 +8,13 @@ pub fn var(amount: u32, mut var: Var) -> Var {
 }
 
 #[inline]
-pub fn var_mut(amount: u32, var: &mut Var) {
+pub fn var_mut(amount: egg::uvar, var: &mut Var) {
     if let VarExposed::Num(i) = var.expose() {
         *var = (i + amount).into()
     }
 }
 
-pub fn rexpr_mut<L>(amount: u32, f: &mut [ENodeOrVar<L>]) {
+pub fn rexpr_mut<L>(amount: egg::uvar, f: &mut [ENodeOrVar<L>]) {
     for e in f {
         if let ENodeOrVar::Var(v) = e {
             var_mut(amount, v);
