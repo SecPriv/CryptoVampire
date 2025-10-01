@@ -1,10 +1,8 @@
 mod cowarc {
-    use std::{
-        fmt::{Debug, Display},
-        hash::Hash,
-        ops::Deref,
-        sync::Arc,
-    };
+    use std::fmt::{Debug, Display};
+    use std::hash::Hash;
+    use std::ops::Deref;
+    use std::sync::Arc;
 
     // #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
     pub enum CowArc<'a, U: ?Sized> {
@@ -63,6 +61,18 @@ mod cowarc {
         }
     }
 
+    impl<'a, U: Default> Default for CowArc<'a, U> {
+        fn default() -> Self {
+            Self::Owned(Arc::new(U::default()))
+        }
+    }
+    
+    impl<'a, U> Default for CowArc<'a, [U]> {
+        fn default() -> Self {
+            Self::Owned(vec![].into())
+        }
+    }
+
     impl<U> From<U> for CowArc<'_, U> {
         fn from(value: U) -> Self {
             Self::Owned(Arc::new(value))
@@ -72,6 +82,13 @@ mod cowarc {
     impl<'a, U: ?Sized> CowArc<'a, U> {
         pub const fn from_ref(value: &'a U) -> Self {
             CowArc::Borrowed(value)
+        }
+
+        pub fn as_owned(&self) -> <U as ToOwned>::Owned
+        where
+            U: ToOwned,
+        {
+            self.deref().to_owned()
         }
     }
 
@@ -93,16 +110,26 @@ mod cowarc {
             Ok(U::deserialize(deserializer)?.into())
         }
     }
+
+    impl<'a, T> FromIterator<T> for CowArc<'a, [T]> {
+        fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+            Self::Owned(iter.into_iter().collect())
+        }
+    }
+
+    impl<'a, T> From<Vec<T>> for CowArc<'a, [T]> {
+        fn from(value: Vec<T>) -> Self {
+            Self::Owned(value.into())
+        }
+    }
 }
 pub use cowarc::CowArc;
 
 mod cowrc {
-    use std::{
-        fmt::{Debug, Display},
-        hash::Hash,
-        ops::Deref,
-        rc::Rc,
-    };
+    use std::fmt::{Debug, Display};
+    use std::hash::Hash;
+    use std::ops::Deref;
+    use std::rc::Rc;
     pub enum CowRc<'a, U: ?Sized> {
         Owned(Rc<U>),
         Borrowed(&'a U),
@@ -168,6 +195,13 @@ mod cowrc {
         pub const fn from_ref(value: &'a U) -> Self {
             CowRc::Borrowed(value)
         }
+
+        pub fn as_owned(&self) -> <U as ToOwned>::Owned
+        where
+            U: ToOwned,
+        {
+            self.deref().to_owned()
+        }
     }
 
     #[cfg(feature = "serde")]
@@ -186,6 +220,30 @@ mod cowrc {
             D: serde::Deserializer<'de>,
         {
             Ok(U::deserialize(deserializer)?.into())
+        }
+    }
+
+    impl<'a, T> FromIterator<T> for CowRc<'a, [T]> {
+        fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+            Self::Owned(iter.into_iter().collect())
+        }
+    }
+
+    impl<'a, T> From<Vec<T>> for CowRc<'a, [T]> {
+        fn from(value: Vec<T>) -> Self {
+            Self::Owned(value.into())
+        }
+    }
+
+    impl<'a, U: Default> Default for CowRc<'a, U> {
+        fn default() -> Self {
+            Self::Owned(Rc::new(U::default()))
+        }
+    }
+    
+    impl<'a, U> Default for CowRc<'a, [U]> {
+        fn default() -> Self {
+            Self::Owned(vec![].into())
         }
     }
 }

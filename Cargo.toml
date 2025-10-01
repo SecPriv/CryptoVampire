@@ -5,7 +5,9 @@ members = [
   "crates/logic_formula",
   "crates/cryptovampire_macros",
   "crates/indistinguishability",
-  "crates/golgge", "crates/cryptovampire_smt",
+  "crates/golgge",
+  "crates/cryptovampire_smt",
+  "crates/quarck"
 ]
 resolver = "2"
 # authors = ["Simon Jeanteur <7871851+puyral@users.noreply.github.com>"]

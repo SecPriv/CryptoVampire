@@ -982,6 +982,7 @@ dependencies = [
  "logic_formula",
  "num_cpus",
  "paste",
+ "quarck",
  "rpds",
  "rustc-hash",
  "serde",
@@ -1401,6 +1402,13 @@ dependencies = [
  "wasi 0.11.0+wasi-snapshot-preview1",
  "web-sys",
  "winapi",
+]
+
+[[package]]
+name = "quarck"
+version = "0.1.0"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

@@ -1,0 +1,16 @@
+[package]
+name = "quarck"
+version = "0.1.0"
+edition = "2024"
+authors = ["Simon Jeanteur <7871851+puyral@users.noreply.github.com>"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true, optional = true }
+
+[features]
+serde = ["dep:serde"]
