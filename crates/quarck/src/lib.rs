@@ -66,7 +66,7 @@ mod cowarc {
             Self::Owned(Arc::new(U::default()))
         }
     }
-    
+
     impl<'a, U> Default for CowArc<'a, [U]> {
         fn default() -> Self {
             Self::Owned(vec![].into())
@@ -93,7 +93,7 @@ mod cowarc {
     }
 
     #[cfg(feature = "serde")]
-    impl<U: serde::Serialize> serde::Serialize for CowArc<'_, U> {
+    impl<U: serde::Serialize + ?Sized> serde::Serialize for CowArc<'_, U> {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer,
@@ -120,6 +120,16 @@ mod cowarc {
     impl<'a, T> From<Vec<T>> for CowArc<'a, [T]> {
         fn from(value: Vec<T>) -> Self {
             Self::Owned(value.into())
+        }
+    }
+
+    impl<'a, 'b, T> IntoIterator for &'b CowArc<'a, [T]> {
+        type Item = &'b T;
+    
+        type IntoIter = ::std::slice::Iter<'b, T>;
+    
+        fn into_iter(self) -> Self::IntoIter {
+            (*self).deref().into_iter()
         }
     }
 }
@@ -205,7 +215,7 @@ mod cowrc {
     }
 
     #[cfg(feature = "serde")]
-    impl<U: serde::Serialize> serde::Serialize for CowRc<'_, U> {
+    impl<U: serde::Serialize + ?Sized> serde::Serialize for CowRc<'_, U> {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer,
@@ -240,7 +250,7 @@ mod cowrc {
             Self::Owned(Rc::new(U::default()))
         }
     }
-    
+
     impl<'a, U> Default for CowRc<'a, [U]> {
         fn default() -> Self {
             Self::Owned(vec![].into())

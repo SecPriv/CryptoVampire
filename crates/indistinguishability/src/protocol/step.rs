@@ -3,13 +3,15 @@ use std::fmt::Display;
 use bon::bon;
 use cryptovampire_macros::smt;
 use cryptovampire_smt::{Smt, SortedVar};
-use egg::{Analysis, ENodeOrVar, Pattern,  RecExpr, Rewrite};
-use itertools::{Itertools, izip};
+use egg::{Analysis, ENodeOrVar, Pattern, RecExpr, Rewrite};
+use itertools::{Itertools, chain, izip};
 use log::trace;
 use logic_formula::Formula;
 
 use super::MacroKind;
-use crate::terms::{FormulaLike, Function, RecFOFormula, Variable, EMPTY, INIT, TRUE, UNFOLD_COND, UNFOLD_MSG};
+use crate::terms::{
+    EMPTY, FormulaLike, Function, INIT, RecFOFormula, TRUE, UNFOLD_COND, UNFOLD_MSG, Variable,
+};
 use crate::vampire::convert::{formula_to_smt, var_to_smt};
 use crate::{Lang, LangVar, MSmt, MSmtFormula, rexp};
 
@@ -19,7 +21,7 @@ pub struct Step {
     pub id: Function,
     pub vars: Vec<Variable>,
     pub cond: RecFOFormula,
-    pub msg: RecFOFormula
+    pub msg: RecFOFormula,
 }
 
 #[bon]
@@ -41,26 +43,17 @@ impl Step {
 }
 
 impl Step {
-    pub fn id_expr(&self) -> RecExpr<LangVar> {
-        self.id.app_var(
-            &self
-                .vars
-                .iter()
-                .map(|x| [ENodeOrVar::Var(*x)])
-                .collect::<Vec<_>>(),
-        )
+    pub fn id_expr(&self) -> RecFOFormula {
+        let Self { id, vars, .. } = self;
+        rexp!((id #(vars.iter().map_into())*))
     }
 
     pub fn valid(&self) -> bool {
-        self.cond
-            .as_formula()
-            .free_vars_iter()
-            .all(|v| self.vars.contains(&v))
-            && self
-                .msg
-                .as_formula()
-                .free_vars_iter()
-                .all(|v| self.vars.contains(&v))
+        let Self {
+            vars, cond, msg, ..
+        } = self;
+
+        chain![cond.free_vars_iter(), msg.free_vars_iter()].all(|v| vars.contains(v))
     }
 }
 
@@ -87,18 +80,18 @@ impl Step {
     ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
         trace!("mk unfold rw for {self}");
         let name = self.id_expr();
-        let ptcl = &rexp!(ptcl).to_vec().into();
+        let ptcl = rexp!(ptcl);
 
         let unfold_cond = Rewrite::new(
             format!("unfold cond {name} in {ptcl}"),
-            Pattern::from(MacroKind::Cond.get_unfold().app_var(&[&name, &ptcl])),
-            Pattern::from(self.cond.clone()),
+            Pattern::from(&rexp!(UNFOLD_COND #name #ptcl)),
+            Pattern::from(&self.cond),
         )
         .unwrap();
         let unfold_msg = Rewrite::new(
             format!("unfold msg {name} in {ptcl}"),
-            Pattern::from(MacroKind::Msg.get_unfold().app_var(&[&name, &ptcl])),
-            Pattern::from(self.msg.clone()),
+            Pattern::from(&rexp!(UNFOLD_MSG #name #ptcl)),
+            Pattern::from(&self.msg),
         )
         .unwrap();
 
@@ -109,6 +102,7 @@ impl Step {
         &self,
         ptcl: &MSmtFormula,
     ) -> impl Iterator<Item = MSmt> + use<'_> {
+
         use Smt::*;
         let [cond, msg, name] =
             [self.cond.as_ref(), &self.msg, &self.id_expr()].map(formula_to_smt);

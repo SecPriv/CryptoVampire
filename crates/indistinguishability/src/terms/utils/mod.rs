@@ -13,7 +13,7 @@ declare_trace!($"formula_utils");
 
 /// This module mostly exists for the macro [rexp] to pull it's functions from.
 /// It also contains other miscelenious functions
-mod rexp_macro;
+pub mod rexp_macro;
 
 pub mod offset;
 pub mod pull_from_egraph;

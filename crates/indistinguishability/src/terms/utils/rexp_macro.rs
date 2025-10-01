@@ -65,9 +65,9 @@ pub fn mk_neqs(args: implvec!(MacroExpr)) -> MacroExpr {
 }
 
 /// for [rexp]
-pub fn mk_app(head: Function, args: implvec!(MacroExpr)) -> MacroExpr {
+pub fn mk_app<T: FunctionRef>(head: T, args: implvec!(MacroExpr)) -> MacroExpr {
     RecFOFormula::App {
-        head,
+        head: head.to_function(),
         args: Cow::Owned(args.into_iter().collect_vec()),
     }
 }
@@ -101,4 +101,21 @@ pub fn mk_quantifier(
 pub fn convert_to_ground_rexp(c: implvec!(LangVar)) -> Result<RecExpr<crate::Lang>, egg::Var> {
     let tmp: PatternAst<crate::Lang> = c.into_iter().collect();
     tmp.try_into()
+}
+
+
+trait FunctionRef {
+    fn to_function(&self) -> Function;
+}
+
+impl FunctionRef for Function {
+    fn to_function(&self) -> Function {
+        self.clone()
+    }
+}
+
+impl FunctionRef for &Function {
+    fn to_function(&self) -> Function {
+        (*self).clone()
+    }
 }

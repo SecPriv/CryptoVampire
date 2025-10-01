@@ -13,6 +13,7 @@ egg = {path = "../egg", features = ["serde-1", "cryptovampire"]}
 golgge = {path = "../golgge"}
 cryptovampire_macros = {path = "../cryptovampire_macros"}
 cryptovampire_smt = {path = "../cryptovampire_smt", features = ["vampire", "macro"]}
+quarck = {path = "../quarck", features = ["serde"]}
 
 # workspace
 itertools.workspace = true
@@ -40,6 +41,9 @@ steel-derive = { git = "https://github.com/mattwparas/steel"}
 
 [patch.crates-io]
 lasso = { git = "https://github.com/lcnr/lasso/", branch = "patch-1" }
+
+[features]
+verbose = []
 
 [lints]
 workspace = true

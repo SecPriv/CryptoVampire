@@ -6,12 +6,13 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
 
 use bon::{bon, builder};
+use serde::Serialize;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
+use crate::LangVar;
 use crate::input::Registerable;
 use crate::terms::Sort;
-use crate::LangVar;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Steel)]
 pub struct Variable(NonNull<VariableInner>);
@@ -19,6 +20,7 @@ pub struct Variable(NonNull<VariableInner>);
 unsafe impl Sync for Variable {}
 unsafe impl Send for Variable {}
 
+#[derive(Serialize)]
 pub struct VariableInner {
     /// The smart counter, [None] when the variable is leaked
     count: Option<AtomicUsize>,
@@ -33,24 +35,6 @@ enum MaybeOnce<T> {
     Dyn(OnceLock<T>),
 }
 
-impl Clone for Variable {
-    fn clone(&self) -> Self {
-        let inner = self.as_inner_ref();
-        match &inner.count {
-            Some(c) => {
-                // same implementation as `Arc` hence why the `Rela`
-                let old_count = c.fetch_add(1, Relaxed);
-
-                if old_count >= usize::MAX {
-                    panic!("too many references for the counter")
-                }
-            }
-            None => {}
-        }
-        Self(self.0)
-    }
-}
-
 impl VariableInner {
     pub const fn new_const(sort: Option<Sort>, unique: Option<&'static str>) -> Self {
         let count = None;
@@ -63,23 +47,12 @@ impl VariableInner {
     }
 }
 
-impl Drop for Variable {
-    fn drop(&mut self) {
-        // same implementation as `Arc`
-        {
-            let inner = self.as_inner_ref();
-            let Some(count) = &inner.count else {
-                return;
-            };
-
-            if count.fetch_sub(1, Release) != 1 {
-                return;
-            }
-            std::sync::atomic::fence(Acquire);
+impl<T> MaybeOnce<T> {
+    pub fn as_option(&self) -> Option<&T> {
+        match self {
+            Self::Const(x) => x.as_ref(),
+            Self::Dyn(x) => x.get(),
         }
-
-        let inner = unsafe { Box::from_raw(self.0.as_mut()) };
-        drop(inner);
     }
 }
 
@@ -196,6 +169,44 @@ impl Variable {
     }
 }
 
+impl Clone for Variable {
+    fn clone(&self) -> Self {
+        let inner = self.as_inner_ref();
+        match &inner.count {
+            Some(c) => {
+                // same implementation as `Arc` hence why the `Rela`
+                let old_count = c.fetch_add(1, Relaxed);
+
+                if old_count >= usize::MAX {
+                    panic!("too many references for the counter")
+                }
+            }
+            None => {}
+        }
+        Self(self.0)
+    }
+}
+
+impl Drop for Variable {
+    fn drop(&mut self) {
+        // same implementation as `Arc`
+        {
+            let inner = self.as_inner_ref();
+            let Some(count) = &inner.count else {
+                return;
+            };
+
+            if count.fetch_sub(1, Release) != 1 {
+                return;
+            }
+            std::sync::atomic::fence(Acquire);
+        }
+
+        let inner = unsafe { Box::from_raw(self.0.as_mut()) };
+        drop(inner);
+    }
+}
+
 impl From<Variable> for egg::Var {
     fn from(value: Variable) -> Self {
         egg::Var::from_usize(value.as_usize())
@@ -220,24 +231,22 @@ impl cryptovampire_smt::SortedVar for Variable {
     }
 }
 
-macro_rules! mk_fresh_var {
-    // (@path) => {
-    //   $crate::terms::formula::variable
-    // };
-    (@str) => {
-        std::concat![std::file!(), ":", std::line!(), ":", std::column!()]
-    };
+impl Serialize for Variable {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.as_inner_ref().serialize(serializer)
+    }
+}
 
-    () => {{
-        static TMP: $crate::terms::variable::VariableInner =
-        $crate::terms::variable::VariableInner::new_const(None, Some(mk_fresh_var!(@str)));
-        $crate::terms::variable::Variable::from_const(&TMP)
-    }};
-    ($s:expr) => {{
-        static TMP: $crate::terms::variable::VariableInner =
-        $crate::terms::variable::VariableInner::new_const(Some($s), Some(mk_fresh_var!(@str)));
-        $crate::terms::variable::Variable::from_const(&TMP)
-    }};
+impl<T: Serialize> Serialize for MaybeOnce<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.as_option().serialize(serializer)
+    }
 }
 
 #[macro_export]
@@ -245,53 +254,52 @@ macro_rules! fresh {
     () => {
         $crate::terms::Variable::fresh().call()
     };
-    
+
     (@str) => {
         std::concat![std::file!(), ":", std::line!(), ":", std::column!()]
     };
     (const) => {{
         static TMP: $crate::terms::variable::VariableInner =
-        $crate::terms::variable::VariableInner::new_const(None, Some(mk_fresh_var!(@str)));
+        $crate::terms::variable::VariableInner::new_const(None, Some($crate::fresh!(@str)));
         $crate::terms::variable::Variable::from_const(&TMP)
     }};
     (const $s:expr) => {{
         static TMP: $crate::terms::variable::VariableInner =
         $crate::terms::variable::VariableInner::new_const(Some({
+            #[allow(unused)]
             use$crate::terms::sort::Sort::*;
-            $s}), Some(mk_fresh_var!(@str)));
+            $s
+        }), Some($crate::fresh!(@str)));
         $crate::terms::variable::Variable::from_const(&TMP)
     }};
     ($sort:expr) => {
         $crate::terms::Variable::fresh().sort({
-            use$crate::terms::sort::Sort::*;
-            $sort}).call()
+            #[allow(unused)]
+            use $crate::terms::sort::Sort::*;
+            $sort
+        }).call()
     };
 }
-
-pub(crate) use mk_fresh_var as mk_fresh_static_var;
 
 #[cfg(test)]
 mod test {
     use itertools::Itertools;
 
     use super::Variable;
-    use crate::terms::Sort;
 
-    static V1: Variable = mk_fresh_var!(Sort::Bitstring);
-    static V2: Variable = mk_fresh_var!(Sort::Bitstring);
-    static V3: Variable = mk_fresh_var!();
-    static V4: Variable = mk_fresh_var!();
+    static V1: Variable = fresh!(const Bitstring);
+    static V2: Variable = fresh!(const Bitstring);
+    static V3: Variable = fresh!(const);
+    static V4: Variable = fresh!(const);
 
     macro_rules! mk_vars {
-        (@ ) => {0};
-        (@ $ta:tt $($t:tt)*)  => {1 + mk_vars!(@ $($t)*)};
         (# $i:ident $($t:tt)*) => {
-            static $i: [Variable; mk_vars!(@ $($t)*)] =
-                [
+            static $i: &'static [Variable] =
+                &[
                     $(mk_vars!($t)),*
                 ];
         };
-        ($t:tt) => {mk_fresh_var!()}
+        ($t:tt) => {fresh!(const)}
     }
 
     mk_vars!(# MANY x x x x x x x x x x x x x x x x );

@@ -9,11 +9,11 @@ use crate::input::Registerable;
 use crate::terms::{RecFOFormula, Sort, Variable};
 
 /// When the fonction is an alias
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 pub struct Alias(pub cow![AliasRewrite]);
 
 /// A rewrite rule for an alias
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Steel)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Steel, Serialize)]
 pub struct AliasRewrite {
     /// These are the arguments to the function that one must unify with to get
     /// rewritten as [Self::to].

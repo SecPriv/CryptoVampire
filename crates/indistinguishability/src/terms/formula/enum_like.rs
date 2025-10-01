@@ -1,15 +1,19 @@
 use std::borrow::Cow;
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 use std::ops::{BitAnd, BitOr, Not, Shr};
 
-use cryptovampire_smt::{IntoSmt, SmtFormula, SmtQuantifier, SortedVar};
-use egg::{Analysis, EGraph, Id, Language, PatternAst, RecExpr};
+use bon::{Builder, bon, builder};
+use cryptovampire_smt::{IntoSmt, SmtFormula, SmtHead, SmtQuantifier, SortedVar};
+use egg::{Analysis, EGraph, Id, Language, Pattern, PatternAst, RecExpr};
 use itertools::{Itertools, chain, izip};
 use logic_formula::{Destructed, Formula, HeadSk};
+use quarck::CowArc;
 use rpds::HashTrieSet;
 use rustc_hash::FxHashMap;
+use serde::Serialize;
 use smallvec::SmallVec;
 use steel::core::labels::fresh;
+use steel::parser::kernel;
 use steel::rvals::IntoSteelVal;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
@@ -18,24 +22,25 @@ use utils::{dynamic_iter, ereturn_if, implvec, match_eq};
 use super::{FOBinder, RecFOFormulaQuant};
 use crate::input::Registerable;
 use crate::terms::formula::egg::EggLanguage;
+use crate::terms::formula::sexpr::SExpr;
 use crate::terms::formula::{FormulaLike, RecFOFormulaQuantRef, sort_list};
-use crate::terms::utils::{mk_var, pull_from_egraph};
+use crate::terms::utils::pull_from_egraph;
 use crate::terms::{
     AND, BITE, CONS, EQ, FALSE, Function, IMPLIES, LAMBDA_O, LAMBDA_S, NIL, NOT, OR, Sort, TRUE,
     Variable,
 };
 use crate::{Lang, LangVar, MSmtFormula, MSmtParam, fresh};
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Steel)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Steel, Serialize)]
 pub enum RecFOFormula {
     Quantifier {
         head: FOBinder,
-        vars: cow![Variable],
-        arg: cow![RecFOFormula],
+        vars: cowarc![Variable],
+        arg: cowarc![Self],
     },
     App {
         head: Function,
-        args: cow![RecFOFormula],
+        args: cowarc![Self],
     },
     Var(Variable),
 }
@@ -83,32 +88,33 @@ impl RecFOFormula {
         }
     }
 
-    fn as_recexp_inner(&self, res: &mut Vec<LangVar>) -> Option<usize> {
+    fn as_recexp_inner(&self, res: &mut Vec<LangVar>) -> usize {
         match self {
-            RecFOFormula::Quantifier { .. } => None,
+            RecFOFormula::Quantifier { .. } => todo!(),
             RecFOFormula::Var(var) => {
                 res.push(egg::ENodeOrVar::Var(var.as_egg()));
-                Some(res.len() - 1)
+                res.len() - 1
             }
             RecFOFormula::App { head, args } => {
-                let args: Option<SmallVec<_>> = args
+                let args: SmallVec<_> = args
                     .iter()
-                    .map(|arg| arg.as_recexp_inner(res).map(egg::Id::from))
+                    .map(|arg| arg.as_recexp_inner(res))
+                    .map_into()
                     .collect();
                 let head = crate::Lang {
                     head: head.clone(),
-                    args: args?,
+                    args: args,
                 };
                 res.push(egg::ENodeOrVar::ENode(head));
-                Some(res.len() - 1)
+                res.len() - 1
             }
         }
     }
 
-    pub fn as_recexp(&self) -> Option<PatternAst<Lang>> {
+    pub fn as_recexp(&self) -> PatternAst<Lang> {
         let mut ret = Vec::new();
-        self.as_recexp_inner(&mut ret)?;
-        Some(ret.into())
+        self.as_recexp_inner(&mut ret);
+        ret.into()
     }
 
     fn from_id_inner(ids: &[Id], langs: &[Option<&Lang>], current: &Lang) -> Self {
@@ -335,8 +341,8 @@ impl RecFOFormula {
                     );
                     Self::Quantifier {
                         head: binder,
-                        vars: Cow::Owned(vars),
-                        arg: Cow::Owned(args),
+                        vars: vars.into(),
+                        arg: args.into(),
                     }
                 } else {
                     // a regular function
@@ -407,6 +413,14 @@ impl RecFOFormula {
         };
 
         out.len() - 1
+    }
+
+    fn as_pre_smt<'a, U>(&'a self) -> PreSmtRecFOFormulaF<'a, U> {
+        PreSmtRecFOFormula::builder().formula(Cow::Borrowed(self))
+    }
+
+    fn into_pre_smt<'a, U>(self) -> PreSmtRecFOFormulaF<'a, U> {
+        PreSmtRecFOFormula::builder().formula(Cow::Owned(self))
     }
 
     // =========================================================
@@ -495,14 +509,14 @@ impl RecFOFormula {
     pub const fn constant(head: Function) -> Self {
         Self::App {
             head,
-            args: Cow::Borrowed(&[]),
+            args: mk_cowarc![],
         }
     }
 
     pub const fn mk_const_app(head: Function, args: &'static [Self]) -> Self {
         Self::App {
             head,
-            args: Cow::Borrowed(args),
+            args: CowArc::Borrowed(args),
         }
     }
 
@@ -517,8 +531,8 @@ impl RecFOFormula {
     ) -> Self {
         Self::Quantifier {
             head,
-            vars: Cow::Borrowed(vars),
-            arg: Cow::Borrowed(arg),
+            vars: CowArc::Borrowed(vars),
+            arg: CowArc::Borrowed(arg),
         }
     }
 
@@ -526,19 +540,19 @@ impl RecFOFormula {
         match self {
             Self::Quantifier {
                 head,
-                vars: Cow::Borrowed(vars),
-                arg: Cow::Borrowed(arg),
+                vars: CowArc::Borrowed(vars),
+                arg: CowArc::Borrowed(arg),
             } => Self::Quantifier {
                 head: *head,
-                vars: Cow::Borrowed(*vars),
-                arg: Cow::Borrowed(&arg),
+                vars: CowArc::Borrowed(*vars),
+                arg: CowArc::Borrowed(&arg),
             },
             Self::App {
                 head,
-                args: Cow::Borrowed(args),
+                args: CowArc::Borrowed(args),
             } if head.is_static() => Self::App {
                 head: head.const_clone(),
-                args: Cow::Borrowed(*args),
+                args: CowArc::Borrowed(*args),
             },
             Self::Var(variable) if variable.is_static() => Self::Var(variable.const_clone()),
             _ => panic!("not const formula"),
@@ -579,13 +593,38 @@ impl From<Variable> for RecFOFormula {
     }
 }
 
-impl TryFrom<RecFOFormula> for RecExpr<LangVar> {
-    type Error = ();
+impl From<&Variable> for RecFOFormula {
+    fn from(value: &Variable) -> Self {
+        Self::Var(value.clone())
+    }
+}
 
-    fn try_from(value: RecFOFormula) -> Result<Self, Self::Error> {
-        match value.as_recexp() {
-            Some(x) => Ok(x),
-            None => Err(()),
+impl From<&RecFOFormula> for RecExpr<LangVar> {
+    fn from(value: &RecFOFormula) -> Self {
+        value.as_recexp()
+    }
+}
+
+impl From<&RecFOFormula> for Pattern<Lang> {
+    fn from(value: &RecFOFormula) -> Self {
+        Pattern::from(RecExpr::from(value))
+    }
+}
+
+impl<'a> From<&'a RecFOFormula> for SExpr<'a> {
+    fn from(value: &'a RecFOFormula) -> Self {
+        use SExpr::*;
+        match value {
+            RecFOFormula::Quantifier { head, vars, arg } => Group(vec![
+                Atom(head),
+                Group(vars.iter().map(|x| Atom(x)).collect()),
+                Group(arg.iter().map(|x| Atom(x)).collect()),
+            ]),
+            RecFOFormula::App { head, args } => Group(vec![
+                Atom(head),
+                Group(args.iter().map(|x| Atom(x)).collect()),
+            ]),
+            RecFOFormula::Var(variable) => AtomDebug(variable),
         }
     }
 }
@@ -610,12 +649,12 @@ impl Formula for RecFOFormula {
 
         match self {
             RecFOFormula::Quantifier { head, vars, arg } => Destructed {
-                head: HeadSk::Quant(RecFOFormulaQuant::new(head, vars.into_owned())),
-                args: MIter::One(arg.into_owned().into_iter()),
+                head: HeadSk::Quant(RecFOFormulaQuant::new(head, vars.as_owned())),
+                args: MIter::One(arg.as_owned().into_iter()),
             },
             RecFOFormula::App { head, args } => Destructed {
                 head: HeadSk::Fun(head.clone()),
-                args: MIter::Many(args.into_owned().into_iter()),
+                args: MIter::Many(args.as_owned().into_iter()),
             },
             RecFOFormula::Var(var) => Destructed {
                 head: HeadSk::Var(var),
@@ -663,7 +702,7 @@ impl From<MSmtFormula> for RecFOFormula {
                 args: args.into_iter().map_into().collect(),
             },
             SmtFormula::Forall(vars, formula) => {
-                let arg = mk_cow![Self::from(*formula)];
+                let arg = mk_cowarc![Self::from(*formula)];
                 Self::Quantifier {
                     head: FOBinder::Forall,
                     vars,
@@ -672,7 +711,7 @@ impl From<MSmtFormula> for RecFOFormula {
                 }
             }
             SmtFormula::Exists(vars, formula) => {
-                let arg = mk_cow![Self::from(*formula)];
+                let arg = mk_cowarc![Self::from(*formula)];
                 Self::Quantifier {
                     head: FOBinder::Exists,
                     vars,
@@ -727,55 +766,164 @@ impl Shr for RecFOFormula {
     }
 }
 
-impl IntoSmt<MSmtParam> for RecFOFormula {
-    fn convert_var(var: Variable) -> Variable {
-        var
-    }
+// impl IntoSmt<MSmtParam> for RecFOFormula {
+//     fn convert_var(var: Variable) -> Variable {
+//         var
+//     }
 
-    fn convert_quant(
-        RecFOFormulaQuant { quantifier, vars }: Self::Quant,
-    ) -> SmtQuantifier<MSmtParam> {
-        assert!(
-            vars.iter().all(Variable::has_smt_sort),
-            "Variable must have valid smt sort, see Variable::has_smt_sort"
-        );
-        match quantifier {
-            FOBinder::Forall => SmtQuantifier::Forall(vars),
-            FOBinder::Exists => SmtQuantifier::Exists(vars),
-            _ => todo!(),
+//     fn convert_quant(
+//         RecFOFormulaQuant { quantifier, vars }: Self::Quant,
+//     ) -> SmtQuantifier<MSmtParam> {
+//         assert!(
+//             vars.iter().all(Variable::has_smt_sort),
+//             "Variable must have valid smt sort, see Variable::has_smt_sort"
+//         );
+//         match quantifier {
+//             FOBinder::Forall => SmtQuantifier::Forall(vars),
+//             FOBinder::Exists => SmtQuantifier::Exists(vars),
+//             _ => todo!(),
+//         }
+//     }
+
+//     fn as_head(fun: &Self::Fun) -> Option<cryptovampire_smt::SmtHead> {
+//         fun.as_smt_head()
+//     }
+
+//     fn convert_function(fun: Function) -> Function {
+//         fun
+//     }
+// }
+
+pub trait QuantifierTranslator {
+    fn try_translate(
+        &self,
+        head: &FOBinder,
+        vars: &[Variable],
+        args: &[RecFOFormula],
+    ) -> Option<RecFOFormula>;
+}
+
+#[derive(Builder)]
+pub struct PreSmtRecFOFormula<'a, U> {
+    formula: Cow<'a, RecFOFormula>,
+    translator: &'a U,
+}
+
+/// Shortcut to keep signatures sane
+pub type PreSmtRecFOFormulaF<'a, U> = PreSmtRecFOFormulaBuilder<
+    'a,
+    U,
+    pre_smt_rec_f_o_formula_builder::SetFormula<pre_smt_rec_f_o_formula_builder::Empty>,
+>;
+
+impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for SmtFormula<MSmtParam> {
+    type Error = RecFOFormula;
+
+    fn try_from(
+        PreSmtRecFOFormula {
+            formula,
+            translator,
+        }: PreSmtRecFOFormula<'a, U>,
+    ) -> Result<Self, Self::Error> {
+        let propagate = |f: &RecFOFormula| f.as_pre_smt().translator(translator).build().try_into();
+        match formula.as_ref() {
+            RecFOFormula::Var(variable) => Ok(Self::Var(variable.clone())),
+            RecFOFormula::App { head, args } => match head.as_smt_head() {
+                Some(h) => {
+                    let args = args.iter().map(propagate).try_collect()?;
+                    Ok(match h {
+                        SmtHead::True => Self::True,
+                        SmtHead::False => Self::False,
+                        SmtHead::And => Self::And(args),
+                        SmtHead::Or => Self::Or(args),
+                        SmtHead::Eq => Self::Eq(args),
+                        SmtHead::Neq => Self::Neq(args),
+                        SmtHead::Not => {
+                            let [arg] = args
+                                .try_into()
+                                .map_err(|_| formula.into_owned())?
+                                .map(Box::new);
+                            Self::Not(arg)
+                        }
+                        SmtHead::Implies => {
+                            let [a1, a2] = args
+                                .try_into()
+                                .map_err(|_| formula.into_owned())?
+                                .map(Box::new);
+                            Self::Implies(a1, a2)
+                        }
+                        SmtHead::If => {
+                            let [c, l, r] = args
+                                .try_into()
+                                .map_err(|_| formula.into_owned())?
+                                .map(Box::new);
+                            Self::Ite(c, l, r)
+                        }
+                    })
+                }
+                None => {
+                    let args = args.iter().map(propagate).try_collect()?;
+                    Ok(Self::Fun(head.clone(), args))
+                }
+            },
+            RecFOFormula::Quantifier { head, vars, arg } => match head {
+                FOBinder::Exists => {
+                    Ok(Self::Exists(vars.as_owned(), Box::new(propagate(&arg[0])?)))
+                }
+                FOBinder::Forall => {
+                    Ok(Self::Forall(vars.as_owned(), Box::new(propagate(&arg[0])?)))
+                }
+                FOBinder::FindSuchThat => match translator.try_translate(head, &vars, &arg) {
+                    Some(f) => propagate(&f),
+                    None => Err(formula.into_owned()),
+                },
+            },
         }
-    }
-
-    fn as_head(fun: &Self::Fun) -> Option<cryptovampire_smt::SmtHead> {
-        fun.as_smt_head()
-    }
-
-    fn convert_function(fun: Function) -> Function {
-        fun
     }
 }
 
 impl Display for RecFOFormula {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let smt = self.clone().into_smt();
-        write!(f, "{smt}")
+        super::sexpr::SExpr::from(self).fmt(f)
     }
 }
+
+impl Debug for RecFOFormula {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        #[cfg(feature = "verbose")]
+        {
+            match self {
+                Self::Quantifier { head, vars, arg } => f
+                    .debug_struct("Quantifier")
+                    .field("head", head)
+                    .field("vars", vars)
+                    .field("arg", arg)
+                    .finish(),
+                Self::App { head, args } => f
+                    .debug_struct("App")
+                    .field("head", head)
+                    .field("args", args)
+                    .finish(),
+                Self::Var(arg0) => f.debug_tuple("Var").field(arg0).finish(),
+            }
+        }
+
+        #[cfg(not(feature = "verbose"))]
+        {
+            Display::fmt(&self, f)
+        }
+    }
+}
+
 // =========================================================
 // ====================== Steel API ========================
 // =========================================================
 
 impl RecFOFormula {
-    /// Turns self into a [PatternAst] but errors out with [steel]'s error instead of [Option]
-    pub fn steel_maybe_as_recexp(&self) -> ::steel::rvals::Result<PatternAst<Lang>> {
-        match self.as_recexp() {
-            Some(patt) => Ok(patt),
-            None => Err(::steel::SteelErr::new(
-                ::steel::rerrs::ErrorKind::ConversionError,
-                "could convert into RecExpr. Did you use quantifiers?".to_string(),
-            )),
-        }
-    }
+    // /// Turns self into a [PatternAst] but errors out with [steel]'s error instead of [Option]
+    // pub fn steel_maybe_as_recexp(&self) -> PatternAst<Lang> {
+    //      self.as_recexp()
+    // }
 
     // TODO: find such that
     fn steel_binder(head: FOBinder, vars: Vec<Variable>, arg: RecFOFormula) -> Self {

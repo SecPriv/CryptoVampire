@@ -1,6 +1,7 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, fmt::Display};
 
 use logic_formula::{Destructed, Formula};
+use serde::Serialize;
 use steel_derive::Steel;
 
 use crate::terms::{Function, Sort, Variable, CONS, EXISTS, FIND_SUCH_THAT};
@@ -9,12 +10,12 @@ mod egg;
 // mod egg_like;
 mod enum_like;
 // mod rec_exp_lang;
+mod sexpr;
 
 pub use egg::InnerLang;
 pub use enum_like::RecFOFormula;
-pub use rec_exp_lang::RecExprIter;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Steel)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Steel, Serialize)]
 pub enum FOBinder {
     Forall,
     Exists,
@@ -91,6 +92,16 @@ impl FOBinder {
             FOBinder::Exists => Some(&EXISTS),
             FOBinder::FindSuchThat => Some(&FIND_SUCH_THAT),
             FOBinder::Forall => None
+        }
+    }
+}
+
+impl Display for FOBinder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FOBinder::Forall => write!(f, "forall"),
+            FOBinder::Exists => write!(f, "exists"),
+            FOBinder::FindSuchThat => write!(f, "find_such_that"),
         }
     }
 }

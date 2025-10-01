@@ -25,10 +25,36 @@ macro_rules! cow {
     };
 }
 
+/// Shortcut for `Cow<'smt, [U]>`
+macro_rules! cowarc {
+    ($l:lifetime; $t:ty) => {
+        ::quarck::CowArc<$l, [$t]>
+    };
+    ($t:ty) => {
+        ::quarck::CowArc<'static, [$t]>
+    };
+}
+
+/// equivalent of [vec!] for [cow!] types
+macro_rules! mk_cowarc {
+    (@ $v:expr) => {
+        ::quarck::CowArc::Owned($v)
+    };
+    () => {
+        ::quarck::CowArc::Borrowed(&[])
+    };
+    ($($tt:tt)*) => {
+        ::quarck::CowArc::Owned(::std::vec![$($tt)*].into())
+    }
+}
+
 /// equivalent of [vec!] for [cow!] types
 macro_rules! mk_cow {
     (@ $v:expr) => {
         ::std::borrow::Cow::Owned($v)
+    };
+    () => {
+        ::std::borrow::Cow::Borrowed(&[])
     };
     ($($tt:tt)*) => {
         ::std::borrow::Cow::Owned(::std::vec![$($tt)*])
