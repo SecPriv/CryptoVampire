@@ -27,10 +27,10 @@ static VAR_COUNTER: AtomicUsize = AtomicUsize::new(0);
 use super::parser::*;
 
 fn generate_banged_expr_tokens(b: BangedContent) -> proc_macro2::TokenStream {
-    match b {
-        BangedContent::Lit(lit) => quote! { #lit },
-        BangedContent::Ident(ident) => quote! { #ident.clone() },
-        BangedContent::Expr(expr) => quote! { (#expr) }, // Parenthesize expr just in case
+    match b.inner {
+        BangedContentInner::Lit(lit) => quote! { #lit },
+        BangedContentInner::Ident(ident) => quote! { #ident.clone() },
+        BangedContentInner::Expr(expr) => quote! { (#expr) }, // Parenthesize expr just in case
     }
 }
 

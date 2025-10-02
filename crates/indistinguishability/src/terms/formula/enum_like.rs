@@ -469,7 +469,7 @@ impl RecFOFormula {
     }
 
     #[allow(non_snake_case)]
-    pub fn False() -> Self {
+    pub const fn False() -> Self {
         Self::constant(FALSE.const_clone())
     }
 
@@ -935,14 +935,14 @@ impl RecFOFormula {
         Self::Quantifier {
             head,
             vars,
-            arg: mk_cow![arg],
+            arg: mk_cowarc![arg],
         }
     }
 
     fn steel_app(head: Function, args: Vec<RecFOFormula>) -> Self {
         Self::App {
             head,
-            args: mk_cow!(@ args),
+            args: args.into(),
         }
     }
 

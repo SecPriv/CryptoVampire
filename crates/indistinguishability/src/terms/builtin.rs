@@ -54,10 +54,15 @@ macro_rules! alias {
                     #[allow(non_upper_case_globals)]
                     static $var: $crate::terms::Variable = $crate::fresh!(const $sort);
                 )*
-                AliasRewrite {
-                    from: Cow::Borrowed(mk_static_slice!($crate::terms::RecFOFormula; [$($args),*])),
-                    to: $to,
-                    variables: Cow::Borrowed(mk_static_slice!($crate::terms::Variable; [$($var.const_clone()),*])),
+                {
+                    let variables = Cow::Borrowed(mk_static_slice!($crate::terms::Variable; [$($var.const_clone()),*]));
+
+                    
+                    AliasRewrite {
+                        from: Cow::Borrowed(mk_static_slice!($crate::terms::RecFOFormula; [$($args),*])),
+                        to: $to,
+                        variables,
+                    }
                 }
             }),*]
             )))
@@ -123,7 +128,7 @@ mk_builtin_funs!(
         signature: s!(Bool, 2),
         flags: f!(BUILTIN_SMT), // e.g., this will be `BUILTIN | BUILTIN_SMT` instead of `FunctionFlags::BUILTIN`
         alias: Some(alias!{ // <- magic
-            a:Bool, b:Bool in rexp!(#a), rexp!(#b) => rexp!((BITE #a #b true))
+            a:Bool, b:Bool in rexp!(const !a), rexp!(const !b) => rexp!(const (BITE !a !b true))
         }),
     };
 
@@ -135,7 +140,7 @@ mk_builtin_funs!(
         signature: s!(Bool, 2),
         flags: f!(/* ALIAS | */ BUILTIN_SMT),
         alias: Some(alias!{
-            a:Bool, b:Bool in rexp!(const #a), rexp!(const #b) => rexp!(const (BITE #a #b false))
+            a:Bool, b:Bool in rexp!(const !a), rexp!(const !b) => rexp!(const (BITE !a !b false))
         }),
     };
 
@@ -147,7 +152,7 @@ mk_builtin_funs!(
         signature: s!(Bool, 2),
         flags: f!(/* ALIAS | */ BUILTIN_SMT),
         alias: Some(alias!{
-            a:Bool, b:Bool in rexp!(const #a), rexp!(const #b) => rexp!(const (BITE #a true #b))
+            a:Bool, b:Bool in rexp!(const !a), rexp!(const !b) => rexp!(const (BITE !a true !b))
         }),
     };
 
@@ -159,7 +164,7 @@ mk_builtin_funs!(
         signature: s!(Bool, 1),
         flags: f!(/* ALIAS | */ BUILTIN_SMT),
         alias: Some(alias!{
-            a:Bool in rexp!(const #a) => rexp!(const (BITE #a false true))
+            a:Bool in rexp!(const !a) => rexp!(const (BITE !a false true))
         }),
     };
 

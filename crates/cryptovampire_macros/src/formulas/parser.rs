@@ -105,9 +105,21 @@ impl ToTokens for VarName {
     }
 }
 
+/// Represents content after a '#' or `!`
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub enum BangedContent {
-    // Represents content after a '#'
+pub struct BangedContent {
+    pub kind: BangedContentKind,
+    pub inner: BangedContentInner,
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub enum BangedContentKind {
+    ExplamationMark(Token![!]),
+    Cross(Token![#]),
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub enum BangedContentInner {
     Lit(Lit),
     Ident(Ident),
     Expr(Expr),
@@ -176,7 +188,7 @@ impl ToTokens for FunIdent {
     }
 }
 
-impl Parse for BangedContent {
+impl Parse for BangedContentInner {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         // '#' is expected to be consumed by the caller before calling this
         // If not, add input.parse::<Token![#]>()?; here.
@@ -188,16 +200,34 @@ impl Parse for BangedContent {
             if !content.is_empty() {
                 return Err(content.error("Expected end of expression in #()"));
             }
-            Ok(BangedContent::Expr(expr))
+            Ok(Self::Expr(expr))
         } else if input.peek(Lit) {
             let lit: Lit = input.parse()?;
-            Ok(BangedContent::Lit(lit))
+            Ok(Self::Lit(lit))
         } else if input.peek(Ident) {
             let ident: Ident = input.parse()?;
-            Ok(BangedContent::Ident(ident))
+            Ok(Self::Ident(ident))
         } else {
             Err(input.error("Expected literal, identifier, or parenthesized expression after #"))
         }
+    }
+}
+
+impl Parse for BangedContentKind {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        if input.peek(Token![#]) {
+            Ok(Self::Cross(input.parse()?))
+        } else {
+            Ok(Self::ExplamationMark(input.parse()?))
+        }
+    }
+}
+
+impl Parse for BangedContent {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        let kind = input.parse()?;
+        let inner = input.parse()?;
+        Ok(Self { kind, inner })
     }
 }
 
@@ -232,7 +262,7 @@ impl Parse for ArgItem {
         if input.peek(Token![#]) {
             // Tentatively parse '#', but fork to give it back if not a splat or specific #term
             let marker_span = input.cursor().span(); // For error messages
-            input.parse::<Token![#]>()?; // Consume '#'
+            let kind = input.parse::<Token![#]>()?; // Consume '#'
 
             if input.peek(token::Paren) {
                 // Potential #(expr) or #(expr)*
@@ -252,7 +282,10 @@ impl Parse for ArgItem {
                 } else {
                     // Regular #(expr) term
                     Ok(ArgItem::Regular(
-                        InnerAst::Banged(BangedContent::Expr(expr)).with(span),
+                        InnerAst::Banged(BangedContent{
+                            kind: BangedContentKind::Cross(kind),
+                            inner: BangedContentInner::Expr(expr),
+                        }).with(span),
                     ))
                 }
             } else if input.peek(Ident) {
@@ -265,7 +298,10 @@ impl Parse for ArgItem {
                     // Regular #ident term
                     let span = ident.span();
                     Ok(ArgItem::Regular(
-                        InnerAst::Banged(BangedContent::Ident(ident)).with(span),
+                        InnerAst::Banged(BangedContent{
+                            kind: BangedContentKind::Cross(kind),
+                            inner: BangedContentInner::Ident(ident),
+                        }).with(span),
                     ))
                 }
             } else if input.peek(Lit) {
@@ -273,8 +309,14 @@ impl Parse for ArgItem {
                 let lit: Lit = input.parse()?;
                 let span = lit.span();
                 Ok(ArgItem::Regular(
-                    InnerAst::Banged(BangedContent::Lit(lit)).with(span),
+                    InnerAst::Banged(BangedContent{
+                            kind: BangedContentKind::Cross(kind),
+                            inner: BangedContentInner::Lit(lit),
+                        }).with(span),
                 ))
+            } else if input.peek(Token![!]) {
+                let span = input.span();
+                Ok(ArgItem::Regular(InnerAst::Banged(input.parse()?).with(span)))
             } else {
                 Err(syn::Error::new(
                     marker_span,
@@ -336,7 +378,7 @@ impl Parse for VarBinding {
         let binding_content;
         parenthesized!(binding_content in content);
 
-        binding_content.parse::<Token![#]>()?;
+        binding_content.parse::<Token![!]>()?;
         let name: VarName = binding_content.parse()?;
         let index;
         if binding_content.peek(Token![!]) {
@@ -355,15 +397,15 @@ impl Parse for VarBinding {
 
 impl Parse for VarBindings {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        if input.peek(Token![#]) {
-            input.parse::<Token![#]>()?;
+        if input.peek(Token![!]) {
+            input.parse::<Token![!]>()?;
             if input.peek(token::Paren) {
                 let content;
                 parenthesized!(content in input);
                 let expr: Expr = content.parse()?;
                 ereturn_if!(
                     !content.is_empty(),
-                    Err(content.error("Expected end of expression in #()"))
+                    Err(content.error("Expected end of expression in !()"))
                 );
 
                 Ok(Self::Expr(expr))
@@ -372,7 +414,7 @@ impl Parse for VarBindings {
                 Ok(Self::Ident(ident))
             } else {
                 Err(input
-                    .error("Expected literal, identifier, or parenthesized expression after #"))
+                    .error("Expected literal, identifier, or parenthesized expression after !"))
             }
         } else {
             Ok(Self::Binding(parse_bindings(input)?))
@@ -440,14 +482,12 @@ impl Parse for FunAppAst {
 
 impl Parse for Ast {
     fn parse(input: ParseStream<'_>) -> Result<Ast> {
-        if input.peek(Token![#]) {
-            input.parse::<Token![#]>()?; // Consume '#'
+        if input.peek(Token![#]) || input.peek(Token![!]) {
+            // input.parse::<Token![#]>()?; // Consume '#'
             let span = input.span();
-            let banged_content = input.parse::<BangedContent>()?;
-            return Ok(InnerAst::Banged(banged_content).with(span));
-        }
-
-        if input.peek(token::Paren) {
+            let banged_content = input.parse()?;
+            Ok(InnerAst::Banged(banged_content).with(span))
+        } else if input.peek(token::Paren) {
             let content;
             let span = parenthesized!(content in input).span.join();
             ereturn_if!(
@@ -473,16 +513,19 @@ impl Parse for Ast {
                         content.parse().map(InnerAst::Quantifier)
                     }
                     "and" => {
-                        let _ : Ident = content.parse()?;
-                        Ok(InnerAst::And(parse_argument_list(&content)?))},
+                        let _: Ident = content.parse()?;
+                        Ok(InnerAst::And(parse_argument_list(&content)?))
+                    }
                     "or" => {
-                        let _ : Ident = content.parse()?;
-                        Ok(InnerAst::Or(parse_argument_list(&content)?))},
-                    "distinct" =>{
-                        let _ : Ident = content.parse()?;
-                         Ok(InnerAst::Neq(parse_argument_list(&content)?))},
+                        let _: Ident = content.parse()?;
+                        Ok(InnerAst::Or(parse_argument_list(&content)?))
+                    }
+                    "distinct" => {
+                        let _: Ident = content.parse()?;
+                        Ok(InnerAst::Neq(parse_argument_list(&content)?))
+                    }
                     "not" => {
-                        let _ : Ident = content.parse()?;
+                        let _: Ident = content.parse()?;
                         let arg = content.parse()?;
                         if !content.is_empty() {
                             return Err(content.error("Expected single argument for not"));

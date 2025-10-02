@@ -8,7 +8,7 @@ use syn::spanned::Spanned;
 use syn::{Error, Token, parse_macro_input};
 
 use crate::formulas::parser::{
-    ArgItem, Ast, BangedContent, FunAppAst, QuantifierAst, QuantifierKind, VarBinding, VarBindings,
+    ArgItem, Ast, BangedContent, BangedContentInner, BangedContentKind, FunAppAst, QuantifierAst, QuantifierKind, VarBinding, VarBindings
 };
 
 struct MacroInput {
@@ -333,7 +333,10 @@ impl ToTokenWithInputs for QuantifierAst {
 
         Ok(quote! {
           #pre_binding
-          #constructor(#kind, #binding_arg, #nargs)
+          #constructor(#kind, #binding_arg, {
+            // compute the argument
+            #nargs
+          })
         })
     }
 }
@@ -346,6 +349,7 @@ struct BindingForQuantifer {
 impl QuantifierAst {
     fn mk_bindings(&self, macro_input: &MacroInput) -> Result<BindingForQuantifer, Error> {
         let ic = macro_input.is_const();
+        let path = &macro_input.path;
         let pre_binding;
         let binding_arg;
         match &self.bindings {
@@ -355,11 +359,11 @@ impl QuantifierAst {
                     quote!(#ident)
                 } else {
                     quote!(#ident.clone())
-                }
+                };
             }
             VarBindings::Expr(expr) => {
                 pre_binding = None;
-                binding_arg = quote! {{#expr}}
+                binding_arg = quote! {{#expr}};
             }
             VarBindings::Binding(var_bindings) => {
                 let names = var_bindings
@@ -377,6 +381,7 @@ impl QuantifierAst {
                         quote! {#keyword #ident: #t = #content; }
                     })
                 };
+                let mk_formula_from_var = quote!(#path::mk_var);
 
                 pre_binding = Some(quote!(#(#names_declarations)*));
                 if ic {
@@ -387,6 +392,7 @@ impl QuantifierAst {
                 } else {
                     binding_arg = quote!([#(#names.clone()),*]);
                 }
+                let t = Kind::Formula.to_tokens(macro_input)?;
             }
         }
 
@@ -433,24 +439,36 @@ impl FunAppAst {
 
 impl ToTokenWithInputs for BangedContent {
     fn to_tokens(&self, macro_input: &MacroInput) -> syn::Result<TokenStream> {
-        match self {
-            BangedContent::Lit(lit) => Err(Error::new_spanned(
+        let path = &macro_input.path;
+        let Self { kind, inner } = self;
+        match inner {
+            BangedContentInner::Lit(lit) => Err(Error::new_spanned(
                 lit,
                 "litterals don't make sense in this mode",
             )),
-            BangedContent::Ident(ident) => {
+            BangedContentInner::Ident(ident) => {
                 let cloned = macro_input.mk_clone(&quote!(#ident));
-                Ok(quote!(#cloned.into()))
+                if macro_input.is_const() {
+                    match kind {
+                        BangedContentKind::ExplamationMark(_) => Ok(quote!(#path::mk_var_from_ref(&#ident))),
+                        BangedContentKind::Cross(_) => Ok(cloned),
+                    }
+                } else {
+                    Ok(quote!(#cloned.into()))
+                }
             }
-                ,
-            BangedContent::Expr(expr) => Ok(quote!({#expr})),
+            BangedContentInner::Expr(expr) =>match kind {
+                BangedContentKind::ExplamationMark(_) => Ok(quote!(#path::mk_var({#expr}))),
+                BangedContentKind::Cross(_) => Ok(quote!({#expr})),
+            } ,
         }
     }
 }
 
 pub fn mk_recexpr(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let macro_input = parse_macro_input!(input as MacroInput);
-    let output: proc_macro::TokenStream = macro_input.content.to_tokens(&macro_input).unwrap().into();
+    let output: proc_macro::TokenStream =
+        macro_input.content.to_tokens(&macro_input).unwrap().into();
     dbg!(&output.to_string());
     output
 }

@@ -5,6 +5,7 @@ use egg::{Analysis, EGraph, ENodeOrVar, Id, Language, PatternAst, RecExpr, Var, 
 use itertools::{EitherOrBoth, Itertools, izip};
 use log::error;
 use logic_formula::{Destructed, Formula, HeadSk};
+use quarck::CowArc;
 use utils::{econtinue_if, ereturn_if, implvec};
 
 use crate::terms::{FOBinder, Function, RecFOFormula, Sort, Variable, builtin};
@@ -48,6 +49,11 @@ pub const fn mk_var(var: Variable) -> MacroExpr {
     MacroExpr::mk_var(var)
 }
 
+/// for [rexp]
+pub const fn mk_var_from_ref(var: &Variable) -> MacroExpr {
+    MacroExpr::mk_var(var.const_clone())
+}
+
 pub fn mk_ands(args: implvec!(MacroExpr)) -> MacroExpr {
     MacroExpr::and(args)
 }
@@ -68,11 +74,11 @@ pub fn mk_neqs(args: implvec!(MacroExpr)) -> MacroExpr {
 pub fn mk_app<T: FunctionRef>(head: T, args: implvec!(MacroExpr)) -> MacroExpr {
     RecFOFormula::App {
         head: head.to_function(),
-        args: Cow::Owned(args.into_iter().collect_vec()),
+        args: CowArc::Owned(args.into_iter().collect_vec()),
     }
 }
 
-pub fn mk_const_app(head: Function, args: &'static [MacroExpr]) -> MacroExpr {
+pub const fn mk_const_app(head: Function, args: &'static [MacroExpr]) -> MacroExpr {
     MacroExpr::mk_const_app(head, args)
 }
 
@@ -83,8 +89,8 @@ pub const fn mk_const_quantifier(
 ) -> MacroExpr {
     MacroExpr::Quantifier {
         head,
-        vars: Cow::Borrowed(vars),
-        arg: Cow::Borrowed(arg),
+        vars: CowArc::Borrowed(vars),
+        arg: CowArc::Borrowed(arg),
     }
 }
 
