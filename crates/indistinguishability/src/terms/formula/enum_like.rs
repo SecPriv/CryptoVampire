@@ -9,7 +9,7 @@ use itertools::{Itertools, chain, izip};
 use logic_formula::{Destructed, Formula, HeadSk};
 use quarck::CowArc;
 use rpds::HashTrieSet;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use serde::Serialize;
 use smallvec::SmallVec;
 use steel::core::labels::fresh;
@@ -170,6 +170,206 @@ impl RecFOFormula {
     pub fn is_false(&self) -> bool {
         matches!(self, Self::App { head, .. } if head == &FALSE)
     }
+}
+
+// =========================================================
+// ======================= is_xxx ==========================
+// =========================================================
+#[allow(dead_code)]
+impl RecFOFormula {
+    #[must_use]
+    pub fn is_var(&self) -> bool {
+        matches!(self, Self::Var(_))
+    }
+    #[must_use]
+    pub fn is_app(&self) -> bool {
+        matches!(self, Self::App { .. })
+    }
+    #[must_use]
+    pub fn is_quantifier(&self) -> bool {
+        matches!(self, Self::Quantifier { .. })
+    }
+}
+
+// =========================================================
+// ==================== manipulation =======================
+// =========================================================
+// substitution, unification, etc...
+
+#[non_exhaustive]
+#[derive(Debug)]
+pub struct AlphaArgs<'var, 'r> {
+    pub var: &'var Variable,
+    pub subst: &'r mut FxHashMap<&'var Variable, Variable>,
+}
+
+impl RecFOFormula {
+    // ~~~~~~~~~~~~ alpha renaming ~~~~~~~~~~~~~~
+
+    /// Renames the variables in `self` that verify `do_change` with fresh ones.
+    /// It populate `subst` as it goes with the substitution it creates. If a
+    /// substution was alreay there, it extends it.
+    ///
+    /// ## Notes
+    /// - `do_change` has priority over the pre-existing substitution to
+    /// decide how to modify the variables
+    /// - it effectively clones `self`.
+    pub fn alpha_rename_if_with<'a>(
+        &'a self,
+        subst: &mut FxHashMap<&'a Variable, Variable>,
+        do_change: &mut impl FnMut(AlphaArgs<'a, '_>) -> bool,
+    ) -> Self {
+        match self {
+            Self::App { head, args } => Self::App {
+                head: head.clone(),
+                args: args
+                    .iter()
+                    .map(|arg| arg.alpha_rename_if_with(subst, do_change))
+                    .collect(),
+            },
+            Self::Var(var) => {
+                if do_change(AlphaArgs { var, subst }) {
+                    Self::Var(
+                        subst
+                            .entry(var)
+                            .or_insert_with(|| Variable::fresh().maybe_sort(var.get_sort()).call())
+                            .clone(),
+                    )
+                } else {
+                    self.clone()
+                }
+            }
+            Self::Quantifier { head, vars, arg } => {
+                let head = *head;
+                let vars = vars
+                    .iter()
+                    .map(|var| {
+                        if do_change(AlphaArgs { var, subst }) {
+                            subst
+                                .entry(var)
+                                .or_insert_with(|| {
+                                    Variable::fresh().maybe_sort(var.get_sort()).call()
+                                })
+                                .clone()
+                        } else {
+                            var.clone()
+                        }
+                    })
+                    .collect();
+                let arg = arg
+                    .iter()
+                    .map(|arg| arg.alpha_rename_if_with(subst, do_change))
+                    .collect();
+                Self::Quantifier { head, vars, arg }
+            }
+        }
+    }
+
+    /// Freshen all the variables to ensure their uniqueness
+    ///
+    /// ## arguments
+    /// - `predicate`: a function that return `true` if the variable must be
+    ///   renamed
+    pub fn alpha_rename_if(&self, mut do_change: impl FnMut(&Variable) -> bool) -> Self {
+        self.alpha_rename_if_with(
+            &mut FxHashMap::default(),
+            &mut |AlphaArgs { var, .. }| do_change(var),
+        )
+    }
+
+    /// Make all the variables apearing in `self` unique to `self`
+    pub fn alpha_rename(&self) -> Self {
+        self.alpha_rename_if_with(&mut FxHashMap::default(), &mut |_| true)
+    }
+
+    /// Apply a specific variable substitution
+    pub fn apply_substitution<'a>(&'a self, subst: &mut FxHashMap<&'a Variable, Variable>) -> Self {
+        self.alpha_rename_if_with(subst, &mut |AlphaArgs { var, subst }| {
+            subst.contains_key(var)
+        })
+    }
+
+    // ~~~~~~~~~~~~~ unification ~~~~~~~~~~~~~~~~
+
+    fn are_vars_and_eq(l: &Self, r: &Self) -> bool {
+        match (l, r) {
+            (Self::Var(v1), Self::Var(v2)) => v1 == v2,
+            _ => false,
+        }
+    }
+
+    fn unify_inner(
+        &self,
+        other: &Self,
+        subst: &mut FxHashMap<Variable, Self>,
+        is_bound: &mut FxHashSet<Variable>,
+        short_cut: &mut impl FnMut(&Self, &Self, &mut FxHashMap<Variable, Self>) -> Option<bool>,
+    ) -> bool {
+        if let Some(x) = short_cut(self, other, subst) {
+            return x;
+        }
+
+        match (self, other) {
+            (Self::Var(v1), Self::Var(v2)) => {
+                let l = subst.entry(v1.clone()).or_insert(other.clone()).clone();
+                let r = subst.entry(v2.clone()).or_insert(self.clone()).clone();
+                // they're both mapped to variables
+                Self::are_vars_and_eq(&l, &r) ||
+                 // or what they map to unify
+                 (!is_bound.contains(v1) && !is_bound.contains(v2) && l.unify_inner(&r, subst, is_bound, short_cut))
+            }
+            (Self::Var(v), x) | (x, Self::Var(v)) if !is_bound.contains(v) => {
+                let y = subst.entry(v.clone()).or_insert(x.clone()).clone();
+                x.unify_inner(&y, subst, is_bound, short_cut)
+            }
+            (
+                Self::App {
+                    head: hl,
+                    args: argsl,
+                },
+                Self::App {
+                    head: hr,
+                    args: argsr,
+                },
+            ) if hl == hr => {
+                izip!(argsl, argsr).all(|(l, r)| l.unify_inner(r, subst, is_bound, short_cut))
+            }
+            (
+                Self::Quantifier {
+                    head: hl,
+                    vars: vl,
+                    arg: al,
+                },
+                Self::Quantifier {
+                    head: hr,
+                    vars: vr,
+                    arg: ar,
+                },
+            ) if hl == hr && vl.len() == vr.len() => {
+                // we bail if any of the bound variables were already assigned somewhere
+                let already_assigned = izip!(vl, vr).any(|(l, r)| {
+                    subst.insert(l.clone(), Self::Var(r.clone())).is_some()
+                        || subst.insert(r.clone(), Self::Var(l.clone())).is_some()
+                });
+                ereturn_if!(already_assigned, false);
+                is_bound.extend(chain![vl, vr].cloned());
+
+                izip!(al, ar).all(|(l, r)| l.unify_inner(r, subst, is_bound, short_cut))
+            }
+            _ => false,
+        }
+    }
+
+    pub fn unify(&self, other: &Self) -> Option<FxHashMap<Variable, Self>> {
+        let mut subst = Default::default();
+        self.unify_inner(
+            other,
+            &mut subst,
+            &mut Default::default(),
+            &mut |_, _, _| None,
+        )
+        .then_some(subst)
+    }
 
     /// capture avoiding substitution
     pub fn subst(&self, subst: &[(Variable, Self)]) -> Self {
@@ -207,11 +407,12 @@ impl RecFOFormula {
             .clone(),
         }
     }
+}
 
-    // =========================================================
-    // ===================== conversion ========================
-    // =========================================================
-
+// =========================================================
+// ===================== conversion ========================
+// =========================================================
+impl RecFOFormula {
     pub fn from_egg(formula: &[LangVar], sort: Option<Sort>) -> Self {
         let mut free_vars = Default::default();
         let mut db_free_vars = Default::default();
@@ -422,10 +623,30 @@ impl RecFOFormula {
     fn into_pre_smt<'a, U>(self) -> PreSmtRecFOFormulaF<'a, U> {
         PreSmtRecFOFormula::builder().formula(Cow::Owned(self))
     }
+}
 
-    // =========================================================
-    // ================== specific builders ====================
-    // =========================================================
+fn mk_list<L: EggLanguage>(out: &mut Vec<L>, sorts: implvec!(Sort)) -> usize {
+    let sorts = sorts.into_iter();
+    let mut i = out.len();
+    out.reserve(sorts.size_hint().0 * 2 + 1);
+    out.push(L::mk_fun_application(NIL, []));
+
+    for sort in sorts {
+        let sort = sort.as_function().unwrap();
+        out.push(EggLanguage::mk_fun_application(sort.clone(), []));
+        out.push(EggLanguage::mk_fun_application(
+            CONS.clone(),
+            [i, i + 1].map(Id::from),
+        ));
+        i += 2
+    }
+    i
+}
+
+// =========================================================
+// ================== specific builders ====================
+// =========================================================
+impl RecFOFormula {
     pub fn bind(kind: FOBinder, vars: Vec<Variable>, args: implvec!(RecFOFormula)) -> Self {
         assert!(vars.iter().all(Variable::has_sort));
         Self::Quantifier {
@@ -766,34 +987,6 @@ impl Shr for RecFOFormula {
     }
 }
 
-// impl IntoSmt<MSmtParam> for RecFOFormula {
-//     fn convert_var(var: Variable) -> Variable {
-//         var
-//     }
-
-//     fn convert_quant(
-//         RecFOFormulaQuant { quantifier, vars }: Self::Quant,
-//     ) -> SmtQuantifier<MSmtParam> {
-//         assert!(
-//             vars.iter().all(Variable::has_smt_sort),
-//             "Variable must have valid smt sort, see Variable::has_smt_sort"
-//         );
-//         match quantifier {
-//             FOBinder::Forall => SmtQuantifier::Forall(vars),
-//             FOBinder::Exists => SmtQuantifier::Exists(vars),
-//             _ => todo!(),
-//         }
-//     }
-
-//     fn as_head(fun: &Self::Fun) -> Option<cryptovampire_smt::SmtHead> {
-//         fun.as_smt_head()
-//     }
-
-//     fn convert_function(fun: Function) -> Function {
-//         fun
-//     }
-// }
-
 pub trait QuantifierTranslator {
     fn try_translate(
         &self,
@@ -981,22 +1174,4 @@ fn mk_bound_var<L: EggLanguage>(depth: usize) -> impl Iterator<Item = L> {
         ::std::iter::once(L::mk_fun_application(LAMBDA_O.clone(), [])),
         (0..depth).map(|i| L::mk_fun_application(LAMBDA_S.clone(), [Id::from(i)]))
     ]
-}
-
-fn mk_list<L: EggLanguage>(out: &mut Vec<L>, sorts: implvec!(Sort)) -> usize {
-    let sorts = sorts.into_iter();
-    let mut i = out.len();
-    out.reserve(sorts.size_hint().0 * 2 + 1);
-    out.push(L::mk_fun_application(NIL, []));
-
-    for sort in sorts {
-        let sort = sort.as_function().unwrap();
-        out.push(EggLanguage::mk_fun_application(sort.clone(), []));
-        out.push(EggLanguage::mk_fun_application(
-            CONS.clone(),
-            [i, i + 1].map(Id::from),
-        ));
-        i += 2
-    }
-    i
 }
