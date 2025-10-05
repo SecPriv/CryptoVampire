@@ -6,7 +6,6 @@ use itertools::{Itertools, chain, izip};
 use utils::dynamic_iter;
 
 use crate::problem::CurrentStep;
-use crate::rules::utils::generate_rule_vars;
 use crate::terms::{Function, MACRO_EXEC, MACRO_FRAME, NONCE, PRED, SUBSTITUTION, Sort};
 use crate::{Lang, Problem, rexp};
 

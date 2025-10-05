@@ -3,7 +3,6 @@ use std::fmt::{Display, write};
 use std::rc::Rc;
 
 use bon::{Builder, bon, builder};
-use egg::{PatternAst, Var};
 use itertools::{Itertools, chain};
 use logic_formula::Formula;
 use utils::{ereturn_if, implvec};
@@ -11,42 +10,42 @@ use utils::{ereturn_if, implvec};
 use crate::rules::utils::fresh;
 use crate::terms::quantifier::default_valid;
 use crate::terms::{
-    Function, FunctionCollection, FunctionFlags, InnerFunction, Quantifier, QuantifierIndex, QuantifierT, RecExprIter, Signature, Sort, FIND_SUCH_THAT
+    FIND_SUCH_THAT, Function, FunctionCollection, FunctionFlags, InnerFunction, Quantifier,
+    QuantifierIndex, QuantifierT, RecExprIter, RecFOFormula, Signature, Sort, Variable,
 };
-use crate::{Lang, LangVar, Problem};
+use crate::{Lang, LangVar, Problem, fresh};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Builder)]
 #[builder(builder_type = FindSuchThatBuilder0)]
 pub struct FindSuchThat {
     /// The free variables captured by the quantifier
-    vars: Rc<[Var]>,
+    #[builder(with = <_>::from_iter)]
+    vars: Vec<Variable>,
     /// The variable bound by the quantifier
-    bound_var: Rc<[Var]>,
+    #[builder(with = <_>::from_iter)]
+    bound_var: Vec<Variable>,
     #[builder(default = true)]
     temporary: bool,
     /// The "content" of the quantifier
-    #[builder(default = std::iter::empty().collect())]
-    condition: PatternAst<Lang>,
-    #[builder(default = std::iter::empty().collect())]
-    then_branch: PatternAst<Lang>,
-    #[builder(default = std::iter::empty().collect())]
-    else_branch: PatternAst<Lang>,
+    condition: Option<RecFOFormula>,
+    then_branch: Option<RecFOFormula>,
+    else_branch: Option<RecFOFormula>,
     /// the main alias (e.g., `exists$1`)
     ///
     /// stands for "top level function"
     tlf: Function,
     /// the skolem function
-    skolems: Rc<[Function]>,
+    skolems: Vec<Function>,
     /// the fresh constant replacing the index
-    freshes: Rc<[Function]>,
+    freshes: Vec<Function>,
 }
 
 impl QuantifierT for FindSuchThat {
-    fn bvars(&self) -> &[Var] {
+    fn bvars(&self) -> &[Variable] {
         &self.bound_var
     }
 
-    fn cvars(&self) -> &[Var] {
+    fn cvars(&self) -> &[Variable] {
         &self.vars
     }
 
@@ -105,22 +104,14 @@ impl FindSuchThat {
     #[builder]
     pub fn insert(
         pbl: &mut Problem,
-        #[builder(with = FromIterator::from_iter, default = vec![])] cvars_sort: Vec<Sort>,
+        #[builder(with = FromIterator::from_iter, default = vec![])] cvars_sorts: Vec<Sort>,
         #[builder(with = FromIterator::from_iter, default = vec![])] bvars_sorts: Vec<Sort>,
         #[builder(default = true)] temporary: bool,
     ) -> &mut FindSuchThat {
         assert!(!bvars_sorts.is_empty());
         // set up
-        let bvars: Rc<[_]> = bvars_sorts
-            .iter()
-            .enumerate()
-            .map(|(i, _)| egg::Var::from_usize(i as u32))
-            .collect();
-        let cvars: Rc<[_]> = cvars_sort
-            .iter()
-            .enumerate()
-            .map(|(i, _)| egg::Var::from_usize((i + bvars.len()) as u32))
-            .collect();
+        let bvars = bvars_sorts.iter().map(|&s| fresh!(s)).collect_vec();
+        let cvars = cvars_sorts.iter().map(|&s| fresh!(s)).collect_vec();
 
         let quant_idx = pbl.functions().quantifiers(temporary).len();
 
@@ -128,15 +119,15 @@ impl FindSuchThat {
 
         // build the Functions
         let tlf;
-        let skolems: Rc<[_]>;
-        let freshes: Rc<[_]>;
+        let skolems;
+        let freshes;
 
         {
             tlf = pbl
                 .declare_function()
                 .fresh_name("_findst")
                 .inputs(chain!(
-                    cvars_sort.iter().copied(),
+                    cvars_sorts.iter().copied(),
                     bvars_sorts.iter().copied()
                 ))
                 .output(Sort::Bitstring)
@@ -154,7 +145,7 @@ impl FindSuchThat {
                 skolem_vec.push(
                     pbl.declare_function()
                         .fresh_name(&name)
-                        .inputs(cvars_sort.iter().copied())
+                        .inputs(cvars_sorts.iter().copied())
                         .output(bs)
                         .quantifier_idx(quant_idx)
                         .flag(FunctionFlags::SKOLEM)
@@ -162,7 +153,7 @@ impl FindSuchThat {
                         .call(),
                 );
             }
-            skolems = skolem_vec.into();
+            skolems = skolem_vec;
         }
 
         {
@@ -180,7 +171,7 @@ impl FindSuchThat {
                         .call(),
                 );
             }
-            freshes = fresh_vec.into();
+            freshes = fresh_vec;
         }
 
         let q = pbl.functions_mut().push_quantifier(
@@ -205,9 +196,7 @@ impl FindSuchThat {
 
 impl FindSuchThat {
     pub fn is_uninit(&self) -> bool {
-        self.condition().is_empty()
-            || self.then_branch().is_empty()
-            || self.else_branch().is_empty()
+        self.condition().is_none() || self.then_branch().is_none() || self.else_branch().is_none()
     }
 
     pub fn functions(&self) -> FindSuchThatFuns {
@@ -219,35 +208,34 @@ impl FindSuchThat {
         } = self;
         FindSuchThatFuns {
             tlf: tlf.clone(),
-            skolem: skolems.clone(),
-            fresh: freshes.clone(),
+            skolem: skolems.iter().cloned().collect(),
+            fresh: freshes.iter().cloned().collect(),
         }
     }
 
-    pub fn condition(&self) -> &[LangVar] {
-        &self.condition
+    pub fn condition(&self) -> Option<&RecFOFormula> {
+        self.condition.as_ref()
     }
 
-    pub fn set_condition(&mut self, condition: implvec!(LangVar)) {
-        self.condition = condition.into_iter().collect()
+    pub fn set_condition(&mut self, condition: RecFOFormula) {
+        self.condition = Some(condition)
     }
 
-    pub fn then_branch(&self) -> &[LangVar] {
-        &self.then_branch
+    pub fn then_branch(&self) -> Option<&RecFOFormula> {
+        self.then_branch.as_ref()
     }
 
-    pub fn set_then_branch(&mut self, then_branch: implvec!(LangVar)) {
-        self.then_branch = then_branch.into_iter().collect()
+    pub fn set_then_branch(&mut self, then_branch: RecFOFormula) {
+        self.then_branch = Some(then_branch)
     }
 
-    pub fn else_branch(&self) -> &[LangVar] {
-        &self.else_branch
+    pub fn else_branch(&self) -> Option<&RecFOFormula> {
+        self.else_branch.as_ref()
     }
 
-    pub fn set_else_branch(&mut self, else_branch: implvec!(LangVar)) {
-        self.else_branch = else_branch.into_iter().collect()
+    pub fn set_else_branch(&mut self, else_branch: RecFOFormula) {
+        self.else_branch = Some(else_branch)
     }
-    
 }
 
 #[derive(Debug)]
@@ -257,17 +245,17 @@ pub struct FindSuchThatFuns {
     pub fresh: Rc<[Function]>,
 }
 
-#[derive(Debug)]
-pub struct FindSuchThatBuilder {
-    /// The free variables captured by the quantifier
-    pub vars: Vec<Var>,
-    /// The variable bound by the quantifier
-    pub bound_var: Vec<Var>,
-    /// The "content" of the quantifier
-    pub condition: PatternAst<Lang>,
-    pub then_branch: PatternAst<Lang>,
-    pub else_branch: PatternAst<Lang>,
-}
+// #[derive(Debug)]
+// pub struct FindSuchThatBuilder {
+//     /// The free variables captured by the quantifier
+//     pub vars: Vec<Var>,
+//     /// The variable bound by the quantifier
+//     pub bound_var: Vec<Var>,
+//     /// The "content" of the quantifier
+//     pub condition: PatternAst<Lang>,
+//     pub then_branch: PatternAst<Lang>,
+//     pub else_branch: PatternAst<Lang>,
+// }
 
 impl Display for FindSuchThat {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -286,6 +274,12 @@ impl Display for FindSuchThat {
         let bound_vars = bound_var.iter().join(", ");
         let skolems = skolems.iter().join(", ");
         let freshes = freshes.iter().join(", ");
+
+        let [condition, then_branch, else_branch] =
+            [condition, then_branch, else_branch].map(|f| match f {
+                Some(f) => f.to_string(),
+                None => format!(" ∅"),
+            });
 
         write!(
             f,

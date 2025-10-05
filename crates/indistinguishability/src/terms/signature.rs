@@ -5,8 +5,9 @@ use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 use utils::implvec;
 
+use crate::fresh;
 use crate::input::Registerable;
-use crate::terms::Sort;
+use crate::terms::{Sort, Variable};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Steel)]
 pub struct Signature {
@@ -28,6 +29,10 @@ impl Signature {
 
     pub fn inputs_iter(&self) -> impl Iterator<Item = Sort> + use<'_> {
         self.inputs.iter().copied()
+    }
+
+    pub fn mk_vars(&self) -> Vec<Variable> {
+        self.inputs.iter().map(|&s| fresh!(s)).collect()
     }
 
     // pub fn mk_sorted_vars(

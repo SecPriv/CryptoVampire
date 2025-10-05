@@ -10,9 +10,9 @@ use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::terms::utils::offset;
 use crate::terms::{
     Alias, AliasRewrite, EQ, Exists, FindSuchThat, FormulaLike, Function, MACRO_COND, MACRO_MSG,
-    Quantifier, QuantifierT, RecExprIter, RecFOFormula,
+    Quantifier, QuantifierT, RecFOFormula,
 };
-use crate::{LangVar, Problem};
+use crate::{LangVar, Problem, rexp};
 
 declare_trace!($"search");
 
@@ -48,7 +48,7 @@ pub trait SyntaxSearcher {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         fun: Function,
-        args: implvec!(RecExprIter<'a, LangVar>),
+        args: implvec!(RecFOFormula),
     );
 
     /// discriminate whether `fun` has a specific subterm
@@ -59,19 +59,13 @@ pub trait SyntaxSearcher {
         default_is_special(self, pbl, fun)
     }
 
-    fn inner_search_recexpr(
-        &self,
-        pbl: &Problem,
-        builder: &RefFormulaBuilder,
-        term: RecExprIter<'_, LangVar>,
-    ) {
+    fn inner_search_recexpr(&self, pbl: &Problem, builder: &RefFormulaBuilder, term: RecFOFormula) {
         assert!(builder.current_mode().is_and());
         ereturn_if!(builder.is_saturated());
-        tr!(
-            "searching through {}",
-            egg::RecExpr::from(term.iter().cloned().collect_vec())
-        );
+        tr!("searching through {term}");
+
         ereturn_let!(let Destructed { head: HeadSk::Fun(fun), args} = term.destruct());
+
         if self.is_instance(pbl, &fun) {
             self.process_instance(pbl, builder, fun, args);
         } else if self.is_special(pbl, &fun) {
@@ -89,7 +83,7 @@ pub trait SyntaxSearcher {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         fun: Function,
-        args: implvec!(RecExprIter<'b, LangVar>),
+        args: implvec!(RecFOFormula),
     ) {
         assert!(builder.current_mode().is_and());
         assert!(self.is_special(pbl, &fun));
@@ -113,13 +107,11 @@ pub trait SyntaxSearcher {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         Alias(rws): &Alias,
-        args: implvec!(RecExprIter<'b, LangVar>),
+        args: implvec!(RecFOFormula),
     ) {
         assert!(builder.current_mode().is_and());
         tr!("in search_alias");
         let args = args.into_iter().collect_vec();
-        let max_var = builder.min_var() + 1;
-        tr!("max_var = {max_var}");
 
         let builder = builder.add_node().and().build();
 
@@ -127,42 +119,24 @@ pub trait SyntaxSearcher {
             from,
             to,
             variables,
-            sorts,
         } in rws.iter()
         {
-            assert!(
-                variables
-                    .iter()
-                    .all(|v| matches!(v.expose(), VarExposed::Num(_))),
-                "only numeric variables are allowed in aliases"
-            );
-
-            let variables = variables
-                .iter()
-                .map(|v| offset::var(max_var, *v))
-                .collect_vec();
-            let from = from
-                .iter()
-                .map(|f| offset::rexpr_owned(max_var, f.iter().cloned()))
-                .collect_vec();
-            let to = offset::rexpr_owned(max_var, to.iter().cloned());
+            let from = from.iter().map(RecFOFormula::alpha_rename).collect_vec();
+            let to = to.alpha_rename();
 
             assert_eq!(from.len(), args.len());
-            let condition = RecFOFormula::and(
-                izip!(args.iter(), from.iter())
-                    .map(|(arg, f)| EQ.rapp(vec![arg.clone().into(), f.as_ref().into()])),
-            );
+            let eqs = izip!(args.iter(), from.iter()).map(|(arg, f)| rexp!((= #arg #f)));
+            let condition = rexp!((and #eqs*));
+
             let builder = builder
                 .add_node()
                 .and()
                 // .quantifier(FOBinder::Exists)
                 .forall()
                 .condition(condition)
-                .variables(variables)
-                .sorts(sorts.iter().cloned())
-                .min_var(max_var)
+                .variables(variables.iter().cloned())
                 .build();
-            self.inner_search_recexpr(pbl, &builder, to.as_formula());
+            self.inner_search_recexpr(pbl, &builder, to);
             for arg in &args {
                 self.inner_search_recexpr(pbl, &builder, arg.clone());
             }
@@ -174,7 +148,7 @@ pub trait SyntaxSearcher {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         e: &Exists,
-        args: implvec!(RecExprIter<'b, LangVar>),
+        args: implvec!(RecFOFormula),
     ) {
         tr!("in search_exists {e}");
         todo!()
@@ -228,7 +202,7 @@ pub trait SyntaxSearcher {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         fdst: &FindSuchThat,
-        args: implvec!(RecExprIter<'b, LangVar>),
+        args: implvec!(RecFOFormula),
     ) {
         todo!()
         // tr!("in search_find_such_that {fdst}");

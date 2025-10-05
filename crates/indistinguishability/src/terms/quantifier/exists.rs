@@ -3,7 +3,7 @@ use std::fmt::{Display, write};
 use std::rc::Rc;
 
 use bon::{Builder, bon, builder};
-use egg::{PatternAst};
+use egg::PatternAst;
 use itertools::{Itertools, chain};
 use logic_formula::Formula;
 use utils::{ereturn_if, implvec};
@@ -11,7 +11,8 @@ use utils::{ereturn_if, implvec};
 use crate::rules::utils::fresh;
 use crate::terms::quantifier::default_valid;
 use crate::terms::{
-    Function, FunctionCollection, FunctionFlags, InnerFunction, Quantifier, QuantifierIndex, QuantifierT, RecExprIter, RecFOFormula, Signature, Sort, Variable 
+    Function, FunctionCollection, FunctionFlags, InnerFunction, Quantifier, QuantifierIndex,
+    QuantifierT, RecExprIter, RecFOFormula, Signature, Sort, Variable,
 };
 use crate::{Lang, LangVar, Problem};
 
@@ -61,15 +62,19 @@ impl QuantifierT for Exists {
     fn valid(&self, idx: QuantifierIndex, pbl: &crate::Problem) -> bool {
         ereturn_if!(!default_valid(self, idx, pbl), false);
 
-        let mut all_vars_set = HashSet::with_capacity(self.bvars().len() + self.cvars().len());
-        for v in chain![self.bvars(), self.cvars()] {
-            ereturn_if!(all_vars_set.insert(v), false)
+        if let Some(patt) = &self.patt {
+            let mut all_vars_set = HashSet::with_capacity(self.bvars().len() + self.cvars().len());
+            for v in chain![self.bvars(), self.cvars()] {
+                ereturn_if!(all_vars_set.insert(v), false)
+            }
+            let all_vars_set = all_vars_set;
+
+            let pattern_vars: HashSet<_> = patt.free_vars_iter().collect();
+
+            ereturn_if!(!all_vars_set.is_superset(&pattern_vars), false);
         }
-        let all_vars_set = all_vars_set;
 
-        let pattern_vars: HashSet<_> = (&self.patt).free_vars_iter().collect();
-
-        all_vars_set.is_superset(&pattern_vars)
+        true
     }
 
     fn try_from_ref(q: &super::Quantifier) -> Option<&Self> {
@@ -85,7 +90,7 @@ impl QuantifierT for Exists {
             _ => None,
         }
     }
-    
+
     fn temporary(&self) -> bool {
         // delete static variable if changed
         EXISTS_TEMPORARY
@@ -258,7 +263,11 @@ impl Display for Exists {
 
         write!(
             f,
-            "∃{tlf}({vars}) {bound_vars}@({freshes}; {skolems}). {patt}"
-        )
+            "∃{tlf}({vars}) {bound_vars}@({freshes}; {skolems})."
+        )?;
+        match patt {
+            Some(patt) => write!(f, " {patt}"),
+            None => write!(f, " ∅")
+        }
     }
 }
