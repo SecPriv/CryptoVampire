@@ -1,4 +1,6 @@
+use egg::Pattern;
 use golgge::PrologRule;
+use itertools::Itertools;
 use steel::rvals::Result as SResult;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
@@ -12,15 +14,12 @@ pub struct Rule(pub RcRule);
 
 impl Rule {
     fn new_prolog(name: String, from: RecFOFormula, to: Vec<RecFOFormula>) -> SResult<Self> {
-        let from = from.steel_maybe_as_recexp()?.into();
-        let to: SResult<Vec<_>> = to
-            .iter()
-            .map(|x| x.steel_maybe_as_recexp().map(|x| x.into()))
-            .collect();
+        let from = Pattern::from(&from);
+        let to = to.iter().map_into();
         let prolog = PrologRule::builder()
             .input(from)
             .name(name)
-            .deps(to?)
+            .deps(to)
             .build()
             .unwrap();
 

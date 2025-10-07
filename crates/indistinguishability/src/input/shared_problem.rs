@@ -13,7 +13,9 @@ use crate::input::golgge_rules::Rule;
 use crate::input::shared_exists::ShrExists;
 use crate::input::shared_fdst::ShrFindSuchThat;
 use crate::protocol::Step;
-use crate::terms::{Exists, FindSuchThat, Function, QuantifierT, RecFOFormula, Rewrite, Sort};
+use crate::terms::{
+    Exists, FindSuchThat, Function, QuantifierT, RecFOFormula, Rewrite, Sort, Variable,
+};
 use crate::{MSmt, Problem};
 
 declare_trace!($"shrpblm");
@@ -110,12 +112,7 @@ impl ShrProblem {
         pbl.push_steps((0..nptcl).map(|_| {
             Step::builder()
                 .id(step.clone())
-                .vars(
-                    sorts
-                        .iter()
-                        .enumerate()
-                        .map(|(i, _)| egg::Var::from_usize(i as u32)),
-                )
+                .vars(sorts.iter().enumerate().map(|(i, s)| crate::fresh!(*s)))
                 .build()
                 .unwrap()
         }));
@@ -130,7 +127,7 @@ impl ShrProblem {
         let mut pbl = self.borrow_mut();
         let exist = Exists::insert()
             .bvars_sorts(bound)
-            .cvars_sort(captured)
+            .cvars_sorts(captured)
             .pbl(&mut pbl)
             .call();
         ShrExists {
@@ -141,9 +138,9 @@ impl ShrProblem {
 
     fn declare_fdst(&self, captured: Vec<Sort>, bound: Vec<Sort>) -> ShrFindSuchThat {
         let mut pbl = self.borrow_mut();
-        let fdst =FindSuchThat::insert()
+        let fdst = FindSuchThat::insert()
             .bvars_sorts(bound)
-            .cvars_sort(captured)
+            .cvars_sorts(captured)
             .pbl(&mut pbl)
             .call();
         ShrFindSuchThat {
@@ -152,7 +149,7 @@ impl ShrProblem {
         }
     }
 
-    fn set_step_vars(&self, step: Function, ptcl: Function, vars: Vec<SVar>) -> SResult<()> {
+    fn set_step_vars(&self, step: Function, ptcl: Function, vars: Vec<Variable>) -> SResult<()> {
         let mut step = self.get_step_mut(step, ptcl)?;
 
         if step.id.arity() != vars.len() {
@@ -166,18 +163,16 @@ impl ShrProblem {
             ));
         }
 
-        step.vars = vars.into_iter().map(egg::Var::from).collect();
+        step.vars = vars;
         Ok(())
     }
 
     fn set_step_msg(&self, step: Function, ptcl: Function, msg: RecFOFormula) -> SResult<()> {
-        let msg = msg.steel_maybe_as_recexp()?;
         self.get_step_mut(step, ptcl)?.msg = msg;
         Ok(())
     }
 
     fn set_step_cond(&self, step: Function, ptcl: Function, cond: RecFOFormula) -> SResult<()> {
-        let cond = cond.steel_maybe_as_recexp()?;
         self.get_step_mut(step, ptcl)?.cond = cond;
         Ok(())
     }
@@ -191,9 +186,9 @@ impl ShrProblem {
     }
 
     fn add_smt_axiom(&self, f: RecFOFormula) {
-        self.borrow_mut()
-            .extra_smt_mut()
-            .push(MSmt::mk_assert(f.into_smt()));
+        self.borrow_mut().extra_smt_mut().push(MSmt::mk_assert(
+            f.into_pre_smt().translator(&self.0).build().into(),
+        ));
     }
 
     // =========================================================

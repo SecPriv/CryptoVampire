@@ -8,7 +8,8 @@ use syn::spanned::Spanned;
 use syn::{Error, Token, parse_macro_input};
 
 use crate::formulas::parser::{
-    ArgItem, Ast, BangedContent, BangedContentInner, BangedContentKind, FunAppAst, QuantifierAst, QuantifierKind, VarBinding, VarBindings
+    ArgItem, Ast, BangedContent, BangedContentInner, BangedContentKind, FunAppAst, QuantifierAst,
+    QuantifierKind, VarBinding, VarBindings,
 };
 
 struct MacroInput {
@@ -441,27 +442,36 @@ impl ToTokenWithInputs for BangedContent {
     fn to_tokens(&self, macro_input: &MacroInput) -> syn::Result<TokenStream> {
         let path = &macro_input.path;
         let Self { kind, inner } = self;
-        match inner {
-            BangedContentInner::Lit(lit) => Err(Error::new_spanned(
-                lit,
-                "litterals don't make sense in this mode",
-            )),
+        let mut ret = match inner {
+            BangedContentInner::Lit(lit) => {
+                return Err(Error::new_spanned(
+                    lit,
+                    "litterals don't make sense in this mode",
+                ));
+            }
             BangedContentInner::Ident(ident) => {
                 let cloned = macro_input.mk_clone(&quote!(#ident));
                 if macro_input.is_const() {
                     match kind {
-                        BangedContentKind::ExplamationMark(_) => Ok(quote!(#path::mk_var_from_ref(&#ident))),
-                        BangedContentKind::Cross(_) => Ok(cloned),
+                        BangedContentKind::ExplamationMark(_) => {
+                            quote!(#path::mk_var_from_ref(&#ident))
+                        }
+                        BangedContentKind::Cross(_) => cloned,
                     }
                 } else {
-                    Ok(quote!(#cloned.into()))
+                    quote!(#cloned.into())
                 }
             }
-            BangedContentInner::Expr(expr) =>match kind {
-                BangedContentKind::ExplamationMark(_) => Ok(quote!(#path::mk_var({#expr}))),
-                BangedContentKind::Cross(_) => Ok(quote!({#expr})),
-            } ,
-        }
+            BangedContentInner::Expr(expr) => match kind {
+                BangedContentKind::ExplamationMark(_) => quote!(#path::mk_var({#expr})),
+                BangedContentKind::Cross(_) => quote!({#expr}),
+            },
+        };
+
+        // if !macro_input.is_const() {
+        //     ret = quote!(::std::iter::once(#ret))
+        // }
+        Ok(ret)
     }
 }
 

@@ -56,3 +56,11 @@ pub fn init_engine() -> Engine {
 
     engine
 }
+
+fn conversion_err<To>() -> ::steel::SteelErr {
+    use ::steel::*;
+    SteelErr::new(
+        rerrs::ErrorKind::ConversionError,
+        format!("couldn't convert to {}", ::std::any::type_name::<To>()),
+    )
+}

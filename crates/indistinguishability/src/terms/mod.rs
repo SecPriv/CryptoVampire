@@ -108,7 +108,8 @@ pub use flags::FunctionFlags;
 
 mod formula;
 pub(crate) use formula::InnerLang;
-pub use formula::{FOBinder, RecFOFormula, RecExprIter, FormulaLike};
+pub use formula::{FOBinder, RecFOFormula, FormulaLike};
+pub(crate) use formula::QuantifierTranslator;
 
 pub mod utils;
 

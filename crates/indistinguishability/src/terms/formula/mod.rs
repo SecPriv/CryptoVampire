@@ -14,6 +14,7 @@ mod sexpr;
 
 pub use egg::InnerLang;
 pub use enum_like::RecFOFormula;
+pub(crate) use enum_like::QuantifierTranslator;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Steel, Serialize)]
 pub enum FOBinder {

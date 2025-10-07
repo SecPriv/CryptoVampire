@@ -390,6 +390,16 @@ mk_builtin_funs!(
         signature: s!(() -> Any)
     };
 
+    LAMBDA_LET "λlet" {
+        flags: f!(PROLOG_ONLY),
+        signature: s!(Any, Any -> Any)
+    };
+
+    ADD_S "add_λS" {
+        flags: f!(PROLOG_ONLY),
+        signature: s!(Any /*a list */, Any -> Any)
+    };
+
     // ------ quantifiers --------
 
     /// The binder for `exists`

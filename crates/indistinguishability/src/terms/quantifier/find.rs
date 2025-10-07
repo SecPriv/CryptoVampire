@@ -11,7 +11,7 @@ use crate::rules::utils::fresh;
 use crate::terms::quantifier::default_valid;
 use crate::terms::{
     FIND_SUCH_THAT, Function, FunctionCollection, FunctionFlags, InnerFunction, Quantifier,
-    QuantifierIndex, QuantifierT, RecExprIter, RecFOFormula, Signature, Sort, Variable,
+    QuantifierIndex, QuantifierT,  RecFOFormula, Signature, Sort, Variable,
 };
 use crate::{Lang, LangVar, Problem, fresh};
 
@@ -66,13 +66,13 @@ impl QuantifierT for FindSuchThat {
 
         let mut all_vars_set = HashSet::with_capacity(self.bvars().len() + self.cvars().len());
         for v in chain![self.bvars(), self.cvars()] {
-            ereturn_if!(all_vars_set.insert(*v), false)
+            ereturn_if!(all_vars_set.insert(v), false)
         }
         let all_vars_set = all_vars_set;
 
         let patterns_vars: HashSet<_> = [self.condition(), self.then_branch(), self.else_branch()]
-            .into_iter()
-            .flat_map(|x| RecExprIter::new(x).free_vars_iter())
+            .into_iter().filter_map(::std::convert::identity)
+            .flat_map(|x| x.free_vars_iter())
             .collect();
 
         all_vars_set.is_superset(&patterns_vars)

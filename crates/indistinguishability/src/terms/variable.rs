@@ -79,10 +79,16 @@ impl Variable {
         self.0.as_ptr() as usize
     }
 
+    /// Convertes to `egg` variables
+    /// 
+    /// (this is needed when iteracting with `egg` or `golgge`)
     pub fn as_egg(&self) -> egg::Var {
         egg::Var::from_usize(self.as_usize())
     }
 
+    /// Convertes to `egg` variables in a `egg::Language`
+    /// 
+    /// (this is needed when iteracting with `egg` or `golgge`)
     pub fn as_lang_var(&self) -> LangVar {
         egg::ENodeOrVar::Var(self.as_egg())
     }
@@ -229,6 +235,10 @@ impl cryptovampire_smt::SortedVar for Variable {
     fn sort_ref(&self) -> Cow<'_, Sort> {
         Cow::Owned(self.get_sort().expect("known sort"))
     }
+    
+    fn mk(sort: Self::Sort) -> Self where Self::Sort: Sized {
+        crate::fresh!(sort)
+    }
 }
 
 impl Serialize for Variable {
@@ -267,7 +277,7 @@ macro_rules! fresh {
         static TMP: $crate::terms::variable::VariableInner =
         $crate::terms::variable::VariableInner::new_const(Some({
             #[allow(unused)]
-            use$crate::terms::sort::Sort::*;
+            use$crate::terms::Sort::*;
             $s
         }), Some($crate::fresh!(@str)));
         $crate::terms::variable::Variable::from_const(&TMP)
@@ -275,7 +285,7 @@ macro_rules! fresh {
     ($sort:expr) => {
         $crate::terms::Variable::fresh().sort({
             #[allow(unused)]
-            use $crate::terms::sort::Sort::*;
+            use $crate::terms::Sort::*;
             $sort
         }).call()
     };
@@ -284,6 +294,9 @@ macro_rules! fresh {
 #[cfg(test)]
 mod test {
     use itertools::Itertools;
+    use seq_macro::seq;
+
+    use crate::decl_vars;
 
     use super::Variable;
 
@@ -292,17 +305,10 @@ mod test {
     static V3: Variable = fresh!(const);
     static V4: Variable = fresh!(const);
 
-    macro_rules! mk_vars {
-        (# $i:ident $($t:tt)*) => {
-            static $i: &'static [Variable] =
-                &[
-                    $(mk_vars!($t)),*
-                ];
-        };
-        ($t:tt) => {fresh!(const)}
-    }
 
-    mk_vars!(# MANY x x x x x x x x x x x x x x x x );
+    static MANY : &[Variable; 100] = seq!(N in 0..100 { &[#(crate::fresh!(const),)*] });
+
+    decl_vars!(const A, B, C, D:Nonce,);
 
     #[test]
     fn statics_diff1() {
@@ -315,6 +321,11 @@ mod test {
     #[test]
     fn statics_diff2() {
         assert!(MANY.iter().all_unique())
+    }
+
+    #[test]
+    fn static_diff3() {
+        assert!([&A, &C, &B, &D].iter().all_unique())
     }
 
     #[test]

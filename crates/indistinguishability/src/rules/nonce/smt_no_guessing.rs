@@ -29,7 +29,7 @@ pub fn mk_no_guessing_smt<'a>(pbl: &'a Problem) -> impl Iterator<Item = MSmt> + 
 fn mk_no_guessing_theorem() -> MSmtFormula {
     use Sort::{Bitstring, Nonce};
     let indep = get_is_independant(Bitstring).unwrap();
-    smt!((forall ((#n!0 Nonce) (#m!1 Bitstring))
+    smt!((forall ((!n Nonce) (!m Bitstring))
         (=> (indep #n #m) (distinct (NONCE #n) #m))))
 }
 

@@ -81,7 +81,7 @@ pub(crate) fn inner<'a, N: Analysis<Lang>>(
 ) -> Option<()> {
     inner_generic(
         egraph,
-        |f| !f.head.is_prolog_only(),
+        |f| !f.head.is_prolog_only() || f.head.is_quantifier(),
         id,
         id_buffer,
         recexpr_buffer,

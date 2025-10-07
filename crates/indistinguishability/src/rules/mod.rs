@@ -16,29 +16,17 @@ use crate::{Lang, Problem};
 /// derivatives.
 ///
 /// This is just a fancy `let`.
+#[macro_export]
 macro_rules! decl_vars {
-    ($($var:ident),+) => {
-        let [$($var),+] =
-            ::std::array::from_fn(|i| ::egg::Var::from_u32(i as u32))
-                .map(::egg::ENodeOrVar::Var::<$crate::Lang>);
+    ($($var:ident $(:$sort:expr)? ),+) => {
+        $(
+            let $var = $crate::fresh!($($sort)?);
+        )+
     };
 
-    ($N:ident:$t:ty; $($var:ident),+) => {
-        decl_vars![$($var),+];
-        static $N: $t = decl_vars!(@ $($var)+) + 1;
+    (const $(;)? $($var:ident $(:$sort:expr)? ),+ $(,)?) => {
+        $(static $var: $crate::terms::Variable = $crate::fresh!(const $($sort)?);)+
     };
-
-    ($N:ident; $($var:ident),+) => {
-        decl_vars!($N:u32; $($var),*)
-    };
-
-    (@ $t:tt) => {
-        1
-    };
-
-    (@ $t:tt $($o:tt)+) => {
-        1 + decl_vars!(@ $($o)+)
-    }
 }
 
 /// makes prolog rules
@@ -47,82 +35,85 @@ macro_rules! decl_vars {
 /// mk_prolog!("hey"; (and #0 #1) :- (=> #0 #1))
 /// ```
 macro_rules! mk_prolog {
-    ($pre:tt) => {
-        mk_prolog!(@ None; $pre :-)
+    ($($var:ident),*: $pre:tt) => {
+        mk_prolog!(@ None; ($($var),*) $pre :-)
     };
-    ($name:expr; $pre:tt) => {
-        mk_prolog!(@ Some($name); $pre :-)
+    ($name:expr; $($var:ident),*: $pre:tt) => {
+        mk_prolog!(@ Some($name); ($($var),*) $pre :-)
     };
-    ($pre:tt :- $($post:tt),*) => {
-        mk_prolog!(@ None; $pre :- $($post),*)
+    ($($var:ident),*: $pre:tt :- $($post:tt),*) => {
+        mk_prolog!(@ None; ($($var),*) $pre :- $($post),*)
     };
-    ($name:expr; $pre:tt :- $($post:tt),*) => {
-        mk_prolog!(@ Some($name); $pre :- $($post),*)
+    ($name:expr; $($var:ident),*: $pre:tt :- $($post:tt),*) => {
+        mk_prolog!(@ Some($name); ($($var),*) $pre :- $($post),*)
     };
 
-    (@ $name:expr; $pre:tt :- $($post:tt),*) => {
+
+    (@ $name:expr; ($($var:ident),*) $pre:tt :- $($post:tt),*) => {{
+        $(
+            let $var = $crate::fresh!();
+        )*
         ::golgge::PrologRule::builder()
-            .input($crate::rexp!($pre).into_iter().collect())
-            .deps([$($crate::rexp!($post).into_iter().collect()),*])
+            .input(egg::Pattern::from(&$crate::rexp!($pre)))
+            .deps([$(egg::Pattern::from(&$crate::rexp!($post))),*])
             .maybe_name($name)
             .build()
             .unwrap()
-    };
+    }};
 }
 
 /// build many prolog rules at once
 macro_rules! mk_many_prolog {
     (
         $(
-            [$name:literal]
+            $name:literal $($var:ident),* :
             $pre:tt
             $(:- $($post:tt),+)?
         .)*
     ) => {
         vec![
             $(
-                mk_prolog!($name; $pre $(:- $($post),+)? )
+                mk_prolog!($name; $($var),*: $pre $(:- $($post),+)? )
             ),*
         ]
     }
 }
 
 macro_rules! mk_rewrite {
-    ($name:expr; $from:tt => $to:tt) => {
+    ($name:expr; $(($($var:ident),*))?: $from:tt => $to:tt) => {{
+        $($(
+            let $var = $crate::fresh!();
+        )*)?
         ::egg::Rewrite::new(
             $name,
             mk_rewrite!(@@ $from),
             mk_rewrite!(@@ $to),
         ).unwrap()
-    };
+    }};
 
     (@@ (#$var:tt = #$value:tt)) => {
         ::egg::MultiPattern::new(vec![{
-            let [::egg::ENodeOrVar::Var(v)] = $crate::rexp!(#$var) else {
-                panic!("left side of `=` should be a variable")
-            };
-            (v, $crate::rexp!(#$value).into_iter().collect())
+            let v = ::egg::Var::from($var);
+            (v, $crate::rexp!(#$value).as_egg_var())
         }])
     };
 
     (@@ ($(#$var:tt = $value:tt),+)) => {
         ::egg::MultiPattern::new(vec![$({
-            let [::egg::ENodeOrVar::Var(v)] = $crate::rexp!(#$var) else {
-                panic!("left side of `=` should be a variable")
-            };
-            (v, $crate::rexp!($value).into_iter().collect())
+            let v = ::egg::Var::from($var);
+            (v, $crate::rexp!($value).as_egg_var())
         }),*])
     };
 
     (@@ (#$($value:tt)+)) => {
-        ::egg::Pattern::from_iter(
-            $crate::rexp!(#$($value)+)
+        ::egg::Pattern::from(
+            &$crate::rexp!(#$($value)+)
         )
     };
 
     (@@ $value:tt) => {
-        ::egg::Pattern::from_iter(
-            $crate::rexp!($value)
+        ::egg::Pattern::from(
+            &$crate::rexp!($value)
         )
     };
 }
@@ -136,7 +127,7 @@ macro_rules! mk_many_rewrites {
     ) => {
        vec![
             $(
-                mk_rewrite!($name; $from => $to)
+                mk_rewrite!($name; : $from => $to)
             ),*
         ]
     }
@@ -186,7 +177,7 @@ pub fn mk_default_prolog_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
             }
         ],
         pbl.extra_rules().iter().cloned(),
-        deduce::mk_rules(pbl).map(|x| x.into_mrc()),
+        deduce::mk_rules(pbl),
         [substitution::SubstRule.into_mrc()]
     ]
 }

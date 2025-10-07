@@ -5,8 +5,8 @@ use itertools::Itertools;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
-use crate::input::Registerable;
 use crate::input::shared_problem::ShrProblem;
+use crate::input::{Registerable, conversion_err};
 use crate::terms::{FindSuchThat, Function, QuantifierIndex, QuantifierT, RecFOFormula, Variable};
 
 #[derive(Debug, Clone, Steel)]
@@ -51,31 +51,28 @@ impl ShrFindSuchThat {
         self.fdst().skolems().to_vec()
     }
 
-    fn get_condition(&self) -> RecFOFormula {
-        self.fdst().condition().into()
+    fn get_condition(&self) -> ::steel::rvals::Result<RecFOFormula> {
+        self.fdst().condition().cloned().ok_or(cerr())
     }
 
-    fn get_then_branch(&self) -> RecFOFormula {
-        self.fdst().then_branch().into()
+    fn get_then_branch(&self) -> ::steel::rvals::Result<RecFOFormula> {
+        self.fdst().then_branch().cloned().ok_or(cerr())
     }
 
-    fn get_else_branch(&self) -> RecFOFormula {
-        self.fdst().else_branch().into()
+    fn get_else_branch(&self) -> ::steel::rvals::Result<RecFOFormula> {
+        self.fdst().else_branch().cloned().ok_or(cerr())
     }
 
-    fn set_condition(&self, p: RecFOFormula) -> ::steel::rvals::Result<()> {
-        self.fdst_mut().set_condition(p.steel_maybe_as_recexp()?);
-        Ok(())
+    fn set_condition(&self, p: RecFOFormula) -> () {
+        self.fdst_mut().set_condition(p);
     }
 
-    fn set_then_branch(&self, p: RecFOFormula) -> ::steel::rvals::Result<()> {
-        self.fdst_mut().set_then_branch(p.steel_maybe_as_recexp()?);
-        Ok(())
+    fn set_then_branch(&self, p: RecFOFormula) -> () {
+        self.fdst_mut().set_then_branch(p);
     }
 
-    fn set_else_branch(&self, p: RecFOFormula) -> ::steel::rvals::Result<()> {
-        self.fdst_mut().set_else_branch(p.steel_maybe_as_recexp()?);
-        Ok(())
+    fn set_else_branch(&self, p: RecFOFormula) -> () {
+        self.fdst_mut().set_else_branch(p);
     }
 }
 
@@ -95,4 +92,8 @@ impl Registerable for ShrFindSuchThat {
             .register_fn("get-find-such-that-else-branch", Self::get_else_branch)
             .register_fn("set-find-such-that-else-branch", Self::set_else_branch)
     }
+}
+
+fn cerr() -> ::steel::SteelErr {
+    conversion_err::<RecFOFormula>()
 }

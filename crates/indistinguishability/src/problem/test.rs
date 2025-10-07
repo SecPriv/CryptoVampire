@@ -24,7 +24,6 @@ pub mod basic_hash {
 
         use crate::problem::test::basic_hash::mk_pblm;
         use crate::rules::mk_default_rewrites;
-        use crate::terms::utils::convert_to_ground_rexp;
         use crate::terms::{HAPPENS, MACRO_INPUT, MACRO_MSG};
         use crate::{Lang, decl_fun, rexp};
 

@@ -17,10 +17,10 @@ use crate::problem::function_builder::{
 };
 use crate::protocol::{Protocol, Step};
 use crate::rules::{FreshNonce, VampireRule, mk_default_prolog_rules, mk_default_rewrites};
-use crate::terms::utils::convert_to_ground_rexp;
 use crate::terms::{
     Alias, CryptographicAssumption, EMPTY, EQUIV, Function, FunctionCollection, FunctionFlags,
-    HAPPENS, INIT, InnerFunction, MACRO_FRAME, PRED, Rewrite, Signature, Sort, TRUE, UNFOLD_MSG,
+    HAPPENS, INIT, InnerFunction, MACRO_FRAME, PRED, QuantifierIndex, QuantifierT,
+    QuantifierTranslator, RecFOFormula, Rewrite, Signature, Sort, TRUE, UNFOLD_MSG,
 };
 use crate::utils::fresh_name;
 use crate::vampire::mk_prelude;
@@ -55,6 +55,8 @@ pub struct Problem {
 
     /// the current step in the run (if any)
     current_step: Option<CurrentStep>,
+
+    quantifier_cache: Vec<(RecFOFormula, Function)>,
 }
 
 impl Default for Problem {
@@ -155,10 +157,8 @@ impl Problem {
 
             res &= pgrm
                 .run_expr(
-                    convert_to_ground_rexp(
-                        rexp!((EQUIV EMPTY EMPTY (UNFOLD_MSG init p1f) (UNFOLD_MSG init p2f))),
-                    )
-                    .unwrap(),
+                    rexp!((EQUIV EMPTY EMPTY (UNFOLD_MSG init p1f) (UNFOLD_MSG init p2f)))
+                        .as_egg_ground(),
                     depth,
                 )
                 .as_bool();
@@ -394,6 +394,25 @@ impl Problem {
     }
 }
 
+impl QuantifierTranslator for Problem {
+    fn try_translate(&self, formula: &RecFOFormula) -> Option<crate::terms::RecFOFormula> {
+        let (subst, fun) = self
+            .quantifier_cache
+            .iter()
+            .find_map(|(cached, fun)| cached.unify(formula).map(|subst| (subst, fun.clone())))?;
+        let q = fun.get_quantifier(self.functions()).unwrap();
+
+        let args: Option<Vec<_>> = q.cvars().iter().map(|v| subst.get(v)).collect();
+        let args = args?;
+        let args = args.iter().cloned().cloned();
+
+        let sks = q.skolems().iter().map(|sk| rexp!((sk #(args.clone())*)));
+        let tlf = q.top_level_function();
+
+        Some(rexp!((tlf #(args.clone())* #sks*)))
+    }
+}
+
 impl Debug for Problem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Problem")
@@ -462,6 +481,7 @@ impl Problem {
             extra_smt,
             smt_prelude,
             current_step: None,
+            quantifier_cache: vec![]
         }
     }
 
@@ -600,5 +620,5 @@ pub(crate) struct CurrentStep {
     pub args: Vec<Function>,
 }
 
-// #[cfg(test)]
+#[cfg(test)]
 pub mod test;

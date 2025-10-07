@@ -1,5 +1,5 @@
 mod smt;
-pub use smt::{smt_formulas, smt_many_smt_formulas};
+pub use smt::{smt_formulas, smt_many_smt_formulas, smt_many_smt_with_comments};
 
 mod parser;
 

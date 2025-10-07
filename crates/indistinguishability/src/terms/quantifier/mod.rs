@@ -83,6 +83,40 @@ pub trait QuantifierT: Eq + Sized {
     }
 }
 
+impl QuantifierT for Quantifier {
+    fn bvars(&self) -> &[Variable] {
+        match_as_trait!(self => { Self::Exists(x) | Self::FindSuchThat(x) => {x.bvars()}}) 
+    }
+
+    fn cvars(&self) -> &[Variable] {
+        match_as_trait!(self => { Self::Exists(x) | Self::FindSuchThat(x) => {x.cvars()}}) 
+    }
+
+    fn top_level_function(&self) -> &Function {
+        match_as_trait!(self => { Self::Exists(x) | Self::FindSuchThat(x) => {x.top_level_function()}}) 
+    }
+
+    fn skolems(&self) -> &[Function] {
+        match_as_trait!(self => { Self::Exists(x) | Self::FindSuchThat(x) => {x.skolems()}}) 
+    }
+
+    fn fresh_indices(&self) -> &[Function] {
+        match_as_trait!(self => { Self::Exists(x) | Self::FindSuchThat(x) => {x.fresh_indices()}}) 
+    }
+
+    fn try_from_ref(q: &Quantifier) -> Option<&Self> {
+        Some(q)
+    }
+
+    fn try_from_mut(q: &mut Quantifier) -> Option<&mut Self> {
+        Some(q)
+    }
+
+    fn temporary(&self) -> bool {
+        match_as_trait!(self => { Self::Exists(x) | Self::FindSuchThat(x) => {x.temporary()}}) 
+    }
+}
+
 fn default_valid<Q: QuantifierT>(q: &Q, idx: QuantifierIndex, pbl: &Problem) -> bool {
     ereturn_if!(q.temporary() != idx.temporary, false);
     ereturn_if!(q.index() != idx, false);

@@ -31,6 +31,7 @@ pub trait SortedVar {
     type Sort: Display + Clone;
 
     fn sort_ref(&self) -> Cow<'_, Self::Sort>;
+    fn mk(sort: Self::Sort) -> Self where Self::Sort: Sized;
 }
 
 // #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

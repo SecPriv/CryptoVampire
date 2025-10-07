@@ -568,6 +568,19 @@ impl RecFOFormula {
         }
     }
 
+    /// shortcut for `self.as_egg::<LangVar>()`
+    pub fn as_egg_var(&self) -> RecExpr<LangVar> {
+        RecExpr::from(self.as_egg::<LangVar>())
+    }
+
+    /// shortcut for `self.as_egg::<Lang>()`
+    pub fn as_egg_ground(&self) -> RecExpr<Lang> {
+        RecExpr::from(self.as_egg::<Lang>())
+    }
+
+    /// Converts a `RecFOFormula` into a `egg`-like formula.
+    ///
+    /// `L` lets you decide the `egg::Language` to be used. It panics if the conversion is impossible.
     pub fn as_egg<L: EggLanguage>(&self) -> Vec<L> {
         let mut out = Vec::new();
         self.as_egg_inner(&mut out, Default::default(), 0);
@@ -616,12 +629,16 @@ impl RecFOFormula {
         out.len() - 1
     }
 
-    fn as_pre_smt<'a, U>(&'a self) -> PreSmtRecFOFormulaF<'a, U> {
+    pub fn as_pre_smt<'a, U>(&'a self) -> PreSmtRecFOFormulaF<'a, U> {
         PreSmtRecFOFormula::builder().formula(Cow::Borrowed(self))
     }
 
-    fn into_pre_smt<'a, U>(self) -> PreSmtRecFOFormulaF<'a, U> {
+    pub fn into_pre_smt<'a, U>(self) -> PreSmtRecFOFormulaF<'a, U> {
         PreSmtRecFOFormula::builder().formula(Cow::Owned(self))
+    }
+
+    pub fn as_smt<U: QuantifierTranslator>(&self, pbl: &U) -> Option<MSmtParam> {
+        MSmtFormula::try_from(self.as_pre_smt().translator(pbl).build()).ok()
     }
 }
 
@@ -641,6 +658,13 @@ fn mk_list<L: EggLanguage>(out: &mut Vec<L>, sorts: implvec!(Sort)) -> usize {
         i += 2
     }
     i
+}
+
+fn mk_bound_var<L: EggLanguage>(depth: usize) -> impl Iterator<Item = L> {
+    chain![
+        ::std::iter::once(L::mk_fun_application(LAMBDA_O.clone(), [])),
+        (0..depth).map(|i| L::mk_fun_application(LAMBDA_S.clone(), [Id::from(i)]))
+    ]
 }
 
 // =========================================================
@@ -988,12 +1012,7 @@ impl Shr for RecFOFormula {
 }
 
 pub trait QuantifierTranslator {
-    fn try_translate(
-        &self,
-        head: &FOBinder,
-        vars: &[Variable],
-        args: &[RecFOFormula],
-    ) -> Option<RecFOFormula>;
+    fn try_translate(&self, f: &RecFOFormula) -> Option<RecFOFormula>;
 }
 
 #[derive(Builder)]
@@ -1009,7 +1028,7 @@ pub type PreSmtRecFOFormulaF<'a, U> = PreSmtRecFOFormulaBuilder<
     pre_smt_rec_f_o_formula_builder::SetFormula<pre_smt_rec_f_o_formula_builder::Empty>,
 >;
 
-impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for SmtFormula<MSmtParam> {
+impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for MSmtFormula {
     type Error = RecFOFormula;
 
     fn try_from(
@@ -1066,7 +1085,7 @@ impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for SmtForm
                 FOBinder::Forall => {
                     Ok(Self::Forall(vars.as_owned(), Box::new(propagate(&arg[0])?)))
                 }
-                FOBinder::FindSuchThat => match translator.try_translate(head, &vars, &arg) {
+                FOBinder::FindSuchThat => match translator.try_translate(&formula) {
                     Some(f) => propagate(&f),
                     None => Err(formula.into_owned()),
                 },
@@ -1167,11 +1186,4 @@ impl Registerable for RecFOFormula {
             .register_type::<Self>("Formula?")
             .register_fn("print_formula", |f: RecFOFormula| println!("this: {f}"))
     }
-}
-
-fn mk_bound_var<L: EggLanguage>(depth: usize) -> impl Iterator<Item = L> {
-    chain![
-        ::std::iter::once(L::mk_fun_application(LAMBDA_O.clone(), [])),
-        (0..depth).map(|i| L::mk_fun_application(LAMBDA_S.clone(), [Id::from(i)]))
-    ]
 }

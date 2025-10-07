@@ -8,7 +8,7 @@ use utils::dynamic_iter;
 use crate::terms::{
     AliasRewrite, BITE, Exists, FindSuchThat, Function, MITE, Quantifier, QuantifierT,
 };
-use crate::{Lang, Problem};
+use crate::{Lang, Problem, rexp};
 
 pub fn mk_rewrites<N: Analysis<Lang>>(
     pbl: &Problem,
@@ -42,12 +42,7 @@ fn mk_extra_rw_rules<N: Analysis<Lang>>(
                 .into_owned();
             trace!("registering rw rule {name} to egg...");
 
-            Rewrite::new(
-                name,
-                Pattern::new(from.clone().into_owned().into()),
-                Pattern::new(to.clone().into_owned().into()),
-            )
-            .unwrap()
+            Rewrite::new(name, Pattern::from(from), Pattern::from(to)).unwrap()
         },
     )
 }
@@ -69,8 +64,8 @@ fn mk_alias_rule_1<N: Analysis<Lang>>(
 ) -> Rewrite<Lang, N> {
     Rewrite::new(
         format!("{} definition #{i:}", &f.name),
-        Pattern::new(f.app_var(from)),
-        Pattern::new(to.clone().into_owned().into()),
+        Pattern::from(&rexp!((f #(from.iter().cloned())*))),
+        Pattern::from(to),
     )
     .unwrap()
 }

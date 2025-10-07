@@ -11,12 +11,15 @@ use utils::ereturn_let;
 use super::*;
 use crate::problem::PAnalysis;
 use crate::rules::utils::fresh::RefFormulaBuilder;
-use crate::terms::FRESH_NONCE;
+use crate::terms::{FRESH_NONCE, Variable};
 use crate::vampire::runner::VampireExec;
-use crate::{Lang, Problem, rexp};
+use crate::{Lang, Problem, fresh, rexp};
+
+decl_vars!(const; NONCE_VAR, CONTENT, HYPOTHESIS);
 
 #[dynamic]
-static FRESH_NONCE_PATTERN: Pattern<Lang> = rexp!((FRESH_NONCE #0 #1 #2)).into_iter().collect();
+static FRESH_NONCE_PATTERN: Pattern<Lang> =
+    Pattern::from(&rexp!((FRESH_NONCE #NONCE_VAR #CONTENT #HYPOTHESIS)));
 
 #[derive(Clone, Builder)]
 pub struct FreshNonce {
@@ -26,6 +29,8 @@ pub struct FreshNonce {
 
 impl<'a> Rule<Lang, PAnalysis<'a>> for FreshNonce {
     fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: Id) -> Dependancy {
+        assert_eq!(NONCE_VAR, CONTENT);
+
         let egraph = prgm.egraph_mut();
         ereturn_let!(let Some(substs) =  FRESH_NONCE_PATTERN.search_eclass(egraph, goal),Dependancy::impossible());
 

@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use bon::bon;
-use cryptovampire_macros::smt;
+use cryptovampire_macros::{smt, vec_smt, vec_smt2};
 use cryptovampire_smt::{Smt, SortedVar};
 use egg::{Analysis, ENodeOrVar, Pattern, RecExpr, Rewrite};
 use itertools::{Itertools, chain, izip};
@@ -13,7 +13,7 @@ use crate::terms::{
     EMPTY, FormulaLike, Function, INIT, RecFOFormula, TRUE, UNFOLD_COND, UNFOLD_MSG, Variable,
 };
 use crate::vampire::convert::{formula_to_smt, var_to_smt};
-use crate::{Lang, LangVar, MSmt, MSmtFormula, rexp};
+use crate::{Lang, LangVar, MSmt, MSmtFormula, Problem, rexp};
 
 /// A step in protocol
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -100,30 +100,17 @@ impl Step {
 
     pub(crate) fn mk_unfold_vampire_rewrites(
         &self,
+        pbl: &Problem,
         ptcl: &MSmtFormula,
     ) -> impl Iterator<Item = MSmt> + use<'_> {
+        let [cond, msg, name]: [MSmtFormula; _] =
+            [&self.cond, &self.msg, &self.id_expr()].map(|x| x.as_smt(pbl).unwrap());
+        let vars = self.vars.iter().map(|x| RecFOFormula::Var(x.clone()));
 
-        use Smt::*;
-        let [cond, msg, name] =
-            [self.cond.as_ref(), &self.msg, &self.id_expr()].map(formula_to_smt);
-
-        let sorted_vars: Vec<_> = izip!(self.id.signature.inputs.iter(), self.vars.iter())
-            .map(|(a, b)| (*a, var_to_smt(b)))
-            .map(|(sort, var)| SortedVar { var, sort })
-            .collect();
-
-        let comment = Comment(format!("unfolding of {name}"));
-        let unfold_cond = smt! {
-            (forall #(sorted_vars.clone()) (= (UNFOLD_COND #name #ptcl) #cond))
-        };
-        let unfold_msg = smt! {
-            (forall #(sorted_vars.clone()) (= (UNFOLD_MSG #name #ptcl) #msg))
-        };
-
-        [
-            comment,
-            MSmt::mk_assert(unfold_cond),
-            MSmt::mk_assert(unfold_msg),
+        vec_smt2![
+            ; format!("unfolding of {name}"),
+            (forall !(vars.clone()) (= (UNFOLD_COND #name #ptcl) #cond)),
+            (forall !(vars.clone()) (= (UNFOLD_MSG #name #ptcl) #msg))
         ]
         .into_iter()
     }

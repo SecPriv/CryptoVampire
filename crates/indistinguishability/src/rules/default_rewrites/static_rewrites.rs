@@ -1,12 +1,12 @@
 use egg::{Analysis, ENodeOrVar, Rewrite, Var};
 use itertools::chain;
 
-use crate::Lang;
 use crate::protocol::MacroKind;
 use crate::terms::{
     ATT, BITE, EMPTY, FROM_BOOL, Function, HAPPENS, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME,
     MACRO_MSG, MITE, PRED, PROJ_1, PROJ_2, TUPLE, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT,
 };
+use crate::{Lang, fresh};
 
 pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>> {
     let b_ite = &BITE;
@@ -73,7 +73,7 @@ pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>
         let mmacro = Function::macro_from_kind(kind);
         let unfold = Function::unfold_from_kind(kind);
 
-        mk_rewrite!(format!("unfold {kind}"); 
+        mk_rewrite!(format!("unfold {kind}"); (v1, v2):
           (#v1 = (HAPPENS #t), #v1 = true, #v2 = (mmacro #t #p)) =>
             (#v2 = (unfold #t #p)))
     });

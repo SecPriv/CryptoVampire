@@ -127,7 +127,7 @@ fn generate_code(Ast { inner: parsed, .. }: Ast) -> proc_macro2::TokenStream {
                     quote_spanned! {kind.span() =>  #crate_path::SmtFormula::Exists }
                 }
                 QuantifierKind::FindSuchThat(_) => {
-                    quote_spanned! {kind.span() => ::std::compile_error!("find such that doesn't exists in smt")}
+                    quote_spanned! {kind.span() => ::std::compile_error!("'find such that' doesn't exists in smt")}
                 }
             };
             let body = match body.into_iter().next() {
@@ -140,9 +140,11 @@ fn generate_code(Ast { inner: parsed, .. }: Ast) -> proc_macro2::TokenStream {
                 VarBindings::Binding(bindings) => {
                     generate_quant_with_binders(crate_path, constructor, processed_body, bindings)
                 }
-                VarBindings::Expr(expr) => quote! {#constructor(#expr, Box::new(#processed_body))},
+                VarBindings::Expr(expr) => {
+                    quote! {#constructor({ #expr }.into_iter().collect(), Box::new(#processed_body))}
+                }
                 VarBindings::Ident(ident) => {
-                    quote! {#constructor(#ident, Box::new(#processed_body))}
+                    quote! {#constructor(#ident.into_iter().collect(), Box::new(#processed_body))}
                 }
             }
         }
@@ -213,6 +215,39 @@ pub fn smt_formulas(input: TokenStream) -> TokenStream {
 pub fn smt_many_smt_formulas(input: TokenStream) -> TokenStream {
     let parser = Punctuated::<Ast, Token![,]>::parse_terminated;
     let codes = parser.parse(input).unwrap().into_iter().map(generate_code);
+
+    quote! {
+        vec![#(#codes),*]
+    }
+    .into()
+}
+
+enum SmtWithComments {
+    Comment(syn::Expr),
+    Ast(Ast),
+}
+
+impl Parse for SmtWithComments {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        if input.peek(Token![;]) {
+            let _: Token![;] = input.parse()?;
+            Ok(Self::Comment(input.parse()?))
+        } else {
+            Ok(Self::Ast(input.parse()?))
+        }
+    }
+}
+
+pub fn smt_many_smt_with_comments(input: TokenStream) -> TokenStream {
+    let crate_path = quote! { ::cryptovampire_smt };
+    let parser = Punctuated::<SmtWithComments, Token![,]>::parse_terminated;
+    let codes = parser.parse(input).unwrap().into_iter().map(|x| match x {
+        SmtWithComments::Comment(expr) => quote!(#crate_path::Smt::Comment(#expr)),
+        SmtWithComments::Ast(ast) => {
+            let expr = generate_code(ast);
+            quote!(#crate_path::Smt::mk_assert(#expr))
+        }
+    });
 
     quote! {
         vec![#(#codes),*]

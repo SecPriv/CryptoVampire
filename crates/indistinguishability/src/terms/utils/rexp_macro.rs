@@ -74,7 +74,7 @@ pub fn mk_neqs(args: implvec!(MacroExpr)) -> MacroExpr {
 pub fn mk_app<T: FunctionRef>(head: T, args: implvec!(MacroExpr)) -> MacroExpr {
     RecFOFormula::App {
         head: head.to_function(),
-        args: CowArc::Owned(args.into_iter().collect_vec()),
+        args: CowArc::Owned(args.into_iter().collect()),
     }
 }
 

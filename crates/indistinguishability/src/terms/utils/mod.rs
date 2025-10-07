@@ -53,20 +53,23 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{fresh, rexp};
     use crate::terms::utils::type_check;
     use crate::terms::{FormulaLike, MITE, NONCE, PROJ_1, TUPLE};
+    use crate::{decl_vars, fresh, rexp};
+
+    decl_vars!(const A, B, C, D);
 
     #[test]
     fn type_check_true() {
-        let x =
-            rexp!((MITE (and true true false) (NONCE #0) (PROJ_1 (TUPLE #1 (NONCE #0))))).to_vec();
-        assert!(type_check(x.as_formula()))
+        // let a = fresh!(Nonce);
+        decl_vars!(a:Nonce, b:Bitstring, c:Nonce);
+        let x = rexp!((MITE (and true true false) (NONCE #a) (PROJ_1 (TUPLE #b (NONCE #c)))));
+        assert!(type_check(x))
     }
 
     #[test]
     fn type_check_wrong_length() {
-        let x = rexp!((MITE (and true true false) (NONCE #0) (PROJ_1 (TUPLE (NONCE #0))))).to_vec();
+        let x = rexp!((MITE (and true true false) (NONCE #A) (PROJ_1 (TUPLE (NONCE #B)))));
         assert!(!type_check(x.as_formula()))
     }
 
@@ -80,6 +83,6 @@ mod test {
     fn macro_check1() {
         let v = fresh!(Bitstring);
         rexp!((MITE (and true true false) (and ) (PROJ_1 (TUPLE (NONCE #v)))));
-        rexp!((forall ((#x Bool) (#y Bool)) (and #x #y)));
+        rexp!((forall ((!x Bool) (!y Bool)) (and #x #y)));
     }
 }

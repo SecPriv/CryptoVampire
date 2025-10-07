@@ -12,7 +12,7 @@ use crate::rules::utils::fresh;
 use crate::terms::quantifier::default_valid;
 use crate::terms::{
     Function, FunctionCollection, FunctionFlags, InnerFunction, Quantifier, QuantifierIndex,
-    QuantifierT, RecExprIter, RecFOFormula, Signature, Sort, Variable,
+    QuantifierT,  RecFOFormula, Signature, Sort, Variable,
 };
 use crate::{Lang, LangVar, Problem};
 
@@ -104,7 +104,7 @@ impl Exists {
     #[builder]
     pub fn insert(
         pbl: &mut Problem,
-        #[builder(with = FromIterator::from_iter, default = vec![])] cvars_sort: Vec<Sort>,
+        #[builder(with = FromIterator::from_iter, default = vec![])] cvars_sorts: Vec<Sort>,
         #[builder(with = FromIterator::from_iter, default = vec![])] bvars_sorts: Vec<Sort>,
     ) -> &mut Exists {
         todo!("redo");

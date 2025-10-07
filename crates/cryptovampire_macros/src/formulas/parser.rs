@@ -282,10 +282,11 @@ impl Parse for ArgItem {
                 } else {
                     // Regular #(expr) term
                     Ok(ArgItem::Regular(
-                        InnerAst::Banged(BangedContent{
+                        InnerAst::Banged(BangedContent {
                             kind: BangedContentKind::Cross(kind),
                             inner: BangedContentInner::Expr(expr),
-                        }).with(span),
+                        })
+                        .with(span),
                     ))
                 }
             } else if input.peek(Ident) {
@@ -298,10 +299,11 @@ impl Parse for ArgItem {
                     // Regular #ident term
                     let span = ident.span();
                     Ok(ArgItem::Regular(
-                        InnerAst::Banged(BangedContent{
+                        InnerAst::Banged(BangedContent {
                             kind: BangedContentKind::Cross(kind),
                             inner: BangedContentInner::Ident(ident),
-                        }).with(span),
+                        })
+                        .with(span),
                     ))
                 }
             } else if input.peek(Lit) {
@@ -309,14 +311,17 @@ impl Parse for ArgItem {
                 let lit: Lit = input.parse()?;
                 let span = lit.span();
                 Ok(ArgItem::Regular(
-                    InnerAst::Banged(BangedContent{
-                            kind: BangedContentKind::Cross(kind),
-                            inner: BangedContentInner::Lit(lit),
-                        }).with(span),
+                    InnerAst::Banged(BangedContent {
+                        kind: BangedContentKind::Cross(kind),
+                        inner: BangedContentInner::Lit(lit),
+                    })
+                    .with(span),
                 ))
             } else if input.peek(Token![!]) {
                 let span = input.span();
-                Ok(ArgItem::Regular(InnerAst::Banged(input.parse()?).with(span)))
+                Ok(ArgItem::Regular(
+                    InnerAst::Banged(input.parse()?).with(span),
+                ))
             } else {
                 Err(syn::Error::new(
                     marker_span,
@@ -380,13 +385,12 @@ impl Parse for VarBinding {
 
         binding_content.parse::<Token![!]>()?;
         let name: VarName = binding_content.parse()?;
-        let index;
-        if binding_content.peek(Token![!]) {
+        let index = if binding_content.peek(Token![!]) {
             binding_content.parse::<Token![!]>()?;
-            index = Some(binding_content.parse()?); // Use VarIndex parser
+            Some(binding_content.parse()?) // Use VarIndex parser
         } else {
-            index = None;
-        }
+            None
+        };
 
         binding_content.parse::<Option<Token![:]>>()?;
 

@@ -40,6 +40,12 @@ pub fn vec_smt(input: TokenStream) -> TokenStream {
     formulas::smt_many_smt_formulas(input)
 }
 
+
+#[proc_macro]
+pub fn vec_smt2(input: TokenStream) -> TokenStream {
+    formulas::smt_many_smt_with_comments(input)
+}
+
 #[proc_macro]
 pub fn recexpr(input: TokenStream) -> TokenStream {
     formulas::mk_recexpr(input)
