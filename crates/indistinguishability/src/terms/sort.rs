@@ -1,10 +1,13 @@
 use std::fmt::{Debug, Display};
 
+use logic_formula::Formula;
 use serde::{Deserialize, Serialize};
 use steel::rvals::IntoSteelVal;
 use steel_derive::Steel;
 
+use crate::Lang;
 use crate::input::Registerable;
+use crate::terms::formula::sort_list;
 use crate::terms::{BITSTRING_SORT, Function, INDEX_SORT, TIME_SORT};
 
 #[non_exhaustive]
@@ -61,6 +64,22 @@ impl Sort {
             Sort::Time => Some(&TIME_SORT),
             _ => None,
         }
+    }
+
+    /// see [sort_list::try_get_egraph]
+    pub fn list_from_egg<N: egg::Analysis<Lang>>(
+        egraph: &egg::EGraph<Lang, N>,
+        f: egg::Id,
+    ) -> Option<Vec<Sort>> {
+        sort_list::try_get_egraph(egraph, f)
+    }
+
+    pub fn list_from_formula<F>(f: F) -> Option<Vec<Sort>>
+    where
+        F: Formula,
+        F::Fun: AsRef<Function>,
+    {
+        sort_list::try_get(f)
     }
 }
 

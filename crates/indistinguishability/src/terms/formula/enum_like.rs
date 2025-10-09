@@ -129,7 +129,79 @@ impl RecFOFormula {
         Self::App { head, args }
     }
 
-    pub fn try_from_id<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, id: Id) -> Option<Self> {
+    /// remove any De-Buijn indices from a [Self]
+    fn remove_de_bruijn(
+        &self,
+        bound_vars: &rpds::Queue<Variable>,
+        depth: usize,
+        free_vars: &mut Vec<Variable>,
+    ) -> Option<Self> {
+        match self {
+            Self::Var(variable) => Some(Self::Var(variable.clone())),
+            Self::Quantifier { head, vars, arg } => Some(Self::Quantifier {
+                head: *head,
+                vars: vars.clone(),
+                arg: arg
+                    .iter()
+                    .map(|x| x.remove_de_bruijn(bound_vars, depth, free_vars))
+                    .collect::<Option<cowarc![_]>>()?,
+            }),
+            Self::App { head, args } => {
+                if head == &LAMBDA_O {
+                    let var = bound_vars
+                        .peek()
+                        .cloned()
+                        .unwrap_or_else(|| free_vars[depth].clone());
+                    Some(Self::Var(var))
+                } else if head == &LAMBDA_S {
+                    match bound_vars.dequeue() {
+                        Some(bound_vars) => {
+                            args.first()?
+                                .remove_de_bruijn(&bound_vars, depth, free_vars)
+                        }
+                        None => {
+                            free_vars.push(fresh!());
+                            args.first()?
+                                .remove_de_bruijn(bound_vars, depth + 1, free_vars)
+                        }
+                    }
+                } else if let Some(bind) = head.as_fobinder() {
+                    let mut args = args.iter();
+
+                    let sorts = Sort::list_from_formula(args.next()?)?;
+                    let variables: cowarc![_] = sorts.into_iter().map(|s| fresh!(s)).collect();
+
+                    let bound_vars = variables
+                        .iter()
+                        .fold(bound_vars.clone(), |acc, v| acc.enqueue(v.clone()));
+
+                    let args = args
+                        .map(|arg| arg.remove_de_bruijn(&bound_vars, depth, free_vars))
+                        .collect::<Option<cowarc![_]>>()?;
+                    ereturn_if!(args.len() != bind.arity(), None);
+
+                    Some(Self::Quantifier {
+                        head: bind,
+                        vars: variables,
+                        arg: args,
+                    })
+                } else {
+                    let args = args
+                        .iter()
+                        .map(|x| x.remove_de_bruijn(bound_vars, depth, free_vars))
+                        .collect::<Option<cowarc![_]>>()?;
+                    Some(Self::App {
+                        head: head.clone(),
+                        args,
+                    })
+                }
+            }
+        }
+    }
+
+    /// extract a [Self] from an [EGraph]. This is a raw translation from
+    /// [golgge], notably `egg`-style quantifiers are still there
+    fn pull_from_egraph<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, id: Id) -> Option<Self> {
         let mut id_buffer = Vec::new();
         let mut recexpr_buffer = Vec::new();
 
@@ -149,6 +221,18 @@ impl RecFOFormula {
             &recexpr_buffer,
             recexpr_buffer.first().unwrap().unwrap(),
         ))
+    }
+
+    pub fn try_from_id<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, id: Id) -> Option<Self> {
+        Self::try_from_id_with_vars(egraph, id, &Default::default())
+    }
+
+    pub fn try_from_id_with_vars<N: Analysis<Lang>>(
+        egraph: &EGraph<Lang, N>,
+        id: Id,
+        vars: &rpds::Queue<Variable>,
+    ) -> Option<Self> {
+        Self::pull_from_egraph(egraph, id)?.remove_de_bruijn(vars, 0, &mut vec![fresh!()])
     }
 
     /// Returns the [Sort] of `self`, [None] if it is a variable
@@ -196,12 +280,19 @@ impl RecFOFormula {
 // =========================================================
 // substitution, unification, etc...
 
-#[non_exhaustive]
-#[derive(Debug)]
-pub struct AlphaArgs<'var, 'r> {
-    pub var: &'var Variable,
-    pub subst: &'r mut FxHashMap<&'var Variable, Variable>,
+pub mod substitution_utils {
+    use rustc_hash::FxHashMap;
+
+    use crate::terms::Variable;
+
+    #[non_exhaustive]
+    #[derive(Debug)]
+    pub struct AlphaArgs<'var, 'r> {
+        pub var: &'var Variable,
+        pub subst: &'r mut FxHashMap<&'var Variable, Variable>,
+    }
 }
+use substitution_utils::*;
 
 impl RecFOFormula {
     // ~~~~~~~~~~~~ alpha renaming ~~~~~~~~~~~~~~
@@ -353,6 +444,10 @@ impl RecFOFormula {
                 });
                 ereturn_if!(already_assigned, false);
                 is_bound.extend(chain![vl, vr].cloned());
+                subst.extend(
+                    chain![izip!(vl, vr), izip!(vr, vl)]
+                        .map(|(a, b)| (a.clone(), RecFOFormula::Var(b.clone()))),
+                );
 
                 izip!(al, ar).all(|(l, r)| l.unify_inner(r, subst, is_bound, short_cut))
             }
@@ -526,7 +621,7 @@ impl RecFOFormula {
                         .map(|(&sort, arg)| {
                             Self::inner_from_egg(
                                 arg,
-                                bound_variables,
+                                bound_variables.clone(),
                                 depth,
                                 free_variables,
                                 db_free_variables,
@@ -551,7 +646,7 @@ impl RecFOFormula {
                         |(&sort, arg)| {
                             Self::inner_from_egg(
                                 arg,
-                                bound_variables,
+                                bound_variables.clone(),
                                 depth,
                                 free_variables,
                                 db_free_variables,
@@ -604,7 +699,10 @@ impl RecFOFormula {
 
                 let mut nargs = Vec::with_capacity(arg.len() + 1);
                 nargs.push(mk_list(out, vars.iter().map(|v| v.get_sort().unwrap())));
-                nargs.extend(arg.iter().map(|arg| arg.as_egg_inner(out, bvars, size)));
+                nargs.extend(
+                    arg.iter()
+                        .map(|arg| arg.as_egg_inner(out, bvars.clone(), size)),
+                );
 
                 let head = head.as_function().cloned().unwrap();
                 let nargs = nargs.into_iter().map(Id::from);
@@ -613,7 +711,7 @@ impl RecFOFormula {
             Self::App { head, args } => {
                 let args = args
                     .iter()
-                    .map(|arg| arg.as_egg_inner(out, bvars, size))
+                    .map(|arg| arg.as_egg_inner(out, bvars.clone(), size))
                     .map(Id::from)
                     .collect_vec();
                 out.push(L::mk_fun_application(head.clone(), args));
@@ -637,7 +735,7 @@ impl RecFOFormula {
         PreSmtRecFOFormula::builder().formula(Cow::Owned(self))
     }
 
-    pub fn as_smt<U: QuantifierTranslator>(&self, pbl: &U) -> Option<MSmtParam> {
+    pub fn as_smt<U: QuantifierTranslator>(&self, pbl: &U) -> Option<MSmtFormula> {
         MSmtFormula::try_from(self.as_pre_smt().translator(pbl).build()).ok()
     }
 }
@@ -646,7 +744,7 @@ fn mk_list<L: EggLanguage>(out: &mut Vec<L>, sorts: implvec!(Sort)) -> usize {
     let sorts = sorts.into_iter();
     let mut i = out.len();
     out.reserve(sorts.size_hint().0 * 2 + 1);
-    out.push(L::mk_fun_application(NIL, []));
+    out.push(L::mk_fun_application(NIL.clone(), []));
 
     for sort in sorts {
         let sort = sort.as_function().unwrap();
@@ -950,7 +1048,7 @@ impl From<MSmtFormula> for RecFOFormula {
                 let arg = mk_cowarc![Self::from(*formula)];
                 Self::Quantifier {
                     head: FOBinder::Forall,
-                    vars,
+                    vars: vars.into(),
                     // sorts,
                     arg,
                 }
@@ -959,7 +1057,7 @@ impl From<MSmtFormula> for RecFOFormula {
                 let arg = mk_cowarc![Self::from(*formula)];
                 Self::Quantifier {
                     head: FOBinder::Exists,
-                    vars,
+                    vars: vars.into(),
                     arg,
                 }
             }
@@ -1051,22 +1149,19 @@ impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for MSmtFor
                         SmtHead::Eq => Self::Eq(args),
                         SmtHead::Neq => Self::Neq(args),
                         SmtHead::Not => {
-                            let [arg] = args
-                                .try_into()
+                            let [arg] = TryInto::<[_; _]>::try_into(args)
                                 .map_err(|_| formula.into_owned())?
                                 .map(Box::new);
                             Self::Not(arg)
                         }
                         SmtHead::Implies => {
-                            let [a1, a2] = args
-                                .try_into()
+                            let [a1, a2] = TryInto::<[_; _]>::try_into(args)
                                 .map_err(|_| formula.into_owned())?
                                 .map(Box::new);
                             Self::Implies(a1, a2)
                         }
                         SmtHead::If => {
-                            let [c, l, r] = args
-                                .try_into()
+                            let [c, l, r] = TryInto::<[_; _]>::try_into(args)
                                 .map_err(|_| formula.into_owned())?
                                 .map(Box::new);
                             Self::Ite(c, l, r)

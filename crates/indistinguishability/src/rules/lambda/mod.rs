@@ -71,8 +71,8 @@ fn mk_let_rw<N: Analysis<Lang>>(
         .iter_current()
         .filter(|f| f.is_out_of_term_algebra())
         .map({
-            let m = &m;
             move |f| {
+                let m = &m;
                 let vars = f.signature.mk_vars();
                 let vars = vars.iter().map(|x| RecFOFormula::Var(x.clone()));
                 let svars = vars.clone().map(|v| rexp!((LET #m  #v)));

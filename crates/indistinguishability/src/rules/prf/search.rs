@@ -338,7 +338,7 @@ impl Search {
                     .sorts(id.signature.inputs_iter())
                     .quantifier(FOBinder::Forall)
                     .build();
-                self.inner_search_recexpr(pbl, &builder, RecExprIter::new(&to_search));
+                self.inner_search_formula(pbl, &builder, RecExprIter::new(&to_search));
                 builder.into_inner().unwrap().into_formula()
             })
     }
@@ -374,7 +374,7 @@ impl crate::rules::utils::SyntaxSearcher for Search {
             let content = (!EQ.rapp([k2.clone().into(), NONCE.rapp([self.clone_k()])]))
                 | (!EQ.rapp([m2.clone().into(), self.clone_m()]));
             builder.add_leaf(content);
-            self.inner_search_recexpr(pbl, builder, m2);
+            self.inner_search_formula(pbl, builder, m2);
             {
                 let builder = builder
                     .add_node()
@@ -383,7 +383,7 @@ impl crate::rules::utils::SyntaxSearcher for Search {
                     .quantifier(FOBinder::Forall)
                     .build();
 
-                self.inner_search_recexpr(pbl, &builder, k2);
+                self.inner_search_formula(pbl, &builder, k2);
             }
         } else {
             assert!(!self.is_instance(pbl, &fun));

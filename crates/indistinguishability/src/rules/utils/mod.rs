@@ -2,7 +2,7 @@ pub mod fresh;
 
 mod search;
 use egg::Var;
-pub use search::{SyntaxSearcher, default_is_special};
+pub use search::{SyntaxSearcher, EgraphSearcher,  default_is_special};
 
 use crate::LangVar;
 use crate::terms::Function;

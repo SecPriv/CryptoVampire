@@ -1,10 +1,11 @@
-use std::{borrow::Cow, fmt::Display};
+use std::borrow::Cow;
+use std::fmt::Display;
 
 use logic_formula::{Destructed, Formula};
 use serde::Serialize;
 use steel_derive::Steel;
 
-use crate::terms::{Function, Sort, Variable, CONS, EXISTS, FIND_SUCH_THAT};
+use crate::terms::{CONS, EXISTS, FIND_SUCH_THAT, Function, Sort, Variable};
 
 mod egg;
 // mod egg_like;
@@ -13,8 +14,8 @@ mod enum_like;
 mod sexpr;
 
 pub use egg::InnerLang;
-pub use enum_like::RecFOFormula;
 pub(crate) use enum_like::QuantifierTranslator;
+pub use enum_like::{RecFOFormula, substitution_utils};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Steel, Serialize)]
 pub enum FOBinder {
@@ -25,12 +26,12 @@ pub enum FOBinder {
 
 pub struct RecFOFormulaQuant {
     pub quantifier: FOBinder,
-    pub vars: Vec<Variable> ,
+    pub vars: Vec<Variable>,
 }
 
 pub struct RecFOFormulaQuantRef<'a> {
     pub quantifier: FOBinder,
-    pub vars: &'a [Variable] ,
+    pub vars: &'a [Variable],
 }
 
 impl<'a> RecFOFormulaQuantRef<'a> {
@@ -41,22 +42,19 @@ impl<'a> RecFOFormulaQuantRef<'a> {
 
 impl RecFOFormulaQuant {
     pub fn new(quantifier: FOBinder, vars: Vec<Variable>) -> Self {
-        Self {
-            quantifier,
-            vars,
-        }
+        Self { quantifier, vars }
     }
 }
 
 impl FOBinder {
-    pub fn try_from_function(fun:&Function) -> Option<Self> {
+    pub fn try_from_function(fun: &Function) -> Option<Self> {
         fun.as_fobinder()
     }
 
     pub fn arity(&self) -> usize {
         match self {
             Self::FindSuchThat => 3,
-            Self::Exists | Self::Forall => 1
+            Self::Exists | Self::Forall => 1,
         }
     }
 }
@@ -92,7 +90,7 @@ impl FOBinder {
         match self {
             FOBinder::Exists => Some(&EXISTS),
             FOBinder::FindSuchThat => Some(&FIND_SUCH_THAT),
-            FOBinder::Forall => None
+            FOBinder::Forall => None,
         }
     }
 }
@@ -107,26 +105,55 @@ impl Display for FOBinder {
     }
 }
 
-mod sort_list {
+pub(crate) mod sort_list {
+    use egg::{Analysis, EGraph, Id};
     use itertools::Itertools;
     use logic_formula::{Destructed, Formula};
+    use utils::{econtinue_if, econtinue_let};
 
+    use crate::Lang;
     use crate::terms::{CONS, Function, NIL, Sort};
 
     fn inner<F>(f: F, sorts: &mut Vec<Sort>) -> Option<()>
     where
-        F: Formula<Fun = Function>,
+        F: Formula,
+        F::Fun: AsRef<Function>
     {
         let Destructed { head, args } = f.destruct();
 
         match head.as_fun() {
-            Some(f) if f == &CONS => {
+            Some(f) if f.as_ref() == &CONS => {
                 let (hd, tl) = args.collect_tuple()?;
-                let s = Sort::from_function(hd.destruct().head.as_fun()?)?;
+                let s = Sort::from_function(hd.destruct().head.as_fun()?.as_ref())?;
                 sorts.push(s);
                 inner(tl, sorts)
             }
-            Some(f) if f == &NIL => Some(()),
+            Some(f) if f.as_ref() == &NIL => Some(()),
+            _ => None,
+        }
+    }
+
+    fn inner_egraph<N: Analysis<Lang>>(
+        egraph: &EGraph<Lang, N>,
+        f: Id,
+        sorts: &mut Vec<Sort>,
+    ) -> Option<()> {
+        match egraph[f]
+            .nodes
+            .iter()
+            .filter(|f| f.head == NIL || f.head == CONS)
+            .next()?
+        {
+            Lang { head, .. } if head == &NIL => Some(()),
+            Lang { head, args } if head == &CONS => {
+                let (s, rec) = args.iter().collect_tuple()?;
+                for h in egraph[*s].nodes.iter().map(|x| &x.head) {
+                    econtinue_let!(let Some(s) = Sort::from_function(h));
+                    sorts.push(s);
+                    return inner_egraph(egraph, *rec, sorts);
+                }
+                None
+            }
             _ => None,
         }
     }
@@ -147,16 +174,24 @@ mod sort_list {
     /// * `Some(Vec<Sort>)` - A vector of sorts extracted from the list.
     /// * `None` - If the input formula does not match the expected structure
     ///   (e.g., it's not a proper list or an element has no associated sort).
-    pub fn try_get<F: Formula<Fun = Function>>(f: F) -> Option<Vec<Sort>> {
+    pub fn try_get<F>(f: F) -> Option<Vec<Sort>> where F: Formula, F::Fun: AsRef<Function>{
         let mut sorts = vec![];
         inner(f, &mut sorts)?;
         Some(sorts)
     }
+
+    /// Same as [try_get] but from an egraph
+    pub fn try_get_egraph<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, f: Id) -> Option<Vec<Sort>> {
+        let mut sorts = vec![];
+        inner_egraph(egraph, f, &mut sorts)?;
+        Some(sorts)
+    }
 }
 
-
-pub trait FormulaLike  {
-    type  F<'a> : Formula where Self: 'a;
+pub trait FormulaLike {
+    type F<'a>: Formula
+    where
+        Self: 'a;
     fn as_formula(&self) -> Self::F<'_>;
 
     fn destruct(&self) -> Destructed<Self::F<'_>, impl Iterator<Item = Self::F<'_>>> {

@@ -35,7 +35,7 @@ fn should_process_normaly(f: &Function) -> bool {
 fn mk_deduce_rule(f: &Function) -> PrologRule<Lang> {
     assert!(should_process_normaly(f));
     assert!(f.signature.output.support_deduce());
-    let [u, v, h1, h2] = ::std::array::from_fn(|_| fresh!());
+    let [u, v, h1, h2] = &::std::array::from_fn(|_| fresh!());
     let [args1, args2] = ::std::array::from_fn(|_| f.signature.mk_vars());
     let [args1, args2] = [&args1, &args2].map(|a| a.iter().map(|v| RecFOFormula::Var(v.clone())));
     let deduce = f.signature.output.get_deduce();

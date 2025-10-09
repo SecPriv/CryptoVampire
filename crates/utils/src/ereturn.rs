@@ -173,6 +173,48 @@ macro_rules! ereturn_let {
 }
 
 #[macro_export]
+macro_rules! ereturn_cf {
+    ($e:expr) => {
+        match $e {
+          ::core::ops::control_flow::ControlFlow::Continue(x) => x,
+          ::core::ops::control_flow::ControlFlow::Break(x) => return x,
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! ebreak_cf {
+    ($e:expr) => {
+        match $e {
+          ::core::ops::control_flow::ControlFlow::Continue(x) => x,
+          ::core::ops::control_flow::ControlFlow::Break(x) => break x,
+        }
+    };
+    ($lt:lifetime, $e:expr) => {
+        match $e {
+          ::core::ops::control_flow::ControlFlow::Continue(x) => x,
+          ::core::ops::control_flow::ControlFlow::Break(x) => break $lt x,
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! continue_cf {
+    ($e:expr) => {
+        match $e {
+          ::core::ops::control_flow::ControlFlow::Continue(x) => x,
+          ::core::ops::control_flow::ControlFlow::Break(x) => continue x,
+        }
+    };
+    ($lt:lifetime, $e:expr) => {
+        match $e {
+          ::core::ops::control_flow::ControlFlow::Continue(x) => x,
+          ::core::ops::control_flow::ControlFlow::Break(x) => continue $lt x,
+        }
+    };
+}
+
+#[macro_export]
 /// Early break macro with pattern matching.
 ///
 /// This macro provides a way to conditionally break from a loop or block,

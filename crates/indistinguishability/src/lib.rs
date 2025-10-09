@@ -55,10 +55,11 @@ pub type N = ();
 pub type Lang = terms::InnerLang;
 pub type LangVar = egg::ENodeOrVar<Lang>;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MSmtParam;
 
-pub type MSmtFormula = SmtFormula<MSmtFormula>;
-pub type MSmt = Smt<MSmtFormula>;
+pub type MSmtFormula = SmtFormula<MSmtParam>;
+pub type MSmt = Smt<MSmtParam>;
 
 // ~~~~~~~~~~~~~~~~ other ~~~~~~~~~~~~~~~~~~~
 

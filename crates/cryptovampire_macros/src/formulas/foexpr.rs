@@ -111,9 +111,9 @@ impl MacroInput {
 
     fn mk_clone(&self, stream: &TokenStream) -> TokenStream {
         if self.is_const() {
-            quote!({#stream}.const_clone())
+            quote!(#stream.const_clone())
         } else {
-            quote!({#stream}.clone())
+            quote!(#stream.clone())
         }
     }
 
@@ -248,12 +248,12 @@ impl ToTokenWithInputs for Ast {
                 }
             }
             super::parser::InnerAst::Not(ast) => {
-                let ast = ast.to_tokens(macro_input)?;
+                let ast = ArgItem::to_token_regular(ast, macro_input)?;
                 FunAppAst::mk_app(macro_input, &quote!(#path::NOT), [ast])
             }
             super::parser::InnerAst::Implies(ast, ast1) => {
-                let ast = ast.to_tokens(macro_input)?;
-                let ast1 = ast1.to_tokens(macro_input)?;
+                let ast = ArgItem::to_token_regular(ast, macro_input)?;
+                let ast1 = ArgItem::to_token_regular(ast1, macro_input)?;
                 FunAppAst::mk_app(macro_input, &quote!(#path::IMPLIES), [ast, ast1])
             }
             super::parser::InnerAst::FunApp(fun_app_ast) => fun_app_ast.to_tokens(macro_input),
@@ -281,17 +281,23 @@ impl ToTokenWithInputs for ArgItem {
     fn to_tokens(&self, macro_input: &MacroInput) -> syn::Result<TokenStream> {
         match self {
             ArgItem::Regular(ast) => {
+                Self::to_token_regular(ast, macro_input)
+            }
+            ArgItem::SplatExpr(expr) if !macro_input.is_const() => Ok(quote!({#expr})),
+            ArgItem::SplatIdent(ident) if !macro_input.is_const() => Ok(quote!({#ident})),
+            e => Err(Error::new(e.span(), "no splat expression allowed in const")),
+        }
+    }
+}
+
+impl ArgItem {
+    pub fn to_token_regular(ast: &Ast, macro_input: &MacroInput )-> syn::Result<TokenStream> {
                 let ast = ast.to_tokens(macro_input)?;
                 if macro_input.is_const() {
                     Ok(ast)
                 } else {
                     Ok(quote!(::std::iter::once(#ast)))
                 }
-            }
-            ArgItem::SplatExpr(expr) if !macro_input.is_const() => Ok(quote!({#expr})),
-            ArgItem::SplatIdent(ident) if !macro_input.is_const() => Ok(quote!({#ident})),
-            e => Err(Error::new(e.span(), "no splat expression allowed in const")),
-        }
     }
 }
 

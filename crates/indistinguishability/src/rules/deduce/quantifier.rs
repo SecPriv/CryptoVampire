@@ -195,21 +195,21 @@ impl QuantifierRule {
             other,
             new_var,
             ..
-        } = DEFAULT_PARAMERTERS.clone();
+        } = &DEFAULT_PARAMERTERS;
         let deduce_m = &BIT_DEDUCE;
         let deduce_b = &BOOL_DEDUCE;
         let capture_pattern = match bind {
             FOBinder::Forall => unreachable!(),
             Exists => [
-                rexp!((deduce_m #u #v
+                rexp!((deduce_b #u #v
                     (EXISTS (CONS #sort #sort1_cons) #args1_1)
                     (EXISTS (CONS #sort #sort2_cons) #args2_1)
                     #h1 #h2)),
-                rexp!((deduce_m #u #v
+                rexp!((deduce_b #u #v
                     (EXISTS (CONS #sort #sort1_cons) #args1_1)
                     #other
                     #h1 #h2)),
-                rexp!((deduce_m #u #v
+                rexp!((deduce_b #u #v
                     #other
                     (EXISTS (CONS #sort #sort1_cons) #args1_1)
                     #h1 #h2)),
@@ -233,15 +233,15 @@ impl QuantifierRule {
         let return_pattern = match bind {
             FOBinder::Forall => unreachable!(),
             Exists => [
-                rexp!((deduce_m #u #v
+                rexp!((deduce_b #u #v
                     (EXISTS #sort1_cons (LAMBDA_LET #new_var #args1_1))
                     (EXISTS #sort2_cons (LAMBDA_LET #new_var #args2_1))
                     #h1 #h2)),
-                rexp!((deduce_m #u #v
+                rexp!((deduce_b #u #v
                     (EXISTS #sort1_cons (LAMBDA_LET #new_var #args1_1))
                     #other
                     #h1 #h2)),
-                rexp!((deduce_m #u #v
+                rexp!((deduce_b #u #v
                     #other
                     (EXISTS #sort1_cons (LAMBDA_LET #new_var #args1_1))
                     #h1 #h2)),

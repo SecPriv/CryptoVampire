@@ -115,8 +115,8 @@ fn mk_smt_step<'a>(pbl: &'a Problem, ptcl: &'a Protocol) -> MSmtFormula {
             .variables(vars)
             .sorts(id.signature.inputs_iter())
             .build();
-        nonce.inner_search_recexpr(pbl, &builder, RecExprIter::new(&cond));
-        nonce.inner_search_recexpr(pbl, &builder, RecExprIter::new(&msg));
+        nonce.inner_search_formula(pbl, &builder, RecExprIter::new(&cond));
+        nonce.inner_search_formula(pbl, &builder, RecExprIter::new(&msg));
     }
     let formula = builder.into_inner().unwrap().into_formula().into_smt();
 

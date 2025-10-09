@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::HashSet;
 use std::fmt::Debug;
 use std::num::NonZeroUsize;
 use std::rc::Rc;
@@ -10,7 +11,9 @@ use egg::{EGraph, RecExpr};
 use golgge::{Program, Rule};
 use itertools::{Itertools, chain};
 use log::trace;
-use utils::implvec;
+use logic_formula::Formula;
+use logic_formula::iterators::QuantiferIterator;
+use utils::{econtinue_let, implvec};
 
 use crate::problem::function_builder::{
     SetAlias, SetCryptography, SetInputs, SetName, SetOutput, SetStepIdx,
@@ -18,9 +21,10 @@ use crate::problem::function_builder::{
 use crate::protocol::{Protocol, Step};
 use crate::rules::{FreshNonce, VampireRule, mk_default_prolog_rules, mk_default_rewrites};
 use crate::terms::{
-    Alias, CryptographicAssumption, EMPTY, EQUIV, Function, FunctionCollection, FunctionFlags,
-    HAPPENS, INIT, InnerFunction, MACRO_FRAME, PRED, QuantifierIndex, QuantifierT,
-    QuantifierTranslator, RecFOFormula, Rewrite, Signature, Sort, TRUE, UNFOLD_MSG,
+    Alias, CryptographicAssumption, EMPTY, EQUIV, FOBinder, FindSuchThat, Function,
+    FunctionCollection, FunctionFlags, HAPPENS, INIT, InnerFunction, MACRO_FRAME, PRED,
+    QuantifierIndex, QuantifierT, QuantifierTranslator, RecFOFormula, Rewrite, Signature, Sort,
+    TRUE, UNFOLD_MSG,
 };
 use crate::utils::fresh_name;
 use crate::vampire::mk_prelude;
@@ -392,6 +396,69 @@ impl Problem {
         self.clear_smt_prelude();
         &mut self.function
     }
+
+    pub fn find_temp_quantifiers(&mut self, extra: &[RecFOFormula]) {
+        // unique quantifiers up to unification
+        let quantifiers = {
+            let candidate = chain![self.list_all_terms(), extra]
+                .flat_map(|f| f.iter_with(QuantiferIterator, ()))
+                .unique();
+            let mut pile = Vec::new();
+            for a in candidate {
+                if let RecFOFormula::Quantifier {
+                    head: FOBinder::FindSuchThat,
+                    ..
+                } = a
+                    && let None = pile.iter().find_map(|x| a.unify(x))
+                    && let None = self.quantifier_cache.iter().find_map(|(x, _)| a.unify(x))
+                {
+                    pile.push(a.clone());
+                }
+            }
+            pile
+        };
+
+        if quantifiers.is_empty() {
+            return;
+        }
+
+        for q in quantifiers.iter() {
+            econtinue_let!(let RecFOFormula::Quantifier { vars, arg, .. } = q);
+            let cvars_sorts = q.free_vars_iter().map(|v| {
+                v.get_sort()
+                    .expect("quantifiers should capture variables with sort")
+            });
+            let bvars_sorts = vars.iter().map(|v| {
+                v.get_sort()
+                    .expect("quantified variables should have a sort")
+            });
+            let find = FindSuchThat::insert()
+                .pbl(self)
+                .bvars_sorts(bvars_sorts)
+                .cvars_sorts(cvars_sorts)
+                .temporary(true)
+                .call();
+            find.set_condition(arg[0].clone());
+            find.set_then_branch(arg[1].clone());
+            find.set_else_branch(arg[2].clone());
+            let tlf = find.top_level_function().clone();
+            self.quantifier_cache.push((q.clone(), tlf));
+        }
+        self.clear_smt_prelude();
+    }
+
+    pub fn clear_temp_quantifiers(&mut self) {
+        self.quantifier_cache.clear();
+        self.clear_smt_prelude();
+    }
+
+    /// list all the `RecFOFormula` stored in this `Self`
+    pub fn list_all_terms<'a>(&'a self) -> impl Iterator<Item = &'a RecFOFormula> {
+        self.protocols()
+            .iter()
+            .flat_map(|p| p.steps().iter())
+            .flat_map(|s| [&s.cond, &s.msg].into_iter())
+    }
 }
 
 impl QuantifierTranslator for Problem {
@@ -481,7 +548,7 @@ impl Problem {
             extra_smt,
             smt_prelude,
             current_step: None,
-            quantifier_cache: vec![]
+            quantifier_cache: vec![],
         }
     }
 

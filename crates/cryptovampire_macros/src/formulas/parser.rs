@@ -399,10 +399,25 @@ impl Parse for VarBinding {
     }
 }
 
-impl Parse for VarBindings {
+struct  ExclamationOrCross;
+
+impl Parse for ExclamationOrCross {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         if input.peek(Token![!]) {
             input.parse::<Token![!]>()?;
+        } else if input.peek(Token![#]) {
+            input.parse::<Token![#]>()?;
+        } else {
+            return Err(input.error("Expected '#' or '!'"))
+        }
+        Ok(Self)
+    }
+}
+
+impl Parse for VarBindings {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        if input.peek(Token![!]) || input.peek(Token![#]) {
+            input.parse::<ExclamationOrCross>()?;
             if input.peek(token::Paren) {
                 let content;
                 parenthesized!(content in input);

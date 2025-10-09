@@ -20,12 +20,12 @@ use crate::{Lang, Problem};
 macro_rules! decl_vars {
     ($($var:ident $(:$sort:expr)? ),+) => {
         $(
-            let $var = $crate::fresh!($($sort)?);
+            let $var = &    $crate::fresh!($($sort)?);
         )+
     };
 
     (const $(;)? $($var:ident $(:$sort:expr)? ),+ $(,)?) => {
-        $(static $var: $crate::terms::Variable = $crate::fresh!(const $($sort)?);)+
+        $(static $var: &$crate::terms::Variable = &$crate::fresh!(const $($sort)?);)+
     };
 }
 

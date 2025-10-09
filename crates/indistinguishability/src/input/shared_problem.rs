@@ -1,4 +1,5 @@
 use std::cell::{Ref, RefCell, RefMut};
+use std::ops::Deref;
 use std::rc::Rc;
 
 use cryptovampire_smt::IntoSmt;
@@ -8,10 +9,10 @@ use steel::rvals::Result as SResult;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
-use crate::input::Registerable;
 use crate::input::golgge_rules::Rule;
 use crate::input::shared_exists::ShrExists;
 use crate::input::shared_fdst::ShrFindSuchThat;
+use crate::input::{Registerable, conversion_err};
 use crate::protocol::Step;
 use crate::terms::{
     Exists, FindSuchThat, Function, QuantifierT, RecFOFormula, Rewrite, Sort, Variable,
@@ -185,10 +186,12 @@ impl ShrProblem {
         self.borrow_mut().extra_rewrite_mut().push(rw);
     }
 
-    fn add_smt_axiom(&self, f: RecFOFormula) {
+    fn add_smt_axiom(&self, f: RecFOFormula) -> SResult<()> {
         self.borrow_mut().extra_smt_mut().push(MSmt::mk_assert(
-            f.into_pre_smt().translator(&self.0).build().into(),
+            f.as_smt(self.0.borrow().deref())
+                .ok_or(conversion_err::<MSmt>())?,
         ));
+        Ok(())
     }
 
     // =========================================================

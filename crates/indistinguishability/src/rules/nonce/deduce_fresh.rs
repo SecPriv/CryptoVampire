@@ -34,10 +34,9 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FreshNonce {
         let egraph = prgm.egraph_mut();
         ereturn_let!(let Some(substs) =  FRESH_NONCE_PATTERN.search_eclass(egraph, goal),Dependancy::impossible());
 
-        let mut conditions = Vec::with_capacity(substs.substs.len());
-        for subst in substs.substs {
+        let condition = substs.substs.iter().map(|subst| {
             let [nonce, content, hypothesis] =
-                [0, 1, 2].map(|i| *subst.get(Var::from_usize(i)).unwrap());
+                [NONCE_VAR, CONTENT, HYPOTHESIS].map(|i| *subst.get(i.as_egg()).unwrap());
             let hypothesis = convert_id(egraph, hypothesis);
             let nonce = Nonce::builder().content_id(egraph, nonce).build();
 
@@ -45,14 +44,23 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FreshNonce {
             nonce.search_egraph(egraph, builder.clone(), content, Default::default());
             let search = builder.into_inner().unwrap().into_formula();
 
-            conditions.push((hypothesis >> search).into_smt())
-        }
-        let condition = SmtFormula::Or(conditions);
-
-        tr!("checking {condition}");
+            hypothesis >> search
+        });
+        let query = rexp!((or #condition*));
+        tr!("checking {query}");
         let pbl: &mut Problem = egraph.analysis.pbl_mut();
 
-        self.exec.run_to_dependancy(pbl, condition)
+        pbl.find_temp_quantifiers(&[query.clone()]);
+
+        let query = query.as_smt(pbl).unwrap();
+        tr!("checking {query}");
+
+        self.exec
+            .run_to_dependancy()
+            .pbl(pbl)
+            .query(query)
+            .clean_afterward()
+            .call()
     }
 
     fn name(&self) -> Cow<'_, str> {

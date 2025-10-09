@@ -79,8 +79,8 @@ impl Step {
         ptcl: &Function,
     ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
         trace!("mk unfold rw for {self}");
-        let name = self.id_expr();
-        let ptcl = rexp!(ptcl);
+        let name = &self.id_expr();
+        let ptcl = &rexp!(ptcl);
 
         let unfold_cond = Rewrite::new(
             format!("unfold cond {name} in {ptcl}"),
@@ -105,7 +105,7 @@ impl Step {
     ) -> impl Iterator<Item = MSmt> + use<'_> {
         let [cond, msg, name]: [MSmtFormula; _] =
             [&self.cond, &self.msg, &self.id_expr()].map(|x| x.as_smt(pbl).unwrap());
-        let vars = self.vars.iter().map(|x| RecFOFormula::Var(x.clone()));
+        let vars = self.vars.iter().cloned();
 
         vec_smt2![
             ; format!("unfolding of {name}"),

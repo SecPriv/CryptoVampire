@@ -65,6 +65,7 @@ impl Display for Mode {
 impl RefFormulaBuilder {
     #[builder(builder_type = RefFormulaBuilderBuilder)]
     pub fn new(
+        #[builder(default)]
         mode: Mode,
 
         parent: Option<&RefFormulaBuilder>,
@@ -149,6 +150,14 @@ impl RefFormulaBuilder {
     /// tells is any of the `add` will do anything
     pub fn is_saturated(&self) -> bool {
         self.try_evaluate().is_some()
+    }
+
+    pub fn is_and(&self) -> bool {
+        self.borrow().mode == Mode::And
+    }
+
+    pub fn is_or(&self) -> bool {
+        self.borrow().mode == Mode::Or
     }
 
     /// adds to the formula (in a disjonction or a conjunction depending on the mode)
