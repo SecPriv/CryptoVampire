@@ -8,6 +8,7 @@ declare_trace!($"formula_utils");
 
 /// This module mostly exists for the macro [rexp] to pull it's functions from.
 /// It also contains other miscelenious functions
+#[allow(dead_code)]
 pub mod rexp_macro;
 
 // pub mod offset;

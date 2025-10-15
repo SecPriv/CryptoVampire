@@ -4,7 +4,7 @@ use crate::terms::{EXISTS, FIND_SUCH_THAT, MITE, NIL};
 use crate::{Lang, Problem};
 
 pub fn mk_rewrites<N: Analysis<Lang>>(
-    pbl: &Problem,
+    _: &Problem,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
     decl_vars![a, b, c];
 

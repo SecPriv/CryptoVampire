@@ -1,6 +1,5 @@
 use std::cell::{Ref, RefMut};
 
-use itertools::Itertools;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
@@ -62,15 +61,15 @@ impl ShrFindSuchThat {
         self.fdst().else_branch().cloned().ok_or(cerr())
     }
 
-    fn set_condition(&self, p: RecFOFormula) -> () {
+    fn set_condition(&self, p: RecFOFormula) {
         self.fdst_mut().set_condition(p);
     }
 
-    fn set_then_branch(&self, p: RecFOFormula) -> () {
+    fn set_then_branch(&self, p: RecFOFormula) {
         self.fdst_mut().set_then_branch(p);
     }
 
-    fn set_else_branch(&self, p: RecFOFormula) -> () {
+    fn set_else_branch(&self, p: RecFOFormula) {
         self.fdst_mut().set_else_branch(p);
     }
 }

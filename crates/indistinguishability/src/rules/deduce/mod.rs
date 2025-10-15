@@ -1,7 +1,7 @@
 use itertools::chain;
 
 use crate::Problem;
-use crate::problem::{PRule, RcRule};
+use crate::problem::RcRule;
 use crate::terms::{BIT_DEDUCE, BOOL_DEDUCE, Function, Sort};
 
 mod quantifier;
@@ -11,10 +11,9 @@ mod static_rules;
 pub fn mk_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> + use<'_> {
     chain! {
       regular::mk_rules(pbl),
-    //   quantifier::mk_rules(pbl),
+      quantifier::mk_rules(pbl),
       static_rules::mk_rules(),
     }
-    .map(|x| x.into_mrc())
 }
 
 trait GetDeduce {

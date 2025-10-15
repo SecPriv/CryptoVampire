@@ -11,7 +11,7 @@ use crate::terms::{
 pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>> {
     let b_ite = &BITE;
     let m_ite = &MITE;
-    decl_vars![t, t1, t2, a, b, c, d, v1, v2, x, p];
+    decl_vars![t, t1, t2, a, b, c, d, v1, x, p];
 
     let main = mk_many_rewrites! {
       ["if true"] (m_ite true #a #b) => (#a).

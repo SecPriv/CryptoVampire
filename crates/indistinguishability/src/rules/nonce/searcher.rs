@@ -3,7 +3,6 @@ use std::ops::ControlFlow;
 
 use bon::bon;
 use egg::{Analysis, EGraph, Id};
-use itertools::Itertools;
 use utils::implvec;
 
 use crate::rules::nonce::searcher::nonce_builder::SetContent;
@@ -15,6 +14,7 @@ use crate::{Lang, Problem, rexp};
 #[derive(Debug, Clone)]
 pub struct Nonce {
     content: RecFOFormula,
+    #[allow(dead_code)]
     name: Cow<'static, str>,
 }
 
@@ -213,7 +213,7 @@ impl SyntaxSearcher for Nonce {
     ) -> ControlFlow<()> {
         assert_eq!(fun, &NONCE);
         tr!("found nonce!");
-        let arg = args.into_iter().next().expect("NONCE need a parameter");
+        let arg = args.iter().next().expect("NONCE need a parameter");
 
         builder.add_leaf(rexp!((= #arg #(self.as_recformula()))));
         ControlFlow::Break(())

@@ -5,7 +5,7 @@ use QuantifierKindRule::{BothSides, OneSide};
 use Side::{Left, Right};
 use egg::{Id, Pattern, Searcher};
 use golgge::{Dependancy, Rule};
-use itertools::{Itertools, izip};
+use itertools::izip;
 use utils::{ebreak_if, ebreak_let, ereturn_let};
 
 use crate::problem::{PAnalysis, PRule, RcRule};
@@ -17,7 +17,7 @@ use crate::{Lang, Problem, fresh, rexp};
 
 declare_trace!($"quantifier_deduce");
 
-pub fn mk_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
+pub fn mk_rules(_: &Problem) -> impl Iterator<Item = RcRule> {
     [Exists, FindSuchThat]
         .map(|quantifier| {
             let (patterns, return_patterns) = QuantifierRule::mk_patterns(quantifier);

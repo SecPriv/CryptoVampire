@@ -1,14 +1,13 @@
-use golgge::PrologRule;
 use itertools::chain;
 
-use crate::Lang;
+use crate::problem::{PRule, RcRule};
 use crate::rules::deduce::GetDeduce;
 use crate::terms::{
     BIT_DEDUCE, BITE, BOOL_DEDUCE, EQUIV, FRESH_NONCE, HAPPENS, LEQ, MACRO_COND, MACRO_EXEC,
     MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, VAMPIRE,
 };
 
-pub fn mk_rules() -> impl Iterator<Item = PrologRule<Lang>> {
+pub fn mk_rules() -> impl Iterator<Item = RcRule> {
     let equiv = &EQUIV;
     let deduce_m = &BIT_DEDUCE;
     let deduce_b = &BOOL_DEDUCE;
@@ -80,5 +79,5 @@ pub fn mk_rules() -> impl Iterator<Item = PrologRule<Lang>> {
           (FRESH_NONCE #y #v #h2).
     };
 
-    chain![deduce_macro, others]
+    chain![deduce_macro, others].map(|x| x.into_mrc())
 }

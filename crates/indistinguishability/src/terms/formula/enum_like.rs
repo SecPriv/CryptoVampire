@@ -101,7 +101,7 @@ impl RecFOFormula {
                     .collect();
                 let head = crate::Lang {
                     head: head.clone(),
-                    args: args,
+                    args,
                 };
                 res.push(egg::ENodeOrVar::ENode(head));
                 res.len() - 1
@@ -301,7 +301,7 @@ impl RecFOFormula {
     ///
     /// ## Notes
     /// - `do_change` has priority over the pre-existing substitution to
-    /// decide how to modify the variables
+    ///   decide how to modify the variables
     /// - it effectively clones `self`.
     pub fn alpha_rename_if_with<'a>(
         &'a self,
@@ -894,7 +894,7 @@ impl RecFOFormula {
             } => Self::Quantifier {
                 head: *head,
                 vars: CowArc::Borrowed(*vars),
-                arg: CowArc::Borrowed(&arg),
+                arg: CowArc::Borrowed(arg),
             },
             Self::App {
                 head,

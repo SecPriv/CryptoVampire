@@ -381,6 +381,7 @@ impl Problem {
         ret
     }
 
+    #[allow(dead_code)]
     pub(crate) fn current_step(&self) -> Option<&CurrentStep> {
         self.current_step.as_ref()
     }
@@ -450,7 +451,7 @@ impl Problem {
     }
 
     /// list all the `RecFOFormula` stored in this `Self`
-    pub fn list_all_terms<'a>(&'a self) -> impl Iterator<Item = &'a RecFOFormula> {
+    pub fn list_all_terms(&self) -> impl Iterator<Item = &RecFOFormula> {
         self.protocols()
             .iter()
             .flat_map(|p| p.steps().iter())
@@ -674,6 +675,7 @@ where
     }
 }
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub(crate) struct CurrentStep {
     /// index in the [Problem]

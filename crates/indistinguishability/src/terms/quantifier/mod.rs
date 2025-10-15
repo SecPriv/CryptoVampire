@@ -83,7 +83,7 @@ pub trait QuantifierT: Eq + Sized {
     fn appplied_skolens<'a>(
         &'a self,
     ) -> impl Iterator<Item = RecFOFormula> + Clone + use<'a, Self> {
-        let args = self.cvars().iter().cloned().map(|v| RecFOFormula::Var(v));
+        let args = self.cvars().iter().cloned().map(RecFOFormula::Var);
         self.skolems()
             .iter()
             .map(move |sk| rexp!((sk #(args.clone())*)))

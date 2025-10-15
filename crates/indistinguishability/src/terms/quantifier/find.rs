@@ -70,7 +70,7 @@ impl QuantifierT for FindSuchThat {
 
         let patterns_vars: HashSet<_> = [self.condition(), self.then_branch(), self.else_branch()]
             .into_iter()
-            .filter_map(::std::convert::identity)
+            .flatten()
             .flat_map(|x| x.free_vars_iter())
             .collect();
 
@@ -281,7 +281,7 @@ impl Display for FindSuchThat {
         let [condition, then_branch, else_branch] =
             [condition, then_branch, else_branch].map(|f| match f {
                 Some(f) => f.to_string(),
-                None => format!(" ∅"),
+                None => " ∅".to_string(),
             });
 
         write!(

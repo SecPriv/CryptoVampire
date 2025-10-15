@@ -112,7 +112,7 @@ impl ShrProblem {
         pbl.push_steps((0..nptcl).map(|_| {
             Step::builder()
                 .id(step.clone())
-                .vars(sorts.iter().enumerate().map(|(i, s)| crate::fresh!(*s)))
+                .vars(sorts.iter().map(|&s| crate::fresh!(s)))
                 .build()
                 .unwrap()
         }));

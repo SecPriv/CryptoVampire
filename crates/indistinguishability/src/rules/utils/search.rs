@@ -12,9 +12,9 @@ use crate::protocol::{Protocol, Step};
 use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::terms::substitution_utils::AlphaArgs;
 use crate::terms::{
-    Alias, AliasRewrite, BITE, Exists, FOBinder, FindSuchThat, FormulaLike, Function, HAPPENS,
-    LAMBDA_S, LT, MACRO_COND, MACRO_FRAME, MACRO_MSG, MITE, PRED, Quantifier, QuantifierT,
-    RecFOFormula, RecFOFormulaQuant, Sort, Variable,
+    Alias, AliasRewrite, BITE, Exists, FOBinder, FindSuchThat, Function, HAPPENS, LAMBDA_S, LT,
+    MACRO_COND, MACRO_FRAME, MACRO_MSG, MITE, PRED, Quantifier, QuantifierT, RecFOFormula,
+    RecFOFormulaQuant, Sort, Variable,
 };
 use crate::{Lang, Problem, fresh, rexp};
 
@@ -323,7 +323,7 @@ pub trait EgraphSearcher: SyntaxSearcher {
             .map(|&id| expr_of_id(egraph, id, variables))
             .collect_vec();
 
-        self.process_instance(&**egraph.analysis.pbl(), builder, fun, &args)
+        self.process_instance(egraph.analysis.pbl(), builder, fun, &args)
     }
 
     fn search_egraph<'a>(
@@ -433,13 +433,14 @@ pub trait EgraphSearcher: SyntaxSearcher {
             self.search_egraph_frame(egraph, builder, time, ptcl, variables);
             return ControlFlow::Break(());
         }
-        if self.is_instance(&**egraph.analysis.pbl(), head) {
+        if self.is_instance(egraph.analysis.pbl(), head) {
             self.process_egraph_instance(egraph, builder, head, args, variables)
         } else {
             ControlFlow::Continue(())
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn main_egraph_loop<'a>(
         &self,
         egraph: &EGraph<crate::Lang, PAnalysis<'a>>,
@@ -462,7 +463,6 @@ pub trait EgraphSearcher: SyntaxSearcher {
             if head == &MITE || head == &BITE {
                 self.ite_egraph(egraph, builder, args, visited, variables);
             } else if head == &LAMBDA_S {
-                let arg = args[0];
                 self.search_egraph(
                     egraph,
                     builder,

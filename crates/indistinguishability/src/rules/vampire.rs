@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use bon::Builder;
 use cryptovampire_smt::Smt;
-use egg::{Pattern, Searcher, Var};
+use egg::{Pattern, Searcher};
 use golgge::{Dependancy, Rule};
 use itertools::chain;
 use static_init::dynamic;
@@ -20,8 +20,6 @@ decl_vars!(const; X);
 
 #[dynamic]
 static PATTERN: Pattern<Lang> = Pattern::from(&rexp!((VAMPIRE #X)));
-
-static VAR: Var = Var::from_usize(0);
 
 /// A rule that calls vampire to get its answer
 #[derive(Clone, Builder)]
@@ -47,7 +45,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for VampireRule {
             return golgge::Dependancy::impossible();
         };
         let pbl: &mut Problem = egraph.analysis.pbl_mut();
-        pbl.find_temp_quantifiers(&[to_prove.clone()]);
+        pbl.find_temp_quantifiers(std::slice::from_ref(&to_prove));
 
         let to_prove = to_prove.as_smt(pbl).unwrap();
         let prelude = pbl.get_smt_prelude();

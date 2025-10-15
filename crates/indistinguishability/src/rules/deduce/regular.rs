@@ -2,6 +2,7 @@ use egg::Pattern;
 use golgge::PrologRule;
 use itertools::izip;
 
+use crate::problem::{PRule, RcRule};
 use crate::rules::deduce::GetDeduce;
 use crate::terms::{Function, RecFOFormula};
 use crate::{Lang, Problem, fresh, rexp};
@@ -15,11 +16,12 @@ use crate::{Lang, Problem, fresh, rexp};
 /// ```
 ///
 /// for all "regular" `f`s
-pub fn mk_rules(pbl: &Problem) -> impl Iterator<Item = PrologRule<Lang>> + use<'_> {
+pub fn mk_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> + use<'_> {
     pbl.functions()
         .iter_current()
         .filter(|x| should_process_normaly(x))
         .map(mk_deduce_rule)
+        .map(|x| x.into_mrc())
 }
 
 fn should_process_normaly(f: &Function) -> bool {

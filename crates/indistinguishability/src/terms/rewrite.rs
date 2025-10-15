@@ -1,7 +1,6 @@
 use std::borrow::Cow;
 
 use bon::{Builder, builder};
-use itertools::Itertools;
 use serde::Serialize;
 use steel::rvals::Result as SResult;
 use steel::steel_vm::register_fn::RegisterFn;

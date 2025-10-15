@@ -220,7 +220,7 @@ fn mk_rule_neq_k(
 /// **NB**: there is no distinction between `exec` and `frame`, they both search
 /// everywhere
 fn mk_rule_exec(
-    prf @ PRF {
+    PRF {
         search_bool: search,
         search_trigger,
         ..
@@ -241,7 +241,7 @@ fn mk_rule_exec(
 ///  m, k ||> frame(p)@t
 /// ```
 fn mk_rule_frame(
-    prf @ PRF {
+    PRF {
         search_bitstring: search,
         search_trigger,
         ..
@@ -266,14 +266,6 @@ pub struct Search {
 }
 
 impl Search {
-    pub fn clone_m(&self) -> RecFOFormula {
-        self.m.clone()
-    }
-
-    pub fn clone_k(&self) -> RecFOFormula {
-        self.k.clone()
-    }
-
     #[inline]
     fn prf<'a>(&self, pbl: &'a Problem) -> &'a PRF {
         pbl.cryptography()[self.prf_idx].as_prf().unwrap()
@@ -335,7 +327,7 @@ impl crate::rules::utils::SyntaxSearcher for Search {
         args: &[RecFOFormula],
     ) -> ControlFlow<()> {
         let Self { m, k, .. } = self;
-        let mut args = args.into_iter();
+        let mut args = args.iter();
         if fun == &NONCE {
             tr!("found key!");
             let arg = args.next().expect("NONCE needs a parameter");
@@ -357,7 +349,7 @@ impl crate::rules::utils::SyntaxSearcher for Search {
                 self.inner_search_formula(pbl, &builder, k2.clone());
             }
         } else {
-            assert!(!self.is_instance(pbl, &fun));
+            assert!(!self.is_instance(pbl, fun));
             unreachable!()
         }
         ControlFlow::Break(())

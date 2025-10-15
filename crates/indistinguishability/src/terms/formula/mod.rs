@@ -140,8 +140,7 @@ pub(crate) mod sort_list {
         match egraph[f]
             .nodes
             .iter()
-            .filter(|f| f.head == NIL || f.head == CONS)
-            .next()?
+            .find(|f| f.head == NIL || f.head == CONS)?
         {
             Lang { head, .. } if head == &NIL => Some(()),
             Lang { head, args } if head == &CONS => {

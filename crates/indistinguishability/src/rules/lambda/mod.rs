@@ -16,7 +16,7 @@ static S: Function = LAMBDA_S.const_clone();
 static O: Function = LAMBDA_O.const_clone();
 
 pub fn mk_rewrites<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = Rewrite<Lang, N>> {
-    chain![mk_base_rw::<N>(), mk_s_rw::<N>(pbl),]
+    chain![mk_base_rw::<N>(), mk_s_rw::<N>(pbl), mk_let_rw::<N>(pbl)]
 }
 
 fn mk_base_rw<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>> {

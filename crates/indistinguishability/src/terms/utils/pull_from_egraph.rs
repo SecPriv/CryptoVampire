@@ -3,7 +3,6 @@ use std::collections::VecDeque;
 use egg::{Analysis, EGraph, Id, Language, RecExpr};
 use itertools::Itertools;
 use log::error;
-use logic_formula::Formula;
 use utils::{econtinue_if, ereturn_if};
 
 use crate::Lang;

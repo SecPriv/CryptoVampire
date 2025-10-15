@@ -94,7 +94,7 @@ impl Variable {
     }
 
     pub const fn from_const(inner: &'static VariableInner) -> Self {
-        assert!(matches!(inner.count, None));
+        assert!(inner.count.is_none());
         Self(NonNull::from_ref(inner))
     }
 
@@ -120,13 +120,9 @@ impl Variable {
 
     #[must_use]
     pub fn has_smt_sort(&self) -> bool {
-        match self.get_sort() {
-            Some(Sort::Any) | None => false,
-            _ => true,
-        }
+        !matches!(self.get_sort(), Some(Sort::Any) | None)
     }
 
-    #[must_use]
     pub fn maybe_set_sort(&self, sort: Option<Sort>) -> Result<(), Option<Sort>> {
         match (sort, &self.as_inner_ref().sort) {
             (None, _) => Ok(()),
@@ -178,16 +174,14 @@ impl Variable {
 impl Clone for Variable {
     fn clone(&self) -> Self {
         let inner = self.as_inner_ref();
-        match &inner.count {
-            Some(c) => {
-                // same implementation as `Arc` hence why the `Rela`
-                let old_count = c.fetch_add(1, Relaxed);
+        if let Some(c) = &inner.count {
+            // same implementation as `Arc` hence why the `Rela`
+            let old_count = c.fetch_add(1, Relaxed);
 
-                if old_count >= usize::MAX {
-                    panic!("too many references for the counter")
-                }
+            #[allow(clippy::absurd_extreme_comparisons)] // clearer semantically
+            if old_count >= usize::MAX {
+                panic!("too many references for the counter")
             }
-            None => {}
         }
         Self(self.0)
     }

@@ -152,14 +152,6 @@ impl PRF {
         ]
     }
 
-    /// Generate the pattern to do the deep search
-    ///
-    /// use variables 0..=3
-    // fn search_trigger_pattern(&self) -> impl Iterator<Item = LangVar> {
-    //     let Self { search_trigger, .. } = self;
-    //     rexp!((search_trigger #0 #1 #2 #3)).into_iter()
-    // }
-
     pub fn index(&self) -> usize {
         self.index
     }
@@ -177,6 +169,7 @@ struct TopPrfRule {
 
     // for debuging
     kind: PrfKind,
+    #[allow(dead_code)]
     candidate_bitstring: Function,
 }
 
@@ -227,7 +220,6 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for TopPrfRule {
 
             egraph.add(fun.app_id([]))
         };
-        let subst_id = substs.eclass;
         substs
             .substs
             .into_iter()

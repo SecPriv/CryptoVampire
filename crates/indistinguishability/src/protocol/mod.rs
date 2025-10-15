@@ -1,7 +1,6 @@
 mod step;
 use std::fmt::Display;
 
-use egg::RecExpr;
 pub use step::Step;
 
 #[allow(clippy::module_inception)]
@@ -56,19 +55,3 @@ impl MacroKind {
         [Frame, Input, Cond, Msg, Exec]
     }
 }
-
-/// This is a shortcut for [join_recexprs]. It expects the childrens of `fun` to
-/// be `0..args.length()`.
-///
-/// [join_recexprs]: egg::Language::join_recexprs
-#[inline]
-fn apply_rec_exprs<L, Expr>(fun: &L, args: &[Expr]) -> RecExpr<L>
-where
-    L: egg::Language + Display,
-    Expr: AsRef<[L]>,
-{
-    fun.join_recexprs(|i| &args[usize::from(i)])
-}
-
-// #[cfg(test)]
-// pub mod test;

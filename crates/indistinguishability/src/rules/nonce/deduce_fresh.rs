@@ -56,7 +56,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FreshNonce {
         tr!("checking {query}");
         let pbl: &mut Problem = egraph.analysis.pbl_mut();
 
-        pbl.find_temp_quantifiers(&[query.clone()]);
+        pbl.find_temp_quantifiers(std::slice::from_ref(&query));
 
         let query = query.as_smt(pbl).unwrap();
         tr!("checking {query}");

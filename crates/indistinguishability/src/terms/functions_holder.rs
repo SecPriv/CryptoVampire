@@ -1,18 +1,11 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::ops::Deref;
 
-use itertools::{Itertools, chain};
+use itertools::chain;
 use log::trace;
-use steel::rvals::CustomType;
 
 use super::{BUILTINS, Function, PARSING_PAIRS};
 use crate::terms::Quantifier;
-
-/// The numbe of declared existential quantifiers
-///
-/// This is used to generate unique names
-// pub(crate) static QUANTIFIER_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 /// see [Self::valid] for the invariants
 #[derive(Debug, Default)]
@@ -52,12 +45,12 @@ impl FunctionCollection {
     }
 
     /// iterate over temporary and non temporary functions
-    pub fn iter_current<'a>(&'a self) -> impl Iterator<Item = &'a Function> {
+    pub fn iter_current(&self) -> impl Iterator<Item = &Function> {
         chain![&self.functions, &self.temporary_functions]
     }
 
     /// iterate over the constant quantifiers and the temporary ones
-    pub fn current_quantifiers<'a>(&'a self) -> impl Iterator<Item = &'a Quantifier> {
+    pub fn current_quantifiers(&self) -> impl Iterator<Item = &Quantifier> {
         chain![&self.quantifiers, &self.temporary_quantifiers]
     }
 
