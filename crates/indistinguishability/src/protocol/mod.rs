@@ -1,7 +1,7 @@
 mod step;
 use std::fmt::Display;
 
-use egg::{Id, RecExpr};
+use egg::RecExpr;
 pub use step::Step;
 
 #[allow(clippy::module_inception)]

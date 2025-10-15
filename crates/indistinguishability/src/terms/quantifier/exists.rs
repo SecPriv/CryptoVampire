@@ -1,20 +1,15 @@
 use std::collections::HashSet;
-use std::fmt::{Display, write};
-use std::rc::Rc;
+use std::fmt::Display;
 
 use bon::{Builder, bon, builder};
 use egg::PatternAst;
 use itertools::{Itertools, chain};
 use logic_formula::Formula;
-use utils::{ereturn_if, implvec};
+use utils::ereturn_if;
 
-use crate::rules::utils::fresh;
 use crate::terms::quantifier::default_valid;
-use crate::terms::{
-    Function, FunctionCollection, FunctionFlags, InnerFunction, Quantifier, QuantifierIndex,
-    QuantifierT,  RecFOFormula, Signature, Sort, Variable,
-};
-use crate::{Lang, LangVar, Problem};
+use crate::terms::{Function, QuantifierIndex, QuantifierT, RecFOFormula, Sort, Variable};
+use crate::{Lang, Problem};
 
 /// For now [Exists] are never temporary
 static EXISTS_TEMPORARY: bool = false;
@@ -261,13 +256,10 @@ impl Display for Exists {
         let skolems = skolems.iter().join(", ");
         let freshes = freshes.iter().join(", ");
 
-        write!(
-            f,
-            "∃{tlf}({vars}) {bound_vars}@({freshes}; {skolems})."
-        )?;
+        write!(f, "∃{tlf}({vars}) {bound_vars}@({freshes}; {skolems}).")?;
         match patt {
             Some(patt) => write!(f, " {patt}"),
-            None => write!(f, " ∅")
+            None => write!(f, " ∅"),
         }
     }
 }

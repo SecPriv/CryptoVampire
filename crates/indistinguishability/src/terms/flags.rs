@@ -50,7 +50,7 @@ bitflags! {
 
       /// This function is temporary and should be garabage collected as soon as
       /// possible.
-      /// 
+      ///
       /// This can be used for temporary quantifiers for instance.
       const TEMPORARY = 1 << 19;
   }

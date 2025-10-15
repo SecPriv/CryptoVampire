@@ -1,15 +1,14 @@
-use cryptovampire_smt::{Smt, SmtCons, SmtFormula, SortedVar};
-use egg::RecExpr;
+use cryptovampire_smt::{Smt, SmtCons, SmtFormula};
 use itertools::{Itertools, chain, izip};
 use utils::{dynamic_iter, ereturn_if};
 
 use crate::terms::{
-    ATT, AliasRewrite, BITE, EMPTY, Exists, FROM_BOOL, FindSuchThat, Function, HAPPENS, LEQ, LT,
+    ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, FindSuchThat, Function, HAPPENS, LEQ, LT,
     MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, PROJ_1, PROJ_2, Quantifier,
-    QuantifierT, RecFOFormula, Rewrite, SMT_ITE, SMT_SORT_LIST, Signature, Sort, TUPLE,
-    UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
+    QuantifierT, Rewrite, SMT_ITE, SMT_SORT_LIST, Signature, Sort, TUPLE, UNFOLD_COND, UNFOLD_EXEC,
+    UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
 };
-use crate::{MSmt, MSmtFormula, Problem, rexp, smt, vec_smt};
+use crate::{MSmt, MSmtFormula, Problem, smt, vec_smt};
 
 pub fn mk_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     chain![

@@ -2,8 +2,8 @@ use bon::Builder;
 use itertools::Itertools;
 
 use super::Step;
-use crate::{smt, MSmtFormula};
 use crate::terms::Function;
+use crate::{MSmtFormula, smt};
 #[derive(Debug, PartialEq, Eq, Clone, Builder)]
 pub struct Protocol {
     name: Function,

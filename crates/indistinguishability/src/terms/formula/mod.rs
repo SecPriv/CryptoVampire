@@ -1,11 +1,10 @@
-use std::borrow::Cow;
 use std::fmt::Display;
 
 use logic_formula::{Destructed, Formula};
 use serde::Serialize;
 use steel_derive::Steel;
 
-use crate::terms::{CONS, EXISTS, FIND_SUCH_THAT, Function, Sort, Variable};
+use crate::terms::{EXISTS, FIND_SUCH_THAT, Function, Variable};
 
 mod egg;
 // mod egg_like;
@@ -109,7 +108,7 @@ pub(crate) mod sort_list {
     use egg::{Analysis, EGraph, Id};
     use itertools::Itertools;
     use logic_formula::{Destructed, Formula};
-    use utils::{econtinue_if, econtinue_let};
+    use utils::econtinue_let;
 
     use crate::Lang;
     use crate::terms::{CONS, Function, NIL, Sort};
@@ -117,7 +116,7 @@ pub(crate) mod sort_list {
     fn inner<F>(f: F, sorts: &mut Vec<Sort>) -> Option<()>
     where
         F: Formula,
-        F::Fun: AsRef<Function>
+        F::Fun: AsRef<Function>,
     {
         let Destructed { head, args } = f.destruct();
 
@@ -174,7 +173,11 @@ pub(crate) mod sort_list {
     /// * `Some(Vec<Sort>)` - A vector of sorts extracted from the list.
     /// * `None` - If the input formula does not match the expected structure
     ///   (e.g., it's not a proper list or an element has no associated sort).
-    pub fn try_get<F>(f: F) -> Option<Vec<Sort>> where F: Formula, F::Fun: AsRef<Function>{
+    pub fn try_get<F>(f: F) -> Option<Vec<Sort>>
+    where
+        F: Formula,
+        F::Fun: AsRef<Function>,
+    {
         let mut sorts = vec![];
         inner(f, &mut sorts)?;
         Some(sorts)

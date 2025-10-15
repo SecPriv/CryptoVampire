@@ -2,8 +2,7 @@ use std::borrow::Cow;
 use std::rc::Rc;
 
 use bon::Builder;
-use cryptovampire_smt::{IntoSmt, SmtFormula};
-use egg::{Id, Pattern, Searcher, Var};
+use egg::{Id, Pattern, Searcher};
 use golgge::{Dependancy, Rule};
 use static_init::dynamic;
 use utils::ereturn_let;
@@ -12,9 +11,9 @@ use super::*;
 use crate::problem::PAnalysis;
 use crate::rules::utils::EgraphSearcher;
 use crate::rules::utils::fresh::RefFormulaBuilder;
-use crate::terms::{FRESH_NONCE, Variable};
+use crate::terms::FRESH_NONCE;
 use crate::vampire::runner::VampireExec;
-use crate::{Lang, Problem, fresh, rexp};
+use crate::{Lang, Problem, rexp};
 
 decl_vars!(const; NONCE_VAR, CONTENT, HYPOTHESIS);
 

@@ -1,14 +1,12 @@
-use std::borrow::Cow;
 use std::collections::VecDeque;
 
-use egg::{Analysis, EGraph, ENodeOrVar, Id, Language, PatternAst, RecExpr, Var, VarExposed};
-use itertools::{EitherOrBoth, Itertools, izip};
+use egg::{Analysis, EGraph, Id, Language, RecExpr};
+use itertools::Itertools;
 use log::error;
-use logic_formula::{Destructed, Formula, HeadSk};
-use utils::{econtinue_if, ereturn_if, implvec};
+use logic_formula::Formula;
+use utils::{econtinue_if, ereturn_if};
 
-use crate::terms::{Function, Sort};
-use crate::{Lang, LangVar};
+use crate::Lang;
 
 /// partial result for [pull_from_egraph]
 ///

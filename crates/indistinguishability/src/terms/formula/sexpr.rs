@@ -1,9 +1,9 @@
 use std::fmt::{Debug, Display};
 
 pub enum SExpr<'a> {
-  Atom(&'a dyn Display),
-  AtomDebug(&'a dyn Debug),
-  Group(Vec<Self>)
+    Atom(&'a dyn Display),
+    AtomDebug(&'a dyn Debug),
+    Group(Vec<Self>),
 }
 
 impl<'a> Display for SExpr<'a> {
@@ -12,25 +12,25 @@ impl<'a> Display for SExpr<'a> {
             SExpr::Atom(printer) => printer.fmt(f),
             SExpr::AtomDebug(printer) => printer.fmt(f),
             SExpr::Group(sexprs) => {
-              write!(f, "(")?;
-              for e in sexprs {
-                write!(f, "{e} ")?;
-              }
-              write!(f, ")")
-            },
+                write!(f, "(")?;
+                for e in sexprs {
+                    write!(f, "{e} ")?;
+                }
+                write!(f, ")")
+            }
         }
     }
 }
 
 pub struct DebugToDisplay<T>(T);
 
-impl<'a, T:Debug> Display for DebugToDisplay<&'a T> {
+impl<'a, T: Debug> Display for DebugToDisplay<&'a T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
     }
 }
 
-impl<'a, T:Debug> From<&'a T> for DebugToDisplay<&'a T> {
+impl<'a, T: Debug> From<&'a T> for DebugToDisplay<&'a T> {
     fn from(value: &'a T) -> Self {
         Self(value)
     }

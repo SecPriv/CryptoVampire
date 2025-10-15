@@ -2,8 +2,8 @@
 //! blog](https://web.archive.org/web/20240814030029/https://pavpanchekha.com/blog/egg-bindings.html#expand)
 //! for more info
 
-use egg::{Analysis, ENodeOrVar, Pattern, Rewrite, Var};
-use itertools::{Itertools, chain};
+use egg::{Analysis, Pattern, Rewrite};
+use itertools::chain;
 
 use crate::terms::{
     ADD_S, CONS, EXISTS, FIND_SUCH_THAT, Function, LAMBDA_LET, LAMBDA_O, LAMBDA_S, NIL,

@@ -1,5 +1,3 @@
-use egg::{Symbol, Var};
-
 use crate::{Lang, LangVar};
 
 // =========================================================
@@ -107,9 +105,11 @@ pub(crate) mod flags;
 pub use flags::FunctionFlags;
 
 mod formula;
-pub(crate) use formula::InnerLang;
-pub use formula::{FOBinder, RecFOFormula, FormulaLike, substitution_utils, RecFOFormulaQuant, RecFOFormulaQuantRef};
-pub(crate) use formula::QuantifierTranslator;
+pub use formula::{
+    FOBinder, FormulaLike, RecFOFormula, RecFOFormulaQuant, RecFOFormulaQuantRef,
+    substitution_utils,
+};
+pub(crate) use formula::{InnerLang, QuantifierTranslator};
 
 pub mod utils;
 

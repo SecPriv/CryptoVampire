@@ -1,11 +1,6 @@
-use std::borrow::Cow;
-use std::collections::VecDeque;
-
 use itertools::{EitherOrBoth, Itertools, izip};
-use log::error;
 use logic_formula::{Destructed, Formula, HeadSk};
 
-use crate::LangVar;
 use crate::terms::{Function, Sort};
 use crate::utils::LightClone;
 

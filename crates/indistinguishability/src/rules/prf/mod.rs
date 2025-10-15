@@ -1,16 +1,15 @@
 use std::borrow::Cow;
 
-use egg::{Id, Language, Pattern, RecExpr, Searcher, Var};
+use egg::{Id, Language, Pattern, Searcher, Var};
 use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain};
-use log::{Log, log_enabled};
 use utils::ereturn_let;
 
 use crate::problem::{PAnalysis, PRule};
 use crate::terms::{
-    Function, FunctionFlags, RecFOFormula, Sort, EQUIV, FALSE, NONCE, SUBSTITUTION, SUBSTITUTION_RULE, TRUE
+    EQUIV, Function, FunctionFlags, NONCE, RecFOFormula, SUBSTITUTION, SUBSTITUTION_RULE, Sort,
 };
-use crate::{Lang, LangVar, Problem, mk_signature, rexp};
+use crate::{Lang, Problem, mk_signature, rexp};
 
 #[cfg(test)]
 pub mod test;

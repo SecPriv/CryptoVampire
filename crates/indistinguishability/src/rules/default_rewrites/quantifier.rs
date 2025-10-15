@@ -1,25 +1,18 @@
-use egg::{Analysis, Pattern, Rewrite, SymbolLang};
-use itertools::{Itertools, chain};
-use log::trace;
-use utils::dynamic_iter;
+use egg::{Analysis, Rewrite};
 
-use crate::rules::var_as_recexpr;
-use crate::terms::{
-    AliasRewrite, BITE, Exists, FindSuchThat, Function, MITE, EXISTS, FIND_SUCH_THAT, NIL, Quantifier, QuantifierT,
-};
+use crate::terms::{EXISTS, FIND_SUCH_THAT, MITE, NIL};
 use crate::{Lang, Problem};
 
 pub fn mk_rewrites<N: Analysis<Lang>>(
     pbl: &Problem,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
     decl_vars![a, b, c];
-    
 
     mk_many_rewrites! {
         ["empty_exists"] (EXISTS NIL #a) => false.
         ["empty_find"] (FIND_SUCH_THAT NIL #a #b #c) => (MITE #a #b #c).
-    }.into_iter()
-
+    }
+    .into_iter()
 
     // dynamic_iter!(Tmp; A:A, B:B);
     // pbl.functions()

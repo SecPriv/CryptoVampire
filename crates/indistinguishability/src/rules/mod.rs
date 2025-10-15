@@ -83,9 +83,9 @@ macro_rules! mk_many_prolog {
     ) => {
         vec![
             $(
-                mk_prolog!($name; $($var),*: $pre 
-                    $(:-! $($post),+)? 
-                    $(:- $($post2),+)? 
+                mk_prolog!($name; $($var),*: $pre
+                    $(:-! $($post),+)?
+                    $(:- $($post2),+)?
                 )
             ),*
         ]

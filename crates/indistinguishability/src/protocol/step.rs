@@ -1,17 +1,16 @@
 use std::fmt::Display;
 
 use bon::bon;
-use cryptovampire_smt::{Smt, SortedVar};
-use egg::{Analysis, ENodeOrVar, Pattern, RecExpr, Rewrite};
-use itertools::{Itertools, chain, izip};
+use cryptovampire_smt::SortedVar;
+use egg::{Analysis, Pattern, Rewrite};
+use itertools::{Itertools, chain};
 use log::trace;
 use logic_formula::Formula;
 
-use super::MacroKind;
 use crate::terms::{
-    EMPTY, FormulaLike, Function, INIT, RecFOFormula, TRUE, UNFOLD_COND, UNFOLD_MSG, Variable,
+    EMPTY, FormulaLike, Function, INIT, RecFOFormula, UNFOLD_COND, UNFOLD_MSG, Variable,
 };
-use crate::{rexp, vec_smt, Lang, LangVar, MSmt, MSmtFormula, Problem};
+use crate::{Lang, MSmt, MSmtFormula, Problem, rexp, vec_smt};
 
 /// A step in protocol
 #[derive(Debug, PartialEq, Eq, Clone)]

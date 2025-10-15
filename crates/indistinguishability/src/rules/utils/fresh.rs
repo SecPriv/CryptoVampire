@@ -4,12 +4,9 @@ use std::mem::ManuallyDrop;
 use std::rc::{Rc, Weak};
 
 use bon::{Builder, bon, builder};
-use egg::Var;
-use itertools::chain;
-use logic_formula::Formula;
 use utils::{ereturn_if, ereturn_let};
 
-use crate::terms::{FOBinder, RecFOFormula, Sort, Variable};
+use crate::terms::{FOBinder, RecFOFormula, Variable};
 
 declare_trace!($"search");
 
@@ -65,8 +62,7 @@ impl Display for Mode {
 impl RefFormulaBuilder {
     #[builder(builder_type = RefFormulaBuilderBuilder)]
     pub fn new(
-        #[builder(default)]
-        mode: Mode,
+        #[builder(default)] mode: Mode,
 
         parent: Option<&RefFormulaBuilder>,
 
@@ -81,8 +77,6 @@ impl RefFormulaBuilder {
                 .quantifier(quantifer)
                 .build()
         });
-
-        
 
         let builder = Self(Rc::new(RefCell::new(FormulaBuilder {
             parent: None,
@@ -251,10 +245,10 @@ impl FormulaBuilder {
                 let mut inner = match quantifier {
                     FOBinder::Forall => condition >> inner,
                     FOBinder::Exists => condition & inner,
-                    _ => todo!()
+                    _ => todo!(),
                 };
                 if !variables.is_empty() {
-                    inner = RecFOFormula::bind(quantifier, variables,  [inner])
+                    inner = RecFOFormula::bind(quantifier, variables, [inner])
                 }
                 inner
             }

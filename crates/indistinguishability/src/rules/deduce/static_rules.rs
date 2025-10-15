@@ -1,8 +1,7 @@
-use egg::{ENodeOrVar, Var};
 use golgge::PrologRule;
 use itertools::chain;
 
-use crate::{fresh, Lang};
+use crate::Lang;
 use crate::rules::deduce::GetDeduce;
 use crate::terms::{
     BIT_DEDUCE, BITE, BOOL_DEDUCE, EQUIV, FRESH_NONCE, HAPPENS, LEQ, MACRO_COND, MACRO_EXEC,
@@ -15,7 +14,9 @@ pub fn mk_rules() -> impl Iterator<Item = PrologRule<Lang>> {
     let deduce_b = &BOOL_DEDUCE;
     let b_ite = &BITE;
     let m_ite = &MITE;
-    decl_vars![t, t2, p1, p2, h1, h2, u, v, a, b, a1, b1, a2, b2, c1, c2, x, y];
+    decl_vars![
+        t, t2, p1, p2, h1, h2, u, v, a, b, a1, b1, a2, b2, c1, c2, x, y
+    ];
 
     let deduce_macro = [
         &MACRO_FRAME,

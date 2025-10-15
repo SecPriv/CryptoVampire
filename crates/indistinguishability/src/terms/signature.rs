@@ -1,5 +1,3 @@
-use cryptovampire_smt::{SortedVar};
-use itertools::izip;
 use serde::{Deserialize, Serialize};
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;

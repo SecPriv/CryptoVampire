@@ -1,13 +1,10 @@
-use egg::{Analysis, Pattern, Rewrite, SymbolLang};
-use itertools::{Itertools, chain};
+use egg::{Analysis, Pattern, Rewrite};
+use itertools::chain;
 use log::trace;
-use utils::dynamic_iter;
 
 // use super::parse::{PatternsAst, clean_input, convert_fun};
 // use super::var_as_recexpr;
-use crate::terms::{
-    AliasRewrite, BITE, Exists, FindSuchThat, Function, MITE, Quantifier, QuantifierT,
-};
+use crate::terms::{AliasRewrite, Function};
 use crate::{Lang, Problem, rexp};
 
 pub fn mk_rewrites<N: Analysis<Lang>>(

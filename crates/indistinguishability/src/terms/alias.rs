@@ -4,9 +4,8 @@ use steel::rvals::{FromSteelVal, IntoSteelVal, Result as SResult};
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
-use super::CowPattern;
 use crate::input::Registerable;
-use crate::terms::{RecFOFormula, Sort, Variable};
+use crate::terms::{RecFOFormula, Variable};
 
 /// When the fonction is an alias
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]

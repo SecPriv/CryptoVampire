@@ -2,8 +2,8 @@ use std::borrow::Cow;
 use std::fmt::{Debug, Display};
 use std::ops::{BitAnd, BitOr, Not, Shr};
 
-use bon::{Builder, bon, builder};
-use cryptovampire_smt::{IntoSmt, SmtFormula, SmtHead, SmtQuantifier, SortedVar};
+use bon::Builder;
+use cryptovampire_smt::{SmtFormula, SmtHead};
 use egg::{Analysis, EGraph, Id, Language, Pattern, PatternAst, RecExpr};
 use itertools::{Itertools, chain, izip};
 use logic_formula::{Destructed, Formula, HeadSk};
@@ -12,8 +12,6 @@ use rpds::HashTrieSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::Serialize;
 use smallvec::SmallVec;
-use steel::core::labels::fresh;
-use steel::parser::kernel;
 use steel::rvals::IntoSteelVal;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
@@ -23,13 +21,13 @@ use super::{FOBinder, RecFOFormulaQuant};
 use crate::input::Registerable;
 use crate::terms::formula::egg::EggLanguage;
 use crate::terms::formula::sexpr::SExpr;
-use crate::terms::formula::{FormulaLike, RecFOFormulaQuantRef, sort_list};
+use crate::terms::formula::{RecFOFormulaQuantRef, sort_list};
 use crate::terms::utils::pull_from_egraph;
 use crate::terms::{
     AND, BITE, CONS, EQ, FALSE, Function, IMPLIES, LAMBDA_O, LAMBDA_S, NIL, NOT, OR, Sort, TRUE,
     Variable,
 };
-use crate::{Lang, LangVar, MSmtFormula, MSmtParam, fresh};
+use crate::{Lang, LangVar, MSmtFormula, fresh};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Steel, Serialize)]
 pub enum RecFOFormula {
@@ -83,7 +81,7 @@ impl RecFOFormula {
                     _ => {None}
                 }}
             }
-            RecFOFormula::Quantifier { arg, .. } => todo!(),
+            RecFOFormula::Quantifier { .. } => todo!(),
             _ => None,
         }
     }
@@ -739,7 +737,11 @@ impl RecFOFormula {
         MSmtFormula::try_from(self.as_pre_smt().translator(pbl).build()).ok()
     }
 
-    pub fn try_from_subts<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, subst: &egg::Subst, var: &Variable) -> Option<Self> {
+    pub fn try_from_subts<N: Analysis<Lang>>(
+        egraph: &EGraph<Lang, N>,
+        subst: &egg::Subst,
+        var: &Variable,
+    ) -> Option<Self> {
         Self::try_from_id(egraph, *subst.get(var.as_egg())?)
     }
 }

@@ -5,20 +5,18 @@
 //! ```
 
 use std::borrow::Cow;
+use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
-use std::collections::{HashSet, VecDeque};
-use std::fmt::format;
-use std::mem;
 use std::rc::Rc;
 
-use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr, Searcher, Var};
+use egg::{Analysis, EGraph, Id, Language, Pattern, Searcher, Var};
 use golgge::{Dependancy, Rule};
 use indexmap::IndexMap;
 use itertools::{Itertools, izip};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 use static_init::dynamic;
+use utils::ereturn_let;
 use utils::transposer::VecTranspose;
-use utils::{econtinue_let, ereturn_let};
 
 use crate::problem::PAnalysis;
 // use crate::rules::base_rules::substitution;

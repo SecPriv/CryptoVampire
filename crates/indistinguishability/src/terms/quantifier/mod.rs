@@ -1,7 +1,5 @@
-use std::collections::HashSet;
-
 pub use exists::*;
-use itertools::{chain, izip};
+use itertools::chain;
 use utils::{ereturn_if, match_as_trait};
 
 use crate::terms::{Function, QuantifierIndex, RecFOFormula, Sort, Variable};
@@ -82,7 +80,9 @@ pub trait QuantifierT: Eq + Sized {
         self.top_level_function().get_quantifier_index().unwrap()
     }
 
-    fn appplied_skolens<'a>(&'a self) -> impl Iterator<Item = RecFOFormula> + Clone + use<'a, Self> {
+    fn appplied_skolens<'a>(
+        &'a self,
+    ) -> impl Iterator<Item = RecFOFormula> + Clone + use<'a, Self> {
         let args = self.cvars().iter().cloned().map(|v| RecFOFormula::Var(v));
         self.skolems()
             .iter()

@@ -1,21 +1,17 @@
 // QUESTION: Should we cross reference existential quantifiers?
-use std::ops::Deref;
 
 use FOBinder::{Exists, FindSuchThat};
 use QuantifierKindRule::{BothSides, OneSide};
 use Side::{Left, Right};
-use egg::{ENodeOrVar, Id, Pattern, Searcher, Var};
-use golgge::{Dependancy, PrologRule, Rule};
-use itertools::{Itertools, chain, izip};
-use rustc_hash::FxHashMap;
-use seq_macro::seq;
+use egg::{Id, Pattern, Searcher};
+use golgge::{Dependancy, Rule};
+use itertools::{Itertools, izip};
 use utils::{ebreak_if, ebreak_let, ereturn_let};
 
 use crate::problem::{PAnalysis, PRule, RcRule};
-use crate::rules::deduce::{self, GetDeduce};
 use crate::terms::{
-    BIT_DEDUCE, BOOL_DEDUCE, CONS, EXISTS, FIND_SUCH_THAT, FOBinder, INDEX_SORT, LAMBDA_LET,
-    Quantifier, QuantifierT, Sort, Variable,
+    BIT_DEDUCE, BOOL_DEDUCE, CONS, EXISTS, FIND_SUCH_THAT, FOBinder, INDEX_SORT, LAMBDA_LET, Sort,
+    Variable,
 };
 use crate::{Lang, Problem, fresh, rexp};
 

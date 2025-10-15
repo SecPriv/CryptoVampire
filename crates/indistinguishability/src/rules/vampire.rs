@@ -2,8 +2,8 @@ use std::borrow::Cow;
 use std::rc::Rc;
 
 use bon::Builder;
-use cryptovampire_smt::{IntoSmt, Smt};
-use egg::{Pattern, RecExpr, Searcher, Var};
+use cryptovampire_smt::Smt;
+use egg::{Pattern, Searcher, Var};
 use golgge::{Dependancy, Rule};
 use itertools::chain;
 use static_init::dynamic;
@@ -41,7 +41,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for VampireRule {
 
         let egraph = prgm.egraph_mut();
 
-        let Some(to_prove) = RecFOFormula::try_from_subts(egraph, s, X)  else {
+        let Some(to_prove) = RecFOFormula::try_from_subts(egraph, s, X) else {
             panic!("aaaaa");
             #[allow(unreachable_code)]
             return golgge::Dependancy::impossible();

@@ -4,19 +4,13 @@ use std::ops::ControlFlow;
 use bon::bon;
 use egg::{Analysis, EGraph, Id};
 use itertools::Itertools;
-use utils::{ereturn_if, implvec};
+use utils::implvec;
 
-use super::*;
-use crate::problem::PAnalysis;
-use crate::protocol::Step;
 use crate::rules::nonce::searcher::nonce_builder::SetContent;
+use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::rules::utils::{EgraphSearcher, SyntaxSearcher};
-use crate::rules::utils::fresh::{Mode, RefFormulaBuilder};
-use crate::terms::utils::pull_from_egraph;
-use crate::terms::{
-    FOBinder, Function, RecFOFormula, BITE, EQ, HAPPENS, LT, MACRO_FRAME, MITE, NONCE, PRED
-};
-use crate::{rexp, Lang, LangVar, Problem};
+use crate::terms::{Function, NONCE, RecFOFormula};
+use crate::{Lang, Problem, rexp};
 
 #[derive(Debug, Clone)]
 pub struct Nonce {
@@ -215,8 +209,8 @@ impl SyntaxSearcher for Nonce {
         _: &Problem,
         builder: &RefFormulaBuilder,
         fun: &Function,
-        args:  &[RecFOFormula],
-    ) -> ControlFlow<()>{
+        args: &[RecFOFormula],
+    ) -> ControlFlow<()> {
         assert_eq!(fun, &NONCE);
         tr!("found nonce!");
         let arg = args.into_iter().next().expect("NONCE need a parameter");

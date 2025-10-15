@@ -2,23 +2,21 @@ use std::borrow::Cow;
 use std::ops::ControlFlow;
 use std::rc::Rc;
 
-use cryptovampire_smt::{IntoSmt, SmtFormula};
-use egg::{Pattern, PatternAst, Searcher, Var};
+use egg::{Pattern, Searcher};
 use golgge::{Dependancy, PrologRule, Rule};
 use itertools::{Itertools, chain, izip};
-use utils::{ereturn_if, ereturn_let, implvec};
+use utils::{ereturn_if, ereturn_let};
 
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::protocol::{Protocol, Step};
 use crate::rules::PRF;
 use crate::rules::utils::SyntaxSearcher;
-use crate::rules::utils::fresh::{Mode, RefFormulaBuilder};
+use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::terms::{
-    EQ, FAIL, FOBinder, Function, HAPPENS, LT, MACRO_EXEC, MACRO_FRAME, NONCE, RecFOFormula, Sort,
-    VAMPIRE,
+    FAIL, Function, HAPPENS, LT, MACRO_EXEC, MACRO_FRAME, NONCE, RecFOFormula, Sort, VAMPIRE,
 };
 use crate::vampire::runner::VampireExec;
-use crate::{Lang, LangVar, Problem, fresh, rexp};
+use crate::{Lang, Problem, fresh, rexp};
 
 declare_trace!($"search_prf");
 
@@ -400,9 +398,8 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfVampireRule {
                 .search_eclass(egraph, goal), Dependancy::impossible());
 
         for subst in substs.substs {
-            let [m, k, time] = [M, K,  T].map(|x| 
-                RecFOFormula::try_from_subts(egraph, &subst, x).unwrap()
-            );
+            let [m, k, time] =
+                [M, K, T].map(|x| RecFOFormula::try_from_subts(egraph, &subst, x).unwrap());
             let pbl = egraph.analysis.pbl();
             let search = Search {
                 prf_idx: self.prf,

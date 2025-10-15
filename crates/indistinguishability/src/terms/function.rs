@@ -4,18 +4,21 @@ use std::ops::Deref;
 
 use cryptovampire_smt::SmtHead;
 use egg::{Id, Language, PatternAst, RecExpr};
+use quarck::CowArc;
 use serde::Serialize;
 use steel::rvals::IntoSteelVal;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
-use quarck::CowArc;
 use utils::{ereturn_if, implvec, match_eq};
 
 use crate::input::Registerable;
 use crate::input::shared_cryptography::ShrCrypto;
-use crate::protocol::{MacroKind};
+use crate::protocol::MacroKind;
 use crate::terms::{
-    builtin, Alias, Exists, FOBinder, FunctionCollection, FunctionFlags, Quantifier, QuantifierIndex, QuantifierT, RecFOFormula, Signature, Sort, BUILTINS, EXISTS, HAPPENS, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, NOT, TRUE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,  FIND_SUCH_THAT
+    Alias, BUILTINS, EXISTS, Exists, FIND_SUCH_THAT, FOBinder, FunctionCollection, FunctionFlags,
+    MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, NOT, Quantifier, QuantifierIndex,
+    QuantifierT, RecFOFormula, Signature, Sort, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME,
+    UNFOLD_INPUT, UNFOLD_MSG, builtin,
 };
 use crate::utils::LightClone;
 use crate::{Lang, LangVar};
@@ -127,12 +130,10 @@ impl Function {
     }
 
     pub fn get_quantifier_index(&self) -> Option<QuantifierIndex> {
-        self.has_quantifier_idx().then_some(
-            QuantifierIndex {
-                temporary: self.is_temporary(),
-                index: self.quantifier_idx,
-            }
-        )
+        self.has_quantifier_idx().then_some(QuantifierIndex {
+            temporary: self.is_temporary(),
+            index: self.quantifier_idx,
+        })
     }
 
     pub fn get_quantifier<'a>(&self, functions: &'a FunctionCollection) -> Option<&'a Quantifier> {
@@ -184,10 +185,7 @@ impl Function {
         Lang::new(self.clone(), ids)
     }
 
-    pub fn app<E: AsRef<[Lang]>>(
-        &self,
-        ids: &[E],
-    ) -> RecExpr<Lang> {
+    pub fn app<E: AsRef<[Lang]>>(&self, ids: &[E]) -> RecExpr<Lang> {
         let head = self.app_id((0..ids.len()).map(Id::from));
         head.join_recexprs(|i| &ids[usize::from(i)])
     }
@@ -284,7 +282,7 @@ impl Function {
         self.is_nonce() || self.is_protocol()
     }
 
-    is_fun!(is_prolog_only; PROLOG_ONLY; 
+    is_fun!(is_prolog_only; PROLOG_ONLY;
             "This function should appear outside of prolog (e.g., doesn't make sense in smt)");
     is_fun!(is_if_then_else; IF_THEN_ELSE);
     is_fun!(is_out_of_term_algebra; SMT_ONLY| PROLOG_ONLY);

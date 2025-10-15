@@ -1,11 +1,10 @@
-use egg::{Pattern, RecExpr, Var};
+use egg::Pattern;
 use golgge::PrologRule;
-use itertools::{Itertools, izip};
+use itertools::izip;
 
 use crate::rules::deduce::GetDeduce;
-use crate::rules::var_as_recexpr;
-use crate::terms::{Function, RecFOFormula, Sort};
-use crate::{Lang, LangVar, Problem, fresh, rexp};
+use crate::terms::{Function, RecFOFormula};
+use crate::{Lang, Problem, fresh, rexp};
 
 /// Generate the base deduce rules:
 ///

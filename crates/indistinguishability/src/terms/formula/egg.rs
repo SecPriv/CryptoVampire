@@ -1,16 +1,12 @@
 use std::fmt::Display;
-use std::rc::Rc;
 
-use egg::{ENodeOrVar, Id, Language, RecExpr, Var};
-use itertools::Itertools;
-use logic_formula::{Destructed, Formula, Head, HeadSk};
+use egg::{ENodeOrVar, Id, Language};
+use logic_formula::Formula;
 use serde::Serialize;
 use smallvec::SmallVec;
 use utils::implvec;
 
-use crate::LangVar;
-use crate::terms::formula::RecFOFormulaQuant;
-use crate::terms::{FOBinder, Function, Sort, Variable, CONS, NIL};
+use crate::terms::{Function, Variable};
 
 const SIZE: usize = 3;
 
@@ -39,7 +35,6 @@ impl InnerLang {
             args: args.into_iter().collect(),
         }
     }
-
 }
 
 impl Language for InnerLang {
@@ -70,9 +65,9 @@ impl Display for InnerLang {
 
 trait Sealed {}
 
-pub trait EggLanguage : Sealed + Sealed {
+pub trait EggLanguage: Sealed + Sealed {
     fn mk_fun_application(head: Function, args: implvec!(Id)) -> Self;
-    fn mk_variable(var:&Variable) -> Self;
+    fn mk_variable(var: &Variable) -> Self;
 }
 
 impl Sealed for crate::Lang {}
@@ -83,7 +78,7 @@ impl EggLanguage for crate::Lang {
         head.app_id(args)
     }
 
-    fn mk_variable(var:&Variable) -> Self {
+    fn mk_variable(var: &Variable) -> Self {
         unimplemented!()
     }
 }
@@ -94,7 +89,7 @@ impl EggLanguage for crate::LangVar {
         ENodeOrVar::ENode(head.app_id(args))
     }
 
-    fn mk_variable(var:&Variable) -> Self {
+    fn mk_variable(var: &Variable) -> Self {
         var.as_lang_var()
     }
 }

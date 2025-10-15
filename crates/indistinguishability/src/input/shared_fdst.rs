@@ -1,5 +1,4 @@
 use std::cell::{Ref, RefMut};
-use std::ops::Deref;
 
 use itertools::Itertools;
 use steel::steel_vm::register_fn::RegisterFn;

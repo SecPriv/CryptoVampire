@@ -1,17 +1,13 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::ops::Deref;
-use std::rc::Rc;
-use std::sync::atomic::AtomicUsize;
 
-use egg::Var;
 use itertools::{Itertools, chain};
 use log::trace;
 use steel::rvals::CustomType;
-use utils::{ereturn_if, implvec};
 
-use super::{BUILTINS, Exists, Function, FunctionFlags, PARSING_PAIRS};
-use crate::terms::{InnerFunction, Quantifier, Signature, Sort, function};
+use super::{BUILTINS, Function, PARSING_PAIRS};
+use crate::terms::Quantifier;
 
 /// The numbe of declared existential quantifiers
 ///

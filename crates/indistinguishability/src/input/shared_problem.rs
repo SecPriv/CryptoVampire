@@ -2,7 +2,6 @@ use std::cell::{Ref, RefCell, RefMut};
 use std::ops::Deref;
 use std::rc::Rc;
 
-use cryptovampire_smt::IntoSmt;
 use steel::SteelErr;
 use steel::rerrs::ErrorKind;
 use steel::rvals::Result as SResult;

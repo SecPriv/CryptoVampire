@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::collections::HashSet;
 use std::fmt::Debug;
 use std::num::NonZeroUsize;
 use std::rc::Rc;
@@ -22,13 +21,12 @@ use crate::rules::{FreshNonce, VampireRule, mk_default_prolog_rules, mk_default_
 use crate::terms::{
     Alias, CryptographicAssumption, EMPTY, EQUIV, FOBinder, FindSuchThat, Function,
     FunctionCollection, FunctionFlags, HAPPENS, INIT, InnerFunction, MACRO_FRAME, PRED,
-    QuantifierIndex, QuantifierT, QuantifierTranslator, RecFOFormula, Rewrite, Signature, Sort,
-    TRUE, UNFOLD_MSG,
+    QuantifierT, QuantifierTranslator, RecFOFormula, Rewrite, Signature, Sort, TRUE, UNFOLD_MSG,
 };
 use crate::utils::fresh_name;
 use crate::vampire::mk_prelude;
 use crate::vampire::runner::VampireExec;
-use crate::{mk_signature, rexp, smt, Configuration, Lang, MSmt};
+use crate::{Configuration, Lang, MSmt, mk_signature, rexp, smt};
 
 mod analysis;
 pub use analysis::{PAnalysis, PRule, RcRule};

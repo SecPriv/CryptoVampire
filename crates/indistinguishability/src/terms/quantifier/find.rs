@@ -1,19 +1,17 @@
 use std::collections::HashSet;
-use std::fmt::{Display, write};
+use std::fmt::Display;
 use std::rc::Rc;
 
 use bon::{Builder, bon, builder};
 use itertools::{Itertools, chain};
 use logic_formula::Formula;
-use utils::{ereturn_if, implvec};
+use utils::ereturn_if;
 
-use crate::rules::utils::fresh;
 use crate::terms::quantifier::default_valid;
 use crate::terms::{
-    FIND_SUCH_THAT, Function, FunctionCollection, FunctionFlags, InnerFunction, Quantifier,
-    QuantifierIndex, QuantifierT, RecFOFormula, Signature, Sort, Variable,
+    Function, FunctionFlags, Quantifier, QuantifierIndex, QuantifierT, RecFOFormula, Sort, Variable,
 };
-use crate::{Lang, LangVar, Problem, fresh};
+use crate::{Problem, fresh};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Builder)]
 #[builder(builder_type = FindSuchThatBuilder0)]

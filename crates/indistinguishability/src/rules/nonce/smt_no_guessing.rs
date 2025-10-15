@@ -1,16 +1,12 @@
-use cryptovampire_smt::{IntoSmt, SortedVar};
-use egg::Var;
-use itertools::{Itertools, chain};
+use itertools::chain;
 use log::trace;
 
-use crate::protocol::{Protocol, Step};
+use crate::protocol::Protocol;
 use crate::rules::nonce::Nonce;
-use crate::rules::utils::{EgraphSearcher, SyntaxSearcher};
+use crate::rules::utils::SyntaxSearcher;
 use crate::rules::utils::fresh::RefFormulaBuilder;
-use crate::terms::{
-    Function, RecFOFormula, Sort, HAPPENS, IS_INDEPENDANT_BITSTRING, LT, MACRO_FRAME, NONCE
-};
-use crate::{rexp, smt, MSmt, MSmtFormula, Problem};
+use crate::terms::{Function, IS_INDEPENDANT_BITSTRING, MACRO_FRAME, NONCE, RecFOFormula, Sort};
+use crate::{MSmt, MSmtFormula, Problem, rexp, smt};
 
 pub fn mk_no_guessing_smt<'a>(pbl: &'a Problem) -> impl Iterator<Item = MSmt> + use<'a> {
     chain![
@@ -58,9 +54,7 @@ fn mk_regular(fun: &Function) -> Option<MSmtFormula> {
 
     let bvars = chain![[x], vars.clone()].cloned();
     let vars = vars.cloned().map(MSmtFormula::Var);
-    Some(
-        smt!((forall #bvars (=> (and #premises*) (indep !x (fun #vars*))))),
-    )
+    Some(smt!((forall #bvars (=> (and #premises*) (indep !x (fun #vars*))))))
 }
 
 // fn mk_buitin_smt() -> impl Iterator<Item = MSmtFormula> {
@@ -81,20 +75,26 @@ fn mk_smt_step<'a>(pbl: &'a Problem, ptcl: &'a Protocol) -> MSmtFormula {
     decl_vars!(x:Nonce, t:Time);
 
     // search
-    let nonce = Nonce::builder().content(RecFOFormula::Var(x.clone())).build();
+    let nonce = Nonce::builder()
+        .content(RecFOFormula::Var(x.clone()))
+        .build();
     let builder = RefFormulaBuilder::builder().build();
     nonce.search_frame(pbl, &builder, ptcl, &rexp!(#t));
 
-
     // build formula
-    let formula = builder.into_inner().unwrap().into_formula().as_smt(pbl).unwrap();
+    let formula = builder
+        .into_inner()
+        .unwrap()
+        .into_formula()
+        .as_smt(pbl)
+        .unwrap();
     let indep_m = get_is_independant(Sort::Bitstring).unwrap();
     let p = ptcl.name();
     let ret = smt!((forall #([x.clone(), t.clone()])
-            (=> #formula (and
-                (indep_m !x (MACRO_FRAME !t p))
-                // (indep_b #x (MACRO_EXEC #t p))
-            ))));
+    (=> #formula (and
+        (indep_m !x (MACRO_FRAME !t p))
+        // (indep_b #x (MACRO_EXEC #t p))
+    ))));
 
     // return
     trace!("no guessing ptcl:\n{ret}");

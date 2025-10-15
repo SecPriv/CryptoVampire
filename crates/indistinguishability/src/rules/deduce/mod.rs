@@ -1,11 +1,8 @@
-use egg::{ENodeOrVar, Var};
-use golgge::PrologRule;
 use itertools::chain;
-use utils::implvec;
 
+use crate::Problem;
 use crate::problem::{PRule, RcRule};
 use crate::terms::{BIT_DEDUCE, BOOL_DEDUCE, Function, Sort};
-use crate::{Lang, Problem};
 
 mod quantifier;
 mod regular;
@@ -16,7 +13,8 @@ pub fn mk_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> + use<'_> {
       regular::mk_rules(pbl),
     //   quantifier::mk_rules(pbl),
       static_rules::mk_rules(),
-    }.map(|x| x.into_mrc())
+    }
+    .map(|x| x.into_mrc())
 }
 
 trait GetDeduce {

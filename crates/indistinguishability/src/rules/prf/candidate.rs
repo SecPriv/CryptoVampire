@@ -1,4 +1,3 @@
-use egg::{ENodeOrVar, Id};
 use itertools::{Itertools, chain};
 
 use crate::rules::PRF;

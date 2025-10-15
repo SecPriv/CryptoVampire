@@ -7,9 +7,8 @@ use steel::rvals::Result as SResult;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
-use crate::LangVar;
 use crate::input::Registerable;
-use crate::terms::{CowPattern, RecFOFormula, Sort, Variable};
+use crate::terms::{RecFOFormula, Variable};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Builder, Steel)]
 pub struct Rewrite {

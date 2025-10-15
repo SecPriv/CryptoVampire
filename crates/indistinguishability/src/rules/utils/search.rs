@@ -1,23 +1,22 @@
 use std::borrow::Cow;
 use std::ops::ControlFlow;
 
-use egg::{EGraph, Id, RecExpr, Var, VarExposed};
+use egg::{EGraph, Id};
 use itertools::{Itertools, izip};
 use logic_formula::{Destructed, Formula, HeadSk};
 use rustc_hash::FxHashMap;
-use steel::parser::builder;
-use utils::{ereturn_cf, ereturn_if, ereturn_let, implvec};
+use utils::{ereturn_cf, ereturn_if, implvec};
 
 use crate::problem::PAnalysis;
 use crate::protocol::{Protocol, Step};
 use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::terms::substitution_utils::AlphaArgs;
 use crate::terms::{
-    Alias, AliasRewrite, BITE, EQ, Exists, FOBinder, FindSuchThat, FormulaLike, Function, HAPPENS,
+    Alias, AliasRewrite, BITE, Exists, FOBinder, FindSuchThat, FormulaLike, Function, HAPPENS,
     LAMBDA_S, LT, MACRO_COND, MACRO_FRAME, MACRO_MSG, MITE, PRED, Quantifier, QuantifierT,
     RecFOFormula, RecFOFormulaQuant, Sort, Variable,
 };
-use crate::{Lang, LangVar, Problem, fresh, rexp};
+use crate::{Lang, Problem, fresh, rexp};
 
 declare_trace!($"search");
 
@@ -270,9 +269,8 @@ pub trait SyntaxSearcher {
         );
     }
 
-
     /// search `frame_<ptcl>@<time>`,
-    /// 
+    ///
     /// NB: This doesn't try to unfold (so `time` can a variables)
     fn search_frame(
         &self,
@@ -299,7 +297,8 @@ pub trait SyntaxSearcher {
             };
 
             let builder = builder
-                .add_node().and()
+                .add_node()
+                .and()
                 .condition(condition)
                 .variables(vars.clone())
                 .forall()
@@ -401,7 +400,8 @@ pub trait EgraphSearcher: SyntaxSearcher {
             };
 
             let builder = builder
-                .add_node().and()
+                .add_node()
+                .and()
                 .condition(condition)
                 .variables(vars.clone())
                 .forall()

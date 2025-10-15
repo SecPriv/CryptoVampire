@@ -1,11 +1,7 @@
 pub mod fresh;
 
 mod search;
-use egg::Var;
-pub use search::{SyntaxSearcher, EgraphSearcher,  default_is_special};
-
-use crate::LangVar;
-use crate::terms::Function;
+pub use search::{EgraphSearcher, SyntaxSearcher, default_is_special};
 
 // mod subst;
 // pub use subst::mk_subst_rw;

@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use cryptovampire_macros::mk_builtin_funs;
 
 use super::Sort::{self, *};
-use super::{Alias, AliasRewrite, CowPattern, Function, FunctionFlags, InnerFunction, Signature};
+use super::{Alias, AliasRewrite, Function, FunctionFlags, InnerFunction, Signature};
 use crate::rexp;
 
 /// helper to write const signatures
@@ -57,7 +57,7 @@ macro_rules! alias {
                 {
                     let variables = Cow::Borrowed(mk_static_slice!($crate::terms::Variable; [$($var.const_clone()),*]));
 
-                    
+
                     AliasRewrite {
                         from: Cow::Borrowed(mk_static_slice!($crate::terms::RecFOFormula; [$($args),*])),
                         to: $to,

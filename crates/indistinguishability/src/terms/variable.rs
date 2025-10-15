@@ -5,14 +5,14 @@ use std::sync::OnceLock;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
 
-use bon::{bon, builder};
+use bon::bon;
 use serde::Serialize;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
-use crate::{LangVar, MSmtFormula};
 use crate::input::Registerable;
 use crate::terms::Sort;
+use crate::{LangVar, MSmtFormula};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Steel)]
 pub struct Variable(NonNull<VariableInner>);
@@ -80,14 +80,14 @@ impl Variable {
     }
 
     /// Convertes to `egg` variables
-    /// 
+    ///
     /// (this is needed when iteracting with `egg` or `golgge`)
     pub fn as_egg(&self) -> egg::Var {
         egg::Var::from_usize(self.as_usize())
     }
 
     /// Convertes to `egg` variables in a `egg::Language`
-    /// 
+    ///
     /// (this is needed when iteracting with `egg` or `golgge`)
     pub fn as_lang_var(&self) -> LangVar {
         egg::ENodeOrVar::Var(self.as_egg())
@@ -235,8 +235,11 @@ impl cryptovampire_smt::SortedVar for Variable {
     fn sort_ref(&self) -> Cow<'_, Sort> {
         Cow::Owned(self.get_sort().expect("known sort"))
     }
-    
-    fn mk(sort: Self::Sort) -> Self where Self::Sort: Sized {
+
+    fn mk(sort: Self::Sort) -> Self
+    where
+        Self::Sort: Sized,
+    {
         crate::fresh!(sort)
     }
 }
@@ -314,17 +317,15 @@ mod test {
     use itertools::Itertools;
     use seq_macro::seq;
 
-    use crate::decl_vars;
-
     use super::Variable;
+    use crate::decl_vars;
 
     static V1: Variable = fresh!(const Bitstring);
     static V2: Variable = fresh!(const Bitstring);
     static V3: Variable = fresh!(const);
     static V4: Variable = fresh!(const);
 
-
-    static MANY : &[Variable; 100] = seq!(N in 0..100 { &[#(crate::fresh!(const),)*] });
+    static MANY: &[Variable; 100] = seq!(N in 0..100 { &[#(crate::fresh!(const),)*] });
 
     decl_vars!(const A, B, C, D:Nonce,);
 

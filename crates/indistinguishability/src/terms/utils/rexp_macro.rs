@@ -1,15 +1,9 @@
-use std::borrow::Cow;
-use std::collections::VecDeque;
-
-use egg::{Analysis, EGraph, ENodeOrVar, Id, Language, PatternAst, RecExpr, Var, VarExposed};
-use itertools::{EitherOrBoth, Itertools, izip};
-use log::error;
-use logic_formula::{Destructed, Formula, HeadSk};
+use egg::{PatternAst, RecExpr};
 use quarck::CowArc;
-use utils::{econtinue_if, ereturn_if, implvec};
+use utils::implvec;
 
-use crate::terms::{FOBinder, Function, RecFOFormula, Sort, Variable, builtin};
-use crate::{Lang, LangVar};
+use crate::LangVar;
+use crate::terms::{FOBinder, Function, RecFOFormula, Variable, builtin};
 
 /// magic ✨
 #[macro_export]
@@ -128,7 +122,6 @@ pub fn convert_to_ground_rexp(c: implvec!(LangVar)) -> Result<RecExpr<crate::Lan
     let tmp: PatternAst<crate::Lang> = c.into_iter().collect();
     tmp.try_into()
 }
-
 
 trait FunctionRef {
     fn to_function(&self) -> Function;
