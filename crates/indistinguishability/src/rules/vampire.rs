@@ -16,8 +16,10 @@ use crate::{Lang, Problem, rexp};
 
 declare_trace!($"vampire_rule");
 
+decl_vars!(const; X);
+
 #[dynamic]
-static PATTERN: Pattern<Lang> = Pattern::new(RecExpr::from(rexp!((VAMPIRE #0)).to_vec()));
+static PATTERN: Pattern<Lang> = Pattern::from(&rexp!((VAMPIRE #X)));
 
 static VAR: Var = Var::from_usize(0);
 
@@ -39,15 +41,15 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for VampireRule {
 
         let egraph = prgm.egraph_mut();
 
-        let to_prove_id = s.get(VAR).unwrap();
-        let Some(to_prove) = RecFOFormula::try_from_id(egraph, *to_prove_id) else {
+        let Some(to_prove) = RecFOFormula::try_from_subts(egraph, s, X)  else {
             panic!("aaaaa");
             #[allow(unreachable_code)]
             return golgge::Dependancy::impossible();
         };
-        let to_prove = to_prove.into_smt();
-
         let pbl: &mut Problem = egraph.analysis.pbl_mut();
+        pbl.find_temp_quantifiers(&[to_prove.clone()]);
+
+        let to_prove = to_prove.as_smt(pbl).unwrap();
         let prelude = pbl.get_smt_prelude();
 
         tr!("running on {to_prove}");

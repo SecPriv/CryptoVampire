@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
 use bon::bon;
-use cryptovampire_macros::{smt, vec_smt, vec_smt2};
 use cryptovampire_smt::{Smt, SortedVar};
 use egg::{Analysis, ENodeOrVar, Pattern, RecExpr, Rewrite};
 use itertools::{Itertools, chain, izip};
@@ -12,8 +11,7 @@ use super::MacroKind;
 use crate::terms::{
     EMPTY, FormulaLike, Function, INIT, RecFOFormula, TRUE, UNFOLD_COND, UNFOLD_MSG, Variable,
 };
-use crate::vampire::convert::{formula_to_smt, var_to_smt};
-use crate::{Lang, LangVar, MSmt, MSmtFormula, Problem, rexp};
+use crate::{rexp, vec_smt, Lang, LangVar, MSmt, MSmtFormula, Problem};
 
 /// A step in protocol
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -107,7 +105,7 @@ impl Step {
             [&self.cond, &self.msg, &self.id_expr()].map(|x| x.as_smt(pbl).unwrap());
         let vars = self.vars.iter().cloned();
 
-        vec_smt2![
+        vec_smt![%
             ; format!("unfolding of {name}"),
             (forall !(vars.clone()) (= (UNFOLD_COND #name #ptcl) #cond)),
             (forall !(vars.clone()) (= (UNFOLD_MSG #name #ptcl) #msg))

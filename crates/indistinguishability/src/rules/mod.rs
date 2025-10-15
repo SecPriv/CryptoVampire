@@ -36,20 +36,28 @@ macro_rules! decl_vars {
 /// ```
 macro_rules! mk_prolog {
     ($($var:ident),*: $pre:tt) => {
-        mk_prolog!(@ None; ($($var),*) $pre :-)
+        mk_prolog!(@ false, None; ($($var),*) $pre :-)
     };
     ($name:expr; $($var:ident),*: $pre:tt) => {
-        mk_prolog!(@ Some($name); ($($var),*) $pre :-)
+        mk_prolog!(@ false, Some($name); ($($var),*) $pre :-)
     };
+
+    ($($var:ident),*: $pre:tt :-!, $($post:tt),*) => {
+        mk_prolog!(@ true, None; ($($var),*) $pre :- $($post),*)
+    };
+    ($name:expr; $($var:ident),*: $pre:tt :-!, $($post:tt),*) => {
+        mk_prolog!(@ true, Some($name); ($($var),*) $pre :- $($post),*)
+    };
+
     ($($var:ident),*: $pre:tt :- $($post:tt),*) => {
-        mk_prolog!(@ None; ($($var),*) $pre :- $($post),*)
+        mk_prolog!(@ false, None; ($($var),*) $pre :- $($post),*)
     };
     ($name:expr; $($var:ident),*: $pre:tt :- $($post:tt),*) => {
-        mk_prolog!(@ Some($name); ($($var),*) $pre :- $($post),*)
+        mk_prolog!(@ false, Some($name); ($($var),*) $pre :- $($post),*)
     };
 
 
-    (@ $name:expr; ($($var:ident),*) $pre:tt :- $($post:tt),*) => {{
+    (@ $cut:expr, $name:expr; ($($var:ident),*) $pre:tt :- $($post:tt),*) => {{
         $(
             let $var = $crate::fresh!();
         )*
@@ -57,6 +65,7 @@ macro_rules! mk_prolog {
             .input(egg::Pattern::from(&$crate::rexp!($pre)))
             .deps([$(egg::Pattern::from(&$crate::rexp!($post))),*])
             .maybe_name($name)
+            .cut($cut)
             .build()
             .unwrap()
     }};
@@ -68,12 +77,16 @@ macro_rules! mk_many_prolog {
         $(
             $name:literal $($var:ident),* :
             $pre:tt
-            $(:- $($post:tt),+)?
+            $(:-! $($post:tt),+)?
+            $(:- $($post2:tt),+)?
         .)*
     ) => {
         vec![
             $(
-                mk_prolog!($name; $($var),*: $pre $(:- $($post),+)? )
+                mk_prolog!($name; $($var),*: $pre 
+                    $(:-! $($post),+)? 
+                    $(:- $($post2),+)? 
+                )
             ),*
         ]
     }
@@ -93,23 +106,24 @@ macro_rules! mk_rewrite {
 
     (@@ (#$var:tt = #$value:tt)) => {
         ::egg::MultiPattern::new(vec![{
-            let v = ::egg::Var::from($var);
-            (v, $crate::rexp!(#$value).as_egg_var())
+            let v = $var.as_egg();
+            (v, $crate::terms::RecFOFormula::as_egg_var(&$crate::rexp!(#$value)))
         }])
     };
 
     (@@ ($(#$var:tt = $value:tt),+)) => {
         ::egg::MultiPattern::new(vec![$({
-            let v = ::egg::Var::from($var);
-            (v, $crate::rexp!($value).as_egg_var())
+            let v = $var.as_egg();
+            (v, $crate::terms::RecFOFormula::as_egg_var(&$crate::rexp!($value)))
         }),*])
     };
 
-    (@@ (#$($value:tt)+)) => {
-        ::egg::Pattern::from(
-            &$crate::rexp!(#$($value)+)
+    (@@ (#$($value:tt)+)) => {{
+        let x : $crate::terms::RecFOFormula = $crate::rexp!(#$($value)+);
+        ::egg::Pattern::<$crate::Lang>::from(
+            &x
         )
-    };
+    }};
 
     (@@ $value:tt) => {
         ::egg::Pattern::from(

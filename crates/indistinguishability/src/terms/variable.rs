@@ -10,7 +10,7 @@ use serde::Serialize;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
-use crate::LangVar;
+use crate::{LangVar, MSmtFormula};
 use crate::input::Registerable;
 use crate::terms::Sort;
 
@@ -256,6 +256,24 @@ impl<T: Serialize> Serialize for MaybeOnce<T> {
         S: serde::Serializer,
     {
         self.as_option().serialize(serializer)
+    }
+}
+
+impl From<Variable> for MSmtFormula {
+    fn from(value: Variable) -> Self {
+        Self::Var(value)
+    }
+}
+
+impl From<&Variable> for MSmtFormula {
+    fn from(value: &Variable) -> Self {
+        Self::Var(value.clone())
+    }
+}
+
+impl From<&Variable> for Variable {
+    fn from(value: &Variable) -> Self {
+        value.clone()
     }
 }
 

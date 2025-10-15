@@ -369,7 +369,7 @@ mk_builtin_funs!(
     };
 
     SUBSTITUTION_RULE "msubst_rule" {
-        signature: s!(Bool, Bitstring, Bitstring -> Bool),
+        signature: s!(Bool -> Bool),
         flags: f!(PROLOG_ONLY)
     };
 

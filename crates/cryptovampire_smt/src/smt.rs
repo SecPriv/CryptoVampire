@@ -43,7 +43,7 @@ pub enum Smt<U: SmtParam> {
     },
 
     DeclareDatatypes {
-        sorts: Vec<U::SVar>,
+        sorts: Vec<<U::SVar as SortedVar>::Sort>,
         cons: Vec<Vec<SmtCons<U>>>,
     },
     Comment(String),

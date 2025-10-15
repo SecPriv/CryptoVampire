@@ -9,10 +9,9 @@ use steel::parser::builder;
 use utils::{ereturn_cf, ereturn_if, ereturn_let, implvec};
 
 use crate::problem::PAnalysis;
-use crate::protocol::Step;
+use crate::protocol::{Protocol, Step};
 use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::terms::substitution_utils::AlphaArgs;
-use crate::terms::utils::offset;
 use crate::terms::{
     Alias, AliasRewrite, BITE, EQ, Exists, FOBinder, FindSuchThat, FormulaLike, Function, HAPPENS,
     LAMBDA_S, LT, MACRO_COND, MACRO_FRAME, MACRO_MSG, MITE, PRED, Quantifier, QuantifierT,
@@ -270,6 +269,45 @@ pub trait SyntaxSearcher {
             rexp!((find_such_that #bvars #condition #then_branch #else_branch)),
         );
     }
+
+
+    /// search `frame_<ptcl>@<time>`,
+    /// 
+    /// NB: This doesn't try to unfold (so `time` can a variables)
+    fn search_frame(
+        &self,
+        pbl: &Problem,
+        builder: &RefFormulaBuilder,
+        ptcl: &Protocol,
+        time: &RecFOFormula,
+    ) {
+        tr!("in frame");
+        assert!(builder.current_mode().is_and());
+
+        // for each step we switch to `search_recexpr` on its message
+        for Step {
+            id,
+            vars,
+            cond,
+            msg,
+        } in ptcl.steps()
+        {
+            // build the condition object
+            let condition = {
+                let vars = vars.iter().map(|x| RecFOFormula::Var(x.clone()));
+                rexp!((and (HAPPENS (id #(vars.clone())*)) (LT (id #vars*) #time) ))
+            };
+
+            let builder = builder
+                .add_node().and()
+                .condition(condition)
+                .variables(vars.clone())
+                .forall()
+                .build();
+            self.inner_search_formula(pbl, &builder, cond.clone());
+            self.inner_search_formula(pbl, &builder, msg.clone());
+        }
+    }
 }
 
 pub trait EgraphSearcher: SyntaxSearcher {
@@ -325,7 +363,7 @@ pub trait EgraphSearcher: SyntaxSearcher {
         }
     }
 
-    fn search_frame<'a>(
+    fn search_egraph_frame<'a>(
         &self,
         egraph: &EGraph<Lang, PAnalysis<'a>>,
         builder: &RefFormulaBuilder,
@@ -392,7 +430,7 @@ pub trait EgraphSearcher: SyntaxSearcher {
         {
             tr!("looking through frame");
             tr!("builder mode {}", builder.borrow().mode());
-            self.search_frame(egraph, builder, time, ptcl, variables);
+            self.search_egraph_frame(egraph, builder, time, ptcl, variables);
             return ControlFlow::Break(());
         }
         if self.is_instance(&**egraph.analysis.pbl(), head) {

@@ -10,6 +10,7 @@ use utils::ereturn_let;
 
 use super::*;
 use crate::problem::PAnalysis;
+use crate::rules::utils::EgraphSearcher;
 use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::terms::{FRESH_NONCE, Variable};
 use crate::vampire::runner::VampireExec;
@@ -37,11 +38,17 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FreshNonce {
         let condition = substs.substs.iter().map(|subst| {
             let [nonce, content, hypothesis] =
                 [NONCE_VAR, CONTENT, HYPOTHESIS].map(|i| *subst.get(i.as_egg()).unwrap());
-            let hypothesis = convert_id(egraph, hypothesis);
+            let hypothesis = RecFOFormula::try_from_id(egraph, hypothesis).unwrap();
             let nonce = Nonce::builder().content_id(egraph, nonce).build();
 
             let builder = RefFormulaBuilder::builder().and().build();
-            nonce.search_egraph(egraph, builder.clone(), content, Default::default());
+            nonce.search_egraph(
+                egraph,
+                &builder,
+                content,
+                &Default::default(),
+                &Default::default(),
+            );
             let search = builder.into_inner().unwrap().into_formula();
 
             hypothesis >> search

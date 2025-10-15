@@ -1,4 +1,3 @@
-use cryptovampire_macros::{smt, vec_smt};
 use cryptovampire_smt::{Smt, SmtCons, SmtFormula, SortedVar};
 use egg::RecExpr;
 use itertools::{Itertools, chain, izip};
@@ -7,11 +6,10 @@ use utils::{dynamic_iter, ereturn_if};
 use crate::terms::{
     ATT, AliasRewrite, BITE, EMPTY, Exists, FROM_BOOL, FindSuchThat, Function, HAPPENS, LEQ, LT,
     MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, PROJ_1, PROJ_2, Quantifier,
-    QuantifierT, Rewrite, SMT_ITE, SMT_SORT_LIST, Signature, Sort, TUPLE, UNFOLD_COND, UNFOLD_EXEC,
-    UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
+    QuantifierT, RecFOFormula, Rewrite, SMT_ITE, SMT_SORT_LIST, Signature, Sort, TUPLE,
+    UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
 };
-use crate::vampire::convert::{formula_to_smt, var_to_smt};
-use crate::{MSmt, MSmtFormula, Problem};
+use crate::{MSmt, MSmtFormula, Problem, rexp, smt, vec_smt};
 
 pub fn mk_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     chain![
@@ -91,38 +89,30 @@ fn mk_header(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
 }
 
 fn mk_pseudo_datatype_diff(funs: Vec<Function>) -> impl Iterator<Item = MSmt> {
-    use SmtFormula::*;
-
     // funs are pairwise distincts
     let pairs = {
-        let mut vars = Vec::with_capacity(funs.iter().map(Function::arity).sum());
+        let mut variables = Vec::with_capacity(funs.iter().map(Function::arity).sum());
 
         let apps = funs
             .iter()
             .map(|f| {
-                let n = vars.len();
-                vars.extend(f.signature.mk_sorted_vars(n as u32));
-                smt!((f #(vars[n..].iter().cloned())*))
+                let fvars = f.signature.mk_vars();
+                variables.extend(fvars.iter().cloned());
+                let fvars = fvars.into_iter().map(SmtFormula::Var);
+                smt!((f #fvars*))
             })
             .collect_vec();
 
-        smt!((forall #vars (distinct #apps*)))
+        smt!((forall #variables (distinct #apps*)))
     };
 
     // a[veci] = a[vecj] => veci = vecj forall each fun
     let singles = funs.into_iter().filter(|f| f.arity() != 0).map(|f| {
-        let n = f.arity();
-        let svars: Vec<SortedVar<_>> = chain![
-            f.signature.mk_sorted_vars(0),
-            f.signature.mk_sorted_vars(n as u32)
-        ]
-        .collect();
-        let n1 = smt!((f #(svars[0..n].iter().cloned())*));
-        let n2 = smt!((f #(svars[n..2*n].iter().cloned())*));
-        let svars_eq = (0..n)
-            .map(|i| smt!((= #(Var(svars[i].var.clone())) #(Var(svars[n+i].var.clone())))))
-            .collect_vec();
-        smt!((forall #svars (=> (= #n1 #n2) (and #svars_eq*))))
+        let v1 = f.signature.mk_vars();
+        let v2 = f.signature.mk_vars();
+        let vars = chain![&v1, &v2].cloned();
+        let and_eq = izip!(&v1, &v2).map(|(v1, v2)| smt!((= #v1 #v2)));
+        smt!((forall #vars (=> (= (f #(v1.clone())*) (f #(v2.clone())*)) (and #and_eq*))))
     });
 
     chain! {
@@ -145,7 +135,7 @@ fn mk_steps_macros(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     pbl.protocols()
         .iter()
         .flat_map(|p| p.steps().iter().map(move |s| (p.as_smt(), s)))
-        .flat_map(|(ptcl, s)| s.mk_unfold_vampire_rewrites(&ptcl))
+        .flat_map(|(ptcl, s)| s.mk_unfold_vampire_rewrites(pbl, &ptcl))
 }
 
 fn mk_step_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
@@ -178,34 +168,31 @@ fn mk_ptcl_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
 }
 
 fn mk_base_order(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
-    use crate::terms::Sort::*;
     let init = pbl.get_init_fun();
-    let iter = vec_smt! {
-        (forall ((#a!0 Time)) (LEQ (PRED #a) #a)),
-        (forall ((#a!0 Time)) (LEQ #a #a)),
-        (forall ((#a!0 Time)) (LEQ init #a)),
-        (forall ((#a!0 Time) (#b!1 Time)) (=> (and (HAPPENS #a) (LEQ #b #a)) (HAPPENS #b))),
-        (forall ((#a!0 Time)) (=> (= (PRED #a) #a) (= #a init))),
-        (forall ((#a!0 Time) (#b!1 Time)) (= (LT #a #b) (LEQ #a (PRED #b)))),
-        (forall ((#a!0 Time) (#b!1 Time)) (=> (and (HAPPENS #a) (HAPPENS #b)) (or (LEQ #a #b) (LEQ #b #a)))),
-        (forall ((#a!0 Time) (#b!1 Time)) (=> (and (LEQ #a #b) (LEQ #b #a)) (= #a #b))),
-        (forall ((#a!0 Time) (#b!1 Time) (#c!2 Time)) (=> (and (LEQ #a #b) (LEQ #b #c)) (LEQ #a #c))),
-    }
-    .into_iter()
-    .map(Smt::mk_assert);
-    chain![[Smt::Comment("order base".into())], iter]
+    vec_smt! {%
+        ; "order base".into(),
+        (forall ((#a Time)) (LEQ (PRED #a) #a)),
+        (forall ((#a Time)) (LEQ #a #a)),
+        (forall ((#a Time)) (LEQ init #a)),
+        (forall ((#a Time) (#b Time)) (=> (and (HAPPENS #a) (LEQ #b #a)) (HAPPENS #b))),
+        (forall ((#a Time)) (=> (= (PRED #a) #a) (= #a init))),
+        (forall ((#a Time) (#b Time)) (= (LT #a #b) (LEQ #a (PRED #b)))),
+        (forall ((#a Time) (#b Time)) (=> (and (HAPPENS #a) (HAPPENS #b)) (or (LEQ #a #b) (LEQ #b #a)))),
+        (forall ((#a Time) (#b Time)) (=> (and (LEQ #a #b) (LEQ #b #a)) (= #a #b))),
+        (forall ((#a Time) (#b Time) (#c Time)) (=> (and (LEQ #a #b) (LEQ #b #c)) (LEQ #a #c))),
+    }.into_iter()
 }
 
 fn mk_base_macro(_: &Problem) -> impl Iterator<Item = MSmt> {
-    use crate::terms::Sort::*;
-    let iter = vec_smt! {
-        (forall ((#t!0 Time) (#p!1 Protocol)) (=> (HAPPENS #t) (= (MACRO_COND #t #p) (UNFOLD_COND #t #p)))),
-        (forall ((#t!0 Time) (#p!1 Protocol)) (=> (HAPPENS #t) (= (MACRO_MSG #t #p) (UNFOLD_MSG #t #p)))),
-        (forall ((#t!0 Time) (#p!1 Protocol)) (=> (HAPPENS #t) (= (MACRO_EXEC #t #p) (UNFOLD_EXEC #t #p)))),
-        (forall ((#t!0 Time) (#p!1 Protocol)) (=> (HAPPENS #t) (= (MACRO_FRAME #t #p) (UNFOLD_FRAME #t #p)))),
-        (forall ((#t!0 Time) (#p!1 Protocol)) (=> (HAPPENS #t) (= (MACRO_INPUT #t #p) (UNFOLD_INPUT #t #p)))),
-        (forall ((#t!0 Time) (#p!1 Protocol)) (= (UNFOLD_INPUT #t #p) (ATT (MACRO_FRAME (PRED #t) #p)))),
-        (forall ((#t!0 Time) (#p!1 Protocol))
+    vec_smt! {%
+        ; "unfold base".into(),
+        (forall ((#t Time) (#p Protocol)) (=> (HAPPENS #t) (= (MACRO_COND #t #p) (UNFOLD_COND #t #p)))),
+        (forall ((#t Time) (#p Protocol)) (=> (HAPPENS #t) (= (MACRO_MSG #t #p) (UNFOLD_MSG #t #p)))),
+        (forall ((#t Time) (#p Protocol)) (=> (HAPPENS #t) (= (MACRO_EXEC #t #p) (UNFOLD_EXEC #t #p)))),
+        (forall ((#t Time) (#p Protocol)) (=> (HAPPENS #t) (= (MACRO_FRAME #t #p) (UNFOLD_FRAME #t #p)))),
+        (forall ((#t Time) (#p Protocol)) (=> (HAPPENS #t) (= (MACRO_INPUT #t #p) (UNFOLD_INPUT #t #p)))),
+        (forall ((#t Time) (#p Protocol)) (= (UNFOLD_INPUT #t #p) (ATT (MACRO_FRAME (PRED #t) #p)))),
+        (forall ((#t Time) (#p Protocol))
           (= (UNFOLD_FRAME #t #p)
             (TUPLE
                 (TUPLE
@@ -213,22 +200,18 @@ fn mk_base_macro(_: &Problem) -> impl Iterator<Item = MSmt> {
                     (SMT_ITE (MACRO_EXEC #t #p)
                         (MACRO_MSG #t #p) EMPTY))
                         (MACRO_FRAME (PRED #t) #p)))),
-        (forall ((#t!0 Time) (#p!1 Protocol)) (= (UNFOLD_EXEC #t #p) (and (MACRO_COND #t #p) (MACRO_EXEC (PRED #t) #p))))
+        (forall ((#t Time) (#p Protocol)) (= (UNFOLD_EXEC #t #p) (and (MACRO_COND #t #p) (MACRO_EXEC (PRED #t) #p))))
     }
     .into_iter()
-    .map(Smt::mk_assert);
-    chain![[Smt::Comment("unfold base".into())], iter]
 }
 
 fn mk_base_rewrite(_: &Problem) -> impl Iterator<Item = MSmt> {
-    use crate::terms::Sort::*;
-    let iter = vec_smt! {
-        (forall ((#m1!0 Bitstring) (#m2!1 Bitstring)) (= (PROJ_1 (TUPLE #m1 #m2)) #m1)),
-        (forall ((#m1!0 Bitstring) (#m2!1 Bitstring)) (= (PROJ_2 (TUPLE #m1 #m2)) #m2))
+    vec_smt! {%
+        ; "base rewrite".into(),
+        (forall ((#m1 Bitstring) (#m2 Bitstring)) (= (PROJ_1 (TUPLE #m1 #m2)) #m1)),
+        (forall ((#m1 Bitstring) (#m2 Bitstring)) (= (PROJ_2 (TUPLE #m1 #m2)) #m2))
     }
     .into_iter()
-    .map(Smt::mk_assert);
-    chain![[Smt::Comment("base rewrite".into())], iter]
 }
 
 fn mk_quantifiers(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
@@ -237,67 +220,46 @@ fn mk_quantifiers(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
         .functions()
         .current_quantifiers()
         .flat_map(|q| match q {
-            Quantifier::Exists(e) => Tmp::A(mk_exists_1(e)),
-            Quantifier::FindSuchThat(e) => Tmp::B(mk_fdst_1(e)),
+            Quantifier::Exists(e) => Tmp::A(mk_exists_1(pbl, e)),
+            Quantifier::FindSuchThat(e) => Tmp::B(mk_fdst_1(pbl, e)),
         })
         .map(MSmt::mk_assert);
 
     chain![[MSmt::Comment("quantifiers".into())], ax]
 }
 
-fn mk_exists_1(e: &Exists) -> impl Iterator<Item = MSmtFormula> {
-    let all_vars = chain![e.cvars_and_sorts(), e.bvars_and_sorts()]
-        .map(|(v, s)| SortedVar {
-            var: var_to_smt(&v),
-            sort: s,
-        })
-        .collect_vec();
-    let cvars = e.cvars_and_sorts().map(|(v, s)| SortedVar {
-        var: var_to_smt(&v),
-        sort: s,
-    });
-
+fn mk_exists_1<'a>(pbl: &'a Problem, e: &'a Exists) -> impl Iterator<Item = MSmtFormula> + use<'a> {
+    let all_vars = chain![e.cvars(), e.bvars()].cloned().collect_vec();
     let tlf = e.top_level_function();
-    let patt = formula_to_smt(e.patt());
+    let patt = e.patt().unwrap().as_smt(pbl).unwrap();
 
-    let applied_skolems = e.skolems().iter().map(|sk| smt!((sk #(cvars.clone())*)));
+    let applied_skolems = e.appplied_skolens().map(|s| s.as_smt(pbl).unwrap());
 
     vec_smt! {
         (forall #(all_vars.clone()) (= (tlf #(all_vars.clone())*) #(patt))),
         (forall #(all_vars.clone()) (=>
-            (tlf #all_vars*) (tlf #(cvars.clone())* #(applied_skolems)*)))
+            (tlf #all_vars*) (tlf #(e.cvars())* #(applied_skolems)*)))
     }
     .into_iter()
 }
 
-fn mk_fdst_1(e: &FindSuchThat) -> impl Iterator<Item = MSmtFormula> {
-    let all_vars = chain![e.cvars_and_sorts(), e.bvars_and_sorts()]
-        .map(|(v, s)| SortedVar {
-            var: var_to_smt(&v),
-            sort: s,
-        })
-        .collect_vec();
-
+fn mk_fdst_1<'a>(
+    pbl: &'a Problem,
+    e: &'a FindSuchThat,
+) -> impl Iterator<Item = MSmtFormula> + use<'a> {
+    let all_vars = chain![e.cvars(), e.bvars()].cloned().collect_vec();
     let tlf = e.top_level_function();
-    // let patt = formula_to_smt(e.patt());
     let [condition, then_branch, else_branch] =
-        [e.condition(), e.then_branch(), e.else_branch()].map(formula_to_smt);
+        [e.condition(), e.then_branch(), e.else_branch()].map(|x| x.unwrap().as_smt(pbl).unwrap());
 
     let applied_condition = {
-        let applied_skolems = e
-            .skolems()
-            .iter()
-            .map(|sk| sk.app_var(&e.cvars_as_lang().map(|x| [x]).collect_vec()));
-        let subst = izip!(e.bvars().iter().copied(), applied_skolems).collect_vec();
+        let subst = izip!(e.bvars().iter().cloned(), e.appplied_skolens()).collect_vec();
 
-        let applied_skolems = e
-            .condition()
-            .iter()
-            .cloned()
-            .collect::<RecExpr<_>>()
-            .apply_pattern_subst(subst);
-
-        formula_to_smt(&applied_skolems)
+        e.condition()
+            .unwrap()
+            .subst(subst.as_slice())
+            .as_smt(pbl)
+            .unwrap()
     };
 
     vec_smt! {
@@ -308,24 +270,19 @@ fn mk_fdst_1(e: &FindSuchThat) -> impl Iterator<Item = MSmtFormula> {
 }
 
 fn mk_alias_1(
+    pbl: &Problem,
     fun: &Function,
     AliasRewrite {
         from,
         to,
         variables,
-        sorts,
     }: &AliasRewrite,
 ) -> impl Iterator<Item = MSmtFormula> {
-    let args = from.iter().map(|x| formula_to_smt(x));
-    let content = formula_to_smt(to);
-    let vars = izip!(sorts.iter(), variables.iter())
-        .map(|(&sort, v)| SortedVar {
-            sort,
-            var: var_to_smt(v),
-        })
-        .collect_vec();
+    let from = from.iter().map(|x| x.as_smt(pbl).unwrap());
+    let to = to.as_smt(pbl).unwrap();
+    let variables = variables.clone().into_owned();
 
-    [smt!((forall #vars (= (fun #args*) #content)))].into_iter()
+    [smt!((forall #variables (= (fun #from*) #to)))].into_iter()
 }
 
 fn mk_alias(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
@@ -334,7 +291,7 @@ fn mk_alias(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
         .iter_current()
         .filter(|x| should_declare_in_smt(x))
         .filter_map(|f| f.alias.as_ref().map(|a| (f, a)))
-        .flat_map(|(f, a)| a.0.iter().flat_map(|arw| mk_alias_1(f, arw)))
+        .flat_map(|(f, a)| a.0.iter().flat_map(|arw| mk_alias_1(pbl, f, arw)))
         .map(MSmt::mk_assert);
 
     chain![[MSmt::Comment("aliases".into())], aliases]
@@ -350,16 +307,10 @@ fn mk_extra_rw(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
                  from,
                  to,
                  variables,
-                 sorts,
                  ..
              }| {
-                let [from, to] = [from, to].map(|x| formula_to_smt(x));
-                let vars = izip!(sorts.iter(), variables.iter())
-                    .map(|(&sort, v)| SortedVar {
-                        sort,
-                        var: var_to_smt(v),
-                    })
-                    .collect_vec();
+                let [from, to] = [from, to].map(|x| x.as_smt(pbl).unwrap());
+                let vars = variables.clone().into_owned();
                 smt!((forall #vars (= #from #to)))
             },
         )

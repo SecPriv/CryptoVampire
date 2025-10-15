@@ -267,7 +267,7 @@ impl VampireExec {
         &self,
         pbl: &mut Problem,
         query: MSmtFormula,
-        #[builder(name=maybe_clean_afterward)] clean_afterward: bool,
+        #[builder(name=maybe_clean_afterward, default=true)] clean_afterward: bool,
     ) -> Dependancy {
         trace!("checking {query}");
         let prelude = pbl.get_smt_prelude();

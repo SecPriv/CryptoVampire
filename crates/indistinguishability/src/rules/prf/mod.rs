@@ -8,7 +8,7 @@ use utils::ereturn_let;
 
 use crate::problem::{PAnalysis, PRule};
 use crate::terms::{
-    EQUIV, FALSE, Function, FunctionFlags, NONCE, SUBSTITUTION, SUBSTITUTION_RULE, Sort, TRUE,
+    Function, FunctionFlags, RecFOFormula, Sort, EQUIV, FALSE, NONCE, SUBSTITUTION, SUBSTITUTION_RULE, TRUE
 };
 use crate::{Lang, LangVar, Problem, mk_signature, rexp};
 
@@ -117,23 +117,24 @@ impl PRF {
         }
     }
 
-    fn mk_prf_rule(&self) -> [PrfRule; 2] {
+    fn mk_prf_rule(&self) -> [TopPrfRule; 2] {
         let Self {
             hash,
             candidate_bitstring,
             search_bitstring,
             ..
         } = self;
+        decl_vars!(u, v, hm:Bitstring, m:Bitstring, k:Nonce, nk:Nonce, b);
 
-        let conclusionl = rexp!((EQUIV #1 #2 (candidate_bitstring #3 #4 #5) #6));
-        let conclusionr = rexp!((EQUIV #1 #2 #6 (candidate_bitstring #3 #4 #5)));
-        let subterm_search1 = rexp!((search_bitstring #4 #5 #3));
-        let subterm_search2 = rexp!((search_bitstring #4 #5 #4));
-        let new_goall = rexp!((SUBSTITUTION_RULE (EQUIV #1 #2 (SUBSTITUTION #3 (hash #4 (NONCE #5)) (NONCE #7)) #6)));
-        let new_goalr = rexp!((SUBSTITUTION_RULE (EQUIV #1 #2 #6 (SUBSTITUTION #3 (hash #4 (NONCE #5)) (NONCE #7)))));
+        let conclusionl = rexp!((EQUIV #u #v (candidate_bitstring #hm #m #k) #b));
+        let conclusionr = rexp!((EQUIV #u #v #b (candidate_bitstring #hm #m #k)));
+        let subterm_search1 = rexp!((search_bitstring #m #k #hm));
+        let subterm_search2 = rexp!((search_bitstring #m #k #m));
+        let new_goall = rexp!((SUBSTITUTION_RULE (EQUIV #u #v (SUBSTITUTION #hm (hash #m (NONCE #k)) (NONCE #nk)) #b)));
+        let new_goalr = rexp!((SUBSTITUTION_RULE (EQUIV #u #v #b (SUBSTITUTION #hm (hash #m (NONCE #k)) (NONCE #nk)))));
 
         [
-            PrfRule::new(
+            TopPrfRule::new(
                 &conclusionl,
                 &subterm_search1,
                 &subterm_search2,
@@ -141,7 +142,7 @@ impl PRF {
                 PrfKind::Left,
                 candidate_bitstring.clone(),
             ),
-            PrfRule::new(
+            TopPrfRule::new(
                 &conclusionr,
                 &subterm_search1,
                 &subterm_search2,
@@ -155,10 +156,10 @@ impl PRF {
     /// Generate the pattern to do the deep search
     ///
     /// use variables 0..=3
-    fn search_trigger_pattern(&self) -> impl Iterator<Item = LangVar> {
-        let Self { search_trigger, .. } = self;
-        rexp!((search_trigger #0 #1 #2 #3)).into_iter()
-    }
+    // fn search_trigger_pattern(&self) -> impl Iterator<Item = LangVar> {
+    //     let Self { search_trigger, .. } = self;
+    //     rexp!((search_trigger #0 #1 #2 #3)).into_iter()
+    // }
 
     pub fn index(&self) -> usize {
         self.index
@@ -169,7 +170,7 @@ impl PRF {
 ///
 /// This triggers the procedure and will in turn call many other rules
 #[derive(Debug, Clone)]
-struct PrfRule {
+struct TopPrfRule {
     conclusion: Pattern<Lang>,
     subterm_search1: Pattern<Lang>,
     subterm_search2: Pattern<Lang>,
@@ -186,12 +187,12 @@ enum PrfKind {
     Right,
 }
 
-impl PrfRule {
+impl TopPrfRule {
     fn new(
-        conclusion: &[LangVar],
-        subterm_search1: &[LangVar],
-        subterm_search2: &[LangVar],
-        new_goal: &[LangVar],
+        conclusion: &RecFOFormula,
+        subterm_search1: &RecFOFormula,
+        subterm_search2: &RecFOFormula,
+        new_goal: &RecFOFormula,
         kind: PrfKind,
         candidate_bitstring: Function,
     ) -> Self {
@@ -206,7 +207,7 @@ impl PrfRule {
     }
 }
 
-impl<'a> Rule<Lang, PAnalysis<'a>> for PrfRule {
+impl<'a> Rule<Lang, PAnalysis<'a>> for TopPrfRule {
     fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: Id) -> Dependancy {
         let egraph = prgm.egraph_mut();
         ereturn_let!(let Some(substs)= self.conclusion.search_eclass(egraph, goal), Dependancy::impossible());

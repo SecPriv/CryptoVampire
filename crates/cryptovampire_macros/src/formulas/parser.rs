@@ -87,7 +87,7 @@ pub enum VarBindings {
 
 pub struct VarBinding {
     pub name: VarName,
-    pub index: Option<VarIndex>, // Can now be an expression
+    // pub index: Option<VarIndex>, // Can now be an expression
     pub sort: Expr,
 }
 
@@ -120,14 +120,14 @@ pub enum BangedContentKind {
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum BangedContentInner {
-    Lit(Lit),
+    // Lit(Lit),
     Ident(Ident),
     Expr(Expr),
 }
 
 pub enum VarIndex {
     // Represents the SMT variable index
-    Lit(LitInt),
+    // Lit(LitInt),
     Expr(Expr),
     Ident(Ident),
 }
@@ -201,9 +201,9 @@ impl Parse for BangedContentInner {
                 return Err(content.error("Expected end of expression in #()"));
             }
             Ok(Self::Expr(expr))
-        } else if input.peek(Lit) {
-            let lit: Lit = input.parse()?;
-            Ok(Self::Lit(lit))
+        // } else if input.peek(Lit) {
+        //     let lit: Lit = input.parse()?;
+        //     Ok(Self::Lit(lit))
         } else if input.peek(Ident) {
             let ident: Ident = input.parse()?;
             Ok(Self::Ident(ident))
@@ -241,10 +241,10 @@ impl Parse for VarIndex {
                 return Err(content.error("Expected end of expression in () for variable index"));
             }
             Ok(Self::Expr(expr))
-        } else if input.peek(LitInt) {
-            // Specifically LitInt for indices
-            let lit = input.parse()?;
-            Ok(Self::Lit(lit))
+        // } else if input.peek(LitInt) {
+        //     // Specifically LitInt for indices
+        //     let lit = input.parse()?;
+        //     Ok(Self::Lit(lit))
         } else if input.peek(Ident) {
             let ident: Ident = input.parse()?;
             Ok(Self::Ident(ident))
@@ -306,17 +306,17 @@ impl Parse for ArgItem {
                         .with(span),
                     ))
                 }
-            } else if input.peek(Lit) {
-                // Regular #lit term
-                let lit: Lit = input.parse()?;
-                let span = lit.span();
-                Ok(ArgItem::Regular(
-                    InnerAst::Banged(BangedContent {
-                        kind: BangedContentKind::Cross(kind),
-                        inner: BangedContentInner::Lit(lit),
-                    })
-                    .with(span),
-                ))
+            // } else if input.peek(Lit) {
+            //     // Regular #lit term
+            //     let lit: Lit = input.parse()?;
+            //     let span = lit.span();
+            //     Ok(ArgItem::Regular(
+            //         InnerAst::Banged(BangedContent {
+            //             kind: BangedContentKind::Cross(kind),
+            //             inner: BangedContentInner::Lit(lit),
+            //         })
+            //         .with(span),
+            //     ))
             } else if input.peek(Token![!]) {
                 let span = input.span();
                 Ok(ArgItem::Regular(
@@ -378,26 +378,6 @@ impl Parse for VarName {
     }
 }
 
-impl Parse for VarBinding {
-    fn parse(content: ParseStream<'_>) -> Result<Self> {
-        let binding_content;
-        parenthesized!(binding_content in content);
-
-        binding_content.parse::<Token![!]>()?;
-        let name: VarName = binding_content.parse()?;
-        let index = if binding_content.peek(Token![!]) {
-            binding_content.parse::<Token![!]>()?;
-            Some(binding_content.parse()?) // Use VarIndex parser
-        } else {
-            None
-        };
-
-        binding_content.parse::<Option<Token![:]>>()?;
-
-        let sort: Expr = binding_content.parse()?;
-        Ok(VarBinding { name, index, sort })
-    }
-}
 
 struct  ExclamationOrCross;
 
@@ -411,6 +391,21 @@ impl Parse for ExclamationOrCross {
             return Err(input.error("Expected '#' or '!'"))
         }
         Ok(Self)
+    }
+}
+
+impl Parse for VarBinding {
+    fn parse(content: ParseStream<'_>) -> Result<Self> {
+        let binding_content;
+        parenthesized!(binding_content in content);
+
+        binding_content.parse::<ExclamationOrCross>()?;
+        let name: VarName = binding_content.parse()?;
+
+        binding_content.parse::<Option<Token![:]>>()?;
+
+        let sort: Expr = binding_content.parse()?;
+        Ok(VarBinding { name, sort })
     }
 }
 

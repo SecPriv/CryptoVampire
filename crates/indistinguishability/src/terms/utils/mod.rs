@@ -15,7 +15,7 @@ declare_trace!($"formula_utils");
 /// It also contains other miscelenious functions
 pub mod rexp_macro;
 
-pub mod offset;
+// pub mod offset;
 pub mod pull_from_egraph;
 
 pub fn get_sort<F>(f: F) -> Sort
@@ -64,13 +64,13 @@ mod test {
         // let a = fresh!(Nonce);
         decl_vars!(a:Nonce, b:Bitstring, c:Nonce);
         let x = rexp!((MITE (and true true false) (NONCE #a) (PROJ_1 (TUPLE #b (NONCE #c)))));
-        assert!(type_check(x))
+        assert!(type_check(&x))
     }
 
     #[test]
     fn type_check_wrong_length() {
         let x = rexp!((MITE (and true true false) (NONCE #A) (PROJ_1 (TUPLE (NONCE #B)))));
-        assert!(!type_check(x.as_formula()))
+        assert!(!type_check(&x))
     }
 
     #[test]

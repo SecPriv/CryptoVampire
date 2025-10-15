@@ -738,6 +738,10 @@ impl RecFOFormula {
     pub fn as_smt<U: QuantifierTranslator>(&self, pbl: &U) -> Option<MSmtFormula> {
         MSmtFormula::try_from(self.as_pre_smt().translator(pbl).build()).ok()
     }
+
+    pub fn try_from_subts<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, subst: &egg::Subst, var: &Variable) -> Option<Self> {
+        Self::try_from_id(egraph, *subst.get(var.as_egg())?)
+    }
 }
 
 fn mk_list<L: EggLanguage>(out: &mut Vec<L>, sorts: implvec!(Sort)) -> usize {

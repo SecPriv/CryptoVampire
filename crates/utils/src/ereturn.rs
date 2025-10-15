@@ -176,8 +176,8 @@ macro_rules! ereturn_let {
 macro_rules! ereturn_cf {
     ($e:expr) => {
         match $e {
-          ::core::ops::control_flow::ControlFlow::Continue(x) => x,
-          ::core::ops::control_flow::ControlFlow::Break(x) => return x,
+          ::core::ops::ControlFlow::Continue(x) => x,
+          ::core::ops::ControlFlow::Break(x) => return x,
         }
     };
 }
@@ -186,14 +186,14 @@ macro_rules! ereturn_cf {
 macro_rules! ebreak_cf {
     ($e:expr) => {
         match $e {
-          ::core::ops::control_flow::ControlFlow::Continue(x) => x,
-          ::core::ops::control_flow::ControlFlow::Break(x) => break x,
+          ::core::ops::ControlFlow::Continue(x) => x,
+          ::core::ops::ControlFlow::Break(x) => break x,
         }
     };
     ($lt:lifetime, $e:expr) => {
         match $e {
-          ::core::ops::control_flow::ControlFlow::Continue(x) => x,
-          ::core::ops::control_flow::ControlFlow::Break(x) => break $lt x,
+          ::core::ops::ControlFlow::Continue(x) => x,
+          ::core::ops::ControlFlow::Break(x) => break $lt x,
         }
     };
 }

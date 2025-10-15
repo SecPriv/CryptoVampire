@@ -22,6 +22,26 @@ macro_rules! rexp {
   };
 }
 
+#[macro_export]
+macro_rules! smt {
+    ($($t:tt)*) => {
+        ::cryptovampire_macros::smt!($crate::terms::utils::rexp_macro; $($t)*)
+    };
+}
+
+#[macro_export]
+macro_rules! vec_smt {
+    (% $($t:tt)*) => {
+        ::cryptovampire_macros::vec_smt2!($crate::terms::utils::rexp_macro; $($t)*)
+    };
+    ($($t:tt)*) => {
+        ::cryptovampire_macros::vec_smt!($crate::terms::utils::rexp_macro; $($t)*)
+    };
+}
+
+pub type SmtFormula = crate::MSmtFormula;
+pub type Smt = crate::MSmt;
+
 pub type MacroExpr = RecFOFormula;
 pub type MacroVar = Variable;
 pub type MacroFunction = Function;

@@ -7,8 +7,8 @@ pub use search::{SyntaxSearcher, EgraphSearcher,  default_is_special};
 use crate::LangVar;
 use crate::terms::Function;
 
-mod subst;
-pub use subst::mk_subst_rw;
+// mod subst;
+// pub use subst::mk_subst_rw;
 
 // pub fn generate_rule_vars_arr<const N: usize>(
 //     fun: &Function,

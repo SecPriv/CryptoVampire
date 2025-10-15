@@ -22,29 +22,25 @@ use utils::{econtinue_let, ereturn_let};
 
 use crate::problem::PAnalysis;
 // use crate::rules::base_rules::substitution;
-use crate::rules::utils::mk_subst_rw;
+// use crate::rules::utils::mk_subst_rw;
 use crate::terms::{MACRO_EXEC, MACRO_FRAME, PRED, SUBSTITUTION, SUBSTITUTION_RULE};
 use crate::{Lang, rexp};
 
 declare_trace!($"substitution");
 
-#[dynamic]
-static SUBSTITUTION_RULE_PATTERN: Pattern<Lang> = {
-    let ast = rexp!((SUBSTITUTION_RULE #0)).to_vec();
-    RecExpr::from(ast).into()
-};
+decl_vars!(const; GOAL:Bool, X:Any, FROM:Bitstring, TO:Bitstring, PTCL:Protocol, T:Time);
 
 #[dynamic]
-static SUBSTITUTION_PATTERN: Pattern<Lang> = {
-    let ast = rexp!((SUBSTITUTION #0 #1 #2)).to_vec();
-    RecExpr::from(ast).into()
-};
+static SUBSTITUTION_RULE_PATTERN: Pattern<Lang> = Pattern::from(&rexp!((SUBSTITUTION_RULE #GOAL)));
+
+#[dynamic]
+static SUBSTITUTION_PATTERN: Pattern<Lang> = Pattern::from(&rexp!((SUBSTITUTION #X #FROM #TO)));
 
 #[dynamic]
 static ACCEPTABLY_EMPTY: Vec<Pattern<Lang>> = {
     vec![
-        rexp!((MACRO_EXEC (PRED #0) #1)).into_iter().collect(),
-        rexp!((MACRO_FRAME (PRED #0) #1)).into_iter().collect(),
+        Pattern::from(&rexp!((MACRO_EXEC (PRED #T) #PTCL))),
+        Pattern::from(&rexp!((MACRO_FRAME (PRED #T) #PTCL))),
     ]
 };
 
@@ -83,7 +79,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
         for subst in SUBSTITUTION_PATTERN.search(egraph) {
             let current_id = subst.eclass;
             for s in subst.substs {
-                let [m, x, y] = [0, 1, 2].map(|i| *s.get(Var::from_usize(i as u32)).unwrap());
+                let [m, x, y] = [X, FROM, TO].map(|i| *s.get(i.as_egg()).unwrap());
                 let mut memo = memo.clone();
 
                 let ids = mk_substs(egraph, &mut memo, m, x, y);

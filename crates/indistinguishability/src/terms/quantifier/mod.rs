@@ -4,8 +4,8 @@ pub use exists::*;
 use itertools::{chain, izip};
 use utils::{ereturn_if, match_as_trait};
 
-use crate::Problem;
-use crate::terms::{Function, QuantifierIndex, Sort, Variable};
+use crate::terms::{Function, QuantifierIndex, RecFOFormula, Sort, Variable};
+use crate::{Problem, rexp};
 mod exists;
 mod find;
 pub use find::*;
@@ -81,27 +81,34 @@ pub trait QuantifierT: Eq + Sized {
     fn index(&self) -> QuantifierIndex {
         self.top_level_function().get_quantifier_index().unwrap()
     }
+
+    fn appplied_skolens<'a>(&'a self) -> impl Iterator<Item = RecFOFormula> + Clone + use<'a, Self> {
+        let args = self.cvars().iter().cloned().map(|v| RecFOFormula::Var(v));
+        self.skolems()
+            .iter()
+            .map(move |sk| rexp!((sk #(args.clone())*)))
+    }
 }
 
 impl QuantifierT for Quantifier {
     fn bvars(&self) -> &[Variable] {
-        match_as_trait!(self => { Self::Exists(x) | Self::FindSuchThat(x) => {x.bvars()}}) 
+        match_as_trait!(self => { Self::Exists(x) | Self::FindSuchThat(x) => {x.bvars()}})
     }
 
     fn cvars(&self) -> &[Variable] {
-        match_as_trait!(self => { Self::Exists(x) | Self::FindSuchThat(x) => {x.cvars()}}) 
+        match_as_trait!(self => { Self::Exists(x) | Self::FindSuchThat(x) => {x.cvars()}})
     }
 
     fn top_level_function(&self) -> &Function {
-        match_as_trait!(self => { Self::Exists(x) | Self::FindSuchThat(x) => {x.top_level_function()}}) 
+        match_as_trait!(self => { Self::Exists(x) | Self::FindSuchThat(x) => {x.top_level_function()}})
     }
 
     fn skolems(&self) -> &[Function] {
-        match_as_trait!(self => { Self::Exists(x) | Self::FindSuchThat(x) => {x.skolems()}}) 
+        match_as_trait!(self => { Self::Exists(x) | Self::FindSuchThat(x) => {x.skolems()}})
     }
 
     fn fresh_indices(&self) -> &[Function] {
-        match_as_trait!(self => { Self::Exists(x) | Self::FindSuchThat(x) => {x.fresh_indices()}}) 
+        match_as_trait!(self => { Self::Exists(x) | Self::FindSuchThat(x) => {x.fresh_indices()}})
     }
 
     fn try_from_ref(q: &Quantifier) -> Option<&Self> {
@@ -113,7 +120,7 @@ impl QuantifierT for Quantifier {
     }
 
     fn temporary(&self) -> bool {
-        match_as_trait!(self => { Self::Exists(x) | Self::FindSuchThat(x) => {x.temporary()}}) 
+        match_as_trait!(self => { Self::Exists(x) | Self::FindSuchThat(x) => {x.temporary()}})
     }
 }
 

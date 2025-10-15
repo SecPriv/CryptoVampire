@@ -2,9 +2,8 @@ use egg::{ENodeOrVar, Id};
 use itertools::{Itertools, chain};
 
 use crate::rules::PRF;
-use crate::rules::utils::generate_rule_vars0;
-use crate::terms::{Function, NONCE, Rewrite, Sort};
-use crate::{Problem, rexp};
+use crate::terms::{Function, NONCE, RecFOFormula, Rewrite, Sort};
+use crate::{Problem, fresh, rexp};
 
 pub fn mk_rewrites<'a>(pbl: &'a Problem, prf: &'a PRF) -> impl Iterator<Item = Rewrite> + use<'a> {
     chain![[mk_rewrite_init(pbl, prf)], mk_rewrite_regular(pbl, prf)]
@@ -23,12 +22,12 @@ fn mk_rewrite_init<'a>(
         ..
     }: &'a PRF,
 ) -> Rewrite {
+    decl_vars!(m:Bitstring, k:Nonce);
     Rewrite::builder()
         .prolog_only(true)
-        .from(rexp!((hash #1 (NONCE #2))))
-        .to(rexp!((candidate (hash #1 (NONCE #2)) #1 #2)))
-        .variables([1, 2].map(egg::Var::from_usize))
-        .sorts([Sort::Bitstring, Sort::Nonce])
+        .from(rexp!((hash #m (NONCE #k))))
+        .to(rexp!((candidate (hash #m (NONCE #k)) #m #k)))
+        .variables([m, k].map(Clone::clone))
         .name(format!("candidate prf success ({hash})"))
         .build()
 }
@@ -52,56 +51,30 @@ fn mk_rewrite_one<'a>(
     prf: &'a PRF,
     f: &'a Function,
 ) -> impl Iterator<Item = Rewrite> + use<'a> {
-    let (vars0, extra_vars0) = generate_rule_vars0(f);
-
-    // variables for the arguments
-    let vars = vars0.clone().map(ENodeOrVar::Var);
-    // m, k
-    let extra_vars @ [_, _] = extra_vars0.map(ENodeOrVar::Var);
-
-    let all_vars = chain![vars0, extra_vars0];
-    let sorts = chain![
-        f.signature.inputs.iter().cloned(),
-        [Sort::Bitstring, Sort::Nonce]
-    ];
-    let n = f.arity();
+    let m = fresh!(Bitstring);
+    let k = fresh!(Nonce);
+    let vars = f.signature.mk_vars();
 
     let candidate = prf.get_candidate(f.signature.output).unwrap();
+    let ret = rexp!((candidate (f #(vars.iter().map_into())*) #m #k));
+    let vars_fo = vars.iter().cloned().map(RecFOFormula::Var).collect_vec();
 
     f.signature
         .inputs
         .iter()
         .enumerate()
-        .filter_map(|(i, s)| prf.get_candidate(*s).map(|f| (i, f)))
-        .map({
-            move |(i, candidate_x)| {
-                let premise = chain![
-                    vars.clone(),
-                    extra_vars.clone(),
-                    [
-                        candidate_x.app_id([i, n, n + 1].map(Id::from)),
-                        f.app_id(chain![0..i, [n + 2], (i + 1)..n].map_into())
-                    ]
-                    .map(ENodeOrVar::ENode)
-                ];
-                let conclusion = chain![
-                    vars.clone(),
-                    extra_vars.clone(),
-                    [
-                        f.app_id(chain![0..n].map_into()),
-                        candidate.app_id([n + 2, n, n + 1].map(Id::from)),
-                    ]
-                    .map(ENodeOrVar::ENode)
-                ];
-
+        .filter_map(move |(i, &s)| {
+            let candidate = prf.get_candidate(s)?;
+            let mut args = vars_fo.clone();
+            args[i] = rexp!((candidate #(args[i].clone()) #m #k));
+            Some(
                 Rewrite::builder()
                     .prolog_only(true)
-                    .variables(all_vars.clone())
-                    .sorts(sorts.clone())
-                    .from(premise)
-                    .to(conclusion)
+                    .variables(chain!([m.clone(), k.clone()], vars.clone()))
+                    .from(rexp!((f #args*)))
+                    .to(ret.clone())
                     .name(format!("candidate prf {f} arg#{i:}"))
-                    .build()
-            }
+                    .build(),
+            )
         })
 }

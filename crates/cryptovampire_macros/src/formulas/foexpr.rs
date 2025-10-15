@@ -417,7 +417,7 @@ impl ToTokenWithInputs for FunAppAst {
             .iter()
             .map(|arg| arg.to_tokens(macro_input))
             .try_collect()?;
-        Self::mk_app(macro_input, &quote!(&#func), args)
+        Self::mk_app(macro_input, &quote!(#func), args)
     }
 }
 
@@ -432,15 +432,18 @@ impl FunAppAst {
         let path = &macro_input.path;
         let args = args.into_iter();
         let fun = macro_input.mk_clone(fun);
+        let borrow;
         if macro_input.is_const() {
             let t = Kind::Formula.to_tokens(macro_input)?;
             constuctor = quote!(#path::mk_const_app);
             nargs = quote!({static TMP: &'static [#t] = &[#(#args),*]; TMP});
+            borrow = None
         } else {
             constuctor = quote!(#path::mk_app);
             nargs = quote!(::itertools::chain![#(#args),*]);
+            borrow = Some(quote!(&));
         }
-        Ok(quote!(#constuctor(#fun, #nargs)))
+        Ok(quote!(#constuctor(#borrow #fun, #nargs)))
     }
 }
 
@@ -449,12 +452,6 @@ impl ToTokenWithInputs for BangedContent {
         let path = &macro_input.path;
         let Self { kind, inner } = self;
         let mut ret = match inner {
-            BangedContentInner::Lit(lit) => {
-                return Err(Error::new_spanned(
-                    lit,
-                    "litterals don't make sense in this mode",
-                ));
-            }
             BangedContentInner::Ident(ident) => {
                 let cloned = macro_input.mk_clone(&quote!(#ident));
                 if macro_input.is_const() {
@@ -485,6 +482,5 @@ pub fn mk_recexpr(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let macro_input = parse_macro_input!(input as MacroInput);
     let output: proc_macro::TokenStream =
         macro_input.content.to_tokens(&macro_input).unwrap().into();
-    dbg!(&output.to_string());
     output
 }

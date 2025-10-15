@@ -26,6 +26,10 @@ fn mk_rw_self<N: Analysis<Lang>>() -> Rewrite<Lang, N> {
         Pattern::from(conclusion),
     )
     .unwrap()
+
+    mk_rewrite!{
+        "subst_self"
+    }
 }
 
 fn mk_rec_shortcut<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = Rewrite<Lang, N>> {

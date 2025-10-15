@@ -13,7 +13,6 @@ use utils::{ebreak_if, ebreak_let, ereturn_let};
 
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::rules::deduce::{self, GetDeduce};
-use crate::terms::utils::offset;
 use crate::terms::{
     BIT_DEDUCE, BOOL_DEDUCE, CONS, EXISTS, FIND_SUCH_THAT, FOBinder, INDEX_SORT, LAMBDA_LET,
     Quantifier, QuantifierT, Sort, Variable,

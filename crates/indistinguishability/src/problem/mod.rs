@@ -5,7 +5,6 @@ use std::num::NonZeroUsize;
 use std::rc::Rc;
 
 use bon::bon;
-use cryptovampire_macros::smt;
 use cryptovampire_smt::Smt;
 use egg::{EGraph, RecExpr};
 use golgge::{Program, Rule};
@@ -29,7 +28,7 @@ use crate::terms::{
 use crate::utils::fresh_name;
 use crate::vampire::mk_prelude;
 use crate::vampire::runner::VampireExec;
-use crate::{Configuration, Lang, MSmt, mk_signature, rexp};
+use crate::{mk_signature, rexp, smt, Configuration, Lang, MSmt};
 
 mod analysis;
 pub use analysis::{PAnalysis, PRule, RcRule};
