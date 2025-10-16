@@ -29,7 +29,7 @@ pub struct FreshNonce {
 
 impl<'a> Rule<Lang, PAnalysis<'a>> for FreshNonce {
     fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: Id) -> Dependancy {
-        assert_eq!(NONCE_VAR, CONTENT);
+        // assert_eq!(NONCE_VAR, CONTENT);
 
         let egraph = prgm.egraph_mut();
         ereturn_let!(let Some(substs) =  FRESH_NONCE_PATTERN.search_eclass(egraph, goal),Dependancy::impossible());

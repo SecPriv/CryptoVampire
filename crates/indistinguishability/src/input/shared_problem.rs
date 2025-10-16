@@ -2,6 +2,7 @@ use std::cell::{Ref, RefCell, RefMut};
 use std::ops::Deref;
 use std::rc::Rc;
 
+use egg::Var;
 use steel::SteelErr;
 use steel::rerrs::ErrorKind;
 use steel::rvals::Result as SResult;
@@ -167,6 +168,10 @@ impl ShrProblem {
         Ok(())
     }
 
+    fn get_step_vars(&self, step: Function, ptcl: Function) -> SResult<Vec<Variable>> {
+        Ok(self.get_step_mut(step, ptcl)?.vars.clone())
+    }
+
     fn set_step_msg(&self, step: Function, ptcl: Function, msg: RecFOFormula) -> SResult<()> {
         self.get_step_mut(step, ptcl)?.msg = msg;
         Ok(())
@@ -233,6 +238,7 @@ impl Registerable for ShrProblem {
             .register_fn("set-step-message", Self::set_step_msg)
             .register_fn("set-step-condition", Self::set_step_cond)
             .register_fn("set-step-vars", Self::set_step_vars)
+            .register_fn("get-step-variables", Self::get_step_vars)
             .register_fn("add-rule", Self::add_rule)
             .register_fn("add-rewrite", Self::add_rewrite)
             .register_fn("add-smt-axiom", Self::add_smt_axiom)

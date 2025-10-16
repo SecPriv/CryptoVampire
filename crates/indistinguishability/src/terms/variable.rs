@@ -220,6 +220,7 @@ impl Registerable for Variable {
         Self::register_type(module)
             .register_fn("mk-fresh-var", Self::steel_fresh)
             .register_fn("mk-fresh-var-w-sort", Self::steel_fresh_sort)
+            .register_type::<Self>("Variable?")
     }
 }
 

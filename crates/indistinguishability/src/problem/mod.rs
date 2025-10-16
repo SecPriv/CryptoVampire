@@ -99,11 +99,11 @@ impl Problem {
     pub fn run(&mut self, p1: usize, p2: usize) -> bool {
         assert!(
             p1 < self.protocols.len(),
-            "p1 in not a protocol of `self` (index to large"
+            "p1 in not a protocol of `self` (index to large)"
         );
         assert!(
             p2 < self.protocols.len(),
-            "p2 in not a protocol of `self` (index to large"
+            "p2 in not a protocol of `self` (index to large)"
         );
         debug_assert!(self.valid());
 

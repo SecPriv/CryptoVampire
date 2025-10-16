@@ -7,7 +7,7 @@ use egg::{Id, Language, PatternAst, RecExpr};
 use quarck::CowArc;
 use serde::Serialize;
 use steel::rvals::IntoSteelVal;
-use steel::steel_vm::register_fn::RegisterFn;
+use steel::steel_vm::register_fn::{self, RegisterFn};
 use steel_derive::Steel;
 use utils::{ereturn_if, implvec, match_eq};
 
@@ -327,6 +327,10 @@ Because smt has a syntax for it, or it's a prolog trick, or ...");
             ..InnerFunction::new(name.into(), signature)
         })
     }
+
+    pub fn steel_name(&self) -> String {
+        self.name.clone().into_owned()
+    }
 }
 
 impl Registerable for Function {
@@ -335,13 +339,18 @@ impl Registerable for Function {
     ) -> &mut steel::steel_vm::builtin::BuiltInModule {
         Self::register_type(module);
         module
-            .register_type::<Function>("Function?")
-            .register_fn("fun", Self::steel_new)
+            .register_type::<Self>("Function?")
+            .register_fn("mk-fun", Self::steel_new)
             .register_fn("mk-nonce", Self::steel_new_nonce)
-            .register_fn("mk-alias", Self::steel_new_alias);
+            .register_fn("mk-alias", Self::steel_new_alias)
+            .register_fn("arity", Self::arity)
+            .register_fn("function-name", Self::steel_name);
 
         for fun in BUILTINS {
-            module.register_value(&fun.name, fun.clone().into_steelval().unwrap());
+            module.register_value(
+                &format!("__pre_{}", fun.name),
+                fun.clone().into_steelval().unwrap(),
+            );
         }
 
         module

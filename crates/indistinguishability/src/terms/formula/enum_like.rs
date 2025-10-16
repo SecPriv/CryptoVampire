@@ -109,10 +109,12 @@ impl RecFOFormula {
         }
     }
 
+    #[deprecated]
     pub fn as_recexp(&self) -> PatternAst<Lang> {
-        let mut ret = Vec::new();
-        self.as_recexp_inner(&mut ret);
-        ret.into()
+        self.as_egg().into()
+        // let mut ret = Vec::new();
+        // self.as_recexp_inner(&mut ret);
+        // ret.into()
     }
 
     fn from_id_inner(ids: &[Id], langs: &[Option<&Lang>], current: &Lang) -> Self {
@@ -1239,7 +1241,7 @@ impl RecFOFormula {
     // }
 
     // TODO: find such that
-    fn steel_binder(head: FOBinder, vars: Vec<Variable>, arg: RecFOFormula) -> Self {
+    fn steel_binder(head: FOBinder, vars: Vec<Variable>, arg: Vec<RecFOFormula>) -> Self {
         assert!(
             vars.iter().all(Variable::has_smt_sort),
             "Variable must have valid smt sort, see Variable::has_smt_sort"
@@ -1248,7 +1250,7 @@ impl RecFOFormula {
         Self::Quantifier {
             head,
             vars,
-            arg: mk_cowarc![arg],
+            arg: arg.into(),
         }
     }
 
@@ -1282,6 +1284,7 @@ impl Registerable for RecFOFormula {
             .register_fn("mk-varf", Self::steel_var)
             .register_value("existsf", FOBinder::Exists.into_steelval().unwrap())
             .register_value("forallf", FOBinder::Forall.into_steelval().unwrap())
+            .register_value("findstf", FOBinder::FindSuchThat.into_steelval().unwrap())
             .register_fn("is-varf", Self::steel_is_var)
             .register_fn("get-sort", Self::steel_get_sort)
             .register_type::<Self>("Formula?")

@@ -109,13 +109,13 @@ mk_builtin_funs!(
     // ~~~~~~~~~~~~~~~~~ bool ~~~~~~~~~~~~~~~~~~~
 
     /// boolean `if-then-else` in the sens that it returns a [Sort::Bool]
-    BITE "bool_if_then_else" "b_ite" {
+    BITE "b_ite" "bool_if_then_else" {
         signature: s!(Bool, 3),
         flags: f!(CUSTOM_DEDUCE | BUILTIN_SMT | IF_THEN_ELSE)
     };
 
     /// bitstring `if-then-else` in the sens that it returns a [Sort::Bitstring]
-    MITE "bitstring_if_then_else" "m_ite" {
+    MITE "m_ite" "bitstring_if_then_else" {
         signature: s!(Bool, Bitstring, Bitstring -> Bitstring),
         flags: f!(CUSTOM_DEDUCE | BUILTIN_SMT | IF_THEN_ELSE)
     };
@@ -124,7 +124,7 @@ mk_builtin_funs!(
     /// This function is used in the [rexp] macro for `=>`
     ///
     /// *NB*: this is an alias for [BITE]
-    IMPLIES "bit_implies" "implies" "=>" "mimplies" {
+    IMPLIES "mimplies" "bit_implies" "implies" "=>" {
         signature: s!(Bool, 2),
         flags: f!(BUILTIN_SMT), // e.g., this will be `BUILTIN | BUILTIN_SMT` instead of `FunctionFlags::BUILTIN`
         alias: Some(alias!{ // <- magic
@@ -136,7 +136,7 @@ mk_builtin_funs!(
     /// This function is used in the [rexp] macro for `and``
     ///
     /// *NB*: this is an alias for [BITE]
-    AND "bit_and" "and" "mand" {
+    AND "mand" "bit_and" "and"  {
         signature: s!(Bool, 2),
         flags: f!(/* ALIAS | */ BUILTIN_SMT),
         alias: Some(alias!{
@@ -148,7 +148,7 @@ mk_builtin_funs!(
     /// This function is used in the [rexp] macro for `or``
     ///
     /// *NB*: this is an alias for [BITE]
-    OR "bit_or" "or" "mor" {
+    OR "mor" "bit_or" "or" {
         signature: s!(Bool, 2),
         flags: f!(/* ALIAS | */ BUILTIN_SMT),
         alias: Some(alias!{
@@ -160,7 +160,7 @@ mk_builtin_funs!(
     /// This function is used in the [rexp] macro for `not``
     ///
     /// *NB*: this is an alias for [BITE]
-    NOT "bit_not" "not" "mnot" {
+    NOT "mnot" "bit_not" "not" {
         signature: s!(Bool, 1),
         flags: f!(/* ALIAS | */ BUILTIN_SMT),
         alias: Some(alias!{
@@ -169,7 +169,7 @@ mk_builtin_funs!(
     };
 
     /// Bitstring equality. This what is used as `=` in [rexp]
-    EQ "meq" "eq" "==" {
+    EQ "eq" "==" "meq" {
         signature: s!(Bitstring, Bitstring -> Bool),
         flags: f!(BUILTIN_SMT)
     };
@@ -405,7 +405,7 @@ mk_builtin_funs!(
     /// The binder for `exists`
     ///
     /// The first argument is a list of sorts
-    EXISTS "mexists" {
+    EXISTS "lambda_exists" {
         signature: s!(Any /* list */, Bool -> Bool),
         flags: f!(BINDER | PROLOG_ONLY)
     };
@@ -414,7 +414,7 @@ mk_builtin_funs!(
     ///
     /// The first argument is a list of sorts. Then its `condition`,
     /// `then_branch` and `else_branch`
-    FIND_SUCH_THAT "find_such_that" {
+    FIND_SUCH_THAT "lambda_find_such_that" {
         signature: s!(Any /* list */,
             Bool, Bitstring, Bitstring -> Bitstring),
         flags: f!(BINDER | PROLOG_ONLY)

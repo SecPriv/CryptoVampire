@@ -1,9 +1,10 @@
 use egg::{PatternAst, RecExpr};
+use itertools::Itertools;
 use quarck::CowArc;
 use utils::implvec;
 
 use crate::LangVar;
-use crate::terms::{FOBinder, Function, RecFOFormula, Variable, builtin};
+use crate::terms::{ FOBinder, Function, RecFOFormula, Variable, builtin};
 
 /// magic ✨
 #[macro_export]
@@ -77,11 +78,29 @@ pub fn mk_ors(args: implvec!(MacroExpr)) -> MacroExpr {
 }
 
 pub fn mk_eqs(args: implvec!(MacroExpr)) -> MacroExpr {
-    todo!()
+    let args = args.into_iter().collect_vec();
+    MacroExpr::and(
+        args.iter()
+            .cloned()
+            .tuple_combinations()
+            .map(|(a, b)| RecFOFormula::App {
+                head: EQ.const_clone(),
+                args: mk_cowarc![a, b],
+            }),
+    )
 }
 
 pub fn mk_neqs(args: implvec!(MacroExpr)) -> MacroExpr {
-    todo!()
+    let args = args.into_iter().collect_vec();
+    MacroExpr::and(
+        args.iter()
+            .cloned()
+            .tuple_combinations()
+            .map(|(a, b)| !RecFOFormula::App {
+                head: EQ.const_clone(),
+                args: mk_cowarc![a, b],
+            }),
+    )
 }
 
 /// for [rexp]
