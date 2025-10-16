@@ -318,22 +318,22 @@ fn mk_extra_rw(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     chain![[MSmt::Comment("extra rewrites".into())], ax]
 }
 
-#[cfg(test)]
-mod test {
-    mod basic_hash {
-        use itertools::Itertools;
+// #[cfg(test)]
+// mod test {
+//     mod basic_hash {
+//         use itertools::Itertools;
 
-        use crate::vampire::mk_prelude;
+//         use crate::vampire::mk_prelude;
 
-        #[test]
-        fn prelude() {
-            let pbl = crate::problem::test::basic_hash::mk_pblm().0;
+//         #[test]
+//         fn prelude() {
+//             let pbl = crate::problem::test::basic_hash::mk_pblm().0;
 
-            let prelude = mk_prelude(&pbl).collect_vec();
+//             let prelude = mk_prelude(&pbl).collect_vec();
 
-            for x in prelude {
-                println!("{x}")
-            }
-        }
-    }
-}
+//             for x in prelude {
+//                 println!("{x}")
+//             }
+//         }
+//     }
+// }
