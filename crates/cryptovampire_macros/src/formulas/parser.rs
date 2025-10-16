@@ -378,8 +378,7 @@ impl Parse for VarName {
     }
 }
 
-
-struct  ExclamationOrCross;
+struct ExclamationOrCross;
 
 impl Parse for ExclamationOrCross {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
@@ -388,7 +387,7 @@ impl Parse for ExclamationOrCross {
         } else if input.peek(Token![#]) {
             input.parse::<Token![#]>()?;
         } else {
-            return Err(input.error("Expected '#' or '!'"))
+            return Err(input.error("Expected '#' or '!'"));
         }
         Ok(Self)
     }
@@ -451,11 +450,11 @@ impl Parse for QuantifierAst {
             }
         };
         let bindings = content.parse()?;
-        let body = parse_argument_list(&content)?;
+        let body = parse_argument_list(content)?;
         Ok(Self {
             kind,
             bindings,
-            body: body,
+            body,
         })
     }
 }
@@ -486,7 +485,7 @@ impl QuantifierKind {
 impl Parse for FunAppAst {
     fn parse(content: ParseStream<'_>) -> Result<Self> {
         let keyword: Ident = content.parse()?;
-        let args = parse_argument_list(&content)?;
+        let args = parse_argument_list(content)?;
         Ok(Self {
             func: keyword.into(),
             args,
@@ -561,7 +560,15 @@ impl Parse for Ast {
             .map(|x| x.with(span))
         } else if input.peek(Ident) {
             let span = input.span();
-            input.parse().map(InnerAst::FunApp).map(|x| x.with(span))
+            input
+                .parse()
+                .map(|x| {
+                    InnerAst::FunApp(FunAppAst {
+                        func: x,
+                        args: vec![],
+                    })
+                })
+                .map(|x| x.with(span))
         } else {
             Err(input.error("Expected SMT formula: #term, (expression), or identifier"))
         }

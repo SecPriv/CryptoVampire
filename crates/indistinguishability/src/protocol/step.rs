@@ -78,13 +78,13 @@ impl Step {
 
         let unfold_cond = Rewrite::new(
             format!("unfold cond {name} in {ptcl}"),
-            Pattern::from(&rexp!(UNFOLD_COND #name #ptcl)),
+            Pattern::from(&rexp!((UNFOLD_COND #name #ptcl))),
             Pattern::from(&self.cond),
         )
         .unwrap();
         let unfold_msg = Rewrite::new(
             format!("unfold msg {name} in {ptcl}"),
-            Pattern::from(&rexp!(UNFOLD_MSG #name #ptcl)),
+            Pattern::from(&rexp!((UNFOLD_MSG #name #ptcl))),
             Pattern::from(&self.msg),
         )
         .unwrap();
