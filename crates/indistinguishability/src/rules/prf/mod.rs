@@ -123,14 +123,13 @@ impl PRF {
             search_bitstring,
             ..
         } = self;
-        decl_vars!(u, v, hm:Bitstring, m:Bitstring, k:Nonce, nk:Nonce, b);
 
-        let conclusionl = rexp!((EQUIV #u #v (candidate_bitstring #hm #m #k) #b));
-        let conclusionr = rexp!((EQUIV #u #v #b (candidate_bitstring #hm #m #k)));
-        let subterm_search1 = rexp!((search_bitstring #m #k #hm));
-        let subterm_search2 = rexp!((search_bitstring #m #k #m));
-        let new_goall = rexp!((SUBSTITUTION_RULE (EQUIV #u #v (SUBSTITUTION #hm (hash #m (NONCE #k)) (NONCE #nk)) #b)));
-        let new_goalr = rexp!((SUBSTITUTION_RULE (EQUIV #u #v #b (SUBSTITUTION #hm (hash #m (NONCE #k)) (NONCE #nk)))));
+        let conclusionl = rexp!((EQUIV #U #V (candidate_bitstring #HM #M #K) #B));
+        let conclusionr = rexp!((EQUIV #U #V #B (candidate_bitstring #HM #M #K)));
+        let subterm_search1 = rexp!((search_bitstring #M #K #HM));
+        let subterm_search2 = rexp!((search_bitstring #M #K #M));
+        let new_goall = rexp!((SUBSTITUTION_RULE (EQUIV #U #V (SUBSTITUTION #HM (hash #M (NONCE #K)) (NONCE #NK)) #B)));
+        let new_goalr = rexp!((SUBSTITUTION_RULE (EQUIV #U #V #B (SUBSTITUTION #HM (hash #M (NONCE #K)) (NONCE #NK)))));
 
         [
             TopPrfRule::new(
@@ -156,6 +155,9 @@ impl PRF {
         self.index
     }
 }
+
+
+        decl_vars!(const; U, V, HM:Bitstring, M:Bitstring, K:Nonce, NK:Nonce, B);
 
 /// Ochestrating [Rule] for PRF
 ///
@@ -224,7 +226,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for TopPrfRule {
             .substs
             .into_iter()
             .map(|mut subst| {
-                subst.insert(Var::from_usize(7), n);
+                subst.insert(NK.as_egg(), n);
 
                 [
                     self.subterm_search1.apply_susbt(egraph, &subst),

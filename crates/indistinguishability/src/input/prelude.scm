@@ -80,11 +80,13 @@
     (mforall (list sorts ...) (lambda (ids ...) arg1) (lambda (ids ...) arg2) arg3)]))
 
 (define (set-message pbl step ptcl msg) 
-  (let [(vars (map mk-varf (get-step-variables pbl step ptcl)))]
-  (set-step-message pbl step ptcl (apply msg (cons (mk-appf step vars) vars)))))
+  (let* [(vars (map mk-varf (get-step-variables pbl step ptcl)))
+          (in (macro_input (mk-appf step vars) (mk-appf ptcl '())))]
+  (set-step-message pbl step ptcl (apply msg (cons in vars)))))
 (define (set-condition pbl step ptcl condition) 
-  (let [(vars (map mk-varf (get-step-variables pbl step ptcl)))]
-  (set-step-condition pbl step ptcl (apply condition (cons (mk-appf step vars) vars)))))
+  (let* [(vars (map mk-varf (get-step-variables pbl step ptcl)))
+          (in (macro_input (mk-appf step vars) (mk-appf ptcl '())))]
+  (set-step-condition pbl step ptcl (apply condition (cons in vars)))))
 
 (define-syntax signature
   (syntax-rules (->)

@@ -14,8 +14,9 @@ use serde::Serialize;
 use smallvec::SmallVec;
 use steel::rvals::IntoSteelVal;
 use steel::steel_vm::register_fn::RegisterFn;
+use steel::{SteelErr, rerrs};
 use steel_derive::Steel;
-use utils::{dynamic_iter, ereturn_if, implvec, match_eq};
+use utils::{dynamic_iter, econtinue_let, ereturn_if, implvec, match_eq};
 
 use super::{FOBinder, RecFOFormulaQuant};
 use crate::input::Registerable;
@@ -81,7 +82,16 @@ impl RecFOFormula {
                     _ => {None}
                 }}
             }
-            RecFOFormula::Quantifier { .. } => todo!(),
+            RecFOFormula::Quantifier {
+                head: FOBinder::Exists,
+                arg,
+                ..
+            }
+            | RecFOFormula::Quantifier {
+                head: FOBinder::Forall,
+                arg,
+                ..
+            } => arg[0].try_evaluate(),
             _ => None,
         }
     }
@@ -962,22 +972,28 @@ impl From<&RecFOFormula> for Pattern<Lang> {
     }
 }
 
+static FULL_VARS: bool = false;
 impl<'a> From<&'a RecFOFormula> for SExpr<'a> {
     fn from(value: &'a RecFOFormula) -> Self {
         use SExpr::*;
         match value {
             RecFOFormula::Quantifier { head, vars, arg } => Group(vec![
                 Atom(head),
-                Group(vars.iter().map(|x| Atom(x)).collect()),
+                Group(vars.iter().map(|x| mk_var_sexpr(x)).collect()),
                 Group(arg.iter().map(|x| Atom(x)).collect()),
             ]),
-            RecFOFormula::App { head, args } => Group(vec![
-                Atom(head),
-                Group(args.iter().map(|x| Atom(x)).collect()),
-            ]),
-            RecFOFormula::Var(variable) => AtomDebug(variable),
+            RecFOFormula::App { head, args } => {
+                Group(chain![[Atom(head)], args.iter().map(|x| Atom(x)),].collect())
+            }
+            RecFOFormula::Var(variable) => mk_var_sexpr(variable),
         }
     }
+}
+
+#[inline]
+fn mk_var_sexpr<'a>(v: &'a Variable) -> SExpr<'a> {
+    use SExpr::*;
+    if FULL_VARS { Atom(v) } else { AtomDebug(v) }
 }
 
 impl Default for RecFOFormula {
@@ -1254,11 +1270,34 @@ impl RecFOFormula {
         }
     }
 
-    fn steel_app(head: Function, args: Vec<RecFOFormula>) -> Self {
-        Self::App {
+    fn steel_app(head: Function, args: Vec<RecFOFormula>) -> Result<Self, SteelErr> {
+        let ret = Self::App {
             head,
             args: args.into(),
+        };
+        let Self::App { head, args } = &ret else {
+            unreachable!()
+        };
+
+        // checks
+        if head.arity() != args.len() {
+            return Err(SteelErr::new(
+                rerrs::ErrorKind::ArityMismatch,
+                format!("expect {} got {}", head.arity(), args.len()),
+            ));
         }
+
+        for (i, (arg, &s)) in izip!(args.iter(), head.signature.inputs.iter()).enumerate() {
+            econtinue_let!(let Some(s2) = arg.try_get_sort());
+            if s2 != s {
+                return Err(SteelErr::new(
+                    rerrs::ErrorKind::TypeMismatch,
+                    format!("epxected {s} got {s2} in argument {i:} of {ret}"),
+                ));
+            }
+        }
+
+        Ok(ret)
     }
 
     fn steel_var(var: Variable) -> Self {

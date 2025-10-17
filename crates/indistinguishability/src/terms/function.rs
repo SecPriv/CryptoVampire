@@ -1,11 +1,12 @@
 use std::borrow::Cow;
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 use std::ops::Deref;
 
 use cryptovampire_smt::SmtHead;
 use egg::{Id, Language, PatternAst, RecExpr};
 use quarck::CowArc;
 use serde::Serialize;
+use steel::SteelErr;
 use steel::rvals::IntoSteelVal;
 use steel::steel_vm::register_fn::{self, RegisterFn};
 use steel_derive::Steel;
@@ -15,10 +16,10 @@ use crate::input::Registerable;
 use crate::input::shared_cryptography::ShrCrypto;
 use crate::protocol::MacroKind;
 use crate::terms::{
-    Alias, BUILTINS, EXISTS, Exists, FIND_SUCH_THAT, FOBinder, FunctionCollection, FunctionFlags,
-    MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, NOT, Quantifier, QuantifierIndex,
-    QuantifierT, RecFOFormula, Signature, Sort, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME,
-    UNFOLD_INPUT, UNFOLD_MSG, builtin,
+    Alias, AliasRewrite, BUILTINS, EXISTS, Exists, FIND_SUCH_THAT, FOBinder, FunctionCollection,
+    FunctionFlags, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, NOT, Quantifier,
+    QuantifierIndex, QuantifierT, RecFOFormula, Signature, Sort, UNFOLD_COND, UNFOLD_EXEC,
+    UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin,
 };
 use crate::utils::LightClone;
 use crate::{Lang, LangVar};
@@ -76,7 +77,7 @@ impl InnerFunction {
 /// Main type for function in this crate
 ///
 /// This is basicaly a somewhat smart pointer to an [InnerFunction].
-#[derive(Debug, Clone, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash, Steel)]
+#[derive(Clone, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash, Steel)]
 pub struct Function(CowArc<'static, InnerFunction>);
 
 impl Function {
@@ -321,11 +322,31 @@ Because smt has a syntax for it, or it's a prolog trick, or ...");
         })
     }
 
-    pub fn steel_new_alias(name: String, signature: Signature, alias: Alias) -> Self {
-        Self::new(InnerFunction {
+    pub fn steel_new_alias(
+        name: String,
+        signature: Signature,
+        alias: Alias,
+    ) -> Result<Self, SteelErr> {
+        // cheks the alias is well formed
+        for AliasRewrite { from, .. } in alias.iter() {
+            if from.len() != signature.arity() {
+                let err = SteelErr::new(
+                    steel::rerrs::ErrorKind::ArityMismatch,
+                    format!(
+                        "expected the arity of each branch to match the function (got {} expected \
+                         {})",
+                        from.len(),
+                        signature.arity()
+                    ),
+                );
+                return Err(err);
+            }
+        }
+
+        Ok(Self::new(InnerFunction {
             alias: Some(alias),
             ..InnerFunction::new(name.into(), signature)
-        })
+        }))
     }
 
     pub fn steel_name(&self) -> String {
@@ -359,7 +380,14 @@ impl Registerable for Function {
 
 impl Display for Function {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.name.fmt(f)
+        Display::fmt(self.name.as_ref(), f)
+    }
+}
+
+impl Debug for Function {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // f.debug_tuple("Function").field(&self.0).finish()
+        Display::fmt(&self, f)
     }
 }
 

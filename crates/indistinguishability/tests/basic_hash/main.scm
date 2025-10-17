@@ -32,10 +32,10 @@
 (define rf (lift-fun s_rf))
 
 (define _mk (declare-function pbl (mk-alias "mkey"
-  (signature (Index Index Protocol) -> Bitstring) 
-  (list
-    (bind ((i Index) (j Index)) (mk-alias-rwf (list i j) (list (mk-varf i) (mk-varf j)) (k1 i)))
-    (bind ((i Index) (j Index)) (mk-alias-rwf (list i j) (list (mk-varf i) (mk-varf j)) (k2 i j)))))))
+  (signature (Index Index Protocol) -> Nonce) 
+  (bind ((i Index) (j Index) ) (list
+    (mk-alias-rwf (list i j) (list (mk-varf i) (mk-varf j) p1) (k1 i))
+    (mk-alias-rwf (list i j) (list (mk-varf i) (mk-varf j) p2) (k2 i j)))))))
 (define mk (lift-fun _mk))
 
 (initialize-as-prf prf _hash)
@@ -91,17 +91,17 @@
 
 (set-condition pbl s_rs _p1
   (lambda (in i j)
-   (eq (sel2of2 in) (hash (sel1of2 in) (mk i j p1)))))
+   (eq (sel2of2 in) (hash (sel1of2 in) (mnonce (mk i j p1))))))
 (set-condition pbl s_rs _p2
   (lambda (in i j)
-   (eq (sel2of2 in) (hash (sel1of2 in) (mk i j p2)))))
+   (eq (sel2of2 in) (hash (sel1of2 in) (mnonce (mk i j p2))))))
 
 (set-condition pbl s_rf _p1
   (lambda (in i)
-   (mnot (exists ((j Index)) (eq (sel2of2 in) (hash (sel1of2 in) (mk i j p1)))))))
+   (mnot (exists ((j Index)) (eq (sel2of2 in) (hash (sel1of2 in) (mnonce (mk i j p1))))))))
 (set-condition pbl s_rf _p2
   (lambda (in i)
-   (mnot (exists ((j Index)) (eq (sel2of2 in) (hash (sel1of2 in) (mk i j p2)))))))
+   (mnot (exists ((j Index)) (eq (sel2of2 in) (hash (sel1of2 in) (mnonce (mk i j p2))))))))
 
 ; (set-step-condition pbl rf p1
 ;   (let* (
@@ -155,7 +155,7 @@
   ((i Index) (j Index) (t Time) (p Protocol))
   (let [(in (macro_input t p))] 
     (mk-rewrite "lemma-2" (list i j t p) 
-      (eq (sel2of2 in) (hash (sel1of2 in) (mk i j p))) 
+      (eq (sel2of2 in) (hash (sel1of2 in) (mnonce (mk i j p)))) 
       (exists ((i Index))
         (mand
           (lt (tag i j) t) ; <- very important
