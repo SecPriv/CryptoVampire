@@ -50,7 +50,7 @@ fn mk_s_rw<N: Analysis<Lang>>(
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
     pbl.functions()
         .iter_current()
-        .filter(|f| f.is_out_of_term_algebra())
+        .filter(|f| !f.is_out_of_term_algebra())
         .map(|f| {
             let vars = f.signature.mk_vars();
             let vars = vars.iter().map(|x| RecFOFormula::Var(x.clone()));
@@ -69,7 +69,7 @@ fn mk_let_rw<N: Analysis<Lang>>(
     let m = fresh!();
     pbl.functions()
         .iter_current()
-        .filter(|f| f.is_out_of_term_algebra())
+        .filter(|f| !f.is_out_of_term_algebra())
         .map({
             move |f| {
                 let m = &m;

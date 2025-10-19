@@ -525,7 +525,7 @@ pub(crate) fn apply_pat<L: Language, A: Analysis<L>>(
     subst: &Subst,
 ) -> Id {
     debug_assert_eq!(pat.len(), ids.len());
-    println!("apply_rec {:2?} {:?}", pat, subst);
+    trace!("apply_rec {:2?} {:?}", pat, subst);
 
     for (i, pat_node) in pat.iter().enumerate() {
         let id = match pat_node {

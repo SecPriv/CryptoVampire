@@ -93,6 +93,7 @@ impl Problem {
             .eq_rules(eq_rules)
             .rules(rules)
             .egraph(EGraph::new(PAnalysis::builder().pbl(self).build()).with_explanations_enabled())
+            .config(golgge::Config::builder().node_limit(500).build())
             .call()
     }
 

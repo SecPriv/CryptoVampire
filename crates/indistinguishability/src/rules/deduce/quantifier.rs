@@ -64,6 +64,7 @@ macro_rules! mk_vars {
         static DEFAULT_PARAMERTERS : Parameters<Variable> = Parameters {$($n: fresh!(const)),*};
 
         impl Parameters<Variable> {
+            #[allow(dead_code)]
             fn all_params(&self) -> impl Iterator<Item = &Variable> {
                 [ $(&self.$n),* ].into_iter()
             }
@@ -92,6 +93,13 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for QuantifierRule {
                 Some((ret, matches))
             });
         ereturn_let!(let Some((ret, matches)) = matches, Dependancy::impossible());
+        #[cfg(debug_assertions)]
+        {
+            let g = prgm.egraph().id_to_expr(goal);
+            tr!("quantifier deduce with: {}", g)
+        }
+
+        
 
         let new_var = prgm
             .egraph_mut()
@@ -110,6 +118,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for QuantifierRule {
                     'err: {
                         ebreak_let!('err, let Some(&sid) = subst.get(DEFAULT_PARAMERTERS.sort.as_egg()));
                         ebreak_if!('out, prgm.egraph()[sid].nodes[0].head == INDEX_SORT);
+                        log::error!("wrong sort: {}", &prgm.egraph()[sid].nodes[0].head);
                     }
                     panic!("only Index is supported in deduce quantifiers")
                 }
@@ -261,6 +270,7 @@ impl QuantifierRule {
             ],
         }
         .map(|x| Pattern::from(&x));
+        // tr!("{capture_pattern}\n{return_pattern}")
         (capture_pattern, return_pattern)
     }
 }

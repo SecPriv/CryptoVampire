@@ -1,3 +1,4 @@
+use bon::Builder;
 use egg::{Analysis, Language, Runner};
 
 mod rule;
@@ -18,12 +19,16 @@ mod program;
 mod proof;
 pub use proof::ProofItem;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Builder)]
 #[non_exhaustive]
 pub struct Config {
+    #[builder(default = Config::default().iter_limit)]
     pub iter_limit: usize,
+    #[builder(default = Config::default().node_limit)]
     pub node_limit: usize,
+    #[builder(default = Config::default().time_limit)]
     pub time_limit: std::time::Duration,
+    #[builder(default = Config::default().trace_prolog)]
     pub trace_prolog: bool,
 }
 

@@ -154,7 +154,7 @@
 (bind 
   ((i Index) (j Index) (t Time) (p Protocol))
   (let [(in (macro_input t p))] 
-    (mk-rewrite "lemma-2" (list i j t p) 
+    (add-rewrite pbl (mk-rewrite "lemma-2" (list i j t p) 
       (eq (sel2of2 in) (hash (sel1of2 in) (mnonce (mk i j p)))) 
       (exists ((i Index))
         (mand
@@ -162,7 +162,7 @@
           (mand (eq (sel1of2 in) (sel1of2 (macro_input (tag i j) p)))
             (eq (sel2of2 in) (sel2of2 (macro_input (tag i j) p))))
         )
-      )))
+      ))))
 )
 
 ; (print_formula

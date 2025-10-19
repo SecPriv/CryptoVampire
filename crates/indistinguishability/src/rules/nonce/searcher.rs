@@ -215,7 +215,7 @@ impl SyntaxSearcher for Nonce {
         tr!("found nonce!");
         let arg = args.iter().next().expect("NONCE need a parameter");
 
-        builder.add_leaf(rexp!((= #arg #(self.as_recformula()))));
+        builder.add_leaf(rexp!((distinct #arg #(self.as_recformula()))));
         ControlFlow::Break(())
     }
 }

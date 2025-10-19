@@ -769,7 +769,7 @@ fn mk_list<L: EggLanguage>(out: &mut Vec<L>, sorts: implvec!(Sort)) -> usize {
         out.push(EggLanguage::mk_fun_application(sort.clone(), []));
         out.push(EggLanguage::mk_fun_application(
             CONS.clone(),
-            [i, i + 1].map(Id::from),
+            [i + 1, i].map(Id::from),
         ));
         i += 2
     }

@@ -9,7 +9,7 @@ use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
 use std::rc::Rc;
 
-use egg::{Analysis, EGraph, Id, Language, Pattern, Searcher, Var};
+use egg::{Analysis, EGraph, Id, Language, Pattern, Searcher};
 use golgge::{Dependancy, Rule};
 use indexmap::IndexMap;
 use itertools::{Itertools, izip};
@@ -115,7 +115,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
                 // Substitution { egraph, x, y }.apply_subst();
                 // [g]
 
-                let g = *s.get(Var::from_usize(0)).unwrap();
+                let g = *s.get(GOAL.as_egg()).unwrap();
                 [g]
             })
             .collect();

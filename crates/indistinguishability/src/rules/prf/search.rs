@@ -278,6 +278,7 @@ impl Search {
         ptcl: &'a Protocol,
         time: RecFOFormula,
     ) -> impl Iterator<Item = RecFOFormula> + use<'a> {
+        tr!("searching protocol {}", ptcl.name());
         ptcl.steps()
             .iter()
             .flat_map(
@@ -331,7 +332,7 @@ impl crate::rules::utils::SyntaxSearcher for Search {
         if fun == &NONCE {
             tr!("found key!");
             let arg = args.next().expect("NONCE needs a parameter");
-            builder.add_leaf(rexp!((= #arg #k)));
+            builder.add_leaf(rexp!((distinct #arg #k)));
         } else if fun == &self.prf(pbl).hash {
             tr!("found hash!");
             let (m2, k2) = args
@@ -409,6 +410,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfVampireRule {
             };
 
             let search = search.search_timepoint(pbl, ptcl, time).collect_vec();
+            tr!("prf needs to checks:\n[\n\t{}\n]", search.iter().join("\n\t"));
             let pbl = egraph.analysis.pbl_mut();
             pbl.find_temp_quantifiers(&search);
             let result = search.into_iter().all(|query| {

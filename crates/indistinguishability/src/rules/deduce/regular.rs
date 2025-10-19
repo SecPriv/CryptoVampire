@@ -3,7 +3,7 @@ use golgge::PrologRule;
 use itertools::izip;
 
 use crate::problem::{PRule, RcRule};
-use crate::rules::deduce::GetDeduce;
+use crate::rules::deduce::{self, GetDeduce};
 use crate::terms::{Function, RecFOFormula};
 use crate::{Lang, Problem, fresh, rexp};
 
@@ -35,14 +35,16 @@ fn should_process_normaly(f: &Function) -> bool {
 /// ```
 fn mk_deduce_rule(f: &Function) -> PrologRule<Lang> {
     assert!(should_process_normaly(f));
-    assert!(f.signature.output.support_deduce());
+    let deduce = f.try_get_deduce().unwrap();
     let [u, v, h1, h2] = &::std::array::from_fn(|_| fresh!());
     let [args1, args2] = ::std::array::from_fn(|_| f.signature.mk_vars());
     let [args1, args2] = [&args1, &args2].map(|a| a.iter().map(|v| RecFOFormula::Var(v.clone())));
-    let deduce = f.signature.output.get_deduce();
 
-    let deps = izip!(args1.clone(), args2.clone())
-        .map(|(a1, a2)| rexp!((deduce #u #v #a1 #a2 #h1 #h2)))
+    let deps = izip!(args1.clone(), args2.clone(), f.signature.inputs.iter())
+        .filter_map(|(a1, a2, &s)| {
+            let deduce = s.try_get_deduce()?;
+            Some(rexp!((deduce #u #v #a1 #a2 #h1 #h2)))
+        })
         .map(|x| Pattern::from(&x))
         .collect();
     let input = Pattern::from(&rexp!((deduce #u #v (f #args1*) (f #args2*) #h1 #h2)));
