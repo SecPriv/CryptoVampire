@@ -1,14 +1,18 @@
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 
+use logic_formula::Formula;
 use serde::{Deserialize, Serialize};
 use steel::rvals::IntoSteelVal;
 use steel_derive::Steel;
 
+use crate::Lang;
 use crate::input::Registerable;
+use crate::terms::formula::sort_list;
+use crate::terms::{BITSTRING_SORT, Function, INDEX_SORT, TIME_SORT};
 
 #[non_exhaustive]
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Steel, Default,
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Steel, Default,
 )]
 #[steel(equality)]
 pub enum Sort {
@@ -43,6 +47,40 @@ impl Sort {
     pub fn unify(self, other: Self) -> bool {
         self.is_any() || other.is_any() || self == other
     }
+
+    pub fn from_function(fun: &Function) -> Option<Self> {
+        match fun {
+            _ if fun == &BITSTRING_SORT => Some(Self::Bitstring),
+            _ if fun == &INDEX_SORT => Some(Self::Index),
+            _ if fun == &TIME_SORT => Some(Self::Time),
+            _ => None,
+        }
+    }
+
+    pub fn as_function(&self) -> Option<&'static Function> {
+        match self {
+            Sort::Bitstring => Some(&BITSTRING_SORT),
+            Sort::Index => Some(&INDEX_SORT),
+            Sort::Time => Some(&TIME_SORT),
+            _ => None,
+        }
+    }
+
+    /// see [sort_list::try_get_egraph]
+    pub fn list_from_egg<N: egg::Analysis<Lang>>(
+        egraph: &egg::EGraph<Lang, N>,
+        f: egg::Id,
+    ) -> Option<Vec<Sort>> {
+        sort_list::try_get_egraph(egraph, f)
+    }
+
+    pub fn list_from_formula<F>(f: F) -> Option<Vec<Sort>>
+    where
+        F: Formula,
+        F::Fun: AsRef<Function>,
+    {
+        sort_list::try_get(f)
+    }
 }
 
 impl Display for Sort {
@@ -56,6 +94,12 @@ impl Display for Sort {
             Sort::Index => write!(f, "Index"),
             Sort::Any => write!(f, "Any"),
         }
+    }
+}
+
+impl Debug for Sort {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self}")
     }
 }
 

@@ -1,30 +1,22 @@
 use std::borrow::Cow;
 
 use bon::{Builder, builder};
-use itertools::Itertools;
 use serde::Serialize;
 use steel::rvals::Result as SResult;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
-use crate::LangVar;
 use crate::input::Registerable;
-use crate::input::var::SVar;
-use crate::terms::formula_utils::convert_to_cow;
-use crate::terms::{CowPattern, RecFOFormula, Sort};
+use crate::terms::{RecFOFormula, Variable};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Builder, Steel)]
 pub struct Rewrite {
     /// These are the arguments to the function that one must unify with to get
     /// rewritten as [Self::to].
-    #[builder(with = |x: impl std::iter::IntoIterator<Item = LangVar>| convert_to_cow(x))]
-    pub from: CowPattern,
-    #[builder(with = |x: impl std::iter::IntoIterator<Item = LangVar>| convert_to_cow(x))]
-    pub to: CowPattern,
-    #[builder(with = |x: impl std::iter::IntoIterator<Item = egg::Var>| x.into_iter().collect())]
-    pub variables: cow![egg::Var],
-    #[builder(with = |x: impl std::iter::IntoIterator<Item = Sort>| x.into_iter().collect())]
-    pub sorts: cow![Sort],
+    pub from: RecFOFormula,
+    pub to: RecFOFormula,
+    #[builder(with = |x: impl std::iter::IntoIterator<Item = Variable>| x.into_iter().collect())]
+    pub variables: cow![Variable],
 
     /// Can the rewrite be translated outside of [`golgee`] ?
     ///
@@ -41,35 +33,20 @@ pub struct Rewrite {
 impl Rewrite {
     fn steel_new(
         name: String,
-        variables: Vec<SVar>,
-        sorts: Vec<Sort>,
+        variables: Vec<Variable>,
         from: RecFOFormula,
         to: RecFOFormula,
     ) -> SResult<Self> {
-        fn convert(rec: &RecFOFormula) -> SResult<CowPattern> {
-            let patt = rec.steel_maybe_as_recexp()?;
-            let cow: CowPattern = patt.into_iter().collect_vec().into();
-            Ok(cow)
-        }
-        let from = convert(&from)?;
-        let to = convert(&to)?;
-        let variables = variables
-            .into_iter()
-            .map(egg::Var::from)
-            .collect_vec()
-            .into();
-        let sorts = sorts.into();
-
         Ok(Self {
             from,
             to,
-            variables,
-            sorts,
+            variables: mk_cow!(@ variables),
             prolog_only: false,
             name: Some(name.into()),
         })
     }
 
+    #[must_use]
     pub fn prolog_only(&self) -> bool {
         self.prolog_only
     }

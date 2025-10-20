@@ -1,20 +1,22 @@
 use std::cell::{Ref, RefCell, RefMut};
+use std::ops::Deref;
 use std::rc::Rc;
 
-use cryptovampire_smt::IntoSmt;
+use egg::Var;
 use steel::SteelErr;
 use steel::rerrs::ErrorKind;
 use steel::rvals::Result as SResult;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
-use crate::input::shared_fdst::ShrFindSuchThat;
-use crate::input::Registerable;
 use crate::input::golgge_rules::Rule;
 use crate::input::shared_exists::ShrExists;
-use crate::input::var::SVar;
+use crate::input::shared_fdst::ShrFindSuchThat;
+use crate::input::{Registerable, conversion_err};
 use crate::protocol::Step;
-use crate::terms::{Exists, FindSuchThat, Function, RecFOFormula, Rewrite, Sort};
+use crate::terms::{
+    Exists, FindSuchThat, Function, QuantifierT, RecFOFormula, Rewrite, Sort, Variable,
+};
 use crate::{MSmt, Problem};
 
 declare_trace!($"shrpblm");
@@ -86,7 +88,7 @@ impl ShrProblem {
     }
 
     fn declare_function(self, fun: Function) -> Function {
-        self.borrow_mut().function.add(fun.clone());
+        self.borrow_mut().functions_mut().add(fun.clone());
         fun
     }
 
@@ -111,12 +113,7 @@ impl ShrProblem {
         pbl.push_steps((0..nptcl).map(|_| {
             Step::builder()
                 .id(step.clone())
-                .vars(
-                    sorts
-                        .iter()
-                        .enumerate()
-                        .map(|(i, _)| egg::Var::from_u32(i as u32)),
-                )
+                .vars(sorts.iter().map(|&s| crate::fresh!(s)))
                 .build()
                 .unwrap()
         }));
@@ -129,33 +126,31 @@ impl ShrProblem {
 
     fn declare_exists(&self, captured: Vec<Sort>, bound: Vec<Sort>) -> ShrExists {
         let mut pbl = self.borrow_mut();
-        let index = pbl.function.quantifiers().len();
-        Exists::insert()
+        let exist = Exists::insert()
             .bvars_sorts(bound)
-            .cvars_sort(captured)
+            .cvars_sorts(captured)
             .pbl(&mut pbl)
             .call();
         ShrExists {
             pbl: self.clone(),
-            index,
+            index: exist.index().index,
         }
     }
 
     fn declare_fdst(&self, captured: Vec<Sort>, bound: Vec<Sort>) -> ShrFindSuchThat {
         let mut pbl = self.borrow_mut();
-        let index = pbl.function.quantifiers().len();
-        FindSuchThat::insert()
+        let fdst = FindSuchThat::insert()
             .bvars_sorts(bound)
-            .cvars_sort(captured)
+            .cvars_sorts(captured)
             .pbl(&mut pbl)
             .call();
         ShrFindSuchThat {
             pbl: self.clone(),
-            index,
+            index: fdst.index().index,
         }
     }
 
-    fn set_step_vars(&self, step: Function, ptcl: Function, vars: Vec<SVar>) -> SResult<()> {
+    fn set_step_vars(&self, step: Function, ptcl: Function, vars: Vec<Variable>) -> SResult<()> {
         let mut step = self.get_step_mut(step, ptcl)?;
 
         if step.id.arity() != vars.len() {
@@ -169,18 +164,20 @@ impl ShrProblem {
             ));
         }
 
-        step.vars = vars.into_iter().map(egg::Var::from).collect();
+        step.vars = vars;
         Ok(())
     }
 
+    fn get_step_vars(&self, step: Function, ptcl: Function) -> SResult<Vec<Variable>> {
+        Ok(self.get_step_mut(step, ptcl)?.vars.clone())
+    }
+
     fn set_step_msg(&self, step: Function, ptcl: Function, msg: RecFOFormula) -> SResult<()> {
-        let msg = msg.steel_maybe_as_recexp()?;
         self.get_step_mut(step, ptcl)?.msg = msg;
         Ok(())
     }
 
     fn set_step_cond(&self, step: Function, ptcl: Function, cond: RecFOFormula) -> SResult<()> {
-        let cond = cond.steel_maybe_as_recexp()?;
         self.get_step_mut(step, ptcl)?.cond = cond;
         Ok(())
     }
@@ -193,10 +190,12 @@ impl ShrProblem {
         self.borrow_mut().extra_rewrite_mut().push(rw);
     }
 
-    fn add_smt_axiom(&self, f: RecFOFormula) {
-        self.borrow_mut()
-            .extra_smt_mut()
-            .push(MSmt::mk_assert(f.into_smt()));
+    fn add_smt_axiom(&self, f: RecFOFormula) -> SResult<()> {
+        self.borrow_mut().extra_smt_mut().push(MSmt::mk_assert(
+            f.as_smt(self.0.borrow().deref())
+                .ok_or(conversion_err::<MSmt>())?,
+        ));
+        Ok(())
     }
 
     // =========================================================
@@ -239,6 +238,7 @@ impl Registerable for ShrProblem {
             .register_fn("set-step-message", Self::set_step_msg)
             .register_fn("set-step-condition", Self::set_step_cond)
             .register_fn("set-step-vars", Self::set_step_vars)
+            .register_fn("get-step-variables", Self::get_step_vars)
             .register_fn("add-rule", Self::add_rule)
             .register_fn("add-rewrite", Self::add_rewrite)
             .register_fn("add-smt-axiom", Self::add_smt_axiom)

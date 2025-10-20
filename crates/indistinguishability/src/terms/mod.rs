@@ -1,6 +1,3 @@
-use cryptovampire_smt::VarInner;
-use egg::{Symbol, Var};
-
 use crate::{Lang, LangVar};
 
 // =========================================================
@@ -16,10 +13,50 @@ macro_rules! const_fun_flags {
     };
 }
 
+/// Shortcut for `Cow<'smt, [U]>`
 macro_rules! cow {
+    ($l:lifetime; $t:ty) => {
+        ::std::borrow::Cow<$l, [$t]>
+    };
     ($t:ty) => {
         ::std::borrow::Cow<'static, [$t]>
     };
+}
+
+/// Shortcut for `Cow<'smt, [U]>`
+macro_rules! cowarc {
+    ($l:lifetime; $t:ty) => {
+        ::quarck::CowArc<$l, [$t]>
+    };
+    ($t:ty) => {
+        ::quarck::CowArc<'static, [$t]>
+    };
+}
+
+/// equivalent of [vec!] for [cow!] types
+macro_rules! mk_cowarc {
+    (@ $v:expr) => {
+        ::quarck::CowArc::Owned($v)
+    };
+    () => {
+        ::quarck::CowArc::Borrowed(&[])
+    };
+    ($($tt:tt)*) => {
+        ::quarck::CowArc::Owned(::std::vec![$($tt)*].into())
+    }
+}
+
+/// equivalent of [vec!] for [cow!] types
+macro_rules! mk_cow {
+    (@ $v:expr) => {
+        ::std::borrow::Cow::Owned($v)
+    };
+    () => {
+        ::std::borrow::Cow::Borrowed(&[])
+    };
+    ($($tt:tt)*) => {
+        ::std::borrow::Cow::Owned(::std::vec![$($tt)*])
+    }
 }
 
 /// helper to write owned signatures
@@ -67,10 +104,14 @@ pub use functions_holder::*;
 pub(crate) mod flags;
 pub use flags::FunctionFlags;
 
-mod first_order;
-pub use first_order::{FOBinder, RecFOFormula};
+mod formula;
+pub use formula::{
+    FOBinder, FormulaLike, RecFOFormula, RecFOFormulaQuant, RecFOFormulaQuantRef,
+    substitution_utils,
+};
+pub(crate) use formula::{InnerLang, QuantifierTranslator};
 
-pub mod formula_utils;
+pub mod utils;
 
 mod rewrite;
 pub use rewrite::Rewrite;
@@ -94,16 +135,12 @@ mod builtin;
 pub use cryptography::*;
 mod cryptography;
 
+pub(crate) mod variable;
+pub use variable::Variable;
+
 // =========================================================
 // ======================== other ==========================
 // =========================================================
 
 pub type CowExpr = cow![Lang];
 pub type CowPattern = cow![LangVar];
-
-pub fn convert_smt_var(var: cryptovampire_smt::VarInner) -> Var {
-    match var {
-        VarInner::Int(x) => Var::from_u32(x),
-        VarInner::Str(cow) => Var::from_symbol(Symbol::from(cow.as_ref())),
-    }
-}

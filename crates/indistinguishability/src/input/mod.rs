@@ -1,3 +1,7 @@
+use std::borrow::Cow;
+
+use static_init::dynamic;
+use steel::rvals::CustomType;
 use steel::SteelVal;
 use steel::steel_vm::builtin::BuiltInModule;
 use steel::steel_vm::engine::Engine;
@@ -8,14 +12,14 @@ use crate::input::shared_cryptography::ShrCrypto;
 use crate::input::shared_exists::ShrExists;
 use crate::input::shared_fdst::ShrFindSuchThat;
 use crate::input::shared_problem::ShrProblem;
-use crate::terms::{AliasRewrite, Function, RecFOFormula, Rewrite, Signature, Sort};
+use crate::terms::{AliasRewrite, Function, RecFOFormula, Rewrite, Signature, Sort, Variable, BUILTINS};
 
 pub(crate) mod golgge_rules;
 pub(crate) mod shared_cryptography;
 pub(crate) mod shared_exists;
 pub(crate) mod shared_fdst;
 pub(crate) mod shared_problem;
-pub(crate) mod var;
+// pub(crate) mod var;
 
 pub(crate) trait Registerable {
     fn register(module: &mut BuiltInModule) -> &mut BuiltInModule;
@@ -33,13 +37,25 @@ pub fn register(module: &mut BuiltInModule) -> &mut BuiltInModule {
     RecFOFormula::register(module);
     ShrCrypto::register(module);
     ShrFindSuchThat::register(module);
+    Variable::register(module);
 
     module.register_fn("println!", |x: SteelVal| println!("dbg: {x:?}"));
 
     module
 }
 
-static CV_PRELUDE: &str = include_str!("./prelude.scm");
+#[dynamic]
+static CV_PRELUDE: String =  {
+    let mut mkdefintions : String= "\n".into();
+
+    for f in BUILTINS {
+        let name = &f.name;
+        let old_name = format!("__pre_{}", f.name);
+        mkdefintions += &format!("(define {name} (lift-fun {old_name}))\n");
+    }
+
+    include_str!("./prelude.scm").replace("@@@DEFINITIONS@@@", &mkdefintions)
+};
 
 pub fn init_engine() -> Engine {
     let mut engine = Engine::new();
@@ -48,10 +64,19 @@ pub fn init_engine() -> Engine {
 
     crate::register(&mut module);
     engine.register_module(module);
-    match engine.compile_and_run_raw_program(CV_PRELUDE) {
+    log::trace!("prelude:\n{}", CV_PRELUDE.as_str());
+    match engine.compile_and_run_raw_program(Cow::Borrowed(CV_PRELUDE.as_ref())) {
         Ok(_) => (),
-        Err(e) => panic!("{}", e.emit_result_to_string("CV_PRELUDE", CV_PRELUDE)),
+        Err(e) => panic!("{}", e.emit_result_to_string("CV_PRELUDE", &CV_PRELUDE)),
     };
 
     engine
+}
+
+fn conversion_err<To>() -> ::steel::SteelErr {
+    use ::steel::*;
+    SteelErr::new(
+        rerrs::ErrorKind::ConversionError,
+        format!("couldn't convert to {}", ::std::any::type_name::<To>()),
+    )
 }

@@ -170,6 +170,29 @@ where
         &self.eq_rules
     }
 
+    #[cfg(debug_assertions)]
+    pub fn set_eq_rules(&mut self, new: Vec<Rewrite<L, N>>)where
+    L: Display
+    {
+        self.egraph_mut().clean = false;
+        self.eq_rules = new;
+
+        #[cfg(debug_assertions)]
+        {
+            for r in &self.eq_rules {
+                println!("{r:?}")
+            }
+        }
+    }
+
+    #[cfg(not(debug_assertions))]
+    pub fn set_eq_rules(&mut self, new: Vec<Rewrite<L, N>>)where
+    L: Display
+    {
+        self.egraph_mut().clean = false;
+        self.eq_rules = new;
+    }
+
     pub fn rules(&self) -> &[Rc<dyn Rule<L, N>>] {
         &self.rules
     }
@@ -304,7 +327,7 @@ where
         }
 
         if let Some(g) = gtmp {
-            eprintln!("({depth:}) setting {} to {}", g.pretty(80), result)
+            eprintln!("({depth:}) 💾 setting {} to {}", g.pretty(80), result)
         }
         result
     }
@@ -317,6 +340,7 @@ where
     pub fn run_rw_rules(&mut self, rules: Option<&[Rewrite<L, N>]>) -> Report {
         let mut egraph = self.egraph.take().expect("invalid program");
         mtrace!(self, "🚧 rebuilding egraph...");
+        let size = egraph.number_of_classes();
 
         let runner = self
             .config
@@ -347,6 +371,13 @@ where
             mtrace!(self, "✅ done!");
         }
         assert!(self.clean());
+
+        if self.egraph().number_of_classes() >= size + (size / 8) {
+            eprintln!("\n\t!!! large increase !!!\t\n");
+            println!("Press Enter to continue...");
+            let mut _input = String::new();
+            let _ = ::std::io::stdin().read_line(&mut _input);
+        }
         report
     }
 

@@ -1,14 +1,11 @@
 use std::cell::{Ref, RefMut};
-use std::ops::Deref;
 
-use itertools::Itertools;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
-use crate::input::Registerable;
 use crate::input::shared_problem::ShrProblem;
-use crate::input::var::SVar;
-use crate::terms::{FindSuchThat, Function, QuantifierT, RecFOFormula};
+use crate::input::{Registerable, conversion_err};
+use crate::terms::{FindSuchThat, Function, QuantifierIndex, QuantifierT, RecFOFormula, Variable};
 
 #[derive(Debug, Clone, Steel)]
 pub struct ShrFindSuchThat {
@@ -17,24 +14,31 @@ pub struct ShrFindSuchThat {
 }
 
 impl ShrFindSuchThat {
+    pub fn index(&self) -> QuantifierIndex {
+        QuantifierIndex {
+            temporary: false,
+            index: self.index,
+        }
+    }
+
     fn fdst(&self) -> Ref<'_, FindSuchThat> {
-        Ref::map(self.pbl.borrow(), |x| {
-            FindSuchThat::try_from_ref(&x.function.quantifiers()[self.index]).unwrap()
+        Ref::map(self.pbl.borrow(), |pbl| {
+            FindSuchThat::try_from_ref(self.index().get(pbl.functions()).unwrap()).unwrap()
         })
     }
 
     fn fdst_mut(&self) -> RefMut<'_, FindSuchThat> {
-        RefMut::map(self.pbl.borrow_mut(), |x| {
-            FindSuchThat::try_from_mut(x.function.get_mut_quantifier(self.index).unwrap()).unwrap()
+        RefMut::map(self.pbl.borrow_mut(), |pbl| {
+            FindSuchThat::try_from_mut(self.index().get_mut(pbl.functions_mut()).unwrap()).unwrap()
         })
     }
 
-    fn get_cvars(&self) -> Vec<SVar> {
-        self.fdst().cvars().iter().copied().map_into().collect()
+    fn get_cvars(&self) -> Vec<Variable> {
+        self.fdst().cvars().to_vec()
     }
 
-    fn get_bvars(&self) -> Vec<SVar> {
-        self.fdst().bvars().iter().copied().map_into().collect()
+    fn get_bvars(&self) -> Vec<Variable> {
+        self.fdst().bvars().to_vec()
     }
 
     fn get_tlf(&self) -> Function {
@@ -45,31 +49,28 @@ impl ShrFindSuchThat {
         self.fdst().skolems().to_vec()
     }
 
-    fn get_condition(&self) -> RecFOFormula {
-        self.fdst().condition().into()
+    fn get_condition(&self) -> ::steel::rvals::Result<RecFOFormula> {
+        self.fdst().condition().cloned().ok_or(cerr())
     }
 
-    fn get_then_branch(&self) -> RecFOFormula {
-        self.fdst().then_branch().into()
+    fn get_then_branch(&self) -> ::steel::rvals::Result<RecFOFormula> {
+        self.fdst().then_branch().cloned().ok_or(cerr())
     }
 
-    fn get_else_branch(&self) -> RecFOFormula {
-        self.fdst().else_branch().into()
+    fn get_else_branch(&self) -> ::steel::rvals::Result<RecFOFormula> {
+        self.fdst().else_branch().cloned().ok_or(cerr())
     }
 
-    fn set_condition(&self, p: RecFOFormula) -> ::steel::rvals::Result<()> {
-        self.fdst_mut().set_condition(p.steel_maybe_as_recexp()?);
-        Ok(())
+    fn set_condition(&self, p: RecFOFormula) {
+        self.fdst_mut().set_condition(p);
     }
 
-    fn set_then_branch(&self, p: RecFOFormula) -> ::steel::rvals::Result<()> {
-        self.fdst_mut().set_then_branch(p.steel_maybe_as_recexp()?);
-        Ok(())
+    fn set_then_branch(&self, p: RecFOFormula) {
+        self.fdst_mut().set_then_branch(p);
     }
 
-    fn set_else_branch(&self, p: RecFOFormula) -> ::steel::rvals::Result<()> {
-        self.fdst_mut().set_else_branch(p.steel_maybe_as_recexp()?);
-        Ok(())
+    fn set_else_branch(&self, p: RecFOFormula) {
+        self.fdst_mut().set_else_branch(p);
     }
 }
 
@@ -89,4 +90,8 @@ impl Registerable for ShrFindSuchThat {
             .register_fn("get-find-such-that-else-branch", Self::get_else_branch)
             .register_fn("set-find-such-that-else-branch", Self::set_else_branch)
     }
+}
+
+fn cerr() -> ::steel::SteelErr {
+    conversion_err::<RecFOFormula>()
 }

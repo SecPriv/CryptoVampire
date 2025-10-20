@@ -6,45 +6,45 @@ use utils::implvec;
 
 use super::formula::SmtFormula;
 use super::{SmtFile, SortedVar};
-use crate::{Arr, SmtPrettyPrinter, translate_smt_to_term};
+use crate::{Arr, SmtParam, SmtPrettyPrinter, translate_smt_to_term};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum Smt<S, F> {
-    Assert(SmtFormula<S, F>),
+pub enum Smt<U: SmtParam> {
+    Assert(SmtFormula<U>),
     #[cfg(feature = "vampire")]
-    AssertTh(SmtFormula<S, F>),
+    AssertTh(SmtFormula<U>),
     #[cfg(feature = "cryptovampire")]
     AssertGround {
-        sort: S,
-        formula: SmtFormula<S, F>,
+        sort: U::Sort,
+        formula: SmtFormula<U>,
     },
     #[cfg(feature = "vampire")]
-    AssertNot(SmtFormula<S, F>),
+    AssertNot(SmtFormula<U>),
     DeclareFun {
-        fun: F,
-        args: Vec<S>,
-        out: S,
+        fun: U::Function,
+        args: Vec<U::Sort>,
+        out: U::Sort,
     },
-    DeclareSort(S),
+    DeclareSort(U::Sort),
     DeclareSortAlias {
-        from: S,
-        to: S,
+        from: U::Sort,
+        to: U::Sort,
     },
 
     #[cfg(feature = "cryptovampire")]
-    DeclareSubtermRelation(F, Vec<F>),
+    DeclareSubtermRelation(U::Function, Vec<U::Function>),
 
     #[cfg(feature = "cryptovampire")]
     DeclareRewrite {
-        rewrite_fun: RewriteKind<F>,
-        vars: Vec<SortedVar<S>>,
-        lhs: Box<SmtFormula<S, F>>,
-        rhs: Box<SmtFormula<S, F>>,
+        rewrite_fun: RewriteKind<U::Function>,
+        vars: Vec<U::SVar>,
+        lhs: Box<SmtFormula<U>>,
+        rhs: Box<SmtFormula<U>>,
     },
 
     DeclareDatatypes {
-        sorts: Vec<S>,
-        cons: Vec<Vec<SmtCons<S, F>>>,
+        sorts: Vec<<U::SVar as SortedVar>::Sort>,
+        cons: Vec<Vec<SmtCons<U>>>,
     },
     Comment(String),
 
@@ -54,17 +54,17 @@ pub enum Smt<S, F> {
     SetLogic(String),
 }
 
-impl<S: Display, F: Display> Smt<S, F> {
+impl<U: SmtParam> Smt<U> {
     pub fn as_pretty(&self) -> SmtPrettyPrinter {
         translate_smt_to_term(self)
     }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct SmtCons<S, F> {
-    pub fun: F,
-    pub sorts: Vec<S>,
-    pub dest: Vec<Option<F>>,
+pub struct SmtCons<U: SmtParam> {
+    pub fun: U::Function,
+    pub sorts: Vec<U::Sort>,
+    pub dest: Vec<Option<U::Function>>,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -74,15 +74,15 @@ pub enum RewriteKind<F> {
     Other(F),
 }
 
-impl<S, F> FromIterator<Smt<S, F>> for SmtFile<S, F> {
-    fn from_iter<T: IntoIterator<Item = Smt<S, F>>>(iter: T) -> Self {
+impl<U: SmtParam> FromIterator<Smt<U>> for SmtFile<U> {
+    fn from_iter<T: IntoIterator<Item = Smt<U>>>(iter: T) -> Self {
         SmtFile {
             content: iter.into_iter().collect(),
         }
     }
 }
 
-impl<S, F> Smt<S, F> {
+impl<U: SmtParam> Smt<U> {
     /// Returns `true` if the smt is [`Assert`].
     ///
     /// [`Assert`]: Smt::Assert
@@ -96,9 +96,9 @@ impl<S, F> Smt<S, F> {
         }
     }
 
-    pub fn mk_query(query: SmtFormula<S, F>) -> Self
+    pub fn mk_query(query: SmtFormula<U>) -> Self
     where
-        SmtFormula<S, F>: Eq,
+        U::SVar: Eq,
     {
         #[cfg(feature = "vampire")]
         {
@@ -116,11 +116,11 @@ impl<S, F> Smt<S, F> {
     }
 }
 
-impl<S, F> Smt<S, F>
+impl<U: SmtParam> Smt<U>
 where
-    SmtFormula<S, F>: Eq,
+    U::SVar: Eq,
 {
-    pub fn mk_assert(f: SmtFormula<S, F>) -> Self {
+    pub fn mk_assert(f: SmtFormula<U>) -> Self {
         Self::Assert(f.optimise())
     }
 }
@@ -144,11 +144,7 @@ fn write_list<A>(
     write_par(f, |f| iter.into_iter().try_for_each(|x| arg(f, x)))
 }
 
-impl<S, F> Display for Smt<S, F>
-where
-    S: Display,
-    F: Display,
-{
+impl<U: SmtParam> Display for Smt<U> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Smt::Assert(formula) => writeln!(f, "(assert {formula})"),

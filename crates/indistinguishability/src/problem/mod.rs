@@ -4,30 +4,29 @@ use std::num::NonZeroUsize;
 use std::rc::Rc;
 
 use bon::bon;
-use cryptovampire_macros::smt;
 use cryptovampire_smt::Smt;
 use egg::{EGraph, RecExpr};
 use golgge::{Program, Rule};
 use itertools::{Itertools, chain};
 use log::trace;
-use logic_formula::egg::SimpleDiscriminant;
-use utils::implvec;
+use logic_formula::Formula;
+use logic_formula::iterators::QuantiferIterator;
+use utils::{econtinue_let, implvec};
 
 use crate::problem::function_builder::{
-    SetAlias, SetCryptography, SetFlags, SetName, SetOutput, SetStepIdx,
+    SetAlias, SetCryptography, SetInputs, SetName, SetOutput, SetStepIdx,
 };
 use crate::protocol::{Protocol, Step};
-use crate::rules::base_rules::{mk_prolog_rules, mk_rewrites_rules};
-use crate::rules::{FreshNonce, VampireRule};
-use crate::terms::formula_utils::convert_to_ground_rexp;
+use crate::rules::{FreshNonce, VampireRule, mk_default_prolog_rules, mk_default_rewrites};
 use crate::terms::{
-    Alias, CryptographicAssumption, EMPTY, EQUIV, Function, FunctionCollection, FunctionFlags,
-    HAPPENS, INIT, InnerFunction, MACRO_FRAME, PRED, Rewrite, Signature, Sort, TRUE, UNFOLD_MSG,
+    Alias, CryptographicAssumption, EMPTY, EQUIV, FOBinder, FindSuchThat, Function,
+    FunctionCollection, FunctionFlags, HAPPENS, INIT, InnerFunction, MACRO_FRAME, PRED,
+    QuantifierT, QuantifierTranslator, RecFOFormula, Rewrite, Signature, Sort, TRUE, UNFOLD_MSG,
 };
 use crate::utils::fresh_name;
 use crate::vampire::mk_prelude;
 use crate::vampire::runner::VampireExec;
-use crate::{Configuration, Lang, MSmt, mk_signature, rexp};
+use crate::{Configuration, Lang, MSmt, mk_signature, rexp, smt};
 
 mod analysis;
 pub use analysis::{PAnalysis, PRule, RcRule};
@@ -44,7 +43,7 @@ pub struct Problem {
     /// The vector must be at least 2 long
     protocols: Vec<Protocol>,
     /// The functions
-    pub function: FunctionCollection,
+    function: FunctionCollection,
 
     cryptography: Vec<CryptographicAssumption>,
 
@@ -57,6 +56,8 @@ pub struct Problem {
 
     /// the current step in the run (if any)
     current_step: Option<CurrentStep>,
+
+    quantifier_cache: Vec<(RecFOFormula, Function)>,
 }
 
 impl Default for Problem {
@@ -83,8 +84,8 @@ impl Problem {
         let vampire_rule = VampireRule::builder().exec(exec.clone()).build();
         let fresh_rule = FreshNonce::builder().exec(exec.clone()).build();
 
-        let eq_rules = mk_rewrites_rules(self);
-        let rules = mk_prolog_rules(self);
+        let eq_rules = mk_default_rewrites(self);
+        let rules = mk_default_prolog_rules(self);
         let rules: Vec<Rc<dyn Rule<_, _>>> =
             chain![rules, [vampire_rule.into_mrc(), fresh_rule.into_mrc()]].collect_vec();
 
@@ -92,17 +93,18 @@ impl Problem {
             .eq_rules(eq_rules)
             .rules(rules)
             .egraph(EGraph::new(PAnalysis::builder().pbl(self).build()).with_explanations_enabled())
+            .config(golgge::Config::builder().node_limit(500).build())
             .call()
     }
 
     pub fn run(&mut self, p1: usize, p2: usize) -> bool {
         assert!(
             p1 < self.protocols.len(),
-            "p1 in not a protocol of `self` (index to large"
+            "p1 in not a protocol of `self` (index to large)"
         );
         assert!(
             p2 < self.protocols.len(),
-            "p2 in not a protocol of `self` (index to large"
+            "p2 in not a protocol of `self` (index to large)"
         );
         debug_assert!(self.valid());
 
@@ -157,10 +159,8 @@ impl Problem {
 
             res &= pgrm
                 .run_expr(
-                    convert_to_ground_rexp(
-                        rexp!((EQUIV EMPTY EMPTY (UNFOLD_MSG init p1f) (UNFOLD_MSG init p2f))),
-                    )
-                    .unwrap(),
+                    rexp!((EQUIV EMPTY EMPTY (UNFOLD_MSG init p1f) (UNFOLD_MSG init p2f)))
+                        .as_egg_ground(),
                     depth,
                 )
                 .as_bool();
@@ -382,8 +382,100 @@ impl Problem {
         ret
     }
 
+    #[allow(dead_code)]
     pub(crate) fn current_step(&self) -> Option<&CurrentStep> {
         self.current_step.as_ref()
+    }
+
+    pub fn functions(&self) -> &FunctionCollection {
+        &self.function
+    }
+
+    pub fn functions_mut(&mut self) -> &mut FunctionCollection {
+        self.clear_smt_prelude();
+        &mut self.function
+    }
+
+    pub fn find_temp_quantifiers(&mut self, extra: &[RecFOFormula]) {
+        // unique quantifiers up to unification
+        let quantifiers = {
+            let candidate = chain![self.list_all_terms(), extra]
+                .flat_map(|f| f.iter_with(QuantiferIterator, ()))
+                .unique();
+            let mut pile = Vec::new();
+            for a in candidate {
+                if let RecFOFormula::Quantifier {
+                    head: FOBinder::FindSuchThat,
+                    ..
+                } = a
+                    && let None = pile.iter().find_map(|x| a.unify(x))
+                    && let None = self.quantifier_cache.iter().find_map(|(x, _)| a.unify(x))
+                {
+                    pile.push(a.clone());
+                }
+            }
+            pile
+        };
+
+        if quantifiers.is_empty() {
+            return;
+        }
+
+        for q in quantifiers.iter() {
+            econtinue_let!(let RecFOFormula::Quantifier { vars, arg, .. } = q);
+            let cvars_sorts = q.free_vars_iter().map(|v| {
+                v.get_sort()
+                    .expect("quantifiers should capture variables with sort")
+            });
+            let bvars_sorts = vars.iter().map(|v| {
+                v.get_sort()
+                    .expect("quantified variables should have a sort")
+            });
+            let find = FindSuchThat::insert()
+                .pbl(self)
+                .bvars_sorts(bvars_sorts)
+                .cvars_sorts(cvars_sorts)
+                .temporary(true)
+                .call();
+            find.set_condition(arg[0].clone());
+            find.set_then_branch(arg[1].clone());
+            find.set_else_branch(arg[2].clone());
+            let tlf = find.top_level_function().clone();
+            self.quantifier_cache.push((q.clone(), tlf));
+        }
+        self.clear_smt_prelude();
+    }
+
+    pub fn clear_temp_quantifiers(&mut self) {
+        self.quantifier_cache.clear();
+        self.clear_smt_prelude();
+    }
+
+    /// list all the `RecFOFormula` stored in this `Self`
+    pub fn list_all_terms(&self) -> impl Iterator<Item = &RecFOFormula> {
+        self.protocols()
+            .iter()
+            .flat_map(|p| p.steps().iter())
+            .flat_map(|s| [&s.cond, &s.msg].into_iter())
+    }
+}
+
+impl QuantifierTranslator for Problem {
+    fn try_translate(&self, formula: &RecFOFormula) -> Option<crate::terms::RecFOFormula> {
+        let (subst, fun) = self
+            .quantifier_cache
+            .iter()
+            .find_map(|(cached, fun)| cached.unify(formula).map(|subst| (subst, fun.clone())))?;
+        let q = fun.get_quantifier(self.functions()).unwrap();
+
+        let args: Option<Vec<_>> = q.cvars().iter().map(|v| subst.get(v)).collect();
+        let args = args?;
+        let args = args.iter().cloned().cloned();
+
+        let sks = q.skolems().iter().map(|sk| rexp!((sk #(args.clone())*)));
+        let tlf = q.top_level_function();
+
+        Some(rexp!((tlf #(args.clone())* #sks*)))
     }
 }
 
@@ -455,17 +547,18 @@ impl Problem {
             extra_smt,
             smt_prelude,
             current_step: None,
+            quantifier_cache: vec![],
         }
     }
 
     #[builder(builder_type = FunctionBuilder)]
     pub fn declare_function(
         &mut self,
+        #[builder(field)] flags: FunctionFlags,
         #[builder(into)] name: Cow<'static, str>,
         #[builder(with = FromIterator::from_iter, default = vec![])] inputs: Vec<Sort>,
         output: Sort,
         alias: Option<Alias>,
-        #[builder(default = FunctionFlags::empty())] flags: FunctionFlags,
         #[builder(default = 0)] quantifier_idx: usize,
         #[builder(default = 0)] protocol_idx: usize,
         #[builder(default = 0)] step_idx: usize,
@@ -483,8 +576,7 @@ impl Problem {
             cryptography: cryptography.into(),
         };
         let fun = Function::new(inner);
-        self.function.add(fun.clone());
-        self.clear_smt_prelude();
+        self.functions_mut().add(fun.clone());
         fun
     }
 }
@@ -494,19 +586,24 @@ impl<'a, S> FunctionBuilder<'a, S>
 where
     S: function_builder::State,
 {
-    pub fn step(
-        self,
-        idx: usize,
-    ) -> FunctionBuilder<'a, SetOutput<SetFlags<SetStepIdx<SetAlias<S>>>>>
+    pub fn flag(mut self, flag: FunctionFlags) -> Self {
+        self.flags |= flag;
+        self
+    }
+
+    pub fn flags(self, flags: implvec!(FunctionFlags)) -> Self {
+        flags.into_iter().fold(self, |acc, flag| acc.flag(flag))
+    }
+
+    pub fn step(self, idx: usize) -> FunctionBuilder<'a, SetOutput<SetStepIdx<SetAlias<S>>>>
     where
         S::StepIdx: FunctionBuilderIsUnset,
-        S::Flags: FunctionBuilderIsUnset,
         S::Alias: FunctionBuilderIsUnset,
         S::Output: FunctionBuilderIsUnset,
     {
         self.maybe_alias(None)
             .step_idx(idx)
-            .flags(FunctionFlags::STEP)
+            .flag(FunctionFlags::STEP)
             .output(Sort::Time)
     }
 
@@ -537,6 +634,30 @@ where
         };
         self.cryptography(len..(len + num))
     }
+
+    pub fn temporary(self) -> Self {
+        self.set_temporary(true)
+    }
+
+    pub fn set_temporary(mut self, value: bool) -> Self {
+        if value {
+            self.flags |= FunctionFlags::TEMPORARY
+        } else {
+            self.flags -= FunctionFlags::TEMPORARY
+        }
+        self
+    }
+
+    pub fn signature(
+        self,
+        Signature { inputs, output }: Signature,
+    ) -> FunctionBuilder<'a, SetInputs<SetOutput<S>>>
+    where
+        S::Inputs: FunctionBuilderIsUnset,
+        S::Output: FunctionBuilderIsUnset,
+    {
+        self.output(output).inputs(inputs.iter().copied())
+    }
 }
 
 impl<S> ProblemBuilder<S>
@@ -545,7 +666,7 @@ where
 {
     /// removes the default cryptography
     pub fn reset_cryptograhy(mut self) -> Self {
-        self.cryptography = vec![];
+        self.cryptography.clear();
         self
     }
 
@@ -555,6 +676,7 @@ where
     }
 }
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub(crate) struct CurrentStep {
     /// index in the [Problem]
@@ -566,4 +688,4 @@ pub(crate) struct CurrentStep {
 }
 
 // #[cfg(test)]
-pub mod test;
+// pub mod test;

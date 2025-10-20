@@ -4,12 +4,9 @@ use std::mem::ManuallyDrop;
 use std::rc::{Rc, Weak};
 
 use bon::{Builder, bon, builder};
-use egg::Var;
-use itertools::chain;
-use logic_formula::Formula;
 use utils::{ereturn_if, ereturn_let};
 
-use crate::terms::{FOBinder, RecFOFormula, Sort};
+use crate::terms::{FOBinder, RecFOFormula, Variable};
 
 declare_trace!($"search");
 
@@ -25,10 +22,6 @@ pub struct FormulaBuilder {
     staturated: bool,
     condition: Option<Condition>,
     children: Vec<Weak<RefCell<Self>>>,
-    /// all the variables bellow `max_var` may have been bound/used
-    ///
-    /// One shouldn't bound anything bellow
-    min_var: u32,
 }
 
 /// A search condition
@@ -45,9 +38,7 @@ struct Condition {
     ///
     /// e.g., `(exists () A) => A`
     #[builder(default)]
-    variables: Vec<Var>,
-    #[builder(default)]
-    sorts: Vec<Sort>,
+    variables: Vec<Variable>,
     quantifier: FOBinder,
 }
 
@@ -71,48 +62,21 @@ impl Display for Mode {
 impl RefFormulaBuilder {
     #[builder(builder_type = RefFormulaBuilderBuilder)]
     pub fn new(
-        mode: Mode,
+        #[builder(default)] mode: Mode,
 
         parent: Option<&RefFormulaBuilder>,
 
         condition: Option<RecFOFormula>,
-        #[builder(with = <_>::from_iter)] variables: Option<Vec<Var>>,
-        #[builder(with = <_>::from_iter)] sorts: Option<Vec<Sort>>,
+        #[builder(with = <_>::from_iter, default)] variables: Vec<Variable>,
         quantifier: Option<FOBinder>,
-
-        /// highest variable that we are free to use (i.e., we can fearlessly
-        /// bind variables above there)
-        ///
-        /// **NB**: this value will automatically be corrected to be above any
-        /// other referenced variable (by looking a the condition and the
-        /// parent)
-        #[builder(default = 0)]
-        min_var: u32,
     ) -> Self {
         let condition = quantifier.map(|quantifer| {
             Condition::builder()
                 .maybe_condition(condition)
-                .maybe_sorts(sorts)
-                .maybe_variables(variables)
+                .variables(variables)
                 .quantifier(quantifer)
                 .build()
         });
-
-        let min_var = {
-            let condition_max_var = condition.as_ref().and_then(|c| {
-                chain![
-                    c.variables().iter().copied(),
-                    c.condition().free_vars_iter()
-                ]
-                .filter_map(|x| x.as_u32())
-                .max()
-            });
-            let parent_min_var = parent.map(|b| b.min_var());
-
-            chain![[min_var], condition_max_var, parent_min_var]
-                .max()
-                .unwrap()
-        };
 
         let builder = Self(Rc::new(RefCell::new(FormulaBuilder {
             parent: None,
@@ -122,7 +86,6 @@ impl RefFormulaBuilder {
             precomputed: true,
             staturated: false,
             content: vec![],
-            min_var,
         })));
 
         if let Some(parent) = parent {
@@ -183,6 +146,14 @@ impl RefFormulaBuilder {
         self.try_evaluate().is_some()
     }
 
+    pub fn is_and(&self) -> bool {
+        self.borrow().mode == Mode::And
+    }
+
+    pub fn is_or(&self) -> bool {
+        self.borrow().mode == Mode::Or
+    }
+
     /// adds to the formula (in a disjonction or a conjunction depending on the mode)
     pub fn add_leaf(&self, content: RecFOFormula) {
         self.borrow_mut().add_leaf(content);
@@ -240,10 +211,6 @@ impl RefFormulaBuilder {
         let inner = Rc::into_inner(inner).unwrap(); // cannot fail because of the previous check
         Some(RefCell::into_inner(inner))
     }
-
-    pub fn min_var(&self) -> u32 {
-        self.borrow().min_var
-    }
 }
 
 impl Drop for FormulaBuilder {
@@ -273,17 +240,15 @@ impl FormulaBuilder {
             Some(Condition {
                 condition,
                 variables,
-                sorts,
                 quantifier,
             }) => {
-                assert_eq!(variables.len(), sorts.len());
-
                 let mut inner = match quantifier {
                     FOBinder::Forall => condition >> inner,
                     FOBinder::Exists => condition & inner,
+                    _ => todo!(),
                 };
                 if !variables.is_empty() {
-                    inner = RecFOFormula::bind(quantifier, variables, sorts, inner)
+                    inner = RecFOFormula::bind(quantifier, variables, [inner])
                 }
                 inner
             }
@@ -396,13 +361,8 @@ impl Condition {
     }
 
     #[allow(dead_code)]
-    pub fn variables(&self) -> &[Var] {
+    pub fn variables(&self) -> &[Variable] {
         &self.variables
-    }
-
-    #[allow(dead_code)]
-    pub fn sorts(&self) -> &[Sort] {
-        &self.sorts
     }
 
     #[allow(dead_code)]

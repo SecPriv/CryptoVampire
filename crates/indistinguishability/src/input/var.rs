@@ -1,4 +1,3 @@
-use egg::VarExposed;
 use steel::rvals::{FromSteelVal, IntoSteelVal};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -13,20 +12,5 @@ impl FromSteelVal for SVar {
 impl IntoSteelVal for SVar {
     fn into_steelval(self) -> steel::rvals::Result<steel::SteelVal> {
         self.0.into_steelval()
-    }
-}
-
-impl From<egg::Var> for SVar {
-    fn from(value: egg::Var) -> Self {
-        let VarExposed::Num(i) = value.expose() else {
-            unimplemented!()
-        };
-        Self(i)
-    }
-}
-
-impl From<SVar> for egg::Var {
-    fn from(val: SVar) -> Self {
-        egg::Var::from_u32(val.0)
     }
 }

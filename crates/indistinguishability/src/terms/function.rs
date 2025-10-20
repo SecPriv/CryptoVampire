@@ -1,24 +1,49 @@
 use std::borrow::Cow;
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 use std::ops::Deref;
 
 use cryptovampire_smt::SmtHead;
-use logic_formula::egg::{SimplLang, SimpleDiscriminant};
+use egg::{Id, Language, PatternAst, RecExpr};
+use quarck::CowArc;
 use serde::Serialize;
+use steel::SteelErr;
 use steel::rvals::IntoSteelVal;
-use steel::steel_vm::register_fn::RegisterFn;
+use steel::steel_vm::register_fn::{self, RegisterFn};
 use steel_derive::Steel;
-use utils::quack::CowArc;
 use utils::{ereturn_if, implvec, match_eq};
 
 use crate::input::Registerable;
 use crate::input::shared_cryptography::ShrCrypto;
-use crate::protocol::{MacroKind, ProtocolLanguage};
+use crate::protocol::MacroKind;
 use crate::terms::{
-    Alias, BUILTINS, Exists, FunctionCollection, FunctionFlags, HAPPENS, MACRO_COND, MACRO_EXEC,
-    MACRO_FRAME, MACRO_INPUT, MACRO_MSG, NOT, Quantifier, QuantifierT, RecFOFormula, Signature,
-    Sort, TRUE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin,
+    Alias, AliasRewrite, BUILTINS, EXISTS, Exists, FIND_SUCH_THAT, FOBinder, FunctionCollection,
+    FunctionFlags, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, NOT, Quantifier,
+    QuantifierIndex, QuantifierT, RecFOFormula, Signature, Sort, UNFOLD_COND, UNFOLD_EXEC,
+    UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin,
 };
+use crate::utils::LightClone;
+use crate::{Lang, LangVar};
+
+macro_rules! is_fun {
+    ($name:ident; $($flag:ident)|+) => {
+        #[inline]
+        pub fn $name(&self) -> bool {
+            static FLAGS: FunctionFlags =
+                const_fun_flags!($($flag)|+);
+
+            self.flags.intersects(FLAGS)
+        }
+    };
+    ($name:ident; $($flag:ident)|+; $t:literal) => {
+        #[inline] #[doc = $t]
+        pub fn $name(&self) -> bool {
+            static FLAGS: FunctionFlags =
+                const_fun_flags!($($flag)|+);
+
+            self.flags.intersects(FLAGS)
+        }
+    };
+}
 
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
@@ -52,7 +77,7 @@ impl InnerFunction {
 /// Main type for function in this crate
 ///
 /// This is basicaly a somewhat smart pointer to an [InnerFunction].
-#[derive(Debug, Clone, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash, Steel)]
+#[derive(Clone, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash, Steel)]
 pub struct Function(CowArc<'static, InnerFunction>);
 
 impl Function {
@@ -98,24 +123,22 @@ impl Function {
 
     /// static [Function] can be statically cloned. This function lets you do
     /// that. It returns [None] when the [Function] is not static
-    pub const fn const_clone(&self) -> Option<Self> {
+    pub const fn const_clone(&self) -> Self {
         match self.0 {
-            CowArc::Owned(_) => None,
-            CowArc::Borrowed(x) => Some(Self::from_ref(x)),
+            CowArc::Owned(_) => panic!("must be a borrowed function"),
+            CowArc::Borrowed(x) => Self::from_ref(x),
         }
     }
 
-    pub fn get_quantifier_index(&self) -> Option<usize> {
-        self.flags
-            .intersects(const_fun_flags!(
-                EXISTS | FIND_SUCH_THAT | SKOLEM | QUANTIFIER_FRESH
-            ))
-            .then_some(self.quantifier_idx)
+    pub fn get_quantifier_index(&self) -> Option<QuantifierIndex> {
+        self.has_quantifier_idx().then_some(QuantifierIndex {
+            temporary: self.is_temporary(),
+            index: self.quantifier_idx,
+        })
     }
 
     pub fn get_quantifier<'a>(&self, functions: &'a FunctionCollection) -> Option<&'a Quantifier> {
-        let idx = self.get_quantifier_index()?;
-        functions.quantifiers().get(idx)
+        self.get_quantifier_index()?.get(functions)
     }
 
     pub fn get_exists<'a>(&self, functions: &'a FunctionCollection) -> Option<&'a Exists> {
@@ -150,29 +173,54 @@ impl Function {
         }}
     }
 
+    // =========================================================
+    // ========================= app ===========================
+    // =========================================================
+
     pub fn rapp(&self, args: implvec!(RecFOFormula)) -> RecFOFormula {
         RecFOFormula::app(self.clone(), args.into_iter().collect())
+    }
+
+    /// Builds a [SimplLang]. Panics if not valid
+    pub fn app_id(&self, ids: implvec!(Id)) -> Lang {
+        Lang::new(self.clone(), ids)
+    }
+
+    pub fn app<E: AsRef<[Lang]>>(&self, ids: &[E]) -> RecExpr<Lang> {
+        let head = self.app_id((0..ids.len()).map(Id::from));
+        head.join_recexprs(|i| &ids[usize::from(i)])
+    }
+
+    pub fn app_var<E: AsRef<[LangVar]>>(&self, ids: &[E]) -> PatternAst<Lang> {
+        let head = egg::ENodeOrVar::ENode(self.app_id((0..ids.len()).map(Id::from)));
+        head.join_recexprs(|i| &ids[usize::from(i)])
+    }
+
+    pub fn app_empty(&self) -> RecExpr<Lang> {
+        self.app::<[_; 0]>(&[])
+    }
+
+    pub fn app_empty_var(&self) -> PatternAst<Lang> {
+        self.app_var::<[_; 0]>(&[])
+    }
+
+    pub fn as_fobinder(&self) -> Option<FOBinder> {
+        match_eq!(self => {
+            EXISTS => { Some(FOBinder::Exists) },
+            FIND_SUCH_THAT => {Some(FOBinder::FindSuchThat)},
+            _ => { None }
+        })
     }
 
     // =========================================================
     // ==================== is functions =======================
     // =========================================================
 
-    /// Should not appear in an smt file
-    ///
-    /// Because smt has a syntax for it, or it's a prolog trick, or ...
-    #[inline]
-    pub fn is_should_not_declare_in_smt(&self) -> bool {
-        static SHOULD_NOT_DECLARE_IN_SMT: FunctionFlags =
-            const_fun_flags!(PROLOG_ONLY | BUILTIN_SMT);
-
-        self.flags.intersects(SHOULD_NOT_DECLARE_IN_SMT)
-    }
-
-    /// The function already has an equivalent in smt
-    #[inline]
-    pub fn is_builtin_smt(&self) -> bool {
-        self.flags.intersects(FunctionFlags::BUILTIN_SMT)
+    pub const fn is_static(&self) -> bool {
+        match &self.0 {
+            CowArc::Owned(_) => false,
+            CowArc::Borrowed(_) => true,
+        }
     }
 
     #[inline]
@@ -182,7 +230,7 @@ impl Function {
                 | MACRO
                 | UNFOLD
                 | CUSTOM_SUBTERM
-                | EXISTS
+                | BINDER
                 | FIND_SUCH_THAT
                 | SKOLEM
                 | SMT_ONLY
@@ -200,7 +248,7 @@ impl Function {
                 | MACRO
                 | UNFOLD
                 | CUSTOM_DEDUCE
-                | EXISTS
+                | BINDER
                 | FIND_SUCH_THAT
                 | SKOLEM
                 | NONCE
@@ -231,35 +279,25 @@ impl Function {
         true
     }
 
-    /// This function should appear outside of prolog (e.g., doesn't make sense in smt)
-    #[inline]
-    pub fn is_prolog_only(&self) -> bool {
-        self.flags.intersects(FunctionFlags::PROLOG_ONLY)
-    }
-
-    #[inline]
-    pub fn is_if_then_else(&self) -> bool {
-        self.flags.intersects(FunctionFlags::IF_THEN_ELSE)
-    }
-
-    #[inline]
-    pub fn is_out_of_term_algebra(&self) -> bool {
-        self.flags
-            .intersects(FunctionFlags::SMT_ONLY | FunctionFlags::PROLOG_ONLY)
-    }
-
-    pub fn is_nonce(&self) -> bool {
-        self.flags.contains(FunctionFlags::NONCE)
-    }
-
     pub fn is_datatype(&self) -> bool {
         self.is_nonce() || self.is_protocol()
     }
 
-    pub fn is_quantifier(&self) -> bool {
-        self.flags
-            .intersects(FunctionFlags::FIND_SUCH_THAT | FunctionFlags::EXISTS)
-    }
+    is_fun!(is_prolog_only; PROLOG_ONLY;
+            "This function should appear outside of prolog (e.g., doesn't make sense in smt)");
+    is_fun!(is_if_then_else; IF_THEN_ELSE);
+    is_fun!(is_out_of_term_algebra; SMT_ONLY| PROLOG_ONLY);
+    is_fun!(is_nonce; NONCE);
+    is_fun!(is_quantifier; FIND_SUCH_THAT| BINDER);
+    is_fun!(has_quantifier_idx; BINDER | FIND_SUCH_THAT | SKOLEM | QUANTIFIER_FRESH);
+    is_fun!(is_egg_binder; BINDER);
+    is_fun!(is_temporary; TEMPORARY);
+    is_fun!(is_should_not_declare_in_smt; PROLOG_ONLY | BUILTIN_SMT;
+r" Should not appear in an smt file
+
+Because smt has a syntax for it, or it's a prolog trick, or ...");
+
+    is_fun!(is_builtin_smt; BUILTIN_SMT; "The function already has an equivalent in smt");
 
     // =========================================================
     // ====================== Steel API ========================
@@ -284,11 +322,35 @@ impl Function {
         })
     }
 
-    pub fn steel_new_alias(name: String, signature: Signature, alias: Alias) -> Self {
-        Self::new(InnerFunction {
+    pub fn steel_new_alias(
+        name: String,
+        signature: Signature,
+        alias: Alias,
+    ) -> Result<Self, SteelErr> {
+        // cheks the alias is well formed
+        for AliasRewrite { from, .. } in alias.iter() {
+            if from.len() != signature.arity() {
+                let err = SteelErr::new(
+                    steel::rerrs::ErrorKind::ArityMismatch,
+                    format!(
+                        "expected the arity of each branch to match the function (got {} expected \
+                         {})",
+                        from.len(),
+                        signature.arity()
+                    ),
+                );
+                return Err(err);
+            }
+        }
+
+        Ok(Self::new(InnerFunction {
             alias: Some(alias),
             ..InnerFunction::new(name.into(), signature)
-        })
+        }))
+    }
+
+    pub fn steel_name(&self) -> String {
+        self.name.clone().into_owned()
     }
 }
 
@@ -298,13 +360,18 @@ impl Registerable for Function {
     ) -> &mut steel::steel_vm::builtin::BuiltInModule {
         Self::register_type(module);
         module
-            .register_type::<Function>("Function?")
-            .register_fn("fun", Self::steel_new)
+            .register_type::<Self>("Function?")
+            .register_fn("mk-fun", Self::steel_new)
             .register_fn("mk-nonce", Self::steel_new_nonce)
-            .register_fn("mk-alias", Self::steel_new_alias);
+            .register_fn("mk-alias", Self::steel_new_alias)
+            .register_fn("arity", Self::arity)
+            .register_fn("function-name", Self::steel_name);
 
         for fun in BUILTINS {
-            module.register_value(&fun.name, fun.clone().into_steelval().unwrap());
+            module.register_value(
+                &format!("__pre_{}", fun.name),
+                fun.clone().into_steelval().unwrap(),
+            );
         }
 
         module
@@ -313,7 +380,14 @@ impl Registerable for Function {
 
 impl Display for Function {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.name.fmt(f)
+        Display::fmt(self.name.as_ref(), f)
+    }
+}
+
+impl Debug for Function {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // f.debug_tuple("Function").field(&self.0).finish()
+        Display::fmt(&self, f)
     }
 }
 
@@ -331,75 +405,4 @@ impl AsRef<Self> for Function {
     }
 }
 
-// impl Eq for Function {}
-
-// impl PartialEq for Function {
-//     fn eq(&self, other: &Self) -> bool {
-//         match (&self.0, &other.0) {
-//             (CowArc::Owned(a), CowArc::Owned(b)) => Arc::ptr_eq(a, b),
-//             (CowArc::Borrowed(a), CowArc::Borrowed(b)) => ::core::ptr::eq(a, b),
-//             _ => false,
-//         }
-//     }
-// }
-
-// impl PartialOrd for Function {
-//     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-//         if self == other {
-//             // equality if defined by pointer
-//             Some(Ordering::Equal)
-//         } else {
-//             // order by the content
-//             match InnerFunction::cmp(self, other) {
-//                 Ordering::Equal => None,
-//                 x => Some(x),
-//             }
-//         }
-//     }
-// }
-
-// impl Ord for Function {
-//     fn cmp(&self, other: &Self) -> Ordering {
-//         Self::partial_cmp(self, other).expect(
-//             "duplicate function at two different location in memory! (The \
-//             comparison algorithm is unsound in those cases, please avoid \
-//             declaring function twice)",
-//         )
-//     }
-// }
-
-// impl Hash for Function {
-//     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-//         match &self.0 {
-//             CowArc::Owned(x) => Arc::as_ptr(x),
-//             CowArc::Borrowed(x) => *x as *const _,
-//         }
-//         .hash(state);
-//     }
-// }
-
-// ~~~~~~~~~~~~ egg::Language ~~~~~~~~~~~~~~~
-
-impl SimpleDiscriminant for Function {
-    fn valid(&self, ids: &[egg::Id]) -> bool {
-        self.arity() == ids.len()
-    }
-}
-
-impl<const N: usize> ProtocolLanguage for SimplLang<Function, N> {
-    fn mk_happens(step: egg::Id) -> Self {
-        HAPPENS.app_id([step])
-    }
-
-    fn mk_true() -> Self {
-        TRUE.app_id([])
-    }
-
-    fn mk_macro(kind: MacroKind, step: egg::Id, ptcl: egg::Id) -> Self {
-        Function::macro_from_kind(kind).app_id([step, ptcl])
-    }
-
-    fn mk_unfold(kind: MacroKind, step: egg::Id, ptcl: egg::Id) -> Self {
-        Function::unfold_from_kind(kind).app_id([step, ptcl])
-    }
-}
+impl LightClone for Function {}

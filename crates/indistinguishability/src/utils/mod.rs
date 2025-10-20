@@ -56,6 +56,10 @@ pub fn fresh_name<'a, 'b>(name: &str, avoid: implvec!(&'b str)) -> String {
     nname
 }
 
+/// Marks that a type is *almost* free to clone
+pub trait LightClone: Clone {}
+impl<U: Copy> LightClone for U {}
+
 #[cfg(test)]
 mod test {
     use crate::utils::fresh_name;

@@ -7,8 +7,6 @@ bitflags! {
   pub struct FunctionFlags: u32 {
       /// The function is builtin
       const BUILTIN = 1 << 0;
-      /// It's an alias for something else
-      // const ALIAS = 1 << 1;
       /// Appears only in prolog
       const PROLOG_ONLY = 1 << 2;
 
@@ -21,8 +19,7 @@ bitflags! {
       /// not fit in any category
       const CUSTOM_DEDUCE = 1 << 5;
 
-      /// Represents an existential quantifier
-      const EXISTS = 1 << 6;
+      const BINDER = 1 << 6;
       const FIND_SUCH_THAT = 1 << 7;
       /// Represents a skolem function
       const SKOLEM = 1 << 8;
@@ -45,5 +42,16 @@ bitflags! {
 
       /// Is an `if .. then .. else` function
       const IF_THEN_ELSE = 1 << 16;
+
+      /// This represents a [Sort]
+      const SORT = 1 << 17;
+
+      const LIST_CONSTR = 1 << 18;
+
+      /// This function is temporary and should be garabage collected as soon as
+      /// possible.
+      ///
+      /// This can be used for temporary quantifiers for instance.
+      const TEMPORARY = 1 << 19;
   }
 }

@@ -5,47 +5,40 @@
 //! ```
 
 use std::borrow::Cow;
+use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
-use std::collections::{HashSet, VecDeque};
-use std::fmt::format;
-use std::mem;
 use std::rc::Rc;
 
-use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr, Searcher, Var};
+use egg::{Analysis, EGraph, Id, Language, Pattern, Searcher};
 use golgge::{Dependancy, Rule};
 use indexmap::IndexMap;
 use itertools::{Itertools, izip};
-use logic_formula::egg::SimpleDiscriminant;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 use static_init::dynamic;
+use utils::ereturn_let;
 use utils::transposer::VecTranspose;
-use utils::{econtinue_let, ereturn_let};
 
 use crate::problem::PAnalysis;
-use crate::rules::base_rules::substitution;
-use crate::rules::utils::mk_subst_rw;
+// use crate::rules::base_rules::substitution;
+// use crate::rules::utils::mk_subst_rw;
 use crate::terms::{MACRO_EXEC, MACRO_FRAME, PRED, SUBSTITUTION, SUBSTITUTION_RULE};
 use crate::{Lang, rexp};
 
 declare_trace!($"substitution");
 
-#[dynamic]
-static SUBSTITUTION_RULE_PATTERN: Pattern<Lang> = {
-    let ast = rexp!((SUBSTITUTION_RULE #0)).to_vec();
-    RecExpr::from(ast).into()
-};
+decl_vars!(const; GOAL:Bool, X:Any, FROM:Bitstring, TO:Bitstring, PTCL:Protocol, T:Time);
 
 #[dynamic]
-static SUBSTITUTION_PATTERN: Pattern<Lang> = {
-    let ast = rexp!((SUBSTITUTION #0 #1 #2)).to_vec();
-    RecExpr::from(ast).into()
-};
+static SUBSTITUTION_RULE_PATTERN: Pattern<Lang> = Pattern::from(&rexp!((SUBSTITUTION_RULE #GOAL)));
+
+#[dynamic]
+static SUBSTITUTION_PATTERN: Pattern<Lang> = Pattern::from(&rexp!((SUBSTITUTION #X #FROM #TO)));
 
 #[dynamic]
 static ACCEPTABLY_EMPTY: Vec<Pattern<Lang>> = {
     vec![
-        rexp!((MACRO_EXEC (PRED #0) #1)).into_iter().collect(),
-        rexp!((MACRO_FRAME (PRED #0) #1)).into_iter().collect(),
+        Pattern::from(&rexp!((MACRO_EXEC (PRED #T) #PTCL))),
+        Pattern::from(&rexp!((MACRO_FRAME (PRED #T) #PTCL))),
     ]
 };
 
@@ -74,16 +67,17 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
             Dependancy::impossible()
         );
         tr!("substitution");
-        let memo: FxHashMap<_, _> = ACCEPTABLY_EMPTY
+
+        let memo: FxHashMap<_, _> = ACCEPTABLY_EMPTY // <- recursive call where we can't substitute, whoever call this should check that ignoring those is sound
             .iter()
             .flat_map(|patt| patt.search(egraph).into_iter())
             .map(|s| (s.eclass, [s.eclass].into_iter().collect()))
-            .collect();
+            .collect(); // <- we map those to themselves
 
         for subst in SUBSTITUTION_PATTERN.search(egraph) {
             let current_id = subst.eclass;
             for s in subst.substs {
-                let [m, x, y] = [0, 1, 2].map(|i| *s.get(Var::from_u32(i as u32)).unwrap());
+                let [m, x, y] = [X, FROM, TO].map(|i| *s.get(i.as_egg()).unwrap());
                 let mut memo = memo.clone();
 
                 let ids = mk_substs(egraph, &mut memo, m, x, y);
@@ -121,7 +115,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
                 // Substitution { egraph, x, y }.apply_subst();
                 // [g]
 
-                let g = *s.get(Var::from_u32(0)).unwrap();
+                let g = *s.get(GOAL.as_egg()).unwrap();
                 [g]
             })
             .collect();
@@ -131,6 +125,9 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
     }
 }
 
+/// computes `m{x |-> y}`
+///
+/// with `memo` for memoisation
 fn mk_substs<N: Analysis<Lang>>(
     egraph: &mut EGraph<Lang, N>,
     memo: &mut FxHashMap<Id, Rc<[Id]>>,
@@ -201,8 +198,13 @@ fn mk_substs<N: Analysis<Lang>>(
     );
 
     #[cfg(debug_assertions)]
-    if rc_ids.len() ==1 {
-        tr!("only one in subst: \nm = ({m}) {}\nx = ({x}) {}\ny = ({y}) {}", egraph.id_to_expr(m), egraph.id_to_expr(x), egraph.id_to_expr(y))
+    if rc_ids.len() == 1 {
+        tr!(
+            "only one in subst: \nm = ({m}) {}\nx = ({x}) {}\ny = ({y}) {}",
+            egraph.id_to_expr(m),
+            egraph.id_to_expr(x),
+            egraph.id_to_expr(y)
+        )
     }
 
     memo.insert(m, rc_ids.clone());
@@ -219,7 +221,17 @@ where
 }
 
 impl<'a, N: Analysis<Lang>> Substitution<'a, N> {
+    /// Apply a substitution to all terms in the egraph.
+    ///
+    /// This function finds all `SUBSTITUTION` nodes with pattern `(SUBSTITUTION m x y)`
+    /// where `x` and `y` match the current substitution context.
+    /// It then:
+    /// 1. Extracts a closure of dependencies involving `x`
+    /// 2. Sorts this closure to ensure valid rebuild order
+    /// 3. Rebuilds terms in the sorted order with substitutions applied
+    /// 4. Merges results back into the egraph
     pub fn apply_subst(&mut self) {
+        // Find all SUBSTITUTION nodes matching our x and y values
         let mut susbts = self
             .egraph
             .classes_for_op(&SUBSTITUTION)
@@ -234,30 +246,42 @@ impl<'a, N: Analysis<Lang>> Substitution<'a, N> {
             })
             .collect_vec();
 
+        // Extract the dependency closure of x in the egraph
         let mut closure = self.extract_closure(&mut susbts);
+
+        // Sort the closure to ensure proper rebuild order
         self.sort_closure(&mut closure);
+
+        // Rebuild terms with substitutions applied
         let new_ids = self.rebuild_closure(&closure);
 
-        // merge subst eclasses
+        // Merge results back into egraph by unioning eclasses
         for (sid, inner_id) in susbts.into_iter().unique() {
             if let Some(nids) = new_ids.get(&sid) {
                 for &nid in nids.iter().filter(|&&nid| sid != nid) {
                     self.egraph.union_trusted(sid, nid, "substitution");
                 }
             } else {
-                // then sid doesn't depend on x in anyway, so substitution does nothing
+                // If no substitution was needed, union with original term
                 self.egraph.union_trusted(sid, inner_id, "nop substitution");
             }
         }
     }
 
+    /// Check if a node matches the current substitution pattern (SUBSTITUTION m x y).
+    ///
+    /// Returns the `m` part of the substitution if this is a match.
     fn matches(&self, l: &Lang) -> Option<Id> {
+        // Check if this is a SUBSTITUTION node and its second/ third children match x/y
         (l.discriminant() == SUBSTITUTION && l.children()[1] == self.x && l.children()[2] == self.y)
             .then(|| l.children()[0])
     }
 
-    /// Extract the closure of [Self::x] in [Self::egraph], while singleing out
-    /// the eclass with the right subst using `subst`
+    /// Extract the dependency closure of `x` in the egraph.
+    ///
+    /// This identifies all terms that depend on `x` and builds a closure of
+    /// these dependencies for substitution application. It skips direct matches
+    /// (which are handled separately) and adds parent nodes to the processing queue.
     fn extract_closure(&self, susbts: &mut Vec<(Id, Id)>) -> IndexMap<Id, Vec<Lang>> {
         let mut todo: VecDeque<_> = self.egraph[self.x]
             .parents()
@@ -267,12 +291,17 @@ impl<'a, N: Analysis<Lang>> Substitution<'a, N> {
 
         while let Some(current) = todo.pop_front() {
             let eclass = &self.egraph[current];
+
+            // Check if this node is a direct substitution (we want to skip those)
             if let Some(id) = eclass.nodes.iter().find_map(|l| self.matches(l)) {
                 susbts.push((current, id));
                 continue;
             }
 
+            // Add current eclass to the closure
             done.insert(current, eclass.nodes.clone());
+
+            // Add parents of this node to the processing queue if not already processed
             todo.extend(
                 eclass
                     .parents()
@@ -283,12 +312,18 @@ impl<'a, N: Analysis<Lang>> Substitution<'a, N> {
         done
     }
 
-    // makes sure that `closure` has an order that lets us rebuild the egraph
+    // Sort the closure to ensure valid rebuild order.
+    //
+    // This ensures that when rebuilding terms, dependencies are processed before
+    // their dependents. It's a topological sort variant where we make sure no
+    // circular dependencies exist in the closure.
     fn sort_closure(&self, closure: &mut IndexMap<Id, Vec<Lang>>) {
         let mut todo: VecDeque<_> = [self.x].into();
         'outer: while let Some(id) = todo.pop_front() {
             let index = closure.get_index_of(&id);
             dbg!(&index);
+
+            // Find parents of current id that are within the closure
             let (mut parents, mut indices): (VecDeque<_>, VecDeque<_>) = self.egraph[id]
                 .parents()
                 .filter_map(|pid| {
@@ -302,7 +337,7 @@ impl<'a, N: Analysis<Lang>> Substitution<'a, N> {
 
             while !parents.is_empty() {
                 debug_assert_eq!(index, closure.get_index_of(&id));
-                // find the first index in parents of an eclass that doesn't have up edge within the closure
+                // Find the first index in parents of an eclass that doesn't have up edge within the closure
                 let Some(i) = parents.iter().enumerate().find_map(|(i, id)| {
                     self.egraph[*id]
                         .nodes
@@ -311,7 +346,6 @@ impl<'a, N: Analysis<Lang>> Substitution<'a, N> {
                             println!("{}", &l.discriminant().name);
                         })
                         .any(|l| {
-                            // self.matches(l) ||
                             l.children()
                                 .iter()
                                 .inspect(|id| println!("{}", self.egraph.id_to_expr(**id)))
@@ -371,34 +405,42 @@ impl<'a, N: Analysis<Lang>> Substitution<'a, N> {
         }
     }
 
+    /// Rebuild terms in the sorted closure with substitutions applied.
+    ///
+    /// This function processes each term in the closure and rebuilds it with
+    /// substitution applied. It handles cases where children may have been
+    /// already substituted or not, using a remap table to track substitutions.
     fn rebuild_closure(&mut self, closure: &IndexMap<Id, Vec<Lang>>) -> FxHashMap<Id, Vec<Id>> {
+        // Initialize remap table with identity mapping for all nodes in closure
         let mut remap: FxHashMap<Id, Vec<Id>> = [(self.x, [self.y].into_iter().collect())]
             .into_iter()
             .collect();
         remap.extend(closure.keys().cloned().map(|k| (k, Default::default())));
+        // Ensure x is mapped to y
         {
-            // ensure x is mapped to y
             let x_class = remap.get_mut(&self.x).unwrap();
             if !x_class.contains(&self.y) {
                 x_class.push(self.y);
             }
         }
 
-        // This is incomplete, but we remove "useless" loops
+        // Process each term in the closure
         for (current_id, ls) in closure {
             let cids = remap.get(current_id).unwrap();
             let mut nids = Vec::new();
+
+            // Rebuild each node in this eclass
             for l in ls {
-                // [Self::sort_closure] ensures there is at least one element in here
+                // Map children using remap table or identity if not mapped
                 let args = l
                     .children()
                     .iter()
                     .map(|id| match remap.get(id) {
-                        // if there are up edges, then we ignore them
                         Some(ids) => Cow::Borrowed(ids.as_slice()),
                         None => Cow::Owned(vec![*id]),
                     })
                     .collect_vec();
+
                 let fun = l.discriminant();
                 let tranposer = VecTranspose::new(&args);
                 nids.extend(
@@ -406,6 +448,8 @@ impl<'a, N: Analysis<Lang>> Substitution<'a, N> {
                         .map(|args| self.egraph.add(fun.app_id(args.iter().cloned().cloned()))),
                 );
             }
+
+            // Add new ids to remap table, avoiding duplicates
             let nids = nids
                 .into_iter()
                 .unique()

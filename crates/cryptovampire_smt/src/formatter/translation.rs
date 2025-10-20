@@ -3,7 +3,7 @@ use std::fmt::{Display, Write};
 use itertools::izip;
 
 use super::Term;
-use crate::{Smt, SmtCons, SmtFormula, SortedVar};
+use crate::{Smt, SmtCons, SmtFormula, SmtParam, SortedVar};
 
 /// Creates a simple S-expression from a list of strings.
 /// e.g., `sexpr!["define-fun", "f", "()", "Int"]` becomes `(define-fun f () Int)`
@@ -15,10 +15,7 @@ macro_rules! sexpr {
 };
 }
 /// Translates an `SmtFormula` into a generic `Term`.
-pub fn translate_formula_to_term<S, F>(formula: &SmtFormula<S, F>) -> Term
-where
-    S: Display,
-    F: Display,
+pub fn translate_formula_to_term<U:SmtParam>(formula: &SmtFormula<U>) -> Term
 {
     match formula {
         SmtFormula::Var(v) => Term::atom(v),
@@ -57,10 +54,7 @@ where
 }
 
 /// Helper for n-ary operators like `and`, `or`, `=`, `distinct`.
-fn n_ary_op_to_term<S, F>(op: &str, formulas: &[SmtFormula<S, F>]) -> Term
-where
-    S: Display,
-    F: Display,
+fn n_ary_op_to_term<U:SmtParam>(op: &str, formulas: &[SmtFormula<U>]) -> Term
 {
     let mut terms = vec![Term::Atom(op.to_string(), None)];
     terms.extend(formulas.iter().map(translate_formula_to_term));
@@ -68,18 +62,15 @@ where
 }
 
 /// Helper for quantifiers `forall` and `exists`.
-fn quantifier_to_term<S, F>(
+fn quantifier_to_term<U:SmtParam>(
     quantifier: &str,
-    vars: &[SortedVar<S>],
-    formula: &SmtFormula<S, F>,
+    vars: &[U::SVar],
+    formula: &SmtFormula<U>,
 ) -> Term
-where
-    S: Display,
-    F: Display,
 {
     let var_list = Term::sexpr(
         vars.iter()
-            .map(|sv| Term::sexpr(vec![Term::atom(&sv.var), Term::atom(&sv.sort)])),
+            .map(|sv| Term::sexpr(vec![Term::atom(&sv), Term::atom(sv.sort_ref())])),
     );
     Term::sexpr([
         Term::atom(quantifier),
@@ -89,10 +80,7 @@ where
 }
 
 /// Translates a top-level `Smt` command into a generic `Term`.
-pub fn translate_smt_to_term<S, F>(smt: &Smt<S, F>) -> Term
-where
-    S: Display,
-    F: Display,
+pub fn translate_smt_to_term<U:SmtParam>(smt: &Smt<U>) -> Term
 {
     match smt {
         Smt::Assert(formula) => {

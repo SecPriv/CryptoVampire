@@ -1,7 +1,6 @@
 use std::io::Write;
 
-use cryptovampire_smt::{Smt, SmtFormula};
-use logic_formula::egg::{SimplLang, SimplLangVar};
+use cryptovampire_smt::{Smt, SmtFormula, SmtParam};
 use terms::{Function, Sort};
 
 // ~~~~~~~~~~~~~~~~ macros ~~~~~~~~~~~~~~~~~~
@@ -46,17 +45,21 @@ pub use input::{init_engine, register};
 mod configuration;
 pub use configuration::Configuration;
 
+use crate::terms::Variable;
+
 // ~~~~~~ type aliases and constants ~~~~~~~~
 
 /// Our global analysis type
 pub type N = ();
 
-pub static SIZE: usize = 3;
-pub type Lang = SimplLang<Function, SIZE>;
-pub type LangVar = SimplLangVar<Function, SIZE>;
+pub type Lang = terms::InnerLang;
+pub type LangVar = egg::ENodeOrVar<Lang>;
 
-pub type MSmtFormula = SmtFormula<Sort, Function>;
-pub type MSmt = Smt<Sort, Function>;
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct MSmtParam;
+
+pub type MSmtFormula = SmtFormula<MSmtParam>;
+pub type MSmt = Smt<MSmtParam>;
 
 // ~~~~~~~~~~~~~~~~ other ~~~~~~~~~~~~~~~~~~~
 
@@ -79,4 +82,12 @@ pub fn init_logger() {
         })
         .parse_default_env()
         .init();
+}
+
+impl SmtParam for MSmtParam {
+    type Function = Function;
+
+    type Sort = Sort;
+
+    type SVar = Variable;
 }

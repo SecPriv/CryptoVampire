@@ -8,7 +8,7 @@ use bon::bon;
 use egg::{FromOp, Id, Language, Pattern, RecExpr, Searcher, SymbolLang};
 use serde::Serialize;
 use thiserror::Error;
-use utils::ereturn_if;
+use utils::{ereturn_if, ereturn_let};
 
 use super::{Dependancy, Fresh, Rule};
 use crate::Program;
@@ -92,63 +92,35 @@ where
 {
     fn search(&self, prgm: &mut Program<L, N>, goal: Id) -> Dependancy {
         let matches = self.input.search_eclass(prgm.egraph(), goal);
-        let Some(matches) = matches else {
-            return Default::default();
-        };
-
-        // if let Some(memo) = self.memo.borrow().get(&goal) {
-        //     return memo.clone();
-        // }
+        ereturn_let!(let Some(matches) = matches, Dependancy::impossible());
 
         let weight = N::get_weight(&prgm.egraph()[goal].data);
-        // let subst = matches.substs.first().unwrap();
         let inner: Vec<Vec<Id>> = matches
             .substs
             .into_iter()
             .filter_map(|subst| {
-                // generate free vars
-                // for v in &self.free_vars {
-                //     let id = prgm.egraph_mut().add_expr(&Fresh::mk_fresh());
-                //     subst.insert(*v, id);
-                // }
 
                 let deps: Vec<Id> = self
                     .deps
                     .iter()
                     .map(|ret| ret.apply_susbt(prgm.egraph_mut(), &subst))
                     .collect();
-                if self.require_decrease
-                    && deps
+                let does_decrease = !self.require_decrease
+                    || deps
                         .iter()
-                        .any(|id| !N::get_weight(&prgm.egraph()[*id].data).decreases(&weight))
-                {
-                    None
-                } else {
-                    Some(deps)
-                }
-                // .then_some(deps)
+                        .all(|id| N::get_weight(&prgm.egraph()[*id].data).decreases(&weight));
+
+                does_decrease.then_some(deps)
             })
             .collect();
         prgm.config.node_limit += inner.iter().map(|x| x.len()).sum::<usize>();
-        let res = Dependancy {
+        
+        Dependancy {
             inner,
             cut: self.cut,
             proof: None,
-        };
-        // self.memo.borrow_mut().insert(goal, res.clone());
-        res
+        }
     }
-
-    // fn rebuild(&self, prgm: &Program<L, N>) {
-    //     // let mut memo = self.memo.borrow_mut();
-    //     // ereturn_if!(memo.is_empty());
-    //     // let nmemo = std::mem::take(memo.deref_mut());
-    //     // let egraph = prgm.egraph();
-    //     // *memo = nmemo
-    //     //     .into_iter()
-    //     //     .map(|(id, s)| (egraph.find(id), s))
-    //     //     .collect();
-    // }
 
     fn debug(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         write!(f, "<prolog> ")?;

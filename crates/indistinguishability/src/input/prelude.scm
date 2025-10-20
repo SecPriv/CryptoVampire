@@ -1,63 +1,92 @@
 (require-builtin cryptovampire)
 
-(define (is-nonce f) (equal? Nonce (get-sort f)))
+(define (Nonce? f) (equal? Nonce (get-sort f)))
 
-(define (mk-appf2 f args) 
-  (let ([x (mk-appf f args)]) 
-    (if (is-nonce x) (mk-appf mnonce (list x)) x)))
+(define (convert-to-formula arg)
+  (if (Variable? arg) (mk-varf arg) 
+  (if (boolean? arg) (if arg (mk-appf __pre_mtrue '()) (mk-appf __pre_mfalse '()))
+  arg)))
 
-(define (mk-if c l r)
-  (if 
-    (equal? Bool (get-sort c))
-    (mk-appf2 bool_if_then_else (list c l r))
-    (mk-appf2 bitstring_if_then_else (list c l r))))
+(define (lift-fun fun-name)
+  (if (= (arity fun-name) 0)
+    (mk-appf fun-name '())
+    (lambda args 
+      (if (= (length args) (arity fun-name))
+        (mk-appf fun-name (map convert-to-formula args))
+        (begin
+          (displayln (function-name fun-name))
+          (error "Wrong arity")
+        ))
+      )))
 
 
-(define-syntax formula
-  (syntax-rules  (forall exists < > @ and or = tpl)
-      [(_ (@ f)) f]
-      [(_ (@ f args ...)) (f (formula args) ...)]
-      [(_ (forall [(id values sorts) ...] c))
-        (let ([id (mk-varf values)] ...)
-          (mk-binderf forallf 
-            (list values ...) 
-            (list sorts ...) 
-            (formula c)))]
-      [(_ (exists [(id values sorts) ...] c))
-        (let ([id (mk-varf values)] ...)
-          (mk-binderf existsf 
-            (list values ...) 
-            (list sorts ...) 
-            (formula c)))]
-      [(_ (tpl a b )) (formula (mtuple a b))]
-      [(_ (tpl a b ... )) (formula (mtuple a (tpl b ...)))]
-      [(_ (and a b)) (formula (bit_and a b))]
-      [(_ (and a b ...)) (formula (bit_and a (and b ...)))] 
-      [(_ (or a b)) (formula (bit_or a b))]
-      [(_ (or a b ...)) (formula (bit_or a (or b ...)))] 
-      [(_ (= a b)) (formula (meq a b))]
-      ; [(_ (not a)) (formula (bit_not a))]
-      ; [(_ (if c l r)) (mk-if (formula c) (formula l) (formula r))]
-      [(_ (f args ...))
-        (mk-appf2 f (list (formula args) ...))]
-      [(_ f) 
-        (if (Formula? f) 
-          f 
-          (if (number? f) 
-            (mk-varf f) 
-            (mk-appf2 f '())))]      
-))
 
-(define-syntax alias-rule
-  (syntax-rules (@ =>)
-    [(_ ((id values sorts) ...) @ params ... => c)
-      (let ([id (mk-varf values)] ...)
-        (mk-alias-rwf 
-          (list values ...)
-          (list sorts ...)
-          (list (formula params) ...)
-          (formula c)))
-    ]))
+; @@@DEFINITIONS@@@
+
+(define S λS)
+(define O λO)
+
+;; This is some ChatGPT magic ^^''
+(define (mexists sorts arg)
+  (let loop ((ss sorts) (vars '()))
+    (if (null? ss)
+        ;; once all vars generated
+        (let ((rev-vars (reverse vars)))
+          (mk-binderf existsf rev-vars (list (apply arg rev-vars))))
+        ;; otherwise, generate next var and recur
+        (let* ((s (car ss))
+               (v (mk-fresh-var-w-sort s)))
+          (loop (cdr ss) (cons v vars))))))
+
+(define (mforall sorts arg)
+  (let loop ((ss sorts) (vars '()))
+    (if (null? ss)
+        ;; once all vars generated
+        (let ((rev-vars (reverse vars)))
+          (mk-binderf forallf rev-vars (list (apply arg rev-vars))))
+        ;; otherwise, generate next var and recur
+        (let* ((s (car ss))
+               (v (mk-fresh-var-w-sort s)))
+          (loop (cdr ss) (cons v vars))))))
+
+(define (mfindst sorts arg1 arg2 arg3)
+  (let loop ((ss sorts) (vars '()))
+    (if (null? ss)
+        (let ((rev-vars (reverse vars)))
+          (mk-binderf findstf rev-vars 
+            (list 
+              (apply arg1 rev-vars)
+              (apply arg2 rev-vars) 
+              arg3)))
+        (let* ((s (car ss))
+               (v (mk-fresh-var-w-sort s)))
+          (loop (cdr ss) (cons v vars))))))
+
+(define-syntax bind
+  (syntax-rules ()
+  [(_ ((ids sorts) ...) arg) (let [(ids (mk-fresh-var-w-sort sorts)) ...] arg)]))
+
+(define-syntax exists
+  (syntax-rules () 
+  [(_ ((ids sorts) ...) arg)
+    (mexists (list sorts ...) (lambda (ids ...) arg))]))
+(define-syntax forall
+  (syntax-rules () 
+  [(_ ((ids sorts) ...) arg)
+    (mforall (list sorts ...) (lambda (ids ...) arg))]))
+(define-syntax findst
+  (syntax-rules () 
+  [(_ ((ids sorts) ...) arg1 arg2 arg3)
+    (mforall (list sorts ...) (lambda (ids ...) arg1) (lambda (ids ...) arg2) arg3)]))
+
+(define (set-message pbl step ptcl msg) 
+  (let* [(vars (map mk-varf (get-step-variables pbl step ptcl)))
+          (in (macro_input (mk-appf step vars) (mk-appf ptcl '())))]
+  (set-step-message pbl step ptcl (apply msg (cons in vars)))))
+(define (set-condition pbl step ptcl condition) 
+  (let* [(vars (map mk-varf (get-step-variables pbl step ptcl)))
+          (in (macro_input (mk-appf step vars) (mk-appf ptcl '())))]
+  (set-step-condition pbl step ptcl (apply condition (cons in vars)))))
 
 (define-syntax signature
   (syntax-rules (->)
@@ -69,8 +98,8 @@
 (define-syntax prolog
   (syntax-rules (:-)
   [(_ name from) 
-    (mk-prolog name (formula from) '())]
+    (mk-prolog name from '())]
   [(_ name from :- to ...) 
     (mk-prolog name 
-      (formula from) (list (formula to) ...  ))]
+      from (list to ...  ))]
 ))

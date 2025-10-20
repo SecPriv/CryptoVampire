@@ -1,47 +1,44 @@
 use std::collections::HashSet;
-use std::fmt::{Display, write};
-use std::rc::Rc;
+use std::fmt::Display;
 
 use bon::{Builder, bon, builder};
-use egg::{PatternAst, Var};
+use egg::PatternAst;
 use itertools::{Itertools, chain};
 use logic_formula::Formula;
-use utils::{ereturn_if, implvec};
+use utils::ereturn_if;
 
-use crate::rules::utils::fresh;
 use crate::terms::quantifier::default_valid;
-use crate::terms::{
-    Function, FunctionCollection, FunctionFlags, InnerFunction, QUANTIFIER_COUNT, Quantifier,
-    QuantifierT, Signature, Sort,
-};
-use crate::{Lang, LangVar, Problem};
+use crate::terms::{Function, QuantifierIndex, QuantifierT, RecFOFormula, Sort, Variable};
+use crate::{Lang, Problem};
+
+/// For now [Exists] are never temporary
+static EXISTS_TEMPORARY: bool = false;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Builder)]
 #[builder(builder_type = ExistsBuilder0)]
 pub struct Exists {
     /// The free variables captured by the quantifier
-    vars: Rc<[Var]>,
+    vars: Vec<Variable>,
     /// The variable bound by the quantifier
-    bound_var: Rc<[Var]>,
+    bound_var: Vec<Variable>,
     /// The "content" of the quantifier
-    #[builder(default = std::iter::empty().collect())]
-    patt: PatternAst<Lang>,
+    patt: Option<RecFOFormula>,
     /// the main alias (e.g., `exists$1`)
     ///
     /// stands for "top level function"
     tlf: Function,
     /// the skolem function
-    skolems: Rc<[Function]>,
+    skolems: Vec<Function>,
     /// the fresh constant replacing the index
-    freshes: Rc<[Function]>,
+    freshes: Vec<Function>,
 }
 
 impl QuantifierT for Exists {
-    fn bvars(&self) -> &[Var] {
+    fn bvars(&self) -> &[Variable] {
         &self.bound_var
     }
 
-    fn cvars(&self) -> &[Var] {
+    fn cvars(&self) -> &[Variable] {
         &self.vars
     }
 
@@ -57,18 +54,22 @@ impl QuantifierT for Exists {
         &self.freshes
     }
 
-    fn valid(&self, idx: usize, pbl: &crate::Problem) -> bool {
+    fn valid(&self, idx: QuantifierIndex, pbl: &crate::Problem) -> bool {
         ereturn_if!(!default_valid(self, idx, pbl), false);
 
-        let mut all_vars_set = HashSet::with_capacity(self.bvars().len() + self.cvars().len());
-        for v in chain![self.bvars(), self.cvars()] {
-            ereturn_if!(all_vars_set.insert(*v), false)
+        if let Some(patt) = &self.patt {
+            let mut all_vars_set = HashSet::with_capacity(self.bvars().len() + self.cvars().len());
+            for v in chain![self.bvars(), self.cvars()] {
+                ereturn_if!(all_vars_set.insert(v), false)
+            }
+            let all_vars_set = all_vars_set;
+
+            let pattern_vars: HashSet<_> = patt.free_vars_iter().collect();
+
+            ereturn_if!(!all_vars_set.is_superset(&pattern_vars), false);
         }
-        let all_vars_set = all_vars_set;
 
-        let pattern_vars: HashSet<_> = self.patt.free_vars_iter().collect();
-
-        all_vars_set.is_superset(&pattern_vars)
+        true
     }
 
     fn try_from_ref(q: &super::Quantifier) -> Option<&Self> {
@@ -84,6 +85,11 @@ impl QuantifierT for Exists {
             _ => None,
         }
     }
+
+    fn temporary(&self) -> bool {
+        // delete static variable if changed
+        EXISTS_TEMPORARY
+    }
 }
 
 #[bon]
@@ -93,110 +99,106 @@ impl Exists {
     #[builder]
     pub fn insert(
         pbl: &mut Problem,
-        #[builder(with = FromIterator::from_iter, default = vec![])] cvars_sort: Vec<Sort>,
+        #[builder(with = FromIterator::from_iter, default = vec![])] cvars_sorts: Vec<Sort>,
         #[builder(with = FromIterator::from_iter, default = vec![])] bvars_sorts: Vec<Sort>,
     ) -> &mut Exists {
-        assert!(!bvars_sorts.is_empty());
-        // set up
-        let bvars: Rc<[_]> = bvars_sorts
-            .iter()
-            .enumerate()
-            .map(|(i, _)| egg::Var::from_u32(i as u32))
-            .collect();
-        let cvars: Rc<[_]> = cvars_sort
-            .iter()
-            .enumerate()
-            .map(|(i, _)| egg::Var::from_u32((i + bvars.len()) as u32))
-            .collect();
+        todo!("redo");
+        // assert!(!bvars_sorts.is_empty());
+        // // set up
+        // let bvars: Rc<[_]> = bvars_sorts
+        //     .iter()
+        //     .enumerate()
+        //     .map(|(i, _)| egg::Var::from_usize(i as u32))
+        //     .collect();
+        // let cvars: Rc<[_]> = cvars_sort
+        //     .iter()
+        //     .enumerate()
+        //     .map(|(i, _)| egg::Var::from_usize((i + bvars.len()) as u32))
+        //     .collect();
 
-        let exists_idx = pbl.function.quantifiers().len();
+        // let exists_idx = pbl.functions().quantifiers(EXISTS_TEMPORARY).len();
 
-        let n_exists = QUANTIFIER_COUNT.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+        // // let n_exists = QUANTIFIER_COUNT.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
 
-        // build the Functions
-        let tlf;
-        let skolems: Rc<[_]>;
-        let freshes: Rc<[_]>;
+        // // build the Functions
+        // let tlf;
+        // let skolems: Rc<[_]>;
+        // let freshes: Rc<[_]>;
+        // {
+        //     tlf = pbl
+        //         .declare_function()
+        //         .fresh_name("_exists")
+        //         .inputs(chain!(
+        //             cvars_sort.iter().copied(),
+        //             bvars_sorts.iter().copied()
+        //         ))
+        //         .output(Sort::Bitstring)
+        //         .quantifier_idx(exists_idx)
+        //         .flag(FunctionFlags::BINDER)
+        //         .temporary()
+        //         .call()
+        // }
 
-        {
-            // tlf
-            let inner_tlf = {
-                let name = format!("_exists${n_exists:}").into();
-                let inputs = chain!(cvars_sort.iter().copied(), bvars_sorts.iter().copied());
-                let signature = Signature::new(inputs, Sort::Bool);
-                InnerFunction {
-                    flags: FunctionFlags::EXISTS,
-                    quantifier_idx: exists_idx,
-                    ..InnerFunction::new(name, signature)
-                }
-            };
-            tlf = Function::new(inner_tlf);
-            pbl.function.add(tlf.clone());
-        }
+        // {
+        //     // skolem
+        //     let mut skolem_vec = Vec::with_capacity(bvars_sorts.len());
+        //     let name = format!("_sk${}", tlf.name);
+        //     for &bs in &bvars_sorts {
+        //         skolem_vec.push(
+        //             pbl.declare_function()
+        //                 .fresh_name(&name)
+        //                 .inputs(cvars_sort.iter().copied())
+        //                 .output(bs)
+        //                 .quantifier_idx(exists_idx)
+        //                 .flag(FunctionFlags::SKOLEM)
+        //                 .temporary()
+        //                 .call(),
+        //         );
+        //     }
+        //     skolems = skolem_vec.into();
+        // }
 
-        {
-            // skolem
-            let mut skolem_vec = Vec::with_capacity(bvars_sorts.len());
-            for (i, &bs) in bvars_sorts.iter().enumerate() {
-                let inner_skolem = {
-                    let name = format!("_sk${n_exists:}_{i:}").into();
-                    let inputs = cvars_sort.iter().copied();
-                    let signature = Signature::new(inputs, bs);
-                    InnerFunction {
-                        flags: FunctionFlags::SKOLEM,
-                        quantifier_idx: exists_idx,
-                        ..InnerFunction::new(name, signature)
-                    }
-                };
-                let sk = Function::new(inner_skolem);
-                pbl.function.add(sk.clone());
-                skolem_vec.push(sk);
-            }
-            skolems = skolem_vec.into();
-        }
+        // {
+        //     // fresh
+        //     let mut fresh_vec = Vec::with_capacity(bvars_sorts.len());
+        //     let name = format!("_fresh${}", tlf.name);
+        //     for  &bs in &bvars_sorts {
+        //         fresh_vec.push(
+        //             pbl.declare_function()
+        //                 .fresh_name(&name)
+        //                 .output(bs)
+        //                 .quantifier_idx(exists_idx)
+        //                 .flag(FunctionFlags::QUANTIFIER_FRESH)
+        //                 .temporary()
+        //                 .call(),
+        //         );
+        //     }
+        //     freshes = fresh_vec.into();
+        // }
 
-        {
-            // fresh
-            let mut fresh_vec = Vec::with_capacity(bvars_sorts.len());
-            for (i, &bs) in bvars_sorts.iter().enumerate() {
-                let inner_fresh = {
-                    let name = format!("_exists_fresh${n_exists:}_{i:}").into();
-                    let signature = Signature::new([], bs);
-                    InnerFunction {
-                        flags: FunctionFlags::QUANTIFIER_FRESH,
-                        quantifier_idx: exists_idx,
-                        ..InnerFunction::new(name, signature)
-                    }
-                };
-                let frsh = Function::new(inner_fresh);
-                pbl.function.add(frsh.clone());
-                fresh_vec.push(frsh);
-            }
-            freshes = fresh_vec.into();
-        }
+        // let q = pbl.functions_mut().push_quantifier(
+        //     Exists::builder()
+        //         .vars(cvars)
+        //         .bound_var(bvars)
+        //         .skolems(skolems)
+        //         .freshes(freshes)
+        //         .tlf(tlf)
+        //         .build()
+        //         .into(),
+        // );
 
-        let q = pbl.function.push_quantifier(
-            Exists::builder()
-                .vars(cvars)
-                .bound_var(bvars)
-                .skolems(skolems)
-                .freshes(freshes)
-                .tlf(tlf)
-                .build()
-                .into(),
-        );
-
-        // return
-        match q {
-            Quantifier::Exists(q) => q,
-            _ => unreachable!(),
-        }
+        // // return
+        // match q {
+        //     Quantifier::Exists(q) => q,
+        //     _ => unreachable!(),
+        // }
     }
 }
 
 impl Exists {
+    #[must_use]
     pub fn is_uninit(&self) -> bool {
-        self.patt.is_empty()
+        self.patt.is_none()
     }
 
     pub fn functions(&self) -> ExistsFuns {
@@ -213,28 +215,28 @@ impl Exists {
         }
     }
 
-    pub fn patt(&self) -> &[LangVar] {
-        &self.patt
+    pub fn patt(&self) -> Option<&RecFOFormula> {
+        self.patt.as_ref()
     }
 
-    pub fn set_patt(&mut self, patt: implvec!(LangVar)) {
-        self.patt = patt.into_iter().collect();
+    pub fn set_patt(&mut self, patt: RecFOFormula) {
+        self.patt = Some(patt);
     }
 }
 
 #[derive(Debug)]
 pub struct ExistsFuns {
     pub tlf: Function,
-    pub skolem: Rc<[Function]>,
-    pub fresh: Rc<[Function]>,
+    pub skolem: Vec<Function>,
+    pub fresh: Vec<Function>,
 }
 
 #[derive(Debug)]
 pub struct ExistsBuilder {
     /// The free variables captured by the quantifier
-    pub vars: Vec<Var>,
+    pub vars: Vec<Variable>,
     /// The variable bound by the quantifier
-    pub bound_var: Vec<Var>,
+    pub bound_var: Vec<Variable>,
     /// The "content" of the quantifier
     pub patt: PatternAst<Lang>,
 }
@@ -254,9 +256,10 @@ impl Display for Exists {
         let skolems = skolems.iter().join(", ");
         let freshes = freshes.iter().join(", ");
 
-        write!(
-            f,
-            "∃{tlf}({vars}) {bound_vars}@({freshes}; {skolems}). {patt}"
-        )
+        write!(f, "∃{tlf}({vars}) {bound_vars}@({freshes}; {skolems}).")?;
+        match patt {
+            Some(patt) => write!(f, " {patt}"),
+            None => write!(f, " ∅"),
+        }
     }
 }

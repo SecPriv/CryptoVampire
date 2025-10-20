@@ -1,3 +1,0 @@
-[submodule "crates/egg"]
-	path = crates/egg
-	url = git@gitlab.secpriv.tuwien.ac.at:sjeanteur/egg.git

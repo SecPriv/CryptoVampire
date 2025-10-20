@@ -3,11 +3,9 @@ use egg::{
     PatternAst, Rewrite,
 };
 use itertools::{Itertools, chain, izip};
-use logic_formula::egg::SimpleDiscriminant;
 use utils::dynamic_iter;
 
 use crate::problem::CurrentStep;
-use crate::rules::utils::generate_rule_vars;
 use crate::terms::{Function, MACRO_EXEC, MACRO_FRAME, NONCE, PRED, SUBSTITUTION, Sort};
 use crate::{Lang, Problem, rexp};
 
@@ -28,6 +26,10 @@ fn mk_rw_self<N: Analysis<Lang>>() -> Rewrite<Lang, N> {
         Pattern::from(conclusion),
     )
     .unwrap()
+
+    mk_rewrite!{
+        "subst_self"
+    }
 }
 
 fn mk_rec_shortcut<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = Rewrite<Lang, N>> {
@@ -98,7 +100,9 @@ fn mk_rw_one<N: Analysis<Lang>>(fun: Function) -> Rewrite<Lang, N> {
                 Sort::Bitstring | Sort::Bool => {
                     SUBSTITUTION.app_var(&[[v], [x.clone()], [y.clone()]])
                 }
-                Sort::Any | Sort::Index | Sort::Time | Sort::Protocol | Sort::Nonce => vec![v].into(),
+                Sort::Any | Sort::Index | Sort::Time | Sort::Protocol | Sort::Nonce => {
+                    vec![v].into()
+                }
             })
             .collect_vec();
         let a = fun.app_var(&args);
@@ -117,8 +121,8 @@ fn mk_rw_one<N: Analysis<Lang>>(fun: Function) -> Rewrite<Lang, N> {
 fn mk_rw_base<'a, N: Analysis<Lang>>(
     pbl: &'a Problem,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'a, N> {
-    pbl.function
-        .iter()
+    pbl.functions()
+        .iter_current()
         .filter(|f| (!f.is_special_subterm()) || f.is_if_then_else())
         .cloned()
         .map(mk_rw_one)

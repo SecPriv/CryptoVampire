@@ -1,16 +1,15 @@
 use std::borrow::Borrow;
-use std::fmt::Display;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use bon::Builder;
+use bon::{Builder, bon, builder};
 use cryptovampire_smt::Smt;
 use golgge::Dependancy;
 use itertools::chain;
 use log::trace;
 use utils::implvec;
 
-use crate::{MSmtFormula, Problem};
+use crate::{MSmt, MSmtFormula, Problem};
 
 declare_trace!($"vampire_exec");
 
@@ -211,11 +210,9 @@ impl VampireExec {
         Ok(o.status.success() && refutation)
     }
 
-    pub fn run_smt<S, F, RefS>(&self, smt: implvec!(RefS)) -> anyhow::Result<bool>
+    pub fn run_smt<RefS>(&self, smt: implvec!(RefS)) -> anyhow::Result<bool>
     where
-        S: Display,
-        F: Display,
-        RefS: Borrow<Smt<S, F>>,
+        RefS: Borrow<MSmt>,
     {
         let mut tmpfile = tempfile::Builder::new()
             .prefix("cryptovampire")
@@ -260,8 +257,17 @@ impl VampireExec {
             VampireArg::InputSyntax(vampire_suboptions::InputSyntax::SmtLib2),
         ]
     }
+}
 
-    pub fn run_to_dependancy(&self, pbl: &mut Problem, query: MSmtFormula) -> Dependancy {
+#[bon]
+impl VampireExec {
+    #[builder]
+    pub fn run_to_dependancy(
+        &self,
+        pbl: &mut Problem,
+        query: MSmtFormula,
+        #[builder(name=maybe_clean_afterward, default=true)] clean_afterward: bool,
+    ) -> Dependancy {
         trace!("checking {query}");
         let prelude = pbl.get_smt_prelude();
         // let pbl: &Problem<_> = &self.pbl.borrow();
@@ -277,6 +283,24 @@ impl VampireExec {
         } else {
             Dependancy::impossible()
         }
+    }
+}
+
+impl<'a, 'b, S> VampireExecRunToDependancyBuilder<'a, 'b, S>
+where
+    S: vampire_exec_run_to_dependancy_builder::State,
+{
+    pub fn clean_afterward(
+        self,
+    ) -> VampireExecRunToDependancyBuilder<
+        'a,
+        'b,
+        vampire_exec_run_to_dependancy_builder::SetMaybeCleanAfterward<S>,
+    >
+    where
+        S::MaybeCleanAfterward: vampire_exec_run_to_dependancy_builder::IsUnset,
+    {
+        self.maybe_clean_afterward(true)
     }
 }
 

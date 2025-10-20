@@ -4,8 +4,8 @@ pub mod basic_hash {
 
     use crate::protocol::Step;
     use crate::terms::{
-        Exists, Function, FunctionFlags, InnerFunction, LT, MACRO_INPUT, NONCE, PROJ_1, PROJ_2,
-        QuantifierT, Sort, TUPLE,
+        Exists, Function, FunctionFlags, INDEX_SORT, InnerFunction, LT, MACRO_INPUT, NONCE, PROJ_1,
+        PROJ_2, QuantifierT, Sort, TUPLE,
     };
     use crate::{Problem, decl_fun, mk_alias, mk_rewrite, mk_signature, rexp};
 
@@ -39,67 +39,43 @@ pub mod basic_hash {
         let n = decl_fun!(pbl; "n": (Index, Index) -> Nonce);
 
         let mk = {
+            use Sort::*;
             let alias = mk_alias! {
                 0:Index, 1:Index
                     in rexp!(#0), rexp!(#1), rexp!(p1) => rexp!((k1 #0)),
                 0:Index, 1:Index
                     in rexp!(#0), rexp!(#1), rexp!(p2) => rexp!((k2 #0 #1))
             };
-            let inner = InnerFunction {
-                alias: Some(alias),
-                ..InnerFunction::new(
-                    "mkey".into(),
-                    mk_signature!((Index, Index, Protocol) -> Nonce),
-                )
-            };
-            let mk = Function::new(inner);
-            pbl.function.add(mk.clone());
-            mk
+            // let mk = Function::new(inner);
+            // pbl.functions_mut().add(mk.clone());
+            pbl.declare_function()
+                .alias(alias)
+                .name("key")
+                .inputs([Index, Index, Protocol])
+                .output(Nonce)
+                .call()
         };
 
-        // let init = {
-        //     let signature = mk_signature!(() -> Sort::Time);
-        //     let id = Function::new(InnerFunction {
-        //         flags: FunctionFlags::STEP,
-        //         step_idx: 0,
-        //         ..InnerFunction::new("init".into(), signature)
-        //     });
-        //     pbl.function.add(id.clone());
-        //     id
-        // };
+        let tag = pbl
+            .declare_function()
+            .name("tag")
+            .step(1)
+            .inputs([Sort::Index; 2])
+            .call();
 
-        let tag = {
-            let signature = mk_signature!((Sort::Index, Sort::Index) -> Sort::Time);
-            let id = Function::new(InnerFunction {
-                flags: FunctionFlags::STEP,
-                step_idx: 1,
-                ..InnerFunction::new("tag".into(), signature)
-            });
-            pbl.function.add(id.clone());
-            id
-        };
+        let rs = pbl
+            .declare_function()
+            .name("Rs")
+            .step(2)
+            .inputs([Sort::Index; 2])
+            .call();
 
-        let rs = {
-            let signature = mk_signature!((Sort::Index, Sort::Index) -> Sort::Time);
-            let id = Function::new(InnerFunction {
-                flags: FunctionFlags::STEP,
-                step_idx: 2,
-                ..InnerFunction::new("Rs".into(), signature)
-            });
-            pbl.function.add(id.clone());
-            id
-        };
-
-        let rf = {
-            let signature = mk_signature!((Sort::Index) -> Sort::Time);
-            let id = Function::new(InnerFunction {
-                flags: FunctionFlags::STEP,
-                step_idx: 3,
-                ..InnerFunction::new("Rf".into(), signature)
-            });
-            pbl.function.add(id.clone());
-            id
-        };
+        let rf = pbl
+            .declare_function()
+            .name("Rf")
+            .step(3)
+            .inputs([Sort::Index])
+            .call();
 
         let mexists1;
         let msk1;
@@ -157,19 +133,6 @@ pub mod basic_hash {
         }
     }
 
-    // pub fn insert_init(pbl: &mut Problem, funs: &MFunction) {
-    //     let MFunction { init, .. } = funs;
-
-    //     let s1 = Step {
-    //         id: init.clone(),
-    //         vars: vec![],
-    //         cond: rexp!(true).to_vec().into(),
-    //         msg: rexp!(EMPTY).to_vec().into(),
-    //     };
-    //     pbl.protocols[0].add_step(s1.clone());
-    //     pbl.protocols[1].add_step(s1);
-    // }
-
     pub fn insert_tag(pbl: &mut Problem, funs: &MFunction) {
         let MFunction {
             hash,
@@ -183,7 +146,7 @@ pub mod basic_hash {
 
         let s1 = Step {
             id: tag.clone(),
-            vars: [0, 1].map(Var::from_u32).to_vec(),
+            vars: [0, 1].map(Var::from_usize).to_vec(),
             cond: rexp!(true).to_vec().into(),
             msg: rexp!((TUPLE (NONCE (n #0 #1)) (hash (NONCE (n #0 #1)) (NONCE (mk #0 #1 p1)))))
                 .to_vec()
@@ -211,7 +174,7 @@ pub mod basic_hash {
 
         let s1 = Step {
             id: rs.clone(),
-            vars: [0, 1].map(Var::from_u32).to_vec(),
+            vars: [0, 1].map(Var::from_usize).to_vec(),
             cond: rexp!((= (PROJ_2 (MACRO_INPUT (rs #0 #1) p1)) (hash (PROJ_1 (MACRO_INPUT (rs #0 #1) p1)) (NONCE (mk #0 #1 p1)))))
                 .to_vec()
                 .into(),
@@ -239,7 +202,7 @@ pub mod basic_hash {
 
         let s1 = Step {
             id: rf.clone(),
-            vars: [0].map(Var::from_u32).to_vec(),
+            vars: [0].map(Var::from_usize).to_vec(),
             cond: rexp!((not (mexists #0 p1 (msk #0 p1)))).to_vec().into(),
             msg: rexp!(ko).to_vec().into(),
         };
