@@ -44,15 +44,15 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
             // immutable `egraph`
             let egraph = prgm.egraph();
             for subst in &substs.substs {
-                // Extract 'a' and 'b' from the substitution, continue if not found.
-                econtinue_let!(let Some(a) = subst.get(A.as_egg()));
-                econtinue_let!(let Some(b) = subst.get(B.as_egg()));
-
-                // Extract lists for 'a' and 'b', continue if not a list or the lengths don't match
-                econtinue_let!(let Some(list_a) = extract_list(egraph, *a));
-                econtinue_let!(let Some(list_b) = extract_list(egraph, *b));
-                econtinue_if!(list_a.len() != list_b.len());
-                candidates.push((subst, list_a, list_b))
+                if let Some(a) = subst.get(A.as_egg())
+                    && let Some(b) = subst.get(B.as_egg())
+                    // Extract lists for 'a' and 'b', continue if not a list or the lengths don't match
+                    && let Some(list_a) = extract_list(egraph, *a)
+                    && let Some(list_b) = extract_list(egraph, *b)
+                    && list_a.len() != list_b.len()
+                {
+                    candidates.push((subst, list_a, list_b))
+                }
             }
         };
 
@@ -117,6 +117,7 @@ fn collect_sets<N: Analysis<Lang>>(
             } else {
                 process_regular_fun(i, list_a, list_b, a_args, b_args)
             };
+            econtinue_let!(let Some(args) = args);
             sets.push(args);
         }
     }
@@ -129,7 +130,7 @@ fn process_regular_fun(
     old_arg_b: &[Id],
     n_args_a: &[Id],
     n_args_b: &[Id],
-) -> FxHashSet<(Id, Id)> {
+) -> Option<FxHashSet<(Id, Id)>> {
     let [ia, ib] = [(old_args_a, n_args_a), (old_arg_b, n_args_b)].map(|(old, new)| {
         let old = old
             .iter()
@@ -137,7 +138,7 @@ fn process_regular_fun(
             .filter_map(|(j, x)| (i != j).then_some(x));
         chain![old, new].copied()
     });
-    izip!(ia, ib).collect()
+    Some(izip!(ia, ib).collect())
 }
 
 /// Creates lists in the egraph from a set of argument pairs.
