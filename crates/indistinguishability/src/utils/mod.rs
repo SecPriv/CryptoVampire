@@ -67,11 +67,11 @@ mod test {
     #[test]
     fn test_fresh_name() {
         let a = fresh_name("hey", []);
-        let b = fresh_name("hey", ["hey", "hey#0"]);
+        let b = fresh_name("hey", ["hey", "hey$0"]);
         let c = fresh_name("", []);
 
         assert_eq!(&a, "hey");
-        assert_eq!(&b, "hey#1");
+        assert_eq!(&b, "hey$1");
         assert_eq!(&c, "x");
     }
 }

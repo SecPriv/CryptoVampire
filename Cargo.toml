@@ -11,7 +11,7 @@ members = [
 ]
 resolver = "2"
 # authors = ["Simon Jeanteur <7871851+puyral@users.noreply.github.com>"]
-default-members = ["crates/cryptovampire"]
+default-members = ["crates/indistinguishability"]
 
 [workspace.dependencies]
 itertools = "0.13"

@@ -64,21 +64,15 @@ mod test {
     }
 
     #[test]
-    fn type_check_wrong_length() {
-        let x = rexp!((MITE (and true true false) (NONCE #A) (PROJ_1 (TUPLE (NONCE #B)))));
-        assert!(!type_check(&x))
+    fn type_check2() {
+        let x = rexp!((MITE (and true true false) (NONCE #A) (PROJ_1 (TUPLE (NONCE #B) (NONCE #B)))));
+        assert!(type_check(&x))
     }
 
     #[test]
-    fn type_check_wrong_sort() {
-        let v = fresh!(Bitstring);
-        let x = rexp!((MITE (and true true false) (and ) (PROJ_1 (TUPLE (NONCE #v)))));
-        // assert!(!x.typ)
-    }
-
     fn macro_check1() {
         let v = fresh!(Bitstring);
-        rexp!((MITE (and true true false) (and ) (PROJ_1 (TUPLE (NONCE #v)))));
+        rexp!((MITE (and true true false) (and ) (PROJ_1 (TUPLE (NONCE #v) (NONCE #v)))));
         rexp!((forall ((!x Bool) (!y Bool)) (and #x #y)));
     }
 }

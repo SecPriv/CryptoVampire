@@ -64,14 +64,14 @@
         };
 
         cryptovampire = pkgs.callPackage ./crates/cryptovampire/default.nix pkgConfig;
-        egg = pkgs.callPackage ./crates/indistinguishability/default.nix pkgConfig;
+        indistinguishability = pkgs.callPackage ./crates/indistinguishability/default.nix pkgConfig;
         doc = pkgs.callPackage ./nix/doc.nix { inherit cryptovampire; };
 
       in
       rec {
         packages = {
-          inherit cryptovampire ;
-          default = cryptovampire;
+          inherit cryptovampire indistinguishability ;
+          default = indistinguishability;
         };
         checks =
           let
@@ -93,8 +93,9 @@
         devShells.default = pkgs.callPackage ./nix/shell.nix { inherit cryptovampire rust; };
 
         apps = rec {
-          default = cryptovampire;
+          default = indistinguishability;
           cryptovampire = flake-utils.lib.mkApp { drv = packages.cryptovampire; };
+          indistinguishability = flake-utils.lib.mkApp { drv = packages.indistinguishability; };
         };
       }
     );
