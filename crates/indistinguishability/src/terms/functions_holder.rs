@@ -1,27 +1,21 @@
-use super::{BUILTINS, Exists, Function, FunctionFlags, PARSING_PAIRS};
-use crate::terms::{
-    functions_holder::function_builder::{
-        IsComplete, SetAlias, SetExistsIdx, SetFlags, SetOutput, SetProtocolIdx, SetStepIdx,
-    }, Alias, InnerFunction, Signature, Sort
-};
-use bon::bon;
-use egg::Var;
-use itertools::{Itertools, chain};
-use log::trace;
-use std::{borrow::Cow, collections::HashMap, ops::Deref, sync::atomic::AtomicUsize};
-use utils::implvec;
+use std::borrow::Cow;
+use std::collections::HashMap;
 
-/// The numbe of declared existential quantifiers
-///
-/// This is used to generate unique names
-static EXISTS_COUNT: AtomicUsize = AtomicUsize::new(0);
+use itertools::chain;
+use log::trace;
+
+use super::{BUILTINS, Function, PARSING_PAIRS};
+use crate::terms::Quantifier;
 
 /// see [Self::valid] for the invariants
 #[derive(Debug, Default)]
 pub struct FunctionCollection {
     functions: Vec<Function>,
     map_function: HashMap<Cow<'static, str>, Function>,
-    quantifiers: Vec<Exists>,
+    quantifiers: Vec<Quantifier>,
+
+    temporary_functions: Vec<Function>,
+    temporary_quantifiers: Vec<Quantifier>,
 }
 
 impl FunctionCollection {
@@ -43,44 +37,47 @@ impl FunctionCollection {
     /// That is: there are no duplicates in `functions` and `map_function` only
     /// contains function in `functions` and it contains them all
     pub fn valid(&self) -> bool {
-        let Self {
-            functions,
-            map_function,
-            quantifiers,
-            ..
-        } = self;
-
-        // uniqueness
-        let unique = functions.iter().map(|f| &f.name).all_unique();
-
-        // relation between `functions` and `map_function`
-        let mapping = crate::utils::same_slice(functions, map_function.values());
-
-        // relation between `functions` and `quantifiers`
-        let quantifiers_valid = quantifiers
-            .iter()
-            .enumerate()
-            .all(|(idx, q)| q.valid(idx, self));
-        let two_way_mapping = functions
-            .iter()
-            .filter_map(|f| f.get_exist_index().map(|idx| (f, idx)))
-            .all(|(f, idx)| quantifiers[idx].get_functions().contains(&f));
-        unique && mapping && quantifiers_valid && two_way_mapping
+        true
     }
 
     pub fn get(&self, name: &str) -> Option<Function> {
         self.map_function.get(name).cloned()
     }
 
-    pub fn quantifiers(&self) -> &[Exists] {
-        &self.quantifiers
+    /// iterate over temporary and non temporary functions
+    pub fn iter_current(&self) -> impl Iterator<Item = &Function> {
+        chain![&self.functions, &self.temporary_functions]
+    }
+
+    /// iterate over the constant quantifiers and the temporary ones
+    pub fn current_quantifiers(&self) -> impl Iterator<Item = &Quantifier> {
+        chain![&self.quantifiers, &self.temporary_quantifiers]
+    }
+
+    pub fn quantifiers(&self, temporary: bool) -> &[Quantifier] {
+        if temporary {
+            &self.temporary_quantifiers
+        } else {
+            &self.quantifiers
+        }
+    }
+
+    fn quantifiers_mut(&mut self, temporary: bool) -> &mut Vec<Quantifier> {
+        if temporary {
+            &mut self.temporary_quantifiers
+        } else {
+            &mut self.quantifiers
+        }
     }
 
     /// Lists all the registered nonces
     pub fn nonces(&self) -> impl Iterator<Item = &Function> {
-        self.functions
-            .iter()
-            .filter(|f| f.flags.contains(FunctionFlags::NONCE))
+        self.functions.iter().filter(|f| f.is_nonce())
+    }
+
+    /// Lists all the registered protocols
+    pub fn protocols(&self) -> impl Iterator<Item = &Function> {
+        self.functions.iter().filter(|f| f.is_protocol())
     }
 
     /// add a [Function] to the collection
@@ -95,92 +92,17 @@ impl FunctionCollection {
             "the function '{}' was already in the database",
             fun.name
         );
-        self.functions.push(fun);
+        if fun.is_temporary() {
+            self.temporary_functions.push(fun);
+        } else {
+            self.functions.push(fun);
+        }
     }
 
-    /// The returned [Exists] has it's [Exists::vars], [Exists::bound_var] and
-    /// [Exists::patt] left empty.
-    pub fn add_exists_function(
-        &mut self,
-        vars_sorts: implvec!(Sort),
-        bound_var_sort: Sort,
-    ) -> &mut Exists {
-        // set up
-        let vsorts = vars_sorts.into_iter().collect_vec();
-        let bsort = bound_var_sort;
-
-        let exists_idx = self.quantifiers.len();
-
-        let n_exists = EXISTS_COUNT.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
-
-        // build the Functions
-        let tlf;
-        let skolem;
-        let fresh;
-
-        {
-            // tlf
-            let inner_tlf = {
-                let name = format!("_exists${n_exists:}").into();
-                let inputs = chain!(vsorts.iter().copied(), [bsort]);
-                let signature = Signature::new(inputs, Sort::Bool);
-                InnerFunction {
-                    flags: FunctionFlags::EXISTS,
-                    exists_idx,
-                    ..InnerFunction::new(name, signature)
-                }
-            };
-            tlf = Function::new(inner_tlf);
-            self.add(tlf.clone());
-        }
-
-        {
-            // skolem
-            let inner_skolem = {
-                let name = format!("_sk${n_exists:}").into();
-                let inputs = vsorts;
-                let signature = Signature::new(inputs, bsort);
-                InnerFunction {
-                    flags: FunctionFlags::SKOLEM,
-                    exists_idx,
-                    ..InnerFunction::new(name, signature)
-                }
-            };
-            skolem = Function::new(inner_skolem);
-            self.add(skolem.clone());
-        }
-
-        {
-            // fresh
-            let inner_fresh = {
-                let name = format!("_exists_fresh${n_exists:}").into();
-                let signature = Signature::new([], bsort);
-                InnerFunction {
-                    flags: FunctionFlags::EXISTS_FRESH,
-                    exists_idx,
-                    ..InnerFunction::new(name, signature)
-                }
-            };
-            fresh = Function::new(inner_fresh);
-            self.add(fresh.clone());
-        }
-
-        // declare the quantifier
-        self.quantifiers.push(Exists {
-            vars: vec![],
-            bound_var: Var::from_u32(0),
-            patt: std::iter::empty().collect(),
-            tlf,
-            skolem,
-            fresh,
-        });
-
-        // return
-        &mut self.quantifiers[exists_idx]
-    }
-
-    pub fn get_mut_quantifier(&mut self, idx: usize) -> &mut Exists {
-        &mut self.quantifiers[idx]
+    pub(crate) fn push_quantifier(&mut self, q: Quantifier) -> &mut Quantifier {
+        let quantifiers = self.quantifiers_mut(q.temporary());
+        quantifiers.push(q);
+        quantifiers.last_mut().unwrap()
     }
 
     /// Add a name alias for a function
@@ -193,57 +115,24 @@ impl FunctionCollection {
         let r = self.map_function.insert(name, fun);
         assert!(r.is_none(), "the function was already in the database");
     }
-}
 
-#[bon]
-impl FunctionCollection {
-    #[builder(builder_type = FunctionBuilder)]
-    pub fn add_function(
-        &mut self,
-        #[builder(into)] name: Cow<'static, str>,
-        #[builder(with = FromIterator::from_iter, default = vec![])] inputs: Vec<Sort>,
-        output: Sort,
-        alias: Option<Alias>,
-        #[builder(default = FunctionFlags::empty())] flags: FunctionFlags,
-        #[builder(default = 0)] exists_idx: usize,
-        #[builder(default = 0)] protocol_idx: usize,
-        #[builder(default = 0)] step_idx: usize,
-    ) -> Function {
-        let signature = Signature::new(inputs, output);
-        let inner = InnerFunction {
-            name,
-            signature,
-            alias,
-            flags,
-            exists_idx,
-            protocol_idx,
-            step_idx,
-        };
-        let fun = Function::new(inner);
-        self.add(fun.clone());
-        fun
+    pub fn registered_names(&self) -> impl Iterator<Item = &str> {
+        self.map_function.keys().map(|f| f.as_ref())
     }
-}
 
-use crate::terms::functions_holder::function_builder::IsUnset as FunctionBuilderIsUnset;
-impl<'a, S> FunctionBuilder<'a, S>
-where
-    S: function_builder::State,
-{
-    pub fn step(
-        self,
-        idx: usize,
-    ) -> FunctionBuilder<'a, SetOutput<SetFlags<SetStepIdx<SetAlias<S>>>>>
-    where
-        S::StepIdx: FunctionBuilderIsUnset,
-        S::Flags: FunctionBuilderIsUnset,
-        S::Alias: FunctionBuilderIsUnset,
-        S::Output: FunctionBuilderIsUnset,
-    {
-        self.maybe_alias(None)
-            .step_idx(idx)
-            .flags(FunctionFlags::STEP)
-            .output(Sort::Time)
+    pub fn clear_temporary(&mut self) {
+        let Self {
+            map_function,
+            temporary_functions,
+            temporary_quantifiers,
+            ..
+        } = self;
+
+        map_function.retain(|_, f| temporary_functions.contains(f));
+
+        temporary_functions.clear();
+        temporary_quantifiers.clear();
+        assert!(self.valid());
     }
 }
 
@@ -252,8 +141,8 @@ macro_rules! decl_fun{
     ($pbl:expr; $name:literal : ($($s:expr),*) -> Nonce ) => {
         {
             use $crate::terms::Sort::*;
-            let collection = ::std::convert::AsMut::<$crate::terms::FunctionCollection>::as_mut($pbl);
-            collection.add_function()
+            // let collection = ::std::convert::AsMut::<$crate::terms::FunctionCollection>::as_mut($pbl);
+            $pbl.declare_function()
                 .name($name)
                 .inputs([$($s),*])
                 .output(Nonce)
@@ -264,8 +153,8 @@ macro_rules! decl_fun{
     ($pbl:expr; $name:literal : ($($s:expr),*) -> $o:expr ) => {
         {
             use $crate::terms::Sort::*;
-            let collection = ::std::convert::AsMut::<$crate::terms::FunctionCollection>::as_mut($pbl);
-            collection.add_function()
+            // let collection = ::std::convert::AsMut::<$crate::terms::FunctionCollection>::as_mut($pbl);
+            $pbl.declare_function()
                 .name($name)
                 .inputs([$($s),*])
                 .output($o)
@@ -274,11 +163,34 @@ macro_rules! decl_fun{
     }
 }
 
-impl Deref for FunctionCollection {
-    type Target = [Function];
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct QuantifierIndex {
+    pub temporary: bool,
+    pub index: usize,
+}
 
-    fn deref(&self) -> &Self::Target {
-        &self.functions
+pub static TEMPORARY: QuantifierIndex = QuantifierIndex {
+    temporary: true,
+    index: 0,
+};
+pub static CONSTANT: QuantifierIndex = QuantifierIndex {
+    temporary: false,
+    index: 0,
+};
+
+impl QuantifierIndex {
+    pub fn get(self, functions: &FunctionCollection) -> Option<&Quantifier> {
+        functions.quantifiers(self.temporary).get(self.index)
+    }
+
+    pub fn get_mut(self, functions: &mut FunctionCollection) -> Option<&mut Quantifier> {
+        functions
+            .quantifiers_mut(self.temporary)
+            .get_mut(self.index)
+    }
+
+    pub fn get_array(self, functions: &FunctionCollection) -> &[Quantifier] {
+        functions.quantifiers(self.temporary)
     }
 }
 

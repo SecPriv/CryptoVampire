@@ -45,8 +45,10 @@ fn main() {
     match output_format {
         cryptovampire::cli::Output::Quiet => (),
         cryptovampire::cli::Output::Stdout => {
-            let res = res.unwrap();
-            eprintln!("{res}")
+            match res {
+                Err(e) => panic!("error: {e}"),
+                Ok(res) => eprintln!("{res}")
+            }
         }
         cryptovampire::cli::Output::JSON => {
             let res = res.map_err(|e| format!("{e:}"));

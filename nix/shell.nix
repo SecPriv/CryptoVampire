@@ -2,7 +2,7 @@
   cryptovampire,
   mkShell,
   pkgs,
-  rust,
+  rust ,
   python311,
   z3,
   vampire,

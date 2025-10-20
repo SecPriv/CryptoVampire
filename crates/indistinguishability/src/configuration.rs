@@ -1,4 +1,3 @@
-use steel::rvals::FromSteelVal;
 use steel_derive::Steel;
 
 #[derive(Debug, Steel)]
@@ -9,13 +8,16 @@ pub struct Configuration {
     pub keep_smt_files: bool,
 
     pub depth: u64,
+
+    pub vampire_timeout: f64,
 }
 
 impl Default for Configuration {
     fn default() -> Self {
         Self {
-            keep_smt_files: true,
+            keep_smt_files: cfg!(debug_assertions),
             depth: u64::MAX,
+            vampire_timeout: 2f64,
         }
     }
 }

@@ -1,12 +1,8 @@
 use std::io::{self, Read};
 
-use indistinguishability::{
-    init_engine, init_logger,
-    problem::{self, test::basic_hash::mk_pblm},
-    rules::prf::test::basic_hash::mk_prf_rule,
-};
-use steel::steel_vm::{builtin::BuiltInModule, engine::Engine};
+use indistinguishability::{init_engine, init_logger};
 
+static CV_PRELUDE: &str = include_str!("./input/prelude.scm");
 pub fn main() {
     init_logger();
 
@@ -16,8 +12,18 @@ pub fn main() {
         .expect("Failed to read from stdin");
 
     // let res = init_engine().run(pgrm).unwrap();
-    match init_engine().run(pgrm.clone()) {
-        Err(e) =>  eprintln!("{}", e.emit_result_to_string("stdin", pgrm.as_str())),
+    let mut engine = init_engine();
+    match engine.run(pgrm.clone()) {
+        Err(e) => {
+            eprintln!("{}", e.emit_result_to_string("prelude", CV_PRELUDE));
+            eprintln!("{}", e.emit_result_to_string("stdin", &pgrm));
+            if let Some(err) = engine.raise_error_to_string(e) {
+                panic!("{err}")
+            } else {
+                eprintln!("couldn't get a nice error");
+                panic!()
+            }
+        }
         Ok(res) => {
             for r in res {
                 println!("{r}")

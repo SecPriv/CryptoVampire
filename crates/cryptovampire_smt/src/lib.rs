@@ -1,14 +1,13 @@
-use std::{
-    borrow::Cow,
-    fmt::{self, Display},
-};
+use std::borrow::Cow;
+use std::fmt::{self, Debug, Display};
+use std::hash::Hash;
 
 pub const SMT_FILE_EXTENSION: &str = ".smt";
 
 #[cfg(feature = "macro")]
 macro_rules! smt {
     ($($t:tt)*) => {
-        cryptovampire_macor::smt!($($t)*)
+        cryptovampire_macro::smt!($($t)*)
     };
 }
 
@@ -18,56 +17,133 @@ mod formula;
 pub use smt::*;
 mod smt;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct SmtFile<S, F> {
-    pub content: Vec<smt::Smt<S, F>>,
+mod formatter;
+pub use formatter::Term as SmtPrettyPrinter;
+pub(crate) use formatter::translate_smt_to_term;
+
+pub trait SmtParam {
+    type Function: Display;
+    type Sort: Display + Clone;
+    type SVar: SortedVar<Sort = Self::Sort> + Display;
 }
 
-pub use var::{SortedVar, VarInner, uvar};
-mod var {
-    use core::fmt;
-    use std::{borrow::Cow, fmt::Display};
+pub trait SortedVar {
+    type Sort: Display + Clone;
 
-    #[allow(non_camel_case_types)]
-    pub type uvar = u32;
+    fn sort_ref(&self) -> Cow<'_, Self::Sort>;
+    fn mk(sort: Self::Sort) -> Self where Self::Sort: Sized;
+}
 
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-    pub enum VarInner {
-        Int(uvar),
-        Str(Cow<'static, str>),
+// #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct SmtFile<U: SmtParam> {
+    pub content: Vec<smt::Smt<U>>,
+}
+
+impl<U: SmtParam> PartialEq for SmtFile<U>
+where
+    smt::Smt<U>: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.content == other.content
     }
+}
 
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-    pub struct SortedVar<S> {
-        pub var: VarInner,
-        pub sort: S,
+impl<U: SmtParam> Eq for SmtFile<U> where smt::Smt<U>: Eq {}
+
+impl<U: SmtParam> PartialOrd for SmtFile<U>
+where
+    smt::Smt<U>: PartialOrd,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.content.partial_cmp(&other.content)
     }
+}
 
-    impl Display for VarInner {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            match self {
-                VarInner::Int(u) => write!(f, "x_{u:}"),
-                VarInner::Str(str) => write!(f, "{str}"),
-            }
-        }
+impl<U: SmtParam> Ord for SmtFile<U>
+where
+    smt::Smt<U>: Ord,
+{
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.content.cmp(&other.content)
     }
+}
 
-    impl<S: Display> Display for SortedVar<S> {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            let Self { var, sort } = self;
-            write!(f, "({var} {sort})")
-        }
+impl<U: SmtParam> Hash for SmtFile<U>
+where
+    smt::Smt<U>: Hash,
+{
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.content.hash(state);
     }
+}
+impl<U: SmtParam> Debug for SmtFile<U>
+where
+    smt::Smt<U>: Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SmtFile")
+            .field("content", &self.content)
+            .finish()
+    }
+}
 
-    impl<S> SortedVar<S> {
-        pub fn new(i: uvar, sort: S) -> Self {
-            Self {
-                var: VarInner::Int(i),
-                sort,
-            }
+impl<U: SmtParam> Clone for SmtFile<U>
+where
+    smt::Smt<U>: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            content: self.content.clone(),
         }
     }
 }
+
+// pub use var::{VarInner, uvar};
+// mod var {
+//     use core::fmt;
+//     use std::borrow::Cow;
+//     use std::fmt::Display;
+
+//     #[allow(non_camel_case_types)]
+//     pub type uvar = u32;
+
+//     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+//     pub enum VarInner {
+//         Int(uvar),
+//         Str(Cow<'static, str>),
+//     }
+
+//     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+//     pub struct SortedVar<S> {
+//         pub var: VarInner,
+//         pub sort: S,
+//     }
+
+//     impl Display for VarInner {
+//         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//             match self {
+//                 VarInner::Int(u) => write!(f, "x_{u:}"),
+//                 VarInner::Str(str) => write!(f, "{str}"),
+//             }
+//         }
+//     }
+
+//     impl<S: Display> Display for SortedVar<S> {
+//         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//             let Self { var, sort } = self;
+//             write!(f, "({var} {sort})")
+//         }
+//     }
+
+//     impl<S> SortedVar<S> {
+//         pub fn new(i: uvar, sort: S) -> Self {
+//             Self {
+//                 var: VarInner::Int(i),
+//                 sort,
+//             }
+//         }
+//     }
+// }
 
 pub(crate) use arr::Arr;
 mod arr {

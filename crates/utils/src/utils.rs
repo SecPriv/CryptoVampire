@@ -1,7 +1,5 @@
-use std::{
-    convert::Infallible,
-    ops::{Deref, DerefMut},
-};
+use std::convert::Infallible;
+use std::ops::{Deref, DerefMut};
 
 use thiserror::Error;
 
@@ -85,7 +83,7 @@ macro_rules! implvec {
 /// Base usage
 /// ```
 /// # use utils::destvec;
-/// let vec = vec![1,3,4];
+/// let vec = vec![1, 3, 4];
 ///
 /// destvec!([a, b, c] = vec);
 ///
@@ -174,7 +172,6 @@ macro_rules! destvec {
 ///         AB::B(x) => println!("{x:?}"),
 ///     }
 /// }
-///
 /// ```
 #[macro_export]
 macro_rules! match_as_trait {

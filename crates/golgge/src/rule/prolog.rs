@@ -1,34 +1,64 @@
-use crate::{Program, analysis::WeightedAnalysis, weight::Weight};
-use bon::Builder;
-use egg::{Analysis, FromOp, Id, Language, Pattern, RecExpr, Searcher, SymbolLang, Var};
+use std::borrow::Cow;
+use std::fmt::Display;
+use std::rc::Rc;
+use std::str::FromStr;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+use bon::bon;
+use egg::{FromOp, Id, Language, Pattern, RecExpr, Searcher, SymbolLang};
 use serde::Serialize;
-use std::{
-    cell::RefCell,
-    collections::HashMap,
-    fmt::Display,
-    ops::DerefMut,
-    rc::Rc,
-    str::FromStr,
-    sync::atomic::{AtomicU64, Ordering},
-    u64,
-};
-use utils::ereturn_if;
+use thiserror::Error;
+use utils::{ereturn_if, ereturn_let};
 
 use super::{Dependancy, Fresh, Rule};
+use crate::Program;
+use crate::analysis::WeightedAnalysis;
+use crate::weight::Weight;
 
-#[derive(Debug, Builder)]
+#[derive(Debug)]
 pub struct PrologRule<L> {
     pub input: Pattern<L>,
-    #[builder(with = <_>::from_iter, default = vec![])]
     pub deps: Vec<Pattern<L>>,
-    #[builder(default = false)]
     pub cut: bool,
-    #[builder(default = false)]
     pub require_decrease: bool,
     // pub free_vars: Vec<Var>,
-    #[builder(into)]
     pub name: Option<String>,
     // pub memo: RefCell<HashMap<Id, Dependancy>>,
+}
+
+#[derive(Debug, Clone, Copy, Error)]
+#[non_exhaustive]
+pub enum PrologBuilderError {
+    #[error("premise refer to free variable {0}")]
+    VariableMishmatch(egg::Var),
+}
+
+#[bon]
+impl<L: Language> PrologRule<L> {
+    #[builder]
+    pub fn new(
+        input: Pattern<L>,
+        #[builder(with = <_>::from_iter, default = vec![])] deps: Vec<Pattern<L>>,
+        #[builder(default = false)] cut: bool,
+        #[builder(default = false)] require_decrease: bool,
+        #[builder(into)] name: Option<String>,
+    ) -> Result<Self, PrologBuilderError> {
+        let bound_vars = input.vars();
+        for v in deps.iter().flat_map(|d| d.vars().into_iter()) {
+            ereturn_if!(
+                !bound_vars.contains(&v),
+                Err(PrologBuilderError::VariableMishmatch(v))
+            )
+        }
+
+        Ok(Self {
+            input,
+            deps,
+            cut,
+            require_decrease,
+            name,
+        })
+    }
 }
 
 impl<L> FromStr for PrologRule<L>
@@ -62,68 +92,35 @@ where
 {
     fn search(&self, prgm: &mut Program<L, N>, goal: Id) -> Dependancy {
         let matches = self.input.search_eclass(prgm.egraph(), goal);
-        let Some(matches) = matches else {
-            return Default::default();
-        };
-
-        // if let Some(memo) = self.memo.borrow().get(&goal) {
-        //     return memo.clone();
-        // }
-
-        if prgm.config.trace_prolog {
-            if let Some(n) = &self.name {
-                eprintln!("searched {n}")
-            }
-        }
+        ereturn_let!(let Some(matches) = matches, Dependancy::impossible());
 
         let weight = N::get_weight(&prgm.egraph()[goal].data);
-        // let subst = matches.substs.first().unwrap();
         let inner: Vec<Vec<Id>> = matches
             .substs
             .into_iter()
             .filter_map(|subst| {
-                // generate free vars
-                // for v in &self.free_vars {
-                //     let id = prgm.egraph_mut().add_expr(&Fresh::mk_fresh());
-                //     subst.insert(*v, id);
-                // }
 
                 let deps: Vec<Id> = self
                     .deps
                     .iter()
                     .map(|ret| ret.apply_susbt(prgm.egraph_mut(), &subst))
                     .collect();
-                if self.require_decrease
-                    && deps
+                let does_decrease = !self.require_decrease
+                    || deps
                         .iter()
-                        .any(|id| !N::get_weight(&prgm.egraph()[*id].data).decreases(&weight))
-                {
-                    None
-                } else {
-                    Some(deps)
-                }
-                // .then_some(deps)
+                        .all(|id| N::get_weight(&prgm.egraph()[*id].data).decreases(&weight));
+
+                does_decrease.then_some(deps)
             })
             .collect();
         prgm.config.node_limit += inner.iter().map(|x| x.len()).sum::<usize>();
-        let res = Dependancy {
+        
+        Dependancy {
             inner,
             cut: self.cut,
-        };
-        // self.memo.borrow_mut().insert(goal, res.clone());
-        res
+            proof: None,
+        }
     }
-
-    // fn rebuild(&self, prgm: &Program<L, N>) {
-    //     // let mut memo = self.memo.borrow_mut();
-    //     // ereturn_if!(memo.is_empty());
-    //     // let nmemo = std::mem::take(memo.deref_mut());
-    //     // let egraph = prgm.egraph();
-    //     // *memo = nmemo
-    //     //     .into_iter()
-    //     //     .map(|(id, s)| (egraph.find(id), s))
-    //     //     .collect();
-    // }
 
     fn debug(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         write!(f, "<prolog> ")?;
@@ -149,6 +146,14 @@ where
         }
 
         write!(f, "true.")
+    }
+
+    fn name(&self) -> Cow<'_, str> {
+        if let Some(name) = &self.name {
+            format!("prolog({name})").into()
+        } else {
+            Cow::Borrowed("prolog")
+        }
     }
 }
 
@@ -183,12 +188,16 @@ macro_rules! pl {
 }
 
 pub mod parser {
-    use super::PrologRule;
+    use std::cell::RefCell;
+    use std::fmt::Debug;
+    use std::str::FromStr;
+
     use anyhow::{Context, anyhow, bail};
     use egg::{Analysis, FromOp, Language, MultiPattern, Pattern, Rewrite};
     use itertools::Itertools;
     use log::trace;
-    use std::{cell::RefCell, fmt::Debug, str::FromStr};
+
+    use super::PrologRule;
 
     fn parse_rw<L, N>(name: Option<&str>, s1: &str, s2: &str) -> anyhow::Result<Rewrite<L, N>>
     where

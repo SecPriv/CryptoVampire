@@ -1,0 +1,73 @@
+type index;
+fun tpl(Message, Message):Message
+
+
+fun sel1of2(Message):Message;
+fun sel2of2(Message):Message
+fun hash(Message, Message):Message
+fun verify(Message, Message, Message):Bool
+fun ok:Message
+fun ko:Message
+fun tag1:Message
+fun tag2:Message
+
+/* the Names */
+fun nt(index, index): Name
+fun nr(index): Name
+
+/* to quickly change version on key (one or 2 parameters) */
+fun key(index):Name
+let mkey!(i:index, k:index) = key(i)
+
+step tag(i:index, j:index) {true}
+    { tpl(nt(i, j), hash(tpl(tpl(in, nt(i, j)), tag1), mkey!(i, j)))}
+
+step reader1(j:index) {true}
+    {nr(j)}
+
+let m_condition_fst!(i:index, j:index, k:index, m_in: Message) = 
+    (sel2of2(m_in) == hash(tpl(tpl(nr(j),sel1of2(m_in)), tag1), mkey!(i, k)))
+
+step reader_2_s(i:index, j:index, k:index)
+    { m_condition_fst![i, j, k, in] }
+    { hash(tpl(tpl(sel2of2(in), nr(j)), tag2), mkey!(i, k)) }
+
+step reader_2_f(j:index)
+    { not(exists (i:index, k:index) { m_condition_fst![i, j, k, in] }) }
+    { ko }
+
+
+assert
+    forall (m1:Message, m2:Message) {
+        ((m1 == sel1of2(tpl(m1,m2)))  && (m2 == sel2of2(tpl(m1,m2))))
+    }
+
+assert (ko != ok)
+assert (tag1 != tag2)
+
+order forall (i:index,j:index, k:index) 
+    reader1(j) < reader_2_s(i,j, k)
+
+order forall (j:index) 
+    reader1(j) < reader_2_f(j)
+
+order forall (i:index, j:index, k:index)
+    { reader_2_f(j) <> reader_2_s(i, j, k) }
+
+order forall (i1:index, i2:index, j:index, k1:index, k2:index)
+    { reader_2_s(i1, j, k1) <> reader_2_s(i2, j, k2) }
+
+query forall (i:index, j:index, k:index) {(
+    happens(reader_2_s(i, j, k)) =>  (
+        cond![reader_2_s(i, j, k)] <=>
+        exists (k2:index) {(
+            lt(tag(i, k2), reader_2_s(i, j, k)) &&
+            lt(reader1(j), tag(i, k2)) &&
+            (sel1of2(msg![tag(i, k2)]) == sel1of2(input(reader_2_s(i, j, k)))) &&
+            (sel2of2(msg![tag(i, k2)]) == sel2of2(input(reader_2_s(i, j, k)))) &&
+            (msg![reader1(j)] == input(tag(i, k2))) 
+        )}
+))}
+
+assert-crypto euf-cma hash verify [hmac];
+assert-crypto nonce;

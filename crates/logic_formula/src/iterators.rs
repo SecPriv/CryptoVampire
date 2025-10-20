@@ -1,4 +1,5 @@
-use crate::{Bounder, Destructed, Formula, FormulaIterator, outers::OwnedIter};
+use crate::outers::OwnedIter;
+use crate::{Bounder, Destructed, Formula, FormulaIterator};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -112,5 +113,28 @@ impl<F: Formula + Clone> FormulaIterator<F> for AllTermsIterator {
     {
         helper.push_result(current.clone());
         helper.extend_child_with_default(current.args());
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+pub struct QuantiferIterator;
+
+impl<'a, F> FormulaIterator<&'a F> for QuantiferIterator
+where
+    &'a F: Formula,
+{
+    type Passing = ();
+
+    type U = &'a F;
+
+    fn next<H>(&mut self, current: &'a F, _: Self::Passing, helper: &mut H)
+    where
+        H: crate::IteratorHelper<F = &'a F, Passing = Self::Passing, U = Self::U>,
+    {
+        let Destructed { head, args } = current.destruct();
+        helper.extend_child_same_passing(args, &());
+        if let crate::HeadSk::Quant(_) = head {
+            helper.push_result(current);
+        }
     }
 }

@@ -1,4 +1,4 @@
-use std::{fmt::Debug, rc::Rc};
+use std::{borrow::Cow, fmt::{Debug, Display}, rc::Rc};
 
 use crate::Program;
 use egg::{Analysis, Id, Language, RecExpr};
@@ -11,15 +11,17 @@ pub use prolog::{PrologRule, parser::PlOrRw};
 // mod vampire;
 // pub use vampire::VampireRule;
 
-#[derive(Debug, PartialEq, Eq, Ord, PartialOrd, Hash, Clone, Default)]
+#[derive( Default)]
+#[non_exhaustive]
 pub struct Dependancy {
-    inner: Vec<Vec<Id>>,
-    cut: bool,
+    pub inner: Vec<Vec<Id>>,
+    pub cut: bool,
+    pub proof: Option<Rc<dyn Display>>
 }
 
 impl Dependancy {
     pub fn new(inner: Vec<Vec<Id>>) -> Self {
-        Self { inner, cut: false }
+        Self { inner, cut: false, proof: None }
     }
 
     pub fn inner(&self) -> &Vec<Vec<Id>> {
@@ -46,6 +48,7 @@ impl Dependancy {
         Dependancy {
             inner: vec![],
             cut: false,
+            proof: None
         }
     }
 
@@ -53,7 +56,16 @@ impl Dependancy {
         Dependancy {
             inner: vec![vec![]],
             cut: false,
+            proof: None
         }
+    }
+
+    pub const fn is_impossible(&self) -> bool {
+        self.inner.is_empty()
+    }
+
+    pub fn is_axioms(&self) -> bool {
+        self.inner.first().is_some_and(|dep| dep.is_empty())
     }
 }
 
@@ -63,7 +75,11 @@ pub trait Rule<L: Language, N: Analysis<L>> {
     fn rebuild(&self, _prgm: &Program<L, N>) {}
 
     fn debug(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        Ok(())
+        write!(f, "<{}>.", self.name())
+    }
+
+    fn name(&self) -> Cow<'_, str> {
+        Cow::Borrowed("unamed rule")
     }
 
     fn into_rc(self) -> Rc<dyn Rule<L, N>>
@@ -89,5 +105,14 @@ impl<'a, L, N> DebugRule<'a, L, N> {
 impl<'a, L: Language, N: Analysis<L>> Debug for DebugRule<'a, L, N> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.debug(f)
+    }
+}
+
+impl<I> FromIterator<I> for Dependancy
+where
+    I: IntoIterator<Item = Id>,
+{
+    fn from_iter<T: IntoIterator<Item = I>>(iter: T) -> Self {
+        Dependancy::new(iter.into_iter().map(|i| i.into_iter().collect()).collect())
     }
 }

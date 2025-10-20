@@ -1,7 +1,6 @@
-use cryptovampire_smt::{Smt, SmtFormula};
-use logic_formula::egg::{SimplLang, SimplLangVar};
-use std::{io::Write, u128};
-use steel::steel_vm::{builtin::BuiltInModule, engine::Engine};
+use std::io::Write;
+
+use cryptovampire_smt::{Smt, SmtFormula, SmtParam};
 use terms::{Function, Sort};
 
 // ~~~~~~~~~~~~~~~~ macros ~~~~~~~~~~~~~~~~~~
@@ -18,13 +17,15 @@ use terms::{Function, Sort};
 /// }
 /// ```
 /// **NB**: the extra `$` is needed
+#[rustfmt::skip]
 macro_rules! declare_trace {
-    ($dolar:tt$name:literal) => {
+    ($dolar:tt $name:literal) => {
+        #[allow(unused_macros)]
         macro_rules! tr {
-                                                    ($dolar($arg:tt )+) => {
-                                                        ::log::trace!(target: $name, $dolar($arg)+)
-                                                    };
-                                                }
+            ($dolar($arg:tt )+) => {
+                ::log::trace!(target: $name, $dolar($arg)+)
+            };
+        }
     };
 }
 
@@ -40,21 +41,25 @@ pub mod terms; // <- first for macros
 mod test;
 pub(crate) mod utils;
 pub(crate) mod vampire;
-pub use input::{register, init_engine};
+pub use input::{init_engine, register};
 mod configuration;
 pub use configuration::Configuration;
+
+use crate::terms::Variable;
 
 // ~~~~~~ type aliases and constants ~~~~~~~~
 
 /// Our global analysis type
 pub type N = ();
 
-pub static SIZE: usize = 3;
-pub type Lang = SimplLang<Function, SIZE>;
-pub type LangVar = SimplLangVar<Function, SIZE>;
+pub type Lang = terms::InnerLang;
+pub type LangVar = egg::ENodeOrVar<Lang>;
 
-pub type MSmtFormula = SmtFormula<Sort, Function>;
-pub type MSmt = Smt<Sort, Function>;
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct MSmtParam;
+
+pub type MSmtFormula = SmtFormula<MSmtParam>;
+pub type MSmt = Smt<MSmtParam>;
 
 // ~~~~~~~~~~~~~~~~ other ~~~~~~~~~~~~~~~~~~~
 
@@ -79,3 +84,10 @@ pub fn init_logger() {
         .init();
 }
 
+impl SmtParam for MSmtParam {
+    type Function = Function;
+
+    type Sort = Sort;
+
+    type SVar = Variable;
+}

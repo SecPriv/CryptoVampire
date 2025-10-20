@@ -1,33 +1,22 @@
 use std::fmt::{self};
 
-use crate::{
-    FromEnv, SubtermKind,
-    environement::{
-        environement::Environement,
-        traits::{KnowsRealm, Realm},
-    },
-    formula::{
-        file_descriptior::{
-            GeneralFile,
-            axioms::{Axiom, Rewrite, RewriteKind},
-            declare::Declaration,
-        },
-        formula::RichFormula,
-        function::{
-            Function, InnerFunction,
-            inner::booleans::{Booleans, Connective},
-            signature::Signature,
-        },
-        quantifier::Quantifier,
-        sort::Sort,
-        variable::Variable,
-    },
-};
-
 use cryptovampire_smt::{SortedVar, VarInner};
 use if_chain::if_chain;
 
 use self::display::{SmtDisplayer, SmtEnv};
+use crate::environement::environement::Environement;
+use crate::environement::traits::{KnowsRealm, Realm};
+use crate::formula::file_descriptior::GeneralFile;
+use crate::formula::file_descriptior::axioms::{Axiom, Rewrite, RewriteKind};
+use crate::formula::file_descriptior::declare::Declaration;
+use crate::formula::formula::RichFormula;
+use crate::formula::function::inner::booleans::{Booleans, Connective};
+use crate::formula::function::signature::Signature;
+use crate::formula::function::{Function, InnerFunction};
+use crate::formula::quantifier::Quantifier;
+use crate::formula::sort::Sort;
+use crate::formula::variable::Variable;
+use crate::{FromEnv, SubtermKind};
 
 pub type SmtFile<'bump> = cryptovampire_smt::SmtFile<Sort<'bump>, Function<'bump>>;
 pub type Smt<'bump> = cryptovampire_smt::Smt<Sort<'bump>, Function<'bump>>;
@@ -65,7 +54,7 @@ macro_rules! unpack_args {
 
 fn vars_to_sorted_vars<'bump>(vars: &[Variable<'bump>]) -> Vec<SortedVar<Sort<'bump>>> {
     vars.iter()
-        .map(|v | SortedVar {
+        .map(|v| SortedVar {
             var: VarInner::Int(v.get_unique_id()),
             sort: v.sort,
         })
@@ -298,7 +287,7 @@ impl<'bump> FromEnv<'bump, Declaration<'bump>> for Smt<'bump> {
                                 .into_iter()
                                 .map(|cd| SmtCons {
                                     fun: cd.constructor,
-                                    dest: cd.destructor,
+                                    dest: cd.destructor.into_iter().map(Some).collect(),
                                     sorts: cd.constructor.fast_insort().unwrap(),
                                 })
                                 .collect(),

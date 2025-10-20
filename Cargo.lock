@@ -106,6 +106,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69f7f8c3906b62b754cd5326047894316021dcfe5a194c8ea52bdd94934a3457"
 
 [[package]]
+name = "archery"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eae2ed21cd55021f05707a807a5fc85695dafb98832921f6cfa06db67ca5b869"
+dependencies = [
+ "triomphe",
+]
+
+[[package]]
 name = "arrayvec"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -492,6 +501,7 @@ dependencies = [
  "itertools 0.13.0",
  "log",
  "logic_formula",
+ "regex",
  "serde",
  "utils",
 ]
@@ -816,6 +826,7 @@ dependencies = [
  "smallvec",
  "static_init",
  "tempfile",
+ "thiserror 2.0.3",
  "utils",
 ]
 
@@ -965,13 +976,16 @@ dependencies = [
  "egg",
  "env_logger 0.11.6",
  "golgge",
- "im-rc",
+ "indexmap 2.7.1",
  "itertools 0.13.0",
  "log",
  "logic_formula",
  "num_cpus",
  "paste",
+ "quarck",
+ "rpds",
  "rustc-hash",
+ "seq-macro",
  "serde",
  "serde_json",
  "smallvec",
@@ -1392,6 +1406,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "quarck"
+version = "0.1.0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "quickscope"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1517,6 +1538,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 
 [[package]]
+name = "rpds"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a7f89f654d51fffdd6026289d07d1fd523244d46ae0a8bc22caa6dd7f9e8cb0b"
+dependencies = [
+ "archery",
+]
+
+[[package]]
 name = "rustc-hash"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1571,6 +1601,12 @@ name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
+
+[[package]]
+name = "seq-macro"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1bc711410fbe7399f390ca1c3b60ad0f53f80e95c5eb935e52268a0e2cd49acc"
 
 [[package]]
 name = "serde"
@@ -1916,6 +1952,12 @@ name = "tracing-core"
 version = "0.1.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9d12581f227e93f094d3af2ae690a574abb8a2b9b7a96e7cfe9647b2b617678"
+
+[[package]]
+name = "triomphe"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef8f7726da4807b58ea5c96fdc122f80702030edc33b35aff9190a51148ccc85"
 
 [[package]]
 name = "typed-arena"

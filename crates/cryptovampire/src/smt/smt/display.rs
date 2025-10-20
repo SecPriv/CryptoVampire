@@ -1,15 +1,13 @@
-use std::{fmt, ops::Deref};
+use std::fmt;
+use std::ops::Deref;
 
 use itertools::Itertools;
 use log::{log_enabled, trace};
 
-use crate::{
-    environement::traits::{KnowsRealm, Realm},
-    formula::file_descriptior::axioms::RewriteKind,
-    smt::smt::SmtDisplay,
-};
-
 use super::{Smt, SmtFile, SmtFormula, fun_list_fmt};
+use crate::environement::traits::{KnowsRealm, Realm};
+use crate::formula::file_descriptior::axioms::RewriteKind;
+use crate::smt::smt::SmtDisplay;
 
 #[derive(Debug, Copy, Clone)]
 pub struct SmtDisplayer<D, T> {
@@ -212,7 +210,7 @@ impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a Smt<'bump>> {
                 }
                 write!(f, ") {})", out.name())
             }
-            Smt::DeclareSort(sort) => writeln!(f, "(declare-sort {} 0)", sort),
+            Smt::DeclareSort(sort) => writeln!(f, "(declare-sort {sort} 0)"),
             Smt::DeclareSortAlias { from, to } => {
                 writeln!(f, "(define-sort {} () {})", to.name(), from.name())
             }
@@ -257,7 +255,7 @@ impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a Smt<'bump>> {
                         write!(f, "\t\t\t({} ", c.fun.name())?;
 
                         for (i, s) in c.fun.fast_insort().expect("todo").iter().enumerate() {
-                            write!(f, "({} {}) ", c.dest.get(i).unwrap().name(), s)?;
+                            write!(f, "({} {}) ", c.dest.get(i).unwrap().unwrap().name(), s)?; // double unwrap because destructors always have name in cv
                         }
                         writeln!(f, ")")?;
                     }
@@ -267,10 +265,10 @@ impl<'a, 'bump> fmt::Display for SmtDisplayer<&'a SmtEnv, &'a Smt<'bump>> {
             }
 
             Smt::CheckSat => writeln!(f, "(check-sat)"),
-            Smt::Comment(s) => writeln!(f, "\n; {}\n", s),
+            Smt::Comment(s) => writeln!(f, "\n; {s}\n"),
             Smt::GetProof => writeln!(f, "(get-proof)"),
-            Smt::SetOption(option, arg) => writeln!(f, "(set-option :{} {})", option, arg),
-            Smt::SetLogic(logic) => writeln!(f, "(set-logic {})", logic),
+            Smt::SetOption(option, arg) => writeln!(f, "(set-option :{option} {arg})"),
+            Smt::SetLogic(logic) => writeln!(f, "(set-logic {logic})"),
         }
     }
 }
