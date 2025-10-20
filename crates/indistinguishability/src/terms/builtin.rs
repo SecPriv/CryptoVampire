@@ -450,6 +450,14 @@ mk_builtin_funs!(
         flags : f!(PROLOG_ONLY | LIST_CONSTR)
     };
 
+    CONS_FA "fa_cons" {
+        signature: s!(Bitstring, Bitstring -> Bitstring),
+    };
+
+    NIL_FA "fa_nil" {
+        signature: s!(() -> Bitstring),
+    };
+
     // ~~~~~~~~~~~~~~~ smt only ~~~~~~~~~~~~~~~~~
 
     SMT_ITE "ite" {
