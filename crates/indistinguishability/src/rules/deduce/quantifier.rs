@@ -9,9 +9,10 @@ use itertools::izip;
 use utils::{ebreak_if, ebreak_let, ereturn_let};
 
 use crate::problem::{PAnalysis, PRule, RcRule};
+use crate::rules::mk_default_rewrites;
 use crate::terms::{
-    BIT_DEDUCE, BOOL_DEDUCE, CONS, EXISTS, FIND_SUCH_THAT, FOBinder, INDEX_SORT, LAMBDA_LET, Sort,
-    Variable,
+    BIT_DEDUCE, BOOL_DEDUCE, CONS, EXISTS, FIND_SUCH_THAT, FOBinder, INDEX_SORT, LAMBDA_LET,
+    LAMBDA_O, Sort, Variable,
 };
 use crate::{Lang, Problem, fresh, rexp};
 
@@ -99,8 +100,6 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for QuantifierRule {
             tr!("quantifier deduce with: {}", g)
         }
 
-        
-
         let new_var = prgm
             .egraph_mut()
             .analysis
@@ -110,7 +109,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for QuantifierRule {
             .fresh_name("idx")
             .call();
         let new_var = prgm.egraph_mut().add(Lang::new(new_var, []));
-        matches
+        let deps = matches
             .substs
             .into_iter()
             .map(|mut subst| {
@@ -123,9 +122,23 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for QuantifierRule {
                     panic!("only Index is supported in deduce quantifiers")
                 }
                 subst.insert(DEFAULT_PARAMERTERS.new_var.as_egg(), new_var);
-                [ret.apply_susbt(prgm.egraph_mut(), &subst)]
+                let ret = ret.apply_susbt(prgm.egraph_mut(), &subst);
+
+                #[cfg(debug_assertions)]
+                {
+                    let g = prgm.egraph().id_to_expr(ret);
+                    tr!("quantifier new goal: {}", g)
+                }
+
+                [ret]
             })
-            .collect()
+            .collect();
+
+        // because we introduced new constants
+        let eq_rules = mk_default_rewrites(prgm.egraph().analysis.pbl()).collect();
+        prgm.set_eq_rules(eq_rules);
+
+        deps
     }
 
     fn name(&self) -> std::borrow::Cow<'_, str> {
@@ -202,6 +215,7 @@ impl QuantifierRule {
         } = &DEFAULT_PARAMERTERS;
         let deduce_m = &BIT_DEDUCE;
         let deduce_b = &BOOL_DEDUCE;
+        let o = &LAMBDA_O;
         let capture_pattern = match bind {
             FOBinder::Forall => unreachable!(),
             Exists => [
@@ -238,34 +252,34 @@ impl QuantifierRule {
             FOBinder::Forall => unreachable!(),
             Exists => [
                 rexp!((deduce_b #u #v
-                    (EXISTS #sort1_cons (LAMBDA_LET #new_var #args1_1))
-                    (EXISTS #sort2_cons (LAMBDA_LET #new_var #args2_1))
+                    (EXISTS #sort1_cons (LAMBDA_LET o #new_var #args1_1))
+                    (EXISTS #sort2_cons (LAMBDA_LET o #new_var #args2_1))
                     #h1 #h2)),
                 rexp!((deduce_b #u #v
-                    (EXISTS #sort1_cons (LAMBDA_LET #new_var #args1_1))
+                    (EXISTS #sort1_cons (LAMBDA_LET o #new_var #args1_1))
                     #other
                     #h1 #h2)),
                 rexp!((deduce_b #u #v
                     #other
-                    (EXISTS #sort1_cons (LAMBDA_LET #new_var #args1_1))
+                    (EXISTS #sort1_cons (LAMBDA_LET o #new_var #args1_1))
                     #h1 #h2)),
             ],
             FindSuchThat => [
                 rexp!((deduce_m #u #v
                     (FIND_SUCH_THAT #sort1_cons
-                        (LAMBDA_LET #new_var #args1_1) (LAMBDA_LET #new_var #args1_2) #args1_3)
+                        (LAMBDA_LET o #new_var #args1_1) (LAMBDA_LET o #new_var #args1_2) #args1_3)
                     (FIND_SUCH_THAT #sort2_cons
-                        (LAMBDA_LET #new_var #args2_1) (LAMBDA_LET #new_var #args2_2) #args2_3)
+                        (LAMBDA_LET o #new_var #args2_1) (LAMBDA_LET o #new_var #args2_2) #args2_3)
                     #h1 #h2)),
                 rexp!((deduce_m #u #v
                     (FIND_SUCH_THAT #sort1_cons
-                        (LAMBDA_LET #new_var #args1_1) (LAMBDA_LET #new_var #args1_2) #args1_3)
+                        (LAMBDA_LET o #new_var #args1_1) (LAMBDA_LET o #new_var #args1_2) #args1_3)
                     #other
                     #h1 #h2)),
                 rexp!((deduce_m #u #v
                     #other
                     (FIND_SUCH_THAT #sort1_cons
-                        (LAMBDA_LET #new_var #args1_1) (LAMBDA_LET #new_var #args1_2) #args1_3)
+                        (LAMBDA_LET o #new_var #args1_1) (LAMBDA_LET o #new_var #args1_2) #args1_3)
                     #h1 #h2)),
             ],
         }

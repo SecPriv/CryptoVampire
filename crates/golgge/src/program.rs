@@ -170,6 +170,29 @@ where
         &self.eq_rules
     }
 
+    #[cfg(debug_assertions)]
+    pub fn set_eq_rules(&mut self, new: Vec<Rewrite<L, N>>)where
+    L: Display
+    {
+        self.egraph_mut().clean = false;
+        self.eq_rules = new;
+
+        #[cfg(debug_assertions)]
+        {
+            for r in &self.eq_rules {
+                println!("{r:?}")
+            }
+        }
+    }
+
+    #[cfg(not(debug_assertions))]
+    pub fn set_eq_rules(&mut self, new: Vec<Rewrite<L, N>>)where
+    L: Display
+    {
+        self.egraph_mut().clean = false;
+        self.eq_rules = new;
+    }
+
     pub fn rules(&self) -> &[Rc<dyn Rule<L, N>>] {
         &self.rules
     }

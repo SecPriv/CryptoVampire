@@ -6,7 +6,7 @@ use egg::{Analysis, Pattern, Rewrite};
 use itertools::chain;
 
 use crate::terms::{
-    ADD_S, CONS, EXISTS, FIND_SUCH_THAT, Function, LAMBDA_LET, LAMBDA_O, LAMBDA_S, NIL,
+    ADD_S, CONS, EXISTS, FIND_SUCH_THAT, Function, LAMBDA_LET, LAMBDA_O, LAMBDA_S, NIL, MITE,
     RecFOFormula,
 };
 use crate::{Lang, Problem, fresh, rexp};
@@ -20,27 +20,33 @@ pub fn mk_rewrites<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = Rew
 }
 
 fn mk_base_rw<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>> {
-    decl_vars![x, m, hd, tl, sorts, a, b, c];
+    decl_vars![x, y, m, hd, tl,  a, b, c, var];
     mk_many_rewrites! {
       ["λlet subst"]
-      (LET #m O) => (#m).
+      (LET #var #m #var) => (#m).
 
       ["λlet skip"]
-      (LET #m (S #x)) => (#x).
+      (LET O #m (S #x)) => (S #x).
 
-      ["λadd many s cons"]
-      (ADD_S (CONS #hd #tl) #m) => (ADD_S #tl (S #m)).
+    //   ["λlet simpl"]
+    //   (LET (S #y) #m (S #x)) => (LET #y #m #x).
 
-      ["λadd many s nil"]
-      (ADD_S NIL #m) => (#m).
+    //   ["λadd many s cons"]
+    //   (ADD_S (CONS #hd #tl) #m) => (S (ADD_S #tl #m)).
 
-      ["λlet exist"]
-      (LET #m (EXISTS #sorts #a)) =>
-        (EXISTS #sorts (LET #m (ADD_S #sorts #a))).
+    //   ["λadd many s nil"]
+    //   (ADD_S NIL #m) => (#m).
 
-      ["λlet find"]
-      (LET #m (FIND_SUCH_THAT #sorts #a #b #c)) =>
-        (FIND_SUCH_THAT #sorts (LET #m (ADD_S #sorts #a)) (LET #m (ADD_S #sorts #b)) (LET #m #c)).
+    //   ["λlet exist"]
+    //   (LET #var #m (EXISTS (CONS #hd NIL) #a)) =>
+    //     (EXISTS (CONS #hd NIL) (LET (S (ADD_S NIL #var)) #m #a)).
+
+    //   ["λlet find"]
+    //   (LET #var #m (FIND_SUCH_THAT (CONS #hd NIL) #a #b #c)) =>
+    //     (FIND_SUCH_THAT (CONS #hd NIL) 
+    //         (LET (S (ADD_S NIL #var)) #m #a) 
+    //         (LET (S (ADD_S NIL #var)) #m #b) 
+    //         (LET #var #m #c)).
     }
     .into_iter()
 }
@@ -67,17 +73,19 @@ fn mk_let_rw<N: Analysis<Lang>>(
     pbl: &Problem,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
     let m = fresh!();
+    let mvars = fresh!();
     pbl.functions()
         .iter_current()
         .filter(|f| !f.is_out_of_term_algebra())
         .map({
             move |f| {
                 let m = &m;
+                let mvars = &mvars;
                 let vars = f.signature.mk_vars();
                 let vars = vars.iter().map(|x| RecFOFormula::Var(x.clone()));
-                let svars = vars.clone().map(|v| rexp!((LET #m  #v)));
+                let svars = vars.clone().map(|v| rexp!((LET #mvars #m  #v)));
 
-                let searcher = Pattern::from(&rexp!((LET #m (f #vars*))));
+                let searcher = Pattern::from(&rexp!((LET #mvars #m (f #vars*))));
                 let applier = Pattern::from(&rexp!((f #svars*)));
 
                 Rewrite::new(format!("λ let commutes {f}"), searcher, applier).unwrap()

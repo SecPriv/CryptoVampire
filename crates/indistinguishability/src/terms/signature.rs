@@ -21,8 +21,11 @@ impl Signature {
         }
     }
 
-    pub fn arity(&self) -> usize {
-        self.inputs.len()
+    pub const fn arity(&self) -> usize {
+        match &self.inputs {
+            std::borrow::Cow::Borrowed(x) => x.len(),
+            std::borrow::Cow::Owned(x) => x.len(),
+        }
     }
 
     pub fn inputs_iter(&self) -> impl Iterator<Item = Sort> + use<'_> {

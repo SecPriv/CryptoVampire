@@ -28,7 +28,7 @@ use crate::terms::{
     AND, BITE, CONS, EQ, FALSE, Function, IMPLIES, LAMBDA_O, LAMBDA_S, NIL, NOT, OR, Sort, TRUE,
     Variable,
 };
-use crate::{Lang, LangVar, MSmtFormula, fresh};
+use crate::{Lang, LangVar, MSmtFormula, fresh, rexp};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Steel, Serialize)]
 pub enum RecFOFormula {
@@ -688,7 +688,16 @@ impl RecFOFormula {
     /// `L` lets you decide the `egg::Language` to be used. It panics if the conversion is impossible.
     pub fn as_egg<L: EggLanguage>(&self) -> Vec<L> {
         let mut out = Vec::new();
-        self.as_egg_inner(&mut out, Default::default(), 0);
+        self.as_egg_inner(&mut out, Default::default(), 0, true);
+        out
+    }
+
+    /// Converts a `RecFOFormula` into a `egg`-like formula.
+    ///
+    /// `L` lets you decide the `egg::Language` to be used. It panics if the conversion is impossible.
+    pub fn as_egg_non_capture_avoiding<L: EggLanguage>(&self) -> Vec<L> {
+        let mut out = Vec::new();
+        self.as_egg_inner(&mut out, Default::default(), 0, false);
         out
     }
 
@@ -697,6 +706,7 @@ impl RecFOFormula {
         out: &mut Vec<L>,
         bvars: rpds::HashTrieMap<&'a Variable, usize>,
         size: usize,
+        wrap: bool,
     ) -> usize {
         match self {
             Self::Quantifier { head, vars, arg } => {
@@ -711,7 +721,7 @@ impl RecFOFormula {
                 nargs.push(mk_list(out, vars.iter().map(|v| v.get_sort().unwrap())));
                 nargs.extend(
                     arg.iter()
-                        .map(|arg| arg.as_egg_inner(out, bvars.clone(), size)),
+                        .map(|arg| arg.as_egg_inner(out, bvars.clone(), size, wrap)),
                 );
 
                 let head = head.as_function().cloned().unwrap();
@@ -721,7 +731,7 @@ impl RecFOFormula {
             Self::App { head, args } => {
                 let args = args
                     .iter()
-                    .map(|arg| arg.as_egg_inner(out, bvars.clone(), size))
+                    .map(|arg| arg.as_egg_inner(out, bvars.clone(), size, wrap))
                     .map(Id::from)
                     .collect_vec();
                 out.push(L::mk_fun_application(head.clone(), args));
@@ -729,6 +739,12 @@ impl RecFOFormula {
             Self::Var(variable) => match bvars.get(variable) {
                 Some(i) => {
                     out.extend(mk_bound_var(*i));
+                }
+                None if wrap => {
+                    bvars
+                        .iter()
+                        .fold(self.clone(), |acc, _| rexp!((LAMBDA_S #acc)))
+                        .as_egg_inner(out, bvars, size, false);
                 }
                 None => out.push(L::mk_variable(variable)),
             },
@@ -962,7 +978,7 @@ impl From<&Variable> for RecFOFormula {
 
 impl From<&RecFOFormula> for RecExpr<LangVar> {
     fn from(value: &RecFOFormula) -> Self {
-        value.as_recexp()
+        value.as_egg().into()
     }
 }
 

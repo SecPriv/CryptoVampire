@@ -4,7 +4,7 @@ use quarck::CowArc;
 use utils::implvec;
 
 use crate::LangVar;
-use crate::terms::{ FOBinder, Function, RecFOFormula, Variable, builtin};
+use crate::terms::{FOBinder, Function, RecFOFormula, Variable, builtin};
 
 /// magic ✨
 #[macro_export]
@@ -105,10 +105,15 @@ pub fn mk_neqs(args: implvec!(MacroExpr)) -> MacroExpr {
 
 /// for [rexp]
 pub fn mk_app<T: FunctionRef>(head: T, args: implvec!(MacroExpr)) -> MacroExpr {
-    RecFOFormula::App {
-        head: head.to_function(),
-        args: CowArc::Owned(args.into_iter().collect()),
-    }
+    let args = CowArc::Owned(args.into_iter().collect());
+    let head = head.to_function();
+
+    let arity = head.arity();
+    let num_args = args.len();
+    let ret = RecFOFormula::App { head, args };
+
+    assert_eq!(arity, num_args, "arity mismatch with {ret}");
+    ret
 }
 
 pub const fn mk_const_app(head: Function, args: &'static [MacroExpr]) -> MacroExpr {

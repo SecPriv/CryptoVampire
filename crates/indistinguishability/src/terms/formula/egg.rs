@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use egg::{ENodeOrVar, Id, Language};
+use log::trace;
 use logic_formula::Formula;
 use serde::Serialize;
 use smallvec::SmallVec;
@@ -45,6 +46,7 @@ impl Language for InnerLang {
     }
 
     fn matches(&self, other: &Self) -> bool {
+        // trace!("in 'maches': {self} <-> {other}");
         self.head == other.head && self.args.len() == other.args.len()
     }
 

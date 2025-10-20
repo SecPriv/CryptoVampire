@@ -138,10 +138,10 @@ mk_builtin_funs!(
     /// *NB*: this is an alias for [BITE]
     AND "mand" "bit_and" "and"  {
         signature: s!(Bool, 2),
-        flags: f!(/* ALIAS | */ BUILTIN_SMT),
-        alias: Some(alias!{
-            a:Bool, b:Bool in rexp!(const !a), rexp!(const !b) => rexp!(const (BITE !a !b false))
-        }),
+        flags: f!(/* ALIAS | */ BUILTIN_SMT | CUSTOM_DEDUCE),
+        // alias: Some(alias!{
+        //     a:Bool, b:Bool in rexp!(const !a), rexp!(const !b) => rexp!(const (BITE !a !b false))
+        // }),
     };
 
     /// Regular `or`
@@ -163,9 +163,9 @@ mk_builtin_funs!(
     NOT "mnot" "bit_not" "not" {
         signature: s!(Bool, 1),
         flags: f!(/* ALIAS | */ BUILTIN_SMT),
-        alias: Some(alias!{
-            a:Bool in rexp!(const !a) => rexp!(const (BITE !a false true))
-        }),
+        // alias: Some(alias!{
+        //     a:Bool in rexp!(const !a) => rexp!(const (BITE !a false true))
+        // }),
     };
 
     /// Bitstring equality. This what is used as `=` in [rexp]
@@ -392,7 +392,8 @@ mk_builtin_funs!(
 
     LAMBDA_LET "λlet" {
         flags: f!(PROLOG_ONLY),
-        signature: s!(Any, Any -> Any)
+        /* var count, message, content */
+        signature: s!(Any, Any, Any -> Any)
     };
 
     ADD_S "add_λS" {

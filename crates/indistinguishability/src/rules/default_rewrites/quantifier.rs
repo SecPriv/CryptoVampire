@@ -9,8 +9,10 @@ pub fn mk_rewrites<N: Analysis<Lang>>(
     decl_vars![a, b, c];
 
     mk_many_rewrites! {
-        ["empty_exists"] (EXISTS NIL #a) => false.
-        ["empty_find"] (FIND_SUCH_THAT NIL #a #b #c) => (MITE #a #b #c).
+        ["empty exists"] 
+        (EXISTS NIL #a) => (#a).
+        ["empty find"] 
+        (FIND_SUCH_THAT NIL #a #b #c) => (MITE #a #b #c).
     }
     .into_iter()
 
