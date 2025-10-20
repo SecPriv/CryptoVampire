@@ -37,28 +37,40 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
         // Get the substitutions that match the pattern for the goal.
         ereturn_let!(let Some(substs) = PATTERN_FA.search_eclass(prgm.egraph(), goal), Dependancy::impossible());
 
+        // find suitable substitutions and arguments
+        // we need to collect now, because the egraph will get dirty later
+        let mut candidates = Vec::with_capacity(substs.substs.len());
+        {
+            // immutable `egraph`
+            let egraph = prgm.egraph();
+            for subst in substs.substs {
+                // Extract 'a' and 'b' from the substitution, continue if not found.
+                econtinue_let!(let Some(a) = subst.get(A.as_egg()));
+                econtinue_let!(let Some(b) = subst.get(B.as_egg()));
+
+                // Extract lists for 'a' and 'b', continue if not a list or the lengths don't match
+                econtinue_let!(let Some(list_a) = extract_list(egraph, *a));
+                econtinue_let!(let Some(list_b) = extract_list(egraph, *b));
+                econtinue_if!(list_a.len() != list_b.len());
+                candidates.push((subst, list_a, list_b))
+            }
+        };
+
         let mut results = Vec::new();
-        let egraph = prgm.egraph_mut();
-        // Iterate over each substitution.
-        for subst in substs.substs {
-            // Extract 'a' and 'b' from the substitution, continue if not found.
-            econtinue_let!(let Some(a) = subst.get(A.as_egg()));
-            econtinue_let!(let Some(b) = subst.get(B.as_egg()));
-
-            // Extract lists for 'a' and 'b', continue if not found or lengths don't match.
-            econtinue_let!(let Some(list_a) = extract_list(egraph, *a));
-            econtinue_let!(let Some(list_b) = extract_list(egraph, *b));
-            econtinue_if!(list_a.len() != list_b.len());
-
-            // Collect sets of arguments for creating new expressions.
-            let sets = collect_sets(egraph, &list_a, &list_b);
-            // Create new expressions and add them to the egraph.
-            results.extend(sets.into_iter().map(|args| {
-                let (ia_id, ib_id) = create_lists(egraph, &args);
-                let u = *subst.get(U.as_egg()).unwrap();
-                let v = *subst.get(V.as_egg()).unwrap();
-                egraph.add(EQUIV.app_id([u, v, ia_id, ib_id]))
-            }))
+        {
+            // mutable `egraph`
+            let egraph = prgm.egraph_mut();
+            for (subst, list_a, list_b) in candidates {
+                // Collect sets of arguments for creating new expressions.
+                let sets = collect_sets(egraph, &list_a, &list_b);
+                // Create new expressions and add them to the egraph.
+                results.extend(sets.into_iter().map(|args| {
+                    let (ia_id, ib_id) = create_lists(egraph, &args);
+                    let u = *subst.get(U.as_egg()).unwrap();
+                    let v = *subst.get(V.as_egg()).unwrap();
+                    egraph.add(EQUIV.app_id([u, v, ia_id, ib_id]))
+                }))
+            }
         }
         results.into_iter().map(::std::iter::once).collect()
     }
@@ -66,6 +78,8 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
 
 /// Extracts a list of ids from the egraph starting from the given id.
 fn extract_list<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, init: Id) -> Option<Vec<Id>> {
+    ereturn_let!(let None = PATTERN_LIST.search_eclass(egraph, init), Some(vec![init]));
+
     let mut visited = FxHashSet::default();
     let mut res = Vec::new();
     let mut next = init;
