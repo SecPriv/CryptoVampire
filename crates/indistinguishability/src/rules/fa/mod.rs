@@ -43,7 +43,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
         {
             // immutable `egraph`
             let egraph = prgm.egraph();
-            for subst in substs.substs {
+            for subst in &substs.substs {
                 // Extract 'a' and 'b' from the substitution, continue if not found.
                 econtinue_let!(let Some(a) = subst.get(A.as_egg()));
                 econtinue_let!(let Some(b) = subst.get(B.as_egg()));
@@ -103,7 +103,7 @@ fn collect_sets<N: Analysis<Lang>>(
     egraph: &mut EGraph<Lang, N>,
     list_a: &[Id],
     list_b: &[Id],
-) -> Vec<HashSet<(Id, Id)>> {
+) -> Vec<FxHashSet<(Id, Id)>> {
     let mut sets = Vec::new();
     // Iterate over pairs of elements from list_a and list_b.
     for (i, (ta, tb)) in list_a.iter().zip(list_b.iter()).enumerate() {
@@ -129,7 +129,7 @@ fn process_regular_fun(
     old_arg_b: &[Id],
     n_args_a: &[Id],
     n_args_b: &[Id],
-) -> HashSet<(Id, Id)> {
+) -> FxHashSet<(Id, Id)> {
     let [ia, ib] = [(old_args_a, n_args_a), (old_arg_b, n_args_b)].map(|(old, new)| {
         let old = old
             .iter()
@@ -143,7 +143,7 @@ fn process_regular_fun(
 /// Creates lists in the egraph from a set of argument pairs.
 fn create_lists<N: Analysis<Lang>>(
     egraph: &mut EGraph<Lang, N>,
-    args: &HashSet<(Id, Id)>,
+    args: &FxHashSet<(Id, Id)>,
 ) -> (Id, Id) {
     // Create lists for the first and second elements of the argument pairs.
     let ia = args.iter().map(|(x, _)| *x);
