@@ -7,7 +7,7 @@ use logic_formula::{Bounder, Destructed, Formula, HeadSk};
 use utils::{dynamic_iter, ereturn_if, implvec};
 
 use super::SortedVar;
-use crate::{Arr, EvalParam, SmtParam};
+use crate::{EvalParam, SmtParam, write_list, write_par};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum SmtFormula<U: SmtParam> {
@@ -62,6 +62,19 @@ impl<U: SmtParam> Default for SmtFormula<U> {
     }
 }
 
+fn write_app<U>(f: &mut std::fmt::Formatter<'_>, head: &str, args: implvec!(U)) -> std::fmt::Result
+where
+    U: Display,
+{
+    write_par(f, |f| {
+        write!(f, "{head} ")?;
+        for arg in args {
+            write!(f, "{arg} ")?;
+        }
+        Ok(())
+    })
+}
+
 impl<U> Display for SmtFormula<U>
 where
     U: SmtParam,
@@ -80,18 +93,22 @@ where
                     write!(f, ")")
                 }
             }
-            SmtFormula::Forall(vars, formula) => {
-                write!(f, "(forall {} {formula})", Arr::simple(vars.as_slice()))
-            }
-            SmtFormula::Exists(vars, formula) => {
-                write!(f, "(exists {} {formula})", Arr::simple(vars.as_slice()))
-            }
+            SmtFormula::Forall(vars, formula) => write_par(f, |f| {
+                write!(f, "forall ")?;
+                write_list(vars, f, |f, var| write!(f, "({var} {}) ", var.sort_ref()))?;
+                write!(f, "{formula}")
+            }),
+            SmtFormula::Exists(vars, formula) => write_par(f, |f| {
+                write!(f, "exists ")?;
+                write_list(vars, f, |f, var| write!(f, "({var} {}) ", var.sort_ref()))?;
+                write!(f, "{formula}")
+            }),
             SmtFormula::True => write!(f, "true"),
             SmtFormula::False => write!(f, "false"),
-            SmtFormula::And(args) => Arr("and", args.as_slice()).fmt(f),
-            SmtFormula::Or(args) => Arr("or", args.as_slice()).fmt(f),
-            SmtFormula::Eq(args) => Arr("=", args.as_slice()).fmt(f),
-            SmtFormula::Neq(args) => Arr("distinct", args.as_slice()).fmt(f),
+            SmtFormula::And(args) => write_app(f, "and", args),
+            SmtFormula::Or(args) => write_app(f, "or", args),
+            SmtFormula::Eq(args) => write_app(f, "=", args),
+            SmtFormula::Neq(args) => write_app(f, "distinct", args),
             SmtFormula::Not(args) => write!(f, "(not {args})"),
             SmtFormula::Implies(premise, conclusion) => write!(f, "(=> {premise} {conclusion})"),
             SmtFormula::Ite(c, l, r) => write!(f, "(ite {c} {l} {r})"),

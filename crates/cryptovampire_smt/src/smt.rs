@@ -6,7 +6,7 @@ use utils::implvec;
 
 use super::formula::SmtFormula;
 use super::{SmtFile, SortedVar};
-use crate::{Arr, SmtParam, SmtPrettyPrinter, translate_smt_to_term};
+use crate::{SmtParam, SmtPrettyPrinter, translate_smt_to_term, write_list, write_par};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum Smt<U: SmtParam> {
@@ -125,25 +125,6 @@ where
     }
 }
 
-#[inline]
-fn write_par(
-    fmt: &mut std::fmt::Formatter<'_>,
-    f: impl FnOnce(&mut std::fmt::Formatter<'_>) -> std::fmt::Result,
-) -> std::fmt::Result {
-    write!(fmt, "(")?;
-    f(fmt)?;
-    write!(fmt, ") ")
-}
-
-#[inline]
-fn write_list<A>(
-    iter: implvec!(A),
-    f: &mut std::fmt::Formatter<'_>,
-    mut arg: impl FnMut(&mut std::fmt::Formatter<'_>, A) -> std::fmt::Result,
-) -> std::fmt::Result {
-    write_par(f, |f| iter.into_iter().try_for_each(|x| arg(f, x)))
-}
-
 impl<U: SmtParam> Display for Smt<U> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -174,11 +155,19 @@ impl<U: SmtParam> Display for Smt<U> {
                 )?;
                 writeln!(f, "(assert-not {formula})")
             }
-            Smt::DeclareFun { fun, args, out } => writeln!(
-                f,
-                "(declare-fun {fun} {} {out})",
-                Arr::simple(args.as_slice())
-            ),
+            Smt::DeclareFun { fun, args, out } =>
+            // writeln!(
+            //     f,
+            //     "(declare-fun {fun} {} {out})",
+            //     Arr::simple(args.as_slice())
+            // )
+            {
+                write_par(f, |f| {
+                    write!(f, "declare-fun {fun} ")?;
+                    write_list(args, f, |f, arg| write!(f, "{arg} "))?;
+                    write!(f, "{out}")
+                })
+            }
             Smt::DeclareSort(s) => writeln!(f, "(declare-sort {s} 0)"),
             Smt::DeclareSortAlias { from, to } => writeln!(f, "(define-sort {from} () {to})"),
             #[cfg(feature = "cryptovampire")]
@@ -204,36 +193,51 @@ impl<U: SmtParam> Display for Smt<U> {
                     f,
                     "; cryptovampire specific. Needs a modified version of vampire"
                 )?;
-                write!(f, "(declare-rewrite ")?;
-                {
-                    write!(f, "(forall {} (", Arr::simple(vars.as_slice()))?;
-                    match rewrite_fun {
-                        RewriteKind::Bool => write!(f, "="),
-                        RewriteKind::Other(fun) => write!(f, "{fun}"),
-                    }?;
-                    write!(f, " {lhs} {rhs})")?;
-                }
-                writeln!(f, ")")
-            }
-            Smt::DeclareDatatypes { sorts, cons } => {
                 write_par(f, |f| {
-                    write!(f, "declare-datatypes")?;
-
-                    write_list(sorts, f, |f, s| write!(f, "({s} 0)"))?;
-
-                    write_list(cons, f, |f, cons| {
-                        write_list(cons, f, |f, SmtCons { fun, sorts, dest }| {
-                            write!(f, "{fun} ")?;
-                            write_list(izip!(sorts, dest).enumerate(), f, |f, (i, (s, dest))| {
-                                match dest {
-                                    Some(dest) => write!(f, "({dest} {s}) "),
-                                    None => write!(f, "({fun}$_dest_{i:} {s})"),
-                                }
-                            })
+                    write!(f, "declare-rewrite ")?;
+                    write_par(f, |f| {
+                        write!(f, "forall ")?;
+                        write_list(vars, f, |f, var| write!(f, "({var} {})", var.sort_ref()))?;
+                        write_par(f, |f| {
+                            match rewrite_fun {
+                                RewriteKind::Bool => write!(f, "= "),
+                                RewriteKind::Other(fun) => write!(f, "{fun} "),
+                            }?;
+                            write!(f, " {lhs} {rhs}")
                         })
                     })
                 })
+                // write!(f, "(declare-rewrite ")?;
+                // {
+                //     write!(f, "(forall {} (", Arr::simple(vars.as_slice()))?;
+                //     match rewrite_fun {
+                //         RewriteKind::Bool => write!(f, "="),
+                //         RewriteKind::Other(fun) => write!(f, "{fun}"),
+                //     }?;
+                //     write!(f, " {lhs} {rhs})")?;
+                // }
+                // writeln!(f, ")")
             }
+            Smt::DeclareDatatypes { sorts, cons } => write_par(f, |f| {
+                write!(f, "declare-datatypes")?;
+
+                write_list(sorts, f, |f, s| write!(f, "({s} 0)"))?;
+
+                write_list(cons, f, |f, cons| {
+                    write_list(cons, f, |f, SmtCons { fun, sorts, dest }| {
+                        write_par(f, |f| {
+                            write!(f, "{fun} ")?;
+                            for (i, (s, dest)) in izip!(sorts, dest).enumerate() {
+                                match dest {
+                                    Some(dest) => write!(f, "({dest} {s}) "),
+                                    None => write!(f, "({fun}$_dest_{i:} {s}) "),
+                                }?
+                            }
+                            Ok(())
+                        })
+                    })
+                })
+            }),
             Smt::Comment(c) => {
                 for c in c.split('\n') {
                     writeln!(f, "; {c}")?
