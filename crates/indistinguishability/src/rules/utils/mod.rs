@@ -3,7 +3,7 @@ pub mod fresh;
 mod search;
 pub use search::{EgraphSearcher, SyntaxSearcher, default_is_special};
 
-mod lambda_subst;
+pub(crate) mod lambda_subst;
 
 // mod subst;
 // pub use subst::mk_subst_rw;
