@@ -109,7 +109,7 @@ pub use formula::{
     FOBinder, FormulaLike, RecFOFormula, RecFOFormulaQuant, RecFOFormulaQuantRef,
     substitution_utils,
 };
-pub(crate) use formula::{InnerLang, QuantifierTranslator};
+pub(crate) use formula::{InnerLang, QuantifierTranslator, list};
 
 pub mod utils;
 
