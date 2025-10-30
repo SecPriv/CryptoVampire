@@ -17,7 +17,7 @@ use crate::protocol::Step;
 use crate::terms::{
     Exists, FindSuchThat, Function, QuantifierT, RecFOFormula, Rewrite, Sort, Variable,
 };
-use crate::{MSmt, Problem};
+use crate::{Configuration, MSmt, Problem};
 
 declare_trace!($"shrpblm");
 
@@ -82,8 +82,8 @@ impl ShrProblem {
         Ok(self.borrow_mut().run(p1.protocol_idx, p2.protocol_idx))
     }
 
-    fn mk_empty() -> Self {
-        let pbl = Problem::builder().build();
+    fn mk_empty(config: Configuration) -> Self {
+        let pbl = Problem::builder().config(config).build();
         Self(Rc::new(RefCell::new(pbl)))
     }
 

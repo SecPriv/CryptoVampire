@@ -1,12 +1,13 @@
 use std::borrow::Cow;
 
 use static_init::dynamic;
-use steel::rvals::CustomType;
+use steel::rvals::{CustomType, IntoSteelVal};
 use steel::SteelVal;
 use steel::steel_vm::builtin::BuiltInModule;
 use steel::steel_vm::engine::Engine;
 use steel::steel_vm::register_fn::RegisterFn;
 
+use crate::Configuration;
 use crate::input::golgge_rules::Rule;
 use crate::input::shared_cryptography::ShrCrypto;
 use crate::input::shared_exists::ShrExists;
@@ -57,12 +58,13 @@ static CV_PRELUDE: String =  {
     include_str!("./prelude.scm").replace("@@@DEFINITIONS@@@", &mkdefintions)
 };
 
-pub fn init_engine() -> Engine {
+pub fn init_engine(config: Configuration) -> Engine {
     let mut engine = Engine::new();
     let mut module = BuiltInModule::new("cryptovampire");
     engine.compile_and_run_raw_program(steel::PRELUDE).unwrap();
 
     crate::register(&mut module);
+    module.register_value("default-config", IntoSteelVal::into_steelval(config).unwrap());
     engine.register_module(module);
     log::trace!("prelude:\n{}", CV_PRELUDE.as_str());
     match engine.compile_and_run_raw_program(Cow::Borrowed(CV_PRELUDE.as_ref())) {
