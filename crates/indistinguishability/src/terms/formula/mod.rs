@@ -200,6 +200,7 @@ pub(crate) mod list {
         Some(sorts)
     }
 
+    #[allow(dead_code)]
     pub fn count_s<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, f: Id) -> Option<u32> {
         for n in egraph[f].iter() {
             if n.head == LAMBDA_O {

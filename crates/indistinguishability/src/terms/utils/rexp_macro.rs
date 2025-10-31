@@ -104,6 +104,7 @@ pub fn mk_neqs(args: implvec!(MacroExpr)) -> MacroExpr {
 }
 
 /// for [rexp]
+#[allow(private_bounds)]
 pub fn mk_app<T: FunctionRef>(head: T, args: implvec!(MacroExpr)) -> MacroExpr {
     let args = CowArc::Owned(args.into_iter().collect());
     let head = head.to_function();
@@ -147,7 +148,7 @@ pub fn convert_to_ground_rexp(c: implvec!(LangVar)) -> Result<RecExpr<crate::Lan
     tmp.try_into()
 }
 
-trait FunctionRef {
+pub(crate) trait FunctionRef {
     fn to_function(&self) -> Function;
 }
 

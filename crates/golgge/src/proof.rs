@@ -24,6 +24,7 @@ impl SearchResult {
     }
 }
 
+#[allow(dead_code)]
 pub struct Proof<'a, L: Language, N: Analysis<L>> {
   prog: &'a Program<L, N>,
   id: Id

@@ -39,6 +39,7 @@ pub struct Program<L: Language, N: Analysis<L>> {
 }
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub(crate) enum Status<L: Language, N: Analysis<L>> {
     True(ProofItem<L, N>),
     False,

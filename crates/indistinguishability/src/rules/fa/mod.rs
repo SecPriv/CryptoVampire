@@ -1,20 +1,18 @@
 use std::borrow::Cow;
-use std::cell::RefCell;
-use std::collections::HashSet;
 use std::fmt::Debug;
 
-use egg::{Analysis, EClass, EGraph, Id, Pattern, Searcher, Subst};
+use egg::{Analysis, EClass, EGraph, Id, Pattern, Searcher};
 use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain, izip};
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
 use static_init::dynamic;
-use utils::{econtinue_if, econtinue_let, ereturn_if, ereturn_let, implvec};
+use utils::{econtinue_let, ereturn_if, ereturn_let};
 
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::rules::utils::lambda_subst::lambda_subst;
 use crate::terms::list::{snoc_egraph, try_get_egraph};
-use crate::terms::{CONS_FA, EQUIV, EXISTS, FIND_SUCH_THAT, Function, NIL_FA, Quantifier, Sort};
+use crate::terms::{CONS_FA, EQUIV, EXISTS, FIND_SUCH_THAT, Function, NIL_FA, Sort};
 use crate::{Lang, Problem, rexp};
 
 decl_vars!(const; HD:Bitstring, TL:Bitstring, U, V, A, B);

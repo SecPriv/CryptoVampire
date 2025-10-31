@@ -6,13 +6,12 @@ use egg::{Analysis, Pattern, Rewrite};
 use itertools::chain;
 
 use crate::terms::{
-    CONS, EXISTS, FIND_SUCH_THAT, Function, LAMBDA_O, LAMBDA_S, MITE, NIL, RecFOFormula,
+    Function, LAMBDA_O, LAMBDA_S, RecFOFormula,
 };
-use crate::{Lang, Problem, fresh, rexp};
+use crate::{Lang, Problem, rexp};
 
 // static LET: Function = LAMBDA_LET.const_clone();
 static S: Function = LAMBDA_S.const_clone();
-static O: Function = LAMBDA_O.const_clone();
 
 pub fn mk_rewrites<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = Rewrite<Lang, N>> {
     chain![

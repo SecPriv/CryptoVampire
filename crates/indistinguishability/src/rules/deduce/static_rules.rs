@@ -3,7 +3,7 @@ use itertools::chain;
 use crate::problem::{PRule, RcRule};
 use crate::rules::deduce::GetDeduce;
 use crate::terms::{
-    AND, BITE, BIT_DEDUCE, BOOL_DEDUCE, EQUIV, EXISTS, FRESH_NONCE, HAPPENS, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NIL, NONCE, VAMPIRE
+    AND, BITE, BIT_DEDUCE, BOOL_DEDUCE, EQUIV, FRESH_NONCE, HAPPENS, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, VAMPIRE
 };
 
 pub fn mk_rules() -> impl Iterator<Item = RcRule> {

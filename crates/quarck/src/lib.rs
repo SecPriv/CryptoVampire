@@ -129,7 +129,7 @@ mod cowarc {
         type IntoIter = ::std::slice::Iter<'b, T>;
 
         fn into_iter(self) -> Self::IntoIter {
-            (*self).deref().into_iter()
+            (*self).deref().iter()
         }
     }
 }

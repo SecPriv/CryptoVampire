@@ -3,7 +3,7 @@ use golgge::PrologRule;
 use itertools::izip;
 
 use crate::problem::{PRule, RcRule};
-use crate::rules::deduce::{self, GetDeduce};
+use crate::rules::deduce::GetDeduce;
 use crate::terms::{Function, RecFOFormula};
 use crate::{Lang, Problem, fresh, rexp};
 

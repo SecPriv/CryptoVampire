@@ -96,37 +96,6 @@ impl RecFOFormula {
         }
     }
 
-    fn as_recexp_inner(&self, res: &mut Vec<LangVar>) -> usize {
-        match self {
-            RecFOFormula::Quantifier { .. } => todo!(),
-            RecFOFormula::Var(var) => {
-                res.push(egg::ENodeOrVar::Var(var.as_egg()));
-                res.len() - 1
-            }
-            RecFOFormula::App { head, args } => {
-                let args: SmallVec<_> = args
-                    .iter()
-                    .map(|arg| arg.as_recexp_inner(res))
-                    .map_into()
-                    .collect();
-                let head = crate::Lang {
-                    head: head.clone(),
-                    args,
-                };
-                res.push(egg::ENodeOrVar::ENode(head));
-                res.len() - 1
-            }
-        }
-    }
-
-    #[deprecated]
-    pub fn as_recexp(&self) -> PatternAst<Lang> {
-        self.as_egg().into()
-        // let mut ret = Vec::new();
-        // self.as_recexp_inner(&mut ret);
-        // ret.into()
-    }
-
     fn from_id_inner(ids: &[Id], langs: &[Option<&Lang>], current: &Lang) -> Self {
         let head = current.head.clone();
         let args = current
@@ -868,7 +837,8 @@ impl RecFOFormula {
         ret
     }
 
-    pub fn optimised_binder(kind: FOBinder, vars: implvec!(Variable), arg: RecFOFormula) -> Self {
+    #[deprecated]
+    pub fn optimised_binder(_kind: FOBinder, _vars: implvec!(Variable), _arg: RecFOFormula) -> Self {
         todo!()
         // ereturn_if!(arg.is_true() || arg.is_false(), arg);
         // let free_vars: Vec<Variable> = (&arg).free_vars_iter().unique().collect();

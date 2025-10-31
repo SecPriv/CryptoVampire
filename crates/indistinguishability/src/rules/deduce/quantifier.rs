@@ -1,8 +1,4 @@
-// QUESTION: Should we cross reference existential quantifiers?
-
 use FOBinder::{Exists, FindSuchThat};
-use QuantifierKindRule::{BothSides, OneSide};
-use Side::{Left, Right};
 use egg::{Analysis, EGraph, Id, Pattern, Searcher, Subst};
 use golgge::{Dependancy, Rule};
 use itertools::izip;
@@ -32,19 +28,6 @@ pub fn mk_rules(_: &Problem) -> impl Iterator<Item = RcRule> {
         })
         .map(|x| x.into_mrc())
         .into_iter()
-}
-
-/// which side the quantifier is on
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Side {
-    Left,
-    Right,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum QuantifierKindRule {
-    BothSides,
-    OneSide(Side),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -200,46 +183,6 @@ fn extends_subst<N: Analysis<Lang>>(
 }
 
 impl<U> Parameters<U> {
-    fn can_be_ignored(&self, q: FOBinder, kind: QuantifierKindRule) -> Vec<&U> {
-        let Parameters {
-            // args
-            args1_2,
-            args1_3,
-            args2_1,
-            args2_2,
-            args2_3,
-            nargs1_2,
-            nargs2_1,
-            nargs2_2,
-            // others
-            sort2_cons,
-            other,
-            new_var,
-            ..
-        } = self;
-        match (q, kind) {
-            (Exists, OneSide(_)) => vec![
-                // args
-                args1_3, args2_1, args2_2, args2_3, nargs2_1, nargs2_2,
-                // sort of the other side
-                sort2_cons, new_var,
-            ],
-            (Exists, BothSides) => vec![
-                // args
-                args1_2, args1_3, args2_2, args2_3, nargs1_2, nargs2_2, // others
-                other, new_var,
-            ],
-            (FindSuchThat, OneSide(_)) => {
-                vec![
-                    args2_1, args2_2, args2_3, nargs2_1, nargs2_2, // others
-                    sort2_cons, new_var,
-                ]
-            }
-            (FindSuchThat, BothSides) => vec![other, new_var],
-            _ => unreachable!(),
-        }
-    }
-
     fn pair(&self, v: &U) -> Option<&U>
     where
         U: Eq,
@@ -266,37 +209,9 @@ impl<U> Parameters<U> {
         })
     }
 
-    pub fn args(&self) -> impl Iterator<Item = &U> {
-        let Parameters {
-            args1_1,
-            args1_2,
-            args2_1,
-            args2_2,
-            ..
-        } = self;
-        [args1_1, args1_2, args2_1, args2_2].into_iter()
-    }
 }
 
 impl QuantifierRule {
-    const fn kind_order() -> &'static [QuantifierKindRule; 3] {
-        &[BothSides, OneSide(Left), OneSide(Right)]
-    }
-
-    fn assign_subst(&self, kind: QuantifierKindRule, subst: &egg::Subst) -> Parameters {
-        let to_ignore = DEFAULT_PARAMERTERS.can_be_ignored(self.quantifier, kind);
-        DEFAULT_PARAMERTERS
-            .all_params()
-            .map(
-                |var| match (subst.get(var.as_egg()), to_ignore.contains(&var)) {
-                    (None, true) => Id::from(0),
-                    (Some(id), false) => *id,
-                    _ => unreachable!("doesn't match the pattern"),
-                },
-            )
-            .collect()
-    }
-
     fn mk_patterns(bind: FOBinder) -> ([Pattern<Lang>; 3], [Pattern<Lang>; 3]) {
         let Parameters {
             u,
@@ -320,12 +235,11 @@ impl QuantifierRule {
             sort1_cons,
             sort2_cons,
             other,
-            new_var,
+            
             ..
         } = &DEFAULT_PARAMERTERS;
         let deduce_m = &BIT_DEDUCE;
         let deduce_b = &BOOL_DEDUCE;
-        let o = &LAMBDA_O;
         let capture_pattern = match bind {
             FOBinder::Forall => unreachable!(),
             Exists => [

@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use egg::{Id, Language, Pattern, Searcher, Var};
+use egg::{Id, Language, Pattern, Searcher};
 use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain};
 use utils::ereturn_let;

@@ -50,10 +50,10 @@ where
 #[cfg(test)]
 mod test {
     use crate::terms::utils::type_check;
-    use crate::terms::{FormulaLike, MITE, NONCE, PROJ_1, TUPLE};
+    use crate::terms::{ MITE, NONCE, PROJ_1, TUPLE};
     use crate::{decl_vars, fresh, rexp};
 
-    decl_vars!(const A, B, C, D);
+    decl_vars!(const A, B );
 
     #[test]
     fn type_check_true() {

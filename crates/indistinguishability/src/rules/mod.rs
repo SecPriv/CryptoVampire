@@ -169,16 +169,6 @@ pub use prf::PRF;
 #[cfg(debug_assertions)]
 mod sanity_check;
 
-// ~~~~~~~~~~~~~~~ helpers ~~~~~~~~~~~~~~~~~~
-
-fn var_as_recexpr<'a, L>(vars: implvec!(&'a egg::Var)) -> Vec<[ENodeOrVar<L>; 1]> {
-    vars.into_iter()
-        .copied()
-        .map(ENodeOrVar::Var)
-        .map(|x| [x])
-        .collect()
-}
-
 // =========================================================
 // ====================== exported =========================
 // =========================================================

@@ -1,8 +1,7 @@
 use std::borrow::Cow;
 
-use static_init::dynamic;
 use steel::SteelVal;
-use steel::rvals::{CustomType, IntoSteelVal};
+use steel::rvals::IntoSteelVal;
 use steel::steel_vm::builtin::BuiltInModule;
 use steel::steel_vm::engine::Engine;
 use steel::steel_vm::register_fn::RegisterFn;
@@ -14,7 +13,7 @@ use crate::input::shared_exists::ShrExists;
 use crate::input::shared_fdst::ShrFindSuchThat;
 use crate::input::shared_problem::ShrProblem;
 use crate::terms::{
-    AliasRewrite, BUILTINS, Function, RecFOFormula, Rewrite, Signature, Sort, Variable,
+    AliasRewrite, Function, RecFOFormula, Rewrite, Signature, Sort, Variable,
 };
 
 pub(crate) mod golgge_rules;

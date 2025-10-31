@@ -14,6 +14,7 @@ pub trait WithTrue: Language {
     fn is_true(&self) -> bool;
 }
 
+#[allow(dead_code)]
 pub trait WithFalse: Language {
     fn mk_false() -> Self;
     fn is_false(&self) -> bool;
@@ -33,8 +34,8 @@ pub trait WithAnd: WithTrue {
         for i in 1..(n as egg::uvar) {
             ret.push(ENodeOrVar::Var(Var::from_usize(from + i)));
             ret.push(ENodeOrVar::ENode(Self::mk_and(
-                ((2 * (i - 1)) as usize).into(),
-                ((2 * (i - 1) + 1) as usize).into(),
+                (2 * (i - 1)).into(),
+                (2 * (i - 1) + 1).into(),
             )));
         }
         ret.into()

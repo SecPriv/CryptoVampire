@@ -8,7 +8,7 @@ use quarck::CowArc;
 use serde::Serialize;
 use steel::SteelErr;
 use steel::rvals::IntoSteelVal;
-use steel::steel_vm::register_fn::{self, RegisterFn};
+use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 use utils::{ereturn_if, implvec, match_eq};
 

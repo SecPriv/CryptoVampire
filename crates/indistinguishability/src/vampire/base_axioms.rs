@@ -120,16 +120,6 @@ fn mk_pseudo_datatype_diff(funs: Vec<Function>) -> impl Iterator<Item = MSmt> {
     .map(MSmt::mk_assert)
 }
 
-fn mk_nonces_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
-    use Smt::*;
-    let nonces = pbl.functions().nonces().cloned().collect_vec();
-
-    chain! {
-        [Comment("nonce distinctness".into())],
-        mk_pseudo_datatype_diff(nonces)
-    }
-}
-
 fn mk_steps_macros(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     pbl.protocols()
         .iter()
@@ -154,6 +144,7 @@ fn mk_step_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     })
 }
 
+#[allow(dead_code)]
 fn mk_ptcl_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     dynamic_iter!(Ret; Empty:A, A:B);
     let ptcl = pbl.protocols();
@@ -164,6 +155,17 @@ fn mk_ptcl_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
         [Smt::Comment("protocol distinctiveness".into())],
         mk_pseudo_datatype_diff(ptcl)
     })
+}
+
+#[allow(dead_code)]
+fn mk_nonces_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
+    use Smt::*;
+    let nonces = pbl.functions().nonces().cloned().collect_vec();
+
+    chain! {
+        [Comment("nonce distinctness".into())],
+        mk_pseudo_datatype_diff(nonces)
+    }
 }
 
 fn mk_base_order(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {

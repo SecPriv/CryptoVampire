@@ -1,9 +1,8 @@
-use std::{fmt::Display, path::PathBuf};
+use std::path::PathBuf;
 
-use clap::{Parser, ValueEnum, builder::OsStr};
+use clap::Parser;
 use steel_derive::Steel;
 
-use crate::input::Registerable;
 
 pub use crate::input::prelude::Preludes;
 

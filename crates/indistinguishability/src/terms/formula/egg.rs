@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
 use egg::{ENodeOrVar, Id, Language};
-use log::trace;
 use logic_formula::Formula;
 use serde::Serialize;
 use smallvec::SmallVec;
@@ -67,6 +66,7 @@ impl Display for InnerLang {
 
 trait Sealed {}
 
+#[allow(private_bounds)]
 pub trait EggLanguage: Sealed + Sealed {
     fn mk_fun_application(head: Function, args: implvec!(Id)) -> Self;
     fn mk_variable(var: &Variable) -> Self;
@@ -80,7 +80,7 @@ impl EggLanguage for crate::Lang {
         head.app_id(args)
     }
 
-    fn mk_variable(var: &Variable) -> Self {
+    fn mk_variable(_: &Variable) -> Self {
         unimplemented!()
     }
 }

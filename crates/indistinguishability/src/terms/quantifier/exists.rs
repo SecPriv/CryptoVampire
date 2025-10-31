@@ -97,10 +97,11 @@ impl Exists {
     /// The returned [Exists] has it's [Exists::vars], [Exists::bound_var] and
     /// [Exists::patt] left empty.
     #[builder]
+    #[deprecated]
     pub fn insert(
-        pbl: &mut Problem,
-        #[builder(with = FromIterator::from_iter, default = vec![])] cvars_sorts: Vec<Sort>,
-        #[builder(with = FromIterator::from_iter, default = vec![])] bvars_sorts: Vec<Sort>,
+        _pbl: &mut Problem,
+        #[builder(with = FromIterator::from_iter, default = vec![])] _cvars_sorts: Vec<Sort>,
+        #[builder(with = FromIterator::from_iter, default = vec![])] _bvars_sorts: Vec<Sort>,
     ) -> &mut Exists {
         todo!("redo");
         // assert!(!bvars_sorts.is_empty());
