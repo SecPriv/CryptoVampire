@@ -193,6 +193,7 @@ pub fn mk_default_prolog_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
         ],
         pbl.extra_rules().iter().cloned(),
         deduce::mk_rules(pbl),
+        fa::mk_rules(pbl),
         [substitution::SubstRule.into_mrc()]
     ]
 }

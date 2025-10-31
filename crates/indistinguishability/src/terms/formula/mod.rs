@@ -132,28 +132,39 @@ pub(crate) mod list {
         }
     }
 
-    fn inner_egraph<N: Analysis<Lang>>(
+    pub fn snoc_egraph<N: Analysis<Lang>>(
         egraph: &EGraph<Lang, N>,
         f: Id,
-        sorts: &mut Vec<Sort>,
-    ) -> Option<()> {
+    ) -> Result<Option<(Sort, Id)>, Id> {
         match egraph[f]
             .nodes
             .iter()
-            .find(|f| f.head == NIL || f.head == CONS)?
+            .find(|f| f.head == NIL || f.head == CONS)
+            .ok_or(f)?
         {
-            Lang { head, .. } if head == &NIL => Some(()),
+            Lang { head, .. } if head == &NIL => Ok(None),
             Lang { head, args } if head == &CONS => {
-                let (s, rec) = args.iter().collect_tuple()?;
-                for h in egraph[*s].nodes.iter().map(|x| &x.head) {
+                let (&s, &rec) = args.iter().collect_tuple().ok_or(f)?;
+                for h in egraph[s].nodes.iter().map(|x| &x.head) {
                     econtinue_let!(let Some(s) = Sort::from_function(h));
-                    sorts.push(s);
-                    return inner_egraph(egraph, *rec, sorts);
+                    return Ok(Some((s, rec)));
                 }
-                None
+                Err(f)
             }
-            _ => None,
+            _ => unreachable!(),
         }
+    }
+
+    fn inner_egraph<N: Analysis<Lang>>(
+        egraph: &EGraph<Lang, N>,
+        mut f: Id,
+        sorts: &mut Vec<Sort>,
+    ) -> Option<()> {
+        while let Some((s, tl)) = snoc_egraph(egraph, f).ok()? {
+            sorts.push(s);
+            f = tl
+        }
+        Some(())
     }
 
     /// Attempts to extract a list of sorts from a formula.
@@ -189,14 +200,12 @@ pub(crate) mod list {
         Some(sorts)
     }
 
-
-
     pub fn count_s<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, f: Id) -> Option<u32> {
-        for n in egraph[f].iter(){
+        for n in egraph[f].iter() {
             if n.head == LAMBDA_O {
                 return Some(0);
             } else if n.head == LAMBDA_S {
-                return count_s(egraph, n.args[0])
+                return count_s(egraph, n.args[0]);
             }
         }
         None
