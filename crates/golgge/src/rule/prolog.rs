@@ -187,7 +187,7 @@ macro_rules! pl {
 }
 
 pub mod parser {
-    
+
     use std::fmt::Debug;
     use std::str::FromStr;
 

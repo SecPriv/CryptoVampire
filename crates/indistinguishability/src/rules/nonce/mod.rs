@@ -1,7 +1,5 @@
 //! Nonce freshness
 
-
-
 declare_trace!($"nonce_fresh");
 
 pub use deduce_fresh::FreshNonce;

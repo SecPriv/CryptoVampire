@@ -3,16 +3,14 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use anyhow::{Context, bail};
-use bon::{Builder, bon, builder};
+use bon::{Builder, builder};
 use cryptovampire_smt::Smt;
-use golgge::Dependancy;
 use itertools::chain;
 use log::trace;
 use utils::implvec;
 
 mod bounded_model;
 mod regular;
-pub use bounded_model::BounededVampire;
 pub use regular::RegularVampire;
 
 use crate::{MSmt, MSmtFormula, Problem};

@@ -1,4 +1,3 @@
-
 use crate::Problem;
 use crate::runners::SmtSolver;
 use crate::runners::vampire::{self, VampireExec, vampire_suboptions};
@@ -16,7 +15,7 @@ impl BounededVampire {
                     [
                         Cores(pbl.config.cores - 1),
                         InputSyntax(vampire_suboptions::InputSyntax::SmtLib2),
-                        SaturationAlgorithm(vampire_suboptions::SaturationAlgorithm::FiniteModel)
+                        SaturationAlgorithm(vampire_suboptions::SaturationAlgorithm::FiniteModel),
                     ]
                 })
                 .success_verification("Termination reason: Satisfiable\n")
@@ -26,7 +25,11 @@ impl BounededVampire {
 }
 
 impl SmtSolver for BounededVampire {
-    fn try_run(&self, pbl: &mut Problem, query: crate::MSmtFormula) -> anyhow::Result<Option<bool>> {
+    fn try_run(
+        &self,
+        pbl: &mut Problem,
+        query: crate::MSmtFormula,
+    ) -> anyhow::Result<Option<bool>> {
         self.0.run_smt_with_pbl(pbl, query).map(|x| x.map(|y| !y))
     }
 }

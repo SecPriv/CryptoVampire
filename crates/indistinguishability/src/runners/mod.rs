@@ -1,14 +1,16 @@
-use std::{fmt::Debug, rc::Rc};
+use std::fmt::Debug;
+use std::rc::Rc;
 
 use golgge::Dependancy;
 
-use crate::{MSmtFormula, Problem, runners::vampire::RegularVampire};
+use crate::runners::vampire::RegularVampire;
+use crate::{MSmtFormula, Problem};
 
 pub(crate) mod vampire;
 
 pub trait SmtSolver: Debug {
     /// Tries to prove .
-    /// 
+    ///
     /// ## returns
     /// - `Err(_)` if the solver errored out (e.g., syntax error and such).
     /// - `Ok(None)` the solver didn't manage to prove nor disprove the query
@@ -34,7 +36,7 @@ impl SmtSolver for SmtRunner {
 }
 
 impl SmtRunner {
-    pub fn new(pbl:&Problem) -> Self {
+    pub fn new(pbl: &Problem) -> Self {
         Self(Rc::new(RegularVampire::new(pbl)))
     }
 }

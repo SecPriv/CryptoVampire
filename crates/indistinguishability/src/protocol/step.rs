@@ -6,7 +6,6 @@ use itertools::{Itertools, chain};
 use log::trace;
 use logic_formula::Formula;
 
-
 use crate::terms::{EMPTY, Function, INIT, RecFOFormula, UNFOLD_COND, UNFOLD_MSG, Variable};
 use crate::{Lang, MSmt, MSmtFormula, Problem, rexp, vec_smt};
 
