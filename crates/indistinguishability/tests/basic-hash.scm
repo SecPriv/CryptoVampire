@@ -177,5 +177,6 @@
 (displayln (to-string-step pbl _p1 s_rf))
 (displayln (to-string-step pbl _p2 s_rf))
 
-
-(run pbl _p1 _p2)
+(if (run pbl _p1 _p2)
+  (displayln "success")
+  (displayln "failed"))
