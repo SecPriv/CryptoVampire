@@ -64,6 +64,7 @@ pub struct Configuration {
 }
 
 impl Default for Configuration {
+    /// Returns a default `Configuration` instance.
     fn default() -> Self {
         let ::golgge::Config {
             node_limit,
@@ -92,6 +93,7 @@ fn dstr(d: ::std::time::Duration) -> &'static str {
 }
 
 impl Configuration {
+    /// Returns the appropriate prelude content based on the configuration.
     pub fn get_prelude(&self) -> &'static str {
         if self.no_cryptovampire_prelude {
             ""

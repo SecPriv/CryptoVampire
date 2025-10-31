@@ -8,6 +8,7 @@ use crate::terms::{
     MACRO_MSG, MITE, PRED, PROJ_1, PROJ_2, TUPLE, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT,
 };
 
+/// Creates a set of static rewrite rules.
 pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>> {
     let b_ite = &BITE;
     let m_ite = &MITE;

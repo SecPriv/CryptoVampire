@@ -34,10 +34,17 @@ pub fn mk_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
 }
 
 #[inline]
+/// Determines if a given function should be declared in the SMT prelude.
+///
+/// Functions marked as `should_not_declare_in_smt` are excluded.
 fn should_declare_in_smt(fun: &Function) -> bool {
     !fun.is_should_not_declare_in_smt()
 }
 
+/// Generates the SMT header, including sort and function declarations.
+///
+/// This includes declarations for built-in sorts, datatypes for nonces and protocols,
+/// and functions that are not marked as `should_not_declare_in_smt`.
 fn mk_header(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     let sorts = SMT_SORT_LIST.iter().copied().map(Smt::DeclareSort);
 
@@ -87,8 +94,12 @@ fn mk_header(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     }
 }
 
+/// Generates SMT assertions for distinctness and injectivity of pseudo-datatypes.
+///
+/// This ensures that different instances of functions representing datatypes are distinct,
+/// and that if two applications of the same function are equal, their arguments must be equal.
+// funs are pairwise distincts
 fn mk_pseudo_datatype_diff(funs: Vec<Function>) -> impl Iterator<Item = MSmt> {
-    // funs are pairwise distincts
     let pairs = {
         let mut variables = Vec::with_capacity(funs.iter().map(Function::arity).sum());
 
@@ -120,6 +131,10 @@ fn mk_pseudo_datatype_diff(funs: Vec<Function>) -> impl Iterator<Item = MSmt> {
     .map(MSmt::mk_assert)
 }
 
+/// Generates SMT assertions for unfolding protocol step macros.
+///
+/// This iterates through all protocols and their steps, generating SMT rewrites
+/// for `UNFOLD_COND`, `UNFOLD_MSG`, `UNFOLD_EXEC`, `UNFOLD_FRAME`, and `UNFOLD_INPUT`.
 fn mk_steps_macros(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     pbl.protocols()
         .iter()
@@ -127,6 +142,9 @@ fn mk_steps_macros(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
         .flat_map(|(ptcl, s)| s.mk_unfold_vampire_rewrites(pbl, &ptcl))
 }
 
+/// Generates SMT assertions to ensure distinctness of protocol steps.
+///
+/// This uses `mk_pseudo_datatype_diff` to assert that different steps are distinct.
 fn mk_step_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     dynamic_iter!(Ret; Empty:A, A:B);
 
@@ -144,6 +162,9 @@ fn mk_step_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     })
 }
 
+/// Generates SMT assertions to ensure distinctness of protocols.
+///
+/// This uses `mk_pseudo_datatype_diff` to assert that different protocols are distinct.
 #[allow(dead_code)]
 fn mk_ptcl_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     dynamic_iter!(Ret; Empty:A, A:B);
@@ -157,6 +178,9 @@ fn mk_ptcl_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     })
 }
 
+/// Generates SMT assertions to ensure distinctness of nonces.
+///
+/// This uses `mk_pseudo_datatype_diff` to assert that different nonces are distinct.
 #[allow(dead_code)]
 fn mk_nonces_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     use Smt::*;
@@ -168,6 +192,9 @@ fn mk_nonces_diff(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     }
 }
 
+/// Generates SMT assertions for the basic ordering of time points.
+///
+/// This includes axioms for `LEQ` (less than or equal), `HAPPENS`, and `PRED` (predecessor).
 fn mk_base_order(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     let init = pbl.get_init_fun();
     vec_smt! {%
@@ -184,6 +211,9 @@ fn mk_base_order(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     }.into_iter()
 }
 
+/// Generates SMT assertions for unfolding base macros related to protocol execution.
+///
+/// This includes axioms for `MACRO_COND`, `MACRO_MSG`, `MACRO_EXEC`, `MACRO_FRAME`, and `MACRO_INPUT`.
 fn mk_base_macro(_: &Problem) -> impl Iterator<Item = MSmt> {
     vec_smt! {%
         ; "unfold base".into(),
@@ -206,6 +236,7 @@ fn mk_base_macro(_: &Problem) -> impl Iterator<Item = MSmt> {
     .into_iter()
 }
 
+/// Generates SMT assertions for base rewrite rules, such as tuple projections.
 fn mk_base_rewrite(_: &Problem) -> impl Iterator<Item = MSmt> {
     vec_smt! {%
         ; "base rewrite".into(),
@@ -215,6 +246,9 @@ fn mk_base_rewrite(_: &Problem) -> impl Iterator<Item = MSmt> {
     .into_iter()
 }
 
+/// Generates SMT assertions for quantifiers (Exists and FindSuchThat).
+///
+/// This iterates through the problem's quantifiers and generates corresponding SMT axioms.
 fn mk_quantifiers(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     dynamic_iter!(Tmp; A:A, B:B);
     let ax = pbl
@@ -229,6 +263,10 @@ fn mk_quantifiers(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     chain![[MSmt::Comment("quantifiers".into())], ax]
 }
 
+/// Generates SMT formulas for an existential quantifier.
+///
+/// This creates axioms that define the top-level function of the existential
+/// and its relationship with the pattern and applied skolem functions.
 fn mk_exists_1<'a>(pbl: &'a Problem, e: &'a Exists) -> impl Iterator<Item = MSmtFormula> + use<'a> {
     let all_vars = chain![e.cvars(), e.bvars()].cloned().collect_vec();
     let tlf = e.top_level_function();
@@ -244,6 +282,10 @@ fn mk_exists_1<'a>(pbl: &'a Problem, e: &'a Exists) -> impl Iterator<Item = MSmt
     .into_iter()
 }
 
+/// Generates SMT formulas for a `FindSuchThat` quantifier.
+///
+/// This creates axioms that define the top-level function of the `FindSuchThat`
+/// and its relationship with the condition, then branch, and else branch.
 fn mk_fdst_1<'a>(
     pbl: &'a Problem,
     e: &'a FindSuchThat,
@@ -270,6 +312,10 @@ fn mk_fdst_1<'a>(
     .into_iter()
 }
 
+/// Generates SMT formulas for a single alias rewrite rule.
+///
+/// This creates an axiom that equates the `from` and `to` expressions of the alias,
+/// universally quantified over the alias's variables.
 fn mk_alias_1(
     pbl: &Problem,
     fun: &Function,
@@ -286,6 +332,10 @@ fn mk_alias_1(
     [smt!((forall #variables (= (fun #from*) #to)))].into_iter()
 }
 
+/// Generates SMT assertions for all aliases defined in the problem.
+///
+/// This iterates through functions with aliases and generates corresponding SMT axioms
+/// using `mk_alias_1`.
 fn mk_alias(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     let aliases = pbl
         .functions()
@@ -298,6 +348,10 @@ fn mk_alias(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     chain![[MSmt::Comment("aliases".into())], aliases]
 }
 
+/// Generates SMT assertions for extra rewrite rules defined in the problem.
+///
+/// This iterates through rewrite rules that are not prolog-only and generates
+/// corresponding SMT axioms.
 fn mk_extra_rw(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     let ax = pbl
         .extra_rewrite()
@@ -319,23 +373,3 @@ fn mk_extra_rw(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
 
     chain![[MSmt::Comment("extra rewrites".into())], ax]
 }
-
-// #[cfg(test)]
-// mod test {
-//     mod basic_hash {
-//         use itertools::Itertools;
-
-//         use crate::vampire::mk_prelude;
-
-//         #[test]
-//         fn prelude() {
-//             let pbl = crate::problem::test::basic_hash::mk_pblm().0;
-
-//             let prelude = mk_prelude(&pbl).collect_vec();
-
-//             for x in prelude {
-//                 println!("{x}")
-//             }
-//         }
-//     }
-// }

@@ -1,11 +1,8 @@
 use std::borrow::Cow;
-use std::rc::Rc;
 
 use bon::Builder;
-use cryptovampire_smt::Smt;
 use egg::{Pattern, Searcher};
-use golgge::{Dependancy, Rule};
-use itertools::chain;
+use golgge::Rule;
 use static_init::dynamic;
 use utils::ereturn_let;
 
@@ -24,11 +21,17 @@ static PATTERN: Pattern<Lang> = Pattern::from(&rexp!((VAMPIRE #X)));
 /// A rule that calls vampire to get its answer
 #[derive(Clone, Builder)]
 pub struct VampireRule {
+    /// The SMT runner to use
     #[builder(into)]
     exec: SmtRunner,
 }
 
 impl<'a> Rule<Lang, PAnalysis<'a>> for VampireRule {
+    /// Searches for patterns in the e-graph and calls the Vampire SMT solver if a match is found.
+    ///
+    /// This method looks for `(VAMPIRE #X)` patterns. If found, it extracts the formula `#X`,
+    /// translates it to an SMT formula, and sends it to the configured SMT runner (`exec`).
+    /// The result from the SMT solver determines the dependency returned.
     fn search(
         &self,
         prgm: &mut golgge::Program<Lang, PAnalysis<'a>>,
@@ -52,6 +55,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for VampireRule {
         self.exec.run_to_dependancy(pbl, to_prove)
     }
 
+    /// Returns the name of this rule.
     fn name(&self) -> std::borrow::Cow<'_, str> {
         Cow::Borrowed("vampire")
     }

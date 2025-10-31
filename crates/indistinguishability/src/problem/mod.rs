@@ -34,21 +34,29 @@ pub use analysis::{PAnalysis, PRule, RcRule};
 declare_trace!($"problem");
 
 /// A problem for the solver to solve
+///
+/// This struct contains all the information needed to run the solver.
+/// It contains the protocols to prove indistinguishability on, the functions,
+/// the cryptographic assumptions, and the extra rules, rewrites, and SMT formulas.
 #[non_exhaustive]
 pub struct Problem {
     /// The configuration (e.g., cli arguments and such)
     pub config: Configuration,
-    /// The protocol we want to prove indistiguishability on
+    /// The protocols we want to prove indistiguishability on
     ///
     /// The vector must be at least 2 long
     protocols: Vec<Protocol>,
     /// The functions
     function: FunctionCollection,
 
+    /// The cryptographic assumptions
     cryptography: Vec<CryptographicAssumption>,
 
+    /// Extra rules to add to the solver
     extra_rules: Vec<RcRule>,
+    /// Extra rewrites to add to the solver
     extra_rewrite: Vec<Rewrite>,
+    /// Extra SMT formulas to add to the solver
     extra_smt: Vec<MSmt>,
 
     /// cache for the smt prelude
@@ -57,16 +65,23 @@ pub struct Problem {
     /// the current step in the run (if any)
     current_step: Option<CurrentStep>,
 
+    /// a cache for the quantifiers
     quantifier_cache: Vec<(RecFOFormula, Function)>,
 }
 
 impl Default for Problem {
+    /// Creates a new `Problem` with default values.
     fn default() -> Self {
         Self::builder().build()
     }
 }
 
 impl Problem {
+    /// Checks if the protocols are compatible
+    ///
+    /// This function checks that all the protocols are compatible with each other.
+    /// Two protocols are compatible if they have the same steps and the same
+    /// variables in each step.
     pub fn valid(&self) -> bool {
         self.protocols
             .iter()
@@ -74,13 +89,14 @@ impl Problem {
             .all(|(a, b)| Protocol::are_compatible(a, b))
     }
 
+    /// Returns the `init` function
     pub fn get_init_fun(&self) -> &Function {
         &INIT
     }
 
     /// Build a [Program] to use
     pub fn mk_program<'a>(&'a mut self) -> Program<Lang, PAnalysis<'a>> {
-        let exec = SmtRunner::new(&self);
+        let exec = SmtRunner::new(self);
         let vampire_rule = VampireRule::builder().exec(exec.clone()).build();
         let fresh_rule = FreshNonce::builder().exec(exec.clone()).build();
 
@@ -97,7 +113,16 @@ impl Problem {
             .call()
     }
 
-    pub fn run(&mut self, p1: usize, p2: usize) -> bool {
+    /// Run the solver on the given protocols
+    ///
+    /// This function runs the solver on the protocols `p1` and `p2`.
+    /// It returns `true` if the protocols are indistinguishable, `false` otherwise.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if `p1` or `p2` are not valid indices for the
+    /// protocols in the `Problem`.
+    pub fn run_solver(&mut self, p1: usize, p2: usize) -> bool {
         assert!(
             p1 < self.protocols.len(),
             "p1 in not a protocol of `self` (index to large)"
@@ -240,6 +265,7 @@ impl Problem {
         res
     }
 
+    /// Computes the SMT prelude if it hasn't been computed yet and caches it.
     fn compute_smt_prelude(&mut self) {
         if self.smt_prelude.is_none() {
             let prelude = mk_prelude(self).collect();
@@ -247,49 +273,60 @@ impl Problem {
         }
     }
 
+    /// Returns the SMT prelude if it has been computed
     pub fn maybe_get_smt_prelude(&self) -> Option<&[MSmt]> {
-        self.smt_prelude.as_ref().map(|x| x.as_slice())
+        self.smt_prelude.as_deref()
     }
 
+    /// Returns the SMT prelude, computing it if necessary
     pub fn get_smt_prelude(&mut self) -> &[MSmt] {
         self.compute_smt_prelude();
         self.smt_prelude.as_ref().unwrap()
     }
 
+    /// Clears the SMT prelude
     pub fn clear_smt_prelude(&mut self) {
         self.smt_prelude = None;
     }
 
+    /// Returns the extra SMT formulas
     pub fn extra_smt(&self) -> &[MSmt] {
         &self.extra_smt
     }
 
+    /// Returns a mutable reference to the extra SMT formulas
     pub fn extra_smt_mut(&mut self) -> &mut Vec<MSmt> {
         self.clear_smt_prelude();
         &mut self.extra_smt
     }
 
+    /// Returns the extra rewrites
     pub fn extra_rewrite(&self) -> &[Rewrite] {
         &self.extra_rewrite
     }
 
+    /// Returns a mutable reference to the extra rewrites
     pub fn extra_rewrite_mut(&mut self) -> &mut Vec<Rewrite> {
         self.clear_smt_prelude();
         &mut self.extra_rewrite
     }
 
+    /// Returns the extra rules
     pub fn extra_rules(&self) -> &[RcRule] {
         &self.extra_rules
     }
 
+    /// Returns a mutable reference to the extra rules
     pub fn extra_rules_mut(&mut self) -> &mut Vec<RcRule> {
         &mut self.extra_rules
     }
 
+    /// Returns the protocols
     pub fn protocols(&self) -> &[Protocol] {
         &self.protocols
     }
 
+    /// Returns a mutable reference to the protocol at the given index
     pub fn protocol_mut(&mut self, index: usize) -> Option<&mut Protocol> {
         self.protocols.get_mut(index)
     }
@@ -331,7 +368,8 @@ impl Problem {
     ///
     /// The ith steps is pushed to the ith protocol
     ///
-    /// ### panic
+    /// # Panics
+    ///
     /// If the number if steps is different from the number of protocol or they use different [Function]
     pub fn push_steps(&mut self, steps: implvec!(Step)) -> Vec<&mut Step> {
         let steps = steps
@@ -346,6 +384,7 @@ impl Problem {
         steps
     }
 
+    /// Returns an iterator over the steps of the first protocol
     pub fn steps(&self) -> Option<impl Iterator<Item = Function> + use<'_>> {
         Some(
             self.protocols()
@@ -356,6 +395,11 @@ impl Problem {
         )
     }
 
+    /// Returns the number of steps in the first protocol
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the first protocol has no steps.
     pub fn num_steps(&self) -> Option<NonZeroUsize> {
         let n = self.protocols().first()?.steps().len();
         let n = NonZeroUsize::new(n)
@@ -368,38 +412,48 @@ impl Problem {
         self.protocols().first()?.steps().get(index).map(|s| &s.id)
     }
 
+    /// Returns the number of protocols
     pub fn num_protocols(&self) -> usize {
         self.protocols().len()
     }
 
+    /// Returns the cryptographic assumptions
     pub fn cryptography(&self) -> &[CryptographicAssumption] {
         &self.cryptography
     }
 
+    /// Returns a mutable reference to the cryptographic assumption at the given index
     pub fn cryptography_mut(&mut self, index: usize) -> Option<&mut CryptographicAssumption> {
         self.cryptography.get_mut(index)
     }
 
+    /// Extends the cryptographic assumptions with `N` new default assumptions
+    ///
+    /// Returns an array of the indices of the new assumptions.
     pub fn extend_cryptography<const N: usize>(&mut self) -> [usize; N] {
         let ret = std::array::from_fn(|i| i + self.cryptography.len());
         self.cryptography.extend(ret.map(|_| Default::default()));
         ret
     }
 
+    /// Returns a reference to the current step in the problem's execution, if any.
     #[allow(dead_code)]
     pub(crate) fn current_step(&self) -> Option<&CurrentStep> {
         self.current_step.as_ref()
     }
 
+    /// Returns the function collection
     pub fn functions(&self) -> &FunctionCollection {
         &self.function
     }
 
+    /// Returns a mutable reference to the function collection
     pub fn functions_mut(&mut self) -> &mut FunctionCollection {
         self.clear_smt_prelude();
         &mut self.function
     }
 
+    /// Finds all the temporary quantifiers in the problem and adds them to the cache
     pub fn find_temp_quantifiers(&mut self, extra: &[RecFOFormula]) {
         // unique quantifiers up to unification
         let quantifiers = {
@@ -450,6 +504,7 @@ impl Problem {
         self.clear_smt_prelude();
     }
 
+    /// Clears the temporary quantifiers from the cache
     pub fn clear_temp_quantifiers(&mut self) {
         self.quantifier_cache.clear();
         self.clear_smt_prelude();
@@ -464,7 +519,11 @@ impl Problem {
     }
 }
 
+/// This implementation allows to translate quantifiers using the cache
 impl QuantifierTranslator for Problem {
+    /// Attempts to translate a given quantifier formula using the cached quantifiers.
+    ///
+    /// Returns `Some(translated_formula)` if a translation is found, otherwise `None`.
     fn try_translate(&self, formula: &RecFOFormula) -> Option<crate::terms::RecFOFormula> {
         let (subst, fun) = self
             .quantifier_cache
@@ -484,6 +543,7 @@ impl QuantifierTranslator for Problem {
 }
 
 impl Debug for Problem {
+    /// Formats the `Problem` for debugging purposes.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Problem")
             .field("config", &self.config)
@@ -504,12 +564,14 @@ impl Debug for Problem {
 }
 
 impl AsRef<FunctionCollection> for Problem {
+    /// Returns a reference to the `FunctionCollection` within the `Problem`.
     fn as_ref(&self) -> &FunctionCollection {
         &self.function
     }
 }
 
 impl AsMut<FunctionCollection> for Problem {
+    /// Returns a mutable reference to the `FunctionCollection` within the `Problem`.
     fn as_mut(&mut self) -> &mut FunctionCollection {
         &mut self.function
     }
@@ -521,6 +583,9 @@ impl Problem {
         vec![CryptographicAssumption::NoGuessingTh]
     }
 
+    /// Creates a new `Problem` instance with the specified components.
+    ///
+    /// This is typically used with the `ProblemBuilder` for a more ergonomic construction.
     #[builder(builder_type = ProblemBuilder)]
     pub fn new(
         #[builder(field = Self::default_cryptography())] cryptography: Vec<CryptographicAssumption>,
@@ -555,6 +620,9 @@ impl Problem {
         }
     }
 
+    /// Declares a new function
+    ///
+    /// This function returns a [FunctionBuilder] that can be used to build a new function.
     #[builder(builder_type = FunctionBuilder)]
     pub fn declare_function(
         &mut self,
@@ -590,15 +658,18 @@ impl<'a, S> FunctionBuilder<'a, S>
 where
     S: function_builder::State,
 {
+    /// Adds a flag to the function
     pub fn flag(mut self, flag: FunctionFlags) -> Self {
         self.flags |= flag;
         self
     }
 
+    /// Adds multiple flags to the function
     pub fn flags(self, flags: implvec!(FunctionFlags)) -> Self {
         flags.into_iter().fold(self, |acc, flag| acc.flag(flag))
     }
 
+    /// Sets the function as a step function
     pub fn step(self, idx: usize) -> FunctionBuilder<'a, SetOutput<SetStepIdx<SetAlias<S>>>>
     where
         S::StepIdx: FunctionBuilderIsUnset,
@@ -621,6 +692,7 @@ where
         self.name(name)
     }
 
+    /// Allocates a new cryptographic assumption and assigns it to the function
     pub fn and_allocate_cyptographic_assumption(
         self,
         num: usize,
@@ -639,10 +711,12 @@ where
         self.cryptography(len..(len + num))
     }
 
+    /// Sets the function as temporary
     pub fn temporary(self) -> Self {
         self.set_temporary(true)
     }
 
+    /// Sets the function as temporary or not
     pub fn set_temporary(mut self, value: bool) -> Self {
         if value {
             self.flags |= FunctionFlags::TEMPORARY
@@ -652,6 +726,7 @@ where
         self
     }
 
+    /// Sets the signature of the function
     pub fn signature(
         self,
         Signature { inputs, output }: Signature,
@@ -674,20 +749,20 @@ where
         self
     }
 
+    /// extends the cryptography with the given assumptions
     pub fn extend_cryptography(mut self, crypto: implvec!(CryptographicAssumption)) -> Self {
         self.cryptography.extend(crypto);
         self
     }
 }
 
+/// Represents the current step in the execution of the problem
 #[allow(dead_code)]
 #[derive(Clone)]
 pub(crate) struct CurrentStep {
-    /// index in the [Problem]
+    /// The index of the current step in the problem.
     pub idx: usize,
-    /// specific arguments given for this run
-    ///
-    /// All the [Function]s are constants
+    /// Specific arguments given for this run. All the [Function]s are constants.
     pub args: Vec<Function>,
 }
 

@@ -63,6 +63,7 @@ fn finalize(
     }.into()
 }
 
+/// Derives the `LocationProvider` trait for a struct.
 pub fn derive_struct(data: &DataStruct, input: &DeriveInput) -> TokenStream {
     let (i, field) = match find_field(input.span(), &data.fields) {
         Ok(x) => x,
@@ -82,6 +83,7 @@ pub fn derive_struct(data: &DataStruct, input: &DeriveInput) -> TokenStream {
     finalize(input, /* f_ty, */ implementation)
 }
 
+/// Derives the `LocationProvider` trait for an enum.
 pub fn derive_enum(data: &DataEnum, input: &DeriveInput) -> TokenStream {
     let name = &input.ident;
     // let f_ty = &match data

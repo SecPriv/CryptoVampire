@@ -30,10 +30,14 @@ pub fn mk_rules(_: &Problem) -> impl Iterator<Item = RcRule> {
         .into_iter()
 }
 
+/// A rule for deducing properties of quantifiers.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct QuantifierRule {
+    /// The type of quantifier this rule applies to.
     quantifier: FOBinder,
+    /// The patterns to search for in the e-graph.
     patterns: [Pattern<Lang>; 3],
+    /// The patterns to return after a successful search.
     return_patterns: [Pattern<Lang>; 3],
 }
 
@@ -63,7 +67,7 @@ macro_rules! mk_vars {
                 Parameters { $($n),* }
             }
         }
-    };
+    }
 }
 
 mk_vars!(
@@ -72,6 +76,7 @@ mk_vars!(
 );
 
 impl<'a> Rule<Lang, PAnalysis<'a>> for QuantifierRule {
+    /// Searches for matches of the quantifier rule in the e-graph and returns the dependencies.
     fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: egg::Id) -> Dependancy {
         let matches =
             izip!(self.patterns.iter(), self.return_patterns.iter()).find_map(|(pattern, ret)| {
@@ -211,6 +216,7 @@ impl<U> Parameters<U> {
 }
 
 impl QuantifierRule {
+    /// Creates the patterns for the quantifier rule.
     fn mk_patterns(bind: FOBinder) -> ([Pattern<Lang>; 3], [Pattern<Lang>; 3]) {
         let Parameters {
             u,

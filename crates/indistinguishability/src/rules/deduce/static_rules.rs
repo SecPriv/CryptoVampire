@@ -7,6 +7,7 @@ use crate::terms::{
     MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, VAMPIRE,
 };
 
+/// Creates a set of static deduction rules.
 pub fn mk_rules() -> impl Iterator<Item = RcRule> {
     let equiv = &EQUIV;
     let deduce_m = &BIT_DEDUCE;

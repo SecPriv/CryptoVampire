@@ -20,14 +20,17 @@ use crate::{Configuration, MSmt, Problem};
 
 declare_trace!($"shrpblm");
 
+/// A shared, reference-counted, mutable problem instance for use within the Steel VM.
 #[derive(Debug, Clone, Steel)]
 pub struct ShrProblem(Rc<RefCell<Problem>>);
 
 impl ShrProblem {
+    /// Borrows the underlying `Problem` immutably.
     pub fn borrow(&self) -> Ref<'_, Problem> {
         self.0.borrow()
     }
 
+    /// Borrows the underlying `Problem` mutably.
     pub fn borrow_mut(&self) -> RefMut<'_, Problem> {
         self.0.borrow_mut()
     }
@@ -65,6 +68,7 @@ impl ShrProblem {
     // =========================================================
     // ========================= API ===========================
     // =========================================================
+    /// Runs the indistinguishability check between two protocols.
     fn run(&self, p1: Function, p2: Function) -> SResult<bool> {
         if !p1.is_protocol() {
             return Err(SteelErr::new(
@@ -78,19 +82,24 @@ impl ShrProblem {
                 format!("{p2} is not a protocol"),
             ));
         }
-        Ok(self.borrow_mut().run(p1.protocol_idx, p2.protocol_idx))
+        Ok(self
+            .borrow_mut()
+            .run_solver(p1.protocol_idx, p2.protocol_idx))
     }
 
+    /// Creates a new empty `Problem` instance with the given configuration.
     fn mk_empty(config: Configuration) -> Self {
         let pbl = Problem::builder().config(config).build();
         Self(Rc::new(RefCell::new(pbl)))
     }
 
+    /// Declares a new function in the problem.
     fn declare_function(self, fun: Function) -> Function {
         self.borrow_mut().functions_mut().add(fun.clone());
         fun
     }
 
+    /// Declares a new step function in the problem.
     fn declare_step(&self, name: String, sorts: Vec<Sort>) -> SResult<Function> {
         let mut pbl = self.borrow_mut();
 
@@ -119,10 +128,12 @@ impl ShrProblem {
         Ok(step)
     }
 
+    /// Declares a new protocol in the problem.
     fn declare_protocol(&self) -> Function {
         self.borrow_mut().declare_new_protocol().name().clone()
     }
 
+    /// Declares a new existential quantifier in the problem.
     fn declare_exists(&self, captured: Vec<Sort>, bound: Vec<Sort>) -> ShrExists {
         let mut pbl = self.borrow_mut();
         let exist = Exists::insert()
@@ -136,6 +147,7 @@ impl ShrProblem {
         }
     }
 
+    /// Declares a new `FindSuchThat` quantifier in the problem.
     fn declare_fdst(&self, captured: Vec<Sort>, bound: Vec<Sort>) -> ShrFindSuchThat {
         let mut pbl = self.borrow_mut();
         let fdst = FindSuchThat::insert()
@@ -149,6 +161,7 @@ impl ShrProblem {
         }
     }
 
+    /// Sets the variables for a given step in a protocol.
     fn set_step_vars(&self, step: Function, ptcl: Function, vars: Vec<Variable>) -> SResult<()> {
         let mut step = self.get_step_mut(step, ptcl)?;
 
@@ -167,28 +180,34 @@ impl ShrProblem {
         Ok(())
     }
 
+    /// Returns the variables for a given step in a protocol.
     fn get_step_vars(&self, step: Function, ptcl: Function) -> SResult<Vec<Variable>> {
         Ok(self.get_step_mut(step, ptcl)?.vars.clone())
     }
 
+    /// Sets the message for a given step in a protocol.
     fn set_step_msg(&self, step: Function, ptcl: Function, msg: RecFOFormula) -> SResult<()> {
         self.get_step_mut(step, ptcl)?.msg = msg;
         Ok(())
     }
 
+    /// Sets the condition for a given step in a protocol.
     fn set_step_cond(&self, step: Function, ptcl: Function, cond: RecFOFormula) -> SResult<()> {
         self.get_step_mut(step, ptcl)?.cond = cond;
         Ok(())
     }
 
+    /// Adds a new rule to the problem.
     fn add_rule(&self, Rule(r): Rule) {
         self.borrow_mut().extra_rules_mut().push(r);
     }
 
+    /// Adds a new rewrite rule to the problem.
     fn add_rewrite(&self, rw: Rewrite) {
         self.borrow_mut().extra_rewrite_mut().push(rw);
     }
 
+    /// Adds a new SMT axiom to the problem.
     fn add_smt_axiom(&self, f: RecFOFormula) -> SResult<()> {
         self.borrow_mut().extra_smt_mut().push(MSmt::mk_assert(
             f.as_smt(self.0.borrow().deref())
@@ -201,6 +220,7 @@ impl ShrProblem {
     // ====================== printing =========================
     // =========================================================
 
+    /// Returns a string representation of a specific step in a protocol.
     fn to_string_step(&self, ptcl: Function, step: Function) -> SResult<String> {
         let Some(pidx) = ptcl.get_protocol_index() else {
             return Err(SteelErr::new(
@@ -222,6 +242,7 @@ impl ShrProblem {
 }
 
 impl Registerable for ShrProblem {
+    /// Registers the `ShrProblem` type and its associated functions with the Steel VM.
     fn register(
         module: &mut steel::steel_vm::builtin::BuiltInModule,
     ) -> &mut steel::steel_vm::builtin::BuiltInModule {

@@ -1,4 +1,5 @@
 use super::*;
+/// Represents the head of a formula, which can be a variable, function, or quantifier.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum HeadSk<Var, Fun, Quant> {
@@ -6,6 +7,7 @@ pub enum HeadSk<Var, Fun, Quant> {
     Fun(Fun),
     Quant(Quant),
 }
+/// A type alias for `HeadSk` using the associated types from the `Formula` trait.
 pub type Head<F> = HeadSk<<F as Formula>::Var, <F as Formula>::Fun, <F as Formula>::Quant>;
 
 impl<Var, Fun, Quant> HeadSk<Var, Fun, Quant> {
@@ -36,6 +38,7 @@ impl<Var, Fun, Quant> HeadSk<Var, Fun, Quant> {
         }
     }
 
+    /// Tries to convert the `HeadSk` into a variable, returning `Err(self)` if it's not a variable.
     pub fn try_into_var(self) -> Result<Var, Self> {
         if let Self::Var(v) = self {
             Ok(v)
@@ -60,6 +63,7 @@ impl<Var, Fun, Quant> HeadSk<Var, Fun, Quant> {
         matches!(self, Self::Fun(..))
     }
 
+    /// Tries to convert the `HeadSk` into a function, returning `Err(self)` if it's not a function.
     pub fn try_into_fun(self) -> Result<Fun, Self> {
         if let Self::Fun(v) = self {
             Ok(v)
@@ -76,6 +80,7 @@ impl<Var, Fun, Quant> HeadSk<Var, Fun, Quant> {
         matches!(self, Self::Quant(..))
     }
 
+    /// Tries to convert the `HeadSk` into a quantifier, returning `Err(self)` if it's not a quantifier.
     pub fn try_into_quant(self) -> Result<Quant, Self> {
         if let Self::Quant(v) = self {
             Ok(v)

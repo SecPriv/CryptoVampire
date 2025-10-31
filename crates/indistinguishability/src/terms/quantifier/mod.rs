@@ -1,3 +1,4 @@
+/// Re-exports all public items from the `exists` module, primarily the `Exists` struct.
 pub use exists::*;
 use itertools::chain;
 use utils::{ereturn_if, match_as_trait};
@@ -6,52 +7,70 @@ use crate::terms::{Function, QuantifierIndex, RecFOFormula, Sort, Variable};
 use crate::{Problem, rexp};
 mod exists;
 mod find;
+/// Re-exports all public items from the `find` module, primarily the `FindSuchThat` struct.
 pub use find::*;
 
 declare_trace!($"quantifier");
 
+/// Represents a generic quantifier, either existential or a find-such-that.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Quantifier {
+    /// An existential quantifier.
     Exists(Exists),
+    /// A find-such-that quantifier.
     FindSuchThat(FindSuchThat),
 }
 
 impl From<FindSuchThat> for Quantifier {
+    /// Converts a `FindSuchThat` into a `Quantifier::FindSuchThat`.
     fn from(v: FindSuchThat) -> Self {
         Self::FindSuchThat(v)
     }
 }
 
 impl From<Exists> for Quantifier {
+    /// Converts an `Exists` into a `Quantifier::Exists`.
     fn from(v: Exists) -> Self {
         Self::Exists(v)
     }
 }
 
+/// A trait for common operations on quantifiers.
 pub trait QuantifierT: Eq + Sized {
+    /// Returns a slice of the bound variables of the quantifier.
     fn bvars(&self) -> &[Variable];
+    /// Returns a slice of the context variables of the quantifier.
     fn cvars(&self) -> &[Variable];
 
+    /// Returns a reference to the top-level function associated with this quantifier.
     fn top_level_function(&self) -> &Function;
+    /// Returns a slice of the skolem functions associated with this quantifier.
     fn skolems(&self) -> &[Function];
+    /// Returns a slice of the fresh index functions associated with this quantifier.
     fn fresh_indices(&self) -> &[Function];
 
     fn valid(&self, idx: QuantifierIndex, pbl: &Problem) -> bool {
         default_valid(self, idx, pbl)
     }
 
+    /// Returns an iterator over the sorts of the bound variables.
     fn bvars_sorts(&self) -> impl Iterator<Item = Sort> + Clone {
         self.fresh_indices().iter().map(|f| f.signature.output)
     }
 
+    /// Returns an iterator over the sorts of the context variables.
     fn cvars_sorts(&self) -> impl Iterator<Item = Sort> + Clone {
         self.skolems()[0].signature.inputs.iter().copied()
     }
 
+    /// Attempts to downcast a `&Quantifier` to `&Self`.
     fn try_from_ref(q: &Quantifier) -> Option<&Self>;
+    /// Attempts to downcast a `&mut Quantifier` to `&mut Self`.
     fn try_from_mut(q: &mut Quantifier) -> Option<&mut Self>;
+    /// Returns `true` if the quantifier is temporary, `false` otherwise.
     fn temporary(&self) -> bool;
 
+    /// Returns an iterator over all functions associated with this quantifier (top-level, skolems, fresh indices).
     fn all_functions(&self) -> impl Iterator<Item = &Function> + Clone {
         chain![
             [self.top_level_function()],
@@ -76,10 +95,12 @@ pub trait QuantifierT: Eq + Sized {
     //     self.bvars().iter().copied().map(egg::ENodeOrVar::Var)
     // }
 
+    /// Returns the `QuantifierIndex` of this quantifier.
     fn index(&self) -> QuantifierIndex {
         self.top_level_function().get_quantifier_index().unwrap()
     }
 
+    /// Returns an iterator over the applied skolem functions, where context variables are substituted.
     fn appplied_skolens<'a>(
         &'a self,
     ) -> impl Iterator<Item = RecFOFormula> + Clone + use<'a, Self> {
@@ -91,6 +112,7 @@ pub trait QuantifierT: Eq + Sized {
 }
 
 impl QuantifierT for Quantifier {
+    /// Implements `QuantifierT` for the `Quantifier` enum by delegating to the inner `Exists` or `FindSuchThat`.
     fn bvars(&self) -> &[Variable] {
         match_as_trait!(self => { Self::Exists(x) | Self::FindSuchThat(x) => {x.bvars()}})
     }
@@ -153,6 +175,7 @@ fn default_valid<Q: QuantifierT>(q: &Q, idx: QuantifierIndex, pbl: &Problem) -> 
 }
 
 impl Quantifier {
+    /// Returns `true` if the quantifier is temporary, `false` otherwise.
     pub fn temporary(&self) -> bool {
         match_as_trait!(self => {Self::FindSuchThat(x) | Self::Exists(x) => {x.temporary()}})
     }

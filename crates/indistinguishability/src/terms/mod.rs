@@ -4,7 +4,13 @@ use crate::{Lang, LangVar};
 // ======================= macros ==========================
 // =========================================================
 
-/// helper to write flags
+/// A helper macro to create a `FunctionFlags` from a list of flags.
+///
+/// # Example
+///
+/// ```ignore
+/// const_fun_flags!(STEP | PROTOCOL)
+/// ```
 macro_rules! const_fun_flags {
     ($id:ident) => {$crate::terms::FunctionFlags::$id};
     ($id0:ident | $($id:ident)|*) => {
@@ -13,7 +19,7 @@ macro_rules! const_fun_flags {
     };
 }
 
-/// Shortcut for `Cow<'smt, [U]>`
+/// A shortcut for `Cow<[T]>`.
 macro_rules! cow {
     ($l:lifetime; $t:ty) => {
         ::std::borrow::Cow<$l, [$t]>
@@ -23,7 +29,7 @@ macro_rules! cow {
     };
 }
 
-/// Shortcut for `Cow<'smt, [U]>`
+/// A shortcut for `quarck::CowArc<[T]>`.
 macro_rules! cowarc {
     ($l:lifetime; $t:ty) => {
         ::quarck::CowArc<$l, [$t]>
@@ -33,7 +39,7 @@ macro_rules! cowarc {
     };
 }
 
-/// equivalent of [vec!] for [cow!] types
+/// A macro to create a `quarck::CowArc<[T]>` from a list of elements.
 macro_rules! mk_cowarc {
     (@ $v:expr) => {
         ::quarck::CowArc::Owned($v)
@@ -46,7 +52,7 @@ macro_rules! mk_cowarc {
     }
 }
 
-/// equivalent of [vec!] for [cow!] types
+/// A macro to create a `Cow<[T]>` from a list of elements.
 macro_rules! mk_cow {
     (@ $v:expr) => {
         ::std::borrow::Cow::Owned($v)
@@ -59,7 +65,14 @@ macro_rules! mk_cow {
     }
 }
 
-/// helper to write owned signatures
+/// A helper macro to create a `Signature`.
+///
+/// # Example
+///
+/// ```
+/// # use indistinguishability::{mk_signature, terms::Sort};
+/// mk_signature!((Sort::Bitstring, Sort::Bitstring) -> Sort::Bitstring);
+/// ```
 #[macro_export]
 macro_rules! mk_signature {
     (() -> $out:expr) => {
@@ -142,5 +155,7 @@ pub use variable::Variable;
 // ======================== other ==========================
 // =========================================================
 
+/// A `Cow` of `Lang`
 pub type CowExpr = cow![Lang];
+/// A `Cow` of `LangVar`
 pub type CowPattern = cow![LangVar];

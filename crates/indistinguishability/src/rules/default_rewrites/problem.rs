@@ -7,6 +7,7 @@ use log::trace;
 use crate::terms::{AliasRewrite, Function};
 use crate::{Lang, Problem, rexp};
 
+/// Creates rewrite rules based on the problem definition, including unfolding rules, extra rewrite rules, and alias rules.
 pub fn mk_rewrites<N: Analysis<Lang>>(
     pbl: &Problem,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {

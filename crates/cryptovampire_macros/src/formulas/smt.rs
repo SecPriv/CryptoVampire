@@ -1,25 +1,12 @@
 // In your proc-macro crate's src/lib.rs
 
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::AtomicUsize;
 
 use proc_macro::TokenStream;
-use quote::{format_ident, quote, quote_spanned}; // format_ident is key here
-use syn::parenthesized;
-use syn::parse::Parser;
+use quote::{quote, quote_spanned}; // format_ident is key here
+use syn::parse::{Parse, ParseStream, Parser, Result};
 use syn::punctuated::Punctuated;
-use syn::token::Paren;
-use syn::{
-    Expr,
-    Ident,
-    Lit,
-    LitInt,
-    LitStr, // LitStr might not be needed if FunApp changed
-    Token,
-    parse::{Parse, ParseStream, Result},
-    parse_macro_input,
-    token,
-};
-use utils::ereturn_if;
+use syn::{Token, parse_macro_input};
 
 // Counter for generating unique temporary variable names
 static VAR_COUNTER: AtomicUsize = AtomicUsize::new(0);

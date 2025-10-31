@@ -12,44 +12,64 @@ mod enum_like;
 // mod rec_exp_lang;
 mod sexpr;
 
+/// Re-exports `InnerLang`, the language used for `egg` e-graphs.
 pub use egg::InnerLang;
 pub(crate) use enum_like::QuantifierTranslator;
+/// Re-exports `RecFOFormula`, a recursive first-order formula representation.
+/// Re-exports `substitution_utils`, a module containing utilities for substitution.
 pub use enum_like::{RecFOFormula, substitution_utils};
 
+/// Represents the type of a first-order logic binder (quantifier).
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Steel, Serialize)]
 pub enum FOBinder {
+    /// Universal quantifier (for all).
     Forall,
+    /// Existential quantifier (there exists).
     Exists,
+    /// Find such that quantifier.
     FindSuchThat,
 }
 
+/// Represents a quantified first-order formula with its binder and bound variables.
 pub struct RecFOFormulaQuant {
+    /// The type of quantifier (e.g., Forall, Exists).
     pub quantifier: FOBinder,
+    /// The variables bound by this quantifier.
     pub vars: Vec<Variable>,
 }
 
+/// A reference to a quantified first-order formula with its binder and bound variables.
 pub struct RecFOFormulaQuantRef<'a> {
+    /// The type of quantifier (e.g., Forall, Exists).
     pub quantifier: FOBinder,
+    /// A slice of variables bound by this quantifier.
     pub vars: &'a [Variable],
 }
 
 impl<'a> RecFOFormulaQuantRef<'a> {
+    /// Creates a new `RecFOFormulaQuantRef`.
     pub fn new(quantifier: FOBinder, vars: &'a [Variable]) -> Self {
         Self { quantifier, vars }
     }
 }
 
 impl RecFOFormulaQuant {
+    /// Creates a new `RecFOFormulaQuant`.
     pub fn new(quantifier: FOBinder, vars: Vec<Variable>) -> Self {
         Self { quantifier, vars }
     }
 }
 
 impl FOBinder {
+    /// Attempts to convert a `Function` into an `FOBinder`.
+    ///
+    /// Returns `Some(FOBinder)` if the function represents a known binder (e.g., `EXISTS`, `FIND_SUCH_THAT`),
+    /// otherwise returns `None`.
     pub fn try_from_function(fun: &Function) -> Option<Self> {
         fun.as_fobinder()
     }
 
+    /// Returns the arity (number of arguments) of the binder.
     pub fn arity(&self) -> usize {
         match self {
             Self::FindSuchThat => 3,
@@ -85,6 +105,9 @@ impl FOBinder {
         }
     }
 
+    /// Returns the corresponding `Function` for the binder, if applicable.
+    ///
+    /// For `Forall`, this returns `None` as it doesn't have a direct function representation.
     pub fn as_function(&self) -> Option<&'static Function> {
         match self {
             FOBinder::Exists => Some(&EXISTS),
@@ -213,12 +236,16 @@ pub(crate) mod list {
     }
 }
 
+/// A trait for types that can be treated as a formula.
 pub trait FormulaLike {
+    /// The concrete formula type.
     type F<'a>: Formula
     where
         Self: 'a;
+    /// Converts `self` into a concrete formula type.
     fn as_formula(&self) -> Self::F<'_>;
 
+    /// Destructs the formula into its head and arguments.
     fn destruct(&self) -> Destructed<Self::F<'_>, impl Iterator<Item = Self::F<'_>>> {
         self.as_formula().destruct()
     }

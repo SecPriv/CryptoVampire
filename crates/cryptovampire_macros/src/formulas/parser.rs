@@ -1,25 +1,17 @@
 use std::str;
-use std::sync::atomic::{AtomicUsize, Ordering};
 
-use proc_macro::TokenStream;
 use proc_macro2::Span;
-use quote::{ToTokens, format_ident, quote};
-use syn::parse::Peek;
+use quote::ToTokens;
 use syn::spanned::Spanned;
 // format_ident is key here
-use syn::token::Paren;
-use syn::{Error, parenthesized, parse_quote};
+use syn::{Error, parenthesized};
 use syn::{
     Expr,
     Ident,
-    Lit,
-    LitBool,
-    LitInt,
-    LitStr, // LitStr might not be needed if FunApp changed
+    LitBool, // LitStr might not be needed if FunApp changed
     Path,
     Token,
     parse::{Parse, ParseStream, Result},
-    parse_macro_input,
     token,
 };
 use utils::ereturn_if;

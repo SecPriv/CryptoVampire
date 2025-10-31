@@ -7,6 +7,7 @@ use crate::fresh;
 use crate::input::Registerable;
 use crate::terms::{Sort, Variable};
 
+/// Represents the signature of a function, defining its input and output sorts.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Steel)]
 pub struct Signature {
     pub inputs: cow![Sort],
@@ -14,6 +15,7 @@ pub struct Signature {
 }
 
 impl Signature {
+    /// Creates a new `Signature` with the given input sorts and output sort.
     pub fn new(inputs: implvec!(Sort), output: Sort) -> Self {
         Self {
             inputs: inputs.into_iter().collect(),
@@ -21,6 +23,7 @@ impl Signature {
         }
     }
 
+    /// Returns the number of input arguments (arity) of the function.
     pub const fn arity(&self) -> usize {
         match &self.inputs {
             std::borrow::Cow::Borrowed(x) => x.len(),
@@ -28,10 +31,12 @@ impl Signature {
         }
     }
 
+    /// Returns an iterator over the input sorts of the function.
     pub fn inputs_iter(&self) -> impl Iterator<Item = Sort> + use<'_> {
         self.inputs.iter().copied()
     }
 
+    /// Creates a vector of fresh `Variable`s, one for each input sort.
     pub fn mk_vars(&self) -> Vec<Variable> {
         self.inputs.iter().map(|&s| fresh!(s)).collect()
     }
@@ -60,6 +65,7 @@ impl Signature {
 }
 
 impl Registerable for Signature {
+    /// Registers the `Signature` type and its constructor with the Steel VM.
     fn register(
         module: &mut steel::steel_vm::builtin::BuiltInModule,
     ) -> &mut steel::steel_vm::builtin::BuiltInModule {

@@ -5,6 +5,7 @@ use utils::dynamic_iter;
 use crate::rules::{self, mk_no_guessing_smt};
 use crate::{MSmt, Problem};
 
+/// Represents different cryptographic assumptions that can be made in the problem.
 #[derive(Debug, Default)]
 #[non_exhaustive]
 pub enum CryptographicAssumption {
@@ -15,7 +16,7 @@ pub enum CryptographicAssumption {
 }
 
 impl CryptographicAssumption {
-    /// update the prelude when needed
+    /// Generates SMT prelude statements based on the cryptographic assumption.
     pub fn mk_prelude<'a>(&'a self, pbl: &'a Problem) -> impl Iterator<Item = MSmt> + use<'a> {
         dynamic_iter!(Ret; NGTH:A, Empty:B);
 
@@ -52,6 +53,7 @@ impl CryptographicAssumption {
 }
 
 impl From<rules::PRF> for CryptographicAssumption {
+    /// Converts a `rules::PRF` into a `CryptographicAssumption::PRF`.
     fn from(v: rules::PRF) -> Self {
         Self::PRF(v)
     }

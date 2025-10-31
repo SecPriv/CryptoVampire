@@ -4,14 +4,15 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, bail};
 use bon::{Builder, builder};
 use cryptovampire_smt::Smt;
-use itertools::chain;
 use log::trace;
 use tokio::process::Command;
 use utils::implvec;
 
 mod bounded_model;
 mod regular;
+/// Re-exports the `BounededVampire` struct, representing a bounded SMT solver configuration.
 pub use bounded_model::BounededVampire;
+/// Re-exports the `RegularVampire` struct, representing a regular SMT solver configuration.
 pub use regular::RegularVampire;
 
 use crate::runners::SharedProblem;
@@ -43,6 +44,9 @@ impl<S> VampireExecBuilder<S>
 where
     S: vampire_exec_builder::State,
 {
+    /// Configures the `VampireExec` builder with settings from the given `Problem`.
+    ///
+    /// This sets the `keep_file` and `timeout` arguments based on the problem's configuration.
     pub fn with_pbl(self, pbl: &Problem) -> VampireExecBuilder<vampire_exec_builder::SetKeepFile<S>>
     where
         S::KeepFile: vampire_exec_builder::IsUnset,
@@ -51,6 +55,7 @@ where
             .timeout(pbl.config.vampire_timeout)
     }
 
+    /// Extends the arguments of the Vampire executable with additional `VampireArg`s.
     pub fn extend_args(mut self, args: implvec!(VampireArg)) -> Self {
         self.args.extend(args);
         self
@@ -69,12 +74,12 @@ where
 }
 
 macro_rules! options {
-  ($($variant:ident($name:literal, $content:ty)),*,) => {
+  ($(#[$other:meta] $variant:ident($name:literal, $content:ty)),*,) => {
       #[allow(dead_code)]
       #[doc = "arguments to [VampireExec] in type-safeish mode"]
       #[derive(Debug, Clone)]
       pub enum VampireArg {
-        $($variant($content)),*
+        $(#[$other]  $variant($content)),*
       }
 
       impl ToArgs<2> for VampireArg {
@@ -98,31 +103,43 @@ macro_rules! options {
 }
 
 options!(
+    /// Sets the number of cores for Vampire to use.
     Cores("cores", u64),
+    /// Sets the memory limit for Vampire in megabytes.
     MemoryLimit("memory_limit", u64),
+    /// Sets the operational mode for Vampire.
     Mode("mode", vampire_suboptions::Mode),
+    /// Sets the slowness factor for Vampire.
     Slowness("slowness", u64),
+    /// Sets the time limit for Vampire in seconds.
     TimeLimit("time_limit", f64),
+    /// Sets the input syntax for Vampire.
     InputSyntax("input_syntax", vampire_suboptions::InputSyntax),
+    /// Enables or disables new CNF conversion in Vampire.
     NewCnf("newcnf", bool),
+    /// Sets the saturation algorithm for Vampire.
     SaturationAlgorithm(
         "saturation_algorithm",
         vampire_suboptions::SaturationAlgorithm
     ),
+    /// Enables or disables Avatar mode in Vampire.
     Avatar("avatar", bool),
+    /// Sets the SAT solver to be used by Vampire.
     SatSolver("sat_solver", vampire_suboptions::SatSolver),
+    /// Enables or disables showing new clauses in Vampire.
     ShowNew("show_new", bool),
+    /// Enables or disables inlining of let expressions in Vampire.
     InlineLet("inline_let", bool),
 );
 
 pub mod vampire_suboptions {
     use super::ToArgs;
     macro_rules! suboptions {
-      ($name:ident, $(($variant:ident, $content:literal)),*,) => {
+      ($name:ident, $( $(#[$other:meta])?($variant:ident, $content:literal)),*,) => {
           #[allow(dead_code)]
           #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, Hash, Copy)]
           pub enum $name {
-            $($variant),*
+            $($(#[$other])? $variant),*
           }
 
           impl ToArgs<1> for $name {
@@ -135,42 +152,63 @@ pub mod vampire_suboptions {
       };
   }
 
-    suboptions!(Mode, (Portfolio, "portfolio"),);
+    suboptions!(Mode,
+        /// Portfolio mode.
+        (Portfolio, "portfolio"),
+    );
     suboptions!(
         InputSyntax,
+        /// SMT-LIB 2 input syntax.
         (SmtLib2, "smtlib2"),
+        /// TPTP input syntax.
         (Tptp, "tptp"),
+        /// Auto-detect input syntax.
         (Auto, "auto"),
     );
     suboptions!(
         SaturationAlgorithm,
+        /// Discount saturation algorithm.
         (Discount, "discount"),
+        /// Otter saturation algorithm.
         (Otter, "otter"),
+        /// Limited Resources saturation algorithm.
         (LimitedResources, "lrs"),
+        /// Finite Model Builder saturation algorithm.
         (FiniteModel, "fmb"),
+        /// Z3 saturation algorithm.
         (Z3, "z3"),
     );
-    suboptions!(SatSolver, (Minisat, "minisat"), (Z3, "z3"),);
+    suboptions!(SatSolver,
+        /// Minisat SAT solver.
+        (Minisat, "minisat"),
+        /// Z3 SAT solver.
+        (Z3, "z3"),
+    );
 }
 
 /// Turn something into an array of [str] for the [Command] object
+/// A trait for converting types into an array of strings for command-line arguments.
 trait ToArgs<const N: usize> {
+    /// Converts the implementor into an array of `N` strings, representing command-line arguments.
     fn to_args(&self) -> [String; N];
 }
 
 impl ToArgs<1> for u64 {
+    /// Converts a `u64` into a single string argument.
     fn to_args(&self) -> [String; 1] {
         [self.to_string()]
     }
 }
 
 impl ToArgs<1> for f64 {
+    /// Converts an `f64` into a single string argument.
     fn to_args(&self) -> [String; 1] {
         [self.to_string()]
     }
 }
 
 impl ToArgs<1> for bool {
+    /// Converts a `bool` into a single string argument ("on" for true, "off" for false).
     fn to_args(&self) -> [String; 1] {
         [if *self { "on" } else { "off" }.into()]
     }
@@ -182,6 +220,10 @@ const SUCCESS_RC: i32 = 0;
 const TIMEOUT_RC: i32 = 1;
 
 impl VampireExec {
+    /// Runs the Vampire executable with the given SMT file.
+    ///
+    /// Returns `Ok(true)` if Vampire proves the query (refutation found),
+    /// `Ok(false)` if it disproves it, or `Err` if Vampire encounters an error.
     pub async fn run(&self, file: &Path) -> anyhow::Result<bool> {
         let mut cmd = Command::new(&self.exe_location);
         cmd.args(self.args.iter().flat_map(|x| x.to_args().into_iter()));
@@ -219,6 +261,9 @@ impl VampireExec {
         Ok(o.status.success() && refutation)
     }
 
+    /// Writes the given SMT statements to a temporary file and runs Vampire on it.
+    ///
+    /// If `keep_file` is true, the temporary file is not deleted after execution.
     pub async fn run_smt<RefS>(&self, smt: implvec!(RefS)) -> anyhow::Result<bool>
     where
         RefS: Borrow<MSmt>,
@@ -259,6 +304,10 @@ impl VampireExec {
         self.run(tmpfile.path()).await
     }
 
+    /// Runs Vampire with the given SMT query, incorporating the problem's SMT prelude.
+    ///
+    /// This method prepares the SMT input by adding the prelude and the query,
+    /// then executes Vampire and interprets its result.
     pub async fn run_smt_with_pbl<'a>(
         &self,
         pbl: &SharedProblem<'a>,
@@ -278,6 +327,11 @@ impl VampireExec {
     }
 }
 
+/// Discovers the path to the Vampire executable in the system's `$PATH`.
+///
+/// # Panics
+///
+/// Panics if the `vampire` executable cannot be found in `$PATH`.
 fn get_vampire_location() -> PathBuf {
     which::which("vampire").expect("can't find vampire in the $PATH")
 }

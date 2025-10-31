@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::rc::Rc;
 
 use bon::Builder;
 use egg::{Id, Pattern, Searcher};
@@ -21,13 +20,20 @@ decl_vars!(const; NONCE_VAR, CONTENT, HYPOTHESIS);
 static FRESH_NONCE_PATTERN: Pattern<Lang> =
     Pattern::from(&rexp!((FRESH_NONCE #NONCE_VAR #CONTENT #HYPOTHESIS)));
 
+/// A rule that deduces the freshness of a nonce
 #[derive(Clone, Builder)]
 pub struct FreshNonce {
+    /// The SMT runner to use for executing SMT queries.
     #[builder(into)]
     exec: SmtRunner,
 }
 
 impl<'a> Rule<Lang, PAnalysis<'a>> for FreshNonce {
+    /// Searches for patterns related to fresh nonces in the e-graph and deduces their freshness.
+    ///
+    /// This method looks for `(FRESH_NONCE #NONCE_VAR #CONTENT #HYPOTHESIS)` patterns.
+    /// It then constructs a logical query to check if the nonce is fresh under the given hypothesis
+    /// and sends it to the SMT solver. The result determines the dependency returned.
     fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: Id) -> Dependancy {
         // assert_eq!(NONCE_VAR, CONTENT);
 
@@ -63,6 +69,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FreshNonce {
         self.exec.run_to_dependancy(pbl, query)
     }
 
+    /// Returns the name of this rule.
     fn name(&self) -> Cow<'_, str> {
         Cow::Borrowed("fresh nonce")
     }

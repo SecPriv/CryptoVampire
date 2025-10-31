@@ -1,6 +1,4 @@
 use std::fmt::Debug;
-use std::rc::Rc;
-use std::sync::Arc;
 use std::time::Duration;
 
 use golgge::Dependancy;
@@ -11,6 +9,7 @@ use crate::{MSmt, MSmtFormula, Problem};
 
 pub(crate) mod vampire;
 
+/// A trait for SMT solvers.
 trait SmtSolver: Debug {
     /// Tries to prove .
     ///
@@ -36,9 +35,12 @@ trait SmtSolver: Debug {
     }
 }
 
+/// A runner for SMT solvers, encapsulating different Vampire configurations.
 #[derive(Debug, Clone)]
 pub struct SmtRunner {
+    /// The regular Vampire solver instance.
     regular_vampire: Option<RegularVampire>,
+    /// The bounded Vampire solver instance.
     bounded_vapire: Option<BounededVampire>,
 }
 
@@ -56,6 +58,7 @@ impl<T: SmtSolver> SmtSolver for Option<T> {
 }
 
 impl SmtRunner {
+    /// Creates a new `SmtRunner` instance, initializing the Vampire solvers.
     pub fn new(pbl: &Problem) -> Self {
         Self {
             regular_vampire: Some(RegularVampire::new(pbl)),
@@ -63,6 +66,9 @@ impl SmtRunner {
         }
     }
 
+    /// Runs the SMT solver with the given query and converts the result to a `Dependancy`.
+    ///
+    /// If the query is proven true, it returns `Dependancy::axiom()`; otherwise, `Dependancy::impossible()`.
     pub fn run_to_dependancy(&self, pbl: &mut Problem, query: MSmtFormula) -> Dependancy {
         if let Some(true) = self.try_run(pbl, query).unwrap() {
             Dependancy::axiom()
@@ -71,6 +77,10 @@ impl SmtRunner {
         }
     }
 
+    /// Attempts to run the SMT solvers (regular and bounded Vampire) concurrently.
+    ///
+    /// It returns `Ok(Some(true))` if a proof is found, `Ok(Some(false))` if disproven,
+    /// `Ok(None)` if a timeout occurs, or `Err` if a solver error happens.
     #[tokio::main]
     pub async fn try_run(
         &self,
@@ -98,9 +108,13 @@ async fn never_end<T>() -> T {
     }
 }
 
+/// A wrapper around `Problem` to allow shared mutable access across asynchronous tasks.
 struct SharedProblem<'a>(RwLock<&'a mut Problem>);
 
 impl<'a> SharedProblem<'a> {
+    /// Extends the given SMT prelude with the problem's SMT prelude.
+    ///
+    /// If the problem's SMT prelude has not been computed yet, it computes it.
     pub async fn extend_smt_prelud(&self, rec: &mut Vec<MSmt>) {
         if let Some(p) = self.0.read().await.maybe_get_smt_prelude() {
             rec.extend_from_slice(p);

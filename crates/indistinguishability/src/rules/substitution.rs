@@ -52,10 +52,10 @@ static ACCEPTABLY_EMPTY: Vec<Pattern<Lang>> = {
 pub struct SubstRule;
 
 impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
-    fn name(&self) -> std::borrow::Cow<'_, str> {
-        "substitution".into()
-    }
-
+    /// Searches for `SUBSTITUTION_RULE` patterns in the e-graph and applies substitutions.
+    ///
+    /// This rule identifies goals that need substitution, performs the substitution
+    /// using `mk_substs`, and then rebuilds the e-graph with the new terms.
     fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: egg::Id) -> Dependancy {
         let egraph = prgm.egraph_mut();
         ereturn_let!(let Some(substs) =
@@ -125,6 +125,9 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
 /// computes `m{x |-> y}`
 ///
 /// with `memo` for memoisation
+///
+/// This function recursively applies the substitution `x |-> y` to the e-graph node `m`,
+/// using memoization to avoid redundant computations.
 fn mk_substs<N: Analysis<Lang>>(
     egraph: &mut EGraph<Lang, N>,
     memo: &mut FxHashMap<Id, Rc<[Id]>>,

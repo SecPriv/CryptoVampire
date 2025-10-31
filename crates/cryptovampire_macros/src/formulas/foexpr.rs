@@ -1,5 +1,3 @@
-use std::default;
-
 use itertools::{Itertools, izip};
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
@@ -449,7 +447,7 @@ impl ToTokenWithInputs for BangedContent {
     fn to_tokens(&self, macro_input: &MacroInput) -> syn::Result<TokenStream> {
         let path = &macro_input.path;
         let Self { kind, inner } = self;
-        let mut ret = match inner {
+        let ret = match inner {
             BangedContentInner::Ident(ident) => {
                 let cloned = macro_input.mk_clone(&quote!(#ident));
                 if macro_input.is_const() {

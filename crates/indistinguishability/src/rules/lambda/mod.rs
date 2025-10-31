@@ -11,6 +11,7 @@ use crate::{Lang, Problem, rexp};
 // static LET: Function = LAMBDA_LET.const_clone();
 static S: Function = LAMBDA_S.const_clone();
 
+/// Creates rewrite rules for lambda calculus.
 pub fn mk_rewrites<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = Rewrite<Lang, N>> {
     chain![
         mk_base_rw::<N>(),

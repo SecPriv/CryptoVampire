@@ -4,10 +4,16 @@ use crate::rules::PRF;
 use crate::terms::{Function, NONCE, RecFOFormula, Rewrite, Sort};
 use crate::{Problem, fresh, rexp};
 
+/// Generates an iterator of rewrite rules for PRF candidates.
+///
+/// These rules are used to introduce `candidate` functions into the e-graph,
+/// which are essential for reasoning about PRF indistinguishability.
 pub fn mk_rewrites<'a>(pbl: &'a Problem, prf: &'a PRF) -> impl Iterator<Item = Rewrite> + use<'a> {
     chain![[mk_rewrite_init(pbl, prf)], mk_rewrite_regular(pbl, prf)]
 }
 
+/// Creates an initial rewrite rule for PRF candidates.
+///
 /// for `f != hash` this builds for all `n`
 /// ```text
 /// h(m, nonce(k))
@@ -31,6 +37,10 @@ fn mk_rewrite_init<'a>(
         .build()
 }
 
+/// Generates rewrite rules for regular functions, introducing PRF candidates.
+///
+/// This iterates over functions in the problem and creates rewrite rules
+/// to propagate `candidate` functions through them.
 fn mk_rewrite_regular<'a>(pbl: &'a Problem, prf: &'a PRF) -> impl Iterator<Item = Rewrite> {
     pbl.functions()
         .iter_current()
@@ -40,11 +50,14 @@ fn mk_rewrite_regular<'a>(pbl: &'a Problem, prf: &'a PRF) -> impl Iterator<Item 
         .flat_map(|f| mk_rewrite_one(pbl, prf, f))
 }
 
+/// Creates a single rewrite rule for a given function `f`.
+///
 /// for `f != hash` this builds for all `n`
 /// ```text
 /// f(x1,..., xn, candidate(x(n+1), m, k), ...,xm)
 ///     -> candidate(f(x1,...,xm), m, k)
 /// ```
+/// effectively lifting the `candidate` function out of the arguments of `f`.
 fn mk_rewrite_one<'a>(
     _pbl: &'a Problem,
     prf: &'a PRF,

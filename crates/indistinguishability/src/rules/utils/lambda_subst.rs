@@ -14,6 +14,10 @@ use crate::terms::{EXISTS, FIND_SUCH_THAT, LAMBDA_O, LAMBDA_S, list};
 //   lambda_subst_inner(egraph, &mut Default::default(), new_t, 0, current)
 // }
 
+/// Performs lambda substitution on an e-graph.
+///
+/// This function substitutes `LAMBDA_O` with `new_t` at a specific `depth` within the e-graph node `current`.
+/// It uses memoization (`map`) to optimize recursive calls.
 pub fn lambda_subst<N: Analysis<Lang>>(
     egraph: &mut EGraph<Lang, N>,
     map: &mut FxHashMap<Id, Option<Id>>,
@@ -38,6 +42,10 @@ pub fn lambda_subst<N: Analysis<Lang>>(
     map.insert(current, Some(nid));
     Some(nid)
 }
+
+/// Helper function for `lambda_subst`.
+///
+/// This function recursively applies lambda substitution to a single e-node.
 fn lambda_subst_aux<N: Analysis<Lang>>(
     egraph: &mut EGraph<Lang, N>,
     map: &mut FxHashMap<Id, Option<Id>>,

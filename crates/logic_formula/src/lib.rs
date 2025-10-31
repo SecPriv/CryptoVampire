@@ -1,4 +1,6 @@
+/// Provides various iterators for traversing formulas.
 pub mod iterators;
+/// Provides data structures for managing formula iteration.
 pub mod outers;
 mod traits;
 
@@ -14,4 +16,5 @@ pub use desctucted::*;
 mod desctucted;
 
 #[cfg(feature = "egg")]
+/// Provides integration with the `egg` library.
 pub mod egg;

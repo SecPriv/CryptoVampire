@@ -8,6 +8,11 @@ use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::terms::{Function, IS_INDEPENDANT_BITSTRING, MACRO_FRAME, NONCE, RecFOFormula, Sort};
 use crate::{MSmt, MSmtFormula, Problem, rexp, smt};
 
+/// Creates the SMT formulas for the no-guessing theorem
+///
+/// This function creates the SMT formulas for the no-guessing theorem.
+/// It includes the no-guessing theorem itself, the SMT nonce, the SMT formulas
+/// for the functions, and the SMT formulas for the steps.
 pub fn mk_no_guessing_smt<'a>(pbl: &'a Problem) -> impl Iterator<Item = MSmt> + use<'a> {
     chain![
         [MSmt::Comment("no guessing theorem & co".into())],
@@ -20,18 +25,23 @@ pub fn mk_no_guessing_smt<'a>(pbl: &'a Problem) -> impl Iterator<Item = MSmt> + 
     ]
 }
 
+/// Generates the SMT formula for the no-guessing theorem.
 fn mk_no_guessing_theorem() -> MSmtFormula {
     let indep = get_is_independant(Sort::Bitstring).unwrap();
     smt!((forall ((!n Nonce) (!m Bitstring))
         (=> (indep !n !m) (distinct (NONCE !n) !m))))
 }
 
+/// Generates the SMT formula for nonces, asserting their independence properties.
 fn mk_smt_nonce() -> MSmtFormula {
     let indep = get_is_independant(Sort::Bitstring).unwrap();
     smt!((forall ((!n Nonce) (!k Nonce))
         (=> (distinct !n !k) (indep !n (NONCE !k)))))
 }
 
+/// Generates an SMT formula for a single function, if applicable.
+///
+/// Skips special subterm functions, functions that should not be declared in SMT, and the NONCE function.
 fn mk_smt_fun_one(fun: &Function) -> Option<MSmtFormula> {
     if fun.is_special_subterm() || fun.is_should_not_declare_in_smt() || fun == &NONCE {
         None
@@ -40,9 +50,9 @@ fn mk_smt_fun_one(fun: &Function) -> Option<MSmtFormula> {
     }
 }
 
+/// Generates a regular SMT formula for a given function, asserting its independence properties.
 fn mk_regular(fun: &Function) -> Option<MSmtFormula> {
     let indep = get_is_independant(fun.signature.output)?;
-
     decl_vars!(x:Nonce);
 
     let vars = fun.signature.mk_vars();
@@ -71,6 +81,7 @@ fn mk_regular(fun: &Function) -> Option<MSmtFormula> {
 
 // }
 
+/// Generates SMT formulas for a protocol step, incorporating nonce independence.
 fn mk_smt_step<'a>(pbl: &'a Problem, ptcl: &'a Protocol) -> MSmtFormula {
     decl_vars!(x:Nonce, t:Time);
 
@@ -101,6 +112,7 @@ fn mk_smt_step<'a>(pbl: &'a Problem, ptcl: &'a Protocol) -> MSmtFormula {
     ret
 }
 
+/// Returns the `IS_INDEPENDANT` function for a given sort, if it exists.
 const fn get_is_independant(sort: Sort) -> Option<Function> {
     match sort {
         Sort::Bitstring => Some(IS_INDEPENDANT_BITSTRING.const_clone()),

@@ -7,6 +7,7 @@ use super::{Alias, AliasRewrite, Function, FunctionFlags, InnerFunction, Signatu
 use crate::rexp;
 
 /// helper to write const signatures
+/// Helper macro to create `Signature` instances concisely.
 macro_rules! s {
     ($t:ident, $n:literal) => {
         Signature {
@@ -29,6 +30,7 @@ macro_rules! s {
 }
 
 /// helper to write flags
+/// Helper macro to create `FunctionFlags` instances concisely.
 macro_rules! f {
     ($($id:ident)|*) => {
         FunctionFlags::BUILTIN
@@ -36,6 +38,7 @@ macro_rules! f {
     };
 }
 
+/// Helper macro to create a `&'static [T]` slice from a list of expressions.
 macro_rules! mk_static_slice {
     ($ty:ty; [$($e:expr),*]) => {
         {
@@ -45,6 +48,7 @@ macro_rules! mk_static_slice {
     };
 }
 
+/// Helper macro to create an `Alias` with `'static` lifetimes for its components.
 macro_rules! alias {
     ($( $($var:ident:$sort:ident),* in $($args:expr),* => $to:expr),*) => {
         {
@@ -74,6 +78,7 @@ macro_rules! alias {
 // ---------------------------------- sorts ------------------------------------
 // -----------------------------------------------------------------------------
 
+/// A static list of all concrete `Sort`s, excluding `Any`.
 pub static SORT_LIST: [Sort; 6] = {
     use Sort::*;
     [Bool, Bitstring, Time, Protocol, Nonce, Index]
