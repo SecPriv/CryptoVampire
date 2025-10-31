@@ -179,4 +179,4 @@
 
 (if (run pbl _p1 _p2)
   (displayln "success")
-  (displayln "failed"))
+  (error "failed"))
