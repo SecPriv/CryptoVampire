@@ -1,8 +1,10 @@
-use std::{marker::PhantomData, ptr::NonNull};
+use std::marker::PhantomData;
+use std::ptr::NonNull;
 
 use utils::utils::{AccessToInvalidData, AlreadyInitialized};
 
-use super::{allocator::Container, reference::Reference};
+use super::allocator::Container;
+use super::reference::Reference;
 
 pub trait Containable<'bump> {}
 

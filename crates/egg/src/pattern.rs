@@ -1,11 +1,11 @@
-use fmt::Formatter;
-use log::*;
 use std::borrow::Cow;
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Display};
 use std::iter::FromIterator;
-use std::{convert::TryFrom, str::FromStr};
+use std::str::FromStr;
 
+use fmt::Formatter;
+use log::*;
 use thiserror::Error;
 
 use crate::*;
@@ -187,7 +187,6 @@ impl<L: Language + Display> Pattern<L> {
 }
 
 /// The language of [`Pattern`]s.
-///
 #[derive(Debug, Hash, PartialEq, Eq, Clone, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub enum ENodeOrVar<L> {
@@ -389,7 +388,6 @@ impl<L: Language + Display> Display for Pattern<L> {
 /// substitutions. So taking the length of a list of [`SearchMatches`]
 /// tells you how many eclasses something was matched in, _not_ how
 /// many matches were found total.
-///
 #[derive(Debug)]
 pub struct SearchMatches<'a, L: Language> {
     /// The eclass id that these matches were found in.
@@ -501,11 +499,7 @@ where
         if let Some(ast) = searcher_ast {
             let (from, did_something) =
                 egraph.union_instantiations(ast, &self.ast, subst, rule_name);
-            if did_something {
-                vec![from]
-            } else {
-                vec![]
-            }
+            if did_something { vec![from] } else { vec![] }
         } else if egraph.union(eclass, id) {
             vec![eclass]
         } else {

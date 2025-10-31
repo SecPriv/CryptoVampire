@@ -1,17 +1,9 @@
-use crate::{
-    CustomDerive,
-    formula::{
-        function::signature::{Lazy, Signature},
-        sort::{
-            Sort,
-            builtins::BOOL,
-            sorted::{Sorted, SortedError},
-        },
-    },
-    static_signature,
-};
-
 use super::super::traits::{MaybeEvaluatable, MaybeFixedSignature};
+use crate::formula::function::signature::{Lazy, Signature};
+use crate::formula::sort::Sort;
+use crate::formula::sort::builtins::BOOL;
+use crate::formula::sort::sorted::{Sorted, SortedError};
+use crate::{CustomDerive, static_signature};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum Connective {
@@ -204,14 +196,12 @@ impl<'bump> MaybeEvaluatable<'bump> for Equality {
 mod signatures {
     use std::iter::Repeat;
 
-    use crate::{
-        formula::{
-            function::signature::{Impossible, Signature},
-            sort::{builtins::BOOL, sort_proxy::SortProxy},
-        },
-        static_signature,
-    };
     use utils::infinity::Infinity;
+
+    use crate::formula::function::signature::{Impossible, Signature};
+    use crate::formula::sort::builtins::BOOL;
+    use crate::formula::sort::sort_proxy::SortProxy;
+    use crate::static_signature;
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Default)]
     pub struct EqualitySignature<'bump> {

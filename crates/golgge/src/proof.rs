@@ -1,4 +1,6 @@
-use std::{default, fmt::Display, rc::Rc};
+use std::default;
+use std::fmt::Display;
+use std::rc::Rc;
 
 use egg::{Analysis, Id, Language};
 
@@ -26,6 +28,6 @@ impl SearchResult {
 
 #[allow(dead_code)]
 pub struct Proof<'a, L: Language, N: Analysis<L>> {
-  prog: &'a Program<L, N>,
-  id: Id
+    prog: &'a Program<L, N>,
+    id: Id,
 }

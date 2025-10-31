@@ -1,27 +1,18 @@
-use if_chain::if_chain;
-use itertools::chain;
+use std::hash::Hash;
 use std::sync::Arc;
 
-use std::hash::Hash;
+use if_chain::if_chain;
+use itertools::chain;
 use utils::arc_into_iter::ArcIntoIter;
 
-use crate::{
-    formula::{
-        formula::{ARichFormula, RichFormula},
-        function::{
-            Function,
-            builtin::{EQUALITY, EQUALITY_TA},
-            name_caster_collection::NameCasterCollection,
-        },
-        sort::{
-            Sort,
-            builtins::{MESSAGE, NAME},
-        },
-    },
-    subterm::traits::{SubtermAux, VarSubtermResult},
-};
-
 use super::UfCma;
+use crate::formula::formula::{ARichFormula, RichFormula};
+use crate::formula::function::Function;
+use crate::formula::function::builtin::{EQUALITY, EQUALITY_TA};
+use crate::formula::function::name_caster_collection::NameCasterCollection;
+use crate::formula::sort::Sort;
+use crate::formula::sort::builtins::{MESSAGE, NAME};
+use crate::subterm::traits::{SubtermAux, VarSubtermResult};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyAux<'bump> {
@@ -133,7 +124,7 @@ impl<'bump> SubtermAux<'bump> for UfCmaMainSubtAux<'bump> {
         let m_sort = m.get_sort();
 
         VarSubtermResult {
-            unified: m_sort.map(|m_sort| x_sort == m_sort).unwrap_or(true), // m_sort.is_err() || x_sort == m_sort.unwrap(),
+            unified: m_sort.map(|m_sort| x_sort == m_sort).unwrap_or(true), /* m_sort.is_err() || x_sort == m_sort.unwrap(), */
             nexts,
         }
     }

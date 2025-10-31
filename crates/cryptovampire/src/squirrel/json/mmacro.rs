@@ -1,5 +1,6 @@
-use super::*;
 use serde::{Deserialize, Serialize};
+
+use super::*;
 
 new_name!(MacroName:Macro);
 

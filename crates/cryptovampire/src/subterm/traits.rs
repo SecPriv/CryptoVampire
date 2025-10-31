@@ -1,12 +1,10 @@
 use log::trace;
-
-use crate::formula::{
-    formula::{ARichFormula, RichFormula},
-    manipulation::Unifier,
-    sort::Sort,
-    variable::Variable,
-};
 use utils::arc_into_iter::ArcIntoIter;
+
+use crate::formula::formula::{ARichFormula, RichFormula};
+use crate::formula::manipulation::Unifier;
+use crate::formula::sort::Sort;
+use crate::formula::variable::Variable;
 
 // use self::possibly_empty::PE;
 
@@ -119,7 +117,7 @@ impl<'bump> SubtermAux<'bump> for DefaultAuxSubterm<'bump> {
         let m_sort = m.get_sort();
 
         VarSubtermResult {
-            unified: m_sort.map(|m_sort| x_sort == m_sort).unwrap_or(true), // m_sort.is_err() || x_sort == m_sort.unwrap(),
+            unified: m_sort.map(|m_sort| x_sort == m_sort).unwrap_or(true), /* m_sort.is_err() || x_sort == m_sort.unwrap(), */
             nexts,
         }
     }

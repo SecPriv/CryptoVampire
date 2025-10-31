@@ -1,10 +1,8 @@
 //! tptp parsing
 //!
 //! This is an interface with the [tptp] crate. We need this to read the output of `vampire`.
-use crate::formula::{
-    TmpFormula,
-    function::builtin::{EQUALITY, NOT, NOT_TA},
-};
+use crate::formula::TmpFormula;
+use crate::formula::function::builtin::{EQUALITY, NOT, NOT_TA};
 
 struct A(TmpFormula);
 
@@ -32,7 +30,9 @@ impl TptpParse for TmpFormula {
 }
 
 use itertools::Itertools;
-use tptp::{Parse, cnf::Literal, fof::*};
+use tptp::Parse;
+use tptp::cnf::Literal;
+use tptp::fof::*;
 use utils::{implvec, match_as_trait};
 
 // I need to remove the `'` from some function names
@@ -46,7 +46,7 @@ fn trim_quotes(str: String) -> String {
 
 // TODO: remove error
 macro_rules! mtry_from {
-    ($l:lifetime, $name:ty; |$value:ident| $b:block) => {
+    ($l:lifetime, $name:ty; | $value:ident | $b:block) => {
         impl<$l> TryFrom<$name> for A {
             type Error = crate::Error;
 

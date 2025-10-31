@@ -55,8 +55,8 @@ macro_rules! ereturn_if {
 /// ## Basic usage:
 /// ```rust
 /// 'a: {
-///   ebreak_if!(true, 42);
-///   panic!("This line is unreachable");
+///     ebreak_if!(true, 42);
+///     panic!("This line is unreachable");
 /// }
 /// ```
 ///
@@ -110,8 +110,8 @@ macro_rules! ebreak_if {
 /// ```rust
 /// let mut i = 0;
 /// 'a: loop {
-///   econtinue_if!(i < 5);
-///   break;
+///     econtinue_if!(i < 5);
+///     break;
 /// }
 /// ```
 ///
@@ -176,8 +176,8 @@ macro_rules! ereturn_let {
 macro_rules! ereturn_cf {
     ($e:expr) => {
         match $e {
-          ::core::ops::ControlFlow::Continue(x) => x,
-          ::core::ops::ControlFlow::Break(x) => return x,
+            ::core::ops::ControlFlow::Continue(x) => x,
+            ::core::ops::ControlFlow::Break(x) => return x,
         }
     };
 }

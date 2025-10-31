@@ -1,8 +1,9 @@
-use std::{cell::Ref, iter::Map, slice::Iter};
-
-use crate::formula::function::Function;
+use std::cell::Ref;
+use std::iter::Map;
+use std::slice::Iter;
 
 use super::ScopedContainer;
+use crate::formula::function::Function;
 
 /// from <https://stackoverflow.com/a/33542412/10875409>
 #[derive(Debug)]

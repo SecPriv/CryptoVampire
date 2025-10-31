@@ -1,7 +1,8 @@
 //! This module help to solve searching though the dependency graph of memorycells
 //!  and inputs looking for subterm
 
-use super::{cell::MemoryCell, step::Step};
+use super::cell::MemoryCell;
+use super::step::Step;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct DependancyFromStep<'bump> {

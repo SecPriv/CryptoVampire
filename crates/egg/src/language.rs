@@ -1,18 +1,17 @@
 use std::borrow::{Borrow, BorrowMut};
+use std::cmp::Ordering;
+use std::convert::{Infallible, TryFrom};
+use std::fmt::{self, Debug, Display};
+use std::hash::Hash;
 use std::iter::FromIterator;
 use std::ops::{BitOr, Deref, DerefMut, Index, IndexMut};
-use std::{cmp::Ordering, convert::TryFrom};
-use std::{
-    convert::Infallible,
-    fmt::{self, Debug, Display},
-};
-use std::{hash::Hash, str::FromStr};
-
-use crate::*;
+use std::str::FromStr;
 
 use fmt::Formatter;
 use symbolic_expressions::{Sexp, SexpError};
 use thiserror::Error;
+
+use crate::*;
 
 /// Trait that defines a Language whose terms will be in the [`EGraph`].
 ///
@@ -298,7 +297,6 @@ impl FromOpError {
 ///
 /// See [`define_language!`] for more details.
 /// You should not have to implement this trait.
-///
 pub trait LanguageChildren {
     /// Checks if there are no children.
     fn is_empty(&self) -> bool {
@@ -514,7 +512,7 @@ impl<L: Language> RecExpr<L> {
     }
 
     /// Iterate over *all* appearing [Id]s in this expression
-    /// 
+    ///
     /// (usefull to shift things arround for instance)
     pub fn all_ids_mut(&mut self) -> impl Iterator<Item = &mut Id> {
         self.iter_mut().flat_map(|fun| fun.children_mut())
@@ -610,11 +608,15 @@ impl<L: Language + Display> RecExpr<L> {
     /// ```
     /// # use egg::*;
     /// let e: RecExpr<SymbolLang> = "(* (+ 2 2) (+ x y))".parse().unwrap();
-    /// assert_eq!(e.pretty(10), "
+    /// assert_eq!(
+    ///     e.pretty(10),
+    ///     "
     /// (*
     ///   (+ 2 2)
     ///   (+ x y))
-    /// ".trim());
+    /// "
+    ///     .trim()
+    /// );
     /// ```
     pub fn pretty(&self, width: usize) -> String {
         let sexp = self.to_sexp();
@@ -711,83 +713,82 @@ impl BitOr for DidMerge {
     }
 }
 
-/** Arbitrary data associated with an [`EClass`].
-
-`egg` allows you to associate arbitrary data with each eclass.
-The [`Analysis`] allows that data to behave well even across eclasses merges.
-
-[`Analysis`] can prove useful in many situtations.
-One common one is constant folding, a kind of partial evaluation.
-In that case, the metadata is basically `Option<L>`, storing
-the cheapest constant expression (if any) that's equivalent to the
-enodes in this eclass.
-See the test files [`math.rs`] and [`prop.rs`] for more complex
-examples on this usage of [`Analysis`].
-
-If you don't care about [`Analysis`], `()` implements it trivally,
-just use that.
-
-# Example
-
-```
-use egg::{*, rewrite as rw};
-
-define_language! {
-    enum SimpleMath {
-        "+" = Add([Id; 2]),
-        "*" = Mul([Id; 2]),
-        Num(i32),
-        Symbol(Symbol),
-    }
-}
-
-// in this case, our analysis itself doesn't require any data, so we can just
-// use a unit struct and derive Default
-#[derive(Default)]
-struct ConstantFolding;
-impl Analysis<SimpleMath> for ConstantFolding {
-    type Data = Option<i32>;
-
-    fn merge(&mut self, to: &mut Self::Data, from: Self::Data) -> DidMerge {
-        egg::merge_max(to, from)
-    }
-
-    fn make(egraph: &mut EGraph<SimpleMath, Self>, enode: &SimpleMath) -> Self::Data {
-        let x = |i: &Id| egraph[*i].data;
-        match enode {
-            SimpleMath::Num(n) => Some(*n),
-            SimpleMath::Add([a, b]) => Some(x(a)? + x(b)?),
-            SimpleMath::Mul([a, b]) => Some(x(a)? * x(b)?),
-            _ => None,
-        }
-    }
-
-    fn modify(egraph: &mut EGraph<SimpleMath, Self>, id: Id) {
-        if let Some(i) = egraph[id].data {
-            let added = egraph.add(SimpleMath::Num(i));
-            egraph.union(id, added);
-        }
-    }
-}
-
-let rules = &[
-    rw!("commute-add"; "(+ ?a ?b)" => "(+ ?b ?a)"),
-    rw!("commute-mul"; "(* ?a ?b)" => "(* ?b ?a)"),
-
-    rw!("add-0"; "(+ ?a 0)" => "?a"),
-    rw!("mul-0"; "(* ?a 0)" => "0"),
-    rw!("mul-1"; "(* ?a 1)" => "?a"),
-];
-
-let expr = "(+ 0 (* (+ 4 -3) foo))".parse().unwrap();
-let mut runner = Runner::<SimpleMath, ConstantFolding, ()>::default().with_expr(&expr).run(rules);
-let just_foo = runner.egraph.add_expr(&"foo".parse().unwrap());
-assert_eq!(runner.egraph.find(runner.roots[0]), runner.egraph.find(just_foo));
-```
-
-[`math.rs`]: https://github.com/egraphs-good/egg/blob/main/tests/math.rs
-[`prop.rs`]: https://github.com/egraphs-good/egg/blob/main/tests/prop.rs
-*/
+/// Arbitrary data associated with an [`EClass`].
+///
+/// `egg` allows you to associate arbitrary data with each eclass.
+/// The [`Analysis`] allows that data to behave well even across eclasses merges.
+///
+/// [`Analysis`] can prove useful in many situtations.
+/// One common one is constant folding, a kind of partial evaluation.
+/// In that case, the metadata is basically `Option<L>`, storing
+/// the cheapest constant expression (if any) that's equivalent to the
+/// enodes in this eclass.
+/// See the test files [`math.rs`] and [`prop.rs`] for more complex
+/// examples on this usage of [`Analysis`].
+///
+/// If you don't care about [`Analysis`], `()` implements it trivally,
+/// just use that.
+///
+/// # Example
+///
+/// ```
+/// use egg::{*, rewrite as rw};
+///
+/// define_language! {
+/// enum SimpleMath {
+/// "+" = Add([Id; 2]),
+/// "*" = Mul([Id; 2]),
+/// Num(i32),
+/// Symbol(Symbol),
+/// }
+/// }
+///
+/// in this case, our analysis itself doesn't require any data, so we can just
+/// use a unit struct and derive Default
+/// #[derive(Default)]
+/// struct ConstantFolding;
+/// impl Analysis<SimpleMath> for ConstantFolding {
+/// type Data = Option<i32>;
+///
+/// fn merge(&mut self, to: &mut Self::Data, from: Self::Data) -> DidMerge {
+/// egg::merge_max(to, from)
+/// }
+///
+/// fn make(egraph: &mut EGraph<SimpleMath, Self>, enode: &SimpleMath) -> Self::Data {
+/// let x = |i: &Id| egraph[*i].data;
+/// match enode {
+/// SimpleMath::Num(n) => Some(*n),
+/// SimpleMath::Add([a, b]) => Some(x(a)? + x(b)?),
+/// SimpleMath::Mul([a, b]) => Some(x(a)? * x(b)?),
+/// _ => None,
+/// }
+/// }
+///
+/// fn modify(egraph: &mut EGraph<SimpleMath, Self>, id: Id) {
+/// if let Some(i) = egraph[id].data {
+/// let added = egraph.add(SimpleMath::Num(i));
+/// egraph.union(id, added);
+/// }
+/// }
+/// }
+///
+/// let rules = &[
+/// rw!("commute-add"; "(+ ?a ?b)" => "(+ ?b ?a)"),
+/// rw!("commute-mul"; "(* ?a ?b)" => "(* ?b ?a)"),
+///
+/// rw!("add-0"; "(+ ?a 0)" => "?a"),
+/// rw!("mul-0"; "(* ?a 0)" => "0"),
+/// rw!("mul-1"; "(* ?a 1)" => "?a"),
+/// ];
+///
+/// let expr = "(+ 0 (* (+ 4 -3) foo))".parse().unwrap();
+/// let mut runner = Runner::<SimpleMath, ConstantFolding, ()>::default().with_expr(&expr).run(rules);
+/// let just_foo = runner.egraph.add_expr(&"foo".parse().unwrap());
+/// assert_eq!(runner.egraph.find(runner.roots[0]), runner.egraph.find(just_foo));
+/// ```
+///
+/// [`math.rs`]: https://github.com/egraphs-good/egg/blob/main/tests/math.rs
+/// [`prop.rs`]: https://github.com/egraphs-good/egg/blob/main/tests/prop.rs
 pub trait Analysis<L: Language>: Sized {
     /// The per-[`EClass`] data for this analysis.
     type Data: Debug;

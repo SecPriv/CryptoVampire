@@ -1,9 +1,11 @@
-use std::{fmt::Display, iter::Cloned, slice::Iter};
+use std::fmt::Display;
+use std::iter::Cloned;
+use std::slice::Iter;
 
-use crate::formula::sort::Sort;
 use utils::vecref::VecRefClone;
 
 use super::{AsFixedSignature, Signature};
+use crate::formula::sort::Sort;
 
 /// A [Signature] that may of may not own its argument sort via the
 /// use of [VecRefClone]

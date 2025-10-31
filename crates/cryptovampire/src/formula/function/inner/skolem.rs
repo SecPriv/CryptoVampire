@@ -1,9 +1,6 @@
+use super::super::signature::FixedRefSignature;
+use super::super::traits::{FixedSignature, MaybeEvaluatable};
 use crate::formula::sort::Sort;
-
-use super::super::{
-    signature::FixedRefSignature,
-    traits::{FixedSignature, MaybeEvaluatable},
-};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Skolem<'bump> {

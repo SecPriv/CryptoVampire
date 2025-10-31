@@ -1,9 +1,7 @@
-use crate::formula::sort::{Sort, builtins::BOOL};
-
-use super::super::{
-    signature::FixedRefSignature,
-    traits::{FixedSignature, MaybeEvaluatable},
-};
+use super::super::signature::FixedRefSignature;
+use super::super::traits::{FixedSignature, MaybeEvaluatable};
+use crate::formula::sort::Sort;
+use crate::formula::sort::builtins::BOOL;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Predicate<'bump> {

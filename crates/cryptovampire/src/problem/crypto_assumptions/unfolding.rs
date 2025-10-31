@@ -2,26 +2,19 @@ use std::marker::PhantomData;
 
 use itertools::chain;
 
-use crate::{
-    environement::environement::Environement,
-    formula::{
-        file_descriptior::{axioms::Axiom, declare::Declaration},
-        formula::meq,
-        function::{
-            Function,
-            builtin::{
-                CONDITION_MACRO, EXEC_MACRO, HAPPENS, LESS_THAN_EQ_STEP, MESSAGE_MACRO, PRED,
-            },
-        },
-        sort::builtins::{CONDITION, MESSAGE, STEP},
-        utils::Applicable,
-    },
-    mforall,
-    problem::Problem,
-    static_signature,
-};
-
 use super::CryptoFlag;
+use crate::environement::environement::Environement;
+use crate::formula::file_descriptior::axioms::Axiom;
+use crate::formula::file_descriptior::declare::Declaration;
+use crate::formula::formula::meq;
+use crate::formula::function::Function;
+use crate::formula::function::builtin::{
+    CONDITION_MACRO, EXEC_MACRO, HAPPENS, LESS_THAN_EQ_STEP, MESSAGE_MACRO, PRED,
+};
+use crate::formula::sort::builtins::{CONDITION, MESSAGE, STEP};
+use crate::formula::utils::Applicable;
+use crate::problem::Problem;
+use crate::{mforall, static_signature};
 
 static_signature!((pub) UNFOLDING_MESSAGE_SIGNATURE: (STEP) -> MESSAGE);
 static_signature!((pub) UNFOLDING_CONDITION_SIGNATURE: (STEP) -> CONDITION);
@@ -63,13 +56,13 @@ impl<'bump> Unfolding<'bump> {
     }
 
     pub fn use_recusive_def(&self) -> bool {
-        /* self.exec().is_some() && */
+        // self.exec().is_some() &&
         self.flags().contains(CryptoFlag::RECURSIVE_EXEC)
     }
 
     pub fn use_direct_def(&self) -> bool {
-        /* self.exec().is_some()
-        && */
+        // self.exec().is_some()
+        // &&
         self.flags().contains(CryptoFlag::DIRECT_EXEC)
             || !self.flags().contains(CryptoFlag::RECURSIVE_EXEC)
     }

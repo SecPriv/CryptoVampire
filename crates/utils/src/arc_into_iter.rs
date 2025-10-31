@@ -1,4 +1,5 @@
-use std::{iter::FusedIterator, sync::Arc};
+use std::iter::FusedIterator;
+use std::sync::Arc;
 
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum ArcIntoIter<T> {

@@ -1,15 +1,15 @@
-use crate::subterm::{Subterm, kind::SubtermKindConstr, traits::DefaultAuxSubterm};
-use crate::{
-    environement::environement::Environement,
-    formula::{
-        file_descriptior::{axioms::Axiom, declare::Declaration},
-        formula::meq,
-        function::inner::subterm::Subsubterm,
-        sort::builtins::{MESSAGE, NAME},
-    },
-    mforall,
-    problem::{generator::Generator, problem::Problem},
-};
+use crate::environement::environement::Environement;
+use crate::formula::file_descriptior::axioms::Axiom;
+use crate::formula::file_descriptior::declare::Declaration;
+use crate::formula::formula::meq;
+use crate::formula::function::inner::subterm::Subsubterm;
+use crate::formula::sort::builtins::{MESSAGE, NAME};
+use crate::mforall;
+use crate::problem::generator::Generator;
+use crate::problem::problem::Problem;
+use crate::subterm::Subterm;
+use crate::subterm::kind::SubtermKindConstr;
+use crate::subterm::traits::DefaultAuxSubterm;
 
 pub type SubtermNonce<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
 

@@ -1,35 +1,26 @@
-use std::{
-    convert::Infallible,
-    fmt::Display,
-    io,
-    num::NonZeroU32,
-    path::Path,
-    process::Command,
-    sync::{
-        Arc,
-        mpsc::{Receiver, Sender, channel},
-    },
-    thread::{self, ScopedJoinHandle},
-    time::Duration,
-};
+use std::convert::Infallible;
+use std::fmt::Display;
+use std::io;
+use std::num::NonZeroU32;
+use std::path::Path;
+use std::process::Command;
+use std::sync::Arc;
+use std::sync::mpsc::{Receiver, Sender, channel};
+use std::thread::{self, ScopedJoinHandle};
+use std::time::Duration;
 
 use itertools::{Itertools, chain};
 use log::{debug, trace};
 use shared_child::SharedChild;
 use thiserror::Error;
 
-use crate::{
-    environement::environement::{EnabledSolvers, Environement, SolverConfig},
-    error::{BaseError, CVContext},
-    problem::Problem,
-    runner::{RunnerError, RunnerOut},
-};
-
-use super::{
-    RunnerHandler, VampireArg, VampireExec,
-    dyn_traits::{self, DynRunner},
-    z3::Z3Runner,
-};
+use super::dyn_traits::{self, DynRunner};
+use super::z3::Z3Runner;
+use super::{RunnerHandler, VampireArg, VampireExec};
+use crate::environement::environement::{EnabledSolvers, Environement, SolverConfig};
+use crate::error::{BaseError, CVContext};
+use crate::problem::Problem;
+use crate::runner::{RunnerError, RunnerOut};
 
 #[derive(Debug, Clone)]
 pub struct Runners {

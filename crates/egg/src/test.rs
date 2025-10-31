@@ -1,10 +1,13 @@
-/*! Utilities for testing / benchmarking egg.
+//! Utilities for testing / benchmarking egg.
+//!
+//! These are not considered part of the public api.
 
-These are not considered part of the public api.
-*/
+use std::fmt::Display;
+use std::fs::File;
+use std::io::Write;
+use std::path::PathBuf;
 
 use num_traits::identities::Zero;
-use std::{fmt::Display, fs::File, io::Write, path::PathBuf};
 
 use crate::*;
 

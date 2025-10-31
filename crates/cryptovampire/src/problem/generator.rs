@@ -1,9 +1,7 @@
-use crate::{
-    environement::environement::Environement,
-    formula::file_descriptior::{axioms::Axiom, declare::Declaration},
-};
-
 use super::problem::Problem;
+use crate::environement::environement::Environement;
+use crate::formula::file_descriptior::axioms::Axiom;
+use crate::formula::file_descriptior::declare::Declaration;
 
 pub trait Generator<'bump> {
     fn generate(

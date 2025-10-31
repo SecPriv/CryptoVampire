@@ -1,36 +1,29 @@
 use std::borrow::Cow;
 
-use crate::{error_at, formula::function::builtin::EMPTY_FUN_NAME};
 use hashbrown::Equivalent;
 use if_chain::if_chain;
 use itertools::{Either, Itertools, chain};
 use log::trace;
-use utils::{all_or_one::AoOV, match_as_trait, mdo, pure, string_ref::StrRef};
-
-use crate::{
-    bail_at, err_at,
-    parser::ast::{self, FindSuchThat, Operation, Term},
-    squirrel::{
-        Sanitizable,
-        converters::{
-            DEFAULT_FST_PROJ_NAME, DEFAULT_SND_PROJ_NAME, DEFAULT_TUPLE_NAME,
-            ast_convertion::ToAst, helper_functions::to_variable_binding,
-        },
-        json::{
-            self, NameName,
-            action::ActionName,
-            mmacro::{self, MacroNameRef},
-            operator::OperatorName,
-        },
-    },
-};
-
+use utils::all_or_one::AoOV;
 use utils::monad::Monad;
+use utils::string_ref::StrRef;
+use utils::{match_as_trait, mdo, pure};
 
-use super::{
-    super::{Context, RAoO},
-    apply_fun,
+use super::super::{Context, RAoO};
+use super::apply_fun;
+use crate::formula::function::builtin::EMPTY_FUN_NAME;
+use crate::parser::ast::{self, FindSuchThat, Operation, Term};
+use crate::squirrel::Sanitizable;
+use crate::squirrel::converters::ast_convertion::ToAst;
+use crate::squirrel::converters::helper_functions::to_variable_binding;
+use crate::squirrel::converters::{
+    DEFAULT_FST_PROJ_NAME, DEFAULT_SND_PROJ_NAME, DEFAULT_TUPLE_NAME,
 };
+use crate::squirrel::json::action::ActionName;
+use crate::squirrel::json::mmacro::{self, MacroNameRef};
+use crate::squirrel::json::operator::OperatorName;
+use crate::squirrel::json::{self, NameName};
+use crate::{bail_at, err_at, error_at};
 
 pub fn convert_application<'a, 'b>(
     f: &json::Term<'a>,

@@ -1,10 +1,12 @@
+use std::fmt;
+use std::iter::FromIterator;
 use std::str::FromStr;
-use std::{fmt, iter::FromIterator};
 
-use crate::*;
 use fmt::{Debug, Display, Formatter};
 use itertools::Itertools;
 use thiserror::Error;
+
+use crate::*;
 
 /// A variable for use in [`Pattern`]s or [`Subst`]s.
 ///
@@ -16,17 +18,17 @@ use thiserror::Error;
 #[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub struct Var(VarInner);
 
-#[cfg(feature= "cryptovampire")]
+#[cfg(feature = "cryptovampire")]
 #[allow(non_camel_case_types)]
 /// Alias for the underlying type for indexed variable.
-/// 
+///
 /// This changes with the `cryptovampire` feature
 pub type uvar = usize;
 
-#[cfg(not(feature="cryptovampire"))]
+#[cfg(not(feature = "cryptovampire"))]
 #[allow(non_camel_case_types)]
 /// Alias for the underlying type for indexed variable
-/// 
+///
 /// This changes with the `cryptovampire` feature
 pub type uvar = u32;
 
@@ -154,7 +156,6 @@ impl From<uvar> for Var {
 }
 
 /// A substitution mapping [`Var`]s to eclass [`Id`]s.
-///
 #[derive(Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Subst {
     pub(crate) vec: smallvec::SmallVec<[(Var, Id); 3]>,

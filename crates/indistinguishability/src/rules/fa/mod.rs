@@ -22,7 +22,7 @@ static PATTERN_LIST: Pattern<Lang> = Pattern::from(&rexp!((CONS_FA #HD #TL)));
 #[dynamic]
 static PATTERN_FA: Pattern<Lang> = Pattern::from(&rexp!((EQUIV #U #V #A #B)));
 
-pub fn mk_rules(_:&Problem) -> impl Iterator<Item = RcRule> + use<'_>  {
+pub fn mk_rules(_: &Problem) -> impl Iterator<Item = RcRule> + use<'_> {
     [FaRule.into_mrc()].into_iter()
 }
 

@@ -12,9 +12,7 @@ use crate::input::shared_cryptography::ShrCrypto;
 use crate::input::shared_exists::ShrExists;
 use crate::input::shared_fdst::ShrFindSuchThat;
 use crate::input::shared_problem::ShrProblem;
-use crate::terms::{
-    AliasRewrite, Function, RecFOFormula, Rewrite, Signature, Sort, Variable,
-};
+use crate::terms::{AliasRewrite, Function, RecFOFormula, Rewrite, Signature, Sort, Variable};
 
 pub(crate) mod golgge_rules;
 pub(crate) mod prelude;

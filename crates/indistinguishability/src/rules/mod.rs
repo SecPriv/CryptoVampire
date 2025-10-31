@@ -156,12 +156,12 @@ pub mod utils;
 
 mod deduce;
 mod default_rewrites;
+mod fa;
 mod lambda;
 mod nonce;
 mod prf;
 mod substitution;
 mod vampire;
-mod fa;
 
 pub use nonce::{FreshNonce, mk_no_guessing_smt};
 pub use prf::PRF;

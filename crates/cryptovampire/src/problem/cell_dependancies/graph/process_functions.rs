@@ -1,36 +1,16 @@
-use crate::formula::formula::ARichFormula;
-use crate::formula::formula::RichFormula;
-use crate::formula::function::inner::step::StepFunction;
-use crate::formula::function::inner::term_algebra::TermAlgebra;
-use crate::formula::function::inner::term_algebra::step_macro;
-use crate::problem::cell::Assignement;
-
 use if_chain::if_chain;
-use logic_formula::Content;
-use logic_formula::FormulaIterator;
-use logic_formula::IteratorHelper;
 use logic_formula::outers::RefPile;
+use logic_formula::{Content, FormulaIterator, IteratorHelper};
 
-use super::super::call::InputCall;
-
-use super::InnerCellCall;
-
-use super::ToNode;
-
+use super::super::call::{InputCall, StepCall};
+use super::{Edges, FromNode, GlobNode, InnerCellCall, ToNode};
+use crate::formula::formula::{ARichFormula, RichFormula};
 use crate::formula::function::InnerFunction;
-
+use crate::formula::function::inner::step::StepFunction;
+use crate::formula::function::inner::term_algebra::{TermAlgebra, step_macro};
 use crate::formula::sort::builtins::STEP;
-
 use crate::formula::variable::Variable;
-
-use super::super::call::StepCall;
-
-use super::FromNode;
-
-use super::Edges;
-
-use super::GlobNode;
-
+use crate::problem::cell::Assignement;
 use crate::problem::step::Step;
 
 /// populate `input_edges` and `edges` using the content seen in the step definitions

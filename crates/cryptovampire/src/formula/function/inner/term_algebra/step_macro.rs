@@ -1,17 +1,11 @@
 use utils::match_as_trait;
 
-use crate::{
-    formula::{
-        function::{
-            signature::FixedRefSignature,
-            traits::{FixedSignature, MaybeEvaluatable},
-        },
-        sort::builtins::{CONDITION, MESSAGE, STEP},
-        utils::formula_expander::UnfoldFlags,
-    },
-    problem::cell_dependancies::MacroRef,
-    static_signature,
-};
+use crate::formula::function::signature::FixedRefSignature;
+use crate::formula::function::traits::{FixedSignature, MaybeEvaluatable};
+use crate::formula::sort::builtins::{CONDITION, MESSAGE, STEP};
+use crate::formula::utils::formula_expander::UnfoldFlags;
+use crate::problem::cell_dependancies::MacroRef;
+use crate::static_signature;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub enum Macro {

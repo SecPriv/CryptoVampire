@@ -1,39 +1,35 @@
-use std::{collections::BTreeSet, hash::Hash, sync::Arc};
+use std::collections::BTreeSet;
+use std::hash::Hash;
+use std::sync::Arc;
 
 use if_chain::if_chain;
 use itertools::Itertools;
 use log::trace;
-use logic_formula::iterators::AllTermsIterator;
-
-use crate::formula::utils::Applicable;
-use crate::formula::utils::formula_expander::NO_REC_MACRO;
-use crate::formula::variable::IntoVariableIter;
-use crate::subterm::{
-    Subterm, into_exist_formula,
-    kind::SubtermKindConstr,
-    traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
-};
-use crate::{
-    environement::{environement::Environement, traits::KnowsRealm},
-    formula::{
-        file_descriptior::{axioms::Axiom, declare::Declaration},
-        formula::{ARichFormula, RichFormula, ands, forall, meq},
-        function::{Function, builtin::TRUE},
-        function::{inner::subterm::Subsubterm, name_caster_collection::NameCasterCollection},
-        manipulation::Unifier,
-        sort::{
-            Sort,
-            builtins::{CONDITION, MESSAGE, NAME},
-        },
-        utils::formula_expander::UnfoldFlags,
-        variable::Variable,
-    },
-    mexists, mforall,
-    problem::{generator::Generator, problem::Problem},
-    static_signature,
-};
 use logic_formula::Formula;
+use logic_formula::iterators::AllTermsIterator;
 use utils::arc_into_iter::ArcIntoIter;
+
+use crate::environement::environement::Environement;
+use crate::environement::traits::KnowsRealm;
+use crate::formula::file_descriptior::axioms::Axiom;
+use crate::formula::file_descriptior::declare::Declaration;
+use crate::formula::formula::{ARichFormula, RichFormula, ands, forall, meq};
+use crate::formula::function::Function;
+use crate::formula::function::builtin::TRUE;
+use crate::formula::function::inner::subterm::Subsubterm;
+use crate::formula::function::name_caster_collection::NameCasterCollection;
+use crate::formula::manipulation::Unifier;
+use crate::formula::sort::Sort;
+use crate::formula::sort::builtins::{CONDITION, MESSAGE, NAME};
+use crate::formula::utils::Applicable;
+use crate::formula::utils::formula_expander::{NO_REC_MACRO, UnfoldFlags};
+use crate::formula::variable::{IntoVariableIter, Variable};
+use crate::problem::generator::Generator;
+use crate::problem::problem::Problem;
+use crate::subterm::kind::SubtermKindConstr;
+use crate::subterm::traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult};
+use crate::subterm::{Subterm, into_exist_formula};
+use crate::{mexists, mforall, static_signature};
 
 pub type SubtermIntCtxtMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
 pub type SubtermIntCtxtKey<'bump> = Subterm<'bump, KeyAux<'bump>>;

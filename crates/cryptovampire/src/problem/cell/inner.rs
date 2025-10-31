@@ -3,12 +3,13 @@ pub use memory_cell::MemoryCell;
 
 mod assignement;
 pub use assignement::Assignement;
+use utils::asssert_trait;
+use utils::string_ref::StrRef;
+use utils::traits::RefNamed;
 
-use crate::{
-    container::contained::Containable,
-    formula::{function::Function, sort::Sort},
-};
-use utils::{asssert_trait, string_ref::StrRef, traits::RefNamed};
+use crate::container::contained::Containable;
+use crate::formula::function::Function;
+use crate::formula::sort::Sort;
 
 #[derive(Debug)]
 pub struct InnerMemoryCell<'bump> {

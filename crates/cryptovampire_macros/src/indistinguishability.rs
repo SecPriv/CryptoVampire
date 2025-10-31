@@ -3,12 +3,16 @@ use std::collections::HashMap;
 use itertools::{Itertools, chain};
 use proc_macro::{Span, TokenStream};
 use quote::{quote, quote_spanned};
+use syn::parse::{Parse, ParseStream};
+use syn::punctuated::Punctuated;
+use syn::token::{Brace, Impl};
 use syn::{
-    braced, parse::{Parse, ParseStream}, parse_macro_input, parse_quote, punctuated::Punctuated, token::{Brace, Impl}, Attribute, Expr, FieldValue, Ident, LitStr, Member, Token
+    Attribute, Expr, FieldValue, Ident, LitStr, Member, Token, braced, parse_macro_input,
+    parse_quote,
 };
 
 /// represents things like
-/// 
+///
 /// ```text
 /// NOT "bit_not" "not" "mnot" {
 ///    signature: s!(Bool, 1),
@@ -16,9 +20,9 @@ use syn::{
 ///    alias: Some(alias!{
 ///        0:Bool in rexp!(#0) => rexp!((BITE #0 FALSE TRUE))
 ///    }),
-///};
+/// };
 /// ```
-/// 
+///
 /// This will generate a new function with the given name and fields.
 /// The fields are merged with the ones declared at the to of the macro call
 #[derive(Clone)]
@@ -27,7 +31,7 @@ struct MFunction {
     span: proc_macro2::Span,
     alt_names: Vec<LitStr>,
     fields: Vec<FieldValue>,
-    attrs: Vec<Attribute>
+    attrs: Vec<Attribute>,
 }
 
 impl Parse for MFunction {
@@ -54,7 +58,7 @@ impl Parse for MFunction {
             span,
             alt_names,
             fields,
-            attrs
+            attrs,
         })
     }
 }

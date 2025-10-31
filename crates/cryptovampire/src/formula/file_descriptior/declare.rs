@@ -1,10 +1,7 @@
-use crate::{
-    container::{allocator::Container, utils::NameFinder},
-    formula::{
-        function::{Function, InnerFunction},
-        sort::Sort,
-    },
-};
+use crate::container::allocator::Container;
+use crate::container::utils::NameFinder;
+use crate::formula::function::{Function, InnerFunction};
+use crate::formula::sort::Sort;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Declaration<'bump> {

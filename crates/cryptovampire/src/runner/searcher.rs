@@ -1,20 +1,18 @@
 //! Things that look for instance in solvers ouputs
 
-use crate::{
-    environement::environement::Environement,
-    formula::{
-        TmpFormula,
-        formula::ARichFormula,
-        sort::{builtins::BOOL, sort_proxy::SortProxy},
-    },
-    problem::crypto_assumptions::{CryptoAssumption, EufCma, IntCtxt, UfCma},
-};
 use itertools::Itertools;
 use log::{debug, trace};
 use regex::Regex;
 use static_init::dynamic;
 
-use super::{Runner, VampireExec, tptp::TptpParse};
+use super::tptp::TptpParse;
+use super::{Runner, VampireExec};
+use crate::environement::environement::Environement;
+use crate::formula::TmpFormula;
+use crate::formula::formula::ARichFormula;
+use crate::formula::sort::builtins::BOOL;
+use crate::formula::sort::sort_proxy::SortProxy;
+use crate::problem::crypto_assumptions::{CryptoAssumption, EufCma, IntCtxt, UfCma};
 
 #[dynamic]
 static EXTRACT_FORMULA: Regex = Regex::new(r"\[SA\] new: \d*?\. (.*?) \[.*?\]").unwrap();
@@ -186,11 +184,18 @@ mod tests {
     #[test]
     fn regexp_test() {
         let tests = [
-"[SA] new: 4640. ($true = X3) | 'ta$iff'(X1,X0) | (X2 = X3) | (X3 = X4) | ($false = X4) <- (~3, 8, 15) [backward demodulation 4444,4607]",
-"[SA] new: 4641. ~'Condition$_13$subterm_nonce'(X0,$true) | 'Message$_13$subterm_nonce'(X0,X1) | 'Message$_13$subterm_nonce'(X0,X2) | 'Message$_13$subterm_nonce'(X0,X3) <- (~3, 8, 15) [backward demodulation 434,4607]",
-"[SA] new: 4287. (X1 != X1) | (X0 = X1) | (X0 = X0) | (X1 = X2) | ($false = X2) [equality factoring 976]",
-"[SA] new: 4640. ($true = X3) | 'ta$iff'(X1,X0) | (X2 = X3) | (X3 = X4) | ($false = X4) <- (~3, 8, 15) [backward demodulation 4444,4607]
-[SA] new: 4641. ~'Condition$_13$subterm_nonce'(X0,$true) | 'Message$_13$subterm_nonce'(X0,X1) | 'Message$_13$subterm_nonce'(X0,X2) | 'Message$_13$subterm_nonce'(X0,X3) <- (~3, 8, 15) [backward demodulation 434,4607]",
+            "[SA] new: 4640. ($true = X3) | 'ta$iff'(X1,X0) | (X2 = X3) | (X3 = X4) | ($false = \
+             X4) <- (~3, 8, 15) [backward demodulation 4444,4607]",
+            "[SA] new: 4641. ~'Condition$_13$subterm_nonce'(X0,$true) | \
+             'Message$_13$subterm_nonce'(X0,X1) | 'Message$_13$subterm_nonce'(X0,X2) | \
+             'Message$_13$subterm_nonce'(X0,X3) <- (~3, 8, 15) [backward demodulation 434,4607]",
+            "[SA] new: 4287. (X1 != X1) | (X0 = X1) | (X0 = X0) | (X1 = X2) | ($false = X2) \
+             [equality factoring 976]",
+            "[SA] new: 4640. ($true = X3) | 'ta$iff'(X1,X0) | (X2 = X3) | (X3 = X4) | ($false = \
+             X4) <- (~3, 8, 15) [backward demodulation 4444,4607]
+[SA] new: 4641. ~'Condition$_13$subterm_nonce'(X0,$true) | 'Message$_13$subterm_nonce'(X0,X1) | \
+             'Message$_13$subterm_nonce'(X0,X2) | 'Message$_13$subterm_nonce'(X0,X3) <- (~3, 8, \
+             15) [backward demodulation 434,4607]",
         ];
 
         assert!(tests.iter().all(|s| EXTRACT_FORMULA.is_match(s)))

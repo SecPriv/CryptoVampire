@@ -1,11 +1,9 @@
-use crate::error::LocateHelper;
-use crate::error::Location;
 use cryptovampire_macros::LocationProvider;
 use location::{ASTLocation, AsASTLocation};
 
-use crate::formula::utils::Applicable;
-
 use super::*;
+use crate::error::{LocateHelper, Location};
+use crate::formula::utils::Applicable;
 
 /// [Rule::ident]
 #[derive(Derivative, LocationProvider)]

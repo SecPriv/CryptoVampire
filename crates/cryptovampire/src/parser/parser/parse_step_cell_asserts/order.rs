@@ -1,21 +1,15 @@
 use std::sync::Arc;
 
-use crate::parser::{
-    Pstr, ast,
-    parser::{
-        Environement, get_sort,
-        parsable_trait::{Parsable, VarProxy},
-    },
-};
-use crate::{
-    formula::{
-        quantifier::Quantifier,
-        sort::builtins::{BOOL, STEP},
-        variable::Variable,
-    },
-    problem::protocol::{Ordering, OrderingKind},
-};
-use utils::{implvec, string_ref::StrRef};
+use utils::implvec;
+use utils::string_ref::StrRef;
+
+use crate::formula::quantifier::Quantifier;
+use crate::formula::sort::builtins::{BOOL, STEP};
+use crate::formula::variable::Variable;
+use crate::parser::parser::parsable_trait::{Parsable, VarProxy};
+use crate::parser::parser::{Environement, get_sort};
+use crate::parser::{Pstr, ast};
+use crate::problem::protocol::{Ordering, OrderingKind};
 
 pub fn parse_orders_with_bvars<'a, 'str, 'bump, B, S>(
     env: &'a Environement<'bump, 'str, S>,

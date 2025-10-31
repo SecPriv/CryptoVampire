@@ -1,37 +1,26 @@
-use std::{collections::BTreeMap, sync::Arc};
+use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use itertools::Itertools;
 use log::trace;
 
+use crate::environement::environement::Environement;
+use crate::formula::file_descriptior::axioms::{Axiom, Rewrite, RewriteKind};
+use crate::formula::file_descriptior::declare::Declaration;
+use crate::formula::formula::{self, meq};
+use crate::formula::function::builtin::{EQUALITY, IF_THEN_ELSE};
+use crate::formula::function::inner::term_algebra::TermAlgebra;
+use crate::formula::function::inner::term_algebra::connective::{BaseConnective, Connective};
+use crate::formula::function::inner::term_algebra::quantifier::{InnerQuantifier, Quantifier};
+use crate::formula::function::traits::FixedSignature;
+use crate::formula::function::{Function, InnerFunction};
+use crate::formula::manipulation::FrozenOVSubstF;
+use crate::formula::sort::builtins::{BOOL, CONDITION, MESSAGE};
+use crate::formula::sort::{FOSort, Sort};
 use crate::formula::utils::Applicable;
-use crate::{
-    environement::environement::Environement,
-    formula::{
-        file_descriptior::{
-            axioms::{Axiom, Rewrite, RewriteKind},
-            declare::Declaration,
-        },
-        formula::{self, meq},
-        function::{
-            Function, InnerFunction,
-            builtin::{EQUALITY, IF_THEN_ELSE},
-            inner::term_algebra::{
-                TermAlgebra,
-                connective::{BaseConnective, Connective},
-                quantifier::{InnerQuantifier, Quantifier},
-            },
-            traits::FixedSignature,
-        },
-        manipulation::FrozenOVSubstF,
-        sort::{
-            FOSort, Sort,
-            builtins::{BOOL, CONDITION, MESSAGE},
-        },
-        variable::{Variable, from_usize, sorts_to_variables},
-    },
-    mexists, mforall,
-    problem::problem::Problem,
-};
+use crate::formula::variable::{Variable, from_usize, sorts_to_variables};
+use crate::problem::problem::Problem;
+use crate::{mexists, mforall};
 
 pub fn generate<'bump>(
     assertions: &mut Vec<Axiom<'bump>>,

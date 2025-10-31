@@ -1,25 +1,21 @@
-use crate::{
-    bail_at,
-    error::{BaseContext, CVContext},
-    formula::function::signature::CheckError,
-    parser::{
-        Pstr,
-        ast::{self, Options},
-        location::ASTLocation,
-        parser::Environement,
-    },
+use utils::string_ref::StrRef;
+use utils::traits::NicerError;
+use utils::{destvec, implvec};
+
+use crate::bail_at;
+use crate::environement::traits::Realm;
+use crate::error::{BaseContext, CVContext};
+use crate::formula::function::signature::{CheckError, Signature};
+use crate::parser::Pstr;
+use crate::parser::ast::{self, Options};
+use crate::parser::location::ASTLocation;
+use crate::parser::parser::Environement;
+use crate::problem::crypto_assumptions::{
+    CryptoAssumption, CryptoFlag, EUF_CMA_PK_SIGNATURE, EUF_CMA_SIGN_SIGNATURE,
+    EUF_CMA_VERIFY_SIGNATURE, EufCma, INT_CTXT_DEC_SIGNATURE, INT_CTXT_ENC_SIGNATURE,
+    INT_CTXT_FAIL_SIGNATURE, IntCtxt, Nonce, UF_CMA_MAC_SIGNATURE, UF_CMA_VERIFY_SIGNATURE,
+    UfCmaBuilder, Unfolding,
 };
-use crate::{
-    environement::traits::Realm,
-    formula::function::signature::Signature,
-    problem::crypto_assumptions::{
-        CryptoAssumption, CryptoFlag, EUF_CMA_PK_SIGNATURE, EUF_CMA_SIGN_SIGNATURE,
-        EUF_CMA_VERIFY_SIGNATURE, EufCma, INT_CTXT_DEC_SIGNATURE, INT_CTXT_ENC_SIGNATURE,
-        INT_CTXT_FAIL_SIGNATURE, IntCtxt, Nonce, UF_CMA_MAC_SIGNATURE, UF_CMA_VERIFY_SIGNATURE,
-        UfCmaBuilder, Unfolding,
-    },
-};
-use utils::{destvec, implvec, string_ref::StrRef, traits::NicerError};
 
 pub fn parse_asserts_crypto<'a, 'str, 'bump, S>(
     env: &'a Environement<'bump, 'str, S>,

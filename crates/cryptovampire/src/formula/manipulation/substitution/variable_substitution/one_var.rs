@@ -1,12 +1,9 @@
 use log::{error, log_enabled};
 
-use crate::formula::{
-    formula::{ARichFormula, RichFormula},
-    manipulation::Substitution,
-    variable::{Variable, uvar},
-};
-
 use super::MultipleVarSubst;
+use crate::formula::formula::{ARichFormula, RichFormula};
+use crate::formula::manipulation::Substitution;
+use crate::formula::variable::{Variable, uvar};
 
 /// A [Substitution] on only one variable
 ///

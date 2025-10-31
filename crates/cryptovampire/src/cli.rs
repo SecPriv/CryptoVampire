@@ -1,20 +1,15 @@
-use std::{
-    fmt::Display,
-    path::{Path, PathBuf},
-};
+use std::fmt::Display;
+use std::path::{Path, PathBuf};
 
-use crate::{
-    container::ScopedContainer,
-    environement::{
-        environement::{
-            EnabledSolvers, Environement, Flags, Locations, Options, RewriteFlags, SolverConfig,
-            SubtermFlags,
-        },
-        traits::Realm,
-    },
-};
 use clap::{Parser, Subcommand};
 use utils::from_with::IntoWith;
+
+use crate::container::ScopedContainer;
+use crate::environement::environement::{
+    EnabledSolvers, Environement, Flags, Locations, Options, RewriteFlags, SolverConfig,
+    SubtermFlags,
+};
+use crate::environement::traits::Realm;
 
 /// A computationnally sound automated cryptographic protocol verifier based on the CCSA.
 #[derive(Parser, Debug, Clone)]

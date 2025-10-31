@@ -1,4 +1,5 @@
-use std::{collections::VecDeque, fmt::Display};
+use std::collections::VecDeque;
+use std::fmt::Display;
 
 use egg::{
     Analysis, Applier, EClass, EGraph, ENodeOrVar, Id, Language, PatternAst, Rewrite, Searcher,
@@ -124,7 +125,7 @@ fn compute_conected_component2<L: Language + WithAnd + WithFalse + Display, N: A
     eclass: Id,
     mut fuel: usize,
 ) -> Option<Vec<Id>> {
-    /* leafs \cap todos = \empty and there are no duplicates at all time */
+    // leafs \cap todos = \empty and there are no duplicates at all time
     let mut leafs = Vec::new(); // ids where we can go no further
     let mut todos: VecDeque<_> = [eclass].into(); // ids that can loop
 

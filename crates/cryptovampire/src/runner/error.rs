@@ -1,9 +1,7 @@
 use std::fmt::Display;
 
-use super::{
-    runner::DiscovererError,
-    runners::{HandlerError, RunnersCreationError},
-};
+use super::runner::DiscovererError;
+use super::runners::{HandlerError, RunnersCreationError};
 
 /// Errors related to the interaction with a solver
 #[non_exhaustive]
@@ -25,7 +23,8 @@ pub enum RunnerError {
     NothingToDo(String),
 
     #[error(
-        "unexpected behaviour while running {tool}:\nran: \"{cmd:?}\"\nreturn code: {return_code}\nstdout:\n{stdout}"
+        "unexpected behaviour while running {tool}:\nran: \"{cmd:?}\"\nreturn code: \
+         {return_code}\nstdout:\n{stdout}"
     )]
     UnexpectedResult {
         tool: &'static str,

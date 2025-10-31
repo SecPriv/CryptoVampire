@@ -1,10 +1,7 @@
 use static_init::dynamic;
 
-use super::{
-    InnerSort, Sort,
-    inner::{Other, TermBase},
-    new_static_sort,
-};
+use super::inner::{Other, TermBase};
+use super::{InnerSort, Sort, new_static_sort};
 
 #[dynamic]
 pub static BOOL: Sort<'static> = new_static_sort(InnerSort::Base(TermBase::Bool));

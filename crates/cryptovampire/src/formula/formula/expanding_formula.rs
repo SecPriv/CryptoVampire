@@ -3,13 +3,11 @@ use std::sync::Arc;
 use itertools::{Either, chain, izip};
 use logic_formula::{Bounder, Destructed, Formula, HeadSk};
 
-use crate::formula::{
-    function::{Function, inner::term_algebra},
-    quantifier::Quantifier,
-    variable::Variable,
-};
-
 use super::ARichFormula;
+use crate::formula::function::Function;
+use crate::formula::function::inner::term_algebra;
+use crate::formula::quantifier::Quantifier;
+use crate::formula::variable::Variable;
 
 /// A wapper around [ARichFormula] to iterate through ta quantifiers
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]

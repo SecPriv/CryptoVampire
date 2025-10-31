@@ -1,21 +1,19 @@
-use std::{
-    borrow::Borrow,
-    fmt::Display,
-    ops::{BitAnd, BitOr, Deref, Not, Shr},
-};
+use std::borrow::Borrow;
+use std::fmt::Display;
+use std::ops::{BitAnd, BitOr, Deref, Not, Shr};
+use std::sync::Arc;
 
-use crate::formula::{function::Function, quantifier::Quantifier, utils::Applicable};
-use crate::formula::{
-    function::builtin::{AND, IMPLIES, NOT, OR, TRUE_ARC},
-    variable::{IntoVariableIter, Variable},
-};
-
-use super::{Expander, RichFormula};
 use itertools::Either;
 use logic_formula::{Destructed, Formula, Head};
-use utils::{arc_into_iter::ArcIntoIter, utils::MaybeInvalid};
+use utils::arc_into_iter::ArcIntoIter;
+use utils::utils::MaybeInvalid;
 
-use std::sync::Arc;
+use super::{Expander, RichFormula};
+use crate::formula::function::Function;
+use crate::formula::function::builtin::{AND, IMPLIES, NOT, OR, TRUE_ARC};
+use crate::formula::quantifier::Quantifier;
+use crate::formula::utils::Applicable;
+use crate::formula::variable::{IntoVariableIter, Variable};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct ARichFormula<'bump>(Arc<RichFormula<'bump>>);
@@ -146,7 +144,8 @@ impl<'bump> Display for ARichFormula<'bump> {
             write!(f, "(unintialized formula) {:?}", self.as_inner())
         } else {
             panic!(
-                "The formula contains some uninitialized bit. This should not happen please report it"
+                "The formula contains some uninitialized bit. This should not happen please \
+                 report it"
             )
         }
     }

@@ -1,66 +1,48 @@
-use std::fmt::Display;
-use std::fmt::Write;
+use std::fmt::{Display, Write};
 use std::sync::Arc;
 
 use itertools::Itertools;
 use log::{debug, log_enabled, trace};
 use logic_formula::Formula;
+use utils::precise_as_ref::PreciseAsRef;
+use utils::string_ref::StrRef;
+use utils::traits::{NicerError, RefNamed};
+use utils::utils::MaybeInvalid;
+use utils::{assert_variance, force_lifetime, implderef, implvec, variants_ref};
 
+use super::InnerFunction;
+use super::dispacher::Dispacher;
+use super::inner::booleans::Booleans;
+use super::inner::evaluate::Evaluate;
+use super::inner::if_then_else::IfThenElse;
+use super::inner::name::Name;
+use super::inner::predicate::Predicate;
+use super::inner::skolem::Skolem;
+use super::inner::step::StepFunction;
+use super::inner::subterm::Subterm;
+use super::inner::term_algebra::TermAlgebra;
+use super::inner::term_algebra::base_function::BaseFunctionTuple;
+use super::inner::term_algebra::quantifier::{InnerQuantifier, Quantifier, get_next_quantifer_id};
+use super::inner::unused::Tmp;
+use super::inner::{self, term_algebra};
+use super::signature::{AsFixedSignature, OnlyArgsSignature, OnlyArgsSignatureProxy, Signature};
+use super::traits::FixedSignature;
 use crate::container::StaticContainer;
 use crate::container::allocator::{ContainerTools, Residual};
 use crate::container::contained::Containable;
 use crate::container::reference::Reference;
 use crate::container::utils::NameFinder;
 use crate::environement::traits::{KnowsRealm, Realm};
-use crate::formula::utils::Applicable;
-use utils::force_lifetime;
-
-use crate::formula::formula::ARichFormula;
+use crate::formula::formula::{ARichFormula, RichFormula};
 use crate::formula::function::inner::evaluated_fun::EvaluatedFun;
+use crate::formula::function::inner::term_algebra::base_function::BaseFunction;
 use crate::formula::function::signature::Lazy::{A, B};
-use crate::formula::{
-    formula::RichFormula,
-    function::inner::term_algebra::base_function::BaseFunction,
-    quantifier,
-    sort::{
-        Sort,
-        sort_proxy::SortProxy,
-        sorted::{Sorted, SortedError},
-    },
-    variable::Variable,
-};
-use utils::traits::{NicerError, RefNamed};
-use utils::utils::MaybeInvalid;
-use utils::{
-    assert_variance, implderef, implvec, precise_as_ref::PreciseAsRef, string_ref::StrRef,
-    variants_ref,
-};
-
-use super::dispacher::Dispacher;
-use super::inner::name::Name;
-use super::inner::term_algebra;
-use super::signature::{AsFixedSignature, OnlyArgsSignature, OnlyArgsSignatureProxy};
-use super::traits::FixedSignature;
-use super::{
-    InnerFunction,
-    inner::{
-        self,
-        booleans::Booleans,
-        evaluate::Evaluate,
-        if_then_else::IfThenElse,
-        predicate::Predicate,
-        skolem::Skolem,
-        step::StepFunction,
-        subterm::Subterm,
-        term_algebra::{
-            TermAlgebra,
-            base_function::BaseFunctionTuple,
-            quantifier::{InnerQuantifier, Quantifier, get_next_quantifer_id},
-        },
-        unused::Tmp,
-    },
-    signature::Signature,
-};
+use crate::formula::quantifier;
+use crate::formula::sort::Sort;
+use crate::formula::sort::sort_proxy::SortProxy;
+use crate::formula::sort::sorted::{Sorted, SortedError};
+use crate::formula::utils::Applicable;
+use crate::formula::variable::Variable;
 
 /// A function is just a pointer to some content in memory.
 /// Pieces of it are mutable through a RefCell, other are not.
@@ -443,7 +425,8 @@ impl<'bump> Function<'bump> {
     pub fn is_always_datatype(&self) -> bool {
         matches!(
             self.as_inner(),
-            /* InnerFunction::Step(StepFunction::Step(_)) | */ InnerFunction::Name(_)
+            // InnerFunction::Step(StepFunction::Step(_)) |
+            InnerFunction::Name(_)
         )
     }
 

@@ -1,29 +1,20 @@
-use crate::{
-    error_at,
-    formula::sort::builtins::{BOOL, MESSAGE, NAME, STEP},
-};
 use itertools::{Either, Itertools, chain};
-use utils::{
-    all_or_one::AoOV, mdo, monad::Monad, pure, string_ref::StrRef, traits::NicerError,
-    vecref::VecRef,
-};
+use utils::all_or_one::AoOV;
+use utils::monad::Monad;
+use utils::string_ref::StrRef;
+use utils::traits::NicerError;
+use utils::vecref::VecRef;
+use utils::{mdo, pure};
 
-use crate::{
-    bail_at,
-    parser::ast::{self, Options, Term},
-    squirrel::{
-        Sanitizable,
-        converters::ContextBuilder,
-        json::{
-            self, NameNameRef, mmacro,
-            operator::{OperatorName, OperatorNameRef},
-        },
-    },
-};
-
-use super::{RAoO, helper_functions::*};
-
-use super::Context;
+use super::helper_functions::*;
+use super::{Context, RAoO};
+use crate::formula::sort::builtins::{BOOL, MESSAGE, NAME, STEP};
+use crate::parser::ast::{self, Options, Term};
+use crate::squirrel::Sanitizable;
+use crate::squirrel::converters::ContextBuilder;
+use crate::squirrel::json::operator::{OperatorName, OperatorNameRef};
+use crate::squirrel::json::{self, NameNameRef, mmacro};
+use crate::{bail_at, error_at};
 
 pub trait ToAst<'a> {
     type Target;

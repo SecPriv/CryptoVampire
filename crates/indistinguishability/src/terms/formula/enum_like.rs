@@ -581,8 +581,7 @@ impl RecFOFormula {
                     // fetch the sort list
                     let sorts = {
                         let sort_exp = args.next().expect("a list of sorts as first arg");
-                        list::try_get(Self::from(sort_exp))
-                            .expect("a list of sorts as first arg")
+                        list::try_get(Self::from(sort_exp)).expect("a list of sorts as first arg")
                     };
                     assert!(!sorts.is_empty(), "should be non-empty binder");
 
@@ -838,7 +837,11 @@ impl RecFOFormula {
     }
 
     #[deprecated]
-    pub fn optimised_binder(_kind: FOBinder, _vars: implvec!(Variable), _arg: RecFOFormula) -> Self {
+    pub fn optimised_binder(
+        _kind: FOBinder,
+        _vars: implvec!(Variable),
+        _arg: RecFOFormula,
+    ) -> Self {
         todo!()
         // ereturn_if!(arg.is_true() || arg.is_false(), arg);
         // let free_vars: Vec<Variable> = (&arg).free_vars_iter().unique().collect();

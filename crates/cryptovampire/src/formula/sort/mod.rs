@@ -3,23 +3,23 @@ pub mod builtins;
 pub mod sort_proxy;
 pub mod sorted;
 use core::fmt::Debug;
-use std::{fmt::Display, hash::Hash, sync::atomic::AtomicU8};
+use std::fmt::Display;
+use std::hash::Hash;
+use std::sync::atomic::AtomicU8;
 
 pub mod inner;
 
-use crate::{
-    container::{
-        StaticContainer,
-        allocator::ContainerTools,
-        contained::Containable,
-        reference::{FORef, Reference},
-    },
-    environement::traits::{KnowsRealm, Realm},
-};
-use utils::{force_lifetime, precise_as_ref::PreciseAsRef, string_ref::StrRef, traits::RefNamed};
+use utils::force_lifetime;
+use utils::precise_as_ref::PreciseAsRef;
+use utils::string_ref::StrRef;
+use utils::traits::RefNamed;
 
 use self::inner::{Index, Other, TermBase, UserEvaluatable};
-
+use crate::container::StaticContainer;
+use crate::container::allocator::ContainerTools;
+use crate::container::contained::Containable;
+use crate::container::reference::{FORef, Reference};
+use crate::environement::traits::{KnowsRealm, Realm};
 
 pub type Sort<'bump> = Reference<'bump, InnerSort<'bump>>;
 pub type FOSort<'bump> = FORef<'bump, InnerSort<'bump>>;
@@ -192,8 +192,11 @@ impl<'a> Sort<'a> {
             // C::alloc_cyclic(
             container,
             |(symbolic, eval)| {
-                let inner_symbolic =
-                    InnerSort::UserEvaluatable(UserEvaluatable::Symbolic { name, eval: *eval, id: new_idx() });
+                let inner_symbolic = InnerSort::UserEvaluatable(UserEvaluatable::Symbolic {
+                    name,
+                    eval: *eval,
+                    id: new_idx(),
+                });
                 let inner_eval = InnerSort::UserEvaluatable(UserEvaluatable::Evaluated {
                     symbolic: *symbolic,
                 });
@@ -233,8 +236,7 @@ impl<'a> Sort<'a> {
     ///
     /// ```rust
     /// use cryptovampire::environement::traits::Realm;
-    ///
-    /// use cryptovampire::formula::sort::builtins::{CONDITION, BOOL};
+    /// use cryptovampire::formula::sort::builtins::{BOOL, CONDITION};
     /// assert!(BOOL.eq_realm(&CONDITION, &Realm::Evaluated))
     /// ```
     pub fn eq_realm<R>(&self, other: &Self, realm: &R) -> bool
@@ -266,7 +268,7 @@ impl<'a> Sort<'a> {
     }
 
     /// gets a "unique" number for each sort
-    /// 
+    ///
     /// This is because I am stupid and now I need it for variables...
     pub(crate) fn get_id_number(&self) -> u16 {
         match self.inner() {
@@ -276,9 +278,13 @@ impl<'a> Sort<'a> {
             InnerSort::Base(TermBase::Condition) => 0x03,
             InnerSort::Other(Other::Name) => 0x04,
             InnerSort::Other(Other::Step) => 0x05,
-            InnerSort::UserEvaluatable(UserEvaluatable::Evaluated { symbolic }) => (symbolic.get_id_number()) | 0o0040,
-            InnerSort::Index(Index {id,..}) => (*id as u16) << 8 | 0o0010,
-            InnerSort::UserEvaluatable(UserEvaluatable::Symbolic {  id,.. }) => (*id as u16) << 8 | 0o0020,
+            InnerSort::UserEvaluatable(UserEvaluatable::Evaluated { symbolic }) => {
+                (symbolic.get_id_number()) | 0o0040
+            }
+            InnerSort::Index(Index { id, .. }) => (*id as u16) << 8 | 0o0010,
+            InnerSort::UserEvaluatable(UserEvaluatable::Symbolic { id, .. }) => {
+                (*id as u16) << 8 | 0o0020
+            }
         }
     }
 
@@ -301,9 +307,9 @@ impl<'a, 'bump: 'a> RefNamed<'a> for &'a InnerSort<'bump> {
 }
 
 /// Counter for [new_idx]
-static SORT_INDEX : AtomicU8 = AtomicU8::new(0);
+static SORT_INDEX: AtomicU8 = AtomicU8::new(0);
 /// Generate a fresh new [u8] to be used as an index for sorts
-/// 
+///
 /// see [Sort::get_id_number]
 fn new_idx() -> u8 {
     let ret = SORT_INDEX.fetch_add(1, ::std::sync::atomic::Ordering::AcqRel);
@@ -315,10 +321,8 @@ fn new_idx() -> u8 {
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        environement::traits::Realm,
-        formula::sort::builtins::{BOOL, CONDITION},
-    };
+    use crate::environement::traits::Realm;
+    use crate::formula::sort::builtins::{BOOL, CONDITION};
 
     #[test]
     pub fn test_eq_realm() {

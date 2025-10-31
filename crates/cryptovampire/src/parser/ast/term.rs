@@ -1,10 +1,10 @@
-use location::ASTLocation;
 use std::ops::{BitAnd, BitOr, Not, Shr};
 
-use crate::formula::utils::Applicable;
+use location::ASTLocation;
 use term_algebra::connective::NOT_NAME;
 
 use super::*;
+use crate::formula::utils::Applicable;
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

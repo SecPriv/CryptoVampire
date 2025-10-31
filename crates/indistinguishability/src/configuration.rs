@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use clap::Parser;
 use steel_derive::Steel;
 
-
 pub use crate::input::prelude::Preludes;
 
 /// A computationnally sound automated cryptographic protocol verifier based on the CCSA.
@@ -16,12 +15,11 @@ pub struct Configuration {
     #[arg(value_name = "FILE")]
     pub file: Option<PathBuf>,
 
-
     /// Maximal number of nodes in the egraph
     #[arg(long, default_value_t = ::golgge::Config::default().node_limit, env)]
     pub node_limit: usize,
     /// Timout for egg
-    #[arg(long, 
+    #[arg(long,
         default_value = dstr(Self::default().time_limit),
         value_parser = ::humantime::parse_duration, env)]
     pub time_limit: std::time::Duration,
@@ -29,8 +27,8 @@ pub struct Configuration {
     #[arg(long, default_value_t = ::golgge::Config::default().iter_limit,env)]
     pub iter_limit: usize,
 
-    #[arg(long, 
-        default_value = dstr(Self::default().vampire_timeout), 
+    #[arg(long,
+        default_value = dstr(Self::default().vampire_timeout),
         value_parser = ::humantime::parse_duration,env)]
     pub vampire_timeout: std::time::Duration,
 
@@ -48,19 +46,18 @@ pub struct Configuration {
     pub prelude_version: Preludes,
 
     /// don't include the cryptovampire prelude.
-    /// 
+    ///
     /// ignore any other option
     #[arg(long)]
     pub no_cryptovampire_prelude: bool,
-    
+
     /// don't include the steel prelude.
-    /// 
+    ///
     /// ignore any other option. This will likely crash if the cryptovampire
     /// prelude is included
     #[arg(long)]
     pub no_steel_prelude: bool,
 }
-
 
 impl Default for Configuration {
     fn default() -> Self {
@@ -80,7 +77,7 @@ impl Default for Configuration {
             depth: u64::MAX,
             prelude_version: Default::default(),
             no_cryptovampire_prelude: false,
-            no_steel_prelude: false
+            no_steel_prelude: false,
         }
     }
 }

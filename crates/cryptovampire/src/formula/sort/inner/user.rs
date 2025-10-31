@@ -1,8 +1,7 @@
-use crate::{
-    environement::traits::{KnowsRealm, Realm},
-    formula::sort::{Sort, new_idx},
-};
 use utils::string_ref::StrRef;
+
+use crate::environement::traits::{KnowsRealm, Realm};
+use crate::formula::sort::{Sort, new_idx};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum UserEvaluatable<'bump> {

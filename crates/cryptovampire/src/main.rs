@@ -1,11 +1,10 @@
-use std::{
-    fs::read_to_string,
-    io::{self, Read},
-};
+use std::fs::read_to_string;
+use std::io::{self, Read};
 
 use clap::Parser;
-use cryptovampire::{Return, cli::Args, init_logger, run_from_cv, squirrel::run_from_json};
-
+use cryptovampire::cli::Args;
+use cryptovampire::squirrel::run_from_json;
+use cryptovampire::{Return, init_logger, run_from_cv};
 use log::trace;
 
 fn main() {
@@ -44,12 +43,10 @@ fn main() {
 
     match output_format {
         cryptovampire::cli::Output::Quiet => (),
-        cryptovampire::cli::Output::Stdout => {
-            match res {
-                Err(e) => panic!("error: {e}"),
-                Ok(res) => eprintln!("{res}")
-            }
-        }
+        cryptovampire::cli::Output::Stdout => match res {
+            Err(e) => panic!("error: {e}"),
+            Ok(res) => eprintln!("{res}"),
+        },
         cryptovampire::cli::Output::JSON => {
             let res = res.map_err(|e| format!("{e:}"));
             println!("{}", serde_json::to_string(&res).unwrap())

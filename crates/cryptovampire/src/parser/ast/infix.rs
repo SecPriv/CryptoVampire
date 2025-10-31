@@ -1,9 +1,8 @@
 use cryptovampire_macros::LocationProvider;
 use location::ASTLocation;
 
-use crate::bail_at;
-
 use super::*;
+use crate::bail_at;
 
 #[derive(Derivative, LocationProvider)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

@@ -2,9 +2,8 @@ use std::fmt::Debug;
 
 use thiserror::Error;
 
-use crate::formula::function::signature::CheckError;
-
 use super::Sort;
+use crate::formula::function::signature::CheckError;
 
 pub trait Sorted<'a> {
     fn sort(&self, args: &[Sort<'a>]) -> Result<Sort<'a>, SortedError>;

@@ -1,23 +1,18 @@
 use std::sync::Arc;
 
-use crate::subterm::kind::{AbsSubtermKindG, SubtermKind, SubtermKindWSort};
-use crate::{
-    formula::{
-        function::signature::{Lazy, Signature},
-        sort::{Sort, builtins::BOOL},
-    },
-    problem::crypto_assumptions::{
-        SubtermEufCmaSignKey, SubtermEufCmaSignMain, SubtermIntCtxtKey, SubtermIntCtxtMain,
-        SubtermIntCtxtRand, SubtermNonce, SubtermUfCmaKey, SubtermUfCmaMain,
-    },
-    static_signature,
-};
 use utils::string_ref::StrRef;
 
-use super::super::{
-    InnerFunction,
-    traits::{MaybeEvaluatable, MaybeFixedSignature},
+use super::super::InnerFunction;
+use super::super::traits::{MaybeEvaluatable, MaybeFixedSignature};
+use crate::formula::function::signature::{Lazy, Signature};
+use crate::formula::sort::Sort;
+use crate::formula::sort::builtins::BOOL;
+use crate::problem::crypto_assumptions::{
+    SubtermEufCmaSignKey, SubtermEufCmaSignMain, SubtermIntCtxtKey, SubtermIntCtxtMain,
+    SubtermIntCtxtRand, SubtermNonce, SubtermUfCmaKey, SubtermUfCmaMain,
 };
+use crate::static_signature;
+use crate::subterm::kind::{AbsSubtermKindG, SubtermKind, SubtermKindWSort};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Subterm<'bump> {
@@ -150,10 +145,10 @@ impl<'bump> MaybeEvaluatable<'bump> for Subterm<'bump> {
 }
 
 mod signature {
-    use crate::formula::{
-        function::signature::{Impossible, Signature},
-        sort::{Sort, builtins::BOOL, sort_proxy::SortProxy},
-    };
+    use crate::formula::function::signature::{Impossible, Signature};
+    use crate::formula::sort::Sort;
+    use crate::formula::sort::builtins::BOOL;
+    use crate::formula::sort::sort_proxy::SortProxy;
 
     #[derive(Debug)]
     pub struct SubtermSignature<'bump> {

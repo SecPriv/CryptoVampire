@@ -1,6 +1,7 @@
-use pattern::apply_pat;
 use std::fmt::{self, Debug, Display};
 use std::sync::Arc;
+
+use pattern::apply_pat;
 
 use crate::*;
 
@@ -12,7 +13,6 @@ use crate::*;
 /// side) and an [`Applier`] (the righthand side).
 /// It additionally stores a name used to refer to the rewrite and a
 /// long name used for debugging.
-///
 #[derive(Clone)]
 #[non_exhaustive]
 pub struct Rewrite<L, N> {
@@ -53,7 +53,6 @@ where
 impl<L: Language, N: Analysis<L>> Rewrite<L, N> {
     /// Create a new [`Rewrite`]. You typically want to use the
     /// [`rewrite!`] macro instead.
-    ///
     pub fn new(
         name: impl Into<Symbol>,
         searcher: impl Searcher<L, N> + Send + Sync + 'static,
@@ -158,7 +157,6 @@ where
 /// A [`Searcher`] is something that can search the egraph and find
 /// matching substitutions.
 /// Right now the only significant [`Searcher`] is [`Pattern`].
-///
 pub trait Searcher<L, N>
 where
     L: Language,
@@ -407,7 +405,6 @@ pub struct ConditionalApplier<C, A> {
     /// [`check`]: Condition::check()
     pub condition: C,
     /// The inner [`Applier`] to call once `condition` passes.
-    ///
     pub applier: A,
 }
 
@@ -463,7 +460,6 @@ where
     ///
     /// `eclass` is the eclass [`Id`] where the match (`subst`) occured.
     /// If this is true, then the [`ConditionalApplier`] will fire.
-    ///
     fn check(&self, egraph: &mut EGraph<L, N>, eclass: Id, subst: &Subst) -> bool;
 
     /// Returns a list of variables that this Condition assumes are bound.
@@ -492,7 +488,6 @@ where
 ///
 /// This condition adds its two [`Pattern`] to the egraph and passes
 /// if and only if they are equivalent (in the same eclass).
-///
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConditionEqual<L> {
     p1: Pattern<L>,
@@ -588,8 +583,9 @@ where
 #[cfg(test)]
 mod tests {
 
-    use crate::{SymbolLang as S, *};
     use std::str::FromStr;
+
+    use crate::{SymbolLang as S, *};
 
     type EGraph = crate::EGraph<S, ()>;
 
@@ -671,11 +667,7 @@ mod tests {
                         subst,
                         rule_name,
                     );
-                    if did_something {
-                        vec![id]
-                    } else {
-                        vec![]
-                    }
+                    if did_something { vec![id] } else { vec![] }
                 } else {
                     let added = egraph.add(S::leaf(&s));
                     if egraph.union(added, eclass) {

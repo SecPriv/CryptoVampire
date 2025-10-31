@@ -1,9 +1,8 @@
 use cryptovampire_macros::LocationProvider;
 use location::ASTLocation;
 
-use crate::error::CVContext;
-
 use super::*;
+use crate::error::CVContext;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, LocationProvider)]
 pub struct ASTList<'str, S> {

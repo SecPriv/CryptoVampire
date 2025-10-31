@@ -1,19 +1,18 @@
 use itertools::{Itertools, izip};
 
-use crate::formula::function::builtin::GREATER_THAN_STEP;
-use crate::formula::utils::Applicable;
-use crate::{
-    environement::environement::Environement,
-    formula::{
-        file_descriptior::{axioms::Axiom, declare::Declaration},
-        formula::{RichFormula, ands, meq, ors},
-        function::builtin::{HAPPENS, LESS_THAN_EQ_STEP, LESS_THAN_STEP, PRED},
-        sort::builtins::STEP,
-        variable::{IntoVariableIter, Variable},
-    },
-    mexists, mforall,
-    problem::{problem::Problem, protocol::OrderingKind},
+use crate::environement::environement::Environement;
+use crate::formula::file_descriptior::axioms::Axiom;
+use crate::formula::file_descriptior::declare::Declaration;
+use crate::formula::formula::{RichFormula, ands, meq, ors};
+use crate::formula::function::builtin::{
+    GREATER_THAN_STEP, HAPPENS, LESS_THAN_EQ_STEP, LESS_THAN_STEP, PRED,
 };
+use crate::formula::sort::builtins::STEP;
+use crate::formula::utils::Applicable;
+use crate::formula::variable::{IntoVariableIter, Variable};
+use crate::problem::problem::Problem;
+use crate::problem::protocol::OrderingKind;
+use crate::{mexists, mforall};
 
 pub fn generate<'bump>(
     assertions: &mut Vec<Axiom<'bump>>,

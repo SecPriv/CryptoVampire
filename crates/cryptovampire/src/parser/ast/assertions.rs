@@ -1,9 +1,8 @@
 use cryptovampire_macros::LocationProvider;
 use location::{ASTLocation, AsASTLocation};
 
-use crate::Error;
-
 use super::*;
+use crate::Error;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum Assert<'str, S> {

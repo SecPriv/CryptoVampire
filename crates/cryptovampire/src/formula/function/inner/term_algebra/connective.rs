@@ -1,21 +1,12 @@
-use crate::{
-    CustomDerive,
-    formula::{
-        function::{
-            Function,
-            builtin::*,
-            signature::{FixedRefSignature, Impossible, Signature},
-            traits::{Evaluatable, FixedSignature},
-        },
-        sort::{
-            builtins::{CONDITION, MESSAGE},
-            sort_proxy::SortProxy,
-        },
-    },
-    static_signature,
-};
-
 use macro_attr::*;
+
+use crate::formula::function::Function;
+use crate::formula::function::builtin::*;
+use crate::formula::function::signature::{FixedRefSignature, Impossible, Signature};
+use crate::formula::function::traits::{Evaluatable, FixedSignature};
+use crate::formula::sort::builtins::{CONDITION, MESSAGE};
+use crate::formula::sort::sort_proxy::SortProxy;
+use crate::{CustomDerive, static_signature};
 
 macro_attr! {
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy,

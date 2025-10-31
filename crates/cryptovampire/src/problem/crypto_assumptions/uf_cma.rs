@@ -1,45 +1,37 @@
 use std::fmt::Display;
-use std::{hash::Hash, sync::Arc};
+use std::hash::Hash;
+use std::sync::Arc;
 
 use derive_builder::Builder;
 use if_chain::if_chain;
 use itertools::{Itertools, chain};
 use log::trace;
-use static_init::dynamic;
-
-use logic_formula::iterators::AllTermsIterator;
-
-use crate::formula::utils::Applicable;
-use crate::formula::utils::formula_expander::NO_REC_MACRO;
-use crate::formula::variable::IntoVariableIter;
-use crate::{
-    environement::{environement::Environement, traits::KnowsRealm},
-    formula::{
-        file_descriptior::{axioms::Axiom, declare::Declaration},
-        formula::{ARichFormula, RichFormula, forall, meq},
-        function::{
-            Function,
-            builtin::{EQUALITY_TA, MESSAGE_TO_BITSTRING},
-            inner::subterm::Subsubterm,
-            signature::StaticSignature,
-        },
-        manipulation::OneVarSubst,
-        sort::builtins::{MESSAGE, NAME},
-        utils::formula_expander::UnfoldFlags,
-        variable::{Variable, uvar},
-    },
-    mexists, mforall,
-    problem::{generator::Generator, problem::Problem},
-    static_signature,
-};
-use crate::{
-    formula::function::builtin::EQUALITY,
-    subterm::{Subterm, into_exist_formula, kind::SubtermKindConstr, traits::SubtermAux},
-};
 use logic_formula::Formula;
+use logic_formula::iterators::AllTermsIterator;
+use static_init::dynamic;
 use utils::utils::print_type;
 
 use super::CryptoFlag;
+use crate::environement::environement::Environement;
+use crate::environement::traits::KnowsRealm;
+use crate::formula::file_descriptior::axioms::Axiom;
+use crate::formula::file_descriptior::declare::Declaration;
+use crate::formula::formula::{ARichFormula, RichFormula, forall, meq};
+use crate::formula::function::Function;
+use crate::formula::function::builtin::{EQUALITY, EQUALITY_TA, MESSAGE_TO_BITSTRING};
+use crate::formula::function::inner::subterm::Subsubterm;
+use crate::formula::function::signature::StaticSignature;
+use crate::formula::manipulation::OneVarSubst;
+use crate::formula::sort::builtins::{MESSAGE, NAME};
+use crate::formula::utils::Applicable;
+use crate::formula::utils::formula_expander::{NO_REC_MACRO, UnfoldFlags};
+use crate::formula::variable::{IntoVariableIter, Variable, uvar};
+use crate::problem::generator::Generator;
+use crate::problem::problem::Problem;
+use crate::subterm::kind::SubtermKindConstr;
+use crate::subterm::traits::SubtermAux;
+use crate::subterm::{Subterm, into_exist_formula};
+use crate::{mexists, mforall, static_signature};
 
 mod subterm;
 pub use subterm::{KeyAux, UfCmaMainSubtAux};

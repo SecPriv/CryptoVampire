@@ -1,13 +1,9 @@
-use crate::formula::{
-    function::{
-        Function,
-        signature::FixedRefSignature,
-        traits::{Evaluatable, FixedSignature},
-    },
-    sort::Sort,
-};
-
 use utils::assert_variance;
+
+use crate::formula::function::Function;
+use crate::formula::function::signature::FixedRefSignature;
+use crate::formula::function::traits::{Evaluatable, FixedSignature};
+use crate::formula::sort::Sort;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct BaseFunction<'bump> {

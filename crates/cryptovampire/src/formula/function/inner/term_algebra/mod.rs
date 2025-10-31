@@ -1,14 +1,18 @@
-use crate::{
-    CustomDerive,
-    environement::traits::{KnowsRealm, Realm},
-};
 use step_macro::Macro;
-use utils::{assert_variance, match_as_trait, string_ref::StrRef, variants};
+use utils::string_ref::StrRef;
+use utils::{assert_variance, match_as_trait, variants};
 
 use self::{
-    base_function::BaseFunction, cell::Cell, connective::Connective, if_then_else::IfThenElse,
-    /* input::Input, */ name_caster::NameCaster, quantifier::Quantifier,
+    base_function::BaseFunction,
+    cell::Cell,
+    connective::Connective,
+    if_then_else::IfThenElse,
+    // input::Input,
+    name_caster::NameCaster,
+    quantifier::Quantifier,
 };
+use crate::CustomDerive;
+use crate::environement::traits::{KnowsRealm, Realm};
 
 pub mod base_function;
 pub mod cell;

@@ -1,9 +1,8 @@
-use std::{
-    backtrace::Backtrace,
-    fmt::{Debug, Display},
-};
+use std::backtrace::Backtrace;
+use std::fmt::{Debug, Display};
 
-use super::{BaseError, Locate, Location, LocationProvider, Result, inner_error::InnerError};
+use super::inner_error::InnerError;
+use super::{BaseError, Locate, Location, LocationProvider, Result};
 
 /// The main error type of cryptovampire, designed to have a light footprint
 ///

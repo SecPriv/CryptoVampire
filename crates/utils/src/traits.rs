@@ -1,4 +1,5 @@
-use std::{error::Error, fmt::Display};
+use std::error::Error;
+use std::fmt::Display;
 
 use super::string_ref::StrRef;
 

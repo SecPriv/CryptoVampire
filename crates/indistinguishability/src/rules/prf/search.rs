@@ -410,7 +410,10 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfVampireRule {
             };
 
             let search = search.search_timepoint(pbl, ptcl, time).collect_vec();
-            tr!("prf needs to checks:\n[\n\t{}\n]", search.iter().join("\n\t"));
+            tr!(
+                "prf needs to checks:\n[\n\t{}\n]",
+                search.iter().join("\n\t")
+            );
             let pbl = egraph.analysis.pbl_mut();
             pbl.find_temp_quantifiers(&search);
             let result = search.into_iter().all(|query| {

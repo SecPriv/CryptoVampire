@@ -1,29 +1,21 @@
 //! The [Runner] for `vampire` and associated surroundings
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+
 use itertools::Itertools;
 use log::debug;
-use std::{
-    path::{Path, PathBuf},
-    process::{Command, Stdio},
-};
 use utils::traits::MyWriteTo;
 
-use crate::{
-    FromEnv, SmtDisplay, ensure,
-    environement::environement::{Environement, Flags},
-    error::CVContext,
-    problem::Problem,
-    runner::{
-        RetCodeAndStdout, exec_cmd,
-        runner::{ChildKind, RunnerOut},
-        searcher::InstanceSearcher,
-    },
-    smt::SmtFile,
-};
-
-use super::{
-    RunnerHandler,
-    runner::{Discoverer, DiscovererError, Runner, RunnerOutI},
-};
+use super::RunnerHandler;
+use super::runner::{Discoverer, DiscovererError, Runner, RunnerOutI};
+use crate::environement::environement::{Environement, Flags};
+use crate::error::CVContext;
+use crate::problem::Problem;
+use crate::runner::runner::{ChildKind, RunnerOut};
+use crate::runner::searcher::InstanceSearcher;
+use crate::runner::{RetCodeAndStdout, exec_cmd};
+use crate::smt::SmtFile;
+use crate::{FromEnv, SmtDisplay, ensure};
 
 /// The [Runner] itself
 #[derive(Debug, Clone)]

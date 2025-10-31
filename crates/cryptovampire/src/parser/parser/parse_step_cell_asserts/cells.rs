@@ -1,12 +1,13 @@
-use crate::error::BaseContext;
-use crate::parser::{Pstr, parser::CellCache};
-use crate::{
-    container::{ScopedContainer, allocator::ContainerTools},
-    problem::cell::InnerMemoryCell,
-};
-use utils::{implvec, string_ref::StrRef};
+use utils::implvec;
+use utils::string_ref::StrRef;
 
 use super::super::Environement;
+use crate::container::ScopedContainer;
+use crate::container::allocator::ContainerTools;
+use crate::error::BaseContext;
+use crate::parser::Pstr;
+use crate::parser::parser::CellCache;
+use crate::problem::cell::InnerMemoryCell;
 
 pub fn parse_cells<'a, 'str, 'bump, S>(
     env: &'a Environement<'bump, 'str, S>,

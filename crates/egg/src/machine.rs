@@ -1,5 +1,6 @@
-use crate::*;
 use std::result;
+
+use crate::*;
 
 type Result = result::Result<(), ()>;
 
@@ -334,11 +335,7 @@ impl<L: Language> Program<L> {
                         .collect();
                     matches.push(Subst { vec: subst_vec });
                     limit -= 1;
-                    if limit != 0 {
-                        Ok(())
-                    } else {
-                        Err(())
-                    }
+                    if limit != 0 { Ok(()) } else { Err(()) }
                 },
             )
             .unwrap_or_default();

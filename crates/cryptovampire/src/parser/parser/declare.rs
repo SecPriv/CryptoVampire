@@ -1,32 +1,28 @@
-use itertools::Either;
 use std::sync::Arc;
 
+use itertools::Either;
+use utils::string_ref::StrRef;
+use utils::traits::NicerError;
+
+use super::super::ast::extra::SnN;
+use super::super::ast::{self, AST, ASTList, Declaration, DeclareFunction, Ident};
 use super::*;
-
-use crate::{
-    bail_at, err_at,
-    error::{CVContext, LocationProvider},
-    parser::{Pstr, ast::extra::AsFunction, error::ParsingError},
-};
-
-use crate::{
-    container::{ScopedContainer, allocator::ContainerTools},
-    formula::function::{
-        Function, InnerFunction,
-        inner::{
-            name::Name,
-            step::StepFunction,
-            term_algebra::{TermAlgebra, cell::Cell},
-        },
-    },
-    formula::sort::Sort,
-    formula::sort::builtins::*,
-    problem::cell::InnerMemoryCell,
-    problem::step::InnerStep,
-};
-use utils::{string_ref::StrRef, traits::NicerError};
-
-use super::super::ast::{self, AST, ASTList, Declaration, DeclareFunction, Ident, extra::SnN};
+use crate::container::ScopedContainer;
+use crate::container::allocator::ContainerTools;
+use crate::error::{CVContext, LocationProvider};
+use crate::formula::function::inner::name::Name;
+use crate::formula::function::inner::step::StepFunction;
+use crate::formula::function::inner::term_algebra::TermAlgebra;
+use crate::formula::function::inner::term_algebra::cell::Cell;
+use crate::formula::function::{Function, InnerFunction};
+use crate::formula::sort::Sort;
+use crate::formula::sort::builtins::*;
+use crate::parser::Pstr;
+use crate::parser::ast::extra::AsFunction;
+use crate::parser::error::ParsingError;
+use crate::problem::cell::InnerMemoryCell;
+use crate::problem::step::InnerStep;
+use crate::{bail_at, err_at};
 
 /// Declare the sort
 pub fn declare_sorts<'str, 'bump, S>(
@@ -61,8 +57,8 @@ where
                 match out {
                     Some(_) => err_at!(
                         s.name_span(),
-                        "!UNREACHABLE!(line {} in {}) \
-The sort name {} somehow reintroduced itself in the hash",
+                        "!UNREACHABLE!(line {} in {}) The sort name {} somehow reintroduced \
+                         itself in the hash",
                         line!(),
                         file!(),
                         name
@@ -213,8 +209,8 @@ where
             .is_some()
         {
             unreachable!(
-                "!UNREACHABLE!(line {} in {}) \
-The function name {} somehow reintroduced itself in the hash",
+                "!UNREACHABLE!(line {} in {}) The function name {} somehow reintroduced itself in \
+                 the hash",
                 line!(),
                 file!(),
                 name

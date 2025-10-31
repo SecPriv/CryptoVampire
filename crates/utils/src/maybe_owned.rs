@@ -1,4 +1,5 @@
-use std::{borrow::Borrow, ops::Deref};
+use std::borrow::Borrow;
+use std::ops::Deref;
 
 #[derive(Debug, Hash, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum MOw<'a, T> {

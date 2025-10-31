@@ -1,23 +1,20 @@
-use std::{
-    io::BufWriter,
-    path::{Path, PathBuf},
-    process::Command,
-    sync::Arc,
-};
+use std::io::BufWriter;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::sync::Arc;
 
 use log::{info, trace};
 use shared_child::SharedChild;
 use tempfile::{Builder, NamedTempFile};
 use thiserror::Error;
 
-use crate::{
-    ensure,
-    environement::environement::Environement,
-    error::BaseError,
-    problem::{Problem, crypto_assumptions::CryptoAssumption},
-};
-
-use super::{RunnerError, dyn_traits, searcher::InstanceSearcher};
+use super::searcher::InstanceSearcher;
+use super::{RunnerError, dyn_traits};
+use crate::ensure;
+use crate::environement::environement::Environement;
+use crate::error::BaseError;
+use crate::problem::Problem;
+use crate::problem::crypto_assumptions::CryptoAssumption;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum RunnerOut<S, U, T, O> {

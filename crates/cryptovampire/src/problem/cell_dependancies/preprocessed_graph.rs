@@ -2,9 +2,9 @@ use hashbrown::HashMap;
 use itertools::Itertools;
 use utils::implvec;
 
-use crate::problem::{cell::MemoryCell, step::Step};
-
 use super::{Ancestors, DependancyGraph, MacroRef};
+use crate::problem::cell::MemoryCell;
+use crate::problem::step::Step;
 
 /// Preprocess all the information currently retrivable from a [DependancyGraph]
 #[derive(Debug, PartialEq, Eq, Clone)]

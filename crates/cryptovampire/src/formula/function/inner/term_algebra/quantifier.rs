@@ -1,23 +1,15 @@
-use std::{
-    fmt::Display,
-    sync::{
-        Arc,
-        atomic::{self, AtomicUsize},
-    },
-};
+use std::fmt::Display;
+use std::sync::Arc;
+use std::sync::atomic::{self, AtomicUsize};
 
 use itertools::{Either, Itertools};
-
-use crate::formula::{
-    formula::ARichFormula,
-    function::{
-        signature::FixedRefSignature,
-        traits::{FixedSignature, MaybeEvaluatable},
-    },
-    sort::builtins::{CONDITION, MESSAGE},
-    variable::Variable,
-};
 use utils::string_ref::StrRef;
+
+use crate::formula::formula::ARichFormula;
+use crate::formula::function::signature::FixedRefSignature;
+use crate::formula::function::traits::{FixedSignature, MaybeEvaluatable};
+use crate::formula::sort::builtins::{CONDITION, MESSAGE};
+use crate::formula::variable::Variable;
 
 static N_QUANTIFIERS: AtomicUsize = AtomicUsize::new(0);
 
@@ -97,7 +89,8 @@ pub fn get_next_quantifer_id() -> usize {
     let id = N_QUANTIFIERS.fetch_add(1, atomic::Ordering::AcqRel);
     if id == usize::MAX {
         panic!(
-            "what do you think you're doing??? {} quantifiers should be enough!\nI can't ensure that the soundness of future quantifier, so I stop here.",
+            "what do you think you're doing??? {} quantifiers should be enough!\nI can't ensure \
+             that the soundness of future quantifier, so I stop here.",
             usize::MAX - 1
         )
     }

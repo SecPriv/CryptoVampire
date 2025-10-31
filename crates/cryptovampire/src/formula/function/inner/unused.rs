@@ -1,9 +1,6 @@
+use super::super::signature::FixedRefSignature;
+use super::super::traits::{FixedSignature, MaybeEvaluatable};
 use crate::formula::sort::Sort;
-
-use super::super::{
-    signature::FixedRefSignature,
-    traits::{FixedSignature, MaybeEvaluatable},
-};
 
 /// A function that needs to exists for one reason or another but should never be used
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

@@ -1,47 +1,37 @@
-use std::{borrow::Borrow, fmt::Display, ops::Deref, sync::Arc};
+use std::borrow::Borrow;
+use std::fmt::Display;
+use std::ops::Deref;
+use std::sync::Arc;
 mod cached_builtins;
 
 use itertools::Itertools;
 use log::{log_enabled, trace, warn};
-
-use crate::{
-    bail_at,
-    error::{CVContext, ExtraOption, LocationProvider},
-    parser::{
-        Pstr,
-        ast::{self, LetIn, Term, extra::SnN},
-        location::ASTLocation,
-        parser::parsing_environement::get_function_mow,
-    },
-};
-use crate::{
-    environement::traits::{KnowsRealm, Realm},
-    formula::{
-        self,
-        formula::{ARichFormula, RichFormula},
-        function::{
-            self, Function,
-            builtin::{IF_THEN_ELSE, IF_THEN_ELSE_TA},
-            inner::term_algebra::TermAlgebra,
-            signature::Signature,
-        },
-        manipulation::OneVarSubstF,
-        sort::{
-            builtins::{BOOL, CONDITION, MESSAGE, NAME, STEP},
-            sort_proxy::SortProxy,
-        },
-        utils::Applicable,
-        variable::{Variable, from_usize, uvar},
-    },
-};
-use utils::{implvec, match_as_trait, string_ref::StrRef, traits::NicerError};
+use utils::string_ref::StrRef;
+use utils::traits::NicerError;
+use utils::{implvec, match_as_trait};
 
 pub(crate) use self::cached_builtins::*;
-
-use super::{
-    Environement,
-    parsing_environement::{FunctionCache, get_sort},
-};
+use super::Environement;
+use super::parsing_environement::{FunctionCache, get_sort};
+use crate::bail_at;
+use crate::environement::traits::{KnowsRealm, Realm};
+use crate::error::{CVContext, ExtraOption, LocationProvider};
+use crate::formula::formula::{ARichFormula, RichFormula};
+use crate::formula::function::builtin::{IF_THEN_ELSE, IF_THEN_ELSE_TA};
+use crate::formula::function::inner::term_algebra::TermAlgebra;
+use crate::formula::function::signature::Signature;
+use crate::formula::function::{self, Function};
+use crate::formula::manipulation::OneVarSubstF;
+use crate::formula::sort::builtins::{BOOL, CONDITION, MESSAGE, NAME, STEP};
+use crate::formula::sort::sort_proxy::SortProxy;
+use crate::formula::utils::Applicable;
+use crate::formula::variable::{Variable, from_usize, uvar};
+use crate::formula::{self};
+use crate::parser::Pstr;
+use crate::parser::ast::extra::SnN;
+use crate::parser::ast::{self, LetIn, Term};
+use crate::parser::location::ASTLocation;
+use crate::parser::parser::parsing_environement::get_function_mow;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct VarProxy<'bump> {
@@ -589,7 +579,8 @@ where
                 } else {
                     bail_at!(
                         app.span(),
-                        "this can only be a plain reference to a step (not just a term of sort {}))",
+                        "this can only be a plain reference to a step (not just a term of sort \
+                         {}))",
                         STEP.name()
                     )
                 };

@@ -156,8 +156,7 @@ impl PRF {
     }
 }
 
-
-        decl_vars!(const; U, V, HM:Bitstring, M:Bitstring, K:Nonce, NK:Nonce, B);
+decl_vars!(const; U, V, HM:Bitstring, M:Bitstring, K:Nonce, NK:Nonce, B);
 
 /// Ochestrating [Rule] for PRF
 ///

@@ -1,35 +1,28 @@
-use std::{
-    fmt::Display,
-    ops::{BitAnd, BitOr, Not, Shr},
-    sync::Arc,
-};
+use std::fmt::Display;
+use std::ops::{BitAnd, BitOr, Not, Shr};
+use std::sync::Arc;
 
 use itertools::{Either, Itertools};
 use logic_formula::{Destructed, Head};
+use utils::implvec;
+use utils::utils::MaybeInvalid;
 
+use crate::formula::formula::ARichFormula;
+use crate::formula::function::Function;
+use crate::formula::function::builtin::{AND, EQUALITY, IMPLIES, NOT, OR};
+use crate::formula::function::signature::Signature;
+use crate::formula::manipulation::{Substitution, Translate};
+use crate::formula::quantifier::Quantifier;
+use crate::formula::sort::Sort;
+use crate::formula::sort::builtins::BOOL;
+use crate::formula::sort::sorted::{Sorted, SortedError};
 use crate::formula::utils::Applicable;
-use crate::formula::{
-    formula::ARichFormula,
-    function::{
-        Function,
-        builtin::{AND, EQUALITY, IMPLIES, NOT, OR},
-        signature::Signature,
-    },
-    manipulation::{Substitution, Translate},
-    quantifier::Quantifier,
-    sort::{
-        Sort,
-        builtins::BOOL,
-        sorted::{Sorted, SortedError},
-    },
-    variable::{Variable, uvar},
-};
-use utils::{implvec, utils::MaybeInvalid};
+use crate::formula::variable::{Variable, uvar};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum RichFormula<'bump> {
     Var(Variable<'bump>),
-    Fun(Function<'bump>, Arc<[ARichFormula<'bump>]>), //Vec<RichFormula<'bump>>),
+    Fun(Function<'bump>, Arc<[ARichFormula<'bump>]>), // Vec<RichFormula<'bump>>),
     Quantifier(Quantifier<'bump>, ARichFormula<'bump>),
 }
 
@@ -337,18 +330,13 @@ mod tests {
     use itertools::Itertools;
     use logic_formula::Formula;
 
-    use crate::formula::utils::Applicable;
-    use crate::{
-        formula::{
-            formula::ARichFormula,
-            function::builtin::CONDITION_TO_BOOL,
-            sort::builtins::{BOOL, CONDITION, STEP},
-            variable::Variable,
-        },
-        mexists, mforall,
-    };
-
     use super::meq;
+    use crate::formula::formula::ARichFormula;
+    use crate::formula::function::builtin::CONDITION_TO_BOOL;
+    use crate::formula::sort::builtins::{BOOL, CONDITION, STEP};
+    use crate::formula::utils::Applicable;
+    use crate::formula::variable::Variable;
+    use crate::{mexists, mforall};
 
     #[test]
     fn free_vars() {

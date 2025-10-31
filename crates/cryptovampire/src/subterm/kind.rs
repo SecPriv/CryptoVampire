@@ -2,16 +2,12 @@ use std::collections::BTreeMap;
 
 use itertools::Itertools;
 use log::trace;
-
-use crate::{
-    environement::environement::Environement,
-    formula::{
-        function::Function,
-        sort::{FOSort, Sort},
-    },
-    problem::Problem,
-};
 use utils::vecref::VecRef;
+
+use crate::environement::environement::Environement;
+use crate::formula::function::Function;
+use crate::formula::sort::{FOSort, Sort};
+use crate::problem::Problem;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub enum AbsSubtermKindG<U, V> {

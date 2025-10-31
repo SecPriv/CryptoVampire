@@ -1,16 +1,15 @@
 // use core::slice::SlicePattern;
 
-use std::{fmt::Display, sync::Arc};
+use std::fmt::Display;
+use std::sync::Arc;
 
 use itertools::Itertools;
-
 use logic_formula::Bounder;
 use utils::implvec;
 
-use super::{
-    sort::{Sort, builtins::BOOL},
-    variable::Variable,
-};
+use super::sort::Sort;
+use super::sort::builtins::BOOL;
+use super::variable::Variable;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum Quantifier<'bump> {

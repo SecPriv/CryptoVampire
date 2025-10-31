@@ -2,18 +2,16 @@ use std::rc::Rc;
 
 use itertools::{Itertools, chain};
 
+use crate::environement::environement::Environement;
+use crate::formula::file_descriptior::axioms::Axiom;
+use crate::formula::file_descriptior::declare::Declaration;
+use crate::formula::formula;
+use crate::formula::function::builtin::PRED;
+use crate::formula::sort::builtins::STEP;
 use crate::formula::utils::Applicable;
-use crate::{
-    environement::environement::Environement,
-    formula::{
-        file_descriptior::{axioms::Axiom, declare::Declaration},
-        formula,
-        function::builtin::PRED,
-        sort::builtins::STEP,
-        variable::{Variable, from_usize},
-    },
-    problem::{Problem, cell::Assignement},
-};
+use crate::formula::variable::{Variable, from_usize};
+use crate::problem::Problem;
+use crate::problem::cell::Assignement;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Cell;

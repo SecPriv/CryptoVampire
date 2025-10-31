@@ -1,7 +1,5 @@
-use crate::formula::function::{
-    signature::Signature,
-    traits::{MaybeEvaluatable, MaybeFixedSignature},
-};
+use crate::formula::function::signature::Signature;
+use crate::formula::function::traits::{MaybeEvaluatable, MaybeFixedSignature};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct IfThenElse;
@@ -31,10 +29,9 @@ impl<'bump> MaybeEvaluatable<'bump> for IfThenElse {
 }
 
 mod signature {
-    use crate::formula::{
-        function::signature::{Impossible, Signature},
-        sort::{builtins::BOOL, sort_proxy::SortProxy},
-    };
+    use crate::formula::function::signature::{Impossible, Signature};
+    use crate::formula::sort::builtins::BOOL;
+    use crate::formula::sort::sort_proxy::SortProxy;
 
     #[derive(Debug, Default)]
     pub struct ITESignature<'bump> {

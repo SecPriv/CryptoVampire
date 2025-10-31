@@ -1,27 +1,35 @@
-use std::{borrow::Cow, fmt::{Debug, Display}, rc::Rc};
+use std::borrow::Cow;
+use std::fmt::{Debug, Display};
+use std::rc::Rc;
+
+use egg::{Analysis, Id, Language, RecExpr};
 
 use crate::Program;
-use egg::{Analysis, Id, Language, RecExpr};
 
 /// Basic prolog-like rules
 mod prolog;
-pub use prolog::{PrologRule, parser::PlOrRw};
+pub use prolog::PrologRule;
+pub use prolog::parser::PlOrRw;
 
 // /// Calls vampire on a goal
 // mod vampire;
 // pub use vampire::VampireRule;
 
-#[derive( Default)]
+#[derive(Default)]
 #[non_exhaustive]
 pub struct Dependancy {
     pub inner: Vec<Vec<Id>>,
     pub cut: bool,
-    pub proof: Option<Rc<dyn Display>>
+    pub proof: Option<Rc<dyn Display>>,
 }
 
 impl Dependancy {
     pub fn new(inner: Vec<Vec<Id>>) -> Self {
-        Self { inner, cut: false, proof: None }
+        Self {
+            inner,
+            cut: false,
+            proof: None,
+        }
     }
 
     pub fn inner(&self) -> &Vec<Vec<Id>> {
@@ -48,7 +56,7 @@ impl Dependancy {
         Dependancy {
             inner: vec![],
             cut: false,
-            proof: None
+            proof: None,
         }
     }
 
@@ -56,7 +64,7 @@ impl Dependancy {
         Dependancy {
             inner: vec![vec![]],
             cut: false,
-            proof: None
+            proof: None,
         }
     }
 

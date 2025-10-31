@@ -1,5 +1,8 @@
 // pub mod builder;
 mod pbl_iterator;
+use std::collections::{BTreeMap, VecDeque};
+use std::sync::Arc;
+
 use derive_builder::Builder;
 use hashbrown::HashSet;
 use log::trace;
@@ -7,36 +10,24 @@ use logic_formula::iterators::UsedVariableIterator;
 pub use pbl_iterator::PblIterator;
 use utils::implvec;
 
-use std::{
-    collections::{BTreeMap, VecDeque},
-    sync::Arc,
-};
-
-use crate::{
-    container::ScopedContainer,
-    environement::environement::Environement,
-    error::BaseError,
-    formula::{
-        file_descriptior::{
-            GeneralFile,
-            axioms::Axiom,
-            declare::{ConstructorDestructor, DataType, Declaration},
-        },
-        formula::ARichFormula,
-        function::{
-            Function, inner::evaluate::Evaluator, name_caster_collection::NameCasterCollection,
-        },
-        sort::{Sort, builtins::CONDITION},
-        variable::{IntoVariableIter, uvar},
-    },
-};
-
-use super::{
-    crypto_assumptions::CryptoAssumption,
-    general_assertions::{self, assertion_preprocessor::propagate_evaluate, order},
-    generator::Generator,
-    protocol::Protocol,
-};
+use super::crypto_assumptions::CryptoAssumption;
+use super::general_assertions::assertion_preprocessor::propagate_evaluate;
+use super::general_assertions::{self, order};
+use super::generator::Generator;
+use super::protocol::Protocol;
+use crate::container::ScopedContainer;
+use crate::environement::environement::Environement;
+use crate::error::BaseError;
+use crate::formula::file_descriptior::GeneralFile;
+use crate::formula::file_descriptior::axioms::Axiom;
+use crate::formula::file_descriptior::declare::{ConstructorDestructor, DataType, Declaration};
+use crate::formula::formula::ARichFormula;
+use crate::formula::function::Function;
+use crate::formula::function::inner::evaluate::Evaluator;
+use crate::formula::function::name_caster_collection::NameCasterCollection;
+use crate::formula::sort::Sort;
+use crate::formula::sort::builtins::CONDITION;
+use crate::formula::variable::{IntoVariableIter, uvar};
 
 #[derive(Debug, Clone, Builder)]
 pub struct Problem<'bump> {

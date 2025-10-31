@@ -12,7 +12,6 @@ pub use weight::MWeight;
 
 mod analysis;
 pub use analysis::{MAnalysis, WeightedAnalysis};
-
 pub use program::Program;
 mod program;
 

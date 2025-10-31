@@ -34,7 +34,8 @@ pub use result::{BaseContext, CVContext, ExtraOption};
 mod anywhere;
 pub use anywhere::Anywhere;
 
-use crate::formula::{function::signature::CheckError, sort::sort_proxy::InferenceError};
+use crate::formula::function::signature::CheckError;
+use crate::formula::sort::sort_proxy::InferenceError;
 
 // pub type CVResult<T, L> = std::result::Result<T, Error<L>>;
 

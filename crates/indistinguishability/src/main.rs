@@ -3,7 +3,6 @@ use std::io::{self, Read};
 use clap::Parser;
 use indistinguishability::{Configuration, init_engine, init_logger};
 
-
 // static CV_PRELUDE: &str = include_str!("./input/prelude.scm");
 pub fn main() {
     init_logger();

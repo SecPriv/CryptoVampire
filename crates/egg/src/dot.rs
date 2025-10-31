@@ -1,55 +1,53 @@
-/*!
-EGraph visualization with [GraphViz]
-
-Use the [`Dot`] struct to visualize an [`EGraph`]
-
-[GraphViz]: https://graphviz.gitlab.io/
-!*/
+//! EGraph visualization with [GraphViz]
+//!
+//! Use the [`Dot`] struct to visualize an [`EGraph`]
+//!
+//! [GraphViz]: https://graphviz.gitlab.io/
+//! !
 
 use std::ffi::OsStr;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::io::{Error, ErrorKind, Result, Write};
 use std::path::Path;
 
-use crate::{egraph::EGraph, Analysis, Language};
+use crate::egraph::EGraph;
+use crate::{Analysis, Language};
 
-/**
-A wrapper for an [`EGraph`] that can output [GraphViz] for
-visualization.
-
-The [`EGraph::dot`](EGraph::dot()) method creates `Dot`s.
-
-# Example
-
-```no_run
-use egg::{*, rewrite as rw};
-
-let rules = &[
-    rw!("mul-commutes"; "(* ?x ?y)" => "(* ?y ?x)"),
-    rw!("mul-two";      "(* ?x 2)" => "(<< ?x 1)"),
-];
-
-let mut egraph: EGraph<SymbolLang, ()> = Default::default();
-egraph.add_expr(&"(/ (* 2 a) 2)".parse().unwrap());
-let egraph = Runner::default().with_egraph(egraph).run(rules).egraph;
-
-// Dot implements std::fmt::Display
-println!("My egraph dot file: {}", egraph.dot());
-
-// create a Dot and then compile it assuming `dot` is on the system
-egraph.dot().to_svg("target/foo.svg").unwrap();
-egraph.dot().to_png("target/foo.png").unwrap();
-egraph.dot().to_pdf("target/foo.pdf").unwrap();
-egraph.dot().to_dot("target/foo.dot").unwrap();
-```
-
-Note that self-edges (from an enode to its containing eclass) will be
-rendered improperly due to a deficiency in GraphViz.
-So the example above will render with an from the "+" enode to itself
-instead of to its own eclass.
-
-[GraphViz]: https://graphviz.gitlab.io/
-**/
+/// A wrapper for an [`EGraph`] that can output [GraphViz] for
+/// visualization.
+///
+/// The [`EGraph::dot`](EGraph::dot()) method creates `Dot`s.
+///
+/// # Example
+///
+/// ```no_run
+/// use egg::{*, rewrite as rw};
+///
+/// let rules = &[
+/// rw!("mul-commutes"; "(* ?x ?y)" => "(* ?y ?x)"),
+/// rw!("mul-two";      "(* ?x 2)" => "(<< ?x 1)"),
+/// ];
+///
+/// let mut egraph: EGraph<SymbolLang, ()> = Default::default();
+/// egraph.add_expr(&"(/ (* 2 a) 2)".parse().unwrap());
+/// let egraph = Runner::default().with_egraph(egraph).run(rules).egraph;
+///
+/// Dot implements std::fmt::Display
+/// println!("My egraph dot file: {}", egraph.dot());
+///
+/// create a Dot and then compile it assuming `dot` is on the system
+/// egraph.dot().to_svg("target/foo.svg").unwrap();
+/// egraph.dot().to_png("target/foo.png").unwrap();
+/// egraph.dot().to_pdf("target/foo.pdf").unwrap();
+/// egraph.dot().to_dot("target/foo.dot").unwrap();
+/// ```
+///
+/// Note that self-edges (from an enode to its containing eclass) will be
+/// rendered improperly due to a deficiency in GraphViz.
+/// So the example above will render with an from the "+" enode to itself
+/// instead of to its own eclass.
+///
+/// [GraphViz]: https://graphviz.gitlab.io/
 pub struct Dot<'a, L: Language, N: Analysis<L>> {
     pub(crate) egraph: &'a EGraph<L, N>,
     /// A list of strings to be output top part of the dot file.
@@ -119,10 +117,10 @@ where
     /// ```no_run
     /// # use egg::*;
     /// # let mut egraph: EGraph<SymbolLang, ()> = Default::default();
-    /// egraph.dot().run(
-    ///     "/path/to/my/dot",
-    ///     &["arg1", "-o", "outfile"]
-    /// ).unwrap();
+    /// egraph
+    ///     .dot()
+    ///     .run("/path/to/my/dot", &["arg1", "-o", "outfile"])
+    ///     .unwrap();
     /// ```
     pub fn run<S1, S2, I>(&self, program: S1, args: I) -> Result<()>
     where

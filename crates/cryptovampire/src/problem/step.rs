@@ -1,31 +1,26 @@
 use core::fmt::Debug;
-use std::{ops::Range, sync::Arc};
+use std::ops::Range;
+use std::sync::Arc;
 
 use itertools::Itertools;
 use logic_formula::Formula;
 use logic_formula::iterators::UsedVariableIterator;
+use utils::precise_as_ref::PreciseAsRef;
+use utils::string_ref::StrRef;
+use utils::traits::RefNamed;
+use utils::utils::{AlreadyInitialized, MaybeInvalid};
+use utils::{assert_variance, implderef, implvec};
 
+use crate::container::allocator::ContainerTools;
+use crate::container::contained::Containable;
+use crate::container::reference::Reference;
+use crate::formula::formula::{ARichFormula, RichFormula, meq};
+use crate::formula::function::builtin::LESS_THAN_STEP;
+use crate::formula::function::inner::step::{InnerStepFuction, StepFunction};
+use crate::formula::function::{Function, InnerFunction};
+use crate::formula::sort::Sort;
 use crate::formula::utils::Applicable;
-use crate::{
-    container::{allocator::ContainerTools, contained::Containable, reference::Reference},
-    formula::{
-        formula::{ARichFormula, RichFormula, meq},
-        function::{
-            Function, InnerFunction,
-            builtin::LESS_THAN_STEP,
-            inner::step::{InnerStepFuction, StepFunction},
-        },
-        sort::Sort,
-        variable::{Variable, uvar},
-    },
-};
-use utils::{
-    assert_variance, implderef, implvec,
-    precise_as_ref::PreciseAsRef,
-    string_ref::StrRef,
-    traits::RefNamed,
-    utils::{AlreadyInitialized, MaybeInvalid},
-};
+use crate::formula::variable::{Variable, uvar};
 
 // #[derive(Debug)]
 // pub struct Protocol {

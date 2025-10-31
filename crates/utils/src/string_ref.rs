@@ -1,16 +1,13 @@
-use std::{
-    any::type_name,
-    borrow::{Borrow, Cow},
-    fmt::{Debug, Display},
-    hash::Hash,
-    marker::PhantomData,
-    ops::Deref,
-    sync::Arc,
-};
+use std::any::type_name;
+use std::borrow::{Borrow, Cow};
+use std::fmt::{Debug, Display};
+use std::hash::Hash;
+use std::marker::PhantomData;
+use std::ops::Deref;
+use std::sync::Arc;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize, de::Visitor};
-
 pub use validator::{TrivialValidator, ValidationError, Validator};
 
 pub type CRc = Arc<str>;

@@ -2,19 +2,15 @@ use if_chain::if_chain;
 use itertools::Itertools;
 use thiserror::Error;
 
-use crate::formula::{formula::ARichFormula, variable::uvar};
-
-use super::{
-    super::{
-        formula::{RichFormula, meq},
-        sort::sorted::SortedError,
-        variable::Variable,
-    },
-    Substitution,
-    substitution::variable_substitution::{
-        MulitpleVarSubstF, MultipleVarSubst, OneVarSubst, OneVarSubstF,
-    },
+use super::super::formula::{RichFormula, meq};
+use super::super::sort::sorted::SortedError;
+use super::super::variable::Variable;
+use super::Substitution;
+use super::substitution::variable_substitution::{
+    MulitpleVarSubstF, MultipleVarSubst, OneVarSubst, OneVarSubstF,
 };
+use crate::formula::formula::ARichFormula;
+use crate::formula::variable::uvar;
 
 #[derive(Debug, Clone)]
 pub struct Unifier<'bump> {
@@ -219,25 +215,18 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::formula::utils::Applicable;
-    use crate::{
-        container::ScopedContainer,
-        formula::{
-            formula,
-            function::{
-                Function,
-                builtin::INPUT,
-                name_caster_collection::{DEFAULT_NAME_CASTER, NameCasterCollection},
-            },
-            sort::{
-                Sort,
-                builtins::{MESSAGE, NAME, STEP},
-            },
-            variable::{Variable, uvar},
-        },
-    };
-
     use super::Unifier;
+    use crate::container::ScopedContainer;
+    use crate::formula::formula;
+    use crate::formula::function::Function;
+    use crate::formula::function::builtin::INPUT;
+    use crate::formula::function::name_caster_collection::{
+        DEFAULT_NAME_CASTER, NameCasterCollection,
+    };
+    use crate::formula::sort::Sort;
+    use crate::formula::sort::builtins::{MESSAGE, NAME, STEP};
+    use crate::formula::utils::Applicable;
+    use crate::formula::variable::{Variable, uvar};
     fn vars<const N: usize>(mut i: uvar, sorts: [Sort<'_>; N]) -> [Variable<'_>; N] {
         sorts.map(|sort| {
             i += 1;

@@ -1,13 +1,13 @@
-use std::{error::Error, fmt::Debug, marker::PhantomData, ops::DerefMut};
+use std::error::Error;
+use std::fmt::Debug;
+use std::marker::PhantomData;
+use std::ops::{Deref, DerefMut};
 
 use if_chain::if_chain;
 use itertools::{Either, Itertools};
-use std::ops::Deref;
 
-use crate::{
-    implvec, mdo,
-    monad::{Monad, MonadFamily, MonadFamilyMember},
-};
+use crate::monad::{Monad, MonadFamily, MonadFamilyMember};
+use crate::{implvec, mdo};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum AllOrOne<U, V> {

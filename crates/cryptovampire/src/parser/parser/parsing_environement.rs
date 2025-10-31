@@ -1,41 +1,35 @@
-use std::{borrow::Borrow, collections::VecDeque, ops::Deref, sync::Arc};
+use std::borrow::Borrow;
+use std::collections::VecDeque;
+use std::ops::Deref;
+use std::sync::Arc;
 
 use hashbrown::{HashMap, HashSet};
 use itertools::Itertools;
 use log::trace;
+use utils::maybe_owned::MOw;
+use utils::string_ref::StrRef;
+use utils::utils::MaybeInvalid;
+use utils::{implderef, implvec};
 
-use crate::{
-    container::ScopedContainer,
-    environement::traits::{KnowsRealm, Realm},
-    formula::{
-        function::{
-            Function,
-            inner::evaluate::Evaluator,
-            name_caster_collection::{DEFAULT_NAME_CASTER, NameCasterCollection},
-        },
-        sort::Sort,
-    },
-    problem::{
-        cell::MemoryCell,
-        problem::{Problem, ProblemBuilder},
-        protocol::Protocol,
-        step::Step,
-    },
+use crate::container::ScopedContainer;
+use crate::environement::traits::{KnowsRealm, Realm};
+use crate::error::{CVContext, LocateHelper};
+use crate::formula::function::Function;
+use crate::formula::function::inner::evaluate::Evaluator;
+use crate::formula::function::name_caster_collection::{DEFAULT_NAME_CASTER, NameCasterCollection};
+use crate::formula::sort::Sort;
+use crate::parser::Pstr;
+use crate::parser::ast::{self, ASTList};
+use crate::parser::error::ParsingError;
+use crate::parser::location::ASTLocation;
+use crate::parser::parser::{
+    parse_assert_with_bvars, parse_asserts_crypto, parse_asserts_with_bvars, parse_cells,
+    parse_orders_with_bvars, parse_steps,
 };
-use crate::{
-    error::{CVContext, LocateHelper},
-    parser::{
-        Pstr,
-        ast::{self, ASTList},
-        error::ParsingError,
-        location::ASTLocation,
-        parser::{
-            parse_assert_with_bvars, parse_asserts_crypto, parse_asserts_with_bvars, parse_cells,
-            parse_orders_with_bvars, parse_steps,
-        },
-    },
-};
-use utils::{implderef, implvec, maybe_owned::MOw, string_ref::StrRef, utils::MaybeInvalid};
+use crate::problem::cell::MemoryCell;
+use crate::problem::problem::{Problem, ProblemBuilder};
+use crate::problem::protocol::Protocol;
+use crate::problem::step::Step;
 
 #[derive(Hash, Clone, PartialEq, Eq, Debug, PartialOrd, Ord)]
 pub struct Macro<'bump, 'str, S> {
@@ -49,12 +43,10 @@ pub struct Macro<'bump, 'str, S> {
 
 pub use cache::{CellCache, FunctionCache, StepCache};
 
-use super::{
-    declare_sorts, fetch_all,
-    parsable_trait::{
-        FALSE_CACHE, FALSE_TA_CACHE, NOT_CACHE, NOT_TA_CACHE, TRUE_CACHE, TRUE_TA_CACHE,
-    },
+use super::parsable_trait::{
+    FALSE_CACHE, FALSE_TA_CACHE, NOT_CACHE, NOT_TA_CACHE, TRUE_CACHE, TRUE_TA_CACHE,
 };
+use super::{declare_sorts, fetch_all};
 
 mod cache;
 

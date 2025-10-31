@@ -1,6 +1,5 @@
-use crate::environement::traits::{KnowsRealm, Realm, RealmMerger};
-
 use super::parsing_environement::Environement;
+use crate::environement::traits::{KnowsRealm, Realm, RealmMerger};
 
 #[derive(Debug, Clone, Copy)]
 pub struct State<'a, 'str, 'bump, S>(RealmMerger<Realm, &'a Environement<'bump, 'str, S>>);

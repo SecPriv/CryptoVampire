@@ -1,16 +1,16 @@
 use core::hash::Hash;
+use std::error::Error;
+use std::fmt::{Debug, Display};
+use std::str::FromStr;
+
 use egg::{ENodeOrVar, FromOp, Id, Language, RecExpr, SymbolLang};
 use itertools::Itertools;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
-use std::{
-    error::Error,
-    fmt::{Debug, Display},
-    str::FromStr,
-};
 use thiserror::Error;
-use utils::{implvec, impossible::Impossible};
+use utils::implvec;
+use utils::impossible::Impossible;
 
 use crate::{Destructed, Formula, Head, head};
 pub trait SimpleDiscriminant: Debug + Clone + Eq + Ord + Hash {

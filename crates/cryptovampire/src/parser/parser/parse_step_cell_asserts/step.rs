@@ -2,27 +2,24 @@ use std::sync::Arc;
 
 use itertools::Itertools;
 use log::trace;
-
-use crate::{
-    container::{ScopedContainer, allocator::ContainerTools},
-    environement::traits::Realm,
-    formula::{
-        sort::builtins::{CONDITION, MESSAGE},
-        variable::{Variable, from_usize},
-    },
-    problem::{cell::Assignement, step::InnerStep},
-};
-use crate::{
-    error::{BaseContext, BaseError, CVContext, ExtraOption},
-    parser::{
-        Pstr,
-        parser::{CellCache, FunctionCache, parsable_trait::Parsable},
-    },
-};
-use utils::{implvec, string_ref::StrRef, traits::NicerError};
-
-use super::super::{super::ast, Environement, StepCache};
 use logic_formula::Formula;
+use utils::implvec;
+use utils::string_ref::StrRef;
+use utils::traits::NicerError;
+
+use super::super::super::ast;
+use super::super::{Environement, StepCache};
+use crate::container::ScopedContainer;
+use crate::container::allocator::ContainerTools;
+use crate::environement::traits::Realm;
+use crate::error::{BaseContext, BaseError, CVContext, ExtraOption};
+use crate::formula::sort::builtins::{CONDITION, MESSAGE};
+use crate::formula::variable::{Variable, from_usize};
+use crate::parser::Pstr;
+use crate::parser::parser::parsable_trait::Parsable;
+use crate::parser::parser::{CellCache, FunctionCache};
+use crate::problem::cell::Assignement;
+use crate::problem::step::InnerStep;
 
 /// parse a step and assign the assignements
 ///

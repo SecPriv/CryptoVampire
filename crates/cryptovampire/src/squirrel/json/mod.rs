@@ -89,7 +89,6 @@ use path::{ISymb, Path};
 
 mod squirrel_dump;
 pub use squirrel_dump::{ProcessedSquirrelDump, SquirrelDump};
-
 pub use term::*;
 mod term;
 
@@ -217,8 +216,10 @@ pub struct Parameters {
 
 #[cfg(test)]
 mod tests {
+    use std::fs::File;
+    use std::io::BufReader;
+
     use paste::paste;
-    use std::{fs::File, io::BufReader};
 
     use super::CryptoVampireCall;
     const ROOT: &'static str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");

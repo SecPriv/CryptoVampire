@@ -1,15 +1,11 @@
-use std::{
-    fmt,
-    ops::{Add, Deref},
-};
+use std::fmt;
+use std::ops::{Add, Deref};
 
 use itertools::Itertools;
 use utils::utils::MaybeInvalid;
 
-use super::{
-    formula::{ARichFormula, RichFormula},
-    sort::Sort,
-};
+use super::formula::{ARichFormula, RichFormula};
+use super::sort::Sort;
 
 /// Alias for the name of varibles
 #[allow(non_camel_case_types)]
@@ -90,7 +86,7 @@ impl<'bump> Add<uvar> for Variable<'bump> {
 }
 
 pub fn sorts_to_variables<'bump, I, I2>(from: uvar, s: impl IntoIterator<Item = I>) -> I2
-//Vec<Variable<'bump>>
+// Vec<Variable<'bump>>
 where
     I: Deref<Target = Sort<'bump>>,
     I2: FromIterator<Variable<'bump>>,

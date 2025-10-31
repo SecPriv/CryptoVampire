@@ -4,12 +4,9 @@ use ast::StrApplicable;
 use convert_order::mk_depends_mutex_lemmas;
 use log::{info, trace};
 
+use super::{Context, *};
 use crate::ast_forall;
 use crate::squirrel::Sanitizable;
-
-use super::Context;
-
-use super::*;
 
 pub fn convert_squirrel_dump(dump: SquirrelDump<'_>) -> RAoO<ast::ASTList<'_, StrRef<'_>>> {
     let pdump = &ProcessedSquirrelDump::from(dump);
@@ -53,16 +50,15 @@ pub fn convert_squirrel_dump(dump: SquirrelDump<'_>) -> RAoO<ast::ASTList<'_, St
         })))
     });
 
-    /* TODO:
-        - [x] add builtin functions
-        - [x] convert known function (e.g. && => and)
-        - [x] declare names
-        - [-] make init step; possibly not needed
-        - [x] assert tuples
-        - [x] assert crypto
-        - [x] ordering
-        - [ ] <> (i.e., !=); maybe using infix
-    */
+    // TODO:
+    // - [x] add builtin functions
+    // - [x] convert known function (e.g. && => and)
+    // - [x] declare names
+    // - [-] make init step; possibly not needed
+    // - [x] assert tuples
+    // - [x] assert crypto
+    // - [x] ordering
+    // - [ ] <> (i.e., !=); maybe using infix
 
     let all: Vec<_> = chain!(
         types,
@@ -115,13 +111,12 @@ fn mk_assertions<'a>() -> [ast::Assert<'a, StrRef<'a>>; 2] {
 
 use assert_crypto::assert_crypto;
 mod assert_crypto {
-    use crate::formula::sort::builtins::{BOOL, MESSAGE};
     use itertools::Either;
     use json::operator::OperatorName;
 
-    use crate::squirrel::{FakeSanitizable, SanitizeKind};
-
     use super::*;
+    use crate::formula::sort::builtins::{BOOL, MESSAGE};
+    use crate::squirrel::{FakeSanitizable, SanitizeKind};
 
     pub fn assert_crypto<'a, 'b>(
         pdump: &'b ProcessedSquirrelDump<'a>,

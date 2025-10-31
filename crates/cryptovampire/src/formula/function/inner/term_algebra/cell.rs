@@ -1,14 +1,8 @@
-use crate::{
-    formula::{
-        function::{
-            Function,
-            signature::FixedRefSignature,
-            traits::{FixedSignature, MaybeEvaluatable},
-        },
-        sort::builtins::{MESSAGE, STEP},
-    },
-    problem::cell::MemoryCell,
-};
+use crate::formula::function::Function;
+use crate::formula::function::signature::FixedRefSignature;
+use crate::formula::function::traits::{FixedSignature, MaybeEvaluatable};
+use crate::formula::sort::builtins::{MESSAGE, STEP};
+use crate::problem::cell::MemoryCell;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Cell<'bump> {

@@ -2,25 +2,19 @@ use std::sync::Arc;
 
 use static_init::dynamic;
 
-use crate::container::StaticContainer;
-use crate::formula::formula::ARichFormula;
-use crate::formula::sort::builtins::{BITSTRING, BOOL, CONDITION, MESSAGE};
-use crate::formula::{formula::RichFormula, sort::builtins::STEP};
-
+use super::inner::booleans::{self, Booleans};
 use super::inner::evaluate::Evaluate;
-
+use super::inner::if_then_else::IfThenElse;
+use super::inner::predicate::Predicate;
 use super::inner::step::StepFunction;
 use super::inner::term_algebra::base_function::BaseFunctionTuple;
 use super::inner::term_algebra::name_caster::NameCaster;
 use super::inner::term_algebra::step_macro::Macro;
 use super::inner::term_algebra::{self, TermAlgebra};
 use super::{Function, InnerFunction, new_static_function};
-
-use super::inner::{
-    booleans::{self, Booleans},
-    if_then_else::IfThenElse,
-    predicate::Predicate,
-};
+use crate::container::StaticContainer;
+use crate::formula::formula::{ARichFormula, RichFormula};
+use crate::formula::sort::builtins::{BITSTRING, BOOL, CONDITION, MESSAGE, STEP};
 
 macro_rules! builtin {
     ($($name:ident),* $(,)?) => {

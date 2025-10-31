@@ -1,53 +1,50 @@
-use crate::*;
-use std::{
-    borrow::BorrowMut,
-    fmt::{self, Debug, Display},
-    marker::PhantomData,
-};
+use std::borrow::BorrowMut;
+use std::fmt::{self, Debug, Display};
+use std::marker::PhantomData;
 
+use log::*;
 #[cfg(feature = "serde-1")]
 use serde::{Deserialize, Serialize};
 
-use log::*;
+use crate::*;
 
-/** A data structure to keep track of equalities between expressions.
-
-Check out the [background tutorial](crate::tutorials::_01_background)
-for more information on e-graphs in general.
-
-# E-graphs in `egg`
-
-In `egg`, the main types associated with e-graphs are
-[`EGraph`], [`EClass`], [`Language`], and [`Id`].
-
-[`EGraph`] and [`EClass`] are all generic over a
-[`Language`], meaning that types actually floating around in the
-egraph are all user-defined.
-In particular, the e-nodes are elements of your [`Language`].
-[`EGraph`]s and [`EClass`]es are additionally parameterized by some
-[`Analysis`], abritrary data associated with each e-class.
-
-Many methods of [`EGraph`] deal with [`Id`]s, which represent e-classes.
-Because eclasses are frequently merged, many [`Id`]s will refer to the
-same e-class.
-
-You can use the `egraph[id]` syntax to get an [`EClass`] from an [`Id`], because
-[`EGraph`] implements
-`Index` and `IndexMut`.
-
-Enabling the `serde-1` feature on this crate will allow you to
-de/serialize [`EGraph`]s using [`serde`](https://serde.rs/).
-You must call [`EGraph::rebuild`] after deserializing an e-graph!
-
-[`add`]: EGraph::add()
-[`union`]: EGraph::union()
-[`rebuild`]: EGraph::rebuild()
-[equivalence relation]: https://en.wikipedia.org/wiki/Equivalence_relation
-[congruence relation]: https://en.wikipedia.org/wiki/Congruence_relation
-[dot]: Dot
-[extract]: Extractor
-[sound]: https://itinerarium.github.io/phoneme-synthesis/?w=/'igraf/
-**/
+/// A data structure to keep track of equalities between expressions.
+///
+/// Check out the [background tutorial](crate::tutorials::_01_background)
+/// for more information on e-graphs in general.
+///
+/// # E-graphs in `egg`
+///
+/// In `egg`, the main types associated with e-graphs are
+/// [`EGraph`], [`EClass`], [`Language`], and [`Id`].
+///
+/// [`EGraph`] and [`EClass`] are all generic over a
+/// [`Language`], meaning that types actually floating around in the
+/// egraph are all user-defined.
+/// In particular, the e-nodes are elements of your [`Language`].
+/// [`EGraph`]s and [`EClass`]es are additionally parameterized by some
+/// [`Analysis`], abritrary data associated with each e-class.
+///
+/// Many methods of [`EGraph`] deal with [`Id`]s, which represent e-classes.
+/// Because eclasses are frequently merged, many [`Id`]s will refer to the
+/// same e-class.
+///
+/// You can use the `egraph[id]` syntax to get an [`EClass`] from an [`Id`], because
+/// [`EGraph`] implements
+/// `Index` and `IndexMut`.
+///
+/// Enabling the `serde-1` feature on this crate will allow you to
+/// de/serialize [`EGraph`]s using [`serde`](https://serde.rs/).
+/// You must call [`EGraph::rebuild`] after deserializing an e-graph!
+///
+/// [`add`]: EGraph::add()
+/// [`union`]: EGraph::union()
+/// [`rebuild`]: EGraph::rebuild()
+/// [equivalence relation]: https://en.wikipedia.org/wiki/Equivalence_relation
+/// [congruence relation]: https://en.wikipedia.org/wiki/Congruence_relation
+/// [dot]: Dot
+/// [extract]: Extractor
+/// [sound]: https://itinerarium.github.io/phoneme-synthesis/?w=/'igraf/
 #[derive(Clone)]
 #[cfg_attr(feature = "serde-1", derive(Serialize, Deserialize))]
 pub struct EGraph<L: Language, N: Analysis<L>> {
@@ -154,7 +151,7 @@ impl<L: Language, N: Analysis<L>> EGraph<L, N> {
     /// Returns `true` if the egraph is empty
     /// # Example
     /// ```
-    /// use egg::{*, SymbolLang as S};
+    /// use egg::{SymbolLang as S, *};
     /// let mut egraph = EGraph::<S, ()>::default();
     /// assert!(egraph.is_empty());
     /// egraph.add(S::leaf("foo"));
@@ -169,7 +166,7 @@ impl<L: Language, N: Analysis<L>> EGraph<L, N> {
     /// Actually returns the size of the hashcons index.
     /// # Example
     /// ```
-    /// use egg::{*, SymbolLang as S};
+    /// use egg::{SymbolLang as S, *};
     /// let mut egraph = EGraph::<S, ()>::default();
     /// let x = egraph.add(S::leaf("x"));
     /// let y = egraph.add(S::leaf("y"));
@@ -233,7 +230,10 @@ impl<L: Language, N: Analysis<L>> EGraph<L, N> {
     /// Make a copy of the egraph with the same nodes, but no unions between them.
     pub fn copy_without_unions(&self, analysis: N) -> Self {
         if self.explain.is_none() {
-            panic!("Use runner.with_explanations_enabled() or egraph.with_explanations_enabled() before running to get a copied egraph without unions");
+            panic!(
+                "Use runner.with_explanations_enabled() or egraph.with_explanations_enabled() \
+                 before running to get a copied egraph without unions"
+            );
         }
         let mut egraph = Self::new(analysis);
         for node in &self.nodes {
@@ -430,7 +430,10 @@ impl<L: Language, N: Analysis<L>> EGraph<L, N> {
         if let Some(explain) = &self.explain {
             explain.get_union_equalities()
         } else {
-            panic!("Use runner.with_explanations_enabled() or egraph.with_explanations_enabled() before running to get union equalities");
+            panic!(
+                "Use runner.with_explanations_enabled() or egraph.with_explanations_enabled() \
+                 before running to get union equalities"
+            );
         }
     }
 
@@ -453,7 +456,10 @@ impl<L: Language, N: Analysis<L>> EGraph<L, N> {
                 .with_nodes(&self.nodes)
                 .get_num_congr::<N>(&self.classes, &self.unionfind)
         } else {
-            panic!("Use runner.with_explanations_enabled() or egraph.with_explanations_enabled() before running to get explanations.")
+            panic!(
+                "Use runner.with_explanations_enabled() or egraph.with_explanations_enabled() \
+                 before running to get explanations."
+            )
         }
     }
 
@@ -462,7 +468,10 @@ impl<L: Language, N: Analysis<L>> EGraph<L, N> {
         if let Some(explain) = &mut self.explain {
             explain.with_nodes(&self.nodes).get_num_nodes()
         } else {
-            panic!("Use runner.with_explanations_enabled() or egraph.with_explanations_enabled() before running to get explanations.")
+            panic!(
+                "Use runner.with_explanations_enabled() or egraph.with_explanations_enabled() \
+                 before running to get explanations."
+            )
         }
     }
 
@@ -505,7 +514,10 @@ impl<L: Language, N: Analysis<L>> EGraph<L, N> {
                 &self.classes,
             )
         } else {
-            panic!("Use runner.with_explanations_enabled() or egraph.with_explanations_enabled() before running to get explanations.")
+            panic!(
+                "Use runner.with_explanations_enabled() or egraph.with_explanations_enabled() \
+                 before running to get explanations."
+            )
         }
     }
 
@@ -533,7 +545,10 @@ impl<L: Language, N: Analysis<L>> EGraph<L, N> {
                 &self.classes,
             )
         } else {
-            panic!("Use runner.with_explanations_enabled() or egraph.with_explanations_enabled() before running to get explanations.");
+            panic!(
+                "Use runner.with_explanations_enabled() or egraph.with_explanations_enabled() \
+                 before running to get explanations."
+            );
         }
     }
 
@@ -544,7 +559,7 @@ impl<L: Language, N: Analysis<L>> EGraph<L, N> {
     ///
     /// # Example
     /// ```
-    /// use egg::{*, SymbolLang as S};
+    /// use egg::{SymbolLang as S, *};
     /// let mut egraph = EGraph::<S, ()>::default();
     /// let x = egraph.add(S::leaf("x"));
     /// let y = egraph.add(S::leaf("y"));
@@ -686,11 +701,11 @@ where
 /// # }
 ///
 /// // some external library function
-/// pub fn external(egraph: EGraph<SymbolLang, ()>) { }
+/// pub fn external(egraph: EGraph<SymbolLang, ()>) {}
 ///
 /// fn do_thing(egraph: EGraph<MyLang, ()>) {
-///   // how do I call external?
-///   external(todo!())
+///     // how do I call external?
+///     external(todo!())
 /// }
 /// ```
 ///
@@ -806,7 +821,7 @@ impl<L: Language, N: Analysis<L>> EGraph<L, N> {
     ///
     /// # Example
     /// ```
-    /// use egg::{*, SymbolLang as S};
+    /// use egg::{SymbolLang as S, *};
     /// let mut egraph = EGraph::<S, ()>::default();
     /// let x = egraph.add(S::leaf("x"));
     /// let y = egraph.add(S::leaf("y"));
@@ -1061,7 +1076,6 @@ impl<L: Language, N: Analysis<L>> EGraph<L, N> {
     /// Checks whether two [`RecExpr`]s are equivalent.
     /// Returns a list of id where both expression are represented.
     /// In most cases, there will none or exactly one id.
-    ///
     pub fn equivs(&self, expr1: &RecExpr<L>, expr2: &RecExpr<L>) -> Vec<Id> {
         let pat1 = Pattern::from(expr1);
         let pat2 = Pattern::from(expr2);
@@ -1228,10 +1242,7 @@ impl<L: Language + Display, N: Analysis<L>> EGraph<L, N> {
             if matches.is_none() {
                 let best = Extractor::new(self, AstSize).find_best(id).1;
                 panic!(
-                    "Could not prove goal {}:\n\
-                     {}\n\
-                     Best thing found:\n\
-                     {}",
+                    "Could not prove goal {}:\n{}\nBest thing found:\n{}",
                     i,
                     goal.pretty(40),
                     best.pretty(40),

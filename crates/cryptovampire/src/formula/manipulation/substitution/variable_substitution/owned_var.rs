@@ -1,15 +1,9 @@
 use itertools::Itertools;
 
-use crate::formula::{
-    formula::ARichFormula,
-    variable::{Variable, uvar},
-};
-
 use super::super::substitution::Substitution;
-
-use crate::formula::formula::RichFormula;
-
 use super::OneVarSubst;
+use crate::formula::formula::{ARichFormula, RichFormula};
+use crate::formula::variable::{Variable, uvar};
 
 /// List of [OneVarSubst], to more easily deal with the substitution of mulitple variables.
 ///

@@ -7,27 +7,22 @@
 //  - builds useful macros
 //  - defines a bunch of re-exported module for each sub-ASTs
 
-use std::{
-    fmt::Display,
-    slice::{self, Iter},
-    sync::Arc,
-};
+use std::fmt::Display;
+use std::slice::{self, Iter};
+use std::sync::Arc;
 
 use derivative::Derivative;
 use itertools::{Itertools, chain};
 use log::trace;
-use pest::{Parser, iterators::Pair};
-
-use crate::{
-    INIT_STEP_NAME,
-    formula::function::{
-        builtin,
-        inner::term_algebra::{self},
-    },
-};
-use utils::{destvec, implvec, match_as_trait, vecref::VecRef};
+use pest::Parser;
+use pest::iterators::Pair;
+use utils::vecref::VecRef;
+use utils::{destvec, implvec, match_as_trait};
 
 use super::*;
+use crate::INIT_STEP_NAME;
+use crate::formula::function::builtin;
+use crate::formula::function::inner::term_algebra::{self};
 
 // =========================================================
 // ======================= macros ==========================
@@ -35,7 +30,7 @@ use super::*;
 
 // FIXME!
 macro_rules! unreachable_rules {
-    ($span:expr, $urule:expr; $($rule:ident),* ) => {
+    ($span:expr, $urule:expr; $($rule:ident),*) => {
         // $span.wrong_rule(vec![$(Rule::$rule),+], vec![$urule])?
         unreachable!()
     };

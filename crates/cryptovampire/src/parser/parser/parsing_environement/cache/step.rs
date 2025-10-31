@@ -1,18 +1,18 @@
 use std::sync::Arc;
 
-use crate::parser::{FromStaticString, ast, parser::parsable_trait::VarProxy};
-use crate::{
-    formula::{
-        formula::ARichFormula,
-        function::{Function, builtin::INPUT},
-        manipulation::{FrozenSubst, FrozenSubstF, OneVarSubst, OneVarSubstF},
-        sort::{Sort, builtins::MESSAGE},
-        utils::Applicable,
-        variable::{Variable, uvar},
-    },
-    problem::step::Step,
-};
 use itertools::izip;
+
+use crate::formula::formula::ARichFormula;
+use crate::formula::function::Function;
+use crate::formula::function::builtin::INPUT;
+use crate::formula::manipulation::{FrozenSubst, FrozenSubstF, OneVarSubst, OneVarSubstF};
+use crate::formula::sort::Sort;
+use crate::formula::sort::builtins::MESSAGE;
+use crate::formula::utils::Applicable;
+use crate::formula::variable::{Variable, uvar};
+use crate::parser::parser::parsable_trait::VarProxy;
+use crate::parser::{FromStaticString, ast};
+use crate::problem::step::Step;
 
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct StepCache<'str, 'bump, S> {

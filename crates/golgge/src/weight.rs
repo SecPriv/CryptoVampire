@@ -1,4 +1,5 @@
-use std::{iter::Sum, ops::Add};
+use std::iter::Sum;
+use std::ops::Add;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Default)]
 pub struct SuperTuple<U, V>(pub U, pub V);

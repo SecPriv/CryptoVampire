@@ -1,5 +1,6 @@
-use itertools::Itertools;
 use std::str::FromStr;
+
+use itertools::Itertools;
 use thiserror::Error;
 
 use crate::*;
@@ -48,7 +49,10 @@ impl<L: Language> MultiPattern<L> {
     ///
     /// let multipattern = MultiPattern::new(vec![(v1, f_pat), (v2, g_pat)]);
     /// // you can also parse multipatterns
-    /// assert_eq!(multipattern, "?v1 = (f ?x ?y), ?v2 = (g ?x ?y)".parse().unwrap());
+    /// assert_eq!(
+    ///     multipattern,
+    ///     "?v1 = (f ?x ?y), ?v2 = (g ?x ?y)".parse().unwrap()
+    /// );
     ///
     /// assert_eq!(multipattern.n_matches(&egraph), 2);
     /// ```

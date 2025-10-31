@@ -1,21 +1,18 @@
 //! The modules with the building and using the [DependancyGraph]
 
-use std::{hash::Hash, sync::Arc};
+use std::hash::Hash;
+use std::sync::Arc;
 
 use itertools::Itertools;
-
-use crate::{
-    error::BaseError,
-    formula::formula::ARichFormula,
-    problem::{cell::MemoryCell, step::Step},
-};
+use thiserror::Error;
 use utils::implvec;
 
-use super::{
-    Ancestors, MacroRef, PreprocessedDependancyGraph,
-    call::{InputCall, StepCall},
-};
-use thiserror::Error;
+use super::call::{InputCall, StepCall};
+use super::{Ancestors, MacroRef, PreprocessedDependancyGraph};
+use crate::error::BaseError;
+use crate::formula::formula::ARichFormula;
+use crate::problem::cell::MemoryCell;
+use crate::problem::step::Step;
 mod process_functions;
 
 #[derive(Debug, Error)]

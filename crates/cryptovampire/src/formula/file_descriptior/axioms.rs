@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use crate::formula::{formula::ARichFormula, function::Function, sort::Sort, variable::Variable};
+use crate::formula::formula::ARichFormula;
+use crate::formula::function::Function;
+use crate::formula::sort::Sort;
+use crate::formula::variable::Variable;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Axiom<'bump> {

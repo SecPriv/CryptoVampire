@@ -1,10 +1,6 @@
-use crate::{
-    formula::{
-        function::traits::{FixedSignature, MaybeEvaluatable},
-        sort::builtins::{CONDITION, MESSAGE},
-    },
-    static_signature,
-};
+use crate::formula::function::traits::{FixedSignature, MaybeEvaluatable};
+use crate::formula::sort::builtins::{CONDITION, MESSAGE};
+use crate::static_signature;
 
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Default)]
 pub struct IfThenElse;

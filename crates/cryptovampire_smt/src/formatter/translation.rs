@@ -15,8 +15,7 @@ macro_rules! sexpr {
 };
 }
 /// Translates an `SmtFormula` into a generic `Term`.
-pub fn translate_formula_to_term<U:SmtParam>(formula: &SmtFormula<U>) -> Term
-{
+pub fn translate_formula_to_term<U: SmtParam>(formula: &SmtFormula<U>) -> Term {
     match formula {
         SmtFormula::Var(v) => Term::atom(v),
         SmtFormula::True => Term::atom("true"),
@@ -54,20 +53,18 @@ pub fn translate_formula_to_term<U:SmtParam>(formula: &SmtFormula<U>) -> Term
 }
 
 /// Helper for n-ary operators like `and`, `or`, `=`, `distinct`.
-fn n_ary_op_to_term<U:SmtParam>(op: &str, formulas: &[SmtFormula<U>]) -> Term
-{
+fn n_ary_op_to_term<U: SmtParam>(op: &str, formulas: &[SmtFormula<U>]) -> Term {
     let mut terms = vec![Term::Atom(op.to_string(), None)];
     terms.extend(formulas.iter().map(translate_formula_to_term));
     Term::SExpr(terms, None)
 }
 
 /// Helper for quantifiers `forall` and `exists`.
-fn quantifier_to_term<U:SmtParam>(
+fn quantifier_to_term<U: SmtParam>(
     quantifier: &str,
     vars: &[U::SVar],
     formula: &SmtFormula<U>,
-) -> Term
-{
+) -> Term {
     let var_list = Term::sexpr(
         vars.iter()
             .map(|sv| Term::sexpr(vec![Term::atom(&sv), Term::atom(sv.sort_ref())])),
@@ -80,8 +77,7 @@ fn quantifier_to_term<U:SmtParam>(
 }
 
 /// Translates a top-level `Smt` command into a generic `Term`.
-pub fn translate_smt_to_term<U:SmtParam>(smt: &Smt<U>) -> Term
-{
+pub fn translate_smt_to_term<U: SmtParam>(smt: &Smt<U>) -> Term {
     match smt {
         Smt::Assert(formula) => {
             Term::sexpr([Term::atom("assert"), translate_formula_to_term(formula)])
@@ -103,13 +99,12 @@ pub fn translate_smt_to_term<U:SmtParam>(smt: &Smt<U>) -> Term
             let cons_decs = Term::sexpr(cons.iter().map(|con_group| {
                 Term::sexpr(con_group.iter().map(|SmtCons { fun, sorts, dest }| {
                     let mut c_terms = vec![Term::atom(fun)];
-                    c_terms.extend(
-                        izip!(dest.iter(), sorts.iter()).enumerate()
-                            .map(|(i, (sel_name, sel_sort))| match sel_name {
-                                Some(sel_name) => sexpr![sel_name, sel_sort],
-                                None => sexpr![format!("{fun}$_dest_{i:}"), sel_sort],
-                            } ),
-                    );
+                    c_terms.extend(izip!(dest.iter(), sorts.iter()).enumerate().map(
+                        |(i, (sel_name, sel_sort))| match sel_name {
+                            Some(sel_name) => sexpr![sel_name, sel_sort],
+                            None => sexpr![format!("{fun}$_dest_{i:}"), sel_sort],
+                        },
+                    ));
 
                     Term::sexpr(c_terms)
                 }))

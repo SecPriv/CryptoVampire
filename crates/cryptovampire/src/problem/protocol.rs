@@ -1,16 +1,14 @@
-use once_cell::sync::OnceCell;
 use std::rc::Rc;
 
 use itertools::{Itertools, chain};
-
-use crate::formula::{formula::ARichFormula, variable::uvar};
+use once_cell::sync::OnceCell;
 use utils::implvec;
 
-use super::{
-    cell::{Assignement, MemoryCell},
-    cell_dependancies::PreprocessedDependancyGraph,
-    step::Step,
-};
+use super::cell::{Assignement, MemoryCell};
+use super::cell_dependancies::PreprocessedDependancyGraph;
+use super::step::Step;
+use crate::formula::formula::ARichFormula;
+use crate::formula::variable::uvar;
 use crate::subterm::FormlAndVars;
 
 mod ordering;

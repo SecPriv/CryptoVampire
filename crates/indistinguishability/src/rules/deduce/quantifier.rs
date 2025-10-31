@@ -208,7 +208,6 @@ impl<U> Parameters<U> {
             _ => {None}
         })
     }
-
 }
 
 impl QuantifierRule {
@@ -235,7 +234,6 @@ impl QuantifierRule {
             sort1_cons,
             sort2_cons,
             other,
-            
             ..
         } = &DEFAULT_PARAMERTERS;
         let deduce_m = &BIT_DEDUCE;

@@ -1,11 +1,14 @@
 //! Slice-like object for references
 //!
 //! See [VecRef]
-use std::{borrow::Cow, iter::FusedIterator, ops::Index, slice::Iter, sync::Arc};
-
-use crate::match_as_trait;
+use std::borrow::Cow;
+use std::iter::FusedIterator;
+use std::ops::Index;
+use std::slice::Iter;
+use std::sync::Arc;
 
 use super::arc_into_iter::ArcIntoIter;
+use crate::match_as_trait;
 
 /// Slice-like object for references
 ///

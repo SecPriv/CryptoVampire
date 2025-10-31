@@ -5,36 +5,32 @@ mod nonce;
 mod uf_cma;
 mod unfolding;
 
-use itertools::Itertools;
-pub use nonce::SubtermNonce;
-
-pub use uf_cma::{
-    SubtermUfCmaKey, SubtermUfCmaMain, UF_CMA_MAC_SIGNATURE, UF_CMA_VERIFY_SIGNATURE, UfCmaBuilder,
-};
-
 pub use euf_cma::{
     EUF_CMA_PK_SIGNATURE, EUF_CMA_SIGN_SIGNATURE, EUF_CMA_VERIFY_SIGNATURE, SubtermEufCmaSignKey,
     SubtermEufCmaSignMain,
 };
-
 pub use int_ctxt::{
     INT_CTXT_DEC_SIGNATURE, INT_CTXT_ENC_SIGNATURE, INT_CTXT_FAIL_SIGNATURE,
     INT_CTXT_VERIFY_SIGNATURE, SubtermIntCtxtKey, SubtermIntCtxtMain, SubtermIntCtxtRand,
 };
+use itertools::Itertools;
+pub use nonce::SubtermNonce;
+pub use uf_cma::{
+    SubtermUfCmaKey, SubtermUfCmaMain, UF_CMA_MAC_SIGNATURE, UF_CMA_VERIFY_SIGNATURE, UfCmaBuilder,
+};
+pub use unfolding::*;
 use utils::implvec;
-
-use crate::environement::environement::Environement;
-use crate::formula::file_descriptior::{axioms::Axiom, declare::Declaration};
 
 use self::cell::Cell;
 pub use self::euf_cma::EufCma;
 pub use self::int_ctxt::IntCtxt;
 pub use self::nonce::Nonce;
 pub use self::uf_cma::UfCma;
-pub use unfolding::*;
-
 use super::generator::Generator;
 use super::problem::Problem;
+use crate::environement::environement::Environement;
+use crate::formula::file_descriptior::axioms::Axiom;
+use crate::formula::file_descriptior::declare::Declaration;
 
 // should be quick to copy
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

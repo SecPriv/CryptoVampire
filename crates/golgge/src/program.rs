@@ -172,8 +172,9 @@ where
     }
 
     #[cfg(debug_assertions)]
-    pub fn set_eq_rules(&mut self, new: Vec<Rewrite<L, N>>)where
-    L: Display
+    pub fn set_eq_rules(&mut self, new: Vec<Rewrite<L, N>>)
+    where
+        L: Display,
     {
         self.egraph_mut().clean = false;
         self.eq_rules = new;
@@ -187,8 +188,9 @@ where
     }
 
     #[cfg(not(debug_assertions))]
-    pub fn set_eq_rules(&mut self, new: Vec<Rewrite<L, N>>)where
-    L: Display
+    pub fn set_eq_rules(&mut self, new: Vec<Rewrite<L, N>>)
+    where
+        L: Display,
     {
         self.egraph_mut().clean = false;
         self.eq_rules = new;

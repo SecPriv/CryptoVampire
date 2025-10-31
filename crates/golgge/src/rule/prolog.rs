@@ -99,7 +99,6 @@ where
             .substs
             .into_iter()
             .filter_map(|subst| {
-
                 let deps: Vec<Id> = self
                     .deps
                     .iter()
@@ -114,7 +113,7 @@ where
             })
             .collect();
         prgm.config.node_limit += inner.iter().map(|x| x.len()).sum::<usize>();
-        
+
         Dependancy {
             inner,
             cut: self.cut,

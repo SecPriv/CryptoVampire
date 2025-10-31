@@ -3,21 +3,19 @@ mod fixed_signature;
 mod lazy_signature;
 mod partial_signature;
 
-pub use lazy_signature::Lazy;
+use std::fmt::Display;
+use std::ops::RangeInclusive;
 
 pub use error::CheckError;
 pub use fixed_signature::{FixedRefSignature, StaticSignature};
-pub use partial_signature::{OnlyArgsSignature, OnlyArgsSignatureProxy};
-
-use std::{fmt::Display, ops::RangeInclusive};
-
 use itertools::{Itertools, MapInto};
-
-use crate::{
-    environement::traits::{KnowsRealm, Realm},
-    formula::sort::{Sort, sort_proxy::SortProxy},
-};
+pub use lazy_signature::Lazy;
+pub use partial_signature::{OnlyArgsSignature, OnlyArgsSignatureProxy};
 use utils::infinity::Infinity;
+
+use crate::environement::traits::{KnowsRealm, Realm};
+use crate::formula::sort::Sort;
+use crate::formula::sort::sort_proxy::SortProxy;
 
 /// A very general trait of what should be a signature of a function
 pub trait Signature<'bump>: Sized + std::fmt::Debug {

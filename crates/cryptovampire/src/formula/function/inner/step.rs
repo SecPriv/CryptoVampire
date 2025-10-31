@@ -1,12 +1,11 @@
-use crate::{CustomDerive, formula::sort::builtins::STEP, problem::step::Step, static_signature};
+use macro_attr::*;
 use utils::assert_variance;
 
-use super::super::{
-    signature::FixedRefSignature,
-    traits::{FixedSignature, MaybeEvaluatable},
-};
-
-use macro_attr::*;
+use super::super::signature::FixedRefSignature;
+use super::super::traits::{FixedSignature, MaybeEvaluatable};
+use crate::formula::sort::builtins::STEP;
+use crate::problem::step::Step;
+use crate::{CustomDerive, static_signature};
 macro_attr! {
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone,
         CustomDerive!(maybe_evaluate, 'bump),

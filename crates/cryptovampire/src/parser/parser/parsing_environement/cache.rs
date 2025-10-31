@@ -4,22 +4,14 @@ use derivative::Derivative;
 
 mod step;
 pub use step::StepCache;
-
-use crate::parser::ast;
-use crate::{
-    formula::{
-        function::{
-            Function,
-            signature::{FixedRefSignature, Lazy, Signature},
-        },
-        sort::{
-            Sort,
-            builtins::{MESSAGE, STEP},
-        },
-    },
-    problem::cell::{Assignement, MemoryCell},
-};
 use utils::vecref::VecRefClone;
+
+use crate::formula::function::Function;
+use crate::formula::function::signature::{FixedRefSignature, Lazy, Signature};
+use crate::formula::sort::Sort;
+use crate::formula::sort::builtins::{MESSAGE, STEP};
+use crate::parser::ast;
+use crate::problem::cell::{Assignement, MemoryCell};
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum FunctionCache<'str, 'bump, S> {

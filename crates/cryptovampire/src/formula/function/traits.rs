@@ -1,4 +1,5 @@
-use super::{Function, signature::FixedRefSignature};
+use super::Function;
+use super::signature::FixedRefSignature;
 
 // =========================================================
 // =================== FixedSignature ======================

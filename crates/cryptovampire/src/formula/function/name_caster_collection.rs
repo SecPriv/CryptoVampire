@@ -2,13 +2,12 @@ use std::collections::BTreeMap;
 
 use static_init::dynamic;
 
+use super::Function;
+use super::builtin::NAME_TO_MESSAGE;
+use crate::formula::formula::ARichFormula;
+use crate::formula::sort::builtins::MESSAGE;
+use crate::formula::sort::{FOSort, Sort};
 use crate::formula::utils::Applicable;
-use crate::formula::{
-    formula::ARichFormula,
-    sort::{FOSort, Sort, builtins::MESSAGE},
-};
-
-use super::{Function, builtin::NAME_TO_MESSAGE};
 
 #[dynamic]
 pub static DEFAULT_NAME_CASTER: NameCasterCollection<'static> = NameCasterCollection {

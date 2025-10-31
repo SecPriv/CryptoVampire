@@ -1,10 +1,4 @@
 #![allow(clippy::only_used_in_recursion)]
-use crate::Symbol;
-use crate::{
-    util::pretty_print, Analysis, EClass, ENodeOrVar, FromOp, HashMap, HashSet, Id, Language,
-    PatternAst, RecExpr, Rewrite, UnionFind, Var,
-};
-
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, VecDeque};
 use std::fmt::{self, Debug, Display, Formatter};
@@ -14,6 +8,12 @@ use std::rc::Rc;
 use num_bigint::BigUint;
 use num_traits::identities::{One, Zero};
 use symbolic_expressions::Sexp;
+
+use crate::util::pretty_print;
+use crate::{
+    Analysis, EClass, ENodeOrVar, FromOp, HashMap, HashSet, Id, Language, PatternAst, RecExpr,
+    Rewrite, Symbol, UnionFind, Var,
+};
 
 type ProofCost = BigUint;
 
@@ -113,12 +113,11 @@ pub type UnionEqualities = Vec<(Id, Id, Symbol)>;
 type ExplainCache<L> = HashMap<(Id, Id), Rc<TreeTerm<L>>>;
 type NodeExplanationCache<L> = HashMap<Id, Rc<TreeTerm<L>>>;
 
-/** A data structure representing an explanation that two terms are equivalent.
-
-There are two representations of explanations, each of which can be
-represented as s-expressions in strings.
-See [`Explanation`] for more details.
-**/
+/// A data structure representing an explanation that two terms are equivalent.
+///
+/// There are two representations of explanations, each of which can be
+/// represented as s-expressions in strings.
+/// See [`Explanation`] for more details.
 pub struct Explanation<L: Language> {
     /// The tree representation of the explanation.
     pub explanation_trees: TreeExplanation<L>,
@@ -590,7 +589,6 @@ impl<L: Language> TreeTerm<L> {
 /// the rule to this FlatTerm.
 /// Rules are either the string of the name of the rule or the reason provided to
 /// [`union_instantiations`](super::EGraph::union_instantiations).
-///
 #[derive(Debug, Clone, Eq)]
 pub struct FlatTerm<L: Language> {
     /// The node representing this FlatTerm's operator.
@@ -844,8 +842,10 @@ impl<L: Language> FlatTerm<L> {
                 if let Some(existing) = bindings.get(var) {
                     if existing != &self {
                         panic!(
-                            "Invalid proof: binding for variable {:?} does not match between {:?} \n and \n {:?}",
-                            var, existing, self);
+                            "Invalid proof: binding for variable {:?} does not match between {:?} \
+                             \n and \n {:?}",
+                            var, existing, self
+                        );
                     }
                 } else {
                     bindings.insert(*var, self);
@@ -1405,7 +1405,7 @@ impl<'x, L: Language> ExplainNodes<'x, L> {
         // calculate distance to find upper bound
         b + c - (a << 1)
 
-        //assert_eq!(dist+1, Explanation::new(self.explain_enodes(left, right, &mut Default::default())).make_flat_explanation().len());
+        // assert_eq!(dist+1, Explanation::new(self.explain_enodes(left, right, &mut Default::default())).make_flat_explanation().len());
     }
 
     fn congruence_distance(
@@ -1481,8 +1481,8 @@ impl<'x, L: Language> ExplainNodes<'x, L> {
             }
         }
 
-        //assert_eq!(distance_memo.parent_distance[usize::from(enode)].1+1,
-        //Explanation::new(self.explain_enodes(enode, distance_memo.parent_distance[usize::from(enode)].0, &mut Default::default())).make_flat_explanation().len());
+        // assert_eq!(distance_memo.parent_distance[usize::from(enode)].1+1,
+        // Explanation::new(self.explain_enodes(enode, distance_memo.parent_distance[usize::from(enode)].0, &mut Default::default())).make_flat_explanation().len());
 
         distance_memo.parent_distance[usize::from(enode)].1.clone()
     }
@@ -1626,14 +1626,14 @@ impl<'x, L: Language> ExplainNodes<'x, L> {
 
         // we would like to assert that we found a path better than the normal one
         // but since proof sizes are saturated this is not true
-        /*let dist = self.distance_between(start, end, distance_memo);
-        if *total_cost.unwrap() > dist {
-            panic!(
-                "Found cost greater than baseline {} vs {}",
-                total_cost.unwrap(),
-                dist
-            );
-        }*/
+        // let dist = self.distance_between(start, end, distance_memo);
+        // if *total_cost.unwrap() > dist {
+        // panic!(
+        // "Found cost greater than baseline {} vs {}",
+        // total_cost.unwrap(),
+        // dist
+        // );
+        // }
         if *total_cost.unwrap() >= self.distance_between(start, end, distance_memo) {
             let (a_left_connections, a_right_connections) = self.get_path_unoptimized(start, end);
             left_connections = a_left_connections;
@@ -1681,7 +1681,7 @@ impl<'x, L: Language> ExplainNodes<'x, L> {
                 .shortest_path_modulo_congruence(start, end, congruence_neighbors, distance_memo)
                 .unwrap();
 
-            //assert!(Explanation::new(self.explain_enodes(start, end, &mut Default::default())).make_flat_explanation().len()-1 <= total_cost);
+            // assert!(Explanation::new(self.explain_enodes(start, end, &mut Default::default())).make_flat_explanation().len()-1 <= total_cost);
 
             for (i, connection) in left_connections
                 .iter()

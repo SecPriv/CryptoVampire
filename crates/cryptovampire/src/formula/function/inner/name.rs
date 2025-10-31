@@ -1,14 +1,12 @@
 use std::sync::Arc;
 
-use crate::formula::{
-    function::{
-        Function,
-        signature::FixedRefSignature,
-        traits::{FixedSignature, MaybeEvaluatable},
-    },
-    sort::{Sort, builtins::NAME},
-};
 use utils::implvec;
+
+use crate::formula::function::Function;
+use crate::formula::function::signature::FixedRefSignature;
+use crate::formula::function::traits::{FixedSignature, MaybeEvaluatable};
+use crate::formula::sort::Sort;
+use crate::formula::sort::builtins::NAME;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Name<'bump> {

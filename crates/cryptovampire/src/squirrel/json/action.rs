@@ -1,7 +1,8 @@
-use super::*;
 use itertools::chain;
 use mmacro::MacroName;
 use serde::{Deserialize, Serialize};
+
+use super::*;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct Condition<'a> {

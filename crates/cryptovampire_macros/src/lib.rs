@@ -1,14 +1,9 @@
 use proc_macro::TokenStream;
-use quote::quote;
-use quote::quote_spanned;
-use syn::parenthesized;
-use syn::{
-    DeriveInput, Expr, Token,
-    parse::{Parse, ParseStream},
-    parse_macro_input,
-    punctuated::Punctuated,
-    spanned::Spanned,
-};
+use quote::{quote, quote_spanned};
+use syn::parse::{Parse, ParseStream};
+use syn::punctuated::Punctuated;
+use syn::spanned::Spanned;
+use syn::{DeriveInput, Expr, Token, parenthesized, parse_macro_input};
 
 #[proc_macro_derive(LocationProvider, attributes(provider))]
 pub fn with_location_derive(input: TokenStream) -> TokenStream {
@@ -39,7 +34,6 @@ pub fn smt(input: TokenStream) -> TokenStream {
 pub fn vec_smt(input: TokenStream) -> TokenStream {
     formulas::smt_many_smt_formulas(input)
 }
-
 
 #[proc_macro]
 pub fn vec_smt2(input: TokenStream) -> TokenStream {

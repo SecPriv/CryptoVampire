@@ -1,7 +1,8 @@
-use crate::formula::function::inner::if_then_else::IfThenElse;
-use utils::{string_ref::StrRef, traits::RefNamed};
+use utils::string_ref::StrRef;
+use utils::traits::RefNamed;
 
 use super::InnerFunction;
+use crate::formula::function::inner::if_then_else::IfThenElse;
 
 // pub mod base_function;
 pub mod booleans;

@@ -1,11 +1,9 @@
-use crate::formula::function::{
-    Function,
-    signature::FixedRefSignature,
-    traits::{FixedSignature, MaybeEvaluatable},
-};
 use utils::string_ref::StrRef;
 
 use super::term_algebra::base_function::BaseFunction;
+use crate::formula::function::Function;
+use crate::formula::function::signature::FixedRefSignature;
+use crate::formula::function::traits::{FixedSignature, MaybeEvaluatable};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct EvaluatedFun<'bump> {

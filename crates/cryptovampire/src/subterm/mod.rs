@@ -1,52 +1,42 @@
+use std::collections::{BTreeMap, BTreeSet};
+use std::convert::Infallible;
 use std::fmt::Write;
-
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    convert::Infallible,
-    hash::Hash,
-    rc::Rc,
-    sync::{Arc, Weak},
-};
+use std::hash::Hash;
+use std::rc::Rc;
+use std::sync::{Arc, Weak};
 
 use if_chain::if_chain;
 use itertools::Itertools;
 use log::{error, log_enabled, trace, warn};
 use logic_formula::outers::OwnedPile;
 use logic_formula::{Formula, FormulaIterator};
+use utils::traits::NicerError;
+use utils::utils::AlreadyInitialized;
+use utils::{implvec, partial_order};
 
+use crate::container::allocator::{ContainerTools, Residual};
+use crate::environement::environement::Environement;
+use crate::environement::traits::{KnowsRealm, Realm};
+use crate::formula::file_descriptior::declare::{self, Declaration};
+use crate::formula::formula::{self, ARichFormula, exists, forall, meq};
+use crate::formula::function::builtin::TRUE;
+use crate::formula::function::{self, Function, InnerFunction};
+use crate::formula::manipulation::Unifier;
+use crate::formula::sort::Sort;
 use crate::formula::utils::Applicable;
 use crate::formula::utils::formula_expander::{
-    NO_REC_MACRO, UnfolderBuilder, UnfoldingStateBuilder,
+    NO_REC_MACRO, UnfoldFlags, UnfolderBuilder, UnfoldingState, UnfoldingStateBuilder,
 };
-use crate::formula::variable::IntoVariableIter;
-use crate::{
-    container::allocator::{ContainerTools, Residual},
-    environement::{
-        environement::Environement,
-        traits::{KnowsRealm, Realm},
-    },
-    formula::{
-        file_descriptior::declare::{self, Declaration},
-        formula::{self, ARichFormula, exists, forall, meq},
-        function::{self, Function, InnerFunction, builtin::TRUE},
-        manipulation::Unifier,
-        sort::Sort,
-        utils::formula_expander::{UnfoldFlags, UnfoldingState},
-        variable::{Variable, sorts_to_variables},
-    },
-    mforall,
-};
-use utils::{implvec, partial_order, traits::NicerError, utils::AlreadyInitialized};
+use crate::formula::variable::{IntoVariableIter, Variable, sorts_to_variables};
+use crate::mforall;
 
 pub(crate) mod kind;
 pub(crate) mod traits;
 
-use self::{
-    kind::{AbsSubtermKindG, SubtermKind, SubtermKindConstr, SubtermKindWFunction},
-    traits::{SubtermAux, SubtermResult},
-};
-
-use crate::problem::{Problem, protocol::Protocol};
+use self::kind::{AbsSubtermKindG, SubtermKind, SubtermKindConstr, SubtermKindWFunction};
+use self::traits::{SubtermAux, SubtermResult};
+use crate::problem::Problem;
+use crate::problem::protocol::Protocol;
 
 #[derive(Debug, Clone)]
 pub struct Subterm<'bump, Aux>

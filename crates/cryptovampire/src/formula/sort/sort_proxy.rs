@@ -1,6 +1,9 @@
 //! A way to emulate sort variables for type inference
 
-use std::{cell::RefCell, fmt::Display, rc::Rc};
+use std::cell::RefCell;
+use std::fmt::Display;
+use std::rc::Rc;
+
 use thiserror::Error;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Error)]
@@ -59,9 +62,8 @@ pub enum UpdateError {
     AlreadySet,
 }
 
-use crate::environement::traits::{KnowsRealm, Realm};
-
 use super::Sort;
+use crate::environement::traits::{KnowsRealm, Realm};
 #[derive(Debug, Clone)]
 pub enum SortProxy<'bump> {
     Var(Rc<RefCell<Option<Sort<'bump>>>>),

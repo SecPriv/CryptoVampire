@@ -1,14 +1,10 @@
-use crate::{
-    error::{LocateHelper, LocationProvider},
-    formula::sort::builtins::STEP,
-};
 use derivative::Derivative;
 use utils::string_ref::StrRef;
 
-use super::{
-    DeclareCell, DeclareFunction, Function, Macro, MacroName, Step, StepName, TypeName,
-    location::ASTLocation,
-};
+use super::location::ASTLocation;
+use super::{DeclareCell, DeclareFunction, Function, Macro, MacroName, Step, StepName, TypeName};
+use crate::error::{LocateHelper, LocationProvider};
+use crate::formula::sort::builtins::STEP;
 
 #[derive(Derivative)]
 #[derivative(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

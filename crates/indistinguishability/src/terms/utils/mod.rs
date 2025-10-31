@@ -50,7 +50,7 @@ where
 #[cfg(test)]
 mod test {
     use crate::terms::utils::type_check;
-    use crate::terms::{ MITE, NONCE, PROJ_1, TUPLE};
+    use crate::terms::{MITE, NONCE, PROJ_1, TUPLE};
     use crate::{decl_vars, fresh, rexp};
 
     decl_vars!(const A, B );
@@ -65,7 +65,8 @@ mod test {
 
     #[test]
     fn type_check2() {
-        let x = rexp!((MITE (and true true false) (NONCE #A) (PROJ_1 (TUPLE (NONCE #B) (NONCE #B)))));
+        let x =
+            rexp!((MITE (and true true false) (NONCE #A) (PROJ_1 (TUPLE (NONCE #B) (NONCE #B)))));
         assert!(type_check(&x))
     }
 

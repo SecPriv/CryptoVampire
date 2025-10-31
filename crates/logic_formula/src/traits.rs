@@ -1,10 +1,8 @@
 use utils::impossible::Impossible;
 
-use crate::{
-    Destructed, Head,
-    iterators::{FreeVariableIterator, UsedVariableIterator},
-    outers::{Content, OwnedIter, OwnedPile},
-};
+use crate::iterators::{FreeVariableIterator, UsedVariableIterator};
+use crate::outers::{Content, OwnedIter, OwnedPile};
+use crate::{Destructed, Head};
 
 pub trait Formula: Sized {
     type Var;

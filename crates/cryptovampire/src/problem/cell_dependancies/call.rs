@@ -2,10 +2,9 @@
 
 use std::sync::Arc;
 
-use crate::{
-    formula::formula::ARichFormula,
-    problem::{cell::MemoryCell, step::Step},
-};
+use crate::formula::formula::ARichFormula;
+use crate::problem::cell::MemoryCell;
+use crate::problem::step::Step;
 
 /// call `cell(args, step)`
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

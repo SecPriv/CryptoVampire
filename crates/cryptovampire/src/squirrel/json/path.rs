@@ -1,11 +1,11 @@
 use std::fmt::Display;
 
-use crate::squirrel::{Sanitizable, SanitizeKind};
-
-use super::{Symb, Type};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use utils::string_ref::StrRef;
+
+use super::{Symb, Type};
+use crate::squirrel::{Sanitizable, SanitizeKind};
 
 const SEPARATOR: &str = "$#$";
 

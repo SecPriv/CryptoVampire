@@ -280,9 +280,7 @@ impl ToTokenWithInputs for QuantifierKind {
 impl ToTokenWithInputs for ArgItem {
     fn to_tokens(&self, macro_input: &MacroInput) -> syn::Result<TokenStream> {
         match self {
-            ArgItem::Regular(ast) => {
-                Self::to_token_regular(ast, macro_input)
-            }
+            ArgItem::Regular(ast) => Self::to_token_regular(ast, macro_input),
             ArgItem::SplatExpr(expr) if !macro_input.is_const() => Ok(quote!({#expr})),
             ArgItem::SplatIdent(ident) if !macro_input.is_const() => Ok(quote!({#ident})),
             e => Err(Error::new(e.span(), "no splat expression allowed in const")),
@@ -291,13 +289,13 @@ impl ToTokenWithInputs for ArgItem {
 }
 
 impl ArgItem {
-    pub fn to_token_regular(ast: &Ast, macro_input: &MacroInput )-> syn::Result<TokenStream> {
-                let ast = ast.to_tokens(macro_input)?;
-                if macro_input.is_const() {
-                    Ok(ast)
-                } else {
-                    Ok(quote!(::std::iter::once(#ast)))
-                }
+    pub fn to_token_regular(ast: &Ast, macro_input: &MacroInput) -> syn::Result<TokenStream> {
+        let ast = ast.to_tokens(macro_input)?;
+        if macro_input.is_const() {
+            Ok(ast)
+        } else {
+            Ok(quote!(::std::iter::once(#ast)))
+        }
     }
 }
 

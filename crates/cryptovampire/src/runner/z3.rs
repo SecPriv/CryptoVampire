@@ -1,22 +1,18 @@
 //! `z3` [Runner]
-use std::{
-    path::PathBuf,
-    process::{Command, Stdio},
-};
+use std::path::PathBuf;
+use std::process::{Command, Stdio};
 
 use itertools::chain;
 use log::debug;
 use utils::traits::MyWriteTo;
 
-use crate::{
-    FromEnv, SmtDisplay, ensure,
-    environement::environement::Flags,
-    error::{BaseContext, CVContext},
-    runner::{RetCodeAndStdout, RunnerOut, exec_cmd},
-    smt::SmtFile,
-};
-
-use super::{Runner, runner::ChildKind};
+use super::Runner;
+use super::runner::ChildKind;
+use crate::environement::environement::Flags;
+use crate::error::{BaseContext, CVContext};
+use crate::runner::{RetCodeAndStdout, RunnerOut, exec_cmd};
+use crate::smt::SmtFile;
+use crate::{FromEnv, SmtDisplay, ensure};
 
 #[derive(Debug, Clone)]
 pub struct Z3Runner {

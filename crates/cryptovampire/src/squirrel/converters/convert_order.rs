@@ -1,22 +1,20 @@
-use super::{Context, RAoO, ast_convertion::ToAst};
+use std::cmp::Ordering;
+use std::fmt::Debug;
+
 use hashbrown::HashSet;
-use std::{cmp::Ordering, fmt::Debug};
-use utils::monad::Monad;
-
 use itertools::{Itertools, chain, izip};
-use utils::{all_or_one::AoOV, mdo, string_ref::StrRef};
+use utils::all_or_one::AoOV;
+use utils::mdo;
+use utils::monad::Monad;
+use utils::string_ref::StrRef;
 
-use crate::{
-    bail_at,
-    parser::ast::{self, Application, Order, OrderOperation, QuantifierKind},
-    squirrel::{
-        Sanitizable,
-        json::{
-            self,
-            action::{AT, Item, Shape},
-        },
-    },
-};
+use super::ast_convertion::ToAst;
+use super::{Context, RAoO};
+use crate::bail_at;
+use crate::parser::ast::{self, Application, Order, OrderOperation, QuantifierKind};
+use crate::squirrel::Sanitizable;
+use crate::squirrel::json::action::{AT, Item, Shape};
+use crate::squirrel::json::{self};
 
 /// This is a somewhat dump copy of `Lemma.mk_depends_mutex` in `squirrel`.
 /// As this is expection a `squirrel` input this *should* be fine.
@@ -101,7 +99,8 @@ fn mk_depends_lemma<'a>(
         Some(false) => (b, a),
     };
     if b.indices.len() < a.indices.len() {
-        let err_msg = "b has to few indices, this contradicts an implicit requirement of squirrel's `Lemma.mk_depends_lemma`";
+        let err_msg = "b has to few indices, this contradicts an implicit requirement of \
+                       squirrel's `Lemma.mk_depends_lemma`";
         bail_at!(@ "{err_msg}")
     }
 

@@ -1,11 +1,5 @@
 use std::path::PathBuf;
 
-use crate::{
-    container::ScopedContainer,
-    formula::function::Function,
-    runner::{VampireArg, VampireExec},
-};
-
 use bitflags::bitflags;
 use hashbrown::HashMap;
 use utils::string_ref::StrRef;
@@ -14,6 +8,9 @@ use super::{
     // cli::Args,
     traits::{KnowsRealm, Realm},
 };
+use crate::container::ScopedContainer;
+use crate::formula::function::Function;
+use crate::runner::{VampireArg, VampireExec};
 
 /// Super struct containing more or less the global state of cryptovampire
 #[derive(Debug, Clone)]

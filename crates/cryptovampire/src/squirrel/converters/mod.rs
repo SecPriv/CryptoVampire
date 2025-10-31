@@ -1,9 +1,5 @@
 use std::fmt::Display;
 
-use crate::formula::function::builtin::{
-    AND, CONDITION_MACRO, EMPTY, EQUALITY, EXEC_MACRO, FALSE_F, GREATER_THAN_STEP, HAPPENS,
-    IMPLIES, LESS_THAN_EQ_STEP, LESS_THAN_STEP, MESSAGE_MACRO, NOT, OR, PRED, TRUE_F,
-};
 use ast_convertion::{ConcreteMacro, INDEX_SORT_NAME, ToAst};
 use base64::Engine;
 use derive_builder::Builder;
@@ -12,13 +8,15 @@ use itertools::{Itertools, chain};
 use log::trace;
 use serde::Serialize;
 use static_init::dynamic;
-use utils::{
-    all_or_one::{AllOrOneShape, AoOV},
-    mdo,
-    monad::Monad,
-    string_ref::StrRef,
-};
+use utils::all_or_one::{AllOrOneShape, AoOV};
+use utils::mdo;
+use utils::monad::Monad;
+use utils::string_ref::StrRef;
 
+use crate::formula::function::builtin::{
+    AND, CONDITION_MACRO, EMPTY, EQUALITY, EXEC_MACRO, FALSE_F, GREATER_THAN_STEP, HAPPENS,
+    IMPLIES, LESS_THAN_EQ_STEP, LESS_THAN_STEP, MESSAGE_MACRO, NOT, OR, PRED, TRUE_F,
+};
 use crate::{
     bail_at,
     parser::ast,
@@ -83,10 +81,8 @@ static BUILTIN_FUNCTION: HashSet<&'static str> = [
 .into_iter()
 .collect();
 
-use super::{
-    Sanitizer,
-    json::{ProcessedSquirrelDump, SquirrelDump},
-};
+use super::Sanitizer;
+use super::json::{ProcessedSquirrelDump, SquirrelDump};
 type RAoO<T> = crate::Result<AoOV<T>>;
 
 mod ast_convertion;

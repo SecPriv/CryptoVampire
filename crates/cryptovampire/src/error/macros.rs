@@ -17,7 +17,7 @@ macro_rules! error_at {
 /// # Example
 /// ```
 /// # use cryptovampire::{err_at, error::Location, Result};
-/// let err : Result<()>  = err_at!(Location::default(), "error message");
+/// let err: Result<()> = err_at!(Location::default(), "error message");
 /// err.expect_err("");
 /// ```
 #[macro_export]
@@ -36,8 +36,8 @@ macro_rules! err_at  {
 /// ```
 /// # use cryptovampire::{bail_at, error::Location};
 /// fn test() -> cryptovampire::Result<()> {
-///   bail_at!(Location::default(), "error message");
-///   unreachable!()
+///     bail_at!(Location::default(), "error message");
+///     unreachable!()
 /// }
 ///
 /// test().expect_err("");
@@ -65,7 +65,7 @@ macro_rules! bail {
 /// Simialr to `assert!` but return a [Result]
 ///
 ///
-///# Example
+/// # Example
 /// ```rust
 /// # use cryptovampire::ensure;
 /// #

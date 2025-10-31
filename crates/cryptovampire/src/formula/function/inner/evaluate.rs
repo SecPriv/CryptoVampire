@@ -1,21 +1,16 @@
 use std::collections::BTreeMap;
 
-use crate::formula::utils::Applicable;
-use crate::formula::{
-    formula::ARichFormula,
-    function::{
-        Function,
-        builtin::{CONDITION_TO_BOOL, MESSAGE_TO_BITSTRING},
-        signature::FixedRefSignature,
-        traits::{FixedSignature, MaybeEvaluatable},
-    },
-    sort::{
-        FOSort, Sort,
-        builtins::{CONDITION, MESSAGE},
-        sorted::SortedError,
-    },
-};
 use utils::traits::NicerError;
+
+use crate::formula::formula::ARichFormula;
+use crate::formula::function::Function;
+use crate::formula::function::builtin::{CONDITION_TO_BOOL, MESSAGE_TO_BITSTRING};
+use crate::formula::function::signature::FixedRefSignature;
+use crate::formula::function::traits::{FixedSignature, MaybeEvaluatable};
+use crate::formula::sort::builtins::{CONDITION, MESSAGE};
+use crate::formula::sort::sorted::SortedError;
+use crate::formula::sort::{FOSort, Sort};
+use crate::formula::utils::Applicable;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Evaluate<'bump> {

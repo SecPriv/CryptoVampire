@@ -2,14 +2,14 @@ pub mod ast;
 #[allow(clippy::module_inception)]
 mod parser;
 
-use ast::INIT_STEP_AST;
-pub use parser::parse_pbl_from_ast;
-use static_init::dynamic;
-
 use std::borrow::Borrow;
 
+use ast::INIT_STEP_AST;
+pub use parser::parse_pbl_from_ast;
 use pest_derive::Parser;
-use utils::{string_ref::StrRef, traits::NicerError};
+use static_init::dynamic;
+use utils::string_ref::StrRef;
+use utils::traits::NicerError;
 
 /// Errors used thoughout parsing
 // mod error;

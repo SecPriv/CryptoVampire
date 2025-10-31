@@ -1,17 +1,13 @@
 use std::ops::Deref;
 
-use crate::formula::{
-    function::{
-        Function,
-        signature::FixedRefSignature,
-        traits::{FixedSignature, MaybeEvaluatable},
-    },
-    sort::{Sort, builtins::NAME},
-};
-use utils::{
-    string_ref::StrRef,
-    vecref::{VecRef, VecRefClone},
-};
+use utils::string_ref::StrRef;
+use utils::vecref::{VecRef, VecRefClone};
+
+use crate::formula::function::Function;
+use crate::formula::function::signature::FixedRefSignature;
+use crate::formula::function::traits::{FixedSignature, MaybeEvaluatable};
+use crate::formula::sort::Sort;
+use crate::formula::sort::builtins::NAME;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct NameCaster<'bump> {

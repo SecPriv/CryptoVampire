@@ -46,7 +46,10 @@ impl<C: Parse> Parse for MacroInput<C> {
     }
 }
 
-fn generate_banged_expr_tokens(mi: &MacroInput, BangedContent { kind, inner }: BangedContent) -> proc_macro2::TokenStream {
+fn generate_banged_expr_tokens(
+    mi: &MacroInput,
+    BangedContent { kind, inner }: BangedContent,
+) -> proc_macro2::TokenStream {
     let ret = match inner {
         BangedContentInner::Ident(ident) => quote! { #ident.clone() },
         BangedContentInner::Expr(expr) => quote! { (#expr) }, // Parenthesize expr just in case
@@ -55,7 +58,7 @@ fn generate_banged_expr_tokens(mi: &MacroInput, BangedContent { kind, inner }: B
         BangedContentKind::ExplamationMark(_) => {
             let path = mi.path();
             quote!(#path::SmtFormula::Var(#ret))
-        },
+        }
         BangedContentKind::Cross(_) => ret,
     }
 }

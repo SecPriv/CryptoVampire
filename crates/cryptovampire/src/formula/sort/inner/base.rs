@@ -1,11 +1,8 @@
-use crate::{
-    environement::traits::{KnowsRealm, Realm},
-    formula::sort::{
-        Sort,
-        builtins::{BITSTRING, BOOL},
-    },
-};
 use utils::string_ref::StrRef;
+
+use crate::environement::traits::{KnowsRealm, Realm};
+use crate::formula::sort::Sort;
+use crate::formula::sort::builtins::{BITSTRING, BOOL};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub enum TermBase {

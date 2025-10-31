@@ -1,29 +1,25 @@
-use std::{rc::Rc, sync::Arc};
-
-use crate::formula::function::inner::term_algebra::step_macro::InputOrExec;
-use crate::formula::utils::Applicable;
-use crate::{
-    formula::{
-        formula::{ARichFormula, RichFormula, meq},
-        function::{
-            InnerFunction,
-            inner::term_algebra::{TermAlgebra, quantifier::Quantifier, step_macro},
-        },
-        manipulation::{FrozenMultipleVarSubst, FrozenSubst, OneVarSubst, Substitution},
-        variable::{IntoVariableIter, Variable},
-    },
-    problem::{
-        cell::{Assignement, MemoryCell},
-        cell_dependancies::{Ancestors, MacroRef, PreprocessedDependancyGraph},
-        step::Step,
-    },
-};
-use derive_builder::Builder;
-use utils::{destvec, implvec};
+use std::rc::Rc;
+use std::sync::Arc;
 
 use bitflags::bitflags;
+use derive_builder::Builder;
 use itertools::{Itertools, chain};
 use log::trace;
+use utils::{destvec, implvec};
+
+use crate::formula::formula::{ARichFormula, RichFormula, meq};
+use crate::formula::function::InnerFunction;
+use crate::formula::function::inner::term_algebra::quantifier::Quantifier;
+use crate::formula::function::inner::term_algebra::step_macro::InputOrExec;
+use crate::formula::function::inner::term_algebra::{TermAlgebra, step_macro};
+use crate::formula::manipulation::{
+    FrozenMultipleVarSubst, FrozenSubst, OneVarSubst, Substitution,
+};
+use crate::formula::utils::Applicable;
+use crate::formula::variable::{IntoVariableIter, Variable};
+use crate::problem::cell::{Assignement, MemoryCell};
+use crate::problem::cell_dependancies::{Ancestors, MacroRef, PreprocessedDependancyGraph};
+use crate::problem::step::Step;
 bitflags! {
     /// Some flags to control the search.
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]

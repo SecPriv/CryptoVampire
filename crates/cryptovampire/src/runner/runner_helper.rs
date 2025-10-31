@@ -1,14 +1,11 @@
 //! Some functions to help building and using [Runner]
-use std::{
-    io::Read,
-    process::{Command, Stdio},
-};
+use std::io::Read;
+use std::process::{Command, Stdio};
 
 use log::trace;
 
-use crate::error::{BaseContext, CVContext};
-
 use super::{Runner, RunnerHandler};
+use crate::error::{BaseContext, CVContext};
 
 #[derive(Debug)]
 pub enum RetCodeAndStdout {
@@ -88,14 +85,15 @@ fn save_stdout(stdout: &String) -> String {
 
 /// simplified, object safe version of [Runner] and [Discoverer]
 pub mod dyn_traits {
-    use std::{any::Any, path::Path};
+    use std::any::Any;
+    use std::path::Path;
 
-    use crate::{
-        environement::environement::Environement,
-        error::BaseContext,
-        problem::{Problem, crypto_assumptions::CryptoAssumption},
-        runner::{Discoverer, Runner, RunnerHandler, RunnerOut, searcher::InstanceSearcher},
-    };
+    use crate::environement::environement::Environement;
+    use crate::error::BaseContext;
+    use crate::problem::Problem;
+    use crate::problem::crypto_assumptions::CryptoAssumption;
+    use crate::runner::searcher::InstanceSearcher;
+    use crate::runner::{Discoverer, Runner, RunnerHandler, RunnerOut};
 
     pub type RunnerOutDyn = RunnerOut<
         Box<dyn Any + Send>,

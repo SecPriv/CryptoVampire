@@ -3,11 +3,11 @@ use std::fmt::Display;
 use itertools::Itertools;
 use logic_formula::Formula;
 
-use crate::{
-    ensure,
-    error::{Location, LocationProvider},
-    formula::{formula::ARichFormula, quantifier::Quantifier, sort::builtins::STEP},
-};
+use crate::ensure;
+use crate::error::{Location, LocationProvider};
+use crate::formula::formula::ARichFormula;
+use crate::formula::quantifier::Quantifier;
+use crate::formula::sort::builtins::STEP;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Ordering<'bump> {

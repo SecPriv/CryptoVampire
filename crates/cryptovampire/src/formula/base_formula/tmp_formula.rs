@@ -1,26 +1,19 @@
-use super::BaseFormula;
-
+use hashbrown::HashMap;
+use itertools::Itertools;
 use log::{debug, trace};
 use utils::string_ref::StrRef;
 
-use crate::{
-    bail_at,
-    environement::traits::Realm,
-    error::CVContext,
-    error_at,
-    formula::{
-        formula::RichFormula,
-        function::{Function, signature::Signature},
-        quantifier::Quantifier,
-        sort::{
-            builtins::BOOL,
-            sort_proxy::{InferenceError, SortProxy},
-        },
-        variable::{Variable, uvar},
-    },
-};
-use hashbrown::HashMap;
-use itertools::Itertools;
+use super::BaseFormula;
+use crate::environement::traits::Realm;
+use crate::error::CVContext;
+use crate::formula::formula::RichFormula;
+use crate::formula::function::Function;
+use crate::formula::function::signature::Signature;
+use crate::formula::quantifier::Quantifier;
+use crate::formula::sort::builtins::BOOL;
+use crate::formula::sort::sort_proxy::{InferenceError, SortProxy};
+use crate::formula::variable::{Variable, uvar};
+use crate::{bail_at, error_at};
 
 pub type TmpFormula = BaseFormula<String, String, String>;
 
@@ -137,11 +130,10 @@ impl TmpFormula {
             // get the arg
             [arg] => {
                 let mut variables = variables.clone();
-                /* ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                since we have new scoped variables, things might get unsound
-                if we don't copy. Consider the case of (forall i. sk(i)) /\ (exists i. sk(i)).
-                Both `sk(i)` shouldn't be turned into the same variables.
-                */
+                // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                // since we have new scoped variables, things might get unsound
+                // if we don't copy. Consider the case of (forall i. sk(i)) /\ (exists i. sk(i)).
+                // Both `sk(i)` shouldn't be turned into the same variables.
                 arg.to_rich_formula(functions, (*BOOL).into(), &mut variables)?
             }
             _ => bail_at!(self, "no enough of too many arguments"),

@@ -1,8 +1,10 @@
-use std::{convert::Infallible, error::Error, fmt::Debug, ptr::NonNull};
+use std::convert::Infallible;
+use std::error::Error;
+use std::fmt::Debug;
+use std::ptr::NonNull;
 
 use itertools::Itertools;
 use log::error;
-
 use utils::utils::AlreadyInitialized;
 
 use super::contained::{Containable, Contained};

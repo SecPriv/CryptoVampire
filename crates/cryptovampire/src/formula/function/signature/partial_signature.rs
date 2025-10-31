@@ -1,11 +1,11 @@
 use std::iter::Cloned;
 
 use itertools::{Itertools, MapInto};
-
-use crate::formula::sort::{Sort, sort_proxy::SortProxy};
 use utils::vecref::{IterVecRef, VecRef};
 
 use super::{Impossible, Signature};
+use crate::formula::sort::Sort;
+use crate::formula::sort::sort_proxy::SortProxy;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct OnlyArgsSignature<'a, 'bump: 'a> {

@@ -1,41 +1,32 @@
-use std::{hash::Hash, sync::Arc};
+use std::hash::Hash;
+use std::sync::Arc;
 
 use if_chain::if_chain;
 use itertools::Itertools;
-use logic_formula::iterators::AllTermsIterator;
-
-use crate::formula::utils::Applicable;
-use crate::formula::utils::formula_expander::NO_REC_MACRO;
-use crate::formula::variable::IntoVariableIter;
-use crate::{
-    environement::{environement::Environement, traits::KnowsRealm},
-    formula::{
-        file_descriptior::{axioms::Axiom, declare::Declaration},
-        formula::{ARichFormula, RichFormula, forall, meq},
-        function::Function,
-        function::{inner::subterm::Subsubterm, name_caster_collection::NameCasterCollection},
-        manipulation::OneVarSubst,
-        sort::{
-            Sort,
-            builtins::{MESSAGE, NAME},
-        },
-        utils::formula_expander::UnfoldFlags,
-        variable::Variable,
-    },
-    mexists, mforall,
-    problem::{generator::Generator, problem::Problem},
-    static_signature,
-};
-use crate::{
-    formula::sort::builtins::CONDITION,
-    subterm::{
-        Subterm, into_exist_formula,
-        kind::SubtermKindConstr,
-        traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult},
-    },
-};
 use logic_formula::Formula;
+use logic_formula::iterators::AllTermsIterator;
 use utils::arc_into_iter::ArcIntoIter;
+
+use crate::environement::environement::Environement;
+use crate::environement::traits::KnowsRealm;
+use crate::formula::file_descriptior::axioms::Axiom;
+use crate::formula::file_descriptior::declare::Declaration;
+use crate::formula::formula::{ARichFormula, RichFormula, forall, meq};
+use crate::formula::function::Function;
+use crate::formula::function::inner::subterm::Subsubterm;
+use crate::formula::function::name_caster_collection::NameCasterCollection;
+use crate::formula::manipulation::OneVarSubst;
+use crate::formula::sort::Sort;
+use crate::formula::sort::builtins::{CONDITION, MESSAGE, NAME};
+use crate::formula::utils::Applicable;
+use crate::formula::utils::formula_expander::{NO_REC_MACRO, UnfoldFlags};
+use crate::formula::variable::{IntoVariableIter, Variable};
+use crate::problem::generator::Generator;
+use crate::problem::problem::Problem;
+use crate::subterm::kind::SubtermKindConstr;
+use crate::subterm::traits::{DefaultAuxSubterm, SubtermAux, VarSubtermResult};
+use crate::subterm::{Subterm, into_exist_formula};
+use crate::{mexists, mforall, static_signature};
 
 pub type SubtermEufCmaSignMain<'bump> = Subterm<'bump, DefaultAuxSubterm<'bump>>;
 pub type SubtermEufCmaSignKey<'bump> = Subterm<'bump, KeyAux<'bump>>;
@@ -159,7 +150,6 @@ impl<'bump> EufCma<'bump> {
     ) -> impl Iterator<Item = ARichFormula<'bump>> + 'a {
         let max_var = pbl.max_var();
         let realm = env.get_realm();
-        
 
         // This list the formulas to add to the smt files
         let candidates = pbl
@@ -169,10 +159,9 @@ impl<'bump> EufCma<'bump> {
             .flat_map(|f| f.iter_with(AllTermsIterator, ())) // sad...
             // now the iterator will go though *every* term that exists in the
             // problem (including extra instances)
-
             // now we extra all the terms that look like a signature (in the
             // case of euf-cma)
-            // 
+            //
             // we will consider each of those
             .filter_map(move |formula| match formula.as_ref() {
                 RichFormula::Fun(fun, args) => {
@@ -194,23 +183,22 @@ impl<'bump> EufCma<'bump> {
                 _ => None,
             })
             .unique() // no need for duplicates
-
             // .inspect(|c| trace!{"{c:?}"})
             // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ uncomment to `trace` print all the
             // candidates (potentially a lot of them)
-
             // then we start to apply cryptography and start preprocessing and
             // defining subterm.
             //
             // Sometimes it makes no sense (e.g., we can already solve the
             // subterm, the subterm is undefined). We filter out those instances
             .filter_map(
-                move |EufCandidate { // our candidate is `verify(message, signature, vk(key))`
+                move |EufCandidate {
+                          // our candidate is `verify(message, signature, vk(key))`
                           message,
                           signature,
                           key,
                       }| {
-                    
+
                     // some prep-work
                     let array = [&message, &signature, &key];
                     // re-update max-var
@@ -256,7 +244,7 @@ impl<'bump> EufCma<'bump> {
                                 .chain([&message, &signature].map(|t| t.shallow_copy().into())),
                             false,
                             NO_REC_MACRO,
-                        ) 
+                        )
                         // here we have an iterator of potential locations where `key` appears
                         .next()
                         .is_none(); // if it's non empty we bail.
@@ -269,7 +257,7 @@ impl<'bump> EufCma<'bump> {
                                 [&message, &signature].map(|x| x.shallow_copy().into()),
                                 true,
                                 UnfoldFlags::all(),
-                            ); 
+                            );
                             // so now `disjoinction` iterates with the `sign(u,
                             // k) ⊑ message, signature`
                             // 
@@ -311,7 +299,7 @@ impl<'bump> EufCma<'bump> {
                                     self.pk.f([
                                         pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),
                                     ]),
-                                ])) 
+                                ]))
                                 // we can get rid of the `|u = message|` because in this mode `|a=b|` iff `a=b` in smt.
                                 // so we inline `u` and spare one quantifier
                                 >> subterm_search.apply_substitution2(&OneVarSubst {

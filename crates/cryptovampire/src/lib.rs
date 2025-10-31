@@ -17,30 +17,36 @@ pub mod subterm;
 #[cfg(test)]
 mod tests;
 
+use std::fs::File;
+use std::io::BufWriter;
+use std::num::NonZeroU32;
+use std::path::Path;
+
 use error::BaseContext;
 // reexports
 pub use error::{Error, Result, Unit};
+use log::trace;
+use parser::Pstr;
+use parser::ast::ASTList;
 pub use parser::parse_pbl_from_ast;
 pub use problem::step::INIT_STEP_NAME;
 pub use return_value::Return;
 use runner::RunnerResult;
 use smt::SmtDisplay;
 pub use subterm::kind::SubtermKind;
+use utils::from_with::FromWith;
+use utils::string_ref::StrRef;
+use utils::traits::MyWriteTo;
 
 // other imports
 use crate::cli::Args;
-use crate::{
-    container::ScopedContainer,
-    environement::environement::{Environement, SolverConfig},
-    formula::{function::builtin::BUILT_IN_FUNCTIONS, sort::builtins::BUILT_IN_SORTS},
-    problem::{PblIterator, Problem},
-    runner::Runners,
-    smt::{SMT_FILE_EXTENSION, SmtFile},
-};
-use log::trace;
-use parser::{Pstr, ast::ASTList};
-use std::{fs::File, io::BufWriter, num::NonZeroU32, path::Path};
-use utils::{from_with::FromWith, string_ref::StrRef, traits::MyWriteTo};
+use crate::container::ScopedContainer;
+use crate::environement::environement::{Environement, SolverConfig};
+use crate::formula::function::builtin::BUILT_IN_FUNCTIONS;
+use crate::formula::sort::builtins::BUILT_IN_SORTS;
+use crate::problem::{PblIterator, Problem};
+use crate::runner::Runners;
+use crate::smt::{SMT_FILE_EXTENSION, SmtFile};
 
 mod cv_utils;
 pub use cv_utils::FromEnv;

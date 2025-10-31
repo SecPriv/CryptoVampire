@@ -1,13 +1,10 @@
 use itertools::Itertools;
-
-use crate::formula::{
-    formula::{ARichFormula, RichFormula},
-    manipulation::Substitution,
-    variable::{Variable, uvar},
-};
 use utils::vecref::VecRefClone;
 
 use super::OneVarSubst;
+use crate::formula::formula::{ARichFormula, RichFormula};
+use crate::formula::manipulation::Substitution;
+use crate::formula::variable::{Variable, uvar};
 
 /// Immutable version of [super::MultipleVarSubst] that allows for easy cloning.
 ///

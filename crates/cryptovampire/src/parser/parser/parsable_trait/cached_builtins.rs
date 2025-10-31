@@ -1,7 +1,7 @@
-use crate::formula::function::builtin::*;
 use utils::maybe_owned::MOw;
 
 use super::super::parsing_environement::FunctionCache;
+use crate::formula::function::builtin::*;
 
 // #[dynamic]
 #[allow(non_snake_case)]

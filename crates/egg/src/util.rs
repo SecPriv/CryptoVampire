@@ -1,14 +1,9 @@
-use std::{fmt, iter::FromIterator};
-use symbolic_expressions::Sexp;
+use std::fmt;
+use std::iter::FromIterator;
 
 use fmt::{Debug, Display, Formatter};
-
 #[cfg(feature = "serde-1")]
 use serde::{Deserialize, Serialize};
-
-#[allow(unused_imports)]
-use crate::*;
-
 /// An interned string.
 ///
 /// This is provided by the [`symbol_table`](https://crates.io/crates/symbol_table) crate.
@@ -39,8 +34,11 @@ use crate::*;
 ///
 /// assert_ne!(Symbol::from("foo"), Symbol::from("bar"));
 /// ```
-///
 pub use symbol_table::GlobalSymbol as Symbol;
+use symbolic_expressions::Sexp;
+
+#[allow(unused_imports)]
+use crate::*;
 
 pub(crate) type BuildHasher = rustc_hash::FxBuildHasher;
 
@@ -119,10 +117,9 @@ impl<T: Display> Debug for DisplayAsDebug<T> {
     }
 }
 
-/** A data structure to maintain a queue of unique elements.
-
-Notably, insert/pop operations have O(1) expected amortized runtime complexity.
-*/
+/// A data structure to maintain a queue of unique elements.
+///
+/// Notably, insert/pop operations have O(1) expected amortized runtime complexity.
 #[derive(Clone)]
 #[cfg_attr(feature = "serde-1", derive(Serialize, Deserialize))]
 pub(crate) struct UniqueQueue<T>

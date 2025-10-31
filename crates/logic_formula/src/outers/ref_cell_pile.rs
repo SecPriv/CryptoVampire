@@ -1,7 +1,5 @@
-use std::{
-    cell::{RefCell, RefMut},
-    iter::FusedIterator,
-};
+use std::cell::{RefCell, RefMut};
+use std::iter::FusedIterator;
 
 use super::*;
 #[derive(Debug)]

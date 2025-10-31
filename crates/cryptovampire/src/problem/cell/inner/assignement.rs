@@ -1,11 +1,11 @@
-use std::{fmt::Display, sync::Arc};
+use std::fmt::Display;
+use std::sync::Arc;
 
 use itertools::Itertools;
 
-use crate::{
-    formula::{formula::ARichFormula, variable::Variable},
-    problem::step::Step,
-};
+use crate::formula::formula::ARichFormula;
+use crate::formula::variable::Variable;
+use crate::problem::step::Step;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Assignement<'bump> {

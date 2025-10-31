@@ -1,8 +1,10 @@
-use std::{collections::HashMap, hash::Hash};
+use std::collections::HashMap;
+use std::hash::Hash;
 
 use egg::Language;
 
-use crate::{MWeight, weight::Weight};
+use crate::MWeight;
+use crate::weight::Weight;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Data<L> {

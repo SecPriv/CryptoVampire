@@ -1,7 +1,5 @@
-use super::super::{
-    signature::FixedRefSignature,
-    traits::{MaybeEvaluatable, MaybeFixedSignature},
-};
+use super::super::signature::FixedRefSignature;
+use super::super::traits::{MaybeEvaluatable, MaybeFixedSignature};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default)]
 pub struct InvalidFunction {

@@ -1,7 +1,5 @@
-use crate::formula::{
-    formula::{ARichFormula, RichFormula},
-    variable::{Variable, uvar},
-};
+use crate::formula::formula::{ARichFormula, RichFormula};
+use crate::formula::variable::{Variable, uvar};
 
 /// To model substitutions, i.e., replacing varibales with some other formulas
 pub trait Substitution<'bump> {

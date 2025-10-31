@@ -1,9 +1,11 @@
 use std::ops::RangeInclusive;
 
-use crate::formula::sort::{Sort, sort_proxy::SortProxy};
-use utils::{infinity::Infinity, match_as_trait};
+use utils::infinity::Infinity;
+use utils::match_as_trait;
 
 use super::{AsFixedSignature, Signature};
+use crate::formula::sort::Sort;
+use crate::formula::sort::sort_proxy::SortProxy;
 
 #[derive(Debug)]
 pub enum Lazy<A, B> {

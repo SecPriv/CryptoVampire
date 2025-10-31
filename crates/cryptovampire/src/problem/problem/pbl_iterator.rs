@@ -1,8 +1,7 @@
 use state::State;
 
-use crate::formula::function::builtin::TRUE;
-
 use super::Problem;
+use crate::formula::function::builtin::TRUE;
 
 mod state {
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]

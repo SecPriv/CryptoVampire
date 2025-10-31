@@ -8,13 +8,12 @@ pub mod traits;
 #[allow(clippy::module_inception)]
 mod function;
 
-pub use function::{Function, new_static_function};
-
+use core::fmt::Debug;
 // pub mod equality;
 use std::hash::Hash;
 
+pub use function::{Function, new_static_function};
 // use crate::problem::step::Step;
-
 use utils::{variants, variants_ref_try_into};
 
 use self::{
@@ -34,8 +33,6 @@ use self::{
     },
     traits::{MaybeEvaluatable, MaybeFixedSignature},
 };
-
-use core::fmt::Debug;
 
 // const BASE_SKOLEM_NAME: &'static str = "m$sk_";
 // bitflags! {
@@ -76,7 +73,7 @@ use core::fmt::Debug;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum InnerFunction<'bump> {
-    ///Boolean connective like `and`, `or`, `=`, etc...
+    /// Boolean connective like `and`, `or`, `=`, etc...
     /// Basically the builtin functions that have type
     /// [BOOL](crate::formula::sort::builtins::BOOL).
     Bool(Booleans),

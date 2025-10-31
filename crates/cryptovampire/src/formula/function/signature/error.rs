@@ -1,9 +1,9 @@
 use std::ops::RangeInclusive;
 
 use thiserror::Error;
+use utils::infinity::Infinity;
 
 use crate::formula::sort::sort_proxy::InferenceError;
-use utils::infinity::Infinity;
 
 #[derive(Debug, PartialEq, Eq, Clone, Error)]
 pub enum CheckError {

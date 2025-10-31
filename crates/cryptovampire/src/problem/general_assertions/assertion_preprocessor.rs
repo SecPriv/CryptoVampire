@@ -2,19 +2,13 @@ use std::borrow::Cow;
 
 use itertools::Itertools;
 
-use crate::formula::{
-    self,
-    formula::{ARichFormula, RichFormula},
-    function::{
-        inner::{
-            evaluate::Evaluator,
-            term_algebra::quantifier::{InnerQuantifier, Quantifier},
-        },
-        traits::MaybeEvaluatable,
-    },
-    manipulation::FrozenSubstF,
-    variable::Variable,
-};
+use crate::formula::formula::{ARichFormula, RichFormula};
+use crate::formula::function::inner::evaluate::Evaluator;
+use crate::formula::function::inner::term_algebra::quantifier::{InnerQuantifier, Quantifier};
+use crate::formula::function::traits::MaybeEvaluatable;
+use crate::formula::manipulation::FrozenSubstF;
+use crate::formula::variable::Variable;
+use crate::formula::{self};
 
 pub fn propagate_evaluate<'bump>(
     assertion: &RichFormula<'bump>,
