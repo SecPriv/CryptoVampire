@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::fmt::Debug;
 
-use egg::{Analysis, EClass, EGraph, Id, Pattern, Searcher};
+use egg::{Analysis, EClass, EGraph, Id, Pattern, Subst};
 use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain, izip};
 use rustc_hash::{FxHashMap, FxHashSet};

@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::rc::Rc;
 
 use bon::Builder;
-use egg::{Id, Pattern, Searcher};
+use egg::{Id, Pattern};
 use golgge::{Dependancy, Rule};
 use static_init::dynamic;
 use utils::ereturn_let;

@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use serde::Serialize;
 use steel::rvals::{FromSteelVal, IntoSteelVal, Result as SResult};
 use steel::steel_vm::register_fn::RegisterFn;

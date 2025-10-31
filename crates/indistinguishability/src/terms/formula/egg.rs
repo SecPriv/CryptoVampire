@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
 use egg::{ENodeOrVar, Id, Language};
-use logic_formula::Formula;
 use serde::Serialize;
 use smallvec::SmallVec;
 use utils::implvec;

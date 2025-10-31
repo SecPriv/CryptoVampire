@@ -4,15 +4,12 @@
 //! subst(m, x, y) -> m[x -> y]
 //! ```
 
-use std::borrow::Cow;
-use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
 use std::rc::Rc;
 
 use egg::{Analysis, EGraph, Id, Language, Pattern, Searcher};
 use golgge::{Dependancy, Rule};
-use indexmap::IndexMap;
-use itertools::{Itertools, izip};
+use itertools::Itertools;
 use rustc_hash::FxHashMap;
 use static_init::dynamic;
 use utils::ereturn_let;

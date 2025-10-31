@@ -1,6 +1,6 @@
 //! Nonce freshness
 
-use crate::terms::RecFOFormula;
+
 
 declare_trace!($"nonce_fresh");
 

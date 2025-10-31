@@ -1,5 +1,5 @@
 use FOBinder::{Exists, FindSuchThat};
-use egg::{Analysis, EGraph, Id, Pattern, Searcher, Subst};
+use egg::{Analysis, EGraph, Id, Pattern, Subst};
 use golgge::{Dependancy, Rule};
 use itertools::izip;
 use rustc_hash::FxHashMap;
@@ -9,7 +9,7 @@ use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::rules::mk_default_rewrites;
 use crate::rules::utils::lambda_subst::lambda_subst;
 use crate::terms::{
-    BIT_DEDUCE, BOOL_DEDUCE, CONS, EXISTS, FIND_SUCH_THAT, FOBinder, INDEX_SORT, LAMBDA_O, Sort,
+    BIT_DEDUCE, BOOL_DEDUCE, CONS, EXISTS, FIND_SUCH_THAT, FOBinder, INDEX_SORT, Sort,
     Variable, list,
 };
 use crate::{Lang, Problem, fresh, rexp};

@@ -6,7 +6,7 @@ use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
 use crate::input::Registerable;
-use crate::problem::{PRule, RcRule};
+use crate::problem::RcRule;
 use crate::terms::RecFOFormula;
 
 #[derive(Clone, Steel)]

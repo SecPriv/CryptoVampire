@@ -12,7 +12,6 @@ use egg::{
     Runner, StopReason,
 };
 use itertools::{Either, Itertools};
-use log::{debug, trace};
 use serde::Serialize;
 use utils::implvec;
 

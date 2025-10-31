@@ -9,7 +9,7 @@ use egg::{EGraph, RecExpr};
 use golgge::{Program, Rule};
 use itertools::{Itertools, chain};
 use log::trace;
-use logic_formula::Formula;
+
 use logic_formula::iterators::QuantiferIterator;
 use utils::{econtinue_let, implvec};
 
