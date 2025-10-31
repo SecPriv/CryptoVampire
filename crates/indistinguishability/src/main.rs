@@ -5,7 +5,7 @@ use clap::Parser;
 use indistinguishability::{Configuration, init_engine, init_logger};
 
 
-static CV_PRELUDE: &str = include_str!("./input/prelude.scm");
+// static CV_PRELUDE: &str = include_str!("./input/prelude.scm");
 pub fn main() {
     init_logger();
     let config = Configuration::parse();
@@ -22,22 +22,22 @@ pub fn main() {
     };
 
     // let res = init_engine().run(pgrm).unwrap();
+
     let mut engine = init_engine(config);
     match engine.run(pgrm.clone()) {
         Err(e) => {
-            eprintln!("{}", e.emit_result_to_string("prelude", CV_PRELUDE));
-            eprintln!("{}", e.emit_result_to_string("stdin", &pgrm));
+            // eprintln!("{}", e.emit_result_to_string("prelude", CV_PRELUDE));
+            // eprintln!("{}", e.emit_result_to_string("stdin", &pgrm));
             if let Some(err) = engine.raise_error_to_string(e) {
                 panic!("{err}")
             } else {
-                eprintln!("couldn't get a nice error");
-                panic!()
+                panic!("Steel crashed and we could get a nice error out of it...");
             }
         }
-        Ok(res) => {
-            for r in res {
-                println!("{r}")
-            }
+        Ok(_) => {
+            // for r in res {
+            //     println!("{r}")
+            // }
         }
     }
 }

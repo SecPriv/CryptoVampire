@@ -1,9 +1,11 @@
-use std::path::PathBuf;
+use std::{fmt::Display, path::PathBuf};
 
-use clap::{Parser, builder::OsStr};
+use clap::{Parser, ValueEnum, builder::OsStr};
 use steel_derive::Steel;
 
 use crate::input::Registerable;
+
+pub use crate::input::prelude::Preludes;
 
 /// A computationnally sound automated cryptographic protocol verifier based on the CCSA.
 #[derive(Debug, Steel, Parser, Clone)]
@@ -14,6 +16,7 @@ pub struct Configuration {
     /// defaults to stdin
     #[arg(value_name = "FILE")]
     pub file: Option<PathBuf>,
+
 
     /// Maximal number of nodes in the egraph
     #[arg(long, default_value_t = ::golgge::Config::default().node_limit, env)]
@@ -40,7 +43,25 @@ pub struct Configuration {
     /// depth for iterative deepening
     #[arg(long, default_value_t =u64::MAX, env)]
     pub depth: u64,
+
+    /// Choose which version of the cryptovampire prelude to include
+    #[arg(long, default_value_t)]
+    pub prelude_version: Preludes,
+
+    /// don't include the cryptovampire prelude.
+    /// 
+    /// ignore any other option
+    #[arg(long)]
+    pub no_cryptovampire_prelude: bool,
+    
+    /// don't include the steel prelude.
+    /// 
+    /// ignore any other option. This will likely crash if the cryptovampire
+    /// prelude is included
+    #[arg(long)]
+    pub no_steel_prelude: bool,
 }
+
 
 impl Default for Configuration {
     fn default() -> Self {
@@ -58,10 +79,23 @@ impl Default for Configuration {
             vampire_timeout: ::std::time::Duration::from_secs(2),
             keep_smt_files: cfg!(debug_assertions),
             depth: u64::MAX,
+            prelude_version: Default::default(),
+            no_cryptovampire_prelude: false,
+            no_steel_prelude: false
         }
     }
 }
 
 fn dstr(d: ::std::time::Duration) -> &'static str {
     String::leak(humantime::format_duration(d).to_string())
+}
+
+impl Configuration {
+    pub fn get_prelude(&self) -> &'static str {
+        if self.no_cryptovampire_prelude {
+            ""
+        } else {
+            self.prelude_version.get_prelude()
+        }
+    }
 }

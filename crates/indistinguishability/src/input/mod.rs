@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 
 use static_init::dynamic;
-use steel::rvals::{CustomType, IntoSteelVal};
 use steel::SteelVal;
+use steel::rvals::{CustomType, IntoSteelVal};
 use steel::steel_vm::builtin::BuiltInModule;
 use steel::steel_vm::engine::Engine;
 use steel::steel_vm::register_fn::RegisterFn;
@@ -13,9 +13,12 @@ use crate::input::shared_cryptography::ShrCrypto;
 use crate::input::shared_exists::ShrExists;
 use crate::input::shared_fdst::ShrFindSuchThat;
 use crate::input::shared_problem::ShrProblem;
-use crate::terms::{AliasRewrite, Function, RecFOFormula, Rewrite, Signature, Sort, Variable, BUILTINS};
+use crate::terms::{
+    AliasRewrite, BUILTINS, Function, RecFOFormula, Rewrite, Signature, Sort, Variable,
+};
 
 pub(crate) mod golgge_rules;
+pub(crate) mod prelude;
 pub(crate) mod shared_cryptography;
 pub(crate) mod shared_exists;
 pub(crate) mod shared_fdst;
@@ -45,31 +48,27 @@ pub fn register(module: &mut BuiltInModule) -> &mut BuiltInModule {
     module
 }
 
-#[dynamic]
-static CV_PRELUDE: String =  {
-    let mut mkdefintions : String= "\n".into();
-
-    for f in BUILTINS {
-        let name = &f.name;
-        let old_name = format!("__pre_{}", f.name);
-        mkdefintions += &format!("(define {name} (lift-fun {old_name}))\n");
-    }
-
-    include_str!("./prelude.scm").replace("@@@DEFINITIONS@@@", &mkdefintions)
-};
-
 pub fn init_engine(config: Configuration) -> Engine {
     let mut engine = Engine::new();
     let mut module = BuiltInModule::new("cryptovampire");
-    engine.compile_and_run_raw_program(steel::PRELUDE).unwrap();
+
+    if !config.no_steel_prelude {
+        engine.compile_and_run_raw_program(steel::PRELUDE).unwrap();
+    }
+
+    let prelude = config.get_prelude();
 
     crate::register(&mut module);
-    module.register_value("default-config", IntoSteelVal::into_steelval(config).unwrap());
+    module.register_value(
+        "default-config",
+        IntoSteelVal::into_steelval(config).unwrap(),
+    );
     engine.register_module(module);
-    log::trace!("prelude:\n{}", CV_PRELUDE.as_str());
-    match engine.compile_and_run_raw_program(Cow::Borrowed(CV_PRELUDE.as_ref())) {
+
+    log::trace!("prelude:\n{}", prelude);
+    match engine.compile_and_run_raw_program(Cow::Borrowed(prelude)) {
         Ok(_) => (),
-        Err(e) => panic!("{}", e.emit_result_to_string("CV_PRELUDE", &CV_PRELUDE)),
+        Err(e) => panic!("{}", e.emit_result_to_string("CV_PRELUDE", prelude)),
     };
 
     engine
