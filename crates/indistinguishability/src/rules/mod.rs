@@ -1,5 +1,4 @@
-use ::utils::implvec;
-use egg::{Analysis, ENodeOrVar, Rewrite};
+use egg::{Analysis, Rewrite};
 use itertools::chain;
 #[cfg(test)]
 pub use prf::test as prf_test;

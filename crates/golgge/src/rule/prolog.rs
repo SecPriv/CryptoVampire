@@ -187,13 +187,12 @@ macro_rules! pl {
 }
 
 pub mod parser {
-    use std::cell::RefCell;
+
     use std::fmt::Debug;
     use std::str::FromStr;
 
     use anyhow::{Context, anyhow, bail};
     use egg::{Analysis, FromOp, Language, MultiPattern, Pattern, Rewrite};
-    use itertools::Itertools;
     use log::trace;
 
     use super::PrologRule;

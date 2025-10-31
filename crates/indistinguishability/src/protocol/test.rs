@@ -1,5 +1,5 @@
 pub mod basic_hash {
-    use egg::{ENodeOrVar, Var};
+    use egg::Var;
     use itertools::Itertools;
 
     use crate::protocol::Step;

@@ -11,8 +11,8 @@ use super::*;
 use crate::problem::PAnalysis;
 use crate::rules::utils::EgraphSearcher;
 use crate::rules::utils::fresh::RefFormulaBuilder;
-use crate::terms::FRESH_NONCE;
-use crate::vampire::runner::VampireExec;
+use crate::runners::SmtRunner;
+use crate::terms::{FRESH_NONCE, RecFOFormula};
 use crate::{Lang, Problem, rexp};
 
 decl_vars!(const; NONCE_VAR, CONTENT, HYPOTHESIS);
@@ -24,7 +24,7 @@ static FRESH_NONCE_PATTERN: Pattern<Lang> =
 #[derive(Clone, Builder)]
 pub struct FreshNonce {
     #[builder(into)]
-    exec: Rc<VampireExec>,
+    exec: SmtRunner,
 }
 
 impl<'a> Rule<Lang, PAnalysis<'a>> for FreshNonce {
@@ -59,14 +59,8 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FreshNonce {
         pbl.find_temp_quantifiers(std::slice::from_ref(&query));
 
         let query = query.as_smt(pbl).unwrap();
-        tr!("checking {query}");
 
-        self.exec
-            .run_to_dependancy()
-            .pbl(pbl)
-            .query(query)
-            .clean_afterward()
-            .call()
+        self.exec.run_to_dependancy(pbl, query)
     }
 
     fn name(&self) -> Cow<'_, str> {

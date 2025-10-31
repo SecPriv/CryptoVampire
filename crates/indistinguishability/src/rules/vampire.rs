@@ -10,8 +10,8 @@ use static_init::dynamic;
 use utils::ereturn_let;
 
 use crate::problem::PAnalysis;
+use crate::runners::SmtRunner;
 use crate::terms::{RecFOFormula, VAMPIRE};
-use crate::vampire::runner::VampireExec;
 use crate::{Lang, Problem, rexp};
 
 declare_trace!($"vampire_rule");
@@ -25,7 +25,7 @@ static PATTERN: Pattern<Lang> = Pattern::from(&rexp!((VAMPIRE #X)));
 #[derive(Clone, Builder)]
 pub struct VampireRule {
     #[builder(into)]
-    exec: Rc<VampireExec>,
+    exec: SmtRunner,
 }
 
 impl<'a> Rule<Lang, PAnalysis<'a>> for VampireRule {
@@ -48,23 +48,8 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for VampireRule {
         pbl.find_temp_quantifiers(std::slice::from_ref(&to_prove));
 
         let to_prove = to_prove.as_smt(pbl).unwrap();
-        let prelude = pbl.get_smt_prelude();
 
-        tr!("running on {to_prove}");
-
-        let res = self
-            .exec
-            .run_smt(chain![
-                prelude.iter().cloned(),
-                [Smt::mk_query(to_prove), Smt::CheckSat]
-            ])
-            .expect("something went wrong with vampire");
-
-        if res {
-            Dependancy::axiom()
-        } else {
-            Dependancy::impossible()
-        }
+        self.exec.run_to_dependancy(pbl, to_prove)
     }
 
     fn name(&self) -> std::borrow::Cow<'_, str> {

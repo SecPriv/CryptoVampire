@@ -4,14 +4,13 @@ use std::ops::{BitAnd, BitOr, Not, Shr};
 
 use bon::Builder;
 use cryptovampire_smt::{SmtFormula, SmtHead};
-use egg::{Analysis, EGraph, Id, Language, Pattern, PatternAst, RecExpr};
+use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr};
 use itertools::{Itertools, chain, izip};
 use logic_formula::{Destructed, Formula, HeadSk};
 use quarck::CowArc;
 use rpds::HashTrieSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::Serialize;
-use smallvec::SmallVec;
 use steel::rvals::IntoSteelVal;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel::{SteelErr, rerrs};

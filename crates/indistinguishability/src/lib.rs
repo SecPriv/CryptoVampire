@@ -36,11 +36,12 @@ pub use problem::Problem;
 pub(crate) mod input;
 pub mod protocol;
 pub mod rules;
+pub(crate) mod runners;
+pub(crate) mod smt;
 pub mod terms; // <- first for macros
 #[cfg(test)]
 mod test;
 pub(crate) mod utils;
-pub(crate) mod vampire;
 pub use input::{init_engine, register};
 mod configuration;
 pub use configuration::Configuration;

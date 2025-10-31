@@ -1,14 +1,20 @@
 use std::borrow::Borrow;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
-use bon::{Builder, bon, builder};
+use anyhow::{Context, bail};
+use bon::{Builder, builder};
 use cryptovampire_smt::Smt;
-use golgge::Dependancy;
 use itertools::chain;
 use log::trace;
+use tokio::process::Command;
 use utils::implvec;
 
+mod bounded_model;
+mod regular;
+pub use bounded_model::BounededVampire;
+pub use regular::RegularVampire;
+
+use crate::runners::SharedProblem;
 use crate::{MSmt, MSmtFormula, Problem};
 
 declare_trace!($"vampire_exec");
@@ -16,9 +22,9 @@ declare_trace!($"vampire_exec");
 /// The [Runner] itself
 #[derive(Debug, Clone, Builder)]
 #[builder(builder_type = VampireExecBuilder)]
-pub struct VampireExec {
+struct VampireExec {
     /// Arguments to vampire
-    #[builder(field = VampireExec::default_args())]
+    #[builder(field = vec![])]
     args: Vec<VampireArg>,
     /// The location of the vampire executable
     ///
@@ -28,6 +34,9 @@ pub struct VampireExec {
     /// Should the smt file be kept once we don't need it anymore?
     #[builder(default = cfg!(debug_assertions))]
     keep_file: bool,
+
+    #[builder(default = "Termination reason: Refutation\n", into)]
+    success_verification: String,
 }
 
 impl<S> VampireExecBuilder<S>
@@ -40,11 +49,6 @@ where
     {
         self.keep_file(pbl.config.keep_smt_files)
             .timeout(pbl.config.vampire_timeout)
-    }
-
-    pub fn empty_args(mut self) -> Self {
-        self.args = vec![];
-        self
     }
 
     pub fn extend_args(mut self, args: implvec!(VampireArg)) -> Self {
@@ -178,22 +182,23 @@ const SUCCESS_RC: i32 = 0;
 const TIMEOUT_RC: i32 = 1;
 
 impl VampireExec {
-    pub fn run(&self, file: &Path) -> anyhow::Result<bool> {
+    pub async fn run(&self, file: &Path) -> anyhow::Result<bool> {
         let mut cmd = Command::new(&self.exe_location);
         cmd.args(self.args.iter().flat_map(|x| x.to_args().into_iter()));
         cmd.arg(file);
+        cmd.kill_on_drop(true);
 
         #[cfg(debug_assertions)]
         {
-            eprintln!("running '{:?}'...", cmd)
+            eprintln!("running '{:?}'...", cmd.as_std())
         }
 
-        let o = cmd.output()?;
+        let o = cmd.output().await?;
 
         tr!("status code: {:?}", o.status.code());
         let refutation = std::str::from_utf8(&o.stdout)
             .unwrap()
-            .contains("Termination reason: Refutation\n");
+            .contains(&self.success_verification);
         tr!("refutation: {refutation}");
 
         if o.status.code() != Some(SUCCESS_RC) && o.status.code() != Some(TIMEOUT_RC) {
@@ -204,13 +209,17 @@ impl VampireExec {
             eprintln!("file: {file:?}");
             eprintln!("stdout:\n{}", std::str::from_utf8(&o.stdout).unwrap());
             eprintln!("sterr:\n{}", std::str::from_utf8(&o.stderr).unwrap());
-            panic!()
+            bail!(
+                "stdout:\n{}\nsterr:\n{}",
+                std::str::from_utf8(&o.stdout).unwrap(),
+                std::str::from_utf8(&o.stderr).unwrap(),
+            )
         }
 
         Ok(o.status.success() && refutation)
     }
 
-    pub fn run_smt<RefS>(&self, smt: implvec!(RefS)) -> anyhow::Result<bool>
+    pub async fn run_smt<RefS>(&self, smt: implvec!(RefS)) -> anyhow::Result<bool>
     where
         RefS: Borrow<MSmt>,
     {
@@ -247,60 +256,25 @@ impl VampireExec {
             tr!("file written")
         }
 
-        self.run(tmpfile.path())
+        self.run(tmpfile.path()).await
     }
 
-    pub fn default_args() -> Vec<VampireArg> {
-        vec![
-            VampireArg::Cores(0),
-            VampireArg::Mode(vampire_suboptions::Mode::Portfolio),
-            VampireArg::InputSyntax(vampire_suboptions::InputSyntax::SmtLib2),
-        ]
-    }
-}
-
-#[bon]
-impl VampireExec {
-    #[builder]
-    pub fn run_to_dependancy(
+    pub async fn run_smt_with_pbl<'a>(
         &self,
-        pbl: &mut Problem,
+        pbl: &SharedProblem<'a>,
         query: MSmtFormula,
-        #[builder(name=maybe_clean_afterward, default=true)] _clean_afterward: bool,
-    ) -> Dependancy {
+    ) -> anyhow::Result<Option<bool>> {
         trace!("checking {query}");
-        let prelude = pbl.get_smt_prelude();
+        let mut prelude = Vec::new();
+        pbl.extend_smt_prelud(&mut prelude).await;
+        prelude.extend([Smt::mk_query(query), Smt::CheckSat]);
         // let pbl: &Problem<_> = &self.pbl.borrow();
         let res = self
-            .run_smt(chain![
-                prelude.iter().cloned(),
-                [Smt::mk_query(query), Smt::CheckSat]
-            ])
-            .expect("something went wrong with vampire");
+            .run_smt(prelude)
+            .await
+            .with_context(|| "something went wrong with vampire")?;
 
-        if res {
-            Dependancy::axiom()
-        } else {
-            Dependancy::impossible()
-        }
-    }
-}
-
-impl<'a, 'b, S> VampireExecRunToDependancyBuilder<'a, 'b, S>
-where
-    S: vampire_exec_run_to_dependancy_builder::State,
-{
-    pub fn clean_afterward(
-        self,
-    ) -> VampireExecRunToDependancyBuilder<
-        'a,
-        'b,
-        vampire_exec_run_to_dependancy_builder::SetMaybeCleanAfterward<S>,
-    >
-    where
-        S::MaybeCleanAfterward: vampire_exec_run_to_dependancy_builder::IsUnset,
-    {
-        self.maybe_clean_afterward(true)
+        if res { Ok(Some(true)) } else { Ok(None) }
     }
 }
 
