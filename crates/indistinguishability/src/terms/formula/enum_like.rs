@@ -15,7 +15,7 @@ use steel::rvals::IntoSteelVal;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel::{SteelErr, rerrs};
 use steel_derive::Steel;
-use utils::{dynamic_iter, econtinue_let, ereturn_if, implvec, match_eq};
+use utils::{dynamic_iter, econtinue_let, ereturn_if, ereturn_let, implvec, match_eq};
 
 use super::{FOBinder, RecFOFormulaQuant};
 use crate::input::Registerable;
@@ -818,8 +818,12 @@ impl RecFOFormula {
     }
 
     pub fn and(args: implvec!(Self)) -> Self {
-        let mut ret = Self::True();
-        for c in args.into_iter().filter(|x| !x.is_true()).unique() {
+        let mut args = args.into_iter().filter(|x| !x.is_true()).unique();
+        ereturn_let!(let Some(init) = args.next(), Self::True());
+        ereturn_if!(init.is_false(), Self::False());
+
+        let mut ret = init;
+        for c in args {
             ereturn_if!(c.is_false(), Self::False());
             ret = Self::app(AND.clone(), vec![c, ret]);
         }
@@ -827,8 +831,12 @@ impl RecFOFormula {
     }
 
     pub fn or(args: implvec!(Self)) -> Self {
-        let mut ret = Self::False();
-        for c in args.into_iter().filter(|x| !x.is_false()).unique() {
+        let mut args = args.into_iter().filter(|x| !x.is_false()).unique();
+        ereturn_let!(let Some(init) = args.next(), Self::False());
+        ereturn_if!(init.is_true(), Self::True());
+
+        let mut ret = init;
+        for c in args {
             ereturn_if!(c.is_true(), Self::True());
             ret = Self::app(OR.clone(), vec![c, ret]);
         }
