@@ -125,9 +125,9 @@ mod cowarc {
 
     impl<'a, 'b, T> IntoIterator for &'b CowArc<'a, [T]> {
         type Item = &'b T;
-    
+
         type IntoIter = ::std::slice::Iter<'b, T>;
-    
+
         fn into_iter(self) -> Self::IntoIter {
             (*self).deref().into_iter()
         }

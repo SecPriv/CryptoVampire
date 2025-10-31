@@ -104,14 +104,14 @@ impl Display for FOBinder {
     }
 }
 
-pub(crate) mod sort_list {
+pub(crate) mod list {
     use egg::{Analysis, EGraph, Id};
     use itertools::Itertools;
     use logic_formula::{Destructed, Formula};
     use utils::econtinue_let;
 
     use crate::Lang;
-    use crate::terms::{CONS, Function, NIL, Sort};
+    use crate::terms::{CONS, Function, LAMBDA_O, LAMBDA_S, NIL, Sort};
 
     fn inner<F>(f: F, sorts: &mut Vec<Sort>) -> Option<()>
     where
@@ -187,6 +187,19 @@ pub(crate) mod sort_list {
         let mut sorts = vec![];
         inner_egraph(egraph, f, &mut sorts)?;
         Some(sorts)
+    }
+
+
+
+    pub fn count_s<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, f: Id) -> Option<u32> {
+        for n in egraph[f].iter(){
+            if n.head == LAMBDA_O {
+                return Some(0);
+            } else if n.head == LAMBDA_S {
+                return count_s(egraph, n.args[0])
+            }
+        }
+        None
     }
 }
 

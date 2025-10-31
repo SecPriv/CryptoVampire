@@ -22,7 +22,7 @@ use super::{FOBinder, RecFOFormulaQuant};
 use crate::input::Registerable;
 use crate::terms::formula::egg::EggLanguage;
 use crate::terms::formula::sexpr::SExpr;
-use crate::terms::formula::{RecFOFormulaQuantRef, sort_list};
+use crate::terms::formula::{RecFOFormulaQuantRef, list};
 use crate::terms::utils::pull_from_egraph;
 use crate::terms::{
     AND, BITE, CONS, EQ, FALSE, Function, IMPLIES, LAMBDA_O, LAMBDA_S, NIL, NOT, OR, Sort, TRUE,
@@ -612,7 +612,7 @@ impl RecFOFormula {
                     // fetch the sort list
                     let sorts = {
                         let sort_exp = args.next().expect("a list of sorts as first arg");
-                        sort_list::try_get(Self::from(sort_exp))
+                        list::try_get(Self::from(sort_exp))
                             .expect("a list of sorts as first arg")
                     };
                     assert!(!sorts.is_empty(), "should be non-empty binder");

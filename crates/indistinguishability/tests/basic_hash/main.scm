@@ -2,7 +2,7 @@
 
 
 
-(define pbl (empty-problem))
+(define pbl (empty-problem default-config))
 
 (define _p1 (declare-protocol pbl))
 (define p1 (lift-fun _p1))

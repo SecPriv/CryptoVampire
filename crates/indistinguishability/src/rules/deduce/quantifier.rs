@@ -3,16 +3,18 @@
 use FOBinder::{Exists, FindSuchThat};
 use QuantifierKindRule::{BothSides, OneSide};
 use Side::{Left, Right};
-use egg::{Id, Pattern, Searcher};
+use egg::{Analysis, EGraph, Id, Pattern, Searcher, Subst};
 use golgge::{Dependancy, Rule};
 use itertools::izip;
-use utils::{ebreak_if, ebreak_let, ereturn_let};
+use rustc_hash::FxHashMap;
+use utils::{ebreak_if, ebreak_let, econtinue_let, ereturn_let, match_eq};
 
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::rules::mk_default_rewrites;
+use crate::rules::utils::lambda_subst::lambda_subst;
 use crate::terms::{
-    BIT_DEDUCE, BOOL_DEDUCE, CONS, EXISTS, FIND_SUCH_THAT, FOBinder, INDEX_SORT, LAMBDA_LET,
-    LAMBDA_O, Sort, Variable,
+    BIT_DEDUCE, BOOL_DEDUCE, CONS, EXISTS, FIND_SUCH_THAT, FOBinder, INDEX_SORT, LAMBDA_O, Sort,
+    Variable, list,
 };
 use crate::{Lang, Problem, fresh, rexp};
 
@@ -82,8 +84,8 @@ macro_rules! mk_vars {
 }
 
 mk_vars!(
-    u, v, h1, h2, args1_1, args1_2, args1_3, args2_1, args2_2, args2_3, sort, sort1_cons,
-    sort2_cons, other, new_var
+    u, v, h1, h2, args1_1, args1_2, args1_3, args2_1, args2_2, args2_3, nargs1_1, nargs1_2,
+    nargs2_1, nargs2_2, sort, sort1_cons, sort2_cons, other, new_var
 );
 
 impl<'a> Rule<Lang, PAnalysis<'a>> for QuantifierRule {
@@ -112,7 +114,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for QuantifierRule {
         let deps = matches
             .substs
             .into_iter()
-            .map(|mut subst| {
+            .filter_map(|mut subst| {
                 'out: { // checks that the sort matches with the new variable
                     'err: {
                         ebreak_let!('err, let Some(&sid) = subst.get(DEFAULT_PARAMERTERS.sort.as_egg()));
@@ -121,8 +123,13 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for QuantifierRule {
                     }
                     panic!("only Index is supported in deduce quantifiers")
                 }
-                subst.insert(DEFAULT_PARAMERTERS.new_var.as_egg(), new_var);
-                let ret = ret.apply_susbt(prgm.egraph_mut(), &subst);
+
+                let ret=
+                {
+                    let egraph = prgm.egraph_mut();
+                    extends_subst(egraph, new_var, &mut subst)?;
+                    ret.apply_susbt(egraph, &subst)
+                };
 
                 #[cfg(debug_assertions)]
                 {
@@ -130,7 +137,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for QuantifierRule {
                     tr!("quantifier new goal: {}", g)
                 }
 
-                [ret]
+                Some([ret])
             })
             .collect();
 
@@ -150,28 +157,124 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for QuantifierRule {
     }
 }
 
+fn extends_subst<N: Analysis<Lang>>(
+    egraph: &mut EGraph<Lang, N>,
+    nvar: Id,
+    subst: &mut Subst,
+) -> Option<()> {
+    let Parameters {
+        args1_1,
+        args1_2,
+        args2_1,
+        args2_2,
+        sort1_cons,
+        sort2_cons,
+        ..
+    } = &DEFAULT_PARAMERTERS;
+
+    let [llen, rlen] = [sort1_cons, sort2_cons].map(|s| {
+        subst
+            .get(s.as_egg())
+            .and_then(|&id| list::try_get_egraph(egraph, id))
+            .map(|s| s.len())
+    });
+    let mut map = FxHashMap::default();
+
+    // left side
+    for arg_v in [args1_1, args1_2] {
+        econtinue_let!(let Some(arg) = subst.get(arg_v.as_egg()));
+        map.clear();
+        let narg = lambda_subst(egraph, &mut map, nvar, llen?, *arg)?;
+        subst.insert(DEFAULT_PARAMERTERS.pair(arg_v)?.as_egg(), narg);
+    }
+
+    // right side
+    for arg_v in [args2_1, args2_2] {
+        econtinue_let!(let Some(arg) = subst.get(arg_v.as_egg()));
+        map.clear();
+        let narg = lambda_subst(egraph, &mut map, nvar, rlen?, *arg)?;
+        subst.insert(DEFAULT_PARAMERTERS.pair(arg_v)?.as_egg(), narg);
+    }
+
+    Some(())
+}
+
 impl<U> Parameters<U> {
     fn can_be_ignored(&self, q: FOBinder, kind: QuantifierKindRule) -> Vec<&U> {
         let Parameters {
+            // args
             args1_2,
             args1_3,
             args2_1,
             args2_2,
             args2_3,
+            nargs1_2,
+            nargs2_1,
+            nargs2_2,
+            // others
             sort2_cons,
             other,
             new_var,
             ..
         } = self;
         match (q, kind) {
-            (Exists, OneSide(_)) => vec![args1_3, args2_1, args2_2, args2_3, sort2_cons, new_var],
-            (Exists, BothSides) => vec![args1_2, args1_3, args2_2, args2_3, other, new_var],
+            (Exists, OneSide(_)) => vec![
+                // args
+                args1_3, args2_1, args2_2, args2_3, nargs2_1, nargs2_2,
+                // sort of the other side
+                sort2_cons, new_var,
+            ],
+            (Exists, BothSides) => vec![
+                // args
+                args1_2, args1_3, args2_2, args2_3, nargs1_2, nargs2_2, // others
+                other, new_var,
+            ],
             (FindSuchThat, OneSide(_)) => {
-                vec![args2_1, args2_2, args2_3, sort2_cons, new_var]
+                vec![
+                    args2_1, args2_2, args2_3, nargs2_1, nargs2_2, // others
+                    sort2_cons, new_var,
+                ]
             }
             (FindSuchThat, BothSides) => vec![other, new_var],
             _ => unreachable!(),
         }
+    }
+
+    fn pair(&self, v: &U) -> Option<&U>
+    where
+        U: Eq,
+    {
+        let Parameters {
+            // args
+            args1_1,
+            args1_2,
+            args2_1,
+            args2_2,
+            // nargs
+            nargs1_1,
+            nargs1_2,
+            nargs2_1,
+            nargs2_2,
+            ..
+        } = self;
+        match_eq!(&v => {
+            args1_1 => {Some(nargs1_1)},
+            args1_2 => {Some(nargs1_2)},
+            args2_1 => {Some(nargs2_1)},
+            args2_2 => {Some(nargs2_2)},
+            _ => {None}
+        })
+    }
+
+    pub fn args(&self) -> impl Iterator<Item = &U> {
+        let Parameters {
+            args1_1,
+            args1_2,
+            args2_1,
+            args2_2,
+            ..
+        } = self;
+        [args1_1, args1_2, args2_1, args2_2].into_iter()
     }
 }
 
@@ -200,12 +303,19 @@ impl QuantifierRule {
             v,
             h1,
             h2,
+            // args
             args1_1,
             args1_2,
             args1_3,
             args2_1,
             args2_2,
             args2_3,
+            // nargs
+            nargs1_1,
+            nargs1_2,
+            nargs2_1,
+            nargs2_2,
+            // other
             sort,
             sort1_cons,
             sort2_cons,
@@ -252,34 +362,30 @@ impl QuantifierRule {
             FOBinder::Forall => unreachable!(),
             Exists => [
                 rexp!((deduce_b #u #v
-                    (EXISTS #sort1_cons (LAMBDA_LET o #new_var #args1_1))
-                    (EXISTS #sort2_cons (LAMBDA_LET o #new_var #args2_1))
+                    (EXISTS #sort1_cons  #nargs1_1)
+                    (EXISTS #sort2_cons #nargs2_1)
                     #h1 #h2)),
                 rexp!((deduce_b #u #v
-                    (EXISTS #sort1_cons (LAMBDA_LET o #new_var #args1_1))
+                    (EXISTS #sort1_cons #nargs1_1)
                     #other
                     #h1 #h2)),
                 rexp!((deduce_b #u #v
                     #other
-                    (EXISTS #sort1_cons (LAMBDA_LET o #new_var #args1_1))
+                    (EXISTS #sort1_cons #nargs1_1)
                     #h1 #h2)),
             ],
             FindSuchThat => [
                 rexp!((deduce_m #u #v
-                    (FIND_SUCH_THAT #sort1_cons
-                        (LAMBDA_LET o #new_var #args1_1) (LAMBDA_LET o #new_var #args1_2) #args1_3)
-                    (FIND_SUCH_THAT #sort2_cons
-                        (LAMBDA_LET o #new_var #args2_1) (LAMBDA_LET o #new_var #args2_2) #args2_3)
+                    (FIND_SUCH_THAT #sort1_cons #nargs1_1 #nargs1_2 #args1_3)
+                    (FIND_SUCH_THAT #sort2_cons #nargs2_1 #nargs2_2 #args2_3)
                     #h1 #h2)),
                 rexp!((deduce_m #u #v
-                    (FIND_SUCH_THAT #sort1_cons
-                        (LAMBDA_LET o #new_var #args1_1) (LAMBDA_LET o #new_var #args1_2) #args1_3)
+                    (FIND_SUCH_THAT #sort1_cons #nargs1_1 #nargs1_2 #args1_3)
                     #other
                     #h1 #h2)),
                 rexp!((deduce_m #u #v
                     #other
-                    (FIND_SUCH_THAT #sort1_cons
-                        (LAMBDA_LET o #new_var #args1_1) (LAMBDA_LET o #new_var #args1_2) #args1_3)
+                    (FIND_SUCH_THAT #sort1_cons #nargs1_1 #nargs1_2 #args1_3)
                     #h1 #h2)),
             ],
         }

@@ -53,8 +53,8 @@ where
     }
 
     /// sets the timeout in seconds
-    pub fn timeout(mut self, timeout: f64) -> Self {
-        let narg = VampireArg::TimeLimit(timeout);
+    pub fn timeout(mut self, timeout: ::std::time::Duration) -> Self {
+        let narg = VampireArg::TimeLimit(timeout.as_secs_f64());
         if let Some(arg) = self.args.iter_mut().find(|x| x.same(&narg)) {
             *arg = narg;
         } else {

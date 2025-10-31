@@ -390,16 +390,16 @@ mk_builtin_funs!(
         signature: s!(() -> Any)
     };
 
-    LAMBDA_LET "λlet" {
-        flags: f!(PROLOG_ONLY),
-        /* var count, message, content */
-        signature: s!(Any, Any, Any -> Any)
-    };
+    // LAMBDA_LET "λlet" {
+    //     flags: f!(PROLOG_ONLY),
+    //     /* var count, message, content */
+    //     signature: s!(Any, Any, Any -> Any)
+    // };
 
-    ADD_S "add_λS" {
-        flags: f!(PROLOG_ONLY),
-        signature: s!(Any /*a list */, Any -> Any)
-    };
+    // ADD_S "add_λS" {
+    //     flags: f!(PROLOG_ONLY),
+    //     signature: s!(Any /*a list */, Any -> Any)
+    // };
 
     // ------ quantifiers --------
 
@@ -448,6 +448,14 @@ mk_builtin_funs!(
     NIL "list_nil" {
         signature: s!(() -> Any),
         flags : f!(PROLOG_ONLY | LIST_CONSTR)
+    };
+
+    CONS_FA "fa_cons" {
+        signature: s!(Bitstring, Bitstring -> Bitstring),
+    };
+
+    NIL_FA "fa_nil" {
+        signature: s!(() -> Bitstring),
     };
 
     // ~~~~~~~~~~~~~~~ smt only ~~~~~~~~~~~~~~~~~
