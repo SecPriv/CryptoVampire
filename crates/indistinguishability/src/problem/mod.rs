@@ -247,6 +247,10 @@ impl Problem {
         }
     }
 
+    pub fn maybe_get_smt_prelude(&self) -> Option<&[MSmt]> {
+        self.smt_prelude.as_ref().map(|x| x.as_slice())
+    }
+
     pub fn get_smt_prelude(&mut self) -> &[MSmt] {
         self.compute_smt_prelude();
         self.smt_prelude.as_ref().unwrap()

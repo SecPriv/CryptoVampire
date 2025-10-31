@@ -10,7 +10,7 @@ use static_init::dynamic;
 use utils::ereturn_let;
 
 use crate::problem::PAnalysis;
-use crate::runners::{SmtRunner, SmtSolver};
+use crate::runners::SmtRunner;
 use crate::terms::{RecFOFormula, VAMPIRE};
 use crate::{Lang, Problem, rexp};
 

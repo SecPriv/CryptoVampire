@@ -1,6 +1,6 @@
 use crate::Problem;
-use crate::runners::SmtSolver;
 use crate::runners::vampire::{self, VampireExec, vampire_suboptions};
+use crate::runners::{SharedProblem, SmtSolver};
 
 #[derive(Debug, Clone)]
 pub struct BounededVampire(VampireExec);
@@ -13,7 +13,6 @@ impl BounededVampire {
                 .extend_args({
                     use super::VampireArg::*;
                     [
-                        Cores(pbl.config.cores - 1),
                         InputSyntax(vampire_suboptions::InputSyntax::SmtLib2),
                         SaturationAlgorithm(vampire_suboptions::SaturationAlgorithm::FiniteModel),
                     ]
@@ -25,11 +24,14 @@ impl BounededVampire {
 }
 
 impl SmtSolver for BounededVampire {
-    fn try_run(
+    async fn try_run<'a>(
         &self,
-        pbl: &mut Problem,
+        pbl: &SharedProblem<'a>,
         query: crate::MSmtFormula,
     ) -> anyhow::Result<Option<bool>> {
-        self.0.run_smt_with_pbl(pbl, query).map(|x| x.map(|y| !y))
+        self.0
+            .run_smt_with_pbl(pbl, query)
+            .await
+            .map(|x| x.map(|y| !y))
     }
 }

@@ -1,18 +1,20 @@
 use std::borrow::Borrow;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use anyhow::{Context, bail};
 use bon::{Builder, builder};
 use cryptovampire_smt::Smt;
 use itertools::chain;
 use log::trace;
+use tokio::process::Command;
 use utils::implvec;
 
 mod bounded_model;
 mod regular;
+pub use bounded_model::BounededVampire;
 pub use regular::RegularVampire;
 
+use crate::runners::SharedProblem;
 use crate::{MSmt, MSmtFormula, Problem};
 
 declare_trace!($"vampire_exec");
@@ -180,17 +182,18 @@ const SUCCESS_RC: i32 = 0;
 const TIMEOUT_RC: i32 = 1;
 
 impl VampireExec {
-    pub fn run(&self, file: &Path) -> anyhow::Result<bool> {
+    pub async fn run(&self, file: &Path) -> anyhow::Result<bool> {
         let mut cmd = Command::new(&self.exe_location);
         cmd.args(self.args.iter().flat_map(|x| x.to_args().into_iter()));
         cmd.arg(file);
+        cmd.kill_on_drop(true);
 
         #[cfg(debug_assertions)]
         {
-            eprintln!("running '{:?}'...", cmd)
+            eprintln!("running '{:?}'...", cmd.as_std())
         }
 
-        let o = cmd.output()?;
+        let o = cmd.output().await?;
 
         tr!("status code: {:?}", o.status.code());
         let refutation = std::str::from_utf8(&o.stdout)
@@ -216,7 +219,7 @@ impl VampireExec {
         Ok(o.status.success() && refutation)
     }
 
-    pub fn run_smt<RefS>(&self, smt: implvec!(RefS)) -> anyhow::Result<bool>
+    pub async fn run_smt<RefS>(&self, smt: implvec!(RefS)) -> anyhow::Result<bool>
     where
         RefS: Borrow<MSmt>,
     {
@@ -253,30 +256,22 @@ impl VampireExec {
             tr!("file written")
         }
 
-        self.run(tmpfile.path())
+        self.run(tmpfile.path()).await
     }
 
-    // pub fn default_args() -> Vec<VampireArg> {
-    //     vec![
-    //         VampireArg::Cores(0),
-    //         VampireArg::Mode(vampire_suboptions::Mode::Portfolio),
-    //         VampireArg::InputSyntax(vampire_suboptions::InputSyntax::SmtLib2),
-    //     ]
-    // }
-
-    pub fn run_smt_with_pbl(
+    pub async fn run_smt_with_pbl<'a>(
         &self,
-        pbl: &mut Problem,
+        pbl: &SharedProblem<'a>,
         query: MSmtFormula,
     ) -> anyhow::Result<Option<bool>> {
         trace!("checking {query}");
-        let prelude = pbl.get_smt_prelude();
+        let mut prelude = Vec::new();
+        pbl.extend_smt_prelud(&mut prelude).await;
+        prelude.extend([Smt::mk_query(query), Smt::CheckSat]);
         // let pbl: &Problem<_> = &self.pbl.borrow();
         let res = self
-            .run_smt(chain![
-                prelude.iter().cloned(),
-                [Smt::mk_query(query), Smt::CheckSat]
-            ])
+            .run_smt(prelude)
+            .await
             .with_context(|| "something went wrong with vampire")?;
 
         if res { Ok(Some(true)) } else { Ok(None) }

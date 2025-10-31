@@ -11,7 +11,7 @@ use super::*;
 use crate::problem::PAnalysis;
 use crate::rules::utils::EgraphSearcher;
 use crate::rules::utils::fresh::RefFormulaBuilder;
-use crate::runners::{SmtRunner, SmtSolver};
+use crate::runners::SmtRunner;
 use crate::terms::{FRESH_NONCE, RecFOFormula};
 use crate::{Lang, Problem, rexp};
 

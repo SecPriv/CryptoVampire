@@ -1,6 +1,6 @@
 use crate::Problem;
-use crate::runners::SmtSolver;
 use crate::runners::vampire::{VampireExec, vampire_suboptions};
+use crate::runners::{SharedProblem, SmtSolver};
 
 #[derive(Debug, Clone)]
 pub struct RegularVampire(VampireExec);
@@ -13,7 +13,7 @@ impl RegularVampire {
                 .extend_args({
                     use super::VampireArg::*;
                     [
-                        Cores(pbl.config.cores - 1),
+                        Cores(Ord::max(1, pbl.config.cores - 1)),
                         Mode(vampire_suboptions::Mode::Portfolio),
                         InputSyntax(vampire_suboptions::InputSyntax::SmtLib2),
                     ]
@@ -24,11 +24,11 @@ impl RegularVampire {
 }
 
 impl SmtSolver for RegularVampire {
-    fn try_run(
+    async fn try_run<'a>(
         &self,
-        pbl: &mut Problem,
+        pbl: &SharedProblem<'a>,
         query: crate::MSmtFormula,
     ) -> anyhow::Result<Option<bool>> {
-        self.0.run_smt_with_pbl(pbl, query)
+        self.0.run_smt_with_pbl(pbl, query).await
     }
 }
