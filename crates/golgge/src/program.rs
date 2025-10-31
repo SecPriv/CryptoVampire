@@ -372,11 +372,8 @@ where
         }
         assert!(self.clean());
 
-        if self.egraph().number_of_classes() >= size + (size / 8) {
+        if cfg!(debug_assertions) && self.egraph().number_of_classes() >= size + (size / 8) {
             eprintln!("\n\t!!! large increase !!!\t\n");
-            // println!("Press Enter to continue...");
-            // let mut _input = String::new();
-            // let _ = ::std::io::stdin().read_line(&mut _input);
         }
         report
     }

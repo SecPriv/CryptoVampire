@@ -2,6 +2,8 @@ use std::borrow::Cow;
 use std::fmt::{self, Debug, Display};
 use std::hash::Hash;
 
+use utils::implvec;
+
 pub const SMT_FILE_EXTENSION: &str = ".smt";
 
 #[cfg(feature = "macro")]
@@ -31,7 +33,9 @@ pub trait SortedVar {
     type Sort: Display + Clone;
 
     fn sort_ref(&self) -> Cow<'_, Self::Sort>;
-    fn mk(sort: Self::Sort) -> Self where Self::Sort: Sized;
+    fn mk(sort: Self::Sort) -> Self
+    where
+        Self::Sort: Sized;
 }
 
 // #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -98,93 +102,28 @@ where
     }
 }
 
-// pub use var::{VarInner, uvar};
-// mod var {
-//     use core::fmt;
-//     use std::borrow::Cow;
-//     use std::fmt::Display;
-
-//     #[allow(non_camel_case_types)]
-//     pub type uvar = u32;
-
-//     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-//     pub enum VarInner {
-//         Int(uvar),
-//         Str(Cow<'static, str>),
-//     }
-
-//     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-//     pub struct SortedVar<S> {
-//         pub var: VarInner,
-//         pub sort: S,
-//     }
-
-//     impl Display for VarInner {
-//         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//             match self {
-//                 VarInner::Int(u) => write!(f, "x_{u:}"),
-//                 VarInner::Str(str) => write!(f, "{str}"),
-//             }
-//         }
-//     }
-
-//     impl<S: Display> Display for SortedVar<S> {
-//         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//             let Self { var, sort } = self;
-//             write!(f, "({var} {sort})")
-//         }
-//     }
-
-//     impl<S> SortedVar<S> {
-//         pub fn new(i: uvar, sort: S) -> Self {
-//             Self {
-//                 var: VarInner::Int(i),
-//                 sort,
-//             }
-//         }
-//     }
-// }
-
-pub(crate) use arr::Arr;
-mod arr {
-    use core::fmt;
-    use std::fmt::Display;
-
-    pub struct Arr<A, B>(pub A, pub B);
-
-    impl<B> Arr<(), B> {
-        pub fn simple(b: B) -> Self {
-            Arr((), b)
-        }
-    }
-
-    impl<B> Display for Arr<&str, &[B]>
-    where
-        B: Display,
-    {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            let Self(header, arr) = self;
-            write!(f, "({header}")?;
-            for x in *arr {
-                write!(f, " {x}")?;
-            }
-            write!(f, ")")
-        }
-    }
-
-    impl<B> Display for Arr<(), &[B]>
-    where
-        B: Display,
-    {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            Arr("", self.1).fmt(f)
-        }
-    }
-}
-
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, Default)]
 pub struct EvalParam {
     /// Can we simplify the quantifier. In other words are the considered sorts non-empty?
     pub simplify_quantifiers: bool,
+}
+
+#[inline]
+fn write_par(
+    fmt: &mut std::fmt::Formatter<'_>,
+    f: impl FnOnce(&mut std::fmt::Formatter<'_>) -> std::fmt::Result,
+) -> std::fmt::Result {
+    write!(fmt, "(")?;
+    f(fmt)?;
+    write!(fmt, ") ")
+}
+
+#[inline]
+fn write_list<A>(
+    iter: implvec!(A),
+    f: &mut std::fmt::Formatter<'_>,
+    mut arg: impl FnMut(&mut std::fmt::Formatter<'_>, A) -> std::fmt::Result,
+) -> std::fmt::Result {
+    write_par(f, |f| iter.into_iter().try_for_each(|x| arg(f, x)))
 }
