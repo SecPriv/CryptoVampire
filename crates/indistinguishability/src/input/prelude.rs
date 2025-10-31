@@ -19,6 +19,7 @@ static CV_PRELUDE: String = {
     include_str!("../../assets/preludes/v1.scm").replace("@@@DEFINITIONS@@@", &mkdefintions)
 };
 
+/// Represents the available prelude versions for the cryptovampire tool.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Default, Steel)]
 pub enum Preludes {
     #[default]
@@ -27,6 +28,7 @@ pub enum Preludes {
 }
 
 impl Display for Preludes {
+    /// Formats the `Preludes` enum for display.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::V1 => write!(f, "v1"),
@@ -36,6 +38,7 @@ impl Display for Preludes {
 }
 
 impl Preludes {
+    /// Returns the content of the selected prelude as a static string slice.
     pub fn get_prelude(&self) -> &'static str {
         match self {
             Self::V1 | Self::Latest => &CV_PRELUDE,

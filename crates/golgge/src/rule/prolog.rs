@@ -15,26 +15,35 @@ use crate::Program;
 use crate::analysis::WeightedAnalysis;
 use crate::weight::Weight;
 
+/// Represents a Prolog-like rule for the e-graph.
 #[derive(Debug)]
 pub struct PrologRule<L> {
+    /// The input pattern of the rule.
     pub input: Pattern<L>,
+    /// The dependencies of the rule.
     pub deps: Vec<Pattern<L>>,
+    /// Whether the rule is a cut rule.
     pub cut: bool,
+    /// Whether the rule requires a decrease in weight.
     pub require_decrease: bool,
     // pub free_vars: Vec<Var>,
+    /// The name of the rule.
     pub name: Option<String>,
     // pub memo: RefCell<HashMap<Id, Dependancy>>,
 }
 
+/// Errors that can occur during the construction of a `PrologRule`.
 #[derive(Debug, Clone, Copy, Error)]
 #[non_exhaustive]
 pub enum PrologBuilderError {
+    /// Occurs when a premise refers to a free variable that is not bound by the input pattern.
     #[error("premise refer to free variable {0}")]
     VariableMishmatch(egg::Var),
 }
 
 #[bon]
 impl<L: Language> PrologRule<L> {
+    /// Creates a new `PrologRule`.
     #[builder]
     pub fn new(
         input: Pattern<L>,
@@ -66,8 +75,10 @@ where
     anyhow::Error: From<<Pattern<L> as FromStr>::Err>,
     L: FromOp,
 {
+    /// The error type returned when parsing fails.
     type Err = anyhow::Error;
 
+    /// Parses a string into a `PrologRule`.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (name, s) = parser::extract_name(s)?;
         parser::parse_pl(name, s)
@@ -77,6 +88,7 @@ where
 static NUM_VARS: AtomicU64 = AtomicU64::new(u64::MAX / 8);
 
 impl Fresh for SymbolLang {
+    /// Creates a fresh `RecExpr<SymbolLang>`.
     fn mk_fresh() -> RecExpr<Self> {
         let s = format!("_fresh#{:}", NUM_VARS.fetch_add(1, Ordering::AcqRel));
         dbg!(&s);
@@ -90,6 +102,7 @@ where
     N: WeightedAnalysis<L> + Serialize,
     N::Data: Serialize,
 {
+    /// Searches for matches of the rule in the e-graph and returns the dependencies.
     fn search(&self, prgm: &mut Program<L, N>, goal: Id) -> Dependancy {
         let matches = self.input.search_eclass(prgm.egraph(), goal);
         ereturn_let!(let Some(matches) = matches, Dependancy::impossible());
@@ -121,6 +134,7 @@ where
         }
     }
 
+    /// Debugs the rule.
     fn debug(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         write!(f, "<prolog> ")?;
         if let Some(name) = &self.name {
@@ -147,6 +161,7 @@ where
         write!(f, "true.")
     }
 
+    /// Returns the name of the rule.
     fn name(&self) -> Cow<'_, str> {
         if let Some(name) = &self.name {
             format!("prolog({name})").into()
@@ -162,6 +177,7 @@ where
     N: Default + WeightedAnalysis<L> + Serialize,
     N::Data: Serialize,
 {
+    /// Converts a `PrologRule` into an `Rc<dyn Rule<L, N>>`.
     fn from(val: PrologRule<L>) -> Self {
         Box::<dyn Rule<_, _>>::from(Box::new(val)).into()
     }
@@ -282,6 +298,7 @@ pub mod parser {
         }
     }
 
+    /// Represents either a `PrologRule` or a `Rewrite`.
     pub enum PlOrRw<L, N> {
         Pl(PrologRule<L>),
         Rw(Rewrite<L, N>),
@@ -292,6 +309,7 @@ pub mod parser {
         Rewrite<L, N>: Debug,
         PrologRule<L>: Debug,
     {
+        /// Formats the `PlOrRw` for debugging.
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match self {
                 Self::Pl(arg0) => f.debug_tuple("Pl").field(arg0).finish(),
@@ -301,12 +319,14 @@ pub mod parser {
     }
 
     impl<L, N> From<PrologRule<L>> for PlOrRw<L, N> {
+        /// Converts a `PrologRule` into a `PlOrRw`.
         fn from(v: PrologRule<L>) -> Self {
             Self::Pl(v)
         }
     }
 
     impl<L, N> From<Rewrite<L, N>> for PlOrRw<L, N> {
+        /// Converts a `Rewrite` into a `PlOrRw`.
         fn from(v: Rewrite<L, N>) -> Self {
             Self::Rw(v)
         }
@@ -339,6 +359,7 @@ pub mod parser {
     }
 
     pub(crate) fn extract_name(s: &str) -> anyhow::Result<(Option<&str>, &str)> {
+        /// Extracts the name from a rule string.
         let s = s.trim();
 
         let (name, s) = if let Some(rest) = s.strip_prefix('[') {
@@ -400,14 +421,17 @@ pub mod parser {
         anyhow::Error: From<<Pattern<L> as FromStr>::Err>,
         anyhow::Error: From<<MultiPattern<L> as FromStr>::Err>,
     {
+        /// The error type returned when parsing fails.
         type Err = anyhow::Error;
 
+        /// Parses a string into a `PlOrRw`.
         fn from_str(s: &str) -> Result<Self, Self::Err> {
             parse_one(s)
         }
     }
 
     impl<L, N> PlOrRw<L, N> {
+        /// Parses a program string into a vector of `PlOrRw`.
         pub fn parse_program(s: &str) -> anyhow::Result<Vec<Self>>
         where
             L: Language + Sync + Send + FromOp + 'static,

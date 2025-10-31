@@ -5,9 +5,15 @@ use golgge::{Dependancy, Rule};
 
 use crate::Lang;
 
+/// A rule that performs basic sanity checks on the e-graph.
+///
+/// This rule checks for contradictions like `true = false` within the e-graph.
 pub struct SanityCheck;
 
 impl<N: Analysis<Lang>> Rule<Lang, N> for SanityCheck {
+    /// Performs a sanity check by looking for `true = false` in the e-graph.
+    ///
+    /// If such a contradiction is found, it panics and prints an explanation.
     fn search(&self, pblm: &mut golgge::Program<Lang, N>, _: egg::Id) -> golgge::Dependancy {
         let egraph = pblm.egraph_mut();
 

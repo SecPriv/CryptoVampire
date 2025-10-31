@@ -15,12 +15,19 @@ pub struct RefFormulaBuilder(Rc<RefCell<FormulaBuilder>>);
 
 #[derive(Debug)]
 pub struct FormulaBuilder {
+    /// The parent builder, if this is a nested builder.
     parent: Option<RefFormulaBuilder>,
+    /// The logical mode of this builder (And/Or).
     mode: Mode,
+    /// The collected formulas within this builder.
     content: Vec<RecFOFormula>,
+    /// Whether the formula has been precomputed.
     precomputed: bool,
+    /// Whether the builder has been saturated (i.e., its result is final).
     staturated: bool,
+    /// The optional condition associated with this builder.
     condition: Option<Condition>,
+    /// Weak references to child builders.
     children: Vec<Weak<RefCell<Self>>>,
 }
 
@@ -44,8 +51,10 @@ struct Condition {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Mode {
+    /// Represents a logical AND operation.
     #[default]
     And,
+    /// Represents a logical OR operation.
     Or,
 }
 
@@ -118,6 +127,7 @@ where
     {
         self.mode(Mode::Or)
     }
+    /// Sets the quantifier for the condition to `FOBinder::Forall`.
     pub fn forall(
         self,
     ) -> RefFormulaBuilderBuilder<'a, ref_formula_builder_builder::SetQuantifier<S>>
@@ -126,6 +136,7 @@ where
     {
         self.quantifier(FOBinder::Forall)
     }
+    /// Sets the quantifier for the condition to `FOBinder::Exists`.
     pub fn exists(
         self,
     ) -> RefFormulaBuilderBuilder<'a, ref_formula_builder_builder::SetQuantifier<S>>
@@ -137,6 +148,7 @@ where
 }
 
 impl RefFormulaBuilder {
+    /// Returns a weak reference to the inner `FormulaBuilder`.
     pub fn weak(&self) -> Weak<RefCell<FormulaBuilder>> {
         Rc::downgrade(&self.0)
     }
@@ -178,6 +190,9 @@ impl RefFormulaBuilder {
         self.borrow().mode
     }
 
+    /// Attempts to saturate the builder with a given boolean value.
+    ///
+    /// This propagates the saturation up the parent chain.
     pub fn try_saturate(&self, value: bool) {
         self.borrow_mut().try_saturate(value);
     }
@@ -186,14 +201,17 @@ impl RefFormulaBuilder {
         self.borrow().try_evaluate()
     }
 
+    /// Immutably borrows the inner `FormulaBuilder`.
     pub fn borrow(&self) -> Ref<'_, FormulaBuilder> {
         RefCell::borrow(&self.0)
     }
 
+    /// Mutably borrows the inner `FormulaBuilder`.
     pub fn borrow_mut(&self) -> RefMut<'_, FormulaBuilder> {
         RefCell::borrow_mut(&self.0)
     }
 
+    /// Returns the parent `RefFormulaBuilder`, if any.
     pub fn parent(&self) -> Option<Self> {
         self.borrow().parent.clone()
     }
@@ -214,6 +232,10 @@ impl RefFormulaBuilder {
 }
 
 impl Drop for FormulaBuilder {
+    /// Implements the `drop` logic for `FormulaBuilder`.
+    ///
+    /// If the builder is not saturated, it drains its content into a formula
+    /// and adds it as a leaf to its parent builder.
     fn drop(&mut self) {
         // this is already taken care of in [Self::saturate]
         ereturn_if!(self.is_saturated());
@@ -227,6 +249,9 @@ impl Drop for FormulaBuilder {
 }
 
 impl FormulaBuilder {
+    /// Drains the content of the builder and converts it into a `RecFOFormula`.
+    ///
+    /// This consumes the content and applies the builder's mode and condition.
     fn drain_as_formula(&mut self) -> RecFOFormula {
         assert!(self.children.iter().all(|c| c.upgrade().is_none()));
         let content = std::mem::take(&mut self.content);
@@ -289,7 +314,10 @@ impl FormulaBuilder {
     }
 
     /// sets the builder as saturated
-    fn try_saturate(&mut self, value: bool) {
+    /// Attempts to saturate the builder with a given boolean value.
+    ///
+    /// If saturation occurs, it propagates the value up to the parent builder.
+    pub fn try_saturate(&mut self, value: bool) {
         match &mut self.condition {
             None => self.staturate(value),
             Some(Condition { quantifier, .. }) if quantifier.on_empty() == value => {
@@ -317,6 +345,9 @@ impl FormulaBuilder {
 
     /// erase the condition and set the value of `self` to `value`. This is then
     /// propagated to the parent
+    /// Sets the builder as saturated with a given boolean value.
+    ///
+    /// This clears the condition and propagates the saturation to the parent.
     fn staturate(&mut self, value: bool) {
         assert!(
             !self.staturated,

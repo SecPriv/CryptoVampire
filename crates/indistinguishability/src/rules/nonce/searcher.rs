@@ -11,14 +11,18 @@ use crate::rules::utils::{EgraphSearcher, SyntaxSearcher};
 use crate::terms::{Function, NONCE, RecFOFormula};
 use crate::{Lang, Problem, rexp};
 
+/// A nonce to be searched for
 #[derive(Debug, Clone)]
 pub struct Nonce {
+    /// The content of the nonce.
     content: RecFOFormula,
+    /// The name of the nonce.
     #[allow(dead_code)]
     name: Cow<'static, str>,
 }
 
 impl Nonce {
+    /// Creates a new nonce from a function and its arguments
     #[allow(dead_code)]
     pub fn new_from_args(head: Function, args: implvec!(RecFOFormula)) -> Self {
         Self::builder()
@@ -27,6 +31,7 @@ impl Nonce {
             .build()
     }
 
+    /// Returns the content of the nonce as a `RecFOFormula`
     pub fn as_recformula(&self) -> RecFOFormula {
         self.content.clone()
     }
@@ -196,14 +201,17 @@ impl Nonce {
 }
 
 impl SyntaxSearcher for Nonce {
+    /// Returns a debug name for the nonce searcher.
     fn debug_name<'a>(&'a self) -> std::borrow::Cow<'a, str> {
         Cow::Borrowed("nonce")
     }
 
+    /// Checks if the given function represents an instance of a nonce.
     fn is_instance(&self, _: &Problem, fun: &Function) -> bool {
         fun == &NONCE
     }
 
+    /// Processes an instance of a nonce, adding a leaf to the formula builder.
     fn process_instance(
         &self,
         _: &Problem,
@@ -224,6 +232,7 @@ impl EgraphSearcher for Nonce {}
 
 #[bon]
 impl Nonce {
+    /// Creates a new nonce
     #[builder(builder_type = NonceBuilder)]
     pub fn new(
         content: RecFOFormula,
@@ -238,6 +247,9 @@ impl<S> NonceBuilder<S>
 where
     S: nonce_builder::State,
 {
+    /// Sets the content of the nonce from an e-graph ID.
+    ///
+    /// This converts the `Id` from the e-graph into a `RecFOFormula` and sets it as the nonce's content.
     pub fn content_id<N: Analysis<Lang>>(
         self,
         egraph: &EGraph<Lang, N>,

@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::fmt::Debug;
 
-use egg::{Analysis, EClass, EGraph, Id, Pattern, Searcher, Subst};
+use egg::{Analysis, EClass, EGraph, Id, Pattern, Searcher};
 use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain, izip};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -22,6 +22,7 @@ static PATTERN_LIST: Pattern<Lang> = Pattern::from(&rexp!((CONS_FA #HD #TL)));
 #[dynamic]
 static PATTERN_FA: Pattern<Lang> = Pattern::from(&rexp!((EQUIV #U #V #A #B)));
 
+/// Creates the rules for the `fa` module.
 pub fn mk_rules(_: &Problem) -> impl Iterator<Item = RcRule> + use<'_> {
     [FaRule.into_mrc()].into_iter()
 }
@@ -31,9 +32,11 @@ fn can_apply_fa(f: &Function) -> bool {
     (!f.is_out_of_term_algebra()) && f.signature.output.support_deduce()
 }
 
+/// A rule for handling forall quantifiers.
 pub struct FaRule;
 
 impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
+    /// Returns the name of the rule.
     fn name(&self) -> Cow<'_, str> {
         Cow::Borrowed("fa")
     }

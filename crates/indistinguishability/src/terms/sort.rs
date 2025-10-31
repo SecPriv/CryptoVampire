@@ -10,6 +10,7 @@ use crate::input::Registerable;
 use crate::terms::formula::list;
 use crate::terms::{BITSTRING_SORT, Function, INDEX_SORT, TIME_SORT};
 
+/// Represents the sort (type) of a term in the first-order logic.
 #[non_exhaustive]
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Steel, Default,
@@ -29,6 +30,7 @@ pub enum Sort {
 }
 
 impl Sort {
+    /// Returns `true` if the sort supports deduction (i.e., is `Bool` or `Bitstring`).
     pub const fn support_deduce(&self) -> bool {
         matches!(self, Self::Bool | Self::Bitstring)
     }
@@ -43,11 +45,15 @@ impl Sort {
     }
 
     /// Are the two sort equal modulo [Sort::Any] ?
+    /// Checks if two sorts are unifiable, considering `Sort::Any` as a wildcard.
     #[inline]
     pub fn unify(self, other: Self) -> bool {
         self.is_any() || other.is_any() || self == other
     }
 
+    /// Attempts to convert a `Function` into a `Sort`.
+    ///
+    /// This is used for functions that represent sorts themselves (e.g., `BITSTRING_SORT`).
     pub fn from_function(fun: &Function) -> Option<Self> {
         match fun {
             _ if fun == &BITSTRING_SORT => Some(Self::Bitstring),
@@ -57,6 +63,9 @@ impl Sort {
         }
     }
 
+    /// Returns the corresponding `Function` for the sort, if it has one.
+    ///
+    /// For example, `Sort::Bitstring` corresponds to `BITSTRING_SORT`.
     pub fn as_function(&self) -> Option<&'static Function> {
         match self {
             Sort::Bitstring => Some(&BITSTRING_SORT),
@@ -67,6 +76,9 @@ impl Sort {
     }
 
     /// see [sort_list::try_get_egraph]
+    /// Extracts a list of sorts from an e-graph `Id`.
+    ///
+    /// This function is a wrapper around `list::try_get_egraph`.
     pub fn list_from_egg<N: egg::Analysis<Lang>>(
         egraph: &egg::EGraph<Lang, N>,
         f: egg::Id,
@@ -74,6 +86,9 @@ impl Sort {
         list::try_get_egraph(egraph, f)
     }
 
+    /// Extracts a list of sorts from a `Formula`.
+    ///
+    /// This function is a wrapper around `list::try_get`.
     pub fn list_from_formula<F>(f: F) -> Option<Vec<Sort>>
     where
         F: Formula,
@@ -84,6 +99,7 @@ impl Sort {
 }
 
 impl Display for Sort {
+    /// Formats the `Sort` for display.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Sort::Bool => write!(f, "Bool"),
@@ -98,12 +114,14 @@ impl Display for Sort {
 }
 
 impl Debug for Sort {
+    /// Formats the `Sort` for debugging.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{self}")
     }
 }
 
 impl Registerable for Sort {
+    /// Registers the `Sort` enum and its variants with the Steel VM.
     fn register(
         module: &mut steel::steel_vm::builtin::BuiltInModule,
     ) -> &mut steel::steel_vm::builtin::BuiltInModule {

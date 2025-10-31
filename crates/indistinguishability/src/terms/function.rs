@@ -24,6 +24,7 @@ use crate::terms::{
 use crate::utils::LightClone;
 use crate::{Lang, LangVar};
 
+/// Helper macro to generate `is_*` methods for `Function` based on `FunctionFlags`.
 macro_rules! is_fun {
     ($name:ident; $($flag:ident)|+) => {
         #[inline]
@@ -45,6 +46,7 @@ macro_rules! is_fun {
     };
 }
 
+/// The inner representation of a function, containing all its properties.
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 pub struct InnerFunction {
@@ -59,6 +61,7 @@ pub struct InnerFunction {
 }
 
 impl InnerFunction {
+    /// Creates a new `InnerFunction` with the given name and signature, and default flags.
     pub const fn new(name: Cow<'static, str>, signature: Signature) -> Self {
         Self {
             name,
@@ -88,6 +91,7 @@ impl Function {
         Self(CowArc::from_ref(content))
     }
 
+    /// Creates a new `Function` from an `InnerFunction`.
     pub fn new(inner: InnerFunction) -> Self {
         Self(CowArc::from(inner))
     }
@@ -130,6 +134,7 @@ impl Function {
         }
     }
 
+    /// Returns the `QuantifierIndex` if this function is a quantifier, otherwise `None`.
     pub fn get_quantifier_index(&self) -> Option<QuantifierIndex> {
         self.has_quantifier_idx().then_some(QuantifierIndex {
             temporary: self.is_temporary(),
@@ -137,26 +142,32 @@ impl Function {
         })
     }
 
+    /// Retrieves the `Quantifier` associated with this function from the `FunctionCollection`.
     pub fn get_quantifier<'a>(&self, functions: &'a FunctionCollection) -> Option<&'a Quantifier> {
         self.get_quantifier_index()?.get(functions)
     }
 
+    /// Retrieves the `Exists` quantifier associated with this function, if it is one.
     pub fn get_exists<'a>(&self, functions: &'a FunctionCollection) -> Option<&'a Exists> {
         Exists::try_from_ref(self.get_quantifier(functions)?)
     }
 
+    /// Returns the protocol index if this function represents a protocol, otherwise `None`.
     pub fn get_protocol_index(&self) -> Option<usize> {
         self.is_protocol().then_some(self.protocol_idx)
     }
 
+    /// Returns the step index if this function represents a protocol step, otherwise `None`.
     pub fn get_step_index(&self) -> Option<usize> {
         self.is_step().then_some(self.step_idx)
     }
 
+    /// Returns a reference to the `Alias` if this function has one, otherwise `None`.
     pub fn get_alias(&self) -> Option<&Alias> {
         self.alias.as_ref()
     }
 
+    /// Converts the function into its corresponding `SmtHead` representation, if it has one.
     pub fn as_smt_head(&self) -> Option<SmtHead> {
         use SmtHead::*;
         use builtin::*;
@@ -177,33 +188,44 @@ impl Function {
     // ========================= app ===========================
     // =========================================================
 
+    /// Applies the function to a list of `RecFOFormula` arguments, returning a new `RecFOFormula`.
     pub fn rapp(&self, args: implvec!(RecFOFormula)) -> RecFOFormula {
         RecFOFormula::app(self.clone(), args.into_iter().collect())
     }
 
     /// Builds a [SimplLang]. Panics if not valid
+    /// Applies the function to a list of `egg::Id` arguments, returning a `Lang` node.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the number of arguments does not match the function's arity.
     pub fn app_id(&self, ids: implvec!(Id)) -> Lang {
         Lang::new(self.clone(), ids)
     }
 
+    /// Applies the function to a slice of `Lang` expressions, returning a `RecExpr<Lang>`.
     pub fn app<E: AsRef<[Lang]>>(&self, ids: &[E]) -> RecExpr<Lang> {
         let head = self.app_id((0..ids.len()).map(Id::from));
         head.join_recexprs(|i| &ids[usize::from(i)])
     }
 
+    /// Applies the function to a slice of `LangVar` expressions, returning a `PatternAst<Lang>`.
     pub fn app_var<E: AsRef<[LangVar]>>(&self, ids: &[E]) -> PatternAst<Lang> {
         let head = egg::ENodeOrVar::ENode(self.app_id((0..ids.len()).map(Id::from)));
         head.join_recexprs(|i| &ids[usize::from(i)])
     }
 
+    /// Applies the function with no arguments, returning a `RecExpr<Lang>`.
     pub fn app_empty(&self) -> RecExpr<Lang> {
         self.app::<[_; 0]>(&[])
     }
 
+    /// Applies the function with no arguments, returning a `PatternAst<Lang>`.
     pub fn app_empty_var(&self) -> PatternAst<Lang> {
         self.app_var::<[_; 0]>(&[])
     }
 
+    /// Converts the function into an `FOBinder` if it represents a known binder.
     pub fn as_fobinder(&self) -> Option<FOBinder> {
         match_eq!(self => {
             EXISTS => { Some(FOBinder::Exists) },
@@ -216,6 +238,7 @@ impl Function {
     // ==================== is functions =======================
     // =========================================================
 
+    /// Returns `true` if the function is statically allocated (i.e., borrowed), `false` otherwise.
     pub const fn is_static(&self) -> bool {
         match &self.0 {
             CowArc::Owned(_) => false,
@@ -223,6 +246,7 @@ impl Function {
         }
     }
 
+    /// Returns `true` if the function is a special subterm that requires custom handling.
     #[inline]
     pub fn is_special_subterm(&self) -> bool {
         static SPECIAL_SUBTERM: FunctionFlags = const_fun_flags!(
@@ -241,6 +265,7 @@ impl Function {
             && (self.flags.intersects(SPECIAL_SUBTERM) || self.is_protocol() || self.is_alias())
     }
 
+    /// Returns `true` if the function is a special deduction rule.
     #[inline]
     pub fn is_special_deduce(&self) -> bool {
         static SPECIAL_DEDUCE: FunctionFlags = const_fun_flags!(
@@ -258,6 +283,7 @@ impl Function {
         self.flags.intersects(SPECIAL_DEDUCE) || self.is_alias()
     }
 
+    /// Returns `true` if the function represents a protocol.
     #[inline]
     pub fn is_protocol(&self) -> bool {
         ereturn_if!(!self.flags.contains(FunctionFlags::PROTOCOL), false);
@@ -266,11 +292,13 @@ impl Function {
         true
     }
 
+    /// Returns `true` if the function is an alias.
     #[inline]
     pub fn is_alias(&self) -> bool {
         self.get_alias().is_some()
     }
 
+    /// Returns `true` if the function represents a protocol step.
     #[inline]
     pub fn is_step(&self) -> bool {
         ereturn_if!(!self.flags.contains(FunctionFlags::STEP), false);
@@ -279,19 +307,27 @@ impl Function {
         true
     }
 
+    /// Returns `true` if the function represents a datatype (nonce or protocol).
     pub fn is_datatype(&self) -> bool {
         self.is_nonce() || self.is_protocol()
     }
 
     is_fun!(is_prolog_only; PROLOG_ONLY;
             "This function should appear outside of prolog (e.g., doesn't make sense in smt)");
-    is_fun!(is_if_then_else; IF_THEN_ELSE);
-    is_fun!(is_out_of_term_algebra; SMT_ONLY| PROLOG_ONLY);
-    is_fun!(is_nonce; NONCE);
-    is_fun!(is_quantifier; FIND_SUCH_THAT| BINDER);
-    is_fun!(has_quantifier_idx; BINDER | FIND_SUCH_THAT | SKOLEM | QUANTIFIER_FRESH);
-    is_fun!(is_egg_binder; BINDER);
-    is_fun!(is_temporary; TEMPORARY);
+    is_fun!(is_if_then_else; IF_THEN_ELSE;
+            "Returns `true` if the function is an if-then-else construct.");
+    is_fun!(is_out_of_term_algebra; SMT_ONLY| PROLOG_ONLY;
+            "Returns `true` if the function is outside the term algebra (e.g., SMT-only or Prolog-only).");
+    is_fun!(is_nonce; NONCE;
+            "Returns `true` if the function represents a nonce.");
+    is_fun!(is_quantifier; FIND_SUCH_THAT| BINDER;
+            "Returns `true` if the function is a quantifier (e.g., `EXISTS`, `FIND_SUCH_THAT`).");
+    is_fun!(has_quantifier_idx; BINDER | FIND_SUCH_THAT | SKOLEM | QUANTIFIER_FRESH;
+            "Returns `true` if the function has an associated quantifier index.");
+    is_fun!(is_egg_binder; BINDER;
+            "Returns `true` if the function is an `egg` binder.");
+    is_fun!(is_temporary; TEMPORARY;
+            "Returns `true` if the function is temporary.");
     is_fun!(is_should_not_declare_in_smt; PROLOG_ONLY | BUILTIN_SMT;
 r" Should not appear in an smt file
 
@@ -303,6 +339,7 @@ Because smt has a syntax for it, or it's a prolog trick, or ...");
     // ====================== Steel API ========================
     // =========================================================
 
+    /// Creates a new `Function` instance for use with the Steel VM.
     pub fn steel_new(name: String, signature: Signature, crypto: Vec<ShrCrypto>) -> Self {
         let cryptography = crypto
             .iter()
@@ -314,6 +351,7 @@ Because smt has a syntax for it, or it's a prolog trick, or ...");
         })
     }
 
+    /// Creates a new `Function` instance representing a nonce for use with the Steel VM.
     pub fn steel_new_nonce(name: String, signature: Signature) -> Self {
         assert_eq!(signature.output, Sort::Nonce);
         Self::new(InnerFunction {
@@ -322,6 +360,7 @@ Because smt has a syntax for it, or it's a prolog trick, or ...");
         })
     }
 
+    /// Creates a new `Function` instance representing an alias for use with the Steel VM.
     pub fn steel_new_alias(
         name: String,
         signature: Signature,
@@ -349,12 +388,14 @@ Because smt has a syntax for it, or it's a prolog trick, or ...");
         }))
     }
 
+    /// Returns the name of the function as a `String` for use with the Steel VM.
     pub fn steel_name(&self) -> String {
         self.name.clone().into_owned()
     }
 }
 
 impl Registerable for Function {
+    /// Registers the `Function` type and its associated methods with the Steel VM.
     fn register(
         module: &mut steel::steel_vm::builtin::BuiltInModule,
     ) -> &mut steel::steel_vm::builtin::BuiltInModule {
@@ -379,12 +420,14 @@ impl Registerable for Function {
 }
 
 impl Display for Function {
+    /// Formats the function for display, showing its name.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         Display::fmt(self.name.as_ref(), f)
     }
 }
 
 impl Debug for Function {
+    /// Formats the function for debugging, showing its name.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // f.debug_tuple("Function").field(&self.0).finish()
         Display::fmt(&self, f)
@@ -392,6 +435,7 @@ impl Debug for Function {
 }
 
 impl Deref for Function {
+    /// Dereferences to the inner `InnerFunction`.
     type Target = InnerFunction;
 
     fn deref(&self) -> &Self::Target {
@@ -400,6 +444,7 @@ impl Deref for Function {
 }
 
 impl AsRef<Self> for Function {
+    /// Returns a reference to `self`.
     fn as_ref(&self) -> &Self {
         self
     }

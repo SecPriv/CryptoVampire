@@ -9,6 +9,7 @@ use crate::input::Registerable;
 use crate::problem::{PRule, RcRule};
 use crate::terms::RecFOFormula;
 
+/// Represents a Golgge rule, wrapping an `RcRule`.
 #[derive(Clone, Steel)]
 pub struct Rule(pub RcRule);
 
@@ -28,6 +29,7 @@ impl Rule {
 }
 
 impl Registerable for Rule {
+    /// Registers the `Rule` type and its constructor with the Steel VM.
     fn register(
         module: &mut steel::steel_vm::builtin::BuiltInModule,
     ) -> &mut steel::steel_vm::builtin::BuiltInModule {

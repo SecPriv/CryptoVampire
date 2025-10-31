@@ -22,6 +22,7 @@ fn format_term_oneline(term: &Term) -> (bool, String) {
     }
 }
 
+/// Formats a `Term` into a string with a given indent level.
 pub fn format_term(term: &Term, indent_level: usize) -> String {
     let indent = " ".repeat(indent_level * SPACES_PER_INDENT);
 

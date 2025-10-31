@@ -7,10 +7,12 @@ use crate::input::Registerable;
 use crate::terms::{RecFOFormula, Variable};
 
 /// When the fonction is an alias
+/// Represents a collection of rewrite rules for a function alias.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 pub struct Alias(pub cow![AliasRewrite]);
 
 /// A rewrite rule for an alias
+/// A single rewrite rule for an alias.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Steel, Serialize)]
 pub struct AliasRewrite {
     /// These are the arguments to the function that one must unify with to get
@@ -21,6 +23,7 @@ pub struct AliasRewrite {
 }
 
 impl Alias {
+    /// Returns an iterator over the `AliasRewrite` rules.
     pub fn iter(&self) -> impl Iterator<Item = &AliasRewrite> {
         self.0.iter()
     }
@@ -56,6 +59,7 @@ impl AliasRewrite {
 }
 
 impl Registerable for AliasRewrite {
+    /// Registers the `AliasRewrite` type and its constructor with the Steel VM.
     fn register(
         module: &mut steel::steel_vm::builtin::BuiltInModule,
     ) -> &mut steel::steel_vm::builtin::BuiltInModule {
@@ -63,22 +67,3 @@ impl Registerable for AliasRewrite {
     }
 }
 
-#[macro_export]
-macro_rules! mk_alias {
-    ($( $($var:literal:$sort:ident),* in $($args:expr),* => $to:expr),*) => {
-        {
-            $(
-                let $var: $crate::terms::Variable = $crate::fresh!($sort);
-            )*
-
-            $crate::terms::Alias(::std::borrow::Cow::Owned(vec!
-            [$($crate::terms::AliasRewrite {
-                    from: ::std::borrow::Cow::Owned(vec![$($args),*]),
-                    to: $to,
-                    variables: ::std::borrow::Cow::Owned(vec![$($var.clone()),*]),
-                }
-            ),*]
-            ))
-        }
-    };
-}

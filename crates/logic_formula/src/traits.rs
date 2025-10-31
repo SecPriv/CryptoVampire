@@ -98,7 +98,6 @@ pub trait Bounder<Var> {
 
 impl<V> Bounder<V> for Impossible {
     fn bounds(&self) -> impl Iterator<Item = V> {
-        unreachable!();
         [].into_iter()
     }
 }

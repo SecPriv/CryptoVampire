@@ -13,7 +13,9 @@ use utils::implvec;
 use utils::impossible::Impossible;
 
 use crate::{Destructed, Formula, Head, head};
+/// A trait for discriminants that can be used in `SimplLang`.
 pub trait SimpleDiscriminant: Debug + Clone + Eq + Ord + Hash {
+    /// Returns `true` if the discriminant is valid for the given children IDs.
     fn valid(&self, _ids: &[Id]) -> bool {
         true
     }
@@ -50,20 +52,26 @@ pub trait SimpleDiscriminant: Debug + Clone + Eq + Ord + Hash {
     }
 }
 
+/// A trait for converting an operation and its children into a language term.
 pub trait FromOpGeneral<O>: egg::Language + Sized {
+    /// The error type returned when conversion fails.
     type Error: std::fmt::Debug;
 
+    /// Converts an operation and its children into a language term.
     fn from_op(op: O, children: Vec<egg::Id>) -> Result<Self, Self::Error>;
 }
 
+/// A simplified language for `egg` that uses a generic discriminant `D` and a fixed-size array for arguments.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SimplLang<D, const N: usize = 3> {
     pub head: D,
     pub args: SmallVec<[Id; N]>,
 }
+/// A type alias for `egg::ENodeOrVar` with `SimplLang`.
 pub type SimplLangVar<D, const N: usize = 3> = egg::ENodeOrVar<SimplLang<D, N>>;
 
+/// Errors that can occur when parsing `SimplLang`.
 #[derive(Debug, Clone, Copy, Error)]
 pub enum SimpleLangParseError<E: Error + Debug> {
     #[error("invalid arguments")]
@@ -73,32 +81,39 @@ pub enum SimpleLangParseError<E: Error + Debug> {
 }
 
 impl<D: Display, const N: usize> Display for SimplLang<D, N> {
+    /// Formats the `SimplLang` for display.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.head.fmt(f)
     }
 }
 
 impl<D: SimpleDiscriminant, const N: usize> Language for SimplLang<D, N> {
+    /// The discriminant type for `SimplLang`.
     type Discriminant = D;
 
+    /// Returns the discriminant of the `SimplLang` node.
     fn discriminant(&self) -> Self::Discriminant {
         self.head.clone()
     }
 
+    /// Returns `true` if the two `SimplLang` nodes match.
     fn matches(&self, other: &Self) -> bool {
         self.head == other.head && self.args.len() == other.args.len()
     }
 
+    /// Returns a slice of the children IDs.
     fn children(&self) -> &[Id] {
         &self.args
     }
 
+    /// Returns a mutable slice of the children IDs.
     fn children_mut(&mut self) -> &mut [Id] {
         &mut self.args
     }
 }
 
 impl<D: SimpleDiscriminant, const N: usize> SimplLang<D, N> {
+    /// Creates a new `SimplLang` instance.
     pub fn new<I: IntoIterator<Item = Id>>(head: D, args: I) -> Self {
         Self {
             head,
@@ -121,11 +136,13 @@ impl<D: SimpleDiscriminant, const N: usize> SimplLang<D, N> {
         }
     }
 
+    /// Returns `true` if the `SimplLang` instance is valid.
     pub fn valid(&self) -> bool {
         let Self { head, args } = self;
         head.valid(args)
     }
 
+    /// Converts a `SymbolLang` expression into a `RecExpr<SimplLang<D, N>>`.
     pub fn from_symbollang<E: Error>(
         expr: &[SymbolLang],
         mut convert: impl FnMut(&str) -> Result<D, E>,
@@ -141,6 +158,7 @@ impl<D: SimpleDiscriminant, const N: usize> SimplLang<D, N> {
         Ok(RecExpr::from(inner?))
     }
 
+    /// Converts a `SymbolLang` expression with variables into a `RecExpr<SimplLangVar<D, N>>`.
     pub fn from_var_symbollang<E: Error>(
         expr: &[egg::ENodeOrVar<SymbolLang>],
         mut convert: impl FnMut(&str) -> Result<D, E>,
@@ -163,6 +181,7 @@ impl<D: SimpleDiscriminant, const N: usize> SimplLang<D, N> {
 }
 
 impl<E: Error + Debug> SimpleLangParseError<E> {
+    /// Maps the inner error type to another error type.
     pub fn map<E2: Error + Debug>(self, f: impl FnOnce(E) -> E2) -> SimpleLangParseError<E2> {
         match self {
             SimpleLangParseError::InValid => SimpleLangParseError::InValid,
@@ -172,8 +191,10 @@ impl<E: Error + Debug> SimpleLangParseError<E> {
 }
 
 impl<D: SimpleDiscriminant, const N: usize> FromOpGeneral<D> for SimplLang<D, N> {
+    /// The error type returned when conversion fails.
     type Error = ();
 
+    /// Converts a discriminant and its children into a `SimplLang` term.
     fn from_op(head: D, children: Vec<egg::Id>) -> Result<Self, Self::Error> {
         let res = Self {
             head,
@@ -187,8 +208,10 @@ impl<D: SimpleDiscriminant + FromStr, const N: usize> FromOp for SimplLang<D, N>
 where
     D::Err: Error + Debug,
 {
+    /// The error type returned when conversion fails.
     type Error = SimpleLangParseError<D::Err>;
 
+    /// Converts an operation string and its children into a `SimplLang` term.
     fn from_op(op: &str, children: Vec<Id>) -> Result<Self, Self::Error> {
         let op: D = op.parse()?;
         match FromOpGeneral::from_op(op, children) {
@@ -199,20 +222,26 @@ where
 }
 
 impl<L: egg::FromOp> FromOpGeneral<&str> for L {
+    /// The error type returned when conversion fails.
     type Error = <L as egg::FromOp>::Error;
 
+    /// Converts an operation string and its children into a language term.
     fn from_op(op: &str, children: Vec<egg::Id>) -> Result<Self, Self::Error> {
         <L as egg::FromOp>::from_op(op, children)
     }
 }
 
 impl<F: egg::Language> Formula for &[egg::ENodeOrVar<F>] {
+    /// The variable type for the formula.
     type Var = egg::Var;
 
+    /// The function discriminant type for the formula.
     type Fun = F::Discriminant;
 
+    /// The quantifier type for the formula.
     type Quant = Impossible;
 
+    /// Destructures the formula into its head and arguments.
     fn destruct(self) -> Destructed<Self, impl Iterator<Item = Self>> {
         let n = self.len();
         let head = self.last().expect("empty formula");
@@ -227,6 +256,7 @@ impl<F: egg::Language> Formula for &[egg::ENodeOrVar<F>] {
         Destructed { head, args }
     }
 
+    /// Returns an iterator over the used variables in the formula.
     fn used_vars_iter(self) -> impl Iterator<Item = Self::Var>
     where
         Self::Var: Eq + Clone,
@@ -237,6 +267,7 @@ impl<F: egg::Language> Formula for &[egg::ENodeOrVar<F>] {
         })
     }
 
+    /// Returns an iterator over the free variables in the formula.
     fn free_vars_iter(self) -> impl Iterator<Item = Self::Var>
     where
         Self::Quant: crate::Bounder<Self::Var>,
@@ -252,6 +283,7 @@ where
     I: Iterator<Item = &'a [egg::ENodeOrVar<SimplLang<D, N>>]>,
     D: SimpleDiscriminant,
 {
+    /// Converts a `Destructed` instance into a `RecExpr`.
     fn from(
         Destructed { head, args }: Destructed<&'a [egg::ENodeOrVar<SimplLang<D, N>>], I>,
     ) -> Self {

@@ -65,6 +65,10 @@ pub trait SyntaxSearcher {
         default_is_special(self, pbl, fun)
     }
 
+    /// Recursively searches a `RecFOFormula` for relevant instances.
+    ///
+    /// This function traverses the formula, identifying instances that match `is_instance`
+    /// or special subterms handled by `search_special_recexpr`.
     fn inner_search_formula(&self, pbl: &Problem, builder: &RefFormulaBuilder, term: RecFOFormula) {
         assert!(builder.current_mode().is_and());
         ereturn_if!(builder.is_saturated());
@@ -94,6 +98,10 @@ pub trait SyntaxSearcher {
         }
     }
 
+    /// Searches within a quantifier formula, handling different binder types.
+    ///
+    /// This method recursively calls `inner_search_formula` on the quantifier's arguments,
+    /// adjusting the builder's context (e.g., adding variables, conditions).
     fn search_quantifier(
         &self,
         pbl: &Problem,
@@ -137,6 +145,9 @@ pub trait SyntaxSearcher {
         }
     }
 
+    /// Handles searching within special `RecFOFormula` expressions.
+    ///
+    /// This method dispatches to specific handlers for aliases, quantifiers, and other special functions.
     fn search_special_recexpr(
         &self,
         pbl: &Problem,
@@ -166,6 +177,9 @@ pub trait SyntaxSearcher {
         }
     }
 
+    /// Searches within an alias function, applying its rewrite rules.
+    ///
+    /// This method expands the alias according to its rewrite rules and recursively searches the resulting formulas.
     fn search_alias(
         &self,
         pbl: &Problem,
@@ -208,6 +222,9 @@ pub trait SyntaxSearcher {
         }
     }
 
+    /// Searches within an existential quantifier alias function.
+    ///
+    /// This method substitutes the bound variables with the provided arguments and recursively searches the resulting formula.
     fn search_exists_alias_function<'b>(
         &self,
         pbl: &Problem,
@@ -235,6 +252,9 @@ pub trait SyntaxSearcher {
         self.inner_search_formula(pbl, builder, rexp!((exists #bvars #arg)));
     }
 
+    /// Searches within a `FindSuchThat` alias function.
+    ///
+    /// This method substitutes the bound variables and recursively searches the condition, then, and else branches.
     fn search_fdst_alias_function<'b>(
         &self,
         pbl: &Problem,
@@ -270,6 +290,9 @@ pub trait SyntaxSearcher {
     }
 
     /// search `frame_<ptcl>@<time>`,
+    ///
+    /// This method iterates through the steps of the protocol and recursively searches
+    /// their conditions and messages, applying appropriate conditions based on the frame.
     ///
     /// NB: This doesn't try to unfold (so `time` can a variables)
     fn search_frame(
@@ -309,7 +332,14 @@ pub trait SyntaxSearcher {
     }
 }
 
+/// A trait for searching within an e-graph.
+///
+/// This trait extends `SyntaxSearcher` with methods for navigating and processing
+/// e-graphs, handling e-classes and their nodes.
 pub trait EgraphSearcher: SyntaxSearcher {
+    /// Processes an instance found within the e-graph.
+    ///
+    /// This converts the e-graph `Id`s to `RecFOFormula`s and then calls `SyntaxSearcher::process_instance`.
     fn process_egraph_instance<'a>(
         &self,
         egraph: &EGraph<Lang, PAnalysis<'a>>,
@@ -326,6 +356,10 @@ pub trait EgraphSearcher: SyntaxSearcher {
         self.process_instance(egraph.analysis.pbl(), builder, fun, &args)
     }
 
+    /// Recursively searches an e-graph starting from a given `Id`.
+    ///
+    /// This method traverses the e-graph, applying `early_egraph_loop` and `main_egraph_loop`
+    /// to process e-nodes and their children.
     fn search_egraph<'a>(
         &self,
         egraph: &EGraph<Lang, PAnalysis<'a>>,
@@ -362,6 +396,10 @@ pub trait EgraphSearcher: SyntaxSearcher {
         }
     }
 
+    /// Searches within an e-graph representation of a protocol frame.
+    ///
+    /// This method extracts protocol information from the e-graph and then calls
+    /// `inner_search_formula` on the conditions and messages of the protocol steps.
     fn search_egraph_frame<'a>(
         &self,
         egraph: &EGraph<Lang, PAnalysis<'a>>,
@@ -411,6 +449,10 @@ pub trait EgraphSearcher: SyntaxSearcher {
         }
     }
 
+    /// Performs an early loop iteration for e-graph searching.
+    ///
+    /// This checks for special cases like `MACRO_FRAME` or instances that can be processed directly,
+    /// potentially breaking the loop early.
     fn early_egraph_loop<'a>(
         &self,
         egraph: &EGraph<crate::Lang, PAnalysis<'a>>,
@@ -440,6 +482,10 @@ pub trait EgraphSearcher: SyntaxSearcher {
         }
     }
 
+    /// Performs the main loop iteration for e-graph searching.
+    ///
+    /// This method processes the e-nodes, handling special subterms like `MITE` or `BITE`,
+    /// and recursively searches the arguments of regular functions.
     #[allow(clippy::too_many_arguments)]
     fn main_egraph_loop<'a>(
         &self,
@@ -481,7 +527,9 @@ pub trait EgraphSearcher: SyntaxSearcher {
         }
     }
 
-    /// Builds the subterm of an if in the case of an eclass
+    /// Builds the subterm of an if-then-else (ITE) expression within an e-class.
+    ///
+    /// This method recursively searches the condition, then branch, and else branch of the ITE.
     ///
     /// `visisted` must already be updated
     fn ite_egraph<'a>(
@@ -517,7 +565,10 @@ pub trait EgraphSearcher: SyntaxSearcher {
         }
     }
 
-    /// Builds the subterm of a quantifier in the case of an eclass
+    /// Builds the subterm of a quantifier (binder) within an e-class.
+    ///
+    /// This method handles different types of quantifiers (Forall, Exists, FindSuchThat)
+    /// and recursively searches their respective arguments.
     ///
     /// `visisted` must already be updated
     fn binder_egraph<'a>(
@@ -581,6 +632,10 @@ pub trait EgraphSearcher: SyntaxSearcher {
     }
 }
 
+/// Converts an `egg::Id` from the e-graph into a `RecFOFormula`.
+///
+/// This function attempts to reconstruct the formula represented by the given `Id`,
+/// taking into account any bound variables.
 pub fn expr_of_id<'a>(
     egraph: &EGraph<Lang, PAnalysis<'a>>,
     id: Id,

@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 use std::ops::ControlFlow;
-use std::rc::Rc;
 
 use egg::{Pattern, Searcher};
 use golgge::{Dependancy, PrologRule, Rule};
@@ -24,6 +23,9 @@ declare_trace!($"search_prf");
 // ==================== prolog search ======================
 // =========================================================
 
+/// Creates an iterator of all prolog and search rules related to PRF analysis.
+///
+/// These rules are used to guide the e-graph search for PRF indistinguishability.
 pub fn mk_rules<'a>(pbl: &'a Problem, prf: &'a PRF) -> impl Iterator<Item = RcRule> + use<'a> {
     let functions = pbl
         .functions()
@@ -258,20 +260,26 @@ fn mk_rule_frame(
 // ====================== CV Search ========================
 // =========================================================
 
+/// Represents a search context for PRF analysis.
 #[derive(Debug)]
 pub struct Search {
+    /// The index of the PRF being searched.
     pub prf_idx: usize,
+    /// The message `m` in the PRF context.
     pub m: RecFOFormula,
+    /// The key `k` in the PRF context.
     pub k: RecFOFormula,
 }
 
 impl Search {
+    /// Returns a reference to the PRF associated with this search context.
     #[inline]
     fn prf<'a>(&self, pbl: &'a Problem) -> &'a PRF {
         pbl.cryptography()[self.prf_idx].as_prf().unwrap()
     }
 
     /// Returns an iterator of formula instead of a large conjunctrion
+    /// Searches for PRF-related conditions at a specific timepoint within a protocol.
     pub fn search_timepoint<'a>(
         &'a self,
         pbl: &'a Problem,
@@ -312,14 +320,17 @@ impl Search {
 }
 
 impl crate::rules::utils::SyntaxSearcher for Search {
+    /// Returns a debug name for the PRF searcher.
     fn debug_name<'a>(&'a self) -> std::borrow::Cow<'a, str> {
         Cow::Borrowed("search_prf")
     }
 
+    /// Checks if the given function is an instance relevant to this PRF search (i.e., `NONCE` or the PRF's hash function).
     fn is_instance(&self, pbl: &Problem, fun: &Function) -> bool {
         fun == &NONCE || fun == &self.prf(pbl).hash
     }
 
+    /// Processes an instance of a relevant function, updating the formula builder based on PRF logic.
     fn process_instance(
         &self,
         pbl: &Problem,
@@ -363,14 +374,19 @@ impl crate::rules::utils::SyntaxSearcher for Search {
 
 decl_vars!(const M:Bitstring, K:Nonce, P:Protocol, T:Time);
 
+/// A rule that triggers the PRF analysis using the Vampire SMT solver.
 #[derive(Debug)]
 struct PrfVampireRule {
+    /// The index of the PRF in the problem's cryptographic assumptions.
     prf: usize,
+    /// The pattern to search for in the e-graph that triggers this rule.
     pattern: Pattern<Lang>,
+    /// The SMT runner used to interact with the Vampire SMT solver.
     exec: SmtRunner,
 }
 
 impl PrfVampireRule {
+    /// Creates a new `PrfVampireRule`.
     fn new(pbl: &Problem, prf @ PRF { search_trigger, .. }: &PRF) -> Self {
         Self {
             prf: prf.index(),
@@ -381,10 +397,12 @@ impl PrfVampireRule {
 }
 
 impl<'a> Rule<Lang, PAnalysis<'a>> for PrfVampireRule {
+    /// Returns the name of this rule, including the PRF index.
     fn name(&self) -> std::borrow::Cow<'_, str> {
         format!("prf vampire #{:}", self.prf).into()
     }
 
+    /// Searches for the trigger pattern in the e-graph and initiates a PRF search using the SMT solver.
     fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: egg::Id) -> Dependancy {
         let egraph = prgm.egraph_mut();
         ereturn_let!(let Some(substs) = self.pattern

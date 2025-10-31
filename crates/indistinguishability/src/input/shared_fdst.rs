@@ -7,6 +7,7 @@ use crate::input::shared_problem::ShrProblem;
 use crate::input::{Registerable, conversion_err};
 use crate::terms::{FindSuchThat, Function, QuantifierIndex, QuantifierT, RecFOFormula, Variable};
 
+/// Represents a shared `FindSuchThat` quantifier context within the Steel VM.
 #[derive(Debug, Clone, Steel)]
 pub struct ShrFindSuchThat {
     pub(crate) pbl: ShrProblem,
@@ -14,6 +15,7 @@ pub struct ShrFindSuchThat {
 }
 
 impl ShrFindSuchThat {
+    /// Returns the `QuantifierIndex` for this shared `FindSuchThat` quantifier.
     pub fn index(&self) -> QuantifierIndex {
         QuantifierIndex {
             temporary: false,
@@ -33,48 +35,59 @@ impl ShrFindSuchThat {
         })
     }
 
+    /// Returns a vector of the context variables of the `FindSuchThat` quantifier.
     fn get_cvars(&self) -> Vec<Variable> {
         self.fdst().cvars().to_vec()
     }
 
+    /// Returns a vector of the bound variables of the `FindSuchThat` quantifier.
     fn get_bvars(&self) -> Vec<Variable> {
         self.fdst().bvars().to_vec()
     }
 
+    /// Returns the top-level function of the `FindSuchThat` quantifier.
     fn get_tlf(&self) -> Function {
         self.fdst().top_level_function().clone()
     }
 
+    /// Returns a vector of the skolem functions of the `FindSuchThat` quantifier.
     fn get_skolems(&self) -> Vec<Function> {
         self.fdst().skolems().to_vec()
     }
 
+    /// Returns the condition of the `FindSuchThat` quantifier.
     fn get_condition(&self) -> ::steel::rvals::Result<RecFOFormula> {
         self.fdst().condition().cloned().ok_or(cerr())
     }
 
+    /// Returns the then-branch of the `FindSuchThat` quantifier.
     fn get_then_branch(&self) -> ::steel::rvals::Result<RecFOFormula> {
         self.fdst().then_branch().cloned().ok_or(cerr())
     }
 
+    /// Returns the else-branch of the `FindSuchThat` quantifier.
     fn get_else_branch(&self) -> ::steel::rvals::Result<RecFOFormula> {
         self.fdst().else_branch().cloned().ok_or(cerr())
     }
 
+    /// Sets the condition of the `FindSuchThat` quantifier.
     fn set_condition(&self, p: RecFOFormula) {
         self.fdst_mut().set_condition(p);
     }
 
+    /// Sets the then-branch of the `FindSuchThat` quantifier.
     fn set_then_branch(&self, p: RecFOFormula) {
         self.fdst_mut().set_then_branch(p);
     }
 
+    /// Sets the else-branch of the `FindSuchThat` quantifier.
     fn set_else_branch(&self, p: RecFOFormula) {
         self.fdst_mut().set_else_branch(p);
     }
 }
 
 impl Registerable for ShrFindSuchThat {
+    /// Registers the `ShrFindSuchThat` type and its associated functions with the Steel VM.
     fn register(
         module: &mut steel::steel_vm::builtin::BuiltInModule,
     ) -> &mut steel::steel_vm::builtin::BuiltInModule {

@@ -1,11 +1,13 @@
 use crate::Problem;
-use crate::runners::vampire::{self, VampireExec, vampire_suboptions};
+use crate::runners::vampire::{VampireExec, vampire_suboptions};
 use crate::runners::{SharedProblem, SmtSolver};
 
+/// A wrapper around `VampireExec` configured for bounded model checking.
 #[derive(Debug, Clone)]
 pub struct BounededVampire(VampireExec);
 
 impl BounededVampire {
+    /// Creates a new `BounededVampire` instance with default bounded model checking arguments.
     pub fn new(pbl: &Problem) -> Self {
         Self(
             VampireExec::builder()
@@ -24,6 +26,10 @@ impl BounededVampire {
 }
 
 impl SmtSolver for BounededVampire {
+    /// Attempts to run the bounded Vampire solver with the given SMT query.
+    ///
+    /// Returns `Ok(Some(true))` if the query is satisfiable (model found),
+    /// `Ok(Some(false))` if unsatisfiable, or `Err` if a solver error occurs.
     async fn try_run<'a>(
         &self,
         pbl: &SharedProblem<'a>,

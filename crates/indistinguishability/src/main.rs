@@ -1,3 +1,7 @@
+//! The main executable for the indistinguishability analysis tool.
+//! This module handles command-line argument parsing, initialization,
+//! and execution of the analysis engine.
+
 use std::io::{self, Read};
 
 use clap::Parser;

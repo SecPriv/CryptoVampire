@@ -1,9 +1,13 @@
 use super::*;
+/// Represents a destructured formula, separating its head from its arguments.
 pub struct Destructed<F: Formula, I> {
+    /// The head of the formula.
     pub head: Head<F>,
+    /// The arguments of the formula.
     pub args: I,
 }
 
+/// A macro to generate trait bounds for `Destructed`.
 #[allow(unused_macros)]
 macro_rules! mk_bounds {
 ($f:ty, $i:ty : $t:ty; $($tt:tt)*) => {
@@ -27,6 +31,7 @@ where
     F::Var: PartialEq,
     F::Quant: PartialEq,
 {
+    /// Compares two `Destructed` instances for equality.
     fn eq(&self, other: &Self) -> bool {
         self.head == other.head && self.args == other.args
     }
@@ -50,6 +55,7 @@ where
     F::Var: PartialOrd,
     F::Quant: PartialOrd,
 {
+    /// Compares two `Destructed` instances for partial order.
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         match self.head.partial_cmp(&other.head) {
             Some(core::cmp::Ordering::Equal) => {}
@@ -67,6 +73,7 @@ where
     F::Var: Ord,
     F::Quant: Ord,
 {
+    /// Compares two `Destructed` instances for total order.
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         PartialOrd::partial_cmp(&self, &other).unwrap()
     }
@@ -80,6 +87,7 @@ where
     F::Var: Debug,
     F::Quant: Debug,
 {
+    /// Formats the `Destructed` instance for debugging.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Destructed")
             .field("head", &self.head)
@@ -96,6 +104,7 @@ where
     F::Var: Hash,
     F::Quant: Hash,
 {
+    /// Hashes the `Destructed` instance.
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.head.hash(state);
         self.args.hash(state);
@@ -110,6 +119,7 @@ where
     F::Var: Clone,
     F::Quant: Clone,
 {
+    /// Clones the `Destructed` instance.
     fn clone(&self) -> Self {
         Self {
             head: self.head.clone(),

@@ -17,14 +17,22 @@ pub mod test;
 mod candidate;
 mod search;
 
+/// Represents a Pseudo-Random Function (PRF) and associated functions for its analysis.
 #[derive(Debug)]
 pub struct PRF {
+    /// The hash function associated with this PRF.
     hash: Function,
+    /// Candidate function for bitstring outputs.
     candidate_bitstring: Function,
+    /// Candidate function for boolean outputs.
     candidate_bool: Function,
+    /// Search function for bitstring outputs.
     search_bitstring: Function,
+    /// Search function for boolean outputs.
     search_bool: Function,
+    /// Trigger function for PRF searches.
     search_trigger: Function,
+    /// The index of this PRF in the problem's cryptographic assumptions.
     index: usize,
 }
 
@@ -47,6 +55,19 @@ macro_rules! declare {
 declare_trace!($"prf");
 
 impl PRF {
+    /// Creates a new `PRF` instance and adds its associated functions and rules to the problem.
+    ///
+    /// # Arguments
+    ///
+    /// * `pbl` - A mutable reference to the `Problem`.
+    /// * `pos` - The position/index of this PRF in the problem's cryptographic assumptions.
+    /// * `hash` - The hash function to be used as the PRF.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the `hash` function's signature is not `(Bitstring, Bitstring) -> Bitstring`,
+    /// or if the `hash` function does not contain `pos` in its cryptography, or if the
+    /// cryptographic assumption at `pos` is already defined.
     pub fn new_and_add(pbl: &mut Problem, pos: usize, hash: Function) -> &Self {
         assert_eq!(
             hash.signature,
@@ -100,6 +121,7 @@ impl PRF {
         crypt_assumpt.as_prf().unwrap()
     }
 
+    /// Returns the candidate function for a given output sort.
     pub fn get_candidate(&self, sort: Sort) -> Option<&Function> {
         match sort {
             Sort::Bitstring => Some(&self.candidate_bitstring),
@@ -108,6 +130,7 @@ impl PRF {
         }
     }
 
+    /// Returns the search function for a given output sort.
     pub fn get_search(&self, sort: Sort) -> Option<&Function> {
         match sort {
             Sort::Bitstring => Some(&self.search_bitstring),
@@ -116,6 +139,7 @@ impl PRF {
         }
     }
 
+    /// Creates the two main PRF rules (left and right) for the e-graph.
     fn mk_prf_rule(&self) -> [TopPrfRule; 2] {
         let Self {
             hash,
@@ -151,6 +175,7 @@ impl PRF {
         ]
     }
 
+    /// Returns the index of this PRF in the problem's cryptographic assumptions.
     pub fn index(&self) -> usize {
         self.index
     }
@@ -163,24 +188,34 @@ decl_vars!(const; U, V, HM:Bitstring, M:Bitstring, K:Nonce, NK:Nonce, B);
 /// This triggers the procedure and will in turn call many other rules
 #[derive(Debug, Clone)]
 struct TopPrfRule {
+    /// The conclusion pattern to search for in the e-graph.
     conclusion: Pattern<Lang>,
+    /// The first subterm search pattern.
     subterm_search1: Pattern<Lang>,
+    /// The second subterm search pattern.
     subterm_search2: Pattern<Lang>,
+    /// The new goal pattern to apply after a match.
     new_goal: Pattern<Lang>,
 
     // for debuging
+    /// The kind of PRF rule (Left or Right).
     kind: PrfKind,
     #[allow(dead_code)]
+    /// The candidate bitstring function associated with this rule.
     candidate_bitstring: Function,
 }
 
+/// Specifies the kind of PRF rule, either Left or Right.
 #[derive(Debug, Clone, Copy)]
 enum PrfKind {
+    /// Represents the left-hand side PRF rule.
     Left,
+    /// Represents the right-hand side PRF rule.
     Right,
 }
 
 impl TopPrfRule {
+    /// Creates a new `TopPrfRule`.
     fn new(
         conclusion: &RecFOFormula,
         subterm_search1: &RecFOFormula,
@@ -201,6 +236,7 @@ impl TopPrfRule {
 }
 
 impl<'a> Rule<Lang, PAnalysis<'a>> for TopPrfRule {
+    /// Searches for the conclusion pattern in the e-graph and applies the PRF rule.
     fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: Id) -> Dependancy {
         let egraph = prgm.egraph_mut();
         ereturn_let!(let Some(substs)= self.conclusion.search_eclass(egraph, goal), Dependancy::impossible());
@@ -236,6 +272,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for TopPrfRule {
             .collect()
     }
 
+    /// Returns the name of this rule, based on its `PrfKind`.
     fn name(&self) -> std::borrow::Cow<'_, str> {
         match self.kind {
             PrfKind::Left => Cow::Borrowed("prf left"),

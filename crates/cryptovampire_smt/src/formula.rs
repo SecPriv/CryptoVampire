@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::fmt::Display;
 use std::ops::{BitAnd, BitOr, Not, Shr};
 
@@ -7,61 +6,94 @@ use logic_formula::{Bounder, Destructed, Formula, HeadSk};
 use utils::{dynamic_iter, ereturn_if, implvec};
 
 use super::SortedVar;
-use crate::{EvalParam, SmtParam, write_list, write_par};
+use crate::{SmtParam, write_list, write_par};
 
+/// Represents an SMT formula.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum SmtFormula<U: SmtParam> {
+    /// A variable.
     Var(U::SVar),
+    /// A function application.
     Fun(U::Function, Vec<SmtFormula<U>>),
+    /// A universal quantifier.
     Forall(Vec<U::SVar>, Box<SmtFormula<U>>),
+    /// An existential quantifier.
     Exists(Vec<U::SVar>, Box<SmtFormula<U>>),
 
+    /// The boolean literal `true`.
     True,
+    /// The boolean literal `false`.
     False,
+    /// A conjunction of formulas.
     And(Vec<SmtFormula<U>>),
+    /// A disjunction of formulas.
     Or(Vec<SmtFormula<U>>),
+    /// An equality of terms.
     Eq(Vec<SmtFormula<U>>),
+    /// A disequality of terms.
     Neq(Vec<SmtFormula<U>>),
+    /// A negation of a formula.
     Not(Box<SmtFormula<U>>),
+    /// An implication.
     Implies(Box<SmtFormula<U>>, Box<SmtFormula<U>>),
 
+    /// An if-then-else expression.
     Ite(Box<SmtFormula<U>>, Box<SmtFormula<U>>, Box<SmtFormula<U>>),
 
     #[cfg(feature = "cryptovampire")]
+    /// A subterm assertion (specific to cryptovampire).
     Subterm(U::Function, Box<SmtFormula<U>>, Box<SmtFormula<U>>),
 }
 
+/// Represents the head of an SMT formula, indicating the type of operation.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum SmtHead {
+    /// The boolean literal `true`.
     True,
+    /// The boolean literal `false`.
     False,
+    /// Conjunction.
     And,
+    /// Disjunction.
     Or,
+    /// Equality.
     Eq,
+    /// Disequality.
     Neq,
+    /// Negation.
     Not,
+    /// Implication.
     Implies,
+    /// If-then-else.
     If,
 }
 
+/// Represents an SMT quantifier with its bound variables.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum SmtQuantifier<U: SmtParam> {
+    /// Universal quantifier.
     Forall(Vec<U::SVar>),
+    /// Existential quantifier.
     Exists(Vec<U::SVar>),
 }
 
+/// Represents an SMT quantifier with references to its bound variables.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum SmtQuantifierRef<'a, U: SmtParam> {
+    /// Universal quantifier with references to bound variables.
     Forall(&'a [U::SVar]),
+    /// Existential quantifier with references to bound variables.
     Exists(&'a [U::SVar]),
 }
 
 impl<U: SmtParam> Default for SmtFormula<U> {
+    /// Returns the default SMT formula, which is `True`.
     fn default() -> Self {
         Self::True
     }
 }
 
+/// Helper function to write an SMT application (head and arguments).
 fn write_app<U>(f: &mut std::fmt::Formatter<'_>, head: &str, args: implvec!(U)) -> std::fmt::Result
 where
     U: Display,
@@ -79,6 +111,7 @@ impl<U> Display for SmtFormula<U>
 where
     U: SmtParam,
 {
+    /// Formats the SMT formula for display in SMT-LIB format.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             SmtFormula::Var(v) => write!(f, "{v}"),
@@ -126,6 +159,7 @@ where
 }
 
 impl<U: SmtParam> SmtFormula<U> {
+    /// Creates a builtin SMT formula from a given `SmtHead` and arguments.
     pub fn builtin(head: SmtHead, args: implvec!(Self)) -> Result<Self, Vec<Self>> {
         let args: Vec<_> = args.into_iter().collect();
         use SmtFormula::*;
@@ -157,6 +191,7 @@ impl<U: SmtParam> SmtFormula<U> {
         }
     }
 
+    /// Optimises the SMT formula in-place.
     fn optimise_mut(&mut self)
     where
         U::SVar: Eq,
@@ -243,6 +278,7 @@ impl<U: SmtParam> SmtFormula<U> {
         }
     }
 
+    /// Optimises the SMT formula and returns the optimised version.
     pub fn optimise(mut self) -> Self
     where
         U::SVar: Eq,
@@ -251,6 +287,7 @@ impl<U: SmtParam> SmtFormula<U> {
         self
     }
 
+    /// Converts a generic formula into an SMT formula.
     pub fn from_formula<V>(f: V) -> Self
     where
         V: IntoSmt<U>,
@@ -313,36 +350,50 @@ impl<U: SmtParam> SmtFormula<U> {
     }
 }
 
+/// A trait for types that can be converted into an SMT formula.
 pub trait IntoSmt<U: SmtParam>: Formula {
+    /// Converts a generic function into an SMT function.
     fn convert_function(fun: Self::Fun) -> U::Function;
+    /// Converts a generic variable into an SMT sorted variable.
     fn convert_var(var: Self::Var) -> <U as SmtParam>::SVar;
+    /// Converts a generic quantifier into an SMT quantifier.
     fn convert_quant(quant: Self::Quant) -> SmtQuantifier<U>;
+    /// Converts a generic function head into an SMT head, if applicable.
     fn as_head(fun: &Self::Fun) -> Option<SmtHead>;
 
+    /// Converts the formula into an SMT formula.
     fn into_smt(self) -> SmtFormula<U> {
         SmtFormula::from_formula(self)
     }
 }
 
+/// Represents either a builtin SMT function or a user-defined function.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SmtFunctions<F> {
+    /// A builtin SMT function.
     Smt(SmtHead),
+    /// A user-defined function.
     Fun(F),
 }
 
 impl<F> From<F> for SmtFunctions<F> {
+    /// Converts a function `F` into an `SmtFunctions::Fun` variant.
     fn from(v: F) -> Self {
         Self::Fun(v)
     }
 }
 
 impl<U: SmtParam> Formula for SmtFormula<U> {
+    /// The variable type for the formula.
     type Var = U::SVar;
 
+    /// The function type for the formula.
     type Fun = SmtFunctions<U::Function>;
 
+    /// The quantifier type for the formula.
     type Quant = SmtQuantifier<U>;
 
+    /// Destructures the SMT formula into its head and arguments.
     fn destruct(self) -> Destructed<Self, impl Iterator<Item = Self>> {
         dynamic_iter!(MIter; None:A, One:B, Map:D);
 
@@ -409,12 +460,16 @@ impl<U: SmtParam> Formula for SmtFormula<U> {
 }
 
 impl<'a, U: SmtParam> Formula for &'a SmtFormula<U> {
+    /// The variable type for the formula.
     type Var = &'a U::SVar;
 
+    /// The function type for the formula.
     type Fun = SmtFunctions<&'a U::Function>;
 
+    /// The quantifier type for the formula.
     type Quant = SmtQuantifierRef<'a, U>;
 
+    /// Destructures the SMT formula into its head and arguments.
     fn destruct(self) -> Destructed<Self, impl Iterator<Item = Self>> {
         dynamic_iter!(MIter; None:A, One:B, Ref:D,Owned:C);
 
@@ -481,38 +536,47 @@ impl<'a, U: SmtParam> Formula for &'a SmtFormula<U> {
 }
 
 impl<U: SmtParam> Not for SmtFormula<U> {
+    /// The output type of the negation operation.
     type Output = Self;
 
+    /// Applies logical negation to the SMT formula.
     fn not(self) -> Self::Output {
         Self::Not(Box::new(self))
     }
 }
 
 impl<U: SmtParam> BitAnd for SmtFormula<U> {
+    /// The output type of the bitwise AND operation.
     type Output = Self;
 
+    /// Applies logical AND to two SMT formulas.
     fn bitand(self, rhs: Self) -> Self::Output {
         Self::And(vec![self, rhs])
     }
 }
 
 impl<U: SmtParam> BitOr for SmtFormula<U> {
+    /// The output type of the bitwise OR operation.
     type Output = Self;
 
+    /// Applies logical OR to two SMT formulas.
     fn bitor(self, rhs: Self) -> Self::Output {
         Self::Or(vec![self, rhs])
     }
 }
 
 impl<U: SmtParam> Shr for SmtFormula<U> {
+    /// The output type of the right shift operation (used for implication).
     type Output = Self;
 
+    /// Applies logical implication to two SMT formulas.
     fn shr(self, rhs: Self) -> Self::Output {
         Self::Implies(Box::new(self), Box::new(rhs))
     }
 }
 
 impl<'a, U: SmtParam> Bounder<&'a U::SVar> for SmtQuantifierRef<'a, U> {
+    /// Returns an iterator over the bound variables of the quantifier.
     fn bounds(&self) -> impl Iterator<Item = &'a U::SVar> {
         match self {
             SmtQuantifierRef::Forall(vars) | SmtQuantifierRef::Exists(vars) => vars.iter(),

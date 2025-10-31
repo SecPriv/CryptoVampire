@@ -12,14 +12,21 @@ use crate::{Lang, MSmt, MSmtFormula, Problem, rexp, vec_smt};
 /// A step in protocol
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Step {
+    /// The identifier of the step
     pub id: Function,
+    /// The variables of the step
     pub vars: Vec<Variable>,
+    /// The condition of the step
     pub cond: RecFOFormula,
+    /// The message of the step
     pub msg: RecFOFormula,
 }
 
 #[bon]
 impl Step {
+    /// Creates a new step
+    ///
+    /// Returns `None` if the number of variables is different from the arity of the step id.
     #[builder]
     pub fn new(
         #[builder(default = INIT.clone())] id: Function,
@@ -37,11 +44,16 @@ impl Step {
 }
 
 impl Step {
+    /// Returns the expression of the step id with its variables
     pub fn id_expr(&self) -> RecFOFormula {
         let Self { id, vars, .. } = self;
         rexp!((id #(vars.iter().map_into())*))
     }
 
+    /// Checks if the step is valid
+    ///
+    /// A step is valid if all the free variables in the condition and the message
+    /// are contained in the step variables.
     pub fn valid(&self) -> bool {
         let Self {
             vars, cond, msg, ..
@@ -52,6 +64,7 @@ impl Step {
 }
 
 impl Display for Step {
+    /// Formats the `Step` for display.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
             id,
@@ -68,6 +81,10 @@ impl Display for Step {
 }
 
 impl Step {
+    /// Creates an iterator of `Rewrite` rules for unfolding the condition and message of this step.
+    ///
+    /// These rewrites are used in the e-graph to replace `UNFOLD_COND` and `UNFOLD_MSG` applications
+    /// with the actual condition and message formulas of the step.
     pub(crate) fn mk_unfold_rewrites<N: Analysis<Lang>>(
         &self,
         ptcl: &Function,
@@ -92,6 +109,8 @@ impl Step {
         [unfold_cond, unfold_msg].into_iter()
     }
 
+    /// Creates an iterator of SMT formulas representing the unfolding of the condition and message
+    /// for use with the Vampire SMT solver.
     pub(crate) fn mk_unfold_vampire_rewrites(
         &self,
         pbl: &Problem,

@@ -10,22 +10,32 @@ use log::{log_enabled, trace};
 use smallvec::SmallVec;
 use utils::{ebreak_if, ebreak_let, econtinue_if, ereturn_if};
 
+/// A trait for languages that have a concept of a 'true' value.
 pub trait WithTrue: Language {
+    /// Creates a 'true' value for the language.
     fn mk_true() -> Self;
+    /// Returns `true` if the given value is a 'true' value.
     fn is_true(&self) -> bool;
 }
 
+/// A trait for languages that have a concept of a 'false' value.
 #[allow(dead_code)]
 pub trait WithFalse: Language {
+    /// Creates a 'false' value for the language.
     fn mk_false() -> Self;
+    /// Returns `true` if the given value is a 'false' value.
     fn is_false(&self) -> bool;
 }
 
+/// A trait for languages that have a concept of an 'and' operation.
 pub trait WithAnd: WithTrue {
+    /// Creates an 'and' expression with the given children.
     fn mk_and(a: Id, b: Id) -> Self;
 
+    /// Returns `true` if the given value is an 'and' expression.
     fn is_and(&self) -> bool;
 
+    /// Creates a pattern for a nested 'and' expression.
     fn mk_and_pattern(from: egg::uvar, n: usize) -> PatternAst<Self> {
         if n == 0 {
             return vec![ENodeOrVar::ENode(Self::mk_true())].into();
@@ -35,8 +45,8 @@ pub trait WithAnd: WithTrue {
         for i in 1..(n as egg::uvar) {
             ret.push(ENodeOrVar::Var(Var::from_usize(from + i)));
             ret.push(ENodeOrVar::ENode(Self::mk_and(
-                (2 * (i - 1)).into(),
-                (2 * (i - 1) + 1).into(),
+                (2 * (i - 1) as usize).into(),
+                ((2 * (i - 1)) + 1 as usize).into(),
             )));
         }
         ret.into()
@@ -44,30 +54,36 @@ pub trait WithAnd: WithTrue {
 }
 
 impl WithTrue for SymbolLang {
+    /// Creates a 'true' value for `SymbolLang`.
     fn mk_true() -> Self {
         Self::leaf("mtrue")
     }
 
+    /// Returns `true` if the `SymbolLang` value is a 'true' value.
     fn is_true(&self) -> bool {
         self.discriminant().as_str() == "mtrue"
     }
 }
 
 impl WithFalse for SymbolLang {
+    /// Creates a 'false' value for `SymbolLang`.
     fn mk_false() -> Self {
         Self::leaf("mfalse")
     }
 
+    /// Returns `true` if the `SymbolLang` value is a 'false' value.
     fn is_false(&self) -> bool {
         self.discriminant().as_str() == "mfalse"
     }
 }
 
 impl WithAnd for SymbolLang {
+    /// Creates an 'and' expression for `SymbolLang`.
     fn mk_and(a: Id, b: Id) -> Self {
         Self::new("mand", vec![a, b])
     }
 
+    /// Returns `true` if the `SymbolLang` value is an 'and' expression.
     fn is_and(&self) -> bool {
         self.discriminant().as_str() == "mand"
     }
@@ -254,6 +270,7 @@ impl<N: Analysis<SymbolLang>> Applier<SymbolLang, N> for AndSimplifier {
 }
 
 // pub fn and_simpl_rewrite<L: Language + WithAnd + WithFalse + Display + FromOp, N: Analysis<L>>(
+/// Creates a rewrite rule for simplifying 'and' expressions.
 pub fn and_simpl_rewrite<N: Analysis<SymbolLang>>() -> Rewrite<SymbolLang, N> {
     Rewrite::new("and_simpl", AndSimplifier, AndSimplifier).unwrap()
 }

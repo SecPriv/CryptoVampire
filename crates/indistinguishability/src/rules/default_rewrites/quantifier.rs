@@ -3,6 +3,7 @@ use egg::{Analysis, Rewrite};
 use crate::terms::{EXISTS, FIND_SUCH_THAT, MITE, NIL};
 use crate::{Lang, Problem};
 
+/// Creates rewrite rules for quantifiers, including rules for empty quantifiers.
 pub fn mk_rewrites<N: Analysis<Lang>>(
     _: &Problem,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {

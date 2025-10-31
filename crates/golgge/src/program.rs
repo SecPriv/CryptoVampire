@@ -19,6 +19,7 @@ use crate::proof::SearchResult;
 use crate::rule::PlOrRw;
 use crate::{Config, Dependancy, Fresh, ProofItem, Rule, WeightedAnalysis};
 
+/// A macro for tracing messages if tracing is enabled in the program's configuration.
 macro_rules! mtrace {
     ($s:ident, $($t:tt)*) => {
         if $s.is_tracing_enabled() {
@@ -27,24 +28,37 @@ macro_rules! mtrace {
     };
 }
 
+/// A program that manages an `egg::EGraph` and a set of rules.
+/// A program that manages an `egg::EGraph` and a set of rules.
 pub struct Program<L: Language, N: Analysis<L>> {
+    /// The underlying e-graph.
     egraph: Option<EGraph<L, N>>,
+    /// Equality rewrite rules.
     eq_rules: Vec<Rewrite<L, N>>,
+    /// Custom rules.
     rules: Vec<Rc<dyn Rule<L, N>>>,
-    // memo: ECallMap<Rc<RefCell<Status>>>,
+    /// Memoization table for proof attempts.
     memo: Option<HashMap<Id, MemoStatus<L, N>>>,
+    /// Indicates if the program is in a clean state.
     clean: bool,
+    /// Configuration for the program.
     pub config: Config,
 }
 
+/// Represents the status of a proof attempt for a given e-class.
 #[derive(Clone)]
 #[allow(dead_code)]
 pub(crate) enum Status<L: Language, N: Analysis<L>> {
+    /// The proof attempt succeeded, containing the proof item.
     True(ProofItem<L, N>),
+    /// The proof attempt failed.
     False,
+    /// The proof attempt is currently in progress.
     InProgress,
 }
 
+/// A wrapper around `Rc<RefCell<Status<L, N>>>` for memoization.
+/// A wrapper around `Rc<RefCell<Status<L, N>>>` for memoization.
 pub(crate) struct MemoStatus<L: Language, N: Analysis<L>>(Rc<RefCell<Status<L, N>>>);
 
 #[bon]
@@ -53,6 +67,7 @@ where
     L: Language,
     N: Analysis<L>,
 {
+    /// Creates a new `Program` instance.
     #[builder]
     pub fn build(
         egraph: EGraph<L, N>,
@@ -91,6 +106,9 @@ where
     /// activate/deactivate memoisation/tabling
     ///
     /// deactivating it, then reactivating it resets it
+    /// Activates or deactivates memoization/tabling.
+    ///
+    /// Deactivating it, then reactivating it resets it.
     pub fn set_memo(&mut self, activated: bool) -> bool {
         let set = self.memo.is_some() == activated;
         if !set {
@@ -99,11 +117,13 @@ where
         set
     }
 
+    /// Resets the memoization table.
     pub fn reset_memo(&mut self) {
         self.memo = self.memo.is_some().then(Default::default)
     }
 
     /// adds `e` to the egraph
+    /// Adds an expression to the e-graph.
     pub fn add_expr(&mut self, e: &RecExpr<L>) -> Id {
         match &mut self.egraph {
             Some(egraph) => egraph.add_expr(e),
@@ -125,6 +145,7 @@ where
     }
 
     /// Add rewrite rules, and [Rule]s
+    /// Adds rewrite rules and `Rule`s to the program.
     pub fn extend(
         &mut self,
         eq_rules: implvec!(Rewrite<L, N>),
@@ -135,16 +156,19 @@ where
     }
 
     /// add rewrite rules
+    /// Adds a single rewrite rule to the program.
     pub fn add_eq_rule(&mut self, eq_rule: Rewrite<L, N>) {
         self.extend([eq_rule], []);
     }
 
     /// convenient way to add a [Rule]
+    /// Adds a boxed `Rule` to the program.
     pub fn add_boxed_rule(&mut self, rule: Box<dyn Rule<L, N>>) {
         self.extend([], [rule]);
     }
 
     /// convenient way to add a [Rule]
+    /// Adds a `Rule` to the program.
     pub fn add_rule<R: Rule<L, N> + 'static>(&mut self, rule: R) {
         self.add_boxed_rule(Box::new(rule))
     }
@@ -166,10 +190,12 @@ where
         self.memo.as_mut()
     }
 
+    /// Returns a slice of the equality rewrite rules.
     pub fn eq_rules(&self) -> &[Rewrite<L, N>] {
         &self.eq_rules
     }
 
+    /// Sets the equality rewrite rules.
     #[cfg(debug_assertions)]
     pub fn set_eq_rules(&mut self, new: Vec<Rewrite<L, N>>)
     where
@@ -186,6 +212,7 @@ where
         }
     }
 
+    /// Sets the equality rewrite rules.
     #[cfg(not(debug_assertions))]
     pub fn set_eq_rules(&mut self, new: Vec<Rewrite<L, N>>)
     where
@@ -195,10 +222,12 @@ where
         self.eq_rules = new;
     }
 
+    /// Returns a slice of the `Rule`s.
     pub fn rules(&self) -> &[Rc<dyn Rule<L, N>>] {
         &self.rules
     }
 
+    /// Returns `true` if tracing is enabled.
     #[inline]
     pub fn is_tracing_enabled(&self) -> bool {
         self.config.trace_prolog
@@ -402,8 +431,10 @@ where
     anyhow::Error: From<<MultiPattern<L> as FromStr>::Err>,
     N::Data: Serialize,
 {
+    /// The error type returned when parsing fails.
     type Err = anyhow::Error;
 
+    /// Parses a string into a `Program`.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (rules, eq_rules) = PlOrRw::parse_program(s)?
             .into_iter()
@@ -425,6 +456,7 @@ where
     }
 }
 
+/// Saves the e-graph to a DOT file in a temporary location.
 fn save_egraph<L, N>(egraph: &EGraph<L, N>) -> std::io::Result<PathBuf>
 where
     L: Language + Display,
@@ -442,6 +474,7 @@ where
 }
 
 impl<L: Language, N: Analysis<L>> Status<L, N> {
+    /// Returns `true` if the status is `True`.
     pub fn as_bool(&self) -> bool {
         matches!(self, Status::True { .. })
     }
@@ -456,10 +489,12 @@ impl<L: Language, N: Analysis<L>> Status<L, N> {
 }
 
 impl<L: Language, N: Analysis<L>> MemoStatus<L, N> {
+    /// Returns `true` if the underlying `Status` is `True`.
     pub fn as_bool(&self) -> bool {
         self.0.borrow().as_bool()
     }
 
+    /// Sets the underlying `Status`.
     pub fn set(&self, status: Status<L, N>) {
         *self.0.borrow_mut() = status
     }
@@ -474,12 +509,14 @@ impl<L: Language, N: Analysis<L>> MemoStatus<L, N> {
 }
 
 impl<L: Language, N: Analysis<L>> From<Status<L, N>> for MemoStatus<L, N> {
+    /// Converts a `Status` into a `MemoStatus`.
     fn from(value: Status<L, N>) -> Self {
         Self(Rc::new(RefCell::new(value)))
     }
 }
 
 impl<L: Language, N: Analysis<L>> Clone for MemoStatus<L, N> {
+    /// Clones the `MemoStatus`.
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }

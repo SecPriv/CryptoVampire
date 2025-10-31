@@ -102,6 +102,7 @@ fn parse_term(input: &str) -> ParseResult<'_> {
     Err(input)
 }
 
+/// Parses an SMT-LIB program into a vector of `Term`s.
 pub fn parse_program(input: &str) -> Result<Vec<Term>, String> {
     let mut terms = Vec::new();
     let mut remaining = input;

@@ -1,14 +1,9 @@
-use std::collections::HashMap;
-
 use itertools::{Itertools, chain};
-use proc_macro::{Span, TokenStream};
+use proc_macro::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::parse::{Parse, ParseStream};
-use syn::punctuated::Punctuated;
-use syn::token::{Brace, Impl};
 use syn::{
-    Attribute, Expr, FieldValue, Ident, LitStr, Member, Token, braced, parse_macro_input,
-    parse_quote,
+    Attribute, FieldValue, Ident, LitStr, Member, Token, braced, parse_macro_input, parse_quote,
 };
 
 /// represents things like
@@ -27,14 +22,20 @@ use syn::{
 /// The fields are merged with the ones declared at the to of the macro call
 #[derive(Clone)]
 struct MFunction {
+    /// The name of the function.
     name: Ident,
+    /// The span of the function definition.
     span: proc_macro2::Span,
+    /// Alternative names for the function.
     alt_names: Vec<LitStr>,
+    /// The fields of the function.
     fields: Vec<FieldValue>,
+    /// Attributes applied to the function.
     attrs: Vec<Attribute>,
 }
 
 impl Parse for MFunction {
+    /// Parses an `MFunction` from the input token stream.
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let span = input.span();
         let attrs = input.call(Attribute::parse_outer)?;
@@ -63,12 +64,16 @@ impl Parse for MFunction {
     }
 }
 
+/// Represents the input to the `mk_builtin_funs` macro.
 struct Input {
+    /// Default field values for functions.
     default: Vec<FieldValue>,
+    /// Function declarations.
     decls: Vec<MFunction>,
 }
 
 impl Parse for Input {
+    /// Parses an `Input` from the input token stream.
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let default = {
             let content;
@@ -89,6 +94,7 @@ impl Parse for Input {
 }
 
 impl MFunction {
+    /// Merges the function with other field values, prioritizing existing fields.
     pub fn merge(mut self, other: &[FieldValue]) -> Self {
         let to_add: Vec<&FieldValue> = other
             .iter()
@@ -98,10 +104,12 @@ impl MFunction {
         self
     }
 
+    /// Returns an iterator over the members of the function's fields.
     fn members(&self) -> impl Iterator<Item = &Member> {
         self.fields.iter().map(|f| &f.member)
     }
 
+    /// Generates the token stream for declaring the function.
     pub fn declare(&self) -> proc_macro2::TokenStream {
         let fields: proc_macro2::TokenStream = self.fields.iter().map(|f| quote! {#f ,}).collect();
         let name = &self.name;
@@ -112,6 +120,7 @@ impl MFunction {
         }
     }
 
+    /// Returns the token stream for an owned version of the function.
     pub fn as_owned(&self) -> proc_macro2::TokenStream {
         let name = &self.name;
         // let span = self.span;
@@ -119,6 +128,7 @@ impl MFunction {
         quote_spanned! {self.span => #name.const_clone()}
     }
 
+    /// Returns an iterator over the alternative names and their corresponding owned function token streams.
     pub fn list_alt_names(&self) -> impl Iterator<Item = proc_macro2::TokenStream> + use<'_> {
         let owned = self.as_owned();
         let name = &self.name;

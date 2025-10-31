@@ -22,10 +22,13 @@ pub(crate) mod shared_fdst;
 pub(crate) mod shared_problem;
 // pub(crate) mod var;
 
+/// A trait for types that can be registered with the Steel VM.
 pub(crate) trait Registerable {
+    /// Registers the type and its associated functions with the given `BuiltInModule`.
     fn register(module: &mut BuiltInModule) -> &mut BuiltInModule;
 }
 
+/// Registers all `Registerable` types with the given `BuiltInModule`.
 pub fn register(module: &mut BuiltInModule) -> &mut BuiltInModule {
     Sort::register(module);
     Function::register(module);
@@ -45,6 +48,7 @@ pub fn register(module: &mut BuiltInModule) -> &mut BuiltInModule {
     module
 }
 
+/// Initializes a new Steel `Engine` with the cryptovampire prelude and configuration.
 pub fn init_engine(config: Configuration) -> Engine {
     let mut engine = Engine::new();
     let mut module = BuiltInModule::new("cryptovampire");

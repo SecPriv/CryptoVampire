@@ -17,6 +17,9 @@ pub fn mk_subst_rw<'a, N: Analysis<Lang>>(
 }
 
 fn mk_rw_self<N: Analysis<Lang>>() -> Rewrite<Lang, N> {
+    /// Creates a rewrite rule for `subst(x, x, y) -> y`.
+    ///
+    /// This rule simplifies a substitution where the term being substituted is the same as the 'from' term.
     let premise: PatternAst<Lang> = rexp!((SUBSTITUTION #0 #0 #1)).into_iter().collect();
     let conclusion: PatternAst<Lang> = rexp!(#1).into_iter().collect();
 
@@ -33,6 +36,10 @@ fn mk_rw_self<N: Analysis<Lang>>() -> Rewrite<Lang, N> {
 }
 
 fn mk_rec_shortcut<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = Rewrite<Lang, N>> {
+    /// Creates rewrite rules for recursive shortcuts within `MACRO_EXEC` and `MACRO_FRAME`.
+    ///
+    /// These rules are applied when a `CurrentStep` is active and aims to simplify
+    /// expressions involving macros and substitutions.
     dynamic_iter!(Ret; Empty:A, Full:B);
 
     if let Some(CurrentStep { idx, args }) = pbl.current_step()
@@ -72,6 +79,10 @@ fn mk_rec_shortcut<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = Rew
 /// subst(f(x1,...,xn), x, y) -> f(subst(x1, x, y),...,subst(xn,x,y))
 /// ```
 fn mk_rw_one<N: Analysis<Lang>>(fun: Function) -> Rewrite<Lang, N> {
+    /// Creates a substitution rewrite rule for a regular function `f`.
+    ///
+    /// This rule transforms `subst(f(x1,...,xn), x, y)` into `f(subst(x1, x, y),...,subst(xn,x,y))`,
+    /// effectively pushing the substitution into the arguments of the function.
     let (vars, ref ov @ [ref x, ref y]) = generate_rule_vars(&fun);
     let n = vars.len();
     let premise: PatternAst<Lang> = chain![
@@ -121,6 +132,10 @@ fn mk_rw_one<N: Analysis<Lang>>(fun: Function) -> Rewrite<Lang, N> {
 fn mk_rw_base<'a, N: Analysis<Lang>>(
     pbl: &'a Problem,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'a, N> {
+    /// Creates a set of base substitution rewrite rules for functions in the problem.
+    ///
+    /// This iterates over functions that are not special subterms or are if-then-else functions,
+    /// and generates a `mk_rw_one` rule for each.
     pbl.functions()
         .iter_current()
         .filter(|f| (!f.is_special_subterm()) || f.is_if_then_else())

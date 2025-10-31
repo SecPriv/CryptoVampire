@@ -7,6 +7,7 @@ use crate::input::Registerable;
 use crate::input::shared_problem::ShrProblem;
 use crate::terms::{Exists, Function, QuantifierIndex, QuantifierT, RecFOFormula, Variable};
 
+/// Represents a shared existential quantifier context within the Steel VM.
 #[derive(Debug, Clone, Steel)]
 pub struct ShrExists {
     pub(crate) pbl: ShrProblem,
@@ -14,6 +15,7 @@ pub struct ShrExists {
 }
 
 impl ShrExists {
+    /// Returns the `QuantifierIndex` for this shared existential quantifier.
     pub fn index(&self) -> QuantifierIndex {
         QuantifierIndex {
             temporary: false,
@@ -33,26 +35,32 @@ impl ShrExists {
         })
     }
 
+    /// Returns a vector of the context variables of the existential quantifier.
     fn get_cvars(&self) -> Vec<Variable> {
         self.exists().cvars().to_vec()
     }
 
+    /// Returns a vector of the bound variables of the existential quantifier.
     fn get_bvars(&self) -> Vec<Variable> {
         self.exists().bvars().to_vec()
     }
 
+    /// Returns the top-level function of the existential quantifier.
     fn get_tlf(&self) -> Function {
         self.exists().top_level_function().clone()
     }
 
+    /// Returns a vector of the skolem functions of the existential quantifier.
     fn get_skolems(&self) -> Vec<Function> {
         self.exists().skolems().to_vec()
     }
 
+    /// Returns the pattern of the existential quantifier.
     fn get_patt(&self) -> RecFOFormula {
         self.exists().patt().unwrap().clone()
     }
 
+    /// Sets the pattern of the existential quantifier.
     fn set_patt(&self, patt: RecFOFormula) -> ::steel::rvals::Result<()> {
         self.exists_mut().set_patt(patt);
         Ok(())
@@ -60,6 +68,7 @@ impl ShrExists {
 }
 
 impl Registerable for ShrExists {
+    /// Registers the `ShrExists` type and its associated functions with the Steel VM.
     fn register(
         module: &mut steel::steel_vm::builtin::BuiltInModule,
     ) -> &mut steel::steel_vm::builtin::BuiltInModule {
