@@ -1,5 +1,5 @@
 use FOBinder::{Exists, FindSuchThat};
-use egg::{Analysis, EGraph, Id, Pattern, Subst};
+use egg::{Analysis, EGraph, Id, Pattern, Searcher, Subst};
 use golgge::{Dependancy, Rule};
 use itertools::izip;
 use rustc_hash::FxHashMap;

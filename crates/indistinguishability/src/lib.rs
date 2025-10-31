@@ -40,7 +40,8 @@ pub mod terms; // <- first for macros
 #[cfg(test)]
 mod test;
 pub(crate) mod utils;
-pub(crate) mod vampire;
+pub(crate) mod smt;
+pub(crate) mod runners;
 pub use input::{init_engine, register};
 mod configuration;
 pub use configuration::Configuration;

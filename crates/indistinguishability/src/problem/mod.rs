@@ -10,6 +10,7 @@ use golgge::{Program, Rule};
 use itertools::{Itertools, chain};
 use log::trace;
 
+use logic_formula::Formula;
 use logic_formula::iterators::QuantiferIterator;
 use utils::{econtinue_let, implvec};
 
@@ -18,14 +19,14 @@ use crate::problem::function_builder::{
 };
 use crate::protocol::{Protocol, Step};
 use crate::rules::{FreshNonce, VampireRule, mk_default_prolog_rules, mk_default_rewrites};
+use crate::runners::SmtRunner;
 use crate::terms::{
     Alias, CryptographicAssumption, EMPTY, EQUIV, FOBinder, FindSuchThat, Function,
     FunctionCollection, FunctionFlags, HAPPENS, INIT, InnerFunction, MACRO_FRAME, PRED,
     QuantifierT, QuantifierTranslator, RecFOFormula, Rewrite, Signature, Sort, TRUE, UNFOLD_MSG,
 };
 use crate::utils::fresh_name;
-use crate::vampire::mk_prelude;
-use crate::vampire::runner::VampireExec;
+use crate::smt::mk_prelude;
 use crate::{Configuration, Lang, MSmt, mk_signature, rexp, smt};
 
 mod analysis;
@@ -80,7 +81,7 @@ impl Problem {
 
     /// Build a [Program] to use
     pub fn mk_program<'a>(&'a mut self) -> Program<Lang, PAnalysis<'a>> {
-        let exec = Rc::new(VampireExec::builder().with_pbl(self).build());
+        let exec = SmtRunner::new(&self);
         let vampire_rule = VampireRule::builder().exec(exec.clone()).build();
         let fresh_rule = FreshNonce::builder().exec(exec.clone()).build();
 

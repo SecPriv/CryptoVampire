@@ -12,10 +12,10 @@ use crate::protocol::{Protocol, Step};
 use crate::rules::PRF;
 use crate::rules::utils::SyntaxSearcher;
 use crate::rules::utils::fresh::RefFormulaBuilder;
+use crate::runners::{SmtRunner, SmtSolver};
 use crate::terms::{
     FAIL, Function, HAPPENS, LT, MACRO_EXEC, MACRO_FRAME, NONCE, RecFOFormula, Sort, VAMPIRE,
 };
-use crate::vampire::runner::VampireExec;
 use crate::{Lang, Problem, fresh, rexp};
 
 declare_trace!($"search_prf");
@@ -367,7 +367,7 @@ decl_vars!(const M:Bitstring, K:Nonce, P:Protocol, T:Time);
 struct PrfVampireRule {
     prf: usize,
     pattern: Pattern<Lang>,
-    exec: Rc<VampireExec>,
+    exec: SmtRunner,
 }
 
 impl PrfVampireRule {
@@ -375,7 +375,7 @@ impl PrfVampireRule {
         Self {
             prf: prf.index(),
             pattern: Pattern::from(&rexp!((search_trigger #M #K #P #T))),
-            exec: Rc::new(VampireExec::builder().with_pbl(pbl).build()),
+            exec: SmtRunner::new(pbl),
         }
     }
 }
@@ -418,12 +418,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfVampireRule {
             pbl.find_temp_quantifiers(&search);
             let result = search.into_iter().all(|query| {
                 let query = query.as_smt(*pbl).unwrap();
-                self.exec
-                    .run_to_dependancy()
-                    .pbl(pbl)
-                    .query(query)
-                    .call()
-                    .is_axioms()
+                self.exec.run_to_dependancy(pbl, query).is_axioms()
             });
             pbl.clear_temp_quantifiers();
             ereturn_if!(result, Dependancy::axiom());
