@@ -1248,11 +1248,6 @@ impl Debug for RecFOFormula {
 // =========================================================
 
 impl RecFOFormula {
-    // /// Turns self into a [PatternAst] but errors out with [steel]'s error instead of [Option]
-    // pub fn steel_maybe_as_recexp(&self) -> PatternAst<Lang> {
-    //      self.as_recexp()
-    // }
-
     // TODO: find such that
     fn steel_binder(head: FOBinder, vars: Vec<Variable>, arg: Vec<RecFOFormula>) -> Self {
         assert!(
@@ -1324,6 +1319,6 @@ impl Registerable for RecFOFormula {
             .register_fn("is-varf", Self::steel_is_var)
             .register_fn("get-sort", Self::steel_get_sort)
             .register_type::<Self>("Formula?")
-            .register_fn("print_formula", |f: RecFOFormula| println!("this: {f}"))
+            .register_fn("string-of-formula", |f: RecFOFormula| format!("{f}"))
     }
 }

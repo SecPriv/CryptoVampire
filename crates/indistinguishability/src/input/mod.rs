@@ -15,8 +15,7 @@ use crate::input::shared_exists::ShrExists;
 use crate::input::shared_fdst::ShrFindSuchThat;
 use crate::input::shared_problem::ShrProblem;
 use crate::terms::{
-    SCHEME_PREFIX,
-    AliasRewrite, BUILTINS, Function, RecFOFormula, Rewrite, Signature, Sort, Variable,
+    AliasRewrite, BUILTINS, Function, RecFOFormula, Rewrite, SCHEME_PREFIX, SORT_LIST, Signature, Sort, Variable
 };
 
 pub(crate) mod golgge_rules;
@@ -101,6 +100,11 @@ pub fn init_engine(config: Configuration) -> Engine {
                     mkdefintions += &format!("(define {name} (register-function cv-{SCHEME_PREFIX}{}))\n", f.name);
 
                     mkexports += &format!("{name}\n");
+                }
+
+                for s in SORT_LIST {
+                    mkdefintions += &format!("(define {s} cv-{s})\n");
+                    mkexports += &format!("{s}\n");
                 }
 
                 p.get_prelude()

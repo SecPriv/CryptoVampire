@@ -81,6 +81,7 @@ impl InnerFunction {
 ///
 /// This is basicaly a somewhat smart pointer to an [InnerFunction].
 #[derive(Clone, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash, Steel)]
+#[steel(equality)]
 pub struct Function(CowArc<'static, InnerFunction>);
 
 impl Function {
