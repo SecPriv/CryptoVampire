@@ -51,7 +51,7 @@
 
         rust = fenix.packages.${system}.complete;
         toolchain = rust.toolchain;
-        use-nightly = true;
+        use-nightly = false;
 
         mrustPlatform = if use-nightly then pkgs.makeRustPlatform {
           cargo = toolchain;
