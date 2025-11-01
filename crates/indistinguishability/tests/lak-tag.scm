@@ -1,5 +1,5 @@
 (require-builtin steel/base)
-(define pbl (empty-problem))
+(define pbl (empty-problem default-config))
 
 (define p1 (declare-protocol pbl))
 (define p2 (declare-protocol pbl))

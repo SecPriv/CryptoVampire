@@ -12,7 +12,6 @@
 (define prf (declare-cryptography pbl))
 (define _hash (declare-function pbl (mk-fun "hash" (signature (Bitstring Bitstring) -> Bitstring) (list prf))))
 (define hash (lift-fun _hash))
-; (define hash (declare-function pbl (fun "hash" (signature (Bitstring Bitstring) -> Bitstring) '())))
 (define _ok (declare-function pbl (mk-fun "ok" (mk-signature '() Bitstring) '())))
 (define ok (lift-fun _ok))
 (define _ko (declare-function pbl (mk-fun "ko" (signature () -> Bitstring) '())))
@@ -103,54 +102,6 @@
   (lambda (in i)
    (mnot (exists ((j Index)) (eq (sel2of2 in) (hash (sel1of2 in) (mnonce (mk i j p2))))))))
 
-; (set-step-condition pbl rf p1
-;   (let* (
-;     [i (mk-varf 0)]  
-;     [in (formula (macro_input (rf i) p1))])
-;   (formula (bit_not (@ cexists1 i p1)))))
-; (set-step-condition pbl rf p2
-;   (let* (
-;     [i (mk-varf 0)]  
-;     [in (formula (macro_input (rf i) p2))])
-;   (formula (bit_not (@ cexists1 i p2)))))
-
-(define n0 (declare-function pbl (mk-nonce "n0" (signature (Index Index Protocol) -> Nonce))))
-
-; (add-rule pbl (let (
-;   [i (mk-varf 0)]
-;   [j (mk-varf 1)]
-;   [h1 (mk-varf 2)]
-;   [h2 (mk-varf 3)]
-; ) 
-;   (prolog "euf-cma"
-;     (equiv h1 h2 (macro_frame (tag i j) p1) (macro_frame (tag i j) p2)) :-
-;     (equiv h1 h2
-;       (mtuple (mtuple (mfrom_bool (macro_exec (tag i j) p1)) 
-;           (bitstring_if_then_else (macro_exec (tag i j) p1) 
-;             (mtuple (n i j)  (n0 i j p1))
-;             mempty)) (macro_frame (pred (tag i j)) p1))
-;       (mtuple (mtuple (mfrom_bool (macro_exec (tag i j) p2)) 
-;           (bitstring_if_then_else (macro_exec (tag i j) p2) 
-;             (mtuple (n i j)  (n0 i j p2))
-;             mempty)) (macro_frame (pred (tag i j)) p2))
-;     )
-; )))
-
-; (add-rewrite pbl (let* (
-;   [t (mk-varf 0)]
-;   [i (mk-varf 1)]
-;   [j (mk-varf 2)]
-;   [p (mk-varf 3)]
-;   [vars (list 0 1 2 3)]
-;   [sorts (list Time Index Index Protocol)]
-;   [in (formula (macro_input t p))]
-; )
-;   (mk-rewrite "lemma-2" vars sorts
-;     (formula (= (sel2of2 in) (hash (sel1of2 in) (mk i j p))))
-;     (formula (@ cexists2 j t p))
-;   )
-; ))
-
 (bind 
   ((i Index) (j Index) 
     (t Time) 
@@ -166,16 +117,6 @@
         )
       ))))
 )
-
-; (print_formula
-;   (formula (forall ((i 1  Index) (j 2 Index)) (hash (n i j) ko))))
-
-(displayln (to-string-step pbl _p1 s_tag))
-(displayln (to-string-step pbl _p2 s_tag))
-(displayln (to-string-step pbl _p1 s_rs))
-(displayln (to-string-step pbl _p2 s_rs))
-(displayln (to-string-step pbl _p1 s_rf))
-(displayln (to-string-step pbl _p2 s_rf))
 
 (if (run pbl _p1 _p2)
   (displayln "success")
