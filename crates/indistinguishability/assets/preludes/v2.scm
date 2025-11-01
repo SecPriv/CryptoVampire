@@ -1,5 +1,3 @@
-(require-builtin cryptovampire as cv)
-(require-builtin steel/hash)
 (provide
   bind exists forall findst
   prolog signature
@@ -22,35 +20,37 @@
   mk-problem
   ;  @@@EXPORTS@@@
   )
+(require-builtin cryptovampire as cv-)
+(require-builtin steel/hash)
 
 (define functions-map (hash))
 
-(define (Nonce? f) (equal? cv.Nonce (cv.get-sort f)))
+(define (Nonce? f) (equal? cv-Nonce (cv-get-sort f)))
 
 (define (convert-to-formula arg)
-  (if (cv.Variable? arg) (cv.mk-varf arg)
-    (if (boolean? arg) (if arg (cv.mk-appf cv.__pre_mtrue '()) (cv.mk-appf cv.__pre_mfalse '()))
+  (if (cv-Variable? arg) (cv-mk-varf arg)
+    (if (boolean? arg) (if arg (cv-mk-appf cv-__pre_mtrue '()) (cv-mk-appf cv-__pre_mfalse '()))
       arg)))
 
 (define (lift-fun fun-name)
-  (if (= (cv.arity fun-name) 0)
-    (cv.mk-appf fun-name '())
+  (if (= (cv-arity fun-name) 0)
+    (cv-mk-appf fun-name '())
     (lambda args
-      (if (= (length args) (cv.arity fun-name))
-        (cv.mk-appf fun-name (map convert-to-formula args))
+      (if (= (length args) (cv-arity fun-name))
+        (cv-mk-appf fun-name (map convert-to-formula args))
         (begin
-          (displayln (cv.function-name fun-name))
+          (displayln (cv-function-name fun-name))
           (error "Wrong arity"))))))
 
 (define (register-function fun)
   (let
-    [ (f (list-fun fun)) ]
+    [ (f (lift-fun fun)) ]
     (begin
       (set! functions-map (hash-insert functions-map f fun))
       f)))
 
 (define (get-function funf)
-  (if (cv.Function? funf) funf
+  (if (cv-Function? funf) funf
     (hash-ref functions-map funf)))
 
 
@@ -65,10 +65,10 @@
     (if (null? ss)
       ;; once all vars generated
       (let ((rev-vars (reverse vars)))
-        (mk-binderf existsf rev-vars (list (apply arg rev-vars))))
+        (cv-mk-binderf cv-existsf rev-vars (list (apply arg rev-vars))))
       ;; otherwise, generate next var and recur
       (let* ((s (car ss))
-          (v (mk-fresh-var-w-sort s)))
+          (v (cv-mk-fresh-var-w-sort s)))
         (loop (cdr ss) (cons v vars))))))
 
 (define (mforall sorts arg)
@@ -76,23 +76,23 @@
     (if (null? ss)
       ;; once all vars generated
       (let ((rev-vars (reverse vars)))
-        (mk-binderf forallf rev-vars (list (apply arg rev-vars))))
+        (cv-mk-binderf cv-forallf rev-vars (list (apply arg rev-vars))))
       ;; otherwise, generate next var and recur
       (let* ((s (car ss))
-          (v (mk-fresh-var-w-sort s)))
+          (v (cv-mk-fresh-var-w-sort s)))
         (loop (cdr ss) (cons v vars))))))
 
 (define (mfindst sorts arg1 arg2 arg3)
   (let loop ((ss sorts) (vars '()))
     (if (null? ss)
       (let ((rev-vars (reverse vars)))
-        (mk-binderf findstf rev-vars
+        (cv-mk-binderf cv-findstf rev-vars
           (list
             (apply arg1 rev-vars)
             (apply arg2 rev-vars)
             arg3)))
       (let* ((s (car ss))
-          (v (mk-fresh-var-w-sort s)))
+          (v (cv-mk-fresh-var-w-sort s)))
         (loop (cdr ss) (cons v vars))))))
 
 (define-syntax exists
@@ -116,7 +116,7 @@
 (define (declare-step pbl name sorts . content)
   (let*
     [
-    (step (cv.declare-step pbl name sorts))
+    (step (cv-declare-step pbl name sorts))
     (stepf (register-function step))
     ]
     (map (lambda (c)
@@ -127,24 +127,20 @@
           (condf (step-condition c))
           (ptcl (get-function ptclf))
           (variables
-            (map cv.mk-varf (cv.get-step-variables pbl step ptcl)))
+            (map cv-mk-varf (cv-get-step-variables pbl step ptcl)))
           (in (macro_input (stepf variables) ptclf))
           ]
           (begin
-            (cv.set-step-message pbl step ptcl
+            (cv-set-step-message pbl step ptcl
               (apply msgf (append variables in)))
-            (cv.set-step-condition pbl step ptcl
+            (cv-set-step-condition pbl step ptcl
               (apply condf (append variables in))))) content))))
 
 (define (register-lifted-nonce nonce)
-  (let*
-    [
-    (nf (lambda args
-        (mnonce (apply nonce args))))
-    ]
+  (let [ (nf (lambda args (mnonce (apply nonce args)))) ]
     (begin
       (set! functions-map
-        (hash-insert functions-map nf (get-fun nonce)))
+        (hash-insert functions-map nf (get-function nonce)))
       nf)))
 
 (define (mk-fun name cryptos . args)
@@ -153,10 +149,10 @@
     (let* ((outsort (last args))
         (in-sorts (take args (- (length args) 1))))
       ; body of the function
-      ((if (equal? outsort cv.Nonce)
-          (mk-nonce "n" (cv.mk-signature in-sorts outsort))
-          (mk-fun "hash"
-            (cv.mk-signature in-sorts outsort) cryptos))))))
+      ((if (equal? outsort cv-Nonce)
+          (cv-mk-nonce name (cv-mk-signature in-sorts outsort))
+          (cv-mk-fun name
+            (cv-mk-signature in-sorts outsort) cryptos))))))
 
 (define-syntax prolog
   (syntax-rules (:-)
@@ -169,27 +165,27 @@
 (define-syntax bind
   (syntax-rules ()
     [ (_ ((ids sorts) ...) arg)
-    (let [ (ids (cv.mk-fresh-var-w-sort sorts)) ...] arg) ]))
+    (let [ (ids (cv-mk-fresh-var-w-sort sorts)) ...] arg) ]))
 
 (define-syntax signature
   (syntax-rules (->)
-    [ (_ () -> sort) (cv.mk-signature '() sort) ]
-    [ (_ (sorts ...) -> sort) (cv.mk-signature (list sorts ...) sort) ]
-    [ (_ sort) (cv.mk-signature '() sort) ]))
+    [ (_ () -> sort) (cv-mk-signature '() sort) ]
+    [ (_ (sorts ...) -> sort) (cv-mk-signature (list sorts ...) sort) ]
+    [ (_ sort) (cv-mk-signature '() sort) ]))
 
 
-(define mk-alias cv.mk-alias)
+(define mk-alias cv-mk-alias)
 
 (define (mk-alias-rw sorts rw)
   (let*
-    [ (vars (map cv.mk-fresh-var-w-sort sorts))
-    (vars-app (map cv.mk-varf vars))
+    [ (vars (map cv-mk-fresh-var-w-sort sorts))
+    (vars-app (map cv-mk-varf vars))
     (rwl (apply rw vars)) ]
     (if (< (length rwl) 1)
       (error "mk-fun: expected at least one sort argument")
       (let* ((res (last rwl))
           (args (take rwl (- (length rwl) 1))))
-        (cv.mk-alias-rwf vars arsg res)))))
+        (cv-mk-alias-rwf vars args res)))))
 
 (define-syntax alias-rw
   (syntax-rules (->)
@@ -208,16 +204,16 @@
     ]))
 
 (define (initialize-as-prf prf hash)
-  (cv.initialize-as-prf (get-function prf) (get-function hash)))
+  (cv-initialize-as-prf (get-function prf) (get-function hash)))
 
 (define (run pbl p1 p2)
-  (cv.run pbl (get-function p1) (get-function p2)))
+  (cv-run pbl (get-function p1) (get-function p2)))
 
 (define (declare-protocol pbl)
   (register-function (declare-protocol pbl)))
 
 (define (delare-function pbl fun)
-  (let [ (f (cv.declare-function pbl fun)) ]
+  (let [ (f (cv-declare-function pbl fun)) ]
     (register-function f)))
 
-(define (mk-problem _) (empty-problem default-config))
+(define (mk-problem _) (cv-empty-problem cv-cli-config))

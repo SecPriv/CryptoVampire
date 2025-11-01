@@ -1,5 +1,7 @@
 use std::borrow::Cow;
+use std::ops::Deref;
 
+use log::trace;
 use steel::SteelVal;
 use steel::rvals::IntoSteelVal;
 use steel::steel_vm::builtin::BuiltInModule;
@@ -12,7 +14,10 @@ use crate::input::shared_cryptography::ShrCrypto;
 use crate::input::shared_exists::ShrExists;
 use crate::input::shared_fdst::ShrFindSuchThat;
 use crate::input::shared_problem::ShrProblem;
-use crate::terms::{AliasRewrite, Function, RecFOFormula, Rewrite, Signature, Sort, Variable};
+use crate::terms::{
+    SCHEME_PREFIX,
+    AliasRewrite, BUILTINS, Function, RecFOFormula, Rewrite, Signature, Sort, Variable,
+};
 
 pub(crate) mod golgge_rules;
 pub(crate) mod prelude;
@@ -51,28 +56,64 @@ pub fn register(module: &mut BuiltInModule) -> &mut BuiltInModule {
 /// Initializes a new Steel `Engine` with the cryptovampire prelude and configuration.
 pub fn init_engine(config: Configuration) -> Engine {
     let mut engine = Engine::new();
-    let mut module = BuiltInModule::new("cryptovampire");
 
-    if !config.no_steel_prelude {
-        engine.compile_and_run_raw_program(steel::PRELUDE).unwrap();
+    match config.prelude_version {
+        prelude::Preludes::V1 => {
+            let mut module = BuiltInModule::new("cryptovampire");
+
+            if !config.no_steel_prelude {
+                engine.compile_and_run_raw_program(steel::PRELUDE).unwrap();
+            }
+
+            let prelude = config.get_prelude();
+
+            crate::register(&mut module);
+            module.register_value(
+                "default-config",
+                IntoSteelVal::into_steelval(config).unwrap(),
+            );
+            engine.register_module(module);
+
+            log::trace!("prelude:\n{}", prelude);
+            match engine.compile_and_run_raw_program(Cow::Borrowed(prelude)) {
+                Ok(_) => (),
+                Err(e) => panic!("{}", e.emit_result_to_string("CV_PRELUDE", prelude)),
+            };
+
+            engine
+        }
+        p @ prelude::Preludes::V2 => {
+            let mut module = BuiltInModule::new("cryptovampire");
+            crate::register(&mut module);
+            module.register_value(
+                "cli-config",
+                IntoSteelVal::into_steelval(config).unwrap(),
+            );
+            engine.register_module(module);
+
+            let prelude = {
+                let mut mkdefintions: String = "\n".into();
+                let mut mkexports: String = "\n".into();
+
+                for f in BUILTINS {
+                    let name = &f.name;
+                    // let old_name = format!("__pre_{}", f.name);
+                    mkdefintions += &format!("(define {name} (register-function cv-{SCHEME_PREFIX}{}))\n", f.name);
+
+                    mkexports += &format!("{name}\n");
+                }
+
+                p.get_prelude()
+                    .replace("@@@EXPORTS@@@", &mkexports)
+                    .replace("@@@DEFINITIONS@@@", &mkdefintions)
+            };
+            trace!("predlue:\n{prelude}");
+
+            engine.register_steel_module("cryptovampire/v2".into(), prelude);
+
+            engine
+        }
     }
-
-    let prelude = config.get_prelude();
-
-    crate::register(&mut module);
-    module.register_value(
-        "default-config",
-        IntoSteelVal::into_steelval(config).unwrap(),
-    );
-    engine.register_module(module);
-
-    log::trace!("prelude:\n{}", prelude);
-    match engine.compile_and_run_raw_program(Cow::Borrowed(prelude)) {
-        Ok(_) => (),
-        Err(e) => panic!("{}", e.emit_result_to_string("CV_PRELUDE", prelude)),
-    };
-
-    engine
 }
 
 fn conversion_err<To>() -> ::steel::SteelErr {

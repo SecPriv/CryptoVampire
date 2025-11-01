@@ -24,7 +24,7 @@ static CV_PRELUDE: String = {
 pub enum Preludes {
     #[default]
     V1,
-    Latest,
+    V2,
 }
 
 impl Display for Preludes {
@@ -32,7 +32,7 @@ impl Display for Preludes {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::V1 => write!(f, "v1"),
-            Self::Latest => write!(f, "latest"),
+            Self::V2 => write!(f, "v2"),
         }
     }
 }
@@ -41,7 +41,8 @@ impl Preludes {
     /// Returns the content of the selected prelude as a static string slice.
     pub fn get_prelude(&self) -> &'static str {
         match self {
-            Self::V1 | Self::Latest => &CV_PRELUDE,
+            Self::V1  => &CV_PRELUDE,
+            Self::V2 => include_str!("../../assets/preludes/v2.scm")
         }
     }
 }

@@ -30,6 +30,7 @@ use crate::terms::{
 use crate::{Lang, LangVar, MSmtFormula, fresh, rexp};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Steel, Serialize)]
+#[steel(equality, hash)]
 pub enum RecFOFormula {
     Quantifier {
         head: FOBinder,
