@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::hash_map::Entry;
 use std::fmt::{Debug, Display};
 use std::ops::{BitAnd, BitOr, Not, Shr};
 
@@ -6,6 +7,7 @@ use bon::Builder;
 use cryptovampire_smt::{SmtFormula, SmtHead};
 use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr};
 use itertools::{Itertools, chain, izip};
+use log::trace;
 use logic_formula::{Destructed, Formula, HeadSk};
 use quarck::CowArc;
 use rpds::HashTrieSet;
@@ -373,6 +375,7 @@ impl RecFOFormula {
         other: &Self,
         subst: &mut FxHashMap<Variable, Self>,
         is_bound: &mut FxHashSet<Variable>,
+        buffer: &mut Vec<Variable>,
         short_cut: &mut impl FnMut(&Self, &Self, &mut FxHashMap<Variable, Self>) -> Option<bool>,
     ) -> bool {
         if let Some(x) = short_cut(self, other, subst) {
@@ -381,16 +384,42 @@ impl RecFOFormula {
 
         match (self, other) {
             (Self::Var(v1), Self::Var(v2)) => {
-                let l = subst.entry(v1.clone()).or_insert(other.clone()).clone();
-                let r = subst.entry(v2.clone()).or_insert(self.clone()).clone();
-                // they're both mapped to variables
-                Self::are_vars_and_eq(&l, &r) ||
-                 // or what they map to unify
-                 (!is_bound.contains(v1) && !is_bound.contains(v2) && l.unify_inner(&r, subst, is_bound, short_cut))
+                // let l = subst.entry(v1.clone()).or_insert(other.clone()).clone();
+                // let r = subst.entry(v2.clone()).or_insert(self.clone()).clone();
+
+                buffer.clear();
+                let l = find(v1, subst, buffer).map(|x| x.cloned());
+                let lbuffer = buffer.clone();
+                buffer.clear();
+                let r = find(v2, subst, buffer).map(|x| x.cloned());
+
+                match (&l, &r) {
+                    // they are both loops
+                    (Err(_), Err(_)) => lbuffer.contains(v2) || buffer.contains(v1),
+                    // both eventually escaped being variables
+                    (Ok(Some(l)), Ok(Some(r))) => {
+                        l.unify_inner(r, subst, is_bound, buffer, short_cut)
+                    }
+                    (Ok(None), Ok(Some(x))) if !is_bound.contains(v1) => {
+                        subst.insert(v1.clone(), (*x).clone());
+                        true
+                    }
+                    (Ok(Some(x)), Ok(None)) if !is_bound.contains(v2) => {
+                        subst.insert(v2.clone(), (*x).clone());
+                        true
+                    }
+                    (Err(_), Ok(Some(x))) => {
+                        self.unify_inner(x, subst, is_bound, buffer, short_cut)
+                    }
+                    (Ok(Some(x)), Err(_)) => {
+                        x.unify_inner(other, subst, is_bound, buffer, short_cut)
+                    }
+                    _ => false,
+                }
             }
             (Self::Var(v), x) | (x, Self::Var(v)) if !is_bound.contains(v) => {
                 let y = subst.entry(v.clone()).or_insert(x.clone()).clone();
-                x.unify_inner(&y, subst, is_bound, short_cut)
+                x.unify_inner(&y, subst, is_bound, buffer, short_cut)
             }
             (
                 Self::App {
@@ -401,9 +430,8 @@ impl RecFOFormula {
                     head: hr,
                     args: argsr,
                 },
-            ) if hl == hr => {
-                izip!(argsl, argsr).all(|(l, r)| l.unify_inner(r, subst, is_bound, short_cut))
-            }
+            ) if hl == hr => izip!(argsl, argsr)
+                .all(|(l, r)| l.unify_inner(r, subst, is_bound, buffer, short_cut)),
             (
                 Self::Quantifier {
                     head: hl,
@@ -428,7 +456,7 @@ impl RecFOFormula {
                         .map(|(a, b)| (a.clone(), RecFOFormula::Var(b.clone()))),
                 );
 
-                izip!(al, ar).all(|(l, r)| l.unify_inner(r, subst, is_bound, short_cut))
+                izip!(al, ar).all(|(l, r)| l.unify_inner(r, subst, is_bound, buffer, short_cut))
             }
             _ => false,
         }
@@ -439,6 +467,7 @@ impl RecFOFormula {
         self.unify_inner(
             other,
             &mut subst,
+            &mut Default::default(),
             &mut Default::default(),
             &mut |_, _, _| None,
         )
@@ -480,6 +509,22 @@ impl RecFOFormula {
             }
             .clone(),
         }
+    }
+}
+
+fn find<'a>(
+    var: &'a Variable,
+    subst: &'a FxHashMap<Variable, RecFOFormula>,
+    seen: &mut Vec<Variable>,
+) -> Result<Option<&'a RecFOFormula>, &'a Variable> {
+    match subst.get(var) {
+        Some(RecFOFormula::Var(nv)) if seen.contains(nv) => Err(var),
+        Some(RecFOFormula::Var(var)) => {
+            seen.push(var.clone());
+            find(var, subst, seen)
+        }
+        Some(x) => Ok(Some(x)),
+        _ => Ok(None),
     }
 }
 
