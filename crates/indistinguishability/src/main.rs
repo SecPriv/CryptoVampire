@@ -29,10 +29,10 @@ pub fn main() {
     match engine.run(pgrm.clone()) {
         Err(e) => {
             // eprintln!("{}", e.emit_result_to_string("prelude", CV_PRELUDE));
-            // eprintln!("{}", e.emit_result_to_string("stdin", &pgrm));
-            if let Some(err) = engine.raise_error_to_string(e) {
+            if let Some(err) = engine.raise_error_to_string(e.clone()) {
                 panic!("{err}")
             } else {
+                eprintln!("{}", e.emit_result_to_string("stdin", &pgrm));
                 panic!("Steel crashed and we could get a nice error out of it...");
             }
         }

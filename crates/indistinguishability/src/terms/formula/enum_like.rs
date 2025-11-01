@@ -24,12 +24,13 @@ use crate::terms::formula::sexpr::SExpr;
 use crate::terms::formula::{RecFOFormulaQuantRef, list};
 use crate::terms::utils::pull_from_egraph;
 use crate::terms::{
-    AND, BITE, CONS, EQ, FALSE, Function, IMPLIES, LAMBDA_O, LAMBDA_S, NIL, NOT, OR, Sort, TRUE,
-    Variable,
+    AND, BITE, CONS, EMPTY, EQ, FALSE, Function, IMPLIES, LAMBDA_O, LAMBDA_S, NIL, NOT, OR, Sort,
+    TRUE, TUPLE, Variable,
 };
 use crate::{Lang, LangVar, MSmtFormula, fresh, rexp};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Steel, Serialize)]
+#[steel(equality, hash)]
 pub enum RecFOFormula {
     Quantifier {
         head: FOBinder,
@@ -825,7 +826,7 @@ impl RecFOFormula {
         let mut ret = init;
         for c in args {
             ereturn_if!(c.is_false(), Self::False());
-            ret = Self::app(AND.clone(), vec![c, ret]);
+            ret = rexp!((AND #c #ret));
         }
         ret
     }
@@ -838,7 +839,7 @@ impl RecFOFormula {
         let mut ret = init;
         for c in args {
             ereturn_if!(c.is_true(), Self::True());
-            ret = Self::app(OR.clone(), vec![c, ret]);
+            ret = rexp!((OR #c #ret));
         }
         ret
     }
@@ -850,16 +851,6 @@ impl RecFOFormula {
         _arg: RecFOFormula,
     ) -> Self {
         todo!()
-        // ereturn_if!(arg.is_true() || arg.is_false(), arg);
-        // let free_vars: Vec<Variable> = (&arg).free_vars_iter().unique().collect();
-
-        // let (vars, sorts): (Vec<_>, Vec<_>) = izip!(vars.into_iter(), sorts.into_iter())
-        //     .filter(|(v, _)| free_vars.as_slice().contains(v))
-        //     .unzip();
-
-        // ereturn_if!(vars.is_empty(), arg);
-        // todo!("fixme");
-        // Self::bind(kind, vars, sorts, [arg])
     }
 
     /// Makes a constant
@@ -1247,11 +1238,6 @@ impl Debug for RecFOFormula {
 // =========================================================
 
 impl RecFOFormula {
-    // /// Turns self into a [PatternAst] but errors out with [steel]'s error instead of [Option]
-    // pub fn steel_maybe_as_recexp(&self) -> PatternAst<Lang> {
-    //      self.as_recexp()
-    // }
-
     // TODO: find such that
     fn steel_binder(head: FOBinder, vars: Vec<Variable>, arg: Vec<RecFOFormula>) -> Self {
         assert!(
@@ -1307,6 +1293,21 @@ impl RecFOFormula {
     fn steel_get_sort(&self) -> Option<Sort> {
         self.try_get_sort()
     }
+
+    fn steel_and(args: Vec<Self>) -> Self {
+        Self::and(args)
+    }
+
+    fn steel_or(args: Vec<Self>) -> Self {
+        Self::or(args)
+    }
+
+    fn steel_tuple(args: Vec<Self>) -> Self {
+        args.into_iter()
+            .rev()
+            .reduce(|acc, e| rexp!((TUPLE #e #acc)))
+            .unwrap_or(rexp!(EMPTY))
+    }
 }
 
 impl Registerable for RecFOFormula {
@@ -1323,6 +1324,9 @@ impl Registerable for RecFOFormula {
             .register_fn("is-varf", Self::steel_is_var)
             .register_fn("get-sort", Self::steel_get_sort)
             .register_type::<Self>("Formula?")
-            .register_fn("print_formula", |f: RecFOFormula| println!("this: {f}"))
+            .register_fn("string-of-formula", |f: RecFOFormula| format!("{f}"))
+            .register_fn("cand", Self::steel_and)
+            .register_fn("cor", Self::steel_or)
+            .register_fn("tuple", Self::steel_tuple)
     }
 }

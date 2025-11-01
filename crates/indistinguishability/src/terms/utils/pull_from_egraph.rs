@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use egg::{Analysis, EGraph, Id, Language, RecExpr};
 use itertools::Itertools;
-use log::error;
+use log::{error, warn};
 use utils::{econtinue_if, ereturn_if};
 
 use crate::Lang;
@@ -61,7 +61,7 @@ pub(crate) fn inner_generic<'a, N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
     // faillure case
     if cfg!(debug_assertions) {
         let e = egraph.id_to_expr(id);
-        error!(
+        warn!(
             "{e:} cannot be turned into a non recursive formula without using \"prolog\"-specific \
              functions"
         )

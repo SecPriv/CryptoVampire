@@ -69,6 +69,7 @@ impl PRF {
     /// or if the `hash` function does not contain `pos` in its cryptography, or if the
     /// cryptographic assumption at `pos` is already defined.
     pub fn new_and_add(pbl: &mut Problem, pos: usize, hash: Function) -> &Self {
+        tr!("{}", hash.name);
         assert_eq!(
             hash.signature,
             mk_signature!((Bitstring, Bitstring) -> Bitstring)
