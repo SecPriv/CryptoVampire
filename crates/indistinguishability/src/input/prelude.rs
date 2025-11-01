@@ -22,8 +22,8 @@ static CV_PRELUDE: String = {
 /// Represents the available prelude versions for the cryptovampire tool.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Default, Steel)]
 pub enum Preludes {
-    #[default]
     V1,
+    #[default]
     V2,
 }
 
