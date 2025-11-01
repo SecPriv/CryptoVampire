@@ -5,6 +5,7 @@
       lib,
       rustPlatform,
       src ? ./..,
+      vampire,
     }:
 
     let
@@ -21,6 +22,7 @@
         };
         src = lib.cleanSource src;
         patches = [ "${src}/nix.patch" ];
+        buildInputs = [vampire];
       };
     in
     pkg
