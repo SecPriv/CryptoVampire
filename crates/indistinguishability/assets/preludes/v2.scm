@@ -7,7 +7,7 @@
   run
   get-function
   register-function
-  register-lifted-nonce
+  wrap-nonce
   mk-fun
   mk-alias
   mk-alias-rw
@@ -22,6 +22,7 @@
   define-alias
   define-function
   lift-fun
+  cand cor tuple
   ;  @@@EXPORTS@@@
   )
 (require-builtin cryptovampire as cv-)
@@ -65,7 +66,7 @@
         f)
       f)))
 
-(define (register-lifted-nonce nonce)
+(define (wrap-nonce nonce)
   (let ((f (get-function nonce)))
     (if (cv-Formula? nonce)
       (begin
@@ -248,3 +249,7 @@
     (define-function name pbl () () -> sort) ]
     [ (_ name pbl (crypto ...) sort)
     (define-function name pbl (crypto ...) () -> sort) ]))
+
+(define (cand . args) (cv-cand args))
+(define (cor . args) (cv-cor args))
+(define (tuple . args) (cv-tuple args))
