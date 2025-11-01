@@ -66,4 +66,3 @@ impl Registerable for AliasRewrite {
         Self::register_type(module).register_fn("mk-alias-rwf", Self::new_steel)
     }
 }
-

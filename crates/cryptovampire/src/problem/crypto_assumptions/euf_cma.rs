@@ -198,16 +198,12 @@ impl<'bump> EufCma<'bump> {
                           signature,
                           key,
                       }| {
-
                     // some prep-work
                     let array = [&message, &signature, &key];
                     // re-update max-var
                     let max_var = array.iter().copied().max_var_or_max(max_var);
                     // the free variable to be forall quantified
-                    let free_vars = array
-                        .iter()
-                        .flat_map(|f| f.free_vars_iter())
-                        .unique();
+                    let free_vars = array.iter().flat_map(|f| f.free_vars_iter()).unique();
                     let _ = array; // we dont need array anymore
 
                     /*
@@ -215,7 +211,7 @@ impl<'bump> EufCma<'bump> {
                         |verify(message, signature, vk(key))| =>
                             key ⊑* message, signature \or
                             ∃ u, sign(u, k) ⊑ message, signature ∧ |u = message|
-                        
+
                         we try to preprocess the ⊑ as much as possible
                     */
 
@@ -248,7 +244,8 @@ impl<'bump> EufCma<'bump> {
                         // here we have an iterator of potential locations where `key` appears
                         .next()
                         .is_none(); // if it's non empty we bail.
-                    if k_sc { // so here we know `key` is never used wrongly anywhere
+                    if k_sc {
+                        // so here we know `key` is never used wrongly anywhere
                         let subterm_search = {
                             let disjunction = subterm_main.preprocess_terms(
                                 &realm,
@@ -260,7 +257,7 @@ impl<'bump> EufCma<'bump> {
                             );
                             // so now `disjoinction` iterates with the `sign(u,
                             // k) ⊑ message, signature`
-                            // 
+                            //
                             // This is a convoluted iterator that gives us item
                             // of the form (list of vars, formula) such that
                             // when `formula` is true, then `sign(u, k)` is a

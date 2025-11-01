@@ -51,12 +51,16 @@
 
         rust = fenix.packages.${system}.complete;
         toolchain = rust.toolchain;
-        use-nightly = true;
+        use-nightly = false;
 
-        mrustPlatform = if use-nightly then pkgs.makeRustPlatform {
-          cargo = toolchain;
-          rustc = toolchain;
-        } else pkgs.rustPlatform;
+        mrustPlatform =
+          if use-nightly then
+            pkgs.makeRustPlatform {
+              cargo = toolchain;
+              rustc = toolchain;
+            }
+          else
+            pkgs.rustPlatform;
 
         pkgConfig = {
           rustPlatform = mrustPlatform;
@@ -70,7 +74,7 @@
       in
       rec {
         packages = {
-          inherit cryptovampire indistinguishability ;
+          inherit cryptovampire indistinguishability;
           default = indistinguishability;
         };
         checks =

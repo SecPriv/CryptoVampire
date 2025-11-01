@@ -395,7 +395,7 @@ Because smt has a syntax for it, or it's a prolog trick, or ...");
     }
 }
 
-pub(crate) static  SCHEME_PREFIX: &str = "__pre_";
+pub(crate) static SCHEME_PREFIX: &str = "__pre_";
 impl Registerable for Function {
     /// Registers the `Function` type and its associated methods with the Steel VM.
     fn register(

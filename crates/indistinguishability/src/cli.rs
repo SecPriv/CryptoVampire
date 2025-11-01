@@ -7,5 +7,4 @@ use steel_derive::Steel;
 /// Main configuration structure for the command-line interface.
 #[derive(Parser, Debug, Clone, Steel)]
 #[command(author, version, about)]
-pub struct Config {
-}
+pub struct Config {}
