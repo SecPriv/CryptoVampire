@@ -41,8 +41,8 @@ impl Preludes {
     /// Returns the content of the selected prelude as a static string slice.
     pub fn get_prelude(&self) -> &'static str {
         match self {
-            Self::V1  => &CV_PRELUDE,
-            Self::V2 => include_str!("../../assets/preludes/v2.scm")
+            Self::V1 => &CV_PRELUDE,
+            Self::V2 => include_str!("../../assets/preludes/v2.scm"),
         }
     }
 }

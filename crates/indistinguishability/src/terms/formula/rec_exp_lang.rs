@@ -33,7 +33,7 @@ impl<'a, L> Deref for RecExprIter<'a, L> {
 
 impl<'a, L: AsLangVar> RecExprIter<'a, L> {
     /// Creates a new `RecExprLang` with an empty variable list.
-    /// 
+    ///
     /// *complexity*: `O(n)`
     pub fn new(exp: &'a [L]) -> Self {
         Self {
@@ -76,7 +76,9 @@ trait AsLangVar: Sized {
     /// The highest [egg::Var] appearing in `exp`
     fn highest_egg_var(exp: &[Self]) -> uv {
         Self::egg_free_vars(exp)
-            .filter_map(|v| v.as_u32()).max().unwrap_or(0)
+            .filter_map(|v| v.as_u32())
+            .max()
+            .unwrap_or(0)
     }
 }
 
@@ -274,29 +276,33 @@ impl<'a, L: AsLangVar> From<RecExprIter<'a, L>> for RecFOFormula {
 
 /// invariants: empty [Queue] means free variable `0` otherwise use [Free]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-struct  VariablesHelper {
+struct VariablesHelper {
     /// A Queue storing the bound de Bruijn variables
-    /// 
+    ///
     /// **invariant:** the min index of a variable inside of `var` should be *higher*
     /// than the highest variable in `exp`.
     ///
     /// `vars` is ordered, so the first element is the lowest variable.
     bound: rpds::Queue<u32>,
-    
+
     /// How many `S` are need to get a free variable
     free: i64,
 
     /// The minimum safe variable to assign a value to, [None] means that it
     /// hasn't been calculated yet
-    min_free: NonZeroU32
+    min_free: NonZeroU32,
 }
 
 impl VariablesHelper {
-    fn new<L:AsLangVar>(exp: &[L]) -> Self {
-        let min_free = NonZeroU32::new(L::highest_egg_var(exp)+1).unwrap();
-        Self { bound: Default::default(), free: 0, min_free }
+    fn new<L: AsLangVar>(exp: &[L]) -> Self {
+        let min_free = NonZeroU32::new(L::highest_egg_var(exp) + 1).unwrap();
+        Self {
+            bound: Default::default(),
+            free: 0,
+            min_free,
+        }
     }
-    
+
     fn peek_last(&self) -> u32 {
         todo!()
         // match (self.bound.peek(), u32::try_from(self.free)) {

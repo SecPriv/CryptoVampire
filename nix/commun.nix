@@ -18,11 +18,11 @@
 
           outputHashes = {
             "steel-core-0.7.0" = "sha256-f60rAK6tIXk4LFDw+DbcY06NblmqalcJvWvbKYr9BHM=";
-       };
+          };
         };
         src = lib.cleanSource src;
         patches = [ "${src}/nix.patch" ];
-        buildInputs = [vampire];
+        buildInputs = [ vampire ];
       };
     in
     pkg

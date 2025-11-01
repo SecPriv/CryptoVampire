@@ -15,7 +15,8 @@ use crate::input::shared_exists::ShrExists;
 use crate::input::shared_fdst::ShrFindSuchThat;
 use crate::input::shared_problem::ShrProblem;
 use crate::terms::{
-    AliasRewrite, BUILTINS, Function, RecFOFormula, Rewrite, SCHEME_PREFIX, SORT_LIST, Signature, Sort, Variable
+    AliasRewrite, BUILTINS, Function, RecFOFormula, Rewrite, SCHEME_PREFIX, SORT_LIST, Signature,
+    Sort, Variable,
 };
 
 pub(crate) mod golgge_rules;
@@ -84,10 +85,7 @@ pub fn init_engine(config: Configuration) -> Engine {
         p @ prelude::Preludes::V2 => {
             let mut module = BuiltInModule::new("cryptovampire");
             crate::register(&mut module);
-            module.register_value(
-                "cli-config",
-                IntoSteelVal::into_steelval(config).unwrap(),
-            );
+            module.register_value("cli-config", IntoSteelVal::into_steelval(config).unwrap());
             engine.register_module(module);
 
             let prelude = {
@@ -97,7 +95,10 @@ pub fn init_engine(config: Configuration) -> Engine {
                 for f in BUILTINS {
                     let name = &f.name;
                     // let old_name = format!("__pre_{}", f.name);
-                    mkdefintions += &format!("(define {name} (register-function cv-{SCHEME_PREFIX}{}))\n", f.name);
+                    mkdefintions += &format!(
+                        "(define {name} (register-function cv-{SCHEME_PREFIX}{}))\n",
+                        f.name
+                    );
 
                     mkexports += &format!("{name}\n");
                 }
