@@ -12,6 +12,8 @@ mod enum_like;
 // mod rec_exp_lang;
 mod sexpr;
 
+mod unification;
+
 /// Re-exports `InnerLang`, the language used for `egg` e-graphs.
 pub use egg::InnerLang;
 pub(crate) use enum_like::QuantifierTranslator;

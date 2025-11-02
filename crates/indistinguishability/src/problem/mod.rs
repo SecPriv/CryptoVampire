@@ -587,7 +587,7 @@ impl QuantifierTranslator for Problem {
                 subst
                     .get(v)
                     .cloned()
-                    .expect("bound var not found")
+                    .unwrap_or(RecFOFormula::Var(v.clone()))
             })
             .collect_vec();
         let args = args.iter().cloned();

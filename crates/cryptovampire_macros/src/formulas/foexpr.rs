@@ -334,13 +334,13 @@ impl ToTokenWithInputs for QuantifierAst {
             nargs = quote!(::itertools::chain![#(#args),*])
         };
 
-        Ok(quote! {
+        Ok(quote! {{
           #pre_binding
           #constructor(#kind, #binding_arg, {
             // compute the argument
             #nargs
           })
-        })
+        }})
     }
 }
 
