@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 use bon::{Builder, bon, builder};
 use itertools::{Itertools, chain};
+use log::trace;
 use logic_formula::Formula;
 use utils::ereturn_if;
 
@@ -103,14 +104,25 @@ impl FindSuchThat {
     #[builder]
     pub fn insert(
         pbl: &mut Problem,
-        #[builder(with = FromIterator::from_iter, default = vec![])] cvars_sorts: Vec<Sort>,
-        #[builder(with = FromIterator::from_iter, default = vec![])] bvars_sorts: Vec<Sort>,
+        #[builder(with = FromIterator::from_iter, default = vec![])] cvars: Vec<Variable>,
+        #[builder(with = FromIterator::from_iter, default = vec![])] bvars: Vec<Variable>,
         #[builder(default = true)] temporary: bool,
     ) -> &mut FindSuchThat {
-        assert!(!bvars_sorts.is_empty());
-        // set up
-        let bvars = bvars_sorts.iter().map(|&s| fresh!(s)).collect_vec();
-        let cvars = cvars_sorts.iter().map(|&s| fresh!(s)).collect_vec();
+        assert!(!bvars.is_empty());
+        let bvars_sorts = bvars
+            .iter()
+            .map(|v| {
+                v.get_sort()
+                    .expect("quantifiers should capture variables with sort")
+            })
+            .collect_vec();
+        let cvars_sorts = cvars
+            .iter()
+            .map(|v| {
+                v.get_sort()
+                    .expect("quantified variables should have a sort")
+            })
+            .collect_vec();
 
         debug_assert!(
             bvars.iter().all(|v| !cvars.contains(v)),
@@ -136,10 +148,7 @@ impl FindSuchThat {
             tlf = pbl
                 .declare_function()
                 .fresh_name("_findst")
-                .inputs(chain!(
-                    cvars_sorts.iter().copied(),
-                    bvars_sorts.iter().copied()
-                ))
+                .inputs(chain!(cvars_sorts.clone(), bvars_sorts.clone()))
                 .output(Sort::Bitstring)
                 .quantifier_idx(quant_idx)
                 .flag(FunctionFlags::FIND_SUCH_THAT)
@@ -155,7 +164,7 @@ impl FindSuchThat {
                 skolem_vec.push(
                     pbl.declare_function()
                         .fresh_name(&name)
-                        .inputs(cvars_sorts.iter().copied())
+                        .inputs(cvars_sorts.clone())
                         .output(bs)
                         .quantifier_idx(quant_idx)
                         .flag(FunctionFlags::SKOLEM)

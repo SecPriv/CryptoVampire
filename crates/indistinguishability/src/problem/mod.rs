@@ -21,9 +21,7 @@ use crate::rules::{FreshNonce, VampireRule, mk_default_prolog_rules, mk_default_
 use crate::runners::SmtRunner;
 use crate::smt::mk_prelude;
 use crate::terms::{
-    Alias, CryptographicAssumption, EMPTY, EQUIV, FOBinder, FindSuchThat, Function,
-    FunctionCollection, FunctionFlags, HAPPENS, INIT, InnerFunction, MACRO_FRAME, PRED,
-    QuantifierT, QuantifierTranslator, RecFOFormula, Rewrite, Signature, Sort, TRUE, UNFOLD_MSG,
+    Alias, CryptographicAssumption, EMPTY, EQUIV, FOBinder, FindSuchThat, Function, FunctionCollection, FunctionFlags, HAPPENS, INIT, InnerFunction, MACRO_FRAME, PRED, Quantifier, QuantifierT, QuantifierTranslator, RecFOFormula, Rewrite, Signature, Sort, TRUE, UNFOLD_MSG
 };
 use crate::utils::fresh_name;
 use crate::{Configuration, Lang, MSmt, mk_signature, rexp, smt};
@@ -498,25 +496,19 @@ impl Problem {
         tr!("generate names for quantifers");
         for q in quantifiers.iter() {
             econtinue_let!(let RecFOFormula::Quantifier { vars, arg, head: FOBinder::FindSuchThat } = q);
-            let cvars_sorts = q.free_vars_iter().unique().map(|v| {
-                v.get_sort()
-                    .expect("quantifiers should capture variables with sort")
-            });
-            let bvars_sorts = vars.iter().map(|v| {
-                v.get_sort()
-                    .expect("quantified variables should have a sort")
-            });
-
+            let cvars = q.free_vars_iter().unique().cloned();
+            let bvars = vars.iter().cloned();
 
             let find = FindSuchThat::insert()
                 .pbl(self)
-                .bvars_sorts(bvars_sorts)
-                .cvars_sorts(cvars_sorts)
+                .bvars(bvars)
+                .cvars(cvars)
                 .temporary(true)
                 .call();
             find.set_condition(arg[0].clone());
             find.set_then_branch(arg[1].clone());
             find.set_else_branch(arg[2].clone());
+            tr!("adding newfound quantifier:\n{find:#?}\n\tfrom{q}");
             let tlf = find.top_level_function().clone();
             self.quantifier_cache.push((q.clone(), tlf));
         }
@@ -575,6 +567,19 @@ impl QuantifierTranslator for Problem {
             .find_map(|(cached, fun)| cached.unify(formula).map(|subst| (subst, fun.clone())))?;
         let q = fun.get_quantifier(self.functions()).unwrap();
 
+        let Quantifier::FindSuchThat(q2) =q else {unreachable!()};
+        let cond = q2.condition().unwrap();
+
+        tr!(
+            "quantifier translation:\n\tterm:\n\t{formula}\n\tfunction:{}\n\t\t(cond: {cond})\n\t\tcvars:[{}],\n\tsubstitution:\n{}",
+            q.top_level_function().name,
+            q.cvars().iter().map(|v| format!("{v:?}")).join(", "),
+            subst
+                .iter()
+                .map(|(v, f)| format!("\t{v:?} => {f}"))
+                .join(",\n")
+        );
+
         let args = q
             .cvars()
             .iter()
@@ -582,10 +587,12 @@ impl QuantifierTranslator for Problem {
                 subst
                     .get(v)
                     .cloned()
-                    .unwrap_or(RecFOFormula::Var(v.clone()))
+                    .expect("bound var not found")
             })
             .collect_vec();
         let args = args.iter().cloned();
+
+        tr!("arg vars: [{}]", args.clone().join(", "));
 
         let sks = q.skolems().iter().map(|sk| rexp!((sk #(args.clone())*)));
         let tlf = q.top_level_function();

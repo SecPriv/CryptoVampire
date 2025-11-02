@@ -7,7 +7,7 @@ use bon::Builder;
 use cryptovampire_smt::{SmtFormula, SmtHead};
 use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr};
 use itertools::{Either, Itertools, chain, izip};
-use log::trace;
+use log::{error, trace, warn};
 use logic_formula::{Destructed, Formula, HeadSk};
 use quarck::CowArc;
 use rpds::HashTrieSet;
@@ -800,12 +800,16 @@ impl RecFOFormula {
     }
 
     pub fn as_smt<U: QuantifierTranslator>(&self, pbl: &U) -> Option<MSmtFormula> {
+        trace!("trying to translate to smt:\n{self}");
         match MSmtFormula::try_from(self.as_pre_smt().translator(pbl).build()) {
             Err(f) => {
-                trace!("failed to turn into smt {f}");
+                warn!("failed to turn into smt {f}");
                 None
             }
-            Ok(f) => Some(f),
+            Ok(f) => {
+                trace!("translated;\n\t{self}\nto:\n\t{f}");
+                Some(f)
+            }
         }
     }
 
