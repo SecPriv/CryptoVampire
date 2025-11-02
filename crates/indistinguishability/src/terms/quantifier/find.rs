@@ -112,6 +112,17 @@ impl FindSuchThat {
         let bvars = bvars_sorts.iter().map(|&s| fresh!(s)).collect_vec();
         let cvars = cvars_sorts.iter().map(|&s| fresh!(s)).collect_vec();
 
+        debug_assert!(
+            bvars.iter().all(|v| !cvars.contains(v)),
+            "bound vars in captured vars!"
+        );
+        debug_assert!(
+            cvars.iter().all(|v| !bvars.contains(v)),
+            "captured vars in bound vars!"
+        );
+        debug_assert!(bvars.iter().all_unique(), "bvars must be unique");
+        debug_assert!(cvars.iter().all_unique(), "cvars must be unique");
+
         let quant_idx = pbl.functions().quantifiers(temporary).len();
 
         // let n_quant = QUANTIFIER_COUNT.fetch_add(1, std::sync::atomic::Ordering::AcqRel);

@@ -6,7 +6,7 @@ use std::ops::{BitAnd, BitOr, Not, Shr};
 use bon::Builder;
 use cryptovampire_smt::{SmtFormula, SmtHead};
 use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr};
-use itertools::{Itertools, chain, izip};
+use itertools::{Either, Itertools, chain, izip};
 use log::trace;
 use logic_formula::{Destructed, Formula, HeadSk};
 use quarck::CowArc;
@@ -382,7 +382,7 @@ impl RecFOFormula {
             return x;
         }
 
-        match (self, other) {
+        let result = match (self, other) {
             (Self::Var(v1), Self::Var(v2)) => {
                 // let l = subst.entry(v1.clone()).or_insert(other.clone()).clone();
                 // let r = subst.entry(v2.clone()).or_insert(self.clone()).clone();
@@ -393,26 +393,41 @@ impl RecFOFormula {
                 buffer.clear();
                 let r = find(v2, subst, buffer).map(|x| x.cloned());
 
+                use Either::{Left, Right};
                 match (&l, &r) {
                     // they are both loops
                     (Err(_), Err(_)) => lbuffer.contains(v2) || buffer.contains(v1),
-                    // both eventually escaped being variables
-                    (Ok(Some(l)), Ok(Some(r))) => {
+                    // neither is assigned
+                    // NB: we don't optimise the substitution to keep full track of the cycles
+                    (Ok(Right(nv1)), Ok(Right(nv2))) => {
+                        debug_assert!(!is_bound.contains(v1) && !is_bound.contains(v2));
+                        debug_assert!(!is_bound.contains(nv1) && !is_bound.contains(nv2));
+                        subst.insert(nv1.clone(), Self::Var(v2.clone()));
+                        subst.insert(nv2.clone(), Self::Var(v1.clone()));
+                        true
+                    }
+                    // both eventually escaped no longer being variables
+                    (Ok(Left(l)), Ok(Left(r))) => {
                         l.unify_inner(r, subst, is_bound, buffer, short_cut)
                     }
-                    (Ok(None), Ok(Some(x))) if !is_bound.contains(v1) => {
-                        subst.insert(v1.clone(), (*x).clone());
+                    // one remains a var, the other doesn't
+                    (Ok(Right(v)), Ok(Left(x))) | (Ok(Left(x)), Ok(Right(v)))
+                        if !is_bound.contains(v) =>
+                    {
+                        subst.insert(v.clone(), (*x).clone());
                         true
                     }
-                    (Ok(Some(x)), Ok(None)) if !is_bound.contains(v2) => {
-                        subst.insert(v2.clone(), (*x).clone());
-                        true
-                    }
-                    (Err(_), Ok(Some(x))) => {
+                    // one looped the other wasn't a var anyme
+                    (Err(_), Ok(Left(x))) => {
                         self.unify_inner(x, subst, is_bound, buffer, short_cut)
                     }
-                    (Ok(Some(x)), Err(_)) => {
+                    (Ok(Left(x)), Err(_)) => {
                         x.unify_inner(other, subst, is_bound, buffer, short_cut)
+                    }
+                    // one looped while the other remained a variables
+                    (Err(v1), Ok(Right(v2))) | (Ok(Right(v2)), Err(v1)) => {
+                        subst.insert(v2.clone(), Self::Var((*v1).clone()));
+                        true
                     }
                     _ => false,
                 }
@@ -444,12 +459,20 @@ impl RecFOFormula {
                     arg: ar,
                 },
             ) if hl == hr && vl.len() == vr.len() => {
+                // let already_assigned = izip!(vl, vr).any(|(l, r)| {
+                //     // subst.insert(l.clone(), Self::Var(r.clone())).is_some()
+                //     //     || subst.insert(r.clone(), Self::Var(l.clone())).is_some()
+                //     subst.contains_key(l) || subst.contains_key(r)
+                // });
+                // ereturn_if!(already_assigned, false);
+
                 // we bail if any of the bound variables were already assigned somewhere
-                let already_assigned = izip!(vl, vr).any(|(l, r)| {
-                    subst.insert(l.clone(), Self::Var(r.clone())).is_some()
-                        || subst.insert(r.clone(), Self::Var(l.clone())).is_some()
-                });
-                ereturn_if!(already_assigned, false);
+                for (l, r) in izip!(vl, vr) {
+                    ereturn_if!(subst.contains_key(l) || subst.contains_key(r), false);
+                    subst.insert(l.clone(), Self::Var(r.clone()));
+                    subst.insert(r.clone(), Self::Var(l.clone()));
+                }
+
                 is_bound.extend(chain![vl, vr].cloned());
                 subst.extend(
                     chain![izip!(vl, vr), izip!(vr, vl)]
@@ -459,7 +482,9 @@ impl RecFOFormula {
                 izip!(al, ar).all(|(l, r)| l.unify_inner(r, subst, is_bound, buffer, short_cut))
             }
             _ => false,
-        }
+        };
+        // trace!("unifying:\n\t{self}\n\t{other}\n\t===> {result}");
+        result
     }
 
     pub fn unify(&self, other: &Self) -> Option<FxHashMap<Variable, Self>> {
@@ -516,15 +541,15 @@ fn find<'a>(
     var: &'a Variable,
     subst: &'a FxHashMap<Variable, RecFOFormula>,
     seen: &mut Vec<Variable>,
-) -> Result<Option<&'a RecFOFormula>, &'a Variable> {
+) -> Result<Either<&'a RecFOFormula, &'a Variable>, &'a Variable> {
     match subst.get(var) {
         Some(RecFOFormula::Var(nv)) if seen.contains(nv) => Err(var),
         Some(RecFOFormula::Var(var)) => {
             seen.push(var.clone());
             find(var, subst, seen)
         }
-        Some(x) => Ok(Some(x)),
-        _ => Ok(None),
+        Some(x) => Ok(Either::Left(x)),
+        _ => Ok(Either::Right(var)),
     }
 }
 
@@ -775,7 +800,13 @@ impl RecFOFormula {
     }
 
     pub fn as_smt<U: QuantifierTranslator>(&self, pbl: &U) -> Option<MSmtFormula> {
-        MSmtFormula::try_from(self.as_pre_smt().translator(pbl).build()).ok()
+        match MSmtFormula::try_from(self.as_pre_smt().translator(pbl).build()) {
+            Err(f) => {
+                trace!("failed to turn into smt {f}");
+                None
+            }
+            Ok(f) => Some(f),
+        }
     }
 
     pub fn try_from_subts<N: Analysis<Lang>>(
@@ -1192,7 +1223,7 @@ impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for MSmtFor
         }: PreSmtRecFOFormula<'a, U>,
     ) -> Result<Self, Self::Error> {
         let propagate = |f: &RecFOFormula| f.as_pre_smt().translator(translator).build().try_into();
-        match formula.as_ref() {
+        let restult = match formula.as_ref() {
             RecFOFormula::Var(variable) => Ok(Self::Var(variable.clone())),
             RecFOFormula::App { head, args } => match head.as_smt_head() {
                 Some(h) => {
@@ -1241,7 +1272,15 @@ impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for MSmtFor
                     None => Err(formula.into_owned()),
                 },
             },
+        };
+
+        #[cfg(debug_assertions)]
+        if let Err(f) = &restult {
+            use log::error;
+
+            error!("fail to translate to smt\n{f}")
         }
+        restult
     }
 }
 

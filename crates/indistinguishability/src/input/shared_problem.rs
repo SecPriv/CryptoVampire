@@ -209,10 +209,12 @@ impl ShrProblem {
 
     /// Adds a new SMT axiom to the problem.
     fn add_smt_axiom(&self, f: RecFOFormula) -> SResult<()> {
-        self.borrow_mut().extra_smt_mut().push(MSmt::mk_assert(
-            f.as_smt(self.0.borrow().deref())
-                .ok_or(conversion_err::<MSmt>())?,
-        ));
+        let content = f
+            .as_smt(self.0.borrow().deref())
+            .ok_or(conversion_err::<MSmt>())?;
+        self.borrow_mut()
+            .extra_smt_mut()
+            .push(MSmt::mk_assert(content));
         Ok(())
     }
 

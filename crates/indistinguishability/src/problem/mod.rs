@@ -8,10 +8,10 @@ use cryptovampire_smt::Smt;
 use egg::{EGraph, RecExpr};
 use golgge::{Program, Rule};
 use itertools::{Itertools, chain};
-use log::trace;
+use log::{log_enabled, trace};
 use logic_formula::Formula;
 use logic_formula::iterators::QuantiferIterator;
-use utils::{econtinue_let, implvec};
+use utils::{dynamic_iter, econtinue_let, implvec};
 
 use crate::problem::function_builder::{
     SetAlias, SetCryptography, SetInputs, SetName, SetOutput, SetStepIdx,
@@ -268,6 +268,7 @@ impl Problem {
     /// Computes the SMT prelude if it hasn't been computed yet and caches it.
     fn compute_smt_prelude(&mut self) {
         if self.smt_prelude.is_none() {
+            self.find_temp_quantifiers(&[]);
             let prelude = mk_prelude(self).collect();
             self.smt_prelude = Some(prelude)
         }
@@ -455,6 +456,11 @@ impl Problem {
 
     /// Finds all the temporary quantifiers in the problem and adds them to the cache
     pub fn find_temp_quantifiers(&mut self, extra: &[RecFOFormula]) {
+        if extra.is_empty() && self.smt_prelude.is_some() {
+            return;
+        }
+
+        tr!("looks for quantifier candidates in:");
         // unique quantifiers up to unification
         let quantifiers = {
             let candidate = chain![self.list_all_terms(), extra]
@@ -462,6 +468,7 @@ impl Problem {
                 .unique();
             let mut pile = Vec::new();
             for a in candidate {
+                tr!("here {a}");
                 if let RecFOFormula::Quantifier {
                     head: FOBinder::FindSuchThat,
                     ..
@@ -469,19 +476,29 @@ impl Problem {
                     && let None = pile.iter().find_map(|x| a.unify(x))
                     && let None = self.quantifier_cache.iter().find_map(|(x, _)| a.unify(x))
                 {
+                    tr!("{a:?}");
                     pile.push(a.clone());
                 }
             }
             pile
         };
+        tr!(
+            "found quantifiers!:\n{}",
+            chain![
+                quantifiers.iter(),
+                self.quantifier_cache.iter().map(|(q, _)| q)
+            ]
+            .join("\n")
+        );
 
         if quantifiers.is_empty() {
             return;
         }
 
+        tr!("generate names for quantifers");
         for q in quantifiers.iter() {
-            econtinue_let!(let RecFOFormula::Quantifier { vars, arg, .. } = q);
-            let cvars_sorts = q.free_vars_iter().map(|v| {
+            econtinue_let!(let RecFOFormula::Quantifier { vars, arg, head: FOBinder::FindSuchThat } = q);
+            let cvars_sorts = q.free_vars_iter().unique().map(|v| {
                 v.get_sort()
                     .expect("quantifiers should capture variables with sort")
             });
@@ -489,6 +506,8 @@ impl Problem {
                 v.get_sort()
                     .expect("quantified variables should have a sort")
             });
+
+
             let find = FindSuchThat::insert()
                 .pbl(self)
                 .bvars_sorts(bvars_sorts)
@@ -512,10 +531,26 @@ impl Problem {
 
     /// list all the `RecFOFormula` stored in this `Self`
     pub fn list_all_terms(&self) -> impl Iterator<Item = &RecFOFormula> {
-        self.protocols()
-            .iter()
-            .flat_map(|p| p.steps().iter())
-            .flat_map(|s| [&s.cond, &s.msg].into_iter())
+        chain![
+            self.protocols()
+                .iter()
+                .flat_map(|p| p.steps().iter())
+                .flat_map(|s| [&s.cond, &s.msg].into_iter()),
+            self.extra_rewrite().iter().flat_map(
+                |Rewrite {
+                     from,
+                     to,
+                     prolog_only,
+                     ..
+                 }| {
+                    (!prolog_only)
+                        .then_some([from, to].into_iter())
+                        .into_iter()
+                        .flatten()
+                }
+            )
+        ]
+        .inspect(|x| tr!("while listing:\n{x}"))
     }
 }
 
@@ -525,15 +560,32 @@ impl QuantifierTranslator for Problem {
     ///
     /// Returns `Some(translated_formula)` if a translation is found, otherwise `None`.
     fn try_translate(&self, formula: &RecFOFormula) -> Option<crate::terms::RecFOFormula> {
+        tr!("try translate:\n{formula}");
+        if log_enabled!(log::Level::Trace) {
+            let mut p = String::new();
+            for (q, f) in &self.quantifier_cache {
+                p += &format!("{} => {q}\n", f.name);
+            }
+            tr!("available quantifiers:\n{p}")
+        }
+
         let (subst, fun) = self
             .quantifier_cache
             .iter()
             .find_map(|(cached, fun)| cached.unify(formula).map(|subst| (subst, fun.clone())))?;
         let q = fun.get_quantifier(self.functions()).unwrap();
 
-        let args: Option<Vec<_>> = q.cvars().iter().map(|v| subst.get(v)).collect();
-        let args = args?;
-        let args = args.iter().cloned().cloned();
+        let args = q
+            .cvars()
+            .iter()
+            .map(|v| {
+                subst
+                    .get(v)
+                    .cloned()
+                    .unwrap_or(RecFOFormula::Var(v.clone()))
+            })
+            .collect_vec();
+        let args = args.iter().cloned();
 
         let sks = q.skolems().iter().map(|sk| rexp!((sk #(args.clone())*)));
         let tlf = q.top_level_function();

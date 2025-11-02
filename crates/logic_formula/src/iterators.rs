@@ -1,3 +1,5 @@
+use std::fmt::{Debug, Display};
+
 use crate::outers::OwnedIter;
 use crate::{Bounder, Destructed, Formula, FormulaIterator};
 
@@ -121,7 +123,7 @@ pub struct QuantiferIterator;
 
 impl<'a, F> FormulaIterator<&'a F> for QuantiferIterator
 where
-    &'a F: Formula,
+    &'a F: Formula + Debug,
 {
     type Passing = ();
 

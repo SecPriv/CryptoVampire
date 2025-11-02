@@ -10,7 +10,7 @@ use crate::terms::{
 };
 use crate::{MSmt, MSmtFormula, Problem, smt, vec_smt};
 
-pub fn mk_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
+pub fn mk_prelude(pbl: &mut Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     chain![
         mk_header(pbl),
         [MSmt::comment_block("static")],
