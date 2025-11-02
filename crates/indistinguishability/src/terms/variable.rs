@@ -12,7 +12,7 @@ use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
 use crate::input::Registerable;
-use crate::terms::Sort;
+use crate::terms::{RecFOFormula, Sort};
 use crate::{LangVar, MSmtFormula};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Steel)]
@@ -141,6 +141,14 @@ impl Variable {
                 }
             }
         }
+    }
+
+    pub fn as_formula(&self) -> RecFOFormula {
+        RecFOFormula::Var(self.clone())
+    }
+
+    pub fn into_formula(self) -> RecFOFormula {
+        RecFOFormula::Var(self)
     }
 
     #[must_use]
