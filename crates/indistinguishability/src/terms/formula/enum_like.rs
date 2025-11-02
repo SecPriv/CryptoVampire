@@ -23,6 +23,7 @@ use super::{FOBinder, RecFOFormulaQuant};
 use crate::input::Registerable;
 use crate::terms::formula::egg::EggLanguage;
 use crate::terms::formula::sexpr::SExpr;
+use crate::terms::formula::unification::{self, Substitution};
 use crate::terms::formula::{RecFOFormulaQuantRef, list};
 use crate::terms::utils::pull_from_egraph;
 use crate::terms::{
@@ -488,15 +489,20 @@ impl RecFOFormula {
     }
 
     pub fn unify(&self, other: &Self) -> Option<FxHashMap<Variable, Self>> {
-        let mut subst = Default::default();
-        self.unify_inner(
-            other,
-            &mut subst,
-            &mut Default::default(),
-            &mut Default::default(),
-            &mut |_, _, _| None,
-        )
-        .then_some(subst)
+        // let mut subst = Default::default();
+        // self.unify_inner(
+        //     other,
+        //     &mut subst,
+        //     &mut Default::default(),
+        //     &mut Default::default(),
+        //     &mut |_, _, _| None,
+        // )
+        // .then_some(subst)
+
+        match unification::mgu(self, other) {
+            Ok(Substitution(map)) => Some(map),
+            Err(_) => None,
+        }
     }
 
     /// capture avoiding substitution
@@ -533,6 +539,60 @@ impl RecFOFormula {
                 self
             }
             .clone(),
+        }
+    }
+
+    // new attemp
+
+    /// Recursively applies a substitution to a formula.
+    pub fn apply(&self, subst: &Substitution) -> Self {
+        match self {
+            // If we are a variable, check if we are in the substitution
+            RecFOFormula::Var(v) => subst.0.get(v).cloned().unwrap_or_else(|| self.clone()),
+
+            // For an application, apply to all arguments
+            RecFOFormula::App { head, args } => RecFOFormula::App {
+                head: head.clone(),
+                args: args.iter().map(|arg| arg.apply(subst)).collect(),
+            },
+
+            // For a quantifier, we must apply the substitution *without*
+            // touching variables that are shadowed by the quantifier's binders.
+            RecFOFormula::Quantifier { head, vars, arg } => {
+                // 1. Clone the substitution
+                let mut shadowed_subst = subst.clone();
+
+                // 2. Remove any bindings for variables that are now bound
+                for v in vars.iter() {
+                    shadowed_subst.0.remove(v);
+                }
+
+                // 3. Apply the filtered substitution to the body
+                RecFOFormula::Quantifier {
+                    head: head.clone(),
+                    vars: vars.clone(),
+                    arg: arg.iter().map(|x| x.apply(&shadowed_subst)).collect(),
+                }
+            }
+        }
+    }
+
+    /// Checks if a variable occurs *free* within a formula.
+    /// This is the "occurs check".
+    pub fn contains_var(&self, var: &Variable) -> bool {
+        match self {
+            RecFOFormula::Var(v) => v == var,
+            RecFOFormula::App { args, .. } => args.iter().any(|arg| arg.contains_var(var)),
+            RecFOFormula::Quantifier { vars, arg, .. } => {
+                // If the variable is bound by *this* quantifier, it does
+                // not count as a free occurrence.
+                if vars.iter().any(|v| v == var) {
+                    false
+                } else {
+                    // Otherwise, check the body.
+                    arg.iter().any(|arg| arg.contains_var(var))
+                }
+            }
         }
     }
 }
