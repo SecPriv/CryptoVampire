@@ -8,7 +8,7 @@ use rustc_hash::FxHashMap;
 
 use crate::terms::{RecFOFormula, Variable};
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Substitution(pub FxHashMap<Variable, RecFOFormula>);
 
 impl Substitution {
@@ -121,7 +121,7 @@ pub fn mgu(f1: &RecFOFormula, f2: &RecFOFormula) -> Result<Substitution, Unifica
             // Check binders and number of bound variables
             if h1 != h2
                 || v1.len() != v2.len()
-                || izip!(v1.iter(), v2.iter()).all(|(vl, vr)| vl.get_sort() == vr.get_sort())
+                || izip!(v1.iter(), v2.iter()).any(|(vl, vr)| vl.get_sort() != vr.get_sort())
             {
                 return Err(UnificationError::Mismatch);
             }
@@ -174,4 +174,84 @@ fn unify_variable(
     // `add` handles composing this new binding with the existing substitution.
     subst.add(var, term);
     Ok(())
+}
+
+// --- Unit Tests ---
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{decl_vars, rexp};
+
+    #[test]
+    fn test_quantifier_unification() {
+        // --- Define some constants ---
+        decl_vars!(v, z);
+
+        // f1 = forall x. P(x, V)
+        // f2 = forall y. P(y, z)
+        let f1 = rexp!((forall ((#i Bool) ) (and #i #v)));
+        let f2 = rexp!((forall ((#k Bool) ) (and #k #z)));
+
+        let result = mgu(&f1, &f2);
+
+        // We expect { V: z } or { z: V }. Our implementation will produce { V: z }
+        // because (V, z) will be the equation, and unify_variable(V, z, ...) will be called.
+        let mut expected_subst = Substitution::new();
+        expected_subst.add(v.clone(), RecFOFormula::Var(z.clone()));
+
+        assert_eq!(result, Ok(expected_subst));
+    }
+
+    #[test]
+    fn test_quantifier_mismatch_binder() {
+        decl_vars!(v, z);
+        // f1 = forall x. P(x, V)
+        // f2 = exists y. P(y, z)
+        let f1 = rexp!((forall ((#i Bool) ) (and #i #v)));
+        let f2 = rexp!((exists ((#k Bool) ) (and #k #z)));
+
+        let result = mgu(&f1, &f2);
+        assert_eq!(result, Err(UnificationError::Mismatch));
+    }
+
+    #[test]
+    fn test_quantifier_mismatch_body() {
+        decl_vars!(v, z);
+        // f1 = forall x. P(x, V)
+        // f2 = forall y. P'(y, z)
+        let f1 = rexp!((forall ((#i Bool) ) (and #i #v)));
+        let f2 = rexp!((forall ((#k Bool) ) (or #k #z)));
+
+        let result = mgu(&f1, &f2);
+        assert_eq!(result, Err(UnificationError::Mismatch));
+    }
+
+    #[test]
+    fn test_occurs_check() {
+        decl_vars!(v);
+        // f1 = forall x. P(x, V)
+        let f1 = rexp!((forall ((#i Bool) ) (and #i #v)));
+        // f_v = V
+        let f_v = RecFOFormula::Var(v.clone());
+
+        let result = mgu(&f_v, &f1);
+        assert_eq!(result, Err(UnificationError::OccursCheck));
+    }
+
+    #[test]
+    fn test_standard_substitution() {
+        decl_vars!(v, w);
+        // f1 = forall x. P(x, V)
+        let f1 = rexp!((forall ((#i Bool) ) (and #i #v)));
+        // f_v = V
+        let f_w = RecFOFormula::Var(w.clone());
+
+        let result = mgu(&f_w, &f1);
+
+        let mut expected_subst = Substitution::new();
+        expected_subst.add(w.clone(), f1); // Expect { W: forall x. P(x, V) }
+
+        assert_eq!(result, Ok(expected_subst));
+    }
 }
