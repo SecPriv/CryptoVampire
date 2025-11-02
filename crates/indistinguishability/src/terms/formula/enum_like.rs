@@ -17,7 +17,7 @@ use steel::rvals::IntoSteelVal;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel::{SteelErr, rerrs};
 use steel_derive::Steel;
-use utils::{dynamic_iter, econtinue_let, ereturn_if, ereturn_let, implvec, match_eq};
+use utils::{dynamic_iter, ebreak_let, econtinue_let, ereturn_if, ereturn_let, implvec, match_eq};
 
 use super::{FOBinder, RecFOFormulaQuant};
 use crate::input::Registerable;
@@ -786,7 +786,7 @@ impl RecFOFormula {
     /// `L` lets you decide the `egg::Language` to be used. It panics if the conversion is impossible.
     pub fn as_egg<L: EggLanguage>(&self) -> Vec<L> {
         let mut out = Vec::new();
-        self.as_egg_inner(&mut out, Default::default(), 0, true);
+        self.as_egg_inner(&mut out, Default::default(), true, &mut None);
         out
     }
 
@@ -795,31 +795,62 @@ impl RecFOFormula {
     /// `L` lets you decide the `egg::Language` to be used. It panics if the conversion is impossible.
     pub fn as_egg_non_capture_avoiding<L: EggLanguage>(&self) -> Vec<L> {
         let mut out = Vec::new();
-        self.as_egg_inner(&mut out, Default::default(), 0, false);
+        self.as_egg_inner(&mut out, Default::default(), false, &mut None);
         out
     }
 
     fn as_egg_inner<'a, L: EggLanguage>(
         &'a self,
         out: &mut Vec<L>,
-        bvars: rpds::HashTrieMap<&'a Variable, usize>,
-        size: usize,
-        wrap: bool,
+        mut bvars: rpds::HashTrieMap<&'a Variable, usize>,
+        depth: bool,
+        olocation: &mut Option<usize>,
     ) -> usize {
         match self {
             Self::Quantifier { head, vars, arg } => {
-                debug_assert_eq!(bvars.iter().len(), size);
-                let mut bvars = bvars;
-                for (i, var) in vars.iter().enumerate() {
-                    bvars = bvars.insert(var, size + i);
+                if !vars.is_empty() {
+                    let l = match olocation {
+                        Some(l) => *l,
+                        None => {
+                            let i = out.len();
+                            *olocation = Some(i);
+                            out.push(L::mk_fun_application(LAMBDA_O.clone(), []));
+                            i
+                        }
+                    };
+
+                    // update the variables assignement
+                    bvars = bvars
+                        .into_iter()
+                        .map(|(v, i)| {
+                            let mut i = *i;
+                            for _ in vars.iter() {
+                                out.push(L::mk_fun_application(LAMBDA_S.clone(), [Id::from(i)]));
+                                i = out.len() - 1;
+                            }
+                            (*v, i)
+                        })
+                        .collect();
+
+                    // mk the variables
+                    {
+                        let mut vars = vars.iter().rev();
+                        let v1 = vars.next().unwrap();
+                        bvars = bvars.insert(v1, l);
+                        let mut l = l;
+                        for v in vars {
+                            out.push(L::mk_fun_application(LAMBDA_S.clone(), [Id::from(l)]));
+                            l = out.len() - 1;
+                            bvars = bvars.insert(&v, l);
+                        }
+                    }
                 }
-                let size = size + vars.len();
 
                 let mut nargs = Vec::with_capacity(arg.len() + 1);
                 nargs.push(mk_list(out, vars.iter().map(|v| v.get_sort().unwrap())));
                 nargs.extend(
                     arg.iter()
-                        .map(|arg| arg.as_egg_inner(out, bvars.clone(), size, wrap)),
+                        .map(|arg| arg.as_egg_inner(out, bvars.clone(), depth, olocation)),
                 );
 
                 let head = head.as_function().cloned().unwrap();
@@ -829,7 +860,7 @@ impl RecFOFormula {
             Self::App { head, args } => {
                 let args = args
                     .iter()
-                    .map(|arg| arg.as_egg_inner(out, bvars.clone(), size, wrap))
+                    .map(|arg| arg.as_egg_inner(out, bvars.clone(), depth, olocation))
                     .map(Id::from)
                     .collect_vec();
                 out.push(L::mk_fun_application(head.clone(), args));
@@ -838,11 +869,11 @@ impl RecFOFormula {
                 Some(i) => {
                     out.extend(mk_bound_var(*i));
                 }
-                None if wrap => {
+                None if depth => {
                     bvars
                         .iter()
                         .fold(self.clone(), |acc, _| rexp!((LAMBDA_S #acc)))
-                        .as_egg_inner(out, bvars, size, false);
+                        .as_egg_inner(out, bvars, false, olocation);
                 }
                 None => out.push(L::mk_variable(variable)),
             },
@@ -879,6 +910,25 @@ impl RecFOFormula {
         var: &Variable,
     ) -> Option<Self> {
         Self::try_from_id(egraph, *subst.get(var.as_egg())?)
+    }
+}
+
+#[cfg(test)]
+mod conversion_tests {
+    use egg::PatternAst;
+
+    use crate::{Lang, decl_vars, rexp};
+
+    #[test]
+    fn as_egg_succ() {
+        decl_vars!(a, b);
+        let f = rexp!((and #a #b 
+                (exists ((#i Bitstring) (#j Bitstring)) 
+                    (and #a #b (= #i #j) 
+                            (exists ((#i Bitstring) (#k Bitstring)) 
+                                (and (= #i #k #j) #a))))));
+        let f: PatternAst<Lang> = f.as_egg().into();
+        println!("{}", f.pretty(100));
     }
 }
 
