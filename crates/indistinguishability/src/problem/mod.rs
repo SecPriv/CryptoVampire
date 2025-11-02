@@ -21,7 +21,9 @@ use crate::rules::{FreshNonce, VampireRule, mk_default_prolog_rules, mk_default_
 use crate::runners::SmtRunner;
 use crate::smt::mk_prelude;
 use crate::terms::{
-    Alias, CryptographicAssumption, EMPTY, EQUIV, FOBinder, FindSuchThat, Function, FunctionCollection, FunctionFlags, HAPPENS, INIT, InnerFunction, MACRO_FRAME, PRED, Quantifier, QuantifierT, QuantifierTranslator, RecFOFormula, Rewrite, Signature, Sort, TRUE, UNFOLD_MSG
+    Alias, CryptographicAssumption, EMPTY, EQUIV, FOBinder, FindSuchThat, Function,
+    FunctionCollection, FunctionFlags, HAPPENS, INIT, InnerFunction, MACRO_FRAME, PRED, Quantifier,
+    QuantifierT, QuantifierTranslator, RecFOFormula, Rewrite, Signature, Sort, TRUE, UNFOLD_MSG,
 };
 use crate::utils::fresh_name;
 use crate::{Configuration, Lang, MSmt, mk_signature, rexp, smt};
@@ -103,11 +105,26 @@ impl Problem {
         let rules: Vec<Rc<dyn Rule<_, _>>> =
             chain![rules, [vampire_rule.into_mrc(), fresh_rule.into_mrc()]].collect_vec();
 
+        let golgge_config = {
+            let Configuration {
+                node_limit,
+                time_limit,
+                iter_limit,
+                depth,
+                ..
+            } = self.config;
+            golgge::Config::builder()
+                .node_limit(node_limit)
+                .iter_limit(iter_limit)
+                .time_limit(time_limit)
+                .build()
+        };
+
         golgge::Program::build()
             .eq_rules(eq_rules)
             .rules(rules)
+            .config(golgge_config)
             .egraph(EGraph::new(PAnalysis::builder().pbl(self).build()).with_explanations_enabled())
-            .config(golgge::Config::builder().node_limit(500).build())
             .call()
     }
 
@@ -567,11 +584,14 @@ impl QuantifierTranslator for Problem {
             .find_map(|(cached, fun)| cached.unify(formula).map(|subst| (subst, fun.clone())))?;
         let q = fun.get_quantifier(self.functions()).unwrap();
 
-        let Quantifier::FindSuchThat(q2) =q else {unreachable!()};
+        let Quantifier::FindSuchThat(q2) = q else {
+            unreachable!()
+        };
         let cond = q2.condition().unwrap();
 
         tr!(
-            "quantifier translation:\n\tterm:\n\t{formula}\n\tfunction:{}\n\t\t(cond: {cond})\n\t\tcvars:[{}],\n\tsubstitution:\n{}",
+            "quantifier translation:\n\tterm:\n\t{formula}\n\tfunction:{}\n\t\t(cond: \
+             {cond})\n\t\tcvars:[{}],\n\tsubstitution:\n{}",
             q.top_level_function().name,
             q.cvars().iter().map(|v| format!("{v:?}")).join(", "),
             subst

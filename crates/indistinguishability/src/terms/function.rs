@@ -336,6 +336,14 @@ Because smt has a syntax for it, or it's a prolog trick, or ...");
 
     is_fun!(is_builtin_smt; BUILTIN_SMT; "The function already has an equivalent in smt");
 
+    #[allow(non_snake_case)]
+    pub fn is_part_of_F(&self) -> bool {
+        self.flags
+            .difference(const_fun_flags!(
+                BUILTIN | BUILTIN_SMT | TEMPORARY | IF_THEN_ELSE | BINDER |CUSTOM_DEDUCE
+            ))
+            .is_empty()
+    }
     // =========================================================
     // ====================== Steel API ========================
     // =========================================================

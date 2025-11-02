@@ -4,10 +4,11 @@ use std::fmt::Debug;
 use egg::{Analysis, EClass, EGraph, Id, Pattern, Searcher};
 use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain, izip};
+use log::trace;
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
 use static_init::dynamic;
-use utils::{econtinue_let, ereturn_if, ereturn_let};
+use utils::{econtinue_if, econtinue_let, ereturn_if, ereturn_let};
 
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::rules::utils::lambda_subst::lambda_subst;
@@ -29,7 +30,7 @@ pub fn mk_rules(_: &Problem) -> impl Iterator<Item = RcRule> + use<'_> {
 
 /// Checks if the function can be applied for the given function symbol.
 fn can_apply_fa(f: &Function) -> bool {
-    (!f.is_out_of_term_algebra()) && f.signature.output.support_deduce()
+    f.is_part_of_F()
 }
 
 /// A rule for handling forall quantifiers.
@@ -44,6 +45,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
     fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: Id) -> Dependancy {
         // Get the substitutions that match the pattern for the goal.
         ereturn_let!(let Some(substs) = PATTERN_FA.search_eclass(prgm.egraph(), goal), Dependancy::impossible());
+        trace!("into fa-axiom");
 
         // find suitable substitutions and arguments
         // we need to collect now, because the egraph will get dirty later
@@ -52,15 +54,22 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
             // immutable `egraph`
             let egraph = prgm.egraph();
             for subst in &substs.substs {
-                if let Some(a) = subst.get(A.as_egg())
-                    && let Some(b) = subst.get(B.as_egg())
-                    // Extract lists for 'a' and 'b', continue if not a list or the lengths don't match
-                    && let Some(list_a) = extract_list(egraph, *a)
-                    && let Some(list_b) = extract_list(egraph, *b)
-                    && list_a.len() != list_b.len()
-                {
-                    candidates.push((subst, list_a, list_b))
-                }
+                econtinue_let!(let Some(a) = subst.get(A.as_egg()));
+                econtinue_let!(let Some(b) = subst.get(B.as_egg()));
+                trace!(
+                    "fa-axiom found potential instance:\n\t{}\n\t{}",
+                    egraph.id_to_expr(*a).pretty(80),
+                    egraph.id_to_expr(*b).pretty(80)
+                );
+
+                // Extract lists for 'a' and 'b', continue if not a list or the lengths don't match
+                econtinue_let!(let Some(list_a) = extract_list(egraph, *a));
+                trace!("list_a: {list_a:?}");
+                econtinue_let!(let Some(list_b) = extract_list(egraph, *b));
+                econtinue_if!(list_a.len() != list_b.len());
+
+                trace!("here");
+                candidates.push((subst, list_a, list_b))
             }
         };
 
@@ -86,7 +95,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
 
 /// Extracts a list of ids from the egraph starting from the given id.
 fn extract_list<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, init: Id) -> Option<Vec<Id>> {
-    ereturn_let!(let None = PATTERN_LIST.search_eclass(egraph, init), Some(vec![init]));
+    ereturn_if!(PATTERN_LIST.search_eclass(egraph, init).is_none(), Some(vec![init]));
 
     let mut visited = FxHashSet::default();
     let mut res = Vec::new();
@@ -114,7 +123,7 @@ fn collect_sets<'a>(
 ) -> Vec<FxHashSet<(Id, Id)>> {
     let mut sets = Vec::new();
     // Iterate over pairs of elements from list_a and list_b.
-    for (i, (ta, tb)) in list_a.iter().zip(list_b.iter()).enumerate() {
+    for (i, (ta, tb)) in izip!(list_a, list_b).enumerate() {
         let ea = &egraph[*ta];
         let eb = &egraph[*tb];
         // Find common heads and collect arguments.
