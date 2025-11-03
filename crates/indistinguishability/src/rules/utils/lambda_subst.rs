@@ -114,11 +114,12 @@ fn lambda_subst_aux<N: Analysis<Lang>>(
 }
 
 fn lambda_substable_fun(head: &Function) -> bool {
-    !head.flags.intersects(
-        FunctionFlags::PROLOG_ONLY | FunctionFlags::SMT_ONLY | FunctionFlags::LIST_FA_CONSTR,
-    ) || (head == &LAMBDA_O)
-        || (head == &LAMBDA_S)
-        || head.flags.contains(FunctionFlags::LIST_CONSTR)
+    // !head.flags.intersects(
+    //     FunctionFlags::PROLOG_ONLY | FunctionFlags::SMT_ONLY | FunctionFlags::LIST_FA_CONSTR,
+    // ) || (head == &LAMBDA_O)
+    //     || (head == &LAMBDA_S)
+    //     || head.flags.contains(FunctionFlags::LIST_CONSTR)
+        head.is_ok_for_substitution()
 }
 
 fn get_variable_n<N: Analysis<Lang>>(mut id: Id, egraph: &EGraph<Lang, N>) -> Option<usize> {

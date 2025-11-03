@@ -17,9 +17,9 @@ use crate::input::shared_cryptography::ShrCrypto;
 use crate::protocol::MacroKind;
 use crate::terms::{
     Alias, AliasRewrite, BUILTINS, EXISTS, Exists, FIND_SUCH_THAT, FOBinder, FunctionCollection,
-    FunctionFlags, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, NOT, Quantifier,
-    QuantifierIndex, QuantifierT, RecFOFormula, Signature, Sort, UNFOLD_COND, UNFOLD_EXEC,
-    UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin,
+    FunctionFlags, LAMBDA_O, LAMBDA_S, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG,
+    NOT, Quantifier, QuantifierIndex, QuantifierT, RecFOFormula, Signature, Sort, UNFOLD_COND,
+    UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin,
 };
 use crate::utils::LightClone;
 use crate::{Lang, LangVar};
@@ -344,6 +344,20 @@ Because smt has a syntax for it, or it's a prolog trick, or ...");
                 BUILTIN | BUILTIN_SMT | TEMPORARY | IF_THEN_ELSE | BINDER | CUSTOM_DEDUCE
             ))
             .is_empty()
+    }
+
+    /// means that you can fearlessly subtitute in it
+    pub fn is_ok_for_substitution(&self) -> bool {
+        (!self
+            .flags
+            .intersects(FunctionFlags::PROLOG_ONLY | FunctionFlags::SMT_ONLY))
+            || self
+                .flags
+                .contains(FunctionFlags::LIST_CONSTR | FunctionFlags::LIST_FA_CONSTR)
+            || (self == &LAMBDA_O)
+            || (self == &LAMBDA_S)
+            || (self == &EXISTS)
+            || (self == &FIND_SUCH_THAT)
     }
 
     // =========================================================

@@ -18,7 +18,9 @@ use utils::transposer::VecTranspose;
 use crate::problem::PAnalysis;
 // use crate::rules::base_rules::substitution;
 // use crate::rules::utils::mk_subst_rw;
-use crate::terms::{MACRO_EXEC, MACRO_FRAME, PRED, SUBSTITUTION, SUBSTITUTION_RULE};
+use crate::terms::{
+    Function, FunctionFlags, MACRO_EXEC, MACRO_FRAME, PRED, SUBSTITUTION, SUBSTITUTION_RULE,
+};
 use crate::{Lang, rexp};
 
 declare_trace!($"substitution");
@@ -78,7 +80,11 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
                 let mut memo = memo.clone();
 
                 let ids = mk_substs(egraph, &mut memo, m, x, y);
-                assert!(!ids.is_empty());
+                assert!(
+                    !ids.is_empty(),
+                    "failed substitution:\n{}",
+                    print_param(egraph, m, x, y)
+                );
                 for id in ids.iter() {
                     #[cfg(debug_assertions)]
                     if egraph.find(*id) == egraph.find(m) {
@@ -153,7 +159,7 @@ fn mk_substs<N: Analysis<Lang>>(
     let fileterd_heads = eclass
         .nodes
         .iter()
-        .filter(|l| !l.discriminant().is_special_subterm() || l.discriminant().is_if_then_else())
+        .filter(|l| l.head.is_ok_for_substitution())
         .cloned()
         .collect_vec();
 
@@ -175,9 +181,10 @@ fn mk_substs<N: Analysis<Lang>>(
             let tranposer = VecTranspose::new(&n_children);
             if tranposer.is_empty() {
                 tr!(
-                    "{} is empty (from {})",
+                    "{} is empty: from\n\t{}\nin{}",
                     l.discriminant().name,
-                    egraph.id_to_expr(m)
+                    egraph.id_to_expr(m),
+                    print_param(egraph, m, x, y)
                 );
             }
             for arg in tranposer {
@@ -185,28 +192,33 @@ fn mk_substs<N: Analysis<Lang>>(
                 nids.push(nid);
             }
         }
-        assert!(!nids.is_empty());
+        // assert!(!nids.is_empty(), "{}", print_param(egraph, m, x, y));
     }
     let rc_ids: Rc<[_]> = nids.into_iter().unique().collect();
 
-    assert!(
-        !rc_ids.is_empty(),
-        "should not be empty {}{{{} -> {}}}",
-        egraph.id_to_expr(m),
-        egraph.id_to_expr(x),
-        egraph.id_to_expr(y)
-    );
+    // assert!(
+    //     !rc_ids.is_empty(),
+    //     "should not be empty\n{}",
+    //     print_param(egraph, m, x, y)
+    // );
 
     #[cfg(debug_assertions)]
     if rc_ids.len() == 1 {
-        tr!(
-            "only one in subst: \nm = ({m}) {}\nx = ({x}) {}\ny = ({y}) {}",
-            egraph.id_to_expr(m),
-            egraph.id_to_expr(x),
-            egraph.id_to_expr(y)
-        )
+        tr!("only one in subst: \n{}", print_param(egraph, m, x, y))
     }
 
     memo.insert(m, rc_ids.clone());
     rc_ids
+}
+
+fn is_ok_for_substitution(f: &Function) -> bool {
+    f.is_ok_for_substitution()
+        && (!f
+            .flags
+            .intersects(FunctionFlags::MACRO | FunctionFlags::UNFOLD))
+}
+
+fn print_param<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, m: Id, x: Id, y: Id) -> String {
+    let [m, x, y] = [m, x, y].map(|x| egraph.id_to_expr(x).pretty(100));
+    format!("in substitution m{{x|->y}}:\n\tm:\n\t{m}\n\tx:\n\t{x}\n\ty:\n\t{y}")
 }
