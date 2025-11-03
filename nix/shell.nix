@@ -43,6 +43,11 @@ mkShell {
       z3
       vampire
 
+      clippy
+      rustc
+      cargo
+      rustfmt
+      rust-analyzer
     ]
     ++ (with rustPlatform; [
       bindgenHook
