@@ -386,12 +386,12 @@ mk_builtin_funs!(
     // };
 
     LAMBDA_S "λS" {
-        flags: f!(PROLOG_ONLY),
+        flags: f!(PROLOG_ONLY | LAMBDA),
         signature: s!(Any -> Any)
     };
 
     LAMBDA_O "λO" {
-        flags: f!(PROLOG_ONLY),
+        flags: f!(PROLOG_ONLY | LAMBDA),
         signature: s!(() -> Any)
     };
 

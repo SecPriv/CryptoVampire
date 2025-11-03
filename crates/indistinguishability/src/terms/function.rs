@@ -313,6 +313,7 @@ impl Function {
         self.is_nonce() || self.is_protocol()
     }
 
+    is_fun!(is_debruijn; LAMBDA; "related to De Bruijn variables");
     is_fun!(is_prolog_only; PROLOG_ONLY;
             "This function should appear outside of prolog (e.g., doesn't make sense in smt)");
     is_fun!(is_if_then_else; IF_THEN_ELSE;
@@ -344,6 +345,7 @@ Because smt has a syntax for it, or it's a prolog trick, or ...");
             ))
             .is_empty()
     }
+
     // =========================================================
     // ====================== Steel API ========================
     // =========================================================

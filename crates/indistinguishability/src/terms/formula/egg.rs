@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
-use egg::{ENodeOrVar, Id, Language};
+use egg::{Analysis, EGraph, ENodeOrVar, Id, Language, RecExpr};
+use itertools::Itertools;
 use serde::Serialize;
 use smallvec::SmallVec;
 use utils::implvec;
@@ -33,6 +34,32 @@ impl InnerLang {
             head,
             args: args.into_iter().collect(),
         }
+    }
+
+    pub fn as_recexpr<N: Analysis<Self>>(&self, egraph: &EGraph<Self, N>) -> RecExpr<Self> {
+        let mut out = Vec::new();
+
+        let nargs = self
+            .args
+            .iter()
+            .map(|&id| {
+                let i = out.len();
+                out.extend(
+                    egraph
+                        .id_to_expr(id)
+                        .into_iter()
+                        .map(|l| l.map_children(|id| Id::from(usize::from(id) + i))),
+                );
+                out.len() - 1
+            })
+            .map_into();
+
+        let args = nargs.collect();
+        out.push(Self {
+            args,
+            head: self.head.clone(),
+        });
+        out.into()
     }
 }
 

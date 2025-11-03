@@ -32,6 +32,25 @@
 
 (define empty-cond (lambda _ mtrue))
 
+(define (mk-fdst1 in j p)
+  (findst ((i Index) (k Index))
+    (eq
+      (sel2of2 in)
+      (mhash
+        (tuple (tuple (nr j) (sel1of2 in)) tag1)
+        (mk i k p)))
+    (mhash
+      (tuple (tuple (nr j) (sel1of2 in)) tag2)
+      (mk i k p))
+    ko))
+
+(define r2
+  (declare-step pbl "r2" (list Index)
+    (step p1 empty-cond
+      (lambda (in j) (mk-fdst1 in j p1)))
+    (step p2 empty-cond
+      (lambda (in j) (mk-fdst1 in j p2)))))
+
 (define tag
   (declare-step pbl "tag" (list Index Index)
     (step p1 empty-cond
@@ -53,32 +72,7 @@
     (step p1 empty-cond (lambda (_ i) (nr i)))
     (step p2 empty-cond (lambda (_ i) (nr i)))))
 
-(define (mk-fdst1 in j p)
-  (findst ((i Index) (k Index))
-    (eq
-      (sel2of2 in)
-      (mhash
-        (tuple (tuple (nr j) (sel1of2 in)) tag1)
-        (mk i k p)))
-    (mhash
-      (tuple (tuple (nr j) (sel1of2 in)) tag2)
-      (mk i k p))
-    ko))
-
-(define r2
-  (declare-step pbl "r2" (list Index)
-    (step p1 empty-cond
-      (lambda (in j) (mk-fdst1 in j p1)))
-    (step p2 empty-cond
-      (lambda (in j) (mk-fdst1 in j p2)))))
-
 (initialize-as-prf prf mhash)
-
-; (define (m_condition_fst i j k p in)
-;   (formula
-;     (= (sel2of2 in) (mhash (tpl (tpl (nr j) (sel1of2 in)) tag1) (mk i k p)))))
-
-; ; ------------- quantifier -------------
 
 (define (mk-fdst2 t j p)
   (let [ (in (macro_input t p)) ]
@@ -89,61 +83,6 @@
         (lt (tag i j) t)) ; <- very important
       (mhash (tuple (tuple (nr j) (sel1of2 in)) tag2) (mk i k p1))
       ko)))
-
-; (define fdst2 (declare-find-such-that pbl (list Index Protocol Time) (list Index Index)))
-; (let*
-;   ([vars (find-such-that-cvars fdst2) ]
-;     [i (mk-varf (list-ref (find-such-that-bvars fdst2) 0)) ]
-;     [j (mk-varf (list-ref vars 0)) ]
-;     [k (mk-varf (list-ref (find-such-that-bvars fdst2) 1)) ]
-;     [p (mk-varf (list-ref vars 1)) ]
-;     [t (mk-varf (list-ref vars 2)) ]
-;     [in (formula (macro_input t p)) ]
-;     [intag (formula (macro_input (tag i j) p)) ])
-;   (begin
-;     (set-find-such-that-condition fdst2 (formula
-;         (and
-;           (lt (tag i j) t) ; <- very important
-;           (= (sel1of2 in) (sel1of2 intag))
-;           (= (sel2of2 in) (sel2of2 intag)))))
-;     (set-find-such-that-then-branch fdst2 (formula
-;         (mhash (tpl (tpl (nr j) (sel1of2 in)) tag2) (mk i k p1))))
-;     (set-find-such-that-else-branch fdst2 (formula ko))))
-; (define (cfdst2 j p t) (let* ([e (get-find-such-that-tlf fdst2) ] [skk (get-find-such-that-skolems fdst2) ]
-;       [sk_i (list-ref skk 0) ] [sk_k (list-ref skk 1) ])
-;     (mk-appf e (list j p t (mk-appf sk_i (list j p t)) (mk-appf sk_k (list j p t))))))
-
-
-; ; ----------------- steps -----------------
-
-; (set-step-message pbl r p1 (formula (nr 0)))
-; (set-step-message pbl r p2 (formula (nr 0)))
-
-; (set-step-message pbl tag p1
-;   (let* ([i (mk-varf 0) ] [ j (mk-varf 1) ] [in (formula (macro_input (tag i j) p1)) ])
-;     (formula (tpl (nt i j) (mhash (tpl in (nt i j) tag1) (mk i j p1))))))
-
-; (set-step-message pbl tag p2
-;   (let* ([i (mk-varf 0) ] [ j (mk-varf 1) ] [in (formula (macro_input (tag i j) p2)) ])
-;     (formula (tpl (nt i j) (mhash (tpl in (nt i j) tag1) (mk i j p2))))))
-
-; (set-step-message pbl r2 p1
-;   (let* ([j (mk-varf 0) ] [in (formula (macro_input (r2 j) p1)) ])
-;     (formula (@ cfdst1 j p1 (r2 j)))))
-
-; (set-step-message pbl r2 p2
-;   (let* ([j (mk-varf 0) ] [in (formula (macro_input (r2 j) p2)) ])
-;     (formula (@ cfdst1 j p2 (r2 j)))))
-
-
-; (add-rewrite pbl (let* ([t (mk-varf 0) ]
-;       [j (mk-varf 1) ]
-;       [p (mk-varf 2) ]
-;       [vars (list 0 1 2) ]
-;       [sorts (list Time Index Protocol) ])
-;     (mk-rewrite "lemma" vars sorts
-;       (cfdst1 j p t)
-;       (cfdst2 j p t))))
 
 (bind ((j Index) (t Time) (p Protocol))
   (cv-add-rewrite pbl (cv-mk-rewrite "lemma" (list t j p)

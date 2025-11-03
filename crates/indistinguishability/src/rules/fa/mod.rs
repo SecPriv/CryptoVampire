@@ -16,6 +16,7 @@ use crate::terms::list::{snoc_egraph, try_get_egraph};
 use crate::terms::{CONS_FA, EQUIV, EXISTS, FIND_SUCH_THAT, Function, NIL_FA, Sort};
 use crate::{Lang, Problem, rexp};
 
+declare_trace!($"fa");
 decl_vars!(const; HD:Bitstring, TL:Bitstring, U, V, A, B);
 
 #[dynamic]
@@ -30,7 +31,7 @@ pub fn mk_rules(_: &Problem) -> impl Iterator<Item = RcRule> + use<'_> {
 
 /// Checks if the function can be applied for the given function symbol.
 fn can_apply_fa(f: &Function) -> bool {
-    f.is_part_of_F()
+    f.is_part_of_F() || (f == &EXISTS) || (f == &FIND_SUCH_THAT)
 }
 
 /// A rule for handling forall quantifiers.
@@ -45,7 +46,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
     fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: Id) -> Dependancy {
         // Get the substitutions that match the pattern for the goal.
         ereturn_let!(let Some(substs) = PATTERN_FA.search_eclass(prgm.egraph(), goal), Dependancy::impossible());
-        trace!("into fa-axiom");
+        tr!("into fa-axiom");
 
         // find suitable substitutions and arguments
         // we need to collect now, because the egraph will get dirty later
@@ -56,7 +57,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
             for subst in &substs.substs {
                 econtinue_let!(let Some(a) = subst.get(A.as_egg()));
                 econtinue_let!(let Some(b) = subst.get(B.as_egg()));
-                trace!(
+                tr!(
                     "fa-axiom found potential instance:\n\t{}\n\t{}",
                     egraph.id_to_expr(*a).pretty(80),
                     egraph.id_to_expr(*b).pretty(80)
@@ -64,11 +65,10 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
 
                 // Extract lists for 'a' and 'b', continue if not a list or the lengths don't match
                 econtinue_let!(let Some(list_a) = extract_list(egraph, *a));
-                trace!("list_a: {list_a:?}");
+                tr!("list_a: {list_a:?}");
                 econtinue_let!(let Some(list_b) = extract_list(egraph, *b));
                 econtinue_if!(list_a.len() != list_b.len());
 
-                trace!("here");
                 candidates.push((subst, list_a, list_b))
             }
         };
@@ -95,7 +95,10 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
 
 /// Extracts a list of ids from the egraph starting from the given id.
 fn extract_list<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, init: Id) -> Option<Vec<Id>> {
-    ereturn_if!(PATTERN_LIST.search_eclass(egraph, init).is_none(), Some(vec![init]));
+    ereturn_if!(
+        PATTERN_LIST.search_eclass(egraph, init).is_none(),
+        Some(vec![init])
+    );
 
     let mut visited = FxHashSet::default();
     let mut res = Vec::new();
@@ -189,6 +192,7 @@ fn q_transform<'e, 'a>(
     n_args_b: &'a [Id],
 ) -> Option<impl IntoIterator<Item = (Id, Id)> + use<'a, 'e>> {
     assert!(f.is_egg_binder());
+    tr!("here");
 
     let mut args = izip!(n_args_a.iter().copied(), n_args_b.iter().copied());
 
@@ -235,6 +239,7 @@ fn q_transform<'e, 'a>(
             map.clear();
             lambda_subst(egraph, &mut map, new_var, n, id).unwrap()
         });
+        tr!("q_transform:from:\n\t{}\n\tto\n\t{}", egraph.id_to_expr(ac).pretty(80), egraph.id_to_expr(nac).pretty(80));
         reta.extend_from_slice(&[nac, nal, ar]);
         retb.extend_from_slice(&[nbc, nbl, br]);
     } else {
