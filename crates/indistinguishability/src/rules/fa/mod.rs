@@ -175,8 +175,10 @@ fn collect_sets<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>, list: &[FaElem]) -
             };
 
             econtinue_let!(let Some(args) = args);
+            let optimzed = optimize_set(egraph, args);
 
-            sets.push(optimize_set(egraph, args));
+            econtinue_if!(optimzed.len() > egraph.analysis.pbl().config.fa_limit);
+            sets.push(optimzed);
         }
     }
     sets
