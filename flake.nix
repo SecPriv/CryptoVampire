@@ -1,14 +1,14 @@
 {
   description = "cryptovampire";
 
-  nixConfig = {
-    extra-substituters = [
-      "https://nix-community.cachix.org"
-    ];
-    extra-trusted-public-keys = [
-      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-    ];
-  };
+  # nixConfig = {
+  #   extra-substituters = [
+  #     "https://nix-community.cachix.org"
+  #   ];
+  #   extra-trusted-public-keys = [
+  #     "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+  #   ];
+  # };
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -53,7 +53,7 @@
         toolchain = rust.toolchain;
         use-nightly = false;
 
-        mrustPlatform =
+        rustPlatform =
           if use-nightly then
             pkgs.makeRustPlatform {
               cargo = toolchain;
@@ -63,13 +63,15 @@
             pkgs.rustPlatform;
 
         pkgConfig = {
-          rustPlatform = mrustPlatform;
+          inherit rustPlatform;
           src = ./.;
         };
 
         cryptovampire = pkgs.callPackage ./crates/cryptovampire/default.nix pkgConfig;
         indistinguishability = pkgs.callPackage ./crates/indistinguishability/default.nix pkgConfig;
         doc = pkgs.callPackage ./nix/doc.nix { inherit cryptovampire; };
+
+        mrust = if use-nightly then rust else pkgs;
 
       in
       rec {
@@ -94,7 +96,21 @@
 
         formatter = treefmtEval.config.build.wrapper;
 
-        devShells.default = pkgs.callPackage ./nix/shell.nix { inherit cryptovampire rust; };
+        devShells.default = pkgs.callPackage ./nix/shell.nix (
+          with mrust;
+          {
+            inherit
+              cryptovampire
+              indistinguishability
+              clippy
+              rustc
+              cargo
+              rustfmt
+              rust-analyzer
+              rustPlatform
+              ;
+          }
+        );
 
         apps = rec {
           default = indistinguishability;

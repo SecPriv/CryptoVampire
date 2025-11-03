@@ -239,7 +239,11 @@ fn q_transform<'e, 'a>(
             map.clear();
             lambda_subst(egraph, &mut map, new_var, n, id).unwrap()
         });
-        tr!("q_transform:from:\n\t{}\n\tto\n\t{}", egraph.id_to_expr(ac).pretty(80), egraph.id_to_expr(nac).pretty(80));
+        tr!(
+            "q_transform:from:\n\t{}\n\tto\n\t{}",
+            egraph.id_to_expr(ac).pretty(80),
+            egraph.id_to_expr(nac).pretty(80)
+        );
         reta.extend_from_slice(&[nac, nal, ar]);
         retb.extend_from_slice(&[nbc, nbl, br]);
     } else {

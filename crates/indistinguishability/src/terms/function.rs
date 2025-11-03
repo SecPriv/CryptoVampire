@@ -341,7 +341,7 @@ Because smt has a syntax for it, or it's a prolog trick, or ...");
     pub fn is_part_of_F(&self) -> bool {
         self.flags
             .difference(const_fun_flags!(
-                BUILTIN | BUILTIN_SMT | TEMPORARY | IF_THEN_ELSE | BINDER |CUSTOM_DEDUCE
+                BUILTIN | BUILTIN_SMT | TEMPORARY | IF_THEN_ELSE | BINDER | CUSTOM_DEDUCE
             ))
             .is_empty()
     }
