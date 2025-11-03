@@ -1,26 +1,33 @@
 use std::borrow::Cow;
 use std::fmt::Debug;
 
-use egg::{Analysis, EClass, EGraph, Id, Pattern, Searcher};
+use egg::{Analysis, EClass, EGraph, Id, Pattern, SearchMatches, Searcher, Subst};
 use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain, izip};
 use log::trace;
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
 use static_init::dynamic;
-use utils::{econtinue_if, econtinue_let, ereturn_if, ereturn_let};
+use utils::{
+    dynamic_iter, ebreak_if, econtinue_if, econtinue_let, ereturn_if, ereturn_let, implvec,
+};
 
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::rules::utils::lambda_subst::lambda_subst;
 use crate::terms::list::{snoc_egraph, try_get_egraph};
-use crate::terms::{CONS_FA, EQUIV, EXISTS, FIND_SUCH_THAT, Function, NIL_FA, Sort};
+use crate::terms::{
+    CONS_FA_BITSTRING, CONS_FA_BOOL, EMPTY, EQUIV, EXISTS, FIND_SUCH_THAT, Function, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, NIL_FA, NONCE, PRED, Sort
+};
 use crate::{Lang, Problem, rexp};
 
 declare_trace!($"fa");
-decl_vars!(const; HD:Bitstring, TL:Bitstring, U, V, A, B);
+decl_vars!(const; HD:Bitstring, TL:Bitstring, U, V, A, B, T, P);
 
 #[dynamic]
-static PATTERN_LIST: Pattern<Lang> = Pattern::from(&rexp!((CONS_FA #HD #TL)));
+static PATTERN_LIST_M: Pattern<Lang> = Pattern::from(&rexp!((CONS_FA_BITSTRING #HD #TL)));
+#[dynamic]
+static PATTERN_LIST_B: Pattern<Lang> = Pattern::from(&rexp!((CONS_FA_BOOL #HD #TL)));
+
 #[dynamic]
 static PATTERN_FA: Pattern<Lang> = Pattern::from(&rexp!((EQUIV #U #V #A #B)));
 
@@ -31,11 +38,18 @@ pub fn mk_rules(_: &Problem) -> impl Iterator<Item = RcRule> + use<'_> {
 
 /// Checks if the function can be applied for the given function symbol.
 fn can_apply_fa(f: &Function) -> bool {
-    f.is_part_of_F() || (f == &EXISTS) || (f == &FIND_SUCH_THAT)
+    (f != &NONCE) && (f.is_part_of_F() || (f == &EXISTS) || (f == &FIND_SUCH_THAT))
 }
 
 /// A rule for handling forall quantifiers.
 pub struct FaRule;
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+struct FaElem {
+    pub a: Id,
+    pub b: Id,
+    pub sort: LSort,
+}
 
 impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
     /// Returns the name of the rule.
@@ -47,10 +61,9 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
         // Get the substitutions that match the pattern for the goal.
         ereturn_let!(let Some(substs) = PATTERN_FA.search_eclass(prgm.egraph(), goal), Dependancy::impossible());
         tr!("into fa-axiom");
-
         // find suitable substitutions and arguments
         // we need to collect now, because the egraph will get dirty later
-        let mut candidates = Vec::with_capacity(substs.substs.len());
+        let mut candidates: Vec<(&Subst, Vec<FaElem>)> = Vec::with_capacity(substs.substs.len());
         {
             // immutable `egraph`
             let egraph = prgm.egraph();
@@ -69,17 +82,23 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
                 econtinue_let!(let Some(list_b) = extract_list(egraph, *b));
                 econtinue_if!(list_a.len() != list_b.len());
 
-                candidates.push((subst, list_a, list_b))
+                if let Some(list) = izip!(list_a, list_b)
+                    .map(|((a, sa), (b, sb))| (sa == sb).then_some(FaElem { a, b, sort: sa }))
+                    .collect()
+                {
+                    candidates.push((subst, list))
+                }
             }
         };
 
         let mut results = Vec::new();
+
         {
             // mutable `egraph`
             let egraph = prgm.egraph_mut();
-            for (subst, list_a, list_b) in candidates {
+            for (subst, list) in candidates {
                 // Collect sets of arguments for creating new expressions.
-                let sets = collect_sets(egraph, &list_a, &list_b);
+                let sets = collect_sets(egraph, &list);
                 // Create new expressions and add them to the egraph.
                 results.extend(sets.into_iter().map(|args| {
                     let (ia_id, ib_id) = create_lists(egraph, &args);
@@ -93,21 +112,39 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
     }
 }
 
+fn search_for_pattern_list<N: Analysis<Lang>>(
+    egraph: &EGraph<Lang, N>,
+    id: Id,
+) -> Option<(SearchMatches<'_, Lang>, LSort)> {
+    if let Some(matches) = PATTERN_LIST_B.search_eclass(egraph, id) {
+        return Some((matches, LSort::Bool));
+    }
+
+    if let Some(matches) = PATTERN_LIST_M.search_eclass(egraph, id) {
+        return Some((matches, LSort::Bitstring));
+    }
+
+    None
+}
+
 /// Extracts a list of ids from the egraph starting from the given id.
-fn extract_list<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, init: Id) -> Option<Vec<Id>> {
-    ereturn_if!(
-        PATTERN_LIST.search_eclass(egraph, init).is_none(),
-        Some(vec![init])
-    );
+fn extract_list<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, init: Id) -> Option<Vec<(Id, LSort)>> {
+    if egraph[init]
+        .nodes
+        .iter()
+        .all(|f| f.head != CONS_FA_BITSTRING && f.head != CONS_FA_BOOL)
+    {
+        return Some(vec![(init, LSort::Bitstring)]);
+    }
 
     let mut visited = FxHashSet::default();
     let mut res = Vec::new();
     let mut next = init;
     while !visited.contains(&next) {
-        if let Some(matches) = PATTERN_LIST.search_eclass(egraph, next) {
+        if let Some((matches, sort)) = search_for_pattern_list(egraph, next) {
             visited.insert(next);
             let subst = &matches.substs[0];
-            res.push(*subst.get(HD.as_egg()).unwrap());
+            res.push((*subst.get(HD.as_egg()).unwrap(), sort));
             next = *subst.get(TL.as_egg()).unwrap();
         } else if egraph[next].leaves().any(|n| n.head == NIL_FA) {
             return Some(res);
@@ -119,57 +156,104 @@ fn extract_list<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, init: Id) -> Option
 }
 
 /// Collects sets of arguments for creating new expressions.
-fn collect_sets<'a>(
-    egraph: &mut EGraph<Lang, PAnalysis<'a>>,
-    list_a: &[Id],
-    list_b: &[Id],
-) -> Vec<FxHashSet<(Id, Id)>> {
+fn collect_sets<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>, list: &[FaElem]) -> Vec<Vec<FaElem>> {
     let mut sets = Vec::new();
     // Iterate over pairs of elements from list_a and list_b.
-    for (i, (ta, tb)) in izip!(list_a, list_b).enumerate() {
-        let ea = &egraph[*ta];
-        let eb = &egraph[*tb];
+    for (i, FaElem { a, b, .. }) in list.iter().enumerate() {
+        let ea = &egraph[*a];
+        let eb = &egraph[*b];
         // Find common heads and collect arguments.
         for (f, a_args, b_args) in find_commun_head(ea, eb).collect_vec() {
-            // Collect pairs of arguments.
+            // Collect pairs of argumentsEQUIV.
             let args = if f.is_quantifier() {
-                mk_new_list(i, list_a, list_b, &f, &a_args, &b_args, |f, la, lb| {
+                mk_new_list(i, list, &f, &a_args, &b_args, |f, la, lb| {
                     q_transform(egraph, f, la, lb)
                 })
             } else {
-                mk_new_list(i, list_a, list_b, &f, &a_args, &b_args, f_transform)
+                mk_new_list(i, list, &f, &a_args, &b_args, f_transform)
             };
 
             econtinue_let!(let Some(args) = args);
-            sets.push(args);
+
+            sets.push(optimize_set(egraph, args));
         }
     }
     sets
 }
 
+#[dynamic]
+static PATTERN_FRAME: Pattern<Lang> = Pattern::from(&rexp!((MACRO_FRAME #T #P)));
+#[dynamic]
+static PATTERN_FRAME_PRED: Pattern<Lang> = Pattern::from(&rexp!((MACRO_FRAME #T (PRED #P))));
+#[dynamic]
+static PATTERN_EXEC: Pattern<Lang> = Pattern::from(&rexp!((MACRO_EXEC #T #P)));
+#[dynamic]
+static PATTERN_INPUT: Pattern<Lang> = Pattern::from(&rexp!((MACRO_INPUT #T #P)));
+#[dynamic]
+static PATTERN_EMPTY: Pattern<Lang> = Pattern::from(&rexp!(EMPTY));
+
+/// gets rid of some obviously non-optimal elements
+/// 
+/// e.g., if `frame_p@t` is in the set then we can remove `exec_p@t`
+fn optimize_set<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, s: FxHashSet<FaElem>) -> Vec<FaElem> {
+    let mut ret = Vec::with_capacity(s.len());
+    let patt_frame: &Pattern<_> = &PATTERN_FRAME;
+    let patt_frame_pred: &Pattern<_> = &PATTERN_FRAME_PRED;
+
+    let [frame, frame_pred]: [FxHashSet<_>; 2] = [patt_frame, patt_frame_pred].map(|patt| {
+        s.iter()
+            .flat_map(|FaElem { a, b, .. }| match_both_side(egraph, patt, *a, *b))
+            .collect()
+    });
+
+    for e @ FaElem { a, b, .. } in s {
+        econtinue_if!(match_both_side(egraph, &PATTERN_EXEC, a, b).any(|x| frame.contains(&x)));
+        econtinue_if!(
+            match_both_side(egraph, &PATTERN_INPUT, a, b).any(|x| frame_pred.contains(&x))
+        );
+        econtinue_if!(match_both_side(egraph, &PATTERN_EMPTY, a, b).next().is_some());
+
+        ret.push(e);
+    }
+    ret
+}
+
+fn match_both_side<N: Analysis<Lang>>(
+    egraph: &EGraph<Lang, N>,
+    patt: &Pattern<Lang>,
+    a: Id,
+    b: Id,
+) -> impl Iterator<Item = (Subst, Subst)> {
+    dynamic_iter!(Miter; Empty:A, Many:B);
+    let empty = Miter::Empty(::std::iter::empty());
+
+    ereturn_let!(let Some(sa) = patt.search_eclass(egraph, a), empty);
+    ereturn_let!(let Some(sb) = patt.search_eclass(egraph, b), empty);
+    Miter::Many(Itertools::cartesian_product(
+        sa.substs.into_iter(),
+        sb.substs,
+    ))
+}
+
 fn mk_new_list<'a, F, I>(
     i: usize,
-    old_args_a: &[Id],
-    old_args_b: &[Id],
+    old_arg: &[FaElem],
     f: &'a Function,
     n_args_a: &'a [Id],
     n_args_b: &'a [Id],
     transfom: F,
-) -> Option<FxHashSet<(Id, Id)>>
+) -> Option<FxHashSet<FaElem>>
 where
     F: FnOnce(&'a Function, &'a [Id], &'a [Id]) -> Option<I>,
-    I: IntoIterator<Item = (Id, Id)> + 'a,
+    I: IntoIterator<Item = FaElem> + 'a,
 {
-    let old = izip!(old_args_a, old_args_b)
+    let old = old_arg
+        .iter()
         .enumerate()
-        .filter_map(|(j, (&a, &b))| (i != j).then_some((a, b)));
+        .filter_map(|(j, &e)| (i != j).then_some(e));
     let new = transfom(f, n_args_a, n_args_b)?;
-    Some(chain!(old, new).collect())
-}
 
-fn fa_must_keep_sort(s: Sort) -> bool {
-    use Sort::*;
-    matches!(s, Bitstring | Nonce | Bool)
+    Some(chain!(old, new).collect())
 }
 
 /// transformation for regular functions
@@ -177,10 +261,12 @@ fn f_transform<'a>(
     f: &'a Function,
     n_args_a: &'a [Id],
     n_args_b: &'a [Id],
-) -> Option<impl IntoIterator<Item = (Id, Id)> + use<'a>> {
+) -> Option<impl IntoIterator<Item = FaElem> + use<'a>> {
     Some(
-        izip!(f.signature.inputs_iter(), n_args_a, n_args_b)
-            .filter_map(|(s, &a, &b)| fa_must_keep_sort(s).then_some((a, b))),
+        izip!(f.signature.inputs_iter(), n_args_a, n_args_b).filter_map(|(s, &a, &b)| {
+            let sort = s.try_into().ok()?;
+            Some(FaElem { a, b, sort })
+        }),
     )
 }
 
@@ -190,7 +276,7 @@ fn q_transform<'e, 'a>(
     f: &'a Function,
     n_args_a: &'a [Id],
     n_args_b: &'a [Id],
-) -> Option<impl IntoIterator<Item = (Id, Id)> + use<'a, 'e>> {
+) -> Option<impl IntoIterator<Item = FaElem> + use<'a, 'e>> {
     assert!(f.is_egg_binder());
     tr!("here");
 
@@ -258,17 +344,21 @@ fn q_transform<'e, 'a>(
         head: f.clone(),
         args: retb,
     });
-    Some([(na, nb)])
+    Some([FaElem {
+        a: na,
+        b: nb,
+        sort: f.signature.output.try_into().unwrap(),
+    }])
 }
 
 /// Creates lists in the egraph from a set of argument pairs.
 fn create_lists<N: Analysis<Lang>>(
     egraph: &mut EGraph<Lang, N>,
-    args: &FxHashSet<(Id, Id)>,
+    args: &[FaElem],
 ) -> (Id, Id) {
     // Create lists for the first and second elements of the argument pairs.
-    let ia = args.iter().map(|(x, _)| *x);
-    let ib = args.iter().map(|(_, x)| *x);
+    let ia = args.iter().map(|FaElem { a, sort, .. }| (*a, *sort));
+    let ib = args.iter().map(|FaElem { b, sort, .. }| (*b, *sort));
     let ia_id = mk_list(egraph, ia);
     let ib_id = mk_list(egraph, ib);
     (ia_id, ib_id)
@@ -277,12 +367,12 @@ fn create_lists<N: Analysis<Lang>>(
 /// Creates a list in the egraph from a list of terms.
 fn mk_list<N: Analysis<Lang>>(
     egraph: &mut EGraph<Lang, N>,
-    terms: impl IntoIterator<Item = Id>,
+    terms: impl IntoIterator<Item = (Id, LSort)>,
 ) -> Id {
     let init = egraph.add(NIL_FA.app_id([]));
-    terms
-        .into_iter()
-        .fold(init, |acc, t| egraph.add(CONS_FA.app_id([t, acc])))
+    terms.into_iter().fold(init, |acc, (t, s)| {
+        egraph.add(s.to_cons_fn().app_id([t, acc]))
+    })
 }
 
 /// Finds common heads between two eclasses.
@@ -301,4 +391,31 @@ fn find_commun_head<'a, D: Debug>(
                 b.args.clone().into_vec(),
             )
         })
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum LSort {
+    Bool,
+    Bitstring,
+}
+
+impl TryFrom<Sort> for LSort {
+    type Error = ();
+
+    fn try_from(value: Sort) -> Result<Self, Self::Error> {
+        match value {
+            Sort::Bool => Ok(LSort::Bool),
+            Sort::Bitstring => Ok(LSort::Bitstring),
+            _ => Err(()),
+        }
+    }
+}
+
+impl LSort {
+    pub fn to_cons_fn(self) -> &'static Function {
+        match self {
+            Self::Bitstring => &CONS_FA_BITSTRING,
+            Self::Bool => &CONS_FA_BOOL,
+        }
+    }
 }

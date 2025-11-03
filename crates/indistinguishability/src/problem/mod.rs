@@ -31,6 +31,9 @@ use crate::{Configuration, Lang, MSmt, mk_signature, rexp, smt};
 mod analysis;
 pub use analysis::{PAnalysis, PRule, RcRule};
 
+mod state;
+pub use state::ProblemState;
+
 declare_trace!($"problem");
 
 /// A problem for the solver to solve
@@ -67,6 +70,8 @@ pub struct Problem {
 
     /// a cache for the quantifiers
     quantifier_cache: Vec<(RecFOFormula, Function)>,
+
+    pub state: ProblemState,
 }
 
 impl Default for Problem {
@@ -96,6 +101,8 @@ impl Problem {
 
     /// Build a [Program] to use
     pub fn mk_program<'a>(&'a mut self) -> Program<Lang, PAnalysis<'a>> {
+        self.state.reset();
+
         let exec = SmtRunner::new(self);
         let vampire_rule = VampireRule::builder().exec(exec.clone()).build();
         let fresh_rule = FreshNonce::builder().exec(exec.clone()).build();
@@ -696,6 +703,7 @@ impl Problem {
             smt_prelude,
             current_step: None,
             quantifier_cache: vec![],
+            state: Default::default(),
         }
     }
 

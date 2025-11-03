@@ -1,13 +1,15 @@
 use std::borrow::Cow;
 
-use egg::{Id, Language, Pattern, Searcher};
+use egg::{Id, Language, Pattern, Searcher, Subst};
 use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain};
+use static_init::dynamic;
 use utils::ereturn_let;
 
 use crate::problem::{PAnalysis, PRule};
 use crate::terms::{
-    EQUIV, Function, FunctionFlags, NONCE, RecFOFormula, SUBSTITUTION, SUBSTITUTION_RULE, Sort,
+    EQUIV, FRESH_NONCE, Function, FunctionFlags, NONCE, RecFOFormula, SUBSTITUTION,
+    SUBSTITUTION_RULE, Sort, TRUE,
 };
 use crate::{Lang, Problem, mk_signature, rexp};
 
@@ -151,24 +153,28 @@ impl PRF {
 
         let conclusionl = rexp!((EQUIV #U #V (candidate_bitstring #HM #M #K) #B));
         let conclusionr = rexp!((EQUIV #U #V #B (candidate_bitstring #HM #M #K)));
-        let subterm_search1 = rexp!((search_bitstring #M #K #HM));
-        let subterm_search2 = rexp!((search_bitstring #M #K #M));
+        let subterm_hm = rexp!((search_bitstring #M #K #HM));
+        let subterm_m = rexp!((search_bitstring #M #K #M));
+        let freshl = rexp!((FRESH_NONCE #NK #U true));
+        let freshr = rexp!((FRESH_NONCE #NK #V true));
         let new_goall = rexp!((SUBSTITUTION_RULE (EQUIV #U #V (SUBSTITUTION #HM (hash #M (NONCE #K)) (NONCE #NK)) #B)));
         let new_goalr = rexp!((SUBSTITUTION_RULE (EQUIV #U #V #B (SUBSTITUTION #HM (hash #M (NONCE #K)) (NONCE #NK)))));
 
         [
             TopPrfRule::new(
                 &conclusionl,
-                &subterm_search1,
-                &subterm_search2,
+                &subterm_hm,
+                &subterm_m,
+                &freshl,
                 &new_goall,
                 PrfKind::Left,
                 candidate_bitstring.clone(),
             ),
             TopPrfRule::new(
                 &conclusionr,
-                &subterm_search1,
-                &subterm_search2,
+                &subterm_hm,
+                &subterm_m,
+                &freshr,
                 &new_goalr,
                 PrfKind::Right,
                 candidate_bitstring.clone(),
@@ -182,6 +188,10 @@ impl PRF {
     }
 }
 
+#[dynamic]
+static PATTERN_FRESH_SEARCH_INNER: Pattern<Lang> =
+    Pattern::from(&rexp!((FRESH_NONCE #NK #HM true)));
+
 decl_vars!(const; U, V, HM:Bitstring, M:Bitstring, K:Nonce, NK:Nonce, B);
 
 /// Ochestrating [Rule] for PRF
@@ -191,10 +201,12 @@ decl_vars!(const; U, V, HM:Bitstring, M:Bitstring, K:Nonce, NK:Nonce, B);
 struct TopPrfRule {
     /// The conclusion pattern to search for in the e-graph.
     conclusion: Pattern<Lang>,
-    /// The first subterm search pattern.
-    subterm_search1: Pattern<Lang>,
-    /// The second subterm search pattern.
-    subterm_search2: Pattern<Lang>,
+    /// The  subterm search hm.
+    subterm_hm: Pattern<Lang>,
+    /// The  subterm search m.
+    subterm_m: Pattern<Lang>,
+    /// The subterm search fresh u/v.
+    subterm_hyp: Pattern<Lang>,
     /// The new goal pattern to apply after a match.
     new_goal: Pattern<Lang>,
 
@@ -219,19 +231,30 @@ impl TopPrfRule {
     /// Creates a new `TopPrfRule`.
     fn new(
         conclusion: &RecFOFormula,
-        subterm_search1: &RecFOFormula,
-        subterm_search2: &RecFOFormula,
+        subterm_hm: &RecFOFormula,
+        subterm_m: &RecFOFormula,
+        subterm_hyp: &RecFOFormula,
         new_goal: &RecFOFormula,
         kind: PrfKind,
         candidate_bitstring: Function,
     ) -> Self {
         Self {
             conclusion: conclusion.into(),
-            subterm_search1: subterm_search1.into(),
-            subterm_search2: subterm_search2.into(),
+            subterm_hm: subterm_hm.into(),
+            subterm_m: subterm_m.into(),
+            subterm_hyp: subterm_hyp.into(),
             new_goal: new_goal.into(),
             kind,
             candidate_bitstring,
+        }
+    }
+}
+
+impl PrfKind {
+    pub const fn other(self) -> Self {
+        match self {
+            Self::Left => Self::Right,
+            Self::Right => Self::Left,
         }
     }
 }
@@ -246,31 +269,55 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for TopPrfRule {
             check_hash_eq_nonce(egraph);
         }
 
-        let n = {
-            let pblm = egraph.analysis.pbl_mut();
+        let nonces =
+            if egraph.analysis.pbl().state.n_prf.len() <= egraph.analysis.pbl().config.prf_limit {
+                let fun = egraph
+                    .analysis
+                    .pbl_mut()
+                    .declare_function()
+                    .fresh_name("n_prf")
+                    .flags(FunctionFlags::NONCE)
+                    .output(Sort::Nonce)
+                    .call();
+                let n = egraph.add(fun.app_id([]));
+                let etrue = egraph.add(TRUE.app_id([]));
 
-            let fun = pblm
-                .declare_function()
-                .fresh_name("n_prf")
-                .flags(FunctionFlags::NONCE)
-                .output(Sort::Nonce)
-                .call();
+                let mut msubst = Subst::with_capacity(2);
+                msubst.insert(NK.as_egg(), n);
 
-            egraph.add(fun.app_id([]))
-        };
-        substs
-            .substs
-            .into_iter()
-            .map(|mut subst| {
+                // make `(fresh_nonce n _ true)` hold for a bunch of them
+                for g in [U, V, B, HM] {
+                    for subst in substs.substs.iter() {
+                        msubst.insert(HM.as_egg(), *subst.get(g.as_egg()).unwrap());
+                        let fresh = PATTERN_FRESH_SEARCH_INNER.apply_susbt(egraph, &msubst);
+                        egraph.union(etrue, fresh);
+                    }
+                }
+
+                let nonces = &mut egraph.analysis.pbl_mut().state.n_prf;
+                nonces.push(n);
+                nonces.clone()
+            } else {
+                egraph.analysis.pbl().state.n_prf.clone()
+            };
+
+        let mut res = Vec::with_capacity(nonces.len() * substs.substs.len());
+        for n in nonces {
+            for subst in &substs.substs {
+                let mut subst = subst.clone();
                 subst.insert(NK.as_egg(), n);
 
-                [
-                    self.subterm_search1.apply_susbt(egraph, &subst),
-                    self.subterm_search2.apply_susbt(egraph, &subst),
+                let r = [
+                    PATTERN_FRESH_SEARCH_INNER.apply_susbt(egraph, &subst),
+                    self.subterm_hyp.apply_susbt(egraph, &subst),
+                    self.subterm_hm.apply_susbt(egraph, &subst),
+                    self.subterm_m.apply_susbt(egraph, &subst),
                     self.new_goal.apply_susbt(egraph, &subst),
-                ]
-            })
-            .collect()
+                ];
+                res.push(r);
+            }
+        }
+        res.into_iter().collect()
     }
 
     /// Returns the name of this rule, based on its `PrfKind`.

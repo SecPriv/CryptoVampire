@@ -455,8 +455,12 @@ mk_builtin_funs!(
         flags : f!(PROLOG_ONLY | LIST_CONSTR)
     };
 
-    CONS_FA "fa_cons" {
+    CONS_FA_BITSTRING "fa_cons_m" {
         signature: s!(Bitstring, Bitstring -> Bitstring),
+    };
+
+    CONS_FA_BOOL "fa_cons_b" {
+        signature: s!(Bool, Bitstring -> Bitstring),
     };
 
     NIL_FA "fa_nil" {

@@ -120,7 +120,7 @@ fn mk_rule_nonce(
 ///
 /// ```text
 /// ---------------------
-///  m, k ||> hash(m, k)
+///  m, k ||> hash(m, (nonce k))
 /// ```
 ///
 /// this means that it will be captured by the substitution
@@ -133,7 +133,7 @@ fn mk_rule_found_instance(
 ) -> PrologRule<Lang> {
     mk_prolog! {
         "search_prf_found_instance"; m, k:
-        (search #m #k (hash #m #k))
+        (search #m #k (hash #m (NONCE #k)))
     }
 }
 

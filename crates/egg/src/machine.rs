@@ -1,5 +1,7 @@
 use std::result;
 
+use log::warn;
+
 use crate::*;
 
 type Result = result::Result<(), ()>;
@@ -302,7 +304,10 @@ impl<L: Language> Program<L> {
     where
         A: Analysis<L>,
     {
-        assert!(egraph.clean, "Tried to search a dirty e-graph!");
+        // assert!(egraph.clean, "Tried to search a dirty e-graph!");
+        if !egraph.clean {
+            warn!("Tried to search a dirty e-graph!")
+        }
 
         if limit == 0 {
             return vec![];
