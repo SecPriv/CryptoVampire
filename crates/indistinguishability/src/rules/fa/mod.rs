@@ -16,18 +16,14 @@ use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::rules::utils::lambda_subst::lambda_subst;
 use crate::terms::list::{snoc_egraph, try_get_egraph};
 use crate::terms::{
-    CONS_FA_BITSTRING, CONS_FA_BOOL, EMPTY, EQUIV, EXISTS, FIND_SUCH_THAT, Function, MACRO_EXEC,
-    MACRO_FRAME, MACRO_INPUT, NIL_FA, NONCE, PRED, Sort,
+    AND, CONS_FA_BITSTRING, CONS_FA_BOOL, EMPTY, EQUIV, EXISTS, FIND_SUCH_THAT, FROM_BOOL,
+    Function, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NIL_FA, NONCE,
+    PRED, Sort, TUPLE,
 };
 use crate::{Lang, Problem, rexp};
 
 declare_trace!($"fa");
 decl_vars!(const; HD:Bitstring, TL:Bitstring, U, V, A, B, T, P);
-
-#[dynamic]
-static PATTERN_LIST_M: Pattern<Lang> = Pattern::from(&rexp!((CONS_FA_BITSTRING #HD #TL)));
-#[dynamic]
-static PATTERN_LIST_B: Pattern<Lang> = Pattern::from(&rexp!((CONS_FA_BOOL #HD #TL)));
 
 #[dynamic]
 static PATTERN_FA: Pattern<Lang> = Pattern::from(&rexp!((EQUIV #U #V #A #B)));
@@ -39,7 +35,7 @@ pub fn mk_rules(_: &Problem) -> impl Iterator<Item = RcRule> + use<'_> {
 
 /// Checks if the function can be applied for the given function symbol.
 fn can_apply_fa(f: &Function) -> bool {
-    (f != &NONCE) && (f.is_part_of_F() || (f == &EXISTS) || (f == &FIND_SUCH_THAT))
+    (f != &NONCE) && (f != &AND) && (f.is_part_of_F() || (f == &EXISTS) || (f == &FIND_SUCH_THAT))
 }
 
 /// A rule for handling forall quantifiers.
@@ -78,9 +74,9 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
                 );
 
                 // Extract lists for 'a' and 'b', continue if not a list or the lengths don't match
-                econtinue_let!(let Some(list_a) = extract_list(egraph, *a));
+                econtinue_let!(let list_a = extract_list(egraph, *a));
                 tr!("list_a: {list_a:?}");
-                econtinue_let!(let Some(list_b) = extract_list(egraph, *b));
+                econtinue_let!(let list_b = extract_list(egraph, *b));
                 econtinue_if!(list_a.len() != list_b.len());
 
                 if let Some(list) = izip!(list_a, list_b)
@@ -113,11 +109,22 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
     }
 }
 
+#[dynamic]
+static PATTERN_LIST_M: Pattern<Lang> = Pattern::from(&rexp!((CONS_FA_BITSTRING #HD #TL)));
+#[dynamic]
+static PATTERN_LIST_B: Pattern<Lang> = Pattern::from(&rexp!((CONS_FA_BOOL #HD #TL)));
+#[dynamic]
+static PATTERN_LIST_TUPLE: Pattern<Lang> = Pattern::from(&rexp!((TUPLE #HD #TL)));
+
 fn search_for_pattern_list<N: Analysis<Lang>>(
     egraph: &EGraph<Lang, N>,
     id: Id,
 ) -> Option<(SearchMatches<'_, Lang>, LSort)> {
     if let Some(matches) = PATTERN_LIST_B.search_eclass(egraph, id) {
+        return Some((matches, LSort::Bool));
+    }
+
+    if let Some(matches) = PATTERN_LIST_TUPLE.search_eclass(egraph, id) {
         return Some((matches, LSort::Bool));
     }
 
@@ -128,32 +135,59 @@ fn search_for_pattern_list<N: Analysis<Lang>>(
     None
 }
 
+#[dynamic]
+static PATTERN_SKIP_BOILER_PLATE: Pattern<Lang> = Pattern::from(&rexp!((TUPLE
+  (TUPLE (FROM_BOOL (MACRO_EXEC #T #P)) (MITE (MACRO_EXEC #T #P) (MACRO_MSG #T #P) EMPTY))
+  (MACRO_FRAME (PRED #T) #P)
+)));
+
+#[dynamic]
+static PATTERN_NIL: Pattern<Lang> = Pattern::from(&rexp!(NIL_FA));
+
 /// Extracts a list of ids from the egraph starting from the given id.
-fn extract_list<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, init: Id) -> Option<Vec<(Id, LSort)>> {
-    if egraph[init]
-        .nodes
-        .iter()
-        .all(|f| f.head != CONS_FA_BITSTRING && f.head != CONS_FA_BOOL)
-    {
-        return Some(vec![(init, LSort::Bitstring)]);
-    }
+fn extract_list<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, init: Id) -> Vec<(Id, LSort)> {
+    // if egraph[init]
+    //     .nodes
+    //     .iter()
+    //     .all(|f| f.head != CONS_FA_BITSTRING && f.head != CONS_FA_BOOL)
+    // {
+    //     return Some(vec![(init, LSort::Bitstring)]);
+    // }
 
     let mut visited = FxHashSet::default();
     let mut res = Vec::new();
-    let mut next = init;
-    while !visited.contains(&next) {
-        if let Some((matches, sort)) = search_for_pattern_list(egraph, next) {
-            visited.insert(next);
+    let mut todo = vec![(init, LSort::Bitstring)];
+    while let Some((next, sort)) = todo.pop()
+        && !visited.contains(&next)
+    {
+        visited.insert(next);
+        if let Some(matches) = PATTERN_SKIP_BOILER_PLATE.search_eclass(egraph, next) {
+            let subts = &matches.substs[0];
+            let t = *subts.get(T.as_egg()).unwrap();
+            let p = *subts.get(P.as_egg()).unwrap();
+            let pred_t = egraph.lookup(PRED.app_id([t])).unwrap();
+            let mframe = egraph.lookup(MACRO_FRAME.app_id([pred_t, p])).unwrap();
+            let mmsg = egraph.lookup(MACRO_MSG.app_id([t, p])).unwrap();
+            let mcond = egraph.lookup(MACRO_COND.app_id([t, p])).unwrap();
+            todo.extend_from_slice(&[
+                (mframe, LSort::Bitstring),
+                (mmsg, LSort::Bitstring),
+                (mcond, LSort::Bool),
+            ]);
+        } else if let Some((matches, sort)) = search_for_pattern_list(egraph, next) {
             let subst = &matches.substs[0];
-            res.push((*subst.get(HD.as_egg()).unwrap(), sort));
-            next = *subst.get(TL.as_egg()).unwrap();
-        } else if egraph[next].leaves().any(|n| n.head == NIL_FA) {
-            return Some(res);
+            todo.push((*subst.get(HD.as_egg()).unwrap(), sort));
+            todo.push((*subst.get(TL.as_egg()).unwrap(), sort));
+            // res.push((*subst.get(HD.as_egg()).unwrap(), sort));
+            // next = *subst.get(TL.as_egg()).unwrap();
+        } else if PATTERN_NIL.search_eclass(egraph, next).is_some() {
+            // return Some(res);
+            continue;
         } else {
-            break;
+            res.push((next, sort));
         }
     }
-    None
+    res
 }
 
 /// Collects sets of arguments for creating new expressions.
