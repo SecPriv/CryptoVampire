@@ -363,142 +363,7 @@ impl RecFOFormula {
     }
 
     // ~~~~~~~~~~~~~ unification ~~~~~~~~~~~~~~~~
-
-    fn are_vars_and_eq(l: &Self, r: &Self) -> bool {
-        match (l, r) {
-            (Self::Var(v1), Self::Var(v2)) => v1 == v2,
-            _ => false,
-        }
-    }
-
-    fn unify_inner(
-        &self,
-        other: &Self,
-        subst: &mut FxHashMap<Variable, Self>,
-        is_bound: &mut FxHashSet<Variable>,
-        buffer: &mut Vec<Variable>,
-        short_cut: &mut impl FnMut(&Self, &Self, &mut FxHashMap<Variable, Self>) -> Option<bool>,
-    ) -> bool {
-        if let Some(x) = short_cut(self, other, subst) {
-            return x;
-        }
-
-        let result = match (self, other) {
-            (Self::Var(v1), Self::Var(v2)) => {
-                // let l = subst.entry(v1.clone()).or_insert(other.clone()).clone();
-                // let r = subst.entry(v2.clone()).or_insert(self.clone()).clone();
-
-                buffer.clear();
-                let l = find(v1, subst, buffer).map(|x| x.cloned());
-                let lbuffer = buffer.clone();
-                buffer.clear();
-                let r = find(v2, subst, buffer).map(|x| x.cloned());
-
-                use Either::{Left, Right};
-                match (&l, &r) {
-                    // they are both loops
-                    (Err(_), Err(_)) => lbuffer.contains(v2) || buffer.contains(v1),
-                    // neither is assigned
-                    // NB: we don't optimise the substitution to keep full track of the cycles
-                    (Ok(Right(nv1)), Ok(Right(nv2))) => {
-                        debug_assert!(!is_bound.contains(v1) && !is_bound.contains(v2));
-                        debug_assert!(!is_bound.contains(nv1) && !is_bound.contains(nv2));
-                        subst.insert(nv1.clone(), Self::Var(v2.clone()));
-                        subst.insert(nv2.clone(), Self::Var(v1.clone()));
-                        true
-                    }
-                    // both eventually escaped no longer being variables
-                    (Ok(Left(l)), Ok(Left(r))) => {
-                        l.unify_inner(r, subst, is_bound, buffer, short_cut)
-                    }
-                    // one remains a var, the other doesn't
-                    (Ok(Right(v)), Ok(Left(x))) | (Ok(Left(x)), Ok(Right(v)))
-                        if !is_bound.contains(v) =>
-                    {
-                        subst.insert(v.clone(), (*x).clone());
-                        true
-                    }
-                    // one looped the other wasn't a var anyme
-                    (Err(_), Ok(Left(x))) => {
-                        self.unify_inner(x, subst, is_bound, buffer, short_cut)
-                    }
-                    (Ok(Left(x)), Err(_)) => {
-                        x.unify_inner(other, subst, is_bound, buffer, short_cut)
-                    }
-                    // one looped while the other remained a variables
-                    (Err(v1), Ok(Right(v2))) | (Ok(Right(v2)), Err(v1)) => {
-                        subst.insert(v2.clone(), Self::Var((*v1).clone()));
-                        true
-                    }
-                    _ => false,
-                }
-            }
-            (Self::Var(v), x) | (x, Self::Var(v)) if !is_bound.contains(v) => {
-                let y = subst.entry(v.clone()).or_insert(x.clone()).clone();
-                x.unify_inner(&y, subst, is_bound, buffer, short_cut)
-            }
-            (
-                Self::App {
-                    head: hl,
-                    args: argsl,
-                },
-                Self::App {
-                    head: hr,
-                    args: argsr,
-                },
-            ) if hl == hr => izip!(argsl, argsr)
-                .all(|(l, r)| l.unify_inner(r, subst, is_bound, buffer, short_cut)),
-            (
-                Self::Quantifier {
-                    head: hl,
-                    vars: vl,
-                    arg: al,
-                },
-                Self::Quantifier {
-                    head: hr,
-                    vars: vr,
-                    arg: ar,
-                },
-            ) if hl == hr && vl.len() == vr.len() => {
-                // let already_assigned = izip!(vl, vr).any(|(l, r)| {
-                //     // subst.insert(l.clone(), Self::Var(r.clone())).is_some()
-                //     //     || subst.insert(r.clone(), Self::Var(l.clone())).is_some()
-                //     subst.contains_key(l) || subst.contains_key(r)
-                // });
-                // ereturn_if!(already_assigned, false);
-
-                // we bail if any of the bound variables were already assigned somewhere
-                for (l, r) in izip!(vl, vr) {
-                    ereturn_if!(subst.contains_key(l) || subst.contains_key(r), false);
-                    subst.insert(l.clone(), Self::Var(r.clone()));
-                    subst.insert(r.clone(), Self::Var(l.clone()));
-                }
-
-                is_bound.extend(chain![vl, vr].cloned());
-                subst.extend(
-                    chain![izip!(vl, vr), izip!(vr, vl)]
-                        .map(|(a, b)| (a.clone(), RecFOFormula::Var(b.clone()))),
-                );
-
-                izip!(al, ar).all(|(l, r)| l.unify_inner(r, subst, is_bound, buffer, short_cut))
-            }
-            _ => false,
-        };
-        // trace!("unifying:\n\t{self}\n\t{other}\n\t===> {result}");
-        result
-    }
-
     pub fn unify(&self, other: &Self) -> Option<FxHashMap<Variable, Self>> {
-        // let mut subst = Default::default();
-        // self.unify_inner(
-        //     other,
-        //     &mut subst,
-        //     &mut Default::default(),
-        //     &mut Default::default(),
-        //     &mut |_, _, _| None,
-        // )
-        // .then_some(subst)
-
         match unification::mgu(self, other) {
             Ok(Substitution(map)) => Some(map),
             Err(_) => None,
@@ -786,7 +651,7 @@ impl RecFOFormula {
     /// `L` lets you decide the `egg::Language` to be used. It panics if the conversion is impossible.
     pub fn as_egg<L: EggLanguage>(&self) -> Vec<L> {
         let mut out = Vec::new();
-        self.as_egg_inner(&mut out, Default::default(), true, &mut None);
+        self.as_egg_inner(&mut out, Default::default(), Default::default(), &mut None);
         out
     }
 
@@ -795,7 +660,15 @@ impl RecFOFormula {
     /// `L` lets you decide the `egg::Language` to be used. It panics if the conversion is impossible.
     pub fn as_egg_non_capture_avoiding<L: EggLanguage>(&self) -> Vec<L> {
         let mut out = Vec::new();
-        self.as_egg_inner(&mut out, Default::default(), false, &mut None);
+        self.as_egg_inner(
+            &mut out,
+            Default::default(),
+            AsEggParam {
+                capture_avoiding: false,
+                ..Default::default()
+            },
+            &mut None,
+        );
         out
     }
 
@@ -803,7 +676,7 @@ impl RecFOFormula {
         &'a self,
         out: &mut Vec<L>,
         mut bvars: rpds::HashTrieMap<&'a Variable, usize>,
-        depth: bool,
+        param: AsEggParam,
         olocation: &mut Option<usize>,
     ) -> usize {
         match self {
@@ -850,7 +723,7 @@ impl RecFOFormula {
                 nargs.push(mk_list(out, vars.iter().map(|v| v.get_sort().unwrap())));
                 nargs.extend(
                     arg.iter()
-                        .map(|arg| arg.as_egg_inner(out, bvars.clone(), depth, olocation)),
+                        .map(|arg| arg.as_egg_inner(out, bvars.clone(), param.clone(), olocation)),
                 );
 
                 let head = head.as_function().cloned().unwrap();
@@ -860,7 +733,7 @@ impl RecFOFormula {
             Self::App { head, args } => {
                 let args = args
                     .iter()
-                    .map(|arg| arg.as_egg_inner(out, bvars.clone(), depth, olocation))
+                    .map(|arg| arg.as_egg_inner(out, bvars.clone(), param.clone(), olocation))
                     .map(Id::from)
                     .collect_vec();
                 out.push(L::mk_fun_application(head.clone(), args));
@@ -869,13 +742,21 @@ impl RecFOFormula {
                 Some(i) => {
                     out.extend(mk_bound_var(*i));
                 }
-                None if depth => {
+                None if (!param.capture_avoiding)
+                    || param.non_capture_avoiding.contains(&variable) =>
+                {
+                    out.push(L::mk_variable(variable))
+                }
+                None => {
+                    let nparam = AsEggParam {
+                        capture_avoiding: false,
+                        ..param
+                    };
                     bvars
                         .iter()
                         .fold(self.clone(), |acc, _| rexp!((LAMBDA_S #acc)))
-                        .as_egg_inner(out, bvars, false, olocation);
+                        .as_egg_inner(out, bvars, nparam, olocation);
                 }
-                None => out.push(L::mk_variable(variable)),
             },
         };
 
@@ -913,6 +794,21 @@ impl RecFOFormula {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct AsEggParam {
+    pub capture_avoiding: bool,
+    pub non_capture_avoiding: ::rpds::HashTrieSet<Variable>,
+}
+
+impl Default for AsEggParam {
+    fn default() -> Self {
+        Self {
+            non_capture_avoiding: Default::default(),
+            capture_avoiding: true,
+        }
+    }
+}
+
 #[cfg(test)]
 mod conversion_tests {
     use egg::PatternAst;
@@ -922,10 +818,10 @@ mod conversion_tests {
     #[test]
     fn as_egg_succ() {
         decl_vars!(a, b);
-        let f = rexp!((and #a #b 
-                (exists ((#i Bitstring) (#j Bitstring)) 
-                    (and #a #b (= #i #j) 
-                            (exists ((#i Bitstring) (#k Bitstring)) 
+        let f = rexp!((and #a #b
+                (exists ((#i Bitstring) (#j Bitstring))
+                    (and #a #b (= #i #j)
+                            (exists ((#i Bitstring) (#k Bitstring))
                                 (and (= #i #k #j) #a))))));
         let f: PatternAst<Lang> = f.as_egg().into();
         println!("{}", f.pretty(100));

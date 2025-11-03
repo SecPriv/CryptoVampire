@@ -16,7 +16,8 @@ use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::rules::utils::lambda_subst::lambda_subst;
 use crate::terms::list::{snoc_egraph, try_get_egraph};
 use crate::terms::{
-    CONS_FA_BITSTRING, CONS_FA_BOOL, EMPTY, EQUIV, EXISTS, FIND_SUCH_THAT, Function, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, NIL_FA, NONCE, PRED, Sort
+    CONS_FA_BITSTRING, CONS_FA_BOOL, EMPTY, EQUIV, EXISTS, FIND_SUCH_THAT, Function, MACRO_EXEC,
+    MACRO_FRAME, MACRO_INPUT, NIL_FA, NONCE, PRED, Sort,
 };
 use crate::{Lang, Problem, rexp};
 
@@ -184,7 +185,7 @@ fn collect_sets<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>, list: &[FaElem]) -
 #[dynamic]
 static PATTERN_FRAME: Pattern<Lang> = Pattern::from(&rexp!((MACRO_FRAME #T #P)));
 #[dynamic]
-static PATTERN_FRAME_PRED: Pattern<Lang> = Pattern::from(&rexp!((MACRO_FRAME #T (PRED #P))));
+static PATTERN_FRAME_PRED: Pattern<Lang> = Pattern::from(&rexp!((MACRO_FRAME (PRED #T)  #P)));
 #[dynamic]
 static PATTERN_EXEC: Pattern<Lang> = Pattern::from(&rexp!((MACRO_EXEC #T #P)));
 #[dynamic]
@@ -193,7 +194,7 @@ static PATTERN_INPUT: Pattern<Lang> = Pattern::from(&rexp!((MACRO_INPUT #T #P)))
 static PATTERN_EMPTY: Pattern<Lang> = Pattern::from(&rexp!(EMPTY));
 
 /// gets rid of some obviously non-optimal elements
-/// 
+///
 /// e.g., if `frame_p@t` is in the set then we can remove `exec_p@t`
 fn optimize_set<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, s: FxHashSet<FaElem>) -> Vec<FaElem> {
     let mut ret = Vec::with_capacity(s.len());
@@ -211,7 +212,11 @@ fn optimize_set<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, s: FxHashSet<FaElem
         econtinue_if!(
             match_both_side(egraph, &PATTERN_INPUT, a, b).any(|x| frame_pred.contains(&x))
         );
-        econtinue_if!(match_both_side(egraph, &PATTERN_EMPTY, a, b).next().is_some());
+        econtinue_if!(
+            match_both_side(egraph, &PATTERN_EMPTY, a, b)
+                .next()
+                .is_some()
+        );
 
         ret.push(e);
     }
@@ -352,10 +357,7 @@ fn q_transform<'e, 'a>(
 }
 
 /// Creates lists in the egraph from a set of argument pairs.
-fn create_lists<N: Analysis<Lang>>(
-    egraph: &mut EGraph<Lang, N>,
-    args: &[FaElem],
-) -> (Id, Id) {
+fn create_lists<N: Analysis<Lang>>(egraph: &mut EGraph<Lang, N>, args: &[FaElem]) -> (Id, Id) {
     // Create lists for the first and second elements of the argument pairs.
     let ia = args.iter().map(|FaElem { a, sort, .. }| (*a, *sort));
     let ib = args.iter().map(|FaElem { b, sort, .. }| (*b, *sort));
