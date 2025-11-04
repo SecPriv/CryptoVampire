@@ -288,8 +288,8 @@ where
     pub fn run(&mut self, goal: egg::Id, depth: u64) -> bool {
         let gtmp = if self.config.trace_prolog {
             let g = self.egraph().id_to_expr(goal);
-            eprintln!("{}:{}:{}", file!(), line!(), column!());
-            eprintln!("({depth:}) {}", g.pretty(80));
+            println!("{}:{}:{}", file!(), line!(), column!());
+            println!("({depth:}) {}", g.pretty(80));
             Some(g)
         } else {
             None
@@ -366,7 +366,7 @@ where
         }
 
         if let Some(g) = gtmp {
-            eprintln!(
+            println!(
                 "({depth:}) 💾 setting {} to {}",
                 g.pretty(80),
                 print_bool(result)

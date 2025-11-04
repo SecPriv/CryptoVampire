@@ -71,6 +71,10 @@ pub struct Configuration {
     /// Fa limits
     #[arg(long, default_value_t = Self::default().prf_limit)]
     pub fa_limit: usize,
+
+    /// activate golgge trace
+    #[arg(long)]
+    pub trace: bool
 }
 
 impl Default for Configuration {
@@ -95,7 +99,8 @@ impl Default for Configuration {
             no_steel_prelude: false,
             cores: num_cpus::get() as u64,
             prf_limit: 3,
-            fa_limit: 4
+            fa_limit: 4,
+            trace: cfg!(debug_assertions)
         }
     }
 }

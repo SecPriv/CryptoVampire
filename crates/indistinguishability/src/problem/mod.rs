@@ -117,6 +117,7 @@ impl Problem {
                 node_limit,
                 time_limit,
                 iter_limit,
+                trace,
                 depth,
                 ..
             } = self.config;
@@ -124,6 +125,7 @@ impl Problem {
                 .node_limit(node_limit)
                 .iter_limit(iter_limit)
                 .time_limit(time_limit)
+                .trace_prolog(trace)
                 .build()
         };
 
