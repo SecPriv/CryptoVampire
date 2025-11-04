@@ -41,18 +41,8 @@ unit:
     - if: '$CI_COMMIT_BRANCH == "master"'
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
 
-basic_hash:
+all:
   stage: integration
   script:
-    - nix develop --command cargo test --target-dir ./target --release --test basic_hash
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "master"'
-    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
-
-lak_tag:
-  stage: integration
-  script:
-    - nix develop --command cargo test --target-dir ./target --release --test lak_tag
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "master"'
-    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
+    - nix develop --command cargo test --target-dir ./target --release --test-threads 1 
+  only: [schedules]
