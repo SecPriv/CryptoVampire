@@ -23,11 +23,12 @@ variables:
 stages: # List of stages for jobs, and their order of execution
   - build
   - test
+  - integration
 
 build-debug: 
   stage: build
   script:
-    - nix develop --command cargo --release build
+    - nix develop --command cargo build --release
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
@@ -35,23 +36,23 @@ build-debug:
 unit:
   stage: test
   script:
-    - nix develop --command cargo --release test --lib
+    - nix develop --command cargo test --release --lib
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
 
 basic_hash:
-  stage: test
+  stage: integration
   script:
-    - nix develop --command cargo --release test --test basic_hash
+    - nix develop --command cargo test --release --test basic_hash
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
 
 lak_tag:
-  stage: test
+  stage: integration
   script:
-    - nix develop --command cargo --release test --test lak_tag
+    - nix develop --command cargo test --release --test lak_tag
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
