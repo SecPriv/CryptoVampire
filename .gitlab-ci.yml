@@ -28,7 +28,7 @@ stages: # List of stages for jobs, and their order of execution
 build-debug: 
   stage: build
   script:
-    - nix develop --command cargo build --taget-dir ./target --release
+    - nix develop --command cargo build --target-dir ./target --release
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
@@ -36,7 +36,7 @@ build-debug:
 unit:
   stage: test
   script:
-    - nix develop --command cargo test --taget-dir ./target --release --lib
+    - nix develop --command cargo test --target-dir ./target --release --lib
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
@@ -44,7 +44,7 @@ unit:
 basic_hash:
   stage: integration
   script:
-    - nix develop --command cargo test --taget-dir ./target --release --test basic_hash
+    - nix develop --command cargo test --target-dir ./target --release --test basic_hash
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
@@ -52,7 +52,7 @@ basic_hash:
 lak_tag:
   stage: integration
   script:
-    - nix develop --command cargo test --taget-dir ./target --release --test lak_tag
+    - nix develop --command cargo test --target-dir ./target --release --test lak_tag
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
