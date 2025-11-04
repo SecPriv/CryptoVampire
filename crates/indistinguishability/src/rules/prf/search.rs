@@ -13,7 +13,8 @@ use crate::rules::utils::SyntaxSearcher;
 use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::runners::SmtRunner;
 use crate::terms::{
-    FAIL, Function, HAPPENS, LT, MACRO_EXEC, MACRO_FRAME, NONCE, RecFOFormula, Sort, VAMPIRE,
+    FAIL, Function, HAPPENS, LT, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, NONCE, PRED, RecFOFormula,
+    Sort, VAMPIRE,
 };
 use crate::{Lang, Problem, fresh, rexp};
 
@@ -47,7 +48,8 @@ pub fn mk_rules<'a>(pbl: &'a Problem, prf: &'a PRF) -> impl Iterator<Item = RcRu
             mk_rule_neq_m(prf),
             mk_rule_neq_k(prf),
             mk_rule_exec(prf),
-            mk_rule_frame(prf)
+            mk_rule_frame(prf),
+            mk_rule_input(prf),
         ],
     ];
 
@@ -253,6 +255,27 @@ fn mk_rule_frame(
         "search_prf_frame"; m, k, p, t:
         (search #m #k (MACRO_FRAME #t  #p)) :-
         (search_trigger #m #k #p #t)
+    }
+}
+
+/// deep search on `input`
+///
+/// ```text
+///  search(m, k, p, t)
+/// --------------------
+///  m, k ||> frame(p)@t
+/// ```
+fn mk_rule_input(
+    PRF {
+        search_bitstring: search,
+        search_trigger,
+        ..
+    }: &PRF,
+) -> PrologRule<Lang> {
+    mk_prolog! {
+        "search_prf_input"; m, k, p, t:
+        (search #m #k (MACRO_INPUT #t  #p)) :-
+        (search_trigger #m #k #p (PRED #t))
     }
 }
 

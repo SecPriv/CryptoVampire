@@ -490,7 +490,6 @@ impl Problem {
                 .unique();
             let mut pile = Vec::new();
             for a in candidate {
-                tr!("here {a}");
                 if let RecFOFormula::Quantifier {
                     head: FOBinder::FindSuchThat,
                     ..
@@ -566,7 +565,6 @@ impl Problem {
                 }
             )
         ]
-        .inspect(|x| tr!("while listing:\n{x}"))
     }
 }
 

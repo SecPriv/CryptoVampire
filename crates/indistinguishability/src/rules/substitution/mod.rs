@@ -19,11 +19,17 @@ use crate::problem::PAnalysis;
 // use crate::rules::base_rules::substitution;
 // use crate::rules::utils::mk_subst_rw;
 use crate::terms::{
-    Function, FunctionFlags, MACRO_EXEC, MACRO_FRAME, PRED, SUBSTITUTION, SUBSTITUTION_RULE,
+    Function, FunctionFlags, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, PRED, SUBSTITUTION, SUBSTITUTION_RULE
 };
 use crate::{Lang, rexp};
 
 declare_trace!($"substitution");
+
+pub use rule::SubstRule;
+mod rule;
+
+mod algorithm;
+
 
 decl_vars!(const; GOAL:Bool, X:Any, FROM:Bitstring, TO:Bitstring, PTCL:Protocol, T:Time);
 
@@ -38,96 +44,9 @@ static ACCEPTABLY_EMPTY: Vec<Pattern<Lang>> = {
     vec![
         Pattern::from(&rexp!((MACRO_EXEC (PRED #T) #PTCL))),
         Pattern::from(&rexp!((MACRO_FRAME (PRED #T) #PTCL))),
+        Pattern::from(&rexp!((MACRO_INPUT #T #PTCL))),
     ]
 };
-
-/// This rule is a no op logic wise.
-///
-/// It boxes a goal that will release to [`golgge`] after rebuilding the egraph
-/// with the substitution rules.
-/// ```text
-///      goal
-/// -------------
-///  subst(goal)
-/// ```
-#[derive(Clone)]
-pub struct SubstRule;
-
-impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
-    /// Searches for `SUBSTITUTION_RULE` patterns in the e-graph and applies substitutions.
-    ///
-    /// This rule identifies goals that need substitution, performs the substitution
-    /// using `mk_substs`, and then rebuilds the e-graph with the new terms.
-    fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: egg::Id) -> Dependancy {
-        let egraph = prgm.egraph_mut();
-        ereturn_let!(let Some(substs) =
-            SUBSTITUTION_RULE_PATTERN
-                .search_eclass(egraph, goal),
-            Dependancy::impossible()
-        );
-        tr!("substitution");
-
-        let memo: FxHashMap<_, _> = ACCEPTABLY_EMPTY // <- recursive call where we can't substitute, whoever call this should check that ignoring those is sound
-            .iter()
-            .flat_map(|patt| patt.search(egraph).into_iter())
-            .map(|s| (s.eclass, [s.eclass].into_iter().collect()))
-            .collect(); // <- we map those to themselves
-
-        for subst in SUBSTITUTION_PATTERN.search(egraph) {
-            let current_id = subst.eclass;
-            for s in subst.substs {
-                let [m, x, y] = [X, FROM, TO].map(|i| *s.get(i.as_egg()).unwrap());
-                let mut memo = memo.clone();
-
-                let ids = mk_substs(egraph, &mut memo, m, x, y);
-                assert!(
-                    !ids.is_empty(),
-                    "failed substitution:\n{}",
-                    print_param(egraph, m, x, y)
-                );
-                for id in ids.iter() {
-                    #[cfg(debug_assertions)]
-                    if egraph.find(*id) == egraph.find(m) {
-                        let me = egraph.id_to_expr(m);
-                        let args = egraph[m]
-                            .nodes
-                            .iter()
-                            .map(|l| {
-                                let args = l
-                                    .children()
-                                    .iter()
-                                    .map(|id| egraph.id_to_expr(*id))
-                                    .join(" ");
-                                format!("({} {args})", l.discriminant().name)
-                            })
-                            .join("\n");
-
-                        panic!("should not be equal {me}:\n{args}")
-                    }
-
-                    egraph.union_trusted(current_id, *id, "substitution");
-                }
-            }
-        }
-
-        let subst = substs
-            .substs
-            .into_iter()
-            .map(|s| {
-                // let [g, x, y] = [0, 1, 2].map(|i| *s.get(Var::from_u32(i as u32)).unwrap());
-                // Substitution { egraph, x, y }.apply_subst();
-                // [g]
-
-                let g = *s.get(GOAL.as_egg()).unwrap();
-                [g]
-            })
-            .collect();
-
-        egraph.clean = false; // <- to force a true rebuild afterward
-        subst
-    }
-}
-
 /// computes `m{x |-> y}`
 ///
 /// with `memo` for memoisation

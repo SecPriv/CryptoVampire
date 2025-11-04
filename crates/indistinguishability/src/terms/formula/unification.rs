@@ -73,7 +73,7 @@ pub fn mgu(f1: &RecFOFormula, f2: &RecFOFormula) -> Result<Substitution, Unifica
     let mut subst = Substitution::new();
 
     while let Some((t1_orig, t2_orig)) = equations.pop_front() {
-        trace!("in mgu equality:\n\tleft:{t1_orig}\n\tright:{t2_orig}");
+        // trace!("in mgu equality:\n\tleft:{t1_orig}\n\tright:{t2_orig}");
         // Apply the current substitution to both terms
         let t1 = t1_orig.apply(&subst);
         let t2 = t2_orig.apply(&subst);
