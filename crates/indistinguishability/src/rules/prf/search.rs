@@ -9,12 +9,13 @@ use utils::{ereturn_if, ereturn_let};
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::protocol::{Protocol, Step};
 use crate::rules::PRF;
+use crate::rules::prf::B;
 use crate::rules::utils::SyntaxSearcher;
 use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::runners::SmtRunner;
 use crate::terms::{
-    FAIL, Function, HAPPENS, LT, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, NONCE, PRED, RecFOFormula,
-    Sort, VAMPIRE,
+    AND, BITE, FAIL, Function, HAPPENS, LT, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE,
+    PRED, RecFOFormula, Sort, VAMPIRE,
 };
 use crate::{Lang, Problem, fresh, rexp};
 
@@ -28,30 +29,16 @@ declare_trace!($"search_prf");
 ///
 /// These rules are used to guide the e-graph search for PRF indistinguishability.
 pub fn mk_rules<'a>(pbl: &'a Problem, prf: &'a PRF) -> impl Iterator<Item = RcRule> + use<'a> {
-    let functions = pbl
-        .functions()
-        .iter_current()
-        .filter(|f| f != &&NONCE && f != &&prf.hash)
-        .filter(|f| !f.is_out_of_term_algebra())
-        .filter(|f| matches!(f.signature.output, Sort::Bitstring | Sort::Bool))
-        .filter(|f| !f.is_special_subterm() || f.is_if_then_else())
-        .cloned();
+    // let functions = pbl
+    //     .functions()
+    //     .iter_current()
+    //     .filter(|f| f != &&NONCE && f != &&prf.hash)
+    //     .filter(|f| !f.is_out_of_term_algebra())
+    //     .filter(|f| matches!(f.signature.output, Sort::Bitstring | Sort::Bool))
+    //     .filter(|f| !f.is_special_subterm() || f.is_if_then_else())
+    //     .cloned();
 
-    let prolog_rules = chain![
-        [
-            mk_rule_found_instance(prf),
-            mk_rule_found_key(prf),
-            mk_rule_nonce(prf),
-        ],
-        functions.map(|f| mk_rule_one(prf, f)),
-        [
-            mk_rule_neq_m(prf),
-            mk_rule_neq_k(prf),
-            mk_rule_exec(prf),
-            mk_rule_frame(prf),
-            mk_rule_input(prf),
-        ],
-    ];
+    let prolog_rules = mk_static_rules(pbl, prf);
 
     let search_rules = [PrfVampireRule::new(pbl, prf)];
 
@@ -73,7 +60,7 @@ fn mk_rule_one(prf: &PRF, fun: Function) -> PrologRule<Lang> {
     debug_assert_ne!(fun, NONCE);
     let inputs = &fun.signature.inputs;
 
-    decl_vars!(m, k);
+    decl_vars!(m, k, h);
     let args = inputs
         .iter()
         .map(|&x| RecFOFormula::Var(fresh!(x)))
@@ -82,13 +69,13 @@ fn mk_rule_one(prf: &PRF, fun: Function) -> PrologRule<Lang> {
     let deps = izip!(inputs.iter(), &args)
         .filter_map(|(&sort, arg)| {
             let search = prf.get_search(sort)?;
-            Some(rexp!((search #m #k #arg)))
+            Some(rexp!((search #m #k #arg #h)))
         })
         .map(|x| Pattern::from(&x))
         .collect_vec();
 
     let search = prf.get_search(fun.signature.output).unwrap();
-    let input = Pattern::from(&rexp!((search #m #k (fun #args*))));
+    let input = Pattern::from(&rexp!((search #m #k (fun #args*) #h)));
 
     PrologRule::builder()
         .input(input)
@@ -101,9 +88,9 @@ fn mk_rule_one(prf: &PRF, fun: Function) -> PrologRule<Lang> {
 /// search rule for nonces
 ///
 /// ```text
-///  |- k != n
+///  |- h => k != n
 /// -----------
-///  m,k ||> n
+///  m,k ||> n | h
 /// ```
 fn mk_rule_nonce(
     PRF {
@@ -112,9 +99,9 @@ fn mk_rule_nonce(
     }: &PRF,
 ) -> PrologRule<Lang> {
     mk_prolog! {
-        "search_prf_nonce"; m, k, n:
-        (search #m #k (NONCE #n)) :-
-            (VAMPIRE (distinct #k #n))
+        "search_prf_nonce"; m, k, n, h:
+        (search #m #k (NONCE #n) #h) :-
+            (VAMPIRE (=> #h (distinct #k #n)))
     }
 }
 
@@ -134,8 +121,8 @@ fn mk_rule_found_instance(
     }: &PRF,
 ) -> PrologRule<Lang> {
     mk_prolog! {
-        "search_prf_found_instance"; m, k:
-        (search #m #k (hash #m (NONCE #k)))
+        "search_prf_found_instance"; m, k, h:
+        (search #m #k (hash #m (NONCE #k)) #h)
     }
 }
 
@@ -161,8 +148,8 @@ fn mk_rule_found_key(
     }: &PRF,
 ) -> PrologRule<Lang> {
     mk_prolog! {
-        "search_prf_found_key"; m, k:
-        (search #m #k (NONCE #k)) :-!, FAIL
+        "search_prf_found_key"; m, k, h:
+        (search #m #k (NONCE #k) #h) :-!, (VAMPIRE (not #h))
     }
 }
 
@@ -183,10 +170,10 @@ fn mk_rule_neq_m(
     }: &PRF,
 ) -> PrologRule<Lang> {
     mk_prolog! {
-        "search_prf_neq_m"; m, k, m2:
-        (search #m #k (hash #m2 (NONCE #k))) :-
-            (VAMPIRE (distinct #m #m2)),
-            (search #m #k #m2)
+        "search_prf_neq_m"; m, k, m2, h:
+        (search #m #k (hash #m2 (NONCE #k)) #h) :-
+            (VAMPIRE (=> #h (distinct #m #m2))),
+            (search #m #k #m2 #h)
     }
 }
 
@@ -206,11 +193,11 @@ fn mk_rule_neq_k(
     }: &PRF,
 ) -> PrologRule<Lang> {
     mk_prolog! {
-        "search_prf_neq_k"; m, k, m2, k2:
-        (search #m #k (hash #m2 (NONCE #k2))) :-
-            (VAMPIRE (distinct #k #k2)),
-            (search #m #k #m2),
-            (search #m #k #k2)
+        "search_prf_neq_k"; m, k, m2, k2, h:
+        (search #m #k (hash #m2 (NONCE #k2)) #h) :-
+            (VAMPIRE (=> #h (distinct #k #k2))),
+            (search #m #k #m2 #h),
+            (search #m #k #k2 #h)
     }
 }
 
@@ -279,6 +266,138 @@ fn mk_rule_input(
     }
 }
 
+fn mk_static_rules(
+    pbl: &Problem,
+    prf @ PRF {
+        search_bitstring: search_m,
+        search_bool: search_b,
+        search_trigger,
+        hash,
+        ..
+    }: &PRF,
+) -> impl Iterator<Item = PrologRule<Lang>> {
+    let functions = pbl
+        .functions()
+        .iter_current()
+        .filter(|f| f != &&NONCE && f != &&prf.hash)
+        .filter(|f| !f.is_out_of_term_algebra())
+        .filter(|f| matches!(f.signature.output, Sort::Bitstring | Sort::Bool))
+        .filter(|f| !f.is_special_subterm())
+        .filter(|f| *f != &AND)
+        .cloned();
+    decl_vars!(m, k, m2, k2, h, n);
+    chain![
+        [
+            // search axiom
+            //
+            // ```text
+            // ---------------------
+            //  not(m, k ||> k)
+            // ```
+            //
+            // We represent it in prolog using `fail` and `!`, so it is
+            //
+            // ```text
+            // m, k ||> k :- !, fail
+            // ```
+            //
+            // ### soundness
+            // This *needs* to be in front of the [mk_rule_one] for [NONCE].
+            mk_prolog! {
+                "search_prf_found_key"; m, k, h:
+                (search_m #m #k (NONCE #k) #h) :-!,
+                    (VAMPIRE (not #h))
+            }
+        ],
+        mk_many_prolog! {
+            "search_prf_false":
+            (search_m #m #k #m2 false).
+
+            // ```text
+            //  |- h => k != n
+            // -----------
+            //  m,k ||> n | h
+            // ```
+            "search_prf_nonce":
+            (search_m #m #k (NONCE #n) #h) :-
+                (VAMPIRE (=> #h (distinct #k #n))).
+
+            // ```text
+            // ---------------------
+            //  m, k ||> hash(m, (nonce k))
+            // ```
+            //
+            // this means that it will be captured by the substitution
+            "search_prf_found_instance":
+            (search_m #m #k (hash #m (NONCE #k)) #h).
+        },
+        functions.map(|f| mk_rule_one(prf, f)),
+        mk_many_prolog! {
+            // If [egg] can't prove that `m = m'` (e.g., we didn't trigger
+            // [mk_search_rule_found_instance]). Then we need to prove that `m` and
+            // `m'` trully are different otherwise the axiom will fail
+            //
+            // ```text
+            //  |- m != m'   m, k ||> m'
+            // -------------------------
+            //    m, k ||> hash(m', k)
+            // ```
+            "search_prf_neq_m" :
+            (search_m #m #k (hash #m2 (NONCE #k)) #h) :-
+                (VAMPIRE (=> #h (distinct #m #m2))),
+                (search_m #m #k #m2 #h).
+
+
+
+            // If [egg] can't prove that `k = k'`. Then we need to prove that `k` and
+            // `k'` trully are different otherwise the axiom will fail
+            //
+            // ```text
+            //  |- k != k'   m, k ||> m'   m, k ||> k'
+            // ---------------------------------------
+            //         m, k ||> hash(m', k')
+            // ```
+            "search_prf_neq_k":
+            (search_m #m #k (hash #m2 (NONCE #k2)) #h) :-
+                (VAMPIRE (=> #h (distinct #k #k2))),
+                (search_m #m #k #m2 #h),
+                (search_m #m #k #k2 #h).
+
+
+            // macros
+            "search_prf_exec" p, t:
+            (search_b #m #k (MACRO_EXEC #t  #p) #h) :-
+            (search_trigger #m #k #p #t #h).
+
+            "search_prf_frame" p, t:
+            (search_m #m #k (MACRO_FRAME #t  #p) #h) :-
+            (search_trigger #m #k #p #t #h).
+
+            "search_prf_input" p, t:
+            (search_m #m #k (MACRO_INPUT #t  #p) #h) :-
+            (search_trigger #m #k #p (PRED #t) #h).
+
+            // if and and
+            "search_prf_ite_m" c, l, r:
+            (search_m #m #k (MITE #c #l #r) #h):-
+                (search_b #m #k #c #h),
+                (search_m #m #k #l (and #c #h)),
+                (search_m #m #k #r (and (not #c) #h)).
+
+            "search_prf_ite_b" c, l, r:
+            (search_m #m #k (BITE #c #l #r) #h):-
+                (search_b #m #k #c #h),
+                (search_b #m #k #l (and #c #h)),
+                (search_b #m #k #r (and (not #c) #h)).
+
+            "search_prf_and" a, b:
+            (search_b #m #k (AND #a #b) #h):-
+                (search_b #m #k #a #h),
+                (search_b #m #k #b (and #a #h)).
+        }
+    ]
+}
+
 // =========================================================
 // ====================== CV Search ========================
 // =========================================================
@@ -308,6 +427,7 @@ impl Search {
         pbl: &'a Problem,
         ptcl: &'a Protocol,
         time: RecFOFormula,
+        hyp: RecFOFormula,
     ) -> impl Iterator<Item = RecFOFormula> + use<'a> {
         tr!("searching protocol {}", ptcl.name());
         ptcl.steps()
@@ -322,7 +442,7 @@ impl Search {
                     let vars = vars.iter().map(|v| RecFOFormula::Var(v.clone()));
                     let s = rexp!((id #vars*));
 
-                    let condition = rexp!((and (HAPPENS #s) (LT #s #time)));
+                    let condition = rexp!((and #hyp (HAPPENS #s) (LT #s #time)));
                     [
                         (condition.clone(), cond, step),
                         (condition.clone(), msg, step),
@@ -395,7 +515,7 @@ impl crate::rules::utils::SyntaxSearcher for Search {
 // ======================== Rule ===========================
 // =========================================================
 
-decl_vars!(const M:Bitstring, K:Nonce, P:Protocol, T:Time);
+decl_vars!(const M:Bitstring, K:Nonce, P:Protocol, T:Time, H:Bool);
 
 /// A rule that triggers the PRF analysis using the Vampire SMT solver.
 #[derive(Debug)]
@@ -413,7 +533,7 @@ impl PrfVampireRule {
     fn new(pbl: &Problem, prf @ PRF { search_trigger, .. }: &PRF) -> Self {
         Self {
             prf: prf.index(),
-            pattern: Pattern::from(&rexp!((search_trigger #M #K #P #T))),
+            pattern: Pattern::from(&rexp!((search_trigger #M #K #P #T #H))),
             exec: SmtRunner::new(pbl),
         }
     }
@@ -432,8 +552,8 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfVampireRule {
                 .search_eclass(egraph, goal), Dependancy::impossible());
 
         for subst in substs.substs {
-            let [m, k, time] =
-                [M, K, T].map(|x| RecFOFormula::try_from_subts(egraph, &subst, x).unwrap());
+            let [m, k, time, hyp] =
+                [M, K, T, H].map(|x| RecFOFormula::try_from_subts(egraph, &subst, x).unwrap());
             let pbl = egraph.analysis.pbl();
             let search = Search {
                 prf_idx: self.prf,
@@ -450,7 +570,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfVampireRule {
                 &pbl.protocols()[idx]
             };
 
-            let search = search.search_timepoint(pbl, ptcl, time).collect_vec();
+            let search = search.search_timepoint(pbl, ptcl, time, hyp).collect_vec();
             tr!(
                 "prf needs to checks:\n[\n\t{}\n]",
                 search.iter().join("\n\t")

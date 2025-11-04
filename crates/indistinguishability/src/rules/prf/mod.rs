@@ -85,14 +85,14 @@ impl PRF {
             declare!(pbl@pos: "prf_candidate_bitstring"; Bitstring, Bitstring, Nonce);
         let candidate_bool = declare!(pbl@pos: "prf_candidate_bool"; Bool, Bitstring, Nonce);
 
-        //  m, k ||> x
+        //  m, k ||> x | h
         let search_bitstring =
-            declare!(pbl@pos: "prf_search_bitstring"; Bitstring, Nonce, Bitstring);
-        let search_bool = declare!(pbl@pos: "prf_search_bool"; Bitstring, Nonce, Bool);
+            declare!(pbl@pos: "prf_search_bitstring"; Bitstring, Nonce, Bitstring, Bool);
+        let search_bool = declare!(pbl@pos: "prf_search_bool"; Bitstring, Nonce, Bool, Bool);
 
-        // m, k, ptcl, t
+        // m, k, ptcl, t, h
         let search_trigger =
-            declare!(pbl@pos: "prf_search_trigger"; Bitstring, Nonce, Protocol, Time);
+            declare!(pbl@pos: "prf_search_trigger"; Bitstring, Nonce, Protocol, Time, Bool);
 
         let prf = Self {
             hash,
@@ -155,8 +155,8 @@ impl PRF {
 
         let conclusionl = rexp!((EQUIV #U #V (candidate_bitstring #HM #M #K) #B));
         let conclusionr = rexp!((EQUIV #U #V #B (candidate_bitstring #HM #M #K)));
-        let subterm_hm = rexp!((search_bitstring #M #K #HM));
-        let subterm_m = rexp!((search_bitstring #M #K #M));
+        let subterm_hm = rexp!((search_bitstring #M #K #HM true));
+        let subterm_m = rexp!((search_bitstring #M #K #M true));
         let freshl = rexp!((FRESH_NONCE #NK #U true));
         let freshr = rexp!((FRESH_NONCE #NK #V true));
         let new_goall = rexp!((SUBSTITUTION_RULE (EQUIV #U #V (SUBSTITUTION #HM (hash #M (NONCE #K)) (NONCE #NK)) #B)));
