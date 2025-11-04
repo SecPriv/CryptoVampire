@@ -12,7 +12,14 @@ fn basic_hash() {
 fn lak_tag() {
     mk_test(
         "./tests/lak-tag.scm",
-        &["--node-limit", "100000", "--prf-limit", "1"],
+        &[
+            "--vampire-timeout",
+            "3s",
+            "--node-limit",
+            "100000",
+            "--prf-limit",
+            "1",
+        ],
     );
 }
 
