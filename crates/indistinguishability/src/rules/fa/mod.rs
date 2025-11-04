@@ -7,9 +7,7 @@ use itertools::{Itertools, chain, izip};
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
 use static_init::dynamic;
-use utils::{
-    dynamic_iter, econtinue_if, econtinue_let, ereturn_if, ereturn_let,
-};
+use utils::{dynamic_iter, econtinue_if, econtinue_let, ereturn_if, ereturn_let};
 
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::rules::utils::find_available_id;

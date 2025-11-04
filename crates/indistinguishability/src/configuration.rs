@@ -74,7 +74,7 @@ pub struct Configuration {
 
     /// activate golgge trace
     #[arg(long)]
-    pub trace: bool
+    pub trace: bool,
 }
 
 impl Default for Configuration {
@@ -100,7 +100,7 @@ impl Default for Configuration {
             cores: num_cpus::get() as u64,
             prf_limit: 3,
             fa_limit: 4,
-            trace: cfg!(debug_assertions)
+            trace: cfg!(debug_assertions),
         }
     }
 }

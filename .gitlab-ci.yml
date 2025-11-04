@@ -25,7 +25,7 @@ stages: # List of stages for jobs, and their order of execution
   - test
   - integration
 
-build-debug: 
+build-debug:
   stage: build
   script:
     - nix develop --command cargo build --target-dir ./target --release

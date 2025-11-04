@@ -10,8 +10,8 @@ use utils::{ebreak_if, ebreak_let, ereturn_let, implvec};
 use crate::problem::{PAnalysis, PRule};
 use crate::terms::utils::iter_egraph::iter_descendants_lang;
 use crate::terms::{
-    EQUIV, FRESH_NONCE, Function, FunctionFlags, NONCE, RecFOFormula,
-    SUBSTITUTION, SUBSTITUTION_RULE, Sort, TRUE,
+    EQUIV, FRESH_NONCE, Function, FunctionFlags, NONCE, RecFOFormula, SUBSTITUTION,
+    SUBSTITUTION_RULE, Sort, TRUE,
 };
 use crate::{Lang, Problem, mk_signature, rexp};
 

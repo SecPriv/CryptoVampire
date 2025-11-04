@@ -7,9 +7,7 @@ use rustc_hash::FxHashMap;
 use utils::ereturn_if;
 
 use crate::Lang;
-use crate::terms::{
-    EXISTS, FIND_SUCH_THAT, Function, LAMBDA_O, LAMBDA_S, list,
-};
+use crate::terms::{EXISTS, FIND_SUCH_THAT, Function, LAMBDA_O, LAMBDA_S, list};
 
 // pub fn lambda_subst<N: Analysis<Lang>>(
 //     egraph: &mut EGraph<Lang, N>,
@@ -119,7 +117,7 @@ fn lambda_substable_fun(head: &Function) -> bool {
     // ) || (head == &LAMBDA_O)
     //     || (head == &LAMBDA_S)
     //     || head.flags.contains(FunctionFlags::LIST_CONSTR)
-        head.is_ok_for_substitution()
+    head.is_ok_for_substitution()
 }
 
 fn get_variable_n<N: Analysis<Lang>>(mut id: Id, egraph: &EGraph<Lang, N>) -> Option<usize> {

@@ -13,8 +13,8 @@ use crate::rules::utils::SyntaxSearcher;
 use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::runners::SmtRunner;
 use crate::terms::{
-    AND, BITE, Function, HAPPENS, LT, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE,
-    PRED, RecFOFormula, Sort, VAMPIRE,
+    AND, BITE, Function, HAPPENS, LT, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE, PRED,
+    RecFOFormula, Sort, VAMPIRE,
 };
 use crate::{Lang, Problem, fresh, rexp};
 

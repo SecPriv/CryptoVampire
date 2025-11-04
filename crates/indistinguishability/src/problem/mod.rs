@@ -118,7 +118,6 @@ impl Problem {
                 time_limit,
                 iter_limit,
                 trace,
-                
                 ..
             } = self.config;
             golgge::Config::builder()

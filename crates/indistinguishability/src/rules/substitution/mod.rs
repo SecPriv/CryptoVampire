@@ -17,7 +17,8 @@ use utils::transposer::VecTranspose;
 // use crate::rules::base_rules::substitution;
 // use crate::rules::utils::mk_subst_rw;
 use crate::terms::{
-    Function, FunctionFlags, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, PRED, SUBSTITUTION, SUBSTITUTION_RULE
+    Function, FunctionFlags, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, PRED, SUBSTITUTION,
+    SUBSTITUTION_RULE,
 };
 use crate::{Lang, rexp};
 
@@ -27,7 +28,6 @@ pub use rule::SubstRule;
 mod rule;
 
 mod algorithm;
-
 
 decl_vars!(const; GOAL:Bool, X:Any, FROM:Bitstring, TO:Bitstring, PTCL:Protocol, T:Time);
 

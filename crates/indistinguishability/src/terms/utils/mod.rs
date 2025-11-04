@@ -12,8 +12,8 @@ declare_trace!($"formula_utils");
 pub mod rexp_macro;
 
 // pub mod offset;
-pub mod pull_from_egraph;
 pub mod iter_egraph;
+pub mod pull_from_egraph;
 
 pub fn get_sort<F>(f: F) -> Sort
 where

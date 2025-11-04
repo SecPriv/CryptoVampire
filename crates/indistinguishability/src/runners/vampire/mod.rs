@@ -289,8 +289,8 @@ impl VampireExec {
                     i += 1;
                 }
                 // if self.keep_file {
-                    let pretty = statement.as_pretty();
-                    writeln!(buffer, "{pretty}")?;
+                let pretty = statement.as_pretty();
+                writeln!(buffer, "{pretty}")?;
                 // } else {
                 //     writeln!(buffer, "{statement}")?;
                 // }

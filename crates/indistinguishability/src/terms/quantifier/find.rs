@@ -7,11 +7,11 @@ use itertools::{Itertools, chain};
 use logic_formula::Formula;
 use utils::ereturn_if;
 
+use crate::Problem;
 use crate::terms::quantifier::default_valid;
 use crate::terms::{
     Function, FunctionFlags, Quantifier, QuantifierIndex, QuantifierT, RecFOFormula, Sort, Variable,
 };
-use crate::Problem;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Builder)]
 #[builder(builder_type = FindSuchThatBuilder0)]
