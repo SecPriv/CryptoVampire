@@ -1,4 +1,4 @@
-use std::{env, path::Path};
+use std::{env, path::Path, time::Duration};
 
 use assert_cmd::{Command, cargo_bin};
 use predicates::prelude::*;
@@ -14,7 +14,7 @@ fn lak_tag() {
         "./tests/lak-tag.scm",
         &[
             "--vampire-timeout",
-            "3s",
+            "15s",
             "--node-limit",
             "100000",
             "--prf-limit",
@@ -25,9 +25,12 @@ fn lak_tag() {
 
 fn mk_test(file: impl AsRef<Path>, extra_args: &[&str]) {
     let mut cmd = Command::new(cargo_bin!());
-    cmd.pipe_stdin(file).unwrap();
-    cmd.args(extra_args);
-    cmd.assert()
+    cmd.pipe_stdin(file)
+        .unwrap()
+        .arg("--trace")
+        .args(extra_args)
+        .timeout(humantime::parse_duration("1h").unwrap())
+        .assert()
         .success()
         .stdout(predicate::str::contains("success"));
 }

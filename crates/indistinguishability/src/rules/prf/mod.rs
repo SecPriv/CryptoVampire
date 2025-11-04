@@ -41,7 +41,7 @@ pub struct PRF {
 }
 
 macro_rules! declare {
-    ($pbl:ident @ $pos:ident: $name:literal; $($s:expr),*) => {
+    ($pbl:ident @ $pos:ident: $name:literal; $($s:expr),* => $o:ident) => {
         $pbl
             .declare_function()
             .fresh_name($name)
@@ -49,7 +49,7 @@ macro_rules! declare {
                 use Sort::*;
                 [$($s),*]
             })
-            .output(Sort::Bool)
+            .output(Sort::$o)
             .flags(FunctionFlags::PROLOG_ONLY)
             .cryptography([$pos])
             .call()
@@ -82,17 +82,19 @@ impl PRF {
 
         // h(m, k), m, k
         let candidate_bitstring =
-            declare!(pbl@pos: "prf_candidate_bitstring"; Bitstring, Bitstring, Nonce);
-        let candidate_bool = declare!(pbl@pos: "prf_candidate_bool"; Bool, Bitstring, Nonce);
+            declare!(pbl@pos: "prf_candidate_bitstring"; Bitstring, Bitstring, Nonce => Bitstring);
+        let candidate_bool =
+            declare!(pbl@pos: "prf_candidate_bool"; Bool, Bitstring, Nonce => Bool);
 
         //  m, k ||> x | h
         let search_bitstring =
-            declare!(pbl@pos: "prf_search_bitstring"; Bitstring, Nonce, Bitstring, Bool);
-        let search_bool = declare!(pbl@pos: "prf_search_bool"; Bitstring, Nonce, Bool, Bool);
+            declare!(pbl@pos: "prf_search_bitstring"; Bitstring, Nonce, Bitstring, Bool => Bool);
+        let search_bool =
+            declare!(pbl@pos: "prf_search_bool"; Bitstring, Nonce, Bool, Bool => Bool);
 
         // m, k, ptcl, t, h
         let search_trigger =
-            declare!(pbl@pos: "prf_search_trigger"; Bitstring, Nonce, Protocol, Time, Bool);
+            declare!(pbl@pos: "prf_search_trigger"; Bitstring, Nonce, Protocol, Time, Bool => Bool);
 
         let prf = Self {
             hash,

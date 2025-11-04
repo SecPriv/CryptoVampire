@@ -275,7 +275,7 @@ impl VampireExec {
             .tempfile()?;
 
         if self.keep_file {
-            tr!("writting smt file to '{:?}' ...", tmpfile.path())
+            println!("writting smt file to '{:?}' ...", tmpfile.path())
         }
 
         {
@@ -288,12 +288,12 @@ impl VampireExec {
                     writeln!(buffer, "; {i:}")?;
                     i += 1;
                 }
-                if self.keep_file {
+                // if self.keep_file {
                     let pretty = statement.as_pretty();
                     writeln!(buffer, "{pretty}")?;
-                } else {
-                    writeln!(buffer, "{statement}")?;
-                }
+                // } else {
+                //     writeln!(buffer, "{statement}")?;
+                // }
             }
         }
 

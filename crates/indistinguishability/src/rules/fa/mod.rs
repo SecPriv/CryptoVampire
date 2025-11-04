@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::fmt::Debug;
+use std::iter;
 
 use egg::{Analysis, EClass, EGraph, Id, Pattern, SearchMatches, Searcher, Subst};
 use golgge::{Dependancy, Rule};
@@ -127,7 +128,7 @@ fn search_for_pattern_list<N: Analysis<Lang>>(
     }
 
     if let Some(matches) = PATTERN_LIST_TUPLE.search_eclass(egraph, id) {
-        return Some((matches, LSort::Bool));
+        return Some((matches, LSort::Bitstring));
     }
 
     if let Some(matches) = PATTERN_LIST_M.search_eclass(egraph, id) {
@@ -186,6 +187,17 @@ fn extract_list<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, init: Id) -> Vec<(I
             // return Some(res);
             continue;
         } else {
+            debug_assert!(
+                egraph[next]
+                    .nodes
+                    .iter()
+                    .map(|l| l.head.signature.output)
+                    .filter(|s| s != &Sort::Any)
+                    .chain(::std::iter::once(sort.as_sort()))
+                    .all_equal(),
+                "mistyping [{}]",
+                egraph[next].nodes.iter().join(", ")
+            );
             res.push((next, sort));
         }
     }
@@ -398,7 +410,6 @@ fn q_transform<'e, 'a>(
     }])
 }
 
-
 /// Creates lists in the egraph from a set of argument pairs.
 fn create_lists<N: Analysis<Lang>>(egraph: &mut EGraph<Lang, N>, args: &[FaElem]) -> (Id, Id) {
     // Create lists for the first and second elements of the argument pairs.
@@ -461,6 +472,13 @@ impl LSort {
         match self {
             Self::Bitstring => &CONS_FA_BITSTRING,
             Self::Bool => &CONS_FA_BOOL,
+        }
+    }
+
+    pub fn as_sort(&self) -> Sort {
+        match self {
+            Self::Bitstring => Sort::Bitstring,
+            Self::Bool => Sort::Bool,
         }
     }
 }
