@@ -6,6 +6,7 @@ use std::rc::Rc;
 use std::str::FromStr;
 
 use bon::bon;
+use colored::{ColoredString, Colorize};
 // use eclassmap::{ECallMap, Entry};
 use egg::{
     Analysis, EGraph, FromOp, Id, Language, MultiPattern, Pattern, RecExpr, Report, Rewrite,
@@ -234,6 +235,13 @@ where
     }
 }
 
+fn print_bool(b: bool) -> ColoredString {
+    match b {
+        true => "true".green(),
+        false => "false".red(),
+    }
+}
+
 impl<L, N> Program<L, N>
 where
     L: Language + Display,
@@ -297,12 +305,12 @@ where
             use std::collections::hash_map::Entry;
             match memo.entry(goal) {
                 Entry::Occupied(occupied_entry) if occupied_entry.get().is_in_progress() => {
-                    mtrace!(self, "⏩ skipping (loop)");
+                    mtrace!(self, "⏩ skipping: {}", "loop".red());
                     return false;
                 }
                 Entry::Occupied(occupied_entry) => {
                     let res = occupied_entry.get().as_bool();
-                    mtrace!(self, "⏩ skipping: {res:}");
+                    mtrace!(self, "⏩ skipping: {}", print_bool(res));
                     return res;
                 }
                 Entry::Vacant(vacant_entry) => Some(vacant_entry.insert(Status::InProgress.into())),
@@ -358,7 +366,11 @@ where
         }
 
         if let Some(g) = gtmp {
-            eprintln!("({depth:}) 💾 setting {} to {}", g.pretty(80), result)
+            eprintln!(
+                "({depth:}) 💾 setting {} to {}",
+                g.pretty(80),
+                print_bool(result)
+            )
         }
         result
     }

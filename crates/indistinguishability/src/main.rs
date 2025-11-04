@@ -9,8 +9,8 @@ use indistinguishability::{Configuration, init_engine, init_logger};
 
 // static CV_PRELUDE: &str = include_str!("./input/prelude.scm");
 pub fn main() {
-    init_logger();
     let config = Configuration::parse();
+    init_logger();
 
     let pgrm = match &config.file {
         Some(f) => ::std::fs::read_to_string(f).unwrap(),

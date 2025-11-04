@@ -1,11 +1,13 @@
 use std::borrow::Cow;
+use std::collections::hash_map::Entry;
 use std::fmt::{Debug, Display};
 use std::ops::{BitAnd, BitOr, Not, Shr};
 
 use bon::Builder;
 use cryptovampire_smt::{SmtFormula, SmtHead};
 use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr};
-use itertools::{Itertools, chain, izip};
+use itertools::{Either, Itertools, chain, izip};
+use log::{error, trace, warn};
 use logic_formula::{Destructed, Formula, HeadSk};
 use quarck::CowArc;
 use rpds::HashTrieSet;
@@ -15,12 +17,13 @@ use steel::rvals::IntoSteelVal;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel::{SteelErr, rerrs};
 use steel_derive::Steel;
-use utils::{dynamic_iter, econtinue_let, ereturn_if, ereturn_let, implvec, match_eq};
+use utils::{dynamic_iter, ebreak_let, econtinue_let, ereturn_if, ereturn_let, implvec, match_eq};
 
 use super::{FOBinder, RecFOFormulaQuant};
 use crate::input::Registerable;
 use crate::terms::formula::egg::EggLanguage;
 use crate::terms::formula::sexpr::SExpr;
+use crate::terms::formula::unification::{self, Substitution};
 use crate::terms::formula::{RecFOFormulaQuantRef, list};
 use crate::terms::utils::pull_from_egraph;
 use crate::terms::{
@@ -360,89 +363,11 @@ impl RecFOFormula {
     }
 
     // ~~~~~~~~~~~~~ unification ~~~~~~~~~~~~~~~~
-
-    fn are_vars_and_eq(l: &Self, r: &Self) -> bool {
-        match (l, r) {
-            (Self::Var(v1), Self::Var(v2)) => v1 == v2,
-            _ => false,
-        }
-    }
-
-    fn unify_inner(
-        &self,
-        other: &Self,
-        subst: &mut FxHashMap<Variable, Self>,
-        is_bound: &mut FxHashSet<Variable>,
-        short_cut: &mut impl FnMut(&Self, &Self, &mut FxHashMap<Variable, Self>) -> Option<bool>,
-    ) -> bool {
-        if let Some(x) = short_cut(self, other, subst) {
-            return x;
-        }
-
-        match (self, other) {
-            (Self::Var(v1), Self::Var(v2)) => {
-                let l = subst.entry(v1.clone()).or_insert(other.clone()).clone();
-                let r = subst.entry(v2.clone()).or_insert(self.clone()).clone();
-                // they're both mapped to variables
-                Self::are_vars_and_eq(&l, &r) ||
-                 // or what they map to unify
-                 (!is_bound.contains(v1) && !is_bound.contains(v2) && l.unify_inner(&r, subst, is_bound, short_cut))
-            }
-            (Self::Var(v), x) | (x, Self::Var(v)) if !is_bound.contains(v) => {
-                let y = subst.entry(v.clone()).or_insert(x.clone()).clone();
-                x.unify_inner(&y, subst, is_bound, short_cut)
-            }
-            (
-                Self::App {
-                    head: hl,
-                    args: argsl,
-                },
-                Self::App {
-                    head: hr,
-                    args: argsr,
-                },
-            ) if hl == hr => {
-                izip!(argsl, argsr).all(|(l, r)| l.unify_inner(r, subst, is_bound, short_cut))
-            }
-            (
-                Self::Quantifier {
-                    head: hl,
-                    vars: vl,
-                    arg: al,
-                },
-                Self::Quantifier {
-                    head: hr,
-                    vars: vr,
-                    arg: ar,
-                },
-            ) if hl == hr && vl.len() == vr.len() => {
-                // we bail if any of the bound variables were already assigned somewhere
-                let already_assigned = izip!(vl, vr).any(|(l, r)| {
-                    subst.insert(l.clone(), Self::Var(r.clone())).is_some()
-                        || subst.insert(r.clone(), Self::Var(l.clone())).is_some()
-                });
-                ereturn_if!(already_assigned, false);
-                is_bound.extend(chain![vl, vr].cloned());
-                subst.extend(
-                    chain![izip!(vl, vr), izip!(vr, vl)]
-                        .map(|(a, b)| (a.clone(), RecFOFormula::Var(b.clone()))),
-                );
-
-                izip!(al, ar).all(|(l, r)| l.unify_inner(r, subst, is_bound, short_cut))
-            }
-            _ => false,
-        }
-    }
-
     pub fn unify(&self, other: &Self) -> Option<FxHashMap<Variable, Self>> {
-        let mut subst = Default::default();
-        self.unify_inner(
-            other,
-            &mut subst,
-            &mut Default::default(),
-            &mut |_, _, _| None,
-        )
-        .then_some(subst)
+        match unification::mgu(self, other) {
+            Ok(Substitution(map)) => Some(map),
+            Err(_) => None,
+        }
     }
 
     /// capture avoiding substitution
@@ -480,6 +405,76 @@ impl RecFOFormula {
             }
             .clone(),
         }
+    }
+
+    // new attemp
+
+    /// Recursively applies a substitution to a formula.
+    pub fn apply(&self, subst: &Substitution) -> Self {
+        match self {
+            // If we are a variable, check if we are in the substitution
+            RecFOFormula::Var(v) => subst.0.get(v).cloned().unwrap_or_else(|| self.clone()),
+
+            // For an application, apply to all arguments
+            RecFOFormula::App { head, args } => RecFOFormula::App {
+                head: head.clone(),
+                args: args.iter().map(|arg| arg.apply(subst)).collect(),
+            },
+
+            // For a quantifier, we must apply the substitution *without*
+            // touching variables that are shadowed by the quantifier's binders.
+            RecFOFormula::Quantifier { head, vars, arg } => {
+                // 1. Clone the substitution
+                let mut shadowed_subst = subst.clone();
+
+                // 2. Remove any bindings for variables that are now bound
+                for v in vars.iter() {
+                    shadowed_subst.0.remove(v);
+                }
+
+                // 3. Apply the filtered substitution to the body
+                RecFOFormula::Quantifier {
+                    head: head.clone(),
+                    vars: vars.clone(),
+                    arg: arg.iter().map(|x| x.apply(&shadowed_subst)).collect(),
+                }
+            }
+        }
+    }
+
+    /// Checks if a variable occurs *free* within a formula.
+    /// This is the "occurs check".
+    pub fn contains_var(&self, var: &Variable) -> bool {
+        match self {
+            RecFOFormula::Var(v) => v == var,
+            RecFOFormula::App { args, .. } => args.iter().any(|arg| arg.contains_var(var)),
+            RecFOFormula::Quantifier { vars, arg, .. } => {
+                // If the variable is bound by *this* quantifier, it does
+                // not count as a free occurrence.
+                if vars.iter().any(|v| v == var) {
+                    false
+                } else {
+                    // Otherwise, check the body.
+                    arg.iter().any(|arg| arg.contains_var(var))
+                }
+            }
+        }
+    }
+}
+
+fn find<'a>(
+    var: &'a Variable,
+    subst: &'a FxHashMap<Variable, RecFOFormula>,
+    seen: &mut Vec<Variable>,
+) -> Result<Either<&'a RecFOFormula, &'a Variable>, &'a Variable> {
+    match subst.get(var) {
+        Some(RecFOFormula::Var(nv)) if seen.contains(nv) => Err(var),
+        Some(RecFOFormula::Var(var)) => {
+            seen.push(var.clone());
+            find(var, subst, seen)
+        }
+        Some(x) => Ok(Either::Left(x)),
+        _ => Ok(Either::Right(var)),
     }
 }
 
@@ -656,7 +651,7 @@ impl RecFOFormula {
     /// `L` lets you decide the `egg::Language` to be used. It panics if the conversion is impossible.
     pub fn as_egg<L: EggLanguage>(&self) -> Vec<L> {
         let mut out = Vec::new();
-        self.as_egg_inner(&mut out, Default::default(), 0, true);
+        self.as_egg_inner(&mut out, Default::default(), Default::default(), &mut None);
         out
     }
 
@@ -665,31 +660,70 @@ impl RecFOFormula {
     /// `L` lets you decide the `egg::Language` to be used. It panics if the conversion is impossible.
     pub fn as_egg_non_capture_avoiding<L: EggLanguage>(&self) -> Vec<L> {
         let mut out = Vec::new();
-        self.as_egg_inner(&mut out, Default::default(), 0, false);
+        self.as_egg_inner(
+            &mut out,
+            Default::default(),
+            AsEggParam {
+                capture_avoiding: false,
+                ..Default::default()
+            },
+            &mut None,
+        );
         out
     }
 
     fn as_egg_inner<'a, L: EggLanguage>(
         &'a self,
         out: &mut Vec<L>,
-        bvars: rpds::HashTrieMap<&'a Variable, usize>,
-        size: usize,
-        wrap: bool,
+        mut bvars: rpds::HashTrieMap<&'a Variable, usize>,
+        param: AsEggParam,
+        olocation: &mut Option<usize>,
     ) -> usize {
         match self {
             Self::Quantifier { head, vars, arg } => {
-                debug_assert_eq!(bvars.iter().len(), size);
-                let mut bvars = bvars;
-                for (i, var) in vars.iter().enumerate() {
-                    bvars = bvars.insert(var, size + i);
+                if !vars.is_empty() {
+                    let l = match olocation {
+                        Some(l) => *l,
+                        None => {
+                            let i = out.len();
+                            *olocation = Some(i);
+                            out.push(L::mk_fun_application(LAMBDA_O.clone(), []));
+                            i
+                        }
+                    };
+
+                    // update the variables assignement
+                    bvars = bvars
+                        .into_iter()
+                        .map(|(v, i)| {
+                            let mut i = *i;
+                            for _ in vars.iter() {
+                                out.push(L::mk_fun_application(LAMBDA_S.clone(), [Id::from(i)]));
+                                i = out.len() - 1;
+                            }
+                            (*v, i)
+                        })
+                        .collect();
+
+                    // mk the variables
+                    {
+                        let mut vars = vars.iter().rev();
+                        let v1 = vars.next().unwrap();
+                        bvars = bvars.insert(v1, l);
+                        let mut l = l;
+                        for v in vars {
+                            out.push(L::mk_fun_application(LAMBDA_S.clone(), [Id::from(l)]));
+                            l = out.len() - 1;
+                            bvars = bvars.insert(&v, l);
+                        }
+                    }
                 }
-                let size = size + vars.len();
 
                 let mut nargs = Vec::with_capacity(arg.len() + 1);
                 nargs.push(mk_list(out, vars.iter().map(|v| v.get_sort().unwrap())));
                 nargs.extend(
                     arg.iter()
-                        .map(|arg| arg.as_egg_inner(out, bvars.clone(), size, wrap)),
+                        .map(|arg| arg.as_egg_inner(out, bvars.clone(), param.clone(), olocation)),
                 );
 
                 let head = head.as_function().cloned().unwrap();
@@ -699,7 +733,7 @@ impl RecFOFormula {
             Self::App { head, args } => {
                 let args = args
                     .iter()
-                    .map(|arg| arg.as_egg_inner(out, bvars.clone(), size, wrap))
+                    .map(|arg| arg.as_egg_inner(out, bvars.clone(), param.clone(), olocation))
                     .map(Id::from)
                     .collect_vec();
                 out.push(L::mk_fun_application(head.clone(), args));
@@ -708,13 +742,21 @@ impl RecFOFormula {
                 Some(i) => {
                     out.extend(mk_bound_var(*i));
                 }
-                None if wrap => {
+                None if (!param.capture_avoiding)
+                    || param.non_capture_avoiding.contains(&variable) =>
+                {
+                    out.push(L::mk_variable(variable))
+                }
+                None => {
+                    let nparam = AsEggParam {
+                        capture_avoiding: false,
+                        ..param
+                    };
                     bvars
                         .iter()
                         .fold(self.clone(), |acc, _| rexp!((LAMBDA_S #acc)))
-                        .as_egg_inner(out, bvars, size, false);
+                        .as_egg_inner(out, bvars, nparam, olocation);
                 }
-                None => out.push(L::mk_variable(variable)),
             },
         };
 
@@ -730,7 +772,17 @@ impl RecFOFormula {
     }
 
     pub fn as_smt<U: QuantifierTranslator>(&self, pbl: &U) -> Option<MSmtFormula> {
-        MSmtFormula::try_from(self.as_pre_smt().translator(pbl).build()).ok()
+        trace!("trying to translate to smt:\n{self}");
+        match MSmtFormula::try_from(self.as_pre_smt().translator(pbl).build()) {
+            Err(f) => {
+                warn!("failed to turn into smt {f}");
+                None
+            }
+            Ok(f) => {
+                trace!("translated;\n\t{self}\nto:\n\t{f}");
+                Some(f)
+            }
+        }
     }
 
     pub fn try_from_subts<N: Analysis<Lang>>(
@@ -739,6 +791,40 @@ impl RecFOFormula {
         var: &Variable,
     ) -> Option<Self> {
         Self::try_from_id(egraph, *subst.get(var.as_egg())?)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AsEggParam {
+    pub capture_avoiding: bool,
+    pub non_capture_avoiding: ::rpds::HashTrieSet<Variable>,
+}
+
+impl Default for AsEggParam {
+    fn default() -> Self {
+        Self {
+            non_capture_avoiding: Default::default(),
+            capture_avoiding: true,
+        }
+    }
+}
+
+#[cfg(test)]
+mod conversion_tests {
+    use egg::PatternAst;
+
+    use crate::{Lang, decl_vars, rexp};
+
+    #[test]
+    fn as_egg_succ() {
+        decl_vars!(a, b);
+        let f = rexp!((and #a #b
+                (exists ((#i Bitstring) (#j Bitstring))
+                    (and #a #b (= #i #j)
+                            (exists ((#i Bitstring) (#k Bitstring))
+                                (and (= #i #k #j) #a))))));
+        let f: PatternAst<Lang> = f.as_egg().into();
+        println!("{}", f.pretty(100));
     }
 }
 
@@ -1147,7 +1233,7 @@ impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for MSmtFor
         }: PreSmtRecFOFormula<'a, U>,
     ) -> Result<Self, Self::Error> {
         let propagate = |f: &RecFOFormula| f.as_pre_smt().translator(translator).build().try_into();
-        match formula.as_ref() {
+        let restult = match formula.as_ref() {
             RecFOFormula::Var(variable) => Ok(Self::Var(variable.clone())),
             RecFOFormula::App { head, args } => match head.as_smt_head() {
                 Some(h) => {
@@ -1196,7 +1282,15 @@ impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for MSmtFor
                     None => Err(formula.into_owned()),
                 },
             },
+        };
+
+        #[cfg(debug_assertions)]
+        if let Err(f) = &restult {
+            use log::error;
+
+            error!("fail to translate to smt\n{f}")
         }
+        restult
     }
 }
 

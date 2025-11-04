@@ -107,17 +107,25 @@
         (loop (cdr ss) (cons v vars))))))
 
 (define (mfindst sorts arg1 arg2 arg3)
-  (let loop ((ss sorts) (vars '()))
-    (if (null? ss)
-      (let ((rev-vars (reverse vars)))
-        (cv-mk-binderf cv-findstf rev-vars
-          (list
-            (apply arg1 rev-vars)
-            (apply arg2 rev-vars)
-            arg3)))
-      (let* ((s (car ss))
-          (v (cv-mk-fresh-var-w-sort s)))
-        (loop (cdr ss) (cons v vars))))))
+  ; (let loop ((ss sorts) (vars '()))
+  ;   (if (null? ss)
+  ;     (let ((rev-vars (reverse vars)))
+  ;       (cv-mk-binderf cv-findstf rev-vars
+  ;         (list
+  ;           (apply arg1 rev-vars)
+  ;           (apply arg2 rev-vars)
+  ;           arg3)))
+  ;     (let* ((s (car ss))
+  ;         (v (cv-mk-fresh-var-w-sort s)))
+  ;       (loop (cdr ss) (cons v vars)))))
+  (let*
+    [
+    (vars (map cv-mk-fresh-var-w-sort sorts))
+    (varsf (map cv-mk-varf vars))
+    (c (apply arg1 varsf))
+    (l (apply arg2 varsf))
+    ]
+    (cv-mk-binderf cv-findstf vars (list c l arg3))))
 
 (define-syntax exists
   (syntax-rules ()
@@ -130,9 +138,10 @@
 (define-syntax findst
   (syntax-rules ()
     [ (_ ((ids sorts) ...) arg1 arg2 arg3)
-    (mforall (list sorts ...)
+    (mfindst (list sorts ...)
       (lambda (ids ...) arg1)
-      (lambda (ids ...) arg2) arg3) ]))
+      (lambda (ids ...) arg2)
+      arg3) ]))
 
 
 (struct step (protocol condition message))

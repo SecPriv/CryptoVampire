@@ -96,6 +96,18 @@ impl Sort {
     {
         list::try_get(f)
     }
+
+    pub const fn short_name(&self) -> char {
+        match self {
+            Sort::Any => 'a',
+            Sort::Bool => 'b',
+            Sort::Bitstring => 'm',
+            Sort::Time => 't',
+            Sort::Protocol => 'p',
+            Sort::Nonce => 'n',
+            Sort::Index => 'i',
+        }
+    }
 }
 
 impl Display for Sort {

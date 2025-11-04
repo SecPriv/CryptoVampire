@@ -147,20 +147,6 @@ impl ShrProblem {
         }
     }
 
-    /// Declares a new `FindSuchThat` quantifier in the problem.
-    fn declare_fdst(&self, captured: Vec<Sort>, bound: Vec<Sort>) -> ShrFindSuchThat {
-        let mut pbl = self.borrow_mut();
-        let fdst = FindSuchThat::insert()
-            .bvars_sorts(bound)
-            .cvars_sorts(captured)
-            .pbl(&mut pbl)
-            .call();
-        ShrFindSuchThat {
-            pbl: self.clone(),
-            index: fdst.index().index,
-        }
-    }
-
     /// Sets the variables for a given step in a protocol.
     fn set_step_vars(&self, step: Function, ptcl: Function, vars: Vec<Variable>) -> SResult<()> {
         let mut step = self.get_step_mut(step, ptcl)?;
@@ -209,10 +195,12 @@ impl ShrProblem {
 
     /// Adds a new SMT axiom to the problem.
     fn add_smt_axiom(&self, f: RecFOFormula) -> SResult<()> {
-        self.borrow_mut().extra_smt_mut().push(MSmt::mk_assert(
-            f.as_smt(self.0.borrow().deref())
-                .ok_or(conversion_err::<MSmt>())?,
-        ));
+        let content = f
+            .as_smt(self.0.borrow().deref())
+            .ok_or(conversion_err::<MSmt>())?;
+        self.borrow_mut()
+            .extra_smt_mut()
+            .push(MSmt::mk_assert(content));
         Ok(())
     }
 
@@ -253,7 +241,7 @@ impl Registerable for ShrProblem {
             .register_fn("declare-function", Self::declare_function)
             .register_fn("declare-protocol", Self::declare_protocol)
             .register_fn("declare-exists", Self::declare_exists)
-            .register_fn("declare-find-such-that", Self::declare_fdst)
+            // .register_fn("declare-find-such-that", Self::declare_fdst)
             .register_fn("declare-step", Self::declare_step)
             .register_fn("set-step-message", Self::set_step_msg)
             .register_fn("set-step-condition", Self::set_step_cond)

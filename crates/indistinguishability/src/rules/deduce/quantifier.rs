@@ -7,6 +7,7 @@ use utils::{ebreak_if, ebreak_let, econtinue_let, ereturn_let, match_eq};
 
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::rules::mk_default_rewrites;
+use crate::rules::utils::find_available_id;
 use crate::rules::utils::lambda_subst::lambda_subst;
 use crate::terms::{
     BIT_DEDUCE, BOOL_DEDUCE, CONS, EXISTS, FIND_SUCH_THAT, FOBinder, INDEX_SORT, Sort, Variable,
@@ -90,15 +91,26 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for QuantifierRule {
             tr!("quantifier deduce with: {}", g)
         }
 
-        let new_var = prgm
-            .egraph_mut()
-            .analysis
-            .pbl_mut()
-            .declare_function()
-            .output(Sort::Index)
-            .fresh_name("idx")
-            .call();
-        let new_var = prgm.egraph_mut().add(Lang::new(new_var, []));
+        // let new_var = prgm
+        //     .egraph_mut()
+        //     .analysis
+        //     .pbl_mut()
+        //     .declare_function()
+        //     .output(Sort::Index)
+        //     .fresh_name("idx")
+        //     .call();
+        // let new_var = prgm.egraph_mut().add(Lang::new(new_var, []));
+
+        let new_var = find_available_id(
+            prgm.egraph_mut(),
+            Sort::Index,
+            matches
+                .substs
+                .iter()
+                .flat_map(|s| s.iter())
+                .map(|(_, id)| id),
+        );
+
         let deps = matches
             .substs
             .into_iter()

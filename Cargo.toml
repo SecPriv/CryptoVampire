@@ -40,3 +40,10 @@ elided_lifetimes_in_paths = "deny"
 [profile.profiling]
 inherits = "release"
 debug = true
+
+[profile.debug-optimized]
+inherits = "dev"  # Inherits from the default dev profile
+opt-level = 3    # Enables full optimizations
+debug = true     # Includes debug symbols
+debug-assertions = true  # Enables debug assertions
+overflow-checks = true    # Enables overflow checks

@@ -73,6 +73,8 @@ impl SmtRunner {
         if let Some(true) = self.try_run(pbl, query).unwrap() {
             Dependancy::axiom()
         } else {
+            // FIXME - remove me
+            eprintln!("vampire run failed! (vvvamppaire)");
             Dependancy::impossible()
         }
     }

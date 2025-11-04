@@ -6,12 +6,13 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
 
 use bon::bon;
+use cryptovampire_smt::SortedVar;
 use serde::Serialize;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
 use crate::input::Registerable;
-use crate::terms::Sort;
+use crate::terms::{RecFOFormula, Sort};
 use crate::{LangVar, MSmtFormula};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Steel)]
@@ -58,15 +59,17 @@ impl<T> MaybeOnce<T> {
 
 impl Display for Variable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "x{:}", self.as_usize())
+        let x = self.get_sort().map(|x| x.short_name()).unwrap_or('x');
+        write!(f, "{x}{:x}", self.as_usize())
     }
 }
 
 impl Debug for Variable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = self.to_string();
+        let x = self.get_sort().map(|x| x.short_name()).unwrap_or('x');
+        let s = self.to_string().to_uppercase();
         let n = s.len().min(5);
-        write!(f, "{}", &s[..n])
+        write!(f, "{x}{}", &s[(s.len() - n)..s.len()])
     }
 }
 
@@ -138,6 +141,14 @@ impl Variable {
                 }
             }
         }
+    }
+
+    pub fn as_formula(&self) -> RecFOFormula {
+        RecFOFormula::Var(self.clone())
+    }
+
+    pub fn into_formula(self) -> RecFOFormula {
+        RecFOFormula::Var(self)
     }
 
     #[must_use]

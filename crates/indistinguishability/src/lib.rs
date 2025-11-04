@@ -102,7 +102,7 @@ pub fn init_logger() {
                 let str = record.args().to_string().replace("\n", "\n\t");
                 writeln!(
                     buf,
-                    "[{}] in {}:{}\\n\\t{}",
+                    "[{}] in {}:{}\n\t{}",
                     record.level(),
                     record.file().unwrap_or("unknown"),
                     record.line().unwrap_or(0),

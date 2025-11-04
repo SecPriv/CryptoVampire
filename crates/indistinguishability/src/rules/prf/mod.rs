@@ -1,13 +1,17 @@
 use std::borrow::Cow;
 
-use egg::{Id, Language, Pattern, Searcher};
+use egg::{Analysis, EGraph, Id, Language, Pattern, Searcher, Subst};
 use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain};
-use utils::ereturn_let;
+use rustc_hash::FxHashSet;
+use static_init::dynamic;
+use utils::{ebreak_if, ebreak_let, econtinue_if, ereturn_let, implvec};
 
 use crate::problem::{PAnalysis, PRule};
+use crate::terms::utils::iter_egraph::iter_descendants_lang;
 use crate::terms::{
-    EQUIV, Function, FunctionFlags, NONCE, RecFOFormula, SUBSTITUTION, SUBSTITUTION_RULE, Sort,
+    EQUIV, EXISTS, FIND_SUCH_THAT, FRESH_NONCE, Function, FunctionFlags, NONCE, RecFOFormula,
+    SUBSTITUTION, SUBSTITUTION_RULE, Sort, TRUE,
 };
 use crate::{Lang, Problem, mk_signature, rexp};
 
@@ -81,14 +85,14 @@ impl PRF {
             declare!(pbl@pos: "prf_candidate_bitstring"; Bitstring, Bitstring, Nonce);
         let candidate_bool = declare!(pbl@pos: "prf_candidate_bool"; Bool, Bitstring, Nonce);
 
-        //  m, k ||> x
+        //  m, k ||> x | h
         let search_bitstring =
-            declare!(pbl@pos: "prf_search_bitstring"; Bitstring, Nonce, Bitstring);
-        let search_bool = declare!(pbl@pos: "prf_search_bool"; Bitstring, Nonce, Bool);
+            declare!(pbl@pos: "prf_search_bitstring"; Bitstring, Nonce, Bitstring, Bool);
+        let search_bool = declare!(pbl@pos: "prf_search_bool"; Bitstring, Nonce, Bool, Bool);
 
-        // m, k, ptcl, t
+        // m, k, ptcl, t, h
         let search_trigger =
-            declare!(pbl@pos: "prf_search_trigger"; Bitstring, Nonce, Protocol, Time);
+            declare!(pbl@pos: "prf_search_trigger"; Bitstring, Nonce, Protocol, Time, Bool);
 
         let prf = Self {
             hash,
@@ -151,24 +155,28 @@ impl PRF {
 
         let conclusionl = rexp!((EQUIV #U #V (candidate_bitstring #HM #M #K) #B));
         let conclusionr = rexp!((EQUIV #U #V #B (candidate_bitstring #HM #M #K)));
-        let subterm_search1 = rexp!((search_bitstring #M #K #HM));
-        let subterm_search2 = rexp!((search_bitstring #M #K #M));
+        let subterm_hm = rexp!((search_bitstring #M #K #HM true));
+        let subterm_m = rexp!((search_bitstring #M #K #M true));
+        let freshl = rexp!((FRESH_NONCE #NK #U true));
+        let freshr = rexp!((FRESH_NONCE #NK #V true));
         let new_goall = rexp!((SUBSTITUTION_RULE (EQUIV #U #V (SUBSTITUTION #HM (hash #M (NONCE #K)) (NONCE #NK)) #B)));
         let new_goalr = rexp!((SUBSTITUTION_RULE (EQUIV #U #V #B (SUBSTITUTION #HM (hash #M (NONCE #K)) (NONCE #NK)))));
 
         [
             TopPrfRule::new(
                 &conclusionl,
-                &subterm_search1,
-                &subterm_search2,
+                &subterm_hm,
+                &subterm_m,
+                &freshl,
                 &new_goall,
                 PrfKind::Left,
                 candidate_bitstring.clone(),
             ),
             TopPrfRule::new(
                 &conclusionr,
-                &subterm_search1,
-                &subterm_search2,
+                &subterm_hm,
+                &subterm_m,
+                &freshr,
                 &new_goalr,
                 PrfKind::Right,
                 candidate_bitstring.clone(),
@@ -182,6 +190,10 @@ impl PRF {
     }
 }
 
+#[dynamic]
+static PATTERN_FRESH_SEARCH_INNER: Pattern<Lang> =
+    Pattern::from(&rexp!((FRESH_NONCE #NK #HM true)));
+
 decl_vars!(const; U, V, HM:Bitstring, M:Bitstring, K:Nonce, NK:Nonce, B);
 
 /// Ochestrating [Rule] for PRF
@@ -191,10 +203,12 @@ decl_vars!(const; U, V, HM:Bitstring, M:Bitstring, K:Nonce, NK:Nonce, B);
 struct TopPrfRule {
     /// The conclusion pattern to search for in the e-graph.
     conclusion: Pattern<Lang>,
-    /// The first subterm search pattern.
-    subterm_search1: Pattern<Lang>,
-    /// The second subterm search pattern.
-    subterm_search2: Pattern<Lang>,
+    /// The  subterm search hm.
+    subterm_hm: Pattern<Lang>,
+    /// The  subterm search m.
+    subterm_m: Pattern<Lang>,
+    /// The subterm search fresh u/v.
+    subterm_hyp: Pattern<Lang>,
     /// The new goal pattern to apply after a match.
     new_goal: Pattern<Lang>,
 
@@ -219,19 +233,111 @@ impl TopPrfRule {
     /// Creates a new `TopPrfRule`.
     fn new(
         conclusion: &RecFOFormula,
-        subterm_search1: &RecFOFormula,
-        subterm_search2: &RecFOFormula,
+        subterm_hm: &RecFOFormula,
+        subterm_m: &RecFOFormula,
+        subterm_hyp: &RecFOFormula,
         new_goal: &RecFOFormula,
         kind: PrfKind,
         candidate_bitstring: Function,
     ) -> Self {
         Self {
             conclusion: conclusion.into(),
-            subterm_search1: subterm_search1.into(),
-            subterm_search2: subterm_search2.into(),
+            subterm_hm: subterm_hm.into(),
+            subterm_m: subterm_m.into(),
+            subterm_hyp: subterm_hyp.into(),
             new_goal: new_goal.into(),
             kind,
             candidate_bitstring,
+        }
+    }
+
+    fn generate_fresh_nonce<'a>(
+        &self,
+        egraph: &mut EGraph<Lang, PAnalysis<'a>>,
+        substs: &[Subst],
+    ) -> Vec<Id> {
+        // try to look for
+        'a: {
+            let nonces = get_prf(egraph);
+            ebreak_if!('a, nonces.is_empty());
+
+            let [hyp, c, other_hyp, other_b] = match self.kind {
+                PrfKind::Left => [U, HM, V, B],
+                PrfKind::Right => [V, HM, U, B],
+            };
+
+            let other_ids = substs
+                .iter()
+                .cartesian_product([other_hyp, other_b])
+                .map(|(s, v)| s.get(v.as_egg()).unwrap())
+                .copied();
+            let self_ids = substs
+                .iter()
+                .cartesian_product([hyp, c])
+                .map(|(s, v)| s.get(v.as_egg()).unwrap())
+                .copied();
+            let nonces: FxHashSet<_> = nonces
+                .difference(&all_nonce_descendants(egraph, self_ids))
+                .copied()
+                .collect();
+            ebreak_if!('a, nonces.is_empty());
+
+            let all_other = all_nonce_descendants(egraph, other_ids);
+
+            let with_other = nonces.intersection(&all_other).copied().collect_vec();
+            ebreak_if!('a, with_other.is_empty());
+
+            let mut without_other = nonces.difference(&all_other).copied();
+            ebreak_let!('a, let Some(without_other)= without_other.next());
+
+            return chain![with_other, [without_other]].collect();
+        }
+
+        // else generate new nonce
+        if egraph.analysis.pbl().state.n_prf.len() <= egraph.analysis.pbl().config.prf_limit {
+            let fun = egraph
+                .analysis
+                .pbl_mut()
+                .declare_function()
+                .fresh_name("n_prf")
+                .flags(FunctionFlags::NONCE)
+                .output(Sort::Nonce)
+                .call();
+            let n = egraph.add(fun.app_id([]));
+            let etrue = egraph.add(TRUE.app_id([]));
+
+            let mut msubst = Subst::with_capacity(2);
+            msubst.insert(NK.as_egg(), n);
+
+            // make `(fresh_nonce n _ true)` hold for a bunch of them
+            for g in [U, V, B, HM] {
+                for subst in substs.iter() {
+                    msubst.insert(HM.as_egg(), *subst.get(g.as_egg()).unwrap());
+                    let fresh = PATTERN_FRESH_SEARCH_INNER.apply_susbt(egraph, &msubst);
+                    egraph.union(etrue, fresh);
+                }
+            }
+
+            get_prf_mut(egraph).insert(n);
+        }
+
+        get_prf(egraph).iter().cloned().collect()
+    }
+}
+
+fn get_prf<'a, 'b>(egraph: &'b EGraph<Lang, PAnalysis<'a>>) -> &'b FxHashSet<Id> {
+    &egraph.analysis.pbl().state.n_prf
+}
+
+fn get_prf_mut<'a, 'b>(egraph: &'b mut EGraph<Lang, PAnalysis<'a>>) -> &'b mut FxHashSet<Id> {
+    &mut egraph.analysis.pbl_mut().state.n_prf
+}
+
+impl PrfKind {
+    pub const fn other(self) -> Self {
+        match self {
+            Self::Left => Self::Right,
+            Self::Right => Self::Left,
         }
     }
 }
@@ -246,31 +352,25 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for TopPrfRule {
             check_hash_eq_nonce(egraph);
         }
 
-        let n = {
-            let pblm = egraph.analysis.pbl_mut();
+        let nonces = self.generate_fresh_nonce(egraph, &substs.substs);
 
-            let fun = pblm
-                .declare_function()
-                .fresh_name("n_prf")
-                .flags(FunctionFlags::NONCE)
-                .output(Sort::Nonce)
-                .call();
-
-            egraph.add(fun.app_id([]))
-        };
-        substs
-            .substs
-            .into_iter()
-            .map(|mut subst| {
+        let mut res = Vec::with_capacity(nonces.len() * substs.substs.len());
+        for n in nonces {
+            for subst in &substs.substs {
+                let mut subst = subst.clone();
                 subst.insert(NK.as_egg(), n);
 
-                [
-                    self.subterm_search1.apply_susbt(egraph, &subst),
-                    self.subterm_search2.apply_susbt(egraph, &subst),
+                let r = [
+                    PATTERN_FRESH_SEARCH_INNER.apply_susbt(egraph, &subst),
+                    self.subterm_hyp.apply_susbt(egraph, &subst),
+                    self.subterm_hm.apply_susbt(egraph, &subst),
+                    self.subterm_m.apply_susbt(egraph, &subst),
                     self.new_goal.apply_susbt(egraph, &subst),
-                ]
-            })
-            .collect()
+                ];
+                res.push(r);
+            }
+        }
+        res.into_iter().collect()
     }
 
     /// Returns the name of this rule, based on its `PrfKind`.
@@ -329,4 +429,18 @@ fn check_hash_eq_nonce<'a>(egraph: &mut egg::EGraph<Lang, PAnalysis<'a>>) {
     if let Some((_, _, id)) = to_explain.pop() {
         panic!("shared nonce and hash in {:}", egraph.id_to_expr(id))
     }
+}
+
+fn all_nonce_descendants<N: Analysis<Lang>>(
+    egraph: &EGraph<Lang, N>,
+    ancestors: implvec!(Id),
+) -> FxHashSet<Id> {
+    iter_descendants_lang(egraph, ancestors, can_have_children)
+        .filter(|&x| (x.head == NONCE))
+        .map(|x| x.args[0])
+        .collect()
+}
+
+fn can_have_children(f: &Function) -> bool {
+    f.is_egg_binder() || (f.is_part_of_F() && !f.is_alias())
 }

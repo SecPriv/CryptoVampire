@@ -61,6 +61,16 @@ pub struct Configuration {
     /// number of cores used
     #[arg(long, default_value_t = Self::default().cores)]
     pub cores: u64,
+
+    /// Limit on how many new nonce 'prf' can generate
+    ///
+    /// This might be helpful to avoid loops
+    #[arg(long, default_value_t = Self::default().prf_limit)]
+    pub prf_limit: usize,
+
+    /// Fa limits
+    #[arg(long, default_value_t = Self::default().prf_limit)]
+    pub fa_limit: usize,
 }
 
 impl Default for Configuration {
@@ -84,6 +94,8 @@ impl Default for Configuration {
             no_cryptovampire_prelude: false,
             no_steel_prelude: false,
             cores: num_cpus::get() as u64,
+            prf_limit: 3,
+            fa_limit: 4
         }
     }
 }

@@ -1,11 +1,11 @@
-use egg::{Analysis, Pattern, Rewrite};
+use egg::{Analysis, Pattern, PatternAst, Rewrite};
 use itertools::chain;
 use log::trace;
 
 // use super::parse::{PatternsAst, clean_input, convert_fun};
 // use super::var_as_recexpr;
 use crate::terms::{AliasRewrite, Function};
-use crate::{Lang, Problem, rexp};
+use crate::{Lang, LangVar, Problem, rexp};
 
 /// Creates rewrite rules based on the problem definition, including unfolding rules, extra rewrite rules, and alias rules.
 pub fn mk_rewrites<N: Analysis<Lang>>(
@@ -40,7 +40,13 @@ fn mk_extra_rw_rules<N: Analysis<Lang>>(
                 .into_owned();
             trace!("registering rw rule {name} to egg...");
 
-            Rewrite::new(name, Pattern::from(from), Pattern::from(to)).unwrap()
+            let from = from.as_egg_non_capture_avoiding::<LangVar>();
+            Rewrite::new(
+                name,
+                Pattern::from(PatternAst::from(from)),
+                Pattern::from(to),
+            )
+            .unwrap()
         },
     )
 }

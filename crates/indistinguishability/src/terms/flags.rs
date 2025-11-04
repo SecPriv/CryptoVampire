@@ -47,11 +47,14 @@ bitflags! {
       const SORT = 1 << 17;
 
       const LIST_CONSTR = 1 << 18;
+      const LIST_FA_CONSTR = 1 << 19;
 
       /// This function is temporary and should be garabage collected as soon as
       /// possible.
       ///
       /// This can be used for temporary quantifiers for instance.
-      const TEMPORARY = 1 << 19;
+      const TEMPORARY = 1 << 20;
+
+      const LAMBDA = 1 << 21;
   }
 }
