@@ -13,8 +13,10 @@ use utils::{
 };
 
 use crate::problem::{PAnalysis, PRule, RcRule};
+use crate::rules::utils::find_available_id;
 use crate::rules::utils::lambda_subst::lambda_subst;
 use crate::terms::list::{snoc_egraph, try_get_egraph};
+use crate::terms::utils::iter_egraph::iter_descendants_id;
 use crate::terms::{
     AND, CONS_FA_BITSTRING, CONS_FA_BOOL, EMPTY, EQUIV, EXISTS, FIND_SUCH_THAT, FROM_BOOL,
     Function, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NIL_FA, NONCE,
@@ -202,7 +204,7 @@ fn collect_sets<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>, list: &[FaElem]) -
             // Collect pairs of argumentsEQUIV.
             let args = if f.is_quantifier() {
                 mk_new_list(i, list, &f, &a_args, &b_args, |f, la, lb| {
-                    q_transform(egraph, f, la, lb)
+                    q_transform(egraph, list, f, la, lb)
                 })
             } else {
                 mk_new_list(i, list, &f, &a_args, &b_args, f_transform)
@@ -314,6 +316,7 @@ fn f_transform<'a>(
 /// transformation for quantifiers
 fn q_transform<'e, 'a>(
     egraph: &'a mut EGraph<Lang, PAnalysis<'e>>,
+    old: &[FaElem],
     f: &'a Function,
     n_args_a: &'a [Id],
     n_args_b: &'a [Id],
@@ -334,14 +337,17 @@ fn q_transform<'e, 'a>(
         (sa, tlsa, na, tlsb, nb)
     };
 
-    let new_var = egraph
-        .analysis
-        .pbl_mut()
-        .declare_function()
-        .output(s)
-        .fresh_name("idx")
-        .call();
-    let new_var = egraph.add(Lang::new(new_var, []));
+    let new_var = find_available_id(
+        egraph,
+        s,
+        chain![
+            old.iter()
+                .flat_map(|FaElem { a, b, .. }| [a, b].into_iter()),
+            n_args_a,
+            n_args_b
+        ]
+        .copied(),
+    );
 
     let mut reta = SmallVec::with_capacity(f.arity());
     let mut retb = SmallVec::with_capacity(f.arity());
@@ -391,6 +397,7 @@ fn q_transform<'e, 'a>(
         sort: f.signature.output.try_into().unwrap(),
     }])
 }
+
 
 /// Creates lists in the egraph from a set of argument pairs.
 fn create_lists<N: Analysis<Lang>>(egraph: &mut EGraph<Lang, N>, args: &[FaElem]) -> (Id, Id) {

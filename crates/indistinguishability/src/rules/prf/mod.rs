@@ -1,15 +1,17 @@
 use std::borrow::Cow;
 
-use egg::{Id, Language, Pattern, Searcher, Subst};
+use egg::{Analysis, EGraph, Id, Language, Pattern, Searcher, Subst};
 use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain};
+use rustc_hash::FxHashSet;
 use static_init::dynamic;
-use utils::ereturn_let;
+use utils::{ebreak_if, ebreak_let, econtinue_if, ereturn_let, implvec};
 
 use crate::problem::{PAnalysis, PRule};
+use crate::terms::utils::iter_egraph::iter_descendants_lang;
 use crate::terms::{
-    EQUIV, FRESH_NONCE, Function, FunctionFlags, NONCE, RecFOFormula, SUBSTITUTION,
-    SUBSTITUTION_RULE, Sort, TRUE,
+    EQUIV, EXISTS, FIND_SUCH_THAT, FRESH_NONCE, Function, FunctionFlags, NONCE, RecFOFormula,
+    SUBSTITUTION, SUBSTITUTION_RULE, Sort, TRUE,
 };
 use crate::{Lang, Problem, mk_signature, rexp};
 
@@ -248,6 +250,87 @@ impl TopPrfRule {
             candidate_bitstring,
         }
     }
+
+    fn generate_fresh_nonce<'a>(
+        &self,
+        egraph: &mut EGraph<Lang, PAnalysis<'a>>,
+        substs: &[Subst],
+    ) -> Vec<Id> {
+        // try to look for
+        'a: {
+            let nonces = get_prf(egraph);
+            ebreak_if!('a, nonces.is_empty());
+
+            let [hyp, c, other_hyp, other_b] = match self.kind {
+                PrfKind::Left => [U, HM, V, B],
+                PrfKind::Right => [V, HM, U, B],
+            };
+
+            let other_ids = substs
+                .iter()
+                .cartesian_product([other_hyp, other_b])
+                .map(|(s, v)| s.get(v.as_egg()).unwrap())
+                .copied();
+            let self_ids = substs
+                .iter()
+                .cartesian_product([hyp, c])
+                .map(|(s, v)| s.get(v.as_egg()).unwrap())
+                .copied();
+            let nonces: FxHashSet<_> = nonces
+                .difference(&all_nonce_descendants(egraph, self_ids))
+                .copied()
+                .collect();
+            ebreak_if!('a, nonces.is_empty());
+
+            let all_other = all_nonce_descendants(egraph, other_ids);
+
+            let with_other = nonces.intersection(&all_other).copied().collect_vec();
+            ebreak_if!('a, with_other.is_empty());
+
+            let mut without_other = nonces.difference(&all_other).copied();
+            ebreak_let!('a, let Some(without_other)= without_other.next());
+
+            return chain![with_other, [without_other]].collect();
+        }
+
+        // else generate new nonce
+        if egraph.analysis.pbl().state.n_prf.len() <= egraph.analysis.pbl().config.prf_limit {
+            let fun = egraph
+                .analysis
+                .pbl_mut()
+                .declare_function()
+                .fresh_name("n_prf")
+                .flags(FunctionFlags::NONCE)
+                .output(Sort::Nonce)
+                .call();
+            let n = egraph.add(fun.app_id([]));
+            let etrue = egraph.add(TRUE.app_id([]));
+
+            let mut msubst = Subst::with_capacity(2);
+            msubst.insert(NK.as_egg(), n);
+
+            // make `(fresh_nonce n _ true)` hold for a bunch of them
+            for g in [U, V, B, HM] {
+                for subst in substs.iter() {
+                    msubst.insert(HM.as_egg(), *subst.get(g.as_egg()).unwrap());
+                    let fresh = PATTERN_FRESH_SEARCH_INNER.apply_susbt(egraph, &msubst);
+                    egraph.union(etrue, fresh);
+                }
+            }
+
+            get_prf_mut(egraph).insert(n);
+        }
+
+        get_prf(egraph).iter().cloned().collect()
+    }
+}
+
+fn get_prf<'a, 'b>(egraph: &'b EGraph<Lang, PAnalysis<'a>>) -> &'b FxHashSet<Id> {
+    &egraph.analysis.pbl().state.n_prf
+}
+
+fn get_prf_mut<'a, 'b>(egraph: &'b mut EGraph<Lang, PAnalysis<'a>>) -> &'b mut FxHashSet<Id> {
+    &mut egraph.analysis.pbl_mut().state.n_prf
 }
 
 impl PrfKind {
@@ -269,37 +352,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for TopPrfRule {
             check_hash_eq_nonce(egraph);
         }
 
-        let nonces =
-            if egraph.analysis.pbl().state.n_prf.len() <= egraph.analysis.pbl().config.prf_limit {
-                let fun = egraph
-                    .analysis
-                    .pbl_mut()
-                    .declare_function()
-                    .fresh_name("n_prf")
-                    .flags(FunctionFlags::NONCE)
-                    .output(Sort::Nonce)
-                    .call();
-                let n = egraph.add(fun.app_id([]));
-                let etrue = egraph.add(TRUE.app_id([]));
-
-                let mut msubst = Subst::with_capacity(2);
-                msubst.insert(NK.as_egg(), n);
-
-                // make `(fresh_nonce n _ true)` hold for a bunch of them
-                for g in [U, V, B, HM] {
-                    for subst in substs.substs.iter() {
-                        msubst.insert(HM.as_egg(), *subst.get(g.as_egg()).unwrap());
-                        let fresh = PATTERN_FRESH_SEARCH_INNER.apply_susbt(egraph, &msubst);
-                        egraph.union(etrue, fresh);
-                    }
-                }
-
-                let nonces = &mut egraph.analysis.pbl_mut().state.n_prf;
-                nonces.push(n);
-                nonces.clone()
-            } else {
-                egraph.analysis.pbl().state.n_prf.clone()
-            };
+        let nonces = self.generate_fresh_nonce(egraph, &substs.substs);
 
         let mut res = Vec::with_capacity(nonces.len() * substs.substs.len());
         for n in nonces {
@@ -376,4 +429,18 @@ fn check_hash_eq_nonce<'a>(egraph: &mut egg::EGraph<Lang, PAnalysis<'a>>) {
     if let Some((_, _, id)) = to_explain.pop() {
         panic!("shared nonce and hash in {:}", egraph.id_to_expr(id))
     }
+}
+
+fn all_nonce_descendants<N: Analysis<Lang>>(
+    egraph: &EGraph<Lang, N>,
+    ancestors: implvec!(Id),
+) -> FxHashSet<Id> {
+    iter_descendants_lang(egraph, ancestors, can_have_children)
+        .filter(|&x| (x.head == NONCE))
+        .map(|x| x.args[0])
+        .collect()
+}
+
+fn can_have_children(f: &Function) -> bool {
+    f.is_egg_binder() || (f.is_part_of_F() && !f.is_alias())
 }

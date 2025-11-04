@@ -2,9 +2,19 @@
 pub mod fresh;
 
 mod search;
+use egg::{Analysis, EGraph, Id, Language};
+use itertools::Itertools;
+use rustc_hash::FxHashSet;
 /// Re-exports `EgraphSearcher` for e-graph based searching, `SyntaxSearcher` for syntax-based searching,
 /// and `default_is_special` for determining if a function is special.
 pub use search::{EgraphSearcher, SyntaxSearcher, default_is_special};
+use utils::{econtinue_if, implvec};
+
+use crate::{
+    Lang,
+    problem::PAnalysis,
+    terms::{Function, FunctionFlags, Sort, utils::iter_egraph::iter_descendants_id},
+};
 
 pub(crate) mod lambda_subst;
 
@@ -46,3 +56,72 @@ pub(crate) mod lambda_subst;
 //         .map(Var::from_usize);
 //     (vars1, others1)
 // }
+
+pub fn find_available_id<'e>(
+    egraph: &mut EGraph<Lang, PAnalysis<'e>>,
+    sort: Sort,
+    ids_to_check: implvec!(Id),
+) -> Id {
+    // *all* the subterms of `ids_to_check`
+    let used_ids = all_descendants(egraph, ids_to_check, can_have_childrens);
+    // the usable cached ids
+    let relevant_generated_ids: FxHashSet<_> = egraph
+        .analysis
+        .pbl()
+        .state
+        .generated_ids
+        .iter()
+        .filter(|x| {
+            egraph[**x]
+                .nodes
+                .iter()
+                .any(|l| l.head.signature.output == sort)
+        })
+        .copied()
+        .collect();
+    if let Some(id) = relevant_generated_ids.difference(&used_ids).next().copied() {
+        return id;
+    }
+
+    let new_var = egraph
+        .analysis
+        .pbl_mut()
+        .declare_function()
+        .output(sort)
+        .fresh_name("idx")
+        .call();
+    let new_var = egraph.add(Lang::new(new_var, []));
+    egraph
+        .analysis
+        .pbl_mut()
+        .state
+        .generated_ids
+        .insert(new_var);
+    new_var
+}
+
+pub fn all_descendants<N: Analysis<Lang>>(
+    egraph: &EGraph<Lang, N>,
+    ancestors: implvec!(Id),
+    mut can_have_childrens: impl FnMut(&Function) -> bool,
+) -> FxHashSet<Id> {
+    let mut todo = ancestors.into_iter().collect_vec();
+    let mut descendants = FxHashSet::default();
+    while let Some(x) = todo.pop() {
+        econtinue_if!(descendants.contains(&x));
+        descendants.insert(x);
+        todo.extend(
+            egraph[x]
+                .nodes
+                .iter()
+                .filter(|f| can_have_childrens(&f.head))
+                .flat_map(|f| f.children())
+                .cloned(),
+        );
+    }
+    descendants
+}
+
+fn can_have_childrens(f: &Function) -> bool {
+    !f.is_alias()
+}
