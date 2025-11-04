@@ -3,12 +3,12 @@ use std::cell::RefCell;
 use egg::{Analysis, EGraph, Id};
 use itertools::{Itertools, chain};
 use log::trace;
-use rustc_hash::{FxHashMap, FxHashSet};
-use utils::{econtinue_if, ereturn_if};
+use rustc_hash::FxHashMap;
+use utils::ereturn_if;
 
 use crate::Lang;
 use crate::terms::{
-    EXISTS, FIND_SUCH_THAT, Function, FunctionFlags, LAMBDA_O, LAMBDA_S, MACRO_COND, list,
+    EXISTS, FIND_SUCH_THAT, Function, LAMBDA_O, LAMBDA_S, list,
 };
 
 // pub fn lambda_subst<N: Analysis<Lang>>(

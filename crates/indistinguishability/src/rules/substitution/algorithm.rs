@@ -1,16 +1,15 @@
 use egg::{Analysis, EGraph, Id, Pattern, SearchMatches, Searcher};
 use itertools::{Itertools, chain};
 use log::{error, trace};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 use static_init::dynamic;
-use utils::{ereturn_if, ereturn_let};
 
 use super::X;
 use crate::{
     Lang, rexp,
     rules::substitution::{ACCEPTABLY_EMPTY, FROM, TO, is_ok_for_substitution},
-    terms::{MACRO_EXEC, MACRO_FRAME, PRED, SUBSTITUTION},
+    terms::SUBSTITUTION,
 };
 
 #[dynamic]

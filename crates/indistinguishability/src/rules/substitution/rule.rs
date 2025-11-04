@@ -1,23 +1,16 @@
 use super::*;
-use std::collections::hash_map::Entry;
-use std::rc::Rc;
 
-use egg::{Analysis, EGraph, Id, Language, Pattern, Searcher};
+use egg::{Language, Searcher};
 use golgge::{Dependancy, Rule};
 use itertools::Itertools;
-use rustc_hash::FxHashMap;
-use static_init::dynamic;
 use utils::ereturn_let;
-use utils::transposer::VecTranspose;
 
 use crate::problem::PAnalysis;
 use crate::rules::substitution::algorithm::compute_all_substitutions;
 // use crate::rules::base_rules::substitution;
 // use crate::rules::utils::mk_subst_rw;
-use crate::terms::{
-    Function, FunctionFlags, MACRO_EXEC, MACRO_FRAME, PRED, SUBSTITUTION, SUBSTITUTION_RULE,
-};
-use crate::{Lang, rexp};
+use crate::terms::SUBSTITUTION;
+use crate::Lang;
 
 /// This rule is a no op logic wise.
 ///

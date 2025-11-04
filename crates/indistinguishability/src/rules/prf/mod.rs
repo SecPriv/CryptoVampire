@@ -5,12 +5,12 @@ use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain};
 use rustc_hash::FxHashSet;
 use static_init::dynamic;
-use utils::{ebreak_if, ebreak_let, econtinue_if, ereturn_let, implvec};
+use utils::{ebreak_if, ebreak_let, ereturn_let, implvec};
 
 use crate::problem::{PAnalysis, PRule};
 use crate::terms::utils::iter_egraph::iter_descendants_lang;
 use crate::terms::{
-    EQUIV, EXISTS, FIND_SUCH_THAT, FRESH_NONCE, Function, FunctionFlags, NONCE, RecFOFormula,
+    EQUIV, FRESH_NONCE, Function, FunctionFlags, NONCE, RecFOFormula,
     SUBSTITUTION, SUBSTITUTION_RULE, Sort, TRUE,
 };
 use crate::{Lang, Problem, mk_signature, rexp};

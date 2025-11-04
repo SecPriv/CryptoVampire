@@ -9,12 +9,11 @@ use utils::{ereturn_if, ereturn_let};
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::protocol::{Protocol, Step};
 use crate::rules::PRF;
-use crate::rules::prf::B;
 use crate::rules::utils::SyntaxSearcher;
 use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::runners::SmtRunner;
 use crate::terms::{
-    AND, BITE, FAIL, Function, HAPPENS, LT, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE,
+    AND, BITE, Function, HAPPENS, LT, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE,
     PRED, RecFOFormula, Sort, VAMPIRE,
 };
 use crate::{Lang, Problem, fresh, rexp};

@@ -13,7 +13,7 @@ use utils::{econtinue_if, implvec};
 use crate::{
     Lang,
     problem::PAnalysis,
-    terms::{Function, FunctionFlags, Sort, utils::iter_egraph::iter_descendants_id},
+    terms::{Function, Sort},
 };
 
 pub(crate) mod lambda_subst;

@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::collections::hash_map::Entry;
 use std::fmt::{Debug, Display};
 use std::ops::{BitAnd, BitOr, Not, Shr};
 
@@ -11,13 +10,13 @@ use log::{error, trace, warn};
 use logic_formula::{Destructed, Formula, HeadSk};
 use quarck::CowArc;
 use rpds::HashTrieSet;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 use serde::Serialize;
 use steel::rvals::IntoSteelVal;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel::{SteelErr, rerrs};
 use steel_derive::Steel;
-use utils::{dynamic_iter, ebreak_let, econtinue_let, ereturn_if, ereturn_let, implvec, match_eq};
+use utils::{dynamic_iter, econtinue_let, ereturn_if, ereturn_let, implvec, match_eq};
 
 use super::{FOBinder, RecFOFormulaQuant};
 use crate::input::Registerable;

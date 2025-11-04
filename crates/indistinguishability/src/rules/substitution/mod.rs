@@ -7,15 +7,13 @@
 use std::collections::hash_map::Entry;
 use std::rc::Rc;
 
-use egg::{Analysis, EGraph, Id, Language, Pattern, Searcher};
-use golgge::{Dependancy, Rule};
+use egg::{Analysis, EGraph, Id, Language, Pattern};
+use golgge::Rule;
 use itertools::Itertools;
 use rustc_hash::FxHashMap;
 use static_init::dynamic;
-use utils::ereturn_let;
 use utils::transposer::VecTranspose;
 
-use crate::problem::PAnalysis;
 // use crate::rules::base_rules::substitution;
 // use crate::rules::utils::mk_subst_rw;
 use crate::terms::{

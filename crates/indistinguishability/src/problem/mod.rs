@@ -11,7 +11,7 @@ use itertools::{Itertools, chain};
 use log::{log_enabled, trace};
 use logic_formula::Formula;
 use logic_formula::iterators::QuantiferIterator;
-use utils::{dynamic_iter, econtinue_let, implvec};
+use utils::{econtinue_let, implvec};
 
 use crate::problem::function_builder::{
     SetAlias, SetCryptography, SetInputs, SetName, SetOutput, SetStepIdx,
@@ -118,7 +118,7 @@ impl Problem {
                 time_limit,
                 iter_limit,
                 trace,
-                depth,
+                
                 ..
             } = self.config;
             golgge::Config::builder()

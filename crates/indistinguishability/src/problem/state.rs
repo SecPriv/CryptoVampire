@@ -1,7 +1,6 @@
 use egg::Id;
 use rustc_hash::FxHashSet;
 
-use crate::terms::Function;
 
 #[derive(Debug, Clone, Default)]
 pub struct ProblemState {

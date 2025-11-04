@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use egg::{Analysis, EGraph, Id, Language, RecExpr};
 use itertools::Itertools;
-use log::{error, warn};
+use log::warn;
 use utils::{econtinue_if, ereturn_if};
 
 use crate::Lang;

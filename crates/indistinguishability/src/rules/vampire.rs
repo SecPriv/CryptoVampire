@@ -8,7 +8,7 @@ use utils::ereturn_let;
 
 use crate::problem::PAnalysis;
 use crate::runners::SmtRunner;
-use crate::terms::{RecFOFormula, TRUE, VAMPIRE};
+use crate::terms::{RecFOFormula, VAMPIRE};
 use crate::{Lang, Problem, rexp};
 
 declare_trace!($"vampire_rule");

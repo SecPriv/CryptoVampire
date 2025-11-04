@@ -4,7 +4,6 @@ use std::rc::Rc;
 
 use bon::{Builder, bon, builder};
 use itertools::{Itertools, chain};
-use log::trace;
 use logic_formula::Formula;
 use utils::ereturn_if;
 
@@ -12,7 +11,7 @@ use crate::terms::quantifier::default_valid;
 use crate::terms::{
     Function, FunctionFlags, Quantifier, QuantifierIndex, QuantifierT, RecFOFormula, Sort, Variable,
 };
-use crate::{Problem, fresh};
+use crate::Problem;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Builder)]
 #[builder(builder_type = FindSuchThatBuilder0)]
