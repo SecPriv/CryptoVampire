@@ -44,5 +44,5 @@ unit:
 all:
   stage: integration
   script:
-    - nix develop --command cargo test --target-dir ./target --release --test-threads 1 
+    - nix develop --command cargo test --target-dir ./target --release -- --test-threads 1 
   only: [schedules]
