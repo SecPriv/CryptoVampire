@@ -80,9 +80,9 @@ pub fn mk_rules() -> impl Iterator<Item = RcRule> {
 
         // TODO: fix -> this is unsound
         "deduce fresh nonces":
-        (deduce_m #u #v (NONCE #x) (NONCE #y) #h1 #h2):-
+        (deduce_m #u #v (NONCE #x) (NONCE #x) #h1 #h2):-
           (FRESH_NONCE #x #u #h1),
-          (FRESH_NONCE #y #v #h2).
+          (FRESH_NONCE #x #v #h2).
     };
 
     chain![deduce_macro, others].map(|x| x.into_mrc())

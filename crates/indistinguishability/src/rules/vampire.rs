@@ -8,7 +8,7 @@ use utils::ereturn_let;
 
 use crate::problem::PAnalysis;
 use crate::runners::SmtRunner;
-use crate::terms::{RecFOFormula, VAMPIRE};
+use crate::terms::{RecFOFormula, TRUE, VAMPIRE};
 use crate::{Lang, Problem, rexp};
 
 declare_trace!($"vampire_rule");
@@ -51,6 +51,11 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for VampireRule {
         pbl.find_temp_quantifiers(std::slice::from_ref(&to_prove));
 
         let to_prove = to_prove.as_smt(pbl).unwrap();
+
+        // if dep.is_axioms() { <- not possible likely because of indices reuse
+        //     let et = egraph.add(TRUE.app_id([]));
+        //     egraph.union_trusted(*s.get(X.as_egg()).unwrap(), et, "v");
+        // }
 
         self.exec.run_to_dependancy(pbl, to_prove)
     }
