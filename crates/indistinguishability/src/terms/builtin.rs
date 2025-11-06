@@ -132,9 +132,9 @@ mk_builtin_funs!(
     IMPLIES "mimplies" "bit_implies" "implies" "=>" {
         signature: s!(Bool, 2),
         flags: f!(BUILTIN_SMT), // e.g., this will be `BUILTIN | BUILTIN_SMT` instead of `FunctionFlags::BUILTIN`
-        alias: Some(alias!{ // <- magic
-            a:Bool, b:Bool in rexp!(const !a), rexp!(const !b) => rexp!(const (BITE !a !b true))
-        }),
+        // alias: Some(alias!{ // <- magic
+        //     a:Bool, b:Bool in rexp!(const !a), rexp!(const !b) => rexp!(const (BITE !a !b true))
+        // }),
     };
 
     /// Regular `and`, i.e., `a /\ b`.

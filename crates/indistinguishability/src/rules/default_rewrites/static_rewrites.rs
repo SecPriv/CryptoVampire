@@ -4,8 +4,7 @@ use itertools::chain;
 use crate::Lang;
 use crate::protocol::MacroKind;
 use crate::terms::{
-    ATT, BITE, EMPTY, FROM_BOOL, Function, HAPPENS, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME,
-    MACRO_MSG, MITE, PRED, PROJ_1, PROJ_2, TUPLE, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT,
+    ATT, BITE, EMPTY, FROM_BOOL, Function, HAPPENS, IMPLIES, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_MSG, MITE, PRED, PROJ_1, PROJ_2, TUPLE, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT
 };
 
 /// Creates a set of static rewrite rules.
@@ -30,26 +29,20 @@ pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>
       ["b_if simp4"] (b_ite #a true false) => (#a).
       ["b_if simp3"] (b_ite #a (b_ite #a #b #c) #d) => (b_ite #a #b #d).
 
-      // ["meq true"] (#v1 = (= #a #b), #v1 = true) => (#a = #b).
+      ["if implies simp"] (b_ite (and #a #b) #a true) => true.
+      ["if implies simp2"] (b_ite #a #a true) => true.
+      ["if implies trans"] (#v1 = true, #v1 = (m_ite #a #b true), #v1 = (m_ite #b #c true)) => (#v1 = (=> #a #c)).
 
-      ["implies simp"] (b_ite (and #a #b) #a true) => true.
-      ["implies simp2"] (b_ite #a #a true) => true.
-      // %["and symm"] (and #a #b) => (and #b #a).
-      // %["and simpl"] (and #a #a) => (#a).
-      // %["and assoc"] (and #a (and #b #c)) => (and (and #a #b) #c).
-      // ["and def"] (and #a #b) => (b_ite #a #b false).
+      ["implies simp1"] (IMPLIES true #a) => (#a).
+      ["implies simp2"] (IMPLIES #a true) => true.
+      ["implies simp3"] (IMPLIES false #a) => true.
+      ["implies trans"] (#v1 = true, #v1 = (IMPLIES #a #b), #v1 = (IMPLIES #b #c)) => (#v1 = (=> #a #c)).
 
-      // ["not def"] (not #a) => (b_ite #a false true).
-      ["implies trans"] (#v1 = true, #v1 = (m_ite #a #b true), #v1 = (m_ite #b #c true)) => (#v1 = (=> #a #c)).
       ["p1"] (PROJ_1 (TUPLE #a #b)) => (#a).
       ["p2"] (PROJ_2 (TUPLE #a #b)) => (#b).
       ["meq refl"] (= #a #a) => true.
       ["meq symm"] (= #a #b) => (= #b #a).
 
-      ["bif true"] (b_ite true #a #b) => (#a).
-      ["bif false"] (b_ite false #a #b) => (#b).
-      ["bif simp1"] (b_ite #x #a #a) => (#a).
-      ["bif simp3"] (b_ite #a (b_ite #a #b #c) #d) => (b_ite #a #b #d).
       ["and simp1"] (and #a (and #a #b)) => (and #a #b).
       ["and simp2"] (and (and #a #b) #b) => (and #a #b).
       ["and simp3"] (and (and (and #a #b) #c) #b) => (and (and #a #b) #c).
