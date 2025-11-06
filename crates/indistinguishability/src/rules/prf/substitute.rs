@@ -38,15 +38,18 @@ struct SubstData {
 
 impl SubstData {
     fn proof_to_term<'a>(&self, pgrm: &mut Program<Lang, PAnalysis<'a>>, proof: Id) -> Id {
+        tr!("proof to term from:\n\t{}", pgrm.egraph().id_to_expr(proof).pretty(100));
         let ProofItem { ids, payload, rule } = pgrm.get_proof_item(proof).unwrap();
         let prf_proof = payload.as_ref().unwrap().downcast_ref().unwrap();
-        tr!("(prf) substitution with from rule:\n\t{:?}", golgge::DebugRule::new(rule.as_ref()));
+        tr!(
+            "(prf) substitution from rule:\n\t{:?}",
+            golgge::DebugRule::new(rule.as_ref())
+        );
 
         match prf_proof {
             PRFProof::Keep => self.get_term(pgrm, proof),
             PRFProof::Instance => pgrm.egraph_mut().add(NONCE.app_id([self.nprf])),
             PRFProof::Apply(f) if f != &self.hash => {
-                println!("{f}");
                 let t = self.get_term(pgrm, proof);
                 let mut args_proofs = ids.into_iter();
                 let old_args = pgrm.egraph()[t]
@@ -62,12 +65,11 @@ impl SubstData {
                 let args = izip!(f.signature.inputs.iter(), old_args)
                     .map(|(&s, bid)| {
                         if s == Sort::Bool || s == Sort::Bitstring {
-                            args_proofs.next().unwrap()
+                            self.proof_to_term(pgrm, args_proofs.next().unwrap())
                         } else {
                             bid
                         }
                     })
-                    .map(|proof| self.proof_to_term(pgrm, proof))
                     .collect();
 
                 assert!(args_proofs.next().is_none());
@@ -111,7 +113,10 @@ impl SubstData {
             ..
         } = self;
 
-        tr!("(prf) substitution: get_term\n\t{}", pgrm.egraph().id_to_expr(id).pretty(100));
+        tr!(
+            "(prf) substitution: get_term\n\t{}",
+            pgrm.egraph().id_to_expr(id).pretty(100)
+        );
         let l = pgrm.egraph()[id]
             .nodes
             .iter()
