@@ -3,8 +3,7 @@ use itertools::chain;
 use crate::problem::{PRule, RcRule};
 use crate::rules::deduce::GetDeduce;
 use crate::terms::{
-    AND, BIT_DEDUCE, BITE, BOOL_DEDUCE, EQUIV, FRESH_NONCE, HAPPENS, LEQ, MACRO_COND, MACRO_EXEC,
-    MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, VAMPIRE,
+    AND, BIT_DEDUCE, BITE, BOOL_DEDUCE, EQUIV, FAIL, FRESH_NONCE, HAPPENS, IS_FRESH_NONCE, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, VAMPIRE
 };
 
 /// Creates a set of static deduction rules.
@@ -14,9 +13,7 @@ pub fn mk_rules() -> impl Iterator<Item = RcRule> {
     let deduce_b = &BOOL_DEDUCE;
     let b_ite = &BITE;
     let m_ite = &MITE;
-    decl_vars![
-        t, t2, p1, p2, h1, h2, u, v, a, b, a1, b1, a2, b2, c1, c2, x, y
-    ];
+    decl_vars![t, t2, p1, p2, h1, h2, u, v, a, b, a1, b1, a2, b2, c1, c2, x];
 
     let deduce_macro = [
         &MACRO_FRAME,
@@ -35,6 +32,8 @@ pub fn mk_rules() -> impl Iterator<Item = RcRule> {
             (VAMPIRE (HAPPENS #t))
         )
     });
+
+    let vampire_fail = mk_prolog!("vampire false";: (VAMPIRE false) :-!,FAIL);
 
     let others = mk_many_prolog! {
         "vampire trivial":
@@ -78,12 +77,14 @@ pub fn mk_rules() -> impl Iterator<Item = RcRule> {
     // ======================== other ==========================
     // =========================================================
 
-        // TODO: fix -> this is unsound
         "deduce fresh nonces":
         (deduce_m #u #v (NONCE #x) (NONCE #x) #h1 #h2):-
           (FRESH_NONCE #x #u #h1),
           (FRESH_NONCE #x #v #h2).
+
+        "fresh nonce fresh":
+        (FRESH_NONCE (IS_FRESH_NONCE #x) #u #h1).
     };
 
-    chain![deduce_macro, others].map(|x| x.into_mrc())
+    chain![deduce_macro, [vampire_fail], others].map(|x| x.into_mrc())
 }

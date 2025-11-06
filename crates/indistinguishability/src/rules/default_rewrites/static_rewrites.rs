@@ -4,19 +4,19 @@ use itertools::chain;
 use crate::Lang;
 use crate::protocol::MacroKind;
 use crate::terms::{
-    ATT, BITE, EMPTY, FROM_BOOL, Function, HAPPENS, IMPLIES, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_MSG, MITE, PRED, PROJ_1, PROJ_2, TUPLE, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT
+    ATT, BITE, EMPTY, FRESH_NONCE, FROM_BOOL, Function, HAPPENS, IMPLIES, IS_FRESH_NONCE, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_MSG, MITE, NONCE, PRED, PROJ_1, PROJ_2, TUPLE, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT
 };
 
 /// Creates a set of static rewrite rules.
 pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>> {
     let b_ite = &BITE;
     let m_ite = &MITE;
-    decl_vars![t, t1, t2, a, b, c, d, v1, x, p];
+    decl_vars![t, t1, t2, a, b, c, d, v1, x, p, n];
 
     let main = mk_many_rewrites! {
       ["if true"] (m_ite true #a #b) => (#a).
       ["if false"] (m_ite false #a #b) => (#b).
-      ["implies def"] (=> #a #b) => (b_ite #a #b true).
+      // ["implies def"] (=> #a #b) => (b_ite #a #b true).
       ["if simp1"] (m_ite #x #a #a) => (#a).
       ["if simp2"] (m_ite #a #a false) => (#a).
       ["if simp3"] (m_ite #a (m_ite #a #b #c) #d) => (m_ite #a #b #d).
@@ -36,12 +36,14 @@ pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>
       ["implies simp1"] (IMPLIES true #a) => (#a).
       ["implies simp2"] (IMPLIES #a true) => true.
       ["implies simp3"] (IMPLIES false #a) => true.
+      ["implies simp4"] (IMPLIES #a false) => (not #a).
       ["implies trans"] (#v1 = true, #v1 = (IMPLIES #a #b), #v1 = (IMPLIES #b #c)) => (#v1 = (=> #a #c)).
 
       ["p1"] (PROJ_1 (TUPLE #a #b)) => (#a).
       ["p2"] (PROJ_2 (TUPLE #a #b)) => (#b).
       ["meq refl"] (= #a #a) => true.
       ["meq symm"] (= #a #b) => (= #b #a).
+      ["meq nonce"] (= (NONCE #a) (NONCE #b)) => (= #a #b).
 
       ["and simp1"] (and #a (and #a #b)) => (and #a #b).
       ["and simp2"] (and (and #a #b) #b) => (and #a #b).
@@ -67,9 +69,13 @@ pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>
 
       ["leq refl"] (LEQ #t #t) => true.
       ["leq pred"] (LEQ (PRED #t) #t) => true.
+      ["leq pred rev"] (LEQ #t (PRED #t)) => false.
 
       ["happens leq"]
       (#v1 = (HAPPENS #t1), #v1 = (LEQ #t2 #t1), #v1 = true) => (#v1 = (HAPPENS #t2)).
+
+      ["fresh nonce"]
+      (IS_FRESH_NONCE #n) => (#n).
     };
 
     let unfold = MacroKind::all().map(|kind| {

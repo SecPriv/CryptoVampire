@@ -10,8 +10,8 @@ use utils::{ebreak_if, ebreak_let, ereturn_let, implvec};
 use crate::problem::{PAnalysis, PRule};
 use crate::terms::utils::iter_egraph::iter_descendants_lang;
 use crate::terms::{
-    EQUIV, FRESH_NONCE, Function, FunctionFlags, NONCE, RecFOFormula, SUBSTITUTION,
-    SUBSTITUTION_RULE, Sort, TRUE,
+    EQ, EQUIV, FALSE, FRESH_NONCE, Function, FunctionFlags, IS_FRESH_NONCE, NONCE, RecFOFormula,
+    SUBSTITUTION, SUBSTITUTION_RULE, Sort, TRUE,
 };
 use crate::{Lang, Problem, mk_signature, rexp};
 
@@ -86,11 +86,10 @@ impl PRF {
         let candidate_bool =
             declare!(pbl@pos: "prf_candidate_bool"; Bool, Bitstring, Nonce => Bool);
 
-        //  m, k ||> x | h
-        let search_bitstring =
-            declare!(pbl@pos: "prf_search_bitstring"; Bitstring, Nonce, Bitstring, Bool => Bool);
+        //  m, k, nprf ||> x | h
+        let search_bitstring = declare!(pbl@pos: "prf_search_bitstring"; Bitstring, Nonce, Nonce, Bitstring, Bool => Bool);
         let search_bool =
-            declare!(pbl@pos: "prf_search_bool"; Bitstring, Nonce, Bool, Bool => Bool);
+            declare!(pbl@pos: "prf_search_bool"; Bitstring, Nonce, Nonce, Bool, Bool => Bool);
 
         // m, k, ptcl, t, h
         let search_trigger =
@@ -157,8 +156,8 @@ impl PRF {
 
         let conclusionl = rexp!((EQUIV #U #V (candidate_bitstring #HM #M #K) #B));
         let conclusionr = rexp!((EQUIV #U #V #B (candidate_bitstring #HM #M #K)));
-        let subterm_hm = rexp!((search_bitstring #M #K #HM true));
-        let subterm_m = rexp!((search_bitstring #M #K #M true));
+        let subterm_hm = rexp!((search_bitstring #M #K #NK #HM true));
+        let subterm_m = rexp!((search_bitstring #M #K #NK #M true));
         let freshl = rexp!((FRESH_NONCE #NK #U true));
         let freshr = rexp!((FRESH_NONCE #NK #V true));
         let new_goall = rexp!((SUBSTITUTION_RULE (EQUIV #U #V (SUBSTITUTION #HM (hash #M (NONCE #K)) (NONCE #NK)) #B)));
@@ -255,11 +254,12 @@ impl TopPrfRule {
 
     fn generate_fresh_nonce<'a>(
         &self,
-        egraph: &mut EGraph<Lang, PAnalysis<'a>>,
+        pgrm: &mut golgge::Program<Lang, PAnalysis<'a>>,
         substs: &[Subst],
     ) -> Vec<Id> {
         // try to look for
         'a: {
+            let egraph = pgrm.egraph();
             let nonces = get_prf(egraph);
             ebreak_if!('a, nonces.is_empty());
 
@@ -296,8 +296,19 @@ impl TopPrfRule {
         }
 
         // else generate new nonce
-        if egraph.analysis.pbl().state.n_prf.len() <= egraph.analysis.pbl().config.prf_limit {
-            let fun = egraph
+        if pgrm.egraph().analysis.pbl().state.n_prf.len()
+            <= pgrm.egraph().analysis.pbl().config.prf_limit
+        {
+            let nonces = pgrm
+                .egraph()
+                .analysis
+                .pbl()
+                .functions()
+                .nonces()
+                .cloned()
+                .collect_vec();
+            let fun = pgrm
+                .egraph_mut()
                 .analysis
                 .pbl_mut()
                 .declare_function()
@@ -305,27 +316,46 @@ impl TopPrfRule {
                 .flags(FunctionFlags::NONCE)
                 .output(Sort::Nonce)
                 .call();
-            let n = egraph.add(fun.app_id([]));
-            let etrue = egraph.add(TRUE.app_id([]));
+            let n = pgrm.egraph_mut().add(fun.app_id([]));
+            pgrm.egraph_mut().add(IS_FRESH_NONCE.app_id([n]));
 
-            let mut msubst = Subst::with_capacity(2);
-            msubst.insert(NK.as_egg(), n);
+            for n in nonces {
+                let vars = n.signature.mk_vars().into_iter().map(RecFOFormula::Var);
+                let from = Pattern::from(&rexp!((EQ (n #vars*) fun)));
 
-            // make `(fresh_nonce n _ true)` hold for a bunch of them
-            for g in [U, V, B, HM] {
-                for subst in substs.iter() {
-                    msubst.insert(HM.as_egg(), *subst.get(g.as_egg()).unwrap());
-                    let fresh = PATTERN_FRESH_SEARCH_INNER.apply_susbt(egraph, &msubst);
-                    egraph.union(etrue, fresh);
-                }
+                let rw_rule = egg::Rewrite::new(
+                    format!("{fun} {n} distinctiveness"),
+                    from,
+                    PATTERN_FALSE.clone(),
+                )
+                .unwrap();
+                println!("adding {rw_rule:?}");
+                pgrm.add_eq_rule(rw_rule);
             }
 
-            get_prf_mut(egraph).insert(n);
+            // let etrue = egraph.add(TRUE.app_id([]));
+
+            // let mut msubst = Subst::with_capacity(2);
+            // msubst.insert(NK.as_egg(), n);
+
+            // // make `(fresh_nonce n _ true)` hold for a bunch of them
+            // for g in [U, V, B, HM] {
+            //     for subst in substs.iter() {
+            //         msubst.insert(HM.as_egg(), *subst.get(g.as_egg()).unwrap());
+            //         let fresh = PATTERN_FRESH_SEARCH_INNER.apply_susbt(egraph, &msubst);
+            //         egraph.union(etrue, fresh);
+            //     }
+            // }
+
+            get_prf_mut(pgrm.egraph_mut()).insert(n);
         }
 
-        get_prf(egraph).iter().cloned().collect()
+        get_prf(pgrm.egraph()).iter().cloned().collect()
     }
 }
+
+#[dynamic]
+static PATTERN_FALSE: Pattern<Lang> = Pattern::from(&rexp!(false));
 
 fn get_prf<'a, 'b>(egraph: &'b EGraph<Lang, PAnalysis<'a>>) -> &'b FxHashSet<Id> {
     &egraph.analysis.pbl().state.n_prf
@@ -347,14 +377,14 @@ impl PrfKind {
 impl<'a> Rule<Lang, PAnalysis<'a>> for TopPrfRule {
     /// Searches for the conclusion pattern in the e-graph and applies the PRF rule.
     fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: Id) -> Dependancy {
-        let egraph = prgm.egraph_mut();
-        ereturn_let!(let Some(substs)= self.conclusion.search_eclass(egraph, goal), Dependancy::impossible());
+        ereturn_let!(let Some(substs)= self.conclusion.search_eclass(prgm.egraph(), goal), Dependancy::impossible());
 
         if cfg!(debug_assertions) {
-            check_hash_eq_nonce(egraph);
+            check_hash_eq_nonce(prgm.egraph_mut());
         }
 
-        let nonces = self.generate_fresh_nonce(egraph, &substs.substs);
+        let nonces = self.generate_fresh_nonce(prgm, &substs.substs);
+        let egraph = prgm.egraph_mut();
 
         let mut res = Vec::with_capacity(nonces.len() * substs.substs.len());
         for n in nonces {
@@ -363,7 +393,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for TopPrfRule {
                 subst.insert(NK.as_egg(), n);
 
                 let r = [
-                    PATTERN_FRESH_SEARCH_INNER.apply_susbt(egraph, &subst),
+                    // PATTERN_FRESH_SEARCH_INNER.apply_susbt(egraph, &subst),
                     self.subterm_hyp.apply_susbt(egraph, &subst),
                     self.subterm_hm.apply_susbt(egraph, &subst),
                     self.subterm_m.apply_susbt(egraph, &subst),
@@ -396,6 +426,12 @@ fn check_hash_eq_nonce<'a>(egraph: &mut egg::EGraph<Lang, PAnalysis<'a>>) {
         .collect_vec();
 
     let mut to_explain = Vec::new();
+
+    if let Some(t) = egraph.lookup(TRUE.app_id([]))
+        && egraph[t].nodes.iter().any(|f| f.head == FALSE)
+    {
+        to_explain.push((TRUE.app_empty(), FALSE.app_empty(), t));
+    }
 
     for eclass in egraph.classes() {
         let hashes = eclass

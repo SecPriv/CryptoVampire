@@ -13,12 +13,12 @@ use crate::rules::utils::SyntaxSearcher;
 use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::runners::SmtRunner;
 use crate::terms::{
-    AND, BITE, Function, HAPPENS, LT, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE, PRED,
-    RecFOFormula, Sort, VAMPIRE,
+    AND, BITE, Function, HAPPENS, IS_FRESH_NONCE, LT, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE, PRED, RecFOFormula, Sort, VAMPIRE
 };
 use crate::{Lang, Problem, fresh, rexp};
 
 declare_trace!($"search_prf");
+decl_vars!(const M:Bitstring, K:Nonce, P:Protocol, T:Time, H:Bool, N_PRF:Nonce);
 
 // =========================================================
 // ==================== prolog search ======================
@@ -59,7 +59,6 @@ fn mk_rule_one(prf: &PRF, fun: Function) -> PrologRule<Lang> {
     debug_assert_ne!(fun, NONCE);
     let inputs = &fun.signature.inputs;
 
-    decl_vars!(m, k, h);
     let args = inputs
         .iter()
         .map(|&x| RecFOFormula::Var(fresh!(x)))
@@ -68,13 +67,13 @@ fn mk_rule_one(prf: &PRF, fun: Function) -> PrologRule<Lang> {
     let deps = izip!(inputs.iter(), &args)
         .filter_map(|(&sort, arg)| {
             let search = prf.get_search(sort)?;
-            Some(rexp!((search #m #k #arg #h)))
+            Some(rexp!((search #M #K #N_PRF #arg #H)))
         })
         .map(|x| Pattern::from(&x))
         .collect_vec();
 
     let search = prf.get_search(fun.signature.output).unwrap();
-    let input = Pattern::from(&rexp!((search #m #k (fun #args*) #h)));
+    let input = Pattern::from(&rexp!((search #M #K #N_PRF (fun #args*) #H)));
 
     PrologRule::builder()
         .input(input)
@@ -103,33 +102,33 @@ fn mk_static_rules(
         .filter(|f| !f.is_special_subterm())
         .filter(|f| *f != &AND)
         .cloned();
-    decl_vars!(m, k, m2, k2, h, n);
+    decl_vars!(m, k, m2, k2, h, n, nprf);
     chain![
         [
             // search axiom
             //
             // ```text
             // ---------------------
-            //  not(m, k ||> k)
+            //  not(m, k, nprf ||> k | _)
             // ```
             //
             // We represent it in prolog using `fail` and `!`, so it is
             //
             // ```text
-            // m, k ||> k :- !, fail
+            // m, k, nprf ||> k | _ :- !, fail
             // ```
             //
             // ### soundness
             // This *needs* to be in front of the [mk_rule_one] for [NONCE].
             mk_prolog! {
                 "search_prf_found_key"; m, k, h:
-                (search_m #m #k (NONCE #k) #h) :-!,
+                (search_m #m #k #nprf (NONCE #k) #h) :-!,
                     (VAMPIRE (not #h))
             }
         ],
         mk_many_prolog! {
             "search_prf_false":
-            (search_m #m #k #m2 false).
+            (search_m #m #k #nprf #m2 false).
 
             // ```text
             //  |- h => k != n
@@ -137,8 +136,10 @@ fn mk_static_rules(
             //  m,k ||> n | h
             // ```
             "search_prf_nonce":
-            (search_m #m #k (NONCE #n) #h) :-
-                (VAMPIRE (=> #h (distinct #k #n))).
+            (search_m #m #k #nprf (NONCE #n) #h) :-
+                (VAMPIRE (=> #h (distinct #k #n))),
+                (VAMPIRE (=> #h (distinct #nprf #n)))
+                .
 
             // ```text
             // ---------------------
@@ -147,7 +148,7 @@ fn mk_static_rules(
             //
             // this means that it will be captured by the substitution
             "search_prf_found_instance":
-            (search_m #m #k (hash #m (NONCE #k)) #h).
+            (search_m #m #k #nprf (hash #m (NONCE #k)) #h).
         },
         functions.map(|f| mk_rule_one(prf, f)),
         mk_many_prolog! {
@@ -161,9 +162,9 @@ fn mk_static_rules(
             //    m, k ||> hash(m', k)
             // ```
             "search_prf_neq_m" :
-            (search_m #m #k (hash #m2 (NONCE #k)) #h) :-
+            (search_m #m #k #nprf (hash #m2 (NONCE #k)) #h) :-
                 (VAMPIRE (=> #h (distinct #m #m2))),
-                (search_m #m #k #m2 #h).
+                (search_m #m #k #nprf #m2 #h).
 
 
 
@@ -176,42 +177,43 @@ fn mk_static_rules(
             //         m, k ||> hash(m', k')
             // ```
             "search_prf_neq_k":
-            (search_m #m #k (hash #m2 (NONCE #k2)) #h) :-
-                (VAMPIRE (=> #h (distinct #k #k2))),
-                (search_m #m #k #m2 #h),
-                (search_m #m #k #k2 #h).
+            (search_m #m #k #nprf (hash #m2  #k2) #h) :-
+                (VAMPIRE (=> #h (distinct (NONCE #k) #k2))),
+                (VAMPIRE (=> #h (distinct (NONCE #nprf) #k2))),
+                (search_m #m #k #nprf #m2 #h),
+                (search_m #m #k #nprf #k2 #h).
 
 
             // macros
             "search_prf_exec" p, t:
-            (search_b #m #k (MACRO_EXEC #t  #p) #h) :-
+            (search_b #m #k (IS_FRESH_NONCE #nprf) (MACRO_EXEC #t  #p) #h) :-
             (search_trigger #m #k #p #t #h).
 
             "search_prf_frame" p, t:
-            (search_m #m #k (MACRO_FRAME #t  #p) #h) :-
+            (search_m #m #k (IS_FRESH_NONCE #nprf) (MACRO_FRAME #t  #p) #h) :-
             (search_trigger #m #k #p #t #h).
 
             "search_prf_input" p, t:
-            (search_m #m #k (MACRO_INPUT #t  #p) #h) :-
+            (search_m #m #k (IS_FRESH_NONCE #nprf) (MACRO_INPUT #t  #p) #h) :-
             (search_trigger #m #k #p (PRED #t) #h).
 
             // if and and
             "search_prf_ite_m" c, l, r:
-            (search_m #m #k (MITE #c #l #r) #h):-
-                (search_b #m #k #c #h),
-                (search_m #m #k #l (and #c #h)),
-                (search_m #m #k #r (and (not #c) #h)).
+            (search_m #m #k #nprf (MITE #c #l #r) #h):-
+                (search_b #m #k #nprf #c #h),
+                (search_m #m #k #nprf #l (and #c #h)),
+                (search_m #m #k #nprf #r (and (not #c) #h)).
 
             "search_prf_ite_b" c, l, r:
-            (search_m #m #k (BITE #c #l #r) #h):-
-                (search_b #m #k #c #h),
-                (search_b #m #k #l (and #c #h)),
-                (search_b #m #k #r (and (not #c) #h)).
+            (search_m #m #k #nprf (BITE #c #l #r) #h):-
+                (search_b #m #k #nprf #c #h),
+                (search_b #m #k #nprf #l (and #c #h)),
+                (search_b #m #k #nprf #r (and (not #c) #h)).
 
             "search_prf_and" a, b:
-            (search_b #m #k (AND #a #b) #h):-
-                (search_b #m #k #a #h),
-                (search_b #m #k #b (and #a #h)).
+            (search_b #m #k #nprf (AND #a #b) #h):-
+                (search_b #m #k #nprf #a #h),
+                (search_b #m #k #nprf #b (and #a #h)).
         }
     ]
 }
@@ -332,8 +334,6 @@ impl crate::rules::utils::SyntaxSearcher for Search {
 // =========================================================
 // ======================== Rule ===========================
 // =========================================================
-
-decl_vars!(const M:Bitstring, K:Nonce, P:Protocol, T:Time, H:Bool);
 
 /// A rule that triggers the PRF analysis using the Vampire SMT solver.
 #[derive(Debug)]
