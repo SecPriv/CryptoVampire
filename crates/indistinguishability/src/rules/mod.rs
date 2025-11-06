@@ -45,29 +45,29 @@ macro_rules! decl_vars {
 /// mk_prolog!("rule-name"; a, b: (and a b) :- (=> a b));
 /// ```
 macro_rules! mk_prolog {
-    ($($var:ident),*: $pre:tt) => {
-        mk_prolog!(@ false, None; ($($var),*) $pre :-)
+    ($($var:ident),* $(($payload:expr))?: $pre:tt) => {
+        mk_prolog!(@ false, None $(,$payload)?; ($($var),*) $pre :-)
     };
-    ($name:expr; $($var:ident),*: $pre:tt) => {
-        mk_prolog!(@ false, Some($name); ($($var),*) $pre :-)
-    };
-
-    ($($var:ident),*: $pre:tt :-!, $($post:tt),*) => {
-        mk_prolog!(@ true, None; ($($var),*) $pre :- $($post),*)
-    };
-    ($name:expr; $($var:ident),*: $pre:tt :-!, $($post:tt),*) => {
-        mk_prolog!(@ true, Some($name); ($($var),*) $pre :- $($post),*)
+    ($name:expr; $($var:ident),* $(($payload:expr))?: $pre:tt) => {
+        mk_prolog!(@ false, Some($name) $(,$payload)?; ($($var),*) $pre :-)
     };
 
-    ($($var:ident),*: $pre:tt :- $($post:tt),*) => {
-        mk_prolog!(@ false, None; ($($var),*) $pre :- $($post),*)
+    ($($var:ident),* $(($payload:expr))?: $pre:tt :-!, $($post:tt),*) => {
+        mk_prolog!(@ true, None $(,$payload)?; ($($var),*) $pre :- $($post),*)
     };
-    ($name:expr; $($var:ident),*: $pre:tt :- $($post:tt),*) => {
-        mk_prolog!(@ false, Some($name); ($($var),*) $pre :- $($post),*)
+    ($name:expr; $($var:ident),* $(($payload:expr))?: $pre:tt :-!, $($post:tt),*) => {
+        mk_prolog!(@ true, Some($name) $(,$payload)?; ($($var),*) $pre :- $($post),*)
+    };
+
+    ( $($var:ident),* $(($payload:expr))?: $pre:tt :- $($post:tt),*) => {
+        mk_prolog!(@ false, None $(,$payload)?; ($($var),*) $pre :- $($post),*)
+    };
+    ($name:expr; $($var:ident),* $(($payload:expr))?: $pre:tt :- $($post:tt),*) => {
+        mk_prolog!(@ false, Some($name) $(,$payload)?; ($($var),*) $pre :- $($post),*)
     };
 
 
-    (@ $cut:expr, $name:expr; ($($var:ident),*) $pre:tt :- $($post:tt),*) => {{
+    (@ $cut:expr, $name:expr $(, $payload:expr)?; ($($var:ident),*) $pre:tt :- $($post:tt),*) => {{
         $(
             let $var = $crate::fresh!();
         )*
@@ -76,9 +76,11 @@ macro_rules! mk_prolog {
             .deps([$(egg::Pattern::from(&$crate::rexp!($post))),*])
             .maybe_name($name)
             .cut($cut)
+            $(.payload($payload))?
             .build()
             .unwrap()
     }};
+
 }
 
 /// build many prolog rules at once
@@ -94,7 +96,7 @@ macro_rules! mk_prolog {
 macro_rules! mk_many_prolog {
     (
         $(
-            $name:literal $($var:ident),* :
+            $name:literal  $($var:ident),* $( ($payload:expr))? :
             $pre:tt
             $(:-! $($post:tt),+)?
             $(:- $($post2:tt),+)?
@@ -102,7 +104,7 @@ macro_rules! mk_many_prolog {
     ) => {
         vec![
             $(
-                mk_prolog!($name; $($var),*: $pre
+                mk_prolog!($name; $($var),* $(($payload))?: $pre
                     $(:-! $($post),+)?
                     $(:- $($post2),+)?
                 )

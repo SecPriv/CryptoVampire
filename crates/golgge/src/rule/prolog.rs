@@ -1,10 +1,11 @@
+use std::any::Any;
 use std::borrow::Cow;
 use std::fmt::Display;
 use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use bon::bon;
+use bon::{bon, builder};
 use egg::{FromOp, Id, Language, Pattern, RecExpr, Searcher, SymbolLang};
 use serde::Serialize;
 use thiserror::Error;
@@ -13,6 +14,7 @@ use utils::{ereturn_if, ereturn_let};
 use super::{Dependancy, Fresh, Rule};
 use crate::Program;
 use crate::analysis::WeightedAnalysis;
+use crate::rule::prolog::prolog_builder::{SetRcPayload, State};
 use crate::weight::Weight;
 
 /// Represents a Prolog-like rule for the e-graph.
@@ -30,6 +32,7 @@ pub struct PrologRule<L> {
     /// The name of the rule.
     pub name: Option<String>,
     // pub memo: RefCell<HashMap<Id, Dependancy>>,
+    pub payload: Option<Rc<dyn Any>>,
 }
 
 /// Errors that can occur during the construction of a `PrologRule`.
@@ -44,13 +47,14 @@ pub enum PrologBuilderError {
 #[bon]
 impl<L: Language> PrologRule<L> {
     /// Creates a new `PrologRule`.
-    #[builder]
+    #[builder(builder_type = PrologBuilder)]
     pub fn new(
         input: Pattern<L>,
         #[builder(with = <_>::from_iter, default = vec![])] deps: Vec<Pattern<L>>,
         #[builder(default = false)] cut: bool,
         #[builder(default = false)] require_decrease: bool,
         #[builder(into)] name: Option<String>,
+        rc_payload: Option<Rc<dyn Any>>,
     ) -> Result<Self, PrologBuilderError> {
         let bound_vars = input.vars();
         for v in deps.iter().flat_map(|d| d.vars().into_iter()) {
@@ -66,7 +70,21 @@ impl<L: Language> PrologRule<L> {
             cut,
             require_decrease,
             name,
+            payload: rc_payload,
         })
+    }
+}
+
+impl<S, L> PrologBuilder<L, S>
+where
+    L: Language,
+    S: State,
+{
+    pub fn payload<T: Sized + 'static>(self, x: T) -> PrologBuilder<L, SetRcPayload<S>>
+    where
+        S::RcPayload: crate::rule::prolog::prolog_builder::IsUnset,
+    {
+        self.rc_payload(Box::<dyn Any>::from(Box::new(x)).into())
     }
 }
 
@@ -130,7 +148,7 @@ where
         Dependancy {
             inner,
             cut: self.cut,
-            proof: None,
+            payload: self.payload.clone(),
         }
     }
 
@@ -254,6 +272,7 @@ pub mod parser {
                 // free_vars: vec![],
                 name,
                 // memo: RefCell::new(Default::default()),
+                payload: None,
             }),
             Some(ns) => {
                 let ns = ns.trim();
@@ -288,7 +307,7 @@ pub mod parser {
                     // free_vars,
                     require_decrease: decrease,
                     name,
-                    // memo: RefCell::new(Default::default()),
+                    payload: None, // memo: RefCell::new(Default::default()),
                 };
 
                 trace!("parsed {result:?}");
@@ -358,8 +377,8 @@ pub mod parser {
         }
     }
 
+    /// Extracts the name from a rule string.
     pub(crate) fn extract_name(s: &str) -> anyhow::Result<(Option<&str>, &str)> {
-        /// Extracts the name from a rule string.
         let s = s.trim();
 
         let (name, s) = if let Some(rest) = s.strip_prefix('[') {

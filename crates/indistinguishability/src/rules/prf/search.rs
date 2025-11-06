@@ -6,6 +6,7 @@ use golgge::{Dependancy, PrologRule, Rule};
 use itertools::{Itertools, chain, izip};
 use utils::{ereturn_if, ereturn_let};
 
+use super::PRFProof::*;
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::protocol::{Protocol, Step};
 use crate::rules::PRF;
@@ -13,11 +14,11 @@ use crate::rules::utils::SyntaxSearcher;
 use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::runners::SmtRunner;
 use crate::terms::{
-    AND, BITE, Function, HAPPENS, IS_FRESH_NONCE, LT, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE, PRED, RecFOFormula, Sort, VAMPIRE
+    AND, BITE, Function, HAPPENS, IS_FRESH_NONCE, LT, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE,
+    NONCE, PRED, RecFOFormula, Sort, VAMPIRE, Variable,
 };
 use crate::{Lang, Problem, fresh, rexp};
 
-declare_trace!($"search_prf");
 decl_vars!(const M:Bitstring, K:Nonce, P:Protocol, T:Time, H:Bool, N_PRF:Nonce);
 
 // =========================================================
@@ -79,6 +80,7 @@ fn mk_rule_one(prf: &PRF, fun: Function) -> PrologRule<Lang> {
         .input(input)
         .deps(deps)
         .name(format!("search_prf_{fun}"))
+        .payload(Apply(fun))
         .build()
         .unwrap()
 }
@@ -121,13 +123,13 @@ fn mk_static_rules(
             // ### soundness
             // This *needs* to be in front of the [mk_rule_one] for [NONCE].
             mk_prolog! {
-                "search_prf_found_key"; m, k, h:
+                "search_prf_found_key"; m, k, h (Keep):
                 (search_m #m #k #nprf (NONCE #k) #h) :-!,
                     (VAMPIRE (not #h))
             }
         ],
         mk_many_prolog! {
-            "search_prf_false":
+            "search_prf_false" (Keep):
             (search_m #m #k #nprf #m2 false).
 
             // ```text
@@ -135,7 +137,7 @@ fn mk_static_rules(
             // -----------
             //  m,k ||> n | h
             // ```
-            "search_prf_nonce":
+            "search_prf_nonce" (Keep):
             (search_m #m #k #nprf (NONCE #n) #h) :-
                 (VAMPIRE (=> #h (distinct #k #n))),
                 (VAMPIRE (=> #h (distinct #nprf #n)))
@@ -147,7 +149,7 @@ fn mk_static_rules(
             // ```
             //
             // this means that it will be captured by the substitution
-            "search_prf_found_instance":
+            "search_prf_found_instance" (Instance):
             (search_m #m #k #nprf (hash #m (NONCE #k)) #h).
         },
         functions.map(|f| mk_rule_one(prf, f)),
@@ -161,7 +163,7 @@ fn mk_static_rules(
             // -------------------------
             //    m, k ||> hash(m', k)
             // ```
-            "search_prf_neq_m" :
+            "search_prf_neq_m" (Apply(hash.clone())):
             (search_m #m #k #nprf (hash #m2 (NONCE #k)) #h) :-
                 (VAMPIRE (=> #h (distinct #m #m2))),
                 (search_m #m #k #nprf #m2 #h).
@@ -176,7 +178,7 @@ fn mk_static_rules(
             // ---------------------------------------
             //         m, k ||> hash(m', k')
             // ```
-            "search_prf_neq_k":
+            "search_prf_neq_k" (Apply(hash.clone())):
             (search_m #m #k #nprf (hash #m2  #k2) #h) :-
                 (VAMPIRE (=> #h (distinct (NONCE #k) #k2))),
                 (VAMPIRE (=> #h (distinct (NONCE #nprf) #k2))),
@@ -185,32 +187,32 @@ fn mk_static_rules(
 
 
             // macros
-            "search_prf_exec" p, t:
+            "search_prf_exec" p, t (Keep):
             (search_b #m #k (IS_FRESH_NONCE #nprf) (MACRO_EXEC #t  #p) #h) :-
             (search_trigger #m #k #p #t #h).
 
-            "search_prf_frame" p, t:
+            "search_prf_frame" p, t (Keep):
             (search_m #m #k (IS_FRESH_NONCE #nprf) (MACRO_FRAME #t  #p) #h) :-
             (search_trigger #m #k #p #t #h).
 
-            "search_prf_input" p, t:
+            "search_prf_input" p, t (Keep):
             (search_m #m #k (IS_FRESH_NONCE #nprf) (MACRO_INPUT #t  #p) #h) :-
             (search_trigger #m #k #p (PRED #t) #h).
 
             // if and and
-            "search_prf_ite_m" c, l, r:
+            "search_prf_ite_m" c, l, r (Apply(MITE.clone())):
             (search_m #m #k #nprf (MITE #c #l #r) #h):-
                 (search_b #m #k #nprf #c #h),
                 (search_m #m #k #nprf #l (and #c #h)),
                 (search_m #m #k #nprf #r (and (not #c) #h)).
 
-            "search_prf_ite_b" c, l, r:
+            "search_prf_ite_b" c, l, r (Apply(BITE.clone())):
             (search_m #m #k #nprf (BITE #c #l #r) #h):-
                 (search_b #m #k #nprf #c #h),
                 (search_b #m #k #nprf #l (and #c #h)),
                 (search_b #m #k #nprf #r (and (not #c) #h)).
 
-            "search_prf_and" a, b:
+            "search_prf_and" a, b (Apply(AND.clone())):
             (search_b #m #k #nprf (AND #a #b) #h):-
                 (search_b #m #k #nprf #a #h),
                 (search_b #m #k #nprf #b (and #a #h)).

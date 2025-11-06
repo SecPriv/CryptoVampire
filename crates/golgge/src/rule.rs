@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::borrow::Cow;
 use std::fmt::{Debug, Display};
 use std::rc::Rc;
@@ -21,7 +22,7 @@ pub use prolog::parser::PlOrRw;
 pub struct Dependancy {
     pub inner: Vec<Vec<Id>>,
     pub cut: bool,
-    pub proof: Option<Rc<dyn Display>>,
+    pub payload: Option<Rc<dyn Any>>,
 }
 
 impl Dependancy {
@@ -30,7 +31,7 @@ impl Dependancy {
         Self {
             inner,
             cut: false,
-            proof: None,
+            payload: None,
         }
     }
 
@@ -64,7 +65,7 @@ impl Dependancy {
         Dependancy {
             inner: vec![],
             cut: false,
-            proof: None,
+            payload: None,
         }
     }
 
@@ -73,7 +74,7 @@ impl Dependancy {
         Dependancy {
             inner: vec![vec![]],
             cut: false,
-            proof: None,
+            payload: None,
         }
     }
 

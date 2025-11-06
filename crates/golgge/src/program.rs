@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
+use std::ops::Deref;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::str::FromStr;
@@ -16,7 +17,7 @@ use itertools::{Either, Itertools};
 use serde::Serialize;
 use utils::implvec;
 
-use crate::proof::SearchResult;
+use crate::proof::{Proof, SearchResult};
 use crate::rule::PlOrRw;
 use crate::{Config, Dependancy, Fresh, ProofItem, Rule, WeightedAnalysis};
 
@@ -342,11 +343,11 @@ where
                 .iter()
                 .position(|goals| goals.iter().all(|g| self.run(*g, depth - 1)))
                 .map(|i| {
-                    let Dependancy { inner, proof, .. } = search;
+                    let Dependancy { inner, payload, .. } = search;
                     ProofItem {
                         rule: Rc::clone(&r),
                         ids: inner[i].clone(),
-                        side_condition: proof,
+                        payload,
                     }
                 });
             if ret.is_some() || cut {
@@ -433,6 +434,10 @@ where
         }
         assert!(self.clean());
     }
+
+    pub fn get_proof_item(&self, id: Id) -> Option<ProofItem<L, N>> {
+        self.memo.as_ref()?.get(&id)?.get_proof()
+    }
 }
 
 impl<L, N> FromStr for Program<L, N>
@@ -517,6 +522,13 @@ impl<L: Language, N: Analysis<L>> MemoStatus<L, N> {
     #[must_use]
     pub(crate) fn is_in_progress(&self) -> bool {
         self.0.borrow().is_in_progress()
+    }
+
+    pub fn get_proof(&self) -> Option<ProofItem<L, N>> {
+        match self.0.borrow().deref() {
+            Status::True(proof_item) =>  Some(proof_item.clone()),
+            _ => None
+        }
     }
 }
 

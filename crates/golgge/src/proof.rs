@@ -1,19 +1,28 @@
-use std::fmt::Display;
 use std::rc::Rc;
+use std::{any::Any, fmt::Display};
 
 use egg::{Analysis, Id, Language};
 
 use crate::{Program, Rule};
 
 /// Represents a single item in a proof, detailing the rule applied and the e-class IDs involved.
-#[derive(Clone)]
 pub struct ProofItem<L: Language, N: Analysis<L>> {
     /// The rule that was applied.
     pub rule: Rc<dyn Rule<L, N>>,
     /// The e-class IDs involved in the proof step.
     pub ids: Vec<Id>,
     /// An optional side condition for the proof step.
-    pub side_condition: Option<Rc<dyn Display>>,
+    pub payload: Option<Rc<dyn Any>>,
+}
+
+impl<L: Language, N: Analysis<L>> Clone for ProofItem<L, N> {
+    fn clone(&self) -> Self {
+        Self {
+            rule: self.rule.clone(),
+            ids: self.ids.clone(),
+            payload: self.payload.clone(),
+        }
+    }
 }
 
 /// Represents the result of a search operation.

@@ -15,11 +15,14 @@ use crate::terms::{
 };
 use crate::{Lang, Problem, mk_signature, rexp};
 
+declare_trace!($"prf");
+
 #[cfg(test)]
 pub mod test;
 
 mod candidate;
 mod search;
+mod substitute;
 
 /// Represents a Pseudo-Random Function (PRF) and associated functions for its analysis.
 #[derive(Debug)]
@@ -36,8 +39,24 @@ pub struct PRF {
     search_bool: Function,
     /// Trigger function for PRF searches.
     search_trigger: Function,
+
+    subst_left: Function,
+    subst_right: Function,
+
     /// The index of this PRF in the problem's cryptographic assumptions.
     index: usize,
+}
+
+#[derive(Debug, Clone)]
+enum PRFProof {
+    /// keep the element as is
+    Keep,
+    /// This is an instance of the hash (i.e., replace it with the new nonce)
+    Instance,
+    /// Apply this function
+    ///
+    /// Be careful when applying `hash`
+    Apply(Function),
 }
 
 macro_rules! declare {
@@ -56,7 +75,6 @@ macro_rules! declare {
     };
 }
 
-declare_trace!($"prf");
 
 impl PRF {
     /// Creates a new `PRF` instance and adds its associated functions and rules to the problem.
@@ -95,6 +113,11 @@ impl PRF {
         let search_trigger =
             declare!(pbl@pos: "prf_search_trigger"; Bitstring, Nonce, Protocol, Time, Bool => Bool);
 
+        // u, v, m, k, nk, poof, other
+        let subst_left = declare!(pbl@pos: "prf_subst_left"; Bitstring, Bitstring, Bitstring, Nonce, Nonce, Bool, Bitstring => Bool);
+        // u, v, m, k, nk, proof, other
+        let subst_right = declare!(pbl@pos: "prf_subst_right"; Bitstring, Bitstring,  Bitstring, Nonce, Nonce, Bool, Bitstring => Bool);
+
         let prf = Self {
             hash,
             candidate_bitstring,
@@ -102,6 +125,8 @@ impl PRF {
             search_bitstring,
             search_bool,
             search_trigger,
+            subst_left,
+            subst_right,
             index: pos,
         };
 
@@ -109,6 +134,7 @@ impl PRF {
             // rules
             let rules = chain![
                 prf.mk_prf_rule().map(|x| x.into_mrc()),
+                prf.mk_subst_rules().map(|x| x.into_mrc()),
                 search::mk_rules(pbl, &prf)
             ]
             .collect_vec();
@@ -148,9 +174,10 @@ impl PRF {
     /// Creates the two main PRF rules (left and right) for the e-graph.
     fn mk_prf_rule(&self) -> [TopPrfRule; 2] {
         let Self {
-            hash,
             candidate_bitstring,
             search_bitstring,
+            subst_left,
+            subst_right,
             ..
         } = self;
 
@@ -160,8 +187,14 @@ impl PRF {
         let subterm_m = rexp!((search_bitstring #M #K #NK #M true));
         let freshl = rexp!((FRESH_NONCE #NK #U true));
         let freshr = rexp!((FRESH_NONCE #NK #V true));
-        let new_goall = rexp!((SUBSTITUTION_RULE (EQUIV #U #V (SUBSTITUTION #HM (hash #M (NONCE #K)) (NONCE #NK)) #B)));
-        let new_goalr = rexp!((SUBSTITUTION_RULE (EQUIV #U #V #B (SUBSTITUTION #HM (hash #M (NONCE #K)) (NONCE #NK)))));
+
+        let new_goall =
+            rexp!((subst_left #U #V #M #K #NK (search_bitstring #M #K #NK #HM true) #B));
+        let new_goalr =
+            rexp!((subst_right #U #V #M #K #NK (search_bitstring #M #K #NK #HM true) #B));
+
+        // let new_goall = rexp!((SUBSTITUTION_RULE (EQUIV #U #V (SUBSTITUTION #HM (hash #M (NONCE #K)) (NONCE #NK)) #B)));
+        // let new_goalr = rexp!((SUBSTITUTION_RULE (EQUIV #U #V #B (SUBSTITUTION #HM (hash #M (NONCE #K)) (NONCE #NK)))));
 
         [
             TopPrfRule::new(
@@ -185,6 +218,33 @@ impl PRF {
         ]
     }
 
+    fn mk_subst_rules(&self) -> [substitute::SubstRule; 2] {
+        let Self {
+            subst_left,
+            subst_right,
+            index,
+            ..
+        } = self;
+
+        let trigger_l = rexp!((subst_left #U #V #M #K #NK #PROOF #B));
+        let trigger_r = rexp!((subst_right #U #V #M #K #NK #PROOF #B));
+        let new_goal_l = rexp!((EQUIV #U #V #NEW_TERM #B));
+        let new_goal_r = rexp!((EQUIV #U #V #B #NEW_TERM));
+
+        [
+            substitute::SubstRule::builder()
+                .new_goal(&new_goal_l)
+                .trigger(&trigger_l)
+                .prf_idx(*index)
+                .build(),
+            substitute::SubstRule::builder()
+                .new_goal(&new_goal_r)
+                .trigger(&trigger_r)
+                .prf_idx(*index)
+                .build(),
+        ]
+    }
+
     /// Returns the index of this PRF in the problem's cryptographic assumptions.
     pub fn index(&self) -> usize {
         self.index
@@ -195,7 +255,7 @@ impl PRF {
 static PATTERN_FRESH_SEARCH_INNER: Pattern<Lang> =
     Pattern::from(&rexp!((FRESH_NONCE #NK #HM true)));
 
-decl_vars!(const; U, V, HM:Bitstring, M:Bitstring, K:Nonce, NK:Nonce, B);
+decl_vars!(const; U, V, HM:Bitstring, M:Bitstring, NEW_TERM: Bitstring,  K:Nonce, NK:Nonce, B, PROOF: Bool);
 
 /// Ochestrating [Rule] for PRF
 ///
