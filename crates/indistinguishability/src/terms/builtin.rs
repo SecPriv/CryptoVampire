@@ -486,6 +486,17 @@ mk_builtin_funs!(
         signature: s!(() -> Bitstring),
     };
 
+    // side
+    LEFT "left_side" {
+        signature: s!(() -> Any),
+        flags: f!(PROLOG_ONLY)
+    };
+
+    RIGHT "right_side" {
+        signature: s!(() -> Any),
+        flags: f!(PROLOG_ONLY)
+    };
+
     // ~~~~~~~~~~~~~~~ smt only ~~~~~~~~~~~~~~~~~
 
     SMT_ITE "ite" {

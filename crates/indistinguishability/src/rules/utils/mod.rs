@@ -1,7 +1,3 @@
-/// Provides utilities for handling fresh variables and formulas.
-pub mod fresh;
-
-mod search;
 use egg::{Analysis, EGraph, Id, Language};
 use itertools::Itertools;
 use rustc_hash::FxHashSet;
@@ -15,8 +11,15 @@ use crate::{
     problem::PAnalysis,
     terms::{Function, Sort},
 };
+/// Provides utilities for handling fresh variables and formulas.
+pub mod fresh;
+
+mod search;
 
 pub(crate) mod lambda_subst;
+
+mod side;
+pub use side::Side;
 
 // mod subst;
 // pub use subst::mk_subst_rw;
