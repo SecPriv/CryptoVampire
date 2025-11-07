@@ -1,0 +1,149 @@
+use itertools::{Itertools, chain};
+
+use crate::{
+    Problem, mk_signature,
+    terms::{Function, FunctionFlags, Rewrite, Sort},
+};
+declare_trace!($"enc");
+
+mod candidate;
+mod enc_kp;
+mod ind_cca;
+mod search;
+mod subst;
+
+#[derive(Debug, Clone)]
+pub struct AEnc {
+    enc: Function,
+    dec: Function,
+    pk: Function,
+
+    candidate_m: Function,
+    candidate_b: Function,
+    // search with no oracle
+    // skip pk
+    search_k_m: Function,
+    search_k_b: Function,
+    // search with decryption oracle
+    search_o_m: Function,
+    search_o_b: Function,
+
+    subst: Function,
+
+    index: usize,
+}
+
+#[derive(Debug, Clone)]
+enum ProofHints {
+    Keep,
+    Replace,
+    /// in `(fa_cons a b)`, keep `a` as is and propagate to `b`
+    FaKeep,
+    /// beware of crypto functions
+    Apply(Function),
+}
+
+macro_rules! declare {
+    ($pbl:ident @ $pos:ident: $name:expr; $($s:expr),* => $o:ident) => {
+        $pbl
+            .declare_function()
+            .fresh_name($name)
+            .inputs({
+                use Sort::*;
+                [$($s),*]
+            })
+            .output(Sort::$o)
+            .flags(FunctionFlags::PROLOG_ONLY)
+            .cryptography([$pos])
+            .call()
+    };
+}
+
+impl AEnc {
+    pub fn new_and_add(
+        pbl: &mut Problem,
+        index: usize,
+        enc: Function,
+        dec: Function,
+        pk: Function,
+    ) -> &Self {
+        tr!("init aenc: {enc}, {dec}, {pk}");
+        assert_eq!(
+            enc.signature,
+            mk_signature!((Bitstring, Bitstring, Bitstring) -> Bitstring)
+        );
+        assert_eq!(
+            dec.signature,
+            mk_signature!((Bitstring, Bitstring) -> Bitstring)
+        );
+        assert_eq!(pk.signature, mk_signature!((Bitstring) -> Bitstring));
+
+        let aenc = Self {
+            enc: enc.clone(),
+            dec,
+            pk,
+            // C[enc(m, nonce(r), pk(nonce(k)))], m, r, k
+            candidate_m: declare!(pbl@index: format!("{enc}_candidate_m"); Bitstring, Bitstring, Nonce, Nonce => Bitstring),
+            candidate_b: declare!(pbl@index: format!("{enc}_candidate_b"); Bool, Bitstring, Nonce, Nonce => Bool),
+
+            // k ||> t | h
+            search_k_m: declare!(pbl@index: format!("{enc}_search_k_m"); Nonce, Bitstring, Bool => Bool),
+            search_k_b: declare!(pbl@index: format!("{enc}_search_k_b"); Nonce, Bool, Bool => Bool),
+            // k, k', r, m ||> t  | h
+            search_o_m: declare!(pbl@index: format!("{enc}_search_o_m"); Nonce, Nonce, Nonce, Bitstring, Bitstring, Bool => Bool),
+            search_o_b: declare!(pbl@index: format!("{enc}_search_o_b"); Nonce, Nonce, Nonce, Bitstring, Bool, Bool => Bool),
+            // sid, u, v, t{_ -> nt}, b
+            subst: declare!(pbl@index: format!("{enc}_search_o_b"); Any, Bitstring, Bitstring, Bitstring, Bitstring, Bitstring => Bool),
+            index,
+        };
+
+        
+
+        // declare rewrites
+        {
+            let rewrites =
+                chain![aenc.extra_rewrites(pbl), candidate::mk_rwrites(pbl, &aenc)].collect_vec();
+            pbl.extra_rewrite_mut().extend(rewrites);
+        }
+
+        let crypt_assumptions = pbl.cryptography_mut(index).unwrap();
+        assert!(crypt_assumptions.is_undefined());
+        *crypt_assumptions = aenc.into();
+        crypt_assumptions.as_aenc().unwrap()
+    }
+
+    /// Returns the candidate function for a given output sort.
+    pub fn get_candidate(&self, sort: Sort) -> Option<&Function> {
+        match sort {
+            Sort::Bitstring => Some(&self.candidate_m),
+            Sort::Bool => Some(&self.candidate_b),
+            _ => None,
+        }
+    }
+
+    /// Returns the `search_k` function for a given output sort.
+    pub fn get_search_k(&self, sort: Sort) -> Option<&Function> {
+        match sort {
+            Sort::Bitstring => Some(&self.search_k_m),
+            Sort::Bool => Some(&self.search_k_b),
+            _ => None,
+        }
+    }
+
+    /// Returns the `search_o` function for a given output sort.
+    pub fn get_search_o(&self, sort: Sort) -> Option<&Function> {
+        match sort {
+            Sort::Bitstring => Some(&self.search_o_m),
+            Sort::Bool => Some(&self.search_o_b),
+            _ => None,
+        }
+    }
+
+    fn extra_rewrites(&self, _pbl: &Problem) -> impl Iterator<Item = Rewrite> {
+        let Self { enc, dec, pk, .. } = self;
+        // crate::mk_rewrite!()
+        [mk_rewrite!(crate format!("{enc} simplification"); (m Bitstring, r Bitstring, k Bitstring): 
+            (dec (enc #m #r (pk #k)) #k) => (#m))
+        ].into_iter()
+    }
+}

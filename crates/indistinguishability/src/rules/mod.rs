@@ -121,15 +121,30 @@ macro_rules! mk_many_prolog {
 /// mk_rewrite!("rule-name"; a, b: (and a b) => (and b a));
 /// ```
 macro_rules! mk_rewrite {
-    ($name:expr; $(($($var:ident),*))?: $from:tt => $to:tt) => {{
+    (crate prolog $($name:expr;)? $(($($var:ident $sort:expr),*))?: $from:tt => $to:tt) => {{
         $($(
-            let $var = $crate::fresh!();
+            let $var = $crate::fresh!($sort);
         )*)?
-        ::egg::Rewrite::new(
-            $name,
-            mk_rewrite!(@@ $from),
-            mk_rewrite!(@@ $to),
-        ).unwrap()
+
+        $crate::terms::Rewrite::builder()
+            .from($crate::rexp!($from))
+            .to(mk_rewrite!(crate @@ $to))
+            $(.name($name))?
+            $(.variables([$($var),*]))?
+            .prolog_only(true)
+            .build()
+    }};
+    (crate $($name:expr;)? $(($($var:ident $sort:expr),*))?: $from:tt => $to:tt) => {{
+        $($(
+            let $var = $crate::fresh!($sort);
+        )*)?
+
+        $crate::terms::Rewrite::builder()
+            .from($crate::rexp!($from))
+            .to(mk_rewrite!(crate @@ $to))
+            $(.name($name))?
+            $(.variables([$($var),*]))?
+            .build()
     }};
 
     (@@ (#$var:tt = #$value:tt)) => {
@@ -158,6 +173,26 @@ macro_rules! mk_rewrite {
             &$crate::rexp!($value)
         )
     };
+
+    (crate @@ (#$($value:tt)+)) => {{
+        let x : $crate::terms::RecFOFormula = $crate::rexp!(#$($value)+);
+        x
+    }};
+
+    (crate @@ $value:tt) => {
+            $crate::rexp!($value)
+    };
+
+    ($name:expr; $(($($var:ident),*))?: $from:tt => $to:tt) => {{
+        $($(
+            let $var = $crate::fresh!();
+        )*)?
+        ::egg::Rewrite::new(
+            $name,
+            mk_rewrite!(@@ $from),
+            mk_rewrite!(@@ $to),
+        ).unwrap()
+    }};
 }
 
 /// Creates multiple rewrite rules at once
@@ -197,6 +232,7 @@ pub mod utils;
 pub mod deduce;
 /// Provides default rewrite rules.
 mod default_rewrites;
+mod encryption;
 /// Provides rules for handling forall quantifiers.
 mod fa;
 /// Provides rules for lambda calculus.
@@ -215,6 +251,8 @@ mod vampire;
 pub use nonce::{FreshNonce, mk_no_guessing_smt};
 /// Re-exports the `PRF` struct, representing a pseudo-random function.
 pub use prf::PRF;
+
+pub use encryption::AEnc;
 
 /// Provides rules for sanity checking.
 #[cfg(debug_assertions)]

@@ -15,7 +15,7 @@ pub struct Rewrite {
     /// rewritten as [Self::to].
     pub from: RecFOFormula,
     pub to: RecFOFormula,
-    #[builder(with = |x: impl std::iter::IntoIterator<Item = Variable>| x.into_iter().collect())]
+    #[builder(default, with = |x: impl std::iter::IntoIterator<Item = Variable>| x.into_iter().collect())]
     pub variables: cow![Variable],
 
     /// Can the rewrite be translated outside of [`golgee`] ?
@@ -60,16 +60,16 @@ impl Registerable for Rewrite {
     }
 }
 
-#[macro_export]
-macro_rules! mk_rewrite {
-    ($($var:literal:$sort:ident),* in $args:expr => $to:expr) => {
-        {
-          $crate::terms::Rewrite::builder()
-            .from($args)
-            .to($to)
-            .sorts({ use $crate::terms::Sort::*; [$($sort),*]})
-            .variables([$(egg::Var::from_u32($var)),*])
-            .build()
-        }
-    };
-}
+// #[macro_export]
+// macro_rules! mk_rewrite {
+//     ($($var:$sort:ident),*; $args:expr => $to:expr) => {
+//         {
+//           $crate::terms::Rewrite::builder()
+//             .from($args)
+//             .to($to)
+//             .sorts({ use $crate::terms::Sort::*; [$($sort),*]})
+//             .variables([$(egg::Var::from_u32($var)),*])
+//             .build()
+//         }
+//     };
+// }

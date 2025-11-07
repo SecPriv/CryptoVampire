@@ -770,11 +770,11 @@ where
 
     /// Try to assign `name` to [Self::name], but generate a fresh name if it's
     /// already taken
-    pub fn fresh_name(self, name: &str) -> FunctionBuilder<'a, SetName<S>>
+    pub fn fresh_name(self, name: impl AsRef<str>) -> FunctionBuilder<'a, SetName<S>>
     where
         S::Name: FunctionBuilderIsUnset,
     {
-        let name = fresh_name(name, self.self_receiver.function.registered_names());
+        let name = fresh_name(name.as_ref(), self.self_receiver.function.registered_names());
         self.name(name)
     }
 
