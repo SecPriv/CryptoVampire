@@ -774,7 +774,10 @@ where
     where
         S::Name: FunctionBuilderIsUnset,
     {
-        let name = fresh_name(name.as_ref(), self.self_receiver.function.registered_names());
+        let name = fresh_name(
+            name.as_ref(),
+            self.self_receiver.function.registered_names(),
+        );
         self.name(name)
     }
 

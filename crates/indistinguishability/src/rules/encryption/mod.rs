@@ -97,8 +97,6 @@ impl AEnc {
             index,
         };
 
-        
-
         // declare rewrites
         {
             let rewrites =

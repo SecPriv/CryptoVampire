@@ -55,7 +55,7 @@ fn mk_deduce_rule(f: &Function) -> PrologRule<Lang> {
         cut: false,
         require_decrease: false,
         name: Some(format!("deduce {}", &f.name)),
-        payload: None
+        payload: None,
     }
 }
 

@@ -3,7 +3,8 @@ use itertools::chain;
 use crate::problem::{PRule, RcRule};
 use crate::rules::deduce::GetDeduce;
 use crate::terms::{
-    AND, BIT_DEDUCE, BITE, BOOL_DEDUCE, EQUIV, FAIL, FRESH_NONCE, HAPPENS, IS_FRESH_NONCE, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, VAMPIRE
+    AND, BIT_DEDUCE, BITE, BOOL_DEDUCE, EQUIV, FAIL, FRESH_NONCE, HAPPENS, IS_FRESH_NONCE, LEQ,
+    MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, VAMPIRE,
 };
 
 /// Creates a set of static deduction rules.

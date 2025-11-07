@@ -526,8 +526,8 @@ impl<L: Language, N: Analysis<L>> MemoStatus<L, N> {
 
     pub fn get_proof(&self) -> Option<ProofItem<L, N>> {
         match self.0.borrow().deref() {
-            Status::True(proof_item) =>  Some(proof_item.clone()),
-            _ => None
+            Status::True(proof_item) => Some(proof_item.clone()),
+            _ => None,
         }
     }
 }

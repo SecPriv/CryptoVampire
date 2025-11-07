@@ -6,11 +6,8 @@ use crate::{
     terms::{Function, NONCE, RecFOFormula, Rewrite, Sort},
 };
 
-pub fn mk_rwrites(pbl:&Problem, aenc: &AEnc) -> impl Iterator<Item = Rewrite> {
-  chain![
-    mk_static(pbl, aenc),
-    mk_rewrite_regular(pbl, aenc)
-  ]
+pub fn mk_rwrites(pbl: &Problem, aenc: &AEnc) -> impl Iterator<Item = Rewrite> {
+    chain![mk_static(pbl, aenc), mk_rewrite_regular(pbl, aenc)]
 }
 
 /// Generates rewrite rules for regular functions, introducing PRF candidates.
@@ -34,14 +31,10 @@ fn mk_rewrite_regular(pbl: &Problem, aenc: &AEnc) -> impl Iterator<Item = Rewrit
 ///     -> candidate(f(x1,...,xm), m, k)
 /// ```
 /// effectively lifting the `candidate` function out of the arguments of `f`.
-fn mk_rewrite_one(
-    _pbl: & Problem,
-    aenc: & AEnc,
-    f: & Function,
-) -> impl Iterator<Item = Rewrite> {
-    let m =  crate::fresh!(Bitstring);
-let r =  crate::fresh!(Nonce);
-let k =  crate::fresh!(Nonce);
+fn mk_rewrite_one(_pbl: &Problem, aenc: &AEnc, f: &Function) -> impl Iterator<Item = Rewrite> {
+    let m = crate::fresh!(Bitstring);
+    let r = crate::fresh!(Nonce);
+    let k = crate::fresh!(Nonce);
     let vars = f.signature.mk_vars();
 
     let candidate = aenc.get_candidate(f.signature.output).unwrap();

@@ -77,7 +77,6 @@ impl From<rules::PRF> for CryptographicAssumption {
     }
 }
 
-
 impl From<rules::AEnc> for CryptographicAssumption {
     fn from(v: rules::AEnc) -> Self {
         Self::AEnc(v)
