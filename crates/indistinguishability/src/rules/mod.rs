@@ -32,8 +32,8 @@ macro_rules! decl_vars {
         )+
     };
 
-    (const $(;)? $($var:ident $(:$sort:expr)? ),+ $(,)?) => {
-        $(static $var: &$crate::terms::Variable = &$crate::fresh!(const $($sort)?);)+
+    ($v:vis const $(;)? $($var:ident $(:$sort:expr)? ),+ $(,)?) => {
+        $($v static $var: &$crate::terms::Variable = &$crate::fresh!(const $($sort)?);)+
     };
 }
 
