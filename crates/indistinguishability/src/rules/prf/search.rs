@@ -10,8 +10,8 @@ use super::PRFProof::*;
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::protocol::{Protocol, Step};
 use crate::rules::PRF;
-use crate::rules::utils::SyntaxSearcher;
 use crate::rules::utils::fresh::RefFormulaBuilder;
+use crate::rules::utils::{SyntaxSearcher, get_protocol};
 use crate::runners::SmtRunner;
 use crate::terms::{
     AND, BITE, Function, HAPPENS, IS_FRESH_NONCE, LT, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE,
@@ -381,14 +381,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfVampireRule {
                 k,
             };
             // get the protocol from the function
-            let ptcl = {
-                let id = subst.get(P.as_egg()).unwrap();
-                let idx = egraph[*id]
-                    .iter()
-                    .find_map(|f| f.head.get_protocol_index())
-                    .unwrap(); // there has to be one
-                &pbl.protocols()[idx]
-            };
+            let ptcl = get_protocol(egraph, *subst.get(P.as_egg()).unwrap()).unwrap();
 
             let search = search.search_timepoint(pbl, ptcl, time, hyp).collect_vec();
             tr!(

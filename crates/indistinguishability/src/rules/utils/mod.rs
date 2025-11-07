@@ -7,8 +7,9 @@ pub use search::{EgraphSearcher, SyntaxSearcher, default_is_special};
 use utils::{econtinue_if, implvec};
 
 use crate::{
-    Lang,
+    Lang, Problem,
     problem::PAnalysis,
+    protocol::Protocol,
     terms::{Function, Sort},
 };
 /// Provides utilities for handling fresh variables and formulas.
@@ -127,4 +128,16 @@ pub fn all_descendants<N: Analysis<Lang>>(
 
 fn can_have_childrens(f: &Function) -> bool {
     !f.is_alias()
+}
+
+pub fn get_protocol<'a, 'b>(
+    egraph: &'b egg::EGraph<Lang, PAnalysis<'a>>,
+    id: Id,
+) -> Option<&'b Protocol> {
+    // let id = subst.get(P.as_egg()).unwrap();
+    let idx = egraph[id]
+        .iter()
+        .find_map(|f| f.head.get_protocol_index())?;
+    // there has to be one
+    egraph.analysis.pbl().protocols().get(idx)
 }
