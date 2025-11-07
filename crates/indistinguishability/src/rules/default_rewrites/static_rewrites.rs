@@ -4,7 +4,7 @@ use itertools::chain;
 use crate::Lang;
 use crate::protocol::MacroKind;
 use crate::terms::{
-    ATT, BITE, EMPTY, FRESH_NONCE, FROM_BOOL, Function, HAPPENS, IMPLIES, IS_FRESH_NONCE, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_MSG, MITE, NONCE, PRED, PROJ_1, PROJ_2, TUPLE, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT
+    ATT, BITE, EMPTY, ETA, FRESH_NONCE, FROM_BOOL, Function, HAPPENS, IMPLIES, IS_FRESH_NONCE, LENGTH, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_MSG, MITE, NONCE, PRED, PROJ_1, PROJ_2, TUPLE, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, ZEROES
 };
 
 /// Creates a set of static rewrite rules.
@@ -21,6 +21,8 @@ pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>
       ["if simp2"] (m_ite #a #a false) => (#a).
       ["if simp3"] (m_ite #a (m_ite #a #b #c) #d) => (m_ite #a #b #d).
       ["if simp4"] (m_ite #a true false) => (#a).
+      ["if eq"] (m_ite (= #a #b) #a #b) => (#a).
+      // ["if and"] (m_ite (and #a #b) #c #d) => (m_ite #a (m_ite #b #c #d) #d).
 
       ["b_if true"] (b_ite true #a #b) => (#a).
       ["b_if false"] (b_ite false #a #b) => (#b).
@@ -76,6 +78,10 @@ pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>
 
       ["fresh nonce"]
       (IS_FRESH_NONCE #n) => (#n).
+
+      // length & co
+      ["nonce length"] (LENGTH (NONCE #n)) => (ETA).
+      ["length zeroes"] (LENGTH (ZEROES #a)) => (#a).
     };
 
     let unfold = MacroKind::all().map(|kind| {

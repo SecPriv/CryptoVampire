@@ -217,6 +217,19 @@ mk_builtin_funs!(
         signature: s!(Bool -> Bitstring)
     };
 
+    LENGTH "bistring_length" {
+        signature: s!(Bitstring -> Bitstring)
+    };
+
+    ZEROES "zeroes" {
+        signature: s!(Bitstring -> Bitstring)
+    };
+
+    /// length of nonces
+    ETA "eta" {
+        signature: s!(() -> Bitstring)
+    };
+
     // ~~~~~~~~~~~~~~~~~ ptcl ~~~~~~~~~~~~~~~~~~~
 
     HAPPENS "happens" {
