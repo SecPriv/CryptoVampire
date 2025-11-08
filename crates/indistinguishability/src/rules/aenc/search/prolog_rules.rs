@@ -6,7 +6,7 @@ use crate::{
     Lang, Problem, fresh, rexp,
     rules::{
         AEnc,
-        encryption::{ProofHints, vars::*},
+        aenc::{ProofHints, vars::*},
     },
     terms::{
         AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, FRESH_NONCE, Function, IS_FRESH_NONCE, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE, PRED, RecFOFormula, Sort, VAMPIRE

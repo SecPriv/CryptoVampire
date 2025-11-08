@@ -4,7 +4,7 @@ use crate::{
     rexp,
     rules::{
         AEnc,
-        encryption::vars::*,
+        aenc::vars::*,
         utils::{SyntaxSearcher, fresh::RefFormulaBuilder},
     },
     runners::SmtRunner,

@@ -10,7 +10,7 @@ use crate::{
     rexp,
     rules::{
         AEnc,
-        encryption::ProofHints,
+        aenc::ProofHints,
         substitution::{PSArgs, ProofLike, ProofSubstitution},
     },
     terms::{EQUIV_WITH_SIDE, Function},

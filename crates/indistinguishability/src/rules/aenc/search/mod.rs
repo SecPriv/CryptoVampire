@@ -4,7 +4,7 @@ use crate::{
     Problem,
     problem::{PRule, RcRule},
     rexp,
-    rules::{AEnc, encryption::vars::*},
+    rules::{AEnc, aenc::vars::*},
     runners::SmtRunner,
 };
 

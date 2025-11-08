@@ -232,7 +232,7 @@ pub mod utils;
 pub mod deduce;
 /// Provides default rewrite rules.
 mod default_rewrites;
-mod encryption;
+mod aenc;
 /// Provides rules for handling forall quantifiers.
 mod fa;
 /// Provides rules for lambda calculus.
@@ -252,7 +252,7 @@ pub use nonce::{FreshNonce, mk_no_guessing_smt};
 /// Re-exports the `PRF` struct, representing a pseudo-random function.
 pub use prf::PRF;
 
-pub use encryption::AEnc;
+pub use aenc::AEnc;
 
 /// Provides rules for sanity checking.
 #[cfg(debug_assertions)]
