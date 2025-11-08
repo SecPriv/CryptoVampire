@@ -51,12 +51,12 @@ impl EncKpRule {
             checks: [
                 rexp!((search_k_m #K #M true)),
                 rexp!((search_k_m #K2 #M true)),
-                rexp!((search_o_m #K #K2 #R #T true)),
+                rexp!((search_o_m #K #K2 #R #M #T true)),
                 rexp!((FRESH_NONCE #R #M true)),
             ]
             .map(|x| Pattern::from(&x)),
             new_goal: Pattern::from(&rexp!((subst #SIDE #U #V
-              (enc #M (NONCE #R) (pk (NONCE #K2))) (search_o_m #K #K2 #R #T true)
+              (enc #M (NONCE #R) (pk (NONCE #K2))) (search_o_m #K #K2 #R #M #T true)
             #B))),
         }
     }

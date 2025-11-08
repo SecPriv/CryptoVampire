@@ -58,10 +58,9 @@ impl<L: Language> PrologRule<L> {
     ) -> Result<Self, PrologBuilderError> {
         let bound_vars = input.vars();
         for v in deps.iter().flat_map(|d| d.vars().into_iter()) {
-            ereturn_if!(
-                !bound_vars.contains(&v),
-                Err(PrologBuilderError::VariableMishmatch(v))
-            )
+            if !bound_vars.contains(&v) {
+                return Err(PrologBuilderError::VariableMishmatch(v));
+            }
         }
 
         Ok(Self {

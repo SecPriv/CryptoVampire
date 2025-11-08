@@ -32,6 +32,9 @@ struct SubstRule {
 
     goal_pattern: Pattern<Lang>,
     new_goal_pattern: Pattern<Lang>,
+
+    pk: Function,
+    dec: Function,
 }
 
 #[derive(Debug, Clone)]
@@ -39,6 +42,8 @@ struct SubstData {
     search_o_m: Function,
     search_o_b: Function,
     new_term: Id,
+    pk: Function,
+    dec: Function,
 }
 
 impl SubstRule {
@@ -48,6 +53,8 @@ impl SubstRule {
             index,
             search_o_b,
             search_o_m,
+            dec,
+            pk,
             ..
         }: &AEnc,
     ) -> Self {
@@ -60,6 +67,8 @@ impl SubstRule {
             new_goal_pattern: ng_pattern,
             search_o_b: search_o_b.clone(),
             search_o_m: search_o_m.clone(),
+            dec: dec.clone(),
+            pk: pk.clone(),
         }
     }
 }
@@ -81,6 +90,8 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
                     search_o_b: self.search_o_b.clone(),
                     search_o_m: self.search_o_m.clone(),
                     new_term: nt_id,
+                    pk: self.pk.clone(),
+                    dec: self.dec.clone(),
                 })
                 .proof_to_term(prgm, proof_id)
                 .unwrap();
@@ -100,7 +111,7 @@ impl ProofSubstitution for SubstData {
             .iter()
             .find(|Lang { head, .. }| head == &self.search_o_m || head == &self.search_o_b)
             .with_context(|| "not a proof of the expected form")?;
-        Ok(l.args[3])
+        Ok(l.args[4])
     }
 
     fn instance<'a>(&self, _: PSArgs<'_, 'a, Self>) -> anyhow::Result<Id> {
@@ -117,23 +128,35 @@ impl ProofSubstitution for SubstData {
             ..
         }: PSArgs<'_, 'a, Self>,
     ) -> anyhow::Result<Id> {
-        let ProofHints::FaKeep(f) = proof else {
-            unreachable!()
-        };
-        let self_id = self.get_term(prgrm, proof_id)?;
+        match proof {
+            ProofHints::FaKeep(f) => {
+                let self_id = self.get_term(prgrm, proof_id)?;
 
-        let (_, b) = proof_parent
-            .iter()
-            .cloned()
-            .collect_tuple()
-            .with_context(|| "wrong number of argument in fa")?;
-        let nb = self.proof_to_term(prgrm, b)?;
-        let na = prgrm.egraph()[self_id]
-            .nodes
-            .iter()
-            .find_map(|Lang { head, args }| (head == f).then(|| args[0]))
-            .with_context(|| "not a fa")?;
-        Ok(prgrm.egraph_mut().add(f.app_id([na, nb])))
+                let (_, b) = proof_parent
+                    .iter()
+                    .cloned()
+                    .collect_tuple()
+                    .with_context(|| "wrong number of argument in fa")?;
+                let nb = self.proof_to_term(prgrm, b)?;
+                let na = prgrm.egraph()[self_id]
+                    .nodes
+                    .iter()
+                    .find_map(|Lang { head, args }| (head == f).then(|| args[0]))
+                    .with_context(|| "not a fa")?;
+                Ok(prgrm.egraph_mut().add(f.app_id([na, nb])))
+            }
+
+            ProofHints::Apply(fun) => {
+                if fun == &self.dec {
+                    todo!()
+                } else if fun == &self.pk {
+                    todo!()
+                } else {
+                    unreachable!()
+                }
+            }
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -156,7 +179,9 @@ impl ProofLike<SubstData> for ProofHints {
         match self {
             ProofHints::Keep => data.keep(psargs),
             ProofHints::Replace => data.instance(psargs),
-            ProofHints::Apply(fun) => data.function_application(fun, psargs),
+            ProofHints::Apply(fun) if fun != &data.pk && fun != &data.dec => {
+                data.function_application(fun, psargs)
+            }
             _ => data.others(psargs),
         }
     }

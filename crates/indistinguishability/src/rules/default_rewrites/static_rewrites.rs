@@ -64,6 +64,7 @@ pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>
       // length & co
       ["nonce length"] (LENGTH (NONCE #n)) => (ETA).
       ["length zeroes"] (LENGTH (ZEROES #a)) => (#a).
+      ["length tuple"] (LENGTH (TUPLE #a #b)) => (TUPLE (LENGTH #a) (LENGTH #b)).
 
       // side
       ["equiv left"]

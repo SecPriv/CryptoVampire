@@ -104,11 +104,13 @@ impl AEnc {
                 Nonce, Bitstring, Bool => Bool),
             search_k_b: declare!(pbl@index: format!("{enc}_search_k_b");
                 Nonce, Bool, Bool => Bool),
-            // k, k', r ||> t  | h
+            // k, k', r, m ||> t  | h
             search_o_m: declare!(pbl@index: format!("{enc}_search_o_m");
-                Nonce, Nonce, Nonce, Bitstring, Bool => Bool),
+                Nonce, Nonce, Nonce, Bitstring, 
+                    Bitstring, Bool => Bool),
             search_o_b: declare!(pbl@index: format!("{enc}_search_o_b");
-                Nonce, Nonce, Nonce, Bool, Bool => Bool),
+                Nonce, Nonce, Nonce, Bitstring, 
+                    Bool, Bool => Bool),
 
             // k ||> frame@t p | h
             search_k_trigger: declare!(pbl@index: format!("{enc}_search_k_trigger");
@@ -121,7 +123,9 @@ impl AEnc {
                 Nonce, Nonce, Time, Protocol, Bool => Bool),
             // sid, u, v, _{_ -> nt @ proof}, b
             subst: declare!(pbl@index: format!("{enc}_search_o_b");
-                Any, Bitstring, Bitstring, Bitstring, Bool, Bitstring => Bool),
+                Any, Bitstring, Bitstring, 
+                Bitstring, Bool, 
+                Bitstring => Bool),
             index,
         };
 
