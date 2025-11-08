@@ -144,77 +144,100 @@ fn mk_static_rules<'a>(
             (search_o_m #K #K2 #R #M (dec #A #B) #H) :-
               (search_o_m #K #K2 #R #M #A #H).
 
-            // macros
-            "search_k_enc_exec"  (Keep):
+          // macros
+          "search_k_enc_exec"  (Keep):
             (search_k_b #K (MACRO_EXEC #T  #P) #H) :-
-            (search_k_trigger #K #T #P #H).
+              (search_k_trigger #K #T #P #H).
 
-            "search_o_enc_exec"  (Keep):
+          "search_o_enc_exec"  (Keep):
             (search_k_b #K #K2 #R (MACRO_EXEC #T  #P) #H) :-
-            (search_o_pre_trigger #K #K2 #R #T #P #H).
+              (search_o_pre_trigger #K #K2 #R #T #P #H).
 
-            "search_k_enc_frame"  (Keep):
+          "search_k_enc_frame"  (Keep):
             (search_k_m #K (MACRO_FRAME #T  #P) #H) :-
-            (search_k_trigger #K #T #P #H).
+              (search_k_trigger #K #T #P #H).
 
-            "search_o_enc_frame" (Keep):
+          "search_o_enc_frame" (Keep):
             (search_k_b #K #K2 #R (MACRO_FRAME #T  #P) #H) :-
-            (search_o_pre_trigger #K #K2 #R #T #P #H).
+              (search_o_pre_trigger #K #K2 #R #T #P #H).
 
-            "search_k_enc_input" (Keep):
+          "search_k_enc_input" (Keep):
             (search_k_m #K (MACRO_INPUT #T  #P) #H) :-
-            (search_k_trigger #K (PRED #T) #P #H).
+              (search_k_trigger #K (PRED #T) #P #H).
 
-            "search_o_enc_input" (Keep):
+          "search_o_enc_input" (Keep):
             (search_k_b #K #K2 #R (MACRO_INPUT #T  #P) #H) :-
-            (search_o_pre_trigger #K #K2 #R (PRED #T) #P #H).
+              (search_o_pre_trigger #K #K2 #R (PRED #T) #P #H).
 
-            // if and and
-            "search_enc_ite_m" c, l, r (Apply(MITE.clone())):
+          // if and and
+          "search_enc_ite_m" c, l, r (Apply(MITE.clone())):
             (search_k_m #K (MITE #c #l #r) #H):-
-                (search_k_b #K #c #H),
-                (search_k_m #K #l (and #c #H)),
-                (search_k_m #K #r (and (not #c) #H)).
+              (search_k_b #K #c #H),
+              (search_k_m #K #l (and #c #H)),
+              (search_k_m #K #r (and (not #c) #H)).
 
-            "search_o_enc_ite_m" c, l, r (Apply(MITE.clone())):
+          "search_o_enc_ite_m" c, l, r (Apply(MITE.clone())):
             (search_o_m #K #K2 #R (MITE #c #l #r) #H):-
-                (search_o_b #K #K2 #R #c #H),
-                (search_o_m #K #K2 #R #l (and #c #H)),
-                (search_o_m #K #K2 #R #r (and (not #c) #H)).
+              (search_o_b #K #K2 #R #c #H),
+              (search_o_m #K #K2 #R #l (and #c #H)),
+              (search_o_m #K #K2 #R #r (and (not #c) #H)).
 
-            "search_enc_ite_b" c, l, r (Apply(BITE.clone())):
+          "search_enc_ite_b" c, l, r (Apply(BITE.clone())):
             (search_k_b #K (BITE #c #l #r) #H):-
-                (search_k_b #K #c #H),
-                (search_k_b #K #l (and #c #H)),
-                (search_k_b #K #r (and (not #c) #H)).
+              (search_k_b #K #c #H),
+              (search_k_b #K #l (and #c #H)),
+              (search_k_b #K #r (and (not #c) #H)).
 
-            "search_o_enc_ite_m" c, l, r (Apply(BITE.clone())):
+          "search_o_enc_ite_m" c, l, r (Apply(BITE.clone())):
             (search_o_b #K #K2 #R (BITE #c #l #r) #H):-
-                (search_o_b #K #K2 #R #c #H),
-                (search_o_b #K #K2 #R #l (and #c #H)),
-                (search_o_b #K #K2 #R #r (and (not #c) #H)).
+              (search_o_b #K #K2 #R #c #H),
+              (search_o_b #K #K2 #R #l (and #c #H)),
+              (search_o_b #K #K2 #R #r (and (not #c) #H)).
 
-            "search_enc_and" c, l, r (Apply(AND.clone())):
+          "search_enc_and" c, l, r (Apply(AND.clone())):
             (search_k_b #K (AND #c #l) #H):-
-                (search_k_b #K #c #H),
-                (search_k_b #K #r (and  #c #H)).
+              (search_k_b #K #c #H),
+              (search_k_b #K #r (and  #c #H)).
 
-            "search_o_enc_and" c, l (Apply(AND.clone())):
+          "search_o_enc_and" c, l (Apply(AND.clone())):
             (search_o_b #K #K2 #R (AND #c #l) #H):-
-                (search_o_b #K #K2 #R #c #H),
-                (search_o_b #K #K2 #R #l (and #c #H)).
+              (search_o_b #K #K2 #R #c #H),
+              (search_o_b #K #K2 #R #l (and #c #H)).
 
-            // trigger
-            "search_o_ind_cca_trigger" :
-              (search_o_pre_trigger #K #K #R #T #P #H) :-
-                (search_o_trigger #K #R #T #P #H).
+          // trigger
+          "search_o_ind_cca_trigger" :
+            (search_o_pre_trigger #K #K #R #T #P #H) :-
+              (search_o_trigger #K #R #T #P #H).
 
-            "search_o_enc_kp_trigger" :
-              (search_o_pre_trigger #K (IS_FRESH_NONCE #K2) #R #T #P #H) :-
-                (search_o_trigger #K #R #T #P #H).
+          "search_o_enc_kp_trigger" :
+            (search_o_pre_trigger #K (IS_FRESH_NONCE #K2) #R #T #P #H) :-
+              (search_o_trigger #K #R #T #P #H).
 
-            "search_k_enc_trigger_skip":
-              (search_k_trigger (IS_FRESH_NONCE #K) #T #P #H).
+          "search_k_enc_trigger_skip":
+            (search_k_trigger (IS_FRESH_NONCE #K) #T #P #H).
+          
+          // fa
+          "search_o_enc_fa_b_to_k" (Apply(CONS_FA_BITSTRING.clone())):
+            (search_o_m #K #K2 #R  (CONS_FA_BITSTRING #A #B) #H):-
+              (search_k_m #K #A #H),
+              (search_k_m #K #A #H),
+              (search_o_m #K #K2 #R #B #H).
+
+          "search_o_enc_fa_b_to_k" (Apply(CONS_FA_BOOL.clone())):
+            (search_o_m #K #K2 #R  (CONS_FA_BOOL #A #B) #H):-
+              (search_k_b #K #A #H),
+              (search_k_b #K #A #H),
+              (search_o_m #K #K2 #R #B #H).
+
+          "search_o_enc_fa_m_fallback" (Apply(CONS_FA_BITSTRING.clone())):
+            (search_o_m #K #K2 #R  (CONS_FA_BITSTRING #A #B) #H):-
+              (search_o_m #K #K2 #R #A #H),
+              (search_o_m #K #K2 #R #B #H).
+
+          "search_o_enc_fa_b_to_k" (Apply(CONS_FA_BOOL.clone())):
+            (search_o_m #K #K2 #R  (CONS_FA_BOOL #A #B) #H):-
+              (search_o_b #K #K2 #R #A #H),
+              (search_o_m #K #K2 #R #B #H).
         }
     ]
 }

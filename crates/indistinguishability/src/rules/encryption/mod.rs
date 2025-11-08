@@ -48,7 +48,7 @@ enum ProofHints {
     Keep,
     Replace,
     /// in `(fa_cons a b)`, keep `a` as is and propagate to `b`
-    FaKeep,
+    FaKeep(Function),
     /// beware of crypto functions
     Apply(Function),
 }
