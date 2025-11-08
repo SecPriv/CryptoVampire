@@ -72,23 +72,31 @@ pub struct Configuration {
     #[arg(long, default_value_t = Self::default().prf_limit)]
     pub fa_limit: usize,
 
+    /// Limit on how many new nonce 'enc-kp' can generate
+    ///
+    /// This might be helpful to avoid loops
+    #[arg(long, default_value_t = Self::default().prf_limit)]
+    pub enc_kp_limit: usize,
+
     /// activate golgge trace
     #[arg(long)]
     pub trace: bool,
 }
 
+static NODE_LIMIT_DEFAULT: usize = 1000;
+static NONCE_GENERATION_DEFAULT: usize = 3;
+
 impl Default for Configuration {
     /// Returns a default `Configuration` instance.
     fn default() -> Self {
         let ::golgge::Config {
-            node_limit,
             time_limit,
             iter_limit,
             ..
         } = ::golgge::Config::default();
         Self {
             file: Default::default(),
-            node_limit,
+            node_limit: NODE_LIMIT_DEFAULT,
             time_limit,
             iter_limit,
             vampire_timeout: ::std::time::Duration::from_secs(2),
@@ -98,8 +106,9 @@ impl Default for Configuration {
             no_cryptovampire_prelude: false,
             no_steel_prelude: false,
             cores: num_cpus::get() as u64,
-            prf_limit: 3,
             fa_limit: 4,
+            enc_kp_limit: NONCE_GENERATION_DEFAULT,
+            prf_limit: NONCE_GENERATION_DEFAULT,
             trace: cfg!(debug_assertions),
         }
     }

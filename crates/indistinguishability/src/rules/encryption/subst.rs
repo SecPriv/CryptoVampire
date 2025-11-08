@@ -5,8 +5,8 @@ use itertools::Itertools;
 use utils::ereturn_let;
 
 use crate::{
-    Lang,
-    problem::PAnalysis,
+    Lang, Problem,
+    problem::{PAnalysis, PRule, RcRule},
     rexp,
     rules::{
         AEnc,
@@ -18,8 +18,13 @@ use crate::{
 
 use super::vars::*;
 
+pub fn mk_rules(_: &Problem, aenc: &AEnc) -> impl Iterator<Item = RcRule> {
+    [SubstRule::new(aenc).into_mrc()].into_iter()
+}
+
 #[derive(Debug, Clone)]
-pub struct SubstRule {
+struct SubstRule {
+    #[allow(dead_code)]
     aenc: usize,
 
     search_o_m: Function,
@@ -77,7 +82,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
                     search_o_m: self.search_o_m.clone(),
                     new_term: nt_id,
                 })
-                .get_term(prgm, proof_id)
+                .proof_to_term(prgm, proof_id)
                 .unwrap();
                 subst.insert(NT.as_egg(), na);
                 [self.new_goal_pattern.apply_susbt(prgm.egraph_mut(), &subst)]

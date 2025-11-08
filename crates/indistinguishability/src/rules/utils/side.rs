@@ -47,4 +47,8 @@ impl Side {
             .iter()
             .find_map(|Lang { head, .. }| Self::try_from_fn(head))
     }
+
+    pub fn get_id<N: Analysis<Lang>>(self, egraph: &mut EGraph<Lang, N>) -> Id {
+        egraph.add(Function::from(self).app_id([]))
+    }
 }

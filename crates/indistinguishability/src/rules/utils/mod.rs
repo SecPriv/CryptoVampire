@@ -3,7 +3,7 @@ use itertools::Itertools;
 use rustc_hash::FxHashSet;
 /// Re-exports `EgraphSearcher` for e-graph based searching, `SyntaxSearcher` for syntax-based searching,
 /// and `default_is_special` for determining if a function is special.
-pub use search::{EgraphSearcher, SyntaxSearcher, default_is_special};
+pub use subterm_trait::{EgraphSearcher, SyntaxSearcher, default_is_special};
 use utils::{econtinue_if, implvec};
 
 use crate::{
@@ -15,12 +15,15 @@ use crate::{
 /// Provides utilities for handling fresh variables and formulas.
 pub mod fresh;
 
-mod search;
+mod subterm_trait;
 
 pub(crate) mod lambda_subst;
 
 mod side;
 pub use side::Side;
+
+mod with_data;
+pub use with_data::RuleWithFreshNonce;
 
 // mod subst;
 // pub use subst::mk_subst_rw;

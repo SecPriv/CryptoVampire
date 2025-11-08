@@ -29,6 +29,7 @@ pub struct SearchRule {
 
 #[derive(Debug, Clone)]
 struct SearchK {
+    #[allow(dead_code)]
     aenc: usize,
     pk: Function,
     k: RecFOFormula,
@@ -36,6 +37,7 @@ struct SearchK {
 
 #[derive(Debug, Clone)]
 struct SearchO {
+    #[allow(dead_code)]
     aenc: usize,
 
     pk: Function,

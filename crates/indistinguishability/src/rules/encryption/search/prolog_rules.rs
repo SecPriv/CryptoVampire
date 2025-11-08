@@ -9,8 +9,7 @@ use crate::{
         encryption::{ProofHints, vars::*},
     },
     terms::{
-        AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, Function, IS_FRESH_NONCE, MACRO_EXEC,
-        MACRO_FRAME, MACRO_INPUT, MITE, NONCE, PRED, RecFOFormula, Sort, VAMPIRE,
+        AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, FRESH_NONCE, Function, IS_FRESH_NONCE, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE, PRED, RecFOFormula, Sort, VAMPIRE
     },
 };
 
@@ -189,13 +188,15 @@ pub fn mk_static_rules<'a>(
             (search_o_m #K #K2 #R  (CONS_FA_BITSTRING #A #B) #H):-
               (search_o_m #K #K2 #R #B #H),
               (search_k_m #K #A #H),
-              (search_k_m #K #A #H).
+              (search_k_m #K2 #A #H),
+              (FRESH_NONCE #R #A #H).
 
           "search_o_enc_fa_b_to_k" (FaKeep(CONS_FA_BOOL.clone())):
             (search_o_m #K #K2 #R  (CONS_FA_BOOL #A #B) #H):-
               (search_o_m #K #K2 #R #B #H),
               (search_k_b #K #A #H),
-              (search_k_b #K #A #H).
+              (search_k_b #K2 #A #H),
+              (FRESH_NONCE #R #A #H).
 
           "search_o_enc_fa_m_fallback" (Apply(CONS_FA_BITSTRING.clone())):
             (search_o_m #K #K2 #R  (CONS_FA_BITSTRING #A #B) #H):-

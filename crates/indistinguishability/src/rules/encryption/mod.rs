@@ -7,8 +7,8 @@ use crate::{
 declare_trace!($"enc");
 
 mod vars {
-    decl_vars!(pub const M:Bitstring, M2:Bitstring, T, NT, P,
-            A:Bitstring, B:Bitstring, C:Bitstring,
+    decl_vars!(pub const M:Bitstring, T, NT, P,
+            A:Bitstring, B:Bitstring, 
             PROOF: Bool, K:Nonce, K2:Nonce, N:Nonce, R:Nonce, H:Bool,
             SIDE:Any, U:Bitstring, V:Bitstring);
 }
@@ -127,8 +127,14 @@ impl AEnc {
 
         // declare prolog rules
         {
-            let search_rules = search::mk_rules(pbl, &aenc).collect_vec();
-            pbl.extra_rules_mut().extend(search_rules);
+            let rules = chain![
+                search::mk_rules(pbl, &aenc),
+                subst::mk_rules(pbl, &aenc),
+                ind_cca::mk_rules(pbl, &aenc),
+                enc_kp::mk_rules(pbl, &aenc)
+            ]
+            .collect_vec();
+            pbl.extra_rules_mut().extend(rules);
         }
 
         // declare rewrites
