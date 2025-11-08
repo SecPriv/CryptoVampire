@@ -29,6 +29,9 @@ mod rule;
 
 mod algorithm;
 
+mod from_proof;
+pub use from_proof::{PSArgs, ProofLike, ProofSubstitution};
+
 decl_vars!(const; GOAL:Bool, X:Any, FROM:Bitstring, TO:Bitstring, PTCL:Protocol, T:Time);
 
 #[dynamic]

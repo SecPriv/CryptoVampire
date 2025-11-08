@@ -4,16 +4,17 @@ use itertools::chain;
 use crate::Lang;
 use crate::protocol::MacroKind;
 use crate::terms::{
-    ATT, BITE, EMPTY, ETA, FRESH_NONCE, FROM_BOOL, Function, HAPPENS, IMPLIES, IS_FRESH_NONCE,
-    LENGTH, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_MSG, MITE, NONCE, PRED, PROJ_1, PROJ_2,
-    TUPLE, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, ZEROES,
+    ATT, BITE, EMPTY, EQUIV, EQUIV_WITH_SIDE, ETA, FRESH_NONCE, FROM_BOOL, Function, HAPPENS,
+    IMPLIES, IS_FRESH_NONCE, LEFT, LENGTH, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_MSG,
+    MITE, NONCE, PRED, PROJ_1, PROJ_2, RIGHT, TUPLE, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT,
+    ZEROES,
 };
 
 /// Creates a set of static rewrite rules.
 pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>> {
     let b_ite = &BITE;
     let m_ite = &MITE;
-    decl_vars![t, t1, t2, a, b, c, d, v1, x, p, n];
+    decl_vars![t, t1, t2, a, b, c, d, v1, x, p, n, u, v];
 
     let main = mk_many_rewrites! {
       ["if true"] (m_ite true #a #b) => (#a).
@@ -84,6 +85,13 @@ pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>
       // length & co
       ["nonce length"] (LENGTH (NONCE #n)) => (ETA).
       ["length zeroes"] (LENGTH (ZEROES #a)) => (#a).
+
+      // side
+      ["equiv left"]
+        (EQUIV_WITH_SIDE LEFT #u #v #a #b) => (EQUIV #u #v #a #b).
+
+      ["equiv right"]
+        (EQUIV_WITH_SIDE RIGHT #u #v #a #b) => (EQUIV #u #v #b #a).
     };
 
     let unfold = MacroKind::all().map(|kind| {

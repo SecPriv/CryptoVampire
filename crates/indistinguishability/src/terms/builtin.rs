@@ -397,6 +397,29 @@ mk_builtin_funs!(
         flags: f!(PROLOG_ONLY)
     };
 
+    // side
+    LEFT "left_side" {
+        signature: s!(() -> Any),
+        flags: f!(PROLOG_ONLY)
+    };
+
+    RIGHT "right_side" {
+        signature: s!(() -> Any),
+        flags: f!(PROLOG_ONLY)
+    };
+
+    EQUIV_WITH_SIDE "equiv_ws" {
+        signature: s!(
+            /* side */
+            Any,
+            /* hypothesis */
+            Bitstring, Bitstring,
+            /* to prove */
+            Bitstring, Bitstring
+            -> Bool),
+        flags: f!(PROLOG_ONLY)
+    };
+
     // -------- lambda -----------
 
     // LAMBDA_LET "λlet" {
@@ -486,16 +509,6 @@ mk_builtin_funs!(
         signature: s!(() -> Bitstring),
     };
 
-    // side
-    LEFT "left_side" {
-        signature: s!(() -> Any),
-        flags: f!(PROLOG_ONLY)
-    };
-
-    RIGHT "right_side" {
-        signature: s!(() -> Any),
-        flags: f!(PROLOG_ONLY)
-    };
 
     // ~~~~~~~~~~~~~~~ smt only ~~~~~~~~~~~~~~~~~
 

@@ -7,9 +7,10 @@ use crate::{
 declare_trace!($"enc");
 
 mod vars {
-    decl_vars!(pub const M:Bitstring, M2:Bitstring, T, NT, P, 
+    decl_vars!(pub const M:Bitstring, M2:Bitstring, T, NT, P,
             A:Bitstring, B:Bitstring, C:Bitstring,
-            PROOF: Bool, K:Nonce, K2:Nonce, N:Nonce, R:Nonce, H:Bool, SIDE:Any);
+            PROOF: Bool, K:Nonce, K2:Nonce, N:Nonce, R:Nonce, H:Bool,
+            SIDE:Any, U:Bitstring, V:Bitstring);
 }
 
 mod candidate;
@@ -93,24 +94,34 @@ impl AEnc {
             dec,
             pk,
             // C[enc(m, nonce(r), pk(nonce(k)))], m, r, k
-            candidate_m: declare!(pbl@index: format!("{enc}_candidate_m"); Bitstring, Bitstring, Nonce, Nonce => Bitstring),
-            candidate_b: declare!(pbl@index: format!("{enc}_candidate_b"); Bool, Bitstring, Nonce, Nonce => Bool),
+            candidate_m: declare!(pbl@index: format!("{enc}_candidate_m");
+                Bitstring, Bitstring, Nonce, Nonce => Bitstring),
+            candidate_b: declare!(pbl@index: format!("{enc}_candidate_b");
+                Bool, Bitstring, Nonce, Nonce => Bool),
 
             // k ||> t | h
-            search_k_m: declare!(pbl@index: format!("{enc}_search_k_m"); Nonce, Bitstring, Bool => Bool),
-            search_k_b: declare!(pbl@index: format!("{enc}_search_k_b"); Nonce, Bool, Bool => Bool),
+            search_k_m: declare!(pbl@index: format!("{enc}_search_k_m");
+                Nonce, Bitstring, Bool => Bool),
+            search_k_b: declare!(pbl@index: format!("{enc}_search_k_b");
+                Nonce, Bool, Bool => Bool),
             // k, k', r ||> t  | h
-            search_o_m: declare!(pbl@index: format!("{enc}_search_o_m"); Nonce, Nonce, Nonce, Bitstring, Bool => Bool),
-            search_o_b: declare!(pbl@index: format!("{enc}_search_o_b"); Nonce, Nonce, Nonce, Bool, Bool => Bool),
+            search_o_m: declare!(pbl@index: format!("{enc}_search_o_m");
+                Nonce, Nonce, Nonce, Bitstring, Bool => Bool),
+            search_o_b: declare!(pbl@index: format!("{enc}_search_o_b");
+                Nonce, Nonce, Nonce, Bool, Bool => Bool),
 
             // k ||> frame@t p | h
-            search_k_trigger: declare!(pbl@index: format!("{enc}_search_k_trigger"); Nonce, Time, Protocol, Bool => Bool),
+            search_k_trigger: declare!(pbl@index: format!("{enc}_search_k_trigger");
+                Nonce, Time, Protocol, Bool => Bool),
             // k, k', r ||> frame@t p  | h
-            search_o_pre_trigger: declare!(pbl@index: format!("{enc}_search_k_pre_trigger"); Nonce,Nonce,  Nonce, Time, Protocol, Bool => Bool),
+            search_o_pre_trigger: declare!(pbl@index: format!("{enc}_search_k_pre_trigger");
+                Nonce,Nonce,  Nonce, Time, Protocol, Bool => Bool),
             // k, r ||> frame@t p  | h
-            search_o_trigger: declare!(pbl@index: format!("{enc}_search_k_trigger"); Nonce, Nonce, Time, Protocol, Bool => Bool),
-            // sid, u, v, t{_ -> nt}, b
-            subst: declare!(pbl@index: format!("{enc}_search_o_b"); Any, Bitstring, Bitstring, Bitstring, Bitstring, Bitstring => Bool),
+            search_o_trigger: declare!(pbl@index: format!("{enc}_search_k_trigger");
+                Nonce, Nonce, Time, Protocol, Bool => Bool),
+            // sid, u, v, _{_ -> nt @ proof}, b
+            subst: declare!(pbl@index: format!("{enc}_search_o_b");
+                Any, Bitstring, Bitstring, Bitstring, Bool, Bitstring => Bool),
             index,
         };
 
@@ -163,7 +174,7 @@ impl AEnc {
     fn extra_rewrites(&self, _pbl: &Problem) -> impl Iterator<Item = Rewrite> {
         let Self { enc, dec, pk, .. } = self;
         // crate::mk_rewrite!()
-        [mk_rewrite!(crate format!("{enc} simplification"); (m Bitstring, r Bitstring, k Bitstring): 
+        [mk_rewrite!(crate format!("{enc} simplification"); (m Bitstring, r Bitstring, k Bitstring):
             (dec (enc #m #r (pk #k)) #k) => (#m))
         ].into_iter()
     }
