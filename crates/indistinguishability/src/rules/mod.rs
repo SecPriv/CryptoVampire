@@ -228,11 +228,12 @@ macro_rules! mk_many_rewrites {
 /// Provides utility functions and helpers for rules.
 pub mod utils;
 
+/// Encryption rules
+mod aenc;
 /// Provides rules for deduction.
 pub mod deduce;
 /// Provides default rewrite rules.
 mod default_rewrites;
-mod aenc;
 /// Provides rules for handling forall quantifiers.
 mod fa;
 /// Provides rules for lambda calculus.
@@ -245,6 +246,8 @@ mod prf;
 mod substitution;
 /// Provides rules for interacting with the Vampire SMT solver.
 mod vampire;
+
+mod if_rewrites;
 
 /// Re-exports `FreshNonce` for generating fresh nonces and `mk_no_guessing_smt` for SMT rules related to nonces.
 /// Re-exports `FreshNonce` for generating fresh nonces and `mk_no_guessing_smt` for SMT rules related to nonces.
@@ -290,5 +293,9 @@ pub fn mk_default_prolog_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
 pub fn mk_default_rewrites<N: Analysis<Lang>>(
     pbl: &Problem,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
-    chain![default_rewrites::mk_rewrites(pbl), lambda::mk_rewrites(pbl)]
+    chain![
+        default_rewrites::mk_rewrites(pbl),
+        lambda::mk_rewrites(pbl),
+        if_rewrites::mk_rewrite(pbl)
+    ]
 }

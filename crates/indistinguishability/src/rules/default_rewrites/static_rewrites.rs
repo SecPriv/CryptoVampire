@@ -12,31 +12,10 @@ use crate::terms::{
 
 /// Creates a set of static rewrite rules.
 pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>> {
-    let b_ite = &BITE;
     let m_ite = &MITE;
-    decl_vars![t, t1, t2, a, b, c, d, v1, x, p, n, u, v];
+    decl_vars![t, t1, t2, a, b, c, v1, p, n, u, v];
 
     let main = mk_many_rewrites! {
-      ["if true"] (m_ite true #a #b) => (#a).
-      ["if false"] (m_ite false #a #b) => (#b).
-      // ["implies def"] (=> #a #b) => (b_ite #a #b true).
-      ["if simp1"] (m_ite #x #a #a) => (#a).
-      ["if simp2"] (m_ite #a #a false) => (#a).
-      ["if simp3"] (m_ite #a (m_ite #a #b #c) #d) => (m_ite #a #b #d).
-      ["if simp4"] (m_ite #a true false) => (#a).
-      ["if eq"] (m_ite (= #a #b) #a #b) => (#a).
-      // ["if and"] (m_ite (and #a #b) #c #d) => (m_ite #a (m_ite #b #c #d) #d).
-
-      ["b_if true"] (b_ite true #a #b) => (#a).
-      ["b_if false"] (b_ite false #a #b) => (#b).
-      ["b_if simp1"] (b_ite #x #a #a) => (#a).
-      ["b_if simp2"] (b_ite #a #a false) => (#a).
-      ["b_if simp4"] (b_ite #a true false) => (#a).
-      ["b_if simp3"] (b_ite #a (b_ite #a #b #c) #d) => (b_ite #a #b #d).
-
-      ["if implies simp"] (b_ite (and #a #b) #a true) => true.
-      ["if implies simp2"] (b_ite #a #a true) => true.
-      ["if implies trans"] (#v1 = true, #v1 = (m_ite #a #b true), #v1 = (m_ite #b #c true)) => (#v1 = (=> #a #c)).
 
       ["implies simp1"] (IMPLIES true #a) => (#a).
       ["implies simp2"] (IMPLIES #a true) => true.

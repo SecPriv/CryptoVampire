@@ -25,7 +25,7 @@ pub fn mk_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> + use<'_> {
 }
 
 fn should_process_normaly(f: &Function) -> bool {
-    !f.is_special_deduce() && f.signature.output.support_deduce()
+    !f.is_special_deduce() && f.signature.output.is_base()
 }
 
 /// ```text

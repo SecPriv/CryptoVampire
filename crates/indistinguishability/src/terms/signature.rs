@@ -5,7 +5,7 @@ use utils::implvec;
 
 use crate::fresh;
 use crate::input::Registerable;
-use crate::terms::{Sort, Variable};
+use crate::terms::{RecFOFormula, Sort, Variable};
 
 /// Represents the signature of a function, defining its input and output sorts.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Steel)]
@@ -39,6 +39,11 @@ impl Signature {
     /// Creates a vector of fresh `Variable`s, one for each input sort.
     pub fn mk_vars(&self) -> Vec<Variable> {
         self.inputs.iter().map(|&s| fresh!(s)).collect()
+    }
+
+    /// Creates a vector of fresh `Variable`s, one for each input sort.
+    pub fn mk_vars_expr(&self) -> impl Iterator<Item = RecFOFormula> {
+        self.inputs.iter().map(|&s| fresh!(s)).map(RecFOFormula::Var)
     }
 
     // pub fn mk_sorted_vars(
