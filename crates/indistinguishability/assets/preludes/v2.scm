@@ -4,6 +4,8 @@
   declare-protocol
   declare-cryptography
   initialize-as-prf
+  initialize-as-aenc
+  set-init-step
   run
   get-function
   register-function
@@ -22,7 +24,7 @@
   define-alias
   define-function
   lift-fun
-  cand cor tuple
+  cand cor tuple eql
   ;  @@@EXPORTS@@@
   )
 (require-builtin cryptovampire as cv-)
@@ -168,6 +170,14 @@
         content)
       stepf)))
 
+(define (set-init-step pbl . content)
+  (let [ (s (get-function init)) ]
+    (begin
+      (for-each (lambda (c)
+          (let [ (condf (step-message c)) (ptcl (step-protocol c)) ]
+            (cv-set-step-message pbl s (get-function ptcl)
+              condf)))))))
+
 (define (mk-fun name cryptos . args)
   (if (< (length args) 1)
     (error "mk-fun: expected at least one sort argument")
@@ -233,6 +243,10 @@
 (define (initialize-as-prf prf fhash)
   (cv-initialize-as-prf prf (get-function fhash)))
 
+(define (initialize-as-aenc aenc enc dec pk)
+  (cv-initialize-as-aenc aenc
+    (get-function enc) (get-function dec) (get-function pk)))
+
 (define (run pbl p1 p2)
   (cv-run pbl (get-function p1) (get-function p2)))
 
@@ -262,3 +276,4 @@
 (define (cand . args) (cv-cand args))
 (define (cor . args) (cv-cor args))
 (define (tuple . args) (cv-tuple args))
+(define (eql a b) (eq (bistring_length a) (bistring_length b)))
