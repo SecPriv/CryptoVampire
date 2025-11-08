@@ -114,6 +114,12 @@ impl AEnc {
             index,
         };
 
+        // declare prolog rules
+        {
+            let search_rules = search::mk_rules(pbl, &aenc).collect_vec();
+            pbl.extra_rules_mut().extend(search_rules);
+        }
+
         // declare rewrites
         {
             let rewrites =
