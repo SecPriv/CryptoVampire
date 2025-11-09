@@ -75,14 +75,22 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
 
                 // Extract lists for 'a' and 'b', continue if not a list or the lengths don't match
                 econtinue_let!(let list_a = extract_list(egraph, *a));
-                tr!("list_a: {list_a:?}");
+                tr!(
+                    "list_a: [\n\t{}\n]",
+                    list_a
+                        .iter()
+                        .map(|(is, s)| format!("{s:?}: {}", egraph.id_to_expr(*is).pretty(100)))
+                        .join(",\n\t")
+                );
                 econtinue_let!(let list_b = extract_list(egraph, *b));
+                tr!("list_b: {list_b:?}");
                 econtinue_if!(list_a.len() != list_b.len());
 
                 if let Some(list) = izip!(list_a, list_b)
                     .map(|((a, sa), (b, sb))| (sa == sb).then_some(FaElem { a, b, sort: sa }))
                     .collect()
                 {
+                    tr!("fa: add to candidates");
                     candidates.push((subst, list))
                 }
             }
@@ -96,6 +104,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
             for (subst, list) in candidates {
                 // Collect sets of arguments for creating new expressions.
                 let sets = collect_sets(egraph, &list);
+                tr!("sets:\n{sets:#?}");
                 // Create new expressions and add them to the egraph.
                 results.extend(sets.into_iter().map(|args| {
                     let (ia_id, ib_id) = create_lists(egraph, &args);
@@ -180,7 +189,9 @@ fn extract_list<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, init: Id) -> Vec<(I
             todo.push((*subst.get(TL.as_egg()).unwrap(), sort));
             // res.push((*subst.get(HD.as_egg()).unwrap(), sort));
             // next = *subst.get(TL.as_egg()).unwrap();
-        } else if PATTERN_NIL.search_eclass(egraph, next).is_some() {
+            // } else if PATTERN_NIL.search_eclass(egraph, next).is_some() {
+        } else if is_constant(egraph, next) {
+            tr!("drop constant:\n\t{}", egraph.id_to_expr(next).pretty(100));
             // return Some(res);
             continue;
         } else {
@@ -199,6 +210,14 @@ fn extract_list<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, init: Id) -> Vec<(I
         }
     }
     res
+}
+
+fn is_constant<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, id: Id) -> bool {
+    egraph[id]
+        .nodes
+        .iter()
+        .filter(|f| f.head.is_part_of_F())
+        .any(|Lang { head, .. }| head.args_sorts().all(|s| !s.is_base() && s != Sort::Nonce))
 }
 
 /// Collects sets of arguments for creating new expressions.
@@ -331,7 +350,7 @@ fn q_transform<'e, 'a>(
     n_args_b: &'a [Id],
 ) -> Option<impl IntoIterator<Item = FaElem> + use<'a, 'e>> {
     assert!(f.is_egg_binder());
-    tr!("here");
+    tr!("here : {f}");
 
     let mut args = izip!(n_args_a.iter().copied(), n_args_b.iter().copied());
 
@@ -433,9 +452,11 @@ fn find_commun_head<'a, D: Debug>(
     a: &'a EClass<Lang, D>,
     b: &'a EClass<Lang, D>,
 ) -> impl Iterator<Item = (Function, Vec<Id>, Vec<Id>)> {
+    tr!("looking for commun head");
     a.nodes
         .iter()
         .cartesian_product(b.nodes.iter())
+        .inspect(|(a, b)| tr!("trying to find commun head :{a}, {b}"))
         .filter(|(a, b)| (a.head == b.head) && can_apply_fa(&a.head))
         .map(|(a, b)| {
             (

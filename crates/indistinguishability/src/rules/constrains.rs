@@ -33,19 +33,19 @@ pub fn modify_egraph<'pbl>(egraph: &mut EGraph<Lang, PAnalysis<'pbl>>) {
     let args = args.iter().map(|f| rexp!(f));
     let s = rexp!((cf #args*));
 
-    let hid = egraph.add_expr(&s.as_egg_ground());
+    let hid = egraph.add_expr(&rexp!((HAPPENS #s)).as_egg_ground());
     let trueid = egraph.add(TRUE.app_id([]));
     egraph.union(hid, trueid);
 
-    let hpridid = egraph.add_expr(&rexp!((PRED #s)).as_egg_ground());
-    egraph.union(hpridid, trueid);
+    // let hpridid = egraph.add_expr(&rexp!((HAPPENS (PRED #s))).as_egg_ground());
+    // egraph.union(hpridid, trueid);
 }
 
 pub fn mk_smt(pbl: &Problem) -> impl Iterator<Item = MSmt> {
     pbl.constrains()
         .iter()
         .flat_map(|c| mk_smt_constrain_one(pbl, c))
-        .map(|s| MSmt::Assert(s))
+        .map(MSmt::Assert)
 }
 
 pub fn mk_rewrite<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = egg::Rewrite<Lang, N>> {
@@ -59,9 +59,11 @@ fn mk_smt_constrain_one(
     _: &Problem,
     bind!(s1(a1..) op s2(a2..)): &Constrains,
 ) -> impl Iterator<Item = MSmtFormula> {
+    debug_assert_eq!(s1.arity(), a1.len());
+    debug_assert_eq!(s2.arity(), a2.len());
     let vars_iter = chain![a1, a2].unique().cloned();
     let args1 = a1.iter().map::<MSmtFormula, _>(|v| smt!(#v));
-    let args2 = a1.iter().map::<MSmtFormula, _>(|v| smt!(#v));
+    let args2 = a2.iter().map::<MSmtFormula, _>(|v| smt!(#v));
     match op {
         ConstrainOp::LessThan => {
             [smt!((forall #(vars_iter) (LT (s1 #args1*) (s2 #args2*))))].into_iter()
