@@ -1358,7 +1358,7 @@ impl RecFOFormula {
         if head.arity() != args.len() {
             return Err(SteelErr::new(
                 rerrs::ErrorKind::ArityMismatch,
-                format!("expect {} got {}", head.arity(), args.len()),
+                format!("expect {} got {}: ({ret})", head.arity(), args.len()),
             ));
         }
 

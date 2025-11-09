@@ -33,6 +33,7 @@ struct SearchK {
     aenc: usize,
     pk: Function,
     k: RecFOFormula,
+    dec: Function,
 }
 
 #[derive(Debug, Clone)]
@@ -41,10 +42,9 @@ struct SearchO {
     aenc: usize,
 
     pk: Function,
-    dec: Function,
 
     k: RecFOFormula,
-    k2: RecFOFormula,
+    // k2: RecFOFormula,
     r: RecFOFormula,
 }
 
@@ -76,6 +76,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SearchRule {
                 let result = SearchK {
                     aenc: *aenc,
                     pk: pk.clone(),
+                    dec: dec.clone(),
                     k,
                 }
                 .search_id_timepoint(prgm, exec, p, t, h)
@@ -86,7 +87,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SearchRule {
 
         if let Some(matches) = trigger_o.search_eclass(prgm.egraph(), goal) {
             for subst in matches.substs {
-                let [k, k2, r, t, h] = [K, K2, R, T, H]
+                let [k, r, t, h] = [K, R, T, H]
                     .map(|v| subst.get(v.as_egg()).unwrap())
                     .map(|id| RecFOFormula::try_from_id(prgm.egraph(), *id).unwrap());
                 let p = *subst.get(P.as_egg()).unwrap();
@@ -94,9 +95,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SearchRule {
                 let result = (SearchO {
                     aenc: *aenc,
                     pk: pk.clone(),
-                    dec: dec.clone(),
                     k,
-                    k2,
                     r,
                 })
                 .search_id_timepoint(prgm, exec, p, t, h)
@@ -114,7 +113,7 @@ impl crate::rules::utils::SyntaxSearcher for SearchK {
     }
 
     fn is_instance(&self, _: &Problem, fun: &Function) -> bool {
-        fun == &NONCE || fun == &self.pk
+        [&NONCE, &self.pk, &self.dec].contains(&fun)
     }
 
     fn process_instance(
@@ -124,7 +123,7 @@ impl crate::rules::utils::SyntaxSearcher for SearchK {
         fun: &Function,
         args: &[RecFOFormula],
     ) -> ControlFlow<()> {
-        let Self { pk, k, .. } = self;
+        let Self { pk, k, dec, .. } = self;
         let mut args = args.iter();
         if fun == &NONCE {
             tr!("found key!");
@@ -137,9 +136,21 @@ impl crate::rules::utils::SyntaxSearcher for SearchK {
             let builder = builder
                 .add_node()
                 .condition(rexp!((distinct (NONCE #k) #ok)))
+                .forall()
                 .build();
 
             self.inner_search_formula(pbl, &builder, ok.clone());
+        } else if fun == dec {
+            tr!("found {dec}!");
+            let (dm, dk) = args.collect_tuple().unwrap();
+
+            self.inner_search_formula(pbl, builder, dm.clone());
+            let builder = builder
+                .add_node()
+                .condition(rexp!((distinct #dk (NONCE #k) )))
+                .forall()
+                .build();
+            self.inner_search_formula(pbl, &builder, dk.clone());
         } else {
             assert!(!self.is_instance(pbl, fun));
             unreachable!()
@@ -154,7 +165,7 @@ impl crate::rules::utils::SyntaxSearcher for SearchO {
     }
 
     fn is_instance(&self, _: &Problem, fun: &Function) -> bool {
-        [&NONCE, &self.pk, &self.dec].contains(&fun)
+        [&NONCE, &self.pk].contains(&fun)
     }
 
     fn process_instance(
@@ -164,35 +175,36 @@ impl crate::rules::utils::SyntaxSearcher for SearchO {
         fun: &Function,
         args: &[RecFOFormula],
     ) -> ControlFlow<()> {
-        let Self {
-            pk, dec, k2, r, k, ..
-        } = self;
+        let Self { pk, r, k, .. } = self;
         let mut args = args.iter();
         if fun == &NONCE {
             tr!("found key!");
             let arg = args.next().expect("NONCE needs a parameter");
-            builder.add_leaf(rexp!((distinct #arg #k #k2 #r)));
+            builder.add_leaf(rexp!((distinct #arg #k #r)));
         } else if fun == pk {
             tr!("found {pk}!");
 
             let arg = args.next().unwrap();
             let builder = builder
                 .add_node()
-                .condition(rexp!((distinct (NONCE #k) (NONCE #k2) #arg)))
+                .condition(rexp!((distinct (NONCE #k)  #arg)))
+                .forall()
                 .build();
 
             self.inner_search_formula(pbl, &builder, arg.clone());
-        } else if fun == dec {
-            tr!("found {dec}!");
-            let (dm, dk) = args.collect_tuple().unwrap();
+        }
+        // else  if fun == dec {
+        //     tr!("found {dec}!");
+        //     let (dm, dk) = args.collect_tuple().unwrap();
 
-            self.inner_search_formula(pbl, builder, dm.clone());
-            let builder = builder
-                .add_node()
-                .condition(rexp!((distinct #dk (NONCE #k) (NONCE #k2))))
-                .build();
-            self.inner_search_formula(pbl, &builder, dk.clone());
-        } else {
+        //     self.inner_search_formula(pbl, builder, dm.clone());
+        //     let builder = builder
+        //         .add_node()
+        //         .condition(rexp!((distinct #dk (NONCE #k) )))
+        //         .build();
+        //     self.inner_search_formula(pbl, &builder, dk.clone());
+        // }
+        else {
             assert!(!self.is_instance(pbl, fun));
             unreachable!()
         }

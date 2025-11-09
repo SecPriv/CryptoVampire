@@ -132,10 +132,10 @@ impl ProofSubstitution for SubstData {
             ProofHints::FaKeep(f) => {
                 let self_id = self.get_term(prgrm, proof_id)?;
 
-                let (_, b) = proof_parent
+                let b = proof_parent
                     .iter()
                     .cloned()
-                    .collect_tuple()
+                    .next()
                     .with_context(|| "wrong number of argument in fa")?;
                 let nb = self.proof_to_term(prgrm, b)?;
                 let na = prgrm.egraph()[self_id]

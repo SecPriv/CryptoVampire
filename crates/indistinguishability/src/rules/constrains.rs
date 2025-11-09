@@ -7,7 +7,7 @@ use crate::{
     Lang, MSmt, MSmtFormula, Problem,
     problem::{BoundStep, ConstrainOp, Constrains, CurrentStep, PAnalysis},
     rexp, smt,
-    terms::{HAPPENS, INIT, IS_INDEX, LEQ, LT, PRED, RecFOFormula, TRUE, Variable},
+    terms::{CURRENT_STEP, HAPPENS, INIT, IS_INDEX, LEQ, LT, PRED, RecFOFormula, TRUE, Variable},
 };
 
 macro_rules! bind {
@@ -36,6 +36,10 @@ pub fn modify_egraph<'pbl>(egraph: &mut EGraph<Lang, PAnalysis<'pbl>>) {
     let hid = egraph.add_expr(&rexp!((HAPPENS #s)).as_egg_ground());
     let trueid = egraph.add(TRUE.app_id([]));
     egraph.union(hid, trueid);
+
+    let cs = egraph.add(CURRENT_STEP.app_id([]));
+    let s = egraph.add_expr(&s.as_egg_ground());
+    egraph.union(s, cs);
 
     // let hpridid = egraph.add_expr(&rexp!((HAPPENS (PRED #s))).as_egg_ground());
     // egraph.union(hpridid, trueid);

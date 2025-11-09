@@ -117,12 +117,12 @@ pub fn mk_static_rules<'a>(
           "search_k_enc_dec" (Apply(dec.clone())):
             (search_k_m #K (dec #A #B) #H):-
               (search_k_m #K #A #H),
-              (search_k_m #K #B #H).
+              (search_k_m #K (pk #B) #H).
 
           "search_o_enc_dec" (Apply(dec.clone())):
             (search_o_m #K #K2 #R #M (dec #A #B) #H) :-
               (search_o_m #K #K2 #R #M #A #H),
-              (search_o_m #K #K2 #R #M (pk #B) #H).
+              (search_o_m #K #K2 #R #M #B #H).
 
           // macros
           "search_k_enc_exec"  (Keep):
@@ -197,6 +197,16 @@ pub fn mk_static_rules<'a>(
             (search_k_trigger (IS_FRESH_NONCE #K) #T #P #H).
 
           // fa
+          "search_o_enc_fa_m_fallback" (Apply(CONS_FA_BITSTRING.clone())):
+            (search_o_m #K #K2 #R #M (CONS_FA_BITSTRING #A #B) #H):-
+              (search_o_m #K #K2 #R #M #A #H),
+              (search_o_m #K #K2 #R #M #B #H).
+
+          "search_o_enc_fa_b_to_k" (Apply(CONS_FA_BOOL.clone())):
+            (search_o_m #K #K2 #R #M (CONS_FA_BOOL #A #B) #H):-
+              (search_o_b #K #K2 #R #M #A #H),
+              (search_o_m #K #K2 #R #M #B #H).
+
           "search_o_enc_fa_b_to_k" (FaKeep(CONS_FA_BITSTRING.clone())):
             (search_o_m #K #K2 #R #M (CONS_FA_BITSTRING #A #B) #H):-
               (search_o_m #K #K2 #R #M #B #H),
@@ -210,16 +220,6 @@ pub fn mk_static_rules<'a>(
               (search_k_b #K #A #H),
               (search_k_b #K2 #A #H),
               (FRESH_NONCE #R #A #H).
-
-          "search_o_enc_fa_m_fallback" (Apply(CONS_FA_BITSTRING.clone())):
-            (search_o_m #K #K2 #R #M (CONS_FA_BITSTRING #A #B) #H):-
-              (search_o_m #K #K2 #R #M #A #H),
-              (search_o_m #K #K2 #R #M #B #H).
-
-          "search_o_enc_fa_b_to_k" (Apply(CONS_FA_BOOL.clone())):
-            (search_o_m #K #K2 #R #M (CONS_FA_BOOL #A #B) #H):-
-              (search_o_b #K #K2 #R #M #A #H),
-              (search_o_m #K #K2 #R #M #B #H).
         }
     ]
 }

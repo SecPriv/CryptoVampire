@@ -4,7 +4,10 @@ use utils::dynamic_iter;
 
 use crate::{
     Lang, Problem, rexp,
-    terms::{AND, BITE, EQ, Function, IMPLIES, MITE, NOT, OR, RecFOFormula},
+    terms::{
+        AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, EQ, Function, IMPLIES, MITE, NOT, OR,
+        RecFOFormula,
+    },
 };
 
 pub fn mk_rewrite<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = egg::Rewrite<Lang, N>> {
@@ -45,7 +48,17 @@ fn mk_commute_if<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = egg::
         return ME::Empty(::std::iter::empty());
     }
 
-    static FORBIDDEN: [&Function; 7] = [&MITE, &BITE, &AND, &IMPLIES, &NOT, &OR, &EQ];
+    static FORBIDDEN: [&Function; 9] = [
+        &MITE,
+        &BITE,
+        &AND,
+        &IMPLIES,
+        &NOT,
+        &OR,
+        &EQ,
+        &CONS_FA_BITSTRING,
+        &CONS_FA_BOOL,
+    ];
     decl_vars!(const C:Bool);
 
     ME::Many(

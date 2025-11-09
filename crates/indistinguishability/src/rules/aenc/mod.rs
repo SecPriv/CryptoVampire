@@ -116,10 +116,10 @@ impl AEnc {
             search_k_trigger: declare!(pbl@index: format!("{enc}_search_k_trigger");
                 Nonce, Time, Protocol, Bool => Bool),
             // k, k', r ||> frame@t p  | h
-            search_o_pre_trigger: declare!(pbl@index: format!("{enc}_search_k_pre_trigger");
+            search_o_pre_trigger: declare!(pbl@index: format!("{enc}_search_o_pre_trigger");
                 Nonce,Nonce,  Nonce, Time, Protocol, Bool => Bool),
             // k, r ||> frame@t p  | h
-            search_o_trigger: declare!(pbl@index: format!("{enc}_search_k_trigger");
+            search_o_trigger: declare!(pbl@index: format!("{enc}_search_o_trigger");
                 Nonce, Nonce, Time, Protocol, Bool => Bool),
             // sid, u, v, _{_ -> nt @ proof}, b
             subst: declare!(pbl@index: format!("{enc}_search_o_b");

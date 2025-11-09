@@ -163,7 +163,9 @@ pub trait SyntaxSearcher {
         tr!("in search_special_recexpr");
 
         if fun == MACRO_COND || fun == MACRO_MSG {
-            todo!()
+            unimplemented!(
+                "please directly inline the 'msg' and 'cond' macros in your protocol definition"
+            )
         } else if let Some(alias) = fun.get_alias() {
             self.search_alias(pbl, builder, alias, args);
         } else if fun.is_quantifier() {
@@ -379,7 +381,7 @@ pub trait SyntaxSearcher {
         &'b self,
         prgm: &'c mut Program<Lang, PAnalysis<'a>>,
         exec: &'b SmtRunner,
-        ptcl:Id,
+        ptcl: Id,
         time: RecFOFormula,
         hyp: RecFOFormula,
     ) -> Option<bool> {

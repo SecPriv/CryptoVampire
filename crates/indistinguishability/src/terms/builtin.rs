@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use bitflags::Bits;
 use cryptovampire_macros::mk_builtin_funs;
 
 use super::Sort::{self, *};
@@ -417,6 +418,28 @@ mk_builtin_funs!(
             /* to prove */
             Bitstring, Bitstring
             -> Bool),
+        flags: f!(PROLOG_ONLY)
+    };
+
+    CURRENT_STEP "current_step" {
+        signature: s!(() -> Time),
+        flags: f!(PROLOG_ONLY)
+    };
+
+    // ---------is public --------
+
+    IS_PUBLIC "is_public" {
+        signature: s!(Any -> Any),
+        flags: f!(PROLOG_ONLY)
+    };
+
+    /// A value to summon terms in the egraph using rewrite rules
+    PARK_IS_PUBLIC "park_is_public" {
+        signature: s!(() -> Any),
+        flags: f!(PROLOG_ONLY)
+    };
+    PARK_PARKER_IS_PUBLIC "parker_is_public" {
+        signature: s!(Any -> Any),
         flags: f!(PROLOG_ONLY)
     };
 

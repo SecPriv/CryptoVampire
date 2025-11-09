@@ -251,7 +251,7 @@ mod if_rewrites;
 
 pub mod constrains;
 
-mod is_public;
+// mod is_public;
 
 /// Simple rewrite rule to find indices
 /// that can then be used with mutliparterns
