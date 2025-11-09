@@ -251,6 +251,8 @@ mod if_rewrites;
 
 pub mod constrains;
 
+mod xor;
+
 // mod is_public;
 
 /// Simple rewrite rule to find indices
