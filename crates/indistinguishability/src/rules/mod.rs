@@ -1,4 +1,4 @@
-use egg::{Analysis, Rewrite};
+use egg::{Analysis, EGraph, Rewrite};
 use itertools::chain;
 /// Re-exports the test module for PRF rules.
 #[cfg(test)]
@@ -6,8 +6,8 @@ pub use prf::test as prf_test;
 /// Re-exports the `VampireRule` struct, which implements a rule for the Vampire SMT solver.
 pub use vampire::VampireRule;
 
-use crate::problem::{PRule, RcRule};
-use crate::{Lang, Problem};
+use crate::problem::{PAnalysis, PRule, RcRule};
+use crate::{Lang, MSmt, Problem};
 
 // =========================================================
 // ======================= macros ==========================
@@ -249,6 +249,14 @@ mod vampire;
 
 mod if_rewrites;
 
+pub mod constrains;
+
+mod is_public;
+
+/// Simple rewrite rule to find indices
+/// that can then be used with mutliparterns
+mod find_indices;
+
 /// Re-exports `FreshNonce` for generating fresh nonces and `mk_no_guessing_smt` for SMT rules related to nonces.
 /// Re-exports `FreshNonce` for generating fresh nonces and `mk_no_guessing_smt` for SMT rules related to nonces.
 pub use nonce::{FreshNonce, mk_no_guessing_smt};
@@ -281,7 +289,7 @@ pub fn mk_default_prolog_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
         ],
         pbl.extra_rules().iter().cloned(),
         deduce::mk_rules(pbl),
-        fa::mk_rules(pbl),
+        fa::FaRule.mk_prolog_rules(pbl),
         [substitution::SubstRule.into_mrc()]
     ]
 }
@@ -296,6 +304,23 @@ pub fn mk_default_rewrites<N: Analysis<Lang>>(
     chain![
         default_rewrites::mk_rewrites(pbl),
         lambda::mk_rewrites(pbl),
-        if_rewrites::mk_rewrite(pbl)
+        if_rewrites::mk_rewrite(pbl),
+        constrains::mk_rewrite(pbl)
     ]
+}
+
+pub trait Library {
+    fn mk_rewrite_rules<'pbl>(
+        &self,
+        _pbl: &Problem,
+    ) -> impl Iterator<Item = Rewrite<Lang, PAnalysis<'pbl>>> {
+        ::std::iter::empty()
+    }
+    fn mk_prolog_rules(&self, _pbl: &Problem) -> impl Iterator<Item = RcRule> {
+        ::std::iter::empty()
+    }
+    fn mk_extra_smt(&self, _pbl: &Problem) -> impl Iterator<Item = MSmt> {
+        ::std::iter::empty()
+    }
+    fn modify_egraph<'pbl>(&self, _egraph: &mut EGraph<Lang, PAnalysis<'pbl>>) {}
 }

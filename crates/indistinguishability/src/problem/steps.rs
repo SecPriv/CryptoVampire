@@ -14,8 +14,27 @@ impl Problem {
     ///
     /// If the number if steps is different from the number of protocol or they use different [Function]
     pub fn push_steps(&mut self, steps: implvec!(Step)) -> Vec<&mut Step> {
+        assert!(
+            !self.protocols.is_empty(),
+            "can't add steps to nothing! declare a protocol first!"
+        );
+
+        let mut steps = steps.into_iter().peekable();
+
+        // update constrains
+        {
+            let id = steps.peek().expect("at least one step").id.clone();
+            self.constrains_mut().push(Constrains {
+                op: ConstrainOp::LessThan,
+                arg1: BoundStep::init(),
+                arg2: BoundStep {
+                    head: id.clone(),
+                    args: id.signature.mk_vars(),
+                },
+            });
+        }
+
         let steps = steps
-            .into_iter()
             .zip_eq(&mut self.protocols)
             .map(|(s, p)| p.add_step(s))
             .collect_vec();
@@ -23,6 +42,7 @@ impl Problem {
             steps.iter().map(|s| &s.id).all_equal(),
             "The steps should all have the same name"
         );
+
         steps
     }
 
@@ -35,6 +55,18 @@ impl Problem {
                 .iter()
                 .map(|Step { id, .. }| id.clone()),
         )
+    }
+
+    pub fn constrains(&self) -> &[Constrains] {
+        &self.constrains
+    }
+
+    pub fn constrains_mut(&mut self) -> &mut Vec<Constrains> {
+        assert!(
+            self.current_step.is_none(),
+            "can't modify the constrains while the protocol is running"
+        );
+        &mut self.constrains
     }
 
     /// Returns the number of steps in the first protocol
@@ -54,8 +86,11 @@ impl Problem {
     }
 
     /// Returns a reference to the current step in the problem's execution, if any.
-    #[allow(dead_code)]
     pub(crate) fn current_step(&self) -> Option<&CurrentStep> {
         self.current_step.as_ref()
+    }
+
+    pub fn get_step_fun(&self, idx: usize) -> Option<&Function> {
+        Some(&self.protocols.first()?.steps().get(idx)?.id)
     }
 }

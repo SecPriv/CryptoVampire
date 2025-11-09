@@ -1,5 +1,5 @@
 use super::*;
-use crate::rules::{FreshNonce, VampireRule, mk_default_prolog_rules, mk_default_rewrites};
+use crate::rules::{self, FreshNonce, VampireRule, mk_default_prolog_rules, mk_default_rewrites};
 use crate::runners::SmtRunner;
 use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, PRED, TRUE, UNFOLD_MSG};
 use crate::{Configuration, Lang, rexp, smt};
@@ -40,12 +40,18 @@ impl Problem {
                 .build()
         };
 
-        golgge::Program::build()
+        let mut prgm = golgge::Program::build()
             .eq_rules(eq_rules)
             .rules(rules)
             .config(golgge_config)
             .egraph(EGraph::new(PAnalysis::builder().pbl(self).build()).with_explanations_enabled())
-            .call()
+            .call();
+
+        {
+            let egraph = prgm.egraph_mut();
+            rules::constrains::modify_egraph(egraph);
+        }
+        prgm
     }
 
     /// Run the solver on the given protocols
@@ -109,13 +115,13 @@ impl Problem {
 
             let mut pgrm = self.mk_program();
 
-            {
-                // same but for the egraph
-                let egraph = pgrm.egraph_mut();
-                let id_true = egraph.add_expr(&TRUE.app_empty());
-                let id_h = egraph.add_expr(&HAPPENS.app(&[init.app_empty()]));
-                egraph.union(id_true, id_h);
-            }
+            // {
+            //     // same but for the egraph
+            //     let egraph = pgrm.egraph_mut();
+            //     let id_true = egraph.add_expr(&TRUE.app_empty());
+            //     let id_h = egraph.add_expr(&HAPPENS.app(&[init.app_empty()]));
+            //     egraph.union(id_true, id_h);
+            // }
 
             res &= pgrm
                 .run_expr(
@@ -174,17 +180,18 @@ impl Problem {
 
             let mut pgrm = self.mk_program();
 
-            {
-                let egraph = pgrm.egraph_mut();
-                let id_true = egraph.add(TRUE.app_id([]));
-                let id_h = egraph.add_expr(&rexp!((HAPPENS #s)).as_egg_ground());
-                egraph.union(id_true, id_h);
-            }
+            // {
+            //     let egraph = pgrm.egraph_mut();
+            //     let id_true = egraph.add(TRUE.app_id([]));
+            //     let id_h = egraph.add_expr(&rexp!((HAPPENS #s)).as_egg_ground());
+            //     egraph.union(id_true, id_h);
+            // }
 
             res &= pgrm.run_expr(goal, depth).as_bool();
         }
 
         self.extra_smt_mut().truncate(base_smt_n);
+        self.current_step = None;
 
         res
     }

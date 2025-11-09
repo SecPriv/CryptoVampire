@@ -485,6 +485,11 @@ mk_builtin_funs!(
         flags: f!(PROLOG_ONLY | SORT)
     };
 
+    IS_INDEX "is_index" {
+        signature: s!(Index -> Index),
+        flags: f!(PROLOG_ONLY)
+    };
+
     // --------- list ------------
 
     CONS "list_cons" {

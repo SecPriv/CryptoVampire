@@ -51,13 +51,6 @@ pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>
       ).
       ["unfold_input"] (UNFOLD_INPUT #t #p) => (ATT (MACRO_FRAME (PRED #t) #p)).
 
-      ["leq refl"] (LEQ #t #t) => true.
-      ["leq pred"] (LEQ (PRED #t) #t) => true.
-      ["leq pred rev"] (LEQ #t (PRED #t)) => false.
-
-      ["happens leq"]
-      (#v1 = (HAPPENS #t1), #v1 = (LEQ #t2 #t1), #v1 = true) => (#v1 = (HAPPENS #t2)).
-
       ["fresh nonce"]
       (IS_FRESH_NONCE #n) => (#n).
 

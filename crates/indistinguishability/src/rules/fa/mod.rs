@@ -10,6 +10,7 @@ use static_init::dynamic;
 use utils::{dynamic_iter, econtinue_if, econtinue_let, ereturn_if, ereturn_let};
 
 use crate::problem::{PAnalysis, PRule, RcRule};
+use crate::rules::Library;
 use crate::rules::utils::find_available_id;
 use crate::rules::utils::lambda_subst::lambda_subst;
 use crate::terms::list::{snoc_egraph, try_get_egraph};
@@ -26,24 +27,25 @@ decl_vars!(const; HD:Bitstring, TL:Bitstring, U, V, A, B, T, P);
 #[dynamic]
 static PATTERN_FA: Pattern<Lang> = Pattern::from(&rexp!((EQUIV #U #V #A #B)));
 
-/// Creates the rules for the `fa` module.
-pub fn mk_rules(_: &Problem) -> impl Iterator<Item = RcRule> + use<'_> {
-    [FaRule.into_mrc()].into_iter()
-}
-
-/// Checks if the function can be applied for the given function symbol.
-fn can_apply_fa(f: &Function) -> bool {
-    (f != &NONCE) && (f != &AND) && (f.is_part_of_F() || (f == &EXISTS) || (f == &FIND_SUCH_THAT))
-}
-
 /// A rule for handling forall quantifiers.
 pub struct FaRule;
+
+impl Library for FaRule {
+    fn mk_prolog_rules(&self, _: &Problem) -> impl Iterator<Item = RcRule> {
+        [FaRule.into_mrc()].into_iter()
+    }
+}
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 struct FaElem {
     pub a: Id,
     pub b: Id,
     pub sort: LSort,
+}
+
+/// Checks if the function can be applied for the given function symbol.
+fn can_apply_fa(f: &Function) -> bool {
+    (f != &NONCE) && (f != &AND) && (f.is_part_of_F() || (f == &EXISTS) || (f == &FIND_SUCH_THAT))
 }
 
 impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
