@@ -23,6 +23,11 @@ fn lak_tag() {
     );
 }
 
+#[test]
+fn hash_lock() {
+    mk_test("./tests/hash-lock.scm", &[]);
+}
+
 fn mk_test(file: impl AsRef<Path>, extra_args: &[&str]) {
     let mut cmd = Command::new(cargo_bin!());
     cmd.pipe_stdin(file)
