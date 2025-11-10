@@ -70,6 +70,11 @@ pub struct Configuration {
     pub prf_limit: usize,
 
     /// Fa limits
+    /// 
+    /// Note: increasing this limit nastily increases the complexity of the
+    /// problem. A lot of heuristics are put in place to keep this as low as
+    /// possible. Only increase this if you know what you are doing (and have a
+    /// *lot* of time to lose)
     #[arg(long, default_value_t = Self::default().prf_limit)]
     pub fa_limit: usize,
 

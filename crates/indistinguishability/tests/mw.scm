@@ -52,13 +52,6 @@
         (mk i k p)))
     ko))
 
-(define r2
-  (declare-step pbl "r2" (list Index)
-    (step p1 empty-cond
-      (lambda (in j) (mk-fdst1 in j p1)))
-    (step p2 empty-cond
-      (lambda (in j) (mk-fdst1 in j p2)))))
-
 (define tag
   (declare-step pbl "tag" (list Index Index)
     (step p1 empty-cond
@@ -77,6 +70,13 @@
             (mhash
               (tuple (tuple in (nt i j)) tag1)
               (mk i j p2))))))))
+
+(define r2
+  (declare-step pbl "r2" (list Index)
+    (step p1 empty-cond
+      (lambda (in j) (mk-fdst1 in j p1)))
+    (step p2 empty-cond
+      (lambda (in j) (mk-fdst1 in j p2)))))
 
 
 (define r1

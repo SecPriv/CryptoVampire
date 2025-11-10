@@ -310,6 +310,7 @@ pub fn optimize_set<N: Analysis<Lang>>(
                 .next()
                 .is_some()
         );
+        econtinue_if!(a == b && is_constant(egraph, a));
 
         ret.push(e);
     }

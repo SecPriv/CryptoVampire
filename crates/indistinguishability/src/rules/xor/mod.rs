@@ -152,7 +152,6 @@ impl<'pbl> Rule<Lang, PAnalysis<'pbl>> for XOr {
 
         for (s, fas) in candidates.iter() {
             for (i, FaElem { a, b, .. }) in fas.iter().enumerate() {
-                println!("hereekjhqavbfkwdjhfgaksjhdfgkjahsdgfkjahsdgckajshdgfkjaghsdgfjkahsdgfjkhy\n{}", egraph.id_to_expr(*a).pretty(100));
                 self.extract_xor_candidates(egraph, &mut candidates2, fas, *a, i, Side::Left, s);
                 self.extract_xor_candidates(egraph, &mut candidates2, fas, *b, i, Side::Right, s);
             }
@@ -171,7 +170,6 @@ impl<'pbl> Rule<Lang, PAnalysis<'pbl>> for XOr {
                      mut subst,
                      side,
                  }| {
-                    panic!("h!");
                     let id = fas[idx].get(side);
 
                     let faset = chain![
