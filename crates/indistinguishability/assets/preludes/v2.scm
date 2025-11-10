@@ -240,12 +240,26 @@
             (alias-rw ((ids sorts) ...) (args ...) -> res)
             ...)))) ]))
 
+
+
 (define (initialize-as-prf prf fhash)
   (cv-initialize-as-prf prf (get-function fhash)))
 
 (define (initialize-as-aenc aenc enc dec pk)
   (cv-initialize-as-aenc aenc
     (get-function enc) (get-function dec) (get-function pk)))
+
+(define (initialize-as-senc senc enc dec pk)
+  (cv-initialize-as-senc senc
+    (get-function enc) (get-function dec) (get-function pk)))
+
+(define (initialize-as-xor xor-crypt xor)
+  (cv-initialize-as-xor xor-crypt
+    (get-function xor)))
+
+(define (initialize-as-xor ddh g exp)
+  (cv-initialize-as-ddh ddh
+    (get-function g) (get-function exp)))
 
 (define (run pbl p1 p2)
   (cv-run pbl (get-function p1) (get-function p2)))

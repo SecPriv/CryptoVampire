@@ -3,7 +3,7 @@ use steel_derive::Steel;
 
 use crate::input::Registerable;
 use crate::input::shared_problem::ShrProblem;
-use crate::rules::{AEnc, PRF};
+use crate::rules::{AEnc, PRF, XOr};
 use crate::terms::Function;
 
 /// Represents a shared cryptographic context within the Steel VM.
@@ -28,6 +28,19 @@ impl ShrCrypto {
         let mut pbl = self.pbl.borrow_mut();
         AEnc::new_and_add(&mut pbl, self.index, enc, dec, pk);
     }
+
+    fn init_senc(self, enc: Function, dec: Function, pk: Function) {
+        todo!()
+    }
+
+    fn init_xor(self, xor: Function) {
+        let mut pbl = self.pbl.borrow_mut();
+        XOr::new_and_add(&mut pbl, self.index, xor);
+    }
+
+    fn init_ddh(self, g: Function, exp: Function) {
+        todo!()
+    }
 }
 
 impl Registerable for ShrCrypto {
@@ -39,5 +52,8 @@ impl Registerable for ShrCrypto {
             .register_fn("declare-cryptography", Self::new)
             .register_fn("initialize-as-prf", Self::init_prf)
             .register_fn("initialize-as-aenc", Self::init_aenc)
+            .register_fn("initialize-as-senc", Self::init_senc)
+            .register_fn("initialize-as-xor", Self::init_xor)
+            .register_fn("initialize-as-ddh", Self::init_ddh)
     }
 }

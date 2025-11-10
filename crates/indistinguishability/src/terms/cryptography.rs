@@ -13,6 +13,7 @@ pub enum CryptographicAssumption {
     Undefined,
     PRF(rules::PRF),
     AEnc(rules::AEnc),
+    XOr(rules::XOr),
     NoGuessingTh,
 }
 
@@ -68,6 +69,23 @@ impl CryptographicAssumption {
             None
         }
     }
+
+    /// Returns `true` if the cryptographic assumption is [`XOr`].
+    ///
+    /// [`XOr`]: CryptographicAssumption::XOr
+    #[must_use]
+    pub fn is_xor(&self) -> bool {
+        matches!(self, Self::XOr(..))
+    }
+
+    #[must_use]
+    pub fn as_xor(&self) -> Option<&rules::XOr> {
+        if let Self::XOr(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
 }
 
 impl From<rules::PRF> for CryptographicAssumption {
@@ -80,5 +98,12 @@ impl From<rules::PRF> for CryptographicAssumption {
 impl From<rules::AEnc> for CryptographicAssumption {
     fn from(v: rules::AEnc) -> Self {
         Self::AEnc(v)
+    }
+}
+
+
+impl From<rules::XOr> for CryptographicAssumption {
+    fn from(v: rules::XOr) -> Self {
+        Self::XOr(v)
     }
 }
