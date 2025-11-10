@@ -6,11 +6,10 @@ use utils::ereturn_let;
 
 use crate::{
     Lang, Problem, mk_signature,
-    problem::PAnalysis,
+    problem::{PAnalysis, PRule},
     rexp,
     rules::{
-        fa::{self, FaElem, PATTERN_FA},
-        utils::Side,
+        Library, fa::{self, FaElem, PATTERN_FA}, utils::Side
     },
     terms::{FRESH_NONCE, Function, FunctionFlags, NONCE, Rewrite, Sort},
 };
@@ -32,6 +31,7 @@ pub struct XOr {
 }
 
 decl_vars!(const NA:Bitstring, NB:Bitstring, X);
+
 
 impl XOr {
     pub fn new_and_add(pbl: &mut Problem, index: usize, xor: Function) -> &Self {
@@ -56,6 +56,7 @@ impl XOr {
                 // subst::mk_rules(pbl, &aenc),
                 // ind_cca::mk_rules(pbl, &aenc),
                 // enc_kp::mk_rules(pbl, &aenc)
+                [xor.clone().into_mrc()]
             ]
             .collect_vec();
             pbl.extra_rules_mut().extend(rules);
@@ -75,13 +76,15 @@ impl XOr {
 
     fn extra_rewrites(&self, _pbl: &Problem) -> impl Iterator<Item = Rewrite> {
         let Self { xor, .. } = self;
-        decl_vars!(a:Bitstring, b:Bitstring, c:Bitstring);
+        // decl_vars!(a:Bitstring, b:Bitstring, c:Bitstring);
         // crate::mk_rewrite!()
         [
-            mk_rewrite!(crate format!("{xor} symm"); :
-            (xor #a #b) => (xor #b #a)),
-            mk_rewrite!(crate format!("{xor} assoc"); :
-            (xor #a (xor #b #c)) => (xor(xor #a #b) #c)),
+            mk_rewrite!(crate format!("{xor} symm"); (a Bitstring, b Bitstring) :
+                (xor #a #b) => (xor #b #a)),
+            mk_rewrite!(crate format!("{xor} assoc"); (a Bitstring, b Bitstring, c Bitstring):
+                (xor #a (xor #b #c)) => (xor(xor #a #b) #c)),
+            mk_rewrite!(crate format!("{xor} eq"); (a Bitstring, b Bitstring, c Bitstring) :
+                (= #a (xor #b #c)) => (= (xor #b #a) #c)),
         ]
         .into_iter()
     }
@@ -149,6 +152,7 @@ impl<'pbl> Rule<Lang, PAnalysis<'pbl>> for XOr {
 
         for (s, fas) in candidates.iter() {
             for (i, FaElem { a, b, .. }) in fas.iter().enumerate() {
+                println!("hereekjhqavbfkwdjhfgaksjhdfgkjahsdgfkjahsdgckajshdgfkjaghsdgfjkahsdgfjkhy\n{}", egraph.id_to_expr(*a).pretty(100));
                 self.extract_xor_candidates(egraph, &mut candidates2, fas, *a, i, Side::Left, s);
                 self.extract_xor_candidates(egraph, &mut candidates2, fas, *b, i, Side::Right, s);
             }
@@ -167,6 +171,7 @@ impl<'pbl> Rule<Lang, PAnalysis<'pbl>> for XOr {
                      mut subst,
                      side,
                  }| {
+                    panic!("h!");
                     let id = fas[idx].get(side);
 
                     let faset = chain![

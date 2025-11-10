@@ -3,6 +3,7 @@ use std::ops::Deref;
 use std::rc::Rc;
 
 use anyhow::Context;
+use log::trace;
 use steel::SteelErr;
 use steel::rerrs::ErrorKind;
 use steel::rvals::Result as SResult;
@@ -188,6 +189,7 @@ impl ShrProblem {
 
     /// Adds a new rewrite rule to the problem.
     fn add_rewrite(&self, rw: Rewrite) {
+        trace!("registering rw: \n{rw:#?}");
         self.borrow_mut().extra_rewrite_mut().push(rw);
     }
 
