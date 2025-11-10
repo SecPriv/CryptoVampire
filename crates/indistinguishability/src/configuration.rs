@@ -27,7 +27,7 @@ pub struct Configuration {
     #[arg(long, default_value_t = Self::default().iter_limit,env)]
     pub iter_limit: usize,
 
-    #[arg(long, 
+    #[arg(long,
         short('t'),
         default_value = dstr(Self::default().vampire_timeout),
         value_parser = ::humantime::parse_duration,env)]
@@ -79,9 +79,13 @@ pub struct Configuration {
     #[arg(long, default_value_t = Self::default().prf_limit)]
     pub enc_kp_limit: usize,
 
-    /// activate golgge trace
+    /// activate golgge trace for goals
     #[arg(long, short('T'))]
     pub trace: bool,
+
+    /// activate golgge trace for rebuilds
+    #[arg(long)]
+    pub trace_rebuilds: bool,
 
     /// Enable if commute rewrite rules
     #[arg(long)]
@@ -122,6 +126,7 @@ impl Default for Configuration {
             enc_kp_limit: NONCE_GENERATION_DEFAULT,
             prf_limit: NONCE_GENERATION_DEFAULT,
             trace: cfg!(debug_assertions),
+            trace_rebuilds: false,
             if_commute: false,
             complete_and: false,
         }

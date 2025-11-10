@@ -26,6 +26,7 @@ env_logger.workspace = true
 serde.workspace = true
 bon.workspace = true
 thiserror.workspace = true
+bitflags= {workspace = true, features = ["serde"]}
 
 [lints]
 workspace = true

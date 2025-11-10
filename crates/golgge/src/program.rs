@@ -14,21 +14,13 @@ use egg::{
     Runner, StopReason,
 };
 use itertools::{Either, Itertools};
+use log::trace;
 use serde::Serialize;
 use utils::implvec;
 
 use crate::proof::{Proof, SearchResult};
 use crate::rule::PlOrRw;
-use crate::{Config, Dependancy, Fresh, ProofItem, Rule, WeightedAnalysis};
-
-/// A macro for tracing messages if tracing is enabled in the program's configuration.
-macro_rules! mtrace {
-    ($s:ident, $($t:tt)*) => {
-        if $s.is_tracing_enabled() {
-          eprintln!($($t)*)
-        }
-    };
-}
+use crate::{Config, DebugLevel, Dependancy, Fresh, ProofItem, Rule, WeightedAnalysis};
 
 /// A program that manages an `egg::EGraph` and a set of rules.
 /// A program that manages an `egg::EGraph` and a set of rules.
@@ -231,8 +223,8 @@ where
 
     /// Returns `true` if tracing is enabled.
     #[inline]
-    pub fn is_tracing_enabled(&self) -> bool {
-        self.config.trace_prolog
+    pub const fn is_tracing_enabled(&self, kind: DebugLevel) -> bool {
+        kind.intersects(self.config.trace)
     }
 }
 
@@ -275,7 +267,7 @@ where
 
     /// Try to prove `goal` going a most `depth` deep
     pub fn run_expr(&mut self, goal: RecExpr<L>, depth: u64) -> SearchResult {
-        mtrace!(self, "{:?}", self.as_debug_rules());
+        mtrace!(self, RULE, "{:?}", self.as_debug_rules());
 
         let goal = self.egraph.as_mut().unwrap().add_expr(&goal);
         self.rebuild();
@@ -287,17 +279,17 @@ where
 
     /// same as [Self::run_expr] but starting from an [Id] in the [EGraph]
     pub fn run(&mut self, goal: egg::Id, depth: u64) -> bool {
-        let gtmp = if self.config.trace_prolog {
+        let gtmp = if self.is_tracing_enabled(DebugLevel::RULE) {
             let g = self.egraph().id_to_expr(goal);
             println!("{}:{}:{}", file!(), line!(), column!());
-            println!("({depth:}) {}", g.pretty(80));
+            println!("({goal:}) {}", g.pretty(80));
             Some(g)
         } else {
             None
         };
 
         if depth == 0 {
-            mtrace!(self, "❌ ran out of fuel");
+            mtrace!(self, RULE, "❌ ran out of fuel");
             return false;
         }
 
@@ -306,12 +298,12 @@ where
             use std::collections::hash_map::Entry;
             match memo.entry(goal) {
                 Entry::Occupied(occupied_entry) if occupied_entry.get().is_in_progress() => {
-                    mtrace!(self, "⏩ skipping: {}", "loop".red());
+                    mtrace!(self, RULE, "⏩ skipping: {}", "loop".red());
                     return false;
                 }
                 Entry::Occupied(occupied_entry) => {
                     let res = occupied_entry.get().as_bool();
-                    mtrace!(self, "⏩ skipping: {}", print_bool(res));
+                    mtrace!(self, RULE, "⏩ skipping: {}", print_bool(res));
                     return res;
                 }
                 Entry::Vacant(vacant_entry) => Some(vacant_entry.insert(Status::InProgress.into())),
@@ -333,11 +325,30 @@ where
             let search = r.search(self, goal);
 
             if !search.is_impossible() {
-                mtrace!(self, "matched rule '{}'", r.name());
+                mtrace!(self, RULE, "matched rule '{}'", r.name());
             }
 
             let cut = search.cut();
             self.rebuild();
+
+            if self.is_tracing_enabled(DebugLevel::RULE) && !search.is_impossible() {
+                mtrace!(
+                    self,
+                    RULE,
+                    "({goal}) new goals\n{}",
+                    search
+                        .inner
+                        .iter()
+                        .map(|d| format!(
+                            "\t - [{}]",
+                            d.iter()
+                                .map(|c| format!("({})", self.egraph().find(*c)))
+                                .join(", ")
+                        ))
+                        .join("\n")
+                )
+            }
+
             let ret = search
                 .inner()
                 .iter()
@@ -367,8 +378,10 @@ where
         }
 
         if let Some(g) = gtmp {
-            println!(
-                "({depth:}) 💾 setting {} to {}",
+            mtrace!(
+                self,
+                RULE,
+                "({goal:}) 💾 setting {} to {}",
                 g.pretty(80),
                 print_bool(result)
             )
@@ -383,7 +396,7 @@ where
     /// - this is where [Rule::rebuild] is called
     pub fn run_rw_rules(&mut self, rules: Option<&[Rewrite<L, N>]>) -> Report {
         let mut egraph = self.egraph.take().expect("invalid program");
-        mtrace!(self, "🚧 rebuilding egraph...");
+        mtrace!(self, REBUILDS, "🚧 rebuilding egraph...");
         let size = egraph.number_of_classes();
 
         let runner = self
@@ -393,26 +406,26 @@ where
 
         let report = runner.report();
 
-        mtrace!(self, "✅ done !\n{report}");
+        mtrace!(self, REBUILDS, "✅ done !\n{report}");
 
         egraph = runner.egraph;
 
         // self.memo.canonicalise(&egraph);
         if self.memo.is_some() {
-            mtrace!(self, "🚧 canonicalising table...");
+            mtrace!(self, REBUILDS, "🚧 canonicalising table...");
 
             let memo = std::mem::take(&mut self.memo);
             self.memo = memo.map(|x| x.into_iter().map(|(id, s)| (egraph.find(id), s)).collect());
 
-            mtrace!(self, "✅ done!");
+            mtrace!(self, REBUILDS, "✅ done!");
         }
 
         self.egraph = Some(egraph);
 
         {
-            mtrace!(self, "🚧 canonicalising rules...");
+            mtrace!(self, REBUILDS, "🚧 canonicalising rules...");
             self.rules.iter().for_each(|r| r.rebuild(self));
-            mtrace!(self, "✅ done!");
+            mtrace!(self, REBUILDS, "✅ done!");
         }
         assert!(self.clean());
 

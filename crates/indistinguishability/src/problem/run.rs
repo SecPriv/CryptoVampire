@@ -30,13 +30,24 @@ impl Problem {
                 time_limit,
                 iter_limit,
                 trace,
+                trace_rebuilds,
                 ..
             } = self.config;
+
+            let mut gtrace = Default::default();            
+
+            if trace {
+                gtrace |= golgge::DebugLevel::RULE;
+            }
+            if trace_rebuilds {
+                gtrace |= golgge::DebugLevel::REBUILDS;
+            }
+
             golgge::Config::builder()
                 .node_limit(node_limit)
                 .iter_limit(iter_limit)
                 .time_limit(time_limit)
-                .trace_prolog(trace)
+                .trace(gtrace)
                 .build()
         };
 
@@ -50,6 +61,7 @@ impl Problem {
         {
             let egraph = prgm.egraph_mut();
             rules::constrains::modify_egraph(egraph);
+            rules::find_indices::modify_egraph(egraph);
         }
         prgm
     }
