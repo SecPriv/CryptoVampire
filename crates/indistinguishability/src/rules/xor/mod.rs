@@ -1,141 +1,61 @@
+use egg::{Id, Pattern, Searcher, Subst};
+use golgge::{Dependancy, Program, Rule};
 use itertools::{Itertools, chain};
+use static_init::dynamic;
+use utils::ereturn_let;
 
 use crate::{
-    Problem, mk_signature,
-    terms::{Function, FunctionFlags, Rewrite, Sort},
+    Lang, Problem, mk_signature,
+    problem::PAnalysis,
+    rexp,
+    rules::{
+        fa::{self, FaElem, PATTERN_FA},
+        utils::Side,
+    },
+    terms::{FRESH_NONCE, Function, FunctionFlags, NONCE, Rewrite, Sort},
 };
 declare_trace!($"enc");
 
 mod vars {
     decl_vars!(pub const M:Bitstring, T, NT, P,
-            A:Bitstring, B:Bitstring, 
+            A:Bitstring, B:Bitstring,
             PROOF: Bool, K:Nonce, K2:Nonce, N:Nonce, R:Nonce, H:Bool,
             SIDE:Any, U:Bitstring, V:Bitstring);
 }
 
-mod candidate;
-mod enc_kp;
-mod ind_cca;
-mod search;
-mod subst;
-
 #[derive(Debug, Clone)]
 pub struct XOr {
-    enc: Function,
-    dec: Function,
-    pk: Function,
-
-    candidate_m: Function,
-    candidate_b: Function,
-    // search with no oracle
-    // skip pk
-    search_k_m: Function,
-    search_k_b: Function,
-    // search with decryption oracle
-    search_o_m: Function,
-    search_o_b: Function,
-
-    search_k_trigger: Function,
-    search_o_pre_trigger: Function,
-    search_o_trigger: Function,
-
-    subst: Function,
-
+    #[allow(dead_code)]
     index: usize,
+    xor: Function,
+    xor_pattern: Pattern<Lang>,
 }
 
-#[derive(Debug, Clone)]
-enum ProofHints {
-    Keep,
-    Replace,
-    /// in `(fa_cons a b)`, keep `a` as is and propagate to `b`
-    FaKeep(Function),
-    /// beware of crypto functions
-    Apply(Function),
-}
-
-macro_rules! declare {
-    ($pbl:ident @ $pos:ident: $name:expr; $($s:expr),* => $o:ident) => {
-        $pbl
-            .declare_function()
-            .fresh_name($name)
-            .inputs({
-                use Sort::*;
-                [$($s),*]
-            })
-            .output(Sort::$o)
-            .flags(FunctionFlags::PROLOG_ONLY)
-            .cryptography([$pos])
-            .call()
-    };
-}
+decl_vars!(const NA:Bitstring, NB:Bitstring, X);
 
 impl XOr {
-    pub fn new_and_add(
-        pbl: &mut Problem,
-        index: usize,
-        enc: Function,
-        dec: Function,
-        pk: Function,
-    ) -> &Self {
-        tr!("init aenc: {enc}, {dec}, {pk}");
+    pub fn new_and_add(pbl: &mut Problem, index: usize, xor: Function) -> &Self {
+        tr!("init xor: {xor}");
         assert_eq!(
-            enc.signature,
-            mk_signature!((Bitstring, Bitstring, Bitstring) -> Bitstring)
-        );
-        assert_eq!(
-            dec.signature,
+            xor.signature,
             mk_signature!((Bitstring, Bitstring) -> Bitstring)
         );
-        assert_eq!(pk.signature, mk_signature!((Bitstring) -> Bitstring));
+        assert!(xor.cryptography.contains(&index));
 
-        let aenc = Self {
-            enc: enc.clone(),
-            dec,
-            pk,
-            // C[enc(m, nonce(r), pk(nonce(k)))], m, r, k
-            candidate_m: declare!(pbl@index: format!("{enc}_candidate_m");
-                Bitstring, Bitstring, Nonce, Nonce => Bitstring),
-            candidate_b: declare!(pbl@index: format!("{enc}_candidate_b");
-                Bool, Bitstring, Nonce, Nonce => Bool),
-
-            // k ||> t | h
-            search_k_m: declare!(pbl@index: format!("{enc}_search_k_m");
-                Nonce, Bitstring, Bool => Bool),
-            search_k_b: declare!(pbl@index: format!("{enc}_search_k_b");
-                Nonce, Bool, Bool => Bool),
-            // k, k', r, m ||> t  | h
-            search_o_m: declare!(pbl@index: format!("{enc}_search_o_m");
-                Nonce, Nonce, Nonce, Bitstring, 
-                    Bitstring, Bool => Bool),
-            search_o_b: declare!(pbl@index: format!("{enc}_search_o_b");
-                Nonce, Nonce, Nonce, Bitstring, 
-                    Bool, Bool => Bool),
-
-            // k ||> frame@t p | h
-            search_k_trigger: declare!(pbl@index: format!("{enc}_search_k_trigger");
-                Nonce, Time, Protocol, Bool => Bool),
-            // k, k', r ||> frame@t p  | h
-            search_o_pre_trigger: declare!(pbl@index: format!("{enc}_search_o_pre_trigger");
-                Nonce,Nonce,  Nonce, Time, Protocol, Bool => Bool),
-            // k, r ||> frame@t p  | h
-            search_o_trigger: declare!(pbl@index: format!("{enc}_search_o_trigger");
-                Nonce, Nonce, Time, Protocol, Bool => Bool),
-            // sid, u, v, _{_ -> nt @ proof}, b
-            subst: declare!(pbl@index: format!("{enc}_search_o_b");
-                Any, Bitstring, Bitstring, 
-                Bitstring, Bool, 
-                Bitstring => Bool),
+        let xor = Self {
             index,
+            xor: xor.clone(),
+
+            xor_pattern: Pattern::from(&rexp!((xor #NA (NONCE #NB)))),
         };
 
         // declare prolog rules
         {
             let rules = chain![
-                search::mk_rules(pbl, &aenc),
-                subst::mk_rules(pbl, &aenc),
-                ind_cca::mk_rules(pbl, &aenc),
-                enc_kp::mk_rules(pbl, &aenc)
+                // search::mk_rules(pbl, &aenc),
+                // subst::mk_rules(pbl, &aenc),
+                // ind_cca::mk_rules(pbl, &aenc),
+                // enc_kp::mk_rules(pbl, &aenc)
             ]
             .collect_vec();
             pbl.extra_rules_mut().extend(rules);
@@ -143,49 +63,139 @@ impl XOr {
 
         // declare rewrites
         {
-            let rewrites =
-                chain![aenc.extra_rewrites(pbl), candidate::mk_rwrites(pbl, &aenc)].collect_vec();
+            let rewrites = chain![xor.extra_rewrites(pbl)].collect_vec();
             pbl.extra_rewrite_mut().extend(rewrites);
         }
 
         let crypt_assumptions = pbl.cryptography_mut(index).unwrap();
         assert!(crypt_assumptions.is_undefined());
-        *crypt_assumptions = aenc.into();
-        crypt_assumptions.as_aenc().unwrap()
-    }
-
-    /// Returns the candidate function for a given output sort.
-    pub fn get_candidate(&self, sort: Sort) -> Option<&Function> {
-        match sort {
-            Sort::Bitstring => Some(&self.candidate_m),
-            Sort::Bool => Some(&self.candidate_b),
-            _ => None,
-        }
-    }
-
-    /// Returns the `search_k` function for a given output sort.
-    pub fn get_search_k(&self, sort: Sort) -> Option<&Function> {
-        match sort {
-            Sort::Bitstring => Some(&self.search_k_m),
-            Sort::Bool => Some(&self.search_k_b),
-            _ => None,
-        }
-    }
-
-    /// Returns the `search_o` function for a given output sort.
-    pub fn get_search_o(&self, sort: Sort) -> Option<&Function> {
-        match sort {
-            Sort::Bitstring => Some(&self.search_o_m),
-            Sort::Bool => Some(&self.search_o_b),
-            _ => None,
-        }
+        *crypt_assumptions = xor.into();
+        crypt_assumptions.as_xor().unwrap()
     }
 
     fn extra_rewrites(&self, _pbl: &Problem) -> impl Iterator<Item = Rewrite> {
-        let Self { enc, dec, pk, .. } = self;
+        let Self { xor, .. } = self;
+        decl_vars!(a:Bitstring, b:Bitstring, c:Bitstring);
         // crate::mk_rewrite!()
-        [mk_rewrite!(crate format!("{enc} simplification"); (m Bitstring, r Bitstring, k Bitstring):
-            (dec (enc #m #r (pk #k)) #k) => (#m))
-        ].into_iter()
+        [
+            mk_rewrite!(crate format!("{xor} symm"); :
+            (xor #a #b) => (xor #b #a)),
+            mk_rewrite!(crate format!("{xor} assoc"); :
+            (xor #a (xor #b #c)) => (xor(xor #a #b) #c)),
+        ]
+        .into_iter()
+    }
+
+    fn extract_xor_candidates<'pbl, 'a>(
+        &self,
+        egraph: &egg::EGraph<Lang, PAnalysis<'pbl>>,
+        candidates2: &mut Vec<XorCandidate<'a>>,
+        fas: &'a [FaElem],
+        a: Id,
+        idx: usize,
+        side: Side,
+        main_subst: &Subst,
+    ) {
+        if egraph[a]
+            .nodes
+            .iter()
+            .any(|Lang { head, .. }| head == &self.xor)
+        {
+            candidates2.extend(
+                self.xor_pattern
+                    .search_eclass(egraph, a)
+                    .into_iter()
+                    .flat_map(|x| x.substs.into_iter())
+                    .map(|s| {
+                        let s = chain![s.iter(), main_subst.iter()]
+                            .map(|(&v, i)| (v, i))
+                            .collect();
+
+                        XorCandidate {
+                            fas,
+                            idx,
+                            subst: s,
+                            side,
+                        }
+                    }),
+            );
+        }
+    }
+}
+
+struct XorCandidate<'a> {
+    fas: &'a [FaElem],
+    idx: usize,
+    subst: Subst,
+    side: Side,
+}
+
+#[dynamic]
+static PATTERN_CHECK: Pattern<Lang> = Pattern::from(&rexp!((FRESH_NONCE #NB #X true)));
+#[dynamic]
+static PATTERN_NEW: Pattern<Lang> = Pattern::from(&rexp!((NONCE #NB)));
+
+impl<'pbl> Rule<Lang, PAnalysis<'pbl>> for XOr {
+    fn name(&self) -> std::borrow::Cow<'_, str> {
+        std::borrow::Cow::Borrowed("xor")
+    }
+    fn search(&self, prgm: &mut Program<Lang, PAnalysis<'pbl>>, goal: egg::Id) -> Dependancy {
+        ereturn_let!(let Some(substs) = PATTERN_FA.search_eclass(prgm.egraph(), goal), Dependancy::impossible());
+
+        let candidates = fa::find_candidates(prgm, &substs);
+        let egraph = prgm.egraph();
+
+        let mut candidates2 = Vec::new();
+
+        for (s, fas) in candidates.iter() {
+            for (i, FaElem { a, b, .. }) in fas.iter().enumerate() {
+                self.extract_xor_candidates(egraph, &mut candidates2, fas, *a, i, Side::Left, s);
+                self.extract_xor_candidates(egraph, &mut candidates2, fas, *b, i, Side::Right, s);
+            }
+        }
+
+        // let mut ret = Vec::with_capacity(candidates2.len());
+
+        let egraph = prgm.egraph_mut();
+        // for  in candidates2
+        candidates2
+            .into_iter()
+            .map(
+                |XorCandidate {
+                     fas,
+                     idx,
+                     mut subst,
+                     side,
+                 }| {
+                    let id = fas[idx].get(side);
+
+                    let faset = chain![
+                        fas.iter()
+                            .enumerate()
+                            .filter_map(|(i, x)| (i != idx).then_some(*x)),
+                        [fas[idx].set(side, PATTERN_NEW.apply_susbt(egraph, &subst))]
+                    ]
+                    .collect();
+                    let (la, lb) = fa::create_lists(egraph, &fa::optimize_set(egraph, faset));
+
+                    subst.insert(fa::A.as_egg(), la);
+                    subst.insert(fa::B.as_egg(), lb);
+                    let goal = PATTERN_FA.apply_susbt(egraph, &subst);
+
+                    let checks = chain![
+                        fas.iter().map(|f| f.get(side)),
+                        [*subst.get(NA.as_egg()).unwrap()]
+                    ]
+                    .map(|id| {
+                        subst.insert(X.as_egg(), id);
+                        PATTERN_CHECK.apply_susbt(egraph, &subst)
+                    });
+
+                    chain![checks, [goal]].collect_vec()
+                },
+            )
+            .collect()
+
+        // todo!()
     }
 }

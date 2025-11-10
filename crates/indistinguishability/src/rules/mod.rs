@@ -252,6 +252,7 @@ mod if_rewrites;
 pub mod constrains;
 
 mod xor;
+pub use xor::XOr;   
 
 // mod is_public;
 
