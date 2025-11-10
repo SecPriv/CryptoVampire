@@ -26,8 +26,9 @@
   alias-rw
   define-alias
   define-function
+  add-constrain
   lift-fun
-  cand cor tuple eql
+  cand cor tuple eql <>
   ;  @@@EXPORTS@@@
   )
 (require-builtin cryptovampire as cv-)
@@ -291,7 +292,7 @@
     (define-function name pbl (crypto ...) () -> sort) ]))
 
 (define-syntax add-constrain
-  (syntax-rule ()
+  (syntax-rules ()
     [ (_ pbl (vars ...) constrain)
     (let [ (vars (cv-mk-varf (cv-mk-fresh-var-w-sort cv-Index))) ...]
       (cv-add-constrain pbl constrain)) ]))

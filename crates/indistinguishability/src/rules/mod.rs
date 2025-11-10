@@ -258,7 +258,7 @@ pub use xor::XOr;
 
 /// Simple rewrite rule to find indices
 /// that can then be used with mutliparterns
-mod find_indices;
+pub mod find_indices;
 
 /// Re-exports `FreshNonce` for generating fresh nonces and `mk_no_guessing_smt` for SMT rules related to nonces.
 /// Re-exports `FreshNonce` for generating fresh nonces and `mk_no_guessing_smt` for SMT rules related to nonces.
@@ -308,7 +308,8 @@ pub fn mk_default_rewrites<N: Analysis<Lang>>(
         default_rewrites::mk_rewrites(pbl),
         lambda::mk_rewrites(pbl),
         if_rewrites::mk_rewrite(pbl),
-        constrains::mk_rewrite(pbl)
+        constrains::mk_rewrite(pbl),
+        [find_indices::mk_rewrite()]
     ]
 }
 

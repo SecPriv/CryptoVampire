@@ -1,4 +1,4 @@
-use egg::{Analysis, EGraph, MultiPattern, Rewrite};
+use egg::{Analysis, EGraph, MultiPattern, Pattern, Rewrite, rewrite};
 use itertools::{Itertools, chain, izip};
 use rustc_hash::{FxHashMap, FxHashSet};
 use utils::{dynamic_iter, ebreak_if, ereturn_if};

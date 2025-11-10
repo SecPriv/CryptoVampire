@@ -10,7 +10,7 @@ use crate::{
     Lang, Problem,
     problem::PAnalysis,
     protocol::Protocol,
-    terms::{Function, Sort},
+    terms::{Function, IS_INDEX, Sort},
 };
 /// Provides utilities for handling fresh variables and formulas.
 pub mod fresh;
@@ -98,6 +98,7 @@ pub fn find_available_id<'e>(
         .fresh_name("idx")
         .call();
     let new_var = egraph.add(Lang::new(new_var, []));
+    egraph.add(IS_INDEX.app_id([new_var]));
     egraph
         .analysis
         .pbl_mut()
