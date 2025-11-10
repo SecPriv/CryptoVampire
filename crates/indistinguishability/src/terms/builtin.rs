@@ -253,6 +253,11 @@ mk_builtin_funs!(
         signature: s!(Time, 1),
     };
 
+    INCOMPATIBLE "incompatible" {
+        signature: s!(Time, Time -> Time),
+        flags: f!(PROLOG_ONLY)
+    };
+
     /// The `init` step. It's always part of a protocol (added by default in
     /// position `0`)
     INIT "init" {

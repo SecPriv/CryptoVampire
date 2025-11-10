@@ -19,9 +19,8 @@ declare_trace!($"problem");
 
 mod cryptography;
 mod formulas;
-mod protocols;
+mod protocol;
 mod run;
-mod steps;
 
 mod functions;
 pub use functions::FunctionBuilder;

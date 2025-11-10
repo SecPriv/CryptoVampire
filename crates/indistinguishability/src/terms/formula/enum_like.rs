@@ -46,6 +46,15 @@ pub enum RecFOFormula {
     Var(Variable),
 }
 impl RecFOFormula {
+    pub fn as_var(&self) -> Option<&Variable> {
+        match self {
+            Self::Var(v) => Some(v),
+            _ => None
+        }
+    }
+
+
+
     /// Tries to evaluate an expression, return [None] if it can't
     pub fn try_evaluate(&self) -> Option<bool> {
         match self {

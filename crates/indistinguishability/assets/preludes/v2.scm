@@ -5,6 +5,9 @@
   declare-cryptography
   initialize-as-prf
   initialize-as-aenc
+  initialize-as-senc
+  initialize-as-xor
+  initialize-as-ddh
   set-init-step
   run
   get-function
@@ -257,7 +260,7 @@
   (cv-initialize-as-xor xor-crypt
     (get-function xor)))
 
-(define (initialize-as-xor ddh g exp)
+(define (initialize-as-ddh ddh g exp)
   (cv-initialize-as-ddh ddh
     (get-function g) (get-function exp)))
 
@@ -287,7 +290,14 @@
     [ (_ name pbl (crypto ...) sort)
     (define-function name pbl (crypto ...) () -> sort) ]))
 
+(define-syntax add-constrain
+  (syntax-rule ()
+    [ (_ pbl (vars ...) constrain)
+    (let [ (vars (cv-mk-varf (cv-mk-fresh-var-w-sort cv-Index))) ...]
+      (cv-add-constrain pbl constrain)) ]))
+
 (define (cand . args) (cv-cand args))
 (define (cor . args) (cv-cor args))
 (define (tuple . args) (cv-tuple args))
 (define (eql a b) (eq (bistring_length a) (bistring_length b)))
+(define <> incompatible)
