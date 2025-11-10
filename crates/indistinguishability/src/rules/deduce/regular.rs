@@ -25,7 +25,7 @@ pub fn mk_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> + use<'_> {
 }
 
 fn should_process_normaly(f: &Function) -> bool {
-    !f.is_special_deduce() && f.signature.output.support_deduce()
+    !f.is_special_deduce() && f.signature.output.is_base()
 }
 
 /// ```text
@@ -55,7 +55,7 @@ fn mk_deduce_rule(f: &Function) -> PrologRule<Lang> {
         cut: false,
         require_decrease: false,
         name: Some(format!("deduce {}", &f.name)),
-        payload: None
+        payload: None,
     }
 }
 

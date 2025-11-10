@@ -77,8 +77,13 @@ impl RefFormulaBuilder {
 
         condition: Option<RecFOFormula>,
         #[builder(with = <_>::from_iter, default)] variables: Vec<Variable>,
-        quantifier: Option<FOBinder>,
+        mut quantifier: Option<FOBinder>,
     ) -> Self {
+        if quantifier.is_none() && condition.is_some() {
+            quantifier = Some(FOBinder::Forall)
+        }        
+
+
         let condition = quantifier.map(|quantifer| {
             Condition::builder()
                 .maybe_condition(condition)

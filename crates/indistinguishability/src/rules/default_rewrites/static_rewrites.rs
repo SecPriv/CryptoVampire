@@ -1,37 +1,18 @@
 use egg::{Analysis, Rewrite};
-use itertools::chain;
+use itertools::{Itertools, chain};
 
 use crate::Lang;
 use crate::protocol::MacroKind;
 use crate::terms::{
-    ATT, BITE, EMPTY, FRESH_NONCE, FROM_BOOL, Function, HAPPENS, IMPLIES, IS_FRESH_NONCE, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_MSG, MITE, NONCE, PRED, PROJ_1, PROJ_2, TUPLE, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT
+    AND, ATT, BITE, EMPTY, EQUIV, EQUIV_WITH_SIDE, ETA, FRESH_NONCE, FROM_BOOL, Function, HAPPENS, IMPLIES, IS_FRESH_NONCE, LEFT, LENGTH, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_MSG, MITE, NONCE, PRED, PROJ_1, PROJ_2, RIGHT, TUPLE, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, ZEROES
 };
 
 /// Creates a set of static rewrite rules.
 pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>> {
-    let b_ite = &BITE;
     let m_ite = &MITE;
-    decl_vars![t, t1, t2, a, b, c, d, v1, x, p, n];
+    decl_vars![t, t1, t2, a, b, c, v1, p, n, u, v];
 
     let main = mk_many_rewrites! {
-      ["if true"] (m_ite true #a #b) => (#a).
-      ["if false"] (m_ite false #a #b) => (#b).
-      // ["implies def"] (=> #a #b) => (b_ite #a #b true).
-      ["if simp1"] (m_ite #x #a #a) => (#a).
-      ["if simp2"] (m_ite #a #a false) => (#a).
-      ["if simp3"] (m_ite #a (m_ite #a #b #c) #d) => (m_ite #a #b #d).
-      ["if simp4"] (m_ite #a true false) => (#a).
-
-      ["b_if true"] (b_ite true #a #b) => (#a).
-      ["b_if false"] (b_ite false #a #b) => (#b).
-      ["b_if simp1"] (b_ite #x #a #a) => (#a).
-      ["b_if simp2"] (b_ite #a #a false) => (#a).
-      ["b_if simp4"] (b_ite #a true false) => (#a).
-      ["b_if simp3"] (b_ite #a (b_ite #a #b #c) #d) => (b_ite #a #b #d).
-
-      ["if implies simp"] (b_ite (and #a #b) #a true) => true.
-      ["if implies simp2"] (b_ite #a #a true) => true.
-      ["if implies trans"] (#v1 = true, #v1 = (m_ite #a #b true), #v1 = (m_ite #b #c true)) => (#v1 = (=> #a #c)).
 
       ["implies simp1"] (IMPLIES true #a) => (#a).
       ["implies simp2"] (IMPLIES #a true) => true.
@@ -49,6 +30,10 @@ pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>
       ["and simp2"] (and (and #a #b) #b) => (and #a #b).
       ["and simp3"] (and (and (and #a #b) #c) #b) => (and (and #a #b) #c).
       ["and simp4"] (and #b (and #a #b)) => (and #a #b).
+      // ["and simp5"] (and (and #a #b) #a) => (and #a #b).
+      // ["and simp6"] (AND (AND (AND #c #a) #b) #a) => (AND (AND #c #a) #b).
+      // ["and simp7"] (AND (AND #b #a) (not #a)) => false.
+      // ["and simp7bis"] (AND (AND #b (not #a)) #a) => false.
       ["and true l"] (and true #a) => (#a).
       ["and true r"] (and #a true) => (#a).
       ["and false r"] (and #a false) => false.
@@ -67,24 +52,35 @@ pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>
       ).
       ["unfold_input"] (UNFOLD_INPUT #t #p) => (ATT (MACRO_FRAME (PRED #t) #p)).
 
-      ["leq refl"] (LEQ #t #t) => true.
-      ["leq pred"] (LEQ (PRED #t) #t) => true.
-      ["leq pred rev"] (LEQ #t (PRED #t)) => false.
-
-      ["happens leq"]
-      (#v1 = (HAPPENS #t1), #v1 = (LEQ #t2 #t1), #v1 = true) => (#v1 = (HAPPENS #t2)).
-
       ["fresh nonce"]
       (IS_FRESH_NONCE #n) => (#n).
+
+      // length & co
+      ["nonce length"] (LENGTH (NONCE #n)) => (ETA).
+      ["length zeroes"] (LENGTH (ZEROES #a)) => (#a).
+      ["length tuple"] (LENGTH (TUPLE #a #b)) => (TUPLE (LENGTH #a) (LENGTH #b)).
+
+      // side
+      ["equiv left"]
+        (EQUIV_WITH_SIDE LEFT #u #v #a #b) => (EQUIV #u #v #a #b).
+
+      ["equiv right"]
+        (EQUIV_WITH_SIDE RIGHT #u #v #a #b) => (EQUIV #u #v #b #a).
     };
 
-    let unfold = MacroKind::all().map(|kind| {
+    let unfold = MacroKind::all().into_iter().flat_map(|kind| {
         let mmacro = Function::macro_from_kind(kind);
         let unfold = Function::unfold_from_kind(kind);
 
-        mk_rewrite!(format!("unfold {kind}"); (v1, v2):
+        [
+            mk_rewrite!(format!("unfold {kind}"); (v1, v2):
           (#v1 = (HAPPENS #t), #v1 = true, #v2 = (mmacro #t #p)) =>
-            (#v2 = (unfold #t #p)))
-    });
+            (#v2 = (unfold #t #p))),
+            mk_rewrite!(format!("fold {kind}"); (v1, v2):
+          (#v1 = (HAPPENS #t), #v1 = true, #v2 = (unfold #t #p)) =>
+            (#v2 = (mmacro #t #p))),
+        ]
+        .into_iter()
+    }).collect_vec().into_iter();
     chain!(main, unfold)
 }

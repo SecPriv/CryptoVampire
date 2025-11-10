@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::ops::ControlFlow;
 
 use egg::{EGraph, Id};
+use golgge::Program;
 use itertools::{Itertools, izip};
 use logic_formula::{Destructed, Formula, HeadSk};
 use rustc_hash::FxHashMap;
@@ -10,6 +11,8 @@ use utils::{ereturn_cf, ereturn_if, implvec};
 use crate::problem::PAnalysis;
 use crate::protocol::{Protocol, Step};
 use crate::rules::utils::fresh::RefFormulaBuilder;
+use crate::rules::utils::get_protocol;
+use crate::runners::SmtRunner;
 use crate::terms::substitution_utils::AlphaArgs;
 use crate::terms::{
     Alias, AliasRewrite, BITE, Exists, FOBinder, FindSuchThat, Function, HAPPENS, LAMBDA_S, LT,
@@ -160,7 +163,9 @@ pub trait SyntaxSearcher {
         tr!("in search_special_recexpr");
 
         if fun == MACRO_COND || fun == MACRO_MSG {
-            todo!()
+            unimplemented!(
+                "please directly inline the 'msg' and 'cond' macros in your protocol definition"
+            )
         } else if let Some(alias) = fun.get_alias() {
             self.search_alias(pbl, builder, alias, args);
         } else if fun.is_quantifier() {
@@ -329,6 +334,70 @@ pub trait SyntaxSearcher {
             self.inner_search_formula(pbl, &builder, cond.clone());
             self.inner_search_formula(pbl, &builder, msg.clone());
         }
+    }
+
+    /// Returns an iterator of formula instead of a large conjunctrion
+    /// Searches for PRF-related conditions at a specific timepoint within a protocol.
+    fn search_timepoint<'a>(
+        &'a self,
+        pbl: &'a Problem,
+        ptcl: &'a Protocol,
+        time: RecFOFormula,
+        hyp: RecFOFormula,
+    ) -> impl Iterator<Item = RecFOFormula> + use<'a, Self> {
+        tr!("searching protocol {}", ptcl.name());
+        ptcl.steps()
+            .iter()
+            .flat_map(
+                move |step @ Step {
+                          id,
+                          vars,
+                          cond,
+                          msg,
+                      }| {
+                    let vars = vars.iter().map(|v| RecFOFormula::Var(v.clone()));
+                    let s = rexp!((id #vars*));
+
+                    let condition = rexp!((and #hyp (HAPPENS #s) (LT #s #time)));
+                    [
+                        (condition.clone(), cond, step),
+                        (condition.clone(), msg, step),
+                    ]
+                    .into_iter()
+                },
+            )
+            .map(|(condition, to_search, Step { vars, .. })| {
+                let builder = RefFormulaBuilder::builder()
+                    .condition(condition)
+                    .variables(vars.clone())
+                    .forall()
+                    .build();
+                self.inner_search_formula(pbl, &builder, to_search.clone());
+                builder.into_inner().unwrap().into_formula()
+            })
+    }
+
+    fn search_id_timepoint<'a, 'b, 'c>(
+        &'b self,
+        prgm: &'c mut Program<Lang, PAnalysis<'a>>,
+        exec: &'b SmtRunner,
+        ptcl: Id,
+        time: RecFOFormula,
+        hyp: RecFOFormula,
+    ) -> Option<bool> {
+        let ptcl = get_protocol(prgm.egraph(), ptcl)?;
+        let queries = self
+            .search_timepoint(prgm.egraph().analysis.pbl(), ptcl, time, hyp)
+            .collect_vec();
+        let pbl = prgm.egraph_mut().analysis.pbl_mut();
+        pbl.find_temp_quantifiers(&queries);
+
+        let result = queries.into_iter().all(|query| {
+            let query = query.as_smt(*pbl).unwrap();
+            exec.run_to_dependancy(pbl, query).is_axioms()
+        });
+        pbl.clear_temp_quantifiers();
+        Some(result)
     }
 }
 

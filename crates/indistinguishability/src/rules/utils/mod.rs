@@ -1,22 +1,29 @@
-/// Provides utilities for handling fresh variables and formulas.
-pub mod fresh;
-
-mod search;
 use egg::{Analysis, EGraph, Id, Language};
 use itertools::Itertools;
 use rustc_hash::FxHashSet;
 /// Re-exports `EgraphSearcher` for e-graph based searching, `SyntaxSearcher` for syntax-based searching,
 /// and `default_is_special` for determining if a function is special.
-pub use search::{EgraphSearcher, SyntaxSearcher, default_is_special};
+pub use subterm_trait::{EgraphSearcher, SyntaxSearcher, default_is_special};
 use utils::{econtinue_if, implvec};
 
 use crate::{
-    Lang,
+    Lang, Problem,
     problem::PAnalysis,
-    terms::{Function, Sort},
+    protocol::Protocol,
+    terms::{Function, IS_INDEX, Sort},
 };
+/// Provides utilities for handling fresh variables and formulas.
+pub mod fresh;
+
+mod subterm_trait;
 
 pub(crate) mod lambda_subst;
+
+mod side;
+pub use side::Side;
+
+mod with_data;
+pub use with_data::RuleWithFreshNonce;
 
 // mod subst;
 // pub use subst::mk_subst_rw;
@@ -91,6 +98,7 @@ pub fn find_available_id<'e>(
         .fresh_name("idx")
         .call();
     let new_var = egraph.add(Lang::new(new_var, []));
+    egraph.add(IS_INDEX.app_id([new_var]));
     egraph
         .analysis
         .pbl_mut()
@@ -124,4 +132,16 @@ pub fn all_descendants<N: Analysis<Lang>>(
 
 fn can_have_childrens(f: &Function) -> bool {
     !f.is_alias()
+}
+
+pub fn get_protocol<'a, 'b>(
+    egraph: &'b egg::EGraph<Lang, PAnalysis<'a>>,
+    id: Id,
+) -> Option<&'b Protocol> {
+    // let id = subst.get(P.as_egg()).unwrap();
+    let idx = egraph[id]
+        .iter()
+        .find_map(|f| f.head.get_protocol_index())?;
+    // there has to be one
+    egraph.analysis.pbl().protocols().get(idx)
 }

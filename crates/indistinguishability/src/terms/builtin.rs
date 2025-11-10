@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use bitflags::Bits;
 use cryptovampire_macros::mk_builtin_funs;
 
 use super::Sort::{self, *};
@@ -217,6 +218,19 @@ mk_builtin_funs!(
         signature: s!(Bool -> Bitstring)
     };
 
+    LENGTH "bistring_length" {
+        signature: s!(Bitstring -> Bitstring)
+    };
+
+    ZEROES "zeroes" {
+        signature: s!(Bitstring -> Bitstring)
+    };
+
+    /// length of nonces
+    ETA "eta" {
+        signature: s!(() -> Bitstring)
+    };
+
     // ~~~~~~~~~~~~~~~~~ ptcl ~~~~~~~~~~~~~~~~~~~
 
     HAPPENS "happens" {
@@ -237,6 +251,11 @@ mk_builtin_funs!(
 
     PRED "pred" {
         signature: s!(Time, 1),
+    };
+
+    INCOMPATIBLE "incompatible" {
+        signature: s!(Time, Time -> Time),
+        flags: f!(PROLOG_ONLY)
     };
 
     /// The `init` step. It's always part of a protocol (added by default in
@@ -384,6 +403,51 @@ mk_builtin_funs!(
         flags: f!(PROLOG_ONLY)
     };
 
+    // side
+    LEFT "left_side" {
+        signature: s!(() -> Any),
+        flags: f!(PROLOG_ONLY)
+    };
+
+    RIGHT "right_side" {
+        signature: s!(() -> Any),
+        flags: f!(PROLOG_ONLY)
+    };
+
+    EQUIV_WITH_SIDE "equiv_ws" {
+        signature: s!(
+            /* side */
+            Any,
+            /* hypothesis */
+            Bitstring, Bitstring,
+            /* to prove */
+            Bitstring, Bitstring
+            -> Bool),
+        flags: f!(PROLOG_ONLY)
+    };
+
+    CURRENT_STEP "current_step" {
+        signature: s!(() -> Time),
+        flags: f!(PROLOG_ONLY)
+    };
+
+    // ---------is public --------
+
+    IS_PUBLIC "is_public" {
+        signature: s!(Any -> Any),
+        flags: f!(PROLOG_ONLY)
+    };
+
+    /// A value to summon terms in the egraph using rewrite rules
+    PARK_IS_PUBLIC "park_is_public" {
+        signature: s!(() -> Any),
+        flags: f!(PROLOG_ONLY)
+    };
+    PARK_PARKER_IS_PUBLIC "parker_is_public" {
+        signature: s!(Any -> Any),
+        flags: f!(PROLOG_ONLY)
+    };
+
     // -------- lambda -----------
 
     // LAMBDA_LET "λlet" {
@@ -449,6 +513,11 @@ mk_builtin_funs!(
         flags: f!(PROLOG_ONLY | SORT)
     };
 
+    IS_INDEX "is_index" {
+        signature: s!(Index -> Index),
+        flags: f!(PROLOG_ONLY)
+    };
+
     // --------- list ------------
 
     CONS "list_cons" {
@@ -472,6 +541,7 @@ mk_builtin_funs!(
     NIL_FA "fa_nil" {
         signature: s!(() -> Bitstring),
     };
+
 
     // ~~~~~~~~~~~~~~~ smt only ~~~~~~~~~~~~~~~~~
 

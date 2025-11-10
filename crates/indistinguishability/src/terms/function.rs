@@ -19,7 +19,7 @@ use crate::terms::{
     Alias, AliasRewrite, BUILTINS, EXISTS, Exists, FIND_SUCH_THAT, FOBinder, FunctionCollection,
     FunctionFlags, LAMBDA_O, LAMBDA_S, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG,
     NOT, Quantifier, QuantifierIndex, QuantifierT, RecFOFormula, Signature, Sort, UNFOLD_COND,
-    UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin,
+    UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin, signature,
 };
 use crate::utils::LightClone;
 use crate::{Lang, LangVar};
@@ -102,6 +102,11 @@ impl Function {
     /// [egg::RecExpr] are check at build time, so that all functions have the right arity
     pub fn arity(&self) -> usize {
         self.signature.arity()
+    }
+
+    #[inline]
+    pub fn args_sorts(&self) -> impl Iterator<Item = Sort> {
+        self.signature.inputs.iter().copied()
     }
 
     /// Get the `macro` function from a [MacroKind]

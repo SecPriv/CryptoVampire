@@ -1,4 +1,4 @@
-use egg::{Analysis, Rewrite};
+use egg::{Analysis, EGraph, Rewrite};
 use itertools::chain;
 /// Re-exports the test module for PRF rules.
 #[cfg(test)]
@@ -6,8 +6,8 @@ pub use prf::test as prf_test;
 /// Re-exports the `VampireRule` struct, which implements a rule for the Vampire SMT solver.
 pub use vampire::VampireRule;
 
-use crate::problem::{PRule, RcRule};
-use crate::{Lang, Problem};
+use crate::problem::{PAnalysis, PRule, RcRule};
+use crate::{Lang, MSmt, Problem};
 
 // =========================================================
 // ======================= macros ==========================
@@ -32,8 +32,8 @@ macro_rules! decl_vars {
         )+
     };
 
-    (const $(;)? $($var:ident $(:$sort:expr)? ),+ $(,)?) => {
-        $(static $var: &$crate::terms::Variable = &$crate::fresh!(const $($sort)?);)+
+    ($v:vis const $(;)? $($var:ident $(:$sort:expr)? ),+ $(,)?) => {
+        $($v static $var: &$crate::terms::Variable = &$crate::fresh!(const $($sort)?);)+
     };
 }
 
@@ -121,15 +121,30 @@ macro_rules! mk_many_prolog {
 /// mk_rewrite!("rule-name"; a, b: (and a b) => (and b a));
 /// ```
 macro_rules! mk_rewrite {
-    ($name:expr; $(($($var:ident),*))?: $from:tt => $to:tt) => {{
+    (crate prolog $($name:expr;)? $(($($var:ident $sort:expr),*))?: $from:tt => $to:tt) => {{
         $($(
-            let $var = $crate::fresh!();
+            let $var = $crate::fresh!($sort);
         )*)?
-        ::egg::Rewrite::new(
-            $name,
-            mk_rewrite!(@@ $from),
-            mk_rewrite!(@@ $to),
-        ).unwrap()
+
+        $crate::terms::Rewrite::builder()
+            .from($crate::rexp!($from))
+            .to(mk_rewrite!(crate @@ $to))
+            $(.name($name))?
+            $(.variables([$($var),*]))?
+            .prolog_only(true)
+            .build()
+    }};
+    (crate $($name:expr;)? $(($($var:ident $sort:expr),*))?: $from:tt => $to:tt) => {{
+        $($(
+            let $var = $crate::fresh!($sort);
+        )*)?
+
+        $crate::terms::Rewrite::builder()
+            .from($crate::rexp!($from))
+            .to(mk_rewrite!(crate @@ $to))
+            $(.name($name))?
+            $(.variables([$($var),*]))?
+            .build()
     }};
 
     (@@ (#$var:tt = #$value:tt)) => {
@@ -158,6 +173,26 @@ macro_rules! mk_rewrite {
             &$crate::rexp!($value)
         )
     };
+
+    (crate @@ (#$($value:tt)+)) => {{
+        let x : $crate::terms::RecFOFormula = $crate::rexp!(#$($value)+);
+        x
+    }};
+
+    (crate @@ $value:tt) => {
+            $crate::rexp!($value)
+    };
+
+    ($name:expr; $(($($var:ident),*))?: $from:tt => $to:tt) => {{
+        $($(
+            let $var = $crate::fresh!();
+        )*)?
+        ::egg::Rewrite::new(
+            $name,
+            mk_rewrite!(@@ $from),
+            mk_rewrite!(@@ $to),
+        ).unwrap()
+    }};
 }
 
 /// Creates multiple rewrite rules at once
@@ -193,6 +228,8 @@ macro_rules! mk_many_rewrites {
 /// Provides utility functions and helpers for rules.
 pub mod utils;
 
+/// Encryption rules
+mod aenc;
 /// Provides rules for deduction.
 pub mod deduce;
 /// Provides default rewrite rules.
@@ -210,11 +247,26 @@ mod substitution;
 /// Provides rules for interacting with the Vampire SMT solver.
 mod vampire;
 
+mod if_rewrites;
+
+pub mod constrains;
+
+mod xor;
+pub use xor::XOr;   
+
+// mod is_public;
+
+/// Simple rewrite rule to find indices
+/// that can then be used with mutliparterns
+pub mod find_indices;
+
 /// Re-exports `FreshNonce` for generating fresh nonces and `mk_no_guessing_smt` for SMT rules related to nonces.
 /// Re-exports `FreshNonce` for generating fresh nonces and `mk_no_guessing_smt` for SMT rules related to nonces.
 pub use nonce::{FreshNonce, mk_no_guessing_smt};
 /// Re-exports the `PRF` struct, representing a pseudo-random function.
 pub use prf::PRF;
+
+pub use aenc::AEnc;
 
 /// Provides rules for sanity checking.
 #[cfg(debug_assertions)]
@@ -240,7 +292,7 @@ pub fn mk_default_prolog_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
         ],
         pbl.extra_rules().iter().cloned(),
         deduce::mk_rules(pbl),
-        fa::mk_rules(pbl),
+        fa::FaRule.mk_prolog_rules(pbl),
         [substitution::SubstRule.into_mrc()]
     ]
 }
@@ -252,5 +304,27 @@ pub fn mk_default_prolog_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
 pub fn mk_default_rewrites<N: Analysis<Lang>>(
     pbl: &Problem,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
-    chain![default_rewrites::mk_rewrites(pbl), lambda::mk_rewrites(pbl)]
+    chain![
+        default_rewrites::mk_rewrites(pbl),
+        lambda::mk_rewrites(pbl),
+        if_rewrites::mk_rewrite(pbl),
+        constrains::mk_rewrite(pbl),
+        [find_indices::mk_rewrite()]
+    ]
+}
+
+pub trait Library {
+    fn mk_rewrite_rules<'pbl>(
+        &self,
+        _pbl: &Problem,
+    ) -> impl Iterator<Item = Rewrite<Lang, PAnalysis<'pbl>>> {
+        ::std::iter::empty()
+    }
+    fn mk_prolog_rules(&self, _pbl: &Problem) -> impl Iterator<Item = RcRule> {
+        ::std::iter::empty()
+    }
+    fn mk_extra_smt(&self, _pbl: &Problem) -> impl Iterator<Item = MSmt> {
+        ::std::iter::empty()
+    }
+    fn modify_egraph<'pbl>(&self, _egraph: &mut EGraph<Lang, PAnalysis<'pbl>>) {}
 }

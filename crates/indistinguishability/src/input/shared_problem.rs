@@ -2,6 +2,8 @@ use std::cell::{Ref, RefCell, RefMut};
 use std::ops::Deref;
 use std::rc::Rc;
 
+use anyhow::Context;
+use log::trace;
 use steel::SteelErr;
 use steel::rerrs::ErrorKind;
 use steel::rvals::Result as SResult;
@@ -187,6 +189,7 @@ impl ShrProblem {
 
     /// Adds a new rewrite rule to the problem.
     fn add_rewrite(&self, rw: Rewrite) {
+        trace!("registering rw: \n{rw:#?}");
         self.borrow_mut().extra_rewrite_mut().push(rw);
     }
 
@@ -199,6 +202,13 @@ impl ShrProblem {
             .extra_smt_mut()
             .push(MSmt::mk_assert(content));
         Ok(())
+    }
+
+    fn add_constrain(&self, f: RecFOFormula) {
+        self.borrow_mut()
+            .add_constrain(&f)
+            .with_context(|| format!("while in {f}"))
+            .unwrap()
     }
 
     // =========================================================
@@ -247,6 +257,7 @@ impl Registerable for ShrProblem {
             .register_fn("add-rule", Self::add_rule)
             .register_fn("add-rewrite", Self::add_rewrite)
             .register_fn("add-smt-axiom", Self::add_smt_axiom)
+            .register_fn("add-constrain", Self::add_constrain)
             .register_fn("run", Self::run);
 
         module

@@ -75,7 +75,6 @@ macro_rules! declare {
     };
 }
 
-
 impl PRF {
     /// Creates a new `PRF` instance and adds its associated functions and rules to the problem.
     ///

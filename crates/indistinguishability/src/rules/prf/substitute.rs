@@ -38,7 +38,10 @@ struct SubstData {
 
 impl SubstData {
     fn proof_to_term<'a>(&self, pgrm: &mut Program<Lang, PAnalysis<'a>>, proof: Id) -> Id {
-        tr!("proof to term from:\n\t{}", pgrm.egraph().id_to_expr(proof).pretty(100));
+        tr!(
+            "proof to term from:\n\t{}",
+            pgrm.egraph().id_to_expr(proof).pretty(100)
+        );
         let ProofItem { ids, payload, rule } = pgrm.get_proof_item(proof).unwrap();
         let prf_proof = payload.as_ref().unwrap().downcast_ref().unwrap();
         tr!(

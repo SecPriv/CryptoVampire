@@ -23,6 +23,26 @@ fn lak_tag() {
     );
 }
 
+#[test]
+fn hash_lock() {
+    mk_test("./tests/hash-lock.scm", &[]);
+}
+
+#[test]
+fn mw() {
+    mk_test(
+        "./tests/mw.scm",
+        &[
+            "--vampire-timeout",
+            "15s",
+            "--node-limit",
+            "100000",
+            "--prf-limit",
+            "1",
+        ],
+    );
+}
+
 fn mk_test(file: impl AsRef<Path>, extra_args: &[&str]) {
     let mut cmd = Command::new(cargo_bin!());
     cmd.pipe_stdin(file)

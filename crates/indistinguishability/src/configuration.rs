@@ -7,7 +7,7 @@ pub use crate::input::prelude::Preludes;
 
 /// A computationnally sound automated cryptographic protocol verifier based on the CCSA.
 #[derive(Debug, Steel, Parser, Clone)]
-#[steel(constructor)]
+// #[steel(constructor)]
 pub struct Configuration {
     /// Path to the `scheme` file
     ///
@@ -16,7 +16,7 @@ pub struct Configuration {
     pub file: Option<PathBuf>,
 
     /// Maximal number of nodes in the egraph
-    #[arg(long, default_value_t = ::golgge::Config::default().node_limit, env)]
+    #[arg(long, default_value_t = Self::default().node_limit, env)]
     pub node_limit: usize,
     /// Timout for egg
     #[arg(long,
@@ -24,10 +24,11 @@ pub struct Configuration {
         value_parser = ::humantime::parse_duration, env)]
     pub time_limit: std::time::Duration,
     /// Iteration limit for egg
-    #[arg(long, default_value_t = ::golgge::Config::default().iter_limit,env)]
+    #[arg(long, default_value_t = Self::default().iter_limit,env)]
     pub iter_limit: usize,
 
     #[arg(long,
+        short('t'),
         default_value = dstr(Self::default().vampire_timeout),
         value_parser = ::humantime::parse_duration,env)]
     pub vampire_timeout: std::time::Duration,
@@ -59,7 +60,7 @@ pub struct Configuration {
     pub no_steel_prelude: bool,
 
     /// number of cores used
-    #[arg(long, default_value_t = Self::default().cores)]
+    #[arg(long, short('c'), default_value_t = Self::default().cores)]
     pub cores: u64,
 
     /// Limit on how many new nonce 'prf' can generate
@@ -69,26 +70,54 @@ pub struct Configuration {
     pub prf_limit: usize,
 
     /// Fa limits
+    /// 
+    /// Note: increasing this limit nastily increases the complexity of the
+    /// problem. A lot of heuristics are put in place to keep this as low as
+    /// possible. Only increase this if you know what you are doing (and have a
+    /// *lot* of time to lose)
     #[arg(long, default_value_t = Self::default().prf_limit)]
     pub fa_limit: usize,
 
-    /// activate golgge trace
-    #[arg(long)]
+    /// Limit on how many new nonce 'enc-kp' can generate
+    ///
+    /// This might be helpful to avoid loops
+    #[arg(long, default_value_t = Self::default().prf_limit)]
+    pub enc_kp_limit: usize,
+
+    /// activate golgge trace for goals
+    #[arg(long, short('T'))]
     pub trace: bool,
+
+    /// activate golgge trace for rebuilds
+    #[arg(long)]
+    pub trace_rebuilds: bool,
+
+    /// Enable if commute rewrite rules
+    #[arg(long)]
+    pub if_commute: bool,
+
+    /// Add various `and` related rewrite rules
+    ///
+    /// This makes the search more complete, but exponentially increases the
+    /// complexity
+    #[arg(long)]
+    pub complete_and: bool,
 }
+
+static NODE_LIMIT_DEFAULT: usize = 100000;
+static NONCE_GENERATION_DEFAULT: usize = 3;
 
 impl Default for Configuration {
     /// Returns a default `Configuration` instance.
     fn default() -> Self {
         let ::golgge::Config {
-            node_limit,
             time_limit,
             iter_limit,
             ..
         } = ::golgge::Config::default();
         Self {
             file: Default::default(),
-            node_limit,
+            node_limit: NODE_LIMIT_DEFAULT,
             time_limit,
             iter_limit,
             vampire_timeout: ::std::time::Duration::from_secs(2),
@@ -98,9 +127,13 @@ impl Default for Configuration {
             no_cryptovampire_prelude: false,
             no_steel_prelude: false,
             cores: num_cpus::get() as u64,
-            prf_limit: 3,
             fa_limit: 4,
+            enc_kp_limit: NONCE_GENERATION_DEFAULT,
+            prf_limit: NONCE_GENERATION_DEFAULT,
             trace: cfg!(debug_assertions),
+            trace_rebuilds: false,
+            if_commute: false,
+            complete_and: false,
         }
     }
 }

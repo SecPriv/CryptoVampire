@@ -906,6 +906,7 @@ name = "golgge"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bitflags 2.9.1",
  "bon",
  "colored",
  "egg",

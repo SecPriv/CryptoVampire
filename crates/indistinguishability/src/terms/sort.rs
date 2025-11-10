@@ -8,7 +8,7 @@ use steel_derive::Steel;
 use crate::Lang;
 use crate::input::Registerable;
 use crate::terms::formula::list;
-use crate::terms::{BITSTRING_SORT, Function, INDEX_SORT, TIME_SORT};
+use crate::terms::{BITE, BITSTRING_SORT, Function, INDEX_SORT, MITE, TIME_SORT};
 
 /// Represents the sort (type) of a term in the first-order logic.
 #[non_exhaustive]
@@ -31,7 +31,7 @@ pub enum Sort {
 
 impl Sort {
     /// Returns `true` if the sort supports deduction (i.e., is `Bool` or `Bitstring`).
-    pub const fn support_deduce(&self) -> bool {
+    pub const fn is_base(&self) -> bool {
         matches!(self, Self::Bool | Self::Bitstring)
     }
 
@@ -106,6 +106,14 @@ impl Sort {
             Sort::Protocol => 'p',
             Sort::Nonce => 'n',
             Sort::Index => 'i',
+        }
+    }
+
+    pub const fn get_if(self) -> Option<Function> {
+        match self {
+            Self::Bool => Some(BITE.const_clone()),
+            Self::Bitstring => Some(MITE.const_clone()),
+            _ => None
         }
     }
 }

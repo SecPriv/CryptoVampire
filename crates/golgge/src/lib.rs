@@ -1,6 +1,17 @@
 use bon::Builder;
 use egg::{Analysis, Language, Runner};
 
+/// A macro for tracing messages if tracing is enabled in the program's configuration.
+macro_rules! mtrace {
+    ($s:ident, $kind:ident, $($t:tt)*) => {
+        if $s.is_tracing_enabled($crate::DebugLevel::$kind) {
+          eprintln!($($t)*)
+        }
+    };
+}
+
+mod tracing;
+pub use tracing::DebugLevel;
 /// Defines traits and structures for working with e-graph rules.
 mod rule;
 pub use rule::{DebugRule, Dependancy, Fresh, PrologRule, Rule};
@@ -34,8 +45,8 @@ pub struct Config {
     pub node_limit: usize,
     #[builder(default = Config::default().time_limit)]
     pub time_limit: std::time::Duration,
-    #[builder(default = Config::default().trace_prolog)]
-    pub trace_prolog: bool,
+    #[builder(default = Config::default().trace)]
+    pub trace: DebugLevel,
 }
 
 impl Config {
@@ -55,7 +66,7 @@ impl Default for Config {
             iter_limit: 150,
             node_limit: 500,
             time_limit: std::time::Duration::from_secs(5),
-            trace_prolog: cfg!(debug_assertions),
+            trace: DebugLevel::default()
         }
     }
 }

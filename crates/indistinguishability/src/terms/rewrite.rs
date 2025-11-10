@@ -1,6 +1,8 @@
 use std::borrow::Cow;
+use std::fmt::Debug;
 
 use bon::{Builder, builder};
+use log::trace;
 use serde::Serialize;
 use steel::rvals::Result as SResult;
 use steel::steel_vm::register_fn::RegisterFn;
@@ -9,13 +11,13 @@ use steel_derive::Steel;
 use crate::input::Registerable;
 use crate::terms::{RecFOFormula, Variable};
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Builder, Steel)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Builder, Steel)]
 pub struct Rewrite {
     /// These are the arguments to the function that one must unify with to get
     /// rewritten as [Self::to].
     pub from: RecFOFormula,
     pub to: RecFOFormula,
-    #[builder(with = |x: impl std::iter::IntoIterator<Item = Variable>| x.into_iter().collect())]
+    #[builder(default, with = |x: impl std::iter::IntoIterator<Item = Variable>| x.into_iter().collect())]
     pub variables: cow![Variable],
 
     /// Can the rewrite be translated outside of [`golgee`] ?
@@ -60,16 +62,14 @@ impl Registerable for Rewrite {
     }
 }
 
-#[macro_export]
-macro_rules! mk_rewrite {
-    ($($var:literal:$sort:ident),* in $args:expr => $to:expr) => {
-        {
-          $crate::terms::Rewrite::builder()
-            .from($args)
-            .to($to)
-            .sorts({ use $crate::terms::Sort::*; [$($sort),*]})
-            .variables([$(egg::Var::from_u32($var)),*])
-            .build()
-        }
-    };
+impl Debug for Rewrite {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Rewrite")
+            .field("from", &self.from)
+            .field("to", &self.to)
+            .field("variables", &self.variables)
+            .field("prolog_only", &self.prolog_only)
+            .field("name", &self.name)
+            .finish()
+    }
 }

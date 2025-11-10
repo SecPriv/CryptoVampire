@@ -4,6 +4,11 @@
   declare-protocol
   declare-cryptography
   initialize-as-prf
+  initialize-as-aenc
+  initialize-as-senc
+  initialize-as-xor
+  initialize-as-ddh
+  set-init-step
   run
   get-function
   register-function
@@ -21,8 +26,9 @@
   alias-rw
   define-alias
   define-function
+  add-constrain
   lift-fun
-  cand cor tuple
+  cand cor tuple eql <>
   ;  @@@EXPORTS@@@
   )
 (require-builtin cryptovampire as cv-)
@@ -168,6 +174,14 @@
         content)
       stepf)))
 
+(define (set-init-step pbl . content)
+  (let [ (s (get-function init)) ]
+    (begin
+      (for-each (lambda (c)
+          (let [ (condf (step-message c)) (ptcl (step-protocol c)) ]
+            (cv-set-step-message pbl s (get-function ptcl)
+              condf)))))))
+
 (define (mk-fun name cryptos . args)
   (if (< (length args) 1)
     (error "mk-fun: expected at least one sort argument")
@@ -230,8 +244,26 @@
             (alias-rw ((ids sorts) ...) (args ...) -> res)
             ...)))) ]))
 
+
+
 (define (initialize-as-prf prf fhash)
   (cv-initialize-as-prf prf (get-function fhash)))
+
+(define (initialize-as-aenc aenc enc dec pk)
+  (cv-initialize-as-aenc aenc
+    (get-function enc) (get-function dec) (get-function pk)))
+
+(define (initialize-as-senc senc enc dec pk)
+  (cv-initialize-as-senc senc
+    (get-function enc) (get-function dec) (get-function pk)))
+
+(define (initialize-as-xor xor-crypt xor)
+  (cv-initialize-as-xor xor-crypt
+    (get-function xor)))
+
+(define (initialize-as-ddh ddh g exp)
+  (cv-initialize-as-ddh ddh
+    (get-function g) (get-function exp)))
 
 (define (run pbl p1 p2)
   (cv-run pbl (get-function p1) (get-function p2)))
@@ -259,6 +291,14 @@
     [ (_ name pbl (crypto ...) sort)
     (define-function name pbl (crypto ...) () -> sort) ]))
 
+(define-syntax add-constrain
+  (syntax-rules ()
+    [ (_ pbl (vars ...) constrain)
+    (let [ (vars (cv-mk-varf (cv-mk-fresh-var-w-sort cv-Index))) ...]
+      (cv-add-constrain pbl constrain)) ]))
+
 (define (cand . args) (cv-cand args))
 (define (cor . args) (cv-cor args))
 (define (tuple . args) (cv-tuple args))
+(define (eql a b) (eq (bistring_length a) (bistring_length b)))
+(define <> incompatible)

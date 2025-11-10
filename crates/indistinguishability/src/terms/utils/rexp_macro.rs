@@ -105,6 +105,7 @@ pub fn mk_neqs(args: implvec!(MacroExpr)) -> MacroExpr {
 
 /// for [rexp]
 #[allow(private_bounds)]
+#[track_caller]
 pub fn mk_app<T: FunctionRef>(head: T, args: implvec!(MacroExpr)) -> MacroExpr {
     let args = CowArc::Owned(args.into_iter().collect());
     let head = head.to_function();
@@ -117,10 +118,12 @@ pub fn mk_app<T: FunctionRef>(head: T, args: implvec!(MacroExpr)) -> MacroExpr {
     ret
 }
 
+#[track_caller]
 pub const fn mk_const_app(head: Function, args: &'static [MacroExpr]) -> MacroExpr {
     MacroExpr::mk_const_app(head, args)
 }
 
+#[track_caller]
 pub const fn mk_const_quantifier(
     head: FOBinder,
     vars: &'static [Variable],
@@ -133,6 +136,7 @@ pub const fn mk_const_quantifier(
     }
 }
 
+#[track_caller]
 pub fn mk_quantifier(
     head: FOBinder,
     vars: implvec![Variable],

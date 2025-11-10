@@ -3,7 +3,8 @@ use itertools::chain;
 use crate::problem::{PRule, RcRule};
 use crate::rules::deduce::GetDeduce;
 use crate::terms::{
-    AND, BIT_DEDUCE, BITE, BOOL_DEDUCE, EQUIV, FAIL, FRESH_NONCE, HAPPENS, IS_FRESH_NONCE, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, VAMPIRE
+    AND, BIT_DEDUCE, BITE, BOOL_DEDUCE, EQUIV, FAIL, FRESH_NONCE, HAPPENS, IS_FRESH_NONCE, LEQ,
+    MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, VAMPIRE,
 };
 
 /// Creates a set of static deduction rules.
@@ -56,11 +57,11 @@ pub fn mk_rules() -> impl Iterator<Item = RcRule> {
     // ========================= ite ===========================
     // =========================================================
 
-        "deduce b_ite":
-        (deduce_b #u #v (b_ite #a1 #b1 #c1) (b_ite #a2 #b2 #c2) #h1 #h2) :-
-          (deduce_b #u #v #b1 #b2 (and #a1 #h1) (and #a2 #h2)),
-          (deduce_b #u #v #c1 #c2 (and (not #a1) #h1) (and (not #a2) #h2)),
-          (deduce_b #u #v #a1 #a2 #h1 #h2).
+        // "deduce b_ite":
+        // (deduce_b #u #v (b_ite #a1 #b1 #c1) (b_ite #a2 #b2 #c2) #h1 #h2) :-
+        //   (deduce_b #u #v #b1 #b2 (and #a1 #h1) (and #a2 #h2)),
+        //   (deduce_b #u #v #c1 #c2 (and (not #a1) #h1) (and (not #a2) #h2)),
+        //   (deduce_b #u #v #a1 #a2 #h1 #h2).
 
         "deduce m_ite":
         (deduce_m #u #v (m_ite #a1 #b1 #c1) (m_ite #a2 #b2 #c2) #h1 #h2) :-

@@ -12,6 +12,8 @@ pub enum CryptographicAssumption {
     #[default]
     Undefined,
     PRF(rules::PRF),
+    AEnc(rules::AEnc),
+    XOr(rules::XOr),
     NoGuessingTh,
 }
 
@@ -50,11 +52,58 @@ impl CryptographicAssumption {
     pub fn is_prf(&self) -> bool {
         matches!(self, Self::PRF(..))
     }
+
+    /// Returns `true` if the cryptographic assumption is [`AEnc`].
+    ///
+    /// [`AEnc`]: CryptographicAssumption::AEnc
+    #[must_use]
+    pub fn is_aenc(&self) -> bool {
+        matches!(self, Self::AEnc(..))
+    }
+
+    #[must_use]
+    pub fn as_aenc(&self) -> Option<&rules::AEnc> {
+        if let Self::AEnc(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    /// Returns `true` if the cryptographic assumption is [`XOr`].
+    ///
+    /// [`XOr`]: CryptographicAssumption::XOr
+    #[must_use]
+    pub fn is_xor(&self) -> bool {
+        matches!(self, Self::XOr(..))
+    }
+
+    #[must_use]
+    pub fn as_xor(&self) -> Option<&rules::XOr> {
+        if let Self::XOr(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
 }
 
 impl From<rules::PRF> for CryptographicAssumption {
     /// Converts a `rules::PRF` into a `CryptographicAssumption::PRF`.
     fn from(v: rules::PRF) -> Self {
         Self::PRF(v)
+    }
+}
+
+impl From<rules::AEnc> for CryptographicAssumption {
+    fn from(v: rules::AEnc) -> Self {
+        Self::AEnc(v)
+    }
+}
+
+
+impl From<rules::XOr> for CryptographicAssumption {
+    fn from(v: rules::XOr) -> Self {
+        Self::XOr(v)
     }
 }

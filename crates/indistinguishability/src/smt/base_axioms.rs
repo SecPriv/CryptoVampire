@@ -2,6 +2,7 @@ use cryptovampire_smt::{Smt, SmtCons, SmtFormula};
 use itertools::{Itertools, chain, izip};
 use utils::{dynamic_iter, ereturn_if};
 
+use crate::rules::constrains;
 use crate::terms::{
     ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, FindSuchThat, Function, HAPPENS, LEQ, LT,
     MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, PROJ_1, PROJ_2, Quantifier,
@@ -26,10 +27,12 @@ pub fn mk_prelude(pbl: &mut Problem) -> impl Iterator<Item = MSmt> + use<'_> {
         mk_quantifiers(pbl),
         mk_alias(pbl),
         mk_extra_rw(pbl),
+        [MSmt::comment_block("Contrains")],
+        constrains::mk_smt(pbl),
         [MSmt::comment_block("Custom")],
         pbl.extra_smt().iter().cloned(),
         [MSmt::comment_block("Cryptography")],
-        pbl.cryptography().iter().flat_map(|c| c.mk_prelude(pbl))
+        pbl.cryptography().iter().flat_map(|c| c.mk_prelude(pbl)),
     ]
 }
 
