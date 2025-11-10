@@ -83,16 +83,6 @@
             (eq (macro_input (tag i j) p) (macro_msg (reader1 i) p))
             (lt (reader1 i) (tag i j))
             (lt (tag i j) t))))))); <- very important
-(bind
-  ((i Index) (j Index))
-  (cv-add-rewrite pbl (cv-mk-rewrite "lemma-3" (list i)
-      (nr i)
-      (macro_msg (reader1 i) p1))))
-(bind
-  ((i Index) (j Index))
-  (cv-add-rewrite pbl (cv-mk-rewrite "lemma-4" (list i)
-      (nr i)
-      (macro_msg (reader1 i) p2))))
 
 (add-constrain pbl (i j) (lt (reader1 i) (rs i j)))
 (add-constrain pbl (i) (lt (reader1 i) (rf i)))
