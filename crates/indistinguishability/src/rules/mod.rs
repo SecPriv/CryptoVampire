@@ -252,7 +252,7 @@ mod if_rewrites;
 pub mod constrains;
 
 mod xor;
-pub use xor::XOr;   
+pub use xor::XOr;
 
 mod ddh;
 pub use ddh::DDH;

@@ -99,7 +99,7 @@ pub fn mk_static_rules<'a>(
         mk_many_prolog! {
           "search_k_enc_pk" (Keep):
             (search_k_m #K (pk (NONCE #K)) #H).
-          
+
           "search_k_enc_pk_neq" (Keep):
             (search_k_m #K (pk #T) #H) :-
               (search_k_m #K #T #H),

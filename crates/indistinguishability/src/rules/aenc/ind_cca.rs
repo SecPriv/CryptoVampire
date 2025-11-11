@@ -14,7 +14,7 @@ pub fn mk_rules(
         search_o_m,
         search_k_m,
         subst,
-        pk, 
+        pk,
         ..
     }: &AEnc,
 ) -> impl Iterator<Item = RcRule> {

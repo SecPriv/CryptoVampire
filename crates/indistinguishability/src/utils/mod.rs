@@ -39,7 +39,7 @@ pub trait LightClone: Clone {}
 impl<U: Copy> LightClone for U {}
 
 mod static_rc;
-pub(crate) use static_rc::{SmartCow, InnerSmartCow};
+pub(crate) use static_rc::{InnerSmartCow, SmartCow};
 
 #[cfg(test)]
 mod test {

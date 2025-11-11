@@ -113,7 +113,7 @@ impl Sort {
         match self {
             Self::Bool => Some(BITE.const_clone()),
             Self::Bitstring => Some(MITE.const_clone()),
-            _ => None
+            _ => None,
         }
     }
 }

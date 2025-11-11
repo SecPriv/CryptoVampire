@@ -34,7 +34,7 @@ impl Problem {
                 ..
             } = self.config;
 
-            let mut gtrace = Default::default();            
+            let mut gtrace = Default::default();
 
             if trace {
                 gtrace |= golgge::DebugLevel::RULE;

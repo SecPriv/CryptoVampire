@@ -9,7 +9,9 @@ use crate::{
     problem::{PAnalysis, PRule},
     rexp,
     rules::{
-        Library, fa::{self, FaElem, PATTERN_FA}, utils::Side
+        Library,
+        fa::{self, FaElem, PATTERN_FA},
+        utils::Side,
     },
     terms::{FRESH_NONCE, Function, FunctionFlags, NONCE, Rewrite, Sort},
 };
@@ -31,7 +33,6 @@ pub struct XOr {
 }
 
 decl_vars!(const NA:Bitstring, NB:Bitstring, X);
-
 
 impl XOr {
     pub fn new_and_add(pbl: &mut Problem, index: usize, xor: Function) -> &Self {

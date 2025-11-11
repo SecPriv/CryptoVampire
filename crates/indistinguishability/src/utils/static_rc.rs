@@ -45,7 +45,7 @@ impl<U> SmartCow<U> {
     }
 
     pub const fn is_static(&self) -> bool {
-      self.as_inner_ref().count.is_none()
+        self.as_inner_ref().count.is_none()
     }
 }
 
@@ -136,8 +136,7 @@ impl<U> Drop for SmartCow<U> {
 unsafe impl<U: Sync> Sync for SmartCow<U> {}
 unsafe impl<U: Sync> Send for SmartCow<U> {}
 
-
-impl<U:Serialize> Serialize for SmartCow<U> {
+impl<U: Serialize> Serialize for SmartCow<U> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,

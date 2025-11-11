@@ -14,9 +14,9 @@ bitflags! {
 impl Default for DebugLevel {
     fn default() -> Self {
         if cfg!(debug_assertions) {
-          DebugLevel::RULE
+            DebugLevel::RULE
         } else {
-          DebugLevel::empty()
+            DebugLevel::empty()
         }
     }
 }

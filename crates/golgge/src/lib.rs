@@ -66,7 +66,7 @@ impl Default for Config {
             iter_limit: 150,
             node_limit: 500,
             time_limit: std::time::Duration::from_secs(5),
-            trace: DebugLevel::default()
+            trace: DebugLevel::default(),
         }
     }
 }

@@ -9,5 +9,6 @@ fn mk_static_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = egg::Rewrite<
       ["public message"]
       (#v1 = (LT #t CURRENT_STEP), #v1 = true, #v2 = PARK_IS_PUBLIC) =>
         (#v2 =  (PARK_PARKER_IS_PUBLIC (MACRO_)))
-    }.into_iter()
+    }
+    .into_iter()
 }

@@ -43,7 +43,10 @@ impl Signature {
 
     /// Creates a vector of fresh `Variable`s, one for each input sort.
     pub fn mk_vars_expr(&self) -> impl Iterator<Item = RecFOFormula> {
-        self.inputs.iter().map(|&s| fresh!(s)).map(RecFOFormula::Var)
+        self.inputs
+            .iter()
+            .map(|&s| fresh!(s))
+            .map(RecFOFormula::Var)
     }
 
     // pub fn mk_sorted_vars(

@@ -5,5 +5,4 @@ use itertools::Itertools;
 use std::num::NonZeroUsize;
 use utils::implvec;
 
-impl Problem {
-}
+impl Problem {}

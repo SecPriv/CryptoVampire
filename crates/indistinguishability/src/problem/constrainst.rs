@@ -21,6 +21,9 @@ pub struct BoundStep {
 
 impl BoundStep {
     pub fn init() -> Self {
-        Self { head: INIT.clone(), args: vec![] }
+        Self {
+            head: INIT.clone(),
+            args: vec![],
+        }
     }
 }

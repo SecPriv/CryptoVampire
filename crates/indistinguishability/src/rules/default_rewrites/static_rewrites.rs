@@ -4,7 +4,10 @@ use itertools::{Itertools, chain};
 use crate::Lang;
 use crate::protocol::MacroKind;
 use crate::terms::{
-    AND, ATT, BITE, EMPTY, EQUIV, EQUIV_WITH_SIDE, ETA, FRESH_NONCE, FROM_BOOL, Function, HAPPENS, IMPLIES, IS_FRESH_NONCE, LEFT, LENGTH, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_MSG, MITE, NONCE, PRED, PROJ_1, PROJ_2, RIGHT, TUPLE, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, ZEROES
+    AND, ATT, BITE, EMPTY, EQUIV, EQUIV_WITH_SIDE, ETA, FRESH_NONCE, FROM_BOOL, Function, HAPPENS,
+    IMPLIES, IS_FRESH_NONCE, LEFT, LENGTH, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_MSG,
+    MITE, NONCE, PRED, PROJ_1, PROJ_2, RIGHT, TUPLE, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT,
+    ZEROES,
 };
 
 /// Creates a set of static rewrite rules.
@@ -68,19 +71,23 @@ pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>
         (EQUIV_WITH_SIDE RIGHT #u #v #a #b) => (EQUIV #u #v #b #a).
     };
 
-    let unfold = MacroKind::all().into_iter().flat_map(|kind| {
-        let mmacro = Function::macro_from_kind(kind);
-        let unfold = Function::unfold_from_kind(kind);
+    let unfold = MacroKind::all()
+        .into_iter()
+        .flat_map(|kind| {
+            let mmacro = Function::macro_from_kind(kind);
+            let unfold = Function::unfold_from_kind(kind);
 
-        [
-            mk_rewrite!(format!("unfold {kind}"); (v1, v2):
+            [
+                mk_rewrite!(format!("unfold {kind}"); (v1, v2):
           (#v1 = (HAPPENS #t), #v1 = true, #v2 = (mmacro #t #p)) =>
             (#v2 = (unfold #t #p))),
-            mk_rewrite!(format!("fold {kind}"); (v1, v2):
+                mk_rewrite!(format!("fold {kind}"); (v1, v2):
           (#v1 = (HAPPENS #t), #v1 = true, #v2 = (unfold #t #p)) =>
             (#v2 = (mmacro #t #p))),
-        ]
-        .into_iter()
-    }).collect_vec().into_iter();
+            ]
+            .into_iter()
+        })
+        .collect_vec()
+        .into_iter();
     chain!(main, unfold)
 }

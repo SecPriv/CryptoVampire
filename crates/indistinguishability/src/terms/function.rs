@@ -82,7 +82,7 @@ impl Ord for InnerFunction {
         self.name.cmp(&other.name)
     }
 }
-impl  PartialOrd for InnerFunction {
+impl PartialOrd for InnerFunction {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }

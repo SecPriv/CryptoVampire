@@ -119,7 +119,6 @@ impl From<rules::AEnc> for CryptographicAssumption {
     }
 }
 
-
 impl From<rules::XOr> for CryptographicAssumption {
     fn from(v: rules::XOr) -> Self {
         Self::XOr(v)

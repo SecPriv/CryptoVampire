@@ -81,8 +81,7 @@ impl RefFormulaBuilder {
     ) -> Self {
         if quantifier.is_none() && condition.is_some() {
             quantifier = Some(FOBinder::Forall)
-        }        
-
+        }
 
         let condition = quantifier.map(|quantifer| {
             Condition::builder()
