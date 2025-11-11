@@ -7,7 +7,7 @@ pub use subterm_trait::{EgraphSearcher, SyntaxSearcher, default_is_special};
 use utils::{econtinue_if, implvec};
 
 use crate::{
-    Lang, Problem,
+    Lang,
     problem::PAnalysis,
     protocol::Protocol,
     terms::{Function, IS_INDEX, Sort},

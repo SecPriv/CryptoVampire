@@ -5,7 +5,6 @@ use std::ops::Deref;
 
 use cryptovampire_smt::SmtHead;
 use egg::{Id, Language, PatternAst, RecExpr};
-use quarck::CowArc;
 use serde::Serialize;
 use steel::SteelErr;
 use steel::rvals::IntoSteelVal;
@@ -20,7 +19,7 @@ use crate::terms::{
     Alias, AliasRewrite, BUILTINS, EXISTS, Exists, FIND_SUCH_THAT, FOBinder, FunctionCollection,
     FunctionFlags, LAMBDA_O, LAMBDA_S, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG,
     NOT, Quantifier, QuantifierIndex, QuantifierT, RecFOFormula, Signature, Sort, UNFOLD_COND,
-    UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin, signature,
+    UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin,
 };
 use crate::utils::{InnerSmartCow, LightClone, SmartCow};
 use crate::{Lang, LangVar};

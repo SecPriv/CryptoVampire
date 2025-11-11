@@ -1,7 +1,7 @@
 use super::*;
 use crate::rules::{self, FreshNonce, VampireRule, mk_default_prolog_rules, mk_default_rewrites};
 use crate::runners::SmtRunner;
-use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, PRED, TRUE, UNFOLD_MSG};
+use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, PRED, UNFOLD_MSG};
 use crate::{Configuration, Lang, rexp, smt};
 use cryptovampire_smt::Smt;
 use egg::EGraph;

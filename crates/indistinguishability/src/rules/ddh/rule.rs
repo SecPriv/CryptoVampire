@@ -17,7 +17,7 @@ use crate::{
             Side::{Left, Right},
         },
     },
-    terms::{EQUIV, EQUIV_WITH_SIDE, Function, FunctionFlags, NONCE, Sort},
+    terms::{EQUIV, Function, FunctionFlags, NONCE, Sort},
 };
 
 #[derive(Debug, Clone)]

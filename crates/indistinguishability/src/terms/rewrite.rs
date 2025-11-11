@@ -2,7 +2,6 @@ use std::borrow::Cow;
 use std::fmt::Debug;
 
 use bon::{Builder, builder};
-use log::trace;
 use serde::Serialize;
 use steel::rvals::Result as SResult;
 use steel::steel_vm::register_fn::RegisterFn;

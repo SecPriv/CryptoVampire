@@ -2,7 +2,6 @@ use std::borrow::Cow;
 use std::fmt::{Debug, Display};
 use std::ops::{BitAnd, BitOr, Not, Shr};
 
-use anyhow::bail;
 use bon::Builder;
 use cryptovampire_smt::{SmtFormula, SmtHead};
 use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr};

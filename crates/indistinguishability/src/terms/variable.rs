@@ -1,9 +1,6 @@
 use std::borrow::Cow;
 use std::fmt::{Debug, Display};
-use std::ptr::NonNull;
 use std::sync::OnceLock;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
 
 use bon::bon;
 use cryptovampire_smt::SortedVar;

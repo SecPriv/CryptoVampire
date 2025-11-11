@@ -1,14 +1,11 @@
 use std::num::NonZeroUsize;
 
 use anyhow::{Context, anyhow, bail, ensure};
-use itertools::izip;
 
 use super::*;
 use crate::mk_signature;
 use crate::protocol::{Protocol, Step};
-use crate::terms::{
-    Function, FunctionFlags, INCOMPATIBLE, INIT, InnerFunction, LT, Sort, Variable,
-};
+use crate::terms::{Function, FunctionFlags, INCOMPATIBLE, INIT, InnerFunction, LT, Sort};
 
 impl Problem {
     /// Returns the `init` function

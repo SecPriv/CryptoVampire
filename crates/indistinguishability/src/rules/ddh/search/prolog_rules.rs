@@ -6,8 +6,8 @@ use crate::{
     Lang, Problem, fresh, rexp,
     rules::ddh::{DDH, ProofHints, vars::*},
     terms::{
-        AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, FRESH_NONCE, Function, IS_FRESH_NONCE,
-        MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE, PRED, RecFOFormula, Sort, VAMPIRE,
+        AND, BITE, FRESH_NONCE, Function, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE, PRED,
+        RecFOFormula, Sort, VAMPIRE,
     },
 };
 

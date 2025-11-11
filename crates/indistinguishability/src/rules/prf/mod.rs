@@ -11,7 +11,7 @@ use crate::problem::{PAnalysis, PRule};
 use crate::terms::utils::iter_egraph::iter_descendants_lang;
 use crate::terms::{
     EQ, EQUIV, FALSE, FRESH_NONCE, Function, FunctionFlags, IS_FRESH_NONCE, NONCE, RecFOFormula,
-    SUBSTITUTION, SUBSTITUTION_RULE, Sort, TRUE,
+    Sort, TRUE,
 };
 use crate::{Lang, Problem, mk_signature, rexp};
 
@@ -532,7 +532,7 @@ fn all_nonce_descendants<N: Analysis<Lang>>(
     ancestors: implvec!(Id),
 ) -> FxHashSet<Id> {
     iter_descendants_lang(egraph, ancestors, can_have_children)
-        .filter(|&x| (x.head == NONCE))
+        .filter(|&x| x.head == NONCE)
         .map(|x| x.args[0])
         .collect()
 }

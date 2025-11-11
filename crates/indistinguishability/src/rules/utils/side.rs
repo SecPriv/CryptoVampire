@@ -1,4 +1,4 @@
-use std::fmt::{Display, write};
+use std::fmt::Display;
 
 use egg::{Analysis, EGraph, Id};
 use utils::match_eq;

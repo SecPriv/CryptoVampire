@@ -9,11 +9,10 @@ use crate::{
     problem::{PAnalysis, PRule},
     rexp,
     rules::{
-        Library,
         fa::{self, FaElem, PATTERN_FA},
         utils::Side,
     },
-    terms::{FRESH_NONCE, Function, FunctionFlags, NONCE, Rewrite, Sort},
+    terms::{FRESH_NONCE, Function, NONCE, Rewrite},
 };
 declare_trace!($"enc");
 

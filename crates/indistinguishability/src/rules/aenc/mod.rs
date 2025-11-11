@@ -8,7 +8,7 @@ declare_trace!($"enc");
 
 mod vars {
     decl_vars!(pub const M:Bitstring, T, NT, P,
-            A:Bitstring, B:Bitstring, 
+            A:Bitstring, B:Bitstring,
             PROOF: Bool, K:Nonce, K2:Nonce, N:Nonce, R:Nonce, H:Bool,
             SIDE:Any, U:Bitstring, V:Bitstring);
 }
@@ -106,10 +106,10 @@ impl AEnc {
                 Nonce, Bool, Bool => Bool),
             // k, k', r, m ||> t  | h
             search_o_m: declare!(pbl@index: format!("{enc}_search_o_m");
-                Nonce, Nonce, Nonce, Bitstring, 
+                Nonce, Nonce, Nonce, Bitstring,
                     Bitstring, Bool => Bool),
             search_o_b: declare!(pbl@index: format!("{enc}_search_o_b");
-                Nonce, Nonce, Nonce, Bitstring, 
+                Nonce, Nonce, Nonce, Bitstring,
                     Bool, Bool => Bool),
 
             // k ||> frame@t p | h
@@ -123,8 +123,8 @@ impl AEnc {
                 Nonce, Nonce, Time, Protocol, Bool => Bool),
             // sid, u, v, _{_ -> nt @ proof}, b
             subst: declare!(pbl@index: format!("{enc}_search_o_b");
-                Any, Bitstring, Bitstring, 
-                Bitstring, Bool, 
+                Any, Bitstring, Bitstring,
+                Bitstring, Bool,
                 Bitstring => Bool),
             index,
         };

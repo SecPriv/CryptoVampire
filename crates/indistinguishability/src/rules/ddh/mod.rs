@@ -2,7 +2,7 @@ use itertools::{Itertools, chain};
 
 use crate::{
     Problem, mk_signature,
-    terms::{Function, FunctionFlags, NONCE, Rewrite, Sort},
+    terms::{Function, FunctionFlags, Rewrite, Sort},
 };
 declare_trace!($"enc");
 

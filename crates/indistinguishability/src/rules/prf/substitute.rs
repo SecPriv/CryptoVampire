@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use bon::Builder;
-use egg::{Analysis, Id, Pattern, Searcher};
+use egg::{Id, Pattern, Searcher};
 use golgge::{Dependancy, Program, ProofItem, Rule};
 use itertools::izip;
 use utils::ereturn_let;

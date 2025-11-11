@@ -1,4 +1,4 @@
-use egg::{Analysis, EGraph, Id, Pattern, Subst};
+use egg::{Analysis, EGraph, Id, Pattern};
 use golgge::Program;
 use itertools::{Itertools, chain};
 use rustc_hash::FxHashSet;
@@ -10,8 +10,7 @@ use crate::{
     problem::PAnalysis,
     rexp,
     terms::{
-        Function, FunctionFlags, IS_FRESH_NONCE, NONCE, RecFOFormula, Sort,
-        utils::iter_egraph::iter_descendants_lang,
+        Function, IS_FRESH_NONCE, NONCE, RecFOFormula, utils::iter_egraph::iter_descendants_lang,
     },
 };
 
@@ -33,7 +32,7 @@ pub trait RuleWithFreshNonce {
         ancestors: implvec!(Id),
     ) -> FxHashSet<Id> {
         iter_descendants_lang(egraph, ancestors, Self::can_have_children)
-            .filter(|&x| (x.head == NONCE))
+            .filter(|&x| x.head == NONCE)
             .map(|x| x.args[0])
             .collect()
     }

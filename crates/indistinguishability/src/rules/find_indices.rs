@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use egg::{Analysis, EGraph, Id, Pattern, SearchMatches, Searcher};
+use egg::{Analysis, EGraph, Pattern, SearchMatches, Searcher};
 use static_init::dynamic;
 
 use crate::{

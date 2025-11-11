@@ -4,10 +4,7 @@ use utils::dynamic_iter;
 
 use crate::{
     Lang, Problem, rexp,
-    terms::{
-        AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, EQ, Function, IMPLIES, MITE, NOT, OR,
-        RecFOFormula,
-    },
+    terms::{AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, EQ, Function, IMPLIES, MITE, NOT, OR},
 };
 
 pub fn mk_rewrite<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = egg::Rewrite<Lang, N>> {

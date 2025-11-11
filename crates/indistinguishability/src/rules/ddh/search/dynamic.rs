@@ -14,7 +14,7 @@ use bon::Builder;
 use egg::{Id, Pattern, Searcher};
 use golgge::{Dependancy, Rule};
 use itertools::Itertools;
-use std::{borrow::Cow, collections::VecDeque, ops::ControlFlow};
+use std::{borrow::Cow, ops::ControlFlow};
 use utils::ereturn_if;
 
 #[derive(Debug, Clone, Builder)]

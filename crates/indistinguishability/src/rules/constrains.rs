@@ -1,13 +1,12 @@
-use egg::{Analysis, EGraph, MultiPattern, Pattern, Rewrite, rewrite};
+use egg::{Analysis, EGraph, MultiPattern, Rewrite};
 use itertools::{Itertools, chain, izip};
-use rustc_hash::{FxHashMap, FxHashSet};
-use utils::{dynamic_iter, ebreak_if, ereturn_if};
+use rustc_hash::FxHashMap;
 
 use crate::{
     Lang, MSmt, MSmtFormula, Problem,
     problem::{BoundStep, ConstrainOp, Constrains, CurrentStep, PAnalysis},
     rexp, smt,
-    terms::{CURRENT_STEP, HAPPENS, INIT, IS_INDEX, LEQ, LT, PRED, RecFOFormula, TRUE, Variable},
+    terms::{CURRENT_STEP, HAPPENS, INIT, IS_INDEX, LEQ, LT, PRED, RecFOFormula, TRUE},
 };
 
 macro_rules! bind {

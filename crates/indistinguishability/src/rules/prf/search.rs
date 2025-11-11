@@ -15,7 +15,7 @@ use crate::rules::utils::{SyntaxSearcher, get_protocol};
 use crate::runners::SmtRunner;
 use crate::terms::{
     AND, BITE, Function, HAPPENS, IS_FRESH_NONCE, LT, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE,
-    NONCE, PRED, RecFOFormula, Sort, VAMPIRE, Variable,
+    NONCE, PRED, RecFOFormula, Sort, VAMPIRE,
 };
 use crate::{Lang, Problem, fresh, rexp};
 
