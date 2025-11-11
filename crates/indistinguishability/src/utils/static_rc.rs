@@ -1,10 +1,13 @@
 use core::sync::atomic::Ordering::*;
 use std::{hash::Hash, ptr::NonNull, sync::atomic::AtomicUsize};
 
+use serde::Serialize;
+
 /// more or less [Arc] that can point to a static point and thus be cloned in
 /// static. Moreover, equality and hash comes from the pointer
 pub struct SmartCow<U>(NonNull<InnerSmartCow<U>>);
 
+#[derive(Debug, Serialize)]
 pub struct InnerSmartCow<U> {
     count: Option<AtomicUsize>,
     content: U,
@@ -17,7 +20,7 @@ impl<U> SmartCow<U> {
     }
 
     pub const fn const_clone(&self) -> Self {
-        assert!(self.as_inner_ref().count.is_none());
+        assert!(self.is_static());
         Self(self.0)
     }
 
@@ -35,6 +38,14 @@ impl<U> SmartCow<U> {
 
     const fn as_inner_ref(&self) -> &InnerSmartCow<U> {
         unsafe { self.0.as_ref() }
+    }
+
+    pub fn as_usize(&self) -> usize {
+        self.0.as_ptr() as usize
+    }
+
+    pub const fn is_static(&self) -> bool {
+      self.as_inner_ref().count.is_none()
     }
 }
 
@@ -124,3 +135,13 @@ impl<U> Drop for SmartCow<U> {
 
 unsafe impl<U: Sync> Sync for SmartCow<U> {}
 unsafe impl<U: Sync> Send for SmartCow<U> {}
+
+
+impl<U:Serialize> Serialize for SmartCow<U> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.as_inner_ref().serialize(serializer)
+    }
+}

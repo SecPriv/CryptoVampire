@@ -13,19 +13,19 @@ use steel_derive::Steel;
 
 use crate::input::Registerable;
 use crate::terms::{RecFOFormula, Sort};
+use crate::utils::{InnerSmartCow, SmartCow};
 use crate::{LangVar, MSmtFormula};
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Steel)]
-pub struct Variable(NonNull<VariableInner>);
+#[derive(Clone, PartialEq, Eq, Hash, Steel)]
+pub struct Variable(SmartCow<VariableInner>);
 
 unsafe impl Sync for Variable {}
 unsafe impl Send for Variable {}
 
 #[derive(Serialize)]
 pub struct VariableInner {
-    /// The smart counter, [None] when the variable is leaked
-    count: Option<AtomicUsize>,
-
+    // /// The smart counter, [None] when the variable is leaked
+    // count: Option<AtomicUsize>,
     sort: MaybeOnce<Sort>,
     unique: Option<&'static str>,
 }
@@ -38,13 +38,8 @@ enum MaybeOnce<T> {
 
 impl VariableInner {
     pub const fn new_const(sort: Option<Sort>, unique: Option<&'static str>) -> Self {
-        let count = None;
         let sort = MaybeOnce::Const(sort);
-        Self {
-            count,
-            sort,
-            unique,
-        }
+        Self { sort, unique }
     }
 }
 
@@ -75,11 +70,11 @@ impl Debug for Variable {
 
 impl Variable {
     const fn as_inner_ref(&self) -> &VariableInner {
-        unsafe { self.0.as_ref() }
+        self.0.as_ref()
     }
 
     pub fn as_usize(&self) -> usize {
-        self.0.as_ptr() as usize
+        self.0.as_usize() as usize
     }
 
     /// Convertes to `egg` variables
@@ -96,16 +91,12 @@ impl Variable {
         egg::ENodeOrVar::Var(self.as_egg())
     }
 
-    pub const fn from_const(inner: &'static VariableInner) -> Self {
-        assert!(inner.count.is_none());
-        Self(NonNull::from_ref(inner))
+    pub(crate) const fn from_const(inner: &'static InnerSmartCow<VariableInner>) -> Self {
+        Self(SmartCow::from_static(inner))
     }
 
     pub const fn const_clone(&self) -> Self {
-        match self.is_static() {
-            true => Self(self.0),
-            _ => panic!("not static"),
-        }
+        Self(self.0.const_clone())
     }
 
     #[must_use]
@@ -153,7 +144,7 @@ impl Variable {
 
     #[must_use]
     pub const fn is_static(&self) -> bool {
-        self.as_inner_ref().count.is_none()
+        self.0.is_static()
     }
 
     fn steel_fresh() -> Self {
@@ -169,52 +160,24 @@ impl Variable {
 impl Variable {
     #[builder]
     pub fn fresh(sort: Option<Sort>) -> Self {
-        let inner = Box::new(VariableInner {
-            count: Some(AtomicUsize::new(1)),
+        // let inner = Box::new(VariableInner {
+        //     count: Some(AtomicUsize::new(1)),
+        //     sort: match sort {
+        //         Some(x) => MaybeOnce::Const(Some(x)),
+        //         _ => MaybeOnce::Dyn(Default::default()),
+        //     },
+        //     unique: None,
+        // });
+        // let inner = NonNull::from_ref(Box::leak(inner));
+        // Self(inner)
+
+        Self(SmartCow::new(VariableInner {
             sort: match sort {
                 Some(x) => MaybeOnce::Const(Some(x)),
                 _ => MaybeOnce::Dyn(Default::default()),
             },
             unique: None,
-        });
-        let inner = NonNull::from_ref(Box::leak(inner));
-        Self(inner)
-    }
-}
-
-impl Clone for Variable {
-    fn clone(&self) -> Self {
-        let inner = self.as_inner_ref();
-        if let Some(c) = &inner.count {
-            // same implementation as `Arc` hence why the `Rela`
-            let old_count = c.fetch_add(1, Relaxed);
-
-            #[allow(clippy::absurd_extreme_comparisons)] // clearer semantically
-            if old_count >= usize::MAX {
-                panic!("too many references for the counter")
-            }
-        }
-        Self(self.0)
-    }
-}
-
-impl Drop for Variable {
-    fn drop(&mut self) {
-        // same implementation as `Arc`
-        {
-            let inner = self.as_inner_ref();
-            let Some(count) = &inner.count else {
-                return;
-            };
-
-            if count.fetch_sub(1, Release) != 1 {
-                return;
-            }
-            std::sync::atomic::fence(Acquire);
-        }
-
-        let inner = unsafe { Box::from_raw(self.0.as_mut()) };
-        drop(inner);
+        }))
     }
 }
 
@@ -286,6 +249,22 @@ impl From<&Variable> for Variable {
     }
 }
 
+impl PartialOrd for Variable {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Variable {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        if self == other {
+            std::cmp::Ordering::Equal
+        } else {
+            self.as_usize().cmp(&other.as_usize())
+        }
+    }
+}
+
 #[macro_export]
 macro_rules! fresh {
     () => {
@@ -296,17 +275,20 @@ macro_rules! fresh {
         std::concat![std::file!(), ":", std::line!(), ":", std::column!()]
     };
     (const) => {{
-        static TMP: $crate::terms::variable::VariableInner =
-        $crate::terms::variable::VariableInner::new_const(None, Some($crate::fresh!(@str)));
+        static TMP: $crate::utils::InnerSmartCow<$crate::terms::variable::VariableInner> =
+            $crate::utils::InnerSmartCow::mk_static(
+                $crate::terms::variable::VariableInner::new_const(None, Some($crate::fresh!(@str)))
+            );
         $crate::terms::variable::Variable::from_const(&TMP)
     }};
     (const $s:expr) => {{
-        static TMP: $crate::terms::variable::VariableInner =
-        $crate::terms::variable::VariableInner::new_const(Some({
-            #[allow(unused)]
-            use$crate::terms::Sort::*;
-            $s
-        }), Some($crate::fresh!(@str)));
+        static TMP: $crate::utils::InnerSmartCow<$crate::terms::variable::VariableInner> =
+        $crate::utils::InnerSmartCow::mk_static(
+            $crate::terms::variable::VariableInner::new_const(Some({
+                #[allow(unused)]
+                use$crate::terms::Sort::*;
+                $s
+            }), Some($crate::fresh!(@str))));
         $crate::terms::variable::Variable::from_const(&TMP)
     }};
     ($sort:expr) => {
