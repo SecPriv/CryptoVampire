@@ -6,6 +6,7 @@ use cryptovampire_macros::mk_builtin_funs;
 use super::Sort::{self, *};
 use super::{Alias, AliasRewrite, Function, FunctionFlags, InnerFunction, Signature};
 use crate::rexp;
+use crate::utils::InnerSmartCow;
 
 /// helper to write const signatures
 /// Helper macro to create `Signature` instances concisely.
