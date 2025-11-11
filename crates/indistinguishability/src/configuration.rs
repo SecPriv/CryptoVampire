@@ -70,19 +70,22 @@ pub struct Configuration {
     pub prf_limit: usize,
 
     /// Fa limits
-    /// 
+    ///
     /// Note: increasing this limit nastily increases the complexity of the
     /// problem. A lot of heuristics are put in place to keep this as low as
     /// possible. Only increase this if you know what you are doing (and have a
     /// *lot* of time to lose)
-    #[arg(long, default_value_t = Self::default().prf_limit)]
+    #[arg(long, default_value_t = Self::default().fa_limit)]
     pub fa_limit: usize,
 
     /// Limit on how many new nonce 'enc-kp' can generate
     ///
     /// This might be helpful to avoid loops
-    #[arg(long, default_value_t = Self::default().prf_limit)]
+    #[arg(long, default_value_t = Self::default().enc_kp_limit)]
     pub enc_kp_limit: usize,
+
+    #[arg(long, default_value_t = Self::default().ddh_limit)]
+    pub ddh_limit: usize,
 
     /// activate golgge trace for goals
     #[arg(long, short('T'))]
@@ -134,6 +137,7 @@ impl Default for Configuration {
             trace_rebuilds: false,
             if_commute: false,
             complete_and: false,
+            ddh_limit: NONCE_GENERATION_DEFAULT,
         }
     }
 }

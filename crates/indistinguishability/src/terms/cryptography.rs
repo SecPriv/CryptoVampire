@@ -14,6 +14,7 @@ pub enum CryptographicAssumption {
     PRF(rules::PRF),
     AEnc(rules::AEnc),
     XOr(rules::XOr),
+    DDH(rules::DDH),
     NoGuessingTh,
 }
 
@@ -86,6 +87,23 @@ impl CryptographicAssumption {
             None
         }
     }
+
+    /// Returns `true` if the cryptographic assumption is [`DDH`].
+    ///
+    /// [`DDH`]: CryptographicAssumption::DDH
+    #[must_use]
+    pub fn is_ddh(&self) -> bool {
+        matches!(self, Self::DDH(..))
+    }
+
+    #[must_use]
+    pub fn as_ddh(&self) -> Option<&rules::DDH> {
+        if let Self::DDH(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
 }
 
 impl From<rules::PRF> for CryptographicAssumption {
@@ -105,5 +123,11 @@ impl From<rules::AEnc> for CryptographicAssumption {
 impl From<rules::XOr> for CryptographicAssumption {
     fn from(v: rules::XOr) -> Self {
         Self::XOr(v)
+    }
+}
+
+impl From<rules::DDH> for CryptographicAssumption {
+    fn from(v: rules::DDH) -> Self {
+        Self::DDH(v)
     }
 }
