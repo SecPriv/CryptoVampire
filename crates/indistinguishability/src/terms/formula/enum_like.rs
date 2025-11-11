@@ -440,7 +440,7 @@ impl RecFOFormula {
 
                 // 3. Apply the filtered substitution to the body
                 RecFOFormula::Quantifier {
-                    head: head.clone(),
+                    head: *head,
                     vars: vars.clone(),
                     arg: arg.iter().map(|x| x.apply(&shadowed_subst)).collect(),
                 }
@@ -720,7 +720,7 @@ impl RecFOFormula {
                         for v in vars {
                             out.push(L::mk_fun_application(LAMBDA_S.clone(), [Id::from(l)]));
                             l = out.len() - 1;
-                            bvars = bvars.insert(&v, l);
+                            bvars = bvars.insert(v, l);
                         }
                     }
                 }
@@ -749,7 +749,7 @@ impl RecFOFormula {
                     out.extend(mk_bound_var(*i));
                 }
                 None if (!param.capture_avoiding)
-                    || param.non_capture_avoiding.contains(&variable) =>
+                    || param.non_capture_avoiding.contains(variable) =>
                 {
                     out.push(L::mk_variable(variable))
                 }

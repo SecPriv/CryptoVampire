@@ -71,7 +71,7 @@ impl Variable {
     }
 
     pub fn as_usize(&self) -> usize {
-        self.0.as_usize() as usize
+        self.0.as_usize()
     }
 
     /// Convertes to `egg` variables

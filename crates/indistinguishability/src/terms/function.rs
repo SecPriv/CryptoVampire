@@ -489,7 +489,7 @@ impl Deref for Function {
     type Target = InnerFunction;
 
     fn deref(&self) -> &Self::Target {
-        &self.0.as_ref()
+        self.0.as_ref()
     }
 }
 

@@ -50,7 +50,7 @@ pub trait ProofSubstitution {
             golgge::DebugRule::new(rule.as_ref())
         );
 
-        prf_proof.split(pgrm, &self, proof, &ids, rule.as_ref())
+        prf_proof.split(pgrm, self, proof, &ids, rule.as_ref())
     }
 
     /// retrieves the term to apply substitution to from a proo
