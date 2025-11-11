@@ -143,7 +143,6 @@ impl DDH {
 
     fn extra_rewrites(&self, _pbl: &Problem) -> impl Iterator<Item = Rewrite> {
         let Self {
-            g,
             exp,
             search_m,
             search_b,

@@ -3,7 +3,7 @@ use steel_derive::Steel;
 
 use crate::input::Registerable;
 use crate::input::shared_problem::ShrProblem;
-use crate::rules::{AEnc, PRF, XOr};
+use crate::rules::{AEnc, DDH, PRF, XOr};
 use crate::terms::Function;
 
 /// Represents a shared cryptographic context within the Steel VM.
@@ -39,7 +39,8 @@ impl ShrCrypto {
     }
 
     fn init_ddh(self, g: Function, exp: Function) {
-        todo!()
+        let mut pbl = self.pbl.borrow_mut();
+        DDH::new_and_add(&mut pbl, self.index, g, exp);
     }
 }
 

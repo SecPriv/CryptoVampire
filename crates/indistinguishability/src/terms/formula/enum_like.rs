@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::fmt::{Debug, Display};
 use std::ops::{BitAnd, BitOr, Not, Shr};
 
+use anyhow::bail;
 use bon::Builder;
 use cryptovampire_smt::{SmtFormula, SmtHead};
 use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr};
@@ -1407,7 +1408,7 @@ impl RecFOFormula {
     fn steel_tuple(args: Vec<Self>) -> Self {
         args.into_iter()
             .rev()
-            .reduce(|acc, e| rexp!((TUPLE #e #acc)))
+            .reduce(|acc, e| rexp!((TUPLE #acc #e)))
             .unwrap_or(rexp!(EMPTY))
     }
 }
