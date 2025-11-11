@@ -15,6 +15,11 @@
     flake-utils = {
       url = "github:numtide/flake-utils";
     };
+
+    rust-overlay= {
+      url = "github:oxalica/rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     custom = {
       url = "github:puyral/custom-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -26,10 +31,10 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    fenix = {
-      url = "github:nix-community/fenix/monthly";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # fenix = {
+    #   url = "github:nix-community/fenix/monthly";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
   };
 
   outputs =
@@ -39,27 +44,31 @@
       flake-utils,
       custom,
       treefmt-nix,
-      fenix,
+      # fenix,
+      rust-overlay,
       ...
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
+        overlays = [ (import rust-overlay) ];
+        pkgs = import nixpkgs {
+          inherit system overlays;
+        };
         custom-pkgs = custom.packages.${system};
         treefmtEval = treefmt-nix.lib.evalModule pkgs ./nix/fmt.nix;
 
-        rust = fenix.packages.${system}.complete;
-        toolchain = rust.toolchain;
+        # rust = fenix.packages.${system}.complete;
+        # toolchain = rust.toolchain;
         use-nightly = false;
 
         rustPlatform =
-          if use-nightly then
-            pkgs.makeRustPlatform {
-              cargo = toolchain;
-              rustc = toolchain;
-            }
-          else
+          # if use-nightly then
+          #   pkgs.makeRustPlatform {
+          #     cargo = toolchain;
+          #     rustc = toolchain;
+          #   }
+          # else
             pkgs.rustPlatform;
 
         pkgConfig = {
@@ -71,7 +80,8 @@
         indistinguishability = pkgs.callPackage ./crates/indistinguishability/default.nix pkgConfig;
         doc = pkgs.callPackage ./nix/doc.nix { inherit cryptovampire; };
 
-        mrust = if use-nightly then rust else pkgs;
+        # mrust = if use-nightly then rust else pkgs;
+        mrust =  pkgs;
 
       in
       rec {

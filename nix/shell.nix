@@ -26,7 +26,7 @@ let
 in
 mkShell {
   # RUST_SRC_PATH = "${rust.rust-src}/lib/rustlib/src/rust/library/";
-  RUST_SRC_PATH = "${rustPlatform.rustLibSrc}";
+  # RUST_SRC_PATH = "${rustPlatform.rustLibSrc}";
 
   buildInputs =
     with pkgs;
@@ -43,11 +43,8 @@ mkShell {
       z3
       vampire
 
-      clippy
-      rustc
-      cargo
-      rustfmt
-      rust-analyzer
+      cargo-limit
+      rust-bin.stable.latest.complete
     ]
     ++ (with rustPlatform; [
       bindgenHook
