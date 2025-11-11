@@ -38,6 +38,8 @@ pub fn fresh_name<'a, 'b>(name: &str, avoid: implvec!(&'b str)) -> String {
 pub trait LightClone: Clone {}
 impl<U: Copy> LightClone for U {}
 
+pub mod static_rc;
+
 #[cfg(test)]
 mod test {
     use crate::utils::fresh_name;
