@@ -388,7 +388,6 @@ impl TopPrfRule {
                     PATTERN_FALSE.clone(),
                 )
                 .unwrap();
-                println!("adding {rw_rule:?}");
                 pgrm.add_eq_rule(rw_rule);
             }
 
