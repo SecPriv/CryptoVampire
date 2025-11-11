@@ -116,7 +116,10 @@ impl MFunction {
         let attrs = &self.attrs;
         quote_spanned! { self.span =>
             #(#attrs)*
-            pub static #name: Function = Function::from_ref(&InnerFunction {#fields});
+            pub static #name: Function = {
+                static TMP : InnerSmartCow<InnerFunction> = InnerSmartCow::mk_static(InnerFunction {#fields});
+                Function::from_ref(&TMP)
+            };
         }
     }
 

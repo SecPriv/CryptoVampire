@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::fmt::{Debug, Display};
+use std::hash::Hash;
 use std::ops::Deref;
 
 use cryptovampire_smt::SmtHead;
@@ -21,7 +22,7 @@ use crate::terms::{
     NOT, Quantifier, QuantifierIndex, QuantifierT, RecFOFormula, Signature, Sort, UNFOLD_COND,
     UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin, signature,
 };
-use crate::utils::LightClone;
+use crate::utils::{InnerSmartCow, LightClone, SmartCow};
 use crate::{Lang, LangVar};
 
 /// Helper macro to generate `is_*` methods for `Function` based on `FunctionFlags`.
@@ -48,7 +49,7 @@ macro_rules! is_fun {
 
 /// The inner representation of a function, containing all its properties.
 #[non_exhaustive]
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct InnerFunction {
     pub name: Cow<'static, str>,
     pub signature: Signature,
@@ -76,25 +77,50 @@ impl InnerFunction {
     }
 }
 
+impl Ord for InnerFunction {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.name.cmp(&other.name)
+    }
+}
+impl  PartialOrd for InnerFunction {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Eq for InnerFunction {}
+
+impl PartialEq for InnerFunction {
+    fn eq(&self, _: &Self) -> bool {
+        unimplemented!("you should use equality on `Function`")
+    }
+}
+
+impl Hash for InnerFunction {
+    fn hash<H: std::hash::Hasher>(&self, _: &mut H) {
+        unimplemented!("you should use the Hash on `Function`")
+    }
+}
+
 // TODO: make comparison faster
 /// Main type for function in this crate
 ///
 /// This is basicaly a somewhat smart pointer to an [InnerFunction].
 #[derive(Clone, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash, Steel)]
 #[steel(equality)]
-pub struct Function(CowArc<'static, InnerFunction>);
+pub struct Function(SmartCow<InnerFunction>);
 
 impl Function {
     /// Build a [Function] from an inner reference.
     ///
     /// Mostly useful for the constants because this is `const`
-    pub const fn from_ref(content: &'static InnerFunction) -> Self {
-        Self(CowArc::from_ref(content))
+    pub const fn from_ref(content: &'static InnerSmartCow<InnerFunction>) -> Self {
+        Self(SmartCow::from_static(content))
     }
 
     /// Creates a new `Function` from an `InnerFunction`.
-    pub fn new(inner: InnerFunction) -> Self {
-        Self(CowArc::from(inner))
+    pub fn new(content: InnerFunction) -> Self {
+        Self(SmartCow::new(content))
     }
 
     /// The arity of the function
@@ -134,10 +160,7 @@ impl Function {
     /// static [Function] can be statically cloned. This function lets you do
     /// that. It returns [None] when the [Function] is not static
     pub const fn const_clone(&self) -> Self {
-        match self.0 {
-            CowArc::Owned(_) => panic!("must be a borrowed function"),
-            CowArc::Borrowed(x) => Self::from_ref(x),
-        }
+        Self(self.0.const_clone())
     }
 
     /// Returns the `QuantifierIndex` if this function is a quantifier, otherwise `None`.
@@ -246,10 +269,7 @@ impl Function {
 
     /// Returns `true` if the function is statically allocated (i.e., borrowed), `false` otherwise.
     pub const fn is_static(&self) -> bool {
-        match &self.0 {
-            CowArc::Owned(_) => false,
-            CowArc::Borrowed(_) => true,
-        }
+        self.0.is_static()
     }
 
     /// Returns `true` if the function is a special subterm that requires custom handling.
@@ -470,7 +490,7 @@ impl Deref for Function {
     type Target = InnerFunction;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.0.as_ref()
     }
 }
 
