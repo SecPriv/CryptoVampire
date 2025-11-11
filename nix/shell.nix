@@ -25,9 +25,6 @@ let
 
 in
 mkShell {
-  # RUST_SRC_PATH = "${rust.rust-src}/lib/rustlib/src/rust/library/";
-  # RUST_SRC_PATH = "${rustPlatform.rustLibSrc}";
-
   buildInputs =
     with pkgs;
     cryptovampire.buildInputs
@@ -43,6 +40,7 @@ mkShell {
       z3
       vampire
 
+      cargo-expand
       cargo-limit
       rust-bin.stable.latest.complete
     ]

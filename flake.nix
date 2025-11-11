@@ -16,7 +16,7 @@
       url = "github:numtide/flake-utils";
     };
 
-    rust-overlay= {
+    rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
@@ -69,7 +69,7 @@
           #     rustc = toolchain;
           #   }
           # else
-            pkgs.rustPlatform;
+          pkgs.rustPlatform;
 
         pkgConfig = {
           inherit rustPlatform;
@@ -81,7 +81,7 @@
         doc = pkgs.callPackage ./nix/doc.nix { inherit cryptovampire; };
 
         # mrust = if use-nightly then rust else pkgs;
-        mrust =  pkgs;
+        mrust = pkgs;
 
       in
       rec {
