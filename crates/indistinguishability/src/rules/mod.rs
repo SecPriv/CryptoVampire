@@ -254,6 +254,9 @@ pub mod constrains;
 mod xor;
 pub use xor::XOr;   
 
+mod ddh;
+pub use ddh::DDH;
+
 // mod is_public;
 
 /// Simple rewrite rule to find indices
