@@ -3,8 +3,7 @@ use itertools::chain;
 use crate::problem::{PRule, RcRule};
 use crate::rules::deduce::GetDeduce;
 use crate::terms::{
-    AND, BIT_DEDUCE, BITE, BOOL_DEDUCE, EQUIV, FAIL, FRESH_NONCE, HAPPENS, IS_FRESH_NONCE, LEQ,
-    MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, VAMPIRE,
+    AND, BIT_DEDUCE, BITE, BOOL_DEDUCE, EQUIV, FAIL, FRESH_NONCE, HAPPENS, IS_FRESH_NONCE, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, PRED, VAMPIRE
 };
 
 /// Creates a set of static deduction rules.
@@ -19,9 +18,9 @@ pub fn mk_rules() -> impl Iterator<Item = RcRule> {
     let deduce_macro = [
         &MACRO_FRAME,
         &MACRO_EXEC,
-        &MACRO_COND,
+        // &MACRO_COND,
         &MACRO_INPUT,
-        &MACRO_MSG,
+        // &MACRO_MSG,
     ]
     .map(|mmacro| {
         let deduce = mmacro.get_deduce();
@@ -52,6 +51,31 @@ pub fn mk_rules() -> impl Iterator<Item = RcRule> {
 
         "deduce b trivial":
         (deduce_b #u #v #a #b false false).
+    
+    // =========================================================
+    // ==================== extra macros =======================
+    // =========================================================
+
+        "deduce message":
+        (deduce_m (MACRO_FRAME #t #p1) (MACRO_FRAME #t #p2) (MACRO_MSG #t2 #p1) (MACRO_MSG #t2 #p2) #h1 #h2) :-
+            (VAMPIRE (=> #h1 (LEQ #t2 #t))),
+            (VAMPIRE (=> #h2 (LEQ #t2 #t))),
+            (VAMPIRE (HAPPENS #t)),
+            (VAMPIRE (=> (and #h1 (HAPPENS #t2) (LEQ #t2 #t)) 
+                (MACRO_EXEC #t2 #p1))),
+            (VAMPIRE (=> (and #h2 (HAPPENS #t2) (LEQ #t2 #t)) 
+                (MACRO_EXEC #t2 #p2))).
+
+        "deduce condition":
+        (deduce_b (MACRO_FRAME #t #p1) (MACRO_FRAME #t #p2) (MACRO_COND #t2 #p1) (MACRO_COND #t2 #p2) #h1 #h2) :-
+            (VAMPIRE (=> #h1 (LEQ #t2 #t))),
+            (VAMPIRE (=> #h2 (LEQ #t2 #t))),
+            (VAMPIRE (HAPPENS #t)),
+            (VAMPIRE (=> (and #h1 (HAPPENS #t2) (LEQ #t2 #t)) 
+                (MACRO_EXEC (PRED #t2) #p1))),
+            (VAMPIRE (=> (and #h2 (HAPPENS #t2) (LEQ #t2 #t)) 
+                (MACRO_EXEC (PRED #t2) #p2))).
+
 
     // =========================================================
     // ========================= ite ===========================

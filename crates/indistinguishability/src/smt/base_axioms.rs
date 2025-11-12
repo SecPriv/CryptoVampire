@@ -4,10 +4,7 @@ use utils::{dynamic_iter, ereturn_if};
 
 use crate::rules::constrains;
 use crate::terms::{
-    ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, FindSuchThat, Function, HAPPENS, LEQ, LT,
-    MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, PROJ_1, PROJ_2, Quantifier,
-    QuantifierT, Rewrite, SMT_ITE, SMT_SORT_LIST, Signature, Sort, TUPLE, UNFOLD_COND, UNFOLD_EXEC,
-    UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
+    ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, FindSuchThat, Function, HAPPENS, INIT, LEQ, LT, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, PROJ_1, PROJ_2, Quantifier, QuantifierT, Rewrite, SMT_ITE, SMT_SORT_LIST, Signature, Sort, TUPLE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG
 };
 use crate::{MSmt, MSmtFormula, Problem, smt, vec_smt};
 
@@ -227,14 +224,23 @@ fn mk_base_macro(_: &Problem) -> impl Iterator<Item = MSmt> {
         (forall ((#t Time) (#p Protocol)) (=> (HAPPENS #t) (= (MACRO_INPUT #t #p) (UNFOLD_INPUT #t #p)))),
         (forall ((#t Time) (#p Protocol)) (= (UNFOLD_INPUT #t #p) (ATT (MACRO_FRAME (PRED #t) #p)))),
         (forall ((#t Time) (#p Protocol))
-          (= (UNFOLD_FRAME #t #p)
-            (TUPLE
-                (TUPLE
-                    (FROM_BOOL (MACRO_EXEC #t #p))
-                    (SMT_ITE (MACRO_EXEC #t #p)
-                        (MACRO_MSG #t #p) EMPTY))
-                        (MACRO_FRAME (PRED #t) #p)))),
-        (forall ((#t Time) (#p Protocol)) (= (UNFOLD_EXEC #t #p) (and (MACRO_COND #t #p) (MACRO_EXEC (PRED #t) #p))))
+            (=> (distinct #t INIT)
+                (= (UNFOLD_FRAME #t #p)
+                    (TUPLE
+                        (TUPLE
+                            (FROM_BOOL (MACRO_EXEC #t #p))
+                            (SMT_ITE (MACRO_EXEC #t #p)
+                                (MACRO_MSG #t #p) EMPTY))
+                                (MACRO_FRAME (PRED #t) #p))))),
+        (forall ((#t Time) (#p Protocol)) 
+            (=> (distinct #t INIT)
+                (= (UNFOLD_EXEC #t #p) (and (MACRO_COND #t #p) (MACRO_EXEC (PRED #t) #p))))),
+        (forall ((#p Protocol)) (= (UNFOLD_FRAME INIT #p) (UNFOLD_MSG INIT #p))),
+        (forall ((#p Protocol)) (UNFOLD_EXEC INIT #p)),
+        (forall ((#t1 Time) (#t2 Time) (#p Protocol))
+            (=> (LEQ #t1 #t2) (=> (MACRO_EXEC #t2 #p) (MACRO_EXEC #t1 #p)))),
+        (forall ((#t Time)  (#p Protocol))
+            (=> (MACRO_EXEC #t #p) (MACRO_COND #t #p))),
     }
     .into_iter()
 }

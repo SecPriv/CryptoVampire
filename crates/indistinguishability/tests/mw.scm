@@ -64,9 +64,9 @@
               (mk i j p1))))))
     (step p2 empty-cond
       (lambda (in i j)
-        (mxor
-          (mid i j p2)
-          (tuple (nt i j)
+        (tuple (nt i j)
+          (mxor
+            (mid i j p2)
             (mhash
               (tuple (tuple in (nt i j)) tag1)
               (mk i j p2))))))))
@@ -108,11 +108,9 @@
 (bind ((i Index))
   (begin
     (cv-add-rewrite pbl (cv-mk-rewrite "lemma1" (list i)
-      (nr i) (macro_msg (r1 i) p1)))
+        (nr i) (macro_msg (r1 i) p1)))
     (cv-add-rewrite pbl (cv-mk-rewrite "lemma2" (list i)
-      (nr i) (macro_msg (r1 i) p2)))
-  )
-)
+        (nr i) (macro_msg (r1 i) p2)))))
 (cv-add-smt-axiom pbl (mnot (eq tag1 tag2)))
 
 (if (run pbl p1 p2)
