@@ -32,6 +32,20 @@
 
 (define empty-cond (lambda _ mtrue))
 
+(cv-set-step-message pbl (get-function init) (get-function p1)
+  (tuple skP skS))
+(cv-set-step-message pbl (get-function init) (get-function p2)
+  (tuple skP skS))
+(cv-add-rewrite pbl (cv-mk-rewrite "init-skP-1" '()
+    skP (sel2of2 (macro_msg init p1))))
+(cv-add-rewrite pbl (cv-mk-rewrite "init-skP-2" '()
+    skP (sel2of2 (macro_msg init p2))))
+(cv-add-rewrite pbl (cv-mk-rewrite "init-skS-1" '()
+    skS (sel1of2 (macro_msg init p1))))
+(cv-add-rewrite pbl (cv-mk-rewrite "init-skS-2" '()
+    skS (sel1of2 (macro_msg init p2))))
+
+
 (define P1
   (declare-step pbl "P1" (list Index)
     (step p1 empty-cond
@@ -40,6 +54,12 @@
     (step p2 empty-cond
       (lambda (in i)
         (tuple (vk skP) (mexp g (a i)))))))
+(bind ((i Index))
+  (begin
+    (cv-add-rewrite pbl (cv-mk-rewrite "P1-ga-1" (list i)
+        (mexp g (a i)) (sel2of2 (macro_msg (P1 i) p1))))
+    (cv-add-rewrite pbl (cv-mk-rewrite "P1-ga-2" (list i)
+        (mexp g (a i)) (sel2of2 (macro_msg (P1 i) p2))))))
 
 (define P2
   (declare-step pbl "P2" (list Index)
@@ -63,38 +83,40 @@
           (sign (tuple gs (mexp g (a i)) vks) skP))))))
 (define (P2in i p) (macro_input (P2 i) p))
 
-(define P3
-  (declare-step pbl "P3" (list Index Index)
-    (step p1
-      (lambda (challenge i j)
-        (let [ (gS (sel2of2 (sel1of2 (P2in i p1)))) (vkS (sel1of2 (sel1of2 (P2in i p1)))) ]
-          (eq gS (mexp g (b j)))))
-      (lambda (challenge i j)
-        (mexp (mexp g (a i)) (b j))))
-    (step p2
-      (lambda (challenge i j)
-        (let [ (gS (sel2of2 (sel1of2 (P2in i p2)))) (vkS (sel1of2 (sel1of2 (P2in i p2)))) ]
-          (eq gS (mexp g (b j)))))
-      (lambda (challenge i j)
-        (mexp g (k i j))))))
+; (define P3
+;   (declare-step pbl "P3" (list Index Index)
+;     (step p1
+;       (lambda (challenge i j)
+;         (let [ (gS (sel2of2 (sel1of2 (P2in i p1)))) (vkS (sel1of2 (sel1of2 (P2in i p1)))) ]
+;           (eq gS (mexp g (b j)))))
+;       (lambda (challenge i j)
+;         ; (mexp (mexp g (a i)) (b j))))
+;         ok)) ;))
+;     (step p2
+;       (lambda (challenge i j)
+;         (let [ (gS (sel2of2 (sel1of2 (P2in i p2)))) (vkS (sel1of2 (sel1of2 (P2in i p2)))) ]
+;           (eq gS (mexp g (b j)))))
+;       (lambda (challenge i j)
+;         ; (mexp g (k i j))))))
+;         ok))))
 
-(define P3fail
-  (declare-step pbl "P3fail" (list Index)
-    (step p1
-      (lambda (challenge i)
-        (let [ (gS (sel2of2 (sel1of2 (P2in i p1)))) (vkS (sel1of2 (sel1of2 (P2in i p1)))) ]
-          (mnot (exists ((j Index)) (eq gS (mexp g (b j)))))))
-      (lambda _ ok))
-    (step p2
-      (lambda (challenge i)
-        (let [ (gS (sel2of2 (sel1of2 (P2in i p2)))) (vkS (sel1of2 (sel1of2 (P2in i p2)))) ]
-          (mnot (exists ((j Index)) (eq gS (mexp g (b j)))))))
-      (lambda _ ko))))
+; (define P3fail
+;   (declare-step pbl "P3fail" (list Index)
+;     (step p1
+;       (lambda (challenge i)
+;         (let [ (gS (sel2of2 (sel1of2 (P2in i p1)))) (vkS (sel1of2 (sel1of2 (P2in i p1)))) ]
+;           (mnot (exists ((j Index)) (eq gS (mexp g (b j)))))))
+;       (lambda _ ok))
+;     (step p2
+;       (lambda (challenge i)
+;         (let [ (gS (sel2of2 (sel1of2 (P2in i p2)))) (vkS (sel1of2 (sel1of2 (P2in i p2)))) ]
+;           (mnot (exists ((j Index)) (eq gS (mexp g (b j)))))))
+;       (lambda _ ko))))
 
 (add-constrain pbl (i) (lt (P1 i) (P2 i)))
-(add-constrain pbl (i) (lt (P2 i) (P3fail i)))
-(add-constrain pbl (i j) (lt (P2 i) (P3 i j)))
-(add-constrain pbl (i j) (<> (P3 i j) (P3fail i)))
+; (add-constrain pbl (i) (lt (P2 i) (P3fail i)))
+; (add-constrain pbl (i j) (lt (P2 i) (P3 i j)))
+; (add-constrain pbl (i j) (<> (P3 i j) (P3fail i)))
 
 (define Schall1
   (declare-step pbl "Schall1" (list Index)
@@ -119,6 +141,12 @@
             (mexp g (b j))
             (sign (tuple gp (mexp g (b j)) vkp) skS)))))))
 (define (S1in j p) (macro_input (Schall1 j) p))
+(bind ((i Index))
+  (begin
+    (cv-add-rewrite pbl (cv-mk-rewrite "S1-gb-1" (list i)
+        (mexp g (b i)) (sel1of2 (sel2of2 (macro_msg (Schall1 i) p1)))))
+    (cv-add-rewrite pbl (cv-mk-rewrite "S1-gb-2" (list i)
+        (mexp g (b i)) (sel1of2 (sel2of2 (macro_msg (Schall1 i) p2)))))))
 
 (define Schall2
   (declare-step pbl "Schall2" (list Index)
@@ -137,10 +165,10 @@
 
 (initialize-as-ddh ddh g mexp)
 
-(bind ((i Index) (p Protocol))
-  (cv-add-rewrite pbl (cv-mk-rewrite "lemma" (list i p)
-      (and (macro_exec (P3fail i) p) (macro_cond (P3fail i) p))
-      mfalse)))
+; (bind ((i Index) (p Protocol))
+;   (cv-add-rewrite pbl (cv-mk-rewrite "lemma" (list i p)
+;       (and (macro_exec (P3fail i) p) (macro_cond (P3fail i) p))
+;       mfalse)))
 
 (if (run pbl p1 p2)
   (displayln "success")
