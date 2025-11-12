@@ -144,9 +144,9 @@
 (bind ((i Index))
   (begin
     (cv-add-rewrite pbl (cv-mk-rewrite "S1-gb-1" (list i)
-        (mexp g (b i)) (sel1of2 (sel2of2 (macro_msg (Schall1 i) p1)))))
+        (mexp g (b i)) (sel2of2 (sel1of2 (macro_msg (Schall1 i) p1)))))
     (cv-add-rewrite pbl (cv-mk-rewrite "S1-gb-2" (list i)
-        (mexp g (b i)) (sel1of2 (sel2of2 (macro_msg (Schall1 i) p2)))))))
+        (mexp g (b i)) (sel2of2 (sel1of2 (macro_msg (Schall1 i) p2)))))))
 
 (define Schall2
   (declare-step pbl "Schall2" (list Index)
