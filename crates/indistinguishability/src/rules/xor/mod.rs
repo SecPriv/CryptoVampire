@@ -12,7 +12,7 @@ use crate::{
         fa::{self, FaElem, PATTERN_FA},
         utils::Side,
     },
-    terms::{FRESH_NONCE, Function, NONCE, Rewrite},
+    terms::{ETA, FRESH_NONCE, Function, LENGTH, NONCE, Rewrite, VAMPIRE},
 };
 declare_trace!($"enc");
 
@@ -134,7 +134,11 @@ struct XorCandidate<'a> {
 }
 
 #[dynamic]
-static PATTERN_CHECK: Pattern<Lang> = Pattern::from(&rexp!((FRESH_NONCE #NB #X true)));
+static PATTERN_CHECK_FRESH1: Pattern<Lang> = Pattern::from(&rexp!((FRESH_NONCE #NB #X true)));
+#[dynamic]
+static PATTERN_CHECK_FRESH2: Pattern<Lang> = Pattern::from(&rexp!((FRESH_NONCE #NB #NA true)));
+#[dynamic]
+static PATTERN_CHECK_LENGTH: Pattern<Lang> = Pattern::from(&rexp!((VAMPIRE (= (LENGTH #NA) ETA))));
 #[dynamic]
 static PATTERN_NEW: Pattern<Lang> = Pattern::from(&rexp!((NONCE #NB)));
 
@@ -189,9 +193,17 @@ impl<'pbl> Rule<Lang, PAnalysis<'pbl>> for XOr {
                         fas.iter().map(|f| f.get(side)),
                         [*subst.get(NA.as_egg()).unwrap()]
                     ]
-                    .map(|id| {
+                    .flat_map(|id| {
+                        use std::ops::Deref;
                         subst.insert(X.as_egg(), id);
-                        PATTERN_CHECK.apply_susbt(egraph, &subst)
+                        // PATTERN_CHECK_FRESH1.apply_susbt(egraph, &subst)
+                        [
+                            PATTERN_CHECK_FRESH1.deref(),
+                            PATTERN_CHECK_FRESH2.deref(),
+                            PATTERN_CHECK_LENGTH.deref(),
+                        ]
+                        .map(|p| p.apply_susbt(egraph, &subst))
+                        .into_iter()
                     });
 
                     chain![checks, [goal]].collect_vec()

@@ -42,7 +42,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for VampireRule {
 
         let egraph = prgm.egraph_mut();
 
-        let Some(to_prove) = RecFOFormula::try_from_subts(egraph, s, X) else {
+        let Some(to_prove) = RecFOFormula::try_from_id(egraph, *s.get(X.as_egg()).unwrap()) else {
             panic!("aaaaa");
             #[allow(unreachable_code)]
             return golgge::Dependancy::impossible();

@@ -71,21 +71,34 @@
               (tuple (tuple in (nt i j)) tag1)
               (mk i j p2))))))))
 
-(define r2
-  (declare-step pbl "r2" (list Index)
-    (step p1 empty-cond
-      (lambda (in j) (mk-fdst1 in j p1)))
-    (step p2 empty-cond
-      (lambda (in j) (mk-fdst1 in j p2)))))
-
 
 (define r1
   (declare-step pbl "r" (list Index)
     (step p1 empty-cond (lambda (_ i) (nr i)))
     (step p2 empty-cond (lambda (_ i) (nr i)))))
 
+(bind ((i Index))
+  (begin
+    (cv-add-rewrite pbl (cv-mk-rewrite "lemma1" (list i)
+        (nr i) (macro_msg (r1 i) p1)))
+    (cv-add-rewrite pbl (cv-mk-rewrite "lemma2" (list i)
+        (nr i) (macro_msg (r1 i) p2)))))
+
+(define r2
+  (declare-step pbl "r2" (list Index)
+    (step p1 empty-cond
+      (lambda (in j) (mk-fdst1 in j p1)))
+    (step p2 empty-cond
+      (lambda (in j) (mk-fdst1 in j p2)))))
+(add-constrain pbl (i) (lt (r1 i) (r2 i)))
+
 (initialize-as-prf prf mhash)
-(initialize-as-xor mxorc mxor)
+; (initialize-as-xor mxorc mxor)
+
+; hashes have the length of nonces
+(bind ((m Bitstring) (k Bitstring) )
+  (cv-add-rewrite pbl (cv-mk-rewrite "length hash" (list m k)
+      (bitstring-length (mhash m k)) eta)))
 
 (define (mk-fdst2 r p)
   (let [ (in (macro_input (r2 r) p)) ]
@@ -103,14 +116,7 @@
       (mk-fdst1 (macro_input (r2 r) p) j p)
       (mk-fdst2 r p))))
 
-(add-constrain pbl (i) (lt (r1 i) (r2 i)))
 
-(bind ((i Index))
-  (begin
-    (cv-add-rewrite pbl (cv-mk-rewrite "lemma1" (list i)
-        (nr i) (macro_msg (r1 i) p1)))
-    (cv-add-rewrite pbl (cv-mk-rewrite "lemma2" (list i)
-        (nr i) (macro_msg (r1 i) p2)))))
 (cv-add-smt-axiom pbl (mnot (eq tag1 tag2)))
 
 (if (run pbl p1 p2)

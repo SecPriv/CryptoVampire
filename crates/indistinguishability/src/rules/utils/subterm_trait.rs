@@ -15,9 +15,7 @@ use crate::rules::utils::get_protocol;
 use crate::runners::SmtRunner;
 use crate::terms::substitution_utils::AlphaArgs;
 use crate::terms::{
-    Alias, AliasRewrite, BITE, Exists, FOBinder, FindSuchThat, Function, HAPPENS, LAMBDA_S, LT,
-    MACRO_COND, MACRO_FRAME, MACRO_MSG, MITE, PRED, Quantifier, QuantifierT, RecFOFormula,
-    RecFOFormulaQuant, Sort, Variable,
+    Alias, AliasRewrite, BITE, Exists, FOBinder, FindSuchThat, Function, HAPPENS, LAMBDA_S, LEQ, LT, MACRO_COND, MACRO_FRAME, MACRO_MSG, MITE, PRED, Quantifier, QuantifierT, RecFOFormula, RecFOFormulaQuant, Sort, Variable
 };
 use crate::{Lang, Problem, fresh, rexp};
 
@@ -358,7 +356,7 @@ pub trait SyntaxSearcher {
                     let vars = vars.iter().map(|v| RecFOFormula::Var(v.clone()));
                     let s = rexp!((id #vars*));
 
-                    let condition = rexp!((and #hyp (HAPPENS #s) (LT #s #time)));
+                    let condition = rexp!((and #hyp (HAPPENS #s) (LEQ #s #time)));
                     [
                         (condition.clone(), cond, step),
                         (condition.clone(), msg, step),

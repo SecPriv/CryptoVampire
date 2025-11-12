@@ -300,5 +300,5 @@
 (define (cand . args) (cv-cand args))
 (define (cor . args) (cv-cor args))
 (define (tuple . args) (cv-tuple args))
-(define (eql a b) (eq (bistring_length a) (bistring_length b)))
+(define (eql a b) (eq (bitstring-length a) (bitstring-length b)))
 (define <> incompatible)

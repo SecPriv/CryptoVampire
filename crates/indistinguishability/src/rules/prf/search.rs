@@ -373,7 +373,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfVampireRule {
 
         for subst in substs.substs {
             let [m, k, time, hyp] =
-                [M, K, T, H].map(|x| RecFOFormula::try_from_subts(egraph, &subst, x).unwrap());
+                [M, K, T, H].map(|x| RecFOFormula::try_from_id(egraph, *subst.get(x.as_egg()).unwrap()).unwrap());
             let pbl = egraph.analysis.pbl();
             let search = Search {
                 prf_idx: self.prf,

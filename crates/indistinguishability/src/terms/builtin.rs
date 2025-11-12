@@ -110,7 +110,7 @@ mk_builtin_funs!(
     };
 
     // =========================================================
-    // ===================== the structs =======================
+    // ===================== the structs ======================m k=
     // =========================================================
 
     // ~~~~~~~~~~~~~~~~~ bool ~~~~~~~~~~~~~~~~~~~
@@ -219,7 +219,7 @@ mk_builtin_funs!(
         signature: s!(Bool -> Bitstring)
     };
 
-    LENGTH "bistring_length" {
+    LENGTH "bitstring-length" {
         signature: s!(Bitstring -> Bitstring)
     };
 
