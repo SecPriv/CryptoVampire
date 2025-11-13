@@ -5,7 +5,7 @@
 use egg::{Analysis, Pattern, Rewrite};
 use itertools::chain;
 
-use crate::terms::{Function, LAMBDA_S, RecFOFormula};
+use crate::terms::{Function, LAMBDA_S, Formula};
 use crate::{Lang, Problem, rexp};
 
 // static LET: Function = LAMBDA_LET.const_clone();
@@ -61,7 +61,7 @@ fn mk_s_rw<N: Analysis<Lang>>(
         .filter(|f| !f.is_out_of_term_algebra())
         .map(|f| {
             let vars = f.signature.mk_vars();
-            let vars = vars.iter().map(|x| RecFOFormula::Var(x.clone()));
+            let vars = vars.iter().map(|x| Formula::Var(x.clone()));
             let svars = vars.clone().map(|v| rexp!((S #v)));
 
             let searcher = Pattern::from(&rexp!((S (f #vars*))));

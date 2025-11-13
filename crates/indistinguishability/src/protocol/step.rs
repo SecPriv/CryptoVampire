@@ -6,7 +6,7 @@ use itertools::{Itertools, chain};
 use log::trace;
 use logic_formula::AsFormula;
 
-use crate::terms::{EMPTY, Function, INIT, RecFOFormula, UNFOLD_COND, UNFOLD_MSG, Variable};
+use crate::terms::{EMPTY, Function, INIT, Formula, UNFOLD_COND, UNFOLD_MSG, Variable};
 use crate::{Lang, MSmt, MSmtFormula, Problem, rexp, vec_smt};
 
 /// A step in protocol
@@ -17,9 +17,9 @@ pub struct Step {
     /// The variables of the step
     pub vars: Vec<Variable>,
     /// The condition of the step
-    pub cond: RecFOFormula,
+    pub cond: Formula,
     /// The message of the step
-    pub msg: RecFOFormula,
+    pub msg: Formula,
 }
 
 #[bon]
@@ -31,8 +31,8 @@ impl Step {
     pub fn new(
         #[builder(default = INIT.clone())] id: Function,
         #[builder(with = <_>::from_iter, default = vec![])] vars: Vec<Variable>,
-        #[builder(default = RecFOFormula::True())] cond: RecFOFormula,
-        #[builder(default = RecFOFormula::constant(EMPTY.clone()))] msg: RecFOFormula,
+        #[builder(default = Formula::True())] cond: Formula,
+        #[builder(default = Formula::constant(EMPTY.clone()))] msg: Formula,
     ) -> Option<Step> {
         (vars.len() == id.signature.arity()).then_some(Self {
             id,
@@ -45,7 +45,7 @@ impl Step {
 
 impl Step {
     /// Returns the expression of the step id with its variables
-    pub fn id_expr(&self) -> RecFOFormula {
+    pub fn id_expr(&self) -> Formula {
         let Self { id, vars, .. } = self;
         rexp!((id #(vars.iter().map_into())*))
     }

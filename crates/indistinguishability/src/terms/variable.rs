@@ -9,7 +9,7 @@ use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
 use crate::input::Registerable;
-use crate::terms::{RecFOFormula, Sort};
+use crate::terms::{Formula, Sort};
 use crate::utils::{InnerSmartCow, SmartCow};
 use crate::{LangVar, MSmtFormula};
 
@@ -131,12 +131,12 @@ impl Variable {
         }
     }
 
-    pub fn as_formula(&self) -> RecFOFormula {
-        RecFOFormula::Var(self.clone())
+    pub fn as_formula(&self) -> Formula {
+        Formula::Var(self.clone())
     }
 
-    pub fn into_formula(self) -> RecFOFormula {
-        RecFOFormula::Var(self)
+    pub fn into_formula(self) -> Formula {
+        Formula::Var(self)
     }
 
     #[must_use]

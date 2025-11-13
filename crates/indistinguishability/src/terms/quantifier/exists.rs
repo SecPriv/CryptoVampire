@@ -8,7 +8,7 @@ use logic_formula::AsFormula;
 use utils::ereturn_if;
 
 use crate::terms::quantifier::default_valid;
-use crate::terms::{Function, QuantifierIndex, QuantifierT, RecFOFormula, Sort, Variable};
+use crate::terms::{Function, QuantifierIndex, QuantifierT, Formula, Sort, Variable};
 use crate::{Lang, Problem};
 
 /// For now [Exists] are never temporary
@@ -22,7 +22,7 @@ pub struct Exists {
     /// The variable bound by the quantifier
     bound_var: Vec<Variable>,
     /// The "content" of the quantifier
-    patt: Option<RecFOFormula>,
+    patt: Option<Formula>,
     /// the main alias (e.g., `exists$1`)
     ///
     /// stands for "top level function"
@@ -216,11 +216,11 @@ impl Exists {
         }
     }
 
-    pub fn patt(&self) -> Option<&RecFOFormula> {
+    pub fn patt(&self) -> Option<&Formula> {
         self.patt.as_ref()
     }
 
-    pub fn set_patt(&mut self, patt: RecFOFormula) {
+    pub fn set_patt(&mut self, patt: Formula) {
         self.patt = Some(patt);
     }
 }

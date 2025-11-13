@@ -1,4 +1,4 @@
-use super::RecFOFormula;
+use super::Formula;
 use crate::rexp;
 use crate::terms::{AND, FALSE, FOBinder, Function, IMPLIES, NOT, OR, TRUE, Variable};
 use itertools::Itertools;
@@ -9,8 +9,8 @@ use utils::{ereturn_if, ereturn_let, implvec};
 // =========================================================
 // ================== specific builders ====================
 // =========================================================
-impl RecFOFormula {
-    pub fn bind(kind: FOBinder, vars: Vec<Variable>, args: implvec!(RecFOFormula)) -> Self {
+impl Formula {
+    pub fn bind(kind: FOBinder, vars: Vec<Variable>, args: implvec!(Formula)) -> Self {
         assert!(vars.iter().all(Variable::has_sort));
         Self::Quantifier {
             head: kind,
@@ -87,7 +87,7 @@ impl RecFOFormula {
     pub fn optimised_binder(
         _kind: FOBinder,
         _vars: implvec!(Variable),
-        _arg: RecFOFormula,
+        _arg: Formula,
     ) -> Self {
         todo!()
     }
@@ -146,7 +146,7 @@ impl RecFOFormula {
         }
     }
 }
-impl Not for RecFOFormula {
+impl Not for Formula {
     type Output = Self;
 
     fn not(self) -> Self::Output {
@@ -154,7 +154,7 @@ impl Not for RecFOFormula {
     }
 }
 
-impl BitAnd for RecFOFormula {
+impl BitAnd for Formula {
     type Output = Self;
 
     fn bitand(self, rhs: Self) -> Self::Output {
@@ -162,7 +162,7 @@ impl BitAnd for RecFOFormula {
     }
 }
 
-impl BitOr for RecFOFormula {
+impl BitOr for Formula {
     type Output = Self;
 
     fn bitor(self, rhs: Self) -> Self::Output {
@@ -170,7 +170,7 @@ impl BitOr for RecFOFormula {
     }
 }
 
-impl Shr for RecFOFormula {
+impl Shr for Formula {
     type Output = Self;
 
     fn shr(self, rhs: Self) -> Self::Output {

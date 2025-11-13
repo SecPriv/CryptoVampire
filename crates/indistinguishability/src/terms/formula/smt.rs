@@ -1,5 +1,5 @@
 use super::FOBinder;
-use super::RecFOFormula;
+use super::Formula;
 use crate::MSmtFormula;
 use crate::terms::{AND, BITE, EQ, FALSE, OR, TRUE};
 use bon::Builder;
@@ -9,12 +9,12 @@ use log::{error, trace, warn};
 use std::borrow::Cow;
 
 pub trait QuantifierTranslator {
-    fn try_translate(&self, f: &RecFOFormula) -> Option<RecFOFormula>;
+    fn try_translate(&self, f: &Formula) -> Option<Formula>;
 }
 
 #[derive(Builder)]
 pub struct PreSmtRecFOFormula<'a, U> {
-    formula: Cow<'a, RecFOFormula>,
+    formula: Cow<'a, Formula>,
     translator: &'a U,
 }
 
@@ -26,7 +26,7 @@ pub type PreSmtRecFOFormulaF<'a, U> = PreSmtRecFOFormulaBuilder<
 >;
 
 impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for MSmtFormula {
-    type Error = RecFOFormula;
+    type Error = Formula;
 
     fn try_from(
         PreSmtRecFOFormula {
@@ -34,10 +34,10 @@ impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for MSmtFor
             translator,
         }: PreSmtRecFOFormula<'a, U>,
     ) -> Result<Self, Self::Error> {
-        let propagate = |f: &RecFOFormula| f.as_pre_smt().translator(translator).build().try_into();
+        let propagate = |f: &Formula| f.as_pre_smt().translator(translator).build().try_into();
         let restult = match formula.as_ref() {
-            RecFOFormula::Var(variable) => Ok(Self::Var(variable.clone())),
-            RecFOFormula::App { head, args } => match head.as_smt_head() {
+            Formula::Var(variable) => Ok(Self::Var(variable.clone())),
+            Formula::App { head, args } => match head.as_smt_head() {
                 Some(h) => {
                     let args = args.iter().map(propagate).try_collect()?;
                     Ok(match h {
@@ -72,7 +72,7 @@ impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for MSmtFor
                     Ok(Self::Fun(head.clone(), args))
                 }
             },
-            RecFOFormula::Quantifier { head, vars, arg } => match head {
+            Formula::Quantifier { head, vars, arg } => match head {
                 FOBinder::Exists => {
                     Ok(Self::Exists(vars.as_owned(), Box::new(propagate(&arg[0])?)))
                 }
@@ -96,14 +96,14 @@ impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for MSmtFor
     }
 }
 
-impl From<MSmtFormula> for RecFOFormula {
+impl From<MSmtFormula> for Formula {
     fn from(value: MSmtFormula) -> Self {
         // TODO: find such that
 
         #[allow(unreachable_patterns)]
         match value {
             SmtFormula::Var(var) => Self::Var(var),
-            SmtFormula::Fun(fun, args) => RecFOFormula::App {
+            SmtFormula::Fun(fun, args) => Formula::App {
                 head: fun,
                 args: args.into_iter().map_into().collect(),
             },
@@ -140,7 +140,7 @@ impl From<MSmtFormula> for RecFOFormula {
     }
 }
 
-impl RecFOFormula {
+impl Formula {
     pub fn as_pre_smt<'a, U>(&'a self) -> PreSmtRecFOFormulaF<'a, U> {
         PreSmtRecFOFormula::builder().formula(Cow::Borrowed(self))
     }

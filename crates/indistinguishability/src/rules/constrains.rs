@@ -6,7 +6,7 @@ use crate::{
     Lang, MSmt, MSmtFormula, Problem,
     problem::{BoundStep, ConstrainOp, Constrains, CurrentStep, PAnalysis},
     rexp, smt,
-    terms::{CURRENT_STEP, HAPPENS, INIT, IS_INDEX, LEQ, LT, PRED, RecFOFormula, TRUE},
+    terms::{CURRENT_STEP, HAPPENS, INIT, IS_INDEX, LEQ, LT, PRED, Formula, TRUE},
 };
 
 macro_rules! bind {
@@ -91,7 +91,7 @@ fn mk_rewrite_one<N: Analysis<Lang>>(
     match op {
         ConstrainOp::LessThan if s2 == cf => {
             let argmap: FxHashMap<_, _> = izip!(a2, &argscf).collect();
-            let argss1 = a1.iter().map::<RecFOFormula, _>(|v| {
+            let argss1 = a1.iter().map::<Formula, _>(|v| {
                 if let Some(&a) = argmap.get(&v) {
                     rexp!(#a)
                 } else {
@@ -117,7 +117,7 @@ fn mk_rewrite_one<N: Analysis<Lang>>(
         ConstrainOp::Exclude if s1 == cf || s2 == cf => {
             let (s1, a1, a2) = if s1 == cf { (s2, a2, a1) } else { (s1, a1, a2) };
             let argmap: FxHashMap<_, _> = izip!(a2, &argscf).collect();
-            let argss1 = a1.iter().map::<RecFOFormula, _>(|v| {
+            let argss1 = a1.iter().map::<Formula, _>(|v| {
                 if let Some(&a) = argmap.get(&v) {
                     rexp!(#a)
                 } else {

@@ -1,4 +1,4 @@
-use super::RecFOFormula;
+use super::Formula;
 use crate::terms::Variable;
 use rpds::HashTrieSet;
 use rustc_hash::FxHashMap;
@@ -18,7 +18,7 @@ pub struct AlphaArgs<'var, 'r> {
     pub subst: &'r mut FxHashMap<&'var Variable, Variable>,
 }
 
-impl RecFOFormula {
+impl Formula {
     // ~~~~~~~~~~~~ alpha renaming ~~~~~~~~~~~~~~
 
     /// Renames the variables in `self` that verify `do_change` with fresh ones.
@@ -155,17 +155,17 @@ impl RecFOFormula {
     pub fn apply(&self, subst: &Substitution) -> Self {
         match self {
             // If we are a variable, check if we are in the substitution
-            RecFOFormula::Var(v) => subst.0.get(v).cloned().unwrap_or_else(|| self.clone()),
+            Formula::Var(v) => subst.0.get(v).cloned().unwrap_or_else(|| self.clone()),
 
             // For an application, apply to all arguments
-            RecFOFormula::App { head, args } => RecFOFormula::App {
+            Formula::App { head, args } => Formula::App {
                 head: head.clone(),
                 args: args.iter().map(|arg| arg.apply(subst)).collect(),
             },
 
             // For a quantifier, we must apply the substitution *without*
             // touching variables that are shadowed by the quantifier's binders.
-            RecFOFormula::Quantifier { head, vars, arg } => {
+            Formula::Quantifier { head, vars, arg } => {
                 // 1. Clone the substitution
                 let mut shadowed_subst = subst.clone();
 
@@ -175,7 +175,7 @@ impl RecFOFormula {
                 }
 
                 // 3. Apply the filtered substitution to the body
-                RecFOFormula::Quantifier {
+                Formula::Quantifier {
                     head: *head,
                     vars: vars.clone(),
                     arg: arg.iter().map(|x| x.apply(&shadowed_subst)).collect(),
@@ -188,9 +188,9 @@ impl RecFOFormula {
     /// This is the "occurs check".
     pub fn contains_var(&self, var: &Variable) -> bool {
         match self {
-            RecFOFormula::Var(v) => v == var,
-            RecFOFormula::App { args, .. } => args.iter().any(|arg| arg.contains_var(var)),
-            RecFOFormula::Quantifier { vars, arg, .. } => {
+            Formula::Var(v) => v == var,
+            Formula::App { args, .. } => args.iter().any(|arg| arg.contains_var(var)),
+            Formula::Quantifier { vars, arg, .. } => {
                 // If the variable is bound by *this* quantifier, it does
                 // not count as a free occurrence.
                 if vars.iter().any(|v| v == var) {

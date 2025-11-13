@@ -5,7 +5,7 @@ use steel_derive::Steel;
 
 use crate::input::Registerable;
 use crate::input::shared_problem::ShrProblem;
-use crate::terms::{Exists, Function, QuantifierIndex, QuantifierT, RecFOFormula, Variable};
+use crate::terms::{Exists, Function, QuantifierIndex, QuantifierT, Formula, Variable};
 
 /// Represents a shared existential quantifier context within the Steel VM.
 #[derive(Debug, Clone, Steel)]
@@ -56,12 +56,12 @@ impl ShrExists {
     }
 
     /// Returns the pattern of the existential quantifier.
-    fn get_patt(&self) -> RecFOFormula {
+    fn get_patt(&self) -> Formula {
         self.exists().patt().unwrap().clone()
     }
 
     /// Sets the pattern of the existential quantifier.
-    fn set_patt(&self, patt: RecFOFormula) -> ::steel::rvals::Result<()> {
+    fn set_patt(&self, patt: Formula) -> ::steel::rvals::Result<()> {
         self.exists_mut().set_patt(patt);
         Ok(())
     }

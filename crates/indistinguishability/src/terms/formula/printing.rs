@@ -1,16 +1,16 @@
-use super::RecFOFormula;
+use super::Formula;
 use crate::terms::Variable;
 use crate::terms::formula::sexpr::SExpr;
 use itertools::chain;
 use std::fmt::{Display, Debug};
 
-impl Display for RecFOFormula {
+impl Display for Formula {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         super::sexpr::SExpr::from(self).fmt(f)
     }
 }
 
-impl Debug for RecFOFormula {
+impl Debug for Formula {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         #[cfg(feature = "verbose")]
         {
@@ -38,19 +38,19 @@ impl Debug for RecFOFormula {
 }
 
 static FULL_VARS: bool = false;
-impl<'a> From<&'a RecFOFormula> for SExpr<'a> {
-    fn from(value: &'a RecFOFormula) -> Self {
+impl<'a> From<&'a Formula> for SExpr<'a> {
+    fn from(value: &'a Formula) -> Self {
         use SExpr::*;
         match value {
-            RecFOFormula::Quantifier { head, vars, arg } => Group(vec![
+            Formula::Quantifier { head, vars, arg } => Group(vec![
                 Atom(head),
                 Group(vars.iter().map(|x| mk_var_sexpr(x)).collect()),
                 Group(arg.iter().map(|x| Atom(x)).collect()),
             ]),
-            RecFOFormula::App { head, args } => {
+            Formula::App { head, args } => {
                 Group(chain![[Atom(head)], args.iter().map(|x| Atom(x)),].collect())
             }
-            RecFOFormula::Var(variable) => mk_var_sexpr(variable),
+            Formula::Var(variable) => mk_var_sexpr(variable),
         }
     }
 }

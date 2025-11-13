@@ -14,7 +14,7 @@ use crate::input::shared_exists::ShrExists;
 use crate::input::shared_fdst::ShrFindSuchThat;
 use crate::input::shared_problem::ShrProblem;
 use crate::terms::{
-    AliasRewrite, BUILTINS, Function, RecFOFormula, Rewrite, SCHEME_PREFIX, SORT_LIST, Signature,
+    AliasRewrite, BUILTINS, Function, Formula, Rewrite, SCHEME_PREFIX, SORT_LIST, Signature,
     Sort, Variable,
 };
 
@@ -42,7 +42,7 @@ pub fn register(module: &mut BuiltInModule) -> &mut BuiltInModule {
     Rule::register(module);
     ShrProblem::register(module);
     Signature::register(module);
-    RecFOFormula::register(module);
+    Formula::register(module);
     ShrCrypto::register(module);
     ShrFindSuchThat::register(module);
     Variable::register(module);

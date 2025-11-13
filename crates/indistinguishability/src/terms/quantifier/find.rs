@@ -10,7 +10,7 @@ use utils::ereturn_if;
 use crate::Problem;
 use crate::terms::quantifier::default_valid;
 use crate::terms::{
-    Function, FunctionFlags, Quantifier, QuantifierIndex, QuantifierT, RecFOFormula, Sort, Variable,
+    Function, FunctionFlags, Quantifier, QuantifierIndex, QuantifierT, Formula, Sort, Variable,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Builder)]
@@ -25,9 +25,9 @@ pub struct FindSuchThat {
     #[builder(default = true)]
     temporary: bool,
     /// The "content" of the quantifier
-    condition: Option<RecFOFormula>,
-    then_branch: Option<RecFOFormula>,
-    else_branch: Option<RecFOFormula>,
+    condition: Option<Formula>,
+    then_branch: Option<Formula>,
+    else_branch: Option<Formula>,
     /// the main alias (e.g., `exists$1`)
     ///
     /// stands for "top level function"
@@ -231,31 +231,31 @@ impl FindSuchThat {
         }
     }
 
-    pub fn condition(&self) -> Option<&RecFOFormula> {
+    pub fn condition(&self) -> Option<&Formula> {
         self.condition.as_ref()
     }
 
-    pub fn set_condition(&mut self, condition: RecFOFormula) {
+    pub fn set_condition(&mut self, condition: Formula) {
         self.condition = Some(condition)
     }
 
-    pub fn then_branch(&self) -> Option<&RecFOFormula> {
+    pub fn then_branch(&self) -> Option<&Formula> {
         self.then_branch.as_ref()
     }
 
-    pub fn set_then_branch(&mut self, then_branch: RecFOFormula) {
+    pub fn set_then_branch(&mut self, then_branch: Formula) {
         self.then_branch = Some(then_branch)
     }
 
-    pub fn else_branch(&self) -> Option<&RecFOFormula> {
+    pub fn else_branch(&self) -> Option<&Formula> {
         self.else_branch.as_ref()
     }
 
-    pub fn set_else_branch(&mut self, else_branch: RecFOFormula) {
+    pub fn set_else_branch(&mut self, else_branch: Formula) {
         self.else_branch = Some(else_branch)
     }
 
-    pub fn arguments(&self) -> Option<[&RecFOFormula; 3]> {
+    pub fn arguments(&self) -> Option<[&Formula; 3]> {
         Some([self.condition()?, self.then_branch()?, self.else_branch()?])
     }
 }

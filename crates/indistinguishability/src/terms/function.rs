@@ -18,7 +18,7 @@ use crate::protocol::MacroKind;
 use crate::terms::{
     Alias, AliasRewrite, BUILTINS, EXISTS, Exists, FIND_SUCH_THAT, FOBinder, FunctionCollection,
     FunctionFlags, LAMBDA_O, LAMBDA_S, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG,
-    NOT, Quantifier, QuantifierIndex, QuantifierT, RecFOFormula, Signature, Sort, UNFOLD_COND,
+    NOT, Quantifier, QuantifierIndex, QuantifierT, Formula, Signature, Sort, UNFOLD_COND,
     UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin,
 };
 use crate::utils::{InnerSmartCow, LightClone, SmartCow};
@@ -217,8 +217,8 @@ impl Function {
     // =========================================================
 
     /// Applies the function to a list of `RecFOFormula` arguments, returning a new `RecFOFormula`.
-    pub fn rapp(&self, args: implvec!(RecFOFormula)) -> RecFOFormula {
-        RecFOFormula::app(self.clone(), args.into_iter().collect())
+    pub fn rapp(&self, args: implvec!(Formula)) -> Formula {
+        Formula::app(self.clone(), args.into_iter().collect())
     }
 
     /// Builds a [SimplLang]. Panics if not valid

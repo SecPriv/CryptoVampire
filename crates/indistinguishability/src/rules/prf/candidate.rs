@@ -1,7 +1,7 @@
 use itertools::{Itertools, chain};
 
 use crate::rules::PRF;
-use crate::terms::{Function, NONCE, RecFOFormula, Rewrite, Sort};
+use crate::terms::{Function, NONCE, Formula, Rewrite, Sort};
 use crate::{Problem, fresh, rexp};
 
 /// Generates an iterator of rewrite rules for PRF candidates.
@@ -69,7 +69,7 @@ fn mk_rewrite_one<'a>(
 
     let candidate = prf.get_candidate(f.signature.output).unwrap();
     let ret = rexp!((candidate (f #(vars.iter().map_into())*) #m #k));
-    let vars_fo = vars.iter().cloned().map(RecFOFormula::Var).collect_vec();
+    let vars_fo = vars.iter().cloned().map(Formula::Var).collect_vec();
 
     f.signature
         .inputs

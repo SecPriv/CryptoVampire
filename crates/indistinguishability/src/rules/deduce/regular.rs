@@ -4,7 +4,7 @@ use itertools::izip;
 
 use crate::problem::{PRule, RcRule};
 use crate::rules::deduce::GetDeduce;
-use crate::terms::{Function, RecFOFormula};
+use crate::terms::{Function, Formula};
 use crate::{Lang, Problem, fresh, rexp};
 
 /// Generate the base deduce rules:
@@ -38,7 +38,7 @@ fn mk_deduce_rule(f: &Function) -> PrologRule<Lang> {
     let deduce = f.try_get_deduce().unwrap();
     let [u, v, h1, h2] = &::std::array::from_fn(|_| fresh!());
     let [args1, args2] = ::std::array::from_fn(|_| f.signature.mk_vars());
-    let [args1, args2] = [&args1, &args2].map(|a| a.iter().map(|v| RecFOFormula::Var(v.clone())));
+    let [args1, args2] = [&args1, &args2].map(|a| a.iter().map(|v| Formula::Var(v.clone())));
 
     let deps = izip!(args1.clone(), args2.clone(), f.signature.inputs.iter())
         .filter_map(|(a1, a2, &s)| {

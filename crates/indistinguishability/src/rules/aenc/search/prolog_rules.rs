@@ -10,7 +10,7 @@ use crate::{
     },
     terms::{
         AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, FRESH_NONCE, Function, IS_FRESH_NONCE,
-        MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE, PRED, RecFOFormula, Sort, VAMPIRE,
+        MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE, PRED, Formula, Sort, VAMPIRE,
     },
 };
 
@@ -232,7 +232,7 @@ fn mk_rule_one(prf @ AEnc { enc, pk, dec, .. }: &AEnc, fun: &Function) -> [Prolo
 
     let args = inputs
         .iter()
-        .map(|&x| RecFOFormula::Var(fresh!(x)))
+        .map(|&x| Formula::Var(fresh!(x)))
         .collect_vec();
 
     let (deps_k, deps_o): (Vec<_>, Vec<_>) = izip!(inputs.iter(), &args)

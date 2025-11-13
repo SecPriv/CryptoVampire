@@ -8,14 +8,14 @@ use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
 use crate::input::Registerable;
-use crate::terms::{RecFOFormula, Variable};
+use crate::terms::{Formula, Variable};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Builder, Steel)]
 pub struct Rewrite {
     /// These are the arguments to the function that one must unify with to get
     /// rewritten as [Self::to].
-    pub from: RecFOFormula,
-    pub to: RecFOFormula,
+    pub from: Formula,
+    pub to: Formula,
     #[builder(default, with = |x: impl std::iter::IntoIterator<Item = Variable>| x.into_iter().collect())]
     pub variables: cow![Variable],
 
@@ -35,8 +35,8 @@ impl Rewrite {
     fn steel_new(
         name: String,
         variables: Vec<Variable>,
-        from: RecFOFormula,
-        to: RecFOFormula,
+        from: Formula,
+        to: Formula,
     ) -> SResult<Self> {
         Ok(Self {
             from,

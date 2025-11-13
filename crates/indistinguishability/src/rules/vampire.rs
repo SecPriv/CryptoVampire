@@ -8,7 +8,7 @@ use utils::ereturn_let;
 
 use crate::problem::PAnalysis;
 use crate::runners::SmtRunner;
-use crate::terms::{RecFOFormula, VAMPIRE};
+use crate::terms::{Formula, VAMPIRE};
 use crate::{Lang, Problem, rexp};
 
 declare_trace!($"vampire_rule");
@@ -42,7 +42,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for VampireRule {
 
         let egraph = prgm.egraph_mut();
 
-        let to_prove = RecFOFormula::try_from_id(egraph, *s.get(X.as_egg()).unwrap()).unwrap();
+        let to_prove = Formula::try_from_id(egraph, *s.get(X.as_egg()).unwrap()).unwrap();
         let pbl: &mut Problem = egraph.analysis.pbl_mut();
         pbl.find_temp_quantifiers(std::slice::from_ref(&to_prove));
 

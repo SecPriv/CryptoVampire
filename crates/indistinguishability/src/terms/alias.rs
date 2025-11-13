@@ -4,7 +4,7 @@ use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
 use crate::input::Registerable;
-use crate::terms::{RecFOFormula, Variable};
+use crate::terms::{Formula, Variable};
 
 /// When the fonction is an alias
 /// Represents a collection of rewrite rules for a function alias.
@@ -17,8 +17,8 @@ pub struct Alias(pub cow![AliasRewrite]);
 pub struct AliasRewrite {
     /// These are the arguments to the function that one must unify with to get
     /// rewritten as [Self::to].
-    pub from: cow![RecFOFormula],
-    pub to: RecFOFormula,
+    pub from: cow![Formula],
+    pub to: Formula,
     pub variables: cow![Variable],
 }
 
@@ -47,8 +47,8 @@ impl IntoSteelVal for Alias {
 impl AliasRewrite {
     fn new_steel(
         variables: Vec<Variable>,
-        from: Vec<RecFOFormula>,
-        to: RecFOFormula,
+        from: Vec<Formula>,
+        to: Formula,
     ) -> SResult<Self> {
         Ok(AliasRewrite {
             from: from.into(),

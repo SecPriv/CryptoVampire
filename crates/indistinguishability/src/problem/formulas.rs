@@ -2,7 +2,7 @@ use super::*;
 use crate::smt::mk_prelude;
 use crate::terms::{
     FOBinder, FindSuchThat, FunctionCollection, Quantifier, QuantifierT, QuantifierTranslator,
-    RecFOFormula, Rewrite,
+    Formula, Rewrite,
 };
 use crate::{MSmt, rexp};
 use itertools::{Itertools, chain};
@@ -70,7 +70,7 @@ impl Problem {
     }
 
     /// Finds all the temporary quantifiers in the problem and adds them to the cache
-    pub fn find_temp_quantifiers(&mut self, extra: &[RecFOFormula]) {
+    pub fn find_temp_quantifiers(&mut self, extra: &[Formula]) {
         if extra.is_empty() && self.smt_prelude.is_some() {
             return;
         }
@@ -83,7 +83,7 @@ impl Problem {
                 .unique();
             let mut pile = Vec::new();
             for a in candidate {
-                if let RecFOFormula::Quantifier {
+                if let Formula::Quantifier {
                     head: FOBinder::FindSuchThat,
                     ..
                 } = a
@@ -111,7 +111,7 @@ impl Problem {
 
         tr!("generate names for quantifers");
         for q in quantifiers.iter() {
-            econtinue_let!(let RecFOFormula::Quantifier { vars, arg, head: FOBinder::FindSuchThat } = q);
+            econtinue_let!(let Formula::Quantifier { vars, arg, head: FOBinder::FindSuchThat } = q);
             let cvars = q.free_vars_iter().unique().cloned();
             let bvars = vars.iter().cloned();
 
@@ -138,7 +138,7 @@ impl Problem {
     }
 
     /// list all the `RecFOFormula` stored in this `Self`
-    pub fn list_all_terms(&self) -> impl Iterator<Item = &RecFOFormula> {
+    pub fn list_all_terms(&self) -> impl Iterator<Item = &Formula> {
         chain![
             self.protocols()
                 .iter()
@@ -166,7 +166,7 @@ impl QuantifierTranslator for Problem {
     /// Attempts to translate a given quantifier formula using the cached quantifiers.
     ///
     /// Returns `Some(translated_formula)` if a translation is found, otherwise `None`.
-    fn try_translate(&self, formula: &RecFOFormula) -> Option<crate::terms::RecFOFormula> {
+    fn try_translate(&self, formula: &Formula) -> Option<crate::terms::Formula> {
         tr!("try translate:\n{formula}");
         if log_enabled!(log::Level::Trace) {
             let mut p = String::new();
@@ -205,7 +205,7 @@ impl QuantifierTranslator for Problem {
                 subst
                     .get(v)
                     .cloned()
-                    .unwrap_or(RecFOFormula::Var(v.clone()))
+                    .unwrap_or(Formula::Var(v.clone()))
             })
             .collect_vec();
         let args = args.iter().cloned();

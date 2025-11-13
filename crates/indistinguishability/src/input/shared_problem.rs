@@ -14,7 +14,7 @@ use crate::input::golgge_rules::Rule;
 use crate::input::shared_exists::ShrExists;
 use crate::input::{Registerable, conversion_err};
 use crate::protocol::Step;
-use crate::terms::{Exists, Function, QuantifierT, RecFOFormula, Rewrite, Sort, Variable};
+use crate::terms::{Exists, Function, QuantifierT, Formula, Rewrite, Sort, Variable};
 use crate::{Configuration, MSmt, Problem};
 
 declare_trace!($"shrpblm");
@@ -171,13 +171,13 @@ impl ShrProblem {
     }
 
     /// Sets the message for a given step in a protocol.
-    fn set_step_msg(&self, step: Function, ptcl: Function, msg: RecFOFormula) -> SResult<()> {
+    fn set_step_msg(&self, step: Function, ptcl: Function, msg: Formula) -> SResult<()> {
         self.get_step_mut(step, ptcl)?.msg = msg;
         Ok(())
     }
 
     /// Sets the condition for a given step in a protocol.
-    fn set_step_cond(&self, step: Function, ptcl: Function, cond: RecFOFormula) -> SResult<()> {
+    fn set_step_cond(&self, step: Function, ptcl: Function, cond: Formula) -> SResult<()> {
         self.get_step_mut(step, ptcl)?.cond = cond;
         Ok(())
     }
@@ -194,7 +194,7 @@ impl ShrProblem {
     }
 
     /// Adds a new SMT axiom to the problem.
-    fn add_smt_axiom(&self, f: RecFOFormula) -> SResult<()> {
+    fn add_smt_axiom(&self, f: Formula) -> SResult<()> {
         let content = f
             .as_smt(self.0.borrow().deref())
             .ok_or(conversion_err::<MSmt>())?;
@@ -204,7 +204,7 @@ impl ShrProblem {
         Ok(())
     }
 
-    fn add_constrain(&self, f: RecFOFormula) {
+    fn add_constrain(&self, f: Formula) {
         self.borrow_mut()
             .add_constrain(&f)
             .with_context(|| format!("while in {f}"))

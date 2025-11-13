@@ -7,7 +7,7 @@ use crate::{
     rules::ddh::{DDH, ProofHints, vars::*},
     terms::{
         AND, BITE, FRESH_NONCE, Function, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE, PRED,
-        RecFOFormula, Sort, VAMPIRE,
+        Formula, Sort, VAMPIRE,
     },
 };
 
@@ -131,7 +131,7 @@ fn mk_rule_one(ddh @ DDH { exp, .. }: &DDH, fun: &Function) -> PrologRule<Lang> 
 
     let args = inputs
         .iter()
-        .map(|&x| RecFOFormula::Var(fresh!(x)))
+        .map(|&x| Formula::Var(fresh!(x)))
         .collect_vec();
 
     let deps = izip!(inputs.iter(), &args)

@@ -7,14 +7,14 @@ use steel_derive::Steel;
 
 use crate::input::Registerable;
 use crate::problem::{PRule, RcRule};
-use crate::terms::RecFOFormula;
+use crate::terms::Formula;
 
 /// Represents a Golgge rule, wrapping an `RcRule`.
 #[derive(Clone, Steel)]
 pub struct Rule(pub RcRule);
 
 impl Rule {
-    fn new_prolog(name: String, from: RecFOFormula, to: Vec<RecFOFormula>) -> SResult<Self> {
+    fn new_prolog(name: String, from: Formula, to: Vec<Formula>) -> SResult<Self> {
         let from = Pattern::from(&from);
         let to = to.iter().map_into();
         let prolog = PrologRule::builder()

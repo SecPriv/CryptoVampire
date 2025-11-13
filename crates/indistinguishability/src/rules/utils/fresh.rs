@@ -6,7 +6,7 @@ use std::rc::{Rc, Weak};
 use bon::{Builder, bon, builder};
 use utils::{ereturn_if, ereturn_let};
 
-use crate::terms::{FOBinder, RecFOFormula, Variable};
+use crate::terms::{FOBinder, Formula, Variable};
 
 declare_trace!($"search");
 
@@ -20,7 +20,7 @@ pub struct FormulaBuilder {
     /// The logical mode of this builder (And/Or).
     mode: Mode,
     /// The collected formulas within this builder.
-    content: Vec<RecFOFormula>,
+    content: Vec<Formula>,
     /// Whether the formula has been precomputed.
     precomputed: bool,
     /// Whether the builder has been saturated (i.e., its result is final).
@@ -39,8 +39,8 @@ pub struct FormulaBuilder {
 #[derive(Debug, Builder)]
 struct Condition {
     /// the actual formula
-    #[builder(default= RecFOFormula::True())]
-    condition: RecFOFormula,
+    #[builder(default= Formula::True())]
+    condition: Formula,
     /// NB: empty set of variable removes the quantifier instead of simplifying it
     ///
     /// e.g., `(exists () A) => A`
@@ -75,7 +75,7 @@ impl RefFormulaBuilder {
 
         parent: Option<&RefFormulaBuilder>,
 
-        condition: Option<RecFOFormula>,
+        condition: Option<Formula>,
         #[builder(with = <_>::from_iter, default)] variables: Vec<Variable>,
         mut quantifier: Option<FOBinder>,
     ) -> Self {
@@ -171,7 +171,7 @@ impl RefFormulaBuilder {
     }
 
     /// adds to the formula (in a disjonction or a conjunction depending on the mode)
-    pub fn add_leaf(&self, content: RecFOFormula) {
+    pub fn add_leaf(&self, content: Formula) {
         self.borrow_mut().add_leaf(content);
     }
 
@@ -256,12 +256,12 @@ impl FormulaBuilder {
     /// Drains the content of the builder and converts it into a `RecFOFormula`.
     ///
     /// This consumes the content and applies the builder's mode and condition.
-    fn drain_as_formula(&mut self) -> RecFOFormula {
+    fn drain_as_formula(&mut self) -> Formula {
         assert!(self.children.iter().all(|c| c.upgrade().is_none()));
         let content = std::mem::take(&mut self.content);
         let inner = match self.mode {
-            Mode::And => RecFOFormula::and(content),
-            Mode::Or => RecFOFormula::or(content),
+            Mode::And => Formula::and(content),
+            Mode::Or => Formula::or(content),
         };
 
         match self.condition.take() {
@@ -277,14 +277,14 @@ impl FormulaBuilder {
                     _ => todo!(),
                 };
                 if !variables.is_empty() {
-                    inner = RecFOFormula::bind(quantifier, variables, [inner])
+                    inner = Formula::bind(quantifier, variables, [inner])
                 }
                 inner
             }
         }
     }
 
-    pub fn into_formula(mut self) -> RecFOFormula {
+    pub fn into_formula(mut self) -> Formula {
         self.drain_as_formula()
     }
 
@@ -300,7 +300,7 @@ impl FormulaBuilder {
     }
 
     /// adds to the formula (in a disjonction or a conjunction depending on the mode)
-    pub fn add_leaf(&mut self, content: RecFOFormula) {
+    pub fn add_leaf(&mut self, content: Formula) {
         tr!(
             "add_leaf {content}\n(staturated: {}, try_evaluate: {:?})",
             self.is_saturated(),
@@ -339,7 +339,7 @@ impl FormulaBuilder {
                     let saturate_to = !(condition_value ^ value);
                     self.staturate(saturate_to);
                 } else {
-                    let mut old_condition = RecFOFormula::True();
+                    let mut old_condition = Formula::True();
                     ::std::mem::swap(condition, &mut old_condition);
                     self.content = vec![old_condition]
                 }
@@ -391,7 +391,7 @@ impl Mode {
 
 impl Condition {
     #[allow(dead_code)]
-    pub fn condition(&self) -> &RecFOFormula {
+    pub fn condition(&self) -> &Formula {
         &self.condition
     }
 

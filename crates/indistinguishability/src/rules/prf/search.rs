@@ -15,7 +15,7 @@ use crate::rules::utils::{SyntaxSearcher, get_protocol};
 use crate::runners::SmtRunner;
 use crate::terms::{
     AND, BITE, Function, HAPPENS, IS_FRESH_NONCE, LT, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE,
-    NONCE, PRED, RecFOFormula, Sort, VAMPIRE,
+    NONCE, PRED, Formula, Sort, VAMPIRE,
 };
 use crate::{Lang, Problem, fresh, rexp};
 
@@ -62,7 +62,7 @@ fn mk_rule_one(prf: &PRF, fun: Function) -> PrologRule<Lang> {
 
     let args = inputs
         .iter()
-        .map(|&x| RecFOFormula::Var(fresh!(x)))
+        .map(|&x| Formula::Var(fresh!(x)))
         .collect_vec();
 
     let deps = izip!(inputs.iter(), &args)
@@ -230,9 +230,9 @@ pub struct Search {
     /// The index of the PRF being searched.
     pub prf_idx: usize,
     /// The message `m` in the PRF context.
-    pub m: RecFOFormula,
+    pub m: Formula,
     /// The key `k` in the PRF context.
-    pub k: RecFOFormula,
+    pub k: Formula,
 }
 
 impl Search {
@@ -248,9 +248,9 @@ impl Search {
         &'a self,
         pbl: &'a Problem,
         ptcl: &'a Protocol,
-        time: RecFOFormula,
-        hyp: RecFOFormula,
-    ) -> impl Iterator<Item = RecFOFormula> + use<'a> {
+        time: Formula,
+        hyp: Formula,
+    ) -> impl Iterator<Item = Formula> + use<'a> {
         tr!("searching protocol {}", ptcl.name());
         ptcl.steps()
             .iter()
@@ -261,7 +261,7 @@ impl Search {
                           cond,
                           msg,
                       }| {
-                    let vars = vars.iter().map(|v| RecFOFormula::Var(v.clone()));
+                    let vars = vars.iter().map(|v| Formula::Var(v.clone()));
                     let s = rexp!((id #vars*));
 
                     let condition = rexp!((and #hyp (HAPPENS #s) (LT #s #time)));
@@ -301,7 +301,7 @@ impl crate::rules::utils::SyntaxSearcher for Search {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         fun: &Function,
-        args: &[RecFOFormula],
+        args: &[Formula],
     ) -> ControlFlow<()> {
         let Self { m, k, .. } = self;
         let mut args = args.iter();
@@ -373,7 +373,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfVampireRule {
 
         for subst in substs.substs {
             let [m, k, time, hyp] =
-                [M, K, T, H].map(|x| RecFOFormula::try_from_id(egraph, *subst.get(x.as_egg()).unwrap()).unwrap());
+                [M, K, T, H].map(|x| Formula::try_from_id(egraph, *subst.get(x.as_egg()).unwrap()).unwrap());
             let pbl = egraph.analysis.pbl();
             let search = Search {
                 prf_idx: self.prf,

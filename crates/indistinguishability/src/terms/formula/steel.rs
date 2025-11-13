@@ -32,11 +32,11 @@ use crate::terms::{
     TRUE, TUPLE, Variable,
 };
 use crate::{Lang, LangVar, MSmtFormula, fresh, rexp};
-use super::RecFOFormula;
+use super::Formula;
 
-impl RecFOFormula {
+impl Formula {
     // TODO: find such that
-    fn steel_binder(head: FOBinder, vars: Vec<Variable>, arg: Vec<RecFOFormula>) -> Self {
+    fn steel_binder(head: FOBinder, vars: Vec<Variable>, arg: Vec<Formula>) -> Self {
         assert!(
             vars.iter().all(Variable::has_smt_sort),
             "Variable must have valid smt sort, see Variable::has_smt_sort"
@@ -49,7 +49,7 @@ impl RecFOFormula {
         }
     }
 
-    fn steel_app(head: Function, args: Vec<RecFOFormula>) -> Result<Self, SteelErr> {
+    fn steel_app(head: Function, args: Vec<Formula>) -> Result<Self, SteelErr> {
         let ret = Self::App {
             head,
             args: args.into(),
@@ -83,7 +83,7 @@ impl RecFOFormula {
         Self::Var(var)
     }
 
-    fn steel_is_var(f: RecFOFormula) -> bool {
+    fn steel_is_var(f: Formula) -> bool {
         matches!(f, Self::Var(_))
     }
 
@@ -107,7 +107,7 @@ impl RecFOFormula {
     }
 }
 
-impl Registerable for RecFOFormula {
+impl Registerable for Formula {
     fn register(
         module: &mut steel::steel_vm::builtin::BuiltInModule,
     ) -> &mut steel::steel_vm::builtin::BuiltInModule {
@@ -121,7 +121,7 @@ impl Registerable for RecFOFormula {
             .register_fn("is-varf", Self::steel_is_var)
             .register_fn("get-sort", Self::steel_get_sort)
             .register_type::<Self>("Formula?")
-            .register_fn("string-of-formula", |f: RecFOFormula| format!("{f}"))
+            .register_fn("string-of-formula", |f: Formula| format!("{f}"))
             .register_fn("cand", Self::steel_and)
             .register_fn("cor", Self::steel_or)
             .register_fn("tuple", Self::steel_tuple)

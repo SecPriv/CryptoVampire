@@ -65,7 +65,7 @@ macro_rules! alias {
 
 
                     AliasRewrite {
-                        from: Cow::Borrowed(mk_static_slice!($crate::terms::RecFOFormula; [$($args),*])),
+                        from: Cow::Borrowed(mk_static_slice!($crate::terms::Formula; [$($args),*])),
                         to: $to,
                         variables,
                     }

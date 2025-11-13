@@ -10,7 +10,7 @@ use crate::{
     problem::PAnalysis,
     rexp,
     terms::{
-        Function, IS_FRESH_NONCE, NONCE, RecFOFormula, utils::iter_egraph::iter_descendants_lang,
+        Function, IS_FRESH_NONCE, NONCE, Formula, utils::iter_egraph::iter_descendants_lang,
     },
 };
 
@@ -87,7 +87,7 @@ pub trait RuleWithFreshNonce {
             pgrm.egraph_mut().add(IS_FRESH_NONCE.app_id([n]));
 
             for n in nonces {
-                let vars = n.signature.mk_vars().into_iter().map(RecFOFormula::Var);
+                let vars = n.signature.mk_vars().into_iter().map(Formula::Var);
                 let from = Pattern::from(&rexp!((= (n #vars*) fun)));
 
                 let rw_rule = egg::Rewrite::new(

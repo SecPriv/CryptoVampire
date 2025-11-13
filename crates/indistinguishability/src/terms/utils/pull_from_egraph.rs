@@ -8,7 +8,7 @@ use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 use utils::{econtinue_if, ereturn_if};
 
-use crate::{Lang, terms::RecFOFormula};
+use crate::{Lang, terms::Formula};
 
 /// partial result for [pull_from_egraph]
 ///
@@ -76,12 +76,12 @@ pub(crate) fn inner_generic<'a, N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
 enum ExtractionStatus {
     Looping,
     Empty,
-    Found(RecFOFormula),
+    Found(Formula),
 }
 
 impl ExtractionStatus {
     #[must_use]
-    fn into_found(self) -> Option<RecFOFormula> {
+    fn into_found(self) -> Option<Formula> {
         if let Self::Found(v) = self {
             Some(v)
         } else {
@@ -90,8 +90,8 @@ impl ExtractionStatus {
     }
 }
 
-impl From<Option<RecFOFormula>> for ExtractionStatus {
-    fn from(value: Option<RecFOFormula>) -> Self {
+impl From<Option<Formula>> for ExtractionStatus {
+    fn from(value: Option<Formula>) -> Self {
         match value {
             Some(x) => Self::Found(x),
             None => Self::Empty,
@@ -119,7 +119,7 @@ fn inner_generic2<N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
                 .copied()
                 .map(|id| inner_generic2(egraph, filter, id, recexpr_buffer).into_found())
                 .collect();
-            Some(RecFOFormula::App {
+            Some(Formula::App {
                 head: head.clone(),
                 args: args?,
             })

@@ -1,4 +1,4 @@
-use super::RecFOFormula;
+use super::Formula;
 use super::{FOBinder, RecFOFormulaQuant};
 use crate::terms::formula::RecFOFormulaQuantRef;
 use crate::terms::{AND, FALSE, Function, IMPLIES, NOT, OR, Sort, TRUE, Variable};
@@ -7,7 +7,7 @@ use logic_formula::{Destructed, AsFormula, HeadSk};
 use rustc_hash::FxHashMap;
 use utils::{dynamic_iter, match_eq};
 
-impl RecFOFormula {
+impl Formula {
     pub fn as_var(&self) -> Option<&Variable> {
         match self {
             Self::Var(v) => Some(v),
@@ -18,7 +18,7 @@ impl RecFOFormula {
     /// Tries to evaluate an expression, return [None] if it can't
     pub fn try_evaluate(&self) -> Option<bool> {
         match self {
-            RecFOFormula::App { head, args } => {
+            Formula::App { head, args } => {
                 match_eq! { head => {
                     TRUE => {Some(true)},
                     FALSE => {Some(false)},
@@ -53,12 +53,12 @@ impl RecFOFormula {
                     _ => {None}
                 }}
             }
-            RecFOFormula::Quantifier {
+            Formula::Quantifier {
                 head: FOBinder::Exists,
                 arg,
                 ..
             }
-            | RecFOFormula::Quantifier {
+            | Formula::Quantifier {
                 head: FOBinder::Forall,
                 arg,
                 ..
@@ -73,9 +73,9 @@ impl RecFOFormula {
     /// - doesn't typechecks
     pub fn try_get_sort(&self) -> Option<Sort> {
         match self {
-            RecFOFormula::Quantifier { .. } => Some(Sort::Bool),
-            RecFOFormula::App { head, .. } => Some(head.signature.output),
-            RecFOFormula::Var(_) => None,
+            Formula::Quantifier { .. } => Some(Sort::Bool),
+            Formula::App { head, .. } => Some(head.signature.output),
+            Formula::Var(_) => None,
         }
     }
 
@@ -92,7 +92,7 @@ impl RecFOFormula {
 // ======================= is_xxx ==========================
 // =========================================================
 #[allow(dead_code)]
-impl RecFOFormula {
+impl Formula {
     #[must_use]
     pub fn is_var(&self) -> bool {
         matches!(self, Self::Var(_))
@@ -109,12 +109,12 @@ impl RecFOFormula {
 
 fn find<'a>(
     var: &'a Variable,
-    subst: &'a FxHashMap<Variable, RecFOFormula>,
+    subst: &'a FxHashMap<Variable, Formula>,
     seen: &mut Vec<Variable>,
-) -> Result<Either<&'a RecFOFormula, &'a Variable>, &'a Variable> {
+) -> Result<Either<&'a Formula, &'a Variable>, &'a Variable> {
     match subst.get(var) {
-        Some(RecFOFormula::Var(nv)) if seen.contains(nv) => Err(var),
-        Some(RecFOFormula::Var(var)) => {
+        Some(Formula::Var(nv)) if seen.contains(nv) => Err(var),
+        Some(Formula::Var(var)) => {
             seen.push(var.clone());
             find(var, subst, seen)
         }
@@ -123,7 +123,7 @@ fn find<'a>(
     }
 }
 
-impl Default for RecFOFormula {
+impl Default for Formula {
     fn default() -> Self {
         Self::App {
             head: TRUE.clone(),
@@ -131,7 +131,7 @@ impl Default for RecFOFormula {
         }
     }
 }
-impl AsFormula for RecFOFormula {
+impl AsFormula for Formula {
     type Var = Variable;
 
     type Fun = Function;
@@ -142,15 +142,15 @@ impl AsFormula for RecFOFormula {
         dynamic_iter!(MIter; One:A, Many:B, None:C);
 
         match self {
-            RecFOFormula::Quantifier { head, vars, arg } => Destructed {
+            Formula::Quantifier { head, vars, arg } => Destructed {
                 head: HeadSk::Quant(RecFOFormulaQuant::new(head, vars.as_owned())),
                 args: MIter::One(arg.as_owned().into_iter()),
             },
-            RecFOFormula::App { head, args } => Destructed {
+            Formula::App { head, args } => Destructed {
                 head: HeadSk::Fun(head.clone()),
                 args: MIter::Many(args.as_owned().into_iter()),
             },
-            RecFOFormula::Var(var) => Destructed {
+            Formula::Var(var) => Destructed {
                 head: HeadSk::Var(var),
                 args: MIter::None([].into_iter()),
             },
@@ -158,7 +158,7 @@ impl AsFormula for RecFOFormula {
     }
 }
 
-impl<'b> AsFormula for &'b RecFOFormula {
+impl<'b> AsFormula for &'b Formula {
     type Var = &'b Variable;
 
     type Fun = &'b Function;
@@ -169,15 +169,15 @@ impl<'b> AsFormula for &'b RecFOFormula {
         dynamic_iter!(MIter; One:A, Many:B, None:C);
 
         match self {
-            RecFOFormula::Quantifier { head, vars, arg } => Destructed {
+            Formula::Quantifier { head, vars, arg } => Destructed {
                 head: HeadSk::Quant(RecFOFormulaQuantRef::new(*head, vars.as_ref())),
                 args: MIter::One(arg.iter()),
             },
-            RecFOFormula::App { head, args } => Destructed {
+            Formula::App { head, args } => Destructed {
                 head: HeadSk::Fun(head),
                 args: MIter::Many(args.iter()),
             },
-            RecFOFormula::Var(var) => Destructed {
+            Formula::Var(var) => Destructed {
                 head: HeadSk::Var(var),
                 args: MIter::None([].into_iter()),
             },

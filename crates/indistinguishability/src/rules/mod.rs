@@ -150,19 +150,19 @@ macro_rules! mk_rewrite {
     (@@ (#$var:tt = #$value:tt)) => {
         ::egg::MultiPattern::new(vec![{
             let v = $var.as_egg();
-            (v, $crate::terms::RecFOFormula::as_egg_var(&$crate::rexp!(#$value)))
+            (v, $crate::terms::Formula::as_egg_var(&$crate::rexp!(#$value)))
         }])
     };
 
     (@@ ($(#$var:tt = $value:tt),+)) => {
         ::egg::MultiPattern::new(vec![$({
             let v = $var.as_egg();
-            (v, $crate::terms::RecFOFormula::as_egg_var(&$crate::rexp!($value)))
+            (v, $crate::terms::Formula::as_egg_var(&$crate::rexp!($value)))
         }),*])
     };
 
     (@@ (#$($value:tt)+)) => {{
-        let x : $crate::terms::RecFOFormula = $crate::rexp!(#$($value)+);
+        let x : $crate::terms::Formula = $crate::rexp!(#$($value)+);
         ::egg::Pattern::<$crate::Lang>::from(
             &x
         )
@@ -175,7 +175,7 @@ macro_rules! mk_rewrite {
     };
 
     (crate @@ (#$($value:tt)+)) => {{
-        let x : $crate::terms::RecFOFormula = $crate::rexp!(#$($value)+);
+        let x : $crate::terms::Formula = $crate::rexp!(#$($value)+);
         x
     }};
 

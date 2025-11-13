@@ -5,7 +5,7 @@ use steel_derive::Steel;
 
 use crate::input::shared_problem::ShrProblem;
 use crate::input::{Registerable, conversion_err};
-use crate::terms::{FindSuchThat, Function, QuantifierIndex, QuantifierT, RecFOFormula, Variable};
+use crate::terms::{FindSuchThat, Function, QuantifierIndex, QuantifierT, Formula, Variable};
 
 /// Represents a shared `FindSuchThat` quantifier context within the Steel VM.
 #[derive(Debug, Clone, Steel)]
@@ -56,32 +56,32 @@ impl ShrFindSuchThat {
     }
 
     /// Returns the condition of the `FindSuchThat` quantifier.
-    fn get_condition(&self) -> ::steel::rvals::Result<RecFOFormula> {
+    fn get_condition(&self) -> ::steel::rvals::Result<Formula> {
         self.fdst().condition().cloned().ok_or(cerr())
     }
 
     /// Returns the then-branch of the `FindSuchThat` quantifier.
-    fn get_then_branch(&self) -> ::steel::rvals::Result<RecFOFormula> {
+    fn get_then_branch(&self) -> ::steel::rvals::Result<Formula> {
         self.fdst().then_branch().cloned().ok_or(cerr())
     }
 
     /// Returns the else-branch of the `FindSuchThat` quantifier.
-    fn get_else_branch(&self) -> ::steel::rvals::Result<RecFOFormula> {
+    fn get_else_branch(&self) -> ::steel::rvals::Result<Formula> {
         self.fdst().else_branch().cloned().ok_or(cerr())
     }
 
     /// Sets the condition of the `FindSuchThat` quantifier.
-    fn set_condition(&self, p: RecFOFormula) {
+    fn set_condition(&self, p: Formula) {
         self.fdst_mut().set_condition(p);
     }
 
     /// Sets the then-branch of the `FindSuchThat` quantifier.
-    fn set_then_branch(&self, p: RecFOFormula) {
+    fn set_then_branch(&self, p: Formula) {
         self.fdst_mut().set_then_branch(p);
     }
 
     /// Sets the else-branch of the `FindSuchThat` quantifier.
-    fn set_else_branch(&self, p: RecFOFormula) {
+    fn set_else_branch(&self, p: Formula) {
         self.fdst_mut().set_else_branch(p);
     }
 }
@@ -106,5 +106,5 @@ impl Registerable for ShrFindSuchThat {
 }
 
 fn cerr() -> ::steel::SteelErr {
-    conversion_err::<RecFOFormula>()
+    conversion_err::<Formula>()
 }

@@ -10,7 +10,7 @@ use utils::{ebreak_if, ebreak_let, ereturn_let, implvec};
 use crate::problem::{PAnalysis, PRule};
 use crate::terms::utils::iter_egraph::iter_descendants_lang;
 use crate::terms::{
-    EQ, EQUIV, FALSE, FRESH_NONCE, Function, FunctionFlags, IS_FRESH_NONCE, NONCE, RecFOFormula,
+    EQ, EQUIV, FALSE, FRESH_NONCE, Function, FunctionFlags, IS_FRESH_NONCE, NONCE, Formula,
     Sort, TRUE,
 };
 use crate::{Lang, Problem, mk_signature, rexp};
@@ -292,11 +292,11 @@ enum PrfKind {
 impl TopPrfRule {
     /// Creates a new `TopPrfRule`.
     fn new(
-        conclusion: &RecFOFormula,
-        subterm_hm: &RecFOFormula,
-        subterm_m: &RecFOFormula,
-        subterm_hyp: &RecFOFormula,
-        new_goal: &RecFOFormula,
+        conclusion: &Formula,
+        subterm_hm: &Formula,
+        subterm_m: &Formula,
+        subterm_hyp: &Formula,
+        new_goal: &Formula,
         kind: PrfKind,
         candidate_bitstring: Function,
     ) -> Self {
@@ -379,7 +379,7 @@ impl TopPrfRule {
             pgrm.egraph_mut().add(IS_FRESH_NONCE.app_id([n]));
 
             for n in nonces {
-                let vars = n.signature.mk_vars().into_iter().map(RecFOFormula::Var);
+                let vars = n.signature.mk_vars().into_iter().map(Formula::Var);
                 let from = Pattern::from(&rexp!((EQ (n #vars*) fun)));
 
                 let rw_rule = egg::Rewrite::new(

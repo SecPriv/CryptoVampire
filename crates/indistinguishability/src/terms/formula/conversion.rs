@@ -1,4 +1,4 @@
-use super::RecFOFormula;
+use super::Formula;
 use crate::terms::formula::egg::EggLanguage;
 use crate::terms::formula::list;
 use crate::terms::utils::pull_from_egraph;
@@ -11,7 +11,7 @@ use rustc_hash::FxHashMap;
 use std::fmt::Debug;
 use utils::{ereturn_if, implvec};
 
-impl RecFOFormula {
+impl Formula {
     pub fn from_egg(formula: &[LangVar], sort: Option<Sort>) -> Self {
         let mut free_vars = Default::default();
         let mut db_free_vars = Default::default();
@@ -477,25 +477,25 @@ fn mk_bound_var<L: EggLanguage>(depth: usize) -> impl Iterator<Item = L> {
     ]
 }
 
-impl From<&[LangVar]> for RecFOFormula {
+impl From<&[LangVar]> for Formula {
     fn from(v: &[LangVar]) -> Self {
         Self::from_egg(v, None)
     }
 }
 
-impl From<&RecExpr<LangVar>> for RecFOFormula {
+impl From<&RecExpr<LangVar>> for Formula {
     fn from(value: &RecExpr<LangVar>) -> Self {
         Self::from_egg(value.as_ref(), None)
     }
 }
 
-impl From<RecExpr<LangVar>> for RecFOFormula {
+impl From<RecExpr<LangVar>> for Formula {
     fn from(value: RecExpr<LangVar>) -> Self {
         Self::from(&value)
     }
 }
 
-impl From<bool> for RecFOFormula {
+impl From<bool> for Formula {
     fn from(value: bool) -> Self {
         match value {
             true => Self::True(),
@@ -504,26 +504,26 @@ impl From<bool> for RecFOFormula {
     }
 }
 
-impl From<Variable> for RecFOFormula {
+impl From<Variable> for Formula {
     fn from(value: Variable) -> Self {
         Self::Var(value)
     }
 }
 
-impl From<&Variable> for RecFOFormula {
+impl From<&Variable> for Formula {
     fn from(value: &Variable) -> Self {
         Self::Var(value.clone())
     }
 }
 
-impl From<&RecFOFormula> for RecExpr<LangVar> {
-    fn from(value: &RecFOFormula) -> Self {
+impl From<&Formula> for RecExpr<LangVar> {
+    fn from(value: &Formula) -> Self {
         value.as_egg().into()
     }
 }
 
-impl From<&RecFOFormula> for Pattern<Lang> {
-    fn from(value: &RecFOFormula) -> Self {
+impl From<&Formula> for Pattern<Lang> {
+    fn from(value: &Formula) -> Self {
         Pattern::from(RecExpr::from(value))
     }
 }

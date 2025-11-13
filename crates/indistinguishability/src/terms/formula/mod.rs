@@ -31,7 +31,7 @@ mod printing;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Steel, Serialize)]
 #[steel(equality, hash)]
-pub enum RecFOFormula {
+pub enum Formula {
     Quantifier {
         head: FOBinder,
         vars: cowarc![Variable],

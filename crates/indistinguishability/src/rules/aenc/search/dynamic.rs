@@ -8,7 +8,7 @@ use crate::{
         utils::{SyntaxSearcher, fresh::RefFormulaBuilder},
     },
     runners::SmtRunner,
-    terms::{Function, NONCE, RecFOFormula},
+    terms::{Function, NONCE, Formula},
 };
 use bon::Builder;
 use egg::{Id, Pattern, Searcher};
@@ -32,7 +32,7 @@ struct SearchK {
     #[allow(dead_code)]
     aenc: usize,
     pk: Function,
-    k: RecFOFormula,
+    k: Formula,
     dec: Function,
 }
 
@@ -43,9 +43,9 @@ struct SearchO {
 
     pk: Function,
 
-    k: RecFOFormula,
+    k: Formula,
     // k2: RecFOFormula,
-    r: RecFOFormula,
+    r: Formula,
 }
 
 impl<'a> Rule<Lang, PAnalysis<'a>> for SearchRule {
@@ -70,7 +70,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SearchRule {
             for subst in matches.substs {
                 let [k, t, h] = [K, T, H]
                     .map(|v| subst.get(v.as_egg()).unwrap())
-                    .map(|id| RecFOFormula::try_from_id(prgm.egraph(), *id).unwrap());
+                    .map(|id| Formula::try_from_id(prgm.egraph(), *id).unwrap());
                 let p = *subst.get(P.as_egg()).unwrap();
 
                 let result = SearchK {
@@ -89,7 +89,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SearchRule {
             for subst in matches.substs {
                 let [k, r, t, h] = [K, R, T, H]
                     .map(|v| subst.get(v.as_egg()).unwrap())
-                    .map(|id| RecFOFormula::try_from_id(prgm.egraph(), *id).unwrap());
+                    .map(|id| Formula::try_from_id(prgm.egraph(), *id).unwrap());
                 let p = *subst.get(P.as_egg()).unwrap();
 
                 let result = (SearchO {
@@ -121,7 +121,7 @@ impl crate::rules::utils::SyntaxSearcher for SearchK {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         fun: &Function,
-        args: &[RecFOFormula],
+        args: &[Formula],
     ) -> ControlFlow<()> {
         let Self { pk, k, dec, .. } = self;
         let mut args = args.iter();
@@ -173,7 +173,7 @@ impl crate::rules::utils::SyntaxSearcher for SearchO {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         fun: &Function,
-        args: &[RecFOFormula],
+        args: &[Formula],
     ) -> ControlFlow<()> {
         let Self { pk, r, k, .. } = self;
         let mut args = args.iter();

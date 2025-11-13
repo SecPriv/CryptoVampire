@@ -1,7 +1,7 @@
 use crate::{
     Problem, rexp,
     rules::AEnc,
-    terms::{Function, NONCE, RecFOFormula, Rewrite, Sort},
+    terms::{Function, NONCE, Formula, Rewrite, Sort},
 };
 use itertools::{Itertools, chain};
 
@@ -38,7 +38,7 @@ fn mk_rewrite_one(_pbl: &Problem, aenc: &AEnc, f: &Function) -> impl Iterator<It
 
     let candidate = aenc.get_candidate(f.signature.output).unwrap();
     let ret = rexp!((candidate (f #(vars.iter().map_into())*) #m #r #k));
-    let vars_fo = vars.iter().cloned().map(RecFOFormula::Var).collect_vec();
+    let vars_fo = vars.iter().cloned().map(Formula::Var).collect_vec();
 
     f.signature
         .inputs

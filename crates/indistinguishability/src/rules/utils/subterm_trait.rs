@@ -14,7 +14,7 @@ use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::rules::utils::get_protocol;
 use crate::runners::SmtRunner;
 use crate::terms::{
-    Alias, AliasRewrite, AlphaArgs, BITE, Exists, FOBinder, FindSuchThat, Function, HAPPENS, LAMBDA_S, LEQ, LT, MACRO_COND, MACRO_FRAME, MACRO_MSG, MITE, PRED, Quantifier, QuantifierT, RecFOFormula, RecFOFormulaQuant, Sort, Variable
+    Alias, AliasRewrite, AlphaArgs, BITE, Exists, FOBinder, FindSuchThat, Function, HAPPENS, LAMBDA_S, LEQ, LT, MACRO_COND, MACRO_FRAME, MACRO_MSG, MITE, PRED, Quantifier, QuantifierT, Formula, RecFOFormulaQuant, Sort, Variable
 };
 use crate::{Lang, Problem, fresh, rexp};
 
@@ -54,7 +54,7 @@ pub trait SyntaxSearcher {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         fun: &Function,
-        args: &[RecFOFormula],
+        args: &[Formula],
     ) -> ControlFlow<()>;
 
     /// discriminate whether `fun` has a specific subterm
@@ -69,7 +69,7 @@ pub trait SyntaxSearcher {
     ///
     /// This function traverses the formula, identifying instances that match `is_instance`
     /// or special subterms handled by `search_special_recexpr`.
-    fn inner_search_formula(&self, pbl: &Problem, builder: &RefFormulaBuilder, term: RecFOFormula) {
+    fn inner_search_formula(&self, pbl: &Problem, builder: &RefFormulaBuilder, term: Formula) {
         assert!(builder.current_mode().is_and());
         ereturn_if!(builder.is_saturated());
         tr!("searching through {term}");
@@ -107,7 +107,7 @@ pub trait SyntaxSearcher {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         quant: RecFOFormulaQuant,
-        args: implvec!(RecFOFormula),
+        args: implvec!(Formula),
     ) {
         let RecFOFormulaQuant { quantifier, vars } = quant;
 
@@ -153,7 +153,7 @@ pub trait SyntaxSearcher {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         fun: Function,
-        args: implvec!(RecFOFormula),
+        args: implvec!(Formula),
     ) {
         assert!(builder.current_mode().is_and());
         assert!(self.is_special(pbl, &fun));
@@ -187,7 +187,7 @@ pub trait SyntaxSearcher {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         alias: &Alias,
-        args: implvec!(RecFOFormula),
+        args: implvec!(Formula),
     ) {
         let Alias(rws) = alias; // <- because of rustfmt
         assert!(builder.current_mode().is_and());
@@ -202,7 +202,7 @@ pub trait SyntaxSearcher {
             variables,
         } in rws.iter()
         {
-            let from = from.iter().map(RecFOFormula::alpha_rename).collect_vec();
+            let from = from.iter().map(Formula::alpha_rename).collect_vec();
             let to = to.alpha_rename();
 
             assert_eq!(from.len(), args.len());
@@ -232,7 +232,7 @@ pub trait SyntaxSearcher {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         e: &Exists,
-        args: implvec!(RecFOFormula),
+        args: implvec!(Formula),
     ) {
         tr!("in search_exists {e}");
         ::log::warn!("into an exists alias functions, thoses are deprecated");
@@ -262,7 +262,7 @@ pub trait SyntaxSearcher {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         fdst: &FindSuchThat,
-        args: implvec!(RecFOFormula),
+        args: implvec!(Formula),
     ) {
         tr!("in search_find_such_that fucntion {fdst}");
 
@@ -302,7 +302,7 @@ pub trait SyntaxSearcher {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         ptcl: &Protocol,
-        time: &RecFOFormula,
+        time: &Formula,
     ) {
         tr!("in frame");
         assert!(builder.current_mode().is_and());
@@ -317,7 +317,7 @@ pub trait SyntaxSearcher {
         {
             // build the condition object
             let condition = {
-                let vars = vars.iter().map(|x| RecFOFormula::Var(x.clone()));
+                let vars = vars.iter().map(|x| Formula::Var(x.clone()));
                 rexp!((and (HAPPENS (id #(vars.clone())*)) (LT (id #vars*) #time) ))
             };
 
@@ -339,9 +339,9 @@ pub trait SyntaxSearcher {
         &'a self,
         pbl: &'a Problem,
         ptcl: &'a Protocol,
-        time: RecFOFormula,
-        hyp: RecFOFormula,
-    ) -> impl Iterator<Item = RecFOFormula> + use<'a, Self> {
+        time: Formula,
+        hyp: Formula,
+    ) -> impl Iterator<Item = Formula> + use<'a, Self> {
         tr!("searching protocol {}", ptcl.name());
         ptcl.steps()
             .iter()
@@ -352,7 +352,7 @@ pub trait SyntaxSearcher {
                           cond,
                           msg,
                       }| {
-                    let vars = vars.iter().map(|v| RecFOFormula::Var(v.clone()));
+                    let vars = vars.iter().map(|v| Formula::Var(v.clone()));
                     let s = rexp!((id #vars*));
 
                     let condition = rexp!((and #hyp (HAPPENS #s) (LEQ #s #time)));
@@ -379,8 +379,8 @@ pub trait SyntaxSearcher {
         prgm: &'c mut Program<Lang, PAnalysis<'a>>,
         exec: &'b SmtRunner,
         ptcl: Id,
-        time: RecFOFormula,
-        hyp: RecFOFormula,
+        time: Formula,
+        hyp: Formula,
     ) -> Option<bool> {
         let ptcl = get_protocol(prgm.egraph(), ptcl)?;
         let queries = self
@@ -499,7 +499,7 @@ pub trait EgraphSearcher: SyntaxSearcher {
         {
             // build the condition object
             let condition = {
-                let vars = vars.iter().map(|x| RecFOFormula::Var(x.clone()));
+                let vars = vars.iter().map(|x| Formula::Var(x.clone()));
                 rexp!((and (HAPPENS (id #(vars.clone())*)) (LT (id #vars*) #time) ))
             };
 
@@ -706,6 +706,6 @@ pub fn expr_of_id<'a>(
     egraph: &EGraph<Lang, PAnalysis<'a>>,
     id: Id,
     variables: &rpds::Queue<Variable>,
-) -> RecFOFormula {
-    RecFOFormula::try_from_id_with_vars(egraph, id, variables).unwrap()
+) -> Formula {
+    Formula::try_from_id_with_vars(egraph, id, variables).unwrap()
 }

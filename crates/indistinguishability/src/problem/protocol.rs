@@ -155,9 +155,9 @@ impl Problem {
         &mut self.constrains
     }
 
-    pub fn add_constrain(&mut self, constrain: &RecFOFormula) -> anyhow::Result<()> {
+    pub fn add_constrain(&mut self, constrain: &Formula) -> anyhow::Result<()> {
         match constrain {
-            RecFOFormula::App { head, args } => {
+            Formula::App { head, args } => {
                 let op = if head == &LT {
                     ConstrainOp::LessThan
                 } else if head == &INCOMPATIBLE {
@@ -188,9 +188,9 @@ impl Problem {
         }
     }
 
-    fn extract_step_and_vars(&self, f: RecFOFormula) -> anyhow::Result<BoundStep> {
+    fn extract_step_and_vars(&self, f: Formula) -> anyhow::Result<BoundStep> {
         match f {
-            RecFOFormula::App { head, args } => {
+            Formula::App { head, args } => {
                 ensure!(
                     head.arity() == args.len(),
                     "wrong arity in step application"

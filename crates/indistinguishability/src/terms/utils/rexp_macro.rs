@@ -4,7 +4,7 @@ use quarck::CowArc;
 use utils::implvec;
 
 use crate::LangVar;
-use crate::terms::{FOBinder, Function, RecFOFormula, Variable, builtin};
+use crate::terms::{FOBinder, Function, Formula, Variable, builtin};
 
 /// magic ✨
 #[macro_export]
@@ -37,7 +37,7 @@ macro_rules! vec_smt {
 pub type SmtFormula = crate::MSmtFormula;
 pub type Smt = crate::MSmt;
 
-pub type MacroExpr = RecFOFormula;
+pub type MacroExpr = Formula;
 pub type MacroVar = Variable;
 pub type MacroFunction = Function;
 pub type MacroBinder = FOBinder;
@@ -83,7 +83,7 @@ pub fn mk_eqs(args: implvec!(MacroExpr)) -> MacroExpr {
         args.iter()
             .cloned()
             .tuple_combinations()
-            .map(|(a, b)| RecFOFormula::App {
+            .map(|(a, b)| Formula::App {
                 head: EQ.const_clone(),
                 args: mk_cowarc![a, b],
             }),
@@ -96,7 +96,7 @@ pub fn mk_neqs(args: implvec!(MacroExpr)) -> MacroExpr {
         args.iter()
             .cloned()
             .tuple_combinations()
-            .map(|(a, b)| !RecFOFormula::App {
+            .map(|(a, b)| !Formula::App {
                 head: EQ.const_clone(),
                 args: mk_cowarc![a, b],
             }),
@@ -112,7 +112,7 @@ pub fn mk_app<T: FunctionRef>(head: T, args: implvec!(MacroExpr)) -> MacroExpr {
 
     let arity = head.arity();
     let num_args = args.len();
-    let ret = RecFOFormula::App { head, args };
+    let ret = Formula::App { head, args };
 
     assert_eq!(arity, num_args, "arity mismatch with {ret}");
     ret

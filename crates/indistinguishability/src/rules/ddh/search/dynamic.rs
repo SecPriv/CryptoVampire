@@ -8,7 +8,7 @@ use crate::{
         utils::{SyntaxSearcher, fresh::RefFormulaBuilder},
     },
     runners::SmtRunner,
-    terms::{Function, NONCE, RecFOFormula},
+    terms::{Function, NONCE, Formula},
 };
 use bon::Builder;
 use egg::{Id, Pattern, Searcher};
@@ -31,8 +31,8 @@ struct SearchK {
     ddh: usize,
     g: Function,
     exp: Function,
-    a: RecFOFormula,
-    b: RecFOFormula,
+    a: Formula,
+    b: Formula,
 }
 
 impl<'a> Rule<Lang, PAnalysis<'a>> for SearchRule {
@@ -52,7 +52,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SearchRule {
             for subst in matches.substs {
                 let [a, b, t, h] = [NA, NB, TIME, H]
                     .map(|v| subst.get(v.as_egg()).unwrap())
-                    .map(|id| RecFOFormula::try_from_id(prgm.egraph(), *id).unwrap());
+                    .map(|id| Formula::try_from_id(prgm.egraph(), *id).unwrap());
                 let p = *subst.get(PTCL.as_egg()).unwrap();
 
                 let result = SearchK {
@@ -85,7 +85,7 @@ impl crate::rules::utils::SyntaxSearcher for SearchK {
         pbl: &Problem,
         builder: &RefFormulaBuilder,
         fun: &Function,
-        args: &[RecFOFormula],
+        args: &[Formula],
     ) -> ControlFlow<()> {
         let Self { a, b, exp, .. } = self;
         let mut args = args.iter();
@@ -140,16 +140,16 @@ impl SearchK {
     /// It expect `base=(((g^a)^b)^c)` and `exponent=d`
     fn unpile_exp<'a>(
         &self,
-        pile: &mut Vec<&'a RecFOFormula>,
-        base: &'a RecFOFormula,
-        exponent: &'a RecFOFormula,
+        pile: &mut Vec<&'a Formula>,
+        base: &'a Formula,
+        exponent: &'a Formula,
     ) {
         pile.push(exponent);
         match base {
-            RecFOFormula::App { head, args } if head == &self.exp => {
+            Formula::App { head, args } if head == &self.exp => {
                 self.unpile_exp(pile, &args[0], &args[1]);
             }
-            RecFOFormula::App { head, .. } if head == &self.g => {}
+            Formula::App { head, .. } if head == &self.g => {}
             _ => {
                 pile.clear();
             }

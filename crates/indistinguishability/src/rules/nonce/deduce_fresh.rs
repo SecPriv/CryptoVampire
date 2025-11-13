@@ -11,7 +11,7 @@ use crate::problem::PAnalysis;
 use crate::rules::utils::EgraphSearcher;
 use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::runners::SmtRunner;
-use crate::terms::{FRESH_NONCE, RecFOFormula};
+use crate::terms::{FRESH_NONCE, Formula};
 use crate::{Lang, Problem, rexp};
 
 decl_vars!(const; NONCE_VAR, CONTENT, HYPOTHESIS);
@@ -43,7 +43,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FreshNonce {
         let condition = substs.substs.iter().map(|subst| {
             let [nonce, content, hypothesis] =
                 [NONCE_VAR, CONTENT, HYPOTHESIS].map(|i| *subst.get(i.as_egg()).unwrap());
-            let hypothesis = RecFOFormula::try_from_id(egraph, hypothesis).unwrap();
+            let hypothesis = Formula::try_from_id(egraph, hypothesis).unwrap();
             let nonce = Nonce::builder().content_id(egraph, nonce).build();
 
             let builder = RefFormulaBuilder::builder().and().build();

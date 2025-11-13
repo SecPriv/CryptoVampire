@@ -8,14 +8,14 @@ use utils::implvec;
 use crate::rules::nonce::searcher::nonce_builder::SetContent;
 use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::rules::utils::{EgraphSearcher, SyntaxSearcher};
-use crate::terms::{Function, NONCE, RecFOFormula};
+use crate::terms::{Function, NONCE, Formula};
 use crate::{Lang, Problem, rexp};
 
 /// A nonce to be searched for
 #[derive(Debug, Clone)]
 pub struct Nonce {
     /// The content of the nonce.
-    content: RecFOFormula,
+    content: Formula,
     /// The name of the nonce.
     #[allow(dead_code)]
     name: Cow<'static, str>,
@@ -24,15 +24,15 @@ pub struct Nonce {
 impl Nonce {
     /// Creates a new nonce from a function and its arguments
     #[allow(dead_code)]
-    pub fn new_from_args(head: Function, args: implvec!(RecFOFormula)) -> Self {
+    pub fn new_from_args(head: Function, args: implvec!(Formula)) -> Self {
         Self::builder()
             .name(head.name.clone())
-            .content(RecFOFormula::app(head, args.into_iter().collect()))
+            .content(Formula::app(head, args.into_iter().collect()))
             .build()
     }
 
     /// Returns the content of the nonce as a `RecFOFormula`
-    pub fn as_recformula(&self) -> RecFOFormula {
+    pub fn as_recformula(&self) -> Formula {
         self.content.clone()
     }
 
@@ -217,7 +217,7 @@ impl SyntaxSearcher for Nonce {
         _: &Problem,
         builder: &RefFormulaBuilder,
         fun: &Function,
-        args: &[RecFOFormula],
+        args: &[Formula],
     ) -> ControlFlow<()> {
         assert_eq!(fun, &NONCE);
         tr!("found nonce!");
@@ -235,7 +235,7 @@ impl Nonce {
     /// Creates a new nonce
     #[builder(builder_type = NonceBuilder)]
     pub fn new(
-        content: RecFOFormula,
+        content: Formula,
         #[builder(into, default = format!("{content}"))] name: Cow<'static, str>,
     ) -> Self {
         Self { content, name }
@@ -258,7 +258,7 @@ where
     where
         S::Content: NonceBuilderIsUnset,
     {
-        let formula = RecFOFormula::try_from_id(egraph, id).unwrap();
+        let formula = Formula::try_from_id(egraph, id).unwrap();
         self.content(formula)
     }
 }

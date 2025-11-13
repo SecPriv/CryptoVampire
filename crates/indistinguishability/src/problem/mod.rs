@@ -1,5 +1,5 @@
 use crate::protocol::Protocol;
-use crate::terms::{CryptographicAssumption, Function, FunctionCollection, RecFOFormula, Rewrite};
+use crate::terms::{CryptographicAssumption, Function, FunctionCollection, Formula, Rewrite};
 use crate::{Configuration, MSmt};
 use bon::bon;
 use itertools::Itertools;
@@ -58,7 +58,7 @@ pub struct Problem {
     current_step: Option<CurrentStep>,
 
     /// a cache for the quantifiers
-    quantifier_cache: Vec<(RecFOFormula, Function)>,
+    quantifier_cache: Vec<(Formula, Function)>,
 
     pub state: ProblemState,
 

@@ -7,7 +7,7 @@ use crate::{
     Lang,
     problem::{CurrentStep, PAnalysis},
     rexp,
-    terms::{IS_INDEX, RecFOFormula, Sort},
+    terms::{IS_INDEX, Formula, Sort},
 };
 
 pub fn mk_rewrite<N: Analysis<Lang>>() -> egg::Rewrite<Lang, N> {
@@ -31,7 +31,7 @@ decl_vars!(pub const FOUND_INDICE:Index);
 
 #[dynamic]
 static PATTERN_SEARCH: Pattern<Lang> =
-    <Pattern<_> as From<&RecFOFormula>>::from(&rexp!(#FOUND_INDICE));
+    <Pattern<_> as From<&Formula>>::from(&rexp!(#FOUND_INDICE));
 
 impl<N: Analysis<Lang>> Searcher<Lang, N> for FindInces {
     fn search_eclass_with_limit(
