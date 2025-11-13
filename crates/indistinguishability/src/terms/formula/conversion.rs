@@ -1,36 +1,15 @@
-use std::borrow::Cow;
-use std::fmt::{Debug, Display};
-use std::ops::{BitAnd, BitOr, Not, Shr};
-
-use anyhow::{Context, bail};
-use bon::Builder;
-use cryptovampire_smt::{SmtFormula, SmtHead};
-use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr};
-use itertools::{Either, Itertools, chain, izip};
-use log::{error, trace, warn};
-use logic_formula::{Destructed, Formula, HeadSk};
-use quarck::CowArc;
-use rpds::HashTrieSet;
-use rustc_hash::FxHashMap;
-use serde::Serialize;
-use steel::rvals::IntoSteelVal;
-use steel::steel_vm::register_fn::RegisterFn;
-use steel::{SteelErr, rerrs};
-use steel_derive::Steel;
-use utils::{dynamic_iter, econtinue_let, ereturn_if, ereturn_let, implvec, match_eq};
-
 use super::RecFOFormula;
-use super::{FOBinder, RecFOFormulaQuant};
-use crate::input::Registerable;
 use crate::terms::formula::egg::EggLanguage;
-use crate::terms::formula::sexpr::SExpr;
-use crate::terms::formula::{RecFOFormulaQuantRef, list};
+use crate::terms::formula::list;
 use crate::terms::utils::pull_from_egraph;
-use crate::terms::{
-    AND, BITE, CONS, EMPTY, EQ, FALSE, Function, IMPLIES, LAMBDA_O, LAMBDA_S, NIL, NOT, OR, Sort,
-    TRUE, TUPLE, Variable,
-};
-use crate::{Lang, LangVar, MSmtFormula, fresh, rexp};
+use crate::terms::{CONS, LAMBDA_O, LAMBDA_S, NIL, Sort, Variable};
+use crate::{Lang, LangVar, fresh, rexp};
+use anyhow::{Context, bail};
+use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr};
+use itertools::{Itertools, chain};
+use rustc_hash::FxHashMap;
+use std::fmt::Debug;
+use utils::{ereturn_if, implvec};
 
 impl RecFOFormula {
     pub fn from_egg(formula: &[LangVar], sort: Option<Sort>) -> Self {
@@ -548,7 +527,6 @@ impl From<&RecFOFormula> for Pattern<Lang> {
         Pattern::from(RecExpr::from(value))
     }
 }
-
 
 #[cfg(test)]
 mod conversion_tests {

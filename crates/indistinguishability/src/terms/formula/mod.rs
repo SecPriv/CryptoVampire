@@ -1,12 +1,9 @@
-use std::fmt::Display;
-
 use ::egg::Id;
 use logic_formula::{Destructed, Formula};
 use serde::Serialize;
 use smallvec::SmallVec;
 use steel_derive::Steel;
-
-use crate::terms::{EXISTS, FIND_SUCH_THAT, Function, Variable};
+use crate::terms::{Function, Variable};
 
 mod egg;
 // mod egg_like;

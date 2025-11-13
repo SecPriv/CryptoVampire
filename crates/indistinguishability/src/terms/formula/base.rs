@@ -1,37 +1,11 @@
-
-use std::borrow::Cow;
-use std::fmt::{Debug, Display};
-use std::ops::{BitAnd, BitOr, Not, Shr};
-
-use anyhow::{Context, bail};
-use bon::Builder;
-use cryptovampire_smt::{SmtFormula, SmtHead};
-use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr};
-use itertools::{Either, Itertools, chain, izip};
-use log::{error, trace, warn};
-use logic_formula::{Destructed, Formula, HeadSk};
-use quarck::CowArc;
-use rpds::HashTrieSet;
-use rustc_hash::FxHashMap;
-use serde::Serialize;
-use steel::rvals::IntoSteelVal;
-use steel::steel_vm::register_fn::RegisterFn;
-use steel::{SteelErr, rerrs};
-use steel_derive::Steel;
-use utils::{dynamic_iter, econtinue_let, ereturn_if, ereturn_let, implvec, match_eq};
-
-use super::{FOBinder, RecFOFormulaQuant};
-use crate::input::Registerable;
-use crate::terms::formula::egg::EggLanguage;
-use crate::terms::formula::sexpr::SExpr;
-use crate::terms::formula::{RecFOFormulaQuantRef, list};
-use crate::terms::utils::pull_from_egraph;
-use crate::terms::{
-    AND, BITE, CONS, EMPTY, EQ, FALSE, Function, IMPLIES, LAMBDA_O, LAMBDA_S, NIL, NOT, OR, Sort,
-    TRUE, TUPLE, Variable,
-};
-use crate::{Lang, LangVar, MSmtFormula, fresh, rexp};
 use super::RecFOFormula;
+use super::{FOBinder, RecFOFormulaQuant};
+use crate::terms::formula::RecFOFormulaQuantRef;
+use crate::terms::{AND, FALSE, Function, IMPLIES, NOT, OR, Sort, TRUE, Variable};
+use itertools::Either;
+use logic_formula::{Destructed, Formula, HeadSk};
+use rustc_hash::FxHashMap;
+use utils::{dynamic_iter, match_eq};
 
 impl RecFOFormula {
     pub fn as_var(&self) -> Option<&Variable> {
@@ -93,7 +67,6 @@ impl RecFOFormula {
         }
     }
 
-
     /// Returns the [Sort] of `self`, [None] if it is a variable
     ///
     /// **NB**:
@@ -134,7 +107,6 @@ impl RecFOFormula {
     }
 }
 
-
 fn find<'a>(
     var: &'a Variable,
     subst: &'a FxHashMap<Variable, RecFOFormula>,
@@ -150,7 +122,6 @@ fn find<'a>(
         _ => Ok(Either::Right(var)),
     }
 }
-
 
 impl Default for RecFOFormula {
     fn default() -> Self {
