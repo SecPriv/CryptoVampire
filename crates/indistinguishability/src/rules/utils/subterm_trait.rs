@@ -318,7 +318,7 @@ pub trait SyntaxSearcher {
             // build the condition object
             let condition = {
                 let vars = vars.iter().map(|x| Formula::Var(x.clone()));
-                rexp!((and (HAPPENS (id #(vars.clone())*)) (LT (id #vars*) #time) ))
+                rexp!((and (HAPPENS (id #(vars.clone())*)) (LEQ (id #vars*) #time) ))
             };
 
             let builder = builder
@@ -500,7 +500,7 @@ pub trait EgraphSearcher: SyntaxSearcher {
             // build the condition object
             let condition = {
                 let vars = vars.iter().map(|x| Formula::Var(x.clone()));
-                rexp!((and (HAPPENS (id #(vars.clone())*)) (LT (id #vars*) #time) ))
+                rexp!((and (HAPPENS (id #(vars.clone())*)) (LEQ (id #vars*) #time) ))
             };
 
             let builder = builder
