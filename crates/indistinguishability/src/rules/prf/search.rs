@@ -14,8 +14,8 @@ use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::rules::utils::{SyntaxSearcher, get_protocol};
 use crate::runners::SmtRunner;
 use crate::terms::{
-    AND, BITE, Function, HAPPENS, IS_FRESH_NONCE, LT, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE,
-    NONCE, PRED, Formula, Sort, VAMPIRE,
+    AND, BITE, Formula, Function, HAPPENS, IS_FRESH_NONCE, LT, MACRO_EXEC, MACRO_FRAME,
+    MACRO_INPUT, MITE, NONCE, PRED, Sort, VAMPIRE,
 };
 use crate::{Lang, Problem, fresh, rexp};
 
@@ -372,8 +372,11 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for PrfVampireRule {
                 .search_eclass(egraph, goal), Dependancy::impossible());
 
         for subst in substs.substs {
-            let [m, k, time, hyp] =
-                [M, K, T, H].map(|x| Formula::try_from_id(egraph, *subst.get(x.as_egg()).unwrap()).unwrap());
+            let mut cache = Default::default();
+            let [m, k, time, hyp] = [M, K, T, H].map(|x| {
+                Formula::try_from_id_cached(egraph, *subst.get(x.as_egg()).unwrap(), &mut cache)
+                    .unwrap()
+            });
             let pbl = egraph.analysis.pbl();
             let search = Search {
                 prf_idx: self.prf,

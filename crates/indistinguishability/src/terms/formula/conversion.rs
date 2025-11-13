@@ -8,6 +8,7 @@ use anyhow::{Context, bail};
 use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr};
 use itertools::{Itertools, chain};
 use rustc_hash::FxHashMap;
+use steel::steel_vm::cache;
 use std::fmt::Debug;
 use utils::{ereturn_if, implvec};
 
@@ -295,17 +296,17 @@ impl Formula {
 
     // ~~~~~~~~~~~~~~ from graph ~~~~~~~~~~~~~~~~
 
-    fn from_id_inner(ids: &[Id], langs: &[Option<&Lang>], current: &Lang) -> Self {
-        let head = current.head.clone();
-        let args = current
-            .args
-            .iter()
-            .map(|id| ids.iter().position(|x| x == id).unwrap())
-            .map(|i| langs[i].unwrap())
-            .map(|l| Self::from_id_inner(ids, langs, l))
-            .collect();
-        Self::App { head, args }
-    }
+    // fn from_id_inner(ids: &[Id], langs: &[Option<&Lang>], current: &Lang) -> Self {
+    //     let head = current.head.clone();
+    //     let args = current
+    //         .args
+    //         .iter()
+    //         .map(|id| ids.iter().position(|x| x == id).unwrap())
+    //         .map(|i| langs[i].unwrap())
+    //         .map(|l| Self::from_id_inner(ids, langs, l))
+    //         .collect();
+    //     Self::App { head, args }
+    // }
 
     /// remove any De-Buijn indices from a [Self]
     fn remove_de_bruijn(
@@ -377,28 +378,18 @@ impl Formula {
         }
     }
 
-    /// extract a [Self] from an [EGraph]. This is a raw translation from
-    /// [golgge], notably `egg`-style quantifiers are still there
-    fn pull_from_egraph<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, id: Id) -> Result<Self, Id> {
-        let mut id_buffer = Vec::new();
-        let mut recexpr_buffer = Vec::new();
-
-        pull_from_egraph::inner(egraph, id, &mut id_buffer, &mut recexpr_buffer)?;
-
-        // all the ids referenced in `recexpr_buffer` are in `id_buffer`
-        debug_assert!(
-            recexpr_buffer
-                .iter()
-                .flat_map(|x| x.as_ref().into_iter())
-                .flat_map(|l| l.children())
-                .all(|c| id_buffer.contains(c))
-        );
-
-        Ok(Self::from_id_inner(
-            &id_buffer,
-            &recexpr_buffer,
-            recexpr_buffer.first().unwrap().unwrap(),
-        ))
+    pub fn try_from_id_cached<N: Analysis<Lang>>(
+        egraph: &EGraph<Lang, N>,
+        id: Id,
+        cache: &mut Vec<Id>,
+    ) -> anyhow::Result<Self>  {
+        Self::try_pull_from_egraph_full(
+            egraph,
+            default_extraction_filter,
+            id,
+            Some(&Default::default()),
+            cache,
+        )
     }
 
     pub fn try_from_id<N: Analysis<Lang>>(
@@ -413,28 +404,41 @@ impl Formula {
         id: Id,
         vars: &rpds::Queue<Variable>,
     ) -> anyhow::Result<Self> {
-        let var = match Self::pull_from_egraph(egraph, id) {
-            Ok(f) => f,
-            Err(id) => {
-                let s = egraph.id_to_expr(id).pretty(100);
-                bail!("{id} is a formula that is not translatable to smt:\n\t{s}");
-            }
-        };
-
-        var.remove_de_bruijn(vars, 0, &mut vec![fresh!()])
-            .with_context(|| format!("couldn't remove de bruijin indices in {var}"))
+        Self::try_pull_from_egraph_full(
+            egraph,
+            default_extraction_filter,
+            id,
+            Some(vars),
+            &mut Default::default(),
+        )
     }
 
-    // ~~~~~~~~~~~~~~~~~ smt ~~~~~~~~~~~~~~~~~~~~
+    pub fn try_pull_from_egraph_full<N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
+        egraph: &EGraph<Lang, N>,
+        mut filter: F,
+        id: Id,
+        bound_vars: Option<&rpds::Queue<Variable>>,
+        recexpr_buffer: &mut Vec<Id>,
+    ) -> anyhow::Result<Self> {
+        recexpr_buffer.clear();
+        let status = extract_from_egraph(egraph, &mut filter, id, recexpr_buffer);
 
-    // #[deprecated]
-    // pub fn try_from_subts<N: Analysis<Lang>>(
-    //     egraph: &EGraph<Lang, N>,
-    //     subst: &egg::Subst,
-    //     var: &Variable,
-    // ) -> Option<Self> {
-    //     Self::try_from_id(egraph, *subst.get(var.as_egg())?)
-    // }
+        let formula = match status {
+            ExtractionStatus::Looping => unreachable!(),
+            ExtractionStatus::Empty => bail!(
+                "impossible to translate:\n{}",
+                egraph.id_to_expr(id).pretty(100)
+            ),
+            ExtractionStatus::Found(formula) => formula,
+        };
+
+        match bound_vars {
+            Some(bvars) => formula
+                .remove_de_bruijn(bvars, 0, &mut vec![fresh!()])
+                .with_context(|| format!("couldn't remove de bruijin indices in {formula}")),
+            None => Ok(formula),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -476,6 +480,89 @@ fn mk_bound_var<L: EggLanguage>(depth: usize) -> impl Iterator<Item = L> {
         (0..depth).map(|i| L::mk_fun_application(LAMBDA_S.clone(), [Id::from(i)]))
     ]
 }
+
+#[derive(Debug, Clone)]
+pub enum ExtractionStatus {
+    Looping,
+    Empty,
+    Found(Formula),
+}
+
+impl ExtractionStatus {
+    #[must_use]
+    fn into_found(self) -> Option<Formula> {
+        if let Self::Found(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+}
+
+impl From<Option<Formula>> for ExtractionStatus {
+    fn from(value: Option<Formula>) -> Self {
+        match value {
+            Some(x) => Self::Found(x),
+            None => Self::Empty,
+        }
+    }
+}
+
+/// Pulls a value from an egraph
+/// 
+/// # Paramters
+///  - `egraph`: the egraph
+///  - `filter`: a predicate to filter out unwanted functions. For instance
+///    [default_extraction_filter] remove everything specific to golgge/prolog.
+///  - `id`: the [Id] to extract
+///  - `loop_breaker`: the set of [Id] already seen in this search to avoid
+///    looping.
+fn extract_from_egraph<N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
+    egraph: &EGraph<Lang, N>,
+    filter: &mut F,
+    id: Id,
+    loop_breaker: &mut Vec<Id>
+) -> ExtractionStatus {
+    if loop_breaker.contains(&id) {
+        return ExtractionStatus::Looping;
+    }
+
+    let n = loop_breaker.len();
+    loop_breaker.push(id);
+    
+    println!("{id} is {}", egraph.id_to_expr(id));
+
+    let result: ExtractionStatus = egraph[id]
+        .nodes
+        .iter() //.filter(|l| filter(*l))
+        .filter_map(|l @ Lang { head, args }| {
+            println!("{id} here {head} : {}", filter(l));
+            filter(l).then_some(())?;
+            let args: Option<_> = args
+                .iter()
+                .copied()
+                .map(|id| extract_from_egraph(egraph, filter, id, loop_breaker).into_found())
+                .collect();
+
+            println!("{id} after collect {head} : {args:?}");
+            Some(Formula::App {
+                head: head.clone(),
+                args: args?,
+            })
+        })
+        .next()
+        .into();
+
+    loop_breaker.truncate(n);
+    result
+}
+
+/// Filter any golgge specific head function, but keep lambda binders. Those
+/// needs to be removed with [Formula::remove_de_bruijn]
+pub fn default_extraction_filter(f: &Lang) -> bool {
+    !f.head.is_prolog_only() || f.head.is_quantifier()
+}
+
 
 impl From<&[LangVar]> for Formula {
     fn from(v: &[LangVar]) -> Self {
