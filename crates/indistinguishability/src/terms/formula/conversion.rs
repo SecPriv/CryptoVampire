@@ -7,9 +7,10 @@ use crate::{Lang, LangVar, fresh, rexp};
 use anyhow::{Context, bail};
 use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr};
 use itertools::{Itertools, chain};
+use log::trace;
 use rustc_hash::FxHashMap;
-use steel::steel_vm::cache;
 use std::fmt::Debug;
+use steel::steel_vm::cache;
 use utils::{ereturn_if, implvec};
 
 impl Formula {
@@ -382,7 +383,7 @@ impl Formula {
         egraph: &EGraph<Lang, N>,
         id: Id,
         cache: &mut Vec<Id>,
-    ) -> anyhow::Result<Self>  {
+    ) -> anyhow::Result<Self> {
         Self::try_pull_from_egraph_full(
             egraph,
             default_extraction_filter,
@@ -509,7 +510,7 @@ impl From<Option<Formula>> for ExtractionStatus {
 }
 
 /// Pulls a value from an egraph
-/// 
+///
 /// # Paramters
 ///  - `egraph`: the egraph
 ///  - `filter`: a predicate to filter out unwanted functions. For instance
@@ -521,19 +522,22 @@ fn extract_from_egraph<N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
     egraph: &EGraph<Lang, N>,
     filter: &mut F,
     id: Id,
-    loop_breaker: &mut Vec<Id>
+    loop_breaker: &mut Vec<Id>,
 ) -> ExtractionStatus {
+    trace!(target: "extract_from_egraph", "({id}) {}", egraph.id_to_expr(id).pretty(100));
     if loop_breaker.contains(&id) {
+        trace!(target: "extract_from_egraph", "({id}) loop");
         return ExtractionStatus::Looping;
     }
 
     let n = loop_breaker.len();
     loop_breaker.push(id);
-    
+
     let result: ExtractionStatus = egraph[id]
         .nodes
         .iter() //.filter(|l| filter(*l))
         .filter_map(|l @ Lang { head, args }| {
+            trace!(target: "extract_from_egraph", "({id}, {head}) filter: {}", filter(l));
             filter(l).then_some(())?;
             let args: Option<_> = args
                 .iter()
@@ -541,6 +545,7 @@ fn extract_from_egraph<N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
                 .map(|id| extract_from_egraph(egraph, filter, id, loop_breaker).into_found())
                 .collect();
 
+            trace!(target: "extract_from_egraph", "({id}, {head}) args: {args:?}");
             Some(Formula::App {
                 head: head.clone(),
                 args: args?,
@@ -548,6 +553,8 @@ fn extract_from_egraph<N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
         })
         .next()
         .into();
+
+    trace!(target: "extract_from_egraph", "({id}) result: {result:?}");
 
     loop_breaker.truncate(n);
     result
@@ -558,7 +565,6 @@ fn extract_from_egraph<N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
 pub fn default_extraction_filter(f: &Lang) -> bool {
     !f.head.is_prolog_only() || f.head.is_quantifier()
 }
-
 
 impl From<&[LangVar]> for Formula {
     fn from(v: &[LangVar]) -> Self {

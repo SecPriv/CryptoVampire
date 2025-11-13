@@ -70,7 +70,12 @@
             (mhash
               (tuple (tuple in (nt i j)) tag1)
               (mk i j p2))))))))
-
+; (bind ((j Index) (i Index) (p Protocol))
+;   (cv-add-rewrite pbl (cv-mk-rewrite "rebuild mid" (list j i p)
+;       (mid i j p)
+;       (mxor
+;         (mhash (tuple (tuple (macro_input (tag i j) p) (nt i j)) tag1) (mk i j p))
+;         (sel2of2 (macro_msg (tag i j) p))))))
 
 (define r1
   (declare-step pbl "r" (list Index)
@@ -93,12 +98,12 @@
 (add-constrain pbl (i) (lt (r1 i) (r2 i)))
 
 (initialize-as-prf prf mhash)
-; (initialize-as-xor mxorc mxor)
+(initialize-as-xor mxorc mxor)
 
 ; hashes have the length of nonces
-(bind ((m Bitstring) (k Bitstring) )
-  (cv-add-rewrite pbl (cv-mk-rewrite "length hash" (list m k)
-      (bitstring-length (mhash m k)) eta)))
+(bind ((i Index) (j Index) (p Protocol))
+  (cv-add-rewrite pbl (cv-mk-rewrite "length id" (list i j p)
+      (bitstring-length (mid i j p)) eta)))
 
 (define (mk-fdst2 r p)
   (let [ (in (macro_input (r2 r) p)) ]
