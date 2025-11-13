@@ -4,7 +4,7 @@ use std::ops::ControlFlow;
 use egg::{EGraph, Id};
 use golgge::Program;
 use itertools::{Itertools, izip};
-use logic_formula::{Destructed, Formula, HeadSk};
+use logic_formula::{Destructed, AsFormula, HeadSk};
 use rustc_hash::FxHashMap;
 use utils::{ereturn_cf, ereturn_if, implvec};
 

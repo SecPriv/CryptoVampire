@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use itertools::{Either, chain, izip};
-use logic_formula::{Bounder, Destructed, Formula, HeadSk};
+use logic_formula::{Bounder, Destructed, AsFormula, HeadSk};
 
 use super::ARichFormula;
 use crate::formula::function::Function;
@@ -24,7 +24,7 @@ impl<'a, 'bump> Expander<'a, 'bump> {
     }
 }
 
-impl<'a, 'bump> Formula for Expander<'a, 'bump> {
+impl<'a, 'bump> AsFormula for Expander<'a, 'bump> {
     type Var = Variable<'bump>;
 
     type Fun = Function<'bump>;

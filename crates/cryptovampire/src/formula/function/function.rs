@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use itertools::Itertools;
 use log::{debug, log_enabled, trace};
-use logic_formula::Formula;
+use logic_formula::AsFormula;
 use utils::precise_as_ref::PreciseAsRef;
 use utils::string_ref::StrRef;
 use utils::traits::{NicerError, RefNamed};

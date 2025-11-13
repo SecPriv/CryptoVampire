@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display};
 
-use logic_formula::Formula;
+use logic_formula::AsFormula;
 use serde::{Deserialize, Serialize};
 use steel::rvals::IntoSteelVal;
 use steel_derive::Steel;
@@ -91,7 +91,7 @@ impl Sort {
     /// This function is a wrapper around `list::try_get`.
     pub fn list_from_formula<F>(f: F) -> Option<Vec<Sort>>
     where
-        F: Formula,
+        F: AsFormula,
         F::Fun: AsRef<Function>,
     {
         list::try_get(f)

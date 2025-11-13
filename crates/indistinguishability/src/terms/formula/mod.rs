@@ -1,5 +1,5 @@
 use ::egg::Id;
-use logic_formula::{Destructed, Formula};
+use logic_formula::{Destructed, AsFormula};
 use serde::Serialize;
 use smallvec::SmallVec;
 use steel_derive::Steel;
@@ -67,7 +67,7 @@ pub enum FOBinder {
 /// A trait for types that can be treated as a formula.
 pub trait FormulaLike {
     /// The concrete formula type.
-    type F<'a>: Formula
+    type F<'a>: AsFormula
     where
         Self: 'a;
     /// Converts `self` into a concrete formula type.

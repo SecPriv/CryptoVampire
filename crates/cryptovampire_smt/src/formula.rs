@@ -2,7 +2,7 @@ use std::fmt::Display;
 use std::ops::{BitAnd, BitOr, Not, Shr};
 
 use itertools::Itertools;
-use logic_formula::{Bounder, Destructed, Formula, HeadSk};
+use logic_formula::{Bounder, Destructed, AsFormula, HeadSk};
 use utils::{dynamic_iter, ereturn_if, implvec};
 
 use super::SortedVar;
@@ -351,7 +351,7 @@ impl<U: SmtParam> SmtFormula<U> {
 }
 
 /// A trait for types that can be converted into an SMT formula.
-pub trait IntoSmt<U: SmtParam>: Formula {
+pub trait IntoSmt<U: SmtParam>: AsFormula {
     /// Converts a generic function into an SMT function.
     fn convert_function(fun: Self::Fun) -> U::Function;
     /// Converts a generic variable into an SMT sorted variable.
@@ -383,7 +383,7 @@ impl<F> From<F> for SmtFunctions<F> {
     }
 }
 
-impl<U: SmtParam> Formula for SmtFormula<U> {
+impl<U: SmtParam> AsFormula for SmtFormula<U> {
     /// The variable type for the formula.
     type Var = U::SVar;
 
@@ -459,7 +459,7 @@ impl<U: SmtParam> Formula for SmtFormula<U> {
     }
 }
 
-impl<'a, U: SmtParam> Formula for &'a SmtFormula<U> {
+impl<'a, U: SmtParam> AsFormula for &'a SmtFormula<U> {
     /// The variable type for the formula.
     type Var = &'a U::SVar;
 

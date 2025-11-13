@@ -3,7 +3,7 @@ use super::{FOBinder, RecFOFormulaQuant};
 use crate::terms::formula::RecFOFormulaQuantRef;
 use crate::terms::{AND, FALSE, Function, IMPLIES, NOT, OR, Sort, TRUE, Variable};
 use itertools::Either;
-use logic_formula::{Destructed, Formula, HeadSk};
+use logic_formula::{Destructed, AsFormula, HeadSk};
 use rustc_hash::FxHashMap;
 use utils::{dynamic_iter, match_eq};
 
@@ -131,7 +131,7 @@ impl Default for RecFOFormula {
         }
     }
 }
-impl Formula for RecFOFormula {
+impl AsFormula for RecFOFormula {
     type Var = Variable;
 
     type Fun = Function;
@@ -158,7 +158,7 @@ impl Formula for RecFOFormula {
     }
 }
 
-impl<'b> Formula for &'b RecFOFormula {
+impl<'b> AsFormula for &'b RecFOFormula {
     type Var = &'b Variable;
 
     type Fun = &'b Function;

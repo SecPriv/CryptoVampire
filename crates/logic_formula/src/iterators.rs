@@ -1,14 +1,14 @@
 use std::fmt::{Debug, Display};
 
 use crate::outers::OwnedIter;
-use crate::{Bounder, Destructed, Formula, FormulaIterator};
+use crate::{Bounder, Destructed, AsFormula, FormulaIterator};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct UsedVariableIterator;
 
 impl UsedVariableIterator {
-    pub fn with<F: Formula>(formulas: impl IntoIterator<Item = F>) -> impl Iterator<Item = F::Var> {
+    pub fn with<F: AsFormula>(formulas: impl IntoIterator<Item = F>) -> impl Iterator<Item = F::Var> {
         OwnedIter::new(
             formulas
                 .into_iter()
@@ -20,7 +20,7 @@ impl UsedVariableIterator {
     }
 }
 
-impl<F: Formula> FormulaIterator<F> for UsedVariableIterator {
+impl<F: AsFormula> FormulaIterator<F> for UsedVariableIterator {
     type Passing = ();
     type U = F::Var;
 
@@ -40,7 +40,7 @@ impl<F: Formula> FormulaIterator<F> for UsedVariableIterator {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DepthIterator;
 
-impl<F: Formula> FormulaIterator<F> for DepthIterator {
+impl<F: AsFormula> FormulaIterator<F> for DepthIterator {
     type Passing = u32;
     type U = u32;
 
@@ -61,7 +61,7 @@ pub struct FreeVariableIterator<Var> {
 
 impl<F> FormulaIterator<F> for FreeVariableIterator<F::Var>
 where
-    F: Formula,
+    F: AsFormula,
     F::Quant: Bounder<F::Var>,
     F::Var: Eq + Clone,
 {
@@ -105,7 +105,7 @@ impl<V> Default for FreeVariableIterator<V> {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AllTermsIterator;
 
-impl<F: Formula + Clone> FormulaIterator<F> for AllTermsIterator {
+impl<F: AsFormula + Clone> FormulaIterator<F> for AllTermsIterator {
     type Passing = ();
     type U = F;
 
@@ -123,7 +123,7 @@ pub struct QuantiferIterator;
 
 impl<'a, F> FormulaIterator<&'a F> for QuantiferIterator
 where
-    &'a F: Formula + Debug,
+    &'a F: AsFormula + Debug,
 {
     type Passing = ();
 

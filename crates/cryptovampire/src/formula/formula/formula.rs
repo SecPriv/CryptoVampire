@@ -294,7 +294,7 @@ pub fn ors_owned<'bump>(args: impl IntoIterator<Item = RichFormula<'bump>>) -> R
     OR.apply(args)
 }
 
-impl<'a, 'bump> logic_formula::Formula for &'a RichFormula<'bump> {
+impl<'a, 'bump> logic_formula::AsFormula for &'a RichFormula<'bump> {
     type Var = Variable<'bump>;
 
     type Fun = Function<'bump>;
@@ -328,7 +328,7 @@ impl<'a, 'bump> crate::error::LocationProvider for &'a RichFormula<'bump> {
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
-    use logic_formula::Formula;
+    use logic_formula::AsFormula;
 
     use super::meq;
     use crate::formula::formula::ARichFormula;

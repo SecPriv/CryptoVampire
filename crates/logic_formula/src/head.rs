@@ -8,7 +8,7 @@ pub enum HeadSk<Var, Fun, Quant> {
     Quant(Quant),
 }
 /// A type alias for `HeadSk` using the associated types from the `Formula` trait.
-pub type Head<F> = HeadSk<<F as Formula>::Var, <F as Formula>::Fun, <F as Formula>::Quant>;
+pub type Head<F> = HeadSk<<F as AsFormula>::Var, <F as AsFormula>::Fun, <F as AsFormula>::Quant>;
 
 impl<Var, Fun, Quant> HeadSk<Var, Fun, Quant> {
     #[must_use]

@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use itertools::Itertools;
-use logic_formula::Formula;
+use logic_formula::AsFormula;
 
 use crate::ensure;
 use crate::error::{Location, LocationProvider};

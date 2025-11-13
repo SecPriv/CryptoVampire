@@ -4,7 +4,7 @@ use std::ops::{BitAnd, BitOr, Deref, Not, Shr};
 use std::sync::Arc;
 
 use itertools::Either;
-use logic_formula::{Destructed, Formula, Head};
+use logic_formula::{Destructed, AsFormula, Head};
 use utils::arc_into_iter::ArcIntoIter;
 use utils::utils::MaybeInvalid;
 
@@ -169,7 +169,7 @@ impl<'bump> MaybeInvalid for ARichFormula<'bump> {
     }
 }
 
-impl<'a, 'bump> logic_formula::Formula for &'a ARichFormula<'bump> {
+impl<'a, 'bump> logic_formula::AsFormula for &'a ARichFormula<'bump> {
     type Var = Variable<'bump>;
 
     type Fun = Function<'bump>;
@@ -194,7 +194,7 @@ impl<'a, 'bump> logic_formula::Formula for &'a ARichFormula<'bump> {
     }
 }
 
-impl<'bump> logic_formula::Formula for ARichFormula<'bump> {
+impl<'bump> logic_formula::AsFormula for ARichFormula<'bump> {
     type Var = Variable<'bump>;
 
     type Fun = Function<'bump>;

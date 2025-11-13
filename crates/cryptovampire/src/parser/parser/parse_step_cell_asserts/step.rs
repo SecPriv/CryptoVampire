@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use itertools::Itertools;
 use log::trace;
-use logic_formula::Formula;
+use logic_formula::AsFormula;
 use utils::implvec;
 use utils::string_ref::StrRef;
 use utils::traits::NicerError;

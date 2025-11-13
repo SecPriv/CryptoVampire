@@ -36,7 +36,7 @@ impl<'a, F, I> RefCellPile<'a, F, I> {
 
 impl<'a, F, Passing, I, U> Iterator for RefCellPile<'a, Content<U, F, Passing>, I>
 where
-    F: Formula,
+    F: AsFormula,
     I: FormulaIterator<F, Passing = Passing, U = U>,
 {
     /// The type of the items yielded by the iterator.
@@ -59,7 +59,7 @@ where
 
 impl<'a, F, Passing, I, U> FusedIterator for RefCellPile<'a, Content<U, F, Passing>, I>
 where
-    F: Formula,
+    F: AsFormula,
     I: FormulaIterator<F, Passing = Passing, U = U>,
 {
 }

@@ -1,6 +1,6 @@
 use egg::{Analysis, EGraph, Id};
 use itertools::Itertools;
-use logic_formula::{Destructed, Formula};
+use logic_formula::{Destructed, AsFormula};
 use utils::econtinue_let;
 
 use crate::Lang;
@@ -8,7 +8,7 @@ use crate::terms::{CONS, Function, LAMBDA_O, LAMBDA_S, NIL, Sort};
 
 fn inner<F>(f: F, sorts: &mut Vec<Sort>) -> Option<()>
 where
-    F: Formula,
+    F: AsFormula,
     F::Fun: AsRef<Function>,
 {
     let Destructed { head, args } = f.destruct();
@@ -78,7 +78,7 @@ fn inner_egraph<N: Analysis<Lang>>(
 ///   (e.g., it's not a proper list or an element has no associated sort).
 pub fn try_get<F>(f: F) -> Option<Vec<Sort>>
 where
-    F: Formula,
+    F: AsFormula,
     F::Fun: AsRef<Function>,
 {
     let mut sorts = vec![];

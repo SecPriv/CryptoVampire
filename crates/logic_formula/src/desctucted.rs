@@ -1,6 +1,6 @@
 use super::*;
 /// Represents a destructured formula, separating its head from its arguments.
-pub struct Destructed<F: Formula, I> {
+pub struct Destructed<F: AsFormula, I> {
     /// The head of the formula.
     pub head: Head<F>,
     /// The arguments of the formula.
@@ -23,7 +23,7 @@ macro_rules! mk_bounds {
   };
 }
 
-impl<F: Formula, I> PartialEq for Destructed<F, I>
+impl<F: AsFormula, I> PartialEq for Destructed<F, I>
 where
     F: PartialEq,
     I: PartialEq,
@@ -37,7 +37,7 @@ where
     }
 }
 
-impl<F: Formula, I> Eq for Destructed<F, I>
+impl<F: AsFormula, I> Eq for Destructed<F, I>
 where
     F: Eq,
     I: Eq,
@@ -47,7 +47,7 @@ where
 {
 }
 
-impl<F: Formula, I> PartialOrd for Destructed<F, I>
+impl<F: AsFormula, I> PartialOrd for Destructed<F, I>
 where
     F: PartialOrd,
     I: PartialOrd,
@@ -65,7 +65,7 @@ where
     }
 }
 
-impl<F: Formula, I> Ord for Destructed<F, I>
+impl<F: AsFormula, I> Ord for Destructed<F, I>
 where
     F: Ord,
     I: Ord,
@@ -79,7 +79,7 @@ where
     }
 }
 
-impl<F: Formula, I> Debug for Destructed<F, I>
+impl<F: AsFormula, I> Debug for Destructed<F, I>
 where
     F: Debug,
     I: Debug,
@@ -96,7 +96,7 @@ where
     }
 }
 
-impl<F: Formula, I> Hash for Destructed<F, I>
+impl<F: AsFormula, I> Hash for Destructed<F, I>
 where
     F: Hash,
     I: Hash,
@@ -111,7 +111,7 @@ where
     }
 }
 
-impl<F: Formula, I> Clone for Destructed<F, I>
+impl<F: AsFormula, I> Clone for Destructed<F, I>
 where
     F: Clone,
     I: Clone,

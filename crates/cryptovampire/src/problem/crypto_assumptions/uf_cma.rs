@@ -6,7 +6,7 @@ use derive_builder::Builder;
 use if_chain::if_chain;
 use itertools::{Itertools, chain};
 use log::trace;
-use logic_formula::Formula;
+use logic_formula::AsFormula;
 use logic_formula::iterators::AllTermsIterator;
 use static_init::dynamic;
 use utils::utils::print_type;

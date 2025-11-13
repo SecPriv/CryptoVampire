@@ -4,7 +4,7 @@ use std::fmt::Display;
 use bon::{Builder, bon, builder};
 use egg::PatternAst;
 use itertools::{Itertools, chain};
-use logic_formula::Formula;
+use logic_formula::AsFormula;
 use utils::ereturn_if;
 
 use crate::terms::quantifier::default_valid;

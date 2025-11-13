@@ -4,7 +4,7 @@ use crate::iterators::{FreeVariableIterator, UsedVariableIterator};
 use crate::outers::{Content, OwnedIter, OwnedPile};
 use crate::{Destructed, Head};
 
-pub trait Formula: Sized {
+pub trait AsFormula: Sized {
     type Var;
     type Fun;
     type Quant;
@@ -44,7 +44,7 @@ pub trait Formula: Sized {
 }
 
 pub trait IteratorHelper {
-    type F: Formula;
+    type F: AsFormula;
     type Passing;
     type U;
 
@@ -82,7 +82,7 @@ pub trait IteratorHelper {
     }
 }
 
-pub trait FormulaIterator<F: Formula> {
+pub trait FormulaIterator<F: AsFormula> {
     type Passing;
 
     type U;
@@ -104,7 +104,7 @@ impl<V> Bounder<V> for Impossible {
 
 pub trait IteratorContainer<F, I>
 where
-    F: Formula,
+    F: AsFormula,
     I: FormulaIterator<F>,
 {
     type Iter: Iterator<Item = I::U>;
@@ -113,7 +113,7 @@ where
 
 impl<F, I> IteratorContainer<F, I> for Vec<Content<I::U, F, I::Passing>>
 where
-    F: Formula,
+    F: AsFormula,
     I: FormulaIterator<F>,
 {
     type Iter = OwnedIter<F, I>;

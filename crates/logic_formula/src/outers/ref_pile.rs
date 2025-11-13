@@ -22,7 +22,7 @@ impl<'a, F> RefPile<'a, F, ()> {
 
 impl<'a, U, F, Passing, I> IteratorHelper for RefPile<'a, Content<U, F, Passing>, I>
 where
-    F: Formula,
+    F: AsFormula,
 {
     type F = F;
     type U = U;
@@ -45,7 +45,7 @@ where
 
 impl<'a, U, F, Passing, I> Iterator for RefPile<'a, Content<U, F, Passing>, I>
 where
-    F: Formula,
+    F: AsFormula,
     I: FormulaIterator<F, Passing = Passing, U = U>,
 {
     type Item = I::U;
@@ -66,7 +66,7 @@ where
 
 impl<'a, U, F, Passing, I> FusedIterator for RefPile<'a, Content<U, F, Passing>, I>
 where
-    F: Formula,
+    F: AsFormula,
     I: FormulaIterator<F, Passing = Passing, U = U>,
 {
 }

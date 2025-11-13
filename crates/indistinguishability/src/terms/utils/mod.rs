@@ -1,5 +1,5 @@
 use itertools::{EitherOrBoth, Itertools, izip};
-use logic_formula::{Destructed, Formula, HeadSk};
+use logic_formula::{Destructed, AsFormula, HeadSk};
 
 use crate::terms::{Function, Sort};
 use crate::utils::LightClone;
@@ -17,8 +17,8 @@ pub mod pull_from_egraph;
 
 pub fn get_sort<F>(f: F) -> Sort
 where
-    F: Formula + LightClone,
-    <F as Formula>::Fun: AsRef<Function>,
+    F: AsFormula + LightClone,
+    <F as AsFormula>::Fun: AsRef<Function>,
 {
     match f.head() {
         HeadSk::Var(_) => Sort::Any,
@@ -29,8 +29,8 @@ where
 
 pub fn type_check<F>(f: F) -> bool
 where
-    F: Formula + LightClone,
-    <F as Formula>::Fun: AsRef<Function>,
+    F: AsFormula + LightClone,
+    <F as AsFormula>::Fun: AsRef<Function>,
 {
     let Destructed { head, args } = f.destruct();
     match head {

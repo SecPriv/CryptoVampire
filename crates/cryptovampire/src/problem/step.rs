@@ -3,7 +3,7 @@ use std::ops::Range;
 use std::sync::Arc;
 
 use itertools::Itertools;
-use logic_formula::Formula;
+use logic_formula::AsFormula;
 use logic_formula::iterators::UsedVariableIterator;
 use utils::precise_as_ref::PreciseAsRef;
 use utils::string_ref::StrRef;

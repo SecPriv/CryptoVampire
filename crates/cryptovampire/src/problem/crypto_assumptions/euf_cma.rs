@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use if_chain::if_chain;
 use itertools::Itertools;
-use logic_formula::Formula;
+use logic_formula::AsFormula;
 use logic_formula::iterators::AllTermsIterator;
 use utils::arc_into_iter::ArcIntoIter;
 

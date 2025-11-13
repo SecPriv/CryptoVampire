@@ -10,7 +10,7 @@ use cryptovampire_smt::{SmtFormula, SmtHead};
 use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr};
 use itertools::{Either, Itertools, chain, izip};
 use log::{error, trace, warn};
-use logic_formula::{Destructed, Formula, HeadSk};
+use logic_formula::{Destructed, AsFormula, HeadSk};
 use quarck::CowArc;
 use rpds::HashTrieSet;
 use rustc_hash::FxHashMap;

@@ -7,7 +7,7 @@ use crate::terms::{
 use crate::{MSmt, rexp};
 use itertools::{Itertools, chain};
 use log::log_enabled;
-use logic_formula::Formula;
+use logic_formula::AsFormula;
 use logic_formula::iterators::QuantiferIterator;
 use utils::econtinue_let;
 

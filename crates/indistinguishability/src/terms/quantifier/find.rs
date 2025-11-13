@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use bon::{Builder, bon, builder};
 use itertools::{Itertools, chain};
-use logic_formula::Formula;
+use logic_formula::AsFormula;
 use utils::ereturn_if;
 
 use crate::Problem;

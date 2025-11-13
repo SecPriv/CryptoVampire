@@ -1,4 +1,4 @@
-use crate::{Formula, FormulaIterator, IteratorHelper};
+use crate::{AsFormula, FormulaIterator, IteratorHelper};
 
 /// Represents either a result `U` or a formula `F` with associated passing data `Passing`.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]

@@ -31,7 +31,7 @@ impl<F, I> OwnedPile<F, I> {
 
 impl<F, Passing, I, U> Iterator for OwnedPile<Content<U, F, Passing>, I>
 where
-    F: Formula,
+    F: AsFormula,
     I: FormulaIterator<F, Passing = Passing, U = U>,
 {
     /// The type of the items yielded by the iterator.
@@ -54,7 +54,7 @@ where
 
 impl<F, Passing, I, U> FusedIterator for OwnedPile<Content<U, F, Passing>, I>
 where
-    F: Formula,
+    F: AsFormula,
     I: FormulaIterator<F, Passing = Passing, U = U>,
 {
 }

@@ -9,7 +9,7 @@ use if_chain::if_chain;
 use itertools::Itertools;
 use log::{error, log_enabled, trace, warn};
 use logic_formula::outers::OwnedPile;
-use logic_formula::{Formula, FormulaIterator};
+use logic_formula::{AsFormula, FormulaIterator};
 use utils::traits::NicerError;
 use utils::utils::AlreadyInitialized;
 use utils::{implvec, partial_order};
