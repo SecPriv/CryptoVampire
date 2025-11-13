@@ -530,13 +530,10 @@ fn extract_from_egraph<N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
     let n = loop_breaker.len();
     loop_breaker.push(id);
     
-    println!("{id} is {}", egraph.id_to_expr(id));
-
     let result: ExtractionStatus = egraph[id]
         .nodes
         .iter() //.filter(|l| filter(*l))
         .filter_map(|l @ Lang { head, args }| {
-            println!("{id} here {head} : {}", filter(l));
             filter(l).then_some(())?;
             let args: Option<_> = args
                 .iter()
@@ -544,7 +541,6 @@ fn extract_from_egraph<N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
                 .map(|id| extract_from_egraph(egraph, filter, id, loop_breaker).into_found())
                 .collect();
 
-            println!("{id} after collect {head} : {args:?}");
             Some(Formula::App {
                 head: head.clone(),
                 args: args?,
