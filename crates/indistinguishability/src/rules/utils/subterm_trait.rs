@@ -13,9 +13,8 @@ use crate::protocol::{Protocol, Step};
 use crate::rules::utils::fresh::RefFormulaBuilder;
 use crate::rules::utils::get_protocol;
 use crate::runners::SmtRunner;
-use crate::terms::substitution_utils::AlphaArgs;
 use crate::terms::{
-    Alias, AliasRewrite, BITE, Exists, FOBinder, FindSuchThat, Function, HAPPENS, LAMBDA_S, LEQ, LT, MACRO_COND, MACRO_FRAME, MACRO_MSG, MITE, PRED, Quantifier, QuantifierT, RecFOFormula, RecFOFormulaQuant, Sort, Variable
+    Alias, AliasRewrite, AlphaArgs, BITE, Exists, FOBinder, FindSuchThat, Function, HAPPENS, LAMBDA_S, LEQ, LT, MACRO_COND, MACRO_FRAME, MACRO_MSG, MITE, PRED, Quantifier, QuantifierT, RecFOFormula, RecFOFormulaQuant, Sort, Variable
 };
 use crate::{Lang, Problem, fresh, rexp};
 

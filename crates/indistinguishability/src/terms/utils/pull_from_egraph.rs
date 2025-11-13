@@ -3,9 +3,12 @@ use std::collections::VecDeque;
 use egg::{Analysis, EGraph, Id, Language, RecExpr};
 use itertools::Itertools;
 use log::warn;
+use quarck::CowArc;
+use rustc_hash::FxHashMap;
+use smallvec::SmallVec;
 use utils::{econtinue_if, ereturn_if};
 
-use crate::Lang;
+use crate::{Lang, terms::RecFOFormula};
 
 /// partial result for [pull_from_egraph]
 ///
@@ -26,7 +29,7 @@ pub(crate) fn inner_generic<'a, N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
     id: Id,
     id_buffer: &mut Vec<Id>,
     recexpr_buffer: &mut Vec<Option<&'a Lang>>,
-) -> Option<()> {
+) -> Result<(), Id> {
     debug_assert!(!id_buffer.contains(&id));
     debug_assert_eq!(id_buffer.len(), recexpr_buffer.len());
     let eclass = &egraph[id];
@@ -44,7 +47,7 @@ pub(crate) fn inner_generic<'a, N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
                 }
             }
 
-            econtinue_if!('enodes, inner(egraph, *cid, id_buffer, recexpr_buffer).is_none());
+            econtinue_if!('enodes, inner(egraph, *cid, id_buffer, recexpr_buffer).is_ok());
 
             if cfg!(debug_assertions) {
                 debug_assert_eq!(id_buffer.len(), recexpr_buffer.len());
@@ -55,7 +58,7 @@ pub(crate) fn inner_generic<'a, N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
 
         // if we reach that point, we can save the result and exit
         recexpr_buffer[len] = Some(e);
-        return Some(());
+        return Ok(());
     }
 
     // faillure case
@@ -66,7 +69,63 @@ pub(crate) fn inner_generic<'a, N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
              functions"
         )
     }
-    None
+    Err(id)
+}
+
+#[derive(Debug, Clone)]
+enum ExtractionStatus {
+    Looping,
+    Empty,
+    Found(RecFOFormula),
+}
+
+impl ExtractionStatus {
+    #[must_use]
+    fn into_found(self) -> Option<RecFOFormula> {
+        if let Self::Found(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+}
+
+impl From<Option<RecFOFormula>> for ExtractionStatus {
+    fn from(value: Option<RecFOFormula>) -> Self {
+        match value {
+            Some(x) => Self::Found(x),
+            None => Self::Empty,
+        }
+    }
+}
+
+fn inner_generic2<N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
+    egraph: &EGraph<Lang, N>,
+    filter: &mut F,
+    id: Id,
+    recexpr_buffer: &mut FxHashMap<Id, ExtractionStatus>,
+) -> ExtractionStatus {
+    if let Some(status) = recexpr_buffer.get(&id) {
+        return status.clone();
+    }
+
+    egraph[id]
+        .nodes
+        .iter() //.filter(|l| filter(*l))
+        .filter_map(|l @ Lang { head, args }| {
+            filter(l).then_some(())?;
+            let args: Option<CowArc<'static, _>> = args
+                .iter()
+                .copied()
+                .map(|id| inner_generic2(egraph, filter, id, recexpr_buffer).into_found())
+                .collect();
+            Some(RecFOFormula::App {
+                head: head.clone(),
+                args: args?,
+            })
+        })
+        .next()
+        .into()
 }
 
 /// [pull_from_egraph_inner_generic] which blocks prolog functions
@@ -75,7 +134,7 @@ pub(crate) fn inner<'a, N: Analysis<Lang>>(
     id: Id,
     id_buffer: &mut Vec<Id>,
     recexpr_buffer: &mut Vec<Option<&'a Lang>>,
-) -> Option<()> {
+) -> Result<(), Id> {
     inner_generic(
         egraph,
         |f| !f.head.is_prolog_only() || f.head.is_quantifier(),
@@ -130,7 +189,7 @@ pub fn generic<N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
     egraph: &EGraph<Lang, N>,
     filter: F,
     id: Id,
-) -> Option<RecExpr<Lang>> {
+) -> Result<RecExpr<Lang>, Id> {
     let mut id_buffer = Vec::new();
     let mut recexpr_buffer = Vec::new();
 
@@ -150,7 +209,7 @@ pub fn generic<N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
     let (ids, langs) = topo_sort(&id_buffer, &recexpr_buffer);
     let recexpr = rebuild_recexpr(&ids, &langs);
     debug_assert!(recexpr.is_dag());
-    Some(recexpr)
+    Ok(recexpr)
 }
 
 /// Does the same thing as [EGraph::id_to_expr] but make sure all function used
@@ -158,6 +217,6 @@ pub fn generic<N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
 ///
 /// ## panic
 ///  If it's not possible
-pub fn no_prolog<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, id: Id) -> Option<RecExpr<Lang>> {
+pub fn no_prolog<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, id: Id) -> Result<RecExpr<Lang>, Id> {
     generic(egraph, |f| !f.head.is_prolog_only(), id)
 }

@@ -7,14 +7,9 @@ use smallvec::SmallVec;
 use utils::implvec;
 
 use crate::terms::{Function, Variable};
+use super::{InnerLang, SIZE};
 
-const SIZE: usize = 3;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Serialize)]
-pub struct InnerLang {
-    pub head: Function,
-    pub args: SmallVec<[Id; SIZE]>,
-}
 
 impl InnerLang {
     pub const fn new_const(head: Function, args: [Id; SIZE], len: usize) -> Self {
