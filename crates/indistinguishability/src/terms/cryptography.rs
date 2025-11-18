@@ -1,5 +1,6 @@
 //! Dumb module to define some of the data regarding cryptopgrahy
 
+use anyhow::{Context, ensure};
 use utils::dynamic_iter;
 
 use crate::libraries::{self, mk_no_guessing_smt};
@@ -21,20 +22,15 @@ pub enum CryptographicAssumption {
 impl CryptographicAssumption {
     /// Generates SMT prelude statements based on the cryptographic assumption.
     pub fn mk_prelude<'a>(&'a self, pbl: &'a Problem) -> impl Iterator<Item = MSmt> + use<'a> {
-        dynamic_iter!(Ret; NGTH:A, Empty:B);
+        dynamic_iter!(Ret; Empty:Empty, NGTH:A, PRF:B, AEnc:C, XOr:D, DDH:E);
 
         match self {
             Self::NoGuessingTh => Ret::NGTH(mk_no_guessing_smt(pbl)),
-            _ => Ret::Empty(::std::iter::empty()),
-        }
-    }
-
-    #[must_use]
-    pub fn as_prf(&self) -> Option<&libraries::PRF> {
-        if let Self::PRF(v) = self {
-            Some(v)
-        } else {
-            None
+            Self::PRF(prf) => Ret::PRF(prf.mk_prelude(pbl)),
+            Self::AEnc(prf) => Ret::AEnc(prf.mk_prelude(pbl)),
+            Self::XOr(prf) => Ret::XOr(prf.mk_prelude(pbl)),
+            Self::DDH(prf) => Ret::DDH(prf.mk_prelude(pbl)),
+            Self::Undefined => Ret::Empty(::std::iter::empty()),
         }
     }
 
@@ -46,87 +42,29 @@ impl CryptographicAssumption {
         matches!(self, Self::Undefined)
     }
 
-    /// Returns `true` if the cryptographic assumption is [`PRF`].
-    ///
-    /// [`PRF`]: CryptographicAssumption::PRF
     #[must_use]
-    pub fn is_prf(&self) -> bool {
-        matches!(self, Self::PRF(..))
-    }
-
-    /// Returns `true` if the cryptographic assumption is [`AEnc`].
-    ///
-    /// [`AEnc`]: CryptographicAssumption::AEnc
-    #[must_use]
-    pub fn is_aenc(&self) -> bool {
-        matches!(self, Self::AEnc(..))
-    }
-
-    #[must_use]
-    pub fn as_aenc(&self) -> Option<&libraries::AEnc> {
-        if let Self::AEnc(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
-    /// Returns `true` if the cryptographic assumption is [`XOr`].
-    ///
-    /// [`XOr`]: CryptographicAssumption::XOr
-    #[must_use]
-    pub fn is_xor(&self) -> bool {
-        matches!(self, Self::XOr(..))
-    }
-
-    #[must_use]
-    pub fn as_xor(&self) -> Option<&libraries::XOr> {
-        if let Self::XOr(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
-    /// Returns `true` if the cryptographic assumption is [`DDH`].
-    ///
-    /// [`DDH`]: CryptographicAssumption::DDH
-    #[must_use]
-    pub fn is_ddh(&self) -> bool {
-        matches!(self, Self::DDH(..))
-    }
-
-    #[must_use]
-    pub fn as_ddh(&self) -> Option<&libraries::DDH> {
-        if let Self::DDH(v) = self {
-            Some(v)
-        } else {
-            None
-        }
+    pub fn as_inner<T: Cryptography>(&self) -> Option<&T> {
+        T::ref_from_assumption(self)
     }
 }
 
-impl From<libraries::PRF> for CryptographicAssumption {
-    /// Converts a `rules::PRF` into a `CryptographicAssumption::PRF`.
-    fn from(v: libraries::PRF) -> Self {
-        Self::PRF(v)
+pub trait Cryptography: Into<CryptographicAssumption> {
+    fn mk_prelude<'a>(&'a self, _: &'a Problem) -> impl Iterator<Item = MSmt> + use<'a, Self> {
+        ::std::iter::empty()
     }
-}
 
-impl From<libraries::AEnc> for CryptographicAssumption {
-    fn from(v: libraries::AEnc) -> Self {
-        Self::AEnc(v)
-    }
-}
+    #[must_use]
+    fn ref_from_assumption(r: &CryptographicAssumption) -> Option<&Self>;
 
-impl From<libraries::XOr> for CryptographicAssumption {
-    fn from(v: libraries::XOr) -> Self {
-        Self::XOr(v)
-    }
-}
-
-impl From<libraries::DDH> for CryptographicAssumption {
-    fn from(v: libraries::DDH) -> Self {
-        Self::DDH(v)
+    fn register_at(self, pbl: &mut Problem, index: usize) -> anyhow::Result<&Self> {
+        let ca = pbl
+            .cryptography_mut(index)
+            .with_context(|| format!("no cryptography at index {index:}"))?;
+        ensure!(
+            ca.is_undefined(),
+            "cryptography at index {index:} is already defined as:\n{ca:#?}"
+        );
+        *ca = self.into();
+        Ok(ca.as_inner().unwrap())
     }
 }

@@ -43,7 +43,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SearchRule {
     fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: Id) -> Dependancy {
         let Self { ddh, trigger, exec } = self;
         let DDH { g, exp, .. } = prgm.egraph().analysis.pbl().cryptography()[*ddh]
-            .as_ddh()
+            .as_inner()
             .unwrap();
         let g = g.clone();
         let exp = exp.clone();

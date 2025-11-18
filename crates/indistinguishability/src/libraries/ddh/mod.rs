@@ -2,7 +2,7 @@ use itertools::{Itertools, chain};
 
 use crate::{
     Problem, mk_signature,
-    terms::{Function, FunctionFlags, Rewrite, Sort},
+    terms::{CryptographicAssumption, Cryptography, Function, FunctionFlags, Rewrite, Sort},
 };
 declare_trace!($"enc");
 
@@ -117,10 +117,7 @@ impl DDH {
             pbl.extra_rewrite_mut().extend(rewrites);
         }
 
-        let crypt_assumptions = pbl.cryptography_mut(index).unwrap();
-        assert!(crypt_assumptions.is_undefined());
-        *crypt_assumptions = ddh.into();
-        crypt_assumptions.as_ddh().unwrap()
+        ddh.register_at(pbl, index).unwrap()
     }
 
     /// Returns the candidate function for a given output sort.
@@ -166,5 +163,20 @@ impl DDH {
                     => (search_trigger #nb #na #t #p #h)),
         ]
         .into_iter()
+    }
+}
+
+impl From<DDH> for CryptographicAssumption {
+    fn from(v: DDH) -> Self {
+        Self::DDH(v)
+    }
+}
+
+impl Cryptography for DDH {
+    fn ref_from_assumption(r: &CryptographicAssumption) -> Option<&Self> {
+        match r {
+            CryptographicAssumption::DDH(x) => Some(x),
+            _ => None,
+        }
     }
 }

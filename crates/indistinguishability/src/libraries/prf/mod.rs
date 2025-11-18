@@ -10,8 +10,7 @@ use utils::{ebreak_if, ebreak_let, ereturn_let, implvec};
 use crate::problem::{PAnalysis, PRule};
 use crate::terms::utils::iter_egraph::iter_descendants_lang;
 use crate::terms::{
-    EQ, EQUIV, FALSE, FRESH_NONCE, Formula, Function, FunctionFlags, IS_FRESH_NONCE, NONCE, Sort,
-    TRUE,
+    CryptographicAssumption, Cryptography, EQ, EQUIV, FALSE, FRESH_NONCE, Formula, Function, FunctionFlags, IS_FRESH_NONCE, NONCE, Sort, TRUE
 };
 use crate::{Lang, Problem, mk_signature, rexp};
 
@@ -146,10 +145,8 @@ impl PRF {
             pbl.extra_rewrite_mut().extend(rewrites);
         }
 
-        let crypt_assumpt = pbl.cryptography_mut(pos).unwrap();
-        assert!(crypt_assumpt.is_undefined());
-        *crypt_assumpt = prf.into();
-        crypt_assumpt.as_prf().unwrap()
+
+        prf.register_at(pbl, pos).unwrap()
     }
 
     /// Returns the candidate function for a given output sort.
@@ -539,4 +536,20 @@ fn all_nonce_descendants<N: Analysis<Lang>>(
 
 fn can_have_children(f: &Function) -> bool {
     f.is_egg_binder() || (f.is_part_of_F() && !f.is_alias())
+}
+
+impl Cryptography for PRF {
+    fn ref_from_assumption(r: &CryptographicAssumption) -> Option<&Self> {
+        match r {
+            CryptographicAssumption::PRF(x) => Some(x),
+            _ => None
+        }
+    }
+}
+
+impl From<PRF> for CryptographicAssumption {
+    /// Converts a `rules::PRF` into a `CryptographicAssumption::PRF`.
+    fn from(v: PRF) -> Self {
+        Self::PRF(v)
+    }
 }

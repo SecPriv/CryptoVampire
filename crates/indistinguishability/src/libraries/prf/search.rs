@@ -239,7 +239,7 @@ impl Search {
     /// Returns a reference to the PRF associated with this search context.
     #[inline]
     fn prf<'a>(&self, pbl: &'a Problem) -> &'a PRF {
-        pbl.cryptography()[self.prf_idx].as_prf().unwrap()
+        pbl.cryptography()[self.prf_idx].as_inner().unwrap()
     }
 
     /// Returns an iterator of formula instead of a large conjunctrion
