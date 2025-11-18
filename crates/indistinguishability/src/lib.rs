@@ -42,8 +42,6 @@ pub mod protocol;
 pub mod libraries;
 /// Defines the different runners for executing cryptographic analysis.
 pub(crate) mod runners;
-/// Provides SMT-related functionalities for the analysis.
-pub(crate) mod smt;
 /// Defines the terms and their operations used in the cryptographic analysis.
 pub mod terms; // <- first for macros
 #[cfg(test)]

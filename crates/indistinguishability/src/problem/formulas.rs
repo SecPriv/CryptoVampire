@@ -1,5 +1,5 @@
 use super::*;
-use crate::smt::mk_prelude;
+use crate::libraries::mk_smt_prelude;
 use crate::terms::{
     FOBinder, FindSuchThat, FunctionCollection, Quantifier, QuantifierT, QuantifierTranslator,
     Formula, Rewrite,
@@ -16,7 +16,7 @@ impl Problem {
     fn compute_smt_prelude(&mut self) {
         if self.smt_prelude.is_none() {
             self.find_temp_quantifiers(&[]);
-            let prelude = mk_prelude(self).collect();
+            let prelude = mk_smt_prelude(self).collect();
             self.smt_prelude = Some(prelude)
         }
     }

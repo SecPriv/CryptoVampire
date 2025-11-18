@@ -257,6 +257,8 @@ pub use xor::XOr;
 mod ddh;
 pub use ddh::DDH;
 
+mod smt;
+
 // mod is_public;
 
 /// Simple rewrite rule to find indices
@@ -314,6 +316,10 @@ pub fn mk_egg_rewrites<N: Analysis<Lang>>(
         constrains::mk_rewrite(pbl),
         [find_indices::mk_rewrite()]
     ]
+}
+
+pub fn mk_smt_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
+    chain![smt::mk_prelude(pbl), constrains::mk_smt(pbl)]
 }
 
 pub trait Library {

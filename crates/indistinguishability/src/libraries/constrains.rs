@@ -45,10 +45,11 @@ pub fn modify_egraph<'pbl>(egraph: &mut EGraph<Lang, PAnalysis<'pbl>>) {
 }
 
 pub fn mk_smt(pbl: &Problem) -> impl Iterator<Item = MSmt> {
+    chain![        [MSmt::comment_block("Contrains")],
     pbl.constrains()
         .iter()
         .flat_map(|c| mk_smt_constrain_one(pbl, c))
-        .map(MSmt::Assert)
+        .map(MSmt::Assert)]
 }
 
 pub fn mk_rewrite<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = egg::Rewrite<Lang, N>> {

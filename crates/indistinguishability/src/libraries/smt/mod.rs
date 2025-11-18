@@ -8,7 +8,7 @@ use crate::terms::{
 };
 use crate::{MSmt, MSmtFormula, Problem, smt, vec_smt};
 
-pub fn mk_prelude(pbl: &mut Problem) -> impl Iterator<Item = MSmt> + use<'_> {
+pub fn mk_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     chain![
         mk_header(pbl),
         [MSmt::comment_block("static")],
@@ -16,16 +16,12 @@ pub fn mk_prelude(pbl: &mut Problem) -> impl Iterator<Item = MSmt> + use<'_> {
         mk_base_macro(pbl),
         mk_base_rewrite(pbl),
         [MSmt::comment_block("term algebra")],
-        // mk_nonces_diff(pbl),
         mk_step_diff(pbl),
-        // mk_ptcl_diff(pbl),
         [MSmt::comment_block("Protocol definition")],
         mk_steps_macros(pbl),
         mk_quantifiers(pbl),
         mk_alias(pbl),
         mk_extra_rw(pbl),
-        [MSmt::comment_block("Contrains")],
-        constrains::mk_smt(pbl),
         [MSmt::comment_block("Custom")],
         pbl.extra_smt().iter().cloned(),
         [MSmt::comment_block("Cryptography")],
