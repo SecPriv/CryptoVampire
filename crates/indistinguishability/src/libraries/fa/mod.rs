@@ -10,7 +10,6 @@ use static_init::dynamic;
 use utils::{dynamic_iter, econtinue_if, econtinue_let, ereturn_if, ereturn_let};
 
 use crate::problem::{PAnalysis, PRule, RcRule};
-use crate::libraries::Library;
 use crate::libraries::utils::lambda_subst::lambda_subst;
 use crate::libraries::utils::{Side, find_available_id};
 use crate::terms::list::{snoc_egraph, try_get_egraph};
@@ -32,11 +31,9 @@ pub static PATTERN_FA: Pattern<Lang> = Pattern::from(&rexp!((EQUIV #U #V #A #B))
 /// A rule for handling forall quantifiers.
 pub struct FaRule;
 
-impl Library for FaRule {
-    fn mk_prolog_rules(&self, _: &Problem) -> impl Iterator<Item = RcRule> {
+pub fn mk_prolog_rules(_: &Problem) -> impl Iterator<Item = RcRule> {
         [FaRule.into_mrc()].into_iter()
     }
-}
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub struct FaElem {

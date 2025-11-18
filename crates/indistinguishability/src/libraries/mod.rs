@@ -297,7 +297,7 @@ pub fn mk_golgge_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
         ],
         pbl.extra_rules().iter().cloned(),
         deduce::mk_rules(pbl),
-        fa::FaRule.mk_prolog_rules(pbl),
+        fa::mk_prolog_rules(pbl),
         [substitution::SubstRule.into_mrc()]
     ]
 }
@@ -320,20 +320,4 @@ pub fn mk_egg_rewrites<N: Analysis<Lang>>(
 
 pub fn mk_smt_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     chain![smt::mk_prelude(pbl), constrains::mk_smt(pbl)]
-}
-
-pub trait Library {
-    fn mk_rewrite_rules<'pbl>(
-        &self,
-        _pbl: &Problem,
-    ) -> impl Iterator<Item = Rewrite<Lang, PAnalysis<'pbl>>> {
-        ::std::iter::empty()
-    }
-    fn mk_prolog_rules(&self, _pbl: &Problem) -> impl Iterator<Item = RcRule> {
-        ::std::iter::empty()
-    }
-    fn mk_extra_smt(&self, _pbl: &Problem) -> impl Iterator<Item = MSmt> {
-        ::std::iter::empty()
-    }
-    fn modify_egraph<'pbl>(&self, _egraph: &mut EGraph<Lang, PAnalysis<'pbl>>) {}
 }

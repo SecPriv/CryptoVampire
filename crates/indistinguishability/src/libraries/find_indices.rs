@@ -7,7 +7,6 @@ use crate::{
     Lang,
     problem::{CurrentStep, PAnalysis},
     rexp,
-    libraries::Library,
     terms::{Formula, IS_INDEX, Sort},
 };
 
@@ -22,22 +21,6 @@ pub fn modify_egraph<'pbl>(egraph: &mut EGraph<Lang, PAnalysis<'pbl>>) {
 }
 
 struct FindInces;
-
-impl Library for FindInces {
-    fn mk_rewrite_rules<'pbl>(
-        &self,
-        _pbl: &crate::Problem,
-    ) -> impl Iterator<Item = egg::Rewrite<Lang, PAnalysis<'pbl>>> {
-        [mk_rewrite!("eq_indices"; (i): (IS_INDEX #i) => (#i))].into_iter()
-    }
-
-    fn modify_egraph<'pbl>(&self, egraph: &mut EGraph<Lang, PAnalysis<'pbl>>) {
-        let CurrentStep { args, .. } = egraph.analysis.pbl().current_step().unwrap().clone();
-        for arg in args {
-            egraph.add_expr(&rexp!((IS_INDEX arg)).as_egg_ground());
-        }
-    }
-}
 
 decl_vars!(pub const FOUND_INDICE:Index);
 
