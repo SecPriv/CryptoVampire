@@ -15,15 +15,6 @@ impl Problem {
     pub fn mk_program<'a>(&'a mut self) -> Program<Lang, PAnalysis<'a>> {
         self.state.reset();
 
-        let exec = SmtRunner::new(self);
-        let vampire_rule = VampireRule::builder().exec(exec.clone()).build();
-        let fresh_rule = FreshNonce::builder().exec(exec.clone()).build();
-
-        let eq_rules = mk_egg_rewrites(self);
-        let rules = mk_golgge_rules(self);
-        let rules: Vec<Rc<dyn Rule<_, _>>> =
-            chain![rules, [vampire_rule.into_mrc(), fresh_rule.into_mrc()]].collect_vec();
-
         let golgge_config = {
             let Configuration {
                 node_limit,
@@ -50,6 +41,9 @@ impl Problem {
                 .trace(gtrace)
                 .build()
         };
+
+        let eq_rules = mk_egg_rewrites(self);
+        let rules: Vec<Rc<dyn Rule<_, _>>> = mk_golgge_rules(self).collect_vec();
 
         let mut prgm = golgge::Program::build()
             .eq_rules(eq_rules)

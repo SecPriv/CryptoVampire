@@ -7,6 +7,7 @@ pub use prf::test as prf_test;
 pub use vampire::VampireRule;
 
 use crate::problem::{PAnalysis, PRule, RcRule};
+use crate::runners::SmtRunner;
 use crate::{Lang, MSmt, Problem};
 
 // =========================================================
@@ -288,6 +289,9 @@ mod sanity_check;
 /// and the substitution rule.
 /// In debug mode, it also includes the sanity check rule.
 pub fn mk_golgge_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
+    let exec = SmtRunner::new(pbl);
+    let vampire_rule = VampireRule::builder().exec(exec.clone()).build().into_mrc();
+    let fresh_rule = FreshNonce::builder().exec(exec.clone()).build().into_mrc();
     chain![
         [
             #[cfg(debug_assertions)]
@@ -298,7 +302,7 @@ pub fn mk_golgge_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
         pbl.extra_rules().iter().cloned(),
         deduce::mk_rules(pbl),
         fa::mk_prolog_rules(pbl),
-        [substitution::SubstRule.into_mrc()]
+        [substitution::SubstRule.into_mrc(), vampire_rule, fresh_rule]
     ]
 }
 
