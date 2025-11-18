@@ -1,5 +1,5 @@
 use super::*;
-use crate::libraries::{self, mk_egg_rewrites, mk_golgge_rules};
+use crate::libraries;
 use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, PRED, UNFOLD_MSG};
 use crate::{Configuration, Lang, rexp, smt};
 use cryptovampire_smt::Smt;
@@ -41,8 +41,8 @@ impl Problem {
                 .build()
         };
 
-        let eq_rules = mk_egg_rewrites(self);
-        let rules: Vec<Rc<dyn Rule<_, _>>> = mk_golgge_rules(self).collect_vec();
+        let eq_rules = libraries::mk_egg_rewrites(self);
+        let rules: Vec<Rc<dyn Rule<_, _>>> = libraries::mk_golgge_rules(self).collect_vec();
 
         let mut prgm = golgge::Program::build()
             .eq_rules(eq_rules)
@@ -51,11 +51,8 @@ impl Problem {
             .egraph(EGraph::new(PAnalysis::builder().pbl(self).build()).with_explanations_enabled())
             .call();
 
-        {
-            let egraph = prgm.egraph_mut();
-            libraries::constrains::modify_egraph(egraph);
-            libraries::find_indices::modify_egraph(egraph);
-        }
+        libraries::init_egraph(prgm.egraph_mut());
+
         prgm
     }
 

@@ -1,4 +1,4 @@
-use egg::{Analysis, Rewrite};
+use egg::{Analysis, EGraph, Rewrite};
 use itertools::chain;
 /// Re-exports the test module for PRF rules.
 #[cfg(test)]
@@ -6,7 +6,7 @@ pub use prf::test as prf_test;
 /// Re-exports the `VampireRule` struct, which implements a rule for the Vampire SMT solver.
 pub use vampire::VampireRule;
 
-use crate::problem::{PRule, RcRule};
+use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::runners::SmtRunner;
 use crate::{Lang, MSmt, Problem};
 
@@ -324,4 +324,10 @@ pub fn mk_egg_rewrites<N: Analysis<Lang>>(
 
 pub fn mk_smt_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     chain![smt::mk_prelude(pbl), constrains::mk_smt(pbl)]
+}
+
+/// Add terms to the egraph / union terms
+pub fn init_egraph<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
+    constrains::modify_egraph(egraph);
+    find_indices::modify_egraph(egraph);
 }
