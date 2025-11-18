@@ -5,13 +5,14 @@ use static_init::dynamic;
 use utils::ereturn_let;
 
 use crate::{
-    Lang, Problem, mk_signature,
-    problem::{PAnalysis, PRule},
-    rexp,
+    Lang, Problem,
     libraries::{
         fa::{self, FaElem, PATTERN_FA},
         utils::Side,
     },
+    mk_signature,
+    problem::{PAnalysis, PRule},
+    rexp,
     terms::{ETA, FRESH_NONCE, Function, LENGTH, NONCE, Rewrite, VAMPIRE},
 };
 declare_trace!($"enc");

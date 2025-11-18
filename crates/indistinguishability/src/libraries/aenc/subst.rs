@@ -6,13 +6,13 @@ use utils::ereturn_let;
 
 use crate::{
     Lang, Problem,
-    problem::{PAnalysis, PRule, RcRule},
-    rexp,
     libraries::{
         AEnc,
         aenc::ProofHints,
         substitution::{PSArgs, ProofLike, ProofSubstitution},
     },
+    problem::{PAnalysis, PRule, RcRule},
+    rexp,
     terms::{EQUIV_WITH_SIDE, Function},
 };
 

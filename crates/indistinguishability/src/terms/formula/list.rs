@@ -1,6 +1,6 @@
 use egg::{Analysis, EGraph, Id};
 use itertools::Itertools;
-use logic_formula::{Destructed, AsFormula};
+use logic_formula::{AsFormula, Destructed};
 use utils::econtinue_let;
 
 use crate::Lang;

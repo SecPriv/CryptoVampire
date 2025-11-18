@@ -14,7 +14,7 @@ use crate::input::golgge_rules::Rule;
 use crate::input::shared_exists::ShrExists;
 use crate::input::{Registerable, conversion_err};
 use crate::protocol::Step;
-use crate::terms::{Exists, Function, QuantifierT, Formula, Rewrite, Sort, Variable};
+use crate::terms::{Exists, Formula, Function, QuantifierT, Rewrite, Sort, Variable};
 use crate::{Configuration, MSmt, Problem};
 
 declare_trace!($"shrpblm");

@@ -3,14 +3,15 @@ use golgge::PrologRule;
 use itertools::{Itertools, chain, izip};
 
 use crate::{
-    Lang, Problem, fresh, rexp,
+    Lang, Problem, fresh,
     libraries::{
         AEnc,
         aenc::{ProofHints, vars::*},
     },
+    rexp,
     terms::{
-        AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, FRESH_NONCE, Function, IS_FRESH_NONCE,
-        MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE, PRED, Formula, Sort, VAMPIRE,
+        AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, FRESH_NONCE, Formula, Function, IS_FRESH_NONCE,
+        MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE, PRED, Sort, VAMPIRE,
     },
 };
 

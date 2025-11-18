@@ -7,11 +7,11 @@ use itertools::{Itertools, chain, izip};
 use utils::{ereturn_if, ereturn_let};
 
 use super::PRFProof::*;
-use crate::problem::{PAnalysis, PRule, RcRule};
-use crate::protocol::{Protocol, Step};
 use crate::libraries::PRF;
 use crate::libraries::utils::fresh::RefFormulaBuilder;
 use crate::libraries::utils::{SyntaxSearcher, get_protocol};
+use crate::problem::{PAnalysis, PRule, RcRule};
+use crate::protocol::{Protocol, Step};
 use crate::runners::SmtRunner;
 use crate::terms::{
     AND, BITE, Formula, Function, HAPPENS, IS_FRESH_NONCE, LT, MACRO_EXEC, MACRO_FRAME,

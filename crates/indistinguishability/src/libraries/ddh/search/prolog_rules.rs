@@ -3,11 +3,12 @@ use golgge::PrologRule;
 use itertools::{Itertools, chain, izip};
 
 use crate::{
-    Lang, Problem, fresh, rexp,
+    Lang, Problem, fresh,
     libraries::ddh::{DDH, ProofHints, vars::*},
+    rexp,
     terms::{
-        AND, BITE, FRESH_NONCE, Function, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE, PRED,
-        Formula, Sort, VAMPIRE,
+        AND, BITE, FRESH_NONCE, Formula, Function, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE,
+        NONCE, PRED, Sort, VAMPIRE,
     },
 };
 

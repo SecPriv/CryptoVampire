@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use itertools::{Either, chain, izip};
-use logic_formula::{Bounder, Destructed, AsFormula, HeadSk};
+use logic_formula::{AsFormula, Bounder, Destructed, HeadSk};
 
 use super::ARichFormula;
 use crate::formula::function::Function;

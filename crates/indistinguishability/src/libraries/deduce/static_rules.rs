@@ -1,9 +1,10 @@
 use itertools::chain;
 
-use crate::problem::{PRule, RcRule};
 use crate::libraries::deduce::GetDeduce;
+use crate::problem::{PRule, RcRule};
 use crate::terms::{
-    AND, BIT_DEDUCE, BITE, BOOL_DEDUCE, EQUIV, FAIL, FRESH_NONCE, HAPPENS, IS_FRESH_NONCE, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, PRED, VAMPIRE
+    AND, BIT_DEDUCE, BITE, BOOL_DEDUCE, EQUIV, FAIL, FRESH_NONCE, HAPPENS, IS_FRESH_NONCE, LEQ,
+    MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, PRED, VAMPIRE,
 };
 
 /// Creates a set of static deduction rules.
@@ -51,7 +52,7 @@ pub fn mk_rules() -> impl Iterator<Item = RcRule> {
 
         "deduce b trivial":
         (deduce_b #u #v #a #b false false).
-    
+
     // =========================================================
     // ==================== extra macros =======================
     // =========================================================
@@ -61,9 +62,9 @@ pub fn mk_rules() -> impl Iterator<Item = RcRule> {
             (VAMPIRE (=> #h1 (LEQ #t2 #t))),
             (VAMPIRE (=> #h2 (LEQ #t2 #t))),
             (VAMPIRE (HAPPENS #t)),
-            (VAMPIRE (=> (and #h1 (HAPPENS #t2) (LEQ #t2 #t)) 
+            (VAMPIRE (=> (and #h1 (HAPPENS #t2) (LEQ #t2 #t))
                 (MACRO_EXEC #t2 #p1))),
-            (VAMPIRE (=> (and #h2 (HAPPENS #t2) (LEQ #t2 #t)) 
+            (VAMPIRE (=> (and #h2 (HAPPENS #t2) (LEQ #t2 #t))
                 (MACRO_EXEC #t2 #p2))).
 
         "deduce condition":
@@ -71,9 +72,9 @@ pub fn mk_rules() -> impl Iterator<Item = RcRule> {
             (VAMPIRE (=> #h1 (LEQ #t2 #t))),
             (VAMPIRE (=> #h2 (LEQ #t2 #t))),
             (VAMPIRE (HAPPENS #t)),
-            (VAMPIRE (=> (and #h1 (HAPPENS #t2) (LEQ #t2 #t)) 
+            (VAMPIRE (=> (and #h1 (HAPPENS #t2) (LEQ #t2 #t))
                 (MACRO_EXEC (PRED #t2) #p1))),
-            (VAMPIRE (=> (and #h2 (HAPPENS #t2) (LEQ #t2 #t)) 
+            (VAMPIRE (=> (and #h2 (HAPPENS #t2) (LEQ #t2 #t))
                 (MACRO_EXEC (PRED #t2) #p2))).
 
 

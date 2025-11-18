@@ -2,7 +2,7 @@ use std::fmt::Display;
 use std::ops::{BitAnd, BitOr, Not, Shr};
 
 use itertools::Itertools;
-use logic_formula::{Bounder, Destructed, AsFormula, HeadSk};
+use logic_formula::{AsFormula, Bounder, Destructed, HeadSk};
 use utils::{dynamic_iter, ereturn_if, implvec};
 
 use super::SortedVar;

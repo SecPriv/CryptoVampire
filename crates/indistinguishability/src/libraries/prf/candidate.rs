@@ -1,7 +1,7 @@
 use itertools::{Itertools, chain};
 
 use crate::libraries::PRF;
-use crate::terms::{Function, NONCE, Formula, Rewrite, Sort};
+use crate::terms::{Formula, Function, NONCE, Rewrite, Sort};
 use crate::{Problem, fresh, rexp};
 
 /// Generates an iterator of rewrite rules for PRF candidates.

@@ -1,7 +1,8 @@
 use crate::{
-    Problem, rexp,
+    Problem,
     libraries::DDH,
-    terms::{Function, NONCE, Formula, Rewrite, Sort},
+    rexp,
+    terms::{Formula, Function, NONCE, Rewrite, Sort},
 };
 use itertools::{Itertools, chain};
 // super::vars::*;

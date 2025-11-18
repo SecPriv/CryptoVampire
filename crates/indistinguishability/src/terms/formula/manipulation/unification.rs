@@ -95,10 +95,7 @@ pub fn mgu(f1: &Formula, f2: &Formula) -> Result<Substitution, UnificationError>
             }
 
             // 3. App vs. App
-            (
-                Formula::App { head: h1, args: a1 },
-                Formula::App { head: h2, args: a2 },
-            ) => {
+            (Formula::App { head: h1, args: a1 }, Formula::App { head: h2, args: a2 }) => {
                 // Check heads and arity
                 if h1 != h2 {
                     return Err(UnificationError::Mismatch);

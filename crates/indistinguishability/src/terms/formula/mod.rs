@@ -1,9 +1,9 @@
+use crate::terms::{Function, Variable};
 use ::egg::Id;
-use logic_formula::{Destructed, AsFormula};
+use logic_formula::{AsFormula, Destructed};
 use serde::Serialize;
 use smallvec::SmallVec;
 use steel_derive::Steel;
-use crate::terms::{Function, Variable};
 
 mod egg;
 // mod egg_like;
@@ -12,22 +12,21 @@ mod base;
 mod sexpr;
 
 mod builders;
-mod steel;
 mod manipulation;
-pub use manipulation::{Substitution, AlphaArgs};
+mod steel;
+pub use manipulation::{AlphaArgs, Substitution};
 
 /// Re-exports `InnerLang`, the language used for `egg` e-graphs.
 pub(crate) use smt::QuantifierTranslator;
 /// Re-exports `RecFOFormula`, a recursive first-order formula representation.
 /// Re-exports `substitution_utils`, a module containing utilities for substitution.
-
 pub(crate) mod list;
 
 mod binder;
 pub use binder::{RecFOFormulaQuant, RecFOFormulaQuantRef};
 
-mod smt;
 mod printing;
+mod smt;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Steel, Serialize)]
 #[steel(equality, hash)]

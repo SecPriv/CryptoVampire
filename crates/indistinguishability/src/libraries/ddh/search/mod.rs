@@ -2,9 +2,9 @@ use itertools::chain;
 
 use crate::{
     Problem,
+    libraries::{DDH, ddh::vars::*},
     problem::{PRule, RcRule},
     rexp,
-    libraries::{DDH, ddh::vars::*},
     runners::SmtRunner,
 };
 

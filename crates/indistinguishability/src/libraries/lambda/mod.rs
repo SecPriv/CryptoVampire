@@ -5,7 +5,7 @@
 use egg::{Analysis, Pattern, Rewrite};
 use itertools::chain;
 
-use crate::terms::{Function, LAMBDA_S, Formula};
+use crate::terms::{Formula, Function, LAMBDA_S};
 use crate::{Lang, Problem, rexp};
 
 // static LET: Function = LAMBDA_LET.const_clone();

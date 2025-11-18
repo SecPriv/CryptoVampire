@@ -1,7 +1,8 @@
 use crate::{
-    Problem, rexp,
+    Problem,
     libraries::AEnc,
-    terms::{Function, NONCE, Formula, Rewrite, Sort},
+    rexp,
+    terms::{Formula, Function, NONCE, Rewrite, Sort},
 };
 use itertools::{Itertools, chain};
 

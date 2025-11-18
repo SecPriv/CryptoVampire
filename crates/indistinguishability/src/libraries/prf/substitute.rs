@@ -8,11 +8,11 @@ use utils::ereturn_let;
 
 use crate::{
     Lang,
-    problem::PAnalysis,
     libraries::{
         PRF,
         prf::{K, M, NEW_TERM, NK, PRFProof, PROOF},
     },
+    problem::PAnalysis,
     terms::{CryptographicAssumption, Function, NONCE, Sort},
 };
 

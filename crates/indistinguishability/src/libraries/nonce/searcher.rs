@@ -8,7 +8,7 @@ use utils::implvec;
 use crate::libraries::nonce::searcher::nonce_builder::SetContent;
 use crate::libraries::utils::fresh::RefFormulaBuilder;
 use crate::libraries::utils::{EgraphSearcher, SyntaxSearcher};
-use crate::terms::{Function, NONCE, Formula};
+use crate::terms::{Formula, Function, NONCE};
 use crate::{Lang, Problem, rexp};
 
 /// A nonce to be searched for

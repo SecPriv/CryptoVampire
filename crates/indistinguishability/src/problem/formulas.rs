@@ -1,8 +1,8 @@
 use super::*;
 use crate::libraries::mk_smt_prelude;
 use crate::terms::{
-    FOBinder, FindSuchThat, FunctionCollection, Quantifier, QuantifierT, QuantifierTranslator,
-    Formula, Rewrite,
+    FOBinder, FindSuchThat, Formula, FunctionCollection, Quantifier, QuantifierT,
+    QuantifierTranslator, Rewrite,
 };
 use crate::{MSmt, rexp};
 use itertools::{Itertools, chain};
@@ -201,12 +201,7 @@ impl QuantifierTranslator for Problem {
         let args = q
             .cvars()
             .iter()
-            .map(|v| {
-                subst
-                    .get(v)
-                    .cloned()
-                    .unwrap_or(Formula::Var(v.clone()))
-            })
+            .map(|v| subst.get(v).cloned().unwrap_or(Formula::Var(v.clone())))
             .collect_vec();
         let args = args.iter().cloned();
 

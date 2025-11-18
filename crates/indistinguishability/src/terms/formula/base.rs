@@ -3,7 +3,7 @@ use super::{FOBinder, RecFOFormulaQuant};
 use crate::terms::formula::RecFOFormulaQuantRef;
 use crate::terms::{AND, FALSE, Function, IMPLIES, NOT, OR, Sort, TRUE, Variable};
 use itertools::Either;
-use logic_formula::{Destructed, AsFormula, HeadSk};
+use logic_formula::{AsFormula, Destructed, HeadSk};
 use rustc_hash::FxHashMap;
 use utils::{dynamic_iter, match_eq};
 

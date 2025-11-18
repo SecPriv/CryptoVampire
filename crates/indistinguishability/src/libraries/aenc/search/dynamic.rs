@@ -1,14 +1,14 @@
 use crate::{
     Lang, Problem,
-    problem::PAnalysis,
-    rexp,
     libraries::{
         AEnc,
         aenc::vars::*,
         utils::{SyntaxSearcher, fresh::RefFormulaBuilder},
     },
+    problem::PAnalysis,
+    rexp,
     runners::SmtRunner,
-    terms::{Function, NONCE, Formula},
+    terms::{Formula, Function, NONCE},
 };
 use bon::Builder;
 use egg::{Id, Pattern, Searcher};

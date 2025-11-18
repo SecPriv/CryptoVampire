@@ -10,8 +10,8 @@ use utils::{ebreak_if, ebreak_let, ereturn_let, implvec};
 use crate::problem::{PAnalysis, PRule};
 use crate::terms::utils::iter_egraph::iter_descendants_lang;
 use crate::terms::{
-    EQ, EQUIV, FALSE, FRESH_NONCE, Function, FunctionFlags, IS_FRESH_NONCE, NONCE, Formula,
-    Sort, TRUE,
+    EQ, EQUIV, FALSE, FRESH_NONCE, Formula, Function, FunctionFlags, IS_FRESH_NONCE, NONCE, Sort,
+    TRUE,
 };
 use crate::{Lang, Problem, mk_signature, rexp};
 

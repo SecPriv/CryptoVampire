@@ -10,7 +10,7 @@ use utils::ereturn_if;
 use crate::Problem;
 use crate::terms::quantifier::default_valid;
 use crate::terms::{
-    Function, FunctionFlags, Quantifier, QuantifierIndex, QuantifierT, Formula, Sort, Variable,
+    Formula, Function, FunctionFlags, Quantifier, QuantifierIndex, QuantifierT, Sort, Variable,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Builder)]

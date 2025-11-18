@@ -36,10 +36,10 @@ pub mod problem;
 pub use problem::Problem;
 /// Handles the parsing and processing of input files.
 pub(crate) mod input;
-/// Handles the definition and manipulation of cryptographic protocols.
-pub mod protocol;
 /// Contains the rules for the e-graph rewriting system.
 pub mod libraries;
+/// Handles the definition and manipulation of cryptographic protocols.
+pub mod protocol;
 /// Defines the different runners for executing cryptographic analysis.
 pub(crate) mod runners;
 /// Defines the terms and their operations used in the cryptographic analysis.

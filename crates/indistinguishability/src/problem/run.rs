@@ -1,5 +1,5 @@
 use super::*;
-use crate::libraries::{self, FreshNonce, VampireRule, mk_golgge_rules, mk_egg_rewrites};
+use crate::libraries::{self, FreshNonce, VampireRule, mk_egg_rewrites, mk_golgge_rules};
 use crate::runners::SmtRunner;
 use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, PRED, UNFOLD_MSG};
 use crate::{Configuration, Lang, rexp, smt};

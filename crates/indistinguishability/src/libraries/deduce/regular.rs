@@ -2,9 +2,9 @@ use egg::Pattern;
 use golgge::PrologRule;
 use itertools::izip;
 
-use crate::problem::{PRule, RcRule};
 use crate::libraries::deduce::GetDeduce;
-use crate::terms::{Function, Formula};
+use crate::problem::{PRule, RcRule};
+use crate::terms::{Formula, Function};
 use crate::{Lang, Problem, fresh, rexp};
 
 /// Generate the base deduce rules:

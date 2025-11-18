@@ -1,5 +1,5 @@
 use itertools::{EitherOrBoth, Itertools, izip};
-use logic_formula::{Destructed, AsFormula, HeadSk};
+use logic_formula::{AsFormula, Destructed, HeadSk};
 
 use crate::terms::{Function, Sort};
 use crate::utils::LightClone;

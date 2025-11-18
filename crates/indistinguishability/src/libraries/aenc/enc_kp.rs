@@ -1,8 +1,6 @@
 use super::vars::*;
 use crate::{
     Lang, Problem,
-    problem::{PAnalysis, PRule, RcRule},
-    rexp,
     libraries::{
         AEnc,
         utils::{
@@ -10,6 +8,8 @@ use crate::{
             Side::{Left, Right},
         },
     },
+    problem::{PAnalysis, PRule, RcRule},
+    rexp,
     terms::{EQUIV, FRESH_NONCE, Function, FunctionFlags, NONCE, Sort},
 };
 use egg::{Id, Pattern, SearchMatches, Searcher};

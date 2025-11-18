@@ -7,8 +7,9 @@ use static_init::dynamic;
 
 use super::X;
 use crate::{
-    Lang, rexp,
+    Lang,
     libraries::substitution::{ACCEPTABLY_EMPTY, FROM, TO, is_ok_for_substitution},
+    rexp,
     terms::SUBSTITUTION,
 };
 

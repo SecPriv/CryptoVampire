@@ -6,7 +6,7 @@ use itertools::{Itertools, chain};
 use log::trace;
 use logic_formula::AsFormula;
 
-use crate::terms::{EMPTY, Function, INIT, Formula, UNFOLD_COND, UNFOLD_MSG, Variable};
+use crate::terms::{EMPTY, Formula, Function, INIT, UNFOLD_COND, UNFOLD_MSG, Variable};
 use crate::{Lang, MSmt, MSmtFormula, Problem, rexp, vec_smt};
 
 /// A step in protocol

@@ -4,17 +4,19 @@ use std::ops::ControlFlow;
 use egg::{EGraph, Id};
 use golgge::Program;
 use itertools::{Itertools, izip};
-use logic_formula::{Destructed, AsFormula, HeadSk};
+use logic_formula::{AsFormula, Destructed, HeadSk};
 use rustc_hash::FxHashMap;
 use utils::{ereturn_cf, ereturn_if, implvec};
 
-use crate::problem::PAnalysis;
-use crate::protocol::{Protocol, Step};
 use crate::libraries::utils::fresh::RefFormulaBuilder;
 use crate::libraries::utils::get_protocol;
+use crate::problem::PAnalysis;
+use crate::protocol::{Protocol, Step};
 use crate::runners::SmtRunner;
 use crate::terms::{
-    Alias, AliasRewrite, AlphaArgs, BITE, Exists, FOBinder, FindSuchThat, Function, HAPPENS, LAMBDA_S, LEQ, LT, MACRO_COND, MACRO_FRAME, MACRO_MSG, MITE, PRED, Quantifier, QuantifierT, Formula, RecFOFormulaQuant, Sort, Variable
+    Alias, AliasRewrite, AlphaArgs, BITE, Exists, FOBinder, FindSuchThat, Formula, Function,
+    HAPPENS, LAMBDA_S, LEQ, LT, MACRO_COND, MACRO_FRAME, MACRO_MSG, MITE, PRED, Quantifier,
+    QuantifierT, RecFOFormulaQuant, Sort, Variable,
 };
 use crate::{Lang, Problem, fresh, rexp};
 

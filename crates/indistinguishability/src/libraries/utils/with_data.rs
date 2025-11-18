@@ -9,9 +9,7 @@ use crate::{
     Lang, Problem,
     problem::PAnalysis,
     rexp,
-    terms::{
-        Function, IS_FRESH_NONCE, NONCE, Formula, utils::iter_egraph::iter_descendants_lang,
-    },
+    terms::{Formula, Function, IS_FRESH_NONCE, NONCE, utils::iter_egraph::iter_descendants_lang},
 };
 
 #[dynamic]

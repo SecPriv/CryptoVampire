@@ -5,7 +5,7 @@ use steel_derive::Steel;
 
 use crate::input::Registerable;
 use crate::input::shared_problem::ShrProblem;
-use crate::terms::{Exists, Function, QuantifierIndex, QuantifierT, Formula, Variable};
+use crate::terms::{Exists, Formula, Function, QuantifierIndex, QuantifierT, Variable};
 
 /// Represents a shared existential quantifier context within the Steel VM.
 #[derive(Debug, Clone, Steel)]

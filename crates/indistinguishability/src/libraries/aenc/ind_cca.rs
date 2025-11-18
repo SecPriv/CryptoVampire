@@ -1,8 +1,8 @@
 use super::vars::*;
 use crate::{
     Problem,
-    problem::{PRule, RcRule},
     libraries::AEnc,
+    problem::{PRule, RcRule},
     terms::{EQUIV, FRESH_NONCE, LEFT, LENGTH, NONCE, RIGHT, ZEROES},
 };
 

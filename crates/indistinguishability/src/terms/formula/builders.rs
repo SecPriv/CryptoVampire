@@ -84,11 +84,7 @@ impl Formula {
     }
 
     #[deprecated]
-    pub fn optimised_binder(
-        _kind: FOBinder,
-        _vars: implvec!(Variable),
-        _arg: Formula,
-    ) -> Self {
+    pub fn optimised_binder(_kind: FOBinder, _vars: implvec!(Variable), _arg: Formula) -> Self {
         todo!()
     }
 

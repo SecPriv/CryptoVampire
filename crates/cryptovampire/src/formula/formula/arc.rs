@@ -4,7 +4,7 @@ use std::ops::{BitAnd, BitOr, Deref, Not, Shr};
 use std::sync::Arc;
 
 use itertools::Either;
-use logic_formula::{Destructed, AsFormula, Head};
+use logic_formula::{AsFormula, Destructed, Head};
 use utils::arc_into_iter::ArcIntoIter;
 use utils::utils::MaybeInvalid;
 

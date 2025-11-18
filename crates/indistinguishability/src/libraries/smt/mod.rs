@@ -4,7 +4,10 @@ use utils::{dynamic_iter, ereturn_if};
 
 use crate::libraries::constrains;
 use crate::terms::{
-    ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, FindSuchThat, Function, HAPPENS, INIT, LEQ, LT, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, PROJ_1, PROJ_2, Quantifier, QuantifierT, Rewrite, SMT_ITE, SMT_SORT_LIST, Signature, Sort, TUPLE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG
+    ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, FindSuchThat, Function, HAPPENS, INIT, LEQ, LT,
+    MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, PROJ_1, PROJ_2, Quantifier,
+    QuantifierT, Rewrite, SMT_ITE, SMT_SORT_LIST, Signature, Sort, TUPLE, UNFOLD_COND, UNFOLD_EXEC,
+    UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
 };
 use crate::{MSmt, MSmtFormula, Problem, smt, vec_smt};
 
@@ -228,7 +231,7 @@ fn mk_base_macro(_: &Problem) -> impl Iterator<Item = MSmt> {
                             (SMT_ITE (MACRO_EXEC #t #p)
                                 (MACRO_MSG #t #p) EMPTY))
                                 (MACRO_FRAME (PRED #t) #p))))),
-        (forall ((#t Time) (#p Protocol)) 
+        (forall ((#t Time) (#p Protocol))
             (=> (distinct #t INIT)
                 (= (UNFOLD_EXEC #t #p) (and (MACRO_COND #t #p) (MACRO_EXEC (PRED #t) #p))))),
         (forall ((#p Protocol)) (= (UNFOLD_FRAME INIT #p) (UNFOLD_MSG INIT #p))),

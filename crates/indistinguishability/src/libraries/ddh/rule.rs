@@ -8,8 +8,6 @@ use rustc_hash::FxHashSet;
 use super::vars::*;
 use crate::{
     Lang,
-    problem::PAnalysis,
-    rexp,
     libraries::{
         DDH,
         utils::{
@@ -17,6 +15,8 @@ use crate::{
             Side::{Left, Right},
         },
     },
+    problem::PAnalysis,
+    rexp,
     terms::{EQUIV, Function, FunctionFlags, NONCE, Sort},
 };
 

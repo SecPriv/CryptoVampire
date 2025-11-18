@@ -8,7 +8,7 @@ use logic_formula::AsFormula;
 use utils::ereturn_if;
 
 use crate::terms::quantifier::default_valid;
-use crate::terms::{Function, QuantifierIndex, QuantifierT, Formula, Sort, Variable};
+use crate::terms::{Formula, Function, QuantifierIndex, QuantifierT, Sort, Variable};
 use crate::{Lang, Problem};
 
 /// For now [Exists] are never temporary

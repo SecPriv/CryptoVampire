@@ -1,11 +1,11 @@
 use itertools::chain;
 use log::trace;
 
-use crate::protocol::Protocol;
 use crate::libraries::nonce::Nonce;
 use crate::libraries::utils::SyntaxSearcher;
 use crate::libraries::utils::fresh::RefFormulaBuilder;
-use crate::terms::{Function, IS_INDEPENDANT_BITSTRING, MACRO_FRAME, NONCE, Formula, Sort};
+use crate::protocol::Protocol;
+use crate::terms::{Formula, Function, IS_INDEPENDANT_BITSTRING, MACRO_FRAME, NONCE, Sort};
 use crate::{MSmt, MSmtFormula, Problem, rexp, smt};
 
 /// Creates the SMT formulas for the no-guessing theorem
@@ -86,9 +86,7 @@ fn mk_smt_step<'a>(pbl: &'a Problem, ptcl: &'a Protocol) -> MSmtFormula {
     decl_vars!(x:Nonce, t:Time);
 
     // search
-    let nonce = Nonce::builder()
-        .content(Formula::Var(x.clone()))
-        .build();
+    let nonce = Nonce::builder().content(Formula::Var(x.clone())).build();
     let builder = RefFormulaBuilder::builder().build();
     nonce.search_frame(pbl, &builder, ptcl, &rexp!(#t));
 

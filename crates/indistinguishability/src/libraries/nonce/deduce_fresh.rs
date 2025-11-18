@@ -7,9 +7,9 @@ use static_init::dynamic;
 use utils::ereturn_let;
 
 use super::*;
-use crate::problem::PAnalysis;
 use crate::libraries::utils::EgraphSearcher;
 use crate::libraries::utils::fresh::RefFormulaBuilder;
+use crate::problem::PAnalysis;
 use crate::runners::SmtRunner;
 use crate::terms::{FRESH_NONCE, Formula};
 use crate::{Lang, Problem, rexp};

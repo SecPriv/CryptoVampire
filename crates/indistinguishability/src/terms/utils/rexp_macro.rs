@@ -4,7 +4,7 @@ use quarck::CowArc;
 use utils::implvec;
 
 use crate::LangVar;
-use crate::terms::{FOBinder, Function, Formula, Variable, builtin};
+use crate::terms::{FOBinder, Formula, Function, Variable, builtin};
 
 /// magic ✨
 #[macro_export]
