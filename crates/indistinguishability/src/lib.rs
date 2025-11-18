@@ -39,7 +39,7 @@ pub(crate) mod input;
 /// Handles the definition and manipulation of cryptographic protocols.
 pub mod protocol;
 /// Contains the rules for the e-graph rewriting system.
-pub mod rules;
+pub mod libraries;
 /// Defines the different runners for executing cryptographic analysis.
 pub(crate) mod runners;
 /// Provides SMT-related functionalities for the analysis.

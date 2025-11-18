@@ -2,7 +2,7 @@
 
 use utils::dynamic_iter;
 
-use crate::rules::{self, mk_no_guessing_smt};
+use crate::libraries::{self, mk_no_guessing_smt};
 use crate::{MSmt, Problem};
 
 /// Represents different cryptographic assumptions that can be made in the problem.
@@ -11,10 +11,10 @@ use crate::{MSmt, Problem};
 pub enum CryptographicAssumption {
     #[default]
     Undefined,
-    PRF(rules::PRF),
-    AEnc(rules::AEnc),
-    XOr(rules::XOr),
-    DDH(rules::DDH),
+    PRF(libraries::PRF),
+    AEnc(libraries::AEnc),
+    XOr(libraries::XOr),
+    DDH(libraries::DDH),
     NoGuessingTh,
 }
 
@@ -30,7 +30,7 @@ impl CryptographicAssumption {
     }
 
     #[must_use]
-    pub fn as_prf(&self) -> Option<&rules::PRF> {
+    pub fn as_prf(&self) -> Option<&libraries::PRF> {
         if let Self::PRF(v) = self {
             Some(v)
         } else {
@@ -63,7 +63,7 @@ impl CryptographicAssumption {
     }
 
     #[must_use]
-    pub fn as_aenc(&self) -> Option<&rules::AEnc> {
+    pub fn as_aenc(&self) -> Option<&libraries::AEnc> {
         if let Self::AEnc(v) = self {
             Some(v)
         } else {
@@ -80,7 +80,7 @@ impl CryptographicAssumption {
     }
 
     #[must_use]
-    pub fn as_xor(&self) -> Option<&rules::XOr> {
+    pub fn as_xor(&self) -> Option<&libraries::XOr> {
         if let Self::XOr(v) = self {
             Some(v)
         } else {
@@ -97,7 +97,7 @@ impl CryptographicAssumption {
     }
 
     #[must_use]
-    pub fn as_ddh(&self) -> Option<&rules::DDH> {
+    pub fn as_ddh(&self) -> Option<&libraries::DDH> {
         if let Self::DDH(v) = self {
             Some(v)
         } else {
@@ -106,27 +106,27 @@ impl CryptographicAssumption {
     }
 }
 
-impl From<rules::PRF> for CryptographicAssumption {
+impl From<libraries::PRF> for CryptographicAssumption {
     /// Converts a `rules::PRF` into a `CryptographicAssumption::PRF`.
-    fn from(v: rules::PRF) -> Self {
+    fn from(v: libraries::PRF) -> Self {
         Self::PRF(v)
     }
 }
 
-impl From<rules::AEnc> for CryptographicAssumption {
-    fn from(v: rules::AEnc) -> Self {
+impl From<libraries::AEnc> for CryptographicAssumption {
+    fn from(v: libraries::AEnc) -> Self {
         Self::AEnc(v)
     }
 }
 
-impl From<rules::XOr> for CryptographicAssumption {
-    fn from(v: rules::XOr) -> Self {
+impl From<libraries::XOr> for CryptographicAssumption {
+    fn from(v: libraries::XOr) -> Self {
         Self::XOr(v)
     }
 }
 
-impl From<rules::DDH> for CryptographicAssumption {
-    fn from(v: rules::DDH) -> Self {
+impl From<libraries::DDH> for CryptographicAssumption {
+    fn from(v: libraries::DDH) -> Self {
         Self::DDH(v)
     }
 }

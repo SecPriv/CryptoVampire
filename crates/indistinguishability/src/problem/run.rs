@@ -1,5 +1,5 @@
 use super::*;
-use crate::rules::{self, FreshNonce, VampireRule, mk_default_prolog_rules, mk_default_rewrites};
+use crate::libraries::{self, FreshNonce, VampireRule, mk_golgge_rules, mk_egg_rewrites};
 use crate::runners::SmtRunner;
 use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, PRED, UNFOLD_MSG};
 use crate::{Configuration, Lang, rexp, smt};
@@ -19,8 +19,8 @@ impl Problem {
         let vampire_rule = VampireRule::builder().exec(exec.clone()).build();
         let fresh_rule = FreshNonce::builder().exec(exec.clone()).build();
 
-        let eq_rules = mk_default_rewrites(self);
-        let rules = mk_default_prolog_rules(self);
+        let eq_rules = mk_egg_rewrites(self);
+        let rules = mk_golgge_rules(self);
         let rules: Vec<Rc<dyn Rule<_, _>>> =
             chain![rules, [vampire_rule.into_mrc(), fresh_rule.into_mrc()]].collect_vec();
 
@@ -60,8 +60,8 @@ impl Problem {
 
         {
             let egraph = prgm.egraph_mut();
-            rules::constrains::modify_egraph(egraph);
-            rules::find_indices::modify_egraph(egraph);
+            libraries::constrains::modify_egraph(egraph);
+            libraries::find_indices::modify_egraph(egraph);
         }
         prgm
     }
