@@ -1,4 +1,4 @@
-use egg::{Analysis, EGraph, Rewrite};
+use egg::{Analysis, Rewrite};
 use itertools::chain;
 /// Re-exports the test module for PRF rules.
 #[cfg(test)]
@@ -6,7 +6,7 @@ pub use prf::test as prf_test;
 /// Re-exports the `VampireRule` struct, which implements a rule for the Vampire SMT solver.
 pub use vampire::VampireRule;
 
-use crate::problem::{PAnalysis, PRule, RcRule};
+use crate::problem::{PRule, RcRule};
 use crate::runners::SmtRunner;
 use crate::{Lang, MSmt, Problem};
 

@@ -1,12 +1,11 @@
 use super::*;
-use crate::libraries::{self, FreshNonce, VampireRule, mk_egg_rewrites, mk_golgge_rules};
-use crate::runners::SmtRunner;
+use crate::libraries::{self, mk_egg_rewrites, mk_golgge_rules};
 use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, PRED, UNFOLD_MSG};
 use crate::{Configuration, Lang, rexp, smt};
 use cryptovampire_smt::Smt;
 use egg::EGraph;
 use golgge::{Program, Rule};
-use itertools::{Itertools, chain};
+use itertools::Itertools;
 use log::trace;
 use std::rc::Rc;
 

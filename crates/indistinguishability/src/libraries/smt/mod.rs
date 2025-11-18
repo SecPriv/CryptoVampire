@@ -2,7 +2,6 @@ use cryptovampire_smt::{Smt, SmtCons, SmtFormula};
 use itertools::{Itertools, chain, izip};
 use utils::{dynamic_iter, ereturn_if};
 
-use crate::libraries::constrains;
 use crate::terms::{
     ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, FindSuchThat, Function, HAPPENS, INIT, LEQ, LT,
     MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, PROJ_1, PROJ_2, Quantifier,

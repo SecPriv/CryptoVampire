@@ -15,7 +15,7 @@ use crate::protocol::{Protocol, Step};
 use crate::runners::SmtRunner;
 use crate::terms::{
     Alias, AliasRewrite, AlphaArgs, BITE, Exists, FOBinder, FindSuchThat, Formula, Function,
-    HAPPENS, LAMBDA_S, LEQ, LT, MACRO_COND, MACRO_FRAME, MACRO_MSG, MITE, PRED, Quantifier,
+    HAPPENS, LAMBDA_S, LEQ, MACRO_COND, MACRO_FRAME, MACRO_MSG, MITE, PRED, Quantifier,
     QuantifierT, RecFOFormulaQuant, Sort, Variable,
 };
 use crate::{Lang, Problem, fresh, rexp};

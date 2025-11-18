@@ -5,7 +5,6 @@ use itertools::Itertools;
 use log::warn;
 use quarck::CowArc;
 use rustc_hash::FxHashMap;
-use smallvec::SmallVec;
 use utils::{econtinue_if, ereturn_if};
 
 use crate::{Lang, terms::Formula};
