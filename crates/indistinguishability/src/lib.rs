@@ -53,7 +53,7 @@ pub use input::{init_engine, register};
 /// Defines the configuration structures for the crate.
 mod configuration;
 /// Re-exports the main Configuration structure for the crate.
-pub use configuration::Configuration;
+pub use configuration::{Configuration, Commands};
 
 use crate::terms::Variable;
 

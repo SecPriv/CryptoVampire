@@ -1,19 +1,36 @@
-use std::path::PathBuf;
+use std::{default, path::PathBuf};
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use steel_derive::Steel;
 
 pub use crate::input::prelude::Preludes;
 
+#[derive(Debug, Steel, Clone, Subcommand)]
+pub enum Commands {
+    /// Uses Steel's repl mode
+    Repl,
+    /// Reads from a file
+    File {
+        /// Path to the `scheme` file
+        ///
+        /// defaults to stdin
+        #[arg(value_name = "FILE")]
+        file: PathBuf,
+    },
+}
+
 /// A computationnally sound automated cryptographic protocol verifier based on the CCSA.
 #[derive(Debug, Steel, Parser, Clone)]
-// #[steel(constructor)]
+#[command(version, about, long_about = None)]
+#[command(propagate_version = true)]
 pub struct Configuration {
-    /// Path to the `scheme` file
-    ///
-    /// defaults to stdin
-    #[arg(value_name = "FILE")]
-    pub file: Option<PathBuf>,
+    // /// Path to the `scheme` file
+    // ///
+    // /// defaults to stdin
+    // #[arg(value_name = "FILE")]
+    // pub file: Option<PathBuf>,
+    #[command(subcommand)]
+    pub command: Option<Commands>,
 
     /// Maximal number of nodes in the egraph
     #[arg(long, default_value_t = Self::default().node_limit, env)]
@@ -119,7 +136,8 @@ impl Default for Configuration {
             ..
         } = ::golgge::Config::default();
         Self {
-            file: Default::default(),
+            // file: Default::default(),
+            command: None,
             node_limit: NODE_LIMIT_DEFAULT,
             time_limit,
             iter_limit,
