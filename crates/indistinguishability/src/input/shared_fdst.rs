@@ -5,7 +5,7 @@ use steel_derive::Steel;
 
 use crate::input::shared_problem::ShrProblem;
 use crate::input::{Registerable, conversion_err};
-use crate::terms::{FindSuchThat, Function, QuantifierIndex, QuantifierT, Formula, Variable};
+use crate::terms::{FindSuchThat, Formula, Function, QuantifierIndex, QuantifierT, Variable};
 
 /// Represents a shared `FindSuchThat` quantifier context within the Steel VM.
 #[derive(Debug, Clone, Steel)]

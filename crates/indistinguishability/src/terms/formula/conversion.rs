@@ -1,7 +1,6 @@
 use super::Formula;
 use crate::terms::formula::egg::EggLanguage;
 use crate::terms::formula::list;
-use crate::terms::utils::pull_from_egraph;
 use crate::terms::{CONS, LAMBDA_O, LAMBDA_S, NIL, Sort, Variable};
 use crate::{Lang, LangVar, fresh, rexp};
 use anyhow::{Context, bail};
@@ -10,7 +9,6 @@ use itertools::{Itertools, chain};
 use log::trace;
 use rustc_hash::FxHashMap;
 use std::fmt::Debug;
-use steel::steel_vm::cache;
 use utils::{ereturn_if, implvec};
 
 impl Formula {

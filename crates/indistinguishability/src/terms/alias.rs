@@ -45,11 +45,7 @@ impl IntoSteelVal for Alias {
 }
 
 impl AliasRewrite {
-    fn new_steel(
-        variables: Vec<Variable>,
-        from: Vec<Formula>,
-        to: Formula,
-    ) -> SResult<Self> {
+    fn new_steel(variables: Vec<Variable>, from: Vec<Formula>, to: Formula) -> SResult<Self> {
         Ok(AliasRewrite {
             from: from.into(),
             to,

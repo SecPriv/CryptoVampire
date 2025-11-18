@@ -14,8 +14,8 @@ use crate::input::shared_exists::ShrExists;
 use crate::input::shared_fdst::ShrFindSuchThat;
 use crate::input::shared_problem::ShrProblem;
 use crate::terms::{
-    AliasRewrite, BUILTINS, Function, Formula, Rewrite, SCHEME_PREFIX, SORT_LIST, Signature,
-    Sort, Variable,
+    AliasRewrite, BUILTINS, Formula, Function, Rewrite, SCHEME_PREFIX, SORT_LIST, Signature, Sort,
+    Variable,
 };
 
 pub(crate) mod golgge_rules;

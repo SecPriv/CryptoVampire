@@ -3,7 +3,7 @@ use steel_derive::Steel;
 
 use crate::input::Registerable;
 use crate::input::shared_problem::ShrProblem;
-use crate::rules::{AEnc, DDH, PRF, XOr};
+use crate::libraries::{AEnc, DDH, PRF, XOr};
 use crate::terms::Function;
 
 /// Represents a shared cryptographic context within the Steel VM.

@@ -1,12 +1,11 @@
 use super::*;
-use crate::rules::{self, FreshNonce, VampireRule, mk_default_prolog_rules, mk_default_rewrites};
-use crate::runners::SmtRunner;
+use crate::libraries;
 use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, PRED, UNFOLD_MSG};
 use crate::{Configuration, Lang, rexp, smt};
 use cryptovampire_smt::Smt;
 use egg::EGraph;
 use golgge::{Program, Rule};
-use itertools::{Itertools, chain};
+use itertools::Itertools;
 use log::trace;
 use std::rc::Rc;
 
@@ -14,15 +13,6 @@ impl Problem {
     /// Build a [Program] to use
     pub fn mk_program<'a>(&'a mut self) -> Program<Lang, PAnalysis<'a>> {
         self.state.reset();
-
-        let exec = SmtRunner::new(self);
-        let vampire_rule = VampireRule::builder().exec(exec.clone()).build();
-        let fresh_rule = FreshNonce::builder().exec(exec.clone()).build();
-
-        let eq_rules = mk_default_rewrites(self);
-        let rules = mk_default_prolog_rules(self);
-        let rules: Vec<Rc<dyn Rule<_, _>>> =
-            chain![rules, [vampire_rule.into_mrc(), fresh_rule.into_mrc()]].collect_vec();
 
         let golgge_config = {
             let Configuration {
@@ -51,6 +41,9 @@ impl Problem {
                 .build()
         };
 
+        let eq_rules = libraries::mk_egg_rewrites(self);
+        let rules: Vec<Rc<dyn Rule<_, _>>> = libraries::mk_golgge_rules(self).collect_vec();
+
         let mut prgm = golgge::Program::build()
             .eq_rules(eq_rules)
             .rules(rules)
@@ -58,11 +51,8 @@ impl Problem {
             .egraph(EGraph::new(PAnalysis::builder().pbl(self).build()).with_explanations_enabled())
             .call();
 
-        {
-            let egraph = prgm.egraph_mut();
-            rules::constrains::modify_egraph(egraph);
-            rules::find_indices::modify_egraph(egraph);
-        }
+        libraries::init_egraph(prgm.egraph_mut());
+
         prgm
     }
 

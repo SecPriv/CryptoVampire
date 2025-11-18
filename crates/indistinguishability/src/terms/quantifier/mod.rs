@@ -3,7 +3,7 @@ pub use exists::*;
 use itertools::chain;
 use utils::{ereturn_if, match_as_trait};
 
-use crate::terms::{Function, QuantifierIndex, Formula, Sort, Variable};
+use crate::terms::{Formula, Function, QuantifierIndex, Sort, Variable};
 use crate::{Problem, rexp};
 mod exists;
 mod find;
@@ -101,9 +101,7 @@ pub trait QuantifierT: Eq + Sized {
     }
 
     /// Returns an iterator over the applied skolem functions, where context variables are substituted.
-    fn appplied_skolens<'a>(
-        &'a self,
-    ) -> impl Iterator<Item = Formula> + Clone + use<'a, Self> {
+    fn appplied_skolens<'a>(&'a self) -> impl Iterator<Item = Formula> + Clone + use<'a, Self> {
         let args = self.cvars().iter().cloned().map(Formula::Var);
         self.skolems()
             .iter()

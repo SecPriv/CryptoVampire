@@ -119,7 +119,8 @@ pub use flags::FunctionFlags;
 
 mod formula;
 pub use formula::{
-    FOBinder, FormulaLike, Formula, RecFOFormulaQuant, RecFOFormulaQuantRef, AlphaArgs, Substitution
+    AlphaArgs, FOBinder, Formula, FormulaLike, RecFOFormulaQuant, RecFOFormulaQuantRef,
+    Substitution,
 };
 pub(crate) use formula::{InnerLang, QuantifierTranslator, list};
 

@@ -1,8 +1,8 @@
 use super::*;
-use crate::smt::mk_prelude;
+use crate::libraries::mk_smt_prelude;
 use crate::terms::{
-    FOBinder, FindSuchThat, FunctionCollection, Quantifier, QuantifierT, QuantifierTranslator,
-    Formula, Rewrite,
+    FOBinder, FindSuchThat, Formula, FunctionCollection, Quantifier, QuantifierT,
+    QuantifierTranslator, Rewrite,
 };
 use crate::{MSmt, rexp};
 use itertools::{Itertools, chain};
@@ -16,7 +16,7 @@ impl Problem {
     fn compute_smt_prelude(&mut self) {
         if self.smt_prelude.is_none() {
             self.find_temp_quantifiers(&[]);
-            let prelude = mk_prelude(self).collect();
+            let prelude = mk_smt_prelude(self).collect();
             self.smt_prelude = Some(prelude)
         }
     }
@@ -201,12 +201,7 @@ impl QuantifierTranslator for Problem {
         let args = q
             .cvars()
             .iter()
-            .map(|v| {
-                subst
-                    .get(v)
-                    .cloned()
-                    .unwrap_or(Formula::Var(v.clone()))
-            })
+            .map(|v| subst.get(v).cloned().unwrap_or(Formula::Var(v.clone())))
             .collect_vec();
         let args = args.iter().cloned();
 

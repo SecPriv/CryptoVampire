@@ -1,14 +1,16 @@
 use std::fmt::{Debug, Display};
 
 use crate::outers::OwnedIter;
-use crate::{Bounder, Destructed, AsFormula, FormulaIterator};
+use crate::{AsFormula, Bounder, Destructed, FormulaIterator};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct UsedVariableIterator;
 
 impl UsedVariableIterator {
-    pub fn with<F: AsFormula>(formulas: impl IntoIterator<Item = F>) -> impl Iterator<Item = F::Var> {
+    pub fn with<F: AsFormula>(
+        formulas: impl IntoIterator<Item = F>,
+    ) -> impl Iterator<Item = F::Var> {
         OwnedIter::new(
             formulas
                 .into_iter()

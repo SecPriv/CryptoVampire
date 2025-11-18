@@ -1,5 +1,5 @@
 use crate::protocol::Protocol;
-use crate::terms::{CryptographicAssumption, Function, FunctionCollection, Formula, Rewrite};
+use crate::terms::{CryptographicAssumption, Formula, Function, FunctionCollection, Rewrite};
 use crate::{Configuration, MSmt};
 use bon::bon;
 use itertools::Itertools;
