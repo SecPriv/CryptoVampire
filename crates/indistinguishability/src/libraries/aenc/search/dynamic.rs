@@ -61,7 +61,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SearchRule {
             exec,
         } = self;
         let AEnc { pk, dec, .. } = prgm.egraph().analysis.pbl().cryptography()[*aenc]
-            .as_aenc()
+            .as_inner()
             .unwrap();
         let pk = pk.clone();
         let dec = dec.clone();

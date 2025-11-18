@@ -13,7 +13,7 @@ use crate::{
     mk_signature,
     problem::{PAnalysis, PRule},
     rexp,
-    terms::{ETA, FRESH_NONCE, Function, LENGTH, NONCE, Rewrite, VAMPIRE},
+    terms::{CryptographicAssumption, Cryptography, ETA, FRESH_NONCE, Function, LENGTH, NONCE, Rewrite, VAMPIRE},
 };
 declare_trace!($"enc");
 
@@ -69,10 +69,7 @@ impl XOr {
             pbl.extra_rewrite_mut().extend(rewrites);
         }
 
-        let crypt_assumptions = pbl.cryptography_mut(index).unwrap();
-        assert!(crypt_assumptions.is_undefined());
-        *crypt_assumptions = xor.into();
-        crypt_assumptions.as_xor().unwrap()
+        xor.register_at(pbl, index).unwrap()
     }
 
     fn extra_rewrites(&self, _pbl: &Problem) -> impl Iterator<Item = Rewrite> {
@@ -213,5 +210,20 @@ impl<'pbl> Rule<Lang, PAnalysis<'pbl>> for XOr {
             .collect()
 
         // todo!()
+    }
+}
+
+impl From<XOr> for CryptographicAssumption {
+    fn from(v: XOr) -> Self {
+        Self::XOr(v)
+    }
+}
+
+impl Cryptography for XOr {
+    fn ref_from_assumption(r: &CryptographicAssumption) -> Option<&Self> {
+        match r {
+            CryptographicAssumption::XOr(x) => Some(x),
+            _ => None
+        }
     }
 }

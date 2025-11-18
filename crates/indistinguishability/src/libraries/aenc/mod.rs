@@ -2,7 +2,7 @@ use itertools::{Itertools, chain};
 
 use crate::{
     Problem, mk_signature,
-    terms::{Function, FunctionFlags, Rewrite, Sort},
+    terms::{CryptographicAssumption, Cryptography, Function, FunctionFlags, Rewrite, Sort},
 };
 declare_trace!($"enc");
 
@@ -148,10 +148,7 @@ impl AEnc {
             pbl.extra_rewrite_mut().extend(rewrites);
         }
 
-        let crypt_assumptions = pbl.cryptography_mut(index).unwrap();
-        assert!(crypt_assumptions.is_undefined());
-        *crypt_assumptions = aenc.into();
-        crypt_assumptions.as_aenc().unwrap()
+        aenc.register_at(pbl, index).unwrap()
     }
 
     /// Returns the candidate function for a given output sort.
@@ -187,5 +184,20 @@ impl AEnc {
         [mk_rewrite!(crate format!("{enc} simplification"); (m Bitstring, r Bitstring, k Bitstring):
             (dec (enc #m #r (pk #k)) #k) => (#m))
         ].into_iter()
+    }
+}
+
+impl From<AEnc> for CryptographicAssumption {
+    fn from(v: AEnc) -> Self {
+        Self::AEnc(v)
+    }
+}
+
+impl Cryptography for AEnc {
+    fn ref_from_assumption(r: &CryptographicAssumption) -> Option<&Self> {
+        match r {
+            CryptographicAssumption::AEnc(r) => Some(r), 
+            _ => None
+        }
     }
 }
