@@ -8,8 +8,9 @@ use log::trace;
 use steel::SteelErr;
 use steel::rerrs::ErrorKind;
 use steel::rvals::Result as SResult;
+use steel::steel_vm::builtin::BuiltInModule;
 use steel::steel_vm::register_fn::RegisterFn;
-use steel_derive::Steel;
+use steel_derive::{Steel, function};
 
 use crate::input::golgge_rules::Rule;
 use crate::input::shared_exists::ShrExists;
@@ -35,7 +36,11 @@ impl ShrProblem {
         self.0.write().unwrap()
     }
 
-    fn get_step_mut(&self, step: Function, ptcl: Function) -> SResult<impl DerefMut<Target = Step>> {
+    fn get_step_mut(
+        &self,
+        step: Function,
+        ptcl: Function,
+    ) -> SResult<impl DerefMut<Target = Step>> {
         if !step.is_step() {
             return Err(SteelErr::new(
                 ErrorKind::ConversionError,
@@ -231,12 +236,54 @@ impl ShrProblem {
     }
 }
 
+use paste::paste;
+macro_rules! configuration {
+    ($($id:ident : $t:ty),* $(,)?) => {
+        impl ShrProblem {
+            $(
+                paste!{
+                    fn [<get_ $id>](&self) -> $t {
+                        self.borrow().config.$id.clone()
+                    }
+
+                    fn [<set_ $id>](&self, value:$t) {
+                        self.borrow_mut().config.$id = value;
+                    }
+                }
+            )*
+
+            fn register_configuration( module: &mut BuiltInModule) -> &mut BuiltInModule {
+                module
+                $(
+                    .register_fn(String::leak(paste!(std::stringify!([<get_ $id>]).replace('_', "-"))), paste!(Self::[<get_ $id>]))
+                    .register_fn(String::leak(paste!(std::stringify!([<set_ $id>]).replace('_', "-"))), paste!(Self::[<set_ $id>]))
+                )*
+            }
+        }
+    };
+}
+
+configuration!(
+    node_limit: usize,
+    iter_limit: usize,
+    time_limit: std::time::Duration,
+    vampire_timeout: std::time::Duration,
+    cores: u64,
+    trace: bool,
+    trace_rebuilds:bool,
+    keep_smt_files:bool,
+
+    prf_limit:usize,
+    fa_limit:usize,
+    enc_kp_limit:usize,
+    ddh_limit:usize,
+);
+
 impl Registerable for ShrProblem {
     /// Registers the `ShrProblem` type and its associated functions with the Steel VM.
-    fn register(
-        module: &mut steel::steel_vm::builtin::BuiltInModule,
-    ) -> &mut steel::steel_vm::builtin::BuiltInModule {
+    fn register(module: &mut BuiltInModule) -> &mut BuiltInModule {
         Self::register_type(module);
+
         module
             .register_fn("to-string-step", Self::to_string_step)
             .register_fn("empty-problem", Self::mk_empty)
@@ -254,6 +301,9 @@ impl Registerable for ShrProblem {
             .register_fn("add-smt-axiom", Self::add_smt_axiom)
             .register_fn("add-constrain", Self::add_constrain)
             .register_fn("run", Self::run);
+
+        Self::register_configuration(module)
+            .register_fn("string->duration", |s: String| humantime::parse_duration(&s).unwrap());
 
         module
     }
