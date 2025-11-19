@@ -28,5 +28,9 @@ bon.workspace = true
 thiserror.workspace = true
 bitflags= {workspace = true, features = ["serde"]}
 
+[features]
+sync = []
+default = ["sync"]
+
 [lints]
 workspace = true

@@ -1,3 +1,4 @@
+
 use std::any::Any;
 use std::borrow::Cow;
 use std::fmt::{Debug, Display};
@@ -6,11 +7,15 @@ use std::rc::Rc;
 use egg::{Analysis, Id, Language, RecExpr};
 
 use crate::Program;
+use crate::proof::Payload;
 
 /// Basic prolog-like rules
-mod prolog;
-pub use prolog::PrologRule;
-pub use prolog::parser::PlOrRw;
+// mod prolog;
+// pub use prolog::PrologRule;
+// pub use prolog::parser::PlOrRw;
+
+mod dynamic;
+// mod general;
 
 // /// Calls vampire on a goal
 // mod vampire;
@@ -22,7 +27,7 @@ pub use prolog::parser::PlOrRw;
 pub struct Dependancy {
     pub inner: Vec<Vec<Id>>,
     pub cut: bool,
-    pub payload: Option<Rc<dyn Any>>,
+    pub payload: Option<Payload>,
 }
 
 impl Dependancy {
@@ -89,13 +94,14 @@ impl Dependancy {
     }
 }
 
+
 /// A trait for defining rules that can be applied to an e-graph.
-pub trait Rule<L: Language, N: Analysis<L>> {
+pub trait Rule<L: Language, N: Analysis<L>, R> : Sized  {
     /// Searches for matches of the rule in the e-graph and returns the dependencies.
-    fn search(&self, prgm: &mut Program<L, N>, goal: Id) -> Dependancy;
+    fn search(&self, prgm: &mut Program<L, N, R>, goal: Id) -> Dependancy;
 
     /// Called when the e-graph is rebuilt.
-    fn rebuild(&self, _prgm: &Program<L, N>) {}
+    fn rebuild(&self, _prgm: &Program<L, N, R>) {}
 
     /// Debugs the rule.
     fn debug(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
@@ -106,15 +112,15 @@ pub trait Rule<L: Language, N: Analysis<L>> {
     fn name(&self) -> Cow<'_, str> {
         Cow::Borrowed("unamed rule")
     }
-
-    /// Converts the rule into an `Rc<dyn Rule<L, N>>`.
-    fn into_rc(self) -> Rc<dyn Rule<L, N>>
-    where
-        Self: Sized + 'static,
-    {
-        Box::<dyn Rule<_, _>>::from(Box::new(self)).into()
-    }
 }
+
+    // /// Converts the rule into an `Rc<dyn Rule<L, N>>`.
+    // fn into_rc(self) -> Rc<dyn Rule<L, N>>
+    // where
+    //     Self: Sized + 'static,
+    // {
+    //     Box::<dyn Rule<_, _>>::from(Box::new(self)).into()
+    // }
 
 /// A trait for types that can generate fresh expressions.
 pub trait Fresh: Sized {
@@ -122,22 +128,22 @@ pub trait Fresh: Sized {
     fn mk_fresh() -> RecExpr<Self>;
 }
 
-/// A wrapper for `dyn Rule` that implements `Debug`.
-pub struct DebugRule<'a, L, N>(&'a dyn Rule<L, N>);
+// /// A wrapper for `dyn Rule` that implements `Debug`.
+// pub struct DebugRule<'a, L, N>(&'a dyn Rule<L, N>);
 
-impl<'a, L, N> DebugRule<'a, L, N> {
-    /// Creates a new `DebugRule`.
-    pub fn new(inner: &'a dyn Rule<L, N>) -> Self {
-        Self(inner)
-    }
-}
+// impl<'a, L, N> DebugRule<'a, L, N> {
+//     /// Creates a new `DebugRule`.
+//     pub fn new(inner: &'a dyn Rule<L, N>) -> Self {
+//         Self(inner)
+//     }
+// }
 
-impl<'a, L: Language, N: Analysis<L>> Debug for DebugRule<'a, L, N> {
-    /// Formats the `DebugRule` for debugging.
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.debug(f)
-    }
-}
+// impl<'a, L: Language, N: Analysis<L>> Debug for DebugRule<'a, L, N> {
+//     /// Formats the `DebugRule` for debugging.
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         self.0.debug(f)
+//     }
+// }
 
 impl<I> FromIterator<I> for Dependancy
 where

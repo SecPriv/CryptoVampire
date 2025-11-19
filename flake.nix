@@ -60,16 +60,24 @@
 
         # rust = fenix.packages.${system}.complete;
         # toolchain = rust.toolchain;
-        use-nightly = false;
+        use-nightly = true;
+        rust = with pkgs; if use-nightly 
+          then rust-bin.selectLatestNightlyWith (toolchain: toolchain.complete) 
+          else #rust-bin.stable.minimal;
+      rust-bin.stable.latest.complete;
 
-        rustPlatform =
-          # if use-nightly then
-          #   pkgs.makeRustPlatform {
-          #     cargo = toolchain;
-          #     rustc = toolchain;
-          #   }
-          # else
-          pkgs.rustPlatform;
+        # rustPlatform =
+        #   # if use-nightly then
+        #   #   pkgs.makeRustPlatform {
+        #   #     cargo = toolchain;
+        #   #     rustc = toolchain;
+        #   #   }
+        #   # else
+        #   pkgs.rustPlatform;
+          rustPlatform = pkgs.makeRustPlatform {
+              cargo = rust;
+              rustc = rust;
+            };
 
         pkgConfig = {
           inherit rustPlatform;
@@ -107,16 +115,11 @@
         formatter = treefmtEval.config.build.wrapper;
 
         devShells.default = pkgs.callPackage ./nix/shell.nix (
-          with mrust;
           {
             inherit
               cryptovampire
               indistinguishability
-              clippy
-              rustc
-              cargo
-              rustfmt
-              rust-analyzer
+              rust
               rustPlatform
               ;
           }

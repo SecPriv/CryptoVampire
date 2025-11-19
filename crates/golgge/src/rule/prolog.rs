@@ -113,80 +113,80 @@ impl Fresh for SymbolLang {
     }
 }
 
-impl<L, N> Rule<L, N> for PrologRule<L>
-where
-    L: Language + Display + Serialize,
-    N: WeightedAnalysis<L> + Serialize,
-    N::Data: Serialize,
-{
-    /// Searches for matches of the rule in the e-graph and returns the dependencies.
-    fn search(&self, prgm: &mut Program<L, N>, goal: Id) -> Dependancy {
-        let matches = self.input.search_eclass(prgm.egraph(), goal);
-        ereturn_let!(let Some(matches) = matches, Dependancy::impossible());
+// impl<L, N> Rule<L, N> for PrologRule<L>
+// where
+//     L: Language + Display + Serialize,
+//     N: WeightedAnalysis<L> + Serialize,
+//     N::Data: Serialize,
+// {
+//     /// Searches for matches of the rule in the e-graph and returns the dependencies.
+//     fn search(&self, prgm: &mut Program<L, N>, goal: Id) -> Dependancy {
+//         let matches = self.input.search_eclass(prgm.egraph(), goal);
+//         ereturn_let!(let Some(matches) = matches, Dependancy::impossible());
 
-        let weight = N::get_weight(&prgm.egraph()[goal].data);
-        let inner: Vec<Vec<Id>> = matches
-            .substs
-            .into_iter()
-            .filter_map(|subst| {
-                let deps: Vec<Id> = self
-                    .deps
-                    .iter()
-                    .map(|ret| ret.apply_susbt(prgm.egraph_mut(), &subst))
-                    .collect();
-                let does_decrease = !self.require_decrease
-                    || deps
-                        .iter()
-                        .all(|id| N::get_weight(&prgm.egraph()[*id].data).decreases(&weight));
+//         let weight = N::get_weight(&prgm.egraph()[goal].data);
+//         let inner: Vec<Vec<Id>> = matches
+//             .substs
+//             .into_iter()
+//             .filter_map(|subst| {
+//                 let deps: Vec<Id> = self
+//                     .deps
+//                     .iter()
+//                     .map(|ret| ret.apply_susbt(prgm.egraph_mut(), &subst))
+//                     .collect();
+//                 let does_decrease = !self.require_decrease
+//                     || deps
+//                         .iter()
+//                         .all(|id| N::get_weight(&prgm.egraph()[*id].data).decreases(&weight));
 
-                does_decrease.then_some(deps)
-            })
-            .collect();
-        prgm.config.node_limit += inner.iter().map(|x| x.len()).sum::<usize>();
+//                 does_decrease.then_some(deps)
+//             })
+//             .collect();
+//         prgm.config.node_limit += inner.iter().map(|x| x.len()).sum::<usize>();
 
-        Dependancy {
-            inner,
-            cut: self.cut,
-            payload: self.payload.clone(),
-        }
-    }
+//         Dependancy {
+//             inner,
+//             cut: self.cut,
+//             payload: self.payload.clone(),
+//         }
+//     }
 
-    /// Debugs the rule.
-    fn debug(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        write!(f, "<prolog> ")?;
-        if let Some(name) = &self.name {
-            write!(f, "[{name}] ")?;
-        }
+//     /// Debugs the rule.
+//     fn debug(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+//         write!(f, "<prolog> ")?;
+//         if let Some(name) = &self.name {
+//             write!(f, "[{name}] ")?;
+//         }
 
-        write!(f, "{}", self.input)?;
+//         write!(f, "{}", self.input)?;
 
-        if self.deps.is_empty() && !self.cut && !self.require_decrease {
-            return write!(f, ".");
-        }
+//         if self.deps.is_empty() && !self.cut && !self.require_decrease {
+//             return write!(f, ".");
+//         }
 
-        write!(f, " :- ")?;
-        if self.cut {
-            write!(f, "!, ")?;
-        }
-        if self.require_decrease {
-            write!(f, "@, ")?;
-        }
-        for dep in &self.deps {
-            write!(f, "{dep}, ")?;
-        }
+//         write!(f, " :- ")?;
+//         if self.cut {
+//             write!(f, "!, ")?;
+//         }
+//         if self.require_decrease {
+//             write!(f, "@, ")?;
+//         }
+//         for dep in &self.deps {
+//             write!(f, "{dep}, ")?;
+//         }
 
-        write!(f, "true.")
-    }
+//         write!(f, "true.")
+//     }
 
-    /// Returns the name of the rule.
-    fn name(&self) -> Cow<'_, str> {
-        if let Some(name) = &self.name {
-            format!("prolog({name})").into()
-        } else {
-            Cow::Borrowed("prolog")
-        }
-    }
-}
+//     /// Returns the name of the rule.
+//     fn name(&self) -> Cow<'_, str> {
+//         if let Some(name) = &self.name {
+//             format!("prolog({name})").into()
+//         } else {
+//             Cow::Borrowed("prolog")
+//         }
+//     }
+// }
 
 impl<L, N> From<PrologRule<L>> for Rc<dyn Rule<L, N>>
 where
