@@ -26,11 +26,11 @@ use utils::implvec;
 
 use crate::proof::{Proof, SearchResult};
 // use crate::rule::PlOrRw;
-use crate::{Config, DebugLevel, Dependancy, Fresh, /* PrologRule, */ ProofItem, Rule, WeightedAnalysis};
+use crate::{Config, DRule, DebugLevel, Dependancy, Fresh, ProofItem, Rule, WeightedAnalysis};
 
 /// A program that manages an `egg::EGraph` and a set of rules.
 /// A program that manages an `egg::EGraph` and a set of rules.
-pub struct Program<L: Language, N: Analysis<L>, R> {
+pub struct Program<L: Language, N: Analysis<L>, R = DRule<L, N>> {
     /// The underlying e-graph.
     egraph: Option<EGraph<L, N>>,
     /// Equality rewrite rules.
@@ -149,11 +149,7 @@ where
 
     /// Add rewrite rules, and [Rule]s
     /// Adds rewrite rules and `Rule`s to the program.
-    pub fn extend(
-        &mut self,
-        eq_rules: implvec!(Rewrite<L, N>),
-        rules: implvec!(R),
-    ) {
+    pub fn extend(&mut self, eq_rules: implvec!(Rewrite<L, N>), rules: implvec!(R)) {
         self.eq_rules.extend(eq_rules);
         self.rules.extend(rules.into_iter().map_into());
     }
@@ -248,7 +244,7 @@ impl<L, N, R> Program<L, N, R>
 where
     L: Language + Display,
     N: Analysis<L>,
-    R: Rule<L, N, R> + Clone
+    R: Rule<L, N, R> + Clone,
 {
     /// Debug the available [`Rule`]s by calling [Rule::debug]
     pub fn debug_rules(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
@@ -267,7 +263,9 @@ where
     /// clean
     pub fn as_debug_rules(&self) -> impl Debug {
         struct DP<'a, L: Language, N: Analysis<L>, R>(&'a Program<L, N, R>);
-        impl<'a, L: Language + Display, N: Analysis<L>, R:Rule<L, N, R> + Clone> Debug for DP<'a, L, N, R> {
+        impl<'a, L: Language + Display, N: Analysis<L>, R: Rule<L, N, R> + Clone> Debug
+            for DP<'a, L, N, R>
+        {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 self.0.debug_rules(f)
             }
@@ -548,7 +546,10 @@ impl<R> MemoStatus<R> {
         self.borrow().is_in_progress()
     }
 
-    pub fn get_proof(&self) -> Option<ProofItem<R>> where R:Clone {
+    pub fn get_proof(&self) -> Option<ProofItem<R>>
+    where
+        R: Clone,
+    {
         match self.borrow().deref() {
             Status::True(proof_item) => Some(proof_item.clone()),
             _ => None,
@@ -561,7 +562,7 @@ impl<R> MemoStatus<R> {
     fn borrow(&self) -> impl Deref<Target = Status<R>> {
         self.0.read().unwrap()
     }
-    
+
     fn borrow_mut(&self) -> impl DerefMut<Target = Status<R>> {
         self.0.write().unwrap()
     }
@@ -572,12 +573,11 @@ impl<R> MemoStatus<R> {
     fn borrow(&self) -> impl Deref<Target = Status<R>> {
         self.0.borrow()
     }
-    
+
     fn borrow_mut(&self) -> impl DerefMut<Target = Status<R>> {
         self.0.borrow_mut()
     }
 }
-
 
 #[cfg(feature = "sync")]
 impl<R> From<Status<R>> for MemoStatus<R> {

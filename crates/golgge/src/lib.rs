@@ -1,5 +1,3 @@
-// #![feature(min_specialization, neg)]
-
 use bon::Builder;
 use egg::{Analysis, Language, Runner};
 
@@ -16,7 +14,7 @@ mod tracing;
 pub use tracing::DebugLevel;
 /// Defines traits and structures for working with e-graph rules.
 mod rule;
-pub use rule::{ Dependancy, Fresh, /* PrologRule, */ Rule};
+pub use rule::{ Dependancy, Fresh, PrologRule, Rule, DRule};
 
 /// Provides utilities for simplifying `and` expressions in e-graphs.
 mod simplify_and;

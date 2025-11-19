@@ -8,11 +8,12 @@ use egg::{Analysis, Id, Language, RecExpr};
 
 use crate::Program;
 use crate::proof::Payload;
+pub use crate::rule::dynamic::DRule;
 
 /// Basic prolog-like rules
-// mod prolog;
-// pub use prolog::PrologRule;
-// pub use prolog::parser::PlOrRw;
+mod prolog;
+pub use prolog::PrologRule;
+pub use prolog::parser::PlOrRw;
 
 mod dynamic;
 // mod general;
@@ -96,7 +97,7 @@ impl Dependancy {
 
 
 /// A trait for defining rules that can be applied to an e-graph.
-pub trait Rule<L: Language, N: Analysis<L>, R> : Sized  {
+pub trait Rule<L: Language, N: Analysis<L>, R>   {
     /// Searches for matches of the rule in the e-graph and returns the dependencies.
     fn search(&self, prgm: &mut Program<L, N, R>, goal: Id) -> Dependancy;
 

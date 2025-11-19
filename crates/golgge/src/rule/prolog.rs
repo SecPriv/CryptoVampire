@@ -14,6 +14,8 @@ use utils::{ereturn_if, ereturn_let};
 use super::{Dependancy, Fresh, Rule};
 use crate::Program;
 use crate::analysis::WeightedAnalysis;
+use crate::proof::Payload;
+use crate::rule::dynamic::DRule;
 use crate::rule::prolog::prolog_builder::{SetRcPayload, State};
 use crate::weight::Weight;
 
@@ -32,7 +34,7 @@ pub struct PrologRule<L> {
     /// The name of the rule.
     pub name: Option<String>,
     // pub memo: RefCell<HashMap<Id, Dependancy>>,
-    pub payload: Option<Rc<dyn Any>>,
+    pub payload: Option<Payload>,
 }
 
 /// Errors that can occur during the construction of a `PrologRule`.
@@ -54,7 +56,7 @@ impl<L: Language> PrologRule<L> {
         #[builder(default = false)] cut: bool,
         #[builder(default = false)] require_decrease: bool,
         #[builder(into)] name: Option<String>,
-        rc_payload: Option<Rc<dyn Any>>,
+        rc_payload: Option<Payload>,
     ) -> Result<Self, PrologBuilderError> {
         let bound_vars = input.vars();
         for v in deps.iter().flat_map(|d| d.vars().into_iter()) {
@@ -79,11 +81,14 @@ where
     L: Language,
     S: State,
 {
-    pub fn payload<T: Sized + 'static>(self, x: T) -> PrologBuilder<L, SetRcPayload<S>>
+    pub fn payload<T: Sized + Sync + Send + 'static>(
+        self,
+        x: T,
+    ) -> PrologBuilder<L, SetRcPayload<S>>
     where
         S::RcPayload: crate::rule::prolog::prolog_builder::IsUnset,
     {
-        self.rc_payload(Box::<dyn Any>::from(Box::new(x)).into())
+        self.rc_payload(Box::<dyn Any + Send + Sync>::from(Box::new(x)).into())
     }
 }
 
@@ -113,82 +118,82 @@ impl Fresh for SymbolLang {
     }
 }
 
-// impl<L, N> Rule<L, N> for PrologRule<L>
-// where
-//     L: Language + Display + Serialize,
-//     N: WeightedAnalysis<L> + Serialize,
-//     N::Data: Serialize,
-// {
-//     /// Searches for matches of the rule in the e-graph and returns the dependencies.
-//     fn search(&self, prgm: &mut Program<L, N>, goal: Id) -> Dependancy {
-//         let matches = self.input.search_eclass(prgm.egraph(), goal);
-//         ereturn_let!(let Some(matches) = matches, Dependancy::impossible());
+impl<L, N, R> Rule<L, N, R> for PrologRule<L>
+where
+    L: Language + Display + Serialize,
+    N: WeightedAnalysis<L> + Serialize,
+    N::Data: Serialize,
+{
+    /// Searches for matches of the rule in the e-graph and returns the dependencies.
+    fn search(&self, prgm: &mut Program<L, N, R>, goal: Id) -> Dependancy {
+        let matches = self.input.search_eclass(prgm.egraph(), goal);
+        ereturn_let!(let Some(matches) = matches, Dependancy::impossible());
 
-//         let weight = N::get_weight(&prgm.egraph()[goal].data);
-//         let inner: Vec<Vec<Id>> = matches
-//             .substs
-//             .into_iter()
-//             .filter_map(|subst| {
-//                 let deps: Vec<Id> = self
-//                     .deps
-//                     .iter()
-//                     .map(|ret| ret.apply_susbt(prgm.egraph_mut(), &subst))
-//                     .collect();
-//                 let does_decrease = !self.require_decrease
-//                     || deps
-//                         .iter()
-//                         .all(|id| N::get_weight(&prgm.egraph()[*id].data).decreases(&weight));
+        let weight = N::get_weight(&prgm.egraph()[goal].data);
+        let inner: Vec<Vec<Id>> = matches
+            .substs
+            .into_iter()
+            .filter_map(|subst| {
+                let deps: Vec<Id> = self
+                    .deps
+                    .iter()
+                    .map(|ret| ret.apply_susbt(prgm.egraph_mut(), &subst))
+                    .collect();
+                let does_decrease = !self.require_decrease
+                    || deps
+                        .iter()
+                        .all(|id| N::get_weight(&prgm.egraph()[*id].data).decreases(&weight));
 
-//                 does_decrease.then_some(deps)
-//             })
-//             .collect();
-//         prgm.config.node_limit += inner.iter().map(|x| x.len()).sum::<usize>();
+                does_decrease.then_some(deps)
+            })
+            .collect();
+        prgm.config.node_limit += inner.iter().map(|x| x.len()).sum::<usize>();
 
-//         Dependancy {
-//             inner,
-//             cut: self.cut,
-//             payload: self.payload.clone(),
-//         }
-//     }
+        Dependancy {
+            inner,
+            cut: self.cut,
+            payload: self.payload.clone(),
+        }
+    }
 
-//     /// Debugs the rule.
-//     fn debug(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-//         write!(f, "<prolog> ")?;
-//         if let Some(name) = &self.name {
-//             write!(f, "[{name}] ")?;
-//         }
+    /// Debugs the rule.
+    fn debug(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        write!(f, "<prolog> ")?;
+        if let Some(name) = &self.name {
+            write!(f, "[{name}] ")?;
+        }
 
-//         write!(f, "{}", self.input)?;
+        write!(f, "{}", self.input)?;
 
-//         if self.deps.is_empty() && !self.cut && !self.require_decrease {
-//             return write!(f, ".");
-//         }
+        if self.deps.is_empty() && !self.cut && !self.require_decrease {
+            return write!(f, ".");
+        }
 
-//         write!(f, " :- ")?;
-//         if self.cut {
-//             write!(f, "!, ")?;
-//         }
-//         if self.require_decrease {
-//             write!(f, "@, ")?;
-//         }
-//         for dep in &self.deps {
-//             write!(f, "{dep}, ")?;
-//         }
+        write!(f, " :- ")?;
+        if self.cut {
+            write!(f, "!, ")?;
+        }
+        if self.require_decrease {
+            write!(f, "@, ")?;
+        }
+        for dep in &self.deps {
+            write!(f, "{dep}, ")?;
+        }
 
-//         write!(f, "true.")
-//     }
+        write!(f, "true.")
+    }
 
-//     /// Returns the name of the rule.
-//     fn name(&self) -> Cow<'_, str> {
-//         if let Some(name) = &self.name {
-//             format!("prolog({name})").into()
-//         } else {
-//             Cow::Borrowed("prolog")
-//         }
-//     }
-// }
+    /// Returns the name of the rule.
+    fn name(&self) -> Cow<'_, str> {
+        if let Some(name) = &self.name {
+            format!("prolog({name})").into()
+        } else {
+            Cow::Borrowed("prolog")
+        }
+    }
+}
 
-impl<L, N> From<PrologRule<L>> for Rc<dyn Rule<L, N>>
+impl<L, N> From<PrologRule<L>> for DRule<L, N>
 where
     L: Language + Display + Serialize + 'static,
     N: Default + WeightedAnalysis<L> + Serialize,
@@ -196,7 +201,7 @@ where
 {
     /// Converts a `PrologRule` into an `Rc<dyn Rule<L, N>>`.
     fn from(val: PrologRule<L>) -> Self {
-        Box::<dyn Rule<_, _>>::from(Box::new(val)).into()
+        DRule::new(val)
     }
 }
 
@@ -423,14 +428,6 @@ pub mod parser {
             .map(parse_one)
             .collect()
     }
-
-    // #[test]
-    // fn test() {
-    //     use egg::SymbolLang;
-    //     let s = include_str!("$CARGO_MANIFEST_DIR/tests/test");
-    //     let r: Vec<PlOrRw<SymbolLang, ()>> = parse(s).unwrap();
-    //     println!("{r:?}")
-    // }
 
     impl<L, N> FromStr for PlOrRw<L, N>
     where
