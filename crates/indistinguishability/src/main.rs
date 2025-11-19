@@ -11,16 +11,17 @@ use indistinguishability::{Commands, Configuration, init_engine, init_logger};
 pub fn main() {
     let config = Configuration::parse();
     init_logger();
+    let mode = config.command.clone().unwrap_or_default();
+    let mut engine = init_engine(config);
 
-    match &config.command {
-        Some(Commands::Repl) => {
-            let engine = init_engine(config);
+    match mode {
+        Commands::Repl => {
             steel_repl::run_repl(engine).unwrap();
         }
-        _ => {
-            let pgrm = match &config.command {
-                Some(Commands::File { file }) => ::std::fs::read_to_string(file).unwrap(),
-                None => {
+        x => {
+            let pgrm = match x {
+                Commands::File { file } => ::std::fs::read_to_string(file).unwrap(),
+                Commands::Stdin => {
                     let mut pgrm = String::new();
                     io::stdin()
                         .read_to_string(&mut pgrm)
@@ -30,7 +31,6 @@ pub fn main() {
                 _ => unreachable!(),
             };
 
-            let mut engine = init_engine(config);
             if let Err(e) = engine.run(pgrm.clone()) {
                 if let Some(err) = engine.raise_error_to_string(e.clone()) {
                     panic!("{err}")

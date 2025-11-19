@@ -5,7 +5,7 @@ use steel_derive::Steel;
 
 pub use crate::input::prelude::Preludes;
 
-#[derive(Debug, Steel, Clone, Subcommand)]
+#[derive(Debug, Steel, Clone, Subcommand, Default)]
 pub enum Commands {
     /// Uses Steel's repl mode
     Repl,
@@ -17,18 +17,19 @@ pub enum Commands {
         #[arg(value_name = "FILE")]
         file: PathBuf,
     },
+    /// Reads from stdin (default)
+    #[default]
+    Stdin
 }
 
 /// A computationnally sound automated cryptographic protocol verifier based on the CCSA.
+/// 
+/// NB: the command line interface is unstable
 #[derive(Debug, Steel, Parser, Clone)]
 #[command(version, about, long_about = None)]
 #[command(propagate_version = true)]
 pub struct Configuration {
-    // /// Path to the `scheme` file
-    // ///
-    // /// defaults to stdin
-    // #[arg(value_name = "FILE")]
-    // pub file: Option<PathBuf>,
+    /// Default to reading a scheme file from stdin
     #[command(subcommand)]
     pub command: Option<Commands>,
 
