@@ -7,12 +7,12 @@ use rustc_hash::FxHashSet;
 use static_init::dynamic;
 use utils::{ebreak_if, ebreak_let, ereturn_let, implvec};
 
-use crate::problem::{PAnalysis, PRule};
+use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::terms::utils::iter_egraph::iter_descendants_lang;
 use crate::terms::{
     CryptographicAssumption, Cryptography, EQ, EQUIV, FALSE, FRESH_NONCE, Formula, Function, FunctionFlags, IS_FRESH_NONCE, NONCE, Sort, TRUE
 };
-use crate::{Lang, Problem, mk_signature, rexp};
+use crate::{CVProgram, Lang, Problem, mk_signature, rexp};
 
 declare_trace!($"prf");
 
@@ -310,7 +310,7 @@ impl TopPrfRule {
 
     fn generate_fresh_nonce<'a>(
         &self,
-        pgrm: &mut golgge::Program<Lang, PAnalysis<'a>>,
+        pgrm: &mut CVProgram<'a>,
         substs: &[Subst],
     ) -> Vec<Id> {
         // try to look for
@@ -429,9 +429,9 @@ impl PrfKind {
     }
 }
 
-impl<'a> Rule<Lang, PAnalysis<'a>> for TopPrfRule {
+impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for TopPrfRule {
     /// Searches for the conclusion pattern in the e-graph and applies the PRF rule.
-    fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: Id) -> Dependancy {
+    fn search(&self, prgm: &mut CVProgram<'a>, goal: Id) -> Dependancy {
         ereturn_let!(let Some(substs)= self.conclusion.search_eclass(prgm.egraph(), goal), Dependancy::impossible());
 
         if cfg!(debug_assertions) {

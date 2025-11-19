@@ -6,10 +6,7 @@ use static_init::dynamic;
 use utils::{ebreak_if, ebreak_let, implvec};
 
 use crate::{
-    Lang, Problem,
-    problem::PAnalysis,
-    rexp,
-    terms::{Formula, Function, IS_FRESH_NONCE, NONCE, utils::iter_egraph::iter_descendants_lang},
+    CVProgram, Lang, Problem, problem::PAnalysis, rexp, terms::{Formula, Function, IS_FRESH_NONCE, NONCE, utils::iter_egraph::iter_descendants_lang}
 };
 
 #[dynamic]
@@ -37,9 +34,9 @@ pub trait RuleWithFreshNonce {
 
     fn mk_fresh_function(&self, pbl: &mut Problem) -> Function;
 
-    fn generate_fresh_nonce<'a>(
+    fn generate_fresh_nonce<'a, R>(
         &self,
-        pgrm: &mut Program<Lang, PAnalysis<'a>>,
+        pgrm: &mut CVProgram<'a, R>,
         // we need to avoid here
         self_ids: implvec!(Id),
         // we'd like to pick in here

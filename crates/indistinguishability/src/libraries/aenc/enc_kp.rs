@@ -62,8 +62,8 @@ impl EncKpRule {
     }
 }
 
-impl<'a> Rule<Lang, PAnalysis<'a>> for EncKpRule {
-    fn search(&self, prgm: &mut Program<Lang, PAnalysis<'a>>, goal: Id) -> Dependancy {
+impl<'a, R> Rule<Lang, PAnalysis<'a>, R> for EncKpRule {
+    fn search(&self, prgm: &mut Program<Lang, PAnalysis<'a>, R>, goal: Id) -> Dependancy {
         let matches = chain![
             self.goal_left
                 .search_eclass(prgm.egraph(), goal)

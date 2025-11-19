@@ -8,6 +8,7 @@ use utils::implvec;
 
 mod analysis;
 pub use analysis::{PAnalysis, PRule, RcRule};
+pub(crate) use  analysis::CVRuleTrait;
 
 mod state;
 pub use state::ProblemState;
@@ -170,7 +171,7 @@ impl Debug for Problem {
                 &self
                     .extra_rules
                     .iter()
-                    .map(|x| golgge::DebugRule::new(x.as_ref()))
+                    // .map(|x| golgge::DebugRule::new(x.as_ref()))
                     .collect_vec(),
             )
             .field("extra_rewrite", &self.extra_rewrite)

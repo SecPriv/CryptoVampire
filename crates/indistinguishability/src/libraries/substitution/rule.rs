@@ -9,7 +9,7 @@ use crate::libraries::substitution::algorithm::compute_all_substitutions;
 use crate::problem::PAnalysis;
 // use crate::rules::base_rules::substitution;
 // use crate::rules::utils::mk_subst_rw;
-use crate::Lang;
+use crate::{CVProgram, Lang};
 use crate::terms::SUBSTITUTION;
 
 /// This rule is a no op logic wise.
@@ -24,12 +24,12 @@ use crate::terms::SUBSTITUTION;
 #[derive(Clone)]
 pub struct SubstRule;
 
-impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
+impl<'a, R> Rule<Lang, PAnalysis<'a>, R> for SubstRule {
     /// Searches for `SUBSTITUTION_RULE` patterns in the e-graph and applies substitutions.
     ///
     /// This rule identifies goals that need substitution, performs the substitution
     /// using `mk_substs`, and then rebuilds the e-graph with the new terms.
-    fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: egg::Id) -> Dependancy {
+    fn search(&self, prgm: &mut CVProgram<'a, R>, goal: egg::Id) -> Dependancy {
         let egraph = prgm.egraph_mut();
         ereturn_let!(let Some(substs) =
             SUBSTITUTION_RULE_PATTERN
