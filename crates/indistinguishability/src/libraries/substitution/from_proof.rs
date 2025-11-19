@@ -1,5 +1,5 @@
 use egg::Id;
-use golgge::{Program, ProofItem, Rule};
+use golgge::{Program, ProofItem};
 use itertools::izip;
 use log::trace;
 

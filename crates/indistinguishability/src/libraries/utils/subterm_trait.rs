@@ -2,7 +2,6 @@ use std::borrow::Cow;
 use std::ops::ControlFlow;
 
 use egg::{EGraph, Id};
-use golgge::Program;
 use itertools::{Itertools, izip};
 use logic_formula::{AsFormula, Destructed, HeadSk};
 use rustc_hash::FxHashMap;

@@ -1,5 +1,5 @@
 use egg::{Id, Pattern, Searcher, Subst};
-use golgge::{Dependancy, Program, Rule};
+use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain};
 use static_init::dynamic;
 use utils::ereturn_let;

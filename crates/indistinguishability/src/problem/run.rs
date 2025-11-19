@@ -7,7 +7,6 @@ use egg::EGraph;
 use golgge::{Program, Rule};
 use itertools::Itertools;
 use log::trace;
-use std::rc::Rc;
 
 impl Problem {
     /// Build a [Program] to use

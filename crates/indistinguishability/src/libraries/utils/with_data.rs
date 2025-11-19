@@ -1,5 +1,4 @@
 use egg::{Analysis, EGraph, Id, Pattern};
-use golgge::Program;
 use itertools::{Itertools, chain};
 use rustc_hash::FxHashSet;
 use static_init::dynamic;
@@ -7,7 +6,6 @@ use utils::{ebreak_if, ebreak_let, implvec};
 
 use crate::{
     CVProgram, Lang, Problem,
-    problem::PAnalysis,
     rexp,
     terms::{Formula, Function, IS_FRESH_NONCE, NONCE, utils::iter_egraph::iter_descendants_lang},
 };

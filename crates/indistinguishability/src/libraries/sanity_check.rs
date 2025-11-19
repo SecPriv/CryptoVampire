@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 
-use egg::Analysis;
 use golgge::{Dependancy, Rule};
 
 use crate::{

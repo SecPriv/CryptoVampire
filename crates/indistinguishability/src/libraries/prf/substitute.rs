@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use bon::Builder;
 use egg::{Id, Pattern, Searcher};
-use golgge::{Dependancy, Program, ProofItem, Rule};
+use golgge::{Dependancy, ProofItem, Rule};
 use itertools::izip;
 use utils::ereturn_let;
 

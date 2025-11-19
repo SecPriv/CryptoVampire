@@ -1,4 +1,4 @@
-use std::{any::Any, fmt::Debug, rc::Rc, sync::Arc};
+use std::{any::Any, fmt::Debug, sync::Arc};
 
 use bon::Builder;
 use egg::Analysis;

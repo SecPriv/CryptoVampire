@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::fmt::Debug;
 
 use egg::{Analysis, EClass, EGraph, Id, Pattern, SearchMatches, Searcher, Subst};
-use golgge::{Dependancy, Program, Rule};
+use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain, izip};
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
