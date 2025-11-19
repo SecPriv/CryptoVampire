@@ -76,18 +76,22 @@ where
 impl<'a, R> CVRuleTrait<'a> for R where R: Any + Rule<Lang, PAnalysis<'a>, RcRule> {}
 
 impl<'a> Rule<Lang, PAnalysis<'a>, Self> for RcRule {
-    fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>, Self>, goal: egg::Id) -> golgge::Dependancy {
+    fn search(
+        &self,
+        prgm: &mut golgge::Program<Lang, PAnalysis<'a>, Self>,
+        goal: egg::Id,
+    ) -> golgge::Dependancy {
         self.0.search(prgm, goal)
     }
-    
+
     fn rebuild(&self, prgm: &golgge::Program<Lang, PAnalysis<'a>, Self>) {
         self.0.rebuild(prgm);
     }
-    
+
     fn debug(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         self.0.debug(f)
     }
-    
+
     fn name(&self) -> std::borrow::Cow<'_, str> {
         self.0.name()
     }

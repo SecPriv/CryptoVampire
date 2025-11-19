@@ -7,8 +7,8 @@ use std::fmt::Debug;
 use utils::implvec;
 
 mod analysis;
+pub(crate) use analysis::CVRuleTrait;
 pub use analysis::{PAnalysis, PRule, RcRule};
-pub(crate) use  analysis::CVRuleTrait;
 
 mod state;
 pub use state::ProblemState;

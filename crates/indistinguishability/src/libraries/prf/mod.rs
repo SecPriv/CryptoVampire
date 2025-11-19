@@ -10,7 +10,8 @@ use utils::{ebreak_if, ebreak_let, ereturn_let, implvec};
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::terms::utils::iter_egraph::iter_descendants_lang;
 use crate::terms::{
-    CryptographicAssumption, Cryptography, EQ, EQUIV, FALSE, FRESH_NONCE, Formula, Function, FunctionFlags, IS_FRESH_NONCE, NONCE, Sort, TRUE
+    CryptographicAssumption, Cryptography, EQ, EQUIV, FALSE, FRESH_NONCE, Formula, Function,
+    FunctionFlags, IS_FRESH_NONCE, NONCE, Sort, TRUE,
 };
 use crate::{CVProgram, Lang, Problem, mk_signature, rexp};
 
@@ -144,7 +145,6 @@ impl PRF {
             let rewrites = chain![candidate::mk_rewrites(pbl, &prf),].collect_vec();
             pbl.extra_rewrite_mut().extend(rewrites);
         }
-
 
         prf.register_at(pbl, pos).unwrap()
     }
@@ -308,11 +308,7 @@ impl TopPrfRule {
         }
     }
 
-    fn generate_fresh_nonce<'a>(
-        &self,
-        pgrm: &mut CVProgram<'a>,
-        substs: &[Subst],
-    ) -> Vec<Id> {
+    fn generate_fresh_nonce<'a>(&self, pgrm: &mut CVProgram<'a>, substs: &[Subst]) -> Vec<Id> {
         // try to look for
         'a: {
             let egraph = pgrm.egraph();
@@ -542,7 +538,7 @@ impl Cryptography for PRF {
     fn ref_from_assumption(r: &CryptographicAssumption) -> Option<&Self> {
         match r {
             CryptographicAssumption::PRF(x) => Some(x),
-            _ => None
+            _ => None,
         }
     }
 }

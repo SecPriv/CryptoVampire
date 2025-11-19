@@ -7,10 +7,13 @@ use itertools::izip;
 use utils::ereturn_let;
 
 use crate::{
-    CVProgram, Lang, libraries::{
+    CVProgram, Lang,
+    libraries::{
         PRF,
         prf::{K, M, NEW_TERM, NK, PRFProof, PROOF},
-    }, problem::{PAnalysis, RcRule}, terms::{CryptographicAssumption, Function, NONCE, Sort}
+    },
+    problem::{PAnalysis, RcRule},
+    terms::{CryptographicAssumption, Function, NONCE, Sort},
 };
 
 #[derive(Debug, Clone, Builder)]

@@ -1,4 +1,3 @@
-
 use std::any::Any;
 use std::borrow::Cow;
 use std::fmt::{Debug, Display};
@@ -95,9 +94,8 @@ impl Dependancy {
     }
 }
 
-
 /// A trait for defining rules that can be applied to an e-graph.
-pub trait Rule<L: Language, N: Analysis<L>, R>   {
+pub trait Rule<L: Language, N: Analysis<L>, R> {
     /// Searches for matches of the rule in the e-graph and returns the dependencies.
     fn search(&self, prgm: &mut Program<L, N, R>, goal: Id) -> Dependancy;
 
@@ -115,13 +113,13 @@ pub trait Rule<L: Language, N: Analysis<L>, R>   {
     }
 }
 
-    // /// Converts the rule into an `Rc<dyn Rule<L, N>>`.
-    // fn into_rc(self) -> Rc<dyn Rule<L, N>>
-    // where
-    //     Self: Sized + 'static,
-    // {
-    //     Box::<dyn Rule<_, _>>::from(Box::new(self)).into()
-    // }
+// /// Converts the rule into an `Rc<dyn Rule<L, N>>`.
+// fn into_rc(self) -> Rc<dyn Rule<L, N>>
+// where
+//     Self: Sized + 'static,
+// {
+//     Box::<dyn Rule<_, _>>::from(Box::new(self)).into()
+// }
 
 /// A trait for types that can generate fresh expressions.
 pub trait Fresh: Sized {

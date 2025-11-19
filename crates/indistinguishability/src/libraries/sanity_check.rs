@@ -3,7 +3,10 @@ use std::borrow::Cow;
 use egg::Analysis;
 use golgge::{Dependancy, Rule};
 
-use crate::{CVProgram, Lang, problem::{PAnalysis, RcRule}};
+use crate::{
+    CVProgram, Lang,
+    problem::{PAnalysis, RcRule},
+};
 
 /// A rule that performs basic sanity checks on the e-graph.
 ///

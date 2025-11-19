@@ -6,7 +6,10 @@ use static_init::dynamic;
 use utils::{ebreak_if, ebreak_let, implvec};
 
 use crate::{
-    CVProgram, Lang, Problem, problem::PAnalysis, rexp, terms::{Formula, Function, IS_FRESH_NONCE, NONCE, utils::iter_egraph::iter_descendants_lang}
+    CVProgram, Lang, Problem,
+    problem::PAnalysis,
+    rexp,
+    terms::{Formula, Function, IS_FRESH_NONCE, NONCE, utils::iter_egraph::iter_descendants_lang},
 };
 
 #[dynamic]

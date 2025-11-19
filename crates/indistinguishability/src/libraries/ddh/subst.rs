@@ -5,11 +5,15 @@ use itertools::Itertools;
 use utils::ereturn_let;
 
 use crate::{
-    CVProgram, Lang, Problem, libraries::{
+    CVProgram, Lang, Problem,
+    libraries::{
         DDH,
         ddh::ProofHints,
         substitution::{PSArgs, ProofLike, ProofSubstitution},
-    }, problem::{CVRuleTrait, PAnalysis, PRule, RcRule}, rexp, terms::{EQUIV_WITH_SIDE, Function}
+    },
+    problem::{CVRuleTrait, PAnalysis, PRule, RcRule},
+    rexp,
+    terms::{EQUIV_WITH_SIDE, Function},
 };
 
 use super::vars::*;

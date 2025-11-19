@@ -9,8 +9,8 @@ use crate::libraries::substitution::algorithm::compute_all_substitutions;
 use crate::problem::PAnalysis;
 // use crate::rules::base_rules::substitution;
 // use crate::rules::utils::mk_subst_rw;
-use crate::{CVProgram, Lang};
 use crate::terms::SUBSTITUTION;
+use crate::{CVProgram, Lang};
 
 /// This rule is a no op logic wise.
 ///

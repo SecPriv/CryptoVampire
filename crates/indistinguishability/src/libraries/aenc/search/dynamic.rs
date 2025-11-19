@@ -1,9 +1,14 @@
 use crate::{
-    CVProgram, Lang, Problem, libraries::{
+    CVProgram, Lang, Problem,
+    libraries::{
         AEnc,
         aenc::vars::*,
         utils::{SyntaxSearcher, fresh::RefFormulaBuilder},
-    }, problem::{PAnalysis, RcRule}, rexp, runners::SmtRunner, terms::{Formula, Function, NONCE}
+    },
+    problem::{PAnalysis, RcRule},
+    rexp,
+    runners::SmtRunner,
+    terms::{Formula, Function, NONCE},
 };
 use bon::Builder;
 use egg::{Id, Pattern, Searcher};

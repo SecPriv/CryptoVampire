@@ -32,11 +32,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for VampireRule {
     /// This method looks for `(VAMPIRE #X)` patterns. If found, it extracts the formula `#X`,
     /// translates it to an SMT formula, and sends it to the configured SMT runner (`exec`).
     /// The result from the SMT solver determines the dependency returned.
-    fn search(
-        &self,
-        prgm: &mut CVProgram<'a>,
-        goal: egg::Id,
-    ) -> golgge::Dependancy {
+    fn search(&self, prgm: &mut CVProgram<'a>, goal: egg::Id) -> golgge::Dependancy {
         ereturn_let!(let Some(m) = PATTERN.search_eclass(prgm.egraph(), goal), Default::default());
         ereturn_let!(let Some(s) = m.substs.first(), Default::default());
 

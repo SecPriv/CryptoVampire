@@ -5,10 +5,18 @@ use static_init::dynamic;
 use utils::ereturn_let;
 
 use crate::{
-    CVProgram, Lang, Problem, libraries::{
+    CVProgram, Lang, Problem,
+    libraries::{
         fa::{self, FaElem, PATTERN_FA},
         utils::Side,
-    }, mk_signature, problem::{PAnalysis, PRule, RcRule}, rexp, terms::{CryptographicAssumption, Cryptography, ETA, FRESH_NONCE, Function, LENGTH, NONCE, Rewrite, VAMPIRE}
+    },
+    mk_signature,
+    problem::{PAnalysis, PRule, RcRule},
+    rexp,
+    terms::{
+        CryptographicAssumption, Cryptography, ETA, FRESH_NONCE, Function, LENGTH, NONCE, Rewrite,
+        VAMPIRE,
+    },
 };
 declare_trace!($"enc");
 
@@ -218,7 +226,7 @@ impl Cryptography for XOr {
     fn ref_from_assumption(r: &CryptographicAssumption) -> Option<&Self> {
         match r {
             CryptographicAssumption::XOr(x) => Some(x),
-            _ => None
+            _ => None,
         }
     }
 }

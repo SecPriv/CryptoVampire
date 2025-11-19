@@ -5,11 +5,15 @@ use itertools::Itertools;
 use utils::ereturn_let;
 
 use crate::{
-    CVProgram, Lang, Problem, libraries::{
+    CVProgram, Lang, Problem,
+    libraries::{
         AEnc,
         aenc::ProofHints,
         substitution::{PSArgs, ProofLike, ProofSubstitution},
-    }, problem::{CVRuleTrait, PAnalysis, PRule, RcRule}, rexp, terms::{EQUIV_WITH_SIDE, Function}
+    },
+    problem::{CVRuleTrait, PAnalysis, PRule, RcRule},
+    rexp,
+    terms::{EQUIV_WITH_SIDE, Function},
 };
 
 use super::vars::*;
@@ -69,7 +73,7 @@ impl SubstRule {
     }
 }
 
-impl<'a> Rule<Lang, PAnalysis<'a>,RcRule> for SubstRule {
+impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SubstRule {
     fn name(&self) -> std::borrow::Cow<'_, str> {
         std::borrow::Cow::Borrowed("subst aenc")
     }

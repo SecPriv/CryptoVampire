@@ -4,7 +4,9 @@ use itertools::izip;
 use log::trace;
 
 use crate::{
-    CVProgram, Lang, problem::{CVRuleTrait, PAnalysis, RcRule}, terms::{Function, Sort}
+    CVProgram, Lang,
+    problem::{CVRuleTrait, PAnalysis, RcRule},
+    terms::{Function, Sort},
 };
 
 pub trait ProofLike<S: ProofSubstitution + ?Sized> {
