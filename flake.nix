@@ -60,7 +60,7 @@
 
         # rust = fenix.packages.${system}.complete;
         # toolchain = rust.toolchain;
-        use-nightly = true;
+        use-nightly = false;
         rust = with pkgs; if use-nightly 
           then rust-bin.selectLatestNightlyWith (toolchain: toolchain.complete) 
           else #rust-bin.stable.minimal;
