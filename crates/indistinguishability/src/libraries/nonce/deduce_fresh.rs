@@ -9,10 +9,10 @@ use utils::ereturn_let;
 use super::*;
 use crate::libraries::utils::EgraphSearcher;
 use crate::libraries::utils::fresh::RefFormulaBuilder;
-use crate::problem::PAnalysis;
+use crate::problem::{PAnalysis, RcRule};
 use crate::runners::SmtRunner;
 use crate::terms::{FRESH_NONCE, Formula};
-use crate::{Lang, Problem, rexp};
+use crate::{CVProgram, Lang, Problem, rexp};
 
 decl_vars!(const; NONCE_VAR, CONTENT, HYPOTHESIS);
 
@@ -28,13 +28,13 @@ pub struct FreshNonce {
     exec: SmtRunner,
 }
 
-impl<'a> Rule<Lang, PAnalysis<'a>> for FreshNonce {
+impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for FreshNonce {
     /// Searches for patterns related to fresh nonces in the e-graph and deduces their freshness.
     ///
     /// This method looks for `(FRESH_NONCE #NONCE_VAR #CONTENT #HYPOTHESIS)` patterns.
     /// It then constructs a logical query to check if the nonce is fresh under the given hypothesis
     /// and sends it to the SMT solver. The result determines the dependency returned.
-    fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: Id) -> Dependancy {
+    fn search(&self, prgm: &mut CVProgram<'a>, goal: Id) -> Dependancy {
         // assert_eq!(NONCE_VAR, CONTENT);
 
         let egraph = prgm.egraph_mut();

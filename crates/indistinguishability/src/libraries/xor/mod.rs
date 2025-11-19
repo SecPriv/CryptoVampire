@@ -1,19 +1,22 @@
 use egg::{Id, Pattern, Searcher, Subst};
-use golgge::{Dependancy, Program, Rule};
+use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain};
 use static_init::dynamic;
 use utils::ereturn_let;
 
 use crate::{
-    Lang, Problem,
+    CVProgram, Lang, Problem,
     libraries::{
         fa::{self, FaElem, PATTERN_FA},
         utils::Side,
     },
     mk_signature,
-    problem::{PAnalysis, PRule},
+    problem::{PAnalysis, PRule, RcRule},
     rexp,
-    terms::{CryptographicAssumption, Cryptography, ETA, FRESH_NONCE, Function, LENGTH, NONCE, Rewrite, VAMPIRE},
+    terms::{
+        CryptographicAssumption, Cryptography, ETA, FRESH_NONCE, Function, LENGTH, NONCE, Rewrite,
+        VAMPIRE,
+    },
 };
 declare_trace!($"enc");
 
@@ -140,11 +143,11 @@ static PATTERN_CHECK_LENGTH: Pattern<Lang> = Pattern::from(&rexp!((VAMPIRE (= (L
 #[dynamic]
 static PATTERN_NEW: Pattern<Lang> = Pattern::from(&rexp!((NONCE #NB)));
 
-impl<'pbl> Rule<Lang, PAnalysis<'pbl>> for XOr {
+impl<'pbl> Rule<Lang, PAnalysis<'pbl>, RcRule> for XOr {
     fn name(&self) -> std::borrow::Cow<'_, str> {
         std::borrow::Cow::Borrowed("xor")
     }
-    fn search(&self, prgm: &mut Program<Lang, PAnalysis<'pbl>>, goal: egg::Id) -> Dependancy {
+    fn search(&self, prgm: &mut CVProgram<'pbl>, goal: egg::Id) -> Dependancy {
         ereturn_let!(let Some(substs) = PATTERN_FA.search_eclass(prgm.egraph(), goal), Dependancy::impossible());
 
         let candidates = fa::find_candidates(prgm, &substs);
@@ -223,7 +226,7 @@ impl Cryptography for XOr {
     fn ref_from_assumption(r: &CryptographicAssumption) -> Option<&Self> {
         match r {
             CryptographicAssumption::XOr(x) => Some(x),
-            _ => None
+            _ => None,
         }
     }
 }

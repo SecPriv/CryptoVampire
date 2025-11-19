@@ -6,12 +6,8 @@
   python311,
   z3,
   vampire,
-  clippy,
-  rustc,
-  cargo,
-  rustfmt,
-  rust-analyzer,
   rustPlatform,
+  rust,
   ...
 }:
 let
@@ -42,7 +38,7 @@ mkShell {
 
       cargo-expand
       cargo-limit
-      rust-bin.stable.latest.complete
+      rust
     ]
     ++ (with rustPlatform; [
       bindgenHook

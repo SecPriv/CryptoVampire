@@ -7,7 +7,7 @@ use rustc_hash::FxHashSet;
 
 use super::vars::*;
 use crate::{
-    Lang,
+    CVProgram, Lang,
     libraries::{
         DDH,
         utils::{
@@ -15,7 +15,7 @@ use crate::{
             Side::{Left, Right},
         },
     },
-    problem::PAnalysis,
+    problem::{PAnalysis, RcRule},
     rexp,
     terms::{EQUIV, Function, FunctionFlags, NONCE, Sort},
 };
@@ -53,16 +53,12 @@ impl DDHRule {
     }
 }
 
-impl<'pbl> Rule<Lang, PAnalysis<'pbl>> for DDHRule {
+impl<'pbl> Rule<Lang, PAnalysis<'pbl>, RcRule> for DDHRule {
     fn name(&self) -> Cow<'_, str> {
         Cow::Borrowed("ddh")
     }
 
-    fn search(
-        &self,
-        prgm: &mut golgge::Program<Lang, PAnalysis<'pbl>>,
-        goal: egg::Id,
-    ) -> golgge::Dependancy {
+    fn search(&self, prgm: &mut CVProgram<'pbl>, goal: egg::Id) -> golgge::Dependancy {
         let matches = chain![
             self.goal_left
                 .search_eclass(prgm.egraph(), goal)

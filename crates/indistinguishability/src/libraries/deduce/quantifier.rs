@@ -13,7 +13,7 @@ use crate::terms::{
     BIT_DEDUCE, BOOL_DEDUCE, CONS, EXISTS, FIND_SUCH_THAT, FOBinder, INDEX_SORT, Sort, Variable,
     list,
 };
-use crate::{Lang, Problem, fresh, rexp};
+use crate::{CVProgram, Lang, Problem, fresh, rexp};
 
 declare_trace!($"quantifier_deduce");
 
@@ -76,9 +76,9 @@ mk_vars!(
     nargs2_1, nargs2_2, sort, sort1_cons, sort2_cons, other, new_var
 );
 
-impl<'a> Rule<Lang, PAnalysis<'a>> for QuantifierRule {
+impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for QuantifierRule {
     /// Searches for matches of the quantifier rule in the e-graph and returns the dependencies.
-    fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: egg::Id) -> Dependancy {
+    fn search(&self, prgm: &mut CVProgram<'a>, goal: egg::Id) -> Dependancy {
         let matches =
             izip!(self.patterns.iter(), self.return_patterns.iter()).find_map(|(pattern, ret)| {
                 let matches = pattern.search_eclass(prgm.egraph(), goal)?;

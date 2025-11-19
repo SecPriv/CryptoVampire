@@ -1,31 +1,31 @@
 use egg::Id;
-use golgge::{Program, ProofItem, Rule};
+use golgge::{Program, ProofItem};
 use itertools::izip;
 use log::trace;
 
 use crate::{
-    Lang,
-    problem::PAnalysis,
+    CVProgram, Lang,
+    problem::{CVRuleTrait, PAnalysis, RcRule},
     terms::{Function, Sort},
 };
 
 pub trait ProofLike<S: ProofSubstitution + ?Sized> {
     fn split<'pbl>(
         &self,
-        prgrm: &mut Program<Lang, PAnalysis<'pbl>>,
+        prgrm: &mut Program<Lang, PAnalysis<'pbl>, RcRule>,
         data: &S,
         proof_id: Id,
         parent: &[Id],
-        rule: &dyn Rule<Lang, PAnalysis<'pbl>>,
+        rule: &dyn CVRuleTrait<'pbl>,
     ) -> Result<Id>;
 }
 
 pub struct PSArgs<'a, 'pbl, S: ProofSubstitution + ?Sized> {
-    pub prgrm: &'a mut Program<Lang, PAnalysis<'pbl>>,
+    pub prgrm: &'a mut CVProgram<'pbl>,
     pub proof: &'a S::Proof,
     pub proof_id: Id,
     pub proof_parent: &'a [Id],
-    pub rule: &'a dyn Rule<Lang, PAnalysis<'pbl>>,
+    pub rule: &'a dyn CVRuleTrait<'pbl>,
 }
 
 use anyhow::{Context, Result, ensure};
@@ -33,7 +33,7 @@ use anyhow::{Context, Result, ensure};
 pub trait ProofSubstitution {
     type Proof: ProofLike<Self> + 'static;
 
-    fn proof_to_term<'a>(&self, pgrm: &mut Program<Lang, PAnalysis<'a>>, proof: Id) -> Result<Id> {
+    fn proof_to_term<'a>(&self, pgrm: &mut CVProgram<'a>, proof: Id) -> Result<Id> {
         trace!(
             "proof to term from:\n\t{}",
             pgrm.egraph().id_to_expr(proof).pretty(100)
@@ -46,15 +46,15 @@ pub trait ProofSubstitution {
             .downcast_ref();
         let prf_proof = prf_proof.with_context(|| "can't convert proof type")?;
         trace!(
-            "(prf) substitution from rule:\n\t{:?}",
-            golgge::DebugRule::new(rule.as_ref())
+            "(prf) substitution from rule:\n\t{rule:?}",
+            // golgge::DebugRule::new(rule.as_ref())
         );
 
         prf_proof.split(pgrm, self, proof, &ids, rule.as_ref())
     }
 
     /// retrieves the term to apply substitution to from a proo
-    fn get_term<'a>(&self, prgrm: &mut Program<Lang, PAnalysis<'a>>, proof: Id) -> Result<Id>;
+    fn get_term<'a>(&self, prgrm: &mut CVProgram<'a>, proof: Id) -> Result<Id>;
 
     /// when the proof ask to "keep" the term
     fn keep<'a>(

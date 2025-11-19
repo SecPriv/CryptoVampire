@@ -2,7 +2,6 @@ use std::borrow::Cow;
 use std::ops::ControlFlow;
 
 use egg::{EGraph, Id};
-use golgge::Program;
 use itertools::{Itertools, izip};
 use logic_formula::{AsFormula, Destructed, HeadSk};
 use rustc_hash::FxHashMap;
@@ -18,7 +17,7 @@ use crate::terms::{
     HAPPENS, LAMBDA_S, LEQ, MACRO_COND, MACRO_FRAME, MACRO_MSG, MITE, PRED, Quantifier,
     QuantifierT, RecFOFormulaQuant, Sort, Variable,
 };
-use crate::{Lang, Problem, fresh, rexp};
+use crate::{CVProgram, Lang, Problem, fresh, rexp};
 
 declare_trace!($"search");
 
@@ -378,7 +377,7 @@ pub trait SyntaxSearcher {
 
     fn search_id_timepoint<'a, 'b, 'c>(
         &'b self,
-        prgm: &'c mut Program<Lang, PAnalysis<'a>>,
+        prgm: &'c mut CVProgram<'a>,
         exec: &'b SmtRunner,
         ptcl: Id,
         time: Formula,

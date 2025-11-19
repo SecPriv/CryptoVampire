@@ -1,13 +1,11 @@
 use egg::{Analysis, EGraph, Id, Pattern};
-use golgge::Program;
 use itertools::{Itertools, chain};
 use rustc_hash::FxHashSet;
 use static_init::dynamic;
 use utils::{ebreak_if, ebreak_let, implvec};
 
 use crate::{
-    Lang, Problem,
-    problem::PAnalysis,
+    CVProgram, Lang, Problem,
     rexp,
     terms::{Formula, Function, IS_FRESH_NONCE, NONCE, utils::iter_egraph::iter_descendants_lang},
 };
@@ -37,9 +35,9 @@ pub trait RuleWithFreshNonce {
 
     fn mk_fresh_function(&self, pbl: &mut Problem) -> Function;
 
-    fn generate_fresh_nonce<'a>(
+    fn generate_fresh_nonce<'a, R>(
         &self,
-        pgrm: &mut Program<Lang, PAnalysis<'a>>,
+        pgrm: &mut CVProgram<'a, R>,
         // we need to avoid here
         self_ids: implvec!(Id),
         // we'd like to pick in here

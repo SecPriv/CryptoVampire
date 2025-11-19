@@ -2,17 +2,17 @@ use std::borrow::Cow;
 
 use bon::Builder;
 use egg::{Id, Pattern, Searcher};
-use golgge::{Dependancy, Program, ProofItem, Rule};
+use golgge::{Dependancy, ProofItem, Rule};
 use itertools::izip;
 use utils::ereturn_let;
 
 use crate::{
-    Lang,
+    CVProgram, Lang,
     libraries::{
         PRF,
         prf::{K, M, NEW_TERM, NK, PRFProof, PROOF},
     },
-    problem::PAnalysis,
+    problem::{PAnalysis, RcRule},
     terms::{CryptographicAssumption, Function, NONCE, Sort},
 };
 
@@ -37,7 +37,7 @@ struct SubstData {
 }
 
 impl SubstData {
-    fn proof_to_term<'a>(&self, pgrm: &mut Program<Lang, PAnalysis<'a>>, proof: Id) -> Id {
+    fn proof_to_term<'a>(&self, pgrm: &mut CVProgram<'a>, proof: Id) -> Id {
         tr!(
             "proof to term from:\n\t{}",
             pgrm.egraph().id_to_expr(proof).pretty(100)
@@ -45,8 +45,8 @@ impl SubstData {
         let ProofItem { ids, payload, rule } = pgrm.get_proof_item(proof).unwrap();
         let prf_proof = payload.as_ref().unwrap().downcast_ref().unwrap();
         tr!(
-            "(prf) substitution from rule:\n\t{:?}",
-            golgge::DebugRule::new(rule.as_ref())
+            "(prf) substitution from rule:\n\t{rule:?}",
+            // golgge::DebugRule::new(rule.as_ref())
         );
 
         match prf_proof {
@@ -109,7 +109,7 @@ impl SubstData {
         }
     }
 
-    fn get_term<'a>(&self, pgrm: &Program<Lang, PAnalysis<'a>>, id: Id) -> Id {
+    fn get_term<'a>(&self, pgrm: &CVProgram<'a>, id: Id) -> Id {
         let Self {
             search_bitstring,
             search_bool,
@@ -134,12 +134,12 @@ impl SubstData {
     }
 }
 
-impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
+impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SubstRule {
     fn name(&self) -> Cow<'_, str> {
         Cow::Borrowed("prf substitution")
     }
 
-    fn search(&self, prgm: &mut Program<Lang, PAnalysis<'a>>, goal: Id) -> Dependancy {
+    fn search(&self, prgm: &mut CVProgram<'a>, goal: Id) -> Dependancy {
         ereturn_let!(let Some(substs)= self.trigger.search_eclass(prgm.egraph(), goal), Dependancy::impossible());
 
         let CryptographicAssumption::PRF(PRF {

@@ -1,11 +1,11 @@
 use crate::{
-    Lang, Problem,
+    CVProgram, Lang, Problem,
     libraries::{
         AEnc,
         aenc::vars::*,
         utils::{SyntaxSearcher, fresh::RefFormulaBuilder},
     },
-    problem::PAnalysis,
+    problem::{PAnalysis, RcRule},
     rexp,
     runners::SmtRunner,
     terms::{Formula, Function, NONCE},
@@ -48,12 +48,12 @@ struct SearchO {
     r: Formula,
 }
 
-impl<'a> Rule<Lang, PAnalysis<'a>> for SearchRule {
+impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SearchRule {
     fn name(&self) -> Cow<'_, str> {
         format!("enc vampire #{:}", self.aenc).into()
     }
 
-    fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: Id) -> Dependancy {
+    fn search(&self, prgm: &mut CVProgram<'a>, goal: Id) -> Dependancy {
         let Self {
             aenc,
             trigger_k,
