@@ -17,7 +17,7 @@ use crate::terms::{
     AND, BITE, Formula, Function, HAPPENS, IS_FRESH_NONCE, LT, MACRO_EXEC, MACRO_FRAME,
     MACRO_INPUT, MITE, NONCE, PRED, Sort, VAMPIRE,
 };
-use crate::{Lang, Problem, fresh, rexp};
+use crate::{CVProgram, Lang, Problem, fresh, rexp};
 
 decl_vars!(const M:Bitstring, K:Nonce, P:Protocol, T:Time, H:Bool, N_PRF:Nonce);
 
@@ -359,14 +359,14 @@ impl PrfVampireRule {
     }
 }
 
-impl<'a> Rule<Lang, PAnalysis<'a>> for PrfVampireRule {
+impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for PrfVampireRule {
     /// Returns the name of this rule, including the PRF index.
     fn name(&self) -> std::borrow::Cow<'_, str> {
         format!("prf vampire #{:}", self.prf).into()
     }
 
     /// Searches for the trigger pattern in the e-graph and initiates a PRF search using the SMT solver.
-    fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: egg::Id) -> Dependancy {
+    fn search(&self, prgm: &mut CVProgram<'a>, goal: egg::Id) -> Dependancy {
         let egraph = prgm.egraph_mut();
         ereturn_let!(let Some(substs) = self.pattern
                 .search_eclass(egraph, goal), Dependancy::impossible());

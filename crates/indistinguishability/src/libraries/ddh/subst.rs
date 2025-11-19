@@ -1,17 +1,17 @@
 use anyhow::Context;
 use egg::{Id, Pattern, Searcher};
-use golgge::{Dependancy, Program, Rule};
+use golgge::{Dependancy, Rule};
 use itertools::Itertools;
 use utils::ereturn_let;
 
 use crate::{
-    Lang, Problem,
+    CVProgram, Lang, Problem,
     libraries::{
         DDH,
         ddh::ProofHints,
         substitution::{PSArgs, ProofLike, ProofSubstitution},
     },
-    problem::{PAnalysis, PRule, RcRule},
+    problem::{CVRuleTrait, PAnalysis, PRule, RcRule},
     rexp,
     terms::{EQUIV_WITH_SIDE, Function},
 };
@@ -64,12 +64,12 @@ impl SubstRule {
     }
 }
 
-impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
+impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SubstRule {
     fn name(&self) -> std::borrow::Cow<'_, str> {
         std::borrow::Cow::Borrowed("subst aenc")
     }
 
-    fn search(&self, prgm: &mut Program<Lang, PAnalysis<'a>>, goal: Id) -> golgge::Dependancy {
+    fn search(&self, prgm: &mut CVProgram<'a>, goal: Id) -> golgge::Dependancy {
         ereturn_let!(let Some(matches) = self.goal_pattern.search_eclass(prgm.egraph(), goal), Dependancy::impossible());
 
         matches
@@ -94,7 +94,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for SubstRule {
 impl ProofSubstitution for SubstData {
     type Proof = ProofHints;
 
-    fn get_term<'a>(&self, pgrm: &mut Program<Lang, PAnalysis<'a>>, id: Id) -> anyhow::Result<Id> {
+    fn get_term<'a>(&self, pgrm: &mut CVProgram<'a>, id: Id) -> anyhow::Result<Id> {
         let l = pgrm.egraph()[id]
             .nodes
             .iter()
@@ -115,11 +115,11 @@ impl ProofSubstitution for SubstData {
 impl ProofLike<SubstData> for ProofHints {
     fn split<'pbl>(
         &self,
-        prgrm: &mut Program<Lang, PAnalysis<'pbl>>,
+        prgrm: &mut CVProgram<'pbl>,
         data: &SubstData,
         proof_id: Id,
         proof_parent: &[Id],
-        rule: &dyn golgge::Rule<Lang, PAnalysis<'pbl>>,
+        rule: &dyn CVRuleTrait<'pbl>,
     ) -> anyhow::Result<Id> {
         let psargs = PSArgs {
             prgrm,

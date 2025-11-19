@@ -7,11 +7,10 @@ use egg::EGraph;
 use golgge::{Program, Rule};
 use itertools::Itertools;
 use log::trace;
-use std::rc::Rc;
 
 impl Problem {
     /// Build a [Program] to use
-    pub fn mk_program<'a>(&'a mut self) -> Program<Lang, PAnalysis<'a>> {
+    pub fn mk_program<'a>(&'a mut self) -> Program<Lang, PAnalysis<'a>, RcRule> {
         self.state.reset();
 
         let golgge_config = {
@@ -42,7 +41,7 @@ impl Problem {
         };
 
         let eq_rules = libraries::mk_egg_rewrites(self);
-        let rules: Vec<Rc<dyn Rule<_, _>>> = libraries::mk_golgge_rules(self).collect_vec();
+        let rules: Vec<RcRule> = libraries::mk_golgge_rules(self).collect_vec();
 
         let mut prgm = golgge::Program::build()
             .eq_rules(eq_rules)

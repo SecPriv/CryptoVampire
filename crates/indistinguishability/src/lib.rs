@@ -1,6 +1,9 @@
+#![feature(mapped_lock_guards)]
+
 use std::io::Write;
 
 use cryptovampire_smt::{Smt, SmtFormula, SmtParam};
+use golgge::Program;
 use terms::{Function, Sort};
 
 // ~~~~~~~~~~~~~~~~ macros ~~~~~~~~~~~~~~~~~~
@@ -53,9 +56,12 @@ pub use input::{init_engine, register};
 /// Defines the configuration structures for the crate.
 mod configuration;
 /// Re-exports the main Configuration structure for the crate.
-pub use configuration::Configuration;
+pub use configuration::{Configuration, Commands};
 
-use crate::terms::Variable;
+use crate::{
+    problem::{PAnalysis, RcRule},
+    terms::Variable,
+};
 
 // ~~~~~~ type aliases and constants ~~~~~~~
 
@@ -86,6 +92,8 @@ pub type MSmtFormula = SmtFormula<MSmtParam>;
 /// The SMT solver
 /// The SMT solver
 pub type MSmt = Smt<MSmtParam>;
+
+pub type CVProgram<'a, R = RcRule> = Program<Lang, PAnalysis<'a>, R>;
 
 // ~~~~~~~~~~~~~~~~ other ~~~~~~~~~~~~~~~~~~~
 

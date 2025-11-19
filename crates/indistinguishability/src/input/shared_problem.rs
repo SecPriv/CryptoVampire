@@ -1,6 +1,7 @@
 use std::cell::{Ref, RefCell, RefMut};
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
+use std::sync::{Arc, RwLock, RwLockWriteGuard};
 
 use anyhow::Context;
 use log::trace;
@@ -21,26 +22,20 @@ declare_trace!($"shrpblm");
 
 /// A shared, reference-counted, mutable problem instance for use within the Steel VM.
 #[derive(Debug, Clone, Steel)]
-pub struct ShrProblem(Rc<RefCell<Problem>>);
+pub struct ShrProblem(pub(crate) Arc<RwLock<Problem>>);
 
 impl ShrProblem {
     /// Borrows the underlying `Problem` immutably.
-    pub fn borrow(&self) -> Ref<'_, Problem> {
-        self.0.borrow()
+    pub fn borrow(&self) -> impl Deref<Target = Problem> {
+        self.0.read().unwrap()
     }
 
     /// Borrows the underlying `Problem` mutably.
-    pub fn borrow_mut(&self) -> RefMut<'_, Problem> {
-        self.0.borrow_mut()
+    pub fn borrow_mut(&self) -> impl DerefMut<Target = Problem> {
+        self.0.write().unwrap()
     }
 
-    /// returns [None] is the shared pointer is still shared
-    #[allow(dead_code)]
-    pub fn try_into_inner(self) -> Option<Problem> {
-        Rc::into_inner(self.0).map(RefCell::into_inner)
-    }
-
-    fn get_step_mut(&self, step: Function, ptcl: Function) -> SResult<RefMut<'_, Step>> {
+    fn get_step_mut(&self, step: Function, ptcl: Function) -> SResult<impl DerefMut<Target = Step>> {
         if !step.is_step() {
             return Err(SteelErr::new(
                 ErrorKind::ConversionError,
@@ -55,7 +50,7 @@ impl ShrProblem {
             ));
         }
 
-        let step = RefMut::map(self.borrow_mut(), |x| {
+        let step = RwLockWriteGuard::map(self.0.write().unwrap(), |x| {
             x.protocol_mut(ptcl.protocol_idx)
                 .unwrap()
                 .step_mut(step.step_idx)
@@ -89,7 +84,7 @@ impl ShrProblem {
     /// Creates a new empty `Problem` instance with the given configuration.
     fn mk_empty(config: Configuration) -> Self {
         let pbl = Problem::builder().config(config).build();
-        Self(Rc::new(RefCell::new(pbl)))
+        Self(Arc::new(RwLock::new(pbl)))
     }
 
     /// Declares a new function in the problem.
@@ -196,7 +191,7 @@ impl ShrProblem {
     /// Adds a new SMT axiom to the problem.
     fn add_smt_axiom(&self, f: Formula) -> SResult<()> {
         let content = f
-            .as_smt(self.0.borrow().deref())
+            .as_smt(self.borrow().deref())
             .ok_or(conversion_err::<MSmt>())?;
         self.borrow_mut()
             .extra_smt_mut()

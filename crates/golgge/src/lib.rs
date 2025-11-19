@@ -14,7 +14,7 @@ mod tracing;
 pub use tracing::DebugLevel;
 /// Defines traits and structures for working with e-graph rules.
 mod rule;
-pub use rule::{DebugRule, Dependancy, Fresh, PrologRule, Rule};
+pub use rule::{DRule, Dependancy, Fresh, PrologRule, Rule};
 
 /// Provides utilities for simplifying `and` expressions in e-graphs.
 mod simplify_and;
@@ -70,3 +70,15 @@ impl Default for Config {
         }
     }
 }
+
+#[cfg(feature = "sync")]
+pub trait MaybeSyncSend: Sync + Send {}
+
+#[cfg(feature = "sync")]
+impl<T: Sync + Send> MaybeSyncSend for T {}
+
+#[cfg(not(feature = "sync"))]
+pub trait MaybeSyncSend {}
+
+#[cfg(not(feature = "sync"))]
+impl<T> MaybeSyncSend for T {}

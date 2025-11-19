@@ -196,8 +196,8 @@ impl From<AEnc> for CryptographicAssumption {
 impl Cryptography for AEnc {
     fn ref_from_assumption(r: &CryptographicAssumption) -> Option<&Self> {
         match r {
-            CryptographicAssumption::AEnc(r) => Some(r), 
-            _ => None
+            CryptographicAssumption::AEnc(r) => Some(r),
+            _ => None,
         }
     }
 }

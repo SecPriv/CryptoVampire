@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{any::Any, fmt::Debug, sync::Arc};
 
 use bon::Builder;
 use egg::Analysis;
@@ -7,8 +7,9 @@ use serde::Serialize;
 
 use crate::{Lang, Problem};
 
-/// A reference counted rule
-pub type RcRule = Rc<dyn for<'a> Rule<Lang, PAnalysis<'a>>>;
+pub struct RcRule(Arc<dyn for<'a> CVRuleTrait<'a>>);
+
+pub(crate) trait CVRuleTrait<'a>: Any + Rule<Lang, PAnalysis<'a>, RcRule> + Sync +Send {}
 
 /// The analysis for the problem
 #[derive(Debug, Serialize, Builder)]
@@ -56,18 +57,60 @@ impl<'a> WeightedAnalysis<Lang> for PAnalysis<'a> {
 }
 
 /// A trait for rules that can be converted into a `RcRule`
-pub trait PRule: for<'a> Rule<Lang, PAnalysis<'a>> {
+pub trait PRule {
     /// Converts the rule into a `RcRule`
     fn into_mrc(self) -> RcRule;
 }
 
 impl<R> PRule for R
 where
-    R: for<'a> Rule<Lang, PAnalysis<'a>>,
-    R: Sized + 'static,
+    R: for<'a> Rule<Lang, PAnalysis<'a>, RcRule>,
+    R: Sized + Any +Sync +Send + 'static,
 {
     /// Converts the rule into a reference-counted `RcRule`.
     fn into_mrc(self) -> RcRule {
-        Box::<dyn for<'a> Rule<Lang, PAnalysis<'a>>>::from(Box::new(self)).into()
+        RcRule(Box::<dyn for<'a> CVRuleTrait<'a>>::from(Box::new(self)).into())
+    }
+}
+
+impl<'a, R> CVRuleTrait<'a> for R where R: Any + Rule<Lang, PAnalysis<'a>, RcRule> + Sync +Send {}
+
+impl<'a> Rule<Lang, PAnalysis<'a>, Self> for RcRule {
+    fn search(
+        &self,
+        prgm: &mut golgge::Program<Lang, PAnalysis<'a>, Self>,
+        goal: egg::Id,
+    ) -> golgge::Dependancy {
+        self.0.search(prgm, goal)
+    }
+
+    fn rebuild(&self, prgm: &golgge::Program<Lang, PAnalysis<'a>, Self>) {
+        self.0.rebuild(prgm);
+    }
+
+    fn debug(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        self.0.debug(f)
+    }
+
+    fn name(&self) -> std::borrow::Cow<'_, str> {
+        self.0.name()
+    }
+}
+
+impl Clone for RcRule {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl Debug for RcRule {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.debug(f)
+    }
+}
+
+impl<'a> AsRef<dyn CVRuleTrait<'a>> for RcRule {
+    fn as_ref(&self) -> &dyn CVRuleTrait<'a> {
+        self.0.as_ref()
     }
 }

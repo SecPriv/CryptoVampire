@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::fmt::Debug;
 
 use egg::{Analysis, EClass, EGraph, Id, Pattern, SearchMatches, Searcher, Subst};
-use golgge::{Dependancy, Program, Rule};
+use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain, izip};
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
@@ -18,7 +18,7 @@ use crate::terms::{
     Function, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NIL_FA, NONCE,
     PRED, Sort, TUPLE,
 };
-use crate::{Lang, Problem, rexp};
+use crate::{CVProgram, Lang, Problem, rexp};
 
 declare_trace!($"fa");
 decl_vars!(const; HD:Bitstring, TL:Bitstring, U, V, T, P);
@@ -63,13 +63,13 @@ fn can_apply_fa(f: &Function) -> bool {
     (f != &NONCE) && (f != &AND) && (f.is_part_of_F() || (f == &EXISTS) || (f == &FIND_SUCH_THAT))
 }
 
-impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
+impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for FaRule {
     /// Returns the name of the rule.
     fn name(&self) -> Cow<'_, str> {
         Cow::Borrowed("fa")
     }
 
-    fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: Id) -> Dependancy {
+    fn search(&self, prgm: &mut CVProgram<'a>, goal: Id) -> Dependancy {
         // Get the substitutions that match the pattern for the goal.
         ereturn_let!(let Some(substs) = PATTERN_FA.search_eclass(prgm.egraph(), goal), Dependancy::impossible());
         tr!("into fa-axiom");
@@ -100,7 +100,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>> for FaRule {
 }
 
 pub fn find_candidates<'a, 'pbl>(
-    prgm: &mut Program<Lang, PAnalysis<'pbl>>,
+    prgm: &mut CVProgram<'pbl>,
     substs: &'a SearchMatches<'_, Lang>,
 ) -> Vec<(&'a Subst, Vec<FaElem>)> {
     let mut candidates: Vec<(&Subst, Vec<FaElem>)> = Vec::with_capacity(substs.substs.len());

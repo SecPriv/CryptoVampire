@@ -1,10 +1,16 @@
+#[cfg(feature = "sync")]
+use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::ops::Deref;
+#[cfg(feature = "sync")]
+use std::ops::DerefMut;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::str::FromStr;
+#[cfg(feature = "sync")]
+use std::sync::{Arc, RwLock};
 
 use bon::bon;
 use colored::{ColoredString, Colorize};
@@ -19,20 +25,20 @@ use serde::Serialize;
 use utils::implvec;
 
 use crate::proof::{Proof, SearchResult};
-use crate::rule::PlOrRw;
-use crate::{Config, DebugLevel, Dependancy, Fresh, ProofItem, Rule, WeightedAnalysis};
+// use crate::rule::PlOrRw;
+use crate::{Config, DRule, DebugLevel, Dependancy, Fresh, ProofItem, Rule, WeightedAnalysis};
 
 /// A program that manages an `egg::EGraph` and a set of rules.
 /// A program that manages an `egg::EGraph` and a set of rules.
-pub struct Program<L: Language, N: Analysis<L>> {
+pub struct Program<L: Language, N: Analysis<L>, R = DRule<L, N>> {
     /// The underlying e-graph.
     egraph: Option<EGraph<L, N>>,
     /// Equality rewrite rules.
     eq_rules: Vec<Rewrite<L, N>>,
     /// Custom rules.
-    rules: Vec<Rc<dyn Rule<L, N>>>,
+    rules: Vec<R>,
     /// Memoization table for proof attempts.
-    memo: Option<HashMap<Id, MemoStatus<L, N>>>,
+    memo: Option<HashMap<Id, MemoStatus<R>>>,
     /// Indicates if the program is in a clean state.
     clean: bool,
     /// Configuration for the program.
@@ -42,9 +48,9 @@ pub struct Program<L: Language, N: Analysis<L>> {
 /// Represents the status of a proof attempt for a given e-class.
 #[derive(Clone)]
 #[allow(dead_code)]
-pub(crate) enum Status<L: Language, N: Analysis<L>> {
+pub(crate) enum Status<R> {
     /// The proof attempt succeeded, containing the proof item.
-    True(ProofItem<L, N>),
+    True(ProofItem<R>),
     /// The proof attempt failed.
     False,
     /// The proof attempt is currently in progress.
@@ -53,10 +59,13 @@ pub(crate) enum Status<L: Language, N: Analysis<L>> {
 
 /// A wrapper around `Rc<RefCell<Status<L, N>>>` for memoization.
 /// A wrapper around `Rc<RefCell<Status<L, N>>>` for memoization.
-pub(crate) struct MemoStatus<L: Language, N: Analysis<L>>(Rc<RefCell<Status<L, N>>>);
+#[cfg(feature = "sync")]
+pub(crate) struct MemoStatus<R>(Arc<RwLock<Status<R>>>);
+#[cfg(not(feature = "sync"))]
+pub(crate) struct MemoStatus<R>(Rc<RefCell<Status<R>>>);
 
 #[bon]
-impl<L, N> Program<L, N>
+impl<L, N, R> Program<L, N, R>
 where
     L: Language,
     N: Analysis<L>,
@@ -67,7 +76,7 @@ where
         egraph: EGraph<L, N>,
         #[builder(with = <_>::from_iter, default = vec![])] eq_rules: Vec<Rewrite<L, N>>,
         // #[builder(with = |rules: impl IntoIterator<Item = I>| rules.into_iter().map_into().collect(), default = vec![])]
-        #[builder(with = <_>::from_iter, default = vec![])] rules: Vec<Rc<dyn Rule<L, N>>>,
+        #[builder(with = <_>::from_iter, default = vec![])] rules: Vec<R>,
         #[builder(default = true)] with_memo: bool,
         #[builder(default)] config: Config,
     ) -> Self {
@@ -140,11 +149,7 @@ where
 
     /// Add rewrite rules, and [Rule]s
     /// Adds rewrite rules and `Rule`s to the program.
-    pub fn extend(
-        &mut self,
-        eq_rules: implvec!(Rewrite<L, N>),
-        rules: implvec!(Box<dyn Rule<L, N>>),
-    ) {
+    pub fn extend(&mut self, eq_rules: implvec!(Rewrite<L, N>), rules: implvec!(R)) {
         self.eq_rules.extend(eq_rules);
         self.rules.extend(rules.into_iter().map_into());
     }
@@ -155,17 +160,17 @@ where
         self.extend([eq_rule], []);
     }
 
-    /// convenient way to add a [Rule]
-    /// Adds a boxed `Rule` to the program.
-    pub fn add_boxed_rule(&mut self, rule: Box<dyn Rule<L, N>>) {
-        self.extend([], [rule]);
-    }
+    // /// convenient way to add a [Rule]
+    // /// Adds a boxed `Rule` to the program.
+    // pub fn add_boxed_rule(&mut self, rule: Box<dyn Rule<L, N>>) {
+    //     self.extend([], [rule]);
+    // }
 
-    /// convenient way to add a [Rule]
-    /// Adds a `Rule` to the program.
-    pub fn add_rule<R: Rule<L, N> + 'static>(&mut self, rule: R) {
-        self.add_boxed_rule(Box::new(rule))
-    }
+    // /// convenient way to add a [Rule]
+    // /// Adds a `Rule` to the program.
+    // pub fn add_rule<R: Rule<L, N> + 'static>(&mut self, rule: R) {
+    //     self.add_boxed_rule(Box::new(rule))
+    // }
 
     /// activate/deactivate explaination for the [EGraph]
     ///
@@ -180,7 +185,7 @@ where
         self.egraph = Some(egraph)
     }
 
-    fn memo_mut(&mut self) -> Option<&mut HashMap<Id, MemoStatus<L, N>>> {
+    fn memo_mut(&mut self) -> Option<&mut HashMap<Id, MemoStatus<R>>> {
         self.memo.as_mut()
     }
 
@@ -217,7 +222,7 @@ where
     }
 
     /// Returns a slice of the `Rule`s.
-    pub fn rules(&self) -> &[Rc<dyn Rule<L, N>>] {
+    pub fn rules(&self) -> &[R] {
         &self.rules
     }
 
@@ -235,10 +240,11 @@ fn print_bool(b: bool) -> ColoredString {
     }
 }
 
-impl<L, N> Program<L, N>
+impl<L, N, R> Program<L, N, R>
 where
     L: Language + Display,
     N: Analysis<L>,
+    R: Rule<L, N, R> + Clone,
 {
     /// Debug the available [`Rule`]s by calling [Rule::debug]
     pub fn debug_rules(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
@@ -256,8 +262,10 @@ where
     /// Alternative debug method based on [Self::debug_rules] to leave [Debug]
     /// clean
     pub fn as_debug_rules(&self) -> impl Debug {
-        struct DP<'a, L: Language, N: Analysis<L>>(&'a Program<L, N>);
-        impl<'a, L: Language + Display, N: Analysis<L>> Debug for DP<'a, L, N> {
+        struct DP<'a, L: Language, N: Analysis<L>, R>(&'a Program<L, N, R>);
+        impl<'a, L: Language + Display, N: Analysis<L>, R: Rule<L, N, R> + Clone> Debug
+            for DP<'a, L, N, R>
+        {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 self.0.debug_rules(f)
             }
@@ -356,7 +364,7 @@ where
                 .map(|i| {
                     let Dependancy { inner, payload, .. } = search;
                     ProofItem {
-                        rule: Rc::clone(&r),
+                        rule: r.clone(),
                         ids: inner[i].clone(),
                         payload,
                     }
@@ -448,43 +456,44 @@ where
         assert!(self.clean());
     }
 
-    pub fn get_proof_item(&self, id: Id) -> Option<ProofItem<L, N>> {
+    pub fn get_proof_item(&self, id: Id) -> Option<ProofItem<R>> {
         self.memo.as_ref()?.get(&id)?.get_proof()
     }
 }
 
-impl<L, N> FromStr for Program<L, N>
-where
-    L: Language + Sync + Send + FromOp + Fresh + Display + 'static + Serialize,
-    N: WeightedAnalysis<L> + Default + Serialize,
-    anyhow::Error: From<<Pattern<L> as FromStr>::Err>,
-    anyhow::Error: From<<MultiPattern<L> as FromStr>::Err>,
-    N::Data: Serialize,
-{
-    /// The error type returned when parsing fails.
-    type Err = anyhow::Error;
+// impl<L, N, R> FromStr for Program<L, N, R>
+// where
+//     L: Language + Sync + Send + FromOp + Fresh + Display + 'static + Serialize,
+//     N: WeightedAnalysis<L> + Default + Serialize,
+//     anyhow::Error: From<<Pattern<L> as FromStr>::Err>,
+//     anyhow::Error: From<<MultiPattern<L> as FromStr>::Err>,
+//     N::Data: Serialize,
+//     R: From<PrologRule<L>>
+// {
+//     /// The error type returned when parsing fails.
+//     type Err = anyhow::Error;
 
-    /// Parses a string into a `Program`.
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (rules, eq_rules) = PlOrRw::parse_program(s)?
-            .into_iter()
-            .partition_map(|p| match p {
-                PlOrRw::Pl(prolog_rule) => {
-                    let b: Box<dyn Rule<L, N>> = Box::new(prolog_rule);
-                    Either::Left(b.into())
-                }
-                PlOrRw::Rw(rewrite) => Either::Right(rewrite),
-            });
-        Ok(Self {
-            egraph: Some(Default::default()),
-            eq_rules,
-            rules,
-            memo: Default::default(),
-            clean: true,
-            config: Default::default(),
-        })
-    }
-}
+//     /// Parses a string into a `Program`.
+//     fn from_str(s: &str) -> Result<Self, Self::Err> {
+//         let (rules, eq_rules) = PlOrRw::parse_program(s)?
+//             .into_iter()
+//             .partition_map(|p| match p {
+//                 PlOrRw::Pl(prolog_rule) => {
+//                     // let b: Box<dyn Rule<L, N>> = Box::new(prolog_rule);
+//                     Either::Left(prolog_rule.into())
+//                 }
+//                 PlOrRw::Rw(rewrite) => Either::Right(rewrite),
+//             });
+//         Ok(Self {
+//             egraph: Some(Default::default()),
+//             eq_rules,
+//             rules,
+//             memo: Default::default(),
+//             clean: true,
+//             config: Default::default(),
+//         })
+//     }
+// }
 
 /// Saves the e-graph to a DOT file in a temporary location.
 fn save_egraph<L, N>(egraph: &EGraph<L, N>) -> std::io::Result<PathBuf>
@@ -503,7 +512,7 @@ where
     Ok(dot.path().to_path_buf())
 }
 
-impl<L: Language, N: Analysis<L>> Status<L, N> {
+impl<R> Status<R> {
     /// Returns `true` if the status is `True`.
     pub fn as_bool(&self) -> bool {
         matches!(self, Status::True { .. })
@@ -518,15 +527,15 @@ impl<L: Language, N: Analysis<L>> Status<L, N> {
     }
 }
 
-impl<L: Language, N: Analysis<L>> MemoStatus<L, N> {
+impl<R> MemoStatus<R> {
     /// Returns `true` if the underlying `Status` is `True`.
     pub fn as_bool(&self) -> bool {
-        self.0.borrow().as_bool()
+        self.borrow().as_bool()
     }
 
     /// Sets the underlying `Status`.
-    pub fn set(&self, status: Status<L, N>) {
-        *self.0.borrow_mut() = status
+    pub fn set(&self, status: Status<R>) {
+        *self.borrow_mut() = status
     }
 
     /// Returns `true` if the status is [`InProgress`].
@@ -534,25 +543,59 @@ impl<L: Language, N: Analysis<L>> MemoStatus<L, N> {
     /// [`InProgress`]: Status::InProgress
     #[must_use]
     pub(crate) fn is_in_progress(&self) -> bool {
-        self.0.borrow().is_in_progress()
+        self.borrow().is_in_progress()
     }
 
-    pub fn get_proof(&self) -> Option<ProofItem<L, N>> {
-        match self.0.borrow().deref() {
+    pub fn get_proof(&self) -> Option<ProofItem<R>>
+    where
+        R: Clone,
+    {
+        match self.borrow().deref() {
             Status::True(proof_item) => Some(proof_item.clone()),
             _ => None,
         }
     }
 }
 
-impl<L: Language, N: Analysis<L>> From<Status<L, N>> for MemoStatus<L, N> {
+#[cfg(feature = "sync")]
+impl<R> MemoStatus<R> {
+    fn borrow(&self) -> impl Deref<Target = Status<R>> {
+        self.0.read().unwrap()
+    }
+
+    fn borrow_mut(&self) -> impl DerefMut<Target = Status<R>> {
+        self.0.write().unwrap()
+    }
+}
+
+#[cfg(not(feature = "sync"))]
+impl<R> MemoStatus<R> {
+    fn borrow(&self) -> impl Deref<Target = Status<R>> {
+        self.0.borrow()
+    }
+
+    fn borrow_mut(&self) -> impl DerefMut<Target = Status<R>> {
+        self.0.borrow_mut()
+    }
+}
+
+#[cfg(feature = "sync")]
+impl<R> From<Status<R>> for MemoStatus<R> {
     /// Converts a `Status` into a `MemoStatus`.
-    fn from(value: Status<L, N>) -> Self {
+    fn from(value: Status<R>) -> Self {
+        Self(Arc::new(RwLock::new(value)))
+    }
+}
+
+#[cfg(not(feature = "sync"))]
+impl<R> From<Status<R>> for MemoStatus<R> {
+    /// Converts a `Status` into a `MemoStatus`.
+    fn from(value: Status<R>) -> Self {
         Self(Rc::new(RefCell::new(value)))
     }
 }
 
-impl<L: Language, N: Analysis<L>> Clone for MemoStatus<L, N> {
+impl<R> Clone for MemoStatus<R> {
     /// Clones the `MemoStatus`.
     fn clone(&self) -> Self {
         Self(self.0.clone())

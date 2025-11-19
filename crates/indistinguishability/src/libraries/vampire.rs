@@ -6,10 +6,10 @@ use golgge::Rule;
 use static_init::dynamic;
 use utils::ereturn_let;
 
-use crate::problem::PAnalysis;
+use crate::problem::{PAnalysis, RcRule};
 use crate::runners::SmtRunner;
 use crate::terms::{Formula, VAMPIRE};
-use crate::{Lang, Problem, rexp};
+use crate::{CVProgram, Lang, Problem, rexp};
 
 declare_trace!($"vampire_rule");
 
@@ -26,17 +26,13 @@ pub struct VampireRule {
     exec: SmtRunner,
 }
 
-impl<'a> Rule<Lang, PAnalysis<'a>> for VampireRule {
+impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for VampireRule {
     /// Searches for patterns in the e-graph and calls the Vampire SMT solver if a match is found.
     ///
     /// This method looks for `(VAMPIRE #X)` patterns. If found, it extracts the formula `#X`,
     /// translates it to an SMT formula, and sends it to the configured SMT runner (`exec`).
     /// The result from the SMT solver determines the dependency returned.
-    fn search(
-        &self,
-        prgm: &mut golgge::Program<Lang, PAnalysis<'a>>,
-        goal: egg::Id,
-    ) -> golgge::Dependancy {
+    fn search(&self, prgm: &mut CVProgram<'a>, goal: egg::Id) -> golgge::Dependancy {
         ereturn_let!(let Some(m) = PATTERN.search_eclass(prgm.egraph(), goal), Default::default());
         ereturn_let!(let Some(s) = m.substs.first(), Default::default());
 

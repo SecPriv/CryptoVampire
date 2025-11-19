@@ -1,21 +1,28 @@
 use std::rc::Rc;
+#[cfg(feature = "sync")]
+use std::sync::Arc;
 use std::{any::Any, fmt::Display};
 
 use egg::{Analysis, Id, Language};
 
 use crate::{Program, Rule};
 
+#[cfg(feature = "sync")]
+pub type Payload = Arc<dyn Any + Sync + Send>;
+#[cfg(not(feature = "sync"))]
+pub type Payload = Rc<dyn Any>;
+
 /// Represents a single item in a proof, detailing the rule applied and the e-class IDs involved.
-pub struct ProofItem<L: Language, N: Analysis<L>> {
+pub struct ProofItem<R> {
     /// The rule that was applied.
-    pub rule: Rc<dyn Rule<L, N>>,
+    pub rule: R,
     /// The e-class IDs involved in the proof step.
     pub ids: Vec<Id>,
     /// An optional side condition for the proof step.
-    pub payload: Option<Rc<dyn Any>>,
+    pub payload: Option<Payload>,
 }
 
-impl<L: Language, N: Analysis<L>> Clone for ProofItem<L, N> {
+impl<R: Clone> Clone for ProofItem<R> {
     fn clone(&self) -> Self {
         Self {
             rule: self.rule.clone(),
@@ -44,9 +51,9 @@ impl SearchResult {
 
 /// Represents a proof for a given e-class.
 #[allow(dead_code)]
-pub struct Proof<'a, L: Language, N: Analysis<L>> {
+pub struct Proof<'a, L: Language, N: Analysis<L>, R> {
     /// A reference to the program that generated the proof.
-    prog: &'a Program<L, N>,
+    prog: &'a Program<L, N, R>,
     /// The ID of the e-class for which the proof was generated.
     id: Id,
 }

@@ -1,11 +1,11 @@
 use crate::{
-    Lang, Problem,
+    CVProgram, Lang, Problem,
     libraries::{
         DDH,
         ddh::vars::*,
         utils::{SyntaxSearcher, fresh::RefFormulaBuilder},
     },
-    problem::PAnalysis,
+    problem::{PAnalysis, RcRule},
     rexp,
     runners::SmtRunner,
     terms::{Formula, Function, NONCE},
@@ -35,12 +35,12 @@ struct SearchK {
     b: Formula,
 }
 
-impl<'a> Rule<Lang, PAnalysis<'a>> for SearchRule {
+impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SearchRule {
     fn name(&self) -> Cow<'_, str> {
         format!("enc vampire #{:}", self.ddh).into()
     }
 
-    fn search(&self, prgm: &mut golgge::Program<Lang, PAnalysis<'a>>, goal: Id) -> Dependancy {
+    fn search(&self, prgm: &mut CVProgram<'a>, goal: Id) -> Dependancy {
         let Self { ddh, trigger, exec } = self;
         let DDH { g, exp, .. } = prgm.egraph().analysis.pbl().cryptography()[*ddh]
             .as_inner()
