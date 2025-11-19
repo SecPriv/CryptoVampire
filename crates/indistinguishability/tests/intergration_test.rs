@@ -10,17 +10,7 @@ fn basic_hash() {
 
 #[test]
 fn lak_tag() {
-    mk_test(
-        "./tests/lak-tag.scm",
-        &[
-            "--vampire-timeout",
-            "15s",
-            "--node-limit",
-            "100000",
-            "--prf-limit",
-            "1",
-        ],
-    );
+    mk_test("./tests/lak-tag.scm", &[]);
 }
 
 #[test]
@@ -30,17 +20,7 @@ fn hash_lock() {
 
 #[test]
 fn mw() {
-    mk_test(
-        "./tests/mw.scm",
-        &[
-            "--vampire-timeout",
-            "15s",
-            "--node-limit",
-            "100000",
-            "--prf-limit",
-            "1",
-        ],
-    );
+    mk_test("./tests/mw.scm", &[]);
 }
 
 fn mk_test(file: impl AsRef<Path>, extra_args: &[&str]) {

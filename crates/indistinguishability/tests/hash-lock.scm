@@ -88,6 +88,9 @@
 (add-constrain pbl (i) (lt (reader1 i) (rf i)))
 (add-constrain pbl (i j) (<> (rs i j) (rf i)))
 
+;; configuration
+(cv-set-trace pbl #t)
+
 (if (run pbl p1 p2)
   (displayln "success")
   (error "failed"))

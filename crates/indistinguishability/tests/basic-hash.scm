@@ -73,6 +73,9 @@
             (eq (sel2of2 in) (sel2of2 (macro_input (tag i j) p)))
             (lt (tag i j) t))))))); <- very important
 
+;; configuration
+(cv-set-trace pbl #t)
+
 (if (run pbl p1 p2)
   (displayln "success")
   (error "failed"))

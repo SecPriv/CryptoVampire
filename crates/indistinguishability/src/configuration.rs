@@ -48,7 +48,7 @@ pub struct Configuration {
     #[arg(long,
         short('t'),
         default_value = dstr(Self::default().vampire_timeout),
-        value_parser = ::humantime::parse_duration,env)]
+        value_parser = ::humantime::parse_duration, env)]
     pub vampire_timeout: std::time::Duration,
 
     /// Wether to keep the smt files around (or let the os get rid of them once
