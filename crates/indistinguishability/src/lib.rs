@@ -1,3 +1,5 @@
+#![feature(mapped_lock_guards)]
+
 use std::io::Write;
 
 use cryptovampire_smt::{Smt, SmtFormula, SmtParam};

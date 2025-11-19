@@ -60,7 +60,7 @@
 
         # rust = fenix.packages.${system}.complete;
         # toolchain = rust.toolchain;
-        use-nightly = false;
+        use-nightly = true;
         rust =
           with pkgs;
           if use-nightly then

@@ -45,6 +45,14 @@ pub enum Formula {
 
 mod conversion;
 
+fn test<T:Sync>() {}
+fn test2<T:Send>() {}
+
+fn test3(){
+    test::<Formula>();
+    test2::<Formula>();
+}
+
 const SIZE: usize = 3;
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Serialize)]
 pub struct InnerLang {

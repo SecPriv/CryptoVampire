@@ -12,15 +12,14 @@ pub fn main() {
     let config = Configuration::parse();
     init_logger();
 
-    let mut engine = init_engine(config);
-
     match &config.command {
         Some(Commands::Repl) => {
-            steel_repl::run_repl(engine)
-        },
+            let engine = init_engine(config);
+            steel_repl::run_repl(engine).unwrap();
+        }
         _ => {
             let pgrm = match &config.command {
-                Some(Commands::File { file }) => ::std::fs::read_to_string(f).unwrap(),
+                Some(Commands::File { file }) => ::std::fs::read_to_string(file).unwrap(),
                 None => {
                     let mut pgrm = String::new();
                     io::stdin()
@@ -31,16 +30,14 @@ pub fn main() {
                 _ => unreachable!(),
             };
 
-            match engine.run(pgrm.clone()) {
-                Err(e) => {
-                    if let Some(err) = engine.raise_error_to_string(e.clone()) {
-                        panic!("{err}")
-                    } else {
-                        eprintln!("{}", e.emit_result_to_string("stdin", &pgrm));
-                        panic!("Steel crashed and we could get a nice error out of it...");
-                    }
+            let mut engine = init_engine(config);
+            if let Err(e) = engine.run(pgrm.clone()) {
+                if let Some(err) = engine.raise_error_to_string(e.clone()) {
+                    panic!("{err}")
+                } else {
+                    eprintln!("{}", e.emit_result_to_string("stdin", &pgrm));
+                    panic!("Steel crashed and we could get a nice error out of it...");
                 }
-                Ok(_) => {}
             }
         }
     }

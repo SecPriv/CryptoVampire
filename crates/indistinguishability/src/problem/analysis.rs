@@ -9,7 +9,7 @@ use crate::{Lang, Problem};
 
 pub struct RcRule(Arc<dyn for<'a> CVRuleTrait<'a>>);
 
-pub(crate) trait CVRuleTrait<'a>: Any + Rule<Lang, PAnalysis<'a>, RcRule> {}
+pub(crate) trait CVRuleTrait<'a>: Any + Rule<Lang, PAnalysis<'a>, RcRule> + Sync +Send {}
 
 /// The analysis for the problem
 #[derive(Debug, Serialize, Builder)]
@@ -65,7 +65,7 @@ pub trait PRule {
 impl<R> PRule for R
 where
     R: for<'a> Rule<Lang, PAnalysis<'a>, RcRule>,
-    R: Sized + Any + 'static,
+    R: Sized + Any +Sync +Send + 'static,
 {
     /// Converts the rule into a reference-counted `RcRule`.
     fn into_mrc(self) -> RcRule {
@@ -73,7 +73,7 @@ where
     }
 }
 
-impl<'a, R> CVRuleTrait<'a> for R where R: Any + Rule<Lang, PAnalysis<'a>, RcRule> {}
+impl<'a, R> CVRuleTrait<'a> for R where R: Any + Rule<Lang, PAnalysis<'a>, RcRule> + Sync +Send {}
 
 impl<'a> Rule<Lang, PAnalysis<'a>, Self> for RcRule {
     fn search(
