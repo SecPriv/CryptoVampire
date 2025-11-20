@@ -6,19 +6,12 @@ use itertools::{Itertools, chain};
 use rustc_hash::FxHashSet;
 
 use super::vars::*;
-use crate::{
-    CVProgram, Lang,
-    libraries::{
-        DDH,
-        utils::{
-            FreshNonceSet, RuleWithFreshNonce,
-            Side::{Left, Right},
-        },
-    },
-    problem::{PAnalysis, RcRule},
-    rexp,
-    terms::{EQUIV, Function, FunctionFlags, NONCE, Sort},
-};
+use crate::libraries::DDH;
+use crate::libraries::utils::Side::{Left, Right};
+use crate::libraries::utils::{FreshNonceSet, RuleWithFreshNonce};
+use crate::problem::{PAnalysis, RcRule};
+use crate::terms::{EQUIV, Function, FunctionFlags, NONCE, Sort};
+use crate::{CVProgram, Lang, rexp};
 
 #[derive(Debug, Clone)]
 struct DDHRule {

@@ -2,6 +2,7 @@ use std::ops::Deref;
 
 use steel::SteelErr;
 use steel::rerrs::ErrorKind;
+use steel::rvals::Result as SResult;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
@@ -12,7 +13,6 @@ use crate::libraries::{AEnc, DDH, PRF, XOr};
 use crate::terms::{
     CryptographicAssumption, Cryptography, Formula, Function, NONCE, Sort, Variable,
 };
-use steel::rvals::Result as SResult;
 
 /// Represents a shared cryptographic context within the Steel VM.
 #[derive(Debug, Clone, Steel)]

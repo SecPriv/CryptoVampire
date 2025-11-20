@@ -1,13 +1,13 @@
-use super::FOBinder;
-use super::Formula;
-use crate::input::Registerable;
-use crate::rexp;
-use crate::terms::{EMPTY, Function, Sort, TUPLE, Variable};
 use itertools::{Itertools, izip};
 use steel::rvals::IntoSteelVal;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel::{SteelErr, rerrs};
 use utils::econtinue_let;
+
+use super::{FOBinder, Formula};
+use crate::input::Registerable;
+use crate::rexp;
+use crate::terms::{EMPTY, Function, Sort, TUPLE, Variable};
 
 impl Formula {
     // TODO: find such that

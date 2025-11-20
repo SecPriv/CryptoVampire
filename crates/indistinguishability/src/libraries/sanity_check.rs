@@ -2,10 +2,8 @@ use std::borrow::Cow;
 
 use golgge::{Dependancy, Rule};
 
-use crate::{
-    CVProgram, Lang,
-    problem::{PAnalysis, RcRule},
-};
+use crate::problem::{PAnalysis, RcRule};
+use crate::{CVProgram, Lang};
 
 /// A rule that performs basic sanity checks on the e-graph.
 ///

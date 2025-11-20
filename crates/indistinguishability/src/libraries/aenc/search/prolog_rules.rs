@@ -2,18 +2,14 @@ use egg::Pattern;
 use golgge::PrologRule;
 use itertools::{Itertools, chain, izip};
 
-use crate::{
-    Lang, Problem, fresh,
-    libraries::{
-        AEnc,
-        aenc::{ProofHints, vars::*},
-    },
-    rexp,
-    terms::{
-        AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, FRESH_NONCE, Formula, Function, IS_FRESH_NONCE,
-        MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE, PRED, Sort, VAMPIRE,
-    },
+use crate::libraries::AEnc;
+use crate::libraries::aenc::ProofHints;
+use crate::libraries::aenc::vars::*;
+use crate::terms::{
+    AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, FRESH_NONCE, Formula, Function, IS_FRESH_NONCE,
+    MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE, PRED, Sort, VAMPIRE,
 };
+use crate::{Lang, Problem, fresh, rexp};
 
 pub fn mk_static_rules<'a>(
     pbl: &'a Problem,

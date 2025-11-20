@@ -1,4 +1,5 @@
-use std::{default, path::PathBuf};
+use std::default;
+use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 use steel_derive::Steel;

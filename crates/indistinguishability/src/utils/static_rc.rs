@@ -1,5 +1,7 @@
 use core::sync::atomic::Ordering::*;
-use std::{hash::Hash, ptr::NonNull, sync::atomic::AtomicUsize};
+use std::hash::Hash;
+use std::ptr::NonNull;
+use std::sync::atomic::AtomicUsize;
 
 use serde::Serialize;
 

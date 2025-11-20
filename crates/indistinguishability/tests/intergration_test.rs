@@ -1,4 +1,6 @@
-use std::{env, path::Path, time::Duration};
+use std::env;
+use std::path::Path;
+use std::time::Duration;
 
 use assert_cmd::{Command, cargo_bin};
 use predicates::prelude::*;

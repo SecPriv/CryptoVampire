@@ -4,20 +4,14 @@ use itertools::{Itertools, chain};
 use static_init::dynamic;
 use utils::ereturn_let;
 
-use crate::{
-    CVProgram, Lang, Problem,
-    libraries::{
-        fa::{self, FaElem, PATTERN_FA},
-        utils::Side,
-    },
-    mk_signature,
-    problem::{PAnalysis, PRule, RcRule},
-    rexp,
-    terms::{
-        CryptographicAssumption, Cryptography, ETA, FRESH_NONCE, Function, LENGTH, NONCE, Rewrite,
-        VAMPIRE,
-    },
+use crate::libraries::fa::{self, FaElem, PATTERN_FA};
+use crate::libraries::utils::Side;
+use crate::problem::{PAnalysis, PRule, RcRule};
+use crate::terms::{
+    CryptographicAssumption, Cryptography, ETA, FRESH_NONCE, Function, LENGTH, NONCE, Rewrite,
+    VAMPIRE,
 };
+use crate::{CVProgram, Lang, Problem, mk_signature, rexp};
 declare_trace!($"enc");
 
 mod vars {

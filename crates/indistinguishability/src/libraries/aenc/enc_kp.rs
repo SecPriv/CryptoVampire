@@ -1,20 +1,14 @@
-use super::vars::*;
-use crate::{
-    Lang, Problem,
-    libraries::{
-        AEnc,
-        utils::{
-            FreshNonceSet, RuleWithFreshNonce,
-            Side::{Left, Right},
-        },
-    },
-    problem::{PAnalysis, PRule, RcRule},
-    rexp,
-    terms::{EQUIV, FRESH_NONCE, Function, FunctionFlags, NONCE, Sort},
-};
 use egg::{Id, Pattern, SearchMatches, Searcher};
 use golgge::{Dependancy, Program, Rule};
 use itertools::{Itertools, chain};
+
+use super::vars::*;
+use crate::libraries::AEnc;
+use crate::libraries::utils::Side::{Left, Right};
+use crate::libraries::utils::{FreshNonceSet, RuleWithFreshNonce};
+use crate::problem::{PAnalysis, PRule, RcRule};
+use crate::terms::{EQUIV, FRESH_NONCE, Function, FunctionFlags, NONCE, Sort};
+use crate::{Lang, Problem, rexp};
 
 pub fn mk_rules(_: &Problem, aenc: &AEnc) -> impl Iterator<Item = RcRule> {
     [EncKpRule::new(aenc).into_mrc()].into_iter()

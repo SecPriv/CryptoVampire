@@ -1,11 +1,11 @@
-use super::Formula;
-use super::{FOBinder, RecFOFormulaQuant};
-use crate::terms::formula::RecFOFormulaQuantRef;
-use crate::terms::{AND, FALSE, Function, IMPLIES, NOT, OR, Sort, TRUE, Variable};
 use itertools::Either;
 use logic_formula::{AsFormula, Destructed, HeadSk};
 use rustc_hash::FxHashMap;
 use utils::{dynamic_iter, match_eq};
+
+use super::{FOBinder, Formula, RecFOFormulaQuant};
+use crate::terms::formula::RecFOFormulaQuantRef;
+use crate::terms::{AND, FALSE, Function, IMPLIES, NOT, OR, Sort, TRUE, Variable};
 
 impl Formula {
     pub fn as_var(&self) -> Option<&Variable> {

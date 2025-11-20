@@ -2,12 +2,9 @@ use egg::{Analysis, EGraph, MultiPattern, Rewrite};
 use itertools::{Itertools, chain, izip};
 use rustc_hash::FxHashMap;
 
-use crate::{
-    Lang, MSmt, MSmtFormula, Problem,
-    problem::{BoundStep, ConstrainOp, Constrains, CurrentStep, PAnalysis},
-    rexp, smt,
-    terms::{CURRENT_STEP, Formula, HAPPENS, INIT, IS_INDEX, LEQ, LT, PRED, TRUE},
-};
+use crate::problem::{BoundStep, ConstrainOp, Constrains, CurrentStep, PAnalysis};
+use crate::terms::{CURRENT_STEP, Formula, HAPPENS, INIT, IS_INDEX, LEQ, LT, PRED, TRUE};
+use crate::{Lang, MSmt, MSmtFormula, Problem, rexp, smt};
 
 macro_rules! bind {
     ($s1:ident($a1:ident..) $op:ident $s2:ident($a2:ident..)) => {

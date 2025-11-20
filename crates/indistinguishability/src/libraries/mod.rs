@@ -266,13 +266,12 @@ mod smt;
 /// that can then be used with mutliparterns
 pub mod find_indices;
 
+pub use aenc::AEnc;
 /// Re-exports `FreshNonce` for generating fresh nonces and `mk_no_guessing_smt` for SMT rules related to nonces.
 /// Re-exports `FreshNonce` for generating fresh nonces and `mk_no_guessing_smt` for SMT rules related to nonces.
 pub use nonce::{FreshNonce, mk_no_guessing_smt};
 /// Re-exports the `PRF` struct, representing a pseudo-random function.
 pub use prf::PRF;
-
-pub use aenc::AEnc;
 
 /// Provides rules for sanity checking.
 #[cfg(debug_assertions)]

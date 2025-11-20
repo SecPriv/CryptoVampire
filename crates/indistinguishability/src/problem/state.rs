@@ -2,12 +2,10 @@ use egg::{EGraph, Id};
 use log::trace;
 use rustc_hash::FxHashSet;
 
-use crate::{
-    Lang,
-    libraries::utils::FreshNonceSet,
-    problem::PAnalysis,
-    terms::{IS_INDEX, Sort},
-};
+use crate::Lang;
+use crate::libraries::utils::FreshNonceSet;
+use crate::problem::PAnalysis;
+use crate::terms::{IS_INDEX, Sort};
 
 #[derive(Debug, Clone, Default)]
 pub struct ProblemState {

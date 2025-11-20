@@ -4,7 +4,8 @@ use egg::{Analysis, EGraph, Id, Language};
 use rustc_hash::FxHashSet;
 use utils::{ebreak_if, implvec};
 
-use crate::{Lang, terms::Function};
+use crate::Lang;
+use crate::terms::Function;
 
 pub struct IdEgraphIter<'a, N: Analysis<Lang>, F> {
     current: Vec<Id>,

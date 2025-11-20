@@ -6,12 +6,10 @@ use rustc_hash::FxHashSet;
 pub use subterm_trait::{EgraphSearcher, SyntaxSearcher, default_is_special};
 use utils::{econtinue_if, implvec};
 
-use crate::{
-    Lang,
-    problem::{PAnalysis, ProblemState},
-    protocol::Protocol,
-    terms::{Function, IS_INDEX, Sort},
-};
+use crate::Lang;
+use crate::problem::{PAnalysis, ProblemState};
+use crate::protocol::Protocol;
+use crate::terms::{Function, IS_INDEX, Sort};
 /// Provides utilities for handling fresh variables and formulas.
 pub mod fresh;
 

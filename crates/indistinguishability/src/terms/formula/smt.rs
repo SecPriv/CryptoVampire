@@ -1,12 +1,13 @@
-use super::FOBinder;
-use super::Formula;
-use crate::MSmtFormula;
-use crate::terms::{AND, BITE, EQ, FALSE, OR, TRUE};
+use std::borrow::Cow;
+
 use bon::Builder;
 use cryptovampire_smt::{SmtFormula, SmtHead};
 use itertools::Itertools;
 use log::{error, trace, warn};
-use std::borrow::Cow;
+
+use super::{FOBinder, Formula};
+use crate::MSmtFormula;
+use crate::terms::{AND, BITE, EQ, FALSE, OR, TRUE};
 
 pub trait QuantifierTranslator {
     fn try_translate(&self, f: &Formula) -> Option<Formula>;

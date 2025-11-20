@@ -1,8 +1,10 @@
+use std::fmt::{Debug, Display};
+
+use itertools::chain;
+
 use super::Formula;
 use crate::terms::Variable;
 use crate::terms::formula::sexpr::SExpr;
-use itertools::chain;
-use std::fmt::{Debug, Display};
 
 impl Display for Formula {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

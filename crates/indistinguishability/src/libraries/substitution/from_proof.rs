@@ -3,11 +3,9 @@ use golgge::{Program, ProofItem};
 use itertools::izip;
 use log::trace;
 
-use crate::{
-    CVProgram, Lang,
-    problem::{CVRuleTrait, PAnalysis, RcRule},
-    terms::{Function, Sort},
-};
+use crate::problem::{CVRuleTrait, PAnalysis, RcRule};
+use crate::terms::{Function, Sort};
+use crate::{CVProgram, Lang};
 
 pub trait ProofLike<S: ProofSubstitution + ?Sized> {
     fn split<'pbl>(
@@ -47,7 +45,7 @@ pub trait ProofSubstitution {
         let prf_proof = prf_proof.with_context(|| "can't convert proof type")?;
         trace!(
             "(prf) substitution from rule:\n\t{rule:?}",
-            // golgge::DebugRule::new(rule.as_ref())
+            /* golgge::DebugRule::new(rule.as_ref()) */
         );
 
         prf_proof.split(pgrm, self, proof, &ids, rule.as_ref())

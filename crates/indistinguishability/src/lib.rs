@@ -58,10 +58,8 @@ mod configuration;
 /// Re-exports the main Configuration structure for the crate.
 pub use configuration::{Commands, Configuration};
 
-use crate::{
-    problem::{PAnalysis, RcRule},
-    terms::Variable,
-};
+use crate::problem::{PAnalysis, RcRule};
+use crate::terms::Variable;
 
 // ~~~~~~ type aliases and constants ~~~~~~~
 

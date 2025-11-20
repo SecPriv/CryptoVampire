@@ -3,12 +3,9 @@ use std::borrow::Cow;
 use egg::{Analysis, EGraph, Pattern, SearchMatches, Searcher};
 use static_init::dynamic;
 
-use crate::{
-    Lang,
-    problem::{CurrentStep, PAnalysis},
-    rexp,
-    terms::{Formula, IS_INDEX, Sort},
-};
+use crate::problem::{CurrentStep, PAnalysis};
+use crate::terms::{Formula, IS_INDEX, Sort};
+use crate::{Lang, rexp};
 
 pub fn mk_rewrite<N: Analysis<Lang>>() -> egg::Rewrite<Lang, N> {
     mk_rewrite!("eq_indices"; (i): (IS_INDEX #i) => (#i))

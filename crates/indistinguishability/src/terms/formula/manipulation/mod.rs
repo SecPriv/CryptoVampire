@@ -1,7 +1,8 @@
-use super::Formula;
-use crate::terms::Variable;
 use rpds::HashTrieSet;
 use rustc_hash::FxHashMap;
+
+use super::Formula;
+use crate::terms::Variable;
 
 mod unification;
 pub use unification::Substitution;

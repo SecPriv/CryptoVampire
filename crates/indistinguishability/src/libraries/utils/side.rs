@@ -3,10 +3,8 @@ use std::fmt::Display;
 use egg::{Analysis, EGraph, Id};
 use utils::match_eq;
 
-use crate::{
-    Lang,
-    terms::{Function, LEFT, RIGHT},
-};
+use crate::Lang;
+use crate::terms::{Function, LEFT, RIGHT};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Side {

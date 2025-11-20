@@ -7,7 +7,8 @@ use quarck::CowArc;
 use rustc_hash::FxHashMap;
 use utils::{econtinue_if, ereturn_if};
 
-use crate::{Lang, terms::Formula};
+use crate::Lang;
+use crate::terms::Formula;
 
 /// partial result for [pull_from_egraph]
 ///

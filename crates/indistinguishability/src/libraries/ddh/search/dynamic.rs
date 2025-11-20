@@ -1,21 +1,20 @@
-use crate::{
-    CVProgram, Lang, Problem,
-    libraries::{
-        DDH,
-        ddh::vars::*,
-        utils::{SyntaxSearcher, fresh::RefFormulaBuilder},
-    },
-    problem::{PAnalysis, RcRule},
-    rexp,
-    runners::SmtRunner,
-    terms::{Formula, Function, NONCE},
-};
+use std::borrow::Cow;
+use std::ops::ControlFlow;
+
 use bon::Builder;
 use egg::{Id, Pattern, Searcher};
 use golgge::{Dependancy, Rule};
 use itertools::Itertools;
-use std::{borrow::Cow, ops::ControlFlow};
 use utils::ereturn_if;
+
+use crate::libraries::DDH;
+use crate::libraries::ddh::vars::*;
+use crate::libraries::utils::SyntaxSearcher;
+use crate::libraries::utils::fresh::RefFormulaBuilder;
+use crate::problem::{PAnalysis, RcRule};
+use crate::runners::SmtRunner;
+use crate::terms::{Formula, Function, NONCE};
+use crate::{CVProgram, Lang, Problem, rexp};
 
 #[derive(Debug, Clone, Builder)]
 pub struct SearchRule {

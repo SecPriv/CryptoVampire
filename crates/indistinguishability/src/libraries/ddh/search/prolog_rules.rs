@@ -2,15 +2,13 @@ use egg::Pattern;
 use golgge::PrologRule;
 use itertools::{Itertools, chain, izip};
 
-use crate::{
-    Lang, Problem, fresh,
-    libraries::ddh::{DDH, ProofHints, vars::*},
-    rexp,
-    terms::{
-        AND, BITE, FRESH_NONCE, Formula, Function, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE,
-        NONCE, PRED, Sort, VAMPIRE,
-    },
+use crate::libraries::ddh::vars::*;
+use crate::libraries::ddh::{DDH, ProofHints};
+use crate::terms::{
+    AND, BITE, FRESH_NONCE, Formula, Function, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE,
+    PRED, Sort, VAMPIRE,
 };
+use crate::{Lang, Problem, fresh, rexp};
 
 pub fn mk_static_rules<'a>(
     pbl: &'a Problem,

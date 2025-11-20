@@ -1,7 +1,8 @@
+use std::any::Any;
+use std::fmt::Display;
 use std::rc::Rc;
 #[cfg(feature = "sync")]
 use std::sync::Arc;
-use std::{any::Any, fmt::Display};
 
 use egg::{Analysis, Id, Language};
 

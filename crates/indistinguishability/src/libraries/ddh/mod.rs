@@ -1,12 +1,10 @@
 use itertools::{Itertools, chain};
 
-use crate::{
-    Problem, mk_signature,
-    terms::{
-        CryptographicAssumption, Cryptography, Formula, Function, FunctionFlags, Rewrite, Sort,
-        Variable,
-    },
+use crate::terms::{
+    CryptographicAssumption, Cryptography, Formula, Function, FunctionFlags, Rewrite, Sort,
+    Variable,
 };
+use crate::{Problem, mk_signature};
 declare_trace!($"enc");
 
 mod vars {

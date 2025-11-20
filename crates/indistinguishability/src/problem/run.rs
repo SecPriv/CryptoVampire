@@ -1,12 +1,12 @@
-use super::*;
-use crate::libraries;
-use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, PRED, UNFOLD_MSG};
-use crate::{Configuration, Lang, rexp, smt};
 use cryptovampire_smt::Smt;
 use egg::EGraph;
 use golgge::{Program, Rule};
 use itertools::Itertools;
 use log::trace;
+
+use super::*;
+use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, PRED, UNFOLD_MSG};
+use crate::{Configuration, Lang, libraries, rexp, smt};
 
 impl Problem {
     /// Build a [Program] to use

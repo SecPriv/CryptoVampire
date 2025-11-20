@@ -1,12 +1,12 @@
-# format_code_in_doc_comments = true
+format_code_in_doc_comments = true
 style_edition = "2024"
-# normalize_comments = true
-# normalize_doc_attributes = true
-# format_strings = true
-# format_macro_matchers = true
-# format_macro_bodies = true
-# imports_granularity = "Module"
-# group_imports = "StdExternalCrate"
+normalize_comments = true
+normalize_doc_attributes = true
+format_strings = true
+format_macro_matchers = true
+format_macro_bodies = true
+imports_granularity = "Module"
+group_imports = "StdExternalCrate"
 
 # max_width = 100
 # hard_tabs = false

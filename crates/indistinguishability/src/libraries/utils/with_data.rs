@@ -3,21 +3,14 @@ use itertools::{Itertools, chain, izip};
 use log::warn;
 use rustc_hash::FxHashSet;
 use static_init::dynamic;
-use utils::{
-    ebreak_if, ebreak_let, implvec,
-    transposer::{Transposable, VecTranspose},
-};
+use utils::transposer::{Transposable, VecTranspose};
+use utils::{ebreak_if, ebreak_let, implvec};
 
-use crate::{
-    CVProgram, Lang, Problem,
-    libraries::nonce,
-    problem::{PAnalysis, ProblemState},
-    rexp,
-    terms::{
-        Formula, Function, IS_FRESH_NONCE, NONCE, Sort, Substitution, Variable,
-        utils::iter_egraph::iter_descendants_lang,
-    },
-};
+use crate::libraries::nonce;
+use crate::problem::{PAnalysis, ProblemState};
+use crate::terms::utils::iter_egraph::iter_descendants_lang;
+use crate::terms::{Formula, Function, IS_FRESH_NONCE, NONCE, Sort, Substitution, Variable};
+use crate::{CVProgram, Lang, Problem, rexp};
 
 #[dynamic]
 static PATTERN_FALSE: Pattern<Lang> = Pattern::from(&rexp!(false));

@@ -2,10 +2,8 @@ use std::fmt::format;
 
 use itertools::{Itertools, chain};
 
-use crate::{
-    Problem, mk_signature,
-    terms::{CryptographicAssumption, Cryptography, Function, FunctionFlags, Rewrite, Sort},
-};
+use crate::terms::{CryptographicAssumption, Cryptography, Function, FunctionFlags, Rewrite, Sort};
+use crate::{Problem, mk_signature};
 declare_trace!($"enc");
 
 mod vars {
