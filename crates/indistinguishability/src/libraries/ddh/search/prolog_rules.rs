@@ -68,7 +68,7 @@ pub fn mk_static_rules<'a>(
                 (and (distinct #N #NA) (distinct #N #NB) (distinct #N #NC)))).
 
           "search_instance" (Replace):
-            (search_m #NA #NB #NC (exp (exp g #NA) #NB) #H).
+            (search_m #NA #NB #NC (exp (exp g (NONCE #NA)) (NONCE #NB)) #H).
 
           "search_ddh_exp_ga" (Keep):
             (search_m #NA #NB #NC (exp g (NONCE #NA)) #H).

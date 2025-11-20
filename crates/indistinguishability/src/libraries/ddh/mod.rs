@@ -2,7 +2,7 @@ use itertools::{Itertools, chain};
 
 use crate::libraries::ddh::rule::DDHRule;
 use crate::libraries::utils::RuleWithFreshNonce;
-use crate::problem::ProblemState;
+use crate::problem::{PRule, ProblemState};
 use crate::terms::{
     CryptographicAssumption, Cryptography, Formula, Function, FunctionFlags, Rewrite, Sort,
     Variable,
@@ -107,6 +107,7 @@ impl DDH {
             let rules = chain![
                 search::mk_rules(pbl, &ddh),
                 subst::mk_rules(pbl, &ddh),
+                [DDHRule::new(&ddh).into_mrc()]
                 // ind_cca::mk_rules(pbl, &aenc),
                 // enc_kp::mk_rules(pbl, &aenc)
             ]

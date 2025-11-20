@@ -38,7 +38,7 @@ impl DDHRule {
             goal_right: Pattern::from(&rexp!((EQUIV #U #V  #B (candidate_m #M #NA #NB)))),
             deps: [
                 rexp!((search_m #NA #NB #NC #M true)),
-                rexp!((subst #SIDE #U #V (exp g (NONCE #NC)) (search_m #NA #NB #NC #M true))),
+                rexp!((subst #SIDE #U #V (exp g (NONCE #NC)) (search_m #NA #NB #NC #M true) #B)),
             ]
             .map(|x| Pattern::from(&x)),
         }
@@ -67,9 +67,9 @@ impl<'pbl> Rule<Lang, PAnalysis<'pbl>, RcRule> for DDHRule {
             let side = side.get_id(prgm.egraph_mut());
             for mut subst in substs {
                 subst.insert(SIDE.as_egg(), side);
-                let [t, m, r, k, b] = [T, M, R, K, B].map(|v| *subst.get(v.as_egg()).unwrap());
-                for k2 in self.generate_fresh_nonce(prgm, [t, m, r, k], [b]) {
-                    subst.insert(K2.as_egg(), k2);
+                let [m, na, nb, b] = [M, NA, NB, B].map(|v| *subst.get(v.as_egg()).unwrap());
+                for nc in self.generate_fresh_nonce(prgm, [m, na, nb], [b]) {
+                    subst.insert(NC.as_egg(), nc);
                     ret.push(
                         self.deps
                             .clone()

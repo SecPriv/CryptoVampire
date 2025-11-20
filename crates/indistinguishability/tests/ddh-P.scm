@@ -174,18 +174,19 @@
 (add-constrain pbl (i j) (lt (ExpG j) (P1 i)))
 (bind ((i Index)) (begin
     (cv-add-rewrite pbl (cv-mk-rewrite "expga1" (list i)
-        (mexp g (a i)) (sel1of2 (macro_msg init p1))))
+        (mexp g (a i)) (sel1of2 (macro_msg (ExpG i) p1))))
     (cv-add-rewrite pbl (cv-mk-rewrite "expga2" (list i)
-        (mexp g (a i)) (sel1of2 (macro_msg init p2))))
+        (mexp g (a i)) (sel1of2 (macro_msg (ExpG i) p2))))
     (cv-add-rewrite pbl (cv-mk-rewrite "expgb1" (list i)
-        (mexp g (b i)) (sel2of2 (macro_msg init p1))))
+        (mexp g (b i)) (sel2of2 (macro_msg (ExpG i) p1))))
     (cv-add-rewrite pbl (cv-mk-rewrite "expgb2" (list i)
-        (mexp g (b i)) (sel2of2 (macro_msg init p2))))))
+        (mexp g (b i)) (sel2of2 (macro_msg (ExpG i) p2))))))
 
 ;; configuration
 (cv-set-trace pbl #t)
 (cv-set-vampire-timeout pbl (cv-string->duration "15s"))
 (cv-set-node-limit pbl 100000)
+(cv-set-keep-smt-files pbl #t)
 
 (initialize-as-ddh ddh g mexp)
 
