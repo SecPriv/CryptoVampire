@@ -4,7 +4,8 @@ use crate::{
     libraries::{
         AEnc,
         utils::{
-            FreshNonceSet, RuleWithFreshNonce, Side::{Left, Right}
+            FreshNonceSet, RuleWithFreshNonce,
+            Side::{Left, Right},
         },
     },
     problem::{PAnalysis, PRule, RcRule},
@@ -98,7 +99,7 @@ impl RuleWithFreshNonce for EncKpRule {
     fn get_set_mut<'a>(&self, pbl: &'a mut Problem) -> &'a mut FreshNonceSet {
         &mut pbl.state.n_enc_kp
     }
-    
+
     fn get_set<'a>(&self, pbl: &'a Problem) -> &'a FreshNonceSet {
         &pbl.state.n_enc_kp
     }

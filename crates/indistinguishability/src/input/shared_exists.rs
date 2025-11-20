@@ -29,7 +29,6 @@ impl ShrExists {
         RwLockReadGuard::map(self.pbl.0.read().unwrap(), |pbl| {
             Exists::try_from_ref(self.index().get(pbl.functions()).unwrap()).unwrap()
         })
-        
     }
 
     fn exists_mut(&self) -> impl DerefMut<Target = Exists> {

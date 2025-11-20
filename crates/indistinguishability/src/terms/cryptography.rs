@@ -88,7 +88,7 @@ impl Cryptography for CryptographicAssumption {
             Self::Undefined => { format!("undefined") }
         })
     }
-    
+
     fn mk_prelude<'a>(&'a self, pbl: &'a Problem) -> impl Iterator<Item = MSmt> + use<'a> {
         dynamic_iter!(Ret; Empty:Empty, NGTH:A, PRF:B, AEnc:C, XOr:D, DDH:E);
 

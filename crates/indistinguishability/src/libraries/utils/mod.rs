@@ -33,7 +33,8 @@ pub fn find_available_id<'e>(
     // *all* the subterms of `ids_to_check`
     let used_ids = all_descendants(egraph, ids_to_check, can_have_childrens);
     // the usable cached ids
-    let relevant_generated_ids: FxHashSet<_> = ProblemState::ids_of_sort(egraph, Some(sort)).collect();
+    let relevant_generated_ids: FxHashSet<_> =
+        ProblemState::ids_of_sort(egraph, Some(sort)).collect();
     if let Some(id) = relevant_generated_ids.difference(&used_ids).next().copied() {
         return id;
     }

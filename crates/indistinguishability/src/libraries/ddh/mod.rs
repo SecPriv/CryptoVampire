@@ -2,7 +2,10 @@ use itertools::{Itertools, chain};
 
 use crate::{
     Problem, mk_signature,
-    terms::{CryptographicAssumption, Cryptography, Formula, Function, FunctionFlags, Rewrite, Sort, Variable},
+    terms::{
+        CryptographicAssumption, Cryptography, Formula, Function, FunctionFlags, Rewrite, Sort,
+        Variable,
+    },
 };
 declare_trace!($"enc");
 
@@ -185,7 +188,7 @@ impl Cryptography for DDH {
     }
 
     fn register_nonce(&self, variables: Vec<Variable>, n: Formula) -> anyhow::Result<()> {
-     println!("registerd {n} !");
-     Ok(())
+        println!("registerd {n} !");
+        Ok(())
     }
 }

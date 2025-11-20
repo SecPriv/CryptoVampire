@@ -302,8 +302,9 @@ impl Registerable for ShrProblem {
             .register_fn("add-constrain", Self::add_constrain)
             .register_fn("run", Self::run);
 
-        Self::register_configuration(module)
-            .register_fn("string->duration", |s: String| humantime::parse_duration(&s).unwrap());
+        Self::register_configuration(module).register_fn("string->duration", |s: String| {
+            humantime::parse_duration(&s).unwrap()
+        });
 
         module
     }
