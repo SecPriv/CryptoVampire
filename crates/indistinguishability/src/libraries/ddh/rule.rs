@@ -11,8 +11,7 @@ use crate::{
     libraries::{
         DDH,
         utils::{
-            RuleWithFreshNonce,
-            Side::{Left, Right},
+            FreshNonceSet, RuleWithFreshNonce, Side::{Left, Right}
         },
     },
     problem::{PAnalysis, RcRule},
@@ -91,11 +90,11 @@ impl<'pbl> Rule<Lang, PAnalysis<'pbl>, RcRule> for DDHRule {
 }
 
 impl RuleWithFreshNonce for DDHRule {
-    fn get_set_mut<'a>(&self, pbl: &'a mut crate::Problem) -> &'a mut FxHashSet<Id> {
+    fn get_set_mut<'a>(&self, pbl: &'a mut crate::Problem) -> &'a mut FreshNonceSet {
         &mut pbl.state.n_ddh
     }
-
-    fn get_set<'a>(&self, pbl: &'a crate::Problem) -> &'a FxHashSet<Id> {
+    
+    fn get_set<'a>(&self, pbl: &'a crate::Problem) -> &'a FreshNonceSet {
         &pbl.state.n_ddh
     }
 

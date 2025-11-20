@@ -4,8 +4,7 @@ use crate::{
     libraries::{
         AEnc,
         utils::{
-            RuleWithFreshNonce,
-            Side::{Left, Right},
+            FreshNonceSet, RuleWithFreshNonce, Side::{Left, Right}
         },
     },
     problem::{PAnalysis, PRule, RcRule},
@@ -96,11 +95,11 @@ impl<'a, R> Rule<Lang, PAnalysis<'a>, R> for EncKpRule {
 }
 
 impl RuleWithFreshNonce for EncKpRule {
-    fn get_set_mut<'a>(&self, pbl: &'a mut Problem) -> &'a mut rustc_hash::FxHashSet<Id> {
+    fn get_set_mut<'a>(&self, pbl: &'a mut Problem) -> &'a mut FreshNonceSet {
         &mut pbl.state.n_enc_kp
     }
-
-    fn get_set<'a>(&self, pbl: &'a Problem) -> &'a rustc_hash::FxHashSet<Id> {
+    
+    fn get_set<'a>(&self, pbl: &'a Problem) -> &'a FreshNonceSet {
         &pbl.state.n_enc_kp
     }
 
