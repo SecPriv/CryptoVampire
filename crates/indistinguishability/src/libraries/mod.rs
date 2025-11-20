@@ -6,7 +6,7 @@ pub use prf::test as prf_test;
 /// Re-exports the `VampireRule` struct, which implements a rule for the Vampire SMT solver.
 pub use vampire::VampireRule;
 
-use crate::problem::{PAnalysis, PRule, RcRule};
+use crate::problem::{PAnalysis, PRule, ProblemState, RcRule};
 use crate::runners::SmtRunner;
 use crate::{Lang, MSmt, Problem};
 
@@ -330,4 +330,5 @@ pub fn mk_smt_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
 pub fn init_egraph<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
     constrains::modify_egraph(egraph);
     find_indices::modify_egraph(egraph);
+    ProblemState::init_egraph(egraph);
 }

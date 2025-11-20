@@ -438,6 +438,11 @@ impl Formula {
             None => Ok(formula),
         }
     }
+
+    pub fn add_to_egraph<N: Analysis<Lang>>(&self, egraph: &mut EGraph<Lang, N>) -> Id {
+        let recexpr = self.as_egg_ground();
+        egraph.add_expr(&recexpr)
+    }
 }
 
 #[derive(Debug, Clone)]

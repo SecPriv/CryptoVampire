@@ -1,16 +1,20 @@
 use egg::{Analysis, EGraph, Id, Pattern};
-use itertools::{Itertools, chain};
+use itertools::{Itertools, chain, izip};
 use log::warn;
 use rustc_hash::FxHashSet;
 use static_init::dynamic;
-use utils::{ebreak_if, ebreak_let, implvec};
+use utils::{
+    ebreak_if, ebreak_let, implvec,
+    transposer::{Transposable, VecTranspose},
+};
 
 use crate::{
     CVProgram, Lang, Problem,
     libraries::nonce,
+    problem::{PAnalysis, ProblemState},
     rexp,
     terms::{
-        Formula, Function, IS_FRESH_NONCE, NONCE, Variable,
+        Formula, Function, IS_FRESH_NONCE, NONCE, Sort, Substitution, Variable,
         utils::iter_egraph::iter_descendants_lang,
     },
 };
@@ -35,7 +39,7 @@ pub struct UserFreshNonce {
 }
 
 impl FreshNonceSet {
-    fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.set.is_empty() || self.fresh.is_empty()
     }
 
@@ -52,10 +56,64 @@ impl FreshNonceSet {
         &self.fresh
     }
 
-    pub fn register(&mut self, variables: Vec<Variable>, nonce: Formula) {
+    pub fn register_nonce(&mut self, variables: Vec<Variable>, nonce: Formula) {
+        assert!(self.is_empty());
+
         self.extra_recipies
             .push(UserFreshNonce { variables, nonce });
-        todo!()
+    }
+
+    pub fn register_idx<'pbl>(
+        egraph: &mut EGraph<Lang, PAnalysis<'pbl>>,
+        mself: impl for<'a> Fn(&'a mut EGraph<Lang, PAnalysis<'pbl>>) -> &'a mut Self,
+        nidx: Option<Id>,
+    ) {
+        let recipies = mself(egraph).extra_recipies.clone();
+        let mut subst = Substitution::default();
+        for UserFreshNonce { variables, nonce } in recipies {
+            let idx = variables
+                .iter()
+                .map(|v| {
+                    let mut arg = ProblemState::ids_of_sort(egraph, v.get_sort()).collect_vec();
+                    if let Some(nidx) = nidx
+                        && v.get_sort()
+                            == Some(
+                                egraph[nidx]
+                                    .nodes
+                                    .iter()
+                                    .map(|l| l.head.signature.output)
+                                    .find(|s| s != &Sort::Any)
+                                    .unwrap(),
+                            )
+                    {
+                        arg.push(nidx);
+                    }
+                    arg.extend(
+                        egraph
+                            .analysis
+                            .pbl()
+                            .current_step()
+                            .unwrap()
+                            .args
+                            .iter()
+                            .filter(|f| f.signature.output == v.get_sort().unwrap())
+                            .map(|f| egraph.lookup(f.app_id([])).unwrap()),
+                    );
+
+                    arg.into_iter()
+                        .map(|id| Formula::try_from_id(egraph, id).unwrap())
+                        .collect_vec()
+                })
+                .collect_vec();
+            for args in idx.as_slice().transpose() {
+                subst.0.clear();
+                subst
+                    .0
+                    .extend(izip!(&variables, args).map(|(v, f)| (v.clone(), f.clone())));
+                let fresh_idx = nonce.apply(&subst).add_to_egraph(egraph);
+                mself(egraph).set.insert(fresh_idx);
+            }
+        }
     }
 
     fn add(&mut self, id: Id) {
