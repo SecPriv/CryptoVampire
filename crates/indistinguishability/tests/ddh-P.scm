@@ -83,40 +83,42 @@
           (sign (tuple gs (mexp g (a i)) vks) skP))))))
 (define (P2in i p) (macro_input (P2 i) p))
 
-; (define P3
-;   (declare-step pbl "P3" (list Index Index)
-;     (step p1
-;       (lambda (challenge i j)
-;         (let [ (gS (sel2of2 (sel1of2 (P2in i p1)))) (vkS (sel1of2 (sel1of2 (P2in i p1)))) ]
-;           (eq gS (mexp g (b j)))))
-;       (lambda (challenge i j)
-;         ; (mexp (mexp g (a i)) (b j))))
-;         ok)) ;))
-;     (step p2
-;       (lambda (challenge i j)
-;         (let [ (gS (sel2of2 (sel1of2 (P2in i p2)))) (vkS (sel1of2 (sel1of2 (P2in i p2)))) ]
-;           (eq gS (mexp g (b j)))))
-;       (lambda (challenge i j)
-;         ; (mexp g (k i j))))))
-;         ok))))
+(define P3
+  (declare-step pbl "P3" (list Index Index)
+    (step p1
+      (lambda (challenge i j)
+        (let [ (gS (sel2of2 (sel1of2 (P2in i p1)))) (vkS (sel1of2 (sel1of2 (P2in i p1)))) ]
+          (eq gS (mexp g (b j)))))
+      (lambda (challenge i j)
+        (mexp (mexp g (a i)) (b j))))
+    ; ok
+    ; )) ;))
+    (step p2
+      (lambda (challenge i j)
+        (let [ (gS (sel2of2 (sel1of2 (P2in i p2)))) (vkS (sel1of2 (sel1of2 (P2in i p2)))) ]
+          (eq gS (mexp g (b j)))))
+      (lambda (challenge i j)
+        (mexp g (k i j))))))
+; ok
+; ))))
 
-; (define P3fail
-;   (declare-step pbl "P3fail" (list Index)
-;     (step p1
-;       (lambda (challenge i)
-;         (let [ (gS (sel2of2 (sel1of2 (P2in i p1)))) (vkS (sel1of2 (sel1of2 (P2in i p1)))) ]
-;           (mnot (exists ((j Index)) (eq gS (mexp g (b j)))))))
-;       (lambda _ ok))
-;     (step p2
-;       (lambda (challenge i)
-;         (let [ (gS (sel2of2 (sel1of2 (P2in i p2)))) (vkS (sel1of2 (sel1of2 (P2in i p2)))) ]
-;           (mnot (exists ((j Index)) (eq gS (mexp g (b j)))))))
-;       (lambda _ ko))))
+(define P3fail
+  (declare-step pbl "P3fail" (list Index)
+    (step p1
+      (lambda (challenge i)
+        (let [ (gS (sel2of2 (sel1of2 (P2in i p1)))) (vkS (sel1of2 (sel1of2 (P2in i p1)))) ]
+          (mnot (exists ((j Index)) (eq gS (mexp g (b j)))))))
+      (lambda _ ok))
+    (step p2
+      (lambda (challenge i)
+        (let [ (gS (sel2of2 (sel1of2 (P2in i p2)))) (vkS (sel1of2 (sel1of2 (P2in i p2)))) ]
+          (mnot (exists ((j Index)) (eq gS (mexp g (b j)))))))
+      (lambda _ ko))))
 
 (add-constrain pbl (i) (lt (P1 i) (P2 i)))
-; (add-constrain pbl (i) (lt (P2 i) (P3fail i)))
-; (add-constrain pbl (i j) (lt (P2 i) (P3 i j)))
-; (add-constrain pbl (i j) (<> (P3 i j) (P3fail i)))
+(add-constrain pbl (i) (lt (P2 i) (P3fail i)))
+(add-constrain pbl (i j) (lt (P2 i) (P3 i j)))
+(add-constrain pbl (i j) (<> (P3 i j) (P3fail i)))
 
 (define Schall1
   (declare-step pbl "Schall1" (list Index)
@@ -141,12 +143,12 @@
             (mexp g (b j))
             (sign (tuple gp (mexp g (b j)) vkp) skS)))))))
 (define (S1in j p) (macro_input (Schall1 j) p))
-(bind ((i Index))
-  (begin
-    (cv-add-rewrite pbl (cv-mk-rewrite "S1-gb-1" (list i)
-        (mexp g (b i)) (sel2of2 (sel1of2 (macro_msg (Schall1 i) p1)))))
-    (cv-add-rewrite pbl (cv-mk-rewrite "S1-gb-2" (list i)
-        (mexp g (b i)) (sel2of2 (sel1of2 (macro_msg (Schall1 i) p2)))))))
+; (bind ((i Index))
+;   (begin
+;     (cv-add-rewrite pbl (cv-mk-rewrite "S1-gb-1" (list i)
+;         (mexp g (b i)) (sel2of2 (sel1of2 (macro_msg (Schall1 i) p1)))))
+;     (cv-add-rewrite pbl (cv-mk-rewrite "S1-gb-2" (list i)
+;         (mexp g (b i)) (sel2of2 (sel1of2 (macro_msg (Schall1 i) p2)))))))
 
 (define Schall2
   (declare-step pbl "Schall2" (list Index)
@@ -163,6 +165,28 @@
 (define (S2in j p) (macro_input (Schall2 j) p))
 (add-constrain pbl (i) (lt (Schall1 i) (Schall2 i)))
 
+
+(define ExpG
+  (declare-step pbl "expg" (list Index)
+    (step p2 empty-cond (lambda (_ i) (tuple (mexp g (a i)) (mexp g (b i)))))
+    (step p2 empty-cond (lambda (_ i) (tuple (mexp g (a i)) (mexp g (b i)))))))
+(add-constrain pbl (i j) (lt (ExpG j) (Schall1 i)))
+(add-constrain pbl (i j) (lt (ExpG j) (P1 i)))
+(bind ((i Index)) (begin
+    (cv-add-rewrite pbl (cv-mk-rewrite "expga1" (list i)
+        (mexp g (a i)) (sel1of2 (macro_msg init p1))))
+    (cv-add-rewrite pbl (cv-mk-rewrite "expga2" (list i)
+        (mexp g (a i)) (sel1of2 (macro_msg init p2))))
+    (cv-add-rewrite pbl (cv-mk-rewrite "expgb1" (list i)
+        (mexp g (b i)) (sel2of2 (macro_msg init p1))))
+    (cv-add-rewrite pbl (cv-mk-rewrite "expgb2" (list i)
+        (mexp g (b i)) (sel2of2 (macro_msg init p2))))))
+
+;; configuration
+(cv-set-trace pbl #t)
+(cv-set-vampire-timeout pbl (cv-string->duration "15s"))
+(cv-set-node-limit pbl 100000)
+
 (initialize-as-ddh ddh g mexp)
 
 ; (bind ((i Index) (p Protocol))
@@ -171,9 +195,8 @@
 ;       mfalse)))
 
 (bind ((i Index) (j Index))
-  (cv-register-fresh-nonce ddh (list i j) (k i j))
-)
+  (cv-register-fresh-nonce ddh (list i j) (k i j)))
 
-; (if (run pbl p1 p2)
-;   (displayln "success")
-;   (error "failed"))
+(if (run pbl p1 p2)
+  (displayln "success")
+  (error "failed"))

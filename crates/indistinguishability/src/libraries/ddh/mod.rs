@@ -1,5 +1,8 @@
 use itertools::{Itertools, chain};
 
+use crate::libraries::ddh::rule::DDHRule;
+use crate::libraries::utils::RuleWithFreshNonce;
+use crate::problem::ProblemState;
 use crate::terms::{
     CryptographicAssumption, Cryptography, Formula, Function, FunctionFlags, Rewrite, Sort,
     Variable,
@@ -185,8 +188,13 @@ impl Cryptography for DDH {
         format!("Decisional Diffie-Hellman hardness of {}", self.exp)
     }
 
-    fn register_nonce(&self, _variables: Vec<Variable>, n: Formula) -> anyhow::Result<()> {
-        println!("registerd {n} !");
+    fn register_nonce(
+        &self,
+        pbl: &mut ProblemState,
+        variables: Vec<Variable>,
+        n: Formula,
+    ) -> anyhow::Result<()> {
+        pbl.n_ddh.register_nonce(variables, n);
         Ok(())
     }
 }
