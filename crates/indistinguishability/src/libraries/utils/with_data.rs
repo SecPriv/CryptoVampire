@@ -1,14 +1,18 @@
 use egg::{Analysis, EGraph, Id, Pattern};
 use itertools::{Itertools, chain};
+use log::warn;
 use rustc_hash::FxHashSet;
 use static_init::dynamic;
 use utils::{ebreak_if, ebreak_let, implvec};
 
 use crate::{
-    CVProgram, Lang, Problem, libraries::nonce, rexp, terms::{
+    CVProgram, Lang, Problem,
+    libraries::nonce,
+    rexp,
+    terms::{
         Formula, Function, IS_FRESH_NONCE, NONCE, Variable,
         utils::iter_egraph::iter_descendants_lang,
-    }
+    },
 };
 
 #[dynamic]
@@ -27,7 +31,7 @@ pub struct FreshNonceSet {
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct UserFreshNonce {
     variables: Vec<Variable>,
-    nonce: Formula
+    nonce: Formula,
 }
 
 impl FreshNonceSet {
@@ -49,8 +53,14 @@ impl FreshNonceSet {
     }
 
     pub fn register(&mut self, variables: Vec<Variable>, nonce: Formula) {
-        self.extra_recipies.push(UserFreshNonce { variables, nonce });
+        self.extra_recipies
+            .push(UserFreshNonce { variables, nonce });
         todo!()
+    }
+
+    fn add(&mut self, id: Id) {
+        self.fresh.insert(id);
+        self.set.insert(id);
     }
 }
 
@@ -112,8 +122,10 @@ pub trait RuleWithFreshNonce {
 
         // else generate new nonce
         if let Some(limit) = self.get_bound(pgrm.egraph().analysis.pbl())
-            && self.get_set(pgrm.egraph().analysis.pbl()).fresh().len() <= limit
+            && self.get_set(pgrm.egraph().analysis.pbl()).fresh().len() >= limit
         {
+            warn!("beyonf the limit")
+        } else {
             let nonces = pgrm
                 .egraph()
                 .analysis
@@ -141,8 +153,7 @@ pub trait RuleWithFreshNonce {
             }
 
             self.get_set_mut(pgrm.egraph_mut().analysis.pbl_mut())
-                .fresh
-                .insert(n);
+                .add(n);
         }
 
         self.get_set(pgrm.egraph().analysis.pbl())
