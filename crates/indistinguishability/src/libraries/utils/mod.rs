@@ -23,7 +23,7 @@ mod side;
 pub use side::Side;
 
 mod with_data;
-pub use with_data::RuleWithFreshNonce;
+pub use with_data::{RuleWithFreshNonce, FreshNonceSet};
 
 // mod subst;
 // pub use subst::mk_subst_rw;
