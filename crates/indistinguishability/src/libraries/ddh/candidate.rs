@@ -1,10 +1,8 @@
-use crate::{
-    Problem,
-    libraries::DDH,
-    rexp,
-    terms::{Formula, Function, NONCE, Rewrite, Sort},
-};
 use itertools::{Itertools, chain};
+
+use crate::libraries::DDH;
+use crate::terms::{Formula, Function, NONCE, Rewrite, Sort};
+use crate::{Problem, rexp};
 // super::vars::*;
 
 pub fn mk_rwrites(pbl: &Problem, ddh: &DDH) -> impl Iterator<Item = Rewrite> {

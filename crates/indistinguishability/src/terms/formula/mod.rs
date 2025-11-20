@@ -1,9 +1,10 @@
-use crate::terms::{Function, Variable};
 use ::egg::Id;
 use logic_formula::{AsFormula, Destructed};
 use serde::Serialize;
 use smallvec::SmallVec;
 use steel_derive::Steel;
+
+use crate::terms::{Function, Variable};
 
 mod egg;
 // mod egg_like;
@@ -15,7 +16,6 @@ mod builders;
 mod manipulation;
 mod steel;
 pub use manipulation::{AlphaArgs, Substitution};
-
 /// Re-exports `InnerLang`, the language used for `egg` e-graphs.
 pub(crate) use smt::QuantifierTranslator;
 /// Re-exports `RecFOFormula`, a recursive first-order formula representation.
@@ -44,14 +44,6 @@ pub enum Formula {
 }
 
 mod conversion;
-
-fn test<T:Sync>() {}
-fn test2<T:Send>() {}
-
-fn test3(){
-    test::<Formula>();
-    test2::<Formula>();
-}
 
 const SIZE: usize = 3;
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Serialize)]

@@ -170,6 +170,10 @@
 ;       (and (macro_exec (P3fail i) p) (macro_cond (P3fail i) p))
 ;       mfalse)))
 
-(if (run pbl p1 p2)
-  (displayln "success")
-  (error "failed"))
+(bind ((i Index) (j Index))
+  (cv-register-fresh-nonce ddh (list i j) (k i j))
+)
+
+; (if (run pbl p1 p2)
+;   (displayln "success")
+;   (error "failed"))

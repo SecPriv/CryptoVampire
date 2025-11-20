@@ -1,11 +1,11 @@
-use super::Formula;
-use super::{FOBinder, RecFOFormulaQuant};
-use crate::terms::formula::RecFOFormulaQuantRef;
-use crate::terms::{AND, FALSE, Function, IMPLIES, NOT, OR, Sort, TRUE, Variable};
 use itertools::Either;
 use logic_formula::{AsFormula, Destructed, HeadSk};
 use rustc_hash::FxHashMap;
 use utils::{dynamic_iter, match_eq};
+
+use super::{FOBinder, Formula, RecFOFormulaQuant};
+use crate::terms::formula::RecFOFormulaQuantRef;
+use crate::terms::{AND, FALSE, Function, IMPLIES, NOT, OR, Sort, TRUE, Variable};
 
 impl Formula {
     pub fn as_var(&self) -> Option<&Variable> {
@@ -76,6 +76,16 @@ impl Formula {
             Formula::Quantifier { .. } => Some(Sort::Bool),
             Formula::App { head, .. } => Some(head.signature.output),
             Formula::Var(_) => None,
+        }
+    }
+
+    /// Checks that the terms has the given sort.
+    ///
+    /// This doesn't typechecks
+    pub fn has_sort(&self, sort: Sort) -> bool {
+        match self.try_get_sort() {
+            Some(x) => x == sort,
+            None => true,
         }
     }
 

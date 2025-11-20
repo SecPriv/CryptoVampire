@@ -1,3 +1,8 @@
+use std::borrow::Cow;
+
+use bon::bon;
+use utils::implvec;
+
 use self::function_builder::{
     SetAlias, SetCryptography, SetInputs, SetName, SetOutput, SetStepIdx,
 };
@@ -6,9 +11,6 @@ use crate::terms::{
     Alias, Function, FunctionCollection, FunctionFlags, InnerFunction, Signature, Sort,
 };
 use crate::utils::fresh_name;
-use bon::bon;
-use std::borrow::Cow;
-use utils::implvec;
 
 impl Problem {
     /// Returns the function collection

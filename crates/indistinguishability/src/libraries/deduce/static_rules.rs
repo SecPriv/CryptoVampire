@@ -12,7 +12,7 @@ pub fn mk_rules() -> impl Iterator<Item = RcRule> {
     let equiv = &EQUIV;
     let deduce_m = &BIT_DEDUCE;
     let deduce_b = &BOOL_DEDUCE;
-    let b_ite = &BITE;
+    let _b_ite = &BITE;
     let m_ite = &MITE;
     decl_vars![t, t2, p1, p2, h1, h2, u, v, a, b, a1, b1, a2, b2, c1, c2, x];
 

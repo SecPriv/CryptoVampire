@@ -1,9 +1,10 @@
 use itertools::{Itertools, chain};
 
-use crate::{
-    Problem, mk_signature,
-    terms::{CryptographicAssumption, Cryptography, Function, FunctionFlags, Rewrite, Sort},
+use crate::terms::{
+    CryptographicAssumption, Cryptography, Formula, Function, FunctionFlags, Rewrite, Sort,
+    Variable,
 };
+use crate::{Problem, mk_signature};
 declare_trace!($"enc");
 
 mod vars {
@@ -178,5 +179,14 @@ impl Cryptography for DDH {
             CryptographicAssumption::DDH(x) => Some(x),
             _ => None,
         }
+    }
+
+    fn name(&self) -> impl std::fmt::Display {
+        format!("Decisional Diffie-Hellman hardness of {}", self.exp)
+    }
+
+    fn register_nonce(&self, _variables: Vec<Variable>, n: Formula) -> anyhow::Result<()> {
+        println!("registerd {n} !");
+        Ok(())
     }
 }

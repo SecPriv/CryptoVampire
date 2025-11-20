@@ -1,9 +1,12 @@
 //! Dumb module to define some of the data regarding cryptopgrahy
 
-use anyhow::{Context, ensure};
-use utils::dynamic_iter;
+use std::fmt::Display;
+
+use anyhow::{Context, bail, ensure};
+use utils::{dynamic_iter, match_as_trait};
 
 use crate::libraries::{self, mk_no_guessing_smt};
+use crate::terms::{Formula, Sort, Variable};
 use crate::{MSmt, Problem};
 
 /// Represents different cryptographic assumptions that can be made in the problem.
@@ -20,19 +23,19 @@ pub enum CryptographicAssumption {
 }
 
 impl CryptographicAssumption {
-    /// Generates SMT prelude statements based on the cryptographic assumption.
-    pub fn mk_prelude<'a>(&'a self, pbl: &'a Problem) -> impl Iterator<Item = MSmt> + use<'a> {
-        dynamic_iter!(Ret; Empty:Empty, NGTH:A, PRF:B, AEnc:C, XOr:D, DDH:E);
+    // /// Generates SMT prelude statements based on the cryptographic assumption.
+    // pub fn mk_prelude<'a>(&'a self, pbl: &'a Problem) -> impl Iterator<Item = MSmt> + use<'a> {
+    //     dynamic_iter!(Ret; Empty:Empty, NGTH:A, PRF:B, AEnc:C, XOr:D, DDH:E);
 
-        match self {
-            Self::NoGuessingTh => Ret::NGTH(mk_no_guessing_smt(pbl)),
-            Self::PRF(prf) => Ret::PRF(prf.mk_prelude(pbl)),
-            Self::AEnc(prf) => Ret::AEnc(prf.mk_prelude(pbl)),
-            Self::XOr(prf) => Ret::XOr(prf.mk_prelude(pbl)),
-            Self::DDH(prf) => Ret::DDH(prf.mk_prelude(pbl)),
-            Self::Undefined => Ret::Empty(::std::iter::empty()),
-        }
-    }
+    //     match self {
+    //         Self::NoGuessingTh => Ret::NGTH(mk_no_guessing_smt(pbl)),
+    //         Self::PRF(prf) => Ret::PRF(prf.mk_prelude(pbl)),
+    //         Self::AEnc(prf) => Ret::AEnc(prf.mk_prelude(pbl)),
+    //         Self::XOr(prf) => Ret::XOr(prf.mk_prelude(pbl)),
+    //         Self::DDH(prf) => Ret::DDH(prf.mk_prelude(pbl)),
+    //         Self::Undefined => Ret::Empty(::std::iter::empty()),
+    //     }
+    // }
 
     /// Returns `true` if the cryptographic assumption is [`Undefined`].
     ///
@@ -53,6 +56,8 @@ pub trait Cryptography: Into<CryptographicAssumption> {
         ::std::iter::empty()
     }
 
+    fn name(&self) -> impl Display;
+
     #[must_use]
     fn ref_from_assumption(r: &CryptographicAssumption) -> Option<&Self>;
 
@@ -66,5 +71,48 @@ pub trait Cryptography: Into<CryptographicAssumption> {
         );
         *ca = self.into();
         Ok(ca.as_inner().unwrap())
+    }
+
+    fn register_nonce(&self, _variables: Vec<Variable>, n: Formula) -> anyhow::Result<()> {
+        assert!(n.has_sort(Sort::Nonce), "nonce should have sort 'Nonce'");
+        bail!("unsupported for {}", self.name())
+    }
+}
+
+impl Cryptography for CryptographicAssumption {
+    fn name(&self) -> impl Display {
+        match_as_trait!(self =>{
+            Self::PRF(x) | Self::AEnc(x) | Self::XOr(x) | Self::DDH(x) => { format!("{}", x.name()) },
+            Self::NoGuessingTh => { "no-guessing".to_string() },
+            Self::Undefined => { "undefined".to_string() }
+        })
+    }
+
+    fn mk_prelude<'a>(&'a self, pbl: &'a Problem) -> impl Iterator<Item = MSmt> + use<'a> {
+        dynamic_iter!(Ret; Empty:Empty, NGTH:A, PRF:B, AEnc:C, XOr:D, DDH:E);
+
+        match self {
+            Self::NoGuessingTh => Ret::NGTH(mk_no_guessing_smt(pbl)),
+            Self::PRF(prf) => Ret::PRF(prf.mk_prelude(pbl)),
+            Self::AEnc(prf) => Ret::AEnc(prf.mk_prelude(pbl)),
+            Self::XOr(prf) => Ret::XOr(prf.mk_prelude(pbl)),
+            Self::DDH(prf) => Ret::DDH(prf.mk_prelude(pbl)),
+            Self::Undefined => Ret::Empty(::std::iter::empty()),
+        }
+    }
+
+    fn ref_from_assumption(r: &CryptographicAssumption) -> Option<&Self> {
+        Some(r)
+    }
+
+    fn register_at(self, _: &mut Problem, _: usize) -> anyhow::Result<&Self> {
+        unimplemented!("Calling this is a mistake")
+    }
+
+    fn register_nonce(&self, variables: Vec<Variable>, n: Formula) -> anyhow::Result<()> {
+        match_as_trait!(self =>{
+            Self::PRF(x) | Self::AEnc(x) | Self::XOr(x) | Self::DDH(x) => { x.register_nonce(variables, n) },
+            _ => {bail!("unsupported for {}", self.name())}
+        })
     }
 }

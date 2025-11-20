@@ -6,12 +6,10 @@ use rustc_hash::FxHashSet;
 pub use subterm_trait::{EgraphSearcher, SyntaxSearcher, default_is_special};
 use utils::{econtinue_if, implvec};
 
-use crate::{
-    Lang,
-    problem::PAnalysis,
-    protocol::Protocol,
-    terms::{Function, IS_INDEX, Sort},
-};
+use crate::Lang;
+use crate::problem::{PAnalysis, ProblemState};
+use crate::protocol::Protocol;
+use crate::terms::{Function, Sort};
 /// Provides utilities for handling fresh variables and formulas.
 pub mod fresh;
 
@@ -23,46 +21,7 @@ mod side;
 pub use side::Side;
 
 mod with_data;
-pub use with_data::RuleWithFreshNonce;
-
-// mod subst;
-// pub use subst::mk_subst_rw;
-
-// pub fn generate_rule_vars_arr<const N: usize>(
-//     fun: &Function,
-// ) -> (Vec<[LangVar; 1]>, [[LangVar; 1]; N]) {
-//     use egg::*;
-//     let (vars, others) = generate_rule_vars0(fun);
-//     let vars: Vec<[LangVar; 1]> = vars.map(ENodeOrVar::Var).map(|x| [x]).collect();
-//     let others = others.map(ENodeOrVar::Var).map(|x| [x]);
-//     (vars, others)
-// }
-
-// pub fn generate_rule_vars<const N: usize>(fun: &Function) -> (Vec<LangVar>, [LangVar; N]) {
-//     use egg::*;
-//     let (vars1, others1) = generate_rule_vars0(fun);
-
-//     let vars: Vec<LangVar> = vars1.map(ENodeOrVar::Var).collect();
-//     let others = others1.map(ENodeOrVar::Var);
-//     (vars, others)
-// }
-
-// pub fn generate_rule_vars0<const N: usize>(
-//     fun: &Function,
-// ) -> (impl Iterator<Item = Var> + Clone + use<'_, N>, [Var; N]) {
-//     use egg::*;
-//     let n = fun.signature.inputs.len() as u32;
-//     let vars1 = fun
-//         .signature
-//         .inputs
-//         .iter()
-//         .enumerate()
-//         .map(|(i, _)| Var::from_usize(i as u32));
-//     let others1 = ::std::array::from_fn(|i| i as u32)
-//         .map(|x| x + n)
-//         .map(Var::from_usize);
-//     (vars1, others1)
-// }
+pub use with_data::{FreshNonceSet, RuleWithFreshNonce};
 
 pub fn find_available_id<'e>(
     egraph: &mut EGraph<Lang, PAnalysis<'e>>,
@@ -72,40 +31,13 @@ pub fn find_available_id<'e>(
     // *all* the subterms of `ids_to_check`
     let used_ids = all_descendants(egraph, ids_to_check, can_have_childrens);
     // the usable cached ids
-    let relevant_generated_ids: FxHashSet<_> = egraph
-        .analysis
-        .pbl()
-        .state
-        .generated_ids
-        .iter()
-        .filter(|x| {
-            egraph[**x]
-                .nodes
-                .iter()
-                .any(|l| l.head.signature.output == sort)
-        })
-        .copied()
-        .collect();
+    let relevant_generated_ids: FxHashSet<_> =
+        ProblemState::ids_of_sort(egraph, Some(sort)).collect();
     if let Some(id) = relevant_generated_ids.difference(&used_ids).next().copied() {
         return id;
     }
 
-    let new_var = egraph
-        .analysis
-        .pbl_mut()
-        .declare_function()
-        .output(sort)
-        .fresh_name("idx")
-        .call();
-    let new_var = egraph.add(Lang::new(new_var, []));
-    egraph.add(IS_INDEX.app_id([new_var]));
-    egraph
-        .analysis
-        .pbl_mut()
-        .state
-        .generated_ids
-        .insert(new_var);
-    new_var
+    ProblemState::generate_fresh_idx(egraph, sort, "idx")
 }
 
 pub fn all_descendants<N: Analysis<Lang>>(

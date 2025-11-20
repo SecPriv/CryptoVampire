@@ -1,10 +1,8 @@
 use super::vars::*;
-use crate::{
-    Problem,
-    libraries::AEnc,
-    problem::{PRule, RcRule},
-    terms::{EQUIV, FRESH_NONCE, LEFT, LENGTH, NONCE, RIGHT, ZEROES},
-};
+use crate::Problem;
+use crate::libraries::AEnc;
+use crate::problem::{PRule, RcRule};
+use crate::terms::{EQUIV, FRESH_NONCE, LEFT, LENGTH, NONCE, RIGHT, ZEROES};
 
 pub fn mk_rules(
     _: &Problem,

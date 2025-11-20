@@ -6,15 +6,11 @@ use golgge::{Dependancy, ProofItem, Rule};
 use itertools::izip;
 use utils::ereturn_let;
 
-use crate::{
-    CVProgram, Lang,
-    libraries::{
-        PRF,
-        prf::{K, M, NEW_TERM, NK, PRFProof, PROOF},
-    },
-    problem::{PAnalysis, RcRule},
-    terms::{CryptographicAssumption, Function, NONCE, Sort},
-};
+use crate::libraries::PRF;
+use crate::libraries::prf::{K, M, NEW_TERM, NK, PRFProof, PROOF};
+use crate::problem::{PAnalysis, RcRule};
+use crate::terms::{CryptographicAssumption, Function, NONCE, Sort};
+use crate::{CVProgram, Lang};
 
 #[derive(Debug, Clone, Builder)]
 pub struct SubstRule {

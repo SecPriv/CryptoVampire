@@ -1,12 +1,10 @@
 use itertools::chain;
 
-use crate::{
-    Problem,
-    libraries::{AEnc, aenc::vars::*},
-    problem::{PRule, RcRule},
-    rexp,
-    runners::SmtRunner,
-};
+use crate::libraries::AEnc;
+use crate::libraries::aenc::vars::*;
+use crate::problem::{PRule, RcRule};
+use crate::runners::SmtRunner;
+use crate::{Problem, rexp};
 
 mod dynamic;
 mod prolog_rules;

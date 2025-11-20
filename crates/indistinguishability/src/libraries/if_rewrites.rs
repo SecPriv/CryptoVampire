@@ -2,10 +2,10 @@ use egg::{Analysis, Pattern, Rewrite};
 use itertools::{Itertools, chain, izip};
 use utils::dynamic_iter;
 
-use crate::{
-    Lang, Problem, rexp,
-    terms::{AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, EQ, Function, IMPLIES, MITE, NOT, OR},
+use crate::terms::{
+    AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, EQ, Function, IMPLIES, MITE, NOT, OR,
 };
+use crate::{Lang, Problem, rexp};
 
 pub fn mk_rewrite<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = egg::Rewrite<Lang, N>> {
     chain![mk_static_rewrites(), mk_commute_if(pbl)]

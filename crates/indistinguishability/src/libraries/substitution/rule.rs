@@ -1,10 +1,9 @@
-use super::*;
-
 use egg::{Language, Searcher};
 use golgge::{Dependancy, Rule};
 use itertools::Itertools;
 use utils::ereturn_let;
 
+use super::*;
 use crate::libraries::substitution::algorithm::compute_all_substitutions;
 use crate::problem::PAnalysis;
 // use crate::rules::base_rules::substitution;
@@ -119,32 +118,29 @@ impl<'a, R> Rule<Lang, PAnalysis<'a>, R> for SubstRule {
     }
 }
 
-/*
-
-(msubst
-  (fa_cons_m
-    (lambda_find_such_that
-      list_nil
-      (mand
-        (lt (tag idx r2_0) (r2 r2_0))
-        (mand
-          (eq (sel2of2 (macro_input (r2 (λS (λS r2_0))) _p$1)) (sel2of2 (macro_input (tag idx r2_0) _p$1)))
-          (eq
-            (sel1of2 (macro_input (λS (λS (r2 (λS (λS r2_0))))) (λS (λS _p$1))))
-            (sel1of2 (macro_input (tag idx r2_0) _p$1)))))
-      (mhash
-        (mtuple
-          (mtuple (mnonce (_nr (λS (λS r2_0)))) (sel1of2 (macro_input (r2 (λS (λS r2_0))) _p$1)))
-          tag2)
-        (mnonce (_mk idx λO _p$0)))
-      ko)
-    (fa_cons_m (macro_frame (pred (r2 r2_0)) _p$1) (fa_cons_b (macro_cond (r2 r2_0) _p$1) fa_nil)))
-  (mhash
-    (mtuple
-      (mtuple (mnonce (_nr (λS (λS r2_0)))) (sel1of2 (macro_input (r2 (λS (λS r2_0))) _p$1)))
-      tag2)
-    (mnonce (_mk idx λO _p$0)))
-  (mnonce n_prf))
-
-
-*/
+// (msubst
+// (fa_cons_m
+// (lambda_find_such_that
+// list_nil
+// (mand
+// (lt (tag idx r2_0) (r2 r2_0))
+// (mand
+// (eq (sel2of2 (macro_input (r2 (λS (λS r2_0))) _p$1)) (sel2of2 (macro_input (tag idx r2_0) _p$1)))
+// (eq
+// (sel1of2 (macro_input (λS (λS (r2 (λS (λS r2_0))))) (λS (λS _p$1))))
+// (sel1of2 (macro_input (tag idx r2_0) _p$1)))))
+// (mhash
+// (mtuple
+// (mtuple (mnonce (_nr (λS (λS r2_0)))) (sel1of2 (macro_input (r2 (λS (λS r2_0))) _p$1)))
+// tag2)
+// (mnonce (_mk idx λO _p$0)))
+// ko)
+// (fa_cons_m (macro_frame (pred (r2 r2_0)) _p$1) (fa_cons_b (macro_cond (r2 r2_0) _p$1) fa_nil)))
+// (mhash
+// (mtuple
+// (mtuple (mnonce (_nr (λS (λS r2_0)))) (sel1of2 (macro_input (r2 (λS (λS r2_0))) _p$1)))
+// tag2)
+// (mnonce (_mk idx λO _p$0)))
+// (mnonce n_prf))
+//
+//

@@ -1,3 +1,9 @@
+use itertools::{Itertools, chain};
+use log::log_enabled;
+use logic_formula::AsFormula;
+use logic_formula::iterators::QuantiferIterator;
+use utils::econtinue_let;
+
 use super::*;
 use crate::libraries::mk_smt_prelude;
 use crate::terms::{
@@ -5,11 +11,6 @@ use crate::terms::{
     QuantifierTranslator, Rewrite,
 };
 use crate::{MSmt, rexp};
-use itertools::{Itertools, chain};
-use log::log_enabled;
-use logic_formula::AsFormula;
-use logic_formula::iterators::QuantiferIterator;
-use utils::econtinue_let;
 
 impl Problem {
     /// Computes the SMT prelude if it hasn't been computed yet and caches it.

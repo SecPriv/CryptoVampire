@@ -1,6 +1,7 @@
+use std::fmt::Display;
+
 use super::FOBinder;
 use crate::terms::{EXISTS, FIND_SUCH_THAT, Function, Variable};
-use std::fmt::Display;
 
 /// Represents a quantified first-order formula with its binder and bound variables.
 pub struct RecFOFormulaQuant {

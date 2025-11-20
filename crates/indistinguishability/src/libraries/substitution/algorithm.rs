@@ -6,12 +6,9 @@ use smallvec::SmallVec;
 use static_init::dynamic;
 
 use super::X;
-use crate::{
-    Lang,
-    libraries::substitution::{ACCEPTABLY_EMPTY, FROM, TO, is_ok_for_substitution},
-    rexp,
-    terms::SUBSTITUTION,
-};
+use crate::libraries::substitution::{ACCEPTABLY_EMPTY, FROM, TO, is_ok_for_substitution};
+use crate::terms::SUBSTITUTION;
+use crate::{Lang, rexp};
 
 #[dynamic]
 static SUBSTITUTION_PATTERN: Pattern<Lang> = Pattern::from(&rexp!((SUBSTITUTION #X #FROM #TO)));

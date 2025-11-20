@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, bail};
-use bon::{Builder, builder};
+use bon::Builder;
 use cryptovampire_smt::Smt;
 use log::trace;
 use tokio::process::Command;

@@ -1,15 +1,17 @@
-use super::Formula;
-use crate::terms::formula::egg::EggLanguage;
-use crate::terms::formula::list;
-use crate::terms::{CONS, LAMBDA_O, LAMBDA_S, NIL, Sort, Variable};
-use crate::{Lang, LangVar, fresh, rexp};
+use std::fmt::Debug;
+
 use anyhow::{Context, bail};
 use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr};
 use itertools::{Itertools, chain};
 use log::trace;
 use rustc_hash::FxHashMap;
-use std::fmt::Debug;
 use utils::{ereturn_if, implvec};
+
+use super::Formula;
+use crate::terms::formula::egg::EggLanguage;
+use crate::terms::formula::list;
+use crate::terms::{CONS, LAMBDA_O, LAMBDA_S, NIL, Sort, Variable};
+use crate::{Lang, LangVar, fresh, rexp};
 
 impl Formula {
     pub fn from_egg(formula: &[LangVar], sort: Option<Sort>) -> Self {
@@ -437,6 +439,11 @@ impl Formula {
                 .with_context(|| format!("couldn't remove de bruijin indices in {formula}")),
             None => Ok(formula),
         }
+    }
+
+    pub fn add_to_egraph<N: Analysis<Lang>>(&self, egraph: &mut EGraph<Lang, N>) -> Id {
+        let recexpr = self.as_egg_ground();
+        egraph.add_expr(&recexpr)
     }
 }
 

@@ -1,10 +1,12 @@
+use std::fmt::Debug;
+
+use bon::bon;
+use itertools::Itertools;
+use utils::implvec;
+
 use crate::protocol::Protocol;
 use crate::terms::{CryptographicAssumption, Formula, Function, FunctionCollection, Rewrite};
 use crate::{Configuration, MSmt};
-use bon::bon;
-use itertools::Itertools;
-use std::fmt::Debug;
-use utils::implvec;
 
 mod analysis;
 pub(crate) use analysis::CVRuleTrait;

@@ -4,19 +4,13 @@ use golgge::{Dependancy, Rule};
 use itertools::Itertools;
 use utils::ereturn_let;
 
-use crate::{
-    CVProgram, Lang, Problem,
-    libraries::{
-        AEnc,
-        aenc::ProofHints,
-        substitution::{PSArgs, ProofLike, ProofSubstitution},
-    },
-    problem::{CVRuleTrait, PAnalysis, PRule, RcRule},
-    rexp,
-    terms::{EQUIV_WITH_SIDE, Function},
-};
-
 use super::vars::*;
+use crate::libraries::AEnc;
+use crate::libraries::aenc::ProofHints;
+use crate::libraries::substitution::{PSArgs, ProofLike, ProofSubstitution};
+use crate::problem::{CVRuleTrait, PAnalysis, PRule, RcRule};
+use crate::terms::{EQUIV_WITH_SIDE, Function};
+use crate::{CVProgram, Lang, Problem, rexp};
 
 pub fn mk_rules(_: &Problem, aenc: &AEnc) -> impl Iterator<Item = RcRule> {
     [SubstRule::new(aenc).into_mrc()].into_iter()

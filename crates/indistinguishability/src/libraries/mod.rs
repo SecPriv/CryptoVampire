@@ -6,7 +6,7 @@ pub use prf::test as prf_test;
 /// Re-exports the `VampireRule` struct, which implements a rule for the Vampire SMT solver.
 pub use vampire::VampireRule;
 
-use crate::problem::{PAnalysis, PRule, RcRule};
+use crate::problem::{PAnalysis, PRule, ProblemState, RcRule};
 use crate::runners::SmtRunner;
 use crate::{Lang, MSmt, Problem};
 
@@ -266,13 +266,12 @@ mod smt;
 /// that can then be used with mutliparterns
 pub mod find_indices;
 
+pub use aenc::AEnc;
 /// Re-exports `FreshNonce` for generating fresh nonces and `mk_no_guessing_smt` for SMT rules related to nonces.
 /// Re-exports `FreshNonce` for generating fresh nonces and `mk_no_guessing_smt` for SMT rules related to nonces.
 pub use nonce::{FreshNonce, mk_no_guessing_smt};
 /// Re-exports the `PRF` struct, representing a pseudo-random function.
 pub use prf::PRF;
-
-pub use aenc::AEnc;
 
 /// Provides rules for sanity checking.
 #[cfg(debug_assertions)]
@@ -330,4 +329,5 @@ pub fn mk_smt_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
 pub fn init_egraph<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
     constrains::modify_egraph(egraph);
     find_indices::modify_egraph(egraph);
+    ProblemState::init_egraph(egraph);
 }

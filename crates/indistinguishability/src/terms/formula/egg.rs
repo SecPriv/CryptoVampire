@@ -1,10 +1,12 @@
-use super::{InnerLang, SIZE};
-use crate::terms::{Function, Variable};
+use std::fmt::Display;
+
 use egg::{Analysis, EGraph, ENodeOrVar, Id, Language, RecExpr};
 use itertools::Itertools;
 use smallvec::SmallVec;
-use std::fmt::Display;
 use utils::implvec;
+
+use super::{InnerLang, SIZE};
+use crate::terms::{Function, Variable};
 
 impl InnerLang {
     pub const fn new_const(head: Function, args: [Id; SIZE], len: usize) -> Self {

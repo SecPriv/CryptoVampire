@@ -1,9 +1,8 @@
+
 use itertools::{Itertools, chain};
 
-use crate::{
-    Problem, mk_signature,
-    terms::{CryptographicAssumption, Cryptography, Function, FunctionFlags, Rewrite, Sort},
-};
+use crate::terms::{CryptographicAssumption, Cryptography, Function, FunctionFlags, Rewrite, Sort};
+use crate::{Problem, mk_signature};
 declare_trace!($"enc");
 
 mod vars {
@@ -199,5 +198,9 @@ impl Cryptography for AEnc {
             CryptographicAssumption::AEnc(r) => Some(r),
             _ => None,
         }
+    }
+
+    fn name(&self) -> impl std::fmt::Display {
+        format!("Asymetric Encryption of {}", self.enc)
     }
 }

@@ -1,4 +1,4 @@
-use std::{default, path::PathBuf};
+use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 use steel_derive::Steel;
@@ -19,11 +19,11 @@ pub enum Commands {
     },
     /// Reads from stdin (default)
     #[default]
-    Stdin
+    Stdin,
 }
 
 /// A computationnally sound automated cryptographic protocol verifier based on the CCSA.
-/// 
+///
 /// NB: the command line interface is unstable
 #[derive(Debug, Steel, Parser, Clone)]
 #[command(version, about, long_about = None)]

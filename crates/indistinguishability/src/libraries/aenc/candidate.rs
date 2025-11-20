@@ -1,10 +1,8 @@
-use crate::{
-    Problem,
-    libraries::AEnc,
-    rexp,
-    terms::{Formula, Function, NONCE, Rewrite, Sort},
-};
 use itertools::{Itertools, chain};
+
+use crate::libraries::AEnc;
+use crate::terms::{Formula, Function, NONCE, Rewrite, Sort};
+use crate::{Problem, rexp};
 
 pub fn mk_rwrites(pbl: &Problem, aenc: &AEnc) -> impl Iterator<Item = Rewrite> {
     chain![mk_static(pbl, aenc), mk_rewrite_regular(pbl, aenc)]

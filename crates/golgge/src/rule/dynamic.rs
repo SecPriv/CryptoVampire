@@ -1,6 +1,10 @@
 #[cfg(feature = "sync")]
 use std::any::Any;
-use std::{borrow::Cow, fmt::Debug, ops::Deref, rc::Rc, sync::Arc};
+use std::borrow::Cow;
+use std::fmt::Debug;
+use std::ops::Deref;
+use std::rc::Rc;
+use std::sync::Arc;
 
 use egg::{Analysis, Id, Language};
 

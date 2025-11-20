@@ -1,24 +1,16 @@
 use std::borrow::Cow;
 
-use egg::{Id, Pattern, SearchMatches, Searcher};
+use egg::{Pattern, SearchMatches, Searcher};
 use golgge::Rule;
 use itertools::{Itertools, chain};
-use rustc_hash::FxHashSet;
 
 use super::vars::*;
-use crate::{
-    CVProgram, Lang,
-    libraries::{
-        DDH,
-        utils::{
-            RuleWithFreshNonce,
-            Side::{Left, Right},
-        },
-    },
-    problem::{PAnalysis, RcRule},
-    rexp,
-    terms::{EQUIV, Function, FunctionFlags, NONCE, Sort},
-};
+use crate::libraries::DDH;
+use crate::libraries::utils::Side::{Left, Right};
+use crate::libraries::utils::{FreshNonceSet, RuleWithFreshNonce};
+use crate::problem::{PAnalysis, RcRule};
+use crate::terms::{EQUIV, Function, FunctionFlags, NONCE, Sort};
+use crate::{CVProgram, Lang, rexp};
 
 #[derive(Debug, Clone)]
 struct DDHRule {
@@ -91,11 +83,11 @@ impl<'pbl> Rule<Lang, PAnalysis<'pbl>, RcRule> for DDHRule {
 }
 
 impl RuleWithFreshNonce for DDHRule {
-    fn get_set_mut<'a>(&self, pbl: &'a mut crate::Problem) -> &'a mut FxHashSet<Id> {
+    fn get_set_mut<'a>(&self, pbl: &'a mut crate::Problem) -> &'a mut FreshNonceSet {
         &mut pbl.state.n_ddh
     }
 
-    fn get_set<'a>(&self, pbl: &'a crate::Problem) -> &'a FxHashSet<Id> {
+    fn get_set<'a>(&self, pbl: &'a crate::Problem) -> &'a FreshNonceSet {
         &pbl.state.n_ddh
     }
 

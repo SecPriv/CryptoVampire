@@ -1,10 +1,12 @@
+use std::ops::{BitAnd, BitOr, Not, Shr};
+
+use itertools::Itertools;
+use quarck::CowArc;
+use utils::{ereturn_if, ereturn_let, implvec};
+
 use super::Formula;
 use crate::rexp;
 use crate::terms::{AND, FALSE, FOBinder, Function, IMPLIES, NOT, OR, TRUE, Variable};
-use itertools::Itertools;
-use quarck::CowArc;
-use std::ops::{BitAnd, BitOr, Not, Shr};
-use utils::{ereturn_if, ereturn_let, implvec};
 
 // =========================================================
 // ================== specific builders ====================
