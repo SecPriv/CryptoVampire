@@ -534,6 +534,13 @@ fn can_have_children(f: &Function) -> bool {
     f.is_egg_binder() || (f.is_part_of_F() && !f.is_alias())
 }
 
+impl From<PRF> for CryptographicAssumption {
+    /// Converts a `rules::PRF` into a `CryptographicAssumption::PRF`.
+    fn from(v: PRF) -> Self {
+        Self::PRF(v)
+    }
+}
+
 impl Cryptography for PRF {
     fn ref_from_assumption(r: &CryptographicAssumption) -> Option<&Self> {
         match r {
@@ -541,11 +548,8 @@ impl Cryptography for PRF {
             _ => None,
         }
     }
-}
 
-impl From<PRF> for CryptographicAssumption {
-    /// Converts a `rules::PRF` into a `CryptographicAssumption::PRF`.
-    fn from(v: PRF) -> Self {
-        Self::PRF(v)
+    fn name(&self) -> impl std::fmt::Display {
+        format!("Pseudo-randomness of {}", self.hash)
     }
 }

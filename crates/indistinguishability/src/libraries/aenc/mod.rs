@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use itertools::{Itertools, chain};
 
 use crate::{
@@ -199,5 +201,9 @@ impl Cryptography for AEnc {
             CryptographicAssumption::AEnc(r) => Some(r),
             _ => None,
         }
+    }
+
+    fn name(&self) -> impl std::fmt::Display {
+        format!("Asymetric Encryption of {}", self.enc)
     }
 }

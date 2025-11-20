@@ -79,6 +79,16 @@ impl Formula {
         }
     }
 
+    /// Checks that the terms has the given sort.
+    /// 
+    /// This doesn't typechecks
+    pub fn has_sort(&self, sort: Sort) -> bool {
+        match self.try_get_sort() {
+            Some(x) => x == sort,
+            None => true,
+        }
+    }
+
     pub fn is_true(&self) -> bool {
         matches!(self, Self::App { head, .. } if head == &TRUE)
     }

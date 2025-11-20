@@ -1,9 +1,13 @@
 //! Dumb module to define some of the data regarding cryptopgrahy
 
-use anyhow::{Context, ensure};
+use std::borrow::Cow;
+use std::fmt::Display;
+
+use anyhow::{Context, bail, ensure};
 use utils::dynamic_iter;
 
 use crate::libraries::{self, mk_no_guessing_smt};
+use crate::terms::{Formula, Sort, Variable};
 use crate::{MSmt, Problem};
 
 /// Represents different cryptographic assumptions that can be made in the problem.
@@ -53,6 +57,8 @@ pub trait Cryptography: Into<CryptographicAssumption> {
         ::std::iter::empty()
     }
 
+    fn name(&self) -> impl Display;
+
     #[must_use]
     fn ref_from_assumption(r: &CryptographicAssumption) -> Option<&Self>;
 
@@ -66,5 +72,10 @@ pub trait Cryptography: Into<CryptographicAssumption> {
         );
         *ca = self.into();
         Ok(ca.as_inner().unwrap())
+    }
+
+    fn register_nonce(&self, variables: Vec<Variable>, n: Formula ) -> anyhow::Result<()> {
+        assert!(n.has_sort(Sort::Nonce), "nonce should have sort 'Nonce'");
+        bail!("unsupported for {}", self.name())
     }
 }

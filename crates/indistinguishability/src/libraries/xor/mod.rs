@@ -229,4 +229,8 @@ impl Cryptography for XOr {
             _ => None,
         }
     }
+
+    fn name(&self) -> impl std::fmt::Display {
+        &self.xor
+    }
 }

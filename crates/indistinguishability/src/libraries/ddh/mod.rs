@@ -179,4 +179,8 @@ impl Cryptography for DDH {
             _ => None,
         }
     }
+
+    fn name(&self) -> impl std::fmt::Display {
+        format!("Decisional Diffie-Hellman hardness of {}", self.exp)
+    }
 }
