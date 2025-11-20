@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 use steel::SteelErr;
 use steel::rerrs::ErrorKind;
@@ -84,7 +84,14 @@ impl ShrCrypto {
             }
         };
 
-        match self.get_crypto().register_nonce(variables, n) {
+        let mut pbl = self.pbl.0.write().unwrap();
+        let Problem {
+            cryptography,
+            state,
+            ..
+        } = pbl.deref_mut();
+
+        match cryptography[self.index].register_nonce(state, variables, n) {
             Err(e) => SResult::Err(SteelErr::new(ErrorKind::Generic, e.to_string())),
             _ => Ok(()),
         }

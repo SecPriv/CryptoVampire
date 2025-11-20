@@ -45,7 +45,7 @@ pub struct Problem {
     function: FunctionCollection,
 
     /// The cryptographic assumptions
-    cryptography: Vec<CryptographicAssumption>,
+    pub(crate) cryptography: Vec<CryptographicAssumption>,
 
     /// Extra rules to add to the solver
     extra_rules: Vec<RcRule>,

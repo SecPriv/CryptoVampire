@@ -1,7 +1,8 @@
 
 use itertools::{Itertools, chain};
 
-use crate::terms::{CryptographicAssumption, Cryptography, Function, FunctionFlags, Rewrite, Sort};
+use crate::problem::ProblemState;
+use crate::terms::{CryptographicAssumption, Cryptography, Formula, Function, FunctionFlags, Rewrite, Sort, Variable};
 use crate::{Problem, mk_signature};
 declare_trace!($"enc");
 
@@ -202,5 +203,15 @@ impl Cryptography for AEnc {
 
     fn name(&self) -> impl std::fmt::Display {
         format!("Asymetric Encryption of {}", self.enc)
+    }
+
+    fn register_nonce(
+        &self,
+        pbl: &mut ProblemState,
+        variables: Vec<Variable>,
+        n: Formula,
+    ) -> anyhow::Result<()> {
+        pbl.n_enc_kp.register_nonce(variables, n);
+        Ok(())
     }
 }

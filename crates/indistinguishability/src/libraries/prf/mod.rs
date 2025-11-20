@@ -7,10 +7,10 @@ use static_init::dynamic;
 use utils::ereturn_let;
 
 use crate::libraries::utils::RuleWithFreshNonce;
-use crate::problem::{PAnalysis, PRule, RcRule};
+use crate::problem::{PAnalysis, PRule, ProblemState, RcRule};
 use crate::terms::{
     CryptographicAssumption, Cryptography, EQUIV, FALSE, FRESH_NONCE, Formula, Function,
-    FunctionFlags, NONCE, Sort, TRUE,
+    FunctionFlags, NONCE, Sort, TRUE, Variable,
 };
 use crate::{CVProgram, Lang, Problem, mk_signature, rexp};
 
@@ -461,5 +461,15 @@ impl Cryptography for PRF {
 
     fn name(&self) -> impl std::fmt::Display {
         format!("Pseudo-randomness of {}", self.hash)
+    }
+
+    fn register_nonce(
+        &self,
+        pbl: &mut ProblemState,
+        variables: Vec<Variable>,
+        n: Formula,
+    ) -> anyhow::Result<()> {
+        pbl.n_prf.register_nonce(variables, n);
+        Ok(())
     }
 }

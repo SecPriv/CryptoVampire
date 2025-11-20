@@ -13,7 +13,7 @@ use crate::terms::{EQUIV, Function, FunctionFlags, NONCE, Sort};
 use crate::{CVProgram, Lang, rexp};
 
 #[derive(Debug, Clone)]
-struct DDHRule {
+pub struct DDHRule {
     index: usize,
     goal_left: Pattern<Lang>,
     goal_right: Pattern<Lang>,

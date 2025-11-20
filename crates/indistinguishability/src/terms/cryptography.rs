@@ -6,6 +6,7 @@ use anyhow::{Context, bail, ensure};
 use utils::{dynamic_iter, match_as_trait};
 
 use crate::libraries::{self, mk_no_guessing_smt};
+use crate::problem::ProblemState;
 use crate::terms::{Formula, Sort, Variable};
 use crate::{MSmt, Problem};
 
@@ -73,7 +74,12 @@ pub trait Cryptography: Into<CryptographicAssumption> {
         Ok(ca.as_inner().unwrap())
     }
 
-    fn register_nonce(&self, _variables: Vec<Variable>, n: Formula) -> anyhow::Result<()> {
+    fn register_nonce(
+        &self,
+        pbl: &mut ProblemState,
+        _variables: Vec<Variable>,
+        n: Formula,
+    ) -> anyhow::Result<()> {
         assert!(n.has_sort(Sort::Nonce), "nonce should have sort 'Nonce'");
         bail!("unsupported for {}", self.name())
     }
@@ -109,9 +115,14 @@ impl Cryptography for CryptographicAssumption {
         unimplemented!("Calling this is a mistake")
     }
 
-    fn register_nonce(&self, variables: Vec<Variable>, n: Formula) -> anyhow::Result<()> {
+    fn register_nonce(
+        &self,
+        pbl: &mut ProblemState,
+        variables: Vec<Variable>,
+        n: Formula,
+    ) -> anyhow::Result<()> {
         match_as_trait!(self =>{
-            Self::PRF(x) | Self::AEnc(x) | Self::XOr(x) | Self::DDH(x) => { x.register_nonce(variables, n) },
+            Self::PRF(x) | Self::AEnc(x) | Self::XOr(x) | Self::DDH(x) => { x.register_nonce(pbl, variables, n) },
             _ => {bail!("unsupported for {}", self.name())}
         })
     }

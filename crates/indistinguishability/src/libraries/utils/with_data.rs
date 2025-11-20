@@ -117,6 +117,7 @@ impl FreshNonceSet {
 pub trait RuleWithFreshNonce {
     fn get_set_mut<'a>(&self, pbl: &'a mut Problem) -> &'a mut FreshNonceSet;
     fn get_set<'a>(&self, pbl: &'a Problem) -> &'a FreshNonceSet;
+    fn mk_fresh_function(&self, pbl: &mut Problem) -> Function;
 
     /// how much can be generated?
     fn get_bound(&self, pbl: &Problem) -> Option<usize>;
@@ -133,8 +134,6 @@ pub trait RuleWithFreshNonce {
             .map(|x| x.args[0])
             .collect()
     }
-
-    fn mk_fresh_function(&self, pbl: &mut Problem) -> Function;
 
     fn generate_fresh_nonce<'a, R>(
         &self,
