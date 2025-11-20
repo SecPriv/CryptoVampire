@@ -3,7 +3,7 @@ use std::fmt::Display;
 use std::mem::ManuallyDrop;
 use std::rc::{Rc, Weak};
 
-use bon::{Builder, bon, builder};
+use bon::{Builder, bon};
 use utils::{ereturn_if, ereturn_let};
 
 use crate::terms::{FOBinder, Formula, Variable};

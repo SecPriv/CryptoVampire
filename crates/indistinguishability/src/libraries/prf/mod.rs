@@ -1,18 +1,16 @@
 use std::borrow::Cow;
 
-use egg::{Analysis, EGraph, Id, Language, Pattern, Searcher, Subst};
+use egg::{Id, Language, Pattern, Searcher};
 use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain};
-use rustc_hash::FxHashSet;
 use static_init::dynamic;
-use utils::{ebreak_if, ebreak_let, ereturn_let, implvec};
+use utils::ereturn_let;
 
 use crate::libraries::utils::RuleWithFreshNonce;
 use crate::problem::{PAnalysis, PRule, RcRule};
-use crate::terms::utils::iter_egraph::iter_descendants_lang;
 use crate::terms::{
-    CryptographicAssumption, Cryptography, EQ, EQUIV, FALSE, FRESH_NONCE, Formula, Function,
-    FunctionFlags, IS_FRESH_NONCE, NONCE, Sort, TRUE,
+    CryptographicAssumption, Cryptography, EQUIV, FALSE, FRESH_NONCE, Formula, Function,
+    FunctionFlags, NONCE, Sort, TRUE,
 };
 use crate::{CVProgram, Lang, Problem, mk_signature, rexp};
 

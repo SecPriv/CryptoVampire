@@ -9,7 +9,7 @@ use utils::{econtinue_if, implvec};
 use crate::Lang;
 use crate::problem::{PAnalysis, ProblemState};
 use crate::protocol::Protocol;
-use crate::terms::{Function, IS_INDEX, Sort};
+use crate::terms::{Function, Sort};
 /// Provides utilities for handling fresh variables and formulas.
 pub mod fresh;
 

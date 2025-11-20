@@ -1,9 +1,8 @@
 use std::borrow::Cow;
 
-use egg::{Id, Pattern, SearchMatches, Searcher};
+use egg::{Pattern, SearchMatches, Searcher};
 use golgge::Rule;
 use itertools::{Itertools, chain};
-use rustc_hash::FxHashSet;
 
 use super::vars::*;
 use crate::libraries::DDH;

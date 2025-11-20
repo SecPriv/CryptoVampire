@@ -43,7 +43,7 @@ impl ShrCrypto {
         AEnc::new_and_add(&mut pbl, self.index, enc, dec, pk);
     }
 
-    fn init_senc(self, enc: Function, dec: Function, pk: Function) {
+    fn init_senc(self, _enc: Function, _dec: Function, _pk: Function) {
         todo!()
     }
 

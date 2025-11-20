@@ -1,6 +1,4 @@
-use std::cell::{Ref, RefCell, RefMut};
 use std::ops::{Deref, DerefMut};
-use std::rc::Rc;
 use std::sync::{Arc, RwLock, RwLockWriteGuard};
 
 use anyhow::Context;
@@ -10,7 +8,7 @@ use steel::rerrs::ErrorKind;
 use steel::rvals::Result as SResult;
 use steel::steel_vm::builtin::BuiltInModule;
 use steel::steel_vm::register_fn::RegisterFn;
-use steel_derive::{Steel, function};
+use steel_derive::Steel;
 
 use crate::input::golgge_rules::Rule;
 use crate::input::shared_exists::ShrExists;

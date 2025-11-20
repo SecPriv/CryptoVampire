@@ -1,6 +1,5 @@
 //! Dumb module to define some of the data regarding cryptopgrahy
 
-use std::borrow::Cow;
 use std::fmt::Display;
 
 use anyhow::{Context, bail, ensure};
@@ -74,7 +73,7 @@ pub trait Cryptography: Into<CryptographicAssumption> {
         Ok(ca.as_inner().unwrap())
     }
 
-    fn register_nonce(&self, variables: Vec<Variable>, n: Formula) -> anyhow::Result<()> {
+    fn register_nonce(&self, _variables: Vec<Variable>, n: Formula) -> anyhow::Result<()> {
         assert!(n.has_sort(Sort::Nonce), "nonce should have sort 'Nonce'");
         bail!("unsupported for {}", self.name())
     }
@@ -84,8 +83,8 @@ impl Cryptography for CryptographicAssumption {
     fn name(&self) -> impl Display {
         match_as_trait!(self =>{
             Self::PRF(x) | Self::AEnc(x) | Self::XOr(x) | Self::DDH(x) => { format!("{}", x.name()) },
-            Self::NoGuessingTh => { format!("no-guessing") },
-            Self::Undefined => { format!("undefined") }
+            Self::NoGuessingTh => { "no-guessing".to_string() },
+            Self::Undefined => { "undefined".to_string() }
         })
     }
 

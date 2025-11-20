@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::fmt::Display;
 
-use bon::{Builder, bon, builder};
+use bon::{Builder, bon};
 use egg::PatternAst;
 use itertools::{Itertools, chain};
 use logic_formula::AsFormula;

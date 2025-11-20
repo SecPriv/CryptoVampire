@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::fmt::Display;
 use std::rc::Rc;
 
-use bon::{Builder, bon, builder};
+use bon::{Builder, bon};
 use itertools::{Itertools, chain};
 use logic_formula::AsFormula;
 use utils::ereturn_if;

@@ -169,7 +169,7 @@ impl<'pbl> Rule<Lang, PAnalysis<'pbl>, RcRule> for XOr {
                      mut subst,
                      side,
                  }| {
-                    let id = fas[idx].get(side);
+                    let _id = fas[idx].get(side);
 
                     let faset = chain![
                         fas.iter()

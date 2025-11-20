@@ -185,7 +185,7 @@ impl Cryptography for DDH {
         format!("Decisional Diffie-Hellman hardness of {}", self.exp)
     }
 
-    fn register_nonce(&self, variables: Vec<Variable>, n: Formula) -> anyhow::Result<()> {
+    fn register_nonce(&self, _variables: Vec<Variable>, n: Formula) -> anyhow::Result<()> {
         println!("registerd {n} !");
         Ok(())
     }

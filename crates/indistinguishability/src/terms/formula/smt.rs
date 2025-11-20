@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use bon::Builder;
 use cryptovampire_smt::{SmtFormula, SmtHead};
 use itertools::Itertools;
-use log::{error, trace, warn};
+use log::{trace, warn};
 
 use super::{FOBinder, Formula};
 use crate::MSmtFormula;

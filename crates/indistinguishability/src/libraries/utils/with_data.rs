@@ -3,10 +3,9 @@ use itertools::{Itertools, chain, izip};
 use log::warn;
 use rustc_hash::FxHashSet;
 use static_init::dynamic;
-use utils::transposer::{Transposable, VecTranspose};
+use utils::transposer::Transposable;
 use utils::{ebreak_if, ebreak_let, implvec};
 
-use crate::libraries::nonce;
 use crate::problem::{PAnalysis, ProblemState};
 use crate::terms::utils::iter_egraph::iter_descendants_lang;
 use crate::terms::{Formula, Function, IS_FRESH_NONCE, NONCE, Sort, Substitution, Variable};
