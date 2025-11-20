@@ -7,6 +7,7 @@ use rustc_hash::FxHashSet;
 use static_init::dynamic;
 use utils::{ebreak_if, ebreak_let, ereturn_let, implvec};
 
+use crate::libraries::utils::RuleWithFreshNonce;
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::terms::utils::iter_egraph::iter_descendants_lang;
 use crate::terms::{
@@ -308,113 +309,136 @@ impl TopPrfRule {
         }
     }
 
-    fn generate_fresh_nonce<'a>(&self, pgrm: &mut CVProgram<'a>, substs: &[Subst]) -> Vec<Id> {
-        // try to look for
-        'a: {
-            let egraph = pgrm.egraph();
-            let nonces = get_prf(egraph);
-            ebreak_if!('a, nonces.is_empty());
+    // fn generate_fresh_nonce<'a>(&self, pgrm: &mut CVProgram<'a>, substs: &[Subst]) -> Vec<Id> {
+    //     // try to look for
+    //     'a: {
+    //         let egraph = pgrm.egraph();
+    //         let nonces = get_prf(egraph);
+    //         ebreak_if!('a, nonces.is_empty());
 
-            let [hyp, c, other_hyp, other_b] = match self.kind {
-                PrfKind::Left => [U, HM, V, B],
-                PrfKind::Right => [V, HM, U, B],
-            };
+    //         let [hyp, c, other_hyp, other_b] = match self.kind {
+    //             PrfKind::Left => [U, HM, V, B],
+    //             PrfKind::Right => [V, HM, U, B],
+    //         };
 
-            let other_ids = substs
-                .iter()
-                .cartesian_product([other_hyp, other_b])
-                .map(|(s, v)| s.get(v.as_egg()).unwrap())
-                .copied();
-            let self_ids = substs
-                .iter()
-                .cartesian_product([hyp, c])
-                .map(|(s, v)| s.get(v.as_egg()).unwrap())
-                .copied();
-            let nonces: FxHashSet<_> = nonces
-                .difference(&all_nonce_descendants(egraph, self_ids))
-                .copied()
-                .collect();
-            ebreak_if!('a, nonces.is_empty());
+    //         let other_ids = substs
+    //             .iter()
+    //             .cartesian_product([other_hyp, other_b])
+    //             .map(|(s, v)| s.get(v.as_egg()).unwrap())
+    //             .copied();
+    //         let self_ids = substs
+    //             .iter()
+    //             .cartesian_product([hyp, c])
+    //             .map(|(s, v)| s.get(v.as_egg()).unwrap())
+    //             .copied();
+    //         let nonces: FxHashSet<_> = nonces
+    //             .difference(&all_nonce_descendants(egraph, self_ids))
+    //             .copied()
+    //             .collect();
+    //         ebreak_if!('a, nonces.is_empty());
 
-            let all_other = all_nonce_descendants(egraph, other_ids);
+    //         let all_other = all_nonce_descendants(egraph, other_ids);
 
-            let with_other = nonces.intersection(&all_other).copied().collect_vec();
-            ebreak_if!('a, with_other.is_empty());
+    //         let with_other = nonces.intersection(&all_other).copied().collect_vec();
+    //         ebreak_if!('a, with_other.is_empty());
 
-            let mut without_other = nonces.difference(&all_other).copied();
-            ebreak_let!('a, let Some(without_other)= without_other.next());
+    //         let mut without_other = nonces.difference(&all_other).copied();
+    //         ebreak_let!('a, let Some(without_other)= without_other.next());
 
-            return chain![with_other, [without_other]].collect();
-        }
+    //         return chain![with_other, [without_other]].collect();
+    //     }
 
-        // else generate new nonce
-        if pgrm.egraph().analysis.pbl().state.n_prf.len()
-            <= pgrm.egraph().analysis.pbl().config.prf_limit
-        {
-            let nonces = pgrm
-                .egraph()
-                .analysis
-                .pbl()
-                .functions()
-                .nonces()
-                .cloned()
-                .collect_vec();
-            let fun = pgrm
-                .egraph_mut()
-                .analysis
-                .pbl_mut()
-                .declare_function()
-                .fresh_name("n_prf")
-                .flags(FunctionFlags::NONCE)
-                .output(Sort::Nonce)
-                .call();
-            let n = pgrm.egraph_mut().add(fun.app_id([]));
-            pgrm.egraph_mut().add(IS_FRESH_NONCE.app_id([n]));
+    //     // else generate new nonce
+    //     if pgrm.egraph().analysis.pbl().state.n_prf.len()
+    //         <= pgrm.egraph().analysis.pbl().config.prf_limit
+    //     {
+    //         let nonces = pgrm
+    //             .egraph()
+    //             .analysis
+    //             .pbl()
+    //             .functions()
+    //             .nonces()
+    //             .cloned()
+    //             .collect_vec();
+    //         let fun = pgrm
+    //             .egraph_mut()
+    //             .analysis
+    //             .pbl_mut()
+    //             .declare_function()
+    //             .fresh_name("n_prf")
+    //             .flags(FunctionFlags::NONCE)
+    //             .output(Sort::Nonce)
+    //             .call();
+    //         let n = pgrm.egraph_mut().add(fun.app_id([]));
+    //         pgrm.egraph_mut().add(IS_FRESH_NONCE.app_id([n]));
 
-            for n in nonces {
-                let vars = n.signature.mk_vars().into_iter().map(Formula::Var);
-                let from = Pattern::from(&rexp!((EQ (n #vars*) fun)));
+    //         for n in nonces {
+    //             let vars = n.signature.mk_vars().into_iter().map(Formula::Var);
+    //             let from = Pattern::from(&rexp!((EQ (n #vars*) fun)));
 
-                let rw_rule = egg::Rewrite::new(
-                    format!("{fun} {n} distinctiveness"),
-                    from,
-                    PATTERN_FALSE.clone(),
-                )
-                .unwrap();
-                pgrm.add_eq_rule(rw_rule);
-            }
+    //             let rw_rule = egg::Rewrite::new(
+    //                 format!("{fun} {n} distinctiveness"),
+    //                 from,
+    //                 PATTERN_FALSE.clone(),
+    //             )
+    //             .unwrap();
+    //             pgrm.add_eq_rule(rw_rule);
+    //         }
 
-            // let etrue = egraph.add(TRUE.app_id([]));
+    //         // let etrue = egraph.add(TRUE.app_id([]));
 
-            // let mut msubst = Subst::with_capacity(2);
-            // msubst.insert(NK.as_egg(), n);
+    //         // let mut msubst = Subst::with_capacity(2);
+    //         // msubst.insert(NK.as_egg(), n);
 
-            // // make `(fresh_nonce n _ true)` hold for a bunch of them
-            // for g in [U, V, B, HM] {
-            //     for subst in substs.iter() {
-            //         msubst.insert(HM.as_egg(), *subst.get(g.as_egg()).unwrap());
-            //         let fresh = PATTERN_FRESH_SEARCH_INNER.apply_susbt(egraph, &msubst);
-            //         egraph.union(etrue, fresh);
-            //     }
-            // }
+    //         // // make `(fresh_nonce n _ true)` hold for a bunch of them
+    //         // for g in [U, V, B, HM] {
+    //         //     for subst in substs.iter() {
+    //         //         msubst.insert(HM.as_egg(), *subst.get(g.as_egg()).unwrap());
+    //         //         let fresh = PATTERN_FRESH_SEARCH_INNER.apply_susbt(egraph, &msubst);
+    //         //         egraph.union(etrue, fresh);
+    //         //     }
+    //         // }
 
-            get_prf_mut(pgrm.egraph_mut()).insert(n);
-        }
+    //         get_prf_mut(pgrm.egraph_mut()).insert(n);
+    //     }
 
-        get_prf(pgrm.egraph()).iter().cloned().collect()
+    //     get_prf(pgrm.egraph()).iter().cloned().collect()
+    // }
+}
+
+impl RuleWithFreshNonce for TopPrfRule {
+    fn get_set_mut<'a>(&self, pbl: &'a mut Problem) -> &'a mut super::utils::FreshNonceSet {
+        &mut pbl.state.n_prf
+    }
+
+    fn get_set<'a>(&self, pbl: &'a Problem) -> &'a super::utils::FreshNonceSet {
+        &pbl.state.n_prf
+    }
+
+    fn get_bound(&self, pbl: &Problem) -> Option<usize> {
+        Some(pbl.config.prf_limit)
+    }
+
+    fn mk_fresh_function(&self, pbl: &mut Problem) -> Function {
+        pbl.declare_function()
+            .fresh_name("n_prf")
+            .flags(FunctionFlags::NONCE)
+            .output(Sort::Nonce)
+            .call()
+        // todo!()
     }
 }
 
 #[dynamic]
 static PATTERN_FALSE: Pattern<Lang> = Pattern::from(&rexp!(false));
 
-fn get_prf<'a, 'b>(egraph: &'b EGraph<Lang, PAnalysis<'a>>) -> &'b FxHashSet<Id> {
-    &egraph.analysis.pbl().state.n_prf
-}
+// fn get_prf<'a, 'b>(egraph: &'b EGraph<Lang, PAnalysis<'a>>) -> &'b FxHashSet<Id> {
+//     &egraph.analysis.pbl().state.n_prf
+// }
 
-fn get_prf_mut<'a, 'b>(egraph: &'b mut EGraph<Lang, PAnalysis<'a>>) -> &'b mut FxHashSet<Id> {
-    &mut egraph.analysis.pbl_mut().state.n_prf
-}
+// fn get_prf_mut<'a, 'b>(egraph: &'b mut EGraph<Lang, PAnalysis<'a>>) -> &'b mut FxHashSet<Id> {
+//     &mut egraph.analysis.pbl_mut().state.n_prf
+// }
 
 impl PrfKind {
     pub const fn other(self) -> Self {
@@ -433,16 +457,31 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for TopPrfRule {
         if cfg!(debug_assertions) {
             check_hash_eq_nonce(prgm.egraph_mut());
         }
+        let [hyp, c, other_hyp, other_b] = match self.kind {
+            PrfKind::Left => [U, HM, V, B],
+            PrfKind::Right => [V, HM, U, B],
+        };
+        //         let other_ids = substs
+        //             .iter()
+        //             .cartesian_product([other_hyp, other_b])
+        //             .map(|(s, v)| s.get(v.as_egg()).unwrap())
+        //             .copied();
+        //         let self_ids = substs
+        //             .iter()
+        //             .cartesian_product([hyp, c])
+        //             .map(|(s, v)| s.get(v.as_egg()).unwrap())
+        //             .copied();
 
-        let nonces = self.generate_fresh_nonce(prgm, &substs.substs);
-        let egraph = prgm.egraph_mut();
+        let mut res = Vec::new();
+        for mut subst in substs.substs {
+            let [other_hyp, other_b, hyp, c] =
+                [other_hyp, other_b, hyp, c].map(|v| *subst.get(v.as_egg()).unwrap());
+            let nonces = self.generate_fresh_nonce(prgm, [hyp, c], [other_hyp, other_b]);
 
-        let mut res = Vec::with_capacity(nonces.len() * substs.substs.len());
-        for n in nonces {
-            for subst in &substs.substs {
-                let mut subst = subst.clone();
+            for n in nonces {
                 subst.insert(NK.as_egg(), n);
 
+                let egraph = prgm.egraph_mut();
                 let r = [
                     // PATTERN_FRESH_SEARCH_INNER.apply_susbt(egraph, &subst),
                     self.subterm_hyp.apply_susbt(egraph, &subst),
