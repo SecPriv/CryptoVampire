@@ -84,8 +84,8 @@ impl Formula {
     /// This doesn't typechecks
     pub fn has_sort(&self, sort: Sort) -> bool {
         match self.try_get_sort() {
-            Some(x) => x == sort,
-            None => true,
+            Some(Sort::Any) | None => true,
+            Some(x) => x == sort || sort == Sort::Any,
         }
     }
 

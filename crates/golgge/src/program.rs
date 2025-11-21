@@ -12,6 +12,7 @@ use std::str::FromStr;
 #[cfg(feature = "sync")]
 use std::sync::{Arc, RwLock};
 
+use anyhow::{Context, anyhow};
 use bon::bon;
 use colored::{ColoredString, Colorize};
 // use eclassmap::{ECallMap, Entry};
@@ -456,8 +457,21 @@ where
         assert!(self.clean());
     }
 
-    pub fn get_proof_item(&self, id: Id) -> Option<ProofItem<R>> {
-        self.memo.as_ref()?.get(&id)?.get_proof()
+    pub fn get_proof_item(&self, id: Id) -> anyhow::Result<ProofItem<R>> {
+        let id = self.egraph().find(id);
+        let mut proof_item = self.memo
+            .as_ref()
+            .with_context(|| "memoisation disabled")?
+            .get(&id)
+            .with_context(|| format!("goal {id} hasn't been memoized"))?
+            .get_proof()
+            .with_context(|| format!("for goal {id}"))?;
+
+        // canonicalise
+        for ids in proof_item.ids.iter_mut() {
+            *ids = self.egraph().find(*ids);
+        }
+        Ok(proof_item)
     }
 }
 
@@ -546,13 +560,14 @@ impl<R> MemoStatus<R> {
         self.borrow().is_in_progress()
     }
 
-    pub fn get_proof(&self) -> Option<ProofItem<R>>
+    pub fn get_proof(&self) -> anyhow::Result<ProofItem<R>>
     where
         R: Clone,
     {
         match self.borrow().deref() {
-            Status::True(proof_item) => Some(proof_item.clone()),
-            _ => None,
+            Status::True(proof_item) => Ok(proof_item.clone()),
+            Status::False => Err(anyhow!("goal is false")),
+            Status::InProgress => Err(anyhow!("goal in progress")),
         }
     }
 }

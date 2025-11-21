@@ -1,5 +1,5 @@
 use egg::{PatternAst, RecExpr};
-use itertools::Itertools;
+use itertools::{Itertools, izip};
 use quarck::CowArc;
 use utils::implvec;
 
@@ -110,12 +110,25 @@ pub fn mk_app<T: FunctionRef>(head: T, args: implvec!(MacroExpr)) -> MacroExpr {
     let args = CowArc::Owned(args.into_iter().collect());
     let head = head.to_function();
 
-    let arity = head.arity();
-    let num_args = args.len();
-    let ret = Formula::App { head, args };
+    #[cfg(debug_assertions)]
+    for (s, arg) in izip!(head.args_sorts(), args.iter()) {
+        if !arg.has_sort(s) {
+            let ret = Formula::App {
+                head: head.clone(),
+                args: args.clone(),
+            };
+            panic!("typing error, expected sort {s} for {arg}\n\nin {ret}")
+        }
+    }
 
-    assert_eq!(arity, num_args, "arity mismatch with {ret}");
-    ret
+    debug_assert_eq!(
+        head.clone().arity(),
+        args.clone().len(),
+        "arity mismatch with {}",
+        Formula::App { head, args }
+    );
+
+    Formula::App { head, args }
 }
 
 #[track_caller]
