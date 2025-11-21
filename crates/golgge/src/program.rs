@@ -22,6 +22,7 @@ use egg::{
 };
 use itertools::{Either, Itertools};
 use log::trace;
+use rustc_hash::FxHashMap;
 use serde::Serialize;
 use utils::implvec;
 
@@ -39,7 +40,7 @@ pub struct Program<L: Language, N: Analysis<L>, R = DRule<L, N>> {
     /// Custom rules.
     rules: Vec<R>,
     /// Memoization table for proof attempts.
-    memo: Option<HashMap<Id, MemoStatus<R>>>,
+    memo: Option<FxHashMap<Id, MemoStatus<R>>>,
     /// Indicates if the program is in a clean state.
     clean: bool,
     /// Configuration for the program.
@@ -56,6 +57,18 @@ pub(crate) enum Status<R> {
     False,
     /// The proof attempt is currently in progress.
     InProgress,
+}
+
+pub trait Rebuildable<L: Language, N: Analysis<L>> {
+    fn rebuild(&mut self, egraph: &EGraph<L, N>) {}
+}
+
+impl<L: Language, N: Analysis<L>, R> Rebuildable<L, N> for Status<R> {
+    fn rebuild(&mut self, egraph: &egg::EGraph<L, N>) {
+        if let Self::True(pitem) = self {
+            pitem.rebuild(egraph);
+        }
+    }
 }
 
 /// A wrapper around `Rc<RefCell<Status<L, N>>>` for memoization.
@@ -186,7 +199,7 @@ where
         self.egraph = Some(egraph)
     }
 
-    fn memo_mut(&mut self) -> Option<&mut HashMap<Id, MemoStatus<R>>> {
+    fn memo_mut(&mut self) -> Option<&mut FxHashMap<Id, MemoStatus<R>>> {
         self.memo.as_mut()
     }
 
@@ -423,8 +436,16 @@ where
         if self.memo.is_some() {
             mtrace!(self, REBUILDS, "🚧 canonicalising table...");
 
-            let memo = std::mem::take(&mut self.memo);
-            self.memo = memo.map(|x| x.into_iter().map(|(id, s)| (egraph.find(id), s)).collect());
+            if let Some(memo) = std::mem::take(&mut self.memo) {
+                let memo = memo
+                    .into_iter()
+                    .map(|(id, status)| {
+                        status.0.write().unwrap().rebuild(&egraph);
+                        (egraph.find(id), status)
+                    })
+                    .collect();
+                self.memo = Some(memo);
+            }
 
             mtrace!(self, REBUILDS, "✅ done!");
         }
@@ -459,7 +480,8 @@ where
 
     pub fn get_proof_item(&self, id: Id) -> anyhow::Result<ProofItem<R>> {
         let id = self.egraph().find(id);
-        let mut proof_item = self.memo
+        let mut proof_item = self
+            .memo
             .as_ref()
             .with_context(|| "memoisation disabled")?
             .get(&id)
@@ -468,9 +490,9 @@ where
             .with_context(|| format!("for goal {id}"))?;
 
         // canonicalise
-        for ids in proof_item.ids.iter_mut() {
-            *ids = self.egraph().find(*ids);
-        }
+        // for ids in proof_item.ids.iter_mut() {
+        //     *ids = self.egraph().find(*ids);
+        // }
         Ok(proof_item)
     }
 }

@@ -13,7 +13,7 @@ colored = "3.0.0"
 # own crates
 utils = { path = "../utils"}
 logic_formula = {path = "../logic_formula"}
-egg = {path = "../egg", features = ["serde-1"]}
+egg = {path = "../egg", features = ["serde-1", "cryptovampire"]}
 
 # workspace
 itertools.workspace = true

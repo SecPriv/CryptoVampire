@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use egg::{Analysis, Id, Language};
 
-use crate::{Program, Rule};
+use crate::{Program, Rule, program::Rebuildable};
 
 #[cfg(feature = "sync")]
 pub type Payload = Arc<dyn Any + Sync + Send>;
@@ -57,4 +57,12 @@ pub struct Proof<'a, L: Language, N: Analysis<L>, R> {
     prog: &'a Program<L, N, R>,
     /// The ID of the e-class for which the proof was generated.
     id: Id,
+}
+
+impl<L:Language, N: Analysis<L>, R> Rebuildable<L, N> for ProofItem<R> {
+    fn rebuild(&mut self, egraph: &egg::EGraph<L, N>) {
+        for id in &mut self.ids {
+            *id = egraph.find(*id)
+        }
+    }
 }
