@@ -5,9 +5,10 @@ use std::rc::Rc;
 
 use egg::{Analysis, Id, Language, RecExpr};
 
-use crate::Program;
+use crate::program::Rebuildable;
 use crate::proof::Payload;
 pub use crate::rule::dynamic::DRule;
+use crate::{Program, canonicalize_id_mut};
 
 /// Basic prolog-like rules
 mod prolog;

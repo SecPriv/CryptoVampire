@@ -6,7 +6,8 @@ use std::sync::Arc;
 
 use egg::{Analysis, Id, Language};
 
-use crate::{Program, Rule, program::Rebuildable};
+use crate::program::{Rebuildable, Status};
+use crate::{Program, Rule, canonicalize_id};
 
 #[cfg(feature = "sync")]
 pub type Payload = Arc<dyn Any + Sync + Send>;
@@ -59,10 +60,19 @@ pub struct Proof<'a, L: Language, N: Analysis<L>, R> {
     id: Id,
 }
 
-impl<L:Language, N: Analysis<L>, R> Rebuildable<L, N> for ProofItem<R> {
+impl<L: Language, N: Analysis<L>, R> Rebuildable<L, N> for ProofItem<R> {
     fn rebuild(&mut self, egraph: &egg::EGraph<L, N>) {
         for id in &mut self.ids {
-            *id = egraph.find(*id)
+            *id = canonicalize_id(*id, egraph)
+        }
+    }
+}
+
+impl<R> From<Option<ProofItem<R>>> for Status<R> {
+    fn from(value: Option<ProofItem<R>>) -> Self {
+        match value {
+            Some(proof) => Self::True(proof),
+            None => Self::False,
         }
     }
 }
