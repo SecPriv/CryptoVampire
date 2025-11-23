@@ -26,7 +26,8 @@ fn mw() {
 }
 
 #[test]
-fn mw() {
+#[allow(non_snake_case)]
+fn ddh_P() {
     mk_test("./tests/ddh-P.scm", &[]);
 }
 
