@@ -168,7 +168,7 @@
 
 (define ExpG
   (declare-step pbl "expg" (list Index)
-    (step p2 empty-cond (lambda (_ i) (tuple (mexp g (a i)) (mexp g (b i)))))
+    (step p1 empty-cond (lambda (_ i) (tuple (mexp g (a i)) (mexp g (b i)))))
     (step p2 empty-cond (lambda (_ i) (tuple (mexp g (a i)) (mexp g (b i)))))))
 (add-constrain pbl (i j) (lt (ExpG j) (Schall1 i)))
 (add-constrain pbl (i j) (lt (ExpG j) (P1 i)))
@@ -184,16 +184,17 @@
 
 ;; configuration
 (cv-set-trace pbl #t)
-(cv-set-vampire-timeout pbl (cv-string->duration "15s"))
+; (cv-set-trace-rebuilds pbl #t)
+(cv-set-vampire-timeout pbl (cv-string->duration "5s"))
 (cv-set-node-limit pbl 100000)
 (cv-set-keep-smt-files pbl #t)
 
 (initialize-as-ddh ddh g mexp)
 
-; (bind ((i Index) (p Protocol))
-;   (cv-add-rewrite pbl (cv-mk-rewrite "lemma" (list i p)
-;       (and (macro_exec (P3fail i) p) (macro_cond (P3fail i) p))
-;       mfalse)))
+(bind ((i Index) (p Protocol))
+  (cv-add-rewrite pbl (cv-mk-rewrite "lemma" (list i p)
+      (and (macro_exec (P3fail i) p) (macro_cond (P3fail i) p))
+      mfalse)))
 
 (bind ((i Index) (j Index))
   (cv-register-fresh-nonce ddh (list i j) (k i j)))
