@@ -447,6 +447,28 @@ where
                 self.memo = Some(memo);
             }
 
+            #[cfg(debug_assertions)]
+            if let Some(memo) = &self.memo {
+                mtrace!(self, REBUILDS, "checking soundness...");
+                // memo.values().all(|x| match x.0.read().unwrap() {
+                //     Status::True(ProofItem {  ids, .. }) =>
+                //     ids.iter().all(f)
+                //     ,
+                //     _ => true
+                // })
+                for (oid, v) in memo.iter() {
+                    let s = v.borrow();
+                    if let Status::True(ProofItem { ids, .. }) = s.deref() {
+                        for id in ids {
+                            let x = memo
+                                .get(id)
+                                .unwrap_or_else(|| panic!("{id} parent of {oid} isn't memoized"));
+                            assert!(x.as_bool(), "{id} parent of {oid} is false")
+                        }
+                    }
+                }
+            }
+
             mtrace!(self, REBUILDS, "✅ done!");
         }
 

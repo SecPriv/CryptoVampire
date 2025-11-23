@@ -65,6 +65,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SubstRule {
     }
 
     fn search(&self, prgm: &mut CVProgram<'a>, goal: Id) -> golgge::Dependancy {
+        assert!(prgm.egraph().clean);
         ereturn_let!(let Some(matches) = self.goal_pattern.search_eclass(prgm.egraph(), goal), Dependancy::impossible());
 
         matches
