@@ -1,5 +1,5 @@
 use bon::Builder;
-use egg::{Analysis, Language, Runner};
+use egg::{Analysis, EGraph, Id, Language, Runner};
 
 /// A macro for tracing messages if tracing is enabled in the program's configuration.
 macro_rules! mtrace {
@@ -10,8 +10,6 @@ macro_rules! mtrace {
     };
 }
 
-mod tracing;
-pub use tracing::DebugLevel;
 /// Defines traits and structures for working with e-graph rules.
 mod rule;
 pub use rule::{DRule, Dependancy, Fresh, PrologRule, Rule};
@@ -35,41 +33,8 @@ mod program;
 mod proof;
 pub use proof::ProofItem;
 
-/// Configuration for the Golgge e-graph runner.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Builder)]
-#[non_exhaustive]
-pub struct Config {
-    #[builder(default = Config::default().iter_limit)]
-    pub iter_limit: usize,
-    #[builder(default = Config::default().node_limit)]
-    pub node_limit: usize,
-    #[builder(default = Config::default().time_limit)]
-    pub time_limit: std::time::Duration,
-    #[builder(default = Config::default().trace)]
-    pub trace: DebugLevel,
-}
-
-impl Config {
-    /// Applies the configuration settings to an `egg::Runner`.
-    pub fn apply<L: Language, N: Analysis<L>>(&self, runner: Runner<L, N>) -> Runner<L, N> {
-        runner
-            .with_iter_limit(self.iter_limit)
-            .with_node_limit(self.node_limit)
-            .with_time_limit(self.time_limit)
-    }
-}
-
-impl Default for Config {
-    /// Returns a default `Config` instance.
-    fn default() -> Self {
-        Self {
-            iter_limit: 150,
-            node_limit: 500,
-            time_limit: std::time::Duration::from_secs(5),
-            trace: DebugLevel::default(),
-        }
-    }
-}
+mod config;
+pub use config::{Config, DebugLevel, Flags};
 
 #[cfg(feature = "sync")]
 pub trait MaybeSyncSend: Sync + Send {}
@@ -82,3 +47,28 @@ pub trait MaybeSyncSend {}
 
 #[cfg(not(feature = "sync"))]
 impl<T> MaybeSyncSend for T {}
+
+fn canonicalize_id<L: Language, N: Analysis<L>>(id: Id, egraph: &EGraph<L, N>) -> Id {
+    let nid = egraph.find(id);
+
+    #[cfg(debug_assertions)]
+    if nid != id {
+        println!("mapped {id:} to {nid:}")
+    }
+    nid
+}
+
+/// canonicalize `id`, returns `true` if the value changed
+#[inline]
+fn canonicalize_id_mut<L: Language, N: Analysis<L>>(id: &mut Id, egraph: &EGraph<L, N>) -> bool {
+    let nid = egraph.find(*id);
+    let res = nid != *id;
+
+    #[cfg(debug_assertions)]
+    if res {
+        println!("updated id from {id} to {nid}")
+    }
+
+    *id = nid;
+    res
+}

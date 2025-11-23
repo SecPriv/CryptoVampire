@@ -2,6 +2,7 @@ use anyhow::Context;
 use egg::{Id, Pattern, Searcher};
 use golgge::{Dependancy, Rule};
 use itertools::Itertools;
+use log::trace;
 use utils::ereturn_let;
 
 use super::vars::*;
@@ -64,6 +65,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SubstRule {
     }
 
     fn search(&self, prgm: &mut CVProgram<'a>, goal: Id) -> golgge::Dependancy {
+        assert!(prgm.egraph().clean);
         ereturn_let!(let Some(matches) = self.goal_pattern.search_eclass(prgm.egraph(), goal), Dependancy::impossible());
 
         matches
@@ -71,6 +73,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SubstRule {
             .into_iter()
             .map(|mut subst| {
                 let [nt_id, proof_id] = [T, PROOF].map(|v| *subst.get(v.as_egg()).unwrap());
+                trace!("rebuilding in ddh");
                 let na = (SubstData {
                     search_b: self.search_b.clone(),
                     search_m: self.search_m.clone(),
@@ -89,6 +92,7 @@ impl ProofSubstitution for SubstData {
     type Proof = ProofHints;
 
     fn get_term<'a>(&self, pgrm: &mut CVProgram<'a>, id: Id) -> anyhow::Result<Id> {
+        trace!("get term ({id:})");
         let l = pgrm.egraph()[id]
             .nodes
             .iter()
@@ -97,7 +101,8 @@ impl ProofSubstitution for SubstData {
         Ok(l.args[3])
     }
 
-    fn instance<'a>(&self, _: PSArgs<'_, 'a, Self>) -> anyhow::Result<Id> {
+    fn instance<'a>(&self, psargs: PSArgs<'_, 'a, Self>) -> anyhow::Result<Id> {
+        trace!("instance: {psargs:#?}");
         Ok(self.new_term)
     }
 
@@ -115,6 +120,7 @@ impl ProofLike<SubstData> for ProofHints {
         proof_parent: &[Id],
         rule: &dyn CVRuleTrait<'pbl>,
     ) -> anyhow::Result<Id> {
+        trace!("using prooghint:\n{self:#?}");
         let psargs = PSArgs {
             prgrm,
             proof_id,

@@ -20,9 +20,9 @@ fn mk_static_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = egg::Rewrite<
       ["if true"] (m_ite true #a #b) => (#a).
       ["if false"] (m_ite false #a #b) => (#b).
       ["if simp1"] (m_ite #x #a #a) => (#a).
-      ["if simp2"] (m_ite #a #a false) => (#a).
+    //   ["if simp2"] (m_ite #a #a false) => (#a).
       ["if simp3"] (m_ite #a (m_ite #a #b #c) #d) => (m_ite #a #b #d).
-      ["if simp4"] (m_ite #a true false) => (#a).
+    //   ["if simp4"] (m_ite #a true false) => (#a).
       ["if eq"] (m_ite (= #a #b) #a #b) => (#a).
 
       ["b_if true"] (b_ite true #a #b) => (#a).
@@ -34,7 +34,7 @@ fn mk_static_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = egg::Rewrite<
 
       ["if implies simp"] (b_ite (and #a #b) #a true) => true.
       ["if implies simp2"] (b_ite #a #a true) => true.
-      ["if implies trans"] (#v1 = true, #v1 = (m_ite #a #b true), #v1 = (m_ite #b #c true)) => (#v1 = (=> #a #c)).
+      ["if implies trans"] (#v1 = true, #v1 = (b_ite #a #b true), #v1 = (b_ite #b #c true)) => (#v1 = (=> #a #c)).
     }.into_iter()
 }
 

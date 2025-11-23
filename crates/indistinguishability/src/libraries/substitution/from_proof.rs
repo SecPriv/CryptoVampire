@@ -1,6 +1,9 @@
-use egg::Id;
+use std::fmt::Debug;
+
+use anyhow::{Context, Result, ensure};
+use egg::{EGraph, Id};
 use golgge::{Program, ProofItem};
-use itertools::izip;
+use itertools::{Itertools, izip};
 use log::trace;
 
 use crate::problem::{CVRuleTrait, PAnalysis, RcRule};
@@ -26,14 +29,12 @@ pub struct PSArgs<'a, 'pbl, S: ProofSubstitution + ?Sized> {
     pub rule: &'a dyn CVRuleTrait<'pbl>,
 }
 
-use anyhow::{Context, Result, ensure};
-
 pub trait ProofSubstitution {
     type Proof: ProofLike<Self> + 'static;
 
     fn proof_to_term<'a>(&self, pgrm: &mut CVProgram<'a>, proof: Id) -> Result<Id> {
         trace!(
-            "proof to term from:\n\t{}",
+            "proof to term from ({proof:}):\n\t{}",
             pgrm.egraph().id_to_expr(proof).pretty(100)
         );
         let ProofItem { ids, payload, rule } =
@@ -61,22 +62,22 @@ pub trait ProofSubstitution {
             prgrm, proof_id, ..
         }: PSArgs<'_, 'a, Self>,
     ) -> Result<Id> {
+        trace!("keep term");
         self.get_term(prgrm, proof_id)
     }
 
     /// when the proffs ask to apply an instance
     fn instance<'a>(&self, args: PSArgs<'_, 'a, Self>) -> Result<Id>;
 
-    fn function_application<'a>(
-        &self,
-        fun: &Function,
-        PSArgs {
+    fn function_application<'a>(&self, fun: &Function, psargs: PSArgs<'_, 'a, Self>) -> Result<Id> {
+        trace!("rebuilding proof with {fun}:\n{psargs:#?}");
+        let PSArgs {
             prgrm,
             proof_id,
             proof_parent: ids,
             ..
-        }: PSArgs<'_, 'a, Self>,
-    ) -> Result<Id> {
+        } = psargs;
+
         let t = self.get_term(prgrm, proof_id)?;
         let mut args_proofs = ids.iter();
         let old_args = prgrm.egraph()[t]
@@ -89,25 +90,49 @@ pub trait ProofSubstitution {
 
         // collect the arguments, mixing the old and the new depending
         // on their sort. Irrelevant sorts don't have proofs.
-        let args: Result<_> = izip!(fun.args_sorts(), old_args)
+        let args: Result<_> = fun
+            .args_sorts()
+            .zip_eq(old_args)
             .map(|(s, bid)| {
+                trace!("{s}: {:}", usize::from(bid));
                 if s == Sort::Bool || s == Sort::Bitstring {
+                    trace!("recurse rebuilding");
                     self.proof_to_term(
                         prgrm,
-                        *args_proofs.next().with_context(|| "no enough arguements")?,
+                        *args_proofs.next().with_context(|| "no enough arguments")?,
                     )
                 } else {
+                    trace!("skip");
                     Ok(bid)
                 }
             })
             .collect();
+        let args = args?;
 
         ensure!(args_proofs.next().is_none(), "too many arguements");
         Ok(prgrm.egraph_mut().add(Lang {
             head: fun.clone(),
-            args: args?,
+            args,
         }))
     }
 
     fn others<'a>(&self, args: PSArgs<'_, 'a, Self>) -> Result<Id>;
+}
+
+impl<'a, 'pbl, S: ProofSubstitution + ?Sized> Debug for PSArgs<'a, 'pbl, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PSArgs")
+            .field("proof_parent_ids", &self.proof_parent)
+            .field("rule", &self.rule.name())
+            .field("proof_id", &self.proof_id)
+            .field(
+                "proof",
+                &self
+                    .prgrm
+                    .egraph()
+                    .id_to_expr(self.proof_id)
+                    .pretty(100),
+            )
+            .finish()
+    }
 }
