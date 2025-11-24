@@ -27,8 +27,9 @@ fn mw() {
 
 #[test]
 #[allow(non_snake_case)]
-fn ddh_P() {
+fn ddh() {
     mk_test("./tests/ddh-P.scm", &[]);
+    mk_test("./tests/ddh-S.scm", &[]);
 }
 
 fn mk_test(file: impl AsRef<Path>, extra_args: &[&str]) {

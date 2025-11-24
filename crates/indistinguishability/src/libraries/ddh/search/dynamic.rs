@@ -70,7 +70,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SearchRule {
     }
 }
 
-impl crate::libraries::utils::SyntaxSearcher for SearchK {
+impl SyntaxSearcher for SearchK {
     fn debug_name<'a>(&'a self) -> std::borrow::Cow<'a, str> {
         Cow::Borrowed("search k enc")
     }

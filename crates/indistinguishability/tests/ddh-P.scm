@@ -184,7 +184,6 @@
 
 ;; configuration
 (cv-set-trace pbl #t)
-; (cv-set-trace-rebuilds pbl #t)
 (cv-set-vampire-timeout pbl (cv-string->duration "5s"))
 (cv-set-node-limit pbl 100000)
 (cv-set-keep-smt-files pbl #t)
