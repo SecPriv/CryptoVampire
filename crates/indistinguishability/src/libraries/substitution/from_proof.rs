@@ -127,11 +127,7 @@ impl<'a, 'pbl, S: ProofSubstitution + ?Sized> Debug for PSArgs<'a, 'pbl, S> {
             .field("proof_id", &self.proof_id)
             .field(
                 "proof",
-                &self
-                    .prgrm
-                    .egraph()
-                    .id_to_expr(self.proof_id)
-                    .pretty(100),
+                &self.prgrm.egraph().id_to_expr(self.proof_id).pretty(100),
             )
             .finish()
     }

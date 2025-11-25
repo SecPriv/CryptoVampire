@@ -1,8 +1,10 @@
-
 use itertools::{Itertools, chain};
 
 use crate::problem::ProblemState;
-use crate::terms::{CryptographicAssumption, Cryptography, Formula, Function, FunctionFlags, Rewrite, Sort, Variable};
+use crate::terms::{
+    CryptographicAssumption, Cryptography, Formula, Function, FunctionFlags, Rewrite, Sort,
+    Variable,
+};
 use crate::{Problem, mk_signature};
 declare_trace!($"enc");
 
