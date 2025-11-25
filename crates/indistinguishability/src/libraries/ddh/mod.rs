@@ -1,7 +1,6 @@
 use itertools::{Itertools, chain};
 
 use crate::libraries::ddh::rule::DDHRule;
-use crate::libraries::utils::RuleWithFreshNonce;
 use crate::problem::{PRule, ProblemState};
 use crate::terms::{
     CryptographicAssumption, Cryptography, Formula, Function, FunctionFlags, Rewrite, Sort,

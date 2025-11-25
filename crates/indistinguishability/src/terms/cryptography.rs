@@ -76,7 +76,7 @@ pub trait Cryptography: Into<CryptographicAssumption> {
 
     fn register_nonce(
         &self,
-        pbl: &mut ProblemState,
+        _pbl: &mut ProblemState,
         _variables: Vec<Variable>,
         n: Formula,
     ) -> anyhow::Result<()> {

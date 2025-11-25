@@ -1,9 +1,9 @@
 use std::fmt::Debug;
 
 use anyhow::{Context, Result, ensure};
-use egg::{EGraph, Id};
+use egg::Id;
 use golgge::{Program, ProofItem};
-use itertools::{Itertools, izip};
+use itertools::Itertools;
 use log::trace;
 
 use crate::problem::{CVRuleTrait, PAnalysis, RcRule};
