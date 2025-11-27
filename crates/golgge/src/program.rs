@@ -363,7 +363,8 @@ where
             let canonicalized = canonicalize_id_mut(&mut goal, self.egraph());
             // check memoization
             if self.is_memo_enabled()
-                && (canonicalized || i == 0)
+                // && (canonicalized || i == 0)
+                && ( i == 0)
                 && let Some(res) = self.check_and_set_memo(goal, Status::InProgress)
             {
                 return res;

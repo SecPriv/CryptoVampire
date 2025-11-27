@@ -239,18 +239,21 @@ impl VampireExec {
 
         tr!("status code: {:?}", o.status.code());
         let refutation = std::str::from_utf8(&o.stdout)
-            .unwrap()
+            .with_context(|| "non utf8 ouput")?
             .contains(&self.success_verification);
         tr!("refutation: {refutation}");
 
         if o.status.code() != Some(SUCCESS_RC) && o.status.code() != Some(TIMEOUT_RC) {
             eprintln!("file: {file:?}");
-            eprintln!("stdout:\n{}", std::str::from_utf8(&o.stdout).unwrap());
-            eprintln!("sterr:\n{}", std::str::from_utf8(&o.stderr).unwrap());
             eprintln!(
-                "vampire failed with error code {:}",
-                o.status.code().unwrap()
+                "stdout:\n{}",
+                std::str::from_utf8(&o.stdout).with_context(|| "non utf8 stdout")?
             );
+            eprintln!(
+                "sterr:\n{}",
+                std::str::from_utf8(&o.stderr).with_context(|| "non utf8 stderr")?
+            );
+            eprintln!("vampire failed with error code {:?}", o.status.code());
             bail!(
                 "stdout:\n{}\nsterr:\n{}",
                 std::str::from_utf8(&o.stdout).unwrap(),

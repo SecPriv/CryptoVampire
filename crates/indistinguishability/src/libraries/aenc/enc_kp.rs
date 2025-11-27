@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use egg::{Id, Pattern, SearchMatches, Searcher};
 use golgge::{Dependancy, Program, Rule};
 use itertools::{Itertools, chain};
@@ -57,11 +59,23 @@ impl EncKpRule {
 }
 
 impl<'a, R> Rule<Lang, PAnalysis<'a>, R> for EncKpRule {
+    fn name(&self) -> Cow<'_, str> {
+        Cow::Borrowed("enc-kp")
+    }
+
+    fn debug(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        write!(
+            f,
+            "enc-kp(left:={}, right:={})",
+            self.goal_left, self.goal_right
+        )
+    }
+
     fn search(&self, prgm: &mut Program<Lang, PAnalysis<'a>, R>, goal: Id) -> Dependancy {
         let matches = chain![
             self.goal_left
                 .search_eclass(prgm.egraph(), goal)
-                .map(|m| (Left, m)),
+                .map(|m| { (Left, m) }),
             self.goal_right
                 .search_eclass(prgm.egraph(), goal)
                 .map(|m| (Right, m)),

@@ -161,8 +161,8 @@ impl AEnc {
             let rules = chain![
                 search::mk_rules(pbl, &aenc),
                 subst::mk_rules(pbl, &aenc),
+                enc_kp::mk_rules(pbl, &aenc),
                 ind_cca::mk_rules(pbl, &aenc),
-                enc_kp::mk_rules(pbl, &aenc)
             ]
             .collect_vec();
             pbl.extra_rules_mut().extend(rules);

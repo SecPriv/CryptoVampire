@@ -18,7 +18,7 @@ pub fn mk_rules(
     }: &AEnc,
 ) -> impl Iterator<Item = RcRule> {
     mk_many_prolog! {
-      "ind-ccsa left" :
+      "ind-cca1-left" :
         (EQUIV #U #V (candidate #T #M #R #K) #B) :-
           (search_o #K #M true),
           (FRESH_NONCE #R #M true),
@@ -27,7 +27,7 @@ pub fn mk_rules(
             (enc (ZEROES (LENGTH #M)) (NONCE #R) (pk (NONCE #K))) (search_k #K #K #R #M #T true)
             #B).
 
-      "ind-ccsa left" :
+      "ind-cca1-right" :
         (EQUIV #U #V #B (candidate #T #M #R #K)) :-
           (search_o #K #M true),
           (FRESH_NONCE #R #M true),
