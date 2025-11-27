@@ -168,7 +168,7 @@ impl crate::libraries::utils::SyntaxSearcher for SearchO {
         if fun == &NONCE {
             tr!("found key!");
             let arg = args.next().expect("NONCE needs a parameter");
-            builder.add_leaf(rexp!((distinct #arg #k #r)));
+            builder.add_leaf(rexp!((distinct #arg #k)));
         } else if fun == pk {
             tr!("found {pk}!");
 

@@ -283,8 +283,8 @@ fn mk_rule_one(
             let search_k = search_k.form_sort(sort)?;
             let search_o = search_o.form_sort(sort)?;
             Some((
-                rexp!((search_k #K #arg #H)),
-                rexp!((search_o #K #K2 #R #M #arg #H)),
+                rexp!((search_k #K #K2 #R #M #arg #H)),
+                rexp!((search_o #K #arg #H)),
             ))
         })
         .map(|(x, y)| (Pattern::from(&x), Pattern::from(&y)))
@@ -292,8 +292,8 @@ fn mk_rule_one(
 
     let search_k = search_k.form_sort(fun.signature.output).unwrap();
     let search_o = search_o.form_sort(fun.signature.output).unwrap();
-    let input_k = Pattern::from(&rexp!((search_k #K (fun #(args.clone())*) #H)));
-    let input_o = Pattern::from(&rexp!((search_o #K #K2 #R #M (fun #args*) #H)));
+    let input_k = Pattern::from(&rexp!((search_k #K #K2 #R #M (fun #(args.clone())*) #H)));
+    let input_o = Pattern::from(&rexp!((search_o #K (fun #args*) #H)));
 
     [
         PrologRule::builder()
