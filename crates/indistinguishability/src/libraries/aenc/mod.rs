@@ -1,5 +1,6 @@
 use itertools::{Itertools, chain};
 
+use crate::libraries::utils::TwoSortFunction;
 use crate::problem::ProblemState;
 use crate::terms::{
     CryptographicAssumption, Cryptography, Formula, Function, FunctionFlags, Rewrite, Sort,
@@ -21,26 +22,44 @@ mod ind_cca;
 mod search;
 mod subst;
 
+/// When `enc` is IND-CCA1 and ENC-KP secure
 #[derive(Debug, Clone)]
 pub struct AEnc {
     enc: Function,
     dec: Function,
     pk: Function,
 
-    candidate_m: Function,
-    candidate_b: Function,
-    // search with no oracle
-    // skip pk
-    search_k_m: Function,
-    search_k_b: Function,
-    // search with decryption oracle
-    search_o_m: Function,
-    search_o_b: Function,
+    /// `C[enc(m, nonce(r), pk(nonce(k)))], m, r, k`
+    candidate: TwoSortFunction,
 
+    /// search with no oracle skip `pk`.
+    /// ```text
+    /// k, k', r, m ||> t  | h
+    /// ```
+    ///
+    /// **!!!**: This is the search that finds instances.
+    ///
+    /// It does the search for both `k` and `k'`. In IND-CCA1 it is expected for
+    /// `k` and `k'` to be the same
+    search_k: TwoSortFunction,
+    /// search with decryption oracle.
+    /// ```text
+    /// k ||> t  | h
+    /// ```
+    ///
+    /// Conceptually these are computed before `C` so there cannot be instances
+    /// within them. Notably, (see notes) we can split this search.
+    search_o: TwoSortFunction,
+
+    // triggers
+    /// `k ||> frame@t p | h`
     search_k_trigger: Function,
+    /// `k, k', r ||> frame@t p  | h`
     search_o_pre_trigger: Function,
+    /// `k, r ||> frame@t p  | h`
     search_o_trigger: Function,
 
+    /// `sid, u, v, _{_ -> nt @ proof}, b`
     subst: Function,
 
     index: usize,
@@ -95,35 +114,33 @@ impl AEnc {
             enc: enc.clone(),
             dec,
             pk,
-            // C[enc(m, nonce(r), pk(nonce(k)))], m, r, k
-            candidate_m: declare!(pbl@index: format!("{enc}_candidate_m");
+            candidate: TwoSortFunction {
+                m: declare!(pbl@index: format!("{enc}_candidate_m");
                 Bitstring, Bitstring, Nonce, Nonce => Bitstring),
-            candidate_b: declare!(pbl@index: format!("{enc}_candidate_b");
+                b: declare!(pbl@index: format!("{enc}_candidate_b");
                 Bool, Bitstring, Nonce, Nonce => Bool),
-
-            // k ||> t | h
-            search_k_m: declare!(pbl@index: format!("{enc}_search_k_m");
-                Nonce, Bitstring, Bool => Bool),
-            search_k_b: declare!(pbl@index: format!("{enc}_search_k_b");
-                Nonce, Bool, Bool => Bool),
-            // k, k', r, m ||> t  | h
-            search_o_m: declare!(pbl@index: format!("{enc}_search_o_m");
+            },
+            search_k: TwoSortFunction {
+                m: declare!(pbl@index: format!("{enc}_search_k_m");
                 Nonce, Nonce, Nonce, Bitstring,
                     Bitstring, Bool => Bool),
-            search_o_b: declare!(pbl@index: format!("{enc}_search_o_b");
+                b: declare!(pbl@index: format!("{enc}_search_k_b");
                 Nonce, Nonce, Nonce, Bitstring,
                     Bool, Bool => Bool),
+            },
+            search_o: TwoSortFunction {
+                m: declare!(pbl@index: format!("{enc}_search_o_m");
+                Nonce, Bitstring, Bool => Bool),
+                b: declare!(pbl@index: format!("{enc}_search_o_b");
+                Nonce, Bool, Bool => Bool),
+            },
 
-            // k ||> frame@t p | h
             search_k_trigger: declare!(pbl@index: format!("{enc}_search_k_trigger");
                 Nonce, Time, Protocol, Bool => Bool),
-            // k, k', r ||> frame@t p  | h
             search_o_pre_trigger: declare!(pbl@index: format!("{enc}_search_o_pre_trigger");
                 Nonce,Nonce,  Nonce, Time, Protocol, Bool => Bool),
-            // k, r ||> frame@t p  | h
             search_o_trigger: declare!(pbl@index: format!("{enc}_search_o_trigger");
                 Nonce, Nonce, Time, Protocol, Bool => Bool),
-            // sid, u, v, _{_ -> nt @ proof}, b
             subst: declare!(pbl@index: format!("{enc}_search_o_b");
                 Any, Bitstring, Bitstring,
                 Bitstring, Bool,

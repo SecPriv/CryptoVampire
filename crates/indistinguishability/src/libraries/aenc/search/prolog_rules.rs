@@ -5,6 +5,7 @@ use itertools::{Itertools, chain, izip};
 use crate::libraries::AEnc;
 use crate::libraries::aenc::ProofHints;
 use crate::libraries::aenc::vars::*;
+use crate::libraries::utils::TwoSortFunction;
 use crate::terms::{
     AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, FRESH_NONCE, Formula, Function, IS_FRESH_NONCE,
     MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE, PRED, Sort, VAMPIRE,
@@ -17,10 +18,16 @@ pub fn mk_static_rules<'a>(
         enc,
         dec,
         pk,
-        search_k_b,
-        search_k_m,
-        search_o_b,
-        search_o_m,
+        search_k:
+            search_k @ TwoSortFunction {
+                m: search_k_m,
+                b: search_k_b,
+            },
+        search_o:
+            search_o @ TwoSortFunction {
+                m: search_o_m,
+                b: search_o_b,
+            },
         search_k_trigger,
         search_o_pre_trigger,
         search_o_trigger,
@@ -221,7 +228,17 @@ pub fn mk_static_rules<'a>(
     ]
 }
 
-fn mk_rule_one(prf @ AEnc { enc, pk, dec, .. }: &AEnc, fun: &Function) -> [PrologRule<Lang>; 2] {
+fn mk_rule_one(
+    prf @ AEnc {
+        enc,
+        pk,
+        dec,
+        search_k,
+        search_o,
+        ..
+    }: &AEnc,
+    fun: &Function,
+) -> [PrologRule<Lang>; 2] {
     debug_assert_ne!(fun, dec);
     debug_assert_ne!(fun, pk);
     debug_assert_ne!(fun, &NONCE);
@@ -234,8 +251,8 @@ fn mk_rule_one(prf @ AEnc { enc, pk, dec, .. }: &AEnc, fun: &Function) -> [Prolo
 
     let (deps_k, deps_o): (Vec<_>, Vec<_>) = izip!(inputs.iter(), &args)
         .filter_map(|(&sort, arg)| {
-            let search_k = prf.get_search_k(sort)?;
-            let search_o = prf.get_search_o(sort)?;
+            let search_k = search_k.form_sort(sort)?;
+            let search_o = search_o.form_sort(sort)?;
             Some((
                 rexp!((search_k #K #arg #H)),
                 rexp!((search_o #K #K2 #R #M #arg #H)),
@@ -244,8 +261,8 @@ fn mk_rule_one(prf @ AEnc { enc, pk, dec, .. }: &AEnc, fun: &Function) -> [Prolo
         .map(|(x, y)| (Pattern::from(&x), Pattern::from(&y)))
         .unzip();
 
-    let search_k = prf.get_search_k(fun.signature.output).unwrap();
-    let search_o = prf.get_search_o(fun.signature.output).unwrap();
+    let search_k = search_k.form_sort(fun.signature.output).unwrap();
+    let search_o = search_o.form_sort(fun.signature.output).unwrap();
     let input_k = Pattern::from(&rexp!((search_k #K (fun #(args.clone())*) #H)));
     let input_o = Pattern::from(&rexp!((search_o #K #K2 #R #M (fun #args*) #H)));
 
