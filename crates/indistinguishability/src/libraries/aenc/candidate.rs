@@ -1,6 +1,7 @@
 use itertools::{Itertools, chain};
 
 use crate::libraries::AEnc;
+use crate::libraries::utils::TwoSortFunction;
 use crate::terms::{Formula, Function, NONCE, Rewrite, Sort};
 use crate::{Problem, rexp};
 
@@ -35,7 +36,7 @@ fn mk_rewrite_one(_pbl: &Problem, aenc: &AEnc, f: &Function) -> impl Iterator<It
     let k = crate::fresh!(Nonce);
     let vars = f.signature.mk_vars();
 
-    let candidate = aenc.get_candidate(f.signature.output).unwrap();
+    let candidate = aenc.candidate.form_sort(f.signature.output).unwrap();
     let ret = rexp!((candidate (f #(vars.iter().map_into())*) #m #r #k));
     let vars_fo = vars.iter().cloned().map(Formula::Var).collect_vec();
 
@@ -44,7 +45,7 @@ fn mk_rewrite_one(_pbl: &Problem, aenc: &AEnc, f: &Function) -> impl Iterator<It
         .iter()
         .enumerate()
         .filter_map(move |(i, &s)| {
-            let candidate = aenc.get_candidate(s)?;
+            let candidate = aenc.candidate.form_sort(s)?;
             let mut args = vars_fo.clone();
             args[i] = rexp!((candidate #(args[i].clone()) #m #r #k));
             Some(
@@ -63,7 +64,7 @@ fn mk_static(_pbl: &Problem, aenc: &AEnc) -> impl Iterator<Item = Rewrite> {
     let AEnc {
         enc,
         pk,
-        candidate_m,
+        candidate: TwoSortFunction { m: candidate_m, .. },
         ..
     } = aenc;
     [
