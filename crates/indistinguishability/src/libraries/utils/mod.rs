@@ -43,6 +43,10 @@ impl TwoSortFunction {
             _ => None
         }
     }
+
+    pub fn contains(&self, other: &Function) -> bool {
+        other == &self.m || other == &self.b
+    }
 }
 
 pub fn find_available_id<'e>(

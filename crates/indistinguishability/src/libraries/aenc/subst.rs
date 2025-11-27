@@ -8,6 +8,7 @@ use super::vars::*;
 use crate::libraries::AEnc;
 use crate::libraries::aenc::ProofHints;
 use crate::libraries::substitution::{PSArgs, ProofLike, ProofSubstitution};
+use crate::libraries::utils::TwoSortFunction;
 use crate::problem::{CVRuleTrait, PAnalysis, PRule, RcRule};
 use crate::terms::{EQUIV_WITH_SIDE, Function};
 use crate::{CVProgram, Lang, Problem, rexp};
@@ -21,21 +22,18 @@ struct SubstRule {
     #[allow(dead_code)]
     aenc: usize,
 
-    search_o_m: Function,
-    search_o_b: Function,
-
     goal_pattern: Pattern<Lang>,
     new_goal_pattern: Pattern<Lang>,
 
     pk: Function,
     dec: Function,
+    search: TwoSortFunction,
 }
 
 #[derive(Debug, Clone)]
 struct SubstData {
-    search_o_m: Function,
-    search_o_b: Function,
     new_term: Id,
+    search: TwoSortFunction,
     pk: Function,
     dec: Function,
 }
@@ -45,10 +43,9 @@ impl SubstRule {
         AEnc {
             subst,
             index,
-            search_o_b,
-            search_o_m,
             dec,
             pk,
+            search_k,
             ..
         }: &AEnc,
     ) -> Self {
@@ -59,10 +56,9 @@ impl SubstRule {
             aenc: *index,
             goal_pattern: g_pattern,
             new_goal_pattern: ng_pattern,
-            search_o_b: search_o_b.clone(),
-            search_o_m: search_o_m.clone(),
-            dec: dec.clone(),
             pk: pk.clone(),
+            dec: dec.clone(),
+            search: search_k.clone(),
         }
     }
 }
@@ -81,11 +77,10 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SubstRule {
             .map(|mut subst| {
                 let [nt_id, proof_id] = [T, PROOF].map(|v| *subst.get(v.as_egg()).unwrap());
                 let na = (SubstData {
-                    search_o_b: self.search_o_b.clone(),
-                    search_o_m: self.search_o_m.clone(),
                     new_term: nt_id,
                     pk: self.pk.clone(),
                     dec: self.dec.clone(),
+                    search: self.search.clone(),
                 })
                 .proof_to_term(prgm, proof_id)
                 .unwrap();
@@ -103,7 +98,7 @@ impl ProofSubstitution for SubstData {
         let l = pgrm.egraph()[id]
             .nodes
             .iter()
-            .find(|Lang { head, .. }| head == &self.search_o_m || head == &self.search_o_b)
+            .find(|Lang { head, .. }| self.search.contains(head))
             .with_context(|| "not a proof of the expected form")?;
         Ok(l.args[4])
     }
@@ -123,6 +118,7 @@ impl ProofSubstitution for SubstData {
         }: PSArgs<'_, 'a, Self>,
     ) -> anyhow::Result<Id> {
         match proof {
+            // search_k_enc_fa_m_weak case: keep `A` reconstruct `B`
             ProofHints::FaKeep(f) => {
                 let self_id = self.get_term(prgrm, proof_id)?;
 
@@ -130,7 +126,7 @@ impl ProofSubstitution for SubstData {
                     .iter()
                     .cloned()
                     .next()
-                    .with_context(|| "wrong number of argument in fa")?;
+                    .with_context(|| "wrong number of argument in fa (needs at least 1)")?;
                 let nb = self.proof_to_term(prgrm, b)?;
                 let na = prgrm.egraph()[self_id]
                     .nodes
@@ -174,6 +170,7 @@ impl ProofLike<SubstData> for ProofHints {
             ProofHints::Keep => data.keep(psargs),
             ProofHints::Replace => data.instance(psargs),
             ProofHints::Apply(fun) if fun != &data.pk && fun != &data.dec => {
+                // NB: enc is a behaves like a regular function
                 data.function_application(fun, psargs)
             }
             _ => data.others(psargs),
