@@ -5,7 +5,7 @@ use itertools::{Itertools, chain};
 use super::vars::*;
 use crate::libraries::AEnc;
 use crate::libraries::utils::Side::{Left, Right};
-use crate::libraries::utils::{FreshNonceSet, RuleWithFreshNonce};
+use crate::libraries::utils::{FreshNonceSet, RuleWithFreshNonce, TwoSortFunction};
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::terms::{EQUIV, FRESH_NONCE, Function, FunctionFlags, NONCE, Sort};
 use crate::{Lang, Problem, rexp};
@@ -28,29 +28,29 @@ struct EncKpRule {
 impl EncKpRule {
     pub fn new(
         AEnc {
-            candidate_m,
             enc,
             pk,
             index,
             subst,
-            search_o_m,
-            search_k_m,
+            candidate: TwoSortFunction { m: candidate, .. },
+            search_o: TwoSortFunction { m: search_o, .. },
+            search_k: TwoSortFunction { m: search_k, .. },
             ..
         }: &AEnc,
     ) -> Self {
         EncKpRule {
             aenc: *index,
-            goal_left: Pattern::from(&rexp!((EQUIV #U #V (candidate_m #T #M #R #K) #B))),
-            goal_right: Pattern::from(&rexp!((EQUIV #U #V #B (candidate_m #T #M #R #K)))),
+            goal_left: Pattern::from(&rexp!((EQUIV #U #V (candidate #T #M #R #K) #B))),
+            goal_right: Pattern::from(&rexp!((EQUIV #U #V #B (candidate #T #M #R #K)))),
             checks: [
-                rexp!((search_k_m #K #M true)),
-                rexp!((search_k_m #K2 #M true)),
-                rexp!((search_o_m #K #K2 #R #M #T true)),
+                rexp!((search_o #K #M true)),
+                rexp!((search_o #K2 #M true)),
+                rexp!((search_k #K #K2 #R #M #T true)),
                 rexp!((FRESH_NONCE #R #M true)),
             ]
             .map(|x| Pattern::from(&x)),
             new_goal: Pattern::from(&rexp!((subst #SIDE #U #V
-              (enc #M (NONCE #R) (pk (NONCE #K2))) (search_o_m #K #K2 #R #M #T true)
+              (enc #M (NONCE #R) (pk (NONCE #K2))) (search_k #K #K2 #R #M #T true)
             #B))),
         }
     }
