@@ -10,7 +10,7 @@ use crate::{Problem, mk_signature};
 declare_trace!($"enc");
 
 mod vars {
-    decl_vars!(pub const M:Bitstring, T, NT, P,
+    decl_vars!(pub const M:Bitstring, T, NT, P:Protocol,
             A:Bitstring, B:Bitstring,
             PROOF: Bool, K:Nonce, K2:Nonce, N:Nonce, R:Nonce, H:Bool,
             SIDE:Any, U:Bitstring, V:Bitstring);
@@ -25,23 +25,25 @@ mod subst;
 /// When `enc` is IND-CCA1 and ENC-KP secure
 #[derive(Debug, Clone)]
 pub struct AEnc {
-    enc: Function,
-    dec: Function,
-    pk: Function,
+    pub enc: Function,
+    pub dec: Function,
+    pub pk: Function,
 
     /// `C[enc(m, nonce(r), pk(nonce(k)))], m, r, k`
-    candidate: TwoSortFunction,
+    pub candidate: TwoSortFunction,
 
     /// search with no oracle skip `pk`.
     /// ```text
     /// k, k', r, m ||> t  | h
+    ///
+    /// Nonce, Nonce, Nonce, Bitstring  , _, Bool
     /// ```
     ///
     /// **!!!**: This is the search that finds instances.
     ///
     /// It does the search for both `k` and `k'`. In IND-CCA1 it is expected for
     /// `k` and `k'` to be the same
-    search_k: TwoSortFunction,
+    pub search_k: TwoSortFunction,
     /// search with decryption oracle.
     /// ```text
     /// k ||> t  | h
@@ -49,18 +51,24 @@ pub struct AEnc {
     ///
     /// Conceptually these are computed before `C` so there cannot be instances
     /// within them. Notably, (see notes) we can split this search.
-    search_o: TwoSortFunction,
+    pub search_o: TwoSortFunction,
 
     // triggers
-    /// `k ||> frame@t p | h`
-    search_k_trigger: Function,
     /// `k, k', r ||> frame@t p  | h`
-    search_o_pre_trigger: Function,
+    ///
+    /// Pre triggers the search so we can do some processing on it (i.e., split
+    /// the search easily)
+    pub search_k_pre_trigger: Function,
+    /// `k ||> frame@t p | h`
+    ///
+    /// Using the same trick as what we used for `search_o` we can search
+    /// separatly
+    pub search_k_trigger: Function,
     /// `k, r ||> frame@t p  | h`
-    search_o_trigger: Function,
+    pub search_o_trigger: Function,
 
     /// `sid, u, v, _{_ -> nt @ proof}, b`
-    subst: Function,
+    pub subst: Function,
 
     index: usize,
 }
@@ -137,7 +145,7 @@ impl AEnc {
 
             search_k_trigger: declare!(pbl@index: format!("{enc}_search_k_trigger");
                 Nonce, Time, Protocol, Bool => Bool),
-            search_o_pre_trigger: declare!(pbl@index: format!("{enc}_search_o_pre_trigger");
+            search_k_pre_trigger: declare!(pbl@index: format!("{enc}_search_k_pre_trigger");
                 Nonce,Nonce,  Nonce, Time, Protocol, Bool => Bool),
             search_o_trigger: declare!(pbl@index: format!("{enc}_search_o_trigger");
                 Nonce, Nonce, Time, Protocol, Bool => Bool),
@@ -170,32 +178,32 @@ impl AEnc {
         aenc.register_at(pbl, index).unwrap()
     }
 
-    /// Returns the candidate function for a given output sort.
-    pub fn get_candidate(&self, sort: Sort) -> Option<&Function> {
-        match sort {
-            Sort::Bitstring => Some(&self.candidate_m),
-            Sort::Bool => Some(&self.candidate_b),
-            _ => None,
-        }
-    }
+    // /// Returns the candidate function for a given output sort.
+    // pub fn get_candidate(&self, sort: Sort) -> Option<&Function> {
+    //     match sort {
+    //         Sort::Bitstring => Some(&self.candidate_m),
+    //         Sort::Bool => Some(&self.candidate_b),
+    //         _ => None,
+    //     }
+    // }
 
-    /// Returns the `search_k` function for a given output sort.
-    pub fn get_search_k(&self, sort: Sort) -> Option<&Function> {
-        match sort {
-            Sort::Bitstring => Some(&self.search_k_m),
-            Sort::Bool => Some(&self.search_k_b),
-            _ => None,
-        }
-    }
+    // /// Returns the `search_k` function for a given output sort.
+    // pub fn get_search_k(&self, sort: Sort) -> Option<&Function> {
+    //     match sort {
+    //         Sort::Bitstring => Some(&self.search_k_m),
+    //         Sort::Bool => Some(&self.search_k_b),
+    //         _ => None,
+    //     }
+    // }
 
-    /// Returns the `search_o` function for a given output sort.
-    pub fn get_search_o(&self, sort: Sort) -> Option<&Function> {
-        match sort {
-            Sort::Bitstring => Some(&self.search_o_m),
-            Sort::Bool => Some(&self.search_o_b),
-            _ => None,
-        }
-    }
+    // /// Returns the `search_o` function for a given output sort.
+    // pub fn get_search_o(&self, sort: Sort) -> Option<&Function> {
+    //     match sort {
+    //         Sort::Bitstring => Some(&self.search_o_m),
+    //         Sort::Bool => Some(&self.search_o_b),
+    //         _ => None,
+    //     }
+    // }
 
     fn extra_rewrites(&self, _pbl: &Problem) -> impl Iterator<Item = Rewrite> {
         let Self { enc, dec, pk, .. } = self;
