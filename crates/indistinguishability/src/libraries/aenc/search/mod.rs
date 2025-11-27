@@ -13,8 +13,8 @@ pub fn mk_rules<'a>(
     pbl: &'a Problem,
     aenc @ AEnc {
         index,
-        search_o_trigger,
         search_k_trigger,
+        search_o_trigger,
         ..
     }: &'a AEnc,
 ) -> impl Iterator<Item = RcRule> + use<'a> {
@@ -24,7 +24,7 @@ pub fn mk_rules<'a>(
             .aenc(*index)
             .exec(SmtRunner::new(pbl))
             .trigger_k(&rexp!((search_o_trigger #K #T #P #H)))
-            .trigger_o(&rexp!((search_k_trigger #K #R #T #P #H)))
+            .trigger_o(&rexp!((search_k_trigger #K #T #P #H)))
             .build()
             .into_mrc()]
     ]
