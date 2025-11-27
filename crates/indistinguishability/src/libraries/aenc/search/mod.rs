@@ -23,8 +23,8 @@ pub fn mk_rules<'a>(
         [dynamic::SearchRule::builder()
             .aenc(*index)
             .exec(SmtRunner::new(pbl))
-            .trigger_k(&rexp!((search_k_trigger #K #T #P #H)))
-            .trigger_o(&rexp!((search_o_trigger #K #R #T #P #H)))
+            .trigger_k(&rexp!((search_o_trigger #K #T #P #H)))
+            .trigger_o(&rexp!((search_k_trigger #K #R #T #P #H)))
             .build()
             .into_mrc()]
     ]

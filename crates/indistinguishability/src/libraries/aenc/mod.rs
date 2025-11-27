@@ -146,9 +146,9 @@ impl AEnc {
             search_k_trigger: declare!(pbl@index: format!("{enc}_search_k_trigger");
                 Nonce, Time, Protocol, Bool => Bool),
             search_k_pre_trigger: declare!(pbl@index: format!("{enc}_search_k_pre_trigger");
-                Nonce,Nonce,  Nonce, Time, Protocol, Bool => Bool),
+                Nonce, Nonce,  Nonce, Time, Protocol, Bool => Bool),
             search_o_trigger: declare!(pbl@index: format!("{enc}_search_o_trigger");
-                Nonce, Nonce, Time, Protocol, Bool => Bool),
+                Nonce, Time, Protocol, Bool => Bool),
             subst: declare!(pbl@index: format!("{enc}_search_o_b");
                 Any, Bitstring, Bitstring,
                 Bitstring, Bool,
