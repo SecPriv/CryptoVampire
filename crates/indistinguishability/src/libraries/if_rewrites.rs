@@ -23,7 +23,8 @@ fn mk_static_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = egg::Rewrite<
     //   ["if simp2"] (m_ite #a #a false) => (#a).
       ["if simp3"] (m_ite #a (m_ite #a #b #c) #d) => (m_ite #a #b #d).
     //   ["if simp4"] (m_ite #a true false) => (#a).
-      ["if eq"] (m_ite (= #a #b) #a #b) => (#a).
+      ["if eq1"] (m_ite (= #a #b) #a #b) => (#a).
+      ["if eq2"] (m_ite (= #a #b) #a #b) => (#b).
 
       ["b_if true"] (b_ite true #a #b) => (#a).
       ["b_if false"] (b_ite false #a #b) => (#b).

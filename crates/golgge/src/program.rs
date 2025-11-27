@@ -340,8 +340,7 @@ where
         let ndepth = u64::MAX - fuel;
         let gtmp = if self.is_tracing_enabled(DebugLevel::RULE) {
             let g = self.egraph().id_to_expr(base_goal);
-            println!("{}:{}:{}", file!(), line!(), column!());
-            println!("({base_goal:}) {}", g.pretty(80));
+            println!("({base_goal:}) selecting {}", g.pretty(80));
             Some(g)
         } else {
             None
@@ -366,10 +365,20 @@ where
                 && (canonicalized || i == 0)
                 && let Some(res) = self.check_and_set_memo(goal, Status::InProgress)
             {
-                return res;
+                // yes side effects ^^', this is here because I don't
+                // want break out of a loop that came from a rewrite mid proof
+                if i == 0 {
+                    return res;
+                } else {
+                    println!("not skipping !!!!!")
+                }
             }
 
-            debug_assert!(self.memo.contains_key(&goal));
+            debug_assert!(
+                !self.is_memo_enabled() || self.memo.contains_key(&goal),
+                "({goal:}) {}",
+                self.egraph().id_to_expr(goal).pretty(100)
+            );
 
             let Some(r) = self.rules.get(i).cloned() else {
                 break None; // no more path to a proof
@@ -403,6 +412,12 @@ where
                 )
             }
 
+            debug_assert!(
+                !self.is_memo_enabled() || self.memo.contains_key(&goal),
+                "({goal:}) {}",
+                self.egraph().id_to_expr(goal).pretty(100)
+            );
+
             let ret = search
                 .inner()
                 .iter()
@@ -425,6 +440,15 @@ where
                 break ret; // found a proof or cut
             }
         };
+        
+        canonicalize_id_mut(&mut goal, self.egraph());
+        self.check_and_set_memo(goal, Status::InProgress);
+
+        debug_assert!(
+            !self.is_memo_enabled() || self.memo.contains_key(&goal),
+            "({goal:}) {}",
+            self.egraph().id_to_expr(goal).pretty(100)
+        );
 
         let result = proof.is_some();
         // save memoisation
@@ -432,7 +456,8 @@ where
             let there = self.memo.insert(goal, Status::from(proof).into());
             assert!(
                 there.is_some(),
-                "the goal wasn't registered as 'In Progress'"
+                "the goal ({goal:}) wasn't registered at all...\nthis was {}",
+                self.egraph().id_to_expr(goal).pretty(100)
             )
         }
 
