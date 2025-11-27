@@ -109,14 +109,18 @@
     (cv-add-rewrite pbl (cv-mk-rewrite "flip-zeroes" (list m1 m2 c)
         (m_ite c (zeroes m1) (zeroes m2))
         (zeroes (m_ite c m1 m2))))
-    (cv-add-rewrite pbl (cv-mk-rewrite "flip-length" (list m1 m2 c)
-        (m_ite c (bitstring-length m1) (bitstring-length m2))
-        (bitstring-length (m_ite c m1 m2))))))
+    ; (cv-add-rewrite pbl (cv-mk-rewrite "flip-length" (list m1 m2 c)
+    ;     (m_ite c (bitstring-length m1) (bitstring-length m2))
+    ;     (bitstring-length (m_ite c m1 m2))))
+    (cv-add-rewrite pbl (cv-mk-rewrite "flip-length-rev" (list m1 m2 c)
+        (bitstring-length (m_ite c m1 m2))
+        (m_ite c (bitstring-length m1) (bitstring-length m2))))))
 
 ;; configuration
 (cv-set-trace pbl #t)
 (cv-set-vampire-timeout pbl (cv-string->duration "5s"))
-(cv-set-node-limit pbl 100000)
+(cv-set-node-limit pbl 10000000)
+; (cv-set-node-limit pbl 200)
 (cv-set-enc-kp-limit pbl 1)
 (cv-set-fa-limit pbl 0)
 

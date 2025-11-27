@@ -161,8 +161,8 @@ impl AEnc {
             let rules = chain![
                 search::mk_rules(pbl, &aenc),
                 subst::mk_rules(pbl, &aenc),
-                enc_kp::mk_rules(pbl, &aenc),
                 ind_cca::mk_rules(pbl, &aenc),
+                enc_kp::mk_rules(pbl, &aenc),
             ]
             .collect_vec();
             pbl.extra_rules_mut().extend(rules);
@@ -177,33 +177,6 @@ impl AEnc {
 
         aenc.register_at(pbl, index).unwrap()
     }
-
-    // /// Returns the candidate function for a given output sort.
-    // pub fn get_candidate(&self, sort: Sort) -> Option<&Function> {
-    //     match sort {
-    //         Sort::Bitstring => Some(&self.candidate_m),
-    //         Sort::Bool => Some(&self.candidate_b),
-    //         _ => None,
-    //     }
-    // }
-
-    // /// Returns the `search_k` function for a given output sort.
-    // pub fn get_search_k(&self, sort: Sort) -> Option<&Function> {
-    //     match sort {
-    //         Sort::Bitstring => Some(&self.search_k_m),
-    //         Sort::Bool => Some(&self.search_k_b),
-    //         _ => None,
-    //     }
-    // }
-
-    // /// Returns the `search_o` function for a given output sort.
-    // pub fn get_search_o(&self, sort: Sort) -> Option<&Function> {
-    //     match sort {
-    //         Sort::Bitstring => Some(&self.search_o_m),
-    //         Sort::Bool => Some(&self.search_o_b),
-    //         _ => None,
-    //     }
-    // }
 
     fn extra_rewrites(&self, _pbl: &Problem) -> impl Iterator<Item = Rewrite> {
         let Self { enc, dec, pk, .. } = self;
