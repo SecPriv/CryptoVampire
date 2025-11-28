@@ -32,6 +32,11 @@ fn ddh() {
     mk_test("./tests/ddh-S.scm", &[]);
 }
 
+#[test]
+fn private_authentication() {
+    mk_test("./tests/private-auth.scm", &[]);
+}
+
 fn mk_test(file: impl AsRef<Path>, extra_args: &[&str]) {
     let mut cmd = Command::new(cargo_bin!());
     cmd.pipe_stdin(file)
