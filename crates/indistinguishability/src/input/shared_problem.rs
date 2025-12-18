@@ -13,6 +13,7 @@ use steel_derive::Steel;
 use crate::input::golgge_rules::Rule;
 use crate::input::shared_exists::ShrExists;
 use crate::input::{Registerable, conversion_err};
+use crate::problem::Report;
 use crate::protocol::Step;
 use crate::terms::{Exists, Formula, Function, QuantifierT, Rewrite, Sort, Variable};
 use crate::{Configuration, MSmt, Problem};
@@ -209,6 +210,10 @@ impl ShrProblem {
             .unwrap()
     }
 
+    fn get_report(&self) -> Report {
+        self.0.read().unwrap().report.clone()
+    }
+
     // =========================================================
     // ====================== printing =========================
     // =========================================================
@@ -298,6 +303,7 @@ impl Registerable for ShrProblem {
             .register_fn("add-rewrite", Self::add_rewrite)
             .register_fn("add-smt-axiom", Self::add_smt_axiom)
             .register_fn("add-constrain", Self::add_constrain)
+            .register_fn("get-report", Self::get_report)
             .register_fn("run", Self::run);
 
         Self::register_configuration(module).register_fn("string->duration", |s: String| {

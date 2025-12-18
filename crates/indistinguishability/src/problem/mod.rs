@@ -28,6 +28,9 @@ mod run;
 mod functions;
 pub use functions::FunctionBuilder;
 
+mod report;
+pub use report::Report;
+
 /// A problem for the solver to solve
 ///
 /// This struct contains all the information needed to run the solver.
@@ -66,6 +69,8 @@ pub struct Problem {
     pub state: ProblemState,
 
     constrains: Vec<Constrains>,
+
+    pub report: Report,
 }
 
 /// Represents the current step in the execution of the problem
@@ -133,6 +138,7 @@ impl Problem {
             quantifier_cache: vec![],
             state: Default::default(),
             constrains,
+            report: Default::default(),
         }
     }
 }

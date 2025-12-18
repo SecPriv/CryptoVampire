@@ -33,6 +33,9 @@ which = "8.0.0"
 bon = "3.6.4"
 clap = { version = "4", features = ["derive"] }
 clap_complete = "4.5"
+steel-core = { git = "https://github.com/puyral/steel/", branch = "hash-everything", features = ["custom-hash"]}
+steel-derive = { git = "https://github.com/puyral/steel/", branch = "hash-everything"}
+steel-repl = { git = "https://github.com/puyral/steel/", branch = "hash-everything"}
 
 [workspace.lints.rust]
 elided_lifetimes_in_paths = "deny"

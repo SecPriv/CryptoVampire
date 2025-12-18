@@ -133,3 +133,5 @@
 (if (run pbl p1 p2)
   (displayln "success")
   (error "failed"))
+
+(displayln (cv-print-report (cv-get-report pbl)))

@@ -5,15 +5,15 @@ edition = "2024"
 authors = ["Simon Jeanteur <simon.jeanteur@tuwien.ac.at>"]
 
 [dependencies]
-rustc-hash = "2.1.0" # for hash on integers
+rustc-hash = "2.1.0"   # for hash on integers
 serde_json = "1.0.120"
 tempfile = "3.10"
 colored = "3.0.0"
 
 # own crates
-utils = { path = "../utils"}
-logic_formula = {path = "../logic_formula"}
-egg = {path = "../egg", features = ["serde-1", "cryptovampire"]}
+utils = { path = "../utils" }
+logic_formula = { path = "../logic_formula" }
+egg = { path = "../egg", features = ["serde-1", "cryptovampire"] }
 
 # workspace
 itertools.workspace = true
@@ -26,11 +26,15 @@ env_logger.workspace = true
 serde.workspace = true
 bon.workspace = true
 thiserror.workspace = true
-bitflags= {workspace = true, features = ["serde"]}
+bitflags = { workspace = true, features = ["serde"] }
+# steel-core = { workspace = true, optional = true }
+# steel-derive = { workspace = true, optional = true }
+# steel-repl = { workspace = true, optional = true }
 
 [features]
 sync = []
 default = ["sync"]
+# steel = ["steel-core", "steel-derive", "steel-repl"]
 
 [lints]
 workspace = true
