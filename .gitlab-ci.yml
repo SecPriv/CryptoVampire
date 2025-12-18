@@ -44,7 +44,7 @@ unit:
 all:
   stage: integration
   script:
-    - nix develop --set-env-var RESULT "$(pwd)/results.csv" --command RESULT= cargo test --target-dir ./target --release -- --test-threads 1
+    - nix develop --set-env-var RESULT "$(pwd)/results.csv" --command cargo test --target-dir ./target --release -- --test-threads 1
   only: [schedules]
   artifacts:
     untracked: false
