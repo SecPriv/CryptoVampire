@@ -27,10 +27,12 @@
       (begin
         (print-row file "name" "runtime" "vampire time" "total" "hits" "hitrate")
         file))))
+(define get-file (let [ (env (maybe-get-env-var "RESULT")) ]
+    (if (Err? env) "/tmp/results.csv" (Ok->value env))))
 
-(define (save-results file name pbl)
+(define (save-results name pbl)
   (let* [
-    (file (prepare file))
+    (file (prepare get-file))
     (report (cv-get-report pbl))
     (runtime (cv-get-runtime report))
     (vampire (cv-get-time-spent-in-vampire report))

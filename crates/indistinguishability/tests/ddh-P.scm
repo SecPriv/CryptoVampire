@@ -204,4 +204,4 @@
   (error "failed"))
 
 (displayln (cv-print-report (cv-get-report pbl)))
-(save-results "./result.csv" "ddh-P" pbl)
+(save-results "ddh-P" pbl)

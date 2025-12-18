@@ -106,4 +106,4 @@
 
 
 (displayln (cv-print-report (cv-get-report pbl)))
-(save-results "./result.csv" "lak-tag" pbl)
+(save-results "lak-tag" pbl)

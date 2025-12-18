@@ -82,4 +82,4 @@
   (error "failed"))
 
 (displayln (cv-print-report (cv-get-report pbl)))
-(save-results "./result.csv" "basic-hash" pbl)
+(save-results "basic-hash" pbl)

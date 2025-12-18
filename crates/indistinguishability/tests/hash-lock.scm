@@ -97,4 +97,4 @@
   (error "failed"))
 
 (displayln (cv-print-report (cv-get-report pbl)))
-(save-results "./result.csv" "hash-lock" pbl)
+(save-results  "hash-lock" pbl)
