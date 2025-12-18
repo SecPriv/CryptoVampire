@@ -36,6 +36,7 @@ use crate::{
 
 /// A program that manages an `egg::EGraph` and a set of rules.
 /// A program that manages an `egg::EGraph` and a set of rules.
+#[non_exhaustive]
 pub struct Program<L: Language, N: Analysis<L>, R = DRule<L, N>> {
     /// The underlying e-graph.
     egraph: Option<EGraph<L, N>>,
@@ -49,6 +50,12 @@ pub struct Program<L: Language, N: Analysis<L>, R = DRule<L, N>> {
     clean: bool,
     /// Configuration for the program.
     pub config: Config,
+
+    /// Number of time the memoisation was hit
+    num_memo_hits: u64,
+
+    /// number of times `run` was called
+    total_calls: u64,
 }
 
 /// Represents the status of a proof attempt for a given e-class.
@@ -118,6 +125,8 @@ where
             memo: Default::default(),
             clean: true,
             config,
+            num_memo_hits: 0,
+            total_calls: 0,
         }
     }
 
@@ -151,7 +160,7 @@ where
     /// Resets the memoization table.
     #[deprecated]
     pub fn reset_memo(&mut self) {
-        self.memo = Default::default()
+        self.memo = Default::default();
     }
 
     /// adds `e` to the egraph
@@ -260,6 +269,19 @@ where
     pub const fn is_tracing_enabled(&self, kind: DebugLevel) -> bool {
         kind.intersects(self.config.trace)
     }
+    
+    pub fn get_memo_hit(&self) -> u64 {
+        self.num_memo_hits
+    }
+
+    pub fn get_num_calls(&self) -> u64 {
+        self.total_calls
+    }
+
+    /// Rate at which the memoisation kicks in
+    pub fn get_hit_rate(&self) -> f64 {
+        (self.num_memo_hits as f64) / (self.total_calls as f64)
+    }
 }
 
 fn print_bool(b: bool) -> ColoredString {
@@ -325,6 +347,7 @@ where
             }
             Entry::Occupied(occupied_entry) => {
                 let res = occupied_entry.get().as_bool();
+                self.num_memo_hits += 1 ;
                 mtrace!(self, RULE, "⏩ skipping: {}", print_bool(res));
                 Some(res)
             }
@@ -337,6 +360,7 @@ where
 
     /// same as [Self::run_expr] but starting from an [Id] in the [EGraph]
     pub fn run(&mut self, base_goal: egg::Id, fuel: u64) -> bool {
+        self.total_calls += 1;
         let ndepth = u64::MAX - fuel;
         let gtmp = if self.is_tracing_enabled(DebugLevel::RULE) {
             let g = self.egraph().id_to_expr(base_goal);
