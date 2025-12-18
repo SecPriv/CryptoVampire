@@ -10,7 +10,7 @@ This project is split in multiples crates
 
 ## General Instructions
  - The code should compile (i.e., `cargo check` is successful)
- - `cargo run -- crates/indistinguishability/tests/basic-hash.scm` succeed and it's last returned line should be `success`
+ - `cargo run -- crates/indistinguishability/tests/basic-hash.scm` succeed. (Note that it can fail for weird reasons, so sometime a rerun is required)
  - It's better if `cargo clippy` has the least amount of warning, but it is not a requirement
  - dead code is acceptable
  - all new function, trait, stuctures,... should be documented

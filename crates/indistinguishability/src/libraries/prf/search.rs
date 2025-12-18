@@ -207,7 +207,7 @@ fn mk_static_rules(
                 (search_m #m #k #nprf #r (and (not #c) #h)).
 
             "search_prf_ite_b" c, l, r (Apply(BITE.clone())):
-            (search_m #m #k #nprf (BITE #c #l #r) #h):-
+            (search_b #m #k #nprf (BITE #c #l #r) #h):-
                 (search_b #m #k #nprf #c #h),
                 (search_b #m #k #nprf #l (and #c #h)),
                 (search_b #m #k #nprf #r (and (not #c) #h)).
