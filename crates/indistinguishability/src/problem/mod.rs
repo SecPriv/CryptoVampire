@@ -28,6 +28,8 @@ mod run;
 mod functions;
 pub use functions::FunctionBuilder;
 
+mod report;
+
 /// A problem for the solver to solve
 ///
 /// This struct contains all the information needed to run the solver.
