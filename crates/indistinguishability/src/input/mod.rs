@@ -57,6 +57,7 @@ pub fn register(module: &mut BuiltInModule) -> &mut BuiltInModule {
 /// Initializes a new Steel `Engine` with the cryptovampire prelude and configuration.
 pub fn init_engine(config: Configuration) -> Engine {
     let mut engine = Engine::new();
+    engine.add_search_directory(std::env::current_dir().unwrap());
 
     match config.prelude_version {
         prelude::Preludes::V1 => {

@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use cryptovampire_smt::Smt;
 use egg::EGraph;
 use golgge::{Program, Rule};
@@ -83,6 +85,7 @@ impl Problem {
 
         let mut cache_hits = 0;
         let mut total = 0;
+        let start = ::std::time::Instant::now();
 
         // the result of the computation
         let mut res = true;
@@ -205,6 +208,7 @@ impl Problem {
 
         self.report.total_cache_hits = cache_hits;
         self.report.total_run_calls = total;
+        self.report.runtime = start.elapsed();
 
         res
     }

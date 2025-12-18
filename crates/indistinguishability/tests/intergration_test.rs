@@ -39,10 +39,9 @@ fn private_authentication() {
 
 fn mk_test(file: impl AsRef<Path>, extra_args: &[&str]) {
     let mut cmd = Command::new(cargo_bin!());
-    cmd.pipe_stdin(file)
-        .unwrap()
-        .arg("--trace")
+    cmd.arg("--trace")
         .args(extra_args)
+        .args(["file", file.as_ref().to_str().unwrap()])
         .timeout(humantime::parse_duration("1h").unwrap())
         .assert()
         .success()
