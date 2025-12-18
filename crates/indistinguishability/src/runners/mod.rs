@@ -1,5 +1,5 @@
 use std::fmt::Debug;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use golgge::Dependancy;
 use tokio::sync::RwLock;
@@ -94,11 +94,14 @@ impl SmtRunner {
 
         let pbl = SharedProblem(RwLock::new(pbl));
 
-        tokio::select! {
+        let start = std::time::Instant::now();
+        let res = tokio::select! {
             x = regular_vampire.try_run_spin(&pbl, query.clone()) => x.map(Some),
             x = bounded_vapire.try_run_spin(&pbl, query.clone()) => x.map(Some),
             _ = tokio::time::sleep( pbl.0.read().await.config.vampire_timeout) => Ok(None)
-        }
+        };
+        pbl.0.write().await.report.time_spent_in_vampire += start.elapsed().as_secs_f64();
+        res
     }
 }
 

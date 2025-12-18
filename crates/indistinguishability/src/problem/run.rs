@@ -81,6 +81,9 @@ impl Problem {
         let p1f = self.protocols[p1].name().clone();
         let p2f = self.protocols[p2].name().clone();
 
+        let mut cache_hits = 0;
+        let mut total = 0;
+
         // the result of the computation
         let mut res = true;
 
@@ -131,6 +134,9 @@ impl Problem {
                     depth,
                 )
                 .as_bool();
+
+            cache_hits += pgrm.get_memo_hit();
+            total += pgrm.get_num_calls();
         } else {
             trace!("empty problem");
             return true;
@@ -189,10 +195,16 @@ impl Problem {
             // }
 
             res &= pgrm.run_expr(goal, depth).as_bool();
+
+            cache_hits += pgrm.get_memo_hit();
+            total += pgrm.get_num_calls();
         }
 
         self.extra_smt_mut().truncate(base_smt_n);
         self.current_step = None;
+
+        self.report.total_cache_hits = cache_hits;
+        self.report.total_run_calls = total;
 
         res
     }

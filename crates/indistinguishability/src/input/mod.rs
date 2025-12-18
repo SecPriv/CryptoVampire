@@ -13,6 +13,7 @@ use crate::input::shared_cryptography::ShrCrypto;
 use crate::input::shared_exists::ShrExists;
 // use crate::input::shared_fdst::ShrFindSuchThat;
 use crate::input::shared_problem::ShrProblem;
+use crate::problem::Report;
 use crate::terms::{
     AliasRewrite, BUILTINS, Formula, Function, Rewrite, SCHEME_PREFIX, SORT_LIST, Signature, Sort,
     Variable,
@@ -46,6 +47,7 @@ pub fn register(module: &mut BuiltInModule) -> &mut BuiltInModule {
     ShrCrypto::register(module);
     // ShrFindSuchThat::register(module);
     Variable::register(module);
+    Report::register(module);
 
     module.register_fn("println!", |x: SteelVal| println!("dbg: {x:?}"));
 
