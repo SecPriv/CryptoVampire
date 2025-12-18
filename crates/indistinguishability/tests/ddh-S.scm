@@ -199,4 +199,4 @@
   (error "failed"))
 
 (displayln (cv-print-report (cv-get-report pbl)))
-(save-results "/tmp/test.csv" "basic-hash" pbl)
+(save-results "./result.csv" "ddh-S" pbl)

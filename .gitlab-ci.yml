@@ -46,3 +46,10 @@ all:
   script:
     - nix develop --command cargo test --target-dir ./target --release -- --test-threads 1
   only: [schedules]
+  artifacts:
+    untracked: false
+    when: on_success
+    access: all
+    expire_in: "30 days"
+    paths:
+      - "./crates/indistinguishability/tests/result.csv"
