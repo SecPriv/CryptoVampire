@@ -1,4 +1,5 @@
 (require "cryptovampire/v2")
+(require "./save-results.scm")
 (require-builtin cryptovampire as cv-)
 
 (define pbl (mk-problem 'x))
@@ -129,3 +130,4 @@
   (error "failed"))
 
 (displayln (cv-print-report (cv-get-report pbl)))
+(save-results "/tmp/test.csv" "basic-hash" pbl)

@@ -100,7 +100,7 @@ impl SmtRunner {
             x = bounded_vapire.try_run_spin(&pbl, query.clone()) => x.map(Some),
             _ = tokio::time::sleep( pbl.0.read().await.config.vampire_timeout) => Ok(None)
         };
-        pbl.0.write().await.report.time_spent_in_vampire += start.elapsed().as_secs_f64();
+        pbl.0.write().await.report.time_spent_in_vampire += start.elapsed();
         res
     }
 }
