@@ -30,7 +30,8 @@ pub struct SearchRule {
 struct SearchK {
     #[allow(dead_code)]
     aenc: usize,
-    pk: Function,
+    pk: Option<Function>,
+    enc: Function,
 
     k: Formula,
 }
@@ -40,12 +41,32 @@ struct SearchO {
     #[allow(dead_code)]
     aenc: usize,
 
-    pk: Function,
+    pk: Option<Function>,
     dec: Function,
+    enc: Function,
 
     k: Formula,
     // k2: RecFOFormula,
     // r: Formula,
+}
+
+impl SearchK {
+    fn get_pk_enc(&self) -> &Function {
+        self.pk.as_ref().unwrap_or(&self.enc)
+    }
+
+    fn is_senc(&self) -> bool {
+        self.pk.is_none()
+    }
+}
+
+impl SearchO {
+    fn get_pk_enc(&self) -> &Function {
+        self.pk.as_ref().unwrap_or(&self.enc)
+    }
+    fn is_senc(&self) -> bool {
+        self.pk.is_none()
+    }
 }
 
 impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SearchRule {
@@ -60,11 +81,12 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SearchRule {
             trigger_o,
             exec,
         } = self;
-        let AEnc { pk, dec, .. } = prgm.egraph().analysis.pbl().cryptography()[*aenc]
+        let AEnc { pk, dec, enc, .. } = prgm.egraph().analysis.pbl().cryptography()[*aenc]
             .as_inner()
             .unwrap();
         let pk = pk.clone();
         let dec = dec.clone();
+        let enc = enc.clone();
 
         if let Some(matches) = trigger_k.search_eclass(prgm.egraph(), goal) {
             for subst in matches.substs {
@@ -76,6 +98,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SearchRule {
                 let result = SearchK {
                     aenc: *aenc,
                     pk: pk.clone(),
+                    enc: enc.clone(),
                     k,
                 }
                 .search_id_timepoint(prgm, exec, p, t, h)
@@ -95,6 +118,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SearchRule {
                     aenc: *aenc,
                     pk: pk.clone(),
                     dec: dec.clone(),
+                    enc: enc.clone(),
                     k,
                 })
                 .search_id_timepoint(prgm, exec, p, t, h)
@@ -112,7 +136,7 @@ impl crate::libraries::utils::SyntaxSearcher for SearchK {
     }
 
     fn is_instance(&self, _: &Problem, fun: &Function) -> bool {
-        [&NONCE, &self.pk].contains(&fun)
+        [&NONCE, self.get_pk_enc()].contains(&fun)
     }
 
     fn process_instance(
@@ -128,17 +152,34 @@ impl crate::libraries::utils::SyntaxSearcher for SearchK {
             tr!("found key!");
             let arg = args.next().expect("NONCE needs a parameter");
             builder.add_leaf(rexp!((distinct #arg #k)));
-        } else if fun == pk {
-            tr!("found {pk}!");
+        } else if fun == self.get_pk_enc() {
+            tr!("found {}!", self.get_pk_enc());
 
-            let ok = args.next().unwrap();
-            let builder = builder
-                .add_node()
-                .condition(rexp!((distinct (NONCE #k) #ok)))
-                .forall()
-                .build();
+            if self.is_senc() {
+                assert_eq!(fun, &self.enc);
 
-            self.inner_search_formula(pbl, &builder, ok.clone());
+                let op = args.next().unwrap();
+                let or = args.next().unwrap();
+                let ok = args.next().unwrap();
+                let builder = builder
+                    .add_node()
+                    .condition(rexp!((distinct (NONCE #k) #ok)))
+                    .forall()
+                    .build();
+
+                self.inner_search_formula(pbl, &builder, op.clone());
+                self.inner_search_formula(pbl, &builder, or.clone());
+                self.inner_search_formula(pbl, &builder, ok.clone());
+            } else {
+                let ok = args.next().unwrap();
+                let builder = builder
+                    .add_node()
+                    .condition(rexp!((distinct (NONCE #k) #ok)))
+                    .forall()
+                    .build();
+
+                self.inner_search_formula(pbl, &builder, ok.clone());
+            }
         } else {
             assert!(!self.is_instance(pbl, fun));
             unreachable!()
@@ -153,7 +194,7 @@ impl crate::libraries::utils::SyntaxSearcher for SearchO {
     }
 
     fn is_instance(&self, _: &Problem, fun: &Function) -> bool {
-        [&NONCE, &self.pk].contains(&fun)
+        [&NONCE, self.get_pk_enc()].contains(&fun)
     }
 
     fn process_instance(
@@ -169,17 +210,34 @@ impl crate::libraries::utils::SyntaxSearcher for SearchO {
             tr!("found key!");
             let arg = args.next().expect("NONCE needs a parameter");
             builder.add_leaf(rexp!((distinct #arg #k)));
-        } else if fun == pk {
-            tr!("found {pk}!");
+        } else if fun == self.get_pk_enc() {
+            tr!("found {}!", self.get_pk_enc());
 
-            let arg = args.next().unwrap();
-            let builder = builder
-                .add_node()
-                .condition(rexp!((distinct (NONCE #k)  #arg)))
-                .forall()
-                .build();
+            if self.is_senc() {
+                assert_eq!(fun, &self.enc);
 
-            self.inner_search_formula(pbl, &builder, arg.clone());
+                let op = args.next().unwrap();
+                let or = args.next().unwrap();
+                let ok = args.next().unwrap();
+                let builder = builder
+                    .add_node()
+                    .condition(rexp!((distinct (NONCE #k) #ok)))
+                    .forall()
+                    .build();
+
+                self.inner_search_formula(pbl, &builder, op.clone());
+                self.inner_search_formula(pbl, &builder, or.clone());
+                self.inner_search_formula(pbl, &builder, ok.clone());
+            } else {
+                let ok = args.next().unwrap();
+                let builder = builder
+                    .add_node()
+                    .condition(rexp!((distinct (NONCE #k) #ok)))
+                    .forall()
+                    .build();
+
+                self.inner_search_formula(pbl, &builder, ok.clone());
+            }
         } else if fun == dec {
             tr!("found {dec}!");
             let (dm, dk) = args.collect_tuple().unwrap();

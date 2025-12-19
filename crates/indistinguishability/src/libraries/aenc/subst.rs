@@ -25,7 +25,7 @@ struct SubstRule {
     goal_pattern: Pattern<Lang>,
     new_goal_pattern: Pattern<Lang>,
 
-    pk: Function,
+    pk: Option<Function>,
     dec: Function,
     search: TwoSortFunction,
 }
@@ -34,7 +34,7 @@ struct SubstRule {
 struct SubstData {
     new_term: Id,
     search: TwoSortFunction,
-    pk: Function,
+    pk: Option<Function>,
     dec: Function,
 }
 
@@ -107,16 +107,14 @@ impl ProofSubstitution for SubstData {
         Ok(self.new_term)
     }
 
-    fn others<'a>(
-        &self,
-        PSArgs {
+    fn others<'a>(&self, args: PSArgs<'_, 'a, Self>) -> anyhow::Result<Id> {
+        let PSArgs {
             proof,
             proof_parent,
             prgrm,
             proof_id,
             ..
-        }: PSArgs<'_, 'a, Self>,
-    ) -> anyhow::Result<Id> {
+        } = args;
         match proof {
             // search_k_enc_fa_m_weak case: keep `A` reconstruct `B`
             ProofHints::FaKeep(f) => {
@@ -138,8 +136,12 @@ impl ProofSubstitution for SubstData {
 
             ProofHints::Apply(fun) => {
                 if fun == &self.dec {
-                    todo!()
-                } else if fun == &self.pk {
+                    if proof_parent.len() == 2 {
+                        self.function_application(&self.dec, PSArgs { prgrm, ..args })
+                    } else {
+                        todo!()
+                    }
+                } else if Some(fun) == self.pk.as_ref() {
                     todo!()
                 } else {
                     unreachable!()
@@ -169,7 +171,7 @@ impl ProofLike<SubstData> for ProofHints {
         match self {
             ProofHints::Keep => data.keep(psargs),
             ProofHints::Replace => data.instance(psargs),
-            ProofHints::Apply(fun) if fun != &data.pk && fun != &data.dec => {
+            ProofHints::Apply(fun) if Some(fun) != data.pk.as_ref() && fun != &data.dec => {
                 // NB: enc is a behaves like a regular function
                 data.function_application(fun, psargs)
             }

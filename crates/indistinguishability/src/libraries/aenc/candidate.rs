@@ -67,10 +67,19 @@ fn mk_static(_pbl: &Problem, aenc: &AEnc) -> impl Iterator<Item = Rewrite> {
         candidate: TwoSortFunction { m: candidate_m, .. },
         ..
     } = aenc;
-    [
-        mk_rewrite!(crate prolog format!(""); (m Bitstring, r Nonce, k Nonce):
+
+    if let Some(pk) = pk {
+        [
+            mk_rewrite!(crate prolog format!(""); (m Bitstring, r Nonce, k Nonce):
           (enc #m (NONCE #r) (pk (NONCE #k)))
             => (candidate_m (enc #m (NONCE #r) (pk (NONCE #k))) #m #r #k)),
-    ]
+        ]
+    } else {
+        [
+            mk_rewrite!(crate prolog format!(""); (m Bitstring, r Nonce, k Nonce):
+          (enc #m (NONCE #r) (NONCE #k))
+            => (candidate_m (enc #m (NONCE #r) (NONCE #k)) #m #r #k)),
+        ]
+    }
     .into_iter()
 }

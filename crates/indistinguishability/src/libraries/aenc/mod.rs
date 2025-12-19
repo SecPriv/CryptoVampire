@@ -27,7 +27,7 @@ mod subst;
 pub struct AEnc {
     pub enc: Function,
     pub dec: Function,
-    pub pk: Function,
+    pub pk: Option<Function>,
 
     /// `C[enc(m, nonce(r), pk(nonce(k)))], m, r, k`
     pub candidate: TwoSortFunction,
@@ -105,9 +105,9 @@ impl AEnc {
         index: usize,
         enc: Function,
         dec: Function,
-        pk: Function,
+        pk: Option<Function>,
     ) -> &Self {
-        tr!("init aenc: {enc}, {dec}, {pk}");
+        tr!("init aenc: {enc}, {dec}, {pk:?}");
         assert_eq!(
             enc.signature,
             mk_signature!((Bitstring, Bitstring, Bitstring) -> Bitstring)
@@ -116,7 +116,9 @@ impl AEnc {
             dec.signature,
             mk_signature!((Bitstring, Bitstring) -> Bitstring)
         );
-        assert_eq!(pk.signature, mk_signature!((Bitstring) -> Bitstring));
+        if let Some(pk) = &pk {
+            assert_eq!(pk.signature, mk_signature!((Bitstring) -> Bitstring));
+        }
 
         let aenc = Self {
             enc: enc.clone(),
@@ -181,9 +183,12 @@ impl AEnc {
     fn extra_rewrites(&self, _pbl: &Problem) -> impl Iterator<Item = Rewrite> {
         let Self { enc, dec, pk, .. } = self;
         // crate::mk_rewrite!()
+        if let Some(pk) = pk {
         [mk_rewrite!(crate format!("{enc} simplification"); (m Bitstring, r Bitstring, k Bitstring):
             (dec (enc #m #r (pk #k)) #k) => (#m))
-        ].into_iter()
+        ] } else {[mk_rewrite!(crate format!("{enc} simplification"); (m Bitstring, r Bitstring, k Bitstring):
+            (dec (enc #m #r #k) #k) => (#m))
+        ]}.into_iter()
     }
 }
 
