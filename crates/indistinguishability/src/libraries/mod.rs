@@ -231,6 +231,7 @@ pub mod utils;
 
 /// Encryption rules
 mod aenc;
+
 /// Provides rules for deduction.
 pub mod deduce;
 /// Provides default rewrite rules.
@@ -267,8 +268,7 @@ mod smt;
 pub mod find_indices;
 
 pub use aenc::AEnc;
-/// Re-exports `FreshNonce` for generating fresh nonces and `mk_no_guessing_smt` for SMT rules related to nonces.
-/// Re-exports `FreshNonce` for generating fresh nonces and `mk_no_guessing_smt` for SMT rules related to nonces.
+
 pub use nonce::{FreshNonce, mk_no_guessing_smt};
 /// Re-exports the `PRF` struct, representing a pseudo-random function.
 pub use prf::PRF;

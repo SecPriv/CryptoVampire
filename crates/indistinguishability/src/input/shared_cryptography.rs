@@ -40,11 +40,12 @@ impl ShrCrypto {
 
     fn init_aenc(self, enc: Function, dec: Function, pk: Function) {
         let mut pbl = self.pbl.borrow_mut();
-        AEnc::new_and_add(&mut pbl, self.index, enc, dec, pk);
+        AEnc::new_and_add(&mut pbl, self.index, enc, dec, Some(pk));
     }
 
-    fn init_senc(self, _enc: Function, _dec: Function, _pk: Function) {
-        todo!()
+    fn init_senc(self, enc: Function, dec: Function) {
+        let mut pbl = self.pbl.borrow_mut();
+        AEnc::new_and_add(&mut pbl, self.index, enc, dec, None);
     }
 
     fn init_xor(self, xor: Function) {

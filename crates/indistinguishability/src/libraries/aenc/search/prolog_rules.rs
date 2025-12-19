@@ -12,6 +12,11 @@ use crate::terms::{
 };
 use crate::{Lang, Problem, fresh, rexp};
 
+fn function_to_skip(aenc: &AEnc, f: &Function) -> bool {
+    [&NONCE, &aenc.dec, &AND, &CONS_FA_BITSTRING, &CONS_FA_BOOL].contains(&f)
+        || aenc.pk.as_ref() == Some(f)
+}
+
 /// Build the static rule for search for the ENC-KP and IND-CCA1 axioms
 ///
 /// ## Implementation notes
@@ -45,24 +50,22 @@ pub fn mk_static_rules<'a>(
         ..
     }: &'a AEnc,
 ) -> impl Iterator<Item = PrologRule<Lang>> + use<'a> {
-    let function_to_skip = [
-        NONCE.clone(),
-        dec.clone(),
-        pk.clone(),
-        AND.clone(),
-        CONS_FA_BITSTRING.clone(),
-        CONS_FA_BOOL.clone(),
-    ];
 
     let functions = pbl
         .functions()
         .iter_current()
-        .filter(move |f| !function_to_skip.contains(*f))
+        .filter(|f| !function_to_skip(aenc, f))
         .filter(|f| !f.is_out_of_term_algebra())
         .filter(|f| matches!(f.signature.output, Sort::Bitstring | Sort::Bool))
         .filter(|f| !f.is_special_subterm())
         .cloned();
     use super::super::ProofHints::*;
+
+    let mpk = if let Some(pk) = pk {
+        rexp!((pk (NONCE #K)))
+    } else {
+        rexp!((NONCE #K))
+    };
 
     chain![
         [
@@ -109,50 +112,78 @@ pub fn mk_static_rules<'a>(
 
           // ~~~~~~~~~~~~~~~ instance ~~~~~~~~~~~~~~~~~
           "search_k_instance" (Replace):
-            (search_k_m #K #K2 #R #M (enc #M (NONCE #R) (pk (NONCE #K))) #H).
+            (search_k_m #K #K2 #R #M (enc #M (NONCE #R) #mpk) #H).
         },
         // =========================================================
         // =================== general search ======================
         // =========================================================
         functions.flat_map(|f| mk_rule_one(aenc, &f)),
+        // ~~~~~~~~~~~~ rules with pk ~~~~~~~~~~~~~~~
+        if let Some(pk) = pk {
+            mk_many_prolog! {
+              // ~~~~~~~~~~~~~~~~~~ pk ~~~~~~~~~~~~~~~~~~~~
+              "search_k_enc_pk_k" (Keep):
+                (search_k_m #K #K2 #R #M (pk (NONCE #K)) #H).
+              "search_k_enc_pk_k2" (Keep):
+                (search_k_m #K #K2 #R #M (pk (NONCE #K2)) #H).
+
+              "search_k_enc_pk_neq" (Apply(pk.clone())):
+                (search_k_m #K #K2 #R #M (pk #T) #H) :-
+                  (search_k_m #K #K2 #R #M #T #H),
+                  (VAMPIRE (=> #H (distinct #T (NONCE #K)))),
+                  (VAMPIRE (=> #H (distinct #T (NONCE #R)))),
+                  (VAMPIRE (=> #H (distinct #T (NONCE #K2)))).
+
+              "search_o_enc_pk_k" :
+                (search_o_m #K (pk (NONCE #K)) #H).
+
+              "search_o_enc_pk_neq" :
+                (search_o_m #K (pk #T) #H) :-
+                  (search_o_m #K #T #H),
+                  (VAMPIRE (=> #H (distinct #T (NONCE #K)))).
+
+              // ~~~~~~~~~~~~~~~~~ dec ~~~~~~~~~~~~~~~~~~~~
+              // This behaves a lot like `pk` so we offload to the pk rules.
+              // This needs to be taken into account while rebuilding the term
+              "search_k_enc_dec" (Apply(dec.clone())):
+                (search_k_m #K #K2 #R #M (dec #A #B) #H) :-
+                  (search_k_m #K #K2 #R #M #A #H),
+                  (search_k_m #K #K2 #R #M #B #H).
+
+              "search_o_enc_dec" :
+                (search_o_m #K (dec #A #B) #H):-
+                  (search_o_m #K #A #H),
+                  (search_o_m #K (pk #B) #H).
+            }
+        } else {
+            mk_many_prolog! {
+              // ~~~~~~~~~~~~~~~~~ dec ~~~~~~~~~~~~~~~~~~~~
+              // This behaves a lot like `pk` so we offload to the pk rules.
+              // This needs to be taken into account while rebuilding the term
+              "search_k_enc_dec" (Apply(dec.clone())):
+                (search_k_m #K #K2 #R #M (dec #A (NONCE #K)) #H) :-
+                  (search_k_m #K #K2 #R #M #A #H).
+
+              "search_k_enc_dec2" (Apply(dec.clone())):
+                (search_k_m #K #K2 #R #M (dec #A (NONCE #K2)) #H) :-
+                  (search_k_m #K #K2 #R #M #A #H).
+
+              "search_k_enc_dec_neq" (Apply(dec.clone())):
+                (search_k_m #K #K2 #R #M (dec #A #B) #H) :-
+                  (search_k_m #K #K2 #R #M #A #H),
+                  (search_k_m #K #K2 #R #M #B #H).
+
+              "search_o_enc_dec" :
+                (search_o_m #K (dec #A (NONCE #K)) #H):-
+                  (search_o_m #K #A #H).
+
+              "search_o_enc_dec_neq" :
+                (search_o_m #K (dec #A #B) #H):-
+                  (search_o_m #K #A #H),
+                  (search_o_m #K #B #B).
+            }
+        },
         mk_many_prolog! {
-          // =========================================================
-          // ================ other speacial cases ===================
-          // =========================================================
-
-          // ~~~~~~~~~~~~~~~~~~ pk ~~~~~~~~~~~~~~~~~~~~
-          "search_k_enc_pk_k" (Keep):
-            (search_k_m #K #K2 #R #M (pk (NONCE #K)) #H).
-          "search_k_enc_pk_k2" (Keep):
-            (search_k_m #K #K2 #R #M (pk (NONCE #K2)) #H).
-
-          "search_k_enc_pk_neq" (Apply(pk.clone())):
-            (search_k_m #K #K2 #R #M (pk #T) #H) :-
-              (search_k_m #K #K2 #R #M #T #H),
-              (VAMPIRE (=> #H (distinct #T (NONCE #K)))),
-              (VAMPIRE (=> #H (distinct #T (NONCE #K2)))).
-
-          "search_o_enc_pk_k" :
-            (search_o_m #K (pk (NONCE #K)) #H).
-
-          "search_o_enc_pk_neq" :
-            (search_o_m #K (pk #T) #H) :-
-              (search_o_m #K #T #H),
-              (VAMPIRE (=> #H (distinct #T (NONCE #K)))).
-
-          // ~~~~~~~~~~~~~~~~~ dec ~~~~~~~~~~~~~~~~~~~~
-          // This behaves a lot like `pk` so we offload to the pk rules.
-          // This needs to be taken into account while rebuilding the term
-          "search_k_enc_dec" (Apply(dec.clone())):
-            (search_k_m #K #K2 #R #M (dec #A #B) #H) :-
-              (search_k_m #K #K2 #R #M #A #H),
-              (search_k_m #K #K2 #R #M #B #H).
-
-          "search_o_enc_dec" :
-            (search_o_m #K (dec #A #B) #H):-
-              (search_o_m #K #A #H),
-              (search_o_m #K (pk #B) #H).
-
           // ~~~~~~~~~~~~~~~~ macros ~~~~~~~~~~~~~~~~~~
           "search_k_enc_exec"  (Keep):
             (search_k_b #K #K2 #R #M (MACRO_EXEC #T #P) #H) :-
@@ -269,7 +300,7 @@ fn mk_rule_one(
     fun: &Function,
 ) -> [PrologRule<Lang>; 2] {
     debug_assert_ne!(fun, dec);
-    debug_assert_ne!(fun, pk);
+    debug_assert_ne!(Some(fun), pk.as_ref());
     debug_assert_ne!(fun, &NONCE);
     let inputs = &fun.signature.inputs;
 

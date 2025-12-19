@@ -40,6 +40,16 @@ impl EncKpRule {
             ..
         }: &AEnc,
     ) -> Self {
+        let new_goal = if let Some(pk) = pk {
+            Pattern::from(&rexp!((subst #SIDE #U #V
+              (enc #M (NONCE #R) (pk (NONCE #K2))) (search_k #K #K2 #R #M #T true)
+            #B)))
+        } else {
+            Pattern::from(&rexp!((subst #SIDE #U #V
+              (enc #M (NONCE #R) (NONCE #K2)) (search_k #K #K2 #R #M #T true)
+            #B)))
+        };
+
         EncKpRule {
             aenc: *index,
             goal_left: Pattern::from(&rexp!((EQUIV #U #V (candidate #T #M #R #K) #B))),
@@ -51,9 +61,7 @@ impl EncKpRule {
                 rexp!((FRESH_NONCE #R #M true)),
             ]
             .map(|x| Pattern::from(&x)),
-            new_goal: Pattern::from(&rexp!((subst #SIDE #U #V
-              (enc #M (NONCE #R) (pk (NONCE #K2))) (search_k #K #K2 #R #M #T true)
-            #B))),
+            new_goal,
         }
     }
 }
