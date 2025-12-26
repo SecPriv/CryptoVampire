@@ -74,13 +74,13 @@
   ((i Index) (j Index)
     (t Time)
     (p Protocol))
-  (let [ (in (macro_input t p)) (int (macro_input (tag i j) p)) ]
+  (let [ (in (macro_input t p)) (int (unfold_msg (tag i j) p)) ]
     (cv-add-rewrite pbl (cv-mk-rewrite "lemma-2" (list i t j p)
         (eq (tuple (nr i) (sel2of2 in)) (mhash (sel1of2 in) (mk i j p)))
         (exists ((j Index))
           (cand
-            (eq (sel1of2 in) (sel1of2 (macro_input (tag i j) p)))
-            (eq (sel2of2 in) (sel2of2 (macro_input (tag i j) p)))
+            (eq (sel1of2 in) (sel1of2 int))
+            (eq (sel2of2 in) (sel2of2 int))
             (eq (macro_input (tag i j) p) (macro_msg (reader1 i) p))
             (lt (reader1 i) (tag i j))
             (lt (tag i j) t))))))); <- very important

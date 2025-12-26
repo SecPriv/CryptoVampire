@@ -79,8 +79,8 @@
   (let [ (in (macro_input t p)) ]
     (findst ((i Index) (k Index))
       (cand
-        (eq (sel1of2 in) (sel1of2 (macro_input (tag i j) p)))
-        (eq (sel2of2 in) (sel2of2 (macro_input (tag i j) p)))
+        (eq (sel1of2 in) (sel1of2 (unfold_msg (tag i j) p)))
+        (eq (sel2of2 in) (sel2of2 (unfold_msg (tag i j) p)))
         (lt (tag i j) t)) ; <- very important
       (mhash (tuple (tuple (nr j) (sel1of2 in)) tag2) (mk i k p))
       ko)))
