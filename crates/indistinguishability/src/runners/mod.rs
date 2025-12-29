@@ -1,5 +1,5 @@
 use std::fmt::Debug;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use golgge::Dependancy;
 use tokio::sync::RwLock;

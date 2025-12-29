@@ -1,6 +1,5 @@
 use std::borrow::Cow;
-use std::cell::{Ref, RefCell};
-use std::collections::VecDeque;
+use std::cell::RefCell;
 use std::fmt::{Debug, Display};
 use std::rc::Rc;
 
@@ -18,7 +17,7 @@ use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::terms::list::{snoc_egraph, try_get_egraph};
 use crate::terms::{
     AND, CONS_FA_BITSTRING, CONS_FA_BOOL, EMPTY, EQUIV, EXISTS, FIND_SUCH_THAT, FROM_BOOL,
-    Function, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NIL_FA, NONCE,
+    Function, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NIL_FA, NONCE,
     PRED, Sort, TUPLE,
 };
 use crate::{CVProgram, Lang, Problem, rexp};

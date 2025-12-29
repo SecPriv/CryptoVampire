@@ -323,7 +323,7 @@ pub fn mk_static_rules<'a>(
 }
 
 fn mk_rule_one(
-    prf @ AEnc {
+    _prf @ AEnc {
         enc,
         pk,
         dec,

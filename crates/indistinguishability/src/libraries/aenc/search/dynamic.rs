@@ -151,7 +151,7 @@ impl crate::libraries::utils::SyntaxSearcher for SearchK {
         fun: &Function,
         args: &[Formula],
     ) -> ControlFlow<()> {
-        let Self { pk, k, .. } = self;
+        let Self { pk: _, k, .. } = self;
         let mut args = args.iter();
         if fun == &NONCE {
             tr!("found key!");
@@ -209,7 +209,7 @@ impl crate::libraries::utils::SyntaxSearcher for SearchO {
         fun: &Function,
         args: &[Formula],
     ) -> ControlFlow<()> {
-        let Self { pk, k, dec, .. } = self;
+        let Self { pk: _, k, dec, .. } = self;
         let mut args = args.iter();
         if fun == &NONCE {
             tr!("found key!");

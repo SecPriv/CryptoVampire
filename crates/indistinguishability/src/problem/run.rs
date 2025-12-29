@@ -1,4 +1,3 @@
-use std::time::Duration;
 
 use cryptovampire_smt::Smt;
 use egg::EGraph;
