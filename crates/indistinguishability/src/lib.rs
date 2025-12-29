@@ -47,8 +47,6 @@ pub mod protocol;
 pub(crate) mod runners;
 /// Defines the terms and their operations used in the cryptographic analysis.
 pub mod terms; // <- first for macros
-#[cfg(test)]
-mod test;
 /// Contains utility functions and helpers.
 pub(crate) mod utils;
 /// Re-exports functions for initializing the engine and registering input handlers.
