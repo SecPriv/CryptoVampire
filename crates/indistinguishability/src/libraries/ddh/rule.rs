@@ -14,6 +14,7 @@ use crate::{CVProgram, Lang, rexp};
 
 #[derive(Debug, Clone)]
 pub struct DDHRule {
+    #[allow(dead_code)]
     index: usize,
     goal_left: Pattern<Lang>,
     goal_right: Pattern<Lang>,

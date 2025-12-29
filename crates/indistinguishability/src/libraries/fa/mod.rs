@@ -1,22 +1,21 @@
 use std::borrow::Cow;
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 
 use egg::{Analysis, EClass, EGraph, Id, Pattern, SearchMatches, Searcher, Subst};
 use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain, izip};
 use rustc_hash::{FxHashMap, FxHashSet};
-use smallvec::{SmallVec, smallvec};
+use smallvec::SmallVec;
 use static_init::dynamic;
 use utils::{dynamic_iter, econtinue_if, econtinue_let, ereturn_if, ereturn_let};
 
+use crate::libraries::utils::find_available_id;
 use crate::libraries::utils::lambda_subst::lambda_subst;
-use crate::libraries::utils::{Side, find_available_id};
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::terms::list::{snoc_egraph, try_get_egraph};
 use crate::terms::{
-    AND, CONS_FA_BITSTRING, CONS_FA_BOOL, EMPTY, EQUIV, EXISTS, FIND_SUCH_THAT, FROM_BOOL,
-    Function, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NIL_FA, NONCE, PRED, Sort,
-    TUPLE,
+    AND, EMPTY, EQUIV, EXISTS, FIND_SUCH_THAT, Function, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT,
+    NIL_FA, NONCE, PRED, Sort,
 };
 use crate::{CVProgram, Lang, Problem, rexp};
 

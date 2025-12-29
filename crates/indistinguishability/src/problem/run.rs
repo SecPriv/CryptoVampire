@@ -1,4 +1,3 @@
-
 use cryptovampire_smt::Smt;
 use egg::EGraph;
 use golgge::{Program, Rule};

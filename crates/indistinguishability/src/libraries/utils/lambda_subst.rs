@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
 use egg::{Analysis, EGraph, Id};
-use itertools::{Itertools, chain};
+use itertools::chain;
 use log::trace;
 use rustc_hash::FxHashMap;
 use utils::ereturn_if;

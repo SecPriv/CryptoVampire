@@ -9,6 +9,7 @@ use crate::terms::{
 use crate::{Problem, mk_signature};
 declare_trace!($"enc");
 
+#[allow(dead_code)]
 mod vars {
     decl_vars!(pub const M:Bitstring, T, NT, P,
         NA: Nonce, NB:Nonce, NC:Nonce,

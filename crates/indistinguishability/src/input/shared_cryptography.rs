@@ -27,6 +27,7 @@ impl ShrCrypto {
         Self { pbl, index }
     }
 
+    #[allow(dead_code)]
     fn get_crypto(&self) -> impl Deref<Target = CryptographicAssumption> {
         std::sync::RwLockReadGuard::<'_, Problem>::map(self.pbl.0.read().unwrap(), |pbl| {
             &pbl.cryptography()[self.index]

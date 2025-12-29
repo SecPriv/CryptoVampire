@@ -1,7 +1,6 @@
 use anyhow::Context;
 use egg::{Id, Pattern, Searcher};
 use golgge::{Dependancy, Rule};
-use itertools::Itertools;
 use utils::ereturn_let;
 
 use super::vars::*;

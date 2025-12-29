@@ -2,11 +2,11 @@ use egg::{Analysis, EGraph, Id, Pattern, Searcher, Subst};
 use itertools::{Itertools, izip};
 use smallvec::{SmallVec, smallvec};
 use static_init::dynamic;
+
 use crate::libraries::fa::*;
 use crate::terms::{
-    CONS_FA_BITSTRING, CONS_FA_BOOL, EMPTY, FROM_BOOL,
-    MACRO_COND, MACRO_EXEC, MACRO_FRAME, MITE, NIL_FA, PRED, Sort,
-    TUPLE,
+    CONS_FA_BITSTRING, CONS_FA_BOOL, EMPTY, FROM_BOOL, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MITE,
+    NIL_FA, PRED, Sort, TUPLE,
 };
 use crate::{Lang, rexp};
 

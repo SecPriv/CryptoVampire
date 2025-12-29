@@ -39,16 +39,14 @@ pub fn mk_static_rules<'a>(
         enc,
         dec,
         pk,
-        search_k:
-            search_k @ TwoSortFunction {
-                m: search_k_m,
-                b: search_k_b,
-            },
-        search_o:
-            search_o @ TwoSortFunction {
-                m: search_o_m,
-                b: search_o_b,
-            },
+        search_k: TwoSortFunction {
+            m: search_k_m,
+            b: search_k_b,
+        },
+        search_o: TwoSortFunction {
+            m: search_o_m,
+            b: search_o_b,
+        },
         search_k_trigger,
         search_k_pre_trigger,
         search_o_trigger,
