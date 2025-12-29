@@ -269,7 +269,7 @@ where
     pub const fn is_tracing_enabled(&self, kind: DebugLevel) -> bool {
         kind.intersects(self.config.trace)
     }
-    
+
     pub fn get_memo_hit(&self) -> u64 {
         self.num_memo_hits
     }
@@ -336,19 +336,23 @@ where
         }
     }
 
-    fn check_and_set_memo(&mut self, goal: egg::Id, status: Status<R>) -> Option<bool> {
+    fn check_and_set_memo(&mut self, goal: egg::Id, status: Status<R>, log: bool) -> Option<bool> {
         assert!(self.is_memo_enabled());
 
         use std::collections::hash_map::Entry;
         match self.memo_mut().entry(goal) {
             Entry::Occupied(occupied_entry) if occupied_entry.get().is_in_progress() => {
-                mtrace!(self, RULE, "⏩ skipping: {}", "loop".red());
+                if log {
+                    mtrace!(self, RULE, "⏩ skipping {goal:}: {}", "loop".red());
+                }
                 Some(false)
             }
             Entry::Occupied(occupied_entry) => {
                 let res = occupied_entry.get().as_bool();
-                self.num_memo_hits += 1 ;
-                mtrace!(self, RULE, "⏩ skipping: {}", print_bool(res));
+                self.num_memo_hits += 1;
+                if log {
+                    mtrace!(self, RULE, "⏩ skipping {goal:}: {}", print_bool(res));
+                }
                 Some(res)
             }
             Entry::Vacant(vacant_entry) => {
@@ -387,7 +391,7 @@ where
             // check memoization
             if self.is_memo_enabled()
                 && (canonicalized || i == 0)
-                && let Some(res) = self.check_and_set_memo(goal, Status::InProgress)
+                && let Some(res) = self.check_and_set_memo(goal, Status::InProgress, true)
             {
                 // yes side effects ^^', this is here because I don't
                 // want break out of a loop that came from a rewrite mid proof
@@ -408,6 +412,8 @@ where
                 break None; // no more path to a proof
             };
             i += 1;
+
+            trace!("({base_goal:}) rule: '{}'", r.name());
 
             let search = r.search(self, goal);
 
@@ -433,7 +439,28 @@ where
                                 .join(", ")
                         ))
                         .join("\n")
-                )
+                );
+
+                if cfg!(debug_assertions) {
+                    eprintln!("({goal}) new goals prefetch:");
+
+                    for d in search.inner.iter() {
+                        eprint!("\t - [");
+                        for c in d {
+                            let tmp = self.memo.get(c).map(|c| c.0.read().unwrap());
+                            match tmp {
+                                Some(x) => match x.deref() {
+                                    Status::False => eprint!("{c} ({})", "false".red()),
+                                    Status::True(_) => eprint!("{c} ({})", "true".green()),
+                                    Status::InProgress => eprint!("{c} ({})", "loop".red()),
+                                },
+                                None => eprint!("{c} (?)"),
+                            }
+                            eprint!(", ")
+                        }
+                        eprintln!("]");
+                    }
+                }
             }
 
             debug_assert!(
@@ -464,9 +491,9 @@ where
                 break ret; // found a proof or cut
             }
         };
-        
+
         canonicalize_id_mut(&mut goal, self.egraph());
-        self.check_and_set_memo(goal, Status::InProgress);
+        self.check_and_set_memo(goal, Status::InProgress, true);
 
         debug_assert!(
             !self.is_memo_enabled() || self.memo.contains_key(&goal),

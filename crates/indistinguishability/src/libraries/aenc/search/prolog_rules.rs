@@ -6,6 +6,11 @@ use crate::libraries::AEnc;
 use crate::libraries::aenc::ProofHints;
 use crate::libraries::aenc::vars::*;
 use crate::libraries::utils::TwoSortFunction;
+use crate::terms::HAPPENS;
+use crate::terms::MACRO_COND;
+use crate::terms::MACRO_MSG;
+use crate::terms::UNFOLD_COND;
+use crate::terms::UNFOLD_MSG;
 use crate::terms::{
     AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, FRESH_NONCE, Formula, Function, IS_FRESH_NONCE,
     MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE, PRED, Sort, VAMPIRE,
@@ -14,7 +19,11 @@ use crate::{Lang, Problem, fresh, rexp};
 
 fn function_to_skip(aenc: &AEnc, f: &Function) -> bool {
     [&NONCE, &aenc.dec, &AND, &CONS_FA_BITSTRING, &CONS_FA_BOOL].contains(&f)
-        || aenc.pk.as_ref() == Some(f)
+        || if let Some(pk) = &aenc.pk {
+            f == pk
+        } else {
+            f == &aenc.enc
+        }
 }
 
 /// Build the static rule for search for the ENC-KP and IND-CCA1 axioms
@@ -50,7 +59,6 @@ pub fn mk_static_rules<'a>(
         ..
     }: &'a AEnc,
 ) -> impl Iterator<Item = PrologRule<Lang>> + use<'a> {
-
     let functions = pbl
         .functions()
         .iter_current()
@@ -180,7 +188,26 @@ pub fn mk_static_rules<'a>(
               "search_o_enc_dec_neq" :
                 (search_o_m #K (dec #A #B) #H):-
                   (search_o_m #K #A #H),
-                  (search_o_m #K #B #B).
+                  (search_o_m #K #B #H).
+              
+              // enc
+              
+              "search_k_enc_enc" (Apply(enc.clone())):
+                (search_k_m #K #K2 #R #M (enc #T #A #B) #H) :-
+                  (search_k_m #K #K2 #R #M #T #H),
+                  (search_k_m #K #K2 #R #M #A #H),
+                  (search_k_m #K #K2 #R #M #B #H).
+
+              // TODO: make sure this is sound
+              "search_o_enc_enc" :
+                (search_o_m #K (enc #T (NONCE #A) (NONCE #B)) #H):-
+                  (search_o_m #K #T #H).
+              
+              "search_o_enc_enc_2" :
+                (search_o_m #K (enc #T  #A #B) #H):-
+                  (search_o_m #K #T #H),
+                  (search_o_m #K #A #H),
+                  (search_o_m #K #B #H).
             }
         },
         mk_many_prolog! {
@@ -284,6 +311,17 @@ pub fn mk_static_rules<'a>(
               (search_o_b #K #A #H),
               (search_o_b #K2 #A #H),
               (FRESH_NONCE #R #A #H).
+
+          // ~~~~~~~~~~~~~~~~ macros ~~~~~~~~~~~~~~~~~~
+          "search_o_enc_msg":
+            (search_o_m #K (MACRO_MSG #T #P) #H):-
+              (VAMPIRE (=> #H (HAPPENS #T))),
+              (search_o_m #K (UNFOLD_MSG #T #P) #H).
+
+          "search_o_enc_cond":
+            (search_o_b #K (MACRO_COND #T #P) #H):-
+              (VAMPIRE (=> #H (HAPPENS #T))),
+              (search_o_b #K (UNFOLD_COND #T #P) #H).
         }
     ]
 }

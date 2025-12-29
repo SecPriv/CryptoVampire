@@ -22,6 +22,7 @@
   step-protocol
   ;; macros
   bind exists forall findst
+  mfindst
   prolog signature
   alias-rw
   define-alias
@@ -240,9 +241,9 @@
   (cv-initialize-as-aenc aenc
     (get-function enc) (get-function dec) (get-function pk)))
 
-(define (initialize-as-senc senc enc dec pk)
+(define (initialize-as-senc senc enc dec)
   (cv-initialize-as-senc senc
-    (get-function enc) (get-function dec) (get-function pk)))
+    (get-function enc) (get-function dec)))
 
 (define (initialize-as-xor xor-crypt xor)
   (cv-initialize-as-xor xor-crypt

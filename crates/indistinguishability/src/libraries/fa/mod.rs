@@ -1,11 +1,14 @@
 use std::borrow::Cow;
-use std::fmt::Debug;
+use std::cell::{Ref, RefCell};
+use std::collections::VecDeque;
+use std::fmt::{Debug, Display};
+use std::rc::Rc;
 
 use egg::{Analysis, EClass, EGraph, Id, Pattern, SearchMatches, Searcher, Subst};
 use golgge::{Dependancy, Rule};
 use itertools::{Itertools, chain, izip};
 use rustc_hash::{FxHashMap, FxHashSet};
-use smallvec::SmallVec;
+use smallvec::{SmallVec, smallvec};
 use static_init::dynamic;
 use utils::{dynamic_iter, econtinue_if, econtinue_let, ereturn_if, ereturn_let};
 
@@ -21,7 +24,7 @@ use crate::terms::{
 use crate::{CVProgram, Lang, Problem, rexp};
 
 declare_trace!($"fa");
-decl_vars!(const; HD:Bitstring, TL:Bitstring, U, V, T, P);
+decl_vars!(const; HD:Bitstring, TL:Bitstring, U, V, T, P, M:Bitstring);
 
 decl_vars!(pub const; A, B);
 
@@ -35,11 +38,17 @@ pub fn mk_prolog_rules(_: &Problem) -> impl Iterator<Item = RcRule> {
     [FaRule.into_mrc()].into_iter()
 }
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FaElem {
     pub a: Id,
     pub b: Id,
     sort: LSort,
+    splittable: bool,
+}
+
+struct PrintFa<'a, N: Analysis<Lang>> {
+    egraph: &'a EGraph<Lang, N>,
+    fa: &'a FaElem,
 }
 
 impl FaElem {
@@ -55,6 +64,24 @@ impl FaElem {
             Side::Left => Self { a: x, ..*self },
             Side::Right => Self { b: x, ..*self },
         }
+    }
+
+    pub fn display<'a, N: Analysis<Lang>>(
+        &'a self,
+        egraph: &'a EGraph<Lang, N>,
+    ) -> impl Display + use<'a, N> {
+        PrintFa { egraph, fa: self }
+    }
+}
+
+impl<'a, N: Analysis<Lang>> Display for PrintFa<'a, N> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(
+            f,
+            "FaElem {{\n\ta:'{}'\n\tb:'{}'\n,.. }}",
+            self.egraph.id_to_expr(self.fa.a).pretty(100),
+            self.egraph.id_to_expr(self.fa.b).pretty(100)
+        )
     }
 }
 
@@ -103,7 +130,7 @@ pub fn find_candidates<'a, 'pbl>(
     prgm: &mut CVProgram<'pbl>,
     substs: &'a SearchMatches<'_, Lang>,
 ) -> Vec<(&'a Subst, Vec<FaElem>)> {
-    let mut candidates: Vec<(&Subst, Vec<FaElem>)> = Vec::with_capacity(substs.substs.len());
+    let mut candidates: Vec<(&Subst, Vec<FaElem>)> = Vec::new();
     // immutable `egraph`
     let egraph = prgm.egraph();
     for subst in &substs.substs {
@@ -116,26 +143,48 @@ pub fn find_candidates<'a, 'pbl>(
         );
 
         // Extract lists for 'a' and 'b', continue if not a list or the lengths don't match
-        econtinue_let!(let list_a = extract_list(egraph, *a));
-        tr!(
-            "list_a: [\n\t{}\n]",
-            list_a
-                .iter()
-                .map(|(is, s)| format!("{s:?}: {}", egraph.id_to_expr(*is).pretty(100)))
-                .join(",\n\t")
-        );
-        econtinue_let!(let list_b = extract_list(egraph, *b));
-        tr!("list_b: {list_b:?}");
-        econtinue_if!(list_a.len() != list_b.len());
+        // econtinue_let!(let list_a = extract_list(egraph, *a));
 
-        if let Some(list) = izip!(list_a, list_b)
-            .map(|((a, sa), (b, sb))| (sa == sb).then_some(FaElem { a, b, sort: sa }))
-            .collect()
-        {
-            tr!("fa: add to candidates");
-            candidates.push((subst, list))
-        }
+        let fal2 = FaList2::new(*a, *b);
+        let res = fal2.step_all(egraph);
+        let iter = res
+            .into_iter()
+            .map(|l| l.iter().unique().cloned().collect())
+            .unique()
+            .map(|l| (subst, l));
+        candidates.extend(iter);
+
+        // let nc = extract_list(egraph, *a, *b);
+        // let nc = nc.map(|fa| fa.iter().unique().cloned().collect());
+        // candidates.extend(nc.map(|fa| (subst, fa)));
+
+        // let ll_a = extract_list(egraph, *a);
+        // let ll_b = extract_list(egraph, *b);
+        // for list_a in &ll_a {
+        //     tr!(
+        //         "list_a: [\n\t{}\n]",
+        //         list_a
+        //             .iter()
+        //             .map(|(is, s)| format!("{s:?}: {}", egraph.id_to_expr(*is).pretty(100)))
+        //             .join(",\n\t")
+        //     );
+        //     for list_b in &ll_b {
+        //         tr!("list_b: {list_b:?}");
+        //         if list_a.len() != list_b.len() {
+        //             continue 'out;
+        //         }
+
+        //         if let Some(list) = izip!(list_a, list_b)
+        //             .map(|(&(a, sa), &(b, sb))| (sa == sb).then_some(FaElem { a, b, sort: sa }))
+        //             .collect()
+        //         {
+        //             tr!("fa: add to candidates");
+        //             candidates.push((subst, list))
+        //         }
+        //     }
+        // }
     }
+    assert!(substs.substs.is_empty() || !candidates.is_empty());
     candidates
 }
 
@@ -149,17 +198,17 @@ static PATTERN_LIST_TUPLE: Pattern<Lang> = Pattern::from(&rexp!((TUPLE #HD #TL))
 fn search_for_pattern_list<N: Analysis<Lang>>(
     egraph: &EGraph<Lang, N>,
     id: Id,
-) -> Option<(SearchMatches<'_, Lang>, LSort)> {
-    if let Some(matches) = PATTERN_LIST_B.search_eclass(egraph, id) {
-        return Some((matches, LSort::Bool));
+) -> Option<(Subst, LSort)> {
+    if let Some(mut matches) = PATTERN_LIST_B.search_eclass(egraph, id) {
+        return Some((matches.substs.pop().unwrap(), LSort::Bool));
     }
 
-    if let Some(matches) = PATTERN_LIST_TUPLE.search_eclass(egraph, id) {
-        return Some((matches, LSort::Bitstring));
+    if let Some(mut matches) = PATTERN_LIST_TUPLE.search_eclass(egraph, id) {
+        return Some((matches.substs.pop().unwrap(), LSort::Bitstring));
     }
 
-    if let Some(matches) = PATTERN_LIST_M.search_eclass(egraph, id) {
-        return Some((matches, LSort::Bitstring));
+    if let Some(mut matches) = PATTERN_LIST_M.search_eclass(egraph, id) {
+        return Some((matches.substs.pop().unwrap(), LSort::Bitstring));
     }
 
     None
@@ -167,71 +216,478 @@ fn search_for_pattern_list<N: Analysis<Lang>>(
 
 #[dynamic]
 static PATTERN_SKIP_BOILER_PLATE: Pattern<Lang> = Pattern::from(&rexp!((TUPLE
-  (TUPLE (FROM_BOOL (MACRO_EXEC #T #P)) (MITE (MACRO_EXEC #T #P) (MACRO_MSG #T #P) EMPTY))
+  (TUPLE (FROM_BOOL (MACRO_EXEC #T #P)) (MITE (MACRO_EXEC #T #P) #M EMPTY))
   (MACRO_FRAME (PRED #T) #P)
 )));
 
 #[dynamic]
 static PATTERN_NIL: Pattern<Lang> = Pattern::from(&rexp!(NIL_FA));
 
-/// Extracts a list of ids from the egraph starting from the given id.
-pub fn extract_list<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, init: Id) -> Vec<(Id, LSort)> {
-    // if egraph[init]
-    //     .nodes
-    //     .iter()
-    //     .all(|f| f.head != CONS_FA_BITSTRING && f.head != CONS_FA_BOOL)
-    // {
-    //     return Some(vec![(init, LSort::Bitstring)]);
-    // }
+#[derive(Debug, Default, PartialEq, Eq)]
+struct FaList(Rc<RefCell<rpds::List<FaElem>>>);
 
-    let mut visited = FxHashSet::default();
-    let mut res = Vec::new();
-    let mut todo = vec![(init, LSort::Bitstring)];
-    while let Some((next, sort)) = todo.pop()
-        && !visited.contains(&next)
-    {
-        visited.insert(next);
-        if let Some(matches) = PATTERN_SKIP_BOILER_PLATE.search_eclass(egraph, next) {
-            let subts = &matches.substs[0];
-            let t = *subts.get(T.as_egg()).unwrap();
-            let p = *subts.get(P.as_egg()).unwrap();
-            let pred_t = egraph.lookup(PRED.app_id([t])).unwrap();
-            let mframe = egraph.lookup(MACRO_FRAME.app_id([pred_t, p])).unwrap();
-            let mmsg = egraph.lookup(MACRO_MSG.app_id([t, p])).unwrap();
-            let mcond = egraph.lookup(MACRO_COND.app_id([t, p])).unwrap();
-            todo.extend_from_slice(&[
-                (mframe, LSort::Bitstring),
-                (mmsg, LSort::Bitstring),
-                (mcond, LSort::Bool),
-            ]);
-        } else if let Some((matches, sort)) = search_for_pattern_list(egraph, next) {
-            let subst = &matches.substs[0];
-            todo.push((*subst.get(HD.as_egg()).unwrap(), sort));
-            todo.push((*subst.get(TL.as_egg()).unwrap(), sort));
-            // res.push((*subst.get(HD.as_egg()).unwrap(), sort));
-            // next = *subst.get(TL.as_egg()).unwrap();
-            // } else if PATTERN_NIL.search_eclass(egraph, next).is_some() {
-        } else if is_constant(egraph, next) {
-            tr!("drop constant:\n\t{}", egraph.id_to_expr(next).pretty(100));
-            // return Some(res);
-            continue;
-        } else {
-            debug_assert!(
-                egraph[next]
-                    .nodes
-                    .iter()
-                    .map(|l| l.head.signature.output)
-                    .filter(|s| s != &Sort::Any)
-                    .chain(::std::iter::once(sort.as_sort()))
-                    .all_equal(),
-                "mistyping [{}]",
-                egraph[next].nodes.iter().join(", ")
-            );
-            res.push((next, sort));
+#[derive(Debug, Clone)]
+struct TodoListItem {
+    ida: Id,
+    idb: Id,
+    /// current sort of the ids
+    sort: LSort,
+    /// nodes extracted
+    list: FaList,
+    /// nodes visited during the dfs
+    visited: rpds::HashTrieSet<(Id, Id)>,
+}
+
+impl TodoListItem {
+    pub fn new(ida: Id, idb: Id) -> Self {
+        Self {
+            ida,
+            idb,
+            sort: LSort::Bitstring,
+            list: Default::default(),
+            visited: Default::default(),
         }
     }
+}
+
+impl FaList {
+    pub fn push(&self, elem: FaElem) {
+        let x = self.0.borrow().push_front(elem);
+        *self.0.borrow_mut() = x;
+    }
+
+    pub fn into_inner(self) -> rpds::List<FaElem> {
+        // match Rc::try_unwrap(self.0) {
+        //     Ok(x) => x.into_inner(),
+        //     Err(x) => panic!("still got {:} references", Rc::strong_count(&x))
+        // }
+        self.0.borrow().clone()
+    }
+}
+
+impl Clone for FaList {
+    fn clone(&self) -> Self {
+        // Self(self.0.clone())
+        Self(Rc::new(RefCell::new(self.0.borrow().clone())))
+    }
+}
+
+/// just to quickly make sure the sorts make sense
+#[inline]
+fn debug_check_sort<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, id: Id, sort: LSort) {
+    debug_assert!(
+        egraph[id]
+            .nodes
+            .iter()
+            .map(|l| l.head.signature.output)
+            .filter(|s| s != &Sort::Any)
+            .chain(::std::iter::once(sort.as_sort()))
+            .all_equal(),
+        "mistyping [{}]",
+        egraph[id].nodes.iter().join(", ")
+    );
+}
+
+fn split<N: Analysis<Lang>>(
+    egraph: &EGraph<Lang, N>,
+    fa @ FaElem { a: ida, b: idb, .. }: FaElem,
+) -> Vec<SmallVec<[FaElem; 3]>> {
+    assert!(fa.splittable);
+
+    tr!("spliting {}", fa.display(egraph));
+
+    if let Some(ma) = PATTERN_SKIP_BOILER_PLATE.search_eclass(egraph, ida)
+        && let Some(mb) = PATTERN_SKIP_BOILER_PLATE.search_eclass(egraph, idb)
+    {
+        let iter = ma
+            .substs
+            .iter()
+            .cartesian_product(mb.substs.iter())
+            .map(|(sa, sb)| {
+                let ntodos_a = extra_shortcut_pattern(egraph, sa);
+                let ntodos_b = extra_shortcut_pattern(egraph, sb);
+                izip!(ntodos_a, ntodos_b)
+                    .map(|((ida, sorta), (idb, sortb))| {
+                        debug_assert_eq!(sorta, sortb);
+                        FaElem {
+                            a: ida,
+                            b: idb,
+                            sort: sorta,
+                            splittable: true,
+                        }
+                    })
+                    .collect()
+            });
+        return iter.collect();
+    }
+
+    if is_constant(egraph, ida) && is_constant(egraph, idb) {
+        tr!("drop constant:\n\t{}", fa.display(egraph));
+        // return Some(res);
+        return Vec::new();
+    }
+
+    let mut res = Vec::new();
+
+    let iter = egraph[ida]
+        .nodes
+        .iter()
+        .cartesian_product(egraph[idb].nodes.iter());
+
+    let n = res.len();
+    // for Lang { head, args } in &egraph[id].nodes {
+    for (
+        Lang { head, args: argsa },
+        Lang {
+            head: hb,
+            args: argsb,
+        },
+    ) in iter
+    {
+        if (head.is_prolog_only() || hb.is_prolog_only()) && !head.is_quantifier() {
+            // we skip, there *will* be another one
+            continue;
+        } else if head == hb && (head == &TUPLE || head == &CONS_FA_BITSTRING) {
+            res.push(smallvec![
+                FaElem {
+                    a: argsa[0],
+                    b: argsb[0],
+                    sort: LSort::Bitstring,
+                    splittable: true
+                },
+                FaElem {
+                    a: argsa[1],
+                    b: argsb[1],
+                    sort: LSort::Bitstring,
+                    splittable: true
+                },
+            ])
+        } else if head == hb && (head == &CONS_FA_BOOL) {
+            res.push(smallvec![
+                FaElem {
+                    a: argsa[0],
+                    b: argsb[0],
+                    sort: LSort::Bool,
+                    splittable: true
+                },
+                FaElem {
+                    a: argsa[1],
+                    b: argsb[1],
+                    sort: LSort::Bitstring,
+                    splittable: true
+                },
+            ]);
+        } else {
+            res.push(smallvec![FaElem {
+                splittable: false,
+                ..fa
+            }]);
+        };
+    }
+    assert!(
+        res.len() > n,
+        "needs to go through a non prolog-only branch"
+    );
     res
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct FaList2 {
+    todo: Vec<FaElem>,
+    done: Vec<FaElem>,
+}
+
+impl FaList2 {
+    pub fn new(ida: Id, idb: Id) -> Self {
+        Self {
+            todo: vec![FaElem {
+                a: ida,
+                b: idb,
+                sort: LSort::Bitstring,
+                splittable: true,
+            }],
+            done: Default::default(),
+        }
+    }
+
+    pub fn step_one<N: Analysis<Lang>>(
+        self,
+        egraph: &EGraph<Lang, N>,
+    ) -> impl Iterator<Item = Self> {
+        dynamic_iter!(Iter; A:A, B:B);
+        let FaList2 { mut todo, done } = self;
+
+        match todo.pop() {
+            Some(fa) => {
+                let splitted = split(egraph, fa);
+                if splitted.is_empty() {
+                    Iter::A(::std::iter::once(FaList2 { todo, done }))
+                } else {
+                    Iter::B(splitted.into_iter().map(move |x| {
+                        // x.into_iter().pa(|x| x.splittable);
+                        let mut done = done.clone();
+                        let mut todo = todo.clone();
+                        for fa in x {
+                            if fa.splittable {
+                                tr!("ntodo {}", fa.display(egraph));
+                                todo.push(fa);
+                            } else {
+                                tr!("done {}", fa.display(egraph));
+                                done.push(fa);
+                            }
+                        }
+                        tr!(
+                            "todo = [{}]",
+                            todo.iter().map(|x| x.display(egraph)).join(",\n")
+                        );
+                        FaList2 { todo, done }
+                    }))
+                }
+            }
+            _ => panic!("nothing to be done"),
+        }
+    }
+
+    pub fn is_done(&self) -> bool {
+        self.todo.is_empty()
+    }
+
+    pub fn step_all<N: Analysis<Lang>>(self, egraph: &EGraph<Lang, N>) -> Vec<Vec<FaElem>> {
+        let mut todo = vec![self];
+        let mut done = Vec::new();
+
+        while let Some(e) = todo.pop() {
+            tr!(
+                "todo.todo = [{}]",
+                e.todo.iter().map(|x| x.display(egraph)).join(",\n")
+            );
+            if e.is_done() {
+                done.push(e.done)
+            } else {
+                todo.extend(e.step_one(egraph));
+            }
+            tr!("{:}", todo.len());
+        }
+        done
+    }
+}
+
+// fn extract_list_inner<N: Analysis<Lang>>(
+//     egraph: &EGraph<Lang, N>,
+//     // to append things to do
+//     todos: &mut Vec<TodoListItem>,
+//     // current item under consideration
+//     TodoListItem {
+//         ida,
+//         idb,
+//         sort,
+//         list,
+//         mut visited,
+//     }: TodoListItem,
+// ) -> Option<FaList> {
+//     debug_check_sort(egraph, ida, sort);
+//     debug_check_sort(egraph, idb, sort);
+
+//     if visited.contains(&(ida, idb)) {
+//         list.push(FaElem {
+//             a: ida,
+//             b: idb,
+//             sort,
+//         });
+//         return Some(list);
+//     } else {
+//         visited = visited.insert((ida, idb))
+//     }
+
+//     if let Some(ma) = PATTERN_SKIP_BOILER_PLATE.search_eclass(egraph, ida)
+//         && let Some(mb) = PATTERN_SKIP_BOILER_PLATE.search_eclass(egraph, idb)
+//     {
+//         for (sa, sb) in ma.substs.iter().cartesian_product(mb.substs.iter()) {
+//             let ntodos_a = extra_shortcut_pattern(egraph, sa);
+//             let ntodos_b = extra_shortcut_pattern(egraph, sb);
+//             let ntodos = izip!(ntodos_a, ntodos_b).map(|((ida, sorta), (idb, sortb))| {
+//                 debug_assert_eq!(sorta, sortb);
+//                 TodoListItem {
+//                     ida,
+//                     idb,
+//                     sort: sorta,
+//                     list: list.clone(),
+//                     visited: visited.clone(),
+//                 }
+//             });
+//             todos.extend(ntodos);
+//         }
+//         None
+//     } else if is_constant(egraph, ida) || is_constant(egraph, idb) {
+//         tr!("drop constant:\n\t{}", egraph.id_to_expr(ida).pretty(100));
+//         tr!("drop constant:\n\t{}", egraph.id_to_expr(idb).pretty(100));
+//         // return Some(res);
+//         list.push(FaElem {
+//             a: ida,
+//             b: idb,
+//             sort,
+//         });
+//         Some(list)
+//     } else {
+//         let iter = egraph[ida]
+//             .nodes
+//             .iter()
+//             .cartesian_product(egraph[idb].nodes.iter());
+//         // for Lang { head, args } in &egraph[id].nodes {
+//         for (
+//             Lang { head, args: argsa },
+//             Lang {
+//                 head: hb,
+//                 args: argsb,
+//             },
+//         ) in iter
+//         {
+//             let ntodos = if !head.is_quantifier() && (head.is_prolog_only() || hb.is_prolog_only())
+//             {
+//                 // we skip, there *will* be another one
+//                 continue;
+//             } else if head == hb && (head == &TUPLE || head == &CONS_FA_BITSTRING) {
+//                 [
+//                     (argsa[0], argsb[0], LSort::Bitstring),
+//                     (argsa[1], argsb[1], LSort::Bitstring),
+//                 ]
+//             } else if head == hb && (head == &CONS_FA_BOOL) {
+//                 [
+//                     (argsa[0], argsa[0], LSort::Bool),
+//                     (argsa[1], argsb[1], LSort::Bitstring),
+//                 ]
+//             } else {
+//                 // Shouldn't be possible to get to the other non-prolog-only branch
+//                 list.push(FaElem {
+//                     a: ida,
+//                     b: idb,
+//                     sort,
+//                 });
+//                 return Some(list);
+//             };
+//             let ntodos = ntodos.into_iter().map(|(ida, idb, sort)| TodoListItem {
+//                 ida,
+//                 idb,
+//                 sort,
+//                 list: list.clone(),
+//                 visited: visited.clone(),
+//             });
+//             todos.extend(ntodos);
+//         }
+//         None
+//     }
+// }
+
+fn extra_shortcut_pattern<N: Analysis<Lang>>(
+    egraph: &EGraph<Lang, N>,
+    subts: &Subst,
+) -> [(Id, LSort); 3] {
+    let t = *subts.get(T.as_egg()).unwrap();
+    let p = *subts.get(P.as_egg()).unwrap();
+    let pred_t = egraph.lookup(PRED.app_id([t])).unwrap();
+    let mframe = egraph.lookup(MACRO_FRAME.app_id([pred_t, p])).unwrap();
+    let mmsg = *subts.get(M.as_egg()).unwrap();
+    // egraph.lookup(MACRO_MSG.app_id([t, p])).unwrap();
+    let mcond = egraph.lookup(MACRO_COND.app_id([t, p])).unwrap();
+    [
+        (mframe, LSort::Bitstring),
+        (mmsg, LSort::Bitstring),
+        (mcond, LSort::Bool),
+    ]
+}
+
+// Extracts a list of ids from the egraph starting from the given id.
+// pub fn extract_list<N: Analysis<Lang>>(
+//     egraph: &EGraph<Lang, N>,
+//     inita: Id,
+//     initb: Id,
+// ) -> impl Iterator<Item = rpds::List<FaElem>> {
+//     let mut todos = vec![TodoListItem::new(inita, initb)];
+
+//     let mut res = Vec::new();
+
+//     while let Some(todo) = todos.pop() {
+//         let nres = extract_list_inner(egraph, &mut todos, todo);
+//         if let Some(r) = nres {
+//             res.push(r);
+//         }
+//     }
+//     res.into_iter().map(|x| x.into_inner()).unique()
+// }
+
+// Extracts a list of ids from the egraph starting from the given id.
+// FIXME !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// pub fn extract_list<N: Analysis<Lang>>(
+//     egraph: &EGraph<Lang, N>,
+//     init: Id,
+// ) -> Vec<Vec<(Id, LSort)>> {
+//     todo!("fixme");
+//     // if egraph[init]
+//     //     .nodes
+//     //     .iter()
+//     //     .all(|f| f.head != CONS_FA_BITSTRING && f.head != CONS_FA_BOOL)
+//     // {
+//     //     return Some(vec![(init, LSort::Bitstring)]);
+//     // }
+
+//     let mut visited = FxHashSet::default();
+//     let mut res = Vec::new();
+//     let mut todos = vec![vec![(init, LSort::Bitstring)]];
+//     while let Some((next, sort)) = todo.pop()
+//         && !visited.contains(&next)
+//     {
+//         visited.insert(next);
+//         if let Some(matches) = PATTERN_SKIP_BOILER_PLATE.search_eclass(egraph, next) {
+//             let mut ntodos = Vec::with_capacity(todos.len() * matches.substs.len());
+//             for todo in todos {
+//                 for subts in &matches.substs {
+//                     ntodos.push(todo.clone());
+//                     let mut todo = ntodos.last().unwrap();
+
+//                     let t = *subts.get(T.as_egg()).unwrap();
+//                     let p = *subts.get(P.as_egg()).unwrap();
+//                     let pred_t = egraph.lookup(PRED.app_id([t])).unwrap();
+//                     let mframe = egraph.lookup(MACRO_FRAME.app_id([pred_t, p])).unwrap();
+//                     let mmsg = *subts.get(M.as_egg()).unwrap(); // egraph.lookup(MACRO_MSG.app_id([t, p])).unwrap();
+//                     let mcond = egraph.lookup(MACRO_COND.app_id([t, p])).unwrap();
+//                     todo.extend_from_slice(&[
+//                         (mframe, LSort::Bitstring),
+//                         (mmsg, LSort::Bitstring),
+//                         (mcond, LSort::Bool),
+//                     ]);
+//                 }
+//             }
+//             todos = ntodos;
+//             // let subts = &matches.substs[0];
+//         } else if let Some((subst, sort)) = search_for_pattern_list(egraph, next) {
+//             for todo in &mut todos {
+//                 todo.push((*subst.get(HD.as_egg()).unwrap(), sort));
+//                 todo.push((*subst.get(TL.as_egg()).unwrap(), sort));
+//                 // res.push((*subst.get(HD.as_egg()).unwrap(), sort));
+//                 // next = *subst.get(TL.as_egg()).unwrap();
+//                 // } else if PATTERN_NIL.search_eclass(egraph, next).is_some() {
+//             }
+//         } else if is_constant(egraph, next) {
+//             tr!("drop constant:\n\t{}", egraph.id_to_expr(next).pretty(100));
+//             // return Some(res);
+//             continue;
+//         } else {
+//             debug_assert!(
+//                 egraph[next]
+//                     .nodes
+//                     .iter()
+//                     .map(|l| l.head.signature.output)
+//                     .filter(|s| s != &Sort::Any)
+//                     .chain(::std::iter::once(sort.as_sort()))
+//                     .all_equal(),
+//                 "mistyping [{}]",
+//                 egraph[next].nodes.iter().join(", ")
+//             );
+//             res.push((next, sort));
+//         }
+//     }
+//     res
+// }
 
 fn is_constant<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, id: Id) -> bool {
     egraph[id]
@@ -243,7 +699,7 @@ fn is_constant<N: Analysis<Lang>>(egraph: &EGraph<Lang, N>, id: Id) -> bool {
 
 /// Collects sets of arguments for creating new expressions.
 fn collect_sets<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>, list: &[FaElem]) -> Vec<Vec<FaElem>> {
-    let mut sets = Vec::new();
+    let mut sets = vec![list.to_vec()];
     // Iterate over pairs of elements from list_a and list_b.
     for (i, FaElem { a, b, .. }) in list.iter().enumerate() {
         let ea = &egraph[*a];
@@ -361,7 +817,12 @@ fn f_transform<'a>(
     Some(
         izip!(f.signature.inputs_iter(), n_args_a, n_args_b).filter_map(|(s, &a, &b)| {
             let sort = s.try_into().ok()?;
-            Some(FaElem { a, b, sort })
+            Some(FaElem {
+                a,
+                b,
+                sort,
+                splittable: false,
+            })
         }),
     )
 }
@@ -448,6 +909,7 @@ fn q_transform<'e, 'a>(
         a: na,
         b: nb,
         sort: f.signature.output.try_into().unwrap(),
+        splittable: false,
     }])
 }
 
@@ -492,7 +954,7 @@ fn find_commun_head<'a, D: Debug>(
         })
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 enum LSort {
     Bool,
     Bitstring,

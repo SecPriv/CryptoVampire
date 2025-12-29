@@ -12,3 +12,4 @@ crates/indistinguishability old
 **/.\#*
 
 **/profile.json.gz
+results*
