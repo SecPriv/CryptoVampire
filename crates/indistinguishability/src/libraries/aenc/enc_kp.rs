@@ -89,7 +89,7 @@ impl<'a, R> Rule<Lang, PAnalysis<'a>, R> for EncKpRule {
                 .map(|m| (Right, m)),
         ]
         .collect_vec();
-        
+
         if matches.is_empty() {
             return Dependancy::impossible();
         }

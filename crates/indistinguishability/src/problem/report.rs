@@ -33,9 +33,8 @@ impl Report {
     }
 
     pub fn get_runtime(&self) -> Duration {
-      self.runtime
+        self.runtime
     }
-
 }
 
 impl Registerable for Report {
@@ -54,12 +53,15 @@ impl Registerable for Report {
 
 impl Display for Report {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Report:\n\truntime: {}\n\tvampire: {}\n\tcache hits: {:}\n\ttotal calls: {:}\n\thit rate: {:.2}%",
-        humantime::format_duration(self.get_runtime()),
-        humantime::format_duration(self.get_time_spent_in_vampire()),
-        self.total_cache_hits,
-        self.total_run_calls,
-        self.get_hit_rate()*100.0
+        writeln!(
+            f,
+            "Report:\n\truntime: {}\n\tvampire: {}\n\tcache hits: {:}\n\ttotal calls: {:}\n\thit \
+             rate: {:.2}%",
+            humantime::format_duration(self.get_runtime()),
+            humantime::format_duration(self.get_time_spent_in_vampire()),
+            self.total_cache_hits,
+            self.total_run_calls,
+            self.get_hit_rate() * 100.0
         )
     }
 }

@@ -23,8 +23,6 @@ pub use side::Side;
 mod with_data;
 pub use with_data::{FreshNonceSet, RuleWithFreshNonce};
 
-
-
 /// Convenient holder for function that applies to both [Sort::Bitstring] and
 /// [Sort::Bool] like subterms and candidates
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -32,15 +30,15 @@ pub struct TwoSortFunction {
     /// Version of the function with sort [Sort::Bitstring]
     pub m: Function,
     /// Version of the function with sort [Sort::Bool]
-    pub b: Function
+    pub b: Function,
 }
 
 impl TwoSortFunction {
-    pub fn form_sort(&self, s:Sort) -> Option<&Function> {
+    pub fn form_sort(&self, s: Sort) -> Option<&Function> {
         match s {
             Sort::Bitstring => Some(&self.m),
             Sort::Bool => Some(&self.b),
-            _ => None
+            _ => None,
         }
     }
 

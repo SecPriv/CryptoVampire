@@ -6,14 +6,10 @@ use crate::libraries::AEnc;
 use crate::libraries::aenc::ProofHints;
 use crate::libraries::aenc::vars::*;
 use crate::libraries::utils::TwoSortFunction;
-use crate::terms::HAPPENS;
-use crate::terms::MACRO_COND;
-use crate::terms::MACRO_MSG;
-use crate::terms::UNFOLD_COND;
-use crate::terms::UNFOLD_MSG;
 use crate::terms::{
-    AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, FRESH_NONCE, Formula, Function, IS_FRESH_NONCE,
-    MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE, PRED, Sort, VAMPIRE,
+    AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, FRESH_NONCE, Formula, Function, HAPPENS,
+    IS_FRESH_NONCE, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, PRED,
+    Sort, UNFOLD_COND, UNFOLD_MSG, VAMPIRE,
 };
 use crate::{Lang, Problem, fresh, rexp};
 
@@ -189,9 +185,9 @@ pub fn mk_static_rules<'a>(
                 (search_o_m #K (dec #A #B) #H):-
                   (search_o_m #K #A #H),
                   (search_o_m #K #B #H).
-              
+
               // enc
-              
+
               "search_k_enc_enc" (Apply(enc.clone())):
                 (search_k_m #K #K2 #R #M (enc #T #A #B) #H) :-
                   (search_k_m #K #K2 #R #M #T #H),
@@ -202,7 +198,7 @@ pub fn mk_static_rules<'a>(
               "search_o_enc_enc" :
                 (search_o_m #K (enc #T (NONCE #A) (NONCE #B)) #H):-
                   (search_o_m #K #T #H).
-              
+
               "search_o_enc_enc_2" :
                 (search_o_m #K (enc #T  #A #B) #H):-
                   (search_o_m #K #T #H),

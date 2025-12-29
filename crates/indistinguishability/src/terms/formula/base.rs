@@ -73,7 +73,10 @@ impl Formula {
     /// - doesn't typechecks
     pub fn try_get_sort(&self) -> Option<Sort> {
         match self {
-            Formula::Quantifier { head: FOBinder::FindSuchThat,.. } => Some(Sort::Bitstring),
+            Formula::Quantifier {
+                head: FOBinder::FindSuchThat,
+                ..
+            } => Some(Sort::Bitstring),
             Formula::Quantifier { .. } => Some(Sort::Bool),
             Formula::App { head, .. } => Some(head.signature.output),
             Formula::Var(_) => None,

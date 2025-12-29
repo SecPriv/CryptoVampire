@@ -273,7 +273,7 @@ impl Formula {
             Self::Var(variable) => match bvars.get(variable) {
                 Some(i) => {
                     // out.extend(mk_bound_var(*i));
-                    return *i
+                    return *i;
                 }
                 None if (!param.capture_avoiding)
                     || param.non_capture_avoiding.contains(variable) =>

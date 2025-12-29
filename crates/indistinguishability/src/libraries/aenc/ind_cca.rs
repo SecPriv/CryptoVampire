@@ -45,7 +45,7 @@ pub fn mk_rules(
         .map(|x| x.into_mrc());
         MIter::A(ret)
     } else {
-      // no ind-cca if senc
+        // no ind-cca if senc
         MIter::B(::std::iter::empty())
     }
 }

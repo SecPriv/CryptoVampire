@@ -22,9 +22,9 @@ pub fn main() {
             let pgrm = match x {
                 Commands::File { file } => {
                     engine.add_search_directory(file.parent().unwrap().to_path_buf());
-                    ::std::fs::read_to_string(file).unwrap()},
+                    ::std::fs::read_to_string(file).unwrap()
+                }
                 Commands::Stdin => {
-                    
                     let mut pgrm = String::new();
                     io::stdin()
                         .read_to_string(&mut pgrm)

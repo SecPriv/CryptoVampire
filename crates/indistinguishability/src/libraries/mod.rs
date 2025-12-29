@@ -268,7 +268,6 @@ mod smt;
 pub mod find_indices;
 
 pub use aenc::AEnc;
-
 pub use nonce::{FreshNonce, mk_no_guessing_smt};
 /// Re-exports the `PRF` struct, representing a pseudo-random function.
 pub use prf::PRF;
