@@ -74,7 +74,7 @@
   ((i Index) (j Index)
     (t Time)
     (p Protocol))
-  (let [ (in (macro_input t p)) (int (unfold_msg (tag i j) p)) ]
+  (let [ (in (macro_input t p)) (int (macro_msg (tag i j) p)) ]
     (cv-add-rewrite pbl (cv-mk-rewrite "lemma-2" (list i t j p)
         (eq (tuple (nr i) (sel2of2 in)) (mhash (sel1of2 in) (mk i j p)))
         (exists ((j Index))

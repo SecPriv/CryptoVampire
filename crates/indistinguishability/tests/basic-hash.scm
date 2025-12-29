@@ -70,8 +70,8 @@
         (eq (sel2of2 in) (mhash (sel1of2 in) (mk i j p)))
         (exists ((i Index))
           (cand
-            (eq (sel1of2 in) (sel1of2 (unfold_msg (tag i j) p)))
-            (eq (sel2of2 in) (sel2of2 (unfold_msg (tag i j) p)))
+            (eq (sel1of2 in) (sel1of2 (macro_msg (tag i j) p)))
+            (eq (sel2of2 in) (sel2of2 (macro_msg (tag i j) p)))
             (lt (tag i j) t))))))); <- very important
 
 ;; configuration
