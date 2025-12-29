@@ -37,6 +37,11 @@ fn private_authentication() {
     mk_test("./tests/private-auth.scm", &[]);
 }
 
+#[test]
+fn feldhofer() {
+    mk_test("./tests/feldhofer.scm", &[]);
+}
+
 fn mk_test(file: impl AsRef<Path>, extra_args: &[&str]) {
     let mut cmd = Command::new(cargo_bin!());
     cmd.arg("--trace")
