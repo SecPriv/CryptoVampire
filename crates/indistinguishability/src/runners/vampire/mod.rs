@@ -1,4 +1,5 @@
 use std::borrow::Borrow;
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, bail};
@@ -32,10 +33,9 @@ struct VampireExec {
     /// By default it looks into the `$PATH`
     #[builder(default = get_vampire_location(), into)]
     exe_location: PathBuf,
-    /// Should the smt file be kept once we don't need it anymore?
-    #[builder(default = cfg!(debug_assertions))]
-    keep_file: bool,
-
+    // /// Should the smt file be kept once we don't need it anymore?
+    // #[builder(default = cfg!(debug_assertions))]
+    // keep_file: bool,
     #[builder(default = "Termination reason: Refutation\n", into)]
     success_verification: String,
 }
@@ -44,16 +44,16 @@ impl<S> VampireExecBuilder<S>
 where
     S: vampire_exec_builder::State,
 {
-    /// Configures the `VampireExec` builder with settings from the given `Problem`.
-    ///
-    /// This sets the `keep_file` and `timeout` arguments based on the problem's configuration.
-    pub fn with_pbl(self, pbl: &Problem) -> VampireExecBuilder<vampire_exec_builder::SetKeepFile<S>>
-    where
-        S::KeepFile: vampire_exec_builder::IsUnset,
-    {
-        self.keep_file(pbl.config.keep_smt_files)
-            .timeout(pbl.config.vampire_timeout)
-    }
+    // /// Configures the `VampireExec` builder with settings from the given `Problem`.
+    // ///
+    // /// This sets the `keep_file` and `timeout` arguments based on the problem's configuration.
+    // pub fn with_pbl(self, pbl: &Problem) -> VampireExecBuilder<vampire_exec_builder::SetKeepFile<S>>
+    // where
+    //     S::KeepFile: vampire_exec_builder::IsUnset,
+    // {
+    //     self.keep_file(pbl.config.keep_smt_files)
+    //         .timeout(pbl.config.vampire_timeout)
+    // }
 
     /// Extends the arguments of the Vampire executable with additional `VampireArg`s.
     pub fn extend_args(mut self, args: implvec!(VampireArg)) -> Self {
@@ -220,13 +220,24 @@ const SUCCESS_RC: i32 = 0;
 const TIMEOUT_RC: i32 = 1;
 
 impl VampireExec {
+    pub fn contains_time(&self) -> bool {
+        self.args
+            .iter()
+            .any(|x| matches!(&x, VampireArg::TimeLimit(_)))
+    }
+
     /// Runs the Vampire executable with the given SMT file.
     ///
     /// Returns `Ok(true)` if Vampire proves the query (refutation found),
     /// `Ok(false)` if it disproves it, or `Err` if Vampire encounters an error.
-    pub async fn run(&self, file: &Path) -> anyhow::Result<bool> {
+    pub async fn run(&self, pbl: &Problem, file: &Path) -> anyhow::Result<bool> {
         let mut cmd = Command::new(&self.exe_location);
         cmd.args(self.args.iter().flat_map(|x| x.to_args().into_iter()));
+
+        if !self.contains_time() {
+            cmd.args(VampireArg::TimeLimit(pbl.config.vampire_timeout.as_secs_f64()).to_args());
+        }
+
         cmd.arg(file);
         cmd.kill_on_drop(true);
 
@@ -267,17 +278,17 @@ impl VampireExec {
     /// Writes the given SMT statements to a temporary file and runs Vampire on it.
     ///
     /// If `keep_file` is true, the temporary file is not deleted after execution.
-    pub async fn run_smt<RefS>(&self, smt: implvec!(RefS)) -> anyhow::Result<bool>
+    pub async fn run_smt<RefS>(&self, pbl: &Problem, smt: implvec!(RefS)) -> anyhow::Result<bool>
     where
         RefS: Borrow<MSmt>,
     {
         let mut tmpfile = tempfile::Builder::new()
             .prefix("cryptovampire")
             .suffix(".smt")
-            .keep(self.keep_file)
+            .keep(pbl.config.keep_smt_files)
             .tempfile()?;
 
-        if self.keep_file {
+        if pbl.config.keep_smt_files {
             println!("writting smt file to '{:?}' ...", tmpfile.path())
         }
 
@@ -300,11 +311,11 @@ impl VampireExec {
             }
         }
 
-        if self.keep_file {
+        if pbl.config.keep_smt_files {
             tr!("file written")
         }
 
-        self.run(tmpfile.path()).await
+        self.run(pbl, tmpfile.path()).await
     }
 
     /// Runs Vampire with the given SMT query, incorporating the problem's SMT prelude.
@@ -322,7 +333,7 @@ impl VampireExec {
         prelude.extend([Smt::mk_query(query), Smt::CheckSat]);
         // let pbl: &Problem<_> = &self.pbl.borrow();
         let res = self
-            .run_smt(prelude)
+            .run_smt(Deref::deref(&pbl.0.read().await), prelude)
             .await
             .with_context(|| "something went wrong with vampire")?;
 

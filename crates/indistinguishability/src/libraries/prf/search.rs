@@ -14,8 +14,8 @@ use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::protocol::{Protocol, Step};
 use crate::runners::SmtRunner;
 use crate::terms::{
-    AND, BITE, Formula, Function, HAPPENS, IS_FRESH_NONCE, LT, MACRO_EXEC, MACRO_FRAME,
-    MACRO_INPUT, MITE, NONCE, PRED, Sort, VAMPIRE,
+    AND, BITE, Formula, Function, HAPPENS, IS_FRESH_NONCE, LT, MACRO_COND, MACRO_EXEC, MACRO_FRAME,
+    MACRO_INPUT, MACRO_MSG, MITE, NONCE, PRED, Sort, UNFOLD_COND, UNFOLD_MSG, VAMPIRE,
 };
 use crate::{CVProgram, Lang, Problem, fresh, rexp};
 
@@ -216,6 +216,19 @@ fn mk_static_rules(
             (search_b #m #k #nprf (AND #a #b) #h):-
                 (search_b #m #k #nprf #a #h),
                 (search_b #m #k #nprf #b (and #a #h)).
+
+            // ~~~~~~~~~~~~~~~~ macros ~~~~~~~~~~~~~~~~~~
+
+            "serach_prf_msg" t, p (Apply(MACRO_MSG.clone())):
+            (search_m #m #k #nprf (MACRO_MSG #t #p) #h):-
+                (VAMPIRE (=> #h (HAPPENS #t))),
+                (search_m #m #k #nprf (UNFOLD_MSG #t #p) #h).
+
+            "serach_prf_cond" t, p (Apply(MACRO_COND.clone())):
+            (search_b #m #k #nprf (MACRO_COND #t #p) #h):-
+                (VAMPIRE (=> #h (HAPPENS #t))),
+                (search_b #m #k #nprf (UNFOLD_COND #t #p) #h).
+
         }
     ]
 }

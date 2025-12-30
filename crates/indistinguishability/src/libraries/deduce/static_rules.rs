@@ -4,7 +4,8 @@ use crate::libraries::deduce::GetDeduce;
 use crate::problem::{PRule, RcRule};
 use crate::terms::{
     AND, BIT_DEDUCE, BITE, BOOL_DEDUCE, EQUIV, FAIL, FRESH_NONCE, HAPPENS, IS_FRESH_NONCE, LEQ,
-    MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, PRED, VAMPIRE,
+    MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, PRED, UNFOLD_COND,
+    UNFOLD_MSG, VAMPIRE,
 };
 
 /// Creates a set of static deduction rules.
@@ -14,7 +15,9 @@ pub fn mk_rules() -> impl Iterator<Item = RcRule> {
     let deduce_b = &BOOL_DEDUCE;
     let _b_ite = &BITE;
     let m_ite = &MITE;
-    decl_vars![t, t2, p1, p2, h1, h2, u, v, a, b, a1, b1, a2, b2, c1, c2, x];
+    decl_vars![
+        t, t1, t2, p1, p2, h1, h2, u, v, a, b, a1, b1, a2, b2, c1, c2, x
+    ];
 
     let deduce_macro = [
         &MACRO_FRAME,
@@ -67,6 +70,12 @@ pub fn mk_rules() -> impl Iterator<Item = RcRule> {
             (VAMPIRE (=> (and #h2 (HAPPENS #t2) (LEQ #t2 #t))
                 (MACRO_EXEC #t2 #p2))).
 
+        "deduce msg to unfold":
+        (deduce_m #u #v (MACRO_MSG #t1 #p1) (MACRO_MSG #t2 #p2) #h1 #h2) :-
+            (VAMPIRE (=> #h1 (HAPPENS #t1))),
+            (VAMPIRE (=> #h2 (HAPPENS #t2))),
+            (deduce_m #u #v (UNFOLD_MSG #t1 #p1) (UNFOLD_MSG #t2 #p2) #h1 #h2).
+
         "deduce condition":
         (deduce_b (MACRO_FRAME #t #p1) (MACRO_FRAME #t #p2) (MACRO_COND #t2 #p1) (MACRO_COND #t2 #p2) #h1 #h2) :-
             (VAMPIRE (=> #h1 (LEQ #t2 #t))),
@@ -76,6 +85,12 @@ pub fn mk_rules() -> impl Iterator<Item = RcRule> {
                 (MACRO_EXEC (PRED #t2) #p1))),
             (VAMPIRE (=> (and #h2 (HAPPENS #t2) (LEQ #t2 #t))
                 (MACRO_EXEC (PRED #t2) #p2))).
+
+        "deduce cond to unfold":
+        (deduce_b #u #v (MACRO_COND #t1 #p1) (MACRO_COND #t2 #p2) #h1 #h2) :-
+            (VAMPIRE (=> #h1 (HAPPENS #t1))),
+            (VAMPIRE (=> #h2 (HAPPENS #t2))),
+            (deduce_b #u #v (UNFOLD_COND #t1 #p1) (UNFOLD_COND #t2 #p2) #h1 #h2).
 
 
     // =========================================================

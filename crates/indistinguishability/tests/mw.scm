@@ -112,6 +112,7 @@
       (cand
         (eq (sel1of2 in) (sel1of2 (macro_msg (tag i t) p)))
         (eq (sel2of2 in) (sel2of2 (macro_msg (tag i t) p)))
+        (macro_exec (r2 r) p)
         (lt (r1 r) (tag i t))
         (lt (tag i t) (r2 r))) ; <- very important
       (mxor (mid i t p) (mhash (tuple (tuple (nr r) (sel1of2 in)) tag2) (mk i t p)))
@@ -119,8 +120,8 @@
 
 (bind ((j Index) (r Index) (p Protocol))
   (cv-add-rewrite pbl (cv-mk-rewrite "lemma" (list j r p)
-      (mk-fdst1 (macro_input (r2 r) p) j p)
-      (mk-fdst2 r p))))
+      (m_ite (macro_exec (r2 r) p) (mk-fdst1 (macro_input (r2 r) p) j p) mempty)
+      (m_ite (macro_exec (r2 r) p) (mk-fdst2 r p) mempty))))
 
 
 (cv-add-smt-axiom pbl (mnot (eq tag1 tag2)))

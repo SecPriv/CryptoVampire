@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::ops::Deref;
 use std::time::Duration;
 
 use golgge::Dependancy;
@@ -124,5 +125,9 @@ impl<'a> SharedProblem<'a> {
         } else {
             rec.extend_from_slice(self.0.write().await.get_smt_prelude());
         }
+    }
+
+    pub async fn keep_smt_files(&self) -> bool {
+        self.0.read().await.config.keep_smt_files
     }
 }

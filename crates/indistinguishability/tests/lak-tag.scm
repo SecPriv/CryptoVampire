@@ -79,16 +79,17 @@
   (let [ (in (macro_input t p)) ]
     (findst ((i Index) (k Index))
       (cand
-        (eq (sel1of2 in) (sel1of2 (macro_msg (tag i j) p)))
-        (eq (sel2of2 in) (sel2of2 (macro_msg (tag i j) p)))
-        (lt (tag i j) t)) ; <- very important
+        (eq (sel1of2 in) (sel1of2 (macro_msg (tag i k) p)))
+        (eq (sel2of2 in) (sel2of2 (macro_msg (tag i k) p)))
+        (macro_exec t p)
+        (lt (tag i k) t)) ; <- very important
       (mhash (tuple (tuple (nr j) (sel1of2 in)) tag2) (mk i k p))
       ko)))
 
 (bind ((j Index) (t Time) (p Protocol))
   (cv-add-rewrite pbl (cv-mk-rewrite "lemma" (list t j p)
-      (mk-fdst1 (macro_input t p) j p)
-      (mk-fdst2 t j p))))
+      (m_ite (macro_exec t p) (mk-fdst1 (macro_input t p) j p) mempty)
+      (m_ite (macro_exec t p) (mk-fdst2 t j p) mempty))))
 
 
 (cv-add-smt-axiom pbl (mnot (eq tag1 tag2)))

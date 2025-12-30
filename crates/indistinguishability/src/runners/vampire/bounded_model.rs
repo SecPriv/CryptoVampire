@@ -11,7 +11,6 @@ impl BounededVampire {
     pub fn new(pbl: &Problem) -> Self {
         Self(
             VampireExec::builder()
-                .with_pbl(pbl)
                 .extend_args({
                     use super::VampireArg::*;
                     [

@@ -9,7 +9,7 @@ use utils::ereturn_let;
 use crate::libraries::PRF;
 use crate::libraries::prf::{K, M, NEW_TERM, NK, PRFProof, PROOF};
 use crate::problem::{PAnalysis, RcRule};
-use crate::terms::{CryptographicAssumption, Function, NONCE, Sort};
+use crate::terms::{CryptographicAssumption, Function, MACRO_COND, MACRO_MSG, NONCE, Sort};
 use crate::{CVProgram, Lang};
 
 #[derive(Debug, Clone, Builder)]
@@ -48,6 +48,16 @@ impl SubstData {
         match prf_proof {
             PRFProof::Keep => self.get_term(pgrm, proof),
             PRFProof::Instance => pgrm.egraph_mut().add(NONCE.app_id([self.nprf])),
+            PRFProof::Apply(f) if f == &MACRO_MSG || f == &MACRO_COND => {
+                // The "unfold" is second, and we go through it completely transparently
+                let ret = self.proof_to_term(pgrm, ids[1]);
+                if self.get_term(pgrm, ids[1]) == ret {
+                    // we can keep the `macro`
+                    self.get_term(pgrm, proof)
+                } else {
+                    ret
+                }
+            }
             PRFProof::Apply(f) if f != &self.hash => {
                 let t = self.get_term(pgrm, proof);
                 let mut args_proofs = ids.into_iter();
