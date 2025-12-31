@@ -222,16 +222,7 @@ impl RefFormulaBuilder {
 
     // get the content bypassing drop
     pub fn into_inner(self) -> Option<FormulaBuilder> {
-        ereturn_if!(Rc::strong_count(&self.0) != 1, None);
-
-        let inner = {
-            let manually_dropped = ManuallyDrop::new(self);
-            // Safety: okay because we'll never be touching "manually_dropped.0" again.
-            unsafe { std::ptr::read(&manually_dropped.0) }
-        };
-
-        let inner = Rc::into_inner(inner).unwrap(); // cannot fail because of the previous check
-        Some(RefCell::into_inner(inner))
+        Some(RefCell::into_inner(Rc::into_inner(self.0)?))
     }
 }
 

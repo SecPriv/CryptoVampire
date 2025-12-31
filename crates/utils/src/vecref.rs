@@ -58,18 +58,6 @@ impl<'a, T> VecRef<'a, T> {
         }
     }
 
-    /// # Safety
-    /// Unedfined behaviour if the access is out of bounds
-    pub unsafe fn get_unchecked(&self, i: usize) -> &'a T {
-        match self {
-            VecRef::Vec(v) => v.get_unchecked(i),
-            VecRef::Ref(v) => v.get_unchecked(i),
-            VecRef::RefRef(v) => v.get_unchecked(i),
-            VecRef::Single(e) => e,
-            VecRef::Empty => panic!(),
-        }
-    }
-
     pub fn iter(&'_ self) -> IterVecRef<'a, '_, T> {
         self.into_iter()
     }
