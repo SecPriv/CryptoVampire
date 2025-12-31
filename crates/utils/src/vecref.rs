@@ -18,19 +18,14 @@ use crate::match_as_trait;
 /// single `&'a T` and the empty iterator.
 ///
 /// Note that it is cheap to clone (ie. almost free)
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default)]
 pub enum VecRef<'a, T> {
     Vec(Arc<[&'a T]>),
     Ref(&'a [T]),
     RefRef(&'a [&'a T]),
     Single(&'a T),
+    #[default]
     Empty,
-}
-
-impl<'a, T> Default for VecRef<'a, T> {
-    fn default() -> Self {
-        Self::Empty
-    }
 }
 
 impl<'a, T> VecRef<'a, T> {

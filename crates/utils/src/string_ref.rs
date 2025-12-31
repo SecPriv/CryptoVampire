@@ -2,6 +2,7 @@ use std::any::type_name;
 use std::borrow::{Borrow, Cow};
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
+#[cfg(feature = "serde")]
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::sync::Arc;
