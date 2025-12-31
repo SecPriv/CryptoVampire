@@ -68,7 +68,7 @@
   (let [ (in (macro_input t p)) ]
     (cv-add-rewrite pbl (cv-mk-rewrite "lemma-2" (list i t j p)
         (eq (sel2of2 in) (mhash (sel1of2 in) (mk i j p)))
-        (exists ((i Index))
+        (exists ((j Index))
           (cand
             (eq (sel1of2 in) (sel1of2 (macro_msg (tag i j) p)))
             (eq (sel2of2 in) (sel2of2 (macro_msg (tag i j) p)))
