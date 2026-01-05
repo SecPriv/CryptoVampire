@@ -101,7 +101,19 @@ impl SmtRunner {
             x = bounded_vapire.try_run_spin(&pbl, query.clone()) => x.map(Some),
             _ = tokio::time::sleep( pbl.0.read().await.config.vampire_timeout) => Ok(None)
         };
-        pbl.0.write().await.report.time_spent_in_vampire += start.elapsed();
+        {
+            let time = start.elapsed();
+            let mut pbl = pbl.0.write().await;
+            pbl.report.time_spent_in_vampire += time;
+            if let Ok(Some(true)) = res
+                && pbl.report.max_vampire < time
+            {
+                pbl.report.max_vampire = time;
+                if pbl.config.trace {
+                    eprintln!("new longest vampire!")
+                }
+            }
+        }
         res
     }
 }

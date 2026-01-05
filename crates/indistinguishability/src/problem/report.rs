@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::path::PathBuf;
 use std::time::Duration;
 
 use steel::steel_vm::builtin::BuiltInModule;
@@ -10,6 +11,7 @@ use crate::input::Registerable;
 #[derive(Debug, Clone, Steel, Default)]
 pub struct Report {
     pub(crate) time_spent_in_vampire: Duration,
+    pub(crate) max_vampire: Duration,
     pub(crate) total_run_calls: u64,
     pub(crate) total_cache_hits: u64,
     pub(crate) runtime: Duration,
@@ -56,12 +58,13 @@ impl Display for Report {
         writeln!(
             f,
             "Report:\n\truntime: {}\n\tvampire: {}\n\tcache hits: {:}\n\ttotal calls: {:}\n\thit \
-             rate: {:.2}%",
+             rate: {:.2}%\n\tmax vampire: {}",
             humantime::format_duration(self.get_runtime()),
             humantime::format_duration(self.get_time_spent_in_vampire()),
             self.total_cache_hits,
             self.total_run_calls,
-            self.get_hit_rate() * 100.0
+            self.get_hit_rate() * 100.0,
+            humantime::format_duration(self.max_vampire),
         )
     }
 }
