@@ -1,6 +1,6 @@
 use std::ops::{BitAnd, BitOr, Not, Shr};
 
-use itertools::Itertools;
+use itertools::{Itertools, chain};
 use quarck::CowArc;
 use utils::{ereturn_if, ereturn_let, implvec};
 
@@ -142,6 +142,42 @@ impl Formula {
             Self::Var(variable) if variable.is_static() => Self::Var(variable.const_clone()),
             _ => panic!("not const formula"),
         }
+    }
+
+    fn split_conjunction_inner(self, uqvar: &[Variable], condition: Self) -> Vec<Self> {
+        match self {
+            Self::Quantifier {
+                head: FOBinder::Forall,
+                vars,
+                arg,
+            } => {
+                let vars = {
+                    let mut tmp = uqvar.to_vec();
+                    tmp.extend_from_slice(&vars);
+                    tmp
+                };
+                arg[0].clone().split_conjunction_inner(&vars, condition)
+            }
+            Self::App { head, args } if head == AND => {
+                let (a, b) = args.iter().cloned().collect_tuple().unwrap();
+                [a, b]
+                    .into_iter()
+                    .flat_map(|x| x.split_conjunction_inner(uqvar, condition.clone()))
+                    .collect()
+            }
+            Self::App { head, args } if head == IMPLIES => {
+                let (a, b) = args.iter().cloned().collect_tuple().unwrap();
+                b.split_conjunction_inner(uqvar, condition & a)
+            }
+            x => {
+                let vars = uqvar.iter().cloned();
+                vec![rexp!((forall #vars (=> #condition #x)))]
+            }
+        }
+    }
+
+    pub fn split_conjunction(self) -> Vec<Self> {
+        self.split_conjunction_inner(&[], rexp!(true))
     }
 }
 impl Not for Formula {

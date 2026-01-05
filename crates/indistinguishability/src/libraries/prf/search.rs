@@ -294,6 +294,7 @@ impl Search {
                 self.inner_search_formula(pbl, &builder, to_search.clone());
                 builder.into_inner().unwrap().into_formula()
             })
+            .flat_map(|x| x.split_conjunction())
     }
 }
 
