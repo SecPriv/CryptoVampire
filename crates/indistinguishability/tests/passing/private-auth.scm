@@ -1,5 +1,5 @@
 (require "cryptovampire/v2")
-(require "./save-results.scm")
+(require "../save-results.scm")
 (require-builtin cryptovampire as cv-)
 
 (define pbl (mk-problem 'x))
@@ -56,13 +56,17 @@
             (enc dflt (rb i) (pka2 i))))))))
 
 
-(define pa (declare-step pbl "publish_a" (list Index Index)
-    (step p1 ltrue (lambda (in i j) (pk (ka i j))))
-    (step p2 ltrue (lambda (in i j) (pk (ka i j))))))
+(publish pbl ((i Index) (j Index)) (pk (ka i j)))
+(publish pbl ((i Index) ) (pkb i))
+; (publish pbl ((i Index) ) (nb i))
 
-(define pb (declare-step pbl "publish_b" (list Index)
-    (step p1 ltrue (lambda (in i) (pkb i)))
-    (step p2 ltrue (lambda (in i) (pkb i)))))
+; (define pa (declare-step pbl "publish_a" (list Index Index)
+;     (step p1 ltrue (lambda (in i j) (pk (ka i j))))
+;     (step p2 ltrue (lambda (in i j) (pk (ka i j))))))
+
+; (define pb (declare-step pbl "publish_b" (list Index)
+;     (step p1 ltrue (lambda (in i) (pkb i)))
+;     (step p2 ltrue (lambda (in i) (pkb i)))))
 
 (define b1
   (declare-step pbl "b1" (list Index)
@@ -72,14 +76,14 @@
 
 (bind ((i Index) (j Index))
   (begin
-    (cv-add-rewrite pbl (cv-mk-rewrite "message_pa1" (list i j)
-        (pk (ka i j)) (macro_msg (pa i j) p1)))
-    (cv-add-rewrite pbl (cv-mk-rewrite "message_pa2" (list i j)
-        (pk (ka i j)) (macro_msg (pa i j) p2)))
-    (cv-add-rewrite pbl (cv-mk-rewrite "message_pb1" (list i)
-        (pkb i) (macro_msg (pb i) p1)))
-    (cv-add-rewrite pbl (cv-mk-rewrite "message_pb2" (list i)
-        (pkb i) (macro_msg (pb i) p2)))
+    ; (cv-add-rewrite pbl (cv-mk-rewrite "message_pa1" (list i j)
+    ;     (pk (ka i j)) (macro_msg (pa i j) p1)))
+    ; (cv-add-rewrite pbl (cv-mk-rewrite "message_pa2" (list i j)
+    ;     (pk (ka i j)) (macro_msg (pa i j) p2)))
+    ; (cv-add-rewrite pbl (cv-mk-rewrite "message_pb1" (list i)
+    ;     (pkb i) (macro_msg (pb i) p1)))
+    ; (cv-add-rewrite pbl (cv-mk-rewrite "message_pb2" (list i)
+    ;     (pkb i) (macro_msg (pb i) p2)))
     (cv-add-rewrite pbl (cv-mk-rewrite "message_b1_1" (list i)
         (nb i) (macro_msg (b1 i) p1)))
     (cv-add-rewrite pbl (cv-mk-rewrite "message_b1_2" (list i)
@@ -91,11 +95,11 @@
 
 (initialize-as-aenc aenc enc dec pk)
 
-(add-constrain pbl (i j k) (lt (pb k) (as i j)))
-(add-constrain pbl (i j k l) (lt (pa k l) (as i j)))
-(add-constrain pbl (i k l) (lt (pa k l) (b1 i)))
-(add-constrain pbl (i k) (lt (pb k) (b1 i)))
-(add-constrain pbl (i) (lt (b1 i) (b2 i)))
+; (add-constrain pbl (i j k) (lt (pb k) (as i j)))
+; (add-constrain pbl (i j k l) (lt (pa k l) (as i j)))
+; (add-constrain pbl (i k l) (lt (pa k l) (b1 i)))
+; (add-constrain pbl (i k) (lt (pb k) (b1 i)))
+; (add-constrain pbl (i) (lt (b1 i) (b2 i)))
 
 ;; if flips
 (bind
@@ -127,7 +131,7 @@
 
 (if (run pbl p1 p2)
   (displayln "success")
-  (error "failed"))
+  (error "failed private auth"))
 
 (displayln (cv-print-report (cv-get-report pbl)))
 (save-results "private-auth" pbl)

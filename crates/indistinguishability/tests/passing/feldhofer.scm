@@ -1,5 +1,5 @@
 (require "cryptovampire/v2")
-(require "./save-results.scm")
+(require "../save-results.scm")
 (require-builtin cryptovampire as cv-)
 
 (define pbl (mk-problem 'x))
@@ -80,32 +80,34 @@
     (step p1 empty-cond (lambda (_ i) (nr i)))
     (step p2 empty-cond (lambda (_ i) (nr i)))))
 
-(define exposes-nt
-  (declare-step pbl "exposts-nt" (list Index Index)
-    (step p1 empty-cond (lambda (_ i j) (nt i j)))
-    (step p2 empty-cond (lambda (_ i j) (nt i j)))))
-(define exposes-nr
-  (declare-step pbl "exposts-nr" (list Index)
-    (step p1 empty-cond (lambda (_ j) (nr j)))
-    (step p2 empty-cond (lambda (_ j) (nr j)))))
-(add-constrain pbl (i j k) (lt (exposes-nt i j) (r k)))
-(add-constrain pbl (i j k l) (lt (exposes-nt i j) (tag k l)))
-(add-constrain pbl (i j k) (lt (exposes-nr i) (r k)))
-(add-constrain pbl (i j k l) (lt (exposes-nr i) (tag k l)))
+; (define exposes-nt
+;   (declare-step pbl "exposts-nt" (list Index Index)
+;     (step p1 empty-cond (lambda (_ i j) (nt i j)))
+;     (step p2 empty-cond (lambda (_ i j) (nt i j)))))
+; (define exposes-nr
+;   (declare-step pbl "exposts-nr" (list Index)
+;     (step p1 empty-cond (lambda (_ j) (nr j)))
+;     (step p2 empty-cond (lambda (_ j) (nr j)))))
+; (add-constrain pbl (i j k) (lt (exposes-nt i j) (r k)))
+; (add-constrain pbl (i j k l) (lt (exposes-nt i j) (tag k l)))
+; (add-constrain pbl (i j k) (lt (exposes-nr i) (r k)))
+; (add-constrain pbl (i j k l) (lt (exposes-nr i) (tag k l)))
 
-(bind ((i Index) (j Index) (p Protocol)) (begin
-    (cv-add-rewrite pbl (cv-mk-rewrite "nt1" (list i j)
-        (nt i j) (macro_msg (exposes-nt i j) p1)))
-    (cv-add-rewrite pbl (cv-mk-rewrite "nt2" (list i j)
-        (nt i j) (macro_msg (exposes-nt i j) p2)))
-    (cv-add-rewrite pbl (cv-mk-rewrite "nr1" (list i)
-        (nr i) (macro_msg (exposes-nr i) p1)))
-    (cv-add-rewrite pbl (cv-mk-rewrite "nr2" (list i)
-        (nr i) (macro_msg (exposes-nr i) p2)))
-    (cv-add-rewrite pbl (cv-mk-rewrite "nt_exec" (list i j p)
-        (macro_exec (exposes-nt i j) p) (happens (exposes-nt i j))))
-    (cv-add-rewrite pbl (cv-mk-rewrite "nr_exec" (list i j p)
-        (macro_exec (exposes-nr i) p) (happens (exposes-nr i))))))
+; (bind ((i Index) (j Index) (p Protocol)) (begin
+;     (cv-add-rewrite pbl (cv-mk-rewrite "nt1" (list i j)
+;         (nt i j) (macro_msg (exposes-nt i j) p1)))
+;     (cv-add-rewrite pbl (cv-mk-rewrite "nt2" (list i j)
+;         (nt i j) (macro_msg (exposes-nt i j) p2)))
+;     (cv-add-rewrite pbl (cv-mk-rewrite "nr1" (list i)
+;         (nr i) (macro_msg (exposes-nr i) p1)))
+;     (cv-add-rewrite pbl (cv-mk-rewrite "nr2" (list i)
+;         (nr i) (macro_msg (exposes-nr i) p2)))
+;     (cv-add-rewrite pbl (cv-mk-rewrite "nt_exec" (list i j p)
+;         (macro_exec (exposes-nt i j) p) (happens (exposes-nt i j))))
+;     (cv-add-rewrite pbl (cv-mk-rewrite "nr_exec" (list i j p)
+;         (macro_exec (exposes-nr i) p) (happens (exposes-nr i))))))
+(publish pbl ((i Index) (j Index)) (nt i j))
+(publish pbl ((i Index)) (nr i))
 
 (initialize-as-senc senc enc dec)
 
@@ -168,7 +170,7 @@
 
 (if (run pbl p1 p2)
   (displayln "success")
-  (error "failed"))
+  (error "failed feldhofer"))
 
 
 (displayln (cv-print-report (cv-get-report pbl)))
