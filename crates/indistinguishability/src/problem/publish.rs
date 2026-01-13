@@ -1,5 +1,6 @@
 use anyhow::{Context, ensure};
 use itertools::{Itertools, chain};
+use logic_formula::AsFormula;
 use rustc_hash::FxHashSet;
 
 use crate::protocol::Step;
@@ -19,11 +20,23 @@ pub struct PublicTerm {
     pub term: Formula,
 }
 
+impl PublicTerm {
+    pub fn is_valid(&self) -> bool {
+        (&self.term)
+            .free_vars_iter()
+            .all(|v| self.vars.contains(v))
+    }
+}
+
 impl Problem {
     pub fn publish(&mut self, term: PublicTerm) -> anyhow::Result<Function> {
         ensure!(
             term.term.try_get_sort() == Some(Sort::Bitstring),
             "the published term must have sort Bitstring"
+        );
+        ensure!(
+            term.is_valid(),
+            "All variables in a published terms should be bound"
         );
 
         self.clear_smt_prelude();
@@ -51,25 +64,6 @@ impl Problem {
                 .build()
                 .unwrap()
         }));
-
-        // {
-        //     // publication steps are the smallest steps
-
-        //     let vars = vars
-        //         .map(|v| v.freshen().as_formula())
-        //         .collect_vec()
-        //         .into_iter();
-        //     let non_publish_steps = self
-        //         .steps()
-        //         .with_context(|| "no protocols")?
-        //         .filter(|s| !s.is_publish_step())
-        //         .collect_vec();
-
-        //     for s in non_publish_steps {
-        //         let other_vars = s.args_sorts().map(|x| fresh!(x).as_formula());
-        //         self.add_constrain(&rexp!((LT (step #(vars.clone())*) (s #other_vars*))))?;
-        //     }
-        // }
 
         Ok(step)
     }

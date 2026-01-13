@@ -13,7 +13,7 @@ use steel_derive::Steel;
 use crate::input::golgge_rules::Rule;
 use crate::input::shared_exists::ShrExists;
 use crate::input::{Registerable, conversion_err};
-use crate::problem::Report;
+use crate::problem::{PublicTerm, Report};
 use crate::protocol::Step;
 use crate::terms::{Exists, Formula, Function, QuantifierT, Rewrite, Sort, Variable};
 use crate::{Configuration, MSmt, Problem};
@@ -189,6 +189,12 @@ impl ShrProblem {
             .unwrap()
     }
 
+    fn publish(&self, vars: Vec<Variable>, term: Formula) {
+        self.borrow_mut()
+            .publish(PublicTerm { vars, term })
+            .unwrap();
+    }
+
     fn get_report(&self) -> Report {
         self.0.read().unwrap().report.clone()
     }
@@ -265,6 +271,7 @@ impl Registerable for ShrProblem {
     /// Registers the `ShrProblem` type and its associated functions with the Steel VM.
     fn register(module: &mut BuiltInModule) -> &mut BuiltInModule {
         Self::register_type(module);
+        Self::register_configuration(module);
 
         module
             .register_fn("to-string-step", Self::to_string_step)
@@ -282,12 +289,12 @@ impl Registerable for ShrProblem {
             .register_fn("add-rewrite", Self::add_rewrite)
             .register_fn("add-smt-axiom", Self::add_smt_axiom)
             .register_fn("add-constrain", Self::add_constrain)
+            .register_fn("publish", Self::publish)
             .register_fn("get-report", Self::get_report)
-            .register_fn("run", Self::run);
-
-        Self::register_configuration(module).register_fn("string->duration", |s: String| {
-            humantime::parse_duration(&s).unwrap()
-        });
+            .register_fn("run", Self::run)
+            .register_fn("string->duration", |s: String| {
+                humantime::parse_duration(&s).unwrap()
+            });
 
         module
     }

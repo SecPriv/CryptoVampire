@@ -28,6 +28,7 @@
   define-alias
   define-function
   add-constrain
+  publish
   lift-fun
   cand cor tuple eql <>
   ;  @@@EXPORTS@@@
@@ -284,6 +285,12 @@
     [ (_ pbl (vars ...) constrain)
     (let [ (vars (cv-mk-varf (cv-mk-fresh-var-w-sort cv-Index))) ...]
       (cv-add-constrain pbl constrain)) ]))
+
+(define-syntax publish
+  (syntax-rules ()
+    [ (_ pbl (vars ...) term)
+    (let [ (vars (cv-mk-varf (cv-mk-fresh-var-w-sort cv-Index))) ...]
+      (cv-publish pbl (list vars ...) term)) ]))
 
 (define (cand . args) (cv-cand args))
 (define (cor . args) (cv-cor args))

@@ -57,20 +57,23 @@ pub fn mk_smt(pbl: &Problem) -> impl Iterator<Item = MSmt> {
     for s in pub_steps {
         econtinue_if!(s == INIT);
 
-        let vars = s.args_sorts().map(|x| fresh!(x));
-        let sf = smt!((s #vars*));
+        let vars = s.args_sorts().map(|x| fresh!(x)).collect_vec();
+        let vars = vars.iter().cloned();
+        let sf = smt!((s #(vars.clone())*));
 
         let comment = MSmt::Comment(format!("step {s}"));
         let order = steps
             .iter()
             .map(|so| {
-                let ovars = so.args_sorts().map(|x| fresh!(x));
-                smt!((LT #sf (so #ovars*)))
+                let ovars = so.args_sorts().map(|x| fresh!(x)).collect_vec();
+                let ovars = ovars.iter().cloned();
+                let vars = chain![vars.clone(), ovars.clone()];
+                smt!((forall #vars (LT #sf (so #ovars*))))
             })
             .map(MSmt::Assert);
 
-        let exec = MSmt::Assert(
-            smt!((= (MACRO_EXEC #p #sf) (HAPPENS #sf))));
+        let exec =
+            MSmt::Assert(smt!((forall #(vars.clone()) (= (MACRO_EXEC #p #sf) (HAPPENS #sf)))));
         res.extend(chain!([comment, exec], order));
     }
 
