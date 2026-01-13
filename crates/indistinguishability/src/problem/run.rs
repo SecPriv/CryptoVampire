@@ -5,7 +5,7 @@ use itertools::Itertools;
 use log::trace;
 
 use super::*;
-use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, PRED, UNFOLD_MSG};
+use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, PRED, UNFOLD_MSG, Variable};
 use crate::{Configuration, Lang, libraries, rexp, smt};
 
 impl Problem {
@@ -75,6 +75,57 @@ impl Problem {
         );
         debug_assert!(self.valid());
 
+        let cp = self.checkpoint();
+        let res = self.run_solver_internal(p1, p2);
+
+        if res || !self.config.guided_nonce_search {
+            self.reset_to(&cp);
+            return res;
+        }
+
+        if self.switch_to_run_public_nonce() {
+            loop {
+                let candidates = match &mut self.nonce_finder {
+                    NoncePublicSearchState::Run(iter) => iter.next(),
+                    _ => unreachable!("switch_to_run_public_nonce ensures we are in Run state"),
+                };
+
+                let Some(candidates) = candidates else {
+                    break;
+                };
+
+                self.reset_to(&cp);
+
+                for nonce in candidates {
+                    let vars = nonce
+                        .args_sorts()
+                        .map(|s| Variable::fresh().sort(s).call())
+                        .collect_vec();
+
+                    let args = vars.iter().map(|v| v.clone().into_formula()).collect_vec();
+                    let term = nonce.rapp(args);
+
+                    let public_term = PublicTerm { vars, term };
+
+                    if let Err(e) = self.publish(public_term) {
+                        log::warn!("Failed to publish nonce {}: {}", nonce, e);
+                    }
+                }
+
+                let res = self.run_solver_internal(p1, p2);
+                if res {
+                    self.reset_to(&cp);
+                    return true;
+                }
+            }
+        }
+        
+        self.reset_to(&cp);
+        false
+    }
+
+    /// Run the solver on the given protocols (internal helper)
+    fn run_solver_internal(&mut self, p1: usize, p2: usize) -> bool {
         let depth = self.config.depth;
         let base_smt_n = self.extra_smt().len();
 

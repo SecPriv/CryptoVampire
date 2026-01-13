@@ -125,6 +125,9 @@ pub struct Configuration {
     /// complexity
     #[arg(long)]
     pub complete_and: bool,
+
+    #[arg(long)]
+    pub guided_nonce_search: bool,
 }
 
 static NODE_LIMIT_DEFAULT: usize = 100000;
@@ -159,6 +162,7 @@ impl Default for Configuration {
             if_commute: false,
             complete_and: false,
             ddh_limit: NONCE_GENERATION_DEFAULT,
+            guided_nonce_search: false,
         }
     }
 }

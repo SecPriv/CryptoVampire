@@ -354,6 +354,8 @@ impl Function {
             "Returns `true` if the function is an `egg` binder.");
     is_fun!(is_temporary; TEMPORARY;
             "Returns `true` if the function is temporary.");
+    is_fun!(is_fresh; FRESH;
+            "Returns `true` if the function represents something fresh.");
     #[inline]
     /// Returns `true` if the function is a publications step.
     pub fn is_publish_step(&self) -> bool {
