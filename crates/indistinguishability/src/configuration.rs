@@ -1,8 +1,10 @@
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
+use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
+use crate::input::Registerable;
 pub use crate::input::prelude::Preludes;
 
 #[derive(Debug, Steel, Clone, Subcommand, Default)]
@@ -173,5 +175,13 @@ impl Configuration {
         } else {
             self.prelude_version.get_prelude()
         }
+    }
+}
+
+impl Registerable for Configuration {
+    fn register(
+        module: &mut steel::steel_vm::builtin::BuiltInModule,
+    ) -> &mut steel::steel_vm::builtin::BuiltInModule {
+        module.register_fn("vampire-timeout", |x: Self| x.vampire_timeout)
     }
 }

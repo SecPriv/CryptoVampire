@@ -128,7 +128,7 @@
 
 ;; configuration
 (cv-set-trace pbl #t)
-(cv-set-vampire-timeout pbl (cv-string->duration "10s"))
+(cv-set-vampire-timeout pbl (cv-string->duration "1s"))
 (cv-set-node-limit pbl 100000)
 (cv-set-prf-limit pbl 1)
 
