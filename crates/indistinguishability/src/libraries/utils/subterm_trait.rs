@@ -375,6 +375,7 @@ pub trait SyntaxSearcher {
                 self.inner_search_formula(pbl, &builder, to_search.clone());
                 builder.into_inner().unwrap().into_formula()
             })
+            .flat_map(|x| x.split_conjunction())
     }
 
     fn search_id_timepoint<'a, 'b, 'c>(

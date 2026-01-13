@@ -25,7 +25,7 @@
         file))
     (let [ (file (open-output-file file)) ]
       (begin
-        (print-row file "name" "runtime" "vampire time" "total" "hits" "hitrate")
+        (print-row file "name" "runtime" "vampire time" "total" "hits" "hitrate" "timeout")
         file))))
 (define get-file (let [ (env (maybe-get-env-var "RESULT")) ]
     (if (Err? env) "/tmp/results.csv" (Ok->value env))))
@@ -38,5 +38,7 @@
     (vampire (cv-get-time-spent-in-vampire report))
     (hits (cv-get-total-cache-hits report))
     (total (cv-get-total-run-calls report))
-    (hit-rate (cv-get-hit-rate report)) ]
-    (print-row file name runtime vampire total hits hit-rate)))
+    (hit-rate (cv-get-hit-rate report)) 
+    (vampire-timeout (cv-vampire-timeout (cv-get-config pbl)))
+    ]
+    (print-row file name runtime vampire total hits hit-rate vampire-timeout)))

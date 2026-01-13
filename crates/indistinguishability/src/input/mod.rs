@@ -48,6 +48,7 @@ pub fn register(module: &mut BuiltInModule) -> &mut BuiltInModule {
     // ShrFindSuchThat::register(module);
     Variable::register(module);
     Report::register(module);
+    Configuration::register(module);
 
     module.register_fn("println!", |x: SteelVal| println!("dbg: {x:?}"));
 
