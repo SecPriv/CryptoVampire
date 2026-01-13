@@ -288,8 +288,8 @@
 
 (define-syntax publish
   (syntax-rules ()
-    [ (_ pbl (vars ...) term)
-    (let [ (vars (cv-mk-varf (cv-mk-fresh-var-w-sort cv-Index))) ...]
+    [ (_ pbl ((vars sorts) ...) term)
+    (let [ (vars (cv-mk-fresh-var-w-sort sorts)) ...]
       (cv-publish pbl (list vars ...) term)) ]))
 
 (define (cand . args) (cv-cand args))

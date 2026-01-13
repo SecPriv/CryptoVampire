@@ -29,7 +29,8 @@ impl Checkpoint {
         pbl.extra_rewrite_mut().truncate(self.extra_rewrite);
         pbl.extra_rules_mut().truncate(self.extra_rules);
         pbl.extra_smt_mut().truncate(self.extra_smt);
-        pbl.constrains_mut().truncate(self.constrains);
+        pbl.constrains.truncate(self.constrains);
+        pbl.clear_smt_prelude();
     }
 
     fn reset_to(&self, pbl: &mut Problem) {

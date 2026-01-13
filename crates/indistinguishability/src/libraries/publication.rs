@@ -2,7 +2,8 @@ use egg::{Analysis, Pattern};
 use itertools::{Itertools, chain};
 use utils::econtinue_if;
 
-use crate::terms::{Function, HAPPENS, INIT, LT, MACRO_EXEC};
+use crate::protocol::Step;
+use crate::terms::{Function, HAPPENS, INIT, LT, MACRO_EXEC, MACRO_MSG};
 use crate::{Lang, MSmt, Problem, fresh, rexp, smt};
 
 fn public_steps(pbl: &Problem) -> impl Iterator<Item = Function> {
@@ -20,6 +21,8 @@ pub fn mk_rewrites<N: Analysis<Lang>>(
 
     for s in pub_steps {
         econtinue_if!(s == INIT);
+        println!("{s}");
+        assert!(s.is_publish_step());
 
         let vars = s.args_sorts().map(|x| fresh!(x).as_formula());
         let sf = rexp!((s #vars*));
@@ -35,13 +38,28 @@ pub fn mk_rewrites<N: Analysis<Lang>>(
             .unwrap()
         });
 
+        let msg = {
+            pbl.protocols().iter().map(|p| {
+                let Step { vars, msg, .. } =
+                    &pbl.protocols().first().unwrap().steps()[s.get_step_index().unwrap()];
+                let vars = vars.iter().map(|x| x.as_formula());
+                let p = p.name();
+                egg::Rewrite::new(
+                    format!("{s} msg macro in {p}"),
+                    Pattern::from(msg),
+                    Pattern::from(&rexp!((MACRO_MSG (s #(vars.clone())*) p))),
+                )
+                .unwrap()
+            })
+        };
+
         let exec = egg::Rewrite::new(
             format!("{s} exec macro"),
-            Pattern::from(&rexp!((MACRO_EXEC #p #sf ))),
+            Pattern::from(&rexp!((MACRO_EXEC #sf #p))),
             Pattern::from(&rexp!((HAPPENS #sf))),
         )
         .unwrap();
-        res.extend(chain!([exec], order));
+        res.extend(chain!([exec], msg, order));
     }
 
     res.into_iter()
@@ -52,7 +70,6 @@ pub fn mk_smt(pbl: &Problem) -> impl Iterator<Item = MSmt> {
         pbl.steps().unwrap().partition(|s| s.is_publish_step());
 
     let mut res = vec![MSmt::comment_block("Publication Steps")];
-    decl_vars!(p:Protocol);
 
     for s in pub_steps {
         econtinue_if!(s == INIT);
@@ -73,7 +90,7 @@ pub fn mk_smt(pbl: &Problem) -> impl Iterator<Item = MSmt> {
             .map(MSmt::Assert);
 
         let exec =
-            MSmt::Assert(smt!((forall #(vars.clone()) (= (MACRO_EXEC #p #sf) (HAPPENS #sf)))));
+            MSmt::Assert(smt!((forall ((#p Protocol)) (forall #(vars.clone()) (= (MACRO_EXEC #sf #p) (HAPPENS #sf))))));
         res.extend(chain!([comment, exec], order));
     }
 
