@@ -1,5 +1,5 @@
 (require "cryptovampire/v2")
-(require "./save-results.scm")
+(require "../save-results.scm")
 (require-builtin cryptovampire as cv-)
 
 (define pbl (mk-problem 'x))
@@ -76,10 +76,11 @@
 
 ;; configuration
 (cv-set-trace pbl #t)
+(cv-set-vampire-timeout pbl (cv-string->duration "2s"))
 
 (if (run pbl p1 p2)
   (displayln "success")
-  (error "failed"))
+  (error "failed basic-hash"))
 
 (displayln (cv-print-report (cv-get-report pbl)))
 (save-results "basic-hash" pbl)

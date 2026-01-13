@@ -4,6 +4,7 @@ use bon::bon;
 use itertools::Itertools;
 use utils::implvec;
 
+use crate::problem::publish::NoncePublicSearchState;
 use crate::protocol::Protocol;
 use crate::terms::{CryptographicAssumption, Formula, Function, FunctionCollection, Rewrite};
 use crate::{Configuration, MSmt};
@@ -30,6 +31,12 @@ pub use functions::FunctionBuilder;
 
 mod report;
 pub use report::Report;
+
+mod checkpoint;
+
+mod publish;
+pub use publish::PublicTerm;
+
 
 /// A problem for the solver to solve
 ///
@@ -71,7 +78,13 @@ pub struct Problem {
     constrains: Vec<Constrains>,
 
     pub report: Report,
+
+    /// Terms that are "public"
+    public_terms: Vec<PublicTerm>,
+
+    nonce_finder: NoncePublicSearchState,
 }
+
 
 /// Represents the current step in the execution of the problem
 #[allow(dead_code)]
@@ -139,6 +152,8 @@ impl Problem {
             state: Default::default(),
             constrains,
             report: Default::default(),
+            public_terms: Default::default(),
+            nonce_finder: Default::default()
         }
     }
 }

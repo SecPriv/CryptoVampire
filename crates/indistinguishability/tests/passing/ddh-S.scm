@@ -1,5 +1,5 @@
 (require "cryptovampire/v2")
-(require "./save-results.scm")
+(require "../save-results.scm")
 (require-builtin cryptovampire as cv-)
 
 (define pbl (mk-problem 'x))
@@ -34,33 +34,11 @@
 (define empty-cond (lambda _ mtrue))
 
 ;; we need to give the attacker the private keys
-(cv-set-step-message pbl (get-function init) (get-function p1)
-  (tuple skP skS))
-(cv-set-step-message pbl (get-function init) (get-function p2)
-  (tuple skP skS))
-(cv-add-rewrite pbl (cv-mk-rewrite "init-skP-1" '()
-    skP (sel2of2 (macro_msg init p1))))
-(cv-add-rewrite pbl (cv-mk-rewrite "init-skP-2" '()
-    skP (sel2of2 (macro_msg init p2))))
-(cv-add-rewrite pbl (cv-mk-rewrite "init-skS-1" '()
-    skS (sel1of2 (macro_msg init p1))))
-(cv-add-rewrite pbl (cv-mk-rewrite "init-skS-2" '()
-    skS (sel1of2 (macro_msg init p2))))
-
+(publish pbl () skP)
+(publish pbl () skS)
 ;; same for e^a and e^b
-(define ExpG
-  (declare-step pbl "expg" (list Index)
-    (step p1 empty-cond (lambda (_ i) (tuple (mexp g (a i)) (mexp g (b i)))))
-    (step p2 empty-cond (lambda (_ i) (tuple (mexp g (a i)) (mexp g (b i)))))))
-(bind ((i Index)) (begin
-    (cv-add-rewrite pbl (cv-mk-rewrite "expga1" (list i)
-        (mexp g (a i)) (sel1of2 (macro_msg (ExpG i) p1))))
-    (cv-add-rewrite pbl (cv-mk-rewrite "expga2" (list i)
-        (mexp g (a i)) (sel1of2 (macro_msg (ExpG i) p2))))
-    (cv-add-rewrite pbl (cv-mk-rewrite "expgb1" (list i)
-        (mexp g (b i)) (sel2of2 (macro_msg (ExpG i) p1))))
-    (cv-add-rewrite pbl (cv-mk-rewrite "expgb2" (list i)
-        (mexp g (b i)) (sel2of2 (macro_msg (ExpG i) p2))))))
+(publish pbl ((i Index)) (mexp g (a i)))
+(publish pbl ((i Index)) (mexp g (b i)))
 
 (define P1
   (declare-step pbl "P1" (list Index)
@@ -70,7 +48,6 @@
     (step p2 empty-cond
       (lambda (in i)
         (tuple (vk skP) (mexp g (a i)))))))
-(add-constrain pbl (i j) (lt (ExpG j) (P1 i)))
 
 (define P2
   (declare-step pbl "P2" (list Index)
@@ -168,7 +145,6 @@
 
 ;; ordering constrains
 (add-constrain pbl (i) (lt (P1 i) (P2 i)))
-(add-constrain pbl (i j) (lt (ExpG j) (Schall1 i)))
 (add-constrain pbl (i) (lt (Schall1 i) (Schall2 i)))
 (add-constrain pbl (i) (lt (Schall2 i) (Schall3fail i)))
 (add-constrain pbl (i j) (lt (Schall2 j) (Schall3 i j)))
@@ -190,13 +166,13 @@
 ;; configuration
 (cv-set-trace pbl #t)
 (cv-set-node-limit pbl 100000)
-(cv-set-vampire-timeout pbl (cv-string->duration "15s"))
+(cv-set-vampire-timeout pbl (cv-string->duration "300ms"))
 (cv-set-fa-limit pbl 0)
 (cv-set-keep-smt-files pbl #t)
 
 (if (run pbl p1 p2)
   (displayln "success")
-  (error "failed"))
+  (error "failed ddh-S"))
 
 (displayln (cv-print-report (cv-get-report pbl)))
 (save-results "ddh-S" pbl)

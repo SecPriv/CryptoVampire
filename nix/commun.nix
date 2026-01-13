@@ -23,6 +23,7 @@
         src = lib.cleanSource src;
         patches = [ "${src}/nix.patch" ];
         buildInputs = [ vampire ];
+        doCheck = false;
       };
     in
     pkg

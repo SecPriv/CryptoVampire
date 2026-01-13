@@ -314,6 +314,7 @@ pub trait SyntaxSearcher {
             vars,
             cond,
             msg,
+            ..
         } in ptcl.steps()
         {
             // build the condition object
@@ -352,6 +353,7 @@ pub trait SyntaxSearcher {
                           vars,
                           cond,
                           msg,
+                          ..
                       }| {
                     let vars = vars.iter().map(|v| Formula::Var(v.clone()));
                     let s = rexp!((id #vars*));
@@ -373,6 +375,7 @@ pub trait SyntaxSearcher {
                 self.inner_search_formula(pbl, &builder, to_search.clone());
                 builder.into_inner().unwrap().into_formula()
             })
+            .flat_map(|x| x.split_conjunction())
     }
 
     fn search_id_timepoint<'a, 'b, 'c>(
@@ -496,6 +499,7 @@ pub trait EgraphSearcher: SyntaxSearcher {
             vars,
             cond,
             msg,
+            ..
         } in ptcl.steps()
         {
             // build the condition object

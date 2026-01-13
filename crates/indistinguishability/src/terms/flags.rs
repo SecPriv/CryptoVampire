@@ -56,5 +56,10 @@ bitflags! {
       const TEMPORARY = 1 << 20;
 
       const LAMBDA = 1 << 21;
+
+      const FRESH = 1 << 22;
+
+      /// This step is a publication step
+      const PUBLICATION_STEP = 1 << 23;
   }
 }

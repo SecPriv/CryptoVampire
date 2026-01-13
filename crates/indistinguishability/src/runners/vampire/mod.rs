@@ -44,17 +44,6 @@ impl<S> VampireExecBuilder<S>
 where
     S: vampire_exec_builder::State,
 {
-    // /// Configures the `VampireExec` builder with settings from the given `Problem`.
-    // ///
-    // /// This sets the `keep_file` and `timeout` arguments based on the problem's configuration.
-    // pub fn with_pbl(self, pbl: &Problem) -> VampireExecBuilder<vampire_exec_builder::SetKeepFile<S>>
-    // where
-    //     S::KeepFile: vampire_exec_builder::IsUnset,
-    // {
-    //     self.keep_file(pbl.config.keep_smt_files)
-    //         .timeout(pbl.config.vampire_timeout)
-    // }
-
     /// Extends the arguments of the Vampire executable with additional `VampireArg`s.
     pub fn extend_args(mut self, args: implvec!(VampireArg)) -> Self {
         self.args.extend(args);
@@ -302,12 +291,7 @@ impl VampireExec {
                     writeln!(buffer, "; {i:}")?;
                     i += 1;
                 }
-                // if self.keep_file {
-                let pretty = statement.as_pretty();
-                writeln!(buffer, "{pretty}")?;
-                // } else {
-                //     writeln!(buffer, "{statement}")?;
-                // }
+                writeln!(buffer, "{}",  statement.as_pretty())?;
             }
         }
 

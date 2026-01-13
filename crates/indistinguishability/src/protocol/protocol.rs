@@ -11,7 +11,7 @@ pub struct Protocol {
     /// The name of the protocol
     name: Function,
     /// The steps of the protocol
-    #[builder(with = <_>::from_iter, default = vec![Step::builder().build().unwrap()])]
+    #[builder(with = <_>::from_iter, default = vec![Step::default()])]
     steps: Vec<Step>,
 }
 
@@ -65,5 +65,9 @@ impl Protocol {
     /// Returns a mutable reference to the step at the given index
     pub fn step_mut(&mut self, idx: usize) -> Option<&mut Step> {
         self.steps.get_mut(idx)
+    }
+
+    pub(crate) fn truncate_steps(&mut self, n: usize) {
+        self.steps.truncate(n);
     }
 }

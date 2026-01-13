@@ -1,4 +1,5 @@
 #![feature(mapped_lock_guards)]
+#![feature(type_alias_impl_trait)]
 
 use std::io::Write;
 

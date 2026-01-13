@@ -1,5 +1,5 @@
 (require "cryptovampire/v2")
-(require "./save-results.scm")
+(require "../save-results.scm")
 (require-builtin cryptovampire as cv-)
 
 (define pbl (mk-problem 'x))
@@ -91,11 +91,11 @@
 
 ;; configuration
 (cv-set-trace pbl #t)
-(cv-set-vampire-timeout pbl (cv-string->duration "15s"))
+(cv-set-vampire-timeout pbl (cv-string->duration "10s"))
 
 (if (run pbl p1 p2)
   (displayln "success")
-  (error "failed"))
+  (error "failed hash-lock"))
 
 (displayln (cv-print-report (cv-get-report pbl)))
 (save-results  "hash-lock" pbl)

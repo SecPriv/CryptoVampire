@@ -83,6 +83,7 @@ impl Problem {
 
         let mut cache_hits = 0;
         let mut total = 0;
+        let checkpoint = self.checkpoint();
         let start = ::std::time::Instant::now();
 
         // the result of the computation
@@ -144,7 +145,7 @@ impl Problem {
         }
 
         for (idx, s) in steps {
-            self.current_step = None;
+            self.reset_to(&checkpoint);
 
             if !res {
                 // early exists if we failed to prove one result
@@ -201,12 +202,11 @@ impl Problem {
             total += pgrm.get_num_calls();
         }
 
-        self.extra_smt_mut().truncate(base_smt_n);
-        self.current_step = None;
+        self.reset_to(&checkpoint);
 
         self.report.total_cache_hits = cache_hits;
         self.report.total_run_calls = total;
-        self.report.runtime = start.elapsed();
+        self.report.runtime += start.elapsed();
 
         res
     }

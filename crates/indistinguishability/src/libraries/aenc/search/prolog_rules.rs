@@ -150,7 +150,7 @@ pub fn mk_static_rules<'a>(
               "search_k_enc_dec" (Apply(dec.clone())):
                 (search_k_m #K #K2 #R #M (dec #A #B) #H) :-
                   (search_k_m #K #K2 #R #M #A #H),
-                  (search_k_m #K #K2 #R #M #B #H).
+                  (search_k_m #K #K2 #R #M (pk #B) #H).
 
               "search_o_enc_dec" :
                 (search_o_m #K (dec #A #B) #H):-

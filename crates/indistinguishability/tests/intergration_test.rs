@@ -5,41 +5,43 @@ use std::time::Duration;
 use assert_cmd::{Command, cargo_bin};
 use predicates::prelude::*;
 
+static BASE_DIR: &str = "./tests/passing";
+
 #[test]
 fn basic_hash() {
-    mk_test("./tests/basic-hash.scm", &[]);
+    mk_test(format!("{BASE_DIR}/basic-hash.scm"), &[]);
 }
 
 #[test]
 fn lak_tag() {
-    mk_test("./tests/lak-tag.scm", &[]);
+    mk_test(format!("{BASE_DIR}/lak-tag.scm"), &[]);
 }
 
 #[test]
 fn hash_lock() {
-    mk_test("./tests/hash-lock.scm", &[]);
+    mk_test(format!("{BASE_DIR}/hash-lock.scm"), &[]);
 }
 
 #[test]
 fn mw() {
-    mk_test("./tests/mw.scm", &[]);
+    mk_test(format!("{BASE_DIR}/mw.scm"), &[]);
 }
 
 #[test]
 #[allow(non_snake_case)]
 fn ddh() {
-    mk_test("./tests/ddh-P.scm", &[]);
-    mk_test("./tests/ddh-S.scm", &[]);
+    mk_test(format!("{BASE_DIR}/ddh-P.scm"), &[]);
+    mk_test(format!("{BASE_DIR}/ddh-S.scm"), &[]);
 }
 
 #[test]
 fn private_authentication() {
-    mk_test("./tests/private-auth.scm", &[]);
+    mk_test(format!("{BASE_DIR}/private-auth.scm"), &[]);
 }
 
 #[test]
 fn feldhofer() {
-    mk_test("./tests/feldhofer.scm", &[]);
+    mk_test(format!("{BASE_DIR}/feldhofer.scm"), &[]);
 }
 
 fn mk_test(file: impl AsRef<Path>, extra_args: &[&str]) {

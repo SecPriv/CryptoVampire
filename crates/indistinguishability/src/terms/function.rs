@@ -354,6 +354,12 @@ impl Function {
             "Returns `true` if the function is an `egg` binder.");
     is_fun!(is_temporary; TEMPORARY;
             "Returns `true` if the function is temporary.");
+    #[inline]
+    /// Returns `true` if the function is a publications step.
+    pub fn is_publish_step(&self) -> bool {
+        static FLAGS: FunctionFlags = const_fun_flags!(PUBLICATION_STEP | STEP);
+        self.flags.contains(FLAGS)
+    }
     is_fun!(is_should_not_declare_in_smt; PROLOG_ONLY | BUILTIN_SMT;
 r" Should not appear in an smt file
 

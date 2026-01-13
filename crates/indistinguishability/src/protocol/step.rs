@@ -9,6 +9,15 @@ use logic_formula::AsFormula;
 use crate::terms::{EMPTY, Formula, Function, INIT, UNFOLD_COND, UNFOLD_MSG, Variable};
 use crate::{Lang, MSmt, MSmtFormula, Problem, rexp, vec_smt};
 
+bitflags::bitflags! {
+  #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord,
+           Hash, Debug)]
+  pub struct StepFlags: u8 {
+      /// The function is builtin
+      const PUBLICATION = 1 << 0;
+  }
+}
+
 /// A step in protocol
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Step {
@@ -20,6 +29,12 @@ pub struct Step {
     pub cond: Formula,
     /// The message of the step
     pub msg: Formula,
+}
+
+impl Default for Step {
+    fn default() -> Self {
+        Step::builder().build().unwrap()
+    }
 }
 
 #[bon]
@@ -71,6 +86,7 @@ impl Display for Step {
             vars,
             cond,
             msg,
+            ..
         } = self;
         write!(
             f,
@@ -105,7 +121,7 @@ impl Step {
             Pattern::from(&self.msg),
         )
         .unwrap();
-
+        
         [unfold_cond, unfold_msg].into_iter()
     }
 
@@ -126,6 +142,15 @@ impl Step {
             (forall !(vars.clone()) (= (UNFOLD_MSG #name #ptcl) #msg))
         ]
         .into_iter()
+    }
+
+    pub fn mk_publish_step(id: Function, msg: Formula) -> Self {
+        Self {
+            id,
+            vars: Vec::new(),
+            cond: rexp!(true),
+            msg,
+        }
     }
 }
 

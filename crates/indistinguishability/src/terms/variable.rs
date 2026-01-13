@@ -144,6 +144,12 @@ impl Variable {
         self.0.is_static()
     }
 
+    /// Makes fresh variables while keeping the information about the variable
+    /// (ie. the sort) the same
+    pub fn freshen(&self) -> Self {
+        Self::fresh().maybe_sort(self.get_sort()).call()
+    }
+
     fn steel_fresh() -> Self {
         Self::fresh().call()
     }

@@ -98,7 +98,7 @@ impl RuleWithFreshNonce for DDHRule {
 
     fn mk_fresh_function(&self, pbl: &mut crate::Problem) -> Function {
         pbl.declare_function()
-            .flag(FunctionFlags::NONCE)
+            .flag(FunctionFlags::NONCE | FunctionFlags::FRESH)
             .output(Sort::Nonce)
             .fresh_name("ddh_c")
             .call()

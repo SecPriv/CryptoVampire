@@ -13,7 +13,7 @@ use steel_derive::Steel;
 use crate::input::golgge_rules::Rule;
 use crate::input::shared_exists::ShrExists;
 use crate::input::{Registerable, conversion_err};
-use crate::problem::Report;
+use crate::problem::{PublicTerm, Report};
 use crate::protocol::Step;
 use crate::terms::{Exists, Formula, Function, QuantifierT, Rewrite, Sort, Variable};
 use crate::{Configuration, MSmt, Problem};
@@ -99,31 +99,10 @@ impl ShrProblem {
 
     /// Declares a new step function in the problem.
     fn declare_step(&self, name: String, sorts: Vec<Sort>) -> SResult<Function> {
-        let mut pbl = self.borrow_mut();
-
-        let Some(steps) = pbl.steps() else {
-            return Err(SteelErr::new(
-                ErrorKind::Generic,
-                "can't declare step function, you need to declare at least one protocol first"
-                    .into(),
-            ));
-        };
-        let n = steps.count();
-        let step = pbl
-            .declare_function()
-            .inputs(sorts.iter().cloned())
-            .step(n)
-            .name(name)
-            .call();
-        let nptcl = pbl.num_protocols();
-        pbl.push_steps((0..nptcl).map(|_| {
-            Step::builder()
-                .id(step.clone())
-                .vars(sorts.iter().map(|&s| crate::fresh!(s)))
-                .build()
-                .unwrap()
-        }));
-        Ok(step)
+        match self.borrow_mut().declare_step(name, sorts) {
+            Err(e) => Err(SteelErr::new(ErrorKind::Generic, e.to_string())),
+            Ok(s) => Ok(s),
+        }
     }
 
     /// Declares a new protocol in the problem.
@@ -210,6 +189,12 @@ impl ShrProblem {
             .unwrap()
     }
 
+    fn publish(&self, vars: Vec<Variable>, term: Formula) {
+        self.borrow_mut()
+            .publish(PublicTerm { vars, term })
+            .unwrap();
+    }
+
     fn get_report(&self) -> Report {
         self.0.read().unwrap().report.clone()
     }
@@ -286,6 +271,7 @@ impl Registerable for ShrProblem {
     /// Registers the `ShrProblem` type and its associated functions with the Steel VM.
     fn register(module: &mut BuiltInModule) -> &mut BuiltInModule {
         Self::register_type(module);
+        Self::register_configuration(module);
 
         module
             .register_fn("to-string-step", Self::to_string_step)
@@ -303,7 +289,9 @@ impl Registerable for ShrProblem {
             .register_fn("add-rewrite", Self::add_rewrite)
             .register_fn("add-smt-axiom", Self::add_smt_axiom)
             .register_fn("add-constrain", Self::add_constrain)
+            .register_fn("publish", Self::publish)
             .register_fn("get-report", Self::get_report)
+            .register_fn("get-config", |x: Self| x.0.read().unwrap().config.clone())
             .register_fn("run", Self::run);
 
         Self::register_configuration(module).register_fn("string->duration", |s: String| {

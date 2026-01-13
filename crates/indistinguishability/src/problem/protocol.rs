@@ -124,11 +124,31 @@ impl Problem {
             .with_context(|| "no protocols")?
             .steps()
             .len();
-        let n = NonZeroUsize::new(n).with_context(
-            || "a protocol has no steps, a protocol should always at least have an INIT step",
-        )?;
+        let n = NonZeroUsize::new(n).with_context(|| {
+            "a protocol has no steps, a protocol should always at least have an INIT step"
+        })?;
         Ok(n)
     }
+
+    pub fn declare_step(&mut self, name: String, sorts: Vec<Sort>) -> anyhow::Result<Function> {
+        let n = self.num_steps()?.into();
+        let step = self
+            .declare_function()
+            .inputs(sorts.iter().cloned())
+            .step(n)
+            .name(name)
+            .call();
+        let nptcl = self.num_protocols();
+        self.push_steps((0..nptcl).map(|_| {
+            Step::builder()
+                .id(step.clone())
+                .vars(sorts.iter().map(|&s| crate::fresh!(s)))
+                .build()
+                .unwrap()
+        }));
+        Ok(step)
+    }
+
     /// returns the [Function] associated to the `index`th [Step] if it exists
     pub fn get_step_name(&self, index: usize) -> Option<&Function> {
         self.protocols().first()?.steps().get(index).map(|s| &s.id)
