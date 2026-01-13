@@ -314,6 +314,7 @@ pub trait SyntaxSearcher {
             vars,
             cond,
             msg,
+            ..
         } in ptcl.steps()
         {
             // build the condition object
@@ -352,6 +353,7 @@ pub trait SyntaxSearcher {
                           vars,
                           cond,
                           msg,
+                          ..
                       }| {
                     let vars = vars.iter().map(|v| Formula::Var(v.clone()));
                     let s = rexp!((id #vars*));
@@ -496,6 +498,7 @@ pub trait EgraphSearcher: SyntaxSearcher {
             vars,
             cond,
             msg,
+            ..
         } in ptcl.steps()
         {
             // build the condition object

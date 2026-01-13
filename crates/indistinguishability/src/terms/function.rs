@@ -354,6 +354,8 @@ impl Function {
             "Returns `true` if the function is an `egg` binder.");
     is_fun!(is_temporary; TEMPORARY;
             "Returns `true` if the function is temporary.");
+    is_fun!(is_publish_step; PUBLICATION_STEP | STEP;
+            "Returns `true` if the function is a publications step.");
     is_fun!(is_should_not_declare_in_smt; PROLOG_ONLY | BUILTIN_SMT;
 r" Should not appear in an smt file
 

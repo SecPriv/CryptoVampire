@@ -273,6 +273,7 @@ impl Search {
                           vars,
                           cond,
                           msg,
+                          ..
                       }| {
                     let vars = vars.iter().map(|v| Formula::Var(v.clone()));
                     let s = rexp!((id #vars*));

@@ -131,7 +131,7 @@ impl RuleWithFreshNonce for EncKpRule {
     fn mk_fresh_function(&self, pbl: &mut Problem) -> Function {
         pbl.declare_function()
             .fresh_name("k_enc_kp")
-            .flags(FunctionFlags::NONCE)
+            .flags(FunctionFlags::NONCE | FunctionFlags::FRESH)
             .output(Sort::Nonce)
             .call()
     }

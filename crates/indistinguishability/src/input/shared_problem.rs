@@ -99,31 +99,10 @@ impl ShrProblem {
 
     /// Declares a new step function in the problem.
     fn declare_step(&self, name: String, sorts: Vec<Sort>) -> SResult<Function> {
-        let mut pbl = self.borrow_mut();
-
-        let Some(steps) = pbl.steps() else {
-            return Err(SteelErr::new(
-                ErrorKind::Generic,
-                "can't declare step function, you need to declare at least one protocol first"
-                    .into(),
-            ));
-        };
-        let n = steps.count();
-        let step = pbl
-            .declare_function()
-            .inputs(sorts.iter().cloned())
-            .step(n)
-            .name(name)
-            .call();
-        let nptcl = pbl.num_protocols();
-        pbl.push_steps((0..nptcl).map(|_| {
-            Step::builder()
-                .id(step.clone())
-                .vars(sorts.iter().map(|&s| crate::fresh!(s)))
-                .build()
-                .unwrap()
-        }));
-        Ok(step)
+        match self.borrow_mut().declare_step(name, sorts) {
+            Err(e) => Err(SteelErr::new(ErrorKind::Generic, e.to_string())),
+            Ok(s) => Ok(s),
+        }
     }
 
     /// Declares a new protocol in the problem.

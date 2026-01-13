@@ -324,7 +324,7 @@ impl RuleWithFreshNonce for TopPrfRule {
     fn mk_fresh_function(&self, pbl: &mut Problem) -> Function {
         pbl.declare_function()
             .fresh_name("n_prf")
-            .flags(FunctionFlags::NONCE)
+            .flags(FunctionFlags::NONCE | FunctionFlags::FRESH)
             .output(Sort::Nonce)
             .call()
         // todo!()

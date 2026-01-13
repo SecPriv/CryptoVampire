@@ -272,6 +272,8 @@ pub use nonce::{FreshNonce, mk_no_guessing_smt};
 /// Re-exports the `PRF` struct, representing a pseudo-random function.
 pub use prf::PRF;
 
+mod publication;
+
 /// Provides rules for sanity checking.
 #[cfg(debug_assertions)]
 mod sanity_check;
@@ -316,12 +318,17 @@ pub fn mk_egg_rewrites<N: Analysis<Lang>>(
         lambda::mk_rewrites(pbl),
         if_rewrites::mk_rewrite(pbl),
         constrains::mk_rewrite(pbl),
-        [find_indices::mk_rewrite()]
+        [find_indices::mk_rewrite()],
+        publication::mk_rewrites(pbl),
     ]
 }
 
 pub fn mk_smt_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
-    chain![smt::mk_prelude(pbl), constrains::mk_smt(pbl)]
+    chain![
+        smt::mk_prelude(pbl),
+        constrains::mk_smt(pbl),
+        publication::mk_smt(pbl)
+    ]
 }
 
 /// Add terms to the egraph / union terms

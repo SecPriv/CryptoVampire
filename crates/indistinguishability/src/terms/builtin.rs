@@ -263,7 +263,7 @@ mk_builtin_funs!(
     /// position `0`)
     INIT "init" {
         signature: s!(Time, 0),
-        flags: f!(STEP),
+        flags: f!(STEP | PUBLICATION_STEP),
         step_idx: 0,
     };
 
