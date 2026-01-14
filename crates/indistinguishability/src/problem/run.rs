@@ -77,6 +77,7 @@ impl Problem {
         debug_assert!(self.valid());
 
         let cp = self.checkpoint();
+        // code block to ensure cleanup
         let res = 'a: {
             let res = self.run_solver_internal(p1, p2);
             if res || !self.config.guided_nonce_search {
@@ -136,122 +137,111 @@ impl Problem {
         let mut total = 0;
         let checkpoint = self.checkpoint();
 
-        // the result of the computation
-        let mut res = true;
+        // code block to ensure cleanup
+        let res = 'a: {
+            // the result of the computation
+            let mut res = true;
 
-        // the steps in the problem
-        let mut steps = {
-            // just to make things cleaner
-            let get_steps = |i: usize| {
-                self.protocols[i]
-                    .steps()
-                    .iter()
-                    .map(|s| s.id.clone())
-                    .collect_vec()
+            // the steps in the problem
+            let mut steps = {
+                // just to make things cleaner
+                let get_steps = |i: usize| {
+                    self.protocols[i]
+                        .steps()
+                        .iter()
+                        .map(|s| s.id.clone())
+                        .collect_vec()
+                };
+
+                let steps = get_steps(p1);
+                assert!(
+                    steps == get_steps(p2),
+                    "not the same steps in both protocols!"
+                );
+                steps.into_iter().enumerate()
             };
 
-            let steps = get_steps(p1);
-            assert!(
-                steps == get_steps(p2),
-                "not the same steps in both protocols!"
-            );
-            steps.into_iter().enumerate()
-        };
+            if let Some((idx, init)) = steps.next() {
+                debug_assert_eq!(idx, 0);
+                self.current_step = Some(CurrentStep { idx, args: vec![] });
 
-        if let Some((idx, init)) = steps.next() {
-            debug_assert_eq!(idx, 0);
-            self.current_step = Some(CurrentStep { idx, args: vec![] });
+                tr!("running input step");
+                assert_eq!(init.name, "init");
 
-            tr!("running input step");
-            assert_eq!(init.name, "init");
+                // we add to `extra_smt` things specific to this run that need to be reflected in smt
+                self.extra_smt_mut()
+                    .push(Smt::mk_assert(smt!((HAPPENS init))));
 
-            // we add to `extra_smt` things specific to this run that need to be reflected in smt
-            self.extra_smt_mut()
-                .push(Smt::mk_assert(smt!((HAPPENS init))));
+                let mut pgrm = self.mk_program();
 
-            let mut pgrm = self.mk_program();
+                res &= pgrm
+                    .run_expr(
+                        rexp!((EQUIV EMPTY EMPTY (UNFOLD_MSG init p1f) (UNFOLD_MSG init p2f)))
+                            .as_egg_ground(),
+                        depth,
+                    )
+                    .as_bool();
 
-            // {
-            //     // same but for the egraph
-            //     let egraph = pgrm.egraph_mut();
-            //     let id_true = egraph.add_expr(&TRUE.app_empty());
-            //     let id_h = egraph.add_expr(&HAPPENS.app(&[init.app_empty()]));
-            //     egraph.union(id_true, id_h);
-            // }
-
-            res &= pgrm
-                .run_expr(
-                    rexp!((EQUIV EMPTY EMPTY (UNFOLD_MSG init p1f) (UNFOLD_MSG init p2f)))
-                        .as_egg_ground(),
-                    depth,
-                )
-                .as_bool();
-
-            cache_hits += pgrm.get_memo_hit();
-            total += pgrm.get_num_calls();
-        } else {
-            trace!("empty problem");
-            return true;
-        }
-
-        for (idx, s) in steps {
-            self.reset_to(&checkpoint);
-
-            if !res {
-                // early exists if we failed to prove one result
-                tr!("false!");
-                return res;
+                cache_hits += pgrm.get_memo_hit();
+                total += pgrm.get_num_calls();
+            } else {
+                trace!("empty problem");
+                break 'a true;
             }
 
-            tr!("running step {}", s.name);
+            for (idx, s) in steps {
+                self.reset_to(&checkpoint);
 
-            // we ensure we remove the extra stuff from the previous run
-            self.extra_smt_mut().truncate(base_smt_n);
+                if !res {
+                    // early exists if we failed to prove one result
+                    tr!("false!");
+                    break 'a res;
+                }
 
-            // add and collect functions that will serve as ground indices for the search
-            let args = s
-                .signature
-                .inputs
-                .iter()
-                .enumerate()
-                .map(|(_i, &sort)| {
-                    self.declare_function()
-                        .output(sort)
-                        .fresh_name(format!("{}_i", s.name))
-                        .temporary()
-                        .call()
-                })
-                .collect_vec();
+                tr!("running step {}", s.name);
 
-            self.current_step = Some(CurrentStep {
-                idx,
-                args: args.clone(),
-            });
+                // we ensure we remove the extra stuff from the previous run
+                self.extra_smt_mut().truncate(base_smt_n);
 
-            self.extra_smt.push(Smt::mk_assert({
-                let args = args.iter().map(|f| smt!(f));
-                smt!((HAPPENS (s #args*)))
-            }));
+                // add and collect functions that will serve as ground indices for the search
+                let args = s
+                    .signature
+                    .inputs
+                    .iter()
+                    .enumerate()
+                    .map(|(i, &sort)| {
+                        self.declare_function()
+                            .output(sort)
+                            .fresh_name(format!("{}_{i:}", s.name))
+                            .temporary()
+                            .call()
+                    })
+                    .collect_vec();
 
-            let s = rexp!((s #(args.iter().map(|f| rexp!(f)))*));
-            let goal = rexp!((EQUIV (MACRO_FRAME (PRED #s) p1f) (MACRO_FRAME (PRED #s) p2f)
+                self.current_step = Some(CurrentStep {
+                    idx,
+                    args: args.clone(),
+                });
+
+                self.extra_smt.push(Smt::mk_assert({
+                    let args = args.iter().map(|f| smt!(f));
+                    smt!((HAPPENS (s #args*)))
+                }));
+
+                let s = rexp!((s #(args.iter().map(|f| rexp!(f)))*));
+                let goal = rexp!((EQUIV (MACRO_FRAME (PRED #s) p1f) (MACRO_FRAME (PRED #s) p2f)
                 (MACRO_FRAME #s p1f) (MACRO_FRAME #s p2f)))
-            .as_egg_ground();
+                .as_egg_ground();
 
-            let mut pgrm = self.mk_program();
+                let mut pgrm = self.mk_program();
 
-            // {
-            //     let egraph = pgrm.egraph_mut();
-            //     let id_true = egraph.add(TRUE.app_id([]));
-            //     let id_h = egraph.add_expr(&rexp!((HAPPENS #s)).as_egg_ground());
-            //     egraph.union(id_true, id_h);
-            // }
+                res &= pgrm.run_expr(goal, depth).as_bool();
 
-            res &= pgrm.run_expr(goal, depth).as_bool();
-
-            cache_hits += pgrm.get_memo_hit();
-            total += pgrm.get_num_calls();
-        }
+                cache_hits += pgrm.get_memo_hit();
+                total += pgrm.get_num_calls();
+            }
+            res
+        };
 
         self.reset_to(&checkpoint);
 
