@@ -2,7 +2,8 @@ use std::borrow::Cow;
 
 use egg::{Pattern, Searcher};
 use golgge::{Dependancy, Program, Rule};
-use itertools::{chain, Itertools};
+use itertools::{Itertools, chain};
+use static_init::dynamic;
 
 use crate::libraries::deduce::GetDeduce;
 use crate::problem::{PAnalysis, PRule, RcRule};
@@ -11,7 +12,7 @@ use crate::terms::{
     MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, PRED, UNFOLD_COND,
     UNFOLD_MSG, VAMPIRE,
 };
-use crate::{decl_vars, rexp, Lang};
+use crate::{Lang, rexp};
 
 /// Creates a set of static deduction rules.
 pub fn mk_rules() -> impl Iterator<Item = RcRule> {
@@ -127,78 +128,9 @@ pub fn mk_rules() -> impl Iterator<Item = RcRule> {
         (FRESH_NONCE (IS_FRESH_NONCE #x) #u #h1).
     };
 
-    chain![deduce_macro.map(|x| x.into_mrc()), [vampire_fail.into_mrc(), DeduceNonceRule::new().into_mrc()], others.into_iter().map(|x| x.into_mrc())]
-}
-
-struct DeduceNonceRule {
-    pattern: Pattern<Lang>,
-    vars: [crate::terms::Variable; 5], // u, v, x, h1, h2
-    subgoals: [Pattern<Lang>; 2],
-}
-
-impl DeduceNonceRule {
-    fn new() -> Self {
-        // (deduce_m #u #v (NONCE #x) (NONCE #x) #h1 #h2)
-        decl_vars![u, v, x, h1, h2];
-        let pattern = Pattern::from(&rexp!((BIT_DEDUCE #u #v (NONCE #x) (NONCE #x) #h1 #h2)));
-        Self {
-            pattern,
-            vars: [u.clone(), v.clone(), x.clone(), h1.clone(), h2.clone()],
-            subgoals: [
-                Pattern::from(&rexp!((FRESH_NONCE #x #u #h1))),
-                Pattern::from(&rexp!((FRESH_NONCE #x #v #h2))),
-            ],
-        }
-    }
-}
-
-impl<'a, R> Rule<Lang, PAnalysis<'a>, R> for DeduceNonceRule {
-    fn name(&self) -> Cow<'_, str> {
-        Cow::Borrowed("deduce fresh nonces (custom)")
-    }
-
-    fn search(&self, prgm: &mut Program<Lang, PAnalysis<'a>, R>, goal: egg::Id) -> Dependancy {
-        let matches = self.pattern.search_eclass(prgm.egraph(), goal);
-        let mut ret = Vec::new();
-
-        let [_, _, x_var, ..] = &self.vars;
-
-        for match_ in matches {
-            for subst in &match_.substs {
-                let x = subst[x_var.as_egg()];
-
-                let nodes = &prgm.egraph()[x].nodes;
-                let mut nonce_func = None;
-
-                for node in nodes {
-                    // node is Lang (InnerLang)
-                    // InnerLang acts like a wrapper around Function and args
-                    if node.head.is_nonce() && !node.head.is_fresh() {
-                         nonce_func = Some(node.head.clone());
-                         break;
-                    }
-                }
-
-                if let Some(f) = nonce_func {
-                    prgm.egraph_mut()
-                        .analysis
-                        .pbl_mut()
-                        .register_potential_public_nonce(f);
-                }
-
-                ret.push(
-                    self.subgoals
-                        .iter()
-                        .map(|g| g.apply_susbt(prgm.egraph_mut(), subst))
-                        .collect_vec(),
-                );
-            }
-        }
-
-        ret.into_iter().collect()
-    }
-
-    fn debug(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "deduce-fresh-nonce")
-    }
+    chain![
+        deduce_macro.map(|x| x.into_mrc()),
+        [vampire_fail.into_mrc()],
+        others.into_iter().map(|x| x.into_mrc())
+    ]
 }

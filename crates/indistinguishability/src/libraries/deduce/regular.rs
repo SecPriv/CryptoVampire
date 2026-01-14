@@ -58,27 +58,3 @@ fn mk_deduce_rule(f: &Function) -> PrologRule<Lang> {
         payload: None,
     }
 }
-
-// fn mk_input(f: &Function, s: Sort, vars: [Var; 4], left: &[Var], right: &[Var]) -> Pattern<Lang> {
-//     let left = f.app_var(&var_as_recexpr(left));
-//     let right = f.app_var(&var_as_recexpr(right));
-//     let vars = var_as_recexpr(&vars);
-//     let ast: RecExpr<LangVar> = s.get_deduce().app_var(&[
-//         vars[0].as_slice(),
-//         &vars[1],
-//         &left,
-//         &right,
-//         &vars[2],
-//         &vars[3],
-//     ]);
-//     Pattern::new(ast)
-// }
-
-// /// this generate `u,v|>a, b#h1, h2` using the right sort
-// ///
-// /// `vars` is [u, v, a, b, h1, h2]
-// fn mk_dep(vars: [Var; 6], s: Sort) -> Option<Pattern<Lang>> {
-//     let vars = var_as_recexpr(&vars);
-//     let ast = s.try_get_deduce()?.app_var(&vars);
-//     Some(Pattern::new(ast))
-// }

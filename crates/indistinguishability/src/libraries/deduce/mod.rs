@@ -1,7 +1,7 @@
 use itertools::chain;
 
 use crate::Problem;
-use crate::problem::RcRule;
+use crate::problem::{PRule, RcRule};
 use crate::terms::{BIT_DEDUCE, BOOL_DEDUCE, Function, Sort};
 
 /// Provides rules for deducing properties of quantifiers.
@@ -11,11 +11,14 @@ mod regular;
 /// Provides static deduction rules.
 mod static_rules;
 
+mod nonce;
+
 pub fn mk_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> + use<'_> {
     chain! {
       regular::mk_rules(pbl),
       quantifier::mk_rules(pbl),
       static_rules::mk_rules(),
+      [nonce::DeduceNonceRule.into_mrc()]
     }
 }
 
