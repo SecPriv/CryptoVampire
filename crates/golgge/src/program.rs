@@ -3,9 +3,9 @@ use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
-use std::ops::Deref;
 #[cfg(feature = "sync")]
 use std::ops::DerefMut;
+use std::ops::{ControlFlow, Deref};
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::result;
@@ -402,11 +402,7 @@ where
                 }
             }
 
-            debug_assert!(
-                !self.is_memo_enabled() || self.memo.contains_key(&goal),
-                "({goal:}) {}",
-                self.egraph().id_to_expr(goal).pretty(100)
-            );
+            self.check_memo_goal(goal);
 
             let Some(r) = self.rules.get(i).cloned() else {
                 break None; // no more path to a proof
@@ -422,7 +418,9 @@ where
             }
 
             let cut = search.cut();
+            self.check_memo_goal(goal);
             self.rebuild();
+            self.check_memo_goal(goal);
 
             if self.is_tracing_enabled(DebugLevel::RULE) && !search.is_impossible() {
                 mtrace!(
@@ -463,11 +461,7 @@ where
                 }
             }
 
-            debug_assert!(
-                !self.is_memo_enabled() || self.memo.contains_key(&goal),
-                "({goal:}) {}",
-                self.egraph().id_to_expr(goal).pretty(100)
-            );
+            self.check_memo_goal(goal);
 
             let ret = search
                 .inner()
@@ -528,6 +522,16 @@ where
         result
     }
 
+    #[inline]
+    #[track_caller]
+    fn check_memo_goal(&mut self, goal: Id) {
+        debug_assert!(
+            !self.is_memo_enabled() || self.memo.contains_key(&goal),
+            "({goal:}) {}",
+            self.egraph().id_to_expr(goal).pretty(100)
+        );
+    }
+
     /// Rebuild the [EGraph] according the set of rules defined by `rules` and
     /// update all the relevant datastructures
     ///
@@ -578,16 +582,9 @@ where
 
         for (mut id, mut status) in memo {
             status.rebuild(egraph);
-            canonicalize_id_mut(&mut id, egraph);
-            use ::std::collections::hash_map::Entry::*;
-            match self.memo_mut().entry(id) {
-                Occupied(mut entry) if !status.is_in_progress() => {
-                    entry.insert(status);
-                }
-                Vacant(entry) => {
-                    entry.insert(status);
-                }
-                _ => continue,
+            self.update_memo_safe(id, status.clone());
+            if canonicalize_id_mut(&mut id, egraph) {
+                self.update_memo_safe(id, status)
             }
         }
 
@@ -595,6 +592,20 @@ where
         self.check_proof_consistency().unwrap();
 
         mtrace!(self, REBUILDS, "✅ done!");
+    }
+
+    fn update_memo_safe(&mut self, id: Id, status: MemoStatus<R>) {
+        use ::std::collections::hash_map::Entry::*;
+        match self.memo_mut().entry(id) {
+            Occupied(mut entry) if !status.is_in_progress() => {
+                // TODO: smarter overwrite
+                entry.insert(status);
+            }
+            Vacant(entry) => {
+                entry.insert(status);
+            }
+            _ => {}
+        }
     }
 
     pub fn check_proof_consistency(&self) -> anyhow::Result<()> {
