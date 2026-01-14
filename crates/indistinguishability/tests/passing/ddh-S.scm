@@ -33,9 +33,6 @@
 
 (define empty-cond (lambda _ mtrue))
 
-;; we need to give the attacker the private keys
-; (publish pbl () skP)
-; (publish pbl () skS)
 ;; same for e^a and e^b
 (publish pbl ((i Index)) (mexp g (a i)))
 (publish pbl ((i Index)) (mexp g (b i)))
@@ -162,6 +159,9 @@
 ; This is not the case default for efficiency reasons
 (bind ((i Index) (j Index))
   (cv-register-fresh-nonce ddh (list i j) (k i j)))
+
+; enable looking for extra things to publish
+(cv-set-guided-nonce-search pbl #t)
 
 ;; configuration
 (cv-set-trace pbl #t)

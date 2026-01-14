@@ -106,8 +106,9 @@
 ;         (macro_exec (exposes-nt i j) p) (happens (exposes-nt i j))))
 ;     (cv-add-rewrite pbl (cv-mk-rewrite "nr_exec" (list i j p)
 ;         (macro_exec (exposes-nr i) p) (happens (exposes-nr i))))))
-(publish pbl ((i Index) (j Index)) (nt i j))
-(publish pbl ((i Index)) (nr i))
+(cv-set-guided-nonce-search pbl #t)
+; (publish pbl ((i Index) (j Index)) (nt i j))
+; (publish pbl ((i Index)) (nr i))
 
 (initialize-as-senc senc enc dec)
 
