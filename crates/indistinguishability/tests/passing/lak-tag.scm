@@ -96,7 +96,7 @@
 (cv-add-smt-axiom pbl (forall [ (j Index) ] (lt (r j) (r2 j))))
 
 ;; configuration
-(cv-set-trace pbl #t)
+; (cv-set-trace pbl #t)
 (cv-set-vampire-timeout pbl (cv-string->duration "3s"))
 (cv-set-node-limit pbl 100000)
 (cv-set-prf-limit pbl 1)

@@ -90,7 +90,7 @@
 (add-constrain pbl (i j) (<> (rs i j) (rf i)))
 
 ;; configuration
-(cv-set-trace pbl #t)
+; (cv-set-trace pbl #t)
 (cv-set-vampire-timeout pbl (cv-string->duration "10s"))
 
 (if (run pbl p1 p2)

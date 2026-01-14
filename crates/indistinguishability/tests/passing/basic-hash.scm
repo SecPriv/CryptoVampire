@@ -75,7 +75,7 @@
             (lt (tag i j) t))))))); <- very important
 
 ;; configuration
-(cv-set-trace pbl #t)
+; (cv-set-trace pbl #t)
 (cv-set-vampire-timeout pbl (cv-string->duration "2s"))
 
 (if (run pbl p1 p2)

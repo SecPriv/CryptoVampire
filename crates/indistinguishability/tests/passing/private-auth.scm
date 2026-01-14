@@ -122,7 +122,7 @@
         (m_ite c (bitstring-length m1) (bitstring-length m2))))))
 
 ;; configuration
-(cv-set-trace pbl #t)
+; (cv-set-trace pbl #t)
 (cv-set-vampire-timeout pbl (cv-string->duration "300ms"))
 (cv-set-node-limit pbl 10000000)
 ; (cv-set-node-limit pbl 200)

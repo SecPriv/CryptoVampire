@@ -151,10 +151,10 @@
 (cv-set-guided-nonce-search pbl #t)
 
 ;; configuration
-(cv-set-trace pbl #t)
+; (cv-set-trace pbl #t)
 (cv-set-vampire-timeout pbl (cv-string->duration "300ms"))
 (cv-set-node-limit pbl 100000)
-(cv-set-keep-smt-files pbl #t)
+; (cv-set-keep-smt-files pbl #t)
 
 (initialize-as-ddh ddh g mexp)
 
