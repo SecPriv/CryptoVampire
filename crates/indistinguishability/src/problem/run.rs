@@ -77,47 +77,47 @@ impl Problem {
         debug_assert!(self.valid());
 
         let cp = self.checkpoint();
-        let res = self.run_solver_internal(p1, p2);
+        let res = 'a: {
 
-        if res || !self.config.guided_nonce_search {
-            self.reset_to(&cp);
-            return res;
-        }
+            let res = self.run_solver_internal(p1, p2);
+            if res || !self.config.guided_nonce_search {
+                break 'a res;
+            }
 
-        let res = if self.switch_to_run_public_nonce() {
-            'a: loop {
-                let candidates = match &mut self.nonce_finder {
-                    NoncePublicSearchState::Run(iter) => iter.next(),
-                    _ => unreachable!("switch_to_run_public_nonce ensures we are in Run state"),
-                };
-
-                let Some(candidates) = candidates else {
-                    break 'a false;
-                };
-
-                println!("running with p [{}]", candidates.iter().join(", "));
-
-                self.report.tested_nonces.push(candidates.clone());
-                self.reset_to(&cp);
-
-                for nonce in candidates {
-                    let vars = nonce.args_vars().collect_vec();
-
-                    let term = {
-                        let vars = vars.iter().map(|x| x.as_formula());
-                        rexp!((NONCE (nonce #vars*)))
+            if self.switch_to_run_public_nonce() {
+                loop {
+                    let candidates = match &mut self.nonce_finder {
+                        NoncePublicSearchState::Run(iter) => iter.next(),
+                        _ => unreachable!("switch_to_run_public_nonce ensures we are in Run state"),
                     };
 
-                    self.publish(PublicTerm { vars, term }).unwrap();
-                }
+                    let Some(candidates) = candidates else {
+                        break 'a false;
+                    };
 
-                let res = self.run_solver_internal(p1, p2);
-                if res {
-                    break 'a true;
+                    println!("running with p [{}]", candidates.iter().join(", "));
+
+                    self.report.tested_nonces.push(candidates.clone());
+                    self.reset_to(&cp);
+
+                    for nonce in candidates {
+                        let vars = nonce.args_vars().collect_vec();
+
+                        let term = {
+                            let vars = vars.iter().map(|x| x.as_formula());
+                            rexp!((NONCE (nonce #vars*)))
+                        };
+
+                        self.publish(PublicTerm { vars, term }).unwrap();
+                    }
+
+                    let res = self.run_solver_internal(p1, p2);
+                    if res {
+                        break 'a true;
+                    }
                 }
-            }
-        } else {
-            false
+            };
+            unreachable!()
         };
 
         self.reset_to(&cp);
