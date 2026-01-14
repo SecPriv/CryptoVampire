@@ -78,7 +78,6 @@ impl Problem {
 
         let cp = self.checkpoint();
         let res = 'a: {
-
             let res = self.run_solver_internal(p1, p2);
             if res || !self.config.guided_nonce_search {
                 break 'a res;

@@ -127,7 +127,7 @@ pub struct Configuration {
     pub complete_and: bool,
 
     /// Guided search for publishable nonce
-    /// 
+    ///
     /// The proof sometimes requires to "publish" messages that should be secret
     /// by the protocol specification. This features does a guided brute force
     /// search to find such nonces.

@@ -8,7 +8,7 @@ pub struct Checkpoint {
     steps: usize,
     constrains: usize,
     temporary: (usize, usize),
-    public_terms: usize
+    public_terms: usize,
 }
 
 impl Checkpoint {
@@ -20,7 +20,7 @@ impl Checkpoint {
             steps: pbl.protocols[0].steps().len(),
             constrains: pbl.constrains.len(),
             temporary: pbl.functions().temporary_len(),
-            public_terms: pbl.public_terms.len()
+            public_terms: pbl.public_terms.len(),
         }
     }
 
@@ -51,6 +51,6 @@ impl Problem {
     }
 
     pub fn reset_to(&mut self, chck: &Checkpoint) {
-      chck.reset_to(self);
+        chck.reset_to(self);
     }
 }

@@ -7,7 +7,6 @@ use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
 use crate::input::Registerable;
-
 use crate::problem::Function;
 
 #[derive(Debug, Clone, Steel, Default)]
@@ -73,7 +72,10 @@ impl Display for Report {
             self.total_run_calls,
             self.get_hit_rate() * 100.0,
             humantime::format_duration(self.max_vampire),
-            self.tested_nonces.iter().map(|x| format!("[{}]", x.iter().join(", "))).join(", ")
+            self.tested_nonces
+                .iter()
+                .map(|x| format!("[{}]", x.iter().join(", ")))
+                .join(", ")
         )
     }
 }

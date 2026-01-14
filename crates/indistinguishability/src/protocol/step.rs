@@ -121,7 +121,7 @@ impl Step {
             Pattern::from(&self.msg),
         )
         .unwrap();
-        
+
         [unfold_cond, unfold_msg].into_iter()
     }
 

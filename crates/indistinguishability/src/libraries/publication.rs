@@ -89,8 +89,9 @@ pub fn mk_smt(pbl: &Problem) -> impl Iterator<Item = MSmt> {
             })
             .map(MSmt::Assert);
 
-        let exec =
-            MSmt::Assert(smt!((forall ((#p Protocol)) (forall #(vars.clone()) (= (MACRO_EXEC #sf #p) (HAPPENS #sf))))));
+        let exec = MSmt::Assert(
+            smt!((forall ((#p Protocol)) (forall #(vars.clone()) (= (MACRO_EXEC #sf #p) (HAPPENS #sf))))),
+        );
         res.extend(chain!([comment, exec], order));
     }
 

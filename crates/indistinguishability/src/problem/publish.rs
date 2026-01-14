@@ -3,9 +3,9 @@ use itertools::{Itertools, chain};
 use logic_formula::AsFormula;
 use rustc_hash::FxHashSet;
 
+use crate::Problem;
 use crate::protocol::Step;
 use crate::terms::{Formula, Function, FunctionFlags, Sort, Variable};
-use crate::Problem;
 
 pub type MI = impl Iterator<Item = Vec<Function>>;
 
@@ -120,6 +120,6 @@ fn mk_iterator(candidates: FxHashSet<Function>, pbl: &Problem) -> MI {
         .into_iter()
         .powerset();
     chain!(to_test_first, others)
-    .filter(|x| !x.is_empty())
-    .unique()
+        .filter(|x| !x.is_empty())
+        .unique()
 }

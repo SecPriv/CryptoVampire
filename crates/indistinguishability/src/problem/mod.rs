@@ -6,9 +6,7 @@ use utils::implvec;
 
 use crate::problem::publish::NoncePublicSearchState;
 use crate::protocol::Protocol;
-use crate::terms::{
-    CryptographicAssumption, Formula, Function, FunctionCollection, Rewrite,
-};
+use crate::terms::{CryptographicAssumption, Formula, Function, FunctionCollection, Rewrite};
 use crate::{Configuration, MSmt};
 
 mod analysis;
@@ -38,7 +36,6 @@ mod checkpoint;
 
 mod publish;
 pub use publish::PublicTerm;
-
 
 /// A problem for the solver to solve
 ///
@@ -86,7 +83,6 @@ pub struct Problem {
 
     nonce_finder: NoncePublicSearchState,
 }
-
 
 /// Represents the current step in the execution of the problem
 #[allow(dead_code)]
@@ -155,7 +151,7 @@ impl Problem {
             constrains,
             report: Default::default(),
             public_terms: Default::default(),
-            nonce_finder: Default::default()
+            nonce_finder: Default::default(),
         }
     }
 }
