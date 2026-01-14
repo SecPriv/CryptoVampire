@@ -132,31 +132,28 @@
       ko)))
 
 (bind ((j Index) (t Time) (p Protocol))
-  (let [(tmp (findst ((i Index) (k Index))
-          (cand
-            (eq (sel1of2 (dec (macro_input (r2 j) p) (mk i k p))) tagT)
-            (eq (sel1of2 (sel2of2 (dec (macro_input (r2 j) p) (mk i k p)))) (nr j)))
-          (enc
-            (tuple tagR (tuple (nr j) (nt i j)))
-            (rr j)
-            (mk i k p))
-          ko))]
-
-
-  (begin
-; (displayln (cv-string-of-formula (m_ite mtrue tmp mempty)))
-  
-  (cv-add-rewrite pbl (cv-mk-rewrite "lemma" (list t j p)
-      ; (let ((x (mk-fdst1 (macro_input (r2 j) p) j p)))
-      ; (m_ite mtrue x  mempty))
-      ; (m_ite mtrue tmp mempty)
-      ; tmp
-      ; ok
-      (m_ite (macro_exec (r2 j) p) (mk-fdst1 (macro_input (r2 j) p) j p) mempty)
-      (m_ite (macro_exec (r2 j) p) (mk-fdst2 (r2 j) j p) mempty)
-      ; ok
-      ))
-  )))
+  (let [ (tmp (findst ((i Index) (k Index))
+        (cand
+          (eq (sel1of2 (dec (macro_input (r2 j) p) (mk i k p))) tagT)
+          (eq (sel1of2 (sel2of2 (dec (macro_input (r2 j) p) (mk i k p)))) (nr j)))
+        (enc
+          (tuple tagR (tuple (nr j) (nt i j)))
+          (rr j)
+          (mk i k p))
+        ko)) ]
+    (begin
+      ; (displayln (cv-string-of-formula (m_ite mtrue tmp mempty)))
+      
+      (cv-add-rewrite pbl (cv-mk-rewrite "lemma" (list t j p)
+          ; (let ((x (mk-fdst1 (macro_input (r2 j) p) j p)))
+          ; (m_ite mtrue x  mempty))
+          ; (m_ite mtrue tmp mempty)
+          ; tmp
+          ; ok
+          (m_ite (macro_exec (r2 j) p) (mk-fdst1 (macro_input (r2 j) p) j p) mempty)
+          (m_ite (macro_exec (r2 j) p) (mk-fdst2 (r2 j) j p) mempty)
+          ; ok
+          )))))
 
 
 (cv-add-smt-axiom pbl (mnot (eq tagT tagR)))
