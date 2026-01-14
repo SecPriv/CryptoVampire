@@ -95,7 +95,9 @@ impl Problem {
                         break 'a false;
                     };
 
-                    println!("running with p [{}]", candidates.iter().join(", "));
+                    if self.config.trace {
+                    eprintln!("re-running with published nonces [{}]", candidates.iter().join(", "));
+                    }
 
                     self.report.tested_nonces.push(candidates.clone());
                     self.reset_to(&cp);

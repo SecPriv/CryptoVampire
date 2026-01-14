@@ -90,7 +90,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SearchRule {
 
         if let Some(matches) = trigger_k.search_eclass(prgm.egraph(), goal) {
             assert!(!matches.substs.is_empty());
-            println!("matched trigger_k for {goal:}");
+            tr!("matched trigger_k for {goal:}");
             for subst in matches.substs {
                 let [k, t, h] = [K, T, H]
                     .map(|v| subst.get(v.as_egg()).unwrap())
@@ -111,7 +111,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SearchRule {
 
         if let Some(matches) = trigger_o.search_eclass(prgm.egraph(), goal) {
             assert!(!matches.substs.is_empty());
-            println!("matched trigger_o for {goal:}");
+            tr!("matched trigger_o for {goal:}");
             for subst in matches.substs {
                 let [k, t, h] = [K, T, H]
                     .map(|v| subst.get(v.as_egg()).unwrap())
@@ -127,7 +127,6 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SearchRule {
                 })
                 .search_id_timepoint(prgm, exec, p, t, h)
                 .unwrap();
-                println!("here: {result}");
                 ereturn_if!(result, Dependancy::axiom());
             }
         }

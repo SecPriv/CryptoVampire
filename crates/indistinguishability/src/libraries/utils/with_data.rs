@@ -1,6 +1,6 @@
 use egg::{Analysis, EGraph, Id, Pattern};
 use itertools::{Itertools, chain, izip};
-use log::warn;
+use log::{trace, warn};
 use rustc_hash::FxHashSet;
 use static_init::dynamic;
 use utils::transposer::Transposable;
@@ -197,7 +197,7 @@ pub trait RuleWithFreshNonce {
                     PATTERN_FALSE.clone(),
                 )
                 .unwrap();
-                println!("adding {rw_rule:?}");
+                trace!("adding {rw_rule:?}");
                 pgrm.add_eq_rule(rw_rule);
             }
 

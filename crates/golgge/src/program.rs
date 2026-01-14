@@ -398,7 +398,7 @@ where
                 if i == 0 {
                     return res;
                 } else {
-                    println!("not skipping !!!!!")
+                    mtrace!(self, RULE, "not skipping !!!!!")
                 }
             }
 

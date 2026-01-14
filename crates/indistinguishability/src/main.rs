@@ -39,7 +39,7 @@ pub fn main() {
                     panic!("{err}")
                 } else {
                     eprintln!("{}", e.emit_result_to_string("stdin", &pgrm));
-                    panic!("Steel crashed and we could get a nice error out of it...");
+                    panic!("Steel crashed and we could not get a nice error out of it...");
                 }
             }
         }

@@ -21,7 +21,6 @@ pub fn mk_rewrites<N: Analysis<Lang>>(
 
     for s in pub_steps {
         econtinue_if!(s == INIT);
-        println!("{s}");
         assert!(s.is_publish_step());
 
         let vars = s.args_sorts().map(|x| fresh!(x).as_formula());

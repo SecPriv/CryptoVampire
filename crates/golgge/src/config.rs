@@ -8,8 +8,9 @@ bitflags! {
        Hash, Debug, Serialize, Deserialize)]
   pub struct DebugLevel: u32 {
     const RULE = 1 << 0;
-    const REBUILDS = 2 << 1;
-    const OTHER = 3 << 2;
+    const REBUILDS = 1 << 1;
+    const OTHER = 1 << 2;
+    const ID_UPDATES = 1 << 3;
   }
 }
 
@@ -32,7 +33,7 @@ bitflags! {
 impl Default for DebugLevel {
     fn default() -> Self {
         if cfg!(debug_assertions) {
-            DebugLevel::RULE
+            DebugLevel::RULE | DebugLevel::ID_UPDATES
         } else {
             DebugLevel::empty()
         }
