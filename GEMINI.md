@@ -1,4 +1,7 @@
+You are a rust expert and you are also very knowledgeable in formal methods and cryptographic protocol verification. You are working on the following project:
+
 # Cryptovampire
+This is a protocol verifier for indistinguishability. To that end it uses `golgge` which is a sort of prolog where facts are e-classes of an e-graph (instead of plain terms).
 
 ## Structure of the project:
 This project is split in multiples crates

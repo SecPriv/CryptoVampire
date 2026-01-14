@@ -3,6 +3,7 @@ use std::collections::HashMap;
 
 use itertools::chain;
 use log::trace;
+use steel::rvals::CustomType;
 
 use super::{BUILTINS, Function, PARSING_PAIRS};
 use crate::terms::Quantifier;
@@ -148,11 +149,34 @@ impl FunctionCollection {
             ..
         } = self;
 
-        map_function.retain(|_, f| temporary_functions.contains(f));
+        map_function.retain(|_, f| !temporary_functions.contains(f));
 
         temporary_functions.clear();
         temporary_quantifiers.clear();
         assert!(self.valid());
+    }
+
+    pub(crate) fn temporary_len(&self) -> (usize, usize) {
+        (
+            self.temporary_functions.len(),
+            self.temporary_quantifiers.len(),
+        )
+    }
+
+    pub(crate) fn truncate_temporary(&mut self, (len_f, len_q): (usize, usize)) {
+        let Self {
+            temporary_functions,
+            temporary_quantifiers,
+            map_function,
+            ..
+        } = self;
+
+        temporary_quantifiers.truncate(len_q);
+        let funs = temporary_functions.drain(len_f..);
+
+        for f in funs {
+            // map_function.remove(f.name());
+        }
     }
 }
 

@@ -2,11 +2,14 @@ use std::fmt::Display;
 use std::path::PathBuf;
 use std::time::Duration;
 
+use itertools::Itertools;
 use steel::steel_vm::builtin::BuiltInModule;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
 use crate::input::Registerable;
+
+use crate::problem::Function;
 
 #[derive(Debug, Clone, Steel, Default)]
 pub struct Report {
@@ -15,6 +18,7 @@ pub struct Report {
     pub(crate) total_run_calls: u64,
     pub(crate) total_cache_hits: u64,
     pub(crate) runtime: Duration,
+    pub(crate) tested_nonces: Vec<Vec<Function>>,
 }
 
 impl Report {
@@ -37,6 +41,10 @@ impl Report {
     pub fn get_runtime(&self) -> Duration {
         self.runtime
     }
+
+    pub fn get_tested_nonces(&self) -> Vec<Vec<Function>> {
+        self.tested_nonces.clone()
+    }
 }
 
 impl Registerable for Report {
@@ -49,6 +57,7 @@ impl Registerable for Report {
             .register_fn("get-total-cache-hits", Self::get_total_cache_hits)
             .register_fn("get-hit-rate", Self::get_hit_rate)
             .register_fn("get-runtime", Self::get_runtime)
+            .register_fn("get-tested-nonces", Self::get_tested_nonces)
             .register_fn("print-report", Self::to_string)
     }
 }
@@ -58,13 +67,14 @@ impl Display for Report {
         writeln!(
             f,
             "Report:\n\truntime: {}\n\tvampire: {}\n\tcache hits: {:}\n\ttotal calls: {:}\n\thit \
-             rate: {:.2}%\n\tmax vampire: {}",
+             rate: {:.2}%\n\tmax vampire: {}\n\ttested nonces: [{}]",
             humantime::format_duration(self.get_runtime()),
             humantime::format_duration(self.get_time_spent_in_vampire()),
             self.total_cache_hits,
             self.total_run_calls,
             self.get_hit_rate() * 100.0,
             humantime::format_duration(self.max_vampire),
+            self.tested_nonces.iter().map(|x| format!("[{}]", x.iter().join(", "))).join(", ")
         )
     }
 }

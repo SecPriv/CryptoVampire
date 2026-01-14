@@ -5,8 +5,8 @@ use itertools::Itertools;
 use log::trace;
 
 use super::*;
-use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, PRED, UNFOLD_MSG, Variable};
-use crate::{Configuration, Lang, libraries, rexp, smt};
+use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, NONCE, PRED, UNFOLD_MSG, Variable};
+use crate::{Configuration, Lang, fresh, libraries, rexp, smt};
 
 impl Problem {
     /// Build a [Program] to use
@@ -65,6 +65,7 @@ impl Problem {
     /// This function will panic if `p1` or `p2` are not valid indices for the
     /// protocols in the `Problem`.
     pub fn run_solver(&mut self, p1: usize, p2: usize) -> bool {
+        let start = ::std::time::Instant::now();
         assert!(
             p1 < self.protocols.len(),
             "p1 in not a protocol of `self` (index to large)"
@@ -83,45 +84,45 @@ impl Problem {
             return res;
         }
 
-        if self.switch_to_run_public_nonce() {
-            loop {
+        let res = if self.switch_to_run_public_nonce() {
+            'a: loop {
                 let candidates = match &mut self.nonce_finder {
                     NoncePublicSearchState::Run(iter) => iter.next(),
                     _ => unreachable!("switch_to_run_public_nonce ensures we are in Run state"),
                 };
 
                 let Some(candidates) = candidates else {
-                    break;
+                    break 'a false;
                 };
 
+                println!("running with p [{}]", candidates.iter().join(", "));
+
+                self.report.tested_nonces.push(candidates.clone());
                 self.reset_to(&cp);
 
                 for nonce in candidates {
-                    let vars = nonce
-                        .args_sorts()
-                        .map(|s| Variable::fresh().sort(s).call())
-                        .collect_vec();
+                    let vars = nonce.args_vars().collect_vec();
 
-                    let args = vars.iter().map(|v| v.clone().into_formula()).collect_vec();
-                    let term = nonce.rapp(args);
+                    let term = {
+                        let vars = vars.iter().map(|x| x.as_formula());
+                        rexp!((NONCE (nonce #vars*)))
+                    };
 
-                    let public_term = PublicTerm { vars, term };
-
-                    if let Err(e) = self.publish(public_term) {
-                        log::warn!("Failed to publish nonce {}: {}", nonce, e);
-                    }
+                    self.publish(PublicTerm { vars, term }).unwrap();
                 }
 
                 let res = self.run_solver_internal(p1, p2);
                 if res {
-                    self.reset_to(&cp);
-                    return true;
+                    break 'a true;
                 }
             }
-        }
-        
+        } else {
+            false
+        };
+
         self.reset_to(&cp);
-        false
+        self.report.runtime += start.elapsed();
+        res
     }
 
     /// Run the solver on the given protocols (internal helper)
@@ -135,7 +136,6 @@ impl Problem {
         let mut cache_hits = 0;
         let mut total = 0;
         let checkpoint = self.checkpoint();
-        let start = ::std::time::Instant::now();
 
         // the result of the computation
         let mut res = true;
@@ -218,7 +218,8 @@ impl Problem {
                 .map(|(i, &sort)| {
                     self.declare_function()
                         .output(sort)
-                        .name(format!("{}_{i:}", s.name))
+                        .fresh_name(format!("{}_i", s.name))
+                        .temporary()
                         .call()
                 })
                 .collect_vec();
@@ -255,9 +256,8 @@ impl Problem {
 
         self.reset_to(&checkpoint);
 
-        self.report.total_cache_hits = cache_hits;
-        self.report.total_run_calls = total;
-        self.report.runtime += start.elapsed();
+        self.report.total_cache_hits += cache_hits;
+        self.report.total_run_calls += total;
 
         res
     }

@@ -24,9 +24,7 @@ pub struct PublicTerm {
 
 impl PublicTerm {
     pub fn is_valid(&self) -> bool {
-        (&self.term)
-            .free_vars_iter()
-            .all(|v| self.vars.contains(v))
+        (&self.term).free_vars_iter().all(|v| self.vars.contains(v))
     }
 }
 
@@ -34,7 +32,9 @@ impl Problem {
     pub fn publish(&mut self, term: PublicTerm) -> anyhow::Result<Function> {
         ensure!(
             term.term.try_get_sort() == Some(Sort::Bitstring),
-            "the published term must have sort Bitstring"
+            "the published term must have sort Bitstring got {:?} for\n{}",
+            term.term.try_get_sort(),
+            term.term
         );
         ensure!(
             term.is_valid(),
@@ -78,7 +78,7 @@ impl Problem {
     }
 
     /// Switch from information gathering to bruteforcing
-    /// 
+    ///
     /// Returns `true` to the switch did indeed happen
     pub fn switch_to_run_public_nonce(&mut self) -> bool {
         use NoncePublicSearchState::*;
@@ -119,5 +119,7 @@ fn mk_iterator(candidates: FxHashSet<Function>, pbl: &Problem) -> MI {
         .collect_vec()
         .into_iter()
         .powerset();
-    chain!(to_test_first, others).unique()
+    chain!(to_test_first, others)
+    .filter(|x| !x.is_empty())
+    .unique()
 }

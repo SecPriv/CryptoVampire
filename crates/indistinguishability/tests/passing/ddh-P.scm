@@ -33,8 +33,8 @@
 
 (define empty-cond (lambda _ mtrue))
 
-(publish pbl () skP)
-(publish pbl () skS)
+; (publish pbl () skP)
+; (publish pbl () skS)
 
 
 (define P1

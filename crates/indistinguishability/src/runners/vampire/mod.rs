@@ -243,7 +243,7 @@ impl VampireExec {
             .contains(&self.success_verification);
         tr!("refutation: {refutation}");
 
-        if o.status.code() != Some(SUCCESS_RC) && o.status.code() != Some(TIMEOUT_RC) {
+        if o.status.code() != Some(SUCCESS_RC) && o.status.code() != Some(TIMEOUT_RC) && o.status.code().is_some() {
             eprintln!("file: {file:?}");
             eprintln!(
                 "stdout:\n{}",
