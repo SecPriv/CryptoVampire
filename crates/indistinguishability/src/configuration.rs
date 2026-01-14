@@ -125,6 +125,14 @@ pub struct Configuration {
     /// complexity
     #[arg(long)]
     pub complete_and: bool,
+
+    /// Guided search for publishable nonce
+    /// 
+    /// The proof sometimes requires to "publish" messages that should be secret
+    /// by the protocol specification. This features does a guided brute force
+    /// search to find such nonces.
+    #[arg(long)]
+    pub guided_nonce_search: bool,
 }
 
 static NODE_LIMIT_DEFAULT: usize = 100000;
@@ -159,6 +167,7 @@ impl Default for Configuration {
             if_commute: false,
             complete_and: false,
             ddh_limit: NONCE_GENERATION_DEFAULT,
+            guided_nonce_search: false,
         }
     }
 }

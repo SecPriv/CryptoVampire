@@ -265,6 +265,7 @@ configuration!(
     fa_limit:usize,
     enc_kp_limit:usize,
     ddh_limit:usize,
+    guided_nonce_search: bool,
 );
 
 impl Registerable for ShrProblem {

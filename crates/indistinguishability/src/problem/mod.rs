@@ -6,7 +6,9 @@ use utils::implvec;
 
 use crate::problem::publish::NoncePublicSearchState;
 use crate::protocol::Protocol;
-use crate::terms::{CryptographicAssumption, Formula, Function, FunctionCollection, Rewrite};
+use crate::terms::{
+    CryptographicAssumption, Formula, Function, FunctionCollection, Rewrite, Variable,
+};
 use crate::{Configuration, MSmt};
 
 mod analysis;

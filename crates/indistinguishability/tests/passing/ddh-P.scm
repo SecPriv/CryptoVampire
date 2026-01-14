@@ -33,8 +33,8 @@
 
 (define empty-cond (lambda _ mtrue))
 
-(publish pbl () skP)
-(publish pbl () skS)
+; (publish pbl () skP)
+; (publish pbl () skS)
 
 
 (define P1
@@ -147,6 +147,8 @@
 (publish pbl ((i Index)) (mexp g (a i)))
 (publish pbl ((i Index)) (mexp g (b i)))
 
+; enable looking for extra things to publish
+(cv-set-guided-nonce-search pbl #t)
 
 ;; configuration
 (cv-set-trace pbl #t)

@@ -16,13 +16,10 @@ use crate::input::Registerable;
 use crate::input::shared_cryptography::ShrCrypto;
 use crate::protocol::MacroKind;
 use crate::terms::{
-    Alias, AliasRewrite, BUILTINS, EXISTS, Exists, FIND_SUCH_THAT, FOBinder, Formula,
-    FunctionCollection, FunctionFlags, LAMBDA_O, LAMBDA_S, MACRO_COND, MACRO_EXEC, MACRO_FRAME,
-    MACRO_INPUT, MACRO_MSG, NOT, Quantifier, QuantifierIndex, QuantifierT, Signature, Sort,
-    UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, builtin,
+    Alias, AliasRewrite, BUILTINS, EXISTS, Exists, FIND_SUCH_THAT, FOBinder, Formula, FunctionCollection, FunctionFlags, LAMBDA_O, LAMBDA_S, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, NOT, Quantifier, QuantifierIndex, QuantifierT, Signature, Sort, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, Variable, builtin
 };
 use crate::utils::{InnerSmartCow, LightClone, SmartCow};
-use crate::{Lang, LangVar};
+use crate::{Lang, LangVar, fresh};
 
 /// Helper macro to generate `is_*` methods for `Function` based on `FunctionFlags`.
 macro_rules! is_fun {
@@ -132,6 +129,10 @@ impl Function {
     #[inline]
     pub fn args_sorts(&self) -> impl Iterator<Item = Sort> {
         self.signature.inputs.iter().copied()
+    }
+
+    pub fn args_vars(&self) -> impl Iterator<Item = Variable> {
+        self.args_sorts().map(|s| fresh!(s))
     }
 
     /// Get the `macro` function from a [MacroKind]
@@ -354,6 +355,8 @@ impl Function {
             "Returns `true` if the function is an `egg` binder.");
     is_fun!(is_temporary; TEMPORARY;
             "Returns `true` if the function is temporary.");
+    is_fun!(is_fresh; FRESH;
+            "Returns `true` if the function represents something fresh.");
     #[inline]
     /// Returns `true` if the function is a publications step.
     pub fn is_publish_step(&self) -> bool {

@@ -6,7 +6,9 @@ pub struct Checkpoint {
     extra_rewrite: usize,
     extra_smt: usize,
     steps: usize,
-    constrains: usize
+    constrains: usize,
+    temporary: (usize, usize),
+    public_terms: usize
 }
 
 impl Checkpoint {
@@ -17,6 +19,8 @@ impl Checkpoint {
             extra_smt: pbl.extra_smt.len(),
             steps: pbl.protocols[0].steps().len(),
             constrains: pbl.constrains.len(),
+            temporary: pbl.functions().temporary_len(),
+            public_terms: pbl.public_terms.len()
         }
     }
 
@@ -31,6 +35,8 @@ impl Checkpoint {
         pbl.extra_smt_mut().truncate(self.extra_smt);
         pbl.constrains.truncate(self.constrains);
         pbl.clear_smt_prelude();
+        pbl.public_terms.truncate(self.public_terms);
+        // pbl.functions_mut().truncate_temporary(self.temporary);
     }
 
     fn reset_to(&self, pbl: &mut Problem) {
