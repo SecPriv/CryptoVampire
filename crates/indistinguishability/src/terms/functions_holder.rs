@@ -167,14 +167,14 @@ impl FunctionCollection {
         let Self {
             temporary_functions,
             temporary_quantifiers,
-            map_function,
+            map_function: _,
             ..
         } = self;
 
         temporary_quantifiers.truncate(len_q);
         let funs = temporary_functions.drain(len_f..);
 
-        for f in funs {
+        for _f in funs {
             // map_function.remove(f.name());
         }
     }

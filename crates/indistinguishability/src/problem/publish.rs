@@ -4,8 +4,8 @@ use logic_formula::AsFormula;
 use rustc_hash::FxHashSet;
 
 use crate::protocol::Step;
-use crate::terms::{Formula, Function, FunctionFlags, LT, Sort, Variable};
-use crate::{Problem, decl_vars, fresh, rexp};
+use crate::terms::{Formula, Function, FunctionFlags, Sort, Variable};
+use crate::Problem;
 
 pub type MI = impl Iterator<Item = Vec<Function>>;
 

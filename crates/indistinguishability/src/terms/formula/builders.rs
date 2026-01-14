@@ -1,6 +1,6 @@
 use std::ops::{BitAnd, BitOr, Not, Shr};
 
-use itertools::{Itertools, chain};
+use itertools::Itertools;
 use quarck::CowArc;
 use utils::{ereturn_if, ereturn_let, implvec};
 

@@ -1,5 +1,4 @@
 use std::fmt::Debug;
-use std::ops::Deref;
 use std::time::Duration;
 
 use golgge::Dependancy;

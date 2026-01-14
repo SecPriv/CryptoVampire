@@ -8,7 +8,7 @@ pub struct BounededVampire(VampireExec);
 
 impl BounededVampire {
     /// Creates a new `BounededVampire` instance with default bounded model checking arguments.
-    pub fn new(pbl: &Problem) -> Self {
+    pub fn new(_pbl: &Problem) -> Self {
         Self(
             VampireExec::builder()
                 .extend_args({

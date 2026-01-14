@@ -5,8 +5,8 @@ use itertools::Itertools;
 use log::trace;
 
 use super::*;
-use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, NONCE, PRED, UNFOLD_MSG, Variable};
-use crate::{Configuration, Lang, fresh, libraries, rexp, smt};
+use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, NONCE, PRED, UNFOLD_MSG};
+use crate::{Configuration, Lang, libraries, rexp, smt};
 
 impl Problem {
     /// Build a [Program] to use
@@ -215,7 +215,7 @@ impl Problem {
                 .inputs
                 .iter()
                 .enumerate()
-                .map(|(i, &sort)| {
+                .map(|(_i, &sort)| {
                     self.declare_function()
                         .output(sort)
                         .fresh_name(format!("{}_i", s.name))
