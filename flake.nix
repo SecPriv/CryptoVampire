@@ -22,10 +22,11 @@
     };
     custom = {
       url = "github:puyral/custom-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.squirrel-prover-src.url = "github:puyral/squirrel-prover?ref=cryptovampire";
-      inputs.cryptovampire-src.url = "github:puyral/empty-flake";
-      inputs.vampire-master-src.url = "github:vprover/vampire";
+inputs = {      nixpkgs.follows = "nixpkgs";
+      squirrel-prover-src.url = "github:puyral/squirrel-prover?ref=cryptovampire";
+      cryptovampire-src.url = "github:puyral/empty-flake";
+      vampire-master-src.url = "github:vprover/vampire";
+treefmt-nix.follows = "treefmt-nix";};
     };
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
