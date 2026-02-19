@@ -10,6 +10,7 @@ BINARY_NAME := indistinguishability
 BINARY := ./$(BINARY_NAME)
 RESULTS := results.csv
 SOURCES := $(wildcard *.scm)
+VAMPIRE_PATH :=$(PWD)/moldvampire.sh
 
 # Ensure sequential execution
 .NOTPARALLEL:
@@ -32,7 +33,7 @@ $(BINARY): force_cargo
 
 .PHONY: force_cargo
 force_cargo:
-	cd $(CRATE_DIR) && cargo build --release
+	cd $(CRATE_DIR) && VAMPIRE_PATH=$(VAMPIRE_PATH) cargo lbuild --release
 
 # Run tests to generate results.csv
 # Invalidates if the binary changes or any source file changes.
