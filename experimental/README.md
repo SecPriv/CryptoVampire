@@ -1,1 +1,3 @@
-**NB**: This directory gathers example files. Some of which are likely to be out of date due to subtle syntax changes and such... Please refer to [`nix`](../tests/nix/) for tested working example files.
+# Experimental files
+
+Collection of tests files that may or may not succeed or even be syntactly correct
