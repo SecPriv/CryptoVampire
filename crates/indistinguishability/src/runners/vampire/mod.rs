@@ -1,4 +1,5 @@
 use std::borrow::Borrow;
+use std::env;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 
@@ -334,5 +335,9 @@ impl VampireExec {
 ///
 /// Panics if the `vampire` executable cannot be found in `$PATH`.
 fn get_vampire_location() -> PathBuf {
-    which::which("vampire").expect("can't find vampire in the $PATH")
+    if let Some(path) = option_env!("VAMPIRE_PATH") {
+        return path.into();
+    } else {
+        which::which("vampire").expect("can't find vampire in the $PATH")
+    }
 }
