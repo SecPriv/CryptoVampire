@@ -44,6 +44,12 @@ pub fn translate_formula_to_term<U: SmtParam>(formula: &SmtFormula<U>) -> Term {
         SmtFormula::Eq(fs) => n_ary_op_to_term("=", fs),
         SmtFormula::Neq(fs) => n_ary_op_to_term("distinct", fs),
         // Quantifiers
+        SmtFormula::Forall(vars, f) | SmtFormula::Exists(vars, f) if vars.is_empty() => {
+            // quantifiers with no variables are considered transparent
+            let ret = translate_formula_to_term(f);
+            log::warn!("empty quantifier: {ret:}");
+            ret
+        }
         SmtFormula::Forall(vars, f) => quantifier_to_term("forall", vars, f),
         SmtFormula::Exists(vars, f) => quantifier_to_term("exists", vars, f),
         // Custom features
