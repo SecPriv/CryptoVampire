@@ -152,7 +152,7 @@
 
 ;; configuration
 ; (cv-set-trace pbl #t)
-(cv-set-vampire-timeout pbl (cv-string->duration "300ms"))
+(cv-set-vampire-timeout pbl (cv-string->duration "200ms"))
 (cv-set-node-limit pbl 100000)
 ; (cv-set-keep-smt-files pbl #t)
 
