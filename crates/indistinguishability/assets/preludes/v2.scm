@@ -234,7 +234,6 @@
             ...)))) ]))
 
 
-
 (define (initialize-as-prf prf fhash)
   (cv-initialize-as-prf prf (get-function fhash)))
 
@@ -271,8 +270,10 @@
 (define-syntax define-function
   (syntax-rules (->)
     [ (_ name pbl (crypto ...) (args ...) -> sort)
-    (define name (declare-function pbl
-        (mk-fun (symbol->string 'name) (list crypto ...) args ... sort))) ]
+    ((let [ (f (mk-fun (symbol->string 'name) (list crypto ...) args ... sort)) ]
+        (if (equal? sort cv-Nonce)
+          (define name (wrap-nonce f))
+          (define name f)))) ]
     [ (_ name pbl (args ...) -> sort)
     (define-function name pbl () (args ...) -> sort) ]
     [ (_ name pbl sort)
