@@ -5,7 +5,9 @@ use egg::{Analysis, Pattern, Rewrite};
 use itertools::{Itertools, chain};
 use log::trace;
 use logic_formula::AsFormula;
+use steel_derive::Steel;
 
+use crate::input::Registerable;
 use crate::terms::{EMPTY, Formula, Function, INIT, UNFOLD_COND, UNFOLD_MSG, Variable};
 use crate::{Lang, MSmt, MSmtFormula, Problem, rexp, vec_smt};
 
@@ -19,7 +21,8 @@ bitflags::bitflags! {
 }
 
 /// A step in protocol
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Steel)]
+#[steel(getters, constructors)]
 pub struct Step {
     /// The identifier of the step
     pub id: Function,
@@ -151,6 +154,14 @@ impl Step {
             cond: rexp!(true),
             msg,
         }
+    }
+}
+
+impl Registerable for Step {
+    fn register(
+        module: &mut steel::steel_vm::builtin::BuiltInModule,
+    ) -> &mut steel::steel_vm::builtin::BuiltInModule {
+        Step::register_type(module)
     }
 }
 

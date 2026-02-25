@@ -19,7 +19,7 @@ pub struct Variable(SmartCow<VariableInner>);
 unsafe impl Sync for Variable {}
 unsafe impl Send for Variable {}
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct VariableInner {
     // /// The smart counter, [None] when the variable is leaked
     // count: Option<AtomicUsize>,
@@ -147,7 +147,7 @@ impl Variable {
     /// Makes fresh variables while keeping the information about the variable
     /// (ie. the sort) the same
     pub fn freshen(&self) -> Self {
-        Self::fresh().maybe_sort(self.get_sort()).call()
+        Self(self.0.replicate())
     }
 
     fn steel_fresh() -> Self {

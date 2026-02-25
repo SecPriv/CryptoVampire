@@ -362,7 +362,8 @@ impl<L: Language> Explanation<L> {
             self.flat_explanation.as_ref().unwrap()
         } else {
             self.flat_explanation = Some(TreeTerm::flatten_proof(&self.explanation_trees));
-            self.flat_explanation.as_ref().unwrap()
+            #[allow(clippy::panicking_unwrap)]
+            self.flat_explanation.as_ref().unwrap() // always succeeds actually
         }
     }
 

@@ -1,8 +1,9 @@
 use bon::Builder;
-use itertools::Itertools;
+use itertools::{Itertools, izip};
+use rustc_hash::FxHashMap;
 
 use super::Step;
-use crate::terms::Function;
+use crate::terms::{Formula, Function, Substitution, Variable};
 use crate::{MSmtFormula, smt};
 /// A protocol to be proven
 #[derive(Debug, PartialEq, Eq, Clone, Builder)]
@@ -69,5 +70,67 @@ impl Protocol {
 
     pub(crate) fn truncate_steps(&mut self, n: usize) {
         self.steps.truncate(n);
+    }
+
+    pub fn clone_from(&mut self, other: &Self) {
+        let Self { name, steps } = self;
+
+        let mut varmap = FxHashMap::default();
+        for (sl, sr) in izip!(steps, &other.steps) {
+            let nvars = sr.vars.iter().map(|v| v.freshen()).collect_vec();
+            varmap.clear();
+            varmap.extend(izip!(sr.vars.iter().cloned(), nvars.iter().cloned()));
+            let to = other.name.rapp([]);
+            let msg = converter::clone_from_sanitizer(&mut varmap, &self.name, &to, &sr.cond);
+            let cond = converter::clone_from_sanitizer(&mut varmap, &self.name, &to, &sr.msg);
+            sl.vars = nvars;
+            sl.msg = msg;
+            sl.cond = cond;
+        }
+    }
+}
+
+mod converter {
+    use rustc_hash::FxHashMap;
+
+    use crate::rexp;
+    use crate::terms::{Formula, Function, Variable};
+
+    pub(crate) fn clone_from_sanitizer(
+        subst: &mut FxHashMap<Variable, Variable>,
+        from: &Function,
+        to: &Formula,
+        into: &Formula,
+    ) -> Formula {
+        match into {
+            Formula::Quantifier { head, vars, arg } => {
+                let vars = vars
+                    .iter()
+                    .map(|v| (v, v.freshen()))
+                    .inspect(|(v, nv)| assert!(subst.insert((*v).clone(), nv.clone()).is_none()))
+                    .map(|(_, v)| v)
+                    .collect();
+                let arg = arg.iter().map(|x| clone_from_sanitizer(subst, from, to, x));
+                Formula::Quantifier {
+                    head: *head,
+                    vars,
+                    arg: arg.collect(),
+                }
+            }
+            Formula::App { head, .. } if head == from => to.clone(),
+            Formula::App { head, args } => {
+                let args = args
+                    .iter()
+                    .map(|x| clone_from_sanitizer(subst, from, to, x));
+                rexp!((head #args*))
+            }
+            Formula::Var(variable) => {
+                let var = subst
+                    .get(variable)
+                    .expect("there cannot be free variables")
+                    .clone();
+                Formula::Var(var)
+            }
+        }
     }
 }

@@ -14,6 +14,7 @@ use crate::input::shared_exists::ShrExists;
 // use crate::input::shared_fdst::ShrFindSuchThat;
 use crate::input::shared_problem::ShrProblem;
 use crate::problem::Report;
+use crate::protocol::Step;
 use crate::terms::{
     AliasRewrite, BUILTINS, Formula, Function, Rewrite, SCHEME_PREFIX, SORT_LIST, Signature, Sort,
     Variable,
@@ -34,25 +35,29 @@ pub(crate) trait Registerable {
 }
 
 /// Registers all `Registerable` types with the given `BuiltInModule`.
-pub fn register(module: &mut BuiltInModule) -> &mut BuiltInModule {
-    Sort::register(module);
-    Function::register(module);
-    AliasRewrite::register(module);
-    ShrExists::register(module);
-    Rewrite::register(module);
-    Rule::register(module);
-    ShrProblem::register(module);
-    Signature::register(module);
-    Formula::register(module);
-    ShrCrypto::register(module);
+pub fn register() -> Vec<BuiltInModule> {
+    let mut module = BuiltInModule::new("cryptovampire");
+    Sort::register(&mut module);
+    Function::register(&mut module);
+    AliasRewrite::register(&mut module);
+    ShrExists::register(&mut module);
+    Rewrite::register(&mut module);
+    Rule::register(&mut module);
+    ShrProblem::register(&mut module);
+    Signature::register(&mut module);
+    Formula::register(&mut module);
+    ShrCrypto::register(&mut module);
     // ShrFindSuchThat::register(module);
-    Variable::register(module);
-    Report::register(module);
-    Configuration::register(module);
+    Variable::register(&mut module);
+    Report::register(&mut module);
+    Configuration::register(&mut module);
+
+    let mut step = BuiltInModule::new("steps");
+    Step::register(&mut step);
 
     module.register_fn("println!", |x: SteelVal| println!("dbg: {x:?}"));
 
-    module
+    vec![module, step]
 }
 
 /// Initializes a new Steel `Engine` with the cryptovampire prelude and configuration.
@@ -62,20 +67,21 @@ pub fn init_engine(config: Configuration) -> Engine {
 
     match config.prelude_version {
         prelude::Preludes::V1 => {
-            let mut module = BuiltInModule::new("cryptovampire");
-
             if !config.no_steel_prelude {
                 engine.compile_and_run_raw_program(steel::PRELUDE).unwrap();
             }
 
             let prelude = config.get_prelude();
 
-            crate::register(&mut module);
-            module.register_value(
+            let mut modules = crate::register();
+            modules[0].register_value(
                 "default-config",
                 IntoSteelVal::into_steelval(config).unwrap(),
             );
-            engine.register_module(module);
+
+            for module in modules {
+                engine.register_module(module);
+            }
 
             log::trace!("prelude:\n{}", prelude);
             match engine.compile_and_run_raw_program(Cow::Borrowed(prelude)) {
@@ -86,10 +92,11 @@ pub fn init_engine(config: Configuration) -> Engine {
             engine
         }
         p @ prelude::Preludes::V2 => {
-            let mut module = BuiltInModule::new("cryptovampire");
-            crate::register(&mut module);
-            module.register_value("cli-config", IntoSteelVal::into_steelval(config).unwrap());
-            engine.register_module(module);
+            let mut modules = crate::register();
+            modules[0].register_value("cli-config", IntoSteelVal::into_steelval(config).unwrap());
+            for module in modules {
+                engine.register_module(module);
+            }
 
             let prelude = {
                 let mut mkdefintions: String = "\n".into();

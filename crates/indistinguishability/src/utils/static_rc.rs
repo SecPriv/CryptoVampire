@@ -49,6 +49,14 @@ impl<U> SmartCow<U> {
     pub const fn is_static(&self) -> bool {
         self.as_inner_ref().count.is_none()
     }
+
+    /// Clones the content to a new address, effectivelly spawning a fresh instance.
+    pub fn replicate(&self) -> Self
+    where
+        U: Clone,
+    {
+        Self::new(self.as_ref().clone())
+    }
 }
 
 impl<U> InnerSmartCow<U> {
