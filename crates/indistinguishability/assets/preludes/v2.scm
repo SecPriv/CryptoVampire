@@ -270,10 +270,11 @@
 (define-syntax define-function
   (syntax-rules (->)
     [ (_ name pbl (crypto ...) (args ...) -> sort)
-    ((let [ (f (mk-fun (symbol->string 'name) (list crypto ...) args ... sort)) ]
-        (if (equal? sort cv-Nonce)
-          (define name (wrap-nonce f))
-          (define name f)))) ]
+    (define name 
+      (let [ (f (mk-fun (symbol->string 'name) (list crypto ...) args ... sort)) ] (if (equal? sort cv-Nonce)
+          (wrap-nonce f)
+           f)
+        )) ]
     [ (_ name pbl (args ...) -> sort)
     (define-function name pbl () (args ...) -> sort) ]
     [ (_ name pbl sort)
