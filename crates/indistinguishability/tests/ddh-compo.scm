@@ -65,10 +65,10 @@
     (step p2
       (lambda (in)
         (let [ (gs (sel2of2 (sel1of2 in))) (vks (sel1of2 (sel1of2 in))) ]
-          (checksign (tuple (mexp g (a i)) gs (vk skP)) (sel2of2 in) vks)))
+          (checksign (tuple (mexp g a1) gs (vk skP)) (sel2of2 in) vks)))
       (lambda (in)
         (let [ (gs (sel2of2 (sel1of2 in))) (vks (sel1of2 (sel1of2 in))) ]
-          (sign (tuple gs (mexp g (a i)) vks) skP))))))
+          (sign (tuple gs (mexp g a1) vks) skP))))))
 (define (inP2 p) (macro_input P2 p))
 (define (vks p) (sel1of2 (sel1of2 (inP2 p))))
 
@@ -77,8 +77,8 @@
     (step p1
       (lambda (in) ((and (eq (vks p1) (vk skP)) (sel2of2 (sel1of2 (inP2 p1))))))
       (lambda (in) ok))
-    (step p1
-      (lambda (in) ((and (eq (vks p1) (vk skP)) (eq (sel2of2 (sel1of2 (inP2 p1))) (mexp g b1)))))
+    (step p2
+      (lambda (in) ((and (eq (vks p1) (vk skP)) (eq (sel2of2 (sel1of2 (inP2 p2))) (mexp g b1)))))
       (lambda (in) ok))))
 
 (define P4
@@ -88,10 +88,10 @@
             (not (eq (sel2of2 (sel1of2 (inP2 p1))) (mexp g b1)))
             (eq (sel2of2 (sel1of2 (inP2 p1))) (mexp g (b i))))))
       (lambda _ ok))
-    (step p1
-      (lambda (in i) ((and (eq (vks p1) (vk skP))
-            (not (eq (sel2of2 (sel1of2 (inP2 p1))) (mexp g b1)))
-            (eq (sel2of2 (sel1of2 (inP2 p1))) (mexp g (b i))))))
+    (step p2
+      (lambda (in i) ((and (eq (vks p2) (vk skP))
+            (not (eq (sel2of2 (sel1of2 (inP2 p2))) (mexp g b1)))
+            (eq (sel2of2 (sel1of2 (inP2 p2))) (mexp g (b i))))))
       (lambda _ ok))))
 
 (define P5
@@ -101,10 +101,10 @@
             (not (eq (sel2of2 (sel1of2 (inP2 p1))) (mexp g b1)))
             (not (exists ((i Index)) (eq (sel2of2 (sel1of2 (inP2 p1))) (mexp g (b i))))))))
       (lambda _ ok))
-    (step p1
+    (step p2
       (lambda (in) ((and (eq (vks p1) (vk skP))
-            (not (eq (sel2of2 (sel1of2 (inP2 p1))) (mexp g b1)))
-            (not (exists ((i Index)) (eq (sel2of2 (sel1of2 (inP2 p1))) (mexp g (b i))))))))
+            (not (eq (sel2of2 (sel1of2 (inP2 p2))) (mexp g b1)))
+            (not (exists ((i Index)) (eq (sel2of2 (sel1of2 (inP2 p2))) (mexp g (b i))))))))
       (lambda _ ko))))
 
 (add-constrain pbl () (lt P1 P2))
@@ -120,7 +120,7 @@
   (declare-step pbl "Schall1" '()
     (step p1
       empty-cond
-      (lambda (in )
+      (lambda (in)
         (let [ (gp (sel2of2 in)) (vkp (sel1of2 in)) ]
           (tuple
             (vk skS)
@@ -134,88 +134,81 @@
             (vk skS)
             (mexp g b1)
             (sign (tuple gp (mexp g b1) vkp) skS)))))))
-(define (S1in p) (macro_input S1  p))
+(define (S1in p) (macro_input S1 p))
 (define (vkS p) (sel1of2 (S1in p)))
 (define (gpS p) (sel2of2 (S1in p)))
 
 (bind ((i Index))
   (begin
     (cv-add-rewrite pbl (cv-mk-rewrite "Schall1-gb-1" '()
-        (mexp g b1) (sel1of2 (sel2of2 (macro_msg Schall1  p1)))))
+        (mexp g b1) (sel1of2 (sel2of2 (macro_msg S1 p1)))))
     (cv-add-rewrite pbl (cv-mk-rewrite "Schall1-gb-2" '()
-        (mexp g b1) (sel1of2 (sel2of2 (macro_msg Schall1  p2)))))))
+        (mexp g b1) (sel1of2 (sel2of2 (macro_msg S1 p2)))))))
 
 
 (define S2
   (declare-step pbl "Schall2" '()
     (step p1
-      (lambda (in )
-          (checksign (tuple (mexp g b1) (gpS p1) (vk skS)) in (vkS p1)))
+      (lambda (in)
+        (checksign (tuple (mexp g b1) (gpS p1) (vk skS)) in (vkS p1)))
       (lambda _ ok))
     (step p2
-      (lambda (in )
-          (checksign (tuple (mexp g b1) (gpS p2) (vk skS)) in (vkS p2)))
+      (lambda (in)
+        (checksign (tuple (mexp g b1) (gpS p2) (vk skS)) in (vkS p2)))
       (lambda _ ok))))
-(define (S2in p) (macro_input S2  p))
+(define (S2in p) (macro_input S2 p))
 
 (define S3
   (declare-step pbl "Schall3" '()
     (step p1
       (lambda (c)
-          (and
+        (and
           (eq (vkS p1) (vk skP))
-          (eq (gpS p1) (mexp g a1))
-          ))
+          (eq (gpS p1) (mexp g a1))))
       (lambda _
         ok))
     (step p2
       (lambda (c)
-          (and
+        (and
           (eq (vkS p2) (vk skP))
-          (eq (gpS p2) (mexp g a1))
-          ))
+          (eq (gpS p2) (mexp g a1))))
       (lambda _
         ok))))
 
 (define S4
-  (declare-step pbl "Schall4" (List Index)
+  (declare-step pbl "Schall4" (list Index)
     (step p1
       (lambda (c i)
-          (and
+        (and
           (eq (vkS p1) (vk skP))
           (not (eq (gpS p1) (mexp g a1)))
-          (eq (gpS p1) (mexp g (a i)))
-          ))
+          (eq (gpS p1) (mexp g (a i)))))
       (lambda _
         ok))
     (step p2
       (lambda (c i)
-          (and
+        (and
           (eq (vkS p2) (vk skP))
           (not (eq (gpS p2) (mexp g a1)))
-          (eq (gpS p2) (mexp g (a i)))
-          ))
+          (eq (gpS p2) (mexp g (a i)))))
       (lambda _
         ok))))
 
 (define S5
   (declare-step pbl "Schall3fail" '()
     (step p1
-      (lambda (c )
-          (and
+      (lambda (c)
+        (and
           (eq (vkS p2) (vk skP))
           (not (eq (gpS p1) (mexp g a1)))
-          (not (exists ((i Index)) (eq (gpS p1) (mexp g (a i)))))
-          ))
-
+          (not (exists ((i Index)) (eq (gpS p1) (mexp g (a i)))))))
       (lambda _ ok))
     (step p2
-      (lambda (c )
-          (and
-            (eq (vkS p2) (vk skP))
-            (not (eq (gpS p2) (mexp g a1)))
-            (not (exists ((i Index)) (eq (gpS p2) (mexp g (a i)))))
-          ))
+      (lambda (c)
+        (and
+          (eq (vkS p2) (vk skP))
+          (not (eq (gpS p2) (mexp g a1)))
+          (not (exists ((i Index)) (eq (gpS p2) (mexp g (a i)))))))
       (lambda _ ko))))
 
 ;; ordering constrains
@@ -228,12 +221,12 @@
 (add-constrain pbl () (<> S5 S3))
 
 ;; lemma (given by the crypto)
-(bind ( (p Protocol))
+(bind ((p Protocol))
   (cv-add-rewrite pbl (cv-mk-rewrite "lemma-S" (list p)
-      (and (macro_exec S5  p) (macro_cond S5  p))
+      (and (macro_exec S5 p) (macro_cond S5 p))
       mfalse)))
-(bind ( (p Protocol))
-  (cv-add-rewrite pbl (cv-mk-rewrite "lemma-P" (list  p)
+(bind ((p Protocol))
+  (cv-add-rewrite pbl (cv-mk-rewrite "lemma-P" (list p)
       (and (macro_exec S5 p) (macro_cond P5 p))
       mfalse)))
 
@@ -241,7 +234,7 @@
 
 ; tell the ddh rules to make use of `k i j`
 ; This is not the case default for efficiency reasons
-  (cv-register-fresh-nonce ddh '() k11)
+(cv-register-fresh-nonce ddh '() k11)
 
 ; enable looking for extra things to publish
 (cv-set-guided-nonce-search pbl #t)
@@ -259,3 +252,4 @@
 
 (displayln (cv-print-report (cv-get-report pbl)))
 ; (save-results "ddh-S" pbl)
+

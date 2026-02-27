@@ -395,38 +395,47 @@ Because smt has a syntax for it, or it's a prolog trick, or ...");
             || (self == &EXISTS)
             || (self == &FIND_SUCH_THAT)
     }
+}
+
 
     // =========================================================
     // ====================== Steel API ========================
     // =========================================================
+mod steel {
+    use steel::{SteelErr, SteelVal, rvals::IntoSteelVal};
+
+    use crate::{input::shared_cryptography::ShrCrypto, terms::{Alias, AliasRewrite, Function, FunctionFlags, InnerFunction, Signature, Sort}};
 
     /// Creates a new `Function` instance for use with the Steel VM.
-    pub fn steel_new(name: String, signature: Signature, crypto: Vec<ShrCrypto>) -> Self {
+    #[steel_derive::declare_steel_function(name = "mk-function")]
+    fn steel_new(name: String, signature: Signature, crypto: Vec<ShrCrypto>) -> Function {
         let cryptography = crypto
             .iter()
             .map(|ShrCrypto { index, .. }| *index)
             .collect();
-        Self::new(InnerFunction {
+        Function::new(InnerFunction {
             cryptography,
             ..InnerFunction::new(name.into(), signature)
         })
     }
 
     /// Creates a new `Function` instance representing a nonce for use with the Steel VM.
-    pub fn steel_new_nonce(name: String, signature: Signature) -> Self {
+    #[steel_derive::declare_steel_function(name = "mk-nonce")]
+    fn steel_new_nonce(name: String, signature: Signature) -> Function {
         assert_eq!(signature.output, Sort::Nonce);
-        Self::new(InnerFunction {
+        Function::new(InnerFunction {
             flags: FunctionFlags::NONCE,
             ..InnerFunction::new(name.into(), signature)
         })
     }
 
     /// Creates a new `Function` instance representing an alias for use with the Steel VM.
-    pub fn steel_new_alias(
+    #[steel_derive::declare_steel_function(name = "mk-alias")]
+    fn steel_new_alias(
         name: String,
         signature: Signature,
         alias: Alias,
-    ) -> Result<Self, SteelErr> {
+    ) -> Result<SteelVal, SteelErr> {
         // cheks the alias is well formed
         for AliasRewrite { from, .. } in alias.iter() {
             if from.len() != signature.arity() {
@@ -443,15 +452,16 @@ Because smt has a syntax for it, or it's a prolog trick, or ...");
             }
         }
 
-        Ok(Self::new(InnerFunction {
+        Ok(Function::new(InnerFunction {
             alias: Some(alias),
             ..InnerFunction::new(name.into(), signature)
-        }))
+        }).into_steelval()?)
     }
 
     /// Returns the name of the function as a `String` for use with the Steel VM.
-    pub fn steel_name(&self) -> String {
-        self.name.clone().into_owned()
+    #[steel_derive::declare_steel_function(name = "function-name")]
+    pub fn steel_name(fun: Function) -> String {
+        fun.name.clone().into_owned()
     }
 }
 
