@@ -1,4 +1,5 @@
 use itertools::{Itertools, izip};
+use log::trace;
 use steel::rvals::{IntoSteelVal, Result as SResult};
 use steel::steel_vm::builtin::BuiltInModule;
 use steel::{SteelErr, SteelVal, rerrs};
@@ -64,17 +65,17 @@ fn var(var: Variable) -> Formula {
     Formula::Var(var)
 }
 
-#[steel_derive::declare_steel_function(name = "is_var")]
+#[steel_derive::declare_steel_function(name = "var?")]
 fn is_var(f: Formula) -> bool {
     matches!(f, Formula::Var(_))
 }
 
-#[steel_derive::declare_steel_function(name = "is_binder")]
+#[steel_derive::declare_steel_function(name = "binder?")]
 fn is_binder(f: Formula) -> bool {
     matches!(f, Formula::Quantifier { .. })
 }
 
-#[steel_derive::declare_steel_function(name = "is_app")]
+#[steel_derive::declare_steel_function(name = "app?")]
 fn is_app(f: Formula) -> bool {
     matches!(f, Formula::App { .. })
 }
@@ -122,9 +123,10 @@ fn stuple(args: Vec<Formula>) -> Formula {
 
 impl Registerable for Formula {
     fn register(modules: &mut rustc_hash::FxHashMap<String, BuiltInModule>) {
-        let name = "cryptovampire/ll/function";
+        let name = "cryptovampire/ll/formula";
         let mut module = BuiltInModule::new(name);
         module
+            .register_type::<Self>("Formula?")
             .register_native_fn_definition(BINDER_DEFINITION)
             .register_native_fn_definition(APP_DEFINITION)
             .register_native_fn_definition(VAR_DEFINITION)
@@ -135,7 +137,11 @@ impl Registerable for Formula {
             .register_native_fn_definition(GET_SORT_DEFINITION)
             .register_native_fn_definition(CAND_DEFINITION)
             .register_native_fn_definition(COR_DEFINITION)
-            .register_native_fn_definition(STUPLE_DEFINITION);
+            .register_native_fn_definition(STUPLE_DEFINITION)
+            .register_value("binder->exist", FOBinder::Exists.into_steelval().unwrap())
+            .register_value("binder->forall", FOBinder::Forall.into_steelval().unwrap())
+            .register_value("binder->findst", FOBinder::FindSuchThat.into_steelval().unwrap());
+        trace!("defined {name} scheme module");
         assert!(modules.insert(name.into(), module).is_none())
     }
 }

@@ -174,14 +174,3 @@ impl Default for Configuration {
 fn dstr(d: ::std::time::Duration) -> &'static str {
     String::leak(humantime::format_duration(d).to_string())
 }
-
-impl Configuration {
-    /// Returns the appropriate prelude content based on the configuration.
-    pub fn get_prelude(&self) -> &'static str {
-        if self.no_cryptovampire_prelude {
-            ""
-        } else {
-            self.prelude_version.get_prelude()
-        }
-    }
-}

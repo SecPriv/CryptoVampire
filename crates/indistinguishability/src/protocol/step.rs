@@ -159,6 +159,7 @@ impl Step {
 }
 
 mod msteel {
+    use log::trace;
     use steel::primitives::strings::TO_STRING_DEFINITION;
     use steel::rerrs::ErrorKind;
     use steel::rvals::{IntoSteelVal, Result as SResult};
@@ -276,6 +277,7 @@ mod msteel {
                 .register_native_fn_definition(DECLARE_DEFINITION)
                 .register_native_fn_definition(TO_STRING_DEFINITION);
 
+            trace!("defined {name} scheme module");
             assert!(modules.insert(name.into(), module).is_none())
         }
     }

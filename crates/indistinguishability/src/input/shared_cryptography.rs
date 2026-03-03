@@ -1,5 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
+use log::trace;
 use steel::SteelErr;
 use steel::rerrs::ErrorKind;
 use steel::rvals::Result as SResult;
@@ -128,6 +129,7 @@ impl Registerable for ShrCrypto {
             .register_native_fn_definition(INIT_XOR_DEFINITION)
             .register_native_fn_definition(REGISTER_FRESH_NONCE_DEFINITION);
 
+        trace!("defined {name} scheme module");
         assert!(modules.insert(name.into(), module).is_none())
     }
 }

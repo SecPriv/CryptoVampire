@@ -36,28 +36,36 @@
 (require-builtin cryptovampire as cv-)
 (require-builtin steel/hash)
 
+;; done
 (define functions-map (hash))
 
+;; done
 (define (insert-function p f)
   (set! functions-map
     (hash-insert functions-map p f)))
 
+;; done
 (define (Nonce? f) (equal? cv-Nonce (cv-get-sort f)))
 
+;; done
 (define (convert-to-formula arg)
   (if (cv-Variable? arg) (cv-mk-varf arg)
     (if (boolean? arg) (if arg (cv-mk-appf cv-__pre_mtrue '()) (cv-mk-appf cv-__pre_mfalse '()))
       arg)))
 
+;; done
 (define get-head 'head)
 
+;; done
 (define (get-function funf)
   (if (cv-Formula? funf)
     (hash-ref functions-map funf)
     (if (cv-Function? funf) funf (funf get-head))))
 
+;; done
 (define (requests-head args) (equal? (first args) get-head))
 
+;; done
 (define (lift-fun f)
   (if (= (cv-arity f) 0)
     (cv-mk-appf f '())
@@ -65,6 +73,7 @@
       (if (requests-head args) f
         (cv-mk-appf f (map convert-to-formula args))))))
 
+;; done
 (define (register-function fun)
   (let
     [ (f (lift-fun fun)) ]
@@ -74,6 +83,7 @@
         f)
       f)))
 
+;; done
 (define (wrap-nonce nonce)
   (let ((f (get-function nonce)))
     (if (cv-Formula? nonce)
@@ -171,6 +181,7 @@
             (cv-set-step-message pbl s (get-function ptcl)
               condf)))))))
 
+;; done
 (define (mk-fun name cryptos . args)
   (if (< (length args) 1)
     (error "mk-fun: expected at least one sort argument")

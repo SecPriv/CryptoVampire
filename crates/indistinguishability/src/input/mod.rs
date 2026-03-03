@@ -17,7 +17,7 @@ use crate::input::shared_problem::ShrProblem;
 use crate::problem::Report;
 use crate::protocol::Step;
 use crate::terms::{
-    Alias, AliasRewrite, BUILTINS, Formula, Function, Rewrite, SCHEME_PREFIX, SORT_LIST, Signature,
+    Alias, AliasRewrite, BUILTINS, Formula, Function, Rewrite,  SORT_LIST, Signature,
     Sort, Variable, mk_scheme_lib,
 };
 
@@ -90,10 +90,10 @@ pub fn init_engine(config: Configuration) -> Engine {
         engine.register_module(module);
     }
 
-    let libs = libraries!["prelude"];
+    let libs = libraries!["formula", "function", "signature", "type", "sort"];
 
     for (name, lib) in libs {
-        engine.register_steel_module(format!("cryptovampire/${name}"), lib.into());
+        engine.register_steel_module(format!("cryptovampire/{name}"), lib.into());
     }
 
     engine.register_steel_module("cryptovampire/builtin-functions".into(), mk_scheme_lib());

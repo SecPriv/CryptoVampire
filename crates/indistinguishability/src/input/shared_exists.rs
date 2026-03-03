@@ -1,6 +1,7 @@
 use std::ops::{Deref, DerefMut};
 use std::sync::{RwLockReadGuard, RwLockWriteGuard};
 
+use log::trace;
 use steel::SteelVal;
 use steel::rvals::IntoSteelVal;
 use steel::steel_vm::builtin::BuiltInModule;
@@ -90,6 +91,7 @@ impl Registerable for ShrExists {
             .register_native_fn_definition(GET_PATT_DEFINITION)
             .register_native_fn_definition(SET_PATT_DEFINITION);
 
+        trace!("defined {name} scheme module");
         assert!(modules.insert(name.into(), module).is_none());
     }
 }

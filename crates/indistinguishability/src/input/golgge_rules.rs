@@ -18,6 +18,7 @@ mod msteel {
     use egg::Pattern;
     use golgge::PrologRule;
     use itertools::Itertools;
+    use log::trace;
     use steel::SteelVal;
     use steel::rvals::{IntoSteelVal, Result as SResult};
     use steel::steel_vm::builtin::BuiltInModule;
@@ -45,6 +46,7 @@ mod msteel {
             let name = "cryptovampire/ll/rule";
             let mut module = BuiltInModule::new(name);
             module.register_native_fn_definition(NEW_PROLOG_DEFINITION);
+            trace!("defined {name} scheme module");
             assert!(modules.insert(name.into(), module).is_none())
         }
     }

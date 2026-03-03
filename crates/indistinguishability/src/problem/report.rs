@@ -2,6 +2,7 @@ use std::fmt::Display;
 use std::time::Duration;
 
 use itertools::Itertools;
+use log::trace;
 use rustc_hash::FxHashMap;
 use steel::steel_vm::builtin::BuiltInModule;
 use steel::steel_vm::register_fn::RegisterFn;
@@ -61,6 +62,7 @@ impl Registerable for Report {
             .register_fn("get-tested-nonces", Self::get_tested_nonces)
             .register_fn("print-report", Self::to_string);
 
+        trace!("defined {name} scheme module");
         assert!(modules.insert(name.into(), module).is_none())
     }
 }

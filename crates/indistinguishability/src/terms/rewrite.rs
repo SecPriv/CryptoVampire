@@ -52,6 +52,7 @@ impl Rewrite {
 }
 
 mod msteel {
+    use log::trace;
     use ::steel::rvals::IntoSteelVal;
     use rustc_hash::FxHashMap;
     use steel::SteelVal;
@@ -84,6 +85,7 @@ mod msteel {
             let name = "cryptovampire/ll/rewrite";
             let mut module = BuiltInModule::new("cryptovampire/ll/rewrite");
             module.register_native_fn_definition(NEW_DEFINITION);
+            trace!("defined {name} scheme module");
             assert!(modules.insert(name.into(), module).is_none())
         }
     }

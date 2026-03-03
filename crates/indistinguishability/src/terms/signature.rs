@@ -70,6 +70,7 @@ impl Signature {
 }
 
 mod mstell {
+    use log::trace;
     use steel::steel_vm::builtin::BuiltInModule;
 
     use crate::input::Registerable;
@@ -102,6 +103,7 @@ mod mstell {
                 .register_native_fn_definition(NEW_DEFINITION)
                 .register_native_fn_definition(INPUTS_DEFINITION)
                 .register_native_fn_definition(OUTPUT_DEFINITION);
+            trace!("defined {name} scheme module");
             assert!(modules.insert(name.into(), module).is_none());
         }
     }

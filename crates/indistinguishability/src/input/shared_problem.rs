@@ -220,6 +220,7 @@ impl Registerable for ShrProblem {
             let name = "crypotvampire/ll/configuration";
             let mut module = BuiltInModule::new(name);
             register_configuration(&mut module);
+            trace!("defined {name} scheme module");
             assert!(modules.insert(name.into(), module).is_none());
         }
         {
@@ -240,6 +241,7 @@ impl Registerable for ShrProblem {
                 .register_native_fn_definition(PUBLISH_DEFINITION)
                 .register_native_fn_definition(GET_REPORT_DEFINITION);
 
+            trace!("defined {name} scheme module");
             assert!(modules.insert(name.into(), module).is_none());
         }
         {

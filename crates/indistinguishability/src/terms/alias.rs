@@ -46,6 +46,7 @@ impl IntoSteelVal for Alias {
 }
 
 mod msteel {
+    use log::trace;
     use steel::SteelVal;
     use steel::rvals::{FromSteelVal, IntoSteelVal, Result as SResult};
     use steel::steel_vm::builtin::BuiltInModule;
@@ -89,6 +90,7 @@ mod msteel {
                 .register_native_fn_definition(TO_DEFINITION)
                 .register_native_fn_definition(VARIABLES_DEFINITION)
                 .register_native_fn_definition(NEW_DEFINITION);
+            trace!("defined {name} scheme module");
             assert!(modules.insert(name.into(), module).is_none())
         }
     }

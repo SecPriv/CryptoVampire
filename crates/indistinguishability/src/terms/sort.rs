@@ -1,5 +1,6 @@
 use std::fmt::{Debug, Display};
 
+use log::trace;
 use logic_formula::AsFormula;
 use serde::{Deserialize, Serialize};
 use steel::rvals::IntoSteelVal;
@@ -147,6 +148,7 @@ impl Registerable for Sort {
         let mut module = BuiltInModule::new(name);
         Self::register_enum_variants(&mut module);
         module.register_type::<Self>("Sort?");
+        trace!("defined {name} scheme module");
         assert!(modules.insert(name.into(), module).is_none())
     }
 }

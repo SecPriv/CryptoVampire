@@ -455,11 +455,11 @@ mod steel_api {
             }
         }
 
-        Ok(Function::new(InnerFunction {
+        Function::new(InnerFunction {
             alias: Some(alias),
             ..InnerFunction::new(name.into(), signature)
         })
-        .into_steelval()?)
+        .into_steelval()
     }
 
     /// Returns the name of the function as a `String` for use with the Steel VM.
@@ -473,7 +473,6 @@ mod steel_api {
         fun.signature.clone()
     }
 
-    pub(crate) static SCHEME_PREFIX: &str = "__pre_";
     impl Registerable for Function {
         /// Registers the `Function` type and its associated methods with the Steel VM.
         fn register(modules: &mut FxHashMap<String, BuiltInModule>) {
@@ -495,11 +494,11 @@ mod steel_api {
                 let mut module = BuiltInModule::new("cryptovampire/ll/builtin-functions");
 
                 crate::terms::register_builtins_to_module(&mut module);
+                modules.insert(module.name().to_string(), module);
             }
         }
     }
 }
-pub(crate) use steel_api::SCHEME_PREFIX;
 
 impl Display for Function {
     /// Formats the function for display, showing its name.

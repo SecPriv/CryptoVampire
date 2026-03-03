@@ -184,6 +184,7 @@ impl From<Variable> for egg::Var {
 }
 
 mod msteel {
+    use log::trace;
     use steel::steel_vm::builtin::BuiltInModule;
 
     use crate::input::Registerable;
@@ -205,8 +206,10 @@ mod msteel {
             let mut module = BuiltInModule::new(name);
             Self::register_type(&mut module);
             module
+                .register_type::<Self>("Variable?")
                 .register_native_fn_definition(FRESH_DEFINITION)
                 .register_native_fn_definition(FRESH_SORT_DEFINITION);
+            trace!("defined {name} scheme module");
             assert!(modules.insert(name.into(), module).is_none())
         }
     }

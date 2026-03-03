@@ -573,7 +573,7 @@ pub(crate) fn mk_scheme_lib() -> String {
 
     module.push_str("(provide ");
     for fun in BUILTINS.iter() {
-        let name = fun.name();
+        let name = &fun.name;
 
         writeln!(module, "{name}").unwrap();
         writeln!(
@@ -591,7 +591,8 @@ pub(crate) fn mk_scheme_lib() -> String {
 
         {wrapped}
         "
-    );
+    )
+    .unwrap();
     trace!("builtin function schem:\n{module}");
     module
 }
