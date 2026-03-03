@@ -3,6 +3,7 @@ use std::fmt::{Debug, Display};
 use logic_formula::AsFormula;
 use serde::{Deserialize, Serialize};
 use steel::rvals::IntoSteelVal;
+use steel::steel_vm::builtin::BuiltInModule;
 use steel_derive::Steel;
 
 use crate::Lang;
@@ -141,18 +142,11 @@ impl Debug for Sort {
 }
 
 impl Registerable for Sort {
-    /// Registers the `Sort` enum and its variants with the Steel VM.
-    fn register(
-        module: &mut steel::steel_vm::builtin::BuiltInModule,
-    ) -> &mut steel::steel_vm::builtin::BuiltInModule {
-        Self::register_enum_variants(module);
+    fn register(modules: &mut rustc_hash::FxHashMap<String, BuiltInModule>) {
+        let name = "cryptovampire/ll/sort";
+        let mut module = BuiltInModule::new(name);
+        Self::register_enum_variants(&mut module);
         module.register_type::<Self>("Sort?");
-        use Sort::*;
-        for v in [Bool, Bitstring, Time, Nonce, Index, Protocol] {
-            let tmp = format!("{v}").leak();
-            // module.register_fn(tmp, move || v);
-            module.register_value(tmp, v.into_steelval().unwrap());
-        }
-        module
+        assert!(modules.insert(name.into(), module).is_none())
     }
 }

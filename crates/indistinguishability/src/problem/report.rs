@@ -2,6 +2,7 @@ use std::fmt::Display;
 use std::time::Duration;
 
 use itertools::Itertools;
+use rustc_hash::FxHashMap;
 use steel::steel_vm::builtin::BuiltInModule;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
@@ -46,8 +47,10 @@ impl Report {
 }
 
 impl Registerable for Report {
-    fn register(module: &mut BuiltInModule) -> &mut BuiltInModule {
-        Self::register_type(module);
+    fn register(modules: &mut FxHashMap<String, BuiltInModule>) {
+        let name = "cryptovampire/ll/report";
+        let mut module = BuiltInModule::new(name);
+        Self::register_type(&mut module);
         module.register_type::<Duration>("duration?");
         module
             .register_fn("get-time-spent-in-vampire", Self::get_time_spent_in_vampire)
@@ -56,7 +59,9 @@ impl Registerable for Report {
             .register_fn("get-hit-rate", Self::get_hit_rate)
             .register_fn("get-runtime", Self::get_runtime)
             .register_fn("get-tested-nonces", Self::get_tested_nonces)
-            .register_fn("print-report", Self::to_string)
+            .register_fn("print-report", Self::to_string);
+
+        assert!(modules.insert(name.into(), module).is_none())
     }
 }
 

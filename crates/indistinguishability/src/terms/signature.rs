@@ -69,11 +69,40 @@ impl Signature {
     }
 }
 
-impl Registerable for Signature {
-    /// Registers the `Signature` type and its constructor with the Steel VM.
-    fn register(
-        module: &mut steel::steel_vm::builtin::BuiltInModule,
-    ) -> &mut steel::steel_vm::builtin::BuiltInModule {
-        Self::register_type(module).register_fn("mk-signature", Self::steel_constructor)
+mod mstell {
+    use steel::steel_vm::builtin::BuiltInModule;
+
+    use crate::input::Registerable;
+    use crate::terms::{Signature, Sort};
+
+    #[steel_derive::declare_steel_function(name = "new")]
+    fn new(input: Vec<Sort>, output: Sort) -> Signature {
+        Signature {
+            inputs: input.into(),
+            output,
+        }
+    }
+
+    #[steel_derive::declare_steel_function(name = "inputs")]
+    fn inputs(s: Signature) -> Vec<Sort> {
+        s.inputs.to_vec()
+    }
+
+    #[steel_derive::declare_steel_function(name = "outputs")]
+    fn output(s: Signature) -> Sort {
+        s.output
+    }
+
+    impl Registerable for Signature {
+        fn register(modules: &mut rustc_hash::FxHashMap<String, BuiltInModule>) {
+            let name = "cryptovampire/ll/signature";
+            let mut module = BuiltInModule::new(name);
+            module
+                .register_type::<Signature>("Signature?")
+                .register_native_fn_definition(NEW_DEFINITION)
+                .register_native_fn_definition(INPUTS_DEFINITION)
+                .register_native_fn_definition(OUTPUT_DEFINITION);
+            assert!(modules.insert(name.into(), module).is_none());
+        }
     }
 }

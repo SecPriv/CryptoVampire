@@ -46,6 +46,19 @@ pub enum PrologBuilderError {
     VariableMishmatch(egg::Var),
 }
 
+#[cfg(feature = "steel")]
+impl From<PrologBuilderError> for steel::rerrs::SteelErr {
+    fn from(value: PrologBuilderError) -> Self {
+        use steel::rerrs::*;
+        match value {
+            PrologBuilderError::VariableMishmatch(var) => SteelErr::new(
+                ErrorKind::BadSyntax,
+                format!("premise refer to free variable {var}"),
+            ),
+        }
+    }
+}
+
 #[bon]
 impl<L: Language> PrologRule<L> {
     /// Creates a new `PrologRule`.

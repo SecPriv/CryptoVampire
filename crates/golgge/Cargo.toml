@@ -27,14 +27,14 @@ serde.workspace = true
 bon.workspace = true
 thiserror.workspace = true
 bitflags = { workspace = true, features = ["serde"] }
-# steel-core = { workspace = true, optional = true }
-# steel-derive = { workspace = true, optional = true }
-# steel-repl = { workspace = true, optional = true }
+steel-core = { workspace = true, optional = true }
+steel-derive = { workspace = true, optional = true }
+steel-repl = { workspace = true, optional = true }
 
 [features]
 sync = []
 default = ["sync"]
-# steel = ["steel-core", "steel-derive", "steel-repl"]
+steel = ["steel-core", "steel-derive", "steel-repl"]
 
 [lints]
 workspace = true

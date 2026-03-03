@@ -2,6 +2,8 @@ use std::borrow::Cow;
 
 use bitflags::Bits;
 use cryptovampire_macros::mk_builtin_funs;
+use log::trace;
+use steel::rvals::CustomType;
 
 use super::Sort::{self, *};
 use super::{Alias, AliasRewrite, Function, FunctionFlags, InnerFunction, Signature};
@@ -563,3 +565,33 @@ mk_builtin_funs!(
 
 
 );
+
+pub(crate) fn mk_scheme_lib() -> String {
+    use std::fmt::Write;
+    let mut module = String::new();
+    let mut wrapped = String::new();
+
+    module.push_str("(provide ");
+    for fun in BUILTINS.iter() {
+        let name = fun.name();
+
+        writeln!(module, "{name}").unwrap();
+        writeln!(
+            wrapped,
+            "(define {name} (register-function ___pre_${name}))"
+        )
+        .unwrap();
+    }
+    writeln!(module, ")").unwrap();
+    writeln!(
+        module,
+        "
+        (require-builtin cryptovampire/ll/builtin-functions as bi)
+        (require \"cryptovampire/function\") 
+
+        {wrapped}
+        "
+    );
+    trace!("builtin function schem:\n{module}");
+    module
+}

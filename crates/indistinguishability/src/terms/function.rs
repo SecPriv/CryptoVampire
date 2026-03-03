@@ -410,6 +410,7 @@ mod steel_api {
     use crate::input::shared_cryptography::ShrCrypto;
     use crate::terms::{
         Alias, AliasRewrite, BUILTINS, Function, FunctionFlags, InnerFunction, Signature, Sort,
+        builtin,
     };
 
     /// Creates a new `Function` instance for use with the Steel VM.
@@ -489,14 +490,11 @@ mod steel_api {
                     .register_type::<Self>("Function?");
                 modules.insert(module.name().to_string(), module);
             }
+            // ::steel::steel_vm::builtin::BuiltInModule::register_value_with_doc(&mut self, name, value, doc)
             {
-                let mut module = BuiltInModule::new("cryptovampire/function");
-                for fun in BUILTINS {
-                    module.register_value(
-                        &format!("{SCHEME_PREFIX}{}", fun.name),
-                        fun.clone().into_steelval().unwrap(),
-                    );
-                }
+                let mut module = BuiltInModule::new("cryptovampire/ll/builtin-functions");
+
+                crate::terms::register_builtins_to_module(&mut module);
             }
         }
     }

@@ -144,7 +144,7 @@ impl MFunction {
     }
 }
 
-fn mk_steel(functions: implvec!(MFunction)) -> proc_macro2::TokenStream {
+fn mk_steel<'a>(functions: implvec!(&'a MFunction)) -> proc_macro2::TokenStream {
     // pub fn register_value_with_doc(
     // &mut self,
     // name: &'static str,
@@ -159,8 +159,10 @@ fn mk_steel(functions: implvec!(MFunction)) -> proc_macro2::TokenStream {
     // pub examples: &'a [(&'a str, &'a str)],
     // }
     let imports = quote! {
-        use steel::steel_vm::builtin::{DocTemplate, register_value_with_doc};
-        use steel::steel_vm::builtin::BuiltInModule;
+        use ::steel::steel_vm::builtin::DocTemplate;
+        use ::steel::steel_vm::builtin::BuiltInModule;
+        use ::steel::rvals::IntoSteelVal;
+        use ::itertools::Itertools;
     };
 
     let doc: Attribute = parse_quote!(#[doc = r"test"]);
@@ -173,25 +175,26 @@ fn mk_steel(functions: implvec!(MFunction)) -> proc_macro2::TokenStream {
             _ => None,
         });
 
-        let doc = quote! {
+        let doc = quote! {{
+            let docs :[&'static str; _] = [ #(#docs),* ];
             DocTemplate {
                 signature: "Function",
                 params : &[],
-                description : String::leak([ #(#docs),* ].join("\n"))
+                description : String::leak(docs.into_iter().join("\n")),
                 examples: &[]
             }
-        };
+        }};
 
         let name = &f.name;
         let str_name = f.alt_names.first().unwrap();
 
         quote! {
-            module.register_value_with_doc( #str_name, #name.clone().into_steelval(), #doc )
+            module.register_value_with_doc( #str_name, #name.clone().into_steelval().unwrap(), #doc );
         }
     });
 
     quote! {
-        pub(crate) fn register_builtins_to_module(module: &mut ::steel::steel_vm::builtin::BuiltInModule) => ::steel::steel_vm::builtin::BuiltInModule {
+        pub(crate) fn register_builtins_to_module(module: &mut ::steel::steel_vm::builtin::BuiltInModule) -> &mut ::steel::steel_vm::builtin::BuiltInModule {
             #imports
 
             #(#body)*
@@ -208,11 +211,14 @@ pub fn mk_builtin_funs(input: TokenStream) -> TokenStream {
     let defines = decls.iter().map(MFunction::declare);
     let names = decls.iter().map(|f| f.as_owned());
     let alt_names = decls.iter().flat_map(|f| f.list_alt_names());
+    let steel = mk_steel(&decls);
 
     quote! {
         #(#defines)*
         pub static BUILTINS : &[Function] = &[#(#names),*];
         pub static PARSING_PAIRS: &[(&str, Function)] = &[#(#alt_names),*];
+
+        #steel
     }
     .into()
 }

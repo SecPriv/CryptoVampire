@@ -14,6 +14,7 @@ pub struct Alias(pub cow![AliasRewrite]);
 /// A rewrite rule for an alias
 /// A single rewrite rule for an alias.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Steel, Serialize)]
+#[steel(equality)]
 pub struct AliasRewrite {
     /// These are the arguments to the function that one must unify with to get
     /// rewritten as [Self::to].
@@ -44,21 +45,51 @@ impl IntoSteelVal for Alias {
     }
 }
 
-impl AliasRewrite {
-    fn new_steel(variables: Vec<Variable>, from: Vec<Formula>, to: Formula) -> SResult<Self> {
-        Ok(AliasRewrite {
+mod msteel {
+    use steel::SteelVal;
+    use steel::rvals::{FromSteelVal, IntoSteelVal, Result as SResult};
+    use steel::steel_vm::builtin::BuiltInModule;
+
+    use super::*;
+    use crate::terms::{Formula, Variable};
+
+    #[steel_derive::declare_steel_function(name = "new-rewrite")]
+    fn new(variables: Vec<Variable>, from: Vec<Formula>, to: Formula) -> SResult<SteelVal> {
+        AliasRewrite {
             from: from.into(),
             to,
             variables: variables.into(),
-        })
+        }
+        .into_steelval()
     }
-}
 
-impl Registerable for AliasRewrite {
-    /// Registers the `AliasRewrite` type and its constructor with the Steel VM.
-    fn register(
-        module: &mut steel::steel_vm::builtin::BuiltInModule,
-    ) -> &mut steel::steel_vm::builtin::BuiltInModule {
-        Self::register_type(module).register_fn("mk-alias-rwf", Self::new_steel)
+    #[steel_derive::declare_steel_function(name = "rewrite-from")]
+    fn from(rw: AliasRewrite) -> Vec<Formula> {
+        rw.from.to_vec()
+    }
+
+    #[steel_derive::declare_steel_function(name = "rewrite-to")]
+    fn to(rw: AliasRewrite) -> Formula {
+        rw.to.clone()
+    }
+
+    #[steel_derive::declare_steel_function(name = "rewrite-variables")]
+    fn variables(rw: AliasRewrite) -> Vec<Variable> {
+        rw.variables.to_vec()
+    }
+
+    impl Registerable for Alias {
+        fn register(modules: &mut rustc_hash::FxHashMap<String, BuiltInModule>) {
+            let name = "cryptovampire/ll/alias";
+            let mut module = BuiltInModule::new(name);
+
+            AliasRewrite::register_type(&mut module);
+            module
+                .register_native_fn_definition(FROM_DEFINITION)
+                .register_native_fn_definition(TO_DEFINITION)
+                .register_native_fn_definition(VARIABLES_DEFINITION)
+                .register_native_fn_definition(NEW_DEFINITION);
+            assert!(modules.insert(name.into(), module).is_none())
+        }
     }
 }
