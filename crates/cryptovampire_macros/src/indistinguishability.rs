@@ -3,8 +3,10 @@ use proc_macro::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::parse::{Parse, ParseStream};
 use syn::{
-    Attribute, FieldValue, Ident, LitStr, Member, Token, braced, parse_macro_input, parse_quote,
+    Attribute, FieldValue, Ident, LitStr, Member, MetaNameValue, Token, braced, parse_macro_input,
+    parse_quote,
 };
+use utils::implvec;
 
 /// represents things like
 ///
@@ -139,6 +141,63 @@ impl MFunction {
             // [quote_spanned! {self.span => (#name, #owned)}],
             self.alt_names.iter().map(move |n| quote! {(#n, #owned)})
         ]
+    }
+}
+
+fn mk_steel(functions: implvec!(MFunction)) -> proc_macro2::TokenStream {
+    // pub fn register_value_with_doc(
+    // &mut self,
+    // name: &'static str,
+    // value: SteelVal,
+    // doc: DocTemplate<'static>,
+    // ) -> &mut Self {
+    //
+    // pub struct DocTemplate<'a> {
+    // pub signature: &'a str,
+    // pub params: &'a [&'a str],
+    // pub description: &'a str,
+    // pub examples: &'a [(&'a str, &'a str)],
+    // }
+    let imports = quote! {
+        use steel::steel_vm::builtin::{DocTemplate, register_value_with_doc};
+        use steel::steel_vm::builtin::BuiltInModule;
+    };
+
+    let doc: Attribute = parse_quote!(#[doc = r"test"]);
+
+    let body = functions.into_iter().map(|f| {
+        let docs = f.attrs.iter().filter_map(|attr| match &attr.meta {
+            syn::Meta::NameValue(MetaNameValue { path, value, .. }) if path == doc.meta.path() => {
+                Some(value)
+            }
+            _ => None,
+        });
+
+        let doc = quote! {
+            DocTemplate {
+                signature: "Function",
+                params : &[],
+                description : String::leak([ #(#docs),* ].join("\n"))
+                examples: &[]
+            }
+        };
+
+        let name = &f.name;
+        let str_name = f.alt_names.first().unwrap();
+
+        quote! {
+            module.register_value_with_doc( #str_name, #name.clone().into_steelval(), #doc )
+        }
+    });
+
+    quote! {
+        pub(crate) fn register_builtins_to_module(module: &mut ::steel::steel_vm::builtin::BuiltInModule) => ::steel::steel_vm::builtin::BuiltInModule {
+            #imports
+
+            #(#body)*
+
+            module
+        }
     }
 }
 

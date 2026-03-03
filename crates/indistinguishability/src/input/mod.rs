@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 
 use log::trace;
+use rustc_hash::FxHashMap;
 use steel::SteelVal;
 use steel::rvals::IntoSteelVal;
 use steel::steel_vm::builtin::BuiltInModule;
@@ -31,7 +32,7 @@ pub(crate) mod shared_problem;
 /// A trait for types that can be registered with the Steel VM.
 pub(crate) trait Registerable {
     /// Registers the type and its associated functions with the given `BuiltInModule`.
-    fn register(module: &mut BuiltInModule) -> &mut BuiltInModule;
+    fn register(module: &mut FxHashMap<String, BuiltInModule>);
 }
 
 /// Registers all `Registerable` types with the given `BuiltInModule`.

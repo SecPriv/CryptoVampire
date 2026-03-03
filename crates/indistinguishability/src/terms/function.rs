@@ -397,18 +397,24 @@ Because smt has a syntax for it, or it's a prolog trick, or ...");
     }
 }
 
+// =========================================================
+// ====================== Steel API ========================
+// =========================================================
+mod steel_api {
+    use rustc_hash::FxHashMap;
+    use steel::rvals::IntoSteelVal;
+    use steel::steel_vm::builtin::BuiltInModule;
+    use steel::{SteelErr, SteelVal};
 
-    // =========================================================
-    // ====================== Steel API ========================
-    // =========================================================
-mod steel {
-    use steel::{SteelErr, SteelVal, rvals::IntoSteelVal};
-
-    use crate::{input::shared_cryptography::ShrCrypto, terms::{Alias, AliasRewrite, Function, FunctionFlags, InnerFunction, Signature, Sort}};
+    use crate::input::Registerable;
+    use crate::input::shared_cryptography::ShrCrypto;
+    use crate::terms::{
+        Alias, AliasRewrite, BUILTINS, Function, FunctionFlags, InnerFunction, Signature, Sort,
+    };
 
     /// Creates a new `Function` instance for use with the Steel VM.
     #[steel_derive::declare_steel_function(name = "mk-function")]
-    fn steel_new(name: String, signature: Signature, crypto: Vec<ShrCrypto>) -> Function {
+    fn new(name: String, signature: Signature, crypto: Vec<ShrCrypto>) -> Function {
         let cryptography = crypto
             .iter()
             .map(|ShrCrypto { index, .. }| *index)
@@ -421,7 +427,7 @@ mod steel {
 
     /// Creates a new `Function` instance representing a nonce for use with the Steel VM.
     #[steel_derive::declare_steel_function(name = "mk-nonce")]
-    fn steel_new_nonce(name: String, signature: Signature) -> Function {
+    fn new_nonce(name: String, signature: Signature) -> Function {
         assert_eq!(signature.output, Sort::Nonce);
         Function::new(InnerFunction {
             flags: FunctionFlags::NONCE,
@@ -431,11 +437,7 @@ mod steel {
 
     /// Creates a new `Function` instance representing an alias for use with the Steel VM.
     #[steel_derive::declare_steel_function(name = "mk-alias")]
-    fn steel_new_alias(
-        name: String,
-        signature: Signature,
-        alias: Alias,
-    ) -> Result<SteelVal, SteelErr> {
+    fn new_alias(name: String, signature: Signature, alias: Alias) -> Result<SteelVal, SteelErr> {
         // cheks the alias is well formed
         for AliasRewrite { from, .. } in alias.iter() {
             if from.len() != signature.arity() {
@@ -455,41 +457,51 @@ mod steel {
         Ok(Function::new(InnerFunction {
             alias: Some(alias),
             ..InnerFunction::new(name.into(), signature)
-        }).into_steelval()?)
+        })
+        .into_steelval()?)
     }
 
     /// Returns the name of the function as a `String` for use with the Steel VM.
-    #[steel_derive::declare_steel_function(name = "function-name")]
-    pub fn steel_name(fun: Function) -> String {
+    #[steel_derive::declare_steel_function(name = "name")]
+    pub fn name(fun: Function) -> String {
         fun.name.clone().into_owned()
     }
-}
 
-pub(crate) static SCHEME_PREFIX: &str = "__pre_";
-impl Registerable for Function {
-    /// Registers the `Function` type and its associated methods with the Steel VM.
-    fn register(
-        module: &mut steel::steel_vm::builtin::BuiltInModule,
-    ) -> &mut steel::steel_vm::builtin::BuiltInModule {
-        Self::register_type(module);
-        module
-            .register_type::<Self>("Function?")
-            .register_fn("mk-fun", Self::steel_new)
-            .register_fn("mk-nonce", Self::steel_new_nonce)
-            .register_fn("mk-alias", Self::steel_new_alias)
-            .register_fn("arity", Self::arity)
-            .register_fn("function-name", Self::steel_name);
+    #[steel_derive::declare_steel_function(name = "signature")]
+    pub fn signature(fun: Function) -> Signature {
+        fun.signature.clone()
+    }
 
-        for fun in BUILTINS {
-            module.register_value(
-                &format!("{SCHEME_PREFIX}{}", fun.name),
-                fun.clone().into_steelval().unwrap(),
-            );
+    pub(crate) static SCHEME_PREFIX: &str = "__pre_";
+    impl Registerable for Function {
+        /// Registers the `Function` type and its associated methods with the Steel VM.
+        fn register(modules: &mut FxHashMap<String, BuiltInModule>) {
+            {
+                let mut module = BuiltInModule::new("cryptovampire/ll/function");
+
+                Self::register_type(&mut module);
+                module
+                    .register_native_fn_definition(SIGNATURE_DEFINITION)
+                    .register_native_fn_definition(NAME_DEFINITION)
+                    .register_native_fn_definition(NEW_DEFINITION)
+                    .register_native_fn_definition(NEW_ALIAS_DEFINITION)
+                    .register_native_fn_definition(NEW_NONCE_DEFINITION)
+                    .register_type::<Self>("Function?");
+                modules.insert(module.name().to_string(), module);
+            }
+            {
+                let mut module = BuiltInModule::new("cryptovampire/function");
+                for fun in BUILTINS {
+                    module.register_value(
+                        &format!("{SCHEME_PREFIX}{}", fun.name),
+                        fun.clone().into_steelval().unwrap(),
+                    );
+                }
+            }
         }
-
-        module
     }
 }
+pub(crate) use steel_api::SCHEME_PREFIX;
 
 impl Display for Function {
     /// Formats the function for display, showing its name.
