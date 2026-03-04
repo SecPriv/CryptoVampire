@@ -1,6 +1,16 @@
-(require "cryptovampire/v2")
-; (require "./save-results.scm")
-(require-builtin cryptovampire as cv-)
+(require "cryptovampire/function")
+(require "cryptovampire/builtin-functions")
+(require "cryptovampire/cryptography")
+(require "cryptovampire/protocol")
+(require "cryptovampire/solver")
+(require "cryptovampire/sort")
+(require "cryptovampire/formula")
+(require "cryptovampire/signature")
+(require-builtin cryptovampire/ll/pbl as pbl.)
+(require-builtin cryptovampire/ll/configuration as config.)
+(require-builtin cryptovampire/ll as b.)
+(require-builtin cryptovampire/ll/report as report.)
+(require-builtin cryptovampire/ll/rewrite as rw.)
 
 (define pbl (mk-problem 'x))
 
@@ -44,68 +54,51 @@
 (publish pbl ((i Index)) (mexp g a1))
 (publish pbl ((i Index)) (mexp g b1))
 
-(define P1
-  (declare-step pbl "P1" '()
-    (step p1 empty-cond
-      (lambda (in)
-        (tuple (vk skP) (mexp g a1))))
-    (step p2 empty-cond
-      (lambda (in)
-        (tuple (vk skP) (mexp g a1))))))
+(define ptcls (list p1 p2))
 
-(define P2
-  (declare-step pbl "P2" '()
-    (step p1
-      (lambda (in)
-        (let [ (gs (sel2of2 (sel1of2 in))) (vks (sel1of2 (sel1of2 in))) ]
-          (checksign (tuple (mexp g a1) gs (vk skP)) (sel2of2 in) vks)))
-      (lambda (in)
-        (let [ (gs (sel2of2 (sel1of2 in))) (vks (sel1of2 (sel1of2 in))) ]
-          (sign (tuple gs (mexp g a1) vks) skP))))
-    (step p2
-      (lambda (in)
-        (let [ (gs (sel2of2 (sel1of2 in))) (vks (sel1of2 (sel1of2 in))) ]
-          (checksign (tuple (mexp g a1) gs (vk skP)) (sel2of2 in) vks)))
-      (lambda (in)
-        (let [ (gs (sel2of2 (sel1of2 in))) (vks (sel1of2 (sel1of2 in))) ]
-          (sign (tuple gs (mexp g a1) vks) skP))))))
+(define P1 (declare-same-step pbl "P1" ptcls '()
+    empty-cond
+    (lambda (p in) (tuple (vk skP) (mexp g a1)))))
+
+(define P2 (declare-same-step pbl "P2" ptcls '()
+    (lambda (p in)
+      (let [ (gs (sel2of2 (sel1of2 in))) (vks (sel1of2 (sel1of2 in))) ]
+        (checksign (tuple (mexp g a1) gs (vk skP)) (sel2of2 in) vks)))
+    (lambda (p in)
+      (let [ (gs (sel2of2 (sel1of2 in))) (vks (sel1of2 (sel1of2 in))) ]
+        (sign (tuple gs (mexp g a1) vks) skP)))))
 (define (inP2 p) (macro_input P2 p))
 (define (vks p) (sel1of2 (sel1of2 (inP2 p))))
 
-(define P3
-  (declare-step pbl "P3" '()
-    (step p1
-      (lambda (in) ((and (eq (vks p1) (vk skP)) (sel2of2 (sel1of2 (inP2 p1))))))
-      (lambda (in) ok))
-    (step p2
-      (lambda (in) ((and (eq (vks p1) (vk skP)) (eq (sel2of2 (sel1of2 (inP2 p2))) (mexp g b1)))))
-      (lambda (in) ok))))
+(define P3 (declare-same-step pbl "P3" ptcls '()
+    (lambda (p in) (cand
+        (eq (vks p) (vk skP))
+        (eq (sel2of2 (sel1of2 (inP2 p))) (mexp g b1))))
+    (lambda _ ok)))
 
-(define P4
-  (declare-step pbl "P4" (list Index)
-    (step p1
-      (lambda (in i) ((and (eq (vks p1) (vk skP))
-            (not (eq (sel2of2 (sel1of2 (inP2 p1))) (mexp g b1)))
-            (eq (sel2of2 (sel1of2 (inP2 p1))) (mexp g (b i))))))
-      (lambda _ ok))
-    (step p2
-      (lambda (in i) ((and (eq (vks p2) (vk skP))
-            (not (eq (sel2of2 (sel1of2 (inP2 p2))) (mexp g b1)))
-            (eq (sel2of2 (sel1of2 (inP2 p2))) (mexp g (b i))))))
-      (lambda _ ok))))
+(define P4 (declare-same-step pbl "P4" ptcls '()
+    (lambda (p in i) (cand
+        (eq (vks p) (vk skP))
+        (not (eq (sel2of2 (sel1of2 (inP2 p))) (mexp g b1)))
+        (eq (sel2of2 (sel1of2 (inP2 p))) (mexp g (b i)))))
+    (lambda _ ok)))
 
 (define P5
   (declare-step pbl "P5" '()
     (step p1
-      (lambda (in) ((and (eq (vks p1) (vk skP))
-            (not (eq (sel2of2 (sel1of2 (inP2 p1))) (mexp g b1)))
-            (not (exists ((i Index)) (eq (sel2of2 (sel1of2 (inP2 p1))) (mexp g (b i))))))))
-      (lambda _ ok))
-    (step p2
-      (lambda (in) ((and (eq (vks p1) (vk skP))
-            (not (eq (sel2of2 (sel1of2 (inP2 p2))) (mexp g b1)))
-            (not (exists ((i Index)) (eq (sel2of2 (sel1of2 (inP2 p2))) (mexp g (b i))))))))
-      (lambda _ ko))))
+      (lambda (in) (cand
+          (eq (vks p1) (vk skP))
+          (not (eq (sel2of2 (sel1of2 (inP2 p1))) (mexp g b1)))
+          (not (exists ((i Index))
+              (eq (sel2of2 (sel1of2 (inP2 p1))) (mexp g (b i))))))))
+    (lambda _ ok))
+  (step p2
+    (lambda (in) (cand
+        (eq (vks p2) (vk skP))
+        (not (eq (sel2of2 (sel1of2 (inP2 p2))) (mexp g b1)))
+        (not (exists ((i Index))
+            (eq (sel2of2 (sel1of2 (inP2 p2))) (mexp g (b i))))))))
+  (lambda _ ko))
 
 (add-constrain pbl () (lt P1 P2))
 (add-constrain pbl () (lt P2 P3))
@@ -116,24 +109,14 @@
 (add-constrain pbl () (<> P5 P3))
 
 
-(define S1
-  (declare-step pbl "Schall1" '()
-    (step p1
-      empty-cond
-      (lambda (in)
-        (let [ (gp (sel2of2 in)) (vkp (sel1of2 in)) ]
-          (tuple
-            (vk skS)
-            (mexp g b1)
-            (sign (tuple gp (mexp g b1) vkp) skS)))))
-    (step p2
-      empty-cond
-      (lambda (in j)
-        (let [ (gp (sel2of2 in)) (vkp (sel1of2 in)) ]
-          (tuple
-            (vk skS)
-            (mexp g b1)
-            (sign (tuple gp (mexp g b1) vkp) skS)))))))
+(define S1 (declare-same-step pbl "S1" ptcls '()
+    empty-cond
+    (lambda (p in)
+      (let [ (gp (sel2of2 in)) (vkp (sel1of2 in)) ]
+        (tuple
+          (vk skS)
+          (mexp g b1)
+          (sign (tuple gp (mexp g b1) vkp) skS))))))
 (define (S1in p) (macro_input S1 p))
 (define (vkS p) (sel1of2 (S1in p)))
 (define (gpS p) (sel2of2 (S1in p)))
@@ -146,53 +129,29 @@
         (mexp g b1) (sel1of2 (sel2of2 (macro_msg S1 p2)))))))
 
 
-(define S2
-  (declare-step pbl "Schall2" '()
-    (step p1
-      (lambda (in)
-        (checksign (tuple (mexp g b1) (gpS p1) (vk skS)) in (vkS p1)))
-      (lambda _ ok))
-    (step p2
-      (lambda (in)
-        (checksign (tuple (mexp g b1) (gpS p2) (vk skS)) in (vkS p2)))
-      (lambda _ ok))))
+
+(define S2 (declare-same-step "S2" pbl ptcls '()
+    (lambda (p in)
+      (checksign (tuple (mexp g b1) (gpS p) (vk skS)) in (vkS p)))
+    (lambda _ ok)))
 (define (S2in p) (macro_input S2 p))
 
-(define S3
-  (declare-step pbl "Schall3" '()
-    (step p1
-      (lambda (c)
-        (and
-          (eq (vkS p1) (vk skP))
-          (eq (gpS p1) (mexp g a1))))
-      (lambda _
-        ok))
-    (step p2
-      (lambda (c)
-        (and
-          (eq (vkS p2) (vk skP))
-          (eq (gpS p2) (mexp g a1))))
-      (lambda _
-        ok))))
 
-(define S4
-  (declare-step pbl "Schall4" (list Index)
-    (step p1
-      (lambda (c i)
-        (and
-          (eq (vkS p1) (vk skP))
-          (not (eq (gpS p1) (mexp g a1)))
-          (eq (gpS p1) (mexp g (a i)))))
-      (lambda _
-        ok))
-    (step p2
-      (lambda (c i)
-        (and
-          (eq (vkS p2) (vk skP))
-          (not (eq (gpS p2) (mexp g a1)))
-          (eq (gpS p2) (mexp g (a i)))))
-      (lambda _
-        ok))))
+(define S3 (declare-same-step "S3" pbl ptcls '()
+    (lambda (p in)
+      (cand
+        (eq (vkS p) (vk skP))
+        (eq (gpS p) (mexp g a1))))
+    (lambda _ ok)))
+
+(define S3 (declare-same-step "S3" pbl ptcls (list Index)
+    (lambda (p in i)
+      (cand
+        (eq (vkS p) (vk skP))
+        (not (eq (gpS p) (mexp g a1)))
+        (eq (gpS p1) (mexp g (a i)))))
+    (lambda _ ok)))
+
 
 (define S5
   (declare-step pbl "Schall3fail" '()
