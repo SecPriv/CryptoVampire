@@ -17,8 +17,8 @@ use crate::input::shared_problem::ShrProblem;
 use crate::problem::Report;
 use crate::protocol::Step;
 use crate::terms::{
-    Alias, AliasRewrite, BUILTINS, Formula, Function, Rewrite,  SORT_LIST, Signature,
-    Sort, Variable, mk_scheme_lib,
+    Alias, AliasRewrite, BUILTINS, Formula, Function, Rewrite, SORT_LIST, Signature, Sort,
+    Variable, mk_scheme_lib,
 };
 
 pub(crate) mod golgge_rules;
@@ -90,7 +90,16 @@ pub fn init_engine(config: Configuration) -> Engine {
         engine.register_module(module);
     }
 
-    let libs = libraries!["formula", "function", "signature", "type", "sort"];
+    let libs = libraries![
+        "formula",
+        "function",
+        "signature",
+        "type",
+        "sort",
+        "cryptography",
+        "protocol",
+        "solver"
+    ];
 
     for (name, lib) in libs {
         engine.register_steel_module(format!("cryptovampire/{name}"), lib.into());

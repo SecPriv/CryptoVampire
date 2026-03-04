@@ -138,7 +138,7 @@ impl Registerable for Formula {
             .register_native_fn_definition(CAND_DEFINITION)
             .register_native_fn_definition(COR_DEFINITION)
             .register_native_fn_definition(STUPLE_DEFINITION)
-            .register_value("binder->exist", FOBinder::Exists.into_steelval().unwrap())
+            .register_value("binder->exists", FOBinder::Exists.into_steelval().unwrap())
             .register_value("binder->forall", FOBinder::Forall.into_steelval().unwrap())
             .register_value("binder->findst", FOBinder::FindSuchThat.into_steelval().unwrap());
         trace!("defined {name} scheme module");

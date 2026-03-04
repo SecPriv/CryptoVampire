@@ -31,6 +31,10 @@ pub enum Sort {
     Index,
 }
 
+pub static SORTS: &[Sort] = {
+    use Sort::*;
+    &[Any, Bool, Bitstring, Time, Protocol, Nonce, Index]};
+
 impl Sort {
     /// Returns `true` if the sort supports deduction (i.e., is `Bool` or `Bitstring`).
     pub const fn is_base(&self) -> bool {
@@ -88,7 +92,7 @@ impl Sort {
         list::try_get_egraph(egraph, f)
     }
 
-    /// Extracts a list of sorts from a `Formula`.
+    /// Extracts a list of sorts from a `Formula` representing a list of sorts.
     ///
     /// This function is a wrapper around `list::try_get`.
     pub fn list_from_formula<F>(f: F) -> Option<Vec<Sort>>
@@ -101,13 +105,25 @@ impl Sort {
 
     pub const fn short_name(&self) -> char {
         match self {
-            Sort::Any => 'a',
-            Sort::Bool => 'b',
-            Sort::Bitstring => 'm',
-            Sort::Time => 't',
-            Sort::Protocol => 'p',
-            Sort::Nonce => 'n',
-            Sort::Index => 'i',
+            Self::Any => 'a',
+            Self::Bool => 'b',
+            Self::Bitstring => 'm',
+            Self::Time => 't',
+            Self::Protocol => 'p',
+            Self::Nonce => 'n',
+            Self::Index => 'i',
+        }
+    }
+
+    pub const fn long_name(&self) -> &'static str {
+        match self {
+            Self::Any => "Any",
+            Self::Bool => "Bool",
+            Self::Bitstring => "Bitstring",
+            Self::Time => "Time",
+            Self::Protocol => "Protocol",
+            Self::Nonce => "Nonce",
+            Self::Index => "Index",
         }
     }
 
@@ -123,15 +139,7 @@ impl Sort {
 impl Display for Sort {
     /// Formats the `Sort` for display.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Sort::Bool => write!(f, "Bool"),
-            Sort::Bitstring => write!(f, "Bitstring"),
-            Sort::Time => write!(f, "Time"),
-            Sort::Protocol => write!(f, "Protocol"),
-            Sort::Nonce => write!(f, "Nonce"),
-            Sort::Index => write!(f, "Index"),
-            Sort::Any => write!(f, "Any"),
-        }
+        std::fmt::Display::fmt(&self.long_name(), f)
     }
 }
 
@@ -148,6 +156,11 @@ impl Registerable for Sort {
         let mut module = BuiltInModule::new(name);
         Self::register_enum_variants(&mut module);
         module.register_type::<Self>("Sort?");
+
+        for &s in SORTS {
+            module.register_value(s.long_name(), s.into_steelval().unwrap());
+        }
+
         trace!("defined {name} scheme module");
         assert!(modules.insert(name.into(), module).is_none())
     }

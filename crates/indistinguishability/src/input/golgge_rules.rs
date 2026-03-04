@@ -38,7 +38,7 @@ mod msteel {
             .deps(to)
             .build()?;
 
-        Ok(Rule(prolog.into_mrc()).into_steelval()?)
+        Rule(prolog.into_mrc()).into_steelval()
     }
 
     impl Registerable for Rule {

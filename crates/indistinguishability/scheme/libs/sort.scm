@@ -1,10 +1,35 @@
-(provide Nonce Bool Bitstring Message Time Protocol Step Nonce Index Any Condition)
-(require-builtin cryptovampire/ll/sort)
+(provide 
+  Nonce Bool Bitstring Message Time Protocol Step Index Any Condition
+  Nonce? Bool? Bitstring? Message? Time? Protocol? Step? Index? Any? Condition?
+  )
+(require-builtin cryptovampire/ll/sort as sort->)
 
-(define Nonce Sort-Nonce)
-(define Bool Sort-Bool) (define Condition Bool)
-(define Bitstring Sort-Bitstring) (define Message Bitstring)
-(define Time Sort-Time) (define Step Time)
-(define Protocol Sort-Protocol)
-(define Index Sort-Index)
-(define Any Sort-Any)
+(define Nonce sort->Nonce)
+(define Nonce? sort->Sort-Nonce?)
+
+(define Bool sort->Bool)
+(define Bool? sort->Sort-Bool?)
+
+(define Bitstring sort->Bitstring)
+(define Bitstring? sort->Sort-Bitstring?)
+
+(define Message Bitstring)
+(define Message? Bitstring?)
+
+(define Time sort->Time)
+(define Time? sort->Sort-Time?)
+
+(define Protocol sort->Protocol)
+(define Protocol? sort->Sort-Protocol?)
+
+(define Step Time)
+(define Step? Time?)
+
+(define Index sort->Index)
+(define Index? sort->Sort-Index?)
+
+(define Any sort->Any)
+(define Any? sort->Sort-Any?)
+
+(define Condition Bool)
+(define Condition? Bool?)

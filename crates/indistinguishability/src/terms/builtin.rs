@@ -571,7 +571,7 @@ pub(crate) fn mk_scheme_lib() -> String {
     let mut module = String::new();
     let mut wrapped = String::new();
 
-    module.push_str("(provide ");
+    module.push_str("(provide eql <> ");
     for fun in BUILTINS.iter() {
         let name = &fun.name;
 
@@ -586,13 +586,15 @@ pub(crate) fn mk_scheme_lib() -> String {
     writeln!(
         module,
         "
-        (require-builtin cryptovampire/ll/builtin-functions as bi)
+        (require-builtin cryptovampire/ll/builtin-functions as ___pre_$)
         (require \"cryptovampire/function\") 
 
         {wrapped}
+        (define (eql a b) (eq (bitstring-length a) (bitstring-length b)))
+        (define <> incompatible)
         "
     )
     .unwrap();
-    trace!("builtin function schem:\n{module}");
+    trace!("builtin function scheme:\n{module}");
     module
 }

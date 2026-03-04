@@ -160,7 +160,6 @@ impl Step {
 
 mod msteel {
     use log::trace;
-    use steel::primitives::strings::TO_STRING_DEFINITION;
     use steel::rerrs::ErrorKind;
     use steel::rvals::{IntoSteelVal, Result as SResult};
     use steel::steel_vm::builtin::BuiltInModule;
@@ -199,7 +198,7 @@ mod msteel {
     /// Returns the variables for a given step in a protocol.
     #[steel_derive::declare_steel_function(name = "get-vars")]
     fn get_vars(pbl: ShrProblem, step: Function, ptcl: Function) -> SResult<SteelVal> {
-        Ok(pbl.get_step_mut(step, ptcl)?.vars.clone().into_steelval()?)
+        pbl.get_step_mut(step, ptcl)?.vars.clone().into_steelval()
     }
 
     /// Sets the message for a given step in a protocol.
@@ -242,6 +241,7 @@ mod msteel {
     // =========================================================
 
     /// Returns a string representation of a specific step in a protocol.
+    #[steel_derive::declare_steel_function(name = "string")]
     fn to_string(pbl: ShrProblem, ptcl: Function, step: Function) -> SResult<SteelVal> {
         let Some(pidx) = ptcl.get_protocol_index() else {
             return Err(SteelErr::new(
@@ -268,6 +268,7 @@ mod msteel {
             Self::register_type(&mut module);
             module
                 .register_type::<Self>("Step?")
+                .register_native_fn_definition(TO_STRING_DEFINITION)
                 .register_native_fn_definition(SET_VARS_DEFINITION)
                 .register_native_fn_definition(SET_COND_DEFINITION)
                 .register_native_fn_definition(SET_MSG_DEFINITION)

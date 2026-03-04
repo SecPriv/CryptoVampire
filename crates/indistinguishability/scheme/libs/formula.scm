@@ -1,6 +1,6 @@
 (provide 
-  cand cor 
-  exists forall finst)
+  cand cor ctuple
+  exists forall findst)
 (require "cryptovampire/function") 
 (require-builtin cryptovampire/ll/builtin-functions as funs->)
 (require-builtin cryptovampire/ll/variable as var->)
@@ -54,3 +54,7 @@
       (lambda (ids ...) arg1)
       (lambda (ids ...) arg2)
       arg3) ]))
+
+(define (cand . args) (f->cand args))
+(define (cor . args) (f->cor args))
+(define (ctuple . args) (f->ctuple args))

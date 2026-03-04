@@ -89,7 +89,7 @@ mod mstell {
         s.inputs.to_vec()
     }
 
-    #[steel_derive::declare_steel_function(name = "outputs")]
+    #[steel_derive::declare_steel_function(name = "output")]
     fn output(s: Signature) -> Sort {
         s.output
     }

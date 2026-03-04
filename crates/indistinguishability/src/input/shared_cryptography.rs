@@ -37,6 +37,11 @@ impl ShrCrypto {
     }
 }
 
+#[steel_derive::declare_steel_function(name = "declare-cryptography")]
+fn declare_crypto(pbl: ShrProblem) -> ShrCrypto {
+    ShrCrypto::new(pbl)
+}
+
 /// Enable PRF axioms and rules
 #[steel_derive::declare_steel_function(name = "init->prf")]
 fn init_prf(shrc: ShrCrypto, hash: Function) {
@@ -127,6 +132,7 @@ impl Registerable for ShrCrypto {
             .register_native_fn_definition(INIT_SENC_DEFINITION)
             .register_native_fn_definition(INIT_DDH_DEFINITION)
             .register_native_fn_definition(INIT_XOR_DEFINITION)
+            .register_native_fn_definition(DECLARE_CRYPTO_DEFINITION)
             .register_native_fn_definition(REGISTER_FRESH_NONCE_DEFINITION);
 
         trace!("defined {name} scheme module");
