@@ -5,7 +5,6 @@ use egg::{Analysis, Pattern, Rewrite};
 use itertools::{Itertools, chain};
 use log::trace;
 use logic_formula::AsFormula;
-use steel::steel_vm::builtin::BuiltInModule;
 use steel_derive::Steel;
 
 use crate::input::Registerable;

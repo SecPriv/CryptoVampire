@@ -3,12 +3,9 @@ use std::fmt::{Debug, Display};
 use std::sync::OnceLock;
 
 use bon::bon;
-use cryptovampire_smt::SortedVar;
 use serde::Serialize;
-use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
-use crate::input::Registerable;
 use crate::terms::{Formula, Sort};
 use crate::utils::{InnerSmartCow, SmartCow};
 use crate::{LangVar, MSmtFormula};

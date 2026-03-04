@@ -14,7 +14,7 @@ pub fn mk_rewrite<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = egg:
 fn mk_static_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = egg::Rewrite<Lang, N>> {
     let b_ite = &BITE;
     let m_ite = &MITE;
-    decl_vars![a, b, c, d, v1, x, v];
+    decl_vars![a, b, c, d, v1, x];
 
     mk_many_rewrites! {
       ["if true"] (m_ite true #a #b) => (#a).

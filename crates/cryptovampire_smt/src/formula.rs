@@ -454,7 +454,7 @@ impl<U: SmtParam> AsFormula for SmtFormula<U> {
                 args: MIter::Map(vec![*c, *l, *r].into_iter()),
             },
             #[cfg(feature = "cryptovampire")]
-            SmtFormula::Subterm(_, smt_formula, smt_formula1) => unimplemented!(),
+            SmtFormula::Subterm(_, _, _) => unimplemented!(),
         }
     }
 }
@@ -486,11 +486,11 @@ impl<'a, U: SmtParam> AsFormula for &'a SmtFormula<U> {
                 args: MIter::Ref(args.iter()),
             },
             SmtFormula::Forall(vars, f) => Destructed {
-                head: HeadSk::Quant(SmtQuantifierRef::Forall(&vars)),
+                head: HeadSk::Quant(SmtQuantifierRef::Forall(vars)),
                 args: MIter::One([f.as_ref()].into_iter()),
             },
             SmtFormula::Exists(vars, f) => Destructed {
-                head: HeadSk::Quant(SmtQuantifierRef::Exists(&vars)),
+                head: HeadSk::Quant(SmtQuantifierRef::Exists(vars)),
                 args: MIter::One([f.as_ref()].into_iter()),
             },
             SmtFormula::True => Destructed {
@@ -530,7 +530,7 @@ impl<'a, U: SmtParam> AsFormula for &'a SmtFormula<U> {
                 args: MIter::Owned(vec![c.as_ref(), l.as_ref(), r.as_ref()].into_iter()),
             },
             #[cfg(feature = "cryptovampire")]
-            SmtFormula::Subterm(_, smt_formula, smt_formula1) => unimplemented!(),
+            SmtFormula::Subterm(_, _, _) => unimplemented!(),
         }
     }
 }

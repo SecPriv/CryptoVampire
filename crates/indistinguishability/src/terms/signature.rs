@@ -1,10 +1,8 @@
 use serde::{Deserialize, Serialize};
-use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 use utils::implvec;
 
 use crate::fresh;
-use crate::input::Registerable;
 use crate::terms::{Formula, Sort, Variable};
 
 /// Represents the signature of a function, defining its input and output sorts.
@@ -45,31 +43,9 @@ impl Signature {
     pub fn mk_vars_expr(&self) -> impl Iterator<Item = Formula> {
         self.inputs.iter().map(|&s| fresh!(s)).map(Formula::Var)
     }
-
-    // pub fn mk_sorted_vars(
-    //     &self,
-    //     from: u32,
-    // ) -> impl Iterator<Item = SortedVar<Sort>> + Clone + use<'_> {
-    //     izip!(from.., self.inputs.iter()).map(|(i, s)| SortedVar {
-    //         var: VarInner::Int(i as cryptovampire_smt::uvar),
-    //         sort: *s,
-    //     })
-    // }
-
-    // pub fn mk_egg_vars(&self, from: u32) -> impl Iterator<Item = egg::Var> {
-    //     let n = self.arity() as u32 + from;
-    //     (from..n).map(egg::Var::from_usize)
-    // }
-
-    fn steel_constructor(input: Vec<Sort>, output: Sort) -> Self {
-        Self {
-            inputs: input.into(),
-            output,
-        }
-    }
 }
 
-mod mstell {
+mod msteel {
     use log::trace;
     use steel::steel_vm::builtin::BuiltInModule;
 

@@ -8,9 +8,6 @@ use syn::parse::{Parse, ParseStream, Parser, Result};
 use syn::punctuated::Punctuated;
 use syn::{Token, parse_macro_input};
 
-// Counter for generating unique temporary variable names
-static VAR_COUNTER: AtomicUsize = AtomicUsize::new(0);
-
 use super::parser::*;
 
 struct MacroInput<C = ()> {
@@ -47,14 +44,6 @@ fn generate_banged_expr_tokens(
             quote!(#path::SmtFormula::Var(#ret))
         }
         BangedContentKind::Cross(_) => ret,
-    }
-}
-
-fn generate_var_index_expr_tokens(mi: &MacroInput, v_idx: &VarIndex) -> proc_macro2::TokenStream {
-    match v_idx {
-        // VarIndex::Lit(lit_int) => quote! { #lit_int },
-        VarIndex::Expr(expr) => quote! { (#expr) }, // Parenthesize expr
-        VarIndex::Ident(ident) => quote! { #ident.clone() },
     }
 }
 

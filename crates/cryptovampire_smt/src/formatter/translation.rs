@@ -73,7 +73,7 @@ fn quantifier_to_term<U: SmtParam>(
 ) -> Term {
     let var_list = Term::sexpr(
         vars.iter()
-            .map(|sv| Term::sexpr(vec![Term::atom(&sv), Term::atom(sv.sort_ref())])),
+            .map(|sv| Term::sexpr(vec![Term::atom(sv), Term::atom(sv.sort_ref())])),
     );
     Term::sexpr([
         Term::atom(quantifier),

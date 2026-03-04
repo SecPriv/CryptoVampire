@@ -9,6 +9,7 @@ pub const SMT_FILE_EXTENSION: &str = ".smt";
 
 #[cfg(feature = "macro")]
 /// A macro for generating SMT formulas.
+#[allow(unused)]
 macro_rules! smt {
     ($($t:tt)*) => {
         cryptovampire_macro::smt!($($t)*)

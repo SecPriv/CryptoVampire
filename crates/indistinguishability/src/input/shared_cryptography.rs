@@ -5,7 +5,6 @@ use steel::SteelErr;
 use steel::rerrs::ErrorKind;
 use steel::rvals::Result as SResult;
 use steel::steel_vm::builtin::BuiltInModule;
-use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
 use crate::Problem;

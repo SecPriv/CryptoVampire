@@ -1,6 +1,3 @@
-use std::borrow::Cow;
-
-use log::trace;
 use rustc_hash::FxHashMap;
 use steel::SteelVal;
 use steel::rvals::IntoSteelVal;
@@ -16,10 +13,7 @@ use crate::input::shared_exists::ShrExists;
 use crate::input::shared_problem::ShrProblem;
 use crate::problem::Report;
 use crate::protocol::Step;
-use crate::terms::{
-    Alias, AliasRewrite, BUILTINS, Formula, Function, Rewrite, SORT_LIST, Signature, Sort,
-    Variable, mk_scheme_lib,
-};
+use crate::terms::{Alias, Formula, Function, Rewrite, Signature, Sort, Variable, mk_scheme_lib};
 
 pub(crate) mod golgge_rules;
 pub(crate) mod prelude;

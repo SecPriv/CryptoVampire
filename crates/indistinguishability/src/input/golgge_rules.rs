@@ -1,12 +1,6 @@
-use egg::Pattern;
-use golgge::PrologRule;
-use itertools::Itertools;
-use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
-use crate::input::Registerable;
-use crate::problem::{PRule, RcRule};
-use crate::terms::Formula;
+use crate::problem::RcRule;
 
 /// Represents a Golgge rule, wrapping an `RcRule`.
 #[derive(Clone, Steel)]

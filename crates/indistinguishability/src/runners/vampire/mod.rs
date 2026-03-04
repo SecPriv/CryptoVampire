@@ -1,5 +1,4 @@
 use std::borrow::Borrow;
-use std::env;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 
@@ -52,6 +51,7 @@ where
     }
 
     /// sets the timeout in seconds
+    #[allow(unused)]
     pub fn timeout(mut self, timeout: ::std::time::Duration) -> Self {
         let narg = VampireArg::TimeLimit(timeout.as_secs_f64());
         if let Some(arg) = self.args.iter_mut().find(|x| x.same(&narg)) {
@@ -82,6 +82,7 @@ macro_rules! options {
 
     impl VampireArg {
         #[doc = "tells if two [VampireArg] are setting the same parameter"]
+        #[allow(unused)]
         pub const fn same(&self, other: &Self) -> bool {
             matches!(
                 (self, other),
@@ -278,7 +279,7 @@ impl VampireExec {
         let mut tmpfile = tempfile::Builder::new()
             .prefix("cryptovampire")
             .suffix(".smt")
-            .keep(pbl.config.keep_smt_files)
+            .disable_cleanup(pbl.config.keep_smt_files)
             .tempfile()?;
 
         if pbl.config.keep_smt_files {
@@ -336,7 +337,7 @@ impl VampireExec {
 /// Panics if the `vampire` executable cannot be found in `$PATH`.
 fn get_vampire_location() -> PathBuf {
     if let Some(path) = option_env!("VAMPIRE_PATH") {
-        return path.into();
+        path.into()
     } else {
         which::which("vampire").expect("can't find vampire in the $PATH")
     }

@@ -3,11 +3,11 @@ use std::sync::{Arc, RwLock, RwLockWriteGuard};
 
 use anyhow::Context;
 use log::trace;
+use steel::SteelErr;
 use steel::rerrs::ErrorKind;
 use steel::rvals::{IntoSteelVal, Result as SResult};
 use steel::steel_vm::builtin::BuiltInModule;
 use steel::steel_vm::register_fn::RegisterFn;
-use steel::{SteelErr, SteelVal};
 use steel_derive::Steel;
 
 use crate::input::golgge_rules::Rule;

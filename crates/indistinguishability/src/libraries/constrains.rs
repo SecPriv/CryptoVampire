@@ -145,7 +145,7 @@ fn mk_rewrite_one<N: Analysis<Lang>>(
 }
 
 fn mk_rewrite_static<N: Analysis<Lang>>() -> impl Iterator<Item = egg::Rewrite<Lang, N>> {
-    decl_vars![t, t1, t2, a, b, c, v1, p, n, u, v];
+    decl_vars![t, t1, t2, v1];
 
     mk_many_rewrites! {
      ["leq refl"] (LEQ #t #t) => true.

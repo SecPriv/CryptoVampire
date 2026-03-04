@@ -7,7 +7,7 @@
 
 use std::ffi::OsStr;
 use std::fmt::{self, Debug, Display, Formatter};
-use std::io::{Error, ErrorKind, Result, Write};
+use std::io::{Error, Result, Write};
 use std::path::Path;
 
 use crate::egraph::EGraph;
@@ -138,14 +138,11 @@ where
         write!(stdin, "{}", self)?;
         match child.wait()?.code() {
             Some(0) => Ok(()),
-            Some(e) => Err(Error::new(
-                ErrorKind::Other,
-                format!("dot program returned error code {}", e),
-            )),
-            None => Err(Error::new(
-                ErrorKind::Other,
-                "dot program was killed by a signal",
-            )),
+            Some(e) => Err(Error::other(format!(
+                "dot program returned error code {}",
+                e
+            ))),
+            None => Err(Error::other("dot program was killed by a signal")),
         }
     }
 

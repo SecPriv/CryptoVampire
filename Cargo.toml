@@ -42,6 +42,7 @@ steel-repl = { git = "https://github.com/puyral/steel/", branch = "better-macros
 
 [workspace.lints.rust]
 elided_lifetimes_in_paths = "deny"
+unused_imports = "allow"
 
 [profile.profiling]
 inherits = "release"

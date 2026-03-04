@@ -12,7 +12,7 @@ use crate::terms::{
 /// Creates a set of static rewrite rules.
 pub fn mk_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>> {
     let m_ite = &MITE;
-    decl_vars![t, t1, t2, a, b, c, v1, p, n, u, v];
+    decl_vars![t, a, b, c, v1, p, n, u, v];
 
     let main = mk_many_rewrites! {
 

@@ -6,20 +6,15 @@ use std::ops::Deref;
 use cryptovampire_smt::SmtHead;
 use egg::{Id, Language, PatternAst, RecExpr};
 use serde::Serialize;
-use steel::SteelErr;
-use steel::rvals::IntoSteelVal;
-use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 use utils::{ereturn_if, implvec, match_eq};
 
-use crate::input::Registerable;
-use crate::input::shared_cryptography::ShrCrypto;
 use crate::protocol::MacroKind;
 use crate::terms::{
-    Alias, AliasRewrite, BUILTINS, EXISTS, Exists, FIND_SUCH_THAT, FOBinder, Formula,
-    FunctionCollection, FunctionFlags, LAMBDA_O, LAMBDA_S, MACRO_COND, MACRO_EXEC, MACRO_FRAME,
-    MACRO_INPUT, MACRO_MSG, NOT, Quantifier, QuantifierIndex, QuantifierT, Signature, Sort,
-    UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, Variable, builtin,
+    Alias, EXISTS, Exists, FIND_SUCH_THAT, FOBinder, Formula, FunctionCollection, FunctionFlags,
+    LAMBDA_O, LAMBDA_S, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, NOT,
+    Quantifier, QuantifierIndex, QuantifierT, Signature, Sort, UNFOLD_COND, UNFOLD_EXEC,
+    UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, Variable, builtin,
 };
 use crate::utils::{InnerSmartCow, LightClone, SmartCow};
 use crate::{Lang, LangVar, fresh};
@@ -409,8 +404,7 @@ mod steel_api {
     use crate::input::Registerable;
     use crate::input::shared_cryptography::ShrCrypto;
     use crate::terms::{
-        Alias, AliasRewrite, BUILTINS, Function, FunctionFlags, InnerFunction, Signature, Sort,
-        builtin,
+        Alias, AliasRewrite, Function, FunctionFlags, InnerFunction, Signature, Sort,
     };
 
     /// Creates a new `Function` instance for use with the Steel VM.

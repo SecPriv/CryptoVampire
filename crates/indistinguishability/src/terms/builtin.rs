@@ -1,9 +1,7 @@
 use std::borrow::Cow;
 
-use bitflags::Bits;
 use cryptovampire_macros::mk_builtin_funs;
 use log::trace;
-use steel::rvals::CustomType;
 
 use super::Sort::{self, *};
 use super::{Alias, AliasRewrite, Function, FunctionFlags, InnerFunction, Signature};

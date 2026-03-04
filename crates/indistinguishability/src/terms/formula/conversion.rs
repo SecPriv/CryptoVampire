@@ -481,13 +481,6 @@ fn mk_list<L: EggLanguage>(out: &mut Vec<L>, sorts: implvec!(Sort)) -> usize {
     i
 }
 
-fn mk_bound_var<L: EggLanguage>(depth: usize) -> impl Iterator<Item = L> {
-    chain![
-        ::std::iter::once(L::mk_fun_application(LAMBDA_O.clone(), [])),
-        (0..depth).map(|i| L::mk_fun_application(LAMBDA_S.clone(), [Id::from(i)]))
-    ]
-}
-
 #[derive(Debug, Clone)]
 pub enum ExtractionStatus {
     Looping,

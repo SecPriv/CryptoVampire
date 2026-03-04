@@ -33,7 +33,8 @@ pub enum Sort {
 
 pub static SORTS: &[Sort] = {
     use Sort::*;
-    &[Any, Bool, Bitstring, Time, Protocol, Nonce, Index]};
+    &[Any, Bool, Bitstring, Time, Protocol, Nonce, Index]
+};
 
 impl Sort {
     /// Returns `true` if the sort supports deduction (i.e., is `Bool` or `Bitstring`).

@@ -359,6 +359,7 @@ impl<L: Language> Explanation<L> {
     /// Construct the flat representation of the explanation and return it.
     pub fn make_flat_explanation(&mut self) -> &FlatExplanation<L> {
         if self.flat_explanation.is_some() {
+            #[allow(clippy::unnecessary_unwrap)]
             self.flat_explanation.as_ref().unwrap()
         } else {
             self.flat_explanation = Some(TreeTerm::flatten_proof(&self.explanation_trees));
@@ -405,6 +406,7 @@ impl<L: Language> Explanation<L> {
         is_forward: bool,
     ) -> bool {
         if is_forward && next.forward_rule.is_some() {
+            #[allow(clippy::unnecessary_unwrap)]
             let rule_name = next.forward_rule.as_ref().unwrap();
             if let Some(rule) = table.get(rule_name) {
                 Explanation::check_rewrite(current, next, rule)

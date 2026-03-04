@@ -5,7 +5,6 @@ use log::trace;
 use steel::SteelVal;
 use steel::rvals::IntoSteelVal;
 use steel::steel_vm::builtin::BuiltInModule;
-use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
 use crate::input::Registerable;
@@ -75,7 +74,7 @@ fn get_patt(shre: ShrExists) -> Formula {
 #[steel_derive::declare_steel_function(name = "set-exists-pattern")]
 fn set_patt(shre: ShrExists, patt: Formula) -> ::steel::rvals::Result<SteelVal> {
     shre.exists_mut().set_patt(patt);
-    Ok(().into_steelval()?)
+    ().into_steelval()
 }
 
 impl Registerable for ShrExists {

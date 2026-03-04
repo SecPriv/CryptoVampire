@@ -136,7 +136,6 @@ impl MFunction {
     /// Returns an iterator over the alternative names and their corresponding owned function token streams.
     pub fn list_alt_names(&self) -> impl Iterator<Item = proc_macro2::TokenStream> + use<'_> {
         let owned = self.as_owned();
-        let name = &self.name;
         chain![
             // [quote_spanned! {self.span => (#name, #owned)}],
             self.alt_names.iter().map(move |n| quote! {(#n, #owned)})

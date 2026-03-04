@@ -4,9 +4,6 @@ use clap::{Parser, Subcommand};
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
-use crate::input::Registerable;
-pub use crate::input::prelude::Preludes;
-
 #[derive(Debug, Steel, Clone, Subcommand, Default)]
 pub enum Commands {
     /// Uses Steel's repl mode

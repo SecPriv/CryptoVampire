@@ -3,7 +3,6 @@ use std::fmt::Debug;
 
 use bon::Builder;
 use serde::Serialize;
-use steel::rvals::Result as SResult;
 use steel_derive::Steel;
 
 use crate::terms::{Formula, Variable};
@@ -30,21 +29,6 @@ pub struct Rewrite {
 }
 
 impl Rewrite {
-    fn steel_new(
-        name: String,
-        variables: Vec<Variable>,
-        from: Formula,
-        to: Formula,
-    ) -> SResult<Self> {
-        Ok(Self {
-            from,
-            to,
-            variables: mk_cow!(@ variables),
-            prolog_only: false,
-            name: Some(name.into()),
-        })
-    }
-
     #[must_use]
     pub fn prolog_only(&self) -> bool {
         self.prolog_only
@@ -52,8 +36,8 @@ impl Rewrite {
 }
 
 mod msteel {
-    use log::trace;
     use ::steel::rvals::IntoSteelVal;
+    use log::trace;
     use rustc_hash::FxHashMap;
     use steel::SteelVal;
     use steel::rvals::Result as SResult;
