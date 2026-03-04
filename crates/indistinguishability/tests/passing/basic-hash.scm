@@ -5,6 +5,13 @@
 (require "cryptovampire/protocol")
 (require "cryptovampire/solver")
 (require "cryptovampire/sort")
+(require "cryptovampire/formula")
+(require "cryptovampire/signature")
+(require-builtin cryptovampire/ll/pbl as pbl.)
+(require-builtin cryptovampire/ll/configuration as config.)
+(require-builtin cryptovampire/ll as b.)
+(require-builtin cryptovampire/ll/report as report.)
+(require-builtin cryptovampire/ll/rewrite as rw.)
 
 (define pbl (mk-problem 'x))
 
@@ -21,8 +28,8 @@
 (define-function n pbl (Index Index) -> Nonce)
 
 (define-alias _mk pbl (Index Index Protocol) Nonce
-  [ ([ (i Index) (j Index) ] (i j p1) -> (k1 i))
-  ([ (i Index) (j Index) ] (i j p2) -> (k2 i j)) ])
+  [ ([ (i Index) (j Index) ] (i j p1) -> ((unwrap-nonce k1) i))
+  ([ (i Index) (j Index) ] (i j p2) -> ((unwrap-nonce k2) i j)) ])
 
 (define mk (wrap-nonce _mk))
 
@@ -69,7 +76,7 @@
     (t Time)
     (p Protocol))
   (let [ (in (macro_input t p)) ]
-    (cv-add-rewrite pbl (cv-mk-rewrite "lemma-2" (list i t j p)
+    (add-rewrite pbl (rw.new "lemma-2" (list i t j p)
         (eq (sel2of2 in) (mhash (sel1of2 in) (mk i j p)))
         (exists ((j Index))
           (cand
@@ -79,11 +86,11 @@
 
 ;; configuration
 ; (cv-set-trace pbl #t)
-(cv-set-vampire-timeout pbl (cv-string->duration "5s"))
+(config.set_vampire_timeout pbl (b.string->duration "5s"))
 
 (if (run pbl p1 p2)
   (displayln "success")
   (error "failed basic-hash"))
 
-(displayln (cv-print-report (cv-get-report pbl)))
+(displayln (report.print-report (pbl.get-report pbl)))
 (save-results "basic-hash" pbl)

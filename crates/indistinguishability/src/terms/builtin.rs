@@ -570,13 +570,13 @@ pub(crate) fn mk_scheme_lib() -> String {
     let mut wrapped = String::new();
 
     module.push_str("(provide eql <> ");
-    for fun in BUILTINS.iter() {
-        let name = &fun.name;
+    for (name, fun) in PARSING_PAIRS.iter() {
+        let fun_name = &fun.name;
 
         writeln!(module, "{name}").unwrap();
         writeln!(
             wrapped,
-            "(define {name} (register-function ___pre_${name}))"
+            "(define {name} (register-function ___pre_${fun_name}))"
         )
         .unwrap();
     }

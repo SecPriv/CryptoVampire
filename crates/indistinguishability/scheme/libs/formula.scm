@@ -1,6 +1,7 @@
 (provide 
   cand cor ctuple
-  exists forall findst)
+  exists forall findst
+  mexists mforall mfindst)
 (require "cryptovampire/function") 
 (require-builtin cryptovampire/ll/builtin-functions as funs->)
 (require-builtin cryptovampire/ll/variable as var->)

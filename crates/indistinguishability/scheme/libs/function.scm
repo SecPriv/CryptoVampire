@@ -2,11 +2,15 @@
   nonce?
   get-function
   wrap-nonce
+  unwrap-nonce
+  lift-function
   register-function
   declare-function
   mk-function
   arity
   define-alias
+  alias-rw
+  define-function
   mk-alias-rw)
 (require-builtin cryptovampire/ll/function as fun->)
 (require-builtin cryptovampire/ll/builtin-functions as funs->)
@@ -114,7 +118,7 @@
   (syntax-rules (->)
     [ (_ name pbl (crypto ...) (args ...) -> sort)
     (define name
-      (pre-define-function name pbl (list crypto ...) (list args ...) sort)) ]
+      (pre-define-function (symbol->string 'name) pbl (list crypto ...) (list args ...) sort)) ]
     [ (_ name pbl (args ...) -> sort)
     (define-function name pbl () (args ...) -> sort) ]
     [ (_ name pbl sort)
@@ -148,7 +152,7 @@
     (define name (declare-function pbl
         (fun->mk-alias
           (symbol->string 'name)
-          (signature (inputs ...) -> output)
+          (sig->new (list inputs ...) output)
           (list
-            (alias-rw ((ids sorts) ...) (args ...) -> res)
+            (mk-alias-rw (list sorts ...) (lambda (ids ...) (list args ... res)))
             ...)))) ]))
