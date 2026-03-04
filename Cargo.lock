@@ -1800,6 +1800,7 @@ dependencies = [
  "steel-derive",
  "steel-repl",
  "tempfile",
+ "thiserror 2.0.18",
  "tokio",
  "utils",
  "which",

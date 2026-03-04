@@ -91,7 +91,8 @@ pub fn init_engine(config: Configuration) -> Engine {
         "formula",
         "cryptography",
         "protocol",
-        "solver"
+        "solver",
+        "stdlib"
     ];
 
     for (name, lib) in libs {

@@ -5,7 +5,10 @@ use egg::{Analysis, Pattern, Rewrite};
 use itertools::{Itertools, chain};
 use log::trace;
 use logic_formula::AsFormula;
+use logic_formula::iterators::AllTermsIterator;
+use steel::rerrs::ErrorKind;
 use steel_derive::Steel;
+use thiserror::Error;
 
 use crate::input::Registerable;
 use crate::terms::{EMPTY, Formula, Function, INIT, UNFOLD_COND, UNFOLD_MSG, Variable};
@@ -157,8 +160,56 @@ impl Step {
     }
 }
 
+#[derive(Debug, Clone, Error)]
+enum InvalidStepError {
+    #[error("wrong protocol referenced (expected only references to {expected} got {got})")]
+    WrongProtocol { expected: Function, got: Function },
+    #[error("Variable {0} is free")]
+    FreeVariable(Variable),
+}
+
+impl From<InvalidStepError> for steel::rerrs::SteelErr {
+    fn from(value: InvalidStepError) -> Self {
+        let kind = match &value {
+            InvalidStepError::WrongProtocol { .. } => ErrorKind::Generic,
+            InvalidStepError::FreeVariable(_) => ErrorKind::FreeIdentifier,
+        };
+        Self::new(kind, value.to_string())
+    }
+}
+
+fn check_elem(
+    pbl: &Problem,
+    step: &Function,
+    ptcl: &Function,
+    elem: &Formula,
+) -> Result<(), InvalidStepError> {
+    for f in elem.iter_with(AllTermsIterator, ()) {
+        if let Formula::App { head, .. } = f
+            && head.is_protocol()
+            && head != ptcl
+        {
+            return Err(InvalidStepError::WrongProtocol {
+                expected: ptcl.clone(),
+                got: head.clone(),
+            });
+        }
+    }
+
+    let vars = &pbl.protocols()[ptcl.protocol_idx].steps()[step.step_idx].vars;
+    for v in elem.free_vars_iter() {
+        if !vars.contains(v) {
+            return Err(InvalidStepError::FreeVariable(v.clone()));
+        }
+    }
+
+    Ok(())
+}
+
 mod msteel {
     use log::trace;
+    use logic_formula::AsFormula;
+    use logic_formula::iterators::AllTermsIterator;
     use steel::rerrs::ErrorKind;
     use steel::rvals::{IntoSteelVal, Result as SResult};
     use steel::steel_vm::builtin::BuiltInModule;
@@ -167,6 +218,7 @@ mod msteel {
     use super::Step;
     use crate::input::Registerable;
     use crate::input::shared_problem::ShrProblem;
+    use crate::protocol::step::check_elem;
     use crate::terms::{Formula, Function, Sort, Variable};
 
     /// Sets the variables for a given step in a protocol.
@@ -203,6 +255,7 @@ mod msteel {
     /// Sets the message for a given step in a protocol.
     #[steel_derive::declare_steel_function(name = "set-msg")]
     fn set_msg(pbl: ShrProblem, step: Function, ptcl: Function, msg: Formula) -> SResult<()> {
+        check_elem(&pbl.borrow(), &step, &ptcl, &msg)?;
         pbl.get_step_mut(step, ptcl)?.msg = msg;
         Ok(())
     }
@@ -210,6 +263,7 @@ mod msteel {
     /// Sets the condition for a given step in a protocol.
     #[steel_derive::declare_steel_function(name = "set-cond")]
     fn set_cond(pbl: ShrProblem, step: Function, ptcl: Function, cond: Formula) -> SResult<()> {
+        check_elem(&pbl.borrow(), &step, &ptcl, &cond)?;
         pbl.get_step_mut(step, ptcl)?.cond = cond;
         Ok(())
     }
