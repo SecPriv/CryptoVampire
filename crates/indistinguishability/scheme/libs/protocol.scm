@@ -1,12 +1,13 @@
 (provide
   step
   step-protocol
-  declare-step
+  declare-step declare-same-step
   set-init-step)
 (require-builtin cryptovampire/ll/pbl as pbl->)
 (require-builtin cryptovampire/ll/step as step->)
 (require-builtin cryptovampire/ll/formula as f->)
 (require "cryptovampire/function")
+(require "cryptovampire/stdlib")
 (require "cryptovampire/builtin-functions")
 
 
@@ -33,6 +34,13 @@
                 (apply condf (cons in variables))))))
         content)
       stepf)))
+
+(define (declare-same-step pbl name ptcls sorts msg mcond)
+  (let* [
+    (declare (partial declare-step pbl name sorts))
+    (content (map (lambda (p) (step p (partial msg p) (partial mcond p))) ptcls))
+    ]
+    (apply declare content)))
 
 (define (set-init-step pbl . content)
   (let [ (s (get-function init)) ]

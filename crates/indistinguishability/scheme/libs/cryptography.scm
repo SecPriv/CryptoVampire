@@ -6,15 +6,12 @@
   initialize-as-xor)
 (require-builtin cryptovampire/ll/cryptography as c->)
 (require "cryptovampire/function")
+(require "cryptovampire/stdlib")
 
 (define (register-fresh-nonce crypto vars f)
   (c->register-fresh-nonce crypto vars f))
 
 (define declare-cryptography c->declare-cryptography)
-
-(define (partial f . args)
-  (lambda rest-args
-    (apply f (append args rest-args))))
 
 (define (initialize-as crypto kind . funs)
   (let [ (funs (map get-function funs)) ]
