@@ -3,11 +3,8 @@ use std::fmt::Debug;
 
 use bon::Builder;
 use serde::Serialize;
-use steel::rvals::Result as SResult;
-use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
-use crate::input::Registerable;
 use crate::terms::{Formula, Variable};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Builder, Steel)]
@@ -32,32 +29,49 @@ pub struct Rewrite {
 }
 
 impl Rewrite {
-    fn steel_new(
-        name: String,
-        variables: Vec<Variable>,
-        from: Formula,
-        to: Formula,
-    ) -> SResult<Self> {
-        Ok(Self {
-            from,
-            to,
-            variables: mk_cow!(@ variables),
-            prolog_only: false,
-            name: Some(name.into()),
-        })
-    }
-
     #[must_use]
     pub fn prolog_only(&self) -> bool {
         self.prolog_only
     }
 }
 
-impl Registerable for Rewrite {
-    fn register(
-        module: &mut steel::steel_vm::builtin::BuiltInModule,
-    ) -> &mut steel::steel_vm::builtin::BuiltInModule {
-        Self::register_type(module).register_fn("mk-rewrite", Self::steel_new)
+mod msteel {
+    use ::steel::rvals::IntoSteelVal;
+    use log::trace;
+    use rustc_hash::FxHashMap;
+    use steel::SteelVal;
+    use steel::rvals::Result as SResult;
+    use steel::steel_vm::builtin::BuiltInModule;
+
+    use super::Rewrite;
+    use crate::input::Registerable;
+    use crate::terms::{Formula, Variable};
+
+    #[steel_derive::declare_steel_function(name = "new")]
+    fn new(
+        name: String,
+        variables: Vec<Variable>,
+        from: Formula,
+        to: Formula,
+    ) -> SResult<SteelVal> {
+        (Rewrite {
+            from,
+            to,
+            variables: mk_cow!(@ variables),
+            prolog_only: false,
+            name: Some(name.into()),
+        })
+        .into_steelval()
+    }
+
+    impl Registerable for Rewrite {
+        fn register(modules: &mut FxHashMap<String, BuiltInModule>) {
+            let name = "cryptovampire/ll/rewrite";
+            let mut module = BuiltInModule::new("cryptovampire/ll/rewrite");
+            module.register_native_fn_definition(NEW_DEFINITION);
+            trace!("defined {name} scheme module");
+            assert!(modules.insert(name.into(), module).is_none())
+        }
     }
 }
 

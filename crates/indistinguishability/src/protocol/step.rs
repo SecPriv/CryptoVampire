@@ -157,11 +157,129 @@ impl Step {
     }
 }
 
-impl Registerable for Step {
-    fn register(
-        module: &mut steel::steel_vm::builtin::BuiltInModule,
-    ) -> &mut steel::steel_vm::builtin::BuiltInModule {
-        Step::register_type(module)
+mod msteel {
+    use log::trace;
+    use steel::rerrs::ErrorKind;
+    use steel::rvals::{IntoSteelVal, Result as SResult};
+    use steel::steel_vm::builtin::BuiltInModule;
+    use steel::{SteelErr, SteelVal};
+
+    use super::Step;
+    use crate::input::Registerable;
+    use crate::input::shared_problem::ShrProblem;
+    use crate::terms::{Formula, Function, Sort, Variable};
+
+    /// Sets the variables for a given step in a protocol.
+    #[steel_derive::declare_steel_function(name = "declare-exists")]
+    fn set_vars(
+        pbl: ShrProblem,
+        step: Function,
+        ptcl: Function,
+        vars: Vec<Variable>,
+    ) -> SResult<()> {
+        let mut step = pbl.get_step_mut(step, ptcl)?;
+
+        if step.id.arity() != vars.len() {
+            return Err(SteelErr::new(
+                ErrorKind::Generic,
+                format!(
+                    "wrong number of step variables ({} instead of {})",
+                    vars.len(),
+                    step.id.arity()
+                ),
+            ));
+        }
+
+        step.vars = vars;
+        Ok(())
+    }
+
+    /// Returns the variables for a given step in a protocol.
+    #[steel_derive::declare_steel_function(name = "get-vars")]
+    fn get_vars(pbl: ShrProblem, step: Function, ptcl: Function) -> SResult<SteelVal> {
+        pbl.get_step_mut(step, ptcl)?.vars.clone().into_steelval()
+    }
+
+    /// Sets the message for a given step in a protocol.
+    #[steel_derive::declare_steel_function(name = "set-msg")]
+    fn set_msg(pbl: ShrProblem, step: Function, ptcl: Function, msg: Formula) -> SResult<()> {
+        pbl.get_step_mut(step, ptcl)?.msg = msg;
+        Ok(())
+    }
+
+    /// Sets the condition for a given step in a protocol.
+    #[steel_derive::declare_steel_function(name = "set-cond")]
+    fn set_cond(pbl: ShrProblem, step: Function, ptcl: Function, cond: Formula) -> SResult<()> {
+        pbl.get_step_mut(step, ptcl)?.cond = cond;
+        Ok(())
+    }
+
+    /// Sets the message for a given step in a protocol.
+    #[steel_derive::declare_steel_function(name = "get-msg")]
+    fn get_msg(pbl: ShrProblem, step: Function, ptcl: Function) -> SResult<SteelVal> {
+        pbl.get_step_mut(step, ptcl)?.msg.clone().into_steelval()
+    }
+
+    /// Sets the condition for a given step in a protocol.
+    #[steel_derive::declare_steel_function(name = "get-cond")]
+    fn get_cond(pbl: ShrProblem, step: Function, ptcl: Function) -> SResult<SteelVal> {
+        pbl.get_step_mut(step, ptcl)?.cond.clone().into_steelval()
+    }
+
+    /// Declares a new step function in the problem.
+    #[steel_derive::declare_steel_function(name = "declare-step")]
+    fn declare(pbl: ShrProblem, name: String, sorts: Vec<Sort>) -> SResult<SteelVal> {
+        match pbl.borrow_mut().declare_step(name, sorts) {
+            Err(e) => Err(SteelErr::new(ErrorKind::Generic, e.to_string())),
+            Ok(s) => Ok(s.into_steelval()?),
+        }
+    }
+
+    // =========================================================
+    // ====================== printing =========================
+    // =========================================================
+
+    /// Returns a string representation of a specific step in a protocol.
+    #[steel_derive::declare_steel_function(name = "string")]
+    fn to_string(pbl: ShrProblem, ptcl: Function, step: Function) -> SResult<SteelVal> {
+        let Some(pidx) = ptcl.get_protocol_index() else {
+            return Err(SteelErr::new(
+                ErrorKind::ConversionError,
+                format!("{ptcl} (ptcl) isn't a protocol"),
+            ));
+        };
+        let Some(sidx) = step.get_step_index() else {
+            return Err(SteelErr::new(
+                ErrorKind::ConversionError,
+                format!("{step} (step) isn't a step"),
+            ));
+        };
+
+        let pbl = pbl.borrow();
+        let step = &pbl.protocols()[pidx].steps()[sidx];
+        format!("{step}").into_steelval()
+    }
+
+    impl Registerable for Step {
+        fn register(modules: &mut rustc_hash::FxHashMap<String, BuiltInModule>) {
+            let name = "cryptovampire/ll/step";
+            let mut module = BuiltInModule::new(name);
+            Self::register_type(&mut module);
+            module
+                .register_type::<Self>("Step?")
+                .register_native_fn_definition(TO_STRING_DEFINITION)
+                .register_native_fn_definition(SET_VARS_DEFINITION)
+                .register_native_fn_definition(SET_COND_DEFINITION)
+                .register_native_fn_definition(SET_MSG_DEFINITION)
+                .register_native_fn_definition(GET_VARS_DEFINITION)
+                .register_native_fn_definition(GET_COND_DEFINITION)
+                .register_native_fn_definition(GET_MSG_DEFINITION)
+                .register_native_fn_definition(DECLARE_DEFINITION)
+                .register_native_fn_definition(TO_STRING_DEFINITION);
+
+            trace!("defined {name} scheme module");
+            assert!(modules.insert(name.into(), module).is_none())
+        }
     }
 }
 

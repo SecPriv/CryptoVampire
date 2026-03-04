@@ -71,6 +71,7 @@ pub(crate) enum Status<R> {
 }
 
 pub trait Rebuildable<L: Language, N: Analysis<L>> {
+    #[allow(unused)]
     fn rebuild(&mut self, egraph: &EGraph<L, N>) {}
 }
 
@@ -365,7 +366,7 @@ where
     /// same as [Self::run_expr] but starting from an [Id] in the [EGraph]
     pub fn run(&mut self, base_goal: egg::Id, fuel: u64) -> bool {
         self.total_calls += 1;
-        let ndepth = u64::MAX - fuel;
+        let ndepth = u64::MAX - fuel; // FIXME - why is this not used ?
         let gtmp = if self.is_tracing_enabled(DebugLevel::RULE) {
             let g = self.egraph().id_to_expr(base_goal);
             println!("({base_goal:}) selecting {}", g.pretty(80));
@@ -702,7 +703,7 @@ where
     let dot = tempfile::Builder::new()
         .prefix("egraph_")
         .suffix(".dot")
-        .keep(true)
+        .disable_cleanup(true)
         .tempfile()?;
 
     egraph.dot().to_dot(&dot)?;
@@ -732,6 +733,7 @@ impl<R> MemoStatus<R> {
     }
 
     /// Sets the underlying `Status`.
+    #[allow(unused)]
     pub fn set(&self, status: Status<R>) {
         *self.borrow_mut() = status
     }

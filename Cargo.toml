@@ -14,31 +14,35 @@ resolver = "2"
 default-members = ["crates/indistinguishability"]
 
 [workspace.dependencies]
-itertools = "0.13"
-if_chain = "1.0.2"
-hashbrown = "0.15"
+itertools = "0.14"
+if_chain = "1.0"
+hashbrown = "0.16"
 log = { version = "0.4", features = ["release_max_level_warn"] }
 static_init = "1.0"
-paste = "1.0"
-thiserror = "2.0"
+paste = "1"
+thiserror = "2"
 macro-attr = "0.2"
 anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 derive_builder = "0.20"
-bitflags = "2.9"
-smallvec = {version = "1.15.0", features = ["union", "const_generics", "serde", "const_new"]}
+bitflags = "2"
+smallvec = {version = "1", features = ["union", "const_generics", "serde", "const_new"]}
 env_logger = "0.11"
-tempfile = "3.10"
-which = "8.0.0"
-bon = "3.6.4"
+tempfile = "3"
+which = "8.0"
+bon = "3.6"
 clap = { version = "4", features = ["derive"] }
 clap_complete = "4.5"
-steel-core = { git = "https://github.com/puyral/steel/", branch = "hash-everything", features = ["custom-hash"]}
-steel-derive = { git = "https://github.com/puyral/steel/", branch = "hash-everything"}
-steel-repl = { git = "https://github.com/puyral/steel/", branch = "hash-everything"}
+steel-core = { git = "https://github.com/puyral/steel/", branch = "better-macros", features = ["custom-hash"]}
+steel-derive = { git = "https://github.com/puyral/steel/", branch = "better-macros"}
+steel-repl = { git = "https://github.com/puyral/steel/", branch = "better-macros"}
+# steel-core = { version = "0.8.2", features = ["custom-hash"]}
+# steel-derive = { version = "0.8.2"}
+# steel-repl = { version = "0.8.2"}
 
 [workspace.lints.rust]
 elided_lifetimes_in_paths = "deny"
+unused_imports = "allow"
 
 [profile.profiling]
 inherits = "release"

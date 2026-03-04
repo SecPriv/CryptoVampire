@@ -3,8 +3,10 @@ use proc_macro::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::parse::{Parse, ParseStream};
 use syn::{
-    Attribute, FieldValue, Ident, LitStr, Member, Token, braced, parse_macro_input, parse_quote,
+    Attribute, FieldValue, Ident, LitStr, Member, MetaNameValue, Token, braced, parse_macro_input,
+    parse_quote,
 };
+use utils::implvec;
 
 /// represents things like
 ///
@@ -134,11 +136,70 @@ impl MFunction {
     /// Returns an iterator over the alternative names and their corresponding owned function token streams.
     pub fn list_alt_names(&self) -> impl Iterator<Item = proc_macro2::TokenStream> + use<'_> {
         let owned = self.as_owned();
-        let name = &self.name;
         chain![
             // [quote_spanned! {self.span => (#name, #owned)}],
             self.alt_names.iter().map(move |n| quote! {(#n, #owned)})
         ]
+    }
+}
+
+fn mk_steel<'a>(functions: implvec!(&'a MFunction)) -> proc_macro2::TokenStream {
+    // pub fn register_value_with_doc(
+    // &mut self,
+    // name: &'static str,
+    // value: SteelVal,
+    // doc: DocTemplate<'static>,
+    // ) -> &mut Self {
+    //
+    // pub struct DocTemplate<'a> {
+    // pub signature: &'a str,
+    // pub params: &'a [&'a str],
+    // pub description: &'a str,
+    // pub examples: &'a [(&'a str, &'a str)],
+    // }
+    let imports = quote! {
+        use ::steel::steel_vm::builtin::DocTemplate;
+        use ::steel::steel_vm::builtin::BuiltInModule;
+        use ::steel::rvals::IntoSteelVal;
+        use ::itertools::Itertools;
+    };
+
+    let doc: Attribute = parse_quote!(#[doc = r"test"]);
+
+    let body = functions.into_iter().map(|f| {
+        let docs = f.attrs.iter().filter_map(|attr| match &attr.meta {
+            syn::Meta::NameValue(MetaNameValue { path, value, .. }) if path == doc.meta.path() => {
+                Some(value)
+            }
+            _ => None,
+        });
+
+        let doc = quote! {{
+            let docs :[&'static str; _] = [ #(#docs),* ];
+            DocTemplate {
+                signature: "Function",
+                params : &[],
+                description : String::leak(docs.into_iter().join("\n")),
+                examples: &[]
+            }
+        }};
+
+        let name = &f.name;
+        let str_name = f.alt_names.first().unwrap();
+
+        quote! {
+            module.register_value_with_doc( #str_name, #name.clone().into_steelval().unwrap(), #doc );
+        }
+    });
+
+    quote! {
+        pub(crate) fn register_builtins_to_module(module: &mut ::steel::steel_vm::builtin::BuiltInModule) -> &mut ::steel::steel_vm::builtin::BuiltInModule {
+            #imports
+
+            #(#body)*
+
+            module
+        }
     }
 }
 
@@ -149,11 +210,14 @@ pub fn mk_builtin_funs(input: TokenStream) -> TokenStream {
     let defines = decls.iter().map(MFunction::declare);
     let names = decls.iter().map(|f| f.as_owned());
     let alt_names = decls.iter().flat_map(|f| f.list_alt_names());
+    let steel = mk_steel(&decls);
 
     quote! {
         #(#defines)*
         pub static BUILTINS : &[Function] = &[#(#names),*];
         pub static PARSING_PAIRS: &[(&str, Function)] = &[#(#alt_names),*];
+
+        #steel
     }
     .into()
 }

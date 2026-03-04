@@ -12,7 +12,7 @@ define_language! {
         "=" = Eq([Id; 2]),
 
         "app" = App([Id; 2]),
-        "lam" = Lambda([Id; 2]),
+        "lam" = Lam([Id; 2]),
         "let" = Let([Id; 3]),
         "fix" = Fix([Id; 2]),
 
@@ -87,7 +87,7 @@ impl Analysis<Lambda> for LambdaAnalysis {
                 free.remove(v);
                 free.extend(f(a));
             }
-            Lambda::Lambda([v, a]) | Lambda::Fix([v, a]) => {
+            Lambda::Lam([v, a]) | Lambda::Fix([v, a]) => {
                 free.extend(f(a));
                 free.remove(v);
             }

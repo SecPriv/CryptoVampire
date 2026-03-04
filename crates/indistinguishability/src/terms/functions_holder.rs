@@ -3,7 +3,6 @@ use std::collections::HashMap;
 
 use itertools::chain;
 use log::trace;
-use steel::rvals::CustomType;
 
 use super::{BUILTINS, Function, PARSING_PAIRS};
 use crate::terms::Quantifier;
@@ -163,6 +162,7 @@ impl FunctionCollection {
         )
     }
 
+    #[allow(unused)]
     pub(crate) fn truncate_temporary(&mut self, (len_f, len_q): (usize, usize)) {
         let Self {
             temporary_functions,

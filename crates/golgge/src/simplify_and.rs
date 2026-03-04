@@ -44,6 +44,7 @@ pub trait WithAnd: WithTrue {
         ret.push(ENodeOrVar::Var(Var::from_usize(from)));
         for i in 1..(n as egg::uvar) {
             ret.push(ENodeOrVar::Var(Var::from_usize(from + i)));
+            #[allow(clippy::unnecessary_cast)]
             ret.push(ENodeOrVar::ENode(Self::mk_and(
                 (2 * (i - 1) as usize).into(),
                 ((2 * (i - 1)) + 1 as usize).into(),

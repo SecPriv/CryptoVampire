@@ -7,6 +7,7 @@ pub struct Checkpoint {
     extra_smt: usize,
     steps: usize,
     constrains: usize,
+    #[allow(unused)]
     temporary: (usize, usize),
     public_terms: usize,
 }

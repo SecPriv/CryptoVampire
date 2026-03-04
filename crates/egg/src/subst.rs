@@ -60,43 +60,6 @@ impl Var {
             _ => None,
         }
     }
-
-    /// Exposes the content of a variable
-    #[deprecated]
-    pub fn expose(&self) -> VarExposed {
-        match self.0 {
-            VarInner::Sym(global_symbol) => VarExposed::Sym(global_symbol.as_str()),
-            VarInner::Num(n) => VarExposed::Num(n),
-        }
-    }
-}
-
-/// An enum to expose how a variable was built (with a `str` or a number)
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[deprecated]
-pub enum VarExposed {
-    Sym(&'static str),
-    Num(uvar),
-}
-
-impl VarExposed {
-    #[must_use]
-    pub fn try_into_sym(self) -> Result<&'static str, Self> {
-        if let Self::Sym(v) = self {
-            Ok(v)
-        } else {
-            Err(self)
-        }
-    }
-
-    #[must_use]
-    pub fn try_into_num(self) -> Result<uvar, Self> {
-        if let Self::Num(v) = self {
-            Ok(v)
-        } else {
-            Err(self)
-        }
-    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

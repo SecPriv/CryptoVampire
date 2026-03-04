@@ -124,6 +124,8 @@ async fn never_end<T>() -> T {
 }
 
 /// A wrapper around `Problem` to allow shared mutable access across asynchronous tasks.
+///
+/// Differs from [crate::input::shared_problem::ShrProblem] in the sense that it's async.
 struct SharedProblem<'a>(RwLock<&'a mut Problem>);
 
 impl<'a> SharedProblem<'a> {
@@ -136,9 +138,5 @@ impl<'a> SharedProblem<'a> {
         } else {
             rec.extend_from_slice(self.0.write().await.get_smt_prelude());
         }
-    }
-
-    pub async fn keep_smt_files(&self) -> bool {
-        self.0.read().await.config.keep_smt_files
     }
 }

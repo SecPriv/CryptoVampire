@@ -72,62 +72,6 @@ pub(crate) fn inner_generic<'a, N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
     Err(id)
 }
 
-#[derive(Debug, Clone)]
-enum ExtractionStatus {
-    Looping,
-    Empty,
-    Found(Formula),
-}
-
-impl ExtractionStatus {
-    #[must_use]
-    fn into_found(self) -> Option<Formula> {
-        if let Self::Found(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-}
-
-impl From<Option<Formula>> for ExtractionStatus {
-    fn from(value: Option<Formula>) -> Self {
-        match value {
-            Some(x) => Self::Found(x),
-            None => Self::Empty,
-        }
-    }
-}
-
-fn inner_generic2<N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
-    egraph: &EGraph<Lang, N>,
-    filter: &mut F,
-    id: Id,
-    recexpr_buffer: &mut FxHashMap<Id, ExtractionStatus>,
-) -> ExtractionStatus {
-    if let Some(status) = recexpr_buffer.get(&id) {
-        return status.clone();
-    }
-
-    egraph[id]
-        .nodes
-        .iter() //.filter(|l| filter(*l))
-        .filter_map(|l @ Lang { head, args }| {
-            filter(l).then_some(())?;
-            let args: Option<CowArc<'static, _>> = args
-                .iter()
-                .copied()
-                .map(|id| inner_generic2(egraph, filter, id, recexpr_buffer).into_found())
-                .collect();
-            Some(Formula::App {
-                head: head.clone(),
-                args: args?,
-            })
-        })
-        .next()
-        .into()
-}
-
 /// [pull_from_egraph_inner_generic] which blocks prolog functions
 pub(crate) fn inner<'a, N: Analysis<Lang>>(
     egraph: &'a EGraph<Lang, N>,

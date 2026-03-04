@@ -3,7 +3,7 @@ use itertools::{Itertools, izip};
 use rustc_hash::FxHashMap;
 
 use super::Step;
-use crate::terms::{Formula, Function, Substitution, Variable};
+use crate::terms::Function;
 use crate::{MSmtFormula, smt};
 /// A protocol to be proven
 #[derive(Debug, PartialEq, Eq, Clone, Builder)]
@@ -73,7 +73,7 @@ impl Protocol {
     }
 
     pub fn clone_from(&mut self, other: &Self) {
-        let Self { name, steps } = self;
+        let Self { name: _, steps } = self;
 
         let mut varmap = FxHashMap::default();
         for (sl, sr) in izip!(steps, &other.steps) {

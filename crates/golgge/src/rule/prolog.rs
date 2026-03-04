@@ -46,6 +46,19 @@ pub enum PrologBuilderError {
     VariableMishmatch(egg::Var),
 }
 
+#[cfg(feature = "steel")]
+impl From<PrologBuilderError> for steel::rerrs::SteelErr {
+    fn from(value: PrologBuilderError) -> Self {
+        use steel::rerrs::*;
+        match value {
+            PrologBuilderError::VariableMishmatch(var) => SteelErr::new(
+                ErrorKind::BadSyntax,
+                format!("premise refer to free variable {var}"),
+            ),
+        }
+    }
+}
+
 #[bon]
 impl<L: Language> PrologRule<L> {
     /// Creates a new `PrologRule`.
@@ -224,6 +237,7 @@ macro_rules! pl {
 };
 }
 
+#[allow(dead_code)]
 pub mod parser {
 
     use std::fmt::Debug;
@@ -322,6 +336,7 @@ pub mod parser {
     }
 
     /// Represents either a `PrologRule` or a `Rewrite`.
+    #[allow(dead_code)]
     pub enum PlOrRw<L, N> {
         Pl(PrologRule<L>),
         Rw(Rewrite<L, N>),
@@ -399,6 +414,7 @@ pub mod parser {
         Ok((name, s))
     }
 
+    #[allow(dead_code)]
     fn parse<L, N>(s: &str) -> anyhow::Result<Vec<PlOrRw<L, N>>>
     where
         L: Language + Sync + Send + FromOp + 'static,
@@ -447,6 +463,7 @@ pub mod parser {
 
     impl<L, N> PlOrRw<L, N> {
         /// Parses a program string into a vector of `PlOrRw`.
+        #[allow(dead_code)]
         pub fn parse_program(s: &str) -> anyhow::Result<Vec<Self>>
         where
             L: Language + Sync + Send + FromOp + 'static,

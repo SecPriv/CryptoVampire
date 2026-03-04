@@ -6,10 +6,6 @@ use crate::protocol::Step;
 use crate::terms::{Function, HAPPENS, INIT, LT, MACRO_EXEC, MACRO_MSG};
 use crate::{Lang, MSmt, Problem, fresh, rexp, smt};
 
-fn public_steps(pbl: &Problem) -> impl Iterator<Item = Function> {
-    pbl.steps().unwrap().filter(|s| s.is_publish_step())
-}
-
 pub fn mk_rewrites<N: Analysis<Lang>>(
     pbl: &Problem,
 ) -> impl Iterator<Item = egg::Rewrite<Lang, N>> {

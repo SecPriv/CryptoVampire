@@ -1,18 +1,12 @@
-use std::borrow::Cow;
-
-use egg::{Pattern, Searcher};
-use golgge::{Dependancy, Program, Rule};
-use itertools::{Itertools, chain};
-use static_init::dynamic;
+use itertools::chain;
 
 use crate::libraries::deduce::GetDeduce;
-use crate::problem::{PAnalysis, PRule, RcRule};
+use crate::problem::{PRule, RcRule};
 use crate::terms::{
     AND, BIT_DEDUCE, BITE, BOOL_DEDUCE, EQUIV, FAIL, FRESH_NONCE, HAPPENS, IS_FRESH_NONCE, LEQ,
-    MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, PRED, UNFOLD_COND,
+    MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, PRED, UNFOLD_COND,
     UNFOLD_MSG, VAMPIRE,
 };
-use crate::{Lang, rexp};
 
 /// Creates a set of static deduction rules.
 pub fn mk_rules() -> impl Iterator<Item = RcRule> {

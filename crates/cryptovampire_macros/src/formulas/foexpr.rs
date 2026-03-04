@@ -1,3 +1,5 @@
+#![allow(private_interfaces)]
+
 use itertools::{Itertools, izip};
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
@@ -31,6 +33,7 @@ struct MacroInput {
     content: Ast,
 }
 
+#[allow(dead_code)]
 enum Kind {
     Var,
     Formula,
@@ -38,18 +41,8 @@ enum Kind {
     Binder,
 }
 
-struct ArrayLike {
-    kind: Kind,
-    tokens: TokenStream,
-    len: Option<usize>,
-}
-
 pub trait ToTokenWithInputs {
     fn to_tokens(&self, macro_input: &MacroInput) -> syn::Result<TokenStream>;
-}
-
-pub trait ToArrayWithInputs {
-    fn to_array(&self, macro_input: &MacroInput) -> syn::Result<ArrayLike>;
 }
 
 impl ToTokenWithInputs for Kind {
@@ -61,24 +54,6 @@ impl ToTokenWithInputs for Kind {
             Kind::Function => quote!(#path::MacroFunction),
             Kind::Binder => quote!(#path::MacroBinder),
         })
-    }
-}
-
-impl ToTokenWithInputs for ArrayLike {
-    fn to_tokens(&self, macro_input: &MacroInput) -> syn::Result<TokenStream> {
-        let span = self.tokens.span();
-        let tokens = &self.tokens;
-        if macro_input.is_const() {
-            let kind = self.kind.to_tokens(&macro_input)?;
-            Ok(quote_spanned! { span =>
-              {
-                static TMP : &'static [#kind] = &#tokens;
-                TMP
-              }
-            })
-        } else {
-            Ok(quote! {#tokens})
-        }
     }
 }
 
@@ -161,7 +136,7 @@ impl MacroInput {
 
     fn mk_eqs(&self, span: Span, args: &[TokenStream]) -> syn::Result<TokenStream> {
         // let args = args.into_iter().collect_vec();
-        let mut args = args.iter().into_iter().multipeek();
+        let mut args = args.iter().multipeek();
         if args.peek().is_some() && args.peek().is_some() {
             let fun = self.eq_fun();
             let args: Vec<_> = args
@@ -177,7 +152,7 @@ impl MacroInput {
 
     fn mk_neqs(&self, span: Span, args: &[TokenStream]) -> syn::Result<TokenStream> {
         // let args = args.into_iter().collect_vec();
-        let mut args = args.iter().into_iter().multipeek();
+        let mut args = args.iter().multipeek();
         if args.peek().is_some() && args.peek().is_some() {
             let fun = self.neq_fun();
             let args: Vec<_> = args
@@ -324,6 +299,7 @@ impl ToTokenWithInputs for QuantifierAst {
             .try_collect()?;
 
         let constructor;
+        #[allow(clippy::needless_late_init)]
         let nargs;
         if macro_input.is_const() {
             let t = Kind::Formula.to_tokens(macro_input)?;

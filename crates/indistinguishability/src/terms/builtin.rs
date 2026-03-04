@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
-use bitflags::Bits;
 use cryptovampire_macros::mk_builtin_funs;
+use log::trace;
 
 use super::Sort::{self, *};
 use super::{Alias, AliasRewrite, Function, FunctionFlags, InnerFunction, Signature};
@@ -563,3 +563,36 @@ mk_builtin_funs!(
 
 
 );
+
+pub(crate) fn mk_scheme_lib() -> String {
+    use std::fmt::Write;
+    let mut module = String::new();
+    let mut wrapped = String::new();
+
+    module.push_str("(provide eql <> ");
+    for (name, fun) in PARSING_PAIRS.iter() {
+        let fun_name = &fun.name;
+
+        writeln!(module, "{name}").unwrap();
+        writeln!(
+            wrapped,
+            "(define {name} (register-function ___pre_${fun_name}))"
+        )
+        .unwrap();
+    }
+    writeln!(module, ")").unwrap();
+    writeln!(
+        module,
+        "
+        (require-builtin cryptovampire/ll/builtin-functions as ___pre_$)
+        (require \"cryptovampire/function\") 
+
+        {wrapped}
+        (define (eql a b) (eq (bitstring-length a) (bitstring-length b)))
+        (define <> incompatible)
+        "
+    )
+    .unwrap();
+    trace!("builtin function scheme:\n{module}");
+    module
+}

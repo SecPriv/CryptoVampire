@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use itertools::Itertools;
 use thiserror::Error;
 
 use crate::*;
@@ -111,7 +110,7 @@ impl<L: Language, A: Analysis<L>> Searcher<L, A> for MultiPattern<L> {
         egraph: &EGraph<L, A>,
         eclass: Id,
         limit: usize,
-    ) -> Option<SearchMatches<L>> {
+    ) -> Option<SearchMatches<'_, L>> {
         match self.asts.as_slice() {
             [] => panic!("empty multipattern"),
             [(_var, pat), ..] => {
@@ -176,7 +175,7 @@ impl<L: Language, A: Analysis<L>> Applier<L, A> for MultiPattern<L> {
             for subst in &mat.substs {
                 let mut subst = subst.clone();
                 let mut id_buf = vec![];
-                for (i, (v, p)) in self.asts.iter().enumerate() {
+                for (v, p) in self.asts.iter() {
                     id_buf.resize(p.len(), 0.into());
                     let id1 = crate::pattern::apply_pat(&mut id_buf, p, egraph, &subst);
 

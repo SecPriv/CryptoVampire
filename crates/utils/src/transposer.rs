@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+#[allow(unused_imports)]
 use itertools::{Itertools, izip};
 
 use crate::ereturn_if;

@@ -1,7 +1,10 @@
 use std::ops::{Deref, DerefMut};
 use std::sync::{RwLockReadGuard, RwLockWriteGuard};
 
-use steel::steel_vm::register_fn::RegisterFn;
+use log::trace;
+use steel::SteelVal;
+use steel::rvals::IntoSteelVal;
+use steel::steel_vm::builtin::BuiltInModule;
 use steel_derive::Steel;
 
 use crate::input::Registerable;
@@ -35,50 +38,59 @@ impl ShrExists {
             Exists::try_from_mut(self.index().get_mut(pbl.functions_mut()).unwrap()).unwrap()
         })
     }
+}
 
-    /// Returns a vector of the context variables of the existential quantifier.
-    fn get_cvars(&self) -> Vec<Variable> {
-        self.exists().cvars().to_vec()
-    }
+/// Returns a vector of the context variables of the existential quantifier.
+#[steel_derive::declare_steel_function(name = "get-cvars")]
+fn get_cvars(shre: ShrExists) -> Vec<Variable> {
+    shre.exists().cvars().to_vec()
+}
 
-    /// Returns a vector of the bound variables of the existential quantifier.
-    fn get_bvars(&self) -> Vec<Variable> {
-        self.exists().bvars().to_vec()
-    }
+/// Returns a vector of the bound variables of the existential quantifier.
+#[steel_derive::declare_steel_function(name = "get-bvars")]
+fn get_bvars(shre: ShrExists) -> Vec<Variable> {
+    shre.exists().bvars().to_vec()
+}
 
-    /// Returns the top-level function of the existential quantifier.
-    fn get_tlf(&self) -> Function {
-        self.exists().top_level_function().clone()
-    }
+/// Returns the top-level function of the existential quantifier.
+#[steel_derive::declare_steel_function(name = "get-tlf")]
+fn get_tlf(shre: ShrExists) -> Function {
+    shre.exists().top_level_function().clone()
+}
 
-    /// Returns a vector of the skolem functions of the existential quantifier.
-    fn get_skolems(&self) -> Vec<Function> {
-        self.exists().skolems().to_vec()
-    }
+/// Returns a vector of the skolem functions of the existential quantifier.
+#[steel_derive::declare_steel_function(name = "get-skolem")]
+fn get_skolems(shre: ShrExists) -> Vec<Function> {
+    shre.exists().skolems().to_vec()
+}
 
-    /// Returns the pattern of the existential quantifier.
-    fn get_patt(&self) -> Formula {
-        self.exists().patt().unwrap().clone()
-    }
+/// Returns the pattern of the existential quantifier. (deprecated)
+#[steel_derive::declare_steel_function(name = "get-exists-pattern")]
+fn get_patt(shre: ShrExists) -> Formula {
+    shre.exists().patt().unwrap().clone()
+}
 
-    /// Sets the pattern of the existential quantifier.
-    fn set_patt(&self, patt: Formula) -> ::steel::rvals::Result<()> {
-        self.exists_mut().set_patt(patt);
-        Ok(())
-    }
+/// Sets the pattern of the existential quantifier.
+#[steel_derive::declare_steel_function(name = "set-exists-pattern")]
+fn set_patt(shre: ShrExists, patt: Formula) -> ::steel::rvals::Result<SteelVal> {
+    shre.exists_mut().set_patt(patt);
+    ().into_steelval()
 }
 
 impl Registerable for ShrExists {
-    /// Registers the `ShrExists` type and its associated functions with the Steel VM.
-    fn register(
-        module: &mut steel::steel_vm::builtin::BuiltInModule,
-    ) -> &mut steel::steel_vm::builtin::BuiltInModule {
-        Self::register_type(module)
-            .register_fn("exists-cvars", Self::get_cvars)
-            .register_fn("exists-bvars", Self::get_bvars)
-            .register_fn("get-exists-tlf", Self::get_tlf)
-            .register_fn("get-exists-skolems", Self::get_skolems)
-            .register_fn("get-exists-pattern", Self::get_patt)
-            .register_fn("set-exists-pattern", Self::set_patt)
+    fn register(modules: &mut rustc_hash::FxHashMap<String, BuiltInModule>) {
+        let name = "crypotvampire/ll/exists";
+        let mut module = BuiltInModule::new(name);
+        module
+            .register_type::<Self>("Exists?")
+            .register_native_fn_definition(GET_CVARS_DEFINITION)
+            .register_native_fn_definition(GET_BVARS_DEFINITION)
+            .register_native_fn_definition(GET_TLF_DEFINITION)
+            .register_native_fn_definition(GET_SKOLEMS_DEFINITION)
+            .register_native_fn_definition(GET_PATT_DEFINITION)
+            .register_native_fn_definition(SET_PATT_DEFINITION);
+
+        trace!("defined {name} scheme module");
+        assert!(modules.insert(name.into(), module).is_none());
     }
 }

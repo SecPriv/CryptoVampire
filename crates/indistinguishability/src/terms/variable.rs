@@ -3,17 +3,15 @@ use std::fmt::{Debug, Display};
 use std::sync::OnceLock;
 
 use bon::bon;
-use cryptovampire_smt::SortedVar;
 use serde::Serialize;
-use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
-use crate::input::Registerable;
 use crate::terms::{Formula, Sort};
 use crate::utils::{InnerSmartCow, SmartCow};
 use crate::{LangVar, MSmtFormula};
 
 #[derive(Clone, PartialEq, Eq, Hash, Steel)]
+#[steel(equality)]
 pub struct Variable(SmartCow<VariableInner>);
 
 unsafe impl Sync for Variable {}
@@ -149,14 +147,6 @@ impl Variable {
     pub fn freshen(&self) -> Self {
         Self(self.0.replicate())
     }
-
-    fn steel_fresh() -> Self {
-        Self::fresh().call()
-    }
-
-    fn steel_fresh_sort(s: Sort) -> Self {
-        Self::fresh().sort(s).call()
-    }
 }
 
 #[bon]
@@ -190,14 +180,35 @@ impl From<Variable> for egg::Var {
     }
 }
 
-impl Registerable for Variable {
-    fn register(
-        module: &mut steel::steel_vm::builtin::BuiltInModule,
-    ) -> &mut steel::steel_vm::builtin::BuiltInModule {
-        Self::register_type(module)
-            .register_fn("mk-fresh-var", Self::steel_fresh)
-            .register_fn("mk-fresh-var-w-sort", Self::steel_fresh_sort)
-            .register_type::<Self>("Variable?")
+mod msteel {
+    use log::trace;
+    use steel::steel_vm::builtin::BuiltInModule;
+
+    use crate::input::Registerable;
+    use crate::terms::{Sort, Variable};
+
+    #[steel_derive::declare_steel_function(name = "fresh")]
+    fn fresh() -> Variable {
+        Variable::fresh().call()
+    }
+
+    #[steel_derive::declare_steel_function(name = "fresh-with-sort")]
+    fn fresh_sort(s: Sort) -> Variable {
+        Variable::fresh().sort(s).call()
+    }
+
+    impl Registerable for Variable {
+        fn register(modules: &mut rustc_hash::FxHashMap<String, BuiltInModule>) {
+            let name = "cryptovampire/ll/variable";
+            let mut module = BuiltInModule::new(name);
+            Self::register_type(&mut module);
+            module
+                .register_type::<Self>("Variable?")
+                .register_native_fn_definition(FRESH_DEFINITION)
+                .register_native_fn_definition(FRESH_SORT_DEFINITION);
+            trace!("defined {name} scheme module");
+            assert!(modules.insert(name.into(), module).is_none())
+        }
     }
 }
 

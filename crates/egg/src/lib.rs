@@ -60,6 +60,7 @@ mod util;
 pub struct Id(u32);
 
 impl Id {
+    /// Builds a new [`Id`] in a const context.
     pub const fn new_const(i: u32) -> Self {
         Self(i)
     }
@@ -108,7 +109,7 @@ pub use rewrite::{
     ConditionalApplier, Rewrite, Searcher,
 };
 pub use run::*;
-pub use subst::{Subst, Var, VarExposed, uvar};
+pub use subst::{Subst, Var, uvar};
 pub(crate) use unionfind::UnionFind;
 pub use util::*;
 

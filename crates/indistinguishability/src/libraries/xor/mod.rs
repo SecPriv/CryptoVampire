@@ -14,6 +14,7 @@ use crate::terms::{
 use crate::{CVProgram, Lang, Problem, mk_signature, rexp};
 declare_trace!($"enc");
 
+#[allow(unused)]
 mod vars {
     decl_vars!(pub const M:Bitstring, T, NT, P,
             A:Bitstring, B:Bitstring,
@@ -84,6 +85,7 @@ impl XOr {
         .into_iter()
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn extract_xor_candidates<'pbl, 'a>(
         &self,
         egraph: &egg::EGraph<Lang, PAnalysis<'pbl>>,

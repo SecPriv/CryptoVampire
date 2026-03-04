@@ -4,9 +4,6 @@ use clap::{Parser, Subcommand};
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
-use crate::input::Registerable;
-pub use crate::input::prelude::Preludes;
-
 #[derive(Debug, Steel, Clone, Subcommand, Default)]
 pub enum Commands {
     /// Uses Steel's repl mode
@@ -62,10 +59,9 @@ pub struct Configuration {
     #[arg(long, default_value_t =u64::MAX, env)]
     pub depth: u64,
 
-    /// Choose which version of the cryptovampire prelude to include
-    #[arg(long, default_value_t)]
-    pub prelude_version: Preludes,
-
+    // /// Choose which version of the cryptovampire prelude to include
+    // #[arg(long, default_value_t)]
+    // pub prelude_version: Preludes,
     /// don't include the cryptovampire prelude.
     ///
     /// ignore any other option
@@ -155,7 +151,7 @@ impl Default for Configuration {
             vampire_timeout: ::std::time::Duration::from_secs(2),
             keep_smt_files: cfg!(debug_assertions),
             depth: u64::MAX,
-            prelude_version: Default::default(),
+            // prelude_version: Default::default(),
             no_cryptovampire_prelude: false,
             no_steel_prelude: false,
             cores: num_cpus::get() as u64,
@@ -174,23 +170,4 @@ impl Default for Configuration {
 
 fn dstr(d: ::std::time::Duration) -> &'static str {
     String::leak(humantime::format_duration(d).to_string())
-}
-
-impl Configuration {
-    /// Returns the appropriate prelude content based on the configuration.
-    pub fn get_prelude(&self) -> &'static str {
-        if self.no_cryptovampire_prelude {
-            ""
-        } else {
-            self.prelude_version.get_prelude()
-        }
-    }
-}
-
-impl Registerable for Configuration {
-    fn register(
-        module: &mut steel::steel_vm::builtin::BuiltInModule,
-    ) -> &mut steel::steel_vm::builtin::BuiltInModule {
-        module.register_fn("vampire-timeout", |x: Self| x.vampire_timeout)
-    }
 }

@@ -117,13 +117,6 @@ pub enum BangedContentInner {
     Expr(Expr),
 }
 
-pub enum VarIndex {
-    // Represents the SMT variable index
-    // Lit(LitInt),
-    Expr(Expr),
-    Ident(Ident),
-}
-
 pub enum ArgItem {
     Regular(Ast),      // A standard SMT expression
     SplatExpr(Expr),   // Represents #(expr)*
@@ -220,32 +213,6 @@ impl Parse for BangedContent {
         let kind = input.parse()?;
         let inner = input.parse()?;
         Ok(Self { kind, inner })
-    }
-}
-
-impl Parse for VarIndex {
-    fn parse(input: ParseStream<'_>) -> Result<Self> {
-        if input.peek(token::Paren) {
-            let content;
-            parenthesized!(content in input);
-            let expr: Expr = content.parse()?;
-            if !content.is_empty() {
-                return Err(content.error("Expected end of expression in () for variable index"));
-            }
-            Ok(Self::Expr(expr))
-        // } else if input.peek(LitInt) {
-        //     // Specifically LitInt for indices
-        //     let lit = input.parse()?;
-        //     Ok(Self::Lit(lit))
-        } else if input.peek(Ident) {
-            let ident: Ident = input.parse()?;
-            Ok(Self::Ident(ident))
-        } else {
-            Err(input.error(
-                "Expected integer literal, identifier, or parenthesized expression for variable \
-                 index",
-            ))
-        }
     }
 }
 

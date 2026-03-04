@@ -1,6 +1,17 @@
-(require "cryptovampire/v2")
 (require "../save-results.scm")
-(require-builtin cryptovampire as cv-)
+(require "cryptovampire/function")
+(require "cryptovampire/builtin-functions")
+(require "cryptovampire/cryptography")
+(require "cryptovampire/protocol")
+(require "cryptovampire/solver")
+(require "cryptovampire/sort")
+(require "cryptovampire/formula")
+(require "cryptovampire/signature")
+(require-builtin cryptovampire/ll/pbl as pbl.)
+(require-builtin cryptovampire/ll/configuration as config.)
+(require-builtin cryptovampire/ll as b.)
+(require-builtin cryptovampire/ll/report as report.)
+(require-builtin cryptovampire/ll/rewrite as rw.)
 
 (define pbl (mk-problem 'x))
 
@@ -19,17 +30,11 @@
 (define-function g pbl (ddh) Bitstring)
 (define-function mexp pbl (ddh) (Bitstring Bitstring) -> Bitstring)
 
-(define-function _a pbl (Index) -> Nonce)
-(define-function _b pbl (Index) -> Nonce)
-(define-function _k pbl (Index Index) -> Nonce)
-(define-function _skP pbl Nonce)
-(define-function _skS pbl Nonce)
-
-(define a (wrap-nonce _a))
-(define b (wrap-nonce _b))
-(define k (wrap-nonce _k))
-(define skP (wrap-nonce _skP))
-(define skS (wrap-nonce _skS))
+(define-function a pbl (Index) -> Nonce)
+(define-function b pbl (Index) -> Nonce)
+(define-function k pbl (Index Index) -> Nonce)
+(define-function skP pbl Nonce)
+(define-function skS pbl Nonce)
 
 (define empty-cond (lambda _ mtrue))
 
@@ -148,27 +153,27 @@
 (publish pbl ((i Index)) (mexp g (b i)))
 
 ; enable looking for extra things to publish
-(cv-set-guided-nonce-search pbl #t)
+(config.set_guided_nonce_search pbl #t)
 
 ;; configuration
-; (cv-set-trace pbl #t)
-(cv-set-vampire-timeout pbl (cv-string->duration "200ms"))
-(cv-set-node-limit pbl 100000)
-; (cv-set-keep-smt-files pbl #t)
+; (config.set_trace pbl #t)
+(config.set_vampire_timeout pbl (b.string->duration "200ms"))
+(config.set_node_limit pbl 100000)
+; (config.set_keep_smt_files pbl #t)
 
 (initialize-as-ddh ddh g mexp)
 
 (bind ((i Index) (p Protocol))
-  (cv-add-rewrite pbl (cv-mk-rewrite "lemma" (list i p)
+  (add-rewrite pbl (rw.new "lemma" (list i p)
       (and (macro_exec (P3fail i) p) (macro_cond (P3fail i) p))
       mfalse)))
 
 (bind ((i Index) (j Index))
-  (cv-register-fresh-nonce ddh (list i j) (k i j)))
+  (register-fresh-nonce ddh (list i j) (k i j)))
 
 (if (run pbl p1 p2)
   (displayln "success")
   (error "failed ddh-P"))
 
-(displayln (cv-print-report (cv-get-report pbl)))
+(displayln (report.print-report (pbl.get-report pbl)))
 (save-results "ddh-P" pbl)

@@ -1,10 +1,8 @@
 use serde::{Deserialize, Serialize};
-use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 use utils::implvec;
 
 use crate::fresh;
-use crate::input::Registerable;
 use crate::terms::{Formula, Sort, Variable};
 
 /// Represents the signature of a function, defining its input and output sorts.
@@ -45,35 +43,44 @@ impl Signature {
     pub fn mk_vars_expr(&self) -> impl Iterator<Item = Formula> {
         self.inputs.iter().map(|&s| fresh!(s)).map(Formula::Var)
     }
+}
 
-    // pub fn mk_sorted_vars(
-    //     &self,
-    //     from: u32,
-    // ) -> impl Iterator<Item = SortedVar<Sort>> + Clone + use<'_> {
-    //     izip!(from.., self.inputs.iter()).map(|(i, s)| SortedVar {
-    //         var: VarInner::Int(i as cryptovampire_smt::uvar),
-    //         sort: *s,
-    //     })
-    // }
+mod msteel {
+    use log::trace;
+    use steel::steel_vm::builtin::BuiltInModule;
 
-    // pub fn mk_egg_vars(&self, from: u32) -> impl Iterator<Item = egg::Var> {
-    //     let n = self.arity() as u32 + from;
-    //     (from..n).map(egg::Var::from_usize)
-    // }
+    use crate::input::Registerable;
+    use crate::terms::{Signature, Sort};
 
-    fn steel_constructor(input: Vec<Sort>, output: Sort) -> Self {
-        Self {
+    #[steel_derive::declare_steel_function(name = "new")]
+    fn new(input: Vec<Sort>, output: Sort) -> Signature {
+        Signature {
             inputs: input.into(),
             output,
         }
     }
-}
 
-impl Registerable for Signature {
-    /// Registers the `Signature` type and its constructor with the Steel VM.
-    fn register(
-        module: &mut steel::steel_vm::builtin::BuiltInModule,
-    ) -> &mut steel::steel_vm::builtin::BuiltInModule {
-        Self::register_type(module).register_fn("mk-signature", Self::steel_constructor)
+    #[steel_derive::declare_steel_function(name = "inputs")]
+    fn inputs(s: Signature) -> Vec<Sort> {
+        s.inputs.to_vec()
+    }
+
+    #[steel_derive::declare_steel_function(name = "output")]
+    fn output(s: Signature) -> Sort {
+        s.output
+    }
+
+    impl Registerable for Signature {
+        fn register(modules: &mut rustc_hash::FxHashMap<String, BuiltInModule>) {
+            let name = "cryptovampire/ll/signature";
+            let mut module = BuiltInModule::new(name);
+            module
+                .register_type::<Signature>("Signature?")
+                .register_native_fn_definition(NEW_DEFINITION)
+                .register_native_fn_definition(INPUTS_DEFINITION)
+                .register_native_fn_definition(OUTPUT_DEFINITION);
+            trace!("defined {name} scheme module");
+            assert!(modules.insert(name.into(), module).is_none());
+        }
     }
 }
