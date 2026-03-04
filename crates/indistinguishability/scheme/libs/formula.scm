@@ -1,7 +1,8 @@
 (provide 
   cand cor ctuple tuple
   exists forall findst
-  mexists mforall mfindst)
+  mexists mforall mfindst
+  subst)
 (require "cryptovampire/function") 
 (require-builtin cryptovampire/ll/builtin-functions as funs->)
 (require-builtin cryptovampire/ll/variable as var->)
@@ -60,3 +61,16 @@
 (define (cor . args) (f->cor args))
 (define (ctuple . args) (f->ctuple args))
 (define tuple ctuple)
+
+(define (subst a b f)
+  (cond
+    [(equal? f a) b]
+    [(f->var? f) f]
+    [(f->app? f)
+     (let ((parts (f->destruct f)))
+       (f->app (car parts) (map (lambda (arg) (subst a b arg)) (cadr parts))))]
+    [(f->binder? f)
+     (let ((parts (f->destruct f)))
+       (f->binder (car parts) (cadr parts)
+                  (map (lambda (arg) (subst a b arg)) (caddr parts))))]
+    [else f]))
