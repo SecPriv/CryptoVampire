@@ -33,41 +33,20 @@
 
 (define mk (wrap-nonce _mk))
 
+(define ptcls (list p1 p2))
 
-(define tag
-  (declare-step pbl "tag" (list Index Index)
-    (step p1
-      (lambda _ mtrue)
-      (lambda (in i j)
-        (tuple (n i j) (mhash (n i j) (mk i j p1)))))
-    (step p2
-      (lambda _ mtrue)
-      (lambda (in i j)
-        (tuple (n i j) (mhash (n i j) (mk i j p2)))))))
+(define tag (declare-same-step pbl "tag" ptcls (list Index Index)
+    (lambda _ mtrue)
+    (lambda (p in i j) (tuple (n i j) (mhash (n i j) (mk i j p))))))
 
-(define rs
-  (declare-step pbl "rs" (list Index Index)
-    (step p1
-      (lambda (in i j)
-        (eq (sel2of2 in) (mhash (sel1of2 in) (mk i j p1))))
-      (lambda _ ok))
-    (step p2
-      (lambda (in i j)
-        (eq (sel2of2 in) (mhash (sel1of2 in) (mk i j p2))))
-      (lambda _ ok))))
+(define rs (declare-same-step pbl "rs" ptcls (list Index Index)
+    (lambda (p in i j) (eq (sel2of2 in) (mhash (sel1of2 in) (mk i j p))))
+    (lambda _ ok)))
 
-(define rf
-  (declare-step pbl "rf" (list Index)
-    (step p1
-      (lambda (in i)
-        (mnot (exists ((j Index))
-            (eq (sel2of2 in) (mhash (sel1of2 in) (mk i j p1))))))
-      (lambda _ ok))
-    (step p2
-      (lambda (in i)
-        (mnot (exists ((j Index))
-            (eq (sel2of2 in) (mhash (sel1of2 in) (mk i j p2))))))
-      (lambda _ ok))))
+(define rf (declare-same-step pbl "rf" ptcls (list Index)
+    (lambda (p in i) (mnot (exists ((j Index))
+          (eq (sel2of2 in) (mhash (sel1of2 in) (mk i j p))))))
+    (lambda _ ko)))
 
 (initialize-as-prf prf mhash)
 
