@@ -16,7 +16,6 @@ use crate::protocol::Step;
 use crate::terms::{Alias, Formula, Function, Rewrite, Signature, Sort, Variable, mk_scheme_lib};
 
 pub(crate) mod golgge_rules;
-pub(crate) mod prelude;
 pub(crate) mod shared_cryptography;
 pub(crate) mod shared_exists;
 // pub(crate) mod shared_fdst;
