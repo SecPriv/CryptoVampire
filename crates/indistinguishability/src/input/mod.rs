@@ -85,11 +85,11 @@ pub fn init_engine(config: Configuration) -> Engine {
     }
 
     let libs = libraries![
-        "formula",
-        "function",
-        "signature",
         "type",
         "sort",
+        "signature",
+        "function",
+        "formula",
         "cryptography",
         "protocol",
         "solver"

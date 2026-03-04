@@ -8,7 +8,7 @@
 (define declare-cryptography c->declare-cryptography)
 
 (define (partial f . args)
-  (lambda (. rest-args)
+  (lambda rest-args
     (apply f (append args rest-args))))
 
 (define (initialize-as crypto kind . funs)

@@ -18,6 +18,7 @@
 (require-builtin cryptovampire/ll/alias as alias->)
 (require "cryptovampire/type")
 (require "cryptovampire/sort")
+(require "cryptovampire/signature")
 (require-builtin steel/hash)
 
 (define functions-map (hash))

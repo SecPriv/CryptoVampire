@@ -52,7 +52,6 @@ impl Registerable for Report {
         let name = "cryptovampire/ll/report";
         let mut module = BuiltInModule::new(name);
         Self::register_type(&mut module);
-        module.register_type::<Duration>("duration?");
         module
             .register_fn("get-time-spent-in-vampire", Self::get_time_spent_in_vampire)
             .register_fn("get-total-run-calls", Self::get_total_run_calls)

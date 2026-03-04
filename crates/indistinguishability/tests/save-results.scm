@@ -1,18 +1,20 @@
 (provide
   save-results)
-(require-builtin cryptovampire as cv-)
-(require-builtin "steel/base")
+(require-builtin cryptovampire/ll/pbl as pbl->)
+(require-builtin cryptovampire/ll/report as report->)
+(require-builtin cryptovampire/ll/configuration as config->)
+(require-builtin cryptovampire/ll as b.)
+(require-builtin steel/base)
 
 
 (define (print-row file . args)
   (begin
     (for-each (lambda (x)
         (begin
-          (if (string? x)
-            (write-string x file)
-            (if (cv-duration? x)
-              (write (duration->millis x) file)
-              (write x file)))
+          (cond
+            [ (string? x) (write-string x file) ]
+            ; [ (b.duration? x) (write (duration->millis x) file) ]
+            [else (write x file) ])
           (write-string "," file)))
       args)
     (write-string "\n" file)))
@@ -33,12 +35,12 @@
 (define (save-results name pbl)
   (let* [
     (file (prepare get-file))
-    (report (cv-get-report pbl))
-    (runtime (cv-get-runtime report))
-    (vampire (cv-get-time-spent-in-vampire report))
-    (hits (cv-get-total-cache-hits report))
-    (total (cv-get-total-run-calls report))
-    (hit-rate (cv-get-hit-rate report)) 
-    (vampire-timeout (cv-vampire-timeout (cv-get-config pbl)))
+    (report (pbl->get-report pbl))
+    (runtime (report->get-runtime report))
+    (vampire (report->get-time-spent-in-vampire report))
+    (hits (report->get-total-cache-hits report))
+    (total (report->get-total-run-calls report))
+    (hit-rate (report->get-hit-rate report))
+    (vampire-timeout (config->get_vampire_timeout pbl))
     ]
     (print-row file name runtime vampire total hits hit-rate vampire-timeout)))

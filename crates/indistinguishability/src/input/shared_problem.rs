@@ -1,5 +1,6 @@
 use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, RwLock, RwLockWriteGuard};
+use std::time::Duration;
 
 use anyhow::Context;
 use log::trace;
@@ -172,13 +173,13 @@ macro_rules! configuration {
         $(
             paste!{
                 #[doc = "gets the `" $id "` configuration field. See `--help` for documentation"]
-                #[steel_derive::declare_steel_function(name = "[<get_ $id>]")]
+                #[steel_derive::declare_steel_function(name = "get_" $id)]
                 fn [<get_ $id>](pbl: ShrProblem) -> $t {
                     pbl.borrow().config.$id.clone()
                 }
 
                 #[doc = "sets the `" $id "` configuration field. See `--help` for documentation"]
-                #[steel_derive::declare_steel_function(name = "[<set_ $id>]")]
+                #[steel_derive::declare_steel_function(name = "set_" $id)]
                 fn [<set_ $id>](pbl: ShrProblem, value:$t) {
                     pbl.borrow_mut().config.$id = value;
                 }
@@ -186,7 +187,7 @@ macro_rules! configuration {
         )*
 
         fn register_configuration( module: &mut BuiltInModule) -> &mut BuiltInModule {
-                paste! {
+            paste! {
                 module
                 $(
                     .register_native_fn_definition([<GET_ $id:upper _DEFINITION>])
@@ -217,7 +218,7 @@ configuration!(
 impl Registerable for ShrProblem {
     fn register(modules: &mut rustc_hash::FxHashMap<String, BuiltInModule>) {
         {
-            let name = "crypotvampire/ll/configuration";
+            let name = "cryptovampire/ll/configuration";
             let mut module = BuiltInModule::new(name);
             register_configuration(&mut module);
             trace!("defined {name} scheme module");
@@ -226,6 +227,7 @@ impl Registerable for ShrProblem {
         {
             let name = "cryptovampire/ll/pbl";
             let mut module = BuiltInModule::new(name);
+
 
             module
                 .register_type::<Self>("Problem?")
@@ -249,7 +251,8 @@ impl Registerable for ShrProblem {
 
             module.register_fn("string->duration", |s: String| {
                 humantime::parse_duration(&s).unwrap()
-            });
+            }).register_type::<Duration>("duration?")
+            ;
         }
     }
 }

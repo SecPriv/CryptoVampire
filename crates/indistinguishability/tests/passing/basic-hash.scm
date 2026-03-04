@@ -1,6 +1,10 @@
-(require "cryptovampire/v2")
 (require "../save-results.scm")
-(require-builtin cryptovampire as cv-)
+(require "cryptovampire/function")
+(require "cryptovampire/builtin-functions")
+(require "cryptovampire/cryptography")
+(require "cryptovampire/protocol")
+(require "cryptovampire/solver")
+(require "cryptovampire/sort")
 
 (define pbl (mk-problem 'x))
 
@@ -14,13 +18,12 @@
 (define-function ko pbl Bitstring)
 (define-function k1 pbl (Index) -> Nonce)
 (define-function k2 pbl (Index Index) -> Nonce)
-(define-function _n pbl (Index Index) -> Nonce)
+(define-function n pbl (Index Index) -> Nonce)
 
 (define-alias _mk pbl (Index Index Protocol) Nonce
   [ ([ (i Index) (j Index) ] (i j p1) -> (k1 i))
   ([ (i Index) (j Index) ] (i j p2) -> (k2 i j)) ])
 
-(define n (wrap-nonce _n))
 (define mk (wrap-nonce _mk))
 
 
