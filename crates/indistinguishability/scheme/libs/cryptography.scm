@@ -8,7 +8,7 @@
 (require "cryptovampire/function")
 
 (define (register-fresh-nonce crypto vars f)
-  (c->register-fresh-nonce crypto vars (get-function f)))
+  (c->register-fresh-nonce crypto vars f))
 
 (define declare-cryptography c->declare-cryptography)
 

@@ -1,5 +1,5 @@
 (provide 
-  cand cor ctuple
+  cand cor ctuple tuple
   exists forall findst
   mexists mforall mfindst)
 (require "cryptovampire/function") 
@@ -59,3 +59,4 @@
 (define (cand . args) (f->cand args))
 (define (cor . args) (f->cor args))
 (define (ctuple . args) (f->ctuple args))
+(define tuple ctuple)

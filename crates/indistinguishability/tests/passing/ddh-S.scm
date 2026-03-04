@@ -1,6 +1,17 @@
-(require "cryptovampire/v2")
 (require "../save-results.scm")
-(require-builtin cryptovampire as cv-)
+(require "cryptovampire/function")
+(require "cryptovampire/builtin-functions")
+(require "cryptovampire/cryptography")
+(require "cryptovampire/protocol")
+(require "cryptovampire/solver")
+(require "cryptovampire/sort")
+(require "cryptovampire/formula")
+(require "cryptovampire/signature")
+(require-builtin cryptovampire/ll/pbl as pbl.)
+(require-builtin cryptovampire/ll/configuration as config.)
+(require-builtin cryptovampire/ll as b.)
+(require-builtin cryptovampire/ll/report as report.)
+(require-builtin cryptovampire/ll/rewrite as rw.)
 
 (define pbl (mk-problem 'x))
 
@@ -19,17 +30,11 @@
 (define-function g pbl (ddh) Bitstring)
 (define-function mexp pbl (ddh) (Bitstring Bitstring) -> Bitstring)
 
-(define-function _a pbl (Index) -> Nonce)
-(define-function _b pbl (Index) -> Nonce)
-(define-function _k pbl (Index Index) -> Nonce)
-(define-function _skP pbl  Nonce)
-(define-function _skS pbl  Nonce)
-
-(define a (wrap-nonce _a))
-(define b (wrap-nonce _b))
-(define k (wrap-nonce _k))
-(define skP (wrap-nonce _skP))
-(define skS (wrap-nonce _skS))
+(define-function a pbl (Index) -> Nonce)
+(define-function b pbl (Index) -> Nonce)
+(define-function k pbl (Index Index) -> Nonce)
+(define-function skP pbl  Nonce)
+(define-function skS pbl  Nonce)
 
 (define empty-cond (lambda _ mtrue))
 
@@ -93,9 +98,9 @@
 (define (S1in j p) (macro_input (Schall1 j) p))
 (bind ((i Index))
   (begin
-    (cv-add-rewrite pbl (cv-mk-rewrite "Schall1-gb-1" (list i)
+    (add-rewrite pbl (rw.new "Schall1-gb-1" (list i)
         (mexp g (b i)) (sel1of2 (sel2of2 (macro_msg (Schall1 i) p1)))))
-    (cv-add-rewrite pbl (cv-mk-rewrite "Schall1-gb-2" (list i)
+    (add-rewrite pbl (rw.new "Schall1-gb-2" (list i)
         (mexp g (b i)) (sel1of2 (sel2of2 (macro_msg (Schall1 i) p2)))))))
 
 (define Schall2
@@ -149,7 +154,7 @@
 
 ;; lemma (given by the crypto)
 (bind ((i Index) (j Index) (p Protocol))
-  (cv-add-rewrite pbl (cv-mk-rewrite "lemma" (list i j p)
+  (add-rewrite pbl (rw.new "lemma" (list i j p)
       (and (macro_exec (Schall3fail i) p) (macro_cond (Schall3fail i) p))
       mfalse)))
 
@@ -158,21 +163,21 @@
 ; tell the ddh rules to make use of `k i j`
 ; This is not the case default for efficiency reasons
 (bind ((i Index) (j Index))
-  (cv-register-fresh-nonce ddh (list i j) (k i j)))
+  (register-fresh-nonce ddh (list i j) (k i j)))
 
 ; enable looking for extra things to publish
-(cv-set-guided-nonce-search pbl #t)
+(config.set_guided_nonce_search pbl #t)
 
 ;; configuration
-; (cv-set-trace pbl #t)
-(cv-set-node-limit pbl 100000)
-(cv-set-vampire-timeout pbl (cv-string->duration "300ms"))
-; (cv-set-fa-limit pbl 0)
-; (cv-set-keep-smt-files pbl #t)
+; (config.set_trace pbl #t)
+(config.set_node_limit pbl 100000)
+(config.set_vampire_timeout pbl (b.string->duration "300ms"))
+; (config.set_fa_limit pbl 0)
+; (config.set_keep_smt_files pbl #t)
 
 (if (run pbl p1 p2)
   (displayln "success")
   (error "failed ddh-S"))
 
-(displayln (cv-print-report (cv-get-report pbl)))
+(displayln (report.print-report (pbl.get-report pbl)))
 (save-results "ddh-S" pbl)
