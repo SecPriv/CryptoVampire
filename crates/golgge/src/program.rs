@@ -488,7 +488,7 @@ where
         };
 
         canonicalize_id_mut(&mut goal, self.egraph());
-        self.check_and_set_memo(goal, Status::InProgress, true);
+        self.check_and_set_memo(goal, Status::InProgress, false);
 
         debug_assert!(
             !self.is_memo_enabled() || self.memo.contains_key(&goal),
