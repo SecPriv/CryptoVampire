@@ -3,7 +3,7 @@ use itertools::{Itertools, chain, izip};
 use rustc_hash::FxHashMap;
 
 use crate::problem::{BoundStep, ConstrainOp, Constrains, CurrentStep, PAnalysis};
-use crate::terms::{CURRENT_STEP, Formula, HAPPENS, INIT, IS_INDEX, LEQ, LT, PRED, TRUE};
+use crate::terms::{CURRENT_STEP, Formula, HAPPENS, INIT, IS_INDEX, LEQ, LT, PRED, TEQ, TRUE};
 use crate::{Lang, MSmt, MSmtFormula, Problem, rexp, smt};
 
 macro_rules! bind {
@@ -161,8 +161,13 @@ fn mk_rewrite_static<N: Analysis<Lang>>() -> impl Iterator<Item = egg::Rewrite<L
      (#v1 = (HAPPENS #t1), #v1 = (LT  #t2 #t1), #v1 = true) => (#v1 = (HAPPENS #t2)).
 
      ["lt to leq"]
-     (#v1 = (LT  #t2 #t1), #v1 = true) => (#v1 = (LEQ #t2 #t1)).
+     (#v1 = (LT  #t2 #t1), #v1 = true) => (#v1 = (LEQ #t2 (PRED #t1))).
 
+     ["leq trans"]
+     (#v1 = (LEQ #t1 #t2), #v1 = (LEQ #t2 #t), #v1 = true) => (#v1 = (LEQ #t1 #t)).
+
+     ["lt trans"]
+     (#v1 = (LT #t1 #t2), #v1 = (LT #t2 #t), #v1 = true) => (#v1 = (LT #t1 #t)).
     }
     .into_iter()
 }

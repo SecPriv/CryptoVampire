@@ -76,6 +76,12 @@ pub fn mk_rules() -> impl Iterator<Item = RcRule> {
             (VAMPIRE (=> #h2 (HAPPENS #t2))),
             (deduce_m #u #v (UNFOLD_MSG #t1 #p1) (UNFOLD_MSG #t2 #p2) #h1 #h2).
 
+        "deduce unfold to message":
+        (deduce_m #u #v (UNFOLD_MSG #t1 #p1) (UNFOLD_MSG #t2 #p2) #h1 #h2) :-
+            (VAMPIRE (=> #h1 (HAPPENS #t1))),
+            (VAMPIRE (=> #h2 (HAPPENS #t2))),
+            (deduce_m #u #v (MACRO_MSG #t1 #p1) (MACRO_MSG #t2 #p2) #h1 #h2).
+
         "deduce condition":
         (deduce_b (MACRO_FRAME #t #p1) (MACRO_FRAME #t #p2) (MACRO_COND #t2 #p1) (MACRO_COND #t2 #p2) #h1 #h2) :-
             (VAMPIRE (=> #h1 (LEQ #t2 #t))),
