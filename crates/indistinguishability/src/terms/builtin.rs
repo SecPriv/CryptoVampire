@@ -254,6 +254,11 @@ mk_builtin_funs!(
         signature: s!(Time, 1),
     };
 
+    /// Equality for timepoints
+    TEQ "step-eq" {
+        signature: s!(Time, Time -> Bool)
+    };
+
     INCOMPATIBLE "incompatible" {
         signature: s!(Time, Time -> Time),
         flags: f!(PROLOG_ONLY)

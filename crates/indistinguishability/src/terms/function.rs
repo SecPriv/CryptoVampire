@@ -203,7 +203,7 @@ impl Function {
             NOT => { Some(Not) },
             OR => { Some(Or) },
             IMPLIES => { Some(Implies) },
-            EQ => { Some(Eq) },
+            EQ | TEQ => { Some(Eq) },
             BITE | MITE => {Some(If)},
             TRUE => { Some(True) },
             FALSE => { Some(False) },
