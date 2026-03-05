@@ -112,7 +112,12 @@ impl Default for NoncePublicSearchState {
 fn mk_iterator(candidates: FxHashSet<Function>, pbl: &Problem) -> MI {
     let already_used: FxHashSet<_> = mk_blocked_by_published_iter(pbl);
 
+    let filter = move |n: &Function| !(n.is_fresh() || already_used.contains(n));
+
     let to_test_first = candidates
+        .into_iter()
+        .filter(&filter)
+        .collect_vec()
         .into_iter()
         .powerset()
         .collect_vec()
@@ -121,13 +126,16 @@ fn mk_iterator(candidates: FxHashSet<Function>, pbl: &Problem) -> MI {
     let others = pbl
         .functions()
         .nonces()
+        .filter(|&x| filter(x))
         .cloned()
         .collect_vec()
         .into_iter()
-        .powerset();
+        .powerset()
+        .collect_vec()
+        .into_iter()
+        .rev();
     chain!(to_test_first, others)
         .filter(|x| !x.is_empty())
-        .filter(move |x| !x.iter().any(|n| n.is_fresh() || already_used.contains(n)))
         .unique()
 }
 
