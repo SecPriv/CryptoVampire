@@ -213,7 +213,6 @@ pub trait SyntaxSearcher {
             assert_eq!(from.len(), args.len());
             let eqs = izip!(args.iter(), from.iter()).map(|(arg, f)| rexp!((= #arg #f)));
             let condition = rexp!((and #eqs*));
-            eprintln!("I am here !!!! {condition}");
 
             let builder = builder
                 .add_node()
