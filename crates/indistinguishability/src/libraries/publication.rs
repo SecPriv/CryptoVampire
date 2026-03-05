@@ -80,12 +80,12 @@ pub fn mk_smt(pbl: &Problem) -> impl Iterator<Item = MSmt> {
                 let ovars = so.args_sorts().map(|x| fresh!(x)).collect_vec();
                 let ovars = ovars.iter().cloned();
                 let vars = chain![vars.clone(), ovars.clone()];
-                smt!((forall #vars (LT #sf (so #ovars*))))
+                smt!((forall #vars (LT #sf (so #ovars*)))).optimise()
             })
             .map(MSmt::Assert);
 
         let exec = MSmt::Assert(
-            smt!((forall ((#p Protocol)) (forall #(vars.clone()) (= (MACRO_EXEC #sf #p) (HAPPENS #sf))))),
+            smt!((forall ((#p Protocol)) (forall #(vars.clone()) (= (MACRO_EXEC #sf #p) (HAPPENS #sf))))).optimise(),
         );
         res.extend(chain!([comment, exec], order));
     }

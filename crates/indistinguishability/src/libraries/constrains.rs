@@ -69,12 +69,13 @@ fn mk_smt_constrain_one(
     let args2 = a2.iter().map::<MSmtFormula, _>(|v| smt!(#v));
     match op {
         ConstrainOp::LessThan => {
-            [smt!((forall #(vars_iter) (LT (s1 #args1*) (s2 #args2*))))].into_iter()
+            [smt!((forall #(vars_iter) (LT (s1 #args1*) (s2 #args2*)))).optimise()].into_iter()
         }
         ConstrainOp::Exclude => [smt!((forall #(vars_iter)
           (=>
             (and (HAPPENS (s1 #(args1.clone())*)) (HAPPENS (s2 #(args2.clone())*)))
-            (= (s1 #args1*) (s2 #args2*)))))]
+            (= (s1 #args1*) (s2 #args2*)))))
+        .optimise()]
         .into_iter(),
     }
 }
