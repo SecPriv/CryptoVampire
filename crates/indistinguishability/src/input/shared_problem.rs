@@ -228,7 +228,6 @@ impl Registerable for ShrProblem {
             let name = "cryptovampire/ll/pbl";
             let mut module = BuiltInModule::new(name);
 
-
             module
                 .register_type::<Self>("Problem?")
                 .register_native_fn_definition(RUN_DEFINITION)
@@ -249,10 +248,11 @@ impl Registerable for ShrProblem {
         {
             let module = modules.get_mut(BASE_LL_MODULE).unwrap();
 
-            module.register_fn("string->duration", |s: String| {
-                humantime::parse_duration(&s).unwrap()
-            }).register_type::<Duration>("duration?")
-            ;
+            module
+                .register_fn("string->duration", |s: String| {
+                    humantime::parse_duration(&s).unwrap()
+                })
+                .register_type::<Duration>("duration?");
         }
     }
 }

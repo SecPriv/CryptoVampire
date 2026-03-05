@@ -107,7 +107,7 @@ fn register_fresh_nonce(shrc: ShrCrypto, variables: Vec<Variable>, n: Formula) -
         }
     };
 
-    let mut pbl = shrc.pbl.0.write().unwrap();
+    let mut pbl = shrc.pbl.borrow_mut();
     let Problem {
         cryptography,
         state,
