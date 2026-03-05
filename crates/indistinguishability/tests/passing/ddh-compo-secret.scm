@@ -57,11 +57,6 @@
 
 (define ptcls (list p1 p2))
 
-(define mehhh (declare-step pbl "meh" '()
-  (step p1 empty-cond (lambda _ (mexp (mexp g a1) b1)))
-  (step p2 empty-cond (lambda _ (mexp g k11)))
-))
-
 (define P1 (declare-same-step pbl "P1" ptcls '()
     empty-cond
     (lambda (p in) (tuple (vk skP) (mexp g a1)))))
@@ -147,9 +142,12 @@
 (add-constrain pbl (i) (<> S3 (S4 i)))
 
 
+(define mehhh (declare-step pbl "meh" '()
+  (step p1 empty-cond (lambda _ (mexp (mexp g a1) b1)))
+  (step p2 empty-cond (lambda _ (mexp g k11)))
+))
 (add-constrain pbl () (lt mehhh S1))
 (add-constrain pbl () (lt mehhh P1))
-
 (add-rewrite pbl (rw.new "l1" '() (mexp (mexp g a1) b1) (unfold_msg mehhh p1) ))
 (add-rewrite pbl (rw.new "l2" '() (mexp g k11) (unfold_msg mehhh p2) ))
 

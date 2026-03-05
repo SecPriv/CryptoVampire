@@ -58,7 +58,18 @@
 (publish pbl () (mexp g a1))
 (publish pbl () (mexp g b1))
 
+(define mehhh (declare-step pbl "meh" '()
+  (step p1 empty-cond (lambda _ (mexp (mexp g a1) b1)))
+  (step p2 empty-cond (lambda _ (mexp g k11)))
+))
+(add-constrain pbl () (lt mehhh S1))
+(add-constrain pbl () (lt mehhh P1))
+(add-rewrite pbl (rw.new "l1" '() (mexp (mexp g a1) b1) (unfold_msg mehhh p1) ))
+(add-rewrite pbl (rw.new "l2" '() (mexp g k11) (unfold_msg mehhh p2) ))
+
 (config.set_vampire_timeout pbl (b.string->duration "300ms"))
+(register-fresh-nonce ddh '() k11)
+(config.set_guided_nonce_search pbl #t)
 
 (if (run pbl p1 p2)
   (displayln "success")

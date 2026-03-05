@@ -78,7 +78,7 @@
         (enc
           (tuple tagT (tuple in (nt i j)))
           (rt i j)
-          (mk i j p1))))))
+          (mk i j p2))))))
 
 
 (define r
