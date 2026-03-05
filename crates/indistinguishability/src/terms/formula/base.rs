@@ -79,7 +79,7 @@ impl Formula {
             } => Some(Sort::Bitstring),
             Formula::Quantifier { .. } => Some(Sort::Bool),
             Formula::App { head, .. } => Some(head.signature.output),
-            Formula::Var(_) => None,
+            Formula::Var(var) => var.get_sort(),
         }
     }
 

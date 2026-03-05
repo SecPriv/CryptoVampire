@@ -383,7 +383,7 @@ mk_builtin_funs!(
     /// doesn't appear in `u` when `h` holds
     FRESH_NONCE "mfresh_nonce" "fresh_nonce" {
                 /* nonce -> look into -> constrains -> Bool */
-        signature: s!(Nonce, Bitstring, Bool -> Bool),
+        signature: s!(Nonce, Any, Bool -> Bool),
         flags: f!(PROLOG_ONLY)
     };
 

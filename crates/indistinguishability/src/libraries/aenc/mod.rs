@@ -12,6 +12,7 @@ declare_trace!($"enc");
 mod vars {
     decl_vars!(pub const M:Bitstring, T, NT, P:Protocol,
             A:Bitstring, B:Bitstring,
+            A_N:Nonce, B_N:Nonce, A_B:Bool,
             PROOF: Bool, K:Nonce, K2:Nonce, N:Nonce, R:Nonce, H:Bool,
             SIDE:Any, U:Bitstring, V:Bitstring);
 }

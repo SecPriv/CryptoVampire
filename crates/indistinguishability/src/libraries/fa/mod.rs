@@ -20,7 +20,7 @@ use crate::terms::{
 use crate::{CVProgram, Lang, Problem, rexp};
 
 declare_trace!($"fa");
-decl_vars!(const; HD:Bitstring, TL:Bitstring, U, V, T, P, M:Bitstring);
+decl_vars!(const; HD:Bitstring, HDB:Bool, TL:Bitstring, U, V, T, P, M:Bitstring);
 
 decl_vars!(pub const; A, B);
 

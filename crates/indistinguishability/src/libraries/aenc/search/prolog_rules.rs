@@ -194,7 +194,7 @@ pub fn mk_static_rules<'a>(
 
               // TODO: make sure this is sound
               "search_o_enc_enc" :
-                (search_o_m #K (enc #T (NONCE #A) (NONCE #B)) #H):-
+                (search_o_m #K (enc #T (NONCE #A_N) (NONCE #B_N)) #H):-
                   (search_o_m #K #T #H).
 
               "search_o_enc_enc_2" :
@@ -285,8 +285,8 @@ pub fn mk_static_rules<'a>(
               (search_k_m #K #K2 #R #M #A #H),
               (search_k_m #K #K2 #R #M #B #H).
           "search_k_enc_fa_b_strong" (Apply(CONS_FA_BOOL.clone())):
-            (search_k_m #K #K2 #R #M (CONS_FA_BOOL #A #B) #H):-
-              (search_k_b #K #K2 #R #M #A #H),
+            (search_k_m #K #K2 #R #M (CONS_FA_BOOL #A_B #B) #H):-
+              (search_k_b #K #K2 #R #M #A_B #H),
               (search_k_m #K #K2 #R #M #B #H).
 
           // first `B` then `A`
@@ -299,12 +299,12 @@ pub fn mk_static_rules<'a>(
               (FRESH_NONCE #R #A #H).
 
           "search_k_enc_fa_b_weak" (FaKeep(CONS_FA_BOOL.clone())):
-            (search_k_m #K #K2 #R #M (CONS_FA_BOOL #A #B) #H):-
+            (search_k_m #K #K2 #R #M (CONS_FA_BOOL #A_B #B) #H):-
               (search_k_m #K #K2 #R #M #B #H),
 
-              (search_o_b #K #A #H),
-              (search_o_b #K2 #A #H),
-              (FRESH_NONCE #R #A #H).
+              (search_o_b #K #A_B #H),
+              (search_o_b #K2 #A_B #H),
+              (FRESH_NONCE #R #A_B #H).
 
           // ~~~~~~~~~~~~~~~~ macros ~~~~~~~~~~~~~~~~~~
           "search_o_enc_msg":

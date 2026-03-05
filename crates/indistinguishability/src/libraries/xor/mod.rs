@@ -30,7 +30,7 @@ pub struct XOr {
     xor_pattern: Pattern<Lang>,
 }
 
-decl_vars!(const NA:Bitstring, NB:Bitstring, X);
+decl_vars!(const NA:Bitstring, NB:Nonce, X);
 
 impl XOr {
     pub fn new_and_add(pbl: &mut Problem, index: usize, xor: Function) -> &Self {

@@ -13,7 +13,7 @@ use crate::{Lang, rexp};
 #[dynamic]
 static PATTERN_LIST_M: Pattern<Lang> = Pattern::from(&rexp!((CONS_FA_BITSTRING #HD #TL)));
 #[dynamic]
-static PATTERN_LIST_B: Pattern<Lang> = Pattern::from(&rexp!((CONS_FA_BOOL #HD #TL)));
+static PATTERN_LIST_B: Pattern<Lang> = Pattern::from(&rexp!((CONS_FA_BOOL #HDB #TL)));
 #[dynamic]
 static PATTERN_LIST_TUPLE: Pattern<Lang> = Pattern::from(&rexp!((TUPLE #HD #TL)));
 
