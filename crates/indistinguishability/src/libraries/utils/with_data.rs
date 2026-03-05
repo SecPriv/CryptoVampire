@@ -35,6 +35,10 @@ impl FreshNonceSet {
         self.set.is_empty() || self.fresh.is_empty()
     }
 
+    pub fn len(&self) -> usize {
+        self.set.len() + self.fresh.len()
+    }
+
     pub fn reset(&mut self) {
         self.set.clear();
         self.fresh.clear();
@@ -63,6 +67,12 @@ impl FreshNonceSet {
         let recipies = mself(egraph).extra_recipies.clone();
         let mut subst = Substitution::default();
         for UserFreshNonce { variables, nonce } in recipies {
+            if variables.is_empty() {
+                let fresh_idx = nonce.add_to_egraph(egraph);
+                mself(egraph).set.insert(fresh_idx);
+                continue;
+            }
+
             let idx = variables
                 .iter()
                 .map(|v| {
@@ -97,6 +107,7 @@ impl FreshNonceSet {
                         .collect_vec()
                 })
                 .collect_vec();
+
             for args in idx.as_slice().transpose() {
                 subst.0.clear();
                 subst
@@ -147,6 +158,7 @@ pub trait RuleWithFreshNonce {
         'a: {
             let egraph = pgrm.egraph();
             let nonces = self.get_set(egraph.analysis.pbl());
+            trace!("nonces has {:} elements", nonces.len());
             ebreak_if!('a, nonces.is_empty());
 
             let to_avoid = Self::all_nonce_descendants(egraph, self_ids);
@@ -156,15 +168,19 @@ pub trait RuleWithFreshNonce {
             let fresh_nonce_pool: FxHashSet<_> =
                 nonces.fresh().difference(&to_avoid).copied().collect();
 
+            trace!("nonce_pool has {:} elements", nonce_pool.len());
+            trace!("fresh_nonce_pool has {:} elements", fresh_nonce_pool.len());
             ebreak_if!('a, nonce_pool.is_empty() || fresh_nonce_pool.is_empty());
 
             let all_other = Self::all_nonce_descendants(egraph, other_ids);
 
             let with_other = nonce_pool.intersection(&all_other).copied().collect_vec();
+            trace!("with_other has {:} elements", with_other.len());
             ebreak_if!('a, with_other.is_empty());
 
             let mut without_other = fresh_nonce_pool.difference(&all_other).copied();
             ebreak_let!('a, let Some(without_other)= without_other.next());
+            trace!("without_other is non-empty");
 
             return chain![with_other, [without_other]].collect();
         }
