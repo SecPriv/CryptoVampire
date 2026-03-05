@@ -31,7 +31,9 @@ impl Formula {
                         .iter()
                         .map(Formula::try_get_sort)
                         .collect_tuple()
-                        .with_context(|| format!("wrong number of arguments in {self} (expecting 2)"))?
+                        .with_context(|| {
+                            format!("wrong number of arguments in {self} (expecting 2)")
+                        })?
                     {
                         ensure!(
                             sl.unify(sr),

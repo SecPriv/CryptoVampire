@@ -25,9 +25,9 @@ pub(crate) mod list;
 mod binder;
 pub use binder::{RecFOFormulaQuant, RecFOFormulaQuantRef};
 
+mod checking;
 mod printing;
 mod smt;
-mod checking;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Steel, Serialize)]
 #[steel(equality, hash)]
@@ -69,7 +69,7 @@ impl FOBinder {
         use Sort::*;
         match self {
             Self::FindSuchThat => &[Bool, Bitstring, Bitstring],
-            Self::Exists | Self::Forall => &[Bool]
+            Self::Exists | Self::Forall => &[Bool],
         }
     }
 }
