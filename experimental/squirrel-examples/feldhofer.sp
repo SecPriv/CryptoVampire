@@ -45,6 +45,8 @@ tactic's implementation. In the meantime, the file is left as-is with its
 admits.
 *)
 
+include Core.
+
 set timeout=10.
 set postQuantumSound=true.
 
@@ -94,8 +96,6 @@ process Tag(i:index, j:index) =
   out(cT, cipher).
 
 system (!_k Reader(k) | !_i !_j Tag(i,j)).
-
-include Basic.
 
 axiom tags_neq : tagR <> tagT
 
@@ -290,7 +290,7 @@ Proof.
 
         (* find condB => condA *)
         - intro _. 
-          have A := %local(unique_outputs i j i0 j0). 
+          have A := localize(unique_outputs i j i0 j0). 
           (have [A1 A2] := A _ _; 1,2: auto); clear A.
           use fail_not_pair with tagT, <input@Tag(i,j),nt(i,j)>. 
           auto.
@@ -305,7 +305,7 @@ Proof.
 
         (* find condB => condA *)
         - intro _.
-          have A := %local(unique_outputs i j i0 j0). 
+          have A := localize(unique_outputs i j i0 j0). 
           (have [A1 A2] := A _ _; 1,2: auto); clear A.
           use fail_not_pair with tagT, <input@Tag(i,j),nt(i,j)>.
           auto.
