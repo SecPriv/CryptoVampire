@@ -1,6 +1,10 @@
+use std::cell::RefCell;
+
 use anyhow::{Context, ensure};
 use itertools::{Itertools, chain};
-use logic_formula::AsFormula;
+use logic_formula::iterators::AllTermsIterator;
+use logic_formula::outers::{RefCellPile, RefPile};
+use logic_formula::{AsFormula, IteratorHelper};
 use rustc_hash::FxHashSet;
 
 use crate::Problem;
@@ -106,6 +110,8 @@ impl Default for NoncePublicSearchState {
 /// Generates a non-stupid order of set nonce to try to publish.
 #[define_opaque(MI)]
 fn mk_iterator(candidates: FxHashSet<Function>, pbl: &Problem) -> MI {
+    let already_used: FxHashSet<_> = mk_blocked_by_published_iter(pbl);
+
     let to_test_first = candidates
         .into_iter()
         .powerset()
@@ -121,5 +127,32 @@ fn mk_iterator(candidates: FxHashSet<Function>, pbl: &Problem) -> MI {
         .powerset();
     chain!(to_test_first, others)
         .filter(|x| !x.is_empty())
+        .filter(move |x| !x.iter().any(|n| n.is_fresh() || already_used.contains(n)))
         .unique()
+}
+
+fn mk_blocked_by_published_iter<I: FromIterator<Function>>(pbl: &Problem) -> I {
+    let pile = RefCell::new(Vec::new());
+
+    pbl.protocols()
+        .iter()
+        .flat_map(|p| p.steps().iter())
+        .filter(|s| s.id.is_publish_step())
+        .map(|s| &s.msg)
+        .flat_map(|f| {
+            let mut iter = RefCellPile::new(&pile, AllTermsIterator);
+            iter.as_mut().push_child(f, ());
+            iter
+        })
+        .filter_map(|f| {
+            if let Formula::App { head, .. } = f
+                && head.signature.output == Sort::Nonce
+            {
+                Some(head)
+            } else {
+                None
+            }
+        })
+        .cloned()
+        .collect()
 }
