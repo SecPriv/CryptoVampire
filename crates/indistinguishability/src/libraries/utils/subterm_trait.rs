@@ -4,7 +4,7 @@ use std::ops::ControlFlow;
 use egg::{EGraph, Id};
 use itertools::{Itertools, izip};
 use logic_formula::{AsFormula, Destructed, HeadSk};
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use utils::{ereturn_cf, ereturn_if, implvec};
 
 use crate::libraries::utils::fresh::RefFormulaBuilder;
@@ -203,12 +203,17 @@ pub trait SyntaxSearcher {
             variables,
         } in rws.iter()
         {
-            let from = from.iter().map(Formula::alpha_rename).collect_vec();
-            let to = to.alpha_rename();
+            let mut subst = Default::default();
+            let from = from.iter().map(|f| f.alpha_rename_if_with(&mut subst, &mut |_| true)).collect_vec();
+            let to = to.alpha_rename_if_with(&mut subst, &mut |_| true);
+
+            debug_assert_eq!(FxHashSet::from_iter(variables.iter()), FxHashSet::from_iter(subst.keys().copied()));
+            let variables = subst.into_values();
 
             assert_eq!(from.len(), args.len());
             let eqs = izip!(args.iter(), from.iter()).map(|(arg, f)| rexp!((= #arg #f)));
             let condition = rexp!((and #eqs*));
+            eprintln!("I am here !!!! {condition}");
 
             let builder = builder
                 .add_node()
@@ -216,7 +221,7 @@ pub trait SyntaxSearcher {
                 // .quantifier(FOBinder::Exists)
                 .forall()
                 .condition(condition)
-                .variables(variables.iter().cloned())
+                .variables(variables)
                 .build();
             self.inner_search_formula(pbl, &builder, to);
             for arg in &args {
