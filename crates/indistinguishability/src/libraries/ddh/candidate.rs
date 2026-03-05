@@ -66,7 +66,7 @@ fn mk_static(_pbl: &Problem, ddh: &DDH) -> impl Iterator<Item = Rewrite> {
         ..
     } = ddh;
     [
-        mk_rewrite!(crate prolog format!(""); (a Bitstring, b Nonce):
+        mk_rewrite!(crate prolog format!("ddh candidate trigger"); (a Bitstring, b Nonce):
           (exp (exp g (NONCE #a)) (NONCE #b))
             => (candidate_m (exp (exp g (NONCE #a)) (NONCE #b)) #a #b)),
     ]
