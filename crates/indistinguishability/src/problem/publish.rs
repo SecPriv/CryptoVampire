@@ -6,6 +6,7 @@ use logic_formula::iterators::AllTermsIterator;
 use logic_formula::outers::{RefCellPile, RefPile};
 use logic_formula::{AsFormula, IteratorHelper};
 use rustc_hash::FxHashSet;
+use utils::powerset::{PowersetReverse, PowersetReverseIter};
 
 use crate::Problem;
 use crate::protocol::Step;
@@ -114,26 +115,16 @@ fn mk_iterator(candidates: FxHashSet<Function>, pbl: &Problem) -> MI {
 
     let filter = move |n: &Function| !(n.is_fresh() || already_used.contains(n));
 
-    let to_test_first = candidates
-        .into_iter()
-        .filter(&filter)
-        .collect_vec()
-        .into_iter()
-        .powerset()
-        .collect_vec()
-        .into_iter()
-        .rev();
+    let to_test_first = candidates.into_iter().filter(&filter).collect_vec();
     let others = pbl
         .functions()
         .nonces()
         .filter(|&x| filter(x))
         .cloned()
-        .collect_vec()
-        .into_iter()
-        .powerset()
-        .collect_vec()
-        .into_iter()
-        .rev();
+        .collect_vec();
+
+    let to_test_first = PowersetReverse::new(to_test_first);
+    let others = PowersetReverse::new(others);
     chain!(to_test_first, others)
         .filter(|x| !x.is_empty())
         .unique()
