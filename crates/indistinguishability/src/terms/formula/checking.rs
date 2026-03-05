@@ -1,14 +1,14 @@
 #![allow(dead_code)]
 use std::fmt::Display;
 
-use anyhow::{anyhow, bail, ensure};
+use anyhow::{Context, anyhow, bail, ensure};
 use itertools::Itertools;
 use logic_formula::AsFormula;
 use logic_formula::iterators::AllTermsIterator;
 use thiserror::Error;
 use utils::implvec;
 
-use crate::terms::{FOBinder, Formula, Sort};
+use crate::terms::{EQ, FOBinder, Formula, Sort};
 
 impl Formula {
     pub fn type_check(&self) -> anyhow::Result<()> {
@@ -26,6 +26,20 @@ impl Formula {
                     )?;
                 }
                 Self::Quantifier { arg, .. } => check_sign(self, arg.iter(), [Sort::Bool])?,
+                Self::App { head, args } if head == &EQ => {
+                    if let (Some(sl), Some(sr)) = args
+                        .iter()
+                        .map(Formula::try_get_sort)
+                        .collect_tuple()
+                        .with_context(|| format!("wrong number of arguments in {self} (expecting 2)"))?
+                    {
+                        ensure!(
+                            sl.unify(sr),
+                            "both side of the equality shhould have the same sort. Left is {sl} \
+                             while right is {sr} in {self}"
+                        )
+                    }
+                }
                 Self::App { head, args } => check_sign(self, args.iter(), head.args_sorts())?,
                 Self::Var(_) => (),
             }
@@ -59,7 +73,7 @@ fn check_sign_one(context: &Formula, arg: &Formula, expected_sort: Sort) -> anyh
     if !s.unwrap_or(expected_sort).unify(expected_sort) {
         let s = s.unwrap(); // cannot fail otherwise we wouldn't be in this branch
         Err(anyhow!(
-            "{arg} should have sort {expected_sort} but instead has {s} (in {context})"
+            "{arg} should have sort {expected_sort} but instead has {s}, in {context}"
         ))
     } else {
         Ok(())

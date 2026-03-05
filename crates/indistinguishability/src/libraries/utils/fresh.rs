@@ -3,6 +3,7 @@ use std::fmt::Display;
 use std::rc::{Rc, Weak};
 
 use bon::{Builder, bon};
+use log::trace;
 use utils::{ereturn_if, ereturn_let};
 
 use crate::terms::{FOBinder, Formula, Variable};
@@ -238,6 +239,7 @@ impl Drop for FormulaBuilder {
         let inner = self.drain_as_formula();
 
         let parent = self.parent.as_ref().unwrap();
+        trace!(target: "search", "dropping formula builder");
         parent.add_leaf(inner);
     }
 }
@@ -296,6 +298,11 @@ impl FormulaBuilder {
             self.is_saturated(),
             content.try_evaluate()
         );
+        #[cfg(debug_assertions)]
+        {
+            content.type_check().unwrap();
+        }
+
         ereturn_if!(self.is_saturated());
 
         // checks if we are now saturated
