@@ -27,6 +27,7 @@ pub use binder::{RecFOFormulaQuant, RecFOFormulaQuantRef};
 
 mod printing;
 mod smt;
+mod checking;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Steel, Serialize)]
 #[steel(equality, hash)]
