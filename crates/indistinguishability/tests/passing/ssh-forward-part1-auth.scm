@@ -57,11 +57,13 @@
 
 (publish pbl ((i Index)) (mexp g (a i)))
 (publish pbl ((i Index)) (mexp g (b i)))
-(publish pbl () (mexp g a1))
-(publish pbl () (mexp g b1))
-(publish pbl () (vk skP))
-(publish pbl () (vk skS))
+; (publish pbl () (mexp g a1))
+; (publish pbl () (mexp g b1))
 (publish pbl () hKey)
+
+; (publish pbl () skP)
+; (publish pbl () rP)
+; (publish pbl () skS)
 
 ;; Protocol P
 (define P1 (declare-same-step pbl "P1" ptcls '()
@@ -77,27 +79,27 @@
 (define P3 (declare-same-step pbl "P3" ptcls '()
     (lambda (p in)
       (let [ (sidP (h (tuple (tuple (mexp g a1) (gB p)) (mexp (gB p) a1)) hKey))
-             (pkS_in (sel1of2 in))
-             (sigS (sel2of2 in)) ]
+        (pkS_in (sel1of2 in))
+        (sigS (sel2of2 in)) ]
         (cand (eq pkS_in (vk skS))
-              (checksign sidP sigS pkS_in))))
+          (checksign sidP sigS pkS_in))))
     (lambda (p in)
       (let [ (sidP (h (tuple (tuple (mexp g a1) (gB p)) (mexp (gB p) a1)) hKey)) ]
         (enc (sign sidP skP) rP (mexp (gB p) a1))))))
 
 (define P4_ok (declare-same-step pbl "P4_ok" ptcls '()
     (lambda (p in) (cor (eq (gB p) (mexp g b1))
-                        (exists ((i Index)) (eq (gB p) (mexp g (b i))))))
+        (exists ((i Index)) (eq (gB p) (mexp g (b i))))))
     (lambda _ ok)))
 
 (define P4_fail (declare-step pbl "P4_fail" '()
     (step p1
       (lambda (in) (mnot (cor (eq (gB p1) (mexp g b1))
-                             (exists ((i Index)) (eq (gB p1) (mexp g (b i)))))))
+            (exists ((i Index)) (eq (gB p1) (mexp g (b i)))))))
       (lambda _ ok))
     (step p2
       (lambda (in) (mnot (cor (eq (gB p2) (mexp g b1))
-                             (exists ((i Index)) (eq (gB p2) (mexp g (b i)))))))
+            (exists ((i Index)) (eq (gB p2) (mexp g (b i)))))))
       (lambda _ ko))))
 
 (add-constrain pbl () (lt P1 P2))
@@ -127,17 +129,17 @@
 
 (define S4_ok (declare-same-step pbl "S4_ok" ptcls '()
     (lambda (p in) (cor (eq (gP p) (mexp g a1))
-                        (exists ((i Index)) (eq (gP p) (mexp g (a i))))))
+        (exists ((i Index)) (eq (gP p) (mexp g (a i))))))
     (lambda _ ok)))
 
 (define S4_fail (declare-step pbl "S4_fail" '()
     (step p1
       (lambda (in) (mnot (cor (eq (gP p1) (mexp g a1))
-                             (exists ((i Index)) (eq (gP p1) (mexp g (a i)))))))
+            (exists ((i Index)) (eq (gP p1) (mexp g (a i)))))))
       (lambda _ ok))
     (step p2
       (lambda (in) (mnot (cor (eq (gP p2) (mexp g a1))
-                             (exists ((i Index)) (eq (gP p2) (mexp g (a i)))))))
+            (exists ((i Index)) (eq (gP p2) (mexp g (a i)))))))
       (lambda _ ko))))
 
 (add-constrain pbl () (lt S1 S2))
@@ -157,7 +159,7 @@
       mfalse)))
 
 (config.set_vampire_timeout pbl (b.string->duration "300ms"))
-(config.set_keep_smt_files pbl #t)
+(config.set_guided_nonce_search pbl #t)
 
 (if (run pbl p1 p2)
   (displayln "success")

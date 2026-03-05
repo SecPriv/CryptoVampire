@@ -90,10 +90,10 @@
 (define P1FA2 (declare-same-step pbl "P1FA2" ptcls '()
     (lambda (p in)
       (let [ (sidPaF (h (tuple (tuple (mexp g ake11) (gB_P1FA p)) k11) hKey))
-             (pkSaF (sel1of2 in))
-             (sigS (sel2of2 in)) ]
+        (pkSaF (sel1of2 in))
+        (sigS (sel2of2 in)) ]
         (cand (eq pkSaF (vk skS))
-              (checksign sidPaF sigS pkSaF))))
+          (checksign sidPaF sigS pkSaF))))
     (lambda (p in)
       (let [ (sidPaF (h (tuple (tuple (mexp g ake11) (gB_P1FA p)) k11) hKey)) ]
         (enc (sign sidPaF skP) r k11)))))
@@ -102,7 +102,7 @@
     (lambda (p in i)
       (let [ (x (dec in k11)) ]
         (cand (mnot (eq x mfail))
-              (eq (sel1of2 x) reqsign))))
+          (eq (sel1of2 x) reqsign))))
     (lambda (p in i)
       (let [ (x (dec in k11)) ]
         (enc (tuple anssign (sign (tuple forwarded (sel2of2 x)) skP)) (r2 i) k11)))))
@@ -139,10 +139,10 @@
 (define PDIS6 (declare-same-step pbl "PDIS6" ptcls '()
     (lambda (p in)
       (let [ (sidPa (h (tuple (tuple (mexp g a1) (gB_PDIS p)) (mexp (gB_PDIS p) a1)) hKey))
-             (pkSa (sel1of2 in))
-             (sigS (sel2of2 in)) ]
+        (pkSa (sel1of2 in))
+        (sigS (sel2of2 in)) ]
         (cand (eq pkSa (vk skS))
-              (checksign sidPa sigS pkSa))))
+          (checksign sidPa sigS pkSa))))
     (lambda (p in)
       (let [ (sidPa (h (tuple (tuple (mexp g a1) (gB_PDIS p)) (mexp (gB_PDIS p) a1)) hKey)) ]
         (enc (tuple reqsign sidPa) r3 k11)))))
@@ -151,11 +151,11 @@
 (define Pfail (declare-step pbl "Pfail" '()
     (step p1
       (lambda (in) (mnot (cor (eq (gB_PDIS p1) (mexp g b1))
-                             (exists ((i Index)) (eq (gB_PDIS p1) (mexp g (b i)))))))
+            (exists ((i Index)) (eq (gB_PDIS p1) (mexp g (b i)))))))
       (lambda _ ok))
     (step p2
       (lambda (in) (mnot (cor (eq (gB_PDIS p2) (mexp g b1))
-                             (exists ((i Index)) (eq (gB_PDIS p2) (mexp g (b i)))))))
+            (exists ((i Index)) (eq (gB_PDIS p2) (mexp g (b i)))))))
       (lambda _ ko))))
 
 ;; Simplified SDIS
@@ -174,18 +174,18 @@
 (define SDIS3 (declare-same-step pbl "SDIS3" ptcls '()
     (lambda (p in)
       (let [ (sidSa (h (tuple (tuple (gP_SDIS p) (mexp g b1)) (mexp (gP_SDIS p) b1)) hKey))
-             (x4 (dec in (mexp (gP_SDIS p) b1))) ]
+        (x4 (dec in (mexp (gP_SDIS p) b1))) ]
         (checksign (tuple forwarded sidSa) x4 (vk skP))))
     (lambda _ ok)))
 
 (define Sfail (declare-step pbl "Sfail" '()
     (step p1
       (lambda (in) (mnot (cor (eq (gP_SDIS p1) (mexp g a1))
-                             (exists ((i Index)) (eq (gP_SDIS p1) (mexp g (a i)))))))
+            (exists ((i Index)) (eq (gP_SDIS p1) (mexp g (a i)))))))
       (lambda _ ok))
     (step p2
       (lambda (in) (mnot (cor (eq (gP_SDIS p2) (mexp g a1))
-                             (exists ((i Index)) (eq (gP_SDIS p2) (mexp g (a i)))))))
+            (exists ((i Index)) (eq (gP_SDIS p2) (mexp g (a i)))))))
       (lambda _ ko))))
 
 (add-constrain pbl () (lt P1FA1 P1FA2))
