@@ -4,7 +4,7 @@ use serde::Serialize;
 use smallvec::SmallVec;
 use steel_derive::Steel;
 
-use crate::terms::{Function, Variable};
+use crate::terms::{Function, Sort, Variable};
 
 mod egg;
 // mod egg_like;
@@ -62,6 +62,16 @@ pub enum FOBinder {
     Exists,
     /// Find such that quantifier.
     FindSuchThat,
+}
+
+impl FOBinder {
+    pub const fn input_sorts(&self) -> &'static [Sort] {
+        use Sort::*;
+        match self {
+            Self::FindSuchThat => &[Bool, Bitstring, Bitstring],
+            Self::Exists | Self::Forall => &[Bool]
+        }
+    }
 }
 
 /// A trait for types that can be treated as a formula.

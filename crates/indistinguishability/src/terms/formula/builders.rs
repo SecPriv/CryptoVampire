@@ -1,12 +1,12 @@
 use std::ops::{BitAnd, BitOr, Not, Shr};
 
-use itertools::Itertools;
+use itertools::{Itertools, izip};
 use quarck::CowArc;
 use utils::{ereturn_if, ereturn_let, implvec};
 
 use super::Formula;
 use crate::rexp;
-use crate::terms::{AND, FALSE, FOBinder, Function, IMPLIES, NOT, OR, TRUE, Variable};
+use crate::terms::{AND, FALSE, FOBinder, Function, IMPLIES, NOT, OR, Sort, TRUE, Variable};
 
 // =========================================================
 // ================== specific builders ====================
@@ -14,14 +14,17 @@ use crate::terms::{AND, FALSE, FOBinder, Function, IMPLIES, NOT, OR, TRUE, Varia
 impl Formula {
     pub fn bind(kind: FOBinder, vars: Vec<Variable>, args: implvec!(Formula)) -> Self {
         assert!(vars.iter().all(Variable::has_sort));
+        let arg: CowArc<'_, _> = args.into_iter().collect();
+        debug_assert!(izip!(kind.input_sorts(), arg.iter()).all(|(s, arg)| arg.has_sort(*s)));
         Self::Quantifier {
             head: kind,
             vars: vars.into(),
-            arg: args.into_iter().collect(),
+            arg,
         }
     }
 
     pub fn app(fun: Function, args: Vec<Self>) -> Self {
+        debug_assert!(izip!(fun.args_sorts(), &args).all(|(s, arg)| arg.has_sort(s)));
         Self::App {
             head: fun,
             args: args.into(),
@@ -66,6 +69,7 @@ impl Formula {
 
         let mut ret = init;
         for c in args {
+            debug_assert!(c.has_sort(Sort::Bool));
             ereturn_if!(c.is_false(), Self::False());
             ret = rexp!((AND #c #ret));
         }
@@ -79,15 +83,11 @@ impl Formula {
 
         let mut ret = init;
         for c in args {
+            debug_assert!(c.has_sort(Sort::Bool));
             ereturn_if!(c.is_true(), Self::True());
             ret = rexp!((OR #c #ret));
         }
         ret
-    }
-
-    #[deprecated]
-    pub fn optimised_binder(_kind: FOBinder, _vars: implvec!(Variable), _arg: Formula) -> Self {
-        todo!()
     }
 
     /// Makes a constant
