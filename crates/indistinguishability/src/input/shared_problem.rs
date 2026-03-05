@@ -207,6 +207,7 @@ configuration!(
     trace: bool,
     trace_rebuilds:bool,
     keep_smt_files:bool,
+    trace_guessed_published_nonces: bool,
 
     prf_limit:usize,
     fa_limit:usize,

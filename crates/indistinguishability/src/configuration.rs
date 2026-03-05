@@ -111,6 +111,10 @@ pub struct Configuration {
     #[arg(long)]
     pub trace_rebuilds: bool,
 
+    /// follow to set of nonce currently "published"
+    #[arg(long)]
+    pub trace_guessed_published_nonces: bool,
+
     /// Enable if commute rewrite rules
     #[arg(long)]
     pub if_commute: bool,
@@ -164,6 +168,7 @@ impl Default for Configuration {
             complete_and: false,
             ddh_limit: NONCE_GENERATION_DEFAULT,
             guided_nonce_search: false,
+            trace_guessed_published_nonces: false,
         }
     }
 }

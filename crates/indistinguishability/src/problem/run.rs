@@ -95,7 +95,7 @@ impl Problem {
                         break 'a false;
                     };
 
-                    if self.config.trace {
+                    if self.config.trace || self.config.trace_guessed_published_nonces {
                         eprintln!(
                             "re-running with published nonces [{}]",
                             candidates.iter().join(", ")
