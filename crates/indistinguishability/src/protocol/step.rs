@@ -162,17 +162,24 @@ impl Step {
 
 #[derive(Debug, Clone, Error)]
 enum InvalidStepError {
-    #[error("wrong protocol referenced (expected only references to {expected} got {got})")]
-    WrongProtocol { expected: Function, got: Function },
-    #[error("Variable {0} is free")]
-    FreeVariable(Variable),
+    #[error(
+        "wrong protocol referenced (expected only references to {expected} got {got}) \
+         in\n\t{formula}"
+    )]
+    WrongProtocol {
+        expected: Function,
+        got: Function,
+        formula: Formula,
+    },
+    #[error("Variable {var} is free in\n\t{formula}")]
+    FreeVariable { var: Variable, formula: Formula },
 }
 
 impl From<InvalidStepError> for steel::rerrs::SteelErr {
     fn from(value: InvalidStepError) -> Self {
         let kind = match &value {
             InvalidStepError::WrongProtocol { .. } => ErrorKind::Generic,
-            InvalidStepError::FreeVariable(_) => ErrorKind::FreeIdentifier,
+            InvalidStepError::FreeVariable { .. } => ErrorKind::FreeIdentifier,
         };
         Self::new(kind, value.to_string())
     }
@@ -192,6 +199,7 @@ fn check_elem(
             return Err(InvalidStepError::WrongProtocol {
                 expected: ptcl.clone(),
                 got: head.clone(),
+                formula: elem.clone(),
             });
         }
     }
@@ -199,7 +207,10 @@ fn check_elem(
     let vars = &pbl.protocols()[ptcl.protocol_idx].steps()[step.step_idx].vars;
     for v in elem.free_vars_iter() {
         if !vars.contains(v) {
-            return Err(InvalidStepError::FreeVariable(v.clone()));
+            return Err(InvalidStepError::FreeVariable {
+                var: v.clone(),
+                formula: elem.clone(),
+            });
         }
     }
 

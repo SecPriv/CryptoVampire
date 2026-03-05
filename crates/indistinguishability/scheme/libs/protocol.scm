@@ -14,19 +14,20 @@
 (struct step (protocol condition message))
 
 (define (declare-step pbl name sorts . content)
-  (let*
-    [ (step (step->declare-step pbl name sorts))
+  (let* [
+    (step (step->declare-step pbl name sorts))
     (stepf (register-function step)) ]
     (begin
       (for-each (lambda (c)
-          (let*
-            [ (ptclf (step-protocol c))
+          (let* [
+            (ptclf (step-protocol c))
             (msgf (step-message c))
             (condf (step-condition c))
             (ptcl (get-function ptclf))
             (variables
               (map f->var (step->get-vars pbl step ptcl)))
-            (in (macro_input (apply stepf variables) ptclf)) ]
+            (applied-step (if (empty? variables) stepf (apply stepf variables)))
+            (in (macro_input applied-step ptclf)) ]
             (begin
               (step->set-msg pbl step ptcl
                 (apply msgf (cons in variables)))
@@ -38,8 +39,7 @@
 (define (declare-same-step pbl name ptcls sorts msg mcond)
   (let* [
     (declare (partial declare-step pbl name sorts))
-    (content (map (lambda (p) (step p (partial msg p) (partial mcond p))) ptcls))
-    ]
+    (content (map (lambda (p) (step p (partial msg p) (partial mcond p))) ptcls)) ]
     (apply declare content)))
 
 (define (set-init-step pbl . content)

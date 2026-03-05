@@ -347,6 +347,8 @@ impl Function {
             "Returns `true` if the function represents a nonce.");
     is_fun!(is_quantifier; FIND_SUCH_THAT| BINDER;
             "Returns `true` if the function is a quantifier (e.g., `EXISTS`, `FIND_SUCH_THAT`).");
+    is_fun!(is_ok_for_extraction; FIND_SUCH_THAT| BINDER|LIST_CONSTR|SORT|LAMBDA;
+            "Returns `true` if the function is can be extracted in a first step from the egraph");
     is_fun!(has_quantifier_idx; BINDER | FIND_SUCH_THAT | SKOLEM | QUANTIFIER_FRESH;
             "Returns `true` if the function has an associated quantifier index.");
     is_fun!(is_egg_binder; BINDER;

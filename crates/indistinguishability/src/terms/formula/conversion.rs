@@ -1,9 +1,11 @@
 use std::fmt::Debug;
 
-use anyhow::{Context, bail};
+use anyhow::{Context, bail, ensure};
 use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr};
 use itertools::{Itertools, chain};
 use log::trace;
+use logic_formula::AsFormula;
+use logic_formula::iterators::AllFunctionsIterator;
 use rustc_hash::FxHashMap;
 use utils::{ereturn_if, implvec};
 
@@ -398,7 +400,13 @@ impl Formula {
         egraph: &EGraph<Lang, N>,
         id: Id,
     ) -> anyhow::Result<Self> {
-        Self::try_from_id_with_vars(egraph, id, &Default::default())
+        let f = Self::try_from_id_with_vars(egraph, id, &Default::default())?;
+        for fun in (&f).iter_with(AllFunctionsIterator, ()) {
+            if fun.is_prolog_only() {
+                bail!("Failed to extract: {fun} is a prolog-only function.\nIn:\t{f}")
+            }
+        }
+        Ok(f)
     }
 
     pub fn try_from_id_with_vars<N: Analysis<Lang>>(
@@ -561,8 +569,8 @@ fn extract_from_egraph<N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
 
 /// Filter any golgge specific head function, but keep lambda binders. Those
 /// needs to be removed with [Formula::remove_de_bruijn]
-pub fn default_extraction_filter(f: &Lang) -> bool {
-    !f.head.is_prolog_only() || f.head.is_quantifier()
+pub fn default_extraction_filter(Lang { head, .. }: &Lang) -> bool {
+    !head.is_prolog_only() || head.is_ok_for_extraction()
 }
 
 impl From<&[LangVar]> for Formula {

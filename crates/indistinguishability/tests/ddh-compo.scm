@@ -51,8 +51,8 @@
 ;; same for e^a and e^b
 (publish pbl ((i Index)) (mexp g (a i)))
 (publish pbl ((i Index)) (mexp g (b i)))
-(publish pbl ((i Index)) (mexp g a1))
-(publish pbl ((i Index)) (mexp g b1))
+(publish pbl () (mexp g a1))
+(publish pbl () (mexp g b1))
 
 (define ptcls (list p1 p2))
 
@@ -76,10 +76,10 @@
         (eq (sel2of2 (sel1of2 (inP2 p))) (mexp g b1))))
     (lambda _ ok)))
 
-(define P4 (declare-same-step pbl "P4" ptcls '()
+(define P4 (declare-same-step pbl "P4" ptcls (list Index)
     (lambda (p in i) (cand
         (eq (vks p) (vk skP))
-        (not (eq (sel2of2 (sel1of2 (inP2 p))) (mexp g b1)))
+        (mnot (eq (sel2of2 (sel1of2 (inP2 p))) (mexp g b1)))
         (eq (sel2of2 (sel1of2 (inP2 p))) (mexp g (b i)))))
     (lambda _ ok)))
 
@@ -88,17 +88,17 @@
     (step p1
       (lambda (in) (cand
           (eq (vks p1) (vk skP))
-          (not (eq (sel2of2 (sel1of2 (inP2 p1))) (mexp g b1)))
-          (not (exists ((i Index))
-              (eq (sel2of2 (sel1of2 (inP2 p1))) (mexp g (b i))))))))
-    (lambda _ ok))
-  (step p2
-    (lambda (in) (cand
-        (eq (vks p2) (vk skP))
-        (not (eq (sel2of2 (sel1of2 (inP2 p2))) (mexp g b1)))
-        (not (exists ((i Index))
-            (eq (sel2of2 (sel1of2 (inP2 p2))) (mexp g (b i))))))))
-  (lambda _ ko))
+          (mnot (eq (sel2of2 (sel1of2 (inP2 p1))) (mexp g b1)))
+          (mnot (exists ((i Index))
+              (eq (sel2of2 (sel1of2 (inP2 p1))) (mexp g (b i)))))))
+      (lambda _ ok))
+    (step p2
+      (lambda (in) (cand
+          (eq (vks p2) (vk skP))
+          (mnot (eq (sel2of2 (sel1of2 (inP2 p2))) (mexp g b1)))
+          (mnot (exists ((i Index))
+              (eq (sel2of2 (sel1of2 (inP2 p2))) (mexp g (b i)))))))
+      (lambda _ ko))))
 
 (add-constrain pbl () (lt P1 P2))
 (add-constrain pbl () (lt P2 P3))
@@ -123,33 +123,33 @@
 
 (bind ((i Index))
   (begin
-    (cv-add-rewrite pbl (cv-mk-rewrite "Schall1-gb-1" '()
+    (add-rewrite pbl (rw.new "Schall1-gb-1" '()
         (mexp g b1) (sel1of2 (sel2of2 (macro_msg S1 p1)))))
-    (cv-add-rewrite pbl (cv-mk-rewrite "Schall1-gb-2" '()
+    (add-rewrite pbl (rw.new "Schall1-gb-2" '()
         (mexp g b1) (sel1of2 (sel2of2 (macro_msg S1 p2)))))))
 
 
 
-(define S2 (declare-same-step "S2" pbl ptcls '()
+(define S2 (declare-same-step pbl "S2" ptcls '()
     (lambda (p in)
       (checksign (tuple (mexp g b1) (gpS p) (vk skS)) in (vkS p)))
     (lambda _ ok)))
 (define (S2in p) (macro_input S2 p))
 
 
-(define S3 (declare-same-step "S3" pbl ptcls '()
+(define S3 (declare-same-step pbl "S3" ptcls '()
     (lambda (p in)
       (cand
         (eq (vkS p) (vk skP))
         (eq (gpS p) (mexp g a1))))
     (lambda _ ok)))
 
-(define S3 (declare-same-step "S3" pbl ptcls (list Index)
+(define S4 (declare-same-step pbl "S4" ptcls (list Index)
     (lambda (p in i)
       (cand
         (eq (vkS p) (vk skP))
-        (not (eq (gpS p) (mexp g a1)))
-        (eq (gpS p1) (mexp g (a i)))))
+        (mnot (eq (gpS p) (mexp g a1)))
+        (eq (gpS p) (mexp g (a i)))))
     (lambda _ ok)))
 
 
@@ -159,15 +159,15 @@
       (lambda (c)
         (and
           (eq (vkS p2) (vk skP))
-          (not (eq (gpS p1) (mexp g a1)))
-          (not (exists ((i Index)) (eq (gpS p1) (mexp g (a i)))))))
+          (mnot (eq (gpS p1) (mexp g a1)))
+          (mnot (exists ((i Index)) (eq (gpS p1) (mexp g (a i)))))))
       (lambda _ ok))
     (step p2
       (lambda (c)
         (and
           (eq (vkS p2) (vk skP))
-          (not (eq (gpS p2) (mexp g a1)))
-          (not (exists ((i Index)) (eq (gpS p2) (mexp g (a i)))))))
+          (mnot (eq (gpS p2) (mexp g a1)))
+          (mnot (exists ((i Index)) (eq (gpS p2) (mexp g (a i)))))))
       (lambda _ ko))))
 
 ;; ordering constrains
@@ -181,27 +181,27 @@
 
 ;; lemma (given by the crypto)
 (bind ((p Protocol))
-  (cv-add-rewrite pbl (cv-mk-rewrite "lemma-S" (list p)
-      (and (macro_exec S5 p) (macro_cond S5 p))
+  (add-rewrite pbl (rw.new "lemma-S" (list p)
+      (cand (macro_exec S5 p) (macro_cond S5 p))
       mfalse)))
 (bind ((p Protocol))
-  (cv-add-rewrite pbl (cv-mk-rewrite "lemma-P" (list p)
-      (and (macro_exec S5 p) (macro_cond P5 p))
+  (add-rewrite pbl (rw.new "lemma-P" (list p)
+      (cand (macro_exec P5 p) (macro_cond P5 p))
       mfalse)))
 
 (initialize-as-ddh ddh g mexp)
 
 ; tell the ddh rules to make use of `k i j`
-; This is not the case default for efficiency reasons
-(cv-register-fresh-nonce ddh '() k11)
+; This is mnot the case default for efficiency reasons
+(register-fresh-nonce ddh '() k11)
 
 ; enable looking for extra things to publish
-(cv-set-guided-nonce-search pbl #t)
+(config.set_guided_nonce_search pbl #t)
 
 ;; configuration
 ; (cv-set-trace pbl #t)
-(cv-set-node-limit pbl 100000)
-(cv-set-vampire-timeout pbl (cv-string->duration "300ms"))
+(config.set_node_limit pbl 100000)
+(config.set_vampire_timeout pbl (b.string->duration "300ms"))
 ; (cv-set-fa-limit pbl 0)
 ; (cv-set-keep-smt-files pbl #t)
 
@@ -209,6 +209,6 @@
   (displayln "success")
   (error "failed ddh-S"))
 
-(displayln (cv-print-report (cv-get-report pbl)))
+(displayln (report.print-report (pbl.get-report pbl)))
 ; (save-results "ddh-S" pbl)
 

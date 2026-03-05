@@ -142,3 +142,28 @@ where
         }
     }
 }
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct AllFunctionsIterator;
+
+impl<F: AsFormula> FormulaIterator<F> for AllFunctionsIterator
+where
+    F::Fun: Clone,
+{
+    type Passing = ();
+    type U = F::Fun;
+
+    fn next<H>(&mut self, current: F, _passing: Self::Passing, helper: &mut H)
+    where
+        H: crate::IteratorHelper<F = F, Passing = Self::Passing, U = Self::U>,
+    {
+        let Destructed { head, args } = current.destruct();
+
+        if let crate::HeadSk::Fun(f) = head {
+            helper.push_result(f.clone());
+        }
+
+        helper.extend_child_with_default(args);
+    }
+}
