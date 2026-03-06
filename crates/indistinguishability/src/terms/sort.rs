@@ -10,7 +10,7 @@ use steel_derive::Steel;
 use crate::Lang;
 use crate::input::Registerable;
 use crate::terms::formula::list;
-use crate::terms::{BITE, BITSTRING_SORT, Function, INDEX_SORT, MITE, TIME_SORT};
+use crate::terms::{BITE, BITSTRING_SORT, BOOL_SORT, Function, INDEX_SORT, MITE, TIME_SORT};
 
 /// Represents the sort (type) of a term in the first-order logic.
 #[non_exhaustive]
@@ -66,6 +66,7 @@ impl Sort {
             _ if fun == &BITSTRING_SORT => Some(Self::Bitstring),
             _ if fun == &INDEX_SORT => Some(Self::Index),
             _ if fun == &TIME_SORT => Some(Self::Time),
+            _ if fun == &BOOL_SORT => Some(Self::Bool),
             _ => None,
         }
     }
@@ -78,6 +79,7 @@ impl Sort {
             Sort::Bitstring => Some(&BITSTRING_SORT),
             Sort::Index => Some(&INDEX_SORT),
             Sort::Time => Some(&TIME_SORT),
+            Sort::Bool => Some(&BOOL_SORT),
             _ => None,
         }
     }

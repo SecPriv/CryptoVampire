@@ -519,6 +519,11 @@ mk_builtin_funs!(
         flags: f!(PROLOG_ONLY | SORT)
     };
 
+    BOOL_SORT "bool_sort" {
+        signature: s!(() -> Any),
+        flags: f!(PROLOG_ONLY | SORT)
+    };
+
     IS_INDEX "is_index" {
         signature: s!(Index -> Index),
         flags: f!(PROLOG_ONLY)
