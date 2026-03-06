@@ -814,3 +814,93 @@ mod extraction {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    //! vibe coded tests
+    use egg::{EGraph, Id};
+
+    use super::*;
+    use crate::terms::builtin::{AND, EXISTS, FALSE, INCOMPATIBLE, INIT, LAMBDA_O, NIL, TRUE};
+    use crate::terms::{BITSTRING_SORT, BOOL_SORT};
+
+    #[test]
+    fn test_basic_extraction() {
+        let mut egraph = EGraph::<Lang, ()>::default();
+        let id_true = egraph.add(Lang::mk_fun_application(TRUE.clone(), []));
+
+        let formula = Formula::try_from_id(&egraph, id_true).unwrap();
+        assert!(formula.is_true());
+    }
+
+    #[test]
+    fn test_backtracking_filter() {
+        let mut egraph = EGraph::<Lang, ()>::default();
+        let id_init = egraph.add(Lang::mk_fun_application(INIT.clone(), []));
+        let id_incompatible = egraph.add(Lang::mk_fun_application(
+            INCOMPATIBLE.clone(),
+            [id_init, id_init],
+        ));
+        let id_true = egraph.add(Lang::mk_fun_application(TRUE.clone(), []));
+
+        egraph.union(id_incompatible, id_true);
+        egraph.rebuild();
+
+        // INCOMPATIBLE is filtered out by default_extraction_filter because it is PROLOG_ONLY
+        let formula = Formula::try_from_id(&egraph, id_incompatible).unwrap();
+        assert!(formula.is_true());
+    }
+
+    #[test]
+    fn test_loop_handling() {
+        let mut egraph = EGraph::<Lang, ()>::default();
+        let id_true = egraph.add(Lang::mk_fun_application(TRUE.clone(), []));
+        let id_and = egraph.add(Lang::mk_fun_application(AND.clone(), [id_true, id_true]));
+
+        // Create a loop: id_true = AND(id_true, id_true)
+        egraph.union(id_true, id_and);
+        egraph.rebuild();
+
+        // It should still be able to extract TRUE by avoiding the loop in AND
+        let formula = Formula::try_from_id(&egraph, id_and).unwrap();
+        assert!(formula.try_evaluate().unwrap(), "{formula}");
+    }
+
+    #[test]
+    fn test_multiple_valid_options() {
+        let mut egraph = EGraph::<Lang, ()>::default();
+        let id_true = egraph.add(Lang::mk_fun_application(TRUE.clone(), []));
+        let id_false = egraph.add(Lang::mk_fun_application(FALSE.clone(), []));
+        egraph.union(id_true, id_false);
+        egraph.rebuild();
+
+        let formula = Formula::try_from_id(&egraph, id_true).unwrap();
+        // It should be either True or False
+        assert!(formula.is_true() || formula.is_false());
+    }
+
+    #[test]
+    fn test_extraction_with_vars() {
+        use crate::terms::FOBinder;
+        let mut egraph = EGraph::<Lang, ()>::default();
+
+        let id_nil = egraph.add(Lang::mk_fun_application(NIL.clone(), []));
+        let id_sort = egraph.add(Lang::mk_fun_application(BOOL_SORT.clone(), []));
+        let id_list = egraph.add(Lang::mk_fun_application(CONS.clone(), [id_sort, id_nil]));
+
+        // EXISTS ( [Bitstring], LAMBDA_O )
+        let id_var = egraph.add(Lang::mk_fun_application(LAMBDA_O.clone(), []));
+        let id_exists = egraph.add(Lang::mk_fun_application(EXISTS.clone(), [id_list, id_var]));
+
+        let formula = Formula::try_from_id(&egraph, id_exists).unwrap();
+
+        if let Formula::Quantifier { head, vars, arg } = formula {
+            assert_eq!(head, FOBinder::Exists);
+            assert_eq!(vars.len(), 1);
+            assert_eq!(vars[0].get_sort().unwrap(), Sort::Bool);
+            assert!(matches!(&arg[0], Formula::Var(v) if v == &vars[0]));
+        } else {
+            panic!("expected quantifier, got {:?}", formula);
+        }
+    }
+}
