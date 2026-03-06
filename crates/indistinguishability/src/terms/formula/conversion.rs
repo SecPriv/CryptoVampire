@@ -493,7 +493,7 @@ impl Formula {
     ) -> anyhow::Result<Formula> {
         use extraction::*;
 
-        let stateless = StateLess::builder().build();
+        let stateless = Box::new(ImmutatbleStateStruct::builder().build());
 
         let mut state = ExtractionState::builder()
             .egraph(egraph)
@@ -518,9 +518,11 @@ impl Formula {
 
         let variables = variables.into_iter().collect_vec();
 
-        let stateless = StateLess::builder()
-            .boundpile(variables.into_iter().rev().cloned().collect())
-            .build();
+        let stateless = Box::new(
+            ImmutatbleStateStruct::builder()
+                .boundpile(variables.into_iter().rev().cloned().collect())
+                .build(),
+        );
 
         let mut state = ExtractionState::builder()
             .egraph(egraph)
@@ -677,25 +679,6 @@ mod extraction {
 
     declare_trace!($"extrac_from_egraph");
 
-    #[derive(Debug, Clone, PartialEq, Eq)]
-    struct VariableState {
-        freevars: FxHashMap<usize, Variable>,
-        depth: usize,
-    }
-
-    #[derive(Debug)]
-    struct SearState<'a, N: Analysis<Lang>> {
-        egraph: &'a EGraph<Lang, N>,
-        id_states: FxHashMap<Id, IdState>,
-    }
-
-    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    enum IdState {
-        Looping,
-        Failed,
-        Succeeded(Formula),
-    }
-
     #[derive(Builder)]
     pub struct ExtractionState<'a, F, N: Analysis<Lang>> {
         filter: F,
@@ -704,7 +687,7 @@ mod extraction {
     }
 
     #[derive(Default, Clone, Builder)]
-    pub struct StateLess {
+    pub struct ImmutatbleStateStruct {
         #[builder(default = true)]
         quantifiers: bool,
         #[builder(default)]
@@ -716,7 +699,10 @@ mod extraction {
         boundpile: imbl::GenericVector<Variable, RcK>,
     }
 
+    pub type ImmutableState = Box<ImmutatbleStateStruct>;
+
     impl<'a, F, N: Analysis<Lang>> ExtractionState<'a, F, N> {
+        #[allow(unused)]
         pub fn change_filter<F2>(self, filter: F2) -> ExtractionState<'a, F2, N> {
             let Self {
                 egraph,
@@ -732,7 +718,7 @@ mod extraction {
     }
 
     impl<'a, F: FnMut(&Lang) -> bool, N: Analysis<Lang>> ExtractionState<'a, F, N> {
-        pub fn extract(&mut self, mut pile: StateLess, id: Id) -> Option<Formula> {
+        pub fn extract(&mut self, mut pile: ImmutableState, id: Id) -> Option<Formula> {
             tr!("({id}) {}", self.egraph.id_to_expr(id).pretty(100));
 
             // search map
@@ -746,9 +732,10 @@ mod extraction {
                 .next()
         }
 
+        #[inline(never)]
         fn extract_lang(
             &mut self,
-            mut pile: StateLess,
+            mut pile: ImmutableState,
             l @ Lang { head, args }: &Lang,
         ) -> Option<Formula> {
             tr!("extract_lang: ({l})");
@@ -758,7 +745,7 @@ mod extraction {
                 }
 
                 if head == &LAMBDA_O {
-                    let var = self.get_first_var(pile)?;
+                    let var = self.get_first_var(*pile)?;
                     return Some(Formula::Var(var));
                 }
             }
@@ -790,7 +777,7 @@ mod extraction {
         }
 
         /// Traverse `S`
-        fn drop_var(&mut self, mut pile: StateLess, arg: Id) -> Option<Formula> {
+        fn drop_var(&mut self, mut pile: ImmutableState, arg: Id) -> Option<Formula> {
             tr!(
                 "drop_var: ({arg}) {}",
                 self.egraph.id_to_expr(arg).pretty(100)
@@ -803,21 +790,23 @@ mod extraction {
         }
 
         /// when reaching a `O`
-        fn get_first_var(&mut self, pile: StateLess) -> Option<Variable> {
+        fn get_first_var(&mut self, pile: ImmutatbleStateStruct) -> Option<Variable> {
             tr!("pop_var");
             if let Some(var) = pile.boundpile.front() {
                 Some(var.clone())
             } else {
-                Some(self.free_variables
-                    .as_mut()?
-                    .entry(pile.depth)
-                    .or_insert(fresh!())
-                    .clone())
+                Some(
+                    self.free_variables
+                        .as_mut()?
+                        .entry(pile.depth)
+                        .or_insert(fresh!())
+                        .clone(),
+                )
             }
         }
 
         /// add bound variables
-        fn push_front_var(&mut self, pile: &mut StateLess, sort: Sort) -> Variable {
+        fn push_front_var(&mut self, pile: &mut ImmutableState, sort: Sort) -> Variable {
             tr!("enque_var: {sort}");
             let var = fresh!(sort);
             pile.boundpile.push_front(var.clone());
