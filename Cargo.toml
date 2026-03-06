@@ -14,6 +14,7 @@ resolver = "2"
 default-members = ["crates/indistinguishability"]
 
 [workspace.dependencies]
+rustc-hash = "2.1.0"     
 itertools = "0.14"
 if_chain = "1.0"
 hashbrown = "0.16"
