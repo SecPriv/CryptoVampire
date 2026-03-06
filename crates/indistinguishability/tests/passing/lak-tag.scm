@@ -74,7 +74,7 @@
         (tuple (nt i j)
           (mhash
             (tuple (tuple in (nt i j)) tag1)
-            (mk i j p1)))))))
+            (mk i j p2)))))))
 
 
 (define r

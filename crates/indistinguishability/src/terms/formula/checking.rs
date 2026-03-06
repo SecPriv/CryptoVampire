@@ -2,6 +2,8 @@
 use std::fmt::Display;
 
 use anyhow::{Context, anyhow, bail, ensure};
+use bon::bon;
+use clap::builder;
 use itertools::Itertools;
 use logic_formula::AsFormula;
 use logic_formula::iterators::AllTermsIterator;
@@ -10,8 +12,10 @@ use utils::implvec;
 
 use crate::terms::{EQ, FOBinder, Formula, Sort};
 
+#[bon]
 impl Formula {
-    pub fn type_check(&self) -> anyhow::Result<()> {
+    #[builder]
+    pub fn type_check(&self, #[builder(default = true)] recurse: bool) -> anyhow::Result<()> {
         for t in self.iter_with(AllTermsIterator, ()) {
             match t {
                 Self::Quantifier {
@@ -23,9 +27,12 @@ impl Formula {
                         self,
                         arg.iter(),
                         [Sort::Bool, Sort::Bitstring, Sort::Bitstring],
+                        recurse,
                     )?;
                 }
-                Self::Quantifier { arg, .. } => check_sign(self, arg.iter(), [Sort::Bool])?,
+                Self::Quantifier { arg, .. } => {
+                    check_sign(self, arg.iter(), [Sort::Bool], recurse)?
+                }
                 Self::App { head, args } if head == &EQ => {
                     if let (Some(sl), Some(sr)) = args
                         .iter()
@@ -42,7 +49,9 @@ impl Formula {
                         )
                     }
                 }
-                Self::App { head, args } => check_sign(self, args.iter(), head.args_sorts())?,
+                Self::App { head, args } => {
+                    check_sign(self, args.iter(), head.args_sorts(), recurse)?
+                }
                 Self::Var(_) => (),
             }
         }
@@ -54,10 +63,11 @@ fn check_sign<'a>(
     context: &'a Formula,
     args: implvec!(&'a Formula),
     expected_sorts: implvec!(Sort),
+    recurse: bool,
 ) -> anyhow::Result<()> {
     for (i, e) in Itertools::zip_longest(args.into_iter(), expected_sorts).enumerate() {
         match e {
-            itertools::EitherOrBoth::Both(f, s) => check_sign_one(context, f, s)?,
+            itertools::EitherOrBoth::Both(f, s) => check_sign_one(context, f, s, recurse)?,
             itertools::EitherOrBoth::Left(_) => bail!(
                 "too many arguments: got at least {:} but expected {i:} in {context}",
                 i + 1
@@ -70,7 +80,15 @@ fn check_sign<'a>(
     Ok(())
 }
 
-fn check_sign_one(context: &Formula, arg: &Formula, expected_sort: Sort) -> anyhow::Result<()> {
+fn check_sign_one(
+    context: &Formula,
+    arg: &Formula,
+    expected_sort: Sort,
+    recurse: bool,
+) -> anyhow::Result<()> {
+    if recurse {
+        arg.type_check().recurse(recurse).call()?;
+    }
     let s = arg.try_get_sort();
     if !s.unwrap_or(expected_sort).unify(expected_sort) {
         let s = s.unwrap(); // cannot fail otherwise we wouldn't be in this branch

@@ -33,6 +33,15 @@ macro_rules! declare_trace {
     };
 }
 
+macro_rules! debug_assert_ok {
+    ($e:expr) => {
+        #[cfg(debug_assertions)]
+        {
+            $e.unwrap()
+        }
+    };
+}
+
 // ~~~~~~~~~~~~~~~ modules ~~~~~~~~~~~~~~~~~~
 
 /// Defines the problem structure and related functionalities.

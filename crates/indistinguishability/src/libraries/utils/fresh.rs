@@ -298,10 +298,7 @@ impl FormulaBuilder {
             self.is_saturated(),
             content.try_evaluate()
         );
-        #[cfg(debug_assertions)]
-        {
-            content.type_check().unwrap();
-        }
+        debug_assert_ok!(content.type_check().recurse(true).call());
 
         ereturn_if!(self.is_saturated());
 

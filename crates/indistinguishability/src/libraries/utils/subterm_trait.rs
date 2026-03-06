@@ -717,6 +717,7 @@ pub trait EgraphSearcher: SyntaxSearcher {
 ///
 /// This function attempts to reconstruct the formula represented by the given `Id`,
 /// taking into account any bound variables.
+#[deprecated]
 pub fn expr_of_id<'a>(
     egraph: &EGraph<Lang, PAnalysis<'a>>,
     id: Id,

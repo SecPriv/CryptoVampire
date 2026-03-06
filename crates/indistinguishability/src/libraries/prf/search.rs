@@ -387,9 +387,8 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for PrfVampireRule {
                 .search_eclass(egraph, goal), Dependancy::impossible());
 
         for subst in substs.substs {
-            let mut cache = Default::default();
             let [m, k, time, hyp] = [M, K, T, H].map(|x| {
-                Formula::try_from_id_cached(egraph, *subst.get(x.as_egg()).unwrap(), &mut cache)
+                Formula::try_from_id(egraph, *subst.get(x.as_egg()).unwrap())
                     .unwrap()
             });
             let pbl = egraph.analysis.pbl();

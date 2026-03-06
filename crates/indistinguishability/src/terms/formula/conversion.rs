@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
 use anyhow::{Context, bail, ensure};
+use bon::{bon, builder};
 use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr};
 use itertools::{Itertools, chain};
 use log::trace;
@@ -10,6 +11,7 @@ use rustc_hash::FxHashMap;
 use utils::{ereturn_if, implvec};
 
 use super::Formula;
+use crate::terms::formula::conversion::extraction::ExtractionState;
 use crate::terms::formula::egg::EggLanguage;
 use crate::terms::formula::list;
 use crate::terms::{CONS, LAMBDA_O, LAMBDA_S, NIL, Sort, Variable};
@@ -29,7 +31,7 @@ impl Formula {
         )
     }
 
-    /// - formula: The formula to convert. It must be a valid reference to a [egg:RecExpr]
+    /// - formula: The formula to convert. It must be a valid reference to a `[LangVar]` slice
     /// - bound_variables: a queue use to track the De Bruijn indices and assign them names
     /// - free_variables: a map to transfrom [egg]'s free variables into cryptovampire's
     /// - possible_sort: the possible output sort of the formula
@@ -170,28 +172,103 @@ impl Formula {
         }
     }
 
-    /// shortcut for `self.as_egg::<LangVar>()`
+    /// Converts this formula into an e-graph expression with variable support.
+    ///
+    /// This method creates a `RecExpr<LangVar>` which can contain both ground terms
+    /// and variables. This is useful for pattern matching and e-graph operations that
+    /// need to express variable positions.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use crate::{rexp, Sort};
+    ///
+    /// let formula = rexp!((and true false));
+    /// let expr = formula.as_egg_var();
+    /// ```
+    ///
+    /// # See Also
+    /// - [`as_egg_ground`] for converting to fully grounded expressions
+    /// - [`add_to_egraph`] for adding directly to an e-graph
     pub fn as_egg_var(&self) -> RecExpr<LangVar> {
         RecExpr::from(self.as_egg::<LangVar>())
     }
 
-    /// shortcut for `self.as_egg::<Lang>()`
+    /// Converts this formula into a fully grounded e-graph expression.
+    ///
+    /// This method creates a `RecExpr<Lang>` which contains only ground terms
+    /// (no variables). This is useful when you need to add the formula to an e-graph
+    /// for rewriting or equality checking.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use crate::rexp;
+    /// use egg::{EGraph, Runner};
+    ///
+    /// let formula = rexp!((and true false));
+    /// let expr = formula.as_egg_ground();
+    ///
+    /// let mut egraph = EGraph::new(());
+    /// egraph.add_expr(&expr);
+    /// ```
+    ///
+    /// # See Also
+    /// - [`as_egg_var`] for converting to expressions with variables
+    /// - [`add_to_egraph`] for adding directly to an e-graph
     pub fn as_egg_ground(&self) -> RecExpr<Lang> {
         RecExpr::from(self.as_egg::<Lang>())
     }
 
-    /// Converts a `RecFOFormula` into a `egg`-like formula.
+    /// Converts this formula into an e-graph representation.
     ///
-    /// `L` lets you decide the `egg::Language` to be used. It panics if the conversion is impossible.
+    /// # Type Parameters
+    ///
+    /// * `L` - The `EggLanguage` type to use for the conversion (e.g., `Lang` for ground terms
+    ///        or `LangVar` for expressions with variables).
+    ///
+    /// # Notes
+    ///
+    /// This method uses capture-avoiding substitution by default. Free variables will be
+    /// shifted to avoid capture by quantifiers. If you don't need capture avoidance,
+    /// use [`as_egg_non_capture_avoiding`] instead.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if the conversion is impossible (e.g., if the formula contains
+    /// unsupported constructs).
+    ///
+    /// # See Also
+    ///
+    /// - [`as_egg_non_capture_avoiding`] for non-capture-avoiding conversion
+    /// - [`as_egg_var`] for `LangVar` conversion shortcut
+    /// - [`as_egg_ground`] for `Lang` conversion shortcut
     pub fn as_egg<L: EggLanguage>(&self) -> Vec<L> {
         let mut out = Vec::new();
         self.as_egg_inner(&mut out, Default::default(), Default::default(), &mut None);
         out
     }
 
-    /// Converts a `RecFOFormula` into a `egg`-like formula.
+    /// Converts this formula into an e-graph representation without capture avoidance.
     ///
-    /// `L` lets you decide the `egg::Language` to be used. It panics if the conversion is impossible.
+    /// # Type Parameters
+    ///
+    /// * `L` - The `EggLanguage` type to use for the conversion.
+    ///
+    /// # Notes
+    ///
+    /// Unlike [`as_egg`], this method does not use capture-avoiding substitution. Free variables
+    /// will not be shifted, which may lead to variable capture in the presence of quantifiers.
+    /// This can be useful for performance reasons or when you know capture won't occur.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if the conversion is impossible.
+    ///
+    /// # See Also
+    ///
+    /// - [`as_egg`] for capture-avoiding conversion
+    /// - [`AsEggParam`] for configuring conversion parameters
     pub fn as_egg_non_capture_avoiding<L: EggLanguage>(&self) -> Vec<L> {
         let mut out = Vec::new();
         self.as_egg_inner(
@@ -382,81 +459,105 @@ impl Formula {
         }
     }
 
-    pub fn try_from_id_cached<N: Analysis<Lang>>(
-        egraph: &EGraph<Lang, N>,
-        id: Id,
-        cache: &mut Vec<Id>,
-    ) -> anyhow::Result<Self> {
-        Self::try_pull_from_egraph_full(
-            egraph,
-            default_extraction_filter,
-            id,
-            Some(&Default::default()),
-            cache,
-        )
+    /// Adds this formula to an e-graph and returns the resulting e-class id.
+    ///
+    /// # Parameters
+    ///
+    /// * `egraph` - A mutable reference to the e-graph to add to.
+    ///
+    /// # Returns
+    ///
+    /// The id of the e-class that represents this formula in the e-graph.
+    ///
+    /// # Notes
+    ///
+    /// This is a convenience method that converts the formula to a ground expression
+    /// and adds it to the e-graph in one step. Equivalent to:
+    ///
+    /// ```ignore
+    /// let recexpr = formula.as_egg_ground();
+    /// egraph.add_expr(&recexpr)
+    /// ```
+    /// # See Also
+    ///
+    /// - [`Self::as_egg_ground`] for conversion without adding to e-graph
+    /// - [`Self::try_from_id`] for extracting formulas back from e-graphs
+    pub fn add_to_egraph<N: Analysis<Lang>>(&self, egraph: &mut EGraph<Lang, N>) -> Id {
+        let recexpr = self.as_egg_ground();
+        egraph.add_expr(&recexpr)
     }
 
     pub fn try_from_id<N: Analysis<Lang>>(
         egraph: &EGraph<Lang, N>,
         id: Id,
-    ) -> anyhow::Result<Self> {
-        let f = Self::try_from_id_with_vars(egraph, id, &Default::default())?;
-        for fun in (&f).iter_with(AllFunctionsIterator, ()) {
-            if fun.is_prolog_only() {
-                bail!("Failed to extract: {fun} is a prolog-only function.\nIn:\t{f}")
-            }
-        }
-        Ok(f)
+    ) -> anyhow::Result<Formula> {
+        use extraction::*;
+
+        let stateless = StateLess::builder().build();
+
+        let mut state = ExtractionState::builder()
+            .egraph(egraph)
+            .filter(default_extraction_filter)
+            .build();
+
+        state.extract(stateless, id).with_context(|| {
+            format!(
+                "couldn't convert ({id}) {}",
+                egraph.id_to_expr(id).pretty(100)
+            )
+        })
     }
 
+    #[deprecated]
     pub fn try_from_id_with_vars<N: Analysis<Lang>>(
         egraph: &EGraph<Lang, N>,
         id: Id,
-        vars: &rpds::Queue<Variable>,
-    ) -> anyhow::Result<Self> {
-        Self::try_pull_from_egraph_full(
-            egraph,
-            default_extraction_filter,
-            id,
-            Some(vars),
-            &mut Default::default(),
-        )
-    }
+        variables: &rpds::Queue<Variable>,
+    ) -> anyhow::Result<Formula> {
+        use extraction::*;
 
-    pub fn try_pull_from_egraph_full<N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
-        egraph: &EGraph<Lang, N>,
-        mut filter: F,
-        id: Id,
-        bound_vars: Option<&rpds::Queue<Variable>>,
-        recexpr_buffer: &mut Vec<Id>,
-    ) -> anyhow::Result<Self> {
-        recexpr_buffer.clear();
-        let status = extract_from_egraph(egraph, &mut filter, id, recexpr_buffer);
+        let variables = variables.into_iter().collect_vec();
 
-        let formula = match status {
-            ExtractionStatus::Looping => unreachable!(),
-            ExtractionStatus::Empty => bail!(
-                "impossible to translate:\n{}",
+        let stateless = StateLess::builder()
+            .boundpile(variables.into_iter().rev().cloned().collect())
+            .build();
+
+        let mut state = ExtractionState::builder()
+            .egraph(egraph)
+            .filter(default_extraction_filter)
+            .build();
+
+        state.extract(stateless, id).with_context(|| {
+            format!(
+                "couldn't convert ({id}) {}",
                 egraph.id_to_expr(id).pretty(100)
-            ),
-            ExtractionStatus::Found(formula) => formula,
-        };
-
-        match bound_vars {
-            Some(bvars) => formula
-                .remove_de_bruijn(bvars, 0, &mut vec![fresh!()])
-                .with_context(|| format!("couldn't remove de bruijin indices in {formula}")),
-            None => Ok(formula),
-        }
-    }
-
-    pub fn add_to_egraph<N: Analysis<Lang>>(&self, egraph: &mut EGraph<Lang, N>) -> Id {
-        let recexpr = self.as_egg_ground();
-        egraph.add_expr(&recexpr)
+            )
+        })
     }
 }
 
 #[derive(Debug, Clone)]
+/// Parameters for controlling how formulas are converted to e-graph representations.
+///
+/// # Fields
+///
+/// * `capture_avoiding` - If `true`, free variables will be shifted to avoid capture by
+///   quantifiers (alpha conversion). This is the default and recommended behavior for
+///   correctness. Set to `false` only when you're certain capture won't occur.
+///
+/// * `non_capture_avoiding` - A set of variables that should be treated as if they won't
+///   cause capture, even when `capture_avoiding` is `true`.
+///
+/// # Example
+///
+/// ```ignore
+/// use crate::terms::Variable;
+///
+/// AsEggParam {
+///     capture_avoiding: false,
+///     non_capture_avoiding: Default::default(),
+/// }
+/// ```
 pub struct AsEggParam {
     pub capture_avoiding: bool,
     pub non_capture_avoiding: ::rpds::HashTrieSet<Variable>,
@@ -471,6 +572,24 @@ impl Default for AsEggParam {
     }
 }
 
+/// Builds a list in the e-graph representation from a collection of sorts.
+///
+/// This function constructs a cons-list (`CONS`/`NIL`) representation of sorts,
+/// which is used for quantifier binders that need to specify the types of bound variables.
+///
+/// # Parameters
+///
+/// * `out` - The output buffer to append the list nodes to.
+/// * `sorts` - A collection of sorts to create a list from.
+///
+/// # Returns
+///
+/// The index in `out` where the list head is located.
+///
+/// # Notes
+///
+/// The list is built in reverse order (last element at the head), following the
+/// standard e-graph pattern for list representation.
 fn mk_list<L: EggLanguage>(out: &mut Vec<L>, sorts: implvec!(Sort)) -> usize {
     let sorts = sorts.into_iter();
     let mut i = out.len();
@@ -487,84 +606,6 @@ fn mk_list<L: EggLanguage>(out: &mut Vec<L>, sorts: implvec!(Sort)) -> usize {
         i += 2
     }
     i
-}
-
-#[derive(Debug, Clone)]
-pub enum ExtractionStatus {
-    Looping,
-    Empty,
-    Found(Formula),
-}
-
-impl ExtractionStatus {
-    #[must_use]
-    fn into_found(self) -> Option<Formula> {
-        if let Self::Found(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-}
-
-impl From<Option<Formula>> for ExtractionStatus {
-    fn from(value: Option<Formula>) -> Self {
-        match value {
-            Some(x) => Self::Found(x),
-            None => Self::Empty,
-        }
-    }
-}
-
-/// Pulls a value from an egraph
-///
-/// # Paramters
-///  - `egraph`: the egraph
-///  - `filter`: a predicate to filter out unwanted functions. For instance
-///    [default_extraction_filter] remove everything specific to golgge/prolog.
-///  - `id`: the [Id] to extract
-///  - `loop_breaker`: the set of [Id] already seen in this search to avoid
-///    looping.
-fn extract_from_egraph<N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
-    egraph: &EGraph<Lang, N>,
-    filter: &mut F,
-    id: Id,
-    loop_breaker: &mut Vec<Id>,
-) -> ExtractionStatus {
-    trace!(target: "extract_from_egraph", "({id}) {}", egraph.id_to_expr(id).pretty(100));
-    if loop_breaker.contains(&id) {
-        trace!(target: "extract_from_egraph", "({id}) loop");
-        return ExtractionStatus::Looping;
-    }
-
-    let n = loop_breaker.len();
-    loop_breaker.push(id);
-
-    let result: ExtractionStatus = egraph[id]
-        .nodes
-        .iter() //.filter(|l| filter(*l))
-        .filter_map(|l @ Lang { head, args }| {
-            trace!(target: "extract_from_egraph", "({id}, {head}) filter: {}", filter(l));
-            filter(l).then_some(())?;
-            let args: Option<_> = args
-                .iter()
-                .copied()
-                .map(|id| extract_from_egraph(egraph, filter, id, loop_breaker).into_found())
-                .collect();
-
-            trace!(target: "extract_from_egraph", "({id}, {head}) args: {args:?}");
-            Some(Formula::App {
-                head: head.clone(),
-                args: args?,
-            })
-        })
-        .next()
-        .into();
-
-    trace!(target: "extract_from_egraph", "({id}) result: {result:?}");
-
-    loop_breaker.truncate(n);
-    result
 }
 
 /// Filter any golgge specific head function, but keep lambda binders. Those
@@ -624,21 +665,163 @@ impl From<&Formula> for Pattern<Lang> {
     }
 }
 
-#[cfg(test)]
-mod conversion_tests {
-    use egg::PatternAst;
+mod extraction {
+    use archery::RcK;
+    use bon::{Builder, bon};
+    use egg::{Analysis, EGraph, Id, Language};
+    use imbl::hashmap::Entry;
+    use rustc_hash::{FxBuildHasher, FxHashMap};
 
-    use crate::{Lang, decl_vars, rexp};
+    use crate::terms::{Formula, Function, LAMBDA_O, LAMBDA_S, Sort, Variable, list};
+    use crate::{Lang, fresh};
 
-    #[test]
-    fn as_egg_succ() {
-        decl_vars!(a, b);
-        let f = rexp!((and #a #b
-                (exists ((#i Bitstring) (#j Bitstring))
-                    (and #a #b (= #i #j)
-                            (exists ((#i Bitstring) (#k Bitstring))
-                                (and (= #i #k #j) #a))))));
-        let f: PatternAst<Lang> = f.as_egg().into();
-        println!("{}", f.pretty(100));
+    declare_trace!($"extrac_from_egraph");
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    struct VariableState {
+        freevars: FxHashMap<usize, Variable>,
+        depth: usize,
+    }
+
+    #[derive(Debug)]
+    struct SearState<'a, N: Analysis<Lang>> {
+        egraph: &'a EGraph<Lang, N>,
+        id_states: FxHashMap<Id, IdState>,
+    }
+
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    enum IdState {
+        Looping,
+        Failed,
+        Succeeded(Formula),
+    }
+
+    #[derive(Builder)]
+    pub struct ExtractionState<'a, F, N: Analysis<Lang>> {
+        filter: F,
+        egraph: &'a EGraph<Lang, N>,
+        free_variables: Option<FxHashMap<usize, Variable>>,
+    }
+
+    #[derive(Default, Clone, Builder)]
+    pub struct StateLess {
+        #[builder(default = true)]
+        quantifiers: bool,
+        #[builder(default)]
+        depth: usize,
+        /// tracks if we are looping. Note that we can't cache the result because of variables
+        #[builder(default)]
+        id_states: imbl::GenericHashSet<Id, FxBuildHasher, RcK>,
+        #[builder(default)]
+        boundpile: imbl::GenericVector<Variable, RcK>,
+    }
+
+    impl<'a, F, N: Analysis<Lang>> ExtractionState<'a, F, N> {
+        pub fn change_filter<F2>(self, filter: F2) -> ExtractionState<'a, F2, N> {
+            let Self {
+                egraph,
+                free_variables,
+                ..
+            } = self;
+            ExtractionState {
+                filter,
+                egraph,
+                free_variables,
+            }
+        }
+    }
+
+    impl<'a, F: FnMut(&Lang) -> bool, N: Analysis<Lang>> ExtractionState<'a, F, N> {
+        pub fn extract(&mut self, mut pile: StateLess, id: Id) -> Option<Formula> {
+            tr!("({id}) {}", self.egraph.id_to_expr(id).pretty(100));
+
+            // search map
+            if pile.id_states.insert(id).is_some() {
+                return None;
+            }
+
+            self.egraph[id]
+                .iter()
+                .filter_map(|f| self.extract_lang(pile.clone(), f))
+                .next()
+        }
+
+        fn extract_lang(
+            &mut self,
+            mut pile: StateLess,
+            l @ Lang { head, args }: &Lang,
+        ) -> Option<Formula> {
+            tr!("extract_lang: ({l})");
+            if self.free_variables.is_some() || pile.quantifiers {
+                if head == &LAMBDA_S {
+                    return self.drop_var(pile, args[0]);
+                }
+
+                if head == &LAMBDA_O {
+                    let var = self.get_first_var(pile)?;
+                    return Some(Formula::Var(var));
+                }
+            }
+            if pile.quantifiers
+                && let Some(head) = head.as_fobinder()
+            {
+                let mut args = args.iter().copied();
+                let vars = list::try_get_egraph(self.egraph, args.next()?)?
+                    .into_iter()
+                    .rev() // `boundedvar` is a pile
+                    .map(|s| self.push_front_var(&mut pile, s))
+                    .collect();
+                let args: Option<Vec<_>> =
+                    args.map(|arg| self.extract(pile.clone(), arg)).collect();
+
+                return Some(Formula::bind(head, vars, args?));
+            }
+
+            if (self.filter)(l) {
+                let args: Option<_> = args
+                    .iter()
+                    .copied()
+                    .map(|id| self.extract(pile.clone(), id))
+                    .collect();
+                return Some(Formula::app(head.clone(), args?));
+            }
+
+            None
+        }
+
+        /// Traverse `S`
+        fn drop_var(&mut self, mut pile: StateLess, arg: Id) -> Option<Formula> {
+            tr!(
+                "drop_var: ({arg}) {}",
+                self.egraph.id_to_expr(arg).pretty(100)
+            );
+            if pile.boundpile.pop_front().is_none() {
+                // if the list was already empty, we increase the `depth` counter
+                pile.depth += 1
+            }
+            self.extract(pile, arg)
+        }
+
+        /// when reaching a `O`
+        fn get_first_var(&mut self, pile: StateLess) -> Option<Variable> {
+            tr!("pop_var");
+            if let Some(var) = pile.boundpile.front() {
+                Some(var.clone())
+            } else {
+                Some(self.free_variables
+                    .as_mut()?
+                    .entry(pile.depth)
+                    .or_insert(fresh!())
+                    .clone())
+            }
+        }
+
+        /// add bound variables
+        fn push_front_var(&mut self, pile: &mut StateLess, sort: Sort) -> Variable {
+            tr!("enque_var: {sort}");
+            let var = fresh!(sort);
+            pile.boundpile.push_front(var.clone());
+            var
+        }
     }
 }

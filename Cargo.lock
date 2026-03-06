@@ -1735,6 +1735,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "imbl"
+version = "7.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e525189e5f603908d0c6e0d402cb5de9c4b2c8866151fabc4ebd771ed2630a2e"
+dependencies = [
+ "archery",
+ "bitmaps 3.2.1",
+ "imbl-sized-chunks",
+ "rand_core 0.9.5",
+ "rand_xoshiro 0.7.0",
+ "version_check",
+ "wide",
+]
+
+[[package]]
 name = "imbl-sized-chunks"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1770,6 +1785,7 @@ name = "indistinguishability"
 version = "0.2.0"
 dependencies = [
  "anyhow",
+ "archery",
  "assert_cmd",
  "bitflags 2.11.0",
  "bon",
@@ -1781,6 +1797,7 @@ dependencies = [
  "env_logger 0.11.9",
  "golgge",
  "humantime",
+ "imbl",
  "indexmap 2.13.0",
  "itertools",
  "log",

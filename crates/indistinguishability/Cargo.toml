@@ -33,13 +33,15 @@ bon.workspace = true
 clap = { workspace = true, features = ["derive", "env"] }
 clap_complete.workspace = true
 thiserror = { workspace = true }
+rustc-hash.workspace = true
 steel-core.workspace = true
 steel-derive.workspace = true
 steel-repl.workspace = true
 
 
 rpds = "1.1.1"
-rustc-hash = "2.1.0"                           # for hash on integers
+imbl = "7"
+archery = "1.2"
 indexmap = "2.7.0"
 serde_json = "1.0.120"
 num_cpus = "1.17.0"
