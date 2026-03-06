@@ -15,20 +15,22 @@ impl Formula {
     pub fn bind(kind: FOBinder, vars: Vec<Variable>, args: implvec!(Formula)) -> Self {
         assert!(vars.iter().all(Variable::has_sort));
         let arg: CowArc<'_, _> = args.into_iter().collect();
-        debug_assert!(izip!(kind.input_sorts(), arg.iter()).all(|(s, arg)| arg.has_sort(*s)));
-        Self::Quantifier {
+        let res = Self::Quantifier {
             head: kind,
             vars: vars.into(),
             arg,
-        }
+        };
+        debug_assert_ok!(res.type_check().recurse(false).call());
+        res
     }
 
     pub fn app(fun: Function, args: Vec<Self>) -> Self {
-        debug_assert!(izip!(fun.args_sorts(), &args).all(|(s, arg)| arg.has_sort(s)));
-        Self::App {
+        let res = Self::App {
             head: fun,
             args: args.into(),
-        }
+        };
+        debug_assert_ok!(res.type_check().recurse(false).call());
+        res
     }
 
     pub fn fold(

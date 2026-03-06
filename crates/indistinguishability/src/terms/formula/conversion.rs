@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
 use anyhow::{Context, bail, ensure};
+use bon::{bon, builder};
 use egg::{Analysis, EGraph, Id, Language, Pattern, RecExpr};
 use itertools::{Itertools, chain};
 use log::trace;
@@ -10,6 +11,7 @@ use rustc_hash::FxHashMap;
 use utils::{ereturn_if, implvec};
 
 use super::Formula;
+use crate::terms::formula::conversion::extraction::ExtractionState;
 use crate::terms::formula::egg::EggLanguage;
 use crate::terms::formula::list;
 use crate::terms::{CONS, LAMBDA_O, LAMBDA_S, NIL, Sort, Variable};
@@ -457,166 +459,6 @@ impl Formula {
         }
     }
 
-    /// Extracts a formula from an e-graph using a cached buffer for efficiency.
-    ///
-    /// # Parameters
-    ///
-    /// * `egraph` - The e-graph to extract from.
-    /// * `id` - The e-class id to extract.
-    /// * `cache` - A reusable buffer for the extraction process to avoid allocations.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the extraction fails.
-    ///
-    /// # Notes
-    ///
-    /// This method uses De Bruijn indices for bound variables and removes them during
-    /// extraction. The cache buffer is cleared at the start of each call.
-    ///
-    /// # See Also
-    ///
-    /// - [`try_from_id`] for non-cached extraction
-    /// - [`try_from_id_with_vars`] for extraction with known bound variables
-    pub fn try_from_id_cached<N: Analysis<Lang>>(
-        egraph: &EGraph<Lang, N>,
-        id: Id,
-        cache: &mut Vec<Id>,
-    ) -> anyhow::Result<Self> {
-        Self::try_pull_from_egraph_full(
-            egraph,
-            default_extraction_filter,
-            id,
-            Some(&Default::default()),
-            cache,
-        )
-    }
-
-    /// Extracts a formula from an e-graph c-id.
-    ///
-    /// # Parameters
-    ///
-    /// * `egraph` - The e-graph to extract from.
-    /// * `id` - The e-class id to extract.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - The extraction fails
-    /// - The formula contains prolog-only functions (which shouldn't exist in
-    ///   the general-purpose representation)
-    ///
-    /// # Notes
-    ///
-    /// This method validates that no prolog-specific functions are present in the
-    /// extracted formula, as these are not applicable outside the prolog context.
-    ///
-    /// # See Also
-    ///
-    /// - [`try_from_id_cached`] for cached extraction (more efficient for repeated calls)
-    /// - [`try_from_id_with_vars`] for extraction with known bound variables
-    pub fn try_from_id<N: Analysis<Lang>>(
-        egraph: &EGraph<Lang, N>,
-        id: Id,
-    ) -> anyhow::Result<Self> {
-        let f = Self::try_from_id_with_vars(egraph, id, &Default::default())?;
-        for fun in (&f).iter_with(AllFunctionsIterator, ()) {
-            if fun.is_prolog_only() {
-                bail!("Failed to extract: {fun} is a prolog-only function.\nIn:\t{f}")
-            }
-        }
-        Ok(f)
-    }
-
-    /// Extracts a formula from an e-graph c-id with known bound variables.
-    ///
-    /// # Parameters
-    ///
-    /// * `egraph` - The e-graph to extract from.
-    /// * `id` - The e-class id to extract.
-    /// * `vars` - A queue of variables that are bound in the current context.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the extraction fails.
-    ///
-    /// # Notes
-    ///
-    /// The `vars` parameter provides context about which variables are bound, which
-    /// helps with De Bruijn index removal during extraction.
-    ///
-    /// # See Also
-    ///
-    /// - [`try_from_id`] for extraction without known bound variables
-    /// - [`try_from_id_cached`] for cached extraction
-    pub fn try_from_id_with_vars<N: Analysis<Lang>>(
-        egraph: &EGraph<Lang, N>,
-        id: Id,
-        vars: &rpds::Queue<Variable>,
-    ) -> anyhow::Result<Self> {
-        Self::try_pull_from_egraph_full(
-            egraph,
-            default_extraction_filter,
-            id,
-            Some(vars),
-            &mut Default::default(),
-        )
-    }
-
-    /// Low-level extraction from an e-graph with full customization options.
-    ///
-    /// # Parameters
-    ///
-    /// * `egraph` - The e-graph to extract from.
-    /// * `filter` - A predicate function to filter which functions to include/allow.
-    ///             Returns `true` to allow, `false` to skip. See [`default_extraction_filter`].
-    /// * `id` - The e-class id to extract.
-    /// * `bound_vars` - Optional bound variable context for De Bruijn index removal.
-    /// * `recexpr_buffer` - A buffer for the recursive extraction process.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - The extraction fails (no valid formula found)
-    /// - De Bruijn index removal fails (if `bound_vars` is provided)
-    ///
-    /// # Notes
-    ///
-    /// This is the most flexible extraction method, allowing complete control over
-    /// the extraction process through the `filter` predicate. If `bound_vars` is
-    /// provided, De Bruijn indices are removed; otherwise, they remain in the result.
-    ///
-    /// # See Also
-    ///
-    /// - [`default_extraction_filter`] for the standard filter predicate
-    /// - [`try_from_id`] for higher-level extraction methods
-    pub fn try_pull_from_egraph_full<N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
-        egraph: &EGraph<Lang, N>,
-        mut filter: F,
-        id: Id,
-        bound_vars: Option<&rpds::Queue<Variable>>,
-        recexpr_buffer: &mut Vec<Id>,
-    ) -> anyhow::Result<Self> {
-        recexpr_buffer.clear();
-        let status = extract_from_egraph(egraph, &mut filter, id, recexpr_buffer);
-
-        let formula = match status {
-            ExtractionStatus::Looping => unreachable!(),
-            ExtractionStatus::Empty => bail!(
-                "impossible to translate:\n{}",
-                egraph.id_to_expr(id).pretty(100)
-            ),
-            ExtractionStatus::Found(formula) => formula,
-        };
-
-        match bound_vars {
-            Some(bvars) => formula
-                .remove_de_bruijn(bvars, 0, &mut vec![fresh!()])
-                .with_context(|| format!("couldn't remove de bruijin indices in {formula}")),
-            None => Ok(formula),
-        }
-    }
-
     /// Adds this formula to an e-graph and returns the resulting e-class id.
     ///
     /// # Parameters
@@ -636,25 +478,61 @@ impl Formula {
     /// let recexpr = formula.as_egg_ground();
     /// egraph.add_expr(&recexpr)
     /// ```
-    ///
-    /// # Examples
-    ///
-    /// ```ignore
-    /// use egg::EGraph;
-    /// use crate::rexp;
-    ///
-    /// let formula = rexp!((and true false));
-    /// let mut egraph = EGraph::new(());
-    /// let id = formula.add_to_egraph(&mut egraph);
-    /// ```
-    ///
     /// # See Also
     ///
-    /// - [`as_egg_ground`] for conversion without adding to e-graph
-    /// - [`try_from_id`] for extracting formulas back from e-graphs
+    /// - [`Self::as_egg_ground`] for conversion without adding to e-graph
+    /// - [`Self::try_from_id`] for extracting formulas back from e-graphs
     pub fn add_to_egraph<N: Analysis<Lang>>(&self, egraph: &mut EGraph<Lang, N>) -> Id {
         let recexpr = self.as_egg_ground();
         egraph.add_expr(&recexpr)
+    }
+
+    pub fn try_from_id<N: Analysis<Lang>>(
+        egraph: &EGraph<Lang, N>,
+        id: Id,
+    ) -> anyhow::Result<Formula> {
+        use extraction::*;
+
+        let stateless = StateLess::builder().build();
+
+        let mut state = ExtractionState::builder()
+            .egraph(egraph)
+            .filter(default_extraction_filter)
+            .build();
+
+        state.extract(stateless, id).with_context(|| {
+            format!(
+                "couldn't convert ({id}) {}",
+                egraph.id_to_expr(id).pretty(100)
+            )
+        })
+    }
+
+    #[deprecated]
+    pub fn try_from_id_with_vars<N: Analysis<Lang>>(
+        egraph: &EGraph<Lang, N>,
+        id: Id,
+        variables: &rpds::Queue<Variable>,
+    ) -> anyhow::Result<Formula> {
+        use extraction::*;
+
+        let variables = variables.into_iter().collect_vec();
+
+        let stateless = StateLess::builder()
+            .boundpile(variables.into_iter().rev().cloned().collect())
+            .build();
+
+        let mut state = ExtractionState::builder()
+            .egraph(egraph)
+            .filter(default_extraction_filter)
+            .build();
+
+        state.extract(stateless, id).with_context(|| {
+            format!(
+                "couldn't convert ({id}) {}",
+                egraph.id_to_expr(id).pretty(100)
+            )
+        })
     }
 }
 
@@ -668,8 +546,7 @@ impl Formula {
 ///   correctness. Set to `false` only when you're certain capture won't occur.
 ///
 /// * `non_capture_avoiding` - A set of variables that should be treated as if they won't
-///   cause capture, even when `capture_avoiding` is `true`. This is useful for performance
-///   optimization when you know certain variables can't be captured.
+///   cause capture, even when `capture_avoiding` is `true`.
 ///
 /// # Example
 ///
@@ -731,109 +608,6 @@ fn mk_list<L: EggLanguage>(out: &mut Vec<L>, sorts: implvec!(Sort)) -> usize {
     i
 }
 
-#[derive(Debug, Clone)]
-/// Status of a formula extraction attempt from an e-graph.
-///
-/// This enum represents the possible outcomes when attempting to extract a formula
-/// from an e-class in an e-graph.
-///
-/// # Variants
-///
-/// * `Looping` - The extraction would loop infinitely (cyclic structure detected).
-/// * `Empty` - No valid formula could be extracted from the e-class.
-/// * `Found(Formula)` - A valid formula was successfully extracted.
-///
-/// # Notes
-///
-/// The `Looping` status typically indicates a problem with the e-graph structure,
-/// such as cycles caused by unsupported rewriting rules.
-pub enum ExtractionStatus {
-    /// The extraction would loop infinitely (cyclic structure detected).
-    Looping,
-    /// No valid formula could be extracted from the e-class.
-    Empty,
-    /// A valid formula was successfully extracted.
-    Found(Formula),
-}
-
-impl ExtractionStatus {
-    #[must_use]
-    /// Converts the status into an `Option<Formula>`.
-    ///
-    /// Returns `Some(formula)` if the status is `Found`, otherwise returns `None`.
-    fn into_found(self) -> Option<Formula> {
-        if let Self::Found(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-}
-
-impl From<Option<Formula>> for ExtractionStatus {
-    /// Converts an `Option<Formula>` into an `ExtractionStatus`.
-    ///
-    /// - `Some(formula)` becomes `ExtractionStatus::Found(formula)`
-    /// - `None` becomes `ExtractionStatus::Empty`
-    fn from(value: Option<Formula>) -> Self {
-        match value {
-            Some(x) => Self::Found(x),
-            None => Self::Empty,
-        }
-    }
-}
-
-/// Pulls a value from an egraph
-///
-/// # Paramters
-///  - `egraph`: the egraph
-///  - `filter`: a predicate to filter out unwanted functions. For instance
-///    [default_extraction_filter] remove everything specific to golgge/prolog.
-///  - `id`: the [Id] to extract
-///  - `loop_breaker`: the set of [Id] already seen in this search to avoid
-///    looping.
-fn extract_from_egraph<N: Analysis<Lang>, F: FnMut(&Lang) -> bool>(
-    egraph: &EGraph<Lang, N>,
-    filter: &mut F,
-    id: Id,
-    loop_breaker: &mut Vec<Id>,
-) -> ExtractionStatus {
-    trace!(target: "extract_from_egraph", "({id}) {}", egraph.id_to_expr(id).pretty(100));
-    if loop_breaker.contains(&id) {
-        trace!(target: "extract_from_egraph", "({id}) loop");
-        return ExtractionStatus::Looping;
-    }
-
-    let n = loop_breaker.len();
-    loop_breaker.push(id);
-
-    let result: ExtractionStatus = egraph[id]
-        .nodes
-        .iter() //.filter(|l| filter(*l))
-        .filter_map(|l @ Lang { head, args }| {
-            trace!(target: "extract_from_egraph", "({id}, {head}) filter: {}", filter(l));
-            filter(l).then_some(())?;
-            let args: Option<_> = args
-                .iter()
-                .copied()
-                .map(|id| extract_from_egraph(egraph, filter, id, loop_breaker).into_found())
-                .collect();
-
-            trace!(target: "extract_from_egraph", "({id}, {head}) args: {args:?}");
-            Some(Formula::App {
-                head: head.clone(),
-                args: args?,
-            })
-        })
-        .next()
-        .into();
-
-    trace!(target: "extract_from_egraph", "({id}) result: {result:?}");
-
-    loop_breaker.truncate(n);
-    result
-}
-
 /// Filter any golgge specific head function, but keep lambda binders. Those
 /// needs to be removed with [Formula::remove_de_bruijn]
 pub fn default_extraction_filter(Lang { head, .. }: &Lang) -> bool {
@@ -891,199 +665,163 @@ impl From<&Formula> for Pattern<Lang> {
     }
 }
 
-#[cfg(test)]
-mod conversion_tests {
-    use egg::{EGraph, Id, PatternAst, RecExpr};
+mod extraction {
+    use archery::RcK;
+    use bon::{Builder, bon};
+    use egg::{Analysis, EGraph, Id, Language};
+    use imbl::hashmap::Entry;
+    use rustc_hash::{FxBuildHasher, FxHashMap};
 
-    use crate::{Lang, Sort, Variable, decl_vars, rexp};
+    use crate::terms::{Formula, Function, LAMBDA_O, LAMBDA_S, Sort, Variable, list};
+    use crate::{Lang, fresh};
 
-    #[test]
-    fn as_egg_succ() {
-        decl_vars!(a, b);
-        let f = rexp!((and #a #b
-                (exists ((#i Bitstring) (#j Bitstring))
-                    (and #a #b (= #i #j)
-                            (exists ((#i Bitstring) (#k Bitstring))
-                                (and (= #i #k #j) #a))))));
-        let f: PatternAst<Lang> = f.as_egg().into();
-        println!("{}", f.pretty(100));
+    declare_trace!($"extrac_from_egraph");
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    struct VariableState {
+        freevars: FxHashMap<usize, Variable>,
+        depth: usize,
     }
 
-    #[test]
-    fn test_as_egg_var_with_constants() {
-        let formula1 = rexp!(true);
-        let expr1 = formula1.as_egg_var();
-        assert!(!expr1.as_ref().is_empty());
-
-        let formula2 = rexp!((and true false));
-        let expr2 = formula2.as_egg_var();
-        assert!(!expr2.as_ref().is_empty());
-
-        let formula3 = rexp!((or true false));
-        let expr3 = formula3.as_egg_var();
-        assert!(!expr3.as_ref().is_empty());
+    #[derive(Debug)]
+    struct SearState<'a, N: Analysis<Lang>> {
+        egraph: &'a EGraph<Lang, N>,
+        id_states: FxHashMap<Id, IdState>,
     }
 
-    #[test]
-    fn test_as_egg_ground_with_constants() {
-        let formula1 = rexp!(true);
-        let expr1 = formula1.as_egg_ground();
-        assert!(!expr1.as_ref().is_empty());
-
-        let formula2 = rexp!((and true false));
-        let expr2 = formula2.as_egg_ground();
-        assert!(!expr2.as_ref().is_empty());
-
-        let formula3 = rexp!((or true false));
-        let expr3 = formula3.as_egg_ground();
-        assert!(!expr3.as_ref().is_empty());
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    enum IdState {
+        Looping,
+        Failed,
+        Succeeded(Formula),
     }
 
-    #[test]
-    fn test_as_egg_with_variables() {
-        decl_vars!(a, b);
-
-        let formula = rexp!((and #a #b));
-        let expr = formula.as_egg_var();
-        assert!(!expr.as_ref().is_empty());
-
-        let formula2 = rexp!((or #a (not #b)));
-        let expr2 = formula2.as_egg_var();
-        assert!(!expr2.as_ref().is_empty());
+    #[derive(Builder)]
+    pub struct ExtractionState<'a, F, N: Analysis<Lang>> {
+        filter: F,
+        egraph: &'a EGraph<Lang, N>,
+        free_variables: Option<FxHashMap<usize, Variable>>,
     }
 
-    #[test]
-    fn test_add_to_egraph() {
-        let mut egraph = EGraph::new(());
-
-        let formula1 = rexp!(true);
-        let id1 = formula1.add_to_egraph(&mut egraph);
-        let formula2 = rexp!((and true false));
-        let id2 = formula2.add_to_egraph(&mut egraph);
-        assert_ne!(id1, id2);
+    #[derive(Default, Clone, Builder)]
+    pub struct StateLess {
+        #[builder(default = true)]
+        quantifiers: bool,
+        #[builder(default)]
+        depth: usize,
+        /// tracks if we are looping. Note that we can't cache the result because of variables
+        #[builder(default)]
+        id_states: imbl::GenericHashSet<Id, FxBuildHasher, RcK>,
+        #[builder(default)]
+        boundpile: imbl::GenericVector<Variable, RcK>,
     }
 
-    #[test]
-    fn test_add_to_egraph_with_quantifiers() {
-        let mut egraph = EGraph::new(());
-
-        let formula = rexp!((exists ((#i Bitstring)) true));
-        let id = formula.add_to_egraph(&mut egraph);
-        assert_ne!(id, Id::from(0));
+    impl<'a, F, N: Analysis<Lang>> ExtractionState<'a, F, N> {
+        pub fn change_filter<F2>(self, filter: F2) -> ExtractionState<'a, F2, N> {
+            let Self {
+                egraph,
+                free_variables,
+                ..
+            } = self;
+            ExtractionState {
+                filter,
+                egraph,
+                free_variables,
+            }
+        }
     }
 
-    #[test]
-    fn test_extract_formula_from_egraph() {
-        let mut egraph = EGraph::new(());
+    impl<'a, F: FnMut(&Lang) -> bool, N: Analysis<Lang>> ExtractionState<'a, F, N> {
+        pub fn extract(&mut self, mut pile: StateLess, id: Id) -> Option<Formula> {
+            tr!("({id}) {}", self.egraph.id_to_expr(id).pretty(100));
 
-        let formula = rexp!((and true false));
-        let id = formula.add_to_egraph(&mut egraph);
+            // search map
+            if pile.id_states.insert(id).is_some() {
+                return None;
+            }
 
-        let extracted = crate::terms::formula::Formula::try_from_id(&egraph, id);
-        assert!(extracted.is_ok());
-    }
+            self.egraph[id]
+                .iter()
+                .filter_map(|f| self.extract_lang(pile.clone(), f))
+                .next()
+        }
 
-    #[test]
-    fn test_from_bool() {
-        let f_true = crate::terms::formula::Formula::True();
-        assert_eq!(f_true.as_egg_ground().as_ref().len(), 1);
+        fn extract_lang(
+            &mut self,
+            mut pile: StateLess,
+            l @ Lang { head, args }: &Lang,
+        ) -> Option<Formula> {
+            tr!("extract_lang: ({l})");
+            if self.free_variables.is_some() || pile.quantifiers {
+                if head == &LAMBDA_S {
+                    return self.drop_var(pile, args[0]);
+                }
 
-        let f_false = crate::terms::formula::Formula::False();
-        assert_eq!(f_false.as_egg_ground().as_ref().len(), 1);
+                if head == &LAMBDA_O {
+                    let var = self.get_first_var(pile)?;
+                    return Some(Formula::Var(var));
+                }
+            }
+            if pile.quantifiers
+                && let Some(head) = head.as_fobinder()
+            {
+                let mut args = args.iter().copied();
+                let vars = list::try_get_egraph(self.egraph, args.next()?)?
+                    .into_iter()
+                    .rev() // `boundedvar` is a pile
+                    .map(|s| self.push_front_var(&mut pile, s))
+                    .collect();
+                let args: Option<Vec<_>> =
+                    args.map(|arg| self.extract(pile.clone(), arg)).collect();
 
-        assert_ne!(f_true.as_egg_ground(), f_false.as_egg_ground());
-    }
+                return Some(Formula::bind(head, vars, args?));
+            }
 
-    #[test]
-    fn test_conversion_roundtrip_bool() {
-        let formula = rexp!((and (or true false) (not true)));
-        let egg_expr = formula.as_egg_ground();
-        let egg_var = formula.as_egg_var();
-        let recovered = crate::terms::formula::Formula::from(&egg_var);
-        let recovered_expr = recovered.as_egg_ground();
+            if (self.filter)(l) {
+                let args: Option<_> = args
+                    .iter()
+                    .copied()
+                    .map(|id| self.extract(pile.clone(), id))
+                    .collect();
+                return Some(Formula::app(head.clone(), args?));
+            }
 
-        assert!(egg_expr.as_ref().len() > 0);
-        assert!(recovered_expr.as_ref().len() > 0);
-    }
+            None
+        }
 
-    #[test]
-    fn test_extract_with_cached_buffer() {
-        let mut egraph = EGraph::new(());
-        let mut buffer = Vec::new();
+        /// Traverse `S`
+        fn drop_var(&mut self, mut pile: StateLess, arg: Id) -> Option<Formula> {
+            tr!(
+                "drop_var: ({arg}) {}",
+                self.egraph.id_to_expr(arg).pretty(100)
+            );
+            if pile.boundpile.pop_front().is_none() {
+                // if the list was already empty, we increase the `depth` counter
+                pile.depth += 1
+            }
+            self.extract(pile, arg)
+        }
 
-        let formula = rexp!((and true false));
-        let id = formula.add_to_egraph(&mut egraph);
+        /// when reaching a `O`
+        fn get_first_var(&mut self, pile: StateLess) -> Option<Variable> {
+            tr!("pop_var");
+            if let Some(var) = pile.boundpile.front() {
+                Some(var.clone())
+            } else {
+                Some(self.free_variables
+                    .as_mut()?
+                    .entry(pile.depth)
+                    .or_insert(fresh!())
+                    .clone())
+            }
+        }
 
-        let extracted1 =
-            crate::terms::formula::Formula::try_from_id_cached(&egraph, id, &mut buffer);
-        assert!(extracted1.is_ok());
-
-        let formula2 = rexp!((or true false));
-        let id2 = formula2.add_to_egraph(&mut egraph);
-
-        let extracted2 =
-            crate::terms::formula::Formula::try_from_id_cached(&egraph, id2, &mut buffer);
-        assert!(extracted2.is_ok());
-
-        assert_ne!(id, id2);
-    }
-
-    #[test]
-    fn test_implication_conversion() {
-        let formula = rexp!((=> true false));
-        let egg_expr = formula.as_egg_ground();
-        assert!(!egg_expr.as_ref().is_empty());
-
-        let formula2 = rexp!((=> false true));
-        let egg_expr2 = formula2.as_egg_ground();
-        assert!(!egg_expr2.as_ref().is_empty());
-    }
-
-    #[test]
-    fn test_nested_booleans() {
-        let formula = rexp!((and (or true false) (not (and false true))));
-        let egg_expr = formula.as_egg_ground();
-        assert!(!egg_expr.as_ref().is_empty());
-
-        let mut egraph = EGraph::new(());
-        let id = formula.add_to_egraph(&mut egraph);
-        let extracted = crate::terms::formula::Formula::try_from_id(&egraph, id);
-        assert!(extracted.is_ok());
-    }
-
-    #[test]
-    fn test_multiple_variables_in_quantifier() {
-        let formula = rexp!(
-            (exists ((#i Bitstring) (#j Bitstring) (#k Bitstring))
-                (and true true)));
-
-        let egg_expr = formula.as_egg_ground();
-        assert!(!egg_expr.as_ref().is_empty());
-    }
-
-    #[test]
-    fn test_nested_quantifiers_simple() {
-        let formula = rexp!((exists ((#i Bitstring))
-            (exists ((#j Bitstring)) true)));
-
-        let egg_expr = formula.as_egg_var();
-        assert!(!egg_expr.as_ref().is_empty());
-    }
-
-    #[test]
-    fn test_egraph_size_growth() {
-        let mut egraph = EGraph::new(());
-        let initial_size = egraph.classes().count();
-
-        let formula1 = rexp!(true);
-        formula1.add_to_egraph(&mut egraph);
-        let size_after_first = egraph.classes().count();
-
-        let formula2 = rexp!((and true false));
-        formula2.add_to_egraph(&mut egraph);
-        let size_after_second = egraph.classes().count();
-
-        assert!(size_after_first > initial_size);
-        assert!(size_after_second >= size_after_first);
+        /// add bound variables
+        fn push_front_var(&mut self, pile: &mut StateLess, sort: Sort) -> Variable {
+            tr!("enque_var: {sort}");
+            let var = fresh!(sort);
+            pile.boundpile.push_front(var.clone());
+            var
+        }
     }
 }
