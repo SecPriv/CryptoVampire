@@ -23,9 +23,8 @@ use std::iter::FusedIterator;
 ///
 /// # Complexity
 ///
-/// - Creating the iterator: O(n)
+/// - Creating the iterator: O(1)
 /// - Iterating through all subsets: O(2^n) (as expected for any powerset iterator)
-/// - Memory: O(n) for the stored elements
 pub struct PowersetReverse<T> {
     elements: Vec<T>,
     mask: usize,
@@ -100,10 +99,8 @@ impl<T> FusedIterator for PowersetReverse<T> where T: Clone {}
 ///
 /// # Complexity
 ///
-/// - Creating the iterator: O(n)
+/// - Creating the iterator: O(1)
 /// - Iterating through all subsets: O(2^n) (as expected for any powerset iterator)
-/// - Memory: O(n) for the stored slice reference
-/// - Per-subset iteration: O(k) where k is the size of the subset
 pub struct PowersetReverseIter<'a, T> {
     elements: &'a [T],
     mask: usize,
