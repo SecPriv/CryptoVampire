@@ -93,7 +93,7 @@
     (add-rewrite pbl (rw.new "message_b1_2" (list i)
         (nb i) (macro_msg (b1 i) p2)))))
 
-(define as (declare-step pbl "as" (list Index Index)
+(define as (declare-step pbl "astep" (list Index Index)
     (step p1 ltrue (lambda (in i j) (enc (tuple in (na i j)) (ra i j) (pkb j))))
     (step p2 ltrue (lambda (in i j) (enc (tuple in (na i j)) (ra i j) (pkb j))))))
 
