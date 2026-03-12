@@ -16,6 +16,11 @@ log.workspace = true
 env_logger.workspace = true
 itertools.workspace = true
 serde = { workspace = true, optional = true}
+rustc-hash.workspace = true
+bitflags.workspace = true
+static_init.workspace = true
+thiserror.workspace = true
+
 regex = {version = "1.11.1", optional = true}
 
 [features]

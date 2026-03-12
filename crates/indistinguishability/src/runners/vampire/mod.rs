@@ -289,12 +289,21 @@ impl VampireExec {
         {
             use std::io::Write as _;
             let buffer = tmpfile.as_file_mut();
-            let mut i = 1;
+            let mut axiom_count = 1usize;
             for statement in smt {
                 let statement = statement.borrow();
+                {
+                    use cryptovampire_smt::{SolverKind, VAMPIRE};
+
+                    statement
+                        .check(VAMPIRE)
+                        .with_context(|| format!("checking {statement}"))?
+                }
+
                 if statement.is_any_assert() {
-                    writeln!(buffer, "; {i:}")?;
-                    i += 1;
+                    // numbered comments
+                    writeln!(buffer, "; {axiom_count:}")?;
+                    axiom_count += 1;
                 }
                 writeln!(buffer, "{}", statement.as_pretty())?;
             }

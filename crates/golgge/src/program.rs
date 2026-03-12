@@ -8,13 +8,13 @@ use std::ops::DerefMut;
 use std::ops::{ControlFlow, Deref};
 use std::path::PathBuf;
 use std::rc::Rc;
-use std::result;
 use std::str::FromStr;
 #[cfg(feature = "sync")]
 use std::sync::{Arc, RwLock};
+use std::{default, result};
 
 use anyhow::{Context, anyhow, ensure};
-use bon::bon;
+use bon::{bon, builder};
 use colored::{ColoredString, Colorize};
 // use eclassmap::{ECallMap, Entry};
 use egg::{
@@ -59,7 +59,7 @@ pub struct Program<L: Language, N: Analysis<L>, R = DRule<L, N>> {
 }
 
 /// Represents the status of a proof attempt for a given e-class.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 #[allow(dead_code)]
 pub(crate) enum Status<R> {
     /// The proof attempt succeeded, containing the proof item.
@@ -67,6 +67,7 @@ pub(crate) enum Status<R> {
     /// The proof attempt failed.
     False,
     /// The proof attempt is currently in progress.
+    #[default]
     InProgress,
 }
 
@@ -292,6 +293,49 @@ fn print_bool(b: bool) -> ColoredString {
     }
 }
 
+#[bon]
+impl<L, N, R> Program<L, N, R>
+where
+    L: Language + Display,
+    N: Analysis<L>,
+    R: Rule<L, N, R> + Clone,
+{
+    #[builder]
+    fn check_and_set_memo(
+        &mut self,
+        goal: egg::Id,
+        status: Status<R>,
+        #[builder(default = false)] log: bool,
+        #[builder(default = false)] track_hits: bool,
+    ) -> Option<bool> {
+        assert!(self.is_memo_enabled());
+
+        use std::collections::hash_map::Entry;
+        match self.memo_mut().entry(goal) {
+            Entry::Occupied(occupied_entry) if occupied_entry.get().is_in_progress() => {
+                if log {
+                    mtrace!(self, RULE, "⏩ skipping {goal:}: {}", "loop".red());
+                }
+                Some(false)
+            }
+            Entry::Occupied(occupied_entry) => {
+                let res = occupied_entry.get().as_bool();
+                if track_hits {
+                    self.num_memo_hits += 1;
+                }
+                if log {
+                    mtrace!(self, RULE, "⏩ skipping {goal:}: {}", print_bool(res));
+                }
+                Some(res)
+            }
+            Entry::Vacant(vacant_entry) => {
+                vacant_entry.insert(status.into());
+                None
+            }
+        }
+    }
+}
+
 impl<L, N, R> Program<L, N, R>
 where
     L: Language + Display,
@@ -337,32 +381,6 @@ where
         }
     }
 
-    fn check_and_set_memo(&mut self, goal: egg::Id, status: Status<R>, log: bool) -> Option<bool> {
-        assert!(self.is_memo_enabled());
-
-        use std::collections::hash_map::Entry;
-        match self.memo_mut().entry(goal) {
-            Entry::Occupied(occupied_entry) if occupied_entry.get().is_in_progress() => {
-                if log {
-                    mtrace!(self, RULE, "⏩ skipping {goal:}: {}", "loop".red());
-                }
-                Some(false)
-            }
-            Entry::Occupied(occupied_entry) => {
-                let res = occupied_entry.get().as_bool();
-                self.num_memo_hits += 1;
-                if log {
-                    mtrace!(self, RULE, "⏩ skipping {goal:}: {}", print_bool(res));
-                }
-                Some(res)
-            }
-            Entry::Vacant(vacant_entry) => {
-                vacant_entry.insert(status.into());
-                None
-            }
-        }
-    }
-
     /// same as [Self::run_expr] but starting from an [Id] in the [EGraph]
     pub fn run(&mut self, base_goal: egg::Id, fuel: u64) -> bool {
         self.total_calls += 1;
@@ -392,7 +410,13 @@ where
             // check memoization
             if self.is_memo_enabled()
                 && (canonicalized || i == 0)
-                && let Some(res) = self.check_and_set_memo(goal, Status::InProgress, true)
+                && let Some(res) = self
+                    .check_and_set_memo()
+                    .goal(goal)
+                    .status(Status::InProgress)
+                    .log(true)
+                    .track_hits(true)
+                    .call()
             {
                 // yes side effects ^^', this is here because I don't
                 // want break out of a loop that came from a rewrite mid proof
@@ -488,7 +512,10 @@ where
         };
 
         canonicalize_id_mut(&mut goal, self.egraph());
-        self.check_and_set_memo(goal, Status::InProgress, false);
+        self.check_and_set_memo()
+            .goal(goal)
+            .status(Status::InProgress)
+            .call();
 
         debug_assert!(
             !self.is_memo_enabled() || self.memo.contains_key(&goal),
