@@ -1,10 +1,16 @@
+use std::convert::identity;
 use std::fmt::Display;
 
 use itertools::izip;
+use static_init::dynamic;
 
 use super::formula::SmtFormula;
 use super::{SmtFile, SortedVar};
-use crate::{SmtParam, SmtPrettyPrinter, translate_smt_to_term, write_list, write_par};
+use crate::solvers::{Solver, SolverFeatures};
+use crate::{
+    CheckError, SmtParam, SmtPrettyPrinter, SolverKind, translate_smt_to_term, write_list,
+    write_par,
+};
 
 /// Represents an SMT-LIB command.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -145,6 +151,99 @@ where
     /// Creates an SMT assert command with an optimised formula.
     pub fn mk_assert(f: SmtFormula<U>) -> Self {
         Self::Assert(f.optimise())
+    }
+
+    pub fn check(&self, kind: SolverKind) -> Result<(), CheckError> {
+        match self {
+            Self::Comment(_)
+            | Self::CheckSat
+            | Self::GetProof
+            | Self::SetOption(_, _)
+            | Self::SetLogic(_) => Ok(()),
+
+            // Asserts
+            #[cfg(feature = "vampire")]
+            Self::AssertTh(f) => {
+                if kind.contains(SolverKind::AssertTh) {
+                    f.check(kind)
+                } else {
+                    Err(CheckError::UnsupportedFeature(SolverFeatures::AssertTh))
+                }
+            }
+            #[cfg(feature = "cryptovampire")]
+            Self::AssertGround { formula, .. } => {
+                if kind.contains(SolverKind::AssertGround) {
+                    formula.check(kind)
+                } else {
+                    Err(CheckError::UnsupportedFeature(SolverFeatures::AssertGround))
+                }
+            }
+            #[cfg(feature = "vampire")]
+            Self::AssertNot(f) => {
+                if kind.contains(SolverKind::AssertGround) {
+                    f.check(kind)
+                } else {
+                    Err(CheckError::UnsupportedFeature(SolverFeatures::AssertNot))
+                }
+            }
+            Self::Assert(f) => f.check(kind),
+
+            // Declarations
+            Self::DeclareFun { fun, .. } => Self::check_fun(fun.to_string(), kind),
+            #[cfg(feature = "cryptovampire")]
+            Self::DeclareSubtermRelation(f, _) => {
+                if kind.contains(SolverKind::CVSubterm) {
+                    Self::check_fun(f.to_string(), kind)
+                } else {
+                    Err(CheckError::UnsupportedFeature(SolverFeatures::Subterm))
+                }
+            }
+            Self::DeclareSort(s) | Self::DeclareSortAlias { to: s, .. } => {
+                Self::check_fun(s.to_string(), kind)
+            }
+            #[cfg(feature = "cryptovampire")]
+            Self::DeclareRewrite { lhs, rhs, .. } => {
+                if kind.contains(SolverKind::CVRewrite) {
+                    lhs.check(kind)?;
+                    rhs.check(kind)
+                } else {
+                    Err(CheckError::UnsupportedFeature(SolverFeatures::Rewrite))
+                }
+            }
+            Self::DeclareDatatypes { sorts, cons } => {
+                for s in sorts {
+                    Self::check_fun(s.to_string(), kind)?
+                }
+                for SmtCons { fun, dest, .. } in cons.iter().flat_map(|v| v.iter()) {
+                    Self::check_fun(fun.to_string(), kind)?;
+                    for dest in dest.iter().filter_map(Option::as_ref) {
+                        Self::check_fun(dest.to_string(), kind)?
+                    }
+                }
+                Ok(())
+            }
+        }
+    }
+
+    fn check_fun(fun_init: String, kind: SolverKind) -> Result<(), CheckError> {
+        let fun = fun_init.trim();
+        if Solver::Generic.reserved_keywords().contains(fun) {
+            return Err(CheckError::BuiltinNameClash {
+                fun: fun_init.into_boxed_str(),
+                solver: Solver::Generic,
+            });
+        }
+        for s in kind {
+            if let Some(solver) = SolverKind::builtins_to_solvers(s)
+                && solver.reserved_keywords().contains(fun)
+            {
+                return Err(CheckError::BuiltinNameClash {
+                    fun: fun_init.into_boxed_str(),
+                    solver,
+                });
+            }
+        }
+        Ok(())
     }
 }
 

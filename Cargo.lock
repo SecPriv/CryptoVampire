@@ -964,13 +964,17 @@ dependencies = [
 name = "cryptovampire_smt"
 version = "0.1.0"
 dependencies = [
+ "bitflags 2.11.0",
  "cryptovampire_macros",
  "env_logger 0.11.9",
  "itertools",
  "log",
  "logic_formula",
  "regex",
+ "rustc-hash",
  "serde",
+ "static_init",
+ "thiserror 2.0.18",
  "utils",
 ]
 

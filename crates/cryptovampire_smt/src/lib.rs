@@ -2,6 +2,8 @@ use std::borrow::Cow;
 use std::fmt::{self, Debug, Display};
 use std::hash::Hash;
 
+use bitflags::bitflags;
+use thiserror::Error;
 use utils::implvec;
 
 /// The file extension for SMT files.
@@ -22,9 +24,40 @@ mod formula;
 pub use smt::*;
 mod smt;
 
+pub mod solvers;
+
 mod formatter;
 pub use formatter::Term as SmtPrettyPrinter;
 pub(crate) use formatter::translate_smt_to_term;
+
+use crate::solvers::{Solver, SolverFeatures};
+
+bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    pub struct SolverKind : u8 {
+        const AssertGround = 1 << 0;
+        const AssertTh = 1 << 1;
+        const AssertNot = 1 << 2;
+        const VampireBuiltins = 1 << 3;
+        const Z3Builtins = 1 << 4;
+        const CVC5Builtins = 1 << 5;
+        const CVSubterm = 1 << 6;
+        const CVRewrite = 1 << 7;
+    }
+}
+
+pub static SMT_COMPLIANT: SolverKind = SolverKind::empty();
+pub static VAMPIRE: SolverKind = SolverKind::from_bits(
+    SolverKind::AssertGround.bits()
+        | SolverKind::AssertTh.bits()
+        | SolverKind::AssertNot.bits()
+        | SolverKind::VampireBuiltins.bits(),
+)
+.unwrap();
+pub static Z3: SolverKind =
+    SolverKind::from_bits(SolverKind::AssertNot.bits() | SolverKind::Z3Builtins.bits()).unwrap();
+pub static CVC5: SolverKind =
+    SolverKind::from_bits(SMT_COMPLIANT.bits() | SolverKind::CVC5Builtins.bits()).unwrap();
 
 /// A trait for defining parameters used in SMT formulas.
 pub trait SmtParam {
@@ -147,4 +180,41 @@ fn write_list<A>(
     mut arg: impl FnMut(&mut std::fmt::Formatter<'_>, A) -> std::fmt::Result,
 ) -> std::fmt::Result {
     write_par(f, |f| iter.into_iter().try_for_each(|x| arg(f, x)))
+}
+
+impl SolverKind {
+    pub fn iter_solvers(self) -> impl Iterator<Item = Self> {
+        self.iter().filter(|&f| {
+            f == Self::empty()
+                || f == Self::VampireBuiltins
+                || f == Self::Z3Builtins
+                || f == Self::CVC5Builtins
+        })
+    }
+
+    pub const fn builtins_to_solvers(self) -> Option<Solver> {
+        if self.is_empty() {
+            return Some(Solver::Generic);
+        }
+        match self {
+            SolverKind::VampireBuiltins => Some(Solver::Vampire),
+            SolverKind::Z3Builtins => Some(Solver::Z3),
+            SolverKind::CVC5Builtins => Some(Solver::Cvc5),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Error)]
+pub enum CheckError {
+    #[error("'{fun}' clashses with a builtin keyword/function/sort for {solver}.")]
+    BuiltinNameClash {
+        fun: Box<str>,
+        solver: solvers::Solver,
+    },
+    #[error("the targeted solver doesn't support {0}")]
+    UnsupportedFeature(SolverFeatures),
+
+    #[error("empty quantifier")]
+    EmptyQuantifier
 }

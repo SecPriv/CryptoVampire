@@ -6,7 +6,8 @@ use logic_formula::{AsFormula, Bounder, Destructed, HeadSk};
 use utils::{dynamic_iter, ereturn_if, implvec};
 
 use super::SortedVar;
-use crate::{SmtParam, write_list, write_par};
+use crate::solvers::SolverFeatures;
+use crate::{CheckError, SmtParam, SolverKind, write_list, write_par};
 
 /// Represents an SMT formula.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -347,6 +348,43 @@ impl<U: SmtParam> SmtFormula<U> {
     #[must_use]
     pub const fn is_false(&self) -> bool {
         matches!(self, Self::False)
+    }
+
+    pub fn check(&self, kind: SolverKind) -> Result<(), CheckError> {
+        match self {
+            Self::True | Self::False | Self::Var(_) => Ok(()),
+            Self::Forall(vars, arg) | Self::Exists(vars, arg) => {
+                if vars.is_empty() {
+                    Err(CheckError::EmptyQuantifier)
+                } else {
+                    arg.check(kind)
+                }
+            }
+            Self::Fun(_, f) | Self::And(f) | Self::Or(f) | Self::Eq(f) | Self::Neq(f) => {
+                Self::rec_check(f, kind)
+            }
+            Self::Ite(f1, f2, f3) => Self::rec_check([f1, f2, f3].map(Box::as_ref), kind),
+            #[cfg(feature = "cryptovampire")]
+            Self::Subterm(_, f1, f2) => {
+                if !kind.contains(SolverKind::CVSubterm) {
+                    Err(CheckError::UnsupportedFeature(SolverFeatures::Subterm))
+                } else {
+                    Self::rec_check([f1, f2].map(Box::as_ref), kind)
+                }
+            }
+            Self::Implies(f1, f2) => Self::rec_check([f1, f2].map(Box::as_ref), kind),
+            Self::Not(f) => f.check(kind),
+        }
+    }
+
+    fn rec_check<'a>(selves: implvec!(&'a Self), kind: SolverKind) -> Result<(), CheckError>
+    where
+        U: 'a,
+    {
+        for f in selves {
+            f.check(kind)?
+        }
+        Ok(())
     }
 }
 

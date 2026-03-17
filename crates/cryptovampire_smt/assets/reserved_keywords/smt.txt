@@ -1,0 +1,13 @@
+assert
+assert-not
+assert-theory
+declare-fun
+declare-sort
+define-function
+define-sort
+declare-datatype
+declare-datatypes
+ite
+exists
+forall
+as
