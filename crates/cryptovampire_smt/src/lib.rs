@@ -216,5 +216,36 @@ pub enum CheckError {
     UnsupportedFeature(SolverFeatures),
 
     #[error("empty quantifier")]
-    EmptyQuantifier
+    EmptyQuantifier,
+}
+
+pub trait SmtSink<U: SmtParam> where <U as SmtParam>::SVar: std::cmp::Eq {
+    fn extend_smt(&mut self, iter: implvec!(Smt<U>));
+
+    fn extend_one_smt(&mut self, smt: Smt<U>) {
+        self.extend_smt(Some(smt));
+    }
+
+    fn assert_many(&mut self, iter: implvec!(SmtFormula<U>)) {
+        self.extend_smt(iter.into_iter().map(Smt::mk_assert));
+    }
+
+    fn assert_one(&mut self, formula: SmtFormula<U>) {
+        self.assert_many(Some(formula));
+    }
+
+    fn comment(&mut self, comment: impl Display) {
+        self.extend_one_smt(Smt::Comment(comment.to_string()));
+    }
+}
+
+impl<U, V> SmtSink<U> for V
+where
+    U: SmtParam,
+    V: Extend<Smt<U>>,
+    <U as SmtParam>::SVar: std::cmp::Eq
+{
+    fn extend_smt(&mut self, iter: implvec!(Smt<U>)) {
+        self.extend(iter);
+    }
 }

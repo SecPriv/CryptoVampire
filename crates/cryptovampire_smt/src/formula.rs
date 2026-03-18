@@ -1,9 +1,11 @@
+use std::collections::VecDeque;
 use std::fmt::Display;
 use std::ops::{BitAnd, BitOr, Not, Shr};
 
 use itertools::Itertools;
 use logic_formula::{AsFormula, Bounder, Destructed, HeadSk};
-use utils::{dynamic_iter, ereturn_if, implvec};
+use rustc_hash::FxHashSet;
+use utils::{dynamic_iter, ebreak_if, ereturn_if, implvec};
 
 use super::SortedVar;
 use crate::solvers::SolverFeatures;
@@ -205,11 +207,10 @@ impl<U: SmtParam> SmtFormula<U> {
             // This remove
             SmtFormula::Forall(vars, f) | SmtFormula::Exists(vars, f) => {
                 f.optimise_mut();
-                if vars.is_empty()
-                    || f.as_ref()
-                        .free_vars_iter()
-                        .all(|v| !vars.iter().contains(&v))
-                {
+
+                optimize_variables_quantifiers(vars, f);
+
+                if vars.is_empty() {
                     // gymnastic to set `self` to `f`
                     *self = ::std::mem::take(f.as_mut())
                 }
@@ -399,6 +400,41 @@ impl<U: SmtParam> SmtFormula<U> {
             f.check(kind)?
         }
         Ok(())
+    }
+}
+
+fn optimize_variables_quantifiers<U>(vars: &mut Vec<U::SVar>, f: &mut Box<SmtFormula<U>>)
+where
+    U: SmtParam,
+    U::SVar: std::cmp::Eq,
+{
+    ereturn_if!(vars.is_empty());
+    // bvar is the indices of `vars` which have relevant variables, the rest can be discarded
+    let mut bvars = f
+        .as_ref()
+        .free_vars_iter()
+        .filter_map(|fv| vars.iter().position(|v| v == fv))
+        .collect_vec();
+    bvars.sort_unstable();
+    bvars.dedup();
+    let mut bvars = bvars.as_slice();
+    // in-place filters out the unnessesary variables from `vars`
+    let mut i = 0;
+    while i < vars.len() {
+        let Some(&fst) = bvars.first() else {
+            vars.truncate(i);
+            return;
+        };
+        if i < fst {
+            vars.swap_remove(i);
+            bvars = &bvars[0..bvars.len() - 1];
+            // we keep vars[i]
+        } else if i == fst {
+            bvars = &bvars[1..];
+        } else {
+            unreachable!()
+        }
+        i += 1;
     }
 }
 
