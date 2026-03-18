@@ -249,9 +249,10 @@ mod substitution;
 /// Provides rules for interacting with the Vampire SMT solver.
 mod vampire;
 
-mod if_rewrites;
+mod ifs;
 
-pub mod constrains;
+pub use protocol::constrains;
+pub use protocol::publication;
 
 mod xor;
 pub use xor::XOr;
@@ -272,7 +273,9 @@ pub use nonce::{FreshNonce, mk_no_guessing_smt};
 /// Re-exports the `PRF` struct, representing a pseudo-random function.
 pub use prf::PRF;
 
-mod publication;
+mod protocol;
+mod problem;
+mod base;
 
 /// Provides rules for sanity checking.
 #[cfg(debug_assertions)]
@@ -316,7 +319,7 @@ pub fn mk_egg_rewrites<N: Analysis<Lang>>(
     chain![
         default_rewrites::mk_rewrites(pbl),
         lambda::mk_rewrites(pbl),
-        if_rewrites::mk_rewrite(pbl),
+        ifs::mk_rewrite(pbl),
         constrains::mk_rewrite(pbl),
         [find_indices::mk_rewrite()],
         publication::mk_rewrites(pbl),

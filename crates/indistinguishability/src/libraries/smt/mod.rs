@@ -31,10 +31,10 @@ pub fn mk_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
     ]
 }
 
-#[inline]
 /// Determines if a given function should be declared in the SMT prelude.
 ///
 /// Functions marked as `should_not_declare_in_smt` are excluded.
+#[inline]
 fn should_declare_in_smt(fun: &Function) -> bool {
     !fun.is_should_not_declare_in_smt()
 }
