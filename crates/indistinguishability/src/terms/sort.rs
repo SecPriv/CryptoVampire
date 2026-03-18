@@ -116,6 +116,7 @@ impl Sort {
             Self::Protocol => 'p',
             Self::Nonce => 'n',
             Self::Index => 'i',
+            Self::MemoryCell => 's',
         }
     }
 
@@ -128,6 +129,7 @@ impl Sort {
             Self::Protocol => "Protocol",
             Self::Nonce => "Nonce",
             Self::Index => "Index",
+            Self::MemoryCell => "MemoryCell"
         }
     }
 
