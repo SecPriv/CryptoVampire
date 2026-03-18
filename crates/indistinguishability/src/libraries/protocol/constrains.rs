@@ -41,14 +41,16 @@ pub fn modify_egraph<'pbl>(egraph: &mut EGraph<Lang, PAnalysis<'pbl>>) {
     // egraph.union(hpridid, trueid);
 }
 
-pub fn mk_smt(pbl: &Problem) -> impl Iterator<Item = MSmt> {
-    chain![
-        [MSmt::comment_block("Contrains")],
-        pbl.constrains()
-            .iter()
-            .flat_map(|c| mk_smt_constrain_one(pbl, c))
-            .map(MSmt::Assert)
-    ]
+use cryptovampire_smt::SmtSink;
+
+use crate::MSmtParam;
+
+pub fn add_smt(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
+    sink.comment("Constrains");
+
+    for constrain in pbl.constrains() {
+        mk_smt_constrain_one(pbl, constrain, sink);
+    }
 }
 
 pub fn mk_rewrite<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = egg::Rewrite<Lang, N>> {
@@ -61,23 +63,22 @@ pub fn mk_rewrite<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = egg:
 fn mk_smt_constrain_one(
     _: &Problem,
     bind!(s1(a1..) op s2(a2..)): &Constrains,
-) -> impl Iterator<Item = MSmtFormula> {
+    sink: &mut impl SmtSink<MSmtParam>,
+) {
     debug_assert_eq!(s1.arity(), a1.len());
     debug_assert_eq!(s2.arity(), a2.len());
     let vars_iter = chain![a1, a2].unique().cloned();
     let args1 = a1.iter().map::<MSmtFormula, _>(|v| smt!(#v));
     let args2 = a2.iter().map::<MSmtFormula, _>(|v| smt!(#v));
-    match op {
+    sink.assert_one(match op {
         ConstrainOp::LessThan => {
-            [smt!((forall #(vars_iter) (LT (s1 #args1*) (s2 #args2*)))).optimise()].into_iter()
+            smt!((forall #(vars_iter) (LT (s1 #args1*) (s2 #args2*))))
         }
-        ConstrainOp::Exclude => [smt!((forall #(vars_iter)
+        ConstrainOp::Exclude => smt!((forall #(vars_iter)
           (=>
             (and (HAPPENS (s1 #(args1.clone())*)) (HAPPENS (s2 #(args2.clone())*)))
-            (= (s1 #args1*) (s2 #args2*)))))
-        .optimise()]
-        .into_iter(),
-    }
+            (= (s1 #args1*) (s2 #args2*))))),
+    })
 }
 
 decl_vars!(const TRUTH_VAR:Bool);

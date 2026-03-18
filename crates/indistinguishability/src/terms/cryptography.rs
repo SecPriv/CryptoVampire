@@ -3,12 +3,13 @@
 use std::fmt::Display;
 
 use anyhow::{Context, bail, ensure};
+use cryptovampire_smt::SmtSink;
 use utils::{dynamic_iter, match_as_trait};
 
 use crate::libraries::{self, mk_no_guessing_smt};
 use crate::problem::ProblemState;
 use crate::terms::{Formula, Sort, Variable};
-use crate::{MSmt, Problem};
+use crate::{MSmt, Problem, MSmtParam};
 
 /// Represents different cryptographic assumptions that can be made in the problem.
 #[derive(Debug, Default)]
@@ -53,6 +54,8 @@ impl CryptographicAssumption {
 }
 
 pub trait Cryptography: Into<CryptographicAssumption> {
+    fn add_prelude(&self, _pbl: &Problem, _sink: &mut impl SmtSink<MSmtParam>) {}
+
     fn mk_prelude<'a>(&'a self, _: &'a Problem) -> impl Iterator<Item = MSmt> + use<'a, Self> {
         ::std::iter::empty()
     }
@@ -92,6 +95,17 @@ impl Cryptography for CryptographicAssumption {
             Self::NoGuessingTh => { "no-guessing".to_string() },
             Self::Undefined => { "undefined".to_string() }
         })
+    }
+
+    fn add_prelude(&self, pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
+        match self {
+            Self::NoGuessingTh => sink.extend_smt(mk_no_guessing_smt(pbl)),
+            Self::PRF(x) => x.add_prelude(pbl, sink),
+            Self::AEnc(x) => x.add_prelude(pbl, sink),
+            Self::XOr(x) => x.add_prelude(pbl, sink),
+            Self::DDH(x) => x.add_prelude(pbl, sink),
+            Self::Undefined => {}
+        }
     }
 
     fn mk_prelude<'a>(&'a self, pbl: &'a Problem) -> impl Iterator<Item = MSmt> + use<'a> {

@@ -60,35 +60,33 @@ pub fn mk_rewrites<N: Analysis<Lang>>(
     res.into_iter()
 }
 
-pub fn mk_smt(pbl: &Problem) -> impl Iterator<Item = MSmt> {
+use cryptovampire_smt::SmtSink;
+
+use crate::MSmtParam;
+
+pub fn add_smt(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
     let (pub_steps, steps): (Vec<_>, Vec<_>) =
         pbl.steps().unwrap().partition(|s| s.is_publish_step());
 
-    let mut res = vec![MSmt::comment_block("Publication Steps")];
+    sink.extend_one_smt(MSmt::comment_block("Publication Steps"));
 
     for s in pub_steps {
         econtinue_if!(s == INIT);
 
         let vars = s.args_sorts().map(|x| fresh!(x)).collect_vec();
-        let vars = vars.iter().cloned();
-        let sf = smt!((s #(vars.clone())*));
+        let vars_iter = || vars.iter().cloned();
+        let sf = smt!((s #(vars_iter())*));
 
-        let comment = MSmt::Comment(format!("step {s}"));
-        let order = steps
-            .iter()
-            .map(|so| {
-                let ovars = so.args_sorts().map(|x| fresh!(x)).collect_vec();
-                let ovars = ovars.iter().cloned();
-                let vars = chain![vars.clone(), ovars.clone()];
-                smt!((forall #vars (LT #sf (so #ovars*)))).optimise()
-            })
-            .map(MSmt::Assert);
+        sink.comment(format!("step {s}"));
 
-        let exec = MSmt::Assert(
-            smt!((forall ((#p Protocol)) (forall #(vars.clone()) (= (MACRO_EXEC #sf #p) (HAPPENS #sf))))).optimise(),
-        );
-        res.extend(chain!([comment, exec], order));
+        sink.assert_one(smt!((forall ((#p Protocol)) (forall #(vars_iter()) (= (MACRO_EXEC #sf #p) (HAPPENS #sf))))));
+
+        for so in steps.iter() {
+            let ovars = so.args_sorts().map(|x| fresh!(x)).collect_vec();
+            let ovars_iter = || ovars.iter().cloned();
+            let all_vars = vars_iter().chain(ovars_iter());
+            // sf is captured from outside.
+            sink.assert_one(smt!((forall #all_vars (LT #sf (so #(ovars_iter())*)))));
+        }
     }
-
-    res.into_iter()
 }

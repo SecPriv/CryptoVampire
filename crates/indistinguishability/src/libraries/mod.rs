@@ -327,11 +327,11 @@ pub fn mk_egg_rewrites<N: Analysis<Lang>>(
 }
 
 pub fn mk_smt_prelude(pbl: &Problem) -> Vec<MSmt> {
-    chain![
-        smt::mk_prelude(pbl),
-        constrains::mk_smt(pbl),
-        publication::mk_smt(pbl)
-    ].collect()
+    let mut prelude = Vec::new();
+    smt::add_prelude(pbl, &mut prelude);
+    constrains::add_smt(pbl, &mut prelude);
+    publication::add_smt(pbl, &mut prelude);
+    prelude
 }
 
 /// Add terms to the egraph / union terms
