@@ -44,6 +44,7 @@ fn should_declare_in_smt(fun: &Function) -> bool {
 /// This includes declarations for built-in sorts, datatypes for nonces and protocols,
 /// and functions that are not marked as `should_not_declare_in_smt`.
 fn mk_header(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
+
     let sorts = SMT_SORT_LIST.iter().copied().map(Smt::DeclareSort);
 
     let datatypes = Smt::DeclareDatatypes {

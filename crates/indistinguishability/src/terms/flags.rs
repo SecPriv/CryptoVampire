@@ -61,5 +61,8 @@ bitflags! {
 
       /// This step is a publication step
       const PUBLICATION_STEP = 1 << 23;
+
+      /// This refers to a memory cell
+      const MEMORY_CELL = 1 << 24;
   }
 }

@@ -234,8 +234,6 @@ mod aenc;
 
 /// Provides rules for deduction.
 pub mod deduce;
-/// Provides default rewrite rules.
-mod default_rewrites;
 /// Provides rules for handling forall quantifiers.
 mod fa;
 /// Provides rules for lambda calculus.
@@ -317,7 +315,9 @@ pub fn mk_egg_rewrites<N: Analysis<Lang>>(
     pbl: &Problem,
 ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
     chain![
-        default_rewrites::mk_rewrites(pbl),
+        base::mk_rewrites(pbl),
+        problem::mk_rewrites(pbl),
+        protocol::unfold::mk_rewrites(pbl),
         lambda::mk_rewrites(pbl),
         ifs::mk_rewrite(pbl),
         constrains::mk_rewrite(pbl),
@@ -326,12 +326,12 @@ pub fn mk_egg_rewrites<N: Analysis<Lang>>(
     ]
 }
 
-pub fn mk_smt_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
+pub fn mk_smt_prelude(pbl: &Problem) -> Vec<MSmt> {
     chain![
         smt::mk_prelude(pbl),
         constrains::mk_smt(pbl),
         publication::mk_smt(pbl)
-    ]
+    ].collect()
 }
 
 /// Add terms to the egraph / union terms

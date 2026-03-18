@@ -17,8 +17,7 @@ impl Problem {
     fn compute_smt_prelude(&mut self) {
         if self.smt_prelude.is_none() {
             self.find_temp_quantifiers(&[]);
-            let prelude = mk_smt_prelude(self).collect();
-            self.smt_prelude = Some(prelude)
+            self.smt_prelude = Some(mk_smt_prelude(self))
         }
     }
 

@@ -91,6 +91,11 @@ impl FunctionCollection {
         self.functions.iter().filter(|f| f.is_nonce())
     }
 
+    /// List all the reifistered memory cells
+    pub fn memory_cells(&self) -> impl Iterator<Item = &Function>  {
+        self.functions.iter().filter(|f| f.is_memory_cell())
+    }
+
     /// Lists all the registered protocols
     pub fn protocols(&self) -> impl Iterator<Item = &Function> {
         self.functions.iter().filter(|f| f.is_protocol())

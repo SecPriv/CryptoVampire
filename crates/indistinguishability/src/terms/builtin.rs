@@ -81,9 +81,9 @@ macro_rules! alias {
 // -----------------------------------------------------------------------------
 
 /// A static list of all concrete `Sort`s, excluding `Any`.
-pub static SORT_LIST: [Sort; 6] = {
+pub static SORT_LIST: [Sort; 7] = {
     use Sort::*;
-    [Bool, Bitstring, Time, Protocol, Nonce, Index]
+    [Bool, Bitstring, Time, Protocol, Nonce, Index, MemoryCell]
 };
 
 /// [Sort]s to be declared in smt
