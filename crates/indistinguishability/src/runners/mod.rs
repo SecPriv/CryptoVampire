@@ -133,6 +133,7 @@ impl<'a> SharedProblem<'a> {
     ///
     /// If the problem's SMT prelude has not been computed yet, it computes it.
     pub async fn extend_smt_prelud(&self, rec: &mut Vec<MSmt>) {
+        // split here to avoid taking a lock if possible
         if let Some(p) = self.0.read().await.maybe_get_smt_prelude() {
             rec.extend_from_slice(p);
         } else {

@@ -96,7 +96,6 @@ impl Hash for InnerFunction {
     }
 }
 
-// TODO: make comparison faster
 /// Main type for function in this crate
 ///
 /// This is basicaly a somewhat smart pointer to an [InnerFunction].

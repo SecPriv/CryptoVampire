@@ -36,7 +36,7 @@ impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for MSmtFor
         }: PreSmtRecFOFormula<'a, U>,
     ) -> Result<Self, Self::Error> {
         let propagate = |f: &Formula| f.as_pre_smt().translator(translator).build().try_into();
-        let restult = match formula.as_ref() {
+        let result = match formula.as_ref() {
             Formula::Var(variable) => Ok(Self::Var(variable.clone())),
             Formula::App { head, args } => match head.as_smt_head() {
                 Some(h) => {
@@ -49,10 +49,8 @@ impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for MSmtFor
                         SmtHead::Eq => Self::Eq(args),
                         SmtHead::Neq => Self::Neq(args),
                         SmtHead::Not => {
-                            let [arg] = TryInto::<[_; _]>::try_into(args)
-                                .map_err(|_| formula.into_owned())?
-                                .map(Box::new);
-                            Self::Not(arg)
+                            let [args] = args.try_into().map_err(|_| formula.into_owned())?;
+                            Self::Not(Box::new(args))
                         }
                         SmtHead::Implies => {
                             let [a1, a2] = TryInto::<[_; _]>::try_into(args)
@@ -88,12 +86,12 @@ impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for MSmtFor
         };
 
         #[cfg(debug_assertions)]
-        if let Err(f) = &restult {
+        if let Err(f) = &result {
             use log::error;
 
             error!("fail to translate to smt\n{f}")
         }
-        restult
+        result
     }
 }
 
