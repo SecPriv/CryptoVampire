@@ -27,7 +27,7 @@ use std::iter::FusedIterator;
 /// - Iterating through all subsets: O(2^n) (as expected for any powerset iterator)
 pub struct PowersetReverse<T> {
     elements: Vec<T>,
-    mask: usize,
+    mask: u64,
     len: usize,
 }
 
@@ -39,6 +39,7 @@ impl<T: Clone> PowersetReverse<T> {
     /// * `elements` - The vector to generate the powerset from
     pub fn new(elements: Vec<T>) -> Self {
         let len = elements.len();
+        assert!(len < 64, "supports at most 64 elememts");
         Self {
             elements,
             mask: 1 << len,
@@ -67,8 +68,11 @@ where
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let remaining = self.mask;
-        (remaining, Some(remaining))
+        let remaining: Result<usize, _> = self.mask.try_into();
+        match remaining {
+            Ok(remaining) => (remaining, Some(remaining)),
+            _ => (usize::MAX, None),
+        }
     }
 }
 
@@ -103,7 +107,7 @@ impl<T> FusedIterator for PowersetReverse<T> where T: Clone {}
 /// - Iterating through all subsets: O(2^n) (as expected for any powerset iterator)
 pub struct PowersetReverseIter<'a, T> {
     elements: &'a [T],
-    mask: usize,
+    mask: u64,
 }
 
 impl<'a, T> PowersetReverseIter<'a, T> {
@@ -114,6 +118,7 @@ impl<'a, T> PowersetReverseIter<'a, T> {
     /// * `elements` - The slice to generate the powerset from
     pub fn new(elements: &'a [T]) -> Self {
         let len = elements.len();
+        assert!(len < 64, "supports at most 64 elememts");
         Self {
             elements,
             mask: 1 << len,
@@ -134,8 +139,11 @@ impl<'a, T> Iterator for PowersetReverseIter<'a, T> {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let remaining = self.mask;
-        (remaining, Some(remaining))
+        let remaining: Result<usize, _> = self.mask.try_into();
+        match remaining {
+            Ok(remaining) => (remaining, Some(remaining)),
+            _ => (usize::MAX, None),
+        }
     }
 }
 
@@ -163,7 +171,7 @@ impl<'a, T> FusedIterator for PowersetReverseIter<'a, T> {}
 /// ```
 pub struct SubsetIter<'a, T> {
     elements: &'a [T],
-    mask: usize,
+    mask: u64,
     index: usize,
 }
 
@@ -177,7 +185,7 @@ impl<'a, T> SubsetIter<'a, T> {
     ///
     /// * `elements` - The slice to iterate over
     /// * `mask` - The bitmask determining which elements to include
-    fn new(elements: &'a [T], mask: usize) -> Self {
+    fn new(elements: &'a [T], mask: u64) -> Self {
         Self {
             elements,
             mask,
