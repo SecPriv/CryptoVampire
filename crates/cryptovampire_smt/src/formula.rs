@@ -215,9 +215,16 @@ impl<U: SmtParam> SmtFormula<U> {
                 }
             }
             SmtFormula::And(args) => {
-                let args_c = ::std::mem::replace(args, Vec::with_capacity(args.len()));
+                let mut args_c = ::std::mem::replace(args, Vec::with_capacity(args.len()));
 
-                for mut arg in args_c {
+                while let Some(mut arg) = args_c.pop() {
+                    // colapse nested
+                    if let Self::And(args_deep) = arg {
+                        args_c.extend(args_deep);
+                        continue;
+                    }
+
+                    // recursively optimise and simplify
                     arg.optimise_mut();
                     if arg.is_false() {
                         *self = Self::False;
@@ -235,9 +242,16 @@ impl<U: SmtParam> SmtFormula<U> {
                 }
             }
             SmtFormula::Or(args) => {
-                let args_c = ::std::mem::replace(args, Vec::with_capacity(args.len()));
+                let mut args_c = ::std::mem::replace(args, Vec::with_capacity(args.len()));
 
-                for mut arg in args_c {
+                while let Some(mut arg) = args_c.pop() {
+                    // colapse nested
+                    if let Self::Or(args_deep) = arg {
+                        args_c.extend(args_deep);
+                        continue;
+                    }
+
+                    // recursively optimise and simplify
                     arg.optimise_mut();
                     if arg.is_true() {
                         *self = Self::True;
