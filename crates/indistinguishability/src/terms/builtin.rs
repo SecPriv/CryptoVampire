@@ -191,6 +191,11 @@ mk_builtin_funs!(
         flags: f!(BUILTIN_SMT)
     };
 
+    /// Index equality
+    INDEX_EQ "idx-eq" {
+        signature: s!(Index, Index -> Bool)
+    };
+
     // ~~~~~~~~~~~ base bitstrings ~~~~~~~~~~~~~~
 
     NONCE "mnonce" "nonce" {
@@ -303,6 +308,11 @@ mk_builtin_funs!(
         flags: f!(MACRO)
     };
 
+    MACRO_MEMORY_CELL "macro_memory_cell" {
+        signature: s!(MemoryCell, Time, Protocol -> Bool),
+        flags: f!(MACRO)
+    };
+
     UNFOLD_INPUT "unfold_input" {
         signature: s!(Time, Protocol -> Bitstring),
         flags: f!(UNFOLD)
@@ -328,6 +338,10 @@ mk_builtin_funs!(
         flags: f!(UNFOLD)
     };
 
+    UNFOLD_MEMORY_CELL "unfold_memory_cell" {
+        signature: s!(MemoryCell, Time, Protocol -> Bool),
+        flags: f!(UNFOLD)
+    };
 
     // ~~~~~~~~~~~~~ prolog only ~~~~~~~~~~~~~~~~
 

@@ -11,6 +11,7 @@ use steel_derive::Steel;
 use thiserror::Error;
 
 use crate::input::Registerable;
+use crate::protocol::state::Assignements;
 use crate::terms::{EMPTY, Formula, Function, INIT, UNFOLD_COND, UNFOLD_MSG, Variable};
 use crate::{Lang, MSmt, MSmtFormula, Problem, rexp, vec_smt};
 
@@ -25,7 +26,7 @@ bitflags::bitflags! {
 
 /// A step in protocol
 #[derive(Debug, PartialEq, Eq, Clone, Steel)]
-#[steel(getters, constructors)]
+// #[steel(getters, constructors)]
 pub struct Step {
     /// The identifier of the step
     pub id: Function,
@@ -35,6 +36,7 @@ pub struct Step {
     pub cond: Formula,
     /// The message of the step
     pub msg: Formula,
+    pub assignements: Assignements,
 }
 
 impl Default for Step {
@@ -54,12 +56,15 @@ impl Step {
         #[builder(with = <_>::from_iter, default = vec![])] vars: Vec<Variable>,
         #[builder(default = Formula::True())] cond: Formula,
         #[builder(default = Formula::constant(EMPTY.clone()))] msg: Formula,
+        #[builder(default)] assignements: Assignements,
     ) -> Option<Step> {
-        (vars.len() == id.signature.arity()).then_some(Self {
+        (vars.len() == id.signature.arity()).then_some(())?;
+        Some(Self {
             id,
             vars,
             cond,
             msg,
+            assignements,
         })
     }
 }
@@ -156,6 +161,7 @@ impl Step {
             vars: Vec::new(),
             cond: rexp!(true),
             msg,
+            assignements: Default::default(),
         }
     }
 }

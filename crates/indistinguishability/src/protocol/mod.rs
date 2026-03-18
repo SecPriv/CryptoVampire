@@ -11,6 +11,9 @@ mod protocol;
 /// Re-exports the `Protocol` struct, representing a cryptographic protocol.
 pub use protocol::Protocol;
 
+mod state;
+pub use state::{SingleAssignement, Assignements, SingleAssignementBuilder};
+
 use crate::terms::{
     Function, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, UNFOLD_COND,
     UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,

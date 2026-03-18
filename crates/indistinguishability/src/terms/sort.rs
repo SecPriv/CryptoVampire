@@ -26,6 +26,7 @@ pub enum Sort {
     Bool,
     Bitstring,
     Time,
+    MemoryCell,
     Protocol,
     Nonce,
     Index,
