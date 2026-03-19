@@ -26,7 +26,7 @@ pub fn add_prelude(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
     add_quantifiers(pbl, sink);
     add_alias(pbl, sink);
     add_extra_rw(pbl, sink);
-    
+
     sink.comment_block("Custom");
     sink.extend_smt(pbl.extra_smt().iter().cloned());
 

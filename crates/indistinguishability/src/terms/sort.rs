@@ -129,7 +129,7 @@ impl Sort {
             Self::Protocol => "Protocol",
             Self::Nonce => "Nonce",
             Self::Index => "Index",
-            Self::MemoryCell => "MemoryCell"
+            Self::MemoryCell => "MemoryCell",
         }
     }
 

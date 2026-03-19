@@ -1,3 +1,4 @@
+use cryptovampire_smt::SmtSink;
 use itertools::chain;
 use log::trace;
 
@@ -6,10 +7,7 @@ use crate::libraries::utils::SyntaxSearcher;
 use crate::libraries::utils::fresh::RefFormulaBuilder;
 use crate::protocol::Protocol;
 use crate::terms::{Formula, Function, IS_INDEPENDANT_BITSTRING, MACRO_FRAME, NONCE, Sort};
-use crate::{MSmt, MSmtFormula, Problem, rexp, smt};
-
-use cryptovampire_smt::SmtSink;
-use crate::MSmtParam;
+use crate::{MSmt, MSmtFormula, MSmtParam, Problem, rexp, smt};
 
 /// Creates the SMT formulas for the no-guessing theorem
 ///

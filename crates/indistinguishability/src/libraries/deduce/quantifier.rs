@@ -20,15 +20,14 @@ declare_trace!($"quantifier_deduce");
 use crate::libraries::utils::RuleSink;
 
 pub fn add_rules(_: &Problem, sink: &mut impl RuleSink) {
+    sink.reserve(2);
     for quantifier in [Exists, FindSuchThat] {
         let (patterns, return_patterns) = QuantifierRule::mk_patterns(quantifier);
-        sink.add_rule(
-            QuantifierRule {
-                quantifier,
-                patterns,
-                return_patterns,
-            }
-        );
+        sink.add_rule(QuantifierRule {
+            quantifier,
+            patterns,
+            return_patterns,
+        });
     }
 }
 

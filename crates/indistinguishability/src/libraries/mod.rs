@@ -249,8 +249,7 @@ mod vampire;
 
 mod ifs;
 
-pub use protocol::constrains;
-pub use protocol::publication;
+pub use protocol::{constrains, publication};
 
 mod xor;
 pub use xor::XOr;
@@ -271,9 +270,9 @@ pub use nonce::{FreshNonce, add_no_guessing_smt};
 /// Re-exports the `PRF` struct, representing a pseudo-random function.
 pub use prf::PRF;
 
-mod protocol;
-mod problem;
 mod base;
+mod problem;
+mod protocol;
 
 mod memory_cells;
 
@@ -293,25 +292,29 @@ mod sanity_check;
 /// In debug mode, it also includes the sanity check rule.
 pub fn add_golgge_rules(pbl: &Problem, sink: &mut impl utils::RuleSink) {
     let exec = SmtRunner::new(pbl);
-    let vampire_rule = VampireRule::builder().exec(exec.clone()).build().into_mrc();
-    let fresh_rule = FreshNonce::builder().exec(exec.clone()).build().into_mrc();
+    let vampire_rule = VampireRule::builder().exec(exec.clone()).build();
+    let fresh_rule = FreshNonce::builder().exec(exec.clone()).build();
 
     #[cfg(debug_assertions)]
-    sink.add_rc_rule(sanity_check::SanityCheck.into_mrc());
+    sink.add_rule(sanity_check::SanityCheck);
 
+    #[allow(deprecated)]
     sink.extend_rc_rules(pbl.extra_rules().iter().cloned());
     deduce::add_rules(pbl, sink);
     fa::add_prolog_rules(pbl, sink);
-    sink.add_rc_rule(substitution::SubstRule.into_mrc());
-    sink.add_rc_rule(vampire_rule);
-    sink.add_rc_rule(fresh_rule);
+    sink.add_rule(substitution::SubstRule);
+    sink.add_rule(vampire_rule);
+    sink.add_rule(fresh_rule);
 }
 
 /// Creates the default rewrite rules
 ///
 /// This function creates the default rewrite rules for the given problem.
 /// It includes the default rewrites and the lambda rewrites.
-pub fn add_egg_rewrites<N: Analysis<Lang>>(pbl: &Problem, sink: &mut impl utils::EggRewriteSink<N>) {
+pub fn add_egg_rewrites<N: Analysis<Lang>>(
+    pbl: &Problem,
+    sink: &mut impl utils::EggRewriteSink<N>,
+) {
     base::add_rewrites(pbl, sink);
     problem::add_rewrites(pbl, sink);
     protocol::unfold::add_rewrites(pbl, sink);

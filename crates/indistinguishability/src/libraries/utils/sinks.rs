@@ -10,12 +10,16 @@ use crate::problem::{PAnalysis, RcRule};
 use crate::terms::Rewrite;
 
 /// Specialized sink trait for prolog rules ([RcRule]).
+#[allow(deprecated)]
 pub trait RuleSink {
+    /// internal use only. Prefer `extend_rules`
     #[deprecated]
     fn extend_rc_rules(&mut self, iter: implvec!(RcRule));
 
+    /// reserve space
     fn reserve(&mut self, size: usize);
 
+    /// internal use only. Prefer `add_rule`
     #[deprecated]
     fn add_rc_rule(&mut self, rule: RcRule) {
         self.extend_rc_rules(Some(rule));
@@ -39,6 +43,7 @@ pub trait RuleSink {
         self.add_rc_rule(rule.into_mrc());
     }
 
+    /// use `add_rule` instead
     #[deprecated]
     fn add_prolog_rule(&mut self, rule: golgge::PrologRule<crate::Lang>) {
         use crate::problem::PRule;
@@ -54,6 +59,7 @@ where
         self.extend(iter);
     }
 
+    /// reserve space
     fn reserve(&mut self, size: usize) {
         Reservable::gen_reserve(self, size);
     }
@@ -78,6 +84,7 @@ where
         self.extend(iter);
     }
 
+    /// reserve space
     fn reserve(&mut self, size: usize) {
         Reservable::gen_reserve(self, size);
     }

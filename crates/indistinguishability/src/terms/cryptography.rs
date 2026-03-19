@@ -9,7 +9,7 @@ use utils::{dynamic_iter, match_as_trait};
 use crate::libraries::{self, add_no_guessing_smt};
 use crate::problem::ProblemState;
 use crate::terms::{Formula, Sort, Variable};
-use crate::{Problem, MSmtParam};
+use crate::{MSmtParam, Problem};
 
 /// Represents different cryptographic assumptions that can be made in the problem.
 #[derive(Debug, Default)]

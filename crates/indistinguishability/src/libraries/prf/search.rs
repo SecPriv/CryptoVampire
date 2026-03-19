@@ -9,7 +9,7 @@ use utils::{ereturn_if, ereturn_let};
 use super::PRFProof::*;
 use crate::libraries::PRF;
 use crate::libraries::utils::fresh::RefFormulaBuilder;
-use crate::libraries::utils::{SyntaxSearcher, get_protocol};
+use crate::libraries::utils::{RuleSink, SyntaxSearcher, get_protocol};
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::protocol::{Protocol, Step};
 use crate::runners::SmtRunner;
@@ -28,7 +28,7 @@ decl_vars!(const M:Bitstring, K:Nonce, P:Protocol, T:Time, H:Bool, N_PRF:Nonce);
 /// Creates an iterator of all prolog and search rules related to PRF analysis.
 ///
 /// These rules are used to guide the e-graph search for PRF indistinguishability.
-pub fn mk_rules<'a>(pbl: &'a Problem, prf: &'a PRF) -> impl Iterator<Item = RcRule> + use<'a> {
+pub fn mk_rules<'a>(pbl: &Problem, prf: &'a PRF, sink: &mut impl RuleSink) {
     // let functions = pbl
     //     .functions()
     //     .iter_current()
@@ -38,14 +38,8 @@ pub fn mk_rules<'a>(pbl: &'a Problem, prf: &'a PRF) -> impl Iterator<Item = RcRu
     //     .filter(|f| !f.is_special_subterm() || f.is_if_then_else())
     //     .cloned();
 
-    let prolog_rules = mk_static_rules(pbl, prf);
-
-    let search_rules = [PrfVampireRule::new(pbl, prf)];
-
-    chain![
-        prolog_rules.map(|p| p.into_mrc()),
-        search_rules.map(|p| p.into_mrc())
-    ]
+    mk_static_rules(pbl, prf, sink);
+    sink.add_rule(PrfVampireRule::new(pbl, prf));
 }
 
 /// basic search rule
@@ -94,7 +88,8 @@ fn mk_static_rules(
         hash,
         ..
     }: &PRF,
-) -> impl Iterator<Item = PrologRule<Lang>> {
+    sink: &mut impl RuleSink,
+) {
     let functions = pbl
         .functions()
         .iter_current()
@@ -105,132 +100,132 @@ fn mk_static_rules(
         .filter(|f| *f != &AND)
         .cloned();
     decl_vars!(m, k, m2, k2, h, n, nprf);
-    chain![
-        [
-            // search axiom
-            //
-            // ```text
-            // ---------------------
-            //  not(m, k, nprf ||> k | _)
-            // ```
-            //
-            // We represent it in prolog using `fail` and `!`, so it is
-            //
-            // ```text
-            // m, k, nprf ||> k | _ :- !, fail
-            // ```
-            //
-            // ### soundness
-            // This *needs* to be in front of the [mk_rule_one] for [NONCE].
-            mk_prolog! {
-                "search_prf_found_key"; m, k, h (Keep):
-                (search_m #m #k #nprf (NONCE #k) #h) :-!,
-                    (VAMPIRE (not #h))
-            }
-        ],
-        mk_many_prolog! {
-            "search_prf_false" (Keep):
-            (search_m #m #k #nprf #m2 false).
-
-            // ```text
-            //  |- h => k != n
-            // -----------
-            //  m,k ||> n | h
-            // ```
-            "search_prf_nonce" (Keep):
-            (search_m #m #k #nprf (NONCE #n) #h) :-
-                (VAMPIRE (=> #h (distinct #k #n))),
-                (VAMPIRE (=> #h (distinct #nprf #n)))
-                .
-
-            // ```text
-            // ---------------------
-            //  m, k ||> hash(m, (nonce k))
-            // ```
-            //
-            // this means that it will be captured by the substitution
-            "search_prf_found_instance" (Instance):
-            (search_m #m #k #nprf (hash #m (NONCE #k)) #h).
+    sink.extend_rules([
+        // search axiom
+        //
+        // ```text
+        // ---------------------
+        //  not(m, k, nprf ||> k | _)
+        // ```
+        //
+        // We represent it in prolog using `fail` and `!`, so it is
+        //
+        // ```text
+        // m, k, nprf ||> k | _ :- !, fail
+        // ```
+        //
+        // ### soundness
+        // This *needs* to be in front of the [mk_rule_one] for [NONCE].
+        mk_prolog! {
+            "search_prf_found_key"; m, k, h (Keep):
+            (search_m #m #k #nprf (NONCE #k) #h) :-!,
+                (VAMPIRE (not #h))
         },
-        functions.map(|f| mk_rule_one(prf, f)),
-        mk_many_prolog! {
-            // If [egg] can't prove that `m = m'` (e.g., we didn't trigger
-            // [mk_search_rule_found_instance]). Then we need to prove that `m` and
-            // `m'` trully are different otherwise the axiom will fail
-            //
-            // ```text
-            //  |- m != m'   m, k ||> m'
-            // -------------------------
-            //    m, k ||> hash(m', k)
-            // ```
-            "search_prf_neq_m" (Apply(hash.clone())):
-            (search_m #m #k #nprf (hash #m2 (NONCE #k)) #h) :-
-                (VAMPIRE (=> #h (distinct #m #m2))),
-                (search_m #m #k #nprf #m2 #h).
+    ]);
+    sink.extend_rules(mk_many_prolog! {
+        "search_prf_false" (Keep):
+        (search_m #m #k #nprf #m2 false).
+
+        // ```text
+        //  |- h => k != n
+        // -----------
+        //  m,k ||> n | h
+        // ```
+        "search_prf_nonce" (Keep):
+        (search_m #m #k #nprf (NONCE #n) #h) :-
+            (VAMPIRE (=> #h (distinct #k #n))),
+            (VAMPIRE (=> #h (distinct #nprf #n)))
+            .
+
+        // ```text
+        // ---------------------
+        //  m, k ||> hash(m, (nonce k))
+        // ```
+        //
+        // this means that it will be captured by the substitution
+        "search_prf_found_instance" (Instance):
+        (search_m #m #k #nprf (hash #m (NONCE #k)) #h).
+    });
+    for f in functions {
+        sink.add_rule(mk_rule_one(prf, f));
+    }
+    sink.extend_rules(mk_many_prolog! {
+    // If [egg] can't prove that `m = m'` (e.g., we didn't trigger
+    // [mk_search_rule_found_instance]). Then we need to prove that `m` and
+    // `m'` trully are different otherwise the axiom will fail
+    //
+    // ```text
+    //  |- m != m'   m, k ||> m'
+    // -------------------------
+    //    m, k ||> hash(m', k)
+    // ```
+    "search_prf_neq_m" (Apply(hash.clone())):
+    (search_m #m #k #nprf (hash #m2 (NONCE #k)) #h) :-
+        (VAMPIRE (=> #h (distinct #m #m2))),
+        (search_m #m #k #nprf #m2 #h).
 
 
 
-            // If [egg] can't prove that `k = k'`. Then we need to prove that `k` and
-            // `k'` trully are different otherwise the axiom will fail
-            //
-            // ```text
-            //  |- k != k'   m, k ||> m'   m, k ||> k'
-            // ---------------------------------------
-            //         m, k ||> hash(m', k')
-            // ```
-            "search_prf_neq_k" (Apply(hash.clone())):
-            (search_m #m #k #nprf (hash #m2  #k2) #h) :-
-                (VAMPIRE (=> #h (distinct (NONCE #k) #k2))),
-                (VAMPIRE (=> #h (distinct (NONCE #nprf) #k2))),
-                (search_m #m #k #nprf #m2 #h),
-                (search_m #m #k #nprf #k2 #h).
+    // If [egg] can't prove that `k = k'`. Then we need to prove that `k` and
+    // `k'` trully are different otherwise the axiom will fail
+    //
+    // ```text
+    //  |- k != k'   m, k ||> m'   m, k ||> k'
+    // ---------------------------------------
+    //         m, k ||> hash(m', k')
+    // ```
+    "search_prf_neq_k" (Apply(hash.clone())):
+    (search_m #m #k #nprf (hash #m2  #k2) #h) :-
+        (VAMPIRE (=> #h (distinct (NONCE #k) #k2))),
+        (VAMPIRE (=> #h (distinct (NONCE #nprf) #k2))),
+        (search_m #m #k #nprf #m2 #h),
+        (search_m #m #k #nprf #k2 #h).
 
 
-            // macros
-            "search_prf_exec" p, t (Keep):
-            (search_b #m #k (IS_FRESH_NONCE #nprf) (MACRO_EXEC #t  #p) #h) :-
-            (search_trigger #m #k #p #t #h).
+    // macros
+    "search_prf_exec" p, t (Keep):
+    (search_b #m #k (IS_FRESH_NONCE #nprf) (MACRO_EXEC #t  #p) #h) :-
+    (search_trigger #m #k #p #t #h).
 
-            "search_prf_frame" p, t (Keep):
-            (search_m #m #k (IS_FRESH_NONCE #nprf) (MACRO_FRAME #t  #p) #h) :-
-            (search_trigger #m #k #p #t #h).
+    "search_prf_frame" p, t (Keep):
+    (search_m #m #k (IS_FRESH_NONCE #nprf) (MACRO_FRAME #t  #p) #h) :-
+    (search_trigger #m #k #p #t #h).
 
-            "search_prf_input" p, t (Keep):
-            (search_m #m #k (IS_FRESH_NONCE #nprf) (MACRO_INPUT #t  #p) #h) :-
-            (search_trigger #m #k #p (PRED #t) #h).
+    "search_prf_input" p, t (Keep):
+    (search_m #m #k (IS_FRESH_NONCE #nprf) (MACRO_INPUT #t  #p) #h) :-
+    (search_trigger #m #k #p (PRED #t) #h).
 
-            // if and and
-            "search_prf_ite_m" c, l, r (Apply(MITE.clone())):
-            (search_m #m #k #nprf (MITE #c #l #r) #h):-
-                (search_b #m #k #nprf #c #h),
-                (search_m #m #k #nprf #l (and #c #h)),
-                (search_m #m #k #nprf #r (and (not #c) #h)).
+    // if and and
+    "search_prf_ite_m" c, l, r (Apply(MITE.clone())):
+    (search_m #m #k #nprf (MITE #c #l #r) #h):-
+        (search_b #m #k #nprf #c #h),
+        (search_m #m #k #nprf #l (and #c #h)),
+        (search_m #m #k #nprf #r (and (not #c) #h)).
 
-            "search_prf_ite_b" c, l, r (Apply(BITE.clone())):
-            (search_b #m #k #nprf (BITE #c #l #r) #h):-
-                (search_b #m #k #nprf #c #h),
-                (search_b #m #k #nprf #l (and #c #h)),
-                (search_b #m #k #nprf #r (and (not #c) #h)).
+    "search_prf_ite_b" c, l, r (Apply(BITE.clone())):
+    (search_b #m #k #nprf (BITE #c #l #r) #h):-
+        (search_b #m #k #nprf #c #h),
+        (search_b #m #k #nprf #l (and #c #h)),
+        (search_b #m #k #nprf #r (and (not #c) #h)).
 
-            "search_prf_and" a, b (Apply(AND.clone())):
-            (search_b #m #k #nprf (AND #a #b) #h):-
-                (search_b #m #k #nprf #a #h),
-                (search_b #m #k #nprf #b (and #a #h)).
+    "search_prf_and" a, b (Apply(AND.clone())):
+    (search_b #m #k #nprf (AND #a #b) #h):-
+        (search_b #m #k #nprf #a #h),
+        (search_b #m #k #nprf #b (and #a #h)).
 
-            // ~~~~~~~~~~~~~~~~ macros ~~~~~~~~~~~~~~~~~~
+    // ~~~~~~~~~~~~~~~~ macros ~~~~~~~~~~~~~~~~~~
 
-            "serach_prf_msg" t, p (Apply(MACRO_MSG.clone())):
-            (search_m #m #k #nprf (MACRO_MSG #t #p) #h):-
-                (VAMPIRE (=> #h (HAPPENS #t))),
-                (search_m #m #k #nprf (UNFOLD_MSG #t #p) #h).
+    "serach_prf_msg" t, p (Apply(MACRO_MSG.clone())):
+    (search_m #m #k #nprf (MACRO_MSG #t #p) #h):-
+        (VAMPIRE (=> #h (HAPPENS #t))),
+        (search_m #m #k #nprf (UNFOLD_MSG #t #p) #h).
 
-            "serach_prf_cond" t, p (Apply(MACRO_COND.clone())):
-            (search_b #m #k #nprf (MACRO_COND #t #p) #h):-
-                (VAMPIRE (=> #h (HAPPENS #t))),
-                (search_b #m #k #nprf (UNFOLD_COND #t #p) #h).
+    "serach_prf_cond" t, p (Apply(MACRO_COND.clone())):
+    (search_b #m #k #nprf (MACRO_COND #t #p) #h):-
+        (VAMPIRE (=> #h (HAPPENS #t))),
+        (search_b #m #k #nprf (UNFOLD_COND #t #p) #h).
 
-        }
-    ]
+    });
 }
 
 // =========================================================

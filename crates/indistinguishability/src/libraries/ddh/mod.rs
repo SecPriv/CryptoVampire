@@ -1,6 +1,7 @@
 use itertools::{Itertools, chain};
 
 use crate::libraries::ddh::rule::DDHRule;
+use crate::libraries::utils::{RewriteSink, RuleSink};
 use crate::problem::{PRule, ProblemState};
 use crate::terms::{
     CryptographicAssumption, Cryptography, Formula, Function, FunctionFlags, Rewrite, Sort,
@@ -104,21 +105,21 @@ impl DDH {
 
         // declare prolog rules
         {
-            let rules = chain![
-                search::mk_rules(pbl, &ddh),
-                subst::mk_rules(pbl, &ddh),
-                [DDHRule::new(&ddh).into_mrc()] /* ind_cca::mk_rules(pbl, &aenc),
-                                                 * enc_kp::mk_rules(pbl, &aenc) */
-            ]
-            .collect_vec();
-            pbl.extra_rules_mut().extend(rules);
+            let mut sink = ::std::mem::take(pbl.extra_rules_mut());
+            search::mk_rules(pbl, &ddh, &mut sink);
+            subst::mk_rules(pbl, &ddh, &mut sink);
+            sink.add_rule(DDHRule::new(&ddh));
+
+            *pbl.extra_rules_mut() = sink;
         }
 
         // declare rewrites
         {
-            let rewrites =
-                chain![ddh.extra_rewrites(pbl), candidate::mk_rwrites(pbl, &ddh)].collect_vec();
-            pbl.extra_rewrite_mut().extend(rewrites);
+            let mut sink = ::std::mem::take(pbl.extra_rewrite_mut());
+            ddh.extra_rewrites(pbl, &mut sink);
+            candidate::add_rwrites(pbl, &ddh, &mut sink);
+
+            *pbl.extra_rewrite_mut() = sink;
         }
 
         ddh.register_at(pbl, index).unwrap()
@@ -142,7 +143,7 @@ impl DDH {
         }
     }
 
-    fn extra_rewrites(&self, _pbl: &Problem) -> impl Iterator<Item = Rewrite> {
+    fn extra_rewrites(&self, _pbl: &Problem, sink: &mut impl RewriteSink) {
         let Self {
             exp,
             search_m,
@@ -150,23 +151,22 @@ impl DDH {
             search_trigger,
             ..
         } = self;
-        [
+        sink.extend_rewrites([
             mk_rewrite!(crate format!("{exp} symm"); (x Bitstring, y Bitstring, z Bitstring):
                 (exp (exp #x #y) #z) => (exp (exp #x #z) #y)),
-            mk_rewrite!(crate prolog format!("{search_m} symm"); 
+            mk_rewrite!(crate prolog format!("{search_m} symm");
                 (na Nonce, nb Nonce, nc Nonce, t Bitstring, h Bool):
                 (search_m #na #nb #nc #t #h)
                     => (search_m #nb #na #nc #t #h)),
-            mk_rewrite!(crate prolog format!("{search_b} symm"); 
+            mk_rewrite!(crate prolog format!("{search_b} symm");
                 (na Nonce, nb Nonce, nc Nonce, t Bool, h Bool):
                 (search_b #na #nb #nc #t #h)
                     => (search_b #nb #na #nc #t #h)),
-            mk_rewrite!(crate prolog format!("{search_trigger} symm"); 
+            mk_rewrite!(crate prolog format!("{search_trigger} symm");
                 (na Nonce, nb Nonce, t Time, p Protocol,  h Bool):
                 (search_trigger #na #nb #t #p #h)
                     => (search_trigger #nb #na #t #p #h)),
-        ]
-        .into_iter()
+        ])
     }
 }
 

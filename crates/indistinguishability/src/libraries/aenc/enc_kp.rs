@@ -12,11 +12,7 @@ use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::terms::{EQUIV, FRESH_NONCE, Function, FunctionFlags, NONCE, Sort};
 use crate::{Lang, Problem, rexp};
 
-pub fn mk_rules(
-    _: &Problem,
-    aenc: &AEnc,
-    sink: &mut impl RuleSink,
-) {
+pub fn mk_rules(_: &Problem, aenc: &AEnc, sink: &mut impl RuleSink) {
     sink.add_rule(EncKpRule::new(aenc));
 }
 

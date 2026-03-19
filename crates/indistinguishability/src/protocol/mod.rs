@@ -12,7 +12,7 @@ mod protocol;
 pub use protocol::Protocol;
 
 mod memory_cell;
-pub use memory_cell::{SingleAssignement, Assignements, SingleAssignementBuilder};
+pub use memory_cell::{Assignements, SingleAssignement, SingleAssignementBuilder};
 
 use crate::terms::{
     Function, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, UNFOLD_COND,

@@ -117,7 +117,7 @@ impl Step {
     pub(crate) fn add_unfold_rewrites<N: Analysis<Lang>>(
         &self,
         ptcl: &Function,
-        sink: &mut impl EggRewriteSink<N>
+        sink: &mut impl EggRewriteSink<N>,
     ) {
         trace!("mk unfold rw for {self}");
         let name = &self.id_expr();
@@ -145,8 +145,8 @@ impl Step {
         &self,
         pbl: &Problem,
         ptcl: &MSmtFormula,
-        sink: &mut impl SmtSink<MSmtParam>
-    ){
+        sink: &mut impl SmtSink<MSmtParam>,
+    ) {
         let [cond, msg, name]: [MSmtFormula; _] =
             [&self.cond, &self.msg, &self.id_expr()].map(|x| x.as_smt(pbl).unwrap());
         let vars = self.vars.iter().cloned();

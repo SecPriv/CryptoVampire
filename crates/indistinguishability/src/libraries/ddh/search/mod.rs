@@ -2,6 +2,7 @@ use itertools::chain;
 
 use crate::libraries::DDH;
 use crate::libraries::ddh::vars::*;
+use crate::libraries::utils::RuleSink;
 use crate::problem::{PRule, RcRule};
 use crate::runners::SmtRunner;
 use crate::{Problem, rexp};
@@ -18,14 +19,14 @@ pub fn mk_rules<'a>(
         // search_k_trigger,
         ..
     }: &'a DDH,
-) -> impl Iterator<Item = RcRule> + use<'a> {
-    chain![
-        prolog_rules::mk_static_rules(pbl, aenc).map(|r| r.into_mrc()),
-        [dynamic::SearchRule::builder()
+    sink: &mut impl RuleSink,
+) {
+    prolog_rules::mk_static_rules(pbl, aenc, sink);
+    sink.add_rule(
+        dynamic::SearchRule::builder()
             .ddh(*index)
             .exec(SmtRunner::new(pbl))
             .trigger(&rexp!((search_trigger #NA #NB #TIME #PTCL #H)))
-            .build()
-            .into_mrc()]
-    ]
+            .build(),
+    );
 }

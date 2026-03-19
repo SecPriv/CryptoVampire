@@ -2,11 +2,11 @@ use std::borrow::Cow;
 
 use egg::{Id, Language, Pattern, Searcher};
 use golgge::{Dependancy, Rule};
-use itertools::{Itertools, chain};
+use itertools::{Itertools, izip};
 use static_init::dynamic;
 use utils::ereturn_let;
 
-use crate::libraries::utils::RuleWithFreshNonce;
+use crate::libraries::utils::{RuleSink, RuleWithFreshNonce};
 use crate::problem::{PAnalysis, PRule, ProblemState, RcRule};
 use crate::terms::{
     CryptographicAssumption, Cryptography, EQUIV, FALSE, FRESH_NONCE, Formula, Function,
@@ -130,19 +130,18 @@ impl PRF {
 
         {
             // rules
-            let rules = chain![
-                prf.mk_prf_rule().map(|x| x.into_mrc()),
-                prf.mk_subst_rules().map(|x| x.into_mrc()),
-                search::mk_rules(pbl, &prf)
-            ]
-            .collect_vec();
-            pbl.extra_rules_mut().extend(rules);
+            let mut sink = ::std::mem::take(pbl.extra_rules_mut());
+            sink.extend_rules(prf.mk_prf_rule());
+            sink.extend_rules(prf.mk_subst_rules());
+            search::mk_rules(pbl, &prf, &mut sink);
+            *pbl.extra_rules_mut() = sink;
         }
 
         {
             // rewrites
-            let rewrites = chain![candidate::mk_rewrites(pbl, &prf),].collect_vec();
-            pbl.extra_rewrite_mut().extend(rewrites);
+            let mut sink = ::std::mem::take(pbl.extra_rewrite_mut());
+            candidate::add_rewrites(pbl, &prf, &mut sink);
+            *pbl.extra_rewrite_mut() = sink;
         }
 
         prf.register_at(pbl, pos).unwrap()

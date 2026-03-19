@@ -92,7 +92,7 @@ impl FunctionCollection {
     }
 
     /// List all the reifistered memory cells
-    pub fn memory_cells(&self) -> impl Iterator<Item = &Function>  {
+    pub fn memory_cells(&self) -> impl Iterator<Item = &Function> {
         self.functions.iter().filter(|f| f.is_memory_cell())
     }
 
