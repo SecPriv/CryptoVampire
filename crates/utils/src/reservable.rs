@@ -1,4 +1,5 @@
-use std::{collections::VecDeque, hash::{BuildHasher, Hash}};
+use std::collections::VecDeque;
+use std::hash::{BuildHasher, Hash};
 
 use hashbrown::{HashMap, HashSet};
 

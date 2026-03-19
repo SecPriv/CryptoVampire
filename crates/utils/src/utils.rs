@@ -272,7 +272,6 @@ pub fn print_type<T>(_: &T) -> &'static str {
     std::any::type_name::<T>()
 }
 
-
 /// Calls `trace!` on something that may panic while printing and catches the error if it does
 #[macro_export]
 macro_rules! try_trace {
@@ -310,11 +309,11 @@ macro_rules! exprdebug {
     };
     (let $id:ident : $ty:ty = $t:expr) => {
         #[cfg(debug_assertions)]
-        let $id : $ty = $t;
+        let $id: $ty = $t;
     };
     (let mut $id:ident : $ty:ty = $t:expr) => {
         #[cfg(debug_assertions)]
-        let mut $id : $ty = $t;
+        let mut $id: $ty = $t;
     };
     ($b:block) => {
         #[cfg(debug_assertions)]

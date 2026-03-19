@@ -1391,7 +1391,7 @@ impl<L: Language, N: Analysis<L>> EGraph<L, N> {
     ///
     /// # Example
     /// ```
-    /// use egg::{*, SymbolLang as S};
+    /// use egg::{SymbolLang as S, *};
     /// let mut egraph = EGraph::<S, ()>::default();
     /// let x = egraph.add(S::leaf("x"));
     /// let y = egraph.add(S::leaf("y"));
