@@ -36,8 +36,10 @@ pub static PATTERN_FA: Pattern<Lang> = Pattern::from(&rexp!((EQUIV #U #V #A #B))
 /// A rule for handling forall quantifiers.
 pub struct FaRule;
 
-pub fn mk_prolog_rules(_: &Problem) -> impl Iterator<Item = RcRule> {
-    [FaRule.into_mrc()].into_iter()
+use crate::libraries::utils::RuleSink;
+
+pub fn add_prolog_rules(_: &Problem, sink: &mut impl RuleSink) {
+    sink.add_rule(FaRule);
 }
 
 impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for FaRule {

@@ -6,10 +6,10 @@ use anyhow::{Context, bail, ensure};
 use cryptovampire_smt::SmtSink;
 use utils::{dynamic_iter, match_as_trait};
 
-use crate::libraries::{self, mk_no_guessing_smt};
+use crate::libraries::{self, add_no_guessing_smt};
 use crate::problem::ProblemState;
 use crate::terms::{Formula, Sort, Variable};
-use crate::{MSmt, Problem, MSmtParam};
+use crate::{Problem, MSmtParam};
 
 /// Represents different cryptographic assumptions that can be made in the problem.
 #[derive(Debug, Default)]
@@ -25,20 +25,6 @@ pub enum CryptographicAssumption {
 }
 
 impl CryptographicAssumption {
-    // /// Generates SMT prelude statements based on the cryptographic assumption.
-    // pub fn mk_prelude<'a>(&'a self, pbl: &'a Problem) -> impl Iterator<Item = MSmt> + use<'a> {
-    //     dynamic_iter!(Ret; Empty:Empty, NGTH:A, PRF:B, AEnc:C, XOr:D, DDH:E);
-
-    //     match self {
-    //         Self::NoGuessingTh => Ret::NGTH(mk_no_guessing_smt(pbl)),
-    //         Self::PRF(prf) => Ret::PRF(prf.mk_prelude(pbl)),
-    //         Self::AEnc(prf) => Ret::AEnc(prf.mk_prelude(pbl)),
-    //         Self::XOr(prf) => Ret::XOr(prf.mk_prelude(pbl)),
-    //         Self::DDH(prf) => Ret::DDH(prf.mk_prelude(pbl)),
-    //         Self::Undefined => Ret::Empty(::std::iter::empty()),
-    //     }
-    // }
-
     /// Returns `true` if the cryptographic assumption is [`Undefined`].
     ///
     /// [`Undefined`]: CryptographicAssumption::Undefined
@@ -55,10 +41,6 @@ impl CryptographicAssumption {
 
 pub trait Cryptography: Into<CryptographicAssumption> {
     fn add_prelude(&self, _pbl: &Problem, _sink: &mut impl SmtSink<MSmtParam>) {}
-
-    fn mk_prelude<'a>(&'a self, _: &'a Problem) -> impl Iterator<Item = MSmt> + use<'a, Self> {
-        ::std::iter::empty()
-    }
 
     fn name(&self) -> impl Display;
 
@@ -99,25 +81,12 @@ impl Cryptography for CryptographicAssumption {
 
     fn add_prelude(&self, pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
         match self {
-            Self::NoGuessingTh => sink.extend_smt(mk_no_guessing_smt(pbl)),
+            Self::NoGuessingTh => add_no_guessing_smt(pbl, sink),
             Self::PRF(x) => x.add_prelude(pbl, sink),
             Self::AEnc(x) => x.add_prelude(pbl, sink),
             Self::XOr(x) => x.add_prelude(pbl, sink),
             Self::DDH(x) => x.add_prelude(pbl, sink),
             Self::Undefined => {}
-        }
-    }
-
-    fn mk_prelude<'a>(&'a self, pbl: &'a Problem) -> impl Iterator<Item = MSmt> + use<'a> {
-        dynamic_iter!(Ret; Empty:Empty, NGTH:A, PRF:B, AEnc:C, XOr:D, DDH:E);
-
-        match self {
-            Self::NoGuessingTh => Ret::NGTH(mk_no_guessing_smt(pbl)),
-            Self::PRF(prf) => Ret::PRF(prf.mk_prelude(pbl)),
-            Self::AEnc(prf) => Ret::AEnc(prf.mk_prelude(pbl)),
-            Self::XOr(prf) => Ret::XOr(prf.mk_prelude(pbl)),
-            Self::DDH(prf) => Ret::DDH(prf.mk_prelude(pbl)),
-            Self::Undefined => Ret::Empty(::std::iter::empty()),
         }
     }
 

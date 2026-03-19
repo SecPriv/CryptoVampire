@@ -16,12 +16,12 @@ use crate::{Lang, Problem, fresh, rexp};
 /// ```
 ///
 /// for all "regular" `f`s
-pub fn mk_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> + use<'_> {
-    pbl.functions()
-        .iter_current()
-        .filter(|x| should_process_normaly(x))
-        .map(mk_deduce_rule)
-        .map(|x| x.into_mrc())
+use crate::libraries::utils::RuleSink;
+
+pub fn add_rules(pbl: &Problem, sink: &mut impl RuleSink) {
+    for f in pbl.functions().iter_current().filter(|x| should_process_normaly(x)) {
+        sink.add_rule(mk_deduce_rule(f));
+    }
 }
 
 fn should_process_normaly(f: &Function) -> bool {

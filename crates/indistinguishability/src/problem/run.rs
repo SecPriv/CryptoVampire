@@ -40,8 +40,10 @@ impl Problem {
                 .build()
         };
 
-        let eq_rules = libraries::mk_egg_rewrites(self);
-        let rules: Vec<RcRule> = libraries::mk_golgge_rules(self).collect_vec();
+        let mut eq_rules = Vec::new();
+        let mut rules: Vec<RcRule> = Vec::new();
+        libraries::add_egg_rewrites(self, &mut eq_rules);
+        libraries::add_golgge_rules(self, &mut rules);
 
         let mut prgm = golgge::Program::build()
             .eq_rules(eq_rules)

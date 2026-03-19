@@ -8,21 +8,20 @@ use crate::protocol::Protocol;
 use crate::terms::{Formula, Function, IS_INDEPENDANT_BITSTRING, MACRO_FRAME, NONCE, Sort};
 use crate::{MSmt, MSmtFormula, Problem, rexp, smt};
 
+use cryptovampire_smt::SmtSink;
+use crate::MSmtParam;
+
 /// Creates the SMT formulas for the no-guessing theorem
 ///
 /// This function creates the SMT formulas for the no-guessing theorem.
 /// It includes the no-guessing theorem itself, the SMT nonce, the SMT formulas
 /// for the functions, and the SMT formulas for the steps.
-pub fn mk_no_guessing_smt<'a>(pbl: &'a Problem) -> impl Iterator<Item = MSmt> + use<'a> {
-    chain![
-        [MSmt::Comment("no guessing theorem & co".into())],
-        chain![
-            [mk_no_guessing_theorem(), mk_smt_nonce(),],
-            pbl.functions().iter_current().filter_map(mk_smt_fun_one),
-            pbl.protocols().iter().map(|ptcl| mk_smt_step(pbl, ptcl))
-        ]
-        .map(MSmt::mk_assert)
-    ]
+pub fn add_no_guessing_smt(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
+    sink.comment("no guessing theorem & co");
+    sink.assert_one(mk_no_guessing_theorem());
+    sink.assert_one(mk_smt_nonce());
+    sink.assert_many(pbl.functions().iter_current().filter_map(mk_smt_fun_one));
+    sink.assert_many(pbl.protocols().iter().map(|ptcl| mk_smt_step(pbl, ptcl)));
 }
 
 /// Generates the SMT formula for the no-guessing theorem.

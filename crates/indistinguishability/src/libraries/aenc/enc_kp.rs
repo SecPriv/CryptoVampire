@@ -7,13 +7,17 @@ use itertools::{Itertools, chain};
 use super::vars::*;
 use crate::libraries::AEnc;
 use crate::libraries::utils::Side::{Left, Right};
-use crate::libraries::utils::{FreshNonceSet, RuleWithFreshNonce, TwoSortFunction};
+use crate::libraries::utils::{FreshNonceSet, RuleSink, RuleWithFreshNonce, TwoSortFunction};
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::terms::{EQUIV, FRESH_NONCE, Function, FunctionFlags, NONCE, Sort};
 use crate::{Lang, Problem, rexp};
 
-pub fn mk_rules(_: &Problem, aenc: &AEnc) -> impl Iterator<Item = RcRule> {
-    [EncKpRule::new(aenc).into_mrc()].into_iter()
+pub fn mk_rules(
+    _: &Problem,
+    aenc: &AEnc,
+    sink: &mut impl RuleSink,
+) {
+    sink.add_rule(EncKpRule::new(aenc));
 }
 
 struct EncKpRule {

@@ -12,21 +12,28 @@ use crate::{MSmt, MSmtFormula, MSmtParam, Problem, smt, vec_smt};
 
 pub fn add_prelude(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
     add_header(pbl, sink);
-    sink.extend_one_smt(MSmt::comment_block("static"));
+
+    sink.comment_block("static");
     add_base_order(pbl, sink);
     add_base_macro(pbl, sink);
     add_base_rewrite(pbl, sink);
-    sink.extend_one_smt(MSmt::comment_block("term algebra"));
+
+    sink.comment_block("term algebra");
     add_step_diff(pbl, sink);
-    sink.extend_one_smt(MSmt::comment_block("Protocol definition"));
+
+    sink.comment_block("Protocol definition");
     add_steps_macros(pbl, sink);
     add_quantifiers(pbl, sink);
     add_alias(pbl, sink);
     add_extra_rw(pbl, sink);
-    sink.extend_one_smt(MSmt::comment_block("Custom"));
+    
+    sink.comment_block("Custom");
     sink.extend_smt(pbl.extra_smt().iter().cloned());
-    sink.extend_one_smt(MSmt::comment_block("Cryptography"));
-    sink.extend_smt(pbl.cryptography().iter().flat_map(|c| c.mk_prelude(pbl)));
+
+    sink.comment_block("Cryptography");
+    for c in pbl.cryptography() {
+        c.add_prelude(pbl, sink);
+    }
 }
 
 /// Determines if a given function should be declared in the SMT prelude.
@@ -157,12 +164,12 @@ fn add_pseudo_datatype_diff(funs: Vec<Function>, sink: &mut impl SmtSink<MSmtPar
 /// This iterates through all protocols and their steps, generating SMT rewrites
 /// for `UNFOLD_COND`, `UNFOLD_MSG`, `UNFOLD_EXEC`, `UNFOLD_FRAME`, and `UNFOLD_INPUT`.
 fn add_steps_macros(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
-    sink.extend_smt(
-        pbl.protocols()
-            .iter()
-            .flat_map(|p| p.steps().iter().map(move |s| (p.as_smt(), s)))
-            .flat_map(|(ptcl, s)| s.mk_unfold_vampire_rewrites(pbl, &ptcl)),
-    );
+    for ptcl in pbl.protocols() {
+        let p = ptcl.as_smt();
+        for s in ptcl.steps() {
+            s.add_unfold_vampire_rewrites(pbl, &p, sink)
+        }
+    }
 }
 
 /// Generates SMT assertions to ensure distinctness of protocol steps.

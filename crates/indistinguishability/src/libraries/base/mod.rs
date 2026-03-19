@@ -7,17 +7,18 @@ use crate::terms::{
 };
 use crate::{Lang, Problem};
 
+use crate::libraries::utils::EggRewriteSink;
+
 /// Creates a set of base rewrite rules.
-pub fn mk_rewrites<N: Analysis<Lang>>(
-    pbl: &Problem,
-) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
-    chain![mk_logic_rewrites(), mk_quantifier_rewrites(pbl)]
+pub fn add_rewrites<N: Analysis<Lang>>(pbl: &Problem, sink: &mut impl EggRewriteSink<N>) {
+    add_logic_rewrites(sink);
+    add_quantifier_rewrites(pbl, sink);
 }
 
-fn mk_logic_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>> {
+fn add_logic_rewrites<N: Analysis<Lang>>(sink: &mut impl EggRewriteSink<N>){
     decl_vars![a, b, c, v1, n, u, v];
 
-    mk_many_rewrites! {
+    sink.extend_egg_rewrites(mk_many_rewrites! {
 
       ["implies simp1"] (IMPLIES true #a) => (#a).
       ["implies simp2"] (IMPLIES #a true) => true.
@@ -63,29 +64,18 @@ fn mk_logic_rewrites<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, 
 
       ["equiv right"]
         (EQUIV_WITH_SIDE RIGHT #u #v #a #b) => (EQUIV #u #v #b #a).
-    }
-    .into_iter()
+    })
 }
 
-fn mk_quantifier_rewrites<N: Analysis<Lang>>(
-    _: &Problem,
-) -> impl Iterator<Item = Rewrite<Lang, N>> {
+fn add_quantifier_rewrites<N: Analysis<Lang>>(
+    _: &Problem, sink: &mut impl EggRewriteSink<N>
+) {
     decl_vars![a, b, c];
 
-    mk_many_rewrites! {
+    sink.extend_egg_rewrites(mk_many_rewrites! {
         ["empty exists"]
         (EXISTS NIL #a) => (#a).
         ["empty find"]
         (FIND_SUCH_THAT NIL #a #b #c) => (MITE #a #b #c).
-    }
-    .into_iter()
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    #[test]
-    fn mk_rewrite_works() {
-        let _: Vec<_> = mk_rewrites::<()>(&Problem::builder().build()).collect();
-    }
+    })
 }

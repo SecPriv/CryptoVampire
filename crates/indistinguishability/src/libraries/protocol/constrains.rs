@@ -48,19 +48,23 @@ use crate::MSmtParam;
 pub fn add_smt(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
     sink.comment("Constrains");
 
+    sink.reserve(pbl.constrains().len());
     for constrain in pbl.constrains() {
-        mk_smt_constrain_one(pbl, constrain, sink);
+        add_smt_constrain_one(pbl, constrain, sink);
     }
 }
 
-pub fn mk_rewrite<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = egg::Rewrite<Lang, N>> {
-    chain![
-        mk_rewrite_static(),
-        pbl.constrains().iter().flat_map(|c| mk_rewrite_one(pbl, c))
-    ]
+use crate::libraries::utils::EggRewriteSink;
+
+pub fn add_rewrites<N: Analysis<Lang>>(pbl: &Problem, sink: &mut impl EggRewriteSink<N>) {
+    add_rewrite_static(sink);
+
+    for c in pbl.constrains() {
+        add_rewrite_one(pbl, c, sink)
+    }
 }
 
-fn mk_smt_constrain_one(
+fn add_smt_constrain_one(
     _: &Problem,
     bind!(s1(a1..) op s2(a2..)): &Constrains,
     sink: &mut impl SmtSink<MSmtParam>,
@@ -83,10 +87,11 @@ fn mk_smt_constrain_one(
 
 decl_vars!(const TRUTH_VAR:Bool);
 
-fn mk_rewrite_one<N: Analysis<Lang>>(
+fn add_rewrite_one<N: Analysis<Lang>>(
     pbl: &Problem,
     bind!(s1(a1..) op s2(a2..)): &Constrains,
-) -> impl Iterator<Item = egg::Rewrite<Lang, N>> {
+    sink: &mut impl EggRewriteSink<N>,
+) {
     let CurrentStep { idx, args } = pbl.current_step().unwrap();
     let cf = pbl.get_step_fun(*idx).unwrap();
     let argscf = args.iter().map(|f| rexp!(f)).collect_vec();
@@ -114,7 +119,9 @@ fn mk_rewrite_one<N: Analysis<Lang>>(
                 TRUTH_VAR.as_egg(),
                 rexp!((LT (s1 #argss1*) (s2 #argscf*))).as_egg_var(),
             )]);
-            Rewrite::new(format!("constrain {s1} < {s2}"), premise, conclusion).ok()
+            sink.add_egg_rewrite(
+                Rewrite::new(format!("constrain {s1} < {s2}"), premise, conclusion).unwrap(),
+            )
         }
         ConstrainOp::Exclude if s1 == cf || s2 == cf => {
             let (s1, a1, a2) = if s1 == cf { (s2, a2, a1) } else { (s1, a1, a2) };
@@ -139,36 +146,36 @@ fn mk_rewrite_one<N: Analysis<Lang>>(
                 TRUTH_VAR.as_egg(),
                 rexp!((HAPPENS (s1 #argss1*))).as_egg_var(),
             )]);
-            Rewrite::new(format!("constrain {s1} <> {s2}"), premise, conclusion).ok()
+            sink.add_egg_rewrite(
+                Rewrite::new(format!("constrain {s1} <> {s2}"), premise, conclusion).unwrap(),
+            )
         }
-        _ => None,
+        _ => {}
     }
-    .into_iter()
 }
 
-fn mk_rewrite_static<N: Analysis<Lang>>() -> impl Iterator<Item = egg::Rewrite<Lang, N>> {
+fn add_rewrite_static<N: Analysis<Lang>>(sink: &mut impl EggRewriteSink<N>) {
     decl_vars![t, t1, t2, v1];
 
-    mk_many_rewrites! {
-     ["leq refl"] (LEQ #t #t) => true.
-     ["leq pred"] (LEQ (PRED #t) #t) => true.
-     ["leq pred rev"] (LEQ #t (PRED #t)) => false.
-     ["lt pred rev"] (LT #t (PRED #t)) => false.
-     ["lt self rev"] (LT #t  #t) => false.
+    sink.extend_egg_rewrites(mk_many_rewrites! {
+        ["leq refl"] (LEQ #t #t) => true.
+        ["leq pred"] (LEQ (PRED #t) #t) => true.
+        ["leq pred rev"] (LEQ #t (PRED #t)) => false.
+        ["lt pred rev"] (LT #t (PRED #t)) => false.
+        ["lt self rev"] (LT #t  #t) => false.
 
-     ["pred init"] (PRED INIT) => INIT.
+        ["pred init"] (PRED INIT) => INIT.
 
-     ["happens leq"]
-     (#v1 = (HAPPENS #t1), #v1 = (LT  #t2 #t1), #v1 = true) => (#v1 = (HAPPENS #t2)).
+        ["happens leq"]
+        (#v1 = (HAPPENS #t1), #v1 = (LT  #t2 #t1), #v1 = true) => (#v1 = (HAPPENS #t2)).
 
-     ["lt to leq"]
-     (#v1 = (LT  #t2 #t1), #v1 = true) => (#v1 = (LEQ #t2 (PRED #t1))).
+        ["lt to leq"]
+        (#v1 = (LT  #t2 #t1), #v1 = true) => (#v1 = (LEQ #t2 (PRED #t1))).
 
-     ["leq trans"]
-     (#v1 = (LEQ #t1 #t2), #v1 = (LEQ #t2 #t), #v1 = true) => (#v1 = (LEQ #t1 #t)).
+        ["leq trans"]
+        (#v1 = (LEQ #t1 #t2), #v1 = (LEQ #t2 #t), #v1 = true) => (#v1 = (LEQ #t1 #t)).
 
-     ["lt trans"]
-     (#v1 = (LT #t1 #t2), #v1 = (LT #t2 #t), #v1 = true) => (#v1 = (LT #t1 #t)).
-    }
-    .into_iter()
+        ["lt trans"]
+        (#v1 = (LT #t1 #t2), #v1 = (LT #t2 #t), #v1 = true) => (#v1 = (LT #t1 #t)).
+    })
 }

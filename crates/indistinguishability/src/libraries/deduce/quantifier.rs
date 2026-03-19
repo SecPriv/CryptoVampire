@@ -5,7 +5,7 @@ use itertools::izip;
 use rustc_hash::FxHashMap;
 use utils::{ebreak_if, ebreak_let, econtinue_let, ereturn_let, match_eq};
 
-use crate::libraries::mk_egg_rewrites;
+use crate::libraries::add_egg_rewrites;
 use crate::libraries::utils::find_available_id;
 use crate::libraries::utils::lambda_subst::lambda_subst;
 use crate::problem::{PAnalysis, PRule, RcRule};
@@ -17,18 +17,19 @@ use crate::{CVProgram, Lang, Problem, fresh, rexp};
 
 declare_trace!($"quantifier_deduce");
 
-pub fn mk_rules(_: &Problem) -> impl Iterator<Item = RcRule> {
-    [Exists, FindSuchThat]
-        .map(|quantifier| {
-            let (patterns, return_patterns) = QuantifierRule::mk_patterns(quantifier);
+use crate::libraries::utils::RuleSink;
+
+pub fn add_rules(_: &Problem, sink: &mut impl RuleSink) {
+    for quantifier in [Exists, FindSuchThat] {
+        let (patterns, return_patterns) = QuantifierRule::mk_patterns(quantifier);
+        sink.add_rule(
             QuantifierRule {
                 quantifier,
                 patterns,
                 return_patterns,
             }
-        })
-        .map(|x| x.into_mrc())
-        .into_iter()
+        );
+    }
 }
 
 /// A rule for deducing properties of quantifiers.
@@ -142,7 +143,8 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for QuantifierRule {
             .collect();
 
         // because we introduced new constants
-        let eq_rules = mk_egg_rewrites(prgm.egraph().analysis.pbl()).collect();
+        let mut eq_rules = Vec::new();
+        add_egg_rewrites(prgm.egraph().analysis.pbl(), &mut eq_rules);
         prgm.set_eq_rules(eq_rules);
 
         deps

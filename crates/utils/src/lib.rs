@@ -26,3 +26,5 @@ pub mod impossible;
 pub mod transposer;
 
 pub mod powerset;
+
+pub mod reservable;

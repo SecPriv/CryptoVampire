@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use bon::bon;
+use cryptovampire_smt::SmtSink;
 use egg::{Analysis, Pattern, Rewrite};
 use itertools::{Itertools, chain};
 use log::trace;
@@ -11,9 +12,10 @@ use steel_derive::Steel;
 use thiserror::Error;
 
 use crate::input::Registerable;
+use crate::libraries::utils::EggRewriteSink;
 use crate::protocol::memory_cell::Assignements;
 use crate::terms::{EMPTY, Formula, Function, INIT, UNFOLD_COND, UNFOLD_MSG, Variable};
-use crate::{Lang, MSmt, MSmtFormula, Problem, rexp, vec_smt};
+use crate::{Lang, MSmt, MSmtFormula, MSmtParam, Problem, rexp, vec_smt};
 
 bitflags::bitflags! {
   #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord,
@@ -112,10 +114,11 @@ impl Step {
     ///
     /// These rewrites are used in the e-graph to replace `UNFOLD_COND` and `UNFOLD_MSG` applications
     /// with the actual condition and message formulas of the step.
-    pub(crate) fn mk_unfold_rewrites<N: Analysis<Lang>>(
+    pub(crate) fn add_unfold_rewrites<N: Analysis<Lang>>(
         &self,
         ptcl: &Function,
-    ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
+        sink: &mut impl EggRewriteSink<N>
+    ) {
         trace!("mk unfold rw for {self}");
         let name = &self.id_expr();
         let ptcl = &rexp!(ptcl);
@@ -133,26 +136,26 @@ impl Step {
         )
         .unwrap();
 
-        [unfold_cond, unfold_msg].into_iter()
+        sink.extend_egg_rewrites([unfold_cond, unfold_msg])
     }
 
     /// Creates an iterator of SMT formulas representing the unfolding of the condition and message
     /// for use with the Vampire SMT solver.
-    pub(crate) fn mk_unfold_vampire_rewrites(
+    pub(crate) fn add_unfold_vampire_rewrites(
         &self,
         pbl: &Problem,
         ptcl: &MSmtFormula,
-    ) -> impl Iterator<Item = MSmt> + use<'_> {
+        sink: &mut impl SmtSink<MSmtParam>
+    ){
         let [cond, msg, name]: [MSmtFormula; _] =
             [&self.cond, &self.msg, &self.id_expr()].map(|x| x.as_smt(pbl).unwrap());
         let vars = self.vars.iter().cloned();
 
-        vec_smt![%
+        sink.extend_smt(vec_smt![%
             ; format!("unfolding of {name}"),
             (forall !(vars.clone()) (= (UNFOLD_COND #name #ptcl) #cond)),
             (forall !(vars.clone()) (= (UNFOLD_MSG #name #ptcl) #msg))
-        ]
-        .into_iter()
+        ])
     }
 
     pub fn mk_publish_step(id: Function, msg: Formula) -> Self {

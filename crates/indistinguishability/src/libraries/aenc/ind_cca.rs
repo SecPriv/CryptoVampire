@@ -3,7 +3,7 @@ use utils::dynamic_iter;
 use super::vars::*;
 use crate::Problem;
 use crate::libraries::AEnc;
-use crate::libraries::utils::TwoSortFunction;
+use crate::libraries::utils::{RuleSink, TwoSortFunction};
 use crate::problem::{PRule, RcRule};
 use crate::terms::{EQUIV, FRESH_NONCE, LEFT, LENGTH, NONCE, RIGHT, ZEROES};
 
@@ -18,11 +18,10 @@ pub fn mk_rules(
         search_k: TwoSortFunction { m: search_k, .. },
         ..
     }: &AEnc,
-) -> impl Iterator<Item = RcRule> {
-    dynamic_iter!(MIter; A:A, B:B);
-
+    sink: &mut impl RuleSink,
+) {
     if let Some(pk) = pk {
-        let ret = mk_many_prolog! {
+        sink.extend_rules(mk_many_prolog! {
           "ind-cca1-left" :
             (EQUIV #U #V (candidate #T #M #R #K) #B) :-
               (search_o #K #M true),
@@ -40,12 +39,8 @@ pub fn mk_rules(
               (subst RIGHT #U #V
                 (enc (ZEROES (LENGTH #M)) (NONCE #R) (pk (NONCE #K))) (search_k #K #K #R #M #T true)
                 #B).
-        }
-        .into_iter()
-        .map(|x| x.into_mrc());
-        MIter::A(ret)
-    } else {
-        // no ind-cca if senc
-        MIter::B(::std::iter::empty())
+        })
     }
+
+    // no ind-cca if senc
 }

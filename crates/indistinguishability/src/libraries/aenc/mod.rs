@@ -1,6 +1,6 @@
 use itertools::{Itertools, chain};
 
-use crate::libraries::utils::TwoSortFunction;
+use crate::libraries::utils::{RewriteSink, TwoSortFunction};
 use crate::problem::ProblemState;
 use crate::terms::{
     CryptographicAssumption, Cryptography, Formula, Function, FunctionFlags, Rewrite, Sort,
@@ -161,35 +161,41 @@ impl AEnc {
 
         // declare prolog rules
         {
-            let rules = chain![
-                search::mk_rules(pbl, &aenc),
-                subst::mk_rules(pbl, &aenc),
-                ind_cca::mk_rules(pbl, &aenc),
-                enc_kp::mk_rules(pbl, &aenc),
-            ]
-            .collect_vec();
-            pbl.extra_rules_mut().extend(rules);
+            let mut sink = ::std::mem::take(pbl.extra_rules_mut());
+            search::mk_rules(pbl, &aenc, &mut sink);
+            subst::mk_rules(pbl, &aenc, &mut sink);
+            ind_cca::mk_rules(pbl, &aenc, &mut sink);
+            enc_kp::mk_rules(pbl, &aenc, &mut sink);
+
+            *pbl.extra_rules_mut() = sink;
         }
 
         // declare rewrites
         {
-            let rewrites =
-                chain![aenc.extra_rewrites(pbl), candidate::mk_rwrites(pbl, &aenc)].collect_vec();
-            pbl.extra_rewrite_mut().extend(rewrites);
+            let mut sink = ::std::mem::take(pbl.extra_rewrite_mut());
+            aenc.extra_rewrites(pbl, &mut sink);
+            candidate::add_rwrites(pbl, &aenc, &mut sink);
+
+            *pbl.extra_rewrite_mut() = sink;
         }
 
         aenc.register_at(pbl, index).unwrap()
     }
 
-    fn extra_rewrites(&self, _pbl: &Problem) -> impl Iterator<Item = Rewrite> {
+    fn extra_rewrites(&self, _pbl: &Problem, sink: &mut impl RewriteSink) {
         let Self { enc, dec, pk, .. } = self;
         // crate::mk_rewrite!()
         if let Some(pk) = pk {
-        [mk_rewrite!(crate format!("{enc} simplification"); (m Bitstring, r Bitstring, k Bitstring):
-            (dec (enc #m #r (pk #k)) #k) => (#m))
-        ] } else {[mk_rewrite!(crate format!("{enc} simplification"); (m Bitstring, r Bitstring, k Bitstring):
-            (dec (enc #m #r #k) #k) => (#m))
-        ]}.into_iter()
+            sink.add_rewrite(
+            mk_rewrite!{crate format!("{enc} simplification"); (m Bitstring, r Bitstring, k Bitstring):
+                (dec (enc #m #r (pk #k)) #k) => (#m)}
+        )
+        } else {
+            sink.add_rewrite(
+                mk_rewrite!{crate format!("{enc} simplification"); (m Bitstring, r Bitstring, k Bitstring):
+                (dec (enc #m #r #k) #k) => (#m)}
+            )
+        }
     }
 }
 

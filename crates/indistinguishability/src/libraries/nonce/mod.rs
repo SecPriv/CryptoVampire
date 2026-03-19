@@ -12,8 +12,8 @@ pub use searcher::Nonce;
 /// Provides functionalities for searching for nonces.
 mod searcher;
 
-/// Re-exports the `mk_no_guessing_smt` function, which generates SMT formulas for no-guessing assumptions.
-pub use smt_no_guessing::mk_no_guessing_smt;
+/// Re-exports the `add_no_guessing_smt` function, which generates SMT formulas for no-guessing assumptions.
+pub use smt_no_guessing::add_no_guessing_smt;
 /// Provides SMT-related functionalities for no-guessing assumptions.
 mod smt_no_guessing;
 

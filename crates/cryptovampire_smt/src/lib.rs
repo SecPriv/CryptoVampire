@@ -29,6 +29,7 @@ pub mod solvers;
 mod formatter;
 pub use formatter::Term as SmtPrettyPrinter;
 pub(crate) use formatter::translate_smt_to_term;
+use utils::reservable::Reservable;
 
 use crate::solvers::{Solver, SolverFeatures};
 
@@ -221,6 +222,7 @@ pub enum CheckError {
 
 pub trait SmtSink<U: SmtParam> where <U as SmtParam>::SVar: std::cmp::Eq {
     fn extend_smt(&mut self, iter: implvec!(Smt<U>));
+    fn reserve(&mut self, size:usize);
 
     fn extend_one_smt(&mut self, smt: Smt<U>) {
         self.extend_smt(Some(smt));
@@ -237,15 +239,23 @@ pub trait SmtSink<U: SmtParam> where <U as SmtParam>::SVar: std::cmp::Eq {
     fn comment(&mut self, comment: impl Display) {
         self.extend_one_smt(Smt::Comment(comment.to_string()));
     }
+    
+    fn comment_block(&mut self, comment: impl Display) {
+        self.extend_one_smt(Smt::comment_block(comment.to_string()));
+    }
 }
 
 impl<U, V> SmtSink<U> for V
 where
     U: SmtParam,
-    V: Extend<Smt<U>>,
+    V: Extend<Smt<U>> + Reservable,
     <U as SmtParam>::SVar: std::cmp::Eq
 {
     fn extend_smt(&mut self, iter: implvec!(Smt<U>)) {
         self.extend(iter);
+    }
+
+    fn reserve(&mut self, size:usize) {
+        self.gen_reserve(size);
     }
 }

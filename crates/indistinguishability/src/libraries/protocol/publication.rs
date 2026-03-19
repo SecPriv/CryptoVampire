@@ -1,18 +1,18 @@
 use egg::{Analysis, Pattern};
 use itertools::{Itertools, chain};
-use utils::econtinue_if;
+use utils::{econtinue_if, exprdebug};
 
+use crate::libraries::utils::EggRewriteSink;
 use crate::protocol::Step;
 use crate::terms::{Function, HAPPENS, INIT, LT, MACRO_EXEC, MACRO_MSG};
 use crate::{Lang, MSmt, Problem, fresh, rexp, smt};
 
-pub fn mk_rewrites<N: Analysis<Lang>>(
-    pbl: &Problem,
-) -> impl Iterator<Item = egg::Rewrite<Lang, N>> {
+pub fn add_rewrites<N: Analysis<Lang>>(pbl: &Problem, sink: &mut impl EggRewriteSink<N>) {
     let (pub_steps, steps): (Vec<_>, Vec<_>) =
         pbl.steps().unwrap().partition(|s| s.is_publish_step());
 
-    let mut res = Vec::new();
+    sink.reserve(pub_steps.len() * (1 + steps.len() + pbl.protocols().len()));
+
     decl_vars!(p:Protocol);
 
     for s in pub_steps {
@@ -22,42 +22,43 @@ pub fn mk_rewrites<N: Analysis<Lang>>(
         let vars = s.args_sorts().map(|x| fresh!(x).as_formula());
         let sf = rexp!((s #vars*));
 
-        let order = steps.iter().map(|so| {
+        for so in &steps {
             let ovars = so.args_sorts().map(|x| fresh!(x).as_formula());
             let name = format!("publication ordering {s}, {so}");
-            egg::Rewrite::new(
-                name,
-                Pattern::from(&rexp!((LT #sf (so #ovars*)))),
-                Pattern::from(&rexp!(true)),
+            sink.add_egg_rewrite(
+                egg::Rewrite::new(
+                    name,
+                    Pattern::from(&rexp!((LT #sf (so #ovars*)))),
+                    Pattern::from(&rexp!(true)),
+                )
+                .unwrap(),
             )
-            .unwrap()
-        });
+        }
 
-        let msg = {
-            pbl.protocols().iter().map(|p| {
-                let Step { vars, msg, .. } =
-                    &pbl.protocols().first().unwrap().steps()[s.get_step_index().unwrap()];
-                let vars = vars.iter().map(|x| x.as_formula());
-                let p = p.name();
+        for p in pbl.protocols() {
+            let Step { vars, msg, .. } =
+                &pbl.protocols().first().unwrap().steps()[s.get_step_index().unwrap()];
+            let vars = vars.iter().map(|x| x.as_formula());
+            let p = p.name();
+            sink.add_egg_rewrite(
                 egg::Rewrite::new(
                     format!("{s} msg macro in {p}"),
                     Pattern::from(msg),
                     Pattern::from(&rexp!((MACRO_MSG (s #(vars.clone())*) p))),
                 )
-                .unwrap()
-            })
-        };
+                .unwrap(),
+            )
+        }
 
-        let exec = egg::Rewrite::new(
-            format!("{s} exec macro"),
-            Pattern::from(&rexp!((MACRO_EXEC #sf #p))),
-            Pattern::from(&rexp!((HAPPENS #sf))),
-        )
-        .unwrap();
-        res.extend(chain!([exec], msg, order));
+        sink.add_egg_rewrite(
+            egg::Rewrite::new(
+                format!("{s} exec macro"),
+                Pattern::from(&rexp!((MACRO_EXEC #sf #p))),
+                Pattern::from(&rexp!((HAPPENS #sf))),
+            )
+            .unwrap(),
+        );
     }
-
-    res.into_iter()
 }
 
 use cryptovampire_smt::SmtSink;
@@ -67,6 +68,10 @@ use crate::MSmtParam;
 pub fn add_smt(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
     let (pub_steps, steps): (Vec<_>, Vec<_>) =
         pbl.steps().unwrap().partition(|s| s.is_publish_step());
+
+    exprdebug!(let mut i = 0);
+
+    sink.reserve(pub_steps.len() * (steps.len() + 2) + 1);
 
     sink.extend_one_smt(MSmt::comment_block("Publication Steps"));
 

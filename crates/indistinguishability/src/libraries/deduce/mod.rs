@@ -13,13 +13,13 @@ mod static_rules;
 
 mod nonce;
 
-pub fn mk_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> + use<'_> {
-    chain! {
-      regular::mk_rules(pbl),
-      quantifier::mk_rules(pbl),
-      static_rules::mk_rules(),
-      [nonce::DeduceNonceRule.into_mrc()]
-    }
+use crate::libraries::utils::RuleSink;
+
+pub fn add_rules(pbl: &Problem, sink: &mut impl RuleSink) {
+    regular::add_rules(pbl, sink);
+    quantifier::add_rules(pbl, sink);
+    static_rules::add_rules(sink);
+    sink.add_rule(nonce::DeduceNonceRule);
 }
 
 /// A trait for types that can provide a deduction function.

@@ -267,7 +267,7 @@ mod smt;
 pub mod find_indices;
 
 pub use aenc::AEnc;
-pub use nonce::{FreshNonce, mk_no_guessing_smt};
+pub use nonce::{FreshNonce, add_no_guessing_smt};
 /// Re-exports the `PRF` struct, representing a pseudo-random function.
 pub use prf::PRF;
 
@@ -291,41 +291,35 @@ mod sanity_check;
 /// It includes the extra rules from the problem, the deduce rules, the forall rules,
 /// and the substitution rule.
 /// In debug mode, it also includes the sanity check rule.
-pub fn mk_golgge_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
+pub fn add_golgge_rules(pbl: &Problem, sink: &mut impl utils::RuleSink) {
     let exec = SmtRunner::new(pbl);
     let vampire_rule = VampireRule::builder().exec(exec.clone()).build().into_mrc();
     let fresh_rule = FreshNonce::builder().exec(exec.clone()).build().into_mrc();
-    chain![
-        [
-            #[cfg(debug_assertions)]
-            {
-                sanity_check::SanityCheck.into_mrc()
-            }
-        ],
-        pbl.extra_rules().iter().cloned(),
-        deduce::mk_rules(pbl),
-        fa::mk_prolog_rules(pbl),
-        [substitution::SubstRule.into_mrc(), vampire_rule, fresh_rule]
-    ]
+
+    #[cfg(debug_assertions)]
+    sink.add_rc_rule(sanity_check::SanityCheck.into_mrc());
+
+    sink.extend_rc_rules(pbl.extra_rules().iter().cloned());
+    deduce::add_rules(pbl, sink);
+    fa::add_prolog_rules(pbl, sink);
+    sink.add_rc_rule(substitution::SubstRule.into_mrc());
+    sink.add_rc_rule(vampire_rule);
+    sink.add_rc_rule(fresh_rule);
 }
 
 /// Creates the default rewrite rules
 ///
 /// This function creates the default rewrite rules for the given problem.
 /// It includes the default rewrites and the lambda rewrites.
-pub fn mk_egg_rewrites<N: Analysis<Lang>>(
-    pbl: &Problem,
-) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
-    chain![
-        base::mk_rewrites(pbl),
-        problem::mk_rewrites(pbl),
-        protocol::unfold::mk_rewrites(pbl),
-        lambda::mk_rewrites(pbl),
-        ifs::mk_rewrite(pbl),
-        constrains::mk_rewrite(pbl),
-        [find_indices::mk_rewrite()],
-        publication::mk_rewrites(pbl),
-    ]
+pub fn add_egg_rewrites<N: Analysis<Lang>>(pbl: &Problem, sink: &mut impl utils::EggRewriteSink<N>) {
+    base::add_rewrites(pbl, sink);
+    problem::add_rewrites(pbl, sink);
+    protocol::unfold::add_rewrites(pbl, sink);
+    lambda::add_rewrites(pbl, sink);
+    ifs::add_rewrites(pbl, sink);
+    constrains::add_rewrites(pbl, sink);
+    sink.add_egg_rewrite(find_indices::mk_rewrite());
+    publication::add_rewrites(pbl, sink);
 }
 
 pub fn mk_smt_prelude(pbl: &Problem) -> Vec<MSmt> {

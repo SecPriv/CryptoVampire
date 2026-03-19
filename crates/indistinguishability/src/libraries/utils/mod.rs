@@ -1,4 +1,7 @@
+use std::any::Any;
+
 use egg::{Analysis, EGraph, Id, Language};
+use golgge::Rule;
 use itertools::Itertools;
 use rustc_hash::FxHashSet;
 /// Re-exports `EgraphSearcher` for e-graph based searching, `SyntaxSearcher` for syntax-based searching,
@@ -7,11 +10,15 @@ pub use subterm_trait::{EgraphSearcher, SyntaxSearcher, default_is_special};
 use utils::{econtinue_if, implvec};
 
 use crate::Lang;
-use crate::problem::{PAnalysis, ProblemState};
+use crate::problem::{PAnalysis, ProblemState, RcRule};
 use crate::protocol::Protocol;
-use crate::terms::{Function, Sort};
+use crate::terms::{Function, Rewrite, Sort};
 /// Provides utilities for handling fresh variables and formulas.
 pub mod fresh;
+pub use fresh::*;
+
+mod sinks;
+pub use sinks::{RuleSink, EggRewriteSink, RewriteSink};
 
 mod subterm_trait;
 
@@ -34,7 +41,7 @@ pub struct TwoSortFunction {
 }
 
 impl TwoSortFunction {
-    pub fn form_sort(&self, s: Sort) -> Option<&Function> {
+    pub fn from_sort(&self, s: Sort) -> Option<&Function> {
         match s {
             Sort::Bitstring => Some(&self.m),
             Sort::Bool => Some(&self.b),
