@@ -63,11 +63,31 @@ impl SingleAssignement {
             parameter_vars,
             value,
         } = self;
+        debug_assert!(
+            fun.args_sorts()
+                .eq(parameter_vars.iter().flat_map(Variable::get_sort))
+        );
+        debug_assert!(
+            fun.args_sorts()
+                .eq(assignement_vars.iter().flat_map(Variable::get_sort))
+        );
+
         let js = parameter_vars.iter().cloned().map(Formula::Var);
         let is = assignement_vars.iter().cloned().map(Formula::Var);
         let id_eq = izip!(js.clone(), is).map(|(j, i)| rexp!((INDEX_EQ #j #i)));
 
         rexp!((MITE (and #id_eq*) #value (MACRO_MEMORY_CELL (fun #js*) (PRED #tau) #ptcl)))
+    }
+
+    pub fn mk_default_formula(
+        fun: &Function,
+        tau: &Formula,
+        ptcl: &Formula,
+    ) -> (Vec<Variable>, Formula) {
+        let vars = fun.args_vars().collect_vec();
+        let vars_iters = vars.iter().cloned().map(Formula::Var);
+        let formula = rexp!((MACRO_MEMORY_CELL (fun #vars_iters*) (PRED #tau) #ptcl));
+        (vars, formula)
     }
 
     pub fn assignement_vars(&self) -> &[Variable] {

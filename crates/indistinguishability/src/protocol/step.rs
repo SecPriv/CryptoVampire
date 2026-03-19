@@ -11,7 +11,7 @@ use steel_derive::Steel;
 use thiserror::Error;
 
 use crate::input::Registerable;
-use crate::protocol::state::Assignements;
+use crate::protocol::memory_cell::Assignements;
 use crate::terms::{EMPTY, Formula, Function, INIT, UNFOLD_COND, UNFOLD_MSG, Variable};
 use crate::{Lang, MSmt, MSmtFormula, Problem, rexp, vec_smt};
 

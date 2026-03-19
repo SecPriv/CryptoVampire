@@ -275,6 +275,8 @@ mod protocol;
 mod problem;
 mod base;
 
+mod memory_cells;
+
 /// Provides rules for sanity checking.
 #[cfg(debug_assertions)]
 mod sanity_check;
