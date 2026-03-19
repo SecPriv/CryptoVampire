@@ -5,7 +5,7 @@ use static_init::dynamic;
 use utils::ereturn_let;
 
 use crate::libraries::fa::{self, FaElem, PATTERN_FA};
-use crate::libraries::utils::Side;
+use crate::libraries::utils::{RewriteSink, RuleSink, Side};
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::terms::{
     CryptographicAssumption, Cryptography, ETA, FRESH_NONCE, Function, LENGTH, NONCE, Rewrite,
@@ -50,39 +50,31 @@ impl XOr {
 
         // declare prolog rules
         {
-            let rules = chain![
-                // search::mk_rules(pbl, &aenc),
-                // subst::mk_rules(pbl, &aenc),
-                // ind_cca::mk_rules(pbl, &aenc),
-                // enc_kp::mk_rules(pbl, &aenc)
-                [xor.clone().into_mrc()]
-            ]
-            .collect_vec();
-            pbl.extra_rules_mut().extend(rules);
+            let mut sink = ::std::mem::take(pbl.extra_rules_mut());
+            sink.add_rule(xor.clone());
+            *pbl.extra_rules_mut() = sink;
         }
 
         // declare rewrites
         {
-            let rewrites = chain![xor.extra_rewrites(pbl)].collect_vec();
-            pbl.extra_rewrite_mut().extend(rewrites);
+            let mut sink = ::std::mem::take(pbl.extra_rewrite_mut());
+            xor.extra_rewrites(pbl, &mut sink);
+            *pbl.extra_rewrite_mut() = sink;
         }
 
         xor.register_at(pbl, index).unwrap()
     }
 
-    fn extra_rewrites(&self, _pbl: &Problem) -> impl Iterator<Item = Rewrite> {
+    fn extra_rewrites(&self, _pbl: &Problem, sink: &mut impl RewriteSink) {
         let Self { xor, .. } = self;
-        // decl_vars!(a:Bitstring, b:Bitstring, c:Bitstring);
-        // crate::mk_rewrite!()
-        [
+        sink.extend_rewrites([
             mk_rewrite!(crate format!("{xor} symm"); (a Bitstring, b Bitstring) :
                 (xor #a #b) => (xor #b #a)),
             mk_rewrite!(crate format!("{xor} assoc"); (a Bitstring, b Bitstring, c Bitstring):
                 (xor #a (xor #b #c)) => (xor(xor #a #b) #c)),
             mk_rewrite!(crate format!("{xor} eq"); (a Bitstring, b Bitstring, c Bitstring) :
                 (= #a (xor #b #c)) => (= (xor #b #a) #c)),
-        ]
-        .into_iter()
+        ]);
     }
 
     #[allow(clippy::too_many_arguments)]
