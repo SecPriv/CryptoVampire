@@ -89,7 +89,7 @@ impl SingleAssignement {
         let formula = rexp!((MACRO_MEMORY_CELL (fun #vars_iters*) (PRED #tau) #ptcl));
         (vars, formula)
     }
-    
+
     pub fn value(&self) -> &Formula {
         &self.value
     }

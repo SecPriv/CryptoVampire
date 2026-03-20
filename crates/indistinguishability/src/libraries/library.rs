@@ -18,11 +18,21 @@ pub trait Library {
 
     fn add_dynamic_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {}
 
+    fn add_all_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
+        Self::add_static_smt(pbl, sink);
+        Self::add_dynamic_smt(pbl, sink);
+    }
+
     /// cryptovampire rewrites
     fn add_static_rewrites(pbl: &mut Problem, sink: &mut impl RewriteSink) {}
 
     /// cryptovampire rewrites
     fn add_dynamic_rewrites(pbl: &mut Problem, sink: &mut impl RewriteSink) {}
+
+    fn add_all_rewrites(pbl: &mut Problem, sink: &mut impl RewriteSink){
+        Self::add_static_rewrites(pbl, sink);
+        Self::add_dynamic_rewrites(pbl, sink);
+    }
 
     /// egg rewrites
     fn add_static_egg_rewrites<N:Analysis<Lang>>(pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {}
@@ -30,11 +40,21 @@ pub trait Library {
     /// egg_rewrite
     fn add_dynamic_egg_rewrites<N:Analysis<Lang>>(pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {}
 
+    fn add_all_egg_rewrites<N:Analysis<Lang>>(pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {
+        Self::add_static_egg_rewrites(pbl, sink);
+        Self::add_dynamic_egg_rewrites(pbl, sink);
+    }
+
     /// golgge rule
     fn add_static_rules(pbl: &mut Problem, sink: &mut impl RuleSink) {}
 
     /// golgge rule
     fn add_dynamic_rules(pbl: &mut Problem, sink: &mut impl RuleSink) {}
+
+    fn add_all_rules(pbl: &mut Problem, sink: &mut impl RuleSink) {
+        Self::add_static_rules(pbl, sink);
+        Self::add_dynamic_rules(pbl, sink);
+    }
     
     /// initialize the egraph. This where a library can put initial elements
     /// into the running egraph. (access to [`Problem`] is done thourgh `egraph`

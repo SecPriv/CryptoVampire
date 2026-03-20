@@ -5,6 +5,7 @@ use itertools::Itertools;
 use log::trace;
 
 use super::*;
+use crate::libraries::Library;
 use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, NONCE, PRED, UNFOLD_MSG};
 use crate::{Configuration, Lang, libraries, rexp, smt};
 
@@ -176,8 +177,7 @@ impl Problem {
                 assert_eq!(init.name, "init");
 
                 // we add to `extra_smt` things specific to this run that need to be reflected in smt
-                self.extra_smt_mut()
-                    .assert_one(smt!((HAPPENS init)));
+                self.extra_smt_mut().assert_one(smt!((HAPPENS init)));
 
                 let mut pgrm = self.mk_program();
 
@@ -256,5 +256,13 @@ impl Problem {
         self.report.total_run_calls += total;
 
         res
+    }
+
+    // TODO: Find a better name
+    /// Clear and recompute the egg_rewrite rules use the the library `library`
+    pub fn recompute_egg_rewrite_rules(&mut self, library: impl Library){
+        self.set_re
+                add_egg_rewrites(self, &mut eq_rules);
+
     }
 }

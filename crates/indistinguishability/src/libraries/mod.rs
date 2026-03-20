@@ -13,7 +13,7 @@ use crate::libraries::utils::{RewriteSink, RuleSink, EggRewriteSink};
 use crate::libraries::vampire::VampireLib;
 use crate::problem::{PAnalysis, PRule, ProblemState, RcRule};
 use crate::runners::SmtRunner;
-use crate::{Lang, MSmt, MSmtParam, Problem};
+use crate::{CVProgram, Lang, MSmt, MSmtParam, Problem};
 
 // =========================================================
 // ======================= macros ==========================
@@ -363,8 +363,7 @@ pub fn add_egg_rewrites<N: Analysis<Lang>>(
     pbl: &mut Problem,
     sink: &mut impl utils::EggRewriteSink<N>,
 ) {
-    Libraries::add_static_egg_rewrites(pbl, sink);
-    Libraries::add_dynamic_egg_rewrites(pbl, sink);
+    Libraries::add_all_egg_rewrites(pbl, sink);
 
     base::add_rewrites(pbl, sink);
     protocol::unfold::add_rewrites(pbl, sink);
@@ -375,8 +374,7 @@ pub fn add_egg_rewrites<N: Analysis<Lang>>(
 }
 
 pub fn mk_smt_prelude(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
-    Libraries::add_static_smt(pbl, sink);
-    Libraries::add_dynamic_smt(pbl, sink);
+    Libraries::add_all_smt(pbl, sink);
 
     smt::add_prelude(pbl, sink);
     constrains::add_smt(pbl, sink);
@@ -388,4 +386,14 @@ pub fn init_egraph<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
     Libraries::init_egraph(egraph);
 
     constrains::modify_egraph(egraph);
+}
+
+impl Libraries {
+    pub fn recompute_egg_rewrite_rules<'a>(prgm: &mut CVProgram<'a>) {
+        let mut eq_rules = prgm.take_eq_rules();
+        // TODO: replace by `Libraries::add_all_egg_rewrites(pbl, sink);` once everything got inlined
+        add_egg_rewrites(prgm.egraph_mut().analysis.pbl_mut(), &mut eq_rules);
+
+        prgm.set_eq_rules(eq_rules);
+    }
 }

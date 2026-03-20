@@ -234,6 +234,12 @@ where
         &self.eq_rules
     }
 
+    /// clears the rules and returns the old one following the semantics of [`std::mem::take`]
+    pub fn take_eq_rules(&mut self) -> Vec<Rewrite<L, N>> {
+        self.eq_rules.clear();
+        ::std::mem::take(&mut self.eq_rules)
+    }
+
     /// Sets the equality rewrite rules.
     #[cfg(debug_assertions)]
     pub fn set_eq_rules(&mut self, new: Vec<Rewrite<L, N>>)
@@ -254,8 +260,6 @@ where
     /// Sets the equality rewrite rules.
     #[cfg(not(debug_assertions))]
     pub fn set_eq_rules(&mut self, new: Vec<Rewrite<L, N>>)
-    where
-        L: Display,
     {
         self.egraph_mut().clean = false;
         self.eq_rules = new;

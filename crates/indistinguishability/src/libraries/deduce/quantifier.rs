@@ -5,7 +5,7 @@ use itertools::izip;
 use rustc_hash::FxHashMap;
 use utils::{ebreak_if, ebreak_let, econtinue_let, ereturn_let, match_eq};
 
-use crate::libraries::add_egg_rewrites;
+use crate::libraries::{Libraries, add_egg_rewrites};
 use crate::libraries::utils::find_available_id;
 use crate::libraries::utils::lambda_subst::lambda_subst;
 use crate::problem::{PAnalysis, PRule, RcRule};
@@ -142,9 +142,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for QuantifierRule {
             .collect();
 
         // because we introduced new constants
-        let mut eq_rules = Vec::new();
-        add_egg_rewrites(prgm.egraph_mut().analysis.pbl_mut(), &mut eq_rules);
-        prgm.set_eq_rules(eq_rules);
+        Libraries::recompute_egg_rewrite_rules(prgm);
 
         deps
     }
