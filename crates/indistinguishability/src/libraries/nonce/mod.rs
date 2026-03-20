@@ -14,8 +14,23 @@ mod searcher;
 
 /// Re-exports the `add_no_guessing_smt` function, which generates SMT formulas for no-guessing assumptions.
 pub use smt_no_guessing::add_no_guessing_smt;
+
+use crate::libraries::Library;
 /// Provides SMT-related functionalities for no-guessing assumptions.
 mod smt_no_guessing;
 
 #[cfg(test)]
 mod test;
+
+pub struct NonceLib;
+
+impl Library for NonceLib {
+  fn add_static_rules(pbl: &mut crate::Problem, sink: &mut impl super::utils::RuleSink) {
+      let runner = pbl.get_or_init_smt_runner();
+      sink.add_rule(FreshNonce::builder().exec(runner.clone()).build());
+  }
+
+  fn add_static_smt(pbl: &mut crate::Problem, sink: &mut impl cryptovampire_smt::SmtSink<crate::MSmtParam>) {
+      add_no_guessing_smt(pbl, sink);
+  }
+}

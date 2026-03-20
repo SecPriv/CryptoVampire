@@ -143,7 +143,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for QuantifierRule {
 
         // because we introduced new constants
         let mut eq_rules = Vec::new();
-        add_egg_rewrites(prgm.egraph().analysis.pbl(), &mut eq_rules);
+        add_egg_rewrites(prgm.egraph_mut().analysis.pbl_mut(), &mut eq_rules);
         prgm.set_eq_rules(eq_rules);
 
         deps

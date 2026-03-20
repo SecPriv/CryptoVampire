@@ -6,6 +6,7 @@ use golgge::Rule;
 use static_init::dynamic;
 use utils::ereturn_let;
 
+use crate::libraries::Library;
 use crate::problem::{PAnalysis, RcRule};
 use crate::runners::SmtRunner;
 use crate::terms::{Formula, VAMPIRE};
@@ -55,5 +56,17 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for VampireRule {
     /// Returns the name of this rule.
     fn name(&self) -> std::borrow::Cow<'_, str> {
         Cow::Borrowed("vampire")
+    }
+}
+
+pub struct VampireLib;
+
+impl Library for VampireLib {
+    fn add_static_rules(pbl: &mut Problem, sink: &mut impl super::utils::RuleSink) {
+        sink.add_rule(
+            VampireRule::builder()
+                .exec(pbl.get_or_init_smt_runner().clone())
+                .build(),
+        );
     }
 }

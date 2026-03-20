@@ -25,10 +25,7 @@ pub fn add_prelude(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
     add_steps_macros(pbl, sink);
     add_quantifiers(pbl, sink);
     add_alias(pbl, sink);
-    add_extra_rw(pbl, sink);
 
-    sink.comment_block("Custom");
-    sink.extend_smt(pbl.extra_smt().iter().cloned());
 
     sink.comment_block("Cryptography");
     for c in pbl.cryptography() {
@@ -346,24 +343,24 @@ fn add_alias(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
     }
 }
 
-/// Generates SMT assertions for extra rewrite rules defined in the problem.
-///
-/// This iterates through rewrite rules that are not prolog-only and generates
-/// corresponding SMT axioms.
-fn add_extra_rw(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
-    sink.comment("extra rewrites");
+// /// Generates SMT assertions for extra rewrite rules defined in the problem.
+// ///
+// /// This iterates through rewrite rules that are not prolog-only and generates
+// /// corresponding SMT axioms.
+// fn add_extra_rw(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
+//     sink.comment("extra rewrites");
 
-    for Rewrite {
-        from,
-        to,
-        variables,
-        prolog_only,
-        ..
-    } in pbl.extra_rewrite()
-    {
-        econtinue_if!(*prolog_only);
-        let [from, to] = [from, to].map(|x| x.as_smt(pbl).unwrap());
-        let vars = variables.clone().into_owned();
-        sink.assert_one(smt!((forall #vars (= #from #to))))
-    }
-}
+//     for Rewrite {
+//         from,
+//         to,
+//         variables,
+//         prolog_only,
+//         ..
+//     } in pbl.extra_rewrite()
+//     {
+//         econtinue_if!(*prolog_only);
+//         let [from, to] = [from, to].map(|x| x.as_smt(pbl).unwrap());
+//         let vars = variables.clone().into_owned();
+//         sink.assert_one(smt!((forall #vars (= #from #to))))
+//     }
+// }

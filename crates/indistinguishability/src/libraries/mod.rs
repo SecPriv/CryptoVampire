@@ -1,3 +1,4 @@
+use cryptovampire_smt::SmtSink;
 use egg::{Analysis, EGraph, Rewrite};
 use itertools::chain;
 /// Re-exports the test module for PRF rules.
@@ -6,9 +7,13 @@ pub use prf::test as prf_test;
 /// Re-exports the `VampireRule` struct, which implements a rule for the Vampire SMT solver.
 pub use vampire::VampireRule;
 
+use crate::libraries::find_indices::FindIndicesLib;
+use crate::libraries::sanity_check::SanityCheck;
+use crate::libraries::utils::{RewriteSink, RuleSink, EggRewriteSink};
+use crate::libraries::vampire::VampireLib;
 use crate::problem::{PAnalysis, PRule, ProblemState, RcRule};
 use crate::runners::SmtRunner;
-use crate::{Lang, MSmt, Problem};
+use crate::{Lang, MSmt, MSmtParam, Problem};
 
 // =========================================================
 // ======================= macros ==========================
@@ -280,9 +285,59 @@ mod memory_cells;
 #[cfg(debug_assertions)]
 mod sanity_check;
 
+mod library;
+pub use library::Library;
+
 // =========================================================
 // ====================== exported =========================
 // =========================================================
+
+macro_rules! mk_libraires {
+  ($vis:vis $name:ident; $($libs:ident),*) => {
+
+    $vis struct $name;
+
+    impl Library for $name {
+        fn add_static_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
+          $($libs::add_static_smt(pbl, sink));*
+        }
+
+        fn add_dynamic_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
+          $($libs::add_dynamic_smt(pbl, sink));*
+        }
+
+        fn add_static_rewrites(pbl: &mut Problem, sink: &mut impl RewriteSink) {
+          $($libs::add_static_rewrites(pbl, sink));*
+        }
+
+        fn add_dynamic_rewrites(pbl: &mut Problem, sink: &mut impl RewriteSink) {
+          $($libs::add_dynamic_rewrites(pbl, sink));*
+        }
+
+        fn add_static_egg_rewrites<N:Analysis<Lang>>(pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {
+          $($libs::add_static_egg_rewrites(pbl, sink));*
+        }
+
+        fn add_dynamic_egg_rewrites<N:Analysis<Lang>>(pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {
+          $($libs::add_dynamic_egg_rewrites(pbl, sink));*
+        }
+
+        fn add_static_rules(pbl: &mut Problem, sink: &mut impl RuleSink) {
+          $($libs::add_static_rules(pbl, sink));*
+        }
+
+        fn add_dynamic_rules(pbl: &mut Problem, sink: &mut impl RuleSink) {
+          $($libs::add_dynamic_rules(pbl, sink));*
+        }
+
+        fn init_egraph<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
+          $($libs::init_egraph(egraph));*
+        }
+    }
+  };
+}
+
+mk_libraires!(pub Libraries; VampireLib, SanityCheck, ProblemState, ProblemState, FindIndicesLib);
 
 /// Creates the default prolog rules
 ///
@@ -290,21 +345,14 @@ mod sanity_check;
 /// It includes the extra rules from the problem, the deduce rules, the forall rules,
 /// and the substitution rule.
 /// In debug mode, it also includes the sanity check rule.
-pub fn add_golgge_rules(pbl: &Problem, sink: &mut impl utils::RuleSink) {
-    let exec = SmtRunner::new(pbl);
-    let vampire_rule = VampireRule::builder().exec(exec.clone()).build();
-    let fresh_rule = FreshNonce::builder().exec(exec.clone()).build();
+pub fn add_golgge_rules(pbl: &mut Problem, sink: &mut impl utils::RuleSink) {
+    Libraries::add_static_rules(pbl, sink);
+    Libraries::add_dynamic_rules(pbl, sink);
 
-    #[cfg(debug_assertions)]
-    sink.add_rule(sanity_check::SanityCheck);
 
-    #[allow(deprecated)]
-    sink.extend_rc_rules(pbl.extra_rules().iter().cloned());
     deduce::add_rules(pbl, sink);
     fa::add_prolog_rules(pbl, sink);
     sink.add_rule(substitution::SubstRule);
-    sink.add_rule(vampire_rule);
-    sink.add_rule(fresh_rule);
 }
 
 /// Creates the default rewrite rules
@@ -312,30 +360,32 @@ pub fn add_golgge_rules(pbl: &Problem, sink: &mut impl utils::RuleSink) {
 /// This function creates the default rewrite rules for the given problem.
 /// It includes the default rewrites and the lambda rewrites.
 pub fn add_egg_rewrites<N: Analysis<Lang>>(
-    pbl: &Problem,
+    pbl: &mut Problem,
     sink: &mut impl utils::EggRewriteSink<N>,
 ) {
+    Libraries::add_static_egg_rewrites(pbl, sink);
+    Libraries::add_dynamic_egg_rewrites(pbl, sink);
+
     base::add_rewrites(pbl, sink);
-    problem::add_rewrites(pbl, sink);
     protocol::unfold::add_rewrites(pbl, sink);
     lambda::add_rewrites(pbl, sink);
     ifs::add_rewrites(pbl, sink);
     constrains::add_rewrites(pbl, sink);
-    sink.add_egg_rewrite(find_indices::mk_rewrite());
     publication::add_rewrites(pbl, sink);
 }
 
-pub fn mk_smt_prelude(pbl: &Problem) -> Vec<MSmt> {
-    let mut prelude = Vec::new();
-    smt::add_prelude(pbl, &mut prelude);
-    constrains::add_smt(pbl, &mut prelude);
-    publication::add_smt(pbl, &mut prelude);
-    prelude
+pub fn mk_smt_prelude(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
+    Libraries::add_static_smt(pbl, sink);
+    Libraries::add_dynamic_smt(pbl, sink);
+
+    smt::add_prelude(pbl, sink);
+    constrains::add_smt(pbl, sink);
+    publication::add_smt(pbl, sink);
 }
 
 /// Add terms to the egraph / union terms
 pub fn init_egraph<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
+    Libraries::init_egraph(egraph);
+
     constrains::modify_egraph(egraph);
-    find_indices::modify_egraph(egraph);
-    ProblemState::init_egraph(egraph);
 }

@@ -3,6 +3,7 @@ use log::trace;
 use rustc_hash::FxHashSet;
 
 use crate::Lang;
+use crate::libraries::Library;
 use crate::libraries::utils::FreshNonceSet;
 use crate::problem::PAnalysis;
 use crate::terms::{IS_INDEX, Sort};
@@ -115,8 +116,10 @@ impl ProblemState {
             i += 1;
         }
     }
+}
 
-    pub fn init_egraph<'pbl>(egraph: &mut EGraph<Lang, PAnalysis<'pbl>>) {
+impl Library for ProblemState {
+    fn init_egraph<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
         assert!(Self::get_self(egraph).sets().iter().all(|s| s.is_empty()));
         Self::propagate(egraph, None);
     }

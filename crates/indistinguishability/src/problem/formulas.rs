@@ -13,28 +13,36 @@ use crate::terms::{
 use crate::{MSmt, rexp};
 
 impl Problem {
+    fn smt_prelude_ready(&self) -> bool {
+        !self.smt_prelude.is_empty()
+    }
+
     /// Computes the SMT prelude if it hasn't been computed yet and caches it.
     fn compute_smt_prelude(&mut self) {
-        if self.smt_prelude.is_none() {
+        if !self.smt_prelude_ready() {
             self.find_temp_quantifiers(&[]);
-            self.smt_prelude = Some(mk_smt_prelude(self))
+
+            let mut prelude = ::std::mem::take(&mut self.smt_prelude);
+
+            mk_smt_prelude(self, &mut prelude);
+            self.smt_prelude = prelude
         }
     }
 
     /// Returns the SMT prelude if it has been computed
     pub fn maybe_get_smt_prelude(&self) -> Option<&[MSmt]> {
-        self.smt_prelude.as_deref()
+        self.smt_prelude_ready().then_some(&self.smt_prelude)
     }
 
     /// Returns the SMT prelude, computing it if necessary
     pub fn get_smt_prelude(&mut self) -> &[MSmt] {
         self.compute_smt_prelude();
-        self.smt_prelude.as_ref().unwrap()
+        &self.smt_prelude
     }
 
     /// Clears the SMT prelude
     pub fn clear_smt_prelude(&mut self) {
-        self.smt_prelude = None;
+        self.smt_prelude.clear();
     }
 
     /// Returns the extra SMT formulas
@@ -71,7 +79,7 @@ impl Problem {
 
     /// Finds all the temporary quantifiers in the problem and adds them to the cache
     pub fn find_temp_quantifiers(&mut self, extra: &[Formula]) {
-        if extra.is_empty() && self.smt_prelude.is_some() {
+        if extra.is_empty() && self.smt_prelude_ready() {
             return;
         }
 

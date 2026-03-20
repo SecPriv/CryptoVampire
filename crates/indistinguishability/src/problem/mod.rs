@@ -37,6 +37,9 @@ mod checkpoint;
 mod publish;
 pub use publish::PublicTerm;
 
+mod data;
+pub use data::ProblemData;
+
 /// A problem for the solver to solve
 ///
 /// This struct contains all the information needed to run the solver.
@@ -64,7 +67,7 @@ pub struct Problem {
     extra_smt: Vec<MSmt>,
 
     /// cache for the smt prelude
-    smt_prelude: Option<Vec<MSmt>>,
+    smt_prelude: Vec<MSmt>,
 
     /// the current step in the run (if any)
     current_step: Option<CurrentStep>,
@@ -73,6 +76,8 @@ pub struct Problem {
     quantifier_cache: Vec<(Formula, Function)>,
 
     pub state: ProblemState,
+    /// random data to store somewhere
+    pub data: ProblemData,
 
     constrains: Vec<Constrains>,
 
@@ -116,7 +121,7 @@ impl Problem {
     #[builder(builder_type = ProblemBuilder)]
     pub fn new(
         #[builder(field = Self::default_cryptography())] cryptography: Vec<CryptographicAssumption>,
-        #[builder(field = None)] smt_prelude: Option<Vec<MSmt>>,
+        #[builder(field = vec![])] smt_prelude: Vec<MSmt>,
         /// The configuration (e.g., cli arguments and such)
         #[builder(default)]
         config: Configuration,
@@ -148,6 +153,7 @@ impl Problem {
             current_step: None,
             quantifier_cache: vec![],
             state: Default::default(),
+            data: Default::default(),
             constrains,
             report: Default::default(),
             public_terms: Default::default(),
