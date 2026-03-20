@@ -225,7 +225,7 @@ impl Formula {
     /// # Type Parameters
     ///
     /// * `L` - The `EggLanguage` type to use for the conversion (e.g., `Lang` for ground terms
-    ///        or `LangVar` for expressions with variables).
+    ///   or `LangVar` for expressions with variables).
     ///
     /// # Notes
     ///

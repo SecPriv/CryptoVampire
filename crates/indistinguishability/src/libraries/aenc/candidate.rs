@@ -41,10 +41,11 @@ fn add_rewrite_one(_pbl: &Problem, aenc: &AEnc, f: &Function, sink: &mut impl Re
     let candidate = aenc.candidate.from_sort(f.signature.output).unwrap();
     let ret = rexp!((candidate (f #(vars.iter().map_into())*) #m #r #k));
     let vars_fo = vars.iter().cloned().map(Formula::Var).collect_vec();
+    let _ = candidate;
 
     sink.reserve(f.arity()); // <- a bit too much, but should be almost tight almost all the time
     for (i, s) in f.args_sorts().enumerate() {
-        econtinue_let!(let Some(condidate) = aenc.candidate.from_sort(s));
+        econtinue_let!(let Some(candidate) = aenc.candidate.from_sort(s));
         let mut args = vars_fo.clone();
         args[i] = rexp!((candidate #(args[i].clone()) #m #r #k));
         sink.add_rewrite(

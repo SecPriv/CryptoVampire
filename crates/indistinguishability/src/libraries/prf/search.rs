@@ -28,7 +28,7 @@ decl_vars!(const M:Bitstring, K:Nonce, P:Protocol, T:Time, H:Bool, N_PRF:Nonce);
 /// Creates an iterator of all prolog and search rules related to PRF analysis.
 ///
 /// These rules are used to guide the e-graph search for PRF indistinguishability.
-pub fn mk_rules<'a>(pbl: &Problem, prf: &'a PRF, sink: &mut impl RuleSink) {
+pub fn mk_rules(pbl: &Problem, prf: &PRF, sink: &mut impl RuleSink) {
     // let functions = pbl
     //     .functions()
     //     .iter_current()

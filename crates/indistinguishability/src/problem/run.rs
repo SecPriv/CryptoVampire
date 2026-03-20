@@ -1,4 +1,4 @@
-use cryptovampire_smt::Smt;
+use cryptovampire_smt::{Smt, SmtSink};
 use egg::EGraph;
 use golgge::{Program, Rule};
 use itertools::Itertools;
@@ -177,7 +177,7 @@ impl Problem {
 
                 // we add to `extra_smt` things specific to this run that need to be reflected in smt
                 self.extra_smt_mut()
-                    .push(Smt::mk_assert(smt!((HAPPENS init))));
+                    .assert_one(smt!((HAPPENS init)));
 
                 let mut pgrm = self.mk_program();
 

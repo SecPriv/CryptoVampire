@@ -18,11 +18,11 @@ use crate::terms::{Formula, Function, INDEX_EQ, MACRO_MEMORY_CELL, MITE, PRED, S
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Steel)]
 pub struct SingleAssignement {
-    // #[builder(with = <_>::from_iter, default = vec![])]
-    assignement_vars: Vec<Variable>,
-    // #[builder(with = <_>::from_iter, default = vec![])]
-    parameter_vars: Vec<Variable>,
-    value: Formula,
+    /// The variables used in the assignement definition
+    pub assignement_vars: Vec<Variable>,
+    /// The variables used as parameters for the cell
+    pub parameter_vars: Vec<Variable>,
+    pub(crate) value: Formula,
 }
 
 pub type Assignements = FxHashMap<Function, SingleAssignement>;
@@ -89,12 +89,8 @@ impl SingleAssignement {
         let formula = rexp!((MACRO_MEMORY_CELL (fun #vars_iters*) (PRED #tau) #ptcl));
         (vars, formula)
     }
-
-    pub fn assignement_vars(&self) -> &[Variable] {
-        &self.assignement_vars
-    }
-
-    pub fn parameter_vars(&self) -> &[Variable] {
-        &self.parameter_vars
+    
+    pub fn value(&self) -> &Formula {
+        &self.value
     }
 }

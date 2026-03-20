@@ -149,7 +149,7 @@ pub use cryptography::*;
 mod cryptography;
 
 pub(crate) mod variable;
-pub use variable::Variable;
+pub use variable::{Variable, FormulaVariableIter};
 
 // =========================================================
 // ======================== other ==========================
