@@ -1,21 +1,21 @@
+use cryptovampire_smt::SmtSink;
 use egg::{Analysis, Pattern};
 use itertools::{Itertools, chain};
 use utils::{econtinue_if, exprdebug};
+
 use crate::libraries::Library;
 use crate::libraries::utils::EggRewriteSink;
 use crate::protocol::Step;
 use crate::terms::{Function, HAPPENS, INIT, LT, MACRO_EXEC, MACRO_MSG};
-use crate::{Lang, MSmt, Problem, fresh, rexp, smt};
-use cryptovampire_smt::SmtSink;
-use crate::MSmtParam;
+use crate::{Lang, MSmt, MSmtParam, Problem, fresh, rexp, smt};
 
 pub struct PublicationLib;
 
 impl Library for PublicationLib {
     fn add_dynamic_egg_rewrites<N: Analysis<Lang>>(
-            pbl: &mut Problem,
-            sink: &mut impl EggRewriteSink<N>,
-        ) {
+        pbl: &mut Problem,
+        sink: &mut impl EggRewriteSink<N>,
+    ) {
         add_rewrites(pbl, sink);
     }
 

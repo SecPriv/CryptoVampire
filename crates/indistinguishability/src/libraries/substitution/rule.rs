@@ -44,7 +44,6 @@ impl<'a, R> Rule<Lang, PAnalysis<'a>, R> for SubstRule {
             .substs
             .into_iter()
             .map(|s| {
-
                 let g = *s.get(GOAL.as_egg()).unwrap();
                 [g]
             })
@@ -74,7 +73,6 @@ impl<'a, R> Rule<Lang, PAnalysis<'a>, R> for SubstRule {
 }
 
 pub struct SubstLib;
-
 
 impl Library for SubstLib {
     fn add_static_rules(_: &mut crate::Problem, sink: &mut impl crate::libraries::utils::RuleSink) {

@@ -9,21 +9,20 @@ use crate::terms::{
 };
 use crate::{Lang, Problem, rexp};
 
-
 pub struct IfLib;
 
 impl Library for IfLib {
     fn add_static_egg_rewrites<N: Analysis<Lang>>(
-            _: &mut Problem,
-            sink: &mut impl EggRewriteSink<N>,
-        ) {
-            add_static_rewrites(sink);
+        _: &mut Problem,
+        sink: &mut impl EggRewriteSink<N>,
+    ) {
+        add_static_rewrites(sink);
     }
     fn add_dynamic_egg_rewrites<N: Analysis<Lang>>(
-            pbl: &mut Problem,
-            sink: &mut impl EggRewriteSink<N>,
-        ) {
-    add_commute_if(pbl, sink);
+        pbl: &mut Problem,
+        sink: &mut impl EggRewriteSink<N>,
+    ) {
+        add_commute_if(pbl, sink);
     }
 }
 

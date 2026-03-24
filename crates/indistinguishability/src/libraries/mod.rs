@@ -389,13 +389,13 @@ impl Libraries {
 
     pub fn mk_all_egg_rewrites<'a>(pbl: &mut Problem) -> Vec<egg::Rewrite<Lang, PAnalysis<'a>>> {
         let mut sink = Vec::new();
-        Self::add_all_egg_rewrites(pbl,&mut sink);
+        Self::add_all_egg_rewrites(pbl, &mut sink);
         sink
     }
 
-/// Add terms to the egraph / union terms
+    /// Add terms to the egraph / union terms
     pub fn init_egraphh<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
-    Self::modify_egraph(egraph);
+        Self::modify_egraph(egraph);
     }
 
     pub fn recompute_egg_rewrite_rules<'a>(prgm: &mut CVProgram<'a>) {
