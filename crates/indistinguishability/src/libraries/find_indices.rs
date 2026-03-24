@@ -18,7 +18,7 @@ impl Library for FindIndicesLib {
         sink.add_egg_rewrite(mk_rewrite!("eq_indices"; (i): (IS_INDEX #i) => (#i)));
     }
 
-    fn init_egraph<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
+    fn modify_egraph<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
         let CurrentStep { args, .. } = egraph.analysis.pbl().current_step().unwrap().clone();
         for arg in args {
             egraph.add_expr(&rexp!((IS_INDEX arg)).as_egg_ground());

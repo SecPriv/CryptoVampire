@@ -1,6 +1,7 @@
 use egg::{Analysis, Rewrite};
 use itertools::{Itertools, chain};
 
+use crate::libraries::Library;
 use crate::libraries::utils::EggRewriteSink;
 use crate::protocol::MacroKind;
 use crate::terms::{
@@ -10,10 +11,23 @@ use crate::terms::{
 use crate::{Lang, Problem};
 
 /// Creates a set of rewrite rules for protocol unfolding.
-pub fn add_rewrites<N: Analysis<Lang>>(pbl: &Problem, sink: &mut impl EggRewriteSink<N>) {
-    add_static_unfold_rewrites(sink);
-    add_macro_unfold_rewrites(sink);
-    add_step_unfold_rewrites(pbl, sink);
+pub struct UnfoldLib;
+
+impl Library for UnfoldLib {
+    fn add_static_egg_rewrites<N: Analysis<Lang>>(
+        _: &mut Problem,
+        sink: &mut impl EggRewriteSink<N>,
+    ) {
+        add_static_unfold_rewrites(sink);
+        add_macro_unfold_rewrites(sink);
+    }
+
+    fn add_dynamic_egg_rewrites<N: Analysis<Lang>>(
+        pbl: &mut Problem,
+        sink: &mut impl EggRewriteSink<N>,
+    ) {
+        add_step_unfold_rewrites(pbl, sink);
+    }
 }
 
 fn add_static_unfold_rewrites<N: Analysis<Lang>>(sink: &mut impl EggRewriteSink<N>) {

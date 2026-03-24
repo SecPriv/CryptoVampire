@@ -5,7 +5,7 @@ use itertools::Itertools;
 use log::trace;
 
 use super::*;
-use crate::libraries::Library;
+use crate::libraries::{Libraries, Library};
 use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, NONCE, PRED, UNFOLD_MSG};
 use crate::{Configuration, Lang, libraries, rexp, smt};
 
@@ -41,10 +41,10 @@ impl Problem {
                 .build()
         };
 
-        let mut eq_rules = Vec::new();
-        let mut rules: Vec<RcRule> = Vec::new();
-        libraries::add_egg_rewrites(self, &mut eq_rules);
-        libraries::add_golgge_rules(self, &mut rules);
+        // let mut eq_rules = Vec::new();
+        // libraries::add_egg_rewrites(self, &mut eq_rules);
+        let rules = Libraries::mk_all_rules(self);
+        let eq_rules = Libraries::mk_all_egg_rewrites(self);
 
         let mut prgm = golgge::Program::build()
             .eq_rules(eq_rules)
@@ -53,7 +53,7 @@ impl Problem {
             .egraph(EGraph::new(PAnalysis::builder().pbl(self).build()).with_explanations_enabled())
             .call();
 
-        libraries::init_egraph(prgm.egraph_mut());
+        Libraries::init_egraphh(prgm.egraph_mut());
 
         prgm
     }

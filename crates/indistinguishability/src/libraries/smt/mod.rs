@@ -2,6 +2,7 @@ use cryptovampire_smt::{Smt, SmtCons, SmtFormula, SmtSink};
 use itertools::{Itertools, chain, izip};
 use utils::{econtinue_if, econtinue_let, implvec};
 
+use crate::libraries::Library;
 use crate::terms::{
     ATT, AliasRewrite, Cryptography, EMPTY, Exists, FROM_BOOL, FindSuchThat, Function, HAPPENS,
     INIT, LEQ, LT, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, PROJ_1,
@@ -10,25 +11,29 @@ use crate::terms::{
 };
 use crate::{MSmt, MSmtFormula, MSmtParam, Problem, smt, vec_smt};
 
-pub fn add_prelude(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
-    add_header(pbl, sink);
+pub struct SmtLib;
 
-    sink.comment_block("static");
-    add_base_order(pbl, sink);
-    add_base_macro(pbl, sink);
-    add_base_rewrite(pbl, sink);
+impl Library for SmtLib {
+    fn add_static_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
+        add_header(pbl, sink);
 
-    sink.comment_block("term algebra");
-    add_step_diff(pbl, sink);
+        sink.comment_block("static");
+        add_base_order(pbl, sink);
+        add_base_macro(pbl, sink);
+        add_base_rewrite(pbl, sink);
 
-    sink.comment_block("Protocol definition");
-    add_steps_macros(pbl, sink);
-    add_quantifiers(pbl, sink);
-    add_alias(pbl, sink);
+        sink.comment_block("term algebra");
+        add_step_diff(pbl, sink);
 
-    sink.comment_block("Cryptography");
-    for c in pbl.cryptography() {
-        c.add_prelude(pbl, sink);
+        sink.comment_block("Protocol definition");
+        add_steps_macros(pbl, sink);
+        add_quantifiers(pbl, sink);
+        add_alias(pbl, sink);
+
+        sink.comment_block("Cryptography");
+        for c in pbl.cryptography() {
+            c.add_prelude(pbl, sink);
+        }
     }
 }
 

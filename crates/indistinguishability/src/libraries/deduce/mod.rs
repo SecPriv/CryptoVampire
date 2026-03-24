@@ -1,6 +1,7 @@
 use itertools::chain;
 
 use crate::Problem;
+use crate::libraries::Library;
 use crate::problem::{PRule, RcRule};
 use crate::terms::{BIT_DEDUCE, BOOL_DEDUCE, Function, Sort};
 
@@ -15,11 +16,18 @@ mod nonce;
 
 use crate::libraries::utils::RuleSink;
 
-pub fn add_rules(pbl: &Problem, sink: &mut impl RuleSink) {
-    regular::add_rules(pbl, sink);
-    quantifier::add_rules(pbl, sink);
-    static_rules::add_rules(sink);
-    sink.add_rule(nonce::DeduceNonceRule);
+pub struct DeduceLib;
+
+impl Library for DeduceLib {
+    fn add_static_rules(_: &mut Problem, sink: &mut impl RuleSink) {
+        static_rules::add_rules(sink);
+        sink.add_rule(nonce::DeduceNonceRule);
+    }
+
+    fn add_dynamic_rules(pbl: &mut Problem, sink: &mut impl RuleSink) {
+        regular::add_rules(pbl, sink);
+        quantifier::add_rules(pbl, sink);
+    }
 }
 
 /// A trait for types that can provide a deduction function.

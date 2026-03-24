@@ -5,7 +5,7 @@ use logic_formula::iterators::QuantiferIterator;
 use utils::econtinue_let;
 
 use super::*;
-use crate::libraries::mk_smt_prelude;
+use crate::libraries::Libraries;
 use crate::terms::{
     FOBinder, FindSuchThat, Formula, FunctionCollection, Quantifier, QuantifierT,
     QuantifierTranslator, Rewrite,
@@ -23,8 +23,8 @@ impl Problem {
             self.find_temp_quantifiers(&[]);
 
             let mut prelude = ::std::mem::take(&mut self.smt_prelude);
-
-            mk_smt_prelude(self, &mut prelude);
+            prelude.clear();
+            Libraries::add_all_smt(self, &mut prelude);
             self.smt_prelude = prelude
         }
     }

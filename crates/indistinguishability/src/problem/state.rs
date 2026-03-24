@@ -119,7 +119,7 @@ impl ProblemState {
 }
 
 impl Library for ProblemState {
-    fn init_egraph<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
+    fn modify_egraph<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
         assert!(Self::get_self(egraph).sets().iter().all(|s| s.is_empty()));
         Self::propagate(egraph, None);
     }

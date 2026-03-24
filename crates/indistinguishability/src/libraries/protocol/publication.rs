@@ -1,13 +1,30 @@
 use egg::{Analysis, Pattern};
 use itertools::{Itertools, chain};
 use utils::{econtinue_if, exprdebug};
-
+use crate::libraries::Library;
 use crate::libraries::utils::EggRewriteSink;
 use crate::protocol::Step;
 use crate::terms::{Function, HAPPENS, INIT, LT, MACRO_EXEC, MACRO_MSG};
 use crate::{Lang, MSmt, Problem, fresh, rexp, smt};
+use cryptovampire_smt::SmtSink;
+use crate::MSmtParam;
 
-pub fn add_rewrites<N: Analysis<Lang>>(pbl: &Problem, sink: &mut impl EggRewriteSink<N>) {
+pub struct PublicationLib;
+
+impl Library for PublicationLib {
+    fn add_dynamic_egg_rewrites<N: Analysis<Lang>>(
+            pbl: &mut Problem,
+            sink: &mut impl EggRewriteSink<N>,
+        ) {
+        add_rewrites(pbl, sink);
+    }
+
+    fn add_dynamic_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
+        add_smt(pbl, sink);
+    }
+}
+
+fn add_rewrites<N: Analysis<Lang>>(pbl: &Problem, sink: &mut impl EggRewriteSink<N>) {
     let (pub_steps, steps): (Vec<_>, Vec<_>) =
         pbl.steps().unwrap().partition(|s| s.is_publish_step());
 
@@ -61,11 +78,7 @@ pub fn add_rewrites<N: Analysis<Lang>>(pbl: &Problem, sink: &mut impl EggRewrite
     }
 }
 
-use cryptovampire_smt::SmtSink;
-
-use crate::MSmtParam;
-
-pub fn add_smt(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
+fn add_smt(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
     let (pub_steps, steps): (Vec<_>, Vec<_>) =
         pbl.steps().unwrap().partition(|s| s.is_publish_step());
 

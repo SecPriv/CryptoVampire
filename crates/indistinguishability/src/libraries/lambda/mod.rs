@@ -6,6 +6,7 @@ use egg::{Analysis, Pattern, Rewrite};
 use itertools::chain;
 use utils::econtinue_if;
 
+use crate::libraries::Library;
 use crate::terms::{Formula, Function, LAMBDA_S};
 use crate::{Lang, Problem, rexp};
 
@@ -15,9 +16,22 @@ static S: Function = LAMBDA_S.const_clone();
 use crate::libraries::utils::EggRewriteSink;
 
 /// Creates rewrite rules for lambda calculus.
-pub fn add_rewrites<N: Analysis<Lang>>(pbl: &Problem, sink: &mut impl EggRewriteSink<N>) {
-    add_base_rw(sink);
-    add_s_rw(pbl, sink);
+pub struct LambdaLib;
+
+impl Library for LambdaLib {
+    fn add_static_egg_rewrites<N: Analysis<Lang>>(
+        _: &mut Problem,
+        sink: &mut impl EggRewriteSink<N>,
+    ) {
+        add_base_rw(sink);
+    }
+
+    fn add_dynamic_egg_rewrites<N: Analysis<Lang>>(
+        pbl: &mut Problem,
+        sink: &mut impl EggRewriteSink<N>,
+    ) {
+        add_s_rw(pbl, sink);
+    }
 }
 
 fn add_base_rw<N: Analysis<Lang>>(_sink: &mut impl EggRewriteSink<N>) {

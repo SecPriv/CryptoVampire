@@ -1,6 +1,7 @@
 use egg::{Analysis, Rewrite};
 use itertools::chain;
 
+use crate::libraries::Library;
 use crate::libraries::utils::EggRewriteSink;
 use crate::terms::{
     EQUIV, EQUIV_WITH_SIDE, ETA, EXISTS, FIND_SUCH_THAT, IMPLIES, IS_FRESH_NONCE, LEFT, LENGTH,
@@ -9,9 +10,16 @@ use crate::terms::{
 use crate::{Lang, Problem};
 
 /// Creates a set of base rewrite rules.
-pub fn add_rewrites<N: Analysis<Lang>>(pbl: &Problem, sink: &mut impl EggRewriteSink<N>) {
-    add_logic_rewrites(sink);
-    add_quantifier_rewrites(pbl, sink);
+pub struct BaseRewriteLib;
+
+impl Library for BaseRewriteLib {
+    fn add_static_egg_rewrites<N: Analysis<Lang>>(
+        _: &mut Problem,
+        sink: &mut impl EggRewriteSink<N>,
+    ) {
+        add_logic_rewrites(sink);
+        add_quantifier_rewrites(sink);
+    }
 }
 
 fn add_logic_rewrites<N: Analysis<Lang>>(sink: &mut impl EggRewriteSink<N>) {
@@ -66,7 +74,7 @@ fn add_logic_rewrites<N: Analysis<Lang>>(sink: &mut impl EggRewriteSink<N>) {
     })
 }
 
-fn add_quantifier_rewrites<N: Analysis<Lang>>(_: &Problem, sink: &mut impl EggRewriteSink<N>) {
+fn add_quantifier_rewrites<N: Analysis<Lang>>(sink: &mut impl EggRewriteSink<N>) {
     decl_vars![a, b, c];
 
     sink.extend_egg_rewrites(mk_many_rewrites! {

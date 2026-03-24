@@ -1,10 +1,13 @@
+use cryptovampire_smt::SmtSink;
 use egg::{Analysis, EGraph, MultiPattern, Rewrite};
 use itertools::{Itertools, chain, izip};
 use rustc_hash::FxHashMap;
 
+use crate::libraries::Library;
+use crate::libraries::utils::EggRewriteSink;
 use crate::problem::{BoundStep, ConstrainOp, Constrains, CurrentStep, PAnalysis};
 use crate::terms::{CURRENT_STEP, Formula, HAPPENS, INIT, IS_INDEX, LEQ, LT, PRED, TEQ, TRUE};
-use crate::{Lang, MSmt, MSmtFormula, Problem, rexp, smt};
+use crate::{Lang, MSmt, MSmtFormula, MSmtParam, Problem, rexp, smt};
 
 macro_rules! bind {
     ($s1:ident($a1:ident..) $op:ident $s2:ident($a2:ident..)) => {
@@ -22,45 +25,46 @@ macro_rules! bind {
     };
 }
 
-pub fn modify_egraph<'pbl>(egraph: &mut EGraph<Lang, PAnalysis<'pbl>>) {
-    let CurrentStep { idx, args } = egraph.analysis.pbl().current_step().unwrap();
-    let cf = egraph.analysis.pbl().get_step_fun(*idx).unwrap().clone();
+pub struct ConstrainsLib;
 
-    let args = args.iter().map(|f| rexp!(f));
-    let s = rexp!((cf #args*));
+impl Library for ConstrainsLib {
+    fn add_dynamic_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
+        sink.comment("Constrains");
 
-    let hid = egraph.add_expr(&rexp!((HAPPENS #s)).as_egg_ground());
-    let trueid = egraph.add(TRUE.app_id([]));
-    egraph.union(hid, trueid);
-
-    let cs = egraph.add(CURRENT_STEP.app_id([]));
-    let s = egraph.add_expr(&s.as_egg_ground());
-    egraph.union(s, cs);
-
-    // let hpridid = egraph.add_expr(&rexp!((HAPPENS (PRED #s))).as_egg_ground());
-    // egraph.union(hpridid, trueid);
-}
-
-use cryptovampire_smt::SmtSink;
-
-use crate::MSmtParam;
-
-pub fn add_smt(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
-    sink.comment("Constrains");
-
-    sink.reserve(pbl.constrains().len());
-    for constrain in pbl.constrains() {
-        add_smt_constrain_one(pbl, constrain, sink);
+        sink.reserve(pbl.constrains().len());
+        for constrain in pbl.constrains() {
+            add_smt_constrain_one(pbl, constrain, sink);
+        }
     }
-}
 
-use crate::libraries::utils::EggRewriteSink;
+    fn add_dynamic_egg_rewrites<N: Analysis<Lang>>(
+        pbl: &mut Problem,
+        sink: &mut impl EggRewriteSink<N>,
+    ) {
+        add_rewrite_static(sink);
 
-pub fn add_rewrites<N: Analysis<Lang>>(pbl: &Problem, sink: &mut impl EggRewriteSink<N>) {
-    add_rewrite_static(sink);
+        for c in pbl.constrains() {
+            add_rewrite_one(pbl, c, sink)
+        }
+    }
 
-    for c in pbl.constrains() {
-        add_rewrite_one(pbl, c, sink)
+    fn modify_egraph<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
+        let CurrentStep { idx, args } = egraph.analysis.pbl().current_step().unwrap();
+        let cf = egraph.analysis.pbl().get_step_fun(*idx).unwrap().clone();
+
+        let args = args.iter().map(|f| rexp!(f));
+        let s = rexp!((cf #args*));
+
+        let hid = egraph.add_expr(&rexp!((HAPPENS #s)).as_egg_ground());
+        let trueid = egraph.add(TRUE.app_id([]));
+        egraph.union(hid, trueid);
+
+        let cs = egraph.add(CURRENT_STEP.app_id([]));
+        let s = egraph.add_expr(&s.as_egg_ground());
+        egraph.union(s, cs);
+
+        // let hpridid = egraph.add_expr(&rexp!((HAPPENS (PRED #s))).as_egg_ground());
+        // egraph.union(hpridid, trueid);
     }
 }
 

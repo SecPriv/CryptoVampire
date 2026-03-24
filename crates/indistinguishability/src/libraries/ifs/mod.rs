@@ -2,15 +2,29 @@ use egg::{Analysis, Pattern, Rewrite};
 use itertools::{Itertools, chain, izip};
 use utils::{dynamic_iter, econtinue_if, econtinue_let, ereturn_if};
 
+use crate::libraries::Library;
 use crate::libraries::utils::EggRewriteSink;
 use crate::terms::{
     AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, EQ, Function, IMPLIES, MITE, NOT, OR,
 };
 use crate::{Lang, Problem, rexp};
 
-pub fn add_rewrites<N: Analysis<Lang>>(pbl: &Problem, sink: &mut impl EggRewriteSink<N>) {
-    add_static_rewrites(sink);
+
+pub struct IfLib;
+
+impl Library for IfLib {
+    fn add_static_egg_rewrites<N: Analysis<Lang>>(
+            _: &mut Problem,
+            sink: &mut impl EggRewriteSink<N>,
+        ) {
+            add_static_rewrites(sink);
+    }
+    fn add_dynamic_egg_rewrites<N: Analysis<Lang>>(
+            pbl: &mut Problem,
+            sink: &mut impl EggRewriteSink<N>,
+        ) {
     add_commute_if(pbl, sink);
+    }
 }
 
 fn add_static_rewrites<N: Analysis<Lang>>(sink: &mut impl EggRewriteSink<N>) {
