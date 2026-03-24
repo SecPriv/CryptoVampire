@@ -182,16 +182,16 @@ impl AEnc {
         aenc.register_at(pbl, index).unwrap()
     }
 
-    fn extra_rewrites(&self, _pbl: &Problem, sink: &mut impl RewriteSink) {
+    fn extra_rewrites(&self, pbl: &Problem, sink: &mut impl RewriteSink) {
         let Self { enc, dec, pk, .. } = self;
         // crate::mk_rewrite!()
         if let Some(pk) = pk {
-            sink.add_rewrite(
+            sink.add_rewrite(pbl,
             mk_rewrite!{crate format!("{enc} simplification"); (m Bitstring, r Bitstring, k Bitstring):
                 (dec (enc #m #r (pk #k)) #k) => (#m)}
         )
         } else {
-            sink.add_rewrite(
+            sink.add_rewrite(pbl,
                 mk_rewrite!{crate format!("{enc} simplification"); (m Bitstring, r Bitstring, k Bitstring):
                 (dec (enc #m #r #k) #k) => (#m)}
             )

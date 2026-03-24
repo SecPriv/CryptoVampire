@@ -10,8 +10,8 @@ use crate::{Problem, fresh, rexp};
 ///
 /// These rules are used to introduce `candidate` functions into the e-graph,
 /// which are essential for reasoning about PRF indistinguishability.
-pub fn add_rewrites<'a>(pbl: &'a Problem, prf: &'a PRF, sink: &mut impl RewriteSink) {
-    sink.add_rewrite(mk_rewrite_init(pbl, prf));
+pub fn add_rewrites(pbl: &Problem, prf: &PRF, sink: &mut impl RewriteSink) {
+    sink.add_rewrite(pbl, mk_rewrite_init(pbl, prf));
     add_rewrite_regular(pbl, prf, sink);
 }
 
@@ -44,7 +44,7 @@ fn mk_rewrite_init(
 ///
 /// This iterates over functions in the problem and creates rewrite rules
 /// to propagate `candidate` functions through them.
-fn add_rewrite_regular<'a>(pbl: &'a Problem, prf: &'a PRF, sink: &mut impl RewriteSink) {
+fn add_rewrite_regular(pbl: &Problem, prf: &PRF, sink: &mut impl RewriteSink) {
     for f in pbl.functions().iter_current() {
         econtinue_if!(f.is_out_of_term_algebra());
         econtinue_if!(!matches!(f.signature.output, Sort::Bitstring | Sort::Bool));
@@ -61,7 +61,7 @@ fn add_rewrite_regular<'a>(pbl: &'a Problem, prf: &'a PRF, sink: &mut impl Rewri
 ///     -> candidate(f(x1,...,xm), m, k)
 /// ```
 /// effectively lifting the `candidate` function out of the arguments of `f`.
-fn add_rewrite_one<'a>(_pbl: &'a Problem, prf: &PRF, f: &'a Function, sink: &mut impl RewriteSink) {
+fn add_rewrite_one(pbl: &Problem, prf: &PRF, f: &Function, sink: &mut impl RewriteSink) {
     let m = fresh!(Bitstring);
     let k = fresh!(Nonce);
     let vars = f.signature.mk_vars();
@@ -76,6 +76,7 @@ fn add_rewrite_one<'a>(_pbl: &'a Problem, prf: &PRF, f: &'a Function, sink: &mut
         let mut args = vars_fo.clone();
         args[i] = rexp!((candidate #(args[i].clone()) #m #k));
         sink.add_rewrite(
+            pbl,
             Rewrite::builder()
                 .prolog_only(true)
                 .variables(chain!([m.clone(), k.clone()], vars.clone()))

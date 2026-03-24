@@ -143,7 +143,7 @@ impl DDH {
         }
     }
 
-    fn extra_rewrites(&self, _pbl: &Problem, sink: &mut impl RewriteSink) {
+    fn extra_rewrites(&self, pbl: &Problem, sink: &mut impl RewriteSink) {
         let Self {
             exp,
             search_m,
@@ -151,7 +151,7 @@ impl DDH {
             search_trigger,
             ..
         } = self;
-        sink.extend_rewrites([
+        sink.extend_rewrites(pbl, [
             mk_rewrite!(crate format!("{exp} symm"); (x Bitstring, y Bitstring, z Bitstring):
                 (exp (exp #x #y) #z) => (exp (exp #x #z) #y)),
             mk_rewrite!(crate prolog format!("{search_m} symm");

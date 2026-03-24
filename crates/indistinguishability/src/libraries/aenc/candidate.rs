@@ -32,7 +32,7 @@ fn add_rewrite_regular(pbl: &Problem, aenc: &AEnc, sink: &mut impl RewriteSink) 
 ///     -> candidate(f(x1,...,xm), m, k)
 /// ```
 /// effectively lifting the `candidate` function out of the arguments of `f`.
-fn add_rewrite_one(_pbl: &Problem, aenc: &AEnc, f: &Function, sink: &mut impl RewriteSink) {
+fn add_rewrite_one(pbl: &Problem, aenc: &AEnc, f: &Function, sink: &mut impl RewriteSink) {
     let m = crate::fresh!(Bitstring);
     let r = crate::fresh!(Nonce);
     let k = crate::fresh!(Nonce);
@@ -49,6 +49,7 @@ fn add_rewrite_one(_pbl: &Problem, aenc: &AEnc, f: &Function, sink: &mut impl Re
         let mut args = vars_fo.clone();
         args[i] = rexp!((candidate #(args[i].clone()) #m #r #k));
         sink.add_rewrite(
+            pbl,
             Rewrite::builder()
                 .prolog_only(true)
                 .variables(chain!([m.clone(), k.clone()], vars.clone()))
@@ -60,7 +61,7 @@ fn add_rewrite_one(_pbl: &Problem, aenc: &AEnc, f: &Function, sink: &mut impl Re
     }
 }
 
-fn add_static(_pbl: &Problem, aenc: &AEnc, sink: &mut impl RewriteSink) {
+fn add_static(pbl: &Problem, aenc: &AEnc, sink: &mut impl RewriteSink) {
     let AEnc {
         enc,
         pk,
@@ -69,13 +70,13 @@ fn add_static(_pbl: &Problem, aenc: &AEnc, sink: &mut impl RewriteSink) {
     } = aenc;
 
     if let Some(pk) = pk {
-        sink.add_rewrite(
+        sink.add_rewrite(pbl,
             mk_rewrite!(crate prolog format!("enc candidate trigger"); (m Bitstring, r Nonce, k Nonce):
           (enc #m (NONCE #r) (pk (NONCE #k)))
             => (candidate_m (enc #m (NONCE #r) (pk (NONCE #k))) #m #r #k))
         )
     } else {
-        sink.add_rewrite(
+        sink.add_rewrite(pbl,
             mk_rewrite!(crate prolog format!("enc candidate trigger"); (m Bitstring, r Nonce, k Nonce):
           (enc #m (NONCE #r) (NONCE #k))
             => (candidate_m (enc #m (NONCE #r) (NONCE #k)) #m #r #k)))

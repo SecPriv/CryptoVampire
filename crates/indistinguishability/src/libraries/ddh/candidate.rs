@@ -32,7 +32,7 @@ fn add_rewrite_regular(pbl: &Problem, ddh: &DDH, sink: &mut impl RewriteSink) {
 ///     -> candidate(f(x1,...,xm), m, k)
 /// ```
 /// effectively lifting the `candidate` function out of the arguments of `f`.
-fn add_rewrite_one(_pbl: &Problem, aenc: &DDH, f: &Function, sink: &mut impl RewriteSink) {
+fn add_rewrite_one(pbl: &Problem, aenc: &DDH, f: &Function, sink: &mut impl RewriteSink) {
     let na = crate::fresh!(Nonce);
     let nb = crate::fresh!(Nonce);
     let vars = f.signature.mk_vars();
@@ -46,7 +46,7 @@ fn add_rewrite_one(_pbl: &Problem, aenc: &DDH, f: &Function, sink: &mut impl Rew
         econtinue_let!(let Some(candidate) = aenc.get_candidate(*s));
         let mut args = vars_fo.clone();
         args[i] = rexp!((candidate #(args[i].clone()) #na #nb));
-        sink.add_rewrite(
+        sink.add_rewrite(pbl,
             Rewrite::builder()
                 .prolog_only(true)
                 .variables(chain!([&na, &nb]).cloned())
@@ -58,14 +58,14 @@ fn add_rewrite_one(_pbl: &Problem, aenc: &DDH, f: &Function, sink: &mut impl Rew
     }
 }
 
-fn add_static(_pbl: &Problem, ddh: &DDH, sink: &mut impl RewriteSink) {
+fn add_static(pbl: &Problem, ddh: &DDH, sink: &mut impl RewriteSink) {
     let DDH {
         candidate_m,
         g,
         exp,
         ..
     } = ddh;
-    sink.add_rewrite(
+    sink.add_rewrite(pbl,
         mk_rewrite!(crate prolog format!("ddh candidate trigger"); (a Nonce, b Nonce):
           (exp (exp g (NONCE #a)) (NONCE #b))
             => (candidate_m (exp (exp g (NONCE #a)) (NONCE #b)) #a #b)),
