@@ -259,8 +259,7 @@ where
 
     /// Sets the equality rewrite rules.
     #[cfg(not(debug_assertions))]
-    pub fn set_eq_rules(&mut self, new: Vec<Rewrite<L, N>>)
-    {
+    pub fn set_eq_rules(&mut self, new: Vec<Rewrite<L, N>>) {
         self.egraph_mut().clean = false;
         self.eq_rules = new;
     }
