@@ -171,7 +171,8 @@
 ;; configuration
 ; (config.set_trace pbl #t)
 (config.set_node_limit pbl 100000)
-(config.set_vampire_timeout pbl (b.string->duration "300ms"))
+(define default-timeout (b.string->duration "300ms"))
+(config.set_vampire_timeout pbl (b.mult->duration scale-timeout default-timeout))
 ; (config.set_fa_limit pbl 0)
 ; (config.set_keep_smt_files pbl #t)
 

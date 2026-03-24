@@ -1,5 +1,5 @@
 (provide
-  save-results)
+  save-results scale-timeout)
 (require-builtin cryptovampire/ll/pbl as pbl->)
 (require-builtin cryptovampire/ll/report as report->)
 (require-builtin cryptovampire/ll/configuration as config->)
@@ -31,6 +31,9 @@
         file))))
 (define get-file (let [ (env (maybe-get-env-var "RESULT")) ]
     (if (Err? env) "/tmp/results.csv" (Ok->value env))))
+
+(define scale-timeout (let [ (env (maybe-get-env-var "SCALE_TIMEOUT")) ]
+    (if (Err? env) 1.0 (string->number (Ok->value env)))))
 
 (define (save-results name pbl)
   (let* [

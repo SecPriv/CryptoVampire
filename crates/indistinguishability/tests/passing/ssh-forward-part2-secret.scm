@@ -47,7 +47,8 @@
 (publish pbl () (mexp g a1))
 (publish pbl () (mexp g b1))
 
-(config.set_vampire_timeout pbl (b.string->duration "300ms"))
+(define default-timeout (b.string->duration "300ms"))
+(config.set_vampire_timeout pbl (b.mult->duration scale-timeout default-timeout))
 
 
 (if (run pbl p1 p2)

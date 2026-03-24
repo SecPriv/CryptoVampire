@@ -167,7 +167,8 @@
 
 ;; configuration
 ; (config.set_trace pbl #t)
-(config.set_vampire_timeout pbl (b.string->duration "0.5s"))
+(define default-timeout (b.string->duration "0.5s"))
+(config.set_vampire_timeout pbl (b.mult->duration scale-timeout default-timeout))
 (config.set_node_limit pbl 100000)
 (config.set_prf_limit pbl 1)
 (config.set_fa_limit pbl 4)

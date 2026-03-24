@@ -4,11 +4,11 @@ use std::time::Duration;
 
 use anyhow::Context;
 use log::trace;
-use steel::SteelErr;
 use steel::rerrs::ErrorKind;
 use steel::rvals::{IntoSteelVal, Result as SResult};
 use steel::steel_vm::builtin::BuiltInModule;
 use steel::steel_vm::register_fn::RegisterFn;
+use steel::{SteelErr, SteelVal};
 use steel_derive::Steel;
 
 use crate::input::golgge_rules::Rule;
@@ -250,10 +250,21 @@ impl Registerable for ShrProblem {
             let module = modules.get_mut(BASE_LL_MODULE).unwrap();
 
             module
-                .register_fn("string->duration", |s: String| {
-                    humantime::parse_duration(&s).unwrap()
-                })
+                .register_native_fn_definition(STRING_TO_DURATION_DEFINITION)
+                .register_native_fn_definition(MULT_DURATION_DEFINITION)
                 .register_type::<Duration>("duration?");
         }
     }
+}
+
+/// Parse time in a fancy human-readable way
+#[steel_derive::declare_steel_function(name = "string->duration")]
+fn string_to_duration(s: String) -> Duration {
+    humantime::parse_duration(&s).unwrap()
+}
+
+/// Parse time in a fancy human-readable way
+#[steel_derive::declare_steel_function(name = "mult->duration")]
+fn mult_duration(a: f64, b: Duration) -> Duration {
+    b.mul_f64(a)
 }
