@@ -67,14 +67,17 @@ impl XOr {
 
     fn extra_rewrites(&self, pbl: &Problem, sink: &mut impl RewriteSink) {
         let Self { xor, .. } = self;
-        sink.extend_rewrites(pbl, [
-            mk_rewrite!(crate format!("{xor} symm"); (a Bitstring, b Bitstring) :
+        sink.extend_rewrites(
+            pbl,
+            [
+                mk_rewrite!(crate format!("{xor} symm"); (a Bitstring, b Bitstring) :
                 (xor #a #b) => (xor #b #a)),
-            mk_rewrite!(crate format!("{xor} assoc"); (a Bitstring, b Bitstring, c Bitstring):
+                mk_rewrite!(crate format!("{xor} assoc"); (a Bitstring, b Bitstring, c Bitstring):
                 (xor #a (xor #b #c)) => (xor(xor #a #b) #c)),
-            mk_rewrite!(crate format!("{xor} eq"); (a Bitstring, b Bitstring, c Bitstring) :
+                mk_rewrite!(crate format!("{xor} eq"); (a Bitstring, b Bitstring, c Bitstring) :
                 (= #a (xor #b #c)) => (= (xor #b #a) #c)),
-        ]);
+            ],
+        );
     }
 
     #[allow(clippy::too_many_arguments)]

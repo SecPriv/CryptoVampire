@@ -34,7 +34,8 @@ pub fn add_rewrites(pbl: &Problem, sink: &mut impl RewriteSink) {
             {
                 let pvars = parameter_vars.into_formula_iter();
                 let formula = a.mk_formula(cell, &tau, &p);
-                sink.add_rewrite(pbl,
+                sink.add_rewrite(
+                    pbl,
                     builder
                         .from(rexp!((UNFOLD_MEMORY_CELL (cell #pvars*) #tau #p)))
                         .to(formula)
@@ -48,7 +49,8 @@ pub fn add_rewrites(pbl: &Problem, sink: &mut impl RewriteSink) {
             } else {
                 let (mut cvars, formula) = SingleAssignement::mk_default_formula(cell, &tau, &p);
                 let fvars = (&cvars).into_formula_iter();
-                sink.add_rewrite(pbl,
+                sink.add_rewrite(
+                    pbl,
                     builder
                         .from(rexp!((UNFOLD_MEMORY_CELL (cell #fvars*) #tau #p)))
                         .to(formula)

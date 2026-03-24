@@ -5,9 +5,9 @@ use golgge::Rule;
 use utils::implvec;
 use utils::reservable::Reservable;
 
-use crate::{Lang, Problem};
 use crate::problem::{PAnalysis, RcRule};
 use crate::terms::Rewrite;
+use crate::{Lang, Problem};
 
 /// Specialized sink trait for prolog rules ([RcRule]).
 #[allow(deprecated)]
@@ -92,10 +92,10 @@ where
 
 /// Specialized sink trait for internal rewrites ([Rewrite]).
 pub trait RewriteSink {
-    fn extend_rewrites(&mut self, pbl : &Problem,  iter: implvec!(Rewrite));
+    fn extend_rewrites(&mut self, pbl: &Problem, iter: implvec!(Rewrite));
     fn reserve(&mut self, size: usize);
 
-    fn add_rewrite(&mut self,pbl : &Problem, rewrite: Rewrite) {
+    fn add_rewrite(&mut self, pbl: &Problem, rewrite: Rewrite) {
         self.extend_rewrites(pbl, [rewrite]);
     }
 }
@@ -104,7 +104,7 @@ impl<V> RewriteSink for V
 where
     V: Extend<Rewrite> + Reservable,
 {
-    fn extend_rewrites(&mut self, _:&Problem, iter: implvec!(Rewrite)) {
+    fn extend_rewrites(&mut self, _: &Problem, iter: implvec!(Rewrite)) {
         self.extend(iter);
     }
 

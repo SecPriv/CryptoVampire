@@ -46,7 +46,8 @@ fn add_rewrite_one(pbl: &Problem, aenc: &DDH, f: &Function, sink: &mut impl Rewr
         econtinue_let!(let Some(candidate) = aenc.get_candidate(*s));
         let mut args = vars_fo.clone();
         args[i] = rexp!((candidate #(args[i].clone()) #na #nb));
-        sink.add_rewrite(pbl,
+        sink.add_rewrite(
+            pbl,
             Rewrite::builder()
                 .prolog_only(true)
                 .variables(chain!([&na, &nb]).cloned())
@@ -65,7 +66,8 @@ fn add_static(pbl: &Problem, ddh: &DDH, sink: &mut impl RewriteSink) {
         exp,
         ..
     } = ddh;
-    sink.add_rewrite(pbl,
+    sink.add_rewrite(
+        pbl,
         mk_rewrite!(crate prolog format!("ddh candidate trigger"); (a Nonce, b Nonce):
           (exp (exp g (NONCE #a)) (NONCE #b))
             => (candidate_m (exp (exp g (NONCE #a)) (NONCE #b)) #a #b)),

@@ -151,22 +151,25 @@ impl DDH {
             search_trigger,
             ..
         } = self;
-        sink.extend_rewrites(pbl, [
-            mk_rewrite!(crate format!("{exp} symm"); (x Bitstring, y Bitstring, z Bitstring):
+        sink.extend_rewrites(
+            pbl,
+            [
+                mk_rewrite!(crate format!("{exp} symm"); (x Bitstring, y Bitstring, z Bitstring):
                 (exp (exp #x #y) #z) => (exp (exp #x #z) #y)),
-            mk_rewrite!(crate prolog format!("{search_m} symm");
+                mk_rewrite!(crate prolog format!("{search_m} symm");
                 (na Nonce, nb Nonce, nc Nonce, t Bitstring, h Bool):
                 (search_m #na #nb #nc #t #h)
                     => (search_m #nb #na #nc #t #h)),
-            mk_rewrite!(crate prolog format!("{search_b} symm");
+                mk_rewrite!(crate prolog format!("{search_b} symm");
                 (na Nonce, nb Nonce, nc Nonce, t Bool, h Bool):
                 (search_b #na #nb #nc #t #h)
                     => (search_b #nb #na #nc #t #h)),
-            mk_rewrite!(crate prolog format!("{search_trigger} symm");
+                mk_rewrite!(crate prolog format!("{search_trigger} symm");
                 (na Nonce, nb Nonce, t Time, p Protocol,  h Bool):
                 (search_trigger #na #nb #t #p #h)
                     => (search_trigger #nb #na #t #p #h)),
-        ])
+            ],
+        )
     }
 }
 

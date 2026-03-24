@@ -56,7 +56,6 @@ fn mk_alias_rule_1<N: Analysis<Lang>>(
     .unwrap()
 }
 
-
 pub struct ProblemLib;
 
 impl Library for ProblemLib {
@@ -78,7 +77,6 @@ impl Library for ProblemLib {
     }
 
     fn add_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
-
         sink.comment_block("Custom smt");
         sink.extend_smt(pbl.extra_smt().iter().cloned());
     }
