@@ -14,7 +14,7 @@ use crate::{MSmt, MSmtFormula, MSmtParam, Problem, smt, vec_smt};
 pub struct SmtLib;
 
 impl Library for SmtLib {
-    fn add_static_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
+    fn add_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
         add_header(pbl, sink);
 
         sink.comment_block("static");

@@ -30,7 +30,7 @@ impl Library for NonceLib {
         sink.add_rule(FreshNonce::builder().exec(runner.clone()).build());
     }
 
-    fn add_static_smt(
+    fn add_smt(
         pbl: &mut crate::Problem,
         sink: &mut impl cryptovampire_smt::SmtSink<crate::MSmtParam>,
     ) {

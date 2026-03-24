@@ -306,12 +306,8 @@ macro_rules! mk_libraires {
   ($name:ty; $($libs:ident),* $(,)*) => {
 
     impl Library for $name {
-        fn add_static_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
-          $($libs::add_static_smt(pbl, sink));*
-        }
-
-        fn add_dynamic_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
-          $($libs::add_dynamic_smt(pbl, sink));*
+        fn add_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
+          $($libs::add_smt(pbl, sink));*
         }
 
         fn add_static_rewrites(pbl: &mut Problem, sink: &mut impl RewriteSink) {
@@ -349,8 +345,7 @@ pub struct Libraries;
 
 impl Libraries {
     pub fn add_all_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
-        Self::add_static_smt(pbl, sink);
-        Self::add_dynamic_smt(pbl, sink);
+        Self::add_smt(pbl, sink);
     }
 
     pub fn add_all_rewrites(pbl: &mut Problem, sink: &mut impl RewriteSink) {

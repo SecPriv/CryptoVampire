@@ -14,9 +14,7 @@ use crate::{Lang, MSmtParam, Problem};
 #[allow(unused)]
 pub trait Library {
     /// Add smt axioms that do not change during a run
-    fn add_static_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {}
-
-    fn add_dynamic_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {}
+    fn add_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {}
 
     /// cryptovampire rewrites
     fn add_static_rewrites(pbl: &mut Problem, sink: &mut impl RewriteSink) {}

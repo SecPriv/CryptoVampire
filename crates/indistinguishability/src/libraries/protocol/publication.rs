@@ -19,7 +19,7 @@ impl Library for PublicationLib {
         add_rewrites(pbl, sink);
     }
 
-    fn add_dynamic_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
+    fn add_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
         add_smt(pbl, sink);
     }
 }

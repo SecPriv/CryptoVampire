@@ -390,6 +390,7 @@ impl Formula {
     // }
 
     /// remove any De-Buijn indices from a [Self]
+    #[allow(unused)]
     fn remove_de_bruijn(
         &self,
         bound_vars: &rpds::Queue<Variable>,

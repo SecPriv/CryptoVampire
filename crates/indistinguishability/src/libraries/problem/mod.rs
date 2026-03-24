@@ -106,7 +106,7 @@ impl Library for ProblemLib {
         sink.extend_rc_rules(pbl.extra_rules().iter().cloned());
     }
 
-    fn add_dynamic_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
+    fn add_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
         add_extra_smt_rw(pbl, sink);
 
         sink.comment_block("Custom smt");

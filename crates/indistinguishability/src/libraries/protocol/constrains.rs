@@ -28,7 +28,7 @@ macro_rules! bind {
 pub struct ConstrainsLib;
 
 impl Library for ConstrainsLib {
-    fn add_dynamic_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
+    fn add_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
         sink.comment("Constrains");
 
         sink.reserve(pbl.constrains().len());
