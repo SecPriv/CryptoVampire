@@ -208,7 +208,6 @@ mk_libraires!(Libraries;
   UnfoldLib,
   SanityCheck,
   ProblemState,
-  ProblemLib,
   FindIndicesLib,
   DeduceLib,
   ConstrainsLib,
@@ -216,6 +215,7 @@ mk_libraires!(Libraries;
   FaLib,
   PublicationLib,
   LambdaLib,
-  VampireLib,
+  ProblemLib,
   SubstLib,
+  VampireLib,
 );

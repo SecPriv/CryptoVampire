@@ -193,7 +193,8 @@ mk_builtin_funs!(
 
     /// Index equality
     INDEX_EQ "idx-eq" {
-        signature: s!(Index, Index -> Bool)
+        signature: s!(Index, Index -> Bool),
+        flags: f!(BUILTIN_SMT)
     };
 
     // ~~~~~~~~~~~ base bitstrings ~~~~~~~~~~~~~~
@@ -261,7 +262,8 @@ mk_builtin_funs!(
 
     /// Equality for timepoints
     TEQ "step-eq" {
-        signature: s!(Time, Time -> Bool)
+        signature: s!(Time, Time -> Bool),
+        flags: f!(BUILTIN_SMT)
     };
 
     INCOMPATIBLE "incompatible" {
