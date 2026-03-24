@@ -26,7 +26,6 @@ pub fn add_prelude(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
     add_quantifiers(pbl, sink);
     add_alias(pbl, sink);
 
-
     sink.comment_block("Cryptography");
     for c in pbl.cryptography() {
         c.add_prelude(pbl, sink);

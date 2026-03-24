@@ -5,9 +5,9 @@ use itertools::izip;
 use rustc_hash::FxHashMap;
 use utils::{ebreak_if, ebreak_let, econtinue_let, ereturn_let, match_eq};
 
-use crate::libraries::{Libraries, add_egg_rewrites};
 use crate::libraries::utils::find_available_id;
 use crate::libraries::utils::lambda_subst::lambda_subst;
+use crate::libraries::{Libraries, add_egg_rewrites};
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::terms::{
     BIT_DEDUCE, BOOL_DEDUCE, CONS, EXISTS, FIND_SUCH_THAT, FOBinder, INDEX_SORT, Sort, Variable,

@@ -65,7 +65,7 @@ fn mk_alias_rule_1<N: Analysis<Lang>>(
 /// This iterates through rewrite rules that are not prolog-only and generates
 /// corresponding SMT axioms.
 fn add_extra_smt_rw(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
-    sink.reserve(2 + 2*pbl.extra_rewrite().len());
+    sink.reserve(2 + 2 * pbl.extra_rewrite().len());
 
     sink.comment_block("Cross engine rewrites");
     sink.comment("this include custom rewrites and library rewrites");

@@ -25,12 +25,15 @@ mod test;
 pub struct NonceLib;
 
 impl Library for NonceLib {
-  fn add_static_rules(pbl: &mut crate::Problem, sink: &mut impl super::utils::RuleSink) {
-      let runner = pbl.get_or_init_smt_runner();
-      sink.add_rule(FreshNonce::builder().exec(runner.clone()).build());
-  }
+    fn add_static_rules(pbl: &mut crate::Problem, sink: &mut impl super::utils::RuleSink) {
+        let runner = pbl.get_or_init_smt_runner();
+        sink.add_rule(FreshNonce::builder().exec(runner.clone()).build());
+    }
 
-  fn add_static_smt(pbl: &mut crate::Problem, sink: &mut impl cryptovampire_smt::SmtSink<crate::MSmtParam>) {
-      add_no_guessing_smt(pbl, sink);
-  }
+    fn add_static_smt(
+        pbl: &mut crate::Problem,
+        sink: &mut impl cryptovampire_smt::SmtSink<crate::MSmtParam>,
+    ) {
+        add_no_guessing_smt(pbl, sink);
+    }
 }

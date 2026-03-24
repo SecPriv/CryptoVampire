@@ -6,7 +6,7 @@ use crate::problem::PAnalysis;
 use crate::{Lang, MSmtParam, Problem};
 
 /// A library that need to initialize axioms and rules
-/// 
+///
 /// NB: the split static/dynamic isn't really taken into account currently. The
 /// idea is that rules should go into static only if they do not need to be
 /// recomputed during a run. But it is a bit unclear at the moment under which
@@ -29,18 +29,29 @@ pub trait Library {
     /// cryptovampire rewrites
     fn add_dynamic_rewrites(pbl: &mut Problem, sink: &mut impl RewriteSink) {}
 
-    fn add_all_rewrites(pbl: &mut Problem, sink: &mut impl RewriteSink){
+    fn add_all_rewrites(pbl: &mut Problem, sink: &mut impl RewriteSink) {
         Self::add_static_rewrites(pbl, sink);
         Self::add_dynamic_rewrites(pbl, sink);
     }
 
     /// egg rewrites
-    fn add_static_egg_rewrites<N:Analysis<Lang>>(pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {}
+    fn add_static_egg_rewrites<N: Analysis<Lang>>(
+        pbl: &mut Problem,
+        sink: &mut impl EggRewriteSink<N>,
+    ) {
+    }
 
     /// egg_rewrite
-    fn add_dynamic_egg_rewrites<N:Analysis<Lang>>(pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {}
+    fn add_dynamic_egg_rewrites<N: Analysis<Lang>>(
+        pbl: &mut Problem,
+        sink: &mut impl EggRewriteSink<N>,
+    ) {
+    }
 
-    fn add_all_egg_rewrites<N:Analysis<Lang>>(pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {
+    fn add_all_egg_rewrites<N: Analysis<Lang>>(
+        pbl: &mut Problem,
+        sink: &mut impl EggRewriteSink<N>,
+    ) {
         Self::add_static_egg_rewrites(pbl, sink);
         Self::add_dynamic_egg_rewrites(pbl, sink);
     }
@@ -55,7 +66,7 @@ pub trait Library {
         Self::add_static_rules(pbl, sink);
         Self::add_dynamic_rules(pbl, sink);
     }
-    
+
     /// initialize the egraph. This where a library can put initial elements
     /// into the running egraph. (access to [`Problem`] is done thourgh `egraph`
     /// [Analysis])

@@ -257,12 +257,4 @@ impl Problem {
 
         res
     }
-
-    // TODO: Find a better name
-    /// Clear and recompute the egg_rewrite rules use the the library `library`
-    pub fn recompute_egg_rewrite_rules(&mut self, library: impl Library){
-        self.set_re
-                add_egg_rewrites(self, &mut eq_rules);
-
-    }
 }
