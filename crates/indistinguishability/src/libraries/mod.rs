@@ -248,7 +248,7 @@ pub mod utils;
 mod aenc;
 
 /// Provides rules for deduction.
-pub mod deduce;
+mod deduce;
 /// Provides rules for handling forall quantifiers.
 mod fa;
 /// Provides rules for lambda calculus.
@@ -278,7 +278,7 @@ mod smt;
 
 /// Simple rewrite rule to find indices
 /// that can then be used with mutliparterns
-pub mod find_indices;
+mod find_indices;
 
 pub use aenc::AEnc;
 pub use nonce::{FreshNonce, add_no_guessing_smt};

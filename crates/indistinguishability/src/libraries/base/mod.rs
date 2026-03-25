@@ -13,7 +13,7 @@ use crate::{Lang, Problem};
 pub struct BaseRewriteLib;
 
 impl Library for BaseRewriteLib {
-    fn add_static_egg_rewrites<N: Analysis<Lang>>(
+    fn add_egg_rewrites<N: Analysis<Lang>>(
         _: &mut Problem,
         sink: &mut impl EggRewriteSink<N>,
     ) {

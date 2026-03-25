@@ -37,7 +37,7 @@ impl Library for ConstrainsLib {
         }
     }
 
-    fn add_dynamic_egg_rewrites<N: Analysis<Lang>>(
+    fn add_egg_rewrites<N: Analysis<Lang>>(
         pbl: &mut Problem,
         sink: &mut impl EggRewriteSink<N>,
     ) {

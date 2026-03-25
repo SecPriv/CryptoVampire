@@ -59,7 +59,7 @@ fn mk_alias_rule_1<N: Analysis<Lang>>(
 pub struct ProblemLib;
 
 impl Library for ProblemLib {
-    fn add_static_egg_rewrites<N: Analysis<Lang>>(
+    fn add_egg_rewrites<N: Analysis<Lang>>(
         pbl: &mut Problem,
         sink: &mut impl EggRewriteSink<N>,
     ) {
@@ -67,11 +67,11 @@ impl Library for ProblemLib {
         add_alias_rule(pbl, sink);
     }
 
-    fn add_dynamic_rewrites(pbl: &mut Problem, sink: &mut impl super::utils::RewriteSink) {
+    fn add_rewrites(pbl: &mut Problem, sink: &mut impl super::utils::RewriteSink) {
         sink.extend_rewrites(pbl, pbl.extra_rewrite().iter().cloned());
     }
 
-    fn add_dynamic_rules(pbl: &mut Problem, sink: &mut impl super::utils::RuleSink) {
+    fn add_rules(pbl: &mut Problem, sink: &mut impl super::utils::RuleSink) {
         #[allow(deprecated)]
         sink.extend_rc_rules(pbl.extra_rules().iter().cloned());
     }

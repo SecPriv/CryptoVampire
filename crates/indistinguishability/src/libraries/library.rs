@@ -17,30 +17,18 @@ pub trait Library {
     fn add_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {}
 
     /// cryptovampire rewrites
-    fn add_static_rewrites(pbl: &mut Problem, sink: &mut impl RewriteSink) {}
+    fn add_rewrites(pbl: &mut Problem, sink: &mut impl RewriteSink) {}
 
-    /// cryptovampire rewrites
-    fn add_dynamic_rewrites(pbl: &mut Problem, sink: &mut impl RewriteSink) {}
 
     /// egg rewrites
-    fn add_static_egg_rewrites<N: Analysis<Lang>>(
-        pbl: &mut Problem,
-        sink: &mut impl EggRewriteSink<N>,
-    ) {
-    }
-
-    /// egg_rewrite
-    fn add_dynamic_egg_rewrites<N: Analysis<Lang>>(
+    fn add_egg_rewrites<N: Analysis<Lang>>(
         pbl: &mut Problem,
         sink: &mut impl EggRewriteSink<N>,
     ) {
     }
 
     /// golgge rule
-    fn add_static_rules(pbl: &mut Problem, sink: &mut impl RuleSink) {}
-
-    /// golgge rule
-    fn add_dynamic_rules(pbl: &mut Problem, sink: &mut impl RuleSink) {}
+    fn add_rules(pbl: &mut Problem, sink: &mut impl RuleSink) {}
 
     /// initialize the egraph. This where a library can put initial elements
     /// into the running egraph. (access to [`Problem`] is done thourgh `egraph`

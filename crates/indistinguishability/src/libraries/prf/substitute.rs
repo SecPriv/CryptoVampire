@@ -35,13 +35,13 @@ struct SubstData {
 impl SubstData {
     fn proof_to_term<'a>(&self, pgrm: &mut CVProgram<'a>, proof: Id) -> Id {
         tr!(
-            "proof to term from:\n\t{}",
+            "proof to term {proof:} from:\n\t{}",
             pgrm.egraph().id_to_expr(proof).pretty(100)
         );
         let ProofItem { ids, payload, rule } = pgrm.get_proof_item(proof).unwrap();
         let prf_proof = payload.as_ref().unwrap().downcast_ref().unwrap();
         tr!(
-            "(prf) substitution from rule:\n\t{rule:?}",
+            "(prf) substitution from rule:\n\t{rule:?}\nwith proof {prf_proof:?}",
             // golgge::DebugRule::new(rule.as_ref())
         );
 

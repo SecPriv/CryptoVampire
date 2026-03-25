@@ -61,8 +61,8 @@ impl SmtRunner {
     /// Creates a new `SmtRunner` instance, initializing the Vampire solvers.
     pub fn new(pbl: &Problem) -> Self {
         Self {
-            regular_vampire: Some(RegularVampire::new(pbl)),
-            bounded_vapire: Some(BounededVampire::new(pbl)),
+            regular_vampire: (!pbl.config.disable_direct_vampire).then(|| RegularVampire::new(pbl)),
+            bounded_vapire: (!pbl.config.disable_fmc_vampire).then(|| BounededVampire::new(pbl)),
         }
     }
 
@@ -87,6 +87,14 @@ impl SmtRunner {
         pbl: &mut Problem,
         query: MSmtFormula,
     ) -> anyhow::Result<Option<bool>> {
+        let query = query.optimise();
+        if query.is_true() {
+            return Ok(Some(true));
+        } else if query.is_false() {
+            return Ok(Some(false));
+        }
+
+
         let Self {
             regular_vampire,
             bounded_vapire,

@@ -62,7 +62,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for VampireRule {
 pub struct VampireLib;
 
 impl Library for VampireLib {
-    fn add_static_rules(pbl: &mut Problem, sink: &mut impl super::utils::RuleSink) {
+    fn add_rules(pbl: &mut Problem, sink: &mut impl super::utils::RuleSink) {
         sink.add_rule(
             VampireRule::builder()
                 .exec(pbl.get_or_init_smt_runner().clone())

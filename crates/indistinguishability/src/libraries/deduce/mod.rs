@@ -19,12 +19,9 @@ use crate::libraries::utils::RuleSink;
 pub struct DeduceLib;
 
 impl Library for DeduceLib {
-    fn add_static_rules(_: &mut Problem, sink: &mut impl RuleSink) {
+    fn add_rules(pbl: &mut Problem, sink: &mut impl RuleSink) {
         static_rules::add_rules(sink);
         sink.add_rule(nonce::DeduceNonceRule);
-    }
-
-    fn add_dynamic_rules(pbl: &mut Problem, sink: &mut impl RuleSink) {
         regular::add_rules(pbl, sink);
         quantifier::add_rules(pbl, sink);
     }

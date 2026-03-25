@@ -216,6 +216,12 @@ impl VampireExec {
             .iter()
             .any(|x| matches!(&x, VampireArg::TimeLimit(_)))
     }
+    
+    pub fn contains_avatar(&self) -> bool {
+        self.args
+            .iter()
+            .any(|x| matches!(&x, VampireArg::Avatar(_)))
+    }
 
     /// Runs the Vampire executable with the given SMT file.
     ///
@@ -227,6 +233,10 @@ impl VampireExec {
 
         if !self.contains_time() {
             cmd.args(VampireArg::TimeLimit(pbl.config.vampire_timeout.as_secs_f64()).to_args());
+        }
+
+        if pbl.config.disable_avatar && !self.contains_avatar() {
+            cmd.args(VampireArg::Avatar(false).to_args());
         }
 
         cmd.arg(file);

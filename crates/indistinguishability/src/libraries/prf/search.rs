@@ -14,8 +14,7 @@ use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::protocol::{Protocol, Step};
 use crate::runners::SmtRunner;
 use crate::terms::{
-    AND, BITE, Formula, Function, HAPPENS, IS_FRESH_NONCE, LT, MACRO_COND, MACRO_EXEC, MACRO_FRAME,
-    MACRO_INPUT, MACRO_MSG, MITE, NONCE, PRED, Sort, UNFOLD_COND, UNFOLD_MSG, VAMPIRE,
+    AND, BITE, Formula, Function, HAPPENS, IS_FRESH_NONCE, LEQ, LT, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, PRED, Sort, UNFOLD_COND, UNFOLD_MSG, VAMPIRE
 };
 use crate::{CVProgram, Lang, Problem, fresh, rexp};
 
@@ -273,7 +272,7 @@ impl Search {
                     let vars = vars.iter().map(|v| Formula::Var(v.clone()));
                     let s = rexp!((id #vars*));
 
-                    let condition = rexp!((and #hyp (HAPPENS #s) (LT #s #time)));
+                    let condition = rexp!((and #hyp (HAPPENS #s) (LEQ #s #time)));
                     [
                         (condition.clone(), cond, step),
                         (condition.clone(), msg, step),
@@ -395,7 +394,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for PrfVampireRule {
 
             let search = search.search_timepoint(pbl, ptcl, time, hyp).collect_vec();
             tr!(
-                "prf needs to checks:\n[\n\t{}\n]",
+                "prf needs to checks:\n[\n\t- {}\n]",
                 search.iter().join("\n\t")
             );
             let pbl = egraph.analysis.pbl_mut();

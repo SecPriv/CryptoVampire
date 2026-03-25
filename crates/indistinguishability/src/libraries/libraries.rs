@@ -14,6 +14,7 @@ use crate::libraries::fa::FaLib;
 use crate::libraries::find_indices::FindIndicesLib;
 use crate::libraries::ifs::IfLib;
 use crate::libraries::lambda::LambdaLib;
+use crate::libraries::nonce::NonceLib;
 use crate::libraries::problem::ProblemLib;
 use crate::libraries::protocol::unfold::UnfoldLib;
 use crate::libraries::publication::PublicationLib;
@@ -27,40 +28,27 @@ use crate::{CVProgram, Lang, LangVar, MSmtParam, Problem, smt};
 
 macro_rules! mk_libraires {
   ($name:ty; $($libs:ident),* $(,)*) => {
+        impl Library for $name {
+            fn add_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
+            $($libs::add_smt(pbl, sink));*
+            }
 
-impl Library for $name {
-    fn add_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
-      $($libs::add_smt(pbl, sink));*
-    }
+            fn add_rewrites(pbl: &mut Problem, sink: &mut impl RewriteSink) {
+            $($libs::add_rewrites(pbl, sink));*
+            }
 
-    fn add_static_rewrites(pbl: &mut Problem, sink: &mut impl RewriteSink) {
-      $($libs::add_static_rewrites(pbl, sink));*
-    }
+            fn add_egg_rewrites<N:Analysis<Lang>>(pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {
+            $($libs::add_egg_rewrites(pbl, sink));*
+            }
 
-    fn add_dynamic_rewrites(pbl: &mut Problem, sink: &mut impl RewriteSink) {
-      $($libs::add_dynamic_rewrites(pbl, sink));*
-    }
+            fn add_rules(pbl: &mut Problem, sink: &mut impl RuleSink) {
+            $($libs::add_rules(pbl, sink));*
+            }
 
-    fn add_static_egg_rewrites<N:Analysis<Lang>>(pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {
-      $($libs::add_static_egg_rewrites(pbl, sink));*
-    }
-
-    fn add_dynamic_egg_rewrites<N:Analysis<Lang>>(pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {
-      $($libs::add_dynamic_egg_rewrites(pbl, sink));*
-    }
-
-    fn add_static_rules(pbl: &mut Problem, sink: &mut impl RuleSink) {
-      $($libs::add_static_rules(pbl, sink));*
-    }
-
-    fn add_dynamic_rules(pbl: &mut Problem, sink: &mut impl RuleSink) {
-      $($libs::add_dynamic_rules(pbl, sink));*
-    }
-
-    fn modify_egraph<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
-      $($libs::modify_egraph(egraph));*
-    }
-}
+            fn modify_egraph<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
+            $($libs::modify_egraph(egraph));*
+            }
+        }
   };
 }
 
@@ -147,23 +135,20 @@ impl Libraries {
     }
 
     pub fn add_all_rewrites(pbl: &mut Problem, sink: &mut impl RewriteSink) {
-        Self::add_static_rewrites(pbl, sink);
-        Self::add_dynamic_rewrites(pbl, sink);
+        Self::add_rewrites(pbl, sink);
     }
 
     pub fn add_all_egg_rewrites<N: Analysis<Lang>>(
         pbl: &mut Problem,
         sink: &mut impl EggRewriteSink<N>,
     ) {
-        Self::add_static_egg_rewrites(pbl, sink);
-        Self::add_dynamic_egg_rewrites(pbl, sink);
+        Self::add_egg_rewrites(pbl, sink);
 
         Self::add_all_rewrites(pbl, &mut Wrapper(sink, Default::default()));
     }
 
     pub fn add_all_rules(pbl: &mut Problem, sink: &mut impl RuleSink) {
-        Self::add_static_rules(pbl, sink);
-        Self::add_dynamic_rules(pbl, sink);
+        Self::add_rules(pbl, sink);
     }
 
     /// Add terms to the egraph / union terms
@@ -207,15 +192,16 @@ mk_libraires!(Libraries;
   BaseRewriteLib,
   UnfoldLib,
   SanityCheck,
+  SubstLib,
   ProblemState,
   FindIndicesLib,
   DeduceLib,
+  NonceLib,
   ConstrainsLib,
   IfLib,
-  FaLib,
   PublicationLib,
   LambdaLib,
   ProblemLib,
-  SubstLib,
+  FaLib,
   VampireLib,
 );

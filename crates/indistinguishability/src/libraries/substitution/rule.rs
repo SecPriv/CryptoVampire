@@ -75,7 +75,7 @@ impl<'a, R> Rule<Lang, PAnalysis<'a>, R> for SubstRule {
 pub struct SubstLib;
 
 impl Library for SubstLib {
-    fn add_static_rules(_: &mut crate::Problem, sink: &mut impl crate::libraries::utils::RuleSink) {
+    fn add_rules(_: &mut crate::Problem, sink: &mut impl crate::libraries::utils::RuleSink) {
         sink.add_rule(SubstRule);
     }
 }
