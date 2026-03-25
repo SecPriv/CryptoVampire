@@ -210,6 +210,7 @@ mk_libraires!(Libraries;
   SanityCheck,
   SubstLib,
   ProblemState,
+  ProblemLib,
   FindIndicesLib,
   DeduceLib,
   NonceLib,
@@ -217,7 +218,6 @@ mk_libraires!(Libraries;
   IfLib,
   PublicationLib,
   LambdaLib,
-  ProblemLib,
   FaLib,
   VampireLib,
 );
