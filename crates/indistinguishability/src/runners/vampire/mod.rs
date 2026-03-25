@@ -64,12 +64,12 @@ where
 }
 
 macro_rules! options {
-  ($(#[$other:meta] $variant:ident($name:literal, $content:ty)),*,) => {
+  ($($(#[$other:meta])* $variant:ident($name:literal, $content:ty)),*$(,)?) => {
       #[allow(dead_code)]
       #[doc = "arguments to [VampireExec] in type-safeish mode"]
       #[derive(Debug, Clone)]
       pub enum VampireArg {
-        $(#[$other]  $variant($content)),*
+        $($(#[$other])*  $variant($content)),*
       }
 
       impl ToArgs<2> for VampireArg {
@@ -121,6 +121,10 @@ options!(
     ShowNew("show_new", bool),
     /// Enables or disables inlining of let expressions in Vampire.
     InlineLet("inline_let", bool),
+    /// Options in the format `<opt1>=<val1>:<opt2>=<val2>:...:<optn>=<valN>`
+    /// that override the option values set by other means (also inside
+    /// portfolio mode strategies)
+    ForcedOptions("forced_options", String),
 );
 
 pub mod vampire_suboptions {
@@ -205,6 +209,12 @@ impl ToArgs<1> for bool {
     }
 }
 
+impl ToArgs<1> for String {
+    fn to_args(&self) -> [String; 1] {
+        [self.clone()]
+    }
+}
+
 /// Success return code
 const SUCCESS_RC: i32 = 0;
 /// Timeout return code
@@ -235,8 +245,8 @@ impl VampireExec {
             cmd.args(VampireArg::TimeLimit(pbl.config.vampire_timeout.as_secs_f64()).to_args());
         }
 
-        if pbl.config.disable_avatar && !self.contains_avatar() {
-            cmd.args(VampireArg::Avatar(false).to_args());
+        if let Some(options) = &pbl.config.vampire_forced_option {
+            cmd.args(VampireArg::ForcedOptions(options.clone()).to_args());
         }
 
         cmd.arg(file);
