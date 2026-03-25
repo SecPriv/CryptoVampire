@@ -310,7 +310,8 @@
         "flake-utils": "flake-utils_3",
         "nixpkgs": "nixpkgs",
         "rust-overlay": "rust-overlay",
-        "treefmt-nix": "treefmt-nix"
+        "treefmt-nix": "treefmt-nix",
+        "vampire-master-src": "vampire-master-src_2"
       }
     },
     "rust-analyzer-src": {
@@ -478,6 +479,24 @@
         "owner": "vprover",
         "repo": "vampire",
         "type": "github"
+      }
+    },
+    "vampire-master-src_2": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1774345504,
+        "narHash": "sha256-HtmVQ8s4Zs6PW/Gavndt+XGKoXUsVru55YKgKVN/aXM=",
+        "ref": "refs/heads/master",
+        "rev": "c0174f876d3e0257f58e6ad492ed89f04e254e59",
+        "revCount": 10701,
+        "submodules": true,
+        "type": "git",
+        "url": "https://github.com/vprover/vampire.git"
+      },
+      "original": {
+        "submodules": true,
+        "type": "git",
+        "url": "https://github.com/vprover/vampire.git"
       }
     },
     "zfs-inplace-rebalance-src": {

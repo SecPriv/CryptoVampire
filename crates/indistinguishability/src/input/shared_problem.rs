@@ -252,6 +252,7 @@ impl Registerable for ShrProblem {
             module
                 .register_native_fn_definition(STRING_TO_DURATION_DEFINITION)
                 .register_native_fn_definition(MULT_DURATION_DEFINITION)
+                .register_native_fn_definition(DURATION_MILLIS_DEFINITION)
                 .register_type::<Duration>("duration?");
         }
     }
@@ -267,4 +268,10 @@ fn string_to_duration(s: String) -> Duration {
 #[steel_derive::declare_steel_function(name = "mult->duration")]
 fn mult_duration(a: f64, b: Duration) -> Duration {
     b.mul_f64(a)
+}
+
+/// Parse time in a fancy human-readable way
+#[steel_derive::declare_steel_function(name = "duration->millis")]
+fn duration_millis( b: Duration) -> u128 {
+    b.as_millis()
 }

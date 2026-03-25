@@ -2,7 +2,7 @@ use cryptovampire_smt::{Smt, SmtSink};
 use egg::EGraph;
 use golgge::{Program, Rule};
 use itertools::Itertools;
-use log::trace;
+use log::{info, trace};
 
 use super::*;
 use crate::libraries::{Libraries, Library};
@@ -53,7 +53,7 @@ impl Problem {
             .egraph(EGraph::new(PAnalysis::builder().pbl(self).build()).with_explanations_enabled())
             .call();
 
-        Libraries::init_egraphh(prgm.egraph_mut());
+        Libraries::init_egraph(prgm.egraph_mut());
 
         prgm
     }
@@ -205,7 +205,7 @@ impl Problem {
                     break 'a res;
                 }
 
-                tr!("running step {}", s.name);
+                info!("running step {}", s.name);
 
                 // we ensure we remove the extra stuff from the previous run
                 self.extra_smt_mut().truncate(base_smt_n);

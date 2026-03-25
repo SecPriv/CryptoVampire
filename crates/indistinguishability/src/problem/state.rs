@@ -43,12 +43,12 @@ impl ProblemState {
             .state
             .generated_ids
             .iter()
-            .filter(move |x| {
-                sort.is_none()
-                    || egraph[**x]
-                        .nodes
-                        .iter()
-                        .any(|l| Some(l.head.signature.output) == sort)
+            .filter(move |x| match sort {
+                None => true,
+                Some(sort) => egraph[**x]
+                    .nodes
+                    .iter()
+                    .any(|l| l.head.signature.output == sort),
             })
             .copied()
     }

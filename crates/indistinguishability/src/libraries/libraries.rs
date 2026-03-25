@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use cryptovampire_smt::SmtSink;
 use egg::{Analysis, EGraph, Pattern, PatternAst};
-use log::trace;
+use log::{debug, log_enabled, trace};
 use utils::econtinue_if;
 
 use super::Library;
@@ -152,8 +152,12 @@ impl Libraries {
     }
 
     /// Add terms to the egraph / union terms
-    pub fn init_egraphh<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
+    pub fn init_egraph<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
         Self::modify_egraph(egraph);
+
+        if cfg!(debug_assertions) && log_enabled!(log::Level::Debug) {
+            debug_init_egraph(egraph);
+        }
     }
 
     /// Creates the default prolog rules
@@ -185,6 +189,18 @@ impl Libraries {
 
         prgm.set_eq_rules(eq_rules);
     }
+}
+
+#[inline(never)]
+fn debug_init_egraph<N:Analysis<Lang>>(egraph: &mut EGraph<Lang, N>) {
+    let tmp = tempfile::Builder::new()
+        .suffix(".pdf")
+        .prefix("egraph-")
+        .disable_cleanup(true)
+        .tempfile()
+        .unwrap();
+    egraph.dot().to_pdf(&tmp).unwrap();
+    debug!("rendered init egraph in {tmp:?}");
 }
 
 mk_libraires!(Libraries;

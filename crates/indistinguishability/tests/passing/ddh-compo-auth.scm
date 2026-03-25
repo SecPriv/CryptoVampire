@@ -1,3 +1,4 @@
+(require "../save-results.scm")
 (require "cryptovampire/function")
 (require "cryptovampire/builtin-functions")
 (require "cryptovampire/cryptography")
@@ -209,8 +210,8 @@
 
 (if (run pbl p1 p2)
   (displayln "success")
-  (error "failed ddh-S"))
+  (error "failed ddh-compo-auth"))
 
 (displayln (report.print-report (pbl.get-report pbl)))
-; (save-results "ddh-S" pbl)
+(save-results "ddh-compo-auth" pbl)
 

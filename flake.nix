@@ -38,6 +38,11 @@
     #   url = "github:nix-community/fenix/monthly";
     #   inputs.nixpkgs.follows = "nixpkgs";
     # };
+
+    vampire-master-src = {
+      url = "git+https://github.com/vprover/vampire.git?submodules=1";
+      flake = false;
+    };
   };
 
   outputs =
@@ -49,12 +54,18 @@
       treefmt-nix,
       # fenix,
       rust-overlay,
+      vampire-master-src,
       ...
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        overlays = [ (import rust-overlay) ];
+        vampire-overlay = final: prev: {
+  vampire = prev.vampire.overrideAttrs (oldAttrs: {
+    src = vampire-master-src;
+  });
+};
+        overlays = [ (import rust-overlay) vampire-overlay ];
         pkgs = import nixpkgs {
           inherit system overlays;
         };

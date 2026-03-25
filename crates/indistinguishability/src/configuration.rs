@@ -104,7 +104,7 @@ pub struct Configuration {
     pub ddh_limit: usize,
 
     /// activate golgge trace for goals
-    #[arg(long, short('T'))]
+    #[arg(long, short('T'), env)]
     pub trace: bool,
 
     /// activate golgge trace for rebuilds
