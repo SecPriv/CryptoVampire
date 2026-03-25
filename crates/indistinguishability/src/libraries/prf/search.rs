@@ -14,7 +14,8 @@ use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::protocol::{Protocol, Step};
 use crate::runners::SmtRunner;
 use crate::terms::{
-    AND, BITE, Formula, Function, HAPPENS, IS_FRESH_NONCE, LEQ, LT, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, PRED, Sort, UNFOLD_COND, UNFOLD_MSG, VAMPIRE
+    AND, BITE, Formula, Function, HAPPENS, IS_FRESH_NONCE, LEQ, LT, MACRO_COND, MACRO_EXEC,
+    MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, PRED, Sort, UNFOLD_COND, UNFOLD_MSG, VAMPIRE,
 };
 use crate::{CVProgram, Lang, Problem, fresh, rexp};
 

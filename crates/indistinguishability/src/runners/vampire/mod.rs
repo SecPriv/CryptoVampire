@@ -216,7 +216,7 @@ impl VampireExec {
             .iter()
             .any(|x| matches!(&x, VampireArg::TimeLimit(_)))
     }
-    
+
     pub fn contains_avatar(&self) -> bool {
         self.args
             .iter()

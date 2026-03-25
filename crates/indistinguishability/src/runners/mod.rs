@@ -94,7 +94,6 @@ impl SmtRunner {
             return Ok(Some(false));
         }
 
-
         let Self {
             regular_vampire,
             bounded_vapire,

@@ -12,10 +12,7 @@ use crate::{Lang, MSmt, MSmtParam, Problem, fresh, rexp, smt};
 pub struct PublicationLib;
 
 impl Library for PublicationLib {
-    fn add_egg_rewrites<N: Analysis<Lang>>(
-        pbl: &mut Problem,
-        sink: &mut impl EggRewriteSink<N>,
-    ) {
+    fn add_egg_rewrites<N: Analysis<Lang>>(pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {
         add_rewrites(pbl, sink);
     }
 

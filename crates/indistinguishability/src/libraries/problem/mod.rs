@@ -59,10 +59,7 @@ fn mk_alias_rule_1<N: Analysis<Lang>>(
 pub struct ProblemLib;
 
 impl Library for ProblemLib {
-    fn add_egg_rewrites<N: Analysis<Lang>>(
-        pbl: &mut Problem,
-        sink: &mut impl EggRewriteSink<N>,
-    ) {
+    fn add_egg_rewrites<N: Analysis<Lang>>(pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {
         // add_extra_rw_rules(pbl, sink);
         add_alias_rule(pbl, sink);
     }

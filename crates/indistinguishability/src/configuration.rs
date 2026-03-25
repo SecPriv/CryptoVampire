@@ -135,23 +135,23 @@ pub struct Configuration {
     pub guided_nonce_search: bool,
 
     /// Disable "direct" vampire proof search.
-    /// 
+    ///
     /// The "direct" proof tries to prove the validity of queries. It is
     /// extrememly unlikely that a proof will go through with direct vampire
     /// disable
     #[arg(long)]
-    pub disable_direct_vampire:bool,
+    pub disable_direct_vampire: bool,
 
     /// Disable vampire disprove path
-    /// 
+    ///
     /// Cryptovampire, by default, also launch an instance of vampire tuned to
     /// *disprove* the query. The idea is to potentially avoid waiting for the
     /// timeout.
     #[arg(long)]
-    pub disable_fmc_vampire:bool,
+    pub disable_fmc_vampire: bool,
 
     #[arg(long, env)]
-    pub disable_avatar: bool
+    pub disable_avatar: bool,
 }
 
 static NODE_LIMIT_DEFAULT: usize = 100000;
@@ -190,7 +190,7 @@ impl Default for Configuration {
             trace_guessed_published_nonces: false,
             disable_direct_vampire: false,
             disable_fmc_vampire: false,
-            disable_avatar : false
+            disable_avatar: false,
         }
     }
 }
