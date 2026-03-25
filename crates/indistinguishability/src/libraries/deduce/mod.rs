@@ -20,10 +20,10 @@ pub struct DeduceLib;
 
 impl Library for DeduceLib {
     fn add_rules(pbl: &mut Problem, sink: &mut impl RuleSink) {
-        static_rules::add_rules(sink);
-        sink.add_rule(nonce::DeduceNonceRule);
         regular::add_rules(pbl, sink);
         quantifier::add_rules(pbl, sink);
+        static_rules::add_rules(sink);
+        sink.add_rule(nonce::DeduceNonceRule);
     }
 }
 

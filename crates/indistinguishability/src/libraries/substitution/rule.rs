@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use egg::{Language, Searcher};
 use golgge::{Dependancy, Rule};
 use itertools::Itertools;
@@ -69,6 +71,10 @@ impl<'a, R> Rule<Lang, PAnalysis<'a>, R> for SubstRule {
 
         egraph.clean = false; // <- to force a true rebuild afterward
         subst
+    }
+
+    fn name(&self) -> std::borrow::Cow<'_, str> {
+        Cow::Borrowed("default subtitution")
     }
 }
 
