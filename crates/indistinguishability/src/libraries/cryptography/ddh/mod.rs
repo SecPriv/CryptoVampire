@@ -1,12 +1,14 @@
 use itertools::{Itertools, chain};
 
-use crate::libraries::ddh::rule::DDHRule;
+use rule::DDHRule;
+use crate::libraries::Library;
 use crate::libraries::utils::{RewriteSink, RuleSink};
 use crate::problem::{PRule, ProblemState};
 use crate::terms::{
-    CryptographicAssumption, Cryptography, Formula, Function, FunctionFlags, Rewrite, Sort,
+     Formula, Function, FunctionFlags, Rewrite, Sort,
     Variable,
 };
+use super::{CryptographicAssumption, Cryptography};
 use crate::{Problem, mk_signature};
 declare_trace!($"enc");
 
@@ -178,6 +180,7 @@ impl From<DDH> for CryptographicAssumption {
         Self::DDH(v)
     }
 }
+impl Library for DDH {}
 
 impl Cryptography for DDH {
     fn ref_from_assumption(r: &CryptographicAssumption) -> Option<&Self> {

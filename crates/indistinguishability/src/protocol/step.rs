@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
 use bon::bon;
-use cryptovampire_smt::SmtSink;
 use egg::{Analysis, Pattern, Rewrite};
 use itertools::{Itertools, chain};
 use log::trace;
@@ -12,7 +11,7 @@ use steel_derive::Steel;
 use thiserror::Error;
 
 use crate::input::Registerable;
-use crate::libraries::utils::EggRewriteSink;
+use crate::libraries::utils::{Context, EggRewriteSink, INDEPEDANT_QUERY, SmtSink};
 use crate::protocol::memory_cell::Assignements;
 use crate::terms::{EMPTY, Formula, Function, INIT, UNFOLD_COND, UNFOLD_MSG, Variable};
 use crate::{Lang, MSmt, MSmtFormula, MSmtParam, Problem, rexp, vec_smt};
@@ -145,13 +144,13 @@ impl Step {
         &self,
         pbl: &Problem,
         ptcl: &MSmtFormula,
-        sink: &mut impl SmtSink<MSmtParam>,
+        sink: &mut impl SmtSink,
     ) {
         let [cond, msg, name]: [MSmtFormula; _] =
             [&self.cond, &self.msg, &self.id_expr()].map(|x| x.as_smt(pbl).unwrap());
         let vars = self.vars.iter().cloned();
 
-        sink.extend_smt(vec_smt![%
+        sink.extend_smt(pbl, &INDEPEDANT_QUERY, vec_smt![%
             ; format!("unfolding of {name}"),
             (forall !(vars.clone()) (= (UNFOLD_COND #name #ptcl) #cond)),
             (forall !(vars.clone()) (= (UNFOLD_MSG #name #ptcl) #msg))

@@ -1,5 +1,5 @@
 use std::ops::{Deref, DerefMut};
-use std::sync::{Arc, RwLock, RwLockWriteGuard};
+use std::sync::{Arc, Mutex, MutexGuard, RwLock, RwLockWriteGuard};
 use std::time::Duration;
 
 use anyhow::Context;
@@ -23,17 +23,19 @@ declare_trace!($"shrpblm");
 
 /// A shared, reference-counted, mutable problem instance for use within the Steel VM.
 #[derive(Debug, Clone, Steel)]
-pub struct ShrProblem(pub(crate) Arc<RwLock<Problem>>);
+pub struct ShrProblem(pub(crate) Arc<Mutex<Problem>>);
+
+
 
 impl ShrProblem {
     /// Borrows the underlying `Problem` immutably.
     pub fn borrow(&self) -> impl Deref<Target = Problem> {
-        self.0.read().unwrap()
+        self.0.lock().unwrap()
     }
 
     /// Borrows the underlying `Problem` mutably.
     pub fn borrow_mut(&self) -> impl DerefMut<Target = Problem> {
-        self.0.write().unwrap()
+        self.0.lock().unwrap()
     }
 
     pub(crate) fn get_step_mut(
@@ -55,7 +57,7 @@ impl ShrProblem {
             ));
         }
 
-        let step = RwLockWriteGuard::map(self.0.write().unwrap(), |x| {
+        let step = MutexGuard::map(self.0.lock().unwrap(), |x| {
             x.protocol_mut(ptcl.protocol_idx)
                 .unwrap()
                 .step_mut(step.step_idx)
@@ -93,7 +95,7 @@ fn run(pbl: ShrProblem, p1: Function, p2: Function) -> SResult<bool> {
 #[steel_derive::declare_steel_function(name = "empty")]
 fn mk_empty(config: Configuration) -> ShrProblem {
     let pbl = Problem::builder().config(config).build();
-    ShrProblem(Arc::new(RwLock::new(pbl)))
+    ShrProblem(Arc::new(Mutex::new(pbl)))
 }
 
 /// Declares a new function in the problem.
@@ -164,7 +166,7 @@ fn publish(pbl: ShrProblem, vars: Vec<Variable>, term: Formula) {
 
 #[steel_derive::declare_steel_function(name = "get-report")]
 fn get_report(pbl: ShrProblem) -> Report {
-    pbl.0.read().unwrap().report.clone()
+    pbl.0.lock().unwrap().report.clone()
 }
 
 use paste::paste;

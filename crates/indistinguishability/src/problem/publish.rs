@@ -46,7 +46,7 @@ impl Problem {
             "All variables in a published terms should be bound"
         );
 
-        self.clear_smt_prelude();
+        self.data.smt.force_reset();
 
         self.public_terms.push(term.clone());
         let n = self.num_steps()?.into();

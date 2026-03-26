@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use cryptovampire_smt::SmtSink;
 use egg::{Analysis, EGraph, Pattern, PatternAst};
 use log::{debug, log_enabled, trace};
 use utils::econtinue_if;
@@ -9,6 +8,7 @@ use utils::econtinue_if;
 use super::Library;
 use crate::libraries::base::BaseRewriteLib;
 use crate::libraries::constrains::ConstrainsLib;
+use crate::libraries::current_step::CurrentStep;
 use crate::libraries::deduce::DeduceLib;
 use crate::libraries::fa::FaLib;
 use crate::libraries::find_indices::FindIndicesLib;
@@ -21,32 +21,33 @@ use crate::libraries::publication::PublicationLib;
 use crate::libraries::sanity_check::SanityCheck;
 use crate::libraries::smt::SmtLib;
 use crate::libraries::substitution::SubstLib;
-use crate::libraries::utils::{EggRewriteSink, RewriteSink, RuleSink};
+use crate::libraries::utils::cache::Context;
+use crate::libraries::utils::{EggRewriteSink, INDEPEDANT_QUERY, RewriteSink, RuleSink, SmtSink};
 use crate::libraries::vampire::VampireLib;
-use crate::problem::{PAnalysis, ProblemState, RcRule};
+use crate::problem::{PAnalysis, ProblemState, ProblemStateLib, RcRule};
 use crate::{CVProgram, Lang, LangVar, MSmtParam, Problem, smt};
 
 macro_rules! mk_libraires {
   ($name:ty; $($libs:ident),* $(,)*) => {
         impl Library for $name {
-            fn add_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
-            $($libs::add_smt(pbl, sink));*
+            fn add_smt(&self, pbl: &mut Problem, context: &Context, sink: &mut impl SmtSink) {
+                $($libs.add_smt(pbl, context, sink));*
             }
 
-            fn add_rewrites(pbl: &mut Problem, sink: &mut impl RewriteSink) {
-            $($libs::add_rewrites(pbl, sink));*
+            fn add_rewrites(&self, pbl: &mut Problem, sink: &mut impl RewriteSink) {
+                $($libs.add_rewrites(pbl, sink));*
             }
 
-            fn add_egg_rewrites<N:Analysis<Lang>>(pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {
-            $($libs::add_egg_rewrites(pbl, sink));*
+            fn add_egg_rewrites<N:Analysis<Lang>>(&self, pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {
+                $($libs.add_egg_rewrites(pbl, sink));*
             }
 
-            fn add_rules(pbl: &mut Problem, sink: &mut impl RuleSink) {
-            $($libs::add_rules(pbl, sink));*
+            fn add_rules(&self, pbl: &mut Problem, sink: &mut impl RuleSink) {
+                $($libs.add_rules(pbl, sink));*
             }
 
-            fn modify_egraph<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
-            $($libs::modify_egraph(egraph));*
+            fn modify_egraph<'a>(&self, egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
+                $($libs.modify_egraph(egraph));*
             }
         }
   };
@@ -91,7 +92,7 @@ impl<'a, N: Analysis<Lang>, U: EggRewriteSink<N>> RewriteSink for Wrapper<'a, U,
     }
 }
 
-impl<'a, U: SmtSink<MSmtParam>> RewriteSink for Wrapper<'a, U, ()> {
+impl<'a, U: SmtSink> RewriteSink for Wrapper<'a, U, ()> {
     fn extend_rewrites(&mut self, pbl: &Problem, iter: utils::implvec!(crate::terms::Rewrite)) {
         let iter = iter.into_iter();
         let (size_hint, _) = iter.size_hint();
@@ -110,10 +111,10 @@ impl<'a, U: SmtSink<MSmtParam>> RewriteSink for Wrapper<'a, U, ()> {
             let vars = variables.clone().into_owned();
 
             if let Some(name) = name {
-                self.0.comment(name);
+                self.0.comment(pbl, &Default::default(), name);
             }
 
-            self.0.assert_one(smt!((forall #vars (= #from #to))))
+            self.0.assert_one(pbl, &Default::default(), smt!((forall #vars (= #from #to))))
         }
     }
 
@@ -125,35 +126,35 @@ impl<'a, U: SmtSink<MSmtParam>> RewriteSink for Wrapper<'a, U, ()> {
 pub struct Libraries;
 
 impl Libraries {
-    pub fn add_all_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
-        Self::add_smt(pbl, sink);
+    pub fn add_all_smt(pbl: &mut Problem, context: &Context, sink: &mut impl SmtSink) {
+        Self.add_smt(pbl, context, sink);
 
-        sink.comment_block("Cross engine rewrites");
-        sink.comment("this include custom rewrites and library rewrites");
+        sink.comment_block(pbl, &INDEPEDANT_QUERY, "Cross engine rewrites");
+        sink.comment(pbl, &INDEPEDANT_QUERY, "this include custom rewrites and library rewrites");
 
         Self::add_all_rewrites(pbl, &mut Wrapper(sink, ()));
     }
 
     pub fn add_all_rewrites(pbl: &mut Problem, sink: &mut impl RewriteSink) {
-        Self::add_rewrites(pbl, sink);
+        Self.add_rewrites(pbl, sink);
     }
 
     pub fn add_all_egg_rewrites<N: Analysis<Lang>>(
         pbl: &mut Problem,
         sink: &mut impl EggRewriteSink<N>,
     ) {
-        Self::add_egg_rewrites(pbl, sink);
+        Self.add_egg_rewrites(pbl, sink);
 
         Self::add_all_rewrites(pbl, &mut Wrapper(sink, Default::default()));
     }
 
     pub fn add_all_rules(pbl: &mut Problem, sink: &mut impl RuleSink) {
-        Self::add_rules(pbl, sink);
+        Self.add_rules(pbl, sink);
     }
 
     /// Add terms to the egraph / union terms
     pub fn init_egraph<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
-        Self::modify_egraph(egraph);
+        Self.modify_egraph(egraph);
 
         if cfg!(debug_assertions) && log_enabled!(log::Level::Debug) {
             debug_init_egraph(egraph);
@@ -208,8 +209,9 @@ mk_libraires!(Libraries;
   BaseRewriteLib,
   UnfoldLib,
   SanityCheck,
-  ProblemState,
+  ProblemStateLib,
   ProblemLib,
+  CurrentStep,
   FindIndicesLib,
   DeduceLib,
   ConstrainsLib,

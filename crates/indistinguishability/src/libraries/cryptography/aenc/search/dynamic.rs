@@ -7,8 +7,8 @@ use golgge::{Dependancy, Rule};
 use itertools::Itertools;
 use utils::ereturn_if;
 
-use crate::libraries::AEnc;
-use crate::libraries::aenc::vars::*;
+use super::super::AEnc;
+use super::super::vars::*;
 use crate::libraries::utils::SyntaxSearcher;
 use crate::libraries::utils::fresh::RefFormulaBuilder;
 use crate::problem::{PAnalysis, RcRule};

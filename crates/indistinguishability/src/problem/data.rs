@@ -1,9 +1,17 @@
+use std::cell::RefCell;
+
 use crate::Problem;
+use crate::libraries::utils::cache::SmtCache;
 use crate::runners::SmtRunner;
+use crate::terms::{Formula, Function};
 
 #[derive(Default)]
-pub struct ProblemData {
+pub struct Cache {
     pub vampire_exec: Option<SmtRunner>,
+    pub smt: SmtCache,
+
+    /// a cache for the quantifiers
+    pub quantifier_cache: Vec<(Formula, Function)>,
 }
 
 impl Problem {

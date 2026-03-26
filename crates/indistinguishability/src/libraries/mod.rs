@@ -1,10 +1,5 @@
-use cryptovampire_smt::SmtSink;
 use egg::{Analysis, EGraph, Rewrite};
 use itertools::chain;
-/// Re-exports the test module for PRF rules.
-#[cfg(test)]
-pub use prf::test as prf_test;
-/// Re-exports the `VampireRule` struct, which implements a rule for the Vampire SMT solver.
 pub use vampire::VampireRule;
 
 use crate::libraries::base::BaseRewriteLib;
@@ -19,7 +14,7 @@ use crate::libraries::publication::PublicationLib;
 use crate::libraries::sanity_check::SanityCheck;
 use crate::libraries::smt::SmtLib;
 use crate::libraries::substitution::SubstLib;
-use crate::libraries::utils::{EggRewriteSink, RewriteSink, RuleSink};
+use crate::libraries::utils::{EggRewriteSink, RewriteSink, RuleSink, SmtSink};
 use crate::libraries::vampire::VampireLib;
 use crate::problem::{PAnalysis, PRule, ProblemState, RcRule};
 use crate::runners::SmtRunner;
@@ -244,8 +239,6 @@ macro_rules! mk_many_rewrites {
 /// Provides utility functions and helpers for rules.
 pub mod utils;
 
-/// Encryption rules
-mod aenc;
 
 /// Provides rules for deduction.
 mod deduce;
@@ -255,8 +248,6 @@ mod fa;
 mod lambda;
 /// Provides rules for handling nonces.
 mod nonce;
-/// Provides rules for pseudo-random functions (PRFs).
-mod prf;
 /// Provides rules for substitution.
 mod substitution;
 /// Provides rules for interacting with the Vampire SMT solver.
@@ -266,11 +257,6 @@ mod ifs;
 
 pub use protocol::{constrains, publication};
 
-mod xor;
-pub use xor::XOr;
-
-mod ddh;
-pub use ddh::DDH;
 
 mod smt;
 
@@ -280,10 +266,7 @@ mod smt;
 /// that can then be used with mutliparterns
 mod find_indices;
 
-pub use aenc::AEnc;
 pub use nonce::{FreshNonce, add_no_guessing_smt};
-/// Re-exports the `PRF` struct, representing a pseudo-random function.
-pub use prf::PRF;
 
 mod base;
 mod problem;
@@ -299,3 +282,8 @@ pub use library::Library;
 
 mod libraries;
 pub use libraries::Libraries;
+
+mod cryptography;
+pub use cryptography::{AEnc, XOr, DDH, PRF,  CryptographicAssumption, Cryptography};
+
+mod current_step;

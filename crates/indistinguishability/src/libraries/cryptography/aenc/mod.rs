@@ -1,11 +1,13 @@
 use itertools::{Itertools, chain};
 
+use crate::libraries::Library;
 use crate::libraries::utils::{RewriteSink, TwoSortFunction};
 use crate::problem::ProblemState;
 use crate::terms::{
-    CryptographicAssumption, Cryptography, Formula, Function, FunctionFlags, Rewrite, Sort,
+     Formula, Function, FunctionFlags, Rewrite, Sort,
     Variable,
 };
+use super::{CryptographicAssumption, Cryptography};
 use crate::{Problem, mk_signature};
 declare_trace!($"enc");
 
@@ -204,6 +206,8 @@ impl From<AEnc> for CryptographicAssumption {
         Self::AEnc(v)
     }
 }
+
+impl Library for AEnc {}
 
 impl Cryptography for AEnc {
     fn ref_from_assumption(r: &CryptographicAssumption) -> Option<&Self> {

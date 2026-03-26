@@ -1,4 +1,4 @@
-use cryptovampire_smt::{Smt, SmtSink};
+use cryptovampire_smt::{Smt};
 use egg::EGraph;
 use golgge::{Program, Rule};
 use itertools::Itertools;
@@ -177,7 +177,7 @@ impl Problem {
                 assert_eq!(init.name, "init");
 
                 // we add to `extra_smt` things specific to this run that need to be reflected in smt
-                self.extra_smt_mut().assert_one(smt!((HAPPENS init)));
+                // self.extra_smt_mut().assert_one(smt!((HAPPENS init))); // current step lib
 
                 let mut pgrm = self.mk_program();
 
@@ -230,10 +230,11 @@ impl Problem {
                     args: args.clone(),
                 });
 
-                self.extra_smt.push(Smt::mk_assert({
-                    let args = args.iter().map(|f| smt!(f));
-                    smt!((HAPPENS (s #args*)))
-                }));
+                // self.extra_smt.push(Smt::mk_assert({
+                //     let args = args.iter().map(|f| smt!(f));
+                //     smt!((HAPPENS (s #args*)))
+                // }));
+                // current step lib
 
                 let s = rexp!((s #(args.iter().map(|f| rexp!(f)))*));
                 let goal = rexp!((EQUIV (MACRO_FRAME (PRED #s) p1f) (MACRO_FRAME (PRED #s) p2f)

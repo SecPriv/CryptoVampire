@@ -1,5 +1,5 @@
 use super::*;
-use crate::terms::CryptographicAssumption;
+use crate::libraries::CryptographicAssumption;
 
 impl Problem {
     pub fn default_cryptography() -> Vec<CryptographicAssumption> {
@@ -23,5 +23,13 @@ impl Problem {
         let ret = std::array::from_fn(|i| i + self.cryptography.len());
         self.cryptography.extend(ret.map(|_| Default::default()));
         ret
+    }
+
+    pub fn map_cryptography(&mut self, mut f: impl FnMut(&mut Self, &mut CryptographicAssumption)) {
+        let mut crypto = ::std::mem::take(&mut self.cryptography);
+        for c in &mut crypto {
+            f(self, c)
+        }
+        self.cryptography = crypto;
     }
 }

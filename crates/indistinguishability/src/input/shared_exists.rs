@@ -1,5 +1,5 @@
 use std::ops::{Deref, DerefMut};
-use std::sync::{RwLockReadGuard, RwLockWriteGuard};
+use std::sync::{MutexGuard, RwLockReadGuard, RwLockWriteGuard};
 
 use log::trace;
 use steel::SteelVal;
@@ -28,13 +28,11 @@ impl ShrExists {
     }
 
     fn exists(&self) -> impl Deref<Target = Exists> {
-        RwLockReadGuard::map(self.pbl.0.read().unwrap(), |pbl| {
-            Exists::try_from_ref(self.index().get(pbl.functions()).unwrap()).unwrap()
-        })
+        self.exists_mut()
     }
 
     fn exists_mut(&self) -> impl DerefMut<Target = Exists> {
-        RwLockWriteGuard::map(self.pbl.0.write().unwrap(), |pbl| {
+        MutexGuard::map(self.pbl.0.lock().unwrap(), |pbl| {
             Exists::try_from_mut(self.index().get_mut(pbl.functions_mut()).unwrap()).unwrap()
         })
     }

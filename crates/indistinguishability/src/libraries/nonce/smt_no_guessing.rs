@@ -1,25 +1,39 @@
-use cryptovampire_smt::SmtSink;
 use itertools::chain;
 use log::trace;
+use utils::ereturn_if;
 
 use crate::libraries::nonce::Nonce;
-use crate::libraries::utils::SyntaxSearcher;
+use crate::libraries::utils::cache::Context;
 use crate::libraries::utils::fresh::RefFormulaBuilder;
+use crate::libraries::utils::{SmtOption, SmtSink, SyntaxSearcher};
 use crate::protocol::Protocol;
 use crate::terms::{Formula, Function, IS_INDEPENDANT_BITSTRING, MACRO_FRAME, NONCE, Sort};
 use crate::{MSmt, MSmtFormula, MSmtParam, Problem, rexp, smt};
+
+static SMT_OPTIONS: SmtOption = SmtOption {
+    depend_on_context: false,
+};
 
 /// Creates the SMT formulas for the no-guessing theorem
 ///
 /// This function creates the SMT formulas for the no-guessing theorem.
 /// It includes the no-guessing theorem itself, the SMT nonce, the SMT formulas
 /// for the functions, and the SMT formulas for the steps.
-pub fn add_no_guessing_smt(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
-    sink.comment("no guessing theorem & co");
-    sink.assert_one(mk_no_guessing_theorem());
-    sink.assert_one(mk_smt_nonce());
-    sink.assert_many(pbl.functions().iter_current().filter_map(mk_smt_fun_one));
-    sink.assert_many(pbl.protocols().iter().map(|ptcl| mk_smt_step(pbl, ptcl)));
+pub fn add_no_guessing_smt(pbl: &Problem, ctx: &Context, sink: &mut impl SmtSink) {
+    ereturn_if!(ctx.using_cache);
+    sink.comment(pbl, &SMT_OPTIONS, "no guessing theorem & co");
+    sink.assert_one(pbl, &SMT_OPTIONS, mk_no_guessing_theorem());
+    sink.assert_one(pbl, &SMT_OPTIONS, mk_smt_nonce());
+    sink.assert_many(
+        pbl,
+        &SMT_OPTIONS,
+        pbl.functions().iter_current().filter_map(mk_smt_fun_one),
+    );
+    sink.assert_many(
+        pbl,
+        &SMT_OPTIONS,
+        pbl.protocols().iter().map(|ptcl| mk_smt_step(pbl, ptcl)),
+    );
 }
 
 /// Generates the SMT formula for the no-guessing theorem.

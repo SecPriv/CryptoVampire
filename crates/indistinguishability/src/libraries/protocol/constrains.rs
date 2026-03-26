@@ -1,10 +1,12 @@
-use cryptovampire_smt::SmtSink;
 use egg::{Analysis, EGraph, MultiPattern, Rewrite};
 use itertools::{Itertools, chain, izip};
 use rustc_hash::FxHashMap;
+use utils::ereturn_if;
 
+use super::SMT_OPTIONS;
 use crate::libraries::Library;
-use crate::libraries::utils::EggRewriteSink;
+use crate::libraries::utils::cache::Context;
+use crate::libraries::utils::{EggRewriteSink, SmtSink};
 use crate::problem::{BoundStep, ConstrainOp, Constrains, CurrentStep, PAnalysis};
 use crate::terms::{CURRENT_STEP, Formula, HAPPENS, INIT, IS_INDEX, LEQ, LT, PRED, TEQ, TRUE};
 use crate::{Lang, MSmt, MSmtFormula, MSmtParam, Problem, rexp, smt};
@@ -28,8 +30,10 @@ macro_rules! bind {
 pub struct ConstrainsLib;
 
 impl Library for ConstrainsLib {
-    fn add_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
-        sink.comment("Constrains");
+    fn add_smt(&self, pbl: &mut Problem, ctx: &Context, sink: &mut impl SmtSink) {
+        ereturn_if!(ctx.using_cache);
+
+        sink.comment(pbl, &SMT_OPTIONS, "Constrains");
 
         sink.reserve(pbl.constrains().len());
         for constrain in pbl.constrains() {
@@ -37,7 +41,7 @@ impl Library for ConstrainsLib {
         }
     }
 
-    fn add_egg_rewrites<N: Analysis<Lang>>(pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {
+    fn add_egg_rewrites<N: Analysis<Lang>>(&self, pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {
         add_rewrite_static(sink);
 
         for c in pbl.constrains() {
@@ -45,7 +49,7 @@ impl Library for ConstrainsLib {
         }
     }
 
-    fn modify_egraph<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
+    fn modify_egraph<'a>(&self, egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
         let CurrentStep { idx, args } = egraph.analysis.pbl().current_step().unwrap();
         let cf = egraph.analysis.pbl().get_step_fun(*idx).unwrap().clone();
 
@@ -66,24 +70,28 @@ impl Library for ConstrainsLib {
 }
 
 fn add_smt_constrain_one(
-    _: &Problem,
+    pbl: &Problem,
     bind!(s1(a1..) op s2(a2..)): &Constrains,
-    sink: &mut impl SmtSink<MSmtParam>,
+    sink: &mut impl SmtSink,
 ) {
     debug_assert_eq!(s1.arity(), a1.len());
     debug_assert_eq!(s2.arity(), a2.len());
     let vars_iter = chain![a1, a2].unique().cloned();
     let args1 = a1.iter().map::<MSmtFormula, _>(|v| smt!(#v));
     let args2 = a2.iter().map::<MSmtFormula, _>(|v| smt!(#v));
-    sink.assert_one(match op {
-        ConstrainOp::LessThan => {
-            smt!((forall #(vars_iter) (LT (s1 #args1*) (s2 #args2*))))
-        }
-        ConstrainOp::Exclude => smt!((forall #(vars_iter)
+    sink.assert_one(
+        pbl,
+        &SMT_OPTIONS,
+        match op {
+            ConstrainOp::LessThan => {
+                smt!((forall #(vars_iter) (LT (s1 #args1*) (s2 #args2*))))
+            }
+            ConstrainOp::Exclude => smt!((forall #(vars_iter)
           (=>
             (and (HAPPENS (s1 #(args1.clone())*)) (HAPPENS (s2 #(args2.clone())*)))
             (= (s1 #args1*) (s2 #args2*))))),
-    })
+        },
+    )
 }
 
 decl_vars!(const TRUTH_VAR:Bool);

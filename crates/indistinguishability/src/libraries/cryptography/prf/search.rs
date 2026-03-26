@@ -377,34 +377,38 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for PrfVampireRule {
 
     /// Searches for the trigger pattern in the e-graph and initiates a PRF search using the SMT solver.
     fn search(&self, prgm: &mut CVProgram<'a>, goal: egg::Id) -> Dependancy {
-        let egraph = prgm.egraph_mut();
         ereturn_let!(let Some(substs) = self.pattern
-                .search_eclass(egraph, goal), Dependancy::impossible());
+                .search_eclass(prgm.egraph(), goal), Dependancy::impossible());
 
         for subst in substs.substs {
+            let egraph = prgm.egraph_mut();
             let [m, k, time, hyp] = [M, K, T, H]
                 .map(|x| Formula::try_from_id(egraph, *subst.get(x.as_egg()).unwrap()).unwrap());
-            let pbl = egraph.analysis.pbl();
+            // let pbl = egraph.analysis.pbl();
             let search = Search {
                 prf_idx: self.prf,
                 m,
                 k,
             };
             // get the protocol from the function
-            let ptcl = get_protocol(egraph, *subst.get(P.as_egg()).unwrap()).unwrap();
+            // let ptcl = get_protocol(egraph, *subst.get(P.as_egg()).unwrap()).unwrap();
 
-            let search = search.search_timepoint(pbl, ptcl, time, hyp).collect_vec();
-            tr!(
-                "prf needs to checks:\n[\n\t- {}\n]",
-                search.iter().join("\n\t")
-            );
-            let pbl = egraph.analysis.pbl_mut();
-            pbl.find_temp_quantifiers(&search);
-            let result = search.into_iter().all(|query| {
-                let query = query.as_smt(*pbl).unwrap();
-                self.exec.run_to_dependancy(pbl, query).is_axioms()
-            });
-            pbl.clear_temp_quantifiers();
+            // let search = search.search_timepoint(pbl, ptcl, time, hyp).collect_vec();
+            // tr!(
+            //     "prf needs to checks:\n[\n\t- {}\n]",
+            //     search.iter().join("\n\t")
+            // );
+            // let pbl = egraph.analysis.pbl_mut();
+            // pbl.find_temp_quantifiers(&search);
+            // let result = search.into_iter().all(|query| {
+            //     let query = query.as_smt(*pbl).unwrap();
+            //     self.exec.run_to_dependancy(pbl, query).is_axioms()
+            // });
+            // pbl.clear_temp_quantifiers();
+
+            let result = search
+                .search_id_timepoint(prgm, &self.exec, *subst.get(P.as_egg()).unwrap(), time, hyp)
+                .unwrap();
             ereturn_if!(result, Dependancy::axiom());
         }
 

@@ -118,9 +118,11 @@ impl ProblemState {
     }
 }
 
-impl Library for ProblemState {
-    fn modify_egraph<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
-        assert!(Self::get_self(egraph).sets().iter().all(|s| s.is_empty()));
-        Self::propagate(egraph, None);
+pub struct ProblemStateLib;
+
+impl Library for ProblemStateLib {
+    fn modify_egraph<'a>(&self, egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
+        assert!(ProblemState::get_self(egraph).sets().iter().all(|s| s.is_empty()));
+        ProblemState::propagate(egraph, None);
     }
 }

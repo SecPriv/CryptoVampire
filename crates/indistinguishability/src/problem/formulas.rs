@@ -6,6 +6,8 @@ use utils::econtinue_let;
 
 use super::*;
 use crate::libraries::Libraries;
+use crate::libraries::utils::SmtSink;
+use crate::libraries::utils::cache::Context;
 use crate::terms::{
     FOBinder, FindSuchThat, Formula, FunctionCollection, Quantifier, QuantifierT,
     QuantifierTranslator, Rewrite,
@@ -13,36 +15,11 @@ use crate::terms::{
 use crate::{MSmt, rexp};
 
 impl Problem {
-    fn smt_prelude_ready(&self) -> bool {
-        !self.smt_prelude.is_empty()
-    }
-
-    /// Computes the SMT prelude if it hasn't been computed yet and caches it.
-    fn compute_smt_prelude(&mut self) {
-        if !self.smt_prelude_ready() {
-            self.find_temp_quantifiers(&[]);
-
-            let mut prelude = ::std::mem::take(&mut self.smt_prelude);
-            prelude.clear();
-            Libraries::add_all_smt(self, &mut prelude);
-            self.smt_prelude = prelude
-        }
-    }
-
-    /// Returns the SMT prelude if it has been computed
-    pub fn maybe_get_smt_prelude(&self) -> Option<&[MSmt]> {
-        self.smt_prelude_ready().then_some(&self.smt_prelude)
-    }
-
-    /// Returns the SMT prelude, computing it if necessary
-    pub fn get_smt_prelude(&mut self) -> &[MSmt] {
-        self.compute_smt_prelude();
-        &self.smt_prelude
-    }
-
-    /// Clears the SMT prelude
-    pub fn clear_smt_prelude(&mut self) {
-        self.smt_prelude.clear();
+    /// Computes the SMT
+    pub fn add_smt(&mut self, context: &mut Context, sink: &mut impl SmtSink) {
+        self.data.smt.reset();
+        context.using_cache = !self.data.smt.anything_cached();
+        Libraries::add_all_smt(self, context, sink);
     }
 
     /// Returns the extra SMT formulas
@@ -52,7 +29,7 @@ impl Problem {
 
     /// Returns a mutable reference to the extra SMT formulas
     pub fn extra_smt_mut(&mut self) -> &mut Vec<MSmt> {
-        self.clear_smt_prelude();
+        self.data.smt.force_reset();
         &mut self.extra_smt
     }
 
@@ -63,7 +40,7 @@ impl Problem {
 
     /// Returns a mutable reference to the extra rewrites
     pub fn extra_rewrite_mut(&mut self) -> &mut Vec<Rewrite> {
-        self.clear_smt_prelude();
+        self.data.smt.force_reset();
         &mut self.extra_rewrite
     }
 
@@ -79,7 +56,7 @@ impl Problem {
 
     /// Finds all the temporary quantifiers in the problem and adds them to the cache
     pub fn find_temp_quantifiers(&mut self, extra: &[Formula]) {
-        if extra.is_empty() && self.smt_prelude_ready() {
+        if extra.is_empty() && !self.data.quantifier_cache.is_empty() {
             return;
         }
 
@@ -96,7 +73,11 @@ impl Problem {
                     ..
                 } = a
                     && let None = pile.iter().find_map(|x| a.unify(x))
-                    && let None = self.quantifier_cache.iter().find_map(|(x, _)| a.unify(x))
+                    && let None = self
+                        .data
+                        .quantifier_cache
+                        .iter()
+                        .find_map(|(x, _)| a.unify(x))
                 {
                     tr!("{a:?}");
                     pile.push(a.clone());
@@ -108,7 +89,7 @@ impl Problem {
             "found quantifiers!:\n{}",
             chain![
                 quantifiers.iter(),
-                self.quantifier_cache.iter().map(|(q, _)| q)
+                self.data.quantifier_cache.iter().map(|(q, _)| q)
             ]
             .join("\n")
         );
@@ -134,15 +115,15 @@ impl Problem {
             find.set_else_branch(arg[2].clone());
             tr!("adding newfound quantifier:\n{find:#?}\n\tfrom{q}");
             let tlf = find.top_level_function().clone();
-            self.quantifier_cache.push((q.clone(), tlf));
+            self.data.quantifier_cache.push((q.clone(), tlf));
         }
-        self.clear_smt_prelude();
+        self.data.smt.force_reset();
     }
 
     /// Clears the temporary quantifiers from the cache
     pub fn clear_temp_quantifiers(&mut self) {
-        self.quantifier_cache.clear();
-        self.clear_smt_prelude();
+        self.data.quantifier_cache.clear();
+        self.data.smt.force_reset();
     }
 
     /// list all the `RecFOFormula` stored in this `Self`
@@ -178,13 +159,14 @@ impl QuantifierTranslator for Problem {
         tr!("try translate:\n{formula}");
         if log_enabled!(log::Level::Trace) {
             let mut p = String::new();
-            for (q, f) in &self.quantifier_cache {
+            for (q, f) in &self.data.quantifier_cache {
                 p += &format!("{} => {q}\n", f.name);
             }
             tr!("available quantifiers:\n{p}")
         }
 
         let (subst, fun) = self
+            .data
             .quantifier_cache
             .iter()
             .find_map(|(cached, fun)| cached.unify(formula).map(|subst| (subst, fun.clone())))?;
@@ -215,8 +197,14 @@ impl QuantifierTranslator for Problem {
 
         tr!("arg vars: [{}]", args.clone().join(", "));
 
-        let sks = q.skolems().iter().map(|sk| rexp!((sk #(args.clone())*)));
         let tlf = q.top_level_function();
+        self.data
+            .smt
+            .occured_quantfiers
+            .borrow_mut()
+            .insert(tlf.clone());
+
+        let sks = q.skolems().iter().map(|sk| rexp!((sk #(args.clone())*)));
 
         Some(rexp!((tlf #(args.clone())* #sks*)))
     }

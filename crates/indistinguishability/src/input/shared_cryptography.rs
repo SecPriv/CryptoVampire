@@ -10,9 +10,9 @@ use steel_derive::Steel;
 use crate::Problem;
 use crate::input::Registerable;
 use crate::input::shared_problem::ShrProblem;
-use crate::libraries::{AEnc, DDH, PRF, XOr};
+use crate::libraries::{AEnc, DDH, PRF, XOr, CryptographicAssumption, Cryptography};
 use crate::terms::{
-    CryptographicAssumption, Cryptography, Formula, Function, NONCE, Sort, Variable,
+     Formula, Function, NONCE, Sort, Variable,
 };
 
 /// Represents a shared cryptographic context within the Steel VM.
@@ -30,8 +30,8 @@ impl ShrCrypto {
 
     #[allow(dead_code)]
     fn get_crypto(&self) -> impl Deref<Target = CryptographicAssumption> {
-        std::sync::RwLockReadGuard::<'_, Problem>::map(self.pbl.0.read().unwrap(), |pbl| {
-            &pbl.cryptography()[self.index]
+        std::sync::MutexGuard::<'_, Problem>::map(self.pbl.0.lock().unwrap(), |pbl| {
+            &mut pbl.cryptography[self.index]
         })
     }
 }

@@ -1,22 +1,24 @@
-use cryptovampire_smt::SmtSink;
 use egg::{Analysis, Pattern};
 use itertools::{Itertools, chain};
-use utils::{econtinue_if, exprdebug};
+use utils::{econtinue_if, ereturn_if, exprdebug};
 
 use crate::libraries::Library;
-use crate::libraries::utils::EggRewriteSink;
+use crate::libraries::utils::cache::Context;
+use crate::libraries::utils::{EggRewriteSink, SmtOption, SmtSink};
 use crate::protocol::Step;
 use crate::terms::{Function, HAPPENS, INIT, LT, MACRO_EXEC, MACRO_MSG};
 use crate::{Lang, MSmt, MSmtParam, Problem, fresh, rexp, smt};
-
+use super::SMT_OPTIONS;
 pub struct PublicationLib;
 
 impl Library for PublicationLib {
-    fn add_egg_rewrites<N: Analysis<Lang>>(pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {
+    fn add_egg_rewrites<N: Analysis<Lang>>(&self,pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {
         add_rewrites(pbl, sink);
     }
 
-    fn add_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
+    fn add_smt(&self, pbl: &mut Problem, ctxt: &Context, sink: &mut impl SmtSink) {
+        ereturn_if!(ctxt.using_cache);
+
         add_smt(pbl, sink);
     }
 }
@@ -75,7 +77,7 @@ fn add_rewrites<N: Analysis<Lang>>(pbl: &Problem, sink: &mut impl EggRewriteSink
     }
 }
 
-fn add_smt(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
+fn add_smt(pbl: &Problem, sink: &mut impl SmtSink) {
     let (pub_steps, steps): (Vec<_>, Vec<_>) =
         pbl.steps().unwrap().partition(|s| s.is_publish_step());
 
@@ -83,7 +85,7 @@ fn add_smt(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
 
     sink.reserve(pub_steps.len() * (steps.len() + 2) + 1);
 
-    sink.extend_one_smt(MSmt::comment_block("Publication Steps"));
+    sink.extend_one_smt(pbl, &SMT_OPTIONS, MSmt::comment_block("Publication Steps"));
 
     for s in pub_steps {
         econtinue_if!(s == INIT);
@@ -92,16 +94,20 @@ fn add_smt(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
         let vars_iter = || vars.iter().cloned();
         let sf = smt!((s #(vars_iter())*));
 
-        sink.comment(format!("step {s}"));
+        sink.comment(pbl, &SMT_OPTIONS, format!("step {s}"));
 
-        sink.assert_one(smt!((forall ((#p Protocol)) (forall #(vars_iter()) (= (MACRO_EXEC #sf #p) (HAPPENS #sf))))));
+        sink.assert_one(pbl, &SMT_OPTIONS, smt!((forall ((#p Protocol)) (forall #(vars_iter()) (= (MACRO_EXEC #sf #p) (HAPPENS #sf))))));
 
         for so in steps.iter() {
             let ovars = so.args_sorts().map(|x| fresh!(x)).collect_vec();
             let ovars_iter = || ovars.iter().cloned();
             let all_vars = vars_iter().chain(ovars_iter());
             // sf is captured from outside.
-            sink.assert_one(smt!((forall #all_vars (LT #sf (so #(ovars_iter())*)))));
+            sink.assert_one(
+                pbl,
+                &SMT_OPTIONS,
+                smt!((forall #all_vars (LT #sf (so #(ovars_iter())*)))),
+            );
         }
     }
 }

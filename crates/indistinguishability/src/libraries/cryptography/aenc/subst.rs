@@ -1,19 +1,17 @@
 use anyhow::Context;
 use egg::{Id, Pattern, Searcher};
 use golgge::{Dependancy, Rule};
-use log::trace;
 use utils::ereturn_let;
 
 use super::vars::*;
-use crate::libraries::DDH;
-use crate::libraries::ddh::ProofHints;
+use super::{AEnc, ProofHints};
 use crate::libraries::substitution::{PSArgs, ProofLike, ProofSubstitution};
-use crate::libraries::utils::RuleSink;
+use crate::libraries::utils::{RuleSink, TwoSortFunction};
 use crate::problem::{CVRuleTrait, PAnalysis, PRule, RcRule};
 use crate::terms::{EQUIV_WITH_SIDE, Function};
 use crate::{CVProgram, Lang, Problem, rexp};
 
-pub fn mk_rules(_: &Problem, aenc: &DDH, sink: &mut impl RuleSink) {
+pub fn mk_rules(_: &Problem, aenc: &AEnc, sink: &mut impl RuleSink) {
     sink.add_rule(SubstRule::new(aenc));
 }
 
@@ -22,29 +20,32 @@ struct SubstRule {
     #[allow(dead_code)]
     aenc: usize,
 
-    search_m: Function,
-    search_b: Function,
-
     goal_pattern: Pattern<Lang>,
     new_goal_pattern: Pattern<Lang>,
+
+    pk: Option<Function>,
+    dec: Function,
+    search: TwoSortFunction,
 }
 
 #[derive(Debug, Clone)]
 struct SubstData {
-    search_m: Function,
-    search_b: Function,
     new_term: Id,
+    search: TwoSortFunction,
+    pk: Option<Function>,
+    dec: Function,
 }
 
 impl SubstRule {
     pub fn new(
-        DDH {
+        AEnc {
             subst,
             index,
-            search_b,
-            search_m,
+            dec,
+            pk,
+            search_k,
             ..
-        }: &DDH,
+        }: &AEnc,
     ) -> Self {
         let g_pattern = Pattern::from(&rexp!((subst #SIDE #U #V #T #PROOF #B)));
         let ng_pattern = Pattern::from(&rexp!((EQUIV_WITH_SIDE #SIDE #U #V #NT #B)));
@@ -53,8 +54,9 @@ impl SubstRule {
             aenc: *index,
             goal_pattern: g_pattern,
             new_goal_pattern: ng_pattern,
-            search_b: search_b.clone(),
-            search_m: search_m.clone(),
+            pk: pk.clone(),
+            dec: dec.clone(),
+            search: search_k.clone(),
         }
     }
 }
@@ -65,7 +67,6 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SubstRule {
     }
 
     fn search(&self, prgm: &mut CVProgram<'a>, goal: Id) -> golgge::Dependancy {
-        assert!(prgm.egraph().clean);
         ereturn_let!(let Some(matches) = self.goal_pattern.search_eclass(prgm.egraph(), goal), Dependancy::impossible());
 
         matches
@@ -73,11 +74,11 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SubstRule {
             .into_iter()
             .map(|mut subst| {
                 let [nt_id, proof_id] = [T, PROOF].map(|v| *subst.get(v.as_egg()).unwrap());
-                trace!("rebuilding in ddh");
                 let na = (SubstData {
-                    search_b: self.search_b.clone(),
-                    search_m: self.search_m.clone(),
                     new_term: nt_id,
+                    pk: self.pk.clone(),
+                    dec: self.dec.clone(),
+                    search: self.search.clone(),
                 })
                 .proof_to_term(prgm, proof_id)
                 .unwrap();
@@ -92,22 +93,60 @@ impl ProofSubstitution for SubstData {
     type Proof = ProofHints;
 
     fn get_term<'a>(&self, pgrm: &mut CVProgram<'a>, id: Id) -> anyhow::Result<Id> {
-        trace!("get term ({id:})");
         let l = pgrm.egraph()[id]
             .nodes
             .iter()
-            .find(|Lang { head, .. }| head == &self.search_m || head == &self.search_b)
+            .find(|Lang { head, .. }| self.search.contains(head))
             .with_context(|| "not a proof of the expected form")?;
-        Ok(l.args[3])
+        Ok(l.args[4])
     }
 
-    fn instance<'a>(&self, psargs: PSArgs<'_, 'a, Self>) -> anyhow::Result<Id> {
-        trace!("instance: {psargs:#?}");
+    fn instance<'a>(&self, _: PSArgs<'_, 'a, Self>) -> anyhow::Result<Id> {
         Ok(self.new_term)
     }
 
-    fn others<'a>(&self, _: PSArgs<'_, 'a, Self>) -> anyhow::Result<Id> {
-        unreachable!()
+    fn others<'a>(&self, args: PSArgs<'_, 'a, Self>) -> anyhow::Result<Id> {
+        let PSArgs {
+            proof,
+            proof_parent,
+            prgrm,
+            proof_id,
+            ..
+        } = args;
+        match proof {
+            // search_k_enc_fa_m_weak case: keep `A` reconstruct `B`
+            ProofHints::FaKeep(f) => {
+                let self_id = self.get_term(prgrm, proof_id)?;
+
+                let b = proof_parent
+                    .iter()
+                    .cloned()
+                    .next()
+                    .with_context(|| "wrong number of argument in fa (needs at least 1)")?;
+                let nb = self.proof_to_term(prgrm, b)?;
+                let na = prgrm.egraph()[self_id]
+                    .nodes
+                    .iter()
+                    .find_map(|Lang { head, args }| (head == f).then(|| args[0]))
+                    .with_context(|| "not a fa")?;
+                Ok(prgrm.egraph_mut().add(f.app_id([na, nb])))
+            }
+
+            ProofHints::Apply(fun) => {
+                if fun == &self.dec {
+                    if proof_parent.len() == 2 {
+                        self.function_application(&self.dec, PSArgs { prgrm, ..args })
+                    } else {
+                        todo!()
+                    }
+                } else if Some(fun) == self.pk.as_ref() {
+                    todo!()
+                } else {
+                    unreachable!()
+                }
+            }
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -120,7 +159,6 @@ impl ProofLike<SubstData> for ProofHints {
         proof_parent: &[Id],
         rule: &dyn CVRuleTrait<'pbl>,
     ) -> anyhow::Result<Id> {
-        trace!("using prooghint:\n{self:#?}");
         let psargs = PSArgs {
             prgrm,
             proof_id,
@@ -131,7 +169,11 @@ impl ProofLike<SubstData> for ProofHints {
         match self {
             ProofHints::Keep => data.keep(psargs),
             ProofHints::Replace => data.instance(psargs),
-            ProofHints::Apply(fun) => data.function_application(fun, psargs), /* _ => data.others(psarg), */
+            ProofHints::Apply(fun) if Some(fun) != data.pk.as_ref() && fun != &data.dec => {
+                // NB: enc is a behaves like a regular function
+                data.function_application(fun, psargs)
+            }
+            _ => data.others(psargs),
         }
     }
 }

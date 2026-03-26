@@ -18,7 +18,7 @@ pub mod fresh;
 pub use fresh::*;
 
 mod sinks;
-pub use sinks::{EggRewriteSink, RewriteSink, RuleSink};
+pub use sinks::{EggRewriteSink, RewriteSink, RuleSink, SmtSink, SmtOption, INDEPEDANT_QUERY};
 
 mod subterm_trait;
 
@@ -29,6 +29,9 @@ pub use side::Side;
 
 mod with_data;
 pub use with_data::{FreshNonceSet, RuleWithFreshNonce};
+
+pub mod cache;
+pub use cache::Context;
 
 /// Convenient holder for function that applies to both [Sort::Bitstring] and
 /// [Sort::Bool] like subterms and candidates

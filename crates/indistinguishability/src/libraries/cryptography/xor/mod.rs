@@ -4,13 +4,15 @@ use itertools::{Itertools, chain};
 use static_init::dynamic;
 use utils::ereturn_let;
 
+use crate::libraries::Library;
 use crate::libraries::fa::{self, FaElem, PATTERN_FA};
 use crate::libraries::utils::{RewriteSink, RuleSink, Side};
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::terms::{
-    CryptographicAssumption, Cryptography, ETA, FRESH_NONCE, Function, LENGTH, NONCE, Rewrite,
+     ETA, FRESH_NONCE, Function, LENGTH, NONCE, Rewrite,
     VAMPIRE,
 };
+use super::{CryptographicAssumption, Cryptography};
 use crate::{CVProgram, Lang, Problem, mk_signature, rexp};
 declare_trace!($"enc");
 
@@ -212,6 +214,8 @@ impl From<XOr> for CryptographicAssumption {
         Self::XOr(v)
     }
 }
+
+impl Library for XOr {}
 
 impl Cryptography for XOr {
     fn ref_from_assumption(r: &CryptographicAssumption) -> Option<&Self> {

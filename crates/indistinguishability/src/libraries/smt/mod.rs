@@ -1,38 +1,49 @@
-use cryptovampire_smt::{Smt, SmtCons, SmtFormula, SmtSink};
+use cryptovampire_smt::{Smt, SmtCons, SmtFormula};
 use itertools::{Itertools, chain, izip};
 use utils::{econtinue_if, econtinue_let, implvec};
 
-use crate::libraries::Library;
+use crate::libraries::utils::cache::Context;
+use crate::libraries::utils::{SmtOption, SmtSink};
+use crate::libraries::{Cryptography, Library};
 use crate::terms::{
-    ATT, AliasRewrite, Cryptography, EMPTY, Exists, FROM_BOOL, FindSuchThat, Function, HAPPENS,
-    INIT, LEQ, LT, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, PROJ_1,
-    PROJ_2, Quantifier, QuantifierT, Rewrite, SMT_ITE, SMT_SORT_LIST, Signature, Sort, TUPLE,
-    UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
+    ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, FindSuchThat, Function, HAPPENS, INIT, LEQ, LT,
+    MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, PROJ_1, PROJ_2, Quantifier,
+    QuantifierT, Rewrite, SMT_ITE, SMT_SORT_LIST, Signature, Sort, TUPLE, UNFOLD_COND, UNFOLD_EXEC,
+    UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
 };
 use crate::{MSmt, MSmtFormula, MSmtParam, Problem, smt, vec_smt};
+
+static SMT_OPTIONS: SmtOption = SmtOption {
+    depend_on_context: false,
+};
 
 pub struct SmtLib;
 
 impl Library for SmtLib {
-    fn add_smt(pbl: &mut Problem, sink: &mut impl SmtSink<MSmtParam>) {
-        add_header(pbl, sink);
+    fn add_smt(&self, pbl: &mut Problem, ctxt: &Context, sink: &mut impl SmtSink) {
+        if ctxt.using_cache {
+            add_quantifiers(pbl, sink);
+        } else {
+            add_header(pbl, sink);
 
-        sink.comment_block("static");
-        add_base_order(pbl, sink);
-        add_base_macro(pbl, sink);
-        add_base_rewrite(pbl, sink);
+            sink.comment_block(pbl, &SMT_OPTIONS, "static");
+            add_base_order(pbl, sink);
+            add_base_macro(pbl, sink);
+            add_base_rewrite(pbl, sink);
 
-        sink.comment_block("term algebra");
-        add_step_diff(pbl, sink);
+            sink.comment_block(pbl, &SMT_OPTIONS, "term algebra");
+            add_step_diff(pbl, sink);
 
-        sink.comment_block("Protocol definition");
-        add_steps_macros(pbl, sink);
-        add_quantifiers(pbl, sink);
-        add_alias(pbl, sink);
+            sink.comment_block(pbl, &SMT_OPTIONS, "Protocol definition");
+            add_steps_macros(pbl, sink);
+            add_quantifiers(pbl, sink);
+            add_alias(pbl, sink);
 
-        sink.comment_block("Cryptography");
-        for c in pbl.cryptography() {
-            c.add_prelude(pbl, sink);
+            sink.comment_block(pbl, &SMT_OPTIONS, "Cryptography");
+
+            pbl.map_cryptography(|pbl, c| {
+                c.add_smt(pbl, ctxt, sink);
+            });
         }
     }
 }
@@ -49,15 +60,19 @@ fn should_declare_in_smt(fun: &Function) -> bool {
 ///
 /// This includes declarations for built-in sorts, datatypes for nonces and protocols,
 /// and functions that are not marked as `should_not_declare_in_smt`.
-fn add_header(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
+fn add_header(pbl: &Problem, sink: &mut impl SmtSink) {
     declare_sorts(pbl, sink);
     declare_datatypes(pbl, sink);
     declare_functions(pbl, sink);
 }
 
-fn declare_sorts(_pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
-    sink.comment("declare base sorts");
-    sink.extend_smt(SMT_SORT_LIST.iter().copied().map(Smt::DeclareSort));
+fn declare_sorts(pbl: &Problem, sink: &mut impl SmtSink) {
+    sink.comment(pbl, &SMT_OPTIONS, "declare base sorts");
+    sink.extend_smt(
+        pbl,
+        &SMT_OPTIONS,
+        SMT_SORT_LIST.iter().copied().map(Smt::DeclareSort),
+    );
 }
 
 #[derive(Debug)]
@@ -73,7 +88,8 @@ impl From<Datatype> for MSmt {
 }
 
 fn declare_one_datatype<'a>(
-    sink: &mut impl SmtSink<MSmtParam>,
+    pbl: &Problem,
+    sink: &mut impl SmtSink,
     datatype: &mut Datatype,
     sort: Sort,
     cons: implvec!(&'a Function),
@@ -88,15 +104,15 @@ fn declare_one_datatype<'a>(
         .collect_vec();
 
     if cons.is_empty() {
-        sink.extend_one_smt(Smt::DeclareSort(sort));
+        sink.extend_one_smt(pbl, &SMT_OPTIONS, Smt::DeclareSort(sort));
     } else {
         datatype.sorts.push(sort);
         datatype.cons.push(cons);
     }
 }
 
-fn declare_datatypes(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
-    sink.comment("declare datatypes");
+fn declare_datatypes(pbl: &Problem, sink: &mut impl SmtSink) {
+    sink.comment(pbl, &SMT_OPTIONS, "declare datatypes");
 
     let funs = pbl.functions();
     let mut datatypes = Datatype {
@@ -104,24 +120,34 @@ fn declare_datatypes(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
         cons: Vec::with_capacity(3),
     };
 
-    declare_one_datatype(sink, &mut datatypes, Sort::Protocol, funs.protocols());
-    declare_one_datatype(sink, &mut datatypes, Sort::Nonce, funs.nonces());
-    declare_one_datatype(sink, &mut datatypes, Sort::MemoryCell, funs.memory_cells());
+    declare_one_datatype(pbl, sink, &mut datatypes, Sort::Protocol, funs.protocols());
+    declare_one_datatype(pbl, sink, &mut datatypes, Sort::Nonce, funs.nonces());
+    declare_one_datatype(
+        pbl,
+        sink,
+        &mut datatypes,
+        Sort::MemoryCell,
+        funs.memory_cells(),
+    );
 
-    sink.extend_one_smt(datatypes.into());
+    sink.extend_one_smt(pbl, &SMT_OPTIONS, datatypes.into());
 }
 
-fn declare_functions(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
-    sink.comment("declare functions");
+fn declare_functions(pbl: &Problem, sink: &mut impl SmtSink) {
+    sink.comment(pbl, &SMT_OPTIONS, "declare functions");
     for fun in pbl.functions().iter_current() {
         econtinue_if!(!should_declare_in_smt(fun));
         econtinue_if!(fun.is_datatype());
         let Signature { inputs, output } = &fun.signature;
-        sink.extend_one_smt(Smt::DeclareFun {
-            args: inputs.to_vec(),
-            out: *output,
-            fun: fun.clone(),
-        });
+        sink.extend_one_smt(
+            pbl,
+            &SMT_OPTIONS,
+            Smt::DeclareFun {
+                args: inputs.to_vec(),
+                out: *output,
+                fun: fun.clone(),
+            },
+        );
     }
 }
 
@@ -130,7 +156,7 @@ fn declare_functions(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
 /// This ensures that different instances of functions representing datatypes are distinct,
 /// and that if two applications of the same function are equal, their arguments must be equal.
 // funs are pairwise distincts
-fn add_pseudo_datatype_diff(funs: Vec<Function>, sink: &mut impl SmtSink<MSmtParam>) {
+fn add_pseudo_datatype_diff(pbl: &Problem, funs: Vec<Function>, sink: &mut impl SmtSink) {
     {
         let mut variables = Vec::with_capacity(funs.iter().map(Function::arity).sum());
 
@@ -144,7 +170,11 @@ fn add_pseudo_datatype_diff(funs: Vec<Function>, sink: &mut impl SmtSink<MSmtPar
             })
             .collect_vec();
 
-        sink.assert_one(smt!((forall #variables (distinct #apps*))));
+        sink.assert_one(
+            pbl,
+            &SMT_OPTIONS,
+            smt!((forall #variables (distinct #apps*))),
+        );
     };
 
     // a[veci] = a[vecj] => veci = vecj forall each fun
@@ -155,6 +185,8 @@ fn add_pseudo_datatype_diff(funs: Vec<Function>, sink: &mut impl SmtSink<MSmtPar
         let vars = chain![&v1, &v2].cloned();
         let and_eq = izip!(&v1, &v2).map(|(v1, v2)| smt!((= #v1 #v2)));
         sink.assert_one(
+            pbl,
+            &SMT_OPTIONS,
             smt!((forall #vars (=> (= (f #(v1.clone())*) (f #(v2.clone())*)) (and #and_eq*)))),
         )
     }
@@ -164,7 +196,7 @@ fn add_pseudo_datatype_diff(funs: Vec<Function>, sink: &mut impl SmtSink<MSmtPar
 ///
 /// This iterates through all protocols and their steps, generating SMT rewrites
 /// for `UNFOLD_COND`, `UNFOLD_MSG`, `UNFOLD_EXEC`, `UNFOLD_FRAME`, and `UNFOLD_INPUT`.
-fn add_steps_macros(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
+fn add_steps_macros(pbl: &Problem, sink: &mut impl SmtSink) {
     for ptcl in pbl.protocols() {
         let p = ptcl.as_smt();
         for s in ptcl.steps() {
@@ -176,7 +208,7 @@ fn add_steps_macros(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
 /// Generates SMT assertions to ensure distinctness of protocol steps.
 ///
 /// This uses `add_pseudo_datatype_diff` to assert that different steps are distinct.
-fn add_step_diff(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
+fn add_step_diff(pbl: &Problem, sink: &mut impl SmtSink) {
     let steps;
     if let Some(iter) = pbl.steps() {
         steps = iter.collect_vec()
@@ -185,41 +217,41 @@ fn add_step_diff(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
         return;
     }
 
-    sink.comment("step distinctness");
-    add_pseudo_datatype_diff(steps, sink);
+    sink.comment(pbl, &SMT_OPTIONS, "step distinctness");
+    add_pseudo_datatype_diff(pbl, steps, sink);
 }
 
 /// Generates SMT assertions to ensure distinctness of protocols.
 ///
 /// This uses `add_pseudo_datatype_diff` to assert that different protocols are distinct.
 #[allow(dead_code)]
-fn add_ptcl_diff(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
+fn add_ptcl_diff(pbl: &Problem, sink: &mut impl SmtSink) {
     let ptcl = pbl.protocols();
     if ptcl.is_empty() {
         return;
     }
     let ptcl_funs = ptcl.iter().map(|p| p.name().clone()).collect();
 
-    sink.comment("protocol distinctiveness");
-    add_pseudo_datatype_diff(ptcl_funs, sink);
+    sink.comment(pbl, &SMT_OPTIONS, "protocol distinctiveness");
+    add_pseudo_datatype_diff(pbl, ptcl_funs, sink);
 }
 
 /// Generates SMT assertions to ensure distinctness of nonces.
 ///
 /// This uses `add_pseudo_datatype_diff` to assert that different nonces are distinct.
 #[allow(dead_code)]
-fn add_nonces_diff(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
+fn add_nonces_diff(pbl: &Problem, sink: &mut impl SmtSink) {
     let nonces = pbl.functions().nonces().cloned().collect_vec();
-    sink.comment("nonce distinctness");
-    add_pseudo_datatype_diff(nonces, sink);
+    sink.comment(pbl, &SMT_OPTIONS, "nonce distinctness");
+    add_pseudo_datatype_diff(pbl, nonces, sink);
 }
 
 /// Generates SMT assertions for the basic ordering of time points.
 ///
 /// This includes axioms for `LEQ` (less than or equal), `HAPPENS`, and `PRED` (predecessor).
-fn add_base_order(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
+fn add_base_order(pbl: &Problem, sink: &mut impl SmtSink) {
     let init = pbl.get_init_fun();
-    sink.extend_smt(vec_smt! {%
+    sink.extend_smt(pbl, &SMT_OPTIONS, vec_smt! {%
         ; "order base".into(),
         (forall ((#a Time)) (LEQ (PRED #a) #a)),
         (forall ((#a Time)) (LEQ #a #a)),
@@ -236,8 +268,8 @@ fn add_base_order(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
 /// Generates SMT assertions for unfolding base macros related to protocol execution.
 ///
 /// This includes axioms for `MACRO_COND`, `MACRO_MSG`, `MACRO_EXEC`, `MACRO_FRAME`, and `MACRO_INPUT`.
-fn add_base_macro(_pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
-    sink.extend_smt(vec_smt! {%
+fn add_base_macro(pbl: &Problem, sink: &mut impl SmtSink) {
+    sink.extend_smt(pbl, &SMT_OPTIONS, vec_smt! {%
         ; "unfold base".into(),
         (forall ((#t Time) (#p Protocol)) (=> (HAPPENS #t) (= (MACRO_COND #t #p) (UNFOLD_COND #t #p)))),
         (forall ((#t Time) (#p Protocol)) (=> (HAPPENS #t) (= (MACRO_MSG #t #p) (UNFOLD_MSG #t #p)))),
@@ -267,20 +299,30 @@ fn add_base_macro(_pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
 }
 
 /// Generates SMT assertions for base rewrite rules, such as tuple projections.
-fn add_base_rewrite(_pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
-    sink.extend_smt(vec_smt! {%
-        ; "base rewrite".into(),
-        (forall ((#m1 Bitstring) (#m2 Bitstring)) (= (PROJ_1 (TUPLE #m1 #m2)) #m1)),
-        (forall ((#m1 Bitstring) (#m2 Bitstring)) (= (PROJ_2 (TUPLE #m1 #m2)) #m2))
-    });
+fn add_base_rewrite(pbl: &Problem, sink: &mut impl SmtSink) {
+    sink.extend_smt(
+        pbl,
+        &SMT_OPTIONS,
+        vec_smt! {%
+            ; "base rewrite".into(),
+            (forall ((#m1 Bitstring) (#m2 Bitstring)) (= (PROJ_1 (TUPLE #m1 #m2)) #m1)),
+            (forall ((#m1 Bitstring) (#m2 Bitstring)) (= (PROJ_2 (TUPLE #m1 #m2)) #m2))
+        },
+    );
 }
+
+static SMT_OPTION_QUANTIFIER: SmtOption = SmtOption {
+    depend_on_context: true,
+};
 
 /// Generates SMT assertions for quantifiers (Exists and FindSuchThat).
 ///
 /// This iterates through the problem's quantifiers and generates corresponding SMT axioms.
-fn add_quantifiers(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
-    sink.comment("quantifiers");
-    for q in pbl.functions().current_quantifiers() {
+fn add_quantifiers(pbl: &Problem, sink: &mut impl SmtSink) {
+    sink.comment(pbl, &SMT_OPTION_QUANTIFIER, "quantifiers");
+    for q in pbl.data.smt.occured_quantfiers.borrow().iter() {
+        let q = q.get_quantifier(pbl.functions()).unwrap();
+
         match q {
             Quantifier::Exists(e) => mk_exists_one(pbl, e, sink),
             Quantifier::FindSuchThat(e) => mk_findst_one(pbl, e, sink),
@@ -288,7 +330,7 @@ fn add_quantifiers(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
     }
 }
 
-fn mk_findst_one(pbl: &Problem, e: &FindSuchThat, sink: &mut impl SmtSink<MSmtParam>) {
+fn mk_findst_one(pbl: &Problem, e: &FindSuchThat, sink: &mut impl SmtSink) {
     let all_vars = chain![e.cvars(), e.bvars()].cloned().collect_vec();
     let tlf = e.top_level_function();
     let [condition, then_branch, else_branch] =
@@ -304,31 +346,35 @@ fn mk_findst_one(pbl: &Problem, e: &FindSuchThat, sink: &mut impl SmtSink<MSmtPa
             .unwrap()
     };
 
-    sink.assert_many(vec_smt! {
+    sink.assert_many(pbl, &SMT_OPTION_QUANTIFIER, vec_smt! {
         (forall #(all_vars.clone()) (= (tlf #(all_vars.clone())*) (SMT_ITE #condition #then_branch #else_branch))),
         (forall #(all_vars.clone()) (=> #condition #applied_condition))
     })
 }
 
-fn mk_exists_one(pbl: &Problem, e: &Exists, sink: &mut impl SmtSink<MSmtParam>) {
+fn mk_exists_one(pbl: &Problem, e: &Exists, sink: &mut impl SmtSink) {
     let all_vars = chain![e.cvars(), e.bvars()].cloned().collect_vec();
     let tlf = e.top_level_function();
     let patt = e.patt().unwrap().as_smt(pbl).unwrap();
 
     let applied_skolems = e.appplied_skolens().map(|s| s.as_smt(pbl).unwrap());
 
-    sink.assert_many(vec_smt! {
-        (forall #(all_vars.clone()) (= (tlf #(all_vars.clone())*) #(patt))),
-        (forall #(all_vars.clone()) (=>
-            (tlf #all_vars*) (tlf #(e.cvars())* #(applied_skolems)*)))
-    })
+    sink.assert_many(
+        pbl,
+        &SMT_OPTION_QUANTIFIER,
+        vec_smt! {
+            (forall #(all_vars.clone()) (= (tlf #(all_vars.clone())*) #(patt))),
+            (forall #(all_vars.clone()) (=>
+                (tlf #all_vars*) (tlf #(e.cvars())* #(applied_skolems)*)))
+        },
+    )
 }
 
 /// Generates SMT assertions for all aliases defined in the problem.
 ///
 /// This iterates through functions with aliases and generates corresponding SMT axioms.
-fn add_alias(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
-    sink.comment("aliases");
+fn add_alias(pbl: &Problem, sink: &mut impl SmtSink) {
+    sink.comment(pbl, &SMT_OPTIONS, "aliases");
     for fun in pbl.functions().iter_current() {
         econtinue_if!(!should_declare_in_smt(fun));
         econtinue_let!(let Some(aliases) = fun.alias.as_ref());
@@ -342,7 +388,11 @@ fn add_alias(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
             let to_formula = alias_rewrite.to.as_smt(pbl).unwrap();
             let vars = alias_rewrite.variables.clone().into_owned();
 
-            sink.assert_one(smt!((forall #vars (= (fun #from_iter*) #to_formula))));
+            sink.assert_one(
+                pbl,
+                &SMT_OPTIONS,
+                smt!((forall #vars (= (fun #from_iter*) #to_formula))),
+            );
         }
     }
 }
