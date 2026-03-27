@@ -2,6 +2,7 @@ use std::convert::identity;
 use std::fmt::Display;
 
 use itertools::izip;
+use quarck::CowArc;
 use static_init::dynamic;
 
 use super::formula::SmtFormula;
@@ -14,25 +15,25 @@ use crate::{
 
 /// Represents an SMT-LIB command.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum Smt<U: SmtParam> {
+pub enum Smt<'a, U: SmtParam> {
     /// An `assert` command.
-    Assert(SmtFormula<U>),
+    Assert(SmtFormula<'a, U>),
     #[cfg(feature = "vampire")]
     /// An `assert-theory` command (Vampire specific).
-    AssertTh(SmtFormula<U>),
+    AssertTh(SmtFormula<'a, U>),
     #[cfg(feature = "cryptovampire")]
     /// An `assert-ground` command (Cryptovampire specific).
     AssertGround {
         sort: U::Sort,
-        formula: SmtFormula<U>,
+        formula: SmtFormula<'a, U>,
     },
     #[cfg(feature = "vampire")]
     /// An `assert-not` command (Vampire specific).
-    AssertNot(SmtFormula<U>),
+    AssertNot(SmtFormula<'a, U>),
     /// A `declare-fun` command.
     DeclareFun {
         fun: U::Function,
-        args: Vec<U::Sort>,
+        args: CowArc<'a, [U::Sort]>,
         out: U::Sort,
     },
     /// A `declare-sort` command.
@@ -42,15 +43,15 @@ pub enum Smt<U: SmtParam> {
 
     #[cfg(feature = "cryptovampire")]
     /// A `declare-subterm-relation` command (Cryptovampire specific).
-    DeclareSubtermRelation(U::Function, Vec<U::Function>),
+    DeclareSubtermRelation(U::Function, CowArc<'a, [U::Function]>),
 
     #[cfg(feature = "cryptovampire")]
     /// A `declare-rewrite` command (Cryptovampire specific).
     DeclareRewrite {
         rewrite_fun: RewriteKind<U::Function>,
         vars: Vec<U::SVar>,
-        lhs: Box<SmtFormula<U>>,
-        rhs: Box<SmtFormula<U>>,
+        lhs: Box<SmtFormula<'a, U>>,
+        rhs: Box<SmtFormula<'a, U>>,
     },
 
     /// A `declare-datatypes` command.
@@ -71,7 +72,7 @@ pub enum Smt<U: SmtParam> {
     SetLogic(String),
 }
 
-impl<U: SmtParam> Smt<U> {
+impl<'a, U: SmtParam> Smt<'a, U> {
     /// Converts the SMT command into a pretty-printable `SmtPrettyPrinter` term.
     pub fn as_pretty(&self) -> SmtPrettyPrinter {
         translate_smt_to_term(self)
@@ -99,16 +100,16 @@ pub enum RewriteKind<F> {
     Other(F),
 }
 
-impl<U: SmtParam> FromIterator<Smt<U>> for SmtFile<U> {
+impl<'a, U: SmtParam> FromIterator<Smt<'a, U>> for SmtFile<'a, U> {
     /// Creates an `SmtFile` from an iterator of `Smt` commands.
-    fn from_iter<T: IntoIterator<Item = Smt<U>>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = Smt<'a, U>>>(iter: T) -> Self {
         SmtFile {
             content: iter.into_iter().collect(),
         }
     }
 }
 
-impl<U: SmtParam> Smt<U> {
+impl<'a, U: SmtParam> Smt<'a, U> {
     /// Returns `true` if the smt is [`Assert`].
     ///
     /// [`Assert`]: Smt::Assert
@@ -123,7 +124,7 @@ impl<U: SmtParam> Smt<U> {
     }
 
     /// Creates an SMT query command (asserting the negation of the given formula).
-    pub fn mk_query(query: SmtFormula<U>) -> Self
+    pub fn mk_query(query: SmtFormula<'a, U>) -> Self
     where
         U::SVar: Eq,
     {
@@ -144,12 +145,12 @@ impl<U: SmtParam> Smt<U> {
     }
 }
 
-impl<U: SmtParam> Smt<U>
+impl<'a, U: SmtParam> Smt<'a, U>
 where
     U::SVar: Eq,
 {
     /// Creates an SMT assert command with an optimised formula.
-    pub fn mk_assert(f: SmtFormula<U>) -> Self {
+    pub fn mk_assert(f: SmtFormula<'a, U>) -> Self {
         Self::Assert(f.optimise())
     }
 
@@ -252,11 +253,11 @@ where
             Self::AssertTh(f) if !kind.contains(SolverKind::AssertTh) => Ok(Self::Assert(f)),
             #[cfg(feature = "vampire")]
             Self::AssertNot(f) if !kind.contains(SolverKind::AssertGround) => {
-                Ok(Self::Assert(SmtFormula::Not(Box::new(f))))
+                Ok(Self::Assert(SmtFormula::Not(f.into())))
             }
 
             #[cfg(feature = "cryptovampire")]
-            Self::AssertGround { formula, sort } if !kind.contains(SolverKind::AssertGround) => {
+            Self::AssertGround { .. } if !kind.contains(SolverKind::AssertGround) => {
                 Err(CheckError::UnsupportedFeature(SolverFeatures::AssertGround))
             }
             #[cfg(feature = "cryptovampire")]
@@ -264,7 +265,7 @@ where
                 Err(CheckError::UnsupportedFeature(SolverFeatures::Subterm))
             }
             #[cfg(feature = "cryptovampire")]
-            Self::DeclareRewrite { lhs, rhs, .. } if !kind.contains(SolverKind::CVRewrite) => {
+            Self::DeclareRewrite { .. } if !kind.contains(SolverKind::CVRewrite) => {
                 Err(CheckError::UnsupportedFeature(SolverFeatures::Rewrite))
             }
             x => Ok(x),
@@ -272,7 +273,7 @@ where
     }
 }
 
-impl<U: SmtParam> Display for Smt<U> {
+impl<'a, U: SmtParam> Display for Smt<'a, U> {
     /// Formats the SMT command for display in SMT-LIB format.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let p = self.as_pretty();

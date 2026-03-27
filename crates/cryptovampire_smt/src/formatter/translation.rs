@@ -15,7 +15,7 @@ macro_rules! sexpr {
 };
 }
 /// Translates an `SmtFormula` into a generic `Term`.
-pub fn translate_formula_to_term<U: SmtParam>(formula: &SmtFormula<U>) -> Term {
+pub fn translate_formula_to_term<'a, U: SmtParam>(formula: &SmtFormula<'a, U>) -> Term {
     match formula {
         SmtFormula::Var(v) => Term::atom(v),
         SmtFormula::True => Term::atom("true"),
@@ -27,17 +27,21 @@ pub fn translate_formula_to_term<U: SmtParam>(formula: &SmtFormula<U>) -> Term {
             Term::SExpr(terms, None)
         }
         SmtFormula::Not(f) => Term::sexpr([Term::atom("not"), translate_formula_to_term(f)]),
-        SmtFormula::Implies(f1, f2) => Term::sexpr([
+        SmtFormula::Implies(args) => {
+            let [f1, f2] = args.as_ref();
+            Term::sexpr([
             Term::atom("=>"),
             translate_formula_to_term(f1),
             translate_formula_to_term(f2),
-        ]),
-        SmtFormula::Ite(i, t, e) => Term::sexpr([
+        ])},
+        SmtFormula::Ite(args) => {
+            let [i, t, e] = args.as_ref();
+            Term::sexpr([
             Term::atom("ite"),
             translate_formula_to_term(i),
             translate_formula_to_term(t),
             translate_formula_to_term(e),
-        ]),
+        ])},
         // N-ary operators
         SmtFormula::And(fs) => n_ary_op_to_term("and", fs),
         SmtFormula::Or(fs) => n_ary_op_to_term("or", fs),
@@ -54,22 +58,22 @@ pub fn translate_formula_to_term<U: SmtParam>(formula: &SmtFormula<U>) -> Term {
         SmtFormula::Exists(vars, f) => quantifier_to_term("exists", vars, f),
         // Custom features
         #[cfg(feature = "cryptovampire")]
-        SmtFormula::Subterm(_, _, _) => todo!("Translate SmtFormula::Subterm"),
+        SmtFormula::Subterm(_, _) => todo!("Translate SmtFormula::Subterm"),
     }
 }
 
 /// Helper for n-ary operators like `and`, `or`, `=`, `distinct`.
-fn n_ary_op_to_term<U: SmtParam>(op: &str, formulas: &[SmtFormula<U>]) -> Term {
+fn n_ary_op_to_term<'a, U: SmtParam>(op: &str, formulas: &[SmtFormula<'a, U>]) -> Term {
     let mut terms = vec![Term::Atom(op.to_string(), None)];
     terms.extend(formulas.iter().map(translate_formula_to_term));
     Term::SExpr(terms, None)
 }
 
 /// Helper for quantifiers `forall` and `exists`.
-fn quantifier_to_term<U: SmtParam>(
+fn quantifier_to_term<'a, U: SmtParam>(
     quantifier: &str,
     vars: &[U::SVar],
-    formula: &SmtFormula<U>,
+    formula: &SmtFormula<'a, U>,
 ) -> Term {
     let var_list = Term::sexpr(
         vars.iter()
@@ -83,7 +87,7 @@ fn quantifier_to_term<U: SmtParam>(
 }
 
 /// Translates a top-level `Smt` command into a generic `Term`.
-pub fn translate_smt_to_term<U: SmtParam>(smt: &Smt<U>) -> Term {
+pub fn translate_smt_to_term<'a, U: SmtParam>(smt: &Smt<'a, U>) -> Term {
     match smt {
         Smt::Assert(formula) => {
             Term::sexpr([Term::atom("assert"), translate_formula_to_term(formula)])
