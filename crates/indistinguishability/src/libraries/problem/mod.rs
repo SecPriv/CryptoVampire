@@ -4,8 +4,8 @@ use log::trace;
 use utils::{econtinue_if, econtinue_let, ereturn_if};
 
 use crate::libraries::Library;
-use crate::libraries::utils::cache::Context;
 use crate::libraries::utils::{EggRewriteSink, INDEPEDANT_QUERY, SmtSink};
+use crate::problem::data::Context;
 use crate::terms::{AliasRewrite, Function};
 use crate::{Lang, LangVar, MSmtParam, Problem, rexp, smt};
 

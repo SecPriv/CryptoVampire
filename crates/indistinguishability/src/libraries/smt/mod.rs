@@ -2,9 +2,9 @@ use cryptovampire_smt::{Smt, SmtCons, SmtFormula};
 use itertools::{Itertools, chain, izip};
 use utils::{econtinue_if, econtinue_let, implvec};
 
-use crate::libraries::utils::cache::Context;
 use crate::libraries::utils::{SmtOption, SmtSink};
 use crate::libraries::{Cryptography, Library};
+use crate::problem::data::Context;
 use crate::terms::{
     ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, FindSuchThat, Function, HAPPENS, INIT, LEQ, LT,
     MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, PROJ_1, PROJ_2, Quantifier,

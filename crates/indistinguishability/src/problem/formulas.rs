@@ -7,7 +7,7 @@ use utils::econtinue_let;
 use super::*;
 use crate::libraries::Libraries;
 use crate::libraries::utils::SmtSink;
-use crate::libraries::utils::cache::Context;
+use super::data::Context;
 use crate::terms::{
     FOBinder, FindSuchThat, Formula, FunctionCollection, Quantifier, QuantifierT,
     QuantifierTranslator, Rewrite,

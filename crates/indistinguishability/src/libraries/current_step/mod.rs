@@ -1,6 +1,6 @@
 use utils::{ereturn_if, ereturn_let};
 
-use crate::{libraries::{Library, utils::{Context, INDEPEDANT_QUERY, SmtSink}}, smt, terms::HAPPENS};
+use crate::{libraries::{Library, utils::{ INDEPEDANT_QUERY, SmtSink}}, problem::data::Context, smt, terms::HAPPENS};
 
 pub struct CurrentStep;
 

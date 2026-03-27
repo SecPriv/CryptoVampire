@@ -1,9 +1,11 @@
 use std::cell::RefCell;
 
 use crate::Problem;
-use crate::libraries::utils::cache::SmtCache;
 use crate::runners::SmtRunner;
 use crate::terms::{Formula, Function};
+
+mod smt;
+pub use smt::{Context, SmtCache};
 
 #[derive(Default)]
 pub struct Cache {

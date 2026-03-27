@@ -30,8 +30,6 @@ pub use side::Side;
 mod with_data;
 pub use with_data::{FreshNonceSet, RuleWithFreshNonce};
 
-pub mod cache;
-pub use cache::Context;
 
 /// Convenient holder for function that applies to both [Sort::Bitstring] and
 /// [Sort::Bool] like subterms and candidates

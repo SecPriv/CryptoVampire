@@ -84,7 +84,7 @@ pub trait Cryptography: Into<CryptographicAssumption> + Library {
 }
 
 impl Library for CryptographicAssumption {
-    fn add_smt(&self, pbl: &mut Problem, ctxt: &libraries::utils::Context,  sink: &mut impl SmtSink) {
+    fn add_smt(&self, pbl: &mut Problem, ctxt: &crate::problem::data::Context,  sink: &mut impl SmtSink) {
         match self {
             Self::NoGuessingTh => add_no_guessing_smt(pbl, ctxt, sink),
             Self::PRF(x) => x.add_smt(pbl, ctxt, sink),

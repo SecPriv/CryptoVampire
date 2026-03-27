@@ -3,8 +3,8 @@ use itertools::{Itertools, chain};
 use utils::{econtinue_if, ereturn_if, exprdebug};
 
 use crate::libraries::Library;
-use crate::libraries::utils::cache::Context;
 use crate::libraries::utils::{EggRewriteSink, SmtOption, SmtSink};
+use crate::problem::data::Context;
 use crate::protocol::Step;
 use crate::terms::{Function, HAPPENS, INIT, LT, MACRO_EXEC, MACRO_MSG};
 use crate::{Lang, MSmt, MSmtParam, Problem, fresh, rexp, smt};

@@ -3,9 +3,9 @@ use log::trace;
 use utils::ereturn_if;
 
 use crate::libraries::nonce::Nonce;
-use crate::libraries::utils::cache::Context;
 use crate::libraries::utils::fresh::RefFormulaBuilder;
 use crate::libraries::utils::{SmtOption, SmtSink, SyntaxSearcher};
+use crate::problem::data::Context;
 use crate::protocol::Protocol;
 use crate::terms::{Formula, Function, IS_INDEPENDANT_BITSTRING, MACRO_FRAME, NONCE, Sort};
 use crate::{MSmt, MSmtFormula, MSmtParam, Problem, rexp, smt};

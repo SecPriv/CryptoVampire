@@ -21,9 +21,9 @@ use crate::libraries::publication::PublicationLib;
 use crate::libraries::sanity_check::SanityCheck;
 use crate::libraries::smt::SmtLib;
 use crate::libraries::substitution::SubstLib;
-use crate::libraries::utils::cache::Context;
 use crate::libraries::utils::{EggRewriteSink, INDEPEDANT_QUERY, RewriteSink, RuleSink, SmtSink};
 use crate::libraries::vampire::VampireLib;
+use crate::problem::data::Context;
 use crate::problem::{PAnalysis, ProblemState, ProblemStateLib, RcRule};
 use crate::{CVProgram, Lang, LangVar, MSmtParam, Problem, smt};
 

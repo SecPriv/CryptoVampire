@@ -1,8 +1,8 @@
 use egg::{Analysis, EGraph};
 
-use crate::libraries::utils::cache::Context;
 use crate::libraries::utils::{EggRewriteSink, RewriteSink, RuleSink, SmtSink};
-use crate::problem::PAnalysis;
+use crate::problem::data::Context;
+use crate::problem::{ PAnalysis};
 use crate::{Lang, MSmtParam, Problem};
 
 /// A library that need to initialize axioms and rules

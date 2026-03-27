@@ -11,7 +11,7 @@ use steel_derive::Steel;
 use thiserror::Error;
 
 use crate::input::Registerable;
-use crate::libraries::utils::{Context, EggRewriteSink, INDEPEDANT_QUERY, SmtSink};
+use crate::libraries::utils::{ EggRewriteSink, INDEPEDANT_QUERY, SmtSink};
 use crate::protocol::memory_cell::Assignements;
 use crate::terms::{EMPTY, Formula, Function, INIT, UNFOLD_COND, UNFOLD_MSG, Variable};
 use crate::{Lang, MSmt, MSmtFormula, MSmtParam, Problem, rexp, vec_smt};
