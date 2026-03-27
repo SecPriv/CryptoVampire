@@ -37,7 +37,7 @@ impl Checkpoint {
         pbl.constrains.truncate(self.constrains);
         pbl.public_terms.truncate(self.public_terms);
         
-        pbl.data.smt.force_reset();
+        pbl.cache.smt.force_reset();
         pbl.functions_mut().garbage_collect();
     }
 

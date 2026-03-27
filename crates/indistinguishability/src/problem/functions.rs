@@ -21,7 +21,7 @@ impl Problem {
 
     /// Returns a mutable reference to the function collection
     pub fn functions_mut(&mut self) -> &mut FunctionCollection {
-        self.data.smt.force_reset();
+        self.cache.smt.force_reset();
         &mut self.function
     }
 }

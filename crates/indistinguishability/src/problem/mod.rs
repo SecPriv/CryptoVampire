@@ -38,7 +38,7 @@ mod checkpoint;
 mod publish;
 pub use publish::PublicTerm;
 
-pub mod data;
+pub mod cache;
 
 /// A problem for the solver to solve
 ///
@@ -71,7 +71,7 @@ pub struct Problem {
 
     pub state: ProblemState,
     /// random data to store somewhere
-    pub data: data::Cache,
+    pub cache: cache::Cache,
 
     constrains: Vec<Constrains>,
 
@@ -144,7 +144,7 @@ impl Problem {
             extra_smt,
             current_step: None,
             state: Default::default(),
-            data: Default::default(),
+            cache: Default::default(),
             constrains,
             report: Default::default(),
             public_terms: Default::default(),

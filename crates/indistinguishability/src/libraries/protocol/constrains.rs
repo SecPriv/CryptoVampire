@@ -6,7 +6,7 @@ use utils::ereturn_if;
 use super::SMT_OPTIONS;
 use crate::libraries::Library;
 use crate::libraries::utils::{EggRewriteSink, SmtSink};
-use crate::problem::data::Context;
+use crate::problem::cache::Context;
 use crate::problem::{BoundStep, ConstrainOp, Constrains, CurrentStep, PAnalysis};
 use crate::terms::{CURRENT_STEP, Formula, HAPPENS, INIT, IS_INDEX, LEQ, LT, PRED, TEQ, TRUE};
 use crate::{Lang, MSmt, MSmtFormula, MSmtParam, Problem, rexp, smt};

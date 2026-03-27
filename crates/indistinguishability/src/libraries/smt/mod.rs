@@ -4,7 +4,7 @@ use utils::{econtinue_if, econtinue_let, implvec};
 
 use crate::libraries::utils::{SmtOption, SmtSink};
 use crate::libraries::{Cryptography, Library};
-use crate::problem::data::Context;
+use crate::problem::cache::Context;
 use crate::terms::{
     ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, FindSuchThat, Function, HAPPENS, INIT, LEQ, LT,
     MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, PROJ_1, PROJ_2, Quantifier,
@@ -320,7 +320,7 @@ static SMT_OPTION_QUANTIFIER: SmtOption = SmtOption {
 /// This iterates through the problem's quantifiers and generates corresponding SMT axioms.
 fn add_quantifiers(pbl: &Problem, sink: &mut impl SmtSink) {
     sink.comment(pbl, &SMT_OPTION_QUANTIFIER, "quantifiers");
-    for q in pbl.data.smt.occured_quantfiers.borrow().iter() {
+    for q in pbl.cache.smt.occured_quantfiers.borrow().iter() {
         let q = q.get_quantifier(pbl.functions()).unwrap();
 
         match q {

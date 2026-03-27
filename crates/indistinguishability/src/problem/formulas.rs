@@ -7,7 +7,7 @@ use utils::econtinue_let;
 use super::*;
 use crate::libraries::Libraries;
 use crate::libraries::utils::SmtSink;
-use super::data::Context;
+use super::cache::Context;
 use crate::terms::{
     FOBinder, FindSuchThat, Formula, FunctionCollection, Quantifier, QuantifierT,
     QuantifierTranslator, Rewrite,
@@ -17,8 +17,8 @@ use crate::{MSmt, rexp};
 impl Problem {
     /// Computes the SMT
     pub fn add_smt(&mut self, context: &mut Context, sink: &mut impl SmtSink) {
-        self.data.smt.reset();
-        context.using_cache = !self.data.smt.anything_cached();
+        self.cache.smt.reset();
+        context.using_cache = !self.cache.smt.anything_cached();
         Libraries::add_all_smt(self, context, sink);
     }
 
@@ -29,7 +29,7 @@ impl Problem {
 
     /// Returns a mutable reference to the extra SMT formulas
     pub fn extra_smt_mut(&mut self) -> &mut Vec<MSmt> {
-        self.data.smt.force_reset();
+        self.cache.smt.force_reset();
         &mut self.extra_smt
     }
 
@@ -40,7 +40,7 @@ impl Problem {
 
     /// Returns a mutable reference to the extra rewrites
     pub fn extra_rewrite_mut(&mut self) -> &mut Vec<Rewrite> {
-        self.data.smt.force_reset();
+        self.cache.smt.force_reset();
         &mut self.extra_rewrite
     }
 
@@ -56,7 +56,7 @@ impl Problem {
 
     /// Finds all the temporary quantifiers in the problem and adds them to the cache
     pub fn find_temp_quantifiers(&mut self, extra: &[Formula]) {
-        if extra.is_empty() && !self.data.quantifier_cache.is_empty() {
+        if extra.is_empty() && !self.cache.quantifier_cache.is_empty() {
             return;
         }
 
@@ -74,7 +74,7 @@ impl Problem {
                 } = a
                     && let None = pile.iter().find_map(|x| a.unify(x))
                     && let None = self
-                        .data
+                        .cache
                         .quantifier_cache
                         .iter()
                         .find_map(|(x, _)| a.unify(x))
@@ -89,7 +89,7 @@ impl Problem {
             "found quantifiers!:\n{}",
             chain![
                 quantifiers.iter(),
-                self.data.quantifier_cache.iter().map(|(q, _)| q)
+                self.cache.quantifier_cache.iter().map(|(q, _)| q)
             ]
             .join("\n")
         );
@@ -115,15 +115,15 @@ impl Problem {
             find.set_else_branch(arg[2].clone());
             tr!("adding newfound quantifier:\n{find:#?}\n\tfrom{q}");
             let tlf = find.top_level_function().clone();
-            self.data.quantifier_cache.push((q.clone(), tlf));
+            self.cache.quantifier_cache.push((q.clone(), tlf));
         }
-        self.data.smt.force_reset();
+        self.cache.smt.force_reset();
     }
 
     /// Clears the temporary quantifiers from the cache
     pub fn clear_temp_quantifiers(&mut self) {
-        self.data.quantifier_cache.clear();
-        self.data.smt.force_reset();
+        self.cache.quantifier_cache.clear();
+        self.cache.smt.force_reset();
     }
 
     /// list all the `RecFOFormula` stored in this `Self`
@@ -159,14 +159,14 @@ impl QuantifierTranslator for Problem {
         tr!("try translate:\n{formula}");
         if log_enabled!(log::Level::Trace) {
             let mut p = String::new();
-            for (q, f) in &self.data.quantifier_cache {
+            for (q, f) in &self.cache.quantifier_cache {
                 p += &format!("{} => {q}\n", f.name);
             }
             tr!("available quantifiers:\n{p}")
         }
 
         let (subst, fun) = self
-            .data
+            .cache
             .quantifier_cache
             .iter()
             .find_map(|(cached, fun)| cached.unify(formula).map(|subst| (subst, fun.clone())))?;
@@ -198,7 +198,7 @@ impl QuantifierTranslator for Problem {
         tr!("arg vars: [{}]", args.clone().join(", "));
 
         let tlf = q.top_level_function();
-        self.data
+        self.cache
             .smt
             .occured_quantfiers
             .borrow_mut()

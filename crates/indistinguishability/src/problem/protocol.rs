@@ -25,7 +25,7 @@ impl Problem {
 
     /// Simply declare a protocol, this one remains quite undefined
     pub fn declare_new_protocol(&mut self) -> &mut Protocol {
-        self.data.smt.force_reset();
+        self.cache.smt.force_reset();
         let n = self.protocols.len();
 
         let inner = InnerFunction {
