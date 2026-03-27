@@ -48,7 +48,7 @@ macro_rules! mk_cowarc {
         ::quarck::CowArc::Borrowed(&[])
     };
     ($($tt:tt)*) => {
-        ::quarck::CowArc::Owned(::std::vec![$($tt)*].into())
+        ::quarck::CowArc::new([$($tt)*]).forget_size()
     }
 }
 
@@ -80,7 +80,7 @@ macro_rules! mk_signature {
             #[allow(unused_imports)]
             use $crate::terms::Sort::*;
             $crate::terms::Signature {
-                inputs: std::borrow::Cow::Owned(vec![]),
+                inputs: ::quarck::CowArc::from_ref(&[]),
                 output: $out
             }
         }
@@ -90,7 +90,7 @@ macro_rules! mk_signature {
             #[allow(unused_imports)]
             use $crate::terms::Sort::*;
             $crate::terms::Signature {
-                inputs: std::borrow::Cow::Owned(vec![$t; $n]),
+                inputs: vec![$t; $n].into_iter().collect(),
                 output: $t,
             }
         }
@@ -100,7 +100,7 @@ macro_rules! mk_signature {
             #[allow(unused_imports)]
             use $crate::terms::Sort::*;
             $crate::terms::Signature {
-                inputs: std::borrow::Cow::Owned(vec![$($ins),*]),
+                inputs: [$($ins),*].into(),
                 output: $out
             }
         }

@@ -9,6 +9,8 @@ use crate::{MSmt, MSmtFormula, Problem};
 
 pub(crate) mod vampire;
 
+pub(crate) mod file_builder;
+
 /// A trait for SMT solvers.
 trait SmtSolver: Debug {
     /// Tries to prove .

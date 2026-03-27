@@ -5,7 +5,7 @@ use crate::{libraries::{Library, utils::{ INDEPEDANT_QUERY, SmtSink}}, problem::
 pub struct CurrentStep;
 
 impl Library for CurrentStep {
-  fn add_smt(&self, pbl: &mut crate::Problem, context: &Context,  sink: &mut impl SmtSink) {
+  fn add_smt<'a>(&self, pbl: &mut crate::Problem, context: &Context,  sink: &mut impl SmtSink<'a>) {
       ereturn_if!(context.using_cache);
       ereturn_let!(let Some(cs) = pbl.current_step());
 

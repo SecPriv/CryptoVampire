@@ -64,7 +64,7 @@ pub struct Problem {
     /// Extra rewrites to add to the solver
     extra_rewrite: Vec<Rewrite>,
     /// Extra SMT formulas to add to the solver
-    extra_smt: Vec<MSmt>,
+    extra_smt: Vec<MSmt<'static>>,
 
     /// the current step in the run (if any)
     current_step: Option<CurrentStep>,
@@ -132,7 +132,7 @@ impl Problem {
 
         #[builder(with = <_>::from_iter, default = vec![])] extra_rules: Vec<RcRule>,
         #[builder(with = <_>::from_iter, default = vec![])] extra_rewrite: Vec<Rewrite>,
-        #[builder(with = <_>::from_iter, default = vec![])] extra_smt: Vec<MSmt>,
+        #[builder(with = <_>::from_iter, default = vec![])] extra_smt: Vec<MSmt<'static>>,
     ) -> Self {
         Self {
             config,

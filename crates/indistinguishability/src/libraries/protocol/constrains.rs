@@ -30,7 +30,7 @@ macro_rules! bind {
 pub struct ConstrainsLib;
 
 impl Library for ConstrainsLib {
-    fn add_smt(&self, pbl: &mut Problem, ctx: &Context, sink: &mut impl SmtSink) {
+    fn add_smt<'a>(&self, pbl: &mut Problem, ctx: &Context, sink: &mut impl SmtSink<'a>) {
         ereturn_if!(ctx.using_cache);
 
         sink.comment(pbl, &SMT_OPTIONS, "Constrains");
@@ -69,16 +69,16 @@ impl Library for ConstrainsLib {
     }
 }
 
-fn add_smt_constrain_one(
+fn add_smt_constrain_one<'a>(
     pbl: &Problem,
     bind!(s1(a1..) op s2(a2..)): &Constrains,
-    sink: &mut impl SmtSink,
+    sink: &mut impl SmtSink<'a>,
 ) {
     debug_assert_eq!(s1.arity(), a1.len());
     debug_assert_eq!(s2.arity(), a2.len());
     let vars_iter = chain![a1, a2].unique().cloned();
-    let args1 = a1.iter().map::<MSmtFormula, _>(|v| smt!(#v));
-    let args2 = a2.iter().map::<MSmtFormula, _>(|v| smt!(#v));
+    let args1 = a1.iter().map::<MSmtFormula<'a>, _>(|v| smt!(#v));
+    let args2 = a2.iter().map::<MSmtFormula<'a>, _>(|v| smt!(#v));
     sink.assert_one(
         pbl,
         &SMT_OPTIONS,

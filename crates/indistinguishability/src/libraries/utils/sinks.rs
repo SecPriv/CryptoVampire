@@ -115,19 +115,19 @@ where
     }
 }
 
-pub trait SmtSink {
-    fn extend_smt(&mut self, pbl: &Problem, options: &SmtOption,  iter: implvec!(MSmt));
+pub trait SmtSink<'a> {
+    fn extend_smt(&mut self, pbl: &Problem, options: &SmtOption,  iter: implvec!(MSmt<'a>));
     fn reserve(&mut self, size: usize);
 
-    fn extend_one_smt(&mut self, pbl: &Problem, options: &SmtOption, smt: MSmt) {
+    fn extend_one_smt(&mut self, pbl: &Problem, options: &SmtOption, smt: MSmt<'a>) {
         self.extend_smt(pbl, options, Some(smt));
     }
 
-    fn assert_many(&mut self, pbl: &Problem, options: &SmtOption, iter: implvec!(MSmtFormula)) {
+    fn assert_many(&mut self, pbl: &Problem, options: &SmtOption, iter: implvec!(MSmtFormula<'a>)) {
         self.extend_smt(pbl, options, iter.into_iter().map(MSmt::mk_assert));
     }
 
-    fn assert_one(&mut self, pbl: &Problem, options: &SmtOption, formula: MSmtFormula) {
+    fn assert_one(&mut self, pbl: &Problem, options: &SmtOption, formula: MSmtFormula<'a>) {
         self.assert_many(pbl, options, Some(formula));
     }
 
@@ -155,11 +155,11 @@ impl Default for SmtOption {
     }
 }
 
-impl<V> SmtSink for V
+impl<'a, V> SmtSink<'a> for V
 where
-    V: Extend<MSmt> + Reservable,
+    V: Extend<MSmt<'a>> + Reservable,
 {
-    fn extend_smt(&mut self, _: &Problem, _: &SmtOption, iter: implvec!(MSmt)) {
+    fn extend_smt(&mut self, _: &Problem, _: &SmtOption, iter: implvec!(MSmt<'a>)) {
         let iter = iter.into_iter().inspect(|f| debug_assert!(no_garabage(f), "garbage in {f}"));
         self.extend(iter);
     }
@@ -169,7 +169,7 @@ where
     }
 }
 
-fn no_garabage(smt: &MSmt) -> bool {
+fn no_garabage<'a>(smt: &MSmt<'a>) -> bool {
     match smt {
         cryptovampire_smt::Smt::Assert(formula)
         | cryptovampire_smt::Smt::AssertTh(formula)
@@ -179,7 +179,7 @@ fn no_garabage(smt: &MSmt) -> bool {
     }
 }
 
-fn no_garabagef(f: &MSmtFormula) -> bool {
+fn no_garabagef<'a>(f: &MSmtFormula<'a>) -> bool {
     match f {
         MSmtFormula::Fun(fun, args) => {
             !fun.is_garabage_collectable() && args.iter().all(|f| no_garabagef(f))

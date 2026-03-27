@@ -144,7 +144,7 @@ fn add_rewrite(pbl: ShrProblem, rw: Rewrite) {
 fn add_smt_axiom(pbl: ShrProblem, f: Formula) -> SResult<()> {
     let content = f
         .as_smt(pbl.borrow().deref())
-        .ok_or(conversion_err::<MSmt>())?;
+        .ok_or(conversion_err::<MSmt<'static>>())?;
     pbl.borrow_mut()
         .extra_smt_mut()
         .push(MSmt::mk_assert(content));

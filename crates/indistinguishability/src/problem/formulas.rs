@@ -16,19 +16,19 @@ use crate::{MSmt, rexp};
 
 impl Problem {
     /// Computes the SMT
-    pub fn add_smt(&mut self, context: &mut Context, sink: &mut impl SmtSink) {
+    pub fn add_smt<'a>(&mut self, context: &mut Context, sink: &mut impl SmtSink<'a>) {
         self.cache.smt.reset();
         context.using_cache = !self.cache.smt.anything_cached();
         Libraries::add_all_smt(self, context, sink);
     }
 
     /// Returns the extra SMT formulas
-    pub fn extra_smt(&self) -> &[MSmt] {
+    pub fn extra_smt(&self) -> &[MSmt<'static>] {
         &self.extra_smt
     }
 
     /// Returns a mutable reference to the extra SMT formulas
-    pub fn extra_smt_mut(&mut self) -> &mut Vec<MSmt> {
+    pub fn extra_smt_mut(&mut self) -> &mut Vec<MSmt<'static>> {
         self.cache.smt.force_reset();
         &mut self.extra_smt
     }

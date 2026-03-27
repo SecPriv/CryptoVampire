@@ -30,7 +30,7 @@ use crate::{CVProgram, Lang, LangVar, MSmtParam, Problem, smt};
 macro_rules! mk_libraires {
   ($name:ty; $($libs:ident),* $(,)*) => {
         impl Library for $name {
-            fn add_smt(&self, pbl: &mut Problem, context: &Context, sink: &mut impl SmtSink) {
+            fn add_smt<'a>(&self, pbl: &mut Problem, context: &Context, sink: &mut impl SmtSink<'a>) {
                 $($libs.add_smt(pbl, context, sink));*
             }
 
@@ -92,7 +92,7 @@ impl<'a, N: Analysis<Lang>, U: EggRewriteSink<N>> RewriteSink for Wrapper<'a, U,
     }
 }
 
-impl<'a, U: SmtSink> RewriteSink for Wrapper<'a, U, ()> {
+impl<'a, 'b,  U: SmtSink<'b>> RewriteSink for Wrapper<'a, U, ()> {
     fn extend_rewrites(&mut self, pbl: &Problem, iter: utils::implvec!(crate::terms::Rewrite)) {
         let iter = iter.into_iter();
         let (size_hint, _) = iter.size_hint();
@@ -126,7 +126,7 @@ impl<'a, U: SmtSink> RewriteSink for Wrapper<'a, U, ()> {
 pub struct Libraries;
 
 impl Libraries {
-    pub fn add_all_smt(pbl: &mut Problem, context: &Context, sink: &mut impl SmtSink) {
+    pub fn add_all_smt<'a>(pbl: &mut Problem, context: &Context, sink: &mut impl SmtSink<'a>) {
         Self.add_smt(pbl, context, sink);
 
         sink.comment_block(pbl, &INDEPEDANT_QUERY, "Cross engine rewrites");

@@ -16,7 +16,7 @@ impl Library for PublicationLib {
         add_rewrites(pbl, sink);
     }
 
-    fn add_smt(&self, pbl: &mut Problem, ctxt: &Context, sink: &mut impl SmtSink) {
+    fn add_smt<'a>(&self, pbl: &mut Problem, ctxt: &Context, sink: &mut impl SmtSink<'a>) {
         ereturn_if!(ctxt.using_cache);
 
         add_smt(pbl, sink);
@@ -77,7 +77,7 @@ fn add_rewrites<N: Analysis<Lang>>(pbl: &Problem, sink: &mut impl EggRewriteSink
     }
 }
 
-fn add_smt(pbl: &Problem, sink: &mut impl SmtSink) {
+fn add_smt<'a>(pbl: &Problem, sink: &mut impl SmtSink<'a>) {
     let (pub_steps, steps): (Vec<_>, Vec<_>) =
         pbl.steps().unwrap().partition(|s| s.is_publish_step());
 

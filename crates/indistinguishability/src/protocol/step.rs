@@ -140,13 +140,13 @@ impl Step {
 
     /// Creates an iterator of SMT formulas representing the unfolding of the condition and message
     /// for use with the Vampire SMT solver.
-    pub(crate) fn add_unfold_vampire_rewrites(
+    pub(crate) fn add_unfold_vampire_rewrites<'a>(
         &self,
         pbl: &Problem,
-        ptcl: &MSmtFormula,
-        sink: &mut impl SmtSink,
+        ptcl: &MSmtFormula<'a>,
+        sink: &mut impl SmtSink<'a>,
     ) {
-        let [cond, msg, name]: [MSmtFormula; _] =
+        let [cond, msg, name]: [MSmtFormula<'a>; _] =
             [&self.cond, &self.msg, &self.id_expr()].map(|x| x.as_smt(pbl).unwrap());
         let vars = self.vars.iter().cloned();
 

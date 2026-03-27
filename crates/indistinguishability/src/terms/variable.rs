@@ -245,13 +245,13 @@ impl<T: Serialize> Serialize for MaybeOnce<T> {
     }
 }
 
-impl From<Variable> for MSmtFormula {
+impl<'a> From<Variable> for MSmtFormula<'a> {
     fn from(value: Variable) -> Self {
         Self::Var(value)
     }
 }
 
-impl From<&Variable> for MSmtFormula {
+impl<'a> From<&Variable> for MSmtFormula<'a> {
     fn from(value: &Variable) -> Self {
         Self::Var(value.clone())
     }

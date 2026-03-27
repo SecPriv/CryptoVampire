@@ -14,19 +14,19 @@ use crate::utils::InnerSmartCow;
 macro_rules! s {
     ($t:ident, $n:literal) => {
         Signature {
-            inputs: Cow::Borrowed(&[$t; $n]),
+            inputs: ::quarck::CowArc::from_ref(&[$t; $n]),
             output: $t,
         }
     };
   ($($ins:ident),* -> $out:ident) => {
       Signature {
-        inputs: Cow::Borrowed(&[$($ins),*]),
+        inputs: ::quarck::CowArc::from_ref(&[$($ins),*]),
         output: $out
       }
   };
   (() -> $out:ident) => {
       Signature {
-        inputs: Cow::Borrowed(&[]),
+        inputs: ::quarck::CowArc::from_ref(&[]),
         output: $out
       }
   };

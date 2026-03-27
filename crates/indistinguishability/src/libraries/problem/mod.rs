@@ -73,7 +73,7 @@ impl Library for ProblemLib {
         sink.extend_rc_rules(pbl.extra_rules().iter().cloned());
     }
 
-    fn add_smt(&self, pbl: &mut Problem, ctx: &Context,  sink: &mut impl SmtSink) {
+    fn add_smt<'a>(&self, pbl: &mut Problem, ctx: &Context,  sink: &mut impl SmtSink<'a>) {
         ereturn_if!(ctx.using_cache);
         sink.comment_block(pbl, &INDEPEDANT_QUERY, "Custom smt");
         sink.extend_smt(pbl, &INDEPEDANT_QUERY, pbl.extra_smt().iter().cloned());
