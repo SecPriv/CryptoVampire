@@ -1,6 +1,7 @@
 use std::borrow::Borrow;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use anyhow::{Context, bail};
 use bon::Builder;
@@ -13,6 +14,8 @@ use crate::runners::Runner;
 use crate::{MSmt, MSmtFormula, Problem};
 
 declare_trace!($"vampire_exec");
+
+static MIN_VAMPIRE_TIMEOUT: Duration = Duration::from_millis(150);
 
 /// The [Runner] itself
 #[derive(Debug, Clone, Builder)]
@@ -38,7 +41,7 @@ where
     S: vampire_exec_builder::State,
 {
     /// Extends the arguments of the Vampire executable with additional `VampireArg`s.
-    pub fn default_args(mut self) -> Self {
+    pub fn default_args(self) -> Self {
         use VampireArg::*;
         self.extend_args([
             Cores(num_cpus::get() as u64),
@@ -56,6 +59,7 @@ where
     /// sets the timeout in seconds
     #[allow(unused)]
     pub fn timeout(mut self, timeout: ::std::time::Duration) -> Self {
+        let timeout = timeout.max(MIN_VAMPIRE_TIMEOUT);
         let narg = VampireArg::TimeLimit(timeout.as_secs_f64());
         if let Some(arg) = self.args.iter_mut().find(|x| x.same(&narg)) {
             *arg = narg;
@@ -247,7 +251,8 @@ impl VampireExec {
         cmd.args(self.args.iter().flat_map(|x| x.to_args().into_iter()));
 
         if !self.contains_time() {
-            cmd.args(VampireArg::TimeLimit(pbl.config.vampire_timeout.as_secs_f64()).to_args());
+            let timeout = pbl.config.vampire_timeout.max(MIN_VAMPIRE_TIMEOUT);
+            cmd.args(VampireArg::TimeLimit(timeout.as_secs_f64()).to_args());
         }
 
         if let Some(options) = &pbl.config.vampire_forced_option {

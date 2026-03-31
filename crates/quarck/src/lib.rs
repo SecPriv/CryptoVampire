@@ -102,7 +102,7 @@ mod cowarc {
         }
 
         /// Prefer [Self::into_inner]
-        #[deprecated]
+        #[deprecated = "prefer `into_innner`"]
         pub fn as_owned(&self) -> <U as ToOwned>::Owned
         where
             U: ToOwned,

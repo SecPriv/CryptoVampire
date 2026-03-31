@@ -8,7 +8,7 @@ use itertools::zip_eq;
 use tempfile::NamedTempFile;
 use tokio::fs::File;
 use tokio::sync::RwLock;
-use utils::{econtinue_if, ereturn_if};
+use utils::{econtinue_if, ereturn_if, implvec};
 
 use crate::libraries::utils::{SmtOption, SmtSink};
 use crate::problem::cache::Context;
@@ -56,19 +56,6 @@ pub struct SmtRunner {
     vampire: Option<VampireExec>,
 }
 
-// impl<T: SmtSolver> SmtSolver for Option<T> {
-//     async fn try_run<'a>(
-//         &self,
-//         pbl: &SharedProblem<'a>,
-//         query: MSmtFormula,
-//     ) -> anyhow::Result<Option<bool>> {
-//         match self {
-//             Some(x) => x.try_run(pbl, query).await,
-//             None => never_end().await,
-//         }
-//     }
-// }
-
 impl SmtRunner {
     /// Creates a new `SmtRunner` instance, initializing the Vampire solvers.
     pub fn new(pbl: &Problem) -> Self {
@@ -76,15 +63,9 @@ impl SmtRunner {
             // regular_vampire: (!pbl.config.disable_direct_vampire).then(|| RegularVampire::new(pbl)),
             // bounded_vapire: (!pbl.config.disable_fmc_vampire).then(|| BounededVampiVre::new(pbl)),
             vampire: (!pbl.config.disable_direct_vampire).then(|| {
-                let x = pbl
-                    .config
-                    .vampire_forced_option
-                    .clone()
-                    .map(VampireArg::ForcedOptions);
                 VampireExec::builder()
                     .timeout(pbl.config.vampire_timeout)
                     .default_args()
-                    .extend_args(x)
                     .maybe_exe_location(pbl.config.vampire_path.clone())
                     .build()
             }),
@@ -105,6 +86,11 @@ impl SmtRunner {
         Ok(success)
     }
 
+    // pub fn iter_run_to_dependancy(&self, pbl: &mut Problem, queries: implvec!(Formula)) -> Dependancy {
+
+    // }
+
+    // #[deprecated = "use iter_run_to_dependancy"]
     pub fn run_to_dependancy(&self, pbl: &mut Problem, queries: &[Formula]) -> Dependancy {
         pbl.cache.smt.reset();
         pbl.find_temp_quantifiers(queries);
@@ -122,7 +108,9 @@ impl SmtRunner {
             }
 
             pbl.cache.smt.reset();
-            sink.clear_files(pbl).unwrap();
+            if using_cache {
+                sink.clear_files(pbl).unwrap();
+            }
 
             let query_smt = query.as_smt(pbl).unwrap().optimise();
 

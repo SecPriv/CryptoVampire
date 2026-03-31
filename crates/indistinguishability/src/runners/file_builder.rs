@@ -84,17 +84,17 @@ impl<'r> FileSink<'r> {
 
     pub fn clear_files(&mut self, pbl: &mut Problem) -> anyhow::Result<()> {
         if let Some(CachedFile { file, .. }) = self.files.as_mut().vampire
-            && file.as_file().metadata()?.len() == 0
+            // && file.as_file().metadata()?.len() == 0
         {
             *file = mk_temp_file("vampire", pbl)?;
         }
         if let Some(CachedFile { file, .. }) = self.files.as_mut().z3
-            && file.as_file().metadata()?.len() == 0
+            // && file.as_file().metadata()?.len() == 0
         {
             *file = mk_temp_file("z3", pbl)?;
         }
         if let Some(CachedFile { file, .. }) = self.files.as_mut().cvc5
-            && file.as_file().metadata()?.len() == 0
+            // && file.as_file().metadata()?.len() == 0
         {
             *file = mk_temp_file("cvc5", pbl)?;
         }
