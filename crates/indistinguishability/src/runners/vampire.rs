@@ -4,19 +4,12 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, bail};
 use bon::Builder;
-use cryptovampire_smt::Smt;
+use cryptovampire_smt::{Smt, VAMPIRE};
 use log::trace;
 use tokio::process::Command;
 use utils::implvec;
 
-mod bounded_model;
-mod regular;
-/// Re-exports the `BounededVampire` struct, representing a bounded SMT solver configuration.
-pub use bounded_model::BounededVampire;
-/// Re-exports the `RegularVampire` struct, representing a regular SMT solver configuration.
-pub use regular::RegularVampire;
-
-use crate::runners::SharedProblem;
+use crate::runners::{Runner, SharedProblem};
 use crate::{MSmt, MSmtFormula, Problem};
 
 declare_trace!($"vampire_exec");
@@ -24,7 +17,7 @@ declare_trace!($"vampire_exec");
 /// The [Runner] itself
 #[derive(Debug, Clone, Builder)]
 #[builder(builder_type = VampireExecBuilder)]
-struct VampireExec {
+pub struct VampireExec {
     /// Arguments to vampire
     #[builder(field = vec![])]
     args: Vec<VampireArg>,
@@ -44,6 +37,16 @@ impl<S> VampireExecBuilder<S>
 where
     S: vampire_exec_builder::State,
 {
+    /// Extends the arguments of the Vampire executable with additional `VampireArg`s.
+    pub fn default_args(mut self) -> Self {
+        use VampireArg::*;
+        self.extend_args([
+            Cores(num_cpus::get() as u64),
+            Mode(vampire_suboptions::Mode::Portfolio),
+            InputSyntax(vampire_suboptions::InputSyntax::SmtLib2),
+        ])
+    }
+
     /// Extends the arguments of the Vampire executable with additional `VampireArg`s.
     pub fn extend_args(mut self, args: implvec!(VampireArg)) -> Self {
         self.args.extend(args);
@@ -147,7 +150,8 @@ pub mod vampire_suboptions {
       };
   }
 
-    suboptions!(Mode,
+    suboptions!(
+        Mode,
         /// Portfolio mode.
         (Portfolio, "portfolio"),
     );
@@ -173,7 +177,8 @@ pub mod vampire_suboptions {
         /// Z3 saturation algorithm.
         (Z3, "z3"),
     );
-    suboptions!(SatSolver,
+    suboptions!(
+        SatSolver,
         /// Minisat SAT solver.
         (Minisat, "minisat"),
         /// Z3 SAT solver.
@@ -269,94 +274,85 @@ impl VampireExec {
             && o.status.code() != Some(TIMEOUT_RC)
             && o.status.code().is_some()
         {
-            eprintln!("file: {file:?}");
-            eprintln!(
-                "stdout:\n{}",
-                std::str::from_utf8(&o.stdout).with_context(|| "non utf8 stdout")?
-            );
-            eprintln!(
-                "sterr:\n{}",
-                std::str::from_utf8(&o.stderr).with_context(|| "non utf8 stderr")?
-            );
-            eprintln!("vampire failed with error code {:?}", o.status.code());
             bail!(
-                "stdout:\n{}\nsterr:\n{}",
-                std::str::from_utf8(&o.stdout).unwrap(),
-                std::str::from_utf8(&o.stderr).unwrap(),
+                "vampire failed with error code {:?}\nstdout:\n{:?}\nsterr:\n{:?}",
+                o.status.code(),
+                &o.stdout,
+                &o.stderr
             )
         }
 
         Ok(o.status.success() && refutation)
     }
 
-    /// Writes the given SMT statements to a temporary file and runs Vampire on it.
-    ///
-    /// If `keep_file` is true, the temporary file is not deleted after execution.
-    pub async fn run_smt<RefS>(&self, pbl: &Problem, smt: implvec!(RefS)) -> anyhow::Result<bool>
-    where
-        RefS: Borrow<MSmt>,
-    {
-        let mut tmpfile = tempfile::Builder::new()
-            .prefix("cryptovampire")
-            .suffix(".smt")
-            .disable_cleanup(pbl.config.keep_smt_files)
-            .tempfile()?;
+    // /// Writes the given SMT statements to a temporary file and runs Vampire on it.
+    // ///
+    // /// If `keep_file` is true, the temporary file is not deleted after execution.
+    // pub async fn run_smt<RefS>(&self, pbl: &Problem, smt: implvec!(RefS)) -> anyhow::Result<bool>
+    // where
+    //     RefS: Borrow<MSmt>,
+    // {
+    //     let mut tmpfile = tempfile::Builder::new()
+    //         .prefix("cryptovampire")
+    //         .suffix(".smt")
+    //         .disable_cleanup(pbl.config.keep_smt_files)
+    //         .tempfile()?;
 
-        if pbl.config.keep_smt_files {
-            println!("writting smt file to '{:?}' ...", tmpfile.path())
-        }
+    //     if pbl.config.keep_smt_files {
+    //         println!("writting smt file to '{:?}' ...", tmpfile.path())
+    //     }
 
-        {
-            use std::io::Write as _;
-            let buffer = tmpfile.as_file_mut();
-            let mut axiom_count = 1usize;
-            for statement in smt {
-                let statement = statement.borrow();
-                {
-                    use cryptovampire_smt::{SolverKind, VAMPIRE};
+    //     {
+    //         use std::io::Write as _;
+    //         let buffer = tmpfile.as_file_mut();
+    //         let mut axiom_count = 1usize;
+    //         for statement in smt {
+    //             let statement = statement.borrow();
+    //             {
+    //                 use cryptovampire_smt::{SolverKind, VAMPIRE};
 
-                    statement
-                        .check(VAMPIRE)
-                        .with_context(|| format!("checking {statement}"))?
-                }
+    //                 statement
+    //                     .check(VAMPIRE)
+    //                     .with_context(|| format!("checking {statement}"))?
+    //             }
 
-                if statement.is_any_assert() {
-                    // numbered comments
-                    writeln!(buffer, "; {axiom_count:}")?;
-                    axiom_count += 1;
-                }
-                writeln!(buffer, "{}", statement.as_pretty())?;
-            }
-        }
+    //             if statement.is_any_assert() {
+    //                 // numbered comments
+    //                 writeln!(buffer, "; {axiom_count:}")?;
+    //                 axiom_count += 1;
+    //             }
+    //             writeln!(buffer, "{}", statement.as_pretty())?;
+    //         }
+    //     }
 
-        if pbl.config.keep_smt_files {
-            tr!("file written")
-        }
+    //     if pbl.config.keep_smt_files {
+    //         tr!("file written")
+    //     }
 
-        self.run(pbl, tmpfile.path()).await
-    }
+    //     self.run(pbl, tmpfile.path()).await
+    // }
 
-    /// Runs Vampire with the given SMT query, incorporating the problem's SMT prelude.
-    ///
-    /// This method prepares the SMT input by adding the prelude and the query,
-    /// then executes Vampire and interprets its result.
-    pub async fn run_smt_with_pbl<'a>(
-        &self,
-        pbl: &SharedProblem<'a>,
-        query: MSmtFormula,
-    ) -> anyhow::Result<Option<bool>> {
-        trace!("checking {query}");
-        let mut prelude = Vec::new();
-        pbl.extend_smt_prelud(&mut prelude).await;
-        prelude.extend([Smt::mk_query(query), Smt::CheckSat]);
-        // let pbl: &Problem<_> = &self.pbl.borrow();
-        let res = self
-            .run_smt(Deref::deref(&pbl.0.read().await), prelude)
-            .await
-            .with_context(|| "something went wrong with vampire")?;
+    // /// Runs Vampire with the given SMT query, incorporating the problem's SMT prelude.
+    // ///
+    // /// This method prepares the SMT input by adding the prelude and the query,
+    // /// then executes Vampire and interprets its result.
+    // pub async fn run_smt_with_pbl<'a>(
+    //     &self,
+    //     pbl: &SharedProblem<'a>,
+    //     query: MSmtFormula,
+    // ) -> anyhow::Result<Option<bool>> {
+    //     trace!("checking {query}");
+    //     let mut prelude = Vec::new();
+    //     pbl.extend_smt_prelud(&mut prelude).await;
+    //     prelude.extend([Smt::mk_query(query), Smt::CheckSat]);
+    //     // let pbl: &Problem<_> = &self.pbl.borrow();
+    //     let res = self
+    //         .run_smt(Deref::deref(&pbl.0.read().await), prelude)
+    //         .await
+    //         .with_context(|| "something went wrong with vampire")?;
 
-        if res { Ok(Some(true)) } else { Ok(None) }
-    }
+    //     if res { Ok(Some(true)) } else { Ok(None) }
+    // }
 }
 
 /// Discovers the path to the Vampire executable in the system's `$PATH`.
@@ -369,5 +365,22 @@ fn get_vampire_location() -> PathBuf {
         path.into()
     } else {
         which::which("vampire").expect("can't find vampire in the $PATH")
+    }
+}
+
+impl Runner for VampireExec {
+    async fn try_run<'a>(&self, pbl: &Problem, query: &Path) -> anyhow::Result<Option<bool>> {
+        match self.run(pbl, query).await? {
+            true => Ok(Some(true)),
+            false => Ok(None),
+        }
+    }
+
+    fn mut_splitter<'a, U>(&self, spliter: &'a mut super::RunnerSplitter<U>) -> Option<&'a mut U> {
+        spliter.vampire.as_mut()
+    }
+
+    fn get_sover_kind(&self) -> cryptovampire_smt::SolverKind {
+        VAMPIRE
     }
 }

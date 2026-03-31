@@ -41,16 +41,16 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for VampireRule {
 
         let to_prove = Formula::try_from_id(egraph, *s.get(X.as_egg()).unwrap()).unwrap();
         let pbl: &mut Problem = egraph.analysis.pbl_mut();
-        pbl.find_temp_quantifiers(std::slice::from_ref(&to_prove));
+        // pbl.find_temp_quantifiers(std::slice::from_ref(&to_prove));
 
-        let to_prove = to_prove.as_smt(pbl).unwrap();
+        // let to_prove = to_prove.as_smt(pbl).unwrap();
 
         // if dep.is_axioms() { <- not possible likely because of indices reuse
         //     let et = egraph.add(TRUE.app_id([]));
         //     egraph.union_trusted(*s.get(X.as_egg()).unwrap(), et, "v");
         // }
 
-        self.exec.run_to_dependancy(pbl, to_prove)
+        self.exec.run_to_dependancy(pbl, &[to_prove])
     }
 
     /// Returns the name of this rule.

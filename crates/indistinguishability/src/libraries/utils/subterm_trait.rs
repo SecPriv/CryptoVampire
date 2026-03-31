@@ -401,13 +401,16 @@ pub trait SyntaxSearcher {
             .search_timepoint(prgm.egraph().analysis.pbl(), ptcl, time, hyp)
             .collect_vec();
         let pbl = prgm.egraph_mut().analysis.pbl_mut();
-        pbl.find_temp_quantifiers(&queries);
-
-        let result = queries.into_iter().all(|query| {
-            let query = query.as_smt(*pbl).unwrap();
-            exec.run_to_dependancy(pbl, query).is_axioms()
-        });
+        let result = exec.run_to_dependancy(pbl, &queries).is_axioms();
         pbl.clear_temp_quantifiers();
+
+        // pbl.find_temp_quantifiers(&queries);
+
+        // let result = queries.into_iter().all(|query| {
+        //     let query = query.as_smt(*pbl).unwrap();
+        //     exec.run_to_dependancy(pbl, query).is_axioms()
+        // });
+        // pbl.clear_temp_quantifiers();
         Some(result)
     }
 }

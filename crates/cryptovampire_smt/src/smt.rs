@@ -14,7 +14,7 @@ use crate::{
 };
 
 /// Represents an SMT-LIB command.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Smt<'a, U: SmtParam> {
     /// An `assert` command.
     Assert(SmtFormula<'a, U>),
@@ -79,8 +79,60 @@ impl<'a, U: SmtParam> Smt<'a, U> {
     }
 }
 
+impl<'a, U: SmtParam> Clone for Smt<'a, U> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Assert(arg0) => Self::Assert(arg0.clone()),
+            #[cfg(feature = "vampire")]
+            Self::AssertTh(arg0) => Self::AssertTh(arg0.clone()),
+            #[cfg(feature = "cryptovampire")]
+            Self::AssertGround { sort, formula } => Self::AssertGround {
+                sort: sort.clone(),
+                formula: formula.clone(),
+            },
+            #[cfg(feature = "vampire")]
+            Self::AssertNot(arg0) => Self::AssertNot(arg0.clone()),
+            Self::DeclareFun { fun, args, out } => Self::DeclareFun {
+                fun: fun.clone(),
+                args: args.clone(),
+                out: out.clone(),
+            },
+            Self::DeclareSort(arg0) => Self::DeclareSort(arg0.clone()),
+            Self::DeclareSortAlias { from, to } => Self::DeclareSortAlias {
+                from: from.clone(),
+                to: to.clone(),
+            },
+            #[cfg(feature = "cryptovampire")]
+            Self::DeclareSubtermRelation(arg0, arg1) => {
+                Self::DeclareSubtermRelation(arg0.clone(), arg1.clone())
+            }
+            #[cfg(feature = "cryptovampire")]
+            Self::DeclareRewrite {
+                rewrite_fun,
+                vars,
+                lhs,
+                rhs,
+            } => Self::DeclareRewrite {
+                rewrite_fun: rewrite_fun.clone(),
+                vars: vars.clone(),
+                lhs: lhs.clone(),
+                rhs: rhs.clone(),
+            },
+            Self::DeclareDatatypes { sorts, cons } => Self::DeclareDatatypes {
+                sorts: sorts.clone(),
+                cons: cons.clone(),
+            },
+            Self::Comment(arg0) => Self::Comment(arg0.clone()),
+            Self::CheckSat => Self::CheckSat,
+            Self::GetProof => Self::GetProof,
+            Self::SetOption(arg0, arg1) => Self::SetOption(arg0.clone(), arg1.clone()),
+            Self::SetLogic(arg0) => Self::SetLogic(arg0.clone()),
+        }
+    }
+}
+
 /// Represents a constructor for a datatype in SMT-LIB.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SmtCons<U: SmtParam> {
     /// The function symbol of the constructor.
     pub fun: U::Function,
@@ -98,6 +150,16 @@ pub enum RewriteKind<F> {
     Bool,
     /// Another kind of rewrite rule with a function.
     Other(F),
+}
+
+impl<U: SmtParam> Clone for SmtCons<U> {
+    fn clone(&self) -> Self {
+        Self {
+            fun: self.fun.clone(),
+            sorts: self.sorts.clone(),
+            dest: self.dest.clone(),
+        }
+    }
 }
 
 impl<'a, U: SmtParam> FromIterator<Smt<'a, U>> for SmtFile<'a, U> {
@@ -247,13 +309,18 @@ where
         Ok(())
     }
 
-    fn convert(self, kind: SolverKind) -> Result<Self, CheckError> {
+    pub fn convert<'b>(&'a self, kind: SolverKind) -> Result<Smt<'b, U>, CheckError>
+    where
+        'a: 'b,
+    {
         match self {
             #[cfg(feature = "vampire")]
-            Self::AssertTh(f) if !kind.contains(SolverKind::AssertTh) => Ok(Self::Assert(f)),
+            Self::AssertTh(f) if !kind.contains(SolverKind::AssertTh) => {
+                Ok(Self::Assert(f.clone()))
+            }
             #[cfg(feature = "vampire")]
             Self::AssertNot(f) if !kind.contains(SolverKind::AssertGround) => {
-                Ok(Self::Assert(SmtFormula::Not(f.into())))
+                Ok(Self::Assert(SmtFormula::Not(CowArc::Borrowed(f))))
             }
 
             #[cfg(feature = "cryptovampire")]
@@ -268,7 +335,7 @@ where
             Self::DeclareRewrite { .. } if !kind.contains(SolverKind::CVRewrite) => {
                 Err(CheckError::UnsupportedFeature(SolverFeatures::Rewrite))
             }
-            x => Ok(x),
+            x => Ok(x.clone()),
         }
     }
 }
