@@ -72,6 +72,7 @@ where
             Self::Not(arg0) => Self::Not(arg0.clone()),
             Self::Implies(arg0) => Self::Implies(arg0.clone()),
             Self::Ite(arg0) => Self::Ite(arg0.clone()),
+            #[cfg(feature = "cryptovampire")]
             Self::Subterm(arg0, arg1) => Self::Subterm(arg0.clone(), arg1.clone()),
         }
     }
@@ -110,7 +111,7 @@ pub enum SmtQuantifier<'a, U: SmtParam> {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum SmtQuantifierRef<'a, U:SmtParam> {
+pub enum SmtQuantifierRef<'a, U: SmtParam> {
     /// Universal quantifier.
     Forall(&'a [U::SVar]),
     /// Existential quantifier.

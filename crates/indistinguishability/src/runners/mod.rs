@@ -8,7 +8,9 @@ use itertools::zip_eq;
 use tempfile::NamedTempFile;
 use tokio::fs::File;
 use tokio::sync::RwLock;
+use utils::{econtinue_if, ereturn_if};
 
+use crate::libraries::utils::{SmtOption, SmtSink};
 use crate::problem::cache::Context;
 use crate::runners::file_builder::FileSink;
 use crate::runners::vampire::{VampireArg, VampireExec};
@@ -30,9 +32,9 @@ trait Runner: Debug {
     /// - `Err(_)` if the solver errored out (e.g., syntax error and such).
     /// - `Ok(None)` the solver didn't manage to prove nor disprove the query
     /// - `Ok(b)` with `b` true is proven, `false` otherwise
-    async fn try_run<'a>(&self, pbl: &Problem, query: &Path) -> anyhow::Result<Option<bool>>;
+    async fn try_run(&self, pbl: &Problem, query: &Path) -> anyhow::Result<Option<bool>>;
 
-    async fn try_run_spin<'a>(&self, pbl: &Problem, query: &Path) -> anyhow::Result<bool> {
+    async fn try_run_spin(&self, pbl: &Problem, query: &Path) -> anyhow::Result<bool> {
         match self.try_run(pbl, query).await? {
             Some(x) => Ok(x),
             _ => never_end().await,
@@ -51,7 +53,7 @@ pub struct SmtRunner {
     // regular_vampire: Option<RegularVampire>,
     // /// The bounded Vampire solver instance.
     // bounded_vapire: Option<BounededVampire>,
-    pub vampire: Option<VampireExec>,
+    vampire: Option<VampireExec>,
 }
 
 // impl<T: SmtSolver> SmtSolver for Option<T> {
@@ -90,40 +92,62 @@ impl SmtRunner {
     }
 
     #[tokio::main]
-    async fn run_all(&self, pbl: &Problem, query: &FileSink<'_>) -> anyhow::Result<bool> {
+    async fn run_all(&self, pbl: &mut Problem, query: &FileSink<'_>) -> anyhow::Result<bool> {
         let Self { vampire } = self;
-        tokio::select! {
+        let start = std::time::Instant::now();
+        let success = tokio::select! {
             _ = to_timeout::<()>(pbl) => Ok(false),
-            res = maybe_run(pbl, &query.files.vampire, vampire) => res
-        }
+            res = maybe_run(pbl, query.vampire_file(), vampire) => res
+        }?;
+        let time = start.elapsed();
+
+        pbl.report.add_smt_time(time, success);
+        Ok(success)
     }
 
     pub fn run_to_dependancy(&self, pbl: &mut Problem, queries: &[Formula]) -> Dependancy {
-        pbl.cache.smt.force_reset();
+        pbl.cache.smt.reset();
         pbl.find_temp_quantifiers(queries);
 
+        let lock = pbl.cache.smt.lock();
+        let mut using_cache = false;
+
+        let mut sink = FileSink::new(pbl, self).unwrap();
+
         for query in queries {
-            let mut sink = FileSink::new(pbl, self);
+            match query.try_evaluate() {
+                Some(true) => continue,
+                Some(false) => return Dependancy::impossible(),
+                _ => {}
+            }
+
+            pbl.cache.smt.reset();
+            sink.clear_files(pbl).unwrap();
+
+            let query_smt = query.as_smt(pbl).unwrap().optimise();
 
             // z3 or cvc5 would set up some headers in the smt files (like chosing a theory & co)
 
-            {
-                // use the cache
-                let FileSink { cache, files, .. } = &mut sink;
-                for (c, f) in zip_eq(cache.as_mut(), files.as_mut()) {
-                    use ::std::io::Write;
-                    write!(f, "{c}").unwrap()
-                }
-            }
+
+            sink.write_cache().unwrap();
 
             pbl.add_smt(
-                &mut Context {
+                &Context {
                     query: query.clone(),
-                    query_smt: query.as_smt(pbl).unwrap(),
-                    using_cache: false,
+                    query_smt: query_smt.clone(),
+                    using_cache,
                 },
                 &mut sink,
             );
+
+            sink.extend_smt(
+                pbl,
+                &SmtOption {
+                    depend_on_context: true,
+                },
+                [MSmt::AssertNot(query_smt), MSmt::CheckSat],
+            );
+
 
             if pbl.config.keep_smt_files {
                 for f in sink.files.as_ref() {
@@ -134,69 +158,15 @@ impl SmtRunner {
             if !self.run_all(pbl, &sink).unwrap() {
                 return Dependancy::impossible();
             }
+
+            using_cache = true;
         }
+
+        drop(lock);
 
         Dependancy::axiom()
     }
 }
-
-//     /// Runs the SMT solver with the given query and converts the result to a `Dependancy`.
-//     ///
-//     /// If the query is proven true, it returns `Dependancy::axiom()`; otherwise, `Dependancy::impossible()`.
-//     pub fn run_to_dependancy(&self, pbl: &mut Problem, query: MSmtFormula) -> Dependancy {
-//         if let Some(true) = self.try_run(pbl, query).unwrap() {
-//             Dependancy::axiom()
-//         } else {
-//             Dependancy::impossible()
-//         }
-//     }
-
-//     /// Attempts to run the SMT solvers (regular and bounded Vampire) concurrently.
-//     ///
-//     /// It returns `Ok(Some(true))` if a proof is found, `Ok(Some(false))` if disproven,
-//     /// `Ok(None)` if a timeout occurs, or `Err` if a solver error happens.
-//     #[tokio::main]
-//     pub async fn try_run(
-//         &self,
-//         pbl: &mut Problem,
-//         query: MSmtFormula,
-//     ) -> anyhow::Result<Option<bool>> {
-//         let query = query.optimise();
-//         if query.is_true() {
-//             return Ok(Some(true));
-//         } else if query.is_false() {
-//             return Ok(Some(false));
-//         }
-
-//         let Self {
-//             regular_vampire,
-//             bounded_vapire,
-//         } = self;
-
-//         let pbl = SharedProblem(RwLock::new(pbl));
-
-//         let start = std::time::Instant::now();
-//         let res = tokio::select! {
-//             x = regular_vampire.try_run_spin(&pbl, query.clone()) => x.map(Some),
-//             x = bounded_vapire.try_run_spin(&pbl, query.clone()) => x.map(Some),
-//             _ = tokio::time::sleep( pbl.0.read().await.config.vampire_timeout) => Ok(None)
-//         };
-//         {
-//             let time = start.elapsed();
-//             let mut pbl = pbl.0.write().await;
-//             pbl.report.time_spent_in_vampire += time;
-//             if let Ok(Some(true)) = res
-//                 && pbl.report.max_vampire < time
-//             {
-//                 pbl.report.max_vampire = time;
-//                 if pbl.config.trace {
-//                     eprintln!("new longest vampire!")
-//                 }
-//             }
-//         }
-//         res
-//     }
-// }
 
 async fn never_end<T>() -> T {
     loop {
@@ -212,30 +182,12 @@ async fn to_timeout<T>(pbl: &Problem) -> Option<T> {
 
 async fn maybe_run<R: Runner>(
     pbl: &Problem,
-    query: &Option<NamedTempFile>,
+    query: Option<&Path>,
     r: &Option<R>,
 ) -> anyhow::Result<bool> {
-    match (r.as_ref(), query.as_ref()) {
-        (Some(x), Some(query)) => x.try_run_spin(pbl, query.path()).await,
-        _ => never_end().await,
+    match (r.as_ref(), query) {
+        (Some(x), Some(query)) => x.try_run_spin(pbl, query).await,
+        (None, None) => never_end().await,
+        _ => unreachable!(),
     }
 }
-
-/// A wrapper around `Problem` to allow shared mutable access across asynchronous tasks.
-///
-/// Differs from [crate::input::shared_problem::ShrProblem] in the sense that it's async.
-struct SharedProblem<'a>(RwLock<&'a mut Problem>);
-
-// impl<'a> SharedProblem<'a> {
-//     /// Extends the given SMT prelude with the problem's SMT prelude.
-//     ///
-//     /// If the problem's SMT prelude has not been computed yet, it computes it.
-//     pub async fn extend_smt_prelud(&self, rec: &mut Vec<MSmt>) {
-//         // split here to avoid taking a lock if possible
-//         if let Some(p) = self.0.read().await.maybe_get_smt_prelude() {
-//             rec.extend_from_slice(p);
-//         } else {
-//             rec.extend_from_slice(self.0.write().await.get_smt_prelude());
-//         }
-//     }
-// }

@@ -23,19 +23,18 @@ pub struct SmtCache {
 
     /// see [Problem::try_translate]
     pub(crate) occured_quantfiers: RefCell<FxHashSet<Function>>,
-    /// number of assertions seen so far
-    pub(crate) nassert: AtomicUsize,
-
-    pub(crate) string_cache: Arc<parking_lot::Mutex<SmtStringCache>>,
 }
 
 impl SmtCache {
+    pub fn lock(&self) -> impl Drop + use<> {
+        self.repeating_runs.clone()
+    }
+
     pub fn anything_cached(&self) -> bool {
         !self.occured_quantfiers.borrow().is_empty()
     }
 
     pub fn reset(&mut self) {
-        *self.nassert.get_mut() = 0;
 
         if Arc::strong_count(&self.repeating_runs) <= 1 {
             self.occured_quantfiers.get_mut().clear();
@@ -43,8 +42,7 @@ impl SmtCache {
     }
 
     pub fn force_reset(&mut self) {
-        *self.nassert.get_mut() = 0;
+        assert!(Arc::strong_count(&self.repeating_runs) <= 1);
         self.occured_quantfiers.get_mut().clear();
-        self.string_cache.try_lock().expect("currently writting to the cache!").clear();
     }
 }

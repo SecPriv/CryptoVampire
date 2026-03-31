@@ -1,7 +1,7 @@
 use std::iter::Flatten;
 
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct RunnerSplitter<U> {
     pub vampire: Option<U>,
     pub cvc5: Option<U>,
@@ -77,5 +77,11 @@ impl<U> IntoIterator for RunnerSplitter<U> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.into_array().into_iter().flatten()
+    }
+}
+
+impl<U> Default for RunnerSplitter<U> {
+    fn default() -> Self {
+        Self { vampire: None, cvc5: None, z3: None }
     }
 }

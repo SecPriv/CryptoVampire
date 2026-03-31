@@ -16,9 +16,7 @@ use crate::{MSmt, rexp};
 
 impl Problem {
     /// Computes the SMT
-    pub fn add_smt<'a>(&mut self, context: &mut Context, sink: &mut impl SmtSink<'a>) {
-        self.cache.smt.reset();
-        context.using_cache = !self.cache.smt.anything_cached();
+    pub fn add_smt<'a>(&mut self, context: &Context, sink: &mut impl SmtSink<'a>) {
         Libraries::add_all_smt(self, context, sink);
     }
 

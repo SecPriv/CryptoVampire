@@ -9,7 +9,7 @@ use log::trace;
 use tokio::process::Command;
 use utils::implvec;
 
-use crate::runners::{Runner, SharedProblem};
+use crate::runners::{Runner};
 use crate::{MSmt, MSmtFormula, Problem};
 
 declare_trace!($"vampire_exec");
@@ -277,82 +277,14 @@ impl VampireExec {
             bail!(
                 "vampire failed with error code {:?}\nstdout:\n{:?}\nsterr:\n{:?}",
                 o.status.code(),
-                &o.stdout,
-                &o.stderr
+                String::from_utf8_lossy(&o.stdout),
+                String::from_utf8_lossy(&o.stderr)
             )
         }
 
         Ok(o.status.success() && refutation)
     }
 
-    // /// Writes the given SMT statements to a temporary file and runs Vampire on it.
-    // ///
-    // /// If `keep_file` is true, the temporary file is not deleted after execution.
-    // pub async fn run_smt<RefS>(&self, pbl: &Problem, smt: implvec!(RefS)) -> anyhow::Result<bool>
-    // where
-    //     RefS: Borrow<MSmt>,
-    // {
-    //     let mut tmpfile = tempfile::Builder::new()
-    //         .prefix("cryptovampire")
-    //         .suffix(".smt")
-    //         .disable_cleanup(pbl.config.keep_smt_files)
-    //         .tempfile()?;
-
-    //     if pbl.config.keep_smt_files {
-    //         println!("writting smt file to '{:?}' ...", tmpfile.path())
-    //     }
-
-    //     {
-    //         use std::io::Write as _;
-    //         let buffer = tmpfile.as_file_mut();
-    //         let mut axiom_count = 1usize;
-    //         for statement in smt {
-    //             let statement = statement.borrow();
-    //             {
-    //                 use cryptovampire_smt::{SolverKind, VAMPIRE};
-
-    //                 statement
-    //                     .check(VAMPIRE)
-    //                     .with_context(|| format!("checking {statement}"))?
-    //             }
-
-    //             if statement.is_any_assert() {
-    //                 // numbered comments
-    //                 writeln!(buffer, "; {axiom_count:}")?;
-    //                 axiom_count += 1;
-    //             }
-    //             writeln!(buffer, "{}", statement.as_pretty())?;
-    //         }
-    //     }
-
-    //     if pbl.config.keep_smt_files {
-    //         tr!("file written")
-    //     }
-
-    //     self.run(pbl, tmpfile.path()).await
-    // }
-
-    // /// Runs Vampire with the given SMT query, incorporating the problem's SMT prelude.
-    // ///
-    // /// This method prepares the SMT input by adding the prelude and the query,
-    // /// then executes Vampire and interprets its result.
-    // pub async fn run_smt_with_pbl<'a>(
-    //     &self,
-    //     pbl: &SharedProblem<'a>,
-    //     query: MSmtFormula,
-    // ) -> anyhow::Result<Option<bool>> {
-    //     trace!("checking {query}");
-    //     let mut prelude = Vec::new();
-    //     pbl.extend_smt_prelud(&mut prelude).await;
-    //     prelude.extend([Smt::mk_query(query), Smt::CheckSat]);
-    //     // let pbl: &Problem<_> = &self.pbl.borrow();
-    //     let res = self
-    //         .run_smt(Deref::deref(&pbl.0.read().await), prelude)
-    //         .await
-    //         .with_context(|| "something went wrong with vampire")?;
-
-    //     if res { Ok(Some(true)) } else { Ok(None) }
-    // }
 }
 
 /// Discovers the path to the Vampire executable in the system's `$PATH`.
@@ -369,7 +301,7 @@ fn get_vampire_location() -> PathBuf {
 }
 
 impl Runner for VampireExec {
-    async fn try_run<'a>(&self, pbl: &Problem, query: &Path) -> anyhow::Result<Option<bool>> {
+    async fn try_run(&self, pbl: &Problem, query: &Path) -> anyhow::Result<Option<bool>> {
         match self.run(pbl, query).await? {
             true => Ok(Some(true)),
             false => Ok(None),
