@@ -10,10 +10,8 @@ use steel_derive::Steel;
 use crate::Problem;
 use crate::input::Registerable;
 use crate::input::shared_problem::ShrProblem;
-use crate::libraries::{AEnc, DDH, PRF, XOr, CryptographicAssumption, Cryptography};
-use crate::terms::{
-     Formula, Function, NONCE, Sort, Variable,
-};
+use crate::libraries::{AEnc, CryptographicAssumption, Cryptography, DDH, PRF, XOr};
+use crate::terms::{Formula, Function, NONCE, Sort, Variable};
 
 /// Represents a shared cryptographic context within the Steel VM.
 #[derive(Debug, Clone, Steel)]

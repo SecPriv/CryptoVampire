@@ -14,7 +14,11 @@ use crate::{Lang, Problem};
 pub struct UnfoldLib;
 
 impl Library for UnfoldLib {
-    fn add_egg_rewrites<N: Analysis<Lang>>(&self, pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {
+    fn add_egg_rewrites<N: Analysis<Lang>>(
+        &self,
+        pbl: &mut Problem,
+        sink: &mut impl EggRewriteSink<N>,
+    ) {
         add_static_unfold_rewrites(sink);
         add_macro_unfold_rewrites(sink);
         add_step_unfold_rewrites(pbl, sink);

@@ -9,7 +9,7 @@ use log::trace;
 use tokio::process::Command;
 use utils::implvec;
 
-use crate::runners::{Runner};
+use crate::runners::Runner;
 use crate::{MSmt, MSmtFormula, Problem};
 
 declare_trace!($"vampire_exec");
@@ -284,7 +284,6 @@ impl VampireExec {
 
         Ok(o.status.success() && refutation)
     }
-
 }
 
 /// Discovers the path to the Vampire executable in the system's `$PATH`.

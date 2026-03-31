@@ -122,7 +122,12 @@ pub struct ProblemStateLib;
 
 impl Library for ProblemStateLib {
     fn modify_egraph<'a>(&self, egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
-        assert!(ProblemState::get_self(egraph).sets().iter().all(|s| s.is_empty()));
+        assert!(
+            ProblemState::get_self(egraph)
+                .sets()
+                .iter()
+                .all(|s| s.is_empty())
+        );
         ProblemState::propagate(egraph, None);
     }
 }

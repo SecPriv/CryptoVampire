@@ -143,7 +143,7 @@ pub struct Configuration {
     pub disable_direct_vampire: bool,
 
     /// Propagate to `vampire` `--forced_options`
-    /// 
+    ///
     /// Options in the format `<opt1>=<val1>:<opt2>=<val2>:...:<optn>=<valN>`
     /// that override the option values set by other means (also inside
     /// portfolio mode strategies)
@@ -151,7 +151,7 @@ pub struct Configuration {
     pub vampire_forced_option: Option<String>,
 
     #[arg(long, env)]
-    pub vampire_path: Option<PathBuf>
+    pub vampire_path: Option<PathBuf>,
 }
 
 static NODE_LIMIT_DEFAULT: usize = 100000;
@@ -190,7 +190,7 @@ impl Default for Configuration {
             trace_guessed_published_nonces: false,
             disable_direct_vampire: false,
             vampire_forced_option: None,
-            vampire_path: None
+            vampire_path: None,
         }
     }
 }

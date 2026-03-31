@@ -59,7 +59,11 @@ fn mk_alias_rule_1<N: Analysis<Lang>>(
 pub struct ProblemLib;
 
 impl Library for ProblemLib {
-    fn add_egg_rewrites<N: Analysis<Lang>>(&self, pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {
+    fn add_egg_rewrites<N: Analysis<Lang>>(
+        &self,
+        pbl: &mut Problem,
+        sink: &mut impl EggRewriteSink<N>,
+    ) {
         // add_extra_rw_rules(pbl, sink);
         add_alias_rule(pbl, sink);
     }
@@ -73,7 +77,7 @@ impl Library for ProblemLib {
         sink.extend_rc_rules(pbl.extra_rules().iter().cloned());
     }
 
-    fn add_smt<'a>(&self, pbl: &mut Problem, ctx: &Context,  sink: &mut impl SmtSink<'a>) {
+    fn add_smt<'a>(&self, pbl: &mut Problem, ctx: &Context, sink: &mut impl SmtSink<'a>) {
         ereturn_if!(ctx.using_cache);
         sink.comment_block(pbl, &INDEPEDANT_QUERY, "Custom smt");
         sink.extend_smt(pbl, &INDEPEDANT_QUERY, pbl.extra_smt().iter().cloned());

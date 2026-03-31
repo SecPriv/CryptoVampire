@@ -1,4 +1,4 @@
-use cryptovampire_smt::{Smt};
+use cryptovampire_smt::Smt;
 use egg::EGraph;
 use golgge::{Program, Rule};
 use itertools::Itertools;

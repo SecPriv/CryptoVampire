@@ -8,7 +8,7 @@ use std::ops::DerefMut;
 use std::path::Path;
 use std::sync::atomic::Ordering;
 
-use anyhow::{Context};
+use anyhow::Context;
 use cryptovampire_smt::{CVC5, SolverKind, VAMPIRE, Z3};
 use parking_lot::{ArcMutexGuard, RawMutex};
 use tempfile::NamedTempFile;

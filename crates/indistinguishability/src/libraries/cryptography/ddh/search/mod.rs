@@ -1,7 +1,7 @@
 use itertools::chain;
 
-use crate::libraries::DDH;
 use super::vars::*;
+use crate::libraries::DDH;
 use crate::libraries::utils::RuleSink;
 use crate::problem::{PRule, RcRule};
 use crate::runners::SmtRunner;

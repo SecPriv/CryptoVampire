@@ -1,14 +1,11 @@
 use itertools::{Itertools, chain};
-
 use rule::DDHRule;
+
+use super::{CryptographicAssumption, Cryptography};
 use crate::libraries::Library;
 use crate::libraries::utils::{RewriteSink, RuleSink};
 use crate::problem::{PRule, ProblemState};
-use crate::terms::{
-     Formula, Function, FunctionFlags, Rewrite, Sort,
-    Variable,
-};
-use super::{CryptographicAssumption, Cryptography};
+use crate::terms::{Formula, Function, FunctionFlags, Rewrite, Sort, Variable};
 use crate::{Problem, mk_signature};
 declare_trace!($"enc");
 

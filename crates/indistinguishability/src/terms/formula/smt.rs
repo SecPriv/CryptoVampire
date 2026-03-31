@@ -121,7 +121,7 @@ impl<'a> From<MSmtFormula<'a>> for Formula {
                     arg,
                 }
             }
-            SmtFormula::True => TRUE.rapp([]) ,
+            SmtFormula::True => TRUE.rapp([]),
             SmtFormula::False => FALSE.rapp([]),
             SmtFormula::And(args) => {
                 Self::fold(&AND, args.into_cloned_iter().map_into(), None, false)

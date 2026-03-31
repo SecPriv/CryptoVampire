@@ -54,7 +54,6 @@ impl CryptographicAssumption {
 }
 
 pub trait Cryptography: Into<CryptographicAssumption> + Library {
-
     fn name(&self) -> impl Display;
 
     #[must_use]
@@ -84,13 +83,18 @@ pub trait Cryptography: Into<CryptographicAssumption> + Library {
 }
 
 impl Library for CryptographicAssumption {
-    fn add_smt<'a>(&self, pbl: &mut Problem, ctxt: &crate::problem::cache::Context,  sink: &mut impl SmtSink<'a>) {
+    fn add_smt<'a>(
+        &self,
+        pbl: &mut Problem,
+        ctxt: &crate::problem::cache::Context,
+        sink: &mut impl SmtSink<'a>,
+    ) {
         match self {
             Self::NoGuessingTh => add_no_guessing_smt(pbl, ctxt, sink),
             Self::PRF(x) => x.add_smt(pbl, ctxt, sink),
             Self::AEnc(x) => x.add_smt(pbl, ctxt, sink),
             Self::XOr(x) => x.add_smt(pbl, ctxt, sink),
-            Self::DDH(x) => x.add_smt(pbl,ctxt, sink),
+            Self::DDH(x) => x.add_smt(pbl, ctxt, sink),
             Self::Undefined => {}
         }
     }

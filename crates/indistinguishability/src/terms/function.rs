@@ -69,7 +69,7 @@ impl InnerFunction {
             protocol_idx: 0,
             step_idx: 0,
             cryptography: Cow::Borrowed(&[]),
-            grabage_collectable: AtomicBool::new(false)
+            grabage_collectable: AtomicBool::new(false),
         }
     }
 }
@@ -397,11 +397,13 @@ Because smt has a syntax for it, or it's a prolog trick, or ...");
     }
 
     pub fn is_garabage_collectable(&self) -> bool {
-        self.grabage_collectable.load(std::sync::atomic::Ordering::Acquire)
+        self.grabage_collectable
+            .load(std::sync::atomic::Ordering::Acquire)
     }
 
     pub fn set_garbage_collectable(&self) {
-        self.grabage_collectable.store(true, std::sync::atomic::Ordering::Release);
+        self.grabage_collectable
+            .store(true, std::sync::atomic::Ordering::Release);
     }
 }
 

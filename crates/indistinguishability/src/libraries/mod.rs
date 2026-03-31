@@ -239,7 +239,6 @@ macro_rules! mk_many_rewrites {
 /// Provides utility functions and helpers for rules.
 pub mod utils;
 
-
 /// Provides rules for deduction.
 mod deduce;
 /// Provides rules for handling forall quantifiers.
@@ -256,7 +255,6 @@ mod vampire;
 mod ifs;
 
 pub use protocol::{constrains, publication};
-
 
 mod smt;
 
@@ -284,6 +282,6 @@ mod libraries;
 pub use libraries::Libraries;
 
 mod cryptography;
-pub use cryptography::{AEnc, XOr, DDH, PRF,  CryptographicAssumption, Cryptography};
+pub use cryptography::{AEnc, CryptographicAssumption, Cryptography, DDH, PRF, XOr};
 
 mod current_step;

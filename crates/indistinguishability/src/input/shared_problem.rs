@@ -25,8 +25,6 @@ declare_trace!($"shrpblm");
 #[derive(Debug, Clone, Steel)]
 pub struct ShrProblem(pub(crate) Arc<Mutex<Problem>>);
 
-
-
 impl ShrProblem {
     /// Borrows the underlying `Problem` immutably.
     pub fn borrow(&self) -> impl Deref<Target = Problem> {
@@ -274,6 +272,6 @@ fn mult_duration(a: f64, b: Duration) -> Duration {
 
 /// Parse time in a fancy human-readable way
 #[steel_derive::declare_steel_function(name = "duration->millis")]
-fn duration_millis( b: Duration) -> u128 {
+fn duration_millis(b: Duration) -> u128 {
     b.as_millis()
 }

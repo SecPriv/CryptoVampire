@@ -54,7 +54,7 @@ impl Problem {
             protocol_idx,
             step_idx,
             cryptography: cryptography.into(),
-            grabage_collectable: AtomicBool::new(false)
+            grabage_collectable: AtomicBool::new(false),
         };
         let fun = Function::new(inner);
         self.functions_mut().add(fun.clone());

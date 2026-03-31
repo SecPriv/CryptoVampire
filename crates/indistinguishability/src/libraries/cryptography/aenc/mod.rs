@@ -1,13 +1,10 @@
 use itertools::{Itertools, chain};
 
+use super::{CryptographicAssumption, Cryptography};
 use crate::libraries::Library;
 use crate::libraries::utils::{RewriteSink, TwoSortFunction};
 use crate::problem::ProblemState;
-use crate::terms::{
-     Formula, Function, FunctionFlags, Rewrite, Sort,
-    Variable,
-};
-use super::{CryptographicAssumption, Cryptography};
+use crate::terms::{Formula, Function, FunctionFlags, Rewrite, Sort, Variable};
 use crate::{Problem, mk_signature};
 declare_trace!($"enc");
 

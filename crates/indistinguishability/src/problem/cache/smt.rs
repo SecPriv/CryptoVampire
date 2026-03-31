@@ -35,7 +35,6 @@ impl SmtCache {
     }
 
     pub fn reset(&mut self) {
-
         if Arc::strong_count(&self.repeating_runs) <= 1 {
             self.occured_quantfiers.get_mut().clear();
         }

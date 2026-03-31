@@ -225,4 +225,3 @@ pub enum CheckError {
     #[error("empty quantifier")]
     EmptyQuantifier,
 }
-

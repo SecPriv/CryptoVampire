@@ -92,7 +92,7 @@ impl<'a, N: Analysis<Lang>, U: EggRewriteSink<N>> RewriteSink for Wrapper<'a, U,
     }
 }
 
-impl<'a, 'b,  U: SmtSink<'b>> RewriteSink for Wrapper<'a, U, ()> {
+impl<'a, 'b, U: SmtSink<'b>> RewriteSink for Wrapper<'a, U, ()> {
     fn extend_rewrites(&mut self, pbl: &Problem, iter: utils::implvec!(crate::terms::Rewrite)) {
         let iter = iter.into_iter();
         let (size_hint, _) = iter.size_hint();
@@ -114,7 +114,8 @@ impl<'a, 'b,  U: SmtSink<'b>> RewriteSink for Wrapper<'a, U, ()> {
                 self.0.comment(pbl, &Default::default(), name);
             }
 
-            self.0.assert_one(pbl, &Default::default(), smt!((forall #vars (= #from #to))))
+            self.0
+                .assert_one(pbl, &Default::default(), smt!((forall #vars (= #from #to))))
         }
     }
 
@@ -130,7 +131,11 @@ impl Libraries {
         Self.add_smt(pbl, context, sink);
 
         sink.comment_block(pbl, &INDEPEDANT_QUERY, "Cross engine rewrites");
-        sink.comment(pbl, &INDEPEDANT_QUERY, "this include custom rewrites and library rewrites");
+        sink.comment(
+            pbl,
+            &INDEPEDANT_QUERY,
+            "this include custom rewrites and library rewrites",
+        );
 
         Self::add_all_rewrites(pbl, &mut Wrapper(sink, ()));
     }
@@ -193,7 +198,7 @@ impl Libraries {
 }
 
 #[inline(never)]
-fn debug_init_egraph<N:Analysis<Lang>>(egraph: &mut EGraph<Lang, N>) {
+fn debug_init_egraph<N: Analysis<Lang>>(egraph: &mut EGraph<Lang, N>) {
     let tmp = tempfile::Builder::new()
         .suffix(".pdf")
         .prefix("egraph-")

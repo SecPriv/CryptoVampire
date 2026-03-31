@@ -1,6 +1,5 @@
 use std::iter::Flatten;
 
-
 #[derive(Debug, Clone, Copy)]
 pub struct RunnerSplitter<U> {
     pub vampire: Option<U>,
@@ -9,7 +8,6 @@ pub struct RunnerSplitter<U> {
 }
 
 const LEN: usize = 3;
-
 
 impl<U> RunnerSplitter<U> {
     #[inline]
@@ -82,6 +80,10 @@ impl<U> IntoIterator for RunnerSplitter<U> {
 
 impl<U> Default for RunnerSplitter<U> {
     fn default() -> Self {
-        Self { vampire: None, cvc5: None, z3: None }
+        Self {
+            vampire: None,
+            cvc5: None,
+            z3: None,
+        }
     }
 }

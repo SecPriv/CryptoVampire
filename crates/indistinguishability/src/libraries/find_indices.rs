@@ -11,7 +11,8 @@ use crate::{Lang, rexp};
 pub struct FindIndicesLib;
 
 impl Library for FindIndicesLib {
-    fn add_egg_rewrites<N: Analysis<Lang>>(&self, 
+    fn add_egg_rewrites<N: Analysis<Lang>>(
+        &self,
         _pbl: &mut crate::Problem,
         sink: &mut impl super::utils::EggRewriteSink<N>,
     ) {

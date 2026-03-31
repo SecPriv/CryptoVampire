@@ -29,5 +29,4 @@ impl Library for NonceLib {
         let runner = pbl.get_or_init_smt_runner();
         sink.add_rule(FreshNonce::builder().exec(runner.clone()).build());
     }
-
 }

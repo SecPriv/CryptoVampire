@@ -128,7 +128,6 @@ impl SmtRunner {
 
             // z3 or cvc5 would set up some headers in the smt files (like chosing a theory & co)
 
-
             sink.write_cache().unwrap();
 
             pbl.add_smt(
@@ -147,7 +146,6 @@ impl SmtRunner {
                 },
                 [MSmt::AssertNot(query_smt), MSmt::CheckSat],
             );
-
 
             if pbl.config.keep_smt_files {
                 for f in sink.files.as_ref() {

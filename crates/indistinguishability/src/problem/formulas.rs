@@ -4,10 +4,10 @@ use logic_formula::AsFormula;
 use logic_formula::iterators::QuantiferIterator;
 use utils::econtinue_let;
 
+use super::cache::Context;
 use super::*;
 use crate::libraries::Libraries;
 use crate::libraries::utils::SmtSink;
-use super::cache::Context;
 use crate::terms::{
     FOBinder, FindSuchThat, Formula, FunctionCollection, Quantifier, QuantifierT,
     QuantifierTranslator, Rewrite,

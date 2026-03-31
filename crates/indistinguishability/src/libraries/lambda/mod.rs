@@ -19,7 +19,11 @@ use crate::libraries::utils::EggRewriteSink;
 pub struct LambdaLib;
 
 impl Library for LambdaLib {
-    fn add_egg_rewrites<N: Analysis<Lang>>(&self, pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {
+    fn add_egg_rewrites<N: Analysis<Lang>>(
+        &self,
+        pbl: &mut Problem,
+        sink: &mut impl EggRewriteSink<N>,
+    ) {
         add_base_rw(sink);
         add_s_rw(pbl, sink);
     }

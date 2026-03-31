@@ -82,7 +82,7 @@ mod cowarc {
         }
     }
 
-    impl<U:?Sized> AsRef<U> for CowArc<'_, U> {
+    impl<U: ?Sized> AsRef<U> for CowArc<'_, U> {
         fn as_ref(&self) -> &U {
             match self {
                 Self::Owned(x) => Arc::as_ref(x),
@@ -91,7 +91,7 @@ mod cowarc {
         }
     }
     impl<'a, U> CowArc<'a, U> {
-        pub fn new(x:U) -> Self {
+        pub fn new(x: U) -> Self {
             Self::Owned(Arc::new(x))
         }
     }
@@ -110,7 +110,10 @@ mod cowarc {
             self.deref().to_owned()
         }
 
-        pub fn into_inner(self) -> U where U:Clone {
+        pub fn into_inner(self) -> U
+        where
+            U: Clone,
+        {
             Arc::unwrap_or_clone(self.into_arc())
         }
 
@@ -123,7 +126,10 @@ mod cowarc {
             }
         }
 
-        pub fn into_owned<'b>(self) -> CowArc<'b, U> where U:Clone {
+        pub fn into_owned<'b>(self) -> CowArc<'b, U>
+        where
+            U: Clone,
+        {
             match self {
                 Self::Owned(x) => CowArc::Owned(x),
                 Self::Borrowed(x) => CowArc::Owned(Arc::new(x.clone())),
@@ -141,25 +147,31 @@ mod cowarc {
             Arc::make_mut(arc)
         }
 
-        pub fn into_arc(mut self) -> Arc<U> where U:Clone {
+        pub fn into_arc(mut self) -> Arc<U>
+        where
+            U: Clone,
+        {
             self.make_owned();
-                        let Self::Owned(arc) = self else {
+            let Self::Owned(arc) = self else {
                 unreachable!()
             };
             arc
         }
     }
-    
-    impl<'a, U> CowArc<'a, [U]> where U:Clone {
-        pub fn make_vec_owned(&mut self)  {
+
+    impl<'a, U> CowArc<'a, [U]>
+    where
+        U: Clone,
+    {
+        pub fn make_vec_owned(&mut self) {
             if let Self::Borrowed(x) = self {
                 *self = x.iter().cloned().collect()
             }
         }
 
-        pub fn to_mut_slice(&mut self) -> &mut [U]  {
+        pub fn to_mut_slice(&mut self) -> &mut [U] {
             self.make_vec_owned();
-                        let Self::Owned(arc) = self else {
+            let Self::Owned(arc) = self else {
                 unreachable!()
             };
             Arc::make_mut(arc)
@@ -171,18 +183,25 @@ mod cowarc {
 
         #[allow(private_interfaces)]
         pub fn into_cloned_iter(&self) -> CowArcOwnedIter<'a, U> {
-            CowArcOwnedIter { arr: self.clone(), start: 0, end: self.len() }
+            CowArcOwnedIter {
+                arr: self.clone(),
+                start: 0,
+                end: self.len(),
+            }
         }
 
         pub fn into_vec_arc(mut self) -> Arc<[U]> {
             self.make_vec_owned();
-                        let Self::Owned(arc) = self else {
+            let Self::Owned(arc) = self else {
                 unreachable!()
             };
             arc
         }
 
-        pub fn into_vec_owned<'b>(self) -> CowArc<'b, [U]> where U:Clone {
+        pub fn into_vec_owned<'b>(self) -> CowArc<'b, [U]>
+        where
+            U: Clone,
+        {
             match self {
                 Self::Owned(x) => CowArc::Owned(x),
                 Self::Borrowed(x) => CowArc::Owned(x.iter().cloned().collect()),
@@ -190,11 +209,11 @@ mod cowarc {
         }
     }
 
-    impl<'a, U, const N:usize> CowArc<'a, [U; N]> {
+    impl<'a, U, const N: usize> CowArc<'a, [U; N]> {
         pub fn forget_size(self) -> CowArc<'a, [U]> {
             match self {
                 CowArc::Borrowed(x) => CowArc::Borrowed(x),
-                CowArc::Owned(x) => CowArc::Owned(x)
+                CowArc::Owned(x) => CowArc::Owned(x),
             }
         }
     }
@@ -244,12 +263,12 @@ mod cowarc {
     pub struct CowArcOwnedIter<'a, U> {
         arr: CowArc<'a, [U]>,
         start: usize,
-        end: usize
+        end: usize,
     }
 
-    impl<'a, U:Clone> Iterator for CowArcOwnedIter<'a, U> {
+    impl<'a, U: Clone> Iterator for CowArcOwnedIter<'a, U> {
         type Item = U;
-    
+
         fn next(&mut self) -> Option<Self::Item> {
             let Self { arr, start, end } = self;
             if start < end {
@@ -262,13 +281,13 @@ mod cowarc {
         }
 
         fn size_hint(&self) -> (usize, Option<usize>) {
-            let Self { start, end,.. } = self;
+            let Self { start, end, .. } = self;
             let n = *start - *end;
             (n, Some(n))
         }
     }
 
-    impl<'a, U:Clone> DoubleEndedIterator for CowArcOwnedIter<'a, U> {
+    impl<'a, U: Clone> DoubleEndedIterator for CowArcOwnedIter<'a, U> {
         fn next_back(&mut self) -> Option<Self::Item> {
             let Self { arr, start, end } = self;
             if start < end {
@@ -280,14 +299,13 @@ mod cowarc {
         }
     }
 
-    impl<'a, U:Clone> FusedIterator for CowArcOwnedIter<'a, U> {}
+    impl<'a, U: Clone> FusedIterator for CowArcOwnedIter<'a, U> {}
 
     impl<'a, U, const N: usize> From<[U; N]> for CowArc<'a, [U]> {
         fn from(value: [U; N]) -> Self {
             Self::Owned(Arc::new(value))
         }
     }
-
 }
 pub use cowarc::{CowArc, CowArcOwnedIter};
 

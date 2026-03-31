@@ -2,17 +2,21 @@ use egg::{Analysis, Pattern};
 use itertools::{Itertools, chain};
 use utils::{econtinue_if, ereturn_if, exprdebug};
 
+use super::SMT_OPTIONS;
 use crate::libraries::Library;
 use crate::libraries::utils::{EggRewriteSink, SmtOption, SmtSink};
 use crate::problem::cache::Context;
 use crate::protocol::Step;
 use crate::terms::{Function, HAPPENS, INIT, LT, MACRO_EXEC, MACRO_MSG};
 use crate::{Lang, MSmt, MSmtParam, Problem, fresh, rexp, smt};
-use super::SMT_OPTIONS;
 pub struct PublicationLib;
 
 impl Library for PublicationLib {
-    fn add_egg_rewrites<N: Analysis<Lang>>(&self,pbl: &mut Problem, sink: &mut impl EggRewriteSink<N>) {
+    fn add_egg_rewrites<N: Analysis<Lang>>(
+        &self,
+        pbl: &mut Problem,
+        sink: &mut impl EggRewriteSink<N>,
+    ) {
         add_rewrites(pbl, sink);
     }
 

@@ -30,18 +30,20 @@ pub fn translate_formula_to_term<'a, U: SmtParam>(formula: &SmtFormula<'a, U>) -
         SmtFormula::Implies(args) => {
             let [f1, f2] = args.as_ref();
             Term::sexpr([
-            Term::atom("=>"),
-            translate_formula_to_term(f1),
-            translate_formula_to_term(f2),
-        ])},
+                Term::atom("=>"),
+                translate_formula_to_term(f1),
+                translate_formula_to_term(f2),
+            ])
+        }
         SmtFormula::Ite(args) => {
             let [i, t, e] = args.as_ref();
             Term::sexpr([
-            Term::atom("ite"),
-            translate_formula_to_term(i),
-            translate_formula_to_term(t),
-            translate_formula_to_term(e),
-        ])},
+                Term::atom("ite"),
+                translate_formula_to_term(i),
+                translate_formula_to_term(t),
+                translate_formula_to_term(e),
+            ])
+        }
         // N-ary operators
         SmtFormula::And(fs) => n_ary_op_to_term("and", fs),
         SmtFormula::Or(fs) => n_ary_op_to_term("or", fs),

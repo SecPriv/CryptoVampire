@@ -4,15 +4,12 @@ use itertools::{Itertools, chain};
 use static_init::dynamic;
 use utils::ereturn_let;
 
+use super::{CryptographicAssumption, Cryptography};
 use crate::libraries::Library;
 use crate::libraries::fa::{self, FaElem, PATTERN_FA};
 use crate::libraries::utils::{RewriteSink, RuleSink, Side};
 use crate::problem::{PAnalysis, PRule, RcRule};
-use crate::terms::{
-     ETA, FRESH_NONCE, Function, LENGTH, NONCE, Rewrite,
-    VAMPIRE,
-};
-use super::{CryptographicAssumption, Cryptography};
+use crate::terms::{ETA, FRESH_NONCE, Function, LENGTH, NONCE, Rewrite, VAMPIRE};
 use crate::{CVProgram, Lang, Problem, mk_signature, rexp};
 declare_trace!($"enc");
 
