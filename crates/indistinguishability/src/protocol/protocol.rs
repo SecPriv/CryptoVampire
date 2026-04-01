@@ -47,7 +47,7 @@ impl Protocol {
     }
 
     /// Converts the protocol's name into an SMT formula.
-    pub(crate) fn as_smt(&self) -> MSmtFormula {
+    pub(crate) fn as_smt<'a>(&self) -> MSmtFormula<'a> {
         let name = self.name();
         smt!(name)
     }

@@ -45,6 +45,14 @@ impl Report {
     pub fn get_tested_nonces(&self) -> Vec<Vec<Function>> {
         self.tested_nonces.clone()
     }
+
+    pub fn add_smt_time(&mut self, time: Duration, successfull: bool) {
+        self.time_spent_in_vampire += time;
+
+        if successfull {
+            self.max_vampire = self.max_vampire.max(time);
+        }
+    }
 }
 
 impl Registerable for Report {

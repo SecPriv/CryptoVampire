@@ -6,9 +6,9 @@ use crate::fresh;
 use crate::terms::{Formula, Sort, Variable};
 
 /// Represents the signature of a function, defining its input and output sorts.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Steel)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Steel)]
 pub struct Signature {
-    pub inputs: cow![Sort],
+    pub inputs: cowarc![Sort],
     pub output: Sort,
 }
 
@@ -22,11 +22,8 @@ impl Signature {
     }
 
     /// Returns the number of input arguments (arity) of the function.
-    pub const fn arity(&self) -> usize {
-        match &self.inputs {
-            std::borrow::Cow::Borrowed(x) => x.len(),
-            std::borrow::Cow::Owned(x) => x.len(),
-        }
+    pub fn arity(&self) -> usize {
+        self.inputs.len()
     }
 
     /// Returns an iterator over the input sorts of the function.

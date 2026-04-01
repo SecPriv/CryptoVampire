@@ -1,13 +1,15 @@
 use std::any::Any;
+use std::fmt::Display;
 
+use bitflags::bitflags;
 use egg::Analysis;
 use golgge::Rule;
-use utils::implvec;
 use utils::reservable::Reservable;
+use utils::{ereturn_let, implvec};
 
 use crate::problem::{PAnalysis, RcRule};
 use crate::terms::Rewrite;
-use crate::{Lang, Problem};
+use crate::{Lang, MSmt, MSmtFormula, Problem};
 
 /// Specialized sink trait for prolog rules ([RcRule]).
 #[allow(deprecated)]
@@ -110,5 +112,84 @@ where
 
     fn reserve(&mut self, size: usize) {
         Reservable::gen_reserve(self, size);
+    }
+}
+
+pub trait SmtSink<'a> {
+    fn extend_smt(&mut self, pbl: &Problem, options: &SmtOption, iter: implvec!(MSmt<'a>));
+    fn reserve(&mut self, size: usize);
+
+    fn extend_one_smt(&mut self, pbl: &Problem, options: &SmtOption, smt: MSmt<'a>) {
+        self.extend_smt(pbl, options, Some(smt));
+    }
+
+    fn assert_many(&mut self, pbl: &Problem, options: &SmtOption, iter: implvec!(MSmtFormula<'a>)) {
+        self.extend_smt(pbl, options, iter.into_iter().map(MSmt::mk_assert));
+    }
+
+    fn assert_one(&mut self, pbl: &Problem, options: &SmtOption, formula: MSmtFormula<'a>) {
+        self.assert_many(pbl, options, Some(formula));
+    }
+
+    fn comment(&mut self, pbl: &Problem, options: &SmtOption, comment: impl Display) {
+        self.extend_one_smt(pbl, options, MSmt::Comment(comment.to_string()));
+    }
+
+    fn comment_block(&mut self, pbl: &Problem, options: &SmtOption, comment: impl Display) {
+        self.extend_one_smt(pbl, options, MSmt::comment_block(comment.to_string()));
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct SmtOption {
+    pub depend_on_context: bool,
+}
+
+pub static INDEPEDANT_QUERY: SmtOption = SmtOption {
+    depend_on_context: false,
+};
+
+impl Default for SmtOption {
+    fn default() -> Self {
+        Self {
+            depend_on_context: true,
+        }
+    }
+}
+
+impl<'a, V> SmtSink<'a> for V
+where
+    V: Extend<MSmt<'a>> + Reservable,
+{
+    fn extend_smt(&mut self, _: &Problem, _: &SmtOption, iter: implvec!(MSmt<'a>)) {
+        let iter = iter
+            .into_iter()
+            .inspect(|f| debug_assert!(no_garabage(f), "garbage in {f}"));
+        self.extend(iter);
+    }
+
+    fn reserve(&mut self, size: usize) {
+        self.gen_reserve(size);
+    }
+}
+
+fn no_garabage<'a>(smt: &MSmt<'a>) -> bool {
+    match smt {
+        cryptovampire_smt::Smt::Assert(formula)
+        | cryptovampire_smt::Smt::AssertTh(formula)
+        | cryptovampire_smt::Smt::AssertNot(formula) => no_garabagef(formula),
+        #[cfg(feature = "cryptovampire")]
+        cryptovampire_smt::Smt::AssertGround { sort: _, formula } => no_garabagef(formula),
+        _ => true,
+    }
+}
+
+fn no_garabagef<'a>(f: &MSmtFormula<'a>) -> bool {
+    match f {
+        MSmtFormula::Fun(fun, args) => {
+            !fun.is_garabage_collectable() && args.iter().all(|f| no_garabagef(f))
+        }
+        MSmtFormula::Exists(_, arg) | MSmtFormula::Forall(_, arg) => no_garabagef(arg),
+        _ => true,
     }
 }

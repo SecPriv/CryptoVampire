@@ -4,9 +4,10 @@ use bon::bon;
 use itertools::Itertools;
 use utils::implvec;
 
+use crate::libraries::CryptographicAssumption;
 use crate::problem::publish::NoncePublicSearchState;
 use crate::protocol::Protocol;
-use crate::terms::{CryptographicAssumption, Formula, Function, FunctionCollection, Rewrite};
+use crate::terms::{Formula, Function, FunctionCollection, Rewrite};
 use crate::{Configuration, MSmt};
 
 mod analysis;
@@ -14,7 +15,7 @@ pub(crate) use analysis::CVRuleTrait;
 pub use analysis::{PAnalysis, PRule, RcRule};
 
 mod state;
-pub use state::ProblemState;
+pub use state::{ProblemState, ProblemStateLib};
 
 mod constrainst;
 pub use constrainst::{BoundStep, ConstrainOp, Constrains};
@@ -37,8 +38,7 @@ mod checkpoint;
 mod publish;
 pub use publish::PublicTerm;
 
-mod data;
-pub use data::ProblemData;
+pub mod cache;
 
 /// A problem for the solver to solve
 ///
@@ -64,20 +64,14 @@ pub struct Problem {
     /// Extra rewrites to add to the solver
     extra_rewrite: Vec<Rewrite>,
     /// Extra SMT formulas to add to the solver
-    extra_smt: Vec<MSmt>,
-
-    /// cache for the smt prelude
-    smt_prelude: Vec<MSmt>,
+    extra_smt: Vec<MSmt<'static>>,
 
     /// the current step in the run (if any)
     current_step: Option<CurrentStep>,
 
-    /// a cache for the quantifiers
-    quantifier_cache: Vec<(Formula, Function)>,
-
     pub state: ProblemState,
     /// random data to store somewhere
-    pub data: ProblemData,
+    pub cache: cache::Cache,
 
     constrains: Vec<Constrains>,
 
@@ -121,7 +115,6 @@ impl Problem {
     #[builder(builder_type = ProblemBuilder)]
     pub fn new(
         #[builder(field = Self::default_cryptography())] cryptography: Vec<CryptographicAssumption>,
-        #[builder(field = vec![])] smt_prelude: Vec<MSmt>,
         /// The configuration (e.g., cli arguments and such)
         #[builder(default)]
         config: Configuration,
@@ -139,7 +132,7 @@ impl Problem {
 
         #[builder(with = <_>::from_iter, default = vec![])] extra_rules: Vec<RcRule>,
         #[builder(with = <_>::from_iter, default = vec![])] extra_rewrite: Vec<Rewrite>,
-        #[builder(with = <_>::from_iter, default = vec![])] extra_smt: Vec<MSmt>,
+        #[builder(with = <_>::from_iter, default = vec![])] extra_smt: Vec<MSmt<'static>>,
     ) -> Self {
         Self {
             config,
@@ -149,11 +142,9 @@ impl Problem {
             extra_rules,
             extra_rewrite,
             extra_smt,
-            smt_prelude,
             current_step: None,
-            quantifier_cache: vec![],
             state: Default::default(),
-            data: Default::default(),
+            cache: Default::default(),
             constrains,
             report: Default::default(),
             public_terms: Default::default(),

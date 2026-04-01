@@ -34,6 +34,7 @@ which = "8.0"
 bon = "3.6"
 clap = { version = "4", features = ["derive"] }
 clap_complete = "4.5"
+parking_lot = "0.12"
 steel-core = { git = "https://github.com/puyral/steel/", branch = "better-macros", features = ["custom-hash"]}
 steel-derive = { git = "https://github.com/puyral/steel/", branch = "better-macros"}
 steel-repl = { git = "https://github.com/puyral/steel/", branch = "better-macros"}

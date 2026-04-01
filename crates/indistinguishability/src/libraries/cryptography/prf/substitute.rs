@@ -6,10 +6,10 @@ use golgge::{Dependancy, ProofItem, Rule};
 use itertools::izip;
 use utils::ereturn_let;
 
-use crate::libraries::PRF;
-use crate::libraries::prf::{K, M, NEW_TERM, NK, PRFProof, PROOF};
+use super::{K, M, NEW_TERM, NK, PRFProof, PROOF};
+use crate::libraries::{CryptographicAssumption, PRF};
 use crate::problem::{PAnalysis, RcRule};
-use crate::terms::{CryptographicAssumption, Function, MACRO_COND, MACRO_MSG, NONCE, Sort};
+use crate::terms::{Function, MACRO_COND, MACRO_MSG, NONCE, Sort};
 use crate::{CVProgram, Lang};
 
 #[derive(Debug, Clone, Builder)]

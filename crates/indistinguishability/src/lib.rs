@@ -94,10 +94,10 @@ pub struct MSmtParam;
 
 /// A formula in the SMT solver
 /// A formula in the SMT solver
-pub type MSmtFormula = SmtFormula<MSmtParam>;
+pub type MSmtFormula<'a> = SmtFormula<'a, MSmtParam>;
 /// The SMT solver
 /// The SMT solver
-pub type MSmt = Smt<MSmtParam>;
+pub type MSmt<'a> = Smt<'a, MSmtParam>;
 
 pub type CVProgram<'a, R = RcRule> = Program<Lang, PAnalysis<'a>, R>;
 

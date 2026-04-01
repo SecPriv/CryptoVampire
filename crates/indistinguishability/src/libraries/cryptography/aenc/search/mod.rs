@@ -1,7 +1,7 @@
 use itertools::chain;
 
-use crate::libraries::AEnc;
-use crate::libraries::aenc::vars::*;
+use super::AEnc;
+use super::vars::*;
 use crate::libraries::utils::RuleSink;
 use crate::problem::{PRule, RcRule};
 use crate::runners::SmtRunner;

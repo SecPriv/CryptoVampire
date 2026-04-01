@@ -18,6 +18,12 @@ macro_rules! smt {
     };
 }
 
+macro_rules! cowvec {
+    ($l:lifetime $t:ty) => {
+        ::std::borrow::Cow<$l, [$t]>
+    };
+}
+
 pub use formula::*;
 mod formula;
 
@@ -63,11 +69,11 @@ pub static CVC5: SolverKind =
 /// A trait for defining parameters used in SMT formulas.
 pub trait SmtParam {
     /// The type representing functions in the SMT formula.
-    type Function: Display;
+    type Function: Display + Clone;
     /// The type representing sorts in the SMT formula.
     type Sort: Display + Clone;
     /// The type representing sorted variables in the SMT formula.
-    type SVar: SortedVar<Sort = Self::Sort> + Display;
+    type SVar: SortedVar<Sort = Self::Sort> + Display + Clone;
 }
 
 /// A trait for variables that have an associated sort.
@@ -85,14 +91,14 @@ pub trait SortedVar {
 
 // #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 /// Represents an SMT file containing a sequence of SMT commands.
-pub struct SmtFile<U: SmtParam> {
+pub struct SmtFile<'a, U: SmtParam> {
     /// The content of the SMT file, as a vector of SMT commands.
-    pub content: Vec<smt::Smt<U>>,
+    pub content: Vec<smt::Smt<'a, U>>,
 }
 
-impl<U: SmtParam> PartialEq for SmtFile<U>
+impl<'a, U: SmtParam> PartialEq for SmtFile<'a, U>
 where
-    smt::Smt<U>: PartialEq,
+    smt::Smt<'a, U>: PartialEq,
 {
     /// Compares two `SmtFile` instances for equality.
     fn eq(&self, other: &Self) -> bool {
@@ -100,11 +106,11 @@ where
     }
 }
 
-impl<U: SmtParam> Eq for SmtFile<U> where smt::Smt<U>: Eq {}
+impl<'a, U: SmtParam> Eq for SmtFile<'a, U> where smt::Smt<'a, U>: Eq {}
 
-impl<U: SmtParam> PartialOrd for SmtFile<U>
+impl<'a, U: SmtParam> PartialOrd for SmtFile<'a, U>
 where
-    smt::Smt<U>: PartialOrd,
+    smt::Smt<'a, U>: PartialOrd,
 {
     /// Compares two `SmtFile` instances for partial order.
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
@@ -112,9 +118,9 @@ where
     }
 }
 
-impl<U: SmtParam> Ord for SmtFile<U>
+impl<'a, U: SmtParam> Ord for SmtFile<'a, U>
 where
-    smt::Smt<U>: Ord,
+    smt::Smt<'a, U>: Ord,
 {
     /// Compares two `SmtFile` instances for total order.
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
@@ -122,18 +128,18 @@ where
     }
 }
 
-impl<U: SmtParam> Hash for SmtFile<U>
+impl<'a, U: SmtParam> Hash for SmtFile<'a, U>
 where
-    smt::Smt<U>: Hash,
+    smt::Smt<'a, U>: Hash,
 {
     /// Hashes the `SmtFile` instance.
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.content.hash(state);
     }
 }
-impl<U: SmtParam> Debug for SmtFile<U>
+impl<'a, U: SmtParam> Debug for SmtFile<'a, U>
 where
-    smt::Smt<U>: Debug,
+    smt::Smt<'a, U>: Debug,
 {
     /// Formats the `SmtFile` for debugging.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -143,9 +149,9 @@ where
     }
 }
 
-impl<U: SmtParam> Clone for SmtFile<U>
+impl<'a, U: SmtParam> Clone for SmtFile<'a, U>
 where
-    smt::Smt<U>: Clone,
+    smt::Smt<'a, U>: Clone,
 {
     /// Clones the `SmtFile` instance.
     fn clone(&self) -> Self {
@@ -218,47 +224,4 @@ pub enum CheckError {
 
     #[error("empty quantifier")]
     EmptyQuantifier,
-}
-
-pub trait SmtSink<U: SmtParam>
-where
-    <U as SmtParam>::SVar: std::cmp::Eq,
-{
-    fn extend_smt(&mut self, iter: implvec!(Smt<U>));
-    fn reserve(&mut self, size: usize);
-
-    fn extend_one_smt(&mut self, smt: Smt<U>) {
-        self.extend_smt(Some(smt));
-    }
-
-    fn assert_many(&mut self, iter: implvec!(SmtFormula<U>)) {
-        self.extend_smt(iter.into_iter().map(Smt::mk_assert));
-    }
-
-    fn assert_one(&mut self, formula: SmtFormula<U>) {
-        self.assert_many(Some(formula));
-    }
-
-    fn comment(&mut self, comment: impl Display) {
-        self.extend_one_smt(Smt::Comment(comment.to_string()));
-    }
-
-    fn comment_block(&mut self, comment: impl Display) {
-        self.extend_one_smt(Smt::comment_block(comment.to_string()));
-    }
-}
-
-impl<U, V> SmtSink<U> for V
-where
-    U: SmtParam,
-    V: Extend<Smt<U>> + Reservable,
-    <U as SmtParam>::SVar: std::cmp::Eq,
-{
-    fn extend_smt(&mut self, iter: implvec!(Smt<U>)) {
-        self.extend(iter);
-    }
-
-    fn reserve(&mut self, size: usize) {
-        self.gen_reserve(size);
-    }
 }

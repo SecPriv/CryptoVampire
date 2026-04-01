@@ -4,10 +4,12 @@ use bon::Builder;
 use cryptovampire_smt::{SmtFormula, SmtHead};
 use itertools::Itertools;
 use log::{trace, warn};
+use quarck::CowArc;
+use utils::{destvec, implvec};
 
 use super::{FOBinder, Formula};
 use crate::MSmtFormula;
-use crate::terms::{AND, BITE, EQ, FALSE, OR, TRUE};
+use crate::terms::{AND, BITE, EQ, FALSE, IMPLIES, OR, TRUE};
 
 pub trait QuantifierTranslator {
     fn try_translate(&self, f: &Formula) -> Option<Formula>;
@@ -26,7 +28,7 @@ pub type PreSmtRecFOFormulaF<'a, U> = PreSmtRecFOFormulaBuilder<
     pre_smt_rec_f_o_formula_builder::SetFormula<pre_smt_rec_f_o_formula_builder::Empty>,
 >;
 
-impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for MSmtFormula {
+impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for MSmtFormula<'static> {
     type Error = Formula;
 
     fn try_from(
@@ -40,29 +42,25 @@ impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for MSmtFor
             Formula::Var(variable) => Ok(Self::Var(variable.clone())),
             Formula::App { head, args } => match head.as_smt_head() {
                 Some(h) => {
-                    let args = args.iter().map(propagate).try_collect()?;
+                    let args = args.iter().map(propagate);
                     Ok(match h {
                         SmtHead::True => Self::True,
                         SmtHead::False => Self::False,
-                        SmtHead::And => Self::And(args),
-                        SmtHead::Or => Self::Or(args),
-                        SmtHead::Eq => Self::Eq(args),
-                        SmtHead::Neq => Self::Neq(args),
+                        SmtHead::And => Self::And(args.try_collect()?),
+                        SmtHead::Or => Self::Or(args.try_collect()?),
+                        SmtHead::Eq => Self::Eq(args.try_collect()?),
+                        SmtHead::Neq => Self::Neq(args.try_collect()?),
                         SmtHead::Not => {
-                            let [args] = args.try_into().map_err(|_| formula.into_owned())?;
-                            Self::Not(Box::new(args))
+                            destvec!([a] = args; |x| {return Err(formula.into_owned())});
+                            Self::Not(CowArc::new(a?))
                         }
                         SmtHead::Implies => {
-                            let [a1, a2] = TryInto::<[_; _]>::try_into(args)
-                                .map_err(|_| formula.into_owned())?
-                                .map(Box::new);
-                            Self::Implies(a1, a2)
+                            destvec!([a, b] = args; |x| {return Err(formula.into_owned())});
+                            Self::Implies(CowArc::new([a?, b?]))
                         }
                         SmtHead::If => {
-                            let [c, l, r] = TryInto::<[_; _]>::try_into(args)
-                                .map_err(|_| formula.into_owned())?
-                                .map(Box::new);
-                            Self::Ite(c, l, r)
+                            destvec!([a, b, c] = args; |x| {return Err(formula.into_owned())});
+                            Self::Ite(CowArc::new([a?, b?, c?]))
                         }
                     })
                 }
@@ -73,10 +71,10 @@ impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for MSmtFor
             },
             Formula::Quantifier { head, vars, arg } => match head {
                 FOBinder::Exists => {
-                    Ok(Self::Exists(vars.as_owned(), Box::new(propagate(&arg[0])?)))
+                    Ok(Self::Exists(vars.clone(), CowArc::new(propagate(&arg[0])?)))
                 }
                 FOBinder::Forall => {
-                    Ok(Self::Forall(vars.as_owned(), Box::new(propagate(&arg[0])?)))
+                    Ok(Self::Forall(vars.clone(), CowArc::new(propagate(&arg[0])?)))
                 }
                 FOBinder::FindSuchThat => match translator.try_translate(&formula) {
                     Some(f) => propagate(&f),
@@ -95,8 +93,8 @@ impl<'a, U: QuantifierTranslator> TryFrom<PreSmtRecFOFormula<'a, U>> for MSmtFor
     }
 }
 
-impl From<MSmtFormula> for Formula {
-    fn from(value: MSmtFormula) -> Self {
+impl<'a> From<MSmtFormula<'a>> for Formula {
+    fn from(value: MSmtFormula<'a>) -> Self {
         // TODO: find such that
 
         #[allow(unreachable_patterns)]
@@ -104,36 +102,46 @@ impl From<MSmtFormula> for Formula {
             SmtFormula::Var(var) => Self::Var(var),
             SmtFormula::Fun(fun, args) => Formula::App {
                 head: fun,
-                args: args.into_iter().map_into().collect(),
+                args: args.into_cloned_iter().map_into().collect(),
             },
             SmtFormula::Forall(vars, formula) => {
-                let arg = mk_cowarc![Self::from(*formula)];
+                let arg = mk_cowarc![formula.into_inner().into()];
                 Self::Quantifier {
                     head: FOBinder::Forall,
-                    vars: vars.into(),
+                    vars: vars.into_vec_owned(),
                     // sorts,
                     arg,
                 }
             }
             SmtFormula::Exists(vars, formula) => {
-                let arg = mk_cowarc![Self::from(*formula)];
+                let arg = mk_cowarc![formula.into_inner().into()];
                 Self::Quantifier {
                     head: FOBinder::Exists,
-                    vars: vars.into(),
+                    vars: vars.into_vec_owned(),
                     arg,
                 }
             }
-            SmtFormula::True => Self::app(TRUE.clone(), vec![]),
-            SmtFormula::False => Self::app(FALSE.clone(), vec![]),
-            SmtFormula::And(args) => Self::fold(&AND, args.into_iter().map_into(), None, false),
-            SmtFormula::Or(args) => Self::fold(&OR, args.into_iter().map_into(), None, false),
-            SmtFormula::Eq(args) => Self::fold(&EQ, args.into_iter().map_into(), None, true),
-            SmtFormula::Neq(args) => !Self::fold(&EQ, args.into_iter().map_into(), None, true),
-            SmtFormula::Not(arg) => !Self::from(*arg),
-            SmtFormula::Implies(a, b) => Self::from(*a) >> Self::from(*b),
-            SmtFormula::Ite(c, l, r) => {
-                Self::app(BITE.clone(), [c, l, r].map(|x| Self::from(*x)).into())
+            SmtFormula::True => TRUE.rapp([]),
+            SmtFormula::False => FALSE.rapp([]),
+            SmtFormula::And(args) => {
+                Self::fold(&AND, args.into_cloned_iter().map_into(), None, false)
             }
+            SmtFormula::Or(args) => {
+                Self::fold(&OR, args.into_cloned_iter().map_into(), None, false)
+            }
+            SmtFormula::Eq(args) => Self::fold(&EQ, args.into_cloned_iter().map_into(), None, true),
+            SmtFormula::Neq(args) => {
+                !Self::fold(&EQ, args.into_cloned_iter().map_into(), None, true)
+            }
+            SmtFormula::Not(arg) => !Self::from(arg.into_inner()),
+            SmtFormula::Implies(args) => {
+                let [a, b] = args.as_ref().clone().map(|x| Self::from(x));
+                a >> b
+            }
+            SmtFormula::Ite(args) => Self::app(
+                BITE.clone(),
+                args.as_ref().clone().map(|x| Self::from(x)).into(),
+            ),
             _ => unimplemented!(),
         }
     }
@@ -148,7 +156,7 @@ impl Formula {
         PreSmtRecFOFormula::builder().formula(Cow::Owned(self))
     }
 
-    pub fn as_smt<U: QuantifierTranslator>(&self, pbl: &U) -> Option<MSmtFormula> {
+    pub fn as_smt<'a, U: QuantifierTranslator>(&self, pbl: &U) -> Option<MSmtFormula<'static>> {
         trace!("trying to translate to smt:\n{self}");
         match MSmtFormula::try_from(self.as_pre_smt().translator(pbl).build()) {
             Err(f) => {
@@ -162,3 +170,5 @@ impl Formula {
         }
     }
 }
+
+// fn collect_array<U, E, const N: usize>(iter: implvec!(Result<U, E>), err: E) -> Result<[U; N], E> {}

@@ -1,36 +1,50 @@
-use cryptovampire_smt::SmtSink;
 use itertools::chain;
 use log::trace;
+use utils::ereturn_if;
 
 use crate::libraries::nonce::Nonce;
-use crate::libraries::utils::SyntaxSearcher;
 use crate::libraries::utils::fresh::RefFormulaBuilder;
+use crate::libraries::utils::{SmtOption, SmtSink, SyntaxSearcher};
+use crate::problem::cache::Context;
 use crate::protocol::Protocol;
 use crate::terms::{Formula, Function, IS_INDEPENDANT_BITSTRING, MACRO_FRAME, NONCE, Sort};
 use crate::{MSmt, MSmtFormula, MSmtParam, Problem, rexp, smt};
+
+static SMT_OPTIONS: SmtOption = SmtOption {
+    depend_on_context: false,
+};
 
 /// Creates the SMT formulas for the no-guessing theorem
 ///
 /// This function creates the SMT formulas for the no-guessing theorem.
 /// It includes the no-guessing theorem itself, the SMT nonce, the SMT formulas
 /// for the functions, and the SMT formulas for the steps.
-pub fn add_no_guessing_smt(pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
-    sink.comment("no guessing theorem & co");
-    sink.assert_one(mk_no_guessing_theorem());
-    sink.assert_one(mk_smt_nonce());
-    sink.assert_many(pbl.functions().iter_current().filter_map(mk_smt_fun_one));
-    sink.assert_many(pbl.protocols().iter().map(|ptcl| mk_smt_step(pbl, ptcl)));
+pub fn add_no_guessing_smt<'a>(pbl: &Problem, ctx: &Context, sink: &mut impl SmtSink<'a>) {
+    ereturn_if!(ctx.using_cache);
+    sink.comment(pbl, &SMT_OPTIONS, "no guessing theorem & co");
+    sink.assert_one(pbl, &SMT_OPTIONS, mk_no_guessing_theorem());
+    sink.assert_one(pbl, &SMT_OPTIONS, mk_smt_nonce());
+    sink.assert_many(
+        pbl,
+        &SMT_OPTIONS,
+        pbl.functions().iter_current().filter_map(mk_smt_fun_one),
+    );
+    sink.assert_many(
+        pbl,
+        &SMT_OPTIONS,
+        pbl.protocols().iter().map(|ptcl| mk_smt_step(pbl, ptcl)),
+    );
 }
 
 /// Generates the SMT formula for the no-guessing theorem.
-fn mk_no_guessing_theorem() -> MSmtFormula {
+fn mk_no_guessing_theorem<'a>() -> MSmtFormula<'a> {
     let indep = get_is_independant(Sort::Bitstring).unwrap();
     smt!((forall ((!n Nonce) (!m Bitstring))
         (=> (indep !n !m) (distinct (NONCE !n) !m))))
 }
 
 /// Generates the SMT formula for nonces, asserting their independence properties.
-fn mk_smt_nonce() -> MSmtFormula {
+fn mk_smt_nonce<'a>() -> MSmtFormula<'a> {
     let indep = get_is_independant(Sort::Bitstring).unwrap();
     smt!((forall ((!n Nonce) (!k Nonce))
         (=> (distinct !n !k) (indep !n (NONCE !k)))))
@@ -39,7 +53,7 @@ fn mk_smt_nonce() -> MSmtFormula {
 /// Generates an SMT formula for a single function, if applicable.
 ///
 /// Skips special subterm functions, functions that should not be declared in SMT, and the NONCE function.
-fn mk_smt_fun_one(fun: &Function) -> Option<MSmtFormula> {
+fn mk_smt_fun_one<'a>(fun: &Function) -> Option<MSmtFormula<'a>> {
     if fun.is_special_subterm() || fun.is_should_not_declare_in_smt() || fun == &NONCE {
         None
     } else {
@@ -48,7 +62,7 @@ fn mk_smt_fun_one(fun: &Function) -> Option<MSmtFormula> {
 }
 
 /// Generates a regular SMT formula for a given function, asserting its independence properties.
-fn mk_regular(fun: &Function) -> Option<MSmtFormula> {
+fn mk_regular<'a>(fun: &Function) -> Option<MSmtFormula<'a>> {
     let indep = get_is_independant(fun.signature.output)?;
     decl_vars!(x:Nonce);
 
@@ -79,7 +93,7 @@ fn mk_regular(fun: &Function) -> Option<MSmtFormula> {
 // }
 
 /// Generates SMT formulas for a protocol step, incorporating nonce independence.
-fn mk_smt_step<'a>(pbl: &'a Problem, ptcl: &'a Protocol) -> MSmtFormula {
+fn mk_smt_step<'a, 'b>(pbl: &'a Problem, ptcl: &'a Protocol) -> MSmtFormula<'b> {
     decl_vars!(x:Nonce, t:Time);
 
     // search

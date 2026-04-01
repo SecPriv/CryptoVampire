@@ -1,6 +1,9 @@
 //! Vibe coded powerset iterator
 
 use std::iter::FusedIterator;
+use std::result;
+
+use crate::econtinue_if;
 
 /// Iterator over the powerset of a vector, starting from the largest subset.
 ///
@@ -27,8 +30,8 @@ use std::iter::FusedIterator;
 /// - Iterating through all subsets: O(2^n) (as expected for any powerset iterator)
 pub struct PowersetReverse<T> {
     elements: Vec<T>,
-    mask: u64,
-    len: usize,
+    end: u64,
+    start: u64,
 }
 
 impl<T: Clone> PowersetReverse<T> {
@@ -42,8 +45,8 @@ impl<T: Clone> PowersetReverse<T> {
         assert!(len < 64, "supports at most 64 elememts");
         Self {
             elements,
-            mask: 1 << len,
-            len,
+            end: 1 << len,
+            start: 0,
         }
     }
 }
@@ -55,21 +58,27 @@ where
     type Item = Vec<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.mask == 0 {
+        if self.end <= self.start {
             return None;
         }
 
-        self.mask -= 1;
-        let result = (0..self.len)
-            .filter(|&i| (self.mask >> i) & 1 == 1)
-            .map(|i| self.elements[i].clone())
-            .collect();
-        Some(result)
+        let mask = !self.start & ((1 << self.elements.len()) - 1);
+
+        let mut ret = Vec::with_capacity(mask.count_ones() as usize);
+
+        for (i, e) in self.elements.iter().enumerate() {
+            if (mask & (1 << i)) != 0 {
+                ret.push(e.clone());
+            }
+        }
+
+        self.start += 1;
+        Some(ret)
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let remaining: Result<usize, _> = self.mask.try_into();
-        match remaining {
+        let remaining = self.end - self.start;
+        match remaining.try_into() {
             Ok(remaining) => (remaining, Some(remaining)),
             _ => (usize::MAX, None),
         }

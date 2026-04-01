@@ -18,7 +18,7 @@ pub mod fresh;
 pub use fresh::*;
 
 mod sinks;
-pub use sinks::{EggRewriteSink, RewriteSink, RuleSink};
+pub use sinks::{EggRewriteSink, INDEPEDANT_QUERY, RewriteSink, RuleSink, SmtOption, SmtSink};
 
 mod subterm_trait;
 

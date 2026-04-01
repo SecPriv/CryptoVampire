@@ -44,7 +44,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SanityCheck {
 
 impl Library for SanityCheck {
     #[cfg(debug_assertions)]
-    fn add_rules(_: &mut crate::Problem, sink: &mut impl super::utils::RuleSink) {
+    fn add_rules(&self, _: &mut crate::Problem, sink: &mut impl super::utils::RuleSink) {
         sink.add_rule(Self);
     }
 }

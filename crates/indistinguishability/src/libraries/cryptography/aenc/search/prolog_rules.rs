@@ -2,9 +2,8 @@ use egg::Pattern;
 use golgge::PrologRule;
 use itertools::{Itertools, chain, izip};
 
-use crate::libraries::AEnc;
-use crate::libraries::aenc::ProofHints;
-use crate::libraries::aenc::vars::*;
+use super::super::vars::*;
+use super::super::{AEnc, ProofHints};
 use crate::libraries::utils::{RuleSink, TwoSortFunction};
 use crate::terms::{
     AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, FRESH_NONCE, Formula, Function, HAPPENS,

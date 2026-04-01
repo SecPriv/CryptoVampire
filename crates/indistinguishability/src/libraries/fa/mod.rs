@@ -39,7 +39,7 @@ pub struct FaRule;
 pub struct FaLib;
 
 impl Library for FaLib {
-    fn add_rules(_: &mut Problem, sink: &mut impl RuleSink) {
+    fn add_rules(&self, _: &mut Problem, sink: &mut impl RuleSink) {
         sink.add_rule(FaRule);
     }
 }

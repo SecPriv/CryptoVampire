@@ -105,7 +105,10 @@ impl FreshNonceSet {
                             .map(|id| Formula::try_from_id(egraph, id).unwrap()),
                     );
 
-                    trace!("register_idx current step: {}", egraph.analysis.pbl().get_step_fun(*idx).unwrap());
+                    trace!(
+                        "register_idx current step: {}",
+                        egraph.analysis.pbl().get_step_fun(*idx).unwrap()
+                    );
 
                     arg.extend(
                         args.iter()

@@ -10,6 +10,7 @@ workspace = true
 [dependencies]
 utils = { path = "../utils"}
 logic_formula = {path = "../logic_formula"}
+quarck = {path = "../quarck"}
 cryptovampire_macros = {path = "../cryptovampire_macros", optional = true}
 
 log.workspace = true

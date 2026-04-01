@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::sync::atomic::AtomicBool;
 
 use cryptovampire_macros::mk_builtin_funs;
 use log::trace;
@@ -13,19 +14,19 @@ use crate::utils::InnerSmartCow;
 macro_rules! s {
     ($t:ident, $n:literal) => {
         Signature {
-            inputs: Cow::Borrowed(&[$t; $n]),
+            inputs: ::quarck::CowArc::from_ref(&[$t; $n]),
             output: $t,
         }
     };
   ($($ins:ident),* -> $out:ident) => {
       Signature {
-        inputs: Cow::Borrowed(&[$($ins),*]),
+        inputs: ::quarck::CowArc::from_ref(&[$($ins),*]),
         output: $out
       }
   };
   (() -> $out:ident) => {
       Signature {
-        inputs: Cow::Borrowed(&[]),
+        inputs: ::quarck::CowArc::from_ref(&[]),
         output: $out
       }
   };
@@ -106,7 +107,8 @@ mk_builtin_funs!(
         protocol_idx: 0,
         alias: None,
         step_idx: 0,
-        cryptography: Cow::Borrowed(&[])
+        cryptography: Cow::Borrowed(&[]),
+        grabage_collectable: AtomicBool::new(false),
     };
 
     // =========================================================

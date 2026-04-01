@@ -310,3 +310,17 @@ impl Display for FindSuchThat {
         )
     }
 }
+
+impl Drop for FindSuchThat {
+    fn drop(&mut self) {
+        let Self {
+            tlf,
+            skolems,
+            freshes,
+            ..
+        } = self;
+        for f in chain![[tlf], skolems, freshes] {
+            f.set_garbage_collectable();
+        }
+    }
+}

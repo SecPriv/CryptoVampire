@@ -6,11 +6,12 @@ use itertools::{Itertools, izip};
 use static_init::dynamic;
 use utils::ereturn_let;
 
-use crate::libraries::utils::{RuleSink, RuleWithFreshNonce};
+use super::{CryptographicAssumption, Cryptography};
+use crate::libraries::Library;
+use crate::libraries::utils::{FreshNonceSet, RuleSink, RuleWithFreshNonce};
 use crate::problem::{PAnalysis, PRule, ProblemState, RcRule};
 use crate::terms::{
-    CryptographicAssumption, Cryptography, EQUIV, FALSE, FRESH_NONCE, Formula, Function,
-    FunctionFlags, NONCE, Sort, TRUE, Variable,
+    EQUIV, FALSE, FRESH_NONCE, Formula, Function, FunctionFlags, NONCE, Sort, TRUE, Variable,
 };
 use crate::{CVProgram, Lang, Problem, mk_signature, rexp};
 
@@ -308,11 +309,11 @@ impl TopPrfRule {
 }
 
 impl RuleWithFreshNonce for TopPrfRule {
-    fn get_set_mut<'a>(&self, pbl: &'a mut Problem) -> &'a mut super::utils::FreshNonceSet {
+    fn get_set_mut<'a>(&self, pbl: &'a mut Problem) -> &'a mut FreshNonceSet {
         &mut pbl.state.n_prf
     }
 
-    fn get_set<'a>(&self, pbl: &'a Problem) -> &'a super::utils::FreshNonceSet {
+    fn get_set<'a>(&self, pbl: &'a Problem) -> &'a FreshNonceSet {
         &pbl.state.n_prf
     }
 
@@ -394,7 +395,7 @@ fn check_hash_eq_nonce<'a>(egraph: &mut egg::EGraph<Lang, PAnalysis<'a>>) {
         .cryptography()
         .iter()
         .filter_map(|c| match c {
-            crate::terms::CryptographicAssumption::PRF(prf) => Some(prf.hash.clone()),
+            super::CryptographicAssumption::PRF(prf) => Some(prf.hash.clone()),
             _ => None,
         })
         .collect_vec();
@@ -449,6 +450,8 @@ impl From<PRF> for CryptographicAssumption {
         Self::PRF(v)
     }
 }
+
+impl Library for PRF {}
 
 impl Cryptography for PRF {
     fn ref_from_assumption(r: &CryptographicAssumption) -> Option<&Self> {

@@ -2,6 +2,7 @@ use std::convert::identity;
 use std::fmt::Display;
 
 use itertools::izip;
+use quarck::CowArc;
 use static_init::dynamic;
 
 use super::formula::SmtFormula;
@@ -13,26 +14,26 @@ use crate::{
 };
 
 /// Represents an SMT-LIB command.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub enum Smt<U: SmtParam> {
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Smt<'a, U: SmtParam> {
     /// An `assert` command.
-    Assert(SmtFormula<U>),
+    Assert(SmtFormula<'a, U>),
     #[cfg(feature = "vampire")]
     /// An `assert-theory` command (Vampire specific).
-    AssertTh(SmtFormula<U>),
+    AssertTh(SmtFormula<'a, U>),
     #[cfg(feature = "cryptovampire")]
     /// An `assert-ground` command (Cryptovampire specific).
     AssertGround {
         sort: U::Sort,
-        formula: SmtFormula<U>,
+        formula: SmtFormula<'a, U>,
     },
     #[cfg(feature = "vampire")]
     /// An `assert-not` command (Vampire specific).
-    AssertNot(SmtFormula<U>),
+    AssertNot(SmtFormula<'a, U>),
     /// A `declare-fun` command.
     DeclareFun {
         fun: U::Function,
-        args: Vec<U::Sort>,
+        args: CowArc<'a, [U::Sort]>,
         out: U::Sort,
     },
     /// A `declare-sort` command.
@@ -42,15 +43,15 @@ pub enum Smt<U: SmtParam> {
 
     #[cfg(feature = "cryptovampire")]
     /// A `declare-subterm-relation` command (Cryptovampire specific).
-    DeclareSubtermRelation(U::Function, Vec<U::Function>),
+    DeclareSubtermRelation(U::Function, CowArc<'a, [U::Function]>),
 
     #[cfg(feature = "cryptovampire")]
     /// A `declare-rewrite` command (Cryptovampire specific).
     DeclareRewrite {
         rewrite_fun: RewriteKind<U::Function>,
         vars: Vec<U::SVar>,
-        lhs: Box<SmtFormula<U>>,
-        rhs: Box<SmtFormula<U>>,
+        lhs: Box<SmtFormula<'a, U>>,
+        rhs: Box<SmtFormula<'a, U>>,
     },
 
     /// A `declare-datatypes` command.
@@ -71,15 +72,67 @@ pub enum Smt<U: SmtParam> {
     SetLogic(String),
 }
 
-impl<U: SmtParam> Smt<U> {
+impl<'a, U: SmtParam> Smt<'a, U> {
     /// Converts the SMT command into a pretty-printable `SmtPrettyPrinter` term.
     pub fn as_pretty(&self) -> SmtPrettyPrinter {
         translate_smt_to_term(self)
     }
 }
 
+impl<'a, U: SmtParam> Clone for Smt<'a, U> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Assert(arg0) => Self::Assert(arg0.clone()),
+            #[cfg(feature = "vampire")]
+            Self::AssertTh(arg0) => Self::AssertTh(arg0.clone()),
+            #[cfg(feature = "cryptovampire")]
+            Self::AssertGround { sort, formula } => Self::AssertGround {
+                sort: sort.clone(),
+                formula: formula.clone(),
+            },
+            #[cfg(feature = "vampire")]
+            Self::AssertNot(arg0) => Self::AssertNot(arg0.clone()),
+            Self::DeclareFun { fun, args, out } => Self::DeclareFun {
+                fun: fun.clone(),
+                args: args.clone(),
+                out: out.clone(),
+            },
+            Self::DeclareSort(arg0) => Self::DeclareSort(arg0.clone()),
+            Self::DeclareSortAlias { from, to } => Self::DeclareSortAlias {
+                from: from.clone(),
+                to: to.clone(),
+            },
+            #[cfg(feature = "cryptovampire")]
+            Self::DeclareSubtermRelation(arg0, arg1) => {
+                Self::DeclareSubtermRelation(arg0.clone(), arg1.clone())
+            }
+            #[cfg(feature = "cryptovampire")]
+            Self::DeclareRewrite {
+                rewrite_fun,
+                vars,
+                lhs,
+                rhs,
+            } => Self::DeclareRewrite {
+                rewrite_fun: rewrite_fun.clone(),
+                vars: vars.clone(),
+                lhs: lhs.clone(),
+                rhs: rhs.clone(),
+            },
+            Self::DeclareDatatypes { sorts, cons } => Self::DeclareDatatypes {
+                sorts: sorts.clone(),
+                cons: cons.clone(),
+            },
+            Self::Comment(arg0) => Self::Comment(arg0.clone()),
+            Self::CheckSat => Self::CheckSat,
+            Self::GetProof => Self::GetProof,
+            Self::SetOption(arg0, arg1) => Self::SetOption(arg0.clone(), arg1.clone()),
+            Self::SetLogic(arg0) => Self::SetLogic(arg0.clone()),
+        }
+    }
+}
+
 /// Represents a constructor for a datatype in SMT-LIB.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SmtCons<U: SmtParam> {
     /// The function symbol of the constructor.
     pub fun: U::Function,
@@ -99,16 +152,26 @@ pub enum RewriteKind<F> {
     Other(F),
 }
 
-impl<U: SmtParam> FromIterator<Smt<U>> for SmtFile<U> {
+impl<U: SmtParam> Clone for SmtCons<U> {
+    fn clone(&self) -> Self {
+        Self {
+            fun: self.fun.clone(),
+            sorts: self.sorts.clone(),
+            dest: self.dest.clone(),
+        }
+    }
+}
+
+impl<'a, U: SmtParam> FromIterator<Smt<'a, U>> for SmtFile<'a, U> {
     /// Creates an `SmtFile` from an iterator of `Smt` commands.
-    fn from_iter<T: IntoIterator<Item = Smt<U>>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = Smt<'a, U>>>(iter: T) -> Self {
         SmtFile {
             content: iter.into_iter().collect(),
         }
     }
 }
 
-impl<U: SmtParam> Smt<U> {
+impl<'a, U: SmtParam> Smt<'a, U> {
     /// Returns `true` if the smt is [`Assert`].
     ///
     /// [`Assert`]: Smt::Assert
@@ -123,7 +186,7 @@ impl<U: SmtParam> Smt<U> {
     }
 
     /// Creates an SMT query command (asserting the negation of the given formula).
-    pub fn mk_query(query: SmtFormula<U>) -> Self
+    pub fn mk_query(query: SmtFormula<'a, U>) -> Self
     where
         U::SVar: Eq,
     {
@@ -144,12 +207,12 @@ impl<U: SmtParam> Smt<U> {
     }
 }
 
-impl<U: SmtParam> Smt<U>
+impl<'a, U: SmtParam> Smt<'a, U>
 where
     U::SVar: Eq,
 {
     /// Creates an SMT assert command with an optimised formula.
-    pub fn mk_assert(f: SmtFormula<U>) -> Self {
+    pub fn mk_assert(f: SmtFormula<'a, U>) -> Self {
         Self::Assert(f.optimise())
     }
 
@@ -245,133 +308,43 @@ where
         }
         Ok(())
     }
+
+    pub fn convert<'b>(&'a self, kind: SolverKind) -> Result<Smt<'b, U>, CheckError>
+    where
+        'a: 'b,
+    {
+        match self {
+            #[cfg(feature = "vampire")]
+            Self::AssertTh(f) if !kind.contains(SolverKind::AssertTh) => {
+                Ok(Self::Assert(f.clone()))
+            }
+            #[cfg(feature = "vampire")]
+            Self::AssertNot(f) if !kind.contains(SolverKind::AssertGround) => {
+                Ok(Self::Assert(SmtFormula::Not(CowArc::Borrowed(f))))
+            }
+
+            #[cfg(feature = "cryptovampire")]
+            Self::AssertGround { .. } if !kind.contains(SolverKind::AssertGround) => {
+                Err(CheckError::UnsupportedFeature(SolverFeatures::AssertGround))
+            }
+            #[cfg(feature = "cryptovampire")]
+            Self::DeclareSubtermRelation(_, _) if !kind.contains(SolverKind::CVSubterm) => {
+                Err(CheckError::UnsupportedFeature(SolverFeatures::Subterm))
+            }
+            #[cfg(feature = "cryptovampire")]
+            Self::DeclareRewrite { .. } if !kind.contains(SolverKind::CVRewrite) => {
+                Err(CheckError::UnsupportedFeature(SolverFeatures::Rewrite))
+            }
+            x => Ok(x.clone()),
+        }
+    }
 }
 
-impl<U: SmtParam> Display for Smt<U> {
+impl<'a, U: SmtParam> Display for Smt<'a, U> {
     /// Formats the SMT command for display in SMT-LIB format.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Smt::Assert(formula) => writeln!(f, "(assert {formula})"),
-            #[cfg(feature = "vampire")]
-            Smt::AssertTh(formula) => {
-                writeln!(
-                    f,
-                    "; not smt-compliant. Change to `(assert ...)` to be compliant while \
-                     retaining the semantics"
-                )?;
-                writeln!(f, "(assert-theory {formula})")
-            }
-            #[cfg(feature = "cryptovampire")]
-            Smt::AssertGround { sort, formula } => {
-                writeln!(
-                    f,
-                    "; cryptovampire specific. Needs a modified version of vampire"
-                )?;
-                writeln!(f, "(assert-ground {sort} {formula})")
-            }
-            #[cfg(feature = "vampire")]
-            Smt::AssertNot(formula) => {
-                writeln!(
-                    f,
-                    "; not smt-compliant. Change to `(assert (not ...))` to be compliant while \
-                     retaining the semantics"
-                )?;
-                writeln!(f, "(assert-not {formula})")
-            }
-            Smt::DeclareFun { fun, args, out } =>
-            // writeln!(
-            //     f,
-            //     "(declare-fun {fun} {} {out})",
-            //     Arr::simple(args.as_slice())
-            // )
-            {
-                write_par(f, |f| {
-                    write!(f, "declare-fun {fun} ")?;
-                    write_list(args, f, |f, arg| write!(f, "{arg} "))?;
-                    write!(f, "{out}")
-                })
-            }
-            Smt::DeclareSort(s) => writeln!(f, "(declare-sort {s} 0)"),
-            Smt::DeclareSortAlias { from, to } => writeln!(f, "(define-sort {from} () {to})"),
-            #[cfg(feature = "cryptovampire")]
-            Smt::DeclareSubtermRelation(fun, funs) => {
-                writeln!(
-                    f,
-                    "; cryptovampire specific. Needs a modified version of vampire"
-                )?;
-                write!(f, "(declare-subterm-relation {fun} ")?;
-                for fun in funs {
-                    write!(f, " {fun}")?;
-                }
-                writeln!(f, ")")
-            }
-            #[cfg(feature = "cryptovampire")]
-            Smt::DeclareRewrite {
-                rewrite_fun,
-                vars,
-                lhs,
-                rhs,
-            } => {
-                writeln!(
-                    f,
-                    "; cryptovampire specific. Needs a modified version of vampire"
-                )?;
-                write_par(f, |f| {
-                    write!(f, "declare-rewrite ")?;
-                    write_par(f, |f| {
-                        write!(f, "forall ")?;
-                        write_list(vars, f, |f, var| write!(f, "({var} {})", var.sort_ref()))?;
-                        write_par(f, |f| {
-                            match rewrite_fun {
-                                RewriteKind::Bool => write!(f, "= "),
-                                RewriteKind::Other(fun) => write!(f, "{fun} "),
-                            }?;
-                            write!(f, " {lhs} {rhs}")
-                        })
-                    })
-                })
-                // write!(f, "(declare-rewrite ")?;
-                // {
-                //     write!(f, "(forall {} (", Arr::simple(vars.as_slice()))?;
-                //     match rewrite_fun {
-                //         RewriteKind::Bool => write!(f, "="),
-                //         RewriteKind::Other(fun) => write!(f, "{fun}"),
-                //     }?;
-                //     write!(f, " {lhs} {rhs})")?;
-                // }
-                // writeln!(f, ")")
-            }
-            Smt::DeclareDatatypes { sorts, cons } => write_par(f, |f| {
-                write!(f, "declare-datatypes")?;
-
-                write_list(sorts, f, |f, s| write!(f, "({s} 0)"))?;
-
-                write_list(cons, f, |f, cons| {
-                    write_list(cons, f, |f, SmtCons { fun, sorts, dest }| {
-                        write_par(f, |f| {
-                            write!(f, "{fun} ")?;
-                            for (i, (s, dest)) in izip!(sorts, dest).enumerate() {
-                                match dest {
-                                    Some(dest) => write!(f, "({dest} {s}) "),
-                                    None => write!(f, "({fun}$_dest_{i:} {s}) "),
-                                }?
-                            }
-                            Ok(())
-                        })
-                    })
-                })
-            }),
-            Smt::Comment(c) => {
-                for c in c.split('\n') {
-                    writeln!(f, "; {c}")?
-                }
-                Ok(())
-            }
-            Smt::CheckSat => writeln!(f, "(check-sat)"),
-            Smt::GetProof => writeln!(f, "(get-proof)"),
-            Smt::SetOption(option, arg) => writeln!(f, "(set-option :{option} {arg})"),
-            Smt::SetLogic(logic) => writeln!(f, "(set-logic {logic})"),
-        }
+        let p = self.as_pretty();
+        write!(f, "{p}")
     }
 }
 

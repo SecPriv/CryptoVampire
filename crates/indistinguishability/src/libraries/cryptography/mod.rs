@@ -3,13 +3,27 @@
 use std::fmt::Display;
 
 use anyhow::{Context, bail, ensure};
-use cryptovampire_smt::SmtSink;
 use utils::{dynamic_iter, match_as_trait};
 
-use crate::libraries::{self, add_no_guessing_smt};
+use crate::libraries::utils::SmtSink;
+use crate::libraries::{self, Library, add_no_guessing_smt};
 use crate::problem::ProblemState;
 use crate::terms::{Formula, Sort, Variable};
 use crate::{MSmtParam, Problem};
+
+mod xor;
+pub use xor::XOr;
+
+mod ddh;
+pub use ddh::DDH;
+
+/// Provides rules for pseudo-random functions (PRFs).
+mod prf;
+pub use prf::PRF;
+
+/// Encryption rules
+mod aenc;
+pub use aenc::AEnc;
 
 /// Represents different cryptographic assumptions that can be made in the problem.
 #[derive(Debug, Default)]
@@ -39,9 +53,7 @@ impl CryptographicAssumption {
     }
 }
 
-pub trait Cryptography: Into<CryptographicAssumption> {
-    fn add_prelude(&self, _pbl: &Problem, _sink: &mut impl SmtSink<MSmtParam>) {}
-
+pub trait Cryptography: Into<CryptographicAssumption> + Library {
     fn name(&self) -> impl Display;
 
     #[must_use]
@@ -70,6 +82,24 @@ pub trait Cryptography: Into<CryptographicAssumption> {
     }
 }
 
+impl Library for CryptographicAssumption {
+    fn add_smt<'a>(
+        &self,
+        pbl: &mut Problem,
+        ctxt: &crate::problem::cache::Context,
+        sink: &mut impl SmtSink<'a>,
+    ) {
+        match self {
+            Self::NoGuessingTh => add_no_guessing_smt(pbl, ctxt, sink),
+            Self::PRF(x) => x.add_smt(pbl, ctxt, sink),
+            Self::AEnc(x) => x.add_smt(pbl, ctxt, sink),
+            Self::XOr(x) => x.add_smt(pbl, ctxt, sink),
+            Self::DDH(x) => x.add_smt(pbl, ctxt, sink),
+            Self::Undefined => {}
+        }
+    }
+}
+
 impl Cryptography for CryptographicAssumption {
     fn name(&self) -> impl Display {
         match_as_trait!(self =>{
@@ -77,17 +107,6 @@ impl Cryptography for CryptographicAssumption {
             Self::NoGuessingTh => { "no-guessing".to_string() },
             Self::Undefined => { "undefined".to_string() }
         })
-    }
-
-    fn add_prelude(&self, pbl: &Problem, sink: &mut impl SmtSink<MSmtParam>) {
-        match self {
-            Self::NoGuessingTh => add_no_guessing_smt(pbl, sink),
-            Self::PRF(x) => x.add_prelude(pbl, sink),
-            Self::AEnc(x) => x.add_prelude(pbl, sink),
-            Self::XOr(x) => x.add_prelude(pbl, sink),
-            Self::DDH(x) => x.add_prelude(pbl, sink),
-            Self::Undefined => {}
-        }
     }
 
     fn ref_from_assumption(r: &CryptographicAssumption) -> Option<&Self> {

@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::sync::atomic::AtomicBool;
 
 use bon::bon;
 use utils::implvec;
@@ -20,7 +21,7 @@ impl Problem {
 
     /// Returns a mutable reference to the function collection
     pub fn functions_mut(&mut self) -> &mut FunctionCollection {
-        self.clear_smt_prelude();
+        self.cache.smt.force_reset();
         &mut self.function
     }
 }
@@ -53,6 +54,7 @@ impl Problem {
             protocol_idx,
             step_idx,
             cryptography: cryptography.into(),
+            grabage_collectable: AtomicBool::new(false),
         };
         let fun = Function::new(inner);
         self.functions_mut().add(fun.clone());

@@ -34,6 +34,7 @@ clap = { workspace = true, features = ["derive", "env"] }
 clap_complete.workspace = true
 thiserror = { workspace = true }
 rustc-hash.workspace = true
+parking_lot.workspace = true
 steel-core.workspace = true
 steel-derive.workspace = true
 steel-repl.workspace = true
