@@ -50,7 +50,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for VampireRule {
         //     egraph.union_trusted(*s.get(X.as_egg()).unwrap(), et, "v");
         // }
 
-        self.exec.run_to_dependancy(pbl, &[to_prove])
+        self.exec.iter_run_to_dependancy(pbl, [to_prove])
     }
 
     /// Returns the name of this rule.

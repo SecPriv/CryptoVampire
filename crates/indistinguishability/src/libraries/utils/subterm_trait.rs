@@ -401,7 +401,7 @@ pub trait SyntaxSearcher {
             .search_timepoint(prgm.egraph().analysis.pbl(), ptcl, time, hyp)
             .collect_vec();
         let pbl = prgm.egraph_mut().analysis.pbl_mut();
-        let result = exec.run_to_dependancy(pbl, &queries).is_axioms();
+        let result = exec.iter_run_to_dependancy(pbl, queries).is_axioms();
         pbl.clear_temp_quantifiers();
 
         // pbl.find_temp_quantifiers(&queries);

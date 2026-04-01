@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use cryptovampire_smt::SolverKind;
 use golgge::Dependancy;
-use itertools::zip_eq;
+use itertools::{Itertools, zip_eq};
 use tempfile::NamedTempFile;
 use tokio::fs::File;
 use tokio::sync::RwLock;
@@ -64,7 +64,6 @@ impl SmtRunner {
             // bounded_vapire: (!pbl.config.disable_fmc_vampire).then(|| BounededVampiVre::new(pbl)),
             vampire: (!pbl.config.disable_direct_vampire).then(|| {
                 VampireExec::builder()
-                    .timeout(pbl.config.vampire_timeout)
                     .default_args()
                     .maybe_exe_location(pbl.config.vampire_path.clone())
                     .build()
@@ -86,11 +85,21 @@ impl SmtRunner {
         Ok(success)
     }
 
-    // pub fn iter_run_to_dependancy(&self, pbl: &mut Problem, queries: implvec!(Formula)) -> Dependancy {
+    pub fn iter_run_to_dependancy(
+        &self,
+        pbl: &mut Problem,
+        queries: implvec!(Formula),
+    ) -> Dependancy {
+        let queries = queries
+            .into_iter()
+            .flat_map(Formula::into_iter_conjunction)
+            .collect_vec();
 
-    // }
+        #[allow(deprecated)]
+        self.run_to_dependancy(pbl, &queries)
+    }
 
-    // #[deprecated = "use iter_run_to_dependancy"]
+    #[deprecated = "use iter_run_to_dependancy"]
     pub fn run_to_dependancy(&self, pbl: &mut Problem, queries: &[Formula]) -> Dependancy {
         pbl.cache.smt.reset();
         pbl.find_temp_quantifiers(queries);
