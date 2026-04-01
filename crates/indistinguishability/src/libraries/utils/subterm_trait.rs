@@ -7,6 +7,7 @@ use logic_formula::{AsFormula, Destructed, HeadSk};
 use rustc_hash::{FxHashMap, FxHashSet};
 use utils::{ereturn_cf, ereturn_if, implvec};
 
+use crate::libraries::memory_cells;
 use crate::libraries::utils::fresh::RefFormulaBuilder;
 use crate::libraries::utils::get_protocol;
 use crate::problem::PAnalysis;
@@ -14,8 +15,8 @@ use crate::protocol::{Protocol, Step};
 use crate::runners::SmtRunner;
 use crate::terms::{
     Alias, AliasRewrite, AlphaArgs, BITE, Exists, FOBinder, FindSuchThat, Formula, Function,
-    HAPPENS, LAMBDA_S, LEQ, MACRO_COND, MACRO_FRAME, MACRO_MSG, MITE, PRED, Quantifier,
-    QuantifierT, RecFOFormulaQuant, Sort, Variable,
+    HAPPENS, LAMBDA_S, LEQ, MACRO_COND, MACRO_FRAME, MACRO_MEMORY_CELL, MACRO_MSG, MITE, PRED,
+    Quantifier, QuantifierT, RecFOFormulaQuant, Sort, Variable,
 };
 use crate::{CVProgram, Lang, Problem, fresh, rexp};
 
@@ -29,6 +30,12 @@ pub fn default_is_special<U: SyntaxSearcher + ?Sized>(
     fun: &Function,
 ) -> bool {
     fun.is_special_subterm()
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq)]
+pub enum MsgOrCond {
+    Msg,
+    Cond,
 }
 
 /// When implementing [SyntaxSearcher] **make sure** each function's
@@ -161,23 +168,127 @@ pub trait SyntaxSearcher {
         tr!("in search_special_recexpr");
 
         if fun == MACRO_COND || fun == MACRO_MSG {
-            unimplemented!(
-                "please directly inline the 'msg' and 'cond' macros in your protocol definition"
-            )
+            let kind = fun.try_into().unwrap();
+            let (time, ptcl) = args
+                .into_iter()
+                .collect_tuple()
+                .expect("terms should be well typed");
+            self.search_msg_cond_macro(pbl, builder, kind, ptcl, time)
+        } else if fun == MACRO_MEMORY_CELL {
+            let (cell, time, ptcl) = args
+                .into_iter()
+                .collect_tuple()
+                .expect("terms should be well typed");
+            self.search_memory_cell(pbl, builder, cell, ptcl, time);
         } else if let Some(alias) = fun.get_alias() {
             self.search_alias(pbl, builder, alias, args);
         } else if fun.is_quantifier() {
             match fun.get_quantifier(pbl.functions()) {
-                // Some(Quantifier::Exists(exists)) => self.search_exists(pbl, builder, exists, args),
                 Some(Quantifier::FindSuchThat(fdst)) => {
                     self.search_fdst_alias_function(pbl, builder, fdst, args)
                 }
                 Some(Quantifier::Exists(_)) => {
-                    panic!("exists aliases are no longer needed, please use high order instead")
+                    panic!(
+                        "exists aliases are no longer needed and deprecated, please use high \
+                         order instead"
+                    )
                 }
                 _ => unreachable!(),
             };
         }
+    }
+
+    fn search_msg_cond_macro(
+        &self,
+        pbl: &Problem,
+        builder: &RefFormulaBuilder,
+        kind: MsgOrCond,
+        ptcl: Formula,
+        time: Formula,
+    ) {
+        // NB: we assume well-formed-ness to ensure terminiation. Otherwise it is easy to make this loop forever.
+        tr!("in search_msg_cond_macro");
+        match (ptcl, time) {
+            (Formula::App { head: ptcl, .. }, Formula::App { head: step, args }) => {
+                let ptcl_idx = ptcl
+                    .get_protocol_index()
+                    .expect("the protocol field should be a concrete protocol");
+                let step_idx = step
+                    .get_step_index()
+                    .expect("the time field should be a concrete step");
+                let step = &pbl.protocols()[ptcl_idx].steps()[step_idx];
+                let t = match kind {
+                    MsgOrCond::Cond => &step.cond,
+                    MsgOrCond::Msg => &step.msg,
+                };
+                let mut subst = Default::default();
+                let t = t.alpha_rename_if_with(&mut subst, &mut |_| true);
+
+                let args_eqs = izip!(args.iter(), &step.vars).map(|(arg, var)| {
+                    let narg = subst.get(var).unwrap().clone();
+                    rexp!((= #arg #narg))
+                });
+
+                let builder = builder
+                    .add_node()
+                    .variables(subst.values().cloned())
+                    .condition(Formula::and(args_eqs))
+                    .build();
+                self.inner_search_formula(pbl, &builder, t);
+            }
+            _ => unreachable!("protocols should be well formed"),
+        }
+    }
+
+    #[allow(unused)]
+    fn search_memory_cell(
+        &self,
+        pbl: &Problem,
+        builder: &RefFormulaBuilder,
+        cell: Formula,
+        ptcl: Formula,
+        time: Formula,
+    ) {
+        tr!("in search_memory_cell");
+        let Formula::App {
+            head: cell_head,
+            args: cell_args,
+        } = cell
+        else {
+            unreachable!("cells should be conctrete")
+        };
+        assert!(cell_head.is_memory_cell());
+        let Formula::App { head: ptcl, .. } = ptcl else {
+            unreachable!("proctols should be concrete")
+        };
+        let ptcl_idx = ptcl
+            .get_protocol_index()
+            .expect("the protocol field should be a concrete protocol");
+        let ptcl = &pbl.protocols()[ptcl_idx];
+
+        match time {
+            Formula::App {
+                head: step_head,
+                args: step_args,
+            } if step_head == PRED => {
+                let time = &step_args[0];
+                memory_cells::search_pred_memory_cell(
+                    self, pbl, builder, cell_head, cell_args, ptcl, time,
+                );
+            }
+            Formula::App {
+                head: ref step_head,
+                args
+            } if step_head.is_step() => {
+                let step = &ptcl.steps()[step_head.get_step_index().unwrap()];
+                memory_cells::search_concrete_memory_cell(
+                    self, pbl, builder, cell_head, cell_args, ptcl, step, args,
+                );
+            }
+            _ => unreachable!("time field should be a 'pred(step)' or a concrete step"),
+        }
+
+        todo!()
     }
 
     /// Searches within an alias function, applying its rewrite rules.
@@ -727,4 +838,18 @@ pub fn expr_of_id<'a>(
     variables: &rpds::Queue<Variable>,
 ) -> Formula {
     Formula::try_from_id_with_vars(egraph, id, variables).unwrap()
+}
+
+impl TryFrom<Function> for MsgOrCond {
+    type Error = Function;
+
+    fn try_from(value: Function) -> Result<Self, Self::Error> {
+        if value == MACRO_COND {
+            Ok(Self::Cond)
+        } else if value == MACRO_MSG {
+            Ok(Self::Msg)
+        } else {
+            Err(value)
+        }
+    }
 }

@@ -14,6 +14,7 @@ use crate::libraries::fa::FaLib;
 use crate::libraries::find_indices::FindIndicesLib;
 use crate::libraries::ifs::IfLib;
 use crate::libraries::lambda::LambdaLib;
+use crate::libraries::memory_cells::MemoryCellLib;
 use crate::libraries::nonce::NonceLib;
 use crate::libraries::problem::ProblemLib;
 use crate::libraries::protocol::unfold::UnfoldLib;
@@ -217,6 +218,7 @@ mk_libraires!(Libraries;
   ProblemStateLib,
   ProblemLib,
   CurrentStep,
+  MemoryCellLib,
   FindIndicesLib,
   DeduceLib,
   ConstrainsLib,
