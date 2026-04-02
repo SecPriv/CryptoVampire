@@ -108,15 +108,29 @@ impl<'a, 'b, U: SmtSink<'b>> RewriteSink for Wrapper<'a, U, ()> {
         } in iter
         {
             econtinue_if!(prolog_only);
-            let [from, to] = [from, to].map(|x| x.as_smt(pbl).unwrap());
-            let vars = variables.clone().into_owned();
 
             if let Some(name) = name {
                 self.0.comment(pbl, &Default::default(), name);
             }
+            let vars = variables.clone().into_owned();
 
-            self.0
-                .assert_one(pbl, &Default::default(), smt!((forall #vars (= #from #to))))
+            let from = from.as_smt(pbl).unwrap();
+
+            match to.try_evaluate() {
+                Some(true) => {
+                    self.0
+                        .assert_one(pbl, &Default::default(), smt!((forall #vars #from)))
+                }
+                Some(false) => {
+                    self.0
+                        .assert_one(pbl, &Default::default(), smt!((forall #vars (not #from))))
+                }
+                None => {
+                    let to = to.as_smt(pbl).unwrap();
+                    self.0
+                        .assert_one(pbl, &Default::default(), smt!((forall #vars (= #from #to))))
+                }
+            }
         }
     }
 
