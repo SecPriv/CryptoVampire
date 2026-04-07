@@ -3,12 +3,11 @@ use itertools::{Itertools, izip};
 use rustc_hash::FxHashMap;
 
 use super::Step;
-use crate::terms::Function;
-use crate::{MSmtFormula, smt};
+use crate::terms::{Formula, Function};
+use crate::{MSmtFormula, rexp, smt};
 /// A protocol to be proven
 #[derive(Debug, PartialEq, Eq, Clone, Builder)]
 pub struct Protocol {
-    /// The name of the protocol
     /// The name of the protocol
     name: Function,
     /// The steps of the protocol
@@ -44,6 +43,11 @@ impl Protocol {
     #[inline]
     pub fn name(&self) -> &Function {
         &self.name
+    }
+
+    pub(crate) fn as_formula(&self) -> Formula {
+        let name = self.name();
+        rexp!(name)
     }
 
     /// Converts the protocol's name into an SMT formula.

@@ -238,4 +238,18 @@ impl Problem {
             f => bail!("{f} is not a function application"),
         }
     }
+
+    pub fn iter_step_def<'a>(&'a self) -> impl Iterator<Item = StepAndProtocol<'a>> + Clone {
+        self.protocols().iter().flat_map(|ptcl| {
+            ptcl.steps()
+                .iter()
+                .map(|step| StepAndProtocol { step, ptcl })
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StepAndProtocol<'a> {
+    pub step: &'a Step,
+    pub ptcl: &'a Protocol,
 }

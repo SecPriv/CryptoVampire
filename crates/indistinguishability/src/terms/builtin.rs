@@ -298,6 +298,15 @@ mk_builtin_funs!(
         flags: f!(SMT_ONLY)
     };
 
+    LT_UNFOLD "lt_unfold" {
+        signature: s!(UnfoldingCall, UnfoldingCall -> Bool),
+        flags: f!(SMT_ONLY),
+        alias: Some(alias!{
+            a:UnfoldingCall, b:UnfoldingCall in rexp!(const !a), rexp!(const !b) => 
+                rexp!(const (and (LEQ_UNFOLD !a !b) (distinct !a !b)))
+        }),
+    };
+
     // ~~~~~~~~~~~~~~~~ macro ~~~~~~~~~~~~~~~~~~~
 
     ATT "att" {
