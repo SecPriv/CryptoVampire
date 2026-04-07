@@ -9,8 +9,8 @@ use utils::ereturn_if;
 
 use super::super::vars::*;
 use crate::libraries::DDH;
-use crate::libraries::utils::SyntaxSearcher;
-use crate::libraries::utils::fresh::RefFormulaBuilder;
+use crate::libraries::utils::{DefaultAux, SyntaxSearcher};
+use crate::libraries::utils::formula_builder::RefFormulaBuilder;
 use crate::problem::{PAnalysis, RcRule};
 use crate::runners::SmtRunner;
 use crate::terms::{Formula, Function, NONCE};
@@ -71,6 +71,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SearchRule {
 }
 
 impl SyntaxSearcher for SearchK {
+    type Aux = DefaultAux;
     fn debug_name<'a>(&'a self) -> std::borrow::Cow<'a, str> {
         Cow::Borrowed("search k enc")
     }

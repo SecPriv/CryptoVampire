@@ -4,7 +4,7 @@ use quarck::CowArc;
 use rustc_hash::FxHashMap;
 use utils::econtinue_let;
 
-use crate::libraries::utils::{EggRewriteSink, RefFormulaBuilder, RewriteSink, SyntaxSearcher};
+use crate::libraries::utils::{EggRewriteSink, RBFormula, RefFormulaBuilder, RewriteSink, SyntaxSearcher};
 use crate::libraries::{Library, memory_cells};
 use crate::protocol::{Assignements, Protocol, SingleAssignement, Step};
 use crate::terms::{Formula, FormulaVariableIter, Function, INDEX_EQ, Rewrite, UNFOLD_MEMORY_CELL};
@@ -80,7 +80,7 @@ fn add_rewrites(pbl: &Problem, sink: &mut impl RewriteSink) {
 pub(crate) fn search_pred_memory_cell<S: SyntaxSearcher + ?Sized>(
     seracher: &S,
     pbl: &Problem,
-    builder: &RefFormulaBuilder,
+    builder: &RBFormula<S>,
     cell_head: Function,
     cell_args: CowArc<'static, [Formula]>,
     ptcl: &Protocol,
@@ -93,7 +93,7 @@ pub(crate) fn search_pred_memory_cell<S: SyntaxSearcher + ?Sized>(
 pub(crate) fn search_concrete_memory_cell<S: SyntaxSearcher + ?Sized>(
     seracher: &S,
     pbl: &Problem,
-    builder: &RefFormulaBuilder,
+    builder: &RBFormula<S>,
     cell_head: Function,
     cell_args: CowArc<'static, [Formula]>,
     ptcl: &Protocol,
