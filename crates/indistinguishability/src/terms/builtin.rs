@@ -88,9 +88,9 @@ pub static SORT_LIST: [Sort; 7] = {
 };
 
 /// [Sort]s to be declared in smt
-pub static SMT_SORT_LIST: [Sort; 3] = {
+pub static SMT_SORT_LIST: [Sort; 4] = {
     use Sort::*;
-    [Bitstring, Time, /* Protocol, Nonce, */ Index]
+    [Bitstring, Time, /* Protocol, Nonce, */ Index, UnfoldingCall]
 };
 
 // -----------------------------------------------------------------------------
@@ -279,6 +279,23 @@ mk_builtin_funs!(
         signature: s!(Time, 0),
         flags: f!(STEP | PUBLICATION_STEP),
         step_idx: 0,
+    };
+
+    // ~~~~~~~~~~~~~~ call graph ~~~~~~~~~~~~~~~~
+
+    CALL_UNFOLD_CELL "call_unfold_cell" {
+        signature: s!(MemoryCell, Time, Protocol -> UnfoldingCall),
+        flags: f!(SMT_ONLY)
+    };
+
+    CALL_UNFOLD_FRAME "call_unfold_frame" {
+        signature: s!(Time, Protocol -> UnfoldingCall),
+        flags: f!(SMT_ONLY)
+    };
+
+    LEQ_UNFOLD "leq_unfold" {
+        signature: s!(UnfoldingCall, UnfoldingCall -> Bool),
+        flags: f!(SMT_ONLY)
     };
 
     // ~~~~~~~~~~~~~~~~ macro ~~~~~~~~~~~~~~~~~~~
