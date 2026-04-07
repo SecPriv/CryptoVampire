@@ -92,22 +92,22 @@ impl MacroInput {
 
     fn and_fun(&self) -> TokenStream {
         let path = &self.path;
-        quote!(&#path::AND)
+        quote!(#path::AND)
     }
 
     fn or_fun(&self) -> TokenStream {
         let path = &self.path;
-        quote!(&#path::OR)
+        quote!(#path::OR)
     }
 
     fn eq_fun(&self) -> TokenStream {
         let path = &self.path;
-        quote!(&#path::EQ)
+        quote!(#path::EQ)
     }
 
-    fn neq_fun(&self) -> TokenStream {
+    fn not_fun(&self) -> TokenStream {
         let path = &self.path;
-        quote!(&#path::NEQ)
+        quote!(#path::NOT)
     }
 
     fn mk_true(&self) -> TokenStream {
@@ -154,15 +154,18 @@ impl MacroInput {
         // let args = args.into_iter().collect_vec();
         let mut args = args.iter().multipeek();
         if args.peek().is_some() && args.peek().is_some() {
-            let fun = self.neq_fun();
+            let eq_fun = self.eq_fun();
+            let not_fun = self.not_fun();
             let args: Vec<_> = args
                 .cloned()
                 .tuple_combinations()
-                .map(|(a, b)| FunAppAst::mk_app(self, &fun, [a, b]))
+                .map(|(a, b)| {
+                    FunAppAst::mk_app(self, &not_fun, [FunAppAst::mk_app(self, &eq_fun, [a, b])?])
+                })
                 .try_collect()?;
             self.mk_ands(args)
         } else {
-            Err(Error::new(span, "need at least two arguments to `=`"))
+            Err(Error::new(span, "need at least two arguments to `!=`"))
         }
     }
 }
