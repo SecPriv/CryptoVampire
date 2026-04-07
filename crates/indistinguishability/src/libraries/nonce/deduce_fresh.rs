@@ -8,7 +8,7 @@ use utils::ereturn_let;
 
 use super::*;
 use crate::libraries::utils::EgraphSearcher;
-use crate::libraries::utils::fresh::RefFormulaBuilder;
+use crate::libraries::utils::formula_builder::RefFormulaBuilder;
 use crate::problem::{PAnalysis, RcRule};
 use crate::runners::SmtRunner;
 use crate::terms::{FRESH_NONCE, Formula};

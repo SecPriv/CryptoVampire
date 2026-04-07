@@ -8,8 +8,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use utils::{ereturn_cf, ereturn_if, implvec};
 
 use crate::libraries::memory_cells;
-use crate::libraries::utils::fresh::RefFormulaBuilder;
-use crate::libraries::utils::get_protocol;
+use crate::libraries::utils::{DefaultAux, FormulaBuilderAux, RefFormulaBuilder, get_protocol};
 use crate::problem::PAnalysis;
 use crate::protocol::{Protocol, Step};
 use crate::runners::SmtRunner;
@@ -38,12 +37,16 @@ pub enum MsgOrCond {
     Cond,
 }
 
+pub type RBFormula<U> = RefFormulaBuilder<<U as SyntaxSearcher>::Aux>;
+
 /// When implementing [SyntaxSearcher] **make sure** each function's
 /// pre-implementation does what you what. Think of this more as a macro than a
 /// trait.
 ///
 /// It should be easy enough to bail out and nothing should be generic over [SyntaxSearcher]s.
 pub trait SyntaxSearcher {
+    type Aux: FormulaBuilderAux + Clone + Default;
+
     /// an name for debugging
     fn debug_name<'a>(&'a self) -> Cow<'a, str>;
 
@@ -60,7 +63,7 @@ pub trait SyntaxSearcher {
     fn process_instance(
         &self,
         pbl: &Problem,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         fun: &Function,
         args: &[Formula],
     ) -> ControlFlow<()>;
@@ -77,7 +80,7 @@ pub trait SyntaxSearcher {
     ///
     /// This function traverses the formula, identifying instances that match `is_instance`
     /// or special subterms handled by `search_special_recexpr`.
-    fn inner_search_formula(&self, pbl: &Problem, builder: &RefFormulaBuilder, term: Formula) {
+    fn inner_search_formula(&self, pbl: &Problem, builder: &RBFormula<Self>, term: Formula) {
         assert!(builder.current_mode().is_and());
         ereturn_if!(builder.is_saturated());
         tr!("searching through {term}");
@@ -113,7 +116,7 @@ pub trait SyntaxSearcher {
     fn search_quantifier(
         &self,
         pbl: &Problem,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         quant: RecFOFormulaQuant,
         args: implvec!(Formula),
     ) {
@@ -159,7 +162,7 @@ pub trait SyntaxSearcher {
     fn search_special_recexpr(
         &self,
         pbl: &Problem,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         fun: Function,
         args: implvec!(Formula),
     ) {
@@ -201,7 +204,7 @@ pub trait SyntaxSearcher {
     fn search_msg_cond_macro(
         &self,
         pbl: &Problem,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         kind: MsgOrCond,
         ptcl: Formula,
         time: Formula,
@@ -244,7 +247,7 @@ pub trait SyntaxSearcher {
     fn search_memory_cell(
         &self,
         pbl: &Problem,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         cell: Formula,
         ptcl: Formula,
         time: Formula,
@@ -278,7 +281,7 @@ pub trait SyntaxSearcher {
             }
             Formula::App {
                 head: ref step_head,
-                args
+                args,
             } if step_head.is_step() => {
                 let step = &ptcl.steps()[step_head.get_step_index().unwrap()];
                 memory_cells::search_concrete_memory_cell(
@@ -297,7 +300,7 @@ pub trait SyntaxSearcher {
     fn search_alias(
         &self,
         pbl: &Problem,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         alias: &Alias,
         args: implvec!(Formula),
     ) {
@@ -352,7 +355,7 @@ pub trait SyntaxSearcher {
     fn search_exists_alias_function<'b>(
         &self,
         pbl: &Problem,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         e: &Exists,
         args: implvec!(Formula),
     ) {
@@ -382,7 +385,7 @@ pub trait SyntaxSearcher {
     fn search_fdst_alias_function<'b>(
         &self,
         pbl: &Problem,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         fdst: &FindSuchThat,
         args: implvec!(Formula),
     ) {
@@ -422,7 +425,7 @@ pub trait SyntaxSearcher {
     fn search_frame(
         &self,
         pbl: &Problem,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         ptcl: &Protocol,
         time: &Formula,
     ) {
@@ -537,7 +540,7 @@ pub trait EgraphSearcher: SyntaxSearcher {
     fn process_egraph_instance<'a>(
         &self,
         egraph: &EGraph<Lang, PAnalysis<'a>>,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         fun: &Function,
         args: &[Id],
         variables: &rpds::Queue<Variable>,
@@ -557,7 +560,7 @@ pub trait EgraphSearcher: SyntaxSearcher {
     fn search_egraph<'a>(
         &self,
         egraph: &EGraph<Lang, PAnalysis<'a>>,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         current: Id,
         visited: &rpds::HashTrieSet<Id>,
         variables: &rpds::Queue<Variable>,
@@ -597,7 +600,7 @@ pub trait EgraphSearcher: SyntaxSearcher {
     fn search_egraph_frame<'a>(
         &self,
         egraph: &EGraph<Lang, PAnalysis<'a>>,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         time: Id,
         ptcl: Id,
         variables: &rpds::Queue<Variable>,
@@ -651,7 +654,7 @@ pub trait EgraphSearcher: SyntaxSearcher {
     fn early_egraph_loop<'a>(
         &self,
         egraph: &EGraph<crate::Lang, PAnalysis<'a>>,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         current: Id,
         head: &Function,
         args: &[Id],
@@ -686,7 +689,7 @@ pub trait EgraphSearcher: SyntaxSearcher {
         &self,
         egraph: &EGraph<crate::Lang, PAnalysis<'a>>,
         current: Id,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         visited: &rpds::HashTrieSet<Id>,
         head: &Function,
         args: &[Id],
@@ -730,7 +733,7 @@ pub trait EgraphSearcher: SyntaxSearcher {
     fn ite_egraph<'a>(
         &self,
         egraph: &EGraph<Lang, PAnalysis<'a>>,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         args: &[Id],
         visited: &rpds::HashTrieSet<Id>,
         variables: &rpds::Queue<Variable>,
@@ -769,7 +772,7 @@ pub trait EgraphSearcher: SyntaxSearcher {
     fn binder_egraph<'a>(
         &self,
         egraph: &EGraph<Lang, PAnalysis<'a>>,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         quant: FOBinder,
         args: &[Id],
         visited: &rpds::HashTrieSet<Id>,

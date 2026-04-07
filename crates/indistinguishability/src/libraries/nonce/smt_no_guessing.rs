@@ -3,7 +3,7 @@ use log::trace;
 use utils::ereturn_if;
 
 use crate::libraries::nonce::Nonce;
-use crate::libraries::utils::fresh::RefFormulaBuilder;
+use crate::libraries::utils::formula_builder::RefFormulaBuilder;
 use crate::libraries::utils::{SmtOption, SmtSink, SyntaxSearcher};
 use crate::problem::cache::Context;
 use crate::protocol::Protocol;

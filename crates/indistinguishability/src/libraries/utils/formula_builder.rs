@@ -1,5 +1,6 @@
 use std::cell::{Ref, RefCell, RefMut};
 use std::fmt::Display;
+use std::ops::Deref;
 use std::rc::{Rc, Weak};
 
 use bon::{Builder, bon};
@@ -10,13 +11,13 @@ use crate::terms::{FOBinder, Formula, Variable};
 
 declare_trace!($"search");
 
-#[derive(Debug, Clone)]
-pub struct RefFormulaBuilder(Rc<RefCell<FormulaBuilder>>);
+#[derive(Debug)]
+pub struct RefFormulaBuilder<A: FormulaBuilderAux = DefaultAux>(Rc<RefCell<FormulaBuilder<A>>>);
 
 #[derive(Debug)]
-pub struct FormulaBuilder {
+pub struct FormulaBuilder<A: FormulaBuilderAux = DefaultAux> {
     /// The parent builder, if this is a nested builder.
-    parent: Option<RefFormulaBuilder>,
+    parent: Option<RefFormulaBuilder<A>>,
     /// The logical mode of this builder (And/Or).
     mode: Mode,
     /// The collected formulas within this builder.
@@ -29,6 +30,8 @@ pub struct FormulaBuilder {
     condition: Option<Condition>,
     /// Weak references to child builders.
     children: Vec<Weak<RefCell<Self>>>,
+
+    aux: A,
 }
 
 /// A search condition
@@ -58,6 +61,23 @@ pub enum Mode {
     Or,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, PartialOrd, Ord, Hash)]
+pub struct DefaultAux;
+
+#[derive(Debug, Clone, PartialEq, Eq, Default, PartialOrd, Ord, Hash)]
+pub enum SaturationCommand {
+    SaturateTo(bool),
+    Insert(Formula),
+    #[default]
+    Skip
+}
+
+pub trait FormulaBuilderAux: Sized {
+    fn merge(&mut self, mode: Mode, content: Vec<Formula>) -> Formula;
+
+    fn try_evaluate(&self, fb: &FormulaBuilder<Self>, content: Formula) -> SaturationCommand;
+}
+
 impl Display for Mode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -68,16 +88,18 @@ impl Display for Mode {
 }
 
 #[bon]
-impl RefFormulaBuilder {
+impl<A: FormulaBuilderAux + Clone + Default> RefFormulaBuilder<A> {
     #[builder(builder_type = RefFormulaBuilderBuilder)]
     pub fn new(
         #[builder(default)] mode: Mode,
 
-        parent: Option<&RefFormulaBuilder>,
+        parent: Option<&RefFormulaBuilder<A>>,
 
         condition: Option<Formula>,
         #[builder(with = <_>::from_iter, default)] variables: Vec<Variable>,
         mut quantifier: Option<FOBinder>,
+
+        aux: Option<A>,
     ) -> Self {
         if quantifier.is_none() && condition.is_some() {
             quantifier = Some(FOBinder::Forall)
@@ -91,6 +113,12 @@ impl RefFormulaBuilder {
                 .build()
         });
 
+        let aux = match (aux, parent) {
+            (Some(aux), _) => aux,
+            (_, Some(parent)) => parent.0.borrow().aux.clone(),
+            _ => Default::default(),
+        };
+
         let builder = Self(Rc::new(RefCell::new(FormulaBuilder {
             parent: None,
             mode,
@@ -99,6 +127,7 @@ impl RefFormulaBuilder {
             precomputed: true,
             staturated: false,
             content: vec![],
+            aux,
         })));
 
         if let Some(parent) = parent {
@@ -112,12 +141,13 @@ impl RefFormulaBuilder {
 }
 
 use ref_formula_builder_builder::IsUnset as RefFormulaBuilderBuilderIsUnset;
-impl<'a, S> RefFormulaBuilderBuilder<'a, S>
+impl<'a, A, S> RefFormulaBuilderBuilder<'a, A, S>
 where
     S: ref_formula_builder_builder::State,
+    A: FormulaBuilderAux + Clone + Default,
 {
     /// Sets the mode to [Mode::And]
-    pub fn and(self) -> RefFormulaBuilderBuilder<'a, ref_formula_builder_builder::SetMode<S>>
+    pub fn and(self) -> RefFormulaBuilderBuilder<'a, A, ref_formula_builder_builder::SetMode<S>>
     where
         S::Mode: RefFormulaBuilderBuilderIsUnset,
     {
@@ -125,7 +155,7 @@ where
     }
 
     /// Sets the mode to [Mode::Or]
-    pub fn or(self) -> RefFormulaBuilderBuilder<'a, ref_formula_builder_builder::SetMode<S>>
+    pub fn or(self) -> RefFormulaBuilderBuilder<'a, A, ref_formula_builder_builder::SetMode<S>>
     where
         S::Mode: RefFormulaBuilderBuilderIsUnset,
     {
@@ -134,7 +164,7 @@ where
     /// Sets the quantifier for the condition to `FOBinder::Forall`.
     pub fn forall(
         self,
-    ) -> RefFormulaBuilderBuilder<'a, ref_formula_builder_builder::SetQuantifier<S>>
+    ) -> RefFormulaBuilderBuilder<'a, A, ref_formula_builder_builder::SetQuantifier<S>>
     where
         S::Quantifier: RefFormulaBuilderBuilderIsUnset,
     {
@@ -143,7 +173,7 @@ where
     /// Sets the quantifier for the condition to `FOBinder::Exists`.
     pub fn exists(
         self,
-    ) -> RefFormulaBuilderBuilder<'a, ref_formula_builder_builder::SetQuantifier<S>>
+    ) -> RefFormulaBuilderBuilder<'a, A, ref_formula_builder_builder::SetQuantifier<S>>
     where
         S::Quantifier: RefFormulaBuilderBuilderIsUnset,
     {
@@ -151,9 +181,9 @@ where
     }
 }
 
-impl RefFormulaBuilder {
+impl<A: FormulaBuilderAux> RefFormulaBuilder<A> {
     /// Returns a weak reference to the inner `FormulaBuilder`.
-    pub fn weak(&self) -> Weak<RefCell<FormulaBuilder>> {
+    pub fn weak(&self) -> Weak<RefCell<FormulaBuilder<A>>> {
         Rc::downgrade(&self.0)
     }
 
@@ -185,7 +215,12 @@ impl RefFormulaBuilder {
     //     }
     //     builder
     // }
-    pub fn add_node(&self) -> RefFormulaBuilderBuilder<'_, ref_formula_builder_builder::SetParent> {
+    pub fn add_node(
+        &self,
+    ) -> RefFormulaBuilderBuilder<'_, A, ref_formula_builder_builder::SetParent>
+    where
+        A: Clone + Default,
+    {
         Self::builder().parent(self)
     }
 
@@ -206,12 +241,12 @@ impl RefFormulaBuilder {
     }
 
     /// Immutably borrows the inner `FormulaBuilder`.
-    pub fn borrow(&self) -> Ref<'_, FormulaBuilder> {
+    pub fn borrow(&self) -> Ref<'_, FormulaBuilder<A>> {
         RefCell::borrow(&self.0)
     }
 
     /// Mutably borrows the inner `FormulaBuilder`.
-    pub fn borrow_mut(&self) -> RefMut<'_, FormulaBuilder> {
+    pub fn borrow_mut(&self) -> RefMut<'_, FormulaBuilder<A>> {
         RefCell::borrow_mut(&self.0)
     }
 
@@ -221,12 +256,12 @@ impl RefFormulaBuilder {
     }
 
     // get the content bypassing drop
-    pub fn into_inner(self) -> Option<FormulaBuilder> {
+    pub fn into_inner(self) -> Option<FormulaBuilder<A>> {
         Some(RefCell::into_inner(Rc::into_inner(self.0)?))
     }
 }
 
-impl Drop for FormulaBuilder {
+impl<A: FormulaBuilderAux> Drop for FormulaBuilder<A> {
     /// Implements the `drop` logic for `FormulaBuilder`.
     ///
     /// If the builder is not saturated, it drains its content into a formula
@@ -244,17 +279,15 @@ impl Drop for FormulaBuilder {
     }
 }
 
-impl FormulaBuilder {
+impl<A: FormulaBuilderAux> FormulaBuilder<A> {
     /// Drains the content of the builder and converts it into a `RecFOFormula`.
     ///
     /// This consumes the content and applies the builder's mode and condition.
     fn drain_as_formula(&mut self) -> Formula {
         assert!(self.children.iter().all(|c| c.upgrade().is_none()));
         let content = std::mem::take(&mut self.content);
-        let inner = match self.mode {
-            Mode::And => Formula::and(content),
-            Mode::Or => Formula::or(content),
-        };
+
+        let inner = self.aux.merge(self.mode, content);
 
         match self.condition.take() {
             None => inner,
@@ -266,7 +299,9 @@ impl FormulaBuilder {
                 let mut inner = match quantifier {
                     FOBinder::Forall => condition >> inner,
                     FOBinder::Exists => condition & inner,
-                    _ => todo!(),
+                    FOBinder::FindSuchThat => {
+                        unreachable!("type error, cannot be a find such that")
+                    }
                 };
                 if !variables.is_empty() {
                     inner = Formula::bind(quantifier, variables, [inner])
@@ -303,11 +338,11 @@ impl FormulaBuilder {
         ereturn_if!(self.is_saturated());
 
         // checks if we are now saturated
-        match (self.mode, content.try_evaluate()) {
-            (Mode::And, Some(true)) | (Mode::Or, Some(false)) => {}
-            (Mode::And, Some(false)) => self.try_saturate(false),
-            (Mode::Or, Some(true)) => self.try_saturate(true),
-            _ => self.content.push(content),
+        let sat = self.aux.try_evaluate(&*self, content);
+        match sat {
+            SaturationCommand::SaturateTo(v) => self.try_saturate(v),
+            SaturationCommand::Insert(formula) => self.content.push(formula),
+            SaturationCommand::Skip => {},
         }
     }
 
@@ -316,6 +351,7 @@ impl FormulaBuilder {
     ///
     /// If saturation occurs, it propagates the value up to the parent builder.
     pub fn try_saturate(&mut self, value: bool) {
+
         match &mut self.condition {
             None => self.staturate(value),
             Some(Condition { quantifier, .. }) if quantifier.on_empty() == value => {
@@ -397,5 +433,30 @@ impl Condition {
     #[allow(dead_code)]
     pub fn quantifier(&self) -> FOBinder {
         self.quantifier
+    }
+}
+
+impl FormulaBuilderAux for DefaultAux {
+    fn merge(&mut self, mode: Mode, content: Vec<Formula>) -> Formula {
+        match mode {
+            Mode::And => Formula::and(content),
+            Mode::Or => Formula::or(content),
+        }
+    }
+    
+    fn try_evaluate(&self, fb: &FormulaBuilder<Self>, content: Formula) -> SaturationCommand {
+        use SaturationCommand::*;
+                match (fb.mode, content.try_evaluate()) {
+            (Mode::And, Some(true)) | (Mode::Or, Some(false)) => Skip,
+            (Mode::And, Some(false)) => SaturateTo(false),
+            (Mode::Or, Some(true)) => SaturateTo(true),
+            _ => Insert(content),
+        }
+    }
+}
+
+impl<A: FormulaBuilderAux> Clone for RefFormulaBuilder<A> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
     }
 }

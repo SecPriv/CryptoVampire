@@ -8,8 +8,8 @@ use utils::{ereturn_if, ereturn_let};
 
 use super::PRFProof::*;
 use crate::libraries::PRF;
-use crate::libraries::utils::fresh::RefFormulaBuilder;
-use crate::libraries::utils::{RuleSink, SyntaxSearcher, get_protocol};
+use crate::libraries::utils::formula_builder::RefFormulaBuilder;
+use crate::libraries::utils::{DefaultAux, RuleSink, SyntaxSearcher, get_protocol};
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::protocol::{Protocol, Step};
 use crate::runners::SmtRunner;
@@ -295,6 +295,8 @@ impl Search {
 }
 
 impl crate::libraries::utils::SyntaxSearcher for Search {
+    type Aux = DefaultAux;
+
     /// Returns a debug name for the PRF searcher.
     fn debug_name<'a>(&'a self) -> std::borrow::Cow<'a, str> {
         Cow::Borrowed("search_prf")
