@@ -11,7 +11,7 @@ use utils::{econtinue_if, ereturn_if, ereturn_let};
 use crate::protocol::call_graph::{
     CallCallee, Caller, CellRef, DescendantFlags, Graph, PreCall, StepRef,
 };
-use crate::protocol::{MemoryCell, SingleAssignement, Step};
+use crate::protocol::{MemoryCell, Protocol, SingleAssignement, Step};
 use crate::terms::{
     Formula, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL, MACRO_MSG, PRED,
     Variable,
@@ -48,7 +48,30 @@ impl PreCall {
     }
 }
 
+impl Default for Graph {
+    fn default() -> Self {
+        Self {
+            cell_num: Default::default(),
+            callers: Default::default(),
+            initialized: false,
+        }
+    }
+}
+
 impl Graph {
+    pub fn clear(&mut self) {
+        ereturn_if!(!self.initialized);
+
+        for c in &mut self.callers {
+            c.clear();
+        }
+        self.initialized = false
+    }
+
+    pub fn is_initialized(&self) -> bool {
+        self.initialized
+    }
+
     pub fn static_find_decendants(
         &self,
         todo: &mut Vec<(usize, DescendantFlags)>,
@@ -83,26 +106,37 @@ impl Graph {
         }
     }
 
-    pub fn populate(pbl: &Problem, ptcl_idx: usize) -> Self {
-        let cell_num = pbl.memory_cells().len();
-        let ptcl = &pbl.protocols()[ptcl_idx];
-        let mut callers: Vec<Caller> =
-            vec![Default::default(); ptcl.steps().len() * (cell_num + 1)];
+    /// Repopulate the graph
+    pub fn reinitialize(&mut self, pbl: &Problem, ptcl: &Protocol) {
+        self.clear();
+        let Self {
+            cell_num,
+            callers,
+            initialized,
+        } = self;
+
+        *cell_num = pbl.memory_cells().len();
+
+        {
+            let n = ptcl.steps().len() * (*cell_num + 1);
+            callers.truncate(n);
+            let diff = n - callers.len();
+            if diff > 0 {
+                callers.extend(::std::iter::repeat_n(Default::default(), diff));
+            }
+        }
 
         let mut cache = Vec::new();
 
         for (i, s) in ptcl.steps().iter().enumerate() {
-            populate_step(cell_num, &mut callers, &mut cache, i, s);
+            populate_step(*cell_num, callers, &mut cache, i, s);
 
             for (j, c) in pbl.memory_cells().iter().enumerate() {
-                populate_cell(cell_num, &mut callers, &mut cache, i, s, j, c);
+                populate_cell(*cell_num, callers, &mut cache, i, s, j, c);
             }
         }
 
-        Self {
-            cell_num,
-            callers,
-        }
+        *initialized = true;
     }
 }
 
@@ -258,9 +292,13 @@ impl Caller {
                     cell_vars,
                 });
             } else {
-              unreachable!()
+                unreachable!()
             }
         }
+    }
+
+    pub fn clear(&mut self) {
+        self.callees.clear();
     }
 }
 
@@ -352,7 +390,7 @@ impl<'a> FormulaIterator<&'a Formula> for MacroCallIterator {
 }
 
 /// Apply the substitution (`from` -> `to`) in `into`.
-/// 
+///
 /// It is not resistant against loops between `to` and `from`
 fn remap_var(from: &[Variable], to: &[Variable], into: &mut [Variable]) {
     for v in into {

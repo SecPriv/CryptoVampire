@@ -150,6 +150,9 @@ impl Problem {
             // the result of the computation
             let mut res = true;
 
+            self.reinitialize_graph(p1);
+            self.reinitialize_graph(p2);
+
             // the steps in the problem
             let mut steps = {
                 // just to make things cleaner

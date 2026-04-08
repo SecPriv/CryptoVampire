@@ -1,19 +1,25 @@
 use bon::Builder;
 use itertools::{Itertools, izip};
 use rustc_hash::FxHashMap;
+use utils::ereturn_if;
 
 use super::Step;
+use crate::protocol::call_graph::Graph;
 use crate::terms::{Formula, Function};
 use crate::{MSmtFormula, rexp, smt};
 /// A protocol to be proven
-#[derive(Debug, PartialEq, Eq, Clone, Builder)]
+#[derive(Debug, Clone, Builder)]
 pub struct Protocol {
     /// The name of the protocol
     name: Function,
     /// The steps of the protocol
     #[builder(with = <_>::from_iter, default = vec![Step::default()])]
     steps: Vec<Step>,
+
+    #[builder(default)]
+    graph: Graph,
 }
+
 
 impl Protocol {
     /// Creates a new protocol with the given name
@@ -63,36 +69,40 @@ impl Protocol {
     /// Panics if the provided step is not valid (i.e., its free variables are not contained in its step variables).
     pub(crate) fn add_step(&mut self, step: Step) -> &mut Step {
         assert!(step.valid());
+        self.graph.clear();
         self.steps.push(step);
         self.steps.last_mut().unwrap()
     }
 
     /// Returns a mutable reference to the step at the given index
     pub fn step_mut(&mut self, idx: usize) -> Option<&mut Step> {
+        self.graph.clear();
         self.steps.get_mut(idx)
     }
 
     pub(crate) fn truncate_steps(&mut self, n: usize) {
+        self.graph.clear();
         self.steps.truncate(n);
     }
 
-    pub fn clone_from(&mut self, other: &Self) {
-        let Self { name: _, steps } = self;
+    pub fn get_graph(&self) -> Option<&Graph> {
+        ereturn_if!(self.graph.is_initialized(), None);
+        Some(&self.graph)
+    }
 
-        let mut varmap = FxHashMap::default();
-        for (sl, sr) in izip!(steps, &other.steps) {
-            let nvars = sr.vars.iter().map(|v| v.freshen()).collect_vec();
-            varmap.clear();
-            varmap.extend(izip!(sr.vars.iter().cloned(), nvars.iter().cloned()));
-            let to = other.name.rapp([]);
-            let msg = converter::clone_from_sanitizer(&mut varmap, &self.name, &to, &sr.cond);
-            let cond = converter::clone_from_sanitizer(&mut varmap, &self.name, &to, &sr.msg);
-            sl.vars = nvars;
-            sl.msg = msg;
-            sl.cond = cond;
-        }
+    pub(crate) fn get_mut_graph(&mut self) -> &mut Graph {
+        &mut self.graph
+    }
+
+}
+
+impl PartialEq for Protocol {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.steps == other.steps 
     }
 }
+
+impl Eq for Protocol {}
 
 mod converter {
     use rustc_hash::FxHashMap;

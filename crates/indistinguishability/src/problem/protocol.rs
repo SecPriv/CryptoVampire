@@ -250,6 +250,12 @@ impl Problem {
     pub fn memory_cells(&self) -> &[MemoryCell] {
         &self.memory_cells
     }
+
+    pub fn reinitialize_graph(&mut self, ptcl_id: usize) {
+        let mut graph = ::std::mem::take(self.protocol_mut(ptcl_id).unwrap().get_mut_graph());
+        graph.reinitialize(self, &self.protocols()[ptcl_id]);
+        *self.protocol_mut(ptcl_id).unwrap().get_mut_graph() = graph;
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

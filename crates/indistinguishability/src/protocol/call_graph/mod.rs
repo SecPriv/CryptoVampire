@@ -61,10 +61,11 @@ pub struct Caller {
 // ======================== graph ==========================
 // =========================================================
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Graph {
     cell_num: usize,
     callers: Vec<Caller>,
+    initialized: bool
 }
 
 bitflags::bitflags! {
