@@ -6,7 +6,7 @@ use itertools::Itertools;
 use rustc_hash::FxHashSet;
 /// Re-exports `EgraphSearcher` for e-graph based searching, `SyntaxSearcher` for syntax-based searching,
 /// and `default_is_special` for determining if a function is special.
-pub use subterm_trait::{EgraphSearcher, SyntaxSearcher, default_is_special, RBFormula};
+pub use subterm_trait::{SyntaxSearcher, default_is_special, RBFormula};
 use utils::{econtinue_if, implvec};
 
 use crate::Lang;

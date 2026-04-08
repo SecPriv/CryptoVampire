@@ -7,7 +7,7 @@ use utils::implvec;
 
 use crate::libraries::nonce::searcher::nonce_builder::SetContent;
 use crate::libraries::utils::formula_builder::RefFormulaBuilder;
-use crate::libraries::utils::{DefaultAux, EgraphSearcher, SyntaxSearcher};
+use crate::libraries::utils::{DefaultAux, SyntaxSearcher};
 use crate::terms::{Formula, Function, NONCE};
 use crate::{Lang, Problem, rexp};
 
@@ -66,7 +66,7 @@ impl SyntaxSearcher for Nonce {
     }
 }
 
-impl EgraphSearcher for Nonce {}
+// impl EgraphSearcher for Nonce {}
 
 #[bon]
 impl Nonce {
