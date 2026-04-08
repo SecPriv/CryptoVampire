@@ -28,3 +28,5 @@ pub mod transposer;
 pub mod powerset;
 
 pub mod reservable;
+
+pub mod sliceidx;

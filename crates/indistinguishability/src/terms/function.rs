@@ -53,6 +53,7 @@ pub struct InnerFunction {
     pub quantifier_idx: usize,
     pub protocol_idx: usize,
     pub step_idx: usize,
+    pub cell_idx: usize,
     pub cryptography: cow![usize],
     pub grabage_collectable: AtomicBool,
 }
@@ -68,6 +69,7 @@ impl InnerFunction {
             quantifier_idx: 0,
             protocol_idx: 0,
             step_idx: 0,
+            cell_idx: 0,
             cryptography: Cow::Borrowed(&[]),
             grabage_collectable: AtomicBool::new(false),
         }
@@ -189,6 +191,11 @@ impl Function {
     /// Returns the step index if this function represents a protocol step, otherwise `None`.
     pub fn get_step_index(&self) -> Option<usize> {
         self.is_step().then_some(self.step_idx)
+    }
+
+    /// Returns the cell index if this function represents a memory_cell, otherwise `None`.
+    pub fn get_cell_index(&self) -> Option<usize> {
+        self.is_memory_cell().then_some(self.cell_idx)
     }
 
     /// Returns a reference to the `Alias` if this function has one, otherwise `None`.
@@ -360,6 +367,9 @@ impl Function {
     is_fun!(is_fresh; FRESH;
             "Returns `true` if the function represents something fresh.");
     is_fun!(is_memory_cell; MEMORY_CELL; "For memory cells");
+    
+    is_fun!(is_macro; MACRO; "is a macro");
+
     #[inline]
     /// Returns `true` if the function is a publications step.
     pub fn is_publish_step(&self) -> bool {

@@ -8,13 +8,17 @@ use steel_derive::Steel;
 use crate::rexp;
 use crate::terms::{Formula, Function, INDEX_EQ, MACRO_MEMORY_CELL, MITE, PRED, Sort, Variable};
 // TODO:
-// - equality for indices (rewrite rule)
 // - rewrite rules for state
 // deal with unassigned state
 // init
 // - subterm
 // traditionnal before a `pred`
 // depency listing
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Builder)]
+pub struct MemoryCell{
+    function: Function
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Steel)]
 pub struct SingleAssignement {
@@ -92,5 +96,12 @@ impl SingleAssignement {
 
     pub fn value(&self) -> &Formula {
         &self.value
+    }
+}
+
+
+impl MemoryCell {
+    pub fn function(&self) -> &Function {
+        &self.function
     }
 }

@@ -246,6 +246,10 @@ impl Problem {
                 .map(|step| StepAndProtocol { step, ptcl })
         })
     }
+
+    pub fn memory_cells(&self) -> &[MemoryCell] {
+        &self.memory_cells
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

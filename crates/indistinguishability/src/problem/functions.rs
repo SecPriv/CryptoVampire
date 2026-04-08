@@ -42,6 +42,7 @@ impl Problem {
         #[builder(default = 0)] quantifier_idx: usize,
         #[builder(default = 0)] protocol_idx: usize,
         #[builder(default = 0)] step_idx: usize,
+        #[builder(default = 0)] cell_idx: usize,
         #[builder(with = FromIterator::from_iter, default = vec![])] cryptography: Vec<usize>,
     ) -> Function {
         let signature = Signature::new(inputs, output);
@@ -53,6 +54,7 @@ impl Problem {
             quantifier_idx,
             protocol_idx,
             step_idx,
+            cell_idx,
             cryptography: cryptography.into(),
             grabage_collectable: AtomicBool::new(false),
         };

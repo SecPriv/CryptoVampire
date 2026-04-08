@@ -6,7 +6,7 @@ use utils::implvec;
 
 use crate::libraries::CryptographicAssumption;
 use crate::problem::publish::NoncePublicSearchState;
-use crate::protocol::Protocol;
+use crate::protocol::{MemoryCell, Protocol};
 use crate::terms::{Formula, Function, FunctionCollection, Rewrite};
 use crate::{Configuration, MSmt};
 
@@ -53,6 +53,7 @@ pub struct Problem {
     ///
     /// The vector must be at least 2 long
     protocols: Vec<Protocol>,
+    memory_cells: Vec<MemoryCell>,
     /// The functions
     function: FunctionCollection,
 
@@ -70,6 +71,7 @@ pub struct Problem {
     current_step: Option<CurrentStep>,
 
     pub state: ProblemState,
+
     /// random data to store somewhere
     pub cache: cache::Cache,
 
@@ -80,6 +82,7 @@ pub struct Problem {
     /// Terms that are "public"
     public_terms: Vec<PublicTerm>,
 
+    /// The thing that learn and "publish" nonce without user input
     nonce_finder: NoncePublicSearchState,
 }
 
@@ -123,6 +126,8 @@ impl Problem {
         /// The vector must be at least 2 long
         #[builder(with = <_>::from_iter, default = vec![])]
         protocols: Vec<Protocol>,
+        #[builder(with = <_>::from_iter, default = vec![])]
+        memory_cells: Vec<MemoryCell>,
         /// The constrains on the steps
         #[builder(with = <_>::from_iter, default = vec![])]
         constrains: Vec<Constrains>,
@@ -137,6 +142,7 @@ impl Problem {
         Self {
             config,
             protocols,
+            memory_cells,
             function,
             cryptography,
             extra_rules,
