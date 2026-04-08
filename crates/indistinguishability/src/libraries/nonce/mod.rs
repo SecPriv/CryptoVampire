@@ -28,5 +28,6 @@ impl Library for NonceLib {
     fn add_rules(&self, pbl: &mut crate::Problem, sink: &mut impl super::utils::RuleSink) {
         let runner = pbl.get_or_init_smt_runner();
         sink.add_rule(FreshNonce::builder().exec(runner.clone()).build());
+        deduce_fresh::mk_static_rules(pbl, sink);
     }
 }

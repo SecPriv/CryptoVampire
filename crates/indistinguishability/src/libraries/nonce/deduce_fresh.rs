@@ -2,23 +2,27 @@ use std::borrow::Cow;
 
 use bon::Builder;
 use egg::{Id, Pattern, Searcher};
-use golgge::{Dependancy, Rule};
+use golgge::{Dependancy, PrologRule, Rule};
+use itertools::Itertools;
 use static_init::dynamic;
-use utils::ereturn_let;
+use utils::{ereturn_if, ereturn_let};
 
 use super::*;
-use crate::libraries::utils::EgraphSearcher;
 use crate::libraries::utils::formula_builder::RefFormulaBuilder;
-use crate::problem::{PAnalysis, RcRule};
+use crate::libraries::utils::{RuleSink, SyntaxSearcher};
+use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::runners::SmtRunner;
-use crate::terms::{FRESH_NONCE, Formula};
-use crate::{CVProgram, Lang, Problem, rexp};
+use crate::terms::{
+    AND, BITE, FRESH_NONCE, FRESH_NONCE_TRIGGER, Formula, Function, HAPPENS, LEQ, MACRO_COND,
+    MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, PRED, UNFOLD_COND, UNFOLD_MSG,
+    VAMPIRE,
+};
+use crate::{CVProgram, Lang, Problem, fresh, rexp};
 
-decl_vars!(const; NONCE_VAR, CONTENT, HYPOTHESIS);
+decl_vars!(const; N:Nonce, T:Time, P:Protocol, H:Bool, M:Nonce, C:Bool, L, R);
 
 #[dynamic]
-static FRESH_NONCE_PATTERN: Pattern<Lang> =
-    Pattern::from(&rexp!((FRESH_NONCE #NONCE_VAR #CONTENT #HYPOTHESIS)));
+static TRIGGER_PATTERN: Pattern<Lang> = Pattern::from(&rexp!((FRESH_NONCE_TRIGGER #N #T #P #H)));
 
 /// A rule that deduces the freshness of a nonce
 #[derive(Clone, Builder)]
@@ -31,48 +35,122 @@ pub struct FreshNonce {
 impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for FreshNonce {
     /// Searches for patterns related to fresh nonces in the e-graph and deduces their freshness.
     ///
-    /// This method looks for `(FRESH_NONCE #NONCE_VAR #CONTENT #HYPOTHESIS)` patterns.
-    /// It then constructs a logical query to check if the nonce is fresh under the given hypothesis
-    /// and sends it to the SMT solver. The result determines the dependency returned.
+    /// This method now looks for `(FRESH_NONCE_TRIGGER #N #T #P #H)` patterns, which are produced
+    /// by prolog rules when encountering macros like `frame` or `exec`.
+    /// It then constructs a logical query to check if the nonce is fresh across protocol steps
+    /// up to the given timepoint.
     fn search(&self, prgm: &mut CVProgram<'a>, goal: Id) -> Dependancy {
-        // assert_eq!(NONCE_VAR, CONTENT);
-
         let egraph = prgm.egraph_mut();
-        ereturn_let!(let Some(substs) =  FRESH_NONCE_PATTERN.search_eclass(egraph, goal),Dependancy::impossible());
+        ereturn_let!(let Some(substs) =  TRIGGER_PATTERN.search_eclass(egraph, goal), Dependancy::impossible());
 
-        let condition = substs.substs.iter().map(|subst| {
-            let [nonce, content, hypothesis] =
-                [NONCE_VAR, CONTENT, HYPOTHESIS].map(|i| *subst.get(i.as_egg()).unwrap());
-            let hypothesis = Formula::try_from_id(egraph, hypothesis).unwrap();
-            let nonce = Nonce::builder().content_id(egraph, nonce).build();
+        for subst in substs.substs {
+            let [n, t, h] = [N, T, H]
+                .map(|v| subst.get(v.as_egg()).unwrap())
+                .map(|id| Formula::try_from_id(prgm.egraph(), *id).unwrap());
+            let p = *subst.get(P.as_egg()).unwrap();
 
-            let builder = RefFormulaBuilder::builder().and().build();
-            nonce.search_egraph(
-                egraph,
-                &builder,
-                content,
-                &Default::default(),
-                &Default::default(),
-            );
-            let search = builder.into_inner().unwrap().into_formula();
+            let result = Nonce::builder()
+                .content(n)
+                .build()
+                .search_id_timepoint(prgm, &self.exec, p, t, h)
+                .unwrap();
+            ereturn_if!(result, Dependancy::axiom());
+        }
 
-            hypothesis >> search
-        });
-        let query = rexp!((or #condition*));
-        tr!("checking {query}");
-        let pbl: &mut Problem = egraph.analysis.pbl_mut();
-
-        self.exec.iter_run_to_dependancy(pbl, [query])
-
-        // pbl.find_temp_quantifiers(std::slice::from_ref(&query));
-
-        // let query = query.as_smt(pbl).unwrap();
-
-        // self.exec.run_to_dependancy(pbl, query)
+        Dependancy::impossible()
     }
 
     /// Returns the name of this rule.
     fn name(&self) -> Cow<'_, str> {
-        Cow::Borrowed("fresh nonce")
+        Cow::Borrowed("fresh nonce dynamic")
     }
+}
+
+/// Adds static prolog rules for decomposing `FRESH_NONCE` goals.
+pub fn mk_static_rules(pbl: &Problem, sink: &mut impl RuleSink) {
+    let functions = pbl
+        .functions()
+        .iter_current()
+        .filter(|f| !f.is_special_subterm())
+        .filter(|f| !f.is_out_of_term_algebra())
+        .filter(|f| f != &&NONCE)
+        .cloned();
+
+    sink.extend_rules(mk_many_prolog! {
+    // Base case: Nonce constructor
+        "fresh_nonce_nonce" :
+        (FRESH_NONCE #N (NONCE #M) #H) :-
+            (VAMPIRE (=> #H (distinct #N #M))).
+
+    // Macros triggers
+        "fresh_nonce_frame" :
+            (FRESH_NONCE #N (MACRO_FRAME #T #P) #H) :-
+                (FRESH_NONCE_TRIGGER #N #T #P #H).
+
+        "fresh_nonce_exec":
+            (FRESH_NONCE #N (MACRO_EXEC #T #P) #H) :-
+                (FRESH_NONCE_TRIGGER #N #T #P #H).
+
+        "fresh_nonce_input":
+            (FRESH_NONCE #N (MACRO_INPUT #T #P) #H) :-
+                (FRESH_NONCE_TRIGGER #N (PRED #T) #P #H).
+
+    // Unfolding rules for MSG and COND
+        "fresh_nonce_msg":
+            (FRESH_NONCE #N (MACRO_MSG #T #P) #H) :-
+                (VAMPIRE (=> #H (HAPPENS #T))),
+                (FRESH_NONCE #N (UNFOLD_MSG #T #P) #H).
+
+        "fresh_nonce_cond":
+            (FRESH_NONCE #N (MACRO_COND #T #P) #H) :-
+                (VAMPIRE (=> #H (HAPPENS #T))),
+                (FRESH_NONCE #N (UNFOLD_COND #T #P) #H).
+
+    // if-then-else
+        "fresh_nonce_ite_m":
+            (FRESH_NONCE #N (MITE #C #L #R) #H) :-
+                (FRESH_NONCE #N #C #H),
+                (FRESH_NONCE #N #L (and #C #H)),
+                (FRESH_NONCE #N #R (and (not #C) #H)).
+
+        "fresh_nonce_ite_b":
+            (FRESH_NONCE #N (BITE #C #L #R) #H) :-
+                (FRESH_NONCE #N #C #H),
+                (FRESH_NONCE #N #L (and #C #H)),
+                (FRESH_NONCE #N #R (and (not #C) #H)).
+
+    // AND
+        "fresh_nonce_and":
+        (FRESH_NONCE #N (AND #C #L) #H) :-
+            (FRESH_NONCE #N #C #H),
+            (FRESH_NONCE #N #L (and #C #H)).
+    });
+
+    // Decompose regular functions
+    for f in functions {
+        sink.add_rule(mk_rule_one(&f));
+    }
+}
+
+fn mk_rule_one(fun: &Function) -> PrologRule<Lang> {
+    let args = fun
+        .signature
+        .inputs
+        .iter()
+        .map(|&s| Formula::Var(fresh!(s)))
+        .collect_vec();
+
+    let deps = args
+        .iter()
+        .map(|arg| Pattern::from(&rexp!((FRESH_NONCE #N #arg #H))))
+        .collect_vec();
+
+    let input = Pattern::from(&rexp!((FRESH_NONCE #N (fun #args*) #H)));
+
+    PrologRule::builder()
+        .input(input)
+        .deps(deps)
+        .name(format!("fresh_nonce_{fun}"))
+        .build()
+        .unwrap()
 }
