@@ -9,11 +9,11 @@ use utils::ereturn_if;
 
 use super::super::vars::*;
 use crate::libraries::DDH;
-use crate::libraries::utils::{DefaultAux, SyntaxSearcher};
 use crate::libraries::utils::formula_builder::RefFormulaBuilder;
+use crate::libraries::utils::{DefaultAux, SyntaxSearcher};
 use crate::problem::{PAnalysis, RcRule};
 use crate::runners::SmtRunner;
-use crate::terms::{Formula, Function, NONCE};
+use crate::terms::{Formula, Function, MACRO_MEMORY_CELL, NONCE, PRED};
 use crate::{CVProgram, Lang, Problem, rexp};
 
 #[derive(Debug, Clone, Builder)]
@@ -130,6 +130,59 @@ impl SyntaxSearcher for SearchK {
             unreachable!()
         }
         ControlFlow::Break(())
+    }
+}
+
+// =========================================================
+// ============== Memory Cell Rule ========================
+// =========================================================
+
+#[derive(Debug, Clone, Builder)]
+pub struct SearchRuleMem {
+    ddh: usize,
+    #[builder(into)]
+    trigger_mem: Pattern<Lang>,
+    exec: SmtRunner,
+}
+
+impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SearchRuleMem {
+    fn name(&self) -> Cow<'_, str> {
+        format!("ddh memory cell #{:}", self.ddh).into()
+    }
+
+    fn search(&self, prgm: &mut CVProgram<'a>, goal: Id) -> Dependancy {
+        let Self {
+            ddh,
+            trigger_mem,
+            exec,
+        } = self;
+        let DDH { g, exp, .. } = prgm.egraph().analysis.pbl().cryptography()[*ddh]
+            .as_inner()
+            .unwrap();
+        let g = g.clone();
+        let exp = exp.clone();
+
+        if let Some(matches) = trigger_mem.search_eclass(prgm.egraph(), goal) {
+            for subst in matches.substs {
+                let egraph = prgm.egraph_mut();
+                let [a, b, t, h, cell, p] = [NA, NB, TIME, H, C, PTCL].map(|x| {
+                    Formula::try_from_id(egraph, *subst.get(x.as_egg()).unwrap()).unwrap()
+                });
+
+                let search = SearchK {
+                    ddh: *ddh,
+                    g: g.clone(),
+                    exp: exp.clone(),
+                    a,
+                    b,
+                };
+
+                let mem_cell_term = rexp!((MACRO_MEMORY_CELL #cell (PRED #t) #p));
+                let result = search.search_term(prgm, exec, mem_cell_term, h).unwrap();
+                ereturn_if!(result, Dependancy::axiom());
+            }
+        }
+        Dependancy::impossible()
     }
 }
 

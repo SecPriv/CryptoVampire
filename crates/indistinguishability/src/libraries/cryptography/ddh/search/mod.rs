@@ -15,6 +15,7 @@ pub fn mk_rules<'a>(
     aenc @ DDH {
         index,
         search_trigger,
+        search_trigger_mem,
         // search_o_trigger,
         // search_k_trigger,
         ..
@@ -27,6 +28,13 @@ pub fn mk_rules<'a>(
             .ddh(*index)
             .exec(SmtRunner::new(pbl))
             .trigger(&rexp!((search_trigger #NA #NB #TIME #PTCL #H)))
+            .build(),
+    );
+    sink.add_rule(
+        dynamic::SearchRuleMem::builder()
+            .ddh(*index)
+            .exec(SmtRunner::new(pbl))
+            .trigger_mem(&rexp!((search_trigger_mem #NA #NB #TIME #PTCL #H #C)))
             .build(),
     );
 }

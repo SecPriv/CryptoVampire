@@ -39,6 +39,8 @@ pub struct PRF {
     search_bool: Function,
     /// Trigger function for PRF searches.
     search_trigger: Function,
+    /// Trigger function for PRF searches on memory cells.
+    search_trigger_mem: Function,
 
     subst_left: Function,
     subst_right: Function,
@@ -112,6 +114,9 @@ impl PRF {
         let search_trigger =
             declare!(pbl@pos: "prf_search_trigger"; Bitstring, Nonce, Protocol, Time, Bool => Bool);
 
+        // m, k, ptcl, t, h, c (for MACRO_MEMORY_CELL)
+        let search_trigger_mem = declare!(pbl@pos: "prf_search_trigger_mem"; Bitstring, Nonce, Protocol, Time, Bool, MemoryCell => Bool);
+
         // u, v, m, k, nk, poof, other
         let subst_left = declare!(pbl@pos: "prf_subst_left"; Bitstring, Bitstring, Bitstring, Nonce, Nonce, Bool, Bitstring => Bool);
         // u, v, m, k, nk, proof, other
@@ -124,6 +129,7 @@ impl PRF {
             search_bitstring,
             search_bool,
             search_trigger,
+            search_trigger_mem,
             subst_left,
             subst_right,
             index: pos,

@@ -13,16 +13,20 @@ use crate::libraries::utils::{RuleSink, SyntaxSearcher};
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::runners::SmtRunner;
 use crate::terms::{
-    AND, BITE, FRESH_NONCE, FRESH_NONCE_TRIGGER, Formula, Function, HAPPENS, LEQ, MACRO_COND,
-    MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, PRED, UNFOLD_COND, UNFOLD_MSG,
-    VAMPIRE,
+    AND, BITE, FRESH_NONCE, FRESH_NONCE_TRIGGER, FRESH_NONCE_TRIGGER_MEM, Formula, Function,
+    HAPPENS, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL, MACRO_MSG,
+    MITE, NONCE, PRED, UNFOLD_COND, UNFOLD_MSG, VAMPIRE,
 };
 use crate::{CVProgram, Lang, Problem, fresh, rexp};
 
-decl_vars!(const; N:Nonce, T:Time, P:Protocol, H:Bool, M:Nonce, C:Bool, L, R);
+decl_vars!(const; N:Nonce, T:Time, P:Protocol, H:Bool, M:Nonce, C:Bool, L, R, CELL:MemoryCell);
 
 #[dynamic]
 static TRIGGER_PATTERN: Pattern<Lang> = Pattern::from(&rexp!((FRESH_NONCE_TRIGGER #N #T #P #H)));
+
+#[dynamic]
+static TRIGGER_PATTERN_MEM: Pattern<Lang> =
+    Pattern::from(&rexp!((FRESH_NONCE_TRIGGER_MEM #N #T #P #H #CELL)));
 
 /// A rule that deduces the freshness of a nonce
 #[derive(Clone, Builder)]
@@ -40,21 +44,37 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for FreshNonce {
     /// It then constructs a logical query to check if the nonce is fresh across protocol steps
     /// up to the given timepoint.
     fn search(&self, prgm: &mut CVProgram<'a>, goal: Id) -> Dependancy {
-        let egraph = prgm.egraph_mut();
-        ereturn_let!(let Some(substs) =  TRIGGER_PATTERN.search_eclass(egraph, goal), Dependancy::impossible());
+        // Handle regular triggers (MACRO_FRAME, MACRO_EXEC, MACRO_INPUT)
+        if let Some(substs) = TRIGGER_PATTERN.search_eclass(prgm.egraph(), goal) {
+            for subst in substs.substs {
+                let [n, t, h] = [N, T, H]
+                    .map(|v| subst.get(v.as_egg()).unwrap())
+                    .map(|id| Formula::try_from_id(prgm.egraph(), *id).unwrap());
+                let p = *subst.get(P.as_egg()).unwrap();
 
-        for subst in substs.substs {
-            let [n, t, h] = [N, T, H]
-                .map(|v| subst.get(v.as_egg()).unwrap())
-                .map(|id| Formula::try_from_id(prgm.egraph(), *id).unwrap());
-            let p = *subst.get(P.as_egg()).unwrap();
+                let result = Nonce::builder()
+                    .content(n)
+                    .build()
+                    .search_id_timepoint(prgm, &self.exec, p, t, h)
+                    .unwrap();
+                ereturn_if!(result, Dependancy::axiom());
+            }
+        }
 
-            let result = Nonce::builder()
-                .content(n)
-                .build()
-                .search_id_timepoint(prgm, &self.exec, p, t, h)
-                .unwrap();
-            ereturn_if!(result, Dependancy::axiom());
+        // Handle MACRO_MEMORY_CELL trigger
+        if let Some(substs) = TRIGGER_PATTERN_MEM.search_eclass(prgm.egraph(), goal) {
+            for subst in substs.substs {
+                let [n, t, h, cell, p] = [N, T, H, CELL, P].map(|x| {
+                    Formula::try_from_id(prgm.egraph(), *subst.get(x.as_egg()).unwrap()).unwrap()
+                });
+
+                let nonce_searcher = Nonce::builder().content(n).build();
+                let mem_cell_term = rexp!((MACRO_MEMORY_CELL #cell (PRED #t) #p));
+                let result = nonce_searcher
+                    .search_term(prgm, &self.exec, mem_cell_term, h)
+                    .unwrap();
+                ereturn_if!(result, Dependancy::axiom());
+            }
         }
 
         Dependancy::impossible()
@@ -94,6 +114,10 @@ pub fn mk_static_rules(pbl: &Problem, sink: &mut impl RuleSink) {
         "fresh_nonce_input":
             (FRESH_NONCE #N (MACRO_INPUT #T #P) #H) :-
                 (FRESH_NONCE_TRIGGER #N (PRED #T) #P #H).
+
+        "fresh_nonce_memory_cell":
+            (FRESH_NONCE #N (MACRO_MEMORY_CELL #CELL (PRED #T) #P) #H) :-
+                (FRESH_NONCE_TRIGGER_MEM #N (PRED #T) #P #H #CELL).
 
     // Unfolding rules for MSG and COND
         "fresh_nonce_msg":

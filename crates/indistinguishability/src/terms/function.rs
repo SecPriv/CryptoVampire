@@ -367,7 +367,7 @@ impl Function {
     is_fun!(is_fresh; FRESH;
             "Returns `true` if the function represents something fresh.");
     is_fun!(is_memory_cell; MEMORY_CELL; "For memory cells");
-    
+
     is_fun!(is_macro; MACRO; "is a macro");
 
     #[inline]

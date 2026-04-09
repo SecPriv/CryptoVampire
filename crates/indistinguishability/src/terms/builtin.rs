@@ -90,7 +90,13 @@ pub static SORT_LIST: [Sort; 7] = {
 /// [Sort]s to be declared in smt
 pub static SMT_SORT_LIST: [Sort; 4] = {
     use Sort::*;
-    [Bitstring, Time, /* Protocol, Nonce, */ Index, UnfoldingCall]
+    [
+        Bitstring,
+        Time,
+        // Protocol, Nonce,
+        Index,
+        UnfoldingCall,
+    ]
 };
 
 // -----------------------------------------------------------------------------
@@ -303,7 +309,7 @@ mk_builtin_funs!(
         signature: s!(UnfoldingCall, UnfoldingCall -> Bool),
         flags: f!(SMT_ONLY),
         alias: Some(alias!{
-            a:UnfoldingCall, b:UnfoldingCall in rexp!(const !a), rexp!(const !b) => 
+            a:UnfoldingCall, b:UnfoldingCall in rexp!(const !a), rexp!(const !b) =>
                 rexp!(const (and (LEQ_UNFOLD !a !b) (distinct !a !b)))
         }),
     };
@@ -340,7 +346,7 @@ mk_builtin_funs!(
     };
 
     MACRO_MEMORY_CELL "macro_memory_cell" {
-        signature: s!(MemoryCell, Time, Protocol -> Bool),
+        signature: s!(MemoryCell, Time, Protocol -> Bitstring),
         flags: f!(MACRO)
     };
 
@@ -435,6 +441,12 @@ mk_builtin_funs!(
     /// Trigger for `FRESH_NONCE` on macros.
     FRESH_NONCE_TRIGGER "mfresh_nonce_trigger" {
         signature: s!(Nonce, Time, Protocol, Bool -> Bool),
+        flags: f!(PROLOG_ONLY)
+    };
+
+    /// Trigger for `FRESH_NONCE` on MACRO_MEMORY_CELL.
+    FRESH_NONCE_TRIGGER_MEM "mfresh_nonce_trigger_mem" {
+        signature: s!(Nonce, Time, Protocol, Bool, MemoryCell -> Bool),
         flags: f!(PROLOG_ONLY)
     };
 

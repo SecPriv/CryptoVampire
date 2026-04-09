@@ -7,8 +7,8 @@ use super::super::{AEnc, ProofHints};
 use crate::libraries::utils::{RuleSink, TwoSortFunction};
 use crate::terms::{
     AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, FRESH_NONCE, Formula, Function, HAPPENS,
-    IS_FRESH_NONCE, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, PRED,
-    Sort, UNFOLD_COND, UNFOLD_MSG, VAMPIRE,
+    IS_FRESH_NONCE, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL, MACRO_MSG,
+    MITE, NONCE, PRED, Sort, UNFOLD_COND, UNFOLD_MSG, VAMPIRE,
 };
 use crate::{Lang, Problem, fresh, rexp};
 
@@ -49,6 +49,9 @@ pub fn mk_static_rules<'a>(
         search_k_trigger,
         search_k_pre_trigger,
         search_o_trigger,
+        search_k_trigger_mem,
+        search_o_trigger_mem,
+        search_k_pre_trigger_mem,
         ..
     }: &'a AEnc,
     sink: &mut impl RuleSink,
@@ -231,6 +234,14 @@ pub fn mk_static_rules<'a>(
         (search_o_m #K (MACRO_INPUT #T  #P) #H) :-
           (search_o_trigger #K (PRED #T) #P #H).
 
+      "search_k_enc_memory_cell" (Keep):
+        (search_k_m #K #K2 #R #M (MACRO_MEMORY_CELL #C (PRED #T) #P) #H) :-
+          (search_k_pre_trigger_mem #K #K2 #R (PRED #T) #P #H #C).
+
+      "search_o_enc_memory_cell" :
+        (search_o_m #K (MACRO_MEMORY_CELL #C (PRED #T) #P) #H) :-
+          (search_o_trigger_mem #K (PRED #T) #P #H #C).
+
       // ~~~~~~~~~~~~~~ if and and ~~~~~~~~~~~~~~~~
       "search_k_enc_ite_m" c, l, r (Apply(MITE.clone())):
         (search_k_m #K #K2 #R #M (MITE #c #l #r) #H):-
@@ -271,6 +282,11 @@ pub fn mk_static_rules<'a>(
         (search_k_pre_trigger #K #K2 #R #T #P #H) :-
           (search_k_trigger #K #T #P #H),
           (search_k_trigger #K2 #T #P #H),
+          (FRESH_NONCE #R (MACRO_FRAME #T #P) #H).
+      "search_k_pre_trigger_mem" :
+        (search_k_pre_trigger_mem #K #K2 #R #T #P #H #C) :-
+          (search_k_trigger_mem #K #T #P #H #C),
+          (search_k_trigger_mem #K2 #T #P #H #C),
           (FRESH_NONCE #R (MACRO_FRAME #T #P) #H).
       "search_k_trigger_skip":
         (search_k_trigger (IS_FRESH_NONCE #K2) #T #P #H).

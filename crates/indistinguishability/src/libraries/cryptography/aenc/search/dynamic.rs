@@ -13,7 +13,7 @@ use crate::libraries::utils::formula_builder::RefFormulaBuilder;
 use crate::libraries::utils::{DefaultAux, SyntaxSearcher};
 use crate::problem::{PAnalysis, RcRule};
 use crate::runners::SmtRunner;
-use crate::terms::{Formula, Function, NONCE};
+use crate::terms::{Formula, Function, MACRO_MEMORY_CELL, NONCE, PRED};
 use crate::{CVProgram, Lang, Problem, rexp};
 
 #[derive(Debug, Clone, Builder)]
@@ -259,5 +259,86 @@ impl crate::libraries::utils::SyntaxSearcher for SearchO {
             unreachable!()
         }
         ControlFlow::Break(())
+    }
+}
+
+// =========================================================
+// ============== Memory Cell Rules ========================
+// =========================================================
+
+#[derive(Debug, Clone, Builder)]
+pub struct SearchRuleMem {
+    aenc: usize,
+    #[builder(into)]
+    trigger_k_mem: Pattern<Lang>,
+    #[builder(into)]
+    trigger_o_mem: Pattern<Lang>,
+    exec: SmtRunner,
+}
+
+impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SearchRuleMem {
+    fn name(&self) -> Cow<'_, str> {
+        format!("enc memory cell #{:}", self.aenc).into()
+    }
+
+    fn search(&self, prgm: &mut CVProgram<'a>, goal: Id) -> Dependancy {
+        let Self {
+            aenc,
+            trigger_k_mem,
+            trigger_o_mem,
+            exec,
+        } = self;
+        let AEnc { pk, dec, enc, .. } = prgm.egraph().analysis.pbl().cryptography()[*aenc]
+            .as_inner()
+            .unwrap();
+        let pk = pk.clone();
+        let dec = dec.clone();
+        let enc = enc.clone();
+
+        if let Some(matches) = trigger_k_mem.search_eclass(prgm.egraph(), goal) {
+            assert!(!matches.substs.is_empty());
+            tr!("matched trigger_k_mem for {goal:}");
+            for subst in matches.substs {
+                let egraph = prgm.egraph_mut();
+                let [k, t, h, cell, p] = [K, T, H, C, P].map(|x| {
+                    Formula::try_from_id(egraph, *subst.get(x.as_egg()).unwrap()).unwrap()
+                });
+
+                let search = SearchK {
+                    aenc: *aenc,
+                    pk: pk.clone(),
+                    enc: enc.clone(),
+                    k,
+                };
+
+                let mem_cell_term = rexp!((MACRO_MEMORY_CELL #cell (PRED #t) #p));
+                let result = search.search_term(prgm, exec, mem_cell_term, h).unwrap();
+                ereturn_if!(result, Dependancy::axiom());
+            }
+        }
+
+        if let Some(matches) = trigger_o_mem.search_eclass(prgm.egraph(), goal) {
+            assert!(!matches.substs.is_empty());
+            tr!("matched trigger_o_mem for {goal:}");
+            for subst in matches.substs {
+                let egraph = prgm.egraph_mut();
+                let [k, t, h, cell, p] = [K, T, H, C, P].map(|x| {
+                    Formula::try_from_id(egraph, *subst.get(x.as_egg()).unwrap()).unwrap()
+                });
+
+                let search = SearchO {
+                    aenc: *aenc,
+                    pk: pk.clone(),
+                    dec: dec.clone(),
+                    enc: enc.clone(),
+                    k,
+                };
+
+                let mem_cell_term = rexp!((MACRO_MEMORY_CELL #cell (PRED #t) #p));
+                let result = search.search_term(prgm, exec, mem_cell_term, h).unwrap();
+                ereturn_if!(result, Dependancy::axiom());
+            }
+        }
+        Dependancy::impossible()
     }
 }

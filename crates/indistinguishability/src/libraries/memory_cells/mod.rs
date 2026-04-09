@@ -156,7 +156,11 @@ pub(crate) fn search_pred_memory_cell<S: SyntaxSearcher + ?Sized>(
                 searcher.inner_search_formula(pbl, &builder, value.clone());
             }
             PreCall::Exec(_) | PreCall::Frame(_) => {
-                econtinue_if!(builder.flags().intersects(FormulaBuilderFlags::NO_THROUGH_PREVIOUS_BODY));
+                econtinue_if!(
+                    builder
+                        .flags()
+                        .intersects(FormulaBuilderFlags::NO_THROUGH_PREVIOUS_BODY)
+                );
                 builder
                     .add_node()
                     .add_flag(new_bflags)

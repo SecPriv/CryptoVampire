@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::ops::ControlFlow;
 
-use egg::{Pattern, Searcher};
+use egg::{Id, Pattern, Searcher};
 use golgge::{Dependancy, PrologRule, Rule};
 use itertools::{Itertools, chain, izip};
 use utils::{ereturn_if, ereturn_let};
@@ -15,11 +15,12 @@ use crate::protocol::{Protocol, Step};
 use crate::runners::SmtRunner;
 use crate::terms::{
     AND, BITE, Formula, Function, HAPPENS, IS_FRESH_NONCE, LEQ, LT, MACRO_COND, MACRO_EXEC,
-    MACRO_FRAME, MACRO_INPUT, MACRO_MSG, MITE, NONCE, PRED, Sort, UNFOLD_COND, UNFOLD_MSG, VAMPIRE,
+    MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL, MACRO_MSG, MITE, NONCE, PRED, Sort, UNFOLD_COND,
+    UNFOLD_MEMORY_CELL, UNFOLD_MSG, VAMPIRE,
 };
 use crate::{CVProgram, Lang, Problem, fresh, rexp};
 
-decl_vars!(const M:Bitstring, K:Nonce, P:Protocol, T:Time, H:Bool, N_PRF:Nonce);
+decl_vars!(const M:Bitstring, K:Nonce, P:Protocol, T:Time, H:Bool, N_PRF:Nonce, C:MemoryCell);
 
 // =========================================================
 // ==================== prolog search ======================
@@ -40,6 +41,7 @@ pub fn mk_rules(pbl: &Problem, prf: &PRF, sink: &mut impl RuleSink) {
 
     mk_static_rules(pbl, prf, sink);
     sink.add_rule(PrfVampireRule::new(pbl, prf));
+    sink.add_rule(PrfMemoryCellRule::new(pbl, prf));
 }
 
 /// basic search rule
@@ -85,6 +87,7 @@ fn mk_static_rules(
         search_bitstring: search_m,
         search_bool: search_b,
         search_trigger,
+        search_trigger_mem,
         hash,
         ..
     }: &PRF,
@@ -194,6 +197,10 @@ fn mk_static_rules(
     "search_prf_input" p, t (Keep):
     (search_m #m #k (IS_FRESH_NONCE #nprf) (MACRO_INPUT #t  #p) #h) :-
     (search_trigger #m #k #p (PRED #t) #h).
+
+    "search_prf_memory_cell" p, t, c (Keep):
+    (search_m #m #k (IS_FRESH_NONCE #nprf) (MACRO_MEMORY_CELL #c (PRED #t) #p) #h) :-
+    (search_trigger_mem #m #k #p #t #h #c).
 
     // if and and
     "search_prf_ite_m" c, l, r (Apply(MITE.clone())):
@@ -392,24 +399,64 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for PrfVampireRule {
                 m,
                 k,
             };
-            // get the protocol from the function
-            // let ptcl = get_protocol(egraph, *subst.get(P.as_egg()).unwrap()).unwrap();
-
-            // let search = search.search_timepoint(pbl, ptcl, time, hyp).collect_vec();
-            // tr!(
-            //     "prf needs to checks:\n[\n\t- {}\n]",
-            //     search.iter().join("\n\t")
-            // );
-            // let pbl = egraph.analysis.pbl_mut();
-            // pbl.find_temp_quantifiers(&search);
-            // let result = search.into_iter().all(|query| {
-            //     let query = query.as_smt(*pbl).unwrap();
-            //     self.exec.run_to_dependancy(pbl, query).is_axioms()
-            // });
-            // pbl.clear_temp_quantifiers();
 
             let result = search
                 .search_id_timepoint(prgm, &self.exec, *subst.get(P.as_egg()).unwrap(), time, hyp)
+                .unwrap();
+            ereturn_if!(result, Dependancy::axiom());
+        }
+
+        Dependancy::impossible()
+    }
+}
+
+// =========================================================
+// ================== Memory Cell Rule =====================
+// =========================================================
+
+#[derive(Debug)]
+struct PrfMemoryCellRule {
+    prf: usize,
+    trigger_mem: Function,
+    pattern: Pattern<Lang>,
+    exec: SmtRunner,
+}
+
+impl PrfMemoryCellRule {
+    fn new(pbl: &Problem, prf: &PRF) -> Self {
+        let trigger_mem = prf.search_trigger_mem.clone();
+        let pattern = Pattern::from(&rexp!((trigger_mem #M #K #P #T #H #C)));
+        Self {
+            prf: prf.index(),
+            trigger_mem,
+            pattern,
+            exec: SmtRunner::new(pbl),
+        }
+    }
+}
+
+impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for PrfMemoryCellRule {
+    fn name(&self) -> Cow<'_, str> {
+        format!("prf memory cell #{:}", self.prf).into()
+    }
+
+    fn search(&self, prgm: &mut CVProgram<'a>, goal: Id) -> Dependancy {
+        ereturn_let!(let Some(substs) = self.pattern.search_eclass(prgm.egraph(), goal), Dependancy::impossible());
+
+        for subst in substs.substs {
+            let egraph = prgm.egraph_mut();
+            let [m, k, time, hyp, cell, p] = [M, K, T, H, C, P]
+                .map(|x| Formula::try_from_id(egraph, *subst.get(x.as_egg()).unwrap()).unwrap());
+
+            let search = Search {
+                prf_idx: self.prf,
+                m,
+                k,
+            };
+
+            let mem_cell_term = rexp!((MACRO_MEMORY_CELL #cell (PRED #time) #p));
+            let result = search
+                .search_term(prgm, &self.exec, mem_cell_term, hyp)
                 .unwrap();
             ereturn_if!(result, Dependancy::axiom());
         }

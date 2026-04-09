@@ -16,6 +16,8 @@ pub fn mk_rules<'a>(
         index,
         search_k_trigger,
         search_o_trigger,
+        search_k_trigger_mem,
+        search_o_trigger_mem,
         ..
     }: &'a AEnc,
     sink: &mut impl RuleSink,
@@ -27,6 +29,14 @@ pub fn mk_rules<'a>(
             .exec(SmtRunner::new(pbl))
             .trigger_k(&rexp!((search_k_trigger #K #T #P #H)))
             .trigger_o(&rexp!((search_o_trigger #K #T #P #H)))
+            .build(),
+    );
+    sink.add_rule(
+        dynamic::SearchRuleMem::builder()
+            .aenc(*index)
+            .exec(SmtRunner::new(pbl))
+            .trigger_k_mem(&rexp!((search_k_trigger_mem #K #T #P #H #C)))
+            .trigger_o_mem(&rexp!((search_o_trigger_mem #K #T #P #H #C)))
             .build(),
     );
 }

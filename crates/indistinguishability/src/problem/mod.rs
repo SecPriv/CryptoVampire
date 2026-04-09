@@ -126,8 +126,7 @@ impl Problem {
         /// The vector must be at least 2 long
         #[builder(with = <_>::from_iter, default = vec![])]
         protocols: Vec<Protocol>,
-        #[builder(with = <_>::from_iter, default = vec![])]
-        memory_cells: Vec<MemoryCell>,
+        #[builder(with = <_>::from_iter, default = vec![])] memory_cells: Vec<MemoryCell>,
         /// The constrains on the steps
         #[builder(with = <_>::from_iter, default = vec![])]
         constrains: Vec<Constrains>,

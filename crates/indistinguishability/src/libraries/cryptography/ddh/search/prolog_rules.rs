@@ -6,8 +6,8 @@ use super::super::vars::*;
 use super::super::{DDH, ProofHints};
 use crate::libraries::utils::RuleSink;
 use crate::terms::{
-    AND, BITE, FRESH_NONCE, Formula, Function, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MITE, NONCE,
-    PRED, Sort, VAMPIRE,
+    AND, BITE, FRESH_NONCE, Formula, Function, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT,
+    MACRO_MEMORY_CELL, MITE, NONCE, PRED, Sort, VAMPIRE,
 };
 use crate::{Lang, Problem, fresh, rexp};
 
@@ -19,6 +19,7 @@ pub fn mk_static_rules<'a>(
         search_b,
         search_m,
         search_trigger,
+        search_trigger_mem,
         ..
     }: &'a DDH,
     sink: &mut impl RuleSink,
@@ -103,6 +104,11 @@ pub fn mk_static_rules<'a>(
       "search_ddh_input" (Keep):
         (search_m #NA #NB #NC (MACRO_INPUT #T #P) #H) :-
           (search_trigger #NA #NB (PRED #T) #P #H),
+          (FRESH_NONCE #NC (MACRO_FRAME (PRED #T)  #P) #H).
+
+      "search_ddh_memory_cell" (Keep):
+        (search_m #NA #NB #NC (MACRO_MEMORY_CELL #C (PRED #T) #P) #H) :-
+          (search_trigger_mem #NA #NB (PRED #T) #P #H #C),
           (FRESH_NONCE #NC (MACRO_FRAME (PRED #T)  #P) #H).
 
       // if and and

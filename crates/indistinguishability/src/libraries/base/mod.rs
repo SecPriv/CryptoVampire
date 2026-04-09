@@ -24,7 +24,7 @@ impl Library for BaseRewriteLib {
 }
 
 fn add_logic_rewrites<N: Analysis<Lang>>(sink: &mut impl EggRewriteSink<N>) {
-    decl_vars![a, b, c, v1, n, u, v];
+    decl_vars![a, b, c, d, v1, n, u, v];
 
     sink.extend_egg_rewrites(mk_many_rewrites! {
 

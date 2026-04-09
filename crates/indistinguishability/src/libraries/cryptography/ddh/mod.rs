@@ -16,7 +16,7 @@ mod vars {
             A:Bitstring, B:Bitstring,
             TIME:Time, PTCL:Protocol,
             PROOF: Bool, K:Nonce, K2:Nonce, N:Nonce, R:Nonce, H:Bool,
-            SIDE:Any, U:Bitstring, V:Bitstring);
+            SIDE:Any, U:Bitstring, V:Bitstring, C:MemoryCell);
 }
 
 mod candidate;
@@ -37,6 +37,8 @@ pub struct DDH {
     search_b: Function,
 
     search_trigger: Function,
+    /// Trigger for MACRO_MEMORY_CELL searches
+    search_trigger_mem: Function,
 
     subst: Function,
 
@@ -94,6 +96,9 @@ impl DDH {
             // a, b ||> frame@t p | h
             search_trigger: declare!(pbl@index: format!("ddh_{g}_search_trigger");
                 Nonce, Nonce, Time, Protocol, Bool => Bool),
+            // a, b ||> MACRO_MEMORY_CELL@t p | h
+            search_trigger_mem: declare!(pbl@index: format!("ddh_{g}_search_trigger_mem");
+                Nonce, Nonce, Time, Protocol, Bool, MemoryCell => Bool),
             // sid, u, v, _{_ -> nt @ proof}, b
             subst: declare!(pbl@index: format!("ddh_{g}_subst");
                 Any, Bitstring, Bitstring,

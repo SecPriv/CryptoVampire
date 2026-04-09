@@ -13,7 +13,7 @@ mod vars {
             A:Bitstring, B:Bitstring,
             A_N:Nonce, B_N:Nonce, A_B:Bool,
             PROOF: Bool, K:Nonce, K2:Nonce, N:Nonce, R:Nonce, H:Bool,
-            SIDE:Any, U:Bitstring, V:Bitstring);
+            SIDE:Any, U:Bitstring, V:Bitstring, C:MemoryCell);
 }
 
 mod candidate;
@@ -66,6 +66,12 @@ pub struct AEnc {
     pub search_k_trigger: Function,
     /// `k, r ||> frame@t p  | h`
     pub search_o_trigger: Function,
+    /// `k, k', r ||> frame@t p | h` (for MACRO_MEMORY_CELL)
+    pub search_k_trigger_mem: Function,
+    /// `k ||> frame@t p | h` (for MACRO_MEMORY_CELL)
+    pub search_o_trigger_mem: Function,
+    /// `k, k', r ||> frame@t p | h` pre-trigger (for MACRO_MEMORY_CELL)
+    pub search_k_pre_trigger_mem: Function,
 
     /// `sid, u, v, _{_ -> nt @ proof}, b`
     pub subst: Function,
@@ -149,8 +155,16 @@ impl AEnc {
                 Nonce, Time, Protocol, Bool => Bool),
             search_k_pre_trigger: declare!(pbl@index: format!("{enc}_search_k_pre_trigger");
                 Nonce, Nonce,  Nonce, Time, Protocol, Bool => Bool),
+            search_k_trigger_mem: declare!(pbl@index: format!("{enc}_search_k_trigger_mem");
+                Nonce, Time, Protocol, Bool, MemoryCell => Bool),
+            search_k_pre_trigger_mem: declare!(pbl@index: format!("{enc}_search_k_pre_trigger_mem");
+                Nonce, Nonce, Nonce, Time, Protocol, Bool, MemoryCell => Bool),
+
             search_o_trigger: declare!(pbl@index: format!("{enc}_search_o_trigger");
                 Nonce, Time, Protocol, Bool => Bool),
+            search_o_trigger_mem: declare!(pbl@index: format!("{enc}_search_o_trigger_mem");
+                Nonce, Time, Protocol, Bool, MemoryCell => Bool),
+
             subst: declare!(pbl@index: format!("{enc}_search_o_b");
                 Any, Bitstring, Bitstring,
                 Bitstring, Bool,

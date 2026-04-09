@@ -16,8 +16,8 @@ use crate::terms::{Formula, Function, INDEX_EQ, MACRO_MEMORY_CELL, MITE, PRED, S
 // depency listing
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Builder)]
-pub struct MemoryCell{
-    function: Function
+pub struct MemoryCell {
+    function: Function,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Steel)]
@@ -98,7 +98,6 @@ impl SingleAssignement {
         &self.value
     }
 }
-
 
 impl MemoryCell {
     pub fn function(&self) -> &Function {

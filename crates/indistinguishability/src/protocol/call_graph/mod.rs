@@ -65,7 +65,7 @@ pub struct Caller {
 pub struct Graph {
     cell_num: usize,
     callers: Vec<Caller>,
-    initialized: bool
+    initialized: bool,
 }
 
 bitflags::bitflags! {
@@ -83,8 +83,8 @@ impl<'a> TryFrom<&'a Function> for CellRef {
 
     fn try_from(value: &'a Function) -> Result<Self, Self::Error> {
         match value.get_cell_index() {
-            Some(i) => Ok(Self(NonZeroUsize::new(i +1).unwrap())),
-            None => Err(value)
+            Some(i) => Ok(Self(NonZeroUsize::new(i + 1).unwrap())),
+            None => Err(value),
         }
     }
 }
@@ -94,8 +94,8 @@ impl TryFrom<Function> for CellRef {
 
     fn try_from(value: Function) -> Result<Self, Self::Error> {
         match value.get_cell_index() {
-            Some(i) => Ok(Self(NonZeroUsize::new(i +1).unwrap())),
-            None => Err(value)
+            Some(i) => Ok(Self(NonZeroUsize::new(i + 1).unwrap())),
+            None => Err(value),
         }
     }
 }

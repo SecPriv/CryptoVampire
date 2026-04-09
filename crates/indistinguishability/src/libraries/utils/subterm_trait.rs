@@ -298,7 +298,6 @@ pub trait SyntaxSearcher {
             }
             _ => unreachable!("time field should be a 'pred(step)' or a concrete step"),
         }
-
     }
 
     /// Searches within an alias function, applying its rewrite rules.

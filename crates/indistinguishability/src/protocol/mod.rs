@@ -17,7 +17,7 @@ mod protocol;
 pub use protocol::Protocol;
 
 mod memory_cell;
-pub use memory_cell::{Assignements, SingleAssignement, SingleAssignementBuilder, MemoryCell};
+pub use memory_cell::{Assignements, MemoryCell, SingleAssignement, SingleAssignementBuilder};
 
 pub mod call_graph;
 /// Represents the different kinds of macros used in the protocol analysis.
