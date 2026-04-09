@@ -8,14 +8,14 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use utils::{ereturn_cf, ereturn_if, implvec};
 
 use crate::libraries::memory_cells;
-use crate::libraries::utils::{DefaultAux, FormulaBuilderAux, RefFormulaBuilder, get_protocol};
+use crate::libraries::utils::{DefaultAux, FormulaBuilderAux, FormulaBuilderFlags, RefFormulaBuilder, get_protocol};
 use crate::problem::PAnalysis;
 use crate::protocol::{Protocol, Step};
 use crate::runners::SmtRunner;
 use crate::terms::{
     Alias, AliasRewrite, AlphaArgs, BITE, Exists, FOBinder, FindSuchThat, Formula, Function,
-    HAPPENS, LAMBDA_S, LEQ, MACRO_COND, MACRO_FRAME, MACRO_MEMORY_CELL, MACRO_MSG, MITE, PRED,
-    Quantifier, QuantifierT, RecFOFormulaQuant, Sort, Variable,
+    HAPPENS, LAMBDA_S, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL,
+    MACRO_MSG, MITE, PRED, Quantifier, QuantifierT, RecFOFormulaQuant, Sort, Variable,
 };
 use crate::{CVProgram, Lang, Problem, fresh, rexp};
 
@@ -183,6 +183,18 @@ pub trait SyntaxSearcher {
                 .collect_tuple()
                 .expect("terms should be well typed");
             self.search_memory_cell(pbl, builder, cell, ptcl, time);
+        } else if fun == MACRO_FRAME || fun == MACRO_EXEC || fun == MACRO_INPUT {
+            let (mut time, ptcl) = args
+                .into_iter()
+                .collect_tuple()
+                .expect("terms should be well typed");
+
+            if fun == MACRO_INPUT {
+                time = rexp!((PRED #time));
+            }
+            let ptcl = Protocol::from_formula(pbl, &ptcl).expect("proctols should be concrete");
+
+            self.search_frame(pbl, builder, ptcl, &time);
         } else if let Some(alias) = fun.get_alias() {
             self.search_alias(pbl, builder, alias, args);
         } else if fun.is_quantifier() {
@@ -261,13 +273,8 @@ pub trait SyntaxSearcher {
             unreachable!("cells should be conctrete")
         };
         assert!(cell_head.is_memory_cell());
-        let Formula::App { head: ptcl, .. } = ptcl else {
-            unreachable!("proctols should be concrete")
-        };
-        let ptcl_idx = ptcl
-            .get_protocol_index()
-            .expect("the protocol field should be a concrete protocol");
-        let ptcl = &pbl.protocols()[ptcl_idx];
+
+        let ptcl = Protocol::from_formula(pbl, &ptcl).expect("proctols should be concrete");
 
         match time {
             Formula::App {
@@ -429,8 +436,9 @@ pub trait SyntaxSearcher {
         ptcl: &Protocol,
         time: &Formula,
     ) {
+        ereturn_if!(builder.is_saturated() || builder.flags().intersects(FormulaBuilderFlags::NO_THROUGH_PREVIOUS_BODY));
         tr!("in frame");
-        assert!(builder.current_mode().is_and());
+        let builder = builder.ensure_and();
 
         // for each step we switch to `search_recexpr` on its message
         for Step {
@@ -453,6 +461,7 @@ pub trait SyntaxSearcher {
                 .condition(condition)
                 .variables(vars.clone())
                 .forall()
+                .add_flag(FormulaBuilderFlags::NO_THROUGH_PREVIOUS_BODY)
                 .build();
             self.inner_search_formula(pbl, &builder, cond.clone());
             self.inner_search_formula(pbl, &builder, msg.clone());
@@ -495,6 +504,7 @@ pub trait SyntaxSearcher {
                     .condition(condition)
                     .variables(vars.clone())
                     .forall()
+                    .add_flag(FormulaBuilderFlags::NO_THROUGH_PREVIOUS_BODY)
                     .build();
                 self.inner_search_formula(pbl, &builder, to_search.clone());
                 builder.into_inner().unwrap().into_formula()

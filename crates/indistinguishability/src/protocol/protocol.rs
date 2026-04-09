@@ -3,12 +3,12 @@ use std::ops::Index;
 use bon::Builder;
 use itertools::{Itertools, izip};
 use rustc_hash::FxHashMap;
-use utils::ereturn_if;
+use utils::{ereturn_if, ereturn_let};
 
 use super::Step;
 use crate::protocol::call_graph::{Graph, StepRef};
 use crate::terms::{Formula, Function};
-use crate::{MSmtFormula, rexp, smt};
+use crate::{MSmtFormula, Problem, rexp, smt};
 /// A protocol to be proven
 #[derive(Debug, Clone, Builder)]
 pub struct Protocol {
@@ -21,7 +21,6 @@ pub struct Protocol {
     #[builder(default)]
     graph: Graph,
 }
-
 
 impl Protocol {
     /// Creates a new protocol with the given name
@@ -96,17 +95,26 @@ impl Protocol {
         &mut self.graph
     }
 
-    pub fn get_step_from_ref(
-        &self,
-        StepRef(idx): StepRef,
-    ) -> Option<&Step> {
+    pub fn get_step_from_ref(&self, StepRef(idx): StepRef) -> Option<&Step> {
         self.steps().get(idx)
+    }
+
+    pub fn from_formula<'a>(pbl: &'a Problem, f: &Formula) -> Option<&'a Self> {
+        if let Formula::App { head, args } = f
+            && args.is_empty()
+            && let Some(idx) = head.get_protocol_index()
+            && let Some(ptcl) = pbl.protocols().get(idx)
+        {
+            Some(ptcl)
+        } else {
+            None
+        }
     }
 }
 
 impl PartialEq for Protocol {
     fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.steps == other.steps 
+        self.name == other.name && self.steps == other.steps
     }
 }
 
