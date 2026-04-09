@@ -257,7 +257,6 @@ pub trait SyntaxSearcher {
         }
     }
 
-    #[allow(unused)]
     fn search_memory_cell(
         &self,
         pbl: &Problem,
@@ -300,7 +299,6 @@ pub trait SyntaxSearcher {
             _ => unreachable!("time field should be a 'pred(step)' or a concrete step"),
         }
 
-        todo!()
     }
 
     /// Searches within an alias function, applying its rewrite rules.
