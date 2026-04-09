@@ -1,9 +1,11 @@
 use std::num::NonZeroUsize;
+use std::ops::Index;
 
 use anyhow::{Context, anyhow, bail, ensure};
 
 use super::*;
 use crate::mk_signature;
+use crate::protocol::call_graph::{CellRef, ProtocolRef, StepRef};
 use crate::protocol::{Protocol, Step};
 use crate::terms::{Function, FunctionFlags, INCOMPATIBLE, INIT, InnerFunction, LT, Sort};
 
@@ -252,9 +254,33 @@ impl Problem {
     }
 
     pub fn reinitialize_graph(&mut self, ptcl_id: usize) {
-        let mut graph = ::std::mem::take(self.protocol_mut(ptcl_id).unwrap().get_mut_graph());
+        let mut graph = ::std::mem::take(self.protocol_mut(ptcl_id).unwrap().graph_mut());
         graph.reinitialize(self, &self.protocols()[ptcl_id]);
-        *self.protocol_mut(ptcl_id).unwrap().get_mut_graph() = graph;
+        *self.protocol_mut(ptcl_id).unwrap().graph_mut() = graph;
+    }
+
+    pub fn get_cell_from_ref(&self, CellRef(idx): CellRef) -> Option<&MemoryCell> {
+        self.memory_cells().get(idx.get() - 1)
+    }
+
+    pub fn get_ptcl_from_ref(&self, ProtocolRef(idx): ProtocolRef) -> Option<&Protocol> {
+        self.protocols().get(idx)
+    }
+}
+
+impl Index<CellRef> for Problem {
+    type Output = MemoryCell;
+
+    fn index(&self, index: CellRef) -> &Self::Output {
+        self.get_cell_from_ref(index).unwrap()
+    }
+}
+
+impl Index<ProtocolRef> for Problem {
+    type Output = Protocol;
+
+    fn index(&self, index: ProtocolRef) -> &Self::Output {
+        self.get_ptcl_from_ref(index).unwrap()
     }
 }
 

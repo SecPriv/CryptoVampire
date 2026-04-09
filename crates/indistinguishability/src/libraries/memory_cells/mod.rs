@@ -2,12 +2,17 @@ use clap::builder;
 use itertools::{Itertools, chain, iproduct, izip};
 use quarck::CowArc;
 use rustc_hash::FxHashMap;
-use utils::econtinue_let;
+use utils::{econtinue_if, econtinue_let, ereturn_if};
 
-use crate::libraries::utils::{EggRewriteSink, RBFormula, RefFormulaBuilder, RewriteSink, SyntaxSearcher};
+use crate::libraries::utils::{
+    EggRewriteSink, FormulaBuilderFlags, RBFormula, RefFormulaBuilder, RewriteSink, SyntaxSearcher,
+};
 use crate::libraries::{Library, memory_cells};
+use crate::protocol::call_graph::{DescendantFlags, PreCall};
 use crate::protocol::{Assignements, Protocol, SingleAssignement, Step};
-use crate::terms::{Formula, FormulaVariableIter, Function, INDEX_EQ, Rewrite, UNFOLD_MEMORY_CELL};
+use crate::terms::{
+    Formula, FormulaVariableIter, Function, HAPPENS, INDEX_EQ, LT, Rewrite, UNFOLD_MEMORY_CELL,
+};
 use crate::{Lang, Problem, rexp};
 
 pub struct MemoryCellLib;
@@ -78,20 +83,95 @@ fn add_rewrites(pbl: &Problem, sink: &mut impl RewriteSink) {
 }
 
 pub(crate) fn search_pred_memory_cell<S: SyntaxSearcher + ?Sized>(
-    seracher: &S,
+    searcher: &S,
     pbl: &Problem,
     builder: &RBFormula<S>,
     cell_head: Function,
-    cell_args: CowArc<'static, [Formula]>,
+    _: CowArc<'static, [Formula]>,
     ptcl: &Protocol,
     time: &Formula,
 ) {
-    todo!()
+    ereturn_if!(
+        builder.is_saturated()
+            || builder
+                .flags()
+                .contains(FormulaBuilderFlags::NO_THROUGH_PRED_MEMORY_CELL)
+    );
+    let builder = builder.ensure_and();
+    let graph = ptcl.graph().unwrap();
+
+    let mut todos = Vec::new();
+    let mut descendants = vec![Default::default(); graph.size()];
+    graph.fill_todo_all_steps(
+        PreCall::Cell {
+            cell: (&cell_head).try_into().unwrap(),
+            time: Default::default(),
+        },
+        DescendantFlags::Pred,
+        &mut todos,
+    );
+
+    graph.find_decendants(&mut todos, &mut descendants);
+
+    let mut new_bflags = builder.flags() | FormulaBuilderFlags::NO_THROUGH_ALL_MEMORY_CELL;
+
+    if graph.all_steps_idx().all(|i| !descendants[i].is_empty()) {
+        new_bflags |= FormulaBuilderFlags::NO_THROUGH_PREVIOUS_BODY;
+    }
+
+    for (idx, dflag) in descendants.into_iter().enumerate() {
+        econtinue_if!(dflag.is_empty());
+        let call = PreCall::from_idx(idx, graph.cell_num());
+        let step = &ptcl[call.get_step()];
+        let lt_cond = {
+            let stepf = step.id_expr();
+            rexp!((and (LT #stepf #time) (HAPPENS #stepf)))
+        };
+
+        match call {
+            PreCall::Cell { cell, time: _ } => {
+                let cellf = pbl[cell].function();
+                econtinue_let!(let Some(SingleAssignement { assignement_vars, parameter_vars, value }) = step.assignements.get(cellf));
+                let vars = chain![
+                    assignement_vars.iter(),
+                    parameter_vars.iter(),
+                    step.vars.iter()
+                ]
+                .unique()
+                .cloned();
+
+                let vars_eq = izip!(
+                    assignement_vars.iter().into_formula_iter(),
+                    parameter_vars.iter().into_formula_iter()
+                )
+                .map(|(a, b)| rexp!((= #a #b)));
+
+                builder
+                    .add_node()
+                    .add_flag(new_bflags)
+                    .variables(vars)
+                    .condition(Formula::and(chain![[lt_cond.clone()], vars_eq]))
+                    .build();
+
+                searcher.inner_search_formula(pbl, &builder, value.clone());
+            }
+            PreCall::Exec(_) | PreCall::Frame(_) => {
+                builder
+                    .add_node()
+                    .add_flag(new_bflags)
+                    .variables(step.vars.iter().cloned())
+                    .condition(lt_cond.clone())
+                    .build();
+                searcher.inner_search_formula(pbl, &builder, step.cond.clone());
+                searcher.inner_search_formula(pbl, &builder, step.msg.clone());
+            }
+        }
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn search_concrete_memory_cell<S: SyntaxSearcher + ?Sized>(
-    seracher: &S,
+    searcher: &S,
     pbl: &Problem,
     builder: &RBFormula<S>,
     cell_head: Function,
@@ -103,14 +183,12 @@ pub(crate) fn search_concrete_memory_cell<S: SyntaxSearcher + ?Sized>(
     let step_id = &step.id;
     let time = rexp!((step_id #(step_args.iter().cloned())*));
     match step.assignements.get(&cell_head) {
-        None => search_pred_memory_cell(seracher, pbl, builder, cell_head, cell_args, ptcl, &time),
-        Some(
-            SingleAssignement {
-                assignement_vars,
-                parameter_vars,
-                value,
-            },
-        ) => {
+        None => search_pred_memory_cell(searcher, pbl, builder, cell_head, cell_args, ptcl, &time),
+        Some(SingleAssignement {
+            assignement_vars,
+            parameter_vars,
+            value,
+        }) => {
             let builder = if builder.is_and() {
                 builder.clone()
             } else {
@@ -137,7 +215,7 @@ pub(crate) fn search_concrete_memory_cell<S: SyntaxSearcher + ?Sized>(
                     .condition(!cond.clone())
                     .variables(vars.iter().cloned().cloned())
                     .build();
-                search_pred_memory_cell(seracher, pbl, &builder, cell_head, cell_args, ptcl, &time);
+                search_pred_memory_cell(searcher, pbl, &builder, cell_head, cell_args, ptcl, &time);
             }
             {
                 let builder = builder
@@ -145,7 +223,7 @@ pub(crate) fn search_concrete_memory_cell<S: SyntaxSearcher + ?Sized>(
                     .condition(cond)
                     .variables(vars.iter().cloned().cloned())
                     .build();
-                seracher.inner_search_formula(pbl, &builder, value);
+                searcher.inner_search_formula(pbl, &builder, value);
             }
         }
     }

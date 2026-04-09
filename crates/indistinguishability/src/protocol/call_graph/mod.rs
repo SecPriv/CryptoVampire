@@ -11,10 +11,10 @@ use crate::terms::{Formula, Function, Variable};
 // ===================== index types =======================
 // =========================================================
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct StepRef(pub usize);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct ProtocolRef(pub usize);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -77,3 +77,25 @@ bitflags::bitflags! {
 }
 
 mod graph;
+
+impl<'a> TryFrom<&'a Function> for CellRef {
+    type Error = &'a Function;
+
+    fn try_from(value: &'a Function) -> Result<Self, Self::Error> {
+        match value.get_cell_index() {
+            Some(i) => Ok(Self(NonZeroUsize::new(i +1).unwrap())),
+            None => Err(value)
+        }
+    }
+}
+
+impl TryFrom<Function> for CellRef {
+    type Error = Function;
+
+    fn try_from(value: Function) -> Result<Self, Self::Error> {
+        match value.get_cell_index() {
+            Some(i) => Ok(Self(NonZeroUsize::new(i +1).unwrap())),
+            None => Err(value)
+        }
+    }
+}

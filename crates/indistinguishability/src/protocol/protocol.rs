@@ -1,10 +1,12 @@
+use std::ops::Index;
+
 use bon::Builder;
 use itertools::{Itertools, izip};
 use rustc_hash::FxHashMap;
 use utils::ereturn_if;
 
 use super::Step;
-use crate::protocol::call_graph::Graph;
+use crate::protocol::call_graph::{Graph, StepRef};
 use crate::terms::{Formula, Function};
 use crate::{MSmtFormula, rexp, smt};
 /// A protocol to be proven
@@ -85,15 +87,21 @@ impl Protocol {
         self.steps.truncate(n);
     }
 
-    pub fn get_graph(&self) -> Option<&Graph> {
+    pub fn graph(&self) -> Option<&Graph> {
         ereturn_if!(self.graph.is_initialized(), None);
         Some(&self.graph)
     }
 
-    pub(crate) fn get_mut_graph(&mut self) -> &mut Graph {
+    pub(crate) fn graph_mut(&mut self) -> &mut Graph {
         &mut self.graph
     }
 
+    pub fn get_step_from_ref(
+        &self,
+        StepRef(idx): StepRef,
+    ) -> Option<&Step> {
+        self.steps().get(idx)
+    }
 }
 
 impl PartialEq for Protocol {
@@ -146,5 +154,13 @@ mod converter {
                 Formula::Var(var)
             }
         }
+    }
+}
+
+impl Index<StepRef> for Protocol {
+    type Output = Step;
+
+    fn index(&self, index: StepRef) -> &Self::Output {
+        self.get_step_from_ref(index).unwrap()
     }
 }

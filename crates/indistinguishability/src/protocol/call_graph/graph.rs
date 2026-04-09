@@ -46,8 +46,14 @@ impl PreCall {
             Self::Cell { cell, time: _ } => Self::Cell { cell, time },
         }
     }
+
+    pub fn get_step(self) -> StepRef {
+        let (Self::Exec(time) | Self::Frame(time) | Self::Cell { time, .. }) = self;
+        time
+    }
 }
 
+#[allow(clippy::derivable_impls, reason = "clearer meaning of the boolean")]
 impl Default for Graph {
     fn default() -> Self {
         Self {
@@ -72,11 +78,20 @@ impl Graph {
         self.initialized
     }
 
-    pub fn static_find_decendants(
+    pub fn size(&self) -> usize {
+        self.callers.len()
+    }
+
+    pub fn cell_num(&self) -> usize {
+        self.cell_num
+    }
+
+    pub fn find_decendants(
         &self,
         todo: &mut Vec<(usize, DescendantFlags)>,
         descendants: &mut [DescendantFlags],
     ) {
+        assert!(descendants.len() == self.callers.len());
         while let Some((next, flags)) = todo.pop() {
             econtinue_if!(descendants[next].contains(flags));
             let Caller { callees, .. } = &self.callers[next];
@@ -89,12 +104,10 @@ impl Graph {
                 if *num_preds > 0 {
                     // if it is a pred we look at `next` "in all the step",
                     // this requires a bit of index manipulation
-                    let nsteps = descendants.len() / (self.cell_num + 1);
-                    let next = PreCall::from_idx(next, self.cell_num);
-                    let flags = DescendantFlags::Pred;
-                    todo.extend(
-                        (0..nsteps)
-                            .map(|i| (next.set_step(StepRef(i)).get_idx(self.cell_num), flags)),
+                    self.fill_todo_all_steps(
+                        PreCall::from_idx(next, self.cell_num),
+                        DescendantFlags::Pred,
+                        todo,
                     );
                 } else {
                     let next = call.get_idx(self.cell_num);
@@ -137,6 +150,33 @@ impl Graph {
         }
 
         *initialized = true;
+    }
+
+    fn num_steps(&self) -> usize {
+        self.callers.len() / (self.cell_num + 1)
+    }
+
+    pub fn fill_todo_all_steps(
+        &self,
+        from: PreCall,
+        flags: DescendantFlags,
+        todo: &mut Vec<(usize, DescendantFlags)>,
+    ) {
+        todo.extend(
+            self.all_steps_iter()
+                .map(|s| (from.set_step(s).get_idx(self.cell_num), flags)),
+        );
+    }
+
+    pub fn all_steps_iter(&self) -> impl Iterator<Item = StepRef> + use<> {
+        (0..self.num_steps()).map(StepRef)
+    }
+
+    pub fn all_steps_idx(&self) -> impl Iterator<Item = usize> + use<> {
+        let cell_num = self.cell_num();
+        self.all_steps_iter()
+            .map(PreCall::Frame)
+            .map(move |c| c.get_idx(cell_num))
     }
 }
 
