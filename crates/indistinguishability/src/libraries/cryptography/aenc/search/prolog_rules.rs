@@ -6,9 +6,7 @@ use super::super::vars::*;
 use super::super::{AEnc, ProofHints};
 use crate::libraries::utils::{RuleSink, TwoSortFunction};
 use crate::terms::{
-    AND, BITE, CONS_FA_BITSTRING, CONS_FA_BOOL, FRESH_NONCE, Formula, Function, HAPPENS,
-    IS_FRESH_NONCE, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL, MACRO_MSG,
-    MITE, NONCE, PRED, Sort, UNFOLD_COND, UNFOLD_MSG, VAMPIRE,
+    AND, BITE, BOUND_ANDS, CONS_FA_BITSTRING, CONS_FA_BOOL, FRESH_NONCE, Formula, Function, HAPPENS, IS_FRESH_NONCE, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL, MACRO_MSG, MITE, NONCE, PRED, Sort, UNFOLD_COND, UNFOLD_MSG, VAMPIRE
 };
 use crate::{Lang, Problem, fresh, rexp};
 
@@ -251,6 +249,8 @@ pub fn mk_static_rules<'a>(
 
       "search_o_enc_ite_m" c, l, r :
         (search_o_m #K (MITE #c #l #r) #H):-
+          (BOUND_ANDS #c #H),
+          (BOUND_ANDS (not #c) #H),
           (search_o_b #K #c #H),
           (search_o_m #K #l (and #c #H)),
           (search_o_m #K #r (and (not #c) #H)).
@@ -263,6 +263,8 @@ pub fn mk_static_rules<'a>(
 
       "search_o_enc_ite_b" c, l, r :
         (search_o_b #K (BITE #c #l #r) #H):-
+          (BOUND_ANDS #c #H),
+          (BOUND_ANDS (not #c) #H),
           (search_o_b #K #c #H),
           (search_o_b #K #l (and #c #H)),
           (search_o_b #K #r (and (not #c) #H)).
@@ -274,6 +276,8 @@ pub fn mk_static_rules<'a>(
 
       "search_o_enc_and" c, l :
         (search_o_b #K (AND #c #l) #H):-
+          (BOUND_ANDS #c #H),
+          (BOUND_ANDS (not #c) #H),
           (search_o_b #K #c #H),
           (search_o_b #K #l (and #c #H)).
 

@@ -6,6 +6,7 @@ use log::{debug, log_enabled, trace};
 use utils::econtinue_if;
 
 use super::Library;
+use crate::libraries::and_bounder::AndBounderLib;
 use crate::libraries::base::BaseRewriteLib;
 use crate::libraries::constrains::ConstrainsLib;
 use crate::libraries::current_step::CurrentStep;
@@ -225,6 +226,7 @@ fn debug_init_egraph<N: Analysis<Lang>>(egraph: &mut EGraph<Lang, N>) {
 }
 
 mk_libraires!(Libraries;
+  AndBounderLib,
   SmtLib,
   BaseRewriteLib,
   UnfoldLib,

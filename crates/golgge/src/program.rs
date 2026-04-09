@@ -1,7 +1,7 @@
 #[cfg(feature = "sync")]
 use std::borrow::Borrow;
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, hash_map};
 use std::fmt::{Debug, Display};
 #[cfg(feature = "sync")]
 use std::ops::DerefMut;
@@ -200,18 +200,6 @@ where
         self.extend([eq_rule], []);
     }
 
-    // /// convenient way to add a [Rule]
-    // /// Adds a boxed `Rule` to the program.
-    // pub fn add_boxed_rule(&mut self, rule: Box<dyn Rule<L, N>>) {
-    //     self.extend([], [rule]);
-    // }
-
-    // /// convenient way to add a [Rule]
-    // /// Adds a `Rule` to the program.
-    // pub fn add_rule<R: Rule<L, N> + 'static>(&mut self, rule: R) {
-    //     self.add_boxed_rule(Box::new(rule))
-    // }
-
     /// activate/deactivate explaination for the [EGraph]
     ///
     /// refer to [egg]'s documentation to know more
@@ -286,6 +274,14 @@ where
     /// Rate at which the memoisation kicks in
     pub fn get_hit_rate(&self) -> f64 {
         (self.num_memo_hits as f64) / (self.total_calls as f64)
+    }
+
+    pub fn forget(&mut self, id: Id) {
+        if let hash_map::Entry::Occupied(occupied_entry) = self.memo.entry(id)
+            && !occupied_entry.get().is_in_progress()
+        {
+            occupied_entry.remove();
+        }
     }
 }
 
@@ -451,42 +447,7 @@ where
             self.check_memo_goal(goal);
 
             if self.is_tracing_enabled(DebugLevel::RULE) && !search.is_impossible() {
-                mtrace!(
-                    self,
-                    RULE,
-                    "({goal}) new goals\n{}",
-                    search
-                        .inner
-                        .iter()
-                        .map(|d| format!(
-                            "\t - [{}]",
-                            d.iter()
-                                .map(|c| format!("({})", self.egraph().find(*c)))
-                                .join(", ")
-                        ))
-                        .join("\n")
-                );
-
-                if cfg!(debug_assertions) {
-                    eprintln!("({goal}) new goals prefetch:");
-
-                    for d in search.inner.iter() {
-                        eprint!("\t - [");
-                        for c in d {
-                            let tmp = self.memo.get(c).map(|c| c.0.read().unwrap());
-                            match tmp {
-                                Some(x) => match x.deref() {
-                                    Status::False => eprint!("{c} ({})", "false".red()),
-                                    Status::True(_) => eprint!("{c} ({})", "true".green()),
-                                    Status::InProgress => eprint!("{c} ({})", "loop".red()),
-                                },
-                                None => eprint!("{c} (?)"),
-                            }
-                            eprint!(", ")
-                        }
-                        eprintln!("]");
-                    }
-                }
+                self.trace_goal_status(goal, &search);
             }
 
             self.check_memo_goal(goal);
@@ -551,6 +512,45 @@ where
         self.check_proof_consistency().unwrap();
 
         result
+    }
+
+    fn trace_goal_status(&self, goal: Id, search: &Dependancy) {
+        mtrace!(
+            self,
+            RULE,
+            "({goal}) new goals\n{}",
+            search
+                .inner
+                .iter()
+                .map(|d| format!(
+                    "\t - [{}]",
+                    d.iter()
+                        .map(|c| format!("({})", self.egraph().find(*c)))
+                        .join(", ")
+                ))
+                .join("\n")
+        );
+
+        if cfg!(debug_assertions) {
+            eprintln!("({goal}) new goals prefetch:");
+
+            for d in search.inner.iter() {
+                eprint!("\t - [");
+                for c in d {
+                    let tmp = self.memo.get(c).map(|c| c.0.read().unwrap());
+                    match tmp {
+                        Some(x) => match x.deref() {
+                            Status::False => eprint!("{c} ({})", "false".red()),
+                            Status::True(_) => eprint!("{c} ({})", "true".green()),
+                            Status::InProgress => eprint!("{c} ({})", "loop".red()),
+                        },
+                        None => eprint!("{c} (?)"),
+                    }
+                    eprint!(", ")
+                }
+                eprintln!("]");
+            }
+        }
     }
 
     #[inline]

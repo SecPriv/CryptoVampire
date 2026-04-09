@@ -500,6 +500,11 @@ mk_builtin_funs!(
         flags: f!(PROLOG_ONLY)
     };
 
+    BOUND_ANDS "bound_ands" {
+        signature: s!(Bool, Bool -> Bool),
+        flags: f!(PROLOG_ONLY)
+    };
+
     // ---------is public --------
 
     IS_PUBLIC "is_public" {

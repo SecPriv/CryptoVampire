@@ -13,9 +13,9 @@ use crate::libraries::utils::{RuleSink, SyntaxSearcher};
 use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::runners::SmtRunner;
 use crate::terms::{
-    AND, BITE, FRESH_NONCE, FRESH_NONCE_TRIGGER, FRESH_NONCE_TRIGGER_MEM, Formula, Function,
-    HAPPENS, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL, MACRO_MSG,
-    MITE, NONCE, PRED, UNFOLD_COND, UNFOLD_MSG, VAMPIRE,
+    AND, BITE, BOUND_ANDS, FRESH_NONCE, FRESH_NONCE_TRIGGER, FRESH_NONCE_TRIGGER_MEM, Formula,
+    Function, HAPPENS, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL,
+    MACRO_MSG, MITE, NONCE, PRED, UNFOLD_COND, UNFOLD_MSG, VAMPIRE,
 };
 use crate::{CVProgram, Lang, Problem, fresh, rexp};
 
@@ -93,7 +93,7 @@ pub fn mk_static_rules(pbl: &Problem, sink: &mut impl RuleSink) {
         .iter_current()
         .filter(|f| !f.is_special_subterm())
         .filter(|f| !f.is_out_of_term_algebra())
-        .filter(|f| f != &&NONCE)
+        .filter(|f| f != &&NONCE && f != &&AND && f != &&MITE && f != &&BITE)
         .cloned();
 
     sink.extend_rules(mk_many_prolog! {
@@ -133,12 +133,16 @@ pub fn mk_static_rules(pbl: &Problem, sink: &mut impl RuleSink) {
     // if-then-else
         "fresh_nonce_ite_m":
             (FRESH_NONCE #N (MITE #C #L #R) #H) :-
+                (BOUND_ANDS #C #H),
+                (BOUND_ANDS (not #C) #H),
                 (FRESH_NONCE #N #C #H),
                 (FRESH_NONCE #N #L (and #C #H)),
                 (FRESH_NONCE #N #R (and (not #C) #H)).
 
         "fresh_nonce_ite_b":
             (FRESH_NONCE #N (BITE #C #L #R) #H) :-
+                (BOUND_ANDS #C #H),
+                (BOUND_ANDS (not #C) #H),
                 (FRESH_NONCE #N #C #H),
                 (FRESH_NONCE #N #L (and #C #H)),
                 (FRESH_NONCE #N #R (and (not #C) #H)).
@@ -146,6 +150,7 @@ pub fn mk_static_rules(pbl: &Problem, sink: &mut impl RuleSink) {
     // AND
         "fresh_nonce_and":
         (FRESH_NONCE #N (AND #C #L) #H) :-
+            (BOUND_ANDS #C #H),
             (FRESH_NONCE #N #C #H),
             (FRESH_NONCE #N #L (and #C #H)).
     });
