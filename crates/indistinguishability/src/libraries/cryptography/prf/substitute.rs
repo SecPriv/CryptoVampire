@@ -9,7 +9,7 @@ use utils::ereturn_let;
 use super::{K, M, NEW_TERM, NK, PRFProof, PROOF};
 use crate::libraries::{CryptographicAssumption, PRF};
 use crate::problem::{PAnalysis, RcRule};
-use crate::terms::{Function, MACRO_COND, MACRO_MSG, NONCE, Sort};
+use crate::terms::{AND, BITE, Function, MACRO_COND, MACRO_MSG, MITE, NONCE, Sort};
 use crate::{CVProgram, Lang};
 
 #[derive(Debug, Clone, Builder)]
@@ -60,7 +60,18 @@ impl SubstData {
             }
             PRFProof::Apply(f) if f != &self.hash => {
                 let t = self.get_term(pgrm, proof);
-                let mut args_proofs = ids.into_iter();
+
+                // skip the guard
+                let ids = if f == &AND {
+                    &ids[1..]
+                } else if f == &BITE || f == &MITE {
+                    &ids[2..]
+                } else {
+                    &ids
+                };
+
+                let mut args_proofs = ids.iter().copied();
+
                 let old_args = pgrm.egraph()[t]
                     .nodes
                     .iter()

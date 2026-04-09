@@ -288,32 +288,6 @@ mk_builtin_funs!(
         step_idx: 0,
     };
 
-    // ~~~~~~~~~~~~~~ call graph ~~~~~~~~~~~~~~~~
-
-    CALL_UNFOLD_CELL "call_unfold_cell" {
-        signature: s!(MemoryCell, Time, Protocol -> UnfoldingCall),
-        flags: f!(SMT_ONLY)
-    };
-
-    CALL_UNFOLD_FRAME "call_unfold_frame" {
-        signature: s!(Time, Protocol -> UnfoldingCall),
-        flags: f!(SMT_ONLY)
-    };
-
-    LEQ_UNFOLD "leq_unfold" {
-        signature: s!(UnfoldingCall, UnfoldingCall -> Bool),
-        flags: f!(SMT_ONLY)
-    };
-
-    LT_UNFOLD "lt_unfold" {
-        signature: s!(UnfoldingCall, UnfoldingCall -> Bool),
-        flags: f!(SMT_ONLY),
-        alias: Some(alias!{
-            a:UnfoldingCall, b:UnfoldingCall in rexp!(const !a), rexp!(const !b) =>
-                rexp!(const (and (LEQ_UNFOLD !a !b) (distinct !a !b)))
-        }),
-    };
-
     // ~~~~~~~~~~~~~~~~ macro ~~~~~~~~~~~~~~~~~~~
 
     ATT "att" {

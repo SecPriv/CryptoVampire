@@ -6,8 +6,7 @@ use super::super::vars::*;
 use super::super::{DDH, ProofHints};
 use crate::libraries::utils::RuleSink;
 use crate::terms::{
-    AND, BITE, FRESH_NONCE, Formula, Function, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT,
-    MACRO_MEMORY_CELL, MITE, NONCE, PRED, Sort, VAMPIRE,
+    AND, BITE, BOUND_ANDS, FRESH_NONCE, Formula, Function, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL, MITE, NONCE, PRED, Sort, VAMPIRE
 };
 use crate::{Lang, Problem, fresh, rexp};
 
@@ -114,18 +113,23 @@ pub fn mk_static_rules<'a>(
       // if and and
       "search_ddh_ite_m" c, l, r (Apply(MITE.clone())):
         (search_m #NA #NB #NC (MITE #c #l #r) #H):-
+          (BOUND_ANDS #c #H),
+          (BOUND_ANDS (not #c) #H),
           (search_b #NA #NB #NC #c #H),
           (search_m #NA #NB #NC #l (and #c #H)),
           (search_m #NA #NB #NC #r (and (not #c) #H)).
 
       "search_ddh_ite_b" c, l, r (Apply(BITE.clone())):
         (search_b #NA #NB #NC (BITE #c #l #r) #H):-
+          (BOUND_ANDS #c #H),
+          (BOUND_ANDS (not #c) #H),
           (search_b #NA #NB #NC #c #H),
           (search_b #NA #NB #NC #l (and #c #H)),
           (search_b #NA #NB #NC #r (and (not #c) #H)).
 
       "search_ddh_and" c, l (Apply(AND.clone())):
         (search_b #NA #NB #NC (AND #c #l) #H):-
+          (BOUND_ANDS #c #H),
           (search_b #NA #NB #NC #c #H),
           (search_b #NA #NB #NC #l (and  #c #H)).
     })

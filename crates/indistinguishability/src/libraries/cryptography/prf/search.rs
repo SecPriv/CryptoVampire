@@ -14,9 +14,7 @@ use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::protocol::{Protocol, Step};
 use crate::runners::SmtRunner;
 use crate::terms::{
-    AND, BITE, Formula, Function, HAPPENS, IS_FRESH_NONCE, LEQ, LT, MACRO_COND, MACRO_EXEC,
-    MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL, MACRO_MSG, MITE, NONCE, PRED, Sort, UNFOLD_COND,
-    UNFOLD_MEMORY_CELL, UNFOLD_MSG, VAMPIRE,
+    AND, BITE, BOUND_ANDS, Formula, Function, HAPPENS, IS_FRESH_NONCE, LEQ, LT, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL, MACRO_MSG, MITE, NONCE, PRED, Sort, UNFOLD_COND, UNFOLD_MEMORY_CELL, UNFOLD_MSG, VAMPIRE
 };
 use crate::{CVProgram, Lang, Problem, fresh, rexp};
 
@@ -205,18 +203,23 @@ fn mk_static_rules(
     // if and and
     "search_prf_ite_m" c, l, r (Apply(MITE.clone())):
     (search_m #m #k #nprf (MITE #c #l #r) #h):-
+        (BOUND_ANDS #c #h),
+        (BOUND_ANDS (not #c) #h),
         (search_b #m #k #nprf #c #h),
         (search_m #m #k #nprf #l (and #c #h)),
         (search_m #m #k #nprf #r (and (not #c) #h)).
 
     "search_prf_ite_b" c, l, r (Apply(BITE.clone())):
     (search_b #m #k #nprf (BITE #c #l #r) #h):-
+        (BOUND_ANDS #c #h),
+        (BOUND_ANDS (not #c) #h),
         (search_b #m #k #nprf #c #h),
         (search_b #m #k #nprf #l (and #c #h)),
         (search_b #m #k #nprf #r (and (not #c) #h)).
 
     "search_prf_and" a, b (Apply(AND.clone())):
     (search_b #m #k #nprf (AND #a #b) #h):-
+        (BOUND_ANDS #a #h),
         (search_b #m #k #nprf #a #h),
         (search_b #m #k #nprf #b (and #a #h)).
 

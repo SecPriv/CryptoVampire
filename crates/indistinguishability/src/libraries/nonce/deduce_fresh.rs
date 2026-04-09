@@ -15,7 +15,7 @@ use crate::runners::SmtRunner;
 use crate::terms::{
     AND, BITE, BOUND_ANDS, FRESH_NONCE, FRESH_NONCE_TRIGGER, FRESH_NONCE_TRIGGER_MEM, Formula,
     Function, HAPPENS, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL,
-    MACRO_MSG, MITE, NONCE, PRED, UNFOLD_COND, UNFOLD_MSG, VAMPIRE,
+    MACRO_MSG, MITE, NONCE, PRED, Sort, UNFOLD_COND, UNFOLD_MSG, VAMPIRE,
 };
 use crate::{CVProgram, Lang, Problem, fresh, rexp};
 
@@ -91,9 +91,10 @@ pub fn mk_static_rules(pbl: &Problem, sink: &mut impl RuleSink) {
     let functions = pbl
         .functions()
         .iter_current()
-        .filter(|f| !f.is_special_subterm())
+        .filter(|f| f.is_nonce() || !f.is_special_subterm())
         .filter(|f| !f.is_out_of_term_algebra())
         .filter(|f| f != &&NONCE && f != &&AND && f != &&MITE && f != &&BITE)
+        .sorted_by_key(|f| f.arity())
         .cloned();
 
     sink.extend_rules(mk_many_prolog! {
@@ -171,6 +172,7 @@ fn mk_rule_one(fun: &Function) -> PrologRule<Lang> {
 
     let deps = args
         .iter()
+        .filter(|v| [Sort::Bool, Sort::Bitstring].contains(&v.try_get_sort().unwrap()))
         .map(|arg| Pattern::from(&rexp!((FRESH_NONCE #N #arg #H))))
         .collect_vec();
 
