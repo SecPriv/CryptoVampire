@@ -8,7 +8,9 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use utils::{ereturn_cf, ereturn_if, implvec};
 
 use crate::libraries::memory_cells;
-use crate::libraries::utils::{DefaultAux, FormulaBuilderAux, FormulaBuilderFlags, RefFormulaBuilder, get_protocol};
+use crate::libraries::utils::{
+    DefaultAux, FormulaBuilderAux, FormulaBuilderFlags, RefFormulaBuilder, get_protocol,
+};
 use crate::problem::PAnalysis;
 use crate::protocol::{Protocol, Step};
 use crate::runners::SmtRunner;
@@ -436,7 +438,12 @@ pub trait SyntaxSearcher {
         ptcl: &Protocol,
         time: &Formula,
     ) {
-        ereturn_if!(builder.is_saturated() || builder.flags().intersects(FormulaBuilderFlags::NO_THROUGH_PREVIOUS_BODY));
+        ereturn_if!(
+            builder.is_saturated()
+                || builder
+                    .flags()
+                    .intersects(FormulaBuilderFlags::NO_THROUGH_PREVIOUS_BODY)
+        );
         tr!("in frame");
         let builder = builder.ensure_and();
 
@@ -535,6 +542,26 @@ pub trait SyntaxSearcher {
         //     exec.run_to_dependancy(pbl, query).is_axioms()
         // });
         // pbl.clear_temp_quantifiers();
+        Some(result)
+    }
+
+    fn search_term<'a, 'b, 'c>(
+        &'b self,
+        prgm: &'c mut CVProgram<'a>,
+        exec: &'b SmtRunner,
+        term: Formula,
+        hyp: Formula,
+    ) -> Option<bool> {
+        let builder = RBFormula::<Self>::builder().condition(hyp).build();
+        let pbl = prgm.egraph_mut().analysis.pbl();
+        self.inner_search_formula(pbl, &builder, term);
+
+        let query = builder.into_inner().unwrap().into_formula();
+        let queries = query.into_iter_conjunction();
+        let _ = pbl;
+        let pbl = prgm.egraph_mut().analysis.pbl_mut();
+        let result = exec.iter_run_to_dependancy(pbl, queries).is_axioms();
+        pbl.clear_temp_quantifiers();
         Some(result)
     }
 }
