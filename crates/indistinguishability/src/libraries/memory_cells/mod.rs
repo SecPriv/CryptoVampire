@@ -152,7 +152,7 @@ pub(crate) fn search_pred_memory_cell<S: SyntaxSearcher + ?Sized>(
                 )
                 .map(|(a, b)| rexp!((= #a #b)));
 
-                builder
+                let builder = builder
                     .add_node()
                     .add_flag(new_bflags)
                     .variables(vars)
@@ -167,7 +167,7 @@ pub(crate) fn search_pred_memory_cell<S: SyntaxSearcher + ?Sized>(
                         .flags()
                         .intersects(FormulaBuilderFlags::NO_THROUGH_PREVIOUS_BODY)
                 );
-                builder
+                let builder = builder
                     .add_node()
                     .add_flag(new_bflags)
                     .variables(step.vars.iter().cloned())
