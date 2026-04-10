@@ -936,6 +936,7 @@ dependencies = [
  "paste",
  "pest",
  "pest_derive",
+ "quarck",
  "regex",
  "serde",
  "serde_json",
