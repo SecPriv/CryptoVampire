@@ -34,23 +34,29 @@
 
 (define P1 (declare-same-step pbl "P1" ptcls '()
     empty-cond
-    (lambda (p in) (mexp g a1))))
+    (lambda (p in . _) (mexp g a1))
+    empty-assignements))
 
 (define P2 (declare-step pbl "P2" '()
-    (step p1 (lambda (in) (eq in (mexp g b1)))
-      (lambda (in) (mexp (mexp g a1) b1)))
-    (step p2 (lambda (in) (eq in (mexp g b1)))
-      (lambda (in) (mexp g k11)))))
+    (step p1 (lambda (in . _) (eq in (mexp g b1)))
+      (lambda (in . _) (mexp (mexp g a1) b1))
+      empty-assignements)
+    (step p2 (lambda (in . _) (eq in (mexp g b1)))
+      (lambda (in . _) (mexp g k11))
+      empty-assignements)))
 
 (define S1 (declare-same-step pbl "S1" ptcls '()
     empty-cond
-    (lambda (p in) (mexp g b1))))
+    (lambda (p in . _) (mexp g b1))
+    empty-assignements))
 
 (define S2 (declare-step pbl "S2" '()
-    (step p1 (lambda (in) (eq in (mexp g a1)))
-      (lambda (in) (mexp (mexp g a1) b1)))
-    (step p2 (lambda (in) (eq in (mexp g a1)))
-      (lambda (in) (mexp g k11)))))
+    (step p1 (lambda (in . _) (eq in (mexp g a1)))
+      (lambda (in . _) (mexp (mexp g a1) b1))
+      empty-assignements)
+    (step p2 (lambda (in . _) (eq in (mexp g a1)))
+      (lambda (in . _) (mexp g k11))
+      empty-assignements)))
 
 (add-constrain pbl () (lt P1 P2))
 (add-constrain pbl () (lt S1 S2))
@@ -59,8 +65,8 @@
 (publish pbl () (mexp g b1))
 
 (define mehhh (declare-step pbl "meh" '()
-  (step p1 empty-cond (lambda _ (mexp (mexp g a1) b1)))
-  (step p2 empty-cond (lambda _ (mexp g k11)))
+  (step p1 empty-cond (lambda _ (mexp (mexp g a1) b1)) empty-assignements)
+  (step p2 empty-cond (lambda _ (mexp g k11)) empty-assignements)
 ))
 (add-constrain pbl () (lt mehhh S1))
 (add-constrain pbl () (lt mehhh P1))

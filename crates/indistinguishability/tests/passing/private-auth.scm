@@ -42,22 +42,24 @@
 ;; put this step first to fail faster
 (define b2
   (declare-step pbl "b2" (list Index)
-    (step p1 ltrue (lambda (in i)
+    (step p1 ltrue (lambda (in i . _)
         (let [ (in (dec in (kb i))) (dflt (tuple (nb i) (nb i))) ]
           (m_ite
             (eq (sel1of2 in) (pka1 i))
             (m_ite (eql (tuple (sel2of2 in) (nb i)) dflt)
               (enc (tuple (sel2of2 in) (nb i)) (rb i) (pka1 i))
               (enc dflt (rb i) (pka1 i)))
-            (enc dflt (rb i) (pka1 i))))))
-    (step p2 ltrue (lambda (in i)
+            (enc dflt (rb i) (pka1 i)))))
+      empty-assignements)
+    (step p2 ltrue (lambda (in i . _)
         (let [ (in (dec in (kb i))) (dflt (tuple (nb i) (nb i))) ]
           (m_ite
             (eq (sel1of2 in) (pka2 i))
             (m_ite (eql (tuple (sel2of2 in) (nb i)) dflt)
               (enc (tuple (sel2of2 in) (nb i)) (rb i) (pka2 i))
               (enc dflt (rb i) (pka2 i)))
-            (enc dflt (rb i) (pka2 i))))))))
+            (enc dflt (rb i) (pka2 i)))))
+      empty-assignements)))
 
 
 (publish pbl ((i Index) (j Index)) (pk (ka i j)))
@@ -65,17 +67,17 @@
 ; (publish pbl ((i Index) ) (nb i))
 
 ; (define pa (declare-step pbl "publish_a" (list Index Index)
-;     (step p1 ltrue (lambda (in i j) (pk (ka i j))))
-;     (step p2 ltrue (lambda (in i j) (pk (ka i j))))))
+;     (step p1 ltrue (lambda (in i j . _) (pk (ka i j))) empty-assignements)
+;     (step p2 ltrue (lambda (in i j . _) (pk (ka i j))) empty-assignements)))
 
 ; (define pb (declare-step pbl "publish_b" (list Index)
-;     (step p1 ltrue (lambda (in i) (pkb i)))
-;     (step p2 ltrue (lambda (in i) (pkb i)))))
+;     (step p1 ltrue (lambda (in i . _) (pkb i)) empty-assignements)
+;     (step p2 ltrue (lambda (in i . _) (pkb i)) empty-assignements)))
 
 (define b1
   (declare-step pbl "b1" (list Index)
-    (step p1 ltrue (lambda (in i) (nb i)))
-    (step p2 ltrue (lambda (in i) (nb i)))))
+    (step p1 ltrue (lambda (in i . _) (nb i)) empty-assignements)
+    (step p2 ltrue (lambda (in i . _) (nb i)) empty-assignements)))
 
 
 (bind ((i Index) (j Index))
@@ -94,8 +96,8 @@
         (nb i) (macro_msg (b1 i) p2)))))
 
 (define as (declare-step pbl "astep" (list Index Index)
-    (step p1 ltrue (lambda (in i j) (enc (tuple in (na i j)) (ra i j) (pkb j))))
-    (step p2 ltrue (lambda (in i j) (enc (tuple in (na i j)) (ra i j) (pkb j))))))
+    (step p1 ltrue (lambda (in i j . _) (enc (tuple in (na i j)) (ra i j) (pkb j))) empty-assignements)
+    (step p2 ltrue (lambda (in i j . _) (enc (tuple in (na i j)) (ra i j) (pkb j))) empty-assignements)))
 
 (initialize-as-aenc aenc enc dec pk)
 

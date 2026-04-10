@@ -39,43 +39,49 @@
   (declare-step pbl "tag" (list Index Index)
     (step p1
       (lambda _ mtrue)
-      (lambda (in i j)
-        (tuple (n i j) (mhash (tuple in (n i j)) (mk i j p1)))))
+      (lambda (in i j . _)
+        (tuple (n i j) (mhash (tuple in (n i j)) (mk i j p1))))
+      empty-assignements)
     (step p2
       (lambda _ mtrue)
-      (lambda (in i j)
-        (tuple (n i j) (mhash (tuple in (n i j)) (mk i j p2)))))))
+      (lambda (in i j . _)
+        (tuple (n i j) (mhash (tuple in (n i j)) (mk i j p2))))
+      empty-assignements)))
 
 (define reader1
   (declare-step pbl "reader1" (list Index)
-    (step p1 (lambda _ mtrue) (lambda (in i) (nr i)))
-    (step p2 (lambda _ mtrue) (lambda (in i) (nr i)))))
+    (step p1 (lambda _ mtrue) (lambda (in i . _) (nr i)) empty-assignements)
+    (step p2 (lambda _ mtrue) (lambda (in i . _) (nr i)) empty-assignements)))
 
 (define rs
   (declare-step pbl "reader_success" (list Index Index)
     (step p1
-      (lambda (in i j)
+      (lambda (in i j . _)
         (eq (tuple (nr i) (sel2of2 in)) (mhash (sel1of2 in) (mk i j p1))))
-      (lambda _ ok))
+      (lambda _ ok)
+      empty-assignements)
     (step p2
-      (lambda (in i j)
+      (lambda (in i j . _)
         (eq (tuple (nr i) (sel2of2 in)) (mhash (sel1of2 in) (mk i j p2))))
-      (lambda _ ok))))
+      (lambda _ ok)
+      empty-assignements)))
 
 (define rf
   (declare-step pbl "reader_fail" (list Index)
     (step p1
-      (lambda (in i)
+      (lambda (in i . _)
         (mnot (exists ((j Index))
             (eq (tuple (nr i) (sel2of2 in))
               (mhash (sel1of2 in) (mk i j p1))))))
-      (lambda _ ko))
+      (lambda _ ko)
+      empty-assignements)
     (step p2
-      (lambda (in i)
+      (lambda (in i . _)
         (mnot (exists ((j Index))
             (eq (tuple (nr i) (sel2of2 in))
               (mhash (sel1of2 in) (mk i j p2))))))
-      (lambda _ ko))))
+      (lambda _ ko)
+      empty-assignements)))
 
 (initialize-as-prf prf mhash)
 

@@ -59,34 +59,39 @@
 
 (define P1 (declare-same-step pbl "P1" ptcls '()
     empty-cond
-    (lambda (p in) (tuple (vk skP) (mexp g a1)))))
+    (lambda (p in . _) (tuple (vk skP) (mexp g a1)))
+    empty-assignements))
 
 (define P2 (declare-same-step pbl "P2" ptcls '()
-    (lambda (p in)
+    (lambda (p in . _)
       (let [ (gs (sel2of2 (sel1of2 in))) (vks (sel1of2 (sel1of2 in))) ]
         (checksign (tuple (mexp g a1) gs (vk skP)) (sel2of2 in) vks)))
-    (lambda (p in)
+    (lambda (p in . _)
       (let [ (gs (sel2of2 (sel1of2 in))) (vks (sel1of2 (sel1of2 in))) ]
-        (sign (tuple gs (mexp g a1) vks) skP)))))
+        (sign (tuple gs (mexp g a1) vks) skP)))
+    empty-assignements))
 (define (inP2 p) (macro_input P2 p))
 (define (vks p) (sel1of2 (sel1of2 (inP2 p))))
 
 (define P3 (declare-step pbl "P3" '()
-    (step p1 (lambda (in) (cand
+    (step p1 (lambda (in . _) (cand
           (eq (vks p1) (vk skP))
           (eq (sel2of2 (sel1of2 (inP2 p1))) (mexp g b1))))
-      (lambda (in) (mexp (mexp g a1) b1)))
-    (step p2 (lambda (in) (cand
+      (lambda (in . _) (mexp (mexp g a1) b1))
+      empty-assignements)
+    (step p2 (lambda (in . _) (cand
           (eq (vks p2) (vk skP))
           (eq (sel2of2 (sel1of2 (inP2 p2))) (mexp g b1))))
-      (lambda (in) (mexp g k11)))))
+      (lambda (in . _) (mexp g k11))
+      empty-assignements)))
 
 (define P4 (declare-same-step pbl "P4" ptcls (list Index)
-    (lambda (p in i) (cand
+    (lambda (p in i . _) (cand
         (eq (vks p) (vk skP))
         (mnot (eq (sel2of2 (sel1of2 (inP2 p))) (mexp g b1)))
         (eq (sel2of2 (sel1of2 (inP2 p))) (mexp g (b i)))))
-    (lambda (p in j) (mexp (mexp g a1) (b j)))))
+    (lambda (p in j . _) (mexp (mexp g a1) (b j)))
+    empty-assignements))
 
 
 (add-constrain pbl () (lt P1 P2))
@@ -97,42 +102,47 @@
 
 (define S1 (declare-same-step pbl "S1" ptcls '()
     empty-cond
-    (lambda (p in)
+    (lambda (p in . _)
       (let [ (gp (sel2of2 in)) (vkp (sel1of2 in)) ]
         (tuple
           (vk skS)
           (mexp g b1)
-          (sign (tuple gp (mexp g b1) vkp) skS))))))
+          (sign (tuple gp (mexp g b1) vkp) skS))))
+    empty-assignements))
 (define (S1in p) (macro_input S1 p))
 (define (vkS p) (sel1of2 (S1in p)))
 (define (gpS p) (sel2of2 (S1in p)))
 
 (define S2 (declare-same-step pbl "S2" ptcls '()
-    (lambda (p in)
+    (lambda (p in . _)
       (checksign (tuple (mexp g b1) (gpS p) (vk skS)) in (vkS p)))
-    (lambda _ ok)))
+    (lambda _ ok)
+    empty-assignements))
 (define (S2in p) (macro_input S2 p))
 
 
 (define S3 (declare-step pbl "S3" '()
     (step p1
-      (lambda (in) (cand
+      (lambda (in . _) (cand
           (eq (vkS p1) (vk skP))
           (eq (gpS p1) (mexp g a1))))
-      (lambda (in) (mexp (mexp g a1) b1)))
+      (lambda (in . _) (mexp (mexp g a1) b1))
+      empty-assignements)
     (step p2
-      (lambda (in) (cand
+      (lambda (in . _) (cand
           (eq (vkS p2) (vk skP))
           (eq (gpS p2) (mexp g a1))))
-      (lambda (in) (mexp g k11)))))
+      (lambda (in . _) (mexp g k11))
+      empty-assignements)))
 
 (define S4 (declare-same-step pbl "S4" ptcls (list Index)
-    (lambda (p in i)
+    (lambda (p in i . _)
       (cand
         (eq (vkS p) (vk skP))
         (mnot (eq (gpS p) (mexp g a1)))
         (eq (gpS p) (mexp g (a i)))))
-    (lambda (p in j) (mexp (mexp g b1) (a j)))))
+    (lambda (p in j . _) (mexp (mexp g b1) (a j)))
+    empty-assignements))
 
 
 ;; ordering constrains
@@ -143,8 +153,8 @@
 
 
 (define mehhh (declare-step pbl "meh" '()
-  (step p1 empty-cond (lambda _ (mexp (mexp g a1) b1)))
-  (step p2 empty-cond (lambda _ (mexp g k11)))
+  (step p1 empty-cond (lambda _ (mexp (mexp g a1) b1)) empty-assignements)
+  (step p2 empty-cond (lambda _ (mexp g k11)) empty-assignements)
 ))
 (add-constrain pbl () (lt mehhh S1))
 (add-constrain pbl () (lt mehhh P1))

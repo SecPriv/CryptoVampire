@@ -68,39 +68,45 @@
 ;; Protocol P
 (define P1 (declare-same-step pbl "P1" ptcls '()
     (lambda _ mtrue)
-    (lambda (p in) (mexp g a1))))
+    (lambda (p in . _) (mexp g a1))
+    empty-assignements))
 
 (define (gB p) (macro_input P2 p))
 
 (define P2 (declare-same-step pbl "P2" ptcls '()
     (lambda _ mtrue)
-    (lambda (p in) ok)))
+    (lambda (p in . _) ok)
+    empty-assignements))
 
 (define P3 (declare-same-step pbl "P3" ptcls '()
-    (lambda (p in)
+    (lambda (p in . _)
       (let [ (sidP (h (tuple (tuple (mexp g a1) (gB p)) (mexp (gB p) a1)) hKey))
         (pkS_in (sel1of2 in))
         (sigS (sel2of2 in)) ]
         (cand (eq pkS_in (vk skS))
           (checksign sidP sigS pkS_in))))
-    (lambda (p in)
+    (lambda (p in . _)
       (let [ (sidP (h (tuple (tuple (mexp g a1) (gB p)) (mexp (gB p) a1)) hKey)) ]
-        (enc (sign sidP skP) rP (mexp (gB p) a1))))))
+        (enc (sign sidP skP) rP (mexp (gB p) a1))))
+    empty-assignements))
 
 (define P4_ok (declare-same-step pbl "P4_ok" ptcls '()
-    (lambda (p in) (cor (eq (gB p) (mexp g b1))
+    (lambda (p in . _) (cor (eq (gB p) (mexp g b1))
         (exists ((i Index)) (eq (gB p) (mexp g (b i))))))
-    (lambda _ ok)))
+    (lambda _ ok)
+    empty-assignements))
 
 (define P4_fail (declare-step pbl "P4_fail" '()
     (step p1
-      (lambda (in) (mnot (cor (eq (gB p1) (mexp g b1))
+      (lambda (in . _) (mnot (cor (eq (gB p1) (mexp g b1))
             (exists ((i Index)) (eq (gB p1) (mexp g (b i)))))))
-      (lambda _ ok))
+      (lambda _ ok)
+      empty-assignements)
     (step p2
-      (lambda (in) (mnot (cor (eq (gB p2) (mexp g b1))
+      (lambda (in . _) (mnot (cor (eq (gB p2) (mexp g b1))
             (exists ((i Index)) (eq (gB p2) (mexp g (b i)))))))
-      (lambda _ ko))))
+      (lambda _ ko)
+      empty-assignements)))
 
 (add-constrain pbl () (lt P1 P2))
 (add-constrain pbl () (lt P2 P3))
@@ -111,36 +117,42 @@
 ;; Protocol S
 (define S1 (declare-same-step pbl "S1" ptcls '()
     (lambda _ mtrue)
-    (lambda (p in) (mexp g b1))))
+    (lambda (p in . _) (mexp g b1))
+    empty-assignements))
 
 (define (gP p) (macro_input S1 p))
 
 (define S2 (declare-same-step pbl "S2" ptcls '()
     (lambda _ mtrue)
-    (lambda (p in)
+    (lambda (p in . _)
       (let [ (sidS (h (tuple (tuple (gP p) (mexp g b1)) (mexp (gP p) b1)) hKey)) ]
-        (tuple (vk skS) (sign sidS skS))))))
+        (tuple (vk skS) (sign sidS skS))))
+    empty-assignements))
 
 (define S3 (declare-same-step pbl "S3" ptcls '()
-    (lambda (p in)
+    (lambda (p in . _)
       (let [ (sidS (h (tuple (tuple (gP p) (mexp g b1)) (mexp (gP p) b1)) hKey)) ]
         (checksign sidS (dec in (mexp (gP p) b1)) (vk skP))))
-    (lambda _ ok)))
+    (lambda _ ok)
+    empty-assignements))
 
 (define S4_ok (declare-same-step pbl "S4_ok" ptcls '()
-    (lambda (p in) (cor (eq (gP p) (mexp g a1))
+    (lambda (p in . _) (cor (eq (gP p) (mexp g a1))
         (exists ((i Index)) (eq (gP p) (mexp g (a i))))))
-    (lambda _ ok)))
+    (lambda _ ok)
+    empty-assignements))
 
 (define S4_fail (declare-step pbl "S4_fail" '()
     (step p1
-      (lambda (in) (mnot (cor (eq (gP p1) (mexp g a1))
+      (lambda (in . _) (mnot (cor (eq (gP p1) (mexp g a1))
             (exists ((i Index)) (eq (gP p1) (mexp g (a i)))))))
-      (lambda _ ok))
+      (lambda _ ok)
+      empty-assignements)
     (step p2
-      (lambda (in) (mnot (cor (eq (gP p2) (mexp g a1))
+      (lambda (in . _) (mnot (cor (eq (gP p2) (mexp g a1))
             (exists ((i Index)) (eq (gP p2) (mexp g (a i)))))))
-      (lambda _ ko))))
+      (lambda _ ko)
+      empty-assignements)))
 
 (add-constrain pbl () (lt S1 S2))
 (add-constrain pbl () (lt S2 S3))

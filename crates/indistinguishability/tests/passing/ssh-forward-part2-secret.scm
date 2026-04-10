@@ -34,13 +34,16 @@
 
 (define SDIS1 (declare-same-step pbl "SDIS1" ptcls '()
     empty-cond
-    (lambda (p in) (mexp g b1))))
+    (lambda (p in . _) (mexp g b1))
+    empty-assignements))
 
 (define SDIS2 (declare-step pbl "SDIS2" '()
-    (step p1 (lambda (in) (eq in (mexp g a1)))
-      (lambda (in) (mexp (mexp g a1) b1)))
-    (step p2 (lambda (in) (eq in (mexp g a1)))
-      (lambda (in) (mexp g c11)))))
+    (step p1 (lambda (in . _) (eq in (mexp g a1)))
+      (lambda (in . _) (mexp (mexp g a1) b1))
+      empty-assignements)
+    (step p2 (lambda (in . _) (eq in (mexp g a1)))
+      (lambda (in . _) (mexp g c11))
+      empty-assignements)))
 
 (add-constrain pbl () (lt SDIS1 SDIS2))
 

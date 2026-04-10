@@ -64,21 +64,23 @@
 (define tag
   (declare-step pbl "tag" (list Index Index)
     (step p1 empty-cond
-      (lambda (in i j)
+      (lambda (in i j . _)
         (tuple (nt i j)
           (mxor
             (mid i j p1)
             (mhash
               (tuple (tuple in (nt i j)) tag1)
-              (mk i j p1))))))
+              (mk i j p1)))))
+      empty-assignements)
     (step p2 empty-cond
-      (lambda (in i j)
+      (lambda (in i j . _)
         (tuple (nt i j)
           (mxor
             (mid i j p2)
             (mhash
               (tuple (tuple in (nt i j)) tag1)
-              (mk i j p2))))))))
+              (mk i j p2)))))
+      empty-assignements)))
 ; (bind ((j Index) (i Index) (p Protocol))
 ;   (cv-add-rewrite pbl (cv-mk-rewrite "rebuild mid" (list j i p)
 ;       (mid i j p)
@@ -88,8 +90,8 @@
 
 (define r1
   (declare-step pbl "r" (list Index)
-    (step p1 empty-cond (lambda (_ i) (nr i)))
-    (step p2 empty-cond (lambda (_ i) (nr i)))))
+    (step p1 empty-cond (lambda (_ i . _) (nr i)) empty-assignements)
+    (step p2 empty-cond (lambda (_ i . _) (nr i)) empty-assignements)))
 
 (bind ((i Index))
   (begin
@@ -101,9 +103,11 @@
 (define r2
   (declare-step pbl "r2" (list Index)
     (step p1 empty-cond
-      (lambda (in j) (mk-fdst1 in j p1)))
+      (lambda (in j . _) (mk-fdst1 in j p1))
+      empty-assignements)
     (step p2 empty-cond
-      (lambda (in j) (mk-fdst1 in j p2)))))
+      (lambda (in j . _) (mk-fdst1 in j p2))
+      empty-assignements)))
 (add-constrain pbl (i) (lt (r1 i) (r2 i)))
 
 (initialize-as-prf prf mhash)

@@ -45,56 +45,62 @@
 (define P1
   (declare-step pbl "P1" (list Index)
     (step p1 empty-cond
-      (lambda (in i)
-        (tuple (vk skP) (mexp g (a i)))))
+      (lambda (in i . _)
+        (tuple (vk skP) (mexp g (a i))))
+      empty-assignements)
     (step p2 empty-cond
-      (lambda (in i)
-        (tuple (vk skP) (mexp g (a i)))))))
+      (lambda (in i . _)
+        (tuple (vk skP) (mexp g (a i))))
+      empty-assignements)))
 
 (define P2
   (declare-step pbl "P2" (list Index)
     (step p1
-      (lambda (in i)
+      (lambda (in i . _)
         (let [ (gs (sel2of2 (sel1of2 in))) (vks (sel1of2 (sel1of2 in))) ]
           (and
             (checksign (tuple (mexp g (a i)) gs (vk skP)) (sel2of2 in) vks)
             (eq vks (vk skS)))))
-      (lambda (in i)
+      (lambda (in i . _)
         (let [ (gs (sel2of2 (sel1of2 in))) (vks (sel1of2 (sel1of2 in))) ]
-          (sign (tuple gs (mexp g (a i)) vks) skP))))
+          (sign (tuple gs (mexp g (a i)) vks) skP)))
+      empty-assignements)
     (step p2
-      (lambda (in i)
+      (lambda (in i . _)
         (let [ (gs (sel2of2 (sel1of2 in))) (vks (sel1of2 (sel1of2 in))) ]
           (and
             (checksign (tuple (mexp g (a i)) gs (vk skP)) (sel2of2 in) vks)
             (eq vks (vk skS)))))
-      (lambda (in i)
+      (lambda (in i . _)
         (let [ (gs (sel2of2 (sel1of2 in))) (vks (sel1of2 (sel1of2 in))) ]
-          (sign (tuple gs (mexp g (a i)) vks) skP))))))
+          (sign (tuple gs (mexp g (a i)) vks) skP)))
+      empty-assignements)))
 
 
 (define Schall1
   (declare-step pbl "Schall1" (list Index)
     (step p1
-      (lambda (in j)
+      (lambda (in j . _)
         (let [ (gp (sel2of2 in)) (vkp (sel1of2 in)) ]
           (eq vkp (vk skP))))
-      (lambda (in j)
+      (lambda (in j . _)
         (let [ (gp (sel2of2 in)) (vkp (sel1of2 in)) ]
           (tuple
             (vk skS)
             (mexp g (b j))
-            (sign (tuple gp (mexp g (b j)) vkp) skS)))))
+            (sign (tuple gp (mexp g (b j)) vkp) skS))))
+      empty-assignements)
     (step p2
-      (lambda (in j)
+      (lambda (in j . _)
         (let [ (gp (sel2of2 in)) (vkp (sel1of2 in)) ]
           (eq vkp (vk skP))))
-      (lambda (in j)
+      (lambda (in j . _)
         (let [ (gp (sel2of2 in)) (vkp (sel1of2 in)) ]
           (tuple
             (vk skS)
             (mexp g (b j))
-            (sign (tuple gp (mexp g (b j)) vkp) skS)))))))
+            (sign (tuple gp (mexp g (b j)) vkp) skS))))
+      empty-assignements)))
 (define (S1in j p) (macro_input (Schall1 j) p))
 (bind ((i Index))
   (begin
@@ -106,44 +112,50 @@
 (define Schall2
   (declare-step pbl "Schall2" (list Index)
     (step p1
-      (lambda (in j)
+      (lambda (in j . _)
         (let [ (gp (sel2of2 (S1in j p1))) (vkp (sel1of2 (S1in j p1))) ]
           (checksign (tuple (mexp g (b j)) gp (vk skS)) in vkp)))
-      (lambda _ ok))
+      (lambda _ ok)
+      empty-assignements)
     (step p2
-      (lambda (in j)
+      (lambda (in j . _)
         (let [ (gp (sel2of2 (S1in j p2))) (vkp (sel1of2 (S1in j p2))) ]
           (checksign (tuple (mexp g (b j)) gp (vk skS)) in vkp)))
-      (lambda _ ok))))
+      (lambda _ ok)
+      empty-assignements)))
 (define (S2in j p) (macro_input (Schall2 j) p))
 
 (define Schall3
   (declare-step pbl "Schall3" (list Index Index)
     (step p1
-      (lambda (challenge i j)
+      (lambda (challenge i j . _)
         (let [ (gp (sel2of2 (S1in j p1))) (vkp (sel1of2 (S1in j p1))) ]
           (eq gp (mexp g (a i)))))
-      (lambda (challenge i j)
-        (mexp (mexp g (a i)) (b j))))
+      (lambda (challenge i j . _)
+        (mexp (mexp g (a i)) (b j)))
+      empty-assignements)
     (step p2
-      (lambda (challenge i j)
+      (lambda (challenge i j . _)
         (let [ (gp (sel2of2 (S1in j p2))) (vkp (sel1of2 (S1in j p2))) ]
           (eq gp (mexp g (a i)))))
-      (lambda (challenge i j)
-        (mexp g (k i j))))))
+      (lambda (challenge i j . _)
+        (mexp g (k i j)))
+      empty-assignements)))
 
 (define Schall3fail
   (declare-step pbl "Schall3fail" (list Index)
     (step p1
-      (lambda (challenge j)
+      (lambda (challenge j . _)
         (let [ (gp (sel2of2 (S1in j p1))) (vkp (sel1of2 (S1in j p1))) ]
           (mnot (exists ((i Index)) (eq gp (mexp g (a i)))))))
-      (lambda _ ok))
+      (lambda _ ok)
+      empty-assignements)
     (step p2
-      (lambda (challenge j)
+      (lambda (challenge j . _)
         (let [ (gp (sel2of2 (S1in j p2))) (vkp (sel1of2 (S1in j p2))) ]
           (mnot (exists ((i Index)) (eq gp (mexp g (a i)))))))
-      (lambda _ ko))))
+      (lambda _ ko)
+      empty-assignements)))
 
 ;; ordering constrains
 (add-constrain pbl (i) (lt (P1 i) (P2 i)))

@@ -37,16 +37,19 @@
 
 (define tag (declare-same-step pbl "tag" ptcls (list Index Index)
     (lambda _ mtrue)
-    (lambda (p in i j . _) (tuple (n i j) (mhash (n i j) (mk i j p))))))
+    (lambda (p in i j . _) (tuple (n i j) (mhash (n i j) (mk i j p))))
+    empty-assignements))
 
 (define rs (declare-same-step pbl "rs" ptcls (list Index Index)
     (lambda (p in i j . _) (eq (sel2of2 in) (mhash (sel1of2 in) (mk i j p))))
-    (lambda _ ok)))
+    (lambda _ ok)
+    empty-assignements))
 
 (define rf (declare-same-step pbl "rf" ptcls (list Index)
     (lambda (p in i . _) (mnot (exists ((j Index))
           (eq (sel2of2 in) (mhash (sel1of2 in) (mk i j p))))))
-    (lambda _ ko)))
+    (lambda _ ko)
+    empty-assignements))
 
 (initialize-as-prf prf mhash)
 

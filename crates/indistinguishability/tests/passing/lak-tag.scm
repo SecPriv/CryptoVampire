@@ -57,30 +57,34 @@
 (define r2
   (declare-step pbl "r2" (list Index)
     (step p1 empty-cond
-      (lambda (in j) (mk-fdst1 in j p1)))
+      (lambda (in j . _) (mk-fdst1 in j p1))
+      empty-assignements)
     (step p2 empty-cond
-      (lambda (in j) (mk-fdst1 in j p2)))))
+      (lambda (in j . _) (mk-fdst1 in j p2))
+      empty-assignements)))
 
 (define tag
   (declare-step pbl "tag" (list Index Index)
     (step p1 empty-cond
-      (lambda (in i j)
+      (lambda (in i j . _)
         (tuple (nt i j)
           (mhash
             (tuple (tuple in (nt i j)) tag1)
-            (mk i j p1)))))
+            (mk i j p1))))
+      empty-assignements)
     (step p2 empty-cond
-      (lambda (in i j)
+      (lambda (in i j . _)
         (tuple (nt i j)
           (mhash
             (tuple (tuple in (nt i j)) tag1)
-            (mk i j p2)))))))
+            (mk i j p2))))
+      empty-assignements)))
 
 
 (define r
   (declare-step pbl "r" (list Index)
-    (step p1 empty-cond (lambda (_ i) (nr i)))
-    (step p2 empty-cond (lambda (_ i) (nr i)))))
+    (step p1 empty-cond (lambda (_ i . _) (nr i)) empty-assignements)
+    (step p2 empty-cond (lambda (_ i . _) (nr i)) empty-assignements)))
 
 (initialize-as-prf prf mhash)
 
