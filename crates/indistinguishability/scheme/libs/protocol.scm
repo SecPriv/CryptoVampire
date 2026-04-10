@@ -2,37 +2,84 @@
   step
   step-protocol
   declare-step declare-same-step
-  set-init-step)
+  declare-memory-cell 
+  store-cell
+  )
 (require-builtin cryptovampire/ll/pbl as pbl->)
 (require-builtin cryptovampire/ll/step as step->)
 (require-builtin cryptovampire/ll/formula as f->)
-(require "cryptovampire/function")
+(require-builtin cryptovampire/ll/builtin-functions as funs->)
+(require-builtin cryptovampire/ll/variable as var->)
+(require (prefix-in fun. "cryptovampire/function"))
 (require "cryptovampire/stdlib")
 (require "cryptovampire/builtin-functions")
+(require (prefix-in t-> "cryptovampire/type"))
 
 
-(struct step (protocol condition message))
+(struct step (protocol condition message assignements))
+(struct assignement (cell single-assignement))
+
+(define-syntax store-cell
+  (syntax-rules (:=)
+    [
+    (_ ((vars ...) cell cargs ...) := value)
+    (let* [
+      (cell-sorts (fun.get-input-sorts cell))
+      (cell-fresh-vars (map var->fresh-with-sort cell-sorts))
+      (args-vars ((lambda (vars ...) (list cargs ...)) cell-fresh-vars))
+      (valuef ((lambda (vars ...) value) cell-fresh-vars))
+      ]
+      (assignement cell (step->mk-single-assignment args-vars cell-fresh-vars valuef)))
+    ]
+    [
+    (_ cell := value)
+    (assignement cell (step->mk-single-assignment '() '() value))
+    ]))
+
+;; if an arguement remain after the argument to the step, it will be taken for the time
+(define (mk-cell-macro time ptcl cell . args)
+  (let*
+    [
+    (cell-arity (fun.arity cell))
+    (cell-args (take args cell-arity))
+    (remaining-args (drop args cell-arity))
+    (ftime
+      (if (empty? remaining-args)
+        time
+        (car remaining-args)))
+    (fcell (if (t->Formula? cell) cell (cell cell-args)))
+    ]
+    (macro_memory_cell fcell ftime ptcl)))
+
 
 (define (declare-step pbl name sorts . content)
   (let* [
     (step (step->declare-step pbl name sorts))
-    (stepf (register-function step)) ]
+    (stepf (fun.register-function step)) ]
     (begin
-      (for-each (lambda (c)
+      (map (lambda (c)
           (let* [
             (ptclf (step-protocol c))
             (msgf (step-message c))
             (condf (step-condition c))
-            (ptcl (get-function ptclf))
+            (assignements (step-assignements c))
+            (ptcl (fun.get-function ptclf))
             (variables
               (map f->var (step->get-vars pbl step ptcl)))
             (applied-step (if (empty? variables) stepf (apply stepf variables)))
-            (in (macro_input applied-step ptclf)) ]
+            (in (macro_input applied-step ptclf))
+            (cells (partial mk-cell-macro (pred applied-step) ptclf))
+            (args (append (cons in variables) (list cells)))
+            ]
             (begin
               (step->set-msg pbl step ptcl
-                (apply msgf (cons in variables)))
+                (apply msgf args))
               (step->set-cond pbl step ptcl
-                (apply condf (cons in variables))))))
+                (apply condf args))
+              (for-each (lambda (assignement)
+                  (step->insert-assignement pbl step ptcl (assignement-cell assignement)
+                    (assignement-single-assignement assignement)))
+                (apply assignements args)))))
         content)
       stepf)))
 
@@ -42,10 +89,17 @@
     (content (map (lambda (p) (step p (partial msg p) (partial mcond p))) ptcls)) ]
     (apply declare content)))
 
-(define (set-init-step pbl . content)
-  (let [ (s (get-function init)) ]
-    (begin
-      (for-each (lambda (c)
-          (let [ (condf (step-message c)) (ptcl (step-protocol c)) ]
-            (step->set-msg pbl s (get-function ptcl)
-              condf)))))))
+; (define (set-init-step pbl . content)
+;   (let [ (s (get-function init)) ]
+;     (begin
+;       (for-each (lambda (c)
+;           (let [ (condf (step-message c)) (ptcl (step-protocol c)) ]
+;             (step->set-msg pbl s (get-function ptcl)
+;               condf)))))))
+
+;; Memory cell helpers
+(define (declare-memory-cell pbl name params #:optional (init (lambda _ empty)))
+  (let* [
+    (cell (pbl->declare-memory-cell pbl name params))
+    (cellf (fun.register-function step)) ]
+    cellf))

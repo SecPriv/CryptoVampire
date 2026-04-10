@@ -39,14 +39,17 @@ impl SingleAssignement {
         #[builder(with = <_>::from_iter, default = vec![])] parameter_vars: Vec<Variable>,
         value: Formula,
     ) -> anyhow::Result<Self> {
-        let free_vars: FxHashSet<_> = chain![&assignement_vars, &parameter_vars].collect();
-        ensure!(
-            (&value).free_vars_iter().all(|v| free_vars.contains(&v)),
-            "free varaible"
-        );
+        // Check sort first (uses reference, doesn't move)
         ensure!(
             value.has_sort(Sort::Bitstring),
             "the content of a state should have sort `Bitstring`"
+        );
+
+        // Check free vars (use reference to avoid moving value)
+        let free_vars: FxHashSet<_> = chain![&assignement_vars, &parameter_vars].collect();
+        ensure!(
+            (&value).free_vars_iter().all(|v| free_vars.contains(v)),
+            "free varaible"
         );
 
         Ok(Self {
@@ -102,5 +105,106 @@ impl SingleAssignement {
 impl MemoryCell {
     pub fn function(&self) -> &Function {
         &self.function
+    }
+}
+
+mod steel {
+    use itertools::chain;
+    use log::trace;
+    use logic_formula::AsFormula;
+    use logic_formula::iterators::AllTermsIterator;
+    use steel::rerrs::ErrorKind;
+    use steel::rvals::{IntoSteelVal, Result as SResult};
+    use steel::steel_vm::builtin::BuiltInModule;
+    use steel::{SteelErr, SteelVal};
+
+    use crate::input::Registerable;
+    use crate::input::shared_problem::ShrProblem;
+    use crate::protocol::step::check_elem;
+    use crate::protocol::{MemoryCell, SingleAssignement};
+    use crate::terms::{Formula, Function, Sort, Variable};
+
+    #[steel_derive::declare_steel_function(name = "mk-single-assignment")]
+    fn mk_single_assignement(
+        assignement_vars: Vec<Variable>,
+        parameter_vars: Vec<Variable>,
+        value: Formula,
+    ) -> SResult<SteelVal> {
+        let sa = SingleAssignement::builder()
+            .assignement_vars(assignement_vars)
+            .parameter_vars(parameter_vars)
+            .value(value)
+            .build();
+        match sa {
+            Err(e) => Err(SteelErr::new(ErrorKind::Generic, e.to_string())),
+            Ok(s) => Ok(s.into_steelval()?),
+        }
+    }
+
+    /// Sets an assignment for a memory cell at a given step.
+    #[steel_derive::declare_steel_function(name = "insert-assignement")]
+    fn set_assignment(
+        pbl: ShrProblem,
+        step: Function,
+        ptcl: Function,
+        cell: Function,
+        assignement: SingleAssignement,
+    ) -> SResult<()> {
+        {
+            let SingleAssignement {
+                assignement_vars,
+                parameter_vars,
+                value,
+            } = &assignement;
+            check_elem(
+                &pbl.borrow(),
+                &step,
+                &ptcl,
+                value,
+                chain![assignement_vars, parameter_vars],
+            )?;
+        }
+
+        if !ptcl.is_protocol() {
+            return Err(SteelErr::new(
+                ErrorKind::TypeMismatch,
+                "'ptcl' should be Protocol".to_string(),
+            ));
+        }
+
+        if !step.is_step() {
+            return Err(SteelErr::new(
+                ErrorKind::TypeMismatch,
+                "'step' should be a step".to_string(),
+            ));
+        }
+
+        if !cell.is_memory_cell() {
+            return Err(SteelErr::new(
+                ErrorKind::TypeMismatch,
+                "'step' should be a cell".to_string(),
+            ));
+        }
+
+        pbl.get_step_mut(step, ptcl)?
+            .assignements
+            .insert(cell, assignement);
+        Ok(())
+    }
+
+    impl Registerable for MemoryCell {
+        fn register(modules: &mut rustc_hash::FxHashMap<String, BuiltInModule>) {
+            let name = "cryptovampire/ll/step";
+
+            let module = modules
+                .entry(name.into())
+                .or_insert_with(|| BuiltInModule::new(name));
+            SingleAssignement::register_type(module);
+            module
+                .register_type::<SingleAssignement>("SingleAssignement?")
+                .register_native_fn_definition(SET_ASSIGNMENT_DEFINITION)
+                .register_native_fn_definition(MK_SINGLE_ASSIGNEMENT_DEFINITION);
+            trace!("defined {name} for memory cells scheme module");
+        }
     }
 }

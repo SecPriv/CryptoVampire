@@ -16,7 +16,7 @@ mod protocol;
 /// Re-exports the `Protocol` struct, representing a cryptographic protocol.
 pub use protocol::Protocol;
 
-mod memory_cell;
+pub mod memory_cell;
 pub use memory_cell::{Assignements, MemoryCell, SingleAssignement, SingleAssignementBuilder};
 
 pub mod call_graph;

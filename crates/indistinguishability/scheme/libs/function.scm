@@ -1,6 +1,8 @@
 (provide
   nonce?
   get-function
+  get-input-sorts
+  get-output-sort
   wrap-nonce
   unwrap-nonce
   lift-function
