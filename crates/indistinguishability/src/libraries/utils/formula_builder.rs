@@ -38,7 +38,6 @@ pub struct FormulaBuilder<A: FormulaBuilderAux = DefaultAux> {
 
     aux: A,
 
-    #[cfg(debug_assertions)]
     name: Variable
 }
 
@@ -155,7 +154,6 @@ impl<A: FormulaBuilderAux + Clone + Default> RefFormulaBuilder<A> {
             content: vec![],
             aux,
             flags,
-            #[cfg(debug_assertions)]
             name: Variable::fresh().call()
         })));
         trace!("spwaned builder {:?} with flags {:?}", builder.0.borrow().name, flags);
@@ -238,7 +236,6 @@ impl<A: FormulaBuilderAux> RefFormulaBuilder<A> {
         self.0.borrow_mut().children.push(child.weak());
     }
 
-    #[cfg(debug_assertions)]
     pub(crate) fn dgb_name(&self) -> Variable {
         self.0.borrow().name.clone()
     }
