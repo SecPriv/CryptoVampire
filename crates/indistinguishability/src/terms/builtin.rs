@@ -376,7 +376,7 @@ mk_builtin_funs!(
     };
 
     UNFOLD_MEMORY_CELL "unfold_memory_cell" {
-        signature: s!(MemoryCell, Time, Protocol -> Bool),
+        signature: s!(MemoryCell, Time, Protocol -> Bitstring),
         flags: f!(UNFOLD)
     };
 

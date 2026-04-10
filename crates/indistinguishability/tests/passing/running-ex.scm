@@ -41,9 +41,9 @@
 
 ;; Initialize memory cells in the init step
 ;; sT(i) = s0(i) and sR(i) = s0(i) initially
-(set-init-step pbl
-  (step p1 (lambda _ mtrue) (lambda (_ in) mtrue))
-  (step p2 (lambda _ mtrue) (lambda (_ in) mtrue)))
+; (set-init-step pbl
+;   (step p1 (lambda _ mtrue) (lambda (_ in) mtrue))
+;   (step p2 (lambda _ mtrue) (lambda (_ in) mtrue)))
 
 ;; Tag process: receives nothing, outputs G(sT(i), k')
 ;; Updates: sT(i) := H(sT(i), k)

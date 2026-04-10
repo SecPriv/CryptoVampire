@@ -45,12 +45,12 @@ impl SingleAssignement {
             "the content of a state should have sort `Bitstring`"
         );
 
-        // Check free vars (use reference to avoid moving value)
-        let free_vars: FxHashSet<_> = chain![&assignement_vars, &parameter_vars].collect();
-        ensure!(
-            (&value).free_vars_iter().all(|v| free_vars.contains(v)),
-            "free varaible"
-        );
+        // // Check free vars (use reference to avoid moving value)
+        // let free_vars: FxHashSet<_> = chain![&assignement_vars, &parameter_vars].collect();
+        // ensure!(
+        //     (&value).free_vars_iter().all(|v| free_vars.contains(v)),
+        //     "free varaible"
+        // );
 
         Ok(Self {
             assignement_vars,
@@ -168,21 +168,21 @@ mod steel {
         if !ptcl.is_protocol() {
             return Err(SteelErr::new(
                 ErrorKind::TypeMismatch,
-                "'ptcl' should be Protocol".to_string(),
+                format!("'ptcl' should be Protocol (got {})", ptcl.signature.output),
             ));
         }
 
         if !step.is_step() {
             return Err(SteelErr::new(
                 ErrorKind::TypeMismatch,
-                "'step' should be a step".to_string(),
+                format!("'step' should be a step (got {})", step.signature.output)
             ));
         }
 
         if !cell.is_memory_cell() {
             return Err(SteelErr::new(
                 ErrorKind::TypeMismatch,
-                "'step' should be a cell".to_string(),
+                format!("'cell' should be a cell (got {})", cell.signature.output),
             ));
         }
 

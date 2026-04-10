@@ -179,6 +179,7 @@ impl Problem {
             .declare_function()
             .inputs(params.iter().cloned())
             .output(Sort::MemoryCell)
+            .flag(FunctionFlags::MEMORY_CELL)
             .name(name)
             .call();
 

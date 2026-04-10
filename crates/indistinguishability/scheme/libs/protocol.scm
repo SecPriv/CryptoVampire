@@ -4,6 +4,7 @@
   declare-step declare-same-step
   declare-memory-cell 
   store-cell
+  empty-assignements
   )
 (require-builtin cryptovampire/ll/pbl as pbl->)
 (require-builtin cryptovampire/ll/step as step->)
@@ -19,6 +20,11 @@
 (struct step (protocol condition message assignements))
 (struct assignement (cell single-assignement))
 
+(define empty-assignements (lambda _ '()))
+
+(define __inner-get-function fun.get-function)
+(define __inner-mk-single-assignment step->mk-single-assignment)
+
 (define-syntax store-cell
   (syntax-rules (:=)
     [
@@ -29,11 +35,11 @@
       (args-vars ((lambda (vars ...) (list cargs ...)) cell-fresh-vars))
       (valuef ((lambda (vars ...) value) cell-fresh-vars))
       ]
-      (assignement cell (step->mk-single-assignment args-vars cell-fresh-vars valuef)))
+      (assignement (__inner-get-function cell) (__inner-mk-single-assignment args-vars cell-fresh-vars valuef)))
     ]
     [
     (_ cell := value)
-    (assignement cell (step->mk-single-assignment '() '() value))
+    (assignement (__inner-get-function cell) (__inner-mk-single-assignment '() '() value))
     ]))
 
 ;; if an arguement remain after the argument to the step, it will be taken for the time
@@ -66,7 +72,7 @@
             (ptcl (fun.get-function ptclf))
             (variables
               (map f->var (step->get-vars pbl step ptcl)))
-            (applied-step (if (empty? variables) stepf (apply stepf variables)))
+            (applied-step (if (t->Formula? stepf) stepf (apply stepf variables)))
             (in (macro_input applied-step ptclf))
             (cells (partial mk-cell-macro (pred applied-step) ptclf))
             (args (append (cons in variables) (list cells)))
@@ -83,10 +89,10 @@
         content)
       stepf)))
 
-(define (declare-same-step pbl name ptcls sorts msg mcond)
+(define (declare-same-step pbl name ptcls sorts msg mcond assignements )
   (let* [
     (declare (partial declare-step pbl name sorts))
-    (content (map (lambda (p) (step p (partial msg p) (partial mcond p))) ptcls)) ]
+    (content (map (lambda (p) (step p (partial msg p) (partial mcond p) assignements)) ptcls)) ]
     (apply declare content)))
 
 ; (define (set-init-step pbl . content)
@@ -98,8 +104,10 @@
 ;               condf)))))))
 
 ;; Memory cell helpers
-(define (declare-memory-cell pbl name params #:optional (init (lambda _ empty)))
+(define (declare-memory-cell pbl name params  init)
   (let* [
-    (cell (pbl->declare-memory-cell pbl name params))
-    (cellf (fun.register-function step)) ]
+    (params (map var->fresh-with-sort params))
+    (initv (map (lambda (p) (apply init (cons p params))) (pbl->get-all-protocols pbl)))
+    (cell (pbl->declare-memory-cell pbl name params initv))
+    (cellf (fun.register-function cell)) ]
     cellf))

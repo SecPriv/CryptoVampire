@@ -11,6 +11,7 @@ use steel::steel_vm::builtin::BuiltInModule;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel::{SteelErr, SteelVal};
 use steel_derive::Steel;
+use utils::econtinue_let;
 
 use crate::input::golgge_rules::Rule;
 use crate::input::shared_exists::ShrExists;
@@ -197,10 +198,43 @@ fn declare_protocol(pbl: ShrProblem) -> Function {
 /// * `name` - The name of the memory cell
 /// * `params` - The parameter sorts (e.g., (list Index) for array-like cells)
 #[steel_derive::declare_steel_function(name = "declare-memory-cell")]
-fn declare_memory_cell(pbl: ShrProblem, name: String, params: Vec<Sort>) -> SResult<Function> {
-    pbl.borrow_mut()
-        .declare_memory_cell(name, params)
-        .map_err(|e| SteelErr::new(ErrorKind::Generic, e.to_string()))
+fn declare_memory_cell(
+    pbl: ShrProblem,
+    name: String,
+    params: Vec<Variable>,
+    initv: Vec<Formula>,
+) -> SResult<Function> {
+    let pbl = &mut pbl.borrow_mut();
+    let fun = pbl
+        .declare_memory_cell(name, params.iter().map(|x| x.get_sort().unwrap()).collect())
+        .map_err(|e| SteelErr::new(ErrorKind::Generic, e.to_string()))?;
+
+    if initv.len() != pbl.num_protocols() {
+        return Err(SteelErr::new(
+            ErrorKind::ArityMismatch,
+            format!(
+                "The number of init value does not match the number of protocols (got {:}, \
+                 expected {:})",
+                initv.len(),
+                pbl.num_protocols()
+            ),
+        ));
+    }
+
+    for (i, value) in initv.into_iter().enumerate() {
+        econtinue_let!(let Some(init) = pbl.protocol_mut(i).unwrap().step_mut(0));
+        assert!(value.has_sort(Sort::Bitstring));
+        init.assignements.insert(
+            fun.clone(),
+            SingleAssignement {
+                assignement_vars: params.clone(),
+                parameter_vars: params.clone(),
+                value,
+            },
+        );
+    }
+
+    Ok(fun)
 }
 
 /// Declares a new existential quantifier in the problem.

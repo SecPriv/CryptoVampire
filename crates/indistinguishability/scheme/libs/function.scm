@@ -50,7 +50,7 @@
     [else (funf get-head) ]))
 
 
-(define (sarity f) (length (sig->inputs (fun->signature f))))
+(define (sarity f) (length (sig->inputs f)))
 (define (get-signature f) (fun->signature (get-function f)))
 (define (get-input-sorts f) (sig->inputs (get-signature f)))
 (define (get-output-sort f) (sig->output (get-signature f)))
@@ -58,7 +58,7 @@
   (if (Sort? f) (Nonce? f) (Nonce? (get-output-sort f))))
 
 (define (lift-function f)
-  (if (= (sarity f) 0)
+  (if (= (sarity (fun->signature f)) 0)
     (f->app f '())
     (lambda args
       (if (requests-head? args) f

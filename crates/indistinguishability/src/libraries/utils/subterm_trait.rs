@@ -265,7 +265,7 @@ pub trait SyntaxSearcher {
         ptcl: Formula,
         time: Formula,
     ) {
-        tr!("in search_memory_cell");
+        tr!("in search_memory_cell {cell}");
         let Formula::App {
             head: cell_head,
             args: cell_args,

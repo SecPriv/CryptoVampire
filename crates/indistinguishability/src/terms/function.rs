@@ -342,7 +342,7 @@ impl Function {
 
     /// Returns `true` if the function represents a datatype (nonce or protocol).
     pub fn is_datatype(&self) -> bool {
-        self.is_nonce() || self.is_protocol()
+        self.is_nonce() || self.is_protocol() || self.is_memory_cell()
     }
 
     is_fun!(is_debruijn; LAMBDA; "related to De Bruijn variables");

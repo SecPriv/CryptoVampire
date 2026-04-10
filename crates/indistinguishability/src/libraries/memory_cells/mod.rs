@@ -82,6 +82,8 @@ fn add_rewrites(pbl: &Problem, sink: &mut impl RewriteSink) {
     }
 }
 
+declare_trace!($"search");
+
 pub(crate) fn search_pred_memory_cell<S: SyntaxSearcher + ?Sized>(
     searcher: &S,
     pbl: &Problem,
@@ -97,6 +99,9 @@ pub(crate) fn search_pred_memory_cell<S: SyntaxSearcher + ?Sized>(
                 .flags()
                 .contains(FormulaBuilderFlags::NO_THROUGH_PRED_MEMORY_CELL)
     );
+    tr!("in search_pred_memory_cell at {time} in {} with {:?}", ptcl.name(), builder.dgb_name());
+    tr!("flags: {:?}", builder.flags());
+
     let builder = builder.ensure_and();
     let graph = ptcl.graph().unwrap();
 
@@ -118,6 +123,7 @@ pub(crate) fn search_pred_memory_cell<S: SyntaxSearcher + ?Sized>(
     if graph.all_steps_idx().all(|i| !descendants[i].is_empty()) {
         new_bflags |= FormulaBuilderFlags::NO_THROUGH_PREVIOUS_BODY;
     }
+    tr!("new flags: {:?}", new_bflags);
 
     for (idx, dflag) in descendants.into_iter().enumerate() {
         econtinue_if!(dflag.is_empty());
@@ -185,6 +191,15 @@ pub(crate) fn search_concrete_memory_cell<S: SyntaxSearcher + ?Sized>(
     step: &Step,
     step_args: CowArc<'static, [Formula]>,
 ) {
+    ereturn_if!(
+        builder.is_saturated()
+            || builder
+                .flags()
+                .contains(FormulaBuilderFlags::NO_THROUGH_DIRECT_MEMORY_CELL)
+    );
+
+    tr!("in search_concrete_memory_cell {cell_head} @ {}", &step.id);
+
     let step_id = &step.id;
     let time = rexp!((step_id #(step_args.iter().cloned())*));
     match step.assignements.get(&cell_head) {
