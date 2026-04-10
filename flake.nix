@@ -61,11 +61,14 @@
       system:
       let
         vampire-overlay = final: prev: {
-  vampire = prev.vampire.overrideAttrs (oldAttrs: {
-    src = vampire-master-src;
-  });
-};
-        overlays = [ (import rust-overlay) vampire-overlay ];
+          vampire = prev.vampire.overrideAttrs (oldAttrs: {
+            src = vampire-master-src;
+          });
+        };
+        overlays = [
+          (import rust-overlay)
+          vampire-overlay
+        ];
         pkgs = import nixpkgs {
           inherit system overlays;
         };

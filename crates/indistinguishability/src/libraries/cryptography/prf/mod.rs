@@ -208,7 +208,7 @@ impl PRF {
                 &new_goall,
                 PrfKind::Left,
                 candidate_bitstring.clone(),
-                name.clone()
+                name.clone(),
             ),
             TopPrfRule::new(
                 &conclusionr,
@@ -218,7 +218,7 @@ impl PRF {
                 &new_goalr,
                 PrfKind::Right,
                 candidate_bitstring.clone(),
-                name.clone()
+                name.clone(),
             ),
         ]
     }
@@ -327,7 +327,7 @@ impl TopPrfRule {
             new_goal: new_goal.into(),
             kind,
             candidate_bitstring,
-            name
+            name,
         }
     }
 }
@@ -406,7 +406,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for TopPrfRule {
 
     /// Returns the name of this rule, based on its `PrfKind`.
     fn name(&self) -> std::borrow::Cow<'_, str> {
-        let Self {kind, name, ..} = self;
+        let Self { kind, name, .. } = self;
         format!("prf {kind} {name}").into()
     }
 }

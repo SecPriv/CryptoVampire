@@ -6,7 +6,10 @@ use crate::libraries::utils::{SmtOption, SmtSink};
 use crate::libraries::{Cryptography, Library};
 use crate::problem::cache::Context;
 use crate::terms::{
-    ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, FindSuchThat, Function, HAPPENS, INIT, LEQ, LT, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL, MACRO_MSG, PRED, PROJ_1, PROJ_2, Quantifier, QuantifierT, Rewrite, SMT_ITE, SMT_SORT_LIST, Signature, Sort, TUPLE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MEMORY_CELL, UNFOLD_MSG
+    ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, FindSuchThat, Function, HAPPENS, INIT, LEQ, LT,
+    MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL, MACRO_MSG, PRED, PROJ_1,
+    PROJ_2, Quantifier, QuantifierT, Rewrite, SMT_ITE, SMT_SORT_LIST, Signature, Sort, TUPLE,
+    UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MEMORY_CELL, UNFOLD_MSG,
 };
 use crate::{MSmt, MSmtFormula, MSmtParam, Problem, smt, vec_smt};
 

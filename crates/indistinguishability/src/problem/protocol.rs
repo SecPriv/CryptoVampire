@@ -135,9 +135,9 @@ impl Problem {
             .with_context(|| "no protocols")?
             .steps()
             .len();
-        let n = NonZeroUsize::new(n).with_context(|| {
-            "a protocol has no steps, a protocol should always at least have an INIT step"
-        })?;
+        let n = NonZeroUsize::new(n).with_context(
+            || "a protocol has no steps, a protocol should always at least have an INIT step",
+        )?;
         Ok(n)
     }
 

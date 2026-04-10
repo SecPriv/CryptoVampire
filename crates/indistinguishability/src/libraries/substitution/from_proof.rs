@@ -71,7 +71,9 @@ pub trait ProofSubstitution {
 
     /// Wether [BOUND_ANDS] is used
     #[inline]
-    fn guard_bounds(&self) -> bool {false}
+    fn guard_bounds(&self) -> bool {
+        false
+    }
 
     fn function_application<'a>(&self, fun: &Function, psargs: PSArgs<'_, 'a, Self>) -> Result<Id> {
         trace!("rebuilding proof with {fun}:\n{psargs:#?}");

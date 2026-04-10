@@ -38,7 +38,7 @@ pub struct FormulaBuilder<A: FormulaBuilderAux = DefaultAux> {
 
     aux: A,
 
-    name: Variable
+    name: Variable,
 }
 
 /// A search condition
@@ -154,9 +154,13 @@ impl<A: FormulaBuilderAux + Clone + Default> RefFormulaBuilder<A> {
             content: vec![],
             aux,
             flags,
-            name: Variable::fresh().call()
+            name: Variable::fresh().call(),
         })));
-        trace!("spwaned builder {:?} with flags {:?}", builder.0.borrow().name, flags);
+        trace!(
+            "spwaned builder {:?} with flags {:?}",
+            builder.0.borrow().name,
+            flags
+        );
 
         if let Some(parent) = parent {
             parent.add_children(builder.clone());
@@ -231,8 +235,12 @@ impl<A: FormulaBuilderAux> RefFormulaBuilder<A> {
         Self::builder().parent(self).add_flag(self.flags())
     }
 
-    pub fn add_children(&self, child: Self){
-        trace!("adding child {:?} to {:?}", child.dgb_name(), self.dgb_name());
+    pub fn add_children(&self, child: Self) {
+        trace!(
+            "adding child {:?} to {:?}",
+            child.dgb_name(),
+            self.dgb_name()
+        );
         self.0.borrow_mut().children.push(child.weak());
     }
 

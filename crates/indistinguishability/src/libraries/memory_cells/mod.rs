@@ -99,7 +99,11 @@ pub(crate) fn search_pred_memory_cell<S: SyntaxSearcher + ?Sized>(
                 .flags()
                 .contains(FormulaBuilderFlags::NO_THROUGH_PRED_MEMORY_CELL)
     );
-    tr!("in search_pred_memory_cell at {time} in {} with {:?}", ptcl.name(), builder.dgb_name());
+    tr!(
+        "in search_pred_memory_cell at {time} in {} with {:?}",
+        ptcl.name(),
+        builder.dgb_name()
+    );
     tr!("flags: {:?}", builder.flags());
 
     let builder = builder.ensure_and();

@@ -6,7 +6,8 @@ use super::super::vars::*;
 use super::super::{DDH, ProofHints};
 use crate::libraries::utils::RuleSink;
 use crate::terms::{
-    AND, BITE, BOUND_ANDS, FRESH_NONCE, Formula, Function, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL, MITE, NONCE, PRED, Sort, VAMPIRE
+    AND, BITE, BOUND_ANDS, FRESH_NONCE, Formula, Function, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT,
+    MACRO_MEMORY_CELL, MITE, NONCE, PRED, Sort, VAMPIRE,
 };
 use crate::{Lang, Problem, fresh, rexp};
 

@@ -175,7 +175,7 @@ mod steel {
         if !step.is_step() {
             return Err(SteelErr::new(
                 ErrorKind::TypeMismatch,
-                format!("'step' should be a step (got {})", step.signature.output)
+                format!("'step' should be a step (got {})", step.signature.output),
             ));
         }
 
