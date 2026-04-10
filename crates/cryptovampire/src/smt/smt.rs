@@ -249,7 +249,7 @@ impl<'bump> FromEnv<'bump, Declaration<'bump>> for Smt<'bump> {
             Declaration::Subterm(sub) => {
                 Self::DeclareSubtermRelation(sub.function, sub.comutative_functions.into())
             }
-            Declaration::SortAlias { from, to } => Self::DeclareSortAlias { from, to },
+            Declaration::SortAlias { from, to } => Self::DeclareSortAlias { from: to, to: from },
         }
     }
 }
