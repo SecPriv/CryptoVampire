@@ -14,7 +14,7 @@ use crate::problem::{PAnalysis, PRule, RcRule};
 use crate::protocol::{Protocol, Step};
 use crate::runners::SmtRunner;
 use crate::terms::{
-    AND, BITE, BOUND_ANDS, Formula, Function, HAPPENS, IS_FRESH_NONCE, LEQ, LT, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL, MACRO_MSG, MITE, NONCE, PRED, Sort, UNFOLD_COND, UNFOLD_MEMORY_CELL, UNFOLD_MSG, VAMPIRE
+    AND, BITE, BOUND_ANDS, FRESH_NONCE, Formula, Function, HAPPENS, IS_FRESH_NONCE, LEQ, LT, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL, MACRO_MSG, MITE, NONCE, PRED, Sort, UNFOLD_COND, UNFOLD_MEMORY_CELL, UNFOLD_MSG, VAMPIRE
 };
 use crate::{CVProgram, Lang, Problem, fresh, rexp};
 
@@ -185,20 +185,23 @@ fn mk_static_rules(
 
     // macros
     "search_prf_exec" p, t (Keep):
-    (search_b #m #k (IS_FRESH_NONCE #nprf) (MACRO_EXEC #t  #p) #h) :-
-    (search_trigger #m #k #p #t #h).
+    (search_b #m #k  #nprf (MACRO_EXEC #t #p) #h) :-
+        (FRESH_NONCE #nprf (MACRO_FRAME #t #p) #h),
+        (search_trigger #m #k #p #t #h).
 
     "search_prf_frame" p, t (Keep):
-    (search_m #m #k (IS_FRESH_NONCE #nprf) (MACRO_FRAME #t  #p) #h) :-
-    (search_trigger #m #k #p #t #h).
+    (search_m #m #k #nprf (MACRO_FRAME #t #p) #h) :-
+        (FRESH_NONCE #nprf (MACRO_FRAME #t #p) #h),
+        (search_trigger #m #k #p #t #h).
 
     "search_prf_input" p, t (Keep):
-    (search_m #m #k (IS_FRESH_NONCE #nprf) (MACRO_INPUT #t  #p) #h) :-
-    (search_trigger #m #k #p (PRED #t) #h).
+    (search_m #m #k #nprf (MACRO_INPUT #t #p) #h) :-
+        (FRESH_NONCE #nprf (MACRO_FRAME (PRED #t) #p) #h),
+        (search_trigger #m #k #p (PRED #t) #h).
 
     "search_prf_memory_cell" p, t, c (Keep):
     (search_m #m #k (IS_FRESH_NONCE #nprf) (MACRO_MEMORY_CELL #c (PRED #t) #p) #h) :-
-    (search_trigger_mem #m #k #p #t #h #c).
+        (search_trigger_mem #m #k #p #t #h #c).
 
     // if and and
     "search_prf_ite_m" c, l, r (Apply(MITE.clone())):

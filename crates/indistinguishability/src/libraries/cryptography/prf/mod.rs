@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::fmt::Display;
 
 use egg::{Id, Language, Pattern, Searcher};
 use golgge::{Dependancy, Rule};
@@ -196,6 +197,7 @@ impl PRF {
 
         // let new_goall = rexp!((SUBSTITUTION_RULE (EQUIV #U #V (SUBSTITUTION #HM (hash #M (NONCE #K)) (NONCE #NK)) #B)));
         // let new_goalr = rexp!((SUBSTITUTION_RULE (EQUIV #U #V #B (SUBSTITUTION #HM (hash #M (NONCE #K)) (NONCE #NK)))));
+        let name = self.hash.to_string();
 
         [
             TopPrfRule::new(
@@ -206,6 +208,7 @@ impl PRF {
                 &new_goall,
                 PrfKind::Left,
                 candidate_bitstring.clone(),
+                name.clone()
             ),
             TopPrfRule::new(
                 &conclusionr,
@@ -215,6 +218,7 @@ impl PRF {
                 &new_goalr,
                 PrfKind::Right,
                 candidate_bitstring.clone(),
+                name.clone()
             ),
         ]
     }
@@ -280,6 +284,8 @@ struct TopPrfRule {
     #[allow(dead_code)]
     /// The candidate bitstring function associated with this rule.
     candidate_bitstring: Function,
+
+    name: String,
 }
 
 /// Specifies the kind of PRF rule, either Left or Right.
@@ -291,8 +297,18 @@ enum PrfKind {
     Right,
 }
 
+impl Display for PrfKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Left => write!(f, "left"),
+            Self::Right => write!(f, "right"),
+        }
+    }
+}
+
 impl TopPrfRule {
     /// Creates a new `TopPrfRule`.
+    #[allow(clippy::too_many_arguments)]
     fn new(
         conclusion: &Formula,
         subterm_hm: &Formula,
@@ -301,6 +317,7 @@ impl TopPrfRule {
         new_goal: &Formula,
         kind: PrfKind,
         candidate_bitstring: Function,
+        name: String,
     ) -> Self {
         Self {
             conclusion: conclusion.into(),
@@ -310,6 +327,7 @@ impl TopPrfRule {
             new_goal: new_goal.into(),
             kind,
             candidate_bitstring,
+            name
         }
     }
 }
@@ -388,10 +406,8 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for TopPrfRule {
 
     /// Returns the name of this rule, based on its `PrfKind`.
     fn name(&self) -> std::borrow::Cow<'_, str> {
-        match self.kind {
-            PrfKind::Left => Cow::Borrowed("prf left"),
-            PrfKind::Right => Cow::Borrowed("prf right"),
-        }
+        let Self {kind, name, ..} = self;
+        format!("prf {kind} {name}").into()
     }
 }
 

@@ -29,29 +29,39 @@
 (define s (declare-memory-cell pbl "s" '() (lambda _ s0)))
 
 (define O (declare-same-step pbl "O" (list p1 p2) (list Index)
-  (lambda _ mtrue)
-  (lambda (p in i . _) (tuple (H in k) (H in kb)))
-  empty-assignements))
+    (lambda _ mtrue)
+    (lambda (p in i . _) (tuple (H in k) (G in kb)))
+    empty-assignements))
 
 (define-function m pbl (Index) -> Nonce)
 
-(declare-step pbl "A" (list Index)
-  (step p1
-    (lambda _ mtrue)
-    (lambda (in i cells . _) (G (H (cells s) k) kb))
-    (lambda (_ _ cells . _) (list (store-cell s := (H (cells s) k)))))
-  (step p2
-    (lambda _ mtrue)
-    (lambda (in i cells . _) (G (m i) kb))
-    (lambda (_ i cells . _) (list (store-cell s := (m i))))))
+(define A (declare-step pbl "A" (list Index)
+    (step p1
+      (lambda _ mtrue)
+      (lambda (in i cells . _) (G (H (cells s) k) kb))
+      (lambda (_ _ cells . _) (list (store-cell s := (H (cells s) k)))))
+    (step p2
+      (lambda _ mtrue)
+      (lambda (in i cells . _) (G (m i) kb))
+      (lambda (_ i cells . _) '()))))
 
 (initialize-as-prf prf1 H)
 (initialize-as-prf prf2 G)
 
+; axiom
 (pbl.add-smt-axiom pbl (forall ((i Index) (j Index) (p Protocol)) (=> (not (idx-eq i j)) (not (eq (macro_input (O i) p) (macro_input (O j) p))))))
+
+; provable by induction with euf-cma
+(pbl.add-smt-axiom pbl (forall ((t1 Time) (t2 Time) (p Protocol)) (=> (and (happens t1) (happens t2)) (not (eq (macro_input t1 p) (macro_memory_cell s t2 p))))))
+(pbl.add-smt-axiom pbl (forall ((t1 Time) (i Index) (p Protocol)) (=> (and (happens t1)) (not (eq (macro_input t1 p) (m i))))))
+(pbl.add-smt-axiom pbl (forall ((t1 Time) (i Index)) (=> (and (happens (A i)) (lt t1 (A i))) (not (eq (macro_memory_cell s (A i) p1) (macro_memory_cell s t1 p1))))))
+
+(bind ((i Index))
+  (register-fresh-nonce prf1 (list i) (m i)))
 
 ;; Configuration - use short timeout
 (config.set_vampire_timeout pbl (b.mult->duration scale-timeout (b.string->duration "150ms")))
+(config.set_fa_limit pbl 1)
 
 ;; Run the indistinguishability check
 (if (run pbl p1 p2)

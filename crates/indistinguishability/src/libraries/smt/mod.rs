@@ -6,10 +6,7 @@ use crate::libraries::utils::{SmtOption, SmtSink};
 use crate::libraries::{Cryptography, Library};
 use crate::problem::cache::Context;
 use crate::terms::{
-    ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, FindSuchThat, Function, HAPPENS, INIT, LEQ, LT,
-    MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, PRED, PROJ_1, PROJ_2, Quantifier,
-    QuantifierT, Rewrite, SMT_ITE, SMT_SORT_LIST, Signature, Sort, TUPLE, UNFOLD_COND, UNFOLD_EXEC,
-    UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
+    ATT, AliasRewrite, EMPTY, Exists, FROM_BOOL, FindSuchThat, Function, HAPPENS, INIT, LEQ, LT, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL, MACRO_MSG, PRED, PROJ_1, PROJ_2, Quantifier, QuantifierT, Rewrite, SMT_ITE, SMT_SORT_LIST, Signature, Sort, TUPLE, UNFOLD_COND, UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MEMORY_CELL, UNFOLD_MSG
 };
 use crate::{MSmt, MSmtFormula, MSmtParam, Problem, smt, vec_smt};
 
@@ -276,6 +273,7 @@ fn add_base_macro<'a>(pbl: &Problem, sink: &mut impl SmtSink<'a>) {
         (forall ((#t Time) (#p Protocol)) (=> (HAPPENS #t) (= (MACRO_EXEC #t #p) (UNFOLD_EXEC #t #p)))),
         (forall ((#t Time) (#p Protocol)) (=> (HAPPENS #t) (= (MACRO_FRAME #t #p) (UNFOLD_FRAME #t #p)))),
         (forall ((#t Time) (#p Protocol)) (=> (HAPPENS #t) (= (MACRO_INPUT #t #p) (UNFOLD_INPUT #t #p)))),
+        (forall ((#c MemoryCell) (#t Time) (#p Protocol)) (=> (HAPPENS #t) (= (MACRO_MEMORY_CELL #c #t #p) (UNFOLD_MEMORY_CELL #c #t #p)))),
         (forall ((#t Time) (#p Protocol)) (= (UNFOLD_INPUT #t #p) (ATT (MACRO_FRAME (PRED #t) #p)))),
         (forall ((#t Time) (#p Protocol))
             (=> (distinct #t INIT)
