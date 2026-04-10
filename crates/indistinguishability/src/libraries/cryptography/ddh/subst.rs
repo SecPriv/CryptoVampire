@@ -108,6 +108,10 @@ impl ProofSubstitution for SubstData {
     fn others<'a>(&self, _: PSArgs<'_, 'a, Self>) -> anyhow::Result<Id> {
         unreachable!()
     }
+
+    fn guard_bounds(&self) -> bool {
+        true
+    }
 }
 
 impl ProofLike<SubstData> for ProofHints {

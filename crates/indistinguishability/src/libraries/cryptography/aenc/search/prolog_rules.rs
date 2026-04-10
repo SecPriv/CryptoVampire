@@ -245,6 +245,8 @@ pub fn mk_static_rules<'a>(
       // ~~~~~~~~~~~~~~ if and and ~~~~~~~~~~~~~~~~
       "search_k_enc_ite_m" c, l, r (Apply(MITE.clone())):
         (search_k_m #K #K2 #R #M (MITE #c #l #r) #H):-
+          (BOUND_ANDS #c #H),
+          (BOUND_ANDS (not #c) #H),
           (search_k_b #K #K2 #R #M #c #H),
           (search_k_m #K #K2 #R #M #l (and #c #H)),
           (search_k_m #K #K2 #R #M #r (and (not #c) #H)).
@@ -259,6 +261,8 @@ pub fn mk_static_rules<'a>(
 
       "search_k_enc_ite_b" c, l, r (Apply(BITE.clone())):
         (search_k_b #K #K2 #R #M (BITE #c #l #r) #H):-
+          (BOUND_ANDS #c #H),
+          (BOUND_ANDS (not #c) #H),
           (search_k_b #K #K2 #R #M #c #H),
           (search_k_b #K #K2 #R #M #l (and #c #H)),
           (search_k_b #K #K2 #R #M #r (and (not #c) #H)).
@@ -273,13 +277,13 @@ pub fn mk_static_rules<'a>(
 
       "search_k_enc_and" c, l (Apply(AND.clone())):
         (search_k_b #K #K2 #N #M (AND #c #l) #H):-
+          (BOUND_ANDS #c #H),
           (search_k_b #K #K2 #N #M #c #H),
           (search_k_b #K #K2 #N #M #l (and  #c #H)).
 
       "search_o_enc_and" c, l :
         (search_o_b #K (AND #c #l) #H):-
           (BOUND_ANDS #c #H),
-          (BOUND_ANDS (not #c) #H),
           (search_o_b #K #c #H),
           (search_o_b #K #l (and #c #H)).
 

@@ -45,6 +45,9 @@
 
 (define empty-cond (lambda _ mtrue))
 
+; (publish pbl ((i Index) (j Index)) (nt i j))
+; (publish pbl ((i Index)) (nr i))
+
 (define (mk-fdst1 in j p)
   (let* [ (pt (lambda (i j) (dec in (mk i j p))))
     (nt (lambda (i j) (sel2of2 (sel2of2 (pt i j))))) ]
@@ -113,8 +116,6 @@
 ;     (cv-add-rewrite pbl (cv-mk-rewrite "nr_exec" (list i j p)
 ;         (macro_exec (exposes-nr i) p) (happens (exposes-nr i))))))
 (config.set_guided_nonce_search pbl #t)
-; (publish pbl ((i Index) (j Index)) (nt i j))
-; (publish pbl ((i Index)) (nr i))
 
 (initialize-as-senc senc enc dec)
 

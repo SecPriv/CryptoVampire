@@ -92,6 +92,11 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SubstRule {
 impl ProofSubstitution for SubstData {
     type Proof = ProofHints;
 
+    #[inline]
+    fn guard_bounds(&self) -> bool {
+        true
+    }
+
     fn get_term<'a>(&self, pgrm: &mut CVProgram<'a>, id: Id) -> anyhow::Result<Id> {
         let l = pgrm.egraph()[id]
             .nodes

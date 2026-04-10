@@ -44,7 +44,7 @@ fn add_rewrites<N: Analysis<Lang>>(pbl: &Problem, sink: &mut impl EggRewriteSink
 
         for so in &steps {
             let ovars = so.args_sorts().map(|x| fresh!(x).as_formula());
-            let name = format!("publication ordering {s}, {so}");
+            let name = format!("pub ordr {s} < {so}");
             sink.add_egg_rewrite(
                 egg::Rewrite::new(
                     name,

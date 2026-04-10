@@ -77,18 +77,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for AndBounder {
             todo.push(a);
             and_set(egraph, &mut todo, &mut seena);
 
-            eprintln!("{:?}", seena);
-            eprintln!("{:?}", seenb);
-
-            for id in seena.difference(&seenb).flat_map(|id| egraph[*id].iter()) {
-                eprintln!("{:?}", id)
-            }
-
-            if seena
-                .difference(&seenb)
-                .flat_map(|id| egraph[*id].iter())
-                .all(|l| l.head == AND)
-            {
+            if seena.difference(&seenb).flat_map(|id| egraph[*id].iter()).all(|l| l.head == AND) {
                 return Dependancy::impossible();
             }
         }

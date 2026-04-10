@@ -1,4 +1,4 @@
-use egg::{Analysis, EGraph, MultiPattern, Rewrite};
+use egg::{Analysis, EGraph, MultiPattern, Pattern, Rewrite};
 use itertools::{Itertools, chain, izip};
 use rustc_hash::FxHashMap;
 use utils::ereturn_if;
@@ -8,7 +8,9 @@ use crate::libraries::Library;
 use crate::libraries::utils::{EggRewriteSink, SmtSink};
 use crate::problem::cache::Context;
 use crate::problem::{BoundStep, ConstrainOp, Constrains, CurrentStep, PAnalysis};
-use crate::terms::{CURRENT_STEP, Formula, HAPPENS, INIT, IS_INDEX, LEQ, LT, PRED, TEQ, TRUE};
+use crate::terms::{
+    CURRENT_STEP, Formula, FormulaVariableIter, HAPPENS, INIT, IS_INDEX, LEQ, LT, PRED, TEQ, TRUE,
+};
 use crate::{Lang, MSmt, MSmtFormula, MSmtParam, Problem, rexp, smt};
 
 macro_rules! bind {
@@ -108,6 +110,7 @@ fn add_rewrite_one<N: Analysis<Lang>>(
     let CurrentStep { idx, args } = pbl.current_step().unwrap();
     let cf = pbl.get_step_fun(*idx).unwrap();
     let argscf = args.iter().map(|f| rexp!(f)).collect_vec();
+    // we need to take care of free variables. so things can get complicated
     match op {
         ConstrainOp::LessThan if s2 == cf => {
             let argmap: FxHashMap<_, _> = izip!(a2, &argscf).collect();
@@ -136,6 +139,19 @@ fn add_rewrite_one<N: Analysis<Lang>>(
                 Rewrite::new(format!("constrain {s1} < {s2}"), premise, conclusion).unwrap(),
             )
         }
+        // ConstrainOp::LessThan => {
+        //     // let vars = chain![a1.iter(), a2.iter()].cloned();
+        //     let a1 = a1.iter().into_formula_iter();
+        //     let a2 = a2.iter().into_formula_iter();
+        //     let premise = rexp!((LT (s1 #a1*) (s2 #a2*)));
+        //     let conclusion = rexp!(true);
+
+        //     sink.add_egg_rewrite(Rewrite::new(
+        //         format!("constraint gen {s1} < {s2}"),
+        //         Pattern::from(&premise),
+        //         Pattern::from(&conclusion),
+        //     ).unwrap());
+        // }
         ConstrainOp::Exclude if s1 == cf || s2 == cf => {
             let (s1, a1, a2) = if s1 == cf { (s2, a2, a1) } else { (s1, a1, a2) };
             let argmap: FxHashMap<_, _> = izip!(a2, &argscf).collect();
