@@ -467,6 +467,12 @@ impl<'bump> Display for DisplayFunction<'bump> {
     }
 }
 
+impl<'bump> Display for Function<'bump> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}{}", self.name(), self.signature().as_display())
+    }
+}
+
 impl<'bump> Applicable for Function<'bump> {
     type Term = ARichFormula<'bump>;
 

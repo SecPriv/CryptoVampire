@@ -69,7 +69,7 @@ impl<'bump> Variable<'bump> {
     ///
     /// Because I'm stupid
     #[inline]
-    pub(crate) fn get_unique_id(&self) -> cryptovampire_smt::uvar {
+    pub(crate) fn get_unique_id(&self) -> u32 {
         (self.id as u32) << 16 | (self.sort.get_id_number() as u32)
     }
 }
