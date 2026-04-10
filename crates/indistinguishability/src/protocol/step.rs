@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use bon::bon;
+use bon::{bon, builder};
 use egg::{Analysis, Pattern, Rewrite};
 use itertools::{Itertools, chain};
 use log::trace;
@@ -9,6 +9,7 @@ use logic_formula::iterators::AllTermsIterator;
 use steel::rerrs::ErrorKind;
 use steel_derive::Steel;
 use thiserror::Error;
+use utils::implvec;
 
 use crate::input::Registerable;
 use crate::libraries::utils::{EggRewriteSink, INDEPEDANT_QUERY, SmtSink};
@@ -173,7 +174,7 @@ impl Step {
 }
 
 #[derive(Debug, Clone, Error)]
-enum InvalidStepError {
+pub(crate) enum InvalidStepError {
     #[error(
         "wrong protocol referenced (expected only references to {expected} got {got}) \
          in\n\t{formula}"
@@ -185,24 +186,33 @@ enum InvalidStepError {
     },
     #[error("Variable {var} is free in\n\t{formula}")]
     FreeVariable { var: Variable, formula: Formula },
+    #[error("{msg}")]
+    Other { msg: String },
 }
 
 impl From<InvalidStepError> for steel::rerrs::SteelErr {
     fn from(value: InvalidStepError) -> Self {
         let kind = match &value {
-            InvalidStepError::WrongProtocol { .. } => ErrorKind::Generic,
+            InvalidStepError::WrongProtocol { .. } | InvalidStepError::Other { .. } => {
+                ErrorKind::Generic
+            }
             InvalidStepError::FreeVariable { .. } => ErrorKind::FreeIdentifier,
         };
         Self::new(kind, value.to_string())
     }
 }
 
-fn check_elem(
+pub(crate) fn check_elem<'a, I, II>(
     pbl: &Problem,
     step: &Function,
     ptcl: &Function,
     elem: &Formula,
-) -> Result<(), InvalidStepError> {
+    extra_vars: I,
+) -> Result<(), InvalidStepError>
+where
+    I: IntoIterator<IntoIter = II>,
+    II: Iterator<Item = &'a Variable> + Clone,
+{
     for f in elem.iter_with(AllTermsIterator, ()) {
         if let Formula::App { head, .. } = f
             && head.is_protocol()
@@ -217,8 +227,9 @@ fn check_elem(
     }
 
     let vars = &pbl.protocols()[ptcl.protocol_idx].steps()[step.step_idx].vars;
+    let vars = chain![vars.iter(), extra_vars.into_iter().map(|v| v.as_ref())];
     for v in elem.free_vars_iter() {
-        if !vars.contains(v) {
+        if !vars.clone().contains(&v) {
             return Err(InvalidStepError::FreeVariable {
                 var: v.clone(),
                 formula: elem.clone(),
@@ -230,6 +241,7 @@ fn check_elem(
 }
 
 mod msteel {
+    use itertools::chain;
     use log::trace;
     use logic_formula::AsFormula;
     use logic_formula::iterators::AllTermsIterator;
@@ -241,6 +253,7 @@ mod msteel {
     use super::Step;
     use crate::input::Registerable;
     use crate::input::shared_problem::ShrProblem;
+    use crate::protocol::SingleAssignement;
     use crate::protocol::step::check_elem;
     use crate::terms::{Formula, Function, Sort, Variable};
 
@@ -278,7 +291,7 @@ mod msteel {
     /// Sets the message for a given step in a protocol.
     #[steel_derive::declare_steel_function(name = "set-msg")]
     fn set_msg(pbl: ShrProblem, step: Function, ptcl: Function, msg: Formula) -> SResult<()> {
-        check_elem(&pbl.borrow(), &step, &ptcl, &msg)?;
+        check_elem(&pbl.borrow(), &step, &ptcl, &msg, [])?;
         pbl.get_step_mut(step, ptcl)?.msg = msg;
         Ok(())
     }
@@ -286,7 +299,7 @@ mod msteel {
     /// Sets the condition for a given step in a protocol.
     #[steel_derive::declare_steel_function(name = "set-cond")]
     fn set_cond(pbl: ShrProblem, step: Function, ptcl: Function, cond: Formula) -> SResult<()> {
-        check_elem(&pbl.borrow(), &step, &ptcl, &cond)?;
+        check_elem(&pbl.borrow(), &step, &ptcl, &cond, [])?;
         pbl.get_step_mut(step, ptcl)?.cond = cond;
         Ok(())
     }
@@ -340,8 +353,12 @@ mod msteel {
     impl Registerable for Step {
         fn register(modules: &mut rustc_hash::FxHashMap<String, BuiltInModule>) {
             let name = "cryptovampire/ll/step";
-            let mut module = BuiltInModule::new(name);
-            Self::register_type(&mut module);
+
+            let module = modules
+                .entry(name.into())
+                .or_insert_with(|| BuiltInModule::new(name));
+
+            Self::register_type(module);
             module
                 .register_type::<Self>("Step?")
                 .register_native_fn_definition(TO_STRING_DEFINITION)
@@ -354,8 +371,7 @@ mod msteel {
                 .register_native_fn_definition(DECLARE_DEFINITION)
                 .register_native_fn_definition(TO_STRING_DEFINITION);
 
-            trace!("defined {name} scheme module");
-            assert!(modules.insert(name.into(), module).is_none())
+            trace!("defined {name} for steps scheme module");
         }
     }
 }

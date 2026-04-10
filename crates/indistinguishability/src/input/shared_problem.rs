@@ -4,18 +4,21 @@ use std::time::Duration;
 
 use anyhow::Context;
 use log::trace;
+use logic_formula::AsFormula;
 use steel::rerrs::ErrorKind;
 use steel::rvals::{IntoSteelVal, Result as SResult};
 use steel::steel_vm::builtin::BuiltInModule;
 use steel::steel_vm::register_fn::RegisterFn;
 use steel::{SteelErr, SteelVal};
 use steel_derive::Steel;
+use utils::econtinue_let;
 
 use crate::input::golgge_rules::Rule;
 use crate::input::shared_exists::ShrExists;
 use crate::input::{BASE_LL_MODULE, Registerable, conversion_err};
 use crate::problem::{PublicTerm, Report};
 use crate::protocol::Step;
+use crate::protocol::memory_cell::SingleAssignement;
 use crate::terms::{Exists, Formula, Function, QuantifierT, Rewrite, Sort, Variable};
 use crate::{Configuration, MSmt, Problem};
 
@@ -63,6 +66,86 @@ impl ShrProblem {
         });
         Ok(step)
     }
+
+    /// Sets an assignment for a memory cell at a given step.
+    ///
+    /// # Arguments
+    /// * `step` - The step function
+    /// * `ptcl` - The protocol function
+    /// * `cell` - The memory cell function
+    /// * `assign_vars` - Variables that trigger this assignment (pattern variables)
+    /// * `value` - The value to assign when the pattern matches
+    pub fn set_step_assignment(
+        &self,
+        step: Function,
+        ptcl: Function,
+        cell: Function,
+        param_vars: Vec<Variable>,
+        assign_vars: Vec<Variable>,
+        value: Formula,
+    ) -> SResult<()> {
+        use crate::protocol::MemoryCell;
+
+        if !step.is_step() {
+            return Err(SteelErr::new(
+                ErrorKind::ConversionError,
+                format!("'step' ({step}) should be a step"),
+            ));
+        }
+
+        if !ptcl.is_protocol() {
+            return Err(SteelErr::new(
+                ErrorKind::ConversionError,
+                format!("'ptcl' ({ptcl}) should be a protocol"),
+            ));
+        }
+
+        if !cell.is_memory_cell() {
+            return Err(SteelErr::new(
+                ErrorKind::ConversionError,
+                format!("'cell' ({cell}) should be a memory cell"),
+            ));
+        }
+
+        // Get parameter variables from the cell's signature
+        let parameter_vars = cell.args_vars().collect::<Vec<_>>();
+
+        // Validate that value has Bitstring sort (check first to avoid moving value)
+        if !value.has_sort(crate::terms::Sort::Bitstring) {
+            return Err(SteelErr::new(
+                ErrorKind::Generic,
+                format!(
+                    "memory cell assignment value must have Bitstring sort, got {:?}",
+                    value.try_get_sort()
+                ),
+            ));
+        }
+
+        // Validate that value only uses assign_vars and parameter_vars
+        let free_vars: rustc_hash::FxHashSet<_> =
+            assign_vars.iter().chain(parameter_vars.iter()).collect();
+
+        for fv in (&value).free_vars_iter() {
+            if !free_vars.contains(&fv) {
+                return Err(SteelErr::new(
+                    ErrorKind::Generic,
+                    format!("free variable {} in assignment value is not bound", fv),
+                ));
+            }
+        }
+
+        let mut step_guard = self.get_step_mut(step, ptcl)?;
+
+        let assignment = SingleAssignement::builder()
+            .assignement_vars(assign_vars)
+            .parameter_vars(parameter_vars)
+            .value(value)
+            .build()
+            .map_err(|e| SteelErr::new(ErrorKind::Generic, e.to_string()))?;
+
+        step_guard.assignements.insert(cell, assignment);
+        Ok(())
+    }
 }
 
 // =========================================================
@@ -107,6 +190,51 @@ fn declare_function(pbl: ShrProblem, fun: Function) -> Function {
 #[steel_derive::declare_steel_function(name = "declare-protocol")]
 fn declare_protocol(pbl: ShrProblem) -> Function {
     pbl.borrow_mut().declare_new_protocol().name().clone()
+}
+
+/// Declares a new memory cell in the problem.
+///
+/// # Arguments
+/// * `name` - The name of the memory cell
+/// * `params` - The parameter sorts (e.g., (list Index) for array-like cells)
+#[steel_derive::declare_steel_function(name = "declare-memory-cell")]
+fn declare_memory_cell(
+    pbl: ShrProblem,
+    name: String,
+    params: Vec<Variable>,
+    initv: Vec<Formula>,
+) -> SResult<Function> {
+    let pbl = &mut pbl.borrow_mut();
+    let fun = pbl
+        .declare_memory_cell(name, params.iter().map(|x| x.get_sort().unwrap()).collect())
+        .map_err(|e| SteelErr::new(ErrorKind::Generic, e.to_string()))?;
+
+    if initv.len() != pbl.num_protocols() {
+        return Err(SteelErr::new(
+            ErrorKind::ArityMismatch,
+            format!(
+                "The number of init value does not match the number of protocols (got {:}, \
+                 expected {:})",
+                initv.len(),
+                pbl.num_protocols()
+            ),
+        ));
+    }
+
+    for (i, value) in initv.into_iter().enumerate() {
+        econtinue_let!(let Some(init) = pbl.protocol_mut(i).unwrap().step_mut(0));
+        assert!(value.has_sort(Sort::Bitstring));
+        init.assignements.insert(
+            fun.clone(),
+            SingleAssignement {
+                assignement_vars: params.clone(),
+                parameter_vars: params.clone(),
+                value,
+            },
+        );
+    }
+
+    Ok(fun)
 }
 
 /// Declares a new existential quantifier in the problem.
@@ -165,6 +293,36 @@ fn publish(pbl: ShrProblem, vars: Vec<Variable>, term: Formula) {
 #[steel_derive::declare_steel_function(name = "get-report")]
 fn get_report(pbl: ShrProblem) -> Report {
     pbl.0.lock().unwrap().report.clone()
+}
+
+/// List the memory cells registered to this problem
+#[steel_derive::declare_steel_function(name = "get-all-memory-cells")]
+fn get_all_memory_cells(pbl: ShrProblem) -> Vec<Function> {
+    pbl.borrow()
+        .memory_cells()
+        .iter()
+        .map(|x| x.function())
+        .cloned()
+        .collect()
+}
+
+/// List the steps registered to this problem
+///
+/// Crashes if there are no protocols/steps
+#[steel_derive::declare_steel_function(name = "get-all-steps")]
+fn get_all_steps(pbl: ShrProblem) -> Vec<Function> {
+    pbl.borrow().steps().unwrap().collect()
+}
+
+/// List the protocols registered to this problem
+#[steel_derive::declare_steel_function(name = "get-all-protocols")]
+fn get_all_protocols(pbl: ShrProblem) -> Vec<Function> {
+    pbl.borrow()
+        .protocols()
+        .iter()
+        .map(|p| p.name())
+        .cloned()
+        .collect()
 }
 
 use paste::paste;
@@ -235,12 +393,16 @@ impl Registerable for ShrProblem {
                 .register_native_fn_definition(MK_EMPTY_DEFINITION)
                 .register_native_fn_definition(DECLARE_FUNCTION_DEFINITION)
                 .register_native_fn_definition(DECLARE_PROTOCOL_DEFINITION)
+                .register_native_fn_definition(DECLARE_MEMORY_CELL_DEFINITION)
                 .register_native_fn_definition(DECLARE_EXISTS_DEFINITION)
                 .register_native_fn_definition(ADD_RULE_DEFINITION)
                 .register_native_fn_definition(ADD_REWRITE_DEFINITION)
                 .register_native_fn_definition(ADD_SMT_AXIOM_DEFINITION)
                 .register_native_fn_definition(ADD_CONSTRAIN_DEFINITION)
                 .register_native_fn_definition(PUBLISH_DEFINITION)
+                .register_native_fn_definition(GET_ALL_PROTOCOLS_DEFINITION)
+                .register_native_fn_definition(GET_ALL_STEPS_DEFINITION)
+                .register_native_fn_definition(GET_ALL_STEPS_DEFINITION)
                 .register_native_fn_definition(GET_REPORT_DEFINITION);
 
             trace!("defined {name} scheme module");

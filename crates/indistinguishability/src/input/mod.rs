@@ -12,7 +12,7 @@ use crate::input::shared_exists::ShrExists;
 // use crate::input::shared_fdst::ShrFindSuchThat;
 use crate::input::shared_problem::ShrProblem;
 use crate::problem::Report;
-use crate::protocol::Step;
+use crate::protocol::{MemoryCell, Step};
 use crate::terms::{Alias, Formula, Function, Rewrite, Signature, Sort, Variable, mk_scheme_lib};
 
 pub(crate) mod golgge_rules;
@@ -54,6 +54,7 @@ pub fn register() -> FxHashMap<String, BuiltInModule> {
     Variable::register(&mut modules);
     Report::register(&mut modules);
     Step::register(&mut modules);
+    MemoryCell::register(&mut modules);
 
     modules
 }

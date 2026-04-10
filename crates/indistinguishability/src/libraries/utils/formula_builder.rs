@@ -37,6 +37,9 @@ pub struct FormulaBuilder<A: FormulaBuilderAux = DefaultAux> {
     children: Vec<Weak<RefCell<Self>>>,
 
     aux: A,
+
+    #[cfg(debug_assertions)]
+    name: Variable
 }
 
 /// A search condition
@@ -152,10 +155,13 @@ impl<A: FormulaBuilderAux + Clone + Default> RefFormulaBuilder<A> {
             content: vec![],
             aux,
             flags,
+            #[cfg(debug_assertions)]
+            name: Variable::fresh().call()
         })));
+        trace!("spwaned builder {:?} with flags {:?}", builder.0.borrow().name, flags);
 
         if let Some(parent) = parent {
-            parent.borrow_mut().children.push(builder.weak());
+            parent.add_children(builder.clone());
             let mut builder = builder.borrow_mut();
             builder.parent = Some(parent.clone());
             builder.staturated = parent.try_evaluate().is_some();
@@ -223,7 +229,18 @@ impl<A: FormulaBuilderAux> RefFormulaBuilder<A> {
     where
         A: Clone + Default,
     {
+        trace!("add node to {:?}", self.dgb_name());
         Self::builder().parent(self).add_flag(self.flags())
+    }
+
+    pub fn add_children(&self, child: Self){
+        trace!("adding child {:?} to {:?}", child.dgb_name(), self.dgb_name());
+        self.0.borrow_mut().children.push(child.weak());
+    }
+
+    #[cfg(debug_assertions)]
+    pub(crate) fn dgb_name(&self) -> Variable {
+        self.0.borrow().name.clone()
     }
 
     /// Returns a weak reference to the inner `FormulaBuilder`.
@@ -316,7 +333,7 @@ impl<A: FormulaBuilderAux> Drop for FormulaBuilder<A> {
         let inner = self.drain_as_formula();
 
         let parent = self.parent.as_ref().unwrap();
-        trace!(target: "search", "dropping formula builder");
+        trace!(target: "search", "dropping formula builder {:?} with flags {:?}", self.name, self.flags());
         parent.add_leaf(inner);
     }
 }

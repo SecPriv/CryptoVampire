@@ -38,7 +38,6 @@ impl Library for AndBounderLib {
 // TODO: add the `Bound and` guard in front of every and and if rules. This
 // breaks substitution reconstruction from proofs though...
 
-
 /// This rules guards against looping over ands by giving up when it notices
 /// that things will loop
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -73,10 +72,10 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for AndBounder {
             let [a, b] = [A, B].map(|x| *subst.get(x.as_egg()).unwrap());
 
             todo.push(b);
-            and_set(egraph,&mut todo, &mut seenb);
+            and_set(egraph, &mut todo, &mut seenb);
             debug_assert!(todo.is_empty());
             todo.push(a);
-            and_set(egraph,&mut todo, &mut seena);
+            and_set(egraph, &mut todo, &mut seena);
 
             if seena.difference(&seenb).flat_map(|id| egraph[*id].iter()).all(|l| l.head == AND) {
                 return Dependancy::impossible();

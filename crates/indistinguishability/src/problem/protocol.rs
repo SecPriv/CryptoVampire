@@ -2,12 +2,13 @@ use std::num::NonZeroUsize;
 use std::ops::Index;
 
 use anyhow::{Context, anyhow, bail, ensure};
+use utils::econtinue_let;
 
 use super::*;
-use crate::mk_signature;
 use crate::protocol::call_graph::{CellRef, ProtocolRef, StepRef};
-use crate::protocol::{Protocol, Step};
-use crate::terms::{Function, FunctionFlags, INCOMPATIBLE, INIT, InnerFunction, LT, Sort};
+use crate::protocol::{Protocol, SingleAssignement, Step};
+use crate::terms::{EMPTY, Function, FunctionFlags, INCOMPATIBLE, INIT, InnerFunction, LT, Sort};
+use crate::{mk_signature, rexp};
 
 impl Problem {
     /// Returns the `init` function
@@ -42,13 +43,21 @@ impl Problem {
             let builder = Protocol::builder().name(fun);
             if let Some(p0) = self.protocols().first() {
                 builder
-                    .steps(p0.steps().iter().map(|Step { id, vars, .. }| {
-                        Step::builder()
-                            .id(id.clone())
-                            .vars(vars.clone())
-                            .build()
-                            .unwrap()
-                    }))
+                    .steps(p0.steps().iter().map(
+                        |Step {
+                             id,
+                             vars,
+                             assignements,
+                             ..
+                         }| {
+                            Step::builder()
+                                .id(id.clone())
+                                .vars(vars.clone())
+                                .assignements(assignements.clone())
+                                .build()
+                                .unwrap()
+                        },
+                    ))
                     .build()
             } else {
                 builder.build()
@@ -149,6 +158,48 @@ impl Problem {
                 .unwrap()
         }));
         Ok(step)
+    }
+
+    /// Declares a new memory cell in the problem.
+    ///
+    /// # Arguments
+    /// * `name` - The name of the memory cell
+    /// * `params` - The parameter sorts (e.g., Index for array-like cells)
+    ///
+    /// # Returns
+    /// The Function representing the memory cell
+    pub fn declare_memory_cell(
+        &mut self,
+        name: String,
+        params: Vec<Sort>,
+    ) -> anyhow::Result<Function> {
+        use crate::protocol::MemoryCell;
+
+        let cell = self
+            .declare_function()
+            .inputs(params.iter().cloned())
+            .output(Sort::MemoryCell)
+            .flag(FunctionFlags::MEMORY_CELL)
+            .name(name)
+            .call();
+
+        self.memory_cells
+            .push(MemoryCell::builder().function(cell.clone()).build());
+
+        for ptcl in &mut self.protocols {
+            let vars = cell.signature.mk_vars();
+            econtinue_let!(let Some(init) = ptcl.step_mut(0));
+            init.assignements.insert(
+                INIT.clone(),
+                SingleAssignement {
+                    assignement_vars: vars.clone(),
+                    parameter_vars: vars,
+                    value: rexp!(EMPTY),
+                },
+            );
+        }
+
+        Ok(cell)
     }
 
     /// returns the [Function] associated to the `index`th [Step] if it exists
