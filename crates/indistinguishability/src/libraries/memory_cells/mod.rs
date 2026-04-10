@@ -39,7 +39,7 @@ fn add_rewrites(pbl: &Problem, sink: &mut impl RewriteSink) {
         {
             let step_varsf = step_vars.into_formula_iter();
             let tau = rexp!((id #step_varsf*));
-            let name = format!("unfold cell {cell} step {id}");
+            let name = format!("unfold cell {cell} @ {id} in {}", ptcl.name());
             let builder = Rewrite::builder().name(name);
             if let Some(
                 a @ SingleAssignement {

@@ -28,10 +28,10 @@
 (define-function s0 pbl Nonce)
 (define s (declare-memory-cell pbl "s" '() (lambda _ s0)))
 
-(declare-same-step pbl "O" (list p1 p2) (list Index)
+(define O (declare-same-step pbl "O" (list p1 p2) (list Index)
   (lambda _ mtrue)
   (lambda (p in i . _) (tuple (H in k) (H in kb)))
-  empty-assignements)
+  empty-assignements))
 
 (define-function m pbl (Index) -> Nonce)
 
@@ -44,6 +44,11 @@
     (lambda _ mtrue)
     (lambda (in i cells . _) (G (m i) kb))
     (lambda (_ i cells . _) (list (store-cell s := (m i))))))
+
+(initialize-as-prf prf1 H)
+(initialize-as-prf prf2 G)
+
+(pbl.add-smt-axiom pbl (forall ((i Index) (j Index) (p Protocol)) (=> (not (idx-eq i j)) (not (eq (macro_input (O i) p) (macro_input (O j) p))))))
 
 ;; Configuration - use short timeout
 (config.set_vampire_timeout pbl (b.mult->duration scale-timeout (b.string->duration "150ms")))

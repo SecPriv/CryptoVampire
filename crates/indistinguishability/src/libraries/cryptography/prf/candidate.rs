@@ -82,7 +82,7 @@ fn add_rewrite_one(pbl: &Problem, prf: &PRF, f: &Function, sink: &mut impl Rewri
                 .variables(chain!([m.clone(), k.clone()], vars.clone()))
                 .from(rexp!((f #args*)))
                 .to(ret.clone())
-                .name(format!("candidate prf {f} arg#{i:}"))
+                .name(format!("candidate prf#{:} {f} arg#{i:}", prf.index()))
                 .build(),
         );
     }
