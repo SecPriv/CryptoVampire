@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use bon::bon;
+use bon::{bon, builder};
 use egg::{Analysis, Pattern, Rewrite};
 use itertools::{Itertools, chain};
 use log::trace;
@@ -9,10 +9,13 @@ use logic_formula::iterators::AllTermsIterator;
 use steel::rerrs::ErrorKind;
 use steel_derive::Steel;
 use thiserror::Error;
+use utils::implvec;
 
 use crate::input::Registerable;
+use crate::libraries::utils::{EggRewriteSink, INDEPEDANT_QUERY, SmtSink};
+use crate::protocol::memory_cell::Assignements;
 use crate::terms::{EMPTY, Formula, Function, INIT, UNFOLD_COND, UNFOLD_MSG, Variable};
-use crate::{Lang, MSmt, MSmtFormula, Problem, rexp, vec_smt};
+use crate::{Lang, MSmt, MSmtFormula, MSmtParam, Problem, rexp, vec_smt};
 
 bitflags::bitflags! {
   #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord,
@@ -25,7 +28,7 @@ bitflags::bitflags! {
 
 /// A step in protocol
 #[derive(Debug, PartialEq, Eq, Clone, Steel)]
-#[steel(getters, constructors)]
+// #[steel(getters, constructors)]
 pub struct Step {
     /// The identifier of the step
     pub id: Function,
@@ -35,6 +38,7 @@ pub struct Step {
     pub cond: Formula,
     /// The message of the step
     pub msg: Formula,
+    pub assignements: Assignements,
 }
 
 impl Default for Step {
@@ -54,12 +58,15 @@ impl Step {
         #[builder(with = <_>::from_iter, default = vec![])] vars: Vec<Variable>,
         #[builder(default = Formula::True())] cond: Formula,
         #[builder(default = Formula::constant(EMPTY.clone()))] msg: Formula,
+        #[builder(default)] assignements: Assignements,
     ) -> Option<Step> {
-        (vars.len() == id.signature.arity()).then_some(Self {
+        (vars.len() == id.signature.arity()).then_some(())?;
+        Some(Self {
             id,
             vars,
             cond,
             msg,
+            assignements,
         })
     }
 }
@@ -107,10 +114,11 @@ impl Step {
     ///
     /// These rewrites are used in the e-graph to replace `UNFOLD_COND` and `UNFOLD_MSG` applications
     /// with the actual condition and message formulas of the step.
-    pub(crate) fn mk_unfold_rewrites<N: Analysis<Lang>>(
+    pub(crate) fn add_unfold_rewrites<N: Analysis<Lang>>(
         &self,
         ptcl: &Function,
-    ) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
+        sink: &mut impl EggRewriteSink<N>,
+    ) {
         trace!("mk unfold rw for {self}");
         let name = &self.id_expr();
         let ptcl = &rexp!(ptcl);
@@ -128,26 +136,30 @@ impl Step {
         )
         .unwrap();
 
-        [unfold_cond, unfold_msg].into_iter()
+        sink.extend_egg_rewrites([unfold_cond, unfold_msg])
     }
 
     /// Creates an iterator of SMT formulas representing the unfolding of the condition and message
     /// for use with the Vampire SMT solver.
-    pub(crate) fn mk_unfold_vampire_rewrites(
+    pub(crate) fn add_unfold_vampire_rewrites<'a>(
         &self,
         pbl: &Problem,
-        ptcl: &MSmtFormula,
-    ) -> impl Iterator<Item = MSmt> + use<'_> {
-        let [cond, msg, name]: [MSmtFormula; _] =
+        ptcl: &MSmtFormula<'a>,
+        sink: &mut impl SmtSink<'a>,
+    ) {
+        let [cond, msg, name]: [MSmtFormula<'a>; _] =
             [&self.cond, &self.msg, &self.id_expr()].map(|x| x.as_smt(pbl).unwrap());
         let vars = self.vars.iter().cloned();
 
-        vec_smt![%
-            ; format!("unfolding of {name}"),
-            (forall !(vars.clone()) (= (UNFOLD_COND #name #ptcl) #cond)),
-            (forall !(vars.clone()) (= (UNFOLD_MSG #name #ptcl) #msg))
-        ]
-        .into_iter()
+        sink.extend_smt(
+            pbl,
+            &INDEPEDANT_QUERY,
+            vec_smt![%
+                ; format!("unfolding of {name}"),
+                (forall !(vars.clone()) (= (UNFOLD_COND #name #ptcl) #cond)),
+                (forall !(vars.clone()) (= (UNFOLD_MSG #name #ptcl) #msg))
+            ],
+        )
     }
 
     pub fn mk_publish_step(id: Function, msg: Formula) -> Self {
@@ -156,12 +168,13 @@ impl Step {
             vars: Vec::new(),
             cond: rexp!(true),
             msg,
+            assignements: Default::default(),
         }
     }
 }
 
 #[derive(Debug, Clone, Error)]
-enum InvalidStepError {
+pub(crate) enum InvalidStepError {
     #[error(
         "wrong protocol referenced (expected only references to {expected} got {got}) \
          in\n\t{formula}"
@@ -173,24 +186,33 @@ enum InvalidStepError {
     },
     #[error("Variable {var} is free in\n\t{formula}")]
     FreeVariable { var: Variable, formula: Formula },
+    #[error("{msg}")]
+    Other { msg: String },
 }
 
 impl From<InvalidStepError> for steel::rerrs::SteelErr {
     fn from(value: InvalidStepError) -> Self {
         let kind = match &value {
-            InvalidStepError::WrongProtocol { .. } => ErrorKind::Generic,
+            InvalidStepError::WrongProtocol { .. } | InvalidStepError::Other { .. } => {
+                ErrorKind::Generic
+            }
             InvalidStepError::FreeVariable { .. } => ErrorKind::FreeIdentifier,
         };
         Self::new(kind, value.to_string())
     }
 }
 
-fn check_elem(
+pub(crate) fn check_elem<'a, I, II>(
     pbl: &Problem,
     step: &Function,
     ptcl: &Function,
     elem: &Formula,
-) -> Result<(), InvalidStepError> {
+    extra_vars: I,
+) -> Result<(), InvalidStepError>
+where
+    I: IntoIterator<IntoIter = II>,
+    II: Iterator<Item = &'a Variable> + Clone,
+{
     for f in elem.iter_with(AllTermsIterator, ()) {
         if let Formula::App { head, .. } = f
             && head.is_protocol()
@@ -205,8 +227,9 @@ fn check_elem(
     }
 
     let vars = &pbl.protocols()[ptcl.protocol_idx].steps()[step.step_idx].vars;
+    let vars = chain![vars.iter(), extra_vars.into_iter().map(|v| v.as_ref())];
     for v in elem.free_vars_iter() {
-        if !vars.contains(v) {
+        if !vars.clone().contains(&v) {
             return Err(InvalidStepError::FreeVariable {
                 var: v.clone(),
                 formula: elem.clone(),
@@ -218,6 +241,7 @@ fn check_elem(
 }
 
 mod msteel {
+    use itertools::chain;
     use log::trace;
     use logic_formula::AsFormula;
     use logic_formula::iterators::AllTermsIterator;
@@ -229,6 +253,7 @@ mod msteel {
     use super::Step;
     use crate::input::Registerable;
     use crate::input::shared_problem::ShrProblem;
+    use crate::protocol::SingleAssignement;
     use crate::protocol::step::check_elem;
     use crate::terms::{Formula, Function, Sort, Variable};
 
@@ -266,7 +291,7 @@ mod msteel {
     /// Sets the message for a given step in a protocol.
     #[steel_derive::declare_steel_function(name = "set-msg")]
     fn set_msg(pbl: ShrProblem, step: Function, ptcl: Function, msg: Formula) -> SResult<()> {
-        check_elem(&pbl.borrow(), &step, &ptcl, &msg)?;
+        check_elem(&pbl.borrow(), &step, &ptcl, &msg, [])?;
         pbl.get_step_mut(step, ptcl)?.msg = msg;
         Ok(())
     }
@@ -274,7 +299,7 @@ mod msteel {
     /// Sets the condition for a given step in a protocol.
     #[steel_derive::declare_steel_function(name = "set-cond")]
     fn set_cond(pbl: ShrProblem, step: Function, ptcl: Function, cond: Formula) -> SResult<()> {
-        check_elem(&pbl.borrow(), &step, &ptcl, &cond)?;
+        check_elem(&pbl.borrow(), &step, &ptcl, &cond, [])?;
         pbl.get_step_mut(step, ptcl)?.cond = cond;
         Ok(())
     }
@@ -328,8 +353,12 @@ mod msteel {
     impl Registerable for Step {
         fn register(modules: &mut rustc_hash::FxHashMap<String, BuiltInModule>) {
             let name = "cryptovampire/ll/step";
-            let mut module = BuiltInModule::new(name);
-            Self::register_type(&mut module);
+
+            let module = modules
+                .entry(name.into())
+                .or_insert_with(|| BuiltInModule::new(name));
+
+            Self::register_type(module);
             module
                 .register_type::<Self>("Step?")
                 .register_native_fn_definition(TO_STRING_DEFINITION)
@@ -342,8 +371,7 @@ mod msteel {
                 .register_native_fn_definition(DECLARE_DEFINITION)
                 .register_native_fn_definition(TO_STRING_DEFINITION);
 
-            trace!("defined {name} scheme module");
-            assert!(modules.insert(name.into(), module).is_none())
+            trace!("defined {name} for steps scheme module");
         }
     }
 }

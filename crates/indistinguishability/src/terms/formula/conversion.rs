@@ -225,7 +225,7 @@ impl Formula {
     /// # Type Parameters
     ///
     /// * `L` - The `EggLanguage` type to use for the conversion (e.g., `Lang` for ground terms
-    ///        or `LangVar` for expressions with variables).
+    ///   or `LangVar` for expressions with variables).
     ///
     /// # Notes
     ///
@@ -390,6 +390,7 @@ impl Formula {
     // }
 
     /// remove any De-Buijn indices from a [Self]
+    #[allow(unused)]
     fn remove_de_bruijn(
         &self,
         bound_vars: &rpds::Queue<Variable>,

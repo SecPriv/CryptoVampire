@@ -7,7 +7,7 @@ use itertools::Itertools;
 use log::trace;
 
 use crate::problem::{CVRuleTrait, PAnalysis, RcRule};
-use crate::terms::{Function, Sort};
+use crate::terms::{AND, BITE, Function, MITE, Sort};
 use crate::{CVProgram, Lang};
 
 pub trait ProofLike<S: ProofSubstitution + ?Sized> {
@@ -69,14 +69,29 @@ pub trait ProofSubstitution {
     /// when the proffs ask to apply an instance
     fn instance<'a>(&self, args: PSArgs<'_, 'a, Self>) -> Result<Id>;
 
+    /// Wether [BOUND_ANDS] is used
+    #[inline]
+    fn guard_bounds(&self) -> bool {
+        false
+    }
+
     fn function_application<'a>(&self, fun: &Function, psargs: PSArgs<'_, 'a, Self>) -> Result<Id> {
         trace!("rebuilding proof with {fun}:\n{psargs:#?}");
         let PSArgs {
             prgrm,
             proof_id,
-            proof_parent: ids,
+            proof_parent: mut ids,
             ..
         } = psargs;
+
+        // skip the guard
+        if self.guard_bounds() {
+            if fun == &AND {
+                ids = &ids[1..]
+            } else if fun == &BITE || fun == &MITE {
+                ids = &ids[2..]
+            }
+        }
 
         let t = self.get_term(prgrm, proof_id)?;
         let mut args_proofs = ids.iter();

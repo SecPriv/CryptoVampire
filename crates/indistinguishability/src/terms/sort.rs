@@ -29,11 +29,23 @@ pub enum Sort {
     Protocol,
     Nonce,
     Index,
+    MemoryCell,
+    UnfoldingCall,
 }
 
 pub static SORTS: &[Sort] = {
     use Sort::*;
-    &[Any, Bool, Bitstring, Time, Protocol, Nonce, Index]
+    &[
+        Any,
+        Bool,
+        Bitstring,
+        Time,
+        Protocol,
+        Nonce,
+        Index,
+        MemoryCell,
+        UnfoldingCall,
+    ]
 };
 
 impl Sort {
@@ -115,6 +127,8 @@ impl Sort {
             Self::Protocol => 'p',
             Self::Nonce => 'n',
             Self::Index => 'i',
+            Self::MemoryCell => 's',
+            Self::UnfoldingCall => 'u',
         }
     }
 
@@ -127,6 +141,8 @@ impl Sort {
             Self::Protocol => "Protocol",
             Self::Nonce => "Nonce",
             Self::Index => "Index",
+            Self::MemoryCell => "MemoryCell",
+            Self::UnfoldingCall => "UnfoldingCall",
         }
     }
 

@@ -23,7 +23,7 @@ use crate::{Lang, rexp};
 
 declare_trace!($"substitution");
 
-pub use rule::SubstRule;
+pub use rule::SubstLib;
 mod rule;
 
 mod algorithm;

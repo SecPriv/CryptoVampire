@@ -6,7 +6,7 @@ use static_init::dynamic;
 use utils::transposer::Transposable;
 use utils::{ebreak_if, ebreak_let, implvec};
 
-use crate::problem::{PAnalysis, ProblemState};
+use crate::problem::{CurrentStep, PAnalysis, ProblemState};
 use crate::terms::utils::iter_egraph::iter_descendants_lang;
 use crate::terms::{Formula, Function, IS_FRESH_NONCE, NONCE, Sort, Substitution, Variable};
 use crate::{CVProgram, Lang, Problem, rexp};
@@ -76,7 +76,7 @@ impl FreshNonceSet {
             let idx = variables
                 .iter()
                 .map(|v| {
-                    let mut arg = ProblemState::ids_of_sort(egraph, v.get_sort()).collect_vec();
+                    let mut arg_idx = ProblemState::ids_of_sort(egraph, v.get_sort()).collect_vec();
                     if let Some(nidx) = nidx
                         && v.get_sort()
                             == Some(
@@ -88,23 +88,36 @@ impl FreshNonceSet {
                                     .unwrap(),
                             )
                     {
-                        arg.push(nidx);
+                        arg_idx.push(nidx);
                     }
+
+                    let CurrentStep { idx, args } = egraph
+                        .analysis
+                        .pbl()
+                        .current_step()
+                        .expect("a running problem with a current step");
+
+                    let mut arg = Vec::with_capacity(arg_idx.len() + args.len());
+
                     arg.extend(
-                        egraph
-                            .analysis
-                            .pbl()
-                            .current_step()
-                            .unwrap()
-                            .args
-                            .iter()
-                            .filter(|f| f.signature.output == v.get_sort().unwrap())
-                            .map(|f| egraph.lookup(f.app_id([])).unwrap()),
+                        arg_idx
+                            .into_iter()
+                            .map(|id| Formula::try_from_id(egraph, id).unwrap()),
                     );
 
-                    arg.into_iter()
-                        .map(|id| Formula::try_from_id(egraph, id).unwrap())
-                        .collect_vec()
+                    trace!(
+                        "register_idx current step: {}",
+                        egraph.analysis.pbl().get_step_fun(*idx).unwrap()
+                    );
+
+                    arg.extend(
+                        args.iter()
+                            .inspect(|f| debug_assert_eq!(f.arity(), 0))
+                            .filter(|f| f.signature.output == v.get_sort().unwrap())
+                            .map(|f| rexp!(f)),
+                    );
+
+                    arg
                 })
                 .collect_vec();
 

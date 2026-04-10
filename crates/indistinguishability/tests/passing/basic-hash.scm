@@ -37,14 +37,14 @@
 
 (define tag (declare-same-step pbl "tag" ptcls (list Index Index)
     (lambda _ mtrue)
-    (lambda (p in i j) (tuple (n i j) (mhash (n i j) (mk i j p))))))
+    (lambda (p in i j . _) (tuple (n i j) (mhash (n i j) (mk i j p))))))
 
 (define rs (declare-same-step pbl "rs" ptcls (list Index Index)
-    (lambda (p in i j) (eq (sel2of2 in) (mhash (sel1of2 in) (mk i j p))))
+    (lambda (p in i j . _) (eq (sel2of2 in) (mhash (sel1of2 in) (mk i j p))))
     (lambda _ ok)))
 
 (define rf (declare-same-step pbl "rf" ptcls (list Index)
-    (lambda (p in i) (mnot (exists ((j Index))
+    (lambda (p in i . _) (mnot (exists ((j Index))
           (eq (sel2of2 in) (mhash (sel1of2 in) (mk i j p))))))
     (lambda _ ko)))
 
@@ -65,7 +65,7 @@
 
 ;; configuration
 ; (cv-set-trace pbl #t)
-(config.set_vampire_timeout pbl (b.string->duration "5s"))
+(config.set_vampire_timeout pbl (b.mult->duration scale-timeout (b.string->duration "5s")))
 
 (if (run pbl p1 p2)
   (displayln "success")

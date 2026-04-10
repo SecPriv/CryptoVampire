@@ -45,5 +45,6 @@ pub mod macros {
         }
     }
 
-    pub use {mexists, mforall};
+    pub use mexists;
+    pub use mforall;
 }

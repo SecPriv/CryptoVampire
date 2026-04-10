@@ -1,14 +1,24 @@
 use egg::{Analysis, EGraph, Rewrite};
 use itertools::chain;
-/// Re-exports the test module for PRF rules.
-#[cfg(test)]
-pub use prf::test as prf_test;
-/// Re-exports the `VampireRule` struct, which implements a rule for the Vampire SMT solver.
 pub use vampire::VampireRule;
 
+use crate::libraries::base::BaseRewriteLib;
+use crate::libraries::constrains::ConstrainsLib;
+use crate::libraries::deduce::DeduceLib;
+use crate::libraries::fa::FaLib;
+use crate::libraries::find_indices::FindIndicesLib;
+use crate::libraries::ifs::IfLib;
+use crate::libraries::lambda::LambdaLib;
+use crate::libraries::protocol::unfold::UnfoldLib;
+use crate::libraries::publication::PublicationLib;
+use crate::libraries::sanity_check::SanityCheck;
+use crate::libraries::smt::SmtLib;
+use crate::libraries::substitution::SubstLib;
+use crate::libraries::utils::{EggRewriteSink, RewriteSink, RuleSink, SmtSink};
+use crate::libraries::vampire::VampireLib;
 use crate::problem::{PAnalysis, PRule, ProblemState, RcRule};
 use crate::runners::SmtRunner;
-use crate::{Lang, MSmt, Problem};
+use crate::{CVProgram, Lang, MSmt, MSmtParam, Problem};
 
 // =========================================================
 // ======================= macros ==========================
@@ -229,35 +239,22 @@ macro_rules! mk_many_rewrites {
 /// Provides utility functions and helpers for rules.
 pub mod utils;
 
-/// Encryption rules
-mod aenc;
-
 /// Provides rules for deduction.
-pub mod deduce;
-/// Provides default rewrite rules.
-mod default_rewrites;
+mod deduce;
 /// Provides rules for handling forall quantifiers.
 mod fa;
 /// Provides rules for lambda calculus.
 mod lambda;
 /// Provides rules for handling nonces.
 mod nonce;
-/// Provides rules for pseudo-random functions (PRFs).
-mod prf;
 /// Provides rules for substitution.
 mod substitution;
 /// Provides rules for interacting with the Vampire SMT solver.
 mod vampire;
 
-mod if_rewrites;
+mod ifs;
 
-pub mod constrains;
-
-mod xor;
-pub use xor::XOr;
-
-mod ddh;
-pub use ddh::DDH;
+pub use protocol::{constrains, publication};
 
 mod smt;
 
@@ -265,75 +262,28 @@ mod smt;
 
 /// Simple rewrite rule to find indices
 /// that can then be used with mutliparterns
-pub mod find_indices;
+mod find_indices;
 
-pub use aenc::AEnc;
-pub use nonce::{FreshNonce, mk_no_guessing_smt};
-/// Re-exports the `PRF` struct, representing a pseudo-random function.
-pub use prf::PRF;
+pub use nonce::{FreshNonce, add_no_guessing_smt};
 
-mod publication;
+mod base;
+mod problem;
+mod protocol;
+
+mod memory_cells;
 
 /// Provides rules for sanity checking.
-#[cfg(debug_assertions)]
 mod sanity_check;
 
-// =========================================================
-// ====================== exported =========================
-// =========================================================
+mod library;
+pub use library::Library;
 
-/// Creates the default prolog rules
-///
-/// This function creates the default prolog rules for the given problem.
-/// It includes the extra rules from the problem, the deduce rules, the forall rules,
-/// and the substitution rule.
-/// In debug mode, it also includes the sanity check rule.
-pub fn mk_golgge_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> {
-    let exec = SmtRunner::new(pbl);
-    let vampire_rule = VampireRule::builder().exec(exec.clone()).build().into_mrc();
-    let fresh_rule = FreshNonce::builder().exec(exec.clone()).build().into_mrc();
-    chain![
-        [
-            #[cfg(debug_assertions)]
-            {
-                sanity_check::SanityCheck.into_mrc()
-            }
-        ],
-        pbl.extra_rules().iter().cloned(),
-        deduce::mk_rules(pbl),
-        fa::mk_prolog_rules(pbl),
-        [substitution::SubstRule.into_mrc(), vampire_rule, fresh_rule]
-    ]
-}
+mod libraries;
+pub use libraries::Libraries;
 
-/// Creates the default rewrite rules
-///
-/// This function creates the default rewrite rules for the given problem.
-/// It includes the default rewrites and the lambda rewrites.
-pub fn mk_egg_rewrites<N: Analysis<Lang>>(
-    pbl: &Problem,
-) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
-    chain![
-        default_rewrites::mk_rewrites(pbl),
-        lambda::mk_rewrites(pbl),
-        if_rewrites::mk_rewrite(pbl),
-        constrains::mk_rewrite(pbl),
-        [find_indices::mk_rewrite()],
-        publication::mk_rewrites(pbl),
-    ]
-}
+mod cryptography;
+pub use cryptography::{AEnc, CryptographicAssumption, Cryptography, DDH, PRF, XOr};
 
-pub fn mk_smt_prelude(pbl: &Problem) -> impl Iterator<Item = MSmt> + use<'_> {
-    chain![
-        smt::mk_prelude(pbl),
-        constrains::mk_smt(pbl),
-        publication::mk_smt(pbl)
-    ]
-}
+mod current_step;
 
-/// Add terms to the egraph / union terms
-pub fn init_egraph<'a>(egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
-    constrains::modify_egraph(egraph);
-    find_indices::modify_egraph(egraph);
-    ProblemState::init_egraph(egraph);
-}
+mod and_bounder;

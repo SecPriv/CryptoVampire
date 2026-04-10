@@ -7,15 +7,17 @@ use logic_formula::{AsFormula, Destructed, HeadSk};
 use rustc_hash::{FxHashMap, FxHashSet};
 use utils::{ereturn_cf, ereturn_if, implvec};
 
-use crate::libraries::utils::fresh::RefFormulaBuilder;
-use crate::libraries::utils::get_protocol;
+use crate::libraries::memory_cells;
+use crate::libraries::utils::{
+    DefaultAux, FormulaBuilderAux, FormulaBuilderFlags, RefFormulaBuilder, get_protocol,
+};
 use crate::problem::PAnalysis;
 use crate::protocol::{Protocol, Step};
 use crate::runners::SmtRunner;
 use crate::terms::{
     Alias, AliasRewrite, AlphaArgs, BITE, Exists, FOBinder, FindSuchThat, Formula, Function,
-    HAPPENS, LAMBDA_S, LEQ, MACRO_COND, MACRO_FRAME, MACRO_MSG, MITE, PRED, Quantifier,
-    QuantifierT, RecFOFormulaQuant, Sort, Variable,
+    HAPPENS, LAMBDA_S, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL,
+    MACRO_MSG, MITE, PRED, Quantifier, QuantifierT, RecFOFormulaQuant, Sort, Variable,
 };
 use crate::{CVProgram, Lang, Problem, fresh, rexp};
 
@@ -31,12 +33,22 @@ pub fn default_is_special<U: SyntaxSearcher + ?Sized>(
     fun.is_special_subterm()
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq)]
+pub enum MsgOrCond {
+    Msg,
+    Cond,
+}
+
+pub type RBFormula<U> = RefFormulaBuilder<<U as SyntaxSearcher>::Aux>;
+
 /// When implementing [SyntaxSearcher] **make sure** each function's
 /// pre-implementation does what you what. Think of this more as a macro than a
 /// trait.
 ///
 /// It should be easy enough to bail out and nothing should be generic over [SyntaxSearcher]s.
 pub trait SyntaxSearcher {
+    type Aux: FormulaBuilderAux + Clone + Default;
+
     /// an name for debugging
     fn debug_name<'a>(&'a self) -> Cow<'a, str>;
 
@@ -53,7 +65,7 @@ pub trait SyntaxSearcher {
     fn process_instance(
         &self,
         pbl: &Problem,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         fun: &Function,
         args: &[Formula],
     ) -> ControlFlow<()>;
@@ -70,7 +82,7 @@ pub trait SyntaxSearcher {
     ///
     /// This function traverses the formula, identifying instances that match `is_instance`
     /// or special subterms handled by `search_special_recexpr`.
-    fn inner_search_formula(&self, pbl: &Problem, builder: &RefFormulaBuilder, term: Formula) {
+    fn inner_search_formula(&self, pbl: &Problem, builder: &RBFormula<Self>, term: Formula) {
         assert!(builder.current_mode().is_and());
         ereturn_if!(builder.is_saturated());
         tr!("searching through {term}");
@@ -106,7 +118,7 @@ pub trait SyntaxSearcher {
     fn search_quantifier(
         &self,
         pbl: &Problem,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         quant: RecFOFormulaQuant,
         args: implvec!(Formula),
     ) {
@@ -152,7 +164,7 @@ pub trait SyntaxSearcher {
     fn search_special_recexpr(
         &self,
         pbl: &Problem,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         fun: Function,
         args: implvec!(Formula),
     ) {
@@ -161,22 +173,130 @@ pub trait SyntaxSearcher {
         tr!("in search_special_recexpr");
 
         if fun == MACRO_COND || fun == MACRO_MSG {
-            unimplemented!(
-                "please directly inline the 'msg' and 'cond' macros in your protocol definition"
-            )
+            let kind = fun.try_into().unwrap();
+            let (time, ptcl) = args
+                .into_iter()
+                .collect_tuple()
+                .expect("terms should be well typed");
+            self.search_msg_cond_macro(pbl, builder, kind, ptcl, time)
+        } else if fun == MACRO_MEMORY_CELL {
+            let (cell, time, ptcl) = args
+                .into_iter()
+                .collect_tuple()
+                .expect("terms should be well typed");
+            self.search_memory_cell(pbl, builder, cell, ptcl, time);
+        } else if fun == MACRO_FRAME || fun == MACRO_EXEC || fun == MACRO_INPUT {
+            let (mut time, ptcl) = args
+                .into_iter()
+                .collect_tuple()
+                .expect("terms should be well typed");
+
+            if fun == MACRO_INPUT {
+                time = rexp!((PRED #time));
+            }
+            let ptcl = Protocol::from_formula(pbl, &ptcl).expect("proctols should be concrete");
+
+            self.search_frame(pbl, builder, ptcl, &time);
         } else if let Some(alias) = fun.get_alias() {
             self.search_alias(pbl, builder, alias, args);
         } else if fun.is_quantifier() {
             match fun.get_quantifier(pbl.functions()) {
-                // Some(Quantifier::Exists(exists)) => self.search_exists(pbl, builder, exists, args),
                 Some(Quantifier::FindSuchThat(fdst)) => {
                     self.search_fdst_alias_function(pbl, builder, fdst, args)
                 }
                 Some(Quantifier::Exists(_)) => {
-                    panic!("exists aliases are no longer needed, please use high order instead")
+                    panic!(
+                        "exists aliases are no longer needed and deprecated, please use high \
+                         order instead"
+                    )
                 }
                 _ => unreachable!(),
             };
+        }
+    }
+
+    fn search_msg_cond_macro(
+        &self,
+        pbl: &Problem,
+        builder: &RBFormula<Self>,
+        kind: MsgOrCond,
+        ptcl: Formula,
+        time: Formula,
+    ) {
+        // NB: we assume well-formed-ness to ensure terminiation. Otherwise it is easy to make this loop forever.
+        tr!("in search_msg_cond_macro");
+        match (ptcl, time) {
+            (Formula::App { head: ptcl, .. }, Formula::App { head: step, args }) => {
+                let ptcl_idx = ptcl
+                    .get_protocol_index()
+                    .expect("the protocol field should be a concrete protocol");
+                let step_idx = step
+                    .get_step_index()
+                    .expect("the time field should be a concrete step");
+                let step = &pbl.protocols()[ptcl_idx].steps()[step_idx];
+                let t = match kind {
+                    MsgOrCond::Cond => &step.cond,
+                    MsgOrCond::Msg => &step.msg,
+                };
+                let mut subst = Default::default();
+                let t = t.alpha_rename_if_with(&mut subst, &mut |_| true);
+
+                let args_eqs = izip!(args.iter(), &step.vars).map(|(arg, var)| {
+                    let narg = subst.get(var).unwrap().clone();
+                    rexp!((= #arg #narg))
+                });
+
+                let builder = builder
+                    .add_node()
+                    .variables(subst.values().cloned())
+                    .condition(Formula::and(args_eqs))
+                    .build();
+                self.inner_search_formula(pbl, &builder, t);
+            }
+            _ => unreachable!("protocols should be well formed"),
+        }
+    }
+
+    fn search_memory_cell(
+        &self,
+        pbl: &Problem,
+        builder: &RBFormula<Self>,
+        cell: Formula,
+        ptcl: Formula,
+        time: Formula,
+    ) {
+        tr!("in search_memory_cell {cell}");
+        let Formula::App {
+            head: cell_head,
+            args: cell_args,
+        } = cell
+        else {
+            unreachable!("cells should be conctrete")
+        };
+        assert!(cell_head.is_memory_cell());
+
+        let ptcl = Protocol::from_formula(pbl, &ptcl).expect("proctols should be concrete");
+
+        match time {
+            Formula::App {
+                head: step_head,
+                args: step_args,
+            } if step_head == PRED => {
+                let time = &step_args[0];
+                memory_cells::search_pred_memory_cell(
+                    self, pbl, builder, cell_head, cell_args, ptcl, time,
+                );
+            }
+            Formula::App {
+                head: ref step_head,
+                args,
+            } if step_head.is_step() => {
+                let step = &ptcl.steps()[step_head.get_step_index().unwrap()];
+                memory_cells::search_concrete_memory_cell(
+                    self, pbl, builder, cell_head, cell_args, ptcl, step, args,
+                );
+            }
+            _ => unreachable!("time field should be a 'pred(step)' or a concrete step"),
         }
     }
 
@@ -186,7 +306,7 @@ pub trait SyntaxSearcher {
     fn search_alias(
         &self,
         pbl: &Problem,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         alias: &Alias,
         args: implvec!(Formula),
     ) {
@@ -241,7 +361,7 @@ pub trait SyntaxSearcher {
     fn search_exists_alias_function<'b>(
         &self,
         pbl: &Problem,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         e: &Exists,
         args: implvec!(Formula),
     ) {
@@ -271,7 +391,7 @@ pub trait SyntaxSearcher {
     fn search_fdst_alias_function<'b>(
         &self,
         pbl: &Problem,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         fdst: &FindSuchThat,
         args: implvec!(Formula),
     ) {
@@ -311,12 +431,18 @@ pub trait SyntaxSearcher {
     fn search_frame(
         &self,
         pbl: &Problem,
-        builder: &RefFormulaBuilder,
+        builder: &RBFormula<Self>,
         ptcl: &Protocol,
         time: &Formula,
     ) {
+        ereturn_if!(
+            builder.is_saturated()
+                || builder
+                    .flags()
+                    .intersects(FormulaBuilderFlags::NO_THROUGH_PREVIOUS_BODY)
+        );
         tr!("in frame");
-        assert!(builder.current_mode().is_and());
+        let builder = builder.ensure_and();
 
         // for each step we switch to `search_recexpr` on its message
         for Step {
@@ -339,6 +465,7 @@ pub trait SyntaxSearcher {
                 .condition(condition)
                 .variables(vars.clone())
                 .forall()
+                .add_flag(FormulaBuilderFlags::NO_THROUGH_PREVIOUS_BODY)
                 .build();
             self.inner_search_formula(pbl, &builder, cond.clone());
             self.inner_search_formula(pbl, &builder, msg.clone());
@@ -381,11 +508,12 @@ pub trait SyntaxSearcher {
                     .condition(condition)
                     .variables(vars.clone())
                     .forall()
+                    .add_flag(FormulaBuilderFlags::NO_THROUGH_PREVIOUS_BODY)
                     .build();
                 self.inner_search_formula(pbl, &builder, to_search.clone());
                 builder.into_inner().unwrap().into_formula()
             })
-            .flat_map(|x| x.split_conjunction())
+            .flat_map(|x: Formula| x.split_conjunction())
     }
 
     fn search_id_timepoint<'a, 'b, 'c>(
@@ -401,315 +529,37 @@ pub trait SyntaxSearcher {
             .search_timepoint(prgm.egraph().analysis.pbl(), ptcl, time, hyp)
             .collect_vec();
         let pbl = prgm.egraph_mut().analysis.pbl_mut();
-        pbl.find_temp_quantifiers(&queries);
-
-        let result = queries.into_iter().all(|query| {
-            let query = query.as_smt(*pbl).unwrap();
-            exec.run_to_dependancy(pbl, query).is_axioms()
-        });
+        let result = exec.iter_run_to_dependancy(pbl, queries).is_axioms();
         pbl.clear_temp_quantifiers();
+
+        // pbl.find_temp_quantifiers(&queries);
+
+        // let result = queries.into_iter().all(|query| {
+        //     let query = query.as_smt(*pbl).unwrap();
+        //     exec.run_to_dependancy(pbl, query).is_axioms()
+        // });
+        // pbl.clear_temp_quantifiers();
         Some(result)
     }
-}
 
-/// A trait for searching within an e-graph.
-///
-/// This trait extends `SyntaxSearcher` with methods for navigating and processing
-/// e-graphs, handling e-classes and their nodes.
-pub trait EgraphSearcher: SyntaxSearcher {
-    /// Processes an instance found within the e-graph.
-    ///
-    /// This converts the e-graph `Id`s to `RecFOFormula`s and then calls `SyntaxSearcher::process_instance`.
-    fn process_egraph_instance<'a>(
-        &self,
-        egraph: &EGraph<Lang, PAnalysis<'a>>,
-        builder: &RefFormulaBuilder,
-        fun: &Function,
-        args: &[Id],
-        variables: &rpds::Queue<Variable>,
-    ) -> ControlFlow<()> {
-        let args = args
-            .iter()
-            .map(|&id| expr_of_id(egraph, id, variables))
-            .collect_vec();
+    fn search_term<'a, 'b, 'c>(
+        &'b self,
+        prgm: &'c mut CVProgram<'a>,
+        exec: &'b SmtRunner,
+        term: Formula,
+        hyp: Formula,
+    ) -> Option<bool> {
+        let builder = RBFormula::<Self>::builder().condition(hyp).build();
+        let pbl = prgm.egraph_mut().analysis.pbl();
+        self.inner_search_formula(pbl, &builder, term);
 
-        self.process_instance(egraph.analysis.pbl(), builder, fun, &args)
-    }
-
-    /// Recursively searches an e-graph starting from a given `Id`.
-    ///
-    /// This method traverses the e-graph, applying `early_egraph_loop` and `main_egraph_loop`
-    /// to process e-nodes and their children.
-    fn search_egraph<'a>(
-        &self,
-        egraph: &EGraph<Lang, PAnalysis<'a>>,
-        builder: &RefFormulaBuilder,
-        current: Id,
-        visited: &rpds::HashTrieSet<Id>,
-        variables: &rpds::Queue<Variable>,
-    ) {
-        tr!("looking at {current:}");
-        ereturn_if!(builder.is_saturated());
-        ereturn_if!(visited.contains(&current));
-        tr!("unskipped");
-
-        let eclass = &egraph[current];
-        tr!(
-            "current enode has {:} nodes\n({})",
-            eclass.nodes.len(),
-            expr_of_id(egraph, current, variables)
-        );
-
-        // first loop for early exit if necessary
-        // This takes care of the cases that replace the whole builder
-        for crate::Lang { head, args } in eclass.iter() {
-            ereturn_cf!(self.early_egraph_loop(egraph, builder, current, head, args, variables))
-        }
-
-        // main loop
-
-        // fresh if indep of *one* of the e-class
-        let builder = builder.add_node().or().build();
-        let visited = visited.insert(current);
-        for crate::Lang { head, args } in eclass.iter() {
-            self.main_egraph_loop(egraph, current, &builder, &visited, head, args, variables);
-        }
-    }
-
-    /// Searches within an e-graph representation of a protocol frame.
-    ///
-    /// This method extracts protocol information from the e-graph and then calls
-    /// `inner_search_formula` on the conditions and messages of the protocol steps.
-    fn search_egraph_frame<'a>(
-        &self,
-        egraph: &EGraph<Lang, PAnalysis<'a>>,
-        builder: &RefFormulaBuilder,
-        time: Id,
-        ptcl: Id,
-        variables: &rpds::Queue<Variable>,
-    ) {
-        tr!("in frame");
-        assert!(builder.current_mode().is_and());
-        let time = expr_of_id(egraph, time, variables);
-
-        let pbl = egraph.analysis.pbl();
-
-        // get the protocol from the function
-        let ptcl = {
-            let idx = egraph[ptcl]
-                .iter()
-                .find_map(|f| f.head.get_protocol_index())
-                .unwrap(); // there has to be one
-            &pbl.protocols()[idx]
-        };
-
-        // for each step we switch to `search_recexpr` on its message
-        for Step {
-            id,
-            vars,
-            cond,
-            msg,
-            ..
-        } in ptcl.steps()
-        {
-            // build the condition object
-            let condition = {
-                let vars = vars.iter().map(|x| Formula::Var(x.clone()));
-                rexp!((and (HAPPENS (id #(vars.clone())*)) (LEQ (id #vars*) #time) ))
-            };
-
-            let builder = builder
-                .add_node()
-                .and()
-                .condition(condition)
-                .variables(vars.clone())
-                .forall()
-                .build();
-            self.inner_search_formula(pbl, &builder, cond.clone());
-            self.inner_search_formula(pbl, &builder, msg.clone());
-        }
-    }
-
-    /// Performs an early loop iteration for e-graph searching.
-    ///
-    /// This checks for special cases like `MACRO_FRAME` or instances that can be processed directly,
-    /// potentially breaking the loop early.
-    fn early_egraph_loop<'a>(
-        &self,
-        egraph: &EGraph<crate::Lang, PAnalysis<'a>>,
-        builder: &RefFormulaBuilder,
-        current: Id,
-        head: &Function,
-        args: &[Id],
-        variables: &rpds::Queue<Variable>,
-    ) -> ControlFlow<()> {
-        tr!(
-            "early looking through {head}:{current:}({})",
-            args.iter().join(", ")
-        );
-        if head == &MACRO_FRAME
-            && let Some((&time, &ptcl)) = args.iter().collect_tuple()
-            && egraph[time].iter().any(|f| f.head == PRED)
-        {
-            tr!("looking through frame");
-            tr!("builder mode {}", builder.borrow().mode());
-            self.search_egraph_frame(egraph, builder, time, ptcl, variables);
-            return ControlFlow::Break(());
-        }
-        if self.is_instance(egraph.analysis.pbl(), head) {
-            self.process_egraph_instance(egraph, builder, head, args, variables)
-        } else {
-            ControlFlow::Continue(())
-        }
-    }
-
-    /// Performs the main loop iteration for e-graph searching.
-    ///
-    /// This method processes the e-nodes, handling special subterms like `MITE` or `BITE`,
-    /// and recursively searches the arguments of regular functions.
-    #[allow(clippy::too_many_arguments)]
-    fn main_egraph_loop<'a>(
-        &self,
-        egraph: &EGraph<crate::Lang, PAnalysis<'a>>,
-        current: Id,
-        builder: &RefFormulaBuilder,
-        visited: &rpds::HashTrieSet<Id>,
-        head: &Function,
-        args: &[Id],
-        variables: &rpds::Queue<Variable>,
-    ) {
-        tr!(
-            "looking through {head}:{current:}({})",
-            args.iter().join(", ")
-        );
-        // fresh if indep of all the *arguements*
-        if head.is_special_subterm() {
-            tr!("is special subterm (flags: {:?})", head.flags);
-            // the special cases
-
-            if head == &MITE || head == &BITE {
-                self.ite_egraph(egraph, builder, args, visited, variables);
-            } else if head == &LAMBDA_S {
-                self.search_egraph(
-                    egraph,
-                    builder,
-                    current,
-                    visited,
-                    &variables.dequeue().unwrap_or_default(),
-                );
-            }
-
-            // The rest is taken care of by equality
-        } else {
-            for arg in args {
-                let builder = builder.add_node().and().build();
-                self.search_egraph(egraph, &builder, *arg, visited, variables);
-            }
-        }
-    }
-
-    /// Builds the subterm of an if-then-else (ITE) expression within an e-class.
-    ///
-    /// This method recursively searches the condition, then branch, and else branch of the ITE.
-    ///
-    /// `visisted` must already be updated
-    fn ite_egraph<'a>(
-        &self,
-        egraph: &EGraph<Lang, PAnalysis<'a>>,
-        builder: &RefFormulaBuilder,
-        args: &[Id],
-        visited: &rpds::HashTrieSet<Id>,
-        variables: &rpds::Queue<Variable>,
-    ) {
-        tr!("in ite");
-        let builder = builder.add_node().and().build();
-        let (c, l, r) = args.iter().copied().collect_tuple().unwrap();
-
-        self.search_egraph(egraph, &builder, c, visited, variables);
-
-        let c = expr_of_id(egraph, c, variables);
-
-        {
-            // pos
-            let builder = builder
-                .add_node()
-                .or()
-                .forall()
-                .condition(c.clone())
-                .build();
-            self.search_egraph(egraph, &builder, l, visited, variables);
-        }
-        {
-            // neg
-            let builder = builder.add_node().or().forall().condition(!c).build();
-            self.search_egraph(egraph, &builder, r, visited, variables);
-        }
-    }
-
-    /// Builds the subterm of a quantifier (binder) within an e-class.
-    ///
-    /// This method handles different types of quantifiers (Forall, Exists, FindSuchThat)
-    /// and recursively searches their respective arguments.
-    ///
-    /// `visisted` must already be updated
-    fn binder_egraph<'a>(
-        &self,
-        egraph: &EGraph<Lang, PAnalysis<'a>>,
-        builder: &RefFormulaBuilder,
-        quant: FOBinder,
-        args: &[Id],
-        visited: &rpds::HashTrieSet<Id>,
-        variables: &rpds::Queue<Variable>,
-    ) {
-        tr!("in {quant}");
-        let mut args = args.iter();
-
-        let sorts = Sort::list_from_egg(egraph, *args.next().unwrap()).unwrap();
-        let nvariables = sorts.into_iter().map(|s| fresh!(s)).collect_vec();
-        let variable = nvariables
-            .iter()
-            .fold(variables.clone(), |acc, v| acc.enqueue(v.clone()));
-
-        match quant {
-            FOBinder::Exists | FOBinder::Forall => {
-                let builder = builder.add_node().forall().variables(nvariables).build();
-                self.search_egraph(egraph, &builder, *args.next().unwrap(), visited, variables);
-            }
-            FOBinder::FindSuchThat => {
-                assert!(builder.is_and());
-                let (c, t, e) = args.cloned().collect_tuple().unwrap();
-                {
-                    // cond
-                    let builder = builder
-                        .add_node()
-                        .forall()
-                        .variables(nvariables.clone())
-                        .build();
-                    self.search_egraph(egraph, &builder, c, visited, variables);
-                }
-
-                ereturn_if!(builder.is_saturated());
-                let cond = expr_of_id(egraph, c, &variable);
-                {
-                    // then
-                    let builder = builder
-                        .add_node()
-                        .forall()
-                        .variables(nvariables.clone())
-                        .condition(cond.clone())
-                        .build();
-                    self.search_egraph(egraph, &builder, t, visited, variables);
-                }
-                {
-                    // else
-                    let builder = builder
-                        .add_node()
-                        .condition(rexp!((forall #nvariables (not #cond))))
-                        .build();
-                    self.search_egraph(egraph, &builder, e, visited, variables);
-                }
-            }
-        }
+        let query = builder.into_inner().unwrap().into_formula();
+        let queries = query.into_iter_conjunction();
+        let _ = pbl;
+        let pbl = prgm.egraph_mut().analysis.pbl_mut();
+        let result = exec.iter_run_to_dependancy(pbl, queries).is_axioms();
+        pbl.clear_temp_quantifiers();
+        Some(result)
     }
 }
 
@@ -724,4 +574,18 @@ pub fn expr_of_id<'a>(
     variables: &rpds::Queue<Variable>,
 ) -> Formula {
     Formula::try_from_id_with_vars(egraph, id, variables).unwrap()
+}
+
+impl TryFrom<Function> for MsgOrCond {
+    type Error = Function;
+
+    fn try_from(value: Function) -> Result<Self, Self::Error> {
+        if value == MACRO_COND {
+            Ok(Self::Cond)
+        } else if value == MACRO_MSG {
+            Ok(Self::Msg)
+        } else {
+            Err(value)
+        }
+    }
 }

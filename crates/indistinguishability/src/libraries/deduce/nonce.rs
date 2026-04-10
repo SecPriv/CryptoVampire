@@ -63,6 +63,6 @@ impl<'a, R> Rule<Lang, PAnalysis<'a>, R> for DeduceNonceRule {
     }
 
     fn debug(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "deduce-fresh-nonce")
+        write!(f, "<deduce-fresh-nonce>")
     }
 }

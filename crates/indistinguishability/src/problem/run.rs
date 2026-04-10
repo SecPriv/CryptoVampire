@@ -2,9 +2,10 @@ use cryptovampire_smt::Smt;
 use egg::EGraph;
 use golgge::{Program, Rule};
 use itertools::Itertools;
-use log::trace;
+use log::{info, trace};
 
 use super::*;
+use crate::libraries::{Libraries, Library};
 use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, NONCE, PRED, UNFOLD_MSG};
 use crate::{Configuration, Lang, libraries, rexp, smt};
 
@@ -40,8 +41,10 @@ impl Problem {
                 .build()
         };
 
-        let eq_rules = libraries::mk_egg_rewrites(self);
-        let rules: Vec<RcRule> = libraries::mk_golgge_rules(self).collect_vec();
+        // let mut eq_rules = Vec::new();
+        // libraries::add_egg_rewrites(self, &mut eq_rules);
+        let rules = Libraries::mk_all_rules(self);
+        let eq_rules = Libraries::mk_all_egg_rewrites(self);
 
         let mut prgm = golgge::Program::build()
             .eq_rules(eq_rules)
@@ -50,7 +53,7 @@ impl Problem {
             .egraph(EGraph::new(PAnalysis::builder().pbl(self).build()).with_explanations_enabled())
             .call();
 
-        libraries::init_egraph(prgm.egraph_mut());
+        Libraries::init_egraph(prgm.egraph_mut());
 
         prgm
     }
@@ -147,6 +150,9 @@ impl Problem {
             // the result of the computation
             let mut res = true;
 
+            self.reinitialize_graph(p1);
+            self.reinitialize_graph(p2);
+
             // the steps in the problem
             let mut steps = {
                 // just to make things cleaner
@@ -174,8 +180,7 @@ impl Problem {
                 assert_eq!(init.name, "init");
 
                 // we add to `extra_smt` things specific to this run that need to be reflected in smt
-                self.extra_smt_mut()
-                    .push(Smt::mk_assert(smt!((HAPPENS init))));
+                // self.extra_smt_mut().assert_one(smt!((HAPPENS init))); // current step lib
 
                 let mut pgrm = self.mk_program();
 
@@ -203,7 +208,7 @@ impl Problem {
                     break 'a res;
                 }
 
-                tr!("running step {}", s.name);
+                info!("running step {}", s.name);
 
                 // we ensure we remove the extra stuff from the previous run
                 self.extra_smt_mut().truncate(base_smt_n);
@@ -228,10 +233,11 @@ impl Problem {
                     args: args.clone(),
                 });
 
-                self.extra_smt.push(Smt::mk_assert({
-                    let args = args.iter().map(|f| smt!(f));
-                    smt!((HAPPENS (s #args*)))
-                }));
+                // self.extra_smt.push(Smt::mk_assert({
+                //     let args = args.iter().map(|f| smt!(f));
+                //     smt!((HAPPENS (s #args*)))
+                // }));
+                // current step lib
 
                 let s = rexp!((s #(args.iter().map(|f| rexp!(f)))*));
                 let goal = rexp!((EQUIV (MACRO_FRAME (PRED #s) p1f) (MACRO_FRAME (PRED #s) p2f)

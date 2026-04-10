@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::ops::Deref;
+use std::sync::atomic::AtomicBool;
 
 use cryptovampire_smt::SmtHead;
 use egg::{Id, Language, PatternAst, RecExpr};
@@ -17,7 +18,7 @@ use crate::terms::{
     UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG, Variable, builtin,
 };
 use crate::utils::{InnerSmartCow, LightClone, SmartCow};
-use crate::{Lang, LangVar, fresh};
+use crate::{Lang, LangVar, MSmt, MSmtParam, fresh};
 
 /// Helper macro to generate `is_*` methods for `Function` based on `FunctionFlags`.
 macro_rules! is_fun {
@@ -43,7 +44,7 @@ macro_rules! is_fun {
 
 /// The inner representation of a function, containing all its properties.
 #[non_exhaustive]
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Serialize)]
 pub struct InnerFunction {
     pub name: Cow<'static, str>,
     pub signature: Signature,
@@ -52,7 +53,9 @@ pub struct InnerFunction {
     pub quantifier_idx: usize,
     pub protocol_idx: usize,
     pub step_idx: usize,
+    pub cell_idx: usize,
     pub cryptography: cow![usize],
+    pub grabage_collectable: AtomicBool,
 }
 
 impl InnerFunction {
@@ -66,7 +69,9 @@ impl InnerFunction {
             quantifier_idx: 0,
             protocol_idx: 0,
             step_idx: 0,
+            cell_idx: 0,
             cryptography: Cow::Borrowed(&[]),
+            grabage_collectable: AtomicBool::new(false),
         }
     }
 }
@@ -96,7 +101,6 @@ impl Hash for InnerFunction {
     }
 }
 
-// TODO: make comparison faster
 /// Main type for function in this crate
 ///
 /// This is basicaly a somewhat smart pointer to an [InnerFunction].
@@ -189,6 +193,11 @@ impl Function {
         self.is_step().then_some(self.step_idx)
     }
 
+    /// Returns the cell index if this function represents a memory_cell, otherwise `None`.
+    pub fn get_cell_index(&self) -> Option<usize> {
+        self.is_memory_cell().then_some(self.cell_idx)
+    }
+
     /// Returns a reference to the `Alias` if this function has one, otherwise `None`.
     pub fn get_alias(&self) -> Option<&Alias> {
         self.alias.as_ref()
@@ -203,7 +212,7 @@ impl Function {
             NOT => { Some(Not) },
             OR => { Some(Or) },
             IMPLIES => { Some(Implies) },
-            EQ | TEQ => { Some(Eq) },
+            EQ | TEQ | INDEX_EQ => { Some(Eq) },
             BITE | MITE => {Some(If)},
             TRUE => { Some(True) },
             FALSE => { Some(False) },
@@ -333,7 +342,7 @@ impl Function {
 
     /// Returns `true` if the function represents a datatype (nonce or protocol).
     pub fn is_datatype(&self) -> bool {
-        self.is_nonce() || self.is_protocol()
+        self.is_nonce() || self.is_protocol() || self.is_memory_cell()
     }
 
     is_fun!(is_debruijn; LAMBDA; "related to De Bruijn variables");
@@ -357,6 +366,10 @@ impl Function {
             "Returns `true` if the function is temporary.");
     is_fun!(is_fresh; FRESH;
             "Returns `true` if the function represents something fresh.");
+    is_fun!(is_memory_cell; MEMORY_CELL; "For memory cells");
+
+    is_fun!(is_macro; MACRO; "is a macro");
+
     #[inline]
     /// Returns `true` if the function is a publications step.
     pub fn is_publish_step(&self) -> bool {
@@ -391,6 +404,16 @@ Because smt has a syntax for it, or it's a prolog trick, or ...");
             || (self == &LAMBDA_S)
             || (self == &EXISTS)
             || (self == &FIND_SUCH_THAT)
+    }
+
+    pub fn is_garabage_collectable(&self) -> bool {
+        self.grabage_collectable
+            .load(std::sync::atomic::Ordering::Acquire)
+    }
+
+    pub fn set_garbage_collectable(&self) {
+        self.grabage_collectable
+            .store(true, std::sync::atomic::Ordering::Release);
     }
 }
 

@@ -1,11 +1,14 @@
 use std::num::NonZeroUsize;
+use std::ops::Index;
 
 use anyhow::{Context, anyhow, bail, ensure};
+use utils::econtinue_let;
 
 use super::*;
-use crate::mk_signature;
-use crate::protocol::{Protocol, Step};
-use crate::terms::{Function, FunctionFlags, INCOMPATIBLE, INIT, InnerFunction, LT, Sort};
+use crate::protocol::call_graph::{CellRef, ProtocolRef, StepRef};
+use crate::protocol::{Protocol, SingleAssignement, Step};
+use crate::terms::{EMPTY, Function, FunctionFlags, INCOMPATIBLE, INIT, InnerFunction, LT, Sort};
+use crate::{mk_signature, rexp};
 
 impl Problem {
     /// Returns the `init` function
@@ -25,7 +28,7 @@ impl Problem {
 
     /// Simply declare a protocol, this one remains quite undefined
     pub fn declare_new_protocol(&mut self) -> &mut Protocol {
-        self.clear_smt_prelude();
+        self.cache.smt.force_reset();
         let n = self.protocols.len();
 
         let inner = InnerFunction {
@@ -40,13 +43,21 @@ impl Problem {
             let builder = Protocol::builder().name(fun);
             if let Some(p0) = self.protocols().first() {
                 builder
-                    .steps(p0.steps().iter().map(|Step { id, vars, .. }| {
-                        Step::builder()
-                            .id(id.clone())
-                            .vars(vars.clone())
-                            .build()
-                            .unwrap()
-                    }))
+                    .steps(p0.steps().iter().map(
+                        |Step {
+                             id,
+                             vars,
+                             assignements,
+                             ..
+                         }| {
+                            Step::builder()
+                                .id(id.clone())
+                                .vars(vars.clone())
+                                .assignements(assignements.clone())
+                                .build()
+                                .unwrap()
+                        },
+                    ))
                     .build()
             } else {
                 builder.build()
@@ -149,6 +160,48 @@ impl Problem {
         Ok(step)
     }
 
+    /// Declares a new memory cell in the problem.
+    ///
+    /// # Arguments
+    /// * `name` - The name of the memory cell
+    /// * `params` - The parameter sorts (e.g., Index for array-like cells)
+    ///
+    /// # Returns
+    /// The Function representing the memory cell
+    pub fn declare_memory_cell(
+        &mut self,
+        name: String,
+        params: Vec<Sort>,
+    ) -> anyhow::Result<Function> {
+        use crate::protocol::MemoryCell;
+
+        let cell = self
+            .declare_function()
+            .inputs(params.iter().cloned())
+            .output(Sort::MemoryCell)
+            .flag(FunctionFlags::MEMORY_CELL)
+            .name(name)
+            .call();
+
+        self.memory_cells
+            .push(MemoryCell::builder().function(cell.clone()).build());
+
+        for ptcl in &mut self.protocols {
+            let vars = cell.signature.mk_vars();
+            econtinue_let!(let Some(init) = ptcl.step_mut(0));
+            init.assignements.insert(
+                INIT.clone(),
+                SingleAssignement {
+                    assignement_vars: vars.clone(),
+                    parameter_vars: vars,
+                    value: rexp!(EMPTY),
+                },
+            );
+        }
+
+        Ok(cell)
+    }
+
     /// returns the [Function] associated to the `index`th [Step] if it exists
     pub fn get_step_name(&self, index: usize) -> Option<&Function> {
         self.protocols().first()?.steps().get(index).map(|s| &s.id)
@@ -238,4 +291,52 @@ impl Problem {
             f => bail!("{f} is not a function application"),
         }
     }
+
+    pub fn iter_step_def<'a>(&'a self) -> impl Iterator<Item = StepAndProtocol<'a>> + Clone {
+        self.protocols().iter().flat_map(|ptcl| {
+            ptcl.steps()
+                .iter()
+                .map(|step| StepAndProtocol { step, ptcl })
+        })
+    }
+
+    pub fn memory_cells(&self) -> &[MemoryCell] {
+        &self.memory_cells
+    }
+
+    pub fn reinitialize_graph(&mut self, ptcl_id: usize) {
+        let mut graph = ::std::mem::take(self.protocol_mut(ptcl_id).unwrap().graph_mut());
+        graph.reinitialize(self, &self.protocols()[ptcl_id]);
+        *self.protocol_mut(ptcl_id).unwrap().graph_mut() = graph;
+    }
+
+    pub fn get_cell_from_ref(&self, CellRef(idx): CellRef) -> Option<&MemoryCell> {
+        self.memory_cells().get(idx.get() - 1)
+    }
+
+    pub fn get_ptcl_from_ref(&self, ProtocolRef(idx): ProtocolRef) -> Option<&Protocol> {
+        self.protocols().get(idx)
+    }
+}
+
+impl Index<CellRef> for Problem {
+    type Output = MemoryCell;
+
+    fn index(&self, index: CellRef) -> &Self::Output {
+        self.get_cell_from_ref(index).unwrap()
+    }
+}
+
+impl Index<ProtocolRef> for Problem {
+    type Output = Protocol;
+
+    fn index(&self, index: ProtocolRef) -> &Self::Output {
+        self.get_ptcl_from_ref(index).unwrap()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StepAndProtocol<'a> {
+    pub step: &'a Step,
+    pub ptcl: &'a Protocol,
 }

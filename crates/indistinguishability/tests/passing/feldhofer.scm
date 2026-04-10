@@ -45,6 +45,9 @@
 
 (define empty-cond (lambda _ mtrue))
 
+; (publish pbl ((i Index) (j Index)) (nt i j))
+; (publish pbl ((i Index)) (nr i))
+
 (define (mk-fdst1 in j p)
   (let* [ (pt (lambda (i j) (dec in (mk i j p))))
     (nt (lambda (i j) (sel2of2 (sel2of2 (pt i j))))) ]
@@ -113,8 +116,6 @@
 ;     (cv-add-rewrite pbl (cv-mk-rewrite "nr_exec" (list i j p)
 ;         (macro_exec (exposes-nr i) p) (happens (exposes-nr i))))))
 (config.set_guided_nonce_search pbl #t)
-; (publish pbl ((i Index) (j Index)) (nt i j))
-; (publish pbl ((i Index)) (nr i))
 
 (initialize-as-senc senc enc dec)
 
@@ -167,7 +168,8 @@
 
 ;; configuration
 ; (config.set_trace pbl #t)
-(config.set_vampire_timeout pbl (b.string->duration "0.5s"))
+(define default-timeout (b.string->duration "0.8s"))
+(config.set_vampire_timeout pbl (b.mult->duration scale-timeout default-timeout))
 (config.set_node_limit pbl 100000)
 (config.set_prf_limit pbl 1)
 (config.set_fa_limit pbl 4)

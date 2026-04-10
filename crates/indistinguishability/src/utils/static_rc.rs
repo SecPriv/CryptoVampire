@@ -4,6 +4,7 @@ use std::ptr::NonNull;
 use std::sync::atomic::AtomicUsize;
 
 use serde::Serialize;
+use utils::{ereturn_if, ereturn_let};
 
 /// more or less [Arc] that can point to a static point and thus be cloned in
 /// static. Moreover, equality and hash comes from the pointer
@@ -69,6 +70,7 @@ impl<U> InnerSmartCow<U> {
 }
 
 impl<U> PartialEq for SmartCow<U> {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0
     }
@@ -77,6 +79,7 @@ impl<U> PartialEq for SmartCow<U> {
 impl<U> Eq for SmartCow<U> {}
 
 impl<U> Hash for SmartCow<U> {
+    #[inline]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.0.hash(state);
     }
@@ -108,6 +111,7 @@ impl<U: PartialOrd> Ord for SmartCow<U> {
 }
 
 impl<U> Clone for SmartCow<U> {
+    #[inline]
     fn clone(&self) -> Self {
         let inner = self.as_inner_ref();
         if let Some(c) = &inner.count {
@@ -124,22 +128,19 @@ impl<U> Clone for SmartCow<U> {
 }
 
 impl<U> Drop for SmartCow<U> {
+    #[inline]
     fn drop(&mut self) {
         // same implementation as `Arc`
+        let inner = self.as_inner_ref();
+
+        if let Some(count) = &inner.count
+            && count.fetch_sub(1, Release) <= 1
         {
-            let inner = self.as_inner_ref();
-            let Some(count) = &inner.count else {
-                return;
-            };
-
-            if count.fetch_sub(1, Release) != 1 {
-                return;
-            }
             std::sync::atomic::fence(Acquire);
-        }
 
-        let inner = unsafe { Box::from_raw(self.0.as_mut()) };
-        drop(inner);
+            let inner = unsafe { Box::from_raw(self.0.as_mut()) };
+            drop(inner);
+        }
     }
 }
 

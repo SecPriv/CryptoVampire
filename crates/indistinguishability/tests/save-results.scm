@@ -1,10 +1,12 @@
 (provide
-  save-results)
+  save-results scale-timeout)
 (require-builtin cryptovampire/ll/pbl as pbl->)
 (require-builtin cryptovampire/ll/report as report->)
 (require-builtin cryptovampire/ll/configuration as config->)
 (require-builtin cryptovampire/ll as b.)
-(require-builtin steel/base)
+; (require-builtin steel/base)
+
+; (define aaaa duration->millis )
 
 
 (define (print-row file . args)
@@ -13,7 +15,7 @@
         (begin
           (cond
             [ (string? x) (write-string x file) ]
-            ; [ (b.duration? x) (write (duration->millis x) file) ]
+            [ (b.duration? x)  (write (b.duration->millis x) file) ]
             [else (write x file) ])
           (write-string "," file)))
       args)
@@ -31,6 +33,9 @@
         file))))
 (define get-file (let [ (env (maybe-get-env-var "RESULT")) ]
     (if (Err? env) "/tmp/results.csv" (Ok->value env))))
+
+(define scale-timeout (let [ (env (maybe-get-env-var "SCALE_TIMEOUT")) ]
+    (if (Err? env) 1.0 (string->number (Ok->value env)))))
 
 (define (save-results name pbl)
   (let* [

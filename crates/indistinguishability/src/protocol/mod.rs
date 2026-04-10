@@ -1,3 +1,8 @@
+use crate::terms::{
+    Function, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, UNFOLD_COND,
+    UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
+};
+
 /// Defines the structure and behavior of a single step within a cryptographic protocol.
 mod step;
 use std::fmt::Display;
@@ -11,11 +16,10 @@ mod protocol;
 /// Re-exports the `Protocol` struct, representing a cryptographic protocol.
 pub use protocol::Protocol;
 
-use crate::terms::{
-    Function, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MSG, UNFOLD_COND,
-    UNFOLD_EXEC, UNFOLD_FRAME, UNFOLD_INPUT, UNFOLD_MSG,
-};
+pub mod memory_cell;
+pub use memory_cell::{Assignements, MemoryCell, SingleAssignement, SingleAssignementBuilder};
 
+pub mod call_graph;
 /// Represents the different kinds of macros used in the protocol analysis.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum MacroKind {

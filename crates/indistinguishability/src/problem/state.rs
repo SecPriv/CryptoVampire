@@ -3,6 +3,7 @@ use log::trace;
 use rustc_hash::FxHashSet;
 
 use crate::Lang;
+use crate::libraries::Library;
 use crate::libraries::utils::FreshNonceSet;
 use crate::problem::PAnalysis;
 use crate::terms::{IS_INDEX, Sort};
@@ -42,12 +43,12 @@ impl ProblemState {
             .state
             .generated_ids
             .iter()
-            .filter(move |x| {
-                sort.is_none()
-                    || egraph[**x]
-                        .nodes
-                        .iter()
-                        .any(|l| Some(l.head.signature.output) == sort)
+            .filter(move |x| match sort {
+                None => true,
+                Some(sort) => egraph[**x]
+                    .nodes
+                    .iter()
+                    .any(|l| l.head.signature.output == sort),
             })
             .copied()
     }
@@ -115,9 +116,18 @@ impl ProblemState {
             i += 1;
         }
     }
+}
 
-    pub fn init_egraph<'pbl>(egraph: &mut EGraph<Lang, PAnalysis<'pbl>>) {
-        assert!(Self::get_self(egraph).sets().iter().all(|s| s.is_empty()));
-        Self::propagate(egraph, None);
+pub struct ProblemStateLib;
+
+impl Library for ProblemStateLib {
+    fn modify_egraph<'a>(&self, egraph: &mut EGraph<Lang, PAnalysis<'a>>) {
+        assert!(
+            ProblemState::get_self(egraph)
+                .sets()
+                .iter()
+                .all(|s| s.is_empty())
+        );
+        ProblemState::propagate(egraph, None);
     }
 }

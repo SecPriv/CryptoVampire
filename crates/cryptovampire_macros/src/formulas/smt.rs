@@ -105,11 +105,11 @@ fn generate_code(mi: &MacroInput, Ast { inner: parsed, .. }: Ast) -> proc_macro2
         }
         InnerAst::Not(arg) => {
             let processed_arg = generate_code(mi, *arg);
-            quote! { #crate_path::SmtFormula::Not(Box::new(#processed_arg)) }
+            quote! { #crate_path::SmtFormula::Not(::quarck::CowArc::new(#processed_arg)) }
         }
         InnerAst::Implies(a, b) => {
             let [a, b] = [*a, *b].map(|x| generate_code(mi, x));
-            quote! {#crate_path::SmtFormula::Implies(Box::new(#a), Box::new(#b))}
+            quote! {#crate_path::SmtFormula::Implies(::quarck::CowArc::new([#a, #b]))}
         }
         InnerAst::FunApp(FunAppAst { func, args }) => {
             let processed_args = generate_args(mi, args); //args.into_iter().map(generate_code);
@@ -146,10 +146,10 @@ fn generate_code(mi: &MacroInput, Ast { inner: parsed, .. }: Ast) -> proc_macro2
                     generate_quant_with_binders(mi, constructor, processed_body, bindings)
                 }
                 VarBindings::Expr(expr) => {
-                    quote! {#constructor({ #expr }.into_iter().collect(), Box::new(#processed_body))}
+                    quote! {#constructor({ #expr }.into_iter().collect(), ::quarck::CowArc::new(#processed_body))}
                 }
                 VarBindings::Ident(ident) => {
-                    quote! {#constructor(#ident.into_iter().collect(), Box::new(#processed_body))}
+                    quote! {#constructor(#ident.into_iter().collect(), ::quarck::CowArc::new(#processed_body))}
                 }
             }
         }
@@ -173,8 +173,8 @@ fn generate_quant_with_binders(
         {
             #(#let_bindings)*
             #constructor( // Use the Forall or Exists constructor
-                vec![ #(#names.clone()),* ],
-                Box::new(#processed_body)
+                vec![ #(#names.clone()),* ].into(),
+                ::quarck::CowArc::new(#processed_body)
             )
         }
     }

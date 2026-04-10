@@ -1,6 +1,7 @@
 use itertools::chain;
 
 use crate::Problem;
+use crate::libraries::Library;
 use crate::problem::{PRule, RcRule};
 use crate::terms::{BIT_DEDUCE, BOOL_DEDUCE, Function, Sort};
 
@@ -13,12 +14,16 @@ mod static_rules;
 
 mod nonce;
 
-pub fn mk_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> + use<'_> {
-    chain! {
-      regular::mk_rules(pbl),
-      quantifier::mk_rules(pbl),
-      static_rules::mk_rules(),
-      [nonce::DeduceNonceRule.into_mrc()]
+use crate::libraries::utils::RuleSink;
+
+pub struct DeduceLib;
+
+impl Library for DeduceLib {
+    fn add_rules(&self, pbl: &mut Problem, sink: &mut impl RuleSink) {
+        regular::add_rules(pbl, sink);
+        quantifier::add_rules(pbl, sink);
+        static_rules::add_rules(sink);
+        sink.add_rule(nonce::DeduceNonceRule);
     }
 }
 

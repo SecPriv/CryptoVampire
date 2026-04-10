@@ -4,23 +4,32 @@
 
 use egg::{Analysis, Pattern, Rewrite};
 use itertools::chain;
+use utils::econtinue_if;
 
+use crate::libraries::Library;
 use crate::terms::{Formula, Function, LAMBDA_S};
 use crate::{Lang, Problem, rexp};
 
 // static LET: Function = LAMBDA_LET.const_clone();
 static S: Function = LAMBDA_S.const_clone();
 
+use crate::libraries::utils::EggRewriteSink;
+
 /// Creates rewrite rules for lambda calculus.
-pub fn mk_rewrites<N: Analysis<Lang>>(pbl: &Problem) -> impl Iterator<Item = Rewrite<Lang, N>> {
-    chain![
-        mk_base_rw::<N>(),
-        mk_s_rw::<N>(pbl),
-        // mk_let_rw::<N>(pbl)
-    ]
+pub struct LambdaLib;
+
+impl Library for LambdaLib {
+    fn add_egg_rewrites<N: Analysis<Lang>>(
+        &self,
+        pbl: &mut Problem,
+        sink: &mut impl EggRewriteSink<N>,
+    ) {
+        add_base_rw(sink);
+        add_s_rw(pbl, sink);
+    }
 }
 
-fn mk_base_rw<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>> {
+fn add_base_rw<N: Analysis<Lang>>(_sink: &mut impl EggRewriteSink<N>) {
     // decl_vars![x, y, m, hd, tl,  a, b, c, var];
     // mk_many_rewrites! {
     //   ["λlet subst"]
@@ -50,25 +59,20 @@ fn mk_base_rw<N: Analysis<Lang>>() -> impl Iterator<Item = Rewrite<Lang, N>> {
     // //         (LET #var #m #c)).
     // }
     // .into_iter()
-    [].into_iter()
 }
 
-fn mk_s_rw<N: Analysis<Lang>>(
-    pbl: &Problem,
-) -> impl Iterator<Item = Rewrite<Lang, N>> + use<'_, N> {
-    pbl.functions()
-        .iter_current()
-        .filter(|f| !f.is_out_of_term_algebra())
-        .map(|f| {
-            let vars = f.signature.mk_vars();
-            let vars = vars.iter().map(|x| Formula::Var(x.clone()));
-            let svars = vars.clone().map(|v| rexp!((S #v)));
+fn add_s_rw<N: Analysis<Lang>>(pbl: &Problem, sink: &mut impl EggRewriteSink<N>) {
+    for f in pbl.functions().iter_current() {
+        econtinue_if!(f.is_out_of_term_algebra());
 
-            let searcher = Pattern::from(&rexp!((S (f #vars*))));
-            let applier = Pattern::from(&rexp!((f #svars*)));
+        let vars = f.signature.mk_vars();
+        let vars = vars.iter().map(|x| Formula::Var(x.clone()));
+        let svars = vars.clone().map(|v| rexp!((S #v)));
 
-            Rewrite::new(format!("λ S commutes {f}"), searcher, applier).unwrap()
-        })
+        let searcher = Pattern::from(&rexp!((S (f #vars*))));
+        let applier = Pattern::from(&rexp!((f #svars*)));
+        sink.add_egg_rewrite(Rewrite::new(format!("λ S commutes {f}"), searcher, applier).unwrap());
+    }
 }
 
 // fn mk_let_rw<N: Analysis<Lang>>(

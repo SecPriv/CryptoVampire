@@ -1,19 +1,25 @@
+use std::ops::Index;
+
 use bon::Builder;
 use itertools::{Itertools, izip};
 use rustc_hash::FxHashMap;
+use utils::{ereturn_if, ereturn_let};
 
 use super::Step;
-use crate::terms::Function;
-use crate::{MSmtFormula, smt};
+use crate::protocol::call_graph::{Graph, StepRef};
+use crate::terms::{Formula, Function};
+use crate::{MSmtFormula, Problem, rexp, smt};
 /// A protocol to be proven
-#[derive(Debug, PartialEq, Eq, Clone, Builder)]
+#[derive(Debug, Clone, Builder)]
 pub struct Protocol {
-    /// The name of the protocol
     /// The name of the protocol
     name: Function,
     /// The steps of the protocol
     #[builder(with = <_>::from_iter, default = vec![Step::default()])]
     steps: Vec<Step>,
+
+    #[builder(default)]
+    graph: Graph,
 }
 
 impl Protocol {
@@ -46,8 +52,13 @@ impl Protocol {
         &self.name
     }
 
+    pub(crate) fn as_formula(&self) -> Formula {
+        let name = self.name();
+        rexp!(name)
+    }
+
     /// Converts the protocol's name into an SMT formula.
-    pub(crate) fn as_smt(&self) -> MSmtFormula {
+    pub(crate) fn as_smt<'a>(&self) -> MSmtFormula<'a> {
         let name = self.name();
         smt!(name)
     }
@@ -59,36 +70,55 @@ impl Protocol {
     /// Panics if the provided step is not valid (i.e., its free variables are not contained in its step variables).
     pub(crate) fn add_step(&mut self, step: Step) -> &mut Step {
         assert!(step.valid());
+        self.graph.clear();
         self.steps.push(step);
         self.steps.last_mut().unwrap()
     }
 
     /// Returns a mutable reference to the step at the given index
     pub fn step_mut(&mut self, idx: usize) -> Option<&mut Step> {
+        self.graph.clear();
         self.steps.get_mut(idx)
     }
 
     pub(crate) fn truncate_steps(&mut self, n: usize) {
+        self.graph.clear();
         self.steps.truncate(n);
     }
 
-    pub fn clone_from(&mut self, other: &Self) {
-        let Self { name: _, steps } = self;
+    pub fn graph(&self) -> Option<&Graph> {
+        ereturn_if!(self.graph.is_initialized(), None);
+        Some(&self.graph)
+    }
 
-        let mut varmap = FxHashMap::default();
-        for (sl, sr) in izip!(steps, &other.steps) {
-            let nvars = sr.vars.iter().map(|v| v.freshen()).collect_vec();
-            varmap.clear();
-            varmap.extend(izip!(sr.vars.iter().cloned(), nvars.iter().cloned()));
-            let to = other.name.rapp([]);
-            let msg = converter::clone_from_sanitizer(&mut varmap, &self.name, &to, &sr.cond);
-            let cond = converter::clone_from_sanitizer(&mut varmap, &self.name, &to, &sr.msg);
-            sl.vars = nvars;
-            sl.msg = msg;
-            sl.cond = cond;
+    pub(crate) fn graph_mut(&mut self) -> &mut Graph {
+        &mut self.graph
+    }
+
+    pub fn get_step_from_ref(&self, StepRef(idx): StepRef) -> Option<&Step> {
+        self.steps().get(idx)
+    }
+
+    pub fn from_formula<'a>(pbl: &'a Problem, f: &Formula) -> Option<&'a Self> {
+        if let Formula::App { head, args } = f
+            && args.is_empty()
+            && let Some(idx) = head.get_protocol_index()
+            && let Some(ptcl) = pbl.protocols().get(idx)
+        {
+            Some(ptcl)
+        } else {
+            None
         }
     }
 }
+
+impl PartialEq for Protocol {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.steps == other.steps
+    }
+}
+
+impl Eq for Protocol {}
 
 mod converter {
     use rustc_hash::FxHashMap;
@@ -132,5 +162,13 @@ mod converter {
                 Formula::Var(var)
             }
         }
+    }
+}
+
+impl Index<StepRef> for Protocol {
+    type Output = Step;
+
+    fn index(&self, index: StepRef) -> &Self::Output {
+        self.get_step_from_ref(index).unwrap()
     }
 }

@@ -2,6 +2,7 @@ use std::borrow::Cow;
 
 use golgge::{Dependancy, Rule};
 
+use crate::libraries::Library;
 use crate::problem::{PAnalysis, RcRule};
 use crate::{CVProgram, Lang};
 
@@ -38,5 +39,12 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SanityCheck {
 
     fn name(&self) -> Cow<'_, str> {
         Cow::Borrowed("sanity check")
+    }
+}
+
+impl Library for SanityCheck {
+    #[cfg(debug_assertions)]
+    fn add_rules(&self, _: &mut crate::Problem, sink: &mut impl super::utils::RuleSink) {
+        sink.add_rule(Self);
     }
 }

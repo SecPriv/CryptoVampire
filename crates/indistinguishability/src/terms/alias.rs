@@ -28,6 +28,14 @@ impl Alias {
     pub fn iter(&self) -> impl Iterator<Item = &AliasRewrite> {
         self.0.iter()
     }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 impl FromSteelVal for Alias {

@@ -7,6 +7,7 @@ use egg::Analysis;
 use golgge::{Rule, WeightedAnalysis};
 use serde::Serialize;
 
+use crate::terms::Formula;
 use crate::{Lang, Problem};
 
 pub struct RcRule(Arc<dyn for<'a> CVRuleTrait<'a>>);

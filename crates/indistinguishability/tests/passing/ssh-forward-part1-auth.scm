@@ -158,7 +158,8 @@
       (cand (macro_exec S4_fail p) (macro_cond S4_fail p))
       mfalse)))
 
-(config.set_vampire_timeout pbl (b.string->duration "300ms"))
+(define default-timeout (b.string->duration "300ms"))
+(config.set_vampire_timeout pbl (b.mult->duration scale-timeout default-timeout))
 (config.set_guided_nonce_search pbl #t)
 
 (if (run pbl p1 p2)

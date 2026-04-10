@@ -34,8 +34,8 @@ macro_rules! vec_smt {
     };
 }
 
-pub type SmtFormula = crate::MSmtFormula;
-pub type Smt = crate::MSmt;
+pub type SmtFormula<'a> = crate::MSmtFormula<'a>;
+pub type Smt<'a> = crate::MSmt<'a>;
 
 pub type MacroExpr = Formula;
 pub type MacroVar = Variable;

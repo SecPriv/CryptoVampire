@@ -63,7 +63,7 @@ macro_rules! implderef {
 ///
 /// fn main() {
 ///     assert_eq!(vec![&1, &2], foo(&[1, 2]));
-///     assert_eq!(vec![&1, &2], foo(&vec![1, 2]));
+///     assert_eq!(vec![1, 2], foo([1, 2]));
 /// }
 /// ```
 macro_rules! implvec {
@@ -195,6 +195,7 @@ macro_rules! match_as_trait {
     }
 }
 
+/// Match-like pattern matching using equality instead.
 #[macro_export]
 macro_rules! match_eq {
     ($e:expr =>{$($($pat:ident)|+ => $b:block,)* _ => $base:block} ) => {
@@ -271,6 +272,7 @@ pub fn print_type<T>(_: &T) -> &'static str {
     std::any::type_name::<T>()
 }
 
+/// Calls `trace!` on something that may panic while printing and catches the error if it does
 #[macro_export]
 macro_rules! try_trace {
     ($($t:tt)*) => {
@@ -284,6 +286,7 @@ macro_rules! try_trace {
     };
 }
 
+/// `_::or_else` chain lazily evaluated
 #[macro_export]
 macro_rules! or_chain {
     ($b0:block) => {$crate::or_chain!($b0,)};
@@ -291,5 +294,29 @@ macro_rules! or_chain {
 
     ($b0:block,  $($b:block),*) => {
         $b0$(.or_else(|| $b))*
+    };
+}
+
+#[macro_export]
+macro_rules! exprdebug {
+    (let $id:ident = $t:expr) => {
+        #[cfg(debug_assertions)]
+        let $id = $t;
+    };
+    (let mut $id:ident = $t:expr) => {
+        #[cfg(debug_assertions)]
+        let mut $id = $t;
+    };
+    (let $id:ident : $ty:ty = $t:expr) => {
+        #[cfg(debug_assertions)]
+        let $id: $ty = $t;
+    };
+    (let mut $id:ident : $ty:ty = $t:expr) => {
+        #[cfg(debug_assertions)]
+        let mut $id: $ty = $t;
+    };
+    ($b:block) => {
+        #[cfg(debug_assertions)]
+        $b
     };
 }

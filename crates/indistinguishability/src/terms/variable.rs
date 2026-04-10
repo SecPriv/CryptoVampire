@@ -245,13 +245,13 @@ impl<T: Serialize> Serialize for MaybeOnce<T> {
     }
 }
 
-impl From<Variable> for MSmtFormula {
+impl<'a> From<Variable> for MSmtFormula<'a> {
     fn from(value: Variable) -> Self {
         Self::Var(value)
     }
 }
 
-impl From<&Variable> for MSmtFormula {
+impl<'a> From<&Variable> for MSmtFormula<'a> {
     fn from(value: &Variable) -> Self {
         Self::Var(value.clone())
     }
@@ -312,6 +312,28 @@ macro_rules! fresh {
             $sort
         }).call()
     };
+}
+
+impl AsRef<Variable> for Variable {
+    fn as_ref(&self) -> &Variable {
+        self
+    }
+}
+
+pub trait FormulaVariableIter {
+    fn into_formula_iter(self) -> impl Iterator<Item = Formula>;
+}
+
+impl<I, R> FormulaVariableIter for I
+where
+    I: IntoIterator<Item = R>,
+    R: AsRef<Variable>,
+{
+    fn into_formula_iter(self) -> impl Iterator<Item = Formula> {
+        self.into_iter()
+            .map(|x| x.as_ref().clone())
+            .map(Formula::Var)
+    }
 }
 
 #[cfg(test)]

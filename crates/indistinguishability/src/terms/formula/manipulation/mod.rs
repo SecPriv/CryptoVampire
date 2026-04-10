@@ -7,6 +7,8 @@ use crate::terms::Variable;
 mod unification;
 pub use unification::Substitution;
 
+mod opmisations;
+
 // =========================================================
 // ==================== manipulation =======================
 // =========================================================

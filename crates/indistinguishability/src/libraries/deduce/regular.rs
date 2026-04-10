@@ -1,12 +1,9 @@
 use egg::Pattern;
 use golgge::PrologRule;
 use itertools::izip;
+use utils::econtinue_if;
 
 use crate::libraries::deduce::GetDeduce;
-use crate::problem::{PRule, RcRule};
-use crate::terms::{Formula, Function};
-use crate::{Lang, Problem, fresh, rexp};
-
 /// Generate the base deduce rules:
 ///
 /// ```text
@@ -16,12 +13,16 @@ use crate::{Lang, Problem, fresh, rexp};
 /// ```
 ///
 /// for all "regular" `f`s
-pub fn mk_rules(pbl: &Problem) -> impl Iterator<Item = RcRule> + use<'_> {
-    pbl.functions()
-        .iter_current()
-        .filter(|x| should_process_normaly(x))
-        .map(mk_deduce_rule)
-        .map(|x| x.into_mrc())
+use crate::libraries::utils::RuleSink;
+use crate::problem::{PRule, RcRule};
+use crate::terms::{Formula, Function};
+use crate::{Lang, Problem, fresh, rexp};
+
+pub fn add_rules(pbl: &Problem, sink: &mut impl RuleSink) {
+    for f in pbl.functions().iter_current() {
+        econtinue_if!(!should_process_normaly(f));
+        sink.add_rule(mk_deduce_rule(f));
+    }
 }
 
 fn should_process_normaly(f: &Function) -> bool {
