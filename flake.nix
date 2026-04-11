@@ -12,6 +12,9 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+    nixpkgs-vampire.url ="github:NixOS/nixpkgs/e0d5027e8873eaa5e8f74fba39072fcb231f4b4b";
+
     flake-utils = {
       url = "github:numtide/flake-utils";
     };
@@ -19,16 +22,6 @@
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
-    };
-    custom = {
-      url = "github:puyral/custom-nix";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-        squirrel-prover-src.url = "github:puyral/squirrel-prover?ref=cryptovampire";
-        cryptovampire-src.url = "github:puyral/empty-flake";
-        vampire-master-src.url = "github:vprover/vampire";
-        treefmt-nix.follows = "treefmt-nix";
-      };
     };
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
@@ -49,8 +42,8 @@
     inputs@{
       self,
       nixpkgs,
+      nixpkgs-vampire,
       flake-utils,
-      custom,
       treefmt-nix,
       # fenix,
       rust-overlay,
@@ -60,19 +53,23 @@
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        vampire-overlay = final: prev: {
+        vampire-master-overlay = final: prev: {
           vampire = prev.vampire.overrideAttrs (oldAttrs: {
             src = vampire-master-src;
           });
         };
+        vampire-4-overlay = final: prev: {
+          vampire = pkgs-vampire.vampire;
+        };
         overlays = [
           (import rust-overlay)
-          vampire-overlay
+          vampire-4-overlay 
+          # vampire-overlay
         ];
         pkgs = import nixpkgs {
           inherit system overlays;
         };
-        custom-pkgs = custom.packages.${system};
+        pkgs-vampire = import nixpkgs-vampire {inherit system; };
         treefmtEval = treefmt-nix.lib.evalModule pkgs ./nix/fmt.nix;
 
         # rust = fenix.packages.${system}.complete;
