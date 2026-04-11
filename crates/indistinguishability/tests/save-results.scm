@@ -42,10 +42,10 @@
     (file (prepare get-file))
     (report (pbl->get-report pbl))
     (runtime (report->get-runtime report))
-    (vampire (report->get-time-spent-in-vampire report))
+    (vampire (report->get-smt-time report))
     (hits (report->get-total-cache-hits report))
     (total (report->get-total-run-calls report))
     (hit-rate (report->get-hit-rate report))
-    (vampire-timeout (config->get_vampire_timeout pbl))
+    (vampire-timeout (config->get_smt_timeout pbl))
     ]
     (print-row file name runtime vampire total hits hit-rate vampire-timeout)))

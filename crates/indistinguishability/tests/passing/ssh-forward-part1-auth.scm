@@ -171,7 +171,7 @@
       mfalse)))
 
 (define default-timeout (b.string->duration "300ms"))
-(config.set_vampire_timeout pbl (b.mult->duration scale-timeout default-timeout))
+(config.set_smt_timeout pbl (b.mult->duration scale-timeout default-timeout))
 (config.set_guided_nonce_search pbl #t)
 
 (if (run pbl p1 p2)

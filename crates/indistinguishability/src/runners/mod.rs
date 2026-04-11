@@ -210,7 +210,7 @@ pub(crate) async fn never_end<T>() -> T {
 }
 
 async fn to_timeout<T>(pbl: &Problem) -> Option<T> {
-    let timeout = pbl.config.vampire_timeout;
+    let timeout = pbl.config.smt_timeout;
     tokio::time::sleep(timeout).await;
     None
 }

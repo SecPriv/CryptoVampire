@@ -360,7 +360,7 @@ configuration!(
     node_limit: usize,
     iter_limit: usize,
     time_limit: std::time::Duration,
-    vampire_timeout: std::time::Duration,
+    smt_timeout: std::time::Duration,
     cores: u64,
     trace: bool,
     trace_rebuilds:bool,

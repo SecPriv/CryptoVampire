@@ -74,7 +74,7 @@
 (add-rewrite pbl (rw.new "l2" '() (mexp g k11) (unfold_msg mehhh p2) ))
 
 (define default-timeout (b.string->duration "300ms"))
-(config.set_vampire_timeout pbl (b.mult->duration scale-timeout default-timeout))
+(config.set_smt_timeout pbl (b.mult->duration scale-timeout default-timeout))
 (register-fresh-nonce ddh '() k11)
 (config.set_guided_nonce_search pbl #t)
 

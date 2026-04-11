@@ -148,7 +148,7 @@ impl Z3Exec {
         cmd.args(self.args.iter().flat_map(|x| x.to_args().into_iter()));
 
         if !self.contains_time() {
-            let timeout = pbl.config.vampire_timeout;
+            let timeout = pbl.config.smt_timeout;
             cmd.args(Z3Arg::Tlim(timeout.as_millis() as u64).to_args());
         }
 

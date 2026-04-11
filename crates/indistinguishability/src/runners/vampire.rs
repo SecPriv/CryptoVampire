@@ -15,7 +15,7 @@ use crate::{MSmt, MSmtFormula, Problem};
 
 declare_trace!($"vampire_exec");
 
-static MIN_VAMPIRE_TIMEOUT: Duration = Duration::from_millis(150);
+static MIN_TIMEOUT: Duration = Duration::from_millis(151);
 
 /// The [Runner] itself
 #[derive(Debug, Clone, Builder)]
@@ -65,7 +65,7 @@ where
     /// sets the timeout in seconds
     #[allow(unused)]
     pub fn timeout(mut self, timeout: ::std::time::Duration) -> Self {
-        let timeout = timeout.max(MIN_VAMPIRE_TIMEOUT);
+        let timeout = timeout.max(MIN_TIMEOUT);
         let narg = VampireArg::TimeLimit(timeout.as_secs_f64());
         if let Some(arg) = self.args.iter_mut().find(|x| x.same(&narg)) {
             *arg = narg;
@@ -257,7 +257,7 @@ impl VampireExec {
         cmd.args(self.args.iter().flat_map(|x| x.to_args().into_iter()));
 
         if !self.contains_time() {
-            let timeout = pbl.config.vampire_timeout.max(MIN_VAMPIRE_TIMEOUT);
+            let timeout = pbl.config.smt_timeout.max(MIN_TIMEOUT);
             cmd.args(VampireArg::TimeLimit(timeout.as_secs_f64()).to_args());
         }
 

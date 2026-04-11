@@ -46,9 +46,9 @@ pub struct Configuration {
 
     #[arg(long,
         short('t'),
-        default_value = dstr(Self::default().vampire_timeout),
+        default_value = dstr(Self::default().smt_timeout),
         value_parser = ::humantime::parse_duration, env)]
-    pub vampire_timeout: std::time::Duration,
+    pub smt_timeout: std::time::Duration,
 
     /// Wether to keep the smt files around (or let the os get rid of them once
     /// we're done using them)
@@ -177,7 +177,7 @@ impl Default for Configuration {
             node_limit: NODE_LIMIT_DEFAULT,
             time_limit,
             iter_limit,
-            vampire_timeout: ::std::time::Duration::from_secs(2),
+            smt_timeout: ::std::time::Duration::from_secs(2),
             keep_smt_files: cfg!(debug_assertions),
             depth: u64::MAX,
             // prelude_version: Default::default(),

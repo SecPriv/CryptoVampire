@@ -177,7 +177,7 @@
 ; (cv-set-trace pbl #t)
 (config.set_node_limit pbl 100000)
 (define default-timeout (b.string->duration "151ms"))
-(config.set_vampire_timeout pbl (b.mult->duration scale-timeout default-timeout))
+(config.set_smt_timeout pbl (b.mult->duration scale-timeout default-timeout))
 ; (config.set_fa_limit pbl 5)
 ; (config.set_keep_smt_files pbl #t)
 ; (config.set_ddh_limit pbl 1)
