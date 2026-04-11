@@ -8,7 +8,7 @@ use log::trace;
 use tokio::process::Command;
 use utils::implvec;
 
-use crate::runners::Runner;
+use crate::runners::{Runner, never_end};
 use crate::{MSmt, MSmtFormula, Problem};
 
 declare_trace!($"cvc5_exec");
@@ -152,12 +152,6 @@ impl Cvc5Exec {
     /// Returns `Ok(true)` if Cvc5 proves the query (unsat found),
     /// `Ok(false)` if it disproves it (sat), or `Err` if Cvc5 encounters an error.
     pub async fn run(&self, pbl: &Problem, file: &Path) -> anyhow::Result<bool> {
-
-        // TODO: in case of unknow, this function should because an infinite
-        // async loop. That is it should never return and wait for tokio to kill
-        // it
-
-
         let mut cmd = Command::new(&self.exe_location);
         cmd.args(self.args.iter().flat_map(|x| x.to_args().into_iter()));
 
@@ -177,9 +171,15 @@ impl Cvc5Exec {
         let o = cmd.output().await?;
 
         tr!("status code: {:?}", o.status.code());
-        let success = std::str::from_utf8(&o.stdout)
-            .with_context(|| "non utf8 ouput")?
-            .contains(&self.success_verification);
+        let output = std::str::from_utf8(&o.stdout).with_context(|| "non utf8 ouput")?;
+        tr!("cvc5 output: {}", output);
+
+        // Check for unknown - loop forever if unknown
+        if output.contains("unknown") {
+            never_end().await
+        }
+
+        let success = output.contains(&self.success_verification);
         tr!("success (unsat): {success}");
 
         if o.status.code() != Some(SUCCESS_RC)

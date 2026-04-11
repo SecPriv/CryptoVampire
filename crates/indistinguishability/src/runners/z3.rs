@@ -8,7 +8,7 @@ use log::trace;
 use tokio::process::Command;
 use utils::implvec;
 
-use crate::runners::Runner;
+use crate::runners::{Runner, never_end};
 use crate::{MSmt, MSmtFormula, Problem};
 
 declare_trace!($"z3_exec");
@@ -149,12 +149,8 @@ impl Z3Exec {
 
         if !self.contains_time() {
             let timeout = pbl.config.vampire_timeout;
-            cmd.args(Z3Arg::Tlim(timeout.as_secs() as u64).to_args());
+            cmd.args(Z3Arg::Tlim(timeout.as_millis() as u64).to_args());
         }
-
-        // TODO: in case of unknow, this function should because an infinite
-        // async loop. That is it should never return and wait for tokio to kill
-        // it
 
         cmd.arg(file);
         cmd.kill_on_drop(true);
@@ -167,9 +163,15 @@ impl Z3Exec {
         let o = cmd.output().await?;
 
         tr!("status code: {:?}", o.status.code());
-        let success = std::str::from_utf8(&o.stdout)
-            .with_context(|| "non utf8 ouput")?
-            .contains(&self.success_verification);
+        let output = std::str::from_utf8(&o.stdout).with_context(|| "non utf8 ouput")?;
+        tr!("z3 output: {}", output);
+
+        // Check for unknown - loop forever if unknown
+        if output.contains("unknown") {
+            never_end().await
+        }
+
+        let success = output.contains(&self.success_verification);
         tr!("success (unsat): {success}");
 
         if o.status.code() != Some(SUCCESS_RC)

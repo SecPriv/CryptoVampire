@@ -203,7 +203,7 @@ impl SmtRunner {
     }
 }
 
-async fn never_end<T>() -> T {
+pub(crate) async fn never_end<T>() -> T {
     loop {
         tokio::time::sleep(Duration::from_secs(1)).await
     }
