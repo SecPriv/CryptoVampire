@@ -51,7 +51,7 @@ pub struct Configuration {
     pub smt_timeout: std::time::Duration,
 
     /// number of cores used
-    /// 
+    ///
     /// This will be distributed among the smt solvers
     #[arg(long, short('c'), default_value_t = Self::default().cores)]
     pub cores: u64,
@@ -76,7 +76,7 @@ pub struct Configuration {
     pub egg_iter_limit: usize,
 
     /// depth for iterative deepening
-    /// 
+    ///
     /// This can mess with caching. It is recommended to leave it to its default value of `u64::MAX`.
     #[arg(long, default_value_t =u64::MAX, env)]
     pub depth: u64,
@@ -140,19 +140,19 @@ pub struct Configuration {
     pub vampire_forced_option: Option<String>,
 
     /// Path to `vampire` executable
-    /// 
+    ///
     /// Unless disable, will default to looking in the `PATH`
     #[arg(long, env, group = "vampire")]
     pub vampire_path: Option<PathBuf>,
 
     /// Path to `z3` executable
-    /// 
+    ///
     /// Unless disable, will default to looking in the `PATH`
     #[arg(long, env, group = "z3")]
     pub z3_path: Option<PathBuf>,
 
     /// Path to `cvc5` executable
-    /// 
+    ///
     /// Unless disable, will default to looking in the `PATH`
     #[arg(long, env, group = "cvc5")]
     pub cvc5_path: Option<PathBuf>,
@@ -229,7 +229,6 @@ impl Configuration {
         if !take(&mut init.disable_cvc5) && init.cvc5_path.is_none() {
             init.cvc5_path = which::which("cvc5").ok()
         }
-
 
         init
     }

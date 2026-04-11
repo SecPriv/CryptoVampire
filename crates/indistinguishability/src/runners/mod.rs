@@ -60,7 +60,13 @@ pub struct SmtRunner {
 
 impl SmtRunner {
     fn calculate_core_distribution(pbl: &Problem) -> (u64, bool, bool) {
-        let Configuration {cores, vampire_path, z3_path, cvc5_path, ..}= &pbl.config;
+        let Configuration {
+            cores,
+            vampire_path,
+            z3_path,
+            cvc5_path,
+            ..
+        } = &pbl.config;
         let z3_enabled = z3_path.is_some();
         let cvc5_enabled = cvc5_path.is_some();
         #[allow(unused)]
@@ -88,18 +94,16 @@ impl SmtRunner {
                     .exe_location(exe)
                     .build()
             }),
-            z3: pbl.config.z3_path.clone().map(|exe| {
-                Z3Exec::builder()
-                    .default_args()
-                    .exe_location(exe)
-                    .build()
-            }),
-            cvc5: pbl.config.cvc5_path.clone().map(|exe| {
-                Cvc5Exec::builder()
-                    .default_args()
-                    .exe_location(exe)
-                    .build()
-            }),
+            z3: pbl
+                .config
+                .z3_path
+                .clone()
+                .map(|exe| Z3Exec::builder().default_args().exe_location(exe).build()),
+            cvc5: pbl
+                .config
+                .cvc5_path
+                .clone()
+                .map(|exe| Cvc5Exec::builder().default_args().exe_location(exe).build()),
         }
     }
 
