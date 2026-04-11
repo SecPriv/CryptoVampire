@@ -12,12 +12,16 @@ use utils::{econtinue_if, ereturn_if, implvec};
 
 use crate::libraries::utils::{SmtOption, SmtSink};
 use crate::problem::cache::Context;
+use crate::runners::cvc5::Cvc5Exec;
 use crate::runners::file_builder::FileSink;
 use crate::runners::vampire::{VampireArg, VampireExec};
+use crate::runners::z3::Z3Exec;
 use crate::terms::Formula;
 use crate::{MSmt, MSmtFormula, Problem};
 
+pub(crate) mod cvc5;
 pub(crate) mod vampire;
+pub(crate) mod z3;
 
 pub(crate) mod file_builder;
 
@@ -46,26 +50,54 @@ trait Runner: Debug {
     fn get_sover_kind(&self) -> SolverKind;
 }
 
-/// A runner for SMT solvers, encapsulating different Vampire configurations.
+/// A runner for SMT solvers, encapsulating different solver configurations.
 #[derive(Debug, Clone)]
 pub struct SmtRunner {
-    // /// The regular Vampire solver instance.
-    // regular_vampire: Option<RegularVampire>,
-    // /// The bounded Vampire solver instance.
-    // bounded_vapire: Option<BounededVampire>,
     vampire: Option<VampireExec>,
+    z3: Option<Z3Exec>,
+    cvc5: Option<Cvc5Exec>,
 }
 
 impl SmtRunner {
-    /// Creates a new `SmtRunner` instance, initializing the Vampire solvers.
+    fn calculate_core_distribution() -> (u64, bool, bool) {
+        let total_cores = num_cpus::get() as u64;
+        let z3_enabled = true;
+        let cvc5_enabled = true;
+
+        let other_solvers = [z3_enabled, cvc5_enabled].iter().filter(|&&x| x).count() as u64;
+
+        let vampire_cores = if other_solvers > 0 {
+            total_cores.saturating_sub(other_solvers)
+        } else {
+            total_cores
+        };
+
+        (vampire_cores, z3_enabled, cvc5_enabled)
+    }
+
+    /// Creates a new `SmtRunner` instance, initializing the solvers.
     pub fn new(pbl: &Problem) -> Self {
+        let disable = pbl.config.disable_direct_vampire;
+
+        let (vampire_cores, _, _) = Self::calculate_core_distribution();
+
         Self {
-            // regular_vampire: (!pbl.config.disable_direct_vampire).then(|| RegularVampire::new(pbl)),
-            // bounded_vapire: (!pbl.config.disable_fmc_vampire).then(|| BounededVampiVre::new(pbl)),
-            vampire: (!pbl.config.disable_direct_vampire).then(|| {
+            vampire: (!disable).then(|| {
                 VampireExec::builder()
-                    .default_args()
+                    .default_args_with_cores(vampire_cores)
                     .maybe_exe_location(pbl.config.vampire_path.clone())
+                    .build()
+            }),
+            z3: (!disable).then(|| {
+                Z3Exec::builder()
+                    .default_args()
+                    .maybe_exe_location(pbl.config.z3_path.clone())
+                    .build()
+            }),
+            cvc5: (!disable).then(|| {
+                Cvc5Exec::builder()
+                    .default_args()
+                    .maybe_exe_location(pbl.config.cvc5_path.clone())
                     .build()
             }),
         }
@@ -73,15 +105,17 @@ impl SmtRunner {
 
     #[tokio::main]
     async fn run_all(&self, pbl: &mut Problem, query: &FileSink<'_>) -> anyhow::Result<bool> {
-        let Self { vampire } = self;
+        let Self { vampire, z3, cvc5 } = self;
         let start = std::time::Instant::now();
+
         let (file, success) = tokio::select! {
             _ = to_timeout::<()>(pbl) => Ok((None, false)),
-            res = maybe_run(pbl, query.vampire_file(), vampire) => res
+            res = run_all_solvers(pbl, query, vampire, z3, cvc5) => res
         }?;
         let time = start.elapsed();
 
-        pbl.report.add_smt_time(pbl.config.keep_smt_files, time, file, success);
+        pbl.report
+            .add_smt_time(pbl.config.keep_smt_files, time, file, success);
         Ok(success)
     }
 
@@ -171,6 +205,94 @@ async fn to_timeout<T>(pbl: &Problem) -> Option<T> {
     let timeout = pbl.config.vampire_timeout;
     tokio::time::sleep(timeout).await;
     None
+}
+
+async fn run_all_solvers<'a>(
+    pbl: &Problem,
+    query: &'a FileSink<'_>,
+    vampire: &Option<VampireExec>,
+    z3: &Option<Z3Exec>,
+    cvc5: &Option<Cvc5Exec>,
+) -> anyhow::Result<(Option<&'a Path>, bool)> {
+    let timeout_fut = to_timeout::<()>(pbl);
+    tokio::pin!(timeout_fut);
+
+    let vampire_fut = async {
+        if let (Some(solver), Some(file)) = (vampire, query.vampire_file()) {
+            solver.run(pbl, file).await
+        } else {
+            never_end().await
+        }
+    };
+    tokio::pin!(vampire_fut);
+
+    let z3_fut = async {
+        if let (Some(solver), Some(file)) = (z3, query.z3_file()) {
+            solver.run(pbl, file).await
+        } else {
+            never_end().await
+        }
+    };
+    tokio::pin!(z3_fut);
+
+    let cvc5_fut = async {
+        if let (Some(solver), Some(file)) = (cvc5, query.cvc5_file()) {
+            solver.run(pbl, file).await
+        } else {
+            never_end().await
+        }
+    };
+    tokio::pin!(cvc5_fut);
+
+    loop {
+        tokio::select! {
+            _ = &mut timeout_fut => {
+                return Ok((None, false));
+            }
+
+            res = &mut vampire_fut => {
+                match res {
+                    Ok(true) => return Ok((query.vampire_file(), true)),
+                    Ok(false) => {}
+                    Err(e) => {
+                        panic!(
+                            "Vampire crashed with error: {}\nThis likely indicates a problem with the SMT file or \
+                             solver configuration.",
+                            e
+                        );
+                    }
+                }
+            }
+
+            res = &mut z3_fut => {
+                match res {
+                    Ok(true) => return Ok((query.z3_file(), true)),
+                    Ok(false) => {}
+                    Err(e) => {
+                        panic!(
+                            "Z3 crashed with error: {}\nThis likely indicates a problem with the SMT file or \
+                             solver configuration.",
+                            e
+                        );
+                    }
+                }
+            }
+
+            res = &mut cvc5_fut => {
+                match res {
+                    Ok(true) => return Ok((query.cvc5_file(), true)),
+                    Ok(false) => {}
+                    Err(e) => {
+                        panic!(
+                            "CVC5 crashed with error: {}\nThis likely indicates a problem with the SMT file or \
+                             solver configuration.",
+                            e
+                        );
+                    }
+                }
+            }
+        }
+    }
 }
 
 async fn maybe_run<'a, R: Runner>(

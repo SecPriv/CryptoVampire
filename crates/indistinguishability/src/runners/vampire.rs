@@ -42,9 +42,15 @@ where
 {
     /// Extends the arguments of the Vampire executable with additional `VampireArg`s.
     pub fn default_args(self) -> Self {
+        self.default_args_with_cores(num_cpus::get().saturating_sub(2) as u64)
+    }
+
+    /// Extends the arguments of the Vampire executable with additional `VampireArg`s.
+    pub fn default_args_with_cores(self, cores: u64) -> Self {
         use VampireArg::*;
+        let cores = if cores == 0 { 1 } else { cores };
         self.extend_args([
-            Cores(num_cpus::get() as u64),
+            Cores(cores),
             Mode(vampire_suboptions::Mode::Portfolio),
             InputSyntax(vampire_suboptions::InputSyntax::SmtLib2),
         ])
