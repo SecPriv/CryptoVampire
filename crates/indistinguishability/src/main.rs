@@ -9,7 +9,7 @@ use indistinguishability::{Commands, Configuration, init_engine, init_logger};
 
 // static CV_PRELUDE: &str = include_str!("./input/prelude.scm");
 pub fn main() {
-    let config = Configuration::parse();
+    let config = Configuration::from_cli();
     init_logger();
     let mode = config.command.clone().unwrap_or_default();
     let mut engine = init_engine(config);

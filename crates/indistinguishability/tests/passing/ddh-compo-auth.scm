@@ -213,7 +213,7 @@
 
 ;; configuration
 ; (cv-set-trace pbl #t)
-(config.set_node_limit pbl 100000)
+(config.set_egg_node_limit pbl 100000)
 (config.set_smt_timeout pbl (b.string->duration "300ms"))
 (define default-timeout (b.string->duration "300ms"))
 (config.set_smt_timeout pbl (b.mult->duration scale-timeout default-timeout))

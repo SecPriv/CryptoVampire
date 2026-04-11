@@ -32,17 +32,17 @@ pub struct Configuration {
     #[command(subcommand)]
     pub command: Option<Commands>,
 
-    /// Maximal number of nodes in the egraph
-    #[arg(long, default_value_t = Self::default().node_limit, env)]
-    pub node_limit: usize,
-    /// Timout for egg
-    #[arg(long,
-        default_value = dstr(Self::default().time_limit),
-        value_parser = ::humantime::parse_duration, env)]
-    pub time_limit: std::time::Duration,
-    /// Iteration limit for egg
-    #[arg(long, default_value_t = Self::default().iter_limit,env)]
-    pub iter_limit: usize,
+    /// activate golgge trace for goals
+    #[arg(long, short('T'), env)]
+    pub trace: bool,
+
+    /// activate golgge trace for rebuilds
+    #[arg(long)]
+    pub trace_rebuilds: bool,
+
+    /// follow to set of nonce currently "published"
+    #[arg(long)]
+    pub trace_guessed_published_nonces: bool,
 
     #[arg(long,
         short('t'),
@@ -50,23 +50,36 @@ pub struct Configuration {
         value_parser = ::humantime::parse_duration, env)]
     pub smt_timeout: std::time::Duration,
 
+    /// number of cores used
+    /// 
+    /// This will be distributed among the smt solvers
+    #[arg(long, short('c'), default_value_t = Self::default().cores)]
+    pub cores: u64,
+
     /// Wether to keep the smt files around (or let the os get rid of them once
     /// we're done using them)
-    #[arg(long, default_value_t=cfg!(debug_assertions), env)]
+    #[arg(long, short('k'), default_value_t=cfg!(debug_assertions), env)]
     pub keep_smt_files: bool,
 
+    /// Timout for egg
+    #[arg(long,
+        default_value = dstr(Self::default().egg_timeout),
+        value_parser = ::humantime::parse_duration, env)]
+    pub egg_timeout: std::time::Duration,
+
+    /// Maximal number of nodes in the egraph
+    #[arg(long, default_value_t = Self::default().egg_node_limit, env)]
+    pub egg_node_limit: usize,
+
+    /// Iteration limit for egg
+    #[arg(long, default_value_t = Self::default().egg_iter_limit,env)]
+    pub egg_iter_limit: usize,
+
     /// depth for iterative deepening
+    /// 
+    /// This can mess with caching. It is recommended to leave it to its default value of `u64::MAX`.
     #[arg(long, default_value_t =u64::MAX, env)]
     pub depth: u64,
-
-    // /// Choose which version of the cryptovampire prelude to include
-    // #[arg(long, default_value_t)]
-    // pub prelude_version: Preludes,
-    /// don't include the cryptovampire prelude.
-    ///
-    /// ignore any other option
-    #[arg(long)]
-    pub no_cryptovampire_prelude: bool,
 
     /// don't include the steel prelude.
     ///
@@ -75,9 +88,13 @@ pub struct Configuration {
     #[arg(long)]
     pub no_steel_prelude: bool,
 
-    /// number of cores used
-    #[arg(long, short('c'), default_value_t = Self::default().cores)]
-    pub cores: u64,
+    /// Guided search for publishable nonce
+    ///
+    /// The proof sometimes requires to "publish" messages that should be secret
+    /// by the protocol specification. This features does a guided brute force
+    /// search to find such nonces.
+    #[arg(long)]
+    pub guided_nonce_search: bool,
 
     /// Limit on how many new nonce 'prf' can generate
     ///
@@ -103,44 +120,16 @@ pub struct Configuration {
     #[arg(long, default_value_t = Self::default().ddh_limit)]
     pub ddh_limit: usize,
 
-    /// activate golgge trace for goals
-    #[arg(long, short('T'), env)]
-    pub trace: bool,
-
-    /// activate golgge trace for rebuilds
-    #[arg(long)]
-    pub trace_rebuilds: bool,
-
-    /// follow to set of nonce currently "published"
-    #[arg(long)]
-    pub trace_guessed_published_nonces: bool,
-
-    /// Enable if commute rewrite rules
+    /// Enable if commute rewrite rules (not recommended)
     #[arg(long)]
     pub if_commute: bool,
 
-    /// Add various `and` related rewrite rules
+    /// Add various `and` related rewrite rules (not recommended)
     ///
     /// This makes the search more complete, but exponentially increases the
     /// complexity
     #[arg(long)]
     pub complete_and: bool,
-
-    /// Guided search for publishable nonce
-    ///
-    /// The proof sometimes requires to "publish" messages that should be secret
-    /// by the protocol specification. This features does a guided brute force
-    /// search to find such nonces.
-    #[arg(long)]
-    pub guided_nonce_search: bool,
-
-    /// Disable "direct" vampire proof search.
-    ///
-    /// The "direct" proof tries to prove the validity of queries. It is
-    /// extrememly unlikely that a proof will go through with direct vampire
-    /// disable
-    #[arg(long)]
-    pub disable_direct_vampire: bool,
 
     /// Propagate to `vampire` `--forced_options`
     ///
@@ -150,14 +139,32 @@ pub struct Configuration {
     #[arg(long, env)]
     pub vampire_forced_option: Option<String>,
 
-    #[arg(long, env)]
+    /// Path to `vampire` executable
+    /// 
+    /// Unless disable, will default to looking in the `PATH`
+    #[arg(long, env, group = "vampire")]
     pub vampire_path: Option<PathBuf>,
 
-    #[arg(long, env)]
+    /// Path to `z3` executable
+    /// 
+    /// Unless disable, will default to looking in the `PATH`
+    #[arg(long, env, group = "z3")]
     pub z3_path: Option<PathBuf>,
 
-    #[arg(long, env)]
+    /// Path to `cvc5` executable
+    /// 
+    /// Unless disable, will default to looking in the `PATH`
+    #[arg(long, env, group = "cvc5")]
     pub cvc5_path: Option<PathBuf>,
+
+    #[arg(long, env, group = "vampire")]
+    pub disable_vampire: bool,
+
+    #[arg(long, env, group = "z3")]
+    pub disable_z3: bool,
+
+    #[arg(long, env, group = "cvc5")]
+    pub disable_cvc5: bool,
 }
 
 static NODE_LIMIT_DEFAULT: usize = 100000;
@@ -174,14 +181,12 @@ impl Default for Configuration {
         Self {
             // file: Default::default(),
             command: None,
-            node_limit: NODE_LIMIT_DEFAULT,
-            time_limit,
-            iter_limit,
+            egg_node_limit: NODE_LIMIT_DEFAULT,
+            egg_timeout: time_limit,
+            egg_iter_limit: iter_limit,
             smt_timeout: ::std::time::Duration::from_secs(2),
             keep_smt_files: cfg!(debug_assertions),
             depth: u64::MAX,
-            // prelude_version: Default::default(),
-            no_cryptovampire_prelude: false,
             no_steel_prelude: false,
             cores: num_cpus::get() as u64,
             fa_limit: 4,
@@ -194,12 +199,39 @@ impl Default for Configuration {
             ddh_limit: NONCE_GENERATION_DEFAULT,
             guided_nonce_search: false,
             trace_guessed_published_nonces: false,
-            disable_direct_vampire: false,
             vampire_forced_option: None,
             vampire_path: None,
             z3_path: None,
             cvc5_path: None,
+            disable_vampire: false,
+            disable_z3: false,
+            disable_cvc5: false,
         }
+    }
+}
+
+impl Configuration {
+    pub fn from_cli() -> Self {
+        use ::std::mem::take;
+        let mut init = Configuration::parse();
+
+        // sets to false at the same time
+        if !take(&mut init.disable_vampire) && init.vampire_path.is_none() {
+            init.vampire_path = which::which("vampire").ok()
+        }
+
+        // sets to false at the same time
+        if !take(&mut init.disable_z3) && init.z3_path.is_none() {
+            init.z3_path = which::which("z3").ok()
+        }
+
+        // sets to false at the same time
+        if !take(&mut init.disable_cvc5) && init.cvc5_path.is_none() {
+            init.cvc5_path = which::which("cvc5").ok()
+        }
+
+
+        init
     }
 }
 

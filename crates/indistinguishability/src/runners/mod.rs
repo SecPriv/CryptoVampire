@@ -17,7 +17,7 @@ use crate::runners::file_builder::FileSink;
 use crate::runners::vampire::{VampireArg, VampireExec};
 use crate::runners::z3::Z3Exec;
 use crate::terms::Formula;
-use crate::{MSmt, MSmtFormula, Problem};
+use crate::{Configuration, MSmt, MSmtFormula, Problem};
 
 pub(crate) mod cvc5;
 pub(crate) mod vampire;
@@ -59,17 +59,19 @@ pub struct SmtRunner {
 }
 
 impl SmtRunner {
-    fn calculate_core_distribution() -> (u64, bool, bool) {
-        let total_cores = num_cpus::get() as u64;
-        let z3_enabled = true;
-        let cvc5_enabled = true;
+    fn calculate_core_distribution(pbl: &Problem) -> (u64, bool, bool) {
+        let Configuration {cores, vampire_path, z3_path, cvc5_path, ..}= &pbl.config;
+        let z3_enabled = z3_path.is_some();
+        let cvc5_enabled = cvc5_path.is_some();
+        #[allow(unused)]
+        let vampire_enabled = vampire_path.is_some();
 
         let other_solvers = [z3_enabled, cvc5_enabled].iter().filter(|&&x| x).count() as u64;
 
         let vampire_cores = if other_solvers > 0 {
-            total_cores.saturating_sub(other_solvers)
+            (*cores).saturating_sub(other_solvers)
         } else {
-            total_cores
+            *cores
         };
 
         (vampire_cores, z3_enabled, cvc5_enabled)
@@ -77,27 +79,25 @@ impl SmtRunner {
 
     /// Creates a new `SmtRunner` instance, initializing the solvers.
     pub fn new(pbl: &Problem) -> Self {
-        let disable = pbl.config.disable_direct_vampire;
-
-        let (vampire_cores, _, _) = Self::calculate_core_distribution();
+        let (vampire_cores, _, _) = Self::calculate_core_distribution(pbl);
 
         Self {
-            vampire: (!disable).then(|| {
+            vampire: pbl.config.vampire_path.clone().map(|exe| {
                 VampireExec::builder()
                     .default_args_with_cores(vampire_cores)
-                    .maybe_exe_location(pbl.config.vampire_path.clone())
+                    .exe_location(exe)
                     .build()
             }),
-            z3: (!disable).then(|| {
+            z3: pbl.config.z3_path.clone().map(|exe| {
                 Z3Exec::builder()
                     .default_args()
-                    .maybe_exe_location(pbl.config.z3_path.clone())
+                    .exe_location(exe)
                     .build()
             }),
-            cvc5: (!disable).then(|| {
+            cvc5: pbl.config.cvc5_path.clone().map(|exe| {
                 Cvc5Exec::builder()
                     .default_args()
-                    .maybe_exe_location(pbl.config.cvc5_path.clone())
+                    .exe_location(exe)
                     .build()
             }),
         }

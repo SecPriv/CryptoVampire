@@ -357,9 +357,9 @@ macro_rules! configuration {
 }
 
 configuration!(
-    node_limit: usize,
-    iter_limit: usize,
-    time_limit: std::time::Duration,
+    egg_node_limit: usize,
+    egg_iter_limit: usize,
+    egg_timeout: std::time::Duration,
     smt_timeout: std::time::Duration,
     cores: u64,
     trace: bool,
