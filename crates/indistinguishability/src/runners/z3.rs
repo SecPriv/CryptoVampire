@@ -45,10 +45,10 @@ where
         self
     }
 
-    /// sets the timeout in seconds
+    /// sets the timeout in milliseconds
     #[allow(unused)]
     pub fn timeout(mut self, timeout: ::std::time::Duration) -> Self {
-        let timeout_arg = Z3Arg::Tlim(timeout.as_secs_f64());
+        let timeout_arg = Z3Arg::Tlim(timeout.as_millis() as u64);
         if let Some(arg) = self.args.iter_mut().find(|x| x.same(&timeout_arg)) {
             *arg = timeout_arg;
         } else {
@@ -91,8 +91,8 @@ macro_rules! options {
 options!(
     /// Sets the memory limit for Z3 in megabytes.
     MemoryLimit("memory", u64),
-    /// Sets the time limit for Z3 in seconds.
-    Tlim("tlim", f64),
+    /// Sets the time limit for Z3 in milliseconds.
+    Tlim("timeout", u64),
     /// Enable or disable model generation.
     Model("model", bool),
     /// Enable or disable proof generation.
@@ -149,7 +149,7 @@ impl Z3Exec {
 
         if !self.contains_time() {
             let timeout = pbl.config.vampire_timeout;
-            cmd.args(Z3Arg::Tlim(timeout.as_secs_f64()).to_args());
+            cmd.args(Z3Arg::Tlim(timeout.as_secs() as u64).to_args());
         }
 
         cmd.arg(file);

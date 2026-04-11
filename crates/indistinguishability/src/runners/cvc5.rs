@@ -52,7 +52,7 @@ where
     /// sets the timeout in seconds
     #[allow(unused)]
     pub fn timeout(mut self, timeout: ::std::time::Duration) -> Self {
-        let timeout_arg = Cvc5Arg::Tlim(timeout.as_secs_f64());
+        let timeout_arg = Cvc5Arg::Tlim(timeout.as_millis() as u64);
         if let Some(arg) = self.args.iter_mut().find(|x| x.same(&timeout_arg)) {
             *arg = timeout_arg;
         } else {
@@ -95,8 +95,8 @@ macro_rules! options {
 options!(
     /// Sets the memory limit for Cvc5 in megabytes.
     MemoryLimit("memory", u64),
-    /// Sets the time limit for Cvc5 in seconds.
-    Tlim("tlim", f64),
+    /// Sets the time limit for Cvc5 in milliseconds.
+    Tlim("tlimit", u64),
     /// Sets the number of threads for Cvc5.
     Threads("threads", u64),
     /// Enable or disable model generation.
@@ -157,7 +157,7 @@ impl Cvc5Exec {
 
         if !self.contains_time() {
             let timeout = pbl.config.vampire_timeout;
-            cmd.args(Cvc5Arg::Tlim(timeout.as_secs_f64()).to_args());
+            cmd.args(Cvc5Arg::Tlim(timeout.as_millis() as u64).to_args());
         }
 
         cmd.arg(file);
