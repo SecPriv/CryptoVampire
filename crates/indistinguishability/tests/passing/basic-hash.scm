@@ -66,9 +66,10 @@
             (eq (sel2of2 in) (sel2of2 (macro_msg (tag i j) p)))
             (lt (tag i j) t))))))); <- very important
 
+
 ;; configuration
 ; (cv-set-trace pbl #t)
-(config.set_vampire_timeout pbl (b.mult->duration scale-timeout (b.string->duration "5s")))
+(config.set_smt_timeout pbl (b.mult->duration scale-timeout (b.string->duration "5s")))
 
 (if (run pbl p1 p2)
   (displayln "success")

@@ -36,10 +36,12 @@ impl<U> RunnerSplitter<U> {
         [vampire, cvc5, z3]
     }
 
+    #[allow(dead_code)]
     pub fn map<V>(self, mut f: impl FnMut(U) -> V) -> RunnerSplitter<V> {
         self.into_array().map(|x| x.map(&mut f)).into()
     }
 
+    #[allow(dead_code)]
     pub fn names(&self) -> RunnerSplitter<&'static str> {
         let RunnerSplitter { vampire, cvc5, z3 } = self.as_ref();
         RunnerSplitter {
@@ -47,17 +49,6 @@ impl<U> RunnerSplitter<U> {
             cvc5: cvc5.map(|_| "cvc5"),
             z3: z3.map(|_| "z3"),
         }
-    }
-}
-
-impl<U, E> RunnerSplitter<Result<U, E>> {
-    pub fn transpose(self) -> Result<RunnerSplitter<U>, E> {
-        let Self { vampire, cvc5, z3 } = self;
-        Ok(RunnerSplitter {
-            vampire: vampire.transpose()?,
-            cvc5: cvc5.transpose()?,
-            z3: z3.transpose()?,
-        })
     }
 }
 

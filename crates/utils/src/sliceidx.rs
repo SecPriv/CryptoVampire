@@ -1,7 +1,5 @@
 use std::collections::VecDeque;
 
-use crate::ereturn_if;
-
 pub trait IdxFromSlice<Idx> {
     type Item;
     fn get_index(&self, ptr: &Self::Item) -> Option<Idx>;

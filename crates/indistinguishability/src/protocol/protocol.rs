@@ -52,11 +52,6 @@ impl Protocol {
         &self.name
     }
 
-    pub(crate) fn as_formula(&self) -> Formula {
-        let name = self.name();
-        rexp!(name)
-    }
-
     /// Converts the protocol's name into an SMT formula.
     pub(crate) fn as_smt<'a>(&self) -> MSmtFormula<'a> {
         let name = self.name();
@@ -126,6 +121,7 @@ mod converter {
     use crate::rexp;
     use crate::terms::{Formula, Function, Variable};
 
+    // FIXME: what was this used for ?
     pub(crate) fn clone_from_sanitizer(
         subst: &mut FxHashMap<Variable, Variable>,
         from: &Function,

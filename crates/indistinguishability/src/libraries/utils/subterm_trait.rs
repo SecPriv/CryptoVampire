@@ -563,19 +563,6 @@ pub trait SyntaxSearcher {
     }
 }
 
-/// Converts an `egg::Id` from the e-graph into a `RecFOFormula`.
-///
-/// This function attempts to reconstruct the formula represented by the given `Id`,
-/// taking into account any bound variables.
-#[deprecated]
-pub fn expr_of_id<'a>(
-    egraph: &EGraph<Lang, PAnalysis<'a>>,
-    id: Id,
-    variables: &rpds::Queue<Variable>,
-) -> Formula {
-    Formula::try_from_id_with_vars(egraph, id, variables).unwrap()
-}
-
 impl TryFrom<Function> for MsgOrCond {
     type Error = Function;
 

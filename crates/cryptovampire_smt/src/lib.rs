@@ -18,12 +18,6 @@ macro_rules! smt {
     };
 }
 
-macro_rules! cowvec {
-    ($l:lifetime $t:ty) => {
-        ::std::borrow::Cow<$l, [$t]>
-    };
-}
-
 pub use formula::*;
 mod formula;
 

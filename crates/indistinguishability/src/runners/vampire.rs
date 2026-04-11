@@ -15,7 +15,7 @@ use crate::{MSmt, MSmtFormula, Problem};
 
 declare_trace!($"vampire_exec");
 
-static MIN_VAMPIRE_TIMEOUT: Duration = Duration::from_millis(150);
+static MIN_TIMEOUT: Duration = Duration::from_millis(151);
 
 /// The [Runner] itself
 #[derive(Debug, Clone, Builder)]
@@ -41,10 +41,11 @@ where
     S: vampire_exec_builder::State,
 {
     /// Extends the arguments of the Vampire executable with additional `VampireArg`s.
-    pub fn default_args(self) -> Self {
+    pub fn default_args_with_cores(self, cores: u64) -> Self {
         use VampireArg::*;
+        let cores = if cores == 0 { 1 } else { cores };
         self.extend_args([
-            Cores(num_cpus::get() as u64),
+            Cores(cores),
             Mode(vampire_suboptions::Mode::Portfolio),
             InputSyntax(vampire_suboptions::InputSyntax::SmtLib2),
         ])
@@ -59,7 +60,7 @@ where
     /// sets the timeout in seconds
     #[allow(unused)]
     pub fn timeout(mut self, timeout: ::std::time::Duration) -> Self {
-        let timeout = timeout.max(MIN_VAMPIRE_TIMEOUT);
+        let timeout = timeout.max(MIN_TIMEOUT);
         let narg = VampireArg::TimeLimit(timeout.as_secs_f64());
         if let Some(arg) = self.args.iter_mut().find(|x| x.same(&narg)) {
             *arg = narg;
@@ -190,6 +191,16 @@ pub mod vampire_suboptions {
     );
 }
 
+impl VampireArg {
+    /// Ensure things make sense. Notbaly the time limit
+    fn guard(&self) -> Self {
+        match self {
+            Self::TimeLimit(d) => Self::TimeLimit(d.max(MIN_TIMEOUT.as_secs_f64())),
+            x => x.clone(),
+        }
+    }
+}
+
 /// Turn something into an array of [str] for the [Command] object
 /// A trait for converting types into an array of strings for command-line arguments.
 trait ToArgs<const N: usize> {
@@ -236,22 +247,22 @@ impl VampireExec {
             .any(|x| matches!(&x, VampireArg::TimeLimit(_)))
     }
 
-    pub fn contains_avatar(&self) -> bool {
-        self.args
-            .iter()
-            .any(|x| matches!(&x, VampireArg::Avatar(_)))
-    }
-
     /// Runs the Vampire executable with the given SMT file.
     ///
     /// Returns `Ok(true)` if Vampire proves the query (refutation found),
     /// `Ok(false)` if it disproves it, or `Err` if Vampire encounters an error.
     pub async fn run(&self, pbl: &Problem, file: &Path) -> anyhow::Result<bool> {
         let mut cmd = Command::new(&self.exe_location);
-        cmd.args(self.args.iter().flat_map(|x| x.to_args().into_iter()));
+
+        cmd.args(
+            self.args
+                .iter()
+                .map(VampireArg::guard)
+                .flat_map(|x| x.to_args().into_iter()),
+        );
 
         if !self.contains_time() {
-            let timeout = pbl.config.vampire_timeout.max(MIN_VAMPIRE_TIMEOUT);
+            let timeout = pbl.config.smt_timeout.max(MIN_TIMEOUT);
             cmd.args(VampireArg::TimeLimit(timeout.as_secs_f64()).to_args());
         }
 

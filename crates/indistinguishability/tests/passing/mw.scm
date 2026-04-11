@@ -141,8 +141,8 @@
 ;; configuration
 ; (config.set_trace pbl #t)
 (define default-timeout (b.string->duration "3s"))
-(config.set_vampire_timeout pbl (b.mult->duration scale-timeout default-timeout))
-(config.set_node_limit pbl 100000)
+(config.set_smt_timeout pbl (b.mult->duration scale-timeout default-timeout))
+(config.set_egg_node_limit pbl 100000)
 (config.set_prf_limit pbl 1)
 
 (if (run pbl p1 p2)

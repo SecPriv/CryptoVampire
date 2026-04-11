@@ -213,10 +213,10 @@
 
 ;; configuration
 ; (cv-set-trace pbl #t)
-(config.set_node_limit pbl 100000)
-(config.set_vampire_timeout pbl (b.string->duration "300ms"))
+(config.set_egg_node_limit pbl 100000)
+(config.set_smt_timeout pbl (b.string->duration "300ms"))
 (define default-timeout (b.string->duration "300ms"))
-(config.set_vampire_timeout pbl (b.mult->duration scale-timeout default-timeout))
+(config.set_smt_timeout pbl (b.mult->duration scale-timeout default-timeout))
 ; (cv-set-fa-limit pbl 0)
 ; (cv-set-keep-smt-files pbl #t)
 

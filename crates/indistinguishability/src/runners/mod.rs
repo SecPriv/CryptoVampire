@@ -12,12 +12,16 @@ use utils::{econtinue_if, ereturn_if, implvec};
 
 use crate::libraries::utils::{SmtOption, SmtSink};
 use crate::problem::cache::Context;
+use crate::runners::cvc5::Cvc5Exec;
 use crate::runners::file_builder::FileSink;
 use crate::runners::vampire::{VampireArg, VampireExec};
+use crate::runners::z3::Z3Exec;
 use crate::terms::Formula;
-use crate::{MSmt, MSmtFormula, Problem};
+use crate::{Configuration, MSmt, MSmtFormula, Problem};
 
+pub(crate) mod cvc5;
 pub(crate) mod vampire;
+pub(crate) mod z3;
 
 pub(crate) mod file_builder;
 
@@ -46,42 +50,84 @@ trait Runner: Debug {
     fn get_sover_kind(&self) -> SolverKind;
 }
 
-/// A runner for SMT solvers, encapsulating different Vampire configurations.
+/// A runner for SMT solvers, encapsulating different solver configurations.
 #[derive(Debug, Clone)]
 pub struct SmtRunner {
-    // /// The regular Vampire solver instance.
-    // regular_vampire: Option<RegularVampire>,
-    // /// The bounded Vampire solver instance.
-    // bounded_vapire: Option<BounededVampire>,
     vampire: Option<VampireExec>,
+    z3: Option<Z3Exec>,
+    cvc5: Option<Cvc5Exec>,
 }
 
 impl SmtRunner {
-    /// Creates a new `SmtRunner` instance, initializing the Vampire solvers.
+    fn calculate_core_distribution(pbl: &Problem) -> (u64, bool, bool) {
+        let Configuration {
+            cores,
+            vampire_path,
+            z3_path,
+            cvc5_path,
+            ..
+        } = &pbl.config;
+        let z3_enabled = z3_path.is_some();
+        let cvc5_enabled = cvc5_path.is_some();
+        #[allow(unused)]
+        let vampire_enabled = vampire_path.is_some();
+
+        let other_solvers = [z3_enabled, cvc5_enabled].iter().filter(|&&x| x).count() as u64;
+
+        let vampire_cores = if other_solvers > 0 {
+            (*cores).saturating_sub(other_solvers)
+        } else {
+            *cores
+        };
+
+        (vampire_cores, z3_enabled, cvc5_enabled)
+    }
+
+    /// Creates a new `SmtRunner` instance, initializing the solvers.
     pub fn new(pbl: &Problem) -> Self {
+        let (vampire_cores, _, _) = Self::calculate_core_distribution(pbl);
+
         Self {
-            // regular_vampire: (!pbl.config.disable_direct_vampire).then(|| RegularVampire::new(pbl)),
-            // bounded_vapire: (!pbl.config.disable_fmc_vampire).then(|| BounededVampiVre::new(pbl)),
-            vampire: (!pbl.config.disable_direct_vampire).then(|| {
+            vampire: pbl.config.vampire_path.clone().map(|exe| {
                 VampireExec::builder()
-                    .default_args()
-                    .maybe_exe_location(pbl.config.vampire_path.clone())
+                    .default_args_with_cores(vampire_cores)
+                    .exe_location(exe)
                     .build()
             }),
+            z3: pbl
+                .config
+                .z3_path
+                .clone()
+                .map(|exe| Z3Exec::builder().default_args().exe_location(exe).build()),
+            cvc5: pbl
+                .config
+                .cvc5_path
+                .clone()
+                .map(|exe| Cvc5Exec::builder().default_args().exe_location(exe).build()),
         }
     }
 
     #[tokio::main]
     async fn run_all(&self, pbl: &mut Problem, query: &FileSink<'_>) -> anyhow::Result<bool> {
-        let Self { vampire } = self;
+        let Self { vampire, z3, cvc5 } = self;
+
+        if vampire.is_none() && z3.is_none() && cvc5.is_none() {
+            return Ok(false);
+        }
+
         let start = std::time::Instant::now();
+
         let (file, success) = tokio::select! {
             _ = to_timeout::<()>(pbl) => Ok((None, false)),
-            res = maybe_run(pbl, query.vampire_file(), vampire) => res
+            res = maybe_run(pbl, query.vampire_file(), vampire) => res,
+            res = maybe_run(pbl, query.z3_file(), z3) => res,
+            res = maybe_run(pbl, query.cvc5_file(), cvc5) => res,
+            // res = run_all_solvers(pbl, query, vampire, z3, cvc5) => res
         }?;
         let time = start.elapsed();
 
-        pbl.report.add_smt_time(pbl.config.keep_smt_files, time, file, success);
+        pbl.report
+            .add_smt_time(pbl.config.keep_smt_files, time, file, success);
         Ok(success)
     }
 
@@ -161,14 +207,14 @@ impl SmtRunner {
     }
 }
 
-async fn never_end<T>() -> T {
+pub(crate) async fn never_end<T>() -> T {
     loop {
         tokio::time::sleep(Duration::from_secs(1)).await
     }
 }
 
 async fn to_timeout<T>(pbl: &Problem) -> Option<T> {
-    let timeout = pbl.config.vampire_timeout;
+    let timeout = pbl.config.smt_timeout;
     tokio::time::sleep(timeout).await;
     None
 }

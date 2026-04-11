@@ -107,7 +107,7 @@
 ;; configuration
 ; (config.set_trace pbl #t)
 (define default-timeout (b.string->duration "20s"))
-(config.set_vampire_timeout pbl (b.mult->duration scale-timeout default-timeout))
+(config.set_smt_timeout pbl (b.mult->duration scale-timeout default-timeout))
 
 (if (run pbl p1 p2)
   (displayln "success")

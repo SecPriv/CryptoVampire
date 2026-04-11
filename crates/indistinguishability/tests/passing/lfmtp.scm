@@ -60,7 +60,7 @@
   (register-fresh-nonce prf1 (list i) (m i)))
 
 ;; Configuration - use short timeout
-(config.set_vampire_timeout pbl (b.mult->duration scale-timeout (b.string->duration "150ms")))
+(config.set_smt_timeout pbl (b.mult->duration scale-timeout (b.string->duration "150ms")))
 (config.set_fa_limit pbl 1)
 
 ;; Run the indistinguishability check

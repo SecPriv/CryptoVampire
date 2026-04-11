@@ -187,6 +187,7 @@ pub(crate) enum InvalidStepError {
     #[error("Variable {var} is free in\n\t{formula}")]
     FreeVariable { var: Variable, formula: Formula },
     #[error("{msg}")]
+    #[allow(unused)]
     Other { msg: String },
 }
 
@@ -227,7 +228,8 @@ where
     }
 
     let vars = &pbl.protocols()[ptcl.protocol_idx].steps()[step.step_idx].vars;
-    let vars = chain![vars.iter(), extra_vars.into_iter().map(|v| v.as_ref())];
+    #[allow(clippy::map_identity, reason = "liftime magic")]
+    let vars = chain![vars.iter(), extra_vars.into_iter().map(|v| v)];
     for v in elem.free_vars_iter() {
         if !vars.clone().contains(&v) {
             return Err(InvalidStepError::FreeVariable {

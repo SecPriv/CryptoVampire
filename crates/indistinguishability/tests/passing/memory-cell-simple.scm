@@ -29,7 +29,7 @@
     (step p2 (lambda _ mtrue) (lambda _ mempty) empty-assignements)))
 
 ;; Configuration - use short timeout
-(config.set_vampire_timeout pbl (b.mult->duration scale-timeout (b.string->duration "150ms")))
+(config.set_smt_timeout pbl (b.mult->duration scale-timeout (b.string->duration "150ms")))
 
 ;; Run the indistinguishability check
 (if (run pbl p1 p2)

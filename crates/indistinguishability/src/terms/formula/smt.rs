@@ -135,13 +135,12 @@ impl<'a> From<MSmtFormula<'a>> for Formula {
             }
             SmtFormula::Not(arg) => !Self::from(arg.into_inner()),
             SmtFormula::Implies(args) => {
-                let [a, b] = args.as_ref().clone().map(|x| Self::from(x));
+                let [a, b] = args.as_ref().clone().map(Self::from);
                 a >> b
             }
-            SmtFormula::Ite(args) => Self::app(
-                BITE.clone(),
-                args.as_ref().clone().map(|x| Self::from(x)).into(),
-            ),
+            SmtFormula::Ite(args) => {
+                Self::app(BITE.clone(), args.as_ref().clone().map(Self::from).into())
+            }
             _ => unimplemented!(),
         }
     }
@@ -156,7 +155,7 @@ impl Formula {
         PreSmtRecFOFormula::builder().formula(Cow::Owned(self))
     }
 
-    pub fn as_smt<'a, U: QuantifierTranslator>(&self, pbl: &U) -> Option<MSmtFormula<'static>> {
+    pub fn as_smt<U: QuantifierTranslator>(&self, pbl: &U) -> Option<MSmtFormula<'static>> {
         trace!("trying to translate to smt:\n{self}");
         match MSmtFormula::try_from(self.as_pre_smt().translator(pbl).build()) {
             Err(f) => {

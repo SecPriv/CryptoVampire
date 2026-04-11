@@ -80,7 +80,7 @@ impl ShrProblem {
         step: Function,
         ptcl: Function,
         cell: Function,
-        param_vars: Vec<Variable>,
+        _param_vars: Vec<Variable>,
         assign_vars: Vec<Variable>,
         value: Formula,
     ) -> SResult<()> {
@@ -357,10 +357,10 @@ macro_rules! configuration {
 }
 
 configuration!(
-    node_limit: usize,
-    iter_limit: usize,
-    time_limit: std::time::Duration,
-    vampire_timeout: std::time::Duration,
+    egg_node_limit: usize,
+    egg_iter_limit: usize,
+    egg_timeout: std::time::Duration,
+    smt_timeout: std::time::Duration,
     cores: u64,
     trace: bool,
     trace_rebuilds:bool,

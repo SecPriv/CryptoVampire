@@ -16,9 +16,9 @@ impl Problem {
 
         let golgge_config = {
             let Configuration {
-                node_limit,
-                time_limit,
-                iter_limit,
+                egg_node_limit: node_limit,
+                egg_timeout: time_limit,
+                egg_iter_limit: iter_limit,
                 trace,
                 trace_rebuilds,
                 ..
@@ -78,6 +78,16 @@ impl Problem {
             "p2 in not a protocol of `self` (index to large)"
         );
         debug_assert!(self.valid());
+
+        if self.config.vampire_path.is_none()
+            && self.config.z3_path.is_none()
+            && self.config.cvc5_path.is_none()
+        {
+            eprintln!(
+                "`vampire`, `z3` and `cvc5` are all disabled or unavailable, this is unlikely to \
+                 succeed."
+            )
+        }
 
         let cp = self.checkpoint();
         // code block to ensure cleanup

@@ -75,7 +75,7 @@ impl Registerable for Report {
         let mut module = BuiltInModule::new(name);
         Self::register_type(&mut module);
         module
-            .register_fn("get-time-spent-in-vampire", Self::get_time_spent_in_vampire)
+            .register_fn("get-smt-time", Self::get_time_spent_in_vampire)
             .register_fn("get-total-run-calls", Self::get_total_run_calls)
             .register_fn("get-total-cache-hits", Self::get_total_cache_hits)
             .register_fn("get-hit-rate", Self::get_hit_rate)
@@ -92,8 +92,8 @@ impl Display for Report {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,
-            "Report:\n\truntime: {}\n\tvampire: {}\n\tcache hits: {:}\n\ttotal calls: {:}\n\thit \
-             rate: {:.2}%\n\tmax vampire: {}\n\ttested nonces: [{}]",
+            "Report:\n\truntime: {}\n\tsmt: {}\n\tcache hits: {:}\n\ttotal calls: {:}\n\thit \
+             rate: {:.2}%\n\tmax smt: {}\n\ttested nonces: [{}]",
             humantime::format_duration(self.get_runtime()),
             humantime::format_duration(self.get_time_spent_in_vampire()),
             self.total_cache_hits,

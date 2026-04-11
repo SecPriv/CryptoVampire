@@ -19,8 +19,6 @@ use crate::runners::runner_spliter::RunnerSplitter;
 use crate::runners::{Runner, SmtRunner};
 use crate::{MSmt, Problem};
 
-pub type SmtStringCache = RunnerSplitter<String>;
-
 #[derive(Debug)]
 pub struct CachedFile {
     file: NamedTempFile,
@@ -31,12 +29,6 @@ pub struct FileSink<'r> {
     pub files: RunnerSplitter<CachedFile>,
     pub nasserts: NonZeroU32,
     pub runners: &'r SmtRunner,
-}
-
-impl SmtStringCache {
-    pub fn clear(&mut self) {
-        self.as_mut().into_iter().for_each(String::clear);
-    }
 }
 
 impl CachedFile {
@@ -74,10 +66,16 @@ impl<'r> FileSink<'r> {
             nasserts: NonZeroU32::new(1).unwrap(),
         };
 
-        let SmtRunner { vampire } = runners;
+        let SmtRunner { vampire, z3, cvc5 } = runners;
 
         if vampire.is_some() {
             cache.files.vampire = Some(CachedFile::new("vampire", pbl)?);
+        }
+        if z3.is_some() {
+            cache.files.z3 = Some(CachedFile::new("z3", pbl)?);
+        }
+        if cvc5.is_some() {
+            cache.files.cvc5 = Some(CachedFile::new("cvc5", pbl)?);
         }
         Ok(cache)
     }
@@ -123,7 +121,7 @@ impl<'r> FileSink<'r> {
 }
 
 impl<'a, 'r> SmtSink<'a> for FileSink<'r> {
-    fn extend_smt(&mut self, pbl: &Problem, opts: &SmtOption, iter: utils::implvec!(MSmt<'a>)) {
+    fn extend_smt(&mut self, _pbl: &Problem, opts: &SmtOption, iter: utils::implvec!(MSmt<'a>)) {
         let Self {
             files,
             runners,
@@ -140,7 +138,9 @@ impl<'a, 'r> SmtSink<'a> for FileSink<'r> {
             let cmd = &command;
             let comment = comment.as_deref();
 
-            mwrite(opts, cmd, comment, files, &runners.vampire).unwrap()
+            mwrite(opts, cmd, comment, files, &runners.vampire).unwrap();
+            mwrite(opts, cmd, comment, files, &runners.z3).unwrap();
+            mwrite(opts, cmd, comment, files, &runners.cvc5).unwrap();
         }
     }
 
@@ -171,17 +171,17 @@ fn mwrite<'a, R: Runner>(
     }
 
     {
-        use ::std::fmt::Write;
+        use std::fmt::Write;
         writeln!(&mut str, "{cmd}")?;
     }
 
     if !options.depend_on_context {
-        use ::std::fmt::Write;
+        use std::fmt::Write;
         writeln!(cache, "{str}")?;
     }
 
     {
-        use ::std::io::Write;
+        use std::io::Write;
         write!(file, "{str}")?
     }
     Ok(())
