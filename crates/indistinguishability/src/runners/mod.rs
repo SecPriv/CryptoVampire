@@ -106,11 +106,19 @@ impl SmtRunner {
     #[tokio::main]
     async fn run_all(&self, pbl: &mut Problem, query: &FileSink<'_>) -> anyhow::Result<bool> {
         let Self { vampire, z3, cvc5 } = self;
+
+        if vampire.is_none() && z3.is_none() && cvc5.is_none() {
+            return Ok(false);
+        }
+
         let start = std::time::Instant::now();
 
         let (file, success) = tokio::select! {
             _ = to_timeout::<()>(pbl) => Ok((None, false)),
-            res = run_all_solvers(pbl, query, vampire, z3, cvc5) => res
+            res = maybe_run(pbl, query.vampire_file(), vampire) => res,
+            res = maybe_run(pbl, query.z3_file(), z3) => res,
+            res = maybe_run(pbl, query.cvc5_file(), cvc5) => res,
+            // res = run_all_solvers(pbl, query, vampire, z3, cvc5) => res
         }?;
         let time = start.elapsed();
 
@@ -205,94 +213,6 @@ async fn to_timeout<T>(pbl: &Problem) -> Option<T> {
     let timeout = pbl.config.vampire_timeout;
     tokio::time::sleep(timeout).await;
     None
-}
-
-async fn run_all_solvers<'a>(
-    pbl: &Problem,
-    query: &'a FileSink<'_>,
-    vampire: &Option<VampireExec>,
-    z3: &Option<Z3Exec>,
-    cvc5: &Option<Cvc5Exec>,
-) -> anyhow::Result<(Option<&'a Path>, bool)> {
-    let timeout_fut = to_timeout::<()>(pbl);
-    tokio::pin!(timeout_fut);
-
-    let vampire_fut = async {
-        if let (Some(solver), Some(file)) = (vampire, query.vampire_file()) {
-            solver.run(pbl, file).await
-        } else {
-            never_end().await
-        }
-    };
-    tokio::pin!(vampire_fut);
-
-    let z3_fut = async {
-        if let (Some(solver), Some(file)) = (z3, query.z3_file()) {
-            solver.run(pbl, file).await
-        } else {
-            never_end().await
-        }
-    };
-    tokio::pin!(z3_fut);
-
-    let cvc5_fut = async {
-        if let (Some(solver), Some(file)) = (cvc5, query.cvc5_file()) {
-            solver.run(pbl, file).await
-        } else {
-            never_end().await
-        }
-    };
-    tokio::pin!(cvc5_fut);
-
-    loop {
-        tokio::select! {
-            _ = &mut timeout_fut => {
-                return Ok((None, false));
-            }
-
-            res = &mut vampire_fut => {
-                match res {
-                    Ok(true) => return Ok((query.vampire_file(), true)),
-                    Ok(false) => {}
-                    Err(e) => {
-                        panic!(
-                            "Vampire crashed with error: {}\nThis likely indicates a problem with the SMT file or \
-                             solver configuration.",
-                            e
-                        );
-                    }
-                }
-            }
-
-            res = &mut z3_fut => {
-                match res {
-                    Ok(true) => return Ok((query.z3_file(), true)),
-                    Ok(false) => {}
-                    Err(e) => {
-                        panic!(
-                            "Z3 crashed with error: {}\nThis likely indicates a problem with the SMT file or \
-                             solver configuration.",
-                            e
-                        );
-                    }
-                }
-            }
-
-            res = &mut cvc5_fut => {
-                match res {
-                    Ok(true) => return Ok((query.cvc5_file(), true)),
-                    Ok(false) => {}
-                    Err(e) => {
-                        panic!(
-                            "CVC5 crashed with error: {}\nThis likely indicates a problem with the SMT file or \
-                             solver configuration.",
-                            e
-                        );
-                    }
-                }
-            }
-        }
-    }
 }
 
 async fn maybe_run<'a, R: Runner>(

@@ -152,6 +152,10 @@ impl Z3Exec {
             cmd.args(Z3Arg::Tlim(timeout.as_secs() as u64).to_args());
         }
 
+        // TODO: in case of unknow, this function should because an infinite
+        // async loop. That is it should never return and wait for tokio to kill
+        // it
+
         cmd.arg(file);
         cmd.kill_on_drop(true);
 

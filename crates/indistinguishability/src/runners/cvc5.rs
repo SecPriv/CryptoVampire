@@ -152,6 +152,12 @@ impl Cvc5Exec {
     /// Returns `Ok(true)` if Cvc5 proves the query (unsat found),
     /// `Ok(false)` if it disproves it (sat), or `Err` if Cvc5 encounters an error.
     pub async fn run(&self, pbl: &Problem, file: &Path) -> anyhow::Result<bool> {
+
+        // TODO: in case of unknow, this function should because an infinite
+        // async loop. That is it should never return and wait for tokio to kill
+        // it
+
+
         let mut cmd = Command::new(&self.exe_location);
         cmd.args(self.args.iter().flat_map(|x| x.to_args().into_iter()));
 
