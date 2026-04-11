@@ -79,24 +79,3 @@ impl Nonce {
         Self { content, name }
     }
 }
-
-use nonce_builder::IsUnset as NonceBuilderIsUnset;
-impl<S> NonceBuilder<S>
-where
-    S: nonce_builder::State,
-{
-    /// Sets the content of the nonce from an e-graph ID.
-    ///
-    /// This converts the `Id` from the e-graph into a `RecFOFormula` and sets it as the nonce's content.
-    pub fn content_id<N: Analysis<Lang>>(
-        self,
-        egraph: &EGraph<Lang, N>,
-        id: Id,
-    ) -> NonceBuilder<SetContent<S>>
-    where
-        S::Content: NonceBuilderIsUnset,
-    {
-        let formula = Formula::try_from_id(egraph, id).unwrap();
-        self.content(formula)
-    }
-}

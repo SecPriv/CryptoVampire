@@ -178,8 +178,6 @@ fn no_garabage<'a>(smt: &MSmt<'a>) -> bool {
         cryptovampire_smt::Smt::Assert(formula)
         | cryptovampire_smt::Smt::AssertTh(formula)
         | cryptovampire_smt::Smt::AssertNot(formula) => no_garabagef(formula),
-        #[cfg(feature = "cryptovampire")]
-        cryptovampire_smt::Smt::AssertGround { sort: _, formula } => no_garabagef(formula),
         _ => true,
     }
 }

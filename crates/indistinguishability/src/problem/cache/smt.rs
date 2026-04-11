@@ -6,7 +6,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::MSmtFormula;
-use crate::runners::file_builder::SmtStringCache;
 use crate::terms::{Formula, Function};
 
 #[derive(Debug)]

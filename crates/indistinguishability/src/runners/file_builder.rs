@@ -19,8 +19,6 @@ use crate::runners::runner_spliter::RunnerSplitter;
 use crate::runners::{Runner, SmtRunner};
 use crate::{MSmt, Problem};
 
-pub type SmtStringCache = RunnerSplitter<String>;
-
 #[derive(Debug)]
 pub struct CachedFile {
     file: NamedTempFile,
@@ -31,12 +29,6 @@ pub struct FileSink<'r> {
     pub files: RunnerSplitter<CachedFile>,
     pub nasserts: NonZeroU32,
     pub runners: &'r SmtRunner,
-}
-
-impl SmtStringCache {
-    pub fn clear(&mut self) {
-        self.as_mut().into_iter().for_each(String::clear);
-    }
 }
 
 impl CachedFile {

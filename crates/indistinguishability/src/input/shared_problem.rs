@@ -80,7 +80,7 @@ impl ShrProblem {
         step: Function,
         ptcl: Function,
         cell: Function,
-        param_vars: Vec<Variable>,
+        _param_vars: Vec<Variable>,
         assign_vars: Vec<Variable>,
         value: Formula,
     ) -> SResult<()> {

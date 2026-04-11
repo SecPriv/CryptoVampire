@@ -278,6 +278,7 @@ mod sanity_check;
 mod library;
 pub use library::Library;
 
+#[allow(clippy::module_inception, reason = "I do what I want!")]
 mod libraries;
 pub use libraries::Libraries;
 

@@ -264,49 +264,6 @@ impl Search {
     fn prf<'a>(&self, pbl: &'a Problem) -> &'a PRF {
         pbl.cryptography()[self.prf_idx].as_inner().unwrap()
     }
-
-    /// Returns an iterator of formula instead of a large conjunctrion
-    /// Searches for PRF-related conditions at a specific timepoint within a protocol.
-    pub fn search_timepoint<'a>(
-        &'a self,
-        pbl: &'a Problem,
-        ptcl: &'a Protocol,
-        time: Formula,
-        hyp: Formula,
-    ) -> impl Iterator<Item = Formula> + use<'a> {
-        tr!("searching protocol {}", ptcl.name());
-        ptcl.steps()
-            .iter()
-            .flat_map(
-                move |step @ Step {
-                          id,
-                          vars,
-                          cond,
-                          msg,
-                          ..
-                      }| {
-                    let vars = vars.iter().map(|v| Formula::Var(v.clone()));
-                    let s = rexp!((id #vars*));
-
-                    let condition = rexp!((and #hyp (HAPPENS #s) (LEQ #s #time)));
-                    [
-                        (condition.clone(), cond, step),
-                        (condition.clone(), msg, step),
-                    ]
-                    .into_iter()
-                },
-            )
-            .map(|(condition, to_search, Step { vars, .. })| {
-                let builder = RefFormulaBuilder::builder()
-                    .condition(condition)
-                    .variables(vars.clone())
-                    .forall()
-                    .build();
-                self.inner_search_formula(pbl, &builder, to_search.clone());
-                builder.into_inner().unwrap().into_formula()
-            })
-            .flat_map(|x| x.split_conjunction())
-    }
 }
 
 impl crate::libraries::utils::SyntaxSearcher for Search {
@@ -423,6 +380,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for PrfVampireRule {
 // =========================================================
 
 #[derive(Debug)]
+#[allow(unused)]
 struct PrfMemoryCellRule {
     prf: usize,
     trigger_mem: Function,

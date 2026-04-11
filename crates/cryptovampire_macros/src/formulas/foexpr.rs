@@ -331,6 +331,7 @@ struct BindingForQuantifer {
 impl QuantifierAst {
     fn mk_bindings(&self, macro_input: &MacroInput) -> Result<BindingForQuantifer, Error> {
         let ic = macro_input.is_const();
+        #[allow(unused)]
         let path = &macro_input.path;
         let pre_binding;
         let binding_arg;
@@ -363,7 +364,6 @@ impl QuantifierAst {
                         quote! {#keyword #ident: #t = #content; }
                     })
                 };
-                let mk_formula_from_var = quote!(#path::mk_var);
 
                 pre_binding = Some(quote!(#(#names_declarations)*));
                 if ic {
@@ -374,7 +374,6 @@ impl QuantifierAst {
                 } else {
                     binding_arg = quote!([#(#names.clone()),*]);
                 }
-                let t = Kind::Formula.to_tokens(macro_input)?;
             }
         }
 

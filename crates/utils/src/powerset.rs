@@ -1,9 +1,6 @@
 //! Vibe coded powerset iterator
 
 use std::iter::FusedIterator;
-use std::result;
-
-use crate::econtinue_if;
 
 /// Iterator over the powerset of a vector, starting from the largest subset.
 ///
