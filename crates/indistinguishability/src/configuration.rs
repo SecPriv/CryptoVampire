@@ -152,6 +152,12 @@ pub struct Configuration {
 
     #[arg(long, env)]
     pub vampire_path: Option<PathBuf>,
+
+    #[arg(long, env)]
+    pub z3_path: Option<PathBuf>,
+
+    #[arg(long, env)]
+    pub cvc5_path: Option<PathBuf>,
 }
 
 static NODE_LIMIT_DEFAULT: usize = 100000;
@@ -191,6 +197,8 @@ impl Default for Configuration {
             disable_direct_vampire: false,
             vampire_forced_option: None,
             vampire_path: None,
+            z3_path: None,
+            cvc5_path: None,
         }
     }
 }
