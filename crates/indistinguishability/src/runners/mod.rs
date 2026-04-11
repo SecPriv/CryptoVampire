@@ -75,13 +75,13 @@ impl SmtRunner {
     async fn run_all(&self, pbl: &mut Problem, query: &FileSink<'_>) -> anyhow::Result<bool> {
         let Self { vampire } = self;
         let start = std::time::Instant::now();
-        let success = tokio::select! {
-            _ = to_timeout::<()>(pbl) => Ok(false),
+        let (file, success) = tokio::select! {
+            _ = to_timeout::<()>(pbl) => Ok((None, false)),
             res = maybe_run(pbl, query.vampire_file(), vampire) => res
         }?;
         let time = start.elapsed();
 
-        pbl.report.add_smt_time(time, success);
+        pbl.report.add_smt_time(pbl.config.keep_smt_files, time, file, success);
         Ok(success)
     }
 
@@ -95,71 +95,69 @@ impl SmtRunner {
             .flat_map(Formula::into_iter_conjunction)
             .collect_vec();
 
-        #[allow(deprecated)]
-        self.run_to_dependancy(pbl, &queries)
-    }
-
-    #[deprecated = "use iter_run_to_dependancy"]
-    pub fn run_to_dependancy(&self, pbl: &mut Problem, queries: &[Formula]) -> Dependancy {
-        pbl.cache.smt.reset();
-        pbl.find_temp_quantifiers(queries);
-
-        let lock = pbl.cache.smt.lock();
-        let mut using_cache = false;
-
-        let mut sink = FileSink::new(pbl, self).unwrap();
-
-        for query in queries {
-            match query.try_evaluate() {
-                Some(true) => continue,
-                Some(false) => return Dependancy::impossible(),
-                _ => {}
-            }
-
+        {
+            let this = &self;
+            let queries: &[Formula] = &queries;
             pbl.cache.smt.reset();
-            if using_cache {
-                sink.clear_files(pbl).unwrap();
-            }
+            pbl.find_temp_quantifiers(queries);
 
-            let query_smt = query.as_smt(pbl).unwrap().optimise();
+            let lock = pbl.cache.smt.lock();
+            let mut using_cache = false;
 
-            // z3 or cvc5 would set up some headers in the smt files (like chosing a theory & co)
+            let mut sink = FileSink::new(pbl, this).unwrap();
 
-            sink.write_cache().unwrap();
-
-            pbl.add_smt(
-                &Context {
-                    query: query.clone(),
-                    query_smt: query_smt.clone(),
-                    using_cache,
-                },
-                &mut sink,
-            );
-
-            sink.extend_smt(
-                pbl,
-                &SmtOption {
-                    depend_on_context: true,
-                },
-                [MSmt::AssertNot(query_smt), MSmt::CheckSat],
-            );
-
-            if pbl.config.keep_smt_files {
-                for f in sink.files.as_ref() {
-                    println!("save smt file to: {:?}", f.path())
+            for query in queries {
+                match query.try_evaluate() {
+                    Some(true) => continue,
+                    Some(false) => return Dependancy::impossible(),
+                    _ => {}
                 }
+
+                pbl.cache.smt.reset();
+                if using_cache {
+                    sink.clear_files(pbl).unwrap();
+                }
+
+                let query_smt = query.as_smt(pbl).unwrap().optimise();
+
+                // z3 or cvc5 would set up some headers in the smt files (like chosing a theory & co)
+
+                sink.write_cache().unwrap();
+
+                pbl.add_smt(
+                    &Context {
+                        query: query.clone(),
+                        query_smt: query_smt.clone(),
+                        using_cache,
+                    },
+                    &mut sink,
+                );
+
+                sink.extend_smt(
+                    pbl,
+                    &SmtOption {
+                        depend_on_context: true,
+                    },
+                    [MSmt::AssertNot(query_smt), MSmt::CheckSat],
+                );
+
+                if pbl.config.keep_smt_files {
+                    for f in sink.files.as_ref() {
+                        println!("saved smt file to: {:?}", f.path())
+                    }
+                }
+
+                if !this.run_all(pbl, &sink).unwrap() {
+                    return Dependancy::impossible();
+                }
+
+                using_cache = true;
             }
 
-            if !self.run_all(pbl, &sink).unwrap() {
-                return Dependancy::impossible();
-            }
+            drop(lock);
 
-            using_cache = true;
+            Dependancy::axiom()
         }
-
-        drop(lock);
-
-        Dependancy::axiom()
     }
 }
 
@@ -175,13 +173,13 @@ async fn to_timeout<T>(pbl: &Problem) -> Option<T> {
     None
 }
 
-async fn maybe_run<R: Runner>(
+async fn maybe_run<'a, R: Runner>(
     pbl: &Problem,
-    query: Option<&Path>,
+    query: Option<&'a Path>,
     r: &Option<R>,
-) -> anyhow::Result<bool> {
+) -> anyhow::Result<(Option<&'a Path>, bool)> {
     match (r.as_ref(), query) {
-        (Some(x), Some(query)) => x.try_run_spin(pbl, query).await,
+        (Some(x), Some(query)) => Ok((Some(query), x.try_run_spin(pbl, query).await?)),
         (None, None) => never_end().await,
         _ => unreachable!(),
     }

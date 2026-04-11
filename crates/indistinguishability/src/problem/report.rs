@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::path::Path;
 use std::time::Duration;
 
 use itertools::Itertools;
@@ -46,11 +47,24 @@ impl Report {
         self.tested_nonces.clone()
     }
 
-    pub fn add_smt_time(&mut self, time: Duration, successfull: bool) {
+    pub fn add_smt_time(
+        &mut self,
+        keep_smt_files: bool,
+        time: Duration,
+        file: Option<&Path>,
+        successfull: bool,
+    ) {
         self.time_spent_in_vampire += time;
 
-        if successfull {
-            self.max_vampire = self.max_vampire.max(time);
+        if successfull && time > self.max_vampire {
+            self.max_vampire = time;
+            if keep_smt_files {
+                println!(
+                    "new longest successful vampire:\n\ttook {}\n\tfile saved at {:?}",
+                    humantime::format_duration(time),
+                    file.unwrap()
+                )
+            }
         }
     }
 }

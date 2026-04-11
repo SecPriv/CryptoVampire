@@ -11,12 +11,12 @@ const LEN: usize = 3;
 
 impl<U> RunnerSplitter<U> {
     #[inline]
-    pub fn as_ref<'a>(&'a self) -> RunnerSplitter<&'a U> {
+    pub fn as_ref(&self) -> RunnerSplitter<&U> {
         self.as_array().map(Option::as_ref).into()
     }
 
     #[inline]
-    pub fn as_mut<'a>(&'a mut self) -> RunnerSplitter<&'a mut U> {
+    pub fn as_mut(&mut self) -> RunnerSplitter<&mut U> {
         self.as_mut_array().map(Option::as_mut).into()
     }
 
@@ -26,12 +26,12 @@ impl<U> RunnerSplitter<U> {
         [vampire, cvc5, z3]
     }
     #[inline]
-    pub fn as_array<'a>(&'a self) -> [&'a Option<U>; LEN] {
+    pub fn as_array(&self) -> [&Option<U>; LEN] {
         let Self { vampire, cvc5, z3 } = self;
         [vampire, cvc5, z3]
     }
     #[inline]
-    pub fn as_mut_array<'a>(&'a mut self) -> [&'a mut Option<U>; LEN] {
+    pub fn as_mut_array(&mut self) -> [&mut Option<U>; LEN] {
         let Self { vampire, cvc5, z3 } = self;
         [vampire, cvc5, z3]
     }
