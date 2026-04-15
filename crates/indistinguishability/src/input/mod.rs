@@ -72,7 +72,7 @@ macro_rules! libraries {
 /// Initializes a new Steel `Engine` with the cryptovampire prelude and configuration.
 pub fn init_engine(config: Configuration) -> Engine {
     let mut engine = Engine::new();
-    engine.add_search_directory(std::env::current_dir().unwrap());
+    engine.add_search_directory(config.root_directory.clone().unwrap());
 
     let mut modules = register();
     modules
