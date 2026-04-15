@@ -165,6 +165,12 @@ pub struct Configuration {
 
     #[arg(long, env, group = "cvc5")]
     pub disable_cvc5: bool,
+
+    /// The root directory from which to root the scheme files
+    ///
+    /// Default to the
+    #[arg(long, env)]
+    pub root_directory: Option<PathBuf>,
 }
 
 static NODE_LIMIT_DEFAULT: usize = 100000;
@@ -206,6 +212,7 @@ impl Default for Configuration {
             disable_vampire: false,
             disable_z3: false,
             disable_cvc5: false,
+            root_directory: None,
         }
     }
 }
@@ -228,6 +235,14 @@ impl Configuration {
         // sets to false at the same time
         if !take(&mut init.disable_cvc5) && init.cvc5_path.is_none() {
             init.cvc5_path = which::which("cvc5").ok()
+        }
+
+        if init.root_directory.is_none() {
+            init.root_directory = Some(if let Some(Commands::File { file }) = &init.command {
+                file.parent().unwrap().to_path_buf()
+            } else {
+                ::std::env::current_dir().unwrap()
+            });
         }
 
         init
