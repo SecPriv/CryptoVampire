@@ -1,0 +1,158 @@
+(require "../save-results.scm")
+(require "cryptovampire/function")
+(require "cryptovampire/builtin-functions")
+(require "cryptovampire/cryptography")
+(require "cryptovampire/protocol")
+(require "cryptovampire/solver")
+(require "cryptovampire/sort")
+(require "cryptovampire/formula")
+(require "cryptovampire/signature")
+(require-builtin cryptovampire/ll/pbl as pbl.)
+(require-builtin cryptovampire/ll/configuration as config.)
+(require-builtin cryptovampire/ll as b.)
+(require-builtin cryptovampire/ll/report as report.)
+(require-builtin cryptovampire/ll/builtin-functions as builtin.)
+
+(define pbl (mk-problem 'x))
+
+(define p1 (declare-protocol pbl))
+(define p2 (declare-protocol pbl))
+
+(define senc (declare-cryptography pbl))
+
+(define-function enc pbl (senc) (Bitstring Bitstring Bitstring) -> Bitstring)
+(define-function dec pbl (senc) (Bitstring Bitstring) -> Bitstring)
+
+(define-function mkey pbl Nonce)
+(define-function rinit pbl (Index) -> Nonce)
+(define-function kh pbl Bitstring)
+(define-function mpid pbl (Index) -> Bitstring)
+(define-function sid pbl (Index) -> Nonce)
+(define-function k pbl (Index) -> Nonce)
+(define-function k-dummy pbl (Index) -> Nonce)
+(define-function cinit pbl Bitstring)
+(define-function mySucc pbl (Bitstring) -> Bitstring)
+(define-function endplug pbl Bitstring)
+(define-function accept pbl Bitstring)
+(define-function setup-ok pbl Bitstring)
+(define-function npr pbl (Index Index) -> Nonce)
+
+(define YCtr (declare-memory-cell pbl "YCtr" (list Index) (lambda (i) cinit)))
+(define SCtr (declare-memory-cell pbl "SCtr" (list Index) (lambda (i) cinit)))
+(define AEAD (declare-memory-cell pbl "AEAD" (list Index) (lambda (pid)
+  (enc (tuple (k pid) (tuple (mpid pid) (sid pid))) (rinit pid) mkey))))
+
+(define Setup (declare-same-step pbl "Setup" (list p1 p2) (list Index)
+    (lambda _ mtrue)
+    (lambda (p in pid . _) accept)
+    empty-assignements))
+
+(define Plug (declare-step pbl "Plug" (list Index Index)
+    (step p1
+      (lambda (p in pid j cells . _)
+        (eq in endplug))
+      (lambda (p in pid j cells . _) endplug)
+      (lambda (in pid j cells . _)
+        (list (store-cell (YCtr pid) := (mySucc (cells YCtr))))))
+    (step p2
+      (lambda _ mtrue)
+      (lambda (in pid j cells . _) endplug)
+      (lambda (in pid j cells . _)
+        (list (store-cell (YCtr pid) := (mySucc (cells YCtr))))))))
+
+(define Press (declare-step pbl "Press" (list Index Index)
+    (step p1
+      (lambda _ mtrue)
+      (lambda (in pid j cells . _)
+        (let ((ctr (cells YCtr)))
+          (tuple (mpid pid)
+            (tuple (nonce pid j)
+              (enc (tuple (sid pid) ctr) (npr pid j) (k pid))))))
+      (lambda (in pid j cells . _)
+        (list (store-cell (YCtr pid) := (mySucc (cells YCtr))))))
+    (step p2
+      (lambda _ mtrue)
+      (lambda (in pid j cells . _)
+        (let ((ctr (cells YCtr)))
+          (tuple (mpid pid)
+            (tuple (nonce pid j)
+              (enc (tuple (sid pid) ctr) (npr pid j) (k-dummy pid))))))
+      (lambda (in pid j cells . _)
+        (list (store-cell (YCtr pid) := (mySucc (cells YCtr))))))))
+
+(define Server (declare-step pbl "Server" (list Index Index)
+    (step p1
+      (lambda (p in pid j cells . _)
+        (let ((deccipher (dec (sel2of2 (sel2of2 in)) (k pid))))
+          (cand
+            (eq (sel1of2 in) (mpid pid))
+            (not (eq deccipher fail))
+            (eq (sel1of2 deccipher) (sid pid))
+            (lt (cells SCtr) (sel2of2 deccipher)))))
+      (lambda (p in pid j cells . _) accept)
+      (lambda (p in pid j cells . _)
+        (let ((deccipher (dec (sel2of2 (sel2of2 in)) (k pid))))
+          (list (store-cell (SCtr pid) := (sel2of2 deccipher))))))
+    (step p2
+      (lambda (p in pid j cells . _)
+        (let ((deccipher (dec (sel2of2 (sel2of2 in)) (k-dummy pid))))
+          (cand
+            (eq (sel1of2 in) (mpid pid))
+            (not (eq deccipher fail))
+            (eq (sel1of2 deccipher) (sid pid))
+            (lt (cells SCtr) (sel2of2 deccipher)))))
+      (lambda (p in pid j cells . _) accept)
+      (lambda (p in pid j cells . _)
+        (let ((deccipher (dec (sel2of2 (sel2of2 in)) (k-dummy pid))))
+          (list (store-cell (SCtr pid) := (sel2of2 deccipher))))))))
+
+(define Decode (declare-step pbl "Decode" (list Index Index)
+    (step p1
+      (lambda (p in pid j cells . _)
+        (let ((aead-dec (dec (sel1of2 (sel2of2 in)) mkey))
+              (otp-dec (dec (sel2of2 (sel2of2 in)) (k pid))))
+          (cand
+            (eq (sel1of2 in) (tuple (mpid pid) kh))
+            (not (eq aead-dec fail))
+            (not (eq otp-dec fail))
+            (eq (sel1of2 otp-dec) (sel2of2 (sel2of2 aead-dec)))
+            (eq (mpid pid) (sel1of2 (sel2of2 aead-dec))))))
+      (lambda (p in pid j cells . _)
+        (sel2of2 (dec (sel2of2 (sel2of2 in)) (k pid))))
+      empty-assignements)
+    (step p2
+      (lambda (p in pid j cells . _)
+        (let ((aead-dec (dec (sel1of2 (sel2of2 in)) mkey))
+              (otp-dec (dec (sel2of2 (sel2of2 in)) (k-dummy pid))))
+          (cand
+            (eq (sel1of2 in) (tuple (mpid pid) kh))
+            (not (eq aead-dec fail))
+            (not (eq otp-dec fail))
+            (eq (sel1of2 otp-dec) (sel2of2 (sel2of2 aead-dec)))
+            (eq (mpid pid) (sel1of2 (sel2of2 aead-dec))))))
+      (lambda (p in pid j cells . _)
+        (sel2of2 (dec (sel2of2 (sel2of2 in)) (k-dummy pid))))
+      empty-assignements)))
+
+(initialize-as-senc senc enc dec)
+
+(pbl.add-smt-axiom pbl (forall ((n Bitstring))
+  (not (eq n (mySucc n)))))
+
+(pbl.add-smt-axiom pbl (forall ((n1 Bitstring) (n2 Bitstring))
+  (=> (and (lt n1 n2) (lt n2 (mySucc n1)))
+    false)))
+
+(pbl.add-smt-axiom pbl (forall ((pid Index) (pid2 Index))
+  (=> (eq (mpid pid) (mpid pid2))
+    (idx-eq pid pid2))))
+
+(config.set_smt_timeout pbl (b.mult->duration scale-timeout (b.string->duration "1s")))
+(config.set_fa_limit pbl 2)
+
+(if (run pbl p1 p2)
+  (displayln "success")
+  (error "failed yubihsm"))
+
+(displayln (report.print-report (pbl.get-report pbl)))
+(save-results "yubihsm" pbl)
