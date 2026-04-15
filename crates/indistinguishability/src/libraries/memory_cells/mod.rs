@@ -132,7 +132,7 @@ pub(crate) fn search_pred_memory_cell<S: SyntaxSearcher + ?Sized>(
     for (idx, dflag) in descendants.into_iter().enumerate() {
         econtinue_if!(dflag.is_empty());
         let call = PreCall::from_idx(idx, graph.cell_num());
-        let step = &ptcl[call.get_step()];
+        let step = ptcl[call.get_step()].freshen();
         let lt_cond = {
             let stepf = step.id_expr();
             rexp!((and (LT #stepf #time) (HAPPENS #stepf)))
@@ -143,7 +143,7 @@ pub(crate) fn search_pred_memory_cell<S: SyntaxSearcher + ?Sized>(
                 let cellf = pbl[cell].function();
                 econtinue_let!(let Some(SingleAssignement { assignement_vars, parameter_vars, value }) = step.assignements.get(cellf));
                 let vars = chain![
-                    assignement_vars.iter(),
+                    // assignement_vars.iter(),
                     parameter_vars.iter(),
                     step.vars.iter()
                 ]
@@ -206,6 +206,7 @@ pub(crate) fn search_concrete_memory_cell<S: SyntaxSearcher + ?Sized>(
 
     let step_id = &step.id;
     let time = rexp!((step_id #(step_args.iter().cloned())*));
+    let mut subst : FxHashMap<_,_> = Default::default();
     match step.assignements.get(&cell_head) {
         None => search_pred_memory_cell(searcher, pbl, builder, cell_head, cell_args, ptcl, &time),
         Some(SingleAssignement {
@@ -213,23 +214,18 @@ pub(crate) fn search_concrete_memory_cell<S: SyntaxSearcher + ?Sized>(
             parameter_vars,
             value,
         }) => {
-            let builder = if builder.is_and() {
-                builder.clone()
-            } else {
-                builder.add_node().and().build()
-            };
+            let builder = builder.ensure_and();
 
-            let mut subst = FxHashMap::with_capacity_and_hasher(
-                assignement_vars.len() + parameter_vars.len(),
-                Default::default(),
-            );
-            let value = value.alpha_rename_if_with(&mut subst, &mut |_| true);
 
-            let vars = chain![assignement_vars.iter(), &step.vars]
+            subst.clear();
+            let value = value.alpha_rename_with(&mut subst);
+
+            let n = assignement_vars.len() + step.vars.len();
+            let vars = chain![assignement_vars.iter(), &step.vars, parameter_vars]
                 .map(|v| subst.get(v).unwrap_or(v))
                 .collect_vec();
             let cond = Formula::and(
-                izip!(&vars, chain![cell_args.iter(), step_args.iter()])
+                izip!(&vars[..n], chain![cell_args.iter(), step_args.iter()])
                     .map(|(&v, arg)| rexp!((INDEX_EQ #v #arg))),
             );
 
@@ -237,7 +233,7 @@ pub(crate) fn search_concrete_memory_cell<S: SyntaxSearcher + ?Sized>(
                 let builder = builder
                     .add_node()
                     .condition(!cond.clone())
-                    .variables(vars.iter().cloned().cloned())
+                    .variables(vars.iter().unique().cloned().cloned())
                     .build();
                 search_pred_memory_cell(searcher, pbl, &builder, cell_head, cell_args, ptcl, &time);
             }
