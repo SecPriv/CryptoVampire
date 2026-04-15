@@ -1,4 +1,7 @@
 ; Comments stolen from squirrel
+
+; Not supported
+
 ; (*******************************************************************************
 ; YUBIHSM
 ; 
@@ -82,6 +85,8 @@
 (require-builtin cryptovampire/ll as b.)
 (require-builtin cryptovampire/ll/report as report.)
 (require-builtin cryptovampire/ll/builtin-functions as builtin.)
+
+(b.exit 0)
 
 (define pbl (mk-problem 'x))
 

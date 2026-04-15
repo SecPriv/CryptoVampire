@@ -40,6 +40,7 @@ where
     }
 
     /// Extends the arguments of the Cvc5 executable with additional `Cvc5Arg`s.
+    #[allow(dead_code)]
     pub fn extend_args(mut self, args: implvec!(Cvc5Arg)) -> Self {
         self.args.extend(args);
         self
