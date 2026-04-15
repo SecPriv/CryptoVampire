@@ -1,5 +1,6 @@
 use clap::builder;
 use itertools::{Itertools, chain, iproduct, izip};
+use log::trace;
 use quarck::CowArc;
 use rustc_hash::FxHashMap;
 use utils::{econtinue_if, econtinue_let, ereturn_if};
@@ -99,12 +100,12 @@ pub(crate) fn search_pred_memory_cell<S: SyntaxSearcher + ?Sized>(
                 .flags()
                 .contains(FormulaBuilderFlags::NO_THROUGH_PRED_MEMORY_CELL)
     );
-    tr!(
+    trace!(
         "in search_pred_memory_cell at {time} in {} with {:?}",
         ptcl.name(),
         builder.dgb_name()
     );
-    tr!("flags: {:?}", builder.flags());
+    trace!("flags: {:?}", builder.flags());
 
     let builder = builder.ensure_and();
     let graph = ptcl.graph().unwrap();
@@ -127,7 +128,7 @@ pub(crate) fn search_pred_memory_cell<S: SyntaxSearcher + ?Sized>(
     if graph.all_steps_idx().all(|i| !descendants[i].is_empty()) {
         new_bflags |= FormulaBuilderFlags::NO_THROUGH_PREVIOUS_BODY;
     }
-    tr!("new flags: {:?}", new_bflags);
+    trace!("new flags: {:?}", new_bflags);
 
     for (idx, dflag) in descendants.into_iter().enumerate() {
         econtinue_if!(dflag.is_empty());
@@ -142,6 +143,15 @@ pub(crate) fn search_pred_memory_cell<S: SyntaxSearcher + ?Sized>(
             PreCall::Cell { cell, time: _ } => {
                 let cellf = pbl[cell].function();
                 econtinue_let!(let Some(SingleAssignement { assignement_vars, parameter_vars, value }) = step.assignements.get(cellf));
+                trace!("search_pred_memory_cell: step.vars = {:?}", step.vars);
+                trace!(
+                    "search_pred_memory_cell: assignement_vars = {:?}",
+                    assignement_vars
+                );
+                trace!(
+                    "search_pred_memory_cell: parameter_vars = {:?}",
+                    parameter_vars
+                );
                 let vars = chain![
                     // assignement_vars.iter(),
                     parameter_vars.iter(),
@@ -149,12 +159,15 @@ pub(crate) fn search_pred_memory_cell<S: SyntaxSearcher + ?Sized>(
                 ]
                 .unique()
                 .cloned();
+                trace!("search_pred_memory_cell: quantified vars = {:?}", vars);
 
-                let vars_eq = izip!(
+                let vars_eq: Vec<_> = izip!(
                     assignement_vars.iter().into_formula_iter(),
                     parameter_vars.iter().into_formula_iter()
                 )
-                .map(|(a, b)| rexp!((= #a #b)));
+                .map(|(a, b)| rexp!((= #a #b)))
+                .collect();
+                trace!("search_pred_memory_cell: vars_eq = {:?}", vars_eq);
 
                 let builder = builder
                     .add_node()
@@ -202,11 +215,11 @@ pub(crate) fn search_concrete_memory_cell<S: SyntaxSearcher + ?Sized>(
                 .contains(FormulaBuilderFlags::NO_THROUGH_DIRECT_MEMORY_CELL)
     );
 
-    tr!("in search_concrete_memory_cell {cell_head} @ {}", &step.id);
+    trace!("in search_concrete_memory_cell {cell_head} @ {}", &step.id);
 
     let step_id = &step.id;
     let time = rexp!((step_id #(step_args.iter().cloned())*));
-    let mut subst : FxHashMap<_,_> = Default::default();
+    let mut subst: FxHashMap<_, _> = Default::default();
     match step.assignements.get(&cell_head) {
         None => search_pred_memory_cell(searcher, pbl, builder, cell_head, cell_args, ptcl, &time),
         Some(SingleAssignement {
@@ -215,7 +228,6 @@ pub(crate) fn search_concrete_memory_cell<S: SyntaxSearcher + ?Sized>(
             value,
         }) => {
             let builder = builder.ensure_and();
-
 
             subst.clear();
             let value = value.alpha_rename_with(&mut subst);

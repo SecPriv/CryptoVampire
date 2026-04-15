@@ -85,6 +85,7 @@ impl Step {
         } = self;
         let nvars = vars.iter().map(Variable::freshen).collect_vec();
         let mut subst: FxHashMap<_, _> = izip!(vars.iter(), nvars.iter().cloned()).collect();
+        trace!("Step::freshen: {} -> {:?}", id, nvars);
 
         let cond = cond.apply_substitution(&mut subst);
         let msg = msg.apply_substitution(&mut subst);

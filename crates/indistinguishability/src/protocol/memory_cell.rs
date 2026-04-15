@@ -1,6 +1,7 @@
 use anyhow::ensure;
 use bon::{Builder, bon, builder};
 use itertools::{Itertools, chain, izip};
+use log::trace;
 use logic_formula::AsFormula;
 use rustc_hash::{FxHashMap, FxHashSet};
 use steel_derive::Steel;
@@ -109,6 +110,14 @@ impl SingleAssignement {
         } = self;
         assert!(parameter_vars.iter().all(|v| !subst.contains_key(v)));
         let nparameter_vars = parameter_vars.iter().map(Variable::freshen).collect_vec();
+        trace!(
+            "SingleAssignement::freshen: param_vars {:?} -> {:?}",
+            parameter_vars, nparameter_vars
+        );
+        trace!(
+            "SingleAssignement::freshen: assignement_vars before lookup: {:?}",
+            assignement_vars
+        );
         subst.extend(izip!(
             parameter_vars.iter(),
             nparameter_vars.iter().cloned()
@@ -116,8 +125,16 @@ impl SingleAssignement {
         let value = value.apply_substitution(subst);
         let assignement_vars = assignement_vars
             .iter()
-            .map(|v| subst.get(v).unwrap().clone())
+            .map(|v| {
+                let mapped = subst.get(v).unwrap().clone();
+                trace!("  assignement_var {:?} -> {:?}", v, mapped);
+                mapped
+            })
             .collect_vec();
+        trace!(
+            "SingleAssignement::freshen: final assignement_vars: {:?}",
+            assignement_vars
+        );
         Self {
             assignement_vars,
             parameter_vars: nparameter_vars,
