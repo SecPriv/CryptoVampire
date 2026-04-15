@@ -2,10 +2,9 @@
   step
   step-protocol
   declare-step declare-same-step
-  declare-memory-cell 
+  declare-memory-cell
   store-cell
-  empty-assignements
-  )
+  empty-assignements)
 (require-builtin cryptovampire/ll/pbl as pbl->)
 (require-builtin cryptovampire/ll/step as step->)
 (require-builtin cryptovampire/ll/formula as f->)
@@ -23,17 +22,26 @@
 (define empty-assignements (lambda _ '()))
 
 (define __inner-get-function fun.get-function)
+(define __inner-get-input-sorts fun.get-input-sorts)
 (define __inner-mk-single-assignment step->mk-single-assignment)
+(define __inner-fresh-with-sort var->fresh-with-sort)
+(define __inner-convert-to-formula fun.convert-to-formula)
+
+(define (ensure-var f) (cond
+    [ (t->Variable? f) f]
+    [ (f->var? f) (car (f->destruct f)) ]
+    [else (error "should be a variable") ]))
+
 
 (define-syntax store-cell
   (syntax-rules (:=)
     [
     (_ ((vars ...) cell cargs ...) := value)
     (let* [
-      (cell-sorts (fun.get-input-sorts cell))
-      (cell-fresh-vars (map var->fresh-with-sort cell-sorts))
-      (args-vars ((lambda (vars ...) (list cargs ...)) cell-fresh-vars))
-      (valuef ((lambda (vars ...) value) cell-fresh-vars))
+      (cell-sorts (__inner-get-input-sorts cell))
+      (cell-fresh-vars (map __inner-fresh-with-sort cell-sorts))
+      (args-vars (map ensure-var ((lambda (vars ...) (list cargs ...)) cell-fresh-vars)))
+      (valuef (__inner-convert-to-formula (apply (lambda (vars ...) value) cell-fresh-vars)))
       ]
       (assignement (__inner-get-function cell) (__inner-mk-single-assignment args-vars cell-fresh-vars valuef)))
     ]
@@ -53,7 +61,7 @@
       (if (empty? remaining-args)
         time
         (car remaining-args)))
-    (fcell (if (t->Formula? cell) cell (cell cell-args)))
+    (fcell (if (t->Formula? cell) cell (apply cell cell-args)))
     ]
     (macro_memory_cell fcell ftime ptcl)))
 
@@ -89,22 +97,14 @@
         content)
       stepf)))
 
-(define (declare-same-step pbl name ptcls sorts msg mcond assignements )
+(define (declare-same-step pbl name ptcls sorts msg mcond assignements)
   (let* [
     (declare (partial declare-step pbl name sorts))
     (content (map (lambda (p) (step p (partial msg p) (partial mcond p) assignements)) ptcls)) ]
     (apply declare content)))
 
-; (define (set-init-step pbl . content)
-;   (let [ (s (get-function init)) ]
-;     (begin
-;       (for-each (lambda (c)
-;           (let [ (condf (step-message c)) (ptcl (step-protocol c)) ]
-;             (step->set-msg pbl s (get-function ptcl)
-;               condf)))))))
-
 ;; Memory cell helpers
-(define (declare-memory-cell pbl name params  init)
+(define (declare-memory-cell pbl name params init)
   (let* [
     (params (map var->fresh-with-sort params))
     (initv (map (lambda (p) (apply init (cons p params))) (pbl->get-all-protocols pbl)))
