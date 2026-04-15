@@ -111,10 +111,24 @@ impl Protocol {
 
     pub fn is_valid(&self, pbl: &Problem) -> anyhow::Result<()> {
         let sign = &self.name.signature;
-        ensure!(self.name.is_protocol(), "{self} isn't fully registered as a protocol");
-        ensure!(sign.arity() == 0, "{self} should not have parameters (got arity {:})", sign.arity());
-        ensure!(sign.output == Sort::Protocol, "{self}'s name should have sort 'Protocol' (got {})", sign.output);
-        if let Some(init) = self.steps().first() && init.id == INIT {} else {
+        ensure!(
+            self.name.is_protocol(),
+            "{self} isn't fully registered as a protocol"
+        );
+        ensure!(
+            sign.arity() == 0,
+            "{self} should not have parameters (got arity {:})",
+            sign.arity()
+        );
+        ensure!(
+            sign.output == Sort::Protocol,
+            "{self}'s name should have sort 'Protocol' (got {})",
+            sign.output
+        );
+        if let Some(init) = self.steps().first()
+            && init.id == INIT
+        {
+        } else {
             bail!("no init step or not in first position in {self}")
         }
 
@@ -123,7 +137,10 @@ impl Protocol {
 
             if s.id == INIT {
                 for c in pbl.functions().memory_cells() {
-                    ensure!(s.assignements.contains_key(c), "{c} should have a default value in {INIT}")
+                    ensure!(
+                        s.assignements.contains_key(c),
+                        "{c} should have a default value in {INIT}"
+                    )
                 }
             }
         }
@@ -193,7 +210,7 @@ impl Index<StepRef> for Protocol {
     }
 }
 
-impl Display  for Protocol {
+impl Display for Protocol {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
     }

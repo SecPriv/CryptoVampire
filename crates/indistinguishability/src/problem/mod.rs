@@ -109,7 +109,10 @@ impl Problem {
         }
 
         for (a, b) in self.protocols().iter().tuple_windows() {
-            ensure!(Protocol::are_compatible(a, b), "{a} and {b} should be compatible")
+            ensure!(
+                Protocol::are_compatible(a, b),
+                "{a} and {b} should be compatible"
+            )
         }
         Ok(())
     }
