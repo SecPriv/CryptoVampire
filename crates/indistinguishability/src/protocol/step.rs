@@ -89,17 +89,24 @@ impl Step {
 
         let cond = cond.apply_substitution(&mut subst);
         let msg = msg.apply_substitution(&mut subst);
-        let mut assignements = assignements.clone();
-        for a in assignements.values_mut() {
-            a.freshen(&mut subst);
-        }
-        Self {
+        let assignements = assignements
+            .iter()
+            .map(|(k, v)| (k.clone(), v.freshen(&mut subst)))
+            .collect();
+        let res = Self {
             id: id.clone(),
             vars: nvars,
             cond,
             msg,
             assignements,
+        };
+
+        #[cfg(debug_assertions)]
+        {
+            res.is_valid().unwrap();
         }
+
+        res
     }
 
     /// Returns the expression of the step id with its variables
