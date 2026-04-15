@@ -100,6 +100,30 @@ impl SingleAssignement {
     pub fn value(&self) -> &Formula {
         &self.value
     }
+
+    pub fn freshen<'a>(&'a self, subst: &mut FxHashMap<&'a Variable, Variable>) -> Self {
+        let Self {
+            assignement_vars,
+            parameter_vars,
+            value,
+        } = self;
+        assert!(parameter_vars.iter().all(|v| !subst.contains_key(v)));
+        let nparameter_vars = parameter_vars.iter().map(Variable::freshen).collect_vec();
+        subst.extend(izip!(
+            parameter_vars.iter(),
+            nparameter_vars.iter().cloned()
+        ));
+        let value = value.apply_substitution(subst);
+        let assignement_vars = assignement_vars
+            .iter()
+            .map(|v| subst.get(v).unwrap().clone())
+            .collect_vec();
+        Self {
+            assignement_vars,
+            parameter_vars: nparameter_vars,
+            value,
+        }
+    }
 }
 
 impl MemoryCell {

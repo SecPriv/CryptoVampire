@@ -100,6 +100,10 @@ impl Formula {
         self.alpha_rename_if_with(&mut FxHashMap::default(), &mut |_| true)
     }
 
+    pub fn alpha_rename_with<'a>(&'a self, subst: &mut FxHashMap<&'a Variable, Variable>) -> Self {
+        self.alpha_rename_if_with(subst, &mut |_| true)
+    }
+
     /// Apply a specific variable substitution
     pub fn apply_substitution<'a>(&'a self, subst: &mut FxHashMap<&'a Variable, Variable>) -> Self {
         self.alpha_rename_if_with(subst, &mut |AlphaArgs { var, subst }| {

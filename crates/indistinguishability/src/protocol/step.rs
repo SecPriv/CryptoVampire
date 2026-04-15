@@ -75,6 +75,32 @@ impl Step {
 }
 
 impl Step {
+    pub fn freshen(&self) -> Self {
+        let Self {
+            id,
+            vars,
+            cond,
+            msg,
+            assignements,
+        } = self;
+        let nvars = vars.iter().map(Variable::freshen).collect_vec();
+        let mut subst: FxHashMap<_, _> = izip!(vars.iter(), nvars.iter().cloned()).collect();
+
+        let cond = cond.apply_substitution(&mut subst);
+        let msg = msg.apply_substitution(&mut subst);
+        let mut assignements = assignements.clone();
+        for a in assignements.values_mut() {
+            a.freshen(&mut subst);
+        }
+        Self {
+            id: id.clone(),
+            vars: nvars,
+            cond,
+            msg,
+            assignements,
+        }
+    }
+
     /// Returns the expression of the step id with its variables
     pub fn id_expr(&self) -> Formula {
         let Self { id, vars, .. } = self;
