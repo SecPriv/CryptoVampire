@@ -1,5 +1,7 @@
+use std::fmt::Display;
 use std::ops::Index;
 
+use anyhow::{bail, ensure};
 use bon::Builder;
 use itertools::{Itertools, izip};
 use rustc_hash::FxHashMap;
@@ -7,7 +9,7 @@ use utils::{ereturn_if, ereturn_let};
 
 use super::Step;
 use crate::protocol::call_graph::{Graph, StepRef};
-use crate::terms::{Formula, Function};
+use crate::terms::{Formula, Function, INIT, Sort};
 use crate::{MSmtFormula, Problem, rexp, smt};
 /// A protocol to be proven
 #[derive(Debug, Clone, Builder)]
@@ -64,7 +66,8 @@ impl Protocol {
     ///
     /// Panics if the provided step is not valid (i.e., its free variables are not contained in its step variables).
     pub(crate) fn add_step(&mut self, step: Step) -> &mut Step {
-        assert!(step.valid());
+        step.is_valid().unwrap();
+
         self.graph.clear();
         self.steps.push(step);
         self.steps.last_mut().unwrap()
@@ -104,6 +107,27 @@ impl Protocol {
         } else {
             None
         }
+    }
+
+    pub fn is_valid(&self, pbl: &Problem) -> anyhow::Result<()> {
+        let sign = &self.name.signature;
+        ensure!(self.name.is_protocol(), "{self} isn't fully registered as a protocol");
+        ensure!(sign.arity() == 0, "{self} should not have parameters (got arity {:})", sign.arity());
+        ensure!(sign.output == Sort::Protocol, "{self}'s name should have sort 'Protocol' (got {})", sign.output);
+        if let Some(init) = self.steps().first() && init.id == INIT {} else {
+            bail!("no init step or not in first position in {self}")
+        }
+
+        for s in self.steps() {
+            s.is_valid()?;
+
+            if s.id == INIT {
+                for c in pbl.functions().memory_cells() {
+                    ensure!(s.assignements.contains_key(c), "{c} should have a default value in {INIT}")
+                }
+            }
+        }
+        Ok(())
     }
 }
 
@@ -166,5 +190,11 @@ impl Index<StepRef> for Protocol {
 
     fn index(&self, index: StepRef) -> &Self::Output {
         self.get_step_from_ref(index).unwrap()
+    }
+}
+
+impl Display  for Protocol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name())
     }
 }
