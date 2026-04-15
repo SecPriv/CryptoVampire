@@ -179,7 +179,7 @@ impl Z3Exec {
             && o.status.code().is_some()
         {
             bail!(
-                "z3 failed with error code {:?}\nstdout:\n```\n{}\n```\nsterr:\n```\n{}\n```",
+                "z3 failed in '{file:?}' with error code {:?}\nstdout:\n```\n{}\n```\nsterr:\n```\n{}\n```",
                 o.status.code(),
                 String::from_utf8_lossy(&o.stdout),
                 String::from_utf8_lossy(&o.stderr)
