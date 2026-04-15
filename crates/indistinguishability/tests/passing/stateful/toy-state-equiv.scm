@@ -40,12 +40,16 @@
 
 (initialize-as-prf prf H)
 
+;; proven in squirrel
 (pbl.add-smt-axiom pbl
   (forall ((t1 Time) (i Index) (i2 Index) (j Index))
     (=> (and (happens (tag i j)) (lt t1 (tag i j)))
       (not (eq (macro_memory_cell (kT i) (tag i j) p1) (macro_memory_cell (kT i2) t1 p1))))))
 
-(config.set_smt_timeout pbl (b.mult->duration scale-timeout (b.string->duration "1s")))
+(bind ((i Index) (j Index))
+  (register-fresh-nonce prf (list i j) (n i j)))
+
+(config.set_smt_timeout pbl (b.mult->duration scale-timeout (b.string->duration "150ms")))
 (config.set_fa_limit pbl 1)
 
 (if (run pbl p1 p2)
