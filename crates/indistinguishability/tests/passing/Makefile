@@ -9,8 +9,14 @@ BUILD_DIR := /tmp/ccsa/build/dir/release
 BINARY_NAME := indistinguishability
 BINARY := ./$(BINARY_NAME)
 RESULTS := results.csv
-SOURCES := $(wildcard *.scm)
+SOURCES := $(wildcard *.scm) $(wildcard ./stateful/*.scm)
 VAMPIRE_PATH :=$(PWD)/moldvampire.sh
+
+# 1. Get the absolute path of the current Makefile
+MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
+
+# 2. Extract just the directory portion from that path
+CURRENT_DIR := $(dir $(MKFILE_PATH))
 
 # Ensure sequential execution
 .NOTPARALLEL:
@@ -42,7 +48,7 @@ $(RESULTS): $(BINARY) $(SOURCES)
 	@rm -f $(RESULTS)
 	@for file in $(SOURCES); do \
 		echo "Running test: $$file"; \
-		RESULT=$(RESULTS) $(BINARY) file "$$file" || exit 1; \
+		RESULT=$(RESULTS) $(BINARY) --root-directory $(CURRENT_DIR) file "$$file" || exit 1; \
 	done
 	@echo "Done. Results saved to $(RESULTS)"
 
