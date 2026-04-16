@@ -190,7 +190,7 @@ impl Default for Configuration {
             egg_node_limit: NODE_LIMIT_DEFAULT,
             egg_timeout: time_limit,
             egg_iter_limit: iter_limit,
-            smt_timeout: ::std::time::Duration::from_secs(2),
+            smt_timeout: ::std::time::Duration::from_millis(151),
             keep_smt_files: cfg!(debug_assertions),
             depth: u64::MAX,
             no_steel_prelude: false,
