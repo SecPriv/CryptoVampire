@@ -50,7 +50,7 @@
 (publish pbl () (mexp g a1))
 (publish pbl () (mexp g b1))
 
-(define default-timeout (b.string->duration "300ms"))
+(define default-timeout (b.string->duration "150ms"))
 (config.set_smt_timeout pbl (b.mult->duration scale-timeout default-timeout))
 
 

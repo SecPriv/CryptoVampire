@@ -170,7 +170,7 @@
       (cand (macro_exec S4_fail p) (macro_cond S4_fail p))
       mfalse)))
 
-(define default-timeout (b.string->duration "300ms"))
+(define default-timeout (b.string->duration "150ms"))
 (config.set_smt_timeout pbl (b.mult->duration scale-timeout default-timeout))
 (config.set_guided_nonce_search pbl #t)
 

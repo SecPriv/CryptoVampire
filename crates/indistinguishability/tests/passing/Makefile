@@ -48,6 +48,7 @@ $(RESULTS): $(BINARY) $(SOURCES)
 	@rm -f $(RESULTS)
 	@for file in $(SOURCES); do \
 		echo "Running test: $$file"; \
+		echo "  $(BINARY) --root-directory $(CURRENT_DIR) file $$file"; \
 		RESULT=$(RESULTS) $(BINARY) --root-directory $(CURRENT_DIR) file "$$file" || exit 1; \
 	done
 	@echo "Done. Results saved to $(RESULTS)"

@@ -73,7 +73,7 @@
 (add-rewrite pbl (rw.new "l1" '() (mexp (mexp g a1) b1) (unfold_msg mehhh p1) ))
 (add-rewrite pbl (rw.new "l2" '() (mexp g k11) (unfold_msg mehhh p2) ))
 
-(define default-timeout (b.string->duration "300ms"))
+(define default-timeout (b.string->duration "150ms"))
 (config.set_smt_timeout pbl (b.mult->duration scale-timeout default-timeout))
 (register-fresh-nonce ddh '() k11)
 (config.set_guided_nonce_search pbl #t)

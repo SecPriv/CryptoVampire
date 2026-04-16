@@ -169,7 +169,7 @@
 
 ;; configuration
 ; (config.set_trace pbl #t)
-(define default-timeout (b.string->duration "200ms"))
+(define default-timeout (b.string->duration "150ms"))
 (config.set_smt_timeout pbl (b.mult->duration scale-timeout default-timeout))
 (config.set_egg_node_limit pbl 100000)
 ; (config.set_keep_smt_files pbl #t)
