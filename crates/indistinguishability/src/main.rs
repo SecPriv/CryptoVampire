@@ -33,6 +33,7 @@ pub fn main() {
 
             if let Err(e) = engine.run(pgrm.clone()) {
                 engine.raise_error(e);
+                panic!()
             }
         }
     }
