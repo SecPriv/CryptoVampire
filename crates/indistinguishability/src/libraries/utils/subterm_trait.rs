@@ -19,7 +19,7 @@ use crate::terms::{
     HAPPENS, LAMBDA_S, LEQ, MACRO_COND, MACRO_EXEC, MACRO_FRAME, MACRO_INPUT, MACRO_MEMORY_CELL,
     MACRO_MSG, MITE, PRED, Quantifier, QuantifierT, RecFOFormulaQuant, Sort, Variable,
 };
-use crate::{CVProgram, Lang, Problem, fresh, rexp};
+use crate::{CVProgram, Lang, MSmt, Problem, fresh, rexp};
 
 declare_trace!($"search");
 
@@ -554,6 +554,10 @@ pub trait SyntaxSearcher {
         self.inner_search_formula(pbl, &builder, term);
 
         let query = builder.into_inner().unwrap().into_formula();
+        println!(
+            "queried: {}",
+            MSmt::Assert(query.as_smt(&**pbl).unwrap()).as_pretty()
+        );
         let queries = query.into_iter_conjunction();
         let _ = pbl;
         let pbl = prgm.egraph_mut().analysis.pbl_mut();

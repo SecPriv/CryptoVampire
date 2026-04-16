@@ -13,7 +13,8 @@
   define-alias
   alias-rw
   define-function
-  mk-alias-rw)
+  mk-alias-rw
+  convert-to-formula)
 (require-builtin cryptovampire/ll/function as fun->)
 (require-builtin cryptovampire/ll/builtin-functions as funs->)
 (require-builtin cryptovampire/ll/variable as var->)
@@ -36,9 +37,12 @@
 
 (define (convert-to-formula arg)
   (cond
+    [ (Formula? arg) arg]
     [ (Variable? arg) (f->var arg) ]
     [ (boolean? arg) (if arg (f->app funs->mtrue '()) (f->app funs->mfalse '())) ]
-    [else arg]))
+    [else (begin
+      (displayln arg)
+      (error "not a formula")) ]))
 
 (define get-head 'head)
 (define (requests-head? args) (equal? (first args) get-head))

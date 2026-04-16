@@ -186,18 +186,18 @@ impl Problem {
         self.memory_cells
             .push(MemoryCell::builder().function(cell.clone()).build());
 
-        for ptcl in &mut self.protocols {
-            let vars = cell.signature.mk_vars();
-            econtinue_let!(let Some(init) = ptcl.step_mut(0));
-            init.assignements.insert(
-                INIT.clone(),
-                SingleAssignement {
-                    assignement_vars: vars.clone(),
-                    parameter_vars: vars,
-                    value: rexp!(EMPTY),
-                },
-            );
-        }
+        // for ptcl in &mut self.protocols {
+        //     let vars = cell.signature.mk_vars();
+        //     econtinue_let!(let Some(init) = ptcl.step_mut(0));
+        //     init.assignements.insert(
+        //         INIT.clone(),
+        //         SingleAssignement {
+        //             assignement_vars: vars.clone(),
+        //             parameter_vars: vars,
+        //             value: rexp!(EMPTY),
+        //         },
+        //     );
+        // }
 
         Ok(cell)
     }

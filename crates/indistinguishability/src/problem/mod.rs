@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+use anyhow::ensure;
 use bon::bon;
 use itertools::Itertools;
 use utils::implvec;
@@ -102,11 +103,18 @@ impl Problem {
     /// This function checks that all the protocols are compatible with each other.
     /// Two protocols are compatible if they have the same steps and the same
     /// variables in each step.
-    pub fn valid(&self) -> bool {
-        self.protocols
-            .iter()
-            .tuple_windows()
-            .all(|(a, b)| Protocol::are_compatible(a, b))
+    pub fn valid(&self) -> anyhow::Result<()> {
+        for p in self.protocols() {
+            p.is_valid(self)?;
+        }
+
+        for (a, b) in self.protocols().iter().tuple_windows() {
+            ensure!(
+                Protocol::are_compatible(a, b),
+                "{a} and {b} should be compatible"
+            )
+        }
+        Ok(())
     }
 }
 

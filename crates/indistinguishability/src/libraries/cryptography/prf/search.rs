@@ -137,8 +137,7 @@ fn mk_static_rules(
         "search_prf_nonce" (Keep):
         (search_m #m #k #nprf (NONCE #n) #h) :-
             (VAMPIRE (=> #h (distinct #k #n))),
-            (VAMPIRE (=> #h (distinct #nprf #n)))
-            .
+            (VAMPIRE (=> #h (distinct #nprf #n))).
 
         // ```text
         // ---------------------
@@ -202,7 +201,8 @@ fn mk_static_rules(
         (search_trigger #m #k #p (PRED #t) #h).
 
     "search_prf_memory_cell" p, t, c (Keep):
-    (search_m #m #k (IS_FRESH_NONCE #nprf) (MACRO_MEMORY_CELL #c (PRED #t) #p) #h) :-
+    (search_m #m #k #nprf (MACRO_MEMORY_CELL #c (PRED #t) #p) #h) :-
+        (FRESH_NONCE #nprf (MACRO_MEMORY_CELL #c (PRED #t) #p) #h),
         (search_trigger_mem #m #k #p #t #h #c).
 
     // if and and

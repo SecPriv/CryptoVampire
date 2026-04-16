@@ -1,6 +1,6 @@
 use rustc_hash::FxHashMap;
 use steel::SteelVal;
-use steel::rvals::IntoSteelVal;
+use steel::rvals::{FromSteelVal, IntoSteelVal};
 use steel::steel_vm::builtin::BuiltInModule;
 use steel::steel_vm::engine::Engine;
 use steel::steel_vm::register_fn::RegisterFn;
@@ -36,7 +36,9 @@ pub fn register() -> FxHashMap<String, BuiltInModule> {
 
     {
         let mut module = BuiltInModule::new(BASE_LL_MODULE);
-        module.register_fn("println!", |x: SteelVal| println!("dbg: {x:?}"));
+        module
+            .register_fn("println!", |x: SteelVal| println!("dbg: {x:?}"))
+            .register_native_fn_definition(STEEL_EXIT_DEFINITION);
         modules.insert(BASE_LL_MODULE.into(), module);
     }
 
@@ -72,7 +74,7 @@ macro_rules! libraries {
 /// Initializes a new Steel `Engine` with the cryptovampire prelude and configuration.
 pub fn init_engine(config: Configuration) -> Engine {
     let mut engine = Engine::new();
-    engine.add_search_directory(std::env::current_dir().unwrap());
+    engine.add_search_directory(config.root_directory.clone().unwrap());
 
     let mut modules = register();
     modules
@@ -111,4 +113,10 @@ fn conversion_err<To>() -> ::steel::SteelErr {
         rerrs::ErrorKind::ConversionError,
         format!("couldn't convert to {}", ::std::any::type_name::<To>()),
     )
+}
+
+/// exit the program with the given exit code
+#[steel_derive::declare_steel_function(name = "exit")]
+fn steel_exit(code: i32) {
+    ::std::process::exit(code)
 }

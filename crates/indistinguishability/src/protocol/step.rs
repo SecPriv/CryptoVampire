@@ -1,11 +1,13 @@
 use std::fmt::Display;
 
+use anyhow::{bail, ensure};
 use bon::{bon, builder};
 use egg::{Analysis, Pattern, Rewrite};
-use itertools::{Itertools, chain};
+use itertools::{Itertools, chain, izip};
 use log::trace;
 use logic_formula::AsFormula;
 use logic_formula::iterators::AllTermsIterator;
+use rustc_hash::{FxHashMap, FxHashSet};
 use steel::rerrs::ErrorKind;
 use steel_derive::Steel;
 use thiserror::Error;
@@ -13,8 +15,9 @@ use utils::implvec;
 
 use crate::input::Registerable;
 use crate::libraries::utils::{EggRewriteSink, INDEPEDANT_QUERY, SmtSink};
+use crate::protocol::SingleAssignement;
 use crate::protocol::memory_cell::Assignements;
-use crate::terms::{EMPTY, Formula, Function, INIT, UNFOLD_COND, UNFOLD_MSG, Variable};
+use crate::terms::{EMPTY, Formula, Function, INIT, Sort, UNFOLD_COND, UNFOLD_MSG, Variable};
 use crate::{Lang, MSmt, MSmtFormula, MSmtParam, Problem, rexp, vec_smt};
 
 bitflags::bitflags! {
@@ -72,6 +75,40 @@ impl Step {
 }
 
 impl Step {
+    pub fn freshen(&self) -> Self {
+        let Self {
+            id,
+            vars,
+            cond,
+            msg,
+            assignements,
+        } = self;
+        let nvars = vars.iter().map(Variable::freshen).collect_vec();
+        let mut subst: FxHashMap<_, _> = izip!(vars.iter(), nvars.iter().cloned()).collect();
+        trace!("Step::freshen: {} -> {:?}", id, nvars);
+
+        let cond = cond.apply_substitution(&mut subst);
+        let msg = msg.apply_substitution(&mut subst);
+        let assignements = assignements
+            .iter()
+            .map(|(k, v)| (k.clone(), v.freshen(&mut subst)))
+            .collect();
+        let res = Self {
+            id: id.clone(),
+            vars: nvars,
+            cond,
+            msg,
+            assignements,
+        };
+
+        #[cfg(debug_assertions)]
+        {
+            res.is_valid().unwrap();
+        }
+
+        res
+    }
+
     /// Returns the expression of the step id with its variables
     pub fn id_expr(&self) -> Formula {
         let Self { id, vars, .. } = self;
@@ -79,15 +116,75 @@ impl Step {
     }
 
     /// Checks if the step is valid
-    ///
-    /// A step is valid if all the free variables in the condition and the message
-    /// are contained in the step variables.
-    pub fn valid(&self) -> bool {
+    pub fn is_valid(&self) -> anyhow::Result<()> {
         let Self {
             vars, cond, msg, ..
         } = self;
 
-        chain![cond.free_vars_iter(), msg.free_vars_iter()].all(|v| vars.contains(v))
+        ensure!(self.id.is_step(), "{} is not marked as a step", self.id);
+
+        ensure!(
+            self.id.signature.output == Sort::Time,
+            "{} should output sort 'Time' (got {})",
+            self.id,
+            self.id.signature.output
+        );
+
+        for v in chain![cond.free_vars_iter(), msg.free_vars_iter()] {
+            ensure!(
+                vars.contains(v),
+                "{v} should be bound in the arguments {}",
+                self.id
+            )
+        }
+
+        let mut vars: FxHashSet<_> = Default::default();
+        for (
+            id,
+            SingleAssignement {
+                assignement_vars,
+                parameter_vars,
+                value,
+            },
+        ) in &self.assignements
+        {
+            ensure!(
+                id.is_memory_cell(),
+                "'{}' is not registered as a memory cell (in {})",
+                id,
+                self.id
+            );
+            ensure!(
+                id.signature.output == Sort::MemoryCell,
+                "'{}' shoud output 'MemoryCell' (got {}, in {})",
+                id,
+                id.signature.output,
+                self.id
+            );
+
+            vars.clear();
+            vars.reserve(parameter_vars.len() + self.vars.len());
+            vars.extend(self.vars.iter());
+            for v in parameter_vars {
+                ensure!(
+                    vars.insert(v),
+                    "{v} shadows a variable bound by {} (in {}'s definition)",
+                    self.id,
+                    id
+                );
+            }
+
+            for v in chain![assignement_vars.iter(), value.free_vars_iter()] {
+                ensure!(
+                    vars.contains(v),
+                    "{v} is free (in {}'s definition in step {})",
+                    id,
+                    self.id
+                )
+            }
+        }
+
+        Ok(())
     }
 }
 

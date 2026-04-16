@@ -36,14 +36,11 @@ where
     /// Extends the arguments of the Cvc5 executable with additional `Cvc5Arg`s.
     pub fn default_args(self) -> Self {
         use Cvc5Arg::*;
-        self.extend_args([
-            ProduceModels(false),
-            ProduceProofs(false),
-            ProduceUnsatCores(false),
-        ])
+        self
     }
 
     /// Extends the arguments of the Cvc5 executable with additional `Cvc5Arg`s.
+    #[allow(dead_code)]
     pub fn extend_args(mut self, args: implvec!(Cvc5Arg)) -> Self {
         self.args.extend(args);
         self
@@ -74,7 +71,7 @@ macro_rules! options {
       impl ToArgs<1> for Cvc5Arg {
         fn to_args(&self) -> [String;1] {
           match self {
-            $(Self::$variant(x) => {let [y] = x.to_args(); [format!("{}={}", $name, y)]})*
+            $(Self::$variant(x) => {let [y] = x.to_args(); [format!("--{}={}", $name, y)]})*
           }
         }
       }
@@ -93,18 +90,8 @@ macro_rules! options {
 }
 
 options!(
-    /// Sets the memory limit for Cvc5 in megabytes.
-    MemoryLimit("memory", u64),
     /// Sets the time limit for Cvc5 in milliseconds.
     Tlim("tlimit", u64),
-    /// Sets the number of threads for Cvc5.
-    Threads("threads", u64),
-    /// Enable or disable model generation.
-    ProduceModels("produce-models", bool),
-    /// Enable or disable proof generation.
-    ProduceProofs("produce-proofs", bool),
-    /// Enable or disable unsat core generation.
-    ProduceUnsatCores("produce-unsat-cores", bool),
 );
 
 /// Turn something into an array of [str] for the [Command] object
@@ -187,7 +174,8 @@ impl Cvc5Exec {
             && o.status.code().is_some()
         {
             bail!(
-                "cvc5 failed with error code {:?}\nstdout:\n```\n{}\n```\nsterr:\n```\n{}\n```",
+                "cvc5 failed in '{file:?}' with error code \
+                 {:?}\nstdout:\n```\n{}\n```\nsterr:\n```\n{}\n```",
                 o.status.code(),
                 String::from_utf8_lossy(&o.stdout),
                 String::from_utf8_lossy(&o.stderr)

@@ -62,11 +62,6 @@ impl Problem {
     ///
     /// This function runs the solver on the protocols `p1` and `p2`.
     /// It returns `true` if the protocols are indistinguishable, `false` otherwise.
-    ///
-    /// # Panics
-    ///
-    /// This function will panic if `p1` or `p2` are not valid indices for the
-    /// protocols in the `Problem`.
     pub fn run_solver(&mut self, p1: usize, p2: usize) -> bool {
         let start = ::std::time::Instant::now();
         assert!(
@@ -77,7 +72,11 @@ impl Problem {
             p2 < self.protocols.len(),
             "p2 in not a protocol of `self` (index to large)"
         );
-        debug_assert!(self.valid());
+
+        // crash on invalid problems
+        if let Err(e) = self.valid() {
+            panic!("invalid problem: {e}")
+        }
 
         if self.config.vampire_path.is_none()
             && self.config.z3_path.is_none()
