@@ -554,10 +554,6 @@ pub trait SyntaxSearcher {
         self.inner_search_formula(pbl, &builder, term);
 
         let query = builder.into_inner().unwrap().into_formula();
-        println!(
-            "queried: {}",
-            MSmt::Assert(query.as_smt(&**pbl).unwrap()).as_pretty()
-        );
         let queries = query.into_iter_conjunction();
         let _ = pbl;
         let pbl = prgm.egraph_mut().analysis.pbl_mut();
