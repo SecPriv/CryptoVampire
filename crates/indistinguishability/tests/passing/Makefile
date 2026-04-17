@@ -56,9 +56,41 @@ $(RESULTS): $(BINARY) $(SOURCES)
 clean:
 	rm -f $(RESULTS) $(BINARY)
 
-# Test all examples with different solver configurations
-# Usage: make test-solvers [CONFIG=all-enabled|no-vampire|no-z3|no-cvc5|vampire-only|z3-only|cvc5-only|no-solvers]
-# If CONFIG is not specified, tests all configurations
+# Test all examples with different solver configurations (PARALLEL VERSION)
+# Uses dynamic core allocation to maximize parallelism while respecting solver constraints:
+#   - vampire-enabled configs: 16 cores (all)
+#   - z3-only/cvc5-only: 1 core each
+#   - no-solvers: 0 cores (unlimited parallelism)
+#
+# Usage:
+#   make test-solvers-parallel                    # Test all configs, all files
+#   make test-solvers-parallel CONFIGS="..."      # Test specific configs
+#   make test-solvers-parallel FILES="..."        # Test specific files
+#   make test-solvers-parallel TIMEOUT=1800       # Set timeout (seconds)
+#   make test-solvers-parallel RESUME=1           # Resume from checkpoint
+#   make test-solvers-parallel DRY_RUN=1          # Show test plan
+#
+# Examples:
+#   make test-solvers-parallel CONFIGS="no-vampire z3-only"
+#   make test-solvers-parallel FILES="basic-hash.scm ddh-P.scm"
+#   make test-solvers-parallel TIMEOUT=3600 CONFIGS="all-enabled"
+#
+# Environment variables:
+#   SOLVER_CONFIGS - Space-separated list of configs
+#   TEST_FILES - Space-separated list of files
+#   TEST_TIMEOUT - Timeout in seconds (default: 1800)
+#   TEST_CORES - Number of cores to use (default: 16)
+.PHONY: test-solvers-parallel
+test-solvers-parallel: $(BINARY)
+	@python3 $(CURRENT_DIR)test-solvers-parallel.py \
+		$(if $(CONFIGS),--configs $(CONFIGS),) \
+		$(if $(FILES),--files $(FILES),) \
+		$(if $(TIMEOUT),--timeout $(TIMEOUT),--timeout 1800) \
+		$(if $(TEST_CORES),--cores $(TEST_CORES),--cores 16) \
+		$(if $(RESUME),--resume,) \
+		$(if $(DRY_RUN),--dry-run,)
+
+# Legacy sequential test script (kept for backwards compatibility)
 .PHONY: test-solvers
 test-solvers: $(BINARY)
 	@./test-solvers.sh

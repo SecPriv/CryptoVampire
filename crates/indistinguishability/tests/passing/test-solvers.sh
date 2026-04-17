@@ -15,6 +15,7 @@
 #   TEST_TIMEOUT - Timeout per test in seconds (default: 300)
 
 set -e
+# set -x
 
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -24,13 +25,13 @@ RESULTS_DIR="$SCRIPT_DIR/solver-test-results"
 # All available solver configurations
 declare -A SOLVER_ENV_MAP=(
     ["all-enabled"]=""
-    ["no-vampire"]="DISABLE_VAMPIRE=1"
-    ["no-z3"]="DISABLE_Z3=1"
-    ["no-cvc5"]="DISABLE_CVC5=1"
-    ["vampire-only"]="DISABLE_Z3=1,DISABLE_CVC5=1"
-    ["z3-only"]="DISABLE_VAMPIRE=1,DISABLE_CVC5=1"
-    ["cvc5-only"]="DISABLE_VAMPIRE=1,DISABLE_Z3=1"
-    ["no-solvers"]="DISABLE_VAMPIRE=1,DISABLE_Z3=1,DISABLE_CVC5=1"
+    ["no-vampire"]="DISABLE_VAMPIRE=true"
+    ["no-z3"]="DISABLE_Z3=true"
+    ["no-cvc5"]="DISABLE_CVC5=true"
+    ["vampire-only"]="DISABLE_Z3=true,DISABLE_CVC5=true"
+    ["z3-only"]="DISABLE_VAMPIRE=true,DISABLE_CVC5=true"
+    ["cvc5-only"]="DISABLE_VAMPIRE=true,DISABLE_Z3=true"
+    ["no-solvers"]="DISABLE_VAMPIRE=true,DISABLE_Z3=true,DISABLE_CVC5=true"
 )
 
 # Default timeout per test (1 hour)
