@@ -55,3 +55,10 @@ $(RESULTS): $(BINARY) $(SOURCES)
 
 clean:
 	rm -f $(RESULTS) $(BINARY)
+
+# Test all examples with different solver configurations
+# Usage: make test-solvers [CONFIG=all-enabled|no-vampire|no-z3|no-cvc5|vampire-only|z3-only|cvc5-only|no-solvers]
+# If CONFIG is not specified, tests all configurations
+.PHONY: test-solvers
+test-solvers: $(BINARY)
+	@./test-solvers.sh
