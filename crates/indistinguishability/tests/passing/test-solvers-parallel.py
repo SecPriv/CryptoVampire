@@ -34,27 +34,26 @@ DEFAULT_TOTAL_CORES = os.cpu_count() or 4
 class SolverConfig:
     """Solver configuration with core requirements."""
     
-    # Core allocation: vampire-enabled configs get all cores, others get 1
-    VAMPIRE_CONFIGS = {"all-enabled", "no-z3", "no-cvc5", "vampire-only"}
     
+    # None => all cores
+    # Some(x) => x cores
     BASE_CONFIGS = {
-        "no-solvers": {"env": {"DISABLE_VAMPIRE": "true", "DISABLE_Z3": "true", "DISABLE_CVC5": "true"}},
-        "all-enabled": {"env": {}},
-        "no-vampire": {"env": {"DISABLE_VAMPIRE": "true"}},
-        "no-z3": {"env": {"DISABLE_Z3": "true"}},  # vampire enabled
-        "no-cvc5": {"env": {"DISABLE_CVC5": "true"}},  # vampire enabled
-        "vampire-only": {"env": {"DISABLE_Z3": "true", "DISABLE_CVC5": "true"}},
-        "z3-only": {"env": {"DISABLE_VAMPIRE": "true", "DISABLE_CVC5": "true"}},
-        "cvc5-only": {"env": {"DISABLE_VAMPIRE": "true", "DISABLE_Z3": "true"}},
+        "no-solvers": {"env": {"DISABLE_VAMPIRE": "true", "DISABLE_Z3": "true", "DISABLE_CVC5": "true"}, "cores": 1},
+        "all-enabled": {"env": {}, "cores": None},
+        "no-vampire": {"env": {"DISABLE_VAMPIRE": "true"}, "cores": 2},
+        "no-z3": {"env": {"DISABLE_Z3": "true"}, "cores": None},  # vampire enabled
+        "no-cvc5": {"env": {"DISABLE_CVC5": "true"}, "cores": None},  # vampire enabled
+        "vampire-only": {"env": {"DISABLE_Z3": "true", "DISABLE_CVC5": "true"}, "cores": None},
+        "z3-only": {"env": {"DISABLE_VAMPIRE": "true", "DISABLE_CVC5": "true"}, "cores": 1},
+        "cvc5-only": {"env": {"DISABLE_VAMPIRE": "true", "DISABLE_Z3": "true"}, "cores": 1},
     }
     
     @classmethod
     def get_cores(cls, config_name: str, total_cores: int) -> int:
-        """Get core requirement for a config. Vampire configs use all cores, others use 1."""
-        if config_name in cls.VAMPIRE_CONFIGS:
+        if cls.BASE_CONFIGS[config_name]["cores"] == None:
             return total_cores
         else:
-            return 1
+            return cls.BASE_CONFIGS[config_name]["cores"]
     
     @classmethod
     def get_env(cls, config_name: str) -> Dict[str, str]:
