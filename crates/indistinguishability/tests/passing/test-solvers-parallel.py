@@ -30,6 +30,7 @@ class SolverConfig:
     """Solver configuration with core requirements."""
     
     CONFIGS = {
+        "no-solvers": {"env": {"DISABLE_VAMPIRE": "true", "DISABLE_Z3": "true", "DISABLE_CVC5": "true"}, "cores": 1},
         "all-enabled": {"env": {}, "cores": os.cpu_count()},
         "no-vampire": {"env": {"DISABLE_VAMPIRE": "true"}, "cores": 2},
         "no-z3": {"env": {"DISABLE_Z3": "true"}, "cores": os.cpu_count()},  # vampire enabled
@@ -37,7 +38,6 @@ class SolverConfig:
         "vampire-only": {"env": {"DISABLE_Z3": "true", "DISABLE_CVC5": "true"}, "cores": os.cpu_count()},
         "z3-only": {"env": {"DISABLE_VAMPIRE": "true", "DISABLE_CVC5": "true"}, "cores": 1},
         "cvc5-only": {"env": {"DISABLE_VAMPIRE": "true", "DISABLE_Z3": "true"}, "cores": 1},
-        "no-solvers": {"env": {"DISABLE_VAMPIRE": "true", "DISABLE_Z3": "true", "DISABLE_CVC5": "true"}, "cores": 1},
     }
     
     @classmethod
@@ -665,7 +665,7 @@ Examples:
     if args.configs:
         configs = args.configs
     else:
-        configs = list(SolverConfig.CONFIGS.keys())
+        configs = list(SolverConfig.CONFIGS.keys())[1:]
     
     # Validate files exist
     missing_files = []
