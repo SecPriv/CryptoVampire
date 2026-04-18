@@ -29,7 +29,7 @@
         file))
     (let [ (file (open-output-file file)) ]
       (begin
-        (print-row file "name" "runtime" "vampire time" "total" "hits" "hitrate" "timeout")
+        (print-row file "name" "runtime" "vampire time" "max smt" "total" "hits" "hitrate" "timeout")
         file))))
 (define get-file (let [ (env (maybe-get-env-var "RESULT")) ]
     (if (Err? env) "/tmp/results.csv" (Ok->value env))))
@@ -43,9 +43,10 @@
     (report (pbl->get-report pbl))
     (runtime (report->get-runtime report))
     (vampire (report->get-smt-time report))
+    (max-smt (report->get-max-smt-time report))
     (hits (report->get-total-cache-hits report))
     (total (report->get-total-run-calls report))
     (hit-rate (report->get-hit-rate report))
     (vampire-timeout (config->get_smt_timeout pbl))
     ]
-    (print-row file name runtime vampire total hits hit-rate vampire-timeout)))
+    (print-row file name runtime vampire max-smt total hits hit-rate vampire-timeout)))

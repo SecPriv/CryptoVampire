@@ -69,7 +69,7 @@
 
 ;; configuration
 ; (cv-set-trace pbl #t)
-; (config.set_smt_timeout pbl (b.mult->duration scale-timeout (b.string->duration "5s")))
+(config.set_smt_timeout pbl (b.mult->duration scale-timeout (b.string->duration "150ms")))
 
 (if (run pbl p1 p2)
   (displayln "success")

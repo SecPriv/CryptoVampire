@@ -47,6 +47,10 @@ impl Report {
         self.tested_nonces.clone()
     }
 
+    pub fn get_max_smt_time(&self) -> Duration {
+        self.max_vampire
+    }
+
     pub fn add_smt_time(
         &mut self,
         keep_smt_files: bool,
@@ -81,6 +85,7 @@ impl Registerable for Report {
             .register_fn("get-hit-rate", Self::get_hit_rate)
             .register_fn("get-runtime", Self::get_runtime)
             .register_fn("get-tested-nonces", Self::get_tested_nonces)
+            .register_fn("get-max-smt-time", Self::get_max_smt_time)
             .register_fn("print-report", Self::to_string);
 
         trace!("defined {name} scheme module");

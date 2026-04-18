@@ -59,6 +59,31 @@ class TestResult(Enum):
     ERROR = "ERROR"
 
 
+def parse_max_smt_time(output: str) -> Optional[float]:
+    """
+    Parse max smt time from tool output.
+    
+    Expected format in output: "max smt: Xms Yus Zns" or "max smt: Xms" etc.
+    Returns the time in milliseconds.
+    """
+    import re
+    
+    # Look for "max smt:" followed by time values
+    match = re.search(r'max smt:\s*(\d+)ms\s*(\d+)us\s*(\d+)ns', output)
+    if match:
+        ms = float(match.group(1))
+        us = float(match.group(2)) / 1000.0
+        ns = float(match.group(3)) / 1000000.0
+        return ms + us + ns
+    
+    # Try simpler format: "max smt: Xms"
+    match = re.search(r'max smt:\s*(\d+)ms', output)
+    if match:
+        return float(match.group(1))
+    
+    return None
+
+
 @dataclass
 class TestJob:
     """Represents a single test job."""
@@ -85,6 +110,7 @@ class TestOutcome:
     result: TestResult
     duration: float
     output: str = ""
+    max_smt_ms: Optional[float] = None
 
 
 class CoreResourceManager:
@@ -158,12 +184,15 @@ class CheckpointManager:
     def save(self, outcome: TestOutcome):
         """Save a completed test to checkpoint."""
         self.completed.add(outcome.job.id)
-        self.results.append({
+        result_dict = {
             'config': outcome.job.config,
             'file': outcome.job.file,
             'result': outcome.result.value,
             'duration': outcome.duration,
-        })
+        }
+        if outcome.max_smt_ms is not None:
+            result_dict['max_smt_ms'] = outcome.max_smt_ms
+        self.results.append(result_dict)
         
         # Write checkpoint atomically
         temp_file = self.checkpoint_file.with_suffix('.tmp')
@@ -240,6 +269,7 @@ async def run_test(
     env = SolverConfig.get_env(job.config)
     
     start_time = datetime.now()
+    max_smt_ms = None
     
     try:
         # Acquire cores before starting
@@ -262,6 +292,8 @@ async def run_test(
             
             if process.returncode == 0:
                 result = TestResult.PASS
+                # Parse max smt time from output on success
+                max_smt_ms = parse_max_smt_time(output)
             else:
                 result = TestResult.FAIL
                 
@@ -290,7 +322,8 @@ async def run_test(
         job=job,
         result=result,
         duration=duration,
-        output=output
+        output=output,
+        max_smt_ms=max_smt_ms
     )
 
 
@@ -431,13 +464,14 @@ def save_results(
     # Detailed CSV
     detailed_file = results_dir / f"detailed_{timestamp}.csv"
     with open(detailed_file, 'w') as f:
-        f.write("test_file,config,result,time,notes\n")
+        f.write("test_file,config,result,time,max_smt_ms,notes\n")
         for outcome in results:
             notes = ""
             if outcome.result == TestResult.TIMEOUT:
                 notes = "timeout"
+            max_smt = outcome.max_smt_ms if outcome.max_smt_ms is not None else ""
             f.write(f"{outcome.job.file},{outcome.job.config},{outcome.result.value},"
-                   f"{outcome.duration:.2f},{notes}\n")
+                   f"{outcome.duration:.2f},{max_smt},{notes}\n")
     
     # Generate report
     report_file = results_dir / f"report_{timestamp}.txt"
@@ -445,6 +479,8 @@ def save_results(
     # Aggregate statistics
     config_stats = {}
     file_stats = {}
+    file_max_smt = {}  # Track max smt per file
+    max_smt_times = []
     
     for outcome in results:
         config = outcome.job.config
@@ -458,6 +494,14 @@ def save_results(
             file_stats[file] = []
         if outcome.result == TestResult.PASS:
             file_stats[file].append(config)
+        
+        # Collect max smt times for successful tests
+        if outcome.max_smt_ms is not None:
+            max_smt_times.append(outcome.max_smt_ms)
+            # Track per-file max smt
+            if file not in file_max_smt:
+                file_max_smt[file] = []
+            file_max_smt[file].append(outcome.max_smt_ms)
     
     with open(report_file, 'w') as f:
         f.write("Solver Configuration Test Report\n")
@@ -495,6 +539,17 @@ def save_results(
             f.write(f"Success rate: {total_pass * 100 / total_tests:.1f}%\n")
         
         f.write("\n")
+        
+        # Add max SMT statistics
+        if max_smt_times:
+            f.write("Max SMT Time Statistics:\n")
+            f.write("-" * 30 + "\n")
+            f.write(f"Tests with SMT data: {len(max_smt_times)}\n")
+            f.write(f"Average max SMT: {sum(max_smt_times) / len(max_smt_times):.3f}ms\n")
+            f.write(f"Min max SMT: {min(max_smt_times):.3f}ms\n")
+            f.write(f"Max max SMT: {max(max_smt_times):.3f}ms\n")
+            f.write("\n")
+        
         f.write("File Compatibility Matrix:\n")
         f.write("=" * 50 + "\n\n")
         
@@ -504,15 +559,19 @@ def save_results(
             
             if len(passing_configs) == all_configs:
                 status = "all configs"
-                status_color = "PASS"
             elif len(passing_configs) == 0:
                 status = "none"
-                status_color = "FAIL"
             else:
                 status = ", ".join(sorted(passing_configs))
-                status_color = "PARTIAL"
             
-            f.write(f"{file}: {status}\n")
+            # Add max smt info if available
+            max_smt_info = ""
+            if file in file_max_smt and file_max_smt[file]:
+                avg_smt = sum(file_max_smt[file]) / len(file_max_smt[file])
+                max_of_max = max(file_max_smt[file])
+                max_smt_info = f" (avg max smt: {avg_smt:.3f}ms, worst: {max_of_max:.3f}ms)"
+            
+            f.write(f"{file}: {status}{max_smt_info}\n")
     
     return summary_file, detailed_file, report_file
 
