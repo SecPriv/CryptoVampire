@@ -60,11 +60,11 @@ pub mod terms; // <- first for macros
 /// Contains utility functions and helpers.
 pub(crate) mod utils;
 /// Re-exports functions for initializing the engine and registering input handlers.
-pub use input::{init_engine, register};
+pub use input::{init_engine, mk_modules};
 /// Defines the configuration structures for the crate.
 mod configuration;
 /// Re-exports the main Configuration structure for the crate.
-pub use configuration::{Commands, Configuration};
+pub use configuration::{ Configuration, RunningMode};
 
 use crate::problem::{PAnalysis, RcRule};
 use crate::terms::Variable;
