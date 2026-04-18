@@ -3,10 +3,12 @@
 Parallel solver configuration tester for indistinguishability.
 
 Dynamically allocates cores based on solver requirements:
-- vampire-enabled configs: 16 cores (all)
+- vampire-enabled configs: all available cores (default: machine core count)
 - z3-only: 1 core
 - cvc5-only: 1 core
-- no-solvers: 0 cores (unlimited parallelism, capped at 16 for fairness)
+- no-solvers: 1 core (minimal, runs in parallel)
+
+The --cores argument is forwarded to indistinguishability for each test.
 
 Supports checkpointing and resume for interrupted runs.
 """
@@ -25,31 +27,39 @@ from enum import Enum
 import argparse
 import hashlib
 
-total_cores = os.cpu_count()
+# Discover available cores from the machine
+DEFAULT_TOTAL_CORES = os.cpu_count() or 4
 
 
 class SolverConfig:
     """Solver configuration with core requirements."""
     
-    CONFIGS = {
-        "no-solvers": {"env": {"DISABLE_VAMPIRE": "true", "DISABLE_Z3": "true", "DISABLE_CVC5": "true"}, "cores": 1},
-        "all-enabled": {"env": {}, "cores": total_cores},
-        "no-vampire": {"env": {"DISABLE_VAMPIRE": "true"}, "cores": 2},
-        "no-z3": {"env": {"DISABLE_Z3": "true"}, "cores": total_cores},  # vampire enabled
-        "no-cvc5": {"env": {"DISABLE_CVC5": "true"}, "cores": total_cores},  # vampire enabled
-        "vampire-only": {"env": {"DISABLE_Z3": "true", "DISABLE_CVC5": "true"}, "cores": total_cores},
-        "z3-only": {"env": {"DISABLE_VAMPIRE": "true", "DISABLE_CVC5": "true"}, "cores": 1},
-        "cvc5-only": {"env": {"DISABLE_VAMPIRE": "true", "DISABLE_Z3": "true"}, "cores": 1},
+    # Core allocation: vampire-enabled configs get all cores, others get 1
+    VAMPIRE_CONFIGS = {"all-enabled", "no-z3", "no-cvc5", "vampire-only"}
+    
+    BASE_CONFIGS = {
+        "no-solvers": {"env": {"DISABLE_VAMPIRE": "true", "DISABLE_Z3": "true", "DISABLE_CVC5": "true"}},
+        "all-enabled": {"env": {}},
+        "no-vampire": {"env": {"DISABLE_VAMPIRE": "true"}},
+        "no-z3": {"env": {"DISABLE_Z3": "true"}},  # vampire enabled
+        "no-cvc5": {"env": {"DISABLE_CVC5": "true"}},  # vampire enabled
+        "vampire-only": {"env": {"DISABLE_Z3": "true", "DISABLE_CVC5": "true"}},
+        "z3-only": {"env": {"DISABLE_VAMPIRE": "true", "DISABLE_CVC5": "true"}},
+        "cvc5-only": {"env": {"DISABLE_VAMPIRE": "true", "DISABLE_Z3": "true"}},
     }
     
     @classmethod
-    def get_cores(cls, config_name: str) -> int:
-        return cls.CONFIGS.get(config_name, {}).get("cores", 1)
+    def get_cores(cls, config_name: str, total_cores: int) -> int:
+        """Get core requirement for a config. Vampire configs use all cores, others use 1."""
+        if config_name in cls.VAMPIRE_CONFIGS:
+            return total_cores
+        else:
+            return 1
     
     @classmethod
     def get_env(cls, config_name: str) -> Dict[str, str]:
         base_env = os.environ.copy()
-        env_vars = cls.CONFIGS.get(config_name, {}).get("env", {})
+        env_vars = cls.BASE_CONFIGS.get(config_name, {}).get("env", {})
         base_env.update(env_vars)
         return base_env
 
@@ -91,10 +101,11 @@ class TestJob:
     """Represents a single test job."""
     config: str
     file: str
+    total_cores: int
     cores: int = field(init=False)
     
     def __post_init__(self):
-        self.cores = SolverConfig.get_cores(self.config)
+        self.cores = SolverConfig.get_cores(self.config, self.total_cores)
     
     @property
     def id(self) -> str:
@@ -218,8 +229,9 @@ class CheckpointManager:
 class ProgressBar:
     """Simple progress bar without external dependencies."""
     
-    def __init__(self, total: int):
+    def __init__(self, total: int, total_cores: int = 16):
         self.total = total
+        self.total_cores = total_cores
         self.current = 0
         self.start_time = datetime.now()
     
@@ -236,7 +248,7 @@ class ProgressBar:
         # Clear line and print progress
         sys.stdout.write('\r' + ' ' * 100 + '\r')  # Clear line
         sys.stdout.write(f'[{bar}] {completed}/{self.total} ({percent:.1f}%) | '
-                        f'Running: {running} | Cores: {cores_used}/16 | '
+                        f'Running: {running} | Cores: {cores_used}/{self.total_cores} | '
                         f'Elapsed: {elapsed_str}')
         sys.stdout.flush()
     
@@ -265,6 +277,7 @@ async def run_test(
     cmd = [
         str(binary),
         "--root-directory", str(script_dir),
+        "--cores", str(job.cores),
         "file", str(script_dir / job.file)
     ]
     
@@ -435,13 +448,14 @@ def generate_jobs(
     configs: List[str],
     files: List[str],
     checkpoint: Optional[CheckpointManager],
+    total_cores: int,
 ) -> List[TestJob]:
     """Generate all test jobs, filtering out completed ones."""
     
     jobs = []
     for config in configs:
         for file in files:
-            job = TestJob(config=config, file=file)
+            job = TestJob(config=config, file=file, total_cores=total_cores)
             if checkpoint is None or not checkpoint.is_completed(job.id):
                 jobs.append(job)
     
@@ -557,7 +571,7 @@ def save_results(
         
         for file in sorted(file_stats.keys()):
             passing_configs = file_stats[file]
-            all_configs = len(SolverConfig.CONFIGS)
+            all_configs = len(SolverConfig.BASE_CONFIGS)
             
             if len(passing_configs) == all_configs:
                 status = "all configs"
@@ -596,7 +610,7 @@ Examples:
     parser.add_argument(
         '--configs',
         nargs='+',
-        choices=list(SolverConfig.CONFIGS.keys()),
+        choices=list(SolverConfig.BASE_CONFIGS.keys()),
         help='Configurations to test (default: all)'
     )
     
@@ -616,8 +630,8 @@ Examples:
     parser.add_argument(
         '--cores',
         type=int,
-        default=total_cores,
-        help=f'Total available cores (default: {total_cores})'
+        default=DEFAULT_TOTAL_CORES,
+        help=f'Total available cores (default: {DEFAULT_TOTAL_CORES})'
     )
     
     parser.add_argument(
@@ -667,7 +681,7 @@ Examples:
     if args.configs:
         configs = args.configs
     else:
-        configs = list(SolverConfig.CONFIGS.keys())[1:]
+        configs = list(SolverConfig.BASE_CONFIGS.keys())
     
     # Validate files exist
     missing_files = []
@@ -701,14 +715,14 @@ Examples:
             sys.exit(1)
     
     # Generate jobs
-    jobs = generate_jobs(configs, files, checkpoint)
+    jobs = generate_jobs(configs, files, checkpoint, args.cores)
     
     # Show test plan
     print("Test Plan")
     print("=" * 60)
     print(f"Configurations: {len(configs)}")
     for config in configs:
-        cores = SolverConfig.get_cores(config)
+        cores = SolverConfig.get_cores(config, args.cores)
         print(f"  - {config}: {cores} cores")
     print(f"Files: {len(files)}")
     print(f"Total test combinations: {len(configs) * len(files)}")
@@ -734,7 +748,7 @@ Examples:
     
     # Run tests
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    progress_bar = ProgressBar(len(jobs) + (len(checkpoint.completed) if checkpoint else 0))
+    progress_bar = ProgressBar(len(jobs) + (len(checkpoint.completed) if checkpoint else 0), args.cores)
     
     print("Starting tests...")
     print()
