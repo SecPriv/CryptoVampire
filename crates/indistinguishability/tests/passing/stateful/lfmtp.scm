@@ -66,7 +66,7 @@
 ;; Run the indistinguishability check
 (if (run pbl p1 p2)
   (displayln "success")
-  (error "failed memory-cell-simple"))
+  (error "lfmtp"))
 
 (displayln (report.print-report (pbl.get-report pbl)))
-(save-results "memory-cell-simple" pbl)
+(save-results "lfmtp" pbl)
