@@ -25,17 +25,19 @@ from enum import Enum
 import argparse
 import hashlib
 
+total_cores = os.cpu_count()
+
 
 class SolverConfig:
     """Solver configuration with core requirements."""
     
     CONFIGS = {
         "no-solvers": {"env": {"DISABLE_VAMPIRE": "true", "DISABLE_Z3": "true", "DISABLE_CVC5": "true"}, "cores": 1},
-        "all-enabled": {"env": {}, "cores": os.cpu_count()},
+        "all-enabled": {"env": {}, "cores": total_cores},
         "no-vampire": {"env": {"DISABLE_VAMPIRE": "true"}, "cores": 2},
-        "no-z3": {"env": {"DISABLE_Z3": "true"}, "cores": os.cpu_count()},  # vampire enabled
-        "no-cvc5": {"env": {"DISABLE_CVC5": "true"}, "cores": os.cpu_count()},  # vampire enabled
-        "vampire-only": {"env": {"DISABLE_Z3": "true", "DISABLE_CVC5": "true"}, "cores": os.cpu_count()},
+        "no-z3": {"env": {"DISABLE_Z3": "true"}, "cores": total_cores},  # vampire enabled
+        "no-cvc5": {"env": {"DISABLE_CVC5": "true"}, "cores": total_cores},  # vampire enabled
+        "vampire-only": {"env": {"DISABLE_Z3": "true", "DISABLE_CVC5": "true"}, "cores": total_cores},
         "z3-only": {"env": {"DISABLE_VAMPIRE": "true", "DISABLE_CVC5": "true"}, "cores": 1},
         "cvc5-only": {"env": {"DISABLE_VAMPIRE": "true", "DISABLE_Z3": "true"}, "cores": 1},
     }
@@ -614,8 +616,8 @@ Examples:
     parser.add_argument(
         '--cores',
         type=int,
-        default=16,
-        help='Total available cores (default: 16)'
+        default=total_cores,
+        help=f'Total available cores (default: {total_cores})'
     )
     
     parser.add_argument(
