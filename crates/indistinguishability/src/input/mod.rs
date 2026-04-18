@@ -31,14 +31,22 @@ pub(crate) trait Registerable {
 }
 
 /// Registers all `Registerable` types with the given `BuiltInModule`.
-pub fn register() -> FxHashMap<String, BuiltInModule> {
+pub fn mk_modules(config: Configuration) -> FxHashMap<String, BuiltInModule> {
     let mut modules = FxHashMap::default();
 
     {
         let mut module = BuiltInModule::new(BASE_LL_MODULE);
         module
             .register_fn("println!", |x: SteelVal| println!("dbg: {x:?}"))
-            .register_native_fn_definition(STEEL_EXIT_DEFINITION);
+            .register_native_fn_definition(STEEL_EXIT_DEFINITION)
+            .register_value(
+                "cli-args",
+                IntoSteelVal::into_steelval(config.scheme_arguments.clone()).unwrap(),
+            )
+            .register_value(
+                "cli-config",
+                IntoSteelVal::into_steelval(config.clone()).unwrap(),
+            );
         modules.insert(BASE_LL_MODULE.into(), module);
     }
 
@@ -74,15 +82,9 @@ macro_rules! libraries {
 /// Initializes a new Steel `Engine` with the cryptovampire prelude and configuration.
 pub fn init_engine(config: Configuration) -> Engine {
     let mut engine = Engine::new();
-    engine.add_search_directory(config.root_directory.clone().unwrap());
+    engine.add_search_directory(config.scheme_root_directory.clone().unwrap());
 
-    let mut modules = register();
-    modules
-        .get_mut(BASE_LL_MODULE)
-        .unwrap()
-        .register_value("cli-config", IntoSteelVal::into_steelval(config).unwrap());
-
-    for (_, module) in modules {
+    for (_, module) in mk_modules(config) {
         engine.register_module(module);
     }
 

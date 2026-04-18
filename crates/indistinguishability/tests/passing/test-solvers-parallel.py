@@ -275,9 +275,9 @@ async def run_test(
     
     cmd = [
         str(binary),
-        "--root-directory", str(script_dir),
+        "--scheme-root-directory", str(script_dir),
         "--cores", str(job.cores),
-        "file", str(script_dir / job.file)
+        str(script_dir / job.file)
     ]
     
     env = SolverConfig.get_env(job.config)

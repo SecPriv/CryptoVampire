@@ -1,25 +1,8 @@
-use std::path::PathBuf;
+use std::{ffi::OsString, path::PathBuf};
 
 use clap::{Parser, Subcommand};
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
-
-#[derive(Debug, Steel, Clone, Subcommand, Default)]
-pub enum Commands {
-    /// Uses Steel's repl mode
-    Repl,
-    /// Reads from a file
-    File {
-        /// Path to the `scheme` file
-        ///
-        /// defaults to stdin
-        #[arg(value_name = "FILE")]
-        file: PathBuf,
-    },
-    /// Reads from stdin (default)
-    #[default]
-    Stdin,
-}
 
 /// A computationnally sound automated cryptographic protocol verifier based on the CCSA.
 ///
@@ -28,9 +11,13 @@ pub enum Commands {
 #[command(version, about, long_about = None)]
 #[command(propagate_version = true)]
 pub struct Configuration {
-    /// Default to reading a scheme file from stdin
-    #[command(subcommand)]
-    pub command: Option<Commands>,
+    /// Path to the `scheme` file (empty for stdin)
+    #[arg(value_name = "FILE", group = "input")]
+    pub file: Option<PathBuf>,
+
+    /// Enable repl mode
+    #[arg(long, short('i'), group = "input")]
+    pub interactive: bool,
 
     /// activate golgge trace for goals
     #[arg(long, short('T'), env)]
@@ -81,13 +68,6 @@ pub struct Configuration {
     #[arg(long, default_value_t =u64::MAX, env)]
     pub depth: u64,
 
-    /// don't include the steel prelude.
-    ///
-    /// ignore any other option. This will likely crash if the cryptovampire
-    /// prelude is included
-    #[arg(long)]
-    pub no_steel_prelude: bool,
-
     /// Guided search for publishable nonce
     ///
     /// The proof sometimes requires to "publish" messages that should be secret
@@ -131,6 +111,15 @@ pub struct Configuration {
     #[arg(long)]
     pub complete_and: bool,
 
+    /// Path to `vampire` executable
+    ///
+    /// Unless disable, will default to looking in the `PATH`
+    #[arg(long, env, group = "vampire")]
+    pub vampire_path: Option<PathBuf>,
+
+    #[arg(long, env, group = "vampire")]
+    pub disable_vampire: bool,
+
     /// Propagate to `vampire` `--forced_options`
     ///
     /// Options in the format `<opt1>=<val1>:<opt2>=<val2>:...:<optn>=<valN>`
@@ -139,29 +128,20 @@ pub struct Configuration {
     #[arg(long, env)]
     pub vampire_forced_option: Option<String>,
 
-    /// Path to `vampire` executable
-    ///
-    /// Unless disable, will default to looking in the `PATH`
-    #[arg(long, env, group = "vampire")]
-    pub vampire_path: Option<PathBuf>,
-
     /// Path to `z3` executable
     ///
     /// Unless disable, will default to looking in the `PATH`
     #[arg(long, env, group = "z3")]
     pub z3_path: Option<PathBuf>,
 
+    #[arg(long, env, group = "z3")]
+    pub disable_z3: bool,
+
     /// Path to `cvc5` executable
     ///
     /// Unless disable, will default to looking in the `PATH`
     #[arg(long, env, group = "cvc5")]
     pub cvc5_path: Option<PathBuf>,
-
-    #[arg(long, env, group = "vampire")]
-    pub disable_vampire: bool,
-
-    #[arg(long, env, group = "z3")]
-    pub disable_z3: bool,
 
     #[arg(long, env, group = "cvc5")]
     pub disable_cvc5: bool,
@@ -170,7 +150,11 @@ pub struct Configuration {
     ///
     /// Default to the
     #[arg(long, env)]
-    pub root_directory: Option<PathBuf>,
+    pub scheme_root_directory: Option<PathBuf>,
+
+    /// arguments to be passed on to scheme into the variable `cli-args`
+    #[arg(long, short('a'), env)]
+    pub scheme_arguments: Vec<String>
 }
 
 static NODE_LIMIT_DEFAULT: usize = 100000;
@@ -185,15 +169,14 @@ impl Default for Configuration {
             ..
         } = ::golgge::Config::default();
         Self {
-            // file: Default::default(),
-            command: None,
+            file: None,
+            interactive: false,
             egg_node_limit: NODE_LIMIT_DEFAULT,
             egg_timeout: time_limit,
             egg_iter_limit: iter_limit,
             smt_timeout: ::std::time::Duration::from_millis(151),
             keep_smt_files: cfg!(debug_assertions),
             depth: u64::MAX,
-            no_steel_prelude: false,
             cores: num_cpus::get() as u64,
             fa_limit: 4,
             enc_kp_limit: NONCE_GENERATION_DEFAULT,
@@ -212,7 +195,8 @@ impl Default for Configuration {
             disable_vampire: false,
             disable_z3: false,
             disable_cvc5: false,
-            root_directory: None,
+            scheme_root_directory: None,
+            scheme_arguments: vec![]
         }
     }
 }
@@ -237,8 +221,8 @@ impl Configuration {
             init.cvc5_path = which::which("cvc5").ok()
         }
 
-        if init.root_directory.is_none() {
-            init.root_directory = Some(if let Some(Commands::File { file }) = &init.command {
+        if init.scheme_root_directory.is_none() {
+            init.scheme_root_directory = Some(if let Some(file) = &init.file {
                 file.parent().unwrap().to_path_buf()
             } else {
                 ::std::env::current_dir().unwrap()
@@ -247,8 +231,26 @@ impl Configuration {
 
         init
     }
+
+    pub fn get_mode(&self) -> RunningMode {
+        if self.interactive {
+            RunningMode::Repl
+        } else if let Some(file) = &self.file {
+            RunningMode::File(file.clone())
+        } else {
+            RunningMode::Stdin
+        }
+    }
 }
 
 fn dstr(d: ::std::time::Duration) -> &'static str {
     String::leak(humantime::format_duration(d).to_string())
+}
+
+#[derive(Debug, Clone, Default)]
+pub enum RunningMode {
+    #[default]
+    Stdin,
+    File(PathBuf),
+    Repl
 }
