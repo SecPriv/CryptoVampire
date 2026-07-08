@@ -154,7 +154,14 @@ pub struct Configuration {
 
     /// arguments to be passed on to scheme into the variable `cli-args`
     #[arg(long, short('a'), env)]
-    pub scheme_arguments: Vec<String>
+    pub scheme_arguments: Vec<String>,
+
+    /// Directory to dump proven proof trees to (as JSON, one file per step)
+    ///
+    /// When set, each successfully proven step is dumped to
+    /// `<DIR>/<step>.json` via golgge's proof exporter.
+    #[arg(long, env)]
+    pub dump_proof: Option<PathBuf>,
 }
 
 static NODE_LIMIT_DEFAULT: usize = 100000;
@@ -196,7 +203,8 @@ impl Default for Configuration {
             disable_z3: false,
             disable_cvc5: false,
             scheme_root_directory: None,
-            scheme_arguments: vec![]
+            scheme_arguments: vec![],
+            dump_proof: None
         }
     }
 }

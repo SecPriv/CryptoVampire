@@ -409,6 +409,18 @@ impl<L: Language> WeightedAnalysis<L> for () {
     fn get_weight(_: &Self::Data) -> Self::Weight {}
 }
 
+/// Trivial `UserAnalysis`: no per-node data, no weights. The `egg::Analysis`
+/// work is done by wrapping it in [`GolggeAnalysis`].
+impl<L: Language> UserAnalysis<L> for () {
+    type Data = ();
+    fn make(_egraph: &mut EGraph<L, GolggeAnalysis<Self, L>>, _enode: &L) -> Self::Data {}
+    fn merge(&mut self, _a: &mut Self::Data, _b: Self::Data) -> DidMerge {
+        DidMerge(false, false)
+    }
+    type Weight = ();
+    fn get_weight(_data: &Self::Data) -> Self::Weight {}
+}
+
 impl<UA, L> WeightedAnalysis<L> for GolggeAnalysis<UA, L>
 where
     UA: UserAnalysis<L>,

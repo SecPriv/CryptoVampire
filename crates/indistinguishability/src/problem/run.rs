@@ -1,13 +1,13 @@
 use cryptovampire_smt::Smt;
 use egg::EGraph;
-use golgge::{GolggeAnalysis, Program, Rule};
+use golgge::{GolggeAnalysis, Program, Rule, SearchResult};
 use itertools::Itertools;
 use log::{info, trace};
 
 use super::*;
 use crate::libraries::{Libraries, Library};
 use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, NONCE, PRED, UNFOLD_MSG};
-use crate::{Configuration, Lang, libraries, rexp, smt};
+use crate::{Configuration, CVProgram, Lang, libraries, rexp, smt};
 
 impl Problem {
     /// Build a [Program] to use
@@ -146,6 +146,8 @@ impl Problem {
     fn run_solver_internal(&mut self, p1: usize, p2: usize) -> bool {
         let depth = self.config.depth;
         let base_smt_n = self.extra_smt().len();
+        // read before mk_program (which borrows self for the program's lifetime)
+        let dump_proof = self.config.dump_proof.clone();
 
         let p1f = self.protocols[p1].name().clone();
         let p2f = self.protocols[p2].name().clone();
@@ -193,13 +195,13 @@ impl Problem {
 
                 let mut pgrm = self.mk_program();
 
-                res &= pgrm
-                    .run_expr(
-                        rexp!((EQUIV EMPTY EMPTY (UNFOLD_MSG init p1f) (UNFOLD_MSG init p2f)))
-                            .as_egg_ground(),
-                        depth,
-                    )
-                    .as_bool();
+                let sr = pgrm.run_expr(
+                    rexp!((EQUIV EMPTY EMPTY (UNFOLD_MSG init p1f) (UNFOLD_MSG init p2f)))
+                        .as_egg_ground(),
+                    depth,
+                );
+                res &= sr.as_bool();
+                dump_step_proof(&pgrm, sr, &dump_proof, "00_init");
 
                 cache_hits += pgrm.get_memo_hit();
                 total += pgrm.get_num_calls();
@@ -218,6 +220,7 @@ impl Problem {
                 }
 
                 info!("running step {}", s.name);
+                let step_name = s.name.clone();
 
                 // we ensure we remove the extra stuff from the previous run
                 self.extra_smt_mut().truncate(base_smt_n);
@@ -255,7 +258,9 @@ impl Problem {
 
                 let mut pgrm = self.mk_program();
 
-                res &= pgrm.run_expr(goal, depth).as_bool();
+                let sr = pgrm.run_expr(goal, depth);
+                res &= sr.as_bool();
+                dump_step_proof(&pgrm, sr, &dump_proof, &format!("{idx:02}_{step_name}"));
 
                 cache_hits += pgrm.get_memo_hit();
                 total += pgrm.get_num_calls();
@@ -269,5 +274,33 @@ impl Problem {
         self.report.total_run_calls += total;
 
         res
+    }
+}
+
+/// Dumps the proof for a step to `<dump_dir>/<name>.json`, if `dump_dir` is set
+/// and the step was proven.
+///
+/// Uses the no-op renderer `()` — downstream payload metadata is intentionally
+/// not included; the proof tree structure carries the semantics.
+fn dump_step_proof(
+    pgrm: &CVProgram<'_>,
+    sr: SearchResult,
+    dump_dir: &Option<std::path::PathBuf>,
+    name: &str,
+) {
+    use std::path::Path;
+    let Some(dir) = dump_dir else { return };
+    let SearchResult::True(id) = sr else { return };
+    if let Err(e) = std::fs::create_dir_all(Path::new(dir)) {
+        log::warn!("failed to create proof dump directory {}: {e}", dir.display());
+        return;
+    }
+    let path = dir.join(format!("{name}.json"));
+    match std::fs::File::create(&path).and_then(|mut f| {
+        pgrm.dump_proof(id, &(), &mut f)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+    }) {
+        Ok(()) => trace!("dumped proof to {}", path.display()),
+        Err(e) => log::warn!("failed to dump proof to {}: {e}", path.display()),
     }
 }
