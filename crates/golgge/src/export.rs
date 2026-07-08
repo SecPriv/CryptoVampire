@@ -131,6 +131,35 @@ where
             .map_err(|e| anyhow::anyhow!("failed to serialize proof: {e}"))?;
         Ok(())
     }
+
+    /// Dumps the proof rooted at `id` as a self-contained, collapsible HTML
+    /// page to `writer`.
+    ///
+    /// The page is a single static `.html` file (no server, no external
+    /// dependencies): the proof tree is embedded as JSON and rendered with
+    /// native `<details>`/`<summary>` elements (collapsible branches and
+    /// terms, zero JS for the core), with a small vanilla-JS viewer for
+    /// expand-all/collapse-all.
+    pub fn dump_proof_html<RR, W>(
+        &self,
+        id: Id,
+        renderer: &RR,
+        mut writer: W,
+    ) -> anyhow::Result<()>
+    where
+        RR: ProofRenderer<R>,
+        W: std::io::Write,
+    {
+        let tree = self.export_proof(id, renderer)?;
+        let json = serde_json::to_string(&tree)
+            .map_err(|e| anyhow::anyhow!("failed to serialize proof: {e}"))?;
+        write!(
+            writer,
+            "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>Proof</title>\n<style>\n{CSS}\n</style>\n</head>\n<body>\n<div id=\"toolbar\">\n  <button onclick=\"expandAll()\">Expand all</button>\n  <button onclick=\"collapseAll()\">Collapse all</button>\n</div>\n<div id=\"proof\"></div>\n<script>\nconst PROOF = {json};\n{JS}\n</script>\n</body>\n</html>\n"
+        )
+        .map_err(|e| anyhow::anyhow!("failed to write html: {e}"))?;
+        Ok(())
+    }
 }
 
 /// Pretty-renders a language's terms for human-readable proof export.
@@ -276,6 +305,84 @@ pub const LATEX_DOCUMENT_PREAMBLE: &str = "\
 \\PreviewBorder=10pt
 \\begin{document}
 ";
+
+
+/// CSS for the HTML proof viewer. Graphviz-X11-ish: monospace, thin black
+/// box borders, white background, indented nesting.
+const CSS: &str = r#"
+:root { color-scheme: light; }
+body {
+  font-family: monospace;
+  font-size: 13px;
+  margin: 0;
+  padding: 8px;
+  background: white;
+  color: black;
+}
+#toolbar { margin-bottom: 8px; }
+#toolbar button {
+  font-family: inherit; font-size: 13px;
+  margin-right: 4px; padding: 2px 8px;
+}
+#proof { line-height: 1.4; }
+details {
+  border: 1px solid #888;
+  border-radius: 2px;
+  margin: 1px 0 1px 14px;
+  padding: 2px 4px;
+  background: white;
+}
+summary {
+  cursor: pointer;
+  list-style: none;
+  white-space: pre-wrap;
+}
+summary::-webkit-details-marker { display: none; }
+.node-id { color: #0066cc; font-weight: bold; }
+.rule   { font-weight: bold; }
+.term {
+  margin: 2px 0 2px 14px;
+  padding: 2px 4px;
+  border-left: 2px solid #ccc;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.children { margin-top: 2px; }
+"#;
+
+/// Vanilla-JS viewer: renders PROOF (embedded JSON) as nested <details>.
+///
+/// Collapsed: shows [N0] rule-name. Expanded: shows the goal term inline in a
+/// <div>, plus children as nested <details>. Expand-all/collapse-all via buttons.
+const JS: &str = r#"
+function renderNode(node) {
+  const d = document.createElement('details');
+  const s = document.createElement('summary');
+  const id = document.createElement('span');
+  id.className = 'node-id';
+  id.textContent = '[N' + node.id + ']';
+  const rule = document.createElement('span');
+  rule.className = 'rule';
+  rule.textContent = ' ' + node.rule;
+  s.appendChild(id); s.appendChild(rule);
+  d.appendChild(s);
+  const term = document.createElement('div');
+  term.className = 'term';
+  term.textContent = node.goal;
+  d.appendChild(term);
+  if (node.children && node.children.length) {
+    const c = document.createElement('div');
+    c.className = 'children';
+    node.children.forEach(ch => c.appendChild(renderNode(ch)));
+    d.appendChild(c);
+  }
+  return d;
+}
+const root = renderNode(PROOF);
+document.getElementById('proof').appendChild(root);
+function expandAll()   { document.querySelectorAll('details').forEach(d => d.open = true); }
+function collapseAll() { document.querySelectorAll('details').forEach(d => d.open = false); }
+"#;
 
 /// Truncates `s` to at most `max` chars, appending `…` if truncated.
 fn truncate_str(s: &str, max: usize) -> String {
@@ -571,10 +678,43 @@ mod tests {
         assert_eq!(opens, closes, "unbalanced forest brackets: {opens} open vs {closes} close");
     }
 
-    // Small helpers so the dot/latex test reads cleanly; not part of the API.
+    #[test]
+    fn html_dumps_a_page() {
+        let (mut prgm, parent, child) = mk_program();
+        use crate::analysis::erase;
+        prgm.egraph_mut()[child]
+            .data
+            .memo_mut()
+            .set_proven(erase(ProofItem {
+                rule: TRule("axiom"),
+                ids: vec![],
+                payload: None,
+            }));
+        prgm.egraph_mut()[parent]
+            .data
+            .memo_mut()
+            .set_proven(erase(ProofItem {
+                rule: TRule("step"),
+                ids: vec![child],
+                payload: None,
+            }));
+
+        let html = prgm.dump_proof_html_to_string(parent);
+        assert!(html.starts_with("<!DOCTYPE html>"));
+        assert!(html.contains("<style>"));
+        assert!(html.contains("<script>"));
+        // the JSON carries the proof; the JS renders it as <details> at runtime
+        assert!(html.contains("const PROOF ="));
+        assert!(html.contains("renderNode"));
+        assert!(html.contains("step"));
+        assert!(html.contains("leaf"));
+    }
+
+    // Small helpers so the dot/latex/html test reads cleanly; not part of the API.
     trait TestExt {
         fn dump_proof_dot_to_string(&self, id: Id) -> String;
         fn dump_proof_latex_to_string(&self, id: Id) -> String;
+        fn dump_proof_html_to_string(&self, id: Id) -> String;
     }
     impl TestExt for Program<SymbolLang, GolggeAnalysis<(), SymbolLang>, TRule> {
         fn dump_proof_dot_to_string(&self, id: Id) -> String {
@@ -584,6 +724,11 @@ mod tests {
         fn dump_proof_latex_to_string(&self, id: Id) -> String {
             let tree = self.export_proof_pretty(id, &()).unwrap();
             tree.to_latex()
+        }
+        fn dump_proof_html_to_string(&self, id: Id) -> String {
+            let mut buf = Vec::new();
+            self.dump_proof_html(id, &(), &mut buf).unwrap();
+            String::from_utf8(buf).unwrap()
         }
     }
 }

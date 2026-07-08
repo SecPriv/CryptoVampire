@@ -179,6 +179,8 @@ pub enum ProofDumpFormat {
     Dot,
     /// LaTeX forest tree.
     Latex,
+    /// Self-contained, collapsible HTML page.
+    Html,
 }
 
 impl std::fmt::Display for ProofDumpFormat {
@@ -187,6 +189,7 @@ impl std::fmt::Display for ProofDumpFormat {
             Self::Json => "json",
             Self::Dot => "dot",
             Self::Latex => "latex",
+            Self::Html => "html",
         })
     }
 }

@@ -323,6 +323,7 @@ fn dump_step_proof(
         ProofDumpFormat::Json => "json",
         ProofDumpFormat::Dot => "dot",
         ProofDumpFormat::Latex => "tex",
+        ProofDumpFormat::Html => "html",
     };
     let fname = format!("{name}.{ext}");
     let path = dir.join(&fname);
@@ -331,6 +332,7 @@ fn dump_step_proof(
             ProofDumpFormat::Json => pgrm.dump_proof(id, &(), &mut f),
             ProofDumpFormat::Dot => pgrm.dump_proof_dot(id, &(), &mut f),
             ProofDumpFormat::Latex => pgrm.dump_proof_latex(id, &(), &mut f),
+            ProofDumpFormat::Html => pgrm.dump_proof_html(id, &(), &mut f),
         };
         r.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
     });
