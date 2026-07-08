@@ -365,10 +365,9 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for PrfVampireRule {
                 k,
             };
 
-            let result = search
-                .search_id_timepoint(prgm, &self.exec, *subst.get(P.as_egg()).unwrap(), time, hyp)
-                .unwrap();
-            ereturn_if!(result, Dependancy::axiom());
+            let dep = search
+                .search_id_timepoint(prgm, &self.exec, *subst.get(P.as_egg()).unwrap(), time, hyp);
+            ereturn_if!(dep.is_axioms(), dep);
         }
 
         Dependancy::impossible()
@@ -421,10 +420,9 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for PrfMemoryCellRule {
             };
 
             let mem_cell_term = rexp!((MACRO_MEMORY_CELL #cell (PRED #time) #p));
-            let result = search
-                .search_term(prgm, &self.exec, mem_cell_term, hyp)
-                .unwrap();
-            ereturn_if!(result, Dependancy::axiom());
+            let dep = search
+                .search_term(prgm, &self.exec, mem_cell_term, hyp);
+            ereturn_if!(dep.is_axioms(), dep);
         }
 
         Dependancy::impossible()

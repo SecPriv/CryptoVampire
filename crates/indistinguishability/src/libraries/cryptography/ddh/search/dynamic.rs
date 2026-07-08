@@ -54,16 +54,15 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SearchRule {
                     .map(|id| Formula::try_from_id(prgm.egraph(), *id).unwrap());
                 let p = *subst.get(PTCL.as_egg()).unwrap();
 
-                let result = SearchK {
+                let dep = SearchK {
                     ddh: *ddh,
                     g: g.clone(),
                     exp: exp.clone(),
                     a,
                     b,
                 }
-                .search_id_timepoint(prgm, exec, p, t, h)
-                .unwrap();
-                ereturn_if!(result, Dependancy::axiom());
+                .search_id_timepoint(prgm, exec, p, t, h);
+                ereturn_if!(dep.is_axioms(), dep);
             }
         }
         Dependancy::impossible()
@@ -178,8 +177,8 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for SearchRuleMem {
                 };
 
                 let mem_cell_term = rexp!((MACRO_MEMORY_CELL #cell (PRED #t) #p));
-                let result = search.search_term(prgm, exec, mem_cell_term, h).unwrap();
-                ereturn_if!(result, Dependancy::axiom());
+                let dep = search.search_term(prgm, exec, mem_cell_term, h);
+                ereturn_if!(dep.is_axioms(), dep);
             }
         }
         Dependancy::impossible()

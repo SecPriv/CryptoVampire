@@ -52,12 +52,11 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for FreshNonce {
                     .map(|id| Formula::try_from_id(prgm.egraph(), *id).unwrap());
                 let p = *subst.get(P.as_egg()).unwrap();
 
-                let result = Nonce::builder()
+                let dep = Nonce::builder()
                     .content(n)
                     .build()
-                    .search_id_timepoint(prgm, &self.exec, p, t, h)
-                    .unwrap();
-                ereturn_if!(result, Dependancy::axiom());
+                    .search_id_timepoint(prgm, &self.exec, p, t, h);
+                ereturn_if!(dep.is_axioms(), dep);
             }
         }
 
@@ -70,10 +69,9 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for FreshNonce {
 
                 let nonce_searcher = Nonce::builder().content(n).build();
                 let mem_cell_term = rexp!((MACRO_MEMORY_CELL #cell (PRED #t) #p));
-                let result = nonce_searcher
-                    .search_term(prgm, &self.exec, mem_cell_term, h)
-                    .unwrap();
-                ereturn_if!(result, Dependancy::axiom());
+                let dep = nonce_searcher
+                    .search_term(prgm, &self.exec, mem_cell_term, h);
+                ereturn_if!(dep.is_axioms(), dep);
             }
         }
 

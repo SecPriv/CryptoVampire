@@ -348,6 +348,14 @@ summary::-webkit-details-marker { display: none; }
   word-break: break-all;
 }
 .children { margin-top: 2px; }
+.meta {
+  margin: 2px 0 2px 14px;
+  padding: 2px 4px;
+  border-left: 2px solid #888;
+}
+.meta-title { font-style: italic; }
+.smt-file { white-space: pre-wrap; word-break: break-all; }
+.solver { font-weight: bold; }
 "#;
 
 /// Vanilla-JS viewer: renders PROOF (embedded JSON) as nested <details>.
@@ -370,6 +378,7 @@ function renderNode(node) {
   term.className = 'term';
   term.textContent = node.goal;
   d.appendChild(term);
+  if (node.meta) { d.appendChild(renderMeta(node.meta)); }
   if (node.children && node.children.length) {
     const c = document.createElement('div');
     c.className = 'children';
@@ -382,6 +391,30 @@ const root = renderNode(PROOF);
 document.getElementById('proof').appendChild(root);
 function expandAll()   { document.querySelectorAll('details').forEach(d => d.open = true); }
 function collapseAll() { document.querySelectorAll('details').forEach(d => d.open = false); }
+function renderMeta(meta) {
+  const wrap = document.createElement('div');
+  wrap.className = 'meta';
+  const title = document.createElement('div');
+  title.className = 'meta-title';
+  title.textContent = 'solver artifacts:';
+  wrap.appendChild(title);
+  if (meta.smt_files) {
+    meta.smt_files.forEach(f => {
+      const row = document.createElement('div');
+      row.className = 'smt-file';
+      const solver = document.createElement('span');
+      solver.className = 'solver';
+      solver.textContent = f.solver + ': ';
+      row.appendChild(solver);
+      const a = document.createElement('a');
+      a.href = 'file://' + f.path;
+      a.textContent = f.path;
+      row.appendChild(a);
+      wrap.appendChild(row);
+    });
+  }
+  return wrap;
+}
 "#;
 
 /// Truncates `s` to at most `max` chars, appending `…` if truncated.

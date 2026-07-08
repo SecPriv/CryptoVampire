@@ -1,9 +1,11 @@
+use std::any::Any;
 use std::fmt::Debug;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::Duration;
 
 use cryptovampire_smt::SolverKind;
-use golgge::Dependancy;
+use golgge::{Dependancy, Payload};
 use itertools::{Itertools, zip_eq};
 use tempfile::NamedTempFile;
 use tokio::fs::File;
@@ -27,6 +29,18 @@ pub(crate) mod file_builder;
 
 mod runner_spliter;
 pub use runner_spliter::RunnerSplitter;
+
+/// Solver artifacts attached to a proof node's payload when SMT solvers were
+/// invoked, so the proof exporter can link the SMT files.
+///
+/// Only populated when `keep_smt_files` is set (otherwise the temp files are
+/// deleted on drop and the paths would dangle).
+#[derive(Debug)]
+pub struct SmtArtifacts {
+    /// `(solver_name, smt_file_path)` per kept SMT file, collected across all
+    /// queries in the call.
+    pub files: Vec<(String, PathBuf)>,
+}
 
 // /// A trait for SMT solvers.
 trait Runner: Debug {
@@ -151,6 +165,9 @@ impl SmtRunner {
             let mut using_cache = false;
 
             let mut sink = FileSink::new(pbl, this).unwrap();
+            // SMT file paths collected per query (only when kept on disk), to
+            // be attached to the returned Dependancy's payload for proof export.
+            let mut collected_smt_files: Vec<(String, PathBuf)> = Vec::new();
 
             for query in queries {
                 match query.try_evaluate() {
@@ -191,6 +208,20 @@ impl SmtRunner {
                     for f in sink.files.as_ref() {
                         println!("saved smt file to: {:?}", f.path())
                     }
+                    // collect (solver, path) for proof export. Order matches
+                    // RunnerSplitter's array order (vampire, cvc5, z3).
+                    let names = sink.files.names();
+                    let files = sink.files.as_ref();
+                    for (solver, file) in [
+                        (names.vampire, files.vampire),
+                        (names.cvc5, files.cvc5),
+                        (names.z3, files.z3),
+                    ] {
+                        if let (Some(solver), Some(file)) = (solver, file) {
+                            collected_smt_files
+                                .push((solver.to_string(), file.path().to_path_buf()));
+                        }
+                    }
                 }
 
                 if !this.run_all(pbl, &sink).unwrap() {
@@ -202,7 +233,14 @@ impl SmtRunner {
 
             drop(lock);
 
-            Dependancy::axiom()
+            let mut dep = Dependancy::axiom();
+            if !collected_smt_files.is_empty() {
+                dep.payload =
+                    Some(Arc::new(SmtArtifacts {
+                        files: collected_smt_files,
+                    }) as Payload);
+            }
+            dep
         }
     }
 }

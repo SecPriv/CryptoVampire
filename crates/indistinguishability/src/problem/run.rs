@@ -299,11 +299,12 @@ impl Problem {
     }
 }
 
-/// Dumps the proof for a step to `<dump_dir>/<name>.json`, if `dump_dir` is set
+/// Dumps the proof for a step to `<dump_dir>/<name>.<ext>`, if `dump_dir` is set
 /// and the step was proven.
 ///
-/// Uses the no-op renderer `()` — downstream payload metadata is intentionally
-/// not included; the proof tree structure carries the semantics.
+/// Uses [`CvProofRenderer`] to render SMT solver artifacts (kept SMT file paths)
+/// into the proof tree's metadata; the rest of the proof tree structure carries
+/// the semantics.
 fn dump_step_proof(
     pgrm: &CVProgram<'_>,
     sr: SearchResult,
@@ -319,6 +320,7 @@ fn dump_step_proof(
         log::warn!("failed to create proof dump directory {}: {e}", dir.display());
         return None;
     }
+    let renderer = CvProofRenderer;
     let ext = match format {
         ProofDumpFormat::Json => "json",
         ProofDumpFormat::Dot => "dot",
@@ -329,10 +331,10 @@ fn dump_step_proof(
     let path = dir.join(&fname);
     let result = std::fs::File::create(&path).and_then(|mut f| {
         let r = match format {
-            ProofDumpFormat::Json => pgrm.dump_proof(id, &(), &mut f),
-            ProofDumpFormat::Dot => pgrm.dump_proof_dot(id, &(), &mut f),
-            ProofDumpFormat::Latex => pgrm.dump_proof_latex(id, &(), &mut f),
-            ProofDumpFormat::Html => pgrm.dump_proof_html(id, &(), &mut f),
+            ProofDumpFormat::Json => pgrm.dump_proof(id, &renderer, &mut f),
+            ProofDumpFormat::Dot => pgrm.dump_proof_dot(id, &renderer, &mut f),
+            ProofDumpFormat::Latex => pgrm.dump_proof_latex(id, &renderer, &mut f),
+            ProofDumpFormat::Html => pgrm.dump_proof_html(id, &renderer, &mut f),
         };
         r.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
     });
@@ -345,5 +347,24 @@ fn dump_step_proof(
             log::warn!("failed to dump proof to {}: {e}", path.display());
             None
         }
+    }
+}
+
+/// Renders a [`ProofItem`]'s SMT solver artifacts into JSON metadata.
+///
+/// Downcasts the type-erased payload to [`SmtArtifacts`] (set by the SMT runner
+/// when `keep_smt_files` is enabled) and emits the kept SMT file paths, so the
+/// proof exporter can link them.
+struct CvProofRenderer;
+
+impl golgge::ProofRenderer<RcRule> for CvProofRenderer {
+    fn render(&self, item: &golgge::ProofItem<RcRule>) -> Option<serde_json::Value> {
+        let payload = item.payload.as_ref()?;
+        let artifacts = payload.downcast_ref::<crate::runners::SmtArtifacts>()?;
+        Some(serde_json::json!({
+            "smt_files": artifacts.files.iter().map(|(solver, path)| {
+                serde_json::json!({ "solver": solver, "path": path.to_string_lossy() })
+            }).collect::<Vec<_>>(),
+        }))
     }
 }

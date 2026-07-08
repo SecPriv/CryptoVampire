@@ -6,6 +6,7 @@ use itertools::{Itertools, izip};
 use logic_formula::{AsFormula, Destructed, HeadSk};
 use rustc_hash::{FxHashMap, FxHashSet};
 use utils::{ereturn_cf, ereturn_if, implvec};
+use golgge::Dependancy;
 
 use crate::libraries::memory_cells;
 use crate::libraries::utils::{
@@ -523,23 +524,20 @@ pub trait SyntaxSearcher {
         ptcl: Id,
         time: Formula,
         hyp: Formula,
-    ) -> Option<bool> {
-        let ptcl = get_protocol(prgm.egraph(), ptcl)?;
+    ) -> Dependancy {
+        let ptcl = match get_protocol(prgm.egraph(), ptcl) {
+            Some(p) => p,
+            None => return Dependancy::impossible(),
+        };
         let queries = self
             .search_timepoint(prgm.egraph().analysis.pbl(), ptcl, time, hyp)
             .collect_vec();
         let pbl = prgm.egraph_mut().analysis.pbl_mut();
-        let result = exec.iter_run_to_dependancy(pbl, queries).is_axioms();
+        // return the Dependancy directly so its SMT-artifacts payload is
+        // preserved for proof export (is_axioms() would discard it).
+        let dep = exec.iter_run_to_dependancy(pbl, queries);
         pbl.clear_temp_quantifiers();
-
-        // pbl.find_temp_quantifiers(&queries);
-
-        // let result = queries.into_iter().all(|query| {
-        //     let query = query.as_smt(*pbl).unwrap();
-        //     exec.run_to_dependancy(pbl, query).is_axioms()
-        // });
-        // pbl.clear_temp_quantifiers();
-        Some(result)
+        dep
     }
 
     fn search_term<'a, 'b, 'c>(
@@ -548,7 +546,7 @@ pub trait SyntaxSearcher {
         exec: &'b SmtRunner,
         term: Formula,
         hyp: Formula,
-    ) -> Option<bool> {
+    ) -> Dependancy {
         let builder = RBFormula::<Self>::builder().condition(hyp).build();
         let pbl = prgm.egraph_mut().analysis.pbl();
         self.inner_search_formula(pbl, &builder, term);
@@ -557,9 +555,9 @@ pub trait SyntaxSearcher {
         let queries = query.into_iter_conjunction();
         let _ = pbl;
         let pbl = prgm.egraph_mut().analysis.pbl_mut();
-        let result = exec.iter_run_to_dependancy(pbl, queries).is_axioms();
+        let dep = exec.iter_run_to_dependancy(pbl, queries);
         pbl.clear_temp_quantifiers();
-        Some(result)
+        dep
     }
 }
 
