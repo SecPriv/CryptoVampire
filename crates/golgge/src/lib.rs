@@ -24,7 +24,10 @@ pub use weight::MWeight;
 
 /// Provides analysis capabilities for e-graphs.
 mod analysis;
-pub use analysis::{MAnalysis, WeightedAnalysis};
+pub use analysis::{
+    BeginResult, GData, GolggeAnalysis, HasMemo, MAnalysis, MemoCell, MemoKind, UserAnalysis,
+    WeightedAnalysis,
+};
 pub use program::Program;
 /// Defines structures for representing e-graph programs.
 mod program;
@@ -47,16 +50,6 @@ pub trait MaybeSyncSend {}
 
 #[cfg(not(feature = "sync"))]
 impl<T> MaybeSyncSend for T {}
-
-fn canonicalize_id<L: Language, N: Analysis<L>>(id: Id, egraph: &EGraph<L, N>) -> Id {
-    let nid = egraph.find(id);
-
-    #[cfg(debug_assertions)]
-    if nid != id {
-        println!("mapped {id:} to {nid:}")
-    }
-    nid
-}
 
 /// canonicalize `id`, returns `true` if the value changed
 #[inline]

@@ -13,7 +13,7 @@ use crate::{Configuration, MSmt};
 
 mod analysis;
 pub(crate) use analysis::CVRuleTrait;
-pub use analysis::{PAnalysis, PRule, RcRule};
+pub use analysis::{PAnalysis, PInner, PRule, RcRule};
 
 mod state;
 pub use state::{ProblemState, ProblemStateLib};

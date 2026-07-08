@@ -1,6 +1,6 @@
 use cryptovampire_smt::Smt;
 use egg::EGraph;
-use golgge::{Program, Rule};
+use golgge::{GolggeAnalysis, Program, Rule};
 use itertools::Itertools;
 use log::{info, trace};
 
@@ -50,7 +50,7 @@ impl Problem {
             .eq_rules(eq_rules)
             .rules(rules)
             .config(golgge_config)
-            .egraph(EGraph::new(PAnalysis::builder().pbl(self).build()).with_explanations_enabled())
+            .egraph(EGraph::new(GolggeAnalysis::new(PInner::builder().pbl(self).build())).with_explanations_enabled())
             .call();
 
         Libraries::init_egraph(prgm.egraph_mut());

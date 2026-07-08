@@ -1,40 +1,29 @@
-#[cfg(feature = "sync")]
-use std::borrow::Borrow;
-use std::cell::RefCell;
-use std::collections::{HashMap, hash_map};
 use std::fmt::{Debug, Display};
-#[cfg(feature = "sync")]
-use std::ops::DerefMut;
-use std::ops::{ControlFlow, Deref};
 use std::path::PathBuf;
-use std::rc::Rc;
-use std::str::FromStr;
-#[cfg(feature = "sync")]
-use std::sync::{Arc, RwLock};
-use std::{default, result};
+// use std::str::FromStr;
 
 use anyhow::{Context, anyhow, ensure};
-use bon::{bon, builder};
+use bon::bon;
 use colored::{ColoredString, Colorize};
 // use eclassmap::{ECallMap, Entry};
 use egg::{
     Analysis, EGraph, FromOp, Id, Language, MultiPattern, Pattern, RecExpr, Report, Rewrite,
     Runner, StopReason,
 };
-use itertools::{Either, Itertools};
+// use itertools::{Either, Itertools};
+use itertools::Itertools;
 use log::trace;
-use rustc_hash::FxHashMap;
 use serde::Serialize;
 use utils::implvec;
 
-use crate::proof::{Proof, SearchResult};
+use crate::proof::SearchResult;
 // use crate::rule::PlOrRw;
 use crate::{
-    Config, DRule, DebugLevel, Dependancy, Flags, Fresh, ProofItem, Rule, WeightedAnalysis,
-    canonicalize_id, canonicalize_id_mut,
+    BeginResult, Config, DRule, DebugLevel, Dependancy, Flags, Fresh, HasMemo, MemoKind,
+    ProofItem, Rule, canonicalize_id_mut,
 };
+use crate::analysis::erase;
 
-/// A program that manages an `egg::EGraph` and a set of rules.
 /// A program that manages an `egg::EGraph` and a set of rules.
 #[non_exhaustive]
 pub struct Program<L: Language, N: Analysis<L>, R = DRule<L, N>> {
@@ -44,8 +33,6 @@ pub struct Program<L: Language, N: Analysis<L>, R = DRule<L, N>> {
     eq_rules: Vec<Rewrite<L, N>>,
     /// Custom rules.
     rules: Vec<R>,
-    /// Memoization table for proof attempts.
-    memo: FxHashMap<Id, MemoStatus<R>>,
     /// Indicates if the program is in a clean state.
     clean: bool,
     /// Configuration for the program.
@@ -57,53 +44,6 @@ pub struct Program<L: Language, N: Analysis<L>, R = DRule<L, N>> {
     /// number of times `run` was called
     total_calls: u64,
 }
-
-/// Represents the status of a proof attempt for a given e-class.
-#[derive(Clone, Default)]
-#[allow(dead_code)]
-pub(crate) enum Status<R> {
-    /// The proof attempt succeeded, containing the proof item.
-    True(ProofItem<R>),
-    /// The proof attempt failed.
-    False,
-    /// The proof attempt is currently in progress.
-    #[default]
-    InProgress,
-}
-
-pub trait Rebuildable<L: Language, N: Analysis<L>> {
-    #[allow(unused)]
-    fn rebuild(&mut self, egraph: &EGraph<L, N>) {}
-}
-
-impl<L: Language, N: Analysis<L>, R> Rebuildable<L, N> for Status<R> {
-    fn rebuild(&mut self, egraph: &egg::EGraph<L, N>) {
-        if let Self::True(pitem) = self {
-            pitem.rebuild(egraph);
-        }
-    }
-}
-
-/// A wrapper around `Rc<RefCell<Status<L, N>>>` for memoization.
-/// A wrapper around `Rc<RefCell<Status<L, N>>>` for memoization.
-#[cfg(feature = "sync")]
-pub(crate) struct MemoStatus<R>(Arc<RwLock<Status<R>>>);
-#[cfg(not(feature = "sync"))]
-pub(crate) struct MemoStatus<R>(Rc<RefCell<Status<R>>>);
-
-impl<L: Language, N: Analysis<L>, R> Rebuildable<L, N> for MemoStatus<R> {
-    fn rebuild(&mut self, egraph: &egg::EGraph<L, N>) {
-        self.0.write().unwrap().rebuild(egraph);
-    }
-}
-
-impl<R> PartialEq for MemoStatus<R> {
-    fn eq(&self, other: &Self) -> bool {
-        Arc::ptr_eq(&self.0, &other.0)
-    }
-}
-
-impl<R> Eq for MemoStatus<R> {}
 
 #[bon]
 impl<L, N, R> Program<L, N, R>
@@ -124,7 +64,6 @@ where
             egraph: Some(egraph),
             eq_rules,
             rules: rules.into_iter().map_into().collect(),
-            memo: Default::default(),
             clean: true,
             config,
             num_memo_hits: 0,
@@ -157,12 +96,6 @@ where
     #[inline]
     pub fn is_memo_enabled(&self) -> bool {
         self.config.flags.contains(Flags::MEMOIZATION)
-    }
-
-    /// Resets the memoization table.
-    #[deprecated]
-    pub fn reset_memo(&mut self) {
-        self.memo = Default::default();
     }
 
     /// adds `e` to the egraph
@@ -211,10 +144,6 @@ where
             egraph.with_explanations_disabled()
         };
         self.egraph = Some(egraph)
-    }
-
-    fn memo_mut(&mut self) -> &mut FxHashMap<Id, MemoStatus<R>> {
-        &mut self.memo
     }
 
     /// Returns a slice of the equality rewrite rules.
@@ -275,12 +204,19 @@ where
     pub fn get_hit_rate(&self) -> f64 {
         (self.num_memo_hits as f64) / (self.total_calls as f64)
     }
+}
 
+/// Forgets the memoization result of a single e-class, resetting its cell back
+/// to `Unknown`.
+impl<L, N, R> Program<L, N, R>
+where
+    L: Language,
+    N: Analysis<L>,
+    N::Data: HasMemo,
+{
     pub fn forget(&mut self, id: Id) {
-        if let hash_map::Entry::Occupied(occupied_entry) = self.memo.entry(id)
-            && !occupied_entry.get().is_in_progress()
-        {
-            occupied_entry.remove();
+        if self.is_memo_enabled() {
+            self.egraph_mut()[id].data.memo_mut().clear();
         }
     }
 }
@@ -289,49 +225,6 @@ fn print_bool(b: bool) -> ColoredString {
     match b {
         true => "true".green(),
         false => "false".red(),
-    }
-}
-
-#[bon]
-impl<L, N, R> Program<L, N, R>
-where
-    L: Language + Display,
-    N: Analysis<L>,
-    R: Rule<L, N, R> + Clone,
-{
-    #[builder]
-    fn check_and_set_memo(
-        &mut self,
-        goal: egg::Id,
-        status: Status<R>,
-        #[builder(default = false)] log: bool,
-        #[builder(default = false)] track_hits: bool,
-    ) -> Option<bool> {
-        assert!(self.is_memo_enabled());
-
-        use std::collections::hash_map::Entry;
-        match self.memo_mut().entry(goal) {
-            Entry::Occupied(occupied_entry) if occupied_entry.get().is_in_progress() => {
-                if log {
-                    mtrace!(self, RULE, "⏩ skipping {goal:}: {}", "loop".red());
-                }
-                Some(false)
-            }
-            Entry::Occupied(occupied_entry) => {
-                let res = occupied_entry.get().as_bool();
-                if track_hits {
-                    self.num_memo_hits += 1;
-                }
-                if log {
-                    mtrace!(self, RULE, "⏩ skipping {goal:}: {}", print_bool(res));
-                }
-                Some(res)
-            }
-            Entry::Vacant(vacant_entry) => {
-                vacant_entry.insert(status.into());
-                None
-            }
-        }
     }
 }
 
@@ -367,7 +260,15 @@ where
         }
         DP(self)
     }
+}
 
+impl<L, N, R> Program<L, N, R>
+where
+    L: Language + Display,
+    N: Analysis<L>,
+    N::Data: HasMemo,
+    R: Rule<L, N, R> + Clone + 'static + Send + Sync,
+{
     /// Try to prove `goal` going a most `depth` deep
     pub fn run_expr(&mut self, goal: RecExpr<L>, depth: u64) -> SearchResult {
         mtrace!(self, RULE, "{:?}", self.as_debug_rules());
@@ -383,7 +284,6 @@ where
     /// same as [Self::run_expr] but starting from an [Id] in the [EGraph]
     pub fn run(&mut self, base_goal: egg::Id, fuel: u64) -> bool {
         self.total_calls += 1;
-        let ndepth = u64::MAX - fuel; // FIXME - why is this not used ?
         let gtmp = if self.is_tracing_enabled(DebugLevel::RULE) {
             let g = self.egraph().id_to_expr(base_goal);
             println!("({base_goal:}) selecting {}", g.pretty(80));
@@ -406,27 +306,18 @@ where
             self.check_proof_consistency().unwrap();
 
             let canonicalized = canonicalize_id_mut(&mut goal, self.egraph());
-            // check memoization
-            if self.is_memo_enabled()
-                && (canonicalized || i == 0)
-                && let Some(res) = self
-                    .check_and_set_memo()
-                    .goal(goal)
-                    .status(Status::InProgress)
-                    .log(true)
-                    .track_hits(true)
-                    .call()
-            {
-                // yes side effects ^^', this is here because I don't
-                // want break out of a loop that came from a rewrite mid proof
-                if i == 0 {
-                    return res;
-                } else {
-                    mtrace!(self, RULE, "not skipping !!!!!")
+            // check / start memoization
+            if self.is_memo_enabled() && (canonicalized || i == 0) {
+                if let Some(res) = self.memo_check_or_start(goal) {
+                    // yes side effects ^^', this is here because I don't
+                    // want break out of a loop that came from a rewrite mid proof
+                    if i == 0 {
+                        return res;
+                    } else {
+                        mtrace!(self, RULE, "not skipping !!!!!")
+                    }
                 }
             }
-
-            self.check_memo_goal(goal);
 
             let Some(r) = self.rules.get(i).cloned() else {
                 break None; // no more path to a proof
@@ -442,15 +333,11 @@ where
             }
 
             let cut = search.cut();
-            self.check_memo_goal(goal);
             self.rebuild();
-            self.check_memo_goal(goal);
 
             if self.is_tracing_enabled(DebugLevel::RULE) && !search.is_impossible() {
                 self.trace_goal_status(goal, &search);
             }
-
-            self.check_memo_goal(goal);
 
             let ret = search
                 .inner()
@@ -476,26 +363,10 @@ where
         };
 
         canonicalize_id_mut(&mut goal, self.egraph());
-        self.check_and_set_memo()
-            .goal(goal)
-            .status(Status::InProgress)
-            .call();
-
-        debug_assert!(
-            !self.is_memo_enabled() || self.memo.contains_key(&goal),
-            "({goal:}) {}",
-            self.egraph().id_to_expr(goal).pretty(100)
-        );
-
         let result = proof.is_some();
         // save memoisation
         if self.is_memo_enabled() {
-            let there = self.memo.insert(goal, Status::from(proof).into());
-            assert!(
-                there.is_some(),
-                "the goal ({goal:}) wasn't registered at all...\nthis was {}",
-                self.egraph().id_to_expr(goal).pretty(100)
-            )
+            self.memo_set_result(goal, proof);
         }
 
         if let Some(g) = gtmp {
@@ -512,6 +383,38 @@ where
         self.check_proof_consistency().unwrap();
 
         result
+    }
+
+    /// Reads the memo cell of `goal` and, if it already holds a terminal result,
+    /// returns it (counting a cache hit). Otherwise marks the cell as
+    /// `InProgress` and returns `None` so the search can proceed.
+    fn memo_check_or_start(&mut self, goal: Id) -> Option<bool> {
+        match self.egraph_mut()[goal].data.memo_mut().begin_search() {
+            BeginResult::Started => None,
+            BeginResult::Cached(res) => {
+                self.num_memo_hits += 1;
+                mtrace!(self, RULE, "⏩ skipping {goal:}: {}", print_bool(res));
+                Some(res)
+            }
+            BeginResult::Cycle => {
+                mtrace!(self, RULE, "⏩ skipping {goal:}: {}", "loop".red());
+                Some(false)
+            }
+        }
+    }
+
+    /// Records the terminal result of a proof attempt for `goal`, applying the
+    /// merge lattice (so a `Failed` never overwrites a `Proven`, etc.).
+    fn memo_set_result(&mut self, goal: Id, proof: Option<ProofItem<R>>) {
+        let cell = self.egraph_mut()[goal].data.memo_mut();
+        match proof {
+            Some(item) => {
+                cell.set_proven(erase(item));
+            }
+            None => {
+                cell.set_failed();
+            }
+        }
     }
 
     fn trace_goal_status(&self, goal: Id, search: &Dependancy) {
@@ -537,30 +440,17 @@ where
             for d in search.inner.iter() {
                 eprint!("\t - [");
                 for c in d {
-                    let tmp = self.memo.get(c).map(|c| c.0.read().unwrap());
-                    match tmp {
-                        Some(x) => match x.deref() {
-                            Status::False => eprint!("{c} ({})", "false".red()),
-                            Status::True(_) => eprint!("{c} ({})", "true".green()),
-                            Status::InProgress => eprint!("{c} ({})", "loop".red()),
-                        },
-                        None => eprint!("{c} (?)"),
+                    match self.egraph()[*c].data.memo().kind() {
+                        MemoKind::Failed => eprint!("{c} ({})", "false".red()),
+                        MemoKind::Proven => eprint!("{c} ({})", "true".green()),
+                        MemoKind::InProgress => eprint!("{c} ({})", "loop".red()),
+                        MemoKind::Unknown => eprint!("{c} (?)"),
                     }
                     eprint!(", ")
                 }
                 eprintln!("]");
             }
         }
-    }
-
-    #[inline]
-    #[track_caller]
-    fn check_memo_goal(&mut self, goal: Id) {
-        debug_assert!(
-            !self.is_memo_enabled() || self.memo.contains_key(&goal),
-            "({goal:}) {}",
-            self.egraph().id_to_expr(goal).pretty(100)
-        );
     }
 
     /// Rebuild the [EGraph] according the set of rules defined by `rules` and
@@ -584,11 +474,6 @@ where
 
         egraph = runner.egraph;
 
-        // self.memo.canonicalise(&egraph);
-        if self.is_memo_enabled() {
-            self.canonicalized_table(&egraph);
-        }
-
         self.egraph = Some(egraph);
 
         {
@@ -604,53 +489,27 @@ where
         report
     }
 
-    fn canonicalized_table(&mut self, egraph: &EGraph<L, N>) {
-        assert!(self.is_memo_enabled());
-        mtrace!(self, REBUILDS, "🚧 canonicalising table...");
-
-        let mut memo = HashMap::with_capacity_and_hasher(self.memo.len(), Default::default());
-        ::std::mem::swap(&mut self.memo, &mut memo);
-
-        for (mut id, mut status) in memo {
-            status.rebuild(egraph);
-            self.update_memo_safe(id, status.clone());
-            if canonicalize_id_mut(&mut id, egraph) {
-                self.update_memo_safe(id, status)
-            }
-        }
-
-        #[cfg(debug_assertions)]
-        self.check_proof_consistency().unwrap();
-
-        mtrace!(self, REBUILDS, "✅ done!");
-    }
-
-    fn update_memo_safe(&mut self, id: Id, status: MemoStatus<R>) {
-        use ::std::collections::hash_map::Entry::*;
-        match self.memo_mut().entry(id) {
-            Occupied(mut entry) if !status.is_in_progress() => {
-                // TODO: smarter overwrite
-                entry.insert(status);
-            }
-            Vacant(entry) => {
-                entry.insert(status);
-            }
-            _ => {}
-        }
-    }
-
+    /// Checks that every `Proven` cell's subgoals are themselves `Proven`.
     pub fn check_proof_consistency(&self) -> anyhow::Result<()> {
         if self.is_memo_enabled() {
-            for (oid, v) in self.memo.iter() {
-                let s = v.borrow();
-                if let Status::True(ProofItem { ids, .. }) = s.deref() {
-                    for id in ids {
-                        let x = self
-                            .memo
-                            .get(id)
-                            .with_context(|| format!("{id} parent of {oid} isn't memoized"))?;
-                        ensure!(x.as_bool(), "{id} parent of {oid} is false")
-                    }
+            for class in self.egraph().classes() {
+                let cell = class.data.memo();
+                if !matches!(cell.kind(), MemoKind::Proven) {
+                    continue;
+                }
+                let Some(erased) = cell.proof_ref() else {
+                    continue;
+                };
+                let Some(item) = erased.as_ref().downcast_ref::<ProofItem<R>>() else {
+                    continue;
+                };
+                for id in &item.ids {
+                    let child = self.egraph()[*id].data.memo();
+                    ensure!(
+                        matches!(child.kind(), MemoKind::Proven),
+                        "{id} parent of {} isn't proven",
+                        class.id
+                    );
                 }
             }
         }
@@ -673,20 +532,26 @@ where
         self.check_proof_consistency().unwrap();
     }
 
+    /// Retrieves the [`ProofItem`] recorded for `id`.
+    ///
+    /// Requires memoisation to be enabled and `id` to have been proven.
     pub fn get_proof_item(&self, id: Id) -> anyhow::Result<ProofItem<R>> {
         ensure!(self.is_memo_enabled(), "memoisation disabled");
-        let proof_item = self
-            .memo
-            .get(&id)
-            .with_context(|| format!("goal {id} hasn't been memoized"))?
-            .get_proof()
-            .with_context(|| format!("for goal {id}"))?;
-
-        // canonicalise
-        // for ids in proof_item.ids.iter_mut() {
-        //     *ids = self.egraph().find(*ids);
-        // }
-        Ok(proof_item)
+        let cell = self.egraph()[id].data.memo();
+        match cell.kind() {
+            MemoKind::Proven => {
+                let erased = cell.proof_ref().with_context(|| "inconsistent memo cell")?;
+                let item = erased
+                    .as_ref()
+                    .downcast_ref::<ProofItem<R>>()
+                    .with_context(|| "memo cell holds a different proof type")?
+                    .clone();
+                Ok(item)
+            }
+            MemoKind::Failed => Err(anyhow!("goal {id} is false")),
+            MemoKind::InProgress => Err(anyhow!("goal {id} in progress")),
+            MemoKind::Unknown => Err(anyhow!("goal {id} hasn't been memoized")),
+        }
     }
 }
 
@@ -701,7 +566,7 @@ where
 // {
 //     /// The error type returned when parsing fails.
 //     type Err = anyhow::Error;
-
+//
 //     /// Parses a string into a `Program`.
 //     fn from_str(s: &str) -> Result<Self, Self::Err> {
 //         let (rules, eq_rules) = PlOrRw::parse_program(s)?
@@ -717,7 +582,6 @@ where
 //             egraph: Some(Default::default()),
 //             eq_rules,
 //             rules,
-//             memo: Default::default(),
 //             clean: true,
 //             config: Default::default(),
 //         })
@@ -739,96 +603,4 @@ where
     egraph.dot().to_dot(&dot)?;
 
     Ok(dot.path().to_path_buf())
-}
-
-impl<R> Status<R> {
-    /// Returns `true` if the status is `True`.
-    pub fn as_bool(&self) -> bool {
-        matches!(self, Status::True { .. })
-    }
-
-    /// Returns `true` if the status is [`InProgress`].
-    ///
-    /// [`InProgress`]: Status::InProgress
-    #[must_use]
-    pub(crate) fn is_in_progress(&self) -> bool {
-        matches!(self, Self::InProgress)
-    }
-}
-
-impl<R> MemoStatus<R> {
-    /// Returns `true` if the underlying `Status` is `True`.
-    pub fn as_bool(&self) -> bool {
-        self.borrow().as_bool()
-    }
-
-    /// Sets the underlying `Status`.
-    #[allow(unused)]
-    pub fn set(&self, status: Status<R>) {
-        *self.borrow_mut() = status
-    }
-
-    /// Returns `true` if the status is [`InProgress`].
-    ///
-    /// [`InProgress`]: Status::InProgress
-    #[must_use]
-    pub(crate) fn is_in_progress(&self) -> bool {
-        self.borrow().is_in_progress()
-    }
-
-    pub fn get_proof(&self) -> anyhow::Result<ProofItem<R>>
-    where
-        R: Clone,
-    {
-        match self.borrow().deref() {
-            Status::True(proof_item) => Ok(proof_item.clone()),
-            Status::False => Err(anyhow!("goal is false")),
-            Status::InProgress => Err(anyhow!("goal in progress")),
-        }
-    }
-}
-
-#[cfg(feature = "sync")]
-impl<R> MemoStatus<R> {
-    fn borrow(&self) -> impl Deref<Target = Status<R>> {
-        self.0.read().unwrap()
-    }
-
-    fn borrow_mut(&self) -> impl DerefMut<Target = Status<R>> {
-        self.0.write().unwrap()
-    }
-}
-
-#[cfg(not(feature = "sync"))]
-impl<R> MemoStatus<R> {
-    fn borrow(&self) -> impl Deref<Target = Status<R>> {
-        self.0.borrow()
-    }
-
-    fn borrow_mut(&self) -> impl DerefMut<Target = Status<R>> {
-        self.0.borrow_mut()
-    }
-}
-
-#[cfg(feature = "sync")]
-impl<R> From<Status<R>> for MemoStatus<R> {
-    /// Converts a `Status` into a `MemoStatus`.
-    fn from(value: Status<R>) -> Self {
-        Self(Arc::new(RwLock::new(value)))
-    }
-}
-
-#[cfg(not(feature = "sync"))]
-impl<R> From<Status<R>> for MemoStatus<R> {
-    /// Converts a `Status` into a `MemoStatus`.
-    fn from(value: Status<R>) -> Self {
-        Self(Rc::new(RefCell::new(value)))
-    }
-}
-
-impl<R> Clone for MemoStatus<R> {
-    /// Clones the `MemoStatus`.
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
-    }
 }

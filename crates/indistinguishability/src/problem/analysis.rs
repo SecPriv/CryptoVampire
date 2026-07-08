@@ -3,8 +3,8 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use bon::Builder;
-use egg::Analysis;
-use golgge::{Rule, WeightedAnalysis};
+use egg::DidMerge;
+use golgge::{GolggeAnalysis, Rule, UserAnalysis};
 use serde::Serialize;
 
 use crate::terms::Formula;
@@ -17,15 +17,19 @@ pub(crate) trait CVRuleTrait<'a>:
 {
 }
 
-/// The analysis for the problem
+/// The inner (user-facing) analysis for a problem.
+///
+/// It only holds a reference to the [`Problem`] and performs no per-node work
+/// (`type Data = ()`). The actual `egg::Analysis` is provided by wrapping it in
+/// a [`golgge::GolggeAnalysis`] — see the [`PAnalysis`] alias.
 #[derive(Debug, Serialize, Builder)]
-pub struct PAnalysis<'a> {
+pub struct PInner<'a> {
     /// A mutable reference to the problem instance.
     #[serde(skip)]
     pbl: &'a mut Problem,
 }
 
-impl<'a> PAnalysis<'a> {
+impl<'a> PInner<'a> {
     /// Returns a mutable reference to the problem
     pub fn pbl_mut(&mut self) -> &mut &'a mut Problem {
         &mut self.pbl
@@ -37,30 +41,34 @@ impl<'a> PAnalysis<'a> {
     }
 }
 
-impl<'a> Analysis<Lang> for PAnalysis<'a> {
-    /// The data associated with each e-class. `PAnalysis` does not store per-node data.
+impl<'a> UserAnalysis<Lang> for PInner<'a> {
+    /// The data associated with each e-class. `PInner` does not store per-node data.
     type Data = ();
 
-    /// Creates a new analysis data for an e-node.
+    /// Creates new analysis data for an e-node.
     ///
-    /// This implementation does nothing as `PAnalysis` does not store per-node data.
-    fn make(_egraph: &mut egg::EGraph<Lang, Self>, _enode: &Lang) -> Self::Data {}
+    /// This implementation does nothing as `PInner` does not store per-node data.
+    fn make(_egraph: &mut egg::EGraph<Lang, GolggeAnalysis<Self, Lang>>, _enode: &Lang) -> Self::Data {}
 
-    /// Merges two analysis data. Since `PAnalysis` does not store per-node data,
-    /// this method always returns `DidMerge(false, false)`.
-    fn merge(&mut self, _a: &mut Self::Data, _b: Self::Data) -> egg::DidMerge {
-        egg::DidMerge(false, false)
+    /// Merges two analysis data. Since `PInner` does not store per-node data,
+    /// this always returns `DidMerge(false, false)`.
+    fn merge(&mut self, _a: &mut Self::Data, _b: Self::Data) -> DidMerge {
+        DidMerge(false, false)
     }
-}
 
-impl<'a> WeightedAnalysis<Lang> for PAnalysis<'a> {
+    /// The weight type. `PInner` does not use weights.
     type Weight = ();
 
-    /// Returns the weight for the given analysis data.
-    ///
-    /// This implementation returns `()` as `PAnalysis` does not use weights.
+    /// Returns `()` as `PInner` does not use weights.
     fn get_weight(_data: &Self::Data) -> Self::Weight {}
 }
+
+/// The analysis plugged into the e-graph: a [`GolggeAnalysis`] wrapping [`PInner`].
+///
+/// This is a type alias so that all the existing `Rule<Lang, PAnalysis<'a>, _>`
+/// bounds keep working unchanged while transparently gaining the memoization
+/// cell maintained by [`GolggeAnalysis`].
+pub type PAnalysis<'a> = GolggeAnalysis<PInner<'a>, Lang>;
 
 /// A trait for rules that can be converted into a `RcRule`
 pub trait PRule {
