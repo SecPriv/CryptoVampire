@@ -1,6 +1,6 @@
 use std::{ffi::OsString, path::PathBuf};
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use steel::steel_vm::register_fn::RegisterFn;
 use steel_derive::Steel;
 
@@ -156,12 +156,46 @@ pub struct Configuration {
     #[arg(long, short('a'), env)]
     pub scheme_arguments: Vec<String>,
 
-    /// Directory to dump proven proof trees to (as JSON, one file per step)
+    /// Directory to dump proven proof trees to (one file per step)
     ///
     /// When set, each successfully proven step is dumped to
-    /// `<DIR>/<step>.json` via golgge's proof exporter.
+    /// `<DIR>/<step>.<ext>` via golgge's proof exporter.
     #[arg(long, env)]
     pub dump_proof: Option<PathBuf>,
+
+    /// Format for proof dumps (json, dot, latex)
+    ///
+    /// Only effective when `--dump-proof` is set.
+    #[arg(long, env, default_value_t = ProofDumpFormat::Json)]
+    pub dump_proof_format: ProofDumpFormat,
+}
+
+/// Proof dump output format.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Steel, ValueEnum)]
+pub enum ProofDumpFormat {
+    /// Pretty-printed JSON.
+    Json,
+    /// Graphviz digraph.
+    Dot,
+    /// LaTeX forest tree.
+    Latex,
+}
+
+impl std::fmt::Display for ProofDumpFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Json => "json",
+            Self::Dot => "dot",
+            Self::Latex => "latex",
+        })
+    }
+}
+
+impl ProofDumpFormat {
+    /// Returns `true` for the LaTeX format (which also generates a `main.tex`).
+    pub fn is_latex(&self) -> bool {
+        matches!(self, Self::Latex)
+    }
 }
 
 static NODE_LIMIT_DEFAULT: usize = 100000;
@@ -204,7 +238,8 @@ impl Default for Configuration {
             disable_cvc5: false,
             scheme_root_directory: None,
             scheme_arguments: vec![],
-            dump_proof: None
+            dump_proof: None,
+            dump_proof_format: ProofDumpFormat::Json,
         }
     }
 }

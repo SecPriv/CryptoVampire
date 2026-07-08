@@ -38,7 +38,7 @@ pub use proof::{ProofItem, SearchResult};
 
 /// Proof export: serializable proof trees.
 mod export;
-pub use export::{ProofRenderer, ProofTree};
+pub use export::{LATEX_DOCUMENT_PREAMBLE, LangRender, ProofRenderer, ProofTree, latex_main};
 
 mod config;
 pub use config::{Config, DebugLevel, Flags};

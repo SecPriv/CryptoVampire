@@ -148,12 +148,15 @@ impl Problem {
         let base_smt_n = self.extra_smt().len();
         // read before mk_program (which borrows self for the program's lifetime)
         let dump_proof = self.config.dump_proof.clone();
+        let dump_format = self.config.dump_proof_format;
 
         let p1f = self.protocols[p1].name().clone();
         let p2f = self.protocols[p2].name().clone();
 
         let mut cache_hits = 0;
         let mut total = 0;
+        // (section display name, dumped filename) for the latex main document
+        let mut dumped_steps: Vec<(String, String)> = Vec::new();
         let checkpoint = self.checkpoint();
 
         // code block to ensure cleanup
@@ -201,7 +204,11 @@ impl Problem {
                     depth,
                 );
                 res &= sr.as_bool();
-                dump_step_proof(&pgrm, sr, &dump_proof, "00_init");
+                if let Some(f) =
+                    dump_step_proof(&pgrm, sr, &dump_proof, dump_format, "00_init")
+                {
+                    dumped_steps.push(("00_init".to_string(), f));
+                }
 
                 cache_hits += pgrm.get_memo_hit();
                 total += pgrm.get_num_calls();
@@ -260,7 +267,12 @@ impl Problem {
 
                 let sr = pgrm.run_expr(goal, depth);
                 res &= sr.as_bool();
-                dump_step_proof(&pgrm, sr, &dump_proof, &format!("{idx:02}_{step_name}"));
+                let step_label = format!("{idx:02}_{step_name}");
+                if let Some(f) =
+                    dump_step_proof(&pgrm, sr, &dump_proof, dump_format, &step_label)
+                {
+                    dumped_steps.push((step_label, f));
+                }
 
                 cache_hits += pgrm.get_memo_hit();
                 total += pgrm.get_num_calls();
@@ -272,6 +284,16 @@ impl Problem {
 
         self.report.total_cache_hits += cache_hits;
         self.report.total_run_calls += total;
+
+        // generate a latex main.tex that imports all dumped step forests
+        if dump_format.is_latex() {
+            if let Some(dir) = &dump_proof {
+                let main = golgge::latex_main(&dumped_steps);
+                if let Err(e) = std::fs::write(dir.join("main.tex"), main) {
+                    log::warn!("failed to write latex main.tex: {e}");
+                }
+            }
+        }
 
         res
     }
@@ -286,21 +308,40 @@ fn dump_step_proof(
     pgrm: &CVProgram<'_>,
     sr: SearchResult,
     dump_dir: &Option<std::path::PathBuf>,
+    format: crate::configuration::ProofDumpFormat,
     name: &str,
-) {
+) -> Option<String> {
     use std::path::Path;
-    let Some(dir) = dump_dir else { return };
-    let SearchResult::True(id) = sr else { return };
+    use crate::configuration::ProofDumpFormat;
+    let Some(dir) = dump_dir else { return None };
+    let SearchResult::True(id) = sr else { return None };
     if let Err(e) = std::fs::create_dir_all(Path::new(dir)) {
         log::warn!("failed to create proof dump directory {}: {e}", dir.display());
-        return;
+        return None;
     }
-    let path = dir.join(format!("{name}.json"));
-    match std::fs::File::create(&path).and_then(|mut f| {
-        pgrm.dump_proof(id, &(), &mut f)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
-    }) {
-        Ok(()) => trace!("dumped proof to {}", path.display()),
-        Err(e) => log::warn!("failed to dump proof to {}: {e}", path.display()),
+    let ext = match format {
+        ProofDumpFormat::Json => "json",
+        ProofDumpFormat::Dot => "dot",
+        ProofDumpFormat::Latex => "tex",
+    };
+    let fname = format!("{name}.{ext}");
+    let path = dir.join(&fname);
+    let result = std::fs::File::create(&path).and_then(|mut f| {
+        let r = match format {
+            ProofDumpFormat::Json => pgrm.dump_proof(id, &(), &mut f),
+            ProofDumpFormat::Dot => pgrm.dump_proof_dot(id, &(), &mut f),
+            ProofDumpFormat::Latex => pgrm.dump_proof_latex(id, &(), &mut f),
+        };
+        r.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+    });
+    match result {
+        Ok(()) => {
+            trace!("dumped proof to {}", path.display());
+            Some(fname)
+        }
+        Err(e) => {
+            log::warn!("failed to dump proof to {}: {e}", path.display());
+            None
+        }
     }
 }
