@@ -7,7 +7,7 @@ use log::{info, trace};
 use super::*;
 use crate::libraries::{Libraries, Library};
 use crate::terms::{EMPTY, EQUIV, HAPPENS, MACRO_FRAME, NONCE, PRED, UNFOLD_MSG};
-use crate::{Configuration, CVProgram, Lang, libraries, rexp, smt};
+use crate::{CVProgram, Configuration, Lang, libraries, rexp, smt};
 
 impl Problem {
     /// Build a [Program] to use
@@ -50,7 +50,10 @@ impl Problem {
             .eq_rules(eq_rules)
             .rules(rules)
             .config(golgge_config)
-            .egraph(EGraph::new(GolggeAnalysis::new(PInner::builder().pbl(self).build())).with_explanations_enabled())
+            .egraph(
+                EGraph::new(GolggeAnalysis::new(PInner::builder().pbl(self).build()))
+                    .with_explanations_enabled(),
+            )
             .call();
 
         Libraries::init_egraph(prgm.egraph_mut());
@@ -204,9 +207,7 @@ impl Problem {
                     depth,
                 );
                 res &= sr.as_bool();
-                if let Some(f) =
-                    dump_step_proof(&pgrm, sr, &dump_proof, dump_format, "00_init")
-                {
+                if let Some(f) = dump_step_proof(&pgrm, sr, &dump_proof, dump_format, "00_init") {
                     dumped_steps.push(("00_init".to_string(), f));
                 }
 
@@ -268,9 +269,7 @@ impl Problem {
                 let sr = pgrm.run_expr(goal, depth);
                 res &= sr.as_bool();
                 let step_label = format!("{idx:02}_{step_name}");
-                if let Some(f) =
-                    dump_step_proof(&pgrm, sr, &dump_proof, dump_format, &step_label)
-                {
+                if let Some(f) = dump_step_proof(&pgrm, sr, &dump_proof, dump_format, &step_label) {
                     dumped_steps.push((step_label, f));
                 }
 
@@ -312,12 +311,17 @@ fn dump_step_proof(
     format: crate::configuration::ProofDumpFormat,
     name: &str,
 ) -> Option<String> {
-    use std::path::Path;
     use crate::configuration::ProofDumpFormat;
+    use std::path::Path;
     let Some(dir) = dump_dir else { return None };
-    let SearchResult::True(id) = sr else { return None };
+    let SearchResult::True(id) = sr else {
+        return None;
+    };
     if let Err(e) = std::fs::create_dir_all(Path::new(dir)) {
-        log::warn!("failed to create proof dump directory {}: {e}", dir.display());
+        log::warn!(
+            "failed to create proof dump directory {}: {e}",
+            dir.display()
+        );
         return None;
     }
     let renderer = CvProofRenderer;

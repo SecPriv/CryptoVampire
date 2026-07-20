@@ -298,5 +298,5 @@ pub enum RunningMode {
     #[default]
     Stdin,
     File(PathBuf),
-    Repl
+    Repl,
 }

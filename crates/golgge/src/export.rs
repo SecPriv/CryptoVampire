@@ -21,7 +21,7 @@ use egg::{Id, Language, RecExpr};
 use serde::Serialize;
 use serde_json::Value;
 
-use crate::{HasMemo, ProofItem, Program, Rule};
+use crate::{HasMemo, Program, ProofItem, Rule};
 
 /// A serializable view of a single proof node.
 ///
@@ -140,12 +140,7 @@ where
     /// native `<details>`/`<summary>` elements (collapsible branches and
     /// terms, zero JS for the core), with a small vanilla-JS viewer for
     /// expand-all/collapse-all.
-    pub fn dump_proof_html<RR, W>(
-        &self,
-        id: Id,
-        renderer: &RR,
-        mut writer: W,
-    ) -> anyhow::Result<()>
+    pub fn dump_proof_html<RR, W>(&self, id: Id, renderer: &RR, mut writer: W) -> anyhow::Result<()>
     where
         RR: ProofRenderer<R>,
         W: std::io::Write,
@@ -252,7 +247,10 @@ impl ProofTree {
     fn write_latex(&self, out: &mut String, depth: usize, counter: &mut NodeCounter) {
         let pad = "  ".repeat(depth);
         let me = counter.next();
-        let label = format!("\\textbf{{{}}}\\\\\\textbf{{N{me}}}", latex_escape(&self.rule));
+        let label = format!(
+            "\\textbf{{{}}}\\\\\\textbf{{N{me}}}",
+            latex_escape(&self.rule)
+        );
         if self.children.is_empty() {
             writeln!(out, "{pad}[{label}]").unwrap();
         } else {
@@ -305,7 +303,6 @@ pub const LATEX_DOCUMENT_PREAMBLE: &str = "\
 \\PreviewBorder=10pt
 \\begin{document}
 ";
-
 
 /// CSS for the HTML proof viewer. Graphviz-X11-ish: monospace, thin black
 /// box borders, white background, indented nesting.
@@ -653,10 +650,12 @@ mod tests {
         let json: Value = serde_json::from_slice(&buf).expect("valid json");
         assert_eq!(json["rule"], "step");
         assert_eq!(json["children"][0]["rule"], "axiom");
-        assert!(json["children"][0]["goal"]
-            .as_str()
-            .unwrap()
-            .contains("leaf"));
+        assert!(
+            json["children"][0]["goal"]
+                .as_str()
+                .unwrap()
+                .contains("leaf")
+        );
     }
 
     #[test]
@@ -708,7 +707,10 @@ mod tests {
         // brackets must balance (well-formed forest)
         let opens = latex.matches('[').count();
         let closes = latex.matches(']').count();
-        assert_eq!(opens, closes, "unbalanced forest brackets: {opens} open vs {closes} close");
+        assert_eq!(
+            opens, closes,
+            "unbalanced forest brackets: {opens} open vs {closes} close"
+        );
     }
 
     #[test]

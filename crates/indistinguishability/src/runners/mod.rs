@@ -235,10 +235,9 @@ impl SmtRunner {
 
             let mut dep = Dependancy::axiom();
             if !collected_smt_files.is_empty() {
-                dep.payload =
-                    Some(Arc::new(SmtArtifacts {
-                        files: collected_smt_files,
-                    }) as Payload);
+                dep.payload = Some(Arc::new(SmtArtifacts {
+                    files: collected_smt_files,
+                }) as Payload);
             }
             dep
         }

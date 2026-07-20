@@ -18,11 +18,11 @@ use utils::implvec;
 
 use crate::proof::SearchResult;
 // use crate::rule::PlOrRw;
-use crate::{
-    BeginResult, Config, DRule, DebugLevel, Dependancy, Flags, Fresh, HasMemo, MemoKind,
-    ProofItem, Rule, canonicalize_id_mut,
-};
 use crate::analysis::erase;
+use crate::{
+    BeginResult, Config, DRule, DebugLevel, Dependancy, Flags, Fresh, HasMemo, MemoKind, ProofItem,
+    Rule, canonicalize_id_mut,
+};
 
 /// A program that manages an `egg::EGraph` and a set of rules.
 #[non_exhaustive]

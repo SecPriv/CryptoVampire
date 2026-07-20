@@ -2,11 +2,11 @@ use std::borrow::Cow;
 use std::ops::ControlFlow;
 
 use egg::{EGraph, Id};
+use golgge::Dependancy;
 use itertools::{Itertools, izip};
 use logic_formula::{AsFormula, Destructed, HeadSk};
 use rustc_hash::{FxHashMap, FxHashSet};
 use utils::{ereturn_cf, ereturn_if, implvec};
-use golgge::Dependancy;
 
 use crate::libraries::memory_cells;
 use crate::libraries::utils::{

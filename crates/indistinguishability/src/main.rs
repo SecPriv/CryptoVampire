@@ -5,7 +5,7 @@
 use std::io::{self, Read};
 
 use clap::Parser;
-use indistinguishability::{ Configuration, RunningMode, init_engine, init_logger};
+use indistinguishability::{Configuration, RunningMode, init_engine, init_logger};
 use steel::rerrs::ErrorKind;
 
 // static CV_PRELUDE: &str = include_str!("./input/prelude.scm");

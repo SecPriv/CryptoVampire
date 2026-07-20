@@ -64,7 +64,7 @@ pub use input::{init_engine, mk_modules};
 /// Defines the configuration structures for the crate.
 mod configuration;
 /// Re-exports the main Configuration structure for the crate.
-pub use configuration::{ Configuration, RunningMode};
+pub use configuration::{Configuration, RunningMode};
 
 use crate::problem::{PAnalysis, RcRule};
 use crate::terms::Variable;

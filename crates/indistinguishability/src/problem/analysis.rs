@@ -48,7 +48,11 @@ impl<'a> UserAnalysis<Lang> for PInner<'a> {
     /// Creates new analysis data for an e-node.
     ///
     /// This implementation does nothing as `PInner` does not store per-node data.
-    fn make(_egraph: &mut egg::EGraph<Lang, GolggeAnalysis<Self, Lang>>, _enode: &Lang) -> Self::Data {}
+    fn make(
+        _egraph: &mut egg::EGraph<Lang, GolggeAnalysis<Self, Lang>>,
+        _enode: &Lang,
+    ) -> Self::Data {
+    }
 
     /// Merges two analysis data. Since `PInner` does not store per-node data,
     /// this always returns `DidMerge(false, false)`.

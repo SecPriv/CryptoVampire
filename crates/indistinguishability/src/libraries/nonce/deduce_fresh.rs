@@ -69,8 +69,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for FreshNonce {
 
                 let nonce_searcher = Nonce::builder().content(n).build();
                 let mem_cell_term = rexp!((MACRO_MEMORY_CELL #cell (PRED #t) #p));
-                let dep = nonce_searcher
-                    .search_term(prgm, &self.exec, mem_cell_term, h);
+                let dep = nonce_searcher.search_term(prgm, &self.exec, mem_cell_term, h);
                 ereturn_if!(dep.is_axioms(), dep);
             }
         }
