@@ -91,8 +91,8 @@
 (define P1FA2 (declare-same-step pbl "P1FA2" ptcls '()
     (lambda (p in . _)
       (let [ (sidPaF (h (tuple (tuple (mexp g ake11) (gB_P1FA p)) k11) hKey))
-        (pkSaF (sel1of2 in))
-        (sigS (sel2of2 in)) ]
+          (pkSaF (sel1of2 in))
+          (sigS (sel2of2 in)) ]
         (cand (eq pkSaF (vk skS))
           (checksign sidPaF sigS pkSaF))))
     (lambda (p in . _)
@@ -147,8 +147,8 @@
 (define PDIS6 (declare-same-step pbl "PDIS6" ptcls '()
     (lambda (p in . _)
       (let [ (sidPa (h (tuple (tuple (mexp g a1) (gB_PDIS p)) (mexp (gB_PDIS p) a1)) hKey))
-        (pkSa (sel1of2 in))
-        (sigS (sel2of2 in)) ]
+          (pkSa (sel1of2 in))
+          (sigS (sel2of2 in)) ]
         (cand (eq pkSa (vk skS))
           (checksign sidPa sigS pkSa))))
     (lambda (p in . _)
@@ -187,7 +187,7 @@
 (define SDIS3 (declare-same-step pbl "SDIS3" ptcls '()
     (lambda (p in . _)
       (let [ (sidSa (h (tuple (tuple (gP_SDIS p) (mexp g b1)) (mexp (gP_SDIS p) b1)) hKey))
-        (x4 (dec in (mexp (gP_SDIS p) b1))) ]
+          (x4 (dec in (mexp (gP_SDIS p) b1))) ]
         (checksign (tuple forwarded sidSa) x4 (vk skP))))
     (lambda _ ok)
     empty-assignements))

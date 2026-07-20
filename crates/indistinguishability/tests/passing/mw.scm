@@ -37,12 +37,12 @@
 
 (define-alias _mk pbl (Index Index Protocol) Nonce
   [ ([ (i Index) (j Index) ] (i j p1) -> ((unwrap-nonce k1) i))
-  ([ (i Index) (j Index) ] (i j p2) -> ((unwrap-nonce k2) i j)) ])
+    ([ (i Index) (j Index) ] (i j p2) -> ((unwrap-nonce k2) i j)) ])
 (define mk (wrap-nonce _mk))
 
 (define-alias mid pbl (Index Index Protocol) Bitstring
   [ ([ (i Index) (j Index) ] (i j p1) -> (id1 i))
-  ([ (i Index) (j Index) ] (i j p2) -> (id2 i j)) ])
+    ([ (i Index) (j Index) ] (i j p2) -> (id2 i j)) ])
 
 (define empty-cond (lambda _ mtrue))
 

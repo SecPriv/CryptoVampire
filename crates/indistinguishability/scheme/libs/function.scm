@@ -41,8 +41,8 @@
     [ (Variable? arg) (f->var arg) ]
     [ (boolean? arg) (if arg (f->app funs->mtrue '()) (f->app funs->mfalse '())) ]
     [else (begin
-      (displayln arg)
-      (error "not a formula")) ]))
+        (displayln arg)
+        (error "not a formula")) ]))
 
 (define get-head 'head)
 (define (requests-head? args) (equal? (first args) get-head))
@@ -115,29 +115,29 @@
 ;; decalres a function, and wraps a nonce if needed
 (define (pre-define-function name pbl cryptos args ret)
   (let* [
-    (allArgs (push-back args ret))
-    (f (declare-function pbl (mk-function name cryptos allArgs))) ]
+      (allArgs (push-back args ret))
+      (f (declare-function pbl (mk-function name cryptos allArgs))) ]
     (if (Nonce? ret) (wrap-nonce f) f)))
 
 
 (define-syntax define-function
   (syntax-rules (->)
     [ (_ name pbl (crypto ...) (args ...) -> sort)
-    (define name
-      (pre-define-function (symbol->string 'name) pbl (list crypto ...) (list args ...) sort)) ]
+      (define name
+        (pre-define-function (symbol->string 'name) pbl (list crypto ...) (list args ...) sort)) ]
     [ (_ name pbl (args ...) -> sort)
-    (define-function name pbl () (args ...) -> sort) ]
+      (define-function name pbl () (args ...) -> sort) ]
     [ (_ name pbl sort)
-    (define-function name pbl () () -> sort) ]
+      (define-function name pbl () () -> sort) ]
     [ (_ name pbl (crypto ...) sort)
-    (define-function name pbl (crypto ...) () -> sort) ]))
+      (define-function name pbl (crypto ...) () -> sort) ]))
 
 
 (define (mk-alias-rw sorts rw)
   (let*
     [ (vars (map var->fresh-with-sort sorts))
-    (vars-app (map f->var vars))
-    (rwl (apply rw vars-app)) ]
+      (vars-app (map f->var vars))
+      (rwl (apply rw vars-app)) ]
     (if (< (length rwl) 1)
       (error "mk-fun: expected at least one sort argument")
       (let* ((res (last rwl))
@@ -147,18 +147,18 @@
 (define-syntax alias-rw
   (syntax-rules (->)
     [ (_ ((ids sorts) ...) (args ...) -> res)
-    (mk-alias-rw
-      (list sorts ...)
-      (lambda (ids ...)
-        (list args ... res))) ]))
+      (mk-alias-rw
+        (list sorts ...)
+        (lambda (ids ...)
+          (list args ... res))) ]))
 
 (define-syntax define-alias
   (syntax-rules (->)
     [ (_ name pbl (inputs ...) output ((((ids sorts) ...) (args ...) -> res) ...))
-    (define name (declare-function pbl
-        (fun->mk-alias
-          (symbol->string 'name)
-          (sig->new (list inputs ...) output)
-          (list
-            (mk-alias-rw (list sorts ...) (lambda (ids ...) (list args ... res)))
-            ...)))) ]))
+      (define name (declare-function pbl
+          (fun->mk-alias
+            (symbol->string 'name)
+            (sig->new (list inputs ...) output)
+            (list
+              (mk-alias-rw (list sorts ...) (lambda (ids ...) (list args ... res)))
+              ...)))) ]))

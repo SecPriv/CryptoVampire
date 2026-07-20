@@ -31,19 +31,19 @@
 (define rf (lift-fun s_rf))
 
 (define _mk (declare-function pbl (mk-alias "mkey"
-  (signature (Index Index Protocol) -> Nonce) 
-  (bind ((i Index) (j Index) ) (list
-    (mk-alias-rwf (list i j) (list (mk-varf i) (mk-varf j) p1) (k1 i))
-    (mk-alias-rwf (list i j) (list (mk-varf i) (mk-varf j) p2) (k2 i j)))))))
+      (signature (Index Index Protocol) -> Nonce)
+      (bind ((i Index) (j Index) ) (list
+          (mk-alias-rwf (list i j) (list (mk-varf i) (mk-varf j) p1) (k1 i))
+          (mk-alias-rwf (list i j) (list (mk-varf i) (mk-varf j) p2) (k2 i j)))))))
 (define mk (lift-fun _mk))
 
 (initialize-as-prf prf _hash)
 
-(set-message pbl s_tag _p1 (lambda (in i j) 
-  (mtuple (mnonce (n i j)) (hash (mnonce (n i j)) (mnonce (mk i j p1))))))
+(set-message pbl s_tag _p1 (lambda (in i j)
+    (mtuple (mnonce (n i j)) (hash (mnonce (n i j)) (mnonce (mk i j p1))))))
 
-(set-message pbl s_tag _p2 (lambda (in i j) 
-  (mtuple (mnonce (n i j)) (hash (mnonce (n i j)) (mnonce (mk i j p2))))))
+(set-message pbl s_tag _p2 (lambda (in i j)
+    (mtuple (mnonce (n i j)) (hash (mnonce (n i j)) (mnonce (mk i j p2))))))
 
 (set-message pbl s_rs _p2 (lambda (in i j) ok))
 (set-message pbl s_rs _p1 (lambda (in i j) ok))
@@ -52,27 +52,27 @@
 
 
 ; (define exists1 (declare-exists pbl (list Index Protocol) (list Index)))
-; (let* 
-;   ([vars (exists-cvars exists1)] 
+; (let*
+;   ([vars (exists-cvars exists1)]
 ;     [j (mk-varf (list-ref (exists-bvars exists1) 0))]
-;     [i (mk-varf (list-ref vars 0))] 
+;     [i (mk-varf (list-ref vars 0))]
 ;     [p (mk-varf (list-ref vars 1))]
 ;     [in (formula (macro_input (rf i) p))])
-;     (set-exists-pattern exists1 (formula 
+;     (set-exists-pattern exists1 (formula
 ;       (= (sel2of2 in) (hash (sel1of2 in) (mk i j p)))))
 ; )
 
 
 ; (define exists2 (declare-exists pbl (list Index Time Protocol) (list Index)))
-; (let* 
-;   ([vars (exists-cvars exists2)] 
+; (let*
+;   ([vars (exists-cvars exists2)]
 ;     [i (mk-varf (list-ref (exists-bvars exists2) 0))]
-;     [j (mk-varf (list-ref vars 0))] 
-;     [t (mk-varf (list-ref vars 1))] 
+;     [j (mk-varf (list-ref vars 0))]
+;     [t (mk-varf (list-ref vars 1))]
 ;     [p (mk-varf (list-ref vars 2))]
 ;     [int (formula (macro_input t p))]
 ;     [intag (formula (macro_input (tag i j) p))])
-;     (set-exists-pattern exists2 (formula 
+;     (set-exists-pattern exists2 (formula
 ;       (and
 ;         (lt (tag i j) t) ; <- very important
 ;         (= (sel1of2 int) (sel1of2 intag))
@@ -90,31 +90,31 @@
 
 (set-condition pbl s_rs _p1
   (lambda (in i j)
-   (eq (sel2of2 in) (hash (sel1of2 in) (mnonce (mk i j p1))))))
+    (eq (sel2of2 in) (hash (sel1of2 in) (mnonce (mk i j p1))))))
 (set-condition pbl s_rs _p2
   (lambda (in i j)
-   (eq (sel2of2 in) (hash (sel1of2 in) (mnonce (mk i j p2))))))
+    (eq (sel2of2 in) (hash (sel1of2 in) (mnonce (mk i j p2))))))
 
 (set-condition pbl s_rf _p1
   (lambda (in i)
-   (mnot (exists ((j Index)) (eq (sel2of2 in) (hash (sel1of2 in) (mnonce (mk i j p1))))))))
+    (mnot (exists ((j Index)) (eq (sel2of2 in) (hash (sel1of2 in) (mnonce (mk i j p1))))))))
 (set-condition pbl s_rf _p2
   (lambda (in i)
-   (mnot (exists ((j Index)) (eq (sel2of2 in) (hash (sel1of2 in) (mnonce (mk i j p2))))))))
+    (mnot (exists ((j Index)) (eq (sel2of2 in) (hash (sel1of2 in) (mnonce (mk i j p2))))))))
 
-(bind 
-  ((i Index) (j Index) 
-    (t Time) 
+(bind
+  ((i Index) (j Index)
+    (t Time)
     (p Protocol))
-  (let [(in (macro_input t p))] 
-    (add-rewrite pbl (mk-rewrite "lemma-2" (list i t j p) 
-      (eq (sel2of2 in) (hash (sel1of2 in) (mnonce (mk i j p)))) 
-      (exists ((i Index))
-        (mand
-          (lt (tag i j) t) ; <- very important
-          (mand (eq (sel1of2 in) (sel1of2 (macro_input (tag i j) p)))
-            (eq (sel2of2 in) (sel2of2 (macro_input (tag i j) p))))
-        )
+  (let [(in (macro_input t p))]
+    (add-rewrite pbl (mk-rewrite "lemma-2" (list i t j p)
+        (eq (sel2of2 in) (hash (sel1of2 in) (mnonce (mk i j p))))
+        (exists ((i Index))
+          (mand
+            (lt (tag i j) t) ; <- very important
+            (mand (eq (sel1of2 in) (sel1of2 (macro_input (tag i j) p)))
+              (eq (sel2of2 in) (sel2of2 (macro_input (tag i j) p))))
+          )
       ))))
 )
 

@@ -17,15 +17,15 @@
 (define-syntax bind
   (syntax-rules ()
     [ (_ ((ids sorts) ...) arg)
-    (let [ (ids (var->fresh-with-sort sorts)) ...] arg) ]))
+      (let [ (ids (var->fresh-with-sort sorts)) ...] arg) ]))
 
 (define-syntax prolog
   (syntax-rules (:-)
     [ (_ name from)
-    (rule->new-prolog name from '()) ]
+      (rule->new-prolog name from '()) ]
     [ (_ name from :- to ...)
-    (rule->new-prolog name
-      from (list to ...)) ]))
+      (rule->new-prolog name
+        from (list to ...)) ]))
 
 (define add-golgge-rule pbl->add-rule)
 (define add-smt-axiom pbl->add-smt-axiom)
@@ -38,14 +38,14 @@
 (define-syntax add-constrain
   (syntax-rules ()
     [ (_ pbl (vars ...) constrain)
-    (let [ (vars (f->var (var->fresh-with-sort Index))) ...]
-      (pbl->add-constrain pbl constrain)) ]))
+      (let [ (vars (f->var (var->fresh-with-sort Index))) ...]
+        (pbl->add-constrain pbl constrain)) ]))
 
 (define-syntax publish
   (syntax-rules ()
     [ (_ pbl ((vars sorts) ...) term)
-    (let [ (vars (var->fresh-with-sort sorts)) ...]
-      (pbl->publish pbl (list vars ...) term)) ]))
+      (let [ (vars (var->fresh-with-sort sorts)) ...]
+        (pbl->publish pbl (list vars ...) term)) ]))
 
 (define (declare-protocol pbl)
   (register-function (pbl->declare-protocol pbl)))

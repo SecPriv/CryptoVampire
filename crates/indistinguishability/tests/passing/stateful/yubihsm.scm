@@ -4,66 +4,66 @@
 
 ; (*******************************************************************************
 ; YUBIHSM
-; 
+;
 ; [1] R. Künnemann, "Foundations for analyzing security APIs in the symbolic and
 ; computational model", 2014.
-; 
+;
 ; Y   -> S   : <pid,<nonce,otp>>
 ; S   -> HSM : <<pid,kh>,<aead,otp>>
 ; HSM -> S   : ctr
 ; S   -> Y   : accept
-; 
+;
 ; with
 ; - aead = enc(<k,pid,sid>,mkey)
 ; - otp = enc(<sid,ctr>,npr,k)
-; 
+;
 ; PUBLIC DATA
 ; - kh, pid
 ; SECRET DATA KNOWN BY EACH PARTY
 ; - YubiKey(pid): k(pid), sid(pid), ctr(pid)
 ; - Server: { sid(pid), ctr(pid) | pid }
 ; - HSM: mkey, { k(pid), sid(pid) | pid }
-; 
+;
 ; COMMENTS
 ; - The last message "otp || nonce || hmac || status" is unclear and
 ;   not modelled at all and replaced by "accept".
 ;   It was also not modelled in [1].
-; 
+;
 ; - The otp is an encryption of a triple (sid, ctr, npr).
 ;   It is modelled here as a randomized encryption of a pair (sid, ctr).
-; 
+;
 ; - enc is assumed to be AEAD (we do not use the associated data).
-; 
+;
 ; - In [1], they "over-approximate in the case that the Yubikey increases the
 ;   session token by allowing the adversary to instantiate the rule for any
 ;   counter value that is higher than the previous one".
 ;   Here, we model the incrementation by 1 of the counter.
-; 
+;
 ; - As in [1], we model the two counters (session and token counters) as a single
 ;   counter.
-; 
+;
 ; - In [1], the server keeps in memory the mapping between public and
 ;   secret identities of the Yubikeys. As far as we understand, this
 ;   does not reflect the YubiHSM specification: secret identities have  to
 ;   be protected by the YubiHSM.  Instead, we choose to keep the
 ;   necessary information to map public to private identities in the
 ;   AEADs (we simply add the public identity to the AEADs plaintext).
-; 
+;
 ; - Diff terms are here to model a real system and an ideal system.
 ;   The purpose of the ideal system is to replace the key inside the AEAD by a
 ;   dummy one, in order to be able to use the intctxt tactic for the third
 ;   security property (injective correspondence).
-; 
+;
 ; HELPING LEMMAS
 ; - counter increase
 ; - valid decode
-; 
+;
 ; SECURITY PROPERTIES
 ; The 3 security properties as stated in [1].
 ; - Property 1: no replay counter
 ; - Property 2: injective correspondence
 ; - Property 3: monotonicity
-; 
+;
 ; Properties 1 and 3 are established directly on the real system.
 ; Property 2 is proved in 2 steps: first an equivalence is established
 ; between the real system and the ideal one, and then the property
@@ -130,13 +130,13 @@
         (eq in endplug))
       (lambda (in pid j cells . _) endplug)
       (lambda (in pid j cells . _)
-        (list (store-cell ((_) YCtr pid) := (mySucc (cells YCtr pid)))) ; 
-        ))
-    (step p2
-      (lambda _ mtrue)
-      (lambda (in pid j cells . _) endplug)
-      (lambda (in pid j cells . _)
-        (list (store-cell ((_) YCtr pid) := (mySucc (cells YCtr pid))))))))
+        (list (store-cell ((_) YCtr pid) := (mySucc (cells YCtr pid)))) ;
+      ))
+  (step p2
+    (lambda _ mtrue)
+    (lambda (in pid j cells . _) endplug)
+    (lambda (in pid j cells . _)
+      (list (store-cell ((_) YCtr pid) := (mySucc (cells YCtr pid))))))))
 
 (define Press (declare-step pbl "Press" (list Index Index)
     (step p1

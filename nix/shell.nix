@@ -12,26 +12,24 @@
 
     in
     {
-      devShells.default = config.devShells.rust.overrideAttrs (
-        old: {
-          buildInputs =
-            old.buildInputs
-            ++ (with pkgs; [
-              mpython
-              nixd
-              graphviz
-              lldb
+      devShells.default = config.devShells.rust.overrideAttrs (old: {
+        buildInputs =
+          old.buildInputs
+          ++ (with pkgs; [
+            mpython
+            nixd
+            graphviz
+            lldb
 
-              cvc5
-              z3
-              config.packages.vampire-4
+            cvc5
+            z3
+            config.packages.vampire-4
 
-              cargo-expand
-              cargo-limit
+            cargo-expand
+            cargo-limit
 
-            ]);
-        }
-      );
+          ]);
+      });
 
     };
 }

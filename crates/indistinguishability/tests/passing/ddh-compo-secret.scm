@@ -153,9 +153,9 @@
 
 
 (define mehhh (declare-step pbl "meh" '()
-  (step p1 empty-cond (lambda _ (mexp (mexp g a1) b1)) empty-assignements)
-  (step p2 empty-cond (lambda _ (mexp g k11)) empty-assignements)
-))
+    (step p1 empty-cond (lambda _ (mexp (mexp g a1) b1)) empty-assignements)
+    (step p2 empty-cond (lambda _ (mexp g k11)) empty-assignements)
+  ))
 (add-constrain pbl () (lt mehhh S1))
 (add-constrain pbl () (lt mehhh P1))
 (add-rewrite pbl (rw.new "l1" '() (mexp (mexp g a1) b1) (unfold_msg mehhh p1) ))

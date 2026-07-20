@@ -36,7 +36,7 @@
 
 (define-alias _mk pbl (Index Index Protocol) Nonce
   [ ([ (i Index) (j Index) ] (i j p1) -> ((unwrap-nonce k1) i))
-  ([ (i Index) (j Index) ] (i j p2) -> ((unwrap-nonce k2) i j)) ])
+    ([ (i Index) (j Index) ] (i j p2) -> ((unwrap-nonce k2) i j)) ])
 (define mk (wrap-nonce _mk))
 
 ; (define tag (declare-step pbl "tag" (list Index Index)))
@@ -50,7 +50,7 @@
 
 (define (mk-fdst1 in j p)
   (let* [ (pt (lambda (i j) (dec in (mk i j p))))
-    (nt (lambda (i j) (sel2of2 (sel2of2 (pt i j))))) ]
+      (nt (lambda (i j) (sel2of2 (sel2of2 (pt i j))))) ]
     (findst ((i Index) (k Index))
       (cand
         (eq (sel1of2 (pt i k)) tagT)
@@ -125,36 +125,36 @@
 
 (define (mk-fdst2 t j p)
   (let* [ (in (macro_input t p))
-    (pt (lambda (i j) (dec in (mk i j p))))
-    (int (lambda (i j) (dec (unfold_msg (tag i j) p) (mk i j p))))
-    ; (nt (lambda (i j) (sel2of2 (sel2of2 (pt i j))))) 
+      (pt (lambda (i j) (dec in (mk i j p))))
+      (int (lambda (i j) (dec (unfold_msg (tag i j) p) (mk i j p))))
+      ; (nt (lambda (i j) (sel2of2 (sel2of2 (pt i j)))))
     ]
-    (findst ((i Index) (k Index))
-      (cand
-        (eq (macro_input t p) (macro_msg (tag i k) p))
-        ; (eq (sel1of2 (pt i k)) (sel1of2 (int i k)))
-        ; (eq (sel2of2 (pt i k)) (sel2of2 (int i k)))
-        (lt (tag i k) t)
-        (macro_exec t p)) ; <- very important
-      (enc
-        (tuple tagR (tuple (nr j) (nt i k)))
-        (rr j)
-        (mk i k p))
-      ko)))
+  (findst ((i Index) (k Index))
+    (cand
+      (eq (macro_input t p) (macro_msg (tag i k) p))
+      ; (eq (sel1of2 (pt i k)) (sel1of2 (int i k)))
+      ; (eq (sel2of2 (pt i k)) (sel2of2 (int i k)))
+      (lt (tag i k) t)
+      (macro_exec t p)) ; <- very important
+    (enc
+      (tuple tagR (tuple (nr j) (nt i k)))
+      (rr j)
+      (mk i k p))
+    ko)))
 
 (bind ((j Index) (t Time) (p Protocol))
   (let [ (tmp (findst ((i Index) (k Index))
-        (cand
-          (eq (sel1of2 (dec (macro_input (r2 j) p) (mk i k p))) tagT)
-          (eq (sel1of2 (sel2of2 (dec (macro_input (r2 j) p) (mk i k p)))) (nr j)))
-        (enc
-          (tuple tagR (tuple (nr j) (nt i j)))
-          (rr j)
-          (mk i k p))
-        ko)) ]
+          (cand
+            (eq (sel1of2 (dec (macro_input (r2 j) p) (mk i k p))) tagT)
+            (eq (sel1of2 (sel2of2 (dec (macro_input (r2 j) p) (mk i k p)))) (nr j)))
+          (enc
+            (tuple tagR (tuple (nr j) (nt i j)))
+            (rr j)
+            (mk i k p))
+          ko)) ]
     (begin
       ; (displayln (cv-string-of-formula (m_ite mtrue tmp mempty)))
-      
+
       (add-rewrite pbl (rw.new "lemma" (list t j p)
           ; (let ((x (mk-fdst1 (macro_input (r2 j) p) j p)))
           ; (m_ite mtrue x  mempty))
@@ -164,7 +164,7 @@
           (m_ite (macro_exec (r2 j) p) (mk-fdst1 (macro_input (r2 j) p) j p) mempty)
           (m_ite (macro_exec (r2 j) p) (mk-fdst2 (r2 j) j p) mempty)
           ; ok
-          )))))
+        )))))
 
 
 (add-smt-axiom pbl (mnot (eq tagT tagR)))

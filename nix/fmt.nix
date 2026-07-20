@@ -20,7 +20,6 @@
           "LICENSE"
           "*.md"
           "*.py"
-          "*.scm"
         ];
         programs.nixfmt.enable = true;
         programs.rustfmt.enable = true;

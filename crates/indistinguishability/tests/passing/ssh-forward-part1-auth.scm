@@ -81,8 +81,8 @@
 (define P3 (declare-same-step pbl "P3" ptcls '()
     (lambda (p in . _)
       (let [ (sidP (h (tuple (tuple (mexp g a1) (gB p)) (mexp (gB p) a1)) hKey))
-        (pkS_in (sel1of2 in))
-        (sigS (sel2of2 in)) ]
+          (pkS_in (sel1of2 in))
+          (sigS (sel2of2 in)) ]
         (cand (eq pkS_in (vk skS))
           (checksign sidP sigS pkS_in))))
     (lambda (p in . _)
