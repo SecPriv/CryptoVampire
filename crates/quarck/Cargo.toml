@@ -3,6 +3,7 @@ name = "quarck"
 version = "0.1.0"
 edition = "2024"
 authors = ["Simon Jeanteur <7871851+puyral@users.noreply.github.com>"]
+description = "Cow but mapping to Arc or Rc"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

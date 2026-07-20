@@ -3,6 +3,7 @@ name = "utils"
 version = "0.2.0"
 edition = "2021"
 authors = ["Simon Jeanteur <7871851+puyral@users.noreply.github.com>"]
+description = "miscelanious utilities used for the cryptovampires"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

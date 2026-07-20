@@ -13,6 +13,9 @@ resolver = "2"
 # authors = ["Simon Jeanteur <7871851+puyral@users.noreply.github.com>"]
 default-members = ["crates/indistinguishability"]
 
+[workspace.package]
+version = "0.0.1"
+
 [workspace.dependencies]
 rustc-hash = "2.1.0"     
 itertools = "0.14"

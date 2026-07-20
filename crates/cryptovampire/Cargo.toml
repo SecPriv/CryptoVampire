@@ -3,6 +3,7 @@ name = "cryptovampire"
 version = "0.5.1"
 edition = "2021"
 authors = ["Simon Jeanteur <simon.jeanteur@tuwien.ac.at>"]
+description = "Computationnally sound cryptographic protocol verifier for trace properties using the CCSA"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

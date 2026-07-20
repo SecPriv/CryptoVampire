@@ -1,5 +1,7 @@
-{ pkgs, ... }:
+{ ... }:
 {
+  perSystem = {...}:{
+    treefmt = {
   # Used to find the project root
   projectRootFile = "flake.nix";
   settings.global.excludes = [
@@ -21,4 +23,6 @@
   programs.nixfmt.enable = true;
   programs.rustfmt.enable = true;
   programs.prettier.enable = true;
+    };
+  };
 }

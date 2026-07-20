@@ -3,6 +3,7 @@ name = "golgge"
 version = "0.1.0"
 edition = "2024"
 authors = ["Simon Jeanteur <simon.jeanteur@tuwien.ac.at>"]
+description = "egglog backwards"
 
 [dependencies]
 serde_json = "1.0.120"
