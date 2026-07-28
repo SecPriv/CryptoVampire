@@ -1,10 +1,10 @@
 # CryptoVampire
 
-**NB**: This repository is currenlty being refactored for CCS2026. Documentation is notably mangled between the multiple versions of Cryptovampire.
+**NB**: This repository is currently being refactored for CCS2026. Documentation is notably mangled between the multiple versions of Cryptovampire.
 
 ## Cryptovampire for indistinguishability
 
-This is the new `cryptovampire`. It's code base is the [`indistinguishability`](./crates/indistinguishability) crate.
+This is the new `cryptovampire`. Its code base is the [`indistinguishability`](./crates/indistinguishability) crate.
 Currently it produces `indistinguishability` binaries.
 
 ### Installation / Building
@@ -15,7 +15,7 @@ $ cargo build --release
 
 You will find the binary in `/tmp/ccsa/build/dir/release/indistinguishability`.
 
-debug build a significantly slower and also force tracing on.
+debug builds are significantly slower and also force tracing on.
 
 #### `nix`
 ```bash
@@ -27,19 +27,19 @@ You will find the binary in `./result/bin/indistinguishability`.
 ### Usage
 In general running `indistinguishability --help` brings out all the options.
 
-`indistinguishability` runs a scheme interpreter (via [`steel`](https://github.com/mattwparas/steel)) and expect to be manipulated through there. Protocol are defined in scheme and options can be overwritten there as well. This also mean that `indistinguishability`'s input file are fully fledged scheme programs.
+`indistinguishability` runs a scheme interpreter (via [`steel`](https://github.com/mattwparas/steel)) and expects to be manipulated through there. Protocols are defined in scheme and options can be overwritten there as well. This also means that `indistinguishability`'s input files are fully fledged scheme programs.
 
 ```
-indistinguishabilit <file> <args>
+indistinguishability <file> <args>
 ```
-executes `<file>` omiting that argument will make the tool listen from stdin.
+executes `<file>` omitting that argument will make the tool listen from stdin.
 
-The `-i` option starts an interactive shell. Notably the `help` command returns some documentation for the rust bindings. Unfortunatly, it is unclear how to activate this for our own scheme wrappers.
+The `-i` option starts an interactive shell. Notably the `help` command returns some documentation for the rust bindings. Unfortunately, it is unclear how to activate this for our own scheme wrappers.
 
 
-## Crypotovampire for Trace properties
+## Cryptovampire for Trace properties
 
-**NB**: The tool *should* be in a working state. But changes to downstream crates for the CCS submission may have broken things in a non-obvious. If any issue arise they will be fixed shortly.
+**NB**: The tool *should* be in a working state. But changes to downstream crates for the CCS submission may have broken things in a non-obvious way. If any issues arise they will be fixed shortly.
 
 [CryptoVampire](https://eprint.iacr.org/2024/534) is an automated, computationally sound protocol verifier. It turns a protocol specification into an `smt` file to be proven by some other FOL theorem prover.
 
