@@ -1,42 +1,79 @@
 # CryptoVampire
 
+**NB**: This repository is currenlty being refactored for CCS2026. Documentation is notably mangled between the multiple versions of Cryptovampire.
+
+## Cryptovampire for indistinguishability
+
+This is the new `cryptovampire`. It's code base is the [`indistinguishability`](./crates/indistinguishability) crate.
+Currently it produces `indistinguishability` binaries.
+
+### Installation / Building
+#### `cargo`
+```bash
+$ cargo build --release
+```
+
+You will find the binary in `/tmp/ccsa/build/dir/release/indistinguishability`.
+
+debug build a significantly slower and also force tracing on.
+
+#### `nix`
+```bash
+$ nix build
+```
+
+You will find the binary in `./result/bin/indistinguishability`.
+
+### Usage
+In general running `indistinguishability --help` brings out all the options.
+
+`indistinguishability` runs a scheme interpreter (via [`steel`](https://github.com/mattwparas/steel)) and expect to be manipulated through there. Protocol are defined in scheme and options can be overwritten there as well. This also mean that `indistinguishability`'s input file are fully fledged scheme programs.
+
+```
+indistinguishabilit <file> <args>
+```
+executes `<file>` omiting that argument will make the tool listen from stdin.
+
+The `-i` option starts an interactive shell. Notably the `help` command returns some documentation for the rust bindings. Unfortunatly, it is unclear how to activate this for our own scheme wrappers.
+
+
+## Crypotovampire for Trace properties
+
+**NB**: The tool *should* be in a working state. But changes to downstream crates for the CCS submission may have broken things in a non-obvious. If any issue arise they will be fixed shortly.
 
 [CryptoVampire](https://eprint.iacr.org/2024/534) is an automated, computationally sound protocol verifier. It turns a protocol specification into an `smt` file to be proven by some other FOL theorem prover.
 
 It can run standalone (see [Usage](#usage)) or through [`squirrel`](https://squirrel-prover.github.io/) (see [Squirrel](#squirrel)).
 
-## Installation
+### Installation
 
-### `cargo`
+#### `cargo`
 CryptoVampire is a plain `rust` project, so it can be installed via [`cargo`](https://doc.rust-lang.org/cargo/getting-started/installation.html).
 
 ```bash
-$ cargo install --git https://github.com/SecPriv/CryptoVampire
+$ cargo install --git https://github.com/SecPriv/CryptoVampire -p cryptovampire
 ```
 You can use the same command to update.
 
-### [`nix`](https://nixos.org/)
+#### [`nix`](https://nixos.org/)
 This repository is a `nix` [`flake`](https://nixos.wiki/wiki/flakes), therefore:
 
 ```bash
 # get a shell with cryptovampire
-$ nix shell github:SecPriv/CryptoVampire
-
-# run cryptovampire
-$ nix run github:SecPriv/CryptoVampire -- <args>
+$ nix shell github:SecPriv/CryptoVampire#cryptovampire
 ```
 
-### From source
+#### From source
 
-### `cargo`
+##### `cargo`
 Then, as with all `rust` projects, you can compile or run it using cargo:
 
 ```bash
 # compile
-cargo build --release
+cargo build --release -p cryptovampire
 
 # run
-cargo run --release -- <args>
+cargo run --release -p cryptovampire -- <args>
 ```
 
 **NB: Windows and `squirrel` users:**
@@ -45,19 +82,19 @@ For this project, cargo will write to `/tmp/ccsa/build/dir`, thus the executable
 **NB: `release` vs `debug`**
 Compiling with `debug` makes the program very eager to crash instead of trying to recover. Especially when reading `vampire`'s output this can lead to crashes that are recovered from in `--release` mode.
 
-#### `nix`
+##### `nix`
 
 This project is set up to work with `nix` as well.
 
-##### `nix develop`
+###### `nix develop`
 
 `nix develop` brings you into a shell with all the tools available (`cargo`, `vampire`, `z3`, `cvc5`, ...). Note that we couldn't get the modified version of vampire to compile using `nix`; therefore, to use it, you will have to build it yourself from [`vampire`'s repository](https://github.com/vprover/vampire/tree/ccsa).
 
-##### `nix build` & `nix run`
+##### `nix build .#cryptovampire`
 
 Works as expected.
 
-## Usage
+### Usage
 
 **Usability is known to be somewhat poor at the moment.**
 
@@ -65,7 +102,7 @@ To use `cryptovampire` effectively, you will need SMT solvers like (in order of 
 
 `cryptovampire` can run on its own with `vampire`, `z3` and it can learn some information about the runs done with `vampire` (see [`auto`](#auto)).
 
-### Command line
+#### Command line
 To get the specifics of the command line interface, run:
 ```bash
 $ cryptovampire --help
@@ -77,7 +114,7 @@ Use the `auto` command to run in [auto](#auto) mode; run `cryptovampire auto --h
 
 To export to an `smt` file (or possibly many `smt` files), use the `to-file` command. See the [to-file](#to-file) section and run `cryptovampire to-file --help` for more information.
 
-#### `auto`
+##### `auto`
 To get the specifics of the command line interface, run:
 ```bash
 $ cryptovampire auto --help
@@ -92,7 +129,7 @@ In this mode, `cryptovampire` attempts to prove everything without user interven
 **NB**:
 - `cryptovampire` fails if a solver terminates for an unexplainable reason (e.g., a syntax error). This can cause problems when using older versions of the solver that do not yet support some of their own extensions to the `smt` format. This is notably the case with older versions of `vampire`.
 
-#### `to-file`
+##### `to-file`
 To get the specifics of the command line interface, run:
 ```bash
 $ cryptovampire to-file --help
@@ -103,7 +140,7 @@ Renders one (or many when activating the lemmas) `smt` file. Without the `-o` fl
 **NB**:
 - To get a fully `smtlib`-compliant file, use the `--cvc5` option. Otherwise, the tool will aim for files readable by the latest released `vampire` and `z3`. Other options make the tool aim for specific versions of `vampire`.
 
-### `squirrel`
+#### `squirrel`
 **NB**: mostly broken currently. (`squirrel` considers a `cryptovampire` success as a failure)
 
 It is possible to run `cryptovampire` from the [`squirrel`](https://squirrel-prover.github.io/) proof assistant. It will then use the [`auto`](#auto) mode with default parameters.
@@ -125,7 +162,7 @@ You will then get access to the `cryptovampire` tactic. You can also add the opt
 
 Please report any error that isn't `"ran out of tries"`.
 
-### Files
+#### Files
 You can see example files in the [tests](./tests/) directory (all those ending in `.ptcl`). In particular the files in [test/nix](./tests/nix/), are tested by the CI/CD, so they should :tm: be fully working.
 
 Infix functions don't really exist (yet); therefore, the parser uses parentheses to fake them (e.g., you need to use `(a = b)` instead of just `a = b`).
@@ -134,11 +171,3 @@ The tool will try to point out any mistakes while reporting where they come from
 
 **NB**:
 - Parsing relies on [`pest`](https://pest.rs/) (for better or worse). You can find the grammar in [grammar.pest](./cryptovampire/grammar.pest).
-
-<!-- # Structure of the Tool
-
-The tool is split into 3 crates:
-- **[`cryptovampire-lib`](./cryptovampire-lib/)**: This is the core of the tool.
-- **[`cryptovampire`](./cryptovampire/)**: This handles command-line arguments and parsing. This can be compiled into a binary and is the user-facing part of CryptoVampire.
-- **[`utils`](./utils/)**: Various utility functions that are not specific to `cryptovampire` but were made during its development. -->
-```
