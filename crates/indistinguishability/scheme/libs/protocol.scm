@@ -12,6 +12,7 @@
 (require-builtin cryptovampire/ll/variable as var->)
 (require (prefix-in fun. "cryptovampire/function"))
 (require "cryptovampire/stdlib")
+(require "cryptovampire/doc")
 (require "cryptovampire/builtin-functions")
 (require (prefix-in t-> "cryptovampire/type"))
 
@@ -35,8 +36,8 @@
 (struct assignement (cell single-assignement))
 
 (@doc (cv-help "empty-assignements" "(empty-assignements . _)"
-  "A step that assigns nothing: use as the `assignements` field of a `step` when the step updates no memory cell.")
- (define empty-assignements (lambda _ '())))
+    "A step that assigns nothing: use as the `assignements` field of a `step` when the step updates no memory cell.")
+  (define empty-assignements (lambda _ '())))
 
 (define __inner-get-function fun.get-function)
 (define __inner-get-input-sorts fun.get-input-sorts)
@@ -118,38 +119,38 @@
 ;; ---------------------------------------------------------------------------
 
 (@doc (cv-help "declare-step" "(declare-step pbl name sorts . contents)"
-  "Declares a step named `name` taking inputs of `sorts`, with one `step` struct per protocol."
-  "Returns the registered (lifted) step function; call it with fresh input terms to build the step term, e.g. `(tag i j)`.")
- (define (declare-step pbl name sorts . content)
-  (let* [
-      (step (step->declare-step pbl name sorts))
-      (stepf (fun.register-function step)) ]
-    (begin
-      (map (lambda (c)
-          (let* [
-              (ptclf (step-protocol c))
-              (msgf (step-message c))
-              (condf (step-condition c))
-              (assignements (step-assignements c))
-              (ptcl (fun.get-function ptclf))
-              (variables
-                (map f->var (step->get-vars pbl step ptcl)))
-              (applied-step (if (t->Formula? stepf) stepf (apply stepf variables)))
-              (in (macro_input applied-step ptclf))
-              (cells (partial mk-cell-macro (pred applied-step) ptclf))
-              (args (append (cons in variables) (list cells)))
-            ]
-          (begin
-            (step->set-msg pbl step ptcl
-              (apply msgf args))
-            (step->set-cond pbl step ptcl
-              (apply condf args))
-            (for-each (lambda (assignement)
-                (step->insert-assignement pbl step ptcl (assignement-cell assignement)
-                  (assignement-single-assignement assignement)))
-              (apply assignements args)))))
-      content)
-    stepf))))
+    "Declares a step named `name` taking inputs of `sorts`, with one `step` struct per protocol."
+    "Returns the registered (lifted) step function; call it with fresh input terms to build the step term, e.g. `(tag i j)`.")
+  (define (declare-step pbl name sorts . content)
+    (let* [
+        (step (step->declare-step pbl name sorts))
+        (stepf (fun.register-function step)) ]
+      (begin
+        (map (lambda (c)
+            (let* [
+                (ptclf (step-protocol c))
+                (msgf (step-message c))
+                (condf (step-condition c))
+                (assignements (step-assignements c))
+                (ptcl (fun.get-function ptclf))
+                (variables
+                  (map f->var (step->get-vars pbl step ptcl)))
+                (applied-step (if (t->Formula? stepf) stepf (apply stepf variables)))
+                (in (macro_input applied-step ptclf))
+                (cells (partial mk-cell-macro (pred applied-step) ptclf))
+                (args (append (cons in variables) (list cells)))
+              ]
+            (begin
+              (step->set-msg pbl step ptcl
+                (apply msgf args))
+              (step->set-cond pbl step ptcl
+                (apply condf args))
+              (for-each (lambda (assignement)
+                  (step->insert-assignement pbl step ptcl (assignement-cell assignement)
+                    (assignement-single-assignement assignement)))
+                (apply assignements args)))))
+        content)
+      stepf))))
 
 ;; ---------------------------------------------------------------------------
 ;; declare-same-step
@@ -168,12 +169,12 @@
 ;; ---------------------------------------------------------------------------
 
 (@doc (cv-help "declare-same-step" "(declare-same-step pbl name ptcls sorts msg mcond assignements)"
-  "Declares the step `name` for every protocol in `ptcls`, sharing the message `msg` and condition `mcond` functions `(lambda (p args...) ...)`.")
- (define (declare-same-step pbl name ptcls sorts msg mcond assignements)
-  (let* [
-      (declare (partial declare-step pbl name sorts))
-      (content (map (lambda (p) (step p (partial msg p) (partial mcond p) assignements)) ptcls)) ]
-    (apply declare content))))
+    "Declares the step `name` for every protocol in `ptcls`, sharing the message `msg` and condition `mcond` functions `(lambda (p args...) ...)`.")
+  (define (declare-same-step pbl name ptcls sorts msg mcond assignements)
+    (let* [
+        (declare (partial declare-step pbl name sorts))
+        (content (map (lambda (p) (step p (partial msg p) (partial mcond p) assignements)) ptcls)) ]
+      (apply declare content))))
 
 ;; ---------------------------------------------------------------------------
 ;; declare-memory-cell
@@ -192,12 +193,12 @@
 ;; ---------------------------------------------------------------------------
 
 (@doc (cv-help "declare-memory-cell" "(declare-memory-cell pbl name params init)"
-  "Declares a memory cell `name` with one value per index combination in `params` (and per protocol)."
-  "`init` returns the initial value: `(lambda (protocol . vars) value)`.  Returns the registered cell function.")
- (define (declare-memory-cell pbl name params init)
-  (let* [
-      (params (map var->fresh-with-sort params))
-      (initv (map (lambda (p) (apply init (cons p params))) (pbl->get-all-protocols pbl)))
-      (cell (pbl->declare-memory-cell pbl name params initv))
-      (cellf (fun.register-function cell)) ]
-    cellf)))
+    "Declares a memory cell `name` with one value per index combination in `params` (and per protocol)."
+    "`init` returns the initial value: `(lambda (protocol . vars) value)`.  Returns the registered cell function.")
+  (define (declare-memory-cell pbl name params init)
+    (let* [
+        (params (map var->fresh-with-sort params))
+        (initv (map (lambda (p) (apply init (cons p params))) (pbl->get-all-protocols pbl)))
+        (cell (pbl->declare-memory-cell pbl name params initv))
+        (cellf (fun.register-function cell)) ]
+      cellf)))

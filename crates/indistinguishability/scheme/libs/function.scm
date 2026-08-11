@@ -26,7 +26,7 @@
 (require "cryptovampire/type")
 (require "cryptovampire/sort")
 (require "cryptovampire/signature")
-(require "cryptovampire/stdlib")
+(require "cryptovampire/doc")
 (require-builtin steel/hash)
 
 (define functions-map (hash))
@@ -40,124 +40,128 @@
 ;; ---------------------------------------------------------------------------
 
 (@doc (cv-help "convert-to-formula" "(convert-to-formula arg)"
-  "Coerces `arg` into a formula."
-  "- a `Formula` is returned as-is"
-  "- a `Variable` becomes the corresponding variable formula"
-  "- a boolean becomes the constant `true`/`false`"
-  "- anything else raises an error.")
- (define (convert-to-formula arg)
-  (cond
-    [ (Formula? arg) arg]
-    [ (Variable? arg) (f->var arg) ]
-    [ (boolean? arg) (if arg (f->app funs->mtrue '()) (f->app funs->mfalse '())) ]
-    [else (begin
-        (displayln arg)
-        (error "not a formula")) ])))
+    "Coerces `arg` into a formula."
+    "- a `Formula` is returned as-is"
+    "- a `Variable` becomes the corresponding variable formula"
+    "- a boolean becomes the constant `true`/`false`"
+    "- anything else raises an error.")
+  (define (convert-to-formula arg)
+    (cond
+      [ (Formula? arg) arg]
+      [ (Variable? arg) (f->var arg) ]
+      [ (boolean? arg) (if arg (f->app funs->mtrue '()) (f->app funs->mfalse '())) ]
+      [else (begin
+          (displayln arg)
+          (error "not a formula")) ])))
 
 (define get-head 'head)
 (define (requests-head? args) (equal? (first args) get-head))
 
 (@doc (cv-help "get-function" "(get-function f)"
-  "Returns the underlying `Function` of a lifted function (as produced by `lift-function`/`register-function`), of a `Formula`, or of a `Function`."
-  "Most `cryptovampire/*` functions accept such a value wherever a function is expected.")
- (define (get-function funf)
-  (cond
-    [ (Formula? funf) (hash-ref functions-map funf) ]
-    [ (Function? funf) funf]
-    [else (funf get-head) ])))
+    "Returns the underlying `Function` of a lifted function (as produced by `lift-function`/`register-function`), of a `Formula`, or of a `Function`."
+    "Most `cryptovampire/*` functions accept such a value wherever a function is expected.")
+  (define (get-function funf)
+    (cond
+      [ (Formula? funf) (hash-ref functions-map funf) ]
+      [ (Function? funf) funf]
+      [else (funf get-head) ])))
 
 
 (define (sarity f) (length (sig->inputs f)))
 (define (get-signature f) (fun->signature (get-function f)))
 
 (@doc (cv-help "get-input-sorts" "(get-input-sorts f)"
-  "Returns the list of input `Sort`s of the function `f`.")
- (define (get-input-sorts f) (sig->inputs (get-signature f))))
+    "Returns the list of input `Sort`s of the function `f`.")
+  (define (get-input-sorts f) (sig->inputs (get-signature f))))
 
 (@doc (cv-help "get-output-sort" "(get-output-sort f)"
-  "Returns the output `Sort` of the function `f`.")
- (define (get-output-sort f) (sig->output (get-signature f))))
+    "Returns the output `Sort` of the function `f`.")
+  (define (get-output-sort f) (sig->output (get-signature f))))
 
 (@doc (cv-help "nonce?" "(nonce? f)"
-  "Is `f` a `Nonce`?  Accepts either a `Sort`, or a function whose output sort is `Nonce`.")
- (define (nonce? f)
-  (if (Sort? f) (Nonce? f) (Nonce? (get-output-sort f)))))
+    "Is `f` a `Nonce`?  Accepts either a `Sort`, or a function whose output sort is `Nonce`.")
+  (define (nonce? f)
+    (if (Sort? f) (Nonce? f) (Nonce? (get-output-sort f)))))
 
 (@doc (cv-help "lift-function" "(lift-function f)"
-  "Turns the `Function` `f` into a callable scheme value:"
-  "- a nullary function becomes the constant formula `(f)`"
-  "- otherwise a function that maps formula arguments to the application `(f a ...)`"
-  "Argument values passed to the resulting function go through `convert-to-formula`.")
- (define (lift-function f)
-  (if (= (sarity (fun->signature f)) 0)
-    (f->app f '())
-    (lambda args
-      (if (requests-head? args) f
-        (f->app f (map convert-to-formula args)))))))
+    "Turns the `Function` `f` into a callable scheme value:"
+    "- a nullary function becomes the constant formula `(f)`"
+    "- otherwise a function that maps formula arguments to the application `(f a ...)`"
+    "Argument values passed to the resulting function go through `convert-to-formula`.")
+  (define (lift-function f)
+    (if (= (sarity (fun->signature f)) 0)
+      (f->app f '())
+      (lambda args
+        (if (requests-head? args) f
+          (f->app f (map convert-to-formula args)))))))
 
 (@doc (cv-help "register-function" "(register-function fun)"
-  "Lifts `fun` (via `lift-function`) and records it so the underlying `Function` can later be recovered with `get-function`."
-  "Returns the lifted callable, or the constant formula for nullary functions.")
- (define (register-function fun)
-  (let
-    [ (f (lift-function fun)) ]
-    (if (f->Formula? f)
-      (begin
-        (insert-function f fun)
-        f)
-      f))))
+    "Lifts `fun` (via `lift-function`) and records it so the underlying `Function` can later be recovered with `get-function`."
+    "Returns the lifted callable, or the constant formula for nullary functions.")
+  (define (register-function fun)
+    (let
+      [ (f (lift-function fun)) ]
+      (if (f->Formula? f)
+        (begin
+          (insert-function f fun)
+          f)
+        f))))
 
 (define (mnonce n) (f->app funs->mnonce (list n)))
 
 (@doc (cv-help "wrap-nonce" "(wrap-nonce f)"
-  "Wraps a nonce-valued function so it can be called directly as `(f args...)`.  The result of each call is wrapped in the `nonce` marker (like `(mnonce (f args...))`)."
-  "This is typically applied to the output of `define-alias` for nonces, e.g. `(define mk (wrap-nonce _mk))`."
-  "*Example:*" "```scheme"
-  "(define mk (wrap-nonce _mk))"
-  "(mk i j p) ;; a nonce term" "```")
- (define (wrap-nonce nonce)
-  (let ((f (get-function nonce)))
-    (if (f->Formula? nonce)
-      (begin
-        (insert-function (mnonce nonce) f)
-        (mnonce nonce))
-      (lambda args
-        (if (requests-head? args) f
-          (mnonce (apply nonce args))))))))
+    "Wraps a nonce-valued function so it can be called directly as `(f args...)`.  The result of each call is wrapped in the `nonce` marker (like `(mnonce (f args...))`)."
+    "This is typically applied to the output of `define-alias` for nonces, e.g. `(define mk (wrap-nonce _mk))`."
+    "*Example:*"
+    "```scheme
+    (define mk (wrap-nonce _mk))
+    (mk i j p) ;; a nonce term
+    ```")
+  (define (wrap-nonce nonce)
+    (let ((f (get-function nonce)))
+      (if (f->Formula? nonce)
+        (begin
+          (insert-function (mnonce nonce) f)
+          (mnonce nonce))
+        (lambda args
+          (if (requests-head? args) f
+            (mnonce (apply nonce args))))))))
 
 (@doc (cv-help "unwrap-nonce" "(unwrap-nonce f)"
-  "Inverse of `wrap-nonce`: returns the lifted function that produces the raw (unmarked) nonce."
-  "*Example:*" "```scheme"
-  "((unwrap-nonce k1) i) ;; the bare term behind (mk i ...)" "```")
- (define (unwrap-nonce nonce)
-  (lift-function (get-function nonce))))
+    "Inverse of `wrap-nonce`: returns the lifted function that produces the raw (unmarked) nonce."
+    "*Example:*"
+    "```scheme
+    ((unwrap-nonce k1) i) ;; the bare term behind (mk i ...)
+    ```")
+  (define (unwrap-nonce nonce)
+    (lift-function (get-function nonce))))
 
 (@doc (cv-help "arity" "(arity f)"
-  "Number of input sorts of `f` (or of the `Signature` `f`).")
- (define (arity f)
-  (if (Signature? f)
-    (sarity f)
-    (sarity (get-signature f)))))
+    "Number of input sorts of `f` (or of the `Signature` `f`).")
+  (define (arity f)
+    (if (Signature? f)
+      (sarity f)
+      (sarity (get-signature f)))))
 
 (@doc (cv-help "mk-function" "(mk-function name cryptos args)"
-  "Builds a fresh `Function` named `name`."
-  "`cryptos` is the list of crypto modules the function depends on.  `args` is the input sorts followed by the *output* sort, e.g. `(mk-function \"h\" (list prf) (list Bitstring Bitstring Bitstring))`."
-  "Prefer the `define-function` macro over this low-level entry point.")
- (define (mk-function name cryptos args)
-  (if (< (length args) 1)
-    (error "mk-fun: expected at least one sort argument")
-    (let* ((outsort (last args))
-        (in-sorts (take args (- (length args) 1))))
-      ; body of the function
-      (if (equal? outsort Nonce)
-        (fun->mk-nonce name (sig->new in-sorts outsort))
-        (fun->mk-function name
-          (sig->new in-sorts outsort) cryptos))))))
+    "Builds a fresh `Function` named `name`."
+    "`cryptos` is the list of crypto modules the function depends on.  `args` is the input sorts followed by the *output* sort, e.g. `(mk-function \"h\" (list prf) (list Bitstring Bitstring Bitstring))`."
+    "Prefer the `define-function` macro over this low-level entry point.")
+  (define (mk-function name cryptos args)
+    (if (< (length args) 1)
+      (error "mk-fun: expected at least one sort argument")
+      (let* ((outsort (last args))
+          (in-sorts (take args (- (length args) 1))))
+        ; body of the function
+        (if (equal? outsort Nonce)
+          (fun->mk-nonce name (sig->new in-sorts outsort))
+          (fun->mk-function name
+            (sig->new in-sorts outsort) cryptos))))))
 
 (@doc (cv-help "declare-function" "(declare-function pbl fun)"
-  "Declares `fun` into the problem `pbl`, registering it so it can be used by name.  Returns the registered (lifted) function.")
- (define (declare-function pbl fun)
-  (register-function (pbl->declare-function pbl fun))))
+    "Declares `fun` into the problem `pbl`, registering it so it can be used by name.  Returns the registered (lifted) function.")
+  (define (declare-function pbl fun)
+    (register-function (pbl->declare-function pbl fun))))
 
 
 ;; decalres a function, and wraps a nonce if needed
@@ -199,17 +203,17 @@
 
 
 (@doc (cv-help "mk-alias-rw" "(mk-alias-rw sorts rw)"
-  "Builds an alias rewrite: `sorts` are the bound sorts, `rw` is a term builder returning `(list args... result)`.  Backs the `alias-rw`/`define-alias` macros.")
- (define (mk-alias-rw sorts rw)
-  (let*
-    [ (vars (map var->fresh-with-sort sorts))
-      (vars-app (map f->var vars))
-      (rwl (apply rw vars-app)) ]
-    (if (< (length rwl) 1)
-      (error "mk-fun: expected at least one sort argument")
-      (let* ((res (last rwl))
-          (args (take rwl (- (length rwl) 1))))
-        (alias->new-rewrite vars args res))))))
+    "Builds an alias rewrite: `sorts` are the bound sorts, `rw` is a term builder returning `(list args... result)`.  Backs the `alias-rw`/`define-alias` macros.")
+  (define (mk-alias-rw sorts rw)
+    (let*
+      [ (vars (map var->fresh-with-sort sorts))
+        (vars-app (map f->var vars))
+        (rwl (apply rw vars-app)) ]
+      (if (< (length rwl) 1)
+        (error "mk-fun: expected at least one sort argument")
+        (let* ((res (last rwl))
+            (args (take rwl (- (length rwl) 1))))
+          (alias->new-rewrite vars args res))))))
 
 ;; ---------------------------------------------------------------------------
 ;; alias-rw
