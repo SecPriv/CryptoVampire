@@ -7,6 +7,7 @@
 (require-builtin cryptovampire/ll/cryptography as c->)
 (require "cryptovampire/function")
 (require "cryptovampire/doc")
+(require "cryptovampire/stdlib")
 
 (@doc (cv-help "register-fresh-nonce" " (register-fresh-nonce crypto vars f) "
     "Registers the term `f` (over the variables `vars`) as a user-provided fresh nonce for `crypto`."
