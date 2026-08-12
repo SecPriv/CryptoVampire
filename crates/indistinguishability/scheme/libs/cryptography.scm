@@ -20,7 +20,8 @@
     "*Example:*"
     "```scheme
     (define prf (declare-cryptography pbl))
-    ```")
+    ```"
+    "Such object is used by cryptovampire to track the builtin axioms/rules to add, and how to instanciate them")
   (define (declare-cryptography pbl)
     (c->declare-cryptography pbl)))
 

@@ -87,7 +87,9 @@
     "Turns the `Function` `f` into a callable scheme value:"
     "- a nullary function becomes the constant formula `(f)`"
     "- otherwise a function that maps formula arguments to the application `(f a ...)`"
-    "Argument values passed to the resulting function go through `convert-to-formula`.")
+    "Argument values passed to the resulting function go through `convert-to-formula`."
+    "\nThis is a major point of magic in the cryptovampire API. It lets the user use 'functions' as scheme functions (i.e., without macros) while still being able to use them as identifier to configure the various aspects of cryptovampire."
+    "See `get-function` to retrive the cryptovampire `Function` object from a lifted function.")
   (define (lift-function f)
     (if (= (sarity (fun->signature f)) 0)
       (f->app f '())
@@ -110,12 +112,12 @@
 (define (mnonce n) (f->app funs->mnonce (list n)))
 
 (@doc (cv-help "wrap-nonce" "(wrap-nonce f)"
-    "Wraps a nonce-valued function so it can be called directly as `(f args...)`.  The result of each call is wrapped in the `nonce` marker (like `(mnonce (f args...))`)."
-    "This is typically applied to the output of `define-alias` for nonces, e.g. `(define mk (wrap-nonce _mk))`."
+    "This wraps a function (lifted or not) outputing a `Nonce` inside the `nonce` constructor and lifts the result."
     "*Example:*"
     "```scheme
+    (get-output-sort _mk) ;; Nonce
     (define mk (wrap-nonce _mk))
-    (mk i j p) ;; a nonce term
+    (mk i j p) ;; return `(nonce (_mk i j p))`
     ```")
   (define (wrap-nonce nonce)
     (let ((f (get-function nonce)))

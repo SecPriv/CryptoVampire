@@ -84,22 +84,23 @@
 
 
 (@doc (cv-help "cand" "(cand . args)"
-    "Logical `and` of the given boolean formulas.")
+    "Symbolic `and` of the given boolean formulas.")
   (define (cand . args) (f->cand args)))
 
 (@doc (cv-help "cor" "(cor . args)"
-    "Logical `or` of the given boolean formulas.")
+    "Symbolic `or` of the given boolean formulas.")
   (define (cor . args) (f->cor args)))
 
 (@doc (cv-help "ctuple" "(ctuple . args)"
-    "Builds a tuple term from the given terms.  `tuple` is a synonym.")
+    "Builds a tuple term from the given terms.  `tuple` is a synonym."
+    "\nThis also auto-nests arguments. Therefore it accpepts more than 2 arguments")
   (define (ctuple . args) (f->ctuple args)))
 
 (define tuple ctuple)
 
 (@doc (cv-help "subst" "(subst a b f)"
     "Returns `f` with every occurrence of term `a` replaced by `b`."
-    "Works on any formula/term; variables are left untouched.")
+    "\n**NB**: the logic is very simple. Notably variables are not taken into account for unification or capture avoidance. Correctness is therefore the caller's responsibility.")
   (define (subst a b f)
     (cond
       [ (equal? f a) b]
