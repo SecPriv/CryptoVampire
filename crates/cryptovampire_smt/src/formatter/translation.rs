@@ -45,8 +45,22 @@ pub fn translate_formula_to_term<'a, U: SmtParam>(formula: &SmtFormula<'a, U>) -
             ])
         }
         // N-ary operators
-        SmtFormula::And(fs) => n_ary_op_to_term("and", fs),
-        SmtFormula::Or(fs) => n_ary_op_to_term("or", fs),
+        SmtFormula::And(fs) => {
+            let tmp: &[_] = fs;
+            match tmp {
+                [] => Term::atom("true"),
+                [x] => translate_formula_to_term(x),
+                _ => n_ary_op_to_term("and", fs),
+            }
+        }
+        SmtFormula::Or(fs) => {
+            let tmp: &[_] = fs;
+            match tmp {
+                [] => Term::atom("false"),
+                [x] => translate_formula_to_term(x),
+                _ => n_ary_op_to_term("or", fs),
+            }
+        }
         SmtFormula::Eq(fs) => n_ary_op_to_term("=", fs),
         SmtFormula::Neq(fs) => n_ary_op_to_term("distinct", fs),
         // Quantifiers
