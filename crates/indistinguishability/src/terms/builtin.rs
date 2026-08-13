@@ -190,13 +190,13 @@ mk_builtin_funs!(
         flags: f!(BUILTIN_SMT)
     };
 
-    /// The boolean constant `true` while `mfalse` is the boolean constant `false`
+    /// Symbolic constructor for `true`
     TRUE "mtrue" "true" {
         signature: s!(() -> Bool),
         flags: f!(BUILTIN_SMT)
     };
 
-    /// The boolean constant `false` while `mtrue` is the boolean constant `true`
+    /// Symbolic constructor for `false`
     FALSE "mfalse" "false" {
         signature: s!(() -> Bool),
         flags: f!(BUILTIN_SMT)
@@ -210,35 +210,40 @@ mk_builtin_funs!(
 
     // ~~~~~~~~~~~ base bitstrings ~~~~~~~~~~~~~~
 
-    /// Another name for [NONCE]: maps a [Sort::Nonce] to the [Sort::Bitstring]
-    /// encoding its raw nonce output.
+    /// Constructore for nonces
+    ///
+    /// Nonces are their own type/sort, this function enable casting to
+    /// bitstring. Also, *all* nonces are created using via this constructor. cv
+    /// relies on this fact to identify nonces.
     NONCE "mnonce" "nonce" {
         signature: s!(Nonce -> Bitstring),
         flags: f!(CUSTOM_DEDUCE /* | CUSTOM_SUBTERM */)
     };
 
-    /// Tuples two bitstrings into a [Bitstring]: `(a, b)`.  `tuple`/`pair` are
-    /// synonyms; `sel1of2`/`sel2of2` project out of it.
+    /// tuple/pair constructor
+    ///
+    /// See `PROJ_1`/`PROJ_2` (`sel1of2`/`sel2of2` in scheme) for its
+    /// destructors
     TUPLE "mtuple" "tuple" "pair" {
         signature: s!(Bitstring, 2)
     };
 
-    /// First projection of a tuple: `(sel1of2 (a, b))` is `a`.
+    /// First projection of a tuple: `(sel1of2 (mtuple a b))` is `a`.
     PROJ_1 "sel1of2" "p1" "fst" {
         signature: s!(Bitstring, 1)
     };
 
-    /// Second projection of a tuple: `(sel2of2 (a, b))` is `b`.
+    /// Second projection of a tuple: `(sel2of2 (mtuple a b))` is `b`.
     PROJ_2 "sel2of2" "p2" "snd" {
         signature: s!(Bitstring, 1)
     };
 
-    /// The empty bitstring.  `empty`/`none` are synonyms.
+    /// The empty bitstring. In scheme, `empty`/`none` are synonyms.
     EMPTY "mempty" "empty" "none" {
         signature: s!(Bitstring, 0)
     };
 
-    /// Converst [Sort::Bool] to [Sort::Bitstring]
+    /// Converts [Sort::Bool] to [Sort::Bitstring]
     FROM_BOOL "mfrom_bool" {
         signature: s!(Bool -> Bitstring)
     };
@@ -248,7 +253,9 @@ mk_builtin_funs!(
         signature: s!(Bitstring -> Bitstring)
     };
 
-    /// The `0` constant (as a bitstring).
+    /// Zeroed bitstring of a given length.
+    ///
+    /// e.g., `(zeroes eta)` is a sequence of `0` the same length as a nonce.
     ZEROES "zeroes" {
         signature: s!(Bitstring -> Bitstring)
     };
@@ -634,8 +641,7 @@ pub(crate) fn mk_scheme_lib() -> String {
     let mut module = String::new();
     let mut wrapped = String::new();
 
-    let docs: std::collections::HashMap<&str, &str> =
-        BUILTIN_DOCS.iter().copied().collect();
+    let docs: std::collections::HashMap<&str, &str> = BUILTIN_DOCS.iter().copied().collect();
 
     module.push_str("(provide eql <> builtin-doc ");
     for (name, fun) in PARSING_PAIRS.iter() {
@@ -652,39 +658,21 @@ pub(crate) fn mk_scheme_lib() -> String {
         let doc = docs.get(fun_name.as_ref()).copied().unwrap_or("");
         let doc_lit = scheme_string_literal(doc);
 
-        writeln!(wrapped, "(define {name}").unwrap();
         writeln!(
             wrapped,
-            "    (let ((___inner (register-function ___pre_${fun_name})))"
+            "
+            (define {name}
+            (let ((___inner (register-function ___pre_${fun_name})))
+                (if (Formula? ___inner)
+                    ___inner
+                    (let ((___w (lambda ___args (apply ___inner ___args))))
+                        (if (> (string-length {doc_lit}) 0)
+                            (#%function-ptr-table-add #%function-ptr-table ___w {doc_lit})
+                            #f)
+                        ___w))))
+            "
         )
         .unwrap();
-        writeln!(
-            wrapped,
-            "        (if (Formula? ___inner)"
-        )
-        .unwrap();
-        writeln!(
-            wrapped,
-            "            ___inner"
-        )
-        .unwrap();
-        writeln!(
-            wrapped,
-            "            (let ((___w (lambda ___args (apply ___inner ___args))))"
-        )
-        .unwrap();
-        writeln!(
-            wrapped,
-            "                (if (> (string-length {doc_lit}) 0)"
-        )
-        .unwrap();
-        writeln!(
-            wrapped,
-            "                    (#%function-ptr-table-add #%function-ptr-table ___w {doc_lit})"
-        )
-        .unwrap();
-        writeln!(wrapped, "                    #f)").unwrap();
-        writeln!(wrapped, "                ___w))))").unwrap();
         // The reference only lists each builtin once, under its primary name:
         // aliases (`and`, `or`, `=`, ...) keep their attached `help` docs but
         // are not duplicated in the `builtin-doc` table.

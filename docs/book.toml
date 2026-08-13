@@ -1,5 +1,5 @@
 [book]
-title = "CryptoVampire API Reference"
-authors = ["CryptoVampire"]
+title = "Cryptovampire2 scheme API Reference"
+authors = ["Cryptovampire2"]
 language = "en"
 src = "."

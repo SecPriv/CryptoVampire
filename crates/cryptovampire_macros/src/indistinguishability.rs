@@ -143,19 +143,7 @@ impl MFunction {
     }
 }
 
-fn mk_steel<'a>(functions: implvec!(&'a MFunction)) -> proc_macro2::TokenStream {    // pub fn register_value_with_doc(
-    // &mut self,
-    // name: &'static str,
-    // value: SteelVal,
-    // doc: DocTemplate<'static>,
-    // ) -> &mut Self {
-    //
-    // pub struct DocTemplate<'a> {
-    // pub signature: &'a str,
-    // pub params: &'a [&'a str],
-    // pub description: &'a str,
-    // pub examples: &'a [(&'a str, &'a str)],
-    // }
+fn mk_steel<'a>(functions: implvec!(&'a MFunction)) -> proc_macro2::TokenStream {   
     let imports = quote! {
         use ::steel::steel_vm::builtin::DocTemplate;
         use ::steel::steel_vm::builtin::BuiltInModule;
@@ -256,6 +244,7 @@ fn mk_builtin_docs(functions: &[MFunction]) -> proc_macro2::TokenStream {
     });
 
     quote! {
+        /// Capture doc-comments to be propagated to steel
         pub static BUILTIN_DOCS: &[(&str, &'static str)] = &[ #(#pairs),* ];
     }
 }
