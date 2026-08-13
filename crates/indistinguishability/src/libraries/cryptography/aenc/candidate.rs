@@ -71,13 +71,13 @@ fn add_static(pbl: &Problem, aenc: &AEnc, sink: &mut impl RewriteSink) {
 
     if let Some(pk) = pk {
         sink.add_rewrite(pbl,
-            mk_rewrite!(crate prolog format!("enc candidate trigger"); (m Bitstring, r Nonce, k Nonce):
+            mk_rewrite!(crate prolog "enc candidate trigger".to_string(); (m Bitstring, r Nonce, k Nonce):
           (enc #m (NONCE #r) (pk (NONCE #k)))
             => (candidate_m (enc #m (NONCE #r) (pk (NONCE #k))) #m #r #k))
         )
     } else {
         sink.add_rewrite(pbl,
-            mk_rewrite!(crate prolog format!("enc candidate trigger"); (m Bitstring, r Nonce, k Nonce):
+            mk_rewrite!(crate prolog "enc candidate trigger".to_string(); (m Bitstring, r Nonce, k Nonce):
           (enc #m (NONCE #r) (NONCE #k))
             => (candidate_m (enc #m (NONCE #r) (NONCE #k)) #m #r #k)))
     }

@@ -68,7 +68,7 @@ fn add_static(pbl: &Problem, ddh: &DDH, sink: &mut impl RewriteSink) {
     } = ddh;
     sink.add_rewrite(
         pbl,
-        mk_rewrite!(crate prolog format!("ddh candidate trigger"); (a Nonce, b Nonce):
+        mk_rewrite!(crate prolog "ddh candidate trigger".to_string(); (a Nonce, b Nonce):
           (exp (exp g (NONCE #a)) (NONCE #b))
             => (candidate_m (exp (exp g (NONCE #a)) (NONCE #b)) #a #b)),
     )

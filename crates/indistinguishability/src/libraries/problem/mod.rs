@@ -49,7 +49,7 @@ fn mk_alias_rule_1<N: Analysis<Lang>>(
     AliasRewrite { from, to, .. }: &AliasRewrite,
 ) -> Rewrite<Lang, N> {
     Rewrite::new(
-        format!("{} definition #{i:}", &f.name),
+        format!("{} definition #{i:}", f.name),
         Pattern::from(&rexp!((f #(from.iter().cloned())*))),
         Pattern::from(to),
     )

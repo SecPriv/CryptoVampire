@@ -119,7 +119,7 @@ impl<'a> Rule<Lang, PAnalysis<'a>, RcRule> for QuantifierRule {
                     'err: {
                         ebreak_let!('err, let Some(&sid) = subst.get(DEFAULT_PARAMERTERS.sort.as_egg()));
                         ebreak_if!('out, prgm.egraph()[sid].nodes[0].head == INDEX_SORT);
-                        log::error!("wrong sort: {}", &prgm.egraph()[sid].nodes[0].head);
+                        log::error!("wrong sort: {}", prgm.egraph()[sid].nodes[0].head);
                     }
                     panic!("only Index is supported in deduce quantifiers")
                 }

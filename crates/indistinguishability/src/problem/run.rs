@@ -285,14 +285,13 @@ impl Problem {
         self.report.total_run_calls += total;
 
         // generate a latex main.tex that imports all dumped step forests
-        if dump_format.is_latex() {
-            if let Some(dir) = &dump_proof {
+        if dump_format.is_latex()
+            && let Some(dir) = &dump_proof {
                 let main = golgge::latex_main(&dumped_steps);
                 if let Err(e) = std::fs::write(dir.join("main.tex"), main) {
                     log::warn!("failed to write latex main.tex: {e}");
                 }
             }
-        }
 
         res
     }
@@ -340,7 +339,7 @@ fn dump_step_proof(
             ProofDumpFormat::Latex => pgrm.dump_proof_latex(id, &renderer, &mut f),
             ProofDumpFormat::Html => pgrm.dump_proof_html(id, &renderer, &mut f),
         };
-        r.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+        r.map_err(std::io::Error::other)
     });
     match result {
         Ok(()) => {

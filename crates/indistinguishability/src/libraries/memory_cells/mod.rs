@@ -215,7 +215,7 @@ pub(crate) fn search_concrete_memory_cell<S: SyntaxSearcher + ?Sized>(
                 .contains(FormulaBuilderFlags::NO_THROUGH_DIRECT_MEMORY_CELL)
     );
 
-    trace!("in search_concrete_memory_cell {cell_head} @ {}", &step.id);
+    trace!("in search_concrete_memory_cell {cell_head} @ {}", step.id);
 
     let step_id = &step.id;
     let time = rexp!((step_id #(step_args.iter().cloned())*));
