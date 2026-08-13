@@ -18,6 +18,7 @@
 //! [Problem]: crate::problem::Problem
 
 mod error;
+mod cvc5;
 #[allow(clippy::module_inception)]
 mod runner;
 mod runner_helper;
@@ -27,6 +28,7 @@ mod tptp;
 mod vampire;
 mod z3;
 
+pub use cvc5::Cvc5Runner;
 pub use error::RunnerError;
 pub use runner::{Discoverer, Runner, RunnerBase, RunnerHandler, RunnerOut, RunnerOutI};
 pub(crate) use runner_helper::*;
