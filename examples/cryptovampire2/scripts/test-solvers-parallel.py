@@ -30,6 +30,8 @@ import hashlib
 # Discover available cores from the machine
 DEFAULT_TOTAL_CORES = os.cpu_count() or 4
 
+IGNORED_FILES = ["save-results.scm"]
+
 
 class SolverConfig:
     """Solver configuration with core requirements."""
@@ -275,7 +277,6 @@ async def run_test(
     
     cmd = [
         str(binary),
-        "--scheme-root-directory", str(script_dir),
         "--cores", str(job.cores),
         str(script_dir / job.file)
     ]
@@ -662,7 +663,7 @@ Examples:
     args = parser.parse_args()
     
     # Setup paths
-    script_dir = Path(__file__).parent.resolve()
+    script_dir = Path(__file__).parent.parent.resolve()
     results_dir = args.output_dir or (script_dir / "solver-test-results")
     checkpoint_file = args.checkpoint or (script_dir / ".solver-test-checkpoint.json")
     
@@ -673,7 +674,7 @@ Examples:
         # Find all .scm files
         files = []
         for pattern in ["*.scm", "stateful/*.scm"]:
-            files.extend(str(p.relative_to(script_dir)) for p in script_dir.glob(pattern))
+            files.extend(str(p.relative_to(script_dir)) for p in script_dir.glob(pattern) if not p in IGNORED_FILES)
         files = sorted(set(files))
     
     # Determine configurations
@@ -695,12 +696,8 @@ Examples:
     # Check binary exists
     binary = script_dir / "cryptovampire2"
     if not binary.exists():
-        print("Binary not found. Building...")
-        try:
-            subprocess.run(["make", str(binary.name)], cwd=script_dir, check=True)
-        except subprocess.CalledProcessError:
-            print("Error: Failed to build binary")
-            sys.exit(1)
+        print(f"Binary not found at {binary}")
+        sys.exit(1)
     
     # Initialize checkpoint manager
     checkpoint = None

@@ -1,22 +1,23 @@
 # Makefile for running cryptovampire2 tests
 
-# Configuration
-CRATE_DIR := ../..
-PROJECT_DIR := $(CRATE_DIR)/../..
-# As per .cargo/config.toml in the project root
-# BUILD_DIR := /tmp/ccsa/build/dir/release
-BUILD_DIR := $(PROJECT_DIR)/target/release
-BINARY_NAME := cryptovampire2
-BINARY := ./$(BINARY_NAME)
-RESULTS := results.csv
-SOURCES := $(wildcard *.scm) $(wildcard ./stateful/*.scm)
-VAMPIRE_PATH :=$(PWD)/moldvampire.sh
-
 # 1. Get the absolute path of the current Makefile
 MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 
 # 2. Extract just the directory portion from that path
 CURRENT_DIR := $(dir $(MKFILE_PATH))
+
+# Configuration
+PROJECT_DIR := ./../..
+CRATE_DIR := $(PROJECT_DIR)/crates/cryptovampire2
+# As per .cargo/config.toml in the project root
+# BUILD_DIR := /tmp/ccsa/build/dir/release
+BUILD_DIR := $(PROJECT_DIR)/target/release
+BINARY_NAME := cryptovampire2
+BINARY := ./$(BINARY_NAME)
+RESULTS := $(CURRENT_DIR)results/results.csv
+SOURCES := $(wildcard *.scm) $(wildcard ./stateful/*.scm)
+VAMPIRE_PATH :=vampire
+
 
 # Ensure sequential execution
 .NOTPARALLEL:
@@ -48,8 +49,8 @@ $(RESULTS): $(BINARY) $(SOURCES)
 	@rm -f $(RESULTS)
 	@for file in $(SOURCES); do \
 		echo "Running test: $$file"; \
-		echo "  $(BINARY) --scheme-root-directory $(CURRENT_DIR) $$file"; \
-		RESULT=$(RESULTS) $(BINARY) --scheme-root-directory $(CURRENT_DIR) "$$file" || exit 1; \
+		echo "  $(BINARY) $$file"; \
+		RESULT=$(RESULTS) $(BINARY) "$$file" || exit 1; \
 	done
 	@echo "Done. Results saved to $(RESULTS)"
 
@@ -83,15 +84,11 @@ clean:
 #   TEST_CORES - Number of cores to use (default: machine core count)
 .PHONY: test-solvers-parallel
 test-solvers-parallel: $(BINARY)
-	@python3 $(CURRENT_DIR)test-solvers-parallel.py \
+	@python3 $(CURRENT_DIR)scripts/test-solvers-parallel.py \
 		$(if $(CONFIGS),--configs $(CONFIGS),) \
 		$(if $(FILES),--files $(FILES),) \
 		$(if $(TIMEOUT),--timeout $(TIMEOUT),--timeout 1800) \
 		$(if $(TEST_CORES),--cores $(TEST_CORES),) \
 		$(if $(RESUME),--resume,) \
-		$(if $(DRY_RUN),--dry-run,)
-
-# Legacy sequential test script (kept for backwards compatibility)
-.PHONY: test-solvers
-test-solvers: $(BINARY)
-	@./test-solvers.sh
+		$(if $(DRY_RUN),--dry-run,) \
+		--output-dir "$(CURRENT_DIR)results/"

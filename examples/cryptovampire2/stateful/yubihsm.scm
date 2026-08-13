@@ -71,7 +71,7 @@
 ; tactic allows one to combine these two steps, and to conclude.
 ; *******************************************************************************)
 
-(require "../save-results.scm")
+(require "../scripts/save-results.scm")
 (require "cryptovampire/function")
 (require "cryptovampire/builtin-functions")
 (require "cryptovampire/cryptography")
