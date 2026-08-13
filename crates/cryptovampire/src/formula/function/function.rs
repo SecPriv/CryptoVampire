@@ -189,6 +189,29 @@ impl<'bump> Function<'bump> {
         }
     }
 
+    /// Creates a skolem function with a deterministic `name`.
+    ///
+    /// Unlike [`Self::new_skolem`], which allocates a fresh unique name on
+    /// every call, this reuses the exact same name for the skolem. This is
+    /// important for `try find` quantifiers: they are skolemised every time
+    /// the problem is (re)generated, while the instances discovered from a
+    /// solver's output keep referencing the previous run's skolem names.
+    /// Always regenerating the same skolem under the same name ensures these
+    /// stale references still resolve to a declared function.
+    pub fn new_skolem_named(
+        container: container!(),
+        name: &str,
+        free_sorts: impl IntoIterator<Item = Sort<'bump>>,
+        out: Sort<'bump>,
+    ) -> Self {
+        let inner = InnerFunction::Skolem(Skolem {
+            name: name.to_string().into(),
+            args: free_sorts.into_iter().collect(),
+            sort: out,
+        });
+        container.alloc_inner(inner)
+    }
+
     pub fn new_quantifier_from_quantifier(
         container: container!(nf),
         q: quantifier::Quantifier<'bump>,

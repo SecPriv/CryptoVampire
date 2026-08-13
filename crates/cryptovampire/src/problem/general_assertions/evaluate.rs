@@ -275,12 +275,20 @@ pub fn generate_quantifier<'bump>(
             success,
             faillure,
         } => {
+            // Skolem functions must be named *deterministically*: they are
+            // recreated on every problem (re)generation, but instances
+            // discovered from a solver's previous output keep referring to the
+            // old names. Deriving the name from the stable quantifier name
+            // (rather than using a fresh unique name) keeps those references
+            // resolving to a declared function.
             let skolems = q
                 .bound_variables
                 .iter()
-                .map(|Variable { sort, .. }| {
-                    Function::new_skolem(
+                .enumerate()
+                .map(|(i, Variable { sort, .. })| {
+                    Function::new_skolem_named(
                         pbl.container(),
+                        &format!("sk${}_{}", function.name(), i),
                         q.free_variables.iter().map(|v| v.sort),
                         *sort,
                     )
