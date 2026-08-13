@@ -1,7 +1,7 @@
 { ... }:
 {
   perSystem =
-    { pkgs, config, ... }:
+    { pkgs, config, inputs', ... }:
     let
       mpython = pkgs.python311.withPackages (
         ps: with ps; [
@@ -28,6 +28,7 @@
             cargo-expand
             cargo-limit
 
+            inputs'.validator.packages.default
           ]);
       });
 
