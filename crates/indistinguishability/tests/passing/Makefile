@@ -4,8 +4,8 @@
 CRATE_DIR := ../..
 PROJECT_DIR := $(CRATE_DIR)/../..
 # As per .cargo/config.toml in the project root
-BUILD_DIR := /tmp/ccsa/build/dir/release
-# BUILD_DIR := $(PROJECT_DIR)/target/release
+# BUILD_DIR := /tmp/ccsa/build/dir/release
+BUILD_DIR := $(PROJECT_DIR)/target/release
 BINARY_NAME := indistinguishability
 BINARY := ./$(BINARY_NAME)
 RESULTS := results.csv
