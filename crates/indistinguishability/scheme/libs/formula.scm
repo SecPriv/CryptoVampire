@@ -25,6 +25,15 @@
 ;; their functional counterparts, exposed mainly for the macros.
 ;; ---------------------------------------------------------------------------
 
+
+(register-syntax-doc! 'exists
+  "Binds fresh existential variables of the given sorts and builds an `exists` formula over `body`."
+  ""
+  "**Usage:**"
+  "```scheme"
+  "(exists ((i Index) (j Index)) body)"
+  "```")
+
 (define-syntax exists
   (syntax-rules ()
     [ (_ ((ids sorts) ...) arg)

@@ -54,15 +54,17 @@
 (@doc (cv-help "add-smt-axiom" " (add-smt-axiom pbl formula) "
     "Adds `formula` as an SMT axiom available to the solvers of `pbl`."
     "*Example:*"
-    "```scheme
-    (add-smt-axiom pbl (mnot (eq tag1 tag2)))
-    ```")
+    "```scheme"
+    "(add-smt-axiom pbl (mnot (eq tag1 tag2)))"
+    "```")
   (define (add-smt-axiom pbl formula) (pbl->add-smt-axiom pbl formula)))
 
 (@doc (cv-help "add-rewrite" " (add-rewrite pbl rw) "
     "Adds a rewrite rule `rw` (built with `rw.new`) to the term rewriting of `pbl`."
-    "*Example:*" "```scheme"
-    " (add-rewrite pbl (rw.new \"lemma\" (list i t j p) lhs rhs)) " "```")
+    "*Example:*" 
+    "```scheme"
+    "(add-rewrite pbl (rw.new \"lemma\" (list i t j p) lhs rhs)) " 
+    "```")
   (define (add-rewrite pbl rw) (pbl->add-rewrite pbl rw)))
 
 (@doc (cv-help "run" " (run pbl p1 p2) "
@@ -73,9 +75,9 @@
 (@doc (cv-help "mk-problem" " (mk-problem tag) "
     "Creates a fresh problem object ; the `tag` is only a name.  Pass the result to all `declare-*` functions."
     "*Example:*"
-    "```scheme
-    (define pbl (mk-problem 'x))
-    ```")
+    "```scheme"
+    "(define pbl (mk-problem 'x))"
+    "```")
   (define (mk-problem _) (pbl->empty base->cli-config)))
 
 ;; ---------------------------------------------------------------------------
@@ -107,8 +109,8 @@
 (@doc (cv-help "declare-protocol" " (declare-protocol pbl) "
     "Declares a fresh protocol in `pbl`. Returns a protocol value ; use one per protocol/participant."
     "*Example:*"
-    "```scheme
-    (define p1 (declare-protocol pbl))
-    ```")
+    "```scheme"
+    "(define p1 (declare-protocol pbl))"
+    "```")
   (define (declare-protocol pbl)
     (register-function (pbl->declare-protocol pbl))))

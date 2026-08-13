@@ -114,11 +114,11 @@
 (@doc (cv-help "wrap-nonce" "(wrap-nonce f)"
     "This wraps a function (lifted or not) outputing a `Nonce` inside the `nonce` constructor and lifts the result."
     "*Example:*"
-    "```scheme
-    (get-output-sort _mk) ;; Nonce
-    (define mk (wrap-nonce _mk))
-    (mk i j p) ;; return `(nonce (_mk i j p))`
-    ```")
+    "```scheme"
+    "(get-output-sort _mk) ;; Nonce"
+    "(define mk (wrap-nonce _mk))"
+    "(mk i j p) ;; return `(nonce (_mk i j p))`"
+    "```")
   (define (wrap-nonce nonce)
     (let ((f (get-function nonce)))
       (if (f->Formula? nonce)
@@ -132,9 +132,9 @@
 (@doc (cv-help "unwrap-nonce" "(unwrap-nonce f)"
     "Inverse of `wrap-nonce`: returns the lifted function that produces the raw (unmarked) nonce."
     "*Example:*"
-    "```scheme
-    ((unwrap-nonce k1) i) ;; the bare term behind (mk i ...)
-    ```")
+    "```scheme"
+    "((unwrap-nonce k1) i) ;; the bare term behind (mk i ...)"
+    "```")
   (define (unwrap-nonce nonce)
     (lift-function (get-function nonce))))
 
@@ -173,23 +173,19 @@
       (f (declare-function pbl (mk-function name cryptos allArgs))) ]
     (if (Nonce? ret) (wrap-nonce f) f)))
 
-;; ---------------------------------------------------------------------------
-;; define-function
-;;
-;; Declares and binds a function with the given name.  The crypto modules it
-;; uses come first (optional, in a list); then the argument sorts; then `->`
-;; and the output sort.  For nullary constants, a bare sort suffices.
-;;
-;; *Examples:*
-;; ```scheme
-;; (define-function mhash pbl (prf) (Bitstring Bitstring) -> Bitstring)
-;; (define-function ok pbl Bitstring)              ; nullary constant
-;; (define-function k1 pbl (Index) -> Nonce)       ; nonce -> wrapped
-;; ```
-;;
-;; Note that the resulting scheme identifier is a lifted callable/formula, so
-;; it can be passed around as a value.
-;; ---------------------------------------------------------------------------
+(register-syntax-doc! 'define-function
+    "Defines and binds a function named `name` in the problem `pbl`."
+    "The crypto modules it uses come first (in a list, optional); then the "
+    "argument sorts; then `->` and the output sort.  A bare sort declares a "
+    "nullary constant; a nonce output is wrapped so the result can be called "
+    "directly.  The bound identifier is a lifted callable/formula value."
+    ""
+    "**Usage:**"
+    "```scheme"
+    "(define-function mhash pbl (prf) (Bitstring Bitstring) -> Bitstring)"
+    "(define-function ok pbl Bitstring)              ; nullary constant"
+    "(define-function k1 pbl (Index) -> Nonce)       ; nonce -> wrapped"
+    "```")
 
 (define-syntax define-function
   (syntax-rules (->)
@@ -217,12 +213,15 @@
             (args (take rwl (- (length rwl) 1))))
           (alias->new-rewrite vars args res))))))
 
-;; ---------------------------------------------------------------------------
-;; alias-rw
-;;
-;; Builds one rewrite used by `define-alias`: `(alias-rw ((i Index) (j Index)) ((unwrap-nonce k1) i) -> ...)`.
-;; Binds the given ids to fresh variables of the given sorts.
-;; ---------------------------------------------------------------------------
+
+(register-syntax-doc! 'alias-rw
+    "Builds one rewrite used by `define-alias`, binding the given ids to fresh"
+    "variables of the given sorts."
+    ""
+    "**Usage:**"
+    "```scheme"
+    "(alias-rw ((i Index) (j Index)) ((unwrap-nonce k1) i) -> ...)"
+    "```")
 
 (define-syntax alias-rw
   (syntax-rules (->)
@@ -232,21 +231,18 @@
         (lambda (ids ...)
           (list args ... res))) ]))
 
-;; ---------------------------------------------------------------------------
-;; define-alias
-;;
-;; Declares a function that is defined by rewriting into previously declared
-;; functions (often per-protocol, or for `wrap-nonce`).  Each rewrite is a
-;; `[ (alias-rw ...) ... ]` clause.
-;;
-;; *Example:* (from the tests)
-;; ```scheme
-;; (define-alias _mk pbl (Index Index Protocol) Nonce
-;;   [ ([ (i Index) (j Index) ] (i j p1) -> ((unwrap-nonce k1) i))
-;;     ([ (i Index) (j Index) ] (i j p2) -> ((unwrap-nonce k2) i j)) ])
-;; (define mk (wrap-nonce _mk))
-;; ```
-;; ---------------------------------------------------------------------------
+(register-syntax-doc! 'define-alias
+    "Declares a function that is defined by rewriting into previously declared"
+    "functions (often per-protocol, or with `wrap-nonce`).  Each clause is a"
+    "`[ (alias-rw ...) ... ]` rewrite."
+    ""
+    "**Usage:**"
+    "```scheme"
+    "(define-alias _mk pbl (Index Index Protocol) Nonce"
+    "  [ ([ (i Index) (j Index) ] (i j p1) -> ((unwrap-nonce k1) i))"
+    "    ([ (i Index) (j Index) ] (i j p2) -> ((unwrap-nonce k2) i j)) ])"
+    "(define mk (wrap-nonce _mk))"
+    "```")
 
 (define-syntax define-alias
   (syntax-rules (->)

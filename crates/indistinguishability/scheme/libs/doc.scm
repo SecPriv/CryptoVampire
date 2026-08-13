@@ -35,49 +35,14 @@
 (define syntax-docs (hash))
 (define types-docs (hash))
 
-(define (register-syntax-doc! name doc)
-  (set! syntax-docs (hash-insert syntax-docs name doc)))
+(define (register-syntax-doc! name . doc)
+  (set! syntax-docs (hash-insert syntax-docs name (string-join doc "\n"))))
 
-(define (register-type-doc! name doc)
-  (set! types-docs (hash-insert types-docs name doc)))
+(define (register-type-doc! name . doc)
+  (set! types-docs (hash-insert types-docs name (string-join doc "\n"))))
 
 ;; ---------------- syntax rules (macros) ----------------
 
-(register-syntax-doc! 'define-function
-  (string-append
-    "Defines and binds a function named `name` in the problem `pbl`.\n"
-    "The crypto modules it uses come first (in a list, optional); then the\n"
-    "argument sorts; then `->` and the output sort.  A bare sort declares a\n"
-    "nullary constant; a nonce output is wrapped so the result can be called\n"
-    "directly.  The bound identifier is a lifted callable/formula value.\n"
-    "\n**Usage:**\n```scheme\n"
-    "(define-function mhash pbl (prf) (Bitstring Bitstring) -> Bitstring)\n"
-    "(define-function ok pbl Bitstring)              ; nullary constant\n"
-    "(define-function k1 pbl (Index) -> Nonce)       ; nonce -> wrapped\n"
-    "```"))
-
-(register-syntax-doc! 'define-alias
-  (string-append
-    "Declares a function that is defined by rewriting into previously declared\n"
-    "functions (often per-protocol, or with `wrap-nonce`).  Each clause is a\n"
-    "`[ (alias-rw ...) ... ]` rewrite.\n"
-    "\n**Usage:**\n```scheme\n"
-    "(define-alias _mk pbl (Index Index Protocol) Nonce\n"
-    "  [ ([ (i Index) (j Index) ] (i j p1) -> ((unwrap-nonce k1) i))\n"
-    "    ([ (i Index) (j Index) ] (i j p2) -> ((unwrap-nonce k2) i j)) ])\n"
-    "(define mk (wrap-nonce _mk))\n"
-    "```"))
-
-(register-syntax-doc! 'alias-rw
-  (string-append
-    "Builds one rewrite used by `define-alias`, binding the given ids to fresh\n"
-    "variables of the given sorts.\n"
-    "\n**Usage:**\n```scheme\n"
-    "(alias-rw ((i Index) (j Index)) ((unwrap-nonce k1) i) -> ...)\n"
-    "```"))
-
-(register-syntax-doc! 'exists
-  "Binds fresh existential variables of the given sorts and builds an `exists` formula over `body`.\n\n**Usage:**\n```scheme\n(exists ((i Index) (j Index)) body)\n```")
 
 (register-syntax-doc! 'forall
   "Binds fresh universal variables of the given sorts and builds a `forall` formula over `body`.\n\n**Usage:**\n```scheme\n(forall ((i Index)) body)\n```")

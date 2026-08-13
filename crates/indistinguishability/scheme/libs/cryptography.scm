@@ -19,9 +19,9 @@
     "Declares a fresh cryptographic module in `pbl` ; returns the crypto value to pass to `initialize-as-*`."
     "Use one per cryptographic family used in the problem."
     "*Example:*"
-    "```scheme
-    (define prf (declare-cryptography pbl))
-    ```"
+    "```scheme"
+    "(define prf (declare-cryptography pbl))"
+    "```"
     "Such object is used by cryptovampire to track the builtin axioms/rules to add, and how to instanciate them")
   (define (declare-cryptography pbl)
     (c->declare-cryptography pbl)))

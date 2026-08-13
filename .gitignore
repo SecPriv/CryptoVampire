@@ -15,3 +15,5 @@ tmp
 
 **/profile.json.gz
 results*
+
+docs/scheme-api.md
