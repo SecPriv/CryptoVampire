@@ -47,6 +47,7 @@ force_cargo:
 all-tests: $(BINARY) $(SOURCES)
 	@for file in $(SOURCES); do \
 		echo "Running test: $$file"; \
-		echo "  $(BINARY) $$file"; \
-		$(BINARY) "$$file"; \
+		$(BINARY) "$$file" \
+			auto \
+			$(if $(TIMEOUT),--timeout $(TIMEOUT),40); \
 	done
