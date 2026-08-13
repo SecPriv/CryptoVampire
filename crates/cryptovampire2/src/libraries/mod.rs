@@ -32,7 +32,7 @@ use crate::{CVProgram, Lang, MSmt, MSmtParam, Problem};
 /// # Example
 ///
 /// ```
-/// # use indistinguishability::{decl_vars, terms::Sort::Bitstring};
+/// # use cryptovampire2::{decl_vars, terms::Sort::Bitstring};
 /// decl_vars!(a, b: Bitstring);
 /// ```
 #[macro_export]

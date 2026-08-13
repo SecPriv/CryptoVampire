@@ -23,7 +23,7 @@
 ;; plain strings which are written with the fixed-arity `doc-put`.
 ;;
 ;; Regenerate from the repository root with:
-;;   cargo run --release -- crates/indistinguishability/scheme/docgen.scm
+;;   cargo run --release -- crates/cryptovampire2/scheme/docgen.scm
 
 (require "cryptovampire/stdlib")
 (require "cryptovampire/function")
@@ -347,7 +347,7 @@
         "tables (see `cryptovampire/doc`).\n\n"
         "Regenerate with:\n\n"
         "```sh\n"
-        "cargo run --release -- crates/indistinguishability/scheme/docgen.scm\n"
+        "cargo run --release -- crates/cryptovampire2/scheme/docgen.scm\n"
         "```\n"))
     (doc-put "\n## Sorts & types\n")
     (doc-put (table-entries->section sort-doc "###"))

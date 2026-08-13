@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Parallel solver configuration tester for indistinguishability.
+Parallel solver configuration tester for cryptovampire2.
 
 Dynamically allocates cores based on solver requirements:
 - vampire-enabled configs: all available cores (default: machine core count)
@@ -8,7 +8,7 @@ Dynamically allocates cores based on solver requirements:
 - cvc5-only: 1 core
 - no-solvers: 1 core (minimal, runs in parallel)
 
-The --cores argument is forwarded to indistinguishability for each test.
+The --cores argument is forwarded to cryptovampire2 for each test.
 
 Supports checkpointing and resume for interrupted runs.
 """
@@ -264,7 +264,7 @@ async def run_test(
 ) -> TestOutcome:
     """Run a single test with timeout and resource management."""
     
-    binary = script_dir / "indistinguishability"
+    binary = script_dir / "cryptovampire2"
     if not binary.exists():
         return TestOutcome(
             job=job,
@@ -693,7 +693,7 @@ Examples:
         sys.exit(1)
     
     # Check binary exists
-    binary = script_dir / "indistinguishability"
+    binary = script_dir / "cryptovampire2"
     if not binary.exists():
         print("Binary not found. Building...")
         try:

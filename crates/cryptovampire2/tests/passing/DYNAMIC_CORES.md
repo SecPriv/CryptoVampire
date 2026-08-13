@@ -1,6 +1,6 @@
 # Dynamic Core Allocation
 
-The parallel solver tester now dynamically manages core allocation based on your machine's capabilities and forwards core counts to the indistinguishability tool.
+The parallel solver tester now dynamically manages core allocation based on your machine's capabilities and forwards core counts to the cryptovampire2 tool.
 
 ## Key Features
 
@@ -13,7 +13,7 @@ The parallel solver tester now dynamically manages core allocation based on your
 - **Single-core configs** (`no-vampire`, `z3-only`, `cvc5-only`, `no-solvers`): Use 1 core each
 
 ### 3. Core Forwarding
-The `--cores <N>` flag is automatically forwarded to the indistinguishability binary for each test, ensuring Vampire uses the correct number of threads.
+The `--cores <N>` flag is automatically forwarded to the cryptovampire2 binary for each test, ensuring Vampire uses the correct number of threads.
 
 ## Usage Examples
 

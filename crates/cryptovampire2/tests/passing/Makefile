@@ -1,4 +1,4 @@
-# Makefile for running indistinguishability tests
+# Makefile for running cryptovampire2 tests
 
 # Configuration
 CRATE_DIR := ../..
@@ -6,7 +6,7 @@ PROJECT_DIR := $(CRATE_DIR)/../..
 # As per .cargo/config.toml in the project root
 # BUILD_DIR := /tmp/ccsa/build/dir/release
 BUILD_DIR := $(PROJECT_DIR)/target/release
-BINARY_NAME := indistinguishability
+BINARY_NAME := cryptovampire2
 BINARY := ./$(BINARY_NAME)
 RESULTS := results.csv
 SOURCES := $(wildcard *.scm) $(wildcard ./stateful/*.scm)
@@ -58,7 +58,7 @@ clean:
 
 # Test all examples with different solver configurations (PARALLEL VERSION)
 # Uses dynamic core allocation to maximize parallelism while respecting solver constraints:
-#   - vampire-enabled configs: all available cores (forwarded to indistinguishability)
+#   - vampire-enabled configs: all available cores (forwarded to cryptovampire2)
 #   - z3-only/cvc5-only/no-solvers: 1 core each (run in parallel)
 #
 # Usage:

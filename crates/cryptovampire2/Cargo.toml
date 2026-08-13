@@ -1,8 +1,8 @@
 [package]
-name = "indistinguishability"
+name = "cryptovampire2"
 version = "0.2.0"
 edition = "2024"
-description = "Computationnally sound cryptographic protocol verifier for indistinguishability properties using the CCSA"
+description = "Computationally sound cryptographic protocol verifier for indistinguishability properties using the CCSA"
 
 [dependencies]
 

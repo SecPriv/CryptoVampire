@@ -33,5 +33,5 @@ Unfortunatly, `steel` does not seems to support documentation for things like ma
   repository root with:
 
   ```sh
-  cargo run --release -- crates/indistinguishability/scheme/docgen.scm
+  cargo run --release -- crates/cryptovampire2/scheme/docgen.scm
   ```

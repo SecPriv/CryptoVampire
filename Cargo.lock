@@ -951,6 +951,50 @@ dependencies = [
 ]
 
 [[package]]
+name = "cryptovampire2"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "archery",
+ "assert_cmd",
+ "bitflags 2.11.0",
+ "bon",
+ "clap",
+ "clap_complete",
+ "cryptovampire_macros",
+ "cryptovampire_smt",
+ "egg",
+ "env_logger 0.11.9",
+ "golgge",
+ "humantime",
+ "imbl",
+ "indexmap 2.13.0",
+ "itertools",
+ "log",
+ "logic_formula",
+ "num_cpus",
+ "parking_lot",
+ "paste",
+ "predicates",
+ "quarck",
+ "rpds",
+ "rustc-hash",
+ "seq-macro",
+ "serde",
+ "serde_json",
+ "smallvec",
+ "static_init",
+ "steel-core",
+ "steel-derive",
+ "steel-repl",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "utils",
+ "which",
+]
+
+[[package]]
 name = "cryptovampire_macros"
 version = "0.1.0"
 dependencies = [
@@ -1784,50 +1828,6 @@ dependencies = [
  "hashbrown 0.16.1",
  "serde",
  "serde_core",
-]
-
-[[package]]
-name = "indistinguishability"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "archery",
- "assert_cmd",
- "bitflags 2.11.0",
- "bon",
- "clap",
- "clap_complete",
- "cryptovampire_macros",
- "cryptovampire_smt",
- "egg",
- "env_logger 0.11.9",
- "golgge",
- "humantime",
- "imbl",
- "indexmap 2.13.0",
- "itertools",
- "log",
- "logic_formula",
- "num_cpus",
- "parking_lot",
- "paste",
- "predicates",
- "quarck",
- "rpds",
- "rustc-hash",
- "seq-macro",
- "serde",
- "serde_json",
- "smallvec",
- "static_init",
- "steel-core",
- "steel-derive",
- "steel-repl",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "utils",
- "which",
 ]
 
 [[package]]

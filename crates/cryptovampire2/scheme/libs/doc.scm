@@ -52,7 +52,7 @@
 ;; `cryptovampire/builtin-functions`' `builtin-doc`, which `mk_scheme_lib`
 ;; builds up entirely inside the module body it emits (intra-module `set!`,
 ;; then export the completed value).
-;; `crates/indistinguishability/scheme/docgen.scm` collects them to render
+;; `crates/cryptovampire2/scheme/docgen.scm` collects them to render
 ;; `docs/scheme-api.md`.
 ;; ---------------------------------------------------------------------------
 

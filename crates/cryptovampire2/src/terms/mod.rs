@@ -70,7 +70,7 @@ macro_rules! mk_cow {
 /// # Example
 ///
 /// ```
-/// # use indistinguishability::{mk_signature, terms::Sort};
+/// # use cryptovampire2::{mk_signature, terms::Sort};
 /// mk_signature!((Sort::Bitstring, Sort::Bitstring) -> Sort::Bitstring);
 /// ```
 #[macro_export]

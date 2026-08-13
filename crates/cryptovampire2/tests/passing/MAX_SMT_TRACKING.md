@@ -4,7 +4,7 @@ The parallel solver tester now captures and reports the **max SMT time** metric 
 
 ## What is Max SMT Time?
 
-The `max smt` metric reported by the indistinguishability tool represents the longest time spent in a single SMT solver call during the test. This is useful for:
+The `max smt` metric reported by the cryptovampire2 tool represents the longest time spent in a single SMT solver call during the test. This is useful for:
 - Identifying performance bottlenecks
 - Understanding solver behavior across different configurations
 - Comparing the impact of different solvers on proof complexity

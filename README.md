@@ -4,8 +4,8 @@
 
 ## Cryptovampire for indistinguishability
 
-This is the new `cryptovampire`. Its code base is the [`indistinguishability`](./crates/indistinguishability) crate.
-Currently it produces `indistinguishability` binaries.
+This is the new `cryptovampire`. Its code base is the [`cryptovampire2`](./crates/cryptovampire2) crate.
+Currently it produces `cryptovampire2` binaries.
 
 ### Installation / Building
 #### `cargo`
@@ -13,7 +13,7 @@ Currently it produces `indistinguishability` binaries.
 $ cargo build --release
 ```
 
-You will find the binary in `/tmp/ccsa/build/dir/release/indistinguishability`.
+You will find the binary in `/tmp/ccsa/build/dir/release/cryptovampire2`.
 
 debug builds are significantly slower and also force tracing on.
 
@@ -22,13 +22,13 @@ debug builds are significantly slower and also force tracing on.
 $ nix build
 ```
 
-You will find the binary in `./result/bin/indistinguishability`.
+You will find the binary in `./result/bin/cryptovampire2`.
 
 
 ### Documentation
 
 The API reference is generated from the scheme `@doc` blocks and the
-per-library doc tables by `crates/indistinguishability/scheme/docgen.scm`:
+per-library doc tables by `crates/cryptovampire2/scheme/docgen.scm`:
 
 ```bash
 $ make html          # binary + markdown (docs/scheme-api.md) + mdBook html (out/book)
@@ -41,12 +41,12 @@ renders it from `docs/book.toml`/`docs/SUMMARY.md`. The `Makefile` owns the
 recipes but never installs dependencies (mdBook comes from `nix develop`).
 
 ### Usage
-In general running `indistinguishability --help` brings out all the options.
+In general running `cryptovampire2 --help` brings out all the options.
 
-`indistinguishability` runs a scheme interpreter (via [`steel`](https://github.com/mattwparas/steel)) and expects to be manipulated through there. Protocols are defined in scheme and options can be overwritten there as well. This also means that `indistinguishability`'s input files are fully fledged scheme programs.
+`cryptovampire2` runs a scheme interpreter (via [`steel`](https://github.com/mattwparas/steel)) and expects to be manipulated through there. Protocols are defined in scheme and options can be overwritten there as well. This also means that `cryptovampire2`'s input files are fully fledged scheme programs.
 
 ```
-indistinguishability <file> <args>
+cryptovampire2 <file> <args>
 ```
 executes `<file>` omitting that argument will make the tool listen from stdin.
 

@@ -9,7 +9,7 @@ See [README.md](README.md) for detailed usage and installation instructions.
 ## Project Structure
 
 Workspace crates:
-- **`indistinguishability`** — Current tool version (main development focus)
+- **`cryptovampire2`** — Current tool version (main development focus)
 - **`golgge`** — E-graph based reasoning engine (can be modified)
 - **`egg`** — Fork of [`egg`](https://github.com/egraphs-good/egg) (do not modify)
 - **`cryptovampire`** — Legacy version (does not compile, ignore)
@@ -26,8 +26,8 @@ Workspace crates:
 
 ### Testing
 Verify changes with integration tests:
-- **Quick test** (seconds): `cargo run --profile debug-optimized -- crates/indistinguishability/tests/passing/basic-hash.scm`
-- **Comprehensive test** (~15 minutes): `make` in `crates/indistinguishability/tests/passing/`
+- **Quick test** (seconds): `cargo run --profile debug-optimized -- crates/cryptovampire2/tests/passing/basic-hash.scm`
+- **Comprehensive test** (~15 minutes): `make` in `crates/cryptovampire2/tests/passing/`
 
 Note: Tests may occasionally fail for non-deterministic reasons; a rerun may help.
 
@@ -38,13 +38,13 @@ Note: Tests may occasionally fail for non-deterministic reasons; a rerun may hel
 cargo check
 
 # Run quick integration test
-cargo run --profile debug-optimized -- crates/indistinguishability/tests/passing/basic-hash.scm
+cargo run --profile debug-optimized -- crates/cryptovampire2/tests/passing/basic-hash.scm
 
 # Enable verbose logging
 RUST_LOG=trace cargo run --profile debug-optimized -- <args>
 
 # Run comprehensive test suite
-cd crates/indistinguishability/tests/passing && make
+cd crates/cryptovampire2/tests/passing && make
 ```
 
 ## Additional Information
@@ -52,7 +52,7 @@ cd crates/indistinguishability/tests/passing && make
 - **Logging**: Set `RUST_LOG=trace` for detailed execution logs
 - **Profiles**: Use `--profile debug-optimized` for development (optimized but with debug symbols)
 - **SMT Solvers**: Requires Vampire, Z3, or CVC5 for full functionality
-- **Test Files**: See `crates/indistinguishability/tests/passing/` for example protocol specifications
+- **Test Files**: See `crates/cryptovampire2/tests/passing/` for example protocol specifications
 
 ## Scheme programing
 Use `delimiter-validator` to debug parenthising problems in  scheme.

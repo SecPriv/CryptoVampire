@@ -1,11 +1,11 @@
-//! The main executable for the indistinguishability analysis tool.
+//! The main executable for the cryptovampire2 analysis tool.
 //! This module handles command-line argument parsing, initialization,
 //! and execution of the analysis engine.
 
 use std::io::{self, Read};
 
 use clap::Parser;
-use indistinguishability::{Configuration, RunningMode, init_engine, init_logger};
+use cryptovampire2::{Configuration, RunningMode, init_engine, init_logger};
 use steel::rerrs::ErrorKind;
 
 // static CV_PRELUDE: &str = include_str!("./input/prelude.scm");

@@ -153,7 +153,7 @@ make test-solvers-parallel
 The script will automatically build the binary if missing. If it fails:
 
 ```bash
-make indistinguishability
+make cryptovampire2
 ```
 
 ### Too Many Timeouts
