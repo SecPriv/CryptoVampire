@@ -1,112 +1,64 @@
 use std::fmt;
 
 use super::{Smt, SmtFile, SmtFormula};
-use crate::environement::traits::{KnowsRealm, Realm};
+use crate::environement::traits::KnowsRealm;
 use crate::smt::smt::SmtDisplay;
 
+/// A wrapper that implements [`fmt::Display`] by writing the SMT representation
+/// of the wrapped value.
+///
+/// The `env` is threaded through [`SmtDisplay::as_display`] so that callers can
+/// pick the realm in which terms are rendered, but the realm doesn't currently
+/// influence the printed string: the actual rendering is done by the [`Display`]
+/// impl of the wrapped value.
 #[derive(Debug, Copy, Clone)]
-pub struct SmtDisplayer<D, T> {
-    pub env: D,
+pub struct SmtDisplayer<T> {
     pub content: T,
 }
 
-#[derive(Debug, Copy, Clone)]
-pub struct SmtEnv {
-    pub realm: Realm,
-}
-
-impl KnowsRealm for SmtEnv {
-    fn get_realm(&self) -> Realm {
-        self.realm
-    }
-}
-
-impl<D, T> SmtDisplayer<D, T> {
-    pub fn propagate<U>(self, other: U) -> SmtDisplayer<D, U> {
-        SmtDisplayer {
-            content: other,
-            env: self.env,
-        }
-    }
-}
-
 impl<'bump> SmtDisplay<'bump> for SmtFormula<'bump> {
-    fn into_display(self, env: &impl KnowsRealm) -> impl fmt::Display + 'bump {
-        SmtDisplayer {
-            env: SmtEnv {
-                realm: env.get_realm(),
-            },
-            content: self,
-        }
-    }
-    fn as_display(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_ {
-        SmtDisplayer {
-            env: SmtEnv {
-                realm: env.get_realm(),
-            },
-            content: self,
-        }
+    fn as_display(&self, _env: &impl KnowsRealm) -> impl fmt::Display + '_ {
+        SmtDisplayer { content: self }
     }
 }
 
 impl<'bump> SmtDisplay<'bump> for Smt<'bump> {
-    fn into_display(self, env: &impl KnowsRealm) -> impl fmt::Display + 'bump {
-        SmtDisplayer {
-            env: SmtEnv {
-                realm: env.get_realm(),
-            },
-            content: self,
-        }
-    }
-    fn as_display(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_ {
-        SmtDisplayer {
-            env: SmtEnv {
-                realm: env.get_realm(),
-            },
-            content: self,
-        }
+    fn as_display(&self, _env: &impl KnowsRealm) -> impl fmt::Display + '_ {
+        SmtDisplayer { content: self }
     }
 }
 
 impl<'bump> SmtDisplay<'bump> for SmtFile<'bump> {
-    fn into_display(self, _: &impl KnowsRealm) -> impl fmt::Display + 'bump {
-        ""
-    }
-    fn as_display(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_ {
-        SmtDisplayer {
-            env: SmtEnv {
-                realm: env.get_realm(),
-            },
-            content: self,
-        }
+    fn as_display(&self, _env: &impl KnowsRealm) -> impl fmt::Display + '_ {
+        SmtDisplayer { content: self }
     }
 }
 
-impl<D: KnowsRealm> fmt::Display for SmtDisplayer<D, SmtFormula<'_>> {
+impl fmt::Display for SmtDisplayer<SmtFormula<'_>> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.content)
     }
 }
 
-impl<D: KnowsRealm> fmt::Display for SmtDisplayer<D, &SmtFormula<'_>> {
+impl fmt::Display for SmtDisplayer<&SmtFormula<'_>> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.content)
     }
 }
 
-impl<D: KnowsRealm> fmt::Display for SmtDisplayer<D, Smt<'_>> {
+impl fmt::Display for SmtDisplayer<Smt<'_>> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.content)
     }
 }
 
-impl<D: KnowsRealm> fmt::Display for SmtDisplayer<D, &Smt<'_>> {
+impl fmt::Display for SmtDisplayer<&Smt<'_>> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.content)
     }
 }
 
-impl<D: KnowsRealm> fmt::Display for SmtDisplayer<D, SmtFile<'_>> {
+impl fmt::Display for SmtDisplayer<SmtFile<'_>> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for smt in &self.content.content {
             writeln!(f, "{}", smt)?;
@@ -115,7 +67,7 @@ impl<D: KnowsRealm> fmt::Display for SmtDisplayer<D, SmtFile<'_>> {
     }
 }
 
-impl<D: KnowsRealm> fmt::Display for SmtDisplayer<D, &SmtFile<'_>> {
+impl fmt::Display for SmtDisplayer<&SmtFile<'_>> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for smt in &self.content.content {
             writeln!(f, "{}", smt)?;

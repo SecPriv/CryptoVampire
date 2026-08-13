@@ -222,15 +222,13 @@ mod tests {
     use paste::paste;
 
     use super::CryptoVampireCall;
-    const ROOT: &'static str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
-
     macro_rules! test_json_parser {
         ($f:ident :  $t:ty) => {
             paste! {
                     #[test]
                     #[allow(elided_lifetimes_in_paths)]
                     fn [<parse_$f>]() {
-                        let file_path = format!("{ROOT}/tests/rust/squirrel-json-parsing/{}.json", stringify!($f));
+                        let file_path = format!("{}/tests/squirrel-json-parsing/{}.json", env!("CARGO_MANIFEST_DIR"), stringify!($f));
                         println!("trying to parse {file_path}...");
                         let content = File::open(file_path).expect("Unable to read file");
                         let deserializer = &mut serde_json::Deserializer::from_reader(BufReader::new(content));

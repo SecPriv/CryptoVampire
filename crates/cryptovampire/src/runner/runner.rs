@@ -227,7 +227,7 @@ pub trait Runner {
         RunnerError::UnexpectedResult {
             tool: Self::name(),
             return_code,
-            cmd,
+            cmd: Box::new(cmd),
             stdout,
         }
         .into()
@@ -254,7 +254,7 @@ fn build_file<R: Runner + ?Sized>(save_to: Option<&Path>) -> crate::Result<Named
     tmp_builder
         .suffix(R::get_file_suffix())
         .prefix(&prefix)
-        .keep(save_to.is_some());
+        .disable_cleanup(save_to.is_some());
     let file = tmp_builder.tempfile()?; // gen tmp file
     info!("generated file {}", file.path().to_string_lossy());
     Ok(file)

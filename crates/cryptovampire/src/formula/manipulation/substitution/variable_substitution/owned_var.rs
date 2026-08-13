@@ -82,10 +82,7 @@ impl<T> Default for MultipleVarSubst<T> {
     }
 }
 
-impl<'a, 'bump> Substitution<'bump> for MultipleVarSubst<ARichFormula<'bump>>
-where
-    'bump: 'a,
-{
+impl<'bump> Substitution<'bump> for MultipleVarSubst<ARichFormula<'bump>> {
     fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump> {
         self.maybe_get(var.id)
             .cloned()

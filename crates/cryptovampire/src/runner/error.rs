@@ -29,7 +29,7 @@ pub enum RunnerError {
     UnexpectedResult {
         tool: &'static str,
         return_code: i32,
-        cmd: std::process::Command,
+        cmd: Box<std::process::Command>,
         stdout: String,
     },
 

@@ -74,19 +74,19 @@ pub trait Parsable<'bump, 'str> {
     ///
     /// ## arguments
     ///  - `env`: the [Environement] used to extract all the information about
-    ///     what's already been parsed / partially parsed. It is not used as
-    ///     a [KnowsRealm].
+    ///    what's already been parsed / partially parsed. It is not used as
+    ///    a [KnowsRealm].
     ///  - `bvar`: the currenlty bounded variables. The contract is to leave
-    ///     as it was found, that is the caller may modify `bvar` but it has
-    ///     to revert it to its old state.
-    ///     
-    ///     **NB**: there is one notable exception to this rule which is
-    ///             [VariableBinding] which add its returned [Variable] to
-    ///             `bvar`
+    ///    as it was found, that is the caller may modify `bvar` but it has
+    ///    to revert it to its old state.
+    ///
+    ///    **NB**: there is one notable exception to this rule which is
+    ///    [VariableBinding] which add its returned [Variable] to
+    ///    `bvar`
     ///  - `state`: the [KnowsRealm]
     ///  - `expected_sort`: the sort that is expected. Set to [None] if we don't
-    ///     expect any sort. It also is a [SortProxy] therefore we can use it to
-    ///     unify sorts (useful for things like equalities).
+    ///    expect any sort. It also is a [SortProxy] therefore we can use it to
+    ///    unify sorts (useful for things like equalities).
     fn parse(
         &self,
         env: &Environement<'bump, 'str, Self::S>,

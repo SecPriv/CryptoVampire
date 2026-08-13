@@ -26,7 +26,7 @@ impl<'a> Data<'a> {
 #[serde(untagged)]
 pub enum GeneralMacro<'a> {
     ProtocolMacro(ProtocolMacro),
-    Structured(#[serde(borrow)] Structured<'a>),
+    Structured(#[serde(borrow)] Box<Structured<'a>>),
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]

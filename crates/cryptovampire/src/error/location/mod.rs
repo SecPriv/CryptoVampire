@@ -3,8 +3,6 @@ use std::fmt::{Debug, Display};
 mod location;
 pub use location::Location;
 
-mod location_helper;
-
 use crate::error_at;
 
 mod empty;

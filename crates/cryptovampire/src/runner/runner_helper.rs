@@ -65,7 +65,7 @@ fn save_stdout(stdout: &String) -> String {
     let maybe_file = tempfile::Builder::new()
         .prefix("solver_output_")
         .suffix(".txt")
-        .keep(true)
+        .disable_cleanup(true)
         .tempfile()
         .map_err(|_| ())
         .and_then(|mut file| {

@@ -49,5 +49,5 @@ all-tests: $(BINARY) $(SOURCES)
 		echo "Running test: $$file"; \
 		$(BINARY) "$$file" \
 			auto \
-			$(if $(TIMEOUT),--timeout $(TIMEOUT),40); \
+			--timeout $(if $(TIMEOUT),$(TIMEOUT),40); \
 	done
