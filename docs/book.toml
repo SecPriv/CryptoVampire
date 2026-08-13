@@ -1,0 +1,5 @@
+[book]
+title = "CryptoVampire API Reference"
+authors = ["CryptoVampire"]
+language = "en"
+src = "."

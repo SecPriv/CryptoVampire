@@ -24,6 +24,22 @@ $ nix build
 
 You will find the binary in `./result/bin/indistinguishability`.
 
+
+### Documentation
+
+The API reference is generated from the scheme `@doc` blocks and the
+per-library doc tables by `crates/indistinguishability/scheme/docgen.scm`:
+
+```bash
+$ make html          # binary + markdown (docs/scheme-api.md) + mdBook html (out/book)
+$ nix build .#doc    # as a nix package: reuses the flake's built binary,
+                     # runs docgen + mdBook (markdown + html under result/)
+```
+
+`docs/scheme-api.md` is generated (gitignored); mdBook (the Rust-book tool)
+renders it from `docs/book.toml`/`docs/SUMMARY.md`. The `Makefile` owns the
+recipes but never installs dependencies (mdBook comes from `nix develop`).
+
 ### Usage
 In general running `indistinguishability --help` brings out all the options.
 
@@ -34,7 +50,7 @@ indistinguishability <file> <args>
 ```
 executes `<file>` omitting that argument will make the tool listen from stdin.
 
-The `-i` option starts an interactive shell. Notably the `help` command returns some documentation for the rust bindings. Unfortunately, it is unclear how to activate this for our own scheme wrappers.
+The `-i` option starts an interactive shell. The `help` command returns documentation for the rust bindings and for the scheme wrappers (`@doc` blocks and the per-library doc tables).
 
 
 ## Cryptovampire for Trace properties

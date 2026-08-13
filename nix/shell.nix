@@ -25,6 +25,8 @@
             z3
             config.packages.vampire-4
 
+            mdbook
+
             cargo-expand
             cargo-limit
 
