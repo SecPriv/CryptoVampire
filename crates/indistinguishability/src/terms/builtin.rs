@@ -190,11 +190,13 @@ mk_builtin_funs!(
         flags: f!(BUILTIN_SMT)
     };
 
+    /// Symbolic constructor for `true`
     TRUE "mtrue" "true" {
         signature: s!(() -> Bool),
         flags: f!(BUILTIN_SMT)
     };
 
+    /// Symbolic constructor for `false`
     FALSE "mfalse" "false" {
         signature: s!(() -> Bool),
         flags: f!(BUILTIN_SMT)
@@ -208,36 +210,52 @@ mk_builtin_funs!(
 
     // ~~~~~~~~~~~ base bitstrings ~~~~~~~~~~~~~~
 
+    /// Constructore for nonces
+    ///
+    /// Nonces are their own type/sort, this function enable casting to
+    /// bitstring. Also, *all* nonces are created using via this constructor. cv
+    /// relies on this fact to identify nonces.
     NONCE "mnonce" "nonce" {
         signature: s!(Nonce -> Bitstring),
         flags: f!(CUSTOM_DEDUCE /* | CUSTOM_SUBTERM */)
     };
 
+    /// tuple/pair constructor
+    ///
+    /// See `PROJ_1`/`PROJ_2` (`sel1of2`/`sel2of2` in scheme) for its
+    /// destructors
     TUPLE "mtuple" "tuple" "pair" {
         signature: s!(Bitstring, 2)
     };
 
+    /// First projection of a tuple: `(sel1of2 (mtuple a b))` is `a`.
     PROJ_1 "sel1of2" "p1" "fst" {
         signature: s!(Bitstring, 1)
     };
 
+    /// Second projection of a tuple: `(sel2of2 (mtuple a b))` is `b`.
     PROJ_2 "sel2of2" "p2" "snd" {
         signature: s!(Bitstring, 1)
     };
 
+    /// The empty bitstring. In scheme, `empty`/`none` are synonyms.
     EMPTY "mempty" "empty" "none" {
         signature: s!(Bitstring, 0)
     };
 
-    /// Converst [Sort::Bool] to [Sort::Bitstring]
+    /// Converts [Sort::Bool] to [Sort::Bitstring]
     FROM_BOOL "mfrom_bool" {
         signature: s!(Bool -> Bitstring)
     };
 
+    /// Bitstring length: maps a bitstring to its length, itself a bitstring.
     LENGTH "bitstring-length" {
         signature: s!(Bitstring -> Bitstring)
     };
 
+    /// Zeroed bitstring of a given length.
+    ///
+    /// e.g., `(zeroes eta)` is a sequence of `0` the same length as a nonce.
     ZEROES "zeroes" {
         signature: s!(Bitstring -> Bitstring)
     };
@@ -249,6 +267,7 @@ mk_builtin_funs!(
 
     // ~~~~~~~~~~~~~~~~~ ptcl ~~~~~~~~~~~~~~~~~~~
 
+    /// Whether the given timepoint currently `happens`.
     HAPPENS "happens" {
         signature: s!(Time -> Bool),
     };
@@ -265,6 +284,7 @@ mk_builtin_funs!(
         signature: s!(Time, Time -> Bool),
     };
 
+    /// Predecessor of a timepoint.
     PRED "pred" {
         signature: s!(Time, 1),
     };
@@ -621,23 +641,59 @@ pub(crate) fn mk_scheme_lib() -> String {
     let mut module = String::new();
     let mut wrapped = String::new();
 
-    module.push_str("(provide eql <> ");
+    let docs: std::collections::HashMap<&str, &str> = BUILTIN_DOCS.iter().copied().collect();
+
+    module.push_str("(provide eql <> builtin-doc ");
     for (name, fun) in PARSING_PAIRS.iter() {
         let fun_name = &fun.name;
-
         writeln!(module, "{name}").unwrap();
+
+        // Inherit the unwrapped (Rust) documentation.  Each wrapper is built
+        // with its OWN lambda literal so it has a distinct closure id: docs
+        // attached through `#%function-ptr-table-add` would otherwise collide
+        // for closures sharing one bytecode lambda (i.e. `register-function`
+        // alone is not enough).  A non-nullary wrapper just delegates to the
+        // lifted inner value, preserving `get-function` and `requests-head?`;
+        // a nullary builtin lifts to a constant formula, which is returned as-is.
+        let doc = docs.get(fun_name.as_ref()).copied().unwrap_or("");
+        let doc_lit = scheme_string_literal(doc);
+
         writeln!(
             wrapped,
-            "(define {name} (register-function ___pre_${fun_name}))"
+            "
+            (define {name}
+            (let ((___inner (register-function ___pre_${fun_name})))
+                (if (Formula? ___inner)
+                    ___inner
+                    (let ((___w (lambda ___args (apply ___inner ___args))))
+                        (if (> (string-length {doc_lit}) 0)
+                            (#%function-ptr-table-add #%function-ptr-table ___w {doc_lit})
+                            #f)
+                        ___w))))
+            "
         )
         .unwrap();
+        // The reference only lists each builtin once, under its primary name:
+        // aliases (`and`, `or`, `=`, ...) keep their attached `help` docs but
+        // are not duplicated in the `builtin-doc` table.
+        if *name == fun_name.as_ref() {
+            writeln!(
+                wrapped,
+                "(set! builtin-doc (doc-add! builtin-doc '{name} {doc_lit}))"
+            )
+            .unwrap();
+        }
     }
     writeln!(module, ")").unwrap();
     writeln!(
         module,
         "
         (require-builtin cryptovampire/ll/builtin-functions as ___pre_$)
-        (require \"cryptovampire/function\") 
+        (require \"cryptovampire/function\")
+        (require \"cryptovampire/type\")
+        (require \"cryptovampire/doc\")
+
+        (define builtin-doc (make-doc-table))
 
         {wrapped}
         (define (eql a b) (eq (bitstring-length a) (bitstring-length b)))
@@ -647,4 +703,22 @@ pub(crate) fn mk_scheme_lib() -> String {
     .unwrap();
     trace!("builtin function scheme:\n{module}");
     module
+}
+
+/// Escape `s` so it can be embedded as a double-quoted scheme string literal.
+fn scheme_string_literal(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 8);
+    out.push('"');
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+    out
 }

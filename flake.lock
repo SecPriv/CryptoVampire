@@ -98,6 +98,20 @@
         "type": "github"
       }
     },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1786384358,
+        "narHash": "sha256-OETwiymkMwunF+pfL25DzLMF2/YpMcJUjVd9qZ0YdsM=",
+        "rev": "2fcb964de67fcf60b43471c55d5d99e61a9ccb5a",
+        "type": "tarball",
+        "url": "https://releases.nixos.org/nixos/unstable/nixos-26.11pre1051473.2fcb964de67f/nixexprs.tar.xz"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "ref": "nixos-unstable",
+        "type": "indirect"
+      }
+    },
     "root": {
       "inputs": {
         "flake-parts": "flake-parts",
@@ -106,6 +120,7 @@
         "nixpkgs-vampire": "nixpkgs-vampire",
         "rust-flake": "rust-flake",
         "treefmt-nix": "treefmt-nix",
+        "validator": "validator",
         "vampire-master-src": "vampire-master-src"
       }
     },
@@ -184,6 +199,33 @@
       "original": {
         "owner": "numtide",
         "repo": "treefmt-nix",
+        "type": "github"
+      }
+    },
+    "validator": {
+      "inputs": {
+        "flake-parts": [
+          "flake-parts"
+        ],
+        "nixpkgs": "nixpkgs_2",
+        "rust-flake": [
+          "rust-flake"
+        ],
+        "treefmt-nix": [
+          "treefmt-nix"
+        ]
+      },
+      "locked": {
+        "lastModified": 1786548398,
+        "narHash": "sha256-Q8HqSWfTv7mqHQn6V6Z10pF6zj74c4Vv9B+i0F/2zpM=",
+        "owner": "puyral",
+        "repo": "delimiter-validator",
+        "rev": "1cec0edb5b264535b3266b134f24e5d02edc37c9",
+        "type": "github"
+      },
+      "original": {
+        "owner": "puyral",
+        "repo": "delimiter-validator",
         "type": "github"
       }
     },

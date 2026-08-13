@@ -53,3 +53,9 @@ cd crates/indistinguishability/tests/passing && make
 - **Profiles**: Use `--profile debug-optimized` for development (optimized but with debug symbols)
 - **SMT Solvers**: Requires Vampire, Z3, or CVC5 for full functionality
 - **Test Files**: See `crates/indistinguishability/tests/passing/` for example protocol specifications
+
+## Scheme programing
+Use `delimiter-validator` to debug parenthising problems in  scheme.
+See `delimiter-validator -h` for the exact parameters to use.
+
+When calling `delimiter-validator -t "scheme" -v -f <file>` it re-outputs the file with `xx: yy->zz: <the line>` where `xx` is the line number, `yy` is how deeply nested the parenthesing is at the begining of the line, and `zz` is the same for the end of the line. 

@@ -1,7 +1,7 @@
 { ... }:
 {
   perSystem =
-    { pkgs, config, ... }:
+    { pkgs, config, inputs', ... }:
     let
       mpython = pkgs.python311.withPackages (
         ps: with ps; [
@@ -25,9 +25,12 @@
             z3
             config.packages.vampire-4
 
+            mdbook
+
             cargo-expand
             cargo-limit
 
+            inputs'.validator.packages.default
           ]);
       });
 
